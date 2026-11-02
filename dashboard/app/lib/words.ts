@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
-import type { AlertSeverity, LineStateCode, ProblemCode, StateReasonCode } from "./vocab";
+import type { AlertSeverity, AlertStatus, LineStateCode, ProblemCode, StateReasonCode } from "./vocab";
 
 /**
  * The one words table (design system §1, rule 3): every code from the API or the controller renders through it, in
  * plain words for someone who knows plants rather than the controller. An unknown code renders raw, so a code added
  * later shows as itself rather than as nothing. `words.test.ts` fails on any OpenAPI `ProblemCode`, `StateReason` or
- * `LineState` code, controller mode or mist stage (`firmware/lib/greenhouse_types.h`) or alert type (`ALERT_TYPES` in
- * `verdify_schemas/alerts.py`) without an entry here, so a PR that adds one adds its words. The `mode_reason` and
+ * `LineState` code, alert status, schedule, line or run field, controller mode or mist stage
+ * (`firmware/lib/greenhouse_types.h`) or alert type (`ALERT_TYPES` in `verdify_schemas/alerts.py`) without an entry here,
+ * and on an activity action the services write without one, so a PR that adds one adds its words. The `mode_reason` and
  * `moisture_block_reason` families come with #1140 and read raw until then.
  */
 const STATE_REASON = {
@@ -21,6 +22,15 @@ const STATE_REASON = {
 } as const satisfies Record<StateReasonCode, string>;
 
 const ALERT_SEVERITY = { critical: "Critical", warning: "Warning", info: "Info" } as const satisfies Record<AlertSeverity, string>;
+
+/** Every `Alert.status` (the disposition), as a closed alert's line begins ("Resolved by Jason · 10:42"). */
+const ALERT_STATUS = {
+  open: "Open",
+  acknowledged: "Acknowledged",
+  resolved: "Resolved",
+  false_positive: "Marked a false positive",
+  suppressed: "Suppressed",
+} as const satisfies Record<AlertStatus, string>;
 
 /**
  * Every OpenAPI `ProblemCode`, as a person reads it beside a field or in a toast. A field's `out_of_range` reads
@@ -163,17 +173,67 @@ const ALERT_TYPE = {
   irrigation_line_faulted: "A mister zone faulted",
 } as const;
 
+/**
+ * `activity_log.action` (`ACTIVITY_ACTION_PATTERN` in verdify_schemas/activity.py), as an Activity row's title begins:
+ * the words, then the target's label ("Set VPD Mister Engage", "Changed line L01"). The irrigation actions are the ones
+ * #1156's services write. `light.on` and `light.off` come with #1140 and read raw until then.
+ */
+const ACTIVITY_ACTION = {
+  "setting.write": "Set",
+  "setting.release": "Released",
+  "plan.write": "Plan",
+  "alert.ack": "Acknowledged",
+  "alert.resolve": "Resolved",
+  "irrigation.run": "Ran",
+  "irrigation.stop": "Stopped",
+  "irrigation.clear_fault": "Cleared the fault on",
+  "irrigation.override": "Equipment override",
+  "irrigation.schedule.create": "Added schedule",
+  "irrigation.schedule.update": "Changed schedule",
+  "irrigation.schedule.delete": "Deleted schedule",
+  "irrigation.line.update": "Changed line",
+} as const;
+
+/**
+ * The schedule, line and run fields an irrigation write's `detail` names (OpenAPI `ScheduleInput`, `LineUpdate` and
+ * `RunRequest`), as Activity shows a change to one ("Daily cap 60 → 45 min").
+ */
+const IRRIGATION_FIELD = {
+  enabled: "Enabled",
+  vpd_member: "VPD control",
+  schedule_member: "Schedule",
+  daily_cap_min: "Daily cap",
+  vpd_reserve_min: "VPD reserve",
+  paused_until: "Paused until",
+  checked: "Checked",
+  check_note: "Check note",
+  label: "Label",
+  days: "Days",
+  start: "Start",
+  on_s: "On",
+  count: "Pulses",
+  gap_s: "Gap",
+  prewet_s: "Prewet",
+  flush_s: "Flush",
+  minutes: "Run time",
+  degraded_only: "Only while VPD sensing is degraded",
+} as const;
+
 export const WORDS: { readonly [family: string]: { readonly [code: string]: string } } = {
   state_reason: STATE_REASON,
   alert_severity: ALERT_SEVERITY,
+  alert_status: ALERT_STATUS,
   problem_code: PROBLEM_CODE,
   line_state: LINE_STATE,
   mode: MODE,
   mist_stage: MIST_STAGE,
   fog_block_reason: FOG_BLOCK_REASON,
   alert_type: ALERT_TYPE,
+  activity_action: ACTIVITY_ACTION,
+  irrigation_field: IRRIGATION_FIELD,
 };
-export type WordFamily = "state_reason" | "alert_severity" | "problem_code" | "line_state" | "mode" | "mist_stage" | "fog_block_reason" | "alert_type";
+export type WordFamily = "state_reason" | "alert_severity" | "alert_status" | "problem_code" | "line_state" | "mode" | "mist_stage" | "fog_block_reason"
+  | "alert_type" | "activity_action" | "irrigation_field";
 
 /** True when the table has words for `code` in `family`. */
 export function hasWords(family: string, code: string): boolean {

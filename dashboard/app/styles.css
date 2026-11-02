@@ -343,6 +343,22 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--fault)}
   .app-page .site-footer{padding-bottom:calc(3.5rem + env(safe-area-inset-bottom))}
 }
 
+/* Activity and alerts (screens §7): the alert groups and the expanded alert, its runbook as text with its line breaks, and the log's filters and plan changes. */
+.panel-link,.alert-toggle a,.alert-graph a,.log-filters a{display:inline-flex;align-items:center;min-height:2.75rem;font-size:.875rem;font-weight:700}
+.event .alert-toggle{margin:0}
+.alert-linked,.alert-group{margin:1rem 0 0}
+.alert-linked>h3,.alert-group>h3{margin:0 0 .5rem;font-size:.875rem}
+.alert-empty{margin:0}
+.event .alert-guidance{color:var(--ink);font-weight:600}
+.alert-detail{display:grid;gap:.5rem;margin:.25rem 0 0;min-width:0}
+.alert-detail h4{margin:.25rem 0 0}
+.event .runbook{white-space:pre-line;color:var(--ink)}
+.kv-nested{font-size:.82rem}
+.alert-respond{max-width:36rem}
+.alert-respond .field{margin:0}
+.card-head .log-filters{margin:0}
+.plan-changes{margin:.25rem 0 0;padding-left:1.1rem;font-size:.85rem;color:var(--muted)}
+
 /* Dashboard (design system §2.2): added tokens, the two AA fixes and the new badges. Weather's tokens above are never edited. This block comes last: its :focus-visible and input,select,textarea rules have the same specificity as weather's and win by order. */
 :root{
   --focus:#0e5a43;--control-border:#6f867d;

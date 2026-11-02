@@ -614,6 +614,20 @@ Acceptance:
    its runbook and "Open in Graphs", and offers no Stop.
 5. `/activity?target=L01` lists only L01 entries.
 
+As built (VD-13, `dashboard/app/routes/activity.tsx` with `app/lib/activity.ts`), where it settles a detail this section
+leaves open:
+
+| Topic | As built |
+|---|---|
+| Names | The API names people by Authentik username (`Actor.name`, `acknowledged_by`, `resolved_by`). The signed-in person reads by their API-01 display name ("Jason · dashboard", "Acknowledged by Jason · 06:47"), anyone else by username |
+| Log rows | The title is the action in words, then its target: "Set VPD Mister Engage", "Plan iris-20261102-0702", "Changed line L01", "Acknowledged “Relay stuck”"; an action the words table lacks reads raw. The writer's line carries the change: before → after with "requested 1.53", "manual" or "manual cleared", a plan's one change with its rule or trigger, a run's length, an update's fields, "during experiment <id>". Setting labels and units are API-09's as written ("Mister Pulse Gap 45 → 60 s"), so the page reads API-09 every 60 s; a param it lacks reads raw |
+| Alert rows | Each row expands and collapses with its own "Details ›" or "Hide details" link, which keeps the scroll position. Acknowledge and Resolve each leave a toast ("“Relay stuck” acknowledged by Jason · 10:42"), because a collapsed row moves into the collapsed group. A closed alert reads "Resolved by Jason · 10:42" with its resolution |
+| Linked alert | An `alert=<id>` missing from the rows shown sits under "Linked alert" at the top of the panel: the row the open list still holds (an alert just resolved here), else API-14 `status=recent`'s, else "Alert <id> is not open or resolved in the last 24 h" |
+| Reads | API-14 with `limit=200` every 15 s; API-17, API-IRR-01 and API-09 every 60 s. Load older asks for one more API-17 page, and each poll reads every page shown again from the newest, so a refresh leaves no gap between them |
+| Shell | The shell polls API-01 and API-02 under the shared read keys, so the R hook's refresh lowers the nav count at once and Stop notes what the shell's API-02 says is running |
+| Words and fixtures | The words table adds the activity actions, the schedule, line and run fields and the alert statuses. The fixtures add `fence-breach`, `run-missed`, `activity-mixed`, `alert-repeat` and `activity-paged` (60 rows, for Load older) |
+| Browser test | `dashboard/e2e/activity.spec.ts` waits for #1128's Playwright harness; `routes/activity.test.tsx` covers the acceptance against the fixture API |
+
 ## 8. SCR-07 Equipment and controller · `/equipment`
 
 **Purpose:** what every actuator is doing, the bursts that replace the Home Assistant buttons, restart, and (Next)

@@ -308,6 +308,33 @@ test("acknowledging lowers the one open-alert count by one and logs alert.ack", 
   expect(at(api, "POST", "/v1/alerts/999/ack", {}).body).toMatchObject({ status: 422, code: "unknown_target" });
 });
 
+test("the Activity fixtures (#1133): a fence breach with its valve on, a missed run, a repeat that keeps the id, a mixed and a paged log", () => {
+  const breach = handler("fence-breach");
+  expect(get(breach, "/v1/alerts").items).toEqual([expect.objectContaining({
+    id: 501, alert_type: "irrigation_fence_breach", category: "water", severity: "critical", status: "open", details: expect.objectContaining({ equipment: "mister_south_fert" }),
+  })]);
+  expect(get(breach, "/v1/now").running).toEqual([expect.objectContaining({ equipment: "mister_south_fert", line_id: "L08" })]);
+  at(breach, "POST", "/v1/irrigation/stop", {}, KEY);
+  expect(get(breach, "/v1/now").running).toEqual([]);
+  expect(fixture("run-missed", { now: NOW })["API-14"].items).toEqual([expect.objectContaining({
+    alert_type: "irrigation_run_missed", severity: "warning", details: expect.objectContaining({ line_id: "L02" }),
+  })]);
+  // One more repeat merges into each open alert: the same id, its count up by one and a newer last seen.
+  const [before] = fixture("flow-valves-closed", { now: NOW })["API-14"].items as Body[];
+  const [after] = fixture(["flow-valves-closed", "alert-repeat"], { now: NOW })["API-14"].items as Body[];
+  expect(after).toMatchObject({ id: before.id, count: (before.count as number) + 1 });
+  expect(Date.parse(after.last_seen_at as string)).toBeGreaterThan(Date.parse(before.last_seen_at as string));
+  const mixed = handler("activity-mixed");
+  expect((get(mixed, "/v1/activity").items as Body[]).map((row) => [(row.actor as Body).source, row.action])).toEqual([
+    ["dashboard", "setting.write"], ["iris", "plan.write"], ["agent:steward", "irrigation.line.update"], ["dashboard", "alert.ack"], ["system", "plan.write"],
+    ["dashboard", "irrigation.run"],
+  ]);
+  expect((get(mixed, "/v1/activity?target=L01").items as Body[]).map((row) => row.target)).toEqual(["L01", "L01"]);
+  const paged = handler("activity-paged");
+  expect(get(paged, "/v1/activity")).toMatchObject({ next_cursor: "50" });
+  expect(get(paged, "/v1/activity?cursor=50")).toMatchObject({ next_cursor: null, items: expect.arrayContaining([expect.objectContaining({ id: 159 })]) });
+});
+
 test("the listener serves HTTP with no-store, the /api prefix and a 16 KiB body cap", async () => {
   const api = handler();
   const now = await request(api).get("/v1/now");

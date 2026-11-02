@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import { parse as parseYaml } from "yaml";
-import { ALERT_SEVERITIES, LINE_STATE_CODES, PROBLEM_CODES, STATE_REASON_CODES } from "./vocab";
+import { ALERT_SEVERITIES, ALERT_STATUSES, LINE_STATE_CODES, PROBLEM_CODES, STATE_REASON_CODES } from "./vocab";
 import { WORDS, hasWords, modeWords, words } from "./words";
 
 const repo = (path: string) => readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
@@ -44,7 +44,7 @@ function expectWorded(family: string, codes: readonly string[]) {
   }
 }
 
-test("every ProblemCode, StateReason code and line-state code in the OpenAPI file has words", () => {
+test("every ProblemCode, StateReason code, line-state code and alert status in the OpenAPI file has words", () => {
   const problemCodes = enumOf(SCHEMAS.ProblemCode);
   const stateReasons = enumOf(SCHEMAS.StateReason?.properties?.code);
   const lineStates = enumOf(SCHEMAS.LineState?.properties?.code);
@@ -57,6 +57,9 @@ test("every ProblemCode, StateReason code and line-state code in the OpenAPI fil
   expect([...LINE_STATE_CODES].sort()).toEqual([...lineStates].sort());
   expect([...ALERT_SEVERITIES].sort()).toEqual([...enumOf(SCHEMAS.Alert?.properties?.severity)].sort());
   expect(ALERT_SEVERITIES.map((severity) => words("alert_severity", severity))).toEqual(["Critical", "Warning", "Info"]);
+  const statuses = enumOf(SCHEMAS.Alert?.properties?.status);
+  expectWorded("alert_status", statuses);
+  expect([...ALERT_STATUSES].sort()).toEqual([...statuses].sort());
 });
 
 test("every mode and mist stage in firmware/lib/greenhouse_types.h has words, in screens SCR-01's", () => {
@@ -88,6 +91,32 @@ test("the table has words for every code gh_fog_block_reason publishes", () => {
   expect(FOG_BLOCK_REASONS).toHaveLength(14);
   expectWorded("fog_block_reason", FOG_BLOCK_REASONS);
   expect(Object.keys(WORDS.fog_block_reason).sort()).toEqual([...FOG_BLOCK_REASONS].sort());
+});
+
+test("every activity action the services write has words, each one an action the server can log", () => {
+  const source = /ACTIVITY_ACTION_PATTERN = \(\s*r"([^"]+)"\s*\)/.exec(repo("verdify_schemas/activity.py"));
+  if (!source) throw new Error("no ACTIVITY_ACTION_PATTERN in verdify_schemas/activity.py");
+  const server = new RegExp(source[1]);
+  // The fixed actions (architecture §9) and the irrigation ones #1156 writes; light.on and light.off come with #1140.
+  const actions = [
+    "setting.write", "setting.release", "plan.write", "alert.ack", "alert.resolve", "irrigation.run", "irrigation.stop", "irrigation.clear_fault",
+    "irrigation.override", "irrigation.schedule.create", "irrigation.schedule.update", "irrigation.schedule.delete", "irrigation.line.update",
+  ];
+  expectWorded("activity_action", actions);
+  expect(Object.keys(WORDS.activity_action).sort()).toEqual([...actions].sort());
+  for (const action of actions) expect(server.test(action), action).toBe(true);
+  expect(words("activity_action", "plan.write")).toBe("Plan");
+  // An action this build does not know reads raw.
+  expect(words("activity_action", "equipment.override")).toBe("equipment.override");
+});
+
+test("every schedule, line and run field an irrigation write carries has words", () => {
+  const props = (name: string) => Object.keys(SCHEMAS[name]?.properties ?? {});
+  // line_id is the row's target, and manual and reason have their own words in the row.
+  const fields = [...new Set(["ScheduleInput", "LineUpdate", "RunRequest"].flatMap(props))].filter((field) => !["line_id", "manual", "reason"].includes(field));
+  expect(fields.length).toBeGreaterThanOrEqual(17);
+  expectWorded("irrigation_field", fields);
+  expect(Object.keys(WORDS.irrigation_field).sort()).toEqual([...fields].sort());
 });
 
 test("the existing families keep their words", () => {

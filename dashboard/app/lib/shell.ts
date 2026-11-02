@@ -12,6 +12,7 @@ import { serverClockSkew } from "../components/freshness";
 import { shortTime } from "./format";
 import { SessionEnded, apiGet, type Freshness, type Me, type Now } from "./operator-api";
 import { POLL_INTERVAL } from "./polling";
+import { readKey } from "./queries";
 import { usePolledQuery, type PolledQueryResult } from "./use-current";
 
 /** API-01 every 60 s and API-02 every 15 s (architecture §3, polling). */
@@ -19,8 +20,12 @@ export const ME_POLL_MS = 60_000;
 export const NOW_POLL_MS = POLL_INTERVAL;
 /** "Dashboard API unavailable" after this many API-02 failures in a row. */
 export const API_DOWN_AFTER = 2;
-export const ME_QUERY_KEY = ["shell", "API-01"] as const;
-export const NOW_QUERY_KEY = ["shell", "API-02"] as const;
+/**
+ * The shared keys of queries.ts: the write hooks read and refresh the same entries, so an Acknowledge lowers the nav
+ * count at once (#1133) and Stop notes what the shell's API-02 says is running.
+ */
+export const ME_QUERY_KEY = readKey("API-01");
+export const NOW_QUERY_KEY = readKey("API-02");
 export const fetchMe = (signal: AbortSignal) => apiGet("API-01", {}, { signal });
 export const fetchNow = (signal: AbortSignal) => apiGet("API-02", {}, { signal });
 
