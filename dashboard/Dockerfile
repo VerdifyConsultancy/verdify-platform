@@ -40,6 +40,7 @@ WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 COPY --from=build /app/package.json /app/server.mjs /app/security-headers.mjs ./
+COPY --from=build /app/bff ./bff
 COPY --from=source-metadata /out/source-revision /etc/verdify/source-revision
 ARG GIT_SHA=unknown
 ENV NODE_ENV=production PORT=3000 SOURCE_REVISION=$GIT_SHA

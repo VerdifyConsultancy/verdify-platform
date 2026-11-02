@@ -119,28 +119,44 @@ OIDC sign-in, a same-origin `/api/v1` proxy, and the writes flag.
 |---|---|
 | Runtime and build | Node 24.22.1, pnpm 12.15.0, Vite 8.3.5, TypeScript 6.0.3 |
 | UI | React 19.3.1, React Router 8.5.0 in framework mode with SSR through `@react-router/express` 8.5.0, TanStack Query 5.104.5, zod 4.6.7 (jitless), uPlot 1.6.32, IBM Plex self-hosted |
-| Server | Express 5.2.1, `openid-client` 6 (new) |
+| Server | Express 5.2.1, `openid-client` 6.8.8 (new) |
 | Contract | openapi-typescript 7.13.0 (weather `web/contract-tools/generate.mjs`) |
 | Tests | Vitest 4.1.0, Testing Library, Playwright 1.64.1, `@axe-core/playwright` 4.14.0 |
 
 Code layout, one pnpm package like weather's `web/`: `dashboard/server.mjs` (weather's server plus `/auth/*`,
 the proxy and the writes flag), `security-headers.mjs` (weather's CSP; `form-action` also allows
-`https://auth.vallery.net`), `bff/` (`oidc.mjs`, `session.mjs`, `proxy.mjs`, `origin.mjs`), `app/`,
-`app/generated/operator-api.ts` (generated, drift-checked), `e2e/` and `Dockerfile`. What the BFF does:
+`https://auth.vallery.net`, and `Referrer-Policy` is `same-origin`, see 4), `bff/` (`oidc.mjs`, `session.mjs`,
+`proxy.mjs`, `origin.mjs`), `app/`, `app/generated/operator-api.ts` (generated, drift-checked), `e2e/` and
+`Dockerfile`. What the BFF does:
 
 1. Serves the SSR shell and hashed assets under a per-request nonce CSP (weather `security-headers.mjs`), pins
    `Host: dashboard.verdify.ai`, and caps URL length and header count as weather does.
-2. Runs sign-in, the callback and sign-out (§4) and sets the session cookie.
+2. Runs sign-in, the callback and sign-out (§4) and sets the session cookie. A page GET or HEAD without a
+   well-formed session cookie (43 base64url characters) answers 302 to `/auth/login?returnTo=<path and query>`,
+   or `returnTo=%2F` when the page is longer than BFF-01 keeps or its encoded form would push `/auth/login` past
+   the 4,096-character URL cap. React Router's single-fetch request (`*.data`) gets that redirect in its own
+   form, 204 with `X-Remix-Redirect` and `X-Remix-Reload-Document: true`, because a hydrated client's fetch would
+   follow a 302 to Authentik and fail cross-origin. Hashed assets, fonts and the lazy route manifest
+   (`/__manifest`, route ids and module paths that the public assets already hold) skip the check. Another method
+   on an `/auth` route answers 405, and another `/auth` path 404.
 3. Proxies `/api/v1/*` to `http://verdify-operator-api.verdify-prod.svc:8090/v1/*` with the bearer
    `$OPERATOR_API_TOKEN`, `X-Dashboard-Session: <cookie value>` and `X-Request-Id`. A path with a `.` or `..`
    segment, or containing `%2e`, `%2f`, `%5c` or a backslash (any case), gets 400 before routing; the upstream
-   path is concatenated from the validated one. Timeout 15 s; a non-GET is sent once, never retried. Every `/api`
-   and `/auth` response is `Cache-Control: no-store`.
+   path is concatenated from the validated one. Timeout 15 s, on a new connection per call; a GET is retried once
+   on a connection error, and a non-GET is sent once, never retried. Every `/api` and `/auth` response is
+   `Cache-Control: no-store`.
 4. Requires `Origin: https://dashboard.verdify.ai` exactly on every non-GET/HEAD `/api/*` request and on
-   `POST /auth/logout`; anything else gets 403.
+   `POST /auth/logout`; anything else gets 403. Responses carry `Referrer-Policy: same-origin`, not weather's
+   `no-referrer`: under `no-referrer` a browser sends `Origin: null` on a form POST (Fetch, "append a request
+   Origin header"), so the sign-out form would be refused. `same-origin` sends no referrer to any other origin.
 5. Answers every non-GET `/api/*` request except `POST /api/v1/irrigation/stop` (matched on the validated path)
-   with 503 `writes_disabled` while `DASHBOARD_WRITES_ENABLED` is not `true` (§5.7).
+   with 503 `writes_disabled` while `DASHBOARD_WRITES_ENABLED` is not `true` (§5.7). `GET /api/v1/me` reads the
+   flag as `writes_enabled` on any encoding of its path that the operator API routes to API-01.
 6. Serves `/healthz` and `/readyz` (§11).
+
+Settings are read and checked once at start. A missing or malformed value stops the start with one log line that
+names the variable, never its value, except `DASHBOARD_WRITES_ENABLED`: anything but `true` turns writes off
+(§5.7), so a mistyped flag fails safe instead of stopping the rollout that was meant to switch writes off.
 
 What it never does: hold a database, device, MCP or Home Assistant credential; connect to `verdify-db`, MQTT,
 the ESP32 or MCP; re-implement registry rules (min, max and step come from the API); render greenhouse data
@@ -182,7 +198,7 @@ cookie cleared, 302 `/water`.
 | Cookie | Content | Attributes | Lifetime |
 |---|---|---|---|
 | `__Host-verdify_session` | 32 random bytes, base64url; `dashboard_session` stores its sha256 | HttpOnly; Secure; SameSite=Lax; Path=/ | 12 h |
-| `__Host-verdify_login` | `{state, nonce, verifier, returnTo}` sealed with AES-256-GCM (`cookie-secret`) | same | 10 min, cleared at the callback |
+| `__Host-verdify_login` | `{state, nonce, verifier, returnTo}` and a 10-minute expiry, sealed with AES-256-GCM: key from `cookie-secret` by HKDF-SHA256, a fresh 12-byte IV, the cookie name as associated data | same | 10 min, cleared at the callback |
 
 | Authentik group | Role | Can |
 |---|---|---|
@@ -195,6 +211,14 @@ cookie cleared, 302 `/water`.
 - Sign-out (`POST /auth/logout`) deletes the session row, clears the cookie and redirects to Authentik's
   end-session endpoint. A group change applies at the next sign-in (at most 12 h); deleting someone's
   `dashboard_session` rows ends their sessions within 30 s.
+- The callback clears the login cookie on every outcome. A missing, expired or tampered login cookie, a state
+  mismatch, an Authentik `error` or a refused code exchange answers 400 (`failed`); neither group answers 403
+  (`no_access`) and makes no INT-01 call; Authentik unreachable (discovery or the token endpoint) or a failed
+  INT-01 answers 503 (`unavailable`). Each is plain text with that status until #1124's root loader renders the
+  SCR-09 card at the same URL. The BFF leaves `{reason, requestId}` in `res.locals.authError` for it: React Router
+  8's `getLoadContext` must return a `RouterContextProvider`, so the context key that carries it lands with
+  #1124's route. With discovery unavailable, sign-out still deletes the session and clears the cookie, then answers
+  303 to `/`.
 - Trust: only the web pods reach `:8090` (NetworkPolicy), with one shared bearer token; the API trusts the BFF's
   session creation because the BFF verified the ID token, and ignores `X-Authentik-*`. `POST /internal/sessions`
   refuses (403) any request carrying `X-Dashboard-Session`, which the proxy always sends and the session-create
@@ -486,14 +510,16 @@ MCP and the dashboard both need, so validation and writes exist once.
 | `series` | metric registry, `series`, `states`, `band` | API-03 to API-06 | none (`history` stays) |
 | `irrigation` | per [irrigation](irrigation.md) | API-IRR-01 to API-IRR-13 | the irrigation tools |
 
-- Functions are `async`, take an asyncpg connection and an `Actor(source, name, role)` and return Pydantic models
-  built on `verdify_schemas`. Actors: `('dashboard', <username>, operator|viewer)`, `('iris', 'iris', None)`,
-  `('agent:<name>', <name>, None)` (admin: `agent:admin`) and `('system', 'forecast-engine', None)`. Every write
-  inserts its domain row and its `activity_log` row (request id, and `experiment_id` while one is armed) in one
-  transaction. Existing Hermes tools keep their names and output shapes.
-- `api/Dockerfile` copies only `api/main.py`, `verdify_schemas/` and `verdify_public/` today; it gains
-  `COPY api/operator_api.py ./operator_api.py`, `COPY api/operator_routes/ ./operator_routes/` and
-  `COPY verdify_services/ ./verdify_services/`, and the MCP image copies the package too. Path impact maps
+- Functions are `async`, take an asyncpg connection (writes also take an `Actor(source, name, role)`; reads do
+  not) and return Pydantic models built on `verdify_schemas`. Actors: `('dashboard', <username>, operator|viewer)`,
+  `('iris', 'iris', None)`, `('agent:<name>', <name>, None)` (admin: `agent:admin`) and
+  `('system', 'forecast-engine', None)`. Every write runs through `activity.recorded_write`, which inserts its
+  domain row and its `activity_log` row (request id, and `experiment_id` while one is armed) in one transaction;
+  [`verdify_services/README.md`](../../../verdify_services/README.md) holds the conventions. Existing Hermes tools
+  keep their names and output shapes.
+- `api/Dockerfile` copies `api/main.py`, `verdify_schemas/`, `verdify_services/` (VD-31) and `verdify_public/`; it
+  gains `COPY api/operator_api.py ./operator_api.py` and `COPY api/operator_routes/ ./operator_routes/`, and the
+  MCP image copies `verdify_services/` too. Path impact maps
   `verdify_services/**` to both images and `api/operator_api.py` and `api/operator_routes/**` to api. The ingestor
   does not import the package: it reads `desired_state` with SQL.
 
@@ -504,11 +530,11 @@ bounded `time_bucket_gapfill` series endpoint. There is no new rollup layer in t
 
 | Need | Source (exists today unless marked new) |
 |---|---|
-| Now hero | The newest `climate`, `diagnostics` and `system_state` rows plus the band rows (below); not `v_greenhouse_now`, which needs DLI and health-score grants the dashboard login does not get |
-| Freshness | Newest `climate`, `diagnostics` and `setpoint_snapshot` rows; the ingestor heartbeat (new, VD-54; no migration): a `system_state` row (entity `ingestor_heartbeat`) written every 60 s from the ingestor's own loop, stale after 180 s; `v_data_pipeline_health`, whose `setpoints` age (the newest push or device-reported change) is the writer-health tile; `setpoint_delivery_stuck` drives the stuck-delivery banner (Round 2 #1, VD-62) |
+| Now hero | The newest `climate`, `diagnostics` and `system_state` rows plus the band rows (below); not `v_greenhouse_now`, which needs DLI and health-score grants the dashboard login does not get. In SEALED_MIST the firmware publishes `greenhouse_state` as `SEALED_MIST_<stage>`, so API-02 serves the code `SEALED_MIST` and the label's stage (`mister_state` is the mister pulse machine and never reads FOG) |
+| Freshness | Newest `climate`, `diagnostics` and `setpoint_snapshot` rows; the ingestor heartbeat (new, VD-54; no migration): a `system_state` row (entity `ingestor_heartbeat`) written every 60 s from the ingestor's own loop, stale after 180 s; `v_data_pipeline_health`, whose `setpoints` age (the newest push or device-reported change) is the writer-health tile; `setpoint_delivery_stuck` drives the stuck-delivery banner (Round 2 #1, VD-62). `writer.differing` judges the planner-policy, scheduled-policy and controller-safety values the dispatcher sends from desired rows and plans; it leaves out crop-band and irrigation-site settings, the plan rows the dispatcher never sends (band-owned, per-circuit lux and dispatcher-default ones), and read-only, retired or unregistered settings |
 | Equipment | `equipment_state` for a fixed list: fan1, fan2, vent, heat1, heat2, the 11 wet relays, `grow_light_main`, `grow_light_grow` (Lutron) and `grow_light_{main,grow}_intent`; `v_equipment_relay_map`; runtime and cycles today from collapsed ON/OFF edges |
 | Alerts | `alert_log` with the `v_open_alerts` predicate (`resolved_at IS NULL AND disposition <> 'suppressed'`), which both the dashboard and MCP logins can read (MCP has no grant on the view); never `v_greenhouse_now.open_alerts` |
-| Plan | Effective `plan_journal` row (hypothesis, experiment, expected outcome, valid window), future `setpoint_plan` waypoints with their `source` (`iris` or `preemptive`), `v_active_plan`; `planner_trigger_ledger` for the 36 h list and `v_planner_trigger_health` for counts and the latest required trigger |
+| Plan | Effective `plan_journal` row (hypothesis, experiment, expected outcome, valid window), future `setpoint_plan` waypoints with their `source` (`iris` or `preemptive`), `v_active_plan`; `planner_trigger_ledger` for the 36 h list and `v_planner_trigger_health` for counts. The latest required trigger (Now's Iris tile) is the newest MIDNIGHT, SUNRISE or SUNSET ledger row that has fired (`expected_at` at or before now): the ledger also holds the day's expected rows ahead, which say nothing yet, so the view's first `latest_required` element would read OK over a missed SUNRISE. A health row's `due_at` is the ledger's own deadline: `expected_at` plus the SLA until delivery, then the delivery time plus the SLA, the deadline its `missed` and `timed_out` sweeps use |
 | Band | In force: the newest `setpoint_snapshot` rows with `band_role` (zone `house` for the hero and Graphs, each zone for its tile), computed every pass by the dispatcher from `crop_band_anchors` with the controller's formula (`band_anchors.emit_band_audit`), provenance DERIVED, kept 90 days. Older windows use `fn_band_setpoints(ts)` over the step series, which gives the same crop values as `fn_band_timeline`, labelled "reconstructed from today's anchors". The device-reported targets (`climate.house_temp_target_f`, `house_vpd_target`, `vpd_target_<zone>`) are cross-check metrics |
 | Settings | `verdify_schemas/tunable_registry.py` (code), `v_desired_state_current`, `v_active_plan`, the newest readbacks in `setpoint_snapshot` and `equipment_state`, `setpoint_changes` and `setpoint_clamps` rows after each request, `irrigation_push` |
 | Daily | `daily_summary` (temperature, RH and VPD min, max and mean; `water_used_gal`; mister runtimes) and the new `v_daily_scorecard`: time in band day and night (`mv_zone_band_grade`), gallons, Iris's required plans written and missed (`planner_trigger_ledger`) and alerts by severity |
@@ -516,10 +542,13 @@ bounded `time_bucket_gapfill` series endpoint. There is no new rollup layer in t
 
 - **Reporting.** One test says whether the controller is reporting: the ingestor heartbeat is fresh (at most
   180 s old) and the newest `climate` row is at most 300 s old (the `GET /health` threshold in `api/main.py`).
-  The banners below and the unknown states of equipment and `irr_state` all use it.
+  The banners below, the unknown states of equipment and `irr_state`, Now's band verdicts (none while it is
+  false, as none for a reading older than 120 s) and the leak block's flag, flow and gallons (null while it is
+  false) all use it.
 - **Equipment state** is known while the controller is reporting: the newest row, with `since` at the start of the
   current run of equal states, so reconnect snapshots, HA polls and cycle counts collapse. It reads unknown, with
-  its age, only while the controller is not reporting or there is no row; `irr_state` ages the same way.
+  its age and no `since`, runtime or cycles today (the open run's length is not known), only while the controller
+  is not reporting or there is no row; `irr_state` ages the same way.
   `grow_light_main` and `grow_light_grow` are only the Lutron readback: VD-48 maps the controller's switches to
   `grow_light_{main,grow}_intent` (`EQUIPMENT_SWITCH_MAP` in `ingestor/entity_map.py`, with its rule-7 line), and
   Equipment shows both.
@@ -640,14 +669,17 @@ against production before the merge: three sessions that each end in ROLLBACK (t
 block, whose live digests are the literals; the exact file with its receipts read back inside; a read-only pass
 after). It writes the fixture only when all of them hold, and `tests/test_NNN_*.py` fails until it does.
 It measures against the predecessor that is applied in production, because the `$predecessor$` block reads the
-live ledger row and receipts. A file whose merged predecessor is not applied yet can be measured only after that
-predecessor is applied, in production or earlier in the same rolled-back session (the script does not do the
-latter yet). Neither works for a grant to a role that an unapplied migration creates: the ordinary digest hashes
-each grantee's OID, and an OID allocated in a rolled-back session is never reused (migration 258's note), so no
-measurement can match the real run. A migration that creates a role grants only on objects it creates, and the
-role's grants on objects a sealed digest hashes land in a later migration measured once the role exists in
-production, as 259 followed 258. M2 and M2b split this way, and M3, whose irrigation tables the ingestor also
-reads, is measured after M2 is applied too.
+live ledger row and receipts. A file whose merged predecessors are not applied yet names each one with
+`--apply-first <file>` (VD-39), in filename order: both write sessions apply and stamp it first, as
+`db/apply-migrations.sh` would, under the same bounds, and the fixture records the files (`applied_first`) and the
+seals they leave (`applied_first_seals`). `--native-fixture <file>` runs a migration's own checks at the end of the
+final session; M4's calls each login's attestor after the re-seal. Neither option can measure a grant
+to a role that an unapplied migration creates: the ordinary digest hashes each grantee's OID, and each
+rolled-back session allocates the role a new OID that is never reused (migration 258's note), so no measurement
+can match the real run. A migration that creates a role grants only on objects it creates, and the role's grants
+on objects a sealed digest hashes land in a later migration measured once the role exists in production, as 259
+followed 258. M2 and M2b split this way, and M3, whose irrigation tables the ingestor also reads, is measured
+after M2 is applied too.
 
 | # | Issue | Contents |
 |---|---|---|
@@ -655,7 +687,7 @@ reads, is measured after M2 is applied too.
 | M2 | VD-66 | `verdify_dashboard_runtime` and `verdify_dashboard_runtime_login` (no password) with 276's role, schema and `fn_attest_login` shape (not its unchanged-boundary postflight); the attestation also checks the guardrails and, in place of 276's denials, requires no write on `setpoint_changes` or `setpoint_plan` and nothing on `control_experiments`, `control_assignments`, `effective_policy_vectors`, `policy_delivery_outbox` or `policy_exposures`; `dashboard_session` with SELECT, INSERT, UPDATE and DELETE. Role settings `statement_timeout = 10s`, `idle_in_transaction_session_timeout = 15s`, `CONNECTION LIMIT 8`. It grants on nothing it did not create, so every receipt keeps its predecessor's value, as 276's did. SQL only: its bootstrap Job entry (`secretKeyRef` optional) lands in the R1 wiring PR (§10) |
 | M2b | VD-66 follow-up | Measured once M2 is applied in production. Grants to `verdify_dashboard_runtime`, each listed in the file and covered by a database test: SELECT on every relation and function the MVP reads (§7; not `v_greenhouse_now`), `v_water_attribution_daily`, `data_gaps`, `desired_state`, the view, `activity_log`, `setpoint_changes` and `setpoint_clamps`, and those of M4's `v_irrigation_minutes_daily`, `v_irrigation_day_coverage` and `fn_irrigation_minutes_daily(date, date)` (EXECUTE) and M6's `v_daily_scorecard` that exist when it merges, through per-login wrappers where migration 268's pattern needs them; EXECUTE on `fn_mcp_armed_assignment_context()` (no SELECT on `control_experiments`); INSERT on `desired_state` and `activity_log` with USAGE on their sequences; UPDATE on `alert_log` (ack and resolve columns) and `crop_band_anchors` (the three columns); no INSERT on `setpoint_changes`. Re-seals the api and ingestor receipts |
 | M3 | VD-38 | Per [irrigation](irrigation.md): the irrigation tables, granted to the dashboard, MCP and ingestor logins; SELECT on `v_water_event_attribution` (per-run gallons) for the dashboard and MCP logins; EXECUTE on `fn_mcp_armed_assignment_context()` for the ingestor login (Iris's irrigation context says whether an experiment is armed) |
-| M4 | VD-39 | `v_irrigation_minutes_daily` and `v_irrigation_day_coverage` (each day complete, partial or no data), granted to the runtime logins that exist when it merges |
+| M4 | VD-39 | `v_irrigation_minutes_daily` and `v_irrigation_day_coverage` (each day complete, partial or no data), and `fn_irrigation_minutes_daily(from, to)`, the minutes for a day range with the scan bounded by it (the view rebuilds every run on each read; [irrigation](irrigation.md) §6.2). SELECT on the views and EXECUTE on the function for the MCP and ingestor duties (the dashboard login exists only after M2; M2b grants all three); none for the api login. Re-seals the api, ingestor and MCP receipts |
 | M5 | VD-33 | The lighting policy functions ignore `source = 'manual'` rows (§5.2), keeping 275's `SET jit = off` on `fn_lighting_minutes_policy` (`CREATE OR REPLACE FUNCTION` resets it) |
 | M6 | VD-56 | `v_daily_scorecard` (§7), granted to the dashboard login |
 | PAR | VD-71 (Next) | The PAR meter's PPFD `climate` column. It re-creates the `v_runtime_climate_write` facade with the column and re-seals the api and ingestor receipts, or every climate write fails once the firmware publishes PPFD. It drops 195's `dli_validity_release_unavailable` CHECK and opens a new validity interval; the DLI views rebind to the column (§7) |
@@ -753,8 +785,8 @@ rows; VD-32 adds the operator-API rows.
 | Signal | BFF | Operator API |
 |---|---|---|
 | `/healthz` | static 200 | static 200 |
-| `/readyz` | 200 once config is loaded. OIDC discovery is fetched at the first `/auth/login` and retried; Authentik and operator API reachability are reported in the body, not gating, so a restart while Authentik is down keeps existing sessions' reads and Stop. `{status, source_revision}` comes from `SOURCE_REVISION`, baked at build | `SELECT 1` on its pool; each connection attests with `verdify_dashboard_runtime.fn_attest_login()` (§9). `{status, source_revision}` comes from `/etc/verdify/source-revision`, which `api/Dockerfile` already bakes |
-| Logs | JSON: service, route template, status, `duration_ms`, request id, hashed user id; a bounded `failure` when the BFF turns a render away (`overloaded`), cuts it at its deadline (`deadline`) or its render handler fails (`render_error`), and `aborted` when a response closes unfinished. Never cookies, tokens, bodies or query strings. Successful probes are not logged (weather #147) | the same fields, without `failure` and `aborted` |
+| `/readyz` | 200 once config is loaded. OIDC discovery is fetched at the first `/auth/login` and retried; Authentik and operator API reachability (the issuer's discovery document and the operator API's `/healthz`, checked at start and every 30 s) are reported in the body, not gating, so a restart while Authentik is down keeps existing sessions' reads and Stop. `{status, source_revision}` comes from `SOURCE_REVISION`, baked at build | `SELECT 1` on its pool; each connection attests with `verdify_dashboard_runtime.fn_attest_login()` (§9). `{status, source_revision}` comes from `/etc/verdify/source-revision`, which `api/Dockerfile` already bakes |
+| Logs | JSON: service, route template (`/api/v1/*` for every proxied path), status, `duration_ms` and `request_id` on every line; `user` (the first 12 hex characters of the username's SHA-256) on callback lines and `session` (the same of the session token) on proxied and sign-out lines, because the BFF never resolves a session, so sign-out cannot name the user (the operator API's INT-02 line, joined by `request_id`, does); a bounded `failure` when the BFF turns a render away (`overloaded`), cuts it at its deadline (`deadline`) or its render handler fails (`render_error`), and `aborted` when a response closes unfinished. A start stopped by a setting logs `failure: "config"` with the variable's name. Never cookies, tokens, bodies or query strings. Successful probes are not logged (weather #147) | the same fields, without `failure` and `aborted` |
 
 The request id is the `X-Request-Id` the BFF sends on every proxied call; for a write it is the `Idempotency-Key`
 (generated by the BFF when the browser sent none), so it is also `activity_log.request_id` and

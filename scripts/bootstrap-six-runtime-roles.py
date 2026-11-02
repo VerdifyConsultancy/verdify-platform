@@ -410,14 +410,41 @@ def sealed_sql_280():
     )
 
 
+IRRIGATION_MINUTES_MIGRATION = (
+    281,
+    "281-irrigation-minutes-by-zone.sql",
+    "45a6d18db74d6ae5f3744049b77a91f9fc243a099483949eb369a6a0e8d2f3f8",
+)
+SUCCESSOR_281 = {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3",
+}
+
+
+def sealed_sql_281():
+    # Keep every 280 predicate and bind the exact 281 runner stamp with the three
+    # seals its minutes-by-zone view and reader grants move.
+    predecessor = sealed_sql_280()
+    current = seal_profile_sql(280, SUCCESSOR_280)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(281, SUCCESSOR_281), 1)
+        + " AND "
+        + ledger_row_sql(*IRRIGATION_MINUTES_MIGRATION)
+        + ")"
+    )
+
+
 DASHBOARD_LOGIN_MIGRATION = (
     282,
     "282-dashboard-runtime-login.sql",
     "4df20310b951b0122313469bae5e3218b7b5679aec567ad69e44a4006a23fee5",
 )
 # Pending VD-66 measurement: 282 moves no seal, so its profile is its
-# predecessor's (281's qualified successor). All-zero until 281 merges and the
-# rolled-back native qualification measures 282; it cannot match before then.
+# predecessor's (281's qualified successor). All-zero until the rolled-back
+# native qualification measures 282 against merged 281; it cannot match before then.
 SUCCESSOR_282 = {
     "api": "0000000000000000000000000000000000000000000000000000000000000000",
     "ingestor": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -426,12 +453,10 @@ SUCCESSOR_282 = {
 
 
 def sealed_sql_282():
-    # Keep every predecessor predicate and bind the exact282 runner stamp; the
-    # dashboard duty and its sessions table change no seal. Chains from the
-    # newest merged profile; re-chain it from sealed_sql_281() once 281 is on
-    # main (VD-66 measurement step).
-    predecessor = sealed_sql_280()
-    current = seal_profile_sql(280, SUCCESSOR_280)
+    # Keep every 281 predicate and bind the exact 282 runner stamp; the dashboard
+    # duty, its schema and its sessions table change no seal.
+    predecessor = sealed_sql_281()
+    current = seal_profile_sql(281, SUCCESSOR_281)
     assert predecessor.count(current) == 1
     return (
         "("
@@ -458,6 +483,8 @@ def sealed_sql():
         + sealed_sql_279()
         + " OR "
         + sealed_sql_280()
+        + " OR "
+        + sealed_sql_281()
         + " OR "
         + sealed_sql_282()
         + ")"

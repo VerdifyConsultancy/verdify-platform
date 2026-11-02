@@ -79,9 +79,12 @@ COPY --from=builder /install /usr/local
 
 # Application code. main.py lands at /app/main.py (uvicorn `main:app`); the
 # shared schema contracts land at /app/verdify_schemas so the repo-root import
-# resolves (the `/app` entry sys.path.insert in main.py covers it).
+# resolves (the `/app` entry sys.path.insert in main.py covers it), and the
+# service layer the operator API shares with MCP at /app/verdify_services.
 COPY api/main.py ./main.py
 COPY verdify_schemas/ ./verdify_schemas/
+COPY verdify_services/ ./verdify_services/
+RUN python -c "import verdify_services.activity"
 COPY verdify_public/ ./verdify_public/
 RUN python -c "import verdify_public.output_policy"
 COPY --from=source-metadata /out/source-revision /etc/verdify/source-revision

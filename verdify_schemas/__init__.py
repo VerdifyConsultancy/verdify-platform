@@ -6,6 +6,7 @@ these schemas so malformed data fails at the boundary instead of
 partial-writing.
 """
 
+from .activity import ACTOR_SOURCE_PATTERN, ActivityLogRow, DesiredStateRow
 from .alerts import (
     ALERT_TYPES,
     AlertAckPayload,
@@ -334,6 +335,8 @@ from .views import (
 )
 
 __all__ = [
+    "ACTOR_SOURCE_PATTERN",
+    "ActivityLogRow",
     "ALL_TUNABLES",
     "ALERT_TYPES",
     "AlertAckPayload",
@@ -403,6 +406,7 @@ __all__ = [
     "DailyZoneComplianceRow",
     "DataGap",
     "DataGapStatus",
+    "DesiredStateRow",
     "DewPointRiskRow",
     "Diagnostics",
     "EMBEDDING_DIM",

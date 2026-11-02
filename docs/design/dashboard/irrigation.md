@@ -153,6 +153,7 @@ humidification minutes.
 | `irrigation_ledger` | The engine's outcomes, one row per occurrence or run-now (§6.2) |
 | `v_irrigation_minutes_daily` | Minutes, pulses and gallons per America/Denver day by zone, line, cause and chemistry (M4, §6.2) |
 | `v_irrigation_day_coverage` | Each America/Denver day's coverage: `complete`, `partial` or `no_data` (M4, §6.2) |
+| `fn_irrigation_minutes_daily(from, to)` | The minutes view's rows for a day range, with the scan bounded by it (M4, §6.2) |
 
 ### 4.2 Line fields (editable)
 
@@ -501,7 +502,8 @@ is pending, and every 60 s in full:
   (`fert_master_valve`), maps each relay to its line and zone (§3) with a fixed line map in the view, and
   takes gallons from the `water_meter_events` attribution. It does not use `water_systems`: its rows
   (migration 085) leave the wall drips without a zone and put fog in center. It needs no engine, so it
-  ships first and covers the history back to 2024-11-17.
+  ships first and covers the history back to 2025-08-05, the first wet-relay `equipment_state` row
+  (2024-11-17 is the first grow-light row).
 - **Cause.** In M4, cause comes from today's topology: L04, L07, L09 and fog are `vpd`, L02 and L03 are
   `feed`, and the rest are `unknown`. M3, which adds `irrigation_command`, extends the view: an L01 run
   that starts within 30 s of a bridge command (§6.5) is `run_now`, and each run matches its
@@ -520,14 +522,27 @@ is pending, and every 60 s in full:
 - **`v_irrigation_minutes_daily`.** Valve-open minutes, pulses and gallons per America/Denver day,
   split at local midnight (23- and 25-hour days are handled), by zone, line, cause and chemistry.
   Per-day coverage comes from `v_irrigation_day_coverage`, also in M4, built on `data_gaps` and the
-  newest `climate` row: a day wholly inside a gap, or after the newest `climate` row, is `no_data`; today
-  and any other day a gap touches are `partial`; the rest are `complete`. So days before climate's
-  365-day retention stay complete, and a day with no runs is told apart from a day with no data. Gaps
-  show as gaps, never as zero; nothing is back-filled.
+  newest `climate` row: a day wholly inside a gap, or after the newest `climate` row (every day when
+  there is no `climate` row at all), is `no_data`; today and any other day a gap touches are `partial`;
+  the rest are `complete`. So days before climate's 365-day retention stay complete, and a day with no
+  runs is told apart from a day with no data. Gaps show as gaps, never as zero; nothing is back-filled.
+- **`fn_irrigation_minutes_daily(from, to)`.** The view rebuilds every run since the first edge on each
+  read (about 1.4 s for 30 days on production in 2026-11, and more at two years of misting), so M4 also
+  ships this reader: the view's rows for local days `from`..`to`, with the `equipment_state` scan bounded
+  by the range. It is seeded with each relay's state at `from`'s local midnight, read as
+  `v_water_relay_runs` reads it (any row on at the newest timestamp before it, rather than
+  `fn_equip_at`'s single row), and a run still open at the end of the range looks ahead for its
+  closing edge, so its gallons match the view's. It is SECURITY DEFINER and granted like the views.
+  API-IRR-10 reads it, and API-IRR-01's minutes and MCP `irrigation_history` get the same numbers from
+  it; a 30-day read is about 0.7 s on production and a 400-day read about 1.7 s. M3 redefines it with
+  the view.
 - **Gallons (D-IRP-18, Round 2b B), informational.** Whole gallons per run and per day: `gal` is the
   whole-gallon meter delta attributed to the run or mist episode (±1 gal; the meter also counts the
   hose, sink and hydro). There is no per-run rate and no flow flag; a run that moved no water reads
-  "0 gal". These figures stop nothing.
+  "0 gal". These figures stop nothing. A day's `gal` sums `v_water_run_accounting.meter_attributed_gal`
+  over the runs that start that day; when none of them overlapped an accepted delta it reads 0 if the
+  meter recorded one that day and NULL if it recorded none. L03's valve minutes have no gallons: its
+  water counts on the line it feeds.
 
 ### 6.3 Alerts (in-app `alert_log`, category `water`)
 

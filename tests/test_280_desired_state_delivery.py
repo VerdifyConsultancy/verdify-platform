@@ -174,7 +174,7 @@ def test_sealed_sql_280_chains_from_279_and_binds_the_exact_ledger_row():
     expected += " AND " + six.ledger_row_sql(*six.DESIRED_STATE_MIGRATION) + ")"
     assert six.sealed_sql_280() == expected
     assert "stamp_method='runner'" in six.ledger_row_sql(*six.DESIRED_STATE_MIGRATION)
-    # Later successors (282, ...) follow 280 in the same OR list.
+    # 280 follows 279 in both ORs; later successors (281, 282) follow it.
     assert six.sealed_sql().count(" OR " + six.sealed_sql_279() + " OR " + expected) == 1
     assert maintenance.contract_sql().count(" OR " + six.sealed_sql_280()) == 1
 
