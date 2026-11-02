@@ -36,6 +36,11 @@ export type EditDrawerProps = {
   error?: string | null;
   /** More actions beside Save, for operators ("Release to auto"). */
   actions?: ReactNode;
+  /**
+   * The item cannot be changed at all (a setting the API serves with `writable: false`): read-only for everyone, as
+   * for a viewer, with Done and no Save or actions.
+   */
+  readOnly?: boolean;
   /** The fields: `NumberField`, `Switch`, `Select`, `TimeField`, `ManualToggle`, `Reason`. */
   children?: ReactNode;
 };
@@ -44,15 +49,18 @@ export type EditDrawerProps = {
  * The one edit drawer (design system §4.3), for settings, schedules and line options: a native `<dialog>` opened with
  * `showModal()`, 28rem on the right at 1440 px and a full-screen sheet with pinned actions at 390 px. Focus goes to the
  * first field and back to the opener; Escape, × and Cancel close without asking; Tab stays inside. A viewer gets it
- * read-only (the values and Done, no Save); with changes switched off an operator sees the fields and Save disabled.
+ * read-only (the values and Done, no Save), and so does everyone for an item marked `readOnly`; with changes switched
+ * off an operator sees the fields and Save disabled.
  */
-export function EditDrawer({ open, onClose, title, eyebrow, heading, status, graph, onSave, saving = false, saveLabel = "Save", error, actions, children }: EditDrawerProps) {
+export function EditDrawer({ open, onClose, title, eyebrow, heading, status, graph, onSave, saving = false, saveLabel = "Save", error, actions, readOnly: fixed = false, children }: EditDrawerProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const errorId = useId();
   const operator = useRole() === "operator";
   const writesEnabled = useWritesEnabled();
-  const readOnly = !operator || !writesEnabled;
+  const readOnly = fixed || !operator || !writesEnabled;
+  // Cancel, the actions and Save: for an operator on an item that can change; otherwise Done alone.
+  const changes = operator && !fixed;
   const { onKeyDown, onCancel } = useModalDialog(ref, open, onClose, (dialog) => firstField(dialog) ?? focusables(dialog.querySelector(".drawer-actions") ?? dialog)[0] ?? null);
   const graphTo = graph ? graphLink(graph.param, graph.unit) : null;
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -78,9 +86,9 @@ export function EditDrawer({ open, onClose, title, eyebrow, heading, status, gra
         {error && <FieldError id={errorId}>{error}</FieldError>}
       </div>
       <div className="drawer-actions">
-        <Button onClick={onClose}>{operator ? "Cancel" : "Done"}</Button>
-        {operator && actions}
-        <Button write variant="primary" type="submit" busy={saving}>{saveLabel}</Button>
+        <Button onClick={onClose}>{changes ? "Cancel" : "Done"}</Button>
+        {changes && actions}
+        {changes && <Button write variant="primary" type="submit" busy={saving}>{saveLabel}</Button>}
       </div>
     </form>
   </dialog>;

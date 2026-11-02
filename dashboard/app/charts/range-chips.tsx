@@ -13,9 +13,10 @@ export const RANGES = [
 ] as const;
 export type RangeId = (typeof RANGES)[number]["id"];
 
-export function RangeChips({ current, href }: { current: string | null; href: (range: RangeId) => string }) {
+/** `only` keeps a subset, in this order: Equipment offers 24 h and 72 h (screens SCR-07). */
+export function RangeChips({ current, href, only }: { current: string | null; href: (range: RangeId) => string; only?: readonly RangeId[] }) {
   return <ul className="chips chips-sm range-chips" aria-label="Range">
-    {RANGES.map((range) => <li key={range.id}>
+    {RANGES.filter((range) => !only || only.includes(range.id)).map((range) => <li key={range.id}>
       <Link to={href(range.id)} aria-current={range.id === current ? "page" : undefined} preventScrollReset>{range.label}</Link>
     </li>)}
   </ul>;

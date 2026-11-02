@@ -102,7 +102,8 @@ export function buildTimeSeriesModel(input: TimeSeriesInput): TimeSeriesModel {
   const unit = input.unit ?? input.metrics[0]?.unit ?? input.settings?.[0]?.history.unit ?? "";
   const metrics = input.metrics.filter((metric) => metric.unit === unit);
   const { series, now, xRange } = input;
-  const t = series ? series.t : [];
+  // uPlot takes a mutable x column; the parsed Series is read-only.
+  const t = series ? [...series.t] : [];
   const bucketSeconds = series?.bucket_s ?? 300;
   const windowFrom = epochOf(series?.from) ?? xRange.from;
   const windowTo = epochOf(series?.to) ?? xRange.to;

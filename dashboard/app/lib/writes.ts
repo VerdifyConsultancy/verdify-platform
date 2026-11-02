@@ -29,7 +29,7 @@ import {
   type WriteResult,
 } from "./operator-api";
 import { engineFlag, fetchRead, readKey, SETTLING_INTERVAL_MS } from "./queries";
-import { outOfRange, rangeText, settingValueText } from "./setting-values";
+import { keptValueText, outOfRange, rangeText } from "./setting-values";
 import { NOW_QUERY_KEY } from "./shell";
 import { hasWords, words } from "./words";
 
@@ -148,12 +148,12 @@ export type SettingSave = { readonly value: number; readonly manual?: boolean; r
 /**
  * The Save toast: "Requested 1.55 kPa for VPD Mister Engage", the stored value with `Setting.unit` and then
  * `Setting.label`, plus "(snapped from 1.53)" when the server snapped it; a release reads "Released <label>: plan, band
- * or default applies".
+ * or default applies". The value keeps the decimals it was stored with: Iris's 48.75 taken manual reads 48.75.
  */
 export function settingToast(saved: Pick<DesiredSetting, "value" | "snapped_from">, setting: Pick<SettingInfo, "label" | "kind" | "unit" | "step" | "options">): string {
   if (saved.value === null) return `Released ${setting.label}: plan, band or default applies`;
   const snapped = saved.snapped_from !== null && saved.snapped_from !== undefined ? ` (snapped from ${formatNumber(saved.snapped_from)})` : "";
-  return `Requested ${settingValueText(saved.value, setting)} for ${setting.label}${snapped}`;
+  return `Requested ${keptValueText(saved.value, setting)} for ${setting.label}${snapped}`;
 }
 
 /**

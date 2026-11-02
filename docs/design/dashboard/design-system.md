@@ -114,7 +114,7 @@ Weather's header, nav and footer, with a Verdify lockup.
 | Part | Spec |
 |---|---|
 | Lockup | Link `.brand`, `aria-label="Verdify dashboard, home"`. The glyph is `#verdify-v-glyph` from `site/quartz/static/brand/verdify-wordmark.svg`, inlined as JSX without its `<style>` and Inter `<text>`: leaf path `.brand-leaf`, ink path `.brand-mark`, dot `.brand-dot`. About 1.2em tall, it is the V, so no gap follows it; then "erdify" in Plex Sans 620 at 1.1rem, then `<small> · DASHBOARD</small>` (weather `.brand small`). Never animated. Favicon: `site/quartz/static/brand/favicon.svg`. |
-| Nav | Weather's `SECTIONS` model (label, path, `owns(path)`), `aria-current="page"`; the open-alert count is plain text in the link ("Activity 2"): unacknowledged `v_open_alerts` rows, repeats of one `alert_type` and zone counted once (as Activity lists them), the one count every surface uses. Above 860 px the top nav lists every section with weather's 2px forest underline ([screens](screens.md) §1.1). At 860 px and below a fixed bottom bar (a labelled `nav`) holds Now, Water, Graphs, Activity and More as text tabs of at least 44 px, the current one ink with a 2px forest top rule; More opens `/more`: Plan, Settings, Equipment, Sign out and the build line. |
+| Nav | Weather's `SECTIONS` model (label, path, `owns(path)`), `aria-current="page"`; the open-alert count is plain text in the link ("Activity 2"): unacknowledged `v_open_alerts` rows, repeats of one `alert_type` and `sensor_id` counted once (as Activity lists them), the one count every surface uses. Above 860 px the top nav lists every section with weather's 2px forest underline ([screens](screens.md) §1.1). At 860 px and below a fixed bottom bar (a labelled `nav`) holds Now, Water, Graphs, Activity and More as text tabs of at least 44 px, the current one ink with a 2px forest top rule; More opens `/more`: Plan, Settings, Equipment, Sign out and the build line. |
 | Header tools | Role pill (OPERATOR or VIEWER); above 860 px also the display name and "Sign out" (POST form), which move to More at 860 px and below. No units or theme toggle. |
 | Banners | Under the header, only while true: one fault banner at a time, worst first (API down, ingestor not running, controller not reporting, leak), then warn, one line each, each linking to the page that explains it. [Screens](screens.md) §1.2 lists the banners, when they show and their words; §4.5 has the states |
 | Footer | Weather `.site-footer`: "Verdify dashboard · build `<sha>` · API `<sha>`", graphs.verdify.ai ↗, lab.verdify.ai ↗, IBM Plex licences |
@@ -232,6 +232,20 @@ are one tap with no dialog; settings and schedule saves never confirm. Values ar
 | `ScheduleWeek` | Week grid: rows L01, L02 and L04–L10 (L05 and L06 marked reserved), columns today and the next 6 days. Each occurrence is a block with its time, minutes or pulses and MANUAL when set; one that will not run is hatched with why (line paused or disabled, Schedule off); "Last 7 days" shows past blocks with their outcome word; the editor's draft previews as PLANNED outlines; selecting a block offers Edit, or Pause the line until after it ([screens](screens.md) SCR-04) | At 390 a day switcher shows one day for every line, with no horizontal scroll |
 | `MisterAssociation` | Two `Switch`es per mister zone, "VPD control" and "Schedule", a one-line summary and the zone's VPD source; a change reads REQUESTED until the controller reports the program that carries it, then CONFIRMED | Any combination; both off reads "This zone will not mist automatically"; a watchdog back-off or fault shows on the `LineCard` |
 
+As built (VD-12): `SettingRow` (`dashboard/app/components/setting-row.tsx`) shows each row as API-09 serves it and
+decides nothing. The device line is the readback with its unit, CONFIRMED and "· 2 min ago"; STALE with "Last data …
+ago (HH:MM)" while readbacks are stale or the controller is not reporting; "—" with `readback.reason` when there is no
+value; keyed on `group`, a Band in force row reads "62.0 °F · DERIVED · 4 min ago" and NO READBACK shows only for
+another row with `readback_via` none; a site cap reads "On controller · rev 42: 360 gal", without the rev while
+API-IRR-01 fails, and STALE like any device value. Under it sits the request line while REQUESTED, NOT CONFIRMED or
+HELD ("→ 1.55 kPa REQUESTED · 20 s · MANUAL · jason · “Vandas drying”", then `StateReasonLine` with the desired row's
+`state_reason`; a plan value carries none, so it reads the default), a write to a row with no readback path while it
+is in force ("Sent. This setting has no readback, so it can never show CONFIRMED"), else who wrote the value in force
+("Iris changed this at 07:02" or "steward changed this at 06:47" with AI, "jason changed this at 08:00 · Iris may
+adjust", "Forecast rule · system", "Released: plan, band or default applies"), and a read-only row's
+`read_only_reason` verbatim. Values keep the decimals they carry (`keptValueText`: Iris's 48.75 on a 30 s grid reads
+48.75), and so does the Save toast. `EditDrawer` gained `readOnly` for a row served with `writable: false`: read-only
+for operators too, with Done and no Save or actions.
 ### 4.7 As built (VD-15)
 
 The Water screen is `dashboard/app/routes/water.tsx` (the layout) with `water-board.tsx`, `water-schedules.tsx` and
@@ -250,7 +264,7 @@ The Water screen is `dashboard/app/routes/water.tsx` (the layout) with `water-bo
 | Limits strip | Mister zones first, then capped drips named by zone and kind ("Wall drip", "Center feed"); a reserved line still disabled is left out |
 | Week | "Last 7 days" (`past_days=7`) shows the seven days before today; today stays in "Next 7 days", where its past blocks already read their outcome. A past skipped block reads "skipped · <reason>", one ahead the reason alone. L05 and L06 are marked Reserved while they are disabled, as their cards are. The API's fixed occurrence notes pass through the words table (`occurrence_reason`): "only while VPD sensing is degraded" reads "only if VPD sensing is degraded" |
 | Run ledger | The window is `from` and `to` local days in the URL (To inclusive, the last 7 days by default, cut to 31 days, or 30 when 31 local days hold the fall-back day and so run 31 days and an hour); older pages load once and stay, and only the newest page polls |
-| Graphs link | `graphWindowUrl` writes whole seconds in UTC (`2026-11-01T08:00:00Z`) and links an unreadable time to Graphs' default view |
+| Graphs link | `graphWindowUrl` writes whole seconds in UTC (`2026-11-01T08:00:00Z`), and `runGraphUrl` links an unreadable time to Graphs' default view |
 | Stop | `useStop` notes the running lines from the newest API-02 answer the page holds, the shell's own poll included, so Water offers Disable for L01 without a second API-02 poll |
 
 ## 5. Charts on uPlot
