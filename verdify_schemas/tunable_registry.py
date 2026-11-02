@@ -4064,28 +4064,12 @@ LEGACY_WIDE_LIMIT_PARAMS: frozenset[str] = frozenset(
 ACTIVITY_MIRROR_PARAMS: frozenset[str] = frozenset(
     {"activity_start_hour", "activity_start_minute", "activity_duration_min"}
 )
-# The nine weekly-feed commissioning rows. They retire with the irrigation
-# engine: #1162 deletes them from REGISTRY, and they then read unknown_target.
-WEEKLY_FEED_PARAMS: frozenset[str] = frozenset(
-    {
-        "sw_wall_fertigation_commissioned",
-        "wall_commissioning_revision",
-        "wall_commissioning_evidence_mask",
-        "wall_commissioning_valid_until_epoch_s",
-        "wall_flow_lpm",
-        "wall_flow_valid_until_epoch_s",
-        "wall_prewet_liters",
-        "wall_feed_liters",
-        "wall_flush_liters",
-    }
-)
 # Decides which side owns the band; refused by name whatever its class.
 BAND_OWNER_SWITCH = "sw_onchip_band_enabled"
 
 READ_ONLY_REASONS: dict[str, str] = {
     "unknown": "not a registered setting",
     "band_owner": "decides which side owns the band",
-    "weekly_feed": "weekly-feed commissioning value; retiring with the irrigation engine",
     "legacy_wide_limit": "legacy wide limit; not the band while the controller runs its on-chip curve",
     "activity_mirror": "derived by the dispatcher from the main-light schedule",
     "retired": "retired; the controller no longer uses it",
@@ -4107,8 +4091,8 @@ def desired_write_rule(name: str) -> tuple[bool, str | None]:
     * Writable: ``planner_policy``, ``scheduled_policy``, ``controller_safety`` and ``crop_band`` rows with an
       ``esp_object_id`` (``irrig_*_duration_min``, ``sw_irrig_*`` and the ``gl_*`` rows among them), and the
       ``irrigation_site`` rows, which reach the controller in the irrigation program.
-    * Read-only: ``readback_context`` and ``retired`` rows; the legacy wide limits; the activity mirror; the
-      nine weekly-feed commissioning rows (until #1162 deletes them); ``sw_onchip_band_enabled``, by name.
+    * Read-only: ``readback_context`` and ``retired`` rows; the legacy wide limits; the activity mirror;
+      ``sw_onchip_band_enabled``, by name.
 
     A ``crop_band`` row is writable only while ``crop_band_anchors`` holds its rows (the zone priorities and
     the window values never do): ``verdify_services.settings`` adds that database check
@@ -4119,8 +4103,6 @@ def desired_write_rule(name: str) -> tuple[bool, str | None]:
         return False, READ_ONLY_REASONS["unknown"]
     if name == BAND_OWNER_SWITCH:
         return False, READ_ONLY_REASONS["band_owner"]
-    if name in WEEKLY_FEED_PARAMS:
-        return False, READ_ONLY_REASONS["weekly_feed"]
     if name in LEGACY_WIDE_LIMIT_PARAMS:
         return False, READ_ONLY_REASONS["legacy_wide_limit"]
     if name in ACTIVITY_MIRROR_PARAMS:
