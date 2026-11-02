@@ -320,26 +320,46 @@ def test_controller_intent_on_and_lutron_off_store_separate_keys(env, monkeypatc
     }
 
 
+_RECEIPT_FUNCTION_DEFINITION = re.compile(
+    r"CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+public\.fn_record_equipment_state_source_receipt\s*\(",
+    re.IGNORECASE,
+)
+
+
+def _migration_order(path: Path) -> tuple[int, str]:
+    number, suffix = re.match(r"(\d+)([a-z]*)-", path.name).groups()
+    return int(number), suffix
+
+
 def test_every_mapped_equipment_stream_is_admitted_by_its_write_path():
     """A stream outside the receipt function's list would stall the receipt queue.
 
     public.fn_record_equipment_state_source_receipt raises on any stream it does
     not list, so every other ESP32 stream must be in that list, and the intent
-    streams must go through the ordinary view instead.
+    streams must go through the ordinary view instead. Only migrations that
+    (re)define the function count; a later GRANT or REVOKE on it does not.
     """
     definitions = sorted(
-        path
-        for path in (REPO_ROOT / "db" / "migrations").glob("*.sql")
-        if "FUNCTION public.fn_record_equipment_state_source_receipt(" in path.read_text()
+        (
+            path
+            for path in (REPO_ROOT / "db" / "migrations").glob("*.sql")
+            if _RECEIPT_FUNCTION_DEFINITION.search(path.read_text())
+        ),
+        key=_migration_order,
     )
+    assert definitions, "no migration defines public.fn_record_equipment_state_source_receipt"
     sql = definitions[-1].read_text()
-    block = sql[sql.index("IF v_equipment NOT IN (") :]
+    *_, latest = _RECEIPT_FUNCTION_DEFINITION.finditer(sql)
+    block = sql[sql.index("IF v_equipment NOT IN (", latest.start()) :]
     admitted = set(re.findall(r"'([a-z0-9_]+)'", block[: block.index(") THEN")]))
     streams = set(entity_map.EQUIPMENT_BINARY_MAP.values()) | set(entity_map.EQUIPMENT_SWITCH_MAP.values())
 
     assert ingestor._ORDINARY_EQUIPMENT_STREAMS == {"grow_light_main_intent", "grow_light_grow_intent"}
     assert not ingestor._ORDINARY_EQUIPMENT_STREAMS & admitted
     assert streams - ingestor._ORDINARY_EQUIPMENT_STREAMS <= admitted
+    # The intent rows reach the database only through this flush, on the
+    # ordinary pool: the equipment-source collector login cannot insert them.
+    assert "await write_ordinary_equipment_events(pool)" in inspect.getsource(ingestor.flush_loop)
 
 
 # ── Source guards ───────────────────────────────────────────────────────────
