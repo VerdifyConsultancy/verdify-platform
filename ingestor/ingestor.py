@@ -100,6 +100,7 @@ from tasks import (
     gpu_power_sync,
     grow_light_daily,
     ha_sensor_sync,
+    hydro_probe_sync,
     infra_cpu_sync,
     matview_refresh,
     midnight_watch,
@@ -4551,6 +4552,9 @@ async def task_loop(
         ("matview_refresh", 300, matview_refresh),
         ("shelly_sync", 300, shelly_sync),
         ("ha_sensor_sync", 300, ha_sensor_sync),
+        # VD-70: read-only YINMIK hydro meter over Tuya local TCP 6668; idle until
+        # the optional verdify-hydro-probe Secret is mounted.
+        ("hydro_probe_sync", 300, hydro_probe_sync),
         ("alert_monitor", 300, alert_monitor),
         # #297: unavailable until measured saturation targets and alert adapter exist.
         ("soil_saturation_status", 3600, saturation_evaluation_status),

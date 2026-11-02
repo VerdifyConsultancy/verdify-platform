@@ -45,6 +45,7 @@ from ._common import (
     json,
     log,
     sync_occupancy_state,
+    update_latest_climate_row,
 )
 
 
@@ -502,18 +503,7 @@ async def ha_sensor_sync(pool: asyncpg.Pool) -> None:
                 log.error("HA climate overlay failed schema validation: %s", e)
                 climate_cols = {}
         if climate_cols:
-            latest = await conn.fetchval(
-                "SELECT ts FROM climate WHERE ts > now() - interval '5 minutes' AND temp_avg IS NOT NULL ORDER BY ts DESC LIMIT 1"
-            )
-            if latest:
-                parts, vals = [], []
-                for i, (c, v) in enumerate(climate_cols.items()):
-                    parts.append(f"{c} = ${i + 1}")
-                    vals.append(v)
-                vals.append(latest)
-                await conn.execute(
-                    f"UPDATE v_runtime_climate_write SET {', '.join(parts)} WHERE ts = ${len(vals)}", *vals
-                )
+            await update_latest_climate_row(conn, climate_cols)
 
         # Grow lights → equipment_state. Record every HA poll so lighting
         # traceability can prove physical state after OTA even if a relay held.

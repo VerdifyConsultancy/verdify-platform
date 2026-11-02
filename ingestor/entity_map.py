@@ -417,41 +417,15 @@ DAILY_ACCUM_MAP: dict[str, str] = {
 # Maps ESP32 object_id → canonical DB parameter name
 # Written to setpoint_snapshot table for ground-truth tracking
 # ──────────────────────────────────────────────────────────────
-# firmware-v2 (firmware/v2-solar-bands) added these cfg_* readback sensors
-# (firmware/greenhouse/sensors.yaml). The underlying number/switch entities live
-# only in firmware (no registry row), so route the readbacks here directly:
-# ESPHome sensor `id:` → canonical setpoint param name. The firmware-v2-dropped
-# fog-window / micropulse / dawn-rehydrate / midday-drench / overnight-micropulse
-# / night-humidity-source cfg_* readbacks remain in the registry-derived base
-# (their registry rows persist) but are now dead firmware routes — allow-listed
-# in verdify_schemas/tests/test_firmware_drift.py.
-_CFG_READBACK_ADDED_FW_V2 = {
-    "cfg_night_stress_min_dew_margin_f": "night_stress_min_dew_margin_f",
-    "cfg_sw_onchip_band_enabled": "sw_onchip_band_enabled",
-    "cfg_sw_wet_taper_enabled": "sw_wet_taper_enabled",
-    "cfg_sw_night_stress_wet_enabled": "sw_night_stress_wet_enabled",
-    # F9 (issue 5): night econ-heat suppression switch — was enforced firmware-side
-    # with no readback (fire-and-forget). sensors.yaml now publishes the cfg_*; map
-    # it so the ingestor can confirm the device holds the operator's value.
-    "cfg_sw_night_econ_heat_suppress_enabled": "sw_night_econ_heat_suppress_enabled",
-    # #410/#420: the vent+reheat held-temp dehum enable readback
-    # (cfg___dehum_vent_hold_enabled → sw_dehum_vent_hold_enabled) now flows
-    # from the registry's cfg_readback_object_id (CFG_READBACK_MAP_REG). The
-    # PR #421 manual route here was retired when the registry row landed —
-    # this dict merges LAST into CFG_READBACK_MAP, so keeping it would have
-    # shadowed the registry-derived route with a conflicting canonical name
-    # (dehum_vent_hold_enabled has no registry row; SetpointSnapshot would
-    # keep rejecting it — issue #420 break (b)). The 5 manual routes above
-    # remain #420 scope (their keys are id-form and wire-dead as documented
-    # in the issue).
-    # Item-3 arbiter switch readback (cfg_arbiter_zone_enabled →
-    # sw_arbiter_zone_enabled) now flows from the registry's cfg_readback_object_id
-    # (CFG_READBACK_MAP_REG); the manual alias here was redundant and is removed.
-}
+# Every route derives from the registry: each row's cfg_readback_object_id,
+# plus its alias table. No hand-written route lives here, so none can shadow
+# a registry route with a parameter name SetpointSnapshot rejects (#420). VD-63
+# registered the last six firmware tunables that had no row and removed the
+# _CFG_READBACK_ADDED_FW_V2 stopgap, whose C++-id keys never matched the
+# object_ids the device reports.
 CFG_READBACK_MAP: dict[str, str] = {
     **CFG_READBACK_MAP_REG,
     **CFG_READBACK_ALIASES_REG,
-    **_CFG_READBACK_ADDED_FW_V2,
 }
 
 # ──────────────────────────────────────────────────────────────

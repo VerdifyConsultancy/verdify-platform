@@ -8,6 +8,9 @@ import ipaddress
 import pytest
 from test_mcp_egress_boundary import allowed, rendered, selected  # noqa: F401
 
+# VD-70: the YINMIK hydro meter's reserved IoT address (jvallery/network-infra).
+HYDRO_METER = "192.168.10.105"
+
 
 def policy(rendered, name):
     return next(x for x in rendered if x and x["kind"] == "NetworkPolicy" and x["metadata"]["name"] == name)
@@ -36,6 +39,45 @@ def test_writer_has_one_policy_and_exact_greenhouse_exceptions(rendered):
     assert allowed(p, "192.168.30.31", 6443)
     assert allowed(p, "192.168.30.107", 8123)
     assert allowed(p, "10.42.1.2", 1883, pod_labels={"app.kubernetes.io/component": "mqtt-broker"})
+    assert allowed(p, HYDRO_METER, 6668)
+
+
+def test_hydro_reader_dials_the_admitted_meter_and_its_secret_is_optional(rendered):
+    writer = next(
+        x for x in rendered if x and x["kind"] == "Deployment" and x["metadata"]["name"] == "verdify-ingestor"
+    )
+    pod = writer["spec"]["template"]["spec"]
+    container = next(c for c in pod["containers"] if c["name"] == "ingestor")
+    assert {e["name"]: e.get("value") for e in container["env"]}["VERDIFY_HYDRO_PROBE_HOST"] == HYDRO_METER
+    # A missing Secret must leave the reader idle, never block the sole writer's start.
+    volume = next(v for v in pod["volumes"] if v["name"] == "hydro-probe")
+    assert volume["secret"]["secretName"] == "verdify-hydro-probe" and volume["secret"]["optional"] is True
+    mount = next(m for m in container["volumeMounts"] if m["name"] == "hydro-probe")
+    assert mount == {"name": "hydro-probe", "mountPath": "/etc/verdify/hydro-probe", "readOnly": True}
+
+
+def test_hydro_meter_is_one_exact_tcp_6668_rule(rendered):
+    rules = [
+        rule
+        for rule in policy(rendered, "allow-ingestor-device-egress")["spec"]["egress"]
+        if any(target.get("ipBlock", {}).get("cidr") == f"{HYDRO_METER}/32" for target in rule["to"])
+    ]
+    assert rules == [{"to": [{"ipBlock": {"cidr": f"{HYDRO_METER}/32"}}], "ports": [{"protocol": "TCP", "port": 6668}]}]
+
+
+@pytest.mark.parametrize(
+    "address,port,protocol",
+    [
+        (HYDRO_METER, 6667, "TCP"),
+        (HYDRO_METER, 6053, "TCP"),
+        ("192.168.10.111", 6668, "TCP"),
+        (HYDRO_METER, 6666, "UDP"),
+        (HYDRO_METER, 6667, "UDP"),
+        ("192.168.10.255", 6667, "UDP"),
+    ],
+)
+def test_hydro_meter_admits_nothing_beyond_tuya_tcp(rendered, address, port, protocol):
+    assert not allowed(policy(rendered, "allow-ingestor-device-egress"), address, port, protocol)
 
 
 @pytest.mark.parametrize(

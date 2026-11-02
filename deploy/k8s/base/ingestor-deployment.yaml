@@ -211,10 +211,13 @@ spec:
               mountPath: /tmp
             # HA token mounted at the path the HA_TOKEN_FILE env above names,
             # which config.py load_token() reads. The ha_sensor_sync ingestor task
-            # (Lutron light readback, hydro probe, Frigate occupancy) fetches from
-            # Home Assistant with this token; without it the task fails every run
-            # ("[Errno 2] ... ha_token.txt") and the climate hydro_* columns go
-            # stale (the 2026-06-07 cutover regression).
+            # (Lutron light readback, Frigate occupancy, and the hydro_* columns
+            # until VD-70's direct reader takes over) fetches from Home Assistant
+            # with this token; without it the task fails every run
+            # ("[Errno 2] ... ha_token.txt") and those columns go stale
+            # (the 2026-06-07 cutover regression). shelly_sync reads the meter
+            # over Modbus and hydro_probe_sync the YINMIK meter over Tuya local;
+            # neither uses this token.
             # Real token via the verdify-ha-token Secret (out-of-band SOPS), the
             # SAME Secret the setpoint-server component mounts; local builds use
             # the placeholder file.

@@ -862,6 +862,106 @@ REGISTRY: dict[str, TunableDef] = {
         notes="Item-3 per-zone arbiter master enable. Default OFF — ships inert; the arbiter (select_arbiter_zone in controls.yaml) only drives select_zone_for_pulse when ON. The firmware publishes cfg_arbiter_zone_enabled (sensor name 'Cfg Arbiter Zone Enabled' → cfg_arbiter_zone_enabled); without this row the setpoint_snapshot rejected it every cycle. Flip after a corpus zone-distribution review.",
     ),
     # ─────────────────────────────────────────────────────────────────────
+    # VD-63: six live firmware tunables that had no row, so Settings could not
+    # list them and setpoint_snapshot rejected their readbacks. Shaped like
+    # sw_arbiter_zone_enabled: tier 2, never planner-pushable, no wire_id.
+    # Bounds and fw_clamp equal the tunables.yaml entity; defaults are the
+    # globals.yaml initial values. The ids are the object_ids the device
+    # reports: the entity or sensor name lower-cased, each character outside
+    # [a-z0-9_-] replaced by "_" (ESPHome keeps hyphens). No plan, band or
+    # default names these rows, so registering them pushes nothing.
+    # ─────────────────────────────────────────────────────────────────────
+    "mister_hysteresis_kpa": TunableDef(
+        name="mister_hysteresis_kpa",
+        kind="numeric",
+        min=0.05,
+        max=0.50,
+        default=0.10,
+        fw_clamp_lo=0.05,
+        fw_clamp_hi=0.50,
+        esp_object_id="mister_hysteresis__kpa_",
+        cfg_readback_object_id="cfg___mister_hysteresis__kpa_",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="IRR-2 mister VPD hysteresis floor, kPa. The mister state machine uses max(this, "
+        "mister_engage_kpa x 0.25), capped at the band width, so misting cannot chatter inside a "
+        "tight band. Its cfg_* readback ships with the engine release OTA; until then the native "
+        "number state is the readback.",
+    ),
+    "night_stress_min_dew_margin_f": TunableDef(
+        name="night_stress_min_dew_margin_f",
+        kind="numeric",
+        min=3.0,
+        max=15.0,
+        default=6.0,
+        fw_clamp_lo=3.0,
+        fw_clamp_hi=15.0,
+        esp_object_id="night_stress_min_dew_margin___f_",
+        cfg_readback_object_id="cfg___night_stress_min_dew_margin___f_",
+        push_owner="safety",
+        planner_pushable=False,
+        tier=2,
+        notes="BC-7 night wetting dew margin, °F. At night, wetting and fog need a temperature-dewpoint "
+        "spread of at least max(direct_wet_stress_min_dew_margin_f, this), so no crown condensation. "
+        "The default is the global's initial value (6.0); default_setpoints() in greenhouse_types.h "
+        "says 10.0, but the live global starts at 6.0.",
+    ),
+    "sw_night_econ_heat_suppress_enabled": TunableDef(
+        name="sw_night_econ_heat_suppress_enabled",
+        kind="switch",
+        default=1,
+        esp_object_id="night_econ_heat_suppress_enabled",
+        cfg_readback_object_id="cfg_night_econ_heat_suppress_enabled",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="ENV-2 night econ-heat suppression (default ON). Never heat to chase humidity at night: "
+        "the econ-rescue heat (heat1 lifting a low VPD) is suppressed for the whole solar night half; "
+        "safety heat is untouched.",
+    ),
+    "sw_wet_taper_enabled": TunableDef(
+        name="sw_wet_taper_enabled",
+        kind="switch",
+        default=1,
+        esp_object_id="wet_taper_enabled",
+        cfg_readback_object_id="cfg_wet_taper_enabled",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Wet taper master enable (default ON). Routine wetting stops wet_taper_before_sunset_min "
+        "before the on-chip sunset and stays off through the night half, so foliage dries before dark.",
+    ),
+    "sw_night_stress_wet_enabled": TunableDef(
+        name="sw_night_stress_wet_enabled",
+        kind="switch",
+        default=1,
+        esp_object_id="night_stress_wet_enabled",
+        cfg_readback_object_id="cfg_night_stress_wet_enabled",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Night stress wetting master enable (default ON). Lets the stress-wet rule fire at night "
+        "under the stricter night_stress_min_dew_margin_f; the mister machinery and SAF-4 caps bound the water.",
+    ),
+    # Read-only on purpose: no esp_object_id, so no route can push it and
+    # Settings shows it read-only with the reason in notes. Its readback
+    # (cfg_on-chip_band_enabled) still lands in setpoint_snapshot. Label set
+    # here because the row has no entity match (the switch name).
+    "sw_onchip_band_enabled": TunableDef(
+        name="sw_onchip_band_enabled",
+        kind="switch",
+        default=1,
+        esp_object_id=None,
+        cfg_readback_object_id="cfg_on-chip_band_enabled",
+        push_owner="firmware_internal",
+        planner_pushable=False,
+        tier=2,
+        label="On-Chip Band Enabled",
+        notes="Decides which side owns the band. Off hands the band to the dispatcher's legacy wide "
+        "limits, which Settings shows read-only; band_device_db_divergence alerts when it is off.",
+    ),
+    # ─────────────────────────────────────────────────────────────────────
     # Per-zone VPD targets (push_owner="band" — dispatcher pushes from crop
     # profile) + related scoring tunables. Tier=2: visible context, not
     # planner-writable unless promoted in a replay-backed contract PR.
@@ -1195,18 +1295,23 @@ REGISTRY: dict[str, TunableDef] = {
         tier=2,
         notes="Fog blocks when indoor temp below this (evap cooling hurts in cold).",
     ),
+    # RETIRED (VD-63): no firmware YAML has the fog_window_start__hr_ /
+    # fog_window_end__hr_ entities or their cfg_* readbacks, so both rows carry
+    # no route. They stay so the setpoint_changes history still validates;
+    # scripts/export-replay-overrides.sh reads only that history.
     "fog_time_window_start": TunableDef(
         name="fog_time_window_start",
         kind="numeric",
         min=5,
         max=12,
         default=6,
-        esp_object_id="fog_window_start__hr_",
-        cfg_readback_object_id="cfg___fog_window_start__hour_",
+        esp_object_id=None,
+        cfg_readback_object_id=None,
         push_owner="planner",
         planner_pushable=False,
         tier=2,
-        notes="Start hour for fog eligibility window.",
+        notes="Retired: start hour of the old fog eligibility window. The firmware has no such entity; "
+        "the row stays for setpoint_changes history.",
     ),
     "fog_time_window_end": TunableDef(
         name="fog_time_window_end",
@@ -1214,12 +1319,13 @@ REGISTRY: dict[str, TunableDef] = {
         min=14,
         max=20,
         default=18,
-        esp_object_id="fog_window_end__hr_",
-        cfg_readback_object_id="cfg___fog_window_end__hour_",
+        esp_object_id=None,
+        cfg_readback_object_id=None,
         push_owner="planner",
         planner_pushable=False,
         tier=2,
-        notes="End hour for fog eligibility window.",
+        notes="Retired: end hour of the old fog eligibility window. The firmware has no such entity; "
+        "the row stays for setpoint_changes history.",
     ),
     # BC-11 (ADR0003 §6.7): the fog_stress_* clock-window tunables are RETIRED dead
     # registry rows — replaced by the solar-phase curve-only fog gate (no firmware
@@ -3447,12 +3553,15 @@ _FW2_WINDOW_PARAMS: dict[str, tuple[float, float, float, str]] = {
 def _esphome_wire_slug(display_name: str) -> str:
     """Apply ESPHome's exact per-character object-id normalization.
 
-    ESPHome lowercases the display name and replaces every non-ASCII
-    alphanumeric character independently.  It does not collapse or trim the
-    resulting underscores.  This is intentionally stricter than a web-style
+    ESPHome lowercases the display name and replaces every character outside
+    ``[a-z0-9_-]`` independently, so hyphens survive ("Cfg On-Chip Band
+    Enabled" is ``cfg_on-chip_band_enabled``).  It does not collapse or trim
+    the resulting underscores.  This is intentionally stricter than a web-style
     slugifier because ``Cfg • X (kPa)`` becomes ``cfg___x__kpa_`` on the API.
     """
-    return "".join(char if char.isascii() and char.isalnum() else "_" for char in display_name.lower())
+    return "".join(
+        char if (char.isascii() and char.isalnum()) or char in "-_" else "_" for char in display_name.lower()
+    )
 
 
 # Words the firmware writes in capitals in the staged readback names
@@ -3733,6 +3842,7 @@ _ENTITY_STEPS: dict[str, float] = {
     "mister_center_penalty": 0.1,
     "mister_engage_delay_s": 30.0,
     "mister_engage_kpa": 0.05,
+    "mister_hysteresis_kpa": 0.01,
     "mister_max_runtime_min": 10.0,
     "mister_min_off_s": 5.0,
     "mister_off_s": 30.0,
@@ -3741,6 +3851,7 @@ _ENTITY_STEPS: dict[str, float] = {
     "mister_pulse_on_s": 5.0,
     "mister_vpd_weight": 0.5,
     "mister_water_budget_gal": 10.0,
+    "night_stress_min_dew_margin_f": 0.5,
     "night_vpd_bias_kpa": 0.01,
     "outdoor_staleness_max_s": 30.0,
     "safety_max": 1.0,
@@ -3865,6 +3976,7 @@ _ENTITY_NAMES: dict[str, str] = {
     "mister_center_penalty": "Mister Center Penalty",
     "mister_engage_delay_s": "Mister Engage Delay (s)",
     "mister_engage_kpa": "VPD Mister Engage kPa",
+    "mister_hysteresis_kpa": "Mister Hysteresis (kPa)",
     "mister_max_runtime_min": "Mister Max Runtime (min)",
     "mister_min_off_s": "Mister Min Off (s)",
     "mister_off_s": "Mister OFF (s)",
@@ -3873,6 +3985,7 @@ _ENTITY_NAMES: dict[str, str] = {
     "mister_pulse_on_s": "Mister Pulse ON (s)",
     "mister_vpd_weight": "Mister VPD Weight",
     "mister_water_budget_gal": "Mister Water Budget (gal)",
+    "night_stress_min_dew_margin_f": "Night Stress Min Dew Margin (°F)",
     "night_vpd_bias_kpa": "Night VPD Bias kPa",
     "outdoor_staleness_max_s": "Outdoor Staleness Max (s)",
     "safety_max": "Safety Max °F",
@@ -3908,9 +4021,12 @@ _ENTITY_NAMES: dict[str, str] = {
     "sw_irrigation_wall_enabled": "Irrigation Wall Enabled",
     "sw_irrigation_weather_skip": "Irrigation Weather Skip",
     "sw_mister_closes_vent": "Mister Closes Vent",
+    "sw_night_econ_heat_suppress_enabled": "Night Econ Heat Suppress Enabled",
+    "sw_night_stress_wet_enabled": "Night Stress Wet Enabled",
     "sw_occupancy_inhibit": "Occupancy Mist Inhibit",
     "sw_summer_vent_enabled": "Summer Vent Enabled",
     "sw_wall_fertigation_commissioned": "Wall Fertigation Commissioned",
+    "sw_wet_taper_enabled": "Wet Taper Enabled",
     "temp_high": "Set Temp High °F",
     "temp_hysteresis": "Temp Hysteresis °F",
     "temp_low": "Set Temp Low °F",
@@ -3969,6 +4085,9 @@ RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
         "direct_wet_stress_latest_hour",
         "fan_burst_min",
         "fog_burst_min",
+        # VD-63: no firmware entity or readback; the rows carry no route.
+        "fog_time_window_end",
+        "fog_time_window_start",
         "mist_vent_close_lead_s",
         "mist_vent_reopen_delay_s",
         "mister_all_off_s",
@@ -3980,6 +4099,48 @@ RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
         "summer_vent_min_runtime_s",
         "vent_bypass_min",
         *_INERT_IRRIGATION_COMPAT_TUNABLES,
+    }
+)
+
+# tunables.yaml number and switch entity ids (ESPHome ``id:``) that the
+# irrigation engine release removes (irrigation design §5, F12 and F13). The
+# catalog drift test (verdify_schemas/tests/test_tunable_registry.py) accepts
+# an entity listed here even when no REGISTRY row covers it, as for
+# num_post_feed_hold_min and num_mister_daily_volume_max. #1162 deletes these
+# entities and shrinks the set to the L01 bridge's; the follow-up that ships
+# once the engine firmware is last-good empties it.
+RETIRING_TUNABLES: frozenset[str] = frozenset(
+    {
+        # F12: the HA burst numbers, replaced by manual_override
+        "num_fan_burst",
+        "num_vent_bypass",
+        "num_fog_burst",
+        # F11/F13: caps the irrigation program carries
+        "num_mister_max_runtime",
+        "num_mister_daily_volume_max",
+        # F13: legacy irrigation numbers
+        "num_irrig_wall_duration",
+        "num_irrig_center_duration",
+        "num_irrig_vpd_boost_pct",
+        "num_irrig_vpd_boost_threshold",
+        # F13: weekly wall-feed commissioning numbers and the post-feed hold
+        "num_wall_commissioning_revision",
+        "num_wall_commissioning_evidence_mask",
+        "num_wall_commissioning_valid_until",
+        "num_wall_flow_lpm",
+        "num_wall_flow_valid_until",
+        "num_wall_prewet_liters",
+        "num_wall_feed_liters",
+        "num_wall_flush_liters",
+        "num_post_feed_hold_min",
+        # F13: legacy irrigation switches
+        "sw_irrig_enabled",
+        "sw_irrig_wall_enabled",
+        "sw_irrig_center_enabled",
+        "sw_irrig_south_enabled",
+        "sw_irrig_west_enabled",
+        "sw_irrig_weather_skip",
+        "sw_wall_fertigation_commissioned",
     }
 )
 

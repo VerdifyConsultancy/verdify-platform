@@ -95,6 +95,7 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-agent-secrets` | `AGENT_RO_DSN` | dev/coding agent (read-only `agent_ro`/`pg_read_all_data`, migration 184; **read-only, no device path**) | — | — | ✓ |
 | `verdify-frigate-vision-auth` | `token` | Vision CronJob and public API camera reader, mounted read-only at `/vfrigate/token`; existing GET-only two-camera snapshot credential, values owned by agents KSOPS | — | — | ✓ |
 | `verdify-firmware-ota` | `ota_password` | `make firmware-deploy` ESPHome OTA upload + `firmware-rollback.sh`; **device-affecting** (flash gate) | — | — | ✓ |
+| `verdify-hydro-probe` | `device-id`, `local-key` | ingestor, optional volume mount (`/etc/verdify/hydro-probe`; read-only YINMIK hydro reader, VD-70) | — | — | opt |
 
 ¹ dev/staging are device-dark: the ingestor runs `replicas: 0` and egress to the
 device VLAN is denied. The key may be present in the sealed secret for shape parity
@@ -271,6 +272,22 @@ renderer, OAuth, experiment and owner Secret keys remain unchanged.
 `iris_slack_bot_token.txt`, preserving the existing Iris bot identity. The
 single ingestor mounts it read-only at `/etc/verdify/slack`, matching
 `slack.yaml`; no app/signing token is required by this sender.
+
+### Hydroponic probe (VD-70, #1183)
+
+`verdify-hydro-probe` is owned by the agents KSOPS lane. It carries the YINMIK
+meter's Tuya `device-id` and `local-key`. The single ingestor mounts it
+read-only and optionally at `/etc/verdify/hydro-probe`; `hydro_probe_sync`
+reads both files on every poll and, while either is absent, logs one
+`hydro key missing` line and idles. The values never appear in env, Git or a
+log line, and no placeholder renders.
+
+Rotate: re-pairing the meter in the Tuya app changes the local key. Jason reads
+the new key from the Tuya cloud (LocalTuya's device entry or
+`python -m tinytuya wizard`) and reseals it in agents KSOPS; the ingestor uses
+it at its next poll once the kubelet refreshes the mount, with no restart. A new
+protocol version goes in `VERDIFY_HYDRO_PROBE_TUYA_VERSION`
+(`deploy/k8s/overlays/prod/hydro-probe.patch.yaml`).
 
 ### #643 prepared maintenance duties (source proposal, not provisioned)
 
