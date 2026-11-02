@@ -201,8 +201,12 @@ function fieldChanges(detail: Detail): string[] {
   }
   return out;
 }
-/** A run's length: "12 min", or a mister's "4 × 45 s, 60 s apart", with any prewet and flush. */
-function runText(detail: Detail): string | null {
+/**
+ * A run's length: "12 min", or a mister's "4 × 45 s, 60 s apart", with any prewet and flush. The fields sit in the
+ * detail itself (the L01 bridge's `minutes`) or in the command's `args`.
+ */
+function runText(written: Detail): string | null {
+  const detail: Detail = isRecord(written.args) ? { ...written, ...written.args } : written;
   const parts: string[] = [];
   if (isNumber(detail.minutes)) parts.push(formatValue(detail.minutes, "min"));
   if (isNumber(detail.on_s)) {
@@ -215,9 +219,11 @@ function runText(detail: Detail): string | null {
 }
 
 /**
- * What a row changed, after its writer: before → after, with "requested 1.53" when the server snapped the value; a
- * plan's one change with its rule (the forecast engine's) or trigger (Iris's); a run's length; a schedule or line
- * update's fields; "manual" or "manual cleared"; and "during experiment <id>" for a write made while one was armed.
+ * What a row changed, after its writer: before → after, with "requested 1.53" when the server snapped the value (the
+ * service stores `requested` on every write, so only one that differs from `value` says so); a plan's one change with
+ * its rule by name (the forecast engine's, its id only when it has no name) or trigger (Iris's); a run's length; a
+ * schedule or line update's fields; "manual" or "manual cleared"; and "during experiment <id>" for a write made while
+ * one was armed.
  */
 export function entryFacts(entry: ActivityEntry, catalog: Catalog): string[] {
   const detail: Detail = entry.detail ?? {};
@@ -227,13 +233,13 @@ export function entryFacts(entry: ActivityEntry, catalog: Catalog): string[] {
     const changes = planChanges(detail);
     if (changes.length === 1) facts.push(planChangeText(changes[0], catalog, localDate(entry.ts)));
     const ruleId = isNumber(detail.rule_id) || typeof detail.rule_id === "string" ? String(detail.rule_id) : null;
-    if (typeof detail.rule === "string" && detail.rule) facts.push(`rule “${detail.rule}”${ruleId ? ` (id ${ruleId})` : ""}`);
+    if (typeof detail.rule === "string" && detail.rule) facts.push(`rule “${detail.rule}”`);
     else if (ruleId) facts.push(`rule ${ruleId}`);
     if (typeof detail.trigger_id === "string" && detail.trigger_id) facts.push(`trigger ${detail.trigger_id}`);
   } else if (action.startsWith("setting.")) {
     if (action === "setting.release" || detail.value === null) facts.push("back to plan, band or default");
     else if ("value" in detail) facts.push(changeText("before" in detail ? detail.before : undefined, detail.value, catalog.get(entry.target)));
-    if (isNumber(detail.requested)) facts.push(`requested ${formatNumber(detail.requested)}`);
+    if (isNumber(detail.requested) && detail.requested !== detail.value) facts.push(`requested ${formatNumber(detail.requested)}`);
   } else if (action === "irrigation.run") {
     const run = runText(detail);
     if (run) facts.push(run);

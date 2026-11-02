@@ -113,8 +113,7 @@ function AlertsPanel({ view, params, irrigation }: { view: ActivityView; params:
     {linked}
     {groups.open.length ? <ol className="events alert-list">{groups.open.map(item)}</ol>
       : <p className="alert-empty">{alertListEmptyText({ readOk: true, ingestor: freshness?.ingestor, climate: freshness?.climate })}</p>}
-    {groups.acknowledged.length > 0 && <AcknowledgedGroup key={`${expandedId}:${groups.acknowledged.some((row) => row.id === expandedId)}`}
-      rows={groups.acknowledged} holdsExpanded={groups.acknowledged.some((row) => row.id === expandedId)} item={item} />}
+    {groups.acknowledged.length > 0 && <AcknowledgedGroup rows={groups.acknowledged} holdsExpanded={groups.acknowledged.some((row) => row.id === expandedId)} item={item} />}
     {view.resolved && <section className="alert-group" aria-labelledby="alert-resolved-head">
       <h3 id="alert-resolved-head">Resolved in the last 24 h</h3>
       {groups.closed.length ? <ol className="events alert-list">{groups.closed.map(item)}</ol> : <p className="alert-empty">Nothing resolved in the last 24 h.</p>}
@@ -125,10 +124,19 @@ function AlertsPanel({ view, params, irrigation }: { view: ActivityView; params:
 
 const notOpenText = (id: string) => `Alert ${id} is not open or resolved in the last 24 h`;
 
-/** "Acknowledged, still open (N)", collapsed unless it holds the expanded alert. */
+/**
+ * "Acknowledged, still open (N)", collapsed until it holds the expanded alert (a link to one, or an Acknowledge that
+ * moved it here), then as the person leaves it. Its rows stay mounted, so a Clear fault readback or a note in progress
+ * survives another alert being expanded or hidden.
+ */
 function AcknowledgedGroup({ rows, holdsExpanded, item }: { rows: readonly Alert[]; holdsExpanded: boolean; item: (alert: Alert) => ReactNode }) {
-  const [chosen, setChosen] = useState<boolean | null>(null);
-  return <Details className="alert-group" open={chosen ?? holdsExpanded} onToggle={(event) => setChosen(event.currentTarget.open)}
+  const [open, setOpen] = useState(holdsExpanded);
+  const [wasHolding, setWasHolding] = useState(holdsExpanded);
+  if (wasHolding !== holdsExpanded) {
+    setWasHolding(holdsExpanded);
+    if (holdsExpanded) setOpen(true);
+  }
+  return <Details className="alert-group" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}
     summary={`Acknowledged, still open (${rows.length})`}>
     <ol className="events alert-list">{rows.map(item)}</ol>
   </Details>;
@@ -183,10 +191,16 @@ function AlertItem({ alert, expanded, toggleHref, me, now, irrigation }: AlertIt
     {faulted && <ClearFault lineId={lineId} />}
   </> : undefined;
   const detailId = `alert-${alert.id}-detail`;
-  // The API names people by username; the signed-in person reads by name ("Acknowledged by Jason · 06:47").
-  const named: Alert = { ...alert, acknowledged_by: alert.acknowledged_by ? personName(alert.acknowledged_by, me) : alert.acknowledged_by };
+  // The API names people by username; the signed-in person reads by name ("Acknowledged by Jason · 06:47"). An open
+  // flow alert's message is the ingestor's words for what LeakLines shows live ("… since 03:02", "Flow stopped at
+  // 03:20"), so the row says it once; the expanded fields keep the message.
+  const leakOpen = alert.alert_type === "leak_detected" && !closed;
+  const named: Alert = {
+    ...alert, message: leakOpen ? "" : alert.message,
+    acknowledged_by: alert.acknowledged_by ? personName(alert.acknowledged_by, me) : alert.acknowledged_by,
+  };
   return <AlertRow alert={named} title={title} id={`alert-${alert.id}`} acknowledge={quick}>
-    {alert.alert_type === "leak_detected" && !closed && <LeakLines alert={alert} now={now} />}
+    {leakOpen && <LeakLines alert={alert} now={now} />}
     {alert.alert_type === "irrigation_fence_breach" && <ValveLine alert={alert} irrigation={irrigation} />}
     {closed && <ClosedLine alert={alert} me={me} />}
     <p className="alert-toggle"><Link to={toggleHref} preventScrollReset aria-expanded={expanded} aria-controls={expanded ? detailId : undefined}>
@@ -198,10 +212,10 @@ function AlertItem({ alert, expanded, toggleHref, me, now, irrigation }: AlertIt
       {alert.runbook ? <p className="runbook">{alert.runbook}</p> : <p>No runbook for this alert type.</p>}
       <GraphLink firstSeen={alert.first_seen_at} />
       {!closed && <OperatorOnly><div className="alert-respond">
-        <NoteField value={note} onChange={setNote} />
+        <NoteField value={note} onChange={setNote} sentWith={unacknowledged ? "Acknowledge or Resolve" : "Resolve"} />
         <div className="actions">
-          {unacknowledged && <Button write wide busy={sending === "ack"} disabled={record.sending} onClick={() => void respond("ack", note || null)}>Acknowledge</Button>}
-          <Button write wide busy={sending === "resolve"} disabled={record.sending} onClick={() => void respond("resolve", note || null)}>Resolve</Button>
+          {unacknowledged && <Button write wide busy={sending === "ack"} disabled={record.sending} onClick={() => void respond("ack", note.trim() || null)}>Acknowledge</Button>}
+          <Button write wide busy={sending === "resolve"} disabled={record.sending} onClick={() => void respond("resolve", note.trim() || null)}>Resolve</Button>
         </div>
         {record.error && <p className="field-error" role="alert">{record.error.message}</p>}
       </div></OperatorOnly>}
@@ -259,12 +273,15 @@ function detailValue(value: unknown): ReactNode {
   if (typeof value === "boolean") return value ? "true" : "false";
   return <code>{JSON.stringify(value)}</code>;
 }
-/** Every field of an expanded alert: each code raw beside the words the row already shows, null as "—". */
+/**
+ * Every field of an expanded alert, null as "—". The type and severity read through the words table like every other
+ * code (an unknown one raw); `details` shows as stored.
+ */
 function alertFields(alert: Alert, me: SignedIn): KvItem[] {
   const details = Object.entries(alert.details ?? {});
   const by = (who: string | null | undefined, at: string | null | undefined) => (at ? <>{who ? `by ${personName(who, me)} · ` : ""}<LocalTime at={at} date /></> : null);
   const items: KvItem[] = [
-    { term: "Type", value: <code>{alert.alert_type}</code> },
+    { term: "Type", value: words("alert_type", alert.alert_type) },
     { term: "Category", value: alert.category || null },
     { term: "Severity", value: words("alert_severity", alert.severity) },
     { term: "Message", value: alert.message || null },
@@ -279,15 +296,18 @@ function alertFields(alert: Alert, me: SignedIn): KvItem[] {
   return items;
 }
 
-/** The one optional note Acknowledge and Resolve send: one line of at most 500 characters, with a counter. */
-function NoteField({ value, onChange }: { value: string; onChange: (text: string) => void }) {
+/**
+ * The one optional note Acknowledge and Resolve send: one line of at most 500 characters, with a counter. `sentWith`
+ * names the buttons the row offers ("Acknowledge or Resolve", or "Resolve" once acknowledged).
+ */
+function NoteField({ value, onChange, sentWith }: { value: string; onChange: (text: string) => void; sentWith: string }) {
   const ids = useFieldIds();
   const writesEnabled = useWritesEnabled();
   return <div className="field note-field">
     <label htmlFor={ids.id}>Note (optional)</label>
     <input id={ids.id} type="text" maxLength={REASON_MAX} autoComplete="off" value={value} disabled={!writesEnabled} aria-describedby={ids.hintId}
       onChange={(event) => onChange(event.target.value)} />
-    <FieldHint id={ids.hintId}>{value.length}/{REASON_MAX} characters, sent with Acknowledge or Resolve</FieldHint>
+    <FieldHint id={ids.hintId}>{value.length}/{REASON_MAX} characters, sent with {sentWith}</FieldHint>
   </div>;
 }
 

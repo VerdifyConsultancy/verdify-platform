@@ -48,6 +48,8 @@ test("a setting write reads before → after with its unit, the requested value 
   const write = entry({ detail: { before: 1.6, value: 1.55, requested: 1.53, manual: { before: false, after: true } } });
   expect(entryTitle(write, CATALOG)).toBe("Set VPD Mister Engage");
   expect(plain(entryFacts(write, CATALOG))).toEqual(["1.60 → 1.55 kPa", "requested 1.53", "manual"]);
+  // The service stores `requested` on every write: one the server did not snap says nothing more.
+  expect(plain(entryFacts(entry({ detail: { before: 1.6, value: 1.55, requested: 1.55, manual: { before: false, after: true } } }), CATALOG))).toEqual(["1.60 → 1.55 kPa", "manual"]);
   // No readback before: "—", never 0. A switch reads OFF and ON.
   expect(plain(entryFacts(entry({ detail: { before: null, value: 1.55 } }), CATALOG))).toEqual(["— → 1.55 kPa"]);
   expect(entryFacts(entry({ target: "sw_gl_main_auto_mode", detail: { before: 0, value: 1 } }), CATALOG)).toEqual(["OFF → ON"]);
@@ -71,11 +73,16 @@ test("plan changes read from either writer's shape; a rule without a name and an
   expect(plain(entryFacts(iris, CATALOG))).toEqual(["VPD Mister Engage 1.70 kPa from Nov 3, 13:00"]);
   const rule = entry({ action: "plan.write", target: "preemptive-1", experiment_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7", detail: { changes: [], rule_id: 7 } });
   expect(entryFacts(rule, CATALOG)).toEqual(["rule 7", "during experiment 7c9e6679-7425-40de-944b-e07fc1f90ae7"]);
+  // A named rule reads by its name alone, as the forecast engine's row does ("· rule “hot afternoon”").
+  const named = entry({ action: "plan.write", target: "preemptive-2", detail: { changes: [{ param: "mister_engage_kpa", before: 1.6, value: 1.5 }], rule: "hot afternoon", rule_id: 3 } });
+  expect(plain(entryFacts(named, CATALOG))).toEqual(["VPD Mister Engage 1.60 → 1.50 kPa", "rule “hot afternoon”"]);
 });
 
 test("irrigation rows: the action in words with its line, a run's length, the fields an update changed, and an unknown action raw", () => {
   const run = (detail: Record<string, unknown>) => plain(entryFacts(entry({ action: "irrigation.run", target: "L08", detail }), CATALOG));
   expect(run({ on_s: 45, count: 4, gap_s: 60, prewet_s: 120, flush_s: 240, command_id: "x" })).toEqual(["4 × 45 s, 60 s apart, prewet 120 s, flush 240 s"]);
+  // A command's fields may sit in its `args`, as the run command stores them.
+  expect(run({ command_id: "x", args: { minutes: 12 } })).toEqual(["12 min"]);
   expect(entryTitle(entry({ action: "irrigation.stop", target: "all" }), CATALOG)).toBe("Stopped every line");
   expect(entryTitle(entry({ action: "irrigation.clear_fault", target: "L04" }), CATALOG)).toBe("Cleared the fault on L04");
   const update = entry({ action: "irrigation.line.update", target: "L02", detail: { before: { enabled: false, daily_cap_min: 0, paused_until: "2026-11-02T21:00:00Z" }, value: { enabled: true, daily_cap_min: 30, paused_until: null }, manual: { before: false, after: true } } });

@@ -191,15 +191,22 @@ test("the flow alert reads its plain title, expands in place with its runbook an
   expect(lines).toEqual(expect.arrayContaining([
     "A leak, or the hose, sink or hydro in use.", "3 gal in the last 10 min · Updated 20 s ago", "If no one is using water, close the spigot.",
   ]));
+  // The title says it once: the alert's message is the same words, shown in the expanded fields.
+  expect(lines).not.toContain("Water flowing with every Verdify valve closed");
   expect(within(item).queryByRole("button", { name: /Stop/ })).toBeNull();
   expect(text(item.querySelector(".runbook"))).toBe("1. Check the hose, sink and hydro. 2. Walk the wall line and the manifold for a break. 3. If no one is using water, close the spigot.");
   // First seen 10:38 (17:38Z): the window 15:38Z to 19:38Z.
   expect(within(item).getByRole("link", { name: "Open in Graphs" }).getAttribute("href")).toBe("/graphs?from=2026-11-02T15:38:00Z&to=2026-11-02T19:38:00Z");
-  expect(text(item.querySelector(".alert-detail .kv"))).toContain("Typeleak_detected");
+  // Every field, each code through the words table: the type reads as the title does, never raw.
+  expect(text(item.querySelector(".alert-detail .kv"))).toContain("TypeWater flowing with every Verdify valve closedCategorywaterSeverityCritical");
+  expect(text(item)).not.toContain("leak_detected");
   stopped();
   // Once the meter has read under 0.1 gal/min twice: Flow stopped at HH:MM, never an all clear.
   await open("/activity", { fixture: "flow-stopped" });
-  expect([...alertRow(201).querySelectorAll(".event-body > p")].map(text)).toEqual(expect.arrayContaining(["Flow stopped at 10:40", "If no one is using water, close the spigot."]));
+  const stoppedLines = [...alertRow(201).querySelectorAll(".event-body > p")].map(text);
+  expect(stoppedLines).toEqual(expect.arrayContaining(["Flow stopped at 10:40", "If no one is using water, close the spigot."]));
+  // The ingestor's message says the same ("Flow stopped at 10:40"): the row says it once.
+  expect(stoppedLines.filter((line) => line === "Flow stopped at 10:40")).toHaveLength(1);
   expect(text(alertRow(201))).not.toMatch(/all clear|0 gal/i);
 });
 
@@ -208,7 +215,7 @@ test("a runbook renders as text with its line breaks, never as HTML", async () =
   const runbook = alertRow(501).querySelector(".runbook");
   expect(runbook?.textContent).toBe("1. Stop all water.\n2. Check that the south fert mister (L08) relay reads OFF.\n3. If water still flows, close the spigot.");
   expect(runbook?.children).toHaveLength(0);
-  expect(alertRow(501).querySelector(".alert-detail code")?.textContent).toBe("irrigation_fence_breach");
+  expect(text(alertRow(501))).not.toContain("irrigation_fence_breach");
 });
 
 test("a copied /activity?alert=<id> link still opens the alert after a new repeat merges; an id no longer open is looked up in the last 24 h", async () => {
@@ -225,12 +232,47 @@ test("a copied /activity?alert=<id> link still opens the alert after a new repea
   expect(requests(api, "API-14").map((row) => row.path)).toEqual(["/api/v1/alerts?status=open&limit=200", "/api/v1/alerts?status=recent&limit=200"]);
 });
 
-test("the run-missed alert reads its plain title with L02, never the raw code", async () => {
+test("the run-missed alert reads its plain title with L02, never the raw code, expanded too", async () => {
   await open("/activity", { fixture: "run-missed" });
   const item = alertRow(502);
   expect(text(item.querySelector("h3"))).toBe("A scheduled watering was missed");
   expect(text(item.querySelector(".alert-facts"))).toBe("L02 · since 09:35 (1 h)");
   expect(text(item)).not.toContain("irrigation_run_missed");
+  fireEvent.click(within(item).getByRole("link", { name: /^Details/ }));
+  await advance(0);
+  expect(text(screen.getByTestId("where"))).toBe("/activity?alert=502");
+  expect(text(alertRow(502).querySelector(".alert-detail .kv"))).toContain("TypeA scheduled watering was missed");
+  expect(text(alertRow(502))).not.toContain("irrigation_run_missed");
+});
+
+test("the acknowledged group opens for the alert it holds, then stays as left, and its rows keep what was typed", async () => {
+  const api = await open("/activity", { fixture: "alerts-merged" });
+  const group = () => alertsPanel().querySelector("details.alert-group") as HTMLDetailsElement;
+  expect(group().open).toBe(false);
+  // Its own row expands from a link: the group opens, and the note goes out with Resolve alone (it is acknowledged).
+  fireEvent.click(within(alertRow(103)).getByRole("link", { name: /^Details/, hidden: true }));
+  await advance(0);
+  expect(group().open).toBe(true);
+  const item = alertRow(103);
+  expect(text(item.querySelector(".field-hint"))).toBe("0/500 characters, sent with Resolve");
+  expect(within(item).queryByRole("button", { name: "Acknowledge" })).toBeNull();
+  fireEvent.change(within(item).getByLabelText("Note (optional)"), { target: { value: "Waiting on the part" } });
+  // Expanding another alert, then hiding it, neither closes the group nor drops the draft.
+  fireEvent.click(within(alertRow(101)).getByRole("link", { name: /^Details/ }));
+  await advance(0);
+  expect(text(screen.getByTestId("where"))).toBe("/activity?alert=101");
+  expect(group().open).toBe(true);
+  fireEvent.click(within(alertRow(101)).getByRole("link", { name: "Hide details" }));
+  await advance(0);
+  expect(group().open).toBe(true);
+  fireEvent.click(within(alertRow(103)).getByRole("link", { name: /^Details/ }));
+  await advance(0);
+  expect((within(alertRow(103)).getByLabelText("Note (optional)") as HTMLInputElement).value).toBe("Waiting on the part");
+  // A note of spaces is no note.
+  fireEvent.change(within(alertRow(103)).getByLabelText("Note (optional)"), { target: { value: "   " } });
+  fireEvent.click(within(alertRow(103)).getByRole("button", { name: "Resolve" }));
+  await advance(0);
+  expect(requests(api, "API-16")).toEqual([expect.objectContaining({ path: "/api/v1/alerts/103/resolve", body: null })]);
 });
 
 test("fence-breach: Stop all water shows with and without the engine and sends one API-IRR-07 with no dialog, even with changes off", async () => {
@@ -319,8 +361,9 @@ test("activity-mixed: who wrote in text, AI for Iris and the agent only, each ch
   expect(text(agent.querySelector(".event-reason"))).toBe("“forecast 92 °F”");
   // The forecast rule is the system, never AI: its one change inline, before → after, with its rule.
   const forecast = logRow("Plan preemptive-20261102-0630");
-  expect(writtenBy(forecast)).toBe("forecast-engine · system · Mister Pulse Gap 45 → 60 s · rule “hot afternoon” (id 3)");
+  expect(writtenBy(forecast)).toBe("forecast-engine · system · Mister Pulse Gap 45 → 60 s · rule “hot afternoon”");
   expect(ai(forecast)).toBe(false);
+  expect(text(forecast.querySelector(".event-reason"))).toBe("“Forecast: hot afternoon — temp_f > 88 (actual 92 at 14:00)”");
   expect(forecast.querySelector("details")).toBeNull();
   expect(text(logRow("Acknowledged “Relay stuck”").querySelector(".event-reason"))).toBe("“breaker reset”");
   // A row from another day carries its date.

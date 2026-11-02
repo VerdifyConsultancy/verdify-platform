@@ -372,7 +372,16 @@ export const FIXTURES = {
   },
   "flow-stopped": (world) => {
     flowWithValvesClosed(world, world.now - 12 * MINUTE);
-    world.leak = { ...world.leak, active: false, flow_gpm: 0, gal_last_10min: 2, stopped_at: iso(world.now - 2 * MINUTE) };
+    const stopped = world.now - 2 * MINUTE;
+    world.leak = { ...world.leak, active: false, flow_gpm: 0, gal_last_10min: 2, stopped_at: iso(stopped) };
+    // The open row as the ingestor rewrites it once the meter reads under 0.1 gal/min twice (VD-72): its message and
+    // details.stopped_at say when flow stopped.
+    const { hour, minute } = local(stopped);
+    const alert = world.alerts.find((row) => row.id === world.leak.alert_id);
+    Object.assign(alert, {
+      message: `Flow stopped at ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+      details: { since: world.leak.since, stopped_at: iso(stopped) },
+    });
   },
   "l01-running": (world) => {
     runLine(world, "L01", { cause: "run_now", started: world.now - 12 * MINUTE, ends: world.now + 3 * MINUTE });
@@ -520,10 +529,12 @@ export const FIXTURES = {
     const plan = world.plan.plan;
     const entry = (row) => ({ detail: {}, reason: null, state: null, confirmed_at: null, experiment_id: null, request_id: null, ...row });
     world.activity = [
-      world.activity.find((row) => row.action === "irrigation.run"),
+      ...world.activity.filter((row) => row.action === "irrigation.run").slice(0, 1),
       entry({
         id: 21, ts: iso(at("06:30")), actor: actor("system", "forecast-engine"), action: "plan.write", target: `preemptive-${local(at("06:30")).date.replaceAll("-", "")}-0630`,
         detail: { changes: [{ param: "mister_pulse_gap_s", before: 45, value: 60 }], rule: "hot afternoon", rule_id: 3 },
+        // The engine's setpoint_plan.reason, which VD-65 also logs as the row's reason.
+        reason: "Forecast: hot afternoon — temp_f > 88 (actual 92 at 14:00)",
       }),
       entry({
         id: 22, ts: iso(at("06:45")), actor: JASON, action: "alert.ack", target: "88", detail: { alert_type: "relay_stuck" }, reason: "breaker reset",
