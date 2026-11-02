@@ -694,13 +694,14 @@ function runNow(world, { params, body, key }) {
   };
   return { status: 202, body: sent, effect };
 }
-/** API-IRR-07: never blocked; every running line in scope reads OFF from the next read. */
+/** API-IRR-07: never blocked; every running line in scope reads OFF from the next read (L01 never does under stop-unconfirmed). */
 function stop(world, { body, key }) {
   const args = object(body);
   if (args.line_id !== undefined && (typeof args.line_id !== "string" || !LINE_ID.test(args.line_id))) throw refuse(422, "unknown_target", "Unknown line", "line_id is L01-L11, or omit it for every line", { field: "line_id" });
   const sent = command(world, "stop", args.line_id ?? null, args, key);
   const effect = (next) => {
-    const stopped = stopLines(next, args.line_id ? [args.line_id] : LINES.map((line) => line.line_id), world.now);
+    const scope = args.line_id ? [args.line_id] : LINES.map((line) => line.line_id);
+    const stopped = stopLines(next, next.flags.stopUnconfirmed ? scope.filter((id) => id !== "L01") : scope, world.now);
     if (next.flags.flowAfterStop && stopped.length && !next.leak.active) flowWithValvesClosed(next, world.now);
     activity(next, { ts: sent.created_at, actor: sent.actor, action: "irrigation.stop", target: args.line_id ?? "all", detail: { command_id: sent.command_id, stopped }, reason: sent.reason, request_id: key });
   };
