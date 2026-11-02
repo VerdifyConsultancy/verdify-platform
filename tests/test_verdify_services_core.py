@@ -11,7 +11,7 @@ import asyncio
 import json
 import sys
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import get_args
 
@@ -215,6 +215,40 @@ def test_key_order_does_not_change_the_hash_but_op_target_and_payload_do():
         reason: str | None
 
     assert activity.request_hash("API-10", "mister_engage_kpa", Body(value=1.53, manual=True, reason=None)) == first
+
+
+def test_a_dict_and_the_model_it_validates_into_hash_alike_with_times_and_ids():
+    """One surface may pass its typed arguments, the other the validated body: both hash one request alike."""
+
+    class Pause(BaseModel):
+        paused_until: datetime
+        resume_on: date
+        at: time
+        slot: uuid.UUID
+        reason: str | None = None
+
+    mountain = timezone(timedelta(hours=-7))
+    for paused_until in (NOW, datetime(2026, 11, 2, 11, 0, 0, 250000, tzinfo=mountain)):
+        typed = {
+            "paused_until": paused_until,
+            "resume_on": date(2026, 11, 3),
+            "at": time(6, 30),
+            "slot": uuid.UUID(int=7),
+            "reason": None,
+        }
+        model = Pause(**typed)
+        assert activity.canonical_request("API-IRR-08", "L01", typed) == activity.canonical_request(
+            "API-IRR-08", "L01", model
+        )
+        # The browser's JSON body, parsed but not validated, hashes the same too.
+        assert activity.request_hash("API-IRR-08", "L01", model.model_dump(mode="json")) == activity.request_hash(
+            "API-IRR-08", "L01", typed
+        )
+    assert b'"paused_until":"2026-11-02T18:00:00Z"' in activity.canonical_request(
+        "API-IRR-08", "L01", {"paused_until": NOW}
+    )
+    with pytest.raises(TypeError, match="is not JSON"):
+        activity.request_hash("API-IRR-08", "L01", {"minutes": object()})
 
 
 class SettingBody(BaseModel):
@@ -561,16 +595,21 @@ def test_append_validates_through_the_row_model_and_returns_the_id():
             reason="high wind",
         )
     )
-    assert new_id == 101 and conn.pending["activity"][0]["detail"] == {"at": NOW.isoformat(), "rule": "high_wind"}
-    for bad in ({"action": "climate.write"}, {"target": ""}, {"reason": "r" * 501}):
+    assert new_id == 101 and conn.pending["activity"][0]["detail"] == {
+        "at": "2026-11-02T18:00:00Z",
+        "rule": "high_wind",
+    }
+    for bad in ({"action": "climate.write"}, {"target": ""}):
         with pytest.raises(ValidationError):
             run(activity.append(conn, AGENT, **{"action": "setting.write", "target": "x", **bad}))
+    # The log takes any reason, as its column does: Iris's unchanged set_tunable must never be refused (R5).
+    assert run(activity.append(conn, Actor.iris(), action="plan.write", target="p-1", reason="r" * 2000)) == 102
     with pytest.raises(ValidationError, match="set together"):
         run(activity.append(conn, AGENT, action="setting.write", target="x", request_id=uuid.uuid4()))
     with pytest.raises(ServiceError) as excinfo:
         run(activity.append(conn, None, action="setting.write", target="x"))
     assert refused(excinfo).code == "forbidden"
-    assert len(conn.pending["activity"]) == 1
+    assert [row["id"] for row in conn.pending["activity"]] == [101, 102]  # the refused appends wrote nothing
 
 
 # ── activity.list ────────────────────────────────────────────────────────────
@@ -630,9 +669,10 @@ def test_list_filters_by_source_actor_action_prefix_target_and_window():
 @pytest.mark.parametrize(
     ("kwargs", "code", "field"),
     [
-        ({"limit": 0}, "out_of_range", "limit"),
-        ({"limit": 201}, "out_of_range", "limit"),
-        ({"limit": True}, "out_of_range", "limit"),
+        # The operator API answers a bad query with 400 invalid_request (#1148), so MCP gets the same code.
+        ({"limit": 0}, "invalid_request", "limit"),
+        ({"limit": 201}, "invalid_request", "limit"),
+        ({"limit": True}, "invalid_request", "limit"),
         ({"source": "admin"}, "invalid_request", "source"),
         ({"source": "Agent:Steward"}, "invalid_request", "source"),
         ({"cursor": "not a cursor"}, "invalid_request", "cursor"),
@@ -646,7 +686,25 @@ def test_list_refuses_bad_arguments_with_a_problem(kwargs, code, field):
     with pytest.raises(ServiceError) as excinfo:
         run(activity.list(conn, **kwargs))
     assert (refused(excinfo).code, refused(excinfo).field) == (code, field)
+    assert refused(excinfo).status == 400 and refused(excinfo).retryable is False
     assert conn.fetched == []
+
+
+def test_a_limit_refusal_names_the_bounds_and_the_value_sent():
+    with pytest.raises(ServiceError) as excinfo:
+        run(activity.list(FakeConnection(), limit=500))
+    assert refused(excinfo).body() == {
+        "type": "about:blank",
+        "title": "Invalid request",
+        "status": 400,
+        "detail": "limit must be 1-200",
+        "code": "invalid_request",
+        "retryable": False,
+        "field": "limit",
+        "min": 1,
+        "max": 200,
+        "current": 500,
+    }
 
 
 def test_activity_models_match_the_openapi_schemas():

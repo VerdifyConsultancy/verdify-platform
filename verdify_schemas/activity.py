@@ -34,6 +34,9 @@ class ActivityLogRow(BaseModel):
 
     ``request_id`` and ``request_sha256`` are the idempotency record (unique per source) and are set
     together; ``detail`` carries ``ref: {table, id}`` of the stored object so a replay can load it.
+    ``reason`` has no length limit, like the column, so logging a write never refuses it (Iris's
+    unchanged ``set_tunable`` takes a reason of any length, R5); the REST and MCP write inputs stop at
+    500 characters in ``verdify_services.activity.recorded_write``.
     """
 
     model_config = ConfigDict(extra="ignore", ser_json_bytes="hex")
@@ -46,7 +49,7 @@ class ActivityLogRow(BaseModel):
     action: str = Field(pattern=ACTIVITY_ACTION_PATTERN)
     target: str = Field(min_length=1)
     detail: dict[str, Any] = Field(default_factory=dict)
-    reason: str | None = Field(default=None, max_length=REASON_MAX_LENGTH)
+    reason: str | None = None
     request_id: UUID | None = None
     request_sha256: bytes | None = Field(default=None, min_length=32, max_length=32)
     experiment_id: UUID | None = None

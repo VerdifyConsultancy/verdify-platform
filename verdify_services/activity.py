@@ -20,6 +20,7 @@ from uuid import UUID
 
 import asyncpg
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic_core import to_jsonable_python
 
 from verdify_schemas.activity import ACTOR_SOURCE_PATTERN, REASON_MAX_LENGTH, ActivityLogRow
 from verdify_services.actor import Actor, ActorRef
@@ -103,12 +104,12 @@ class WriteResult[T](BaseModel):
 
 
 def _jsonable(value: Any) -> Any:
+    """What ``json`` cannot write, written as Pydantic's JSON mode writes it, so a request held in a dict
+    and the model it validates into hash alike (a UTC time is ``...Z`` in both, never ``+00:00``)."""
     if isinstance(value, BaseModel):
         return value.model_dump(mode="json")
-    if isinstance(value, datetime | date | time):
-        return value.isoformat()
-    if isinstance(value, UUID):
-        return str(value)
+    if isinstance(value, datetime | date | time | UUID):
+        return to_jsonable_python(value)
     raise TypeError(f"{type(value).__name__} is not JSON")
 
 
@@ -120,8 +121,8 @@ def _json(value: Any) -> str:
 def canonical_request(op: str, target: str, request: Any) -> bytes:
     """The canonical JSON of ``{"op": op, "target": target, "request": request}``.
 
-    ``op`` is the REST operation id; an MCP tool passes its REST twin's id and that operation's request body,
-    so both surfaces hash one request the same way.
+    ``op`` is the REST operation id; an MCP tool passes its REST twin's id and that operation's ``request``
+    (every input ``target`` does not carry), so both surfaces hash one request the same way.
     """
     try:
         return _json({"op": op, "target": target, "request": request}).encode("ascii")
@@ -250,7 +251,9 @@ async def recorded_write(
     """Run one write: the domain row from ``perform`` and its ``activity_log`` row commit together or not at all.
 
     1. A missing actor (or a viewer) is refused with ``forbidden``.
-    2. The request hash is ``request_hash(op, target, request)``.
+    2. The request hash is ``request_hash(op, target, request)``. ``request`` holds every input ``target``
+       does not carry (the body, plus a path or query value such as API-20's ``{state}``), so two writes
+       that differ only there never replay each other.
     3. In one transaction: when ``request_id`` is set and (``actor.source``, ``request_id``) already has a row,
        the same hash returns ``WriteResult(value=await load(conn, row), replayed=True)`` and appends nothing;
        another hash raises ``request_id_reused`` (422, not retryable).
@@ -332,9 +335,10 @@ async def list(  # activity.list, as the operator API and MCP call it
     page's ``next_cursor`` (an opaque base64url of its last ``ts`` and ``id``).
     """
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= LIMIT_MAX:
+        # invalid_request, as the operator API answers the same query (#1148: request validation is 400).
         raise ServiceError(
             problem(
-                "out_of_range",
+                "invalid_request",
                 f"limit must be 1-{LIMIT_MAX}",
                 field="limit",
                 min=1,

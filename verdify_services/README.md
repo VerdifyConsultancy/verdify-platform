@@ -61,7 +61,7 @@ result = await activity.recorded_write(
     op="API-10",                # the REST operation id; an MCP tool passes its REST twin's id
     action="setting.write",     # the activity action (architecture §9)
     target=param,
-    request=body,               # the REST request body of `op`, as validated JSON (or its model)
+    request=body,               # every input of `op` that `target` does not carry, as validated JSON (or its model)
     request_id=idempotency_key, # Idempotency-Key (REST) or request_id (MCP); None when not sent
     reason=reason,              # at most 500 characters
     perform=perform,            # async (conn) -> (value, detail): validate and write the domain row
@@ -72,7 +72,11 @@ result = await activity.recorded_write(
 1. A missing actor, or a viewer, is refused with `forbidden`.
 2. `request_sha256` is the SHA-256 of the canonical JSON of `{"op", "target", "request"}`: sorted keys, no
    spaces, no NaN (`activity.request_hash`). MCP tools hash their REST twin's request body, so both
-   surfaces hash one request the same way.
+   surfaces hash one request the same way. `request` holds every input that `target` does not: the body,
+   plus any path or query value that changes the write (API-20's `{state}`, API-11's `?reason=`), so two
+   writes that differ only there never replay each other. Times, dates and UUIDs are written as Pydantic's
+   JSON mode writes them (a UTC time ends in `Z`), so a dict of typed arguments and the model it validates
+   into hash alike.
 3. With a `request_id`, the `activity_log` row for (`actor.source`, `request_id`) is read first. The same
    hash returns `WriteResult(value=await load(conn, row), replayed=True)` and appends nothing; another hash
    raises `request_id_reused` (422, not retryable). Idempotency is per source and lives only on the activity
@@ -99,6 +103,9 @@ with a top-level `replayed: true` on a replay (MCP has no headers).
   and returns its id. Actions: `setting.write`, `setting.release`, `plan.write`, `alert.ack`,
   `alert.resolve`, `irrigation.*`, `light.on`, `light.off`; extend `ACTIVITY_ACTION_PATTERN` there for a new
   kind of write. A write with a request id uses `recorded_write`, which stores the id and the hash together.
+  The log takes a reason of any length, as its column does (Iris's unchanged `set_tunable` is never
+  refused, R5); `recorded_write` refuses one over 500 characters with `invalid_request`, as the REST
+  bodies do.
 - `list(conn, *, source=None, actor=None, action=None, target=None, from_=None, to=None, limit=50,
   cursor=None) -> ActivityPage` (API-17, MCP `activity`): newest first by (`ts`, `id`); `source='agent'`
   matches every `agent:<name>`; `action` is a prefix match; `actor` and `target` are exact; `from_` is

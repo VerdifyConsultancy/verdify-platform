@@ -49,6 +49,15 @@ def test_an_activity_row_validates_a_keyed_agent_write():
     assert forecast.detail == {} and forecast.request_id is None
 
 
+def test_an_activity_reason_has_no_length_limit_like_its_column():
+    """activity_log.reason is unbounded; Iris's unchanged set_tunable takes any reason and must never be refused."""
+    body = MIGRATION.read_text().split("CREATE TABLE public.activity_log (", 1)[1].split("\n);", 1)[0]
+    assert [line.split() for line in body.splitlines() if line.split()[:1] == ["reason"]] == [["reason", "text,"]]
+    long_reason = "r" * 2000
+    row = ActivityLogRow(source="iris", actor="iris", action="plan.write", target="p-1", reason=long_reason)
+    assert row.reason == long_reason
+
+
 @pytest.mark.parametrize(
     "action",
     ["setting.write", "setting.release", "plan.write", "alert.ack", "alert.resolve", "light.on", "light.off"]
@@ -72,7 +81,6 @@ def test_the_architecture_9_actions_are_accepted(action):
         {"action": "irrigation."},
         {"action": "light.dim"},
         {"target": ""},
-        {"reason": "r" * 501},
         {"request_id": uuid.uuid4()},  # without its hash
         {"request_sha256": b"\x01" * 32},  # without its id
         {"request_id": uuid.uuid4(), "request_sha256": b"\x01" * 31},
