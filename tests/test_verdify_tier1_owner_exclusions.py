@@ -26,6 +26,7 @@ def test_outside_owner_exclusions_preserve_existing_forwarder_contract():
             "crm",
             "mqtt",
             "traefik",
+            "dashboard",
         )
     }
     assert spec["entryPoints"] == ["websecure", "web"]
@@ -44,5 +45,12 @@ def test_product_and_unknown_single_label_hosts_keep_forwarding():
 
     assert all(forwards(name + ".verdify.ai") for name in ("api", "lab", "labs", "graphs", "mcp", "unclaimed"))
     assert not any(
-        forwards(host) for host in ("www-dev.verdify.ai", "proposals-hello.verdify.ai", "verdify.ai", "a.b.verdify.ai")
+        forwards(host)
+        for host in (
+            "www-dev.verdify.ai",
+            "proposals-hello.verdify.ai",
+            "dashboard.verdify.ai",
+            "verdify.ai",
+            "a.b.verdify.ai",
+        )
     )
