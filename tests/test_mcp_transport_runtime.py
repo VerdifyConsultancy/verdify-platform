@@ -9,6 +9,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+from test_mcp_audience_auth import AGENT_TOOLS
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -167,3 +168,90 @@ async def test_real_mcp_127_duplicate_tokens_fail_before_protocol_dispatch(monke
     assert response.status_code == 401
     assert response.json() == {"error": "unauthorized"}
     assert "runtime-test-shared" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_real_mcp_named_agent_inventory_attribution_and_revocation(monkeypatch, tmp_path):
+    """VD-59 through the real SDK: an agent key lists exactly the agent tools, its
+    alerts acknowledgement is attributed from the request actor, and a removed key
+    is refused at the transport after the 60 s cache while Iris keeps working."""
+    import os
+
+    for key in [k for k in os.environ if k.startswith("VERDIFY_MCP_TOKEN_")]:
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("VERDIFY_MCP_AUTH_MODE", "enforce")
+    monkeypatch.setenv("VERDIFY_MCP_TOKEN_IRIS", "runtime-test-iris")
+    keys = tmp_path / "mcp-agents"
+    keys.mkdir()
+    (keys / "steward").write_text("runtime-test-steward\n")
+    monkeypatch.setenv("VERDIFY_MCP_AGENT_KEYS_DIR", str(keys))
+
+    server = _load_server()
+    now = [1000.0]
+    monkeypatch.setattr(server, "_agent_keys_clock", lambda: now[0])
+
+    class AlertConnection:
+        updates: list[tuple] = []
+
+        async def fetchrow(self, sql, *args):
+            assert sql.startswith("UPDATE alert_log SET acknowledged_at")
+            self.updates.append(args)
+            return {"id": args[0], "disposition": "acknowledged"}
+
+        async def close(self):
+            pass
+
+    async def db():
+        return AlertConnection()
+
+    monkeypatch.setattr(server, "_db", db)
+    app = server.mcp.streamable_http_app()
+    transport = httpx.ASGITransport(app=app)
+    common_headers = {"accept": "application/json, text/event-stream", "content-type": "application/json"}
+    initialize = _request(
+        "initialize",
+        1,
+        {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {},
+            "clientInfo": {"name": "verdify-runtime-test", "version": "1"},
+        },
+    )
+
+    def headers(token):
+        return {**common_headers, "authorization": f"Bearer {token}", "mcp-protocol-version": "2025-11-25"}
+
+    async with app.app.router.lifespan_context(app.app):
+        async with httpx.AsyncClient(transport=transport, base_url="http://127.0.0.1:8000") as client:
+            assert (
+                await client.post("/mcp", headers=headers("runtime-test-steward"), json=initialize)
+            ).status_code == 200
+            listed = await client.post("/mcp", headers=headers("runtime-test-steward"), json=_request("tools/list", 2))
+            names = {tool["name"] for tool in _protocol_payload(listed)["result"]["tools"]}
+            assert names == server.audience_allowlist("agent")
+            # Within the architecture §5.6 agent column; later tools join by registering with `agent`.
+            assert {"climate", "alerts"} <= names <= AGENT_TOOLS
+
+            acknowledged = await client.post(
+                "/mcp",
+                headers=headers("runtime-test-steward"),
+                json=_request(
+                    "tools/call",
+                    3,
+                    {
+                        "name": "alerts",
+                        "arguments": {"action": "acknowledge", "alert_id": 7, "data": '{"acknowledged_by": "jason"}'},
+                    },
+                ),
+            )
+            result = _protocol_payload(acknowledged)["result"]
+            assert result["isError"] is False
+            assert json.loads(result["content"][0]["text"])["action"] == "acknowledged"
+            assert AlertConnection.updates == [(7, "agent:steward")]
+            assert "runtime-test-steward" not in acknowledged.text
+
+            (keys / "steward").unlink()
+            now[0] += 60
+            revoked = await client.post("/mcp", headers=headers("runtime-test-steward"), json=initialize)
+            assert revoked.status_code == 401
+            assert (await client.post("/mcp", headers=headers("runtime-test-iris"), json=initialize)).status_code == 200

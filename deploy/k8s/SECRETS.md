@@ -81,6 +81,7 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-experiment-v2-randomizer-db` | `password` | v2 selector/randomizer (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
 | `verdify-experiment-v2-outcome-freezer-db` | `password` | v2 outcome freezer (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
 | `verdify-mcp-runtime-db` | `password` | production MCP and its dedicated PreSync role bootstrap (`secretKeyRef`; username is migration-owned `verdify_mcp_runtime_login`) | — | — | ✓ |
+| `verdify-mcp-agents` | one key per named agent (`<name>`), the value its MCP bearer token | MCP (optional read-only volume at `/etc/verdify/mcp-agents`, no `subPath`; re-read within 60 s, no restart; [named MCP agents](#named-mcp-agents-vd-59)) | — | — | opt |
 | `verdify-hermes` | `OPENAI_API_KEY` | Hermes and v2 OpenAI selector provider adapters (`secretKeyRef`, optional while component capability is off) | — | — | req at activation |
 | `verdify-ha-token` | `ha_token.txt` | setpoint-server (volume mount); **device-affecting** | — | — | ✓ |
 | `verdify-hermes` | `OPENAI_API_KEY` | MCP semantic retrieval (`secretKeyRef`, required) | — | — | ✓ |
@@ -94,6 +95,7 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-agent-secrets` | `AGENT_RO_DSN` | dev/coding agent (read-only `agent_ro`/`pg_read_all_data`, migration 184; **read-only, no device path**) | — | — | ✓ |
 | `verdify-frigate-vision-auth` | `token` | Vision CronJob and public API camera reader, mounted read-only at `/vfrigate/token`; existing GET-only two-camera snapshot credential, values owned by agents KSOPS | — | — | ✓ |
 | `verdify-firmware-ota` | `ota_password` | `make firmware-deploy` ESPHome OTA upload + `firmware-rollback.sh`; **device-affecting** (flash gate) | — | — | ✓ |
+| `verdify-hydro-probe` | `device-id`, `local-key` | ingestor, optional volume mount (`/etc/verdify/hydro-probe`; read-only YINMIK hydro reader, VD-70) | — | — | opt |
 
 ¹ dev/staging are device-dark: the ingestor runs `replicas: 0` and egress to the
 device VLAN is denied. The key may be present in the sealed secret for shape parity
@@ -149,6 +151,30 @@ in the owning KSOPS lane in `jvallery/agents`. Provision and read back the exact
 provider/callback/group boundary before deploying this configuration. Never
 print the provider secret or store it in this repository.
 
+## Named MCP agents (VD-59)
+
+`verdify-mcp-agents` lives in the jvallery/agents KSOPS lane for `verdify-prod`
+(jvallery/agents#5993), and only Jason seals its values. Each key is one agent's
+name (`^[a-z0-9][a-z0-9_-]{0,62}$`, never `admin`) and its value is that agent's
+bearer token: an RFC 6750 token distinct from every other agent's and from every
+`VERDIFY_MCP_TOKEN_*` value. MCP mounts the Secret as an optional read-only
+volume and re-reads it at most every 60 s; until the Secret exists no agent is
+admitted and MCP runs unchanged. `/readyz` lists names only
+(`auth_agents_configured`, `auth_agent_keys_rejected`); a rejected key admits
+nothing and never makes MCP not ready. Values never appear in logs, errors,
+`/readyz`, Git or a browser.
+
+- **Onboard:** Jason names the agent and seals key `<name>` into the
+  jvallery/agents KSOPS lane for `verdify-prod`; once delivered, MCP admits
+  `agent:<name>` within 3 min with no restart, and the agent's pod carries the
+  label `verdify.ai/mcp-agent: "true"` and reads its own key (a pod in
+  `verdify-prod` mounts only that key, with `items`, never the whole Secret).
+- **Revoke:** delete the key the same way; MCP refuses the agent within 3 min of
+  the Secret syncing.
+- **Rotate:** Jason replaces the value; within 3 min MCP accepts only the new
+  value, with no restart; the agent picks it up from its mounted key file, or on
+  restart if it reads the key from an environment variable.
+
 ## Protected secret-source ownership (Root delivers; Iris specifies)
 
 The current fleet-owned source and delivery entry point are:
@@ -180,7 +206,8 @@ reconciliation.
 | `overlays/prod/ha-token.placeholder.yaml` | `verdify-ha-token` | prod |
 | `overlays/prod/hermes-secret.placeholder.yaml` | `verdify-hermes` | prod |
 
-`verdify-hermes-slack` (optional, non-secret channel config) and
+`verdify-hermes-slack` (optional, non-secret channel config),
+`verdify-mcp-agents` (optional volume) and
 `ghcr-jvallery-readonly` (image-pull, delivered out-of-band by Root) have no
 placeholder — the workloads reference them as `optional` / `imagePullSecrets`, so
 `kustomize build` is complete without an in-repo stand-in. The required
@@ -246,6 +273,22 @@ renderer, OAuth, experiment and owner Secret keys remain unchanged.
 single ingestor mounts it read-only at `/etc/verdify/slack`, matching
 `slack.yaml`; no app/signing token is required by this sender.
 
+### Hydroponic probe (VD-70, #1183)
+
+`verdify-hydro-probe` is owned by the agents KSOPS lane. It carries the YINMIK
+meter's Tuya `device-id` and `local-key`. The single ingestor mounts it
+read-only and optionally at `/etc/verdify/hydro-probe`; `hydro_probe_sync`
+reads both files on every poll and, while either is absent, logs one
+`hydro key missing` line and idles. The values never appear in env, Git or a
+log line, and no placeholder renders.
+
+Rotate: re-pairing the meter in the Tuya app changes the local key. Jason reads
+the new key from the Tuya cloud (LocalTuya's device entry or
+`python -m tinytuya wizard`) and reseals it in agents KSOPS; the ingestor uses
+it at its next poll once the kubelet refreshes the mount, with no restart. A new
+protocol version goes in `VERDIFY_HYDRO_PROBE_TUYA_VERSION`
+(`deploy/k8s/overlays/prod/hydro-probe.patch.yaml`).
+
 ### #643 prepared maintenance duties (source proposal, not provisioned)
 
 Two new password-only identities remove the remaining writer-watchdog and
@@ -284,3 +327,22 @@ The public key is product-owned `cosign.pub`, SHA256
 Jason explicitly approved this new key and encrypted custody on 2026-10-23.
 It grants no permission to flash, rotate OTA credentials or open a device
 connection. See [signed-artifact operations](../../docs/runbooks/firmware-signed-artifacts.md).
+
+## Dashboard web (`verdify-dashboard`) (#1142)
+
+The dashboard BFF reads one Secret, delivered by the jvallery/agents KSOPS Application
+`verdify-dashboard-secrets` (jvallery/agents#5993, `CreateNamespace=false`, so it syncs once Argo app
+`verdify-dashboard` has created the namespace). The `verdify-dashboard` AppProject denies Secret, and
+`kustomize build deploy/k8s/dashboard` emits none; there is no placeholder. Its target namespace is
+`verdify-dashboard`, the same string as the kustomization's `namespace:`, the Namespace object and the
+Application destination (invariant 2).
+
+| Secret | Keys | Consumed by | Rotate |
+|---|---|---|---|
+| `verdify-dashboard-web` | `oidc-client-secret`, `cookie-secret`, `operator-api-token` | the BFF, Deployment `verdify-dashboard-web` (`secretKeyRef`, required: `OIDC_CLIENT_SECRET`, `COOKIE_SECRET`, `OPERATOR_API_TOKEN`) | Jason re-seals in the jvallery/agents KSOPS lane; `operator-api-token` changes together with `verdify-operator-api` in `verdify-prod`, in one agents PR. Once synced, delete the web pod, and the operator API pod for the token, so each restarts with the new value. A new `cookie-secret` voids only sign-ins in progress; sessions survive. |
+
+A missing Secret or key leaves a new web pod in `CreateContainerConfigError`; the Deployment runs no pod
+until R1's pin PR (#1143). Read it back by key name only:
+`kubectl -n verdify-dashboard describe secret verdify-dashboard-web`. The image-pull Secret
+`zot-origin-cluster-pull` is reflected into the namespace by jvallery/agents#5994. Operations:
+[dashboard runbook](../../docs/runbooks/dashboard.md).

@@ -34,6 +34,11 @@ pydantic>=2.8,<3
 paho-mqtt>=1.6,<2
 astral>=3.2,<4
 
+# --- direct YINMIK hydro meter reader (VD-70; also in pyproject [project]) ---
+# Tuya local protocol 3.1-3.5; its AES comes from cryptography, which
+# aioesphomeapi already requires. Imported only once the reader is configured.
+tinytuya==1.20.0
+
 # --- planner extra (pyproject [project.optional-dependencies].planner) ---
 # Pulled in transitively because tasks.py imports iris_planner at module load.
 anthropic>=0.90,<1

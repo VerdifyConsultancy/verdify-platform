@@ -60,6 +60,9 @@ $PY -m pytest -q tests/test_verdify_traefik_file.py tests/test_public_camera_cac
 step "schema suites (incl. drift guards + producer payload round-trips)"
 $PY -m pytest -q verdify_schemas/tests/
 
+step "irrigation program record golden vectors (#1151)"
+$PY scripts/gen-irrigation-program-vectors.py --check
+
 step "ClimateIntent controller contract audit"
 $PY scripts/audit-climate-intent-contract.py
 
@@ -162,6 +165,7 @@ $PY -m pytest -q -rs \
   tests/test_component_experiment_store.py \
   tests/test_component_experiment_writer.py \
   tests/test_component_grid_qualification.py \
+  tests/test_qualify_component_containment.py \
   tests/test_esp32_policy_transaction.py \
   tests/test_experiment_api.py \
   tests/test_experiment_gather_mode.py \
@@ -221,6 +225,7 @@ $PY -m pytest -q -rs \
   tests/test_grafana_manifest_security.py tests/test_grafana_saved_public.py tests/test_278_grafana_delivery.py \
   tests/test_ha_gap_backfill_runtime_boundary.py \
   tests/test_ha_light_writer_boundary.py \
+  tests/test_hydro_probe.py \
   tests/test_ingestor_setpoint_placement.py \
   tests/test_ingestor_gap_snapshot.py \
   tests/test_source_spool.py \
@@ -231,6 +236,7 @@ $PY -m pytest -q -rs \
   tests/test_lab_serving_cache.py \
   tests/test_lab_publish_k3s_guard.py \
   tests/test_mcp_audience_auth.py \
+  tests/test_mcp_named_agents.py \
   tests/test_mcp_transport_runtime.py \
   tests/test_outcome_kpi_dryout_projection.py \
   tests/test_scorecard_realized_dryout.py \
@@ -275,6 +281,11 @@ $PY -m pytest -q -rs \
   tests/test_twin_asof_migration.py \
   tests/test_twin_live_driver.py \
   tests/test_verdify_traefik_placement.py \
+  tests/test_verdify_tier1_owner_exclusions.py \
+  tests/test_dashboard_manifests.py \
+  tests/test_egress_deny_management.py \
+  tests/test_mcp_egress_boundary.py \
+  tests/test_writer_outbound_boundary.py \
   tests/test_verify_component_proof_packet.py \
   tests/test_writer_lease_fence.py
 
@@ -293,12 +304,16 @@ bash scripts/gen-config-revision.sh --check
 step "policy consumer manifest drift (Lane E, #586)"
 $PY scripts/gen-policy-consumer-manifest.py --check
 
-step "firmware policy engine native tests + §8.10 recovery-image proof (#586)"
+step "firmware native tests: policy engine + §8.10 recovery-image proof (#586), zone VPD fallback, climate logic, replay invariants"
 # Tranche 2 (#586): the policy engine and its journal are on the control path
 # of every consumer read, and the recovery image must provably not resume or
 # actuate an experiment. Both suites are small native binaries (< 5 s).
+# VD-43: the registry firmware-logic check does not run on this repository's
+# PRs, so the peer-probe zone VPD fallback, the climate logic tests and the
+# replay-corpus invariants run here and gate every firmware PR. Later suites
+# append their make targets to this list.
 if command -v g++ >/dev/null; then
-  make test-policy-engine test-policy-recovery
+  make test-policy-engine test-policy-recovery test-zone-vpd test-greenhouse-logic firmware-invariants
 else
   echo "SKIP: g++ not available on this host (required in the CI image)"
 fi

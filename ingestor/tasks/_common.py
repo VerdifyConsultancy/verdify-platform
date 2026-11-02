@@ -58,6 +58,7 @@ from verdify_schemas import (
     SetpointChange,
     build_validation_failed_envelope,
 )
+from verdify_schemas.setting_values import SECOND_READBACK_ABS_TOLERANCE_PARAMS
 from verdify_schemas.tunable_registry import (
     CROP_BAND_REG,
     LEGACY_SHARED_LIGHTING_REG,
@@ -142,22 +143,6 @@ IRRIGATION_SCHEDULE_PARAMS = frozenset(
         "irrig_center_fert_days_mask",
         "irrig_center_flush_min",
         "irrig_center_interval_days",
-    }
-)
-
-
-SECOND_READBACK_ABS_TOLERANCE_PARAMS = frozenset(
-    {
-        "mister_engage_delay_s",
-        "mister_all_delay_s",
-        "mister_pulse_on_s",
-        "mister_pulse_gap_s",
-        "min_fog_on_s",
-        "min_fog_off_s",
-        "mist_backoff_s",
-        "mist_max_closed_vent_s",
-        "mist_thermal_relief_s",
-        "vpd_watch_dwell_s",
     }
 )
 
@@ -898,6 +883,30 @@ _ha_prev_state: dict = {}
 _HA_STATE_FILE = STATE_DIR / "ha-sensor-sync-state.json"
 
 
+async def update_latest_climate_row(conn, columns: dict) -> bool:
+    """Overlay validated columns onto the newest ESP32 climate row of the last 5 minutes.
+
+    The one overlay statement ha_sensor_sync and hydro_probe_sync share (VD-70).
+    Callers validate the values with ClimateRow first; the column names come
+    from code-owned route maps. Returns False when no recent row has temp_avg.
+    """
+    unknown = set(columns) - set(ClimateRow.model_fields)
+    if unknown:
+        raise ValueError(f"not climate columns: {sorted(unknown)}")
+    latest = await conn.fetchval(
+        "SELECT ts FROM climate WHERE ts > now() - interval '5 minutes' AND temp_avg IS NOT NULL ORDER BY ts DESC LIMIT 1"
+    )
+    if not latest:
+        return False
+    parts, vals = [], []
+    for i, (c, v) in enumerate(columns.items()):
+        parts.append(f"{c} = ${i + 1}")
+        vals.append(v)
+    vals.append(latest)
+    await conn.execute(f"UPDATE v_runtime_climate_write SET {', '.join(parts)} WHERE ts = ${len(vals)}", *vals)
+    return True
+
+
 # Reactive planner REMOVED in Sprint 5 P6 — replaced by forecast deviation monitor (P4)
 
 
@@ -1485,6 +1494,7 @@ __all__ = [
     "_OCCUPANCY_ENTITIES",
     "_ha_prev_state",
     "_HA_STATE_FILE",
+    "update_latest_climate_row",
     "CFG_READBACK_MAP",
     "EQUIPMENT_SWITCH_MAP",
     "PARAM_TO_ENTITY",

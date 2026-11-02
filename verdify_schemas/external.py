@@ -1,9 +1,11 @@
 """External-API wire schemas — upstream payloads, validated at our boundary.
 
-Two integrations today:
+Three integrations today:
 - Open-Meteo 16-day hourly forecast (forecast-sync.py; 27 parallel arrays)
 - Home Assistant /api/states/{entity_id} (Shelly, Tempest, hydro YINMIK,
   switches, occupancy).
+- The YINMIK hydroponic meter's Tuya local-protocol status() payload
+  (ingestor/hydro_probe.py, VD-70).
 
 The existing ingestion paths parse these ad hoc. Wrapping them in a Pydantic
 model at the boundary catches length-mismatch and missing-key drift when
@@ -13,8 +15,19 @@ Open-Meteo changes its response or HA renames an entity.
 from __future__ import annotations
 
 from datetime import datetime as DateTime
+from typing import Annotated
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictFloat,
+    StrictInt,
+    StrictStr,
+    model_validator,
+)
 
 
 class OpenMeteoHourly(BaseModel):
@@ -124,3 +137,22 @@ class HAEntityState(BaseModel):
             return DateTime.fromisoformat(self.state.replace(" ", "T"))
         except (TypeError, ValueError):
             return None
+
+
+# ── Tuya local protocol (YINMIK hydroponic meter, VD-70) ──
+
+TuyaDpId = Annotated[str, Field(pattern=r"^[0-9]+$")]
+TuyaDpValue = StrictBool | StrictInt | StrictFloat | StrictStr
+
+
+class TuyaDeviceStatus(BaseModel):
+    """Tuya local-protocol ``status()`` payload, as tinytuya returns it.
+
+    ``dps`` maps a data-point id (a numeric string) to the device's raw value:
+    an int, float, bool or str, never coerced. Envelope fields such as the
+    device id are ignored, so they are never carried past this boundary.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    dps: dict[TuyaDpId, TuyaDpValue]

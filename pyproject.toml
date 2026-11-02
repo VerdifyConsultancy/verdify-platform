@@ -18,6 +18,9 @@ dependencies = [
     # ingestor/requirements-image.txt, but was missing from this list (L1 audit
     # — pyproject is meant to be the single dep source of truth).
     "astral>=3.2,<4",
+    # Direct YINMIK hydro meter reader (ingestor/hydro_probe.py, VD-70); pinned
+    # exactly, as in ingestor/requirements-image.txt.
+    "tinytuya==1.20.0",
 ]
 
 [project.optional-dependencies]

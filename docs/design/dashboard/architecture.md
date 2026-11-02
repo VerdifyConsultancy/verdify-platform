@@ -246,6 +246,9 @@ elif plan and plan.created_at > d.created_at -> plan.value   a newer plan wins (
 else                                         -> d.value      beats plan, band and defaults
 ```
 
+`verdify_schemas.setting_values.resolve_effective(desired, plan)` is this rule as one pure function (VD-29), so the
+dispatcher, the API's `applied_from` and the services resolve a setting the same way.
+
 - **Where:** in `setpoint_dispatcher` (`ingestor/tasks/dispatcher.py:782`), where the batch is built from plan,
   band and defaults, before dedupe, the drift probe, C1 and the 12-command limit. A desired value becomes a
   command only when it differs from `_last_pushed` or its readback (the §5.5 comparator), like a plan value, and
@@ -304,13 +307,16 @@ value and `retryable` (problem+json on REST, the same JSON with `isError` on MCP
 | 1 Known and writable | A registry row whose `control_class` is `planner_policy`, `scheduled_policy`, `controller_safety` or `crop_band` with an `esp_object_id`, or the new `irrigation_site` (`mister_daily_volume_max_gal`, `sched_mist_rh_max_pct`, `climate_yield_min`: no `esp_object_id`, delivered in the irrigation program, R12). Read-only, with a reason: `readback_context` and `retired` rows; the legacy wide limits `temp_low`, `temp_high`, `vpd_low`, `vpd_high` and `vpd_target_*` (not the band while the controller runs its on-chip curve, §7) and the three activity-mirror values, all derived by the dispatcher; `sw_onchip_band_enabled`, which decides which side owns the band; the nine weekly-feed commissioning rows (`sw_wall_fertigation_commissioned`, `wall_commissioning_{revision,evidence_mask,valid_until_epoch_s}`, `wall_flow_{lpm,valid_until_epoch_s}`, `wall_{prewet,feed,flush}_liters`), retiring with the engine; `crop_band` rows with no `crop_band_anchors` row (zone priorities and window values). `irrig_*_duration_min` and `sw_irrig_*` stay writable for the L01 bridge (§5.8), and the `gl_*` lighting rows stay writable (a release hands them back to the lighting policy, §5.2) | `unknown_target`, or `read_only` with the reason |
 | 2 Type and range | Finite; switches 0 or 1; enums in `enum_values`; inside `planner_effective_bounds(param)` (registry min/max intersected with the firmware clamp) | `out_of_range` with `min` and `max` |
 | 3 Manual | An `iris` write to a setting whose newest row is manual | `manual` |
-| 4 Snap | To the registry `step` (new on `TunableDef`, read from `firmware/greenhouse/tunables.yaml` and drift-guarded like `fw_clamp`; the `_round_for_push` quanta for the anchors, which have no number entity; equal to the `ENTITY_GRIDS` steps for the 48 policy fields), half to even, by a `snap()` helper in `verdify_schemas`. A value equal to the setting's current effective or device value is stored as is, so taking an Iris value manual keeps it | none; the response carries the stored value and `snapped_from` |
+| 4 Snap | To the registry `step` (new on `TunableDef`, copied as literals from `firmware/greenhouse/tunables.yaml` and drift-guarded like `fw_clamp`; 1 for a switch; the `_round_for_push` quanta for the anchors, which have no number entity; equal to the `ENTITY_GRIDS` steps for the 48 policy fields; none for a row with no entity, which is not snapped, unless the row sets its own, as the `irrigation_site` rows do), half to even, by `snap_setting()` in `verdify_schemas.setting_values`. A snapped value outside `planner_effective_bounds` takes the bound, so the four minimums off their grid (`gl_lux_threshold`, `gl_main_lux_threshold`, `gl_grow_lux_threshold`, `mister_max_runtime_min`) stay reachable. A value equal to the setting's current effective or device value is stored as is, so taking an Iris value manual keeps it | none; the response carries the stored value and `snapped_from` |
 
 A drift test fails when a number or switch in `firmware/greenhouse/tunables.yaml` has no registry row (writable,
 or read-only with a reason) and is not retired, so the catalog really is every setting. Each row's name and unit are
-`TunableDef.label` and `TunableDef.unit`, which VD-29 adds next to `step`, filled from the setting's entity in
-`firmware/greenhouse/tunables.yaml` and drift-tested the same way. `settings.catalog` (VD-67) passes them through,
-and API-09 (VD-55) serves them as `Setting.label` and `Setting.unit`.
+`TunableDef.label` and `TunableDef.unit`, which VD-29 adds next to `step`, split from the `name:` of the setting's
+entity in `firmware/greenhouse/tunables.yaml` (the entities carry no `unit_of_measurement`; `split_entity_name()`)
+and drift-tested the same way. The anchors take theirs from their `cfg_*` readback names in
+`firmware/greenhouse/sensors.yaml` ("Cfg • Band VPD Low SR (kPa)"). A row with no entity carries its registry name
+and no unit unless it sets its own, as the `irrigation_site` rows do; the drift test skips it. `settings.catalog`
+(VD-67) passes them through, and API-09 (VD-55) serves them as `Setting.label` and `Setting.unit`.
 
 `manual` has no default inside `verdify_services`: REST defaults it to true (the dashboard box starts ticked, R3)
 and every MCP write tool to false. A write stores exactly the flag it carries, so an agent's write to a manual
@@ -345,10 +351,11 @@ state requested}` → the fenced pass pushes it (at most 12 per pass) → the `c
 
 `verdify_services.settings.status` computes the state on every read, so a late readback turns NOT CONFIRMED into
 CONFIRMED by itself. A readback matches when |readback − value| ≤ max(step/2, the value's binary32 ULP, the
-duration tolerance): a grid-aware comparator in `verdify_schemas` beside `readback_abs_tolerance` (moved from
-`ingestor/tasks/dispatcher.py:486-500`). The dispatcher uses it to decide whether a desired value needs a push,
-not its 1 % dead-band, which hides one-step changes (`site_pressure_hpa` 840 → 845). Plan values keep
-`readback_values_equivalent` and show as Iris stored them.
+duration tolerance): `readback_matches()` in `verdify_schemas.setting_values`, beside `readback_abs_tolerance` and
+`readback_values_equivalent` (moved from `ingestor/tasks/dispatcher.py:486-500`, which imports them back). A missing
+or non-finite readback never matches. The dispatcher uses it to decide whether a desired value needs a push,
+not its 1 % dead-band (`within_relative_deadband`), which hides one-step changes (`site_pressure_hpa` 840 → 845).
+Plan values keep `readback_values_equivalent` and show as Iris stored them.
 
 | State | When | Badge ([design system](design-system.md) §4.1) |
 |---|---|---|
@@ -427,7 +434,8 @@ and rolls the pod. It is `"false"` until R2 (VD-28), or R3 if that ships first, 
 `"true"`, the BFF answers every non-GET `/api/*` request except irrigation Stop with 503 `writes_disabled`, and
 `/api/v1/me` returns `writes_enabled: false`, so the UI disables its controls and shows a banner; reads and Stop
 continue. It gates only the BFF: MCP writes, Iris's included, are live from the sync that ships them. To roll
-back, merge a one-line flag change; within 5 minutes the new pod serves `writes_enabled: false`.
+back, merge a one-line flag change; within 5 minutes the new pod serves `writes_enabled: false`. The superseded
+ConfigMap stays, because the app has prune off, and its `IgnoreExtraneous` annotation keeps the app Synced.
 
 ### 5.8 Irrigation
 
@@ -659,7 +667,7 @@ coordinator's train and consolidated pin PR deliver them); network-infra and mon
 | Piece | Where | Ships via |
 |---|---|---|
 | BFF image `verdify-dashboard-web` | `dashboard/Dockerfile`, context `.`: Node 24 base pinned by digest, non-root, read-only root filesystem; `ARG GIT_SHA` baked into `/etc/verdify/source-revision` and `SOURCE_REVISION`; plain `COPY` only (no `ADD`, `--chown`, `--chmod`, `--link` or `$VAR`, which make path impact rebuild every image) | a `build-dashboard-web` step in the `verdify-platform-ci` WorkflowTemplate, selected by path impact on `dashboard/**` |
-| Web manifests | `deploy/k8s/dashboard/`: a `Namespace` labelled `pod-security.kubernetes.io/enforce: restricted`; a tokenless ServiceAccount; `Deployment verdify-dashboard-web` (pod label `app.kubernetes.io/name: verdify-dashboard-web`, which the operator API's ingress policy selects; replicas 0 and no digest until R1's pin PR, VD-26, sets the image and scales it to 1; `maxSurge` 1, `maxUnavailable` 0, requests 50m and 128Mi, memory limit 384Mi, non-root, read-only root filesystem, all capabilities dropped, RuntimeDefault seccomp, pull secret `zot-origin-cluster-pull`); a `Service` on 3000; an `IngressRoute` (`websecure`, `` Host(`dashboard.verdify.ai`) ``, `tls: {}` so the default TLSStore serves the `*.verdify.ai` wildcard, no middlewares); the generated, hash-suffixed `ConfigMap verdify-dashboard-web` (`PUBLIC_ORIGIN`, `OIDC_ISSUER`, `OIDC_CLIENT_ID=verdify-dashboard`, `OPERATOR_API_URL`, `DASHBOARD_WRITES_ENABLED`); the NetworkPolicies below | Argo `verdify-dashboard`: automated, self-heal, prune off (as weather) |
+| Web manifests | `deploy/k8s/dashboard/`: a `Namespace` labelled `pod-security.kubernetes.io/enforce: restricted`; a tokenless ServiceAccount; `Deployment verdify-dashboard-web` (pod label `app.kubernetes.io/name: verdify-dashboard-web`, which the operator API's ingress policy selects; replicas 0 and no digest until R1's pin PR, VD-26, sets the image and scales it to 1; `maxSurge` 1, `maxUnavailable` 0, requests 50m and 128Mi, memory limit 384Mi, non-root, read-only root filesystem, all capabilities dropped, RuntimeDefault seccomp, pull secret `zot-origin-cluster-pull`); a `Service` on 3000; an `IngressRoute` (`websecure`, `` Host(`dashboard.verdify.ai`) ``, `tls: {}` so the default TLSStore serves the `*.verdify.ai` wildcard, no middlewares); the generated, hash-suffixed `ConfigMap verdify-dashboard-web` (`PUBLIC_ORIGIN`, `OIDC_ISSUER`, `OIDC_CLIENT_ID=verdify-dashboard`, `OPERATOR_API_URL`, `DASHBOARD_WRITES_ENABLED`), annotated `argocd.argoproj.io/compare-options: IgnoreExtraneous` because prune is off and each superseded copy stays in the namespace; the NetworkPolicies below | Argo `verdify-dashboard`: automated, self-heal, prune off (as weather) |
 | Web pin | `images:` digest in `deploy/k8s/dashboard/kustomization.yaml`, and nowhere else | a digest-only pin PR (resolve the `sha-<12>` tag on zot), as planner's pins are (the first, VD-26, also sets replicas 1); the web ships when it merges |
 | Operator API | `deploy/k8s/components/operator-api/`: `Deployment verdify-operator-api` (`app.kubernetes.io/component: operator-api`, the `verdify-api` image, `uvicorn operator_api:app --port 8090` from `api/operator_api.py`, which avoids shadowing the stdlib `operator`; 1 replica, requests 50m and 192Mi, memory limit 512Mi, the securityContext of `verdify-api`), a ClusterIP `Service` on 8090 with no IngressRoute, ConfigMap `verdify-operator-api` (`DB_USER=verdify_dashboard_runtime_login`). The `overlays/prod` line and the `allow-db-from-app` change land in the R1 wiring PR, because a new Secret reference reaches `overlays/prod` only in the release issue that waits for its sealing | `release-pins.yaml` (same digest as `verdify-api`) plus the gated `verdify-prod-dark` full sync |
 | Migrations | `db/migrations/` | the `verdify-migrate` PreSync hook in that same sync |

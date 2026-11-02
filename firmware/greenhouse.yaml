@@ -31,6 +31,7 @@ esphome:
     - lib/probe_validity.h
     - lib/greenhouse_types.h
     - lib/greenhouse_solar.h
+    - lib/zone_vpd.h
     - lib/irrigation_policy.h
     - lib/greenhouse_logic.h
     # Lane E (#586): atomic policy engine — generated codec + ROM baseline +

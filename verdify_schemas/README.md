@@ -39,6 +39,7 @@ validates at its boundary; drift is caught by CI.
 | `views.py` | `PlannerPerformance`, `PlanAccuracy`, `DewPointRiskRow`, `WaterBudgetRow`, `DailyOscillation`, `DailyOscillationSummary`, `OverrideActivity24h`, `ClampActivity24h` | website renderers, MCP `scorecard` tool |
 | `vault.py` | `DailyVaultFrontmatter`, `DailyPlanVaultFrontmatter`, `CropVaultFrontmatter`, `ForecastVaultFrontmatter`, `LessonsVaultFrontmatter` | every script that writes markdown into the Obsidian vault |
 | `external.py` | `OpenMeteoHourly`, `OpenMeteoForecastResponse`, `HAEntityState` | `forecast-sync.py`, Shelly/Tempest/HA sync tasks |
+| `irrigation.py` | The irrigation program record `VIP1` (`ProgramRecord`, `RecordLine`, `RecordSlot`, `pack_program`, `unpack_program`, `program_sha256`, `program_hash16`, `program_chunks`), the `irr_program_id`, `irr_state` and `irr_events` grammars (`parse_irr_*` and `format_irr_*`, `seq_newer`), `IrrigationCause`, `RunOutcome`, `REASON_WORDS` and the fixed codes (`DEVICE_IDX`, `MISTER_MASK_BIT`, `START_KIND`, `SCHEDULABLE_IDX`). Golden vectors: `tests/fixtures/irrigation_program_vectors.json`, written only by `scripts/gen-irrigation-program-vectors.py` | the irrigation compiler (#1152), ingestor push and ledger (#1157), API and MCP irrigation reads (#1155), firmware decoder native tests (#1159) |
 
 ## Principles
 
