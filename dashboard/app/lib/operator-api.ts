@@ -408,6 +408,17 @@ export type WriteResult<T> = { status: number; data: T; replayed: boolean };
 
 const synthetic = (status: number, code: string, title: string, retryable: boolean): Problem => ({ type: "about:blank", title, status, code, retryable, min: null, max: null, current: null, retry_after_s: null });
 const UNREACHABLE = synthetic(0, "unavailable", "Dashboard API unavailable", true);
+const TIMED_OUT = synthetic(0, "unavailable", "Dashboard API did not answer in time", true);
+
+/**
+ * A fetch or body read that failed. The caller's own abort (a hidden tab) is rethrown as it is; a timeout signal
+ * (`AbortSignal.timeout`, as `usePolledQuery` passes) or a network failure is an `ApiError` with status 0.
+ */
+function unreachable(error: unknown, signal: AbortSignal | undefined): never {
+  const timedOut = (signal?.reason as { name?: unknown } | undefined)?.name === "TimeoutError";
+  if (signal?.aborted && !timedOut) throw error;
+  throw new ApiError(0, timedOut ? TIMED_OUT : UNREACHABLE);
+}
 
 /** `/api/v1/...` for an operation: path parameters fill its template, the rest become the query (arrays repeat). */
 export function operationPath(operationId: ApiOperationId, params: Readonly<Record<string, unknown>>): string {
@@ -416,6 +427,8 @@ export function operationPath(operationId: ApiOperationId, params: Readonly<Reco
     used.add(name);
     const value = params[name];
     if (value === undefined || value === null || value === "") throw new TypeError(`${operationId} needs ${name}`);
+    // The browser would resolve a . or .. segment to another path before the BFF could refuse it.
+    if (value === "." || value === "..") throw new TypeError(`${operationId} ${name} cannot be ${String(value)}`);
     return encodeURIComponent(String(value));
   });
   const query = new URLSearchParams();
@@ -427,8 +440,14 @@ export function operationPath(operationId: ApiOperationId, params: Readonly<Reco
   return `/api${filled}${search ? `?${search}` : ""}`;
 }
 
-async function body(response: Response): Promise<unknown> {
-  try { return await response.json(); } catch { return null; }
+/** The JSON body, or null when it is not JSON. An abort or timeout while it arrives fails like the fetch. */
+async function body(response: Response, signal: AbortSignal | undefined): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch (error) {
+    if (signal?.aborted) unreachable(error, signal);
+    return null;
+  }
 }
 async function call(operationId: ApiOperationId, params: Readonly<Record<string, unknown>>, payload: unknown, idempotencyKey: string | undefined, options: CallOptions) {
   const { method, parse } = OPERATIONS[operationId];
@@ -436,31 +455,33 @@ async function call(operationId: ApiOperationId, params: Readonly<Record<string,
   if (payload !== undefined) headers["Content-Type"] = "application/json";
   if (idempotencyKey !== undefined) headers["Idempotency-Key"] = idempotencyKey;
   const fetcher: Fetcher = options.fetch ?? ((input, init) => fetch(input, init));
+  const path = operationPath(operationId, params);
   let response: Response;
   try {
-    response = await fetcher(operationPath(operationId, params), {
+    response = await fetcher(path, {
       method, headers, body: payload === undefined ? undefined : JSON.stringify(payload), credentials: "same-origin", cache: "no-store",
       redirect: "manual", signal: options.signal,
     });
   } catch (error) {
-    // A hidden tab's abort is the caller's; anything else means the API could not be reached.
-    if (options.signal?.aborted) throw error;
-    throw new ApiError(0, UNREACHABLE);
+    unreachable(error, options.signal);
   }
   // No session: the BFF answers 401 on /api. A redirect to sign in reads the same.
   if (response.status === 401 || response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) throw new SessionEnded();
   if (!response.ok) {
-    const problem = parseProblem(await body(response));
+    const problem = parseProblem(await body(response, options.signal));
     throw new ApiError(response.status, problem ?? synthetic(response.status, `http_${response.status}`, "Dashboard API error", response.status >= 500));
   }
   const replayed = response.headers.get("Idempotency-Replayed") === "true";
   if (parse === null || response.status === 204) return { status: response.status, data: null, replayed };
-  const data = (parse as Parser<unknown>)(await body(response));
+  const data = (parse as Parser<unknown>)(await body(response, options.signal));
   if (data === null) throw new ApiError(response.status, synthetic(response.status, "invalid_response", "Unexpected answer from the dashboard API", false));
   return { status: response.status, data, replayed };
 }
 
-/** One read. Throws `SessionEnded` on a 401 and `ApiError` on any other failure, so a poll counts it. */
+/**
+ * One read. Throws `SessionEnded` on a 401 and `ApiError` on any other failure, a timeout included, so a poll counts
+ * it; the caller's own abort rethrows as the abort it is.
+ */
 export async function apiGet<K extends ReadOperationId>(operationId: K, params: ParamsOf<K>, options: CallOptions = {}): Promise<Parsed<K>> {
   const result = await call(operationId, params as Readonly<Record<string, unknown>>, undefined, undefined, options);
   return result.data as Parsed<K>;

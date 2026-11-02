@@ -1476,7 +1476,7 @@ export interface components {
              * Format: uri-reference
              * @default about:blank
              */
-            readonly type: string;
+            readonly type?: string;
         };
         /**
          * @description Stable codes shared with MCP (architecture §5.3, irrigation §4.3 and §4.7). manual is for Iris only
@@ -1645,7 +1645,7 @@ export interface components {
              * @description Omitted on a REST create means true (the dashboard default); MCP creates default false
              * @default true
              */
-            readonly manual: boolean;
+            readonly manual?: boolean;
         };
         /** @description The weekdays the schedule runs on */
         readonly ScheduleDays: readonly ("mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun")[];
@@ -1655,25 +1655,25 @@ export interface components {
              * @description Pulses in a mist window; drips use 1
              * @default 1
              */
-            readonly count: number;
+            readonly count?: number;
             readonly days?: components["schemas"]["ScheduleDays"];
             /**
              * @description L04, L07, L09 only (D-IRP-12)
              * @default false
              */
-            readonly degraded_only: boolean;
+            readonly degraded_only?: boolean;
             /** @default true */
-            readonly enabled: boolean;
+            readonly enabled?: boolean;
             /**
              * @description Fertilizer lines only
              * @default 0
              */
-            readonly flush_s: number;
+            readonly flush_s?: number;
             /**
              * @description Mister gap 30-600; drips 0
              * @default 0
              */
-            readonly gap_s: number;
+            readonly gap_s?: number;
             readonly label?: string;
             /** @description L01, L02, L04-L10 (not L03 or L11) */
             readonly line_id?: string;
@@ -1681,14 +1681,14 @@ export interface components {
              * @description Iris skips the schedule while true. A REST create or edit that omits it stores true (the dashboard default, R3); MCP writes default false
              * @default true
              */
-            readonly manual: boolean;
+            readonly manual?: boolean;
             /** @description Seconds per run or pulse; misters 10-90; fertilizer the feed */
             readonly on_s?: number;
             /**
              * @description Fertilizer lines only
              * @default 0
              */
-            readonly prewet_s: number;
+            readonly prewet_s?: number;
             readonly reason?: string;
             readonly start?: components["schemas"]["ScheduleStart"];
         };
@@ -1701,7 +1701,7 @@ export interface components {
              * @description Solar kinds
              * @default 0
              */
-            readonly offset_min: number;
+            readonly offset_min?: number;
         };
         /** @description uPlot columns. A bucket with no data is null, never 0; count gives coverage. */
         readonly Series: {
@@ -1853,7 +1853,7 @@ export interface components {
              * @description Iris skips the setting while true. The dashboard default (R3); MCP set_setting defaults false. A write stores exactly the flag it carries
              * @default true
              */
-            readonly manual: boolean;
+            readonly manual?: boolean;
             readonly reason?: string;
             /** @description Switches 0 or 1, enums the option value; snapped to step */
             readonly value: number;

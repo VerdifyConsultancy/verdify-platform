@@ -23,7 +23,9 @@ function localReferences(value) {
   for (const child of Object.values(value)) localReferences(child);
 }
 localReferences(document);
-const ast = await openapiTS(document, { alphabetize: true, emptyObjectsUnknown: true, immutable: true, silent: true });
+// Optionality follows each schema's `required`: a field with a default stays optional in the request bodies that
+// reference it (a schedule edit sends only what changes), and a stored-JSON object reads as Record<string, unknown>.
+const ast = await openapiTS(document, { alphabetize: true, defaultNonNullable: false, emptyObjectsUnknown: true, immutable: true, silent: true });
 const rendered = HEADER + astToString(ast);
 
 const mode = process.argv[2];

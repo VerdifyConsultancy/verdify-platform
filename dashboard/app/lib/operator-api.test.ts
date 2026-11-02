@@ -2,11 +2,11 @@
 /**
  * The operator API client (VD-02): lenient parsing and the typed fetch wrapper, against the fixture API in process.
  */
-import { expect, test, vi } from "vitest";
+import { expect, expectTypeOf, test, vi } from "vitest";
 import { createFixtureHandler } from "../../e2e/fixture-api.mjs";
 import { fixture } from "../../e2e/fixtures/index.mjs";
 import {
-  ApiError, type Fetcher, SessionEnded, apiGet, apiWrite, newIdempotencyKey, operationPath, parseIrrigationStatus, parseMe, parseNow, parseProblem,
+  ApiError, type BodyOf, type Fetcher, SessionEnded, apiGet, apiWrite, newIdempotencyKey, operationPath, parseIrrigationStatus, parseMe, parseNow, parseProblem,
   parseRunPage, parseSettings,
 } from "./operator-api";
 
@@ -94,6 +94,9 @@ test("operationPath fills the template from one table and puts the rest in the q
   expect(operationPath("API-15", { id: 101 })).toBe("/api/v1/alerts/101/ack");
   expect(operationPath("API-IRR-06", { line_id: "L../01" })).toBe("/api/v1/irrigation/lines/L..%2F01/run");
   expect(() => operationPath("API-10", {})).toThrow("API-10 needs param");
+  // The browser would turn a . or .. segment into another path before the BFF could refuse it.
+  expect(() => operationPath("API-12", { param: "..", from: "a", to: "b" })).toThrow("API-12 param cannot be ..");
+  expect(() => operationPath("API-IRR-06", { line_id: "." })).toThrow(TypeError);
 });
 
 test("apiGet reads through the same-origin path and parses with the generated types", async () => {
@@ -129,6 +132,26 @@ test("a 401 raises SessionEnded; a refusal raises ApiError with its Problem; an 
   controller.abort();
   const aborted: Fetcher = async (_input, init) => { init.signal?.throwIfAborted(); return new Response("{}"); };
   await expect(apiGet("API-01", {}, { fetch: aborted, signal: controller.signal })).rejects.toMatchObject({ name: "AbortError" });
+  // A missing path parameter is the caller's bug, never "API unavailable".
+  await expect(apiWrite("API-10", {} as never, { value: 1.6 }, KEY, { fetch: aborted })).rejects.toThrow(TypeError);
+});
+
+test("a timeout is an ApiError the poll counts, and the caller's own abort rethrows, while fetching or reading the body", async () => {
+  const timedOut = () => new DOMException("The operation timed out.", "TimeoutError");
+  const late = new AbortController();
+  late.abort(timedOut());
+  const waiting: Fetcher = async (_input, init) => { init.signal?.throwIfAborted(); return new Response("{}"); };
+  await expect(apiGet("API-01", {}, { fetch: waiting, signal: late.signal })).rejects.toMatchObject({
+    name: "ApiError", status: 0, problem: { code: "unavailable", retryable: true, title: "Dashboard API did not answer in time" },
+  });
+  for (const [reason, expected] of [[undefined, { name: "AbortError" }], [timedOut(), { name: "ApiError", status: 0, problem: { code: "unavailable" } }]] as const) {
+    const controller = new AbortController();
+    // The headers arrived, then the signal fired while the body was still arriving.
+    const cut: Fetcher = async () => Object.assign(new Response(null, { status: 200 }), {
+      json: async () => { controller.abort(reason); throw controller.signal.reason; },
+    });
+    await expect(apiGet("API-01", {}, { fetch: cut, signal: controller.signal })).rejects.toMatchObject(expected);
+  }
 });
 
 test("apiWrite sends one request with its Idempotency-Key and JSON body, never retries, and reports a replay", async () => {
@@ -157,6 +180,14 @@ test("apiWrite sends one request with its Idempotency-Key and JSON body, never r
   const downFetch = fixtureFetch(down);
   await expect(apiWrite("API-IRR-07", {}, { line_id: "L01" }, newIdempotencyKey(), { fetch: downFetch })).rejects.toMatchObject({ status: 503 });
   expect(downFetch.calls).toHaveLength(1);
+});
+
+test("a request body needs only what the file requires, so a schedule edit sends just what changes", () => {
+  expectTypeOf<{ enabled: false }>().toExtend<BodyOf<"API-IRR-04">>();
+  expectTypeOf<{ start: { kind: "sunrise" } }>().toExtend<BodyOf<"API-IRR-04">>();
+  expectTypeOf<{ value: 1.6 }>().toExtend<BodyOf<"API-10">>();
+  expectTypeOf<undefined>().toExtend<BodyOf<"API-IRR-07">>();
+  expectTypeOf<{ line_id: "L01" }>().not.toExtend<BodyOf<"API-IRR-12">>();
 });
 
 test("without an injected fetch, the client uses the page's fetch", async () => {
