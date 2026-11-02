@@ -14,3 +14,4 @@ replay_emit
 replay_emit_follow
 replay_invariants
 test_policy_injection
+test_zone_vpd

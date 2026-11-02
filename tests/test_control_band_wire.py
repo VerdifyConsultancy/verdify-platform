@@ -49,13 +49,18 @@ def test_source_revision_bound_to_actual_owning_files():
     assert algorithm_revision().startswith("served-band-wire-v1:sha256:")
 
 
-def test_previous_controls_declaration_rejects_current_dwell_source(monkeypatch):
-    # The pre-#367 declaration must not silently accept the new owning bytes.
-    monkeypatch.setitem(
-        wire.FIRMWARE_SOURCES,
-        "firmware/greenhouse/controls.yaml",
+@pytest.mark.parametrize(
+    "previous",
+    [
+        # pre-#367 (relay dwell refresh)
         "aac93cd0a29a94f006c94226547e70838179291825c1a7f5008b17b8ccbc68cd",
-    )
+        # pre-VD-43 (peer-probe VPD fallback in zone choice)
+        "7d2bc481325b701857d377242ff5475a3c66c3e6ff633942dde088cee7ec098e",
+    ],
+)
+def test_previous_controls_declaration_rejects_current_source(monkeypatch, previous):
+    # A retired declaration must not silently accept the new owning bytes.
+    monkeypatch.setitem(wire.FIRMWARE_SOURCES, "firmware/greenhouse/controls.yaml", previous)
     with pytest.raises(ValueError, match="firmware/greenhouse/controls.yaml"):
         algorithm_revision()
 
