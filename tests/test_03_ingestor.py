@@ -645,44 +645,17 @@ async def test_failed_forced_dispatch_is_throttled_not_relaunched_each_tick():
     assert runs == 1
 
 
-@pytest.mark.asyncio
-async def test_atomic_approval_replacement_wakes_once_after_throttle(tmp_path):
-    shared.setpoint_dispatch_requested.clear()
-    observed, pending = ingestor._poll_stage_approval(tmp_path, None, None)
-    assert observed is None and pending is None
-    approval = tmp_path / ingestor.bounded_reconcile.APPROVAL_NAME
-    temporary = tmp_path / "approval.tmp"
-    temporary.write_text('{"run_id":"approved"}')
-    temporary.replace(approval)
-    observed, pending = ingestor._poll_stage_approval(tmp_path, observed, pending)
-    assert pending == observed and shared.setpoint_dispatch_requested.is_set()
-
-    # A running dispatcher may consume the event; the new approval remains
-    # pending until a subsequent launch that also honors the 30s minimum.
-    shared.setpoint_dispatch_requested.clear()
-    observed, pending = ingestor._poll_stage_approval(tmp_path, observed, pending)
-    assert shared.setpoint_dispatch_requested.is_set()
-
-    async def dispatcher(_pool):
-        return None
-
-    tasks = [("setpoint_dispatch", 300.0, dispatcher)]
-    last_run = {"setpoint_dispatch": 100.0}
-    running = {}
-    assert (
-        ingestor._launch_due_tasks(
-            None, tasks, last_run, running, 129.9, {"setpoint_dispatch": 300.0}, {"setpoint_dispatch"}
-        )
-        == []
-    )
-    assert ingestor._launch_due_tasks(
-        None, tasks, last_run, running, 130.0, {"setpoint_dispatch": 300.0}, {"setpoint_dispatch"}
-    ) == ["setpoint_dispatch"]
-    pending = None
-    shared.setpoint_dispatch_requested.clear()
-    observed, pending = ingestor._poll_stage_approval(tmp_path, observed, pending)
-    assert pending is None and not shared.setpoint_dispatch_requested.is_set()
-    await asyncio.gather(*running.values())
+def test_startup_archives_halted_runs_before_the_task_loop_and_polls_no_stage_approval():
+    # VD-62: ordinary dispatch reads no approval file. Start-up renames any
+    # halted-run custody into archived/ once, before the task loop starts.
+    assert not hasattr(ingestor, "_poll_stage_approval")
+    source = Path(ingestor.__file__).read_text()
+    main = source[source.index("async def main() -> None:") :]
+    archive = main.index("bounded_reconcile.archive_halted_runs(STATE_DIR)")
+    assert archive < main.index("task_loop(pool, component_pool, equipment_source_pool)")
+    assert main.count("archive_halted_runs(") == 1
+    loop = source[source.index("async def task_loop(") : source.index("async def main() -> None:")]
+    assert "approval_file_stamp" not in loop and "_poll_drift_approval(" in loop
 
 
 @pytest.mark.asyncio

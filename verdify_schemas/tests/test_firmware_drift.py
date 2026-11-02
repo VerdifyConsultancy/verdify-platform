@@ -46,13 +46,19 @@ for tag in ("!secret", "!lambda", "!include"):
     yaml.SafeLoader.add_constructor(tag, lambda loader, node: None)
 
 
-def _slugify(name: str) -> tuple[str, ...]:
-    """Approximate ESPHome's name-to-object_id slugification.
+def _esphome_slug(name: str) -> str:
+    """ESPHome's exact name-to-object_id rule, as the device reports it.
 
-    ESPHome's actual algorithm: lowercase, then replace each char that
-    isn't [a-z0-9] with `_` individually (no collapsing). Trailing
-    underscores are PRESERVED (e.g. "Vent Latch Timer (s)" →
-    `vent_latch_timer__s_`).
+    Lowercase, then replace each character outside [a-z0-9_-] with `_`
+    individually: hyphens survive and underscores are neither collapsed nor
+    trimmed ("Cfg On-Chip Band Enabled" → `cfg_on-chip_band_enabled`,
+    "Vent Latch Timer (s)" → `vent_latch_timer__s_`).
+    """
+    return re.sub(r"[^a-z0-9_-]", "_", name.lower())
+
+
+def _slugify(name: str) -> tuple[str, ...]:
+    """Candidate object_ids for one entity name.
 
     We emit several variants to match across edge cases:
       - tight: collapse runs, strip ends — matches simple names
@@ -60,13 +66,15 @@ def _slugify(name: str) -> tuple[str, ...]:
         with bullets, parens, units in ()
       - loose_stripped: per-char replace, strip ends — older entity_map
         keys sometimes used this style
+      - esphome: ESPHome's exact form (`_esphome_slug`), which keeps
+        hyphens; the other variants turn them into `_`
     """
     s = name.lower()
     tight = re.sub(r"[^a-z0-9]+", "_", s).strip("_")
     per_char = re.sub(r"[^a-z0-9]", "_", s)
     loose = per_char  # preserve all underscores including trailing
     loose_stripped = per_char.strip("_")
-    return (tight, loose, loose_stripped)
+    return (tight, loose, loose_stripped, _esphome_slug(name))
 
 
 def _firmware_entity_ids() -> set[str]:
@@ -74,8 +82,8 @@ def _firmware_entity_ids() -> set[str]:
 
     For each entity, we collect:
       - the explicit `object_id:` (highest precedence)
-      - otherwise both slugifications of `name:` (tight + loose, since
-        ESPHome's exact algorithm depends on platform & character class)
+      - otherwise every `_slugify` candidate of `name:` (ESPHome's exact
+        form plus the older tight/loose spellings entity_map keys used)
       - the C++ `id:` (last-resort match for entities used internally)
     """
     ids: set[str] = set()
@@ -160,7 +168,7 @@ def _firmware_cfg_sensor_wire_ids() -> dict[str, str]:
             name = entry.get("name")
             if not isinstance(sensor_id, str) or not sensor_id.startswith("cfg_") or not isinstance(name, str):
                 continue
-            wire_ids[sensor_id] = str(entry.get("object_id") or _slugify(name)[1])
+            wire_ids[sensor_id] = str(entry.get("object_id") or _esphome_slug(name))
     return wire_ids
 
 
@@ -260,19 +268,15 @@ KNOWN_PRE_EXISTING_DRIFT: dict[str, set[str]] = {
         "fog_stress_min_dew_margin_f",
         "fog_stress_window_extend_enabled",
         "fog_stress_window_latest_hour",
-        "fog_window_end__hr_",
-        "fog_window_start__hr_",
     },
     "CFG_READBACK_MAP": {
         # firmware-v2 (firmware/v2-solar-bands) removed the matching cfg_*
-        # readback sensors for the dropped fog-window / micropulse /
-        # dawn-rehydrate-start / midday-drench / overnight-micropulse /
-        # night-humidity-source entities. Registry rows persist (planner policy
-        # / schedule params), so the registry-derived CFG_READBACK_MAP keeps the
-        # routes. Dead firmware readbacks — accepted drift until the underlying
-        # registry rows are retired.
-        "cfg___fog_window_end__hour_",
-        "cfg___fog_window_start__hour_",
+        # readback sensors for the dropped micropulse / dawn-rehydrate-start /
+        # midday-drench / overnight-micropulse / night-humidity-source
+        # entities. Registry rows persist (planner policy / schedule params),
+        # so the registry-derived CFG_READBACK_MAP keeps the routes. Dead
+        # firmware readbacks — accepted drift until the underlying registry
+        # rows are retired. (VD-63 retired the fog-window rows without routes.)
         "cfg_dawn_rehydrate_start_minute",
         "cfg_direct_wet_stress_latest_hour",
         "cfg_fog_stress_min_dew_margin_f",
@@ -591,3 +595,92 @@ def test_heap_recovery_coalesces_diagnostics_and_records_loop_high_water():
     assert "GH_CONTROL_LOOP_WARN_US = 250000u" in heap_header
     assert "gh_take_control_loop_max_us" in heap_header
     assert "gh_take_control_loop_overrun_count" in heap_header
+
+
+def _source_span(text: str, start: str, end: str) -> tuple[int, int]:
+    """Return the [start, end) offsets of the unique `start` marker up to `end`."""
+    assert text.count(start) == 1, f"marker missing or ambiguous: {start!r}"
+    first = text.index(start)
+    return first, text.index(end, first)
+
+
+def test_zone_choice_reads_zone_vpd_through_peer_fallback():
+    """F8 (D-IRP-13, VD-43): a stale or dead wall probe never feeds zone choice.
+
+    A Modbus probe keeps its last value when it stops answering, so a finite
+    reading is not a live one. Zone choice resolves each zone through
+    zone_vpd_with_fallback() (lib/zone_vpd.h): own probe while fresh and finite,
+    else the fresh peers' mean, else the house VPD; center is always the house
+    VPD. The only raw zone VPD reads left in controls.yaml are the
+    determine_mode() inputs (replay unchanged), the FW-9 emergency merge and the
+    per-tick ZoneProbe snapshot the fallback reads.
+    """
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    root_yaml = (REPO_ROOT / "firmware" / "greenhouse.yaml").read_text()
+    raw_reads = ("id(vpd_south).state", "id(vpd_west).state", "id(vpd_east).state")
+
+    # The header ships in the image; greenhouse-recovery.yaml packages this file.
+    includes = re.findall(r"^\s*-\s+(lib/[A-Za-z0-9_]+\.h)\s*$", root_yaml, re.M)
+    assert "lib/zone_vpd.h" in includes
+    assert includes.index("lib/greenhouse_solar.h") < includes.index("lib/zone_vpd.h")
+
+    # One snapshot per tick, beside VPD, pairing each probe with its stamp.
+    snap_start, snap_end = _source_span(controls, "const ZoneProbe zp[ZONE_COUNT] = {", "};")
+    snapshot = controls[snap_start:snap_end]
+    assert "{NAN, 0u}" in snapshot
+    for zone in ("south", "west", "east"):
+        assert re.search(rf"\{{id\(vpd_{zone}\)\.state,\s*id\(last_{zone}_ms\)\}}", snapshot), zone
+    assert controls.index("if(VPD > 10.0f) VPD = 10.0f;") < snap_start
+
+    mister_start, mister_end = _source_span(
+        controls, "/**************** 12 — MISTER STATE MACHINE", "/**************** 14 — Telemetry & debug"
+    )
+    arbiter_start, arbiter_end = _source_span(
+        controls, "auto select_arbiter_zone = [&]() -> int {", "auto select_zone_for_pulse"
+    )
+    diag_start, diag_end = _source_span(
+        controls, "// ── Firmware-v2 EVIDENCE SURFACE", "id(gh_zone_wet_granted).publish_state"
+    )
+    assert snap_end < mister_start < arbiter_start < arbiter_end < mister_end < diag_start
+    mister = controls[mister_start:mister_end]
+    arbiter = controls[arbiter_start:arbiter_end]
+    diag = controls[diag_start:diag_end]
+
+    # The mister block's zone locals come from the fallback, and every
+    # zone-choice reader (stress scores, east adjacency, fairness, S2 weight)
+    # reads those locals.
+    for zone in ("south", "west", "east"):
+        pattern = (
+            rf"float\s+{zone}_vpd\s*=\s*zone_vpd_with_fallback\(ZONE_{zone.upper()},\s*zp,\s*VPD,\s*now_ms\)\.vpd_kpa;"
+        )
+        assert re.search(pattern, mister), zone
+    assert "s_stress = (south_vpd - id(vpd_target_south))" in mister
+    assert "e_stress = max(0.0f, (east_vpd_val - id(vpd_target_east))" in mister
+    zvpd_loop = re.compile(
+        r"for\s*\(int z = 0; z < ZONE_COUNT; z\+\+\)\s*"
+        r"zvpd\[z\]\s*=\s*zone_vpd_with_fallback\(ZoneId\(z\),\s*zp,\s*VPD,\s*now_ms\)\.vpd_kpa;"
+    )
+    # The arbiter and the published gh_zone_wet_granted read the same values
+    # the relays use.
+    assert zvpd_loop.search(arbiter)
+    assert zvpd_loop.search(diag)
+    for name, block in (("mister block", mister), ("select_arbiter_zone", arbiter), ("diagnostic zvpd", diag)):
+        for raw in raw_reads:
+            assert raw not in block, f"{name} reads raw {raw}; use zone_vpd_with_fallback()"
+
+    # Every raw zone VPD read left is a determine_mode() input, an FW-9
+    # emergency merge term, or the snapshot itself.
+    allowed = [
+        _source_span(controls, "SensorInputs sensor_in = {", "};"),
+        _source_span(controls, "// FW-9: VPD emergency override", "static bool leak_water_interlock_prev"),
+        (snap_start, snap_end),
+    ]
+    sensor_inputs = controls[allowed[0][0] : allowed[0][1]]
+    for zone in ("south", "west", "east"):
+        assert f".vpd_{zone} = id(vpd_{zone}).state," in sensor_inputs, zone
+    for raw in raw_reads:
+        for match in re.finditer(re.escape(raw), controls):
+            assert any(lo <= match.start() < hi for lo, hi in allowed), (
+                f"raw {raw} at controls.yaml line {controls.count(chr(10), 0, match.start()) + 1} "
+                "is outside SensorInputs, the FW-9 merge and the ZoneProbe snapshot"
+            )

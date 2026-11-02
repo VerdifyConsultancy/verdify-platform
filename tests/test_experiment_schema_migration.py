@@ -335,6 +335,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "278-grafana-public-saved-query-bounds.sql",
         # Authentic source-clock consumers and successor seals must run forward.
         "279-authentic-meter-source-clock-consumers.sql",
+        # Desired state, the activity log and their successor seals run forward (VD-30).
+        "280-desired-state-activity-log.sql",
         # Minutes-by-zone views (M4) and their receipt re-seals run forward only.
         "281-irrigation-minutes-by-zone.sql",
     }

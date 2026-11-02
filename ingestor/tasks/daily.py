@@ -34,16 +34,19 @@ from ._common import (
 )
 
 
-def _auto_close_disposition(alert_type: str, prior_disposition: str) -> tuple[str, str]:
+def _auto_close_disposition(
+    alert_type: str, prior_disposition: str, resolution: str = "auto-resolved"
+) -> tuple[str, str]:
     """Pick (disposition, resolution) for an alert that left the active set.
 
     A suppressible alert type that the operator already ACKNOWLEDGED is closed
     as 'suppressed' (accepted hardware/occupancy gap, not a recovery). Everything
-    else auto-resolves as before.
+    else resolves with ``resolution``, the caller's reason (VD-72: for example
+    ``auto-resolved: probe reporting again``).
     """
     if alert_type in SUPPRESSIBLE_ALERT_TYPES and prior_disposition == "acknowledged":
         return "suppressed", "auto-suppressed: acknowledged hardware/occupancy gap, no recovery claimed"
-    return "resolved", "auto-resolved"
+    return "resolved", resolution
 
 
 @dataclass

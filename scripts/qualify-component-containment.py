@@ -7,11 +7,13 @@ No ambient database credential/address is passed to pytest. No live device calls
 
 import datetime as dt
 import hashlib
+import http.client
 import json
 import os
 import re
 import subprocess
 import tempfile
+import time
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -307,6 +309,33 @@ def case_qualified(c):
     )
 
 
+PGDG_KEY_URL = "https://www.postgresql.org/media/keys/ACCC4CF8.asc"
+PGDG_KEY_SHA256 = "0144068502a1eddd2a0280ede10ef607d1ec592ce819940991203941564e8e76"
+# Vendored copy of the pinned key. CI egress to www.postgresql.org intermittently
+# stalls in the TLS handshake, so the network is only a fallback when it is absent.
+PGDG_KEY_FILE = Path(__file__).resolve().parent.parent / "db/qualification/pgdg-ACCC4CF8.asc"
+
+
+def fetch_with_retry(url, attempts=3, timeout=30, backoff_seconds=5):
+    """Read at most 64 KiB from `url`, retrying transient failures with exponential backoff."""
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as response:
+                return response.read(65536)
+        except (OSError, http.client.HTTPException):
+            if attempt == attempts:
+                raise
+            time.sleep(backoff_seconds * 2 ** (attempt - 1))
+
+
+def pgdg_signing_key(vendored=PGDG_KEY_FILE) -> bytes:
+    """The pinned PGDG key: the vendored copy, or a network fetch only when that file is missing."""
+    raw = vendored.read_bytes() if vendored.is_file() else fetch_with_retry(PGDG_KEY_URL)
+    if hashlib.sha256(raw).hexdigest() != PGDG_KEY_SHA256:
+        raise RuntimeError("PGDG signing key does not match the pinned authority")
+    return raw
+
+
 def postgres_bin(workspace: Path, installed=Path("/usr/lib/postgresql/16/bin")) -> Path:
     if (installed / "initdb").is_file() and Path("/usr/share/postgresql/16/extension/pgcrypto.control").is_file():
         return installed
@@ -320,10 +349,7 @@ def postgres_bin(workspace: Path, installed=Path("/usr/lib/postgresql/16/bin")) 
     archives = package_root / "archives"
     (archives / "partial").mkdir(parents=True)
     key = package_root / "pgdg.asc"
-    raw = urllib.request.urlopen("https://www.postgresql.org/media/keys/ACCC4CF8.asc", timeout=30).read(65536)
-    if hashlib.sha256(raw).hexdigest() != "0144068502a1eddd2a0280ede10ef607d1ec592ce819940991203941564e8e76":
-        raise RuntimeError("PGDG signing key does not match the pinned authority")
-    key.write_bytes(raw)
+    key.write_bytes(pgdg_signing_key())
     sources = package_root / "pgdg.list"
     sources.write_text(f"deb [signed-by={key}] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main\n")
     apt = [
@@ -338,6 +364,15 @@ def postgres_bin(workspace: Path, installed=Path("/usr/lib/postgresql/16/bin")) 
         "Debug::NoLocking=true",
         "-o",
         "Acquire::AllowInsecureRepositories=false",
+        # Ride out transient egress stalls: fail a stalled connect or read after
+        # 20 s (apt's default is 30 s) and retry each item up to 5 times; apt
+        # backs off exponentially between retries.
+        "-o",
+        "Acquire::Retries=5",
+        "-o",
+        "Acquire::http::Timeout=20",
+        "-o",
+        "Acquire::https::Timeout=20",
     ]
     subprocess.run([*apt, "update"], check=True, cwd=package_root)
     subprocess.run(
@@ -450,7 +485,8 @@ def main():
                     f"--junitxml={junit}",
                 ],
                 env=env,
-                timeout=600,
+                # CI node contention (validate pods share one node) slows this suite past 600 s; load, not a hang.
+                timeout=1500,
             )
             cases = list(ET.parse(junit).iter("testcase")) if junit.is_file() else []  # noqa: S314 - private pytest output
             report["cases"] = [

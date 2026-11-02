@@ -4,7 +4,7 @@
 #
 # WHY: the fixed-name verdify-config ConfigMap is consumed via envFrom by
 # api / mcp / ingestor / migration-job / planner / setpoint-server /
-# lab-publisher / ha-gap-backfill, while the v2 orchestrator also consumes its
+# lab-publisher, while the v2 orchestrator also consumes its
 # component ConfigMap and the mounted gather-script ConfigMap. Editing one of
 # these ConfigMaps does NOT restart any pod — a
 # flag flip (e.g. VERDIFY_POLICY_VECTOR_MODE at a §8.10 rollout
@@ -49,7 +49,7 @@ GATHER_SCRIPT_CM="deploy/k8s/components/ingestor-gather-script/gather-script-con
 OVERLAY_DIR="deploy/k8s/overlays"
 
 # Pod templates carrying the annotation (the long-running envFrom consumers).
-# migration-job / lab-publisher / ha-gap-backfill are Jobs/CronJobs — they read
+# migration-job / lab-publisher are Jobs/CronJobs — they read
 # the ConfigMap fresh at each run, so they need no rollout trigger.
 ANNOTATED_FILES=(
   "deploy/k8s/base/api-deployment.yaml"

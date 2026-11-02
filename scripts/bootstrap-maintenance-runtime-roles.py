@@ -57,6 +57,8 @@ def contract_sql():
         + " OR "
         + _ordinary.sealed_sql_279()
         + " OR "
+        + _ordinary.sealed_sql_280()
+        + " OR "
         + _ordinary.sealed_sql_281()
         + ")"
     ]

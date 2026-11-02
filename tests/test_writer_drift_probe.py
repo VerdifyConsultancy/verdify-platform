@@ -1,4 +1,8 @@
-"""The one-shot #433 probe must use the sole writer and stop on uncertainty."""
+"""The one-shot #433 probe must use the sole writer and stop on uncertainty.
+
+Since VD-62 a halted probe keeps its receipt but no longer holds ordinary
+passes, and a phase in flight holds a pass for at most its confirmation deadline.
+"""
 
 from __future__ import annotations
 
@@ -187,6 +191,9 @@ async def test_generation_or_plan_change_halts_without_correction(fixture, tmp_p
     drift_probe.finish(tmp_path, probe, [record(probe)], [])
     assert (await drift_probe.choose(db, [], db.planned(), 1.0, 4, True, tmp_path)).action == "hold"
     assert bounded._read(tmp_path / drift_probe.STATE_NAME)["status"] == "halted"
+    # Only the halting pass holds; the next pass repairs the field as usual.
+    after = await drift_probe.choose(db, [(drift_probe.PARAMETER, 1.0)], db.planned(), 1.0, 4, False, tmp_path)
+    assert after.action == "ordinary" and not after.changes
 
     other = tmp_path / "plan"
     await arm(db, other)
@@ -204,8 +211,13 @@ async def test_uncertain_or_failed_dispatch_stops_and_does_not_retry(fixture, tm
     probe = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
     assert (await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)).action == "hold"
     drift_probe.finish(tmp_path, probe, [], [(drift_probe.PARAMETER, "command_timeout_outcome_unknown")])
-    assert bounded._read(tmp_path / drift_probe.STATE_NAME)["status"] == "halted"
-    assert (await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)).action == "hold"
+    halted = bounded._read(tmp_path / drift_probe.STATE_NAME)
+    assert halted["status"] == "halted"
+    # VD-62: the halted receipt is retained and never replayed, but it no
+    # longer holds ordinary passes: plain convergence repairs the field.
+    after = await drift_probe.choose(db, [(drift_probe.PARAMETER, 1.0)], db.planned(), 1.0, 3, False, tmp_path)
+    assert after.action == "ordinary" and not after.changes
+    assert bounded._read(tmp_path / drift_probe.STATE_NAME) == halted
     source = (ROOT / "ingestor" / "tasks" / "dispatcher.py").read_text()
     assert 'max_attempts = 1 if probe_decision.action == "send" else 3' in source
 
@@ -254,3 +266,46 @@ def test_prepare_rejects_stale_preview(fixture, tmp_path):
     }
     with pytest.raises(ValueError, match="stale"):
         prepare_script.prepare(preview, datetime.now(UTC))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("phase", ["probe_inflight", "probe_awaiting", "restore_inflight", "restore_awaiting"])
+async def test_phase_in_flight_holds_only_within_its_confirmation_deadline(fixture, tmp_path, phase):
+    db = fixture
+    await arm(db, tmp_path)
+    probe = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
+    assert probe.action == "send"
+    state = bounded._read(tmp_path / drift_probe.STATE_NAME)
+    requested_at = datetime.now(UTC)
+    state["status"] = phase
+    state["phase_started_at"] = requested_at.isoformat()
+    state[f"{phase.split('_')[0]}_record"] = {"requested_at": requested_at.isoformat(), "value": 1.1}
+    bounded._write(tmp_path / drift_probe.STATE_NAME, state)
+    db.rows[(requested_at, drift_probe.PARAMETER)] = {"delivery_status": "sent", "confirmed_at": None}
+    candidate = [(drift_probe.PARAMETER, 1.0)] if phase.startswith("restore") else []
+    within = await drift_probe.choose(db, candidate, db.planned(), 1.0, 3, False, tmp_path)
+    assert within.action == "hold"
+    assert bounded._read(tmp_path / drift_probe.STATE_NAME)["status"] == phase  # waiting, not halted
+
+    state = bounded._read(tmp_path / drift_probe.STATE_NAME)
+    state["status"] = phase
+    state["phase_started_at"] = (datetime.now(UTC) - drift_probe.CONFIRM_DEADLINE - timedelta(seconds=1)).isoformat()
+    bounded._write(tmp_path / drift_probe.STATE_NAME, state)
+    expired = await drift_probe.choose(db, [(drift_probe.PARAMETER, 1.0)], db.planned(), 1.0, 3, False, tmp_path)
+    assert expired.action == "ordinary" and not expired.changes and "deadline" in expired.reason
+    halted = bounded._read(tmp_path / drift_probe.STATE_NAME)
+    assert halted["status"] == "halted" and "deadline" in halted["halt_reason"]
+    assert (await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)).action == "ordinary"
+
+
+@pytest.mark.asyncio
+async def test_unreadable_approval_holds_a_started_probe_only_until_its_deadline(fixture, tmp_path):
+    db = fixture
+    await arm(db, tmp_path)
+    assert (await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)).action == "send"
+    (tmp_path / drift_probe.APPROVAL_NAME).write_text("malformed-approval")
+    state = bounded._read(tmp_path / drift_probe.STATE_NAME)
+    state["phase_started_at"] = (datetime.now(UTC) - drift_probe.CONFIRM_DEADLINE - timedelta(seconds=1)).isoformat()
+    bounded._write(tmp_path / drift_probe.STATE_NAME, state)
+    assert (await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)).action == "ordinary"
+    assert bounded._read(tmp_path / drift_probe.STATE_NAME)["status"] == "halted"

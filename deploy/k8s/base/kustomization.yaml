@@ -38,6 +38,8 @@ resources:
   - ingestor-rbac.yaml
   - networkpolicy.yaml
   - mcp-egress-networkpolicy.yaml
+  # VD-59: labelled named-agent pods (any namespace) → MCP :8000; additive, ingress-only.
+  - mcp-agents-networkpolicy.yaml
 
 # Image namespace. Canonical org namespace is
 # ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate} (NEVER

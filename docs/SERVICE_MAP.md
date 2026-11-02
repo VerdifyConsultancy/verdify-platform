@@ -44,11 +44,11 @@ new validated issue.
 | `verdify-migrate` | `db/Dockerfile.migrate`, `/usr/local/bin/migrate.sh` | `deploy/k8s/base/migration-job.yaml` | `ghcr.io/verdifyconsultancy/verdify-migrate` | ArgoCD PreSync Job | Replays `db/schema.sql` plus migration bootstrap against `verdify-db`; not the prod data restore path. |
 | `verdify-api` | `api/main.py`, `uvicorn main:app --port 8080` | `deploy/k8s/base/api-deployment.yaml` | `ghcr.io/verdifyconsultancy/verdify-api` | `8080`, ClusterIP; prod `api.verdify.ai` | `verdify-config`; `verdify-app-secrets` keys `POSTGRES_PASSWORD`, `VERDIFY_WRITE_API_KEY`; TimescaleDB. |
 | `verdify-mcp` | `mcp/server.py`, FastMCP streamable HTTP | `deploy/k8s/base/mcp-deployment.yaml` | `ghcr.io/verdifyconsultancy/verdify-mcp` | `8000`, ClusterIP; prod `mcp.verdify.ai` | `verdify-config`; `verdify-app-secrets/POSTGRES_PASSWORD`; planner tool surface. |
-| `verdify-ingestor` | `ingestor/ingestor.py` | `deploy/k8s/base/ingestor-deployment.yaml` plus prod patches | `ghcr.io/verdifyconsultancy/verdify-ingestor` | No inbound service; connect-out worker | ESP32 `192.168.10.111:6053`, HA `192.168.30.107:8123`, MQTT, TimescaleDB, Open-Meteo, Slack, Hermes. Single-writer invariant: replicas `1`, strategy `Recreate`. |
+| `verdify-ingestor` | `ingestor/ingestor.py` | `deploy/k8s/base/ingestor-deployment.yaml` plus prod patches | `ghcr.io/verdifyconsultancy/verdify-ingestor` | No inbound service; connect-out worker | ESP32 `192.168.10.111:6053` (also the outdoor Tempest data the ESP32 receives over UDP 50222), HA `192.168.30.107:8123` REST reads only (Lutron light readback, Frigate occupancy, YINMIK hydro probe until #1183, and the planner context gather's tunable bounds until HA-10), YINMIK hydro meter `192.168.10.105:6668` (read-only), in-cluster `verdify-mqtt` fan-out, TimescaleDB, Open-Meteo, Slack, Hermes. No HAOS MQTT client since VD-48. Single-writer invariant: replicas `1`, strategy `Recreate`. |
 | `verdify-planner` | `planner_graph/`, `python -m planner_graph.server` | `deploy/k8s/components/planner/planner-deployment.yaml` | `ghcr.io/verdifyconsultancy/verdify-planner` | `8080`, ClusterIP, `/health` | TimescaleDB run store; optional `OPENAI_API_KEY`; reached by Hermes/Iris and cron replan paths. |
 | `verdify-setpoint-server` | `scripts/setpoint-server.py` | `deploy/k8s/components/setpoint-server/setpoint-server.yaml` | `ghcr.io/verdifyconsultancy/verdify-setpoint-server` | `8200`, ClusterIP | Prod-only manual grow-light route: `/lights/{main,grow}/{on,off}` calls HA `switch.turn_*` for the two Lutron switches only, then confirms HA state; HA token Secret mount; TimescaleDB. One `Recreate` pod. |
 | `verdify-hermes-iris` | upstream Hermes gateway, args `gateway run` | `deploy/k8s/components/hermes-iris/hermes-iris.yaml` | `nousresearch/hermes-agent@sha256:...` | `8642`, ClusterIP | Secret `verdify-hermes`, optional `verdify-hermes-slack`, production PVC `verdify-hermes-iris-data-portable-20260801`, MCP URL to `verdify-mcp`. |
-| `verdify-mqtt` | Mosquitto fan-out broker | `deploy/k8s/components/mqtt-broker/mqtt-broker.yaml` | `eclipse-mosquitto:2` | `1883`, ClusterIP | In-cluster telemetry fan-out; separate from HAOS/Sentinel broker; no persistence. |
+| `verdify-mqtt` | Mosquitto fan-out broker | `deploy/k8s/components/mqtt-broker/mqtt-broker.yaml` | `eclipse-mosquitto:2` | `1883`, ClusterIP | In-cluster telemetry fan-out; separate from the HAOS broker, which nothing in this repo connects to since VD-48; no persistence. |
 | `verdify-lab` | static Quartz nginx runtime | `deploy/k8s/components/lab-site/lab-site.yaml` | `ghcr.io/verdifyconsultancy/verdify-lab` | `8080`, ClusterIP; prod lab hosts | Public research site. Serves the `verdify-lab-site-cache` PVC read-only; baked image content is bootstrap fallback. |
 | `verdify-lab-publisher` | `scripts/lab-publish-k3s.sh` | `deploy/k8s/components/lab-site/lab-publisher.yaml` | `ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s` | CronJob, no inbound service | S3 content/public/state store, TimescaleDB, Quartz build toolchain; writes only the lab cache PVC and S3 prefixes. |
 | `verdify-grafana` | Grafana plus image-renderer sidecar | `deploy/k8s/components/grafana/grafana.yaml` | digest-pinned `grafana/grafana:12.4.5`, `grafana/grafana-image-renderer:v5.12.9` | `3000`, ClusterIP; prod `graphs.verdify.ai` | Provisioned dashboards/config from git; legacy application-credential datasource (not a reporting-only security boundary); required admin/database/renderer Secret keys; shared Secret-sourced renderer token plus port isolation; surge-first rollout. |
@@ -77,6 +77,12 @@ cannot fabricate equipment runtime. HA UI/manual calls to the Lutron switches
 remain possible through the existing owning routes. See [the read-only ownership check](runbooks/ha-grow-light-writer-ownership.md)
 and `tests/test_ha_light_writer_boundary.py` before changing any route.
 
+In `equipment_state`, `grow_light_main` and `grow_light_grow` are only the Lutron
+readback that the ingestor's `ha_sensor_sync` records from HA on every poll. The
+controller's own grow-light switches record `grow_light_main_intent` and
+`grow_light_grow_intent` (decisions Q-09, VD-48); those two streams are written
+through the ordinary telemetry view, outside the durable equipment receipts.
+
 ## Operational Components
 
 | Component | Manifest | Current wiring | Notes |
@@ -85,7 +91,7 @@ and `tests/test_ha_light_writer_boundary.py` before changing any route.
 | Backup freshness exporter | `deploy/k8s/components/db-backup/backup-freshness-exporter.yaml` | Prod overlay | Exposes backup RPO metrics on `:8080/metrics` for observability scrape. |
 | Dev DB restore | Historical | Removed with the deleted dev environment; no nightly prod copy exists. |
 | DB watchdog | `deploy/k8s/overlays/prod/db-watchdog.yaml` | Prod overlay | Narrow CronJob that can delete only `verdify-db-0` after a specific DB mount/config CrashLoop signature. |
-| HA gap backfill | `deploy/k8s/components/ha-gap-backfill/ha-gap-backfill-cronjob.yaml` | Prod overlay | Hourly HA recorder gap reconciliation; writes missing telemetry rows only. |
+| HA gap backfill | Historical | Retired by VD-48 | The hourly HA recorder backfill CronJob, its script ConfigMap and NetworkPolicy `allow-db-from-ha-gap-backfill` left Git; prune is off, so the live objects are deleted by name after the sync. Gaps stay gaps; the ingestor's spools cover short database outages. Its database login, Secret and bootstrap duty stay. |
 | Gather script mount | `deploy/k8s/components/ingestor-gather-script/` | Prod overlay | ConfigMap delivery for `scripts/gather-plan-context.sh` into the ingestor image. |
 | Grafana band curve refresh | `deploy/k8s/components/grafana/band-curve-refresh-cronjob.yaml` | Prod overlay (via grafana component) | LIVE — refreshes the `mv_band_curve`, `mv_equipment_runtime_daily` and `mv_daily_kpi` matviews at :02 and :32 (`2,32 * * * *`); timer-based, not anchor-change-triggered (audit D12). |
 | Lab site publisher | `deploy/k8s/components/lab-site/lab-publisher.yaml` | Prod overlay with lab site | Regenerates lab.verdify.ai content every 30 minutes (:05 and :35) from S3-backed content and TimescaleDB, then updates the lab cache PVC and S3 public/state prefixes. |
@@ -102,11 +108,10 @@ the drift guards in `verdify_schemas/tests/`.
 |---|---|
 | API | Crop and topology tables/views: `greenhouses`, `crops`, `crop_events`, `observations`, `harvests`, `zones`, `shelves`, `positions`, `crop_catalog`, `equipment`, `sensors`, `switches`, `v_position_current`, `v_zone_full`, `v_crop_lifecycle`, `v_crop_catalog_with_profiles`; public/status surfaces: `climate`, `equipment_state`, `system_state`, `alert_log`, `plan_journal`, `planner_lessons`, `public_contact_submissions`, `v_data_pipeline_health`, `v_data_trust_ledger`, `v_planner_trigger_health`, `fn_planner_scorecard`, `fn_band_trace`, `fn_lighting_policy`, `fn_lighting_minutes_policy`. |
 | MCP | Planner/control state: `climate`, `system_state`, `equipment_state`, `weather_forecast`, `setpoint_changes`, `setpoint_plan`, `plan_delivery_log`, `plan_journal`, `planner_lessons`, `planner_trigger_ledger`, `v_active_plan`, `v_plan_guardrail_scorecard`, `fn_planner_scorecard`. |
-| Ingestor | Live telemetry/control write path: `climate`, `equipment_state`, `system_state`, `diagnostics`, `daily_summary`, `setpoint_changes`, `setpoint_snapshot`, `weather_forecast`, `alert_log`, planner delivery tables, HA/energy/hydro/weather-derived columns. Entity routing starts in `ingestor/entity_map.py`. |
+| Ingestor | Live telemetry/control write path: `climate`, `equipment_state`, `system_state`, `diagnostics`, `daily_summary`, `setpoint_changes`, `setpoint_snapshot`, `weather_forecast`, `alert_log`, planner delivery tables, the HA hydro columns and Lutron readback, Shelly energy and the ESP32 Tempest outdoor columns. Entity routing starts in `ingestor/entity_map.py`. |
 | Planner graph | Planner run and memory state: `planner_graph_runs`, `planner_memory_items`, `planner_memory_embeddings`, `planner_memory_retrievals`, `plan_delivery_log`, `climate`, `weather_forecast`, `plan_journal`, `setpoint_plan`, `alert_log`, `setpoint_clamps`, `setpoint_snapshot`, `fn_planner_scorecard`. |
 | Setpoint server | Lighting and setpoint diagnostics: `equipment_state`, `setpoint_changes`, `setpoint_plan`, lighting policy functions, HA service calls for grow-light circuits. |
 | Grafana | Read-only dashboard datasource over TimescaleDB; dashboards depend on public views/functions including `fn_band_trace`, `fn_lighting_timeline`, `v_data_pipeline_health`, `v_planner_trigger_health`, `mv_band_curve`, and site dashboard JSON under `grafana/` plus generated ConfigMaps. |
-| HA gap backfill | `setpoint_snapshot`, `equipment_state`, `system_state` and HA recorder-derived telemetry windows. |
 | Firmware twin | `twin_decisions` through INSERT-only `twin`/`twin_ro` role when the component is enabled. |
 
 ### PVC storage tiers (policy)
@@ -152,8 +157,9 @@ Grafana/MQTT use `emptyDir` (no PVC). When adding a PVC, follow this tiering.
 | Dependency | Used by | Contract |
 |---|---|---|
 | ESP32 greenhouse controller `192.168.10.111:6053` | Ingestor, firmware validation | ESPHome native API with Noise PSK; live device writes are gated. |
-| Home Assistant `192.168.30.107:8123` | Ingestor, setpoint server, HA backfill | Token from `verdify-ha-token`; service calls can be device-affecting. |
-| MQTT | Ingestor, fan-out broker | HAOS/Sentinel broker plus in-cluster `verdify-mqtt`; telemetry fan-out is not a device control path. |
+| Home Assistant `192.168.30.107:8123` | Ingestor REST reads (`ha_sensor_sync`: Lutron readback, Frigate occupancy, YINMIK hydro probe until #1183; the planner context gather's tunable bounds until HA-10 moves them to the registry), setpoint server (Lutron switch service calls) | Token from `verdify-ha-token`; service calls can be device-affecting. |
+| YINMIK hydroponic meter `192.168.10.105:6668` | Ingestor `hydro_probe_sync` (VD-70) | Tuya local protocol, read-only `status()` every 300 s onto the newest `climate` row's `hydro_*` columns; keys from the optional `verdify-hydro-probe` Secret, idle while it is absent. Home Assistant's YINMIK read (`_HYDRO_MAP`) stays until the direct rows pass the live check. |
+| MQTT | Ingestor (fan-out publish), fan-out broker | In-cluster `verdify-mqtt` only; telemetry fan-out is not a device control path. The ingestor no longer connects to the HAOS broker (VD-48); its `MQTT_USER`/`MQTT_PASS` login stays mounted, unused, until decisions Q-14 retires it. |
 | OpenAI API | Planner, Hermes | Optional for planner manifest render, required for LLM-backed production planning. |
 | Open-Meteo | Ingestor forecast sync | Hourly weather forecast source. |
 | S3-compatible object storage | Lab publisher | Durable `lab/content`, `lab/public`, and `lab/state` prefixes; credentials come from `verdify-lab-publisher-s3`. |

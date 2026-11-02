@@ -4,7 +4,8 @@
 # DANGER SURFACE: enforce mode authenticates every /mcp request before FastMCP
 # handles initialize or exposes tool inventory, then applies the audience matrix
 # again at tool dispatch. NetworkPolicy additionally restricts ingress to
-# in-namespace clients; this service is NEVER given a raw LB IP.
+# in-namespace clients and to pods labelled `verdify.ai/mcp-agent: "true"`
+# (allow-mcp-from-named-agents, VD-59); this service is NEVER given a raw LB IP.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -126,6 +127,14 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            # VD-59: named agent keys, one file per agent (name → bearer token).
+            # No subPath: a subPath mount never sees Secret updates, and MCP
+            # re-reads this directory at most every 60 s to admit or refuse an
+            # agent without a restart. The path is server.py's default
+            # VERDIFY_MCP_AGENT_KEYS_DIR.
+            - name: mcp-agents
+              mountPath: /etc/verdify/mcp-agents
+              readOnly: true
           # GRACEFUL DRAIN (HA #231, Lane C). preStop sleep so Traefik/kube-proxy
           # drop this pod's endpoint before the server stops accepting, avoiding a
           # mid-rollout 503 (same drain contract as www/lab/api).
@@ -159,6 +168,15 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        # Secret verdify-mcp-agents is sealed by Jason in the jvallery/agents
+        # KSOPS lane (jvallery/agents#5993). Optional: until it exists the
+        # directory is empty, no agent is admitted and MCP runs unchanged.
+        # 0440 with the pod's fsGroup 1000 lets the non-root server read it.
+        - name: mcp-agents
+          secret:
+            secretName: verdify-mcp-agents
+            optional: true
+            defaultMode: 0440
 ---
 apiVersion: v1
 kind: Service

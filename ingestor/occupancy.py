@@ -20,6 +20,10 @@ OCCUPANCY_UNTIL_ENTITY = "occupancy_until"
 OCCUPANCY_SOURCE_ENTITY = "occupancy_source"
 OCCUPANCY_TIMEOUT_REASON_ENTITY = "occupancy_timeout_reason"
 OCCUPANCY_LATCH_MIN = int(os.environ.get("OCCUPANCY_LATCH_MIN", "15"))
+# A visit holds the mist for at most this long after its ON edge, however many
+# ON polls re-extend the latch. It matches the firmware occupancy fail-safe
+# (firmware/greenhouse/controls.yaml, OCCUPANCY_FAILSAFE_MS = 60 min).
+OCCUPANCY_VISIT_MAX_MIN = int(os.environ.get("OCCUPANCY_VISIT_MAX_MIN", "60"))
 OCCUPANCY_STATE_ENTITIES = (
     OCCUPANCY_ENTITY,
     OCCUPANCY_LAST_DETECTED_ENTITY,
@@ -70,8 +74,15 @@ async def _record_occupancy_observation(
     occupied: bool,
     source: str,
     observed_at: datetime | None = None,
+    visit_started_at: datetime | None = None,
 ) -> tuple[bool, datetime]:
-    """Persist a raw occupancy observation and return the effective latched state."""
+    """Persist a raw occupancy observation and return the effective latched state.
+
+    An occupied observation latches until ``observed_at + OCCUPANCY_LATCH_MIN``.
+    With ``visit_started_at`` (the sensor's ON edge) the latch is also capped at
+    ``visit_started_at + OCCUPANCY_VISIT_MAX_MIN``, so a sensor that stays ON
+    cannot hold the mist indefinitely.
+    """
     now = datetime.now(UTC)
     await _insert_system_state(conn, OCCUPANCY_SOURCE_ENTITY, source)
 
@@ -83,6 +94,8 @@ async def _record_occupancy_observation(
 
     detected_at = _as_utc(observed_at)
     expires_at = detected_at + timedelta(minutes=OCCUPANCY_LATCH_MIN)
+    if visit_started_at is not None:
+        expires_at = min(expires_at, _as_utc(visit_started_at) + timedelta(minutes=OCCUPANCY_VISIT_MAX_MIN))
     await _insert_system_state(conn, OCCUPANCY_LAST_DETECTED_ENTITY, iso_utc(detected_at))
     await _insert_system_state(conn, OCCUPANCY_UNTIL_ENTITY, iso_utc(expires_at))
 
@@ -100,10 +113,11 @@ async def sync_occupancy_state(
     occupied: bool,
     source: str,
     observed_at: datetime | None = None,
+    visit_started_at: datetime | None = None,
 ) -> None:
     """Record occupancy, latch fresh detections, and push the effective state to ESP32."""
     async with pool.acquire() as conn:
-        effective, until = await _record_occupancy_observation(conn, occupied, source, observed_at)
+        effective, until = await _record_occupancy_observation(conn, occupied, source, observed_at, visit_started_at)
 
     if occupied and not effective:
         log.warning("Occupancy: stale occupied observation via %s expired at %s; pushing empty", source, iso_utc(until))
