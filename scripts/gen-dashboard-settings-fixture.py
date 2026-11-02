@@ -274,11 +274,18 @@ def registry_row(name: str, spec: TunableDef) -> dict[str, Any]:
             {"value": value, "label": label}
             for label, value in sorted((spec.enum_values or {}).items(), key=lambda item: item[1])
         ]
+    # A row with no readback path has no readback (it reads "—" with NO READBACK); every other row reads its registry
+    # default, confirmed.
+    readback = (
+        None
+        if via == "none"
+        else reading(default, ago(DEFAULT_AGE_S), None if default is not None else "not reported yet")
+    )
     row |= {
         "writable": writable,
         "read_only_reason": reason,
         "readback_via": via,
-        "readback": reading(default, ago(DEFAULT_AGE_S), None if default is not None else "not reported yet"),
+        "readback": readback,
         "desired": None,
         "plan": None,
         "applied_from": "band" if spec.push_owner in ("band", "schedule") else "default",
@@ -318,14 +325,20 @@ def band_rows() -> Iterator[dict[str, Any]]:
 def build_payload() -> dict[str, Any]:
     """The base API-09 body: every registry row in registry order, then the Band in force rows."""
     items = [registry_row(name, spec) for name, spec in REGISTRY.items()]
-    unknown = sorted(set(SCENARIO) - set(REGISTRY))
-    if unknown:
-        raise SystemExit(f"scenario names no registry row: {unknown}")
     return {"items": [*items, *band_rows()], "server_time": iso(SERVER_TIME)}
+
+
+def unused_scenario() -> list[str]:
+    """Scenario rows the registry no longer has. They are skipped, so another issue retiring a row (VD-47 retires the
+    L01 bridge's rows) never breaks the render."""
+    return sorted(set(SCENARIO) - set(REGISTRY))
 
 
 def render(out: Path) -> int:
     """Writes the payload to `out` (replacing it whole) and returns the number of rows."""
+    unused = unused_scenario()
+    if unused:
+        print(f"settings fixture: scenario rows with no registry row, skipped: {', '.join(unused)}", file=sys.stderr)
     payload = build_payload()
     text = json.dumps(payload, ensure_ascii=False, allow_nan=False, indent=1) + "\n"
     out.parent.mkdir(parents=True, exist_ok=True)

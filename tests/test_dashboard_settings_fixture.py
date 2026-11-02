@@ -88,7 +88,13 @@ def test_mister_engage_kpa_reads_its_entity_name_unit_bounds_and_step(rows):
     )
 
 
-def test_read_only_rows_follow_architecture_5_3_step_1(rows):
+def present(*names):
+    """The names the registry still has: VD-47 (#1162) and its follow-up retire the weekly-feed rows and the L01
+    bridge's rows, and a registry change in another issue must never turn this test red."""
+    return [name for name in names if name in REGISTRY]
+
+
+def test_read_only_rows_follow_architecture_5_3_step_1(rows, generator):
     def reason(name):
         row = rows[name]
         assert row["writable"] is False, name
@@ -101,12 +107,7 @@ def test_read_only_rows_follow_architecture_5_3_step_1(rows):
     for name in ("activity_start_hour", "activity_start_minute", "activity_duration_min"):
         assert "derived by the dispatcher" in reason(name)
     assert "owns the band" in reason("sw_onchip_band_enabled")
-    for name in (
-        "sw_wall_fertigation_commissioned",
-        "wall_commissioning_revision",
-        "wall_flow_lpm",
-        "wall_flush_liters",
-    ):
+    for name in present(*sorted(generator.WEEKLY_FEED)):
         assert "retiring with the irrigation engine" in reason(name)
     for name in ("zone_priority_center", "wet_taper_before_sunset_min", "manual_override_timeout_min"):
         assert "crop band anchor" in reason(name)
@@ -117,8 +118,8 @@ def test_read_only_rows_follow_architecture_5_3_step_1(rows):
         assert reason(name).startswith("retired"), name
     for name in context:
         assert reason(name), name
-    # Writable: the anchors and widths, the L01 bridge's irrigation values and the lighting rows.
-    for name in (
+    # Writable: the anchors and widths, the L01 bridge's irrigation values while they last, and the lighting rows.
+    for name in present(
         "band_temp_low_sr",
         "band_vpd_target_mid",
         "zone_vpd_target_east_sm",
@@ -206,8 +207,31 @@ def test_scenario_rows_the_screens_and_named_fixtures_rely_on(rows):
     forecast = rows["sw_economiser_enabled"]
     assert (forecast["applied_from"], forecast["plan"]["source"]) == ("plan", "preemptive")
     assert forecast["plan"]["plan_id"].startswith("preemptive-")
-    assert rows["irrig_wall_duration_min"]["readback"]["value"] == 12.0
+    for name in present("irrig_wall_duration_min"):
+        assert rows[name]["readback"]["value"] == 12.0
     assert rows["temp_low"]["readback"]["value"] == 40.0
+
+
+def test_a_scenario_row_the_registry_retired_is_skipped_never_fatal(generator, monkeypatch, capsys, tmp_path):
+    # Another issue retiring a row the scenario names (VD-47 retires the L01 bridge's irrig_wall_duration_min) must not
+    # break the render: the row is skipped with a note, and every other row renders as before.
+    monkeypatch.setitem(
+        generator.SCENARIO, "retired_by_another_issue", {"readback": generator.reading(1.0, generator.SERVER_TIME)}
+    )
+    assert generator.unused_scenario() == ["retired_by_another_issue"]
+    out = tmp_path / "settings.json"
+    assert generator.render(out) == len(REGISTRY) + 30
+    assert "retired_by_another_issue" in capsys.readouterr().err
+    assert "retired_by_another_issue" not in {
+        row["param"] for row in json.loads(out.read_text(encoding="utf-8"))["items"]
+    }
+
+
+def test_a_row_with_no_readback_path_has_no_readback(rows):
+    # NO READBACK: the API has no readback for it, so the row reads "—" with that badge (US-SET-01).
+    for row in rows.values():
+        if row["readback_via"] == "none" and row["group"] != "band_in_force":
+            assert (row["readback"], row["state"]) == (None, "no_readback"), row["param"]
 
 
 def test_the_cli_writes_strict_json_with_every_time_relative_to_server_time(tmp_path):
