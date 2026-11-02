@@ -67,17 +67,26 @@ export function valueInForce(setting: Pick<Setting, "applied_from" | "desired" |
   return setting.readback?.value ?? null;
 }
 
-/** The request the row is waiting on: the value being applied, when it was asked for, and who asked. */
-export type Pending = { readonly value: number; readonly at: string | null; readonly by: ReactNode; readonly manual: boolean; readonly reason: string | null };
+/**
+ * The request the row is waiting on: the value being applied, when it was asked for, who asked, and the platform's
+ * `state_reason` for it. Only a desired row carries one; a plan value has none, so its reason line reads the default.
+ */
+export type Pending = {
+  readonly value: number; readonly at: string | null; readonly by: ReactNode; readonly manual: boolean; readonly reason: string | null;
+  readonly stateReason: StateReason | null;
+};
 /** `desired.value`, or `plan.value` when `applied_from` is plan; null when neither is being applied. */
 export function pendingRequest(setting: Pick<Setting, "applied_from" | "desired" | "plan">): Pending | null {
   const plan = setting.plan;
   if (setting.applied_from === "plan" && plan && plan.value !== null && plan.value !== undefined) {
-    return { value: plan.value, at: plan.written_at, by: planWriter(plan.source), manual: false, reason: null };
+    return { value: plan.value, at: plan.written_at, by: planWriter(plan.source), manual: false, reason: null, stateReason: null };
   }
   const desired = setting.desired;
   if (desired && desired.value !== null && desired.value !== undefined) {
-    return { value: desired.value, at: desired.created_at, by: <Writer actor={desired.actor} />, manual: desired.manual, reason: desired.reason ?? null };
+    return {
+      value: desired.value, at: desired.created_at, by: <Writer actor={desired.actor} />, manual: desired.manual, reason: desired.reason ?? null,
+      stateReason: (desired.state_reason ?? null) as StateReason | null,
+    };
   }
   return null;
 }
@@ -132,7 +141,8 @@ export type DeviceProps = {
  * The device line (design system §4.2): the device's own report, with its unit, CONFIRMED and its age; STALE and
  * "Last data N min ago (HH:MM)" while readbacks are stale; "—" with `readback.reason` when there is no value. A Band in
  * force row is DERIVED with its age and never NO READBACK; NO READBACK shows only for another row with no readback
- * path. A site cap reads the value in the program on the controller: "On controller · rev 42: 360 gal".
+ * path. A site cap reads the value in the program on the controller, "On controller · rev 42: 360 gal", and reads
+ * STALE like any device value while readbacks are stale or the controller is not reporting.
  */
 export function DeviceLine({ setting, readbackStale = false, programRevision = null }: DeviceProps) {
   const reading = setting.readback;
@@ -141,7 +151,7 @@ export function DeviceLine({ setting, readbackStale = false, programRevision = n
   const noReadback = !band && setting.readback_via === "none";
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return <p className="setting-line setting-value" data-device="none">
-      <span className="value-missing">—</span>
+      <span className="setting-device-value value-muted">—</span>
       {reading?.reason && <> <span className="state-note">{reading.reason}</span></>}
       {noReadback && <> <Badge kind="no_readback" /></>}
     </p>;
@@ -151,19 +161,18 @@ export function DeviceLine({ setting, readbackStale = false, programRevision = n
     return <p className="setting-line setting-value" data-device="derived"><span className="setting-device-value">{text}</span> <span className="state-note">· DERIVED ·</span> <Ago at={reading?.observed_at} /></p>;
   }
   if (noReadback) return <p className="setting-line setting-value" data-device="no_readback"><span className="setting-device-value">{text}</span> <Badge kind="no_readback" /></p>;
+  let shown = text;
   if (setting.readback_via === "program") {
     const revision = programRevision !== null && programRevision !== undefined && Number.isFinite(programRevision) ? ` · rev ${programRevision}` : "";
-    return <p className="setting-line setting-value" data-device="program">
-      <span className="setting-device-value">On controller{revision}: {text}</span> <Badge kind="confirmed" /> <span className="state-note">·</span> <Ago at={reading?.observed_at} />
-    </p>;
+    shown = `On controller${revision}: ${text}`;
   }
   if (readbackStale) {
     return <p className="setting-line setting-value" data-device="stale">
-      <span className="setting-device-value value-muted">{text}</span> <Badge kind="stale" /> <AgeLabel observedAt={reading?.observed_at} stale />
+      <span className="setting-device-value value-muted">{shown}</span> <Badge kind="stale" /> <AgeLabel observedAt={reading?.observed_at} stale />
     </p>;
   }
-  return <p className="setting-line setting-value" data-device="confirmed">
-    <span className="setting-device-value">{text}</span> <Badge kind="confirmed" /> <span className="state-note">·</span> <Ago at={reading?.observed_at} />
+  return <p className="setting-line setting-value" data-device={setting.readback_via === "program" ? "program" : "confirmed"}>
+    <span className="setting-device-value">{shown}</span> <Badge kind="confirmed" /> <span className="state-note">·</span> <Ago at={reading?.observed_at} />
   </p>;
 }
 
@@ -185,11 +194,18 @@ export function SettingStatus(props: DeviceProps) {
   </>;
 }
 
+/**
+ * A write to a setting with no readback path, while it is the value in force (`state` no_readback, applied from a
+ * desired row): it is sent and can never confirm. Never for a Band in force row, and never once a plan has won.
+ */
+function sentWithoutReadback(setting: Setting): Pending | null {
+  if (setting.group === "band_in_force" || setting.readback_via !== "none" || setting.state !== "no_readback") return null;
+  return setting.applied_from === "manual" || setting.applied_from === "desired" ? pendingRequest(setting) : null;
+}
+
 function RequestLine({ setting }: { setting: Setting }) {
   const pending = isPending(setting.state) ? pendingRequest(setting) : null;
-  const sentNoReadback = setting.group !== "band_in_force" && setting.readback_via === "none" && !isPending(setting.state) && setting.state !== "released"
-    ? pendingRequest({ ...setting, applied_from: "desired" }) : null;
-  const shown = pending ?? sentNoReadback;
+  const shown = pending ?? sentWithoutReadback(setting);
   if (shown) {
     return <>
       <p className="setting-line setting-request" data-request={setting.state}>
@@ -201,7 +217,7 @@ function RequestLine({ setting }: { setting: Setting }) {
         {shown.reason && <> <span className="state-note">·</span> <span className="setting-reason">“{shown.reason}”</span></>}
       </p>
       {pending
-        ? <StateReasonLine state={setting.state} reason={(setting.desired?.state_reason ?? null) as StateReason | null} requestedAt={shown.at} unit={setting.unit} />
+        ? <StateReasonLine state={setting.state} reason={pending.stateReason} requestedAt={pending.at} unit={setting.unit} />
         : <span className="state-reason">{NO_READBACK_SENT}</span>}
     </>;
   }

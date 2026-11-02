@@ -232,17 +232,20 @@ are one tap with no dialog; settings and schedule saves never confirm. Values ar
 | `ScheduleWeek` | Week grid: rows L01, L02 and L04–L10 (L05 and L06 marked reserved), columns today and the next 6 days. Each occurrence is a block with its time, minutes or pulses and MANUAL when set; one that will not run is hatched with why (line paused or disabled, Schedule off); "Last 7 days" shows past blocks with their outcome word; the editor's draft previews as PLANNED outlines; selecting a block offers Edit, or Pause the line until after it ([screens](screens.md) SCR-04) | At 390 a day switcher shows one day for every line, with no horizontal scroll |
 | `MisterAssociation` | Two `Switch`es per mister zone, "VPD control" and "Schedule", a one-line summary and the zone's VPD source; a change reads REQUESTED until the controller reports the program that carries it, then CONFIRMED | Any combination; both off reads "This zone will not mist automatically"; a watchdog back-off or fault shows on the `LineCard` |
 
-As built (VD-12): `SettingRow` (`dashboard/app/components/setting-row.tsx`) shows each row as API-09 serves it and decides
-nothing. The device line is the readback with its unit, CONFIRMED and "· 2 min ago"; STALE with "Last data … ago (HH:MM)"
-while readbacks are stale or the controller is not reporting; "—" with `readback.reason` when there is no value; keyed on
-`group`, a Band in force row reads "62.0 °F · DERIVED · 4 min ago" and NO READBACK shows only for another row with
-`readback_via` none; a site cap reads "On controller · rev 42: 360 gal", without the rev while API-IRR-01 fails. Under it
-sits the request line while REQUESTED, NOT CONFIRMED or HELD ("→ 1.55 kPa REQUESTED · 20 s · MANUAL · jason · “Vandas
-drying”", then `StateReasonLine`), else who wrote the value in force ("Iris changed this at 07:02" or "steward changed
-this at 06:47" with AI, "jason changed this at 08:00 · Iris may adjust", "Forecast rule · system", "Released: plan, band
-or default applies"), and a read-only row's `read_only_reason` verbatim. Values keep the decimals they carry
-(`keptValueText`: Iris's 48.75 on a 30 s grid reads 48.75), and so does the Save toast. `EditDrawer` gained `readOnly`
-for a row served with `writable: false`: read-only for operators too, with Done and no Save or actions.
+As built (VD-12): `SettingRow` (`dashboard/app/components/setting-row.tsx`) shows each row as API-09 serves it and
+decides nothing. The device line is the readback with its unit, CONFIRMED and "· 2 min ago"; STALE with "Last data …
+ago (HH:MM)" while readbacks are stale or the controller is not reporting; "—" with `readback.reason` when there is no
+value; keyed on `group`, a Band in force row reads "62.0 °F · DERIVED · 4 min ago" and NO READBACK shows only for
+another row with `readback_via` none; a site cap reads "On controller · rev 42: 360 gal", without the rev while
+API-IRR-01 fails, and STALE like any device value. Under it sits the request line while REQUESTED, NOT CONFIRMED or
+HELD ("→ 1.55 kPa REQUESTED · 20 s · MANUAL · jason · “Vandas drying”", then `StateReasonLine` with the desired row's
+`state_reason`; a plan value carries none, so it reads the default), a write to a row with no readback path while it
+is in force ("Sent. This setting has no readback, so it can never show CONFIRMED"), else who wrote the value in force
+("Iris changed this at 07:02" or "steward changed this at 06:47" with AI, "jason changed this at 08:00 · Iris may
+adjust", "Forecast rule · system", "Released: plan, band or default applies"), and a read-only row's
+`read_only_reason` verbatim. Values keep the decimals they carry (`keptValueText`: Iris's 48.75 on a 30 s grid reads
+48.75), and so does the Save toast. `EditDrawer` gained `readOnly` for a row served with `writable: false`: read-only
+for operators too, with Done and no Save or actions.
 
 ## 5. Charts on uPlot
 

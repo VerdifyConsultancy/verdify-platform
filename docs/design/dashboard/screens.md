@@ -539,7 +539,7 @@ At 390 rows become stacked cards with the device value large and Edit full width
 | Loading | Skeleton rows per group |
 | Empty | "No setting matches 'pulse gap x'" |
 | Stale | The device value muted with STALE and its age; a REQUESTED row stays REQUESTED |
-| Not reporting | Save still works: "Saved; it applies when the controller reports again" |
+| Not reporting | Save still works; while the ingestor or controller is down the drawer says so before Save: "Save still works: the change applies when the controller reports again" |
 | Error | The catalog shows Retry; a failed Save keeps the drawer open with the message |
 | No readback | "Sent. This setting has no readback, so it can never show CONFIRMED" |
 

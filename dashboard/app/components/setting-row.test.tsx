@@ -97,6 +97,17 @@ test("NO READBACK only for another row with no readback path; a write to it read
   }));
   expect(lines(".setting-request")).toEqual(["→ 70 s · 1 min · Manual · jason"]);
   expect(text(document.querySelector(".setting-device .state-reason"))).toBe("Sent. This setting has no readback, so it can never show CONFIRMED");
+  cleanup();
+  // Once a newer Iris plan won over that write, the row says so and no longer shows the old write as sent.
+  const plan = row("mister_engage_kpa").plan!;
+  draw(row("mister_pulse_on_s", {
+    readback_via: "none", readback: null, state: "overridden", applied_from: "plan", plan: { ...plan, value: 75, written_at: denver("09:30"), next: null },
+    desired: desired({ param: "mister_pulse_on_s", value: 70, manual: false, state: "overridden", created_at: denver("08:00") }),
+  }));
+  expect(lines(".setting-request")).toEqual([]);
+  expect(document.querySelector(".setting-device .state-reason")).toBeNull();
+  expect(lines(".setting-writer")).toEqual(["AI Iris changed this at 09:30"]);
+  expect(lines(".setting-value")).toEqual(["— No readback"]);
 });
 
 test("the request line: the value being applied, REQUESTED, its age, MANUAL, the actor and the quoted reason; the reason once 60 s old", () => {
@@ -147,6 +158,14 @@ test("NOT CONFIRMED, HELD and no_engine show their reason at once, every time fr
 test("a plan value being applied reads plan.value with Iris and AI, or the forecast rule with no AI", () => {
   draw(row("mister_pulse_gap_s", { state: "requested", plan: { ...row("mister_pulse_gap_s").plan!, value: 50, written_at: denver("10:41") } }));
   expect(lines(".setting-request")).toEqual(["→ 50 s Requested · 1 min · AI Iris"]);
+  cleanup();
+  // The plan's request never borrows an older desired row's reason: the API serves no reason for a plan value.
+  draw(row("mister_pulse_gap_s", {
+    state: "not_confirmed", plan: { ...row("mister_pulse_gap_s").plan!, value: 50, written_at: denver("10:36") },
+    desired: desired({ param: "mister_pulse_gap_s", value: 40, manual: false, state: "overridden", created_at: denver("08:00"), state_reason: { code: "push_failed", since: denver("08:01"), detail: "timeout", applied_value: null } }),
+  }));
+  expect(lines(".setting-request")).toEqual(["→ 50 s Not confirmed · 6 min · AI Iris"]);
+  expect(text(document.querySelector(".setting-device .state-reason"))).toBe("No matching readback yet");
   cleanup();
   draw(row("sw_economiser_enabled", { state: "requested", plan: { ...row("sw_economiser_enabled").plan!, value: 1, written_at: denver("10:41") } }));
   expect(lines(".setting-request")).toEqual(["→ ON Requested · 1 min · Forecast rule · system"]);
@@ -237,6 +256,11 @@ test("a site cap reads the program on the controller, without the revision while
   cleanup();
   draw(row("mister_daily_volume_max_gal", {}, "program-rev-42"), { programRevision: null });
   expect(lines(".setting-value")).toEqual(["On controller: 360 gal Confirmed · 2 min ago"]);
+  cleanup();
+  // Like any device value, it reads STALE while readbacks are stale or the controller is not reporting.
+  draw(row("mister_daily_volume_max_gal", {}, "program-rev-42"), { programRevision: 42, readbackStale: true });
+  expect(lines(".setting-value")).toEqual(["On controller · rev 42: 360 gal Stale Last data 2 min ago (10:40)"]);
+  expect(badges()).not.toContain("confirmed");
   cleanup();
   draw(row("sched_mist_rh_max_pct", {}, "before-engine"));
   expect(lines(".setting-value")).toEqual(["— no irrigation program on the controller yet"]);

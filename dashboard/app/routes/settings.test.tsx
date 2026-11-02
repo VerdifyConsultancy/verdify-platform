@@ -25,9 +25,21 @@ function Here() {
   const { pathname, search } = useLocation();
   return <output data-testid="here">{`${pathname}${search}`}</output>;
 }
+/** API-09's rows as the fixture API serves them, changed by `patch` on every read: a state no named fixture holds. */
+function patchSettings(patch: (items: Row[]) => Row[]) {
+  const fixtureFetch = globalThis.fetch;
+  vi.stubGlobal("fetch", async (input: string, init?: RequestInit) => {
+    const response = await fixtureFetch(input, init);
+    if (!input.startsWith("/api/v1/settings") || (init?.method ?? "GET") !== "GET") return response;
+    const body = await response.json() as { items: Row[] };
+    body.items = patch(body.items);
+    return { ...response, json: async () => body } as Response;
+  });
+}
 /** The shell with Settings at `path`, served by the fixture API; the shell's reads and API-09 have answered. */
-async function open(path: string, options: FixtureOptions = {}) {
+async function open(path: string, { patch, ...options }: FixtureOptions & { patch?: (items: Row[]) => Row[] } = {}) {
   const api = startFixtureApi(options);
+  if (patch) patchSettings(patch);
   const Stub = createRoutesStub([{
     path: "/", Component: () => <AppShell build={BUILD} authError={null} />,
     children: [{ path: "settings", Component: () => <><Settings /><Here /></> }],
@@ -79,6 +91,10 @@ test("the catalog: one row per fixture row rendered from the registry, by group 
     expect(rowOf(row.param).querySelector("[data-badge=no_readback]"), row.param).toBeNull();
     expect(rowOf(row.param).querySelector(".setting-edit"), row.param).toBeNull();
   }
+  // A registry row with no readback path at all has no device value: "—" with NO READBACK.
+  for (const row of items.filter((item) => item.readback_via === "none" && item.group !== "band_in_force")) {
+    expect(linesOf(row.param, ".setting-value"), row.param).toEqual(["— No readback"]);
+  }
   // Who wrote the value in force: Iris and an agent by name with AI; a forecast rule as the system, never AI.
   expect(linesOf("mister_pulse_gap_s", ".setting-writer")).toEqual(["AI Iris changed this at 07:02"]);
   expect(linesOf("fog_rh_ceiling_pct", ".setting-writer")).toEqual(["AI steward changed this at 06:47"]);
@@ -129,6 +145,38 @@ test("the chips count and filter the rows and survive a reload of the URL; searc
   await open("/settings?q=pulse+gap");
   expect(shown()).toEqual(["mister_pulse_gap_s"]);
   expect((screen.getByRole("searchbox", { name: "Search settings" }) as HTMLInputElement).value).toBe("pulse gap");
+});
+
+test("the Manual, Requested and Not confirmed chips keep the rows the API marks so, and survive a reload of the URL", async () => {
+  const minutesAgo = (minutes: number) => new Date(NOW - minutes * 60_000).toISOString();
+  const write = (param: string, value: number, manual: boolean, state: string, minutes: number) => ({
+    id: 70, param, value, snapped_from: null, manual, manual_before: false, state, confirmed_at: state === "confirmed" ? minutesAgo(minutes - 1) : null,
+    state_reason: state === "not_confirmed" ? { code: "no_match", since: minutesAgo(minutes), detail: null, applied_value: null } : null,
+    actor: { source: "dashboard", name: "jason" }, reason: null, created_at: minutesAgo(minutes),
+  });
+  // A person's manual value in force, a request on its way and one the controller never matched.
+  const states: Record<string, Partial<Row>> = {
+    mister_pulse_on_s: { applied_from: "manual", state: "confirmed", desired: write("mister_pulse_on_s", 60, true, "confirmed", 30) },
+    band_vpd_low_sm: { applied_from: "desired", state: "requested", desired: write("band_vpd_low_sm", 0.85, false, "requested", 0.5) },
+    gl_main_lux_threshold: { applied_from: "desired", state: "not_confirmed", desired: write("gl_main_lux_threshold", 42_000, false, "not_confirmed", 8) },
+  };
+  const patch = (items: Row[]) => items.map((row) => (states[row.param] ? { ...row, ...states[row.param] } : row));
+  for (const [chip, filter, param] of [["Manual 1", "manual", "mister_pulse_on_s"], ["Requested 1", "requested", "band_vpd_low_sm"], ["Not confirmed 1", "not_confirmed", "gl_main_lux_threshold"]]) {
+    await open("/settings", { patch });
+    expect(chips().slice(1, 4)).toEqual([["Manual 1", null], ["Requested 1", null], ["Not confirmed 1", null]]);
+    fireEvent.click(screen.getByRole("link", { name: chip }));
+    await settle();
+    expect(here(), chip).toBe(`/settings?filter=${filter}`);
+    expect(shown(), chip).toEqual([param]);
+    cleanup();
+    stopFixtureApi();
+    // A reload of that URL shows the same row under the same chip.
+    await open(`/settings?filter=${filter}`, { patch });
+    expect(shown(), chip).toEqual([param]);
+    expect(chips().find(([, current]) => current === "true"), chip).toEqual([chip, "true"]);
+    cleanup();
+    stopFixtureApi();
+  }
 });
 
 test("/settings?edit=mister_engage_kpa opens with Manual ticked; 1.53 saves as 1.55, reads REQUESTED, then CONFIRMED on the fixture readback", async () => {
@@ -253,6 +301,22 @@ test("Release to auto sends one API-11 and removes MANUAL; a newer non-manual va
   expect(text(rowOf("mister_engage_kpa").querySelector(".setting-next"))).toBe("Next (plan) 1.70 kPa at 13:00 AI");
 });
 
+test("a switch with no known value starts unset, never OFF: Save sends nothing until ON or OFF is picked", async () => {
+  const unknown = (items: Row[]) => items.map((row) => (row.param === "sw_gl_main_auto_mode" ? { ...row, readback: { value: null, observed_at: null, reason: "not reported yet" } } : row));
+  const api = await open("/settings?q=sw_gl_main_auto_mode&edit=sw_gl_main_auto_mode", { patch: unknown });
+  expect(linesOf("sw_gl_main_auto_mode", ".setting-value")).toEqual(["— not reported yet"]);
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await advance(0);
+  expect(within(dialog()).getByText("Choose ON or OFF")).toBeTruthy();
+  expect(drawerOpen()).toBe(true);
+  expect(writes(api)).toEqual([]);
+  fireEvent.click(within(dialog()).getByRole("switch", { name: "New value" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await settle();
+  expect(writes(api).map((row) => [row.operationId, row.body])).toEqual([["API-10", { value: 1, manual: true }]]);
+  expect(drawerOpen()).toBe(false);
+});
+
 test("under iris-unsnapped Iris's 48.75 on mister_engage_delay_s shows as 48.75, and ticking Manual stores it as is", async () => {
   const api = await open("/settings?q=mister_engage_delay_s&edit=mister_engage_delay_s", { fixture: "iris-unsnapped" });
   expect(linesOf("mister_engage_delay_s", ".setting-value")).toEqual(["48.75 s Confirmed · 3 min ago"]);
@@ -304,7 +368,8 @@ test("a viewer sees every row with no Edit, and ?edit= opens the drawer read-onl
   await open("/settings", { fixture: "viewer-session" });
   expect(shown()).toEqual(inGroupOrder(served("viewer-session")));
   expect(document.querySelectorAll(".setting-edit, [data-write-control]")).toHaveLength(0);
-  expect(screen.getAllByRole("link", { name: /^History of / }).length).toBeGreaterThan(200);
+  // Every registry row keeps History; the Band in force rows have none.
+  expect(screen.getAllByRole("link", { name: /^History of / })).toHaveLength(served("viewer-session").filter((row) => row.group !== "band_in_force").length);
   cleanup();
   stopFixtureApi();
   await open("/settings?q=mister_engage_kpa&edit=mister_engage_kpa", { fixture: "viewer-session" });
@@ -341,6 +406,12 @@ test("with changes switched off an operator's Save and Release are disabled besi
   fireEvent.submit(dialog().querySelector("form")!);
   await settle();
   expect(writes(api)).toEqual([]);
+  cleanup();
+  stopFixtureApi();
+  // Switched off while the ingestor is down too: Save stays disabled, and the drawer never says Save still works.
+  await open("/settings?q=mister_engage_kpa&edit=mister_engage_kpa", { fixture: ["ingestor-not-running", "writes-off"] });
+  expect(screen.getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(true);
+  expect(text(dialog().querySelector(".drawer-status"))).not.toContain("Save still works");
 });
 
 test("device values read STALE with their age while readbacks are stale, and Save says when it applies; a failed catalog read shows Retry", async () => {

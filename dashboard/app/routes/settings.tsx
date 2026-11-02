@@ -9,7 +9,7 @@ import { EmptyState, Panel } from "../components/panel";
 import { SETTING_GROUPS, SettingRow, SettingStatus, changedByAgent, classLabel, groupLabel, valueInForce } from "../components/setting-row";
 import type { Setting } from "../lib/operator-api";
 import { useProgramRevisionRead, useSettingsRead } from "../lib/queries";
-import { useRole } from "../lib/session";
+import { useRole, useWritesEnabled } from "../lib/session";
 import { keptNumber, parseDecimal } from "../lib/setting-values";
 import { useShellNow, useShellStatus } from "../lib/shell";
 import { errorFor, formError, useSettingWrite } from "../lib/writes";
@@ -163,6 +163,7 @@ function SiteCapStatus({ setting, readbackStale }: { setting: Setting; readbackS
  */
 function SettingDrawer({ setting, onClose }: { setting: Setting; onClose: () => void }) {
   const operator = useRole() === "operator";
+  const writesEnabled = useWritesEnabled();
   const status = useShellStatus();
   const shellNow = useShellNow();
   const readOnly = !setting.writable || !operator;
@@ -170,7 +171,8 @@ function SettingDrawer({ setting, onClose }: { setting: Setting; onClose: () => 
   const [text, setText] = useState(() => fieldText(setting));
   const [choice, setChoice] = useState<number | null>(() => {
     const value = valueInForce(setting);
-    return setting.kind === "switch" ? (value === 1 ? 1 : 0) : value;
+    // A switch with no known value starts unset, never OFF (screens §1.5): Save sends nothing until ON or OFF is picked.
+    return setting.kind === "switch" ? (value === 0 || value === 1 ? value : null) : value;
   });
   const [manual, setManual] = useState(MANUAL_DEFAULT);
   const [reason, setReason] = useState("");
@@ -179,7 +181,7 @@ function SettingDrawer({ setting, onClose }: { setting: Setting; onClose: () => 
   const save = () => {
     const value = setting.kind === "numeric" ? parseDecimal(text) : choice;
     if (value === null) {
-      setTyped(setting.kind === "numeric" ? "Enter a number" : "Choose a value");
+      setTyped(setting.kind === "numeric" ? "Enter a number" : setting.kind === "switch" ? "Choose ON or OFF" : "Choose a value");
       return;
     }
     setTyped(null);
@@ -195,7 +197,10 @@ function SettingDrawer({ setting, onClose }: { setting: Setting; onClose: () => 
     field = <NumberField label="New value" value={text} onChange={setText} min={setting.min} max={setting.max} step={setting.step} unit={setting.unit}
       error={typed ?? errorFor(write.error, "value")} />;
   }
-  const notReporting = !readOnly && (status.ingestorRunning === false || status.controllerReporting === false);
+  // A Switch has no error slot of its own, so its refusal shows with the form.
+  const switchError = setting.kind === "switch" ? typed : null;
+  // Only while Save is live: with changes switched off it is disabled, and the shell's banner says so.
+  const notReporting = !readOnly && writesEnabled && (status.ingestorRunning === false || status.controllerReporting === false);
   return <EditDrawer open onClose={onClose} title={readOnly ? "Setting" : "Edit setting"} eyebrow={`${classLabel(setting.control_class)} · ${setting.param}`}
     heading={setting.label} graph={setting.group === "band_in_force" ? undefined : { param: setting.param, unit: setting.unit }} readOnly={!setting.writable}
     status={<div className="drawer-setting">
@@ -203,7 +208,7 @@ function SettingDrawer({ setting, onClose }: { setting: Setting; onClose: () => 
       <DrawerStatus setting={setting} readbackStale={readbackStale} />
       {notReporting && <p className="state-note">Save still works: the change applies when the controller reports again.</p>}
     </div>}
-    onSave={save} saving={write.sending} error={formError(write.error, ["value", "reason"])}
+    onSave={save} saving={write.sending} error={switchError ?? formError(write.error, setting.kind === "switch" ? ["reason"] : ["value", "reason"])}
     actions={<Button write onClick={release} disabled={write.sending}>Release to auto</Button>}>
     {field}
     {!readOnly && <ManualToggle checked={manual} onChange={setManual} />}
