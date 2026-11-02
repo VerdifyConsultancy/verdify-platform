@@ -114,7 +114,7 @@ Weather's header, nav and footer, with a Verdify lockup.
 | Part | Spec |
 |---|---|
 | Lockup | Link `.brand`, `aria-label="Verdify dashboard, home"`. The glyph is `#verdify-v-glyph` from `site/quartz/static/brand/verdify-wordmark.svg`, inlined as JSX without its `<style>` and Inter `<text>`: leaf path `.brand-leaf`, ink path `.brand-mark`, dot `.brand-dot`. About 1.2em tall, it is the V, so no gap follows it; then "erdify" in Plex Sans 620 at 1.1rem, then `<small> · DASHBOARD</small>` (weather `.brand small`). Never animated. Favicon: `site/quartz/static/brand/favicon.svg`. |
-| Nav | Weather's `SECTIONS` model (label, path, `owns(path)`), `aria-current="page"`; the open-alert count is plain text in the link ("Activity 2"): unacknowledged `v_open_alerts` rows, repeats of one `alert_type` and zone counted once (as Activity lists them), the one count every surface uses. Above 860 px the top nav lists every section with weather's 2px forest underline ([screens](screens.md) §1.1). At 860 px and below a fixed bottom bar (a labelled `nav`) holds Now, Water, Graphs, Activity and More as text tabs of at least 44 px, the current one ink with a 2px forest top rule; More opens `/more`: Plan, Settings, Equipment, Sign out and the build line. |
+| Nav | Weather's `SECTIONS` model (label, path, `owns(path)`), `aria-current="page"`; the open-alert count is plain text in the link ("Activity 2"): unacknowledged `v_open_alerts` rows, repeats of one `alert_type` and `sensor_id` counted once (as Activity lists them), the one count every surface uses. Above 860 px the top nav lists every section with weather's 2px forest underline ([screens](screens.md) §1.1). At 860 px and below a fixed bottom bar (a labelled `nav`) holds Now, Water, Graphs, Activity and More as text tabs of at least 44 px, the current one ink with a 2px forest top rule; More opens `/more`: Plan, Settings, Equipment, Sign out and the build line. |
 | Header tools | Role pill (OPERATOR or VIEWER); above 860 px also the display name and "Sign out" (POST form), which move to More at 860 px and below. No units or theme toggle. |
 | Banners | Under the header, only while true: one fault banner at a time, worst first (API down, ingestor not running, controller not reporting, leak), then warn, one line each, each linking to the page that explains it. [Screens](screens.md) §1.2 lists the banners, when they show and their words; §4.5 has the states |
 | Footer | Weather `.site-footer`: "Verdify dashboard · build `<sha>` · API `<sha>`", graphs.verdify.ai ↗, lab.verdify.ai ↗, IBM Plex licences |
@@ -259,6 +259,23 @@ v1 validated these for contrast and colour-vision separation; labels, line style
 | Equipment lanes | `--eq-*` | mister #9d2398, fog #1b9bc7, fan1 #22a096, fan2 #484fa7, vent #056190, heat1 #d47a00, heat2 #b61f02, lights #4d9f45 / #2855ad | ≥ 3.19 | Filled segments |
 | Water | `--eq-water`, `--eq-fert`, `--eq-master` | #2389e2, #6331a0, #0e9580 | 3.65, 8.48, 3.73 | Filled; the `leak_detected` flag uses `--fault` |
 
+Causes (VD-07). A wet line's interval in the lanes and its bar in minutes by zone take the colour of their
+`IrrigationCause`. There are no cause tokens, so the causes reuse existing ones, and every surface prints the words
+(`dashboard/app/charts/causes.ts`; Now's running chips and Water read them from there):
+
+| Cause | Words | Token |
+|---|---|---|
+| `vpd` | VPD | `--eq-mister` |
+| `schedule` | schedule | `--eq-water` |
+| `run_now` | run now | `--eq-master` |
+| `feed` | feed | `--eq-fert` |
+| `prewet`, `flush` | prewet, flush | `--eq-fog` |
+| `fallback` | fallback | `--eq-heat1` |
+| `unknown` | cause unknown | `--c-bound` |
+
+A wet interval whose `cause` is null (API-05 returns null until the run ledger fills it) draws in the line's own colour
+with no cause word; a cause the table does not know reads raw, in `--c-bound`.
+
 ### 5.2 Primitives
 
 | Primitive | Shows | Data | Rules |
@@ -324,6 +341,26 @@ The chart layer is `dashboard/app/charts/` (#1126). Where it settles a detail §
 | Gap words | A null run reads its own start and end ("No data 02:10–02:40"), with both dates when it ends on another local day ("Oct 5, 00:00–Oct 6, 00:00"); on daily buckets its days ("No data Oct 5–Oct 7") |
 | Data table | One row per bucket: the time with its offset, each series, the band and its source, and a note (the null run's "No data …" on its first row, the retention words on the first row, STALE on the first row after the last value, a `daily.*` bucket's reason). A second table lists the setting steps, with the bounds in its caption. Rows build only once the disclosure opens |
 | CSV | `time (America/Denver)` as ISO 8601 local time with the offset ("2026-11-01T01:30:00-06:00"), then one `<key> (<unit>)` column per plotted series with the raw `avg`; a UTF-8 byte-order mark and CRLF rows. LinkedPanels offers one file for the window, rows on the union of the panels' bucket starts |
+
+### 5.6 As built (VD-07)
+
+The lanes and the bars are `dashboard/app/charts/equipment-lanes.tsx`, `plan-lanes.tsx` and `minutes-by-zone.tsx`,
+with `lanes-draw.ts`, `causes.ts` and the line register `dashboard/app/lib/lines.ts` (#1127). Where they settle a
+detail §5.2 leaves open, or differ from it:
+
+| Topic | As built |
+|---|---|
+| Lane layout | Rows are HTML at a fixed pitch: the label (the API's words, cut with an ellipsis and whole in `title`) and the right-hand text are text, and an x-only uPlot sits over the plot column and paints each row's band at the same pitch in a `draw` hook, so canvas and HTML rows line up and the reserved height is the rows' own. A spacer under the rows holds the time axis (54 px above 860 px, 32 px at and below) |
+| Equipment rows | Design order whatever order API-05 sends; a key the order does not list follows its group's own. A lane with no `label` reads its key, never a made-up name. `_intent` keys are dropped from the rows, the key and the table. The now line draws when the page passes now |
+| Equipment marks | ON fills the row's band; a sensed row's ON is a 1.5 px outline; unknown is 1 px `--muted` diagonals every 6 px, only where the API says unknown; off paints nothing. A wet line's run of pulses with one cause is named once, after the run, and an unknown span after it ("unknown 02:10–02:40", or "unknown" where only that fits); a label that would overlap a span or another label, or pass the next span, is dropped |
+| Equipment text | Each row ends with the state at the window's end, on time and starts ("off · 80 min · 1"; runtime alone at 860 px and below); a span already on when the window opens is no start. Idle rows fold into one "N idle rows" button (`aria-expanded`, `aria-controls`) at the end of the rows, and open below it. The data table lists every span of every row: equipment, state, from, until, duration and a wet line's cause in words. A key under the lanes names each cause drawn, the hatch (unknown) and the outline (sensed) |
+| Tooltips | A lane or bar tooltip shows only for the row under the pointer. A cursor moved by another chart on the sync key has no row there: that chart shows its own tooltip, and the lanes only move their cursor line |
+| Zoom | A drag on the lanes zooms them with every chart on the sync key. The lanes show their own "Reset zoom" while zoomed (`zoomControl`, default on), so a page with no panels (Equipment, Plan) is never left zoomed; a page whose panels offer one passes false |
+| Plan rows | Each row is a header line (label, then the header words: PLANNED · AI, Forecast rule · system, MANUAL · Iris skips · Jason since 10/30, or YOUR VALUE 1.55 · Jason 08:00 · holds until Iris's next plan; two lines at 860 px and below) over a 24 px strip, with the device value in words at the strip's left ("—" with the API's reason in its title, the tooltip and the table). YOUR VALUE prints the value at its unit's decimals without the unit, which the device value carries. A row with no waypoint drawn and no desired or manual value has no header words |
+| Plan strip | The device value holds as a solid `--c-setpoint` line from now to the first drawn segment, the plan's end or the horizon. Effective waypoints are dashed [8,4] in `--ink` (a lane has no series colour), superseded ones dashed `--c-bound`, each labelled as TimeSeries labels its steps ("1.70 kPa PLANNED · AI", "1.80 kPa SUPERSEDED"; the value or SUPERSEDED alone when the label does not fit). A manual row draws its held value as a solid `--c-bound` line and no waypoint. The plan's end is a dashed `--muted` marker labelled "Plan ends 17:30 · band/default" in an 18 px band above the rows, the words after the dot being what the screen says takes over. No x grid, so the header words stay clear |
+| Minutes rows | Wall, Center, South, West, then Fog (humidification), one 84 px bars chart each (the last 112 px, with the day labels). The four watering zones share one minutes scale so their bars compare; fog has its own. The y axis is whole minutes at one width on every row, so the rows' days line up. Stacks use uPlot's bands (each cause's bar runs from the total below it). Drag zoom is off on the bars (UPlotChart `zoom={false}`) |
+| Minutes marks | A no-data day is hatched the full plot height; a partial day has a dashed `--ink` top edge; today's still-planned minutes are a dashed `--muted` outline on today's bar; the cap is a dotted `--c-bound` line across the row. The right reads "today 46 min · cap 120", with "(partial)" while today is partial |
+| Minutes words | The tooltip and the data table split each day by line and cause ("L04 Center mister · VPD · 46 min · 3 gal"); the line's name comes from the screen (API-IRR-01 `name`), and without it the line id stands alone. L03's supply minutes and a report grouped by cause draw no bar |
 
 ## 6. Responsive rules
 

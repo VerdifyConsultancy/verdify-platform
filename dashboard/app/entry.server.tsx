@@ -4,6 +4,10 @@ import { createReadableStreamFromReadable } from "@react-router/node";
 import { renderToPipeableStream } from "react-dom/server";
 import { ServerRouter, type EntryContext } from "react-router";
 
+// server.mjs reads the load-context key from the server build (`build.entry.module.pageContext`), so its
+// getLoadContext sets the very object the root loader reads.
+export { pageContext } from "./lib/page-context";
+
 export default function handleRequest(request: Request, status: number, headers: Headers, routerContext: EntryContext): Promise<Response> {
   return new Promise((resolve, reject) => {
     const nonce = request.headers.get("x-dashboard-csp-nonce") || "";

@@ -28,13 +28,16 @@ has prune off, and their `IgnoreExtraneous` annotation keeps them out of the syn
 
 ## Sign-in failures
 
+A refused sign-in is SCR-09's card at the URL that refused it, with the refusal's status and the request id, which
+is the `request_id` of the web pod's log line for that request.
+
 | What people see | Meaning | Look at |
 |---|---|---|
-| "Sign-in is unavailable. Try again in a minute." (503 from `/auth/login`) | The BFF cannot fetch the issuer's discovery document | `authentik` in `/readyz`; the discovery fetch below |
-| The same words as a 503 from `/auth/callback` | Authentik's token endpoint did not answer (or answered 5xx), or the operator API refused or missed INT-01, for example a mismatched `operator-api-token` | `authentik` and `operator_api` in `/readyz`; the operator API's INT-01 line with the callback's `request_id` |
-| "Sign-in didn't complete" (400 from `/auth/callback`) | State mismatch, a login cookie older than 10 minutes, an Authentik error or a failed code exchange | The web pod's `/auth/callback` log lines; the redirect URI and the client secret |
+| The "Sign-in is unavailable" card (503 at `/auth/login`) | The BFF cannot fetch the issuer's discovery document | `authentik` in `/readyz`; the discovery fetch below |
+| The same card as a 503 at `/auth/callback` | Authentik's token endpoint did not answer (or answered 5xx), or the operator API refused or missed INT-01, for example a mismatched `operator-api-token` | `authentik` and `operator_api` in `/readyz`; the operator API's INT-01 line with the callback's `request_id` |
+| The "Sign-in didn't complete" card (400 at `/auth/callback`) | State mismatch, a login cookie older than 10 minutes, an Authentik error or a failed code exchange | The web pod's `/auth/callback` log lines; the redirect URI and the client secret |
 | An Authentik error page before the dashboard comes back | Authentik refused the authorize request, usually a redirect URI it does not list | The provider's redirect URIs |
-| "No access" (403), or Authentik's own permission page | The account is in neither dashboard group | The person's groups |
+| The "No dashboard access" card (403 at `/auth/callback`), or Authentik's own permission page | The account is in neither dashboard group | The person's groups |
 
 The discovery URL fetched from the web pod must print 200 (this is also R1's live check):
 

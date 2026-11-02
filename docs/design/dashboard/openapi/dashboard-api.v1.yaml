@@ -260,7 +260,7 @@ paths:
           in: query
           description: >-
             open (default) = every v_open_alerts row, acknowledged ones included. recent = open plus those resolved in
-            the last 24 h. Repeats of one alert_type and zone come back as one row with count and first and last seen;
+            the last 24 h. Repeats of one alert_type and sensor_id come back as one row with count and first and last seen;
             a merged row has status open while any of its repeats is unacknowledged. The rows with status open are the
             one open-alert count (API-02 alerts.open)
           schema: {type: string, enum: [open, recent], default: open}
@@ -275,7 +275,7 @@ paths:
       tags: [alerts]
       summary: Acknowledge, with an optional note
       description: >-
-        Acknowledges every unacknowledged repeat of the alert's alert_type and zone in one transaction, records the
+        Acknowledges every unacknowledged repeat of the alert's alert_type and sensor_id in one transaction, records the
         person and note on each and returns the merged row, so the open-alert count drops by one.
       parameters: [{$ref: '#/components/parameters/AlertId'}, {$ref: '#/components/parameters/IdempotencyKey'}]
       requestBody:
@@ -293,7 +293,7 @@ paths:
       tags: [alerts]
       summary: Resolve, with an optional note (never blocked)
       description: >-
-        Resolves every unresolved repeat of the alert's alert_type and zone in one transaction, records the person
+        Resolves every unresolved repeat of the alert's alert_type and sensor_id in one transaction, records the person
         and resolution on each and returns the merged row. An alert whose condition persists re-opens on the next
         monitor cycle.
       parameters: [{$ref: '#/components/parameters/AlertId'}, {$ref: '#/components/parameters/IdempotencyKey'}]
@@ -627,7 +627,7 @@ paths:
         https://auth.vallery.net/application/o/verdify-dashboard/ (https://auth.vallery.net/application/o/authorize/)
         with client_id=verdify-dashboard, scope openid profile email groups and code_challenge_method=S256. A page
         without a session answers 302 to /auth/login?returnTo=<path> (for /, returnTo=%2F); MFA happens at Authentik.
-        Error bodies are text/plain with the status until #1124 renders the SCR-09 card (text/html) at the same URL.
+        A refusal answers its status with the SCR-09 card (text/html) at the same URL.
       security: []
       parameters:
         - name: returnTo
@@ -640,7 +640,7 @@ paths:
           headers: {Location: {schema: {type: string}}, Set-Cookie: {schema: {type: string}}}
         '503':
           description: 'Sign-in is unavailable: Authentik cannot be reached (existing sessions keep working)'
-          content: {text/plain: {schema: {type: string}}, text/html: {schema: {type: string}}}
+          content: {text/html: {schema: {type: string}}}
   /auth/callback:
     x-served-by: bff
     servers: [{url: 'https://dashboard.verdify.ai'}]
@@ -652,7 +652,8 @@ paths:
         Exchanges the code with the client secret and verifier, verifies the ID token (sub, preferred_username, name,
         groups), maps groups to a role (operators wins), creates the session with INT-01 and sets
         __Host-verdify_session (HttpOnly, Secure, SameSite=Lax, Path=/, 12 h). No tokens reach the browser. The login
-        cookie is cleared on every outcome; error bodies are text/plain until #1124 renders the SCR-09 card.
+        cookie is cleared on every outcome; a refusal answers its status with the SCR-09 card (text/html) at the same
+        URL.
       security: []
       parameters:
         - {name: code, in: query, schema: {type: string}}
@@ -664,13 +665,13 @@ paths:
           headers: {Location: {schema: {type: string}}, Set-Cookie: {schema: {type: string}}}
         '400':
           description: 'Sign-in did not complete (state mismatch, a missing, expired or tampered login cookie, an Authentik error or a refused code exchange); no session cookie'
-          content: {text/plain: {schema: {type: string}}, text/html: {schema: {type: string}}}
+          content: {text/html: {schema: {type: string}}}
         '403':
           description: 'No access: signed in, but in neither verdify-dashboard-operators nor verdify-dashboard-viewers; no INT-01 call'
-          content: {text/plain: {schema: {type: string}}, text/html: {schema: {type: string}}}
+          content: {text/html: {schema: {type: string}}}
         '503':
           description: 'Sign-in is unavailable: Authentik (discovery or the token endpoint) cannot be reached, or INT-01 fails; no session cookie'
-          content: {text/plain: {schema: {type: string}}, text/html: {schema: {type: string}}}
+          content: {text/html: {schema: {type: string}}}
   /auth/logout:
     x-served-by: bff
     servers: [{url: 'https://dashboard.verdify.ai'}]
@@ -1091,7 +1092,7 @@ components:
           type: object
           description: >-
             The one open-alert count every surface shows (nav, Now, Activity, API-14, MCP alerts): the unacknowledged
-            (disposition open) v_open_alerts rows with repeats of one alert_type and zone counted once (a merged row
+            (disposition open) v_open_alerts rows with repeats of one alert_type and sensor_id counted once (a merged row
             counts while any of its repeats is unacknowledged), by severity. It equals the rows with status open that
             API-14 returns (verdify_services.alerts.open_count)
           required: [open, critical, warning, info]
@@ -1408,10 +1409,10 @@ components:
         activity_id: {type: integer, description: 'The activity_log row (light.on or light.off)'}
     Alert:
       type: object
-      description: One alert_log row, or one merged row for repeats of one alert_type and zone
+      description: One alert_log row, or one merged row for repeats of one alert_type and sensor_id
       required: [id, alert_type, category, severity, message, status, first_seen_at]
       properties:
-        id: {type: integer, description: 'The oldest unresolved repeat''s id, stable while new repeats merge (a resolved merged row: its oldest repeat''s); API-15 and API-16 act on every repeat of its alert_type and zone'}
+        id: {type: integer, description: 'The oldest unresolved repeat''s id, stable while new repeats merge (a resolved merged row: its oldest repeat''s); API-15 and API-16 act on every repeat of its alert_type and sensor_id'}
         alert_type: {type: string, examples: [leak_detected, irrigation_fence_breach, irrigation_run_missed, irrigation_line_faulted, setpoint_unconfirmed]}
         category: {type: string, examples: [water, system]}
         severity: {type: string, enum: [critical, warning, info]}
@@ -1423,7 +1424,7 @@ components:
         status: {type: string, enum: [open, acknowledged, resolved, false_positive, suppressed], description: 'disposition; a merged row is open while any of its repeats is unacknowledged'}
         first_seen_at: {type: string, format: date-time}
         last_seen_at: {type: [string, 'null'], format: date-time, description: Newest of the merged repeats}
-        count: {type: integer, minimum: 1, description: Repeats of this alert_type and zone merged into the row}
+        count: {type: integer, minimum: 1, description: Repeats of this alert_type and sensor_id merged into the row}
         acknowledged_at: {type: [string, 'null'], format: date-time}
         acknowledged_by: {type: [string, 'null'], description: 'Username, agent or Slack user'}
         notes: {type: [string, 'null']}

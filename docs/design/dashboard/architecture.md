@@ -214,11 +214,11 @@ cookie cleared, 302 `/water`.
 - The callback clears the login cookie on every outcome. A missing, expired or tampered login cookie, a state
   mismatch, an Authentik `error` or a refused code exchange answers 400 (`failed`); neither group answers 403
   (`no_access`) and makes no INT-01 call; Authentik unreachable (discovery or the token endpoint) or a failed
-  INT-01 answers 503 (`unavailable`). Each is plain text with that status until #1124's root loader renders the
-  SCR-09 card at the same URL. The BFF leaves `{reason, requestId}` in `res.locals.authError` for it: React Router
-  8's `getLoadContext` must return a `RouterContextProvider`, so the context key that carries it lands with
-  #1124's route. With discovery unavailable, sign-out still deletes the session and clears the cookie, then answers
-  303 to `/`.
+  INT-01 answers 503 (`unavailable`). The BFF leaves `{reason, requestId}` in `res.locals.authError` and hands the
+  request on, past the page gate, to React Router: `getLoadContext` puts it in the page context (a
+  `RouterContextProvider`, as React Router 8 requires), and the root loader answers that status with the SCR-09
+  card at the same URL. With discovery unavailable, sign-out still deletes the session and clears the cookie, then
+  answers 303 to `/`.
 - Trust: only the web pods reach `:8090` (NetworkPolicy), with one shared bearer token; the API trusts the BFF's
   session creation because the BFF verified the ID token, and ignores `X-Authentik-*`. `POST /internal/sessions`
   refuses (403) any request carrying `X-Dashboard-Session`, which the proxy always sends and the session-create
@@ -392,7 +392,7 @@ Plan values keep `readback_values_equivalent` and show as Iris stored them.
 | requested | Stored, no matching readback yet, less than 5 min old | REQUESTED |
 | confirmed | A readback at or after `created_at` matches: `cfg_*`, a native Number or Switch, a `SWITCH_CONFIRM_EQUIPMENT` mirror in `equipment_state`, or, for `irrigation_site` rows, the program hash of a push compiled after the write | CONFIRMED |
 | not_confirmed | 5 min after the request there is no match, or the newest readback disagrees (the ingestor's `setpoint_unconfirmed` window) | NOT CONFIRMED |
-| held | The platform applies something else on purpose: a dispatcher clamp (a `setpoint_clamps` row after the request) or an armed experiment manifest (§5.2) | HELD |
+| held | The platform applies something else on purpose: a dispatcher clamp (a `setpoint_clamps` row after the request, while the newest readback does not confirm the value, so a guardrail that let go does not hold it forever) or an armed experiment manifest (§5.2) | HELD |
 | no_readback | None of those readbacks exists; the value is sent but can never be confirmed | NO READBACK |
 | overridden | Not manual, and a newer Iris plan now wins; the UI says "Iris changed this at 14:05" | AI |
 | released | The newest row has `value = NULL`; plan, band or default applies | none |
@@ -401,7 +401,9 @@ Plan values keep `readback_values_equivalent` and show as Iris stored them.
 `experiment`, `deferred` (heap) or `push_failed` (`setpoint_changes.delivery_status` after the request),
 `writer_down` (the ingestor heartbeat is stale, §7) or `no_match`. Before the engine an `irrigation_site` row
 stays requested ("applies with the irrigation firmware"). The states are display only and add no alerts;
-`setpoint_unconfirmed` (`ingestor/tasks/confirmation.py`) still covers device writes.
+`setpoint_unconfirmed` (`ingestor/tasks/confirmation.py`) still covers device writes. With no desired row a
+setting's state is its plan value's, else the dispatcher's newest push's (VD-67); a `setpoint_changes` row the
+controller reported itself (source `esp32`) is never the push a reason's `since` names.
 
 ### 5.6 Iris, agents and `manual`
 
@@ -553,8 +555,10 @@ bounded `time_bucket_gapfill` series endpoint. There is no new rollup layer in t
   `grow_light_{main,grow}_intent` (`EQUIPMENT_SWITCH_MAP` in `ingestor/entity_map.py`, with its rule-7 line), and
   Equipment shows both.
 - **Alerts.** There is one open-alert count, `verdify_services.alerts.open_count` (VD-67): the unacknowledged
-  (disposition `open`) open rows (the predicate above) after repeats of one `alert_type` and zone are merged, each
-  merged row counted once (a merged row is unacknowledged while any of its rows is). It always equals the
+  (disposition `open`) open rows (the predicate above) after repeats of one `alert_type` and `sensor_id` are
+  merged (NULL with NULL: the key the ingestor's monitor keeps one row per probe on; `zone` is NULL on most
+  rows and would fold unrelated sensors together), each merged row counted once (a merged row is
+  unacknowledged while any of its rows is). It always equals the
   unacknowledged rows API-14 returns, and the nav, Now, Activity, API-02, API-14 and the MCP `alerts` adapter all
   show it. API-14 returns the merged rows (count, first and last seen); "recent" means resolved in the last 24 h.
   VD-72 keeps one row per offline probe (`soil_sensor_offline`, keyed on the probe, and every `v_sensor_staleness`
@@ -673,14 +677,21 @@ live ledger row and receipts. A file whose merged predecessors are not applied y
 `--apply-first <file>` (VD-39), in filename order: both write sessions apply and stamp it first, as
 `db/apply-migrations.sh` would, under the same bounds, and the fixture records the files (`applied_first`) and the
 seals they leave (`applied_first_seals`). `--native-fixture <file>` runs a migration's own checks at the end of the
-final session; M4's calls each login's attestor after the re-seal.
+final session; M4's calls each login's attestor after the re-seal. Neither option can measure a grant
+to a role that an unapplied migration creates: the ordinary digest hashes each grantee's OID, and each
+rolled-back session allocates the role a new OID that is never reused (migration 258's note), so no measurement
+can match the real run. A migration that creates a role grants only on objects it creates, and the role's grants
+on objects a sealed digest hashes land in a later migration measured once the role exists in production, as 259
+followed 258. M2 and M2b split this way, and M3, whose irrigation tables the ingestor also reads, is measured
+after M2 is applied too.
 
 | # | Issue | Contents |
 |---|---|---|
 | M1 | VD-30 | `desired_state`, its index, `v_desired_state_current` and the statement-level NOTIFY trigger (§5.1); `activity_log`. Grants: the ingestor login gets SELECT on `desired_state` and the view and INSERT on `activity_log` (forecast-rule rows); the MCP login gets SELECT and INSERT on both tables, SELECT on the view and UPDATE on `crop_band_anchors` (`value`, `width_below`, `width_above`). Sequence USAGE where INSERT is granted. Re-seals the api, ingestor and MCP receipts |
-| M2 | VD-66 | `verdify_dashboard_runtime` and `verdify_dashboard_runtime_login` with 276's role, schema and `fn_attest_login` shape (not its unchanged-boundary postflight); `dashboard_session`. Grants, each listed in the file and covered by a database test: SELECT on every relation and function the MVP reads (§7; not `v_greenhouse_now`), `v_water_attribution_daily`, `data_gaps`, `desired_state`, the view, `activity_log`, `setpoint_changes` and `setpoint_clamps`, and M4's `v_irrigation_minutes_daily`, `v_irrigation_day_coverage` and `fn_irrigation_minutes_daily(date, date)` (EXECUTE) if M4 merged first, through per-login wrappers where migration 268's pattern needs them; EXECUTE on `fn_mcp_armed_assignment_context()` (no SELECT on `control_experiments`); INSERT on `desired_state` and `activity_log`; UPDATE on `alert_log` (ack and resolve columns) and `crop_band_anchors` (the three columns); DML on `dashboard_session`; no INSERT on `setpoint_changes`. Role settings `statement_timeout = 10s`, `idle_in_transaction_session_timeout = 15s`, `CONNECTION LIMIT 8`. Re-seals the api and ingestor receipts. SQL only: its bootstrap Job entry (`secretKeyRef` optional) lands in the R1 wiring PR (§10) |
+| M2 | VD-66 | `verdify_dashboard_runtime` and `verdify_dashboard_runtime_login` (no password) with 276's role, schema and `fn_attest_login` shape (not its unchanged-boundary postflight); the attestation also checks the guardrails and, in place of 276's denials, requires no write on `setpoint_changes` or `setpoint_plan` and nothing on `control_experiments`, `control_assignments`, `effective_policy_vectors`, `policy_delivery_outbox` or `policy_exposures`; `dashboard_session` with SELECT, INSERT, UPDATE and DELETE. Role settings `statement_timeout = 10s`, `idle_in_transaction_session_timeout = 15s`, `CONNECTION LIMIT 8`. It grants on nothing it did not create, so every receipt keeps its predecessor's value, as 276's did. SQL only: its bootstrap Job entry (`secretKeyRef` optional) lands in the R1 wiring PR (§10) |
+| M2b | VD-66 follow-up | Measured once M2 is applied in production. Grants to `verdify_dashboard_runtime`, each listed in the file and covered by a database test: SELECT on every relation and function the MVP reads (§7; not `v_greenhouse_now`), `v_water_attribution_daily`, `data_gaps`, `desired_state`, the view, `activity_log`, `setpoint_changes` and `setpoint_clamps`, and those of M4's `v_irrigation_minutes_daily`, `v_irrigation_day_coverage` and `fn_irrigation_minutes_daily(date, date)` (EXECUTE) and M6's `v_daily_scorecard` that exist when it merges, through per-login wrappers where migration 268's pattern needs them; EXECUTE on `fn_mcp_armed_assignment_context()` (no SELECT on `control_experiments`); INSERT on `desired_state` and `activity_log` with USAGE on their sequences; UPDATE on `alert_log` (ack and resolve columns) and `crop_band_anchors` (the three columns); no INSERT on `setpoint_changes`. Re-seals the api and ingestor receipts |
 | M3 | VD-38 | Per [irrigation](irrigation.md): the irrigation tables, granted to the dashboard, MCP and ingestor logins; SELECT on `v_water_event_attribution` (per-run gallons) for the dashboard and MCP logins; EXECUTE on `fn_mcp_armed_assignment_context()` for the ingestor login (Iris's irrigation context says whether an experiment is armed) |
-| M4 | VD-39 | `v_irrigation_minutes_daily` and `v_irrigation_day_coverage` (each day complete, partial or no data), and `fn_irrigation_minutes_daily(from, to)`, the minutes for a day range with the scan bounded by it (the view rebuilds every run on each read; [irrigation](irrigation.md) §6.2). SELECT on the views and EXECUTE on the function for the MCP and ingestor duties (the dashboard login exists only after M2, which grants all three); none for the api login. Re-seals the api, ingestor and MCP receipts |
+| M4 | VD-39 | `v_irrigation_minutes_daily` and `v_irrigation_day_coverage` (each day complete, partial or no data), and `fn_irrigation_minutes_daily(from, to)`, the minutes for a day range with the scan bounded by it (the view rebuilds every run on each read; [irrigation](irrigation.md) §6.2). SELECT on the views and EXECUTE on the function for the MCP and ingestor duties (the dashboard login exists only after M2; M2b grants all three); none for the api login. Re-seals the api, ingestor and MCP receipts |
 | M5 | VD-33 | The lighting policy functions ignore `source = 'manual'` rows (§5.2), keeping 275's `SET jit = off` on `fn_lighting_minutes_policy` (`CREATE OR REPLACE FUNCTION` resets it) |
 | M6 | VD-56 | `v_daily_scorecard` (§7), granted to the dashboard login |
 | PAR | VD-71 (Next) | The PAR meter's PPFD `climate` column. It re-creates the `v_runtime_climate_write` facade with the column and re-seals the api and ingestor receipts, or every climate write fails once the firmware publishes PPFD. It drops 195's `dli_validity_release_unavailable` CHECK and opens a new validity interval; the DLI views rebind to the column (§7) |

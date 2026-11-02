@@ -19,6 +19,8 @@ export class RecordingContext {
   strokes: Stroke[] = [];
   fills: { color: string; path: [number, number][] }[] = [];
   rects: { color: string; x: number; y: number; width: number; height: number }[] = [];
+  /** strokeRect calls: outlines (sensed lanes, the planned minutes). */
+  outlines: { color: string; width: number; dash: number[]; x: number; y: number; w: number; h: number }[] = [];
   texts: Text[] = [];
   private dash: number[] = [];
   private path: [number, number][] = [];
@@ -37,6 +39,7 @@ export class RecordingContext {
   stroke() { this.strokes.push({ stroke: this.strokeStyle, width: this.lineWidth, dash: this.dash, path: this.path }); }
   fill() { this.fills.push({ color: this.fillStyle, path: this.path }); }
   fillRect(x: number, y: number, width: number, height: number) { this.rects.push({ color: this.fillStyle, x, y, width, height }); }
+  strokeRect(x: number, y: number, w: number, h: number) { this.outlines.push({ color: this.strokeStyle, width: this.lineWidth, dash: this.dash, x, y, w, h }); }
   fillText(text: string, x: number, y: number) { this.texts.push({ text, x, y, color: this.fillStyle }); }
   measureText(text: string) { return { width: text.length * 6 }; }
 }
@@ -57,6 +60,10 @@ export class MockPlot {
     return entry;
   }
   static reset() { created.length = 0; syncs.clear(); MockPlot.zones = []; }
+  /** uPlot.paths: the bars builder records its options. */
+  static paths = {
+    bars: (opts: unknown) => Object.assign(() => null, { bars: opts }),
+  };
 
   opts: uPlot.Options;
   data: uPlot.AlignedData;
@@ -66,7 +73,7 @@ export class MockPlot {
   bbox = { left: 0, top: 0, width: 1000, height: 300 };
   scales: Record<string, { min: number; max: number }>;
   series: { show: boolean; label?: string }[];
-  cursor: { left: number; top: number; idx: number | null } = { left: -10, top: -10, idx: null };
+  cursor: { left: number; top: number; idx: number | null; event?: { type: string } | null } = { left: -10, top: -10, idx: null };
   destroyed = false;
   sizes: { width: number; height: number }[] = [];
   dataUpdates: uPlot.AlignedData[] = [];
@@ -124,9 +131,12 @@ export class MockPlot {
   setSeries(index: number, opts: { show?: boolean }) {
     if (opts.show !== undefined) { this.series[index].show = opts.show; this.seriesCalls.push({ index, show: opts.show }); }
   }
-  /** Moves the cursor to x (epoch seconds) at bucket `idx`, as a mousemove would. */
-  hover(x: number, idx: number | null) {
-    this.cursor = { left: this.valToPos(x, "x") - this.bbox.left, top: 40, idx };
+  /**
+   * Moves the cursor to x (epoch seconds) at bucket `idx`, `top` CSS px down the plot, as a mousemove would; `synced`
+   * moves it as another chart on the sync key does, with no event of its own.
+   */
+  hover(x: number, idx: number | null, top = 40, synced = false) {
+    this.cursor = { left: this.valToPos(x, "x") - this.bbox.left, top, idx, event: synced ? null : { type: "mousemove" } };
     this.fire("setCursor");
   }
   batch(transaction: () => void) { transaction(); }
@@ -164,6 +174,8 @@ export const TOKENS: Readonly<Record<string, string>> = {
   "--c-temp": "#112231", "--c-vpd": "#7d3ab7", "--c-rh": "#0d98a4", "--c-outdoor": "#6c7278", "--c-band-wash": "#e2ede8",
   "--c-band-edge": "#6e9c8e", "--c-setpoint": "#0e5a43", "--c-requested": "#a77601", "--c-bound": "#626b76", "--c-grid": "#dcede7",
   "--eq-fan2": "#484fa7", "--eq-heat1": "#d47a00", "--eq-vent": "#056190", "--eq-mister": "#9d2398",
+  "--eq-fog": "#1b9bc7", "--eq-fan1": "#22a096", "--eq-heat2": "#b61f02", "--eq-light-main": "#4d9f45", "--eq-light-grow": "#2855ad",
+  "--eq-water": "#2389e2", "--eq-fert": "#6331a0", "--eq-master": "#0e9580",
 };
 export function setTokens(root: HTMLElement = document.documentElement) {
   for (const [token, value] of Object.entries(TOKENS)) root.style.setProperty(token, value);

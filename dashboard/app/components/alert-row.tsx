@@ -49,7 +49,7 @@ export function alertPlace(alert: Pick<Alert, "zone" | "details">): string | nul
 
 export type AlertRowProps = {
   alert: Alert;
-  /** The plain title; by default the words table's for `alert_type` (raw until #1124 adds the alert types). */
+  /** The plain title; by default the words table's for `alert_type` (raw for a type it lacks). */
   title?: string;
   /** The unit of `metric_value`, when the screen knows it. */
   unit?: string | null;

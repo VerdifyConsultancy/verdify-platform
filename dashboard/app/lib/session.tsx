@@ -3,8 +3,9 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 
 /**
  * Who is signed in and whether the dashboard can write, from API-01 (`role`, `writes_enabled`), and whether the
- * dashboard API is down (the shell's API-02 poll failed twice in a row). #1124's shell provides it; until then every
- * page is a viewer with writes off. The UI is not the gate: the API refuses a viewer's write with 403.
+ * dashboard API is down (the shell's API-02 poll failed twice in a row). The shell's `ShellProvider` provides it; until
+ * API-01 answers, every page is a viewer with writes off. The UI is not the gate: the API refuses a viewer's write with
+ * 403.
  */
 export type Role = "operator" | "viewer";
 export type Session = { readonly role: Role; readonly writesEnabled: boolean; readonly apiDown: boolean };

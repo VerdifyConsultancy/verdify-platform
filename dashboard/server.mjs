@@ -7,6 +7,7 @@ import { clearInterval, clearTimeout, setInterval, setTimeout } from "node:timer
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { createRequestHandler } from "@react-router/express";
+import { RouterContextProvider } from "react-router";
 import { allowsPlainHttp, authRoutes, createLoginSeal, createProvider, discoveryUrl } from "./bff/oidc.mjs";
 import { answers200, apiPipeline, createOperatorClient, UPSTREAM_TIMEOUT_MS } from "./bff/proxy.mjs";
 import { pageGate } from "./bff/session.mjs";
@@ -22,11 +23,30 @@ const CLIENT_DIR = fileURLToPath(new URL("./build/client", import.meta.url));
 // Route templates for the request log. Any other path logs as "/other", and /api paths as one template each: never
 // raw. The operator API's line, joined by request_id, has its own route template.
 const ROUTES = new Set(["/", "/healthz", "/readyz", "/auth/login", "/auth/callback", "/auth/logout"]);
+// The screens' routes (app/routes.ts, #1124). Any other /auth path, the catch-all and unknown paths stay "/other".
+const PAGES = new Set(["/graphs", "/graphs/scorecard", "/plan", "/water", "/water/schedules", "/water/history", "/settings", "/activity", "/equipment", "/more"]);
 function routeName(path) {
-  if (path.startsWith("/assets/") || path.startsWith("/fonts/")) return "assets";
+  if (path.startsWith("/assets/") || path.startsWith("/fonts/") || path === "/favicon.svg") return "assets";
   if (path.startsWith("/api/v1/")) return "/api/v1/*";
   if (path === "/api" || path.startsWith("/api/")) return "/api/*";
-  return ROUTES.has(path) ? path : "/other";
+  return ROUTES.has(path) || PAGES.has(path) ? path : "/other";
+}
+const loadBuild = () => import("./build/server/index.js");
+
+/**
+ * The load context of one page request (#1124), set under the key the server build exports from entry.server.tsx
+ * (`pageContext`), which the root loader reads: the build revision for the footer, the request id, and a sign-in
+ * refusal that #1141's /auth handlers leave in `res.locals.authError` ({reason, requestId}). The root renders that
+ * refusal as SCR-09's card at the same URL, with its status.
+ * @param {{ entry: { module: { pageContext?: unknown } } }} build
+ * @param {{ locals: Record<string, unknown> }} res
+ * @param {string} sourceRevision
+ */
+export function pageLoadContext(build, res, sourceRevision) {
+  const context = new RouterContextProvider();
+  const key = build.entry.module.pageContext;
+  if (key) context.set(key, { sourceRevision, requestId: res.locals.requestId ?? null, authError: res.locals.authError ?? null });
+  return context;
 }
 
 /**
@@ -224,7 +244,7 @@ export function createApp({ env = process.env, sourceRevisionPath = SOURCE_REVIS
     res.once("finish", release); res.once("close", release);
     next();
   });
-  app.use(render || createRequestHandler({ build: () => import("./build/server/index.js") }));
+  app.use(render || createRequestHandler({ build: loadBuild, getLoadContext: async (_req, res) => pageLoadContext(await loadBuild(), res, config.sourceRevision) }));
   app.use((_error, _req, res, _next) => {
     res.locals.failure = "render_error";
     if (res.headersSent) { res.destroy(); return; }

@@ -93,7 +93,7 @@ test("PLANNED, SUPERSEDED, STALE, CLEAN and FERT", () => {
   expect(renderUi(<ChemistryBadge chemistry={null} />).container.textContent).toBe("");
 });
 
-test("line states: RUNNING, IDLE, DISABLED with Reserved for L05 and L06; other codes from the words table, raw until #1124", () => {
+test("line states: RUNNING, IDLE, DISABLED with Reserved for L05 and L06; other codes from the words table, raw when it lacks one", () => {
   expect(badgeIn(renderUi(<LineStateBadge code="running" />).container)?.className).toBe("tag tag-ok");
   cleanup();
   expect(text(renderUi(<LineStateBadge code="idle" />).container)).toBe("Idle");
@@ -102,7 +102,9 @@ test("line states: RUNNING, IDLE, DISABLED with Reserved for L05 and L06; other 
   cleanup();
   expect(text(renderUi(<LineStateBadge code="disabled" />).container)).toBe("Disabled");
   cleanup();
-  expect(text(renderUi(<LineStateBadge code="paused" />).container)).toBe("paused");
+  expect(text(renderUi(<LineStateBadge code="paused" />).container)).toBe("Paused");
+  cleanup();
+  expect(text(renderUi(<LineStateBadge code="draining" />).container)).toBe("draining");
 });
 
 test("equipment reads the state the API sends: unknown only when it says unknown, never from an age", () => {

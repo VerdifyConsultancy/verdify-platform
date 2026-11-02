@@ -4521,6 +4521,122 @@ def normalize_planner_value(name: str, value: float) -> float:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Desired-state writes (architecture §5.3 step 1, VD-67). One rule for every
+# side: verdify_services.settings validates writes with it, and the dispatcher
+# skips desired_state rows it refuses (#1149). The api and MCP images do not
+# carry ingestor/, and the ingestor does not import verdify_services, so the
+# rule lives here.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Classes a person or agent may write when the row has a controller entity.
+WRITABLE_CONTROL_CLASSES: frozenset[str] = frozenset(
+    {"planner_policy", "scheduled_policy", "controller_safety", "crop_band"}
+)
+# The legacy wide limits: the dispatcher derives them, and they are not the band
+# while the controller runs its on-chip curve.
+LEGACY_WIDE_LIMIT_PARAMS: frozenset[str] = frozenset(
+    {"temp_low", "temp_high", "vpd_low", "vpd_high"} | {name for name in REGISTRY if name.startswith("vpd_target_")}
+)
+# The activity mirror the dispatcher derives from the main-light schedule
+# (ingestor/tasks/_common.py ACTIVITY_MIRROR_PARAMS).
+ACTIVITY_MIRROR_PARAMS: frozenset[str] = frozenset(
+    {"activity_start_hour", "activity_start_minute", "activity_duration_min"}
+)
+# The nine weekly-feed commissioning rows. They retire with the irrigation
+# engine: #1162 deletes them from REGISTRY, and they then read unknown_target.
+WEEKLY_FEED_PARAMS: frozenset[str] = frozenset(
+    {
+        "sw_wall_fertigation_commissioned",
+        "wall_commissioning_revision",
+        "wall_commissioning_evidence_mask",
+        "wall_commissioning_valid_until_epoch_s",
+        "wall_flow_lpm",
+        "wall_flow_valid_until_epoch_s",
+        "wall_prewet_liters",
+        "wall_feed_liters",
+        "wall_flush_liters",
+    }
+)
+# Decides which side owns the band; refused by name whatever its class.
+BAND_OWNER_SWITCH = "sw_onchip_band_enabled"
+
+READ_ONLY_REASONS: dict[str, str] = {
+    "unknown": "not a registered setting",
+    "band_owner": "decides which side owns the band",
+    "weekly_feed": "weekly-feed commissioning value; retiring with the irrigation engine",
+    "legacy_wide_limit": "legacy wide limit; not the band while the controller runs its on-chip curve",
+    "activity_mirror": "derived by the dispatcher from the main-light schedule",
+    "retired": "retired; the controller no longer uses it",
+    "readback_context": "readback context; the controller reports it and nothing sets it",
+    "no_entity": "no controller entity to write",
+}
+
+assert len(LEGACY_WIDE_LIMIT_PARAMS) == 8 and all(
+    REGISTRY[name].control_class == "crop_band" for name in LEGACY_WIDE_LIMIT_PARAMS
+), "the legacy wide limits drifted"
+assert ACTIVITY_MIRROR_PARAMS <= set(REGISTRY), "an activity-mirror row left the registry"
+
+
+def desired_write_rule(name: str) -> tuple[bool, str | None]:
+    """Architecture §5.3 step 1 without the anchor-row check: may a person or agent write ``name`` now?
+
+    Returns ``(True, None)``, or ``(False, reason)`` with the read-only reason the catalog shows.
+
+    * Writable: ``planner_policy``, ``scheduled_policy``, ``controller_safety`` and ``crop_band`` rows with an
+      ``esp_object_id`` (``irrig_*_duration_min``, ``sw_irrig_*`` and the ``gl_*`` rows among them), and the
+      ``irrigation_site`` rows, which reach the controller in the irrigation program.
+    * Read-only: ``readback_context`` and ``retired`` rows; the legacy wide limits; the activity mirror; the
+      nine weekly-feed commissioning rows (until #1162 deletes them); ``sw_onchip_band_enabled``, by name.
+
+    A ``crop_band`` row is writable only while ``crop_band_anchors`` holds its rows (the zone priorities and
+    the window values never do): ``verdify_services.settings`` adds that database check
+    (``verdify_schemas.band_rows``). An unknown name is not writable.
+    """
+    spec = REGISTRY.get(name)
+    if spec is None:
+        return False, READ_ONLY_REASONS["unknown"]
+    if name == BAND_OWNER_SWITCH:
+        return False, READ_ONLY_REASONS["band_owner"]
+    if name in WEEKLY_FEED_PARAMS:
+        return False, READ_ONLY_REASONS["weekly_feed"]
+    if name in LEGACY_WIDE_LIMIT_PARAMS:
+        return False, READ_ONLY_REASONS["legacy_wide_limit"]
+    if name in ACTIVITY_MIRROR_PARAMS:
+        return False, READ_ONLY_REASONS["activity_mirror"]
+    control_class = spec.control_class
+    if control_class == "retired":
+        return False, READ_ONLY_REASONS["retired"]
+    if control_class == "readback_context":
+        return False, READ_ONLY_REASONS["readback_context"]
+    if control_class == "irrigation_site":
+        return True, None
+    if control_class in WRITABLE_CONTROL_CLASSES and spec.esp_object_id is not None:
+        return True, None
+    return False, READ_ONLY_REASONS["no_entity"]
+
+
+# Switch params whose readback is an equipment_state mirror: param → equipment
+# key. It equals the ingestor's SWITCH_CONFIRM_EQUIPMENT (ingestor/tasks/
+# _common.py, built from entity_map.SWITCH_TO_ENTITY and EQUIPMENT_SWITCH_MAP);
+# verdify_schemas/tests/test_settings_rules.py rebuilds that map and keeps the two
+# equal. These switches have no cfg_* sensor: their native Switch state also
+# lands in setpoint_snapshot, and equipment_state records each change.
+SWITCH_READBACK_EQUIPMENT: dict[str, str] = {
+    "sw_economiser_enabled": "economiser_enabled",
+    "sw_fog_closes_vent": "fog_closes_vent",
+    "sw_gl_auto_mode": "gl_auto_mode",
+    "sw_irrigation_center_enabled": "irrigation_center_enabled",
+    "sw_irrigation_enabled": "irrigation_enabled",
+    "sw_irrigation_wall_enabled": "irrigation_wall_enabled",
+    "sw_irrigation_weather_skip": "irrigation_weather_skip",
+    "sw_occupancy_inhibit": "occupancy_inhibit",
+}
+assert all(REGISTRY[name].kind == "switch" and REGISTRY[name].esp_object_id for name in SWITCH_READBACK_EQUIPMENT), (
+    "SWITCH_READBACK_EQUIPMENT names a row that is not a routed switch"
+)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Policy wire schema validation (Lane A, #582) — see WIRE_SCHEMA_VERSION at the
 # top of this module for the reserved-ID policy.
 # ─────────────────────────────────────────────────────────────────────────────

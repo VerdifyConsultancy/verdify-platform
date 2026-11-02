@@ -230,7 +230,7 @@ test("with the issuer unreachable, a fresh BFF is ready, an existing session rea
   expect(stop.status).toBe(202);
   const login = await request(app).get("/auth/login").set("Host", HOST);
   expect(login.status).toBe(503);
-  expect(login.text).toBe("Sign-in is unavailable. Try again in a minute.");
+  expect(login.text).toContain("<h1>Sign-in is unavailable</h1>");
 });
 
 test("/readyz reports both reachable once its checks pass, and stays 200 when neither is", async () => {

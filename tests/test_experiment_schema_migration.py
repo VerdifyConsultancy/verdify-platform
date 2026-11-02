@@ -339,6 +339,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "280-desired-state-activity-log.sql",
         # Minutes-by-zone views (M4) and their receipt re-seals run forward only.
         "281-irrigation-minutes-by-zone.sql",
+        # The dashboard roles' OIDs must come from the forward hook, never baseline history (VD-66).
+        "282-dashboard-runtime-login.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
