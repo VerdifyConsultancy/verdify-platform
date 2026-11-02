@@ -168,7 +168,7 @@ Polling (weather `polling.ts`: paused while the tab is hidden, backing off from 
 |---|---|
 | Now, the alert count in the nav and the open alerts (API-14) | 15 s |
 | Water status (API-IRR-01) and the Equipment board (API-13, API-02 `overrides`) | 15 s |
-| A setting or irrigation write still REQUESTED, or a command still pending | 5 s until it settles |
+| A setting or irrigation write still REQUESTED, or a command still pending | 5 s until it settles; an item that waits for the irrigation firmware (`no_engine`, or `engine: false`) keeps its slow cadence, since no poll can settle it before that firmware ships |
 | Graph windows that end at "now" | 60 s |
 | Plan, settings, schedules, minutes, runs, the activity log and `/v1/me` | 60 s |
 | Closed graph windows | never |
@@ -530,11 +530,11 @@ bounded `time_bucket_gapfill` series endpoint. There is no new rollup layer in t
 
 | Need | Source (exists today unless marked new) |
 |---|---|
-| Now hero | The newest `climate`, `diagnostics` and `system_state` rows plus the band rows (below); not `v_greenhouse_now`, which needs DLI and health-score grants the dashboard login does not get |
-| Freshness | Newest `climate`, `diagnostics` and `setpoint_snapshot` rows; the ingestor heartbeat (new, VD-54; no migration): a `system_state` row (entity `ingestor_heartbeat`) written every 60 s from the ingestor's own loop, stale after 180 s; `v_data_pipeline_health`, whose `setpoints` age (the newest push or device-reported change) is the writer-health tile; `setpoint_delivery_stuck` drives the stuck-delivery banner (Round 2 #1, VD-62) |
+| Now hero | The newest `climate`, `diagnostics` and `system_state` rows plus the band rows (below); not `v_greenhouse_now`, which needs DLI and health-score grants the dashboard login does not get. In SEALED_MIST the firmware publishes `greenhouse_state` as `SEALED_MIST_<stage>`, so API-02 serves the code `SEALED_MIST` and the label's stage (`mister_state` is the mister pulse machine and never reads FOG) |
+| Freshness | Newest `climate`, `diagnostics` and `setpoint_snapshot` rows; the ingestor heartbeat (new, VD-54; no migration): a `system_state` row (entity `ingestor_heartbeat`) written every 60 s from the ingestor's own loop, stale after 180 s; `v_data_pipeline_health`, whose `setpoints` age (the newest push or device-reported change) is the writer-health tile; `setpoint_delivery_stuck` drives the stuck-delivery banner (Round 2 #1, VD-62). `writer.differing` judges the planner-policy, scheduled-policy and controller-safety values the dispatcher sends from desired rows and plans; it leaves out crop-band and irrigation-site settings, the plan rows the dispatcher never sends (band-owned, per-circuit lux and dispatcher-default ones), and read-only, retired or unregistered settings |
 | Equipment | `equipment_state` for a fixed list: fan1, fan2, vent, heat1, heat2, the 11 wet relays, `grow_light_main`, `grow_light_grow` (Lutron) and `grow_light_{main,grow}_intent`; `v_equipment_relay_map`; runtime and cycles today from collapsed ON/OFF edges |
 | Alerts | `alert_log` with the `v_open_alerts` predicate (`resolved_at IS NULL AND disposition <> 'suppressed'`), which both the dashboard and MCP logins can read (MCP has no grant on the view); never `v_greenhouse_now.open_alerts` |
-| Plan | Effective `plan_journal` row (hypothesis, experiment, expected outcome, valid window), future `setpoint_plan` waypoints with their `source` (`iris` or `preemptive`), `v_active_plan`; `planner_trigger_ledger` for the 36 h list and `v_planner_trigger_health` for counts and the latest required trigger |
+| Plan | Effective `plan_journal` row (hypothesis, experiment, expected outcome, valid window), future `setpoint_plan` waypoints with their `source` (`iris` or `preemptive`), `v_active_plan`; `planner_trigger_ledger` for the 36 h list and `v_planner_trigger_health` for counts. The latest required trigger (Now's Iris tile) is the newest MIDNIGHT, SUNRISE or SUNSET ledger row that has fired (`expected_at` at or before now): the ledger also holds the day's expected rows ahead, which say nothing yet, so the view's first `latest_required` element would read OK over a missed SUNRISE. A health row's `due_at` is the ledger's own deadline: `expected_at` plus the SLA until delivery, then the delivery time plus the SLA, the deadline its `missed` and `timed_out` sweeps use |
 | Band | In force: the newest `setpoint_snapshot` rows with `band_role` (zone `house` for the hero and Graphs, each zone for its tile), computed every pass by the dispatcher from `crop_band_anchors` with the controller's formula (`band_anchors.emit_band_audit`), provenance DERIVED, kept 90 days. Older windows use `fn_band_setpoints(ts)` over the step series, which gives the same crop values as `fn_band_timeline`, labelled "reconstructed from today's anchors". The device-reported targets (`climate.house_temp_target_f`, `house_vpd_target`, `vpd_target_<zone>`) are cross-check metrics |
 | Settings | `verdify_schemas/tunable_registry.py` (code), `v_desired_state_current`, `v_active_plan`, the newest readbacks in `setpoint_snapshot` and `equipment_state`, `setpoint_changes` and `setpoint_clamps` rows after each request, `irrigation_push` |
 | Daily | `daily_summary` (temperature, RH and VPD min, max and mean; `water_used_gal`; mister runtimes) and the new `v_daily_scorecard`: time in band day and night (`mv_zone_band_grade`), gallons, Iris's required plans written and missed (`planner_trigger_ledger`) and alerts by severity |
@@ -542,10 +542,13 @@ bounded `time_bucket_gapfill` series endpoint. There is no new rollup layer in t
 
 - **Reporting.** One test says whether the controller is reporting: the ingestor heartbeat is fresh (at most
   180 s old) and the newest `climate` row is at most 300 s old (the `GET /health` threshold in `api/main.py`).
-  The banners below and the unknown states of equipment and `irr_state` all use it.
+  The banners below, the unknown states of equipment and `irr_state`, Now's band verdicts (none while it is
+  false, as none for a reading older than 120 s) and the leak block's flag, flow and gallons (null while it is
+  false) all use it.
 - **Equipment state** is known while the controller is reporting: the newest row, with `since` at the start of the
   current run of equal states, so reconnect snapshots, HA polls and cycle counts collapse. It reads unknown, with
-  its age, only while the controller is not reporting or there is no row; `irr_state` ages the same way.
+  its age and no `since`, runtime or cycles today (the open run's length is not known), only while the controller
+  is not reporting or there is no row; `irr_state` ages the same way.
   `grow_light_main` and `grow_light_grow` are only the Lutron readback: VD-48 maps the controller's switches to
   `grow_light_{main,grow}_intent` (`EQUIPMENT_SWITCH_MAP` in `ingestor/entity_map.py`, with its rule-7 line), and
   Equipment shows both.
@@ -666,16 +669,18 @@ against production before the merge: three sessions that each end in ROLLBACK (t
 block, whose live digests are the literals; the exact file with its receipts read back inside; a read-only pass
 after). It writes the fixture only when all of them hold, and `tests/test_NNN_*.py` fails until it does.
 It measures against the predecessor that is applied in production, because the `$predecessor$` block reads the
-live ledger row and receipts. A file whose merged predecessor is not applied yet can be measured only after that
-predecessor is applied, in production or earlier in the same rolled-back session (the script does not do the
-latter yet).
+live ledger row and receipts. A file whose merged predecessors are not applied yet names each one with
+`--apply-first <file>` (VD-39), in filename order: both write sessions apply and stamp it first, as
+`db/apply-migrations.sh` would, under the same bounds, and the fixture records the files (`applied_first`) and the
+seals they leave (`applied_first_seals`). `--native-fixture <file>` runs a migration's own checks at the end of the
+final session; M4's calls each login's attestor after the re-seal.
 
 | # | Issue | Contents |
 |---|---|---|
 | M1 | VD-30 | `desired_state`, its index, `v_desired_state_current` and the statement-level NOTIFY trigger (§5.1); `activity_log`. Grants: the ingestor login gets SELECT on `desired_state` and the view and INSERT on `activity_log` (forecast-rule rows); the MCP login gets SELECT and INSERT on both tables, SELECT on the view and UPDATE on `crop_band_anchors` (`value`, `width_below`, `width_above`). Sequence USAGE where INSERT is granted. Re-seals the api, ingestor and MCP receipts |
-| M2 | VD-66 | `verdify_dashboard_runtime` and `verdify_dashboard_runtime_login` with 276's role, schema and `fn_attest_login` shape (not its unchanged-boundary postflight); `dashboard_session`. Grants, each listed in the file and covered by a database test: SELECT on every relation and function the MVP reads (§7; not `v_greenhouse_now`), `v_water_attribution_daily`, `data_gaps`, `desired_state`, the view, `activity_log`, `setpoint_changes` and `setpoint_clamps`, and M4's `v_irrigation_minutes_daily` and `v_irrigation_day_coverage` if M4 merged first, through per-login wrappers where migration 268's pattern needs them; EXECUTE on `fn_mcp_armed_assignment_context()` (no SELECT on `control_experiments`); INSERT on `desired_state` and `activity_log`; UPDATE on `alert_log` (ack and resolve columns) and `crop_band_anchors` (the three columns); DML on `dashboard_session`; no INSERT on `setpoint_changes`. Role settings `statement_timeout = 10s`, `idle_in_transaction_session_timeout = 15s`, `CONNECTION LIMIT 8`. Re-seals the api and ingestor receipts. SQL only: its bootstrap Job entry (`secretKeyRef` optional) lands in the R1 wiring PR (§10) |
+| M2 | VD-66 | `verdify_dashboard_runtime` and `verdify_dashboard_runtime_login` with 276's role, schema and `fn_attest_login` shape (not its unchanged-boundary postflight); `dashboard_session`. Grants, each listed in the file and covered by a database test: SELECT on every relation and function the MVP reads (§7; not `v_greenhouse_now`), `v_water_attribution_daily`, `data_gaps`, `desired_state`, the view, `activity_log`, `setpoint_changes` and `setpoint_clamps`, and M4's `v_irrigation_minutes_daily`, `v_irrigation_day_coverage` and `fn_irrigation_minutes_daily(date, date)` (EXECUTE) if M4 merged first, through per-login wrappers where migration 268's pattern needs them; EXECUTE on `fn_mcp_armed_assignment_context()` (no SELECT on `control_experiments`); INSERT on `desired_state` and `activity_log`; UPDATE on `alert_log` (ack and resolve columns) and `crop_band_anchors` (the three columns); DML on `dashboard_session`; no INSERT on `setpoint_changes`. Role settings `statement_timeout = 10s`, `idle_in_transaction_session_timeout = 15s`, `CONNECTION LIMIT 8`. Re-seals the api and ingestor receipts. SQL only: its bootstrap Job entry (`secretKeyRef` optional) lands in the R1 wiring PR (§10) |
 | M3 | VD-38 | Per [irrigation](irrigation.md): the irrigation tables, granted to the dashboard, MCP and ingestor logins; SELECT on `v_water_event_attribution` (per-run gallons) for the dashboard and MCP logins; EXECUTE on `fn_mcp_armed_assignment_context()` for the ingestor login (Iris's irrigation context says whether an experiment is armed) |
-| M4 | VD-39 | `v_irrigation_minutes_daily` and `v_irrigation_day_coverage` (each day complete, partial or no data), granted to the runtime logins that exist when it merges |
+| M4 | VD-39 | `v_irrigation_minutes_daily` and `v_irrigation_day_coverage` (each day complete, partial or no data), and `fn_irrigation_minutes_daily(from, to)`, the minutes for a day range with the scan bounded by it (the view rebuilds every run on each read; [irrigation](irrigation.md) §6.2). SELECT on the views and EXECUTE on the function for the MCP and ingestor duties (the dashboard login exists only after M2, which grants all three); none for the api login. Re-seals the api, ingestor and MCP receipts |
 | M5 | VD-33 | The lighting policy functions ignore `source = 'manual'` rows (§5.2), keeping 275's `SET jit = off` on `fn_lighting_minutes_policy` (`CREATE OR REPLACE FUNCTION` resets it) |
 | M6 | VD-56 | `v_daily_scorecard` (§7), granted to the dashboard login |
 | PAR | VD-71 (Next) | The PAR meter's PPFD `climate` column. It re-creates the `v_runtime_climate_write` facade with the column and re-seals the api and ingestor receipts, or every climate write fails once the firmware publishes PPFD. It drops 195's `dli_validity_release_unavailable` CHECK and opens a new validity interval; the DLI views rebind to the column (§7) |

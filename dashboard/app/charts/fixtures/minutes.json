@@ -1,0 +1,36 @@
+{
+  "from": "2026-10-27", "to": "2026-11-02", "group_by": "line",
+  "periods": [
+    {"start": "2026-10-27", "coverage": "complete"},
+    {"start": "2026-10-28", "coverage": "complete"},
+    {"start": "2026-10-29", "coverage": "complete"},
+    {"start": "2026-10-30", "coverage": "no_data"},
+    {"start": "2026-10-31", "coverage": "partial"},
+    {"start": "2026-11-01", "coverage": "complete"},
+    {"start": "2026-11-02", "coverage": "partial"}
+  ],
+  "rows": [
+    {"period": "2026-10-27", "group": "L01", "cause": "schedule", "chemistry": "clean", "minutes": 12, "pulses": null, "gal": 9},
+    {"period": "2026-10-28", "group": "L01", "cause": "prewet", "chemistry": "clean", "minutes": 2, "pulses": null, "gal": 1},
+    {"period": "2026-10-28", "group": "L02", "cause": "feed", "chemistry": "fert", "minutes": 8, "pulses": null, "gal": 4},
+    {"period": "2026-10-28", "group": "L03", "cause": "feed", "chemistry": "fert", "minutes": 8, "pulses": null, "gal": null},
+    {"period": "2026-10-28", "group": "L01", "cause": "flush", "chemistry": "clean", "minutes": 3, "pulses": null, "gal": 2},
+    {"period": "2026-10-29", "group": "L01", "cause": "run_now", "chemistry": "clean", "minutes": 10, "pulses": null, "gal": 7},
+    {"period": "2026-10-31", "group": "L01", "cause": "unknown", "chemistry": "clean", "minutes": 5, "pulses": null, "gal": null},
+    {"period": "2026-11-01", "group": "L01", "cause": "schedule", "chemistry": "clean", "minutes": 12, "pulses": null, "gal": 9},
+    {"period": "2026-10-27", "group": "L04", "cause": "vpd", "chemistry": "clean", "minutes": 52, "pulses": 52, "gal": 3},
+    {"period": "2026-10-28", "group": "L04", "cause": "vpd", "chemistry": "clean", "minutes": 47, "pulses": 47, "gal": 3},
+    {"period": "2026-10-29", "group": "L04", "cause": "vpd", "chemistry": "clean", "minutes": 61, "pulses": 61, "gal": 4},
+    {"period": "2026-10-31", "group": "L04", "cause": "vpd", "chemistry": "clean", "minutes": 44, "pulses": 44, "gal": 3},
+    {"period": "2026-10-31", "group": "L04", "cause": "schedule", "chemistry": "clean", "minutes": 10, "pulses": 10, "gal": 1},
+    {"period": "2026-11-01", "group": "L04", "cause": "vpd", "chemistry": "clean", "minutes": 58, "pulses": 58, "gal": 4},
+    {"period": "2026-11-02", "group": "L04", "cause": "vpd", "chemistry": "clean", "minutes": 46, "pulses": 46, "gal": 3},
+    {"period": "2026-10-29", "group": "L07", "cause": "vpd", "chemistry": "clean", "minutes": 12, "pulses": 12, "gal": 1},
+    {"period": "2026-10-27", "group": "L11", "cause": "vpd", "chemistry": "clean", "minutes": 30, "pulses": null, "gal": null},
+    {"period": "2026-10-28", "group": "L11", "cause": "vpd", "chemistry": "clean", "minutes": 18, "pulses": null, "gal": null},
+    {"period": "2026-10-29", "group": "L11", "cause": "vpd", "chemistry": "clean", "minutes": 24, "pulses": null, "gal": null},
+    {"period": "2026-10-31", "group": "L11", "cause": "vpd", "chemistry": "clean", "minutes": 9, "pulses": null, "gal": null},
+    {"period": "2026-11-01", "group": "L11", "cause": "vpd", "chemistry": "clean", "minutes": 21, "pulses": null, "gal": null},
+    {"period": "2026-11-02", "group": "L11", "cause": "vpd", "chemistry": "clean", "minutes": 6, "pulses": null, "gal": null}
+  ]
+}

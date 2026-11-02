@@ -35,3 +35,64 @@
 .linked-panels{margin:.75rem 0}
 .linked-panels .chart-linked{margin:.25rem 0;padding-top:.5rem;border-top:1px solid var(--line)}
 .linked-panels .chart-linked:first-of-type{border-top:0}
+
+/* Lanes (#1127, design system §5.2 and §6): rows are HTML at a fixed pitch, the canvas sits over the plot column and
+   paints each row's band at the same pitch, and a spacer under the rows holds the time axis. */
+.chart-lanes .lanes-caption{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:0 1rem;margin:0 0 .35rem}
+.chart-lanes .lanes-caption .eyebrow{margin:0}
+.lanes-columns{font:400 .72rem/1.3 var(--mono);color:var(--muted)}
+.lanes{position:relative;--lanes-label:10rem;--lanes-stat:12rem;--lanes-pitch:20px;--lanes-axis:54px;--lanes-top:0px}
+.lanes-rows{list-style:none;margin:0;padding:0}
+.lanes-rows[hidden]{display:none}
+.lanes-row{display:grid;grid-template-columns:var(--lanes-label) minmax(0,1fr) var(--lanes-stat);align-items:center;height:var(--lanes-pitch);font-size:.8rem;line-height:1}
+.lanes-label{grid-column:1;padding-right:.5rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.lanes-stat{grid-column:3;padding-left:.5rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--muted);font-variant-numeric:tabular-nums}
+.lanes-fold button{grid-column:1;justify-self:start;min-height:0;height:100%;padding:0 .3rem;border:0;background:none;font-size:.75rem;font-weight:700;color:var(--forest)}
+.lanes-fold button::after{content:" ›"}
+.lanes-fold button[aria-expanded=true]::after{content:" ‹"}
+.lanes-axis{height:var(--lanes-axis)}
+.lanes-top{height:var(--lanes-top)}
+.lanes-canvas{position:absolute;top:0;bottom:0;left:var(--lanes-label);right:var(--lanes-stat);overflow:hidden}
+.plan-row{height:var(--lanes-pitch)}
+.plan-head{display:flex;align-items:center;gap:0;height:var(--plan-head);margin:0;font-size:.8rem;line-height:1.2;overflow:hidden;white-space:nowrap}
+.plan-label{font-weight:600;flex:none}
+.plan-sep{flex:none;margin:0 .35em;color:var(--muted)}
+.plan-status{overflow:hidden;text-overflow:ellipsis;font:500 .72rem/1.2 var(--mono);color:var(--ink)}
+.plan-line{display:flex;align-items:flex-end;height:24px;margin:0;font-size:.8rem;line-height:1.2;font-variant-numeric:tabular-nums}
+.plan-device{width:var(--lanes-label);padding:0 .5rem 2px 0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.plan-row-muted,.plan-row-muted .plan-status{color:var(--muted)}
+.lanes-plan{--lanes-stat:0px;--lanes-top:18px;--plan-head:20px;--lanes-pitch:44px;--lanes-label:6rem}
+@media(max-width:860px){
+  .lanes{--lanes-label:6rem;--lanes-stat:4.5rem;--lanes-pitch:24px;--lanes-axis:32px}
+  .lanes .lanes-wide,.lanes-columns .lanes-wide{display:none}
+  .lanes-plan{--lanes-stat:0px;--plan-head:36px;--lanes-pitch:60px;--lanes-label:5rem}
+  .plan-head{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;white-space:normal}
+}
+
+/* Minutes by zone (#1127): one small bars chart per zone; the zone's label left, today and the cap right. */
+.minutes-rows{list-style:none;margin:0;padding:0}
+.minutes-row{display:grid;grid-template-columns:6rem minmax(0,1fr) 12rem;align-items:center;gap:0 .75rem;border-top:1px solid var(--line)}
+.minutes-row:first-child{border-top:0}
+.minutes-label{font-size:.85rem;font-weight:600}
+.minutes-note{display:block;font:400 .66rem/1.3 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.minutes-today{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.chart .plot-bars{position:relative;height:84px;overflow:hidden;min-width:0}
+.chart .plot-bars.plot-bars-axis{height:112px}
+@media(max-width:860px){
+  .minutes-row{grid-template-columns:minmax(0,1fr) auto}
+  .minutes-row .plot-bars{grid-column:1/-1;grid-row:2}
+  .minutes-note{display:inline}
+}
+
+/* Key (marks that are not series): swatch and words; the swatch takes its token from data-token as its colour. */
+.chart-key{list-style:none;display:flex;flex-wrap:wrap;gap:.25rem 1rem;margin:.35rem 0;padding:0;font-size:.8rem;color:var(--muted)}
+.chart-key li{display:inline-flex;align-items:center;gap:.4rem}
+.chart-key-swatch{display:inline-block;flex:none;width:.75rem;height:.75rem;border-radius:2px;color:var(--muted);background:currentColor}
+.chart-key-swatch[data-kind=outline]{background:transparent;border:2px solid currentColor}
+.chart-key-swatch[data-kind=hatch]{background:repeating-linear-gradient(135deg,currentColor 0 1px,transparent 1px 4px);border:1px solid var(--line)}
+.chart-key-swatch[data-kind=dashed]{background:transparent;border:1px dashed currentColor}
+.chart-key-swatch[data-kind=dotted]{height:0;border-radius:0;background:none;border-top:2px dotted currentColor}
+.chart-key-swatch[data-token=ink]{color:var(--ink)}.chart-key-swatch[data-token=c-bound]{color:var(--c-bound)}
+.chart-key-swatch[data-token=eq-mister]{color:var(--eq-mister)}.chart-key-swatch[data-token=eq-water]{color:var(--eq-water)}
+.chart-key-swatch[data-token=eq-master]{color:var(--eq-master)}.chart-key-swatch[data-token=eq-fert]{color:var(--eq-fert)}
+.chart-key-swatch[data-token=eq-fog]{color:var(--eq-fog)}.chart-key-swatch[data-token=eq-heat1]{color:var(--eq-heat1)}

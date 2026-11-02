@@ -20,3 +20,19 @@ export function Legend({ items, onToggle }: { items: readonly LegendItem[]; onTo
   </ul>;
   return narrow ? <details className="chart-legend"><summary>Legend</summary>{buttons}</details> : <div className="chart-legend">{buttons}</div>;
 }
+
+/**
+ * A key for marks that are not series (the lanes' causes, hatching and outlines; the bars' causes, no-data days, the
+ * planned outline and the cap): the same swatch-and-words items as the legend, without toggles, so colour, hatch and
+ * line style always carry words.
+ */
+export type KeyItem = { key: string; label: string; token: string; kind: "fill" | "outline" | "hatch" | "dashed" | "dotted" };
+
+export function ChartKey({ items }: { items: readonly KeyItem[] }) {
+  if (!items.length) return null;
+  return <ul className="chart-key" aria-label="Key">
+    {items.map((item) => <li key={item.key}>
+      <span className="chart-key-swatch" data-token={item.token.replace(/^--/, "")} data-kind={item.kind} aria-hidden="true" />{item.label}
+    </li>)}
+  </ul>;
+}

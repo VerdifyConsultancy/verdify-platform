@@ -122,6 +122,20 @@ test("after API-IRR-07 every running line reads OFF from the next API-IRR-01 rea
   expect((get(api, "/v1/equipment").items as Body[]).find((item) => item.equipment === "drip_wall")).toMatchObject({ state: "off" });
 });
 
+test("stop-unconfirmed: a running L01 stays in API-02 running and API-IRR-01 after API-IRR-07, alone or after l01-running", () => {
+  for (const names of ["stop-unconfirmed", ["l01-running", "stop-unconfirmed"]]) {
+    const api = handler(names);
+    expect(get(api, "/v1/now").running).toEqual([expect.objectContaining({ equipment: "drip_wall", line_id: "L01", cause: "run_now" })]);
+    expect(at(api, "POST", "/v1/irrigation/stop", {}, KEY).status).toBe(202);
+    expect(get(api, "/v1/now").running).toEqual([expect.objectContaining({ line_id: "L01" })]);
+    expect(line(api, "L01").state).toMatchObject({ code: "running" });
+    expect(get(api, "/api/v1/irrigation").active_runs).toEqual([expect.objectContaining({ line_id: "L01" })]);
+    expect((get(api, "/v1/activity?action=irrigation.stop").items as Body[])[0]).toMatchObject({ target: "all", detail: { stopped: [] }, request_id: KEY });
+  }
+  // fixture() answers the reads after its Stop.
+  expect(fixture("stop-unconfirmed", { now: NOW })["API-02"].running).toEqual([expect.objectContaining({ line_id: "L01" })]);
+});
+
 test("requested-to-confirmed: two API-09 reads requested, then confirmed; with confirm false, not_confirmed since the send", () => {
   for (const [options, settled] of [[{}, { state: "confirmed", state_reason: null }], [{ confirm: false }, { state: "not_confirmed" }]] as const) {
     const api = handler("requested-to-confirmed", options);

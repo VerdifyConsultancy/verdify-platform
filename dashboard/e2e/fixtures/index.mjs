@@ -13,10 +13,10 @@ export const FIXTURE_NAMES = Object.keys(FIXTURES);
 /**
  * The writes a fixture describes the reads after. `fixture()` answers that fixture's reads once its writes have
  * settled: `requested-to-confirmed` after its API-10 write (confirmed, or not_confirmed with `confirm: false`), and
- * `flow-after-stop` after a Stop. The fixture API starts before them, so a browser test sends them itself and watches
- * the reads change (a requested setting settles on the third API-09 read).
+ * `flow-after-stop` and `stop-unconfirmed` after a Stop. The fixture API starts before them, so a browser test sends
+ * them itself and watches the reads change (a requested setting settles on the third API-09 read).
  */
-export const AFTER = { "requested-to-confirmed": ["API-10"], "flow-after-stop": ["API-IRR-07"] };
+export const AFTER = { "requested-to-confirmed": ["API-10"], "flow-after-stop": ["API-IRR-07"], "stop-unconfirmed": ["API-IRR-07"] };
 /** As the reads see a write once it has settled. */
 const SETTLED = { readsAfter: () => Number.POSITIVE_INFINITY };
 

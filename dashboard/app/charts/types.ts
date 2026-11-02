@@ -123,6 +123,96 @@ export type MetricDef = {
   note?: string | null;
 };
 
+/** `IrrigationCause`: why a wet line ran (irrigation §6.2). */
+export type IrrigationCause = "vpd" | "schedule" | "run_now" | "feed" | "prewet" | "flush" | "fallback" | "unknown";
+
+/** One `StateLanes` interval. `end` is clamped to the window or now; a wet line's `cause` is null until the run ledger fills it. */
+export type StateInterval = { start: string; end: string; state: "on" | "off" | "unknown"; cause?: IrrigationCause | null };
+
+/** One `StateLanes` lane: an `equipment_state` key, its label from the API's `EQUIPMENT_LABELS`, and its intervals. */
+export type StateLane = {
+  equipment: string;
+  label?: string;
+  group: "climate" | "water" | "light" | "flag";
+  line_id?: string | null;
+  intervals: StateInterval[];
+};
+
+/** `StateLanes` (API-05): intervals seeded with the state at `from`; unknown stays unknown. Windows of 31 days or less. */
+export type StateLanes = { from: string; to: string; lanes: StateLane[] };
+
+/** `Reading`: a value with the time it was observed; null with the reason in words. */
+export type Reading = { value: number | null; observed_at: string | null; reason?: string | null };
+
+/** `PlanRecord`: a plan_journal row. */
+export type PlanRecord = {
+  plan_id: string;
+  trigger: string;
+  written_at: string;
+  valid_from?: string | null;
+  valid_until?: string | null;
+  status?: string | null;
+  hypothesis?: string | null;
+  experiment?: string | null;
+  expected_outcome?: string | null;
+  conditions_summary?: string | null;
+  outcome_score?: number | null;
+  lesson?: string | null;
+  detail?: { [key: string]: unknown };
+};
+
+/** `PlannerTrigger`: one planner_trigger_ledger row. */
+export type PlannerTrigger = {
+  trigger: string;
+  required: boolean;
+  expected_at: string;
+  due_at: string;
+  outcome: "expected" | "delivered" | "acked" | "plan_written" | "action_completed" | "neutral_fallback" | "wrong_action" | "delivery_failed" | "timed_out" | "missed";
+  resolved_at?: string | null;
+  failure_class?: string | null;
+};
+
+/**
+ * `PlanLane`: one planned setting. `label` and `unit` are the setting's `TunableDef.label` and `unit`; `applied_from`
+ * and each waypoint's `effective` are computed by the API with the dispatcher's rule, never by the client.
+ */
+export type PlanLane = {
+  param: string;
+  label: string;
+  unit?: string | null;
+  device: Reading;
+  waypoints: PlanWaypoint[];
+  desired: DesiredSetting | null;
+  applied_from: "manual" | "desired" | "plan" | "band" | "default";
+};
+
+/** `Plan` (API-07): the plan in force, one lane per planned setting, and planner health. */
+export type Plan = {
+  plan: PlanRecord | null;
+  no_plan_since?: string | null;
+  lanes: PlanLane[];
+  manual_count: number;
+  health: PlannerTrigger[];
+};
+
+/** One `MinutesReport` day: `no_data` has no rows (a gap, never 0); today and outage days are `partial`. */
+export type MinutesPeriod = { start: string; coverage: "complete" | "partial" | "no_data" };
+
+/** One `MinutesReport` row, always split by cause and chemistry. `group` is a zone, a line id or a cause. */
+export type MinutesRow = {
+  period: string;
+  group: string;
+  cause: IrrigationCause;
+  chemistry: "clean" | "fert";
+  minutes: number;
+  pulses?: number | null;
+  /** Whole gallons. */
+  gal?: number | null;
+};
+
+/** `MinutesReport` (API-IRR-10): valve-open minutes per America/Denver day. */
+export type MinutesReport = { from: string; to: string; group_by: "zone" | "line" | "cause"; periods: MinutesPeriod[]; rows: MinutesRow[] };
+
 /** A chart's x range, UTC epoch seconds. */
 export type XRange = { from: number; to: number };
 

@@ -1215,6 +1215,9 @@ globals:
     restore_value: no
     initial_value: '0'
 
+  # Gallons today through the misters and fog: a mirror of the irrigation engine's RTC block
+  # (centi-gallons / 100), which SAF-4 and the soft budget read. The block keeps it across a
+  # soft reset and zeroes it on a new local day (#1160).
   - id: mister_water_today
     type: float
     restore_value: no
@@ -1266,6 +1269,8 @@ globals:
     restore_value: no
     initial_value: '300.0'
 
+  # Inert since #1160: the center duty cap is L04's daily_cap_min in the irrigation program
+  # (F11). Kept only for its entity until #1162 retires both.
   - id: mister_max_runtime_min
     type: int
     restore_value: no
@@ -1286,12 +1291,17 @@ globals:
   # (mister_water_budget_gal, which climate_vpd_emergency can bypass). Even a
   # VPD emergency cannot push center misting past this hard cap. Default 360 =
   # 1.2x the 300-gal budget; tune per plumbing.
+  # Inert since #1160: the ceiling is the irrigation program's SAF-4 gallons (F11), checked
+  # against the engine's RTC block. Kept only for its entity until #1162 retires both.
   - id: mister_daily_volume_max_gal
     type: float
     restore_value: no
     initial_value: '360.0'
 
-  # ─── Mister runtime counters (reset at midnight) ───
+  # ─── Mister runtime counters ───
+  # Mirrors of the irrigation engine's RTC block (zone seconds x 1000: south is L07 + L08,
+  # west L09 + L10, center L04), written each engine tick. The block zeroes them on a new
+  # local day and keeps them across a soft reset (#1160).
   - id: runtime_mister_south_ms
     type: uint32_t
     restore_value: no
@@ -1348,48 +1358,23 @@ globals:
     restore_value: no
     initial_value: '0'
 
-  # ─── Irrigation state machine ───
-  - id: irrig_state
-    type: int
-    restore_value: no
-    initial_value: '0'
-    # 0=idle, 1=wall_clean, 2=center_drip_clean,
-    # 5=weekly_wall_prewet, 6=weekly_wall_feed, 7=weekly_wall_flush
-
-  - id: irrig_timer_ms
-    type: uint32_t
+  # ─── Irrigation engine (#1160) ───
+  # The engine grant (F5): bit = device_idx (L01 = 0 to L10 = 9). Written only by the
+  # irrigation engine (lib/irrigation_engine_esphome.h): it sets a bit before the relay's
+  # turn_on() and clears it after the turn_off(); a climate VPD pulse gets its bit through
+  # irr_vpd_grant(). Every wet relay guard in hardware.yaml refuses an ON without its bit.
+  # Fog (fog_rly) is climate only and outside the grant.
+  - id: irr_grant_mask
+    type: uint16_t
     restore_value: no
     initial_value: '0'
 
+  # Written by the two RUN CLEAN buttons only; nothing reads it since the engine replaced
+  # the job machine (#1160). It goes with the buttons (#1162).
   - id: irrig_queue
     type: int
     restore_value: no
     initial_value: '0'
-    # Bitmask: bit0=wall_clean, bit2=center_drip_clean. All fertilizer queue
-    # bits and all mister irrigation jobs are retired.
-
-  # True only while the irrigation state machine is intentionally changing
-  # fertilized relays or the fertilizer master valve. Relay-level guards use
-  # this to reject direct HA/manual fert actuation.
-  - id: fert_controller_actuating
-    type: bool
-    restore_value: no
-    initial_value: 'false'
-
-  # True only while the climate controller or irrigation scheduler is
-  # intentionally changing clean-water drip/mister relays. Relay-level guards
-  # use this to reject direct HA/manual clean-water actuation.
-  - id: water_controller_actuating
-    type: bool
-    restore_value: no
-    initial_value: 'false'
-
-  # Reverse-exclusivity token: ONLY the climate/VPD resolver may energize the
-  # center mister. Irrigation/manual/schedule paths use water_controller_actuating.
-  - id: climate_wet_controller_actuating
-    type: bool
-    restore_value: no
-    initial_value: 'false'
 
   - id: irrig_wall_cycle_count
     type: int
@@ -1634,7 +1619,8 @@ globals:
     restore_value: no
     initial_value: '0'
 
-  # Daily irrigation runtime counters (reset at midnight)
+  # Daily irrigation runtime counters: mirrors of the irrigation engine's RTC block
+  # (L01, L05 and L03 seconds x 1000), zeroed by the block on a new local day (#1160).
   - id: runtime_wall_drip_ms
     type: uint32_t
     restore_value: no

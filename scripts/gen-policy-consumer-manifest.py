@@ -52,6 +52,7 @@ SCAN_FILES: dict[str, str] = {
     "firmware/greenhouse/hardware.yaml": "control",
     "firmware/greenhouse/external_sensors.yaml": "control",
     "firmware/greenhouse/policy_engine.yaml": "control",
+    "firmware/greenhouse/irrigation_engine.yaml": "control",
     "firmware/greenhouse.yaml": "boot_or_diag",
 }
 
