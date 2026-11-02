@@ -40,10 +40,10 @@ export function BrandGlyph() {
 
 /**
  * The lockup: the glyph is the V, so "erdify" follows it with no gap (on its baseline, kerned as the wordmark sets it),
- * then " · DASHBOARD".
+ * then " · DASHBOARD". `reloadDocument` makes it a full page load, for the pages outside the shell.
  */
-export function Brand() {
-  return <Link className="brand" to="/" aria-label="Verdify dashboard, home"><span className="brand-word"><BrandGlyph /><span>erdify<small> · Dashboard</small></span></span></Link>;
+export function Brand({ reloadDocument = false }: { reloadDocument?: boolean }) {
+  return <Link className="brand" to="/" reloadDocument={reloadDocument} aria-label="Verdify dashboard, home"><span className="brand-word"><BrandGlyph /><span>erdify<small> · Dashboard</small></span></span></Link>;
 }
 
 /** "Activity 2": the one open-alert count (API-02 `alerts.open`) as plain text, once API-02 has answered. */
@@ -95,7 +95,11 @@ export function BottomNav() {
   </nav>;
 }
 
-/** The header of the sign-in and error pages: the lockup alone, with no nav and no tools. */
+/**
+ * The header of the sign-in and error pages: the lockup alone, with no nav and no tools. Its link is a full page load:
+ * the root's data (a sign-in refusal) never revalidates on a client navigation, so a client navigation from a refusal
+ * card would draw the same card at /, and the BFF must see the request to start a sign-in.
+ */
 export function PlainHeader() {
-  return <header className="site-header"><div className="shell"><Brand /></div></header>;
+  return <header className="site-header"><div className="shell"><Brand reloadDocument /></div></header>;
 }

@@ -31,9 +31,12 @@ test("API-02 failing twice in a row reads Dashboard API unavailable, and once is
   const down = shellStatus(me, null, 2);
   expect(shown(down.fault)).toEqual({ kind: "api_down", tone: "fault", text: API_DOWN_TEXT, to: null });
   expect(down).toMatchObject({ apiDown: true, openAlerts: null, ingestorRunning: null, controllerReporting: null });
-  // The last answer is kept, but while the API is down nothing says the controller reports.
-  const { now } = answers("in-band");
-  expect(shellStatus(me, now, 3)).toMatchObject({ apiDown: true, ingestorRunning: null, controllerReporting: null, openAlerts: 0 });
+  // The last answer is kept, but while the API is down nothing says the controller reports, and the count is unknown:
+  // the last one (here 2) would read as current, and a stale 0 as an all clear.
+  const { now } = answers("alerts-merged");
+  expect(shellStatus(me, now, 1).openAlerts).toBe(2);
+  expect(shellStatus(me, now, 3)).toMatchObject({ apiDown: true, ingestorRunning: null, controllerReporting: null, openAlerts: null });
+  expect(shellStatus(me, answers("in-band").now, 2).openAlerts).toBeNull();
 });
 
 test("a heartbeat 4 min old reads Ingestor not running, whatever the climate age, and links to Now's data tile", () => {
@@ -121,4 +124,11 @@ test("the footer's build line, and the sign-in link that returns to the same pat
   expect(buildLine("unknown", "fedcba9876543210fedcba9876543210fedcba98")).toBe("Verdify dashboard · build unknown · API fedcba987654");
   expect(signInHref("/activity?target=L01")).toBe("/auth/login?returnTo=%2Factivity%3Ftarget%3DL01");
   expect(signInHref("")).toBe("/auth/login?returnTo=%2F");
+  // A page longer than the 2,048 characters the BFF keeps, or one whose encoded form would pass the 4,096-character
+  // target server.mjs serves (414), signs in back to /, as the BFF's own sign-in redirect does: the link always works.
+  expect(signInHref(`/graphs?${"m=vpd&".repeat(400)}`)).toBe("/auth/login?returnTo=%2F");
+  expect(signInHref(`/graphs?q=${"/".repeat(1400)}`)).toBe("/auth/login?returnTo=%2F");
+  const fits = `/graphs?q=${"a".repeat(2000)}`;
+  expect(signInHref(fits)).toBe(`/auth/login?returnTo=${encodeURIComponent(fits)}`);
+  expect(signInHref(fits).length).toBeLessThanOrEqual(4096);
 });

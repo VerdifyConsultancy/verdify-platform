@@ -40,7 +40,10 @@ export type ShellStatus = {
   readonly warns: readonly ShellBanner[];
   /** API-02 failed twice in a row: nothing green shows. */
   readonly apiDown: boolean;
-  /** API-02 `alerts.open`, the one open-alert count; null until API-02 first answers. */
+  /**
+   * API-02 `alerts.open`, the one open-alert count; null until API-02 first answers, and while the API is down, when
+   * the last count is old news (screens §1.5: unknown never shows the previous value).
+   */
   readonly openAlerts: number | null;
   /** The ingestor heartbeat is at most 180 s old; null while unknown (no answer yet, or the API is down). */
   readonly ingestorRunning: boolean | null;
@@ -112,8 +115,9 @@ export function shellStatus(me: Me | null, now: Now | null, consecutiveFailures:
     fault: faults[0] ?? null,
     warns,
     apiDown,
-    openAlerts: now && Number.isFinite(now.alerts.open) ? now.alerts.open : null,
-    // While the API is down the last answer is old news: whether anything reports is unknown.
+    // While the API is down the last answer is old news: the count and whether anything reports are unknown. A stale
+    // "Activity 0" beside the API banner would read as an all clear.
+    openAlerts: !apiDown && now && Number.isFinite(now.alerts.open) ? now.alerts.open : null,
     ingestorRunning: apiDown ? null : ingestorRunning,
     controllerReporting: apiDown || ingestorRunning === null ? null : ingestorRunning && Boolean(climateReporting),
   };
@@ -130,9 +134,18 @@ export function revisionLabel(revision: string | null | undefined): string {
 export function buildLine(build: string, api: string | null | undefined): string {
   return `Verdify dashboard · build ${revisionLabel(build)} · API ${revisionLabel(api)}`;
 }
-/** Sign in, then back to `pathAndQuery` (the BFF keeps only a same-origin path). */
+/** The longest returnTo the BFF keeps (BFF-01), and the longest request target server.mjs serves (414 past it). */
+const MAX_RETURN_TO = 2048;
+const MAX_TARGET = 4096;
+/**
+ * Sign in, then back to `pathAndQuery` (the BFF keeps only a same-origin path). A page longer than the BFF keeps, or
+ * one whose encoded form would make /auth/login too long to serve, returns to "/", as the BFF's own sign-in redirect
+ * does, so the link always works.
+ */
 export function signInHref(pathAndQuery: string): string {
-  return `/auth/login?returnTo=${encodeURIComponent(pathAndQuery || "/")}`;
+  const target = pathAndQuery || "/";
+  const href = `/auth/login?returnTo=${encodeURIComponent(target)}`;
+  return target.length <= MAX_RETURN_TO && href.length <= MAX_TARGET ? href : "/auth/login?returnTo=%2F";
 }
 
 /**

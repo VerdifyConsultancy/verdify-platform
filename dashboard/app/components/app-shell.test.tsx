@@ -5,8 +5,9 @@
 // pages. Times are America/Denver with the fixture clock at 10:42.
 import { StrictMode } from "react";
 import { renderToString } from "react-dom/server";
-import { act, cleanup, render, screen, within } from "@testing-library/react";
-import { createRoutesStub } from "react-router";
+import { useMutation } from "@tanstack/react-query";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { createRoutesStub, useLoaderData, useLocation } from "react-router";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { createFixtureHandler } from "../../e2e/fixture-api.mjs";
 import { REVISION } from "../../e2e/fixtures/world.mjs";
@@ -22,6 +23,7 @@ import Settings from "../routes/settings";
 import WaterRoute from "../routes/water";
 import WaterHistory from "../routes/water-history";
 import WaterSchedules from "../routes/water-schedules";
+import { apiWrite } from "../lib/operator-api";
 import type { AuthError } from "../lib/page-context";
 import { NOW_POLL_MS } from "../lib/shell";
 import { AppShell } from "./app-shell";
@@ -47,6 +49,14 @@ function Probe() {
   </div>;
 }
 
+/** One write through the client, as #1125's hooks send them, with one Idempotency-Key. */
+function WriteProbe() {
+  const save = useMutation({
+    mutationFn: () => apiWrite("API-10", { param: "mister_engage_kpa" }, { value: 1.53, manual: true, reason: "Vandas drying" }, "4f9d2c1e-7b8a-4c3d-9e2f-1a2b3c4d5e6f"),
+  });
+  return <button type="button" onClick={() => save.mutate()}>Send the write</button>;
+}
+
 type Options = { fail?: Record<string, number> };
 let requests: string[];
 function serve(fixture: string | string[], { fail }: Options = {}) {
@@ -62,6 +72,7 @@ function mount(path: string, { authError = null, probe = false }: { authError?: 
   const children = [
     ...SCREENS.map(([to, Component]) => (to === "/" ? { index: true, Component } : { path: to.slice(1), Component })),
     { path: "probe", Component: Probe },
+    { path: "write", Component: WriteProbe },
     { path: "auth/*", Component: () => null },
   ];
   const Stub = createRoutesStub([{ path: "/", Component: () => <AppShell build={BUILD} authError={authError} />, children }]);
@@ -179,6 +190,25 @@ test("API-02 failing twice in a row reads Dashboard API unavailable, and nothing
   expect(document.querySelector("[data-badge=confirmed]")?.className).toBe("status");
 });
 
+test("while the API is down the count is unknown: both navs drop it rather than keep the last one, and it returns with the API", async () => {
+  serve("alerts-merged");
+  mount("/graphs"); await advance(0);
+  const activity = (label: string) => text(within(nav(label)).getByRole("link", { name: /^Activity/ }));
+  expect([activity("Sections"), activity("Sections, phone")]).toEqual(["Activity 2 open alerts", "Activity 2 open alerts"]);
+  serve("alerts-merged", { fail: { "API-02": 503 } });
+  // One failure keeps the count; the second, after the 30 s backoff, is the API down.
+  await advance(NOW_POLL_MS);
+  expect(activity("Sections")).toBe("Activity 2 open alerts");
+  await advance(2 * NOW_POLL_MS);
+  expect(banners()).toEqual([{ tone: "fault", text: "Dashboard API unavailable" }]);
+  expect([activity("Sections"), activity("Sections, phone")]).toEqual(["Activity", "Activity"]);
+  // The next poll, after the 60 s backoff, answers again.
+  serve("alerts-merged");
+  await advance(60_000);
+  expect(banners()).toEqual([]);
+  expect(activity("Sections")).toBe("Activity 2 open alerts");
+});
+
 test("water flowing with every valve closed, then Flow stopped at HH:MM, links to its alert", async () => {
   serve("flow-stopped");
   mount("/graphs"); await advance(0);
@@ -232,6 +262,20 @@ test("a 401 during polling shows the session-ended card, which signs in back to 
   expect(requests).toHaveLength(sent);
 });
 
+test("a 401 from a write shows the same card and stops every poll", async () => {
+  serve("in-band", { fail: { "API-10": 401 } });
+  mount("/write?from=drawer"); await advance(0);
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Send the write" })); });
+  await advance(0);
+  expect(requests).toContain("/api/v1/settings/mister_engage_kpa");
+  const card = screen.getByRole("alertdialog", { name: "Your session ended" });
+  expect(within(card).getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/auth/login?returnTo=%2Fwrite%3Ffrom%3Ddrawer");
+  const sent = requests.length;
+  await advance(10 * 60_000);
+  expect(requests).toHaveLength(sent);
+});
+
 test.each([
   ["failed", 400, "Sign-in didn't complete", "Try again.", "Sign in"],
   ["unavailable", 503, "Sign-in is unavailable", "Try again in a minute.", "Sign in"],
@@ -249,4 +293,29 @@ test.each([
   expect(text(document.querySelector(".build-line"))).toBe("Verdify dashboard · build fedcba987654 · API —");
   expect(screen.getByText(/Request id/).textContent).toBe("Request id 4f9d2c1e-7b8a-4c3d-9e2f-1a2b3c4d5e6f");
   expect(requests).toEqual([]);
+});
+
+test("a refusal card's lockup is a full page load: a client navigation would keep the refusal and draw it at /", async () => {
+  serve("in-band");
+  const authError: AuthError = { reason: "failed", requestId: null };
+  // As root.tsx: the refusal comes from the root loader, which never revalidates on a navigation.
+  function Root() {
+    const { pathname } = useLocation();
+    return <><AppShell build={BUILD} authError={useLoaderData<{ authError: AuthError | null }>().authError} /><output data-testid="path">{pathname}</output></>;
+  }
+  const Stub = createRoutesStub([{
+    id: "root", path: "/", Component: Root, loader: () => ({ authError }), shouldRevalidate: () => false,
+    children: [{ index: true, Component: Now }, { path: "auth/*", Component: () => null }],
+  }]);
+  render(<Stub initialEntries={["/auth/callback"]} />); await advance(0);
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Sign-in didn't complete");
+  let prevented: boolean | null = null;
+  // Runs after React's handlers, then stops jsdom's own navigation, which it does not implement.
+  const record = (event: Event) => { prevented = event.defaultPrevented; event.preventDefault(); };
+  document.addEventListener("click", record);
+  await act(async () => { fireEvent.click(screen.getByRole("link", { name: "Verdify dashboard, home" })); });
+  document.removeEventListener("click", record);
+  // The browser loads / itself, so the BFF starts a sign-in; React Router never navigated.
+  expect(prevented).toBe(false);
+  expect(screen.getByTestId("path").textContent).toBe("/auth/callback");
 });
