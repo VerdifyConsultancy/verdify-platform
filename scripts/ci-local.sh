@@ -34,14 +34,14 @@ export PATH="$("$PY" -c 'import pathlib, sys; print(pathlib.Path(sys.executable)
 step() { printf '\n== %s ==\n' "$1"; }
 
 step "ruff lint"
-$RUFF check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ \
+$RUFF check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ verdify_services/ \
   research/planner-efficacy/generate_v2_artifacts.py \
   research/planner-efficacy/switchback/v2_*.py \
   research/planner-efficacy/tests/test_protocol_template_contract.py \
   research/planner-efficacy/tests/test_switchback_v2_*.py
 
 step "ruff format"
-$RUFF format --check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ \
+$RUFF format --check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ verdify_services/ \
   research/planner-efficacy/generate_v2_artifacts.py \
   research/planner-efficacy/switchback/v2_*.py \
   research/planner-efficacy/tests/test_protocol_template_contract.py \
@@ -230,6 +230,7 @@ $PY -m pytest -q -rs \
   tests/test_ha_light_writer_boundary.py \
   tests/test_ha_trim.py \
   tests/test_hydro_probe.py \
+  tests/test_ingestor_heartbeat.py \
   tests/test_ingestor_setpoint_placement.py \
   tests/test_ingestor_gap_snapshot.py \
   tests/test_source_spool.py \
@@ -284,6 +285,7 @@ $PY -m pytest -q -rs \
   tests/test_twin_agreement_report.py \
   tests/test_twin_asof_migration.py \
   tests/test_twin_live_driver.py \
+  tests/test_verdify_services_reads.py \
   tests/test_verdify_traefik_placement.py \
   tests/test_verdify_tier1_owner_exclusions.py \
   tests/test_dashboard_manifests.py \

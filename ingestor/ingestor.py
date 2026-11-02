@@ -102,6 +102,7 @@ from tasks import (
     ha_sensor_sync,
     hydro_probe_sync,
     infra_cpu_sync,
+    ingestor_heartbeat,
     matview_refresh,
     midnight_watch,
     planner_memory_ingest_sync,
@@ -4532,6 +4533,10 @@ async def task_loop(
     }
     TASKS = [
         # (name, interval_seconds, coroutine_factory)
+        # VD-54 (Q-01): one system_state row every 60 s whether or not the ESP32
+        # session is up, so the dashboard tells a dead ingestor from a
+        # controller that stopped reporting.
+        ("ingestor_heartbeat", 60, ingestor_heartbeat),
         ("water_flowing", 60, water_flowing_sync),
         ("water_meter_materialize", 60, water_meter_materialize),
         ("matview_refresh", 300, matview_refresh),
