@@ -463,6 +463,36 @@ def sealed_sql_282():
     )
 
 
+IRRIGATION_TABLES_MIGRATION = (
+    283,
+    "283-irrigation-tables.sql",
+    "7570dbc9e603df7ccbec68450da88e1d60fc6cd5c93bd3454ef3911e16ab3e57",
+)
+# 283's grants reach 282's dashboard duty on relations the ingestor reads, so its
+# ordinary seals hash that duty's production OID; the rolled-back native
+# qualification, run once 282 is applied, measures all three.
+SUCCESSOR_283 = {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e",
+}
+
+
+def sealed_sql_283():
+    # Keep every 282 predicate and bind the exact 283 runner stamp with the three
+    # seals its irrigation grants move.
+    predecessor = sealed_sql_282()
+    current = seal_profile_sql(282, SUCCESSOR_282)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(283, SUCCESSOR_283), 1)
+        + " AND "
+        + ledger_row_sql(*IRRIGATION_TABLES_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -483,6 +513,8 @@ def sealed_sql():
         + sealed_sql_281()
         + " OR "
         + sealed_sql_282()
+        + " OR "
+        + sealed_sql_283()
         + ")"
     )
 

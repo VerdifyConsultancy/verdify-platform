@@ -554,10 +554,14 @@ is pending, and every 60 s in full:
   ships first and covers the history back to 2025-08-05, the first wet-relay `equipment_state` row
   (2024-11-17 is the first grow-light row).
 - **Cause.** In M4, cause comes from today's topology: L04, L07, L09 and fog are `vpd`, L02 and L03 are
-  `feed`, and the rest are `unknown`. M3, which adds `irrigation_command`, extends the view: an L01 run
-  that starts within 30 s of a bridge command (§6.5) is `run_now`, and each run matches its
-  `irrigation_ledger` row (same line, overlapping time) for cause and slot; any other run keeps its M4
-  cause.
+  `feed`, and the rest are `unknown`. M3 (migration 283), which adds `irrigation_command`, extends the
+  view: each run takes cause and slot from the newest `irrigation_ledger` row on its line that started
+  at most 24 hours before it and whose span (to now while it is open) contains the run's start; an
+  unmatched L01 run that starts within 30 s after the `sent_at` of a sent bridge run command (§6.5) is
+  `run_now`; any other run keeps its M4 cause. No occurrence lasts 24 hours (a 60-pulse mist window
+  with 600 s gaps and its 60 min tail, or a feed with its prewet, flush and waits, is under 16), and the
+  bound keeps the per-run lookup on an index and keeps a row whose end never arrived from claiming
+  later runs.
 - **`irrigation_ledger`** (written by the ingestor): one row per engine occurrence or run-now, with
   `line_id`, `slot_id`, `local_day`, `cause` (`vpd`, `schedule`, `run_now`, `feed`, `prewet`, `flush`,
   `fallback`, `unknown`) and start from `irr_state`, which names them before the relay opens, and
@@ -584,7 +588,9 @@ is pending, and every 60 s in full:
   closing edge, so its gallons match the view's. It is SECURITY DEFINER and granted like the views.
   API-IRR-10 reads it, and API-IRR-01's minutes and MCP `irrigation_history` get the same numbers from
   it; a 30-day read is about 0.7 s on production and a 400-day read about 1.7 s. M3 redefines it with
-  the view.
+  the view, and starts a run already on at `from` where the view starts it (the newest conflicting
+  timestamp since the relay was last off, else the first timestamp after that), so the run matches
+  the same ledger row and bridge command in both.
 - **Gallons (D-IRP-18, Round 2b B), informational.** Whole gallons per run and per day: `gal` is the
   whole-gallon meter delta attributed to the run or mist episode (±1 gal; the meter also counts the
   hose, sink and hydro). There is no per-run rate and no flow flag; a run that moved no water reads
