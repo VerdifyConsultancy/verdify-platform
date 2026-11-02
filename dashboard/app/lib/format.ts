@@ -131,3 +131,12 @@ export function formatValue(value: number | null | undefined, unit: string | nul
   if (!label) return text;
   return label === "%" ? `${text}%` : `${text}${NBSP}${label}`;
 }
+const PLAIN = new Intl.NumberFormat("en-US", { maximumFractionDigits: 3, signDisplay: "negative" });
+/**
+ * A number with no unit at up to 3 decimals, with a true minus and "—" when missing: the value a reason names, such
+ * as a clamp's applied value, where `formatValue`'s 1 dp would print a value that was never applied (0.25 as 0.3).
+ */
+export function formatNumber(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  return PLAIN.format(value).replace("-", MINUS);
+}
