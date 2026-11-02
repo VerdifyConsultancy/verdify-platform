@@ -1,0 +1,19 @@
+{
+  "final_migration_qualification_pending": true,
+  "pending_reason": "281 is measured against merged 280: its predecessor and its three successor seals come from the production catalog in rolled-back transactions (VD-39 release steps).",
+  "predecessor": {
+    "seq": 280,
+    "filename": "280-desired-state-activity-log.sql"
+  },
+  "before": null,
+  "qualified_successor": null,
+  "after_rollback": null,
+  "rollback_verified": false,
+  "persisted_row_changes": false,
+  "exact_final_migration_sha256": null,
+  "final_migration_rollback_verified": false,
+  "inside_transaction_receipts_match": false,
+  "native_fixture_sha256": "ededea411ad26454902e0aa9b7f03523468f927f2cc538756e6fc03a16ef45c0",
+  "native_fixture": null,
+  "native_fixture_rollback_verified": false
+}

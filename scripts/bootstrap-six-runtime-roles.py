@@ -383,6 +383,35 @@ def sealed_sql_279():
     )
 
 
+IRRIGATION_MINUTES_MIGRATION = (
+    281,
+    "281-irrigation-minutes-by-zone.sql",
+    "04a5d7c6224b0613ee80b412f62c7b4c3a5c1b001791421277d4f0a21bb4e651",
+)
+# Pending VD-39 measurement: all-zero seals until 280 merges and the rolled-back
+# native qualification measures them; this profile cannot match before then.
+SUCCESSOR_281 = {
+    "api": "0000000000000000000000000000000000000000000000000000000000000000",
+    "ingestor": "0000000000000000000000000000000000000000000000000000000000000000",
+    "mcp": "0000000000000000000000000000000000000000000000000000000000000000",
+}
+
+
+def sealed_sql_281():
+    # Chains from the merged predecessor's profile; re-chain it from
+    # sealed_sql_280() once 280 is on main (VD-39 measurement step).
+    predecessor = sealed_sql_279()
+    current = seal_profile_sql(279, SUCCESSOR_279)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(281, SUCCESSOR_281), 1)
+        + " AND "
+        + ledger_row_sql(*IRRIGATION_MINUTES_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -397,6 +426,8 @@ def sealed_sql():
         + sealed_sql_278()
         + " OR "
         + sealed_sql_279()
+        + " OR "
+        + sealed_sql_281()
         + ")"
     )
 

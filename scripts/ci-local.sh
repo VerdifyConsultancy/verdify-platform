@@ -83,6 +83,7 @@ $PY -m pytest -q -rs \
   tests/test_component_runtime_probe.py \
   tests/test_275_c0_delivery.py \
   tests/test_277_getter_delivery.py \
+  tests/test_281_irrigation_minutes_delivery.py \
   tests/test_realized_solar_night_dryout_timeline.py \
   tests/test_05_dispatcher.py \
   tests/test_irrigation_stop_edges.py \

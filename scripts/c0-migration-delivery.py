@@ -215,6 +215,16 @@ SUCCESSOR_279_DIGESTS = {
     "verdify_ingestor_runtime_login": "0e03e19dd7ceaf65c54e14d8fa38dacffa8472e2173d0d7f41a6a03ea758d8f7",
 }
 SUCCESSOR_279_MCP_DIGEST = SUCCESSOR_278_MCP_DIGEST
+# Pending281 (VD-39, M4): minutes by zone, measured against merged 280 in a
+# rolled-back production transaction. Until then its seals are all-zero
+# placeholders, which no live boundary or receipt can equal.
+SUCCESSOR_281 = "281-irrigation-minutes-by-zone.sql"
+SUCCESSOR_281_SHA256 = "04a5d7c6224b0613ee80b412f62c7b4c3a5c1b001791421277d4f0a21bb4e651"
+SUCCESSOR_281_DIGESTS = {
+    "verdify_api_runtime_login": "0000000000000000000000000000000000000000000000000000000000000000",
+    "verdify_ingestor_runtime_login": "0000000000000000000000000000000000000000000000000000000000000000",
+}
+SUCCESSOR_281_MCP_DIGEST = "0000000000000000000000000000000000000000000000000000000000000000"
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.
@@ -259,6 +269,7 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_277,
         SUCCESSOR_278,
         SUCCESSOR_279,
+        SUCCESSOR_281,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
@@ -292,6 +303,7 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_277_SHA256,
                 SUCCESSOR_278_SHA256,
                 SUCCESSOR_279_SHA256,
+                SUCCESSOR_281_SHA256,
             ),
             strict=True,
         ):
@@ -557,6 +569,7 @@ COMMIT;"""
         (SUCCESSOR_277, SUCCESSOR_277_DIGESTS),
         (SUCCESSOR_278, SUCCESSOR_278_DIGESTS),
         (SUCCESSOR_279, SUCCESSOR_279_DIGESTS),
+        (SUCCESSOR_281, SUCCESSOR_281_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
@@ -628,6 +641,8 @@ COMMIT;"""
             expected_mcp = SUCCESSOR_278_MCP_DIGEST
         if SUCCESSOR_279 in later:
             expected_mcp = SUCCESSOR_279_MCP_DIGEST
+        if SUCCESSOR_281 in later:
+            expected_mcp = SUCCESSOR_281_MCP_DIGEST
         if hotfix_predecessor_263:
             require(
                 mcp_state.get("mcp")
