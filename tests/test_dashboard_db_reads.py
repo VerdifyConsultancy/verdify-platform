@@ -8,7 +8,7 @@ v_desired_state_current, and migration 259's fn_mcp_armed_assignment_context()
 over stand-ins for the two experiment tables db/schema.sql predates (with a
 public stand-in that answers from it, because verdify_services.settings names
 the public function). The reads run as a role holding only SELECT on those
-relations and EXECUTE on that function (a subset of what M2, #1179, grants the
+relations and EXECUTE on that function (a subset of what M2b, #1233, grants the
 dashboard login), so a read of anything else fails here. Since VD-55 the alert
 count and the leak rows read alert_log, not v_open_alerts. The reads measure
 every age from the server's now(), so each fixture is placed relative to it.

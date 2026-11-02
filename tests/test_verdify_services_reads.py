@@ -842,7 +842,7 @@ def test_the_plan_block_keeps_iris_values_as_stored():
 
 
 def test_a_full_plan_row_is_superseded_once_a_newer_full_plan_was_written_by_its_time():
-    full_plans = [AT - timedelta(hours=8), AT - timedelta(hours=5)]
+    full_plans = [(AT - timedelta(hours=8), "iris-20261102-0634"), (AT - timedelta(hours=5), "iris-newer")]
     row = plan_db_row("mister_engage_kpa", 1.5, AT - timedelta(hours=6), AT - timedelta(hours=8))
     assert reads.superseded_at(row, full_plans) is False  # written 8 h ago, its 6 h ago row: still in force
     assert reads.superseded_at({**row, "ts": AT - timedelta(hours=5)}, full_plans) is True  # at the newer write
@@ -854,6 +854,17 @@ def test_a_full_plan_row_is_superseded_once_a_newer_full_plan_was_written_by_its
         {"plan_id": "preemptive-20261102", "source": "preemptive"},
     ):
         assert reads.superseded_at({**row, "ts": AT + timedelta(hours=1), **other}, full_plans) is False
+
+
+def test_a_full_plans_own_journal_row_never_supersedes_it():
+    """Older plans wrote their journal row after their waypoints (60 plans up to 2026-04-28, at most 54 s later)."""
+    written = AT - timedelta(hours=8)
+    own = (written + timedelta(seconds=1), "iris-20261102-0634")
+    newer = (AT - timedelta(hours=5), "iris-newer")
+    row = plan_db_row("mister_engage_kpa", 1.5, AT - timedelta(hours=6), written)
+    assert reads.superseded_at(row, [own]) is False
+    assert reads.superseded_at(row, [own, newer]) is False  # the newer plan came after this row's time
+    assert reads.superseded_at({**row, "ts": AT - timedelta(hours=4)}, [own, newer]) is True
 
 
 def test_plan_history_marks_superseded_and_overridden_waypoints():
@@ -880,7 +891,7 @@ def test_plan_history_marks_superseded_and_overridden_waypoints():
     conn = ReadsConn(
         {
             reads._PLAN_HISTORY_SQL: rows,
-            reads._FULL_PLANS_SQL: [{"created_at": plan_b}],
+            reads._FULL_PLANS_SQL: [{"created_at": plan_b, "plan_id": "iris-b"}],
         }
     )
 

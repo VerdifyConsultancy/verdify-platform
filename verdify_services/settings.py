@@ -939,7 +939,7 @@ async def history(conn: asyncpg.Connection, param: str, from_: datetime, to: dat
     The newest row reads its full ``status``; an older row reads released, or confirmed (with
     ``confirmed_at``) when a readback before the next row confirmed it, else not_confirmed. ``readback``
     starts with the newest readback before ``from_`` (readbacks are kept 90 days). ``plan`` stays empty:
-    #1168 adds the waypoints.
+    ``reads.setting_history`` adds the plan values.
     """
     spec = _spec_or_not_found(param)
     start, end = _aware("from", from_), _aware("to", to)

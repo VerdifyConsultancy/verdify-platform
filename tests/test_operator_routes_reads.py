@@ -1,7 +1,7 @@
 """VD-55: the API-09, API-12, API-14 and API-17 adapters in api/operator_routes/reads.py, against fake services.
 
 The routes only map REST onto verdify_services. Each test mounts the router under /v1 as the operator API does
-(#1148), with the error handlers #1148 documents (a ServiceError renders as its Problem, request validation as
+(#1148), with the operator API's own error handlers (a ServiceError renders as its Problem, request validation as
 400 invalid_request, both application/problem+json), swaps the service function for a fake that records what it
 was called with, and checks the operation ids against the committed OpenAPI, the query parameters each adapter
 passes, the cursor passed through both ways and the Problem mapping. A refusal comes from the real service where
@@ -10,6 +10,8 @@ the service refuses before any SQL. Response bodies are validated against the co
 
 from __future__ import annotations
 
+import base64
+import json
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -19,7 +21,6 @@ import pytest
 import yaml
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 from verdify_services import activity, alerts, reads, settings
@@ -32,6 +33,7 @@ API = ROOT / "api"  # operator_routes imports as a top-level package, as in the 
 if str(API) not in sys.path:
     sys.path.insert(0, str(API))
 
+import operator_api  # noqa: E402
 from operator_routes import reads as routes  # noqa: E402
 
 AT = datetime(2026, 11, 2, 21, 0, tzinfo=UTC)
@@ -81,7 +83,7 @@ class Conn:
 
 
 def app_with(conn=None) -> TestClient:
-    """The router under /v1 with #1148's error handlers and a fixed connection."""
+    """The router under /v1 with the operator API's error handlers and a fixed connection."""
     app = FastAPI()
     app.state.pool = FakePool()
     app.include_router(routes.router, prefix="/v1")
@@ -90,16 +92,9 @@ def app_with(conn=None) -> TestClient:
     async def fake_connection():
         yield lent
 
-    async def service_error(_request, exc: ServiceError):
-        return JSONResponse(exc.problem.body(), status_code=exc.problem.status, media_type="application/problem+json")
-
-    async def invalid(_request, exc: RequestValidationError):
-        refusal = problem("invalid_request", "; ".join(str(error["msg"]) for error in exc.errors()))
-        return JSONResponse(refusal.body(), status_code=refusal.status, media_type="application/problem+json")
-
     app.dependency_overrides[routes.connection] = fake_connection
-    app.add_exception_handler(ServiceError, service_error)
-    app.add_exception_handler(RequestValidationError, invalid)
+    app.add_exception_handler(ServiceError, operator_api.on_service_error)
+    app.add_exception_handler(RequestValidationError, operator_api.on_invalid_request)
     return TestClient(app)
 
 
@@ -392,11 +387,16 @@ def test_api17_passes_every_filter_and_the_cursor(monkeypatch):
 
 def test_api17_maps_its_refusals_to_problems():
     client = app_with()  # the real activity_page refuses through activity.list before any statement
+    forged = base64.urlsafe_b64encode(json.dumps(["2026-11-02T08:00:00+00:00", 2**70]).encode()).decode().rstrip("=")
     refusals = (
         ("limit=0", "limit"),
         ("source=agents", "source"),
         ("from=2026-11-01T08:00:00", "from"),
         ("cursor=bm90IGEgY3Vyc29y", "cursor"),
+        (f"cursor={forged}", "cursor"),  # an id beyond bigint must not reach the database as a 503
+        ("actor=a%00b", "actor"),  # nor a NUL, which PostgreSQL text cannot hold
+        ("action=a%00b", "action"),
+        ("target=a%00b", "target"),
     )
     for query, field in refusals:
         response = client.get(f"/v1/activity?{query}")
@@ -412,7 +412,10 @@ def test_a_service_problem_keeps_its_status_and_body(monkeypatch):
     recorder(monkeypatch, reads, "settings_rows", ServiceError(refusal))
     response = app_with().get("/v1/settings")
     assert (response.status_code, response.headers["content-type"]) == (503, "application/problem+json")
-    assert response.json() == refusal.body() and response.json()["retryable"] is True
+    body = response.json()
+    assert body.pop("request_id")  # the operator API stamps it
+    assert body == {key: value for key, value in refusal.body().items() if key != "request_id"}
+    assert body["retryable"] is True
 
 
 @pytest.mark.parametrize("path", ["/v1/settings", "/v1/alerts", "/v1/activity"])

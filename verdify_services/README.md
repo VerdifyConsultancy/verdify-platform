@@ -173,15 +173,16 @@ tools (#1171), so both return the same rows. Each runs in one read-only snapshot
   one in force at `from_`, readback change points; 404 `not_found` for an unknown setting) plus
   `plan_history()`: every `iris` and `preemptive` `setpoint_plan` row of the setting in the window, past,
   superseded and future, one per `ts` (the newest `created_at`). `effective` is false under the desired row in
-  force at that time (`resolve_effective()`), and for a full Iris plan's row once a newer full plan was written
-  at or before it (`plan_journal`), so Graphs marks SUPERSEDED. Every list is bounded by the window.
+  force at that time (`resolve_effective()`), and for a full Iris plan's row once another, newer full plan was
+  written at or before it (`plan_journal`), so Graphs marks SUPERSEDED. Every list is bounded by the window, and
+  readbacks by their 90-day retention: the window is not clamped, because Graphs asks for up to 400 days.
 - `activity_page(conn, *, source, actor, action, target, from_, to, limit=50, cursor) -> ActivityPage`
   (API-17): `activity.list` with each `setting.write` and `setting.release` row's `state` and `confirmed_at`
   from `settings.desired_states` for its `detail.desired_id`.
 - API-02's `alerts` is `alerts.open_count`, and its leak and stuck-delivery facts read `alert_log` under the
-  same predicate; API-07's lanes take `applied_from` and `desired` from `settings.statuses`. The response
-  models are the services' own (`reads.DesiredSetting is settings.DesiredSetting`, `reads.AlertCounts is
-  alerts.AlertCounts`): one model per OpenAPI schema.
+  same predicate; API-07's lanes take `applied_from` and `desired` from `settings.statuses`. `reads` reuses the
+  models of the schemas the services own (`reads.DesiredSetting is settings.DesiredSetting`, `reads.AlertCounts is
+  alerts.AlertCounts`).
 
 ## Alerts: `alerts`
 

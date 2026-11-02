@@ -280,13 +280,13 @@ async def snapshot(conn, ts, parameter, value, zone=None, band_role=None):
     )
 
 
-async def full_plan(conn, plan_id, created, *, status, rows, active):
+async def full_plan(conn, plan_id, created, *, status, rows, active, journal_after=timedelta(0)):
     """A set_plan plan: its plan_journal row and its waypoints (set_plan deactivates the older plans' rows)."""
     await conn.execute(
         "INSERT INTO plan_journal (plan_id, created_at, valid_from, expires_at, lifecycle_status) "
         "VALUES ($1, $2, $2, $3, $4)",
         plan_id,
-        created,
+        created + journal_after,
         created + 3 * D,
         status,
     )
@@ -582,6 +582,22 @@ def test_api12_marks_forecast_rule_superseded_and_overridden_waypoints(dsn):
         with pytest.raises(Exception) as unknown:
             await as_role(conn, MCP_ROLE, reads.setting_history, "band_house_temp_low", t0 - 1 * H, t0)
         assert unknown.value.problem.code == "not_found"
+
+    scenario(dsn, body)
+
+
+def test_api12_a_plan_is_never_superseded_by_its_own_journal_row(dsn):
+    """60 plans up to 2026-04-28 wrote their journal row after their waypoints, at most 54 s later."""
+    param = "mister_engage_kpa"
+
+    async def body(conn, t0):
+        await reporting_now(conn, t0)
+        written = t0 - 4 * H
+        rows = [(written, param, 1.40), (t0 - 1 * H, param, 1.45), (t0 + 1 * H, param, 1.50)]
+        await full_plan(conn, "iris-vd55-late", written, status="effective", rows=rows, active=True, journal_after=S)
+
+        history = await as_role(conn, MCP_ROLE, reads.setting_history, param, t0 - 6 * H, t0 + 6 * H)
+        assert [(point.value, point.effective) for point in history.plan] == [(1.40, True), (1.45, True), (1.50, True)]
 
     scenario(dsn, body)
 

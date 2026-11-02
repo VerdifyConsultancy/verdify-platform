@@ -581,17 +581,21 @@ class ReadbackFacts:
     clamped: bool
 
 
-def superseded_at(plan_row: Mapping[str, Any], full_plans: Sequence[datetime]) -> bool:
+def superseded_at(plan_row: Mapping[str, Any], full_plans: Sequence[tuple[datetime, str]]) -> bool:
     """Whether a full Iris plan's row (not ``iris-oneshot-*``) no longer applied at its own time.
 
-    ``full_plans`` is the ``created_at`` of every full plan, ascending: a newer one written at or before the row's
-    ``ts`` replaced the row's plan, since ``v_active_plan`` reads only the effective plan. One-shots and
-    forecast-rule rows are never superseded this way.
+    ``full_plans`` is the (``created_at``, ``plan_id``) of every full plan, ascending: a newer one written at or
+    before the row's ``ts`` replaced the row's plan, since ``v_active_plan`` reads only the effective plan. The
+    row's own plan never counts: before set_plan wrote both in one transaction (the last such plan is from
+    2026-04), a plan's journal row can be up to 54 s newer than its waypoints. One-shots and forecast-rule rows
+    are never superseded this way.
     """
-    if plan_row["source"] != "iris" or str(plan_row["plan_id"]).startswith("iris-oneshot-"):
+    plan_id = plan_row["plan_id"]
+    if plan_row["source"] != "iris" or str(plan_id).startswith("iris-oneshot-"):
         return False
-    index = bisect_right(full_plans, plan_row["created_at"])
-    return index < len(full_plans) and full_plans[index] <= plan_row["ts"]
+    index = bisect_right(full_plans, plan_row["created_at"], key=lambda plan: plan[0])
+    # plan_id is unique in plan_journal, so the first newer plan that is not the row's own is one of these two.
+    return any(written <= plan_row["ts"] and other != plan_id for written, other in full_plans[index : index + 2])
 
 
 def band_label(zone: str, role: str) -> str:
@@ -965,7 +969,7 @@ SELECT DISTINCT ON (sp.ts) sp.ts, sp.value, sp.source, sp.plan_id, sp.created_at
 
 # When each full Iris plan was written (plan_journal holds the full plans only).
 _FULL_PLANS_SQL = """
-SELECT created_at FROM plan_journal
+SELECT created_at, plan_id FROM plan_journal
  WHERE plan_id NOT LIKE 'iris-oneshot-%' AND created_at > $1 AND created_at <= $2
  ORDER BY created_at
 """
@@ -1136,7 +1140,9 @@ async def plan_history(
         return []
     written_after = min(row["created_at"] for row in rows)
     newest_at = max(row["ts"] for row in rows)
-    full_plans = [row["created_at"] for row in await conn.fetch(_FULL_PLANS_SQL, written_after, newest_at)]
+    full_plans = [
+        (row["created_at"], row["plan_id"]) for row in await conn.fetch(_FULL_PLANS_SQL, written_after, newest_at)
+    ]
     ordered = sorted(desired, key=lambda row: (row.created_at, row.id))
     written = [row.created_at for row in ordered]
     out: list[PlanWaypoint] = []
