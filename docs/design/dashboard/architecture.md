@@ -486,14 +486,16 @@ MCP and the dashboard both need, so validation and writes exist once.
 | `series` | metric registry, `series`, `states`, `band` | API-03 to API-06 | none (`history` stays) |
 | `irrigation` | per [irrigation](irrigation.md) | API-IRR-01 to API-IRR-13 | the irrigation tools |
 
-- Functions are `async`, take an asyncpg connection and an `Actor(source, name, role)` and return Pydantic models
-  built on `verdify_schemas`. Actors: `('dashboard', <username>, operator|viewer)`, `('iris', 'iris', None)`,
-  `('agent:<name>', <name>, None)` (admin: `agent:admin`) and `('system', 'forecast-engine', None)`. Every write
-  inserts its domain row and its `activity_log` row (request id, and `experiment_id` while one is armed) in one
-  transaction. Existing Hermes tools keep their names and output shapes.
-- `api/Dockerfile` copies only `api/main.py`, `verdify_schemas/` and `verdify_public/` today; it gains
-  `COPY api/operator_api.py ./operator_api.py`, `COPY api/operator_routes/ ./operator_routes/` and
-  `COPY verdify_services/ ./verdify_services/`, and the MCP image copies the package too. Path impact maps
+- Functions are `async`, take an asyncpg connection (writes also take an `Actor(source, name, role)`; reads do
+  not) and return Pydantic models built on `verdify_schemas`. Actors: `('dashboard', <username>, operator|viewer)`,
+  `('iris', 'iris', None)`, `('agent:<name>', <name>, None)` (admin: `agent:admin`) and
+  `('system', 'forecast-engine', None)`. Every write runs through `activity.recorded_write`, which inserts its
+  domain row and its `activity_log` row (request id, and `experiment_id` while one is armed) in one transaction;
+  [`verdify_services/README.md`](../../../verdify_services/README.md) holds the conventions. Existing Hermes tools
+  keep their names and output shapes.
+- `api/Dockerfile` copies `api/main.py`, `verdify_schemas/`, `verdify_services/` (VD-31) and `verdify_public/`; it
+  gains `COPY api/operator_api.py ./operator_api.py` and `COPY api/operator_routes/ ./operator_routes/`, and the
+  MCP image copies `verdify_services/` too. Path impact maps
   `verdify_services/**` to both images and `api/operator_api.py` and `api/operator_routes/**` to api. The ingestor
   does not import the package: it reads `desired_state` with SQL.
 

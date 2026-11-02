@@ -24,6 +24,7 @@ from pathlib import Path
 
 import pytest
 
+from verdify_schemas.activity import ActivityLogRow, DesiredStateRow
 from verdify_schemas.alerts import AlertLogRow
 from verdify_schemas.crop_profiles import CropTargetProfile
 from verdify_schemas.crops import Crop, CropEvent, Observation
@@ -247,6 +248,9 @@ DB_BACKED = [
     (CropTaskRow, "crop_tasks"),
     (SlackAlertRunbookRow, "slack_alert_runbooks"),
     (SlackAIWorkItemRow, "slack_ai_work_items"),
+    # Migration 280 (VD-30): the dashboard's write record. Skips until 280 is in the DB it reads.
+    (ActivityLogRow, "activity_log"),
+    (DesiredStateRow, "desired_state"),
 ]
 
 
