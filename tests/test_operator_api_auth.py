@@ -4,8 +4,9 @@ The bearer on every route but /healthz and /readyz; INT-01's refusal of X-Dashbo
 INT-02; the session lookup and its 30 s cache; the role rule per method; problem+json errors; readiness against an
 attesting pool; the request log; and no FastAPI docs or schema routes. ``FakeDb`` answers the operator API's own SQL
 constants over an in-memory ``dashboard_session``, and ``FakePool`` runs the real ``attest_connection`` and
-``setup_connection`` on every checkout, as asyncpg runs ``init`` and ``setup``. The SQL itself runs against
-PostgreSQL in tests/test_dashboard_db_282.py and, live, at the R1 sync (#1143).
+``setup_connection`` on every checkout, as asyncpg runs ``init`` and ``setup``. Statements of the same shape run as
+the dashboard login against PostgreSQL in tests/test_dashboard_db_282.py; these exact ones first run live after the
+R1 sync (#1143).
 """
 
 from __future__ import annotations
