@@ -339,12 +339,13 @@ fixture API at 320, 768 and 1440 px, with no-horizontal-scroll assertions at 360
 
 Copy from jvallery/weather@249fba3 `web/` (MIT; fonts OFL-1.1) into `dashboard/` now, keeping paths and SPDX headers:
 - `app/styles.css` sections: tokens, base, shell, type helpers, page structure, cards, tags, buttons, chips, filters,
-  tables, kv, hero and stats, event rows, plots and summary stats, reduced motion (not camera, keogram, calendar,
-  stills, almanac, search or embed rules).
-- `app/lib/format.ts`, `polling.ts` and `use-current.ts`; as bases, `app/components/common.tsx`, `site-header.tsx`
-  (shell), `current-conditions.tsx` (hero), `events.tsx`, `history-plot.tsx` and `linked-plots.tsx` (charts);
-  `public/fonts/` with the two Plex files and both OFL notices. `dashboard/VENDORED-FROM-WEATHER.md` records the
-  commit, paths and changes.
+  tables, kv, hero and stats, event rows, plots and summary stats, the one-rule error page, reduced motion (not
+  camera, keogram, calendar, stills, almanac, search or embed rules).
+- `app/lib/format.ts`, `polling.ts`, `use-current.ts` and `chunk-reload.ts` (which `entry.client.tsx` imports; it
+  reloads a tab held across a release once, as the image keeps no previous assets); as bases,
+  `app/components/common.tsx`, `site-header.tsx` (shell), `current-conditions.tsx` (hero), `events.tsx`,
+  `history-plot.tsx` and `linked-plots.tsx` (charts); `public/fonts/` with the two Plex files and both OFL notices.
+  `dashboard/VENDORED-FROM-WEATHER.md` records the commit, paths and changes.
 
 No shared package yet: two apps in two GitHub organisations, no estate npm registry, and the dashboard diverges (control
 components, chart tokens). When a third app wants this look, extract the tokens first, then components.

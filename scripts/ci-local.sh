@@ -142,6 +142,7 @@ $PY -m pytest -q -rs \
   tests/test_cnpg_policy_twin_count_time.py \
   tests/test_cnpg_policy_twin_endpoints.py \
   tests/test_cnpg_physical_client_qualification.py \
+  tests/test_dashboard_dockerfile.py \
   tests/test_db_backup_retry_classifier.py \
   tests/test_backup_freshness_exporter.py \
   tests/test_action_log_policy_identity.py \
