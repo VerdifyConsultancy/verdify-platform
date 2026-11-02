@@ -142,7 +142,15 @@ class TunableDef(BaseModel):
     @property
     def control_class(
         self,
-    ) -> Literal["planner_policy", "crop_band", "scheduled_policy", "controller_safety", "readback_context", "retired"]:
+    ) -> Literal[
+        "planner_policy",
+        "crop_band",
+        "scheduled_policy",
+        "controller_safety",
+        "irrigation_site",
+        "readback_context",
+        "retired",
+    ]:
         """Canonical cleanup class used by planner/MCP/site surfaces."""
         return tunable_control_class(self.name, self)
 
@@ -3464,6 +3472,64 @@ REGISTRY: dict[str, TunableDef] = {
         tier=2,
         notes="CYC-4 min temp-dewpoint spread (°F) to micro-pulse — no crown condensation.",
     ),
+    # ─────────────────────────────────────────────────────────────────────
+    # Irrigation site values (VD-37, #1152; irrigation §4.1, architecture §5.3).
+    # Written like any setting (API-10, MCP set_setting) into desired_state,
+    # and delivered to the controller only inside the irrigation program
+    # record (verdify_schemas.irrigation.compile_program, header bytes 4-7), so
+    # they have no esp_object_id and no cfg_* readback: the dispatcher never
+    # pushes them, and the program hash confirms them. control_class
+    # "irrigation_site" (IRRIGATION_SITE_PARAMS). With no firmware entity, each
+    # row carries its own step, label and unit.
+    # ─────────────────────────────────────────────────────────────────────
+    "mister_daily_volume_max_gal": TunableDef(
+        name="mister_daily_volume_max_gal",
+        kind="numeric",
+        min=100.0,
+        max=600.0,
+        default=360.0,
+        esp_object_id=None,
+        cfg_readback_object_id=None,
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        step=10.0,
+        label="SAF-4 ceiling",
+        unit="gal",
+        notes="Delivered in the irrigation program; confirmed by its hash",
+    ),
+    "sched_mist_rh_max_pct": TunableDef(
+        name="sched_mist_rh_max_pct",
+        kind="numeric",
+        min=75.0,
+        max=98.0,
+        default=90.0,
+        esp_object_id=None,
+        cfg_readback_object_id=None,
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        step=1.0,
+        label="Scheduled-mist RH ceiling",
+        unit="%",
+        notes="Delivered in the irrigation program; confirmed by its hash",
+    ),
+    "climate_yield_min": TunableDef(
+        name="climate_yield_min",
+        kind="numeric",
+        min=5.0,
+        max=30.0,
+        default=15.0,
+        esp_object_id=None,
+        cfg_readback_object_id=None,
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        step=1.0,
+        label="Climate yield",
+        unit="min",
+        notes="Delivered in the irrigation program; confirmed by its hash",
+    ),
 }
 
 
@@ -4144,10 +4210,26 @@ RETIRING_TUNABLES: frozenset[str] = frozenset(
     }
 )
 
+# The three irrigation site values (VD-37, #1152): settings with no firmware
+# entity that reach the controller only inside the irrigation program record,
+# so the dispatcher never pushes them and the program hash confirms them
+# (irrigation §4.1, architecture §5.3 step 1).
+IRRIGATION_SITE_PARAMS: frozenset[str] = frozenset(
+    {"mister_daily_volume_max_gal", "sched_mist_rh_max_pct", "climate_yield_min"}
+)
+
 
 def tunable_control_class(
     name: str, spec: TunableDef
-) -> Literal["planner_policy", "crop_band", "scheduled_policy", "controller_safety", "readback_context", "retired"]:
+) -> Literal[
+    "planner_policy",
+    "crop_band",
+    "scheduled_policy",
+    "controller_safety",
+    "irrigation_site",
+    "readback_context",
+    "retired",
+]:
     """Classify a tunable for the cleanup contract.
 
     This is the single policy split used by MCP, planner context, and the
@@ -4172,9 +4254,16 @@ def tunable_control_class(
     Kept deliberately distinct from `crop_band` so the schedule layer does not
     leak into `CROP_BAND_REG`/`BAND_OWNED_REG` (which the dispatcher and the
     HTTP/setpoint-server fallbacks treat as the crop temp/VPD band surface).
+
+    `irrigation_site` is the three `IRRIGATION_SITE_PARAMS`: writable settings
+    with no entity, delivered inside the irrigation program rather than pushed
+    by the dispatcher. They are tested before the `esp_object_id is None` rule,
+    which would otherwise call them read-only context.
     """
     if name in RETIRED_TUNABLES_REG:
         return "retired"
+    if name in IRRIGATION_SITE_PARAMS:
+        return "irrigation_site"
     if spec.esp_object_id is None or spec.push_owner == "firmware_internal":
         return "readback_context"
     if spec.planner_pushable:

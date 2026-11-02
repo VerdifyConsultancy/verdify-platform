@@ -36,17 +36,22 @@ import yaml
 from verdify_schemas.setpoint import SetpointSnapshot
 from verdify_schemas.tunable_registry import (
     _ENTITY_NAMES,
+    ACTIVE_TUNABLES_REG,
     CFG_READBACK_ALIASES_REG,
     CFG_READBACK_MAP_REG,
     FIRMWARE_V2_STAGED_REG,
+    IRRIGATION_SITE_PARAMS,
     PLANNER_PUSHABLE_REG,
     REGISTRY,
     RETIRED_TUNABLES_REG,
     RETIRING_TUNABLES,
+    SETPOINT_MAP_REG,
     TIER1_REG,
     TunableDef,
+    planner_effective_bounds,
     registry_value_error,
     split_entity_name,
+    tunable_control_class,
 )
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
@@ -503,6 +508,52 @@ class TestDriftGuard:
         assert "direct_wet_stress_latest_hour" not in TIER1_REG
         assert "direct_wet_stress_latest_hour" not in PLANNER_PUSHABLE_REG
         assert REGISTRY["direct_wet_stress_latest_hour"].control_class == "retired"
+        for param in IRRIGATION_SITE_PARAMS:
+            assert REGISTRY[param].control_class == "irrigation_site"
+            assert param not in PLANNER_PUSHABLE_REG
+
+    def test_irrigation_site_rows_are_program_bound_and_writable(self) -> None:
+        """#1152: the SAF-4 ceiling, the scheduled-mist RH ceiling and climate yield (irrigation §4.1).
+
+        Writable settings (a default, min, max and step; not retired) with no entity and no
+        cfg_* readback: they reach the controller only inside the irrigation program record,
+        so the dispatcher has no route for them and the program hash confirms them.
+        """
+        assert IRRIGATION_SITE_PARAMS == {"mister_daily_volume_max_gal", "sched_mist_rh_max_pct", "climate_yield_min"}
+        assert {n for n, d in REGISTRY.items() if d.control_class == "irrigation_site"} == IRRIGATION_SITE_PARAMS
+        expected = {
+            "mister_daily_volume_max_gal": (360.0, 100.0, 600.0, 10.0, "SAF-4 ceiling", "gal"),
+            "sched_mist_rh_max_pct": (90.0, 75.0, 98.0, 1.0, "Scheduled-mist RH ceiling", "%"),
+            "climate_yield_min": (15.0, 5.0, 30.0, 1.0, "Climate yield", "min"),
+        }
+        for name, (default, lo, hi, step, label, unit) in expected.items():
+            spec = REGISTRY[name]
+            assert (spec.default, spec.min, spec.max, spec.step, spec.label, spec.unit) == (
+                default,
+                lo,
+                hi,
+                step,
+                label,
+                unit,
+            )
+            assert spec.kind == "numeric"
+            assert spec.esp_object_id is None and spec.cfg_readback_object_id is None
+            assert spec.fw_clamp_lo is None and spec.fw_clamp_hi is None
+            assert spec.push_owner == "operator" and not spec.planner_pushable and spec.tier == 2
+            assert spec.wire_id is None
+            assert spec.notes == "Delivered in the irrigation program; confirmed by its hash"
+            assert name not in RETIRED_TUNABLES_REG and name in ACTIVE_TUNABLES_REG
+            assert name not in SETPOINT_MAP_REG.values() and name not in CFG_READBACK_MAP_REG.values()
+            assert planner_effective_bounds(name) == (lo, hi)
+            assert lo <= default <= hi and default % step == 0
+            assert registry_value_error(name, default) is None
+            assert registry_value_error(name, hi + step) is not None
+        # A planner-shaped row with no entity stays read-only context; the site rows are the exception.
+        assert REGISTRY["fallback_window_s"].control_class == "readback_context"
+        stray = REGISTRY["mister_daily_volume_max_gal"].model_copy(update={"name": "stray_site_value"})
+        assert tunable_control_class("stray_site_value", stray) == "readback_context"
+        # The retired check still wins.
+        assert tunable_control_class("mister_on_s", REGISTRY["mister_on_s"]) == "retired"
 
     def test_registry_value_error_reports_bounds_and_nearest_safe(self) -> None:
         err = registry_value_error("mister_all_kpa", 2.8)
