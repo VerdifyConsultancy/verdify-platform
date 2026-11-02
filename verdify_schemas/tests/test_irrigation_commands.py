@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from verdify_schemas import irrigation as irr
 
 ROOT = Path(__file__).resolve().parents[2]
-M3 = ROOT / "db/migrations/283-irrigation-tables.sql"
+M3 = max((ROOT / "db/migrations").glob("*-irrigation-tables.sql"))
 OPENAPI = yaml.safe_load((ROOT / "docs/design/dashboard/openapi/dashboard-api.v1.yaml").read_text())
 NOW = datetime(2026, 11, 2, 18, tzinfo=UTC)
 

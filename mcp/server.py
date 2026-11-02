@@ -5787,9 +5787,9 @@ async def irrigation_run(
     """Changes watering only; it does not count as your plan for this trigger.
 
     Run one irrigation line now. REST twin: API-IRR-06 (POST /v1/irrigation/lines/{line_id}/run). Returns the
-    same Command JSON: command_id, kind run, line_id, args, status (pending, then sent, or failed when it was
-    not sent within 2 min), actor and created_at. Whether water started shows on the line's relay in
-    equipment_state within about 30 s, not in this reply.
+    same Command JSON: command_id, kind run, line_id, args, status (pending, then sent, or failed: not sent
+    within 2 min, ended by a Stop, or the line already running), actor and created_at. Whether water started
+    shows on the line's relay in equipment_state within about 30 s, not in this reply.
 
     Before the irrigation firmware, run works on L01 only: the controller's "Wall Drips - RUN CLEAN" press,
     which runs the wall drip for the controller's irrig_wall_duration_min. Leave minutes out, or send exactly

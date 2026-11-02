@@ -422,7 +422,7 @@ def test_each_line_stops_the_relay_migration_283_seeds_for_it():
     seeds = dict(
         re.findall(
             r"\('(L\d{2})', '[^']*', '[a-z]+', '[a-z_]+', '[a-z_]+',\s+'([a-z_]+)'",
-            (ROOT / "db/migrations/283-irrigation-tables.sql").read_text(),
+            max((ROOT / "db/migrations").glob("*-irrigation-tables.sql")).read_text(),
         )
     )
     assert seeds.pop("L11") == "fog"
