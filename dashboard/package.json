@@ -13,7 +13,9 @@
     "start": "node server.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "contract:write": "pnpm --dir contract-tools install --frozen-lockfile --ignore-scripts --reporter=silent && node contract-tools/generate.mjs --write",
+    "contract:check": "pnpm --dir contract-tools install --frozen-lockfile --ignore-scripts --reporter=silent && node contract-tools/generate.mjs --check"
   },
   "dependencies": {
     "@react-router/express": "8.5.0",
@@ -42,6 +44,7 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.0",
     "vite": "8.3.5",
-    "vitest": "4.1.0"
+    "vitest": "4.1.0",
+    "yaml": "2.9.1"
   }
 }
