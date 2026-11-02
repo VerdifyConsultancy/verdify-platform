@@ -642,7 +642,10 @@ def test_routes_call_the_services_and_validate_hours(monkeypatch):
 
 
 def test_verdify_services_imports_only_schemas_asyncpg_and_pydantic():
-    allowed = {"verdify_schemas", "verdify_services", "asyncpg", "pydantic"} | set(sys.stdlib_module_names)
+    # pydantic_core is pydantic's own core package (verdify_services.activity uses to_jsonable_python).
+    allowed = {"verdify_schemas", "verdify_services", "asyncpg", "pydantic", "pydantic_core"} | set(
+        sys.stdlib_module_names
+    )
     for path in sorted((ROOT / "verdify_services").glob("*.py")):
         tree = ast.parse(path.read_text())
         for node in ast.walk(tree):
