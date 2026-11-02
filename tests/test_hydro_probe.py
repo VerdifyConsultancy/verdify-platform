@@ -1,8 +1,8 @@
 """Direct YINMIK hydro reader (VD-70, #1183): decode, idle, failure, secrecy; no device or DB I/O.
 
 The read path runs against fakes: a stand-in pool, a stand-in tinytuya module,
-and (when tinytuya is installed, as in CI) a loopback socket that answers one
-protocol-3.3 status query.
+and (when tinytuya is installed, as in CI) a loopback socket that plays a
+protocol-3.3 meter and records every command it receives.
 """
 
 from __future__ import annotations
@@ -187,9 +187,11 @@ def _fake_tinytuya(status=None, raises=None):
         def __init__(self, dev_id, **kwargs):
             calls.append("init")
             self.kwargs = kwargs
+            self.disabledetect = False  # tinytuya's default: device22 auto-detection on
 
         def status(self):
-            calls.append("status")
+            # With detection on, a "data unvalid" answer makes tinytuya resend as CONTROL_NEW.
+            calls.append("status" if self.disabledetect else "status-with-device22-fallback")
             if raises is not None:
                 raise raises
             return status
@@ -307,21 +309,32 @@ def test_the_reader_only_calls_status_and_close_on_the_device():
     assert device_calls == {"status", "close"}
 
 
-def _serve_one_status(dps: dict, received: list) -> socket.socket:
+def _serve(body: bytes, received: list) -> socket.socket:
+    """A loopback protocol-3.3 meter: records each request's command and answers it with ``body``.
+
+    It keeps accepting connections, so a second session (a retry or a fallback
+    frame) would be recorded too.
+    """
     tinytuya = pytest.importorskip("tinytuya")
     server = socket.create_server(("127.0.0.1", 0))
+    server.settimeout(5)
 
     def answer():
-        conn, _ = server.accept()
-        with conn:
-            conn.settimeout(5)
-            request = conn.recv(4096)
-            header = tinytuya.parse_header(request)
-            received.append(header.cmd)
-            body = json.dumps({"devId": DEVICE_ID, "dps": dps}).encode()
-            payload = struct.pack(">I", 0) + tinytuya.AESCipher(CANARY.encode()).encrypt(body, False)
-            reply = tinytuya.TuyaMessage(header.seqno, header.cmd, None, payload, 0, True, 0x55AA, None)
-            conn.sendall(tinytuya.pack_message(reply))
+        while True:
+            try:
+                conn, _ = server.accept()
+            except OSError:  # closed by the test, or no further session
+                return
+            with conn:
+                conn.settimeout(5)
+                request = conn.recv(4096)
+                if not request:
+                    continue
+                header = tinytuya.parse_header(request)
+                received.append(header.cmd)
+                payload = struct.pack(">I", 0) + tinytuya.AESCipher(CANARY.encode()).encrypt(body, False)
+                reply = tinytuya.TuyaMessage(header.seqno, header.cmd, None, payload, 0, True, 0x55AA, None)
+                conn.sendall(tinytuya.pack_message(reply))
 
     threading.Thread(target=answer, daemon=True).start()
     return server
@@ -330,10 +343,26 @@ def _serve_one_status(dps: dict, received: list) -> socket.socket:
 def test_real_tinytuya_session_sends_one_status_query_and_decodes(caplog):
     case = next(case for case in CASES if case["name"] == "full-model-status")
     received: list[int] = []
-    server = _serve_one_status(case["dps"], received)
+    server = _serve(json.dumps({"devId": DEVICE_ID, "dps": case["dps"]}).encode(), received)
     caplog.set_level(logging.DEBUG)
     with server:
         dps = hydro_probe.read_status(_config(port=server.getsockname()[1], version="3.3"))
     assert received == [10]  # DP_QUERY, the only command the meter ever receives
     assert hydro_probe.decode(dps) == case["expected"]
-    assert CANARY not in _all_log_text(caplog)
+    # tinytuya logs the decrypted payload (with the device id) at DEBUG; the reader clamps it.
+    text = _all_log_text(caplog)
+    assert CANARY not in text and DEVICE_ID not in text
+
+
+def test_real_tinytuya_never_falls_back_to_a_control_frame(caplog):
+    # A "data unvalid" answer would switch tinytuya to device22 mode, which resends
+    # the query as CONTROL_NEW (13) with a null DP 1. The reader keeps that off.
+    received: list[int] = []
+    server = _serve(b"json obj data unvalid", received)
+    caplog.set_level(logging.DEBUG)
+    with server, pytest.raises(hydro_probe.HydroProbeError) as failure:
+        hydro_probe.read_status(_config(port=server.getsockname()[1], version="3.3"))
+    assert received == [10]
+    assert failure.value.code == 900  # tinytuya ERR_JSON: an unreadable answer, nothing resent
+    text = _all_log_text(caplog)
+    assert CANARY not in text and DEVICE_ID not in text

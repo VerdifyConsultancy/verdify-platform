@@ -4,7 +4,9 @@ Replaces Home Assistant's LocalTuya relay of the meter. One short session per
 poll: connect to the meter's reserved address on TCP 6668 (5 s timeout, no
 retry loop, no persistent socket, tinytuya debug off), ``status()``, close.
 The status query (after the session-key handshake of protocol 3.4+) is the
-only command sent; no data point is ever written.
+only command sent; no data point is ever written. tinytuya's "device22"
+auto-detection is switched off, because on a "data unvalid" answer it would
+resend the query as a CONTROL_NEW frame carrying a null DP 1.
 
 The data points (DPs) follow the meter's Tuya model, "YINMIK Water Quality
 Tester" (the name Home Assistant's cloud Tuya integration gives this device):
@@ -136,6 +138,8 @@ def read_status(config: ProbeConfig) -> dict[str, bool | int | float | str]:
         connection_retry_delay=0,
         port=config.port,
     )
+    # Never fall back to device22 mode: its "query" is a CONTROL_NEW (0x0d) frame.
+    device.disabledetect = True
     try:
         result = device.status()
     finally:
