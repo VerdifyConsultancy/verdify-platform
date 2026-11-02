@@ -19,18 +19,23 @@ qualification overlay (below).
    neither owns the pass, the ordinary pass sends at most
    `MAX_RECONNECT_COMMANDS = 12` commands. When more than 12 changes remain,
    they go oldest difference first (`shared.delivery_differing_since`), then by
-   parameter name.
+   parameter name. A value already sent on this connection that the controller
+   has not taken goes after every value not yet sent (least recently sent
+   first), so resends never crowd out new values.
 3. A value sent on the same connection in the last 90 s whose readback has not
    caught up is not sent again (the `cfg_*` sensors publish every 30 s), so a
    woken pass never repeats the batch it just sent. A new desired value for
    that parameter is a new change and goes out in the next pass.
 4. After a pass with no failed command the dispatcher completes its trigger
    (which also stops the next pass from reseeding the last-push cache from
-   readbacks that have not caught up) and, when unsent changes remain, wakes
-   the next pass on the task loop's next tick (the scheduler still starts a
-   woken pass at most every 30 s). When every remaining change only
-   awaits its readback it does not wake: those wait for the 300 s cadence or a
-   readback drift, so a value the controller never takes cannot loop.
+   readbacks that have not caught up) and, while changes not yet sent on this
+   connection remain, wakes the next pass on the task loop's next tick (the
+   scheduler still starts a woken pass at most every 30 s), logging
+   `action=wake`. When every remaining change awaits its readback, or was
+   already sent on this connection and not taken, it does not wake (it logs
+   `action=wait` when such resends are left over): those wait for the 300 s
+   cadence or a readback drift, so values the controller never takes cannot
+   keep it waking, however many there are or however slowly passes run.
 5. A failed command leaves the trigger incomplete as before; the next pass runs
    on the 300 s cadence or the next drift. A reconnect reseeds the last-push
    cache from that connection's readbacks, so values a reboot reset go out
@@ -48,7 +53,7 @@ whenever its stage changes (and once after each ingestor start):
 | Value | Meaning |
 |---|---|
 | `ordinary` | Nothing left over after this pass |
-| `paced <sent>/<pending>` | This pass sent `<sent>` of `<pending>` changes and woke the next pass, for example `paced 12/20` |
+| `paced <sent>/<pending>` | This pass sent `<sent>` of `<pending>` changes, for example `paced 12/20`; the rest go in the next passes |
 | `held:c1` | The C1 qualification overlay owns the pass |
 | `held:heap` | Heap deferral held every command (rows `deferred_heap_pressure`) |
 | `held:lease` | The writer Lease was not held, so no command could be sent |
@@ -64,9 +69,11 @@ scripts/verdify-db.sh prod -c "SELECT ts, value FROM system_state WHERE entity =
 `sensor_id` `dispatcher`) while any setting has differed from the controller
 for more than 15 minutes: "N settings not reaching the controller since HH:MM
 UTC". Its details carry `differing`, up to 20 `params` and `oldest_since`. It is
-raised once and resolves when the settings converge; before the first
-dispatcher pass after an ingestor start an open one stays open, because the
-delivery state is not known yet. Clamped settings and settings under
+raised once, stays open while any setting still differs and resolves when none
+differs. An ingestor restart forgets since when settings differ, so an open
+alert stays open through the restart (and before the first dispatcher pass,
+while the delivery state is not known) instead of resolving and being raised
+again. Clamped settings and settings under
 `experiment_policy_hold` never count, and nothing is raised while the stage is
 `held:c1`. Heap deferral and a lost Lease do count, because then settings
 really are not reaching the controller. The dashboard's stuck-delivery banner
@@ -80,8 +87,8 @@ kubectl -n verdify-prod logs deploy/verdify-ingestor -c ingestor --since=30m \
 scripts/k3s-smoke.sh device-monitor
 ```
 
-Paced passes log `writer_reconcile reason=paced ... action=paced` and
-`action=wake`; `writer_reconcile ... action=incomplete` and an open
+Paced passes log `writer_reconcile reason=paced ... action=paced`, then
+`action=wake` or `action=wait`; `writer_reconcile ... action=incomplete` and an open
 `esp32_push_failed` alert name failed commands.
 
 ## Halted-run files

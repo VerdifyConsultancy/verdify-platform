@@ -98,6 +98,24 @@ def _setpoint_delivery_stuck_alert(
     }
 
 
+def _setpoint_delivery_stuck_preserved(
+    differing: Mapping[str, datetime],
+    dispatcher_stage: str | None,
+) -> frozenset[str]:
+    """Alert types ``_sync_monitor_alerts`` keeps open without a fresh envelope.
+
+    ``setpoint_delivery_stuck`` is raised once a setting has differed for more
+    than 15 minutes and resolves when none differs. An open one therefore stays
+    open while any setting still differs, even when this process has tracked
+    them for less than 15 minutes (after an ingestor restart, for example), and
+    before this process's first dispatcher pass, when the state is unknown. It
+    resolves, and is not kept, while the C1 overlay holds the pass on purpose.
+    """
+    if dispatcher_stage is None or (dispatcher_stage != "held:c1" and differing):
+        return frozenset({"setpoint_delivery_stuck"})
+    return frozenset()
+
+
 def _component_experiment_integrity_alert(
     row: Mapping[str, object],
 ) -> dict[str, object] | None:
@@ -2367,10 +2385,10 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             alerts,
             component_status_available=component_status_available,
             component_closure_resolutions=component_closure_resolutions,
-            # Before this process's first dispatcher pass the delivery state is
-            # unknown: an open stuck alert stays open instead of resolving.
-            preserve_open_types=(
-                frozenset({"setpoint_delivery_stuck"}) if shared.dispatcher_stage is None else frozenset()
+            # An open stuck alert resolves only when no setting differs (and
+            # stays open while this process's delivery state is unknown).
+            preserve_open_types=_setpoint_delivery_stuck_preserved(
+                shared.delivery_differing_since, shared.dispatcher_stage
             ),
         )
 

@@ -262,7 +262,10 @@ dispatcher, the API's `applied_from` and the services resolve a setting the same
   `docs/runbooks/writer-staged-reconcile.md`), keeps staging only for the C1 qualification overlay and its restore,
   and raises `setpoint_delivery_stuck`, shown as the stuck-delivery banner, when delivery is stuck. The same value
   sent on the same connection in the last 90 s is not sent again while its readback is pending (a new value is a new
-  change, and a reconnect sends again), and each change of stage is one `system_state` row, entity
+  change, and a reconnect sends again). A value already sent on the connection that the controller has not taken
+  goes after every value not yet sent, and the dispatcher wakes itself only while a value not yet sent is left
+  over, so values the controller never takes cannot keep it waking. The stuck alert stays open while any setting
+  differs, across an ingestor restart too. Each change of stage is one `system_state` row, entity
   `dispatcher_stage`: `ordinary`, `paced <sent>/<pending>` or `held:<c1|heap|lease|drift_probe>`.
 - **Fences unchanged:** registry clamp (`_coerce_registry_value`), physics invariants (`_validate_physics`),
   the VPD-high moisture guardrails (clamps recorded in `setpoint_clamps`), heap deferral, the writer Lease and

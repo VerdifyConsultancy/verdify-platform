@@ -171,37 +171,55 @@ def _note_delivery_differences(
     shared.delivery_differing_since.update(current)
 
 
-def _sent_awaiting_readback(param: str, value: float, generation: int, now: datetime) -> bool:
-    """True for the same value sent on this connection within SENT_READBACK_WAIT_S."""
+def _sent_on_connection(param: str, value: float, generation: int) -> datetime | None:
+    """When this same value was last sent on this connection, or None if it was not."""
     sent = _last_sent_at.get(param)
     if sent is None:
-        return False
+        return None
     sent_at, sent_generation, sent_value = sent
-    elapsed = (now - sent_at).total_seconds()
-    return (
-        sent_generation == generation
-        and 0.0 <= elapsed < SENT_READBACK_WAIT_S
-        and readback_values_equivalent(param, sent_value, value)
-    )
+    if sent_generation != generation or not readback_values_equivalent(param, sent_value, value):
+        return None
+    return sent_at
+
+
+def _sent_awaiting_readback(param: str, value: float, generation: int, now: datetime) -> bool:
+    """True for the same value sent on this connection within SENT_READBACK_WAIT_S."""
+    sent_at = _sent_on_connection(param, value, generation)
+    return sent_at is not None and 0.0 <= (now - sent_at).total_seconds() < SENT_READBACK_WAIT_S
 
 
 def _pace_ordinary_changes(
     changes: list[tuple[str, float]], generation: int, now: datetime
-) -> tuple[list[tuple[str, float]], list[tuple[str, float]], int]:
-    """Select one paced ordinary batch: (send now, left for the next pass, awaiting readback).
+) -> tuple[list[tuple[str, float]], list[tuple[str, float]], int, bool]:
+    """Select one paced ordinary batch: (send now, left over, awaiting readback, wake).
 
     A value sent on this connection in the last 90 s whose readback has not
     caught up is not sent again, so a woken pass never repeats its batch. When
-    more than 12 changes remain they go oldest difference first, then by name.
+    more than 12 changes remain they go oldest difference first, then by name;
+    a value already sent on this connection that the controller has not taken
+    goes after every value not yet sent (least recently sent first), so resends
+    never crowd out new values. ``wake`` asks for the next pass only while a
+    left-over value has not been sent on this connection yet: resends wait for
+    the 300 s cadence or a readback drift, so values the controller never takes
+    cannot keep the dispatcher waking itself, however many there are.
     """
     eligible = [
         (param, value) for param, value in changes if not _sent_awaiting_readback(param, value, generation, now)
     ]
     awaiting = len(changes) - len(eligible)
     if len(eligible) > MAX_RECONNECT_COMMANDS:
+        not_sent = datetime.min.replace(tzinfo=UTC)
         newest = datetime.max.replace(tzinfo=UTC)
-        eligible.sort(key=lambda item: (shared.delivery_differing_since.get(item[0], newest), item[0]))
-    return eligible[:MAX_RECONNECT_COMMANDS], eligible[MAX_RECONNECT_COMMANDS:], awaiting
+        eligible.sort(
+            key=lambda item: (
+                _sent_on_connection(item[0], item[1], generation) or not_sent,
+                shared.delivery_differing_since.get(item[0], newest),
+                item[0],
+            )
+        )
+    batch, left = eligible[:MAX_RECONNECT_COMMANDS], eligible[MAX_RECONNECT_COMMANDS:]
+    wake = any(_sent_on_connection(param, value, generation) is None for param, value in left)
+    return batch, left, awaiting, wake
 
 
 def _dispatcher_stage_value(*, c1_phase: str, heap_deferred: bool, lease_held: bool, sent: int, pending: int) -> str:
@@ -1393,9 +1411,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # pass for the rest. Nothing is staged, approved or halted.
         pending_count = len(changes)
         paced_unsent: list[tuple[str, float]] = []
+        paced_wake = False
         awaiting_readback = 0
         if c1_selection.phase == "ordinary" and probe_decision.action != "send":
-            changes, paced_unsent, awaiting_readback = _pace_ordinary_changes(
+            changes, paced_unsent, awaiting_readback, paced_wake = _pace_ordinary_changes(
                 changes, reconnect_generation, pass_started
             )
             pending_count = len(changes) + len(paced_unsent)
@@ -1878,12 +1897,20 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # Completing the trigger also stops the next pass from reseeding
         # _last_pushed from readbacks that have not caught up yet.
         complete_dispatch_trigger()
-        if paced_unsent and dispatcher_stage.startswith("paced "):
+        if paced_wake and dispatcher_stage.startswith("paced "):
             # After the completion, because clear_cfg_drift clears the event:
             # the task loop launches the next paced pass on its next tick.
             shared.setpoint_dispatch_requested.set()
             log.info(
                 "writer_reconcile reason=paced generation=%d action=wake remaining=%d",
+                reconnect_generation,
+                len(paced_unsent),
+            )
+        elif paced_unsent and dispatcher_stage.startswith("paced "):
+            # Every left-over value was already sent on this connection and not
+            # taken: it waits for the 300 s cadence or a readback drift.
+            log.info(
+                "writer_reconcile reason=paced generation=%d action=wait remaining=%d",
                 reconnect_generation,
                 len(paced_unsent),
             )

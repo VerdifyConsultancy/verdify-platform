@@ -456,12 +456,51 @@ async def test_thirteen_values_never_taken_go_out_once_per_90_s_without_self_wak
     await plain.run_pass()  # t=100 s: only the first batch is older than 90 s
     assert len(plain.controller.sent) == 25 and not shared.setpoint_dispatch_requested.is_set()
 
+    # The 300 s cadence resends at most 12, least recently sent first (the 13th
+    # leads), and the one left over was already sent: no self-wake for it.
+    plain.clock.advance(200)
+    await plain.run_pass()  # t=300 s
+    cadence = plain.controller.sent_params()[25:]
+    assert len(cadence) == 12 and cadence[0] == sorted(plan)[12]
+    assert plain.db.stage_rows[-1] == "paced 12/13"
+    assert not shared.setpoint_dispatch_requested.is_set()
+
     by_param: dict[str, list[datetime]] = {}
     for at, param, _value in plain.controller.sent:
         by_param.setdefault(param, []).append(at)
     for times in by_param.values():
         assert all((later - earlier).total_seconds() >= 90 for earlier, later in zip(times, times[1:], strict=False))
     assert all(row["delivery_status"] == "sent" for row in plain.db.changes)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("spacing_s", [30, 100])
+async def test_refused_values_wake_only_until_each_was_sent_once(plain, caplog, spacing_s):
+    """However far apart woken passes run, refused values cannot keep the dispatcher waking.
+
+    With woken passes 90 s or more apart (or more than 36 refused values 30 s
+    apart) the 90 s rule alone lets resends of the first batch crowd out the
+    rest on every pass, so the dispatcher would wake itself forever.
+    """
+    caplog.set_level(logging.INFO)
+    plan = _load(plain, PARAMS)
+    assert len(plan) > dispatcher.MAX_RECONNECT_COMMANDS
+    plain.controller.refuses = set(plan)
+
+    woken = 0
+    await plain.run_pass()
+    for _ in range(10):
+        if not shared.setpoint_dispatch_requested.is_set():
+            break
+        woken += 1
+        plain.clock.advance(spacing_s)
+        await plain.run_pass()
+    assert not shared.setpoint_dispatch_requested.is_set()
+    assert woken <= -(-len(plan) // dispatcher.MAX_RECONNECT_COMMANDS)  # bounded, no sustained loop
+    assert sorted(plain.controller.sent_params()) == sorted(plan)  # each value went out once
+    if spacing_s >= dispatcher.SENT_READBACK_WAIT_S:
+        # The resends left over wait for the cadence instead of waking a pass.
+        assert any("action=wait" in record.getMessage() for record in caplog.records)
 
 
 class AlertLog:
@@ -723,13 +762,27 @@ def test_paced_order_is_oldest_difference_first_then_name(monkeypatch):
     since[names[13]] = T0 - timedelta(minutes=5)  # the oldest difference goes first
     since[names[12]] = T0 - timedelta(minutes=1)
     monkeypatch.setattr(shared, "delivery_differing_since", since)
-    monkeypatch.setattr(dispatcher, "_last_sent_at", {})
+    sent_at: dict[str, tuple[datetime, int, float]] = {}
+    monkeypatch.setattr(dispatcher, "_last_sent_at", sent_at)
     changes = [(name, 1.0) for name in reversed(names)]
-    batch, left, awaiting = dispatcher._pace_ordinary_changes(changes, 1, T0)
+    batch, left, awaiting, wake = dispatcher._pace_ordinary_changes(changes, 1, T0)
     assert [name for name, _value in batch] == [names[13], names[12], *names[:10]]
-    assert [name for name, _value in left] == names[10:12] and awaiting == 0
+    assert [name for name, _value in left] == names[10:12] and awaiting == 0 and wake
     # Twelve or fewer keep their resolution order; no reorder, no cap.
     assert dispatcher._pace_ordinary_changes(changes[:12], 1, T0)[0] == changes[:12]
+
+    # A value already sent on this connection (and not taken) goes after every
+    # value not yet sent, least recently sent first; the same value sent within
+    # 90 s is not eligible at all, and a new value or a new connection is new.
+    sent_at[names[13]] = (T0 - timedelta(minutes=10), 1, 1.0)
+    sent_at[names[12]] = (T0 - timedelta(minutes=2), 1, 1.0)
+    sent_at[names[0]] = (T0 - timedelta(seconds=30), 1, 1.0)
+    sent_at[names[1]] = (T0 - timedelta(seconds=30), 1, 2.0)  # a different value
+    sent_at[names[2]] = (T0 - timedelta(seconds=30), 0, 1.0)  # an older connection
+    batch, left, awaiting, wake = dispatcher._pace_ordinary_changes(changes, 1, T0)
+    assert awaiting == 1  # names[0]
+    assert [name for name, _value in batch] == [*names[1:12], names[13]]
+    assert [name for name, _value in left] == [names[12]] and not wake
 
 
 @pytest.mark.asyncio
@@ -739,10 +792,65 @@ async def test_unknown_dispatcher_state_keeps_an_open_stuck_alert(no_slack):
     assert alert["message"] == "1 setting not reaching the controller since 12:00 UTC"
     await _sync(log, alert)
     # Before this process's first dispatcher pass nothing is known: keep it open.
-    await _sync(log, None, preserve_open_types=frozenset({"setpoint_delivery_stuck"}))
+    await _sync(log, None, preserve_open_types=alerts._setpoint_delivery_stuck_preserved({}, None))
     assert log.rows[0]["resolved_at"] is None
-    await _sync(log, None)
+    await _sync(log, None, preserve_open_types=alerts._setpoint_delivery_stuck_preserved({}, "ordinary"))
     assert log.rows[0]["disposition"] == "resolved"
+
+
+@pytest.mark.asyncio
+async def test_stuck_alert_stays_open_across_a_restart_until_none_differ(plain, no_slack):
+    plan = _load(plain, PARAMS[:2])
+    plain.controller.refuses = set(plan)
+    await plain.run_pass()
+    plain.clock.advance(16 * 60)
+    await plain.run_pass()
+    log = AlertLog()
+
+    async def monitor_cycle():
+        await _sync(
+            log,
+            alerts._setpoint_delivery_stuck_alert(
+                shared.delivery_differing_since, shared.dispatcher_stage, plain.clock.now
+            ),
+            preserve_open_types=alerts._setpoint_delivery_stuck_preserved(
+                shared.delivery_differing_since, shared.dispatcher_stage
+            ),
+        )
+
+    await monitor_cycle()
+    assert log.inserts == 1 and log.rows[0]["resolved_at"] is None
+
+    # An ingestor restart forgets since when the settings differ. They still
+    # differ, so the open alert neither resolves nor is raised a second time.
+    shared.delivery_differing_since.clear()
+    shared.dispatcher_stage = None
+    dispatcher._last_pushed.clear()
+    dispatcher._last_sent_at.clear()
+    await monitor_cycle()  # before the new process's first pass
+    plain.controller.connect({param: device for param, device, _plan in PARAMS[:2]})
+    plain.clock.advance(60)
+    await plain.run_pass()
+    assert set(shared.delivery_differing_since) == set(plan)
+    await monitor_cycle()  # differing for one minute in this process: kept open
+    assert log.inserts == 1 and log.rows[0]["resolved_at"] is None
+    plain.clock.advance(16 * 60)
+    await plain.run_pass()
+    await monitor_cycle()  # stuck again in this process: refreshed in place
+    assert log.inserts == 1 and log.rows[0]["resolved_at"] is None
+
+    # The C1 overlay holding the pass on purpose resolves it.
+    assert alerts._setpoint_delivery_stuck_preserved(shared.delivery_differing_since, "held:c1") == frozenset()
+
+    plain.controller.refuses.clear()
+    plain.clock.advance(300)
+    await plain.run_pass()
+    plain.controller.publish(plain.db)
+    plain.clock.advance(30)
+    await plain.run_pass()
+    assert shared.delivery_differing_since == {}
+    await monitor_cycle()
+    assert log.rows[0]["disposition"] == "resolved" and log.inserts == 1
 
 
 def test_stuck_alert_lists_at_most_twenty_settings():
@@ -758,4 +866,5 @@ def test_alert_monitor_raises_the_stuck_alert_from_shared_state():
     source = (ROOT / "ingestor" / "tasks" / "alerts.py").read_text()
     monitor = source[source.index("async def alert_monitor(") : source.index("async def _sync_monitor_alerts(")]
     assert "_setpoint_delivery_stuck_alert(" in monitor
+    assert "preserve_open_types=_setpoint_delivery_stuck_preserved(" in monitor
     assert "shared.delivery_differing_since" in monitor and "shared.dispatcher_stage" in monitor
