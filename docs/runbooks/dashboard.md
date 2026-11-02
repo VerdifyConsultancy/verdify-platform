@@ -110,10 +110,13 @@ kubectl -n verdify-dashboard exec deploy/verdify-dashboard-web -- node -e \
   `verdify_dashboard_runtime_login`, which attests itself on connect. Not ready points at `verdify-db`, the
   `allow-db-from-app` policy (it admits `operator-api`) or Secret `verdify-dashboard-runtime-db`. The pod logs one
   `{"event":"not_ready","error":...}` line each time the cause changes: `AttestationError` means the login connected
-  but `verdify_dashboard_runtime.fn_attest_login()` was not true (its role settings, membership or grants drifted);
-  `InvalidPasswordError` points at the Secret, and `InvalidAuthorizationSpecificationError` at a login that does not
-  exist yet (migration 282); `TimeoutError` or a connection error at `verdify-db` or the network path. A pod that
-  exits at start with a `ConfigError` names the setting it refused.
+  but `verdify_dashboard_runtime.fn_attest_login()` was not true (its role settings, membership or grants drifted).
+  `InvalidPasswordError` covers three causes, because `verdify-db` checks remote logins with `scram-sha-256` and
+  answers them alike: the login does not exist yet (migration 282 has not run), it has no password yet (the role
+  bootstrap has not set one from Secret `verdify-dashboard-runtime-db`), or the Secret holds another value. The
+  `verdify-db-0` log names which one. `TooManyConnectionsError` means the login's `CONNECTION LIMIT 8` is used up.
+  `TimeoutError` or a connection error points at `verdify-db` or the network path. A pod that exits at start with a
+  `ConfigError` names the setting it refused.
 - `/healthz` from the web pod timing out points at `allow-operator-api-from-dashboard-web` in `verdify-prod`. It
   admits TCP 8090 only from pods labelled `app.kubernetes.io/name: verdify-dashboard-web` in namespace
   `verdify-dashboard`, so a label change on either side breaks it.
