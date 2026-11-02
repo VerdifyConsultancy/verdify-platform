@@ -20,10 +20,11 @@ from zoneinfo import ZoneInfo
 
 FIRMWARE_SOURCES = {
     "firmware/lib/greenhouse_solar.h": "dd0557760ac17fd61eca8a0449d0060f8452d418616edda2ab95892408a2fb0e",
-    # VD-43 (F8) routes mister zone choice through the peer-probe VPD fallback;
+    # VD-45 (#1160) wires the irrigation engine into the mist path (grants, caps
+    # and counters from the engine) and removes the irrigation job machine;
     # solar/band expressions are unchanged. New captures bind this source;
     # historical receipts stay frozen.
-    "firmware/greenhouse/controls.yaml": "df148284234b1a2f5f055b920d1cfceddcccc7f1caefe5ce4c3a33786a795076",
+    "firmware/greenhouse/controls.yaml": "ccbe44a8c6e6530478011a35895f6c95e498b5da777f96b20c07a10a685e37b2",
 }
 SERIES = ("temp_low", "temp_high", "temp_target", "vpd_low", "vpd_high", "vpd_target")
 ANCHORS = ("sr", "sm", "ss", "mid")

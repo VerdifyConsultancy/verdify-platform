@@ -374,6 +374,55 @@ as the core settles them:
   engine reports the commanded length of each mister it opens (`mist_cmd_s`) for the D-IRP-19
   watchdog, since a prewet or flush on a mister can run up to 1800 s.
 
+### 4.9 What the engine wiring settles (VD-45)
+
+`firmware/greenhouse/irrigation_engine.yaml` and `firmware/lib/irrigation_engine_esphome.h` put the core
+on the controller; the pure part of the wiring is in `irrigation_program.h` with the core. These are the
+points the design left open, as the wiring settles them:
+
+- **Start.** The first 5 s tick binds the relays, the three text sensors and `irr_grant_mask`, then starts
+  the engine: the RTC block by the reset reason, the claims record, and the stored program (`src=nvs` when
+  it decodes against its hash). In the seconds before that, every wet relay guard refuses, a VPD pulse
+  gets no grant and the services log and ignore the call; the ingestor's 60 s pass pushes again.
+- **Clock.** The tick takes the local offset from one ESPTime reading (its local hour, minute and second
+  against its UTC epoch), so DST changeovers follow §4.3's rules by construction.
+- **Grant order.** Every engine call is applied the same way: `irr_state` is published if it changed, the
+  bits of the relays about to open go into `irr_grant_mask`, the relays the engine let go close (L03
+  last), the engine's relays open (L03 first), and the bits of what closed clear. A fertilizer relay no
+  longer opens L03 itself; the engine opens it with each feed.
+- **Climate closes.** The climate path never closes a mister the engine's own run holds (a window, a feed,
+  a mist prewet or flush): its every-tick and pulse-end turn-offs go through `irr_climate_close()`, which
+  closes only what the engine does not hold and hands back the climate's own VPD grant. The fertilizer
+  relays are the engine's alone.
+- **VPD grants.** `irr_vpd_grant(idx, pulse_ms)` carries the pulse's commanded length, which is the `m=`
+  token's planned end; the climate path works out the weighted S2 length before the pulse opens. A wait,
+  a refusal or a pulse already served by a window on the zone opens nothing, and the climate path asks
+  again one pulse later.
+- **Zone fence.** An engine pulse that closes, a VPD release and a stop stamp the zone's off time when
+  they happen. The next tick's relay sample stamps only the closes the engine did not see (a mist prewet
+  or flush, a relay closed outside an engine call), so a window's pulses run `max(gap_s,
+  mister_min_off_s)` apart and `irr_state` does not change between them.
+- **Runs not yet open.** A run whose relay cannot open yet (a drip waiting for a VPD pulse or fog to end,
+  a feed waiting for fog, a flush that opens at the next tick) is published as `w=<line>,man`, with the
+  VPD pulse's end when one holds the manifold, never as a `d=` or `m=` token with no start time.
+- **Stop.** A stop closes the wet relays in its scope inside the call (255: L01 to L10), the climate's VPD
+  pulse included. Fog is climate only: a stop never touches it, and a stop naming L11 does nothing.
+- **Program push.** A commit that decodes is saved to NVS and synced, then runs from the next tick. If the
+  save or sync fails the old program keeps running with no reject token (the `j=` vocabulary has none for
+  storage), and the ingestor's next pass pushes again. A commit with no begin does nothing.
+- **Water and mirrors.** The flow accrual adds integer centi-gallons to the RTC block and carries the
+  fraction; `mister_water_today` mirrors the block at once, and `runtime_mister_*_ms` and
+  `runtime_*_drip_ms` at each tick. Until VD-46 the accrual runs for climate pulses and fog only, as
+  before.
+- **Climate inputs.** Each second the climate loop writes the engine's inputs: SENSOR_FAULT and
+  SAFETY_COOL from the mode, degraded sensing (the average probes are out), the VPD emergency, the
+  measured RH and the dew margin, the soft budget, `mister_min_off_s`, confirmed occupancy, the VPD source
+  per zone and the climate-yield demand (fog or VPD mist that only a drip holds back). None reads the
+  leak. The RH and the dew margin come from one measured pair: the average probes, else the
+  controller-case probe while it answers, never the loop's fabricated fallback values. With neither the
+  RH reads missing (it never blocks) and the margin unknown. Degraded sensing means the averages are out,
+  so the case probe is what lets a `degraded_only` window run (D-IRP-12).
+
 ## 5. Firmware changes
 
 All of this is one release. The pure logic lives in headers under `firmware/lib/`, with native tests

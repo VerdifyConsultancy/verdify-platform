@@ -513,15 +513,20 @@ def test_override_event_schema_matches_firmware_published_tags():
     )
 
 
-def test_irrigation_queue_callers_match_clean_route_matrix():
-    """Queue bit identities are a firmware wire contract, not scratch state.
-
-    Only the two actual clean buttons may write the queue. This prevents a
-    removed fertilizer button or unknown legacy bit from being reinterpreted as
-    a clean relay request when the scheduler changes.
+def test_irrigation_queue_buttons_are_inert_since_the_engine():
+    """The two RUN CLEAN buttons still write their queue bits (they retire with #1162), but since the
+    irrigation engine replaced the job machine (#1160) nothing reads the queue, so a press never
+    opens a relay: run-now is irr_command's.
     """
     tunables = (REPO_ROOT / "firmware" / "greenhouse" / "tunables.yaml").read_text()
-    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    firmware = "\n".join(
+        path.read_text()
+        for path in [
+            *sorted((REPO_ROOT / "firmware" / "greenhouse").glob("*.yaml")),
+            REPO_ROOT / "firmware" / "greenhouse.yaml",
+        ]
+        if path.name != "tunables.yaml"
+    )
 
     queue_writes = re.findall(r"id\(irrig_queue\)\s*\|=\s*([^;]+);", tunables)
     assert queue_writes == ["1", "4"], f"unexpected irrigation queue callers: {queue_writes}"
@@ -534,38 +539,156 @@ def test_irrigation_queue_callers_match_clean_route_matrix():
         "btn_west_mister_fert",
     ):
         assert f"id: {retired_button}" not in tunables
-
-    assert "id(irrig_queue) &= (1 | 4);" in controls
-    assert "if(id(irrig_queue) & 1) { job = 1; bit = 1; zone = WetZone::WALL_DRIP; }" in controls
-    assert "else if(id(irrig_queue) & 4) { job = 2; bit = 4; zone = WetZone::CENTER_DRIP; }" in controls
-    for retired_bit in (2, 8, 16, 32, 64, 128):
-        assert f"id(irrig_queue) & {retired_bit}" not in controls
+    assert "id(irrig_queue)" not in firmware, "nothing outside the buttons may read or write irrig_queue"
 
 
-def test_weekly_wall_claim_syncs_before_first_relay_write():
-    """The exact-once claim must survive a reset before water can open."""
+# Each wet relay (hardware.yaml) and its device_idx in the irrigation program (irrigation §3).
+WET_RELAY_LINES = {
+    "wall_drips": "L01",
+    "wall_drips_fertilized": "L02",
+    "fertilizer_master_valve": "L03",
+    "center_mister": "L04",
+    "center_drips": "L05",
+    "center_drips_fertilized": "L06",
+    "south_wall_mister": "L07",
+    "south_wall_mister_fertilized": "L08",
+    "west_wall_mister": "L09",
+    "west_wall_mister_fertilized": "L10",
+}
+
+
+def _relay_block(hardware: str, relay: str) -> str:
+    start = hardware.index(f"    id: {relay}\n")
+    end = hardware.find("\n  - platform:", start)
+    return hardware[start : end if end != -1 else len(hardware)]
+
+
+def test_every_wet_relay_guard_tests_the_engine_grant():
+    """F5 (#1160): every wet relay's on_turn_on refuses an ON without its bit in irr_grant_mask,
+    first thing, and no other token, enable or commissioning flag opens it. Fog stays outside the
+    grant (climate only). With the engine trace tests (firmware/test/test_irrigation_program.cpp),
+    this is the replay suite for "no wet relay turns on without the engine grant"."""
+    hardware = (REPO_ROOT / "firmware" / "greenhouse" / "hardware.yaml").read_text()
+    globals_yaml = (REPO_ROOT / "firmware" / "greenhouse" / "globals.yaml").read_text()
+
+    grant = re.search(r"- id: irr_grant_mask\n(?P<body>.*?)(?=\n  - id:|\Z)", globals_yaml, re.S)
+    assert grant, "irr_grant_mask is a global"
+    assert "type: uint16_t" in grant["body"] and "restore_value: no" in grant["body"]
+    assert "initial_value: '0'" in grant["body"]
+
+    for relay, line in WET_RELAY_LINES.items():
+        block = _relay_block(hardware, relay)
+        assert "on_turn_on:" in block, relay
+        guard = block.split("on_turn_on:", 1)[1].split("on_turn_off:", 1)[0]
+        code = [
+            row.strip() for row in guard.splitlines() if row.strip() and not row.strip().startswith(("//", "-", "#"))
+        ]
+        assert code[0] == f"if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::k{line}))) {{", (
+            relay,
+            code[:1],
+        )
+        assert code[1] == f"id({relay}).turn_off();", relay
+        assert code[2] == f'ESP_LOGE("irrig","Blocked ungranted {relay} ON");', relay
+        for token in (
+            "water_controller_actuating",
+            "climate_wet_controller_actuating",
+            "fert_controller_actuating",
+            "irrig_wall_enabled",
+            "irrig_center_enabled",
+            "irrig_south_enabled",
+            "irrig_west_enabled",
+            "wall_feed",
+            "irrig_state",
+            "turn_on()",
+        ):
+            assert token not in guard, (relay, token)
+    # SAF-5 stays on the center mister: never on while the fertilizer master valve is open.
+    center_guard = _relay_block(hardware, "center_mister").split("on_turn_on:", 1)[1].split("on_turn_off:", 1)[0]
+    assert "if(id(fertilizer_master_valve).state) {" in center_guard
+    # L03's manual-off correction is gone; the fertilizer relays' on_turn_off still close L03.
+    assert "on_turn_off:" not in _relay_block(hardware, "fertilizer_master_valve")
+    for relay in (
+        "wall_drips_fertilized",
+        "center_drips_fertilized",
+        "south_wall_mister_fertilized",
+        "west_wall_mister_fertilized",
+    ):
+        assert "id(fertilizer_master_valve).turn_off();" in _relay_block(hardware, relay).split("on_turn_off:", 1)[1]
+    # Fog is climate only: no grant check.
+    assert "irr_grant_mask" not in _relay_block(hardware, "fog_rly")
+
+
+def _code_only(text: str) -> str:
+    """Drop /* */, // and # comments, so a comment that names a leak never counts as reading one."""
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    rows = []
+    for row in text.splitlines():
+        stripped = row.split("//", 1)[0]
+        if stripped.lstrip().startswith("#"):
+            continue
+        rows.append(stripped)
+    return "\n".join(rows)
+
+
+def test_no_engine_input_guard_or_reason_reads_the_leak():
+    """Q-05 (F14): leak_detected raises the leak alert only. No engine input, relay guard or irr_state
+    reason reads it; until #1161 only the climate fog and mist gates still do."""
+    lib = REPO_ROOT / "firmware" / "lib"
+    engine = _code_only((lib / "irrigation_program.h").read_text())
+    glue = _code_only((lib / "irrigation_engine_esphome.h").read_text())
+    package = _code_only((REPO_ROOT / "firmware" / "greenhouse" / "irrigation_engine.yaml").read_text())
+    hardware = (REPO_ROOT / "firmware" / "greenhouse" / "hardware.yaml").read_text()
     controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    for name, text in (
+        ("irrigation_program.h", engine),
+        ("irrigation_engine_esphome.h", glue),
+        ("irrigation_engine.yaml", package),
+    ):
+        assert "leak" not in text.lower(), f"{name} reads a leak"
+    for relay in WET_RELAY_LINES:
+        assert "leak" not in _relay_block(hardware, relay).lower(), relay
+    # The climate facts the engine reads are written in one block of the control loop.
+    start = controls.index("// ── Irrigation engine inputs (#1160)")
+    block = _code_only(controls[start : controls.index("/**************** 14 — Telemetry & debug", start)])
+    assert "irr_climate_inputs()" in block and "leak" not in block
+    yield_input = controls[controls.index("const bool climate_fog_wanted =") :]
+    assert "leak" not in _code_only(yield_input[: yield_input.index(";")])
+    reason_words = re.findall(r'"([a-z0-9]+)"', engine[engine.index("kReasonCodes[kReasonCount]") :].split(";", 1)[0])
+    assert reason_words and not [w for w in reason_words if "leak" in w]
 
-    helper_start = controls.index("auto persist_weekly_and_sync")
-    helper_end = controls.index("auto cancel_all", helper_start)
-    helper = controls[helper_start:helper_end]
-    assert helper.index("wall_feed_journal_pref.save(&candidate)") < helper.index("global_preferences->sync()")
-    assert helper.index("global_preferences->sync()") < helper.index("mirror_weekly_readbacks(state, terminal_code)")
-    assert "RestoringGlobalsComponent" not in helper
-    assert "->update()" not in helper
 
-    claim_start = controls.index("auto claimed = claim_weekly_wall_feed")
-    claim_end = controls.index("// Advance the wall sequence", claim_start)
-    claim = controls[claim_start:claim_end]
-    assert claim.index("claim_weekly_wall_feed") < claim.index("persist_weekly_and_sync(claimed, 0)")
-    assert claim.index("persist_weekly_and_sync(claimed, 0)") < claim.index("id(wall_drips).turn_on()")
-    assert "claim persistence sync failed" in claim
+def test_engine_air_inputs_fall_back_to_the_case_probe():
+    """D-IRP-12 (#1160): degraded_only mist runs only while the average probes are out (SF1) and
+    needs a known dew margin, so the engine's RH and dew inputs come from the measured indoor pair:
+    the averages, else the controller-case probe while it answers, never the loop's fabricated RHin.
+    irr_air_inputs() itself is covered by firmware/test/test_irrigation_program.cpp."""
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    start = controls.index("// ── Irrigation engine inputs (#1160)")
+    block = _code_only(controls[start : controls.index("/**************** 14 — Telemetry & debug", start)])
+    assert "irr_in.sensor_degraded = sensor_in.sensor_degraded;" in block
+    assert "probe_sample_fresh(now_ms, id(last_case_ms), kZoneProbeStaleMs)" in block
+    assert "avg_ok ? id(average_temperature).state : irr_case_fresh ? id(case_temperature).state : NAN" in block
+    assert "avg_ok ? id(average_humidity).state : irr_case_fresh ? id(case_humidity).state : NAN" in block
+    for field in ("rh_pct", "dew_margin_known", "dew_breach"):
+        assert f"irr_in.{field} = irr_air.{field};" in block
+    assert "RHin" not in block, "the loop's RHin may be its fabricated 50 %"
 
-    # Every active/terminal transition uses the same sync gate; fertilizer and
-    # flush relay writes only occur after the corresponding call succeeds.
-    assert controls.count("persist_weekly_and_sync(next, 0)") == 2
-    assert "persist_weekly_and_sync(complete, 1)" in controls
-    assert "persist_weekly_and_sync(cancelled, 2)" in controls
+
+def test_engine_program_and_claims_save_then_sync():
+    """F2 and §4.7 (#1160): a committed push is saved to NVS and synced before it can run, and the
+    claims record the engine journals before a relay opens is saved then synced (irr_commit_claims()
+    keeps the claim only when both succeed; firmware/test/test_irrigation_program.cpp covers it)."""
+    glue = (REPO_ROOT / "firmware" / "lib" / "irrigation_engine_esphome.h").read_text()
+    commit = glue[glue.index("inline void irr_esp_program_commit()") :]
+    commit = commit[: commit.index("\n}\n")]
+    save = commit.index("g.program_pref.save(&g.staging.record)")
+    sync = commit.index("esphome::global_preferences->sync()", save)
+    stage = commit.index("irr_stage_program(g.eng, p, g.staging.record.sha256);", sync)
+    assert save < sync < stage
+    assert "irr_set_reject(g.eng, why);" in commit
+    assert "return static_cast<IrrEsp*>(ctx)->claims_pref.save(&c);" in glue
+    assert "return esphome::global_preferences->sync();" in glue
+    assert "RestoringGlobalsComponent" not in glue
 
 
 def test_heap_recovery_coalesces_diagnostics_and_records_loop_high_water():

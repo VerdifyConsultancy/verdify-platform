@@ -17,7 +17,12 @@
  *     and the irr_events outcome ring, with magic, version, local day and CRC32;
  *   - the engine (irr_tick, irr_run_now, irr_stop, irr_vpd_request/irr_vpd_release):
  *     drip and mist manifolds, caps and the VPD reserve, the climate yield, the
- *     fertilizer sequence and the outcomes.
+ *     fertilizer sequence and the outcomes;
+ *   - the pure half of the device wiring (VD-45, #1160; the ESP32 half is
+ *     irrigation_engine_esphome.h): the irr_program_id, irr_state and irr_events text
+ *     (irr_format_program_id, irr_format_state, irr_format_events), the relay grant plan
+ *     (irr_apply_plan), the program push staging (IrrStaging), the irr_command arguments,
+ *     the clock offset and the flow-meter centi-gallons.
  *
  * It touches no relay. Every entry point fills IrrOutputs: the grant mask (bit =
  * device_idx) that the wet relay guards check, the relays the engine wants ON, the
@@ -589,7 +594,7 @@ inline bool irr_commit_claims(IrrClaims& claims, IrrClaims candidate, SaveFn&& s
 }
 
 // Claim the occurrence (slot_id, local_day) exactly once, in the save-then-sync shape
-// of commit_wall_feed_journal() (irrigation_policy.h). At most 24 claims a day.
+// of the retired wall-feed journal (irr_commit_claims()). At most 24 claims a day.
 template <typename SaveFn, typename SyncFn>
 inline bool irr_claim(IrrClaims& claims, uint16_t slot_id, uint16_t local_day, SaveFn&& save, SyncFn&& sync) {
   IrrClaims candidate = claims;
@@ -937,6 +942,9 @@ struct IrrEngine {
   bool sched_turn = false;
   bool zone_off_known[kZoneCount]{};
   uint32_t zone_off_ms[kZoneCount]{};
+  // Mister relays whose close the engine stamped when it happened since the last tick (an
+  // engine pulse, a VPD release, a stop): the next tick's relay sample does not stamp them again.
+  uint16_t off_stamped = 0;
   // Published state.
   IrrStateFields last_state{};
   bool last_state_valid = false;
@@ -1206,10 +1214,18 @@ inline void set_zone_off(IrrEngine& e, uint8_t idx, uint32_t now_ms) {
   }
 }
 
+// A mister relay closes now, in this call: stamp its zone at the moment it closed. The next
+// tick sees it go OFF in its relay sample and leaves this stamp alone, so the zone fence (and
+// a window's pulse spacing) counts from the real close, not from the tick after it.
+inline void stamp_close(IrrEngine& e, uint8_t idx, uint32_t now_ms) {
+  set_zone_off(e, idx, now_ms);
+  e.off_stamped = uint16_t(e.off_stamped | irr_bit(idx));
+}
+
 inline void close_pulse(IrrEngine& e, IrrRun& r, uint32_t now_ms) {
   if (!r.pulse_open) return;
   r.pulse_open = false;
-  set_zone_off(e, r.line, now_ms);
+  stamp_close(e, r.line, now_ms);
 }
 
 inline void clear_run(IrrEngine& e) {
@@ -1499,7 +1515,15 @@ inline void build_outputs(IrrEngine& e, uint32_t now_ms, IrrOutputs& out) {
 
   IrrStateFields& s = out.state;
   s.reject = e.reject;
-  const bool run_blocked = r.kind != IrrRunKind::kNone && r.block != IrrReason::kNone;
+  // A run whose current stage has not opened yet (a drip waiting for a VPD pulse or fog to end,
+  // a feed waiting for fog, a flush the next tick opens) has no start to publish. With a valid
+  // clock it reads as waiting for the manifold (w=), never as a run token with no start time.
+  const bool pulse_train =
+      r.kind == IrrRunKind::kWindow || (r.kind == IrrRunKind::kFert && r.stage == IrrStage::kFeed && is_mister(r.line));
+  const bool run_unopened = r.kind != IrrRunKind::kNone && r.block == IrrReason::kNone && !r.to_flush &&
+                            !r.to_settle && e.in.clock.valid && r.start_epoch == 0 && run_relays(r) == 0 &&
+                            (!pulse_train || r.done == 0);
+  const bool run_blocked = r.kind != IrrRunKind::kNone && (r.block != IrrReason::kNone || run_unopened);
   if (r.kind != IrrRunKind::kNone && !run_blocked && !r.to_flush && !r.to_settle) {
     const IrrRunToken t = run_token(r);
     if (is_drip_line(t.line)) s.drip = t;
@@ -1512,8 +1536,9 @@ inline void build_outputs(IrrEngine& e, uint32_t now_ms, IrrOutputs& out) {
   if (run_blocked) {
     // The active run waits on someone else: a VPD pulse names its planned end; fog or an
     // unknown holder names none.
-    const uint32_t until = r.block == IrrReason::kMan && e.vpd_line != kNoLine ? s.mist.end_epoch : 0u;
-    add_wait(s, run_stage_line(r), r.block, until);
+    const IrrReason why = r.block != IrrReason::kNone ? r.block : IrrReason::kMan;
+    const uint32_t until = why == IrrReason::kMan && e.vpd_line != kNoLine ? s.mist.end_epoch : 0u;
+    add_wait(s, run_stage_line(r), why, until);
   }
   // Pending occurrences, earliest due first.
   bool listed[kMaxSlots] = {};
@@ -2172,8 +2197,10 @@ inline void irr_tick(IrrEngine& e, const IrrInputs& in, IrrOutputs& out) {
   // Integrity first (a corrupted block is zeroed, never re-sealed), then the elapsed
   // interval is counted to the day it mostly belongs to, then local midnight rolls.
   irr_rtc_validate(b, false, 0);
-  // A mister relay that went OFF since the last tick fences its zone (mister_min_off_s).
-  const uint16_t went_off = uint16_t(prev_relays & ~in.relay_on_mask & kMistManifoldMask);
+  // A mister relay that went OFF since the last tick fences its zone (mister_min_off_s),
+  // unless its close was already stamped when it happened (stamp_close()).
+  const uint16_t went_off = uint16_t(prev_relays & ~in.relay_on_mask & kMistManifoldMask & ~e.off_stamped);
+  e.off_stamped = 0;
   for (uint8_t i = 0; i < kLineCount; ++i) {
     if (went_off & irr_bit(i)) detail::set_zone_off(e, i, in.now_ms);
   }
@@ -2315,7 +2342,7 @@ inline uint8_t irr_stop(IrrEngine& e, uint8_t line, uint32_t now_ms, IrrOutputs&
     }
   }
   if (e.vpd_line != kNoLine && (all || e.vpd_line == line)) {
-    set_zone_off(e, e.vpd_line, now_ms);
+    stamp_close(e, e.vpd_line, now_ms);  // the stop closes it inside the call
     e.vpd_line = kNoLine;
     e.sched_turn = true;
     ++ended;
@@ -2417,11 +2444,313 @@ inline void irr_vpd_release(IrrEngine& e, uint8_t idx, uint32_t now_ms, IrrOutpu
   using namespace detail;
   if (e.vpd_line == idx) {
     e.vpd_line = kNoLine;
-    set_zone_off(e, idx, now_ms);
+    stamp_close(e, idx, now_ms);  // the climate path calls this once its relay is off
     e.sched_turn = true;
     if (e.run.yielding) e.run.yield_vpd_done = true;  // a drip or drip flush yielding for it resumes
   }
   build_outputs(e, now_ms, out);
+}
+
+// The outputs as they stand, with no tick: a push reject shows in irr_state at once.
+inline void irr_refresh_outputs(IrrEngine& e, uint32_t now_ms, IrrOutputs& out) {
+  detail::build_outputs(e, now_ms, out);
+}
+
+// ── Device wiring, the pure half (VD-45, #1160) ──────────────────────────────
+// firmware/greenhouse/irrigation_engine.yaml and firmware/lib/irrigation_engine_esphome.h
+// call these; the native tests cover them on the same inputs.
+
+constexpr size_t kTextMax = 255;              // IRR_TEXT_MAX_LEN: a Home Assistant state
+constexpr size_t kTextBufLen = kTextMax + 1;  // the device's static 256 B buffers
+// The relays the engine grants (F5): L01-L10. Fog (L11) is climate only, outside the grant.
+constexpr uint16_t kGrantableMask = 0x03FF;
+static_assert(kGrantableMask == (kWetMask & ~kFogMask), "the grantable relays are L01-L10");
+
+// irr_program_id: "h=<the first 16 hex of the sha256> src=nvs" for a stored program, and
+// "h=0000000000000000 src=rom" for the ROM default, so every desired program differs from it
+// and is pushed. Returns the length written, or 0 when `cap` is too small (`buf` reads "").
+inline size_t irr_format_program_id(bool nvs, const uint8_t hash8[8], char* buf, size_t cap) {
+  if (buf == nullptr || cap == 0) return 0;
+  static constexpr char kHex[] = "0123456789abcdef";
+  char hex[17];
+  for (int i = 0; i < 8; ++i) {
+    const uint8_t b = (nvs && hash8 != nullptr) ? hash8[i] : uint8_t(0);
+    hex[2 * i] = kHex[b >> 4];
+    hex[2 * i + 1] = kHex[b & 0x0F];
+  }
+  hex[16] = '\0';
+  const int w = std::snprintf(buf, cap, "h=%s src=%s", hex, nvs ? "nvs" : "rom");
+  if (w < 0 || size_t(w) >= cap) {
+    buf[0] = '\0';
+    return 0;
+  }
+  return size_t(w);
+}
+
+// An f= token: a mister line backing off (b) or latched (l) by the D-IRP-19 watchdog, and until
+// when. #1161's watchdog fills these; the engine wiring only publishes them.
+struct IrrFaultToken {
+  uint8_t line;          // a mister: L04, L07, L08, L09 or L10
+  bool latched;          // l: latched until local midnight or clear_fault; b: backing off
+  uint32_t until_epoch;  // UTC seconds
+};
+constexpr uint8_t kMaxFaults = 5;  // one per mister line
+
+// What irr_state carries beside the engine's own fields (IrrStateFields).
+struct IrrStateExtras {
+  IrrFaultToken faults[kMaxFaults];
+  uint8_t fault_count;
+  char vpd_source[3];  // center, south, west: 'o' own, 'p' peer, 'h' house; vpd_source[0] 0: no v=
+};
+
+namespace detail {
+
+inline bool vpd_code_ok(char c) { return c == 'o' || c == 'p' || c == 'h'; }
+
+// Append `t` (t_n characters) to dst[0..n), one space apart, if the result stays within `room`.
+inline bool append_token(char* dst, size_t& n, size_t room, const char* t, int t_n) {
+  if (t_n <= 0) return false;
+  const size_t need = (n ? 1u : 0u) + size_t(t_n);
+  if (n + need > room) return false;
+  if (n) dst[n++] = ' ';
+  std::memcpy(dst + n, t, size_t(t_n));
+  n += size_t(t_n);
+  dst[n] = '\0';
+  return true;
+}
+
+}  // namespace detail
+
+// irr_state in #1151's grammar, in format_irr_state()'s order: d=, m=, each w= (earliest due
+// first), each f=, v=, j=. Past 255 characters the w= tokens drop, latest due first, exactly
+// as format_irr_state() drops them. Absolute times only; no masks, acks or remaining seconds.
+// Tokens the parsers refuse are never written: a run on the wrong manifold, a w= naming L03 or
+// L11 or with no reason, an f= naming a line that is not a mister or one line twice, an unknown
+// VPD code. Returns the length written (`buf` is always terminated).
+inline size_t irr_format_state(const IrrStateFields& s, const IrrStateExtras& x, char* buf, size_t cap) {
+  if (buf == nullptr || cap == 0) return 0;
+  buf[0] = '\0';
+  const size_t limit = cap - 1 < kTextMax ? cap - 1 : kTextMax;
+  char tok[48];
+  // The f=, v= and j= tail first, so the w= tokens can be fitted in front of it.
+  char tail[128];
+  size_t tail_n = 0;
+  tail[0] = '\0';
+  uint16_t fault_lines = 0;
+  for (uint8_t i = 0; i < x.fault_count && i < kMaxFaults; ++i) {
+    const IrrFaultToken& f = x.faults[i];
+    if (!detail::is_mister(f.line) || (fault_lines & irr_bit(f.line))) continue;
+    fault_lines = uint16_t(fault_lines | irr_bit(f.line));
+    detail::append_token(tail, tail_n, sizeof(tail) - 1, tok,
+                         std::snprintf(tok, sizeof(tok), "f=%u,%c,%lu", unsigned(f.line), f.latched ? 'l' : 'b',
+                                       static_cast<unsigned long>(f.until_epoch)));
+  }
+  if (detail::vpd_code_ok(x.vpd_source[0]) && detail::vpd_code_ok(x.vpd_source[1]) &&
+      detail::vpd_code_ok(x.vpd_source[2])) {
+    detail::append_token(tail, tail_n, sizeof(tail) - 1, tok,
+                         std::snprintf(tok, sizeof(tok), "v=%c%c%c", x.vpd_source[0], x.vpd_source[1],
+                                       x.vpd_source[2]));
+  }
+  if (s.reject != IrrReject::kNone && uint8_t(s.reject) < 7) {
+    detail::append_token(tail, tail_n, sizeof(tail) - 1, tok,
+                         std::snprintf(tok, sizeof(tok), "j=%s", irr_reject_token(s.reject)));
+  }
+  // The run on each manifold.
+  size_t n = 0;
+  auto run = [&](char key, const IrrRunToken& r, uint16_t manifold) {
+    if (!r.valid || r.line >= kLineCount || !(manifold & irr_bit(r.line)) || uint8_t(r.cause) >= kCauseCount) return;
+    const uint32_t end = r.end_epoch < r.start_epoch ? r.start_epoch : r.end_epoch;
+    detail::append_token(buf, n, limit, tok,
+                         std::snprintf(tok, sizeof(tok), "%c=%u,%s,%u,%lu,%lu", key, unsigned(r.line),
+                                       kCauseNames[uint8_t(r.cause)], unsigned(r.slot_id),
+                                       static_cast<unsigned long>(r.start_epoch), static_cast<unsigned long>(end)));
+  };
+  run('d', s.drip, kDripManifoldMask);
+  run('m', s.mist, kMistManifoldMask);
+  // The w= tokens while the tail still fits after them: the first that does not, and every later
+  // one, drop (format_irr_state() pops them from the end).
+  const size_t after = tail_n ? tail_n + 1 : 0;
+  for (uint8_t i = 0; i < s.wait_count && i < kMaxSlots + 1; ++i) {
+    const IrrWait& w = s.waits[i];
+    if (w.line >= kLineCount || !(kSchedulableMask & irr_bit(w.line)) || w.reason == IrrReason::kNone ||
+        uint8_t(w.reason) >= kReasonCount) {
+      continue;
+    }
+    const int t_n = w.until_epoch != 0
+                        ? std::snprintf(tok, sizeof(tok), "w=%u,%s,%lu", unsigned(w.line),
+                                        kReasonCodes[uint8_t(w.reason)], static_cast<unsigned long>(w.until_epoch))
+                        : std::snprintf(tok, sizeof(tok), "w=%u,%s", unsigned(w.line), kReasonCodes[uint8_t(w.reason)]);
+    if (t_n <= 0 || n + (n ? 1u : 0u) + size_t(t_n) + after > limit) break;
+    detail::append_token(buf, n, limit, tok, t_n);
+  }
+  if (tail_n) detail::append_token(buf, n, limit, tail, int(tail_n));
+  return n;
+}
+
+// How the device applies one engine call (F5). The bits of the relays about to open go into
+// irr_grant_mask before any turn_on; the relays the engine let go (and, for a stop, every open
+// wet relay in its scope) turn off first, L03 last, so two drips never overlap; then the
+// engine's relays turn on, L03 first; the bits clear only once their relays are off.
+struct IrrApply {
+  uint16_t grant_before;  // irr_grant_mask while relays change
+  uint16_t turn_off;
+  uint16_t turn_on;
+  uint16_t grant_after;   // irr_grant_mask once they have
+};
+
+// `grant`: irr_grant_mask now; `held`: the engine relays the device opened at the last call;
+// `on`: the relays that read ON; `stop_scope`: the wet relays a stop closes (0 otherwise).
+inline IrrApply irr_apply_plan(uint16_t grant, uint16_t held, uint16_t on, const IrrOutputs& out, uint16_t stop_scope) {
+  IrrApply a{};
+  const uint16_t want = uint16_t(out.relay_mask & kGrantableMask);
+  a.grant_before = uint16_t((grant | out.grant_mask) & kGrantableMask);
+  a.turn_off = uint16_t(((held & ~want) | stop_scope) & on & kGrantableMask);
+  a.turn_on = uint16_t(want & ~on);
+  a.grant_after = uint16_t(out.grant_mask & kGrantableMask);
+  return a;
+}
+
+// The program as NVS holds it (one preference): the 584 B record and the SHA-256 it was pushed
+// with. At boot it is decoded again: src=nvs when it decodes, else the ROM default (src=rom).
+struct IrrProgramRecord {
+  uint8_t rec[kRecordLen];
+  uint8_t sha256[32];
+};
+static_assert(sizeof(IrrProgramRecord) == kRecordLen + 32, "616 B NVS record");
+static_assert(std::is_trivially_copyable<IrrProgramRecord>::value, "IrrProgramRecord is saved byte for byte");
+
+// The program push (F2) in one static record: irr_program_begin(len, sha256_hex) stores the
+// expected hash and clears the record, irr_program_chunk(offset, data_hex) copies at most
+// 192 B into it, irr_program_commit() decodes it against the hash. The decoder settles every
+// reject, a declared length other than 584 included (bad_length).
+struct IrrStaging {
+  IrrProgramRecord record;  // the staged bytes and the expected hash (on the device, also the NVS buffer)
+  int32_t len;              // the length irr_program_begin declared
+  bool open;                // a begin with no commit since
+  bool hash_ok;             // sha256_hex carried 32 bytes
+};
+
+// `sha256`: the 32 bytes sha256_hex decoded to, or nullptr when it did not (the commit is then
+// rejected bad_hash, or earlier for the length or magic).
+inline void irr_staging_begin(IrrStaging& st, int32_t len, const uint8_t* sha256) {
+  std::memset(&st.record, 0, sizeof(st.record));
+  st.len = len;
+  st.hash_ok = sha256 != nullptr;
+  if (st.hash_ok) std::memcpy(st.record.sha256, sha256, sizeof(st.record.sha256));
+  st.open = true;
+}
+
+// Copy one decoded chunk. False, and nothing copied, with no push open, an empty or undecodable
+// chunk (`data` nullptr), more than 192 B, or bytes past the record's 584.
+inline bool irr_staging_chunk(IrrStaging& st, int32_t offset, const uint8_t* data, size_t n) {
+  if (!st.open || data == nullptr || n == 0 || n > kChunkMax || offset < 0 || size_t(offset) + n > kRecordLen) {
+    return false;
+  }
+  std::memcpy(st.record.rec + offset, data, n);
+  return true;
+}
+
+enum class IrrCommit : uint8_t { kNotOpen, kRejected, kAccepted };
+
+// Decode the staged record against the begin's hash; either way the push is closed. kAccepted:
+// `out` is the program and st.record (record and hash) is what NVS keeps. kRejected: `why`.
+inline IrrCommit irr_staging_commit(IrrStaging& st, IrrProgram& out, IrrReject& why) {
+  why = IrrReject::kNone;
+  if (!st.open) return IrrCommit::kNotOpen;
+  st.open = false;
+  const size_t len = st.len < 0 ? 0u : size_t(st.len);
+  if (!irr_decode(st.record.rec, len, st.hash_ok ? st.record.sha256 : nullptr, out, why)) {
+    return IrrCommit::kRejected;
+  }
+  return IrrCommit::kAccepted;
+}
+
+// irr_command(cmd, line, on_s, count, gap_s, prewet_s, flush_s) (F4).
+enum class IrrCmd : uint8_t { kUnknown, kRun, kStop, kClearFault };
+
+inline IrrCmd irr_parse_cmd(const char* cmd) {
+  if (cmd == nullptr) return IrrCmd::kUnknown;
+  if (std::strcmp(cmd, "run") == 0) return IrrCmd::kRun;
+  if (std::strcmp(cmd, "stop") == 0) return IrrCmd::kStop;
+  if (std::strcmp(cmd, "clear_fault") == 0) return IrrCmd::kClearFault;
+  return IrrCmd::kUnknown;
+}
+
+// The service's ints as run-now arguments. False (bad_args) for a value outside its field's
+// width; irr_run_now() then applies the line kind's bounds (BOUNDS_BY_KIND).
+inline bool irr_run_args_from(int32_t line, int32_t on_s, int32_t count, int32_t gap_s, int32_t prewet_s,
+                              int32_t flush_s, IrrRunArgs& out) {
+  auto u16 = [](int32_t v) { return v >= 0 && v <= 0xFFFF; };
+  if (line < 0 || line >= kLineCount || !u16(on_s) || count < 0 || count > 0xFF || !u16(gap_s) || !u16(prewet_s) ||
+      !u16(flush_s)) {
+    return false;
+  }
+  out = IrrRunArgs{uint8_t(line), uint16_t(on_s), uint8_t(count), uint16_t(gap_s), uint16_t(prewet_s),
+                   uint16_t(flush_s)};
+  return true;
+}
+
+// The wet relays a stop closes inside the service call: one line's relay (L01-L10), or every
+// wet relay (255). Fog (L11) is climate only, so a stop never touches it; false for any other
+// line, and the stop does nothing.
+inline bool irr_stop_scope(int32_t line, uint16_t& scope) {
+  scope = 0;
+  if (line == kAllLines) {
+    scope = kGrantableMask;
+    return true;
+  }
+  if (line >= 0 && line < kLineCount && (kGrantableMask & irr_bit(uint8_t(line)))) {
+    scope = irr_bit(uint8_t(line));
+    return true;
+  }
+  return false;
+}
+
+// The local UTC offset in minutes from one reading of the clock: its local hour, minute and
+// second and its UTC epoch, taken from the same instant (ESPHome's ESPTime gives both), so the
+// DST changeovers come out right by construction (irr_clock_from_epoch()).
+inline int irr_utc_offset_min(int hour, int minute, int second, uint32_t epoch) {
+  int32_t d = int32_t(hour) * 3600 + int32_t(minute) * 60 + int32_t(second) - int32_t(epoch % 86400u);
+  if (d > 43200) d -= 86400;
+  else if (d <= -43200) d += 86400;
+  return int(d / 60);
+}
+
+// Flow-meter water for SAF-4 and the soft budget: `gpm` over `dt_ms` in whole centi-gallons,
+// the fraction below one centi-gallon carried in `carry` to the next call, so truncation loses
+// no water (irr_count_water() adds the result to the RTC block).
+inline uint32_t irr_water_centigal(float gpm, uint32_t dt_ms, float& carry) {
+  if (!std::isfinite(carry) || carry < 0.0f) carry = 0.0f;
+  if (!std::isfinite(gpm) || gpm <= 0.0f || dt_ms == 0) return 0;
+  const float total = gpm * float(dt_ms) / 600.0f + carry;  // gpm x dt_ms / 60000 gal, x 100
+  const float whole = std::floor(total);
+  carry = total - whole;
+  return whole >= 4294967040.0f ? UINT32_MAX : uint32_t(whole);
+}
+
+// The RH ceiling and dew margin inputs (irrigation §4.6, D-IRP-09, D-IRP-12) from one measured
+// indoor temperature and RH pair: the average probes, or while they are out the controller-case
+// probe (the climate loop's own fallback for its temperature and RH). With no measured pair (a
+// NaN, or an RH outside (0, 100]) the RH reads missing, which never blocks, and the dew margin is
+// unknown, which holds degraded_only mist (dew). The dew point is the Magnus form of the
+// dewpoint_avg sensor (sensors.yaml: 17.27, 237.3 C).
+struct IrrAirInputs {
+  float rh_pct;           // NaN: missing
+  bool dew_margin_known;  // a dew margin could be computed
+  bool dew_breach;        // temperature less dew point is below `min_margin_f`
+};
+
+inline IrrAirInputs irr_air_inputs(float temp_f, float rh_pct, float min_margin_f) {
+  IrrAirInputs a{NAN, false, false};
+  if (!std::isfinite(temp_f) || !std::isfinite(rh_pct) || rh_pct <= 0.0f || rh_pct > 100.0f) return a;
+  const float tc = (temp_f - 32.0f) * 5.0f / 9.0f;
+  const float g = std::log(rh_pct / 100.0f) + (17.27f * tc) / (237.3f + tc);
+  const float dew_f = (237.3f * g) / (17.27f - g) * 9.0f / 5.0f + 32.0f;
+  if (!std::isfinite(dew_f)) return a;
+  a.rh_pct = rh_pct;
+  a.dew_margin_known = true;
+  a.dew_breach = std::isfinite(min_margin_f) && temp_f - dew_f < min_margin_f;
+  return a;
 }
 
 }  // namespace verdify_irr

@@ -646,11 +646,10 @@ class TestActivityDirectWetGuards:
             "const bool west_wet_allowed = false",
             "const bool center_wet_allowed = climate_wet_assist_demand",
             "direct_wet_relay_watchdog",
-            "id(south_wall_mister).turn_off();",
-            "id(west_wall_mister).turn_off();",
-            "id(south_wall_mister_fertilized).turn_off();",
-            "id(west_wall_mister_fertilized).turn_off();",
-            "id(center_drips_fertilized).turn_off();",
+            # #1160: the climate path closes only what the irrigation engine's own run does not hold.
+            "irr_climate_close(id(south_wall_mister), verdify_irr::kL07);",
+            "irr_climate_close(id(west_wall_mister), verdify_irr::kL09);",
+            "if(!center_wet_allowed) irr_climate_close(id(center_mister), verdify_irr::kL04);",
             "|| !any_mister_wet_allowed",
             "active_zone_gate_closed",
             "if(center_wet_allowed) return 3",
@@ -666,30 +665,32 @@ class TestActivityDirectWetGuards:
         assert not missing, f"Mister direct-wet gate coverage missing: {missing}"
         assert "crop_direct_wet_allowed" not in controls_yaml
 
-    def test_irrigation_state_machine_gates_explicit_clean_and_weekly_wall_feed(self, controls_yaml: str) -> None:
-        required = [
+    def test_the_irrigation_engine_replaced_the_job_machine(self, controls_yaml: str, greenhouse_yaml: str) -> None:
+        """#1160 (F1, F14): the engine package runs every drip, feed and scheduled window; the job
+        machine, its explicit-clean and weekly-feed gates and its leak cancel are gone."""
+        assert "irrigation: !include greenhouse/irrigation_engine.yaml" in greenhouse_yaml
+        for gone in (
             "WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED",
             "WetCommandOrigin::EXPLICIT_IRRIGATION",
-            "weekly_wall_feed_eligible(eligibility, weekly_state, durations)",
-            "persist_weekly_and_sync(claimed, 0)",
-            "return;  // weekly owner excludes every explicit clean writer",
-            "id(irrig_queue) &= (1 | 4);",
-            "id(wall_drips).turn_off();",
-            "id(wall_drips_fertilized).turn_off();",
-            "id(center_drips).turn_off();",
-            "id(center_drips_fertilized).turn_off();",
-            "id(fertilizer_master_valve).turn_off();",
-            "direct_wet_relay_watchdog",
-            'cancel_all("leak")',
-            'cancel_all("irrigation disabled")',
-            'ESP_LOGW("irrig", "EXPLICIT CLEAN REJECTED: %s"',
-        ]
-        missing = [needle for needle in required if needle not in controls_yaml]
-        assert not missing, f"Irrigation direct-wet gate coverage missing: {missing}"
+            "weekly_wall_feed_eligible",
+            "persist_weekly_and_sync",
+            "cancel_all(",
+            "irrig_state",
+            "id(irrig_queue)",
+            "water_controller_actuating",
+            "fert_controller_actuating",
+            "climate_wet_controller_actuating",
+        ):
+            assert gone not in controls_yaml, gone
+        # A drip run of the engine holds the water for climate mist and fog.
+        assert "const bool irrigation_water_conflict = irr_drip_active();" in controls_yaml
+        assert "bool irrigation_block = irrigation_water_conflict;" in controls_yaml
 
     def test_climate_wet_watchdog_covers_only_climate_owned_relays(
         self, controls_yaml: str, hardware_yaml: str
     ) -> None:
+        """#1160 (F5): the watchdog closes only climate misters the engine does not hold, and the
+        per-tick fertilizer offs are gone: the program's enables and the engine's runs decide."""
         wet_relays = {
             "south_wall_mister",
             "south_wall_mister_fertilized",
@@ -700,38 +701,45 @@ class TestActivityDirectWetGuards:
             "center_mister",
             "center_drips",
             "center_drips_fertilized",
+            "fertilizer_master_valve",
         }
         missing_hardware = [relay for relay in wet_relays if f"id: {relay}" not in hardware_yaml]
         assert not missing_hardware, f"Expected wet relay missing from hardware.yaml: {missing_hardware}"
 
         watchdog = controls_yaml.split("auto direct_wet_relay_watchdog", 1)[1].split("};", 1)[0]
-        climate_owned = {
-            "south_wall_mister",
-            "south_wall_mister_fertilized",
-            "west_wall_mister",
-            "west_wall_mister_fertilized",
-            "center_mister",
+        for relay, line in (("south_wall_mister", "L07"), ("west_wall_mister", "L09"), ("center_mister", "L04")):
+            assert f"irr_climate_close(id({relay}), verdify_irr::k{line});" in watchdog
+        assert ".turn_off();" not in watchdog
+        for engine_owned in (
+            "wall_drips",
+            "wall_drips_fertilized",
+            "center_drips",
             "center_drips_fertilized",
-        }
-        missing_watchdog = [relay for relay in climate_owned if f"id({relay}).turn_off();" not in watchdog]
-        assert not missing_watchdog, f"Direct-wet watchdog does not close relays: {missing_watchdog}"
-        for irrigation_owned in ("wall_drips", "wall_drips_fertilized", "center_drips"):
-            assert f"id({irrigation_owned}).turn_off();" not in watchdog
+            "south_wall_mister_fertilized",
+            "west_wall_mister_fertilized",
+            "fertilizer_master_valve",
+        ):
+            assert f"id({engine_owned})" not in watchdog
+        # No climate path writes a fertilizer relay's OFF every tick any more.
+        for relay in ("center_drips_fertilized", "wall_drips_fertilized", "fertilizer_master_valve"):
+            assert f"id({relay}).turn_off();" not in controls_yaml
 
-    def test_legacy_fert_day_masks_cannot_schedule_actuation(self, controls_yaml: str) -> None:
-        required = [
-            "WeeklyWallEligibilityInput eligibility",
-            "current_solar_phase",
-            "solar_day, 7u",
-            "weekly_wall_feed_eligible(eligibility, weekly_state, durations)",
-        ]
-        missing = [needle for needle in required if needle not in controls_yaml]
-        assert not missing, f"Weekly solar scheduler coverage missing: {missing}"
+    def test_legacy_schedule_globals_cannot_schedule_actuation(self, controls_yaml: str) -> None:
+        """#1160: schedules are the irrigation program's; no legacy schedule global or weekly
+        eligibility gate is read by the control path (the globals stay for their cfg readbacks
+        until #1162)."""
+        for gone in ("WeeklyWallEligibilityInput", "weekly_wall_feed_eligible", "solar_day, 7u"):
+            assert gone not in controls_yaml
         for retired_scheduler_field in (
             "irrig_wall_fert_days_mask",
             "irrig_wall_fert_every_n",
             "irrig_center_fert_days_mask",
             "irrig_center_fert_every_n",
+            "irrig_wall_duration_min",
+            "irrig_center_duration_min",
+            "irrig_wall_enabled",
+            "irrig_center_enabled",
+            "irrig_enabled",
         ):
             assert f"id({retired_scheduler_field})" not in controls_yaml
 
@@ -741,20 +749,26 @@ class TestActivityDirectWetGuards:
         assert not row.planner_pushable
         assert row.push_owner == "operator"
 
-    def test_wall_fert_is_automatic_wall_only_and_not_manually_queued(
-        self, controls_yaml: str, tunables_yaml: str
+    def test_fertilizer_runs_only_through_the_engine_grant(
+        self, controls_yaml: str, hardware_yaml: str, tunables_yaml: str
     ) -> None:
-        required = [
-            "WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED",
-            "WetZone::WALL_DRIP, WetChemistry::FERTILIZER",
-            "id(wall_drips_fertilized).turn_on();",
-            "id(fertilizer_master_valve).turn_on();",
-            "id(wall_drips_fertilized).turn_off();",
-            "id(fertilizer_master_valve).turn_off();",
-            "WALL IMMEDIATE CLEAN FLUSH",
-        ]
-        missing = [needle for needle in required if needle not in controls_yaml]
-        assert not missing, f"Automatic wall-only fertigation missing from controls.yaml: {missing}"
+        """#1160 (F5, D-IRP-14): every fertilizer line is a per-line enable in the program; its relay,
+        and L03, open only with the engine's grant, never unconditionally off and never from a button."""
+        for relay, line in (
+            ("wall_drips_fertilized", "L02"),
+            ("center_drips_fertilized", "L06"),
+            ("south_wall_mister_fertilized", "L08"),
+            ("west_wall_mister_fertilized", "L10"),
+            ("fertilizer_master_valve", "L03"),
+        ):
+            start = hardware_yaml.index(f"    id: {relay}\n")
+            end = hardware_yaml.find("\n  - platform:", start)
+            block = hardware_yaml[start:end]
+            guard = block.split("on_turn_on:", 1)[1].split("on_turn_off:", 1)[0]
+            assert f"if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::k{line}))) {{" in guard
+            assert f'ESP_LOGE("irrig","Blocked ungranted {relay} ON");' in guard
+            assert "Blocked disabled" not in block
+        assert "WALL IMMEDIATE CLEAN FLUSH" not in controls_yaml
         for retired_button in (
             "btn_wall_fert",
             "btn_center_fert",

@@ -1101,6 +1101,7 @@ def test_v3_wire_projection_retains_ideal_difference_and_separate_424_truth():
         "caller_algorithm",
         "previous_source_algorithm",
         "pre_zone_vpd_source_algorithm",
+        "pre_irrigation_engine_source_algorithm",
         "stale_sample",
         "arbitrary_sql",
         "changed_48",
@@ -1146,6 +1147,11 @@ def test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_polic
         # Retained source revision before the VD-43 zone VPD fallback stays historical.
         context["algorithm_revision"] = (
             "served-band-wire-v1:sha256:568ed4c2c1c1a5f65f738f09bce473cce74ed17e3eb01e6f838102679e2db36a"
+        )
+    elif mutation == "pre_irrigation_engine_source_algorithm":
+        # Retained source revision before the VD-45 irrigation engine wiring stays historical.
+        context["algorithm_revision"] = (
+            "served-band-wire-v1:sha256:66d873c41eba1ac7f97cddffd81df29726ffd7097241fb82590424d85b511bf5"
         )
     elif mutation == "stale_sample":
         context["sample_epoch_callback"]["value"] = str(int(OBSERVED_AT.timestamp()) - 31)

@@ -1,0 +1,120 @@
+# irrigation_engine.yaml — the irrigation engine on the controller (irrigation §5 F1-F5, F11, F14;
+# VD-45, #1160). The engine is lib/irrigation_program.h; the device glue (RTC block, NVS, relay
+# grants, publishing) is lib/irrigation_engine_esphome.h, the way policy_engine.yaml serves the
+# policy engine.
+#
+# Heap budget (#428): four api services with tight argument surfaces, three text sensors
+# published on change only (update_interval: never), static buffers (the 584 B staging record,
+# a 192 B chunk, a 256 B state text). No per-field entities: enables, flags and schedules are
+# not echoed, the program hash proves them.
+#
+# Services (called only by the ingestor's irrigation step, under the writer lease and fences):
+#   irr_program_begin(len, sha256_hex)  len must be 584; stores the expected hash, clears the record
+#   irr_program_chunk(offset, data_hex) at most 192 B, offset + n <= 584
+#   irr_program_commit()                decode; on success save to NVS, sync, run it from the next
+#                                       tick; on a reject keep the old program and show j=<token>
+#   irr_command(cmd, line, on_s, count, gap_s, prewet_s, flush_s)
+#                                       run | stop | clear_fault; line = device_idx, or 255 for all
+#
+# Published state (#1151's grammars, verdify_schemas/irrigation.py):
+#   irr_program_id  h=<16 hex> src=nvs, or h=0000000000000000 src=rom for the ROM default
+#   irr_state       the run on each manifold, due runs waiting, mister faults, VPD sources, the
+#                   last push reject; published when it changes and before a relay opens
+#   irr_events      the newest 8 outcomes from the RTC ring, when the newest sequence changes
+#
+# Every wet relay (L01-L10, hardware.yaml) opens only with its bit in irr_grant_mask, which
+# only the engine writes (F5). leak_detected is not an engine input (Q-05, F14).
+
+api:
+  services:
+    - service: irr_program_begin
+      variables:
+        len: int
+        sha256_hex: string
+      then:
+        - lambda: |-
+            irr_esp_program_begin(len, sha256_hex);
+
+    - service: irr_program_chunk
+      variables:
+        offset: int
+        data_hex: string
+      then:
+        - lambda: |-
+            irr_esp_program_chunk(offset, data_hex);
+
+    - service: irr_program_commit
+      then:
+        - lambda: |-
+            irr_esp_program_commit();
+
+    - service: irr_command
+      variables:
+        cmd: string
+        line: int
+        on_s: int
+        count: int
+        gap_s: int
+        prewet_s: int
+        flush_s: int
+      then:
+        - lambda: |-
+            irr_esp_command(cmd, line, on_s, count, gap_s, prewet_s, flush_s);
+
+text_sensor:
+  - platform: template
+    id: irr_program_id
+    name: "Irr Program ID"
+    icon: "mdi:water-sync"
+    update_interval: never
+
+  - platform: template
+    id: irr_state
+    name: "Irr State"
+    icon: "mdi:water-pump"
+    update_interval: never
+
+  - platform: template
+    id: irr_events
+    name: "Irr Events"
+    icon: "mdi:water-check"
+    update_interval: never
+
+interval:
+  # The engine tick (F1): every 5 s. The first run binds the relays, the text sensors,
+  # irr_grant_mask and the counter mirrors, and starts the engine (RTC block, NVS program and
+  # claims). The clock is America/Denver from SNTP; with no valid time nothing starts on schedule.
+  - interval: 5s
+    then:
+      - lambda: |-
+          verdify_irr::IrrEspBindings b{};
+          b.relay[verdify_irr::kL01] = id(wall_drips);
+          b.relay[verdify_irr::kL02] = id(wall_drips_fertilized);
+          b.relay[verdify_irr::kL03] = id(fertilizer_master_valve);
+          b.relay[verdify_irr::kL04] = id(center_mister);
+          b.relay[verdify_irr::kL05] = id(center_drips);
+          b.relay[verdify_irr::kL06] = id(center_drips_fertilized);
+          b.relay[verdify_irr::kL07] = id(south_wall_mister);
+          b.relay[verdify_irr::kL08] = id(south_wall_mister_fertilized);
+          b.relay[verdify_irr::kL09] = id(west_wall_mister);
+          b.relay[verdify_irr::kL10] = id(west_wall_mister_fertilized);
+          b.relay[verdify_irr::kL11] = id(fog_rly);
+          b.program_id = id(irr_program_id);
+          b.state = id(irr_state);
+          b.events = id(irr_events);
+          b.grant_mask = &id(irr_grant_mask);
+          b.mister_water_today = &id(mister_water_today);
+          b.runtime_mister_ms[0] = &id(runtime_mister_center_ms);
+          b.runtime_mister_ms[1] = &id(runtime_mister_south_ms);
+          b.runtime_mister_ms[2] = &id(runtime_mister_west_ms);
+          b.runtime_wall_drip_ms = &id(runtime_wall_drip_ms);
+          b.runtime_center_drip_ms = &id(runtime_center_drip_ms);
+          b.runtime_fert_master_ms = &id(runtime_fert_master_ms);
+          b.cnt_drip_wall_today = &id(cnt_drip_wall_today);
+          b.cnt_drip_center_today = &id(cnt_drip_center_today);
+          auto now = id(sntp_time).now();
+          const bool clock_valid = now.is_valid() && !id(sntp_failed);
+          const uint32_t epoch = clock_valid ? uint32_t(now.timestamp) : 0u;
+          const int utc_offset_min =
+              clock_valid ? verdify_irr::irr_utc_offset_min(now.hour, now.minute, now.second, epoch) : 0;
+          irr_esp_tick(b, clock_valid, epoch, utc_offset_min);
