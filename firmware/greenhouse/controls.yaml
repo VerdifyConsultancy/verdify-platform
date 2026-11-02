@@ -1272,8 +1272,8 @@ interval:
               const uint32_t PULSE_GAP_MS =
                   uint32_t(pol(verdify_policy::kPF_mister_pulse_gap_s, id(mister_pulse_gap_s))) * 1000UL;
 
-              // Center mist is climate/VPD-only. Every zone uses the base pulse
-              // cadence; there is no dawn or midday watering substitution.
+              // Climate VPD pulses: every zone uses the base pulse cadence; there is no
+              // dawn or midday watering substitution (schedules are the engine's, #1161).
               ctl_state.center_burst = CENTER_BURST_NONE;
               auto pulse_on_ms_for  = [&](int) -> uint32_t { return PULSE_ON_MS; };
               auto pulse_gap_ms_for = [&](int) -> uint32_t { return PULSE_GAP_MS; };

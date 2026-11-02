@@ -24,7 +24,7 @@ FIRMWARE_SOURCES = {
     # arbiter, the shared fog force-off, the D-IRP-19 watchdog, no leak lock);
     # solar/band expressions are unchanged. New captures bind this source;
     # historical receipts stay frozen.
-    "firmware/greenhouse/controls.yaml": "c713c8b182634f797ef3e6d3d93bc23e97d0e8eb946df9568a514abd04e0d53a",
+    "firmware/greenhouse/controls.yaml": "3a262092cf6b3ba077bd5147e80d5523876f3b1870dc85579c5914c658c09394",
 }
 SERIES = ("temp_low", "temp_high", "temp_target", "vpd_low", "vpd_high", "vpd_target")
 ANCHORS = ("sr", "sm", "ss", "mid")

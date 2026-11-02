@@ -354,7 +354,7 @@ struct ManualOverrides {
     bool fans_active;        // FANS button (or legacy manual_fan_active)
     bool vent_bypass_active; // VENT-BYPASS button (or legacy vent_lock_active)
     bool humid_active;       // HUMID button (or legacy manual_fog_active)
-    bool fog_safety_blocked; // a real fog safety block (dew/RH/temp/time/leak) is up
+    bool fog_safety_blocked; // a real fog safety block (dew/RH/temp/time) is up
 };
 
 // Which relays the override FORCE-applies (force_on bypasses relay min-off dwell

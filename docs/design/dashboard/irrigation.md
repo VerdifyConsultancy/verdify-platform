@@ -439,7 +439,8 @@ points the design left open, as the implementation settles them:
   `irr_rank_vpd_zone()` picks: the best owner rank (`zone_priority_*`, center 1) among the zones above
   their VPD band target, and when none is (the house-level stress asked for the pulse) the best-ranked
   allowed zone. With one zone allowed the legacy stress score runs as before; it can only pick that zone,
-  and it keeps `mister_center_penalty` a live policy consumer. `sw_arbiter_zone_enabled` is read nowhere.
+  and it keeps `mister_center_penalty` a live policy consumer. No control path reads
+  `sw_arbiter_zone_enabled`; only its `cfg_arbiter_zone_enabled` readback does.
 - **Scheduled pulses at the boundary.** The engine's manifold arbitration (§4.8, VD-44) already
   alternates VPD and window pulses, puts VPD first in an emergency and serves both with one window pulse
   on the same zone. The climate path now asks it for any zone's grant at each pulse boundary
