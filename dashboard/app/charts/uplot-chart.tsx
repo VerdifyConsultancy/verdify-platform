@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type uPlot from "uplot";
 import uplotStyles from "uplot/dist/uPlot.min.css?url";
 import { TIME_ZONE } from "../lib/format";
@@ -87,6 +87,21 @@ export function useStableArray<T>(items: readonly T[] | undefined, parts: (item:
   return useMemo(() => items, [key]);
 }
 
+/**
+ * A chart's own "Reset zoom": whether it is zoomed, the UPlotChart callbacks that track it, and the reset, which puts
+ * every chart on the sync key back to the window (only this one without a key).
+ */
+export function useZoomReset(range: XRange, syncKey?: string) {
+  const plot = useRef<uPlot | null>(null);
+  const [zoomed, setZoomed] = useState(false);
+  return {
+    zoomed,
+    onZoom: setZoomed,
+    onPlot: (next: uPlot | null) => { plot.current = next; },
+    reset: () => (syncKey ? resetZoom(syncKey, range) : plot.current?.setScale("x", { min: range.from, max: range.to })),
+  };
+}
+
 /** What a chart's options builder gets once uPlot has loaded. */
 export type ChartEnv = {
   UPlot: typeof uPlot;
@@ -114,6 +129,8 @@ export type UPlotChartProps = {
   syncKey?: string;
   /** Changes when hook-drawn marks change, so the chart re-ranges and repaints without new data. */
   marks?: unknown;
+  /** Drag-x zoom on fine pointers; off for charts with no zoom to reset, such as the minutes bars. Default true. */
+  zoom?: boolean;
   onZoom?: (zoomed: boolean) => void;
   onPlot?: (plot: uPlot | null) => void;
 };
@@ -145,7 +162,7 @@ export function UPlotChart(props: UPlotChartProps) {
       const { options, data, xRange, syncKey, className } = latest.current;
       shown.current = xRange;
       let xWindow: [number, number] = [xRange.from, xRange.to];
-      const fine = finePointer();
+      const fine = finePointer() && latest.current.zoom !== false;
       const env: ChartEnv = { UPlot, colors: readColors(), px: () => UPlot.pxRatio || 1, fine, xWindow: () => xWindow };
       const built = options(env);
       const setScale = (self: uPlot, key: string) => {
