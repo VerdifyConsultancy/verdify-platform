@@ -48,13 +48,14 @@ ALTER ROLE verdify_dashboard_runtime_login SET idle_in_transaction_session_timeo
 -- 276's identity checks plus the guardrails; in place of 276's per-duty denials,
 -- this login's: no write on setpoint_changes (the NOTIFY fast path past the
 -- dispatcher's fences) or setpoint_plan, and nothing on the experiment tables.
+-- A login with no role settings attests false, never NULL.
 CREATE FUNCTION verdify_dashboard_runtime.fn_attest_login() RETURNS boolean
  LANGUAGE sql STABLE SECURITY INVOKER SET search_path=pg_catalog,public,pg_temp AS $attest$
  SELECT current_user=session_user AND current_user='verdify_dashboard_runtime_login'
  AND r.rolcanlogin AND r.rolinherit AND NOT r.rolsuper AND NOT r.rolcreatedb
  AND NOT r.rolcreaterole AND NOT r.rolreplication AND NOT r.rolbypassrls
  AND r.rolconnlimit=8
- AND r.rolconfig @> ARRAY['statement_timeout=10s','idle_in_transaction_session_timeout=15s']
+ AND coalesce(r.rolconfig @> ARRAY['statement_timeout=10s','idle_in_transaction_session_timeout=15s'],false)
  AND NOT has_database_privilege(current_user,current_database(),'CREATE')
  AND NOT has_schema_privilege(current_user,'public','CREATE')
  AND NOT has_schema_privilege(current_user,'verdify_dashboard_runtime','CREATE')

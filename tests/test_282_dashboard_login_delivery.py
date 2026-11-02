@@ -201,9 +201,10 @@ def test_attestation_keeps_276_identity_checks_and_this_logins_denials():
     start = old.index("CREATE FUNCTION verdify_writer_watchdog_runtime.fn_attest_login()")
     watchdog = old[start : old.index("$attest$;", start)].replace("verdify_writer_watchdog_runtime", DUTY)
     identity, denials = ATTEST.split(" AND NOT has_table_privilege", 1)
+    # The guardrails; coalesce keeps a login with no role settings false, never NULL.
     guardrails = (
         " AND r.rolconnlimit=8\n"
-        " AND r.rolconfig @> ARRAY['statement_timeout=10s','idle_in_transaction_session_timeout=15s']\n"
+        " AND coalesce(r.rolconfig @> ARRAY['statement_timeout=10s','idle_in_transaction_session_timeout=15s'],false)\n"
     )
     expected = watchdog.split(" AND NOT has_table_privilege", 1)[0]
     assert identity == expected.replace(

@@ -103,6 +103,7 @@ BROKEN = (
     f"ALTER ROLE {LOGIN} CONNECTION LIMIT 20",
     f"ALTER ROLE {LOGIN} RESET statement_timeout",
     f"ALTER ROLE {LOGIN} SET idle_in_transaction_session_timeout = '1h'",
+    f"ALTER ROLE {LOGIN} RESET ALL",  # no role settings left: false, not NULL
 )
 
 

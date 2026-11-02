@@ -413,7 +413,7 @@ def sealed_sql_280():
 DASHBOARD_LOGIN_MIGRATION = (
     282,
     "282-dashboard-runtime-login.sql",
-    "de4c8af5d54786c13232b5bfd3185799a588bedb5e769df6cdcf0952a5bd53d4",
+    "4df20310b951b0122313469bae5e3218b7b5679aec567ad69e44a4006a23fee5",
 )
 # Pending VD-66 measurement: 282 moves no seal, so its profile is its
 # predecessor's (281's qualified successor). All-zero until 281 merges and the

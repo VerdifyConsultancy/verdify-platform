@@ -230,7 +230,7 @@ SUCCESSOR_280_MCP_DIGEST = "685212a93b79c980c422db5baacb8f61309af392a9a7a8e9a46b
 # production transaction; until then all-zero placeholders, which no live
 # boundary or receipt can equal. Then they are SUCCESSOR_281's.
 SUCCESSOR_282 = "282-dashboard-runtime-login.sql"
-SUCCESSOR_282_SHA256 = "de4c8af5d54786c13232b5bfd3185799a588bedb5e769df6cdcf0952a5bd53d4"
+SUCCESSOR_282_SHA256 = "4df20310b951b0122313469bae5e3218b7b5679aec567ad69e44a4006a23fee5"
 SUCCESSOR_282_DIGESTS = {
     "verdify_api_runtime_login": "0000000000000000000000000000000000000000000000000000000000000000",
     "verdify_ingestor_runtime_login": "0000000000000000000000000000000000000000000000000000000000000000",
