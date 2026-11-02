@@ -56,16 +56,16 @@ together or not at all.
 
 ```python
 result = await activity.recorded_write(
-    conn,                       # outside any transaction: it opens its own
-    actor,                      # from the session or the token, never from arguments
-    op="API-10",                # the REST operation id; an MCP tool passes its REST twin's id
-    action="setting.write",     # the activity action (architecture §9)
+    conn,  # outside any transaction: it opens its own
+    actor,  # from the session or the token, never from arguments
+    op="API-10",  # the REST operation id; an MCP tool passes its REST twin's id
+    action="setting.write",  # the activity action (architecture §9)
     target=param,
-    request=body,               # every input of `op` that `target` does not carry, as validated JSON (or its model)
-    request_id=idempotency_key, # Idempotency-Key (REST) or request_id (MCP); None when not sent
-    reason=reason,              # at most 500 characters
-    perform=perform,            # async (conn) -> (value, detail): validate and write the domain row
-    load=load,                  # async (conn, ActivityLogRow) -> value: read the stored object back
+    request=body,  # every input of `op` that `target` does not carry, as validated JSON (or its model)
+    request_id=idempotency_key,  # Idempotency-Key (REST) or request_id (MCP); None when not sent
+    reason=reason,  # at most 500 characters
+    perform=perform,  # async (conn) -> (value, detail): validate and write the domain row
+    load=load,  # async (conn, ActivityLogRow) -> value: read the stored object back
 )
 ```
 
