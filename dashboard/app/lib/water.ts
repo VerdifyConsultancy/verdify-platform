@@ -243,15 +243,35 @@ export function todayWords(line: Pick<IrrigationLine, "today" | "daily_cap_min">
   return `Today ${line.daily_cap_min > 0 ? ofWords(minutes, line.daily_cap_min, "min") : `${whole(minutes)}${NBSP}min`}`;
 }
 
+/** Outcomes of occurrences that never opened a valve (`open_s` 0): never the outcome of a run that watered. */
+const DRY_OUTCOMES: readonly string[] = ["skipped", "missed", "cap"];
+/** How far before the last water's start its own outcome may be stamped (the ledger's clock against the relay edge's). */
+const SAME_RUN_SLACK_MS = 2 * 60_000;
 /**
- * When the line last watered and how that ended: "Last water Fri 07:31, 12 min · ok", the outcome's reason after it;
- * with an outcome but no water yet, "No water recorded · last Sun 08:35 · skipped · line paused".
+ * True when `last_outcome` is the last water's own: an outcome of a run that watered, stamped no earlier than that run
+ * began. `last_water` (the newest run that opened a valve, VPD episodes included) and `last_outcome` (the newest ended
+ * ledger row) are separate facts, so a later skip or an older scheduled run's outcome is never pinned on the last water.
+ */
+function outcomeOfLastWater(water: NonNullable<IrrigationLine["last_water"]>, outcome: NonNullable<IrrigationLine["last_outcome"]>): boolean {
+  if (DRY_OUTCOMES.includes(outcome.outcome)) return false;
+  const start = Date.parse(water.at);
+  const at = Date.parse(outcome.at);
+  return Number.isFinite(start) && Number.isFinite(at) && at >= start - SAME_RUN_SLACK_MS;
+}
+
+/**
+ * When the line last watered and how its last run ended: "Last water Fri 07:31, 12 min · ok" when that outcome is the
+ * last water's own, the outcome's reason after it. An outcome of another run reads with its own time: "Last water Fri
+ * 07:31, 12 min · last run Mon 07:35 · skipped · line paused", or with no water yet "No water recorded · last run Sun
+ * 08:35 · skipped · line paused".
  */
 export function lastWaterWords(line: Pick<IrrigationLine, "last_water" | "last_outcome">, today: string): string {
-  const outcome = line.last_outcome ? [words("run_outcome", line.last_outcome.outcome), ...(line.last_outcome.reason ? [line.last_outcome.reason] : [])] : [];
-  if (line.last_water) return [`Last water ${whenWords(line.last_water.at, today)}, ${formatValue(line.last_water.open_s / 60, "min")}`, ...outcome].join(" · ");
-  if (line.last_outcome) return ["No water recorded", `last ${whenWords(line.last_outcome.at, today)}`, ...outcome].join(" · ");
-  return "No water recorded";
+  const { last_water: water, last_outcome: outcome } = line;
+  const ended = outcome ? [words("run_outcome", outcome.outcome), ...(outcome.reason ? [outcome.reason] : [])] : [];
+  const lastRun = outcome ? [`last run ${whenWords(outcome.at, today)}`, ...ended] : [];
+  if (!water) return ["No water recorded", ...lastRun].join(" · ");
+  const head = `Last water ${whenWords(water.at, today)}, ${formatValue(water.open_s / 60, "min")}`;
+  return [head, ...(outcome && outcomeOfLastWater(water, outcome) ? ended : lastRun)].join(" · ");
 }
 
 /**
@@ -419,16 +439,25 @@ export const RUNS_MAX_DAYS = 31;
 export type RunsWindow = { readonly from: string; readonly to: string; readonly fromAt: string; readonly toAt: string; readonly clamped: boolean };
 /**
  * The ledger's window from the URL's `from` and `to` local days (To inclusive): the last 7 days by default, at most 31
- * days (a longer one keeps its end and is cut to 31 days, `clamped`). `fromAt` and `toAt` are the local midnights
- * API-IRR-11 takes (to exclusive), stable for the whole day so the read keeps one key.
+ * days (a longer one keeps its end and is cut, `clamped`). `fromAt` and `toAt` are the local midnights API-IRR-11 takes
+ * (to exclusive), stable for the whole day so the read keeps one key. The API counts 31 days of time, so 31 local days
+ * that hold the fall-back day (31 days and an hour) keep 30.
  */
 export function runsWindow(fromParam: string | null, toParam: string | null, today: string): RunsWindow {
   const to = validDate(toParam) ? toParam : today;
+  const toAt = localDayStart(dateShift(to, 1));
   let from = validDate(fromParam) ? fromParam : dateShift(to, -6);
   if (from > to) from = to;
-  const clamped = daysApart(to, from) + 1 > RUNS_MAX_DAYS;
-  if (clamped) from = dateShift(to, -(RUNS_MAX_DAYS - 1));
-  return { from, to, fromAt: localDayStart(from), toAt: localDayStart(dateShift(to, 1)), clamped };
+  let clamped = false;
+  if (daysApart(to, from) + 1 > RUNS_MAX_DAYS) {
+    from = dateShift(to, -(RUNS_MAX_DAYS - 1));
+    clamped = true;
+  }
+  if (Date.parse(toAt) - Date.parse(localDayStart(from)) > RUNS_MAX_DAYS * DAY_MS) {
+    from = dateShift(from, 1);
+    clamped = true;
+  }
+  return { from, to, fromAt: localDayStart(from), toAt, clamped };
 }
 /** The ledger's filters from the URL: a line L01–L11, a cause and an outcome the API knows; anything else is dropped. */
 export function runsFilters(search: URLSearchParams): { line?: string; cause?: (typeof CAUSES)[number]; outcome?: (typeof OUTCOMES)[number] } {

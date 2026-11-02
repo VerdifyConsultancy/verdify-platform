@@ -45,6 +45,14 @@ test("the next 7 days: each occurrence in its line × day cell with its time, am
   expect([...table.querySelectorAll("tbody th")].map((cellNode) => text(cellNode)).filter((label) => label.includes("Reserved"))).toEqual(["L05 Drip • Center Reserved", "L06 Drip • Center (Fert.) Reserved"]);
 });
 
+test("a reserved line reads Reserved only while it is disabled, as its card does", () => {
+  const served = set("schedules-paused");
+  const lines = (served["API-IRR-01"] as IrrigationStatus).lines.map((line) => (line.line_id === "L05" ? { ...line, enabled: true } : line));
+  renderUi(<ScheduleWeek agenda={served["API-IRR-02"] as ScheduleAgenda} lines={lines} past={false} today={TODAY} now={NOW} />);
+  const reserved = [...screen.getByRole("table").querySelectorAll("tbody th")].map((cell) => text(cell)).filter((label) => label.includes("Reserved"));
+  expect(reserved).toEqual(["L06 Drip • Center (Fert.) Reserved"]);
+});
+
 test("the last 7 days: a past L02 block is hatched and reads \"skipped · line paused\"; past runs read their outcome", () => {
   const { days, blocks } = week("schedules-paused", true);
   expect(days).toEqual(["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01"]);
@@ -80,7 +88,9 @@ test("at phone width a day switcher shows one day for every line, with no horizo
   const phone = css.slice(css.indexOf("@media(max-width:860px){\n  .water-bar"));
   expect(phone).toContain(".week-days{display:block");
   expect(phone).toContain(".week-table [data-day]:not(.is-day){display:none}");
-  expect(phone).toContain(".week-table{min-width:0}");
+  // The table's min-width is set under .table-wrap, which outranks .table-wrap table's min-width:100%.
+  expect(css).toContain(".table-wrap .week-table{width:100%;min-width:52rem}");
+  expect(phone).toContain(".table-wrap .week-table{min-width:0}");
   expect(weekDayLabel("2026-11-01")).toBe("Sun 11/1");
 });
 

@@ -343,7 +343,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--fault)}
   .app-page .site-footer{padding-bottom:calc(3.5rem + env(safe-area-inset-bottom))}
 }
 
-/* Water (SCR-04, design system §4.6): the tabs with Stop all water (one sticky row under the header at phone width, where Stop reads "■ Stop all"), the program banner, the board's limits strip, mister zones and line cards, the schedule week with its phone day switcher, and History's controls. */
+/* Water (SCR-04, design system §4.6): the tabs with Stop all water (one sticky row under the header at phone width, where Stop reads "■ Stop all"; on a phone too narrow for both, Stop wraps below the tabs inside that row, never widening the page), the program banner, the board's limits strip, mister zones and line cards, the schedule week with its phone day switcher, and History's controls. */
 .water-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem 1rem;margin:0 0 .75rem}
 .water-tabs .chips{flex-wrap:nowrap}
 .water-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
@@ -373,7 +373,8 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--fault)}
 .week-head{align-items:center}
 .week-count{margin:0;font-weight:600}
 .week-days{display:none}
-.week-table{table-layout:fixed;min-width:52rem}
+.week-table{table-layout:fixed}
+.table-wrap .week-table{width:100%;min-width:52rem}
 .week-table th[scope=row]{width:9.5rem}
 .week-table td,.week-table th{padding:.4rem}
 .week-table thead .week-today{box-shadow:inset 0 2px 0 var(--forest)}
@@ -391,12 +392,12 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--fault)}
 .history-controls{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem}
 .chips-label{font-size:.8rem;font-weight:600;color:var(--muted)}
 @media(max-width:860px){
-  .water-bar{position:sticky;top:calc(4.3rem + 1px);z-index:5;flex-wrap:nowrap;margin-inline:calc(-1*var(--gutter));padding:.4rem var(--gutter);background:#fff;border-bottom:1px solid var(--line)}
+  .water-bar{position:sticky;top:calc(4.3rem + 1px);z-index:5;margin-inline:calc(-1*var(--gutter));padding:.4rem var(--gutter);background:#fff;border-bottom:1px solid var(--line)}
   .water-tabs .chips a{padding:0 .6rem}
   .stop-all{flex:none;padding-inline:.6rem}
   .stop-all-rest{display:none}
   .week-days{display:block;margin:0 0 .5rem}
-  .week-table{min-width:0}
+  .table-wrap .week-table{min-width:0}
   .week-table th[scope=row]{width:40%}
   .week-table [data-day]:not(.is-day){display:none}
 }

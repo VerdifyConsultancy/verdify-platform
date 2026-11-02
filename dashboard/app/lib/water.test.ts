@@ -122,8 +122,20 @@ test("a card's words: last water and its outcome, today against the cap, the nex
   const base = status();
   expect(plain(lastWaterWords(line(base, "L04"), TODAY))).toBe("Last water today 06:58, 14 min · ok");
   expect(lastWaterWords(line(base, "L05"), TODAY)).toBe("No water recorded");
-  expect(plain(lastWaterWords({ last_water: null, last_outcome: { outcome: "skipped", at: "2026-11-01T15:35:00Z", reason: "line paused by jason" } }, TODAY)))
-    .toBe("No water recorded · last Sun 08:35 · skipped · line paused by jason");
+  const skipped = { outcome: "skipped", at: "2026-11-01T15:35:00Z", reason: "line paused by jason" } as const;
+  expect(plain(lastWaterWords({ last_water: null, last_outcome: skipped }, TODAY))).toBe("No water recorded · last run Sun 08:35 · skipped · line paused by jason");
+  // last_water and last_outcome are separate facts: an outcome is the last water's own only when it is a run that
+  // watered, stamped no earlier than that water began. A later skip, or an older run's outcome beside a newer VPD
+  // episode, reads with its own time.
+  const friday = { at: "2026-10-30T13:31:00Z", open_s: 720, pulses: null, cause: "schedule" } as const;
+  expect(plain(lastWaterWords({ last_water: friday, last_outcome: { outcome: "stopped", at: "2026-10-30T13:43:00Z", reason: "stopped by a command" } }, TODAY)))
+    .toBe("Last water Fri 07:31, 12 min · stopped · stopped by a command");
+  expect(plain(lastWaterWords({ last_water: friday, last_outcome: skipped }, TODAY))).toBe("Last water Fri 07:31, 12 min · last run Sun 08:35 · skipped · line paused by jason");
+  expect(plain(lastWaterWords({ last_water: friday, last_outcome: { outcome: "missed", at: "2026-10-30T13:45:00Z", reason: "no clock" } }, TODAY)))
+    .toBe("Last water Fri 07:31, 12 min · last run Fri 07:45 · missed · no clock");
+  const misted = { at: denver("06:58"), open_s: 840, pulses: 14, cause: "vpd" } as const;
+  expect(plain(lastWaterWords({ last_water: misted, last_outcome: { outcome: "short", at: "2026-10-30T20:10:00Z", reason: "RH limit" } }, TODAY)))
+    .toBe("Last water today 06:58, 14 min · last run Fri 14:10 · short · RH limit");
   expect([todayWords(line(base, "L04")), todayWords(line(base, "L11")), todayWords({ daily_cap_min: 60, today: { minutes: null } })].map(plain))
     .toEqual(["Today 14 of 120 min", "Today 6 min", "Today — of 60 min"]);
   expect(plain(nextRunWords({ line_id: "L01", slot_id: 11, start_at: "2026-11-04T14:35:00Z", minutes: 12 }, TODAY) ?? "")).toBe("next Wed 07:35 · 12 min");
@@ -207,6 +219,12 @@ test("the ledger's window: the last 7 days by default, To inclusive, at most 31 
   expect(runsWindow("2026-09-01", "2026-10-31", TODAY)).toMatchObject({ from: "2026-10-01", to: "2026-10-31", clamped: true });
   expect(runsWindow("2026-11-02", "2026-10-30", TODAY)).toMatchObject({ from: "2026-10-30", to: "2026-10-30" });
   expect(runsWindow("garbage", "2026-13-40", TODAY)).toMatchObject({ from: "2026-10-27", to: TODAY });
+  // 31 local days that hold the fall-back day (2026-11-01, 25 h) are 31 days and an hour: the window keeps 30, so
+  // API-IRR-11 never refuses it as longer than 31 days. 31 days that do not hold it stay 31.
+  const fallBack = runsWindow("2026-10-05", "2026-11-04", "2026-11-04");
+  expect(fallBack).toEqual({ from: "2026-10-06", to: "2026-11-04", fromAt: "2026-10-06T06:00:00.000Z", toAt: "2026-11-05T07:00:00.000Z", clamped: true });
+  expect(Date.parse(fallBack.toAt) - Date.parse(fallBack.fromAt)).toBeLessThanOrEqual(31 * 86_400_000);
+  expect(runsWindow("2026-11-05", "2026-12-05", "2026-12-05")).toMatchObject({ from: "2026-11-05", clamped: false });
   expect(runsFilters(new URLSearchParams("line=L01&cause=run_now&outcome=ok"))).toEqual({ line: "L01", cause: "run_now", outcome: "ok" });
   expect(runsFilters(new URLSearchParams("line=L12&cause=rain&outcome=great"))).toEqual({});
 });

@@ -85,7 +85,10 @@ test("the board shows every line L01–L11: enabled, state in words, last water,
     "Idle", expect.stringMatching(/^Last water Fri \d\d:\d\d, 12 min · ok$/), "Today 0 of 60 min", "next Wed 07:35 · 12 min", "No check recorded",
   ]);
   expect([...card("L02").querySelectorAll(":scope > p")].map((node) => text(node))).toContain("next Sun 07:35 · 5 min");
-  expect(text(card("L02").querySelector(".line-subrow"))).toBe("Fert master L03 · opens the injector line from the tank with each featureDisabled · Today 0 min".replace("featureDisabled", "feedDisabled"));
+  // The sub-row's two paragraphs, joined without a space by text(): what L03 does, then its state and today's minutes.
+  expect([...card("L02").querySelectorAll(".line-subrow p")].map((node) => text(node))).toEqual([
+    "Fert master L03 · opens the injector line from the tank with each feed", "Disabled · Today 0 min",
+  ]);
   expect(cardText("L04", ".line-state")).toBe("Idle");
   expect([...card("L04").querySelectorAll(":scope > p")].map((node) => text(node))).toEqual(expect.arrayContaining(["Last water today 06:58, 14 min · ok", "Today 14 of 120 min", "next Tue 06:50 · 8 min"]));
   for (const id of ["L05", "L06"]) expect(cardText(id, ".line-card-head")).toMatch(/Disabled Reserved$/);

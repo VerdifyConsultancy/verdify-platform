@@ -59,11 +59,11 @@ export type ScheduleWeekProps = {
 };
 
 /**
- * ScheduleWeek (design system §4.6): rows L01, L02 and L04–L10 (L05 and L06 marked reserved), columns today and the next
- * six days, or the seven before today. Each API-IRR-02 occurrence sits in its line × local-day cell, joined to its
- * schedule by `slot_id`: start time, "12m" or "8×60s", FERT on a fertilizer line, MANUAL or "Iris may adjust"; one that
- * will not run is hatched with why, and a past one carries its outcome word. At phone width a day switcher shows one
- * day for every line.
+ * ScheduleWeek (design system §4.6): rows L01, L02 and L04–L10 (L05 and L06 marked reserved while disabled), columns
+ * today and the next six days, or the seven before today. Each API-IRR-02 occurrence sits in its line × local-day cell,
+ * joined to its schedule by `slot_id`: start time, "12m" or "8×60s", FERT on a fertilizer line, MANUAL or "Iris may
+ * adjust"; one that will not run is hatched with why, and a past one carries its outcome word. At phone width a day
+ * switcher shows one day for every line.
  */
 export function ScheduleWeek({ agenda, lines = [], past, today, now, views, actions }: ScheduleWeekProps) {
   const headingId = useId();
@@ -99,8 +99,10 @@ export function ScheduleWeek({ agenda, lines = [], past, today, now, views, acti
           <tbody>{SCHEDULE_LINES.map((id) => {
             const line = byLine.get(id);
             const kind = line?.kind ?? lineById(id)?.kind;
+            // Reserved while still disabled, as the line cards say (Round 2b E); the register's L05 and L06 without the lines.
+            const reserved = line ? line.reserved && !line.enabled : id === "L05" || id === "L06";
             return <tr key={id} data-line={id}>
-              <th scope="row">{id}{line && <> {line.name}</>}{(line?.reserved ?? (id === "L05" || id === "L06")) && <> <span className="tag tag-muted">Reserved</span></>}</th>
+              <th scope="row">{id}{line && <> {line.name}</>}{reserved && <> <span className="tag tag-muted">Reserved</span></>}</th>
               {days.map((day) => {
                 const blocks = cells.get(`${id}|${day}`) ?? [];
                 return <td key={day} data-day={day} className={dayClass(day)}>
