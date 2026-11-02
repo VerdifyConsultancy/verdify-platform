@@ -223,6 +223,7 @@ $PY -m pytest -q -rs \
   tests/test_grafana_manifest_security.py tests/test_grafana_saved_public.py tests/test_278_grafana_delivery.py \
   tests/test_ha_gap_backfill_runtime_boundary.py \
   tests/test_ha_light_writer_boundary.py \
+  tests/test_hydro_probe.py \
   tests/test_ingestor_setpoint_placement.py \
   tests/test_ingestor_gap_snapshot.py \
   tests/test_source_spool.py \

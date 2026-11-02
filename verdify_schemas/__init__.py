@@ -97,6 +97,7 @@ from .external import (
     HAEntityState,
     OpenMeteoForecastResponse,
     OpenMeteoHourly,
+    TuyaDeviceStatus,
 )
 from .forecast import ForecastHour
 from .forecast_ops import ForecastActionLog, ForecastActionRule, ForecastActionType
@@ -560,6 +561,7 @@ __all__ = [
     "Treatment",
     "TreatmentCreate",
     "TunableParameter",
+    "TuyaDeviceStatus",
     "UtilityCategory",
     "UtilityCost",
     "VaultFrontmatter",
