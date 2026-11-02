@@ -232,7 +232,8 @@ test("each named fixture serves what the table says", () => {
   // before-engine serves a site cap saved before the engine, requested with no_engine since that write.
   const engineless = set("before-engine");
   expect(engineless["API-09"].items.find((row: Body) => row.param === "mister_daily_volume_max_gal")).toMatchObject({
-    state: "requested", readback: null, desired: { value: 300, manual: true, state: "requested", state_reason: { code: "no_engine", since: "2026-11-02T16:30:00.000Z" }, created_at: "2026-11-02T16:30:00.000Z" },
+    state: "requested", readback: { value: null, observed_at: null, reason: "no irrigation program on the controller yet" },
+    desired: { value: 300, manual: true, state: "requested", state_reason: { code: "no_engine", since: "2026-11-02T16:30:00.000Z" }, created_at: "2026-11-02T16:30:00.000Z" },
   });
   expect(engineless["API-17"].items).toEqual(expect.arrayContaining([expect.objectContaining({ action: "setting.write", target: "mister_daily_volume_max_gal", state: "requested" })]));
   // program-rev-42 is the base's program even after before-engine: the site caps and every line confirmed inside it.

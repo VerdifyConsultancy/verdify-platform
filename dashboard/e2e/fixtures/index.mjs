@@ -2,7 +2,9 @@
 /**
  * The fixture registry (VD-02). `fixture(name)` returns the response set per operationId: what each operation
  * answers under that fixture, for its example request (`EXAMPLES`). A list of names applies in order over `in-band`.
- * Vitest imports it directly; Playwright selects the same fixtures through the fixture API's `POST /__control`.
+ * Vitest imports it directly; Playwright selects the same fixtures through the fixture API's `POST /__control`. The
+ * base API-09 response is `settings.json`, rendered at test time from the tunable registry by `pnpm fixtures:settings`
+ * (VD-12), which `pnpm test` runs first.
  */
 import { EXAMPLES, OPERATION_IDS, answer } from "./operations.mjs";
 import { FIXTURES, buildWorld } from "./world.mjs";
