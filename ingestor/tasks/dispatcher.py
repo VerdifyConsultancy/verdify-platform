@@ -3,15 +3,20 @@
 Behaviour-preserving extraction; bodies are byte-identical to the
 original module. The tasks package __init__ re-exports the public
 surface so every `from tasks import X` still resolves.
+
+Plain convergence (VD-62): an ordinary pass sends at most
+``MAX_RECONNECT_COMMANDS`` commands, oldest difference first, and wakes the
+next pass for the rest. It never stages, waits for an approval file or holds
+on halted-run custody; only the C1 qualification overlay still stages.
 """
 
 from entity_map import CFG_READBACK_MAP, SETPOINT_MAP
 from esp32_push import (
     DeviceCommandOutcome,
     LifecyclePersistenceError,
+    _experiment_hold_failure,
     delivery_failure_retryable,
     delivery_transition_prior_statuses,
-    device_writes_enabled,
     preserved_terminal_status,
     push_to_esp32_detailed,
 )
@@ -24,6 +29,7 @@ from verdify_schemas.setting_values import (
     readback_values_equivalent,
     within_relative_deadband,
 )
+from verdify_schemas.telemetry import SystemStateRow
 
 from . import band_anchors, bounded_reconcile, c1_overlay, drift_probe
 from ._common import (
@@ -74,6 +80,7 @@ from ._common import (
     SetpointChange,
     ValidationError,
     _last_pushed,
+    _last_sent_at,
     asyncio,
     asyncpg,
     build_validation_failed_envelope,
@@ -102,6 +109,15 @@ _RECONNECT_SAFETY_CANDIDATES = (
 _CURRENT_READBACK_PARAMS = frozenset(CFG_READBACK_MAP.values()) | frozenset(SETPOINT_MAP.values())
 RECONNECT_UNOBSERVED_RESTORE_PARAMS = frozenset(_RECONNECT_SAFETY_CANDIDATES - _CURRENT_READBACK_PARAMS)
 MAX_RECONNECT_COMMANDS = 12
+# A value sent this long ago on the same connection is not sent again while
+# its readback is pending: cfg_* sensors publish every 30 s (VD-62).
+SENT_READBACK_WAIT_S = 90.0
+DISPATCHER_STAGE_ENTITY = "dispatcher_stage"
+
+
+def _clock() -> datetime:
+    """Wall clock for plain-convergence bookkeeping; tests substitute a fake."""
+    return datetime.now(UTC)
 
 
 def _upsert_change(changes: list[tuple[str, float]], param: str, value: float) -> None:
@@ -127,63 +143,115 @@ def _without_equivalent_duration_candidates(
     ]
 
 
-def _without_equivalent_duration_replays(
-    changes: list[tuple[str, float]],
-    readbacks: dict[str, float],
-    *,
-    reconnect_pending: bool,
-    drift_pending: bool,
-    staged_state_exists: bool,
-) -> list[tuple[str, float]]:
-    """Apply the same ordinary duration semantics before and after admission.
+def _note_delivery_differences(
+    candidates: list[tuple[str, float]],
+    held_on_purpose: set[str],
+    generation: int,
+    now: datetime,
+) -> None:
+    """Track since when each outgoing value has differed from the controller.
 
-    Recovery flags and durable stage existence cannot turn an equivalent cfg
-    value into a new desired command. Explicit C1/rollback effects are selected
-    later and retain their own confirmation requirements.
+    A parameter enters ``shared.delivery_differing_since`` when its outgoing
+    value first differs from ``_last_pushed`` or its readback (it is a
+    candidate) and leaves when its readback matches or it is no longer a
+    candidate. What the platform holds on purpose stays out: the parameters
+    clamped in this pass and those under ``experiment_policy_hold``.
     """
-    return _without_equivalent_duration_candidates(changes, readbacks)
+    readbacks = shared.current_cfg_readbacks(generation)
+    previous = dict(shared.delivery_differing_since)
+    current: dict[str, datetime] = {}
+    for param, value in candidates:
+        if param in held_on_purpose or _experiment_hold_failure(param) == "experiment_policy_hold":
+            continue
+        observed = readbacks.get(param)
+        if observed is not None and readback_values_equivalent(param, observed, value):
+            continue
+        current[param] = previous.get(param, now)
+    shared.delivery_differing_since.clear()
+    shared.delivery_differing_since.update(current)
 
 
-async def _choose_bounded_stage_if_required(
-    conn, changes, planned, generation, state_dir, zone_row, planner_params
-) -> bounded_reconcile.Decision:
-    """Route any broad candidate or existing stage through the same sole-writer fence."""
-    if c1_overlay.owns_bounded_stage(state_dir):
-        return bounded_reconcile.Decision("ordinary")
-    if (
-        len(changes) <= MAX_RECONNECT_COMMANDS
-        and not (state_dir / bounded_reconcile.APPROVAL_NAME).exists()
-        and not (state_dir / bounded_reconcile.STATE_NAME).exists()
-    ):
-        return bounded_reconcile.Decision("ordinary")
-    if device_writes_enabled() and not shared.is_shadow_mode():
-        # No transaction/row lock may wait for the existing publisher's other
-        # pool connection. The sole dispatcher holds only this idle connection.
-        if conn.is_in_transaction():
-            return bounded_reconcile.Decision("hold", reason="snapshot publication cannot wait inside a transaction")
-        if not shared.writer_lease_strictly_held():
-            return bounded_reconcile.Decision("hold", reason="writer lease not held for snapshot publication")
-        if not await shared.request_setpoint_snapshot(generation):
-            bounded_reconcile._wake_for_confirmation()
-            return bounded_reconcile.Decision(
-                "hold", reason="awaiting fresh atomic snapshot: current-generation publication unavailable"
+def _sent_on_connection(param: str, value: float, generation: int) -> datetime | None:
+    """When this same value was last sent on this connection, or None if it was not."""
+    sent = _last_sent_at.get(param)
+    if sent is None:
+        return None
+    sent_at, sent_generation, sent_value = sent
+    if sent_generation != generation or not readback_values_equivalent(param, sent_value, value):
+        return None
+    return sent_at
+
+
+def _sent_awaiting_readback(param: str, value: float, generation: int, now: datetime) -> bool:
+    """True for the same value sent on this connection within SENT_READBACK_WAIT_S."""
+    sent_at = _sent_on_connection(param, value, generation)
+    return sent_at is not None and 0.0 <= (now - sent_at).total_seconds() < SENT_READBACK_WAIT_S
+
+
+def _pace_ordinary_changes(
+    changes: list[tuple[str, float]], generation: int, now: datetime
+) -> tuple[list[tuple[str, float]], list[tuple[str, float]], int, bool]:
+    """Select one paced ordinary batch: (send now, left over, awaiting readback, wake).
+
+    A value sent on this connection in the last 90 s whose readback has not
+    caught up is not sent again, so a woken pass never repeats its batch. When
+    more than 12 changes remain they go oldest difference first, then by name;
+    a value already sent on this connection that the controller has not taken
+    goes after every value not yet sent (least recently sent first), so resends
+    never crowd out new values. ``wake`` asks for the next pass only while a
+    left-over value has not been sent on this connection yet: resends wait for
+    the 300 s cadence or a readback drift, so values the controller never takes
+    cannot keep the dispatcher waking itself, however many there are.
+    """
+    eligible = [
+        (param, value) for param, value in changes if not _sent_awaiting_readback(param, value, generation, now)
+    ]
+    awaiting = len(changes) - len(eligible)
+    if len(eligible) > MAX_RECONNECT_COMMANDS:
+        not_sent = datetime.min.replace(tzinfo=UTC)
+        newest = datetime.max.replace(tzinfo=UTC)
+        eligible.sort(
+            key=lambda item: (
+                _sent_on_connection(item[0], item[1], generation) or not_sent,
+                shared.delivery_differing_since.get(item[0], newest),
+                item[0],
             )
-        if not shared.writer_lease_strictly_held():
-            return bounded_reconcile.Decision("hold", reason="writer lease lost during snapshot publication")
-    return await bounded_reconcile.choose_stage(
-        conn,
-        changes,
-        planned,
-        generation,
-        state_dir,
-        MAX_RECONNECT_COMMANDS,
-        {param: round(float(zone_row[param]), 2) for param in bounded_reconcile.ZONE_VPD_TARGETS} if zone_row else None,
-        {
-            param: float(planner_params[param])
-            for param in bounded_reconcile.DYNAMIC_MOISTURE_GUARDRAIL_PARAMS
-            if param in planner_params
-        },
-    )
+        )
+    batch, left = eligible[:MAX_RECONNECT_COMMANDS], eligible[MAX_RECONNECT_COMMANDS:]
+    wake = any(_sent_on_connection(param, value, generation) is None for param, value in left)
+    return batch, left, awaiting, wake
+
+
+def _dispatcher_stage_value(*, c1_phase: str, heap_deferred: bool, lease_held: bool, sent: int, pending: int) -> str:
+    """``ordinary``, ``paced <sent>/<pending>`` or ``held:<reason>`` for this pass."""
+    if c1_phase != "ordinary":
+        return "held:c1"
+    if heap_deferred:
+        return "held:heap"
+    if not lease_held:
+        return "held:lease"
+    if pending > sent:
+        return f"paced {sent}/{pending}"
+    return "ordinary"
+
+
+async def _record_dispatcher_stage(conn, stage: str) -> None:
+    """Write one ``dispatcher_stage`` system_state row when the stage changes."""
+    if stage == shared.dispatcher_stage:
+        return
+    try:
+        row = SystemStateRow(ts=datetime.now(UTC), entity=DISPATCHER_STAGE_ENTITY, value=stage)
+        await conn.execute(
+            "INSERT INTO v_runtime_system_state_write (ts, entity, value) VALUES ($1, $2, $3)",
+            row.ts,
+            row.entity,
+            row.value,
+        )
+    except Exception as error:  # the stage record never stops a dispatch pass
+        log.warning("dispatcher_stage record failed stage=%r error=%s", stage, type(error).__name__)
+        return
+    log.info("dispatcher_stage stage=%r previous=%r", stage, shared.dispatcher_stage)
+    shared.dispatcher_stage = stage
 
 
 def _c1_policy_inputs(planned, anchors, origin, lighting, circuits, activity, safety, quiet, direct_wet, ai_moisture):
@@ -1258,8 +1326,19 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         changes = list(deduped_changes.items())
 
         # Only current-generation cfg values may suppress an equivalent
-        # duration. Apply this before bounded admission on every ordinary pass.
+        # duration. Apply this before the drift probe, C1 and pacing.
         changes = _without_equivalent_duration_candidates(changes, shared.current_cfg_readbacks(reconnect_generation))
+
+        # Plain convergence (VD-62): the complete candidate set is what still
+        # differs from the controller. Record since when, for pacing order and
+        # for alert_monitor's setpoint_delivery_stuck.
+        pass_started = _clock()
+        _note_delivery_differences(
+            changes,
+            {str(row["parameter"]) for row in clamps_to_log},
+            reconnect_generation,
+            pass_started,
+        )
 
         probe_decision = await drift_probe.choose(
             conn,
@@ -1271,8 +1350,11 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             STATE_DIR,
         )
         if probe_decision.action == "hold":
+            # A probe phase in flight holds this pass for at most its
+            # confirmation deadline; a halted probe no longer holds (VD-62).
             shared.defer_failed_dispatch(reconnect_generation, drift_versions)
             log.error("writer_drift_probe action=hold reason=%s", probe_decision.reason)
+            await _record_dispatcher_stage(conn, "held:drift_probe")
             (STATE_DIR / "setpoint-dispatcher.log").touch()
             return
         if probe_decision.action == "send":
@@ -1287,44 +1369,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         elif probe_decision.reason:
             log.info("writer_drift_probe action=skipped reason=%s", probe_decision.reason)
 
-        stage_decision = await _choose_bounded_stage_if_required(
-            conn, changes, planned or [], reconnect_generation, STATE_DIR, zone_row, planner_params
-        )
-        if stage_decision.action == "hold":
-            bounded_reconcile.record_hold(
-                STATE_DIR, changes, planned or [], reconnect_generation, stage_decision.reason
-            )
-            shared.defer_failed_dispatch(reconnect_generation, drift_versions)
-            log.error(
-                "writer_reconcile reason=%s generation=%d action=blocked_stage reason=%s reconciliation_receipt=%s",
-                dispatch_reason,
-                reconnect_generation,
-                stage_decision.reason,
-                json.dumps(
-                    bounded_reconcile.hold_observation(STATE_DIR, stage_decision, reconnect_generation),
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ),
-            )
-            (STATE_DIR / "setpoint-dispatcher.log").touch()
-            return
-        if stage_decision.action == "send":
-            changes = list(stage_decision.changes)
-            log.info(
-                "writer_reconcile reason=%s generation=%d action=%s run_id=%s command_count=%d limit=%d",
-                dispatch_reason,
-                reconnect_generation,
-                "bounded_rollback" if stage_decision.rollback else "bounded_stage",
-                stage_decision.run_id,
-                len(changes),
-                MAX_RECONNECT_COMMANDS,
-            )
-        elif stage_decision.action == "complete":
-            changes = list(stage_decision.changes)
-            bounded_reconcile.note_ordinary_handoff(stage_decision, reconnect_generation)
-
+        # Staging remains only for the C1 qualification overlay and its
+        # restore; it runs through its own choose/physical_fence/finish files.
         c1_selection = c1_overlay.Selection()
-        if stage_decision.action != "send" and probe_decision.action != "send":
+        if probe_decision.action != "send":
             c1_selection = await c1_overlay.choose(
                 conn,
                 changes,
@@ -1349,6 +1397,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             if c1_selection.phase in ("hold", "awaiting_confirmation"):
                 shared.defer_failed_dispatch(reconnect_generation, drift_versions)
                 log.warning("c1_qualification phase=%s reason=%s", c1_selection.phase, c1_selection.reason)
+                await _record_dispatcher_stage(conn, "held:c1")
                 return
             if c1_selection.phase in ("send", "yield"):
                 changes = list(c1_selection.changes)
@@ -1357,13 +1406,35 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 # their temporary projection at the next drift callback.
                 changes = list(c1_selection.changes)
 
+        # Where the 12-command check stood: an ordinary pass sends at most
+        # MAX_RECONNECT_COMMANDS, oldest difference first, and wakes the next
+        # pass for the rest. Nothing is staged, approved or halted.
+        pending_count = len(changes)
+        paced_unsent: list[tuple[str, float]] = []
+        paced_wake = False
+        awaiting_readback = 0
+        if c1_selection.phase == "ordinary" and probe_decision.action != "send":
+            changes, paced_unsent, awaiting_readback, paced_wake = _pace_ordinary_changes(
+                changes, reconnect_generation, pass_started
+            )
+            pending_count = len(changes) + len(paced_unsent)
+            if paced_unsent or awaiting_readback:
+                log.info(
+                    "writer_reconcile reason=paced generation=%d action=paced trigger=%s "
+                    "command_count=%d pending=%d awaiting_readback=%d limit=%d",
+                    reconnect_generation,
+                    dispatch_reason,
+                    len(changes),
+                    pending_count,
+                    awaiting_readback,
+                    MAX_RECONNECT_COMMANDS,
+                )
         if len(changes) > MAX_RECONNECT_COMMANDS:
-            # A broad desired delta is never authority to enqueue a 40+
-            # command storm, including after the reconnect generation ends.
-            # A separately approved stage stays at or below this same cap.
+            # Unreachable: C1 and the drift probe select at most 12 commands by
+            # construction. Never enqueue more than the cap on any path.
             shared.defer_failed_dispatch(reconnect_generation, drift_versions)
             log.error(
-                "writer_reconcile reason=%s generation=%d action=blocked_broad_restore command_count=%d limit=%d",
+                "writer_dispatch reason=%s generation=%d action=cap_exceeded command_count=%d limit=%d",
                 dispatch_reason,
                 reconnect_generation,
                 len(changes),
@@ -1385,16 +1456,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 dispatch_reason,
                 reconnect_generation,
             )
+            # Values still awaiting their readback wait for the 300 s cadence
+            # or a readback drift; this pass does not wake itself for them.
             complete_dispatch_trigger()
-            if c1_selection.phase == "ordinary" and probe_decision.action == "ordinary":
-                observation = await bounded_reconcile.completion_observation(
-                    conn, STATE_DIR, stage_decision, reconnect_generation
-                )
-                if observation is not None:
-                    log.info(
-                        "writer_reconciliation_complete receipt=%s",
-                        json.dumps(observation, sort_keys=True, separators=(",", ":")),
-                    )
+            await _record_dispatcher_stage(conn, "held:c1" if c1_selection.phase != "ordinary" else "ordinary")
             (STATE_DIR / "setpoint-dispatcher.log").touch()
             return
 
@@ -1427,13 +1492,12 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
 
         dispatchable_changes: list[tuple[str, float, str]] = []
         delivery_records: list[dict[str, object]] = []
-        deferred_records: list[dict[str, object]] = []
         prequeue_failures: list[tuple[str, str]] = []
         skipped_heap_deferred = 0
         for param, val in changes:
             source = (
                 "manual"
-                if stage_decision.rollback or probe_decision.phase == "probe" or param in c1_selection.override_fields
+                if probe_decision.phase == "probe" or param in c1_selection.override_fields
                 else _dispatch_source(param, planner_params, quiet_params)
             )
 
@@ -1510,14 +1574,6 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     source,
                     change_trigger_id,
                     change_planner_instance,
-                )
-                deferred_records.append(
-                    {
-                        "parameter": param,
-                        "value": float(val),
-                        "requested_at": requested_at,
-                        "delivery_status": "deferred_heap_pressure",
-                    }
                 )
                 skipped_heap_deferred += 1
                 _last_pushed.pop(param, None)
@@ -1608,6 +1664,17 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 clamp_rows_written,
                 ", ".join(f"{row['parameter']}={row['requested']}->{row['applied']}" for row in clamps_to_log),
             )
+        # Registry clamps are applied above; a clamped value is held on purpose.
+        for row in clamps_to_log:
+            shared.delivery_differing_since.pop(str(row["parameter"]), None)
+        dispatcher_stage = _dispatcher_stage_value(
+            c1_phase=c1_selection.phase,
+            heap_deferred=heap_defer_active,
+            lease_held=shared.writer_lease_held(),
+            sent=len(changes),
+            pending=pending_count,
+        )
+        await _record_dispatcher_stage(conn, dispatcher_stage)
         # Legacy tuple iteration remains conceptually: for param, val, _source in dispatchable_changes:
         anchor_count = sum(param in band_anchors.ANCHOR_SYNC_PARAMS for param, _value, _source in dispatchable_changes)
         unchanged_anchor_count = _unchanged_anchor_dispatch_count(dispatchable_changes)
@@ -1670,6 +1737,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 # durable terminal callback succeeded. Confirmation remains an
                 # independent cfg/equipment readback transition.
                 _last_pushed[param] = value
+                _last_sent_at[param] = (_clock(), outcome.connection_generation, value)
             log.info(
                 "writer_delivery phase=persisted status=%s reason=%s param=%s generation=%d attempt=%d",
                 status,
@@ -1679,7 +1747,6 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 outcome.attempt,
             )
 
-    api_dispatch_attempts = 0
     pending_records = list(delivery_records)
     terminal_failures: list[tuple[str, str]] = []
     max_attempts = 1 if probe_decision.action == "send" else 3
@@ -1738,7 +1805,6 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         ) -> None:
             await persist_delivery_states(records, outcomes, final_attempt=is_final)
 
-        api_dispatch_attempts += 1
         result = await push_to_esp32_detailed(
             [record["route"] for record in pending_records],
             attempt=attempt,
@@ -1813,34 +1879,12 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         except Exception:
             log.exception("terminal-failure alert write failed; continuing to dispatch cleanup")
 
-    bounded_reconcile.record_ordinary_handoff(
-        stage_decision, reconnect_generation, delivery_records + deferred_records, final_failures
-    )
     if c1_selection.phase in ("send", "yield"):
         c1_overlay.finish(STATE_DIR, c1_selection, delivery_records, final_failures)
         shared.defer_failed_dispatch(reconnect_generation, drift_versions)
     elif probe_decision.action == "send":
         drift_probe.finish(STATE_DIR, probe_decision, delivery_records, final_failures)
         shared.defer_failed_dispatch(reconnect_generation, drift_versions)
-    elif stage_decision.action == "send":
-        bounded_reconcile.finish_stage(
-            STATE_DIR,
-            stage_decision,
-            delivery_records,
-            final_failures,
-            deferred_records=deferred_records,
-            api_dispatch_attempts=api_dispatch_attempts,
-        )
-        # Keep the generation unreconciled until every approved stage has a
-        # durable confirmation and current-generation cfg readback.
-        shared.defer_failed_dispatch(reconnect_generation, drift_versions)
-        log.info(
-            "writer_reconcile reason=%s generation=%d action=stage_awaiting_confirmation run_id=%s failure_count=%d",
-            dispatch_reason,
-            reconnect_generation,
-            stage_decision.run_id,
-            len(final_failures),
-        )
     elif not _dispatch_trigger_completed(final_failures):
         shared.defer_failed_dispatch(reconnect_generation, drift_versions)
         log.error(
@@ -1850,5 +1894,24 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             len(final_failures),
         )
     else:
+        # Completing the trigger also stops the next pass from reseeding
+        # _last_pushed from readbacks that have not caught up yet.
         complete_dispatch_trigger()
+        if paced_wake and dispatcher_stage.startswith("paced "):
+            # After the completion, because clear_cfg_drift clears the event:
+            # the task loop launches the next paced pass on its next tick.
+            shared.setpoint_dispatch_requested.set()
+            log.info(
+                "writer_reconcile reason=paced generation=%d action=wake remaining=%d",
+                reconnect_generation,
+                len(paced_unsent),
+            )
+        elif paced_unsent and dispatcher_stage.startswith("paced "):
+            # Every left-over value was already sent on this connection and not
+            # taken: it waits for the 300 s cadence or a readback drift.
+            log.info(
+                "writer_reconcile reason=paced generation=%d action=wait remaining=%d",
+                reconnect_generation,
+                len(paced_unsent),
+            )
     (STATE_DIR / "setpoint-dispatcher.log").touch()

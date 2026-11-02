@@ -335,7 +335,7 @@ API-IRR-NN) are the `operationId`s in the [OpenAPI](openapi/dashboard-api.v1.yam
 *P1 · Next · Now.* As the owner-operator, I want the next plan transition, the next Iris trigger, the next run per line and sunrise and sunset in one list, so that I anticipate instead of react.
 - The next transition shows its time, the settings it changes and an AI label; manual settings are left out.
 - The next occurrence per line shows time, minutes and schedule; a paused one says so, and by whom.
-- Sunrise and sunset come from `ingestor/solar.py`, which mirrors the firmware's solar code.
+- Sunrise and sunset come from `verdify_schemas/solar.py` (re-exported by `ingestor/solar.py`), which mirrors the firmware's solar code.
 
 #### US-NOW-06 · Honest degraded states
 *P1, P2 · MVP · every page.* As the owner-operator, I want "API unavailable", "ingestor not running", "controller not reporting" and "data stale" told apart and each panel to fail alone, so that I never mistake an outage for an all-clear or act on old numbers.
@@ -850,6 +850,7 @@ the audiences by [architecture](architecture.md) §5.6.
 *P4 · MVP · platform.* As the platform maintainer, I want Home Assistant reduced to occupancy reads and the Lutron switches, so that no greenhouse feature depends on a second control path (D-IRP-24).
 - Every touchpoint in [irrigation](irrigation.md) §7 (HA-01 to HA-13) is removed or replaced, keeping only occupancy, Lutron (`verdify-setpoint-server`, the firmware grow-light calls and the light readback) and the YINMIK hydroponic probe until a direct reader without Home Assistant replaces it ([decisions](decisions.md), Round 2); `ha_sensor_sync` then reads only lights, occupancy and hydro. Outdoor weather already comes from the Tempest through the ESP32's UDP listener, so the HA `tempest_sync` remnant goes.
 - No dashboard or MCP feature calls Home Assistant except the grow-light route; `docs/SERVICE_MAP.md` and `scripts/health-check.sh` change in the same PRs.
+- The direct reader (VD-70) is the ingestor task `hydro_probe_sync`: every 300 s it reads the YINMIK meter over the Tuya local protocol (TCP 6668, `status()` only) into the `hydro_*` columns, and it idles while Secret `verdify-hydro-probe` is absent. It decodes the meter's own data points (DP 10 pH, DP 11 EC in µS/cm, DP 1 TDS, DP 2 water temperature, DP 7 battery), not Home Assistant's 2026-04-18 corrections, which read DP 107 (the pH alarm limit, a constant 14.00) as EC and crossed pH with TDS; the cutover compares its first rows with the YINMIK app. `_HYDRO_MAP` goes once those rows pass, and `ha_sensor_sync` then reads only lights and occupancy.
 
 #### US-PLAT-14 · Roll back a release
 *P4 · MVP · platform.* As the platform maintainer, I want a known way to back out a bad release, so that a broken release costs minutes, not a day.

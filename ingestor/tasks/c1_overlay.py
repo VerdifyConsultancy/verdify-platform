@@ -1,7 +1,9 @@
 """Scoped C1 grid qualification through the existing sole-writer lifecycle.
 
 This is a temporary explicit projection of the current ordinary base policy.
-It has no ESPHome client, setter, replay, or generic override input.
+It has no ESPHome client, setter, replay, or generic override input. Since
+VD-62 it is the only staged path left: ordinary dispatch converges in paced
+passes, and only this overlay and its restore keep a worksheet and state file.
 """
 
 from __future__ import annotations
@@ -380,17 +382,6 @@ def poll(state_dir):
     new_worksheet = worksheet and (state is None or worksheet.get("worksheet_id") != state.get("worksheet_id"))
     if new_worksheet or (state and state.get("status") not in ("yielded", "restore_failed")):
         shared.setpoint_dispatch_requested.set()
-
-
-def owns_bounded_stage(state_dir):
-    """An admitted worksheet may restore via the same bound after broad drift."""
-    state = bounded_reconcile._read(state_dir / STATE_NAME)
-    ordinary = bounded_reconcile._read(state_dir / bounded_reconcile.STATE_NAME)
-    return bool(
-        state
-        and state.get("status") not in ("yielded", "restore_failed")
-        and (ordinary is None or ordinary.get("status") == "complete")
-    )
 
 
 def physical_fence(state_dir, selection):

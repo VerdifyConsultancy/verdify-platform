@@ -88,9 +88,9 @@ $PY -m pytest -q -rs \
   tests/test_277_getter_delivery.py \
   tests/test_realized_solar_night_dryout_timeline.py \
   tests/test_05_dispatcher.py \
+  tests/test_dispatcher_plain_convergence.py \
   tests/test_irrigation_stop_edges.py \
   tests/test_bounded_reconcile.py \
-  tests/test_recovered_confirmation_expiry.py \
   tests/test_10_planner_routing.py \
   tests/test_11_planner_milestones.py \
   tests/test_13_grafana_band_traceability.py \
@@ -142,6 +142,7 @@ $PY -m pytest -q -rs \
   tests/test_cnpg_policy_twin_count_time.py \
   tests/test_cnpg_policy_twin_endpoints.py \
   tests/test_cnpg_physical_client_qualification.py \
+  tests/test_dashboard_dockerfile.py \
   tests/test_db_backup_retry_classifier.py \
   tests/test_backup_freshness_exporter.py \
   tests/test_action_log_policy_identity.py \
@@ -164,6 +165,7 @@ $PY -m pytest -q -rs \
   tests/test_component_experiment_store.py \
   tests/test_component_experiment_writer.py \
   tests/test_component_grid_qualification.py \
+  tests/test_qualify_component_containment.py \
   tests/test_esp32_policy_transaction.py \
   tests/test_experiment_api.py \
   tests/test_experiment_gather_mode.py \
@@ -221,8 +223,9 @@ $PY -m pytest -q -rs \
   tests/test_generate_daily_plan.py \
   tests/test_grafana_cm_check.py \
   tests/test_grafana_manifest_security.py tests/test_grafana_saved_public.py tests/test_278_grafana_delivery.py \
-  tests/test_ha_gap_backfill_runtime_boundary.py \
   tests/test_ha_light_writer_boundary.py \
+  tests/test_ha_trim.py \
+  tests/test_hydro_probe.py \
   tests/test_ingestor_setpoint_placement.py \
   tests/test_ingestor_gap_snapshot.py \
   tests/test_source_spool.py \

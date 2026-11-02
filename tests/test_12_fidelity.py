@@ -636,16 +636,21 @@ def test_setpoint_server_controls_real_lutron_switch_entities_and_confirms_state
 
 def test_ha_light_sync_reads_real_lutron_switch_entities():
     """DB equipment_state should trace the same Lutron switch entities the
-    proxy commands, not stale light.* wrappers.
+    proxy commands, not stale light.* wrappers. The ingestor's ha_sensor_sync
+    is the only readback (VD-48 deleted the legacy scripts/ha-sensor-sync.py),
+    and the controller's own switches record their intent under separate keys.
     """
-    tasks = _tasks_src()
-    sync = Path("scripts/ha-sensor-sync.py").read_text()
+    import entity_map
 
-    for src in (tasks, sync):
-        assert '"switch.greenhouse_main": "grow_light_main"' in src
-        assert '"switch.greenhouse_grow": "grow_light_grow"' in src
-        assert '"light.greenhouse_main": "grow_light_main"' not in src
-        assert '"light.greenhouse_grow": "grow_light_grow"' not in src
+    tasks = _tasks_src()
+
+    assert '"switch.greenhouse_main": "grow_light_main"' in tasks
+    assert '"switch.greenhouse_grow": "grow_light_grow"' in tasks
+    assert '"light.greenhouse_main": "grow_light_main"' not in tasks
+    assert '"light.greenhouse_grow": "grow_light_grow"' not in tasks
+    assert not Path("scripts/ha-sensor-sync.py").exists()
+    assert entity_map.EQUIPMENT_SWITCH_MAP["grow_light_main"] == "grow_light_main_intent"
+    assert entity_map.EQUIPMENT_SWITCH_MAP["grow_light_grow"] == "grow_light_grow_intent"
 
 
 def test_planner_context_surfaces_band_source_trace():
@@ -1087,11 +1092,15 @@ def test_firmware_omits_mqtt_and_uses_ingestor_occupancy_push():
     assert "id: sw_greenhouse_occupied" in hardware
     assert 'name: "Greenhouse Occupied"' in hardware
     assert '"greenhouse_occupied": "occupancy"' in entity_map_src
-    assert "sync_occupancy_state(pool" in ingestor_src
+    # VD-48: the HAOS MQTT occupancy subscription is gone; ha_sensor_sync is the
+    # only occupancy input and the reconnect replay is the only other push.
+    assert "sync_occupancy_state(" not in ingestor_src
+    assert "mqtt_loop" not in ingestor_src
     assert "refresh_latest_occupancy_state(pool" in ingestor_src
-    assert "sync_occupancy_state(pool" in tasks_src
+    assert "sync_occupancy_state(" in tasks_src
     assert "expire_occupancy_latch(pool" in tasks_src
     assert "OCCUPANCY_LATCH_MIN" in occupancy_src
+    assert "OCCUPANCY_VISIT_MAX_MIN" in occupancy_src
     assert "recording_quiet_occupancy_active" not in occupancy_src
     assert "quiet mode held" not in occupancy_src
     assert "script.execute: occupancy_quiet_override" in greenhouse
@@ -3239,40 +3248,19 @@ def test_center_root_zone_runoff_mapping_is_ready_for_instrumentation():
     assert entity_map.normalize_feedback_value("moisture_center", "100.1") is None
     assert entity_map.normalize_feedback_value("ph_runoff_center", "14.1") is None
     assert entity_map.normalize_feedback_value("ec_runoff_center", "-1") is None
-    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_center_root_zone_moisture"][0] == "moisture_center"
-    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_center_runoff_ph"][0] == "ph_runoff_center"
-    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_center_runoff_ec"][0] == "ec_runoff_center"
-    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_center_runoff_ec_ms_cm"][0] == "ec_runoff_center"
-    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_middle_substrate_vwc"][0] == "moisture_center"
-    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_middle_substrate_moisture"][0] == "moisture_center"
-    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_center_drain_ph"][0] == "ph_runoff_center"
-    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_center_effluent_ec"][0] == "ec_runoff_center"
-    assert "sensor.greenhouse_drain_tds" not in tasks._CENTER_FEEDBACK_MAP
-
-    legacy_sync_src = Path("scripts/ha-sensor-sync.py").read_text()
-    assert "CENTER_FEEDBACK_MAP" in legacy_sync_src
-    assert "normalize_feedback_value" in legacy_sync_src
-    assert "sensor.greenhouse_center_root_zone_moisture" in legacy_sync_src
-    assert "sensor.greenhouse_middle_substrate_vwc" in legacy_sync_src
-    assert "sensor.greenhouse_middle_substrate_moisture" in legacy_sync_src
-    assert "sensor.greenhouse_center_runoff_ph" in legacy_sync_src
-    assert "sensor.greenhouse_center_drain_ph" in legacy_sync_src
-    assert "sensor.greenhouse_center_runoff_ec" in legacy_sync_src
-    assert "sensor.greenhouse_center_effluent_ec" in legacy_sync_src
-    assert "sensor.greenhouse_drain_tds" not in legacy_sync_src
+    # VD-48 (HA-06): center feedback joins the ESP32 Modbus bus; the Home
+    # Assistant alias map and the legacy sync script are gone.
+    assert not hasattr(tasks, "_CENTER_FEEDBACK_MAP")
+    assert not Path("scripts/ha-sensor-sync.py").exists()
 
 
 def test_irrigation_feedback_alias_sets_stay_aligned():
+    """Feedback reaches climate only through the ESP32 native API (VD-48)."""
     import entity_map
-    import tasks
 
     validator = runpy.run_path(
         str(REPO_ROOT / "scripts" / "validate-irrigation-feedback.py"),
         run_name="_test_irrigation_feedback_validator",
-    )
-    legacy_sync = runpy.run_path(
-        str(REPO_ROOT / "scripts" / "ha-sensor-sync.py"),
-        run_name="_test_ha_sensor_sync",
     )
 
     key_to_column = {
@@ -3281,40 +3269,16 @@ def test_irrigation_feedback_alias_sets_stay_aligned():
         "center_runoff_ec": "ec_runoff_center",
     }
 
+    assert "HA_CANDIDATES" not in validator
+    assert "MQTT_FEEDBACK_CANDIDATES" not in validator
     for feedback_key, column in key_to_column.items():
-        ha_candidates = set(validator["HA_CANDIDATES"][feedback_key])
-        task_entities = {
-            entity_id
-            for entity_id, (mapped_column, _converter) in tasks._CENTER_FEEDBACK_MAP.items()
-            if mapped_column == column
-        }
-        legacy_entities = {
-            entity_id
-            for entity_id, (mapped_column, _converter) in legacy_sync["CENTER_FEEDBACK_MAP"].items()
-            if mapped_column == column
-        }
-        assert ha_candidates == task_entities == legacy_entities
-
-        mqtt_candidates = set(validator["MQTT_FEEDBACK_CANDIDATES"][feedback_key])
-        entity_map_candidates = set(entity_map.MQTT_FEEDBACK_CANDIDATES[feedback_key])
-        accepted_mqtt_topics = {
-            topic for topic, mapped_column in entity_map.MQTT_FEEDBACK_MAP.items() if mapped_column == column
-        }
-        assert mqtt_candidates == entity_map_candidates == accepted_mqtt_topics
-
         esphome_candidates = set(validator["ESPHOME_CANDIDATES"][feedback_key])
         accepted_esphome_ids = {
             object_id for object_id, mapped_column in entity_map.ESPHOME_FEEDBACK_MAP.items() if mapped_column == column
         }
         assert esphome_candidates == accepted_esphome_ids
 
-    for container in (
-        entity_map.ESPHOME_FEEDBACK_MAP,
-        entity_map.MQTT_FEEDBACK_MAP,
-        tasks._CENTER_FEEDBACK_MAP,
-        legacy_sync["CENTER_FEEDBACK_MAP"],
-    ):
-        assert not any("tds" in key for key in container)
+    assert not any("tds" in key for key in entity_map.ESPHOME_FEEDBACK_MAP)
 
 
 def test_writable_entity_states_refresh_generation_fenced_cfg_snapshot_path():
@@ -3328,70 +3292,19 @@ def test_writable_entity_states_refresh_generation_fenced_cfg_snapshot_path():
     assert "_mirror_irrigation_number_readback(param, 1.0 if val else 0.0)" in ingestor_src
 
 
-def test_ingestor_accepts_live_mqtt_feedback_without_retained_state():
+def test_ingestor_has_no_mqtt_feedback_path():
+    """VD-48 (HA-11): the ingestor no longer subscribes to the HAOS broker."""
     import entity_map
 
     ingestor_src = Path("ingestor/ingestor.py").read_text()
 
-    assert "MQTT_FEEDBACK_MAP" in ingestor_src
-    assert "from entity_map import (" in ingestor_src
-    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/south_1_soil_moisture____/state"] == "soil_moisture_south_1"
-    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/south_1_soil_ec____s___cm_/state"] == "soil_ec_south_1"
-    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_root_zone_moisture____/state"] == "moisture_center"
-    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/middle_substrate_vwc/state"] == "moisture_center"
-    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/middle_substrate_moisture/state"] == "moisture_center"
-    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/middle_substrate_moisture____/state"] == "moisture_center"
-    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_runoff_ph/state"] == "ph_runoff_center"
-    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_drain_ph/state"] == "ph_runoff_center"
-    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_runoff_ec_ms_cm/state"] == "ec_runoff_center"
-    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_runoff_ec___s_cm_/state"] == "ec_runoff_center"
-    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_runoff_ec____s___cm_/state"] == "ec_runoff_center"
-    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_drain_ec_us_cm/state"] == "ec_runoff_center"
-    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_drain_ec___s_cm_/state"] == "ec_runoff_center"
-    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_runoff_conductivity/state"] == "ec_runoff_center"
-    assert "greenhouse/sensor/drain_tds/state" not in entity_map.MQTT_FEEDBACK_MAP
-    assert "greenhouse/sensor/south_soil_moisture____/state" not in entity_map.MQTT_FEEDBACK_MAP
-    assert (
-        "greenhouse/sensor/south_soil_moisture____/state" in entity_map.MQTT_FEEDBACK_CANDIDATES["south_soil_probe_1"]
-    )
-    assert "if msg.retain:" in ingestor_src
-    assert "MQTT feedback retained message ignored" in ingestor_src
-    assert "event_loop.call_soon_threadsafe(_record_mqtt_feedback, topic, payload)" in ingestor_src
+    assert "MQTT_FEEDBACK_MAP" not in ingestor_src
+    assert "_record_mqtt_feedback" not in ingestor_src
+    assert not hasattr(entity_map, "MQTT_FEEDBACK_MAP")
+    assert not hasattr(entity_map, "MQTT_FEEDBACK_CANDIDATES")
+    assert not hasattr(ingestor, "_record_mqtt_feedback")
     assert "def _record_climate_sensor" in ingestor_src
     assert "ESPHome feedback rejected invalid value" in ingestor_src
-    assert "state.climate[col] = val" in ingestor_src
-
-
-def test_ingestor_records_mqtt_feedback_into_climate_buffer():
-    topic = "greenhouse/sensor/center_runoff_ec___s_cm_/state"
-    original_climate = ingestor.state.climate.copy()
-    try:
-        ingestor.state.climate.clear()
-
-        assert ingestor._record_mqtt_feedback(topic, "912.5") is True
-        assert ingestor.state.climate["ec_runoff_center"] == 912.5
-
-        assert ingestor._record_mqtt_feedback("greenhouse/sensor/unmapped/state", "1") is False
-        assert "unmapped" not in ingestor.state.climate
-
-        assert ingestor._record_mqtt_feedback(topic, "nan") is False
-        assert ingestor.state.climate["ec_runoff_center"] == 912.5
-
-        assert ingestor._record_mqtt_feedback(topic, "inf") is False
-        assert ingestor.state.climate["ec_runoff_center"] == 912.5
-
-        assert ingestor._record_mqtt_feedback(topic, "-1") is False
-        assert ingestor.state.climate["ec_runoff_center"] == 912.5
-
-        moisture_topic = "greenhouse/sensor/center_root_zone_moisture____/state"
-        assert ingestor._record_mqtt_feedback(moisture_topic, "101") is False
-        assert "moisture_center" not in ingestor.state.climate
-
-        assert ingestor._record_mqtt_feedback(topic, "not-a-number") is False
-        assert ingestor.state.climate["ec_runoff_center"] == 912.5
-    finally:
-        ingestor.state.climate.clear()
-        ingestor.state.climate.update(original_climate)
 
 
 def test_ingestor_records_esphome_feedback_with_value_ranges():
@@ -3550,16 +3463,38 @@ def test_irrigation_feedback_validator_covers_physical_acceptance_paths():
     ):
         assert key in src
 
-    for entity_id in (
-        "sensor.greenhouse_south_1_soil_moisture",
-        "sensor.greenhouse_south_1_soil_ec_ms_cm",
-        "sensor.greenhouse_center_root_zone_moisture",
-        "sensor.greenhouse_center_root_zone_soil_moisture",
-        "sensor.greenhouse_center_runoff_ph",
-        "sensor.greenhouse_center_runoff_ec",
-        "sensor.greenhouse_center_runoff_ec_ms_cm",
+    for object_id in (
+        "south_1_soil_moisture____",
+        "south_1_soil_ec___s_cm_",
+        "center_root_zone_moisture____",
+        "center_root_zone_soil_moisture____",
+        "center_runoff_ph",
+        "center_runoff_ec",
+        "center_runoff_ec_ms_cm",
     ):
-        assert entity_id in src
+        assert object_id in src
+    # VD-48 (HA-12): Native-API candidates only; no HA or MQTT lookups.
+    for removed in (
+        "sensor.greenhouse_",
+        "HA_CANDIDATES",
+        "MQTT_FEEDBACK_CANDIDATES",
+        "MQTT_FEEDBACK_MAP",
+        "MQTT_DISCOVERY_TOPIC",
+        "mosquitto_sub",
+        "stale_retained_only",
+        "ha_discovered_feedback_candidates",
+        "mqtt_discovered_feedback_candidates",
+        '"--no-ha"',
+        '"--discover-ha"',
+        '"--discover-mqtt"',
+        '"--discover-mqtt-all"',
+        '"--mqtt-live-timeout-s"',
+        "HA feedback-like entities",
+        "MQTT feedback-like topics",
+        "Accepted HA IDs",
+        "Accepted MQTT topics",
+    ):
+        assert removed not in src, removed
 
     assert "v_irrigation_sensor_feedback_status" in src
     assert "irrigation_feedback_gap" in src
@@ -3578,11 +3513,7 @@ def test_irrigation_feedback_validator_covers_physical_acceptance_paths():
     assert '"--watch"' in src
     assert '"--timeout-s"' in src
     assert '"--interval-s"' in src
-    assert '"--discover-ha"' in src
-    assert '"--discover-mqtt"' in src
-    assert '"--discover-mqtt-all"' in src
     assert '"--discover-esphome"' in src
-    assert '"--mqtt-live-timeout-s"' in src
     assert '"--work-order"' in src
     assert "print_work_order" in src
     assert "Irrigation Feedback Field Work Order" in src
@@ -3597,11 +3528,7 @@ def test_irrigation_feedback_validator_covers_physical_acceptance_paths():
     assert "_print_discovery_sweep" in src
     assert "Tracking records that must close" in src
     assert "Discovery sweep to catch newly installed or misnamed sources" in src
-    assert "HA feedback-like entities" in src
-    assert "MQTT feedback-like topics" in src
     assert "ESPHome feedback-like entities" in src
-    assert "Accepted HA IDs" in src
-    assert "Accepted MQTT topics" in src
     assert "Accepted ESPHome object IDs" in src
     assert "soil_ec_south_1_last_positive_ts" in src
     assert "south_2_reference_positive_samples_24h" in src
@@ -3631,17 +3558,8 @@ def test_irrigation_feedback_validator_covers_physical_acceptance_paths():
     assert "ESPHOME_STATE_TIMEOUT_S" in src
     assert "subscribe_states" in src
     assert "missing_state" in src
-    assert "MQTT_FEEDBACK_CANDIDATES" in src
-    assert "MQTT_FEEDBACK_MAP" in src
-    assert "MQTT_DISCOVERY_TOPIC" in src
-    assert "greenhouse/sensor/#" in src
-    assert "mqtt_discovered_feedback_candidates" in src
-    assert "from entity_map import MQTT_FEEDBACK_CANDIDATES, MQTT_FEEDBACK_MAP" in src
-    assert "stale_retained_only" in src
-    assert "mosquitto_sub" in src
     assert '"--status-only"' in src
     assert "physical_ready" in src
-    assert "ha_discovered_feedback_candidates" in src
     assert "DISCOVERY_LOCATION_TERMS" in src
 
     makefile = Path("Makefile").read_text()
@@ -3683,26 +3601,31 @@ def test_irrigation_feedback_validator_covers_physical_acceptance_paths():
     assert "scripts/validate-irrigation-feedback.py --work-order" in makefile
     work_order_proof_block = makefile[
         makefile.index("irrigation-feedback-work-order-proof:") : makefile.index(
-            "irrigation-feedback-clear-stale-retained:", makefile.index("irrigation-feedback-work-order-proof:")
+            "irrigation-feedback-watch:", makefile.index("irrigation-feedback-work-order-proof:")
         )
     ]
     assert "set -o pipefail" in work_order_proof_block
     assert "2>&1" in work_order_proof_block
     assert 'tee "$(IRRIGATION_WORK_ORDER_PROOF)"' in work_order_proof_block
-    assert "IRRIGATION_MQTT_LIVE_TIMEOUT" in makefile
     assert "IRRIGATION_DISCOVERY_PROOF ?= /srv/verdify/state/irrigation-discovery-proof.txt" in makefile
-    assert "IRRIGATION_STALE_RETAINED_TOPICS" in makefile
-    assert "IRRIGATION_STALE_NEAR_MISS_TOPICS" in makefile
-    assert (
-        "scripts/validate-irrigation-feedback.py --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome --include-db-history"
-        in makefile
-    )
+    assert "scripts/validate-irrigation-feedback.py --discover-esphome --include-db-history" in makefile
     assert "if [ $$rc -eq 1 ]; then exit 0; fi" in makefile
-    assert "irrigation-feedback-clear-stale-retained" in makefile
-    assert "CONFIRM_CLEAR_RETAINED=1" in makefile
-    assert "scripts/clear-irrigation-stale-retained.py --confirm" in makefile
-    assert "irrigation-feedback-clear-stale-near-misses" in makefile
-    assert "scripts/clear-irrigation-stale-retained.py --confirm --near-miss" in makefile
+    # VD-48: the HA/MQTT discovery flags, timeouts and retained-topic cleanup are gone.
+    for removed in (
+        "IRRIGATION_MQTT_LIVE_TIMEOUT",
+        "IRRIGATION_FIELD_WATCH_MQTT_TIMEOUT",
+        "IRRIGATION_MQTT_HOST",
+        "IRRIGATION_STALE_RETAINED_TOPICS",
+        "IRRIGATION_STALE_NEAR_MISS_TOPICS",
+        "--discover-ha",
+        "--discover-mqtt",
+        "--mqtt-live-timeout-s",
+        "irrigation-feedback-clear-stale-retained",
+        "irrigation-feedback-clear-stale-near-misses",
+        "CONFIRM_CLEAR_RETAINED",
+        "clear-irrigation-stale-retained.py",
+    ):
+        assert removed not in makefile, removed
     discovery_proof_block = makefile[
         makefile.index("irrigation-feedback-discovery-proof:") : makefile.index(
             "irrigation-feedback-work-order:", makefile.index("irrigation-feedback-discovery-proof:")
@@ -3710,7 +3633,6 @@ def test_irrigation_feedback_validator_covers_physical_acceptance_paths():
     ]
     assert "set -o pipefail" in discovery_proof_block
     assert "--include-db-history" in discovery_proof_block
-    assert "--mqtt-live-timeout-s $(IRRIGATION_MQTT_LIVE_TIMEOUT)" in discovery_proof_block
     assert "if [ $$rc -eq 1 ]; then exit 0; fi" in discovery_proof_block
     assert "2>&1" in discovery_proof_block
     assert 'tee "$(IRRIGATION_DISCOVERY_PROOF)"' in discovery_proof_block
@@ -3718,14 +3640,9 @@ def test_irrigation_feedback_validator_covers_physical_acceptance_paths():
     assert "irrigation-feedback-watch: ## Poll until physical feedback rows are healthy" in makefile
     assert "irrigation-feedback-watch-field" in makefile
     assert "irrigation-feedback-watch-field-proof" in makefile
-    assert "IRRIGATION_FIELD_WATCH_MQTT_TIMEOUT" in makefile
     assert "IRRIGATION_FIELD_WATCH_PROOF ?= /srv/verdify/state/irrigation-field-watch-proof.txt" in makefile
     assert (
-        "scripts/validate-irrigation-feedback.py --watch --status-only --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome"
-        in makefile
-    )
-    assert (
-        "scripts/validate-irrigation-feedback.py --watch --status-only --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome --include-db-history"
+        "scripts/validate-irrigation-feedback.py --watch --status-only --discover-esphome --include-db-history"
         in makefile
     )
     assert "scripts/validate-irrigation-feedback.py --watch --status-only" in makefile
@@ -3766,18 +3683,14 @@ def test_irrigation_feedback_validator_covers_physical_acceptance_paths():
     mutate_idx = finalizer_proof_block.index("scripts/finalize-irrigation-feedback.py &&")
     post_check_idx = finalizer_proof_block.rindex("scripts/validate-irrigation-feedback.py")
     assert preflight_idx < dry_run_idx < mutate_idx < post_check_idx
-    assert "--discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome" in finalizer_proof_block
-    assert "IRRIGATION_FIELD_WATCH_MQTT_TIMEOUT" in finalizer_proof_block
+    assert "--status-only --discover-esphome --include-db-history" in finalizer_proof_block
     assert dry_run_idx < finalizer_proof_block.index("scripts/finalize-irrigation-feedback.py &&")
     assert "set -o pipefail" in finalizer_proof_block
     assert "2>&1" in finalizer_proof_block
     assert 'tee "$(IRRIGATION_FINALIZER_PROOF)"' in finalizer_proof_block
     assert "irrigation-feedback-proof-json" in makefile
     assert "IRRIGATION_FEEDBACK_PROOF ?= /srv/verdify/state/irrigation-feedback-proof.json" in makefile
-    assert (
-        "scripts/validate-irrigation-feedback.py --json --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome"
-        in makefile
-    )
+    assert "scripts/validate-irrigation-feedback.py --json --discover-esphome --include-db-history" in makefile
     proof_block = makefile[
         makefile.index("irrigation-feedback-proof-json:") : makefile.index(
             "irrigation-acceptance:", makefile.index("irrigation-feedback-proof-json:")
@@ -3878,18 +3791,31 @@ def test_irrigation_feedback_validator_covers_physical_acceptance_paths():
     assert "Post-deploy production proof after merge/restart/site publish" in makefile
 
     runbook = Path("docs/runbooks/irrigation-feedback-bringup.md").read_text()
-    for entity_id in (
-        "sensor.greenhouse_south_1_soil_moisture",
-        "sensor.greenhouse_center_root_zone_moisture",
-        "sensor.greenhouse_center_root_zone_soil_moisture",
-        "sensor.greenhouse_middle_substrate_moisture",
-        "sensor.greenhouse_center_runoff_ph",
-        "sensor.greenhouse_center_drain_ph",
-        "sensor.greenhouse_center_runoff_ec",
-        "sensor.greenhouse_center_runoff_ec_ms_cm",
-        "sensor.greenhouse_center_effluent_ec",
+    for object_id in (
+        "south_1_soil_moisture____",
+        "center_root_zone_moisture____",
+        "center_root_zone_soil_moisture____",
+        "middle_substrate_moisture____",
+        "center_runoff_ph",
+        "center_drain_ph",
+        "center_runoff_ec",
+        "center_runoff_ec_ms_cm",
+        "center_effluent_ec",
     ):
-        assert entity_id in runbook
+        assert object_id in runbook
+    # VD-48: the runbook no longer documents HA/MQTT feedback or retained-topic cleanup.
+    for removed in (
+        "Accepted Home Assistant entity IDs",
+        "Accepted MQTT topics",
+        "greenhouse/sensor/#",
+        "irrigation-feedback-clear-stale",
+        "CONFIRM_CLEAR_RETAINED",
+        "--mqtt-live-timeout-s",
+        "IRRIGATION_MQTT_LIVE_TIMEOUT",
+        "IRRIGATION_FIELD_WATCH_MQTT_TIMEOUT",
+        "scripts/ha-sensor-sync.py",
+    ):
+        assert removed not in runbook, removed
     assert "v_irrigation_sensor_feedback_status" in runbook
     assert "irrigation_feedback_gap" in runbook
     assert "## Acceptance Gate and Live Proofs" in runbook
@@ -3908,7 +3834,7 @@ def test_irrigation_feedback_validator_covers_physical_acceptance_paths():
     assert "make irrigation-feedback-work-order" in runbook
     assert "make irrigation-feedback-discovery-proof" in runbook
     assert "field actions and pass criteria" in runbook
-    assert "final acceptance captures DB status plus HA, MQTT, ESPHome, and site/Grafana evidence" in runbook
+    assert "final acceptance captures DB status plus ESPHome and site/Grafana evidence" in runbook
     assert "make sensor-health SINCE='5 minutes'" in runbook
     assert "ESP32/Modbus health" in runbook
     assert "/srv/verdify/state/irrigation-sensor-health-proof.txt" in runbook
@@ -3919,19 +3845,13 @@ def test_irrigation_feedback_validator_covers_physical_acceptance_paths():
     assert "IRRIGATION_STACK_PROOF=/path/to/stack-proof.txt" in runbook
     assert "/srv/verdify/state/irrigation-discovery-proof.txt" in runbook
     assert "IRRIGATION_DISCOVERY_PROOF=/path/to/discovery-proof.txt" in runbook
-    assert "ESPHome/HA/DB" in runbook
-    assert "greenhouse/sensor/#" in runbook
-    assert "make irrigation-feedback-clear-stale-near-misses" in runbook
+    assert "ESPHome/DB" in runbook
     assert "soil_temp_south_1" in runbook
     assert "soil_moisture_south_2" in runbook
     assert "shared ingestion and the Modbus bus as healthy" in runbook
-    assert "stale_retained_only=true" in runbook
-    assert "retained broker values" in runbook
     assert "moisture must be 0-100%" in runbook
     assert "pH must be 0-14" in runbook
     assert "EC must be nonnegative" in runbook
-    assert "make irrigation-feedback-clear-stale-retained CONFIRM_CLEAR_RETAINED=1" in runbook
-    assert "does not replace the physical repair requirement" in runbook
     assert "ESPHome discovery lists native controller entities by `object_id`" in runbook
     assert "`instrumentation_requirements`, `maintenance_log`, and `sensor_registry`" in runbook
     assert "center_root_zone_moisture____" in runbook
@@ -3958,7 +3878,7 @@ def test_irrigation_feedback_validator_covers_physical_acceptance_paths():
     assert "IRRIGATION_FINALIZER_DRY_RUN_PROOF=/path/to/finalizer-dry-run-proof.txt" in runbook
     assert "reports the planned closure counts without mutating rows" in runbook
     assert "A successful dry run must include `expected_open_feedback_alerts_after_finalize=0`" in runbook
-    assert "first records DB, HA, MQTT, and ESPHome feedback source evidence" in runbook
+    assert "first records DB and ESPHome feedback source evidence" in runbook
     assert "then runs the dry run before the mutating finalizer" in runbook
     assert "source-evidence, dry-run, mutation, and feedback-check transcript" in runbook
     assert "marks the two irrigation `instrumentation_requirements` rows `complete`" in runbook
@@ -4077,175 +3997,6 @@ def test_irrigation_feedback_validator_discovers_esphome_entities():
     assert "center_unknown_metric" not in discovered
 
 
-def test_irrigation_feedback_validator_discovers_near_miss_ha_entities():
-    module = runpy.run_path(
-        str(REPO_ROOT / "scripts" / "validate-irrigation-feedback.py"),
-        run_name="_test_irrigation_feedback_validator",
-    )
-    discover = module["_discover_ha_feedback_candidates"]
-
-    states = {
-        "sensor.greenhouse_center_root_zone_moisture_raw": {
-            "entity_id": "sensor.greenhouse_center_root_zone_moisture_raw",
-            "state": "42.1",
-            "attributes": {"friendly_name": "Greenhouse Center Root Zone Moisture Raw", "unit_of_measurement": "%"},
-        },
-        "sensor.greenhouse_center_runoff_p_h": {
-            "entity_id": "sensor.greenhouse_center_runoff_p_h",
-            "state": "6.2",
-            "attributes": {"friendly_name": "Greenhouse Center Runoff pH"},
-        },
-        "sensor.greenhouse_air_temperature": {
-            "entity_id": "sensor.greenhouse_air_temperature",
-            "state": "72.0",
-            "attributes": {"friendly_name": "Greenhouse Air Temperature", "unit_of_measurement": "°F"},
-        },
-        "sensor.greenhouse_cfg_direct_wet_center_start_offset_min": {
-            "entity_id": "sensor.greenhouse_cfg_direct_wet_center_start_offset_min",
-            "state": "120",
-            "attributes": {"friendly_name": "Greenhouse Cfg Direct Wet Center Start Offset Min"},
-        },
-        "sensor.center_runoff_ec": {
-            "entity_id": "sensor.center_runoff_ec",
-            "state": "810",
-            "attributes": {"friendly_name": "Center Runoff EC", "unit_of_measurement": "uS/cm"},
-        },
-        "sensor.greenhouse_middle_substrate_vwc": {
-            "entity_id": "sensor.greenhouse_middle_substrate_vwc",
-            "state": "31.2",
-            "attributes": {"friendly_name": "Greenhouse Middle Substrate VWC", "unit_of_measurement": "%"},
-        },
-        "sensor.greenhouse_middle_substrate_moisture": {
-            "entity_id": "sensor.greenhouse_middle_substrate_moisture",
-            "state": "32.8",
-            "attributes": {"friendly_name": "Greenhouse Middle Substrate Moisture", "unit_of_measurement": "%"},
-        },
-        "sensor.greenhouse_center_drain_ph": {
-            "entity_id": "sensor.greenhouse_center_drain_ph",
-            "state": "6.3",
-            "attributes": {"friendly_name": "Greenhouse Center Drain pH"},
-        },
-        "sensor.greenhouse_center_effluent_ec": {
-            "entity_id": "sensor.greenhouse_center_effluent_ec",
-            "state": "840",
-            "attributes": {"friendly_name": "Greenhouse Center Effluent EC", "unit_of_measurement": "uS/cm"},
-        },
-        "sensor.greenhouse_drain_tds": {
-            "entity_id": "sensor.greenhouse_drain_tds",
-            "state": "920",
-            "attributes": {"friendly_name": "Greenhouse Drain TDS", "unit_of_measurement": "ppm"},
-        },
-        "sensor.greenhouse_hydroponic_ec_corrected": {
-            "entity_id": "sensor.greenhouse_hydroponic_ec_corrected",
-            "state": "2478",
-            "attributes": {"friendly_name": "Greenhouse Hydroponic EC (corrected)", "unit_of_measurement": "uS/cm"},
-        },
-        "sensor.greenhouse_hydroponic_ph_corrected": {
-            "entity_id": "sensor.greenhouse_hydroponic_ph_corrected",
-            "state": "5.44",
-            "attributes": {"friendly_name": "Greenhouse Hydroponic pH (corrected)"},
-        },
-        "sensor.greenhouse_reservoir_tds": {
-            "entity_id": "sensor.greenhouse_reservoir_tds",
-            "state": "1148",
-            "attributes": {"friendly_name": "Greenhouse Reservoir TDS", "unit_of_measurement": "ppm"},
-        },
-    }
-
-    discovered = {item["entity_id"]: item for item in discover(states)}
-
-    assert "sensor.greenhouse_center_root_zone_moisture_raw" in discovered
-    assert discovered["sensor.greenhouse_center_root_zone_moisture_raw"]["accepted_for"] == []
-    assert discovered["sensor.greenhouse_center_runoff_p_h"]["accepted_for"] == ["center_runoff_ph"]
-    assert discovered["sensor.center_runoff_ec"]["accepted_for"] == []
-    assert discovered["sensor.greenhouse_middle_substrate_vwc"]["accepted_for"] == ["center_root_zone_moisture"]
-    assert discovered["sensor.greenhouse_middle_substrate_moisture"]["accepted_for"] == ["center_root_zone_moisture"]
-    assert discovered["sensor.greenhouse_center_drain_ph"]["accepted_for"] == ["center_runoff_ph"]
-    assert discovered["sensor.greenhouse_center_effluent_ec"]["accepted_for"] == ["center_runoff_ec"]
-    assert discovered["sensor.greenhouse_drain_tds"]["accepted_for"] == []
-    assert discovered["sensor.greenhouse_hydroponic_ec_corrected"]["accepted_for"] == []
-    assert discovered["sensor.greenhouse_hydroponic_ph_corrected"]["accepted_for"] == []
-    assert discovered["sensor.greenhouse_reservoir_tds"]["accepted_for"] == []
-    assert "sensor.greenhouse_air_temperature" not in discovered
-    assert "sensor.greenhouse_cfg_direct_wet_center_start_offset_min" not in discovered
-
-
-def test_irrigation_feedback_validator_discovers_near_miss_mqtt_topics():
-    module = runpy.run_path(
-        str(REPO_ROOT / "scripts" / "validate-irrigation-feedback.py"),
-        run_name="_test_irrigation_feedback_validator",
-    )
-
-    def fake_subscribe_filter(topic_filter, *, include_retained, timeout_s):
-        assert topic_filter == "greenhouse/sensor/#"
-        assert timeout_s >= 1
-        if include_retained:
-            return {
-                "greenhouse/sensor/middle_substrate_vwc/state": "31.2",
-                "greenhouse/sensor/middle_substrate_moisture/state": "32.0",
-                "greenhouse/sensor/middle_substrate_moisture____/state": "32.8",
-                "greenhouse/sensor/center_drain_ph/state": "6.3",
-                "greenhouse/sensor/center_drain_ec_us_cm/state": "840",
-                "greenhouse/sensor/center_drain_ec___s_cm_/state": "842",
-                "greenhouse/sensor/hydroponic_ec/state": "2478",
-                "greenhouse/sensor/center_unknown/state": "1",
-            }, None
-        return {
-            "greenhouse/sensor/drain_tds/state": "920",
-            "greenhouse/sensor/reservoir_ph/state": "5.44",
-        }, None
-
-    original_subscribe = module["_mqtt_subscribe_filter"]
-    module["_discover_mqtt_feedback_candidates"].__globals__["_mqtt_subscribe_filter"] = fake_subscribe_filter
-    try:
-        discovered, error = module["_discover_mqtt_feedback_candidates"](5)
-    finally:
-        module["_discover_mqtt_feedback_candidates"].__globals__["_mqtt_subscribe_filter"] = original_subscribe
-
-    assert error is None
-    by_topic = {item["topic"]: item for item in discovered}
-    assert by_topic["greenhouse/sensor/middle_substrate_vwc/state"]["accepted_for"] == ["center_root_zone_moisture"]
-    assert by_topic["greenhouse/sensor/middle_substrate_moisture/state"]["accepted_for"] == [
-        "center_root_zone_moisture"
-    ]
-    assert by_topic["greenhouse/sensor/middle_substrate_moisture____/state"]["accepted_for"] == [
-        "center_root_zone_moisture"
-    ]
-    assert by_topic["greenhouse/sensor/center_drain_ph/state"]["accepted_for"] == ["center_runoff_ph"]
-    assert by_topic["greenhouse/sensor/center_drain_ec_us_cm/state"]["accepted_for"] == ["center_runoff_ec"]
-    assert by_topic["greenhouse/sensor/center_drain_ec___s_cm_/state"]["accepted_for"] == ["center_runoff_ec"]
-    assert by_topic["greenhouse/sensor/drain_tds/state"]["accepted_for"] == []
-    assert by_topic["greenhouse/sensor/hydroponic_ec/state"]["accepted_for"] == []
-    assert by_topic["greenhouse/sensor/reservoir_ph/state"]["accepted_for"] == []
-    assert "greenhouse/sensor/center_unknown/state" not in by_topic
-
-
-def test_irrigation_feedback_validator_flags_mqtt_stale_retained_values():
-    module = runpy.run_path(
-        str(REPO_ROOT / "scripts" / "validate-irrigation-feedback.py"),
-        run_name="_test_irrigation_feedback_validator",
-    )
-
-    def fake_subscribe(topics, *, include_retained, timeout_s):
-        assert timeout_s >= 1
-        if include_retained:
-            return {"greenhouse/sensor/south_1_soil_moisture____/state": "64.0"}, None
-        return {}, None
-
-    original_subscribe = module["_mqtt_subscribe"]
-    module["_mqtt_subscribe"].__globals__["_mqtt_subscribe"] = fake_subscribe
-    try:
-        candidates, error = module["_mqtt_candidate_states"](75)
-    finally:
-        module["_mqtt_subscribe"].__globals__["_mqtt_subscribe"] = original_subscribe
-
-    assert error is None
-    south = {item["topic"]: item for item in candidates["south_soil_probe_1"]}
-    assert south["greenhouse/sensor/south_1_soil_moisture____/state"]["retained_value"] == "64.0"
-    assert south["greenhouse/sensor/south_1_soil_moisture____/state"]["live_value"] is None
-    assert south["greenhouse/sensor/south_1_soil_moisture____/state"]["stale_retained_only"] is True
-
-
 def test_irrigation_feedback_validator_formats_view_diagnostics():
     module = runpy.run_path(
         str(REPO_ROOT / "scripts" / "validate-irrigation-feedback.py"),
@@ -4295,24 +4046,6 @@ def test_irrigation_feedback_work_order_prints_south_probe_failure_evidence(caps
             "center_runoff_ec": {"status": "missing", "latest_value": None, "last_sample_ts": None},
         },
         "esphome_candidates": {},
-        "ha_candidates": {},
-        "mqtt_candidates": {},
-        "ha_discovered_feedback_candidates": [
-            {
-                "entity_id": "sensor.greenhouse_center_probe_candidate",
-                "accepted_for": [],
-                "state": "42.0",
-                "unit": "%",
-            }
-        ],
-        "mqtt_discovered_feedback_candidates": [
-            {
-                "topic": "greenhouse/sensor/center_probe_candidate/state",
-                "accepted_for": [],
-                "retained_value": "41",
-                "live_value": None,
-            }
-        ],
         "esphome_discovered_feedback_entities": [
             {
                 "type": "SensorInfo",
@@ -4398,18 +4131,18 @@ def test_irrigation_feedback_work_order_prints_south_probe_failure_evidence(caps
     assert "DB source history:" in output
     assert "soil_moisture_south_1: lifetime_samples=1200 samples_24h=144 valid_samples_24h=0" in output
     assert "moisture_center: lifetime_samples=0 samples_24h=0 valid_samples_24h=0 last_sample=- last_valid=-" in output
-    assert "Accepted HA IDs: sensor.greenhouse_south_1_soil_moisture" in output
-    assert "Accepted MQTT topics: greenhouse/sensor/south_1_soil_moisture____/state" in output
     assert "Accepted ESPHome object IDs: south_1_soil_moisture____" in output
-    assert "Accepted HA IDs: sensor.greenhouse_center_soil_moisture" in output
-    assert "Accepted HA IDs: sensor.greenhouse_center_runoff_ph" in output
-    assert "Accepted HA IDs: sensor.greenhouse_center_runoff_ec" in output
+    assert "Accepted ESPHome object IDs: center_soil_moisture____" in output
+    assert "Accepted ESPHome object IDs: center_runoff_ph" in output
+    assert "Accepted ESPHome object IDs: center_runoff_ec" in output
+    for removed in ("Accepted HA IDs", "Accepted MQTT topics", "   HA: ", "   MQTT: "):
+        assert removed not in output, removed
     assert "Field action: reseat wiring/media contact" in output
     assert "Valid-value gate:" in output
     assert "south_soil_probe_1: moisture must be >0-100%" in output
     assert "center_runoff_ph: ph_runoff_center must be 0-14" in output
     assert "Deploy boundary for accepted aliases" in output
-    assert "ingestor/entity_map.py and ingestor/tasks.py" in output
+    assert "ESPHOME_FEEDBACK_MAP in ingestor/entity_map.py" in output
     assert "sudo systemctl restart verdify-ingestor" in output
     assert "Alias-only feedback changes do not require verdify-mcp" in output
     assert "Do not restart from a dirty shared worktree" in output
@@ -4420,10 +4153,8 @@ def test_irrigation_feedback_work_order_prints_south_probe_failure_evidence(caps
     assert "south_soil_probe_1_repair: status=needed" in output
     assert "moisture_center: sensor_id=climate.moisture_center active=false" in output
     assert "Discovery sweep to catch newly installed or misnamed sources" in output
-    assert "HA feedback-like entities:" in output
-    assert "sensor.greenhouse_center_probe_candidate accepted_for=near_miss state=42.0 %" in output
-    assert "MQTT feedback-like topics:" in output
-    assert "greenhouse/sensor/center_probe_candidate/state accepted_for=near_miss retained=41 live=-" in output
+    assert "HA feedback-like entities:" not in output
+    assert "MQTT feedback-like topics:" not in output
     assert "ESPHome feedback-like entities:" in output
     assert "SensorInfo center_probe_candidate accepted_for=near_miss state=42.0 missing_state=false" in output
     assert "make irrigation-feedback-watch-field-proof" in output
@@ -4454,11 +4185,9 @@ def test_irrigation_completion_audit_maps_objective_and_physical_blocker():
     assert "live public irrigation discoverability" in src
     assert "live graphs DNS routing" in src
     assert "live irrigation dashboard render" in src
-    assert "discover_ha=True" in src
-    assert "discover_mqtt=True" in src
-    assert "discover_mqtt_all=True" in src
     assert "discover_esphome=True" in src
-    assert "--mqtt-live-timeout-s" in src
+    for removed in ("include_ha=", "discover_ha=", "discover_mqtt=", "discover_mqtt_all=", "--mqtt-live-timeout-s"):
+        assert removed not in src, removed
     assert "--allow-physical-blocker" in src
     assert "only_physical_feedback_blocked" in src
     assert '"physical_blocker_only": physical_blocker_only' in src
@@ -4471,22 +4200,19 @@ def test_irrigation_completion_audit_maps_objective_and_physical_blocker():
     assert "south_2_reference_positive_samples_24h" in src
     assert "soil_ec_south_1_last_positive_ts" in src
     assert "_feedback_source_evidence" in src
-    assert "ha {key}" in src
-    assert "mqtt {key}" in src
+    assert "ha {key}" not in src
+    assert "mqtt {key}" not in src
     assert "esphome {key}" in src
     assert "_feedback_discovery_evidence" in src
-    assert "ha_discovered_feedback_candidates" in src
-    assert "mqtt_discovered_feedback_candidates" in src
+    assert "ha_discovered_feedback_candidates" not in src
+    assert "mqtt_discovered_feedback_candidates" not in src
     assert "esphome_discovered_feedback_entities" in src
     assert "discovered near_miss" in src
     assert (
-        "scripts/irrigation-completion-audit.py --json --live-site --allow-physical-blocker --mqtt-live-timeout-s"
+        'scripts/irrigation-completion-audit.py --json --live-site --allow-physical-blocker | tee "$(IRRIGATION_COMPLETION_AUDIT_PROOF)"'
         in makefile
     )
-    assert (
-        "scripts/validate-irrigation-feedback.py --json --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome --include-db-history"
-        in makefile
-    )
+    assert "scripts/validate-irrigation-feedback.py --json --discover-esphome --include-db-history" in makefile
     assert "IRRIGATION_COMPLETION_AUDIT_PROOF" in makefile
     assert "$(MAKE) irrigation-completion-audit" in makefile
 
@@ -4581,33 +4307,6 @@ def test_irrigation_completion_audit_maps_objective_and_physical_blocker():
                 "valid_samples_24h": 0,
             },
         },
-        "ha_candidates": {
-            "south_soil_probe_1": [
-                {
-                    "entity_id": "sensor.greenhouse_south_1_soil_moisture",
-                    "present": "true",
-                    "state": "0.0",
-                    "unit": "%",
-                }
-            ],
-            "center_root_zone_moisture": [
-                {
-                    "entity_id": "sensor.greenhouse_center_root_zone_moisture",
-                    "present": "false",
-                    "state": None,
-                    "unit": None,
-                }
-            ],
-        },
-        "mqtt_candidates": {
-            "south_soil_probe_1": [
-                {
-                    "topic": "greenhouse/sensor/south_1_soil_moisture____/state",
-                    "live_value": None,
-                    "retained_value": None,
-                }
-            ]
-        },
         "esphome_candidates": {
             "south_soil_probe_1": [
                 {
@@ -4626,26 +4325,6 @@ def test_irrigation_completion_audit_maps_objective_and_physical_blocker():
                 }
             ],
         },
-        "ha_discovered_feedback_candidates": [
-            {
-                "entity_id": "sensor.greenhouse_hydroponic_ec_corrected",
-                "accepted_for": [],
-            },
-            {
-                "entity_id": "sensor.greenhouse_south_1_soil_moisture",
-                "accepted_for": ["south_soil_probe_1"],
-            },
-        ],
-        "mqtt_discovered_feedback_candidates": [
-            {
-                "topic": "greenhouse/sensor/hydroponic_ec/state",
-                "accepted_for": [],
-            },
-            {
-                "topic": "greenhouse/sensor/south_1_soil_moisture____/state",
-                "accepted_for": ["south_soil_probe_1"],
-            },
-        ],
         "esphome_discovered_feedback_entities": [
             {
                 "object_id": "west_soil_moisture____",
@@ -4678,14 +4357,11 @@ def test_irrigation_completion_audit_maps_objective_and_physical_blocker():
     assert any("soil_ec_south_1_last_positive_ts=2026-05-16T16:00:49+00:00" in line for line in by_id[5].evidence)
     assert any("db history soil_moisture_south_1: lifetime_samples=77480" in line for line in by_id[5].evidence)
     assert any("db history moisture_center: lifetime_samples=0" in line for line in by_id[5].evidence)
-    assert any("ha south_soil_probe_1" in line for line in by_id[5].evidence)
-    assert any("mqtt south_soil_probe_1: accepted topics absent" in line for line in by_id[5].evidence)
     assert any("esphome south_soil_probe_1" in line for line in by_id[5].evidence)
-    assert any("ha discovered near_miss" in line for line in by_id[5].evidence)
-    assert any("sensor.greenhouse_hydroponic_ec_corrected" in line for line in by_id[5].evidence)
-    assert any("mqtt discovered near_miss" in line for line in by_id[5].evidence)
-    assert any("greenhouse/sensor/hydroponic_ec/state" in line for line in by_id[5].evidence)
+    assert any("esphome center_root_zone_moisture: accepted object IDs absent" in line for line in by_id[5].evidence)
     assert any("esphome discovered near_miss" in line for line in by_id[5].evidence)
+    assert any("west_soil_moisture____" in line for line in by_id[5].evidence)
+    assert not any(line.startswith(("ha ", "mqtt ")) for line in by_id[5].evidence)
 
     regressed = list(results)
     regressed[0] = module["ObjectiveResult"](1, by_id[1].requirement, "fail", [], ["software regression"])
@@ -5448,27 +5124,6 @@ def test_irrigation_feedback_finalizer_rolls_back_if_alerts_remain(monkeypatch):
     assert pool.conn.rolled_back is True
 
 
-def test_irrigation_feedback_stale_retained_clear_uses_configured_mqtt_auth():
-    makefile = Path("Makefile").read_text()
-    src = Path("scripts/clear-irrigation-stale-retained.py").read_text()
-
-    assert "scripts/clear-irrigation-stale-retained.py --confirm" in makefile
-    assert "CONFIRM_CLEAR_RETAINED=1" in makefile
-    assert "MQTT_FEEDBACK_CANDIDATES" in src
-    assert "south_soil_probe_1" in src
-    assert "MQTT_HOST" in src
-    assert "MQTT_PORT" in src
-    assert "MQTT_USER" in src
-    assert "MQTT_PASS" in src
-    assert "STALE_NEAR_MISS_TOPICS" in src
-    assert '"--near-miss"' in src
-    assert "east_soil_moisture" in src
-    assert "south_2_soil_moisture" in src
-    assert "west_soil_moisture" in src
-    assert 'cmd.extend(["-P", MQTT_PASS])' in src
-    assert "Refusing to clear retained MQTT values without --confirm" in src
-
-
 def test_irrigation_stack_validator_audits_full_objective_surface():
     src = Path("scripts/validate-irrigation-stack.py").read_text()
 
@@ -5537,11 +5192,8 @@ def test_irrigation_stack_validator_audits_full_objective_surface():
         "irrigation feedback alias alignment",
         "_literal_assignment",
         "_check_feedback_alias_alignment",
-        "HA_CANDIDATES",
         "ESPHOME_CANDIDATES",
-        "MQTT_FEEDBACK_CANDIDATES",
-        "CENTER_FEEDBACK_MAP",
-        "_CENTER_FEEDBACK_MAP",
+        "ESPHOME_FEEDBACK_MAP",
         "tds_accepted",
         "mismatches",
         "center_moisture_last_valid_ts",
@@ -5695,15 +5347,9 @@ def test_irrigation_stack_validator_audits_full_objective_surface():
     assert "irrigation-feedback-finalize-proof" in makefile
     assert "IRRIGATION_FINALIZER_PROOF" in makefile
     assert 'tee "$(IRRIGATION_FINALIZER_PROOF)"' in makefile
-    assert (
-        "scripts/validate-irrigation-feedback.py --status-only --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome --include-db-history"
-        in makefile
-    )
+    assert "scripts/validate-irrigation-feedback.py --status-only --discover-esphome --include-db-history" in makefile
     assert "IRRIGATION_COMPLETION_AUDIT_PROOF" in makefile
-    assert (
-        "scripts/irrigation-completion-audit.py --json --live-site --allow-physical-blocker --mqtt-live-timeout-s"
-        in makefile
-    )
+    assert "scripts/irrigation-completion-audit.py --json --live-site --allow-physical-blocker" in makefile
     assert "\t$(MAKE) irrigation-completion-audit\n" in makefile
     assert "irrigation-post-deploy-acceptance-plan:" in makefile
     assert "prints only; does not run checks" in makefile

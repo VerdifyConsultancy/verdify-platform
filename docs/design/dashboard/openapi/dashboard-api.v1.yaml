@@ -1689,7 +1689,7 @@ components:
         planned_start: {type: string, format: date-time}
         status: {type: string, enum: [planned, skipped, blocked, running, done]}
         outcome: {anyOf: [{$ref: '#/components/schemas/RunOutcome'}, {type: 'null'}], description: 'Set when done; unknown when no outcome reached the platform'}
-        reason: {type: [string, 'null'], description: 'Why skipped, blocked or missed, in words, e.g. line disabled. A pause reads ''line paused by <name>: <reason>'', the reason left out when none was given'}
+        reason: {type: [string, 'null'], description: 'Why skipped, blocked or missed, in words, e.g. line disabled. A pause reads ''line paused by <name>: <reason>'', the reason left out when none was given. A planned one may carry a note: only while VPD sensing is degraded, ends at the daily cap'}
         run_id: {type: [string, 'null']}
     ScheduleAgenda:
       type: object
@@ -1714,7 +1714,7 @@ components:
               properties: {min: {type: number}, max: {type: number}}
         solar:
           type: array
-          description: Per local day in the window, from ingestor/solar.py, for previews
+          description: Per local day in the window, from verdify_schemas/solar.py, for previews
           items:
             type: object
             required: [date, sunrise, solar_noon, sunset]

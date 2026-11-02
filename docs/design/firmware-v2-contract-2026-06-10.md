@@ -18,8 +18,9 @@ float solar_phase(int now_minute, const SolarTimes& st);  // [0,4): 0=SR 1=SM 2=
 
 - Greenhouse constants: lat 40.167, lon −105.102 (Longmont CO). `utc_offset_min`
   comes from the time component each cycle (DST-correct by construction).
-- **Site-constant SSOT contract (#393):** `ingestor/solar.py`
-  (`GREENHOUSE_LAT_DEG` / `GREENHOUSE_LON_DEG` / `_ZENITH_DEG` 90.833) is the
+- **Site-constant SSOT contract (#393):** `verdify_schemas/solar.py`
+  (`GREENHOUSE_LAT_DEG` / `GREENHOUSE_LON_DEG` / `_ZENITH_DEG` 90.833; moved
+  from `ingestor/solar.py`, which re-exports it, by VD-37) is the
   single editable source for lat/lon/zenith. The mirrored literals in
   `firmware/lib/greenhouse_solar.h` (+ the vendored firmware-twin copy),
   `db/migrations/186-noaa-solar-phase-parity.sql`, and the dumped

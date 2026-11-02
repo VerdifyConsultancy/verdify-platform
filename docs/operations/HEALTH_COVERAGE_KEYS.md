@@ -26,6 +26,16 @@ Namespace ingest/Lease alerts do not establish these availability checks. The sa
 
 All three last-success series were present. Confirm `spec.timeZone`, deadlines and suspend from live source before choosing thresholds. A historical failed Job must not remain the latest-failure alarm after a newer scheduled success. Kubernetes Job failure telemetry is operational evidence, not proof that an outcome freeze or physical operation was scientifically valid.
 
+CronJob `verdify-prod/verdify-ha-gap-backfill` was retired by VD-48 and needs no last-success rule; remove any rule or registry entry that still expects it.
+
+## Home Assistant inputs after VD-48
+
+Home Assistant keeps three reads, all in the ingestor's `ha_sensor_sync` task (every 300 s): the Lutron readback (`equipment_state.grow_light_main` and `grow_light_grow`, one row per poll), the YINMIK hydro probe (`climate.hydro_*`, until #1183) and the Frigate occupancy sensor (`system_state` occupancy rows with `occupancy_source = ha_sensor_sync`). The controller's own grow-light switches record `grow_light_main_intent` and `grow_light_grow_intent`.
+
+Outdoor weather comes only from the ESP32 Tempest UDP listener over the native API (`climate.outdoor_temp_f` and the other `tempest_*` routes in `ingestor/entity_map.py`), so its freshness follows the 60 s climate flush. These HA-only columns stop updating and stay empty: `wind_speed_avg_mph`, `wind_direction_avg_deg`, `feels_like_f`, `wet_bulb_temp_f`, `vapor_pressure_inhg`, `air_density_kg_m3` and `precip_intensity_in_h`. The `sensor_registry` rows `climate.feels_like_f` and `climate.wet_bulb_temp_f` were still active at the change, so they read stale in `v_sensor_staleness` until they are deactivated.
+
+The writer no longer reaches the HAOS MQTT broker: `allow-ingestor-device-egress` admits 192.168.30.107 on TCP 8123 only.
+
 ## Declared probe addresses 04 / 08 / 09
 
 The [firmware topology](https://github.com/VerdifyConsultancy/verdify-platform/blob/33ed324e9a74aa34892bd35f365ce94d564798c8/firmware/greenhouse/hardware.yaml) declares the following software aliases. HA's current Prometheus export contains `homeassistant_entity_available{job="home-assistant",entity="ENTITY"}` for each named entity; all four values were 0 in the October 20 readback.

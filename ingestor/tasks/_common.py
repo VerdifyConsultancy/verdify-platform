@@ -766,36 +766,13 @@ _SHELLY_ENTITIES = {
 
 
 # ═════════════════════════════════════════════════════════════════
-# 4. TEMPEST WEATHER SYNC (every 300s)
-# ═════════════════════════════════════════════════════════════════
-_TEMPEST_MAP = {
-    "sensor.panorama_temperature": ("outdoor_temp_f", None),
-    "sensor.panorama_humidity": ("outdoor_rh_pct", None),
-    "sensor.panorama_wind_speed": ("wind_speed_mph", None),
-    "sensor.panorama_wind_direction": ("wind_direction_deg", None),
-    "sensor.panorama_illuminance": ("outdoor_lux", None),
-    "sensor.panorama_irradiance": ("solar_irradiance_w_m2", None),
-    "sensor.panorama_air_pressure": ("pressure_hpa", lambda v: v * 33.8639),
-    "sensor.panorama_precipitation": ("precip_in", None),
-    "sensor.panorama_uv_index": ("uv_index", None),
-    "sensor.panorama_wind_gust": ("wind_gust_mph", None),
-    "sensor.panorama_wind_lull": ("wind_lull_mph", None),
-    "sensor.panorama_wind_speed_average": ("wind_speed_avg_mph", None),
-    "sensor.panorama_wind_direction_average": ("wind_direction_avg_deg", None),
-    "sensor.panorama_feels_like": ("feels_like_f", None),
-    "sensor.panorama_wet_bulb_temperature": ("wet_bulb_temp_f", None),
-    "sensor.panorama_vapor_pressure": ("vapor_pressure_inhg", None),
-    "sensor.panorama_air_density": ("air_density_kg_m3", None),
-    "sensor.panorama_precipitation_intensity": ("precip_intensity_in_h", None),
-    "sensor.panorama_lightning_count": ("lightning_count", lambda v: int(v)),
-    "sensor.panorama_lightning_average_distance": ("lightning_avg_dist_mi", None),
-}
-
-
-# ═════════════════════════════════════════════════════════════════
-# 5. HA SENSOR SYNC — hydro, lights, switches, occupancy (every 300s)
+# 5. HA SENSOR SYNC — Lutron lights, Frigate occupancy, YINMIK hydro (every 300s)
+#    Home Assistant keeps only these reads (D-IRP-24, irrigation §7). Outdoor
+#    weather comes from the ESP32 Tempest UDP listener (entity_map.CLIMATE_MAP).
 # ═════════════════════════════════════════════════════════════════
 _HYDRO_MAP = {
+    # Stays until a direct reader with no Home Assistant replaces it (#1183,
+    # decisions Round 2 item 5).
     # Read from HA template sensors that apply empirical scaling corrections
     # for the YINMIK meter's non-standard Tuya DP encoding (pH × 400, TDS × ½,
     # EC × 0.565). Corrections are defined in HA's
@@ -811,64 +788,12 @@ _HYDRO_MAP = {
 }
 
 
-_CENTER_FEEDBACK_MAP = {
-    # Pending physical center feedback. Keep HA entity aliases broad so a
-    # sensor added outside the ESP32 path can begin populating climate rows
-    # without another deploy.
-    "sensor.greenhouse_center_soil_moisture": ("moisture_center", None),
-    "sensor.greenhouse_center_root_zone_moisture": ("moisture_center", None),
-    "sensor.greenhouse_center_root_zone_soil_moisture": ("moisture_center", None),
-    "sensor.greenhouse_center_rootzone_moisture": ("moisture_center", None),
-    "sensor.greenhouse_center_moisture": ("moisture_center", None),
-    "sensor.greenhouse_center_vwc": ("moisture_center", None),
-    "sensor.greenhouse_center_substrate_vwc": ("moisture_center", None),
-    "sensor.greenhouse_center_substrate_moisture": ("moisture_center", None),
-    "sensor.greenhouse_center_root_zone_vwc": ("moisture_center", None),
-    "sensor.greenhouse_middle_substrate_vwc": ("moisture_center", None),
-    "sensor.greenhouse_middle_substrate_moisture": ("moisture_center", None),
-    "sensor.greenhouse_center_runoff_ph": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_runoff_p_h": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_run_off_ph": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_run_off_p_h": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_drain_ph": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_drain_p_h": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_drainage_ph": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_leachate_ph": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_effluent_ph": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_tray_ph": ("ph_runoff_center", None),
-    "sensor.greenhouse_center_runoff_ec": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_runoff_ec_ms_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_runoff_ec_us_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_runoff_ec_u_s_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_run_off_ec": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_run_off_ec_ms_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_run_off_ec_us_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_runoff_conductivity": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_runoff_electrical_conductivity": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_drain_ec": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_drain_ec_ms_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_drain_ec_us_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_drain_ec_u_s_cm": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_drainage_ec": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_leachate_ec": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_effluent_ec": ("ec_runoff_center", None),
-    "sensor.greenhouse_center_tray_ec": ("ec_runoff_center", None),
-}
-
-
+# The Lutron readback is the only source of the grow_light_main/_grow equipment
+# rows. The controller's own grow-light switches record grow_light_*_intent
+# (entity_map.EQUIPMENT_SWITCH_MAP, decisions Q-09).
 _LIGHT_ENTITIES = {
     "switch.greenhouse_main": "grow_light_main",
     "switch.greenhouse_grow": "grow_light_grow",
-}
-
-
-_HA_SWITCHES = {
-    "switch.greenhouse_economiser_enabled": "economiser_enabled",
-    "switch.greenhouse_fog_closes_vent": "fog_closes_vent",
-    "switch.greenhouse_irrigation_enabled": "irrigation_enabled",
-    "switch.greenhouse_irrigation_wall_enabled": "irrigation_wall_enabled",
-    "switch.greenhouse_irrigation_center_enabled": "irrigation_center_enabled",
-    "switch.greenhouse_irrigation_weather_skip": "irrigation_weather_skip",
 }
 
 
@@ -881,6 +806,30 @@ _ha_prev_state: dict = {}
 
 
 _HA_STATE_FILE = STATE_DIR / "ha-sensor-sync-state.json"
+
+
+async def update_latest_climate_row(conn, columns: dict) -> bool:
+    """Overlay validated columns onto the newest ESP32 climate row of the last 5 minutes.
+
+    The one overlay statement ha_sensor_sync and hydro_probe_sync share (VD-70).
+    Callers validate the values with ClimateRow first; the column names come
+    from code-owned route maps. Returns False when no recent row has temp_avg.
+    """
+    unknown = set(columns) - set(ClimateRow.model_fields)
+    if unknown:
+        raise ValueError(f"not climate columns: {sorted(unknown)}")
+    latest = await conn.fetchval(
+        "SELECT ts FROM climate WHERE ts > now() - interval '5 minutes' AND temp_avg IS NOT NULL ORDER BY ts DESC LIMIT 1"
+    )
+    if not latest:
+        return False
+    parts, vals = [], []
+    for i, (c, v) in enumerate(columns.items()):
+        parts.append(f"{c} = ${i + 1}")
+        vals.append(v)
+    vals.append(latest)
+    await conn.execute(f"UPDATE v_runtime_climate_write SET {', '.join(parts)} WHERE ts = ${len(vals)}", *vals)
+    return True
 
 
 # Reactive planner REMOVED in Sprint 5 P6 — replaced by forecast deviation monitor (P4)
@@ -900,6 +849,10 @@ from quiet_mode import (
 
 # In-memory cache of last pushed values — prevents re-pushing unchanged setpoints
 _last_pushed: dict[str, float] = {}
+# param -> (sent at, connection generation, value) of the last physically sent
+# command. Plain convergence (VD-62) does not send the same value again on the
+# same connection while its readback is pending (SENT_READBACK_WAIT_S).
+_last_sent_at: dict[str, tuple[datetime, int, float]] = {}
 
 
 SWITCH_CONFIRM_EQUIPMENT = {
@@ -1462,14 +1415,12 @@ __all__ = [
     "_POPULATE_SITE_CONTENT_SCRIPT",
     "_SHELLY_PREFIX",
     "_SHELLY_ENTITIES",
-    "_TEMPEST_MAP",
     "_HYDRO_MAP",
-    "_CENTER_FEEDBACK_MAP",
     "_LIGHT_ENTITIES",
-    "_HA_SWITCHES",
     "_OCCUPANCY_ENTITIES",
     "_ha_prev_state",
     "_HA_STATE_FILE",
+    "update_latest_climate_row",
     "CFG_READBACK_MAP",
     "EQUIPMENT_SWITCH_MAP",
     "PARAM_TO_ENTITY",
@@ -1480,6 +1431,7 @@ __all__ = [
     "quiet_expired_needs_restore",
     "quiet_is_active",
     "_last_pushed",
+    "_last_sent_at",
     "SWITCH_CONFIRM_EQUIPMENT",
     "FIRMWARE_READBACK_PARAMS",
     "FIRMWARE_HAS_PER_CIRCUIT_LIGHTING",

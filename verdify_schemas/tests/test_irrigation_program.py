@@ -834,27 +834,38 @@ def test_seq_newer_rejects_non_u16() -> None:
 
 
 def test_module_is_pure_and_import_light() -> None:
-    """Nothing from ingestor/ (or any other repo package): the api, MCP and ingestor images all load it."""
+    """Nothing from ingestor/ (or any other repo package): the api, MCP and ingestor images all load it.
+
+    The schedule model (VD-37, #1152) adds its sibling modules only: the shared solar code, the
+    snap rule and the registry's site rows.
+    """
     imported: set[str] = set()
+    siblings: set[str] = set()
     for node in ast.walk(ast.parse(MODULE_PATH.read_text())):
         if isinstance(node, ast.Import):
             imported |= {alias.name.split(".")[0] for alias in node.names}
         elif isinstance(node, ast.ImportFrom):
             assert node.level == 0 and node.module, "no relative imports"
             imported.add(node.module.split(".")[0])
+            if node.module.startswith("verdify_schemas"):
+                siblings.add(node.module)
     stdlib = {
         "__future__",
         "collections",
         "datetime",
         "enum",
+        "functools",
         "hashlib",
         "itertools",
+        "math",
         "re",
         "struct",
         "types",
         "typing",
+        "zoneinfo",
     }
-    assert imported <= stdlib | {"pydantic"}
+    assert imported <= stdlib | {"pydantic", "verdify_schemas"}
+    assert siblings == {"verdify_schemas.setting_values", "verdify_schemas.solar", "verdify_schemas.tunable_registry"}
 
 
 REEXPORTED = (

@@ -22,7 +22,7 @@ failure mode).
 (it was hand-created out-of-band during the #436 recovery). The `src/` files
 are byte-identical copies of the canonical sources — kustomize's RootOnly load
 restrictor forbids reaching outside this directory, same pattern as
-`components/firmware-twin` and `components/ha-gap-backfill`:
+`components/firmware-twin`:
 
 | `src/` copy | canonical source |
 | --- | --- |

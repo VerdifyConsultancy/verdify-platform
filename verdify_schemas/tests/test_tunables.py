@@ -12,6 +12,7 @@ import sys
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
+from verdify_schemas.tunable_registry import IRRIGATION_SITE_PARAMS, REGISTRY, RETIRED_TUNABLES_REG
 from verdify_schemas.tunables import (
     ALL_TUNABLES,
     NUMERIC_TUNABLES,
@@ -51,6 +52,13 @@ class TestTunableEnumShape:
           tunables (e.g. fallback_window_s) need a home in ALL_TUNABLES so
           SetpointSnapshot validates; they have no SETPOINT_MAP route by
           design and are allowed here.
+        - A retired row with no firmware presence (no esp_object_id and no
+          cfg_readback_object_id, e.g. fog_time_window_start/end, VD-63) has
+          no route by design: it stays only so setpoint_changes history
+          validates.
+        - The irrigation site values (IRRIGATION_SITE_PARAMS, VD-37) have
+          neither route either: they travel only inside the irrigation
+          program record and are confirmed by its hash.
         """
         import pathlib
 
@@ -65,9 +73,14 @@ class TestTunableEnumShape:
         readback_tunables = set(CFG_READBACK_MAP.values())
         routed_tunables = em_tunables | readback_tunables
         schema_tunables = set(ALL_TUNABLES)
+        routeless_retired = {
+            name
+            for name in RETIRED_TUNABLES_REG
+            if REGISTRY[name].esp_object_id is None and REGISTRY[name].cfg_readback_object_id is None
+        }
 
         missing_in_schema = sorted(em_tunables - schema_tunables)
-        unrouted_in_schema = sorted(schema_tunables - routed_tunables)
+        unrouted_in_schema = sorted(schema_tunables - routed_tunables - routeless_retired - IRRIGATION_SITE_PARAMS)
 
         assert not missing_in_schema, (
             f"entity_map has tunables the schema doesn't know: {missing_in_schema}. Add to verdify_schemas/tunables.py."
@@ -76,6 +89,9 @@ class TestTunableEnumShape:
             f"schema has tunables neither SETPOINT_MAP nor CFG_READBACK_MAP routes: {unrouted_in_schema}. "
             "Remove from schema or add to one of the entity_map maps."
         )
+        # The program-bound site values must stay unrouted: the dispatcher never pushes them.
+        assert IRRIGATION_SITE_PARAMS <= schema_tunables
+        assert not IRRIGATION_SITE_PARAMS & routed_tunables
 
 
 class TestPhysicsInvariants:

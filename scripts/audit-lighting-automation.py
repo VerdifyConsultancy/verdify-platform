@@ -461,19 +461,20 @@ def static_checks(audit: Audit) -> None:
         "entity_map runtime maps are missing per-circuit lighting routes",
     )
     setpoint_server = read(REPO_ROOT / "scripts" / "setpoint-server.py")
-    ha_sync = read(REPO_ROOT / "scripts" / "ha-sensor-sync.py")
+    # The ingestor's ha_sensor_sync is the only Lutron readback (the legacy
+    # scripts/ha-sensor-sync.py was deleted with VD-48).
     tasks_src = read(REPO_ROOT / "ingestor" / "tasks.py")
-    lutron_sources = (setpoint_server, ha_sync, tasks_src)
+    lutron_sources = (setpoint_server, tasks_src)
     audit.check(
-        all('"switch.greenhouse_main": "grow_light_main"' in src for src in (ha_sync, tasks_src))
-        and all('"switch.greenhouse_grow": "grow_light_grow"' in src for src in (ha_sync, tasks_src))
+        '"switch.greenhouse_main": "grow_light_main"' in tasks_src
+        and '"switch.greenhouse_grow": "grow_light_grow"' in tasks_src
         and '"main": {"ha_entity": "switch.greenhouse_main", "equipment": "grow_light_main"}' in setpoint_server
         and '"grow": {"ha_entity": "switch.greenhouse_grow", "equipment": "grow_light_grow"}' in setpoint_server
         and all(
             '"light.greenhouse_main"' not in src and '"light.greenhouse_grow"' not in src for src in lutron_sources
         ),
         "Lutron switch enforcement path",
-        "setpoint server and sync jobs use real switch.greenhouse_* Lutron entities and avoid stale light.* wrappers",
+        "setpoint server and ha_sensor_sync use real switch.greenhouse_* Lutron entities and avoid stale light.* wrappers",
         "Lutron control/sync path is missing switch.greenhouse_* mappings or still references stale light.* wrappers",
     )
 
