@@ -123,6 +123,17 @@ def test_seq_and_lock_and_stamp_are_the_runners():
     )
     assert runner_stamp, "db/apply-migrations.sh changed how it stamps the ledger"
     assert "current_user);" in RUNNER.split("SELECT stamp_migration(", 1)[1].split("EOF", 1)[0]
+    # The runner's per-file order, which applied_first() follows: lock, timer, guard, file, stamp.
+    wrapper = RUNNER.split('cat > "$script" <<EOF', 1)[1].split("\nEOF\n", 1)[0]
+    steps = [
+        "${LOCK_SQL}",
+        "SELECT clock_timestamp() AS verdify_t0",
+        "DO \\$guard\\$",
+        "\\\\i ${file}",
+        "stamp_migration(",
+    ]
+    positions = [wrapper.index(step) for step in steps]
+    assert positions == sorted(positions), "db/apply-migrations.sh changed its per-file order"
 
 
 def test_apply_first_wraps_each_predecessor_as_the_runner_does(migrations):
@@ -134,8 +145,8 @@ def test_apply_first_wraps_each_predecessor_as_the_runner_does(migrations):
     rel = "db/migrations/500-first.sql"
     parts = [
         qualifier.RUNNER_LOCK,
-        f"WHERE source = 'db/migrations' AND filename = '{rel}') THEN",
         "SELECT pg_catalog.set_config('verdify_qualify.t0', pg_catalog.clock_timestamp()::text, true);",
+        f"WHERE source = 'db/migrations' AND filename = '{rel}') THEN",
         raw.decode(),
         f"SELECT public.stamp_migration(\n    '{rel}', 'db/migrations', 500, '{sha}', 'runner',",
         "current_user);",
@@ -229,6 +240,25 @@ def test_qualify_records_the_predecessors_and_the_state_they_leave(migrations, m
     assert json.loads(fixture.read_text()) == report
     probe = qualifier.qualify(target, None, ["psql"], probe_only=True, apply_first=[first, second])
     assert probe["applied_first_seals"] == seals("501") and probe["qualified_successor"] == seals("502")
+
+
+def test_a_later_run_without_the_options_drops_their_earlier_evidence(migrations, monkeypatch, tmp_path):
+    """A rewritten fixture keeps its projection, never evidence this run did not produce."""
+    fixture = tmp_path / "fixture.json"
+    pending = {"projected_successor": seals("502"), "projection": "read only", "native_fixture_sha256": "0" * 64}
+    fixture.write_text(json.dumps(pending))
+    checks = tmp_path / "checks.sql"
+    checks.write_text("SELECT 'QUALIFY native_fixture ' || json_build_object('all_passed', true)::text;\n")
+    target = migrations / "502-target.sql"
+    first = [migrations / "500-first.sql", migrations / "501-second.sql"]
+    replay(monkeypatch, native={"all_passed": True})
+    qualifier.qualify(target, fixture, ["psql"], apply_first=first, native_fixture=checks)
+    assert set(qualifier.OPTION_EVIDENCE) <= set(json.loads(fixture.read_text()))
+    replay(monkeypatch)
+    report = qualifier.qualify(target, fixture, ["psql"])
+    rewritten = json.loads(fixture.read_text())
+    assert rewritten == {"projected_successor": seals("502"), "projection": "read only", **report}
+    assert not set(qualifier.OPTION_EVIDENCE) & set(rewritten)
 
 
 @pytest.mark.parametrize(

@@ -15,24 +15,26 @@ that database, each one transaction that ends in ROLLBACK:
 A successor whose merged predecessors are not applied in production yet names
 each of them with ``--apply-first``, in filename order. The probe and final
 sessions then apply each one before the successor as db/apply-migrations.sh
-applies a wrap-safe file (the ledger advisory lock, the not-yet-ledgered guard,
-the file, then ``stamp_migration(..., 'runner', ...)``) and set the session
-bounds again after it. Each predecessor's own ``$predecessor$`` and
-``$successor$`` blocks must pass, its receipts must equal its digests, and both
-sessions must read the same state before the successor runs
-(``applied_first_seals``). ``--native-fixture`` runs a check file after the
+applies a wrap-safe file (the ledger advisory lock, the start of its timer, the
+not-yet-ledgered guard, the file, then ``stamp_migration(..., 'runner', ...)``)
+and set the session bounds again after it. Each predecessor's own
+``$predecessor$`` and ``$successor$`` blocks must pass, its receipts must equal
+its digests, and both sessions must read the same state before the successor
+runs (``applied_first_seals``). ``--native-fixture`` runs a check file after the
 successor in the final session; it reports one ``QUALIFY native_fixture {json}``
 line with ``"all_passed": true``.
 
 Nothing commits. The successor, each predecessor and the native fixture are
 refused before any session starts if they commit on their own or hold top-level
-transaction control or a psql meta-command. Every statement runs under a 120 s
-statement timeout and a 10 s lock timeout, ON_ERROR_STOP ends psql on the first
-error, and the server rolls the open transaction back on disconnect.
-``--probe-only`` stops after the probe. Otherwise the fixture is written only
-when the file's literals equal the probe, the final run's receipts match, the
-native fixture passed and every value read after the rollback equals its value
-before it.
+transaction control or a psql meta-command. Each session sets a 120 s statement
+timeout and a 10 s lock timeout before any file runs and again after each
+predecessor, ON_ERROR_STOP ends psql on the first error, and the server rolls
+the open transaction back on disconnect. ``--probe-only`` stops after the probe.
+Otherwise the fixture is written only when the file's literals equal the probe,
+the final run's receipts match, the native fixture passed and every value read
+after the rollback equals its value before it. A rewritten fixture keeps its
+projection but drops ``applied_first`` and native-fixture evidence that this
+run did not produce.
 
     python3 scripts/qualify-migration-successor.py \\
         db/migrations/280-desired-state-activity-log.sql \\
@@ -87,11 +89,12 @@ SEALS = ("api", "ingestor", "mcp")
 TRANSACTION_CONTROL = {"ABORT", "BEGIN", "COMMIT", "END", "PREPARE", "RELEASE", "ROLLBACK", "SAVEPOINT", "START"}
 # db/apply-migrations.sh accepts these names only, so they quote safely in SQL.
 MIGRATION_NAME = re.compile(r"[0-9][a-zA-Z0-9._-]*\.sql")
-# The runner's per-file wrapper around a wrap-safe file: its advisory lock, its
-# not-yet-ledgered guard, the file, then the ledger stamp with the duration and
-# the applying user.
+# The runner's per-file wrapper around a wrap-safe file, in its order: its
+# advisory lock, the clock it times the file from, its not-yet-ledgered guard,
+# the file, then the ledger stamp with the duration and the applying user.
 RUNNER_LOCK = "SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtext('verdify-schema-migrations'));\n"
-RUNNER_GUARD = """DO $qualify_apply_first$
+RUNNER_GUARD = """SELECT pg_catalog.set_config('verdify_qualify.t0', pg_catalog.clock_timestamp()::text, true);
+DO $qualify_apply_first$
 BEGIN
     IF EXISTS (SELECT 1 FROM public.schema_migrations
                 WHERE source = 'db/migrations' AND filename = '{rel}') THEN
@@ -99,7 +102,6 @@ BEGIN
     END IF;
 END
 $qualify_apply_first$;
-SELECT pg_catalog.set_config('verdify_qualify.t0', pg_catalog.clock_timestamp()::text, true);
 """
 RUNNER_STAMP = """SELECT public.stamp_migration(
     '{rel}', 'db/migrations', {seq}, '{sha}', 'runner',
@@ -108,6 +110,9 @@ RUNNER_STAMP = """SELECT public.stamp_migration(
     current_user);
 """
 NATIVE_FIXTURE_LINE = "'QUALIFY native_fixture '"
+# Evidence only a run with --apply-first or --native-fixture records. A fixture
+# keeps its projection across runs but never this evidence from an earlier one.
+OPTION_EVIDENCE = ("applied_first", "applied_first_seals", "native_fixture", "native_fixture_sha256")
 
 
 class QualificationError(RuntimeError):
@@ -316,7 +321,8 @@ def qualify(
         raise QualificationError("native qualification failed: " + json.dumps(report, sort_keys=True))
     if fixture is not None:
         existing = json.loads(fixture.read_text()) if fixture.exists() else {}
-        fixture.write_text(json.dumps({**existing, **report}, indent=2) + "\n")
+        kept = {key: value for key, value in existing.items() if key not in OPTION_EVIDENCE}
+        fixture.write_text(json.dumps({**kept, **report}, indent=2) + "\n")
     return report
 
 
