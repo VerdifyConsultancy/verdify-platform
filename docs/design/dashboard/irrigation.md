@@ -550,6 +550,12 @@ After the cleanup, `ha_sensor_sync` reads only lights, occupancy and the hydro p
 `docs/SERVICE_MAP.md`, `docs/operations/HEALTH_COVERAGE_KEYS.md` and `scripts/health-check.sh:180-189`
 (its outdoor check names the ESP32 Tempest path) in the same PRs.
 
+As built (VD-48): the two `grow_light_*_intent` streams are outside the stream list of the durable
+equipment receipt function (`fn_record_equipment_state_source_receipt`, migration 216), which rejects any
+other stream, so the ingestor writes them through the ordinary telemetry view with no continuity receipt.
+If Home Assistant ever omits the occupancy sensor's `last_changed`, the first ON poll latches once and later
+ON polls do not re-extend it.
+
 ## 8. API operations and MCP tools
 
 ### 8.1 Private API (`verdify-operator-api`, `/v1`)

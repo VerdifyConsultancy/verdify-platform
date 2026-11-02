@@ -210,42 +210,12 @@ def _feedback_source_history_evidence(report: dict[str, Any]) -> list[str]:
 
 
 def _feedback_source_evidence(report: dict[str, Any]) -> list[str]:
+    """Accepted-source evidence from the controller's Native API (ESPHome) only."""
     evidence: list[str] = []
-    if report.get("ha_error"):
-        evidence.append(f"ha lookup error: {report['ha_error']}")
-    if report.get("mqtt_error"):
-        evidence.append(f"mqtt lookup warning: {report['mqtt_error']}")
     if report.get("esphome_error"):
         evidence.append(f"esphome lookup warning: {report['esphome_error']}")
 
     for key in ("south_soil_probe_1", "center_root_zone_moisture", "center_runoff_ph", "center_runoff_ec"):
-        ha_items = (report.get("ha_candidates") or {}).get(key, [])
-        ha_present = [item for item in ha_items if item.get("present") == "true"]
-        if ha_present:
-            values = []
-            for item in ha_present:
-                state = item.get("state") if item.get("state") is not None else "-"
-                unit = f" {item['unit']}" if item.get("unit") else ""
-                values.append(f"{item['entity_id']}={state}{unit}")
-            evidence.append(f"ha {key}: " + "; ".join(values))
-        elif ha_items:
-            evidence.append(f"ha {key}: accepted entities absent")
-
-        mqtt_items = (report.get("mqtt_candidates") or {}).get(key, [])
-        mqtt_live = [item for item in mqtt_items if item.get("live_value") is not None]
-        mqtt_retained = [item for item in mqtt_items if item.get("retained_value") is not None]
-        if mqtt_live:
-            evidence.append(
-                f"mqtt {key}: " + "; ".join(f"{item['topic']} live={item['live_value']}" for item in mqtt_live)
-            )
-        elif mqtt_retained:
-            evidence.append(
-                f"mqtt {key}: "
-                + "; ".join(f"{item['topic']} retained={item['retained_value']}" for item in mqtt_retained)
-            )
-        elif mqtt_items:
-            evidence.append(f"mqtt {key}: accepted topics absent")
-
         esphome_items = (report.get("esphome_candidates") or {}).get(key, [])
         esphome_present = [item for item in esphome_items if item.get("present")]
         if esphome_present:
@@ -263,29 +233,11 @@ def _feedback_source_evidence(report: dict[str, Any]) -> list[str]:
 
 
 def _feedback_discovery_evidence(report: dict[str, Any]) -> list[str]:
-    evidence: list[str] = []
-    evidence.extend(
-        _discovery_group_evidence(
-            "ha",
-            report.get("ha_discovered_feedback_candidates") or [],
-            "entity_id",
-        )
+    return _discovery_group_evidence(
+        "esphome",
+        report.get("esphome_discovered_feedback_entities") or [],
+        "object_id",
     )
-    evidence.extend(
-        _discovery_group_evidence(
-            "mqtt",
-            report.get("mqtt_discovered_feedback_candidates") or [],
-            "topic",
-        )
-    )
-    evidence.extend(
-        _discovery_group_evidence(
-            "esphome",
-            report.get("esphome_discovered_feedback_entities") or [],
-            "object_id",
-        )
-    )
-    return evidence
 
 
 def _discovery_group_evidence(label: str, items: list[dict[str, Any]], key: str) -> list[str]:
@@ -390,16 +342,8 @@ def main() -> int:
         action="store_true",
         help="Exit 0 when the only incomplete objective is item 5 physical feedback",
     )
-    parser.add_argument(
-        "--mqtt-live-timeout-s",
-        type=int,
-        default=5,
-        help="Seconds to wait for non-retained MQTT feedback source evidence",
-    )
     parser.add_argument("--direct-db", action="store_true", help="Use local psql instead of docker exec when available")
     args = parser.parse_args()
-    if args.mqtt_live_timeout_s < 0:
-        parser.error("--mqtt-live-timeout-s must be >= 0")
 
     try:
         stack = _load_script(
@@ -411,12 +355,7 @@ def main() -> int:
         )
         checks = stack.run_checks(software_only=True, live_site=args.live_site, direct_db=args.direct_db)
         feedback_report, _ready = feedback.build_report(
-            include_ha=True,
-            discover_ha=True,
             status_only=False,
-            discover_mqtt=True,
-            discover_mqtt_all=True,
-            mqtt_live_timeout_s=args.mqtt_live_timeout_s,
             discover_esphome=True,
             include_db_history=True,
         )

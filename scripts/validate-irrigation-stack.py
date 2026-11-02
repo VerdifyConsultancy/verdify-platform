@@ -871,18 +871,17 @@ def _mapped_keys(mapping: dict[str, object], column: str) -> set[str]:
 
 
 def _check_feedback_alias_alignment() -> Check:
+    """The feedback validator's ESPHome candidates must equal the ingestor's aliases.
+
+    Feedback reaches climate only through the controller's Native API
+    (ESPHOME_FEEDBACK_MAP). The Home Assistant and MQTT alias paths were removed
+    with VD-48 (irrigation design §7, HA-06/HA-11/HA-12).
+    """
     try:
         entity_map_path = REPO_ROOT / "ingestor" / "entity_map.py"
-        tasks_path = REPO_ROOT / "ingestor" / "tasks.py"
-        legacy_sync_path = REPO_ROOT / "scripts" / "ha-sensor-sync.py"
         validator_path = REPO_ROOT / "scripts" / "validate-irrigation-feedback.py"
 
         esphome_feedback_map = _literal_assignment(entity_map_path, "ESPHOME_FEEDBACK_MAP")
-        mqtt_map = _literal_assignment(entity_map_path, "MQTT_FEEDBACK_MAP")
-        mqtt_candidates = _literal_assignment(entity_map_path, "MQTT_FEEDBACK_CANDIDATES")
-        tasks_ha_map = _literal_assignment(tasks_path, "_CENTER_FEEDBACK_MAP")
-        legacy_ha_map = _literal_assignment(legacy_sync_path, "CENTER_FEEDBACK_MAP")
-        validator_ha_candidates = _literal_assignment(validator_path, "HA_CANDIDATES")
         validator_esphome_candidates = _literal_assignment(validator_path, "ESPHOME_CANDIDATES")
     except (OSError, KeyError, SyntaxError, ValueError) as exc:
         return Check("irrigation feedback alias alignment", "fail", str(exc))
@@ -895,45 +894,18 @@ def _check_feedback_alias_alignment() -> Check:
     mismatches: list[str] = []
     counts: list[str] = []
     for feedback_key, column in key_to_column.items():
-        ha_candidates = set(validator_ha_candidates.get(feedback_key, ()))
-        task_entities = _mapped_keys(tasks_ha_map, column)
-        legacy_entities = _mapped_keys(legacy_ha_map, column)
-        if ha_candidates != task_entities or ha_candidates != legacy_entities:
-            mismatches.append(f"{feedback_key}:ha")
-
-        expected_mqtt = set(mqtt_candidates.get(feedback_key, ()))
-        accepted_mqtt = _mapped_keys(mqtt_map, column)
-        if expected_mqtt != accepted_mqtt:
-            mismatches.append(f"{feedback_key}:mqtt")
-
         esphome_candidates = set(validator_esphome_candidates.get(feedback_key, ()))
         accepted_esphome = _mapped_keys(esphome_feedback_map, column)
         if esphome_candidates != accepted_esphome:
             mismatches.append(f"{feedback_key}:esphome")
-
-        counts.append(
-            f"{feedback_key}:ha={len(ha_candidates)} mqtt={len(expected_mqtt)} esphome={len(esphome_candidates)}"
-        )
+        counts.append(f"{feedback_key}:esphome={len(esphome_candidates)}")
 
     feedback_columns = set(key_to_column.values())
-    accepted_maps = {
-        "esphome_feedback": esphome_feedback_map,
-        "mqtt": mqtt_map,
-        "tasks_ha": tasks_ha_map,
-        "legacy_ha": legacy_ha_map,
-    }
     tds_accepted = [
-        f"{name}:{key}"
-        for name, mapping in accepted_maps.items()
-        for key, value in mapping.items()
+        f"esphome_feedback:{key}"
+        for key, value in esphome_feedback_map.items()
         if "tds" in key.lower() and (value[0] if isinstance(value, tuple) else value) in feedback_columns
     ]
-    for feedback_key, values in mqtt_candidates.items():
-        if feedback_key in key_to_column:
-            tds_accepted.extend(f"mqtt_candidates:{topic}" for topic in values if "tds" in topic.lower())
-    for feedback_key, values in validator_ha_candidates.items():
-        if feedback_key in key_to_column:
-            tds_accepted.extend(f"ha_candidates:{entity_id}" for entity_id in values if "tds" in entity_id.lower())
     for feedback_key, values in validator_esphome_candidates.items():
         if feedback_key in key_to_column:
             tds_accepted.extend(f"esphome_candidates:{object_id}" for object_id in values if "tds" in object_id.lower())
@@ -1245,7 +1217,7 @@ def _check_acceptance_tooling() -> Check:
     if "async with conn.transaction():" not in finalizer or "FinalizerBlocked" not in finalizer:
         missing.append("transaction rollback guard")
     if (
-        "first records DB, HA, MQTT, and ESPHome feedback source evidence" not in runbook
+        "first records DB and ESPHome feedback source evidence" not in runbook
         or "then runs the dry run before the mutating finalizer" not in runbook
     ):
         missing.append("runbook finalize source-evidence and dry-run guard")
@@ -1337,10 +1309,8 @@ def _check_acceptance_tooling() -> Check:
             )
         ]
         finalizer_preflight_source_evidence = (
-            "scripts/validate-irrigation-feedback.py --status-only --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome"
-            in finalizer_proof_block
+            "scripts/validate-irrigation-feedback.py --status-only --discover-esphome" in finalizer_proof_block
             and "--include-db-history" in finalizer_proof_block
-            and "IRRIGATION_FIELD_WATCH_MQTT_TIMEOUT" in finalizer_proof_block
         )
         order_ok = (
             finalizer_proof_block.index("scripts/validate-irrigation-feedback.py --status-only")
@@ -1414,7 +1384,7 @@ def _check_acceptance_tooling() -> Check:
         field_watch_proof_persisted = (
             "IRRIGATION_FIELD_WATCH_PROOF" in field_watch_proof_block
             and "set -o pipefail" in field_watch_proof_block
-            and "scripts/validate-irrigation-feedback.py --watch --status-only --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome"
+            and "scripts/validate-irrigation-feedback.py --watch --status-only --discover-esphome"
             in field_watch_proof_block
             and "--include-db-history" in field_watch_proof_block
             and 'tee "$(IRRIGATION_FIELD_WATCH_PROOF)"' in field_watch_proof_block
@@ -1468,7 +1438,7 @@ def _check_acceptance_tooling() -> Check:
         completion_audit_proof_persisted = (
             "IRRIGATION_COMPLETION_AUDIT_PROOF" in completion_audit_block
             and "set -o pipefail" in completion_audit_block
-            and "scripts/irrigation-completion-audit.py --json --live-site --allow-physical-blocker --mqtt-live-timeout-s"
+            and "scripts/irrigation-completion-audit.py --json --live-site --allow-physical-blocker"
             in completion_audit_block
             and 'tee "$(IRRIGATION_COMPLETION_AUDIT_PROOF)"' in completion_audit_block
         )
@@ -1537,16 +1507,14 @@ def _check_acceptance_tooling() -> Check:
         discovery_proof_persisted = (
             "IRRIGATION_DISCOVERY_PROOF" in discovery_proof_block
             and "set -o pipefail" in discovery_proof_block
-            and "scripts/validate-irrigation-feedback.py --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome"
-            in discovery_proof_block
-            and "IRRIGATION_MQTT_LIVE_TIMEOUT" in discovery_proof_block
+            and "scripts/validate-irrigation-feedback.py --discover-esphome" in discovery_proof_block
             and "if [ $$rc -eq 1 ]; then exit 0; fi" in discovery_proof_block
             and "2>&1" in discovery_proof_block
             and 'tee "$(IRRIGATION_DISCOVERY_PROOF)"' in discovery_proof_block
         )
         work_order_proof_block = makefile[
             makefile.index("irrigation-feedback-work-order-proof:") : makefile.index(
-                "irrigation-feedback-clear-stale-retained:", makefile.index("irrigation-feedback-work-order-proof:")
+                "irrigation-feedback-watch:", makefile.index("irrigation-feedback-work-order-proof:")
             )
         ]
         work_order_proof_persisted = (

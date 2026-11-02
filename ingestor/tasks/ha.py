@@ -13,15 +13,11 @@ from shelly_modbus import build_sample as build_modbus_sample
 from shelly_modbus import read_registers, unavailable_sample
 
 from ._common import (
-    _CENTER_FEEDBACK_MAP,
     _HA_STATE_FILE,
-    _HA_SWITCHES,
     _HYDRO_MAP,
     _LIGHT_ENTITIES,
     _OCCUPANCY_ENTITIES,
     _POPULATE_SITE_CONTENT_SCRIPT,
-    _TEMPEST_MAP,
-    FEEDBACK_VALUE_RANGES,
     GREENHOUSE_ID,
     HA_TOKEN_FILE,
     INFRA_TELEMETRY_GREENHOUSE_ID,
@@ -48,7 +44,6 @@ from ._common import (
     expire_occupancy_latch,
     json,
     log,
-    normalize_feedback_value,
     sync_occupancy_state,
 )
 
@@ -467,69 +462,15 @@ async def infra_cpu_sync(pool: asyncpg.Pool) -> None:
     )
 
 
-async def tempest_sync(pool: asyncpg.Pool) -> None:
-    token = _load_token(HA_TOKEN_FILE)
-    loop = asyncio.get_event_loop()
-    states = await loop.run_in_executor(None, _fetch_ha_batch, token, list(_TEMPEST_MAP.keys()))
-    if not states:
-        return
-
-    now = datetime.now(UTC)
-    outdoor_cols = {}
-    for eid, (col, conv) in _TEMPEST_MAP.items():
-        ha = _ha_state(states, eid)
-        if ha is None:
-            continue
-        val = ha.as_float()
-        if val is not None:
-            outdoor_cols[col] = conv(val) if conv else val
-    if not outdoor_cols:
-        return
-
-    # Validate ranges on the outdoor columns before any DB write. ClimateRow
-    # tolerates missing/extra columns (extra="ignore") and just enforces the
-    # ge/le bounds on what it knows.
-    try:
-        ClimateRow.model_validate({"ts": now, **outdoor_cols})
-    except ValidationError as e:
-        log.error("Tempest outdoor_cols failed schema validation: %s", e)
-        return
-
-    async with pool.acquire() as conn:
-        # Update ALL recent climate rows missing outdoor data (not just the latest)
-        parts, vals = [], []
-        for i, (c, v) in enumerate(outdoor_cols.items()):
-            parts.append(f"{c} = ${i + 1}")
-            vals.append(v)
-        count = await conn.fetchval(
-            "SELECT count(*) FROM climate WHERE ts > now() - interval '6 minutes' AND temp_avg IS NOT NULL AND outdoor_temp_f IS NULL"
-        )
-        if count and count > 0:
-            result = await conn.execute(
-                f"UPDATE v_runtime_climate_write SET {', '.join(parts)} WHERE ts > now() - interval '6 minutes' AND temp_avg IS NOT NULL AND outdoor_temp_f IS NULL",
-                *vals,
-            )
-            log.debug("Tempest: %d outdoor cols synced to %s rows", len(outdoor_cols), result.split()[-1])
-        elif not count or count == 0:
-            # All recent rows already have outdoor data, update the latest one with freshest values
-            latest = await conn.fetchval(
-                "SELECT ts FROM climate WHERE ts > now() - interval '5 minutes' AND temp_avg IS NOT NULL ORDER BY ts DESC LIMIT 1"
-            )
-            if latest:
-                vals.append(latest)
-                await conn.execute(
-                    f"UPDATE v_runtime_climate_write SET {', '.join(parts)} WHERE ts = ${len(vals)}", *vals
-                )
-                log.debug("Tempest: %d outdoor cols refreshed on latest row", len(outdoor_cols))
-            else:
-                log.warning("Tempest: skipped climate overlay; no recent indoor climate row")
-
-
 async def ha_sensor_sync(pool: asyncpg.Pool) -> None:
+    """Poll the three reads Home Assistant keeps (D-IRP-24, irrigation §7).
+
+    The Lutron grow-light readback, the YINMIK hydro probe (until #1183) and the
+    Frigate occupancy sensor. Nothing else is requested from Home Assistant.
+    """
     global _ha_prev_state
     token = _load_token(HA_TOKEN_FILE)
-    climate_sensor_map = {**_HYDRO_MAP, **_CENTER_FEEDBACK_MAP}
-    all_eids = list(_LIGHT_ENTITIES) + list(climate_sensor_map) + list(_HA_SWITCHES) + list(_OCCUPANCY_ENTITIES)
+    all_eids = list(_LIGHT_ENTITIES) + list(_HYDRO_MAP) + list(_OCCUPANCY_ENTITIES)
     loop = asyncio.get_event_loop()
     states = await loop.run_in_executor(None, _fetch_ha_batch, token, all_eids)
     if not states:
@@ -542,25 +483,18 @@ async def ha_sensor_sync(pool: asyncpg.Pool) -> None:
 
     now = datetime.now(UTC)
     new_state = dict(_ha_prev_state)
-    occupancy_observations: list[tuple[bool, datetime | None]] = []
+    occupancy_observations: list[tuple[bool, datetime, datetime | None]] = []
 
     async with pool.acquire() as conn:
-        # HA climate overlays → climate. Hydro values and optional center
-        # feedback are merged into the latest ESP32 climate row.
+        # Hydro probe → climate, merged into the latest ESP32 climate row.
         climate_cols = {}
-        for eid, (col, conv) in climate_sensor_map.items():
+        for eid, (col, conv) in _HYDRO_MAP.items():
             ha = _ha_state(states, eid)
             if ha is None:
                 continue
             val = ha.as_float()
             if val is not None:
-                normalized = conv(val) if conv else val
-                if col in FEEDBACK_VALUE_RANGES:
-                    normalized = normalize_feedback_value(col, normalized)
-                    if normalized is None:
-                        log.warning("HA feedback rejected invalid value: %s column=%s value=%r", eid, col, val)
-                        continue
-                climate_cols[col] = normalized
+                climate_cols[col] = conv(val) if conv else val
         if climate_cols:
             try:
                 ClimateRow.model_validate({"ts": now, **climate_cols})
@@ -604,31 +538,13 @@ async def ha_sensor_sync(pool: asyncpg.Pool) -> None:
                 log.info("Light: %s → %s", equip, "ON" if is_on else "OFF")
             new_state[eid] = is_on
 
-        # Config switches → equipment_state (on-change)
-        for eid, equip in _HA_SWITCHES.items():
-            ha = _ha_state(states, eid)
-            if ha is None:
-                continue
-            is_on = ha.state == "on"
-            key = f"switch_{equip}"
-            if new_state.get(key) != is_on:
-                try:
-                    EquipmentStateEvent(ts=now, equipment=equip, state=is_on)
-                except ValidationError as e:
-                    log.error("Switch event skipped (validation failed: %s)", e)
-                    continue
-                await conn.execute(
-                    "INSERT INTO v_runtime_equipment_state_write (ts, equipment, state) VALUES ($1, $2, $3)",
-                    now,
-                    equip,
-                    is_on,
-                )
-            new_state[key] = is_on
-
-        # Occupancy → latched system_state + ESP32 occupancy switch.
-        # HA's ON state is stateful; repeat ON polls are not fresh Frigate
-        # detections, so only ON transitions extend the latch. OFF is a
-        # definitive empty observation and clears the latch on every poll.
+        # Occupancy → latched system_state + ESP32 occupancy switch. The Frigate
+        # sensor through HA is the only input (decisions Round 2b A). Every poll
+        # that sees it available is an observation: ON re-extends the latch from
+        # the poll time, capped at OCCUPANCY_VISIT_MAX_MIN after the ON edge
+        # (HA last_changed); OFF releases at once. An unavailable sensor records
+        # nothing, so expire_occupancy_latch() below ends the hold
+        # OCCUPANCY_LATCH_MIN after the last ON poll.
         for eid, entity in _OCCUPANCY_ENTITIES.items():
             ha = _ha_state(states, eid)
             if ha is None or not ha.is_available:
@@ -638,13 +554,23 @@ async def ha_sensor_sync(pool: asyncpg.Pool) -> None:
             if new_state.get(key) != val:
                 log.info("Occupancy: %s (via HA)", val)
             if val == "empty":
-                occupancy_observations.append((False, now))
+                occupancy_observations.append((False, now, None))
+            elif ha.last_changed is not None:
+                occupancy_observations.append((True, now, ha.last_changed))
             elif new_state.get(key) != val:
-                occupancy_observations.append((True, ha.last_changed))
+                # No ON edge from HA: latch once from this first ON poll and
+                # let later ON polls leave it to expire (no unbounded hold).
+                occupancy_observations.append((True, now, now))
             new_state[key] = val
 
-    for occupied, observed_at in occupancy_observations:
-        await sync_occupancy_state(pool, occupied, "ha_sensor_sync", observed_at=observed_at)
+    for occupied, observed_at, visit_started_at in occupancy_observations:
+        await sync_occupancy_state(
+            pool,
+            occupied,
+            "ha_sensor_sync",
+            observed_at=observed_at,
+            visit_started_at=visit_started_at,
+        )
     await expire_occupancy_latch(pool, "ha_sensor_sync")
 
     _ha_prev_state = new_state

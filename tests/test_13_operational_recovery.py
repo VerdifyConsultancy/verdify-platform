@@ -10,16 +10,10 @@ Covers fixes from ingestor/sprint-25.1:
 from __future__ import annotations
 
 import asyncio
-import io
-import runpy
 import subprocess
 import sys
-import urllib.error
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
-
-import pytest
 
 from verdify_schemas.tunable_registry import (
     BAND_OWNED_REG,
@@ -82,121 +76,6 @@ def test_retired_watchdogs_are_absent_from_the_production_source():
         assert name + ".yaml" not in source
         assert "name: verdify-" + name not in patches
         assert not Path("deploy/k8s/overlays/prod/" + name + ".yaml").exists()
-
-
-def test_ha_gap_backfill_script_is_bounded_and_idempotent():
-    src = Path("deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py").read_text()
-    assert 'parser.add_argument("--apply"' in src
-    assert "--since-earliest-ha" in src
-    assert "--full-scan" in src
-    assert "pg_try_advisory_lock(hashtext($1))" in src
-    assert "has_table_privilege(current_user" in src
-    assert "SetpointSnapshot.model_validate" in src
-    assert "EquipmentStateEvent(" in src
-    assert "SystemStateRow(" in src
-    assert "INSERT INTO climate_action_log" not in src
-
-
-def test_prod_ha_gap_backfill_cronjob_mounts_script_and_ha_token():
-    prod = Path("deploy/k8s/overlays/prod/kustomization.yaml").read_text()
-    component = Path("deploy/k8s/components/ha-gap-backfill/kustomization.yaml").read_text()
-    cron = Path("deploy/k8s/components/ha-gap-backfill/ha-gap-backfill-cronjob.yaml").read_text()
-    wrapper = Path("scripts/backfill-ha-gaps.py").read_text()
-
-    assert "../../components/ha-gap-backfill" in prod
-    assert "configMapGenerator:" in component
-    assert "backfill-ha-gaps.py" in component
-    assert "name: verdify-ha-gap-backfill" in cron
-    assert 'schedule: "23 * * * *"' in cron
-    assert "concurrencyPolicy: Forbid" in cron
-    assert "image: ghcr.io/verdifyconsultancy/verdify-ingestor" in cron
-    assert "verdify-ha-gap-backfill-script" in cron
-    assert "secretName: verdify-ha-token" in cron
-    assert "POSTGRES_PASSWORD" in cron
-    assert "--lookback-days=30" in cron
-    assert "--max-gap-minutes=10" in cron
-    assert "name: allow-db-from-ha-gap-backfill" in cron
-    assert "app.kubernetes.io/component: ha-gap-backfill" in cron
-    assert "deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py" in wrapper
-
-
-def _ha_gap_backfill_globals():
-    return runpy.run_path("deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py")
-
-
-def _http_error(code: int) -> urllib.error.HTTPError:
-    return urllib.error.HTTPError("http://home-assistant/api/history", code, "test", {}, io.BytesIO())
-
-
-def test_ha_gap_backfill_retries_transient_history_http_errors():
-    module = _ha_gap_backfill_globals()
-    response = MagicMock()
-    response.__enter__.return_value.read.return_value = b'{"status":"ok"}'
-
-    with (
-        patch("urllib.request.urlopen", side_effect=[_http_error(404), _http_error(503), response]) as urlopen,
-        patch("time.sleep") as sleep,
-    ):
-        result = module["ha_get_json"]("http://home-assistant", "redacted", "/api/history/period/test")
-
-    assert result == {"status": "ok"}
-    assert urlopen.call_count == 3
-    assert sleep.call_args_list == [call(2), call(4)]
-
-
-def test_ha_gap_backfill_does_not_retry_authentication_errors():
-    module = _ha_gap_backfill_globals()
-
-    with (
-        patch("urllib.request.urlopen", side_effect=_http_error(401)) as urlopen,
-        patch("time.sleep") as sleep,
-        pytest.raises(urllib.error.HTTPError, match="HTTP Error 401"),
-    ):
-        module["ha_get_json"]("http://home-assistant", "redacted", "/api/history/period/test")
-
-    urlopen.assert_called_once()
-    sleep.assert_not_called()
-
-
-def test_ha_gap_backfill_retries_refused_first_connect():
-    """network-infra#865: the pod-start guard refuses the first connect to HA."""
-    module = _ha_gap_backfill_globals()
-    response = MagicMock()
-    response.__enter__.return_value.read.return_value = b'{"status":"ok"}'
-    refused = urllib.error.URLError(ConnectionRefusedError(111, "Connection refused"))
-
-    with (
-        patch("urllib.request.urlopen", side_effect=[refused, refused, response]) as urlopen,
-        patch("time.sleep") as sleep,
-    ):
-        result = module["ha_get_json"]("http://home-assistant", "redacted", "/api/states")
-
-    assert result == {"status": "ok"}
-    assert urlopen.call_count == 3
-    assert sleep.call_args_list == [call(2), call(3)]
-
-
-def test_ha_gap_backfill_connect_retry_is_bounded_and_skips_other_url_errors():
-    module = _ha_gap_backfill_globals()
-    refused = urllib.error.URLError(ConnectionRefusedError(111, "Connection refused"))
-
-    with (
-        patch("urllib.request.urlopen", side_effect=[refused] * 10) as urlopen,
-        patch("time.sleep") as sleep,
-        pytest.raises(urllib.error.URLError),
-    ):
-        module["ha_get_json"]("http://home-assistant", "redacted", "/api/states")
-    assert urlopen.call_count == len(module["HA_CONNECT_RETRY_DELAYS"]) + 1
-    assert sum(c.args[0] for c in sleep.call_args_list) <= 30
-
-    with (
-        patch("urllib.request.urlopen", side_effect=urllib.error.URLError("certificate verify failed")) as urlopen,
-        patch("time.sleep") as sleep,
-        pytest.raises(urllib.error.URLError),
-    ):
-        module["ha_get_json"]("http://home-assistant", "redacted", "/api/states")
-    urlopen.assert_called_once()
-    sleep.assert_not_called()
 
 
 def test_derived_history_reconcile_script_uses_canonical_daily_refresh():

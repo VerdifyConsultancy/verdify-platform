@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Validate irrigation feedback instrumentation after physical bring-up.
 
+Feedback evidence comes from the database and the controller's Native API
+(ESPHome) only; Home Assistant and MQTT lookups were removed with VD-48.
+
 Exit status is intentionally operational:
   0 = all required feedback rows are ok and, unless --status-only is used,
       no feedback-gap alerts are open
@@ -19,19 +22,7 @@ import shutil
 import subprocess
 import sys
 import time
-import urllib.error
-import urllib.request
-from pathlib import Path
 from typing import Any
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-INGESTOR_DIR = REPO_ROOT / "ingestor"
-if str(INGESTOR_DIR) not in sys.path:
-    sys.path.insert(0, str(INGESTOR_DIR))
-
-from entity_map import MQTT_FEEDBACK_CANDIDATES, MQTT_FEEDBACK_MAP  # noqa: E402
-
-from config import HA_TOKEN_FILE, HA_URL, MQTT_HOST, MQTT_PASS, MQTT_PORT, MQTT_USER, load_token  # noqa: E402
 
 REQUIRED_FEEDBACK_KEYS = (
     "south_soil_probe_1",
@@ -66,62 +57,6 @@ FEEDBACK_HISTORY_COLUMNS = {
     "center_root_zone_moisture": ("moisture_center",),
     "center_runoff_ph": ("ph_runoff_center",),
     "center_runoff_ec": ("ec_runoff_center",),
-}
-
-HA_CANDIDATES = {
-    "south_soil_probe_1": (
-        "sensor.greenhouse_south_1_soil_moisture",
-        "sensor.greenhouse_south_1_soil_temp_degf",
-        "sensor.greenhouse_south_1_soil_ec_ms_cm",
-    ),
-    "center_root_zone_moisture": (
-        "sensor.greenhouse_center_soil_moisture",
-        "sensor.greenhouse_center_root_zone_moisture",
-        "sensor.greenhouse_center_root_zone_soil_moisture",
-        "sensor.greenhouse_center_rootzone_moisture",
-        "sensor.greenhouse_center_moisture",
-        "sensor.greenhouse_center_vwc",
-        "sensor.greenhouse_center_substrate_vwc",
-        "sensor.greenhouse_center_substrate_moisture",
-        "sensor.greenhouse_center_root_zone_vwc",
-        "sensor.greenhouse_middle_substrate_vwc",
-        "sensor.greenhouse_middle_substrate_moisture",
-    ),
-    "center_runoff_ph": (
-        "sensor.greenhouse_center_runoff_ph",
-        "sensor.greenhouse_center_runoff_p_h",
-        "sensor.greenhouse_center_run_off_ph",
-        "sensor.greenhouse_center_run_off_p_h",
-        "sensor.greenhouse_center_drain_ph",
-        "sensor.greenhouse_center_drain_p_h",
-        "sensor.greenhouse_center_drainage_ph",
-        "sensor.greenhouse_center_leachate_ph",
-        "sensor.greenhouse_center_effluent_ph",
-        "sensor.greenhouse_center_tray_ph",
-    ),
-    "center_runoff_ec": (
-        "sensor.greenhouse_center_runoff_ec",
-        "sensor.greenhouse_center_runoff_ec_ms_cm",
-        "sensor.greenhouse_center_runoff_ec_us_cm",
-        "sensor.greenhouse_center_runoff_ec_u_s_cm",
-        "sensor.greenhouse_center_run_off_ec",
-        "sensor.greenhouse_center_run_off_ec_ms_cm",
-        "sensor.greenhouse_center_run_off_ec_us_cm",
-        "sensor.greenhouse_center_runoff_conductivity",
-        "sensor.greenhouse_center_runoff_electrical_conductivity",
-        "sensor.greenhouse_center_drain_ec",
-        "sensor.greenhouse_center_drain_ec_ms_cm",
-        "sensor.greenhouse_center_drain_ec_us_cm",
-        "sensor.greenhouse_center_drain_ec_u_s_cm",
-        "sensor.greenhouse_center_drainage_ec",
-        "sensor.greenhouse_center_leachate_ec",
-        "sensor.greenhouse_center_effluent_ec",
-        "sensor.greenhouse_center_tray_ec",
-    ),
-}
-
-ACCEPTED_HA_ENTITY_IDS = {
-    entity_id: feedback_key for feedback_key, entity_ids in HA_CANDIDATES.items() for entity_id in entity_ids
 }
 
 ESPHOME_CANDIDATES = {
@@ -189,10 +124,6 @@ ACCEPTED_ESPHOME_OBJECT_IDS = {
     object_id: feedback_key for feedback_key, object_ids in ESPHOME_CANDIDATES.items() for object_id in object_ids
 }
 ESPHOME_STATE_TIMEOUT_S = 3.0
-MQTT_DISCOVERY_TOPIC = "greenhouse/sensor/#"
-ACCEPTED_MQTT_TOPICS = {
-    topic: feedback_key for feedback_key, topics in MQTT_FEEDBACK_CANDIDATES.items() for topic in topics
-}
 
 DISCOVERY_LOCATION_TERMS = {
     "center",
@@ -511,73 +442,8 @@ def _db_source_history() -> dict[str, dict[str, str | int | None]]:
     return history
 
 
-def _fetch_ha_states() -> dict[str, dict[str, Any]]:
-    token = load_token(HA_TOKEN_FILE)
-    req = urllib.request.Request(
-        f"{HA_URL.rstrip('/')}/api/states",
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-    )
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        return {item["entity_id"]: item for item in json.load(resp)}
-
-
-def _format_ha_state(entity_id: str, state: dict[str, Any] | None) -> dict[str, str | None]:
-    if state is None:
-        return {"entity_id": entity_id, "present": "false", "state": None, "unit": None, "friendly_name": None}
-    attrs = state.get("attributes") or {}
-    return {
-        "entity_id": entity_id,
-        "present": "true",
-        "state": str(state.get("state")),
-        "unit": attrs.get("unit_of_measurement"),
-        "friendly_name": attrs.get("friendly_name"),
-    }
-
-
-def _ha_candidate_states(states: dict[str, dict[str, Any]]) -> dict[str, list[dict[str, str | None]]]:
-    out: dict[str, list[dict[str, str | None]]] = {}
-    for feedback_key, entity_ids in HA_CANDIDATES.items():
-        out[feedback_key] = []
-        for entity_id in entity_ids:
-            out[feedback_key].append(_format_ha_state(entity_id, states.get(entity_id)))
-    return out
-
-
-def _ha_discovery_text(entity_id: str, state: dict[str, Any]) -> str:
-    attrs = state.get("attributes") or {}
-    parts = [
-        entity_id,
-        str(attrs.get("friendly_name") or ""),
-        str(attrs.get("unit_of_measurement") or ""),
-    ]
-    return " ".join(parts).lower().replace("_", " ")
-
-
-def _ha_discovery_tokens(text: str) -> set[str]:
+def _discovery_tokens(text: str) -> set[str]:
     return {token for token in re.split(r"[^a-z0-9]+", text) if token}
-
-
-def _discover_ha_feedback_candidates(states: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
-    discovered: list[dict[str, Any]] = []
-    for entity_id, state in states.items():
-        if not entity_id.startswith("sensor."):
-            continue
-        accepted_for = ACCEPTED_HA_ENTITY_IDS.get(entity_id)
-        text = _ha_discovery_text(entity_id, state)
-        tokens = _ha_discovery_tokens(text)
-        plausible_feedback = bool(tokens & DISCOVERY_LOCATION_TERMS) and (
-            bool(tokens & DISCOVERY_SIGNAL_TERMS) or any(phrase in text for phrase in DISCOVERY_SIGNAL_PHRASES)
-        )
-        if not accepted_for and "greenhouse" not in text and not plausible_feedback:
-            continue
-        if not accepted_for and not plausible_feedback:
-            continue
-
-        item: dict[str, Any] = _format_ha_state(entity_id, state)
-        item.pop("present", None)
-        item["accepted_for"] = [accepted_for] if accepted_for else []
-        discovered.append(item)
-    return sorted(discovered, key=lambda item: item["entity_id"])
 
 
 def _esphome_config() -> tuple[str, int, str]:
@@ -691,7 +557,7 @@ def _discover_esphome_feedback_entities(entities: list[dict[str, Any]]) -> list[
             continue
         accepted_for = ACCEPTED_ESPHOME_OBJECT_IDS.get(object_id)
         text = _esphome_discovery_text(entity)
-        tokens = _ha_discovery_tokens(text)
+        tokens = _discovery_tokens(text)
         plausible_feedback = bool(tokens & DISCOVERY_LOCATION_TERMS) and (
             bool(tokens & DISCOVERY_SIGNAL_TERMS) or any(phrase in text for phrase in DISCOVERY_SIGNAL_PHRASES)
         )
@@ -710,138 +576,8 @@ def _discover_esphome_feedback_entities(entities: list[dict[str, Any]]) -> list[
     return sorted(discovered, key=lambda item: (item["type"] or "", item["object_id"]))
 
 
-def _mqtt_subscribe(
-    topics: tuple[str, ...], *, include_retained: bool, timeout_s: int
-) -> tuple[dict[str, str], str | None]:
-    if not topics:
-        return {}, None
-    if not shutil.which("mosquitto_sub"):
-        return {}, "mosquitto_sub not found"
-    cmd = ["mosquitto_sub", "-h", MQTT_HOST, "-p", str(MQTT_PORT)]
-    if MQTT_USER:
-        cmd.extend(["-u", MQTT_USER])
-    if MQTT_PASS:
-        cmd.extend(["-P", MQTT_PASS])
-    if not include_retained:
-        cmd.append("-R")
-    for topic in topics:
-        cmd.extend(["-t", topic])
-    cmd.extend(["-v", "-W", str(max(1, timeout_s))])
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s + 10, check=False)
-    values: dict[str, str] = {}
-    for line in result.stdout.splitlines():
-        topic, sep, payload = line.partition(" ")
-        if sep and topic in topics:
-            values[topic] = payload.strip()
-    stderr = result.stderr.strip()
-    if stderr == "Timed out":
-        stderr = ""
-    if stderr:
-        return values, stderr
-    return values, None
-
-
-def _mqtt_subscribe_filter(
-    topic_filter: str, *, include_retained: bool, timeout_s: int
-) -> tuple[dict[str, str], str | None]:
-    if not shutil.which("mosquitto_sub"):
-        return {}, "mosquitto_sub not found"
-    cmd = ["mosquitto_sub", "-h", MQTT_HOST, "-p", str(MQTT_PORT)]
-    if MQTT_USER:
-        cmd.extend(["-u", MQTT_USER])
-    if MQTT_PASS:
-        cmd.extend(["-P", MQTT_PASS])
-    if not include_retained:
-        cmd.append("-R")
-    cmd.extend(["-t", topic_filter, "-v", "-W", str(max(1, timeout_s))])
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s + 10, check=False)
-    values: dict[str, str] = {}
-    for line in result.stdout.splitlines():
-        topic, sep, payload = line.partition(" ")
-        if sep and topic:
-            values[topic] = payload.strip()
-    stderr = result.stderr.strip()
-    if stderr == "Timed out":
-        stderr = ""
-    if stderr:
-        return values, stderr
-    return values, None
-
-
-def _mqtt_candidate_states(live_timeout_s: int) -> tuple[dict[str, list[dict[str, Any]]], str | None]:
-    topics = tuple(topic for topic_group in MQTT_FEEDBACK_CANDIDATES.values() for topic in topic_group)
-    retained, retained_error = _mqtt_subscribe(topics, include_retained=True, timeout_s=3)
-    live: dict[str, str] = {}
-    live_error = None
-    if live_timeout_s > 0:
-        live, live_error = _mqtt_subscribe(topics, include_retained=False, timeout_s=live_timeout_s)
-
-    out: dict[str, list[dict[str, Any]]] = {}
-    for feedback_key, topic_group in MQTT_FEEDBACK_CANDIDATES.items():
-        out[feedback_key] = []
-        for topic in topic_group:
-            retained_value = retained.get(topic)
-            live_value = live.get(topic)
-            out[feedback_key].append(
-                {
-                    "topic": topic,
-                    "retained_value": retained_value,
-                    "live_value": live_value,
-                    "live_checked": live_timeout_s > 0,
-                    "stale_retained_only": retained_value is not None and live_timeout_s > 0 and live_value is None,
-                }
-            )
-    error = "; ".join(error for error in (retained_error, live_error) if error) or None
-    return out, error
-
-
-def _mqtt_discovery_text(topic: str) -> str:
-    return topic.lower().replace("_", " ").replace("-", " ").replace("/", " ")
-
-
-def _discover_mqtt_feedback_candidates(live_timeout_s: int) -> tuple[list[dict[str, Any]], str | None]:
-    retained, retained_error = _mqtt_subscribe_filter(MQTT_DISCOVERY_TOPIC, include_retained=True, timeout_s=3)
-    live: dict[str, str] = {}
-    live_error = None
-    if live_timeout_s > 0:
-        live, live_error = _mqtt_subscribe_filter(
-            MQTT_DISCOVERY_TOPIC, include_retained=False, timeout_s=live_timeout_s
-        )
-
-    discovered: list[dict[str, Any]] = []
-    for topic in sorted(set(retained) | set(live)):
-        accepted_for = ACCEPTED_MQTT_TOPICS.get(topic)
-        text = _mqtt_discovery_text(topic)
-        tokens = _ha_discovery_tokens(text)
-        plausible_feedback = bool(tokens & DISCOVERY_LOCATION_TERMS) and (
-            bool(tokens & DISCOVERY_SIGNAL_TERMS) or any(phrase in text for phrase in DISCOVERY_SIGNAL_PHRASES)
-        )
-        if not accepted_for and not plausible_feedback:
-            continue
-        retained_value = retained.get(topic)
-        live_value = live.get(topic)
-        discovered.append(
-            {
-                "topic": topic,
-                "accepted_for": [accepted_for] if accepted_for else [],
-                "source_column": MQTT_FEEDBACK_MAP.get(topic),
-                "retained_value": retained_value,
-                "live_value": live_value,
-                "live_checked": live_timeout_s > 0,
-                "stale_retained_only": retained_value is not None and live_timeout_s > 0 and live_value is None,
-            }
-        )
-    error = "; ".join(error for error in (retained_error, live_error) if error) or None
-    return discovered, error
-
-
 def build_report(
-    include_ha: bool,
-    discover_ha: bool = False,
     status_only: bool = False,
-    discover_mqtt: bool = False,
-    discover_mqtt_all: bool = False,
-    mqtt_live_timeout_s: int = 0,
     discover_esphome: bool = False,
     include_db_history: bool = False,
 ) -> tuple[dict[str, Any], bool]:
@@ -852,29 +588,9 @@ def build_report(
     db_source_history = _db_source_history() if include_db_history else {}
     missing_rows = [key for key in REQUIRED_FEEDBACK_KEYS if key not in db_status]
     not_ok = [key for key in REQUIRED_FEEDBACK_KEYS if db_status.get(key, {}).get("status") != "ok"]
-    ha_states: dict[str, Any] = {}
-    ha_discovered: list[dict[str, Any]] = []
-    ha_error = None
-    mqtt_states: dict[str, Any] = {}
-    mqtt_discovered: list[dict[str, Any]] = []
-    mqtt_error = None
     esphome_states: dict[str, Any] = {}
     esphome_discovered: list[dict[str, Any]] = []
     esphome_error = None
-    if include_ha or discover_ha:
-        try:
-            all_ha_states = _fetch_ha_states()
-            if include_ha:
-                ha_states = _ha_candidate_states(all_ha_states)
-            if discover_ha:
-                ha_discovered = _discover_ha_feedback_candidates(all_ha_states)
-        except (OSError, RuntimeError, urllib.error.URLError) as exc:
-            ha_error = str(exc)
-    if discover_mqtt:
-        mqtt_states, mqtt_error = _mqtt_candidate_states(mqtt_live_timeout_s)
-    if discover_mqtt_all:
-        mqtt_discovered, mqtt_discovery_error = _discover_mqtt_feedback_candidates(mqtt_live_timeout_s)
-        mqtt_error = "; ".join(error for error in (mqtt_error, mqtt_discovery_error) if error) or None
     if discover_esphome:
         try:
             esphome_entities = _fetch_esphome_entities()
@@ -896,12 +612,6 @@ def build_report(
         "field_work_items": field_work_items,
         "sensor_registry_feedback_targets": registry_targets,
         "db_source_history": db_source_history,
-        "ha_candidates": ha_states,
-        "ha_discovered_feedback_candidates": ha_discovered,
-        "ha_error": ha_error,
-        "mqtt_candidates": mqtt_states,
-        "mqtt_discovered_feedback_candidates": mqtt_discovered,
-        "mqtt_error": mqtt_error,
         "esphome_candidates": esphome_states,
         "esphome_discovered_feedback_entities": esphome_discovered,
         "esphome_error": esphome_error,
@@ -970,54 +680,6 @@ def print_text(report: dict[str, Any]) -> None:
                 f"active={active} zone={zone} entity={entity}{notes}"
             )
 
-    if report["ha_error"]:
-        print(f"\nHA candidate lookup failed: {report['ha_error']}")
-    elif report["ha_candidates"]:
-        print("\nHA candidate entities:")
-        for key in REQUIRED_FEEDBACK_KEYS:
-            print(f"  {key}:")
-            for item in report["ha_candidates"].get(key, []):
-                state = item["state"] if item["state"] is not None else "-"
-                present = item["present"]
-                unit = item["unit"] or ""
-                print(f"    {item['entity_id']} present={present} state={state} {unit}".rstrip())
-
-    discovered = report.get("ha_discovered_feedback_candidates") or []
-    if discovered:
-        print("\nDiscovered greenhouse feedback-like HA entities:")
-        for item in discovered:
-            state = item["state"] if item["state"] is not None else "-"
-            unit = item["unit"] or ""
-            accepted_for = ",".join(item["accepted_for"]) if item["accepted_for"] else "near_miss"
-            print(f"  {item['entity_id']} accepted_for={accepted_for} state={state} {unit}".rstrip())
-
-    if report.get("mqtt_error"):
-        print(f"\nMQTT candidate lookup warning: {report['mqtt_error']}")
-    mqtt_candidates = report.get("mqtt_candidates") or {}
-    if mqtt_candidates:
-        print("\nMQTT candidate topics:")
-        for key in REQUIRED_FEEDBACK_KEYS:
-            print(f"  {key}:")
-            for item in mqtt_candidates.get(key, []):
-                retained = item["retained_value"] if item["retained_value"] is not None else "-"
-                live = item["live_value"] if item["live_value"] is not None else "-"
-                stale = " stale_retained_only=true" if item["stale_retained_only"] else ""
-                print(f"    {item['topic']} retained={retained} live={live}{stale}")
-
-    mqtt_discovered = report.get("mqtt_discovered_feedback_candidates") or []
-    if mqtt_discovered:
-        print("\nDiscovered greenhouse feedback-like MQTT topics:")
-        for item in mqtt_discovered:
-            retained = item["retained_value"] if item["retained_value"] is not None else "-"
-            live = item["live_value"] if item["live_value"] is not None else "-"
-            accepted_for = ",".join(item["accepted_for"]) if item["accepted_for"] else "near_miss"
-            source_column = item["source_column"] or "-"
-            stale = " stale_retained_only=true" if item["stale_retained_only"] else ""
-            print(
-                f"  {item['topic']} accepted_for={accepted_for} source_column={source_column} "
-                f"retained={retained} live={live}{stale}"
-            )
-
     if report.get("esphome_error"):
         print(f"\nESPHome entity lookup warning: {report['esphome_error']}")
     esphome_candidates = report.get("esphome_candidates") or {}
@@ -1062,8 +724,6 @@ def _join_expected(values: tuple[str, ...] | list[str]) -> str:
 
 
 def _print_accepted_sources(key: str) -> None:
-    print(f"   Accepted HA IDs: {_join_expected(HA_CANDIDATES.get(key, ()))}")
-    print(f"   Accepted MQTT topics: {_join_expected(MQTT_FEEDBACK_CANDIDATES.get(key, ()))}")
     print(f"   Accepted ESPHome object IDs: {_join_expected(ESPHOME_CANDIDATES.get(key, ()))}")
 
 
@@ -1100,34 +760,6 @@ def _esphome_state_by_object(report: dict[str, Any], key: str) -> str:
         missing_text = "" if missing is None else f", missing_state={str(missing).lower()}"
         parts.append(f"{item['object_id']} present={present}, state={state}{missing_text}")
     return "; ".join(parts)
-
-
-def _ha_state_by_key(report: dict[str, Any], key: str) -> str:
-    items = report.get("ha_candidates", {}).get(key, [])
-    if not items:
-        return "no HA candidates checked"
-    present = [item for item in items if item.get("present") == "true"]
-    if not present:
-        return "accepted HA entities absent"
-    parts = []
-    for item in present:
-        state = item["state"] if item["state"] is not None else "-"
-        unit = f" {item['unit']}" if item.get("unit") else ""
-        parts.append(f"{item['entity_id']}={state}{unit}")
-    return "; ".join(parts)
-
-
-def _mqtt_state_by_key(report: dict[str, Any], key: str) -> str:
-    items = report.get("mqtt_candidates", {}).get(key, [])
-    if not items:
-        return "no MQTT candidates checked"
-    live = [item for item in items if item.get("live_value") is not None]
-    retained = [item for item in items if item.get("retained_value") is not None]
-    if live:
-        return "; ".join(f"{item['topic']} live={item['live_value']}" for item in live)
-    if retained:
-        return "; ".join(f"{item['topic']} retained={item['retained_value']}" for item in retained)
-    return "accepted MQTT topics absent"
 
 
 def _source_history_line(report: dict[str, Any], source_column: str) -> str:
@@ -1177,24 +809,6 @@ def _print_discovery_sweep(report: dict[str, Any]) -> None:
     print("   Discovery sweep:")
     printed = False
 
-    ha_discovered = report.get("ha_discovered_feedback_candidates") or []
-    if ha_discovered:
-        printed = True
-        print("     HA feedback-like entities:")
-        for item in ha_discovered:
-            state = item.get("state") if item.get("state") is not None else "-"
-            unit = f" {item['unit']}" if item.get("unit") else ""
-            print(f"       {item['entity_id']} accepted_for={_accepted_for_text(item)} state={state}{unit}")
-
-    mqtt_discovered = report.get("mqtt_discovered_feedback_candidates") or []
-    if mqtt_discovered:
-        printed = True
-        print("     MQTT feedback-like topics:")
-        for item in mqtt_discovered:
-            retained = item.get("retained_value") if item.get("retained_value") is not None else "-"
-            live = item.get("live_value") if item.get("live_value") is not None else "-"
-            print(f"       {item['topic']} accepted_for={_accepted_for_text(item)} retained={retained} live={live}")
-
     esphome_discovered = report.get("esphome_discovered_feedback_entities") or []
     if esphome_discovered:
         printed = True
@@ -1210,16 +824,11 @@ def _print_discovery_sweep(report: dict[str, Any]) -> None:
                 f"state={state}{missing_text} name={name}"
             )
 
-    warnings = [
-        warning
-        for warning in (report.get("ha_error"), report.get("mqtt_error"), report.get("esphome_error"))
-        if warning
-    ]
-    for warning in warnings:
-        print(f"     discovery warning: {warning}")
+    if report.get("esphome_error"):
+        print(f"     discovery warning: {report['esphome_error']}")
 
-    if not printed and not warnings:
-        print("     no feedback-like HA/MQTT/ESPHome discoveries in this run")
+    if not printed and not report.get("esphome_error"):
+        print("     no feedback-like ESPHome discoveries in this run")
 
 
 def print_work_order(report: dict[str, Any]) -> None:
@@ -1238,8 +847,6 @@ def print_work_order(report: dict[str, Any]) -> None:
         print(f"     {_source_history_line(report, column)}")
     _print_accepted_sources("south_soil_probe_1")
     print(f"   ESPHome: {_esphome_state_by_object(report, 'south_soil_probe_1')}")
-    print(f"   HA: {_ha_state_by_key(report, 'south_soil_probe_1')}")
-    print(f"   MQTT: {_mqtt_state_by_key(report, 'south_soil_probe_1')}")
     print("   Field action: reseat wiring/media contact, then replace the probe if moisture and EC stay zero.")
     print(
         "   Pass criteria: south_soil_probe_1 becomes ok; moisture and EC are nonzero in DB and live entity evidence."
@@ -1251,14 +858,14 @@ def print_work_order(report: dict[str, Any]) -> None:
         for column in FEEDBACK_HISTORY_COLUMNS[key]:
             print(f"   DB source history: {_source_history_line(report, column)}")
         _print_accepted_sources(key)
-        print(f"   HA: {_ha_state_by_key(report, key)}")
-        print(f"   MQTT: {_mqtt_state_by_key(report, key)}")
         print(f"   ESPHome: {_esphome_state_by_object(report, key)}")
-    print("   Field action: install sensors and map one accepted source per signal into climate ingestion.")
+    print(
+        "   Field action: add the sensors to the ESP32 Modbus bus and expose one accepted ESPHome object ID per signal."
+    )
     print("   Pass criteria: center moisture, runoff pH, and runoff EC status rows all become ok.")
     print()
     print("3. Deploy boundary for accepted aliases")
-    print("   Accepted HA/MQTT aliases come from repo mappings in ingestor/entity_map.py and ingestor/tasks.py.")
+    print("   Accepted ESPHome aliases come from ESPHOME_FEEDBACK_MAP in ingestor/entity_map.py.")
     print("   After alias changes merge through the normal deploy path, restart only verdify-ingestor:")
     print("   sudo systemctl restart verdify-ingestor")
     print("   Alias-only feedback changes do not require verdify-mcp unless schemas or mcp/server.py changed.")
@@ -1301,18 +908,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
     parser.add_argument("--work-order", action="store_true", help="Emit concise field repair/install work order")
-    parser.add_argument("--no-ha", action="store_true", help="Skip Home Assistant candidate entity lookup")
-    parser.add_argument(
-        "--discover-ha", action="store_true", help="List greenhouse HA entities that look like feedback sensors"
-    )
-    parser.add_argument(
-        "--discover-mqtt", action="store_true", help="List MQTT candidate topics and retained/live values"
-    )
-    parser.add_argument(
-        "--discover-mqtt-all",
-        action="store_true",
-        help="Scan greenhouse/sensor/# for feedback-like MQTT topics using configured MQTT credentials",
-    )
     parser.add_argument(
         "--discover-esphome",
         action="store_true",
@@ -1322,12 +917,6 @@ def main() -> int:
         "--include-db-history",
         action="store_true",
         help="Include lifetime and 24-hour climate-column sample history for feedback source columns",
-    )
-    parser.add_argument(
-        "--mqtt-live-timeout-s",
-        type=int,
-        default=0,
-        help="Seconds to wait for non-retained MQTT updates when --discover-mqtt is used",
     )
     parser.add_argument("--direct-db", action="store_true", help="Use local psql instead of docker exec when available")
     parser.add_argument(
@@ -1342,14 +931,10 @@ def main() -> int:
         parser.error("--timeout-s must be >= 0")
     if args.interval_s < 1:
         parser.error("--interval-s must be >= 1")
-    if args.no_ha and args.discover_ha:
-        parser.error("--discover-ha requires HA lookup; remove --no-ha")
     if args.json and args.work_order:
         parser.error("--work-order is text output; remove --json")
     if args.watch and args.work_order:
         parser.error("--work-order is a point-in-time handoff; remove --watch")
-    if args.mqtt_live_timeout_s < 0:
-        parser.error("--mqtt-live-timeout-s must be >= 0")
 
     started = time.monotonic()
     attempt = 0
@@ -1358,12 +943,7 @@ def main() -> int:
         attempt += 1
         try:
             report, ready = build_report(
-                include_ha=not args.no_ha or args.work_order,
-                discover_ha=args.discover_ha or args.work_order,
                 status_only=args.status_only,
-                discover_mqtt=args.discover_mqtt or args.work_order,
-                discover_mqtt_all=args.discover_mqtt_all or args.work_order,
-                mqtt_live_timeout_s=args.mqtt_live_timeout_s,
                 discover_esphome=args.discover_esphome or args.work_order,
                 include_db_history=args.include_db_history or args.work_order,
             )

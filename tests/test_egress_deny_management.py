@@ -109,7 +109,8 @@ def test_home_assistant_allow_is_exact(rendered):
     allow = policies(rendered)[HA_ALLOW]
     assert allow["spec"]["policyTypes"] == ["Egress"]
     workloads = {name for name, labels in pod_labels(rendered) if selected(allow["spec"]["podSelector"], labels)}
-    assert workloads == {"verdify-setpoint-server", "verdify-ha-gap-backfill"}
+    # VD-48 retired the HA gap backfill CronJob; only the setpoint server calls HA.
+    assert workloads == {"verdify-setpoint-server"}
     assert allowed(allow, "192.168.30.107", 8123)
     for address, port in [
         ("192.168.30.107", 1883),

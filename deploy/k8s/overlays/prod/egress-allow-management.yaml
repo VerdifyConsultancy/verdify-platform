@@ -1,9 +1,10 @@
 # network-infra#839 (STD-EXP-03): declared management consumers beside the vendored
 # egress-deny-management policy (egress-deny-management.yaml). docs/SERVICE_MAP.md lists
 # the Home Assistant consumers: the ingestor (already bounded by
-# allow-ingestor-device-egress, so not selected by the deny), the setpoint server and the
-# HA gap backfill CronJob. Home Assistant (HAOS 192.168.30.107) is in the management set.
-# Both call only the HA REST API on 8123; neither uses MQTT.
+# allow-ingestor-device-egress, so not selected by the deny) and the setpoint server.
+# Home Assistant (HAOS 192.168.30.107) is in the management set. The setpoint server
+# calls only the HA REST API on 8123 and does not use MQTT. The HA gap backfill CronJob
+# was retired by VD-48.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -18,7 +19,6 @@ spec:
         operator: In
         values:
           - setpoint-server
-          - ha-gap-backfill
   policyTypes:
     - Egress
   egress:

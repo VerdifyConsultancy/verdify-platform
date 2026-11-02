@@ -67,8 +67,8 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 |---|---|---|---|---|---|
 | `verdify-app-secrets` | `POSTGRES_PASSWORD` | db / migrate / planner / setpoint-server and the bounded runtime-role bootstraps; absent from the production API, ingestor, and MCP pods (`secretKeyRef`) | ✓ | ✓ | ✓ |
 | `verdify-app-secrets` | `VERDIFY_WRITE_API_KEY` | api (`secretKeyRef`; write guard `api/main.py`) | ✓ | ✓ | ✓ |
-| `verdify-app-secrets` | `MQTT_USER` | ingestor (`secretKeyRef`) | ✓ | ✓ | ✓ |
-| `verdify-app-secrets` | `MQTT_PASS` | ingestor (`secretKeyRef`) | ✓ | ✓ | ✓ |
+| `verdify-app-secrets` | `MQTT_USER` | ingestor (`secretKeyRef`); unused since VD-48 removed the HAOS MQTT client, kept until decisions Q-14 retires the broker login | ✓ | ✓ | ✓ |
+| `verdify-app-secrets` | `MQTT_PASS` | ingestor (`secretKeyRef`); unused since VD-48 removed the HAOS MQTT client, kept until decisions Q-14 retires the broker login | ✓ | ✓ | ✓ |
 | `verdify-app-secrets` | `ESP32_API_KEY` | ingestor (`secretKeyRef`); **device-affecting** | ref-only¹ | ref-only¹ | ✓ |
 | `verdify-app-secrets` | `VERDIFY_API_RUNTIME_DB_USER`, `VERDIFY_API_RUNTIME_DB_PASSWORD` | production ordinary API database identity (migration 217 exact login; required before the Gate-1 sync) | opt | opt | ✓ |
 | `verdify-app-secrets` | `VERDIFY_INGESTOR_RUNTIME_DB_USER`, `VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD` | production ordinary ingestor and gather-subprocess database identity (migration 217 exact login; required before the Gate-1 sync) | opt | opt | ✓ |

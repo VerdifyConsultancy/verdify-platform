@@ -8,7 +8,7 @@ resources:
 # the #436 recovery; Git owns it from here. src/ holds byte-identical COPIES of
 # the canonical sources (kustomize's RootOnly load restrictor + ArgoCD forbid
 # referencing files outside the kustomization dir — same pattern as
-# components/firmware-twin and components/ha-gap-backfill).
+# components/firmware-twin).
 # tests/test_20_vision_src_sync.py fails CI on any drift from the canonical
 # scripts/, config/, templates/ files.
 configMapGenerator:
