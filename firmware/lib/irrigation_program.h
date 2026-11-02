@@ -34,7 +34,9 @@
  *   - Every occurrence ends in exactly one outcome, claimed in NVS before it is
  *     published or its relay opens, so a reboot never repeats a run or an outcome.
  *   - A fertilizer run's outcome is published when its feed ends; its flush then
- *     runs as the run's tail (journaled, never repeated after a reset).
+ *     runs as the run's tail (journaled: a reset repeats the flush, never the outcome).
+ *   - The engine never opens a disabled line, and a prewet or flush on a mister is
+ *     mist: the rails that hold any mist hold it.
  */
 
 #include <cmath>
@@ -879,11 +881,14 @@ struct IrrRun {
   uint32_t yield_fog_ms;
   bool yield_climate_seen;
   bool yield_vpd_done;
-  // Fertilizer: the outcome settled when the feed ended, and a flush waiting to be journaled.
+  // Fertilizer: the outcome settled when the feed ended, and a flush waiting to be journaled
+  // (to_flush) or a cleared journal waiting to be saved before the outcome is out (to_settle).
   bool to_flush;
+  bool to_settle;
   IrrOutcome fert_outcome;
   IrrReason fert_reason;
   uint32_t flush_since_ms;
+  uint32_t settle_since_ms;
   bool fog_wait;  // the next feed open waits for fog to read OFF (SAF-5: L03 never opens with fog)
   // irr_state.
   uint32_t start_epoch;
@@ -1055,6 +1060,30 @@ inline IrrReason pulse_skip(const IrrEngine& e, uint8_t idx, bool fert_feed, boo
   return IrrReason::kNone;
 }
 
+// Why a prewet or flush on a mister partner (L07 for L08, L09 for L10) may not run now.
+// It is mist, so the rails that hold any mist hold it: SENSOR_FAULT (invariant 26), a
+// latch or back-off (D-IRP-19), confirmed occupancy (D-IRP-10) and the SAF-4 ceiling.
+// The soft budget, the zone duty cap and the drip caps count it but do not stop it.
+inline IrrReason mist_tail_hold(const IrrEngine& e, uint8_t partner) {
+  if (e.in.sensor_fault) return IrrReason::kSf;
+  if (e.in.latch_mask & zone_lines(partner)) return IrrReason::kFlt;
+  if (e.in.backoff_mask & zone_lines(partner)) return IrrReason::kBof;
+  if (e.in.occupied) return IrrReason::kOcc;
+  if (saf4_reached(e)) return IrrReason::kSaf;
+  return IrrReason::kNone;
+}
+
+// The engine never opens a disabled line (irrigation §4.2, §6.3), so a fertilizer run
+// with a prewet or a flush needs its clean partner enabled.
+inline bool partner_disabled(const IrrEngine& e, uint8_t line, uint16_t prewet_s, uint16_t flush_s) {
+  return is_fert(line) && (prewet_s > 0 || flush_s > 0) && !line_enabled(e, kCleanPartner[line]);
+}
+
+// Does a running fertilizer run still use its partner (a prewet or flush under way or to come)?
+inline bool fert_uses_partner(const IrrRun& r) {
+  return r.stage == IrrStage::kPrewet || r.stage == IrrStage::kFlush || r.flush_s > 0;
+}
+
 inline uint16_t physical_misters(const IrrEngine& e) {
   return uint16_t(e.in.relay_on_mask & kMistManifoldMask & ~e.engine_mask);
 }
@@ -1197,6 +1226,25 @@ inline void end_clean_run(IrrEngine& e, uint32_t now_ms, IrrOutcome o, IrrReason
   clear_run(e);
 }
 
+// Clear the journal, then publish the fertilizer run's settled outcome. The outcome goes
+// out only once the cleared journal is saved and synced, as a claim does, so a reset
+// never ends the run a second time from a stale journal (recover()). A clear that does
+// not save is retried each tick; 10 min on, the outcome is dropped unpublished, and a
+// reset would end the run once, from its journal.
+inline void settle_fert(IrrEngine& e, uint32_t now_ms) {
+  IrrRun& r = e.run;
+  if (!r.to_settle) {
+    r.to_settle = true;
+    r.settle_since_ms = now_ms;
+  }
+  if (commit_fert(e, IrrStage::kNone, r, false)) {
+    emit(e, r.line, r.slot_id, r.occ_day, r.fert_outcome, r.fert_reason);
+    clear_run(e);
+  } else if (irr_reached(now_ms, r.settle_since_ms + kSettleGiveUpMs)) {
+    clear_run(e);
+  }
+}
+
 // End the fertilizer part of a run (prewet or feed): the outcome is settled and the
 // flush follows, journaled at the next step. `flush` false: disabling the line ended
 // it, so no flush (D-IRP-15).
@@ -1209,22 +1257,29 @@ inline void end_fert_part(IrrEngine& e, uint32_t now_ms, IrrOutcome o, IrrReason
   r.fert_reason = why;
   if (flush && r.flush_s > 0) {
     r.to_flush = true;
+    r.flush_since_ms = now_ms;
     return;
   }
-  commit_fert(e, IrrStage::kNone, r, false);  // best effort: a stale journal only costs one extra flush
-  emit(e, r.line, r.slot_id, r.occ_day, o, why);
-  clear_run(e);
+  settle_fert(e, now_ms);
 }
 
 // Journal the flush tail, publish the outcome, and arm the flush on the partner.
 inline void begin_flush(IrrEngine& e, uint32_t now_ms) {
   IrrRun& r = e.run;
   r.to_flush = false;
+  if (!line_enabled(e, r.partner)) {
+    // Never open a disabled line: the outcome stands, with no flush.
+    end_fert_part(e, now_ms, r.fert_outcome, r.fert_reason, false);
+    return;
+  }
   if (!commit_fert(e, IrrStage::kFlush, r, false)) {
-    // The flush cannot be journaled: publish the outcome and stop here, all closed.
-    commit_fert(e, IrrStage::kNone, r, false);
-    emit(e, r.line, r.slot_id, r.occ_day, r.fert_outcome, r.fert_reason);
-    clear_run(e);
+    // Not journaled: try again next tick for as long as a flush may wait, then publish
+    // the outcome with no flush (an unjournaled flush cut by a reset would end the run twice).
+    if (!irr_reached(now_ms, r.flush_since_ms + kFlushGiveUpMs)) {
+      r.to_flush = true;
+      return;
+    }
+    end_fert_part(e, now_ms, r.fert_outcome, r.fert_reason, false);
     return;
   }
   emit(e, r.line, r.slot_id, r.occ_day, r.fert_outcome, r.fert_reason);
@@ -1306,7 +1361,8 @@ inline bool advance_pulses(IrrEngine& e, IrrRun& r, uint32_t now_ms, bool fert_f
     return true;
   }
   IrrReason why = pulse_skip(e, r.line, fert_feed, r.degraded_only);
-  if (why == IrrReason::kNone && r.degraded_only && !irr_daylight(e.in.clock)) why = IrrReason::kVok;
+  // A fallback pulse needs daylight; with a valid clock advance_run ends the window at sunset.
+  if (why == IrrReason::kNone && r.degraded_only && !irr_daylight(e.in.clock)) why = IrrReason::kClk;
   if (why == IrrReason::kNone && !mist_free_for(e, r.line, now_ms)) why = IrrReason::kMan;
   if (why == IrrReason::kNone && fert_feed && (e.in.relay_on_mask & kFogMask)) {
     // A feed pulse opens L03: fog must read OFF first. l03_hold asks the climate path for it.
@@ -1377,10 +1433,10 @@ inline void irr_count_water(IrrEngine& e, uint32_t centigal) {
 // A drip run holds the water (irrigation_water_conflict for climate mist and fog).
 inline bool irr_drip_active(const IrrEngine& e) {
   const IrrRun& r = e.run;
-  if (!detail::run_on_drip_manifold(r)) return false;
-  if (r.kind == IrrRunKind::kDrip) return !r.paused && !r.yielding;
-  if (r.stage == IrrStage::kFlush) return !r.paused;
-  return true;
+  // A run whose flush is not journaled yet, or whose outcome waits on its journal, holds nothing.
+  if (!detail::run_on_drip_manifold(r) || r.to_flush || r.to_settle) return false;
+  if (r.kind == IrrRunKind::kDrip || r.stage == IrrStage::kFlush) return !r.paused && !r.yielding;
+  return true;  // a fertilizer prewet or feed is never paused
 }
 
 // ── Outputs ──────────────────────────────────────────────────────────────────
@@ -1444,7 +1500,7 @@ inline void build_outputs(IrrEngine& e, uint32_t now_ms, IrrOutputs& out) {
   IrrStateFields& s = out.state;
   s.reject = e.reject;
   const bool run_blocked = r.kind != IrrRunKind::kNone && r.block != IrrReason::kNone;
-  if (r.kind != IrrRunKind::kNone && !run_blocked && !r.to_flush) {
+  if (r.kind != IrrRunKind::kNone && !run_blocked && !r.to_flush && !r.to_settle) {
     const IrrRunToken t = run_token(r);
     if (is_drip_line(t.line)) s.drip = t;
     else s.mist = t;
@@ -1454,7 +1510,10 @@ inline void build_outputs(IrrEngine& e, uint32_t now_ms, IrrOutputs& out) {
               e.vpd_end_epoch < e.vpd_start_epoch ? e.vpd_start_epoch : e.vpd_end_epoch};
   }
   if (run_blocked) {
-    add_wait(s, run_stage_line(r), r.block, r.block == IrrReason::kMan ? holder_end_epoch(e) : 0u);
+    // The active run waits on someone else: a VPD pulse names its planned end; fog or an
+    // unknown holder names none.
+    const uint32_t until = r.block == IrrReason::kMan && e.vpd_line != kNoLine ? s.mist.end_epoch : 0u;
+    add_wait(s, run_stage_line(r), r.block, until);
   }
   // Pending occurrences, earliest due first.
   bool listed[kMaxSlots] = {};
@@ -1524,13 +1583,15 @@ inline void recover(IrrEngine& e, uint32_t now_ms) {
     r.stage = stage;
     e.run = r;
     rtc_mirror_run(e);
+    // The flush never opens a disabled partner (the engine never opens a disabled line).
+    const bool partner_on = line_enabled(e, r.partner);
     if (stage == IrrStage::kFlush) {
       // The outcome is already out: run the flush again, quietly.
       e.run.remaining_ms = uint32_t(r.flush_s) * 1000u;
       e.run.flush_since_ms = now_ms;
-      if (r.flush_s == 0) finish_flush(e, now_ms);
+      if (r.flush_s == 0 || !partner_on) finish_flush(e, now_ms);
     } else {
-      end_fert_part(e, now_ms, IrrOutcome::kShort, IrrReason::kRst, true);
+      end_fert_part(e, now_ms, IrrOutcome::kShort, IrrReason::kRst, partner_on);
       if (e.run.kind == IrrRunKind::kFert && e.run.to_flush) begin_flush(e, now_ms);
     }
     return;
@@ -1583,18 +1644,25 @@ inline void recover(IrrEngine& e, uint32_t now_ms) {
 }
 
 // A pushed program takes over. A run whose line is now disabled ends: a clean run
-// `stopped` (dis), a fertilizer run with no flush (D-IRP-15). Membership changes do
-// not cut a running window; they apply at the next start.
+// `stopped` (dis), a fertilizer run with no flush (D-IRP-15). A fertilizer run whose
+// clean partner is disabled while it still needs it ends the same way, because the
+// engine never opens a disabled line; a feed that already ended keeps its outcome.
+// Membership changes do not cut a running window; they apply at the next start.
 inline void apply_program(IrrEngine& e, uint32_t now_ms) {
   e.prog = e.staged_prog;
   std::memcpy(e.prog_hash, e.staged_hash, 32);
   e.prog_nvs = true;
   e.staged = false;
   IrrRun& r = e.run;
-  if (r.kind != IrrRunKind::kNone && !line_enabled(e, r.line)) {
+  const bool line_off = r.kind != IrrRunKind::kNone && !line_enabled(e, r.line);
+  const bool partner_off =
+      r.kind == IrrRunKind::kFert && fert_uses_partner(r) && !line_enabled(e, r.partner);
+  if ((line_off || partner_off) && !r.to_settle) {
     if (r.kind == IrrRunKind::kFert) {
       if (r.stage == IrrStage::kFlush) {
         finish_flush(e, now_ms);
+      } else if (r.to_flush) {
+        end_fert_part(e, now_ms, r.fert_outcome, r.fert_reason, false);
       } else {
         end_fert_part(e, now_ms, IrrOutcome::kStopped, IrrReason::kDis, false);
       }
@@ -1634,11 +1702,11 @@ inline bool vpd_waiting(const IrrEngine& e, uint32_t now_ms) {
   return e.vpd_wait_line != kNoLine && !irr_reached(now_ms, e.vpd_wait_ms + kVpdFreshMs);
 }
 
-// A clean drip (or the flush tail on a drip partner): SAFETY_COOL and a VPD emergency
-// pause it at once and it resumes its remainder; a clean drip also yields to climate
+// A clean drip (or the clean flush tail on a drip partner): SAFETY_COOL and a VPD
+// emergency pause it at once and it resumes its remainder; it also yields to climate
 // demand after climate_yield_min continuous minutes, for one VPD pulse or up to 120 s
-// of fog. `may_yield` is false for the flush tail (it is part of a fertilizer run).
-inline void advance_drip_like(IrrEngine& e, IrrRun& r, uint32_t now_ms, uint32_t dt_ms, bool may_yield) {
+// of fog (D-IRP-03). A fertilizer prewet or feed is never paused, so it never comes here.
+inline void advance_drip_like(IrrEngine& e, IrrRun& r, uint32_t now_ms, uint32_t dt_ms) {
   const bool pause_now = e.in.safety_cool || e.in.vpd_emergency;
   if (r.open) {
     account_open(r, now_ms);
@@ -1650,20 +1718,18 @@ inline void advance_drip_like(IrrEngine& e, IrrRun& r, uint32_t now_ms, uint32_t
       r.end_epoch = ep == 0 ? 0u : ep + (r.remaining_ms + 999u) / 1000u;
       return;
     }
-    if (may_yield) {
-      const bool demand = e.in.climate_demand || vpd_waiting(e, now_ms);
-      r.yield_accum_ms = demand ? r.yield_accum_ms + dt_ms : 0u;
-      if (r.yield_accum_ms >= uint32_t(e.prog.climate_yield_min) * 60000u) {
-        close_continuous(r, now_ms);
-        r.yielding = true;
-        r.yield_start_ms = now_ms;
-        r.yield_fog_ms = 0;
-        r.yield_climate_seen = false;
-        r.yield_vpd_done = false;
-        r.yield_accum_ms = 0;
-        const uint32_t ep = epoch_now(e, now_ms);
-        r.end_epoch = ep == 0 ? 0u : ep + (r.remaining_ms + 999u) / 1000u;
-      }
+    const bool demand = e.in.climate_demand || vpd_waiting(e, now_ms);
+    r.yield_accum_ms = demand ? r.yield_accum_ms + dt_ms : 0u;
+    if (r.yield_accum_ms >= uint32_t(e.prog.climate_yield_min) * 60000u) {
+      close_continuous(r, now_ms);
+      r.yielding = true;
+      r.yield_start_ms = now_ms;
+      r.yield_fog_ms = 0;
+      r.yield_climate_seen = false;
+      r.yield_vpd_done = false;
+      r.yield_accum_ms = 0;
+      const uint32_t ep = epoch_now(e, now_ms);
+      r.end_epoch = ep == 0 ? 0u : ep + (r.remaining_ms + 999u) / 1000u;
     }
     return;
   }
@@ -1702,7 +1768,7 @@ inline void advance_run(IrrEngine& e, uint32_t now_ms, uint32_t dt_ms) {
         end_clean_run(e, now_ms, IrrOutcome::kOk, IrrReason::kNone);
         return;
       }
-      advance_drip_like(e, r, now_ms, dt_ms, true);
+      advance_drip_like(e, r, now_ms, dt_ms);
       if (r.remaining_ms == 0) end_clean_run(e, now_ms, IrrOutcome::kOk, IrrReason::kNone);
       return;
     }
@@ -1711,6 +1777,11 @@ inline void advance_run(IrrEngine& e, uint32_t now_ms, uint32_t dt_ms) {
       const IrrReason cap = mist_cap_reason(e, r.line, true);
       if (cap != IrrReason::kNone && r.done < r.count) {
         end_clean_run(e, now_ms, IrrOutcome::kCap, cap);
+        return;
+      }
+      if (r.degraded_only && e.in.clock.valid && !irr_daylight(e.in.clock) && !r.pulse_open && r.done < r.count) {
+        // A fallback window runs in daylight only (D-IRP-12): at sunset it ends where it is.
+        end_clean_run(e, now_ms, IrrOutcome::kShort, IrrReason::kNone);
         return;
       }
       const bool more = advance_pulses(e, r, now_ms, false);
@@ -1725,27 +1796,34 @@ inline void advance_run(IrrEngine& e, uint32_t now_ms, uint32_t dt_ms) {
     }
 
     case IrrRunKind::kFert: {
+      if (r.to_settle) {
+        settle_fert(e, now_ms);
+        return;
+      }
       if (r.to_flush) {
         begin_flush(e, now_ms);
         return;
       }
       const bool mist_partner = is_mister(r.partner);
       if (r.stage == IrrStage::kFlush) {
-        // The clean flush tail: exempt from caps, budgets and occupancy (its water still
-        // counts); a mist flush waits out SENSOR_FAULT, a drip flush pauses for SAFETY_COOL
-        // and a VPD emergency.
+        // The clean flush tail: the soft budget and the caps count it but do not stop it.
+        // A mist flush is mist: it waits out SENSOR_FAULT, a latch or back-off, confirmed
+        // occupancy, the SAF-4 ceiling and a VPD emergency (VPD goes first). A drip flush
+        // pauses for SAFETY_COOL and a VPD emergency.
         account_open(r, now_ms);
         if (r.open && r.remaining_ms == 0) {
           finish_flush(e, now_ms);
           return;
         }
         if (mist_partner) {
-          if (r.open && e.in.sensor_fault) {
+          IrrReason hold = mist_tail_hold(e, r.partner);
+          if (hold == IrrReason::kNone && e.in.vpd_emergency) hold = IrrReason::kMan;
+          if (r.open && hold != IrrReason::kNone) {
             close_continuous(r, now_ms);
-            r.block = IrrReason::kSf;
+            r.block = hold;
           } else if (!r.open) {
-            if (e.in.sensor_fault) {
-              r.block = IrrReason::kSf;
+            if (hold != IrrReason::kNone) {
+              r.block = hold;
             } else if (e.vpd_line != kNoLine || physical_misters(e) != 0 || zone_fenced(e, r.partner, now_ms)) {
               r.block = IrrReason::kMan;
             } else {
@@ -1754,7 +1832,7 @@ inline void advance_run(IrrEngine& e, uint32_t now_ms, uint32_t dt_ms) {
             }
           }
         } else {
-          advance_drip_like(e, r, now_ms, dt_ms, false);
+          advance_drip_like(e, r, now_ms, dt_ms);
           r.block = IrrReason::kNone;
         }
         if (r.remaining_ms == 0) {
@@ -1773,8 +1851,12 @@ inline void advance_run(IrrEngine& e, uint32_t now_ms, uint32_t dt_ms) {
       }
       if (r.stage == IrrStage::kPrewet) {
         account_open(r, now_ms);
-        if (mist_partner && e.in.sensor_fault) {
-          end_fert_part(e, now_ms, IrrOutcome::kShort, IrrReason::kSf, true);
+        // A prewet on a mister is mist (mist_tail_hold). Once open, a fertilizer run never
+        // pauses: a hold ends it (SAF-4 `cap`, the others `short`) and the flush follows.
+        // Before it opens it waits, at most 60 min from the run's start.
+        const IrrReason hold = mist_partner ? mist_tail_hold(e, r.partner) : IrrReason::kNone;
+        if (r.remaining_ms > 0 && hold != IrrReason::kNone && (r.open || hold == IrrReason::kSaf)) {
+          end_fert_part(e, now_ms, hold == IrrReason::kSaf ? IrrOutcome::kCap : IrrOutcome::kShort, hold, true);
           if (e.run.kind == IrrRunKind::kFert && e.run.to_flush) begin_flush(e, now_ms);
           return;
         }
@@ -1794,10 +1876,24 @@ inline void advance_run(IrrEngine& e, uint32_t now_ms, uint32_t dt_ms) {
             r.deadline_ms = now_ms + (span - r.on_s) * 1000u + kWindowGraceMs;
           }
         } else if (!r.open) {
-          const bool ready = mist_partner ? (e.vpd_line == kNoLine && physical_misters(e) == 0 &&
-                                             !zone_fenced(e, r.partner, now_ms))
-                                          : drip_clear(e);
-          if (ready) open_continuous(e, r, now_ms);
+          IrrReason wait = hold;
+          if (wait == IrrReason::kNone) {
+            const bool ready = mist_partner ? (!e.in.vpd_emergency && e.vpd_line == kNoLine &&
+                                               physical_misters(e) == 0 && !zone_fenced(e, r.partner, now_ms))
+                                            : drip_clear(e);
+            if (ready) {
+              r.block = IrrReason::kNone;
+              open_continuous(e, r, now_ms);
+              return;
+            }
+            wait = IrrReason::kMan;
+          }
+          r.block = wait;
+          r.last_block = wait;
+          if (irr_reached(now_ms, r.deadline_ms)) {
+            end_fert_part(e, now_ms, IrrOutcome::kShort, wait, true);
+            if (e.run.kind == IrrRunKind::kFert && e.run.to_flush) begin_flush(e, now_ms);
+          }
           return;
         } else {
           return;
@@ -1863,7 +1959,7 @@ inline bool settle(IrrEngine& e, IrrPending& p, uint8_t line, IrrOutcome o, IrrR
 // line, a pause, mist schedule membership, and the caps. kNone: it may run.
 inline IrrReason settle_reason(const IrrEngine& e, const IrrSlot& s, const IrrPending& p, IrrOutcome& o) {
   o = IrrOutcome::kSkipped;
-  if (!line_enabled(e, s.line)) return IrrReason::kDis;
+  if (!line_enabled(e, s.line) || partner_disabled(e, s.line, s.prewet_s, s.flush_s)) return IrrReason::kDis;
   if (paused_at(e, s.line, p.planned_epoch)) return IrrReason::kPau;
   if (is_clean_mister(s.line)) {
     if (s.degraded_only()) {
@@ -1906,16 +2002,14 @@ inline IrrReason start_block(const IrrEngine& e, const IrrSlot& s, uint32_t now_
     return IrrReason::kNone;
   }
   if (kind == IrrLineKind::kFertMister) {
-    if (s.prewet_s == 0) {
-      const IrrReason skip = pulse_skip(e, s.line, true, false);
-      if (skip != IrrReason::kNone) return skip;
-    } else if (e.in.latch_mask & zone_lines(s.line)) {
-      return IrrReason::kFlt;
-    } else if (e.in.backoff_mask & zone_lines(s.line)) {
-      return IrrReason::kBof;
-    }
-    // SAFETY_COOL would end it at once (never paused): wait, as a drip does.
-    if (e.in.safety_cool || e.vpd_line != kNoLine || physical_misters(e) != 0 || zone_fenced(e, s.line, now_ms)) {
+    // Its prewet and feed are mist on the zone (a prewet on L07 or L09, the feed on L08
+    // or L10): the same rails hold its start.
+    const IrrReason skip = pulse_skip(e, s.line, true, false);
+    if (skip != IrrReason::kNone) return skip;
+    // SAFETY_COOL would end it at once (never paused), and in a VPD emergency VPD goes
+    // first: wait, as a drip does.
+    if (e.in.safety_cool || e.in.vpd_emergency || e.vpd_line != kNoLine || physical_misters(e) != 0 ||
+        zone_fenced(e, s.line, now_ms)) {
       until = holder_end_epoch(e);
       return IrrReason::kMan;
     }
@@ -1936,7 +2030,9 @@ inline bool start_run(IrrEngine& e, IrrRun r, uint32_t now_ms) {
     r.kind = IrrRunKind::kFert;
     r.stage = r.prewet_s > 0 ? IrrStage::kPrewet : IrrStage::kFeed;
     r.remaining_ms = uint32_t(r.prewet_s > 0 ? r.prewet_s : r.on_s) * 1000u;
-    if (r.stage == IrrStage::kFeed && kind == IrrLineKind::kFertMister) {
+    if (r.stage == IrrStage::kPrewet) {
+      r.deadline_ms = now_ms + kWindowGraceMs;  // the prewet opens within 60 min, or the run ends short
+    } else if (kind == IrrLineKind::kFertMister) {
       const uint32_t span = uint32_t(r.count) * r.on_s + uint32_t(r.count - 1) * r.gap_s;
       r.deadline_ms = now_ms + (span - r.on_s) * 1000u + kWindowGraceMs;
     }
@@ -2142,8 +2238,8 @@ inline IrrRunResult irr_run_now(IrrEngine& e, const IrrRunArgs& a, uint32_t now_
   } else if (e.run.kind != IrrRunKind::kNone) {
     res = IrrRunResult::kManifoldBusy;
     why = IrrReason::kMan;
-  } else if (!line_enabled(e, line)) {
-    res = IrrRunResult::kLineDisabled;
+  } else if (!line_enabled(e, line) || partner_disabled(e, line, a.prewet_s, a.flush_s)) {
+    res = IrrRunResult::kLineDisabled;  // a prewet or flush would open a disabled partner
     why = IrrReason::kDis;
   } else if (paused_at(e, line, ep)) {
     res = IrrRunResult::kLinePaused;
@@ -2210,7 +2306,7 @@ inline uint8_t irr_stop(IrrEngine& e, uint8_t line, uint32_t now_ms, IrrOutputs&
     if (r.kind == IrrRunKind::kFert) {
       if (r.stage == IrrStage::kFlush) {
         finish_flush(e, now_ms);
-      } else if (!r.to_flush) {
+      } else if (!r.to_flush && !r.to_settle) {  // otherwise nothing is open and its outcome is settled
         end_fert_part(e, now_ms, IrrOutcome::kStopped, IrrReason::kCmd, true);
       }
     } else {
@@ -2290,7 +2386,8 @@ inline IrrVpdResult irr_vpd_request(IrrEngine& e, uint8_t idx, uint16_t on_s, ui
     // A scheduled pulse due now goes first when it is the schedule's turn (not in a
     // VPD emergency), or when it is on the same zone (one pulse serves both).
     bool sched_due = false;
-    if ((r.kind == IrrRunKind::kWindow || (r.kind == IrrRunKind::kFert && r.stage == IrrStage::kFeed)) &&
+    if ((r.kind == IrrRunKind::kWindow ||
+         (r.kind == IrrRunKind::kFert && r.stage == IrrStage::kFeed && !r.to_flush && !r.to_settle)) &&
         is_mister(r.line) && !r.pulse_open && r.done < r.count && irr_reached(now_ms, r.next_pulse_ms) &&
         pulse_skip(e, r.line, r.kind == IrrRunKind::kFert, r.degraded_only) == IrrReason::kNone &&
         !zone_fenced(e, r.line, now_ms)) {
@@ -2321,7 +2418,7 @@ inline void irr_vpd_release(IrrEngine& e, uint8_t idx, uint32_t now_ms, IrrOutpu
     e.vpd_line = kNoLine;
     set_zone_off(e, idx, now_ms);
     e.sched_turn = true;
-    if (e.run.kind == IrrRunKind::kDrip && e.run.yielding) e.run.yield_vpd_done = true;
+    if (e.run.yielding) e.run.yield_vpd_done = true;  // a drip or drip flush yielding for it resumes
   }
   build_outputs(e, now_ms, out);
 }

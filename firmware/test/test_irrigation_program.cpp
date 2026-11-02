@@ -205,6 +205,8 @@ struct Sim {
   bool l03_with_clean_mist = false;
   bool ungranted = false;
   bool mist_in_sf = false;
+  bool mist_occupied = false;  // an engine mister relay ON while occupancy is confirmed
+  uint16_t disabled_opened = 0;  // engine relays ON while their line is disabled (L03 has its own rule)
 
   void boot(bool power_on, const IrrProgram* prog) {
     if (power_on) nvs.cache_has = false;  // the cache dies with the power
@@ -268,6 +270,8 @@ struct Sim {
     if ((now & irr_bit(kL03)) && (now & kFogMask)) l03_with_fog = true;
     if ((now & irr_bit(kL03)) && (now & kDegradedOnlyMask)) l03_with_clean_mist = true;
     if (in.sensor_fault && (out.relay_mask & kMistManifoldMask)) mist_in_sf = true;
+    if (in.occupied && (out.relay_mask & kMistManifoldMask)) mist_occupied = true;
+    disabled_opened |= uint16_t(out.relay_mask & ~eng.prog.enabled_mask & ~irr_bit(kL03));
     relays = now;
   }
 
@@ -1237,27 +1241,69 @@ static void fertilizer_drip_sequence() {
 }
 
 // Acceptance: an L08 trace with confirmed occupancy through its window skips every feed
-// pulse, ends short and still runs the L07 flush.
+// pulse, ends short and still runs the L07 flush. The prewet and the flush on L07 are mist
+// too (D-IRP-10, F7): the flush waits for the occupancy to clear, so no mister opens on
+// anyone.
 static void l08_occupancy_skips_feed_pulses() {
   IrrProgram p = irr_rom_default();
   enable(p, kL07);
   enable(p, kL08);
   add_slot(p, 9, kL08, 420, 30, 3, 60, 60, 120);  // prewet 60 on L07, 3 x 30 s feed, flush 120 on L07
-  Sim s;
-  s.epoch = at(419, 55);
-  s.boot(true, &p);
-  s.in.occupied = true;
-  s.run_for(70);
-  CHECK(has_wait(s.out, kL08, IrrReason::kOcc), "w=7,occ while someone is inside");
-  s.run_for(3600 + 180 + 10);
-  CHECK(s.open_s[kL08] == 0 && s.open_s[kL03] == 0, "every feed pulse skipped: L08 and L03 never open");
-  CHECK(event_is(s.find_event(9, kL08), IrrOutcome::kShort, IrrReason::kOcc), "the feed ends short (occ)");
-  s.run_for(200);
-  CHECK(s.open_s[kL07] >= 175 && s.open_s[kL07] <= 190, "the L07 prewet and flush still ran");
-  uint16_t seq[16];
-  const int n = s.nonzero_seq(seq, 16);
-  CHECK(n == 1 && seq[0] == irr_bit(kL07), "only L07 ever opened");
-  CHECK(s.nvs.flash.fert_stage == 0, "journal cleared");
+  {
+    Sim s;
+    s.epoch = at(419, 55);
+    s.boot(true, &p);
+    s.tick();  // 07:00: the prewet opens L07
+    CHECK(s.relays & irr_bit(kL07), "the prewet runs on L07");
+    s.run_for(55);
+    s.in.occupied = true;  // confirmed from the feed's start through its window
+    s.tick();               // 07:01: the prewet is done, the feed's first pulse is due
+    CHECK(has_wait(s.out, kL08, IrrReason::kOcc), "w=7,occ while someone is inside");
+    s.run_for(3600 + 180 + 10);
+    CHECK(s.open_s[kL08] == 0 && s.open_s[kL03] == 0, "every feed pulse skipped: L08 and L03 never open");
+    CHECK(event_is(s.find_event(9, kL08), IrrOutcome::kShort, IrrReason::kOcc), "the feed ends short (occ)");
+    CHECK(s.open_s[kL07] >= 55 && s.open_s[kL07] <= 65 && has_wait(s.out, kL07, IrrReason::kOcc),
+          "the L07 flush waits while someone is inside: w=6,occ");
+    s.in.occupied = false;
+    s.run_for(200);
+    CHECK(s.open_s[kL07] >= 175 && s.open_s[kL07] <= 190, "the L07 flush still runs once the occupancy clears");
+    uint16_t seq[16];
+    const int n = s.nonzero_seq(seq, 16);
+    CHECK(n == 1 && seq[0] == irr_bit(kL07), "only L07 ever opened");
+    CHECK(!s.mist_occupied, "no mister open while occupancy is confirmed");
+    CHECK(s.nvs.flash.fert_stage == 0 && s.count_events(9, kL08) == 1, "journal cleared, one outcome");
+  }
+  {
+    // Occupancy arriving mid-prewet ends the run (it never pauses); the flush waits for it to clear.
+    Sim s;
+    s.epoch = at(419, 55);
+    s.boot(true, &p);
+    s.run_for(30);
+    s.in.occupied = true;
+    s.tick();
+    CHECK(!(s.relays & irr_bit(kL07)) && event_is(s.find_event(9, kL08), IrrOutcome::kShort, IrrReason::kOcc),
+          "occupancy mid-prewet: L07 closes, short (occ)");
+    s.run_for(600);
+    CHECK(!s.mist_occupied && s.open_s[kL08] == 0, "nothing mists while occupied, no feed");
+    s.in.occupied = false;
+    s.run_for(200);
+    CHECK(s.open_s[kL07] >= 145 && s.open_s[kL07] <= 160, "the flush runs once it clears");
+    CHECK(s.nvs.flash.fert_stage == 0, "journal cleared");
+  }
+  {
+    // Occupancy at the start time: the occurrence waits (w=7,occ) and starts once it clears.
+    Sim s;
+    s.epoch = at(419, 55);
+    s.boot(true, &p);
+    s.in.occupied = true;
+    s.run_for(300);
+    CHECK(s.open_s[kL07] == 0 && has_wait(s.out, kL08, IrrReason::kOcc) && s.nvs.flash.fert_stage == 0,
+          "occupied at 07:00: nothing opens or is journaled, w=7,occ");
+    s.in.occupied = false;
+    s.run_for(600);
+    CHECK(event_is(s.find_event(9, kL08), IrrOutcome::kOk, IrrReason::kNone) && s.open_s[kL08] >= 85,
+          "it runs once the occupancy clears, inside its 60 min");
+  }
   // Without occupancy the feed pulses run with L03.
   Sim t;
   t.epoch = at(419, 55);
@@ -1265,6 +1311,197 @@ static void l08_occupancy_skips_feed_pulses() {
   t.run_for(600);
   CHECK(t.open_s[kL08] >= 85 && t.open_s[kL08] <= 95 && t.open_s[kL03] == t.open_s[kL08], "3 x 30 s with L03");
   CHECK(event_is(t.find_event(9, kL08), IrrOutcome::kOk, IrrReason::kNone) && !t.l03_alone, "ok");
+}
+
+// A prewet or flush on a mister is mist: SENSOR_FAULT, a latch or back-off, confirmed
+// occupancy and SAF-4 hold it, and in a VPD emergency VPD goes first. The engine never
+// opens a disabled line, so a fertilizer run needs its clean partner enabled.
+static void fertilizer_partner_and_mist_rails() {
+  IrrProgram p = irr_rom_default();
+  enable(p, kL07);
+  enable(p, kL08);
+  add_slot(p, 9, kL08, 420, 30, 1, 60, 0, 600);  // one 30 s feed pulse, a 600 s flush on L07
+  {
+    // SAF-4 reached before the flush: it never opens, and is dropped 60 min later.
+    Sim s;
+    s.epoch = at(419, 55);
+    s.boot(true, &p);
+    s.run_for(40);
+    CHECK(s.open_s[kL08] >= 25 && event_is(s.find_event(9, kL08), IrrOutcome::kOk, IrrReason::kNone),
+          "the feed pulse ran: ok");
+    irr_count_water(s.eng, 36000);
+    s.run_for(600);
+    CHECK(s.open_s[kL07] == 0 && has_wait(s.out, kL07, IrrReason::kSaf), "SAF-4 holds the mist flush: w=6,saf");
+    s.run_for(3600);
+    CHECK(s.open_s[kL07] == 0 && s.nvs.flash.fert_stage == 0 && s.eng.run.kind == IrrRunKind::kNone,
+          "a flush that cannot run for 60 min is dropped");
+  }
+  {
+    // A latch on the zone holds it; it runs once the latch clears.
+    Sim s;
+    s.epoch = at(419, 55);
+    s.boot(true, &p);
+    s.run_for(40);
+    s.in.latch_mask = irr_bit(kL07);
+    s.run_for(300);
+    CHECK(s.open_s[kL07] == 0 && has_wait(s.out, kL07, IrrReason::kFlt), "a latched zone holds the flush: w=6,flt");
+    s.in.latch_mask = 0;
+    s.run_for(700);
+    CHECK(s.open_s[kL07] >= 595 && s.open_s[kL07] <= 610 && s.nvs.flash.fert_stage == 0, "then the full flush runs");
+    // An open mist flush closes for SENSOR_FAULT and finishes its remainder afterwards.
+    Sim t;
+    t.epoch = at(419, 55);
+    t.boot(true, &p);
+    t.run_for(200);
+    CHECK(t.relays & irr_bit(kL07), "flushing on L07");
+    t.in.sensor_fault = true;
+    t.run_for(120);
+    CHECK(!t.mist_in_sf && has_wait(t.out, kL07, IrrReason::kSf), "SENSOR_FAULT closes it: w=6,sf");
+    t.in.sensor_fault = false;
+    t.run_for(700);
+    CHECK(t.open_s[kL07] >= 595 && t.open_s[kL07] <= 610, "the flush finishes its remainder");
+  }
+  {
+    // VPD emergency: a mister fertilizer run waits to start, and an open mist flush yields.
+    IrrProgram q = p;
+    q.slots[0].prewet_s = 120;
+    Sim s;
+    s.epoch = at(419, 55);
+    s.boot(true, &q);
+    s.vpd_want = kL04;
+    s.vpd_on_s = 30;
+    s.vpd_gap_s = 30;
+    s.in.vpd_emergency = true;
+    s.run_for(300);
+    CHECK(s.open_s[kL07] == 0 && s.open_s[kL08] == 0 && has_wait(s.out, kL08, IrrReason::kMan) && s.vpd_grants >= 3,
+          "in a VPD emergency VPD goes first: the run waits (w=7,man)");
+    s.in.vpd_emergency = false;
+    s.vpd_want = kNoLine;
+    s.run_for(300);
+    CHECK(s.relays & irr_bit(kL07), "after it, the flush runs on L07");
+    s.in.vpd_emergency = true;
+    s.vpd_want = kL04;
+    s.run_for(60);
+    CHECK(!(s.relays & irr_bit(kL07)) && s.vpd_grants >= 4, "a new emergency: the mist flush yields to VPD pulses");
+    s.in.vpd_emergency = false;
+    s.vpd_want = kNoLine;
+    s.run_for(900);
+    CHECK(s.open_s[kL07] >= 715 && s.open_s[kL07] <= 735 && s.nvs.flash.fert_stage == 0 && !s.two_misters,
+          "prewet 120 + flush 600 in all, one mister at a time");
+  }
+  {
+    // A disabled clean partner: the run never starts and the partner never opens.
+    IrrProgram d = irr_rom_default();
+    enable(d, kL02);
+    enable(d, kL01, false);
+    add_slot(d, 5, kL02, 420, 300, 1, 0, 120, 240);
+    Sim s;
+    s.epoch = at(419, 55);
+    s.boot(true, &d);
+    s.run_for(900);
+    CHECK(s.open_s[kL01] == 0 && s.open_s[kL02] == 0 && s.open_s[kL03] == 0 &&
+              event_is(s.find_event(5, kL02), IrrOutcome::kSkipped, IrrReason::kDis),
+          "L01 disabled: the L02 feed with a prewet and flush ends skipped (dis)");
+    CHECK(s.run_now(kL02, 120, 1, 0, 30, 60) == IrrRunResult::kLineDisabled &&
+              event_is(s.last_event(), IrrOutcome::kSkipped, IrrReason::kDis),
+          "run-now with a prewet: line_disabled");
+    CHECK(s.run_now(kL02, 60) == IrrRunResult::kStarted, "a feed with no prewet or flush needs no partner");
+    s.run_for(120);
+    CHECK(s.open_s[kL02] >= 55 && s.open_s[kL01] == 0 && s.disabled_opened == 0, "and never opens L01");
+  }
+  {
+    // Disabling the partner mid-feed ends the run with no flush; a reset with it disabled flushes nothing.
+    IrrProgram d = irr_rom_default();
+    enable(d, kL02);
+    add_slot(d, 5, kL02, 420, 300, 1, 0, 120, 240);
+    IrrProgram off = d;
+    enable(off, kL01, false);
+    Sim s;
+    s.epoch = at(419, 55);
+    s.boot(true, &d);
+    s.run_for(185);
+    CHECK(s.relays & irr_bit(kL03), "feeding");
+    s.push(off);
+    s.run_for(600);
+    CHECK(event_is(s.find_event(5, kL02), IrrOutcome::kStopped, IrrReason::kDis) && s.open_s[kL01] <= 130 &&
+              s.disabled_opened == 0 && s.nvs.flash.fert_stage == 0,
+          "partner disabled mid-feed: stopped (dis), no flush");
+    Sim t;
+    t.epoch = at(419, 55);
+    t.boot(true, &d);
+    t.run_for(185);
+    t.boot(true, &off);
+    t.run_for(600);
+    CHECK(event_is(t.find_event(5, kL02), IrrOutcome::kShort, IrrReason::kRst) && t.open_s[kL01] <= 130 &&
+              t.disabled_opened == 0 && t.nvs.flash.fert_stage == 0,
+          "a reset with the partner disabled: short (rst), no flush");
+  }
+  {
+    // A flush journal that fails to save is retried; the flush runs once it saves.
+    IrrProgram f = irr_rom_default();
+    enable(f, kL02);
+    add_slot(f, 5, kL02, 420, 60, 1, 0, 0, 240);
+    Sim s;
+    s.epoch = at(419, 55);
+    s.boot(true, &f);
+    s.run_for(55);
+    s.nvs.fail_save = true;
+    s.run_for(30);
+    CHECK(s.rtc.ring_count == 0 && !s.out.drip_active && !(s.relays & irr_bit(kL01)),
+          "unjournaled: no outcome, no flush, the water is free meanwhile");
+    s.nvs.fail_save = false;
+    s.run_for(400);
+    CHECK(s.open_s[kL01] >= 235 && s.open_s[kL01] <= 250 && s.count_events(5, kL02) == 1 &&
+              event_is(s.find_event(5, kL02), IrrOutcome::kOk, IrrReason::kNone) && s.nvs.flash.fert_stage == 0,
+          "then the flush runs, with one ok outcome");
+    // NVS never saves: no flush, and no outcome while the journal still says feeding; the
+    // engine frees the water after 60 + 10 min, and a later reset ends the run once.
+    Sim t;
+    t.epoch = at(419, 55);
+    t.boot(true, &f);
+    t.run_for(55);
+    t.nvs.fail_save = true;
+    t.run_for(3600 + 600 + 60);
+    CHECK(t.open_s[kL01] == 0 && t.rtc.ring_count == 0 && t.eng.run.kind == IrrRunKind::kNone,
+          "never saved: no flush, no outcome, and the engine is free again");
+    t.nvs.fail_save = false;
+    t.boot(false, &f);
+    t.run_for(400);
+    CHECK(t.count_events(5, kL02) == 1 && event_is(t.find_event(5, kL02), IrrOutcome::kShort, IrrReason::kRst) &&
+              t.open_s[kL01] >= 235 && t.nvs.flash.fert_stage == 0,
+          "a later reset ends it once, from its journal: short (rst), then the flush");
+  }
+  {
+    // An outcome waits for its cleared journal to save, so a reset meanwhile never ends the run twice.
+    IrrProgram g = irr_rom_default();
+    enable(g, kL02);
+    add_slot(g, 6, kL02, 420, 60);  // a 60 s feed with no prewet or flush
+    Sim s;
+    s.epoch = at(419, 55);
+    s.boot(true, &g);
+    s.run_for(55);
+    s.nvs.fail_save = true;
+    s.run_for(30);
+    CHECK(s.rtc.ring_count == 0 && s.open_s[kL02] >= 55 && !(s.relays & kWetMask) && !s.out.drip_active,
+          "the feed ended: everything closed, its outcome waits for the journal");
+    s.nvs.fail_save = false;
+    s.boot(false, &g);
+    s.run_for(60);
+    CHECK(s.count_events(6, kL02) == 1 && event_is(s.find_event(6, kL02), IrrOutcome::kShort, IrrReason::kRst) &&
+              s.nvs.flash.fert_stage == 0,
+          "a reset meanwhile: one outcome, short (rst)");
+    Sim t;
+    t.epoch = at(419, 55);
+    t.boot(true, &g);
+    t.run_for(55);
+    t.nvs.fail_save = true;
+    t.run_for(30);
+    t.nvs.fail_save = false;
+    t.run_for(10);
+    CHECK(t.count_events(6, kL02) == 1 && event_is(t.find_event(6, kL02), IrrOutcome::kOk, IrrReason::kNone) &&
+              t.nvs.flash.fert_stage == 0,
+          "with no reset, ok goes out once the journal clears");
+  }
 }
 
 // D-IRP-05: VPD and scheduled pulses alternate at pulse boundaries; a VPD emergency
@@ -1357,6 +1594,29 @@ static void drip_yields_to_climate() {
   CHECK(s.open_s[kL01] >= 1795 && s.open_s[kL01] <= 1810, "the drip delivers its full 30 min");
   CHECK(event_is(s.find_event(3, kL01), IrrOutcome::kOk, IrrReason::kNone), "ok");
   CHECK(!s.drip_with_mist, "drip and mist never overlap");
+  // The clean flush tail of a fertilizer run is a drip too: it yields after 15 min, then finishes.
+  IrrProgram f = irr_rom_default();
+  f.lines[kL01].daily_cap_min = 0;
+  enable(f, kL02);
+  add_slot(f, 5, kL02, 420, 60, 1, 0, 0, 1800);  // 60 s feed, 30 min flush on L01
+  Sim t;
+  t.epoch = at(419, 55);
+  t.boot(true, &f);
+  t.run_for(70);
+  CHECK((t.relays & irr_bit(kL01)) && t.out.state.drip.cause == IrrCause::kFlush, "flushing on L01");
+  t.vpd_want = kL04;
+  t.vpd_on_s = 45;
+  t.vpd_gap_s = 600;
+  t.in.climate_demand = true;
+  t.run_for(14 * 60);
+  CHECK(t.vpd_grants == 0, "under 15 min the flush keeps the water");
+  t.run_for(3 * 60);
+  CHECK(t.vpd_grants == 1, "after 15 min it yields one VPD pulse");
+  t.in.climate_demand = false;
+  t.vpd_want = kNoLine;
+  t.run_for(20 * 60);
+  CHECK(t.open_s[kL01] >= 1795 && t.open_s[kL01] <= 1810 && !t.drip_with_mist && t.nvs.flash.fert_stage == 0,
+        "the flush delivers its full 30 min");
 }
 
 // D-IRP-03, -05: SAFETY_COOL and a VPD emergency pause a clean drip at once; it resumes.
@@ -1757,6 +2017,41 @@ static void more_engine_rules() {
     CHECK(event_is(s.find_event(1, kL04), IrrOutcome::kShort, IrrReason::kVok), "short (vok)");
     CHECK(s.open_s[kL04] >= 40 && s.open_s[kL04] <= 95, "only the pulses delivered while degraded");
   }
+  {
+    // A fallback window still running at sunset ends there: short, with no reason.
+    IrrProgram p = irr_rom_default();
+    add_slot(p, 4, kL04, -2, 45, 4, 60, 0, 0, true, 3);  // sunset - 2 min, 4 x 45 s every 105 s
+    const SolarTimes st = day0_solar();
+    Sim s;
+    s.epoch = at(st.sunset_min - 3);
+    s.boot(true, &p);
+    s.in.sensor_degraded = true;
+    s.run_until(st.sunset_min + 10);
+    CHECK(event_is(s.find_event(4, kL04), IrrOutcome::kShort, IrrReason::kNone), "sunset: short, no reason");
+    CHECK(s.open_s[kL04] >= 85 && s.open_s[kL04] <= 95, "the two daylight pulses only");
+  }
+  {
+    // A run waiting on a VPD pulse names that pulse's planned end, never its own.
+    IrrProgram p = open_program();
+    add_slot(p, 2, kL04, 420, 30, 4, 60);
+    Sim s;
+    s.in.mister_min_off_s = 30;
+    s.epoch = at(419, 55);
+    s.boot(true, &p);
+    s.run_for(35);
+    s.vpd_want = kL07;
+    s.vpd_on_s = 90;
+    s.vpd_gap_s = 600;
+    s.run_until(421, 35);
+    bool named = false;
+    for (uint8_t i = 0; i < s.out.state.wait_count; ++i) {
+      const IrrWait& w = s.out.state.waits[i];
+      if (w.line == kL04 && w.reason == IrrReason::kMan) {
+        named = w.until_epoch == s.out.state.mist.end_epoch && w.until_epoch != s.eng.run.end_epoch;
+      }
+    }
+    CHECK(s.out.state.mist.cause == IrrCause::kVpd && named, "w=3,man,<the VPD pulse's end>");
+  }
 }
 
 // A day of the full golden program with weather, VPD demand, occupancy and faults: the
@@ -1788,6 +2083,8 @@ static void full_program_day_invariants() {
   CHECK(!s.l03_with_fog && !s.l03_with_clean_mist, "SAF-5: no fog and no clean mist while L03 is open");
   CHECK(!s.ungranted, "every engine relay granted");
   CHECK(!s.mist_in_sf, "no engine mist in SENSOR_FAULT");
+  CHECK(!s.mist_occupied, "no engine mist while occupancy is confirmed (D-IRP-10)");
+  CHECK(s.disabled_opened == 0, "no engine relay on a disabled line");
   CHECK(s.rtc.ring_count > 0 && s.rtc.next_seq > 8, "the day settled its occurrences");
   char buf[256];
   CHECK(irr_format_events(s.rtc, buf, sizeof(buf)) > 0, "irr_events formats");
@@ -1814,6 +2111,7 @@ int main() {
   two_outcomes_in_one_tick();
   fertilizer_drip_sequence();
   l08_occupancy_skips_feed_pulses();
+  fertilizer_partner_and_mist_rails();
   mist_manifold_alternation();
   drip_yields_to_climate();
   drip_pauses_for_survival_fog_and_emergency();
