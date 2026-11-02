@@ -223,6 +223,17 @@ Acceptance:
 5. Occupancy always shows: confirmed reads "Someone inside: misters wait (Frigate, 4 min ago)"; unknown reads
    "Occupancy unknown: misters may run".
 
+**As built (VD-09).** Where the build settles a detail this section leaves open, or differs from it:
+
+| Topic | As built |
+|---|---|
+| The answer's stale row | "Waiting for fresh data" holds while API-02 marks the climate source stale, and also while an indoor reading is older than twice the climate cadence at the answer's `server_time`, or a reading with a band in force (temperature, VPD) has no value. In production the readings come from the newest climate row, so this is the same test; it also covers the `stale-data` fixture (climate fresh, readings 14 min old) and a probe that drops out of a fresh row. A missing RH with no RH band is not stale. Before API-02 first answers the sentence reads "Checking the greenhouse…" and claims nothing |
+| One API-02 request | Now reads the shell's API-02 poll; the shell polls under the same key the write hooks read, so Stop notes what runs from it and reads it every 5 s while it confirms, and an Acknowledge refetches the one count there |
+| VPD and RH beside the hero value | At 860 px and below, where their tiles move under "All readings", a line under the hero value reads "VPD 0.62 kPa · in band · RH 71.0% · no RH band" (verdicts hidden while the answer mutes them) |
+| Phones | 860 px and below throughout (§1.1): the hero keeps Mode, Iris, Water and Alerts 2-up, and a button marked wide (Stop all water and Acknowledge here) is full width. A tighter hero (1rem padding, a 2.75rem hero value, smaller tiles) and tighter gaps keep Stop all water above the fold at 390 × 844; the static chips are 32 px tall, as they are not targets. Opening `/#data` on a phone (the ingestor banner's link) opens "All readings" at the Data tile |
+| Water card | DOM order is the title, the minutes line, the actions row (Stop all water for operators, "Water ›" for everyone), then the rest; above 860 px the actions row moves to the card's end, as drawn. Stop sits outside the card's error boundaries, so it renders in every state. Last water reads "misted Fri 14:20 (VPD)" for a mister and "Fri 08:31, 12 min" for a drip (times are the instant's own clock, so a Friday before the fall-back reads MDT) |
+| Needs someone | A row acknowledged on the page stays in place for the visit, reading "Acknowledged by jason · 10:42"; the head and the answer follow the one count as API-02 refetches |
+
 ## 3. SCR-02 Graphs · `/graphs`
 
 **Purpose:** past, present and plan in one view: climate against the band, any measured signal, setting steps and

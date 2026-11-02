@@ -262,6 +262,18 @@ test("each named fixture serves what the table says", () => {
   expect(set("iris-unsnapped")["API-09"].items.find((row: Body) => row.param === "mister_engage_delay_s")).toMatchObject({ step: 30, plan: { value: 48.75 } });
 });
 
+test("Now's fixtures (#1129): too hot alone, a null RH, band rows with no time, and the occupancy states", () => {
+  const set = (name: string | string[]) => fixture(name, { now: NOW });
+  const hot = set("too-hot")["API-02"];
+  expect(hot).toMatchObject({ indoor: { temp_f: { value: 84.1, observed_at: minutesAgo(1 / 3) } }, band: { temp_f: { low: 62, high: 70, verdict: "above" } }, alerts: { open: 0 } });
+  expect(hot.freshness).toMatchObject({ ingestor: { stale: false }, climate: { stale: false } });
+  expect(set("rh-missing")["API-02"].indoor.rh_pct).toEqual({ value: null, observed_at: minutesAgo(1 / 3), reason: "No indoor RH" });
+  expect(set("band-age-unknown")["API-02"].band).toMatchObject({ temp_f: { low: 62, high: 70 }, observed_at: null });
+  expect(set("occupied")["API-IRR-01"].occupancy).toEqual({ occupied: true, seen_at: minutesAgo(4), hold_enabled: true });
+  expect(set("occupancy-unknown")["API-IRR-01"].occupancy).toEqual({ occupied: null, seen_at: null, hold_enabled: true });
+  expect(set("occupancy-hold-off")["API-IRR-01"].occupancy).toMatchObject({ hold_enabled: false });
+});
+
 test("fixture() reads requested-to-confirmed and flow-after-stop after their writes; the fixture API starts before them", () => {
   const row = (set: Record<string, Body>) => ((set["API-09"] as Body).items as Body[]).find((item) => item.param === "mister_engage_kpa")!;
   const confirmed = fixture("requested-to-confirmed", { now: NOW });
