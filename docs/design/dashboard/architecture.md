@@ -523,8 +523,9 @@ bounded `time_bucket_gapfill` series endpoint. There is no new rollup layer in t
   unacknowledged rows API-14 returns, and the nav, Now, Activity, API-02, API-14 and the MCP `alerts` adapter all
   show it. API-14 returns the merged rows (count, first and last seen); "recent" means resolved in the last 24 h.
   VD-72 keeps one row per offline probe (`soil_sensor_offline`, keyed on the probe, and every `v_sensor_staleness`
-  `sensor_offline` but the forecast feed's): a repeat re-opens or refreshes that row, bumping `details.count` and
-  `details.last_seen_at`, and posts nothing new to Slack; a silent soil probe stays open at night, and an
+  `sensor_offline` but the forecast feed's): a probe that stays offline refreshes its open row, a repeat failure
+  re-opens the row the system closed (bumping `details.count` and `details.last_seen_at`, keeping its first `ts`
+  and any acknowledgement), and neither posts anything new to Slack; a silent soil probe stays open at night, and an
   unpotted zone raises nothing. The row resolves by itself once `details.last_seen_at` (else `ts`) is older than
   `VERDIFY_PROBE_OFFLINE_RESOLVE_DAYS` (default 7; marked `details.long_offline` until the probe reports again).
   The leak alert never auto-resolves: after the flag clears it reads "Flow stopped at HH:MM" (America/Denver) with

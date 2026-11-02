@@ -122,9 +122,13 @@ async def soil_cycle(ns, conn, when, *, silent=(), zones=("south", "west"), extr
 
 async def leak_cycle(ns, conn):
     async def run():
-        leak = await ns["_leak_cycle_alert"](conn)
+        leak, refresh_only = await ns["_leak_cycle_alert"](conn)
         return await ns["_sync_monitor_alerts"](
-            conn, [leak] if leak else [], component_status_available=True, component_closure_resolutions={}
+            conn,
+            [leak] if leak else [],
+            component_status_available=True,
+            component_closure_resolutions={},
+            refresh_only_keys=refresh_only,
         )
 
     return await as_ingestor(conn, run())
@@ -236,6 +240,19 @@ async def leak_lifecycle(ns, conn) -> None:
     [row] = await rows(conn, "equipment.leak_detected")
     stopped = raised_at + timedelta(minutes=3)
     assert row["resolved_at"] is None and datetime.fromisoformat(row["details"]["stopped_at"]) == stopped
+    assert row["message"] == f"Flow stopped at {stopped.astimezone(DENVER):%H:%M}"
+    await conn.execute("INSERT INTO climate (ts, flow_gpm) VALUES ($1, 0.6)", raised_at + timedelta(minutes=4))
+    await leak_cycle(ns, conn)  # flow starts again: the same row, flowing text, stopped_at cleared
+    [row] = await rows(conn, "equipment.leak_detected")
+    assert row["details"]["stopped_at"] is None and row["message"].startswith("Water flowing with every Verdify")
+    await conn.executemany(
+        "INSERT INTO climate (ts, flow_gpm) VALUES ($1, $2)",
+        [(raised_at + timedelta(minutes=minute), gpm) for minute, gpm in ((5, 0.0), (6, None), (7, 0.05), (8, 0.0))],
+    )
+    await leak_cycle(ns, conn)  # the second quiet reading after the last flow, a null skipped
+    [row] = await rows(conn, "equipment.leak_detected")
+    stopped = raised_at + timedelta(minutes=7)
+    assert datetime.fromisoformat(row["details"]["stopped_at"]) == stopped
     assert row["message"] == f"Flow stopped at {stopped.astimezone(DENVER):%H:%M}"
     await conn.execute(
         "UPDATE alert_log SET acknowledged_at = now(), acknowledged_by = 'jason', disposition = 'acknowledged' "

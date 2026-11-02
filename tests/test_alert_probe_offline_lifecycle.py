@@ -310,6 +310,27 @@ def test_reopen_writes_stay_inside_the_ingestor_grants():
     assert len(reopen) == 1  # AlertLog asserted every SET column against migration 217
 
 
+@pytest.mark.parametrize("lifecycle", ["keep_open_keys", "unpotted_keys", "refresh_only_keys"])
+def test_a_scoped_component_call_refuses_lifecycle_keys_before_any_read(lifecycle):
+    ns = load_alert_lifecycle()
+    log = AlertLog(local(0, 8))
+    with pytest.raises(ValueError, match="lifecycle_keys_require_unscoped_monitor"):
+        asyncio.run(
+            ns["_sync_monitor_alerts"](
+                log,
+                [],
+                component_status_available=True,
+                component_closure_resolutions={},
+                scope=("component_experiment_integrity", "experiment.v2.test"),
+                scope_greenhouse_id="synthetic-test",
+                post_message=lambda *args, **kwargs: "1790000000.000001",
+                message_prefix="[NONPRODUCTION SYNTHETIC QUALIFICATION] ",
+                **{lifecycle: {PROBE}},
+            )
+        )
+    assert log.reads == [] and log.writes == []
+
+
 @pytest.mark.parametrize(
     ("raw", "days"), [(None, 7), ("", 7), ("3", 3), ("14", 14), ("0", 7), ("-2", 7), ("seven", 7), ("2.5", 7)]
 )

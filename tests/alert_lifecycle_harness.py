@@ -40,6 +40,8 @@ ALERT_NAMES = (
     "_denver_hhmm",
     "_soil_probe_offline_scan",
     "_soil_probe_offline_cycle",
+    "_LEAK_STOPPED_BELOW_GPM",
+    "_LEAK_STOPPED_READINGS",
     "_leak_alert",
     "_leak_cycle_alert",
     "_probe_offline_key",
@@ -277,7 +279,14 @@ class AlertLog:
             assert " AND alert_type=$1" not in sql, "the monitor never scopes its open read"
             return [self._out(row) for row in self._system_open()]
         if "FROM climate WHERE ts >= $1" in sql:
-            return [{"ts": ts, "flow_gpm": gpm} for ts, gpm in self.flow if ts >= args[0] and gpm is not None]
+            # The leak read: from the open row's ts, the first ``limit`` readings
+            # after the last one at or above ``below`` (the trailing quiet run).
+            assert "flow_gpm >= $2" in sql and sql.endswith("LIMIT $3"), sql
+            since, below, limit = args
+            readings = sorted((ts, gpm) for ts, gpm in self.flow if ts >= since and gpm is not None)
+            flowing = [ts for ts, gpm in readings if gpm >= below]
+            quiet = [(ts, gpm) for ts, gpm in readings if not flowing or ts > max(flowing)]
+            return [{"ts": ts, "flow_gpm": gpm} for ts, gpm in quiet[:limit]]
         raise AssertionError("unexpected read: " + sql)
 
     async def fetchrow(self, sql: str, *args):

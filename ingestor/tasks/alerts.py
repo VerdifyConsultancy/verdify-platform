@@ -194,22 +194,29 @@ async def _soil_probe_offline_cycle(conn, active_zones, local_hour):
     return _soil_probe_offline_scan(dict(counts) if counts else {}, active_zones, local_hour)
 
 
+# The leak alert's "Flow stopped" rule (US-WAT-18): the site meter under
+# 0.1 gal/min for two readings (flow_stopped_at's defaults).
+_LEAK_STOPPED_BELOW_GPM = 0.1
+_LEAK_STOPPED_READINGS = 2
+
+
 def _leak_alert(flag, open_row, readings):
     """This cycle's leak_detected envelope, or None (US-WAT-18, J6; an alert only, Q-05).
 
     ``flag`` is the newest equipment_state leak_detected row (ts, state) or
     None; ``open_row`` the open system leak_detected row (ts, details) or None;
     ``readings`` the (ts, flow_gpm) climate readings since that row's ts, oldest
-    first. While the flag is on the alert raises as before. Once the flag clears
-    the open row is still raised, so only a person or agent resolve closes it:
-    it reads "Flow stopped at HH:MM" after two readings under 0.1 gal/min, and
-    goes back to the flowing text if flow starts again. Nothing latches.
+    first (the trailing quiet run is enough). While the flag is on the alert
+    raises as before. Once the flag clears the open row is still raised, so only
+    a person or agent resolve closes it: it reads "Flow stopped at HH:MM" after
+    two readings under 0.1 gal/min, and goes back to the flowing text if flow
+    starts again. Nothing latches.
     """
     if flag is not None and flag["state"]:
         since, stopped_at = flag["ts"], None
     elif open_row is not None:
         since = _parse_aware(_alert_details(open_row["details"]).get("since")) or open_row["ts"]
-        stopped_at = flow_stopped_at(readings)
+        stopped_at = flow_stopped_at(readings, below_gpm=_LEAK_STOPPED_BELOW_GPM, needed=_LEAK_STOPPED_READINGS)
     else:
         return None
     if stopped_at is not None:
@@ -233,7 +240,13 @@ def _leak_alert(flag, open_row, readings):
 
 
 async def _leak_cycle_alert(conn):
-    """Read the leak flag, the open leak row and the flow since that row; build the envelope."""
+    """Read the leak flag, the open leak row and the meter's quiet run since that row; build the envelope.
+
+    Returns ``(alert, refresh_only_keys)`` for _sync_monitor_alerts. With the
+    flag off the envelope only refreshes the open row, so a row a person
+    resolves between this read and the sync stays resolved and nothing new is
+    inserted ("flag off with no open row: nothing").
+    """
     flag = await conn.fetchrow(
         "SELECT ts, state FROM equipment_state WHERE equipment = 'leak_detected' ORDER BY ts DESC LIMIT 1"
     )
@@ -241,17 +254,27 @@ async def _leak_cycle_alert(conn):
         "SELECT id, ts, details FROM alert_log WHERE alert_type = 'leak_detected' AND source = 'system' "
         "AND disposition IN ('open', 'acknowledged') AND resolved_at IS NULL ORDER BY ts DESC LIMIT 1"
     )
+    flag_on = flag is not None and bool(flag["state"])
     readings = []
-    if not (flag and flag["state"]) and open_row is not None:
-        # Bounded: only the readings since the open row was raised.
+    if not flag_on and open_row is not None:
+        # Bounded however long the row stays open: from the open row's ts, only
+        # the first readings after the last one at or above the threshold (the
+        # start of the trailing quiet run flow_stopped_at reads).
         readings = [
             (r["ts"], r["flow_gpm"])
             for r in await conn.fetch(
-                "SELECT ts, flow_gpm FROM climate WHERE ts >= $1 AND flow_gpm IS NOT NULL ORDER BY ts",
+                "SELECT ts, flow_gpm FROM climate WHERE ts >= $1 AND flow_gpm IS NOT NULL "
+                "AND ts > coalesce((SELECT max(ts) FROM climate WHERE ts >= $1 AND flow_gpm >= $2), '-infinity') "
+                "ORDER BY ts LIMIT $3",
                 open_row["ts"],
+                _LEAK_STOPPED_BELOW_GPM,
+                _LEAK_STOPPED_READINGS,
             )
         ]
-    return _leak_alert(flag, open_row, readings)
+    alert = _leak_alert(flag, open_row, readings)
+    if alert is None or flag_on:
+        return alert, frozenset()
+    return alert, frozenset({(alert["alert_type"], alert["sensor_id"])})
 
 
 # ═════════════════════════════════════════════════════════════════
@@ -1010,7 +1033,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # ingestor's water_flowing_sync and the controller's bs_leak_detected.
         # The open row outlives the flag: it reads "Flow stopped at HH:MM" once
         # the meter goes quiet and stays open until someone resolves it.
-        leak = await _leak_cycle_alert(conn)
+        leak, leak_refresh_only_keys = await _leak_cycle_alert(conn)
         if leak is not None:
             alerts.append(leak)
 
@@ -2412,6 +2435,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             component_closure_resolutions=component_closure_resolutions,
             keep_open_keys=soil_keep_open_keys,
             unpotted_keys=soil_unpotted_keys,
+            refresh_only_keys=leak_refresh_only_keys,
         )
 
 
@@ -2475,6 +2499,7 @@ async def _sync_monitor_alerts(
     message_prefix="",
     keep_open_keys=frozenset(),
     unpotted_keys=frozenset(),
+    refresh_only_keys=frozenset(),
     now=None,
 ):
     """Persist, deduplicate, deliver and resolve the same producer envelopes.
@@ -2490,6 +2515,8 @@ async def _sync_monitor_alerts(
     ``unpotted_keys`` key resolves at once. ``now`` is the lifecycle clock
     (tests); it defaults to the current time. The leak alert never
     auto-resolves: only a person or agent resolve closes it (US-WAT-18, J6).
+    A ``refresh_only_keys`` envelope (the leak alert after its flag cleared)
+    only refreshes its open row and is never inserted.
     """
     # Validate the complete scope before the first database or transport mutation.
     if scope is not None:
@@ -2497,8 +2524,8 @@ async def _sync_monitor_alerts(
             raise ValueError("explicit_synthetic_greenhouse_required")
         if len(alerts) > 1 or any((a["alert_type"], a["sensor_id"]) != scope for a in alerts):
             raise ValueError("component_alert_scope_mismatch")
-        if keep_open_keys or unpotted_keys:
-            raise ValueError("probe_lifecycle_requires_unscoped_monitor")
+        if keep_open_keys or unpotted_keys or refresh_only_keys:
+            raise ValueError("lifecycle_keys_require_unscoped_monitor")
     elif message_prefix or post_message is not None or scope_greenhouse_id is not None:
         raise ValueError("qualified_transport_requires_exact_alert_scope")
     # ── Deduplicate + insert + resolve ──
@@ -2691,6 +2718,10 @@ async def _sync_monitor_alerts(
                 )
             if is_escalation:
                 escalated_count += 1
+            continue
+        if key in refresh_only_keys:
+            # Raised only to refresh its open row, which closed after the
+            # producer read it (a person resolved the leak alert): insert nothing.
             continue
         reopen = None
         if probe:

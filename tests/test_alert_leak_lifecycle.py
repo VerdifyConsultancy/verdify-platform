@@ -15,16 +15,19 @@ from alert_lifecycle_harness import AlertLog, load_alert_lifecycle, local
 KEY = ("leak_detected", "equipment.leak_detected")
 
 
-def leak_cycle(ns, log, when):
+def leak_cycle(ns, log, when, *, before_sync=None):
     """One alert_monitor pass of the leak section and the shared sync."""
     log.now = when
-    leak = asyncio.run(ns["_leak_cycle_alert"](log))
+    leak, refresh_only = asyncio.run(ns["_leak_cycle_alert"](log))
+    if before_sync is not None:
+        before_sync()  # something that happens between the leak read and the sync
     return asyncio.run(
         ns["_sync_monitor_alerts"](
             log,
             [leak] if leak else [],
             component_status_available=True,
             component_closure_resolutions={},
+            refresh_only_keys=refresh_only,
             now=when,
         )
     )
@@ -69,7 +72,7 @@ def test_flag_on_off_then_two_quiet_readings_read_flow_stopped_and_stay_open():
     assert datetime.fromisoformat(row["details"]["since"]) == local(0, 3, 2)  # carried over
     assert row["severity"] == "critical" and len(ns["slack_posts"]) == 1  # refreshes post nothing
     [read] = [args for sql, args in log.reads if "FROM climate WHERE ts >= $1" in sql][-1:]
-    assert read == (row["ts"],)  # bounded: readings since the open row was raised
+    assert read == (row["ts"], 0.1, 2)  # bounded: since the open row, at most the quiet run's first two
 
 
 def test_flow_that_starts_again_clears_stopped_at_on_the_same_row():
@@ -160,8 +163,42 @@ def test_a_resolve_while_water_still_flows_opens_a_new_episode():
 def test_no_flag_and_no_open_row_raise_nothing():
     ns = load_alert_lifecycle()
     log = AlertLog(local(0, 3))
-    assert asyncio.run(ns["_leak_cycle_alert"](log)) is None
+    assert asyncio.run(ns["_leak_cycle_alert"](log)) == (None, frozenset())
     flag(log, local(0, 3), False)
     meter(log, local(0, 3), 0.0, 0.0)
-    assert asyncio.run(ns["_leak_cycle_alert"](log)) is None
+    assert asyncio.run(ns["_leak_cycle_alert"](log)) == (None, frozenset())
     assert not [sql for sql, _ in log.reads if "FROM climate" in sql]  # no open row: no meter read
+
+
+def test_a_resolve_between_the_leak_read_and_the_sync_inserts_nothing():
+    ns = load_alert_lifecycle()
+    log = AlertLog(local(0, 3))
+    meter(log, local(0, 3), 1.0, 1.0, 0.0, 0.0)
+    flag(log, local(0, 3, 1), True)
+    leak_cycle(ns, log, local(0, 3, 1))
+    [row] = log.of(*KEY)
+    flag(log, local(0, 3, 2), False)
+    # The flag is off: the section reads the open row, then a person resolves it before the sync.
+    leak_cycle(ns, log, local(0, 3, 10), before_sync=lambda: log.resolve(row["id"], by="jason"))
+    assert log.of(*KEY) == [row] and row["resolved_by"] == "jason"
+    assert len(ns["slack_posts"]) == 1  # no second critical page for water that stopped
+
+    flag(log, local(0, 4), True)  # with the flag on, a resolved leak is a new episode, as before
+    leak_cycle(ns, log, local(0, 4, 1))
+    assert len(log.of(*KEY)) == 2 and len(ns["slack_posts"]) == 2
+
+
+def test_a_long_open_row_reads_only_the_start_of_the_quiet_run():
+    ns = load_alert_lifecycle()
+    log = AlertLog(local(0, 3))
+    meter(log, local(0, 3), 1.0, 1.0)
+    flag(log, local(0, 3, 1), True)
+    leak_cycle(ns, log, local(0, 3, 1))
+    flag(log, local(0, 3, 2), False)
+    meter(log, local(0, 3, 2), *[0.0] * (3 * 24 * 60))  # nobody resolves it for three quiet days
+    log.reads.clear()
+    leak_cycle(ns, log, local(3, 3))
+    [row] = log.of(*KEY)
+    assert stopped(row) == local(0, 3, 3) and row["message"] == "Flow stopped at 03:03"
+    [(sql, args)] = [(sql, args) for sql, args in log.reads if "FROM climate" in sql]
+    assert args == (row["ts"], 0.1, 2) and sql.endswith("LIMIT $3")
