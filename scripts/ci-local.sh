@@ -291,6 +291,10 @@ $PY -m pytest -q -rs \
   tests/test_twin_asof_migration.py \
   tests/test_twin_live_driver.py \
   tests/test_verdify_services_reads.py \
+  tests/test_operator_api_contract.py \
+  tests/test_operator_api_auth.py \
+  tests/test_public_api_operator_paths.py \
+  tests/test_operator_api_manifests.py \
   tests/test_verdify_traefik_placement.py \
   tests/test_verdify_tier1_owner_exclusions.py \
   tests/test_dashboard_manifests.py \
