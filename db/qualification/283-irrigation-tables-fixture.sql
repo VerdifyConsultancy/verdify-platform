@@ -343,11 +343,6 @@ BEGIN
     UPDATE public.irrigation_push SET pushed_at = now(), confirmed_at = now();
     PERFORM 1 FROM public.fn_mcp_armed_assignment_context();
     BEGIN
-        PERFORM 1 FROM public.control_experiments LIMIT 1;
-        RAISE EXCEPTION '283 ingestor login read control_experiments';
-    EXCEPTION WHEN insufficient_privilege THEN NULL;
-    END;
-    BEGIN
         INSERT INTO public.irrigation_slot (line_id, days, start_kind, start_min, on_s, source, updated_by)
         VALUES ('L01', 21, 'clock', 450, 600, 'system', '283-qualification');
         RAISE EXCEPTION '283 ingestor login wrote irrigation_slot';

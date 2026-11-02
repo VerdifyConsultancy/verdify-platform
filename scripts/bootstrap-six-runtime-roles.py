@@ -466,14 +466,14 @@ def sealed_sql_282():
 IRRIGATION_TABLES_MIGRATION = (
     283,
     "283-irrigation-tables.sql",
-    "d38a1bfc62c326521c70e53143a14791d024821888f17b25c10cccfdb1dc8c78",
+    "0b07a5042edc29cb90da4c800da6514e47517240d765c0da0217b68cc7fe92c2",
 )
 # 283's grants reach 282's dashboard duty on relations the ingestor reads, so its
 # ordinary seals hash that duty's production OID; the rolled-back native
 # qualification, run once 282 is applied, measures all three.
 SUCCESSOR_283 = {
-    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
-    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "api": "030df35ca3b0bc8b94de5f394f96c2292674b2df58aea2d46990c53ad3bd1ad7",
+    "ingestor": "c03d427cbbf327c8843496c744d718e1fca70c1e6d98963022ac87e308954096",
     "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e",
 }
 
