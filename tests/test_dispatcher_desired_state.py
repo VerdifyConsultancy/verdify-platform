@@ -31,7 +31,7 @@ if INGESTOR_PATH not in sys.path:
 import esp32_push  # noqa: E402
 import shared  # noqa: E402
 from esp32_push import DeviceCommandOutcome, PushBatchResult  # noqa: E402
-from tasks import _common, band_anchors, component_experiment, dispatcher, drift_probe  # noqa: E402
+from tasks import _common, band_anchors, c1_overlay, component_experiment, dispatcher, drift_probe  # noqa: E402
 from tasks.experiment_assignments import EXPERIMENT_OWNED_PARAMS  # noqa: E402
 
 from verdify_schemas.setting_values import readback_matches, snap_setting  # noqa: E402
@@ -62,6 +62,8 @@ def _knobs() -> list[Knob]:
     """Writable numeric settings with a number route and no dispatcher default or support gate."""
     excluded = (
         dispatcher.DISPATCHER_DEFAULT_PARAMS
+        | _common.LIGHTING_CIRCUIT_DEFAULT_PARAMS  # gated on per-circuit lighting firmware
+        | _common.LIGHTING_POLICY_PARAMS
         | _common.LIGHTING_TARGET_MINUTE_PARAMS
         | _common.ACTIVITY_MIRROR_PARAMS
         | _common.AI_MOISTURE_STRESS_POLICY_PARAMS
@@ -832,7 +834,10 @@ async def test_an_unreadable_desired_state_view_leaves_plans_band_and_defaults_a
     env.db.desired_error = asyncpg.UndefinedTableError('relation "v_desired_state_current" does not exist')
     await env.run_pass()
     assert [(sent.param, sent.value) for sent in env.controller.sent] == [(knob.param, knob.plan)]
-    assert any("v_desired_state_current unreadable" in record.getMessage() for record in caplog.records)
+    assert any(
+        record.levelno == logging.WARNING and "v_desired_state_current unreadable" in record.getMessage()
+        for record in caplog.records
+    )
 
 
 @pytest.mark.asyncio
@@ -873,7 +878,135 @@ async def test_gl_main_dli_target_written_then_released_returns_to_the_lighting_
     assert env.db.rows_for(param)[-1]["source"] == "band"
 
 
+@pytest.mark.asyncio
+async def test_a_release_of_a_lighting_value_no_dispatcher_block_resolves_returns_its_registry_default(env):
+    """No block resolves the solar-phasing, offset or out-of-service values, nor on per-circuit
+    firmware the legacy shared ones: a release returns each to its registry default (the
+    controller's boot value) on the next pass instead of leaving the manual value in place."""
+    env.db.lighting = lighting_rows()
+    manual = {
+        "sw_gl_main_out_of_service": 1.0,
+        "sw_gl_grow_solar_phasing": 1.0,
+        "gl_main_sunrise_offset_min": 30.0,
+        "gl_dli_target": 20.0,  # legacy shared: resolved only on firmware without per-circuit lighting
+    }
+    defaults = {param: float(REGISTRY[param].default) for param in manual}
+    assert all(not dispatcher._dispatcher_resolves(param, lighting_circuit=True) for param in manual)
+    env.controller.connect({**lighting_device_values(), **defaults})
+    await env.run_pass()
+    assert env.controller.sent == []
+
+    for param, value in manual.items():
+        env.db.write(param, value, at=T0)
+    await env.run_pass()
+    assert {(sent.param, sent.value, sent.desired) for sent in env.controller.sent} == {
+        (param, value, True) for param, value in manual.items()
+    }
+    await settle(env)
+    assert len(env.controller.sent) == len(manual)
+
+    for param in manual:
+        env.db.release(param, at=T0 + timedelta(minutes=5))
+    env.clock.advance(30)
+    await env.run_pass()
+    assert {(sent.param, sent.value, sent.desired) for sent in env.controller.sent[len(manual) :]} == {
+        (param, value, False) for param, value in defaults.items()
+    }
+    assert {env.db.rows_for(param)[-1]["source"] for param in manual} == {"band"}
+    await settle(env)
+    env.clock.advance(300)
+    await env.run_pass()
+    assert len(env.controller.sent) == 2 * len(manual)
+    assert {param: env.controller.values[param] for param in manual} == defaults
+
+
+@pytest.mark.asyncio
+async def test_the_resolved_lighting_set_is_what_the_circuit_block_sends(env):
+    """The release rule trusts LIGHTING_CIRCUIT_RESOLVED_PARAMS: every value the circuit
+    block resolves is in it, and nothing else is, or a release would go to the wrong value."""
+    env.db.lighting = lighting_rows()
+    policy = lighting_device_values()
+    # A controller that holds every circuit value well away from the lighting policy.
+    device = {param: (1.0 - value) if param.startswith("sw_") else value * 1.5 + 1.0 for param, value in policy.items()}
+    env.controller.connect(device)
+    for _ in range(4):
+        await env.run_pass()
+        env.controller.publish(env.db)
+        env.clock.advance(120)
+    assert {sent.param for sent in env.controller.sent} == dispatcher.LIGHTING_CIRCUIT_RESOLVED_PARAMS
+    assert {(row["parameter"], row["value"]) for row in env.db.changes} == set(policy.items())
+    assert {row["source"] for row in env.db.changes} == {"band"}
+
+
+@pytest.mark.asyncio
+async def test_a_c1_restore_of_a_desired_field_is_not_a_desired_value(env, monkeypatch):
+    """Only the very value the desired-state block resolved is a desired value: a C1 restore
+    of the same field carries the ordinary source and does not pass component_authority_hold."""
+    knob = KNOBS[0]
+    connect(env, [knob])
+    env.db.write(knob.param, knob.desired, at=T0 - timedelta(minutes=1))
+    env.hold("COMPONENT_AUTHORITY", {knob.param})
+    restore = c1_overlay.Selection("yield", ((knob.param, knob.plan),), str(uuid.uuid4()), "worksheet expired")
+
+    async def c1_yields(*_args, **_kwargs):
+        return restore
+
+    monkeypatch.setattr(dispatcher.c1_overlay, "choose", c1_yields)
+    monkeypatch.setattr(dispatcher.c1_overlay, "finish", lambda *_args: None)
+    await env.run_pass()
+    assert env.controller.sent == []
+    assert {reason for _param, reason in env.controller.refused} == {"component_authority_hold"}
+    assert [(row["value"], row["source"]) for row in env.db.rows_for(knob.param)] == [(knob.plan, "plan")]
+
+
+@pytest.mark.asyncio
+async def test_a_held_desired_value_is_not_fenced_until_the_hold_ends(env, monkeypatch):
+    """While experiment_policy_hold keeps it back, no clamp row says a guardrail held it."""
+    knob = HELD
+    connect(env, [knob])
+    limit = _between(knob, knob.device, knob.desired)
+    upper = knob.desired > knob.device
+    monkeypatch.setitem(dispatcher._PHYSICS_INVARIANTS, knob.param, (None, limit) if upper else (limit, None))
+    env.db.write(knob.param, knob.desired, at=T0 - timedelta(minutes=1))
+    env.hold("EXPERIMENT", {knob.param})
+    await env.run_pass()
+    assert env.controller.sent == [] and env.db.clamp_rows == []
+
+    env.hold("EXPERIMENT", set())
+    env.clock.advance(300)
+    await env.run_pass()
+    assert [(sent.param, sent.value) for sent in env.controller.sent] == [(knob.param, limit)]
+    assert [(row["parameter"], row["applied"]) for row in env.db.clamp_rows] == [(knob.param, limit)]
+
+
 # ── Pure helpers ──────────────────────────────────────────────────────────────
+
+
+def test_only_values_a_dispatcher_block_resolves_count_as_dispatcher_defaults():
+    unresolved = _common.LIGHTING_CIRCUIT_DEFAULT_PARAMS - dispatcher.LIGHTING_CIRCUIT_RESOLVED_PARAMS
+    assert unresolved == {
+        f"{prefix}{circuit}_{field}"
+        for circuit in ("main", "grow")
+        for prefix, field in (
+            ("gl_", "sunrise_offset_min"),
+            ("gl_", "sunset_offset_min"),
+            ("sw_gl_", "out_of_service"),
+            ("sw_gl_", "solar_phasing"),
+        )
+    }
+    assert dispatcher.LIGHTING_CIRCUIT_RESOLVED_PARAMS < _common.LIGHTING_CIRCUIT_DEFAULT_PARAMS
+    for param in unresolved | {SITE_PRESSURE}:
+        assert not dispatcher._dispatcher_resolves(param, lighting_circuit=True), param
+    for param in _common.LIGHTING_POLICY_PARAMS:
+        assert dispatcher._dispatcher_resolves(param, lighting_circuit=False), param
+        assert not dispatcher._dispatcher_resolves(param, lighting_circuit=True), param
+    for param in (
+        dispatcher.LIGHTING_CIRCUIT_RESOLVED_PARAMS
+        | _common.DIRECT_WET_POLICY_PARAMS
+        | _common.SAFETY_PARAMS
+        | _common.MISTER_DEFAULTS
+    ):
+        assert dispatcher._dispatcher_resolves(param, lighting_circuit=True), param
 
 
 def test_dispatch_source_labels_desired_values_manual_and_releases_band():

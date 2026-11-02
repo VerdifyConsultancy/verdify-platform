@@ -305,12 +305,19 @@ dispatcher, the API's `applied_from` and the services resolve a setting the same
   Besides the §5.3 step 1 rows (`desired_write_rule()` in `verdify_schemas.tunable_registry`), `crop_band` and
   `irrigation_site`, a row is skipped and logged once when the dispatcher has no number or switch route for it
   (`sw_irrig_*` today, which the L01 bridge owns), when the connected firmware lacks the feature a plan row would
-  need too, or when its value is not finite. A release to the registry default goes out with source `band`; it waits
-  out `experiment_policy_hold` and a component bundle as a desired value does, but only a desired value passes
-  `component_authority_hold`. When a desired value wins, the plan's clamp audits for that parameter are dropped and
-  its push carries no plan trigger. Before M1 is applied, or without its grant, the pass runs without desired state
-  (logged once); any other read error fails the pass, so a transient error never hands a manual value back to the
-  plan.
+  need too, or when its value is not finite. A dispatcher default is a value one of its blocks resolves: the band,
+  the lighting policy (nine values per circuit, or the legacy shared `gl_*` values only on firmware without
+  per-circuit lighting), the direct-wet window, the safety limits and the mister defaults. No block resolves the
+  per-circuit offsets, solar phasing and out-of-service switches, so their release, like a legacy shared value's on
+  per-circuit firmware, goes to the registry default, which is also the controller's boot value. A release to the
+  registry default goes out with source `band`; it waits out `experiment_policy_hold` and a component bundle as a
+  desired value does, but only a desired value passes `component_authority_hold`. A held value is fenced only once
+  its hold ends, so no clamp row claims a guardrail held it. A command counts as a desired value (source `manual`,
+  past `component_authority_hold`, no plan trigger) or a release only when it carries the value the desired-state
+  step resolved: a drift-probe, C1 target or C1 restore value for the same field does not. When a desired value
+  wins, the plan's clamp audits for that parameter are dropped. Before M1 is applied, or without its grant, the pass
+  runs without desired state (a warning, logged once); any other read error fails the pass, so a transient error
+  never hands a manual value back to the plan.
 
 ### 5.3 Validation on submit
 

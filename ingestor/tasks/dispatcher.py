@@ -129,11 +129,38 @@ DISPATCHER_STAGE_ENTITY = "dispatcher_stage"
 # crop_band_anchors and the anchor sync, irrigation_site values through
 # irrigation_sync: the dispatcher sends nothing for their desired rows.
 DESIRED_OTHER_PATH_CLASSES = frozenset({"crop_band", "irrigation_site"})
-# The dispatcher's own default sets, the ones _dispatch_source() labels band. A
-# released parameter in none of them and with no plan returns to its registry
+# The per-circuit values the lighting circuit block of setpoint_dispatcher
+# resolves from fn_lighting_minutes_policy, nine per circuit. The wider
+# LIGHTING_CIRCUIT_DEFAULT_PARAMS also holds the solar-phasing, offset and
+# out-of-service values, which no dispatcher block resolves.
+LIGHTING_CIRCUIT_RESOLVED_PARAMS = frozenset(
+    f"{prefix}{circuit}_{field}"
+    for circuit in ("main", "grow")
+    for prefix, field in (
+        ("gl_", "dli_target"),
+        ("gl_", "target_light_minutes"),
+        ("gl_", "sunrise_hour"),
+        ("gl_", "sunset_hour"),
+        ("gl_", "lux_threshold"),
+        ("gl_", "lux_hysteresis"),
+        ("gl_", "min_on_s"),
+        ("gl_", "min_off_s"),
+        ("sw_gl_", "auto_mode"),
+    )
+)
+# The values the dispatcher's own blocks resolve each pass: the band, the
+# lighting policy (per circuit, or the legacy shared values on firmware without
+# per-circuit lighting), the direct-wet activity window, the safety limits and
+# the mister defaults. _dispatch_source() labels each of them band. A released
+# parameter none of them resolves, and with no plan, returns to its registry
 # default (architecture §5.2 Release, API-11).
 DISPATCHER_DEFAULT_PARAMS = frozenset(
-    BAND_DRIVEN_PARAMS | LIGHTING_CIRCUIT_DEFAULT_PARAMS | DIRECT_WET_POLICY_PARAMS | SAFETY_PARAMS | MISTER_DEFAULTS
+    CROP_BAND_REG
+    | LIGHTING_POLICY_PARAMS
+    | LIGHTING_CIRCUIT_RESOLVED_PARAMS
+    | DIRECT_WET_POLICY_PARAMS
+    | SAFETY_PARAMS
+    | MISTER_DEFAULTS
 )
 # (parameter, reason) pairs already logged, so a skipped row logs once.
 _DESIRED_SKIPS_LOGGED: set[tuple[str, str]] = set()
@@ -551,12 +578,28 @@ def _dispatch_source(
     return "plan"
 
 
-def _log_desired_skip_once(param: str, reason: str) -> None:
+def _log_desired_skip_once(param: str, reason: str, *, warning: bool = False) -> None:
     """Log a skipped desired_state row once per parameter and reason."""
     if (param, reason) in _DESIRED_SKIPS_LOGGED:
         return
     _DESIRED_SKIPS_LOGGED.add((param, reason))
-    log.info("desired_state skipped param=%s reason=%s", param, reason)
+    (log.warning if warning else log.info)("desired_state skipped param=%s reason=%s", param, reason)
+
+
+def _dispatcher_resolves(param: str, *, lighting_circuit: bool) -> bool:
+    """Whether a band, lighting-policy or default block of a pass resolves ``param``.
+
+    The per-circuit lighting values are resolved on firmware with per-circuit
+    lighting, the legacy shared ones only on firmware without it. A release of a
+    parameter no block resolves (a lighting offset, solar phasing or
+    out-of-service switch, or a legacy shared lighting value on per-circuit
+    firmware) and with no plan goes to its registry default, not nowhere.
+    """
+    if param in LIGHTING_POLICY_PARAMS:
+        return not lighting_circuit
+    if param in LIGHTING_CIRCUIT_RESOLVED_PARAMS:
+        return lighting_circuit
+    return param in DISPATCHER_DEFAULT_PARAMS
 
 
 async def _fetch_desired_state(conn: asyncpg.Connection) -> dict[str, object]:
@@ -573,7 +616,7 @@ async def _fetch_desired_state(conn: asyncpg.Connection) -> dict[str, object]:
             GREENHOUSE_ID,
         )
     except (asyncpg.UndefinedTableError, asyncpg.InsufficientPrivilegeError) as error:
-        _log_desired_skip_once("*", f"v_desired_state_current unreadable ({type(error).__name__})")
+        _log_desired_skip_once("*", f"v_desired_state_current unreadable ({type(error).__name__})", warning=True)
         return {}
     return {str(row["param"]): row for row in rows or []}
 
@@ -1516,8 +1559,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         desired_readbacks = shared.current_cfg_readbacks(reconnect_generation)
         policy_hold_active, policy_hold_params = experiment_policy_hold()
         bundle_hold_active, bundle_hold_params = component_bundle_hold()
-        desired_params: set[str] = set()
-        released_params: set[str] = set()
+        # param -> the value this block put in changes: a desired value, or a
+        # release's registry default.
+        desired_values: dict[str, float] = {}
+        released_values: dict[str, float] = {}
         desired_held: list[str] = []
         for param, desired in sorted(desired_rows.items()):
             skip = _desired_skip_reason(
@@ -1537,7 +1582,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             if resolved is None:
                 # Released: the plan, band or dispatcher default above applies.
                 # With none of them the setting returns to its registry default.
-                if plan_row is not None or param in DISPATCHER_DEFAULT_PARAMS:
+                if plan_row is not None or _dispatcher_resolves(param, lighting_circuit=lighting_circuit_supported):
                     continue
                 released = True
                 requested = float(get_tunable(param).default)
@@ -1548,22 +1593,23 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 requested = resolved.value
                 # Iris's value for this parameter is not applied, nor its clamps.
                 clamps_to_log[:] = [row for row in clamps_to_log if row["parameter"] != param]
-            value = _fenced_desired_value(param, requested, moisture_guardrails, add_clamp_audit)
             changes = [(name, change) for name, change in changes if name != param]
             if (policy_hold_active and param in policy_hold_params) or (
                 bundle_hold_active and param in bundle_hold_params
             ):
                 # The armed vector or a component bundle owns it: it reads held
-                # and goes out on the first pass after the hold ends.
+                # and goes out on the first pass after the hold ends. Nothing is
+                # fenced, so no clamp row claims a guardrail held it.
                 desired_held.append(param)
                 continue
+            value = _fenced_desired_value(param, requested, moisture_guardrails, add_clamp_audit)
             if not _desired_differs(param, value, _last_pushed.get(param), desired_readbacks.get(param)):
                 continue
             changes.append((param, value))
-            (released_params if released else desired_params).add(param)
+            (released_values if released else desired_values)[param] = value
         if desired_held:
             log.info("desired_state held params=%s reason=experiment_hold", ",".join(desired_held))
-        grid_params = frozenset(desired_params | released_params)
+        grid_params = frozenset(desired_values) | frozenset(released_values)
 
         # Multiple policy layers can resolve the same parameter.  One physical
         # command and one lifecycle row per parameter keeps ordering explicit.
@@ -1740,6 +1786,22 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         )
         heap_defer_active = _heap_push_defer_active(bool(heap_alert_open), heap_free, heap_largest)
 
+        # A command is a desired-state value (source manual, past
+        # component_authority_hold, no plan trigger) or a release (source band)
+        # only when it carries the very value the desired-state block resolved
+        # (VD-33): a drift probe, a C1 target or a C1 restore of the same field
+        # is none of them.
+        outgoing_desired: frozenset[str] = frozenset()
+        outgoing_released: frozenset[str] = frozenset()
+        if probe_decision.action != "send":
+            outgoing = {param: float(value) for param, value in changes if param not in c1_selection.override_fields}
+            outgoing_desired = frozenset(
+                param for param, value in desired_values.items() if outgoing.get(param) == value
+            )
+            outgoing_released = frozenset(
+                param for param, value in released_values.items() if outgoing.get(param) == value
+            )
+
         dispatchable_changes: list[tuple[str, float, str]] = []
         delivery_records: list[dict[str, object]] = []
         prequeue_failures: list[tuple[str, str]] = []
@@ -1748,10 +1810,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             source = (
                 "manual"
                 if probe_decision.phase == "probe" or param in c1_selection.override_fields
-                else _dispatch_source(param, planner_params, quiet_params, desired_params, released_params)
+                else _dispatch_source(param, planner_params, quiet_params, outgoing_desired, outgoing_released)
             )
             # A desired-state value or a release carries no plan's trigger (VD-33).
-            plan_owned = param not in grid_params
+            plan_owned = param not in outgoing_desired and param not in outgoing_released
 
             requested_val = float(val)
             registry_val, registry_violation = _coerce_registry_value(param, requested_val)
@@ -1908,15 +1970,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             )
         # Desired-state values pass component_authority_hold at the physical
         # chokepoint (VD-33); a probe or C1 value for the same field does not.
-        desired_push = (
-            frozenset()
-            if probe_decision.action == "send"
-            else frozenset(
-                param
-                for param, _value, _source in dispatchable_changes
-                if param in desired_params and param not in c1_selection.override_fields
-            )
-        )
+        desired_push = frozenset(param for param, _value, _source in dispatchable_changes if param in outgoing_desired)
         # Tier 1 #2: persist guardrail audit. Rows are written even when the
         # guardrail intentionally holds an unchanged applied value and no
         # setpoint_changes row is emitted.
