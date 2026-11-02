@@ -115,7 +115,7 @@ test("with API-02 failing an empty list cannot vouch for itself", async () => {
   expect(text(panel().querySelector(".panel-empty"))).toBe("In-app alerts may be missing: can't reach the greenhouse data");
 });
 
-test("the top three: critical, warning, info, then oldest first; acknowledged rows only when kept from this page", () => {
+test("the top three: critical, warning, info, each in API-14's order; acknowledged rows only when kept from this page", () => {
   const alert = (id: number, severity: string, firstSeen: string, status = "open"): Alert => ({
     id, alert_type: "relay_stuck", category: "system", severity, message: "", zone: null, metric_value: null, threshold_value: null, status,
     first_seen_at: firstSeen, last_seen_at: null, count: 1, acknowledged_at: null, acknowledged_by: null, notes: null, resolved_at: null, resolved_by: null,
@@ -125,6 +125,7 @@ test("the top three: critical, warning, info, then oldest first; acknowledged ro
     alert(1, "info", "2026-11-02T10:00:00Z"), alert(2, "warning", "2026-11-02T12:00:00Z"), alert(3, "critical", "2026-11-02T14:00:00Z"),
     alert(4, "warning", "2026-11-02T11:00:00Z"), alert(5, "critical", "2026-11-02T09:00:00Z", "acknowledged"),
   ];
-  expect(topAlerts(items).map((item) => item.id)).toEqual([3, 4, 2]);
-  expect(topAlerts(items, new Set([5])).map((item) => item.id)).toEqual([5, 3, 4]);
+  // Within a severity the API's order stands (it sorts by last seen, newest first), never Now's own idea of age.
+  expect(topAlerts(items).map((item) => item.id)).toEqual([3, 2, 4]);
+  expect(topAlerts(items, new Set([5])).map((item) => item.id)).toEqual([3, 5, 2]);
 });

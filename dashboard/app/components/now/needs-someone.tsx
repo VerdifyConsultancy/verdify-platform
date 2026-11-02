@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 /**
  * Needs someone (screens SCR-01, US-ACT-02): the top three alerts nobody has acknowledged (API-14 rows with `status`
- * open), by severity then age, each in #1123's `AlertRow` with Open and, for operators, Acknowledge with an optional
- * note in an "Add a note" disclosure. Acknowledge sends one API-15 request with one `Idempotency-Key` (#1125's R hook)
- * and the row then reads "Acknowledged by jason · 06:47"; it stays in place for this visit so that answer can be read.
+ * open), in API-14's order (by severity then age), each in #1123's `AlertRow` with Open and, for operators,
+ * Acknowledge with an optional note in an "Add a note" disclosure. Acknowledge sends one API-15 request with one
+ * `Idempotency-Key` (#1125's R hook) and the row then reads "Acknowledged by jason · 06:47"; it stays in place for this
+ * visit so that answer can be read.
  * The head carries the one open-alert count (API-02 `alerts.open`), never a count of its own.
  *
  * "No open alerts" only after a successful read while the heartbeat and climate are fresh; otherwise "In-app alerts
@@ -25,19 +26,16 @@ import { EmptyState, Panel, type PanelState } from "../panel";
 export const TOP_ALERTS = 3;
 const SEVERITY_RANK: Readonly<Record<string, number>> = { critical: 0, warning: 1, info: 2 };
 const rank = (severity: string) => SEVERITY_RANK[severity] ?? 3;
-const seen = (alert: Pick<Alert, "first_seen_at">) => {
-  const at = Date.parse(alert.first_seen_at);
-  return Number.isFinite(at) ? at : Number.POSITIVE_INFINITY;
-};
 
 /**
- * The rows Now shows: the unacknowledged ones (`status` open), plus any acknowledged on this page (`keep`), by severity
- * (critical, warning, info) then age, oldest first, at most three.
+ * The rows Now shows: the unacknowledged ones (`status` open), plus any acknowledged on this page (`keep`), at most
+ * three. API-14 lists them by severity, then age (`verdify_services.alerts`: last seen, newest first); Now keeps that
+ * order, so its top three are the first unacknowledged rows Activity lists, and only guards the severity order.
  */
 export function topAlerts(items: readonly Alert[], keep: ReadonlySet<number> = new Set()): Alert[] {
   return items.filter((alert) => alert.status === "open" || keep.has(alert.id))
     .map((alert, index) => ({ alert, index }))
-    .sort((a, b) => rank(a.alert.severity) - rank(b.alert.severity) || seen(a.alert) - seen(b.alert) || a.index - b.index)
+    .sort((a, b) => rank(a.alert.severity) - rank(b.alert.severity) || a.index - b.index)
     .slice(0, TOP_ALERTS)
     .map(({ alert }) => alert);
 }

@@ -10,7 +10,7 @@ import { parseIrrigationStatus, parseNow, type IrrigationStatus, type Now } from
 import type { PanelRead } from "../../lib/queries";
 import { Hero } from "../hero";
 import { renderUi, text } from "../test-render";
-import { alertCountText, bandText, dataText, nextRunText, nowTiles, planLine, waterTile } from "./tiles";
+import { alertCountText, bandText, dataText, lineStatesUnknown, nextRunText, nowTiles, planLine, waterTile } from "./tiles";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); });
@@ -91,11 +91,33 @@ test("Alerts reads the one count by severity; while the ingestor is not running 
   expect(alertCountText({ open: 2, critical: 0, warning: 0, info: 0 })).toBe("2 open");
 });
 
-test("Data: climate STALE with its age, the heartbeat's and the writer's; the band sub-lines without bounds", () => {
+test("Data: climate STALE with its age, the heartbeat's and the writer's; an age it lacks reads — with why; band sub-lines without bounds", () => {
   const now = nowOf("ingestor-not-running");
   expect(dataText(now.freshness, now.writer)).toEqual({ text: "STALE · 4 min", sub: "heartbeat STALE · 4 min · writer 41 min" });
-  expect(dataText({ ...now.freshness, climate: { observed_at: null, age_s: null, cadence_s: 60, stale: true } }, { ...now.writer, age_s: null }).text).toBe("No data");
+  const never = { observed_at: null, age_s: null, cadence_s: 60, stale: true };
+  expect(dataText({ ...now.freshness, climate: never, ingestor: never }, { ...now.writer, age_s: null })).toEqual({
+    text: "No data", sub: "heartbeat STALE · — (never seen) · writer — (no push on record)",
+  });
   expect(bandText({ low: null, high: 0.8 }, "kPa")).toBe("band unavailable");
+});
+
+test("Outdoor: a null RH reads — with its reason, never 0", () => {
+  const now = nowOf("in-band");
+  const tiles = nowTiles({
+    now: { ...now, outdoor: { ...now.outdoor, rh_pct: { value: null, observed_at: null, reason: "No outdoor RH in the last hour" } } },
+    answer: nowAnswer({ now, failed: false }), irrigation: read(statusOf("in-band")), clock: NOW,
+  });
+  expect(plain(String(tiles.find((item) => item.name === "outdoor")?.sub))).toBe("RH — (No outdoor RH in the last hour)");
+});
+
+test("Water before the irrigation firmware: relay states stand alone, so an irr_state never seen is not Unknown", () => {
+  const before = statusOf("before-engine");
+  const neverSeen = { ...before, freshness: { observed_at: null, age_s: null, stale: true } };
+  expect(lineStatesUnknown(neverSeen)).toBe(false);
+  expect(waterTile(read(neverSeen), NOW)).toMatchObject({ text: "Idle" });
+  // With the firmware, a stale irr_state is the controller gone quiet: unknown, never Idle.
+  expect(lineStatesUnknown({ ...neverSeen, engine: true })).toBe(true);
+  expect(waterTile(read({ ...neverSeen, engine: true }), NOW)).toMatchObject({ text: "Unknown" });
 });
 
 test("device tiles follow the hero's STALE; the platform tiles stay readable while the controller is quiet", () => {

@@ -153,5 +153,8 @@ test("rows 2 to 4 at their edges: no time without one, the heartbeat limit, and 
   expect(band((now) => ({ ...now, freshness: { ...now.freshness, climate: source(300) }, indoor: indoorAt(now, 20) })).row).toBe(7);
   // Flow stopped while the alert is open: no row 4, and the open alert is the answer.
   expect(ask(served("flow-stopped")).text).toBe("1 thing needs someone");
+  // A stop time that is no time is no stop, as the flow banner and the water card read it.
+  const flowing = served("flow-valves-closed");
+  expect(ask({ ...flowing, leak: { ...flowing.leak, stopped_at: "not a time" } }).row).toBe(4);
   expect(band((now) => ({ ...now, alerts: { open: 1, critical: 0, warning: 1, info: 0 } })).text).toBe("1 thing needs someone");
 });

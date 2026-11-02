@@ -57,9 +57,10 @@ export default function Now() {
   const pending = sending || confirming;
   const irrigation = panelRead(useApiRead("API-IRR-01", {}, { intervalMs: pending ? SETTLING_INTERVAL_MS : READ_INTERVAL_MS.irrigation, settling: irrigationSettling }));
   const alerts = panelRead(useApiRead("API-14", OPEN_ALERTS, { intervalMs: ALERTS_POLL_MS }));
-  // The newest API-02 read failed: the sentence says so at once; the shell's banner waits for a second failure. A 401
-  // is the session ending, which the shell's card says.
-  const failed = shell.failures > 0 || (shell.error !== null && shell.error !== undefined && !(shell.error instanceof SessionEnded));
+  // The newest API-02 read failed: the sentence says so at once; the shell's banner waits for a second failure. The
+  // entry's error is the newest read's, the shell's poll or a Stop's readback (a success clears it); the poll's own
+  // failure count lags a readback that answered. A 401 is the session ending, which the shell's card says.
+  const failed = shell.error !== null && shell.error !== undefined && !(shell.error instanceof SessionEnded);
   const answer = nowAnswer({ now: shell.data, failed });
   const retryNow = useCallback(() => { void client.refetchQueries({ queryKey: readKey("API-02"), exact: true }); }, [client]);
   const stopControl: StopControl = { stop: () => { void stop(); }, sending, confirming };

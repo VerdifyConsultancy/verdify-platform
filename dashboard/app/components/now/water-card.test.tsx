@@ -10,7 +10,7 @@ import { parseIrrigationStatus, type IrrigationStatus } from "../../lib/operator
 import type { PanelRead } from "../../lib/queries";
 import type { Session } from "../../lib/session";
 import { renderUi, text } from "../test-render";
-import { BEFORE_ENGINE_LINE, WaterCard, faultLines, flowText, minutesLine, saf4Text, type StopControl } from "./water-card";
+import { BEFORE_ENGINE_LINE, WaterCard, faultLines, flowText, minutesLine, runningLine, saf4Text, type StopControl } from "./water-card";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); });
@@ -58,6 +58,10 @@ test("before the irrigation firmware: relay states only, and where L01 runs from
   expect(line("before-engine")).toBe(BEFORE_ENGINE_LINE);
   expect(document.querySelector("[data-water=next]")).toBeNull();
   expect(line("running")).toBe("Running: Wall drip (run now)");
+  // No irr_state exists before the firmware (never seen reads stale): the relay states still say what runs.
+  const before = statusOf("before-engine");
+  expect(runningLine({ ...before, freshness: { observed_at: null, age_s: null, stale: true } })).toBe("none");
+  expect(runningLine(statusOf("controller-not-reporting"))).toBe("unknown, line states not reported");
 });
 
 test("the flow in words: flowing with every valve closed, stopped, unknown, and none", () => {

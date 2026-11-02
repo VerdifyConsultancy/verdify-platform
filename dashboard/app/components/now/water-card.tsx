@@ -22,7 +22,7 @@ import { OperatorOnly } from "../../lib/session";
 import { Button } from "../button";
 import { useNow } from "../freshness";
 import { PanelError, PanelErrorBoundary } from "../panel";
-import { lineName } from "./tiles";
+import { lineName, lineStatesUnknown } from "./tiles";
 
 /** What the route passes from `useStop`: Stop all water, and whether it is sending or confirming. */
 export type StopControl = { readonly stop: () => void; readonly sending: boolean; readonly confirming: boolean };
@@ -46,10 +46,10 @@ export function minutesLine(zones: Readonly<Record<string, number | null>>): str
 }
 
 /** "Center mister (VPD)" for each running line; "none"; "unknown" while the line states are not reported. */
-export function runningLine(status: Pick<IrrigationStatus, "lines" | "freshness">): string {
+export function runningLine(status: Pick<IrrigationStatus, "engine" | "lines" | "freshness">): string {
   const running = status.lines.filter((line) => line.state.code === "running");
   if (running.length) return running.map((line) => `${lineName(line)} (${causeWords(line.state.cause ?? "unknown")})`).join(" · ");
-  if (status.freshness.stale || status.lines.some((line) => line.enabled && line.state.code === "unknown")) return "unknown, line states not reported";
+  if (lineStatesUnknown(status)) return "unknown, line states not reported";
   return "none";
 }
 

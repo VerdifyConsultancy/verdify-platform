@@ -95,6 +95,25 @@ test("API-02 failing: the answer says so at once, the banner after the second fa
   expect(document.querySelector(".tag-ok, .status-complete, .fresh-ok")).toBeNull();
 });
 
+test("the answer follows the newest API-02 read: a Stop's readback that answers clears it; a 401 ends the session, not row 1", async () => {
+  const api = await open("l01-running", { fail: { "API-02": 503 } });
+  expect(answer()).toBe("Can't reach the greenhouse data");
+  // The API answers again. The shell's own next poll waits out its 30 s backoff; the Stop's readback reads API-02 at 5 s.
+  api.respond({ method: "POST", url: "/__control", body: { fixture: "l01-running" } });
+  fireEvent.click(stopButton()!);
+  await advance(0);
+  await advance(5000);
+  await advance(1000);
+  expect(sentAt("API-02").filter((at) => at > 0 && at < 30_000)).toEqual([5000]);
+  expect(answer()).toBe("All OK");
+  expect(running()).toContain("Nothing running");
+  cleanup();
+  stopFixtureApi();
+  await open("in-band", { fail: { "API-02": 401 } });
+  expect(screen.getByRole("alertdialog").textContent).toContain("Your session ended");
+  expect(plain(text(document.querySelector(".hero-answer")))).toBe("Checking the greenhouse…");
+});
+
 test("Stop all water with the irrigation firmware: one API-IRR-07 request, the relay edge turns the wet chip off, and the toast offers Disable", async () => {
   const api = await open("l01-running");
   expect(chips()).toEqual(["Wall drip · run now · since 10:30 · 3 min left", "Nobody seen: misters may run (last person 05:10)"]);

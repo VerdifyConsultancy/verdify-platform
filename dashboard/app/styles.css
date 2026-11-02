@@ -357,7 +357,8 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--fault)}
 .stats .stat{position:relative}
 .stat-link{color:inherit;text-decoration:none}
 .stat-link::after{content:"";position:absolute;inset:0}
-.stat-warn dd>span:first-child{color:var(--amber)}
+.stat-warn dd>span:first-child:not(.value-muted){color:var(--amber)}
+.now-page .stat dd{white-space:normal}
 .now-running{display:grid;gap:.5rem}
 .now-running>h2,.now-running>p{margin:0}
 .chip-static{cursor:default;white-space:normal;min-height:2rem}
@@ -374,7 +375,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--fault)}
 .now-alerts:empty{display:none}
 @media(min-width:861px){.water-stop{order:1}}
 /* On a phone the answer, the hero value and Stop all water fit above the fold at 390 × 844 (and the answer at 360 × 740): a tighter hero and gaps. */
-@media(max-width:860px){.now-page{gap:.75rem}.now-page .hero{padding:1rem;gap:.75rem}.now-page .hero-temp{font-size:2.75rem;margin:.15rem 0 .25rem}.now-page .hero-meta{font-size:.8125rem}.now-page .stat{padding:.5rem .7rem}.now-page .stat dd{font-size:1.1rem;margin-top:.15rem}.now-panels{grid-template-columns:minmax(0,1fr)}.hero-beside{display:flex}}
+@media(max-width:860px){.now-page{gap:.5rem}.now-page .hero{padding:1rem;gap:.5rem}.now-page .hero-temp{font-size:2.75rem;margin:.15rem 0 .25rem}.now-page .hero-meta{font-size:.8125rem}.now-page .stat{padding:.4rem .6rem}.now-page .stat dd{font-size:1.1rem;margin-top:.15rem}.now-running{gap:.35rem}.now-water .card-head{margin-bottom:.35rem}.now-water .water-minutes{font-size:.9rem}.now-panels{grid-template-columns:minmax(0,1fr)}.hero-beside{display:flex}}
 
 /* Dashboard (design system §2.2): added tokens, the two AA fixes and the new badges. Weather's tokens above are never edited. This block comes last: its :focus-visible and input,select,textarea rules have the same specificity as weather's and win by order. */
 :root{

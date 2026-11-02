@@ -142,7 +142,8 @@ export function nowAnswer({ now, failed }: AnswerInput): NowAnswer {
     return answer(3, "controller", `Controller not reporting${since(at)}`, { link: { to: "/equipment", label: "Equipment" }, muted: true, notReporting: true, unknownSince: at });
   }
   const { leak } = now;
-  if (finite(leak.alert_id) && leak.stopped_at === null) {
+  // Flow continues until a valid `stopped_at`, as the flow banner and the water card read it.
+  if (finite(leak.alert_id) && !validTime(leak.stopped_at)) {
     return answer(4, "flow", "Water flowing with every Verdify valve closed", { link: { to: `/activity?alert=${leak.alert_id}`, label: "Open the alert" } });
   }
   const band = outOfBand(now);

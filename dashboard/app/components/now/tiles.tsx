@@ -16,7 +16,7 @@ import { dayClock } from "../../lib/last-water";
 import { lineById } from "../../lib/lines";
 import type { NowAnswer } from "../../lib/now-answer";
 import { targetText } from "../../lib/now-answer";
-import type { IrrigationLine, IrrigationStatus, Now } from "../../lib/operator-api";
+import type { IrrigationLine, IrrigationStatus, Now, Reading } from "../../lib/operator-api";
 import type { PanelRead } from "../../lib/queries";
 import { modeWords, words } from "../../lib/words";
 import { Badge } from "../badge";
@@ -52,12 +52,29 @@ export function alertCountText(alerts: Now["alerts"]): string {
   return parts.length ? parts.join(" · ") : `${alerts.open} open`;
 }
 
-/** The climate row's age ("Fresh · 8 s", "STALE · 14 min") and, under it, the heartbeat's and the writer's. */
+/**
+ * The climate row's age ("Fresh · 8 s", "STALE · 14 min") and, under it, the heartbeat's and the writer's. An age the
+ * API does not have reads "—" with why.
+ */
 export function dataText(freshness: Now["freshness"], writer: Now["writer"]): { text: string; sub: string } {
   const { climate, ingestor } = freshness;
   const text = climate.age_s === null ? "No data" : `${climate.stale ? "STALE" : "Fresh"} · ${ageText(climate.age_s)}`;
-  const heartbeat = `heartbeat ${ingestor.stale ? "STALE · " : ""}${ageText(ingestor.age_s)}`;
-  return { text, sub: `${heartbeat} · writer ${ageText(writer.age_s)}` };
+  const heartbeat = `heartbeat ${ingestor.stale ? "STALE · " : ""}${ageText(ingestor.age_s)}${ingestor.age_s === null ? " (never seen)" : ""}`;
+  return { text, sub: `${heartbeat} · writer ${ageText(writer.age_s)}${writer.age_s === null ? " (no push on record)" : ""}` };
+}
+
+/** A reading in its unit, or "—" with its reason ("— (No outdoor RH in the last hour)"), never 0. */
+function readingText(reading: Reading, unit: string): string {
+  return typeof reading.value === "number" && Number.isFinite(reading.value) ? formatValue(reading.value, unit) : `— (${reading.reason || "No reading"})`;
+}
+
+/**
+ * The line states are not known: an enabled line reads unknown (the controller is not reporting) or, with the
+ * irrigation firmware, `irr_state` is stale. Before that firmware no `irr_state` exists (a source never seen reads
+ * stale), and the relay states stand alone (irrigation §9: `irr_state`'s age alone never makes a line unknown).
+ */
+export function lineStatesUnknown(status: Pick<IrrigationStatus, "engine" | "lines" | "freshness">): boolean {
+  return status.lines.some((line) => line.enabled && line.state.code === "unknown") || (status.engine === true && status.freshness.stale);
 }
 
 /** A line's plain name: the words table's for its relay ("Center mister"), else the API's. */
@@ -84,7 +101,7 @@ export function waterTile(irrigation: PanelRead<IrrigationStatus>, clock: number
     const name = lineName(running[0]);
     return { text: running.length === 1 ? name : `${name} +${running.length - 1}`, badge: <Badge kind="running" />, sub: next ?? undefined };
   }
-  if (status.freshness.stale || status.lines.some((line) => line.enabled && line.state.code === "unknown")) return { text: "Unknown", sub: "line states not reported" };
+  if (lineStatesUnknown(status)) return { text: "Unknown", sub: "line states not reported" };
   return { text: "Idle", sub: next ?? "no run scheduled" };
 }
 
@@ -119,7 +136,7 @@ export function nowTiles({ now, answer, irrigation, clock }: TilesInput): HeroTi
     },
     {
       name: "outdoor", label: graphs("Outdoor"), value: now?.outdoor.temp_f.value ?? null, unit: "°F", reason: now?.outdoor.temp_f.reason ?? missing,
-      sub: now ? `RH ${formatValue(now.outdoor.rh_pct.value, "%")}` : undefined, observedAt: now ? now.outdoor.temp_f.observed_at : undefined,
+      sub: now ? `RH ${readingText(now.outdoor.rh_pct, "%")}` : undefined, observedAt: now ? now.outdoor.temp_f.observed_at : undefined,
     },
     {
       name: "mode", label: graphs("Mode"), phone: true, text: now ? modeWords(now.mode.code, now.mode.stage) : undefined, reason: missing,
