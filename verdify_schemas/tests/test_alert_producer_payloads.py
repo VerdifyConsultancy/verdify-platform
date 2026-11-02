@@ -164,3 +164,87 @@ def test_validation_failed_fallback_survives_garbage_payload():
     assert env.alert_type == "alert_validation_failed"
     assert env.severity == "warning"
     assert env.details["original_alert_type"] == "unknown"
+
+
+def test_soil_probe_offline_per_probe_shape():
+    """VD-72: one soil_sensor_offline row per probe, with the sync's lifecycle fields."""
+    env = AlertEnvelope.model_validate(
+        {
+            "alert_type": "soil_sensor_offline",
+            "severity": "warning",
+            "category": "sensor",
+            "sensor_id": "soil.west",
+            "zone": "west",
+            "message": "Soil probe `soil.west` (west zone) has no data for 30 min: soil_moisture_west, soil_temp_west",
+            "details": {
+                "sensor": "soil.west",
+                "columns": ["soil_moisture_west", "soil_temp_west"],
+                "occupancy": "occupied",
+                "count": 30,
+                "last_seen_at": NOW,
+            },
+            "metric_value": None,
+            "threshold_value": 30.0,
+        }
+    )
+    assert env.details["column"] is None and env.details["columns"] == ["soil_moisture_west", "soil_temp_west"]
+    assert env.details["count"] == 30 and env.details["long_offline"] is False
+
+
+def test_probe_offline_lifecycle_fields_on_stored_and_staleness_rows():
+    legacy = {"column": "soil_moisture_west", "sensor": "soil.west", "occupancy": "occupied"}
+    resolved = AlertEnvelope.model_validate(
+        {
+            "alert_type": "soil_sensor_offline",
+            "severity": "warning",
+            "category": "sensor",
+            "message": "Soil sensor `soil_moisture_west` has no data for 30 min",
+            "details": {**legacy, "long_offline": True},
+        }
+    )
+    assert resolved.details["long_offline"] is True and resolved.details["count"] == 1
+    stale = AlertEnvelope.model_validate(
+        {
+            "alert_type": "sensor_offline",
+            "severity": "warning",
+            "category": "sensor",
+            "message": "Sensor `climate.hydro_ph` offline",
+            "details": {"type": "hydroponic", "staleness_ratio": None, "count": 4, "last_seen_at": NOW},
+        }
+    )
+    assert stale.details["count"] == 4 and stale.details["last_seen_at"].startswith("2026-07-11T03:00:54")
+    with pytest.raises(ValidationError):
+        AlertEnvelope.model_validate(
+            {
+                "alert_type": "sensor_offline",
+                "severity": "warning",
+                "category": "sensor",
+                "message": "Sensor `climate.hydro_ph` offline",
+                "details": {"type": "hydroponic", "count": 0},
+            }
+        )
+
+
+def test_leak_detected_flow_stopped_shape():
+    """VD-72: the leak row outlives the flag and records when the meter went quiet."""
+    env = AlertEnvelope.model_validate(
+        {
+            "alert_type": "leak_detected",
+            "severity": "critical",
+            "category": "water",
+            "sensor_id": "equipment.leak_detected",
+            "message": "Flow stopped at 21:20",
+            "details": {"since": NOW, "stopped_at": "2026-07-11T03:20:00+00:00"},
+        }
+    )
+    assert env.details["stopped_at"].startswith("2026-07-11T03:20:00")
+    flowing = AlertEnvelope.model_validate(
+        {
+            "alert_type": "leak_detected",
+            "severity": "critical",
+            "category": "water",
+            "message": "Water flowing with every Verdify valve closed since 21:00",
+            "details": {"since": NOW, "stopped_at": None},
+        }
+    )
+    assert flowing.details["stopped_at"] is None

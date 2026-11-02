@@ -175,7 +175,7 @@ humidification minutes.
 | `line_id` | L01, L02, L04-L10 | Not L03 (it opens with fertilizer runs) and not L11 (fog is climate only) |
 | `enabled` | bool | Only enabled schedules are compiled into the record |
 | `days` | A set of weekdays (at least one) | |
-| `start` | `clock` HH:MM local, or `sunrise`, `solar_noon` or `sunset` ± 0-240 min | The device computes solar times itself (`firmware/lib/greenhouse_solar.h`); the week view uses the same calculation in `ingestor/solar.py` |
+| `start` | `clock` HH:MM local, or `sunrise`, `solar_noon` or `sunset` ± 0-240 min | The device computes solar times itself (`firmware/lib/greenhouse_solar.h`); the week view uses the same calculation in `verdify_schemas/solar.py`, which `ingestor/solar.py` re-exports, with each date's UTC offset at local noon. A start is the first moment the America/Denver clock reads it that day: a time in the spring-forward gap runs when the clock jumps past it, a repeated fall-back time runs the first time, and a solar start past midnight (sunset + 240 in June) runs early the next morning |
 | `on_s` | Drips 10-7200; misters 10-90 | Valve-open seconds per run or pulse. Fertilizer lines: the feed seconds |
 | `count`, `gap_s` | Misters: 1-60 pulses, 30-600 s apart. Drips: 1 and 0 | At run time a mister gap is never shorter than `mister_min_off_s` |
 | `prewet_s`, `flush_s` | 0-1800 each; fertilizer lines only | Clean water on the partner line before and after the feed. Set `flush_s` to the line's measured fill time |
@@ -194,7 +194,10 @@ humidification minutes.
 **Accepted, then settled at run time.** A schedule on a disabled line, or a mist schedule on a zone
 whose `schedule_member` is off, is stored; its occurrences end `skipped` ("line disabled", "not a
 schedule member") until that changes. Runs past the line's daily cap end `cap`. The week view shows each
-of these before it happens, so schedules can be built ahead of a line's bring-up.
+of these before it happens, so schedules can be built ahead of a line's bring-up. Its "ends at the daily cap"
+note counts, per line and local day, the planned minutes that line's cap counts (§4.5): its own runs and
+pulses, the prewet and flush a feed puts on it as the clean partner, and, on a mister zone, the feed pulses of
+its fertilizer mister. A mister's budget is its cap less its VPD reserve.
 
 Examples (illustrative):
 
@@ -353,7 +356,8 @@ program, the seed program and a full one) and the byte layout live in `verdify_s
 The SHA-256 covers the whole record. The record carries no revision, so an unchanged program compiles
 to the same hash. It goes in 4 chunks of at most 192 B. Only enabled schedules are compiled, ordered by
 `slot_id`; if more than 24 are ever enabled, the compiler keeps the 24 lowest and reports the rest as
-not on the controller.
+not on the controller. A stored schedule outside its line kind's bounds (only a row written around
+validation can be) is left out and reported the same way, so one bad row never blocks the program.
 
 | Bytes | Part | Content (offset: field) |
 |---|---|---|
@@ -477,6 +481,11 @@ is pending, and every 60 s in full:
 - Both new types go in `verdify_schemas/alerts.py`. Nothing else is new: the leak and heap alerts
   already exist, and with no leak latch (Round 2 #3) and no leak force-off in the engine (F14), the
   leak alert is the whole leak response.
+- **The leak alert outlives the flag (VD-72).** While `leak_detected` is on it reads "Water flowing
+  with every Verdify valve closed since HH:MM". Once the flag clears the row stays open: after two
+  meter readings under 0.1 gal/min it reads "Flow stopped at HH:MM" (America/Denver;
+  `details.stopped_at`), flow that starts again puts the flowing text back on the same row, and only
+  a person or agent resolve (API-16, MCP `alerts` or Slack) closes it. It stays `critical`.
 
 ### 6.4 Iris context
 
@@ -549,6 +558,12 @@ Three things stay.
 After the cleanup, `ha_sensor_sync` reads only lights, occupancy and the hydro probe. Update
 `docs/SERVICE_MAP.md`, `docs/operations/HEALTH_COVERAGE_KEYS.md` and `scripts/health-check.sh:180-189`
 (its outdoor check names the ESP32 Tempest path) in the same PRs.
+
+As built (VD-48): the two `grow_light_*_intent` streams are outside the stream list of the durable
+equipment receipt function (`fn_record_equipment_state_source_receipt`, migration 216), which rejects any
+other stream, so the ingestor writes them through the ordinary telemetry view with no continuity receipt.
+If Home Assistant ever omits the occupancy sensor's `last_changed`, the first ON poll latches once and later
+ON polls do not re-extend it.
 
 ## 8. API operations and MCP tools
 
