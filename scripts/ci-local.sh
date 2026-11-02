@@ -60,6 +60,9 @@ $PY -m pytest -q tests/test_verdify_traefik_file.py tests/test_public_camera_cac
 step "schema suites (incl. drift guards + producer payload round-trips)"
 $PY -m pytest -q verdify_schemas/tests/
 
+step "irrigation program record golden vectors (#1151)"
+$PY scripts/gen-irrigation-program-vectors.py --check
+
 step "ClimateIntent controller contract audit"
 $PY scripts/audit-climate-intent-contract.py
 
