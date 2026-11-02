@@ -4516,6 +4516,74 @@ def normalize_planner_value(name: str, value: float) -> float:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Desired-state writability (architecture §5.3 step 1; VD-33 #1149, VD-67 #1180)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Classes a desired-state write may target when the row has a firmware entity.
+# The irrigation_site rows have none and are writable too: the irrigation
+# program record carries them to the controller.
+DESIRED_WRITABLE_CLASSES: frozenset[str] = frozenset(
+    {"planner_policy", "scheduled_policy", "controller_safety", "crop_band"}
+)
+_LEGACY_WIDE_LIMIT = "legacy wide limit; not the band while the controller runs its on-chip curve"
+_WEEKLY_FEED = "weekly-feed commissioning value; retires with the irrigation engine"
+# Rows of a writable class that stay read-only for desired state, each with the
+# reason the settings catalog shows (architecture §5.3 step 1).
+DESIRED_READ_ONLY_REASONS: dict[str, str] = {
+    **dict.fromkeys(("temp_low", "temp_high", "vpd_low", "vpd_high"), _LEGACY_WIDE_LIMIT),
+    **dict.fromkeys(sorted(name for name in REGISTRY if name.startswith("vpd_target_")), _LEGACY_WIDE_LIMIT),
+    **dict.fromkeys(
+        ("activity_start_hour", "activity_start_minute", "activity_duration_min"),
+        "activity mirror; the dispatcher derives it from the lighting policy",
+    ),
+    "sw_onchip_band_enabled": "decides which side owns the band",
+    **dict.fromkeys(
+        (
+            "sw_wall_fertigation_commissioned",
+            "wall_commissioning_revision",
+            "wall_commissioning_evidence_mask",
+            "wall_commissioning_valid_until_epoch_s",
+            "wall_flow_lpm",
+            "wall_flow_valid_until_epoch_s",
+            "wall_prewet_liters",
+            "wall_feed_liters",
+            "wall_flush_liters",
+        ),
+        _WEEKLY_FEED,
+    ),
+}
+
+
+def desired_write_rule(name: str) -> tuple[bool, str | None]:
+    """Whether a desired-state write may target ``name`` now: ``(writable, reason)``.
+
+    Architecture §5.3 step 1 without its database check (a ``crop_band`` row
+    with no ``crop_band_anchors`` row), so the dispatcher, which skips rows that
+    are not writable, and the settings services run one rule. Writable:
+    ``planner_policy``, ``scheduled_policy``, ``controller_safety`` and
+    ``crop_band`` rows with a firmware entity, and the ``irrigation_site`` rows.
+    Read-only, with the reason as the second element: ``retired`` and
+    ``readback_context`` rows and ``DESIRED_READ_ONLY_REASONS``. A name outside
+    the registry is not writable either; a caller tells it apart from a
+    read-only row with ``get(name) is None`` (``unknown_target``).
+    """
+    spec = get(name)
+    if spec is None:
+        return False, "not in the tunable registry"
+    reason = DESIRED_READ_ONLY_REASONS.get(name)
+    if reason is not None:
+        return False, reason
+    control_class = spec.control_class
+    if control_class == "irrigation_site":
+        return True, None
+    if control_class == "retired":
+        return False, "retired; the controller no longer reads it"
+    if control_class in DESIRED_WRITABLE_CLASSES and spec.esp_object_id is not None:
+        return True, None
+    return False, "readback only; the controller reports it and nothing sets it"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Policy wire schema validation (Lane A, #582) — see WIRE_SCHEMA_VERSION at the
 # top of this module for the reserved-ID policy.
 # ─────────────────────────────────────────────────────────────────────────────

@@ -259,6 +259,12 @@ _cfg_drift_version = 0
 # Wake the scheduler for targeted cfg drift without advancing transport state.
 setpoint_dispatch_requested = asyncio.Event()
 
+# Wake irrigation_sync (#1157, irrigation §6.1). setpoint_listener sets it on
+# desired_state_changed, because the irrigation_site values live in
+# desired_state, and after the listener reconnects (VD-33). Only a flag: the
+# task re-reads its own tables.
+irrigation_sync_requested = asyncio.Event()
+
 # The existing flush_loop is the only publisher. A writer admission can ask
 # that same task for a committed batch; readers and native observation clocks
 # never use this coordination as evidence or as permission to write.

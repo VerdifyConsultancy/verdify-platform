@@ -186,6 +186,9 @@ class _WriteRequest:
     command_versions: tuple[float, ...]
     source_fence: Callable[[], str | None] | None = None
     source_guard: Callable[[], Awaitable[str | None]] | None = None
+    # Parameters whose value in this batch is a desired-state value (VD-33):
+    # they pass component_authority_hold; every other hold still applies.
+    desired_params: frozenset[str] = frozenset()
     next_index: int = 0
     outcomes: list[DeviceCommandOutcome] = field(default_factory=list)
     cancel_requested: bool = False
@@ -299,12 +302,19 @@ def component_authority_hold() -> tuple[bool, frozenset[str]]:
     return _COMPONENT_AUTHORITY_HOLD_ACTIVE, _COMPONENT_AUTHORITY_HOLD_PARAMS
 
 
-def _experiment_hold_failure(parameter: str) -> str | None:
+def _experiment_hold_failure(parameter: str, desired: bool = False) -> str | None:
+    """The hold that refuses an ordinary write of ``parameter``, or None.
+
+    A desired-state value (``desired``, VD-33) passes only
+    ``component_authority_hold``: nothing is refused because an experiment is
+    armed (decisions Round 2 #2). It still waits out ``experiment_policy_hold``,
+    whose armed vector the firmware serves, and a bounded component bundle.
+    """
     if _EXPERIMENT_HOLD_ACTIVE and parameter in _EXPERIMENT_HOLD_PARAMS:
         return "experiment_policy_hold"
     if _COMPONENT_BUNDLE_HOLD_ACTIVE and parameter in _COMPONENT_BUNDLE_HOLD_PARAMS:
         return "component_bundle_hold"
-    if _COMPONENT_AUTHORITY_HOLD_ACTIVE and parameter in _COMPONENT_AUTHORITY_HOLD_PARAMS:
+    if not desired and _COMPONENT_AUTHORITY_HOLD_ACTIVE and parameter in _COMPONENT_AUTHORITY_HOLD_PARAMS:
         return "component_authority_hold"
     return None
 
@@ -487,10 +497,12 @@ async def _execute_one(request: _WriteRequest, index: int) -> DeviceCommandOutco
         return _outcome(request, index, "failed", failure)
 
     obj_id, value, entity_type = request.changes[index]
+    parameter = _parameter_for(obj_id, entity_type)
+    desired = parameter in request.desired_params
     # Lane C (#584): experiment-owned parameters are delivered ONLY through the
     # atomic policy transaction while an assignment is armed. Terminal,
     # non-retryable — the dispatcher records it like any other rejection.
-    if hold_failure := _experiment_hold_failure(_parameter_for(obj_id, entity_type)):
+    if hold_failure := _experiment_hold_failure(parameter, desired):
         return _outcome(request, index, "failed", hold_failure)
     client = shared.esp32["client"]
     keys = shared.esp32["keys"]
@@ -514,7 +526,7 @@ async def _execute_one(request: _WriteRequest, index: int) -> DeviceCommandOutco
             # Re-check after lock acquisition: an ordinary request may have
             # queued before component authority armed while it waited behind
             # an exclusive prefix.
-            if hold_failure := _experiment_hold_failure(_parameter_for(obj_id, entity_type)):
+            if hold_failure := _experiment_hold_failure(parameter, desired):
                 return _outcome(request, index, "failed", hold_failure)
             if entity_type == "service":
                 service = (shared.esp32.get("services") or {}).get(_BAND_ANCHOR_SERVICE)
@@ -821,12 +833,15 @@ async def push_to_esp32_detailed(
     expected_connection_generation: int | None = None,
     source_fence: Callable[[], str | None] | None = None,
     source_guard: Callable[[], Awaitable[str | None]] | None = None,
+    desired_params: frozenset[str] = frozenset(),
 ) -> PushBatchResult:
     """Queue a bounded batch and return a truthful terminal result per command.
 
     Caller cancellation does not cancel an in-flight physical command.  It marks
     the request cancelled; the worker reports the command already returned by
     the API as ``sent`` and every still-unsent command as ``cancelled``.
+    ``desired_params`` names the parameters whose value is a desired-state
+    value; only those pass ``component_authority_hold`` (VD-33).
     """
     global _PENDING_REQUESTS, _LIFECYCLE_BLOCKED
     loop = asyncio.get_running_loop()
@@ -866,6 +881,7 @@ async def push_to_esp32_detailed(
         command_versions=versions,
         source_fence=source_fence,
         source_guard=source_guard,
+        desired_params=frozenset(desired_params),
     )
     superseded = _supersede_older_queued_commands(request)
     if superseded:
