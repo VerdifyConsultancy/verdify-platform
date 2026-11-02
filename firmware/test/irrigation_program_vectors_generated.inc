@@ -335,3 +335,25 @@ static const GoldenEvent kEventsParsed[][8] = {
     {{65528, 9, 30000, 20759, "sk", "pau"}, {65529, 8, 40000, 20759, "sk", "nvm"}, {65530, 7, 20000, 20759, "sk", "occ"}, {65531, 6, 32768, 20759, "sh", "res"}, {65532, 5, 12345, 20759, "st", "cmd"}, {65533, 4, 10000, 20759, "mi", "man"}, {65534, 3, 65534, 20759, "pe", "bud"}, {65535, 0, 65535, 20759, "ca", "cap"}},  // eight_full
 };
 static const uint8_t kEventsParsedCount[] = {0, 3, 4, 8};
+// Each irr_state sample as irr_format_state()'s input: its parsed form, or for
+// overflow_drops_waiting the state it was formatted from (VD-45, #1160).
+struct GoldenRun { bool valid; uint8_t line; const char* cause; uint16_t slot_id; uint32_t start_epoch; uint32_t end_epoch; };
+struct GoldenWait { uint8_t line; const char* reason; uint32_t until_epoch; };
+struct GoldenFault { uint8_t line; char kind; uint32_t until_epoch; };
+struct GoldenState {
+  GoldenRun drip; GoldenRun mist;
+  uint8_t wait_count; GoldenWait waits[7];
+  uint8_t fault_count; GoldenFault faults[4];
+  const char* vpd; const char* reject;
+};
+static const GoldenState kStateParsed[] = {
+    {{false, 0, "", 0, 0, 0}, {false, 0, "", 0, 0, 0}, 0, {}, 0, {}, "", ""},  // empty
+    {{false, 0, "", 0, 0, 0}, {false, 0, "", 0, 0, 0}, 0, {}, 0, {}, "hoo", ""},  // idle
+    {{true, 0, "schedule", 4, 1793628000, 1793628600}, {false, 0, "", 0, 0, 0}, 0, {}, 0, {}, "hoo", ""},  // drip_schedule
+    {{false, 0, "", 0, 0, 0}, {true, 3, "fallback", 2, 1793646000, 1793646360}, 0, {}, 0, {}, "hph", ""},  // fallback_mist
+    {{true, 0, "prewet", 5, 1793628000, 1793628120}, {false, 0, "", 0, 0, 0}, 2, {{3, "occ", 0}, {6, "man", 1793628120}}, 1, {{8, 'b', 1793628600}}, "hpo", ""},  // feed_prewet_waiting
+    {{true, 1, "feed", 0, 1793631600, 1793631900}, {false, 0, "", 0, 0, 0}, 1, {{0, "man", 0}}, 0, {}, "hoo", ""},  // run_now_feed
+    {{false, 0, "", 0, 0, 0}, {true, 3, "vpd", 0, 1793631620, 1793631665}, 0, {}, 0, {}, "hoo", "bad_hash"},  // vpd_pulse_rejected
+    {{false, 0, "", 0, 0, 0}, {false, 0, "", 0, 0, 0}, 0, {}, 3, {{6, 'l', 1793689200}, {7, 'l', 1793689200}, {3, 'b', 1793629800}}, "hpo", "bad_slot"},  // faults
+    {{true, 0, "schedule", 65535, 1793628000, 1793629845}, {true, 3, "vpd", 0, 1793628900, 1793628945}, 7, {{1, "man", 1793629845}, {4, "man", 1793629845}, {5, "man", 1793629845}, {6, "bof", 1793629200}, {7, "flt", 1793689200}, {8, "bof", 1793630700}, {9, "flt", 1793689200}}, 4, {{6, 'b', 1793629200}, {7, 'l', 1793689200}, {8, 'b', 1793630700}, {9, 'l', 1793689200}}, "hpo", "bad_header"},  // overflow_drops_waiting
+};
