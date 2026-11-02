@@ -2538,9 +2538,17 @@ async def _sync_monitor_alerts(
     # dispatcher writes source='dispatcher') have their own lifecycle
     # — auto-resolving them here caused setpoint_unconfirmed to flap
     # open↔resolved every alert_monitor cycle.
+    # Only the unscoped monitor's probe-offline lifecycle (VD-72) also reads ts,
+    # category, message and details. A scoped component cycle keeps its exact
+    # column read: the containment qualification stores its alerts in an
+    # exact-column facade that has no ts.
+    open_columns = (
+        "id, ts, alert_type, severity, category, sensor_id, message, details, slack_ts, disposition"
+        if scope is None
+        else "id, alert_type, severity, sensor_id, slack_ts, disposition"
+    )
     open_query = (
-        "SELECT id, ts, alert_type, severity, category, sensor_id, message, details, slack_ts, disposition "
-        "FROM alert_log "
+        f"SELECT {open_columns} FROM alert_log "
         "WHERE disposition IN ('open', 'acknowledged') AND resolved_at IS NULL AND source = 'system'"
     )
     if scope is None:
