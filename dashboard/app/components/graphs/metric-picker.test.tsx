@@ -60,11 +60,14 @@ test("at 8 metrics per window the picker says so and offers no more", () => {
 test("+ Setting lists numeric settings in an open panel's unit, never the Band in force rows, grouped by panel", () => {
   const units = ["°F", "kPa", "%"];
   const groups = chooserGroups(SETTINGS, units);
-  expect(groups.map((group) => [group.unit, group.items.map((row) => row.param)])).toEqual([
-    ["°F", ["temp_low"]],
-    ["kPa", ["mister_engage_kpa", "band_vpd_low_sm"]],
-    ["%", ["fog_rh_ceiling_pct", "sched_mist_rh_max_pct"]],
-  ]);
+  // API-09's base fixture is the whole rendered registry, so a panel is checked for its rows rather than listed in full.
+  const listed = (unit: string) => groups.find((group) => group.unit === unit)?.items.map((row) => row.param) ?? [];
+  expect(groups.map((group) => group.unit)).toEqual(units);
+  expect(listed("°F")).toContain("temp_low");
+  expect(listed("kPa")).toEqual(expect.arrayContaining(["mister_engage_kpa", "band_vpd_low_sm"]));
+  expect(listed("%")).toEqual(["fog_rh_ceiling_pct", "sched_mist_rh_max_pct"]);
+  expect(SETTINGS.some((row) => row.group === "band_in_force")).toBe(true);
+  expect(groups.flatMap((group) => group.items).filter((row) => row.group === "band_in_force" || row.kind !== "numeric")).toEqual([]);
   expect(chooserGroups(SETTINGS, ["kPa"], "engage").flatMap((group) => group.items.map((row) => row.param))).toEqual(["mister_engage_kpa"]);
   expect(settingChipText(SETTINGS.find((row) => row.param === "mister_engage_kpa")!)).toBe("VPD · mister_engage_kpa");
   const resolved = resolveView(parseGraphUrl("range=72h&set=mister_engage_kpa").view, METRICS, SETTINGS);
@@ -72,7 +75,7 @@ test("+ Setting lists numeric settings in an open panel's unit, never the Band i
   fireEvent.click(screen.getByRole("button", { name: "+ Setting" }));
   const list = within(dialog());
   expect(list.getByRole("link", { name: /Fog RH Ceiling/ }).getAttribute("href")).toBe("/graphs?range=72h&set=mister_engage_kpa&set=fog_rh_ceiling_pct");
-  expect(text(list.getByRole("link", { name: /Fog RH Ceiling/ }))).toBe("Fog RH Ceilingfog_rh_ceiling_pct · % · device 90.0%");
+  expect(text(list.getByRole("link", { name: /Fog RH Ceiling/ }))).toBe("Fog RH Ceilingfog_rh_ceiling_pct · % · device 88.0%");
   expect(text(dialog())).toContain("VPD Mister Engagemister_engage_kpa · kPa · device 1.60 kPaOn the charts");
   expect(text(dialog())).not.toMatch(/band_house|band_center|sw_gl_main_auto_mode|mister_pulse_gap_s/);
   fireEvent.click(list.getByRole("button", { name: "Close" }));
