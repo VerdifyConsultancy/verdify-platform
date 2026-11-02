@@ -246,6 +246,9 @@ elif plan and plan.created_at > d.created_at -> plan.value   a newer plan wins (
 else                                         -> d.value      beats plan, band and defaults
 ```
 
+`verdify_schemas.setting_values.resolve_effective(desired, plan)` is this rule as one pure function (VD-29), so the
+dispatcher, the API's `applied_from` and the services resolve a setting the same way.
+
 - **Where:** in `setpoint_dispatcher` (`ingestor/tasks/dispatcher.py:782`), where the batch is built from plan,
   band and defaults, before dedupe, the drift probe, C1 and the 12-command limit. A desired value becomes a
   command only when it differs from `_last_pushed` or its readback (the §5.5 comparator), like a plan value, and
@@ -304,13 +307,16 @@ value and `retryable` (problem+json on REST, the same JSON with `isError` on MCP
 | 1 Known and writable | A registry row whose `control_class` is `planner_policy`, `scheduled_policy`, `controller_safety` or `crop_band` with an `esp_object_id`, or the new `irrigation_site` (`mister_daily_volume_max_gal`, `sched_mist_rh_max_pct`, `climate_yield_min`: no `esp_object_id`, delivered in the irrigation program, R12). Read-only, with a reason: `readback_context` and `retired` rows; the legacy wide limits `temp_low`, `temp_high`, `vpd_low`, `vpd_high` and `vpd_target_*` (not the band while the controller runs its on-chip curve, §7) and the three activity-mirror values, all derived by the dispatcher; `sw_onchip_band_enabled`, which decides which side owns the band; the nine weekly-feed commissioning rows (`sw_wall_fertigation_commissioned`, `wall_commissioning_{revision,evidence_mask,valid_until_epoch_s}`, `wall_flow_{lpm,valid_until_epoch_s}`, `wall_{prewet,feed,flush}_liters`), retiring with the engine; `crop_band` rows with no `crop_band_anchors` row (zone priorities and window values). `irrig_*_duration_min` and `sw_irrig_*` stay writable for the L01 bridge (§5.8), and the `gl_*` lighting rows stay writable (a release hands them back to the lighting policy, §5.2) | `unknown_target`, or `read_only` with the reason |
 | 2 Type and range | Finite; switches 0 or 1; enums in `enum_values`; inside `planner_effective_bounds(param)` (registry min/max intersected with the firmware clamp) | `out_of_range` with `min` and `max` |
 | 3 Manual | An `iris` write to a setting whose newest row is manual | `manual` |
-| 4 Snap | To the registry `step` (new on `TunableDef`, read from `firmware/greenhouse/tunables.yaml` and drift-guarded like `fw_clamp`; the `_round_for_push` quanta for the anchors, which have no number entity; equal to the `ENTITY_GRIDS` steps for the 48 policy fields), half to even, by a `snap()` helper in `verdify_schemas`. A value equal to the setting's current effective or device value is stored as is, so taking an Iris value manual keeps it | none; the response carries the stored value and `snapped_from` |
+| 4 Snap | To the registry `step` (new on `TunableDef`, copied as literals from `firmware/greenhouse/tunables.yaml` and drift-guarded like `fw_clamp`; 1 for a switch; the `_round_for_push` quanta for the anchors, which have no number entity; equal to the `ENTITY_GRIDS` steps for the 48 policy fields; none for a row with no entity, which is not snapped), half to even, by `snap_setting()` in `verdify_schemas.setting_values`. A snapped value outside `planner_effective_bounds` takes the bound, so the four minimums off their grid (`gl_lux_threshold`, `gl_main_lux_threshold`, `gl_grow_lux_threshold`, `mister_max_runtime_min`) stay reachable. A value equal to the setting's current effective or device value is stored as is, so taking an Iris value manual keeps it | none; the response carries the stored value and `snapped_from` |
 
 A drift test fails when a number or switch in `firmware/greenhouse/tunables.yaml` has no registry row (writable,
 or read-only with a reason) and is not retired, so the catalog really is every setting. Each row's name and unit are
-`TunableDef.label` and `TunableDef.unit`, which VD-29 adds next to `step`, filled from the setting's entity in
-`firmware/greenhouse/tunables.yaml` and drift-tested the same way. `settings.catalog` (VD-67) passes them through,
-and API-09 (VD-55) serves them as `Setting.label` and `Setting.unit`.
+`TunableDef.label` and `TunableDef.unit`, which VD-29 adds next to `step`, split from the `name:` of the setting's
+entity in `firmware/greenhouse/tunables.yaml` (the entities carry no `unit_of_measurement`; `split_entity_name()`)
+and drift-tested the same way. The anchors take theirs from their `cfg_*` readback names in
+`firmware/greenhouse/sensors.yaml` ("Cfg • Band VPD Low SR (kPa)"), and a row with no entity carries its registry
+name and no unit. `settings.catalog` (VD-67) passes them through, and API-09 (VD-55) serves them as `Setting.label`
+and `Setting.unit`.
 
 `manual` has no default inside `verdify_services`: REST defaults it to true (the dashboard box starts ticked, R3)
 and every MCP write tool to false. A write stores exactly the flag it carries, so an agent's write to a manual
@@ -345,10 +351,11 @@ state requested}` → the fenced pass pushes it (at most 12 per pass) → the `c
 
 `verdify_services.settings.status` computes the state on every read, so a late readback turns NOT CONFIRMED into
 CONFIRMED by itself. A readback matches when |readback − value| ≤ max(step/2, the value's binary32 ULP, the
-duration tolerance): a grid-aware comparator in `verdify_schemas` beside `readback_abs_tolerance` (moved from
-`ingestor/tasks/dispatcher.py:486-500`). The dispatcher uses it to decide whether a desired value needs a push,
-not its 1 % dead-band, which hides one-step changes (`site_pressure_hpa` 840 → 845). Plan values keep
-`readback_values_equivalent` and show as Iris stored them.
+duration tolerance): `readback_matches()` in `verdify_schemas.setting_values`, beside `readback_abs_tolerance` and
+`readback_values_equivalent` (moved from `ingestor/tasks/dispatcher.py:486-500`, which imports them back). A missing
+or non-finite readback never matches. The dispatcher uses it to decide whether a desired value needs a push,
+not its 1 % dead-band (`within_relative_deadband`), which hides one-step changes (`site_pressure_hpa` 840 → 845).
+Plan values keep `readback_values_equivalent` and show as Iris stored them.
 
 | State | When | Badge ([design system](design-system.md) §4.1) |
 |---|---|---|

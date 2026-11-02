@@ -59,6 +59,7 @@ from solar import (
     solar_phase,
 )
 
+from verdify_schemas.setting_values import within_relative_deadband
 from verdify_schemas.tunable_registry import FIRMWARE_V2_STAGED_REG, REGISTRY
 
 log = logging.getLogger("tasks")
@@ -176,7 +177,7 @@ def anchors_supported() -> bool:
 
 def _values_equivalent(desired: float, readback: float) -> bool:
     """Same 1%-relative dead-band as the dispatcher's _should_skip."""
-    return abs(readback - desired) / max(abs(desired), 1e-3) < 0.01
+    return within_relative_deadband(readback, desired)
 
 
 def anchors_confirmed(desired: dict[str, float]) -> bool:

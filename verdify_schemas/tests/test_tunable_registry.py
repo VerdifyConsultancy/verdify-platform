@@ -16,15 +16,25 @@ Any drift → CI fails → operator fixes before merge.
 
 from __future__ import annotations
 
+import ast
 import pathlib
 import re
 import runpy
 import sys
 import types
+from collections.abc import Mapping
 
 import pytest
 
-from verdify_schemas.tunable_registry import PLANNER_PUSHABLE_REG, REGISTRY, TIER1_REG, registry_value_error
+from verdify_schemas.tunable_registry import (
+    FIRMWARE_V2_STAGED_REG,
+    PLANNER_PUSHABLE_REG,
+    REGISTRY,
+    TIER1_REG,
+    TunableDef,
+    registry_value_error,
+    split_entity_name,
+)
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 
@@ -714,3 +724,260 @@ class TestPlannerWriteContractLockout:
         # FSM switch force-on rewrite.
         assert "if param in FORCED_ON_SWITCH_PARAMS and float(value) < 0.5:" in text
         assert "value = 1.0" in text
+
+
+# ─── Drift Guard #2 — step, label and unit match the firmware entities (VD-29) ───
+#
+# TunableDef.step, label and unit are literals copied from firmware/greenhouse/
+# tunables.yaml (no image carries the YAML). These guards fail on any drift, the
+# same way the fw_clamp guard does: rows are matched to entities by esp_object_id.
+
+_STEP_RE = re.compile(r"\n\s*step:\s*(?P<value>-?\d+(?:\.\d+)?)")
+_YAML_NAME_LINE_RE = re.compile(r'^\s*name:\s*"(?P<name>[^"]+)"\s*$', re.MULTILINE)
+
+# ingestor/tasks/band_anchors.py::_round_for_push as reviewed with the anchor
+# steps. The test compares ASTs, so formatting and comments may change freely.
+_ROUND_FOR_PUSH_RULE = """
+def _round_for_push(param: str, value: float) -> float:
+    if param.startswith("band_temp_"):
+        return round(value, 1)
+    if "vpd" in param:
+        return round(value, 2)
+    return float(round(value))
+"""
+
+
+def _push_quantum(name: str) -> float:
+    """The quantum _ROUND_FOR_PUSH_RULE rounds an anchor value to."""
+    if name.startswith("band_temp_"):
+        return 0.1
+    if "vpd" in name:
+        return 0.01
+    return 1.0
+
+
+def _parse_entities(text: str) -> tuple[dict[str, tuple[str, float | None]], dict[str, str]]:
+    """Return ({number object_id: (name, step)}, {switch object_id: name}).
+
+    Uses the block regex ``_parse_number_bounds`` uses; the switch section runs
+    from ``switch:`` to ``button:``.
+    """
+    number_section, _, rest = text.partition("\nswitch:")
+    switch_section = rest.partition("\nbutton:")[0]
+    numbers: dict[str, tuple[str, float | None]] = {}
+    for m in _NUMBER_BLOCK_RE.finditer(number_section):
+        body = "\n" + m.group("body")
+        name_m = _NUMBER_NAME_RE.search(body)
+        if not name_m:
+            continue
+        step_m = _STEP_RE.search(body)
+        step = float(step_m.group("value")) if step_m else None
+        numbers[_esphome_object_id(name_m.group("name"))] = (name_m.group("name"), step)
+    switches: dict[str, str] = {}
+    for m in _NUMBER_BLOCK_RE.finditer(switch_section):
+        name_m = _NUMBER_NAME_RE.search("\n" + m.group("body"))
+        if name_m:
+            switches[_esphome_object_id(name_m.group("name"))] = name_m.group("name")
+    return numbers, switches
+
+
+def _step_mismatches(registry: Mapping[str, TunableDef], tunables_text: str) -> list[str]:
+    """Rows whose step disagrees with their tunables.yaml entity; empty when clean.
+
+    A number's step must equal its entity's ``step:``; a switch with a switch
+    entity must have step 1.0; a row with no entity keeps step None, except the
+    56 staged anchors (``test_anchor_steps_use_push_quanta``).
+    """
+    numbers, switches = _parse_entities(tunables_text)
+    mismatches: list[str] = []
+    for name, spec in sorted(registry.items()):
+        key = spec.esp_object_id
+        if spec.kind == "numeric" and key in numbers:
+            entity_step = numbers[key][1]
+            if entity_step is None or spec.step is None or abs(spec.step - entity_step) > 1e-9:
+                mismatches.append(f"{name}: registry step={spec.step} tunables.yaml step={entity_step}")
+        elif spec.kind == "switch" and key in switches:
+            if spec.step != 1.0:
+                mismatches.append(f"{name}: a switch entity holds 0/1, so step must be 1.0, registry step={spec.step}")
+        elif name not in FIRMWARE_V2_STAGED_REG and spec.step is not None:
+            mismatches.append(f"{name}: no tunables.yaml entity, so step must be None, registry step={spec.step}")
+    return mismatches
+
+
+def _label_mismatches(registry: Mapping[str, TunableDef], tunables_text: str) -> list[str]:
+    """Rows whose label or unit disagrees with their entity name; empty when clean.
+
+    A row with a number or switch entity carries ``split_entity_name()`` of the
+    entity ``name:``; a row with no entity carries its registry name and no
+    unit, except the 56 staged anchors (``test_anchor_labels_match_readback_names``).
+    """
+    numbers, switches = _parse_entities(tunables_text)
+    mismatches: list[str] = []
+    for name, spec in sorted(registry.items()):
+        key = spec.esp_object_id
+        if spec.kind == "numeric" and key in numbers:
+            expected = split_entity_name(numbers[key][0])
+        elif spec.kind == "switch" and key in switches:
+            expected = split_entity_name(switches[key])
+        elif name in FIRMWARE_V2_STAGED_REG:
+            continue
+        else:
+            expected = (name, None)
+        if (spec.label, spec.unit) != expected:
+            mismatches.append(f"{name}: registry (label, unit)={(spec.label, spec.unit)!r}, expected {expected!r}")
+    return mismatches
+
+
+def _wire_slug(display_name: str) -> str:
+    """ESPHome's per-character object_id normalization (aioesphomeapi slug)."""
+    return "".join(char if char.isascii() and char.isalnum() else "_" for char in display_name.lower())
+
+
+class TestStepLabelUnitDriftGuard:
+    def test_registry_steps_match_tunables_yaml(self, tunables_yaml: str) -> None:
+        numbers, switches = _parse_entities(tunables_yaml)
+        assert len(numbers) > 100 and len(switches) > 20, "tunables.yaml entity parse came back short"
+        mismatches = _step_mismatches(REGISTRY, tunables_yaml)
+        assert not mismatches, f"step drift in {len(mismatches)} rows:\n  " + "\n  ".join(mismatches)
+        assert REGISTRY["site_pressure_hpa"].step == 1.0
+        assert REGISTRY["mister_engage_kpa"].step == 0.05
+
+    @pytest.mark.parametrize(
+        ("name", "step"),
+        [
+            ("site_pressure_hpa", 5.0),  # number entity, wrong step
+            ("mister_engage_kpa", None),  # number entity, step missing
+            ("sw_fog_closes_vent", None),  # switch entity, step not 1.0
+            ("fog_time_window_start", 1.0),  # no entity, step must stay None
+        ],
+    )
+    def test_step_guard_fails_on_a_patched_row(self, tunables_yaml: str, name: str, step: float | None) -> None:
+        patched = {**REGISTRY, name: REGISTRY[name].model_copy(update={"step": step})}
+        assert any(m.startswith(f"{name}:") for m in _step_mismatches(patched, tunables_yaml))
+
+    def test_policy_steps_match_entity_grids(self) -> None:
+        """The 48 policy fields snap to the deployed entity grid (switches: 1.0)."""
+        from verdify_schemas.component_executor import ENTITY_GRIDS
+
+        assert len(ENTITY_GRIDS) == 48
+        mismatched = {}
+        for name, grid in ENTITY_GRIDS.items():
+            expected = 1.0 if grid.step is None else float(grid.step)
+            if REGISTRY[name].step != expected:
+                mismatched[name] = (REGISTRY[name].step, expected)
+        assert not mismatched, f"registry step != ENTITY_GRIDS step: {mismatched}"
+
+    def test_anchor_steps_use_push_quanta(self) -> None:
+        """The 56 staged anchors use the band-anchor push rounding as their step.
+
+        Reads ingestor/tasks/band_anchors.py as text (the ingestor is not
+        imported) and pins ``_round_for_push`` so the two cannot drift apart.
+        """
+        source = (REPO_ROOT / "ingestor" / "tasks" / "band_anchors.py").read_text()
+        live = next(
+            node
+            for node in ast.parse(source).body
+            if isinstance(node, ast.FunctionDef) and node.name == "_round_for_push"
+        )
+        assert ast.dump(live) == ast.dump(ast.parse(_ROUND_FOR_PUSH_RULE).body[0]), (
+            "band_anchors._round_for_push changed: update the anchor steps (_fw2_push_step in "
+            "tunable_registry.py) and _ROUND_FOR_PUSH_RULE together"
+        )
+        assert len(FIRMWARE_V2_STAGED_REG) == 56
+        mismatched = {
+            name: (REGISTRY[name].step, _push_quantum(name))
+            for name in sorted(FIRMWARE_V2_STAGED_REG)
+            if REGISTRY[name].step != _push_quantum(name)
+        }
+        assert not mismatched, f"anchor step != _round_for_push quantum: {mismatched}"
+        assert REGISTRY["band_temp_low_sr"].step == 0.1
+        assert REGISTRY["zone_vpd_width_below_center"].step == 0.01
+        assert REGISTRY["zone_priority_center"].step == 1.0
+        assert REGISTRY["wet_taper_before_sunset_min"].step == 1.0
+
+    def test_registry_labels_match_tunables_yaml(self, tunables_yaml: str) -> None:
+        mismatches = _label_mismatches(REGISTRY, tunables_yaml)
+        assert not mismatches, f"label/unit drift in {len(mismatches)} rows:\n  " + "\n  ".join(mismatches)
+        assert (REGISTRY["mister_engage_kpa"].label, REGISTRY["mister_engage_kpa"].unit) == ("VPD Mister Engage", "kPa")
+        assert (REGISTRY["fog_min_temp_f"].label, REGISTRY["fog_min_temp_f"].unit) == ("Fog Min Temp", "°F")
+        assert (REGISTRY["sw_fog_closes_vent"].label, REGISTRY["sw_fog_closes_vent"].unit) == ("Fog Closes Vent", None)
+
+    @pytest.mark.parametrize(
+        ("name", "field", "value"),
+        [
+            ("mister_engage_kpa", "label", "VPD Mister Engage kPa"),
+            ("mister_engage_kpa", "unit", "°F"),
+            ("fog_min_temp_f", "unit", None),
+            ("sw_fog_closes_vent", "label", "sw_fog_closes_vent"),
+            ("fog_time_window_start", "label", "Fog Window Start"),
+        ],
+    )
+    def test_label_guard_fails_on_a_patched_row(
+        self, tunables_yaml: str, name: str, field: str, value: str | None
+    ) -> None:
+        patched = {**REGISTRY, name: REGISTRY[name].model_copy(update={field: value})}
+        assert any(m.startswith(f"{name}:") for m in _label_mismatches(patched, tunables_yaml))
+
+    def test_anchor_labels_match_readback_names(self) -> None:
+        """Each anchor's label and unit rebuild its cfg_* readback name exactly.
+
+        The anchors have no tunables.yaml entity (the zone priorities aside);
+        their firmware names are the ``Cfg • <label> (<unit>)`` readbacks in
+        sensors.yaml, whose ESPHome slug is the anchor's cfg_readback_object_id.
+        """
+        sensors = (REPO_ROOT / "firmware" / "greenhouse" / "sensors.yaml").read_text(encoding="utf-8")
+        readback_names = set(_YAML_NAME_LINE_RE.findall(sensors))
+        assert len(FIRMWARE_V2_STAGED_REG) == 56
+        missing: list[str] = []
+        rewired: list[str] = []
+        for name in sorted(FIRMWARE_V2_STAGED_REG):
+            spec = REGISTRY[name]
+            rebuilt = f"Cfg • {spec.label}" + (f" ({spec.unit})" if spec.unit else "")
+            if rebuilt not in readback_names:
+                missing.append(f"{name}: {rebuilt!r}")
+            elif _wire_slug(rebuilt) != spec.cfg_readback_object_id:
+                rewired.append(f"{name}: {spec.cfg_readback_object_id!r} != slug of {rebuilt!r}")
+        assert not missing, "anchor label/unit match no sensors.yaml name:\n  " + "\n  ".join(missing)
+        assert not rewired, "anchor cfg_readback_object_id changed:\n  " + "\n  ".join(rewired)
+        assert (REGISTRY["band_vpd_low_sr"].label, REGISTRY["band_vpd_low_sr"].unit) == ("Band VPD Low SR", "kPa")
+        assert REGISTRY["band_vpd_low_sr"].cfg_readback_object_id == "cfg___band_vpd_low_sr__kpa_"
+        assert (REGISTRY["band_temp_high_mid"].label, REGISTRY["band_temp_high_mid"].unit) == (
+            "Band Temp High Mid",
+            "°F",
+        )
+        assert (REGISTRY["manual_override_timeout_min"].label, REGISTRY["manual_override_timeout_min"].unit) == (
+            "Manual Override Timeout",
+            "min",
+        )
+        assert (REGISTRY["zone_priority_center"].label, REGISTRY["zone_priority_center"].unit) == (
+            "Zone Priority Center",
+            None,
+        )
+
+    def test_every_row_has_a_label(self) -> None:
+        unlabeled = sorted(name for name, spec in REGISTRY.items() if not spec.label)
+        assert not unlabeled, f"registry rows without a label: {unlabeled}"
+        # Rows with no firmware entity carry their registry name and no unit or step.
+        for name in ("fog_time_window_start", "fog_time_window_end", "fallback_window_s", "feed_start_hour"):
+            spec = REGISTRY[name]
+            assert (spec.label, spec.unit, spec.step) == (name, None, None)
+
+    @pytest.mark.parametrize(
+        ("name", "expected"),
+        [
+            ("VPD Mister Engage kPa", ("VPD Mister Engage", "kPa")),
+            ("Fog Min Temp (F)", ("Fog Min Temp", "°F")),
+            ("Band Track Fraction", ("Band Track Fraction", None)),
+            ("Mister Engage Delay (s)", ("Mister Engage Delay", "s")),
+            ("Site Pressure (hPa)", ("Site Pressure", "hPa")),
+            ("Set Temp Low °F", ("Set Temp Low", "°F")),
+            ("Direct Wet Stress Min Dew Margin F", ("Direct Wet Stress Min Dew Margin", "°F")),
+            ("Irrig VPD Boost %", ("Irrig VPD Boost", "%")),
+            ("Fog RH Ceiling (%)", ("Fog RH Ceiling", "%")),
+            ("Min Fan OFF (s)", ("Min Fan OFF", "s")),
+            ("GL Grow Min Off S", ("GL Grow Min Off S", None)),
+            ("Cool All Fans At High", ("Cool All Fans At High", None)),
+        ],
+    )
+    def test_split_entity_name(self, name: str, expected: tuple[str, str | None]) -> None:
+        assert split_entity_name(name) == expected

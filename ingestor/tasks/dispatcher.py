@@ -16,6 +16,15 @@ from esp32_push import (
     push_to_esp32_detailed,
 )
 
+# The readback comparators moved to verdify_schemas (VD-29). Callers still load
+# both names from tasks.dispatcher, and ingestor.py takes readback_abs_tolerance
+# through the tasks star import, so they stay importable from here.
+from verdify_schemas.setting_values import (
+    readback_abs_tolerance,  # noqa: F401 - re-exported for tasks.readback_abs_tolerance
+    readback_values_equivalent,
+    within_relative_deadband,
+)
+
 from . import band_anchors, bounded_reconcile, c1_overlay, drift_probe
 from ._common import (
     _PHYSICS_INVARIANTS,
@@ -476,28 +485,12 @@ def _should_skip(last: float | None, val: float, rel: float = 0.01, abs_floor: f
     Replaces the previous absolute 0.1/0.05/0.02/0.01 thresholds that were
     scale-inappropriate — 0.05 on a 0.8 kPa VPD setpoint was 6% (too coarse),
     while the same 0.05 on a 75°F temp setpoint was 0.07% (fine). 1% relative
-    is the right choice across the whole setpoint range.
+    is the right choice across the whole setpoint range. The rule itself is
+    `verdify_schemas.setting_values.within_relative_deadband`, its one copy.
     """
     if last is None:
         return False
-    return abs(last - val) / max(abs(val), abs_floor) < rel
-
-
-def readback_abs_tolerance(param: str) -> float:
-    """Absolute cfg-readback tolerance for quantized firmware readbacks."""
-    return 1.0 if param in SECOND_READBACK_ABS_TOLERANCE_PARAMS else 0.0
-
-
-def readback_values_equivalent(param: str, observed: float, desired: float) -> bool:
-    """Return true when a cfg_* readback is close enough to the requested value."""
-    try:
-        observed_f = float(observed)
-        desired_f = float(desired)
-    except (TypeError, ValueError):
-        return False
-    if _should_skip(observed_f, desired_f):
-        return True
-    return abs(observed_f - desired_f) <= readback_abs_tolerance(param)
+    return within_relative_deadband(last, val, rel, abs_floor)
 
 
 def _heap_push_defer_active(
