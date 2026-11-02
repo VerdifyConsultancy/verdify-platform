@@ -335,7 +335,7 @@ API-IRR-NN) are the `operationId`s in the [OpenAPI](openapi/dashboard-api.v1.yam
 *P1 · Next · Now.* As the owner-operator, I want the next plan transition, the next Iris trigger, the next run per line and sunrise and sunset in one list, so that I anticipate instead of react.
 - The next transition shows its time, the settings it changes and an AI label; manual settings are left out.
 - The next occurrence per line shows time, minutes and schedule; a paused one says so, and by whom.
-- Sunrise and sunset come from `ingestor/solar.py`, which mirrors the firmware's solar code.
+- Sunrise and sunset come from `verdify_schemas/solar.py` (re-exported by `ingestor/solar.py`), which mirrors the firmware's solar code.
 
 #### US-NOW-06 · Honest degraded states
 *P1, P2 · MVP · every page.* As the owner-operator, I want "API unavailable", "ingestor not running", "controller not reporting" and "data stale" told apart and each panel to fail alone, so that I never mistake an outage for an all-clear or act on old numbers.

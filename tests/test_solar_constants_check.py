@@ -1,7 +1,8 @@
 """#393 gate: check-solar-constants.py catches cross-surface solar-constant drift.
 
 Value-equality guard over the intentionally-triplicated Longmont site constants
-(lat 40.167 / lon -105.102 / zenith 90.833): ingestor/solar.py (SSOT),
+(lat 40.167 / lon -105.102 / zenith 90.833): verdify_schemas/solar.py (SSOT;
+ingestor/solar.py re-exports it since VD-37),
 firmware/lib/greenhouse_solar.h + the vendored twin copy, migration 186, and
 the dumped db/schema.sql fn_solar_* bodies. Mutation tests copy the real
 surfaces into a tmp tree so firmware/SQL sources are never modified in place.
@@ -19,7 +20,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SURFACE_RELS = [
-    "ingestor/solar.py",
+    "verdify_schemas/solar.py",
     "firmware/lib/greenhouse_solar.h",
     "db/migrations/186-noaa-solar-phase-parity.sql",
     "db/schema.sql",
@@ -71,7 +72,7 @@ def test_firmware_latitude_drift_fails_naming_both_locations(guard_tree, capsys)
     assert guard.main([]) == 1
     err = capsys.readouterr().err
     assert "firmware/lib/greenhouse_solar.h" in err
-    assert "ingestor/solar.py" in err  # names the canonical side too
+    assert "verdify_schemas/solar.py" in err  # names the canonical side too
     assert "latitude" in err
 
 
@@ -86,13 +87,13 @@ def test_migration_longitude_drift_fails(guard_tree, capsys):
     assert guard.main([]) == 1
     err = capsys.readouterr().err
     assert "db/migrations/186-noaa-solar-phase-parity.sql" in err
-    assert "ingestor/solar.py" in err
+    assert "verdify_schemas/solar.py" in err
     assert "longitude" in err
 
 
 def test_canonical_zenith_drift_fails_every_mirror(guard_tree, capsys):
     guard, root = guard_tree
-    _mutate(root, "ingestor/solar.py", "_ZENITH_DEG = 90.833", "_ZENITH_DEG = 90.0")
+    _mutate(root, "verdify_schemas/solar.py", "_ZENITH_DEG = 90.833", "_ZENITH_DEG = 90.0")
     assert guard.main([]) == 1
     err = capsys.readouterr().err
     for rel in SURFACE_RELS[1:]:
