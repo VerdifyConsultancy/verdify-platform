@@ -675,6 +675,7 @@ As built (VD-14, `dashboard/app/routes/equipment.tsx`), where the board settles 
 | Topic | As built |
 |---|---|
 | Row | The API's label and state (ON, OFF or UNKNOWN; the vent OPEN or CLOSED) over one line of facts in words: "since 08:31 · on today 2 h 10 min · cycles 6 · reported 2 h ago" (the vent "open today"). A null since, time on or cycle count reads "—" |
+| Since | "HH:MM" on today's America/Denver day and "MM/DD HH:MM" before it, 24-hour, where the wireframe's "Fri 07:43" reads "10/30 07:43"; the full time is in the `title`. A known state whose run has not changed within API-13's 31-day edge window (#1167) has a null since and reads "since — (no change in 31 days)" |
 | Unknown | "UNKNOWN · last report 14 min ago" beside the name, and the facts read "since — · on today — · cycles —", because API-13 serves none of them while the state is unknown |
 | Grow lights | "OFF (controller) · Lutron OFF", with "▲ DIFFER" in an amber tag when both are known and differ; an unknown Lutron state reads "Lutron UNKNOWN · 11 min ago"; a null intent reads "— (controller)". A note in the Light card calls the Lutron state sensed and says since, time on and cycles follow it |
 | Omitted actuator | Its `equipment_state` key, with "—" and "no data", never a made-up name or OFF. An item outside the fixed list follows its group's fixed rows; an `_intent` key is never a row |

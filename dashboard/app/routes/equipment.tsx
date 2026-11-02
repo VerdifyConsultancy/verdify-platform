@@ -84,10 +84,18 @@ function Ago({ at }: { at: string }) {
 
 const runtime = (seconds: number | null | undefined) => (seconds === null || seconds === undefined ? "—" : formatValue(seconds / 60, "min"));
 
+/**
+ * API-13 reads each actuator's edges over this many days (`STATE_WINDOW` in verdify_services/reads.py, #1167): a known
+ * state with a null `since` has not changed in that window, so the start of its run is older than the API looks.
+ */
+export const SINCE_WINDOW_DAYS = 31;
+/** A null since with its reason: a known state has not changed in API-13's window; an unknown one says why in its head. */
+const noSince = (state: string) => (known(state) ? `— (no change in ${SINCE_WINDOW_DAYS} days)` : "—");
+
 /** Since, time on today, cycles today and, unless the head already says it, the report's age. A null value is "—". */
 function Facts({ item, age }: { item: EquipmentItem; age: boolean }) {
   const parts: ReactNode[] = [
-    <>since {item.since ? <Since at={item.since} /> : "—"}</>,
+    <>since {item.since ? <Since at={item.since} /> : noSince(item.state)}</>,
     <>{item.equipment === "vent" ? "open" : "on"} today {runtime(item.runtime_today_s)}</>,
     <>cycles {item.cycles_today ?? "—"}</>,
   ];

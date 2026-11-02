@@ -6,6 +6,9 @@
  * rule, the 24 h and 72 h lanes from API-05 with the unknown span hatched, viewers, per-panel errors and the cadence.
  * The clock is the screens' 10:42 America/Denver on 2026-11-02.
  */
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
@@ -16,7 +19,7 @@ import { ServerClockProvider } from "../components/freshness";
 import { renderUi, text } from "../components/test-render";
 import { SessionProvider, type Role } from "../lib/session";
 import { NOW, advance, requests, sentAt, startFixtureApi, stopFixtureApi, type FixtureOptions, type Recorded } from "../lib/test-fixture-api";
-import Equipment, { EquipmentGroups, lanesRange, lightsDiffer, links, type EquipmentItem } from "./equipment";
+import Equipment, { EquipmentGroups, SINCE_WINDOW_DAYS, lanesRange, lightsDiffer, links, type EquipmentItem } from "./equipment";
 
 vi.mock("uplot", async () => ({ default: (await import("../charts/fixtures/uplot-mock")).MockPlot }));
 
@@ -138,6 +141,26 @@ test("ON and the vent's OPEN read from the API's state; runtime reads whole minu
   } finally {
     vi.useRealTimers();
   }
+});
+
+test("a known state with no since says why: it has not changed in API-13's 31-day window", () => {
+  vi.useFakeTimers({ now: NOW });
+  try {
+    // Live, half the relays (the reserved and unplumbed lines) have had one state for over a month: API-13 serves since null.
+    const idle = { ...inBand("fert_master_valve"), since: null };
+    const fog = { ...inBand("fog"), state: "on", since: null, runtime_today_s: 38_520, cycles_today: 0 };
+    renderUi(<EquipmentGroups items={[idle, fog]} state="ready" />);
+    expect(read("fert_master_valve")).toEqual({ name: "Fert master L03", state: "Off", facts: "since — (no change in 31 days) · on today 0 min · cycles 0 · reported 14 d ago" });
+    expect(read("fog")).toEqual({ name: "Fog L11", state: "On", facts: "since — (no change in 31 days) · on today 10 h 42 min · cycles 0 · reported 5 h ago" });
+    // No since time is made up: the row's one time is its report's.
+    expect([...rowOf("fert_master_valve")!.querySelectorAll("time")].map((time) => text(time))).toEqual(["14 d ago"]);
+  } finally {
+    vi.useRealTimers();
+  }
+  // The window is the API's: STATE_WINDOW in verdify_services/reads.py.
+  // A file path, not `new URL(path, import.meta.url)`: under jsdom Vite serves that as an http: asset URL.
+  const reads = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../../verdify_services/reads.py"), "utf8");
+  expect(Number(/^STATE_WINDOW = timedelta\(days=(\d+)\)/m.exec(reads)![1])).toBe(SINCE_WINDOW_DAYS);
 });
 
 test("with the controller not reporting, every state reads unknown with the age of its last report, never OFF, and no since, runtime or cycles", async () => {
