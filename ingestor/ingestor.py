@@ -4398,21 +4398,6 @@ def _launch_due_tasks(
     return started
 
 
-def _poll_stage_approval(
-    state_dir: Path,
-    observed: tuple[int, int, int] | None,
-    pending: tuple[int, int, int] | None,
-) -> tuple[tuple[int, int, int] | None, tuple[int, int, int] | None]:
-    stamp = bounded_reconcile.approval_file_stamp(state_dir)
-    if stamp != observed:
-        pending = stamp
-    # Reassert until a dispatcher launch consumes this replacement. A prior
-    # in-flight pass may clear the event after the file was replaced.
-    if pending is not None:
-        shared.setpoint_dispatch_requested.set()
-    return stamp, pending
-
-
 def _poll_drift_approval(
     state_dir: Path,
     observed: tuple[int, int, int] | None,
@@ -4542,8 +4527,6 @@ async def task_loop(
     ]
     last_run: dict[str, float] = {name: 0.0 for name, _, _ in TASKS}
     running: dict[str, asyncio.Task[None]] = {}
-    approval_stamp = None
-    pending_approval_stamp = None
     drift_approval_stamp = None
     pending_drift_approval_stamp = None
 
@@ -4555,9 +4538,8 @@ async def task_loop(
         while True:
             await asyncio.sleep(1)
             now = asyncio.get_running_loop().time()
-            approval_stamp, pending_approval_stamp = _poll_stage_approval(
-                STATE_DIR, approval_stamp, pending_approval_stamp
-            )
+            # Ordinary dispatch reads no approval file (VD-62); only the
+            # one-field drift probe and the C1 overlay keep their own files.
             drift_approval_stamp, pending_drift_approval_stamp = _poll_drift_approval(
                 STATE_DIR, drift_approval_stamp, pending_drift_approval_stamp
             )
@@ -4565,7 +4547,6 @@ async def task_loop(
             forced = {"setpoint_dispatch"} if shared.setpoint_dispatch_requested.is_set() else set()
             started = _launch_due_tasks(pool, TASKS, last_run, running, now, task_timeouts, forced)
             if "setpoint_dispatch" in started:
-                pending_approval_stamp = None
                 pending_drift_approval_stamp = None
             if started:
                 log.debug("Task scheduler launched: %s", ", ".join(started))
@@ -5315,6 +5296,10 @@ async def main() -> None:
     # ── Capture mode (prod, and the legacy VM single-writer) ──────────────────
     log.info("Verdify ingestor starting (greenhouse: %s)...", GREENHOUSE_ID)
     await reconcile_interrupted_device_writes(pool)
+    # VD-62: ordinary dispatch no longer stages. Rename (never delete) any
+    # halted-run state, approval and halted drift-probe receipt into
+    # archived/<UTC stamp>/ before the task loop starts.
+    bounded_reconcile.archive_halted_runs(STATE_DIR)
 
     # #113: prod-only publish-all. Set up the bus publisher; the flush path
     # re-emits every flushed row. Best-effort connect — a bus outage must never
