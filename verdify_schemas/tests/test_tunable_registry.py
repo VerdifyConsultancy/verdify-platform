@@ -1239,11 +1239,15 @@ class TestRegisteredFirmwareTunables:
             assert registry_value_error(name, hi) is None
             assert registry_value_error(name, hi + step) is not None
 
-    def test_onchip_band_is_read_only_with_its_reason(self) -> None:
+    def test_onchip_band_is_read_only_with_its_reason(self, tunables_yaml: str) -> None:
         spec = REGISTRY["sw_onchip_band_enabled"]
         assert spec.esp_object_id is None, "a push route would make the band owner writable"
         assert spec.notes.startswith("Decides which side owns the band.")
-        assert (spec.label, spec.unit) == ("On-Chip Band Enabled", None)
+        # With no esp_object_id the step and label guards skip this row, so its
+        # own label is checked here against the switch whose getter returns it.
+        (entity,) = [e for e in _tunable_entities(tunables_yaml) if e.global_id == "sw_onchip_band_enabled"]
+        assert entity.section == "switch"
+        assert (spec.label, spec.unit) == split_entity_name(entity.name) == ("On-Chip Band Enabled", None)
 
     def test_readback_routes_derive_from_the_rows_only(self) -> None:
         entity_map = _entity_map()
