@@ -231,6 +231,7 @@ $PY -m pytest -q -rs \
   tests/test_ha_light_writer_boundary.py \
   tests/test_ha_trim.py \
   tests/test_hydro_probe.py \
+  tests/test_ingestor_heartbeat.py \
   tests/test_ingestor_setpoint_placement.py \
   tests/test_ingestor_gap_snapshot.py \
   tests/test_source_spool.py \
@@ -285,6 +286,7 @@ $PY -m pytest -q -rs \
   tests/test_twin_agreement_report.py \
   tests/test_twin_asof_migration.py \
   tests/test_twin_live_driver.py \
+  tests/test_verdify_services_reads.py \
   tests/test_verdify_traefik_placement.py \
   tests/test_verdify_tier1_owner_exclusions.py \
   tests/test_dashboard_manifests.py \
