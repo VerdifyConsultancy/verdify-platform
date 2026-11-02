@@ -323,6 +323,7 @@ def test_equipment_reads_the_newest_state_and_collapses_repeats(dsn):
         await states(conn, "heat1", [(t0 - 2 * H, False), (t0 - 10 * MIN, True)])
         await states(conn, "mister_center", [(t0 - 3 * H, False), (t0 - 7 * MIN, True)])
         await states(conn, "fog", [(t0 - 3 * H, False)])
+        await states(conn, "drip_wall", [(t0 - 40 * D, False)])  # no row in the 31-day window
         main = [(t0 - 2 * D, False), (t0 - 1 * D, False), (t0 - 6 * step, True), (t0 - 5 * step, True)]
         main += [(t0 - 4 * step, True), (t0 - 3 * step, False), (t0 - 2 * step, True), (t0 - step, True)]
         await states(conn, "grow_light_main", main)
@@ -331,9 +332,10 @@ def test_equipment_reads_the_newest_state_and_collapses_repeats(dsn):
         await states(conn, "fan_burst_active", [(t0 - 1 * H, False), (t0 - 3 * MIN, True)])
         await states(conn, "fog_burst_active", [(t0 - 1 * H, False), (t0 - 2 * MIN, True)])
         await system(conn, "fog_block_reason", [(t0 - 2 * MIN, "occupancy")])
-        await system(conn, "greenhouse_state", [(t0 - 3 * H, "IDLE"), (t0 - 40 * MIN, "SEALED_MIST")])
-        await system(conn, "greenhouse_state", [(t0 - 20 * MIN, "SEALED_MIST")])  # a reconnect repeat
-        await system(conn, "mister_state", [(t0 - 10 * MIN, "S1")])
+        # The firmware's label carries the stage; mister_state is the pulse machine, idle while fog runs.
+        await system(conn, "greenhouse_state", [(t0 - 3 * H, "IDLE"), (t0 - 40 * MIN, "SEALED_MIST_FOG")])
+        await system(conn, "greenhouse_state", [(t0 - 20 * MIN, "SEALED_MIST_FOG")])  # a reconnect repeat
+        await system(conn, "mister_state", [(t0 - 10 * MIN, "WATCH")])
         await system(conn, "mode_reason", [(t0 - 40 * MIN, "seal_enter")])
 
         items = {item.equipment: item for item in (await as_reader(conn, reads.equipment)).items}
@@ -347,6 +349,8 @@ def test_equipment_reads_the_newest_state_and_collapses_repeats(dsn):
         grow = items["grow_light_grow"]  # Home Assistant down: the Lutron row is 11 min old
         assert (grow.state, grow.since, grow.observed_at, grow.intent) == ("unknown", None, t0 - 11 * MIN, None)
         assert (items["heat2"].state, items["heat2"].observed_at) == ("unknown", None)
+        drip = items["drip_wall"]  # known from its newest older row, with no since
+        assert (drip.state, drip.since, drip.observed_at, drip.cycles_today) == ("off", None, t0 - 40 * D, 0)
 
         now = await as_reader(conn, reads.now)
         running = {item.equipment: item for item in now.running}
@@ -357,7 +361,38 @@ def test_equipment_reads_the_newest_state_and_collapses_repeats(dsn):
             reads.Override(kind="fans", since=t0 - 3 * MIN, ends_at=None, held_reason=None),
             reads.Override(kind="humidify", since=t0 - 2 * MIN, ends_at=None, held_reason="occupancy"),
         ]
-        assert now.mode == reads.Mode(code="SEALED_MIST", stage="S1", reason="seal_enter", since=t0 - 40 * MIN)
+        assert now.mode == reads.Mode(code="SEALED_MIST", stage="FOG", reason="seal_enter", since=t0 - 40 * MIN)
+
+    scenario(dsn, body)
+
+
+def test_a_burst_ends_at_its_sent_commands_minutes(dsn):
+    """ends_at reads the override command sent within 2 min before the edge, once irrigation_command exists (M3)."""
+
+    async def body(conn, t0):
+        await reporting_now(conn, t0)
+        await states(conn, "fan_burst_active", [(t0 - 1 * H, False), (t0 - 3 * MIN, True)])
+        await states(conn, "vent_bypass_active", [(t0 - 1 * H, False), (t0 - 5 * MIN, True)])
+        await conn.execute(
+            f"CREATE TABLE {SCHEMA}.irrigation_command (kind text, args jsonb, status text, sent_at timestamptz)"
+        )
+        try:
+            commands = [
+                ({"kind": "fans", "minutes": 15}, "sent", t0 - 3 * MIN - 30 * S),
+                ({"kind": "fans", "minutes": 99}, "sent", t0 - 10 * MIN),  # more than 2 min before the edge
+                ({"kind": "vent_bypass", "minutes": 20}, "failed", t0 - 5 * MIN - 10 * S),  # never sent
+            ]
+            await conn.executemany(
+                "INSERT INTO irrigation_command (kind, args, status, sent_at) VALUES ('override', $1::jsonb, $2, $3)",
+                [(json.dumps(args), status, sent_at) for args, status, sent_at in commands],
+            )
+            # Without a grant on it the read cannot see it, and no burst has an end time.
+            assert {item.ends_at for item in (await as_reader(conn, reads.now)).overrides} == {None}
+            await conn.execute(f"GRANT SELECT ON {SCHEMA}.irrigation_command TO {ROLE}")
+            ends = {item.kind: item.ends_at for item in (await as_reader(conn, reads.now)).overrides}
+            assert ends == {"fans": t0 + 12 * MIN, "vent_bypass": None}  # a push-button burst has none
+        finally:
+            await conn.execute(f"DROP TABLE {SCHEMA}.irrigation_command")
 
     scenario(dsn, body)
 
@@ -378,16 +413,19 @@ def test_a_stale_heartbeat_or_climate_reads_unknown_with_ages(dsn):
 
     async def stale_climate(conn, t0):
         await heartbeat(conn, t0 - 30 * S)
-        await climate(conn, t0 - 6 * MIN, temp_avg=79.0, vpd_avg=1.0)
+        await climate(conn, t0 - 6 * MIN, temp_avg=79.0, vpd_avg=1.0, flow_gpm=0.0)
         for role, value in {"temp_low": 74.92, "temp_high": 84.92, "vpd_low": 0.873, "vpd_high": 1.303}.items():
             await snapshot(conn, t0 - 40 * S, f"band_house_{role}", value, "house", role)
         await states(conn, "fan1", [(t0 - 2 * H, False)])
+        await states(conn, "leak_detected", [(t0 - 2 * H, False)])
         await states(conn, "heat1", [(t0 - 50 * MIN, True)])
         await states(conn, "grow_light_main", [(t0 - 12 * MIN, True)])
         await states(conn, "grow_light_main_intent", [(t0 - 1 * H, True)])
         now = await as_reader(conn, reads.now)
         assert not now.freshness.ingestor.stale and now.freshness.climate.stale
         assert now.freshness.climate.age_s >= 360 and now.band.vpd_kpa.verdict == "unavailable"
+        # The 6-minute-old meter reading is not "no water now".
+        assert (now.leak.active, now.leak.flow_gpm, now.leak.gal_last_10min) == (None, None, None)
         items = {item.equipment: item for item in (await as_reader(conn, reads.equipment)).items}
         assert {item.state for item in items.values()} == {"unknown"}
         assert items["fan1"].observed_at == t0 - 2 * H and items["heat1"].observed_at == t0 - 50 * MIN

@@ -10,6 +10,7 @@ SQL itself runs in tests/test_dashboard_db_reads.py on the campaign database.
 from __future__ import annotations
 
 import ast
+import asyncio
 import re
 import sys
 from datetime import UTC, datetime, timedelta
@@ -185,6 +186,38 @@ def test_required_trigger_map(status, due_in_s, expected):
     assert reads.required_trigger_state(status, due, AT) == expected
 
 
+@pytest.mark.parametrize(
+    ("label", "mister_state", "expected"),
+    [
+        # The firmware's SEALED_MIST label carries the stage; mister_state (the pulse machine) never reads FOG.
+        ("SEALED_MIST_FOG", "WATCH", ("SEALED_MIST", "FOG")),
+        ("SEALED_MIST_S2", None, ("SEALED_MIST", "S2")),
+        ("SEALED_MIST", "S1", ("SEALED_MIST", "S1")),  # a bare label takes mister_state
+        ("SEALED_MIST", "0.0", ("SEALED_MIST", None)),
+        ("IDLE", "S1", ("IDLE", None)),
+        ("SAFETY_COOL", None, ("SAFETY_COOL", None)),
+        (None, "S1", ("UNKNOWN", None)),
+    ],
+)
+def test_mode_splits_the_sealed_mist_label_into_code_and_stage(label, mister_state, expected):
+    assert reads.mode_code_and_stage(label, mister_state) == expected
+
+
+@pytest.mark.parametrize(
+    ("reason", "fog_on", "held"),
+    [
+        ("occupancy", False, "occupancy"),
+        ("vent_interlock", False, "vent_interlock"),
+        ("occupancy", True, None),  # fog runs: nothing is held
+        ("served", False, None),  # served means the fog relay is on
+        ("none", False, None),
+        (None, False, None),
+    ],
+)
+def test_a_humidify_burst_is_held_only_by_a_named_fog_block(reason, fog_on, held):
+    assert reads.humidify_held_reason(reason, fog_on) == held
+
+
 def test_required_trigger_reads_the_newest_fired_row_not_the_days_rows_ahead():
     sql = reads._REQUIRED_TRIGGER_SQL
     assert "expected_at <= now()" in sql and "interval '36 hours'" in sql
@@ -199,6 +232,15 @@ def test_the_leak_block_uses_the_one_flow_stopped_rule():
     assert schema_alerts.flow_stopped_at(readings, below_gpm=0.1, needed=2) == AT - timedelta(minutes=1)
     assert schema_alerts.flow_stopped_at([*readings, (AT, 0.4)], below_gpm=0.1, needed=2) is None
     assert (reads.LEAK_STOPPED_BELOW_GPM, reads.LEAK_STOPPED_READINGS) == (0.1, 2)
+
+
+def test_the_leak_block_reads_nothing_as_clear_while_the_controller_is_not_reporting():
+    quiet = track([(AT - timedelta(hours=2), True), (AT - timedelta(hours=1), False)])
+    no_alert = {"leak_alert_id": None, "leak_open_since": None}  # no open row: the read needs no query
+    leak = asyncio.run(reads._leak(None, quiet, no_alert, 0.0, None, reporting(climate_s=360)))
+    assert (leak.active, leak.flow_gpm, leak.gal_last_10min, leak.since) == (None, None, None, None)
+    leak = asyncio.run(reads._leak(None, quiet, no_alert, 0.0, None, reporting()))
+    assert (leak.active, leak.flow_gpm, leak.gal_last_10min, leak.since) == (False, 0.0, 0, None)
 
 
 # ── applied_from, waypoints' effective and the interim desired state ───────
@@ -403,6 +445,34 @@ def test_fan1_reads_off_since_its_last_real_change_while_the_controller_reports(
     item = items_by_name({"fan1": track(rows)}, reporting())["fan1"]
     assert (item.state, item.since, item.runtime_today_s, item.cycles_today) == ("off", october(27, 4, 26), 0, 0)
     assert item.observed_at == october(29, 11)
+
+
+def test_a_state_older_than_the_window_is_known_with_no_since():
+    class Conn:
+        def __init__(self):
+            self.calls = []
+
+        async def fetch(self, sql, keys, window):
+            self.calls.append((sql, list(keys), window))
+            if sql is reads._EQUIPMENT_TRACKS_SQL:  # fan1 changed today; drip_wall not in 31 days
+                return [
+                    {"key": "fan1", "ts": den(2, 9), "state": True, "newest_at": den(2, 10)},
+                    {"key": "fan1", "ts": den(2, 10), "state": False, "newest_at": den(2, 10)},
+                ]
+            return [{"key": "drip_wall", "ts": AT - timedelta(days=40), "state": False}]
+
+    conn = Conn()
+    tracks = asyncio.run(reads._tracks(conn, reads._EQUIPMENT_TRACKS_SQL, ("fan1", "drip_wall", "fog")))
+    assert [call[1:] for call in conn.calls] == [
+        (["fan1", "drip_wall", "fog"], reads.STATE_WINDOW),
+        (["drip_wall", "fog"], reads.NEWEST_ROW_WINDOW),  # only the keys with no row in the window
+    ]
+    assert conn.calls[1][0] is reads._EQUIPMENT_NEWEST_SQL
+    items = items_by_name(tracks, reporting())
+    drip = items["drip_wall"]
+    assert (drip.state, drip.since, drip.runtime_today_s, drip.cycles_today) == ("off", None, 0, 0)
+    assert drip.observed_at == AT - timedelta(days=40)
+    assert (items["fog"].state, items["fan1"].state, items["fan1"].since) == ("unknown", "off", den(2, 10))
 
 
 def test_every_state_is_unknown_with_its_age_while_the_controller_is_not_reporting():

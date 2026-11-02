@@ -58,6 +58,10 @@ SENSOR_STALE_S = 120
 LUTRON_UNKNOWN_S = 600
 
 STATE_WINDOW = timedelta(days=31)  # runs older than this have since null
+# A key with no row in the state window takes its newest row from this longer
+# bound: a state that has not changed or been re-snapshotted in 31 days is still
+# known, with since null.
+NEWEST_ROW_WINDOW = timedelta(days=90)
 DIFFERING_AFTER = timedelta(minutes=10)
 REQUESTED_FOR = timedelta(minutes=5)
 OVERRIDE_COMMAND_LEAD = timedelta(minutes=2)
@@ -96,6 +100,12 @@ _EQUIPMENT_KEYS = tuple(name for name, _ in EQUIPMENT_LIST) + tuple(GROW_LIGHT_I
 _NOW_EQUIPMENT_KEYS = _EQUIPMENT_KEYS + tuple(BURSTS) + (LEAK_FLAG,)
 MODE_ENTITY = "greenhouse_state"
 _NOW_NEWEST_ENTITIES = ("mister_state", "mode_reason", "fog_block_reason")
+# In SEALED_MIST the firmware publishes greenhouse_state as SEALED_MIST_<stage>
+# (controls.yaml, MIST_NAMES in greenhouse_types.h), so the label carries the stage.
+SEALED_MIST = "SEALED_MIST"
+MIST_STAGES = ("WATCH", "FOG", "S1", "S2")
+# fog_block_reason values that hold nothing: none, and served (the fog relay is on).
+_FOG_NOT_HELD = frozenset({"", "none", "served"})
 
 # writer.differing judges the values the dispatcher delivers: the writable
 # classes it pushes from desired rows and plans. A plan value it never sends is
@@ -515,6 +525,31 @@ def band_position(
     return BandPosition(low=low, high=high, verdict=verdict)
 
 
+def mode_code_and_stage(label: str | None, mister_state: str | None) -> tuple[str, str | None]:
+    """Now's mode code and stage from the newest ``greenhouse_state`` label.
+
+    The firmware publishes SEALED_MIST as ``SEALED_MIST_<stage>`` (WATCH, FOG,
+    S1 or S2), so the code is SEALED_MIST and the label gives the stage.
+    ``mister_state`` is the mister pulse machine and never reads FOG, so it
+    gives the stage only for a bare SEALED_MIST label. No row reads UNKNOWN.
+    """
+    if label is None:
+        return "UNKNOWN", None
+    prefix = f"{SEALED_MIST}_"
+    if label.startswith(prefix) and label.removeprefix(prefix) in MIST_STAGES:
+        return SEALED_MIST, label.removeprefix(prefix)
+    if label == SEALED_MIST:
+        return SEALED_MIST, mister_state if mister_state in MIST_STAGES else None
+    return label, None
+
+
+def humidify_held_reason(fog_block_reason: str | None, fog_on: bool) -> str | None:
+    """Why the controller holds a humidify burst: fog (L11) is off and ``fog_block_reason`` names a block."""
+    if fog_on or fog_block_reason is None or fog_block_reason in _FOG_NOT_HELD:
+        return None
+    return fog_block_reason
+
+
 def required_trigger_state(status: str | None, due_at: datetime | None, at: datetime) -> RequiredTrigger:
     """Map the newest required trigger's ledger status (migration 218: only plan_written recovers it).
 
@@ -760,8 +795,25 @@ SELECT entity AS key, ts, value AS state, newest_at
  ORDER BY entity, ts, value
 """
 
+# The newest row of each key with none in the state window (NEWEST_ROW_WINDOW).
+_EQUIPMENT_NEWEST_SQL = """
+SELECT k.key, s.ts, s.state
+  FROM unnest($1::text[]) AS k(key)
+  JOIN LATERAL (SELECT ts, state FROM equipment_state
+                 WHERE equipment = k.key AND ts > now() - $2::interval
+                 ORDER BY ts DESC, state DESC LIMIT 1) AS s ON true
+"""
+
+_SYSTEM_NEWEST_SQL = """
+SELECT k.key, s.ts, s.value AS state
+  FROM unnest($1::text[]) AS k(key)
+  JOIN LATERAL (SELECT ts, value FROM system_state
+                 WHERE entity = k.key AND ts > now() - $2::interval
+                 ORDER BY ts DESC, value DESC LIMIT 1) AS s ON true
+"""
+
 # The newest value of controller text entities that need no since (mode_reason
-# changes thousands of times a month).
+# changes thousands of times a month), bounded like a track's newest row.
 _NEWEST_STATES_SQL = """
 SELECT e.entity, s.value, s.ts
   FROM unnest($1::text[]) AS e(entity)
@@ -922,14 +974,26 @@ async def _snapshot(conn: asyncpg.Connection) -> AsyncIterator[None]:
         yield
 
 
+_NEWEST_FOR_EDGES = {_EQUIPMENT_TRACKS_SQL: _EQUIPMENT_NEWEST_SQL, _SYSTEM_TRACKS_SQL: _SYSTEM_NEWEST_SQL}
+
+
 async def _tracks(conn: asyncpg.Connection, sql: str, keys: Sequence[str]) -> dict[str, Track]:
-    """Each key's runs over the state window, from the lag() edges of ``sql``."""
+    """Each key's runs over the state window, from the lag() edges of ``sql``.
+
+    A key with no row in the window takes its newest older row as its one run,
+    whose start is not known: the state is known and ``since`` is null.
+    """
     rows = await conn.fetch(sql, list(keys), STATE_WINDOW)
     edges: dict[str, list[tuple[datetime, Any]]] = {}
     newest: dict[str, datetime] = {}
     for row in rows:
         edges.setdefault(row["key"], []).append((row["ts"], row["state"]))
         newest[row["key"]] = row["newest_at"]
+    missing = [key for key in keys if key not in edges]
+    if missing:
+        for row in await conn.fetch(_NEWEST_FOR_EDGES[sql], missing, NEWEST_ROW_WINDOW):
+            edges[row["key"]] = [(row["ts"], row["state"])]
+            newest[row["key"]] = row["ts"]
     return {key: Track(tuple(collapse(edges.get(key, ()))), newest.get(key)) for key in keys}
 
 
@@ -1115,9 +1179,9 @@ async def _overrides(
         held_reason = None
         if kind == "humidify":
             fog = tracks.get("fog")
-            fog_on = bool(fog is not None and fog.spans and fog.spans[-1].state)
-            if fog_block_reason not in (None, "", "none") and not fog_on:
-                held_reason = fog_block_reason
+            held_reason = humidify_held_reason(
+                fog_block_reason, bool(fog is not None and fog.spans and fog.spans[-1].state)
+            )
         out.append(Override(kind=kind, since=since, ends_at=ends_at, held_reason=held_reason))
     return out
 
@@ -1134,6 +1198,8 @@ async def _leak(
 
     ``stopped_at`` is ``flow_stopped_at()`` over the meter since the newest
     open leak row, read once the flag is off, as the alert monitor reads it.
+    The flag, the flow and the gallons are null while the controller is not
+    reporting: an old 0 would read as no water.
     """
     flag_on = bool(track.spans and track.spans[-1].state)
     active = flag_on if rep.controller_reporting and track.spans else None
@@ -1156,7 +1222,7 @@ async def _leak(
     return Leak(
         active=active,
         since=since,
-        flow_gpm=flow_gpm,
+        flow_gpm=flow_gpm if rep.controller_reporting else None,
         gal_last_10min=gal,
         alert_id=alert_id,
         stopped_at=stopped_at,
@@ -1180,7 +1246,7 @@ async def now(conn: asyncpg.Connection) -> Now:
         mode_track = (await _tracks(conn, _SYSTEM_TRACKS_SQL, (MODE_ENTITY,)))[MODE_ENTITY]
         texts = {
             row["entity"]: row["value"]
-            for row in await conn.fetch(_NEWEST_STATES_SQL, list(_NOW_NEWEST_ENTITIES), STATE_WINDOW)
+            for row in await conn.fetch(_NEWEST_STATES_SQL, list(_NOW_NEWEST_ENTITIES), NEWEST_ROW_WINDOW)
         }
         tracks = await _tracks(conn, _EQUIPMENT_TRACKS_SQL, _NOW_EQUIPMENT_KEYS)
         plan_row = await conn.fetchrow(_PLAN_IN_FORCE_SQL)
@@ -1227,13 +1293,8 @@ async def now(conn: asyncpg.Connection) -> Now:
         observed_at=min(band_times) if band_times else None,
     )
 
-    code = _newest_text(mode_track) or "UNKNOWN"
-    mode = Mode(
-        code=code,
-        stage=texts.get("mister_state") if code == "SEALED_MIST" else None,
-        reason=texts.get("mode_reason"),
-        since=run_since(mode_track.spans),
-    )
+    code, stage = mode_code_and_stage(_newest_text(mode_track), texts.get("mister_state"))
+    mode = Mode(code=code, stage=stage, reason=texts.get("mode_reason"), since=run_since(mode_track.spans))
 
     iris = Iris(
         plan_id=plan_row["plan_id"] if plan_row else None,
