@@ -300,6 +300,17 @@ dispatcher, the API's `applied_from` and the services resolve a setting the same
   (`TunableDef.default`). The lighting policy functions treat the newest confirmed non-`esp32` `setpoint_changes`
   row as an override, so a released `gl_*` value would stick. Migration M5 (VD-33) makes them ignore
   `source = 'manual'` rows, so after a release the next pass applies the policy's own value.
+- **As built (VD-33).** The plan in `resolve_effective()` and in the release rule is the `v_active_plan` row the
+  dispatcher admits (it is in `planner_params`), so a plan row the dispatcher ignores never hides a desired value.
+  Besides the §5.3 step 1 rows (`desired_write_rule()` in `verdify_schemas.tunable_registry`), `crop_band` and
+  `irrigation_site`, a row is skipped and logged once when the dispatcher has no number or switch route for it
+  (`sw_irrig_*` today, which the L01 bridge owns), when the connected firmware lacks the feature a plan row would
+  need too, or when its value is not finite. A release to the registry default goes out with source `band`; it waits
+  out `experiment_policy_hold` and a component bundle as a desired value does, but only a desired value passes
+  `component_authority_hold`. When a desired value wins, the plan's clamp audits for that parameter are dropped and
+  its push carries no plan trigger. Before M1 is applied, or without its grant, the pass runs without desired state
+  (logged once); any other read error fails the pass, so a transient error never hands a manual value back to the
+  plan.
 
 ### 5.3 Validation on submit
 
@@ -650,7 +661,7 @@ latter yet).
 | M2 | VD-66 | `verdify_dashboard_runtime` and `verdify_dashboard_runtime_login` with 276's role, schema and `fn_attest_login` shape (not its unchanged-boundary postflight); `dashboard_session`. Grants, each listed in the file and covered by a database test: SELECT on every relation and function the MVP reads (§7; not `v_greenhouse_now`), `v_water_attribution_daily`, `data_gaps`, `desired_state`, the view, `activity_log`, `setpoint_changes` and `setpoint_clamps`, and M4's `v_irrigation_minutes_daily` and `v_irrigation_day_coverage` if M4 merged first, through per-login wrappers where migration 268's pattern needs them; EXECUTE on `fn_mcp_armed_assignment_context()` (no SELECT on `control_experiments`); INSERT on `desired_state` and `activity_log`; UPDATE on `alert_log` (ack and resolve columns) and `crop_band_anchors` (the three columns); DML on `dashboard_session`; no INSERT on `setpoint_changes`. Role settings `statement_timeout = 10s`, `idle_in_transaction_session_timeout = 15s`, `CONNECTION LIMIT 8`. Re-seals the api and ingestor receipts. SQL only: its bootstrap Job entry (`secretKeyRef` optional) lands in the R1 wiring PR (§10) |
 | M3 | VD-38 | Per [irrigation](irrigation.md): the irrigation tables, granted to the dashboard, MCP and ingestor logins; SELECT on `v_water_event_attribution` (per-run gallons) for the dashboard and MCP logins; EXECUTE on `fn_mcp_armed_assignment_context()` for the ingestor login (Iris's irrigation context says whether an experiment is armed) |
 | M4 | VD-39 | `v_irrigation_minutes_daily` and `v_irrigation_day_coverage` (each day complete, partial or no data), granted to the runtime logins that exist when it merges |
-| M5 | VD-33 | The lighting policy functions ignore `source = 'manual'` rows (§5.2), keeping 275's `SET jit = off` on `fn_lighting_minutes_policy` (`CREATE OR REPLACE FUNCTION` resets it) |
+| M5 | VD-33 | The lighting policy functions ignore `source = 'manual'` rows (§5.2), keeping 275's `SET jit = off` on `fn_lighting_minutes_policy` (`CREATE OR REPLACE FUNCTION` resets it). As built: it replaces only the override predicate inside each function's live `pg_get_functiondef`, between `prosrc` SHA-256 checks before and after, and refuses any other catalog change (owner, ACL, `ROWS`, `SET`; the argument defaults compare deparsed). It re-seals the api and ingestor receipts; MCP's is projected unchanged, as for 275. It changes no output today: on 2026-11-02 every newest non-`esp32` lighting row was `band` |
 | M6 | VD-56 | `v_daily_scorecard` (§7), granted to the dashboard login |
 | PAR | VD-71 (Next) | The PAR meter's PPFD `climate` column. It re-creates the `v_runtime_climate_write` facade with the column and re-seals the api and ingestor receipts, or every climate write fails once the firmware publishes PPFD. It drops 195's `dli_validity_release_unavailable` CHECK and opens a new validity interval; the DLI views rebind to the column (§7) |
 
