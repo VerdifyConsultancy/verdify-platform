@@ -18,9 +18,9 @@ spec:
   policyTypes: ["Ingress"]
 ---
 # 2. DB accepts connections only from api, mcp, ingestor, the migration Job, the
-#    planner, and the lab publisher in this namespace. Never from ingress. The
-#    planner's wait-for-db init (pg_isready) + its DATABASE_URL connect straight
-#    to verdify-db:5432, so DB clients MUST be in this allow-set or they hang at
+#    planner, the lab publisher and the operator API in this namespace. Never from
+#    ingress. The planner's wait-for-db init (pg_isready) + its DATABASE_URL connect
+#    straight to verdify-db:5432, so DB clients MUST be in this allow-set or they hang at
 #    Init:0/1 or get connection-refused (verified live in verdify-prod
 #    2026-06-07 and again for lab-publisher on 2026-06-14 — this CNI DOES
 #    enforce ingress; see header note).
@@ -41,7 +41,7 @@ spec:
             matchExpressions:
               - key: app.kubernetes.io/component
                 operator: In
-                values: ["api", "mcp", "ingestor", "migrate", "planner", "lab-publisher"]
+                values: ["api", "mcp", "ingestor", "migrate", "planner", "lab-publisher", "operator-api"]
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: verdify-prod
