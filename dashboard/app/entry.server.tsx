@@ -29,7 +29,8 @@ export default function handleRequest(request: Request, status: number, headers:
 }
 
 /**
- * Replaces React Router's default, which writes each error, with its request URL, to stderr. The request
- * log line (server.mjs) records the status; request URLs, query strings and stack text are never logged.
+ * Replaces React Router's default, which writes each error and its stack to stderr (a 404's names the request
+ * path). The request log line (server.mjs) records the status; raw paths, query strings and stack text are never
+ * logged.
  */
 export function handleError(): void {}
