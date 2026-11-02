@@ -32,6 +32,7 @@ validates at its boundary; drift is caught by CI.
 | `setpoint.py` | `SetpointChange`, `SetpointPlanRow`, `SetpointSnapshot`, `SetpointClamp` | ingestor confirmation loop, dispatcher audit, website renderers |
 | `telemetry.py` | `ClimateRow`, `Diagnostics`, `EquipmentStateEvent`, `EnergySample`, `SystemStateRow`, `OverrideEvent` | ingestor write paths, MCP `query` tool consumers |
 | `alerts.py` | `AlertLogRow`, `AlertEnvelope`, `AlertAction` | `alert_monitor` task, MCP `alerts` tool |
+| `activity.py` | `ActivityLogRow` (`activity_log`), `DesiredStateRow` (`desired_state`), `ACTOR_SOURCE_PATTERN` (the R4 sources) and `ACTIVITY_ACTION_PATTERN` (the architecture §9 actions), migration 280 | `verdify_services.activity` (operator API and MCP writes), the ingestor's forecast-rule activity rows |
 | `crops.py` | `Crop`, `CropCreate`, `CropUpdate`, `CropEvent`, `Observation`, `ObservationCreate`, `EventCreate` + action envelopes | `api/main.py`, MCP `crops` / `observations` tools, `vault-crop-writer.py` |
 | `lessons.py` | `PlannerLesson`, `LessonCreate`, `LessonUpdate`, `LessonValidate`, `LessonAction` | MCP `lessons_manage` tool, `generate-lessons-page.py` |
 | `daily.py` | `DailySummaryRow` (61 fields) | `daily-summary-snapshot.py`, `vault-daily-writer.py`, `generate-daily-plan.py` |
