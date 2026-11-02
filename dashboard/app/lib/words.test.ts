@@ -106,3 +106,13 @@ test("an unknown code or family renders raw, prototype names included", () => {
   expect(hasWords("state_reason", "__proto__")).toBe(false);
   expect(hasWords("mode", "hasOwnProperty")).toBe(false);
 });
+
+test("the scorecard reasons: the water day's quality in words, and the reasons VD-56 sends in words already as sent", () => {
+  expect(["partial_day", "unavailable", "ledger_incomplete", "discontinuous", "incomplete"].map((code) => words("scorecard_reason", code))).toEqual([
+    "day not finished", "no meter readings", "meter totals not caught up", "meter readings broken up", "meter readings miss part of the day",
+  ]);
+  expectWorded("scorecard_reason", Object.keys(WORDS.scorecard_reason));
+  expect(words("scorecard_reason", "no meter data")).toBe("no meter data");
+  expect(words("scorecard_reason", "band grade kept 3 days")).toBe("band grade kept 3 days");
+  expect(words("scorecard_reason", "meter_offline")).toBe("meter_offline");
+});

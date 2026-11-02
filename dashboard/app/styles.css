@@ -343,6 +343,46 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--fault)}
   .app-page .site-footer{padding-bottom:calc(3.5rem + env(safe-area-inset-bottom))}
 }
 
+/* Graphs (SCR-02, VD-10): the resolution line, the custom range, what is on the charts, the pickers and the daily scorecard. The charts themselves are styled in app/charts/charts.css. */
+.resolution-line{font-variant-numeric:tabular-nums}
+.range-form{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .5rem;margin:0}
+.range-form label{font-size:.8rem;font-weight:600;color:var(--muted)}
+.range-form input[type=date]{min-height:2.25rem;padding:.2rem .45rem;border:1px solid var(--control-border);border-radius:var(--radius-sm);font:inherit;font-size:.85rem}
+.range-form .field-error{flex-basis:100%}
+.graph-on-charts{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .6rem;margin:.25rem 0 .75rem}
+.graph-on-label{font-size:.8rem;font-weight:600;color:var(--muted)}
+.graph-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:0;padding:0;list-style:none}
+.graph-chip{display:inline-flex;align-items:stretch;min-height:2.25rem;border:1px solid var(--line-strong);border-radius:999px;background:#fff;font-size:.8rem;overflow:hidden}
+.graph-chip>a,.graph-chip>span{display:inline-flex;align-items:center;padding:0 .7rem;color:var(--ink);text-decoration:none;white-space:nowrap}
+.graph-chip>a:hover{color:var(--forest)}
+.graph-chip>a:last-child{justify-content:center;min-width:2.25rem;padding:0 .55rem;border-left:1px solid var(--line);font-size:1rem}
+.graph-scorecard,.graph-back{display:inline-flex;align-items:center;min-height:2.75rem;font-size:.875rem;font-weight:700;text-decoration:none}
+.graph-scorecard{margin-left:auto}
+.graph-notices{list-style:none;display:grid;gap:.4rem;margin:0 0 1rem;padding:0}
+.graph-notices .notice{margin:0}
+.picker-dialog .field{margin-bottom:.75rem}
+.picker-cap{margin:0 0 .75rem;font-weight:600;color:var(--warn-text)}
+.picker-group{margin:0 0 1rem}
+.picker-group .eyebrow{margin:0 0 .35rem}
+.picker-list{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:var(--radius-sm)}
+.picker-list li+li{border-top:1px solid var(--line)}
+.picker-item{display:grid;gap:.1rem;padding:.5rem .75rem;color:var(--ink);text-decoration:none}
+a.picker-item:hover{background:var(--field)}
+.picker-item-on,.picker-item-off{color:var(--muted)}
+.picker-item .tag{justify-self:start;margin-top:.2rem}
+.picker-label{font-weight:600}
+.picker-facts,.picker-text{font-size:.8rem;color:var(--muted)}
+.picker-facts .mono{color:var(--ink)}
+.scorecard-tools{display:flex;justify-content:flex-end;margin:0 0 .5rem}
+.scorecard-wrap{max-height:none}
+.scorecard th[scope=row]{white-space:nowrap}
+.scorecard thead th{white-space:nowrap}
+.scorecard td{white-space:nowrap;font-variant-numeric:tabular-nums}
+.scorecard-note{font-size:.75rem;font-weight:400;color:var(--muted)}
+.scorecard-missing{color:var(--muted)}
+.scorecard-reason{font-size:.75rem;white-space:normal}
+@media(max-width:860px){.graph-scorecard{margin-left:0}.range-form{flex-basis:100%}}
+
 /* Dashboard (design system §2.2): added tokens, the two AA fixes and the new badges. Weather's tokens above are never edited. This block comes last: its :focus-visible and input,select,textarea rules have the same specificity as weather's and win by order. */
 :root{
   --focus:#0e5a43;--control-border:#6f867d;

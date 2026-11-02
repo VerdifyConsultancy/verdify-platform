@@ -163,6 +163,19 @@ const ALERT_TYPE = {
   irrigation_line_faulted: "A mister zone faulted",
 } as const;
 
+/**
+ * Why a scorecard cell is empty (`SeriesColumns.reason` on the `daily.*` keys, #1130): the water day's
+ * `v_water_meter_daily.quality`. VD-56 sends "band grade kept 3 days" and "no meter data" in words already, so they
+ * show as sent, as does any reason added later.
+ */
+const SCORECARD_REASON = {
+  partial_day: "day not finished",
+  unavailable: "no meter readings",
+  ledger_incomplete: "meter totals not caught up",
+  discontinuous: "meter readings broken up",
+  incomplete: "meter readings miss part of the day",
+} as const;
+
 export const WORDS: { readonly [family: string]: { readonly [code: string]: string } } = {
   state_reason: STATE_REASON,
   alert_severity: ALERT_SEVERITY,
@@ -172,8 +185,9 @@ export const WORDS: { readonly [family: string]: { readonly [code: string]: stri
   mist_stage: MIST_STAGE,
   fog_block_reason: FOG_BLOCK_REASON,
   alert_type: ALERT_TYPE,
+  scorecard_reason: SCORECARD_REASON,
 };
-export type WordFamily = "state_reason" | "alert_severity" | "problem_code" | "line_state" | "mode" | "mist_stage" | "fog_block_reason" | "alert_type";
+export type WordFamily = "state_reason" | "alert_severity" | "problem_code" | "line_state" | "mode" | "mist_stage" | "fog_block_reason" | "alert_type" | "scorecard_reason";
 
 /** True when the table has words for `code` in `family`. */
 export function hasWords(family: string, code: string): boolean {

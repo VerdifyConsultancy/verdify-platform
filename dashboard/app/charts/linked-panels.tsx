@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { csvFilename, seriesCsvBlock, windowCsv } from "./csv";
 import { CsvLink } from "./data-table";
 import { RangeChips, type RangeId } from "./range-chips";
@@ -64,6 +64,10 @@ export type LinkedPanelsProps = {
   messages?: Readonly<Record<string, string>>;
   /** Names the CSV file. */
   csvName?: string;
+  /** More controls in the tools row, after the range chips (Graphs' custom range). */
+  tools?: ReactNode;
+  /** A row under the tools and above the panels (Graphs' settings and metrics on the charts). */
+  controls?: ReactNode;
 };
 
 export function LinkedPanels(props: LinkedPanelsProps) {
@@ -94,9 +98,11 @@ export function LinkedPanels(props: LinkedPanelsProps) {
   return <section className="linked-panels" aria-label="Linked charts, one cursor">
     <div className="chart-tools">
       {props.rangeHref && <RangeChips current={props.range} href={props.rangeHref} />}
+      {props.tools}
       {zoomed && <button type="button" onClick={() => resetZoom(key, xRange)}>Reset zoom</button>}
       {chosen.some(Boolean) && <CsvLink filename={csvFilename(props.csvName ?? props.route, xRange)} build={() => windowCsv(blocks())} version={csvVersion} />}
     </div>
+    {props.controls}
     {panels.map((panel, index) => <TimeSeries key={panel.unit} linked syncKey={key}
       series={chosen[index]} metrics={panel.metrics} unit={panel.unit} band={props.band} settings={props.settings}
       now={props.now} xRange={xRange} title={props.titles?.[panel.unit]} message={props.messages?.[panel.unit]}
