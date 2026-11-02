@@ -32,18 +32,14 @@ RESERVED_NO_EFFECT = {
     "bias_cool",
     "bias_heat",
     "d_heat_stage_2",
-    "fan_burst_min",
-    "fog_burst_min",
     "mist_vent_close_lead_s",
     "mist_vent_reopen_delay_s",
     "mister_all_off_s",
     "mister_all_on_s",
-    "mister_max_runtime_min",
     "mister_off_s",
     "mister_on_s",
     "sw_fsm_controller_enabled",
     "summer_vent_min_runtime_s",
-    "vent_bypass_min",
 }
 
 

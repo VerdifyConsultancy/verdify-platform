@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { formatValue } from "../lib/format";
-import type { BandTimeline, ReadbackState, SettingSteps } from "./types";
+import type { BandTimeline, PlanWaypoint, ReadbackState, SettingSteps } from "./types";
 import { epochOf } from "./time-axis";
 
 /**
@@ -99,7 +99,8 @@ export type StepSegment = {
   label: string;
   /** The tooltip and data-table words. */
   detail: string;
-  source?: "iris" | "preemptive";
+  /** `iris`, or `preemptive` for the forecast rule; a newer source reads as a forecast rule, never AI. */
+  source?: PlanWaypoint["source"];
   state?: ReadbackState;
 };
 

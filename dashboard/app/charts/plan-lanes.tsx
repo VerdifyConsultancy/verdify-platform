@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-import { useMemo, useRef, type MutableRefObject } from "react";
+import { useMemo, useRef, type MutableRefObject, type ReactNode } from "react";
 import type uPlot from "uplot";
 import { formatValue, unitDecimals } from "../lib/format";
+import type { Plan, PlanLane, PlanWaypoint } from "../lib/operator-api";
 import { isAiSource } from "../lib/vocab";
 import { DataTable, TimeCell, type DataTableBlock } from "./data-table";
 import { labelColor, type ChartColors, type PaintTarget } from "./draw";
@@ -9,7 +10,7 @@ import { RowLabels, clipColumns, laneFont, rowBand, spanPixels, type RowLayout }
 import { FORECAST_RULE, PLANNED_AI, SUPERSEDED } from "./marks";
 import { clockTime, epochOf, fullTime, localDateMDY, localDay, timeAxis } from "./time-axis";
 import { cursorX, tooltipPlugin } from "./tooltip";
-import type { Plan, PlanLane, PlanWaypoint, XRange } from "./types";
+import type { XRange } from "./types";
 import { UPlotChart, useNarrow, useZoomReset, type ChartEnv, type ChartOptions } from "./uplot-chart";
 
 /**
@@ -17,9 +18,9 @@ import { UPlotChart, useNarrow, useZoomReset, type ChartEnv, type ChartOptions }
  * sits at the left edge and holds until the first waypoint; dashed [8,4] segments run from each waypoint to the next,
  * the plan's end or the horizon, whichever comes first, labelled with the planned value. The row header names whose
  * value applies, exactly as API-07 marks it (`applied_from`, `effective`, `source`): the client decides none of it.
- * The row model is generic (`PlanRow`); `planRows` maps API-07 lanes into it.
+ * The row model is generic (`PlanRow`); `planRows` maps API-07 lanes, as the client parses them, into it.
  */
-export type PlanSegmentKind = "device" | "planned" | "superseded" | "manual";
+export type PlanSegmentKind = "device" | "stale" | "planned" | "superseded" | "manual";
 export type PlanSegment = {
   kind: PlanSegmentKind;
   start: number;
@@ -46,11 +47,16 @@ export type PlanRow = {
   device: string;
   /** Why the device value is missing, in words. */
   deviceNote: string | null;
+  /** When the device value was read (epoch seconds), null when unknown. */
+  deviceAt: number | null;
+  /** The device value is STALE (API-02 `freshness.readback.stale`): it reads muted, and the waypoints still draw. */
+  stale: boolean;
   segments: PlanSegment[];
 };
 
 export const MANUAL_SKIPS = "MANUAL · Iris skips";
 export const HOLDS_UNTIL_NEXT_PLAN = "holds until Iris's next plan";
+export const STALE = "STALE";
 
 /** Who a waypoint's value comes from: Iris or a named agent read AI; the forecast action engine never does. */
 export function waypointWho(source: string): string {
@@ -65,15 +71,19 @@ export function plainValue(value: number, unit: string | null): string {
 }
 const at = (instant: string | null | undefined) => epochOf(instant);
 
-/** One API-07 lane as a row from `now` to `horizon`; `planEnd` is the plan's `valid_until`. */
-export function planRow(lane: PlanLane, now: number, horizon: number, planEnd: number | null): PlanRow {
+/**
+ * One API-07 lane as a row from `now` to `horizon`; `planEnd` is the plan's `valid_until`. `stale` marks the device
+ * value STALE: it draws muted and labelled, and nothing else on the row changes.
+ */
+export function planRow(lane: PlanLane, now: number, horizon: number, planEnd: number | null, stale = false): PlanRow {
   const unit = lane.unit ?? null;
   const value = (number: number) => formatValue(number, unit);
   const device = lane.device.value;
   const desired = lane.desired;
   const row: PlanRow = {
     key: lane.param, label: lane.label, unit, head: "", muted: false,
-    device: formatValue(device, unit), deviceNote: device === null ? (lane.device.reason ?? "no readback") : null, segments: [],
+    device: formatValue(device, unit), deviceNote: device === null ? (lane.device.reason ?? "no readback") : null,
+    deviceAt: at(lane.device.observed_at), stale: stale && device !== null, segments: [],
   };
   // Waypoints stop at the plan's end; the device value runs to it too, or to the horizon with no plan in force.
   const stop = planEnd !== null ? Math.min(planEnd, horizon) : horizon;
@@ -120,17 +130,36 @@ export function planRow(lane: PlanLane, now: number, horizon: number, planEnd: n
   });
   if (!row.head) row.head = [...sources].sort((a, b) => (a === PLANNED_AI ? -1 : b === PLANNED_AI ? 1 : 0)).join(" · ");
 
-  // The device value holds from now until the first drawn segment, the plan's end or the horizon.
+  // The device value holds from now until the first drawn segment, the plan's end or the horizon; a stale one is muted.
   const first = row.segments[0]?.start ?? deviceStop;
   if (device !== null && first > now) {
-    row.segments.unshift({ kind: "device", start: now, end: first, value: device, label: "", short: "", detail: `Device ${value(device)}`, what: "Device" });
+    row.segments.unshift(row.stale
+      ? { kind: "stale", start: now, end: first, value: device, label: STALE, short: STALE, detail: `Device ${value(device)} · ${STALE}`, what: `Device · ${STALE}` }
+      : { kind: "device", start: now, end: first, value: device, label: "", short: "", detail: `Device ${value(device)}`, what: "Device" });
   }
   return row;
 }
 
-export function planRows(plan: Plan, now: number, horizon: number): PlanRow[] {
+export function planRows(plan: Plan, now: number, horizon: number, stale = false): PlanRow[] {
   const planEnd = at(plan.plan?.valid_until);
-  return plan.lanes.map((lane) => planRow(lane, now, horizon, planEnd));
+  return plan.lanes.map((lane) => planRow(lane, now, horizon, planEnd, stale));
+}
+
+/** A row's device value in words for its title: the API's reason when it has none, STALE with when it was read. */
+export function deviceTitle(row: PlanRow, now: number): string | undefined {
+  if (row.deviceNote) return row.deviceNote;
+  if (!row.stale) return undefined;
+  return row.deviceAt === null ? STALE : `${STALE} · read ${clockTime(row.deviceAt, localDay(row.deviceAt) !== localDay(now))}`;
+}
+
+/** "STALE · device values last read 06:02": the newest read among the stale rows, or none when no row has a time. */
+export function staleNote(rows: readonly PlanRow[], now: number): string | null {
+  const stale = rows.filter((row) => row.stale);
+  if (!stale.length) return null;
+  const times = stale.map((row) => row.deviceAt).filter((time): time is number => time !== null);
+  if (!times.length) return `${STALE} · device values`;
+  const newest = Math.max(...times);
+  return `${STALE} · device values last read ${clockTime(newest, localDay(newest) !== localDay(now))}`;
 }
 
 /** The plan's end when it falls inside the window: "Plan ends 17:30", with what takes over when the caller says. */
@@ -149,10 +178,14 @@ export const PLAN_STRIP = 24;
 export type PlanView = { rows: PlanRow[]; head: number; end: { at: number; text: string } | null };
 const planLayout = (view: PlanView): RowLayout => ({ pitch: view.head + PLAN_STRIP });
 
-/** Stroke, width and dash of each segment kind (design system §5.1: device solid, planned dashed, superseded muted). */
+/**
+ * Stroke, width and dash of each segment kind (design system §5.1: device solid, planned dashed, superseded muted; a
+ * stale device value solid and muted, as design system §4.5 mutes a stale value).
+ */
 export function segmentStyle(kind: PlanSegmentKind, colors: ChartColors, px: number): { stroke: string; width: number; dash: number[] } {
   switch (kind) {
     case "device": return { stroke: colors["--c-setpoint"], width: 2 * px, dash: [] };
+    case "stale": return { stroke: colors["--c-bound"], width: 2 * px, dash: [] };
     case "planned": return { stroke: colors["--ink"], width: 2 * px, dash: [8 * px, 4 * px] };
     case "superseded": return { stroke: colors["--c-bound"], width: 2 * px, dash: [8 * px, 4 * px] };
     case "manual": return { stroke: colors["--c-bound"], width: 2 * px, dash: [] };
@@ -286,13 +319,20 @@ export type PlanLanesProps = {
   message?: string;
   /** Its own "Reset zoom" while zoomed. Default true. */
   zoomControl?: boolean;
+  /**
+   * The device values are stale (API-02 `freshness.readback.stale`): each reads muted and STALE, a note above the rows
+   * says when they were last read, and the waypoints still draw.
+   */
+  stale?: boolean;
+  /** Ends each row with the screen's own control for that row (Plan's Open link), in a column beside the plot. */
+  rowEnd?: (row: PlanRow) => ReactNode;
 };
 
 export function PlanLanes(props: PlanLanesProps) {
-  const { plan, now, hours = 24, syncKey } = props;
+  const { plan, now, hours = 24, syncKey, stale = false, rowEnd } = props;
   const narrow = useNarrow();
   const horizon = now + hours * 3600;
-  const rows = useMemo(() => (plan ? planRows(plan, now, horizon) : []), [plan, now, horizon]);
+  const rows = useMemo(() => (plan ? planRows(plan, now, horizon, stale) : []), [plan, now, horizon, stale]);
   const view: PlanView = { rows, head: narrow ? PLAN_HEAD.narrow : PLAN_HEAD.wide, end: planEndLabel(plan, now, horizon, props.takeover) };
   const viewRef = useRef(view);
   viewRef.current = view;
@@ -302,10 +342,12 @@ export function PlanLanes(props: PlanLanesProps) {
   // New rows, the header height or the plan's end repaint the canvas without rebuilding it.
   const marks = useMemo(() => ({ rows, head: view.head, end: view.end?.text }), [rows, view.head, view.end?.text]);
   const drawable = !props.message && plan !== null && rows.length > 0;
+  const note = drawable ? staleNote(rows, now) : null;
   return <figure className="chart chart-lanes">
     <figcaption className="eyebrow">{props.title ?? `Next ${hours} h · one lane per planned setting`}</figcaption>
+    {note && <ul className="chart-notes"><li className="chart-note-stale">{note}</li></ul>}
     {drawable
-      ? <div className="lanes lanes-plan">
+      ? <div className={rowEnd ? "lanes lanes-plan lanes-plan-end" : "lanes lanes-plan"}>
         <div className="lanes-top" aria-hidden="true" />
         <ul className="lanes-rows" aria-label="Planned settings">
           {rows.map((row) => <li key={row.key} className={row.muted ? "plan-row plan-row-muted" : "plan-row"} data-param={row.key}>
@@ -313,7 +355,8 @@ export function PlanLanes(props: PlanLanesProps) {
               <span className="plan-label">{row.label}</span>
               {row.head && <><span className="plan-sep" aria-hidden="true">·</span><span className="plan-status">{row.head}</span></>}
             </p>
-            <p className="plan-line"><span className="plan-device" title={row.deviceNote ?? undefined}>{row.device}</span></p>
+            <p className="plan-line"><span className={row.stale ? "plan-device plan-device-stale" : "plan-device"} title={deviceTitle(row, now)}>{row.device}</span></p>
+            {rowEnd && <div className="plan-end">{rowEnd(row)}</div>}
           </li>)}
         </ul>
         <div className="lanes-axis" aria-hidden="true" />
