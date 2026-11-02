@@ -179,9 +179,12 @@ function headerRuns(columns: readonly ScorecardColumn[]): HeaderRun[] {
 
 export function ScorecardTable({ model, window }: { model: ScorecardModel; window: ScorecardWindow }) {
   const runs = headerRuns(model.columns);
+  // The page rebuilds the model on every poll and clock tick; the file is made again only when its text changes, so the
+  // link a person is about to use is never swapped under them.
+  const csv = scorecardCsv(model);
   return <>
     <div className="scorecard-tools">
-      <CsvLink label="CSV of this table" filename={`verdify-scorecard-${window.from}-${window.to}.csv`} build={() => scorecardCsv(model)} version={model} />
+      <CsvLink label="CSV of this table" filename={`verdify-scorecard-${window.from}-${window.to}.csv`} build={() => csv} version={csv} />
     </div>
     <div className="table-wrap scorecard-wrap" role="region" tabIndex={0} aria-label="Daily scorecard, scrolls sideways">
       <table className="scorecard">

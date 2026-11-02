@@ -105,11 +105,12 @@ export default function Graphs() {
     if (!read || read.data) return;
     messages[panel.unit] = read.error !== null ? readFailure(read.error, `the ${panelName(panel.unit)} chart`) : `Loading ${panelName(panel.unit)}…`;
   });
-  // The climate panels' reads: the resolution line states their bucket, and the window is empty when none has a value.
+  // The climate panels' reads: the resolution line states their bucket. The window is empty when no panel, a picked
+  // metric's included, has a value in it.
   const climate = panelReads.filter((_, index) => panels[index].metrics.some((metric) => (CLIMATE_KEYS as readonly string[]).includes(metric.key)));
   const climateBucket = climate.find((read) => read.data)?.data?.bucket_s ?? null;
   const daily = climate.some((read) => CLIMATE_KEYS.some((metric) => read.data?.series[metric]?.source === "daily_summary"));
-  const empty = climate.length > 0 && climate.every((read) => read.current && read.data && noValues(read.data, CLIMATE_KEYS));
+  const empty = panelReads.length > 0 && panelReads.every((read, index) => read.current && read.data && noValues(read.data, panels[index].metrics.map((metric) => metric.key)));
   const failed = reads.filter((read) => read.error !== null && read.data === null);
   const notices = [...parsed.notices, ...resolved.notices];
   const lanesMessage = window === null ? "Loading equipment…"

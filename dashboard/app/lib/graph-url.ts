@@ -72,10 +72,19 @@ export function isDay(text: string): boolean {
   const date = new Date(`${text}T12:00:00Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === text;
 }
-/** An ISO 8601 time with `Z` or an offset, in epoch seconds; null for anything else, a bare local time included. */
+/**
+ * An ISO time as the page keeps it: a `+` offset that reached the URL unencoded reads as a space (`URLSearchParams`
+ * decodes `+` so), and is a `+` again here.
+ */
+export const instantText = (text: string): string => text.replace(/ (\d{2}:\d{2})$/, "+$1");
+/**
+ * An ISO 8601 time with `Z` or an offset, in epoch seconds; null for anything else: a bare local time, or a day that
+ * does not exist ("2026-02-30T08:00Z", which `Date.parse` would read as March 2).
+ */
 export function instantOf(text: string): number | null {
-  if (!INSTANT_TEXT.test(text)) return null;
-  const ms = Date.parse(text);
+  const value = instantText(text);
+  if (!INSTANT_TEXT.test(value) || !isDay(value.slice(0, 10))) return null;
+  const ms = Date.parse(value);
   return Number.isFinite(ms) ? ms / 1000 : null;
 }
 /** Local days from From to To, both counted. */
@@ -100,7 +109,7 @@ function customWindow(from: string, to: string): { spec: WindowSpec } | { notice
   if (start === null || end === null) return { notice: `${removed}: it is not two days or two times with an offset` };
   if (end <= start) return { notice: `${removed}: to is not after from` };
   if (end - start > MAX_WINDOW_S) return { notice: `${removed}: ${OVER_TEXT.toLowerCase()}` };
-  return { spec: { kind: "exact", from, to, start, end } };
+  return { spec: { kind: "exact", from: instantText(from), to: instantText(to), start, end } };
 }
 
 /**

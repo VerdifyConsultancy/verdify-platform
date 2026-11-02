@@ -96,7 +96,7 @@ test("a key API-03 does not list reads not served; a failed request couldn't loa
 
 test("the table: grouped headers, 30 rows newest first, missing cells as — with their reason, and CSV of this table is exactly those rows", async () => {
   const built = model();
-  render(<ScorecardTable model={built} window={WINDOW} />);
+  const { rerender } = render(<ScorecardTable model={built} window={WINDOW} />);
   const table = within(screen.getByRole("region", { name: /Daily scorecard/ })).getByRole("table");
   const heads = [...table.querySelectorAll("thead tr")].map((row) => [...row.querySelectorAll("th")].map(text));
   expect(heads).toEqual([
@@ -128,4 +128,11 @@ test("the table: grouped headers, 30 rows newest first, missing cells as — wit
   expect(csv).toContain(",— no data (outage),");
   expect(csv).toContain(",— no meter data,");
   expect(csv).toContain(",— meter readings broken up,");
+  // A poll that brings the same rows rebuilds the model but not the file: the link keeps its target.
+  rerender(<ScorecardTable model={model()} window={WINDOW} />);
+  expect(link.getAttribute("href")).toBe("blob:1");
+  expect(blobs).toHaveLength(1);
+  // New rows make a new file.
+  rerender(<ScorecardTable model={model({ minutes: null, minutesFailed: true })} window={WINDOW} />);
+  await waitFor(() => expect(link.getAttribute("href")).toBe("blob:2"));
 });

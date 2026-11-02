@@ -110,8 +110,11 @@ test("/graphs?range=72h&set=mister_engage_kpa: three linked panels with the band
   expect(texts(temp).some((item) => /device|PLANNED/.test(item))).toBe(false);
   expect(texts(rh).some((item) => /device|PLANNED/.test(item))).toBe(false);
   for (const plot of panels()) expect(plot.opts.series.slice(1).every((series) => series.spanGaps === false)).toBe(true);
-  // The lanes draw under the panels, and the chips keep the setting.
+  // The lanes draw under the panels, and a wet line's interval names its cause: L04's misting this morning reads VPD.
   expect(document.querySelector("[data-equipment=fan1]")).not.toBeNull();
+  expect(texts(lanesPlot()!)).toContain("VPD");
+  expect([...document.querySelectorAll(".chart-lanes .chart-key li")].map(text)).toContain("VPD");
+  // The chips keep the setting.
   const chips = within(screen.getByRole("list", { name: "Range" })).getAllByRole("link");
   expect(chips.map((chip) => [chip.textContent, chip.getAttribute("href"), chip.getAttribute("aria-current")])).toEqual([
     ["24 h", "/graphs?range=24h&set=mister_engage_kpa", null], ["72 h", "/graphs?range=72h&set=mister_engage_kpa", "page"],
@@ -272,12 +275,49 @@ test("unknown or undrawable entries from an old link are dropped with a notice, 
   expect(within(screen.getByRole("list", { name: "Range" })).getByRole("link", { name: "7 d" }).getAttribute("href")).toBe("/graphs?range=7d&set=");
 });
 
-test("an empty window says so with a Last 24 h link; the stale trace stops at its last sample", async () => {
+test("an empty window says so with a Last 24 h link", async () => {
   chartStubs();
   await open(`/graphs?from=${iso(S - 4 * 60)}&to=${iso(S)}`, { fixture: "controller-not-reporting" });
   const empty = document.querySelector(".panel-empty")!;
   expect(text(empty)).toBe("No data in this windowLast 24 h");
   expect(within(empty as HTMLElement).getByRole("link", { name: "Last 24 h" }).getAttribute("href")).toBe("/graphs?range=24h");
+});
+
+test("a window where only a picked metric has values is not empty", async () => {
+  chartStubs();
+  startFixtureApi();
+  const answered = globalThis.fetch;
+  // The climate panels' reads come back with no value at all; the flow panel's keeps its values.
+  vi.stubGlobal("fetch", vi.fn(async (input: string, init?: RequestInit) => {
+    const response = await answered(input, init);
+    if (!input.includes("/v1/series") || input.includes("climate.flow_gpm")) return response;
+    const body = await response.json() as { series: Record<string, { avg: (number | null)[] }> };
+    for (const columns of Object.values(body.series)) columns.avg = columns.avg.map(() => null);
+    return { ...response, json: async () => body } as Response;
+  }));
+  mount("/graphs?range=24h&m=climate.flow_gpm");
+  await settle();
+  expect(panels()).toHaveLength(4);
+  expect(document.querySelector(".panel-empty")).toBeNull();
+});
+
+test("while the controller is not reporting each trace stops at its last sample and reads STALE; the band and the plan still draw", async () => {
+  chartStubs();
+  await open("/graphs?range=24h", { fixture: "controller-not-reporting" });
+  const [temp, vpd, rh] = panels();
+  // Every panel names the last minute with data, and draws nothing after it.
+  expect(captions()).toHaveLength(3);
+  expect([...document.querySelectorAll(".linked-panels .chart-notes li")].map(text)).toEqual(Array(3).fill("STALE · last data 10:36"));
+  for (const plot of [temp, vpd, rh]) {
+    const [t, values] = plot.data as [number[], (number | null)[]];
+    const last = values.findLastIndex((value) => value !== null);
+    expect(t[last]).toBe(S - 6 * 60);
+    expect(values.slice(last + 1).every((value) => value === null)).toBe(true);
+  }
+  // The band on temperature and VPD, and the setting steps with Iris's plan ahead.
+  expect([temp, vpd, rh].map((plot) => { plot.draw(); return plot.ctx.fills.length > 0; })).toEqual([true, true, false]);
+  expect(texts(vpd)).toEqual(expect.arrayContaining(["1.60 kPa device", "1.70 kPa PLANNED · AI"]));
+  expect(document.querySelector(".panel-empty")).toBeNull();
 });
 
 test("CSV of this window holds exactly the plotted columns, with local times and offsets", async () => {

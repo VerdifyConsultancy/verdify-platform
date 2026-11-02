@@ -60,6 +60,14 @@ test("ISO times are an exact window with no next 12 h; Z and offsets both read, 
   expect(graphSearch(offset)).toBe("from=2026-11-01T01:30:00-06:00&to=2026-11-01T01:30:00-07:00");
   expect(instantOf("2026-11-01T08:00")).toBeNull();
   expect(instantOf("2026-11-01T08:00:00.250+01:00")).toBe(epoch("2026-11-01T07:00:00.250Z"));
+  // A day that does not exist is refused, never rolled over into March.
+  expect(instantOf("2026-02-30T08:00:00Z")).toBeNull();
+  // A + offset written into a link unencoded arrives as a space; it reads as +, and links write it encoded.
+  const plus = parseGraphUrl("from=2026-11-01T09:00:00+01:00&to=2026-11-01T13:00:00+01:00");
+  expect(plus.notices).toEqual([]);
+  expect(plus.view.window).toMatchObject({ kind: "exact", from: "2026-11-01T09:00:00+01:00", start: epoch("2026-11-01T08:00:00Z"), end: epoch("2026-11-01T12:00:00Z") });
+  expect(graphSearch(plus.view)).toBe("from=2026-11-01T09:00:00%2B01:00&to=2026-11-01T13:00:00%2B01:00");
+  expect(view(graphSearch(plus.view)).window).toEqual(plus.view.window);
   // A window that reaches past now is live, and reads only to now.
   const open = graphWindow(view(`from=2026-11-02T16:00:00Z&to=2026-11-02T19:00:00Z`).window, NOW);
   expect(open).toMatchObject({ live: true, measured: { from: epoch("2026-11-02T16:00:00Z"), to: NOW } });
