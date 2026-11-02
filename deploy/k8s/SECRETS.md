@@ -284,3 +284,22 @@ The public key is product-owned `cosign.pub`, SHA256
 Jason explicitly approved this new key and encrypted custody on 2026-10-23.
 It grants no permission to flash, rotate OTA credentials or open a device
 connection. See [signed-artifact operations](../../docs/runbooks/firmware-signed-artifacts.md).
+
+## Dashboard web (`verdify-dashboard`) (#1142)
+
+The dashboard BFF reads one Secret, delivered by the jvallery/agents KSOPS Application
+`verdify-dashboard-secrets` (jvallery/agents#5993, `CreateNamespace=false`, so it syncs once Argo app
+`verdify-dashboard` has created the namespace). The `verdify-dashboard` AppProject denies Secret, and
+`kustomize build deploy/k8s/dashboard` emits none; there is no placeholder. Its target namespace is
+`verdify-dashboard`, the same string as the kustomization's `namespace:`, the Namespace object and the
+Application destination (invariant 2).
+
+| Secret | Keys | Consumed by | Rotate |
+|---|---|---|---|
+| `verdify-dashboard-web` | `oidc-client-secret`, `cookie-secret`, `operator-api-token` | the BFF, Deployment `verdify-dashboard-web` (`secretKeyRef`, required: `OIDC_CLIENT_SECRET`, `COOKIE_SECRET`, `OPERATOR_API_TOKEN`) | Jason re-seals in the jvallery/agents KSOPS lane; `operator-api-token` changes together with `verdify-operator-api` in `verdify-prod`, in one agents PR. Once synced, delete the web pod, and the operator API pod for the token, so each restarts with the new value. A new `cookie-secret` voids only sign-ins in progress; sessions survive. |
+
+A missing Secret or key leaves a new web pod in `CreateContainerConfigError`; the Deployment runs no pod
+until R1's pin PR (#1143). Read it back by key name only:
+`kubectl -n verdify-dashboard describe secret verdify-dashboard-web`. The image-pull Secret
+`zot-origin-cluster-pull` is reflected into the namespace by jvallery/agents#5994. Operations:
+[dashboard runbook](../../docs/runbooks/dashboard.md).

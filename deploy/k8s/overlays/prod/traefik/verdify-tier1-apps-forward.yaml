@@ -19,9 +19,11 @@
 #
 # HOST SET: a catch-all HostRegexp for product subdomains, EXCEPT the hosts that
 # have their own non-verdify-prod backends or are deliberately off-edge
-# (www/www-dev/auth/analytics/logs/botauth/mqtt/traefik/proposals-hello) plus crm.verdify.ai, which is
+# (www/www-dev/auth/analytics/logs/botauth/mqtt/traefik/proposals-hello/dashboard) plus crm.verdify.ai, which is
 # reserved for the separate Verdify CRM/Twenty rollout. Apex and www are owned
 # by the standalone VerdifyConsultancy/verdify-www repo; www-dev is owned there too.
+# dashboard.verdify.ai is served by its own IngressRoute in namespace verdify-dashboard
+# (deploy/k8s/dashboard/ingressroute.yaml), whose plain Host rule would lose to this priority-50 match.
 # Every single-label host routed outside verdify-prod must be excluded here.
 # Route priority is not an ownership mechanism.
 #
@@ -59,6 +61,7 @@ spec:
         && !Host(`crm.verdify.ai`)
         && !Host(`mqtt.verdify.ai`)
         && !Host(`traefik.verdify.ai`)
+        && !Host(`dashboard.verdify.ai`)
       priority: 50
       services:
         - name: verdify-traefik

@@ -1,0 +1,94 @@
+# verdify-dashboard-web: the BFF (dashboard/Dockerfile, an Express server with React Router SSR).
+# It holds the OIDC client secret, the cookie secret and the operator API token, and no database,
+# device, MCP or Home Assistant credential (architecture §3). The image writes nothing at runtime and
+# runs as a numeric non-root user (#1121), so the pod has no volumes.
+#
+# kustomization.yaml alone sets the replica count and the image digest: replicas 0 and no digest
+# until R1's pin PR (#1143) sets the first digest and count 1.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-dashboard-web
+  labels:
+    app.kubernetes.io/name: verdify-dashboard-web
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: verdify
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-dashboard-web
+  template:
+    metadata:
+      labels:
+        # allow-web-from-traefik-apps (networkpolicy.yaml) and the operator API's ingress policy
+        # allow-operator-api-from-dashboard-web in verdify-prod (#1148, TCP 8090) select this label.
+        app.kubernetes.io/name: verdify-dashboard-web
+        app.kubernetes.io/component: web
+        app.kubernetes.io/part-of: verdify
+    spec:
+      serviceAccountName: verdify-dashboard-web
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      # Reflected into this namespace by jvallery/agents#5994.
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: web
+          image: verdify-dashboard-web
+          ports:
+            - name: http
+              containerPort: 3000
+          # PUBLIC_ORIGIN, OIDC_ISSUER, OIDC_CLIENT_ID, OPERATOR_API_URL and DASHBOARD_WRITES_ENABLED;
+          # kustomize rewrites the name to the generated, hash-suffixed ConfigMap.
+          envFrom:
+            - configMapRef:
+                name: verdify-dashboard-web
+          env:
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-dashboard-web
+                  key: oidc-client-secret
+            - name: COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-dashboard-web
+                  key: cookie-secret
+            - name: OPERATOR_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-dashboard-web
+                  key: operator-api-token
+          # /readyz reports Authentik and operator API reachability in its body and never gates on
+          # them, so a restart while Authentik is down keeps existing sessions' reads and Stop.
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 384Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL

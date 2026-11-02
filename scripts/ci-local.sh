@@ -274,6 +274,11 @@ $PY -m pytest -q -rs \
   tests/test_twin_asof_migration.py \
   tests/test_twin_live_driver.py \
   tests/test_verdify_traefik_placement.py \
+  tests/test_verdify_tier1_owner_exclusions.py \
+  tests/test_dashboard_manifests.py \
+  tests/test_egress_deny_management.py \
+  tests/test_mcp_egress_boundary.py \
+  tests/test_writer_outbound_boundary.py \
   tests/test_verify_component_proof_packet.py \
   tests/test_writer_lease_fence.py
 

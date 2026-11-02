@@ -1,0 +1,26 @@
+# dashboard.verdify.ai on the shared apps Traefik (traefik-apps, 192.168.7.10). The tunnel's
+# *.verdify.ai rule already sends the host to traefik-apps on 443 (websecure), and tls: {} lets the
+# default TLSStore serve the *.verdify.ai wildcard. No middlewares: the BFF pins the Host and sets
+# its own security headers.
+#
+# verdify-tier1-forward (overlays/prod, HostRegexp at priority 50) would win over this plain Host
+# rule, so it excludes dashboard.verdify.ai; route priority is not an ownership mechanism. Never
+# label this route traefik-tier=verdify: traefik-apps reads only IngressRoutes without that label.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: verdify-dashboard-web
+  labels:
+    app.kubernetes.io/name: verdify-dashboard-web
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: verdify
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`dashboard.verdify.ai`)
+      services:
+        - name: verdify-dashboard-web
+          port: 3000
+  tls: {}
