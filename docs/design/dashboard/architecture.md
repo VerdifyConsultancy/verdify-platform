@@ -392,7 +392,7 @@ Plan values keep `readback_values_equivalent` and show as Iris stored them.
 | requested | Stored, no matching readback yet, less than 5 min old | REQUESTED |
 | confirmed | A readback at or after `created_at` matches: `cfg_*`, a native Number or Switch, a `SWITCH_CONFIRM_EQUIPMENT` mirror in `equipment_state`, or, for `irrigation_site` rows, the program hash of a push compiled after the write | CONFIRMED |
 | not_confirmed | 5 min after the request there is no match, or the newest readback disagrees (the ingestor's `setpoint_unconfirmed` window) | NOT CONFIRMED |
-| held | The platform applies something else on purpose: a dispatcher clamp (a `setpoint_clamps` row after the request) or an armed experiment manifest (§5.2) | HELD |
+| held | The platform applies something else on purpose: a dispatcher clamp (a `setpoint_clamps` row after the request, while the newest readback does not confirm the value, so a guardrail that let go does not hold it forever) or an armed experiment manifest (§5.2) | HELD |
 | no_readback | None of those readbacks exists; the value is sent but can never be confirmed | NO READBACK |
 | overridden | Not manual, and a newer Iris plan now wins; the UI says "Iris changed this at 14:05" | AI |
 | released | The newest row has `value = NULL`; plan, band or default applies | none |
@@ -401,7 +401,9 @@ Plan values keep `readback_values_equivalent` and show as Iris stored them.
 `experiment`, `deferred` (heap) or `push_failed` (`setpoint_changes.delivery_status` after the request),
 `writer_down` (the ingestor heartbeat is stale, §7) or `no_match`. Before the engine an `irrigation_site` row
 stays requested ("applies with the irrigation firmware"). The states are display only and add no alerts;
-`setpoint_unconfirmed` (`ingestor/tasks/confirmation.py`) still covers device writes.
+`setpoint_unconfirmed` (`ingestor/tasks/confirmation.py`) still covers device writes. With no desired row a
+setting's state is its plan value's, else the dispatcher's newest push's (VD-67); a `setpoint_changes` row the
+controller reported itself (source `esp32`) is never the push a reason's `since` names.
 
 ### 5.6 Iris, agents and `manual`
 
@@ -553,8 +555,10 @@ bounded `time_bucket_gapfill` series endpoint. There is no new rollup layer in t
   `grow_light_{main,grow}_intent` (`EQUIPMENT_SWITCH_MAP` in `ingestor/entity_map.py`, with its rule-7 line), and
   Equipment shows both.
 - **Alerts.** There is one open-alert count, `verdify_services.alerts.open_count` (VD-67): the unacknowledged
-  (disposition `open`) open rows (the predicate above) after repeats of one `alert_type` and zone are merged, each
-  merged row counted once (a merged row is unacknowledged while any of its rows is). It always equals the
+  (disposition `open`) open rows (the predicate above) after repeats of one `alert_type` and `sensor_id` are
+  merged (NULL with NULL: the key the ingestor's monitor keeps one row per probe on; `zone` is NULL on most
+  rows and would fold unrelated sensors together), each merged row counted once (a merged row is
+  unacknowledged while any of its rows is). It always equals the
   unacknowledged rows API-14 returns, and the nav, Now, Activity, API-02, API-14 and the MCP `alerts` adapter all
   show it. API-14 returns the merged rows (count, first and last seen); "recent" means resolved in the last 24 h.
   VD-72 keeps one row per offline probe (`soil_sensor_offline`, keyed on the probe, and every `v_sensor_staleness`
