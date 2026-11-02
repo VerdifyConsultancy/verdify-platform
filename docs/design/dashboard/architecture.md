@@ -225,8 +225,10 @@ cookie cleared, 302 `/water`.
   call never does, so no proxied user request can mint a session.
 - Every `/v1` call resolves `X-Dashboard-Session` to a `dashboard_session` row (cached 30 s) and checks the
   role: GET and HEAD for both roles, everything else for operators (403 `forbidden`). No session: 401 on `/api`, 302
-  to sign-in on pages. A `/v1` path asked with a method it does not serve gets the same checks before its 404, so a
-  viewer's write is 403 whatever the path.
+  to sign-in on pages. FastAPI answers two things before any check runs: a method the path does not serve and a
+  body it cannot parse. The operator API runs the path's checks before those answers too, so a call without the
+  bearer or the session is 401 and a viewer's write to any served path is 403, whatever its body. An unknown path
+  is 404.
 
 ## 5. Control model
 

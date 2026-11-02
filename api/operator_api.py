@@ -8,7 +8,8 @@ except ``/healthz`` and ``/readyz`` carries the shared bearer token.
 - Sessions. The BFF verifies the Authentik ID token and creates a session with INT-01; ``dashboard_session`` keeps
   only the token's SHA-256, for 12 hours. Every ``/v1`` call resolves ``X-Dashboard-Session`` (cached 30 s) and
   applies the role rule: GET and HEAD for viewers and operators, every other method for operators only. No
-  ``X-Authentik-*`` header is ever read.
+  ``X-Authentik-*`` header is ever read. What FastAPI answers before any dependency (a method the path does not
+  serve, a body it cannot parse) waits for the same checks (``checks_first``).
 - Routes. ``include_v1()`` includes ``/v1/me`` and each module in ``api/operator_routes/`` under ``/v1`` with the
   bearer, session and role checks; a route module carries no auth of its own. Every route's ``operation_id`` is its
   design id, and tests/test_operator_api_contract.py checks each against
@@ -75,6 +76,8 @@ SESSION_CACHE_S = 30.0  # deleting someone's dashboard_session rows ends their s
 SESSION_CACHE_MAX = 1024
 PURGE_INTERVAL_S = 3600.0
 V1 = "/v1"
+INT01_PATH = "/internal/sessions"
+INT02_PATH = "/internal/sessions/current"
 SESSION_HEADER = "x-dashboard-session"
 READ_METHODS = frozenset({"GET", "HEAD"})
 PROBE_PATHS = frozenset({"/healthz", "/readyz"})
@@ -315,6 +318,27 @@ async def no_session_header(request: Request) -> None:
         raise ServiceError(problem("forbidden", "A session is created only by the dashboard's sign-in."))
 
 
+async def checks_first(request: Request) -> Problem | None:
+    """The checks the routes on this path run, for the answers FastAPI gives before any dependency: a method the
+    path does not serve (405) and a body it cannot parse (it reads a JSON body first). So those answers come after
+    the same refusals a served route gives: no bearer or no session 401, a viewer's write 403 and a proxied INT-01
+    call 403. The refusal, or None when the checks pass or the path is a probe."""
+    path = request.scope["path"]
+    if path in PROBE_PATHS:
+        return None
+    try:
+        await bearer(request)
+        if path.startswith(V1 + "/"):
+            await role(request, await session(request))
+        elif path == INT01_PATH:
+            await no_session_header(request)
+        elif path == INT02_PATH:
+            await session(request)
+    except ServiceError as refused:
+        return refused.problem
+    return None
+
+
 def include(app: FastAPI, router: APIRouter, *, prefix: str = "", dependencies: Sequence[Any] = ()) -> None:
     """``app.include_router``, also noting each route's full path for the log line: recent FastAPI (0.139 and 0.162
     were checked; 0.115 copies the routes instead) includes a router lazily and leaves the router's own route,
@@ -339,8 +363,9 @@ class SessionCreate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    # Actor.person() takes 1 to 64 characters, so a longer username is refused here instead of on every /v1 call.
     username: str = Field(min_length=1, max_length=ACTOR_NAME_MAX_LENGTH, description="preferred_username")
-    display_name: str | None = Field(default=None, max_length=256, description="name claim")
+    display_name: str | None = Field(default=None, description="name claim")
     role: Role
 
 
@@ -394,7 +419,7 @@ async def readyz(request: Request) -> JSONResponse:
 
 
 @internal.post(
-    "/internal/sessions",
+    INT01_PATH,
     operation_id="INT-01",
     status_code=201,
     response_model=SessionToken,
@@ -411,7 +436,7 @@ async def create_session(body: SessionCreate, request: Request) -> SessionToken:
     return SessionToken(token=token, expires_at=expires_at)
 
 
-@internal.delete("/internal/sessions/current", operation_id="INT-02", status_code=204, dependencies=[Depends(bearer)])
+@internal.delete(INT02_PATH, operation_id="INT-02", status_code=204, dependencies=[Depends(bearer)])
 async def delete_session(request: Request, current: Annotated[DashboardSession, Depends(session)]) -> Response:
     """Sign-out: delete the session named by X-Dashboard-Session, here and in the cache."""
     async with request.app.state.pool.acquire() as conn:
@@ -456,6 +481,11 @@ async def on_service_error(request: Request, exc: ServiceError) -> JSONResponse:
 
 async def on_invalid_request(request: Request, exc: RequestValidationError) -> JSONResponse:
     errors = exc.errors()
+    if any(error.get("type") == "json_invalid" for error in errors):
+        # Raised while FastAPI reads the body, before any dependency; every other one comes after the checks.
+        refusal = await checks_first(request)
+        if refusal is not None:
+            return problem_response(request, refusal)
     first: Mapping[str, Any] = errors[0] if errors else {}
     # The field names after the location ("body", "query", ...); never the input itself.
     field_name = ".".join(part for part in first.get("loc", ())[1:] if isinstance(part, str)) or None
@@ -464,14 +494,13 @@ async def on_invalid_request(request: Request, exc: RequestValidationError) -> J
 
 
 async def on_http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:
-    if exc.status_code == 405 and request.scope["path"].startswith(V1 + "/"):
-        # A /v1 path with a method it does not serve gets the /v1 checks first, as a served route would: no bearer
-        # or no session is 401 and a viewer's write is 403. Only then is it an unknown operation.
-        try:
-            await bearer(request)
-            await role(request, await session(request))
-        except ServiceError as refused:
-            return problem_response(request, refused.problem)
+    if exc.status_code in (400, 405):
+        # A method the path does not serve, or a body FastAPI could not read (say, not UTF-8): both are answered
+        # before any dependency, so the path's checks come first. Only then is it an unknown operation or a bad
+        # request. An unknown path (404) gets no checks.
+        refusal = await checks_first(request)
+        if refusal is not None:
+            return problem_response(request, refusal)
     if exc.status_code in (404, 405):
         return problem_response(request, problem("not_found", "There is no such operation."))
     if exc.status_code == 401:

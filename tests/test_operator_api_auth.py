@@ -27,6 +27,7 @@ import pytest
 from fastapi import APIRouter, Request
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
+from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parents[1]
 API = ROOT / "api"  # operator_api and operator_routes import as top-level modules, as in the image
@@ -169,6 +170,16 @@ async def probe_refused() -> None:
 @PROBE.get("/probe/hours")
 async def probe_hours(hours: int) -> dict:
     return {"hours": hours}
+
+
+class ProbeBody(BaseModel):
+    value: float
+
+
+@PROBE.put("/probe/body")
+async def probe_body(body: ProbeBody) -> dict:
+    """A write with a JSON body, as API-10 will be: FastAPI reads the body before any dependency runs."""
+    return {"value": body.value}
 
 
 @pytest.fixture
@@ -416,6 +427,38 @@ def test_a_viewer_gets_200_on_get_me_and_403_on_every_other_method(client, db, m
     assert_problem(client.request(method, "/v1/me", headers=signed_in(operator)), 404, "not_found")
     assert_problem(client.request(method, "/v1/me", headers={"X-Dashboard-Session": viewer}), 401, "unauthenticated")
     assert_problem(client.request(method, "/v1/me", headers=with_bearer()), 401, "unauthenticated")
+
+
+@pytest.mark.parametrize("body", [b"{not json", b'{"value": "\xff"}'])  # a JSON decode error, then bytes not UTF-8
+def test_the_checks_come_before_a_body_that_does_not_parse(client, db, body):
+    viewer, operator = add_session(db, role="viewer"), add_session(db, role="operator", username="jason")
+    as_json = {"Content-Type": "application/json"}
+
+    def write(headers: dict[str, str]):
+        return client.put("/v1/probe/body", content=body, headers={**as_json, **headers})
+
+    assert_problem(write({"X-Dashboard-Session": operator}), 401, "unauthenticated")  # no bearer
+    assert_problem(write(with_bearer()), 401, "unauthenticated")  # no session
+    assert_problem(write(signed_in(viewer)), 403, "forbidden")  # a viewer's write, whatever its body
+    assert_problem(write(signed_in(operator)), 400, "invalid_request")  # only then is the body refused
+    assert client.put("/v1/probe/body", json={"value": 1.5}, headers=signed_in(operator)).json() == {"value": 1.5}
+
+    def create(headers: dict[str, str]):
+        return client.post("/internal/sessions", content=body, headers={**as_json, **headers})
+
+    assert_problem(create({}), 401, "unauthenticated")
+    assert_problem(create({**with_bearer(), "X-Dashboard-Session": operator}), 403, "forbidden")
+    assert_problem(create(with_bearer()), 400, "invalid_request")
+    assert operator_api.CREATE_SESSION_SQL not in db.statements
+
+
+def test_an_internal_path_asked_with_a_method_it_does_not_serve_needs_the_bearer_first(client, db):
+    session = add_session(db)
+    for method, path in (("GET", "/internal/sessions"), ("POST", "/internal/sessions/current")):
+        assert_problem(client.request(method, path, headers={"X-Dashboard-Session": session}), 401, "unauthenticated")
+    assert_problem(client.get("/internal/sessions", headers=with_bearer()), 404, "not_found")
+    assert_problem(client.post("/internal/sessions/current", headers=signed_in(session)), 404, "not_found")
+    assert_problem(client.post("/healthz"), 404, "not_found")  # the probes take no bearer
 
 
 def test_the_actor_comes_from_the_session_row_and_x_authentik_headers_are_ignored(client, db):
