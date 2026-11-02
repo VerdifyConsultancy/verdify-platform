@@ -9,6 +9,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+from test_mcp_audience_auth import AGENT_TOOLS
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -228,7 +229,8 @@ async def test_real_mcp_named_agent_inventory_attribution_and_revocation(monkeyp
             listed = await client.post("/mcp", headers=headers("runtime-test-steward"), json=_request("tools/list", 2))
             names = {tool["name"] for tool in _protocol_payload(listed)["result"]["tools"]}
             assert names == server.audience_allowlist("agent")
-            assert len(names) == 10
+            # Within the architecture §5.6 agent column; later tools join by registering with `agent`.
+            assert {"climate", "alerts"} <= names <= AGENT_TOOLS
 
             acknowledged = await client.post(
                 "/mcp",

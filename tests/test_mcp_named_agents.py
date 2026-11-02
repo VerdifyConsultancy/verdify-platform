@@ -34,9 +34,27 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 import yaml
+from test_mcp_audience_auth import AGENT_TOOLS
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROD_OVERLAY = REPO_ROOT / "deploy" / "k8s" / "overlays" / "prod"
+
+# The reads and alerts VD-59 grants. The rest of the architecture §5.6 agent
+# column (AGENT_TOOLS) joins as #1171, #1173, #1174 and #1177 register it.
+VD59_AGENT_TOOLS = frozenset(
+    {
+        "climate",
+        "forecast",
+        "equipment_state",
+        "history",
+        "plan_status",
+        "get_setpoints",
+        "scorecard",
+        "topology",
+        "position_current",
+        "alerts",
+    }
+)
 
 IRIS_TOKEN = "fixture-iris-token"
 ADMIN_TOKEN = "fixture-admin-token"
@@ -373,19 +391,9 @@ class TestTransportAndDispatch:
     def test_agent_tools_list_is_exactly_the_agent_allowlist(self, server, two_agents, monkeypatch):
         _as_caller(server, monkeypatch, STEWARD_TOKEN)
         names = {tool.name for tool in _run(server.mcp.list_tools())}
-        assert names == server.audience_allowlist("agent")
-        assert names == {
-            "climate",
-            "forecast",
-            "equipment_state",
-            "history",
-            "plan_status",
-            "get_setpoints",
-            "scorecard",
-            "topology",
-            "position_current",
-            "alerts",
-        }
+        registered = set(server.mcp._functions)
+        assert names == server.audience_allowlist("agent") == AGENT_TOOLS & registered
+        assert VD59_AGENT_TOOLS <= names
 
     def test_out_of_audience_denial_names_the_agent_never_the_token(self, server, two_agents, caplog):
         with caplog.at_level(logging.WARNING, logger="verdify.mcp.auth"):
