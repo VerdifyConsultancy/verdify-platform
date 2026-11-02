@@ -215,6 +215,61 @@ main>section>h2,main>section>.section-head{margin:2rem 0 .6rem}
 
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
+/* Dashboard components (design system §4 to §4.2 and §4.5): the rules app/components adds beside weather's classes. Colours are tokens only; white is the one literal. The §2.2 block below stays last. */
+.card-link{display:block;color:inherit;text-decoration:none}
+.card-link:hover{color:inherit;border-color:var(--leaf)}
+.chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.chips-sm .chip{min-height:2.25rem;font-size:.8rem;padding:0 .7rem}
+.btn-stop:hover{color:#fff;border-color:var(--ink)}
+@media(max-width:600px){.btn-wide{width:100%}}
+.tag-muted{color:var(--muted)}
+.tag-clean::before,.tag-fert::before{content:"";width:.5rem;height:.5rem;border-radius:50%;flex:none}
+.tag-clean::before{background:var(--eq-water)}
+.tag-fert::before{background:var(--eq-fert)}
+.state-note{font-size:.85rem;color:var(--muted)}
+.state-reason{display:block;font-size:.85rem;color:var(--muted)}
+.fresh{display:inline-flex;align-items:center;gap:.4rem}
+.fresh-ok{background:var(--leaf)}
+.fresh-stale{background:var(--amber)}
+.fresh-off{background:var(--fault)}
+.hero .fresh-ok{background:var(--mint)}
+.hero .fresh-off{background:var(--dot-off)}
+.value-muted,.panel-muted{color:var(--muted)}
+.hero .value-muted{color:var(--ink-muted)}
+.hero .hero-answer{font-size:clamp(1.2rem,2.4vw,1.6rem);font-weight:620;letter-spacing:-.02em;color:inherit}
+.stats-phone,.hero-more-phone{display:none}
+@media(max-width:520px){.stats .stat-more{display:none}.stats-phone{display:grid}.hero-more-phone{display:block}}
+.table-group th{font:600 .68rem/1.3 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--forest);background:var(--field)}
+.event-row .event-when{grid-row:auto}
+.event-body{min-width:0}
+.event-body h3+p{margin-top:.15rem}
+.events .alert-row{border-left:3px solid var(--muted)}
+.events .alert-critical{border-left-color:var(--fault)}
+.events .alert-warning{border-left-color:var(--amber)}
+.alert-severity{font:600 .72rem/1.45 var(--mono);text-transform:uppercase;letter-spacing:.08em}
+.alert-critical .alert-severity{color:var(--fault)}
+.alert-warning .alert-severity{color:var(--warn-text)}
+.alert-info .alert-severity{color:var(--muted)}
+.event-body .actions a,.panel-empty a{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
+.notice-fault{border-left-color:var(--fault);background:var(--tint-fault)}
+.banner{display:flex;flex-wrap:wrap;align-items:center;gap:0 .75rem;margin:0 0 .5rem}
+.banner a{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
+.toasts{position:fixed;right:1rem;bottom:1rem;z-index:30;width:min(24rem,calc(100% - 2rem));display:grid;gap:.5rem;pointer-events:none}
+.toast-stack{display:grid;gap:.5rem}
+.toast{display:flex;align-items:flex-start;gap:.5rem;border-left:3px solid var(--forest);box-shadow:var(--shadow-sm);pointer-events:auto}
+.toast-failure{border-left-color:var(--fault)}
+.toast-body{flex:1;min-width:0}
+.toast-body p{margin:.1rem 0}
+.toast-dismiss{flex:none;min-width:2.75rem;padding:0}
+@media(max-width:860px){.toasts{left:0;right:0;width:auto;padding-inline:.5rem;bottom:calc(3.5rem + env(safe-area-inset-bottom))}}
+.panel-state{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .6rem;margin:0 0 .6rem;font-size:.85rem;color:var(--muted)}
+.panel-error{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem}
+.panel-error p{margin:0}
+.skeleton{background:var(--field);border-radius:var(--radius)}
+.skeleton-sm{min-height:5rem}
+.skeleton-md{min-height:10rem}
+.skeleton-lg{min-height:20rem}
+
 /* Dashboard (design system §2.2): added tokens, the two AA fixes and the new badges. Weather's tokens above are never edited. This block comes last: its :focus-visible and input,select,textarea rules have the same specificity as weather's and win by order. */
 :root{
   --focus:#0e5a43;--control-border:#6f867d;
