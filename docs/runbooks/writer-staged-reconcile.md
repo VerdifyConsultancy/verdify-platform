@@ -1,244 +1,125 @@
-# #433 bounded writer reconciliation
+# Device writer: plain convergence (VD-62)
 
-Jason selected source-owned desired policy for Iris, crop VPD, lighting,
-activity/direct-wet, and safety. This procedure has no facility inspection
-precondition. It keeps one device writer and the 12-command batch limit.
+The ingestor is the only device writer. Since VD-62 its dispatcher converges
+the controller to the desired values in ordinary paced passes. Nothing waits
+for an approval file, a preview, halted-run custody or a forward handoff, and
+no ordinary pass logs `blocked_stage` or `blocked_broad_restore`. The old
+approval, rollback, recovered-confirmation and confirmed-halt procedures and
+`scripts/prepare-writer-stage.py` are retired. Staging survives only in the C1
+qualification overlay (below).
 
-## Delivery boundary
+## How a pass converges
 
-Merge and deploy the source and ingestor digest through the normal Verdify
-full-sync path. Production mounts `/srv/verdify/state` from PVC
-`verdify-ingestor-state` (`overlays/prod/ingestor-state-volume.yaml`), so old
-approvals and halted-run receipts survive Pod replacement. A surviving file is
-not current authority: its source, Pod, session, generation and expiry bindings
-still apply. Never delete/reset a halted run or restart the writer to bypass it.
+1. The dispatcher resolves every desired value (plan, band and defaults)
+   through the unchanged fences: the registry clamp, the physics invariants,
+   the VPD-high moisture guardrails, heap deferral, the writer Lease and
+   `VERDIFY_DEVICE_WRITE_ENABLED`. A value is a change when it differs from the
+   last push or from its current-generation cfg readback.
+2. The drift probe and the C1 overlay see the full change set first. When
+   neither owns the pass, the ordinary pass sends at most
+   `MAX_RECONNECT_COMMANDS = 12` commands. When more than 12 changes remain,
+   they go oldest difference first (`shared.delivery_differing_since`), then by
+   parameter name.
+3. A value sent on the same connection in the last 90 s whose readback has not
+   caught up is not sent again (the `cfg_*` sensors publish every 30 s), so a
+   woken pass never repeats the batch it just sent. A new desired value for
+   that parameter is a new change and goes out in the next pass.
+4. After a pass with no failed command the dispatcher completes its trigger
+   (which also stops the next pass from reseeding the last-push cache from
+   readbacks that have not caught up) and, when unsent changes remain, wakes
+   the next pass on the task loop's next tick (the scheduler still starts a
+   woken pass at most every 30 s). When every remaining change only
+   awaits its readback it does not wake: those wait for the 300 s cadence or a
+   readback drift, so a value the controller never takes cannot loop.
+5. A failed command leaves the trigger incomplete as before; the next pass runs
+   on the 300 s cadence or the next drift. A reconnect reseeds the last-push
+   cache from that connection's readbacks, so values a reboot reset go out
+   again in batches of 12.
 
-Production's `VERDIFY_AUTONOMOUS_POLICY_STAGING=1` permits source-owned admission
-of a fresh ordinary policy when no active state or approval exists; it does not
-resume a halted run. The explicit approval/recovery procedures below retain
-separate custody and current-identity checks. Never open another ESPHome session.
+Each command keeps the `requested` → `queued` → `sent` → `confirmed`
+lifecycle in `setpoint_changes`, and the ingestor's readback callbacks confirm
+it. The `setpoint_changes` NOTIFY fast path is not used for convergence.
 
-The dispatcher writes `/srv/verdify/state/writer-stage-preview.json` when any
-desired candidate exceeds 12 commands, whether it follows a reconnect, cfg
-drift, or a changed plan. It captures all current-generation cfg readbacks for audit.
-The approval fingerprint binds the canonical 48 fields, every candidate and
-prior-stage field, one atomic 48-field DB snapshot, the active plan rows and
-their earliest expiry, image source revision, pod, session, and connection
-generation. Unrelated changing sensor values do not invalidate the approval.
-An approval expires in at most 30 minutes, or five minutes before the first
-plan/one-shot expiry. A changed unrelated fixed desired value, bound readback,
-plan, session, or generation stops the run before another stage. The four crop
-VPD targets may move with their fresh source calculation; they are sent last.
-The seven named VPD-high moisture guardrail fields may also change effective
-value under the same unchanged plan when the live guardrail engages or releases.
-The dispatcher verifies each against its freshly calculated effective value;
-other planner fields stay fixed to approval. Already confirmed guardrail values
-must retain their readback until a new bounded stage sends the changed value.
+## Stage record
 
-## Arm once from a fresh preview
+The dispatcher writes one `system_state` row with entity `dispatcher_stage`
+whenever its stage changes (and once after each ingestor start):
 
-Run from Jason's Mac after the exact intended image is Synced + Healthy and
-the sole ingestor is Ready. `device-monitor` must report exactly one ESP32
-connection. No physical walkthrough is required.
+| Value | Meaning |
+|---|---|
+| `ordinary` | Nothing left over after this pass |
+| `paced <sent>/<pending>` | This pass sent `<sent>` of `<pending>` changes and woke the next pass, for example `paced 12/20` |
+| `held:c1` | The C1 qualification overlay owns the pass |
+| `held:heap` | Heap deferral held every command (rows `deferred_heap_pressure`) |
+| `held:lease` | The writer Lease was not held, so no command could be sent |
+| `held:drift_probe` | A drift-probe phase in flight held this pass (at most its 4-minute confirmation deadline) |
 
 ```bash
+scripts/verdify-db.sh prod -c "SELECT ts, value FROM system_state WHERE entity = 'dispatcher_stage' ORDER BY ts DESC LIMIT 10"
+```
+
+## Stuck-delivery alert
+
+`alert_monitor` raises `setpoint_delivery_stuck` (warning, category `system`,
+`sensor_id` `dispatcher`) while any setting has differed from the controller
+for more than 15 minutes: "N settings not reaching the controller since HH:MM
+UTC". Its details carry `differing`, up to 20 `params` and `oldest_since`. It is
+raised once and resolves when the settings converge; before the first
+dispatcher pass after an ingestor start an open one stays open, because the
+delivery state is not known yet. Clamped settings and settings under
+`experiment_policy_hold` never count, and nothing is raised while the stage is
+`held:c1`. Heap deferral and a lost Lease do count, because then settings
+really are not reaching the controller. The dashboard's stuck-delivery banner
+reads this alert.
+
+When it fires, read `dispatcher_stage`, then the writer logs and the device:
+
+```bash
+kubectl -n verdify-prod logs deploy/verdify-ingestor -c ingestor --since=30m \
+  | grep -E 'writer_reconcile|writer_dispatch|writer_delivery|dispatcher_stage|writer_drift_probe|c1_qualification'
 scripts/k3s-smoke.sh device-monitor
-umask 077
-kubectl -n verdify-prod exec deploy/verdify-ingestor -c ingestor -- \
-  cat /srv/verdify/state/writer-stage-preview.json \
-  > /private/tmp/verdify-writer-stage-preview.json
-python scripts/prepare-writer-stage.py \
-  /private/tmp/verdify-writer-stage-preview.json \
-  /private/tmp/verdify-writer-stage-approval.json
-kubectl -n verdify-prod exec -i deploy/verdify-ingestor -c ingestor -- \
-  sh -c 'umask 077; cat > /srv/verdify/state/.writer-stage-approval.tmp && mv /srv/verdify/state/.writer-stage-approval.tmp /srv/verdify/state/writer-stage-approval.json' \
-  < /private/tmp/verdify-writer-stage-approval.json
 ```
 
-The ingestor itself selects at most 12 values in dispatcher order, writes a
-durable `inflight` state **before** any request row or physical call, then
-uses its existing `requested` → `sent` → `confirmed` lifecycle and the same
-ESPHome connection. The next stage waits for every exact DB row to be
-`confirmed` with `confirmed_at` and matching current-generation cfg readback.
-An atomic approval replacement wakes the existing dispatcher within its
-one-second scheduler loop, subject to the existing 30-second retry throttle.
-It rechecks through that scheduler every 20 seconds while awaiting
-confirmation; the eight-minute deadline is a stop condition, not a sleep.
-A reconnect generation stays unreconciled until all approved values are
-confirmed. An ordinary desired-change run keeps its existing reconciled
-generation and defers its dispatch trigger until the stage is confirmed.
+Paced passes log `writer_reconcile reason=paced ... action=paced` and
+`action=wake`; `writer_reconcile ... action=incomplete` and an open
+`esp32_push_failed` alert name failed commands.
 
-Inspect progress without modifying the device:
+## Halted-run files
+
+At start-up, before the task loop, the ingestor renames (never deletes) every
+`writer-stage-*.json` file (state, approval, preview, recovery and their
+receipts), `writer-policy-hold.json`, and a `writer-drift-state.json` that is
+not `complete` together with `writer-drift-approval.json`, into
+`/srv/verdify/state/archived/<UTC yyyymmddThhmmssZ>/` on the retained
+`verdify-ingestor-state` PVC. It logs one `halted_run_archive` line per file.
+Nothing reads these files after VD-62; keep them as history.
+
+`overlays/prod` still sets `VERDIFY_AUTONOMOUS_POLICY_STAGING=1` for ingestor
+images released before VD-62; VD-62 images ignore it. Remove it in a separate
+change once the release pin carries VD-62.
 
 ```bash
-kubectl -n verdify-prod logs deploy/verdify-ingestor -c ingestor --since=35m \
-  | rg 'action=bounded_stage|action=stage_awaiting_confirmation|action=blocked_stage|action=blocked_broad_restore'
-kubectl -n verdify-prod exec deploy/verdify-ingestor -c ingestor -- \
-  cat /srv/verdify/state/writer-stage-state.json
-scripts/k3s-smoke.sh device-monitor
+kubectl -n verdify-prod exec deploy/verdify-ingestor -c ingestor -- ls -R /srv/verdify/state/archived
 ```
 
-The `writer_reconcile reason=` field names the actual trigger, including
-`desired_change` for a refreshed plan and `transport_reconnect` for a new
-socket. Both paths use the same stage approval and 12-command cap.
+## Staging that remains: the C1 qualification overlay
 
-Successful completion is `status: complete`, no remaining desired candidate,
-one connection, and 48 fresh readbacks. A newly moved crop VPD target may pass
-from the final stage into the ordinary writer only when its fresh source
-matches and the whole current candidate is at most 12 commands; verify that
-ordinary lifecycle reaches `confirmed` and its cfg readback matches before
-recording no residual candidate. Preserve the preview, approval, state, and
-prior private baseline outside the pod for the recovery record.
+The C1 qualification overlay (`docs/runbooks/c1-qualification-overlay.md`) and
+its restore to the ordinary base still stage, through `c1_overlay.choose()`,
+`physical_fence()` and `finish()` with their own worksheet and state files
+(`c1-qualification-*.json`). Each of its stages stays at or below 12 commands
+and waits for durable confirmation. While it owns a pass the stage reads
+`held:c1`.
 
-After a completed stage, a later desired candidate above 12 commands gets a
-new preview and requires a new approval. The ingestor first writes
-`writer-stage-completed-<run_id>.json` with the old state and approval, then
-removes their active names. Keep that archived receipt with the operator copy
-before replacing the pod; its `emptyDir` is lost on restart. If archival cannot
-be verified, the writer holds the broad candidate.
+## Verify after a release
 
-## Stop and bounded rollback
+After the ingestor restarts on a VD-62 image, with no operator action:
 
-The run halts on a changed active plan or one-shot, changed untouched
-readback, lost generation/lease, failed or missing lifecycle row, missing cfg
-confirmation, or uncertain process outcome. Removing the approval file stops
-future stages; an already sent batch must still be checked by its lifecycle.
-The global 12-command cap remains in force. Do not reset state or retry an
-unknown `inflight` stage.
-
-For a halted run in the same pod, the tool can restore **only the last stage**
-to its captured baseline, again through the sole ingestor in a batch of at
-most 12. It skips fields already at baseline and requires a fresh 48-field
-snapshot, a new ten-minute rollback approval, request/sent/confirmed rows,
-and matching cfg readbacks. Earlier confirmed stages remain desired. A
-replacement pod or a failed rollback requires a new read-only capture and
-reviewed recovery; never use a broad blind restore.
+- `v_data_pipeline_health` `setpoints` age falls below 600 s;
+- `dispatcher_stage` reads `ordinary` once convergence finishes;
+- the ingestor logs no `blocked_stage` or `blocked_broad_restore` line:
 
 ```bash
-umask 077
-kubectl -n verdify-prod exec deploy/verdify-ingestor -c ingestor -- \
-  cat /srv/verdify/state/writer-stage-preview.json \
-  > /private/tmp/verdify-writer-rollback-preview.json
-kubectl -n verdify-prod exec deploy/verdify-ingestor -c ingestor -- \
-  cat /srv/verdify/state/writer-stage-state.json \
-  > /private/tmp/verdify-writer-halted-state.json
-python scripts/prepare-writer-stage.py \
-  /private/tmp/verdify-writer-rollback-preview.json \
-  /private/tmp/verdify-writer-stage-recovery.json \
-  --rollback-state /private/tmp/verdify-writer-halted-state.json
-kubectl -n verdify-prod exec -i deploy/verdify-ingestor -c ingestor -- \
-  sh -c 'umask 077; cat > /srv/verdify/state/.writer-stage-recovery.tmp && mv /srv/verdify/state/.writer-stage-recovery.tmp /srv/verdify/state/writer-stage-recovery.json' \
-  < /private/tmp/verdify-writer-stage-recovery.json
+kubectl -n verdify-prod logs deploy/verdify-ingestor -c ingestor --since=2h \
+  | grep -cE 'action=(blocked_stage|blocked_broad_restore)'   # expect 0
 ```
-
-The recovered run remains stopped at `rollback_complete`; it does not resume
-the prior desired vector. A new desired-policy run requires a fresh preview
-and separate approval after resolving the mismatch.
-
-### Close an elapsed confirmation window after verified recovery
-
-A sent request can remain physically uncertain after its eight-minute
-confirmation deadline. Do not mark it failed or confirmed, replay it, or remove
-its alert by hand. For a `rollback_complete` bounded run, prepare the native
-custody companion with `scripts/prepare-recovered-confirmation-custody.py`.
-This companion grants no device authority. It binds unchanged raw state,
-original approval and recovery files, the preserved terminal recovery proof,
-and a read-only export of the exact original and rollback request rows.
-
-The request export has `original_requests` and `rollback_confirmations` arrays.
-Original rows contain `ts`, `parameter`, `value`, `delivery_status`,
-`source`, `confirmed_at` and `expired_at`; rollback rows contain the same fields except
-`expired_at`. Select original rows only for the last stage's exact parameter
-set, between `stage_started_at` and recovery `approved_at`, excluding ESP32
-observation rows. Select rollback rows by the exact timestamp/parameter keys
-in `rollback_records`. Preserve the original SQL export with the raw receipts.
-
-```bash
-python scripts/prepare-recovered-confirmation-custody.py \
-  --state preserved-state.json --approval preserved-approval.json \
-  --recovery preserved-recovery.json --terminal terminal-recovery-proof.json \
-  --requests exact-request-export.json --output local-custody.json
-```
-
-ROOT reviews and installs that new companion as
-`/srv/verdify/state/writer-stage-recovery-custody.json`, using exact file-hash
-comparison and an exclusive, fsynced publication. Preserve all existing native
-files. `/srv/verdify/state` is backed by the retained ingestor state PVC; a
-normal Recreate carries these receipts to the new sole writer. A missing or
-changed custody companion holds the run.
-
-After a normal source delivery, the recovered-run archive path requires fresh
-current-generation canonical 48 readbacks, the last stage at its original
-baseline, earlier completed stages still matching, the same actual firmware,
-a strict writer lease and the existing numeric heap guard (30 KiB free,
-18 KiB largest block). It rechecks real confirmed rollback rows and later
-request outcomes through the authorized writable projection under row locks.
-Only original `sent`/unconfirmed requests whose confirmation window has
-elapsed can transition atomically to `expired`. `expired_at` is the actual DB
-clock at transition; the deadline is recorded separately. Confirmation remains
-null, and the immutable prior-facts receipt retains the original sent status.
-Attempt receipts do not assert commit. Actual committed DB rows, including
-expiry times, become the recovered archive evidence. The existing confirmation
-monitor then owns any terminal-alert resolution. This closes a confirmation
-window; it proves neither earlier delivery nor failure and does not resume the
-stopped desired-policy run.
-
-### Forward from one fully confirmed halted stage
-
-A redundant seconds candidate can halt a run after every command in its first
-stage has already been confirmed. Preserve that stopped run; do not roll back
-valid desired crop values, reset its state, or reuse its approval. Ordinary
-candidate construction consistently omits durations already equivalent on the
-current-generation cfg readback. The residual validator additionally permits
-only an unapproved seconds candidate whose original plan value and original
-baseline readback are unchanged and equivalent.
-
-The explicit `confirmed_halt_forward` handoff applies only to a halted run with
-one stage of 1–12 parameters, an empty pending-record array, exactly those
-completed parameters/values, and no rollback history. Retain the raw active
-files as a JSON object mapping filenames to their exact text. Retain a full
-original Pod readback plus `current.source`, `current.pod`, and
-`current.preview` in the operator receipt; its Pod UID/name and original
-source/session must agree. The custody preview may retain a later integer
-transport generation from that same process after a reconnect; it must never
-move backwards or be relabelled as the original generation. The original
-approval remains unchanged. This custody exception grants only archival
-authority; current-generation readbacks and a distinct fresh approval still
-govern any new delivery. Export exactly the original native
-request rows (`ts`, `parameter`, `value`, `source`, `delivery_status`,
-`confirmed_at`, `expired_at`) read-only, excluding ESP32 observation rows.
-Every row must be confirmed with a non-null confirmation and no expiry.
-
-After source adoption, capture a fresh preview from the new sole writer. The
-following command writes **only a local handoff manifest**:
-
-```bash
-python scripts/prepare-writer-stage.py current-preview.json local-forward.json \
-  --confirmed-halt-custody original-raw-active-files.json \
-  --native-requests original-native-requests.json \
-  --original-writer-custody original-writer-before.json
-```
-
-The owning operator installs this manifest as `writer-stage-recovery.json`
-with exact live Pod/file-custody checks and atomic publication. It grants no
-setter authority. The writer rechecks the exact native rows, rejects any later
-request on those fields, and verifies the complete freshly bound current plan,
-confirmed completed readbacks, and exact untouched baseline. The version-2 handoff separately
-retains the historical original plan and binds `current_plan_rows` from the
-fresh preview. A scheduled waypoint may legitimately change timestamps,
-values, and rationale; no historical plan timestamp/value is normalized or
-replayed. Any subsequent change to the bound current plan rejects archival or
-new admission. Its six-minute identity/baseline binding governs initial archive creation. The immutable
-`writer-stage-confirmed-halt-<original-run-id>.json` retains the old state,
-approval, raw custody, Pod provenance, and native outcomes. The old active
-state/approval remain unchanged; the writer holds for fresh authority.
-
-Only after that archive exists, prepare a distinct ordinary approval from a
-fresh current preview using the normal command above this section. The writer
-rechecks archived native history and readbacks, then runs all normal fresh
-source/session/generation, plan, expiry, lease, candidate and bounded-send
-checks before replacing the active state. Archive-time identity is retained
-as history, never relabelled as the new admission identity. A refused fresh
-approval leaves the original stopped state and archive intact. No DB outcome
-is edited or original request replayed. This path does not recover an unknown,
-failed, partially confirmed, or multi-stage halted run.

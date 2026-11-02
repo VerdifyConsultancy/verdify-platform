@@ -27,7 +27,6 @@ for name, value in {
 
 import shared  # noqa: E402
 from tasks import bounded_reconcile as bounded  # noqa: E402
-from tasks import dispatcher  # noqa: E402
 
 import ingestor  # noqa: E402
 from verdify_schemas.policy_vector import wire_fields  # noqa: E402
@@ -276,106 +275,6 @@ async def test_readonly_snapshot_denies_generation_change_during_query(context):
     with pytest.raises(ValueError, match="replay changed"):
         await bounded._fresh_readbacks(connection, 3)
     assert not shared.setpoint_snapshot_requested.is_set()
-
-
-@pytest.mark.asyncio
-async def test_eligible_admission_waits_for_existing_other_connection_then_strict_sql(context, tmp_path, monkeypatch):
-    _values, published_connection, pool = context
-    reader = Connection()
-    ready = asyncio.Event()
-    finish = asyncio.Event()
-    (tmp_path / bounded.STATE_NAME).write_text("{}")
-
-    async def publisher():
-        shared.register_setpoint_snapshot_publisher()
-        ready.set()
-        await shared.setpoint_snapshot_requested.wait()
-        assert not reader.is_in_transaction() and reader is not published_connection
-        await ingestor._publish_setpoint_snapshot(pool, datetime.now(UTC))
-        reader.rows = list(published_connection.rows)
-        await finish.wait()
-
-    async def choose(conn, *_args):
-        assert shared.setpoint_snapshot_is_current(3)
-        assert len(await bounded._fresh_readbacks(conn, 3)) >= 48
-        return bounded.Decision("ordinary")
-
-    monkeypatch.setattr(bounded, "choose_stage", choose)
-    task = asyncio.create_task(publisher())
-    await ready.wait()
-    try:
-        result = await dispatcher._choose_bounded_stage_if_required(reader, [], [], 3, tmp_path, None, {})
-        assert result.action == "ordinary" and "commit" in published_connection.events
-    finally:
-        finish.set()
-        await task
-
-
-@pytest.mark.asyncio
-async def test_publication_wait_timeout_holds_and_schedules_only_existing_recheck(context, tmp_path, monkeypatch):
-    _values, connection, _pool = context
-    shared.register_setpoint_snapshot_publisher()
-    monkeypatch.setattr(shared, "SETPOINT_SNAPSHOT_WAIT_SECONDS", 0.01)
-    (tmp_path / bounded.STATE_NAME).write_text("{}")
-    wakes = []
-    monkeypatch.setattr(bounded, "_wake_for_confirmation", lambda: wakes.append(True))
-    result = await dispatcher._choose_bounded_stage_if_required(connection, [], [], 3, tmp_path, None, {})
-    assert result.action == "hold" and result.reason.startswith("awaiting fresh atomic snapshot:")
-    assert wakes == [True] and connection.events == []
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("mode", ["ordinary", "c1", "shadow", "device_denied"])
-async def test_noneligible_or_nonwriter_routes_do_not_request_publication(context, tmp_path, monkeypatch, mode):
-    _values, connection, _pool = context
-    if mode != "ordinary":
-        (tmp_path / bounded.STATE_NAME).write_text("{}")
-    if mode == "c1":
-        monkeypatch.setattr(dispatcher.c1_overlay, "owns_bounded_stage", lambda _path: True)
-    elif mode == "shadow":
-        monkeypatch.setattr(shared, "is_shadow_mode", lambda: True)
-    elif mode == "device_denied":
-        monkeypatch.delenv("VERDIFY_DEVICE_WRITE_ENABLED")
-
-    async def choose(*_args):
-        return bounded.Decision("ordinary")
-
-    monkeypatch.setattr(bounded, "choose_stage", choose)
-    result = await dispatcher._choose_bounded_stage_if_required(connection, [], [], 3, tmp_path, None, {})
-    assert result.action == "ordinary" and not shared.setpoint_snapshot_requested.is_set()
-    assert connection.events == []
-
-
-@pytest.mark.asyncio
-async def test_transaction_cannot_wait_for_publisher_pool_connection(context, tmp_path):
-    _values, connection, _pool = context
-    (tmp_path / bounded.STATE_NAME).write_text("{}")
-    connection.active = True
-    result = await dispatcher._choose_bounded_stage_if_required(connection, [], [], 3, tmp_path, None, {})
-    assert result.action == "hold" and "inside a transaction" in result.reason
-    assert not shared.setpoint_snapshot_requested.is_set()
-
-
-@pytest.mark.asyncio
-async def test_lease_loss_during_publication_wait_never_enters_admission(context, tmp_path, monkeypatch):
-    _values, connection, _pool = context
-    (tmp_path / bounded.STATE_NAME).write_text("{}")
-    held = True
-    monkeypatch.setattr(shared, "writer_lease_strictly_held", lambda: held)
-
-    async def publish(_generation):
-        nonlocal held
-        held = False
-        return True
-
-    async def forbidden_admission(*_args):
-        raise AssertionError("lease loss must stop admission")
-
-    monkeypatch.setattr(shared, "request_setpoint_snapshot", publish)
-    monkeypatch.setattr(bounded, "choose_stage", forbidden_admission)
-    result = await dispatcher._choose_bounded_stage_if_required(connection, [], [], 3, tmp_path, None, {})
-    assert result.action == "hold" and "lease lost" in result.reason
-    assert connection.events == []
 
 
 @pytest.mark.asyncio

@@ -260,7 +260,10 @@ dispatcher, the API's `applied_from` and the services resolve a setting the same
   successive passes with readback. Nothing waits for an approval file or halted-run custody: VD-62 replaces the
   halt gate (`ingestor/tasks/bounded_reconcile.py` and the custody steps in
   `docs/runbooks/writer-staged-reconcile.md`), keeps staging only for the C1 qualification overlay and its restore,
-  and raises `setpoint_delivery_stuck`, shown as the stuck-delivery banner, when delivery is stuck.
+  and raises `setpoint_delivery_stuck`, shown as the stuck-delivery banner, when delivery is stuck. The same value
+  sent on the same connection in the last 90 s is not sent again while its readback is pending (a new value is a new
+  change, and a reconnect sends again), and each change of stage is one `system_state` row, entity
+  `dispatcher_stage`: `ordinary`, `paced <sent>/<pending>` or `held:<c1|heap|lease|drift_probe>`.
 - **Fences unchanged:** registry clamp (`_coerce_registry_value`), physics invariants (`_validate_physics`),
   the VPD-high moisture guardrails (clamps recorded in `setpoint_clamps`), heap deferral, the writer Lease and
   `VERDIFY_DEVICE_WRITE_ENABLED`.

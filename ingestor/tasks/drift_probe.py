@@ -2,7 +2,11 @@
 
 An atomic approval names one 0.1 F extension of fan2 cooling exit hysteresis. The dispatcher
 persists each phase before using its existing lifecycle and ESPHome queue. A
-missing or uncertain receipt stops the probe; it never opens another client.
+missing or uncertain receipt halts the probe; it never opens another client.
+Since VD-62 a halted probe keeps its receipt but no longer holds ordinary
+dispatch, which repairs the field from the active plan, and a phase in flight
+holds a pass for at most its four-minute confirmation deadline. The next
+ingestor start archives a probe state that is not complete.
 """
 
 from __future__ import annotations
@@ -27,6 +31,7 @@ STATE_NAME = "writer-drift-state.json"
 MAX_PREVIEW_AGE = timedelta(minutes=6)
 MAX_APPROVAL_AGE = timedelta(minutes=10)
 CONFIRM_DEADLINE = timedelta(minutes=4)
+_ACTIVE_PHASES = frozenset({"probe_inflight", "restore_inflight", "probe_awaiting", "restore_awaiting"})
 
 
 @dataclass(frozen=True)
@@ -44,6 +49,28 @@ def approval_file_stamp(state_dir: Path) -> tuple[int, int, int] | None:
     except FileNotFoundError:
         return None
     return stat.st_ino, stat.st_mtime_ns, stat.st_size
+
+
+def _phase_expired(state: dict, now: datetime) -> bool:
+    """True once an active phase outlives the confirmation deadline (or has no start)."""
+    if state.get("status") not in _ACTIVE_PHASES:
+        return False
+    try:
+        return now - bounded._time(state["phase_started_at"]) > CONFIRM_DEADLINE
+    except (KeyError, TypeError, ValueError):
+        return True
+
+
+def _halt(state_path: Path, reason: str) -> None:
+    """Record a halt on the retained receipt; a complete probe is never rewritten."""
+    try:
+        state = bounded._read(state_path)
+        if state and state.get("status") != "complete":
+            state["status"] = "halted"
+            state["halt_reason"] = reason
+            bounded._write(state_path, state)
+    except Exception:
+        pass
 
 
 def _safe_baseline(value: float) -> bool:
@@ -149,7 +176,12 @@ async def choose(
     if state and state.get("status") == "complete":
         return Decision("ordinary")
     if state and state.get("status") == "halted":
-        return Decision("hold", reason="probe halted; inspect receipt and cfg")
+        # The receipt stays for inspection; ordinary passes repair the field.
+        return Decision("ordinary")
+    if state and _phase_expired(state, datetime.now(UTC)):
+        reason = f"probe {state.get('status')} exceeded its confirmation deadline"
+        _halt(state_path, reason)
+        return Decision("ordinary", reason=f"{reason}; halted")
     try:
         approval = bounded._read(approval_path)
     except Exception as error:
@@ -270,14 +302,8 @@ async def choose(
             # normal writer. A later pass still needs a fresh exact match.
             return Decision("ordinary", reason=f"unstarted probe skipped: {error}")
         if state_path.exists():
-            try:
-                state = bounded._read(state_path)
-                if state and state.get("status") != "complete":
-                    state["status"] = "halted"
-                    state["halt_reason"] = str(error)
-                    bounded._write(state_path, state)
-            except Exception:
-                pass
+            _halt(state_path, str(error))
+        # Only the pass that halts the probe holds; later passes are ordinary.
         return Decision("hold", reason=str(error))
 
 

@@ -78,6 +78,7 @@ AlertType = Literal[
     "relay_stuck",
     "safety_invalid",
     "sensor_offline",
+    "setpoint_delivery_stuck",
     "setpoint_unconfirmed",
     "site_content_stale",
     "soil_dryout",
@@ -128,6 +129,7 @@ ALERT_TYPES: tuple[str, ...] = (
     "relay_stuck",
     "safety_invalid",
     "sensor_offline",
+    "setpoint_delivery_stuck",
     "setpoint_unconfirmed",
     "site_content_stale",
     "soil_dryout",
@@ -491,6 +493,15 @@ class SetpointUnconfirmedDetails(_DetailsBase):
     pushed_at: AwareDatetime
 
 
+class SetpointDeliveryStuckDetails(_DetailsBase):
+    # Plain convergence (VD-62): settings whose outgoing value has differed
+    # from the controller's readback for more than 15 min. Clamped and
+    # experiment-policy-held settings are left out by the dispatcher.
+    differing: int = Field(..., ge=1)
+    params: list[str] = Field(..., min_length=1, max_length=20)
+    oldest_since: AwareDatetime
+
+
 class ESP32PushFailedDetails(_DetailsBase):
     # `error` is the legacy single-string shape; the dispatcher's terminal-failure
     # path reports per-parameter `failure_reasons`/`parameters` instead. At least
@@ -764,6 +775,11 @@ class SetpointUnconfirmedAlert(_AlertBase):
     details: SetpointUnconfirmedDetails
 
 
+class SetpointDeliveryStuckAlert(_AlertBase):
+    alert_type: Literal["setpoint_delivery_stuck"]
+    details: SetpointDeliveryStuckDetails
+
+
 class ESP32PushFailedAlert(_AlertBase):
     alert_type: Literal["esp32_push_failed"]
     details: ESP32PushFailedDetails
@@ -888,6 +904,7 @@ AlertEnvelopeUnion = Annotated[
     | RelayStuckAlert
     | SafetyInvalidAlert
     | SensorOfflineAlert
+    | SetpointDeliveryStuckAlert
     | SetpointUnconfirmedAlert
     | SiteContentStaleAlert
     | SoilDryoutAlert

@@ -85,9 +85,9 @@ $PY -m pytest -q -rs \
   tests/test_277_getter_delivery.py \
   tests/test_realized_solar_night_dryout_timeline.py \
   tests/test_05_dispatcher.py \
+  tests/test_dispatcher_plain_convergence.py \
   tests/test_irrigation_stop_edges.py \
   tests/test_bounded_reconcile.py \
-  tests/test_recovered_confirmation_expiry.py \
   tests/test_10_planner_routing.py \
   tests/test_11_planner_milestones.py \
   tests/test_13_grafana_band_traceability.py \

@@ -56,11 +56,18 @@ def classify_writer_log_line(line: str) -> dict[str, str | int] | None:
 
 
 def summarize_writer_log_lines(lines) -> dict[str, int]:
-    """Return deterministic post-deploy counts for the #433 two-hour probe."""
+    """Return deterministic post-deploy counts for the #433 two-hour probe.
+
+    Since plain convergence (VD-62) the dispatcher logs no ``blocked_stage``
+    or ``blocked_broad_restore`` line; both counters stay as the live check
+    that they read zero, and ``paced_passes`` counts paced ordinary passes.
+    """
     summary = {
         "classified_lines": 0,
         "transport_reconnects": 0,
         "blocked_broad_restores": 0,
+        "blocked_stages": 0,
+        "paced_passes": 0,
         "cfg_drifts": 0,
         "desired_dispatches": 0,
         "retry_batches": 0,
@@ -82,13 +89,19 @@ def summarize_writer_log_lines(lines) -> dict[str, int]:
         summary["classified_lines"] += 1
         event = parsed["event"]
         reason = parsed.get("reason")
-        if event == "writer_reconcile" and reason == "transport_reconnect":
+        action = parsed.get("action")
+        if event == "writer_reconcile" and action == "blocked_broad_restore":
+            summary["blocked_broad_restores"] += 1
+        elif event == "writer_reconcile" and action == "blocked_stage":
+            summary["blocked_stages"] += 1
+        elif event == "writer_reconcile" and reason == "paced":
+            if action == "paced":
+                summary["paced_passes"] += 1
+        elif event == "writer_reconcile" and reason == "transport_reconnect":
             # A failed generation retries on the ordinary dispatcher cadence.
             # Count the actual new socket, not each attempt to reconcile it.
-            if parsed.get("action") == "awaiting_readbacks":
+            if action == "awaiting_readbacks":
                 summary["transport_reconnects"] += 1
-            elif parsed.get("action") == "blocked_broad_restore":
-                summary["blocked_broad_restores"] += 1
         elif event == "writer_reconcile" and reason == "cfg_drift":
             summary["cfg_drifts"] += 1
         elif event == "writer_dispatch":

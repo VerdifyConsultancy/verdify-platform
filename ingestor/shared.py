@@ -461,6 +461,16 @@ def defer_failed_dispatch(generation: int, observed_versions: dict[str, int]) ->
 setpoint_dispatch_in_progress = False
 setpoint_dispatch_lock = asyncio.Lock()
 
+# Plain convergence (VD-62). param -> when its outgoing value first differed
+# from the last push or its readback; it leaves when the readback matches.
+# Clamped and experiment-policy-held parameters are left out on purpose.
+# alert_monitor raises setpoint_delivery_stuck from it.
+delivery_differing_since: dict[str, datetime] = {}
+# Last dispatcher stage written to system_state (entity dispatcher_stage):
+# "ordinary", "paced <sent>/<pending>" or "held:<c1|heap|lease|drift_probe>".
+# None until the first pass of this process records one.
+dispatcher_stage: str | None = None
+
 # A terminal lifecycle-persistence failure means a physical outcome may no
 # longer match its durable row.  The writer fail-closes and this event makes the
 # owning ingestor process exit so Kubernetes can restart and reconcile unknown
