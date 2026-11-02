@@ -23,7 +23,7 @@ FIRMWARE_SOURCES = {
     # VD-43 (F8) routes mister zone choice through the peer-probe VPD fallback;
     # solar/band expressions are unchanged. New captures bind this source;
     # historical receipts stay frozen.
-    "firmware/greenhouse/controls.yaml": "153bb0ade4d468a5f1345beee2f8b8143134e7bf15469005c6efa44b35ed6cae",
+    "firmware/greenhouse/controls.yaml": "df148284234b1a2f5f055b920d1cfceddcccc7f1caefe5ce4c3a33786a795076",
 }
 SERIES = ("temp_low", "temp_high", "temp_target", "vpd_low", "vpd_high", "vpd_target")
 ANCHORS = ("sr", "sm", "ss", "mid")

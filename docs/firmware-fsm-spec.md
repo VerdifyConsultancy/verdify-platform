@@ -416,10 +416,12 @@ Zone choice reads each zone's VPD through the **peer-probe fallback**
 zone uses its own wall probe while the reading is fresh (a probe callback within
 300 s) and finite, otherwise the mean of the fresh peer probes (south, west, east),
 otherwise the house average; center has no probe and always uses the house average.
-A Modbus probe that stops answering keeps its last value, so a stale reading never
+A Modbus probe that stops answering keeps its last value, so a stale VPD reading never
 feeds the stress scores, east's adjacency boost, the fairness watchdog, the S2 pulse
 weight, the rank arbiter or the published `gh_zone_wet_granted` and
-`gh_zone_vpd_delta_*`. `determine_mode()` inputs and the FW-9 emergency merge keep
+`gh_zone_vpd_delta_*`; while a probe is out, its `gh_zone_vpd_delta_*` reports the
+resolved (peer or house) value, not the probe's own reading. `determine_mode()`
+inputs, the FW-9 emergency merge and the stress scores' wall-temperature term keep
 the raw probe readings. Tested in `firmware/test/test_zone_vpd.cpp`.
 Vent is coupled to fan behavior per mode (§3.3).
 

@@ -996,8 +996,8 @@ interval:
             const uint32_t MISTER_ALL_DELAY_MS    =
                 uint32_t(pol(verdify_policy::kPF_mister_all_delay_s, id(mister_all_delay_s))) * 1000UL;
 
-            // F8: every zone-choice reader below uses these locals, so a stale or
-            // non-finite own probe never feeds zone choice (own → peers → house).
+            // F8: zone choice takes each zone's VPD from these locals (own → peers →
+            // house), never a stale held VPD; *_temp below still reads the raw probe.
             float south_vpd = zone_vpd_with_fallback(ZONE_SOUTH, zp, VPD, now_ms).vpd_kpa;
             float west_vpd  = zone_vpd_with_fallback(ZONE_WEST,  zp, VPD, now_ms).vpd_kpa;
             float east_vpd  = zone_vpd_with_fallback(ZONE_EAST,  zp, VPD, now_ms).vpd_kpa;
