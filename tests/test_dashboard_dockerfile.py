@@ -157,8 +157,13 @@ def test_final_stage_carries_every_local_module_the_server_imports():
     imported = {
         PurePosixPath(path).parts[0] for path in re.findall(r"""(?:from\s+|import\()\s*["'](\./[^"']+)["']""", server)
     }
-    assert imported == {"security-headers.mjs", "build"}
+    assert imported == {"security-headers.mjs", "build", "bff"}
     assert imported <= copied
     assert {"node_modules", "package.json", "server.mjs"} <= copied
     for name in ("package.json", "server.mjs", "security-headers.mjs"):
         assert (DASHBOARD / name).is_file(), name
+    # The BFF's sign-in, session, Origin and proxy modules (#1141): without them the pod fails at start.
+    assert "COPY --from=build /app/bff ./bff" in final
+    assert {"oidc.mjs", "session.mjs", "origin.mjs", "proxy.mjs"} <= {
+        path.name for path in (DASHBOARD / "bff").iterdir()
+    }
