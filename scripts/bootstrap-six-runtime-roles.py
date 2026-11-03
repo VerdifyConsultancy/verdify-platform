@@ -546,6 +546,61 @@ def sealed_sql_284():
     )
 
 
+DAILY_SCORECARD_MIGRATION = (
+    285,
+    "285-daily-scorecard-view.sql",
+    "89db770e96f030d2836fe033dce035e8c244d7b08a52c7f6ac378f5526c9ca77",
+)
+# One verdify-owned view, granted to the dashboard duty alone: neither digest takes it in, so all
+# three seals should stay 284's. These are 284's values as stand-ins until the rolled-back native
+# qualification measures 285; its fixture records which they are.
+SUCCESSOR_285 = SUCCESSOR_284
+
+
+def sealed_sql_285():
+    # Keep every 284 predicate and bind the exact 285 runner stamp.
+    predecessor = sealed_sql_284()
+    current = seal_profile_sql(284, SUCCESSOR_284)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(285, SUCCESSOR_285), 1)
+        + " AND "
+        + ledger_row_sql(*DAILY_SCORECARD_MIGRATION)
+        + ")"
+    )
+
+
+LIGHTING_MANUAL_MIGRATION = (
+    286,
+    "286-lighting-policy-ignores-manual.sql",
+    "6bacb419d3aa6d1d16f05c5a1d451f78001db1cedf3315539853f69bf3144eee",
+)
+# Both lighting policy functions are in the ordinary digest's helper closure, so the
+# api and ingestor seals move, as 275's jit change did; the MCP seal should stay 285's.
+# The rolled-back native qualification measured them.
+SUCCESSOR_286 = {
+    "api": "6b43af2ab8da8871469a379b1c322ade82481a92a7d32300381ea5e60fd2dd8c",
+    "ingestor": "6b0c82221c3d826a83b8c7a5cd674c23d4bc39ee9c9912a9aaa5bae0d90dbdcc",
+    "mcp": SUCCESSOR_285["mcp"],
+}
+
+
+def sealed_sql_286():
+    # Keep every 285 predicate and bind the exact 286 runner stamp with the two
+    # ordinary seals its lighting policy replacements move.
+    predecessor = sealed_sql_285()
+    current = seal_profile_sql(285, SUCCESSOR_285)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(286, SUCCESSOR_286), 1)
+        + " AND "
+        + ledger_row_sql(*LIGHTING_MANUAL_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -570,6 +625,10 @@ def sealed_sql():
         + sealed_sql_283()
         + " OR "
         + sealed_sql_284()
+        + " OR "
+        + sealed_sql_285()
+        + " OR "
+        + sealed_sql_286()
         + ")"
     )
 

@@ -260,9 +260,11 @@ _cfg_drift_version = 0
 # Wake the scheduler for targeted cfg drift without advancing transport state.
 setpoint_dispatch_requested = asyncio.Event()
 
-# VD-64 (irrigation §6.1): setpoint_listener sets this on NOTIFY irrigation_changed and the task loop
-# force-launches irrigation_sync while it is set. The pass reads pending commands every 5 s whether or
-# not it is set; #1157's program steps clear it.
+# Wake irrigation_sync (irrigation §6.1). setpoint_listener sets this on NOTIFY irrigation_changed (VD-64), on
+# desired_state_changed, because the irrigation_site values live in desired_state (VD-33), and after the
+# listener reconnects. Only a flag: the task re-reads its own tables. The task loop force-launches
+# irrigation_sync while it is set. The pass reads pending commands every 5 s whether or not it is set; #1157's
+# program steps clear it.
 irrigation_sync_requested = asyncio.Event()
 
 # The ten wet relays of L01-L10 by equipment_state name, in line order: the relays an irrigation Stop may

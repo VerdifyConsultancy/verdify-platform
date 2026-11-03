@@ -92,6 +92,10 @@ $PY -m pytest -q -rs \
   tests/test_282_dashboard_login_delivery.py \
   tests/test_283_irrigation_tables_delivery.py \
   tests/test_284_dashboard_grants_delivery.py \
+  tests/test_285_daily_scorecard_delivery.py \
+  tests/test_286_lighting_policy_delivery.py \
+  tests/test_metric_registry_completeness.py \
+  tests/test_verdify_services_series.py \
   tests/test_qualify_migration_successor.py \
   tests/test_verdify_services_core.py \
   tests/test_verdify_services_settings.py \
@@ -100,6 +104,7 @@ $PY -m pytest -q -rs \
   tests/test_realized_solar_night_dryout_timeline.py \
   tests/test_05_dispatcher.py \
   tests/test_dispatcher_plain_convergence.py \
+  tests/test_dispatcher_desired_state.py \
   tests/test_irrigation_stop_edges.py \
   tests/test_irrigation_bridge.py \
   tests/test_irrigation_bridge_writes.py \

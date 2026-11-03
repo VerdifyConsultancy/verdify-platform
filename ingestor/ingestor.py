@@ -5028,6 +5028,13 @@ async def setpoint_listener(pool: asyncpg.Pool) -> None:
         # VD-64: an irrigation write committed; wake irrigation_sync. The payload is empty by design.
         shared.irrigation_sync_requested.set()
 
+    def _on_desired_state_changed(_conn, _pid, _channel, _payload):
+        # VD-33: a wake only. The payload is always empty and never read, and
+        # nothing is pushed here: the next normal, fenced dispatcher pass reads
+        # v_desired_state_current itself, and irrigation_sync its site values.
+        shared.setpoint_dispatch_requested.set()
+        shared.irrigation_sync_requested.set()
+
     connected_once = False
     while True:
         conn = None
@@ -5042,13 +5049,17 @@ async def setpoint_listener(pool: asyncpg.Pool) -> None:
             conn.add_termination_listener(_on_disconnect)
             await conn.add_listener("setpoint_changed", _on_notify)
             await conn.add_listener("irrigation_changed", _on_irrigation_notify)
+            await conn.add_listener("desired_state_changed", _on_desired_state_changed)
             if connected_once:
                 # NOTIFY is not durable. Reuse the normal fenced dispatcher to
-                # reconcile eligible pending rows after the subscription returns.
+                # reconcile eligible pending rows after the subscription returns,
+                # and wake both tasks for any desired_state or irrigation write the gap hid.
                 shared.setpoint_dispatch_requested.set()
                 shared.irrigation_sync_requested.set()
             connected_once = True
-            log.info("Setpoint listener: LISTEN on setpoint_changed and irrigation_changed channels")
+            log.info(
+                "Setpoint listener: LISTEN on setpoint_changed, irrigation_changed and desired_state_changed channels"
+            )
             if conn.is_closed():
                 disconnected.set()
             await disconnected.wait()
