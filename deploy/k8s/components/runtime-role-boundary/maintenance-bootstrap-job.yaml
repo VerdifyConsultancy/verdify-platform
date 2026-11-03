@@ -74,6 +74,13 @@ spec:
             secretKeyRef:
               name: verdify-matview-refresh-runtime-db
               key: password
+        # Optional: without a value the bootstrap skips the dashboard login's duty (#1143).
+        - name: DASHBOARD_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: verdify-dashboard-runtime-db
+              key: password
+              optional: true
         - name: PGAPPNAME
           value: verdify-maintenance-runtime-role-bootstrap
         securityContext:

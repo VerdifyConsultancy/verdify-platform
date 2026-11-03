@@ -393,9 +393,11 @@ def test_282_grants_only_its_own_objects(dsn):
             )
             sequences = await admin.fetchval(
                 """SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-                    WHERE n.nspname IN ('public', $2) AND c.relkind = 'S'
-                      AND has_sequence_privilege($1, c.oid, 'USAGE,SELECT,UPDATE')
-                      AND NOT has_sequence_privilege('public', c.oid, 'USAGE,SELECT,UPDATE')""",
+                    WHERE n.nspname IN ('public', $2)
+                      AND CASE WHEN c.relkind = 'S'
+                               THEN has_sequence_privilege($1, c.oid, 'USAGE,SELECT,UPDATE')
+                                    AND NOT has_sequence_privilege('public', c.oid, 'USAGE,SELECT,UPDATE')
+                               ELSE FALSE END""",
                 LOGIN,
                 DUTY,
             )

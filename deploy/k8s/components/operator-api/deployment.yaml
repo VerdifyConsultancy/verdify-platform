@@ -9,6 +9,11 @@ metadata:
   labels:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: operator-api
+  annotations:
+    # The last wave of a verdify-prod-dark sync. Argo stops at a wave that does not turn Healthy and nothing else in
+    # the sync needs this pod, so one that cannot start (an API pin from before this Deployment, a login that does not
+    # attest) holds none of MCP (10), Iris (20), the ingestor (30) or the device-egress policy (40).
+    argocd.argoproj.io/sync-wave: "50"
 spec:
   replicas: 1
   selector:
