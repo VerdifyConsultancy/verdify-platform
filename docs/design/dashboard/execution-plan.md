@@ -192,8 +192,9 @@ without a release, merge a one-line change setting `DASHBOARD_WRITES_ENABLED` to
 `verdify-prod`, return api, mcp and ingestor (and the orchestrator if needed) to the promotion receipt's rollback
 pins in a digest-only `release-pins.yaml` commit, keep a `verdify-migrate` digest whose image contains every applied
 migration, then run the full sync and `scripts/k3s-smoke.sh smoke` against the rolled-back API digest. For firmware,
-run `make firmware-rollback`; until VD-51 promotes the engine to last-good, that flashes pre-engine firmware: the
-ingestor writes `irr_engine` false on the reconnect and falls back to the L01 bridge ("engine not on controller"), so
+submit the flasher Job for the rollback release's exact revision and manifest
+(`docs/runbooks/firmware-signed-artifacts.md`); until VD-51 promotes the engine to last-good, that release is pre-engine
+firmware: the ingestor writes `irr_engine` false on the reconnect and falls back to the L01 bridge ("engine not on controller"), so
 L01 runs and every wet line stops through it, while other runs, clear-fault and the bursts answer `unavailable`. VD-26
 writes these steps into AGENTS.md "Deliver and verify".
 
