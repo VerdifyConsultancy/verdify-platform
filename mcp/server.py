@@ -5947,7 +5947,9 @@ def _line_write_manual(line_id: str, definition: bool, pause: bool, manual: bool
 @mcp.tool()
 async def irrigation_line_set(
     line_id: Annotated[LineTarget, Field(description="The line, L01-L11, or all to pause or resume every line.")],
-    enabled: Annotated[bool | None, Field(description="Enable or disable the line.")] = None,
+    enabled: Annotated[
+        bool | None, Field(description="Off stops everything on the line, VPD misting included.")
+    ] = None,
     vpd_member: Annotated[bool | None, Field(description="L04, L07 and L09: VPD misting on this zone.")] = None,
     schedule_member: Annotated[bool | None, Field(description="L04, L07 and L09: schedules and runs here.")] = None,
     daily_cap_min: Annotated[int | None, Field(ge=0, le=480, description="Minutes a day; 0 is no cap.")] = None,
@@ -5956,10 +5958,14 @@ async def irrigation_line_set(
     ] = None,
     paused_until: Annotated[
         AwareDatetime | None,
-        Field(description="ISO date-time with its UTC offset; a time at or before now resumes the line."),
+        Field(
+            description="ISO date-time with its UTC offset: no scheduled or run-now start until then, though VPD misting "
+            "carries on. A time at or before now resumes the line."
+        ),
     ] = None,
     manual: Annotated[
-        bool | None, Field(description="Stored as sent; a definition edit that leaves it out stores false.")
+        bool | None,
+        Field(description="A definition edit stores it, false when left out; alone it sets it; a pause ignores it."),
     ] = None,
     reason: _WaterReason = None,
     request_id: _WaterRequestId = None,
@@ -6111,7 +6117,8 @@ async def irrigation_stop(
     irrigation_stop always works: it is never refused for the firmware, the controller's heap or a writes switch, and it
     goes out ahead of any run. Before the irrigation firmware it ends the wall drip job and switches every open wet relay
     in its scope (L01-L10) off; L11 fog stays with the climate controller.
-    After a Stop, VPD misting may pulse again; to keep a line off, disable it.
+    After a Stop, VPD misting may pulse again; to keep a line off, disable it. A Stop disables nothing: survival fog and
+    the next scheduled run can still start.
 
     Run and stop never carry manual. The same request_id (a UUID) and arguments return the stored command with
     replayed: true. Refusals are the Problem JSON with isError: unknown_target, invalid_request, request_id_reused,

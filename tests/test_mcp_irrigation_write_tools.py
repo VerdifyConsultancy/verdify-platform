@@ -413,8 +413,17 @@ def test_the_descriptions_say_what_each_tool_does_before_the_engine(mcp_server):
     stop_doc = " ".join(mcp_server.irrigation_stop.__doc__.split())
     assert "irrigation_stop always works" in stop_doc
     assert "After a Stop, VPD misting may pulse again; to keep a line off, disable it." in stop_doc
+    # The OpenAPI API-IRR-07 and irrigation §4.7: Stop ends what runs now and disables nothing, and this says so.
+    assert "A Stop disables nothing: survival fog and the next scheduled run can still start." in stop_doc
     clear_doc = " ".join(mcp_server.irrigation_clear_fault.__doc__.split())
     assert "before the irrigation firmware, not retryable, and nothing is stored" in clear_doc
+
+
+def test_the_line_arguments_say_what_a_pause_and_a_disable_do_to_vpd_misting(mcp_server):  # noqa: F811
+    # irrigation §4.2: an agent told "to keep a line off, disable it" must see which of the two stops VPD misting.
+    assert "VPD misting included" in field_info(mcp_server.irrigation_line_set, "enabled").description
+    assert "VPD misting carries on" in field_info(mcp_server.irrigation_line_set, "paused_until").description
+    assert "a pause ignores it" in field_info(mcp_server.irrigation_line_set, "manual").description
 
 
 def test_the_line_description_says_only_a_person_records_the_check(mcp_server):  # noqa: F811
