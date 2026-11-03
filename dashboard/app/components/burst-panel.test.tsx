@@ -36,8 +36,9 @@ test("what a running burst reads: the time left, none for a push-button burst, a
   expect(words({ ends_at: iso(NOW - 60_000) })).toBe("Fans burst");
   expect(words({ kind: "vent_bypass", ends_at: iso(NOW + 600_000) })).toBe("Vent bypass · 10 min left");
   expect(words({ kind: "humidify", ends_at: iso(NOW + 300_000), held_reason: "occupancy" })).toBe("Humidify held off: someone inside");
-  // An unknown code shows raw.
+  // An unknown code shows raw, its case included.
   expect(words({ kind: "humidify", held_reason: "new_reason" })).toBe("Humidify held off: new_reason");
+  expect(words({ kind: "humidify", held_reason: "RH_CEILING" })).toBe("Humidify held off: RH_CEILING");
   expect(burstsIgnoredText("SAFETY_COOL")).toBe("Bursts are ignored during emergency cooling");
   expect(burstsIgnoredText("SAFETY_HEAT")).toBe("Bursts are ignored during emergency heating");
   expect(burstsIgnoredText("SENSOR_FAULT")).toBe("Bursts are ignored during a sensor fault");
@@ -139,6 +140,69 @@ test("a restart with no uptime drop within 3 min says so, and the window is read
   await readBack(5000);
   expect(document.querySelector(".burst-more [data-write-control]")?.textContent).toBe("Restart controller");
   expect(text(document.querySelector(".burst-more .state-note"))).toBe("The controller has not restarted");
+});
+
+/** API-02 answers with `uptime_s` from here on; the function it returns moves it. */
+function pinUptime(first: number) {
+  let uptime = first;
+  const fetcher = globalThis.fetch as (input: string, init?: RequestInit) => Promise<Response>;
+  vi.stubGlobal("fetch", vi.fn(async (input: string, init?: RequestInit) => {
+    const answer = await fetcher(input, init);
+    if (input !== "/api/v1/now") return answer;
+    const body = await answer.json() as { controller: object };
+    body.controller = { ...body.controller, uptime_s: uptime };
+    return { ...answer, headers: answer.headers, json: async () => body } as unknown as Response;
+  }));
+  return (next: number) => { uptime = next; };
+}
+const restartReads = () => document.querySelector(".burst-more [data-write-control]")?.textContent;
+
+test("Restart reads a drop from the last read: a controller up only 10 s at the press, back at 12 s after climbing to 15", async () => {
+  await open();
+  const setUptime = pinUptime(10);
+  await readBack(15_000);
+  fireEvent.click(document.querySelector(".burst-more [data-write-control]")!);
+  await advance(0);
+  setUptime(15);
+  await readBack(5000);
+  expect(restartReads()).toBe("Restart sent");
+  setUptime(12);
+  await readBack(5000);
+  expect(restartReads()).toBe("Restart controller");
+  expect(text(document.querySelector(".burst-more .state-note"))).toBe("The controller restarted");
+});
+
+test("a drop after the 3 min still reads restarted, on the shell's own poll", async () => {
+  await open();
+  const setUptime = pinUptime(5000);
+  await readBack(15_000);
+  fireEvent.click(document.querySelector(".burst-more [data-write-control]")!);
+  await advance(0);
+  await readBack(180_000);
+  expect(text(document.querySelector(".burst-more .state-note"))).toBe("The controller has not restarted");
+  setUptime(20);
+  await readBack(15_000);
+  expect(text(document.querySelector(".burst-more .state-note"))).toBe("The controller restarted");
+});
+
+test("a burst that reads back after its 30 s drops Not started, on the shell's own poll", async () => {
+  await open();
+  const fetcher = globalThis.fetch as (input: string, init?: RequestInit) => Promise<Response>;
+  let hidden = true;
+  vi.stubGlobal("fetch", vi.fn(async (input: string, init?: RequestInit) => {
+    const answer = await fetcher(input, init);
+    if (input !== "/api/v1/now" || !hidden) return answer;
+    const body = { ...(await answer.json() as object), overrides: [] };
+    return { ...answer, headers: answer.headers, json: async () => body } as unknown as Response;
+  }));
+  press("Fans 15 min");
+  await advance(0);
+  await readBack(30_000);
+  expect(text(document.querySelector(".burst-actions .state-note"))).toBe("Not started");
+  hidden = false;
+  await readBack(15_000);
+  expect(bursts()).toHaveLength(1);
+  expect(document.querySelector(".burst-actions .state-note")).toBeNull();
 });
 
 test("before the irrigation firmware: the bursts and Restart read arrives with the irrigation firmware, with no button, and what runs still shows", async () => {

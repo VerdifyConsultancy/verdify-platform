@@ -14,7 +14,7 @@ import type { BodyOf, Now, ParamsOf } from "../lib/operator-api";
 import { READ_INTERVAL_MS, panelRead, useApiRead } from "../lib/queries";
 import { OperatorOnly } from "../lib/session";
 import { useShellNow, useShellStatus } from "../lib/shell";
-import { words } from "../lib/words";
+import { hasWords, words } from "../lib/words";
 import { newestNow, readback, useCommand, type CommandPhase, type Readback } from "../lib/writes";
 import { Button } from "./button";
 import { Details } from "./details";
@@ -42,14 +42,18 @@ export function burstsIgnoredText(mode: string | null | undefined): string | nul
   return during ? `Bursts are ignored during ${during}` : null;
 }
 
-const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
+/** Why a burst is held, mid-sentence: the words table's line in lower case; an unknown code raw. */
+function heldWords(code: string): string {
+  const text = words("fog_block_reason", code);
+  return hasWords("fog_block_reason", code) ? text.charAt(0).toLowerCase() + text.slice(1) : text;
+}
 /**
  * One running burst in words: "Fans burst · 12 min left" from `ends_at`, no time left for a push-button burst (`ends_at`
  * null), or why the controller holds it off: "Humidify held off: someone inside".
  */
 export function burstWords(burst: Now["overrides"][number], clock: number): string {
   const name = words("burst", burst.kind);
-  if (burst.held_reason) return `${name.replace(/ burst$/, "")} held off: ${lowerFirst(words("fog_block_reason", burst.held_reason))}`;
+  if (burst.held_reason) return `${name.replace(/ burst$/, "")} held off: ${heldWords(burst.held_reason)}`;
   const left = leftWords(burst.ends_at, clock);
   return left ? `${name} · ${left}` : name;
 }
@@ -91,22 +95,24 @@ export function ClearBursts() {
 
 /**
  * Restart controller: API-IRR-12 `{kind: "restart"}`. It reads "Restart sent" until API-02 `controller.uptime_s` drops
- * below the value noted before the press, within 3 min; with none noted, until it reads under those 3 min.
+ * below its last read, the one held at the press included, within 3 min; with none held, until it reads under those 3 min.
  */
 function RestartController() {
   const client = useQueryClient();
-  const before = useRef<number | null>(null);
+  const last = useRef<number | null>(null);
   const check = () => readback({
     operationId: "API-02", windowMs: RESTART_WINDOW_MS, reason: () => "The controller has not restarted",
     done: (now) => {
       const uptime = now.controller?.uptime_s;
       if (uptime === null || uptime === undefined) return false;
-      return uptime < (before.current ?? RESTART_WINDOW_MS / 1000);
+      const dropped = uptime < (last.current ?? RESTART_WINDOW_MS / 1000);
+      last.current = uptime;
+      return dropped;
     },
   });
   const command = useCommand({ operation: "API-IRR-12", readback: check });
   const press = () => {
-    before.current = newestNow(client)?.controller?.uptime_s ?? null;
+    last.current = newestNow(client)?.controller?.uptime_s ?? null;
     void command.send({}, { kind: "restart" });
   };
   const waiting = command.phase === "waiting";

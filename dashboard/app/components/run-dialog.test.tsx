@@ -229,28 +229,30 @@ test("a viewer sees no Run…; with changes switched off Run… is disabled", as
   expect(screen.getByRole("button", { name: "Run… L01" }).hasAttribute("disabled")).toBe(true);
 });
 
+type Row = { line_id: string; state: Record<string, unknown> };
+/** API-IRR-01 keeps answering what `change` makes of it, whatever the run did. */
+function pin(change: (row: Row) => void) {
+  const fetcher = globalThis.fetch as (input: string, init?: RequestInit) => Promise<Response>;
+  vi.stubGlobal("fetch", vi.fn(async (input: string, init?: RequestInit) => {
+    const answer = await fetcher(input, init);
+    if (input !== "/api/v1/irrigation") return answer;
+    const body = await answer.json() as { lines: Row[] };
+    for (const row of body.lines) change(row);
+    return { ...answer, headers: answer.headers, json: async () => body } as unknown as Response;
+  }));
+}
+const idle = (row: Row, reason: string | null) => { if (row.line_id === "L01") row.state = { ...row.state, code: "idle", cause: null, ends_at: null, reason }; };
+async function startRun(lineId: string, fixture: string | undefined, change: (row: Row) => void) {
+  startFixtureApi({ fixture });
+  pin(change);
+  renderWithApi(<Card lineId={lineId} />);
+  await advance(0);
+  press(`Run… ${lineId}`);
+  press(/^Run \d/);
+  await advance(0);
+}
+
 test("a run that does not start within 30 s says why in the line's words, or Not started; a feed that opens its prewet has started", async () => {
-  // API-IRR-01 keeps answering what `change` makes of it, whatever the run did.
-  const pin = (change: (row: { line_id: string; state: Record<string, unknown> }) => void) => {
-    const fetcher = globalThis.fetch as (input: string, init?: RequestInit) => Promise<Response>;
-    vi.stubGlobal("fetch", vi.fn(async (input: string, init?: RequestInit) => {
-      const answer = await fetcher(input, init);
-      if (input !== "/api/v1/irrigation") return answer;
-      const body = await answer.json() as { lines: { line_id: string; state: Record<string, unknown> }[] };
-      for (const row of body.lines) change(row);
-      return { ...answer, headers: answer.headers, json: async () => body } as unknown as Response;
-    }));
-  };
-  const idle = (row: { line_id: string; state: Record<string, unknown> }, reason: string | null) => { if (row.line_id === "L01") row.state = { ...row.state, code: "idle", cause: null, ends_at: null, reason }; };
-  const startRun = async (lineId: string, fixture: string | undefined, change: Parameters<typeof pin>[0]) => {
-    startFixtureApi({ fixture });
-    pin(change);
-    renderWithApi(<Card lineId={lineId} />);
-    await advance(0);
-    press(`Run… ${lineId}`);
-    press(/^Run \d/);
-    await advance(0);
-  };
   await startRun("L01", undefined, (row) => idle(row, null));
   await readBack(25_000);
   expect(text(document.querySelector("[data-run-note]"))).toBe("Waiting for the valve to open");
@@ -270,4 +272,31 @@ test("a run that does not start within 30 s says why in the line's words, or Not
   expect(document.querySelector("[data-run-note]")).toBeNull();
   await readBack(30_000);
   expect(document.querySelector("[data-run-note]")).toBeNull();
+});
+
+test("a run that starts after its 30 s drops Not started on the card's own poll, and the note stays gone when the run ends", async () => {
+  let code = "idle";
+  await startRun("L01", undefined, (row) => { if (row.line_id === "L01") row.state = { ...row.state, code, cause: null, ends_at: null }; });
+  await readBack(30_000);
+  expect(text(document.querySelector("[data-run-note]"))).toBe("Not started");
+  code = "running";
+  await readBack(15_000);
+  expect(screen.getByTestId("state").textContent).toBe("running");
+  expect(document.querySelector("[data-run-note]")).toBeNull();
+  code = "idle";
+  await readBack(15_000);
+  expect(screen.getByTestId("state").textContent).toBe("idle");
+  expect(document.querySelector("[data-run-note]")).toBeNull();
+});
+
+test("Cancel while the run is out: its refusal still reads, on the card, and the next opening starts with none", async () => {
+  await open("L02", { fixture: "manifold-busy" });
+  press("Run… L02");
+  press("Run 10 min");
+  press("Cancel");
+  expect(dialog()).toBeNull();
+  await advance(0);
+  expect(text(document.querySelector(".field-error[role=alert]"))).toBe("L01 holds the drip manifold until 10:49; stop it or try then");
+  press("Run… L02");
+  expect(document.querySelector(".field-error")).toBeNull();
 });

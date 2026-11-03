@@ -55,13 +55,16 @@ function RunButton({ line, engine, label }: { line: IrrigationLine; engine: bool
   const command = useCommand({ operation: "API-IRR-06" });
   const fixed = useWallDuration(open && !engine);
   const close = () => { setOpen(false); command.clearError(); };
+  const press = () => { command.clearError(); setOpen(true); };
   const run = async (body: RunBody) => (await command.send({ line_id: line.line_id }, body)).ok;
   // The relay edge answers from here on: RUNNING on the card, or within 30 s the line's reason or "Not started".
   const running = line.state.code === "running";
   const note = command.phase === "waiting" && !running ? "Waiting for the valve to open" : command.phase === "late" && !running ? command.message : null;
   return <>
-    <Button write wide onClick={() => setOpen(true)}>{label} <span className="screen-reader">{line.line_id}</span></Button>
+    <Button write wide onClick={press}>{label} <span className="screen-reader">{line.line_id}</span></Button>
     {note && <span className="state-note" data-run-note={line.line_id}>{note}</span>}
+    {/* A refusal that answers a run the dialog was cancelled during. */}
+    {!open && command.error && <span className="field-error" role="alert">{command.error.message}</span>}
     {open && <ConfirmDialog open onClose={close} line={line} fixed={engine ? null : { minutes: fixed }} onRun={run} sending={command.sending} error={command.error} />}
   </>;
 }

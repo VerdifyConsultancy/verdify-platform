@@ -560,7 +560,7 @@ As built (VD-16), where the commands settle a detail this section leaves open:
 
 | Topic | As built |
 |---|---|
-| Run dialog | Every dialog also has "Reason (optional)", sent only when typed. A cap of 0 reads "wall feed today 0 min, no cap". "Mist now…" opens the same dialog, titled "Run L04 Center mister (clean) for 4 × 45 s?". `manifold_busy` reads the API's `detail`, gaining "until HH:MM" from `retry_after_s` if it has no end time; every other code reads the words table. After the 202 the card reads "Waiting for the valve to open" until the relay edge shows RUNNING, or within 30 s the line's reason or "Not started" |
+| Run dialog | Every dialog also has "Reason (optional)", sent only when typed. A cap of 0 reads "wall feed today 0 min, no cap". "Mist now…" opens the same dialog, titled "Run L04 Center mister (clean) for 4 × 45 s?". `manifold_busy` reads the API's `detail`, gaining "until HH:MM" from `retry_after_s` if it has no end time; every other code reads the words table. After the 202 the card reads "Waiting for the valve to open" until the relay edge shows RUNNING, or within 30 s the line's reason or "Not started", which goes if a later poll shows it running |
 | A feed's start | A fertilizer run counts as started once its clean partner reads `running` with cause `prewet`, because its own relay opens only after the prewet |
 | Stop | On every card but fog, in every state, a disabled line included, since a relay can be on outside its program. While it confirms, the card reads "Waiting for the valve to read off" and API-IRR-01 is read every 5 s. The lines Stop must see go OFF are those running in the newest API-02 answer or in API-IRR-01, so a Stop right after a Run still confirms and offers Disable |
 | Before the irrigation firmware | Operators read "Run arrives with the irrigation firmware" on the other lines and "Clear fault arrives with the irrigation firmware" on the L04, L07 and L09 cards and zones. Viewers read neither, as they have no such control |
@@ -779,7 +779,7 @@ As built (VD-16, `dashboard/app/components/burst-panel.tsx`), where the panel se
 | Panel | A card under the page head. Running bursts are chips after "Running:", the same words for viewers and operators; while API-02 fails, the ingestor is not running or the controller is not reporting it reads "Running: unknown", never none |
 | Bursts | "Fans burst · 12 min left"; a held burst reads only "Humidify held off: someone inside", with the code in words and no time left |
 | Engine flag | Read from API-IRR-01 at the 60 s cadence. Until it answers nothing is offered; while it fails the panel says so with Retry. Before the firmware operators read "Bursts arrive with the irrigation firmware (`manual_override`)" and "Restart arrives with the irrigation firmware"; a running burst still shows |
-| Restart | The button reads "Restart sent" and is disabled until `controller.uptime_s` falls below the value held before the press (with none held, under 180 s), then "The controller restarted". After 3 min with no drop it reads "The controller has not restarted" and can be pressed again |
+| Restart | The button reads "Restart sent" and is disabled until `controller.uptime_s` falls below its last read, the one held at the press included (with none held, under 180 s), then "The controller restarted". After 3 min with no drop it reads "The controller has not restarted" and can be pressed again, and a later drop still reads restarted |
 
 ## 9. SCR-08 Plants (Later) · `/plants`
 

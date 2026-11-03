@@ -315,6 +315,18 @@ async function watch(client: QueryClient, check: Readback, signal?: AbortSignal)
   }
   return { done: false, data };
 }
+/** After its window a readback can still come true on the page's own polls of that entry: `settled` then runs once, unless `signal` aborts first. */
+function settleLate(client: QueryClient, check: Readback, signal: AbortSignal, settled: () => void) {
+  const loose = check as unknown as { operationId: ReadOperationId; params?: object; done: (data: unknown) => boolean };
+  const key = readKey(loose.operationId, loose.params as never);
+  const stop = client.getQueryCache().subscribe(() => {
+    const data = client.getQueryData(key);
+    if (data === undefined || !loose.done(data)) return;
+    stop();
+    settled();
+  });
+  signal.addEventListener("abort", stop, { once: true });
+}
 
 // ---------------------------------------------------------------------------------------------------- C commands
 export type CommandOperationId = "API-IRR-06" | "API-IRR-07" | "API-IRR-12" | "API-IRR-13" | "API-20";
@@ -366,9 +378,9 @@ export function commandBody<K extends CommandOperationId>(body: BodyOf<K>): Body
  * **C**: one command (API-IRR-06 run, -07 stop, -12 burst, -13 clear fault; API-20 for the grow lights). "Sending…"
  * until the answer (a 202 `Command`, or API-20's 200), when `send` resolves (a dialog closes on it); then the readback
  * every 5 s until it shows the expected state (`phase` done). If nothing has changed within 30 s, `phase` is late and
- * `message` the line's reason in words, or "Not started". A refusal keeps the dialog open with `error` beside its
- * field. Pass `readback` for another read and test (API-02 `overrides` for a burst); a function gets the request's
- * params and body.
+ * `message` the line's reason in words, or "Not started", until the page's own polls show the state (`phase` done). A
+ * refusal keeps the dialog open with `error` beside its field. Pass `readback` for another read and test (API-02
+ * `overrides` for a burst); a function gets the request's params and body.
  */
 export function useCommand<K extends CommandOperationId>({ operation, readback: chosen }: {
   operation: K;
@@ -401,6 +413,7 @@ export function useCommand<K extends CommandOperationId>({ operation, readback: 
       if (seen.done) { setProgress({ phase: "done", message: null }); return; }
       const reason = seen.data === undefined ? null : (check.reason as ((data: unknown) => string | null) | undefined)?.(seen.data) ?? null;
       setProgress({ phase: "late", message: reason || NOT_STARTED });
+      settleLate(client, check, controller.signal, () => setProgress({ phase: "done", message: null }));
     }, () => {
       // Unmounted or replaced by a newer command: nothing to show.
     });
