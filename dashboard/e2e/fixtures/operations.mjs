@@ -136,6 +136,10 @@ function nowBody(world) {
 
 const WAVES = {
   "climate.temp_avg": [66, 3], "climate.rh_avg": [70, -8], "climate.vpd_avg": [0.62, 0.12], "climate.temp_south": [66.6, 3.2],
+  "climate.temp_north": [65.2, 2.8], "climate.temp_east": [66.3, 3.1], "climate.temp_west": [65.8, 3], "climate.rh_north": [72, -8], "climate.rh_east": [69, -8],
+  "climate.rh_south": [68, -8], "climate.rh_west": [71, -8], "climate.vpd_north": [0.58, 0.11], "climate.vpd_east": [0.66, 0.12], "climate.vpd_south": [0.68, 0.13],
+  "climate.vpd_west": [0.6, 0.12], "climate.house_vpd_target": [0.62, 0.05], "climate.vpd_target_center": [0.65, 0.05], "climate.vpd_target_south": [0.6, 0.05],
+  "climate.vpd_target_west": [0.6, 0.05], "climate.vpd_target_east": [0.7, 0.05], "forecast.temp_f": [47, 11], "forecast.rh_pct": [52, -14], "forecast.vpd_kpa": [0.5, 0.25],
   "climate.soil_moisture_south_1": [38, -2], "climate.flow_gpm": [0, 0], "climate.outdoor_temp_f": [45, 10], "climate.outdoor_rh_pct": [55, -15],
   "diagnostics.heap_free_kb": [38, 1.5], "daily.temp_in_band_pct": [92, 4], "daily.vpd_in_band_pct": [88, 6], "daily.time_in_band_day_pct": [90, 3],
   "daily.time_in_band_night_pct": [81, 5], "daily.water_gal": [24, 0], "daily.iris_required_written": [3, 0], "daily.iris_required_missed": [0, 0],
@@ -143,9 +147,9 @@ const WAVES = {
 };
 const round = (value, places = 2) => Number(value.toFixed(places));
 const wave = (key, ms) => { const [mean, amplitude] = WAVES[key]; return mean + amplitude * Math.sin((2 * Math.PI * (ms - 14 * HOUR)) / DAY); };
-/** The newest sample each metric has: indoor readings, outdoor readings, the climate row or the diagnostics row. */
+/** The newest sample each metric has: indoor readings (the house, each zone and the on-chip targets), outdoor readings, the climate row or the diagnostics row. */
 function lastSample(world, key) {
-  if (["climate.temp_avg", "climate.rh_avg", "climate.vpd_avg", "climate.temp_south"].includes(key)) return Date.parse(world.indoor.temp_f.observed_at);
+  if (/^climate\.(temp|rh|vpd)_|^climate\.house_vpd_target$/.test(key)) return Date.parse(world.indoor.temp_f.observed_at);
   if (key.startsWith("climate.outdoor_")) return Date.parse(world.outdoor.temp_f.observed_at);
   if (key.startsWith("diagnostics.")) return Date.parse(world.freshness.diagnostics.observed_at);
   return key.startsWith("daily.") ? world.now : Date.parse(world.freshness.climate.observed_at);
@@ -170,6 +174,20 @@ function scorecardColumn(world, key, t) {
   }
   return column;
 }
+/**
+ * One forecast key's column, as #1170 serves it: the newest issue per hour, so below a 1 h bucket only the bucket holding
+ * each whole hour in [from, to) has a value; `issued_at` is that issue, null when the window holds no forecast row.
+ */
+function forecastColumn(world, key, t, bucket, from, to) {
+  const avg = t.map((start) => {
+    const begin = start * 1000;
+    const hour = Math.ceil(Math.max(begin, from) / HOUR) * HOUR;
+    return world.forecast && hour < begin + bucket * 1000 && hour < to ? round(wave(key, hour)) : null;
+  });
+  return { avg, min: avg, max: avg, count: avg.map((value) => (value === null ? 0 : 1)), source: "forecast", retained_from: null, issued_at: avg.some((value) => value !== null) ? world.forecast.issued_at : null };
+}
+/** A probe out over a span (`world.outages`): the bucket reads null, a gap. */
+const outage = (world, key, begin, end) => world.outages.some((span) => span.keys.includes(key) && span.from < end && begin < span.to);
 /** API-04: the bucket and source rules of the contract, over synthetic diurnal values; a bucket with no data is null. */
 function seriesBody(world, { query }) {
   const keys = query.getAll("metric");
@@ -188,6 +206,7 @@ function seriesBody(world, { query }) {
   else for (let start = Math.floor(from / 1000 / bucket) * bucket; start * 1000 < to; start += bucket) t.push(start);
   let watermark = null;
   const columns = Object.fromEntries(defs.map((metric) => {
+    if (metric.key.startsWith("forecast.")) return [metric.key, forecastColumn(world, metric.key, t, bucket, from, to)];
     const scorecard = metric.key.startsWith("daily.");
     if (scorecard && world.scorecard) {
       const column = scorecardColumn(world, metric.key, t);
@@ -200,7 +219,7 @@ function seriesBody(world, { query }) {
     const column = { avg: [], min: [], max: [], count: [], source, retained_from: retainedFrom === null ? null : iso(retainedFrom) };
     for (const start of t) {
       const begin = start * 1000;
-      const covered = begin <= last && (source !== "raw" || begin + bucket * 1000 > retainedFrom);
+      const covered = begin <= last && (source !== "raw" || begin + bucket * 1000 > retainedFrom) && !outage(world, metric.key, begin, begin + bucket * 1000);
       const value = covered ? wave(metric.key, begin + (bucket * 1000) / 2) : null;
       const spread = Math.abs(WAVES[metric.key][1]) * 0.1;
       column.avg.push(value === null ? null : round(value));

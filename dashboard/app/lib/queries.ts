@@ -11,7 +11,7 @@
  */
 import { useQueryClient, type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { useServerSkew } from "../components/freshness";
-import { apiGet, type IrrigationStatus, type ParamsOf, type Parsed, type ReadOperationId, type ScheduleAgenda, type Settings, type StateLanes } from "./operator-api";
+import { apiGet, type BandTimeline, type IrrigationStatus, type ParamsOf, type Parsed, type ReadOperationId, type ScheduleAgenda, type Series, type Settings, type StateLanes } from "./operator-api";
 import { POLL_TIMEOUT_MS, usePolledQuery, type PolledQueryResult } from "./use-current";
 
 /** The one key for a read: `["api", operationId]`, plus the params when there are any. */
@@ -20,7 +20,7 @@ export function readKey<K extends ReadOperationId>(operationId: K, params?: Para
 }
 
 /** Base cadences (architecture §3). */
-export const READ_INTERVAL_MS = { now: 15_000, irrigation: 15_000, equipment: 15_000, settings: 60_000, schedules: 60_000, states: 60_000 } as const;
+export const READ_INTERVAL_MS = { now: 15_000, irrigation: 15_000, equipment: 15_000, settings: 60_000, schedules: 60_000, states: 60_000, plan: 60_000, zones: 60_000 } as const;
 /** A setting or irrigation write still REQUESTED, or a command still pending, is read every 5 s until it settles. */
 export const SETTLING_INTERVAL_MS = 5_000;
 
@@ -133,4 +133,24 @@ export function useStatesWindowRead(seconds: number) {
     const to = Date.now() - skewMs;
     return apiGet("API-05", { from: new Date(to - seconds * 1000).toISOString(), to: new Date(to).toISOString() }, { signal });
   }, READ_INTERVAL_MS.states);
+}
+
+/**
+ * API-04 over the last `seconds` (60 s), as `useStatesWindowRead` reads API-05: the window ends at each poll's own moment
+ * on the server's clock, so a device clock running behind never reads a live probe as old, and the key never moves.
+ */
+export function useSeriesWindowRead(metric: readonly string[], seconds: number) {
+  const skewMs = useServerSkew();
+  return usePolledQuery<Series>(["api", "API-04", { last_s: seconds, metric }], (signal) => {
+    const to = Date.now() - skewMs;
+    return apiGet("API-04", { metric: [...metric], from: new Date(to - seconds * 1000).toISOString(), to: new Date(to).toISOString() }, { signal });
+  }, READ_INTERVAL_MS.zones);
+}
+/** API-06 for `zone` over the last `seconds` (60 s), the same way: its newest point is the band in force. */
+export function useBandWindowRead(zone: NonNullable<ParamsOf<"API-06">["zone"]>, seconds: number) {
+  const skewMs = useServerSkew();
+  return usePolledQuery<BandTimeline>(["api", "API-06", { last_s: seconds, zone }], (signal) => {
+    const to = Date.now() - skewMs;
+    return apiGet("API-06", { zone, from: new Date(to - seconds * 1000).toISOString(), to: new Date(to).toISOString() }, { signal });
+  }, READ_INTERVAL_MS.zones);
 }

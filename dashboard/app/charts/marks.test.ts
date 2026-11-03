@@ -3,8 +3,11 @@ import { expect, test } from "vitest";
 import bandFixture from "./fixtures/band.json";
 import historyFixture from "./fixtures/setting-history.json";
 import { load } from "./fixtures/uplot-mock";
-import { BAND_IN_FORCE, BAND_RETENTION_S, CROP_BAND, bandAt, bandKindFor, bandRuns, boundLabel, groupSteps, lastAtOrBefore, marksExtent, paddedRange, requesterWords, settingBounds, settingSteps, stepsAt } from "./marks";
-import type { BandTimeline, SettingHistory } from "./types";
+import {
+  BAND_IN_FORCE, BAND_RETENTION_S, CROP_BAND, bandAt, bandKindFor, bandRuns, boundLabel, extentUnion, forecastAt, forecastExtent, forecastLines, forecastRuns, groupSteps, lastAtOrBefore,
+  marksExtent, paddedRange, requesterWords, settingBounds, settingSteps, stepsAt,
+} from "./marks";
+import type { BandTimeline, MetricDef, Series, SettingHistory } from "./types";
 
 const NBSP = "\u00a0";
 const epoch = (instant: string) => Date.parse(instant) / 1000;
@@ -182,4 +185,64 @@ test("allRequests: readings that print alike are one device step, a gap stays a 
   ]);
   // Graphs keeps every change point and its label.
   expect(settingSteps({ history }, "kPa", now, now + 3600).map((step) => step.label)).toHaveLength(7);
+});
+
+// ---------------------------------------------------------------- forecast
+const HOUR = 3600;
+const forecastMetric = (key: string, unit: string, label: string): MetricDef => ({ key, label, group: "outdoor", unit, cadence_s: HOUR, retention_days: 400, provenance: "DERIVED", zone: null, daily: false, note: null });
+const TEMP = forecastMetric("forecast.temp_f", "°F", "Forecast temperature");
+const RH = forecastMetric("forecast.rh_pct", "%", "Forecast relative humidity");
+/** A forecast answer: one bucket per entry of `t`, the issue at 07:00 America/Denver (MST) on the day of NOW. */
+function forecastSeries(t: number[], avg: (number | null)[], bucket = HOUR, issued: string | null = "2026-11-01T14:00:00Z"): Series {
+  return {
+    from: "", to: "", bucket_s: bucket, t, watermark: null, server_time: "", gaps: [],
+    series: { [TEMP.key]: { avg, min: avg, max: avg, count: avg.map((value) => (value === null ? 0 : 1)), source: "forecast", retained_from: null, issued_at: issued } },
+  };
+}
+
+test("the forecast draws right of now only, labelled with its issue; with issued_at null there is none", () => {
+  const series = forecastSeries([NOW - HOUR, NOW, NOW + HOUR, NOW + 2 * HOUR], [40, 41, 42, 43]);
+  const [line] = forecastLines({ metrics: [TEMP, RH], series }, "°F", NOW);
+  expect(line).toMatchObject({ key: TEMP.key, label: "Forecast temperature", text: "Forecast · issued 07:00", t: [NOW, NOW + HOUR, NOW + 2 * HOUR], values: [41, 42, 43] });
+  // Each panel draws the key in its own unit; a metric the read lacks draws nothing.
+  expect(forecastLines({ metrics: [TEMP, RH], series }, "%", NOW)).toEqual([]);
+  expect(forecastLines({ metrics: [TEMP], series }, "kPa", NOW)).toEqual([]);
+  expect(forecastLines({ metrics: [TEMP], series: forecastSeries([NOW + HOUR], [42], HOUR, null) }, "°F", NOW)).toEqual([]);
+  expect(forecastLines({ metrics: [TEMP], series: null }, "°F", NOW)).toEqual([]);
+  expect(forecastLines(null, "°F", NOW)).toEqual([]);
+  // Every hour left of now: nothing to draw.
+  expect(forecastLines({ metrics: [TEMP], series: forecastSeries([NOW - HOUR], [40]) }, "°F", NOW)).toEqual([]);
+  // An issue on an earlier day carries its date.
+  expect(forecastLines({ metrics: [TEMP], series: forecastSeries([NOW + HOUR], [42], HOUR, "2026-10-31T13:00:00Z") }, "°F", NOW)[0].text).toBe("Forecast · issued 10/31 07:00");
+});
+
+test("the forecast is joined hour to hour, below a 1 h bucket too, and a missing hour stays a gap", () => {
+  const FIVE = 300;
+  const t = Array.from({ length: 36 }, (_, index) => NOW + index * FIVE);
+  const hourly = t.map((_, index) => (index % 12 === 0 ? 40 + index : null));
+  const line = forecastLines({ metrics: [TEMP], series: forecastSeries(t, hourly, FIVE) }, "°F", NOW)[0];
+  expect(line.t).toEqual([NOW, NOW + HOUR, NOW + 2 * HOUR]);
+  expect(forecastRuns(line)).toEqual([[0, 2]]);
+  const holed = forecastLines({ metrics: [TEMP], series: forecastSeries([NOW, NOW + HOUR, NOW + 2 * HOUR, NOW + 3 * HOUR, NOW + 4 * HOUR], [40, 41, null, 43, null]) }, "°F", NOW)[0];
+  expect(forecastRuns(holed)).toEqual([[0, 1], [2, 2]]);
+  // 3 h buckets join at their own bucket.
+  const wide = forecastLines({ metrics: [TEMP], series: forecastSeries([NOW, NOW + 3 * HOUR], [40, 41], 3 * HOUR) }, "°F", NOW)[0];
+  expect(forecastRuns(wide)).toEqual([[0, 1]]);
+});
+
+test("the forecast hour at the cursor, and the extent the y range holds", () => {
+  const line = forecastLines({ metrics: [TEMP], series: forecastSeries([NOW, NOW + HOUR, NOW + 2 * HOUR], [40, 50, 45]) }, "°F", NOW)[0];
+  expect(forecastAt(line, NOW - 1)).toBeNull();
+  expect(forecastAt(line, NOW + 30)).toEqual({ at: NOW, value: 40 });
+  expect(forecastAt(line, NOW + HOUR)).toEqual({ at: NOW + HOUR, value: 50 });
+  expect(forecastAt(line, NOW + 2 * HOUR + 30)).toEqual({ at: NOW + 2 * HOUR, value: 45 });
+  expect(forecastAt(line, NOW + 4 * HOUR)).toBeNull();
+  expect(forecastExtent([line], NOW, NOW + 2 * HOUR)).toEqual([40, 50]);
+  expect(forecastExtent([line], NOW + 2 * HOUR, NOW + 3 * HOUR)).toEqual([45, 45]);
+  expect(forecastExtent([line], NOW - 2 * HOUR, NOW - HOUR)).toBeNull();
+  expect(forecastExtent([], 0, 1)).toBeNull();
+  expect(extentUnion([1, 2], [0, 5])).toEqual([0, 5]);
+  expect(extentUnion(null, [0, 5])).toEqual([0, 5]);
+  expect(extentUnion([1, 2], null)).toEqual([1, 2]);
+  expect(extentUnion(null, null)).toBeNull();
 });

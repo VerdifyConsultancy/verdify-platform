@@ -23,12 +23,13 @@ function picker(search = "") {
   fireEvent.click(screen.getByRole("button", { name: "+ Metric" }));
 }
 
-test("groups every metric but the daily keys in the picker's order, and the filter matches label, key, unit and note", () => {
+test("groups every metric but the daily and forecast keys in the picker's order, and the filter matches label, key, unit and note", () => {
   const groups = pickerGroups(METRICS);
-  expect(groups.map((group) => group.group)).toEqual(["house climate", "zones", "water and soil", "outdoor", "controller"]);
+  expect(groups.map((group) => group.group)).toEqual(["house climate", "zones", "water and soil", "outdoor", "targets", "controller"]);
   expect(groups.flatMap((group) => group.items).some((metric) => metric.key.startsWith("daily."))).toBe(false);
+  expect(groups.flatMap((group) => group.items).some((metric) => metric.key.startsWith("forecast."))).toBe(false);
   expect(pickerGroups(METRICS, "gal/min").flatMap((group) => group.items.map((metric) => metric.key))).toEqual(["climate.flow_gpm"]);
-  expect(pickerGroups(METRICS, "SOUTH").flatMap((group) => group.items.map((metric) => metric.key))).toEqual(["climate.temp_south", "climate.soil_moisture_south_1"]);
+  expect(pickerGroups(METRICS, "SOUTH").flatMap((group) => group.items.map((metric) => metric.key))).toEqual(["climate.temp_south", "climate.rh_south", "climate.vpd_south", "climate.soil_moisture_south_1", "climate.vpd_target_south"]);
   // A group the picker does not name follows the named ones.
   const extra = { ...METRICS[0], key: "climate.hydro_ph", label: "Hydro pH", group: "hydro", unit: "pH" };
   expect(pickerGroups([...METRICS, extra]).map((group) => group.group).at(-1)).toBe("hydro");

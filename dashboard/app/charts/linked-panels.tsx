@@ -2,8 +2,9 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { csvFilename, seriesCsvBlock, windowCsv } from "./csv";
 import { CsvLink } from "./data-table";
+import { forecastLines, type ForecastInput } from "./marks";
 import { RangeChips, type RangeId } from "./range-chips";
-import { TimeSeries } from "./time-series";
+import { TimeSeries, forecastCsvBlocks, type ChartNote } from "./time-series";
 import type { BandTimeline, MetricDef, Series, SettingSteps, XRange } from "./types";
 import { resetZoom, useStableArray } from "./uplot-chart";
 
@@ -54,6 +55,10 @@ export type LinkedPanelsProps = {
   series: readonly (Series | null | undefined)[];
   band?: BandTimeline | null;
   settings?: readonly SettingSteps[];
+  /** API-04's forecast keys over the window past now; each panel draws the key in its unit. */
+  forecast?: ForecastInput | null;
+  /** Keys drawn dotted. */
+  dotted?: readonly string[];
   now: number;
   xRange: XRange;
   /** Renders the range chips, each linking to this href. */
@@ -62,6 +67,8 @@ export type LinkedPanelsProps = {
   titles?: Readonly<Record<string, string>>;
   /** A panel's message in place of its chart (an error, say), per unit. */
   messages?: Readonly<Record<string, string>>;
+  /** Words under a panel's eyebrow, per unit. */
+  notes?: Readonly<Record<string, readonly ChartNote[]>>;
   /** Names the CSV file. */
   csvName?: string;
   /** More controls in the tools row, after the range chips (Graphs' custom range). */
@@ -93,8 +100,12 @@ export function LinkedPanels(props: LinkedPanelsProps) {
     return next;
   });
   const chosen = useMemo(() => panels.map((panel) => seriesFor(panel, series)), [panels, series]);
-  const csvVersion = useMemo(() => ({ panels, chosen, hidden }), [panels, chosen, hidden]);
-  const blocks = () => panels.map((panel, index) => seriesCsvBlock(chosen[index], panel.metrics.filter((metric) => !hidden.has(metric.key)), panel.unit));
+  const { forecast, now } = props;
+  const csvVersion = useMemo(() => ({ panels, chosen, hidden, forecast, now }), [panels, chosen, hidden, forecast, now]);
+  const blocks = () => panels.flatMap((panel, index) => [
+    seriesCsvBlock(chosen[index], panel.metrics.filter((metric) => !hidden.has(metric.key)), panel.unit),
+    ...forecastCsvBlocks(forecastLines(forecast, panel.unit, now), panel.unit, hidden),
+  ]);
   return <section className="linked-panels" aria-label="Linked charts, one cursor">
     <div className="chart-tools">
       {props.rangeHref && <RangeChips current={props.range} href={props.rangeHref} />}
@@ -104,8 +115,8 @@ export function LinkedPanels(props: LinkedPanelsProps) {
     </div>
     {props.controls}
     {panels.map((panel, index) => <TimeSeries key={panel.unit} linked syncKey={key}
-      series={chosen[index]} metrics={panel.metrics} unit={panel.unit} band={props.band} settings={props.settings}
-      now={props.now} xRange={xRange} title={props.titles?.[panel.unit]} message={props.messages?.[panel.unit]}
+      series={chosen[index]} metrics={panel.metrics} unit={panel.unit} band={props.band} settings={props.settings} forecast={forecast} dotted={props.dotted}
+      now={now} xRange={xRange} title={props.titles?.[panel.unit]} message={props.messages?.[panel.unit]} notes={props.notes?.[panel.unit]}
       hidden={hidden} onToggle={toggle} onZoom={onZoom(panel.unit)} zoomControl={false} csv={false} />)}
   </section>;
 }

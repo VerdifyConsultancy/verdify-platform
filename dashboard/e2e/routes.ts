@@ -3,7 +3,7 @@
  * What the browser suite walks (#1128). `app/routes.test.ts` fails when `app/routes.ts` gains a path `ROUTES` lacks, so
  * a new screen cannot skip axe: an issue that adds a route adds its path here in the same PR.
  */
-export const ROUTES = ["/", "/graphs", "/graphs/scorecard", "/plan", "/water", "/water/schedules", "/water/history", "/settings", "/activity", "/equipment", "/more"] as const;
+export const ROUTES = ["/", "/graphs", "/graphs/scorecard", "/graphs/zones", "/plan", "/water", "/water/schedules", "/water/history", "/settings", "/activity", "/equipment", "/more"] as const;
 export type RoutePath = (typeof ROUTES)[number];
 
 /**
@@ -26,6 +26,6 @@ export const SETTING_DRAWERS = [
 /**
  * The routes that hold a write control for an operator under the roles fixtures (`alerts-merged`, `l01-running`,
  * `mister-fault`), so a viewer's "no write control" means something there. The other routes write nothing: Graphs, its
- * scorecard and More by design, and Plan because Open is a link.
+ * scorecard and zones and More by design, and Plan because Open is a link.
  */
 export const WRITE_ROUTES: readonly RoutePath[] = ["/", "/water", "/water/schedules", "/water/history", "/settings", "/activity", "/equipment"];

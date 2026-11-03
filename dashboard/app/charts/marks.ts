@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
-import { formatValue } from "../lib/format";
+import { formatValue, sinceClock } from "../lib/format";
 import { isAiSource } from "../lib/vocab";
-import type { Actor, BandTimeline, PlanWaypoint, ReadbackState, SettingSteps } from "./types";
+import type { Actor, BandTimeline, MetricDef, PlanWaypoint, ReadbackState, Series, SettingSteps } from "./types";
 import { epochOf } from "./time-axis";
 
 /**
  * The marks a TimeSeries draws in hooks from their own time arrays, never as series: the band ribbon, the device,
- * requested and planned setting steps and the bounds (design system §5.1). Pure: the painter (draw.ts) and the
- * tooltip read these, and the tests check them without a canvas.
+ * requested and planned setting steps, the bounds and the forecast (design system §5.1). Pure: the painter (draw.ts)
+ * and the tooltip read these, and the tests check them without a canvas.
  */
 
 /** The last index whose value is at or before `x` in an ascending array; -1 when every value is after it. */
@@ -265,7 +265,60 @@ export function boundLabel(bound: Bound, yMin: number, yMax: number): { text: st
   return { text: bound.text, edge: null };
 }
 
+// ---------------------------------------------------------------- forecast
+
+/** A forecast read and the metrics to draw from it (API-03's, with the panel's unit picking its own). */
+export type ForecastInput = { metrics: readonly MetricDef[]; series: Series | null };
+/** One forecast key right of now: its valued buckets, joined hour to hour unless more than `joinS` apart. */
+export type ForecastLine = { key: string; label: string; text: string; t: number[]; values: number[]; joinS: number };
+/** A forecast's cadence: the newest issue per hour. Below a 1 h bucket only the bucket holding each hour has a value. */
+const FORECAST_HOUR_S = 3600;
+
+/**
+ * The forecast lines of one unit (US-GRF-05): only right of now, labelled "Forecast · issued HH:MM" from `issued_at`; with
+ * `issued_at` null there is no forecast in the window and none is drawn. A missing hour stays a gap in the line.
+ */
+export function forecastLines(input: ForecastInput | null | undefined, unit: string, now: number): ForecastLine[] {
+  const series = input?.series;
+  if (!input || !series) return [];
+  return input.metrics.filter((metric) => metric.unit === unit).flatMap((metric) => {
+    const columns = series.series[metric.key];
+    if (!columns?.issued_at) return [];
+    const t: number[] = [], values: number[] = [];
+    series.t.forEach((at, index) => {
+      const value = columns.avg[index];
+      if (at >= now && value !== null && value !== undefined && Number.isFinite(value)) { t.push(at); values.push(value); }
+    });
+    if (!t.length) return [];
+    return [{ key: metric.key, label: metric.label, text: `Forecast · issued ${sinceClock(columns.issued_at, now * 1000)}`, t, values, joinS: Math.max(FORECAST_HOUR_S, series.bucket_s) }];
+  });
+}
+
+/** The line as runs of joined points, as index ranges [first, last]; a lone hour is a run of one. */
+export function forecastRuns(line: ForecastLine): [number, number][] {
+  const runs: [number, number][] = [];
+  line.t.forEach((at, index) => {
+    if (index > 0 && at - line.t[index - 1] <= line.joinS) runs[runs.length - 1][1] = index;
+    else runs.push([index, index]);
+  });
+  return runs;
+}
+
+/** The forecast hour in force at `x`: the point at or before it, while within the line's hour. */
+export function forecastAt(line: ForecastLine, x: number): { at: number; value: number } | null {
+  const index = lastAtOrBefore(line.t, x);
+  return index >= 0 && x - line.t[index] <= line.joinS ? { at: line.t[index], value: line.values[index] } : null;
+}
+
 // ---------------------------------------------------------------- y range
+
+/** The lowest and highest forecast values reaching into [x0, x1]. */
+export function forecastExtent(lines: readonly ForecastLine[], x0: number, x1: number): [number, number] | null {
+  const seen = lines.flatMap((line) => line.values.filter((_, index) => line.t[index] >= x0 && line.t[index] <= x1));
+  return seen.length ? [Math.min(...seen), Math.max(...seen)] : null;
+}
+/** The union of two extents; either may be missing. */
+export const extentUnion = (a: [number, number] | null, b: [number, number] | null): [number, number] | null => (a && b ? [Math.min(a[0], b[0]), Math.max(a[1], b[1])] : a ?? b);
 
 /** The lowest and highest band and step values that reach into [x0, x1]. */
 export function marksExtent(runs: readonly BandRun[], steps: readonly StepSegment[], x0: number, x1: number): [number, number] | null {
