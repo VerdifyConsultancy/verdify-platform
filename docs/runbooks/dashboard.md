@@ -33,6 +33,69 @@ FAIL. Its header lists the checks; it mints a viewer session in the web pod and 
 scripts/dashboard-smoke.sh --expected-web-sha <build commit of the pinned digest>
 ```
 
+`API-01` prints what `writes_enabled` reads and passes when it equals the pod's `DASHBOARD_WRITES_ENABLED`, so the same
+line records the first `true` after the flag merges and the `false` after a rollback.
+
+## Live checks
+
+`scripts/dashboard-smoke.sh` runs from any kubectl host and works inside the web pod through the BFF. It prints only
+check names, statuses and PASS, FAIL or HELD, never a cookie, token or body, and it exits non-zero on any FAIL or HELD.
+With no flag it runs the check above; a flag runs that one leg instead (`/readyz`, the leg and its session rows), so
+nothing below runs unless it is named. All of them take `--expected-web-sha`.
+
+| Run | As | What it writes | Needs | Release |
+|---|---|---|---|---|
+| `scripts/dashboard-smoke.sh --sweep` | viewer | one session row, deleted | | #1181, #1186 |
+| `scripts/dashboard-smoke.sh --agent-write <name> [--param <setting>]` | agent `<name>` | one grid step, released at once; one Job, deleted | key `<name>` in Secret `verdify-mcp-agents` | #1144 |
+| `scripts/dashboard-smoke.sh --role operator [--param <setting>]` | `dashboard-smoke` operator | one grid step, manual, released | `writes_enabled: true` | #1144 |
+| `scripts/dashboard-smoke.sh --role operator --revert [--param <setting>]` | `dashboard-smoke` operator | three writes within one grid step, manual, released | `writes_enabled: true` | #1186 |
+| `scripts/dashboard-smoke.sh --role operator --lights` | `dashboard-smoke` operator | **switches the main light once each way**; `sw_gl_main_auto_mode` 1, released | `writes_enabled: true` | #1186 |
+
+`<setting>` defaults to `mister_engage_kpa`.
+
+**The sweep** reads every served read through the BFF and expects 200, then compares MCP with the Water read. It only
+reads, so it can run at any time.
+
+- A failure prints the id and the status. A 500 on a row is usually a relation or function that
+  `verdify_dashboard_runtime_login` was never granted, and the fix is a migration.
+- `API-IRR-10` reads 2025-08-05 to 2025-09-03, the first 30 days of wet-relay `equipment_state` rows (`irrigation.md`
+  §6.2), and each day must carry minutes. An earlier window reads `no_data` for good: 2024-11-17 is the first grow-light
+  row, not the first water.
+- Parity runs `irrigation_status` inside a `verdify-mcp` pod with the Iris token already in its environment and
+  `/api/v1/irrigation` in the web pod, at the same second. Each pod prints one hash per field, and the host compares them
+  over `lines` and `program`, ignoring `server_time`, `observed_at` and age fields. The line reads `equal`, or names the
+  differing line ids and fields; it reads up to three times, because a run in progress can move between two reads.
+
+**The write legs** write through the same paths as people and agents, so they run only when a release or an operator
+asks. Each moves a setting by one grid step at most, and they keep these rules:
+
+- Each refuses to start, having written nothing, unless the setting's newest desired row is absent or released. A
+  crop-band setting is refused because a release leaves `crop_band_anchors` as the write set it, and an irrigation-site
+  setting because it cannot confirm before the engine firmware. `--lights` also needs the main light's intent and Lutron
+  state known and equal, and `sw_gl_main_auto_mode` reading 1.
+- `--role operator`, `--revert` and `--lights` need `writes_enabled: true`, because the BFF answers 503 `writes_disabled`
+  otherwise. `--agent-write` does not: the flag gates only the BFF.
+- Before it releases, a leg re-reads the newest desired row. Another writer's row stays, and a FAIL says so.
+- `FAIL` after 5 minutes means the setting did not read `confirmed`; the leg still released it. `HELD` means an armed
+  experiment serves that field, so repeat the leg after disarm or with another `--param`.
+- `--lights` runs Back to automatic even after a failed readback, so it ends with the light at the controller's intent,
+  unless a person wrote `sw_gl_main_auto_mode` meanwhile; then it touches neither again. Its first call goes through `allow-setpoint-from-operator-api`, so when a sync adds that policy, hold the edge-write
+  lock through this leg (#1186).
+- `--agent-write` without the key fails with that message and creates nothing. Jason seals the key in jvallery/agents
+  (jvallery/agents#6017), and MCP admits it within 3 minutes. The host reads the Secret's key names only, with
+  `kubectl describe secret`.
+
+**If a write leg did not finish** (the run prints "did not finish", or its host died): the program in the pod keeps
+running on its own deadlines and releases what it wrote, within 25 minutes at most, unless the web pod itself restarted.
+After that, read the setting on Settings or in API-09. If its newest desired row is still `dashboard-smoke`'s, use
+Release to auto. For `--lights`, Back to automatic on `/equipment` returns the light to the controller's intent; then
+Release to auto on `sw_gl_main_auto_mode`. An `--agent-write` Job releases on SIGTERM, and a Job left behind deletes
+itself 10 minutes after it ends:
+
+```bash
+kubectl -n verdify-prod get jobs -l app.kubernetes.io/component=dashboard-smoke
+```
+
 ## Sign-in failures
 
 A refused sign-in is SCR-09's card at the URL that refused it, with the refusal's status and the request id, which
