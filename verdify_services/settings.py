@@ -10,10 +10,16 @@ functions, so a person and an agent get the same answer for the same input.
   for a crop-band setting its ``crop_band_anchors`` rows, and one ``activity_log`` row. The ``desired_state``
   insert trigger is the only wake; nothing here writes ``setpoint_changes``.
 - ``status(conn, param)``: whose value applies and the readback state (§5.5). Display only: it raises no alert.
+  ``statuses(conn, params)`` is the same for several settings in one batched read (API-07's lanes).
 - ``history(conn, param, from_, to)``: the desired rows and the readback change points over a window.
+- ``desired_states(conn, ids)``: named ``desired_state`` rows with their readback state, by ``history``'s rule
+  (API-17's ``setting.write`` and ``setting.release`` rows).
 
 Each write takes the caller's ``Actor`` and nothing else says who wrote. ``manual`` has no default here: REST
 defaults it to true (#1150) and MCP to false (#1171).
+
+``verdify_services.reads`` composes these into API-09, API-12 and API-17 (VD-55) and imports this module, so this
+module imports ``reads`` only inside ``_shared()``, where it calls ``reads.reporting()``.
 """
 
 from __future__ import annotations
@@ -24,7 +30,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import asyncpg
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
@@ -47,10 +53,13 @@ from verdify_schemas.tunable_registry import (
     desired_write_rule,
     planner_effective_bounds,
 )
-from verdify_services import activity, reads
+from verdify_services import activity
 from verdify_services.activity import ReadbackState, WriteResult
 from verdify_services.actor import Actor, ActorRef
 from verdify_services.problems import ServiceError, problem
+
+if TYPE_CHECKING:  # reads imports this module; _shared() imports reads when it runs
+    from verdify_services.reads import Reporting
 
 GREENHOUSE_ID = "vallery"
 # A stored write reads requested this long before it reads not_confirmed (§5.5).
@@ -158,7 +167,7 @@ class SettingOption(_Model):
 
 
 class PlanWaypoint(_Model):
-    """A plan value (OpenAPI ``PlanWaypoint``). #1167's ``reads.plan_waypoints`` and #1168 fill these."""
+    """A plan value (OpenAPI ``PlanWaypoint``): ``reads.plan_waypoints`` and ``reads.plan_history`` build them."""
 
     at: AwareDatetime
     value: float | None
@@ -167,7 +176,7 @@ class PlanWaypoint(_Model):
 
 
 class SettingPlan(_Model):
-    """The plan value in force (OpenAPI ``Setting.plan``). #1168 adds it to the catalog rows."""
+    """The plan value in force (OpenAPI ``Setting.plan``): ``reads.settings_rows`` adds it to the catalog rows."""
 
     value: float | None
     plan_id: str
@@ -180,7 +189,7 @@ class Setting(_Model):
     """One registry row as the Settings screen shows it (OpenAPI ``Setting``).
 
     ``label`` and ``unit`` are ``TunableDef.label`` and ``TunableDef.unit``, unchanged. ``plan`` stays None
-    here: #1168 adds the plan block and the Band in force rows.
+    here: ``reads.settings_rows`` (API-09) adds the plan block and the Band in force rows.
     """
 
     param: str
@@ -207,7 +216,7 @@ class SettingHistory(_Model):
     """Desired rows, plan values and readback change points over a window (OpenAPI ``SettingHistory``).
 
     ``from`` is a Python keyword: the field is ``from_`` and serializes as ``from``. ``plan`` stays empty here:
-    #1168 adds the waypoints (``reads.plan_waypoints``).
+    ``reads.setting_history`` (API-12) adds the plan values (``reads.plan_history``).
     """
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True, serialize_by_alias=True)
@@ -284,7 +293,7 @@ class _Facts:
 
 @dataclass(frozen=True)
 class _Shared:
-    reporting: reads.Reporting
+    reporting: Reporting
     experiment_armed: bool
 
     @property
@@ -403,7 +412,7 @@ def _reason(
     clamp: _Clamp | None,
     experiment: bool,
     push: _Push | None,
-    reporting: reads.Reporting,
+    reporting: Reporting,
 ) -> StateReason:
     """§5.5: the first reason that holds, with its ``since``."""
     if clamp is not None:
@@ -589,6 +598,8 @@ def _tolerance(param: str, value: float) -> float:
 
 
 async def _shared(conn: asyncpg.Connection) -> _Shared:
+    from verdify_services import reads  # here, not at the top: reads imports this module
+
     reporting = await reads.reporting(conn)
     armed = await conn.fetchval(activity.ARMED_EXPERIMENT_SQL)
     return _Shared(reporting=reporting, experiment_armed=armed is not None)
@@ -850,6 +861,37 @@ async def status(conn: asyncpg.Connection, param: str) -> SettingStatus:
     return _setting_status(spec, facts[spec.name], shared)
 
 
+async def statuses(conn: asyncpg.Connection, params: Sequence[str]) -> dict[str, SettingStatus]:
+    """``status()`` of several settings in one batched read, by param (API-07's lanes, so Plan and Settings show the
+    same state and reason). Names outside ``REGISTRY`` are left out. Display only, as ``status()``."""
+    specs = [REGISTRY[name] for name in dict.fromkeys(params) if isinstance(name, str) and name in REGISTRY]
+    if not specs:
+        return {}
+    async with _snapshot(conn):
+        facts, shared = await _gather(conn, specs)
+    return {spec.name: _setting_status(spec, facts[spec.name], shared) for spec in specs}
+
+
+def _row_evaluation(
+    row: Mapping[str, Any],
+    spec: TunableDef,
+    facts: _Facts,
+    shared: _Shared,
+    current: Mapping[str, Any] | None,
+    matched: Mapping[int, datetime],
+) -> _Evaluation:
+    """One desired row's state, as ``history`` and ``desired_states`` give it: the setting's newest (writable) row
+    reads its full ``evaluate()``; an older row reads released, or confirmed (``confirmed_at``) when a readback
+    before the next row confirmed it (``matched``), else not_confirmed."""
+    if current is not None and row["id"] == current["id"]:
+        return evaluate(spec, facts, shared)
+    if row["value"] is None:
+        return _Evaluation("released")
+    if row["id"] in matched:
+        return _Evaluation("confirmed", confirmed_at=matched[row["id"]])
+    return _Evaluation("not_confirmed")
+
+
 _HISTORY_DESIRED_SQL = """
 SELECT id, param, value, manual, source, actor, reason, created_at
   FROM desired_state
@@ -897,7 +939,7 @@ async def history(conn: asyncpg.Connection, param: str, from_: datetime, to: dat
     The newest row reads its full ``status``; an older row reads released, or confirmed (with
     ``confirmed_at``) when a readback before the next row confirmed it, else not_confirmed. ``readback``
     starts with the newest readback before ``from_`` (readbacks are kept 90 days). ``plan`` stays empty:
-    #1168 adds the waypoints.
+    ``reads.setting_history`` adds the plan values.
     """
     spec = _spec_or_not_found(param)
     start, end = _aware("from", from_), _aware("to", to)
@@ -921,17 +963,9 @@ async def history(conn: asyncpg.Connection, param: str, from_: datetime, to: dat
         matched = await _first_matches(conn, items)
         before = await conn.fetchrow(_READBACK_BEFORE_SQL, GREENHOUSE_ID, param, start, EQUIPMENT_WINDOW)
         points = await conn.fetch(_READBACK_POINTS_SQL, GREENHOUSE_ID, param, start, end)
-    desired: list[DesiredSetting] = []
-    for row in rows:
-        if current is not None and row["id"] == current["id"]:
-            evaluation = evaluate(spec, facts[param], shared)
-        elif row["value"] is None:
-            evaluation = _Evaluation("released")
-        elif row["id"] in matched:
-            evaluation = _Evaluation("confirmed", confirmed_at=matched[row["id"]])
-        else:
-            evaluation = _Evaluation("not_confirmed")
-        desired.append(_desired_setting(row, evaluation))
+    desired = [
+        _desired_setting(row, _row_evaluation(row, spec, facts[param], shared, current, matched)) for row in rows
+    ]
     readback: list[TimedValue] = []
     for point in ([before] if before is not None else []) + list(points):
         value = _finite(point["value"])
@@ -950,6 +984,53 @@ async def history(conn: asyncpg.Connection, param: str, from_: datetime, to: dat
             "readback": readback,
         }
     )
+
+
+# Each named row and the time its setting's next row was written (None for the newest row).
+_DESIRED_ROWS_SQL = """
+SELECT d.id, d.param, d.value, d.manual, d.source, d.actor, d.reason, d.created_at,
+       (SELECT n.created_at FROM desired_state AS n
+         WHERE n.greenhouse_id = d.greenhouse_id AND n.param = d.param
+           AND (n.created_at, n.id) > (d.created_at, d.id)
+         ORDER BY n.created_at, n.id LIMIT 1) AS until
+  FROM desired_state AS d
+ WHERE d.greenhouse_id = $1 AND d.id = ANY($2::bigint[])
+"""
+_BIGINT_MAX = 2**63 - 1
+
+
+async def desired_states(conn: asyncpg.Connection, ids: Sequence[int]) -> dict[int, DesiredSetting]:
+    """The named ``desired_state`` rows with their readback state, by id (API-17's ``setting.write`` and
+    ``setting.release`` rows, through ``detail.desired_id``).
+
+    ``history``'s rule: a setting's newest row reads its full state, as ``status()`` gives it; an older row reads
+    released, or confirmed (with ``confirmed_at``) when a readback before the next row confirmed it, else
+    not_confirmed. An id that names no row, or a row of a setting outside ``REGISTRY``, is left out. Display only.
+    """
+    keys = sorted({key for key in ids if type(key) is int and 1 <= key <= _BIGINT_MAX})
+    if not keys:
+        return {}
+    async with _snapshot(conn):
+        rows = [row for row in await conn.fetch(_DESIRED_ROWS_SQL, GREENHOUSE_ID, keys) if row["param"] in REGISTRY]
+        specs = [REGISTRY[param] for param in dict.fromkeys(row["param"] for row in rows)]
+        if not specs:
+            return {}
+        facts, shared = await _gather(conn, specs)
+        current = {spec.name: _writable_desired(spec.name, facts[spec.name].desired) for spec in specs}
+        older: list[tuple[int, str, datetime, datetime | None, float]] = []
+        for row in rows:
+            newest = current[row["param"]]
+            value = _finite(row["value"])
+            if (newest is None or row["id"] != newest["id"]) and value is not None:
+                older.append((row["id"], row["param"], row["created_at"], row["until"], value))
+        matched = await _first_matches(conn, older)
+    return {
+        row["id"]: _desired_setting(
+            row,
+            _row_evaluation(row, REGISTRY[row["param"]], facts[row["param"]], shared, current[row["param"]], matched),
+        )
+        for row in rows
+    }
 
 
 # ── Validation (architecture §5.3) ──────────────────────────────────────────

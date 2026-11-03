@@ -95,6 +95,7 @@ $PY -m pytest -q -rs \
   tests/test_verdify_services_core.py \
   tests/test_verdify_services_settings.py \
   tests/test_verdify_services_alerts.py \
+  tests/test_operator_routes_reads.py \
   tests/test_realized_solar_night_dryout_timeline.py \
   tests/test_05_dispatcher.py \
   tests/test_dispatcher_plain_convergence.py \
