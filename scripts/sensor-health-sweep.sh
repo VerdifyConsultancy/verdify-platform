@@ -265,8 +265,10 @@ fi
 # ── 3b. UPTIME CONTINUITY ──────────────────────────────────────────
 # Uptime must keep pace with the wall clock between rows. A row that falls behind
 # is a reset. A changed firmware_version explains it: that is the flash. The same
-# image resetting is not explained, whatever reset_reason says; only one that
-# follows about 300 s of silence fits the firmware's reboot_timeout (a link event).
+# image resetting is not explained: only one that follows about 300 s of silence
+# fits the firmware's reboot_timeout (a link event), and only one the controller
+# itself reports as Power-on, Brown-out or External reset is site power or a person,
+# not the image. Either warns once; a second reset in the window fails.
 # Rows stamped exactly on the minute are gap backfill and carry old uptimes, so
 # only real rows count, and a partial row is skipped rather than read as a reset.
 section "Uptime continuity ('$SINCE' window)"
@@ -287,6 +289,8 @@ if query RESET_ROWS "Uptime continuity" "SELECT ts::timestamptz(0), round(prev_u
         pass "Uptime continuous in window ($flash_boots flash boot(s))"
     elif [[ "$same_image_resets" -eq 1 && "$link_events" -eq 1 ]]; then
         warn "One reset of the same image after silence, which fits reboot_timeout (a link event):$reset_lines"
+    elif [[ "$same_image_resets" -eq 1 && "${reset_reason:-}" =~ ^(Power-on|Brown-out|External\ reset)$ ]]; then
+        warn "One reset of the same image, reported as ${reset_reason} (site power or a person: confirm the relays read OFF):$reset_lines"
     else
         fail "$same_image_resets reset(s) of the same image in window:$reset_lines"
     fi
@@ -303,9 +307,10 @@ fi
 # (open or acknowledged): an acknowledged-but-unresolved alert in the deploy
 # window is still a deploy-window regression.
 #
-# A sensor_offline re-open keeps its first ts, so a sensor last seen inside the
-# window counts too, by details.last_seen_at. Soil probes flap on their own and
-# count only when freshly opened.
+# A sensor_offline re-open keeps its first ts, so a row raised again inside the
+# window counts too, by details.last_seen_at (when the row was last raised, not
+# the sensor's last value). Soil probes flap on their own and count only when
+# freshly opened.
 section "Alerts opened during the deploy window ('$SINCE')"
 
 if query NEW_ALERTS "Deploy-window alerts" "SELECT alert_type || ' :: ' || COALESCE(sensor_id, '?') FROM alert_log WHERE disposition IN ('open', 'acknowledged') AND resolved_at IS NULL AND ((ts >= now() - interval '$SINCE' AND (alert_type IN ('sensor_offline', 'esp32_reboot', 'esp32_push_failed', 'heap_pressure_critical', 'firmware_version_mismatch', 'alert_validation_failed') OR alert_type LIKE 'band%')) OR (alert_type = 'sensor_offline' AND COALESCE(sensor_id, '') NOT LIKE 'climate.soil_%' AND (details ->> 'last_seen_at')::timestamptz >= now() - interval '$SINCE'))"; then

@@ -270,3 +270,18 @@ def test_overrides_keep_their_thresholds(tmp_path):
     assert "all are vent_mist_assist/summer_vent" in run(tmp_path, overrides=["summer_vent|3"]).stdout
     many = run(tmp_path, overrides=["vent_mist_assist|5", "mister_lockout|25"])
     assert many.returncode == 0 and "30 override events in window (5 vent/summer assist, 25 other)" in many.stdout
+
+
+@pytest.mark.parametrize("reason", ["Power-on", "Brown-out", "External reset"])
+def test_one_power_event_warns_and_a_second_reset_fails(tmp_path, reason):
+    diagnostics = [f"60|{reason}|{LIVE}|-58|400"]
+    once = run(tmp_path, diagnostics=diagnostics, continuity=[SAME_IMAGE_NO_SILENCE])
+    assert once.returncode == 0, once.stdout
+    assert f"One reset of the same image, reported as {reason}" in once.stdout
+    twice = run(tmp_path, diagnostics=diagnostics, continuity=[SAME_IMAGE_NO_SILENCE, SAME_IMAGE_NO_SILENCE])
+    assert twice.returncode == 1 and "2 reset(s) of the same image" in twice.stdout
+
+
+def test_a_reset_the_diagnostics_read_cannot_explain_fails(tmp_path):
+    result = run(tmp_path, continuity=[SAME_IMAGE_NO_SILENCE], fail=["diagnostics"])
+    assert result.returncode == 1 and "1 reset(s) of the same image" in result.stdout
