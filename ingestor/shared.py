@@ -559,11 +559,12 @@ setpoint_dispatch_lock = asyncio.Lock()
 
 # Plain convergence (VD-62). param -> when its outgoing value first differed
 # from the last push or its readback; it leaves when the readback matches.
-# Clamped and experiment-policy-held parameters are left out on purpose.
+# Clamped and experiment-policy-held parameters are left out on purpose. A pass
+# blocked on an incomplete readback replay adds each missing readback.
 # alert_monitor raises setpoint_delivery_stuck from it.
 delivery_differing_since: dict[str, datetime] = {}
 # Last dispatcher stage written to system_state (entity dispatcher_stage):
-# "ordinary", "paced <sent>/<pending>" or "held:<c1|heap|lease|drift_probe>".
+# "ordinary", "paced <sent>/<pending>" or "held:<c1|heap|lease|drift_probe|readbacks>".
 # None until the first pass of this process records one.
 dispatcher_stage: str | None = None
 

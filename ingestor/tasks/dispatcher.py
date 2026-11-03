@@ -125,6 +125,9 @@ MAX_RECONNECT_COMMANDS = 12
 # its readback is pending: cfg_* sensors publish every 30 s (VD-62).
 SENT_READBACK_WAIT_S = 90.0
 DISPATCHER_STAGE_ENTITY = "dispatcher_stage"
+HELD_READBACKS_STAGE = "held:readbacks"
+# Stands in the stuck-delivery alert's params for a connection that enumerated no writable value.
+NO_READBACK_INVENTORY = "no_cfg_readbacks_enumerated"
 # The plan_id of a forecast-rule plan row (VD-65). v_active_plan carries no source column.
 FORECAST_RULE_PLAN_PREFIX = "preemptive-"
 # Desired state (VD-33). crop_band values reach the controller through
@@ -331,6 +334,26 @@ async def _record_dispatcher_stage(conn, stage: str) -> None:
         return
     log.info("dispatcher_stage stage=%r previous=%r", stage, shared.dispatcher_stage)
     shared.dispatcher_stage = stage
+
+
+async def _record_blocked_readbacks(pool: asyncpg.Pool, missing: frozenset[str]) -> None:
+    """Make a pass held on an incomplete readback replay visible (``held:readbacks``).
+
+    Nothing is computed or sent until the replay completes, and one that never
+    completes freezes the dispatcher: an empty inventory stays unready for good
+    (``shared.note_transport_connected``). Each missing readback counts as a
+    delivery difference, so alert_monitor raises setpoint_delivery_stuck after its
+    usual 15 minutes. The first complete pass rebuilds the map, so they leave by
+    themselves.
+    """
+    now = _clock()
+    for param in missing or {NO_READBACK_INVENTORY}:
+        shared.delivery_differing_since.setdefault(param, now)
+    try:
+        async with pool.acquire() as conn:
+            await _record_dispatcher_stage(conn, HELD_READBACKS_STAGE)
+    except Exception as error:  # the stage record never stops a dispatch pass
+        log.warning("dispatcher_stage record failed stage=%r error=%s", HELD_READBACKS_STAGE, type(error).__name__)
 
 
 def _c1_policy_inputs(planned, anchors, origin, lighting, circuits, activity, safety, quiet, direct_wet, ai_moisture):
@@ -1106,6 +1129,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             len(missing),
             ",".join(sorted(missing)),
         )
+        await _record_blocked_readbacks(pool, missing)
         return
 
     def complete_dispatch_trigger() -> None:

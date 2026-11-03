@@ -58,6 +58,7 @@ whenever its stage changes (and once after each ingestor start):
 | `held:heap` | Heap deferral held every command (rows `deferred_heap_pressure`) |
 | `held:lease` | The writer Lease was not held, so no command could be sent |
 | `held:drift_probe` | A drift-probe phase in flight held this pass (at most its 4-minute confirmation deadline) |
+| `held:readbacks` | The connection's readback replay is incomplete, so nothing was computed or sent. Normal for a few minutes after a connect; an inventory that stays empty never completes |
 
 ```bash
 scripts/verdify-db.sh prod -c "SELECT ts, value FROM system_state WHERE entity = 'dispatcher_stage' ORDER BY ts DESC LIMIT 10"
@@ -76,8 +77,11 @@ while the delivery state is not known) instead of resolving and being raised
 again. Clamped settings and settings under
 `experiment_policy_hold` never count, and nothing is raised while the stage is
 `held:c1`. Heap deferral and a lost Lease do count, because then settings
-really are not reaching the controller. The dashboard's stuck-delivery banner
-reads this alert.
+really are not reaching the controller. A pass held on `held:readbacks` counts
+each missing readback as a setting that differs, from the first such pass, because
+a replay that never completes would otherwise freeze the dispatcher silently. A
+connection that enumerated no writable value lists `no_cfg_readbacks_enumerated`
+in `params`. The dashboard's stuck-delivery banner reads this alert.
 
 When it fires, read `dispatcher_stage`, then the writer logs and the device:
 
