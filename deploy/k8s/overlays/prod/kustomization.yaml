@@ -131,6 +131,13 @@ components:
   # Protocol-only MCP observer. The credential is owned by the agents KSOPS
   # lane and was reconciled before this workload reference.
   - ../../components/mcp-observer
+  # verdify-operator-api (#1148, wired by R1, #1143): the dashboard's private API, a
+  # second Deployment of the verdify-api image at its release digest, on ClusterIP
+  # :8090 with no route. Only the dashboard BFF reaches it, and egress-deny-management
+  # covers it. Its Secrets, verdify-operator-api and verdify-dashboard-runtime-db, live
+  # in the agents KSOPS lane; its login's password comes from the PreSync hook in
+  # runtime-role-boundary. It is not a device writer.
+  - ../../components/operator-api
   # Gate 2 experiment credential activation. This remains non-actuating and
   # uses a one-container wave-2 hook while capability and active ID stay off.
   - ../../components/experiment-v2-credential-bootstrap

@@ -18,7 +18,10 @@
 #                               exact Iris tool inventory without exporting a token.
 #                            3. database, climate/action data, and setpoint
 #                               readbacks are fresh.
-#                            4. In prod, use device-monitor for the separate
+#                            4. the dashboard's operator API is Ready on the
+#                               reviewed API digest, and its /readyz reports
+#                               ready at the reviewed source SHA.
+#                            5. In prod, use device-monitor for the separate
 #                               single-writer socket invariant.
 #
 #     device-monitor      — prod exactly-one-writer monitor. Counts the
@@ -47,6 +50,7 @@
 #     --namespace NS        target namespace (default: verdify-prod).
 #     --mode MODE           same as the positional MODE arg.
 #     --api-port PORT       localhost port for the api port-forward (default 18080).
+#     --operator-api-port PORT  localhost port for the operator API port-forward (default 18090).
 #     --timeout SECS        per-check curl/exec timeout (default 10).
 #     --expected-api-sha SHA     40-hex source commit of the built API image.
 #     --expected-api-digest sha256:HEX  API digest from the reviewed Git pin.
@@ -65,6 +69,7 @@ set -uo pipefail
 MODE="smoke"
 NAMESPACE=""
 API_PORT="18080"
+OPERATOR_API_PORT="18090"
 TIMEOUT="10"
 EXPECTED_API_SHA=""
 EXPECTED_API_DIGEST=""
@@ -79,6 +84,7 @@ while [ $# -gt 0 ]; do
     --mode) MODE="${2:-}"; shift 2 ;;
     --namespace|-n) NAMESPACE="${2:-}"; shift 2 ;;
     --api-port) API_PORT="${2:-}"; shift 2 ;;
+    --operator-api-port) OPERATOR_API_PORT="${2:-}"; shift 2 ;;
     --timeout) TIMEOUT="${2:-}"; shift 2 ;;
     --expected-api-sha) EXPECTED_API_SHA="${2:-}"; shift 2 ;;
     --expected-api-digest) EXPECTED_API_DIGEST="${2:-}"; shift 2 ;;
@@ -357,6 +363,46 @@ print("ARRAY[" + ",".join("\x27" + name + "\x27" for name in CANONICAL_FIELD_ORD
     pass "setpoint snapshot fresh (${snapshot_age}s; complete canonical 48-field batch)"
   else
     fail "setpoint snapshot stale/incomplete/unavailable (age=${snapshot_age:-?}s; complete batches=${snapshot_count:-?})"
+  fi
+  echo ""
+
+  # 4. The operator API runs the API image at the same release digest, so the same
+  #    reviewed digest and source bind it. Its /readyz needs a connection that
+  #    attests the dashboard login.
+  echo "[4] operator api — digest, Ready and /readyz"
+  local operator_img operator_desired operator_ready operator_body operator_verdict
+  operator_img="$(bounded_kubectl get deploy verdify-operator-api \
+    -o jsonpath='{.spec.template.spec.containers[?(@.name=="operator-api")].image}' 2>/dev/null || true)"
+  if [[ "${operator_img}" == *@"${EXPECTED_API_DIGEST}" ]]; then
+    pass "operator api: Deployment digest matches reviewed ${EXPECTED_API_DIGEST}"
+  else
+    fail "operator api: Deployment digest differs from reviewed ${EXPECTED_API_DIGEST}"
+  fi
+  operator_desired="$(bounded_kubectl get deploy verdify-operator-api -o jsonpath='{.spec.replicas}' 2>/dev/null || true)"
+  operator_ready="$(bounded_kubectl get deploy verdify-operator-api -o jsonpath='{.status.readyReplicas}' 2>/dev/null || true)"
+  if [[ "${operator_desired}" =~ ^[0-9]+$ ]] && [ "${operator_desired}" -gt 0 ] &&
+     [ "${operator_desired}" = "${operator_ready}" ]; then
+    pass "operator api: ${operator_ready}/${operator_desired} replicas Ready"
+  else
+    fail "operator api: desired=${operator_desired:-?} ready=${operator_ready:-?}"
+  fi
+  if start_port_forward verdify-operator-api "${OPERATOR_API_PORT}" 8090; then
+    # No -f: an unready pod answers 503 with the same body.
+    operator_body="$(curl -sS --max-time "${TIMEOUT}" "http://127.0.0.1:${OPERATOR_API_PORT}/readyz" 2>/dev/null || true)"
+    operator_verdict="$(printf '%s' "${operator_body}" | python3 -c '
+import json, sys
+try:
+    body = json.load(sys.stdin)
+    assert body["status"] == "ready", "status is not ready"
+    assert body["source_revision"] == sys.argv[1], "source_revision differs from reviewed source"
+    print(f"/readyz ready at reviewed source {sys.argv[1]}")
+except (ValueError, KeyError, AssertionError, TypeError) as exc:
+    print(f"/readyz unavailable/not ready: {exc}")
+    sys.exit(1)
+' "${EXPECTED_API_SHA}" 2>/dev/null)"
+    if [ "$?" -eq 0 ]; then pass "operator api: ${operator_verdict}"; else fail "operator api: ${operator_verdict}"; fi
+  else
+    fail "operator api: port-forward to svc/verdify-operator-api:8090 did not come up within ${TIMEOUT}s"
   fi
   info "run device-monitor for the separate production single-writer socket invariant"
   echo ""

@@ -14,6 +14,9 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "db/migrations/276-ordinary-maintenance-runtime-boundaries.sql"
+DASHBOARD_MIGRATION = ROOT / "db/migrations/282-dashboard-runtime-login.sql"
+DASHBOARD_LOGIN = "verdify_dashboard_runtime_login"
+DASHBOARD_VALUE = "dashboard_fixture_".ljust(64, "d")
 spec = importlib.util.spec_from_file_location(
     "maintenance_bootstrap", ROOT / "scripts/bootstrap-maintenance-runtime-roles.py"
 )
@@ -35,6 +38,7 @@ def configured(monkeypatch):
     monkeypatch.setenv("DB_NAME", "verdify")
     for i, duty in enumerate(module.DUTIES):
         monkeypatch.setenv(duty.upper() + "_DB_PASSWORD", ("fixture_" + str(i)).ljust(64, "z"))
+    monkeypatch.delenv("DASHBOARD_DB_PASSWORD", raising=False)
     return monkeypatch
 
 
@@ -154,6 +158,118 @@ def test_missing_null_or_nonboolean_metadata_never_grants_install(configured, st
     assert not any(c[2].get("transactional") for c in calls)
 
 
+def maintenance_states(value=False):
+    return {"verdify_" + d + "_runtime_login": value for d in module.DUTIES}
+
+
+@pytest.mark.parametrize("value", [None, ""])
+def test_a_missing_or_empty_dashboard_value_skips_only_that_duty(configured, capsys, value):
+    if value is not None:
+        configured.setenv("DASHBOARD_DB_PASSWORD", value)
+    calls = fake_psql(configured)
+    module.bootstrap()
+    assert DASHBOARD_LOGIN not in str(calls) and "verdify_dashboard_runtime" not in str(calls)
+    assert calls[0][1] == ["SELECT " + module.contract_sql()]
+    [(_, commands, _)] = [c for c in calls if c[2].get("transactional")]
+    assert commands[1:] == ["\\password verdify_" + d + "_runtime_login" for d in module.DUTIES]
+    out = capsys.readouterr().out
+    assert "two exact logins attested" in out and "dashboard duty skipped" in out
+
+
+def test_a_dashboard_value_is_set_only_while_null_then_attested_as_the_login(configured, capsys):
+    configured.setenv("DASHBOARD_DB_PASSWORD", DASHBOARD_VALUE)
+    calls = fake_psql(configured, nulls={**maintenance_states(), DASHBOARD_LOGIN: True})
+    module.bootstrap()
+    [(user, commands, kwargs)] = [c for c in calls if c[2].get("transactional")]
+    assert user == "verdify" and commands[1:] == ["\\password " + DASHBOARD_LOGIN]
+    assert kwargs["password_input"] == (DASHBOARD_VALUE + "\n") * 2
+    # The guard binds 282's attestation body and every login's NULL state under the catalog lock.
+    assert module.DASHBOARD_FUNCTION[1] in commands[0]
+    assert "rolname='" + DASHBOARD_LOGIN + "') IS NOT DISTINCT FROM TRUE" in commands[0]
+    install = next(i for i, c in enumerate(calls) if c[2].get("transactional"))
+    attested = [i for i, c in enumerate(calls) if c[0] == DASHBOARD_LOGIN]
+    assert len(attested) == 1 and attested[0] > install
+    assert calls[attested[0]][1] == ["SELECT verdify_dashboard_runtime.fn_attest_login()"]
+    assert DASHBOARD_VALUE not in str([c[1] for c in calls])
+    out = capsys.readouterr().out
+    assert "three exact logins attested" in out and "skipped" not in out and DASHBOARD_VALUE not in out
+
+
+def test_a_dashboard_value_with_a_set_password_is_attested_and_never_reinstalled(configured):
+    configured.setenv("DASHBOARD_DB_PASSWORD", DASHBOARD_VALUE)
+    calls = fake_psql(configured, nulls={**maintenance_states(), DASHBOARD_LOGIN: False})
+    module.bootstrap()
+    assert not any(c[2].get("transactional") for c in calls)
+    assert sum(c[0] == DASHBOARD_LOGIN for c in calls) == 2  # before the install decision and at the end
+
+
+def test_a_dashboard_value_that_mismatches_refuses_and_installs_nothing(configured):
+    configured.setenv("DASHBOARD_DB_PASSWORD", DASHBOARD_VALUE)
+    state = {**maintenance_states(True), DASHBOARD_LOGIN: False}
+    calls = fake_psql(configured, nulls=state, refused=DASHBOARD_LOGIN)
+    with pytest.raises(module.BootstrapError):
+        module.bootstrap()
+    assert not any(c[2].get("transactional") for c in calls)
+
+
+@pytest.mark.parametrize(
+    "bad", ["x" * 63, "x" * 65, "'" * 64, "\\" * 64, " " * 64, "x" * 64 + "\n", "x" * 63 + "!", " "]
+)
+def test_a_dashboard_value_of_any_other_shape_fails_closed_with_no_database_effect(configured, bad):
+    configured.setenv("DASHBOARD_DB_PASSWORD", bad)
+    calls = fake_psql(configured)
+    with pytest.raises(module.BootstrapError):
+        module.bootstrap()
+    assert not calls
+
+
+@pytest.mark.parametrize("twin", ["MATVIEW_REFRESH_DB_PASSWORD", "DB_ADMIN_PASSWORD"])
+def test_a_dashboard_value_equal_to_another_credential_has_no_database_effect(configured, twin):
+    value = os.environ["MATVIEW_REFRESH_DB_PASSWORD"]
+    configured.setenv("DB_ADMIN_PASSWORD", value if twin == "DB_ADMIN_PASSWORD" else "private-owner-fixture")
+    configured.setenv("MATVIEW_REFRESH_DB_PASSWORD", "other_".ljust(64, "m") if twin == "DB_ADMIN_PASSWORD" else value)
+    configured.setenv("DASHBOARD_DB_PASSWORD", value)
+    calls = fake_psql(configured)
+    with pytest.raises(module.BootstrapError):
+        module.bootstrap()
+    assert not calls
+
+
+def test_a_dashboard_value_needs_the_login_in_the_role_state(configured):
+    configured.setenv("DASHBOARD_DB_PASSWORD", DASHBOARD_VALUE)
+    calls = fake_psql(configured, nulls=maintenance_states(True))
+    with pytest.raises(module.BootstrapError):
+        module.bootstrap()
+    assert not any(c[2].get("transactional") for c in calls)
+
+
+def test_a_dashboard_value_needs_the_contract_with_its_attestation_body(configured):
+    configured.setenv("DASHBOARD_DB_PASSWORD", DASHBOARD_VALUE)
+    calls = []
+
+    def refuse_the_dashboard_contract(user, password, commands, **kwargs):
+        calls.append(commands)
+        return "f" if module.dashboard_contract_sql() in commands[0] else "t"
+
+    configured.setattr(module, "psql", refuse_the_dashboard_contract)
+    with pytest.raises(module.BootstrapError):
+        module.bootstrap()
+    assert len(calls) == 1 and module.contract_sql() in calls[0][0]
+
+
+def test_the_dashboard_contract_binds_the_body_migration_282_creates():
+    sql = DASHBOARD_MIGRATION.read_text()
+    (found,) = re.finditer(r"CREATE FUNCTION ([\w.]+)\(([^)]*)\)(.*?)AS (\$\w+\$)(.*?)\4;", sql, re.S)
+    name, args, attrs, _, body = found.groups()
+    signature, body_sha, definer = module.DASHBOARD_FUNCTION
+    assert signature == name + "(" + args + ")"
+    assert body_sha == hashlib.sha256(body.encode()).hexdigest()
+    assert definer is ("SECURITY DEFINER" in attrs) and "SECURITY INVOKER" in attrs
+    contract = module.dashboard_contract_sql()
+    assert signature in contract and body_sha in contract and "rolname='" + DASHBOARD_LOGIN + "'" in contract
+    assert DASHBOARD_LOGIN not in module.contract_sql()  # the two maintenance duties' contract is unchanged
+
+
 def test_exact_new_profile_retains_275_body_and_bounds_function_drift():
     ordinary = module._ordinary
     profile = ordinary.sealed_sql_276()
@@ -226,7 +342,19 @@ def test_only_two_callers_and_initial_hook_receive_new_custody():
         for e in pod["containers"][0]["env"]
         if "secretKeyRef" in e.get("valueFrom", {})
     }
-    assert set(refs) == {"DB_ADMIN_PASSWORD", "WRITER_WATCHDOG_DB_PASSWORD", "MATVIEW_REFRESH_DB_PASSWORD"}
+    assert set(refs) == {
+        "DB_ADMIN_PASSWORD",
+        "WRITER_WATCHDOG_DB_PASSWORD",
+        "MATVIEW_REFRESH_DB_PASSWORD",
+        "DASHBOARD_DB_PASSWORD",
+    }
+    # Only the dashboard login's reference is optional: without its Secret the hook still runs and skips that duty.
+    assert {name for name, ref in refs.items() if "optional" in ref} == {"DASHBOARD_DB_PASSWORD"}
+    assert refs["DASHBOARD_DB_PASSWORD"] == {
+        "name": "verdify-dashboard-runtime-db",
+        "key": "password",
+        "optional": True,
+    }
 
 
 def maintenance_image_scripts(dockerfile):

@@ -1,15 +1,14 @@
 """deploy/k8s/components/operator-api renders the operator API's verdify-prod manifests (#1148; architecture §10).
 
 Rendered alone it holds one Deployment, a ClusterIP Service on 8090, the ConfigMap and one ingress NetworkPolicy that
-admits only the dashboard web pods: no Secret, no IngressRoute and no egress policy. The prod overlay does not list
-it yet (R1's wiring PR, #1143, adds the line once the Secrets exist), so its render is unchanged; wired into a copy
-of the overlay, the operator API runs the verdify-api release digest and egress-deny-management covers it.
+admits only the dashboard web pods: no Secret, no IngressRoute and no egress policy. In the prod overlay (R1's wiring
+PR, #1143), the operator API runs the verdify-api release digest, allow-db-from-app admits it and
+egress-deny-management covers it, and the overlay still renders no Secret.
 Renders with kustomize, as tests/test_egress_deny_management.py renders the prod overlay.
 """
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -50,16 +49,8 @@ def rendered() -> list[dict]:
 
 
 @pytest.fixture(scope="module")
-def wired(tmp_path_factory) -> list[dict]:
-    """The prod overlay as R1's wiring PR will render it: a copy with the component line added."""
-    copy = tmp_path_factory.mktemp("wired")
-    shutil.copytree(ROOT / "deploy/k8s", copy / "deploy/k8s")
-    kustomization = copy / "deploy/k8s/overlays/prod/kustomization.yaml"
-    text = kustomization.read_text()
-    anchor = "components:\n"
-    assert text.count(anchor) == 1
-    kustomization.write_text(text.replace(anchor, anchor + "  - ../../components/operator-api\n"))
-    return render(kustomization.parent)
+def prod() -> list[dict]:
+    return render(PROD)
 
 
 def test_the_component_renders_its_four_objects_and_no_secret_route_or_egress_policy(rendered):
@@ -187,18 +178,17 @@ def test_the_api_image_carries_the_operator_api_and_every_route_module():
     assert not [line for line in lines if line.startswith("ADD ") or ("COPY" in line and "--chown" in line)]
 
 
-def test_the_prod_overlay_does_not_render_the_component_yet():
-    assert "components/operator-api" not in (PROD / "kustomization.yaml").read_text()
-    prod = render(PROD)
+def test_the_prod_overlay_renders_the_component_and_no_secret(prod):
+    assert "../../components/operator-api" in yaml.safe_load((PROD / "kustomization.yaml").read_text())["components"]
     assert not [doc for doc in prod if doc["kind"] == "Secret"]
     names = {(doc["kind"], doc["metadata"]["name"]) for doc in prod}
-    assert not names & {("Deployment", NAME), ("Service", NAME), ("ConfigMap", NAME), ("NetworkPolicy", POLICY)}
+    assert names >= {("Deployment", NAME), ("Service", NAME), ("ConfigMap", NAME), ("NetworkPolicy", POLICY)}
+    assert not [doc for doc in prod if doc["kind"] in {"Ingress", "IngressRoute"} and NAME in str(doc["spec"])]
 
 
-def test_wired_into_prod_it_runs_the_verdify_api_release_digest_with_no_secret(wired):
-    assert not [doc for doc in wired if doc["kind"] == "Secret"]
-    operator = one(wired, "Deployment", NAME)
-    public = one(wired, "Deployment", "verdify-api")
+def test_in_prod_it_runs_the_verdify_api_release_digest(prod):
+    operator = one(prod, "Deployment", NAME)
+    public = one(prod, "Deployment", "verdify-api")
     assert operator["metadata"]["namespace"] == public["metadata"]["namespace"] == "verdify-prod"
     (operator_container,) = operator["spec"]["template"]["spec"]["containers"]
     (public_container,) = public["spec"]["template"]["spec"]["containers"]
@@ -207,18 +197,42 @@ def test_wired_into_prod_it_runs_the_verdify_api_release_digest_with_no_secret(w
     }
     release = pins["release-pin-verdify-api"]
     assert operator_container["image"] == public_container["image"] == f"{release['name']}@{release['digest']}"
-    assert one(wired, "NetworkPolicy", POLICY)["metadata"]["namespace"] == "verdify-prod"
+    assert one(prod, "NetworkPolicy", POLICY)["metadata"]["namespace"] == "verdify-prod"
 
 
-def test_wired_into_prod_egress_deny_management_covers_the_operator_api(wired):
-    deny = one(wired, "NetworkPolicy", "egress-deny-management")["spec"]["podSelector"]
-    labels = one(wired, "Deployment", NAME)["spec"]["template"]["metadata"]["labels"]
+def test_in_prod_the_operator_api_syncs_after_everything_else_with_no_pod_template_churn(prod):
+    # Argo stops at a wave that does not turn Healthy: an operator API that cannot start must hold nothing else.
+    annotation = "argocd.argoproj.io/sync-wave"
+    operator = one(prod, "Deployment", NAME)
+    others = [
+        int(annotations.get(annotation, "0"))
+        for doc in prod
+        if doc is not operator
+        and "argocd.argoproj.io/hook" not in (annotations := doc["metadata"].get("annotations") or {})
+    ]
+    assert int(operator["metadata"]["annotations"][annotation]) > max(others)
+    assert annotation not in (operator["spec"]["template"]["metadata"].get("annotations") or {})
+
+
+def test_in_prod_allow_db_from_app_admits_the_operator_api(prod):
+    labels = one(prod, "Deployment", NAME)["spec"]["template"]["metadata"]["labels"]
+    policy = one(prod, "NetworkPolicy", "allow-db-from-app")["spec"]
+    (rule,) = policy["ingress"]
+    (expression,) = rule["from"][0]["podSelector"]["matchExpressions"]
+    assert expression["key"] == "app.kubernetes.io/component" and expression["operator"] == "In"
+    assert labels["app.kubernetes.io/component"] in expression["values"]
+    assert rule["ports"] == [{"protocol": "TCP", "port": 5432}]
+
+
+def test_in_prod_egress_deny_management_covers_the_operator_api(prod):
+    deny = one(prod, "NetworkPolicy", "egress-deny-management")["spec"]["podSelector"]
+    labels = one(prod, "Deployment", NAME)["spec"]["template"]["metadata"]["labels"]
     (expression,) = deny["matchExpressions"]
     assert expression["key"] == "app.kubernetes.io/component" and expression["operator"] == "NotIn"
     assert labels["app.kubernetes.io/component"] not in expression["values"]
     own_egress = [
         doc["metadata"]["name"]
-        for doc in wired
+        for doc in prod
         if doc["kind"] == "NetworkPolicy"
         and "Egress" in doc["spec"]["policyTypes"]
         and doc["metadata"]["name"] != "egress-deny-management"
