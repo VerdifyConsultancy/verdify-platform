@@ -270,6 +270,7 @@ test("ledger filters live in the URL and narrow the read; Load older passes the 
 
 // ---------------------------------------------------------------------------------------------------- a line's controls (#1136)
 const CARDS = ["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11"];
+/** A card's controls in order. ON or OFF is its enable switch and Options comes after Stop (#1182), as SCR-04 draws them. */
 const controls = (id: string) => [...card(id).querySelectorAll("[data-write-control]")].map((node) => text(node));
 const everyCard = () => Object.fromEntries(CARDS.map((id) => [id, controls(id)]));
 const zoneCard = (id: string) => document.querySelector<HTMLElement>(`.mister-zone[data-line="${id}"]`)!;
@@ -278,8 +279,9 @@ test("each card's controls with the irrigation firmware: Run… on an enabled li
   open("/water", { fixture: "run-dialogs" });
   await load();
   expect(everyCard()).toEqual({
-    L01: ["Run… L01", "Stop L01"], L02: ["Run… L02", "Stop L02"], L04: ["Mist now… L04", "Stop L04"], L05: ["Stop L05"], L06: ["Stop L06"], L07: ["Stop L07"],
-    L08: ["Run… L08", "Stop L08"], L09: ["Stop L09"], L10: ["Stop L10"], L11: [],
+    L01: ["ON", "Run… L01", "Stop L01", "Options of L01"], L02: ["ON", "Run… L02", "Stop L02", "Options of L02"], L04: ["ON", "Mist now… L04", "Stop L04", "Options of L04"],
+    L05: ["OFF", "Stop L05", "Options of L05"], L06: ["OFF", "Stop L06", "Options of L06"], L07: ["ON", "Stop L07", "Options of L07"],
+    L08: ["ON", "Run… L08", "Stop L08", "Options of L08"], L09: ["ON", "Stop L09", "Options of L09"], L10: ["OFF", "Stop L10", "Options of L10"], L11: [],
   });
   expect(card("L01").querySelector(".btn-stop")).not.toBeNull();
   expect(screen.getByRole("button", { name: "Run… L01" }).className).toContain("btn-wide");
@@ -290,7 +292,9 @@ test("before the irrigation firmware every card but fog has Stop, only L01 has R
   const api = open("/water", { fixture: "before-engine" });
   await load();
   expect(everyCard()).toEqual({
-    L01: ["Run… L01", "Stop L01"], L02: ["Stop L02"], L04: ["Stop L04"], L05: ["Stop L05"], L06: ["Stop L06"], L07: ["Stop L07"], L08: ["Stop L08"], L09: ["Stop L09"], L10: ["Stop L10"], L11: [],
+    L01: ["ON", "Run… L01", "Stop L01", "Options of L01"], L02: ["OFF", "Stop L02", "Options of L02"], L04: ["ON", "Stop L04", "Options of L04"],
+    L05: ["OFF", "Stop L05", "Options of L05"], L06: ["OFF", "Stop L06", "Options of L06"], L07: ["ON", "Stop L07", "Options of L07"],
+    L08: ["OFF", "Stop L08", "Options of L08"], L09: ["ON", "Stop L09", "Options of L09"], L10: ["OFF", "Stop L10", "Options of L10"], L11: [],
   });
   for (const id of ["L02", "L05", "L06", "L08", "L10"]) expect(text(card(id).querySelector("[data-arrives=run]")), id).toBe("Run arrives with the irrigation firmware");
   expect(card("L01").querySelector("[data-arrives=run]")).toBeNull();
@@ -343,8 +347,9 @@ test("before the irrigation firmware the relay edge turns a running card's relay
 test("a latched mister has Clear fault on its card and its zone: one API-IRR-13, and the latch reads gone", async () => {
   const api = open("/water", { fixture: "mister-fault" });
   await load();
-  expect(controls("L04")).toEqual(["Stop L04", "Clear fault on L04"]);
-  expect([...zoneCard("L04").querySelectorAll("[data-write-control]")].map((node) => text(node))).toEqual(["Clear fault on L04"]);
+  expect(controls("L04")).toEqual(["ON", "Stop L04", "Options of L04", "Clear fault on L04"]);
+  // The zone's VPD control and Schedule switches (#1182), then its Clear fault.
+  expect([...zoneCard("L04").querySelectorAll("[data-write-control]")].map((node) => text(node))).toEqual(["ON", "OFF", "Clear fault on L04"]);
   expect(zoneCard("L07").querySelector(".actions button")).toBeNull();
   fireEvent.click(within(zoneCard("L04")).getByRole("button", { name: "Clear fault on L04" }));
   await advance(0);
