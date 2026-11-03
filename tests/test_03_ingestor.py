@@ -720,8 +720,9 @@ async def test_cold_boot_nan_blocks_with_only_its_stage_row_until_native_replay_
     assert not shared.note_cfg_readback_observed("mister_on_s", 300.0, generation)
     assert not shared.transport_readbacks_ready(second)
     assert ingestor._record_cfg_readback("cfg___mister_vpd_weight", float("nan"))
+    before = list(conn.method_calls)
     await dispatcher.setpoint_dispatcher(pool)
-    pool.acquire.assert_not_called()
+    assert conn.method_calls == before  # still held: the unchanged stage writes nothing, and no policy read or command
     ingestor._mirror_irrigation_number_readback("mister_on_s", 300.0)
     ingestor._mirror_irrigation_number_readback("mister_vpd_weight", 1.5)
     assert shared.transport_readbacks_ready(second)
