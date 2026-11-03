@@ -7,12 +7,14 @@
  */
 import type { ReactNode } from "react";
 import { FORECAST_RULE } from "../charts/marks";
-import { formatValue, localDate, shortTime } from "../lib/format";
+import { shownActor, type SignedIn } from "../lib/activity";
+import { duration, formatValue, localDate, shortTime } from "../lib/format";
 import { dayClock } from "../lib/last-water";
-import type { IrrigationLine, IrrigationStatus, Me, Occurrence, Plan, PlanLane, PlanWaypoint, PlannerTrigger, Schedule, ScheduleAgenda } from "../lib/operator-api";
+import type { IrrigationLine, IrrigationStatus, Occurrence, Plan, PlanLane, PlanWaypoint, PlannerTrigger, Schedule, ScheduleAgenda } from "../lib/operator-api";
 import { READ_INTERVAL_MS, panelRead, useApiRead, type PanelRead } from "../lib/queries";
 import { keptNumber, withUnit } from "../lib/setting-values";
 import { useMe } from "../lib/shell";
+import { isAiSource } from "../lib/vocab";
 import { occurrenceWords, pauseUntilWords, pausedNow } from "../lib/water";
 import { Badge } from "./badge";
 import { LocalTime } from "./common";
@@ -74,17 +76,13 @@ export function nextTrigger(health: readonly PlannerTrigger[], now: number): Pla
   return health.filter((row) => row.outcome === "expected" && timeOf(row.expected_at) > now).sort((a, b) => timeOf(a.expected_at) - timeOf(b.expected_at))[0] ?? null;
 }
 
-/** Other people read by username or source; only the signed-in person reads by display name. */
-export function actorName(name: string, me: Pick<Me, "username" | "display_name"> | null): string {
-  return me?.display_name && me.username === name ? me.display_name : name;
-}
-
-/** "12 min · Wall MWF": the schedule's valve-open minutes and label, and any note the API or the slot carries. */
+/** "12 min · Wall MWF": the schedule's valve-open time and label, and any note the API or the slot carries. A mist under a minute reads in seconds, never "0 min". */
 function runDetail(occurrence: Occurrence, schedule: Schedule | undefined, now: number): string[] {
   const note = occurrenceWords(occurrence, now);
   const degraded = schedule?.degraded_only && !(note ?? "").includes("VPD sensing is degraded") ? DEGRADED_ONLY : null;
+  const openS = schedule ? (schedule.on_s ?? 0) * (schedule.count ?? 1) : 0;
   return [
-    ...(schedule ? [formatValue(((schedule.on_s ?? 0) * (schedule.count ?? 1)) / 60, "min")] : []),
+    ...(openS > 0 ? [openS < 60 ? duration(openS) : formatValue(openS / 60, "min")] : []),
     ...(schedule?.label ? [schedule.label] : []),
     ...(degraded ? [degraded] : []),
     ...(note ? [note] : []),
@@ -93,9 +91,9 @@ function runDetail(occurrence: Occurrence, schedule: Schedule | undefined, now: 
 
 type PausableLine = Pick<IrrigationLine, "line_id" | "paused_until" | "paused_by" | "pause_reason">;
 /** "Paused until 14:00 by Jason: rain", "by Jason" alone when no reason was given. */
-export function pausedWords(line: PausableLine, now: number, me: Pick<Me, "username" | "display_name"> | null): string {
+export function pausedWords(line: PausableLine, now: number, me: SignedIn): string {
   const until = pauseUntilWords(line.paused_until as string, localDate(new Date(now).toISOString()));
-  const who = line.paused_by ? ` by ${actorName(line.paused_by.name, me)}` : "";
+  const who = line.paused_by ? ` by ${shownActor(line.paused_by, me).name}` : "";
   return `Paused until ${until}${who}${line.pause_reason ? `: ${line.pause_reason}` : ""}`;
 }
 
@@ -104,7 +102,7 @@ export function pausedWords(line: PausableLine, now: number, me: Pick<Me, "usern
  * 07:34 · 12 min · Wall MWF". A line paused past now reads "L01 Paused until 14:00 by Jason: rain · next Thu 07:34", its
  * next run the first `planned` occurrence after the pause. A line with no planned run is left out.
  */
-export function nextRuns(agenda: Pick<ScheduleAgenda, "schedules" | "occurrences">, lines: readonly PausableLine[], now: number, me: Pick<Me, "username" | "display_name"> | null): { key: string; text: string }[] {
+export function nextRuns(agenda: Pick<ScheduleAgenda, "schedules" | "occurrences">, lines: readonly PausableLine[], now: number, me: SignedIn): { key: string; text: string }[] {
   const planned = agenda.occurrences.filter((item) => item.status === "planned" && validTime(item.planned_start)).sort((a, b) => timeOf(a.planned_start) - timeOf(b.planned_start));
   return [...new Set(planned.map((item) => item.line_id))].flatMap((lineId) => {
     const line = lines.find((item) => item.line_id === lineId);
@@ -147,7 +145,7 @@ function PlanChanges({ plan, now }: { plan: Plan; now: number }) {
   }
   return <ul className="coming-list">
     {next.changes.map((change) => <li key={change.param}>
-      <LocalTime at={next.at} date={otherDay(next.at, now)} /> · {change.text} · {change.source === "iris" ? <Badge kind="ai" /> : FORECAST_RULE}
+      <LocalTime at={next.at} date={otherDay(next.at, now)} /> · {change.text} · {isAiSource(change.source) ? <Badge kind="ai" /> : change.source === "preemptive" ? FORECAST_RULE : change.source}
     </li>)}
   </ul>;
 }

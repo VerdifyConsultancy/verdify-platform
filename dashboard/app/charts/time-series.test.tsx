@@ -282,6 +282,10 @@ test("one unit per plot: a metric in another unit is left out; colours never rep
   expect(traceTokens([metric("climate.rh_avg"), metric("climate.soil_moisture_south_1")], "%")).toEqual(["--c-rh", "--eq-fan2"]);
   expect(traceTokens([metric("climate.soil_moisture_south_1"), metric("climate.rh_avg")], "%")).toEqual(["--eq-fan2", "--c-rh"]);
   expect(traceTokens([metric("climate.flow_gpm")], "gal/min")).toEqual(["--eq-fan2"]);
+  // The setpoint token is for a dotted cross-check alone: a target picked on Graphs is a line like any other, not the device step.
+  const target = { ...metric("climate.vpd_avg"), key: "climate.vpd_target_south" };
+  expect(traceTokens([metric("climate.vpd_avg"), target], "kPa")).toEqual(["--c-vpd", "--eq-fan2"]);
+  expect(traceTokens([metric("climate.vpd_avg"), target], "kPa", [target.key])).toEqual(["--c-vpd", "--c-setpoint"]);
   expect(tickIncrements(2).slice(0, 6)).toEqual([0.01, 0.02, 0.05, 0.1, 0.2, 0.25]);
 });
 

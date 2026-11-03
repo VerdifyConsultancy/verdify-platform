@@ -90,11 +90,11 @@ const UNIT_TOKENS: Readonly<Record<string, string>> = { "°F": "--c-temp", kPa: 
 /** More lines in one unit take the equipment tokens, each at least 3:1 on white (design system §5.1). */
 const EXTRA_TOKENS = ["--eq-fan2", "--eq-heat1", "--eq-vent", "--eq-mister", "--eq-light-grow", "--eq-fert", "--eq-heat2", "--eq-fog"];
 
-/** One token per metric: the climate keys their own, outdoor and forecast keys `--c-outdoor`, the controller's targets `--c-setpoint`, then the unit's, then the rest. */
-export function traceTokens(metrics: readonly MetricDef[], unit: string): string[] {
+/** One token per metric: the climate keys their own, outdoor and forecast keys `--c-outdoor`, a dotted cross-check `--c-setpoint`, then the unit's, then the rest. */
+export function traceTokens(metrics: readonly MetricDef[], unit: string, dotted: readonly string[] = []): string[] {
   const used = new Set<string>();
   const claimed = metrics.map((metric) => {
-    const token = KEY_TOKENS[metric.key] ?? (/outdoor|forecast/.test(metric.key) ? "--c-outdoor" : /vpd_target/.test(metric.key) ? "--c-setpoint" : null);
+    const token = KEY_TOKENS[metric.key] ?? (/outdoor|forecast/.test(metric.key) ? "--c-outdoor" : dotted.includes(metric.key) ? "--c-setpoint" : null);
     if (!token || used.has(token)) return null;
     used.add(token);
     return token;
@@ -118,7 +118,7 @@ export function buildTimeSeriesModel(input: TimeSeriesInput): TimeSeriesModel {
   const windowFrom = epochOf(series?.from) ?? xRange.from;
   const windowTo = epochOf(series?.to) ?? xRange.to;
   const dataEnd = Math.min(windowTo, epochOf(series?.server_time) ?? windowTo);
-  const tokens = traceTokens(metrics, unit);
+  const tokens = traceTokens(metrics, unit, input.dotted);
   const traces = metrics.map((metric, position): Trace => {
     const columns = series?.series[metric.key] ?? null;
     const values = t.map((_, index) => {

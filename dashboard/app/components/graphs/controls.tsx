@@ -2,7 +2,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import {
-  DEFAULT_SETTINGS, DEFAULT_ZONE, daysProblem, graphHref, settingEditHref, withMetrics, withOutdoor, withSettings, withWindow, zonesHref, type GraphView, type GraphWindow, type WindowSpec,
+  DEFAULT_SETTINGS, daysProblem, graphHref, settingEditHref, withMetrics, withOutdoor, withSettings, withWindow, type GraphView, type GraphWindow, type WindowSpec,
 } from "../../lib/graph-url";
 import type { MetricDef, Setting } from "../../lib/operator-api";
 import { localDay } from "../../charts/time-axis";
@@ -14,8 +14,8 @@ import { SettingChooser, settingChipText } from "./setting-chooser";
 /**
  * Graphs' controls (SCR-02): the custom range beside the range chips, and the row of what is on the charts: the Outdoor
  * chip, each setting drawn as steps (its chip links to its drawer on Settings, × takes it off), each picked metric (×
- * takes it off), "+ Setting", "+ Metric", "Zones ›" and "Scorecard ›". Every control is a link or a form that changes the
- * URL; Graphs writes nothing.
+ * takes it off), "+ Setting", "+ Metric" and "Scorecard ›". Every control is a link or a form that changes the URL;
+ * Graphs writes nothing.
  */
 
 /** The days the custom range opens with: the window's own, else the local days the window covers. */
@@ -99,7 +99,6 @@ export function OnCharts({ view, settings, picked, units, metricsCatalog, settin
     </ul>}
     <SettingChooser view={view} settings={settingsCatalog} failed={settingsFailed} chosen={settings} units={units} />
     <MetricPicker view={view} metrics={metricsCatalog} failed={metricsFailed} picked={picked} />
-    <Link className="graph-zones" to={zonesHref(DEFAULT_ZONE, view.window)}>Zones<span aria-hidden="true"> ›</span></Link>
     <Link className="graph-scorecard" to="/graphs/scorecard">Scorecard<span aria-hidden="true"> ›</span></Link>
   </div>;
 }

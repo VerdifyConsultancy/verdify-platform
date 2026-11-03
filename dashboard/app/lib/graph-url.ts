@@ -289,7 +289,7 @@ export const isoOf = (epochSeconds: number): string => new Date(epochSeconds * 1
 
 // ---------------------------------------------------------------------------------------------------- /graphs/zones
 /** The first zone chip: `/graphs/zones` with no zone, or one it does not know. */
-export const DEFAULT_ZONE: Zone = "north";
+const DEFAULT_ZONE: Zone = "north";
 export type ZonesView = { readonly zone: Zone; readonly window: WindowSpec; readonly notices: readonly string[] };
 /** `/graphs/zones`' view: `zone` and the window, read as Graphs reads it; what it cannot use is dropped with a notice. */
 export function parseZonesUrl(search: string): ZonesView {

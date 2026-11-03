@@ -7,8 +7,8 @@ import { useModalDialog } from "../forms/modal";
 
 /**
  * "+ Metric" (SCR-02, US-GRF-07): a native `<dialog>` listing every API-03 metric but the daily scorecard keys and the
- * forecast keys, which the Outdoor chip draws, by group, each with its label, key, unit, cadence, provenance and note, and a filter box. A choice is a link that adds
- * `m=<key>` to the URL; the metric then joins its unit's panel or opens a new one. Keys come only from API-03: nothing
+ * forecast keys, which the Outdoor chip draws, by group, each with its label, key, unit, cadence, provenance and note,
+ * and a filter box. A choice is a link that adds `m=<key>` to the URL; the metric then joins its unit's panel or opens a new one. Keys come only from API-03: nothing
  * is hard-coded here, so DLI appears only once the PAR meter's keys do (#1184). At 8 metrics per window the picker says
  * so and offers no more.
  */

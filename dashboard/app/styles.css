@@ -402,8 +402,8 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--fault)}
 .graph-chip>a,.graph-chip>span{display:inline-flex;align-items:center;padding:0 .7rem;color:var(--ink);text-decoration:none;white-space:nowrap}
 .graph-chip>a:hover{color:var(--forest)}
 .graph-chip>a:last-child{justify-content:center;min-width:2.25rem;padding:0 .55rem;border-left:1px solid var(--line);font-size:1rem}
-.graph-scorecard,.graph-zones,.graph-back{display:inline-flex;align-items:center;min-height:2.75rem;font-size:.875rem;font-weight:700;text-decoration:none}
-.graph-zones{margin-left:auto}
+.graph-scorecard,.graph-back{display:inline-flex;align-items:center;min-height:2.75rem;font-size:.875rem;font-weight:700;text-decoration:none}
+.graph-scorecard{margin-left:auto}
 .graph-notices{list-style:none;display:grid;gap:.4rem;margin:0 0 1rem;padding:0}
 .graph-notices .notice{margin:0}
 .picker-dialog .field{margin-bottom:.75rem}
@@ -427,7 +427,7 @@ a.picker-item:hover{background:var(--field)}
 .scorecard-note{font-size:.75rem;font-weight:400;color:var(--muted)}
 .scorecard-missing{color:var(--muted)}
 .scorecard-reason{font-size:.75rem;white-space:normal}
-@media(max-width:860px){.graph-zones{margin-left:0}.range-form{flex-basis:100%}}
+@media(max-width:860px){.graph-scorecard{margin-left:0}.range-form{flex-basis:100%}}
 /* Plan (SCR-03): the plan in force, planner health and the lanes' head. Card and health sit in .grid-2, which stacks below 600 px; long ids, codes and stored times wrap, so nothing scrolls the page sideways at 390 px. */
 .plan-top{margin-bottom:1rem}
 .plan-facts{margin:0 0 .5rem;font-size:.9rem;overflow-wrap:anywhere}

@@ -8,7 +8,7 @@ import { fixture } from "../../e2e/fixtures/index.mjs";
 import type { IrrigationLine, IrrigationStatus, Plan, PlanLane, PlannerTrigger, ScheduleAgenda } from "../lib/operator-api";
 import { panelRead, useIrrigationRead } from "../lib/queries";
 import { NOW, advance, renderWithApi, requests, startFixtureApi, stopFixtureApi, type FixtureOptions } from "../lib/test-fixture-api";
-import { ComingUp, NO_PLAN, NO_RUNS, NO_RUNS_BEFORE_ENGINE, NO_TRIGGER, actorName, nextRuns, nextTransition, nextTrigger, pausedWords, sunWords } from "./coming-up";
+import { ComingUp, NO_PLAN, NO_RUNS, NO_RUNS_BEFORE_ENGINE, NO_TRIGGER, nextRuns, nextTransition, nextTrigger, pausedWords, sunWords } from "./coming-up";
 import { denver, text } from "./test-render";
 
 afterEach(() => { cleanup(); stopFixtureApi(); vi.unstubAllGlobals(); });
@@ -99,6 +99,15 @@ test("the next run per line joins its schedule, soonest first: time, minutes and
   expect(runs).toEqual(["L04 Tue 06:50 · 8 min · Dawn drench", "L01 Wed 07:35 · 12 min · Wall MWF", "L02 Sun 07:35 · 5 min · Weekly feed"]);
 });
 
+test("a run under a minute reads in seconds, never \"0 min\"; a schedule the agenda does not hold leaves its time and label out", () => {
+  const agenda = agendaOf("schedules-paused");
+  const l01 = agenda.schedules.find((item) => item.line_id === "L01")!;
+  const short = { ...agenda, schedules: agenda.schedules.map((item) => (item.line_id === "L01" ? { ...item, on_s: 20, count: 1 } : item)) };
+  expect(nextRuns(short, [], NOW, ME).map((run) => plain(run.text))).toContain(`L01 Wed 07:35 · 20 s · ${l01.label}`);
+  const unknown = { ...agenda, schedules: agenda.schedules.filter((item) => item.line_id !== "L01") };
+  expect(nextRuns(unknown, [], NOW, ME).map((run) => plain(run.text))).toContain("L01 Wed 07:35");
+});
+
 test("a line paused past now says who paused it and why, and its next run is the first after the pause", () => {
   const lines = linesOf("l01-paused");
   const runs = nextRuns(agendaOf("l01-paused"), lines, NOW, ME).map((run) => plain(run.text));
@@ -115,11 +124,14 @@ test("a line paused past now says who paused it and why, and its next run is the
 });
 
 test("other people read by username or source, only the signed-in person by display name", () => {
-  expect(actorName("jason", ME)).toBe("Jason");
-  expect(actorName("caretaker", ME)).toBe("caretaker");
-  expect(actorName("steward", ME)).toBe("steward");
-  expect(actorName("jason", null)).toBe("jason");
-  expect(actorName("jason", { username: "jason", display_name: null })).toBe("jason");
+  const by = (source: string, name: string, me: Parameters<typeof pausedWords>[2] = ME) => pausedWords({ line_id: "L01", paused_until: denver("14:00"), paused_by: { source, name }, pause_reason: null }, NOW, me);
+  expect(by("dashboard", "jason")).toBe("Paused until 14:00 by Jason");
+  expect(by("dashboard", "caretaker")).toBe("Paused until 14:00 by caretaker");
+  // An agent or the system is named as it is, even with the signed-in person's name.
+  expect(by("agent:steward", "steward")).toBe("Paused until 14:00 by steward");
+  expect(by("agent:jason", "jason")).toBe("Paused until 14:00 by jason");
+  expect(by("dashboard", "jason", null)).toBe("Paused until 14:00 by jason");
+  expect(by("dashboard", "jason", { username: "jason", display_name: null })).toBe("Paused until 14:00 by jason");
 });
 
 test("lines with no planned run are left out, and the fallback slots say when they run", () => {
