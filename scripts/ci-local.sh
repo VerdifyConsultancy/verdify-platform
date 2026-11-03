@@ -34,14 +34,14 @@ export PATH="$("$PY" -c 'import pathlib, sys; print(pathlib.Path(sys.executable)
 step() { printf '\n== %s ==\n' "$1"; }
 
 step "ruff lint"
-$RUFF check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ \
+$RUFF check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ verdify_services/ \
   research/planner-efficacy/generate_v2_artifacts.py \
   research/planner-efficacy/switchback/v2_*.py \
   research/planner-efficacy/tests/test_protocol_template_contract.py \
   research/planner-efficacy/tests/test_switchback_v2_*.py
 
 step "ruff format"
-$RUFF format --check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ \
+$RUFF format --check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ verdify_services/ \
   research/planner-efficacy/generate_v2_artifacts.py \
   research/planner-efficacy/switchback/v2_*.py \
   research/planner-efficacy/tests/test_protocol_template_contract.py \
@@ -88,7 +88,18 @@ $PY -m pytest -q -rs \
   tests/test_277_getter_delivery.py \
   tests/test_279_source_clock_delivery.py \
   tests/test_280_desired_state_delivery.py \
-  tests/test_285_lighting_policy_delivery.py \
+  tests/test_281_irrigation_minutes_delivery.py \
+  tests/test_282_dashboard_login_delivery.py \
+  tests/test_283_irrigation_tables_delivery.py \
+  tests/test_284_dashboard_grants_delivery.py \
+  tests/test_285_daily_scorecard_delivery.py \
+  tests/test_286_lighting_policy_delivery.py \
+  tests/test_metric_registry_completeness.py \
+  tests/test_verdify_services_series.py \
+  tests/test_qualify_migration_successor.py \
+  tests/test_verdify_services_core.py \
+  tests/test_verdify_services_settings.py \
+  tests/test_verdify_services_alerts.py \
   tests/test_realized_solar_night_dryout_timeline.py \
   tests/test_05_dispatcher.py \
   tests/test_dispatcher_plain_convergence.py \
@@ -147,6 +158,7 @@ $PY -m pytest -q -rs \
   tests/test_cnpg_policy_twin_endpoints.py \
   tests/test_cnpg_physical_client_qualification.py \
   tests/test_dashboard_dockerfile.py \
+  tests/test_ci_validate_dockerfile.py \
   tests/test_db_backup_retry_classifier.py \
   tests/test_backup_freshness_exporter.py \
   tests/test_action_log_policy_identity.py \
@@ -232,6 +244,7 @@ $PY -m pytest -q -rs \
   tests/test_ha_light_writer_boundary.py \
   tests/test_ha_trim.py \
   tests/test_hydro_probe.py \
+  tests/test_ingestor_heartbeat.py \
   tests/test_ingestor_setpoint_placement.py \
   tests/test_ingestor_gap_snapshot.py \
   tests/test_source_spool.py \
@@ -286,6 +299,11 @@ $PY -m pytest -q -rs \
   tests/test_twin_agreement_report.py \
   tests/test_twin_asof_migration.py \
   tests/test_twin_live_driver.py \
+  tests/test_verdify_services_reads.py \
+  tests/test_operator_api_contract.py \
+  tests/test_operator_api_auth.py \
+  tests/test_public_api_operator_paths.py \
+  tests/test_operator_api_manifests.py \
   tests/test_verdify_traefik_placement.py \
   tests/test_verdify_tier1_owner_exclusions.py \
   tests/test_dashboard_manifests.py \

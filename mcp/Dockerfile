@@ -72,6 +72,8 @@ COPY slack_config.py ./slack_config.py
 COPY slack.yaml ./slack.yaml
 COPY slack_ops/ ./slack_ops/
 COPY verdify_schemas/ ./verdify_schemas/
+COPY verdify_services/ ./verdify_services/
+RUN python -c "import verdify_services.activity"
 
 # slack.yaml is the NON-SECRET Slack config (channel IDs + credential FILE
 # PATHS, never tokens). server.py's slack_command tool calls load_slack_settings()

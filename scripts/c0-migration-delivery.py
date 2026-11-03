@@ -224,17 +224,69 @@ SUCCESSOR_280_DIGESTS = {
     "verdify_ingestor_runtime_login": "4697e11eb2e66a73f727304df3419d3dd4635199bc346ba5e62cfe2f2a194103",
 }
 SUCCESSOR_280_MCP_DIGEST = "685212a93b79c980c422db5baacb8f61309af392a9a7a8e9a46baf8e55fde291"
-# PROVISIONAL (VD-33, #1149): the lighting policy functions ignore manual rows.
-# 285 follows 281-284; until 284 merges it chains from 280. Its api and
-# ingestor seals are all-zero placeholders until the rolled-back native
-# qualification measures them; MCP's is projected unchanged, as for 275.
-SUCCESSOR_285 = "285-lighting-policy-ignores-manual.sql"
-SUCCESSOR_285_SHA256 = "52175e8e5c18dd96e04c79c1dd01d9dc857c1b91c6e86df93f902bb023b91334"
-SUCCESSOR_285_DIGESTS = {
-    "verdify_api_runtime_login": "0000000000000000000000000000000000000000000000000000000000000000",
-    "verdify_ingestor_runtime_login": "0000000000000000000000000000000000000000000000000000000000000000",
+# Exact281 (VD-39, M4) minutes by zone. Its view and reader grants move all
+# three ordinary seals; the rolled-back native qualification, with 280 applied
+# first in the same session, proves each successor.
+SUCCESSOR_281 = "281-irrigation-minutes-by-zone.sql"
+SUCCESSOR_281_SHA256 = "45a6d18db74d6ae5f3744049b77a91f9fc243a099483949eb369a6a0e8d2f3f8"
+SUCCESSOR_281_DIGESTS = {
+    "verdify_api_runtime_login": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "verdify_ingestor_runtime_login": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
 }
-SUCCESSOR_285_MCP_DIGEST = SUCCESSOR_280_MCP_DIGEST
+SUCCESSOR_281_MCP_DIGEST = "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
+# Exact282 (VD-66, M2): the dashboard login and its sessions. It grants only on
+# the objects it creates, so all three seals stay 281's, as 276's duties kept
+# 275's; the rolled-back native qualification, with 280 and 281 applied first in
+# the same session, proves it.
+SUCCESSOR_282 = "282-dashboard-runtime-login.sql"
+SUCCESSOR_282_SHA256 = "b58f0df3b66f79dc968aee502d41b4860e269285c5369dc0a06273c44908377a"
+SUCCESSOR_282_DIGESTS = SUCCESSOR_281_DIGESTS
+SUCCESSOR_282_MCP_DIGEST = SUCCESSOR_281_MCP_DIGEST
+# Exact283 (VD-38, M3): the irrigation tables, seeds and grants. Its grants reach
+# 282's dashboard duty on relations the ingestor reads, so both ordinary seals
+# hash that duty's production OID: only a rolled-back native qualification run
+# once 282 is applied measures them (no --apply-first). Its fixture records
+# whether these values are that measurement or still the pre-R0 projection.
+SUCCESSOR_283 = "283-irrigation-tables.sql"
+SUCCESSOR_283_SHA256 = "0b07a5042edc29cb90da4c800da6514e47517240d765c0da0217b68cc7fe92c2"
+SUCCESSOR_283_DIGESTS = {
+    "verdify_api_runtime_login": "030df35ca3b0bc8b94de5f394f96c2292674b2df58aea2d46990c53ad3bd1ad7",
+    "verdify_ingestor_runtime_login": "c03d427cbbf327c8843496c744d718e1fca70c1e6d98963022ac87e308954096",
+}
+SUCCESSOR_283_MCP_DIGEST = "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+# Exact284 (VD-74, M2b): the dashboard login's grants on existing objects. They move
+# both ordinary seals, which hash the dashboard duty's production OID, and leave the
+# MCP seal at 283's: only a rolled-back native qualification run once 282 is applied
+# measures them. Its fixture records whether these values are that measurement or
+# still 283's stand-ins.
+SUCCESSOR_284 = "284-dashboard-runtime-grants.sql"
+SUCCESSOR_284_SHA256 = "559d8260ec7138a3bec502f7b29f50587f6a752cc5144fa31e15b406c4ddcaf4"
+SUCCESSOR_284_DIGESTS = {
+    "verdify_api_runtime_login": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
+    "verdify_ingestor_runtime_login": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
+}
+SUCCESSOR_284_MCP_DIGEST = SUCCESSOR_283_MCP_DIGEST
+# Exact285 (VD-56, M6): v_daily_scorecard, granted to the dashboard duty alone. Neither digest
+# takes in a relation only that duty can read, so all three seals should stay 284's. These are
+# 284's values as stand-ins until a rolled-back native qualification measures 285; its fixture
+# records which they are.
+SUCCESSOR_285 = "285-daily-scorecard-view.sql"
+SUCCESSOR_285_SHA256 = "89db770e96f030d2836fe033dce035e8c244d7b08a52c7f6ac378f5526c9ca77"
+SUCCESSOR_285_DIGESTS = SUCCESSOR_284_DIGESTS
+SUCCESSOR_285_MCP_DIGEST = SUCCESSOR_284_MCP_DIGEST
+# Exact286 (VD-33, #1149): the lighting policy functions ignore manual rows. Both
+# functions are in the ordinary digest's helper closure, which hashes their source,
+# so the api and ingestor seals move, as 275's jit change did; the MCP digest takes
+# in neither, so its seal should stay 285's. These are 285's values as stand-ins
+# until a rolled-back native qualification measures 286; its fixture records which
+# they are.
+SUCCESSOR_286 = "286-lighting-policy-ignores-manual.sql"
+SUCCESSOR_286_SHA256 = "60654e0450c1ce2b891397e1ec6d696d3715a11311609072a2a8ff4c819e3fa7"
+SUCCESSOR_286_DIGESTS = {
+    "verdify_api_runtime_login": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
+    "verdify_ingestor_runtime_login": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
+}
+SUCCESSOR_286_MCP_DIGEST = SUCCESSOR_285_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.
@@ -280,7 +332,12 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_278,
         SUCCESSOR_279,
         SUCCESSOR_280,
+        SUCCESSOR_281,
+        SUCCESSOR_282,
+        SUCCESSOR_283,
+        SUCCESSOR_284,
         SUCCESSOR_285,
+        SUCCESSOR_286,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
@@ -315,7 +372,12 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_278_SHA256,
                 SUCCESSOR_279_SHA256,
                 SUCCESSOR_280_SHA256,
+                SUCCESSOR_281_SHA256,
+                SUCCESSOR_282_SHA256,
+                SUCCESSOR_283_SHA256,
+                SUCCESSOR_284_SHA256,
                 SUCCESSOR_285_SHA256,
+                SUCCESSOR_286_SHA256,
             ),
             strict=True,
         ):
@@ -582,7 +644,12 @@ COMMIT;"""
         (SUCCESSOR_278, SUCCESSOR_278_DIGESTS),
         (SUCCESSOR_279, SUCCESSOR_279_DIGESTS),
         (SUCCESSOR_280, SUCCESSOR_280_DIGESTS),
+        (SUCCESSOR_281, SUCCESSOR_281_DIGESTS),
+        (SUCCESSOR_282, SUCCESSOR_282_DIGESTS),
+        (SUCCESSOR_283, SUCCESSOR_283_DIGESTS),
+        (SUCCESSOR_284, SUCCESSOR_284_DIGESTS),
         (SUCCESSOR_285, SUCCESSOR_285_DIGESTS),
+        (SUCCESSOR_286, SUCCESSOR_286_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
@@ -656,8 +723,18 @@ COMMIT;"""
             expected_mcp = SUCCESSOR_279_MCP_DIGEST
         if SUCCESSOR_280 in later:
             expected_mcp = SUCCESSOR_280_MCP_DIGEST
+        if SUCCESSOR_281 in later:
+            expected_mcp = SUCCESSOR_281_MCP_DIGEST
+        if SUCCESSOR_282 in later:
+            expected_mcp = SUCCESSOR_282_MCP_DIGEST
+        if SUCCESSOR_283 in later:
+            expected_mcp = SUCCESSOR_283_MCP_DIGEST
+        if SUCCESSOR_284 in later:
+            expected_mcp = SUCCESSOR_284_MCP_DIGEST
         if SUCCESSOR_285 in later:
             expected_mcp = SUCCESSOR_285_MCP_DIGEST
+        if SUCCESSOR_286 in later:
+            expected_mcp = SUCCESSOR_286_MCP_DIGEST
         if hotfix_predecessor_263:
             require(
                 mcp_state.get("mcp")

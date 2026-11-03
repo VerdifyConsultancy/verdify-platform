@@ -460,7 +460,7 @@ API-IRR-NN) are the `operationId`s in the [OpenAPI](openapi/dashboard-api.v1.yam
 #### US-WAT-03 · Watering minutes by zone and cause
 *P1, P2 · MVP · Water.* As the owner-operator, I want watering minutes per zone per day split by cause and chemistry, so that I know each zone got the water I intended.
 - `v_irrigation_minutes_daily` (API-IRR-10) gives valve-open minutes, pulses and gallons per America/Denver day for wall, center, south and west (fog on its own), stacked by cause (`vpd`, `schedule`, `run_now`, `feed`, `prewet`, `flush`, `fallback`, `unknown`) with clean below fertilizer and each zone's cap as a tick; today, 7 and 30 days.
-- Minutes come from the relay runs already recorded (`v_water_relay_runs`) and ship before the firmware, with history back to 2024-11-17 (before the engine, L04 and fog count as `vpd` and L01 as `unknown`); 23- and 25-hour days are correct.
+- Minutes come from the relay runs already recorded (`v_water_relay_runs`) and ship before the firmware, with history back to 2025-08-05, the first wet-relay row (before the engine, L04 and fog count as `vpd` and L01 as `unknown`); 23- and 25-hour days are correct.
 - Today and any day with an ingestor outage are marked partial; an outage shows as a gap, never as zero, and nothing is back-filled.
 
 #### US-WAT-04 · Run ledger
@@ -631,7 +631,7 @@ API-IRR-NN) are the `operationId`s in the [OpenAPI](openapi/dashboard-api.v1.yam
 
 #### US-ACT-02 · Open alerts
 *P1, P2 · MVP · Activity.* As a caretaker, I want the open alerts in plain words with their age, so that I know what needs someone.
-- API-14 lists every `v_open_alerts` row by severity (critical, warning, info), then age, with a plain title, zone or line, first seen and the current value where the alert has one; repeats of one alert type and zone show as one row with a count and first and last seen, acknowledged ones collapse into "Acknowledged, still open (N)", and "recently resolved" covers the last 24 h. The nav, Now, Activity, API-02 `alerts`, API-14 and MCP `alerts` share one open-alert count: these rows nobody has acknowledged (disposition `open`), repeats counted once; a probe that stays offline keeps one row and auto-resolves after a set period (Round 2b C).
+- API-14 lists every `v_open_alerts` row by severity (critical, warning, info), then age, with a plain title, zone or line, first seen and the current value where the alert has one; repeats of one alert type and sensor show as one row with a count and first and last seen, acknowledged ones collapse into "Acknowledged, still open (N)", and "recently resolved" covers the last 24 h. The nav, Now, Activity, API-02 `alerts`, API-14 and MCP `alerts` share one open-alert count: these rows nobody has acknowledged (disposition `open`), repeats counted once; a probe that stays offline keeps one row and auto-resolves after a set period (Round 2b C).
 - "No open alerts" shows only when the read succeeded, the ingestor heartbeat is fresh and the newest `climate` row is at most 300 s old. With the heartbeat stale, Now's "Needs someone" and the alert list read "In-app alerts may be missing: ingestor not running since HH:MM"; with the controller not reporting, "In-app alerts may be missing: no data since HH:MM"; a failed read shows "Alerts unavailable".
 
 #### US-ACT-03 · Alert detail in place

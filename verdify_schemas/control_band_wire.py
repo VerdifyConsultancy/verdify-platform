@@ -20,10 +20,11 @@ from zoneinfo import ZoneInfo
 
 FIRMWARE_SOURCES = {
     "firmware/lib/greenhouse_solar.h": "dd0557760ac17fd61eca8a0449d0060f8452d418616edda2ab95892408a2fb0e",
-    # VD-43 (F8) routes mister zone choice through the peer-probe VPD fallback;
-    # solar/band expressions are unchanged. New captures bind this source;
-    # historical receipts stay frozen.
-    "firmware/greenhouse/controls.yaml": "df148284234b1a2f5f055b920d1cfceddcccc7f1caefe5ce4c3a33786a795076",
+    # VD-47 (#1162) drops the occupancy quiet override, the outdoor-RH fog-burst
+    # block and the legacy burst flags (the override layer reads only the
+    # latches); solar/band expressions are unchanged. New captures bind this
+    # source; historical receipts stay frozen.
+    "firmware/greenhouse/controls.yaml": "11d3a5f642fe002bd80242d806ff73411258502de60b570a9a6698deb5db1a48",
 }
 SERIES = ("temp_low", "temp_high", "temp_target", "vpd_low", "vpd_high", "vpd_target")
 ANCHORS = ("sr", "sm", "ss", "mid")

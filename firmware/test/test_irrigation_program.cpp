@@ -1,5 +1,6 @@
 // test_irrigation_program.cpp — native tests for the irrigation engine core
-// (firmware/lib/irrigation_program.h; irrigation §4-§5, F1; VD-44, #1159).
+// (firmware/lib/irrigation_program.h; irrigation §4-§5, F1; VD-44, #1159) and its
+// device wiring (VD-45, #1160).
 //
 // The decoder runs on #1151's golden vectors and on Python-computed reject cases
 // (firmware/test/irrigation_program_vectors_generated.inc, rendered by
@@ -9,6 +10,13 @@
 // and the binary exits non-zero, so a failure fails the native firmware step of
 // scripts/ci-local.sh.
 //
+// Section F is the wiring's replay suite for the wet relays (the climate replay corpus
+// has no drip relay columns): a device model with hardware.yaml's grant guards, the
+// glue order of irrigation_engine_esphome.h (publish, grant bits, L03 order), the
+// climate VPD pulse path and the services, run through day-long traces. Every exact
+// irr_* string it expects is an EXPECT_IRR_* literal, which
+// verdify_schemas/tests/test_irrigation_firmware_strings.py parses with #1151's parsers.
+//
 // Build + run (make test-irrigation-program, part of test-firmware and of the native
 // firmware step of scripts/ci-local.sh):
 //   cd firmware && g++ -std=c++17 -I lib -o test/test_irrigation_program test/test_irrigation_program.cpp
@@ -16,6 +24,7 @@
 
 #include "irrigation_program.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -26,6 +35,7 @@
 #include <utility>
 
 #include "irrigation_program_vectors_generated.inc"
+#include "policy_vector.h"  // policy_hex_decode(), as the device's program services decode chunks
 
 using namespace verdify_irr;
 
@@ -2118,6 +2128,1065 @@ static void full_program_day_invariants() {
   CHECK(irr_format_events(s.rtc, buf, sizeof(buf)) > 0, "irr_events formats");
 }
 
+// ── F. Engine wiring (VD-45, #1160) ──────────────────────────────────────────
+
+// The exact text the controller publishes. verdify_schemas/tests/test_irrigation_firmware_strings.py
+// extracts every literal of these three macros and parses it with #1151's parsers.
+#define EXPECT_IRR_PROGRAM_ID(actual, literal) \
+  CHECK(std::strcmp((actual), (literal)) == 0, "irr_program_id reads " literal)
+#define EXPECT_IRR_STATE(actual, literal) CHECK(std::strcmp((actual), (literal)) == 0, "irr_state reads " literal)
+#define EXPECT_IRR_EVENTS(actual, literal) CHECK(std::strcmp((actual), (literal)) == 0, "irr_events reads " literal)
+
+// Q-05, F14: leak_detected is not an engine input, so nothing the engine decides can read it.
+template <typename T, typename = void>
+struct HasLeakDetected : std::false_type {};
+template <typename T>
+struct HasLeakDetected<T, std::void_t<decltype(&T::leak_detected)>> : std::true_type {};
+template <typename T, typename = void>
+struct HasLeak : std::false_type {};
+template <typename T>
+struct HasLeak<T, std::void_t<decltype(&T::leak)>> : std::true_type {};
+static_assert(!HasLeakDetected<IrrInputs>::value && !HasLeak<IrrInputs>::value,
+              "leak_detected is not an engine input (Q-05, F14)");
+
+static void hex_encode(const uint8_t* p, size_t n, char* out) {
+  static const char kH[] = "0123456789abcdef";
+  for (size_t i = 0; i < n; ++i) {
+    out[2 * i] = kH[p[i] >> 4];
+    out[2 * i + 1] = kH[p[i] & 0x0F];
+  }
+  out[2 * n] = '\0';
+}
+
+// America/Denver for this test's span (2026): MDT from 2026-03-08 09:00 UTC to 2026-11-01 08:00 UTC.
+static int denver_offset(uint32_t epoch) { return (epoch >= 1772960400u && epoch < 1793520000u) ? kMdt : kMst; }
+// The local fields ESPHome's ESPTime gives for `epoch` (localtime()).
+static void denver_fields(uint32_t epoch, int& h, int& m, int& s) {
+  const int64_t local = int64_t(epoch) + int64_t(denver_offset(epoch)) * 60;
+  const int64_t sod = ((local % 86400) + 86400) % 86400;
+  h = int(sod / 3600);
+  m = int(sod % 3600 / 60);
+  s = int(sod % 60);
+}
+
+static uint8_t cause_index(const char* s) {
+  for (uint8_t i = 0; i < kCauseCount; ++i) {
+    if (std::strcmp(kCauseNames[i], s) == 0) return i;
+  }
+  return 255;
+}
+static uint8_t reason_index(const char* s) {
+  for (uint8_t i = 1; i < kReasonCount; ++i) {
+    if (std::strcmp(kReasonCodes[i], s) == 0) return i;
+  }
+  return 0;
+}
+static IrrReject reject_of(const char* s) {
+  for (uint8_t i = 1; i < 7; ++i) {
+    if (std::strcmp(irr_reject_token(IrrReject(i)), s) == 0) return IrrReject(i);
+  }
+  return IrrReject::kNone;
+}
+static IrrRunToken golden_run(const GoldenRun& g) {
+  IrrRunToken t{};
+  t.valid = g.valid;
+  if (g.valid) {
+    t.line = g.line;
+    t.cause = IrrCause(cause_index(g.cause));
+    t.slot_id = g.slot_id;
+    t.start_epoch = g.start_epoch;
+    t.end_epoch = g.end_epoch;
+  }
+  return t;
+}
+static void golden_state(const GoldenState& g, IrrStateFields& s, IrrStateExtras& x) {
+  s = IrrStateFields{};
+  x = IrrStateExtras{};
+  s.drip = golden_run(g.drip);
+  s.mist = golden_run(g.mist);
+  for (uint8_t i = 0; i < g.wait_count; ++i) {
+    s.waits[s.wait_count++] = {g.waits[i].line, IrrReason(reason_index(g.waits[i].reason)), g.waits[i].until_epoch};
+  }
+  for (uint8_t i = 0; i < g.fault_count; ++i) {
+    x.faults[x.fault_count++] = {g.faults[i].line, g.faults[i].kind == 'l', g.faults[i].until_epoch};
+  }
+  if (g.vpd[0] != '\0') std::memcpy(x.vpd_source, g.vpd, 3);
+  s.reject = reject_of(g.reject);
+}
+
+// The device's program services in order (irr_program_begin, irr_program_chunk per <= 192 B,
+// irr_program_commit), hex as the ingestor sends it and policy_hex_decode() as the device decodes
+// it. `skip_chunk` leaves one chunk out.
+static IrrCommit push_hex(IrrStaging& st, const uint8_t* rec, int32_t declared_len, const char* sha_hex, IrrProgram& out,
+                          IrrReject& why, int skip_chunk = -1) {
+  uint8_t hash[32];
+  size_t n = 0;
+  const bool ok = sha_hex != nullptr &&
+                  verdify_policy::policy_hex_decode(sha_hex, std::strlen(sha_hex), hash, sizeof(hash), &n) && n == 32;
+  irr_staging_begin(st, declared_len, ok ? hash : nullptr);
+  char hex[2 * kChunkMax + 1];
+  int k = 0;
+  for (size_t off = 0; off < kRecordLen; off += kChunkMax, ++k) {
+    const size_t len = std::min(kChunkMax, kRecordLen - off);
+    CHECK(off == kGoldenChunks[1][k][0] && len == kGoldenChunks[1][k][1], "the chunks are #1151's (offset, length)");
+    if (k == skip_chunk) continue;
+    hex_encode(rec + off, len, hex);
+    uint8_t chunk[kChunkMax];
+    size_t cn = 0;
+    const bool cok = verdify_policy::policy_hex_decode(hex, std::strlen(hex), chunk, sizeof(chunk), &cn);
+    CHECK(irr_staging_chunk(st, int32_t(off), cok ? chunk : nullptr, cok ? cn : 0), "each chunk stages");
+  }
+  return irr_staging_commit(st, out, why);
+}
+
+static void wiring_program_id_text() {
+  char buf[32];
+  CHECK(irr_format_program_id(false, nullptr, buf, sizeof(buf)) == 26, "irr_program_id is 26 characters");
+  EXPECT_IRR_PROGRAM_ID(buf, "h=0000000000000000 src=rom");
+  const uint8_t any[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+  irr_format_program_id(false, any, buf, sizeof(buf));
+  EXPECT_IRR_PROGRAM_ID(buf, "h=0000000000000000 src=rom");
+  irr_format_program_id(true, kGoldenVectorSha256[1], buf, sizeof(buf));
+  EXPECT_IRR_PROGRAM_ID(buf, "h=7ae03efe564082b7 src=nvs");
+  CHECK(std::strcmp(buf, kProgramIdSamples[0].text) == 0, "the seed_nvs golden sample, byte for byte");
+  irr_format_program_id(true, kGoldenVectorSha256[2], buf, sizeof(buf));
+  EXPECT_IRR_PROGRAM_ID(buf, "h=3b76a2316e2f39d8 src=nvs");
+  CHECK(std::strcmp(buf, kProgramIdSamples[1].text) == 0, "the full_nvs golden sample, byte for byte");
+  irr_format_program_id(false, nullptr, buf, sizeof(buf));
+  CHECK(std::strcmp(buf, kProgramIdSamples[2].text) == 0, "the rom_default golden sample, byte for byte");
+  char tiny[26];
+  CHECK(irr_format_program_id(false, nullptr, tiny, sizeof(tiny)) == 0 && tiny[0] == '\0', "a short buffer: nothing");
+}
+
+// irr_format_state() reproduces every golden irr_state sample from its parsed form, the overflow
+// sample from the state it was formatted from (the same w= tokens drop).
+static void wiring_state_text_matches_python() {
+  CHECK(sizeof(kStateParsed) / sizeof(kStateParsed[0]) == kStateSampleCount, "one formatter input per sample");
+  for (size_t i = 0; i < kStateSampleCount; ++i) {
+    IrrStateFields s{};
+    IrrStateExtras x{};
+    golden_state(kStateParsed[i], s, x);
+    char buf[kTextBufLen];
+    const size_t n = irr_format_state(s, x, buf, sizeof(buf));
+    char label[96];
+    std::snprintf(label, sizeof(label), "irr_state sample %s formats byte for byte", kStateSamples[i].name);
+    CHECK(std::strcmp(buf, kStateSamples[i].text) == 0 && n == std::strlen(kStateSamples[i].text), label);
+    CHECK(n <= kTextMax, "irr_state fits 255 characters");
+  }
+}
+
+// What the parsers refuse is never written; short buffers and overflow stay grammatical.
+static void wiring_state_text_rules() {
+  IrrStateFields s{};
+  IrrStateExtras x{};
+  char buf[kTextBufLen];
+  s.drip = {true, kL04, IrrCause::kSchedule, 1, 100, 200};  // a mister on the drip manifold: dropped
+  s.mist = {true, kL01, IrrCause::kSchedule, 1, 100, 200};  // a drip on the mist manifold: dropped
+  s.waits[s.wait_count++] = {kL03, IrrReason::kMan, 0};      // L03 takes no runs
+  s.waits[s.wait_count++] = {kL11, IrrReason::kMan, 0};      // nor does fog
+  s.waits[s.wait_count++] = {kL01, IrrReason::kNone, 0};     // no reason, no token
+  s.waits[s.wait_count++] = {kL01, IrrReason::kMan, 0};
+  x.faults[x.fault_count++] = {kL01, true, 50};  // not a mister
+  x.faults[x.fault_count++] = {kL04, false, 100};
+  x.faults[x.fault_count++] = {kL04, true, 200};  // one f= per line
+  x.vpd_source[0] = 'h';
+  x.vpd_source[1] = 'x';  // unknown code: no v=
+  x.vpd_source[2] = 'o';
+  irr_format_state(s, x, buf, sizeof(buf));
+  EXPECT_IRR_STATE(buf, "w=0,man f=3,b,100");
+  // An end before the start publishes the start (the engine's tokens never do; the parser refuses it).
+  s = IrrStateFields{};
+  x = IrrStateExtras{};
+  s.drip = {true, kL02, IrrCause::kFeed, 0, 1793631600, 1793631000};
+  irr_format_state(s, x, buf, sizeof(buf));
+  EXPECT_IRR_STATE(buf, "d=1,feed,0,1793631600,1793631600");
+  // 25 w= tokens and a full tail: the latest-due w= drop, whole tokens only.
+  s = IrrStateFields{};
+  x = IrrStateExtras{};
+  s.drip = {true, kL01, IrrCause::kSchedule, 65535, 4000000000u, 4000003600u};
+  s.mist = {true, kL04, IrrCause::kVpd, 0, 4000000100u, 4000000145u};
+  for (uint8_t i = 0; i < kMaxSlots + 1; ++i) s.waits[s.wait_count++] = {kL05, IrrReason::kMan, 4000003600u + i};
+  for (uint8_t line : {kL04, kL07, kL08, kL09, kL10}) x.faults[x.fault_count++] = {line, line == kL08, 4000086400u};
+  std::memcpy(x.vpd_source, "hpo", 3);
+  s.reject = IrrReject::kBadHeader;
+  const size_t n = irr_format_state(s, x, buf, sizeof(buf));
+  const char* tail = " f=3,b,4000086400 f=6,b,4000086400 f=7,l,4000086400 f=8,b,4000086400 f=9,b,4000086400 v=hpo j=bad_header";
+  CHECK(n <= kTextMax && n == std::strlen(buf), "the overflow fits 255 characters");
+  CHECK(n > std::strlen(tail) && std::strcmp(buf + n - std::strlen(tail), tail) == 0, "the tail survives whole");
+  int kept = 0;
+  for (const char* p = std::strstr(buf, " w="); p; p = std::strstr(p + 1, " w=")) ++kept;
+  CHECK(kept > 0 && kept < kMaxSlots + 1, "some w= tokens drop, latest due first");
+  char last[40];
+  std::snprintf(last, sizeof(last), " w=4,man,%lu ", static_cast<unsigned long>(4000003600u + kept - 1));
+  CHECK(std::strstr(buf, last) != nullptr, "the earliest-due w= tokens are the ones kept, in order");
+  // A short buffer writes whole tokens only.
+  char small[24];
+  irr_format_state(s, x, small, sizeof(small));
+  CHECK(std::strlen(small) < sizeof(small) && std::strchr(small, ',') == nullptr, "a short buffer: no partial token");
+}
+
+static void wiring_apply_plan() {
+  IrrOutputs out{};
+  // The prewet's L01 closes as the feed opens L02 with L03: the bits first, L01 off, then L02 and L03.
+  out.relay_mask = uint16_t(irr_bit(kL02) | irr_bit(kL03));
+  out.grant_mask = out.relay_mask;
+  IrrApply a = irr_apply_plan(irr_bit(kL01), irr_bit(kL01), irr_bit(kL01), out, 0);
+  CHECK(a.grant_before == uint16_t(irr_bit(kL01) | irr_bit(kL02) | irr_bit(kL03)) && a.turn_off == irr_bit(kL01) &&
+            a.turn_on == uint16_t(irr_bit(kL02) | irr_bit(kL03)) && a.grant_after == out.relay_mask,
+        "bits before the turn_on, cleared after the turn_off");
+  // A climate VPD grant changes the bits only; the climate path opens the relay itself.
+  out = IrrOutputs{};
+  out.grant_mask = irr_bit(kL04);
+  a = irr_apply_plan(0, 0, 0, out, 0);
+  CHECK(a.grant_before == irr_bit(kL04) && a.grant_after == irr_bit(kL04) && a.turn_on == 0 && a.turn_off == 0,
+        "a VPD grant: its bit, no relay change");
+  // Outside a stop the engine never closes what it does not hold (the climate's VPD pulse).
+  out = IrrOutputs{};
+  a = irr_apply_plan(irr_bit(kL04), 0, uint16_t(irr_bit(kL04) | kFogMask), out, 0);
+  CHECK(a.turn_off == 0 && a.grant_after == 0, "a released VPD bit clears; the relay is the climate path's");
+  // A stop closes every open wet relay in its scope inside the call, never fog.
+  uint16_t scope = 0;
+  CHECK(irr_stop_scope(kAllLines, scope), "stop 255");
+  a = irr_apply_plan(uint16_t(irr_bit(kL04) | irr_bit(kL01)), irr_bit(kL01),
+                     uint16_t(irr_bit(kL04) | irr_bit(kL01) | kFogMask), out, scope);
+  CHECK(a.turn_off == uint16_t(irr_bit(kL04) | irr_bit(kL01)) && !(a.turn_off & kFogMask) && a.grant_after == 0,
+        "stop 255: L01 and L04 off, their bits cleared, fog untouched");
+  // A relay the engine wants and already reads ON is left alone.
+  out.relay_mask = irr_bit(kL05);
+  out.grant_mask = irr_bit(kL05);
+  a = irr_apply_plan(irr_bit(kL05), irr_bit(kL05), irr_bit(kL05), out, 0);
+  CHECK(a.turn_on == 0 && a.turn_off == 0 && a.grant_after == irr_bit(kL05), "a held relay stays as it is");
+}
+
+static void wiring_program_push_staging() {
+  for (size_t v = 0; v < kGoldenVectorCount; ++v) {
+    IrrStaging st{};
+    char sha[65];
+    hex_encode(kGoldenVectorSha256[v], 32, sha);
+    IrrProgram p{};
+    IrrReject why = IrrReject::kBadMagic;
+    IrrProgram expect{};
+    CHECK(push_hex(st, kGoldenVectorBytes[v], int32_t(kRecordLen), sha, p, why) == IrrCommit::kAccepted &&
+              why == IrrReject::kNone && decode_vector(v, expect) && same_program(p, expect),
+          "each golden vector pushes in four chunks and decodes");
+    CHECK(std::memcmp(st.record.rec, kGoldenVectorBytes[v], kRecordLen) == 0 &&
+              std::memcmp(st.record.sha256, kGoldenVectorSha256[v], 32) == 0 && !st.open,
+          "the staged record and hash are what NVS keeps; the push is closed");
+    CHECK(irr_staging_commit(st, p, why) == IrrCommit::kNotOpen, "a second commit has nothing to commit");
+  }
+  char sha[65];
+  hex_encode(kGoldenVectorSha256[2], 32, sha);
+  IrrStaging st{};
+  IrrProgram p{};
+  IrrReject why = IrrReject::kNone;
+  CHECK(irr_staging_commit(st, p, why) == IrrCommit::kNotOpen, "a commit with no begin");
+  CHECK(push_hex(st, kGoldenVectorBytes[2], 583, sha, p, why) == IrrCommit::kRejected && why == IrrReject::kBadLength,
+        "len must be 584: bad_length");
+  CHECK(push_hex(st, kGoldenVectorBytes[2], 600, sha, p, why) == IrrCommit::kRejected && why == IrrReject::kBadLength,
+        "len 600: bad_length");
+  char wrong[65];
+  std::memcpy(wrong, sha, sizeof(wrong));
+  wrong[5] = wrong[5] == '0' ? '1' : '0';
+  CHECK(push_hex(st, kGoldenVectorBytes[2], int32_t(kRecordLen), wrong, p, why) == IrrCommit::kRejected &&
+            why == IrrReject::kBadHash,
+        "a hash that does not match: bad_hash");
+  CHECK(push_hex(st, kGoldenVectorBytes[2], int32_t(kRecordLen), "zz", p, why) == IrrCommit::kRejected &&
+            why == IrrReject::kBadHash,
+        "a sha256_hex that is not 64 hex digits: bad_hash");
+  CHECK(push_hex(st, kGoldenVectorBytes[2], int32_t(kRecordLen), sha, p, why, 0) == IrrCommit::kRejected &&
+            why == IrrReject::kBadMagic,
+        "the first chunk missing: bad_magic");
+  CHECK(push_hex(st, kGoldenVectorBytes[2], int32_t(kRecordLen), sha, p, why, 2) == IrrCommit::kRejected &&
+            why == IrrReject::kBadHash,
+        "a later chunk missing: bad_hash");
+  // Chunk rules.
+  IrrStaging c{};
+  uint8_t data[kChunkMax + 1] = {};
+  CHECK(!irr_staging_chunk(c, 0, data, 1), "a chunk with no begin is refused");
+  irr_staging_begin(c, int32_t(kRecordLen), kGoldenVectorSha256[1]);
+  CHECK(!irr_staging_chunk(c, 0, data, kChunkMax + 1), "more than 192 B is refused");
+  CHECK(!irr_staging_chunk(c, int32_t(kRecordLen) - 7, data, 8), "bytes past 584 are refused");
+  CHECK(!irr_staging_chunk(c, -1, data, 4), "a negative offset is refused");
+  CHECK(!irr_staging_chunk(c, 0, nullptr, 4), "an undecodable chunk is refused");
+  CHECK(!irr_staging_chunk(c, 0, data, 0), "an empty chunk is refused");
+  CHECK(irr_staging_chunk(c, int32_t(kRecordLen) - 8, data, 8) && irr_staging_chunk(c, 0, data, kChunkMax),
+        "the last 8 bytes and a full 192 B chunk fit");
+  uint8_t odd[1];
+  size_t on = 0;
+  CHECK(!verdify_policy::policy_hex_decode("abc", 3, odd, sizeof(odd), &on) &&
+            !verdify_policy::policy_hex_decode("zz", 2, odd, sizeof(odd), &on),
+        "odd-length or non-hex chunks do not decode (and are refused)");
+}
+
+static void wiring_commands_and_clock() {
+  CHECK(irr_parse_cmd("run") == IrrCmd::kRun && irr_parse_cmd("stop") == IrrCmd::kStop &&
+            irr_parse_cmd("clear_fault") == IrrCmd::kClearFault,
+        "run, stop and clear_fault");
+  CHECK(irr_parse_cmd("Run") == IrrCmd::kUnknown && irr_parse_cmd("") == IrrCmd::kUnknown &&
+            irr_parse_cmd(nullptr) == IrrCmd::kUnknown && irr_parse_cmd("override") == IrrCmd::kUnknown,
+        "anything else is unknown");
+  IrrRunArgs a{};
+  CHECK(irr_run_args_from(kL01, 600, 1, 0, 0, 0, a) && a.line == kL01 && a.on_s == 600 && a.count == 1 && a.gap_s == 0,
+        "L01 for 10 min");
+  CHECK(irr_run_args_from(kL08, 20, 4, 60, 60, 120, a) && a.prewet_s == 60 && a.flush_s == 120, "an L08 feed");
+  CHECK(!irr_run_args_from(-1, 600, 1, 0, 0, 0, a) && !irr_run_args_from(11, 600, 1, 0, 0, 0, a) &&
+            !irr_run_args_from(kAllLines, 600, 1, 0, 0, 0, a),
+        "a run names one line, L01-L11");
+  CHECK(!irr_run_args_from(kL04, 65536, 1, 30, 0, 0, a) && !irr_run_args_from(kL04, 30, 256, 30, 0, 0, a) &&
+            !irr_run_args_from(kL04, 30, 2, -60, 0, 0, a) && !irr_run_args_from(kL02, 30, 1, 0, 0, -1, a),
+        "values outside their field are bad_args");
+  uint16_t scope = 0;
+  CHECK(irr_stop_scope(kAllLines, scope) && scope == kGrantableMask && !(scope & kFogMask),
+        "stop 255: every wet relay, never fog");
+  CHECK(irr_stop_scope(kL03, scope) && scope == irr_bit(kL03), "stop one line");
+  CHECK(!irr_stop_scope(kL11, scope) && scope == 0 && !irr_stop_scope(-1, scope) && !irr_stop_scope(254, scope),
+        "fog and any other value stop nothing");
+  // The device's local offset from one ESPTime reading, across both 2026 changeovers.
+  const uint32_t jump = 1772960400u, back = 1793520000u;
+  for (uint32_t ep : {kDay0, kDay0 + 25199u, kDay0 + 25200u, jump - 1u, jump, jump + 3599u, back - 1u, back,
+                      back + 3600u, 1782460800u}) {
+    int h, m, s;
+    denver_fields(ep, h, m, s);
+    char label[64];
+    std::snprintf(label, sizeof(label), "utc offset at %lu", static_cast<unsigned long>(ep));
+    CHECK(irr_utc_offset_min(h, m, s, ep) == denver_offset(ep), label);
+  }
+}
+
+static void wiring_water_centigal() {
+  float carry = 0.0f;
+  uint64_t total = 0;
+  for (int i = 0; i < 3600; ++i) total += irr_water_centigal(1.0f, 1000u, carry);
+  CHECK(std::fabs(double(total) + carry - 6000.0) < 0.05 && carry >= 0.0f && carry < 1.0f,
+        "1 gpm for an hour is 60 gal (6000 centi-gallons), fraction carried");
+  carry = 0.0f;
+  total = 0;
+  for (int i = 0; i < 6000; ++i) total += irr_water_centigal(0.01f, 1000u, carry);
+  CHECK(std::fabs(double(total) + carry - 100.0) < 0.05, "a trickle below a centi-gallon per tick is not lost");
+  CHECK(irr_water_centigal(NAN, 1000u, carry) == 0 && irr_water_centigal(-2.0f, 1000u, carry) == 0 &&
+            irr_water_centigal(2.0f, 0u, carry) == 0,
+        "no flow, no water");
+  carry = NAN;
+  CHECK(irr_water_centigal(6.0f, 1000u, carry) == 10 && carry >= 0.0f && carry < 0.01f, "a bad carry restarts at 0");
+}
+
+// The RH and dew margin the engine reads come from one measured pair (the averages, else the
+// case probe): the dewpoint_avg sensor's own Magnus form, and nothing from a missing reading.
+static void wiring_air_inputs() {
+  auto dewpoint_avg = [](float t_f, float rh) {  // sensors.yaml dewpoint_avg, verbatim
+    float tc = (t_f - 32.0f) * 5.0f / 9.0f;
+    float lnR = logf(rh / 100.0f);
+    float dpC = (237.3f * (lnR + ((17.27f * tc) / (237.3f + tc)))) / (17.27f - lnR - ((17.27f * tc) / (237.3f + tc)));
+    return dpC * 9.0f / 5.0f + 32.0f;
+  };
+  IrrAirInputs a = irr_air_inputs(77.0f, 50.0f, 5.0f);
+  CHECK(a.dew_margin_known && a.rh_pct == 50.0f && !a.dew_breach, "77 F, 50 %: a 20 F margin, no breach");
+  CHECK(irr_air_inputs(77.0f, 50.0f, 20.5f).dew_breach && !irr_air_inputs(77.0f, 50.0f, 19.5f).dew_breach,
+        "the margin is 77 less the dewpoint_avg dew point (about 57 F)");
+  CHECK(std::fabs(77.0f - dewpoint_avg(77.0f, 50.0f) - 20.05f) < 0.05f, "dewpoint_avg gives the same margin");
+  a = irr_air_inputs(70.0f, 95.0f, 4.0f);
+  CHECK(a.dew_margin_known && a.dew_breach, "70 F, 95 %: a 1.5 F margin breaches 4 F");
+  for (float t : {40.0f, 65.0f, 95.0f}) {
+    for (float rh : {20.0f, 60.0f, 99.0f}) {
+      const float margin = t - dewpoint_avg(t, rh);
+      CHECK(irr_air_inputs(t, rh, margin + 0.01f).dew_breach && !irr_air_inputs(t, rh, margin - 0.01f).dew_breach,
+            "the breach edge sits on the dewpoint_avg margin");
+    }
+  }
+  for (const auto& bad : {std::pair<float, float>{NAN, 50.0f}, {70.0f, NAN}, {70.0f, 0.0f}, {70.0f, 100.5f}}) {
+    a = irr_air_inputs(bad.first, bad.second, 4.0f);
+    CHECK(std::isnan(a.rh_pct) && !a.dew_margin_known && !a.dew_breach,
+          "no measured pair: RH missing (never blocks), dew margin unknown");
+  }
+  a = irr_air_inputs(70.0f, 100.0f, 0.5f);
+  CHECK(a.dew_margin_known && a.dew_breach, "saturated air has no margin");
+  CHECK(!irr_air_inputs(70.0f, 60.0f, NAN).dew_breach, "no threshold, no breach");
+}
+
+// The controller as irrigation_engine.yaml, irrigation_engine_esphome.h, hardware.yaml and the
+// climate path of controls.yaml wire it: the engine with its RTC block and NVS (claims and the
+// program record), the eleven relays and their guards, irr_grant_mask, the three text sensors,
+// the 5 s tick with the 1 s climate loop between ticks, and the services.
+struct Dev {
+  IrrRtcBlock rtc{};
+  Nvs nvs{};
+  IrrProgramRecord stored{};
+  bool stored_has = false;
+  IrrEngine eng{};
+  IrrOutputs out{};
+  IrrInputs climate = irr_inputs_idle();
+  IrrStateExtras extras{};
+  IrrStaging staging{};
+  uint16_t grant = 0;   // irr_grant_mask
+  uint16_t held = 0;
+  uint16_t relays = 0;  // bit = device_idx; fog is bit 10
+  uint32_t ms = 100000u;
+  uint32_t epoch = kDay0;
+  bool denver = false;  // derive the offset from America/Denver local fields, as the device does
+  int offset = kMst;
+  // Published text.
+  char program_id[32] = "";
+  char state[kTextBufLen] = "";
+  char events[kTextBufLen] = "";
+  bool state_pub = false;
+  bool events_pub = false;
+  uint16_t pub_seq = 0;
+  uint8_t pub_count = 0;
+  int state_publishes = 0;
+  // Relay audit.
+  int on_edges[kLineCount] = {};
+  int refused = 0;         // turn_on attempts the guards refused
+  int uncaused = 0;        // ON edges whose line no published irr_state token named first
+  int ungranted_held = 0;  // ticks with an engine relay ON and no grant bit
+  int zero_start = 0;      // published run tokens with no start time
+  bool two_misters = false;
+  bool drip_with_mist = false;
+  bool l03_alone = false;
+  // The climate path: one VPD pulse train through irr_vpd_grant()/irr_vpd_release(), fog, and
+  // today's leak interlock, which until #1161 holds climate fog and mist and nothing else.
+  bool leak = false;
+  bool fog_want = false;
+  uint8_t vpd_want = kNoLine;
+  uint16_t vpd_on_s = 30;
+  uint16_t vpd_gap_s = 45;
+  uint8_t vpd_on = kNoLine;
+  uint32_t vpd_until = 0;
+  uint32_t vpd_next = 0;
+  int vpd_pulses = 0;
+  bool started = false;  // the device grants nothing before the engine's first tick
+
+  Dev() { std::memcpy(extras.vpd_source, "hoo", 3); }
+
+  bool named(uint8_t i) const {
+    if (i == kL03) return std::strstr(state, ",feed,") != nullptr;  // L03 opens with a feed, which names its line
+    char d[8], m[8];
+    std::snprintf(d, sizeof(d), "d=%u,", unsigned(i));
+    std::snprintf(m, sizeof(m), "m=%u,", unsigned(i));
+    for (const char* needle : {static_cast<const char*>(d), static_cast<const char*>(m)}) {
+      for (const char* p = std::strstr(state, needle); p != nullptr; p = std::strstr(p + 1, needle)) {
+        if (p == state || p[-1] == ' ') return true;
+      }
+    }
+    return false;
+  }
+  // hardware.yaml: a wet relay turns on only with its bit in irr_grant_mask, L04 never with L03 open.
+  void turn_on(uint8_t i) {
+    if (relays & irr_bit(i)) return;
+    if (i != kL11 && (!(grant & irr_bit(i)) || (i == kL04 && (relays & irr_bit(kL03))))) {
+      ++refused;
+      return;
+    }
+    relays = uint16_t(relays | irr_bit(i));
+    ++on_edges[i];
+    if (i != kL11 && !named(i)) ++uncaused;
+  }
+  // The fertilizer relays' on_turn_off closes L03 with the last of them.
+  void turn_off(uint8_t i) {
+    if (!(relays & irr_bit(i))) return;
+    relays = uint16_t(relays & ~irr_bit(i));
+    const uint16_t fert = uint16_t(irr_bit(kL02) | irr_bit(kL06) | irr_bit(kL08) | irr_bit(kL10));
+    if ((irr_bit(i) & fert) && !(relays & fert)) turn_off(kL03);
+  }
+  void publish() {
+    irr_format_program_id(out.program_nvs, out.program_hash8, program_id, sizeof(program_id));
+    char s[kTextBufLen];
+    irr_format_state(out.state, extras, s, sizeof(s));
+    if (!state_pub || std::strcmp(s, state) != 0) {
+      std::memcpy(state, s, sizeof(state));
+      state_pub = true;
+      ++state_publishes;
+      // irr_state carries absolute times: with the clock valid (always, in these traces) no
+      // d= or m= token goes out with a zero start.
+      for (const char* t = s; *t != '\0'; t = std::strchr(t, ' ') ? std::strchr(t, ' ') + 1 : t + std::strlen(t)) {
+        unsigned idx = 0, slot = 0;
+        char cause[16];
+        unsigned long start = 0, end = 0;
+        if ((t[0] == 'd' || t[0] == 'm') && t[1] == '=' &&
+            std::sscanf(t + 2, "%u,%15[a-z_],%u,%lu,%lu", &idx, cause, &slot, &start, &end) == 5 && start == 0) {
+          ++zero_start;
+        }
+      }
+    }
+    if (!events_pub || rtc.next_seq != pub_seq || rtc.ring_count != pub_count) {
+      irr_format_events(rtc, events, sizeof(events));
+      events_pub = true;
+      pub_seq = rtc.next_seq;
+      pub_count = rtc.ring_count;
+    }
+  }
+  // irrigation_engine_esphome.h esp_apply(): publish, bits up, close (L03 last), open (L03 first), bits down.
+  void apply(uint16_t stop_scope = 0) {
+    const IrrApply a = irr_apply_plan(grant, held, relays, out, stop_scope);
+    publish();
+    grant = a.grant_before;
+    for (int pass = 0; pass < 2; ++pass) {
+      for (uint8_t i = 0; i < kLineCount; ++i) {
+        if ((a.turn_off & irr_bit(i)) && (i == kL03) == (pass == 1)) turn_off(i);
+      }
+    }
+    for (int pass = 0; pass < 2; ++pass) {
+      for (uint8_t i = 0; i < kLineCount; ++i) {
+        if ((a.turn_on & irr_bit(i)) && (i == kL03) == (pass == 0)) turn_on(i);
+      }
+    }
+    grant = a.grant_after;
+    held = uint16_t(out.relay_mask & kGrantableMask);
+  }
+  void store(const IrrProgram& p) {
+    pack(p, stored.rec);
+    verdify_policy::Sha256::hash(stored.rec, kRecordLen, stored.sha256);
+    stored_has = true;
+  }
+  // irr_esp_start(): the RTC block by the reset reason, the claims, the stored program; every
+  // relay off (on_boot) and irr_grant_mask 0.
+  void boot(bool power_on) {
+    if (power_on) nvs.cache_has = false;
+    nvs.cache = nvs.flash;
+    nvs.cache_has = nvs.flash_has;
+    IrrPersist p;
+    p.save = nvs_save;
+    p.sync = nvs_sync;
+    p.ctx = &nvs;
+    irr_engine_init(eng, &rtc, p, power_on, nvs.flash_has ? &nvs.flash : nullptr);
+    if (stored_has) {
+      IrrProgram prog{};
+      IrrReject why;
+      if (irr_decode(stored.rec, kRecordLen, stored.sha256, prog, why)) irr_use_program(eng, prog, stored.sha256);
+    }
+    staging = IrrStaging{};
+    out = IrrOutputs{};
+    relays = grant = held = 0;
+    vpd_on = kNoLine;
+    state_pub = events_pub = false;
+    started = false;
+  }
+  void climate_second() {
+    ms += 1000u;
+    epoch += 1u;
+    const bool drip = irr_drip_active(eng);
+    // Fog: irrigation_water_conflict, SAF-5 (L03 open or l03_hold) and, until #1161, the leak.
+    const bool fog = fog_want && !drip && !(relays & irr_bit(kL03)) && !out.l03_hold && !leak && !climate.sensor_fault;
+    relays = fog ? uint16_t(relays | kFogMask) : uint16_t(relays & ~kFogMask);
+    // The VPD pulse closes at its end or when the climate path's own gates close it.
+    if (vpd_on != kNoLine && (irr_reached(ms, vpd_until) || drip || leak || climate.sensor_fault)) {
+      turn_off(vpd_on);
+      irr_vpd_release(eng, vpd_on, ms, out);
+      apply();
+      vpd_on = kNoLine;
+      vpd_next = ms + uint32_t(vpd_gap_s) * 1000u;
+    }
+    // turn_on_zone(): the grant first; with none the FSM asks again one pulse later.
+    if (started && vpd_on == kNoLine && vpd_want != kNoLine && irr_reached(ms, vpd_next) && !drip && !leak &&
+        !climate.sensor_fault) {
+      const IrrVpdResult r = irr_vpd_request(eng, vpd_want, vpd_on_s, ms, out);
+      apply();
+      if (r.answer == IrrVpdAnswer::kGrant) turn_on(vpd_want);
+      if (r.answer == IrrVpdAnswer::kGrant && (relays & irr_bit(vpd_want))) {
+        vpd_on = vpd_want;
+        vpd_until = ms + uint32_t(vpd_on_s) * 1000u;
+        ++vpd_pulses;
+      } else {
+        vpd_next = ms + uint32_t(vpd_on_s) * 1000u;
+      }
+    }
+  }
+  void tick() {
+    for (int k = 0; k < 5; ++k) climate_second();
+    IrrInputs in = climate;
+    in.now_ms = ms;
+    int off = offset;
+    if (denver) {
+      int h, m, s;
+      denver_fields(epoch, h, m, s);
+      off = irr_utc_offset_min(h, m, s, epoch);
+    }
+    in.clock = irr_clock_from_epoch(epoch, off);
+    in.relay_on_mask = relays;
+    irr_tick(eng, in, out);
+    started = true;
+    apply();
+    const uint16_t mist = uint16_t(relays & kMistManifoldMask);
+    if (mist & (mist - 1)) two_misters = true;
+    if ((relays & kDripManifoldMask) && (relays & (kMistManifoldMask | kFogMask))) drip_with_mist = true;
+    if ((relays & irr_bit(kL03)) &&
+        !(relays & (irr_bit(kL02) | irr_bit(kL06) | irr_bit(kL08) | irr_bit(kL10)))) {
+      l03_alone = true;
+    }
+    if (relays & held & ~grant) ++ungranted_held;
+  }
+  void run_until(int minute, int second = 0) {
+    const uint32_t target = at(minute, second);
+    while (epoch < target) tick();
+  }
+  void run_until_epoch(uint32_t target) {
+    while (epoch < target) tick();
+  }
+  void run_for_minutes(int minutes) { run_until_epoch(epoch + uint32_t(minutes) * 60u); }
+  const IrrEventEntry* last_event() const {
+    return rtc.ring_count ? &irr_ring_at(rtc, uint8_t(rtc.ring_count - 1)) : nullptr;
+  }
+  int count_events(uint16_t slot_id, uint8_t line) const {
+    int n = 0;
+    for (uint8_t i = 0; i < rtc.ring_count; ++i) {
+      const IrrEventEntry& e = irr_ring_at(rtc, i);
+      if (e.slot_id == slot_id && e.line == line) ++n;
+    }
+    return n;
+  }
+  // irr_command run / stop.
+  IrrRunResult run(int32_t line, int32_t on_s, int32_t count = 1, int32_t gap_s = 0, int32_t prewet_s = 0,
+                   int32_t flush_s = 0) {
+    IrrRunArgs a{};
+    IrrRunResult r = IrrRunResult::kBadArgs;
+    if (irr_run_args_from(line, on_s, count, gap_s, prewet_s, flush_s, a)) r = irr_run_now(eng, a, ms, out);
+    apply();
+    return r;
+  }
+  uint8_t stop(int32_t line) {
+    uint16_t scope = 0;
+    if (!irr_stop_scope(line, scope)) return 0;
+    const uint8_t n = irr_stop(eng, uint8_t(line), ms, out);
+    apply(scope);
+    if (vpd_on != kNoLine && !(relays & irr_bit(vpd_on))) {  // the climate sees its pulse closed
+      vpd_on = kNoLine;
+      vpd_next = ms + uint32_t(vpd_gap_s) * 1000u;
+    }
+    return n;
+  }
+  // irr_program_begin, _chunk and _commit, then what irr_esp_program_commit() does with the result.
+  IrrCommit push(const uint8_t* rec, const char* sha_hex, int32_t len = int32_t(kRecordLen), int skip_chunk = -1) {
+    IrrProgram p{};
+    IrrReject why = IrrReject::kNone;
+    const IrrCommit c = push_hex(staging, rec, len, sha_hex, p, why, skip_chunk);
+    if (c == IrrCommit::kRejected) irr_set_reject(eng, why);
+    if (c == IrrCommit::kAccepted) {
+      stored = staging.record;
+      stored_has = true;
+      irr_stage_program(eng, p, staging.record.sha256);
+    }
+    irr_refresh_outputs(eng, ms, out);
+    apply();
+    return c;
+  }
+  IrrCommit push_program(const IrrProgram& prog) {
+    uint8_t rec[kRecordLen];
+    uint8_t sha[32];
+    char sha_hex[65];
+    pack(prog, rec);
+    verdify_policy::Sha256::hash(rec, kRecordLen, sha);
+    hex_encode(sha, 32, sha_hex);
+    return push(rec, sha_hex);
+  }
+};
+
+// Acceptance: irr_state is published only on transitions. A 29-minute mist window publishes at
+// its start and its end, and at reason changes, never per pulse or per tick.
+static void wiring_state_published_on_transitions_only() {
+  IrrProgram p = irr_rom_default();
+  members(p, kL04, true, true);
+  add_slot(p, 1, kL04, 420, 60, 15, 60);  // 07:00: 15 pulses of 60 s, 60 s apart, end 07:29
+  {
+    Dev d;
+    d.store(p);
+    d.epoch = at(418);
+    d.boot(true);
+    d.tick();
+    EXPECT_IRR_STATE(d.state, "v=hoo");
+    const int base = d.state_publishes;
+    d.run_until(420);
+    EXPECT_IRR_STATE(d.state, "m=3,schedule,1,1793628000,1793629740 v=hoo");
+    d.run_until(428, 30);  // mid-window, mid-pulse
+    EXPECT_IRR_STATE(d.state, "m=3,schedule,1,1793628000,1793629740 v=hoo");
+    CHECK(d.state_publishes == base + 1 && (d.relays & irr_bit(kL04)), "no publish per pulse or per tick");
+    d.run_until(460);
+    EXPECT_IRR_STATE(d.state, "v=hoo");
+    CHECK(d.state_publishes == base + 2, "the window published twice: at its start and at its end");
+    CHECK(d.on_edges[kL04] == 15 && d.refused == 0 && d.uncaused == 0, "15 pulses, each granted, its cause first");
+    EXPECT_IRR_EVENTS(d.events, "0,3,1,20759,ok");
+  }
+  {
+    // Someone inside (Frigate) for three minutes: the reason changes publish, the pulses never do.
+    Dev d;
+    d.store(p);
+    d.epoch = at(418);
+    d.boot(true);
+    d.run_until(420);
+    const int base = d.state_publishes;
+    d.run_until(430);
+    d.climate.occupied = true;
+    d.run_until(433);
+    EXPECT_IRR_STATE(d.state, "w=3,occ v=hoo");
+    CHECK(!(d.relays & irr_bit(kL04)), "confirmed occupancy cuts the pulse");
+    d.climate.occupied = false;
+    d.run_until(434);
+    EXPECT_IRR_STATE(d.state, "m=3,schedule,1,1793628000,1793629740 v=hoo");
+    d.run_until(480);
+    EXPECT_IRR_STATE(d.state, "v=hoo");
+    CHECK(d.state_publishes == base + 3, "publishes at the reason changes and the end only");
+    CHECK(d.on_edges[kL04] == 16 && d.refused == 0 && d.uncaused == 0, "the cut pulse is delivered again");
+    EXPECT_IRR_EVENTS(d.events, "0,3,1,20759,ok");
+  }
+  {
+    // A gap under mister_min_off_s (gap_s 30 against the 45 s fence): the fence counts from each
+    // pulse's own close, so the next tick's relay sample never re-fences the zone. The pulses run
+    // 45 s apart (07:00:00, 07:01:15, ..., the 20th at 07:23:45) and irr_state never flips to a
+    // w=3,man token between them.
+    IrrProgram q = irr_rom_default();
+    members(q, kL04, true, true);
+    add_slot(q, 1, kL04, 420, 30, 20, 30);
+    Dev d;
+    d.store(q);
+    d.epoch = at(418);
+    d.boot(true);
+    d.tick();
+    const int base = d.state_publishes;
+    d.run_until(444, 10);
+    CHECK(d.on_edges[kL04] == 20 && (d.relays & irr_bit(kL04)), "07:24:10: the 20th pulse (opened 07:23:45) is open");
+    d.run_until(444, 15);
+    CHECK(d.on_edges[kL04] == 20 && !(d.relays & irr_bit(kL04)), "20 pulses, 45 s apart, done at 07:24:15");
+    EXPECT_IRR_STATE(d.state, "v=hoo");
+    EXPECT_IRR_EVENTS(d.events, "0,3,1,20759,ok");
+    CHECK(d.state_publishes == base + 2 && d.refused == 0 && d.uncaused == 0,
+          "a short-gap window publishes at its start and end only, never per pulse");
+  }
+}
+
+// A run whose relay cannot open yet is a w= token, never a run token with no start: an L01
+// schedule that comes due while a climate VPD pulse holds the mist manifold waits until the
+// pulse's end, and opens at the next tick once the climate path closed it.
+static void wiring_run_waiting_for_the_manifold_is_a_wait() {
+  IrrProgram p = irr_rom_default();
+  p.lines[kL01].daily_cap_min = 0;
+  add_slot(p, 1, kL01, 420, 300);  // L01 at 07:00 for 5 min
+  Dev d;
+  d.store(p);
+  d.epoch = at(418);
+  d.boot(true);
+  d.vpd_want = kL04;
+  d.vpd_on_s = 60;
+  d.vpd_gap_s = 45;
+  d.run_until(420);
+  EXPECT_IRR_STATE(d.state, "m=3,vpd,0,1793627991,1793628051 w=0,man,1793628051 v=hoo");
+  CHECK(!(d.relays & irr_bit(kL01)) && (d.relays & irr_bit(kL04)), "07:00: the VPD pulse holds the water");
+  d.run_until(420, 5);
+  EXPECT_IRR_STATE(d.state, "d=0,schedule,1,1793628005,1793628305 v=hoo");
+  CHECK((d.relays & irr_bit(kL01)) && !(d.relays & irr_bit(kL04)), "07:00:05: the drip opens");
+  d.run_until(430);
+  CHECK(d.zero_start == 0 && d.refused == 0 && d.uncaused == 0, "no run token without its start");
+  EXPECT_IRR_EVENTS(d.events, "0,0,1,20759,ok");
+}
+
+// Acceptance: irr_program_id reads src=rom with no stored program and src=nvs with the record's
+// hash after a committed push; a commit with a bad hash keeps the old program and id and shows the
+// reject token in irr_state.
+static void wiring_program_id_rom_then_nvs() {
+  Dev d;
+  d.epoch = at(600);
+  d.boot(true);
+  d.tick();
+  EXPECT_IRR_PROGRAM_ID(d.program_id, "h=0000000000000000 src=rom");
+  EXPECT_IRR_STATE(d.state, "v=hoo");
+  char seed[65], full[65];
+  hex_encode(kGoldenVectorSha256[1], 32, seed);
+  hex_encode(kGoldenVectorSha256[2], 32, full);
+  CHECK(d.push(kGoldenVectorBytes[1], seed) == IrrCommit::kAccepted, "the seed program commits");
+  CHECK(d.stored_has && std::memcmp(d.stored.rec, kGoldenVectorBytes[1], kRecordLen) == 0 &&
+            std::memcmp(d.stored.sha256, kGoldenVectorSha256[1], 32) == 0,
+        "saved to NVS with its hash before it runs");
+  EXPECT_IRR_PROGRAM_ID(d.program_id, "h=0000000000000000 src=rom");  // it runs from the next tick
+  d.tick();
+  EXPECT_IRR_PROGRAM_ID(d.program_id, "h=7ae03efe564082b7 src=nvs");
+  // The seed's degraded_only window at solar noon -120 is due and waits: VPD sensing is healthy.
+  EXPECT_IRR_STATE(d.state, "w=3,vok v=hoo");
+  // A hash that does not match: the old program and id stay, irr_state carries the reject.
+  char bad[65];
+  std::memcpy(bad, full, sizeof(bad));
+  bad[0] = bad[0] == '0' ? '1' : '0';
+  CHECK(d.push(kGoldenVectorBytes[2], bad) == IrrCommit::kRejected, "a bad hash is rejected");
+  EXPECT_IRR_STATE(d.state, "w=3,vok v=hoo j=bad_hash");
+  d.tick();
+  EXPECT_IRR_PROGRAM_ID(d.program_id, "h=7ae03efe564082b7 src=nvs");
+  EXPECT_IRR_STATE(d.state, "w=3,vok v=hoo j=bad_hash");
+  CHECK(std::memcmp(d.stored.rec, kGoldenVectorBytes[1], kRecordLen) == 0, "NVS keeps the old record");
+  CHECK(d.push(kGoldenVectorBytes[2], full, 583) == IrrCommit::kRejected, "len 583");
+  EXPECT_IRR_STATE(d.state, "w=3,vok v=hoo j=bad_length");
+  CHECK(d.push(kGoldenVectorBytes[2], full, int32_t(kRecordLen), 0) == IrrCommit::kRejected, "no first chunk");
+  EXPECT_IRR_STATE(d.state, "w=3,vok v=hoo j=bad_magic");
+  // A good push clears the reject and runs from the next tick.
+  CHECK(d.push(kGoldenVectorBytes[2], full) == IrrCommit::kAccepted, "the full program commits");
+  CHECK(std::strstr(d.state, "j=") == nullptr, "a committed push clears the reject");
+  d.tick();
+  EXPECT_IRR_PROGRAM_ID(d.program_id, "h=3b76a2316e2f39d8 src=nvs");
+  // A soft reset and a power cut both run the stored program again.
+  d.boot(false);
+  d.tick();
+  EXPECT_IRR_PROGRAM_ID(d.program_id, "h=3b76a2316e2f39d8 src=nvs");
+  d.boot(true);
+  d.tick();
+  EXPECT_IRR_PROGRAM_ID(d.program_id, "h=3b76a2316e2f39d8 src=nvs");
+  // A stored record that no longer matches its hash runs the ROM default, and is pushed again.
+  d.stored.rec[200] ^= 0x01;
+  d.boot(true);
+  d.tick();
+  EXPECT_IRR_PROGRAM_ID(d.program_id, "h=0000000000000000 src=rom");
+}
+
+// A degraded_only window (D-IRP-12) runs while VPD sensing is degraded and is published with cause
+// fallback, which is how the platform reads that the fallback is active.
+static void wiring_fallback_run_is_published_as_fallback() {
+  Dev d;
+  d.epoch = at(600);
+  d.boot(true);
+  d.tick();
+  char seed[65];
+  hex_encode(kGoldenVectorSha256[1], 32, seed);
+  CHECK(d.push(kGoldenVectorBytes[1], seed) == IrrCommit::kAccepted, "the seed program");
+  d.tick();
+  EXPECT_IRR_STATE(d.state, "w=3,vok v=hoo");
+  d.climate.sensor_degraded = true;
+  d.tick();
+  EXPECT_IRR_STATE(d.state, "m=3,fallback,1,1793638815,1793639175 v=hoo");
+  CHECK((d.relays & irr_bit(kL04)) && d.refused == 0 && d.uncaused == 0, "the fallback pulse opens, granted");
+  d.run_for_minutes(10);
+  EXPECT_IRR_STATE(d.state, "v=hoo");
+  EXPECT_IRR_EVENTS(d.events, "0,3,1,20759,ok");
+}
+
+// Acceptance (the replay suite): no wet relay turns on without the engine grant, through a day
+// with every line kind, VPD demand on center, fog, occupancy, SENSOR_FAULT, SAFETY_COOL, a VPD
+// emergency, run-now, stops and a push in the middle.
+static void wiring_no_relay_without_the_grant() {
+  IrrProgram p = open_program();
+  add_slot(p, 1, kL01, 360, 900);                    // 06:00 L01 15 min
+  add_slot(p, 2, kL02, 400, 300, 1, 0, 120, 240);    // 06:40 L02 feed: prewet 2, feed 5, flush 4 min
+  add_slot(p, 3, kL04, 480, 45, 8, 60);              // 08:00 L04 window
+  add_slot(p, 4, kL07, 540, 30, 6, 90);              // 09:00 L07 window (occupied 09:00-10:00)
+  add_slot(p, 5, kL08, 600, 20, 4, 60, 60, 120);     // 10:00 L08 feed, prewet and flush on L07
+  add_slot(p, 6, kL05, 660, 600);                    // 11:00 L05 10 min
+  add_slot(p, 7, kL06, 720, 300, 1, 0, 0, 300);      // 12:00 L06 feed, flush on L05
+  add_slot(p, 8, kL09, 780, 40, 5, 60);              // 13:00 L09 window
+  add_slot(p, 9, kL10, 840, 15, 3, 45, 0, 60);       // 14:00 L10 feed, flush on L09
+  add_slot(p, 10, kL01, 900, 1800);                  // 15:00 L01 30 min under SAFETY_COOL and demand
+  Dev d;
+  d.store(p);
+  d.epoch = kDay0;
+  d.boot(true);
+  d.vpd_want = kL04;
+  d.vpd_on_s = 45;
+  d.vpd_gap_s = 60;
+  for (int h = 0; h < 24; ++h) {
+    d.climate.occupied = (h == 9);
+    d.climate.safety_cool = (h == 15);
+    d.climate.vpd_emergency = (h == 16);
+    d.climate.climate_demand = (h >= 10 && h < 18);
+    d.fog_want = (h >= 12 && h < 17);
+    for (int quarter = 0; quarter < 4; ++quarter) {
+      d.climate.sensor_fault = (h == 14 && quarter == 2);
+      if (h == 5 && quarter == 0) CHECK(d.run(kL01, 1800) == IrrRunResult::kStarted, "05:00 run L01 for 30 min");
+      if (h == 5 && quarter == 1) CHECK(d.stop(kAllLines) >= 1 && !(d.relays & kGrantableMask), "05:15 stop all");
+      if (h == 11 && quarter == 2) d.run(kL04, 30, 3, 60);
+      if (h == 13 && quarter == 2) d.run(kL02, 120, 1, 0, 60, 60);
+      if (h == 16 && quarter == 2) {
+        d.stop(kAllLines);
+        CHECK(!(d.relays & kGrantableMask) && d.grant == 0, "16:30 stop all: every wet relay off, every bit clear");
+      }
+      if (h == 17 && quarter == 0) {
+        IrrProgram q = p;
+        enable(q, kL07, false);
+        CHECK(d.push_program(q) == IrrCommit::kAccepted, "17:00 a push disables L07");
+      }
+      d.run_for_minutes(15);
+    }
+  }
+  CHECK(d.refused == 0, "no wet relay turned on without its grant bit");
+  CHECK(d.uncaused == 0, "every ON edge had its cause in irr_state first");
+  CHECK(d.zero_start == 0, "every published run token carried its start time");
+  CHECK(d.ungranted_held == 0, "no engine relay stayed on without its bit");
+  CHECK(!d.two_misters && !d.drip_with_mist && !d.l03_alone, "manifold rules");
+  for (uint8_t line : {kL01, kL02, kL03, kL04, kL05, kL06, kL07, kL08, kL09, kL10}) {
+    char label[48];
+    std::snprintf(label, sizeof(label), "L%02u opened during the day", unsigned(line + 1));
+    CHECK(d.on_edges[line] > 0, label);
+  }
+  CHECK(d.vpd_pulses > 20, "center VPD misting carried on");
+}
+
+// Acceptance (Q-05): with leak_detected on, a due L01 schedule starts, a running L02 feed continues
+// to its flush, and only the leak alert fires: nothing the engine reads, no guard and no irr_state
+// reason reads the leak (IrrInputs has no leak field; the static_assert above).
+static void wiring_leak_changes_nothing_in_irrigation() {
+  auto trace = [](bool leak, uint16_t* seq, int& n, char* events) {
+    IrrProgram p = irr_rom_default();
+    enable(p, kL02);
+    p.lines[kL01].daily_cap_min = 0;
+    add_slot(p, 1, kL01, 420, 600);  // L01 at 07:00 for 10 min
+    Dev d;
+    d.store(p);
+    d.epoch = at(405);
+    d.boot(true);
+    d.leak = leak;
+    d.vpd_want = kL04;
+    d.fog_want = true;
+    d.run_until(410);
+    CHECK(d.run(kL02, 300, 1, 0, 120, 240) == IrrRunResult::kStarted, "06:50 an L02 feed starts");
+    n = 0;
+    uint16_t last = 0;
+    if (d.relays & kDripManifoldMask) seq[n++] = last = uint16_t(d.relays & (kDripManifoldMask | irr_bit(kL03)));
+    while (d.epoch < at(450)) {
+      d.tick();
+      const uint16_t drips = uint16_t(d.relays & (kDripManifoldMask | irr_bit(kL03)));
+      if (drips != last && n < 64 && (n > 0 || drips != 0)) seq[n++] = drips;
+      last = drips;
+      if (!leak) continue;
+      // With the leak on, climate fog and VPD mist are held (until #1161), so the prewet opened
+      // with the run-now call at 06:50:00; each stage names its relay before it opens.
+      if (d.epoch == at(411)) EXPECT_IRR_STATE(d.state, "d=0,prewet,0,1793627400,1793627520 v=hoo");
+      if (d.epoch == at(415)) EXPECT_IRR_STATE(d.state, "d=1,feed,0,1793627520,1793627820 v=hoo");
+      if (d.epoch == at(420, 30)) {
+        EXPECT_IRR_STATE(d.state, "d=0,flush,0,1793627825,1793628065 w=0,man,1793628065 v=hoo");
+      }
+      if (d.epoch == at(425)) EXPECT_IRR_STATE(d.state, "d=0,schedule,1,1793628065,1793628665 v=hoo");
+    }
+    std::memcpy(events, d.events, sizeof(d.events));
+    CHECK(d.refused == 0 && d.uncaused == 0, "granted, with causes");
+    CHECK(std::strstr(d.state, "leak") == nullptr, "no irr_state token names a leak");
+  };
+  uint16_t a[64], b[64];
+  int na = 0, nb = 0;
+  char ea[kTextBufLen], eb[kTextBufLen];
+  trace(false, a, na, ea);
+  trace(true, b, nb, eb);
+  CHECK(na == nb && std::memcmp(a, b, sizeof(uint16_t) * size_t(na)) == 0,
+        "the drip and fertilizer relays run the same sequence with and without the leak");
+  const uint16_t prewet = irr_bit(kL01), feed = uint16_t(irr_bit(kL02) | irr_bit(kL03));
+  // The flush hands L01 straight to the 07:00 schedule that waited for it (one relay edge).
+  const uint16_t expect[] = {prewet, feed, 0, prewet, 0};
+  CHECK(nb == 5 && std::memcmp(b, expect, sizeof(expect)) == 0,
+        "prewet, feed with L03, the flush, then the 07:00 L01 schedule");
+  EXPECT_IRR_EVENTS(eb, "0,1,0,20759,ok 1,0,1,20759,ok");
+  CHECK(std::strcmp(ea, eb) == 0, "the same outcomes with and without the leak");
+}
+
+// Acceptance: irr_command("stop", 255, ...) turns every open wet relay off inside the service call;
+// a second run on a running line is refused line_busy and starts nothing.
+static void wiring_stop_and_run_now_commands() {
+  IrrProgram p = open_program();
+  {
+    // A climate VPD pulse on L04: stop 255 closes it in the call; VPD may pulse again afterwards.
+    Dev d;
+    d.store(p);
+    d.epoch = at(600);
+    d.boot(true);
+    d.vpd_want = kL04;
+    d.vpd_on_s = 60;
+    while (!(d.relays & irr_bit(kL04))) d.tick();
+    EXPECT_IRR_STATE(d.state, "m=3,vpd,0,1793638806,1793638866 v=hoo");
+    CHECK(d.stop(kAllLines) == 1 && !(d.relays & kGrantableMask) && d.grant == 0, "stop 255 closes the VPD pulse now");
+    EXPECT_IRR_STATE(d.state, "v=hoo");
+    const int pulses = d.vpd_pulses;
+    d.run_until(605);
+    CHECK(d.vpd_pulses > pulses, "VPD misting pulses again after a stop (a stop disables nothing)");
+  }
+  {
+    // An L02 feed with L03 open: stop 255 closes both in the call; the flush follows on L01.
+    Dev d;
+    d.store(p);
+    d.epoch = at(600);
+    d.boot(true);
+    d.tick();
+    CHECK(d.run(kL02, 300, 1, 0, 0, 120) == IrrRunResult::kStarted, "an L02 feed");
+    EXPECT_IRR_STATE(d.state, "d=1,feed,0,1793638805,1793639105 v=hoo");
+    CHECK((d.relays & irr_bit(kL02)) && (d.relays & irr_bit(kL03)), "L02 and L03 open");
+    CHECK(d.run(kL02, 300, 1, 0, 0, 120) == IrrRunResult::kLineBusy && d.rtc.ring_count == 0,
+          "a repeated send is line_busy: nothing starts, no outcome");
+    CHECK(d.run(kL01, 300) == IrrRunResult::kManifoldBusy && d.rtc.ring_count == 1,
+          "another drip is manifold_busy, which is an outcome");
+    d.run_for_minutes(1);
+    CHECK(d.stop(kAllLines) == 1 && !(d.relays & kGrantableMask), "stop 255 closes L02 and L03 in the call");
+    CHECK(d.grant == 0, "their grant bits are cleared");
+    d.tick();
+    EXPECT_IRR_EVENTS(d.events, "0,0,0,20759,sk,man 1,1,0,20759,st,cmd");
+    d.tick();
+    CHECK(d.relays & irr_bit(kL01), "the clean flush follows the stopped feed (D-IRP-15)");
+    CHECK(d.stop(kL01) == 1 && !(d.relays & irr_bit(kL01)), "stopping the flush closes L01");
+  }
+  {
+    // Run-now on L01 twice; stop on one line; stop on fog does nothing.
+    Dev d;
+    d.store(p);
+    d.epoch = at(600);
+    d.boot(true);
+    d.tick();
+    CHECK(d.run(kL01, 600) == IrrRunResult::kStarted && (d.relays & irr_bit(kL01)), "L01 runs now");
+    EXPECT_IRR_STATE(d.state, "d=0,run_now,0,1793638805,1793639405 v=hoo");
+    const uint16_t seq_before = d.rtc.next_seq;
+    CHECK(d.run(kL01, 600) == IrrRunResult::kLineBusy && d.rtc.next_seq == seq_before && d.on_edges[kL01] == 1,
+          "a second run on the running line: line_busy, nothing started, no outcome");
+    CHECK(d.run(kL04, 91, 1, 30) == IrrRunResult::kBadArgs, "a mister pulse past 90 s is bad_args (BOUNDS_BY_KIND)");
+    CHECK(d.stop(kL11) == 0 && (d.relays & irr_bit(kL01)), "stop on fog stops nothing");
+    CHECK(d.stop(kL05) == 0 && (d.relays & irr_bit(kL01)), "stop on an idle line stops nothing");
+    CHECK(d.stop(kL01) == 1 && !(d.relays & irr_bit(kL01)) && d.grant == 0, "stop L01");
+    EXPECT_IRR_EVENTS(d.events, "0,0,0,20759,st,cmd");
+  }
+}
+
+// Local time through the device clock (ESPTime's local fields and UTC epoch, irr_utc_offset_min):
+// the rules of VD-37's compiler. A start in the spring-forward gap runs at the jump, a repeated
+// fall-back time runs once, and a solar start past midnight runs the next morning as the
+// occurrence of its schedule day.
+static void wiring_local_time_rules() {
+  {
+    IrrProgram p = irr_rom_default();
+    p.lines[kL01].daily_cap_min = 0;
+    add_slot(p, 1, kL01, 150, 300);  // 02:30, every day
+    Dev d;
+    d.denver = true;
+    d.store(p);
+    d.epoch = 1772960400u - 1800u;  // 2026-03-08 01:30 MST
+    d.boot(true);
+    d.run_until_epoch(1772960400u - 5u);
+    CHECK(d.on_edges[kL01] == 0, "01:59:55 MST: not yet");
+    d.run_until_epoch(1772960400u);
+    CHECK((d.relays & irr_bit(kL01)) && d.on_edges[kL01] == 1, "02:30 in the skipped hour opens at the 03:00 jump");
+    d.run_until_epoch(1772960400u + 3600u);
+    CHECK(d.on_edges[kL01] == 1 && d.count_events(1, kL01) == 1, "and runs once");
+  }
+  {
+    IrrProgram p = irr_rom_default();
+    p.lines[kL01].daily_cap_min = 0;
+    add_slot(p, 1, kL01, 90, 300);  // 01:30, every day
+    Dev d;
+    d.denver = true;
+    d.store(p);
+    d.epoch = 1793518200u - 600u;  // 2026-11-01 01:20 MDT
+    d.boot(true);
+    d.run_until_epoch(1793521800u + 3600u);  // past the second 01:30 (MST)
+    CHECK(d.on_edges[kL01] == 1 && d.count_events(1, kL01) == 1, "the repeated 01:30 runs once");
+  }
+  {
+    // Sunset + 240 in late June lands after midnight: it runs that early morning as the occurrence
+    // of its own (previous) day and weekday.
+    const uint32_t evening = 1782442800u;  // 2026-06-25 21:00 MDT
+    int h, m, s;
+    denver_fields(evening, h, m, s);
+    const IrrClock c = irr_clock_from_epoch(evening, denver_offset(evening));
+    IrrProgram p = irr_rom_default();
+    p.lines[kL01].daily_cap_min = 0;
+    add_slot(p, 1, kL01, 240, 300, 1, 0, 0, 0, false, uint8_t(IrrStartKind::kSunset), uint8_t(1u << c.weekday));
+    Dev d;
+    d.denver = true;
+    d.store(p);
+    d.epoch = evening;
+    d.boot(true);
+    d.run_until_epoch(evening + 9u * 3600u);
+    const IrrEventEntry* e = d.last_event();
+    CHECK(d.on_edges[kL01] == 1 && e != nullptr && e->slot_id == 1 && e->local_day == c.local_day &&
+              e->outcome == uint8_t(IrrOutcome::kOk),
+          "a June sunset + 240 runs after midnight under its schedule day");
+    CHECK(h == 21 && m == 0, "the trace starts at 21:00 MDT");
+  }
+}
+
 int main() {
   codes_match_python();
   decoder_accepts_the_golden_vectors();
@@ -2151,6 +3220,22 @@ int main() {
   midnight_rollover();
   more_engine_rules();
   full_program_day_invariants();
+  wiring_program_id_text();
+  wiring_state_text_matches_python();
+  wiring_state_text_rules();
+  wiring_apply_plan();
+  wiring_program_push_staging();
+  wiring_commands_and_clock();
+  wiring_water_centigal();
+  wiring_air_inputs();
+  wiring_state_published_on_transitions_only();
+  wiring_run_waiting_for_the_manifold_is_a_wait();
+  wiring_program_id_rom_then_nvs();
+  wiring_fallback_run_is_published_as_fallback();
+  wiring_no_relay_without_the_grant();
+  wiring_leak_changes_nothing_in_irrigation();
+  wiring_stop_and_run_now_commands();
+  wiring_local_time_rules();
   std::printf("test_irrigation_program: %d checks, %d failed\n", checks_run, checks_failed);
   return checks_failed == 0 ? 0 : 1;
 }

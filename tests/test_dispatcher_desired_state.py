@@ -527,8 +527,16 @@ async def test_a_desired_row_for_a_retired_unknown_or_read_only_parameter_never_
     knob = KNOBS[0]
     connect(env, [knob])
     at = T0 - timedelta(minutes=1)
-    unusable = ("irrig_wall_days_mask", "sw_fsm_controller_enabled", "no_such_setting", "temp_low", "sw_irrig_enabled")
-    assert REGISTRY["irrig_wall_days_mask"].control_class == "retired"
+    # VD-47 removed irrig_wall_days_mask from the registry, so a stale row names an unknown setting; bias_cool stays.
+    unusable = (
+        "irrig_wall_days_mask",
+        "bias_cool",
+        "sw_fsm_controller_enabled",
+        "no_such_setting",
+        "temp_low",
+        "sw_irrig_enabled",
+    )
+    assert "irrig_wall_days_mask" not in REGISTRY and REGISTRY["bias_cool"].control_class == "retired"
     for param in unusable:
         env.db.write(param, 1.0, at=at)
     env.db.write(knob.param, knob.desired, at=at)

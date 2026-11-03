@@ -26,8 +26,9 @@ It also renders firmware/test/irrigation_program_vectors_generated.inc (VD-44, #
 JSON: the vector bytes, hashes and decoded programs, the text samples, the fixed codes of
 verdify_schemas/irrigation.py (line kinds, clean partners and BOUNDS_BY_KIND included), and
 REJECT_CASES, golden vectors with bytes patched and the code unpack_program() gives each, so the
-C++ decoder is checked against the Python one. --check covers the include too; never edit it by
-hand.
+C++ decoder is checked against the Python one; and each irr_state sample as the controller
+formatter's input (VD-45, #1160), so irr_format_state() reproduces every sample byte for byte.
+--check covers the include too; never edit it by hand.
 """
 
 from __future__ import annotations
@@ -619,7 +620,59 @@ def render_include(fixture: dict) -> str:
         )
     out.append("};")
     out.append(f"static const uint8_t kEventsParsedCount[] = {{{', '.join(counts)}}};")
+    out.extend(_state_rows(text["irr_state"]))
     return "\n".join(out) + "\n"
+
+
+def _state_rows(samples: list[dict]) -> list[str]:
+    """Each irr_state sample as the controller's formatter input (VD-45, #1160): its parsed form, or
+    for overflow_drops_waiting the state it was formatted from, so irr_format_state() must drop the
+    same w= tokens."""
+    max_waits = max(len((s.get("formatted_from") or s["parsed"])["waiting"]) for s in samples)
+    max_faults = max(len((s.get("formatted_from") or s["parsed"])["faults"]) for s in samples)
+    fault_code = {word: code for code, word in irr.FAULT_CODES.items()}
+    source_code = {word: code for code, word in irr.VPD_SOURCE_CODES.items()}
+    out = [
+        "// Each irr_state sample as irr_format_state()'s input: its parsed form, or for",
+        "// overflow_drops_waiting the state it was formatted from (VD-45, #1160).",
+        "struct GoldenRun { bool valid; uint8_t line; const char* cause; uint16_t slot_id; uint32_t start_epoch; "
+        "uint32_t end_epoch; };",
+        "struct GoldenWait { uint8_t line; const char* reason; uint32_t until_epoch; };",
+        "struct GoldenFault { uint8_t line; char kind; uint32_t until_epoch; };",
+        "struct GoldenState {",
+        "  GoldenRun drip; GoldenRun mist;",
+        f"  uint8_t wait_count; GoldenWait waits[{max_waits}];",
+        f"  uint8_t fault_count; GoldenFault faults[{max_faults}];",
+        "  const char* vpd; const char* reject;",
+        "};",
+        "static const GoldenState kStateParsed[] = {",
+    ]
+    for sample in samples:
+        state = sample.get("formatted_from") or sample["parsed"]
+        runs = {"drip": '{false, 0, "", 0, 0, 0}', "mist": '{false, 0, "", 0, 0, 0}'}
+        for run in state["runs"]:
+            idx = irr.DEVICE_IDX[run["line_id"]]
+            manifold = "drip" if idx in irr.DRIP_MANIFOLD_IDX else "mist"
+            runs[manifold] = (
+                f"{{true, {idx}, {_c_string(run['cause'])}, {run['slot_id'] or 0}, {run['start_epoch']}, "
+                f"{run['end_epoch']}}}"
+            )
+        waits = ", ".join(
+            f"{{{irr.DEVICE_IDX[w['line_id']]}, {_c_string(w['reason'])}, {w['until_epoch'] or 0}}}"
+            for w in state["waiting"]
+        )
+        faults = ", ".join(
+            f"{{{irr.DEVICE_IDX[f['line_id']]}, '{fault_code[f['fault']]}', {f['until_epoch']}}}"
+            for f in state["faults"]
+        )
+        sources = state["vpd_source"]
+        vpd = "".join(source_code[sources[zone]] for zone in ("center", "south", "west")) if sources else ""
+        out.append(
+            f"    {{{runs['drip']}, {runs['mist']}, {len(state['waiting'])}, {{{waits}}}, {len(state['faults'])}, "
+            f"{{{faults}}}, {_c_string(vpd)}, {_c_string(state['reject'] or '')}}},  // {sample['name']}"
+        )
+    out.append("};")
+    return out
 
 
 def main() -> int:

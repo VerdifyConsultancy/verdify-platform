@@ -153,6 +153,7 @@ humidification minutes.
 | `irrigation_ledger` | The engine's outcomes, one row per occurrence or run-now (§6.2) |
 | `v_irrigation_minutes_daily` | Minutes, pulses and gallons per America/Denver day by zone, line, cause and chemistry (M4, §6.2) |
 | `v_irrigation_day_coverage` | Each America/Denver day's coverage: `complete`, `partial` or `no_data` (M4, §6.2) |
+| `fn_irrigation_minutes_daily(from, to)` | The minutes view's rows for a day range, with the scan bounded by it (M4, §6.2) |
 
 ### 4.2 Line fields (editable)
 
@@ -373,6 +374,55 @@ as the core settles them:
   engine reports the commanded length of each mister it opens (`mist_cmd_s`) for the D-IRP-19
   watchdog, since a prewet or flush on a mister can run up to 1800 s.
 
+### 4.9 What the engine wiring settles (VD-45)
+
+`firmware/greenhouse/irrigation_engine.yaml` and `firmware/lib/irrigation_engine_esphome.h` put the core
+on the controller; the pure part of the wiring is in `irrigation_program.h` with the core. These are the
+points the design left open, as the wiring settles them:
+
+- **Start.** The first 5 s tick binds the relays, the three text sensors and `irr_grant_mask`, then starts
+  the engine: the RTC block by the reset reason, the claims record, and the stored program (`src=nvs` when
+  it decodes against its hash). In the seconds before that, every wet relay guard refuses, a VPD pulse
+  gets no grant and the services log and ignore the call; the ingestor's 60 s pass pushes again.
+- **Clock.** The tick takes the local offset from one ESPTime reading (its local hour, minute and second
+  against its UTC epoch), so DST changeovers follow §4.3's rules by construction.
+- **Grant order.** Every engine call is applied the same way: `irr_state` is published if it changed, the
+  bits of the relays about to open go into `irr_grant_mask`, the relays the engine let go close (L03
+  last), the engine's relays open (L03 first), and the bits of what closed clear. A fertilizer relay no
+  longer opens L03 itself; the engine opens it with each feed.
+- **Climate closes.** The climate path never closes a mister the engine's own run holds (a window, a feed,
+  a mist prewet or flush): its every-tick and pulse-end turn-offs go through `irr_climate_close()`, which
+  closes only what the engine does not hold and hands back the climate's own VPD grant. The fertilizer
+  relays are the engine's alone.
+- **VPD grants.** `irr_vpd_grant(idx, pulse_ms)` carries the pulse's commanded length, which is the `m=`
+  token's planned end; the climate path works out the weighted S2 length before the pulse opens. A wait,
+  a refusal or a pulse already served by a window on the zone opens nothing, and the climate path asks
+  again one pulse later.
+- **Zone fence.** An engine pulse that closes, a VPD release and a stop stamp the zone's off time when
+  they happen. The next tick's relay sample stamps only the closes the engine did not see (a mist prewet
+  or flush, a relay closed outside an engine call), so a window's pulses run `max(gap_s,
+  mister_min_off_s)` apart and `irr_state` does not change between them.
+- **Runs not yet open.** A run whose relay cannot open yet (a drip waiting for a VPD pulse or fog to end,
+  a feed waiting for fog, a flush that opens at the next tick) is published as `w=<line>,man`, with the
+  VPD pulse's end when one holds the manifold, never as a `d=` or `m=` token with no start time.
+- **Stop.** A stop closes the wet relays in its scope inside the call (255: L01 to L10), the climate's VPD
+  pulse included. Fog is climate only: a stop never touches it, and a stop naming L11 does nothing.
+- **Program push.** A commit that decodes is saved to NVS and synced, then runs from the next tick. If the
+  save or sync fails the old program keeps running with no reject token (the `j=` vocabulary has none for
+  storage), and the ingestor's next pass pushes again. A commit with no begin does nothing.
+- **Water and mirrors.** The flow accrual adds integer centi-gallons to the RTC block and carries the
+  fraction; `mister_water_today` mirrors the block at once, and `runtime_mister_*_ms` and
+  `runtime_*_drip_ms` at each tick. Until VD-46 the accrual runs for climate pulses and fog only, as
+  before.
+- **Climate inputs.** Each second the climate loop writes the engine's inputs: SENSOR_FAULT and
+  SAFETY_COOL from the mode, degraded sensing (the average probes are out), the VPD emergency, the
+  measured RH and the dew margin, the soft budget, `mister_min_off_s`, confirmed occupancy, the VPD source
+  per zone and the climate-yield demand (fog or VPD mist that only a drip holds back). None reads the
+  leak. The RH and the dew margin come from one measured pair: the average probes, else the
+  controller-case probe while it answers, never the loop's fabricated fallback values. With neither the
+  RH reads missing (it never blocks) and the margin unknown. Degraded sensing means the averages are out,
+  so the case probe is what lets a `degraded_only` window run (D-IRP-12).
+
 ## 5. Firmware changes
 
 All of this is one release. The pure logic lives in headers under `firmware/lib/`, with native tests
@@ -407,6 +457,16 @@ same PR: `occupancy_quiet_override` and `occupancy_override_until_ms` with their
 then reads only the latches), and `num_fan_burst`, `num_vent_bypass` and `num_fog_burst` with their
 registry rows and routes. `bs_manual_fan`, `bs_vent_lock` and `bs_manual_fog` stay, reading the
 latches, so `fan_burst_active`, `vent_bypass_active` and `fog_burst_active` confirm each burst.
+
+As built (VD-47): the latch arithmetic is three pure, native-tested helpers in
+`firmware/lib/greenhouse_logic.h` (`manual_override_deadline_ms()`, `manual_latch_active()` and
+`manual_latch_toggle()`), so the push buttons clamp `manual_override_timeout_min` to the same 1-120
+minutes as the service. F13 also deleted the globals #1160 left with no reader (the weekly-feed journal
+`wall_feed_*`, the job machine's cycle and last-day counters, `irrig_vpd_stress_ms` and
+`outdoor_rh_mode`). With no entity in the engine firmware, the L01 bridge's rows carry their own step,
+label and unit, and the two `irrig_*_duration_min` rows drop their firmware clamp (`min` and `max` keep
+1-120); `RETIRING_TUNABLES` keeps the bridge's eight pre-engine entities, which
+`test_retiring_tunables_are_live_or_the_l01_bridge` accepts until the follow-up empties the set.
 
 **Tests and docs pinned to ADR-0007 or the leak interlock** change in the same release (F6 to F10,
 F14): `firmware/test/test_greenhouse_logic.cpp:5263-5298`; invariants #2, #15 and #26 in
@@ -501,12 +561,17 @@ is pending, and every 60 s in full:
   (`fert_master_valve`), maps each relay to its line and zone (§3) with a fixed line map in the view, and
   takes gallons from the `water_meter_events` attribution. It does not use `water_systems`: its rows
   (migration 085) leave the wall drips without a zone and put fog in center. It needs no engine, so it
-  ships first and covers the history back to 2024-11-17.
+  ships first and covers the history back to 2025-08-05, the first wet-relay `equipment_state` row
+  (2024-11-17 is the first grow-light row).
 - **Cause.** In M4, cause comes from today's topology: L04, L07, L09 and fog are `vpd`, L02 and L03 are
-  `feed`, and the rest are `unknown`. M3, which adds `irrigation_command`, extends the view: an L01 run
-  that starts within 30 s of a bridge command (§6.5) is `run_now`, and each run matches its
-  `irrigation_ledger` row (same line, overlapping time) for cause and slot; any other run keeps its M4
-  cause.
+  `feed`, and the rest are `unknown`. M3 (migration 283), which adds `irrigation_command`, extends the
+  view: each run takes cause and slot from the newest `irrigation_ledger` row on its line that started
+  at most 24 hours before it and whose span (to now while it is open) contains the run's start; an
+  unmatched L01 run that starts within 30 s after the `sent_at` of a sent bridge run command (§6.5) is
+  `run_now`; any other run keeps its M4 cause. No occurrence lasts 24 hours (a 60-pulse mist window
+  with 600 s gaps and its 60 min tail, or a feed with its prewet, flush and waits, is under 16), and the
+  bound keeps the per-run lookup on an index and keeps a row whose end never arrived from claiming
+  later runs.
 - **`irrigation_ledger`** (written by the ingestor): one row per engine occurrence or run-now, with
   `line_id`, `slot_id`, `local_day`, `cause` (`vpd`, `schedule`, `run_now`, `feed`, `prewet`, `flush`,
   `fallback`, `unknown`) and start from `irr_state`, which names them before the relay opens, and
@@ -520,14 +585,29 @@ is pending, and every 60 s in full:
 - **`v_irrigation_minutes_daily`.** Valve-open minutes, pulses and gallons per America/Denver day,
   split at local midnight (23- and 25-hour days are handled), by zone, line, cause and chemistry.
   Per-day coverage comes from `v_irrigation_day_coverage`, also in M4, built on `data_gaps` and the
-  newest `climate` row: a day wholly inside a gap, or after the newest `climate` row, is `no_data`; today
-  and any other day a gap touches are `partial`; the rest are `complete`. So days before climate's
-  365-day retention stay complete, and a day with no runs is told apart from a day with no data. Gaps
-  show as gaps, never as zero; nothing is back-filled.
+  newest `climate` row: a day wholly inside a gap, or after the newest `climate` row (every day when
+  there is no `climate` row at all), is `no_data`; today and any other day a gap touches are `partial`;
+  the rest are `complete`. So days before climate's 365-day retention stay complete, and a day with no
+  runs is told apart from a day with no data. Gaps show as gaps, never as zero; nothing is back-filled.
+- **`fn_irrigation_minutes_daily(from, to)`.** The view rebuilds every run since the first edge on each
+  read (about 1.4 s for 30 days on production in 2026-11, and more at two years of misting), so M4 also
+  ships this reader: the view's rows for local days `from`..`to`, with the `equipment_state` scan bounded
+  by the range. It is seeded with each relay's state at `from`'s local midnight, read as
+  `v_water_relay_runs` reads it (any row on at the newest timestamp before it, rather than
+  `fn_equip_at`'s single row), and a run still open at the end of the range looks ahead for its
+  closing edge, so its gallons match the view's. It is SECURITY DEFINER and granted like the views.
+  API-IRR-10 reads it, and API-IRR-01's minutes and MCP `irrigation_history` get the same numbers from
+  it; a 30-day read is about 0.7 s on production and a 400-day read about 1.7 s. M3 redefines it with
+  the view, and starts a run already on at `from` where the view starts it (the newest conflicting
+  timestamp since the relay was last off, else the first timestamp after that), so the run matches
+  the same ledger row and bridge command in both.
 - **Gallons (D-IRP-18, Round 2b B), informational.** Whole gallons per run and per day: `gal` is the
   whole-gallon meter delta attributed to the run or mist episode (±1 gal; the meter also counts the
   hose, sink and hydro). There is no per-run rate and no flow flag; a run that moved no water reads
-  "0 gal". These figures stop nothing.
+  "0 gal". These figures stop nothing. A day's `gal` sums `v_water_run_accounting.meter_attributed_gal`
+  over the runs that start that day; when none of them overlapped an accepted delta it reads 0 if the
+  meter recorded one that day and NULL if it recorded none. L03's valve minutes have no gallons: its
+  water counts on the line it feeds.
 
 ### 6.3 Alerts (in-app `alert_log`, category `water`)
 

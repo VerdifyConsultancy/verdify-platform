@@ -777,6 +777,73 @@ async def test_no_path_enqueues_more_than_twelve_commands(plain, monkeypatch, ca
     assert any("action=cap_exceeded" in record.getMessage() for record in caplog.records)
 
 
+# VD-47 (#1162, irrigation F12 and F13): the parameters whose registry rows and
+# routes retired with the Home Assistant buttons and the old irrigation entities.
+VD47_RETIRED_PARAMS = frozenset(
+    {
+        "fan_burst_min",
+        "vent_bypass_min",
+        "fog_burst_min",
+        "mister_max_runtime_min",
+        "irrig_vpd_boost_pct",
+        "irrig_vpd_boost_threshold_hrs",
+        "sw_wall_fertigation_commissioned",
+        "wall_commissioning_revision",
+        "wall_commissioning_evidence_mask",
+        "wall_commissioning_valid_until_epoch_s",
+        "wall_flow_lpm",
+        "wall_flow_valid_until_epoch_s",
+        "wall_prewet_liters",
+        "wall_feed_liters",
+        "wall_flush_liters",
+        *(
+            f"irrig_{side}_{field}"
+            for side in ("wall", "center")
+            for field in (
+                "start_hour",
+                "start_min",
+                "fert_duration_min",
+                "fert_every_n",
+                "days_mask",
+                "fert_days_mask",
+                "flush_min",
+                "interval_days",
+            )
+        ),
+    }
+)
+
+
+def test_retired_parameters_have_no_row_and_no_route():
+    """A retired name is skipped by name, so it must be one the registry and the routes no longer know."""
+    assert len(VD47_RETIRED_PARAMS) == 31
+    assert VD47_RETIRED_PARAMS <= _common.RETIRED_UNROUTABLE_PARAMS
+    for param in _common.RETIRED_UNROUTABLE_PARAMS:
+        assert param not in REGISTRY, param
+        assert param not in _common.PARAM_TO_ENTITY and param not in _common.SWITCH_TO_ENTITY, param
+
+
+@pytest.mark.asyncio
+async def test_a_plan_row_naming_a_retired_parameter_is_skipped_without_an_error(plain, caplog):
+    """After the platform sync a stale plan row naming one is never pushed and never fails unroutable."""
+    caplog.set_level(logging.INFO)
+    (param, _device, plan_value), *_ = PARAMS
+    _load(plain, PARAMS[:1])
+    plain.db.plan.update(dict.fromkeys(VD47_RETIRED_PARAMS, 1.0))
+
+    await plain.run_pass()
+    assert plain.controller.sent_params() == [param]
+    assert [(row["parameter"], row["value"]) for row in plain.db.changes] == [(param, plan_value)]
+    assert not [record.getMessage() for record in caplog.records if record.levelno >= logging.ERROR]
+    skipped = {
+        record.getMessage().rsplit(": ", 1)[1]
+        for record in caplog.records
+        if record.getMessage().startswith("Dispatcher skipping retired unroutable param from plan row: ")
+    }
+    assert skipped == VD47_RETIRED_PARAMS
+    assert not any("reason=unroutable" in record.getMessage() for record in caplog.records)
+
+
 def test_paced_order_is_oldest_difference_first_then_name(monkeypatch):
     names = [param for param, _device, _plan in PARAMS[:14]]
     since = {name: T0 for name in names}

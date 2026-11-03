@@ -1,0 +1,57 @@
+{
+  "plan": {
+    "plan_id": "iris-20261102-0702", "trigger": "SUNRISE", "written_at": "2026-11-02T14:02:00Z",
+    "valid_from": "2026-11-02T14:02:00Z", "valid_until": "2026-11-03T00:30:00Z", "status": "active",
+    "hypothesis": "Hot, dry afternoon: engage misting earlier from 13:00 and widen the pulse gap at dusk."
+  },
+  "no_plan_since": null,
+  "lanes": [
+    {
+      "param": "mister_engage_kpa", "label": "VPD Mister Engage", "unit": "kPa",
+      "device": {"value": 1.6, "observed_at": "2026-11-02T16:58:00Z", "reason": null},
+      "waypoints": [
+        {"at": "2026-11-02T14:00:00Z", "value": 1.6, "source": "iris", "effective": false},
+        {"at": "2026-11-02T20:00:00Z", "value": 1.7, "source": "iris", "effective": false}
+      ],
+      "desired": {"id": 51, "param": "mister_engage_kpa", "value": 1.55, "manual": false, "state": "requested", "state_reason": null, "confirmed_at": null, "actor": {"source": "dashboard", "name": "Jason"}, "reason": "drier afternoon", "created_at": "2026-11-02T15:00:00Z"},
+      "applied_from": "desired"
+    },
+    {
+      "param": "mister_pulse_gap_s", "label": "Mister pulse gap", "unit": "s",
+      "device": {"value": 60, "observed_at": "2026-11-02T16:58:00Z", "reason": null},
+      "waypoints": [
+        {"at": "2026-11-02T18:00:00Z", "value": 50, "source": "iris", "effective": true},
+        {"at": "2026-11-02T22:00:00Z", "value": 60, "source": "iris", "effective": true}
+      ],
+      "desired": null,
+      "applied_from": "plan"
+    },
+    {
+      "param": "fog_rh_ceiling_pct", "label": "Fog RH ceiling", "unit": "%",
+      "device": {"value": 88, "observed_at": "2026-11-02T16:58:00Z", "reason": null},
+      "waypoints": [
+        {"at": "2026-11-02T19:00:00Z", "value": 85, "source": "preemptive", "effective": true}
+      ],
+      "desired": null,
+      "applied_from": "plan"
+    },
+    {
+      "param": "mister_pulse_on_s", "label": "Mister pulse on", "unit": "s",
+      "device": {"value": 60, "observed_at": "2026-11-02T16:58:00Z", "reason": null},
+      "waypoints": [
+        {"at": "2026-11-02T20:00:00Z", "value": 45, "source": "iris", "effective": false}
+      ],
+      "desired": {"id": 38, "param": "mister_pulse_on_s", "value": 60, "manual": true, "state": "confirmed", "state_reason": null, "confirmed_at": "2026-10-30T16:01:00Z", "actor": {"source": "dashboard", "name": "Jason"}, "reason": "hold while the nozzles are cleaned", "created_at": "2026-10-30T16:00:00Z"},
+      "applied_from": "manual"
+    },
+    {
+      "param": "fan_stage_temp_f", "label": "Fan stage temperature", "unit": "°F",
+      "device": {"value": null, "observed_at": null, "reason": "no readback yet"},
+      "waypoints": [],
+      "desired": null,
+      "applied_from": "band"
+    }
+  ],
+  "manual_count": 1,
+  "health": []
+}

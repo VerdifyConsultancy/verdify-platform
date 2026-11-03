@@ -10,13 +10,17 @@ from __future__ import annotations
 import pytest
 
 from verdify_schemas.tunable_registry import (
-    DESIRED_READ_ONLY_REASONS,
-    DESIRED_WRITABLE_CLASSES,
+    ACTIVITY_MIRROR_PARAMS,
+    BAND_OWNER_SWITCH,
     IRRIGATION_SITE_PARAMS,
+    LEGACY_WIDE_LIMIT_PARAMS,
+    READ_ONLY_REASONS,
     REGISTRY,
+    WRITABLE_CONTROL_CLASSES,
     desired_write_rule,
 )
 
+# VD-47 retired these rows with their routes, so the rule refuses them as unknown names.
 WEEKLY_FEED_ROWS = (
     "sw_wall_fertigation_commissioned",
     "wall_commissioning_revision",
@@ -58,46 +62,44 @@ def test_the_legacy_wide_limits_are_read_only(name: str) -> None:
 
 @pytest.mark.parametrize("name", ["activity_start_hour", "activity_start_minute", "activity_duration_min"])
 def test_the_activity_mirror_is_read_only(name: str) -> None:
-    writable, reason = desired_write_rule(name)
-    assert not writable and "activity mirror" in reason
+    assert desired_write_rule(name) == (False, READ_ONLY_REASONS["activity_mirror"])
 
 
 @pytest.mark.parametrize("name", WEEKLY_FEED_ROWS)
-def test_the_nine_weekly_feed_rows_are_read_only(name: str) -> None:
-    writable, reason = desired_write_rule(name)
-    assert not writable and "weekly-feed" in reason
+def test_a_stale_row_naming_a_retired_weekly_feed_value_is_refused(name: str) -> None:
+    assert name not in REGISTRY
+    assert desired_write_rule(name) == (False, READ_ONLY_REASONS["unknown"])
 
 
 def test_band_ownership_retired_readback_and_unknown_rows_are_not_writable() -> None:
-    assert desired_write_rule("sw_onchip_band_enabled") == (False, "decides which side owns the band")
+    assert desired_write_rule(BAND_OWNER_SWITCH) == (False, READ_ONLY_REASONS["band_owner"])
     retired = next(name for name, spec in REGISTRY.items() if spec.control_class == "retired")
-    assert desired_write_rule(retired) == (False, "retired; the controller no longer reads it")
+    assert desired_write_rule(retired) == (False, READ_ONLY_REASONS["retired"])
     assert desired_write_rule("sw_fsm_controller_enabled")[0] is False  # retired, forced on by the dispatcher
     context = next(
         name
         for name, spec in REGISTRY.items()
-        if spec.control_class == "readback_context" and name not in DESIRED_READ_ONLY_REASONS
+        if spec.control_class == "readback_context" and name != BAND_OWNER_SWITCH
     )
-    writable, reason = desired_write_rule(context)
-    assert not writable and reason.startswith("readback only")
-    assert desired_write_rule("no_such_setting") == (False, "not in the tunable registry")
+    assert desired_write_rule(context) == (False, READ_ONLY_REASONS["readback_context"])
+    assert desired_write_rule("no_such_setting") == (False, READ_ONLY_REASONS["unknown"])
 
 
 def test_every_named_read_only_row_is_registered_and_of_a_writable_class() -> None:
     """A typo would leave a row writable; a row of a read-only class needs no entry."""
-    assert set(WEEKLY_FEED_ROWS) <= set(DESIRED_READ_ONLY_REASONS)
-    for name in DESIRED_READ_ONLY_REASONS:
+    assert BAND_OWNER_SWITCH in REGISTRY  # readback_context today; refused by name all the same
+    for name in LEGACY_WIDE_LIMIT_PARAMS | ACTIVITY_MIRROR_PARAMS:
         assert name in REGISTRY, name
-        if name != "sw_onchip_band_enabled":  # readback_context today; listed by name all the same
-            assert REGISTRY[name].control_class in DESIRED_WRITABLE_CLASSES, name
+        assert REGISTRY[name].control_class in WRITABLE_CONTROL_CLASSES, name
 
 
 def test_the_rule_matches_the_class_split_for_every_row() -> None:
+    named = LEGACY_WIDE_LIMIT_PARAMS | ACTIVITY_MIRROR_PARAMS | {BAND_OWNER_SWITCH}
     for name, spec in REGISTRY.items():
         writable, reason = desired_write_rule(name)
-        expected = name not in DESIRED_READ_ONLY_REASONS and (
+        expected = name not in named and (
             spec.control_class == "irrigation_site"
-            or (spec.control_class in DESIRED_WRITABLE_CLASSES and spec.esp_object_id is not None)
+            or (spec.control_class in WRITABLE_CONTROL_CLASSES and spec.esp_object_id is not None)
         )
         assert writable is expected, name
         assert (reason is None) is writable, name

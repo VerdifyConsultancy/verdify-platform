@@ -238,6 +238,21 @@ def _unregistered_entities(
     ]
 
 
+# The L01 bridge's pre-engine entities (irrigation §6.5) and the REGISTRY rows that
+# stay for each until #1165's follow-up (VD-47): the sw_irrig_* switches with their
+# sw_irrigation_* alias rows, and the two run-now durations.
+_L01_BRIDGE_ROWS: dict[str, tuple[str, ...]] = {
+    "sw_irrig_enabled": ("sw_irrig_enabled", "sw_irrigation_enabled"),
+    "sw_irrig_wall_enabled": ("sw_irrig_wall_enabled", "sw_irrigation_wall_enabled"),
+    "sw_irrig_center_enabled": ("sw_irrig_center_enabled", "sw_irrigation_center_enabled"),
+    "sw_irrig_south_enabled": ("sw_irrig_south_enabled",),
+    "sw_irrig_west_enabled": ("sw_irrig_west_enabled",),
+    "sw_irrig_weather_skip": ("sw_irrigation_weather_skip",),
+    "num_irrig_wall_duration": ("irrig_wall_duration_min",),
+    "num_irrig_center_duration": ("irrig_center_duration_min",),
+}
+
+
 class TestDriftGuard:
     def test_registry_clamps_match_tunables_yaml(self, tunables_yaml: str) -> None:
         """Every registry entry with fw_clamp_lo/hi must match tunables.yaml.
@@ -280,7 +295,8 @@ class TestDriftGuard:
         RETIRING_TUNABLES, the entities the engine release removes.
         """
         entities = _tunable_entities(tunables_yaml)
-        assert len(entities) > 150, f"tunables.yaml entity parse came back short: {len(entities)}"
+        # 142 numbers and switches since VD-47 retired 25 of them.
+        assert len(entities) > 120, f"tunables.yaml entity parse came back short: {len(entities)}"
         missing = _unregistered_entities(tunables_yaml, REGISTRY, RETIRING_TUNABLES)
         assert not missing, (
             f"{len(missing)} tunables.yaml entities have no REGISTRY row and are not in RETIRING_TUNABLES "
@@ -321,20 +337,41 @@ class TestDriftGuard:
             """
         )
         assert len(_tunable_entities(snippet)) == 5
-        # Matched by object_id, by the getter's global (twice) and by
-        # RETIRING_TUNABLES; only the brand-new number fails, named.
-        assert _unregistered_entities(snippet, REGISTRY, RETIRING_TUNABLES) == [
+        # Matched by object_id, by the getter's global (twice) and by the
+        # retiring set; only the brand-new number fails, named. (The set is
+        # explicit: since VD-47 RETIRING_TUNABLES holds only the L01 bridge's.)
+        retiring = frozenset({"num_post_feed_hold_min"})
+        assert _unregistered_entities(snippet, REGISTRY, retiring) == [
             "number num_brand_new_knob (name 'Brand New Knob (s)', global brand_new_knob_s)"
         ]
-        assert not _unregistered_entities(snippet, REGISTRY, RETIRING_TUNABLES | {"num_brand_new_knob"})
-        # Without its RETIRING_TUNABLES entry the unrowed hold fails too.
+        assert not _unregistered_entities(snippet, REGISTRY, retiring | {"num_brand_new_knob"})
+        # Without its retiring entry the unrowed hold fails too.
         assert len(_unregistered_entities(snippet, REGISTRY, frozenset())) == 2
 
-    def test_retiring_tunables_are_live_entities(self, tunables_yaml: str) -> None:
-        """A RETIRING_TUNABLES entry leaves the set with its entity (#1162), so none outlives it."""
+    def test_retiring_tunables_are_live_or_the_l01_bridge(self, tunables_yaml: str) -> None:
+        """A RETIRING_TUNABLES entry is a live entity the next release removes, or one of the L01
+        bridge's pre-engine entities (VD-47, #1162): their entities left the YAML, but the rows
+        behind them stay, routed, until #1165's follow-up retires the rows and empties the set."""
         entity_ids = {entity.entity_id for entity in _tunable_entities(tunables_yaml)}
-        stale = sorted(RETIRING_TUNABLES - entity_ids)
-        assert not stale, f"RETIRING_TUNABLES names entities tunables.yaml no longer has: {stale}"
+        gone = RETIRING_TUNABLES - entity_ids
+        assert gone == set(_L01_BRIDGE_ROWS), (
+            "RETIRING_TUNABLES names entities tunables.yaml no longer has that are not the L01 bridge's: "
+            f"{sorted(gone - set(_L01_BRIDGE_ROWS))}; bridge entities still listed: "
+            f"{sorted(set(_L01_BRIDGE_ROWS) - gone)}"
+        )
+        numbers, switches = _parse_entities(tunables_yaml)
+        for entity_id, rows in _L01_BRIDGE_ROWS.items():
+            for name in rows:
+                spec = REGISTRY[name]
+                # Still routed for the pre-engine firmware, but no entity in this release.
+                assert spec.esp_object_id and spec.esp_object_id not in numbers | switches, (entity_id, name)
+                assert name not in _ENTITY_NAMES, name
+                # Its own step, label and unit (the entity's), and no firmware clamp.
+                assert spec.step == 1.0 and spec.label and spec.notes, name
+                assert spec.fw_clamp_lo is None and spec.fw_clamp_hi is None, name
+                assert spec.control_class == "controller_safety" and not spec.planner_pushable, name
+        for name in ("irrig_wall_duration_min", "irrig_center_duration_min"):
+            assert (REGISTRY[name].unit, planner_effective_bounds(name)) == ("min", (1.0, 120.0))
 
     def test_controls_setpoints_are_not_literal_policy(self, controls_yaml: str) -> None:
         """Setpoints fields must come from globals/handler values, not local
@@ -615,14 +652,9 @@ class TestActivityDirectWetGuards:
             assert row.control_class == "scheduled_policy"
             assert row.push_owner == "schedule"
             assert row.cfg_readback_object_id  # readback visibility preserved
+        # VD-47 retired the day-mask rows with their cfg_* readbacks.
         for name in self.RETIRED_IRRIGATION_MASKS:
-            row = REGISTRY[name]
-            assert not row.planner_pushable
-            assert row.control_class == "retired"
-            assert row.push_owner == "firmware_internal"
-            assert row.esp_object_id is None
-            assert row.default == 0
-            assert row.cfg_readback_object_id
+            assert name not in REGISTRY
         for name in (
             "direct_wet_stress_vpd_margin_kpa",
             "direct_wet_stress_min_dew_margin_f",
@@ -646,11 +678,10 @@ class TestActivityDirectWetGuards:
             "const bool west_wet_allowed = false",
             "const bool center_wet_allowed = climate_wet_assist_demand",
             "direct_wet_relay_watchdog",
-            "id(south_wall_mister).turn_off();",
-            "id(west_wall_mister).turn_off();",
-            "id(south_wall_mister_fertilized).turn_off();",
-            "id(west_wall_mister_fertilized).turn_off();",
-            "id(center_drips_fertilized).turn_off();",
+            # #1160: the climate path closes only what the irrigation engine's own run does not hold.
+            "irr_climate_close(id(south_wall_mister), verdify_irr::kL07);",
+            "irr_climate_close(id(west_wall_mister), verdify_irr::kL09);",
+            "if(!center_wet_allowed) irr_climate_close(id(center_mister), verdify_irr::kL04);",
             "|| !any_mister_wet_allowed",
             "active_zone_gate_closed",
             "if(center_wet_allowed) return 3",
@@ -666,30 +697,32 @@ class TestActivityDirectWetGuards:
         assert not missing, f"Mister direct-wet gate coverage missing: {missing}"
         assert "crop_direct_wet_allowed" not in controls_yaml
 
-    def test_irrigation_state_machine_gates_explicit_clean_and_weekly_wall_feed(self, controls_yaml: str) -> None:
-        required = [
+    def test_the_irrigation_engine_replaced_the_job_machine(self, controls_yaml: str, greenhouse_yaml: str) -> None:
+        """#1160 (F1, F14): the engine package runs every drip, feed and scheduled window; the job
+        machine, its explicit-clean and weekly-feed gates and its leak cancel are gone."""
+        assert "irrigation: !include greenhouse/irrigation_engine.yaml" in greenhouse_yaml
+        for gone in (
             "WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED",
             "WetCommandOrigin::EXPLICIT_IRRIGATION",
-            "weekly_wall_feed_eligible(eligibility, weekly_state, durations)",
-            "persist_weekly_and_sync(claimed, 0)",
-            "return;  // weekly owner excludes every explicit clean writer",
-            "id(irrig_queue) &= (1 | 4);",
-            "id(wall_drips).turn_off();",
-            "id(wall_drips_fertilized).turn_off();",
-            "id(center_drips).turn_off();",
-            "id(center_drips_fertilized).turn_off();",
-            "id(fertilizer_master_valve).turn_off();",
-            "direct_wet_relay_watchdog",
-            'cancel_all("leak")',
-            'cancel_all("irrigation disabled")',
-            'ESP_LOGW("irrig", "EXPLICIT CLEAN REJECTED: %s"',
-        ]
-        missing = [needle for needle in required if needle not in controls_yaml]
-        assert not missing, f"Irrigation direct-wet gate coverage missing: {missing}"
+            "weekly_wall_feed_eligible",
+            "persist_weekly_and_sync",
+            "cancel_all(",
+            "irrig_state",
+            "id(irrig_queue)",
+            "water_controller_actuating",
+            "fert_controller_actuating",
+            "climate_wet_controller_actuating",
+        ):
+            assert gone not in controls_yaml, gone
+        # A drip run of the engine holds the water for climate mist and fog.
+        assert "const bool irrigation_water_conflict = irr_drip_active();" in controls_yaml
+        assert "bool irrigation_block = irrigation_water_conflict;" in controls_yaml
 
     def test_climate_wet_watchdog_covers_only_climate_owned_relays(
         self, controls_yaml: str, hardware_yaml: str
     ) -> None:
+        """#1160 (F5): the watchdog closes only climate misters the engine does not hold, and the
+        per-tick fertilizer offs are gone: the program's enables and the engine's runs decide."""
         wet_relays = {
             "south_wall_mister",
             "south_wall_mister_fertilized",
@@ -700,38 +733,45 @@ class TestActivityDirectWetGuards:
             "center_mister",
             "center_drips",
             "center_drips_fertilized",
+            "fertilizer_master_valve",
         }
         missing_hardware = [relay for relay in wet_relays if f"id: {relay}" not in hardware_yaml]
         assert not missing_hardware, f"Expected wet relay missing from hardware.yaml: {missing_hardware}"
 
         watchdog = controls_yaml.split("auto direct_wet_relay_watchdog", 1)[1].split("};", 1)[0]
-        climate_owned = {
-            "south_wall_mister",
-            "south_wall_mister_fertilized",
-            "west_wall_mister",
-            "west_wall_mister_fertilized",
-            "center_mister",
+        for relay, line in (("south_wall_mister", "L07"), ("west_wall_mister", "L09"), ("center_mister", "L04")):
+            assert f"irr_climate_close(id({relay}), verdify_irr::k{line});" in watchdog
+        assert ".turn_off();" not in watchdog
+        for engine_owned in (
+            "wall_drips",
+            "wall_drips_fertilized",
+            "center_drips",
             "center_drips_fertilized",
-        }
-        missing_watchdog = [relay for relay in climate_owned if f"id({relay}).turn_off();" not in watchdog]
-        assert not missing_watchdog, f"Direct-wet watchdog does not close relays: {missing_watchdog}"
-        for irrigation_owned in ("wall_drips", "wall_drips_fertilized", "center_drips"):
-            assert f"id({irrigation_owned}).turn_off();" not in watchdog
+            "south_wall_mister_fertilized",
+            "west_wall_mister_fertilized",
+            "fertilizer_master_valve",
+        ):
+            assert f"id({engine_owned})" not in watchdog
+        # No climate path writes a fertilizer relay's OFF every tick any more.
+        for relay in ("center_drips_fertilized", "wall_drips_fertilized", "fertilizer_master_valve"):
+            assert f"id({relay}).turn_off();" not in controls_yaml
 
-    def test_legacy_fert_day_masks_cannot_schedule_actuation(self, controls_yaml: str) -> None:
-        required = [
-            "WeeklyWallEligibilityInput eligibility",
-            "current_solar_phase",
-            "solar_day, 7u",
-            "weekly_wall_feed_eligible(eligibility, weekly_state, durations)",
-        ]
-        missing = [needle for needle in required if needle not in controls_yaml]
-        assert not missing, f"Weekly solar scheduler coverage missing: {missing}"
+    def test_legacy_schedule_globals_cannot_schedule_actuation(self, controls_yaml: str) -> None:
+        """#1160: schedules are the irrigation program's; no legacy schedule global or weekly
+        eligibility gate is read by the control path (VD-47 deleted the globals with their cfg
+        readbacks)."""
+        for gone in ("WeeklyWallEligibilityInput", "weekly_wall_feed_eligible", "solar_day, 7u"):
+            assert gone not in controls_yaml
         for retired_scheduler_field in (
             "irrig_wall_fert_days_mask",
             "irrig_wall_fert_every_n",
             "irrig_center_fert_days_mask",
             "irrig_center_fert_every_n",
+            "irrig_wall_duration_min",
+            "irrig_center_duration_min",
+            "irrig_wall_enabled",
+            "irrig_center_enabled",
+            "irrig_enabled",
         ):
             assert f"id({retired_scheduler_field})" not in controls_yaml
 
@@ -741,20 +781,26 @@ class TestActivityDirectWetGuards:
         assert not row.planner_pushable
         assert row.push_owner == "operator"
 
-    def test_wall_fert_is_automatic_wall_only_and_not_manually_queued(
-        self, controls_yaml: str, tunables_yaml: str
+    def test_fertilizer_runs_only_through_the_engine_grant(
+        self, controls_yaml: str, hardware_yaml: str, tunables_yaml: str
     ) -> None:
-        required = [
-            "WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED",
-            "WetZone::WALL_DRIP, WetChemistry::FERTILIZER",
-            "id(wall_drips_fertilized).turn_on();",
-            "id(fertilizer_master_valve).turn_on();",
-            "id(wall_drips_fertilized).turn_off();",
-            "id(fertilizer_master_valve).turn_off();",
-            "WALL IMMEDIATE CLEAN FLUSH",
-        ]
-        missing = [needle for needle in required if needle not in controls_yaml]
-        assert not missing, f"Automatic wall-only fertigation missing from controls.yaml: {missing}"
+        """#1160 (F5, D-IRP-14): every fertilizer line is a per-line enable in the program; its relay,
+        and L03, open only with the engine's grant, never unconditionally off and never from a button."""
+        for relay, line in (
+            ("wall_drips_fertilized", "L02"),
+            ("center_drips_fertilized", "L06"),
+            ("south_wall_mister_fertilized", "L08"),
+            ("west_wall_mister_fertilized", "L10"),
+            ("fertilizer_master_valve", "L03"),
+        ):
+            start = hardware_yaml.index(f"    id: {relay}\n")
+            end = hardware_yaml.find("\n  - platform:", start)
+            block = hardware_yaml[start:end]
+            guard = block.split("on_turn_on:", 1)[1].split("on_turn_off:", 1)[0]
+            assert f"if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::k{line}))) {{" in guard
+            assert f'ESP_LOGE("irrig","Blocked ungranted {relay} ON");' in guard
+            assert "Blocked disabled" not in block
+        assert "WALL IMMEDIATE CLEAN FLUSH" not in controls_yaml
         for retired_button in (
             "btn_wall_fert",
             "btn_center_fert",

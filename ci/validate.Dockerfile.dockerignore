@@ -1,0 +1,18 @@
+# Build context for ci/validate.Dockerfile only. Kaniko (v1.23.2, the
+# in-cluster repo-build executor) and BuildKit read <Dockerfile>.dockerignore
+# in place of the root .dockerignore. The root file stays untouched because
+# path impact rebuilds every registered image when it changes.
+#
+# Admit only the Dockerfile's two COPY inputs: .git/HEAD (the source-revision
+# fallback) and the vendored PGDG signing key. Re-include each parent directory
+# before its file: Kaniko does not restore a file inside a directory that is
+# still excluded (see the db/ block in the root .dockerignore).
+*
+!.git
+.git/*
+!.git/HEAD
+!db
+db/*
+!db/qualification
+db/qualification/*
+!db/qualification/pgdg-ACCC4CF8.asc

@@ -1,0 +1,16 @@
+{
+  "migration": "286-lighting-policy-ignores-manual.sql",
+  "exact_final_migration_sha256": "60654e0450c1ce2b891397e1ec6d696d3715a11311609072a2a8ff4c819e3fa7",
+  "final_migration_qualification_pending": true,
+  "before": null,
+  "projected_successor": {
+    "api": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
+    "ingestor": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projection": "2026-11-02, before any measurement: the re-chain onto 285 (VD-56) had no production access. Every seal in the file and its registrations is a stand-in: the predecessor block carries 285's registered sha and seals (285's are themselves 284's stand-ins until 285 is measured), and the successor block and registrations carry those same seals. The api and ingestor seals are expected to move, so the file's own successor block refuses these stand-ins: fn_lighting_circuit_policy and fn_lighting_minutes_policy are in fn_runtime_ordinary_boundary_digest's invoker helper closure (217), whose function entries hash the definition and prosrc for both logins, as 275's jit change moved them. The MCP seal is expected to stay 285's: fn_mcp_runtime_boundary_digest (263) takes in a function only if an MCP role owns it or PUBLIC or an MCP role holds an ACL entry on it, 217 left neither function with one and no later migration grants them, and 275 changed fn_lighting_minutes_policy without moving it. If the probe shows the MCP digest moved, stop: that is a finding, not a literal to update. The function literals were checked read only on 2026-11-02: each live prosrc SHA-256 equals the file's predecessor value, each override predicate occurs once in pg_get_functiondef, and the server's own SHA-256 of each replaced prosrc equals the file's successor value. Once 285's row and seals are final, update the predecessor block if they changed, take the api and ingestor seals from --probe-only (with --apply-first for each of 283, 284 and 285 production lacks), set them in the file's successor block and receipt UPDATEs and in the c0-migration-delivery.py and bootstrap-six-runtime-roles.py registrations, update the file's sha at those registrations and here, and run the full qualification with --fixture.",
+  "qualified_successor": null,
+  "after_rollback": null,
+  "inside_transaction_receipts_match": false,
+  "final_migration_rollback_verified": false
+}

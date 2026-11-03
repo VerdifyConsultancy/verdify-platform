@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { expect, test } from "vitest";
-import { TIME_UNAVAILABLE, ageSeconds, duration, formatNumber, formatValue, localDate, localDayStart, localTime, plotTime, repeatedLocalTime, shortDateTime, shortTime } from "./format";
+import { TIME_UNAVAILABLE, ageSeconds, duration, formatNumber, formatValue, localDate, localDayStart, localTime, plotTime, repeatedLocalTime, shortDateTime, shortTime, sinceClock, unitDecimals } from "./format";
 
 const NBSP = " ";
 const MINUS = "−";
@@ -44,6 +44,21 @@ test("local days span real elapsed time and unparseable instants stay local to t
   expect(duration(14 * 60)).toBe(`14${NBSP}min`);
 });
 
+test("a since time reads HH:MM on today's America/Denver day and MM/DD HH:MM on any other, 24-hour", () => {
+  const now = Date.parse("2026-11-02T17:42:00Z"); // 10:42 MST
+  expect(sinceClock("2026-11-02T15:31:00Z", now)).toBe("08:31");
+  expect(sinceClock("2026-11-02T07:00:00Z", now)).toBe("00:00");
+  expect(sinceClock("2026-11-02T06:59:00Z", now)).toBe("11/01 23:59");
+  expect(sinceClock("2026-10-27T10:26:00Z", now)).toBe("10/27 04:26");
+  expect(sinceClock("2026-10-27T10:26:00-06:00", now)).toBe("10/27 10:26");
+  expect(sinceClock("2025-12-31T20:05:00Z", now)).toBe("12/31 13:05");
+  // The repeated fall-back hour carries its offset, today or not.
+  expect(sinceClock("2026-11-01T08:30:00Z", Date.parse("2026-11-01T18:00:00Z"))).toBe("01:30 GMT-07:00");
+  expect(sinceClock("2026-11-01T07:30:00Z", now)).toBe("11/01 01:30 GMT-06:00");
+  expect(sinceClock("not a time", now)).toBe(TIME_UNAVAILABLE);
+  expect(sinceClock("2026-11-02T15:31:00Z", Number.NaN)).toBe("11/02 08:31");
+});
+
 test("a missing value is a dash, never 0", () => {
   for (const unit of ["°F", "%", "kPa", "gal", "min", "lx", null]) {
     expect(formatValue(null, unit)).toBe("—");
@@ -74,6 +89,10 @@ test("units are fixed with their decimals, a no-break space before every unit bu
   expect(formatValue(38.6, "kB")).toBe(`39${NBSP}kB`);
   expect(formatValue(30, "s")).toBe(`30.0${NBSP}s`);
   expect(formatValue(1.25, null)).toBe("1.3");
+});
+
+test("unitDecimals matches the decimals formatValue prints", () => {
+  expect(["°F", "%", "kPa", "gal", "gal/min", "min", "kB", "ppm", "°", "s", null].map(unitDecimals)).toEqual([1, 1, 2, 0, 0, 0, 0, 0, 0, 1, 1]);
 });
 
 test("run time reads in whole minutes, and as hours and minutes from 120", () => {

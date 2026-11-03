@@ -325,20 +325,10 @@ switch:
     lambda: "return id(greenhouse_occupied);"
     turn_on_action:
       - lambda: |
-          const uint32_t now_ms = millis();
-          const bool override_active = id(occupancy_override_until_ms) != 0
-            && (int32_t)(id(occupancy_override_until_ms) - now_ms) > 0;
-          if (override_active) {
-            id(greenhouse_occupied) = false;
-            id(occupancy_last_true_ms) = 0;
-            id(sw_greenhouse_occupied).publish_state(false);
-            ESP_LOGW("occupancy","Ignoring OCCUPIED API push: local quiet override active");
-          } else {
-            id(greenhouse_occupied) = true;
-            id(occupancy_last_true_ms) = now_ms;
-            id(sw_greenhouse_occupied).publish_state(true);
-            ESP_LOGI("occupancy","Greenhouse OCCUPIED (API)");
-          }
+          id(greenhouse_occupied) = true;
+          id(occupancy_last_true_ms) = millis();
+          id(sw_greenhouse_occupied).publish_state(true);
+          ESP_LOGI("occupancy","Greenhouse OCCUPIED (API)");
     turn_off_action:
       - lambda: |
           id(greenhouse_occupied) = false;
@@ -419,9 +409,10 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(water_controller_actuating) || !id(irrig_west_enabled)) {
+          // F5 (#1160): only the irrigation engine's grant opens L09.
+          if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::kL09))) {
             id(west_wall_mister).turn_off();
-            ESP_LOGE("irrig","Blocked non-controller west clean-mister relay ON");
+            ESP_LOGE("irrig","Blocked ungranted west_wall_mister ON");
             return;
           }
 
@@ -442,8 +433,12 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          id(west_wall_mister_fertilized).turn_off();
-          ESP_LOGE("irrig","Blocked disabled west fertilizer path");
+          // F5 (#1160): only the irrigation engine's grant opens L10.
+          if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::kL10))) {
+            id(west_wall_mister_fertilized).turn_off();
+            ESP_LOGE("irrig","Blocked ungranted west_wall_mister_fertilized ON");
+            return;
+          }
     on_turn_off:
       - lambda: |-
           if(!id(south_wall_mister_fertilized).state &&
@@ -464,8 +459,12 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          id(south_wall_mister_fertilized).turn_off();
-          ESP_LOGE("irrig","Blocked disabled south fertilizer path");
+          // F5 (#1160): only the irrigation engine's grant opens L08.
+          if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::kL08))) {
+            id(south_wall_mister_fertilized).turn_off();
+            ESP_LOGE("irrig","Blocked ungranted south_wall_mister_fertilized ON");
+            return;
+          }
     on_turn_off:
       - lambda: |-
           if(!id(south_wall_mister_fertilized).state &&
@@ -486,9 +485,10 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(water_controller_actuating) || !id(irrig_south_enabled)) {
+          // F5 (#1160): only the irrigation engine's grant opens L07.
+          if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::kL07))) {
             id(south_wall_mister).turn_off();
-            ESP_LOGE("irrig","Blocked non-controller south clean-mister relay ON");
+            ESP_LOGE("irrig","Blocked ungranted south_wall_mister ON");
             return;
           }
 
@@ -509,9 +509,10 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(water_controller_actuating) || !id(irrig_wall_enabled)) {
+          // F5 (#1160): only the irrigation engine's grant opens L01.
+          if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::kL01))) {
             id(wall_drips).turn_off();
-            ESP_LOGE("irrig","Blocked non-controller wall clean-drip relay ON");
+            ESP_LOGE("irrig","Blocked ungranted wall_drips ON");
             return;
           }
 
@@ -526,11 +527,16 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(climate_wet_controller_actuating)
-             || id(irrig_state) != 0
-             || id(fertilizer_master_valve).state) {
+          // F5 (#1160): only the irrigation engine's grant opens L04: a climate VPD pulse
+          // through irr_vpd_grant(), or the engine's own window. SAF-5: never while L03 is open.
+          if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::kL04))) {
             id(center_mister).turn_off();
-            ESP_LOGE("irrig","Blocked non-climate center-mister relay ON");
+            ESP_LOGE("irrig","Blocked ungranted center_mister ON");
+            return;
+          }
+          if(id(fertilizer_master_valve).state) {
+            id(center_mister).turn_off();
+            ESP_LOGE("irrig","Blocked center_mister ON while L03 is open (SAF-5)");
             return;
           }
 
@@ -551,8 +557,12 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          id(center_drips_fertilized).turn_off();
-          ESP_LOGE("irrig","Blocked disabled center fertilizer path");
+          // F5 (#1160): only the irrigation engine's grant opens L06.
+          if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::kL06))) {
+            id(center_drips_fertilized).turn_off();
+            ESP_LOGE("irrig","Blocked ungranted center_drips_fertilized ON");
+            return;
+          }
     on_turn_off:
       - lambda: |-
           if(!id(south_wall_mister_fertilized).state &&
@@ -573,9 +583,10 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(water_controller_actuating) || !id(irrig_center_enabled)) {
+          // F5 (#1160): only the irrigation engine's grant opens L05.
+          if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::kL05))) {
             id(center_drips).turn_off();
-            ESP_LOGE("irrig","Blocked non-controller center clean-drip relay ON");
+            ESP_LOGE("irrig","Blocked ungranted center_drips ON");
             return;
           }
 
@@ -590,17 +601,11 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(fert_controller_actuating)
-             || !id(wall_feed_commissioning_ready)
-             || id(wall_feed_stage) != static_cast<int>(WallFeedStage::FEED)
-             || id(wall_feed_claim_revision) != id(wall_commissioning_revision)) {
+          // F5 (#1160): only the irrigation engine's grant opens L02.
+          if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::kL02))) {
             id(wall_drips_fertilized).turn_off();
-            ESP_LOGE("irrig","Blocked uncommissioned/non-sequenced wall fertilizer relay ON");
+            ESP_LOGE("irrig","Blocked ungranted wall_drips_fertilized ON");
             return;
-          }
-          if(!id(fertilizer_master_valve).state) {
-            id(fertilizer_master_valve).turn_on();
-            ESP_LOGW("irrig","FERT MASTER opened by wall fert-drip relay");
           }
     on_turn_off:
       - lambda: |-
@@ -622,23 +627,12 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(fert_controller_actuating)
-             || !id(wall_feed_commissioning_ready)
-             || id(wall_feed_stage) != static_cast<int>(WallFeedStage::FEED)
-             || id(wall_feed_claim_revision) != id(wall_commissioning_revision)) {
+          // F5 (#1160): the irrigation engine grants L03 only during a fertilizer run's feed
+          // (with each feed pulse on L08 and L10); it opens with the feed relay, first.
+          if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::kL03))) {
             id(fertilizer_master_valve).turn_off();
-            ESP_LOGE("irrig","Blocked uncommissioned/non-sequenced fert master ON");
-          }
-    on_turn_off:
-      - lambda: |-
-          if(id(wall_drips_fertilized).state
-             && id(wall_feed_commissioning_ready)
-             && id(wall_feed_stage) == static_cast<int>(WallFeedStage::FEED)
-             && id(wall_feed_claim_revision) == id(wall_commissioning_revision)) {
-            id(fert_controller_actuating) = true;
-            id(fertilizer_master_valve).turn_on();
-            id(fert_controller_actuating) = false;
-            ESP_LOGW("irrig","FERT MASTER manual-off corrected while fert relay active");
+            ESP_LOGE("irrig","Blocked ungranted fertilizer_master_valve ON");
+            return;
           }
 
   # --- Grow lights (HA native service calls, no on-device HTTP client) ---
@@ -810,71 +804,6 @@ sensor:
     accuracy_decimals: 3
     entity_category: diagnostic
     update_interval: never
-
-###############################################################################
-# Firmware-v2 MANUAL OVERRIDE BUTTONS (momentary toggle + deadline latch)
-# ---------------------------------------------------------------------------
-# Each press TOGGLES a latch that runs for manual_override_timeout_min minutes
-# (default 10) and SUPERSEDES all climate automation (only a re-press, the
-# timeout, or a true safety rail interrupts it). The deadline globals
-# (manual_*_until_ms) are consumed in controls.yaml's override layer. These
-# are template buttons (HA-pressable now; a physical GPIO binary_sensor can
-# call them via on_press). Fixes the inverted vent_lock that killed the fans.
-###############################################################################
-button:
-  - platform: template
-    id: btn_manual_fans
-    name: "Manual FANS (both + vent, 10min)"
-    on_press:
-      - lambda: |-
-          const uint32_t now_ms = millis();
-          const bool latched = id(manual_fans_until_ms) != 0
-              && (int32_t)(id(manual_fans_until_ms) - now_ms) > 0;
-          if (latched) {
-            id(manual_fans_until_ms) = 0;
-            ESP_LOGI("manual","FANS latch CLEARED by re-press");
-          } else {
-            uint32_t hold = (uint32_t)id(manual_override_timeout_min) * 60000UL;
-            id(manual_fans_until_ms) = now_ms + hold;
-            if (id(manual_fans_until_ms) == 0) id(manual_fans_until_ms) = 1;
-            ESP_LOGW("manual","FANS latched ON for %d min (both fans + vent)", id(manual_override_timeout_min));
-          }
-
-  - platform: template
-    id: btn_manual_humidify
-    name: "Manual HUMIDIFY (fogger, 10min)"
-    on_press:
-      - lambda: |-
-          const uint32_t now_ms = millis();
-          const bool latched = id(manual_fog_until_ms) != 0
-              && (int32_t)(id(manual_fog_until_ms) - now_ms) > 0;
-          if (latched) {
-            id(manual_fog_until_ms) = 0;
-            ESP_LOGI("manual","HUMIDIFY latch CLEARED by re-press");
-          } else {
-            uint32_t hold = (uint32_t)id(manual_override_timeout_min) * 60000UL;
-            id(manual_fog_until_ms) = now_ms + hold;
-            if (id(manual_fog_until_ms) == 0) id(manual_fog_until_ms) = 1;
-            ESP_LOGW("manual","HUMIDIFY latched ON for %d min (fogger only)", id(manual_override_timeout_min));
-          }
-
-  - platform: template
-    id: btn_vent_bypass
-    name: "Manual VENT-BYPASS (fans, vent closed)"
-    on_press:
-      - lambda: |-
-          const uint32_t now_ms = millis();
-          const bool latched = id(vent_bypass_until_ms) != 0
-              && (int32_t)(id(vent_bypass_until_ms) - now_ms) > 0;
-          if (latched) {
-            id(vent_bypass_until_ms) = 0;
-            ESP_LOGI("manual","VENT-BYPASS latch CLEARED by re-press");
-          } else {
-            uint32_t hold = (uint32_t)id(manual_override_timeout_min) * 60000UL;
-            id(vent_bypass_until_ms) = now_ms + hold;
-            if (id(vent_bypass_until_ms) == 0) id(vent_bypass_until_ms) = 1;
-            ESP_LOGW("manual","VENT-BYPASS latched ON for %d min (fans run, vent stays closed)", id(manual_override_timeout_min));
-          }
 
 ###############################################################################
 # END OF FILE

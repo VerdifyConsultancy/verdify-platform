@@ -337,8 +337,18 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "279-authentic-meter-source-clock-consumers.sql",
         # Desired state, the activity log and their successor seals run forward (VD-30).
         "280-desired-state-activity-log.sql",
+        # Minutes-by-zone views (M4) and their receipt re-seals run forward only.
+        "281-irrigation-minutes-by-zone.sql",
+        # The dashboard roles' OIDs must come from the forward hook, never baseline history (VD-66).
+        "282-dashboard-runtime-login.sql",
+        # Irrigation tables, seeds and grants (M3) and their receipt re-seals run forward (VD-38).
+        "283-irrigation-tables.sql",
+        # The dashboard login's grants on existing objects (M2b) and their receipt re-seals run forward (VD-74).
+        "284-dashboard-runtime-grants.sql",
+        # The daily scorecard view and its dashboard grant run forward only (VD-56).
+        "285-daily-scorecard-view.sql",
         # The lighting policy functions ignore manual rows; their seals run forward (VD-33).
-        "285-lighting-policy-ignores-manual.sql",
+        "286-lighting-policy-ignores-manual.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

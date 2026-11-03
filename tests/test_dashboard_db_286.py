@@ -1,11 +1,11 @@
-"""Migration 285 (VD-33) on a private TimescaleDB: the lighting policies ignore manual rows.
+"""Migration 286 (VD-33) on a private TimescaleDB: the lighting policies ignore manual rows.
 
 jvallery/agents#5994's campaign step starts a fresh server for each
 tests/test_dashboard_db_*.py file and sets VERDIFY_ISOLATED_TEST_DSN; without
 it this file skips, and a skip fails campaign qualification. The test loads
 db/schema.sql (whose two lighting policy functions are byte-identical to
 production's), replays 275's jit=off block (db/schema.sql predates it), and
-runs the statements between 285's $predecessor$ and $successor$ blocks. Those
+runs the statements between 286's $predecessor$ and $successor$ blocks. Those
 two blocks compare production digest literals, so the rolled-back native
 qualification on the production catalog proves them.
 """
@@ -21,7 +21,7 @@ import pytest
 from conftest import isolated_mutation_test_dsn
 
 ROOT = Path(__file__).resolve().parents[1]
-MIGRATION = ROOT / "db/migrations/285-lighting-policy-ignores-manual.sql"
+MIGRATION = ROOT / "db/migrations/286-lighting-policy-ignores-manual.sql"
 JIT_MIGRATION = ROOT / "db/migrations/275-lighting-minutes-policy-bounded-jit.sql"
 OWNER = "verdify"
 P_TS = datetime(2026, 11, 2, 18, 0, tzinfo=UTC)
@@ -82,7 +82,7 @@ def block(path: Path, start: str, end: str) -> str:
 
 
 def migration_body() -> str:
-    """The statements 285 runs between its predecessor and successor blocks."""
+    """The statements 286 runs between its predecessor and successor blocks."""
     return block(MIGRATION, "END $predecessor$;", "DO $successor$")
 
 
@@ -119,7 +119,7 @@ async def install(dsn: str) -> None:
     admin = await connect(dsn)
     try:
         if await admin.fetchval("SELECT to_regprocedure($1) IS NOT NULL", MINUTES):
-            pytest.fail("test_dashboard_db_285 needs a fresh database: the lighting policy already exists")
+            pytest.fail("test_dashboard_db_286 needs a fresh database: the lighting policy already exists")
     finally:
         await admin.close()
     await as_user(dsn, PRODUCTION_ROLES)
@@ -185,7 +185,7 @@ def test_manual_rows_stop_moving_either_lighting_policy_and_jit_stays_off(dsn):
             main = next(row for row in before["fn_lighting_circuit_policy"] if row["light_key"] == "main")
             assert main["dli_target"] == POLICY["gl_main_dli_target"]
 
-            # Before 285 a confirmed manual row is an override that sticks after its release.
+            # Before 286 a confirmed manual row is an override that sticks after its release.
             transaction = owner.transaction()
             await transaction.start()
             await insert_rows(owner, MANUAL, "manual", P_TS - timedelta(hours=1))
@@ -212,7 +212,7 @@ def test_manual_rows_stop_moving_either_lighting_policy_and_jit_stays_off(dsn):
             )
             assert await outputs(owner) == before  # nothing moves without a manual row
 
-            # After 285 the same manual rows leave both functions where they were.
+            # After 286 the same manual rows leave both functions where they were.
             await insert_rows(owner, MANUAL, "manual", P_TS - timedelta(hours=1))
             assert await outputs(owner) == before
 
@@ -228,7 +228,7 @@ def test_manual_rows_stop_moving_either_lighting_policy_and_jit_stays_off(dsn):
     asyncio.run(check())
 
 
-def test_285_refuses_a_second_run_on_its_own_successor(dsn):
+def test_286_refuses_a_second_run_on_its_own_successor(dsn):
     """Its predecessor digests no longer match once it ran: the body is not re-runnable."""
 
     async def check():
@@ -243,8 +243,8 @@ def test_285_refuses_a_second_run_on_its_own_successor(dsn):
                 )
                 == "8d4688c4ff0386b3b939b968ae815b50bacb7eb73a9d18cbbdddf95861d17c96"
             ):
-                await owner.execute(migration_body())  # this test ran first: bring the database to 285
-            with pytest.raises(asyncpg.RaiseError, match="285 refuses an unexpected lighting policy predecessor"):
+                await owner.execute(migration_body())  # this test ran first: bring the database to 286
+            with pytest.raises(asyncpg.RaiseError, match="286 refuses an unexpected lighting policy predecessor"):
                 await owner.execute(migration_body())
         finally:
             await owner.close()
