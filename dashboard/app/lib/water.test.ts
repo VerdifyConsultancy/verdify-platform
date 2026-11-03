@@ -9,7 +9,7 @@ import type { IrrigationStatus, MinutesReport, Occupancy, ScheduleAgenda } from 
 import {
   NO_ENGINE_TEXT, RETRYING_TEXT, ROM_TEXT, agoWords, barsReport, blockAmount, boardLines, faultWords, feedStages, flowWords, headroomWords, lastWaterWords, limitItems,
   minutesCaps, misterLines, nextRunWords, occupancyWords, occurrenceReasonWords, occurrenceWords, pauseAfterRun, pauseWords, pausedNow, plannedToday, programBanner, runAmountWords,
-  runGallons, runSpanWords, runsFilters, runsWindow, timeLeftWords, todayWords, weekDays, wetLines, whenWords, type ProgramBannerInput,
+  runGallons, runSpanWords, runsFilters, runsWindow, timeLeftWords, todayWords, weekDays, wetLines, whenWords, waterUseDays, waterUseSplit, type ProgramBannerInput,
 } from "./water";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
@@ -277,4 +277,9 @@ test("a pause until after a block ends one minute past its planned end, for a dr
   expect(pauseAfterRun({ ...planned, status: "skipped" }, drip, now)).toBeNull();
   expect(pauseAfterRun({ ...planned, status: "blocked" }, drip, now)).toBeNull();
   expect(pauseAfterRun(planned, drip, Date.parse(start))).toBeNull();
+});
+
+test("daily water use's URL: 30 days split by line unless it says 90d or cause", () => {
+  expect([waterUseDays(null), waterUseDays("30d"), waterUseDays("90d"), waterUseDays("7d")]).toEqual([30, 30, 90, 30]);
+  expect([waterUseSplit(null), waterUseSplit("line"), waterUseSplit("cause"), waterUseSplit("zone")]).toEqual(["line", "line", "cause", "line"]);
 });

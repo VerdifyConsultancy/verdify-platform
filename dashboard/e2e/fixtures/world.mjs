@@ -195,7 +195,7 @@ function inBand(now) {
   const water = (id, since, fields = {}) => item(lineInfo(id).equipment, lineInfo(id).label, "water", since, { line_id: id, ...fields });
   return {
     now,
-    flags: { apiDown: false, progress: false, confirm: true, flowAfterStop: false, stopUnconfirmed: false, lateOverride: false },
+    flags: { apiDown: false, progress: false, confirm: true, flowAfterStop: false, stopUnconfirmed: false, lateOverride: false, lightResult: null },
     me: { username: "jason", display_name: "Jason", role: "operator", writes_enabled: true, source_revision: REVISION },
     indoor: { temp_f: reading(64.8, now - 20_000), rh_pct: reading(71.0, now - 20_000), vpd_kpa: reading(0.62, now - 20_000) },
     outdoor: { temp_f: reading(41.2, now - 2 * MINUTE), rh_pct: reading(58.0, now - 2 * MINUTE) },
@@ -319,6 +319,9 @@ function inBand(now) {
     preview: { param: "band_vpd_low_sm", value: "0.5" },
     /** Days back that API-IRR-10 reads no_data, beside the base's nine days back (`minutes-gap` adds one). */
     noDataDays: [],
+    // The API-21 example request's `days`, and the days it reads other than the synthetic ones, by days back (water-use-90d).
+    waterUseDays: 30,
+    waterOverrides: {},
   };
 }
 
@@ -392,7 +395,7 @@ export function openAlert(world, row) {
  * Change-only sources hold their newest row only while the controller reports; otherwise they read unknown. As API-13
  * serves it (VD-54): an unknown state keeps its `observed_at` and has no since, runtime or cycles (the open run's length
  * is not known), and the controller's grow-light intent reads unknown. As in VD-54's own not-reporting scenario, the
- * Lutron rows are 12 min old as well (past their 600 s), so every state reads unknown.
+ * Lutron rows are 12 min old as well (past their 600 s), so every state reads unknown; the reasons lose their code too.
  */
 function notReporting(world, since) {
   world.notReportingSince = since;
@@ -404,6 +407,8 @@ function notReporting(world, since) {
   // No irr_state reading while the controller is not reporting, so no VPD source either (`line_state`).
   for (const line of world.lines) Object.assign(line, { state: { ...line.state, code: "unknown", cause: null, reason: "controller not reporting" }, vpd_source: null });
   world.irrFreshness = { ...world.irrFreshness, stale: true };
+  // API-13's reasons (#1167): no code or since while the controller does not report, and the newest row's time stays.
+  for (const reason of Object.values(world.reasons)) Object.assign(reason, { code: null, since: null });
 }
 function climateAge(world, ageS) {
   const { now } = world;
@@ -749,6 +754,39 @@ export const FIXTURES = {
     for (const name of ["grow_light_main", "grow_light_grow"]) {
       Object.assign(itemOf(world, name), { state: "unknown", since: null, runtime_today_s: null, cycles_today: null, observed_at: iso(world.now - 11 * MINUTE) });
     }
+  },
+  // #1140: one known code per family, each with when it began: venting since 13:40 yesterday, fog held since 09:12 and
+  // the misters with nothing to do since 07:12.
+  "why-reasons": (world) => {
+    const at = clock(world.now);
+    world.reasons = {
+      mode_reason: { code: "temp_high", since: iso(at("13:40", -1)), observed_at: iso(world.now - MINUTE) },
+      fog_block_reason: { code: "rh_ceiling", since: iso(at("09:12")), observed_at: iso(world.now - MINUTE) },
+      moisture_block_reason: { code: "no_vpd_demand", since: iso(at("07:12")), observed_at: iso(world.now - MINUTE) },
+    };
+  },
+  // #1140: a code newer than this build, which reads raw.
+  "why-unknown-code": (world) => { Object.assign(world.reasons.mode_reason, { code: "brand_new_code" }); },
+  // #1140: the main light OFF on both sides. API-20 answers 200, and the next API-13 read shows Lutron ON and API-17 the light.on row.
+  "lights-confirmed": (world) => {
+    Object.assign(itemOf(world, "grow_light_main"), { intent: "off", state: "off" });
+    world.flags.lightResult = null;
+  },
+  // #1140: API-20 answers 503 unavailable with its result; the call is logged and the readback stays OFF.
+  "lights-ha-fail": (world) => { world.flags.lightResult = "ha_failed"; },
+  "lights-not-confirmed": (world) => { world.flags.lightResult = "not_confirmed"; },
+  // #1140: the controller has not reported either light's intent; each Lutron state stays known.
+  "lights-intent-unknown": (world) => {
+    for (const name of ["grow_light_main", "grow_light_grow"]) itemOf(world, name).intent = null;
+  },
+  // #1140: API-21 over 90 days: the base's no_data day nine days back and partial today, a complete day of 0 gal four days
+  // back and 14 gal with no valve open six days back, inside the 30-day window too.
+  "water-use-90d": (world) => {
+    world.waterUseDays = 90;
+    world.waterOverrides = {
+      4: { lines: {}, causes: {}, noValve: 0 },
+      6: { lines: { L04: 4, L11: 2 }, causes: { vpd: 6 }, noValve: 14 },
+    };
   },
   // VD-14: one API-05 span the API marks unknown, Fan 1 02:10-02:40 today, inside both the 24 h and 72 h windows.
   "lanes-unknown": (world) => {

@@ -597,6 +597,14 @@ As built (VD-69, #1182). Where the build settles a detail above, or differs from
 | Block menu | Selecting a block opens its menu, one block at a time, and Escape closes it. A block still planned ahead of now offers "Pause <line> until after this run", which sends at once and, since the pause starts now, skips that run and any earlier one on the line; a past, skipped or blocked block offers no pause. Any block whose schedule is stored offers Edit (#1137), in Last 7 days too. A viewer's week offers neither |
 | Line options | The reserve's bound follows the typed cap, and a reserve above it is flagged in the hint and sent, so the API's `out_of_range` shows beside the field. The client refuses only what is not whole minutes from 0 to 480 |
 
+As built (VD-20, `dashboard/app/charts/daily-water-use.tsx` and `components/run-dialog.tsx`), where Daily water use and the Run dialog settle a detail this section leaves open:
+
+| Topic | As built |
+|---|---|
+| Daily water use | A panel between Minutes by zone and Runs. Each day's stack sits left of its tick and the no-valve bar right of it, each 40% of a day wide and at most 18 px. The key lists each colour once, so lines of one kind share an entry, then the no-valve bar and any hatched or partial day. The summary reads "Last 30 days: 612 gal · 40 gal with no Verdify valve open · 1 day with no data", its total the sum of `meter_gal`. In the table every value on a no-data day reads "—", and a line or cause a day's split does not list reads "0 gal". By cause, clean below fertilizer puts `feed` on top. A coverage this build does not know reads partial |
+| Its URL | `?water_use=90d` and `?water_use_by=cause`, left out at the defaults. A chip keeps the page where it is, because the panel sits below the fold |
+| Run dialog in the URL | `?run=<line_id>`, as the drawers do: opening pushes, closing replaces. It and each line's command live in the Water layout (`WaterRuns`), so a failed status read, which replaces the Board with its error, leaves an open dialog and what was typed in it. A viewer gets no dialog from the link, and a link to a line that offers no Run… opens nothing |
+
 As built (VD-16), where the commands settle a detail this section leaves open:
 
 | Topic | As built |
@@ -839,6 +847,18 @@ As built (VD-16, `dashboard/app/components/burst-panel.tsx`), where the panel se
 | Bursts | "Fans burst · 12 min left"; a held burst reads only "Humidify held off: someone inside", with the code in words and no time left |
 | Engine flag | Read from API-IRR-01 at the 60 s cadence. Until it answers nothing is offered; while it fails the panel says so with Retry. Before the firmware operators read "Bursts arrive with the irrigation firmware (`manual_override`)" and "Restart arrives with the irrigation firmware"; a running burst still shows |
 | Restart | The button reads "Restart sent" and is disabled until `controller.uptime_s` falls below its last read, the one held at the press included (with none held, under 180 s), then "The controller restarted". After 3 min with no drop it reads "The controller has not restarted" and can be pressed again, and a later drop still reads restarted |
+
+As built (VD-20, `dashboard/app/components/equipment/why-panel.tsx` and `light-controls.tsx`), where the panel and the controls settle a detail this section leaves open:
+
+| Topic | As built |
+|---|---|
+| Why | A card titled "Why" under the three groups and above the lanes, on the board's own API-13 read, one row per reason at every width; at phone width the label heads its row. A code the table lacks reads raw in mono with its since and link. A null code with no `observed_at` reads "unknown · no data", and a null code has no link. A failed read shows "Couldn't load the reasons." with Retry |
+| Automatic line | Under a light's facts, for every role: "Automatic" or "Automation off" from the switch's device value, or "Automation —" with the API's reason while it is not reported or API-09's newest read fails. REQUESTED, NOT CONFIRMED or HELD replace the words while API-09 says so, and "CONFIRMED Automatic" stands once this control's own write reads it, until another write takes its place |
+| Controls | Operators only: Turn on, Turn off, Back to automatic and "Activity ›". "Waiting for Lutron" during the readback, when the pressed button is disabled and the other may override it. Back to automatic is disabled until API-09 confirms or refuses its write |
+| A 503 | `Problem.result` in words, kept beside "Lutron hasn't confirmed: still OFF" after 30 s ("its state is unknown" when the readback is); a readback that matches clears both. `unavailable` with no `result`, when no answer reached the page, reads the readback the same way with its own words; `writes_disabled` and other refusals send nothing, so they read none. Pressing Back to automatic ends that readback and clears its words, and Turn on or Turn off clears a refused write's |
+| Reason | Turn on and Turn off are one tap with no reason, so their Activity rows show who and where from with none. The resync carries "Back to automatic", as its write does |
+| Resync | Held above the board, so a failed API-13 read does not lose it. A Turn on or Turn off pressed while the write waits stands in its place. If the read after CONFIRMED fails, none is sent and the row says "Couldn't read the light, so Lutron was not matched to the controller". Leaving or reloading the page before CONFIRMED drops the resync: the row then reads its "differ", and pressing Back to automatic again sends it |
+| Activity | "Lights on Main lights", "Lights off Grow lights". A call Lutron did not confirm adds its result in words |
 
 ## 9. SCR-08 Plants (Later) · `/plants`
 

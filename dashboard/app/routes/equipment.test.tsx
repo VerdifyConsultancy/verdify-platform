@@ -17,6 +17,7 @@ import { fixture } from "../../e2e/fixtures/index.mjs";
 import { FakeResizeObserver, MockPlot, TOKENS, created, media, setTokens } from "../charts/fixtures/uplot-mock";
 import { ServerClockProvider } from "../components/freshness";
 import { renderUi, text } from "../components/test-render";
+import { ToastProvider } from "../components/toast";
 import { SessionProvider, type Role } from "../lib/session";
 import { NOW, advance, requests, sentAt, startFixtureApi, stopFixtureApi, type FixtureOptions, type Recorded } from "../lib/test-fixture-api";
 import Equipment, { EquipmentGroups, SINCE_WINDOW_DAYS, lanesRange, lightsDiffer, links, type EquipmentItem } from "./equipment";
@@ -40,7 +41,7 @@ function Where() {
 function renderEquipment({ path = "/equipment", role = "operator", skewMs = 0 }: { path?: string; role?: Role; skewMs?: number } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false, refetchOnReconnect: false } } });
   return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><SessionProvider role={role} writesEnabled>
-    <ServerClockProvider skewMs={skewMs}><Routes><Route path="/equipment" element={<><Equipment /><Where /></>} /></Routes></ServerClockProvider>
+    <ToastProvider><ServerClockProvider skewMs={skewMs}><Routes><Route path="/equipment" element={<><Equipment /><Where /></>} /></Routes></ServerClockProvider></ToastProvider>
   </SessionProvider></MemoryRouter></QueryClientProvider>);
 }
 /** Lets the reads answer, the lanes load uPlot and every render settle. */
@@ -289,7 +290,7 @@ test("the lanes-unknown span is hatched where API-05 returns it, never drawn as 
   expect(cells.filter((row) => row[0] === "Fan 1").map((row) => row[1])).toEqual(["off", "unknown", "off"]);
 });
 
-test("viewers see the board and the lanes with no controls; an operator gets the bursts and Restart controller, and nothing more", async () => {
+test("viewers see the board and the lanes with no controls; an operator gets the bursts, Restart controller and the lights' controls, and nothing more", async () => {
   const controls = () => ({
     buttons: [...document.body.querySelectorAll("button")].map((button) => text(button)),
     writes: document.querySelectorAll("[data-write-control], form, input, select, textarea").length,
@@ -302,7 +303,8 @@ test("viewers see the board and the lanes with no controls; an operator gets the
   expect(controls()).toEqual({ buttons: [fold], writes: 0 });
   cleanup(); stopFixtureApi(); chartStubs();
   await load({}, { role: "operator" });
-  expect(controls()).toEqual({ buttons: ["Fans 15 min", "Humidify 5 min", "Vent bypass 10 min", "Clear bursts", "Restart controller", fold], writes: 5 });
+  const lights = ["Main", "Grow"].flatMap((light) => [`Turn on ${light}`, `Turn off ${light}`, `Back to automatic ${light}`]);
+  expect(controls()).toEqual({ buttons: ["Fans 15 min", "Humidify 5 min", "Vent bypass 10 min", "Clear bursts", "Restart controller", ...lights, fold], writes: 11 });
 });
 
 test("a failed board read shows Couldn't load equipment with Retry on the board alone; the lanes keep working, and Retry reads again", async () => {

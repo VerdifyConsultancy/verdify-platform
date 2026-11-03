@@ -70,15 +70,17 @@ function manifoldBusyText(problem: Problem): string {
 
 /**
  * A Problem in words. `out_of_range` reads "Must be 0.50–2.50 kPa" from `min`, `max` and the field's unit;
- * `writes_disabled` "Changes are switched off"; `unavailable` its detail ("arrives with the irrigation firmware");
- * `manifold_busy` the holder and until when. Any other code reads through `words("problem_code", code)`; until #1124
- * fills that family, a code without words reads as the Problem's own detail (plain words), else raw.
+ * `writes_disabled` "Changes are switched off"; `unavailable` API-20's `result` in words ("Lutron did not reach the
+ * state"), else its detail ("arrives with the irrigation firmware"); `manifold_busy` the holder and until when. Any other
+ * code reads through `words("problem_code", code)`; until #1124 fills that family, a code without words reads as the
+ * Problem's own detail (plain words), else raw.
  */
 export function problemMessage(problem: Problem, units: FieldUnits = {}): string {
   if (problem.code === "out_of_range" && problem.min !== null && problem.min !== undefined && problem.max !== null && problem.max !== undefined) {
     return `Must be ${rangeText(problem.min, problem.max, units.unit, units.step)}`;
   }
   if (problem.code === "writes_disabled") return "Changes are switched off";
+  if (problem.code === "unavailable" && problem.result) return words("light_result", problem.result);
   if (problem.code === "unavailable") return problem.detail || problem.title;
   if (problem.code === "manifold_busy") return manifoldBusyText(problem);
   if (hasWords("problem_code", problem.code)) return words("problem_code", problem.code);
@@ -382,22 +384,43 @@ export function commandBody<K extends CommandOperationId>(body: BodyOf<K>): Body
  * `message` the line's reason in words, or "Not started", until the page's own polls show the state (`phase` done). A
  * refusal keeps the dialog open with `error` beside its field. Pass `readback` for another read and test (API-02
  * `overrides` for a burst); a function gets the request's params and body.
+ *
+ * A failure `readbackAfter` names may still take effect late (API-20's 503, whose light can still switch): the readback
+ * runs just the same, `phase` following it with `error` beside it, and the state showing clears the error. `reset` ends
+ * a readback and its words when another action takes the command's place.
  */
-export function useCommand<K extends CommandOperationId>({ operation, readback: chosen }: {
+export function useCommand<K extends CommandOperationId>({ operation, readback: chosen, readbackAfter }: {
   operation: K;
   readback?: Readback | null | ((params: ParamsOf<K>, body: BodyOf<K>) => Readback | null);
+  readbackAfter?: (error: WriteError) => boolean;
 }) {
   const client = useQueryClient();
   const action = useAction();
-  const [progress, setProgress] = useState<{ phase: Exclude<CommandPhase, "sending" | "failed">; message: string | null }>({ phase: "idle", message: null });
-  const latest = useLatest(chosen);
+  const [progress, setProgress] = useState<{ phase: Exclude<CommandPhase, "sending" | "failed">; message: string | null; failed?: boolean }>({ phase: "idle", message: null });
+  const latest = useLatest({ chosen, readbackAfter });
   const watching = useRef<AbortController | null>(null);
-  useEffect(() => () => watching.current?.abort(), []);
-  const { run } = action;
+  const watchingFailed = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; watching.current?.abort(); };
+  }, []);
+  const { run, clearError } = action;
   const send = useCallback(async (params: ParamsOf<K>, body: BodyOf<K>): Promise<WriteOutcome<Parsed<K>>> => {
     const outcome = await run((key) => apiWrite(operation, params, commandBody<K>(body), key));
-    if (!outcome.ok) return outcome;
-    const option = latest.current;
+    // Answered after the screen left: there is no one to read back for, and an abort that already ran cannot stop a new watch.
+    if (!mounted.current) return outcome;
+    const failed = !outcome.ok;
+    if (!outcome.ok && !(outcome.error && latest.current.readbackAfter?.(outcome.error))) {
+      // A failure with no readback of its own ends the one an earlier failure left running: its words are the newest.
+      if (outcome.error && watchingFailed.current) {
+        watching.current?.abort();
+        watchingFailed.current = false;
+        setProgress({ phase: "idle", message: null });
+      }
+      return outcome;
+    }
+    const option = latest.current.chosen;
     const check = option === undefined
       ? defaultReadback(operation, params as Record<string, unknown>, (body ?? {}) as Record<string, unknown>)
       : typeof option === "function" ? option(params, body) : option;
@@ -408,20 +431,31 @@ export function useCommand<K extends CommandOperationId>({ operation, readback: 
     }
     const controller = new AbortController();
     watching.current = controller;
-    setProgress({ phase: "waiting", message: null });
+    watchingFailed.current = failed;
+    setProgress({ phase: "waiting", message: null, failed });
+    const shown = () => {
+      setProgress({ phase: "done", message: null });
+      if (failed) clearError();
+    };
     void watch(client, check, controller.signal).then((seen) => {
       if (controller.signal.aborted) return;
-      if (seen.done) { setProgress({ phase: "done", message: null }); return; }
+      if (seen.done) { shown(); return; }
       const reason = seen.data === undefined ? null : (check.reason as ((data: unknown) => string | null) | undefined)?.(seen.data) ?? null;
-      setProgress({ phase: "late", message: reason || NOT_STARTED });
-      settleLate(client, check, controller.signal, () => setProgress({ phase: "done", message: null }));
+      setProgress({ phase: "late", message: reason || NOT_STARTED, failed });
+      settleLate(client, check, controller.signal, shown);
     }, () => {
       // Unmounted or replaced by a newer command: nothing to show.
     });
     return outcome;
-  }, [operation, run, client, latest]);
-  const phase: CommandPhase = action.sending ? "sending" : action.error ? "failed" : progress.phase;
-  return { send, phase, sending: action.sending, message: progress.message, error: action.error, clearError: action.clearError };
+  }, [operation, run, clearError, client, latest]);
+  const reset = useCallback(() => {
+    watching.current?.abort();
+    watchingFailed.current = false;
+    clearError();
+    setProgress({ phase: "idle", message: null });
+  }, [clearError]);
+  const phase: CommandPhase = action.sending ? "sending" : action.error && !progress.failed ? "failed" : progress.phase;
+  return { send, phase, sending: action.sending, message: progress.message, error: action.error, clearError, reset };
 }
 
 // ---------------------------------------------------------------------------------------------------- R records

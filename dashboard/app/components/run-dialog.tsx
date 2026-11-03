@@ -8,12 +8,17 @@
  * Before the irrigation firmware only L01 runs, through the bridge, for the controller's own `irrig_wall_duration_min`:
  * no Duration field, the value read from API-09 when the dialog opens (without it the dialog names the setting only), and
  * a body of `{}` plus the optional reason. Other lines say when Run arrives. The engine flag is API-IRR-01's alone.
+ *
+ * The dialog opens from the URL (`?run=<line_id>`, as VD-69's drawers do) and it and each line's command live in the Water
+ * layout (`WaterRuns`), so a failed status read, which replaces the Board with its error, leaves an open dialog and what
+ * was typed in it. A card's button opens it, and its notes come back through context.
  */
-import { useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { IrrigationLine } from "../lib/operator-api";
+import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
 import { fetchRead } from "../lib/queries";
-import { OperatorOnly } from "../lib/session";
+import { OperatorOnly, useRole } from "../lib/session";
+import { useWaterDrawer, wetLines } from "../lib/water";
 import { useCommand } from "../lib/writes";
 import { Button } from "./button";
 import { ConfirmDialog, type RunBody } from "./forms/confirm-dialog";
@@ -50,22 +55,50 @@ function useWallDuration(open: boolean): number | null {
   return minutes;
 }
 
-function RunButton({ line, engine, label }: { line: IrrigationLine; engine: boolean; label: string }) {
-  const [open, setOpen] = useState(false);
+/** What a line's card says of its last run: the readback's note, and a refusal that answered a run the dialog was cancelled during. */
+type RunNote = { readonly note: string | null; readonly refusal: string | null };
+const RunNotes = createContext<Readonly<Record<string, RunNote>>>({});
+
+/** One line's run: its command, and its dialog while `?run=` names it. A link to a line that offers no Run… opens nothing. */
+function LineRun({ line, engine, publish }: { line: IrrigationLine; engine: boolean; publish: (lineId: string, note: RunNote) => void }) {
+  const { value, close } = useWaterDrawer("run");
+  const offer = runOffer(line, engine);
+  const open = value === line.line_id && (offer === "run" || offer === "mist");
   const command = useCommand({ operation: "API-IRR-06" });
+  const { clearError } = command;
   const fixed = useWallDuration(open && !engine);
-  const close = () => { setOpen(false); command.clearError(); };
-  const press = () => { command.clearError(); setOpen(true); };
+  // Opening starts clean, and so does closing: only a refusal that answers after the dialog closed stays on the card.
+  useEffect(() => clearError(), [open, clearError]);
   const run = async (body: RunBody) => (await command.send({ line_id: line.line_id }, body)).ok;
   // The relay edge answers from here on: RUNNING on the card, or within 30 s the line's reason or "Not started".
   const running = line.state.code === "running";
   const note = command.phase === "waiting" && !running ? "Waiting for the valve to open" : command.phase === "late" && !running ? command.message : null;
+  const refusal = !open ? command.error?.message ?? null : null;
+  useEffect(() => publish(line.line_id, { note, refusal }), [publish, line.line_id, note, refusal]);
+  return open ? <ConfirmDialog open onClose={close} line={line} fixed={engine ? null : { minutes: fixed }} onRun={run} sending={command.sending} error={command.error} /> : null;
+}
+
+/**
+ * Holds every line's run in the Water layout, around the view and for operators only, once API-IRR-01 has answered. The
+ * read's data stays through a failed poll, so this does too.
+ */
+export function WaterRuns({ status, children }: { status: Pick<IrrigationStatus, "lines" | "engine"> | undefined; children?: ReactNode }) {
+  const operator = useRole() === "operator";
+  const [notes, setNotes] = useState<Readonly<Record<string, RunNote>>>({});
+  const publish = useCallback((lineId: string, note: RunNote) => setNotes((current) => ({ ...current, [lineId]: note })), []);
+  return <RunNotes.Provider value={notes}>
+    {children}
+    {operator && status && wetLines(status.lines).map((line) => <LineRun key={line.line_id} line={line} engine={status.engine} publish={publish} />)}
+  </RunNotes.Provider>;
+}
+
+function RunButton({ line, label }: { line: IrrigationLine; label: string }) {
+  const { open } = useWaterDrawer("run");
+  const { note, refusal } = useContext(RunNotes)[line.line_id] ?? {};
   return <>
-    <Button write wide onClick={press}>{label} <span className="screen-reader">{line.line_id}</span></Button>
+    <Button write wide aria-haspopup="dialog" onClick={() => open(line.line_id)}>{label} <span className="screen-reader">{line.line_id}</span></Button>
     {note && <span className="state-note" data-run-note={line.line_id}>{note}</span>}
-    {/* A refusal that answers a run the dialog was cancelled during. */}
-    {!open && command.error && <span className="field-error" role="alert">{command.error.message}</span>}
-    {open && <ConfirmDialog open onClose={close} line={line} fixed={engine ? null : { minutes: fixed }} onRun={run} sending={command.sending} error={command.error} />}
+    {refusal && <span className="field-error" role="alert">{refusal}</span>}
   </>;
 }
 
@@ -76,6 +109,6 @@ export function RunControl({ line, engine }: { line: IrrigationLine; engine: boo
   return <OperatorOnly>
     {offer === "arrives"
       ? <span className="state-note" data-arrives="run">{RUN_ARRIVES_TEXT}</span>
-      : <RunButton line={line} engine={engine} label={offer === "mist" ? "Mist now…" : "Run…"} />}
+      : <RunButton line={line} label={offer === "mist" ? "Mist now…" : "Run…"} />}
   </OperatorOnly>;
 }
