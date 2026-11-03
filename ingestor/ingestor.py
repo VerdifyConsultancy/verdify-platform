@@ -4638,8 +4638,6 @@ async def task_loop(
             )
             c1_overlay.poll(STATE_DIR)
             forced = {"setpoint_dispatch"} if shared.setpoint_dispatch_requested.is_set() else set()
-            if shared.irrigation_sync_requested.is_set():
-                forced.add("irrigation_sync")
             started = _launch_due_tasks(pool, TASKS, last_run, running, now, task_timeouts, forced)
             if "setpoint_dispatch" in started:
                 pending_drift_approval_stamp = None
