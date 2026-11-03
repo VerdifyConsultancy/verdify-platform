@@ -321,8 +321,9 @@ dispatcher, the API's `applied_from` and the services resolve a setting the same
   `v_runtime_setpoint_changes_write` inserts go, its `setpoint_plan` rows (source `preemptive`) stay, and each plan
   appends one `activity_log` row (source `system`, actor `forecast-engine`, the rule as reason; labelled "Forecast
   rule · system") and applies through the next normal dispatcher pass. The dispatcher admits a forecast-rule plan
-  row (`plan_id` `preemptive-*`) for any writable parameter (§5.3 step 1), so `high_wind` still reaches
-  `sw_economiser_enabled`, which is not planner-pushable; Iris's rows keep today's filter. Band-owned `temp_low`
+  row (`plan_id` `preemptive-*`) for any writable parameter (§5.3 step 1), even one that is not planner-pushable;
+  Iris's rows keep today's filter. Migration 287 disabled `high_wind`, the seeded rule that wrote
+  `sw_economiser_enabled` (Jason, 2026-11-03: an indoor greenhouse does not need it). Band-owned `temp_low`
   and `temp_high` keep the band. As built: a forecast-rule row for a read-only parameter is audited as
   `planner_param_not_pushable` and goes nowhere, so no forecast-rule value reaches the controller around the fences.
 - **Release.** A released row with no plan, band or dispatcher default gets its registry default

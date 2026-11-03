@@ -589,8 +589,8 @@ def _plan_row_admitted(param: str, plan_id: object) -> bool:
     """Whether a v_active_plan row reaches the fences and ``planner_params``.
 
     Iris's row needs a planner-pushable parameter. A forecast rule's row needs a
-    writable one (VD-65, architecture §5.3 step 1), so ``high_wind`` still reaches
-    ``sw_economiser_enabled``, through the same fences as any plan value.
+    writable one (VD-65, architecture §5.3 step 1), so a rule can still reach a
+    switch like ``sw_economiser_enabled``, through the same fences as any plan value.
     """
     if param in PLANNER_PUSHABLE_REG:
         return True
