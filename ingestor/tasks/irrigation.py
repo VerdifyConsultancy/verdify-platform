@@ -31,27 +31,47 @@ code that turns them into device calls, through ``esp32_push`` under the writer 
 Relay edges in ``equipment_state``, never an ack, show whether water started or stopped. On every ESP32 connect
 ``record_engine_capability`` writes one ``system_state`` row, entity ``irr_engine``, ``true`` only when both
 engine services exist; the services read it to choose this path.
+
+Iris's context pack, section 11 (VD-60; irrigation §6.4), is ``python3 -m tasks.irrigation context --hours 24``, run
+from the ingestor's working directory: ``load_context`` reads it with SQL and ``verdify_schemas``, because this image
+does not carry ``verdify_services``, and ``render_context`` prints it. It only reads. Importing this module starts
+nothing: ``python3 -m`` runs the ``tasks`` package first, which imports it once before it runs again as ``__main__``.
 """
 
 from __future__ import annotations
 
+import argparse
+import asyncio
 import json
 import logging
-from collections.abc import Iterable, Mapping
-from datetime import UTC, datetime, timedelta
+from collections.abc import Iterable, Mapping, Sequence
+from datetime import UTC, date, datetime, time, timedelta
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import asyncpg
 import esp32_push
 import shared
-from pydantic import ValidationError
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError
 
 from verdify_schemas.irrigation import (
     BRIDGE_RUN_LINE,
     COMMAND_SEND_WINDOW_S,
+    LOCAL_TZ_NAME,
+    REASON_WORDS,
     STOP_RESEND_WINDOW_S,
+    Agenda,
+    FaultKind,
     IrrigationCommandRow,
+    LineId,
+    LineSpec,
+    LineState,
+    RunOutcome,
+    ScheduleSpec,
+    agenda,
+    line_state,
 )
 from verdify_schemas.telemetry import SystemStateRow
 
@@ -424,3 +444,468 @@ async def irrigation_sync(pool: asyncpg.Pool, *, store: CommandStore | None = No
         return
     for run in runs:
         await _send_run(store, run)
+
+
+# ── Section 11 of Iris's context pack (VD-60) ───────────────────────────────
+
+GREENHOUSE_ID = "vallery"
+# The architecture §7 test, as verdify_services.reads holds it (this image does not carry verdify_services).
+HEARTBEAT_STALE_S = 180
+CLIMATE_REPORTING_S = 300
+CONTEXT_DEFAULT_HOURS = 24
+CONTEXT_MAX_HOURS = 144  # always inside agenda()'s 7 local days
+CONTEXT_MAX_LINES = 60
+# With the 11 lines these leave the section under its budget whatever is stored.
+CONTEXT_MAX_OCCURRENCES = 24
+CONTEXT_MAX_MANUAL = 14
+CONTEXT_FOOTER = "The irrigation tools change watering only; they do not count as your plan for a trigger."
+CONTEXT_DB_TIMEOUT_S = 15
+
+_CONTEXT_CLOCK_SQL = """
+SELECT now() AS at,
+       (SELECT max(ts) FROM system_state
+         WHERE entity = 'ingestor_heartbeat' AND ts > now() - interval '1 day') AS heartbeat_at,
+       (SELECT max(ts) FROM climate WHERE ts > now() - interval '1 day') AS climate_at,
+       (SELECT value FROM system_state
+         WHERE entity = $1 AND coalesce(greenhouse_id, 'vallery') = $2 AND ts > now() - interval '400 days'
+         ORDER BY ts DESC LIMIT 1) AS engine
+"""
+_CONTEXT_LINES_SQL = """
+SELECT line_id, name, zone, kind, device_idx, clean_partner, reserved, enabled, vpd_member, schedule_member,
+       daily_cap_min, vpd_reserve_min, paused_until, manual, source, updated_by, updated_at, equipment,
+       relay_on, relay_at, irr_state, irr_state_at
+  FROM v_irrigation_line_state
+ WHERE greenhouse_id = $1
+ ORDER BY device_idx
+"""
+_CONTEXT_SLOTS_SQL = """
+SELECT slot_id, line_id, enabled, days, start_kind, start_min, on_s, count, gap_s, prewet_s, flush_s, degraded_only,
+       label, manual, source, updated_by, updated_at
+  FROM irrigation_slot
+ WHERE greenhouse_id = $1
+ ORDER BY slot_id
+"""
+# Where each relay's run still on began, as M3 and irrigation_status start it: the newest conflicting timestamp since
+# the relay was last off, else the first timestamp after that. The view's relay_at is the newest row, which a
+# reconnect snapshot moves, so it cannot say whether a run started within 30 s of its command.
+_CONTEXT_ON_EDGES_SQL = """
+SELECT w.equipment, coalesce(last_conflict.ts, first_on.ts) AS on_edge
+  FROM unnest($1::text[]) AS w(equipment)
+  LEFT JOIN LATERAL (SELECT es.ts FROM equipment_state AS es
+                      WHERE es.equipment = w.equipment AND coalesce(es.greenhouse_id, 'vallery') = $2
+                        AND es.ts < now()
+                      GROUP BY es.ts
+                     HAVING NOT bool_or(es.state)
+                      ORDER BY es.ts DESC
+                      LIMIT 1) AS last_off ON true
+  LEFT JOIN LATERAL (SELECT es.ts FROM equipment_state AS es
+                      WHERE es.equipment = w.equipment AND coalesce(es.greenhouse_id, 'vallery') = $2
+                        AND es.ts < now() AND (last_off.ts IS NULL OR es.ts > last_off.ts)
+                      GROUP BY es.ts
+                     HAVING count(DISTINCT es.state) > 1
+                      ORDER BY es.ts DESC
+                      LIMIT 1) AS last_conflict ON true
+  LEFT JOIN LATERAL (SELECT es.ts FROM equipment_state AS es
+                      WHERE last_conflict.ts IS NULL
+                        AND es.equipment = w.equipment AND coalesce(es.greenhouse_id, 'vallery') = $2
+                        AND es.ts < now() AND (last_off.ts IS NULL OR es.ts > last_off.ts)
+                      ORDER BY es.ts
+                      LIMIT 1) AS first_on ON true
+"""
+_CONTEXT_BRIDGE_SQL = """
+SELECT max(sent_at) FROM irrigation_command
+ WHERE greenhouse_id = $1 AND line_id = $2 AND kind = 'run' AND status = 'sent' AND sent_at <= $3::timestamptz
+"""
+# M4's day-bounded reader: the same rows as v_irrigation_minutes_daily, without its scan of every edge since 2024.
+_CONTEXT_MINUTES_SQL = """
+SELECT line_id, minutes FROM fn_irrigation_minutes_daily($1::date, $1::date) WHERE greenhouse_id = $2
+"""
+_CONTEXT_OUTCOMES_SQL = """
+SELECT DISTINCT ON (line_id) line_id, outcome, reason, coalesce(ended_at, started_at, recorded_at) AS at
+  FROM irrigation_ledger
+ WHERE greenhouse_id = $1 AND (ended_at IS NOT NULL OR outcome IS NOT NULL)
+ ORDER BY line_id, coalesce(ended_at, started_at, recorded_at) DESC, id DESC
+"""
+_CONTEXT_ARMED_SQL = "SELECT experiment_id FROM fn_mcp_armed_assignment_context()"
+
+
+class _ContextModel(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class ContextOutcome(_ContextModel):
+    outcome: RunOutcome
+    at: AwareDatetime
+    reason: str | None = None
+
+
+class ContextLine(_ContextModel):
+    """One line's row: the fields ``irrigation_status`` gives it, with its state from the same ``line_state()``."""
+
+    line_id: LineId
+    enabled: bool
+    vpd_member: bool | None = None
+    schedule_member: bool | None = None
+    manual: bool
+    paused_until: AwareDatetime | None = None
+    fault: FaultKind | None = None
+    fault_until: AwareDatetime | None = None
+    minutes_today: float | None = None  # null for a day with no data, never 0
+    daily_cap_min: int
+    last_outcome: ContextOutcome | None = None
+    state: LineState
+
+
+class ContextOccurrence(_ContextModel):
+    slot_id: int
+    line_id: LineId
+    planned_start: AwareDatetime
+    minutes: float
+    pulses: int | None = None
+    status: str
+    reason: str | None = None
+
+
+class ContextManualItem(_ContextModel):
+    """A schedule or a line a person holds: who and since."""
+
+    item: str
+    updated_by: str
+    source: str
+    updated_at: AwareDatetime
+
+
+class IrrigationContext(_ContextModel):
+    at: AwareDatetime
+    hours: int = Field(ge=1, le=CONTEXT_MAX_HOURS)
+    engine: bool
+    reporting: bool
+    armed_experiment_id: str | None = None
+    lines: tuple[ContextLine, ...]
+    occurrences: tuple[ContextOccurrence, ...] = ()
+    manual_items: tuple[ContextManualItem, ...] = ()
+
+
+def context_occurrences(plan: Agenda, *, at: datetime, hours: int, engine: bool) -> list[ContextOccurrence]:
+    """The agenda's occurrences in [``at``, ``at`` + ``hours``). With no engine nothing runs them, so each one says
+    it arrives with the irrigation firmware, and a planned one reads blocked, as API-IRR-02 reads it."""
+    until = at + timedelta(hours=hours)
+    out = []
+    for item in plan.occurrences:
+        if not at <= item.planned_start < until:
+            continue
+        status, reason = item.status, item.reason
+        if not engine:
+            status = "blocked" if item.status == "planned" else item.status
+            reason = NO_ENGINE if reason is None else f"{reason}; {NO_ENGINE}"
+        out.append(
+            ContextOccurrence(
+                slot_id=item.slot_id,
+                line_id=item.line_id,
+                planned_start=item.planned_start,
+                minutes=item.minutes,
+                pulses=item.pulses,
+                status=status,
+                reason=reason,
+            )
+        )
+    return out
+
+
+def _context_minutes(rows: Iterable[Mapping[str, Any]], line_id: str, *, no_data: bool) -> float | None:
+    """A line's minutes today: null for a day with no data; a line that did not run read 0."""
+    if no_data:
+        return None
+    return float(sum((Decimal(str(row["minutes"])) for row in rows if row["line_id"] == line_id), Decimal(0)))
+
+
+def context_lines(
+    line_rows: Sequence[Mapping[str, Any]],
+    *,
+    engine: bool,
+    reporting: bool,
+    now: datetime,
+    on_edges: Mapping[str, datetime],
+    bridge_run_at: datetime | None,
+    minutes_rows: Sequence[Mapping[str, Any]],
+    outcome_rows: Sequence[Mapping[str, Any]],
+    no_data_today: bool,
+) -> list[ContextLine]:
+    """Each ``v_irrigation_line_state`` row through ``line_state()``, with the keyword arguments
+    ``verdify_services.irrigation.reads.status`` gives it, and the rest of the line's row."""
+    outcomes = {row["line_id"]: row for row in outcome_rows}
+    lines = []
+    for row in line_rows:
+        line_id = row["line_id"]
+        edge = on_edges.get(row["equipment"])
+        source = {**dict(row), "relay_at": edge} if edge is not None else row
+        fields = line_state(
+            source,
+            engine=engine,
+            reporting=reporting,
+            now=now,
+            bridge_run_at=bridge_run_at if line_id == BRIDGE_RUN_LINE else None,
+        )
+        outcome = outcomes.get(line_id)
+        lines.append(
+            ContextLine(
+                line_id=line_id,
+                enabled=row["enabled"],
+                vpd_member=row["vpd_member"],
+                schedule_member=row["schedule_member"],
+                manual=row["manual"],
+                paused_until=row["paused_until"],
+                fault=fields.fault,
+                fault_until=fields.fault_until,
+                minutes_today=_context_minutes(minutes_rows, line_id, no_data=no_data_today),
+                daily_cap_min=row["daily_cap_min"],
+                last_outcome=(
+                    None
+                    if outcome is None
+                    else ContextOutcome(
+                        outcome=outcome["outcome"] or RunOutcome.UNKNOWN,
+                        at=outcome["at"],
+                        reason=None
+                        if outcome["reason"] is None
+                        else REASON_WORDS.get(outcome["reason"], outcome["reason"]),
+                    )
+                ),
+                state=fields.state,
+            )
+        )
+    return lines
+
+
+def _manual_items(
+    line_rows: Iterable[Mapping[str, Any]], slot_rows: Iterable[Mapping[str, Any]]
+) -> list[ContextManualItem]:
+    items = [
+        ContextManualItem(
+            item=f"line {row['line_id']}",
+            updated_by=row["updated_by"],
+            source=row["source"],
+            updated_at=row["updated_at"],
+        )
+        for row in line_rows
+        if row["manual"]
+    ]
+    for row in slot_rows:
+        if row["manual"]:
+            name = f"schedule {row['slot_id']} on {row['line_id']}"
+            items.append(
+                ContextManualItem(
+                    item=f"{name} ({row['label']})" if row["label"] else name,
+                    updated_by=row["updated_by"],
+                    source=row["source"],
+                    updated_at=row["updated_at"],
+                )
+            )
+    return items
+
+
+async def load_context(conn: asyncpg.Connection, greenhouse_id: str, hours: int) -> IrrigationContext:
+    """Section 11's facts in one read-only ``REPEATABLE READ`` snapshot, so every ``now()`` in them agrees."""
+    if isinstance(hours, bool) or not isinstance(hours, int) or not 1 <= hours <= CONTEXT_MAX_HOURS:
+        raise ValueError(f"hours must be 1-{CONTEXT_MAX_HOURS}, not {hours!r}")
+    zone = ZoneInfo(LOCAL_TZ_NAME)
+    async with conn.transaction(isolation="repeatable_read", readonly=True):
+        clock = await conn.fetchrow(_CONTEXT_CLOCK_SQL, ENGINE_ENTITY, greenhouse_id)
+        at: datetime = clock["at"]
+        local_today: date = at.astimezone(zone).date()
+        midnight = datetime.combine(local_today, time(0), tzinfo=zone)
+        last_local_day = (at + timedelta(hours=hours)).astimezone(zone).date()
+        engine = isinstance(clock["engine"], str) and clock["engine"].strip().lower() == "true"
+        heartbeat_at, climate_at = clock["heartbeat_at"], clock["climate_at"]
+        reporting = (
+            heartbeat_at is not None
+            and (at - heartbeat_at).total_seconds() <= HEARTBEAT_STALE_S
+            and climate_at is not None
+            and (at - climate_at).total_seconds() <= CLIMATE_REPORTING_S
+        )
+        line_rows = await conn.fetch(_CONTEXT_LINES_SQL, greenhouse_id)
+        slot_rows = await conn.fetch(_CONTEXT_SLOTS_SQL, greenhouse_id)
+        on_edges: dict[str, datetime] = {}
+        bridge_run_at: datetime | None = None
+        if reporting:
+            running = [row["equipment"] for row in line_rows if row["relay_on"]]
+            if running:
+                rows = await conn.fetch(_CONTEXT_ON_EDGES_SQL, running, greenhouse_id)
+                on_edges = {row["equipment"]: row["on_edge"] for row in rows if row["on_edge"] is not None}
+            bridge_edge = next(
+                (on_edges.get(row["equipment"]) for row in line_rows if row["line_id"] == BRIDGE_RUN_LINE), None
+            )
+            if bridge_edge is not None:
+                bridge_run_at = await conn.fetchval(_CONTEXT_BRIDGE_SQL, greenhouse_id, BRIDGE_RUN_LINE, bridge_edge)
+        minutes_rows = await conn.fetch(_CONTEXT_MINUTES_SQL, local_today, greenhouse_id)
+        outcome_rows = await conn.fetch(_CONTEXT_OUTCOMES_SQL, greenhouse_id)
+        armed = await conn.fetchval(_CONTEXT_ARMED_SQL)
+
+    plan = agenda(
+        tuple(LineSpec.from_row(row) for row in line_rows),
+        tuple(ScheduleSpec.from_row(row) for row in slot_rows),
+        today=local_today,
+        days=min(7, (last_local_day - local_today).days + 1),
+    )
+    return IrrigationContext(
+        at=at,
+        hours=hours,
+        engine=engine,
+        reporting=reporting,
+        armed_experiment_id=None if armed is None else str(armed),
+        lines=context_lines(
+            line_rows,
+            engine=engine,
+            reporting=reporting,
+            now=at,
+            on_edges=on_edges,
+            bridge_run_at=bridge_run_at,
+            minutes_rows=minutes_rows,
+            outcome_rows=outcome_rows,
+            # No climate row today: API-IRR-10 reads the day no_data, so it is a gap here too.
+            no_data_today=climate_at is None or climate_at < midnight,
+        ),
+        occurrences=context_occurrences(plan, at=at, hours=hours, engine=engine),
+        manual_items=_manual_items(line_rows, slot_rows),
+    )
+
+
+def _cell(value: object) -> str:
+    """One table cell on one line. Unknown prints as null, so a gap never reads as 0."""
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return " ".join(str(value).split()).replace("|", "/")
+
+
+def _local_time(moment: datetime | None) -> str:
+    return "null" if moment is None else moment.astimezone(ZoneInfo(LOCAL_TZ_NAME)).strftime("%m-%d %H:%M")
+
+
+def _state_cell(state: LineState) -> str:
+    parts = [state.code]
+    if state.cause is not None:
+        parts.append(f"cause={state.cause.value}")
+    if state.slot_id is not None:
+        parts.append(f"schedule={state.slot_id}")
+    if state.reason is not None:
+        parts.append(f"reason={state.reason}")
+    if state.ends_at is not None:
+        parts.append(f"until={_local_time(state.ends_at)}")
+    return _cell(" ".join(parts))
+
+
+def _line_row(line: ContextLine) -> str:
+    fault = _cell(line.fault)
+    if line.fault_until is not None:
+        fault += f" until {_local_time(line.fault_until)}"
+    outcome = "null"
+    if line.last_outcome is not None:
+        outcome = f"{line.last_outcome.outcome.value} {_local_time(line.last_outcome.at)}"
+        if line.last_outcome.reason is not None:
+            outcome += f" ({_cell(line.last_outcome.reason)})"
+    return "|".join(
+        (
+            line.line_id,
+            _cell(line.enabled),
+            _cell(line.vpd_member),
+            _cell(line.schedule_member),
+            _cell(line.manual),
+            _local_time(line.paused_until),
+            fault,
+            f"{_cell(line.minutes_today)}/{line.daily_cap_min}",
+            outcome,
+            _state_cell(line.state),
+        )
+    )
+
+
+def _capped(rows: list[str], limit: int, more: str) -> list[str]:
+    """Rows within their part of the budget; what is left out is counted and says where it is."""
+    if not rows:
+        return ["(none)"]
+    if len(rows) <= limit:
+        return rows
+    return [*rows[:limit], f"... and {len(rows) - limit} more: {more}"]
+
+
+def render_context(ctx: IrrigationContext) -> str:
+    """Section 11 as Iris reads it: one row per line, the next hours of occurrences and the manual items, within
+    ``CONTEXT_MAX_LINES``. Pure. Times are local; unknown prints as null, never 0."""
+    occurrences = [
+        "|".join(
+            (
+                _local_time(item.planned_start),
+                item.line_id,
+                str(item.slot_id),
+                f"{item.minutes:g}",
+                _cell(item.pulses),
+                item.status,
+                _cell(item.reason),
+            )
+        )
+        for item in ctx.occurrences
+    ]
+    manual = [
+        "|".join((_cell(item.item), _cell(item.updated_by), _cell(item.source), _local_time(item.updated_at)))
+        for item in ctx.manual_items
+    ]
+    return "\n".join(
+        (
+            f"--- IRRIGATION (lines, next {ctx.hours} h, manual items) ---",
+            f"now={_local_time(ctx.at)} {LOCAL_TZ_NAME} engine={_cell(ctx.engine)} reporting={_cell(ctx.reporting)}",
+            f"experiment_armed={ctx.armed_experiment_id or 'none'}",
+            "line|enabled|vpd_member|schedule_member|manual|paused_until|fault|minutes_today/daily_cap_min"
+            "|last_outcome|state",
+            *(_line_row(line) for line in ctx.lines),
+            f"next {ctx.hours} h: start|line|schedule|minutes|pulses|status|reason",
+            *_capped(occurrences, CONTEXT_MAX_OCCURRENCES, "irrigation_schedule has them all"),
+            "manual schedules and lines: item|who|source|since",
+            *_capped(manual, CONTEXT_MAX_MANUAL, "irrigation_status and irrigation_schedule have them all"),
+            CONTEXT_FOOTER,
+        )
+    )
+
+
+def _context_hours(text: str) -> int:
+    hours = int(text)
+    if not 1 <= hours <= CONTEXT_MAX_HOURS:
+        raise argparse.ArgumentTypeError(f"--hours must be 1-{CONTEXT_MAX_HOURS}")
+    return hours
+
+
+async def _print_context(hours: int) -> None:
+    import config  # the ingestor's own settings; only this entry point needs them
+
+    conn = await asyncpg.connect(
+        config.get_db_dsn(),
+        timeout=CONTEXT_DB_TIMEOUT_S,
+        server_settings={
+            "application_name": "verdify-iris-context",
+            "statement_timeout": f"{CONTEXT_DB_TIMEOUT_S * 1000}",
+        },
+    )
+    try:
+        context = await load_context(conn, GREENHOUSE_ID, hours)
+    finally:
+        await conn.close()
+    print(render_context(context))
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="python3 -m tasks.irrigation", description="The ingestor's irrigation step.")
+    commands = parser.add_subparsers(dest="command", required=True)
+    context = commands.add_parser("context", help="Print section 11 of Iris's context pack. Only reads.")
+    context.add_argument(
+        "--hours",
+        type=_context_hours,
+        default=CONTEXT_DEFAULT_HOURS,
+        help=f"Hours of occurrences ahead, 1-{CONTEXT_MAX_HOURS} (default {CONTEXT_DEFAULT_HOURS}).",
+    )
+    args = parser.parse_args(argv)
+    asyncio.run(_print_context(args.hours))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

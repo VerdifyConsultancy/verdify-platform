@@ -963,6 +963,34 @@ def test_hermes_mcp_server_ready_checks_http_status_payload_and_required_tools(m
     assert namespace["mcp_server_ready"]() == (False, [], "TimeoutError")
 
 
+def test_an_mcp_image_from_before_the_irrigation_reads_does_not_block_hermes(monkeypatch):
+    """VD-60: the config moves at any sync and the image at its promotion, and Iris ends every trigger without them."""
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    optional = namespace["PLAN_OPTIONAL"]
+    assert {"irrigation_history", "irrigation_schedule", "irrigation_status"} <= optional <= namespace["REQUIRED"]
+
+    def serves(tools):
+        body = json.dumps({"ready": True, "required_tools": sorted(tools)})
+
+        class Response(io.StringIO):
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                self.close()
+
+        monkeypatch.setattr(namespace["urllib"].request, "urlopen", lambda *_a, **_k: Response(body))
+
+    before = namespace["REQUIRED"] - optional
+    serves(before)
+    assert namespace["mcp_server_ready"]() == (True, [], None)
+    serves(before - {"set_plan"})
+    assert namespace["mcp_server_ready"]() == (False, ["set_plan"], None)
+
+
 def test_actual_python3_liveness_probe_replaces_unacknowledged_disconnect_or_fatal(tmp_path):
     manifest, _profile, source = _hermes_config_documents()
     probe_path = tmp_path / "tool-readiness.py"

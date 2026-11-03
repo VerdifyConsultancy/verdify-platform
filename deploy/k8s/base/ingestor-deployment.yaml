@@ -50,7 +50,7 @@ spec:
         # (the CI gate recomputes it). NOTE: a revision bump makes the NEXT
         # gated ArgoCD sync Recreate the single writer — same gated-restart
         # semantics as any other pod-template change here.
-        verdify.io/config-revision: "8a6126c56dd2"
+        verdify.io/config-revision: "ede16796e00f"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: ingestor
@@ -109,9 +109,8 @@ spec:
             - configMapRef:
                 name: verdify-config
           env:
-            # HA token file read by config.py (HA_TOKEN_FILE) and by the
-            # mounted gather-plan-context.sh. It must match the ha-token
-            # volumeMount below (storage-infra#1198 moved it off the legacy
+            # HA token file read by config.py (HA_TOKEN_FILE). It must match
+            # the ha-token volumeMount below (storage-infra#1198 moved it off the legacy
             # NAS-share path name; the token itself comes from KSOPS).
             - name: HA_TOKEN_FILE
               value: /var/run/secrets/verdify/ha_token.txt

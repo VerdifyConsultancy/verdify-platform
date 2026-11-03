@@ -696,7 +696,8 @@ is pending, and every 60 s in full:
 Iris's context pack, section 11 (`scripts/gather-plan-context.sh:435-470` and its copy in
 `deploy/k8s/components/ingestor-gather-script/gather-script-configmap.yaml`), reads the retired views
 `v_irrigation_schedule_current` and `v_irrigation_fertigation_runs`. It becomes the output of a new
-entry point in the ingestor image, `python3 -m ingestor.tasks.irrigation context --hours 24`. That reads
+entry point in the ingestor image, `python3 -m tasks.irrigation context --hours 24`, run from the image's
+working directory (`/app/ingestor`, where `ingestor` is `ingestor.py`, not a package). That reads
 the same M3 line-state view as `verdify_services.irrigation` status and the `verdify_schemas.irrigation`
 agenda, and prints, in about 60 lines at most: one row per line (enabled, flags, `manual`,
 `paused_until`, fault, today's minutes against the cap, the last outcome); the next 24 h of
