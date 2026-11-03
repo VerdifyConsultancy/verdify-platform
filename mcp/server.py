@@ -32,7 +32,7 @@ from zoneinfo import ZoneInfo
 
 import asyncpg
 from mcp.server.fastmcp import FastMCP
-from pydantic import Field, ValidationError
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError
 
 # verdify_schemas lives one level up from this server file in every worktree.
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -87,7 +87,7 @@ from verdify_schemas.experiment_config import (  # noqa: E402
     submit_policy_proposal,
 )
 from verdify_schemas.fixed_panel_native_route import read_native_fixed_panel_route_evidence  # noqa: E402
-from verdify_schemas.irrigation import LineId  # noqa: E402
+from verdify_schemas.irrigation import LineId, StartKind, Weekday  # noqa: E402
 from verdify_schemas.observed_minute_reader import read_observed_minute_evidence  # noqa: E402
 from verdify_schemas.plan import (  # noqa: E402
     classify_planner_terminal_action,
@@ -1099,7 +1099,7 @@ class AudienceAuthorizedFastMCP(FastMCP):
 
 
 # Every backticked tool name here must be registered: tests/test_mcp_irrigation_read_tools.py fails on one that
-# tools/list for admin does not return, so the paragraph grows with each tool (#1171, #1174).
+# tools/list for admin does not return, so the paragraph grows with each tool (#1171).
 SERVER_INSTRUCTIONS = """Verdify greenhouse control tools. Use these to monitor climate,
     manage setpoints, run the AI planner, and review performance.
     The greenhouse has temp/VPD bands, misters, fog, fans, heaters, and a vent.
@@ -1110,13 +1110,19 @@ SERVER_INSTRUCTIONS = """Verdify greenhouse control tools. Use these to monitor 
     derived from crop + zone policy. Use direct tunable pushes only for explicit overrides.
 
     Irrigation: `irrigation_status`, `irrigation_schedule` and `irrigation_history` only read
-    the water program, in the operator API's JSON, with unknown as null, never 0. Named agents
-    and admin also have `irrigation_run` and `irrigation_stop`: before the irrigation firmware,
-    run works on L01 only, and irrigation_stop always works. `request_id` makes a write safe to
-    retry: the same id and payload returns the stored result with `replayed: true`. A refusal
-    is the Problem JSON with isError: its code is from the OpenAPI ProblemCode list, and
-    `retryable` is true only where waiting helps. None of these tools counts as a plan for a
-    trigger."""
+    the water program, in the operator API's JSON, with unknown as null, never 0. Iris, named
+    agents and admin share the writes, with the dashboard's checks: `irrigation_schedule_set`,
+    `irrigation_line_set`, `irrigation_run`, `irrigation_stop` and `irrigation_clear_fault`.
+    Before the irrigation firmware, run works on L01 only, clear-fault waits for it, schedule and
+    line writes are stored for the first program push, and irrigation_stop always works. `manual`:
+    MCP creates and definition edits store false unless you pass true; pause, resume, run, stop
+    and clear-fault never change it; only Iris is refused with `manual` on a manual item.
+    `check_required`: only a person records a line's check, on the dashboard. `request_id` makes
+    a write safe to retry: the same id and payload returns the stored result with `replayed: true`.
+    A refusal is the Problem JSON with isError: its code is from the OpenAPI ProblemCode list, and
+    `retryable` is true only where waiting helps. A value outside a tool's schema is refused before
+    the tool runs, with isError and a plain message. Each write says the same: Changes watering
+    only; it does not count as your plan for this trigger. The reads do not count either."""
 
 mcp = AudienceAuthorizedFastMCP(
     "verdify",
@@ -1148,9 +1154,14 @@ HERMES_REQUIRED_TOOLS = frozenset(
         "forecast",
         "get_setpoints",
         "history",
+        "irrigation_clear_fault",
         "irrigation_history",
+        "irrigation_line_set",
+        "irrigation_run",
         "irrigation_schedule",
+        "irrigation_schedule_set",
         "irrigation_status",
+        "irrigation_stop",
         "knowledge_search",
         "lessons",
         "lessons_manage",
@@ -1173,7 +1184,7 @@ HERMES_REQUIRED_TOOLS = frozenset(
 # drift, so a new tool cannot silently skip authorization.
 #
 # Audiences:
-#   iris       — the current Hermes Iris profile. Exactly the 26 tools of
+#   iris       — the current Hermes Iris profile. Exactly the 31 tools of
 #                hermes-config.yaml tools.include (== HERMES_REQUIRED_TOOLS);
 #                tests/test_mcp_audience_auth.py holds the three surfaces in
 #                lockstep. Current behavior is preserved.
@@ -1185,10 +1196,10 @@ HERMES_REQUIRED_TOOLS = frozenset(
 #                unused until Lane C/D tranche 2 issues its credential.
 #   agent      — named in-cluster agents (VD-59, architecture §5.6), one key
 #                each in Secret verdify-mcp-agents (agent_key_registry). The
-#                live greenhouse reads plus alerts and the irrigation reads, run
-#                and stop; settings, activity, set_setting and the other irrigation
-#                writes join this column with #1171 and #1174. Never the planner,
-#                lessons, crop or Slack writers. Calls are attributed agent:<name>.
+#                live greenhouse reads plus alerts and every irrigation tool;
+#                settings, activity and set_setting join this column with #1171.
+#                Never the planner, lessons, crop or Slack writers. Calls are
+#                attributed agent:<name>.
 #   admin      — operator/debug credential; every tool. Its writes are
 #                attributed agent:admin.
 #   observer   — protocol-only availability probe; no tools.
@@ -1232,10 +1243,13 @@ TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     # Operator-only surfaces (never in the Hermes include list)
     "plan_run": frozenset({"admin"}),
     "query": frozenset({"admin"}),
-    # Irrigation writes (VD-64, #1177): run L01 now and stop any wet line, through the L01 bridge
-    # before the irrigation firmware. #1174 adds iris and the other irrigation writes.
-    "irrigation_run": frozenset({"agent", "admin"}),
-    "irrigation_stop": frozenset({"agent", "admin"}),
+    # Irrigation writes (VD-64, #1177; VD-61, #1174): one surface for every agent, Iris included (D-IRP-21).
+    # They never touch a trigger, so Iris still ends each one with set_plan or acknowledge_trigger.
+    "irrigation_schedule_set": frozenset({"iris", "agent", "admin"}),
+    "irrigation_line_set": frozenset({"iris", "agent", "admin"}),
+    "irrigation_run": frozenset({"iris", "agent", "admin"}),
+    "irrigation_stop": frozenset({"iris", "agent", "admin"}),
+    "irrigation_clear_fault": frozenset({"iris", "agent", "admin"}),
 }
 
 # Registry entries for tools that are DESIGNED but not yet registered. Each
@@ -5731,12 +5745,38 @@ async def knowledge_search(
 
 
 # ═══════════════════════════════════════════════════════════════
-# IRRIGATION WRITES (VD-64, #1177)
+# IRRIGATION WRITES (VD-64, #1177; VD-61, #1174)
 # ═══════════════════════════════════════════════════════════════
-# Thin adapters over verdify_services.irrigation.writes: the same validation,
-# refusal codes and activity row as the operator API's API-IRR-06 and -07, and
-# the same Command JSON. verdify_services and mcp.types are imported inside the
-# functions: CI loads this module under a FastMCP stub without the MCP runtime.
+# Thin adapters over verdify_services.irrigation.writes: the same validation, refusal codes and activity row as the
+# operator API's API-IRR-03 to -08 and -13, and the same JSON. The actor comes only from current_actor(). None of them
+# reads plan_delivery_log or planner_trigger_ledger, so a water write never satisfies or fails a trigger. verdify_services
+# and mcp.types are imported inside the functions: CI loads this module under a FastMCP stub without the MCP runtime.
+
+ScheduleLineId = Literal["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10"]
+MisterLineId = Literal["L04", "L07", "L09"]
+LineTarget = Literal[LineId, "all"]
+
+_WaterReason = Annotated[str | None, Field(description="Why, at most 500 characters; shown in Activity.")]
+_WaterRequestId = Annotated[
+    str | None, Field(description="A UUID; the same one and arguments replay the stored result.")
+]
+_WaterTriggerId = Annotated[str | None, Field(description="Kept only in the activity log.")]
+_WaterPlannerInstance = Annotated[str | None, Field(description="Kept only in the activity log.")]
+
+
+class ScheduleStart(BaseModel):
+    """The OpenAPI ScheduleStart: clock with a local HH:MM, or a solar kind with offset_min (0 when left out)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: StartKind
+    clock: Annotated[
+        str | None,
+        Field(pattern=r"^([01][0-9]|2[0-3]):[0-5][0-9]$", description="Local HH:MM, when kind is clock."),
+    ] = None
+    offset_min: Annotated[
+        int | None, Field(ge=-240, le=240, description="Minutes from the solar event, when kind is not clock.")
+    ] = None
 
 
 def _tool_ok(model, replayed: bool = False):
@@ -5764,13 +5804,15 @@ def _tool_problem(problem):
 
 async def _irrigation_write(tool: str, write):
     """Run one irrigation write as the request's actor (current_actor(), never an argument) on its own
-    connection: the Command JSON, or the Problem JSON with isError."""
+    connection: the service's JSON, or the Problem JSON with isError."""
     from verdify_services.actor import Actor
     from verdify_services.problems import ServiceError, problem
 
     caller = current_actor()
     if caller is None:
-        return _tool_problem(problem("forbidden", "A water write needs a resolved caller: a named agent or admin"))
+        return _tool_problem(
+            problem("forbidden", "A water write needs a resolved caller: Iris, a named agent or admin")
+        )
     actor = Actor(source=caller.source, name=caller.name)
     conn = None
     try:
@@ -5784,7 +5826,7 @@ async def _irrigation_write(tool: str, write):
             problem(
                 "unavailable",
                 "The irrigation service could not answer. Retry with the same request_id: it stores the "
-                "command once and returns it if it was stored",
+                "write once and returns it if it was stored",
             )
         )
     finally:
@@ -5794,40 +5836,242 @@ async def _irrigation_write(tool: str, write):
 
 
 @mcp.tool()
-async def irrigation_run(
-    line_id: Annotated[LineId, Field(description="The line to run, L01-L11. Before the irrigation firmware: L01.")],
-    minutes: Annotated[
+async def irrigation_schedule_set(
+    slot_id: Annotated[
         int | None,
-        Field(description="Optional. Before the irrigation firmware it must equal irrig_wall_duration_min."),
+        Field(ge=1, le=65535, description="The schedule to edit or delete; leave it out to create one."),
     ] = None,
-    reason: Annotated[str | None, Field(description="Why, at most 500 characters; shown in Activity.")] = None,
-    request_id: Annotated[
-        str | None, Field(description="A UUID that makes a retry safe: the same one replays the stored command.")
+    delete: Annotated[bool, Field(description="Delete the schedule slot_id names; send no schedule field.")] = False,
+    line_id: Annotated[
+        ScheduleLineId | None, Field(description="The line: L01, L02 or L04-L10. Needed to create.")
     ] = None,
-    trigger_id: Annotated[str | None, Field(description="Optional audit trigger id; activity log only.")] = None,
-    planner_instance: Annotated[str | None, Field(description="Optional planner instance; activity log only.")] = None,
+    days: Annotated[list[Weekday] | None, Field(min_length=1, description="The weekdays. Needed to create.")] = None,
+    start: Annotated[ScheduleStart | None, Field(description="When it starts each day. Needed to create.")] = None,
+    on_s: Annotated[
+        int | None,
+        Field(ge=10, le=7200, description="Seconds per run or pulse; misters 10-90. Needed to create."),
+    ] = None,
+    count: Annotated[int | None, Field(ge=1, le=60, description="Pulses in a mist window; drips 1.")] = None,
+    gap_s: Annotated[
+        int | None, Field(ge=0, le=600, description="Seconds between pulses: misters 30-600; drips 0.")
+    ] = None,
+    prewet_s: Annotated[int | None, Field(ge=0, le=1800, description="Fertilizer lines: clean seconds before.")] = None,
+    flush_s: Annotated[int | None, Field(ge=0, le=1800, description="Fertilizer lines: clean seconds after.")] = None,
+    degraded_only: Annotated[
+        bool | None, Field(description="L04, L07 and L09: run only while the zone's VPD sensor is degraded.")
+    ] = None,
+    enabled: Annotated[bool | None, Field(description="Whether it runs; a disabled schedule stays stored.")] = None,
+    label: Annotated[str | None, Field(max_length=60, description="A short name, shown on Water.")] = None,
+    manual: Annotated[bool, Field(description="Stored on a create or edit; false unless you pass true.")] = False,
+    reason: _WaterReason = None,
+    request_id: _WaterRequestId = None,
+    trigger_id: _WaterTriggerId = None,
+    planner_instance: _WaterPlannerInstance = None,
 ):
     """Changes watering only; it does not count as your plan for this trigger.
 
-    Run one irrigation line now. REST twin: API-IRR-06 (POST /v1/irrigation/lines/{line_id}/run). Returns the
-    same Command JSON: command_id, kind run, line_id, args, status (pending, then sent, or failed: not sent
-    within 2 min, ended by a Stop, or the line already running), actor and created_at. Whether water started
-    shows on the line's relay in equipment_state within about 30 s, not in this reply.
+    Create, edit or delete a schedule. REST twins: API-IRR-03 (POST /v1/irrigation/schedules), API-IRR-04 (PUT
+    /v1/irrigation/schedules/{slot_id}) and API-IRR-05 (DELETE /v1/irrigation/schedules/{slot_id}). Returns the Schedule
+    JSON with sync and manual_before; a delete returns {"slot_id": <id>, "deleted": true, "manual_before": <flag>}.
 
-    Before the irrigation firmware, run works on L01 only: the controller's "Wall Drips - RUN CLEAN" press,
-    which runs the wall drip for the controller's irrig_wall_duration_min. Leave minutes out, or send exactly
-    that value. irrigation_stop always works and ends a run early.
+    No slot_id creates, and needs line_id, days, start and on_s. A slot_id edits: omitted fields keep their value, except
+    manual. delete true with a slot_id and no schedule field deletes. irrigation_schedule has the bounds per line kind
+    and the limit of 24 schedules.
 
-    Run and stop never carry manual. request_id (a UUID) makes a retry safe: the same request_id with the same
-    arguments returns the stored command with replayed: true. trigger_id and planner_instance are recorded
-    only in the activity log.
+    manual stores false on every create and edit unless you pass true, so an edit clears a person's flag: manual_before
+    says so and Activity shows "manual cleared". Only Iris is refused with manual, on an edit or a delete. Before the
+    irrigation firmware the write is stored and reaches the controller with the first program push. The same request_id
+    (a UUID) and arguments return the stored result with replayed: true.
 
-    Refusals return the Problem JSON with isError: unavailable (a line other than L01 before the irrigation
-    firmware, not retryable; the database out of reach, retryable with the same request_id), out_of_range
-    (minutes is not irrig_wall_duration_min; min and max give it), line_disabled (L01 is disabled, or the
-    controller's sw_irrig_enabled or sw_irrig_wall_enabled is off; the detail names which), line_paused,
-    line_busy (L01 is already running; retry_after_s when known), unknown_target, invalid_request,
-    request_id_reused and forbidden."""
+    Refusals are the Problem JSON with isError: invalid_request, unknown_target, out_of_range (min and max are the bounds
+    for the line kind), too_close (two starts on a line under 30 min apart), too_many_schedules, manual,
+    request_id_reused, forbidden, and unavailable (the database; retry with the same request_id)."""
+    from verdify_services.irrigation import writes
+    from verdify_services.problems import problem
+
+    fields = {
+        name: value
+        for name, value in (
+            ("line_id", line_id),
+            ("days", days),
+            ("start", None if start is None else start.model_dump(exclude_none=True)),
+            ("on_s", on_s),
+            ("count", count),
+            ("gap_s", gap_s),
+            ("prewet_s", prewet_s),
+            ("flush_s", flush_s),
+            ("degraded_only", degraded_only),
+            ("enabled", enabled),
+            ("label", label),
+        )
+        if value is not None
+    }
+    audit = {
+        "reason": reason,
+        "request_id": request_id,
+        "trigger_id": trigger_id,
+        "planner_instance": planner_instance,
+    }
+
+    if delete:
+        extra = next(iter(fields), "manual" if manual else None)
+        if slot_id is None or extra is not None:
+            detail = "delete needs a slot_id" if slot_id is None else f"delete takes no schedule field, not {extra}"
+            return _tool_problem(problem("invalid_request", detail, field="slot_id" if slot_id is None else extra))
+
+        async def write(conn, actor):
+            return await writes.schedule_delete(conn, actor, slot_id, **audit)
+
+    elif slot_id is None:
+
+        async def write(conn, actor):
+            return await writes.schedule_create(conn, actor, fields, manual=manual, **audit)
+
+    else:
+
+        async def write(conn, actor):
+            return await writes.schedule_update(conn, actor, slot_id, fields, manual=manual, **audit)
+
+    return await _irrigation_write("irrigation_schedule_set", write)
+
+
+def _line_write_manual(line_id: str, definition: bool, pause: bool, manual: bool | None) -> bool | None:
+    """What a line write passes as manual: REST's line_edit_manual with MCP's default, false (architecture §5.6). A
+    definition edit stores the flag it carries. A pause or resume on one line passes none, so the flag stays, even with
+    manual beside it. Anything else passes what it was sent: manual alone sets it, and the service refuses it on all."""
+    if definition:
+        return False if manual is None else manual
+    return None if pause and line_id != "all" else manual
+
+
+@mcp.tool()
+async def irrigation_line_set(
+    line_id: Annotated[LineTarget, Field(description="The line, L01-L11, or all to pause or resume every line.")],
+    enabled: Annotated[bool | None, Field(description="Enable or disable the line.")] = None,
+    vpd_member: Annotated[bool | None, Field(description="L04, L07 and L09: VPD misting on this zone.")] = None,
+    schedule_member: Annotated[bool | None, Field(description="L04, L07 and L09: schedules and runs here.")] = None,
+    daily_cap_min: Annotated[int | None, Field(ge=0, le=480, description="Minutes a day; 0 is no cap.")] = None,
+    vpd_reserve_min: Annotated[
+        int | None, Field(ge=0, le=480, description="Minutes of the cap kept for VPD; at most daily_cap_min.")
+    ] = None,
+    paused_until: Annotated[
+        AwareDatetime | None,
+        Field(description="ISO date-time with its UTC offset; a time at or before now resumes the line."),
+    ] = None,
+    manual: Annotated[
+        bool | None, Field(description="Stored as sent; a definition edit that leaves it out stores false.")
+    ] = None,
+    reason: _WaterReason = None,
+    request_id: _WaterRequestId = None,
+    trigger_id: _WaterTriggerId = None,
+    planner_instance: _WaterPlannerInstance = None,
+):
+    """Changes watering only; it does not count as your plan for this trigger.
+
+    Change one line, or pause or resume every line. REST twin: API-IRR-08 (PUT /v1/irrigation/lines/{line_id}). Returns
+    {"lines": [...]}: each changed line as irrigation_status shows it, with manual_before. Only the fields you send
+    change; line_id all takes only paused_until and reason.
+
+    manual: a definition edit (enabled, vpd_member, schedule_member, daily_cap_min or vpd_reserve_min) stores what you
+    pass, false by default, so it clears a person's flag: manual_before says so and Activity shows "manual cleared". A
+    pause or resume never changes it, even with manual beside it; manual alone sets it. Only Iris is refused with manual:
+    on a manual line, a pause included, and on all while any line is manual.
+
+    Only a person records a line's one-time check, on the dashboard: enabling a line with no recorded check, or turning
+    schedule_member on with none, is check_required, and the same call succeeds once it is recorded. Before the
+    irrigation firmware the write is stored and reaches the controller with the first program push. The same request_id
+    (a UUID) and arguments return the stored result with replayed: true.
+
+    Refusals are the Problem JSON with isError: out_of_range (min and max are the bounds), check_required,
+    invalid_request (all with any field but paused_until, manual included; a mister flag off L04, L07 or L09),
+    unknown_target, manual, request_id_reused, forbidden, and unavailable (the database; retry with the same
+    request_id)."""
+    from verdify_services.irrigation import writes
+
+    definition = {
+        name: value
+        for name, value in (
+            ("enabled", enabled),
+            ("vpd_member", vpd_member),
+            ("schedule_member", schedule_member),
+            ("daily_cap_min", daily_cap_min),
+            ("vpd_reserve_min", vpd_reserve_min),
+        )
+        if value is not None
+    }
+    fields = definition if paused_until is None else {**definition, "paused_until": paused_until}
+    sent_manual = _line_write_manual(line_id, bool(definition), paused_until is not None, manual)
+
+    async def write(conn, actor):
+        return await writes.line_update(
+            conn,
+            actor,
+            line_id,
+            fields,
+            manual=sent_manual,
+            reason=reason,
+            request_id=request_id,
+            trigger_id=trigger_id,
+            planner_instance=planner_instance,
+        )
+
+    return await _irrigation_write("irrigation_line_set", write)
+
+
+@mcp.tool()
+async def irrigation_run(
+    line_id: Annotated[
+        LineId,
+        Field(description="The line to run: L01, L02 or L04-L10; L03 and L11 take no runs. Before the firmware: L01."),
+    ],
+    minutes: Annotated[
+        int | None,
+        Field(
+            ge=1,
+            le=120,
+            description="Drips L01, L02, L05, L06. Before the irrigation firmware: L01, left out or exactly "
+            "irrig_wall_duration_min.",
+        ),
+    ] = None,
+    prewet_s: Annotated[
+        int | None, Field(ge=0, le=1800, description="L02, L06, L08 and L10: clean seconds before the feed.")
+    ] = None,
+    flush_s: Annotated[
+        int | None, Field(ge=0, le=1800, description="L02, L06, L08 and L10: clean seconds after the feed.")
+    ] = None,
+    on_s: Annotated[int | None, Field(ge=10, le=90, description="Misters L04, L07-L10: seconds per pulse.")] = None,
+    count: Annotated[int | None, Field(ge=1, le=60, description="Misters L04, L07-L10: pulses.")] = None,
+    gap_s: Annotated[
+        int | None, Field(ge=30, le=600, description="Misters L04, L07-L10: seconds between pulses.")
+    ] = None,
+    reason: _WaterReason = None,
+    request_id: _WaterRequestId = None,
+    trigger_id: _WaterTriggerId = None,
+    planner_instance: _WaterPlannerInstance = None,
+):
+    """Changes watering only; it does not count as your plan for this trigger.
+
+    Run one line now, or be refused; nothing is queued. REST twin: API-IRR-06 (POST /v1/irrigation/lines/{line_id}/run).
+    Returns the Command JSON: status pending, then sent, or failed (not sent within 2 min, ended by a Stop, or the line
+    already running). Whether water started shows on the line's relay in equipment_state within about 30 s, not here.
+
+    Send exactly the fields of the line's kind. Drips L01, L05: minutes. Fertilizer drips L02, L06: minutes, prewet_s,
+    flush_s. Misters L04, L07, L09, with schedule_member on: on_s, count, gap_s. Fertilizer misters L08, L10: on_s,
+    count, gap_s, prewet_s, flush_s, never minutes; a rinse needs the clean partner enabled, or the controller ends the
+    run skipped.
+
+    Before the irrigation firmware, run works on L01 only: the controller's "Wall Drips - RUN CLEAN" press, which runs
+    the wall drip for its irrig_wall_duration_min. Leave minutes out, or send exactly that value.
+    irrigation_stop always works and ends a run early.
+
+    Run and stop never carry manual. The same request_id (a UUID) and arguments return the stored command with
+    replayed: true.
+
+    Refusals are the Problem JSON with isError: line_busy and manifold_busy (retryable, retry_after_s when known),
+    cap_reached, line_disabled, line_paused, line_faulted, not_schedule_member, out_of_range (before the firmware, minutes
+    is not irrig_wall_duration_min; min and max give it), invalid_request (a missing field or another kind's, such as
+    minutes on L08), unknown_target (L03, L11), request_id_reused, forbidden, and unavailable (a line other than L01
+    before the irrigation firmware, not retryable; the database, retryable with the same request_id)."""
     from verdify_services.irrigation import writes
 
     async def write(conn, actor):
@@ -5840,6 +6084,11 @@ async def irrigation_run(
             request_id=request_id,
             trigger_id=trigger_id,
             planner_instance=planner_instance,
+            prewet_s=prewet_s,
+            flush_s=flush_s,
+            on_s=on_s,
+            count=count,
+            gap_s=gap_s,
         )
 
     return await _irrigation_write("irrigation_run", write)
@@ -5850,34 +6099,56 @@ async def irrigation_stop(
     line_id: Annotated[
         LineId | None, Field(description="The line to stop, L01-L11; leave it out to stop every wet line.")
     ] = None,
-    reason: Annotated[str | None, Field(description="Why, at most 500 characters; shown in Activity.")] = None,
-    request_id: Annotated[
-        str | None, Field(description="A UUID that makes a retry safe: the same one replays the stored command.")
-    ] = None,
+    reason: _WaterReason = None,
+    request_id: _WaterRequestId = None,
 ):
     """Changes watering only; it does not count as your plan for this trigger.
 
-    Stop one irrigation line, or every wet line when line_id is left out. REST twin: API-IRR-07 (POST
-    /v1/irrigation/stop). Returns the same Command JSON (kind stop; line_id null for every line).
+    Stop one line, or every wet line when line_id is left out. REST twin: API-IRR-07 (POST /v1/irrigation/stop). Returns
+    the Command JSON (kind stop; line_id null for every line). Whether water stopped shows on the relays in
+    equipment_state within about 30 s.
 
-    irrigation_stop always works: it is never refused for the firmware, the controller's heap or a writes
-    switch, and it goes out ahead of any run. Before the irrigation firmware it ends the wall drip job and
-    switches every open wet relay in its scope (L01-L10) off; L11 fog stays with the climate controller.
-    Whether water stopped shows on the relays in equipment_state within about 30 s.
+    irrigation_stop always works: it is never refused for the firmware, the controller's heap or a writes switch, and it
+    goes out ahead of any run. Before the irrigation firmware it ends the wall drip job and switches every open wet relay
+    in its scope (L01-L10) off; L11 fog stays with the climate controller.
+    After a Stop, VPD misting may pulse again; to keep a line off, disable it.
 
-    After a Stop, VPD misting may pulse again. A Stop disables nothing: VPD misting and fog can still start on
-    their own.
-
-    Run and stop never carry manual. request_id (a UUID) makes a retry safe: the same request_id with the same
-    arguments returns the stored command with replayed: true. Refusals return the Problem JSON with isError:
-    unknown_target, invalid_request, request_id_reused and forbidden; unavailable means the database is out of
-    reach, so retry with the same request_id."""
+    Run and stop never carry manual. The same request_id (a UUID) and arguments return the stored command with
+    replayed: true. Refusals are the Problem JSON with isError: unknown_target, invalid_request, request_id_reused,
+    forbidden, and unavailable (the database; retry with the same request_id)."""
     from verdify_services.irrigation import writes
 
     async def write(conn, actor):
         return await writes.stop(conn, actor, line_id, reason=reason, request_id=request_id)
 
     return await _irrigation_write("irrigation_stop", write)
+
+
+@mcp.tool()
+async def irrigation_clear_fault(
+    line_id: Annotated[
+        MisterLineId | None, Field(description="The mister to clear: L04, L07 or L09; leave it out for every mister.")
+    ] = None,
+    reason: _WaterReason = None,
+    request_id: _WaterRequestId = None,
+):
+    """Changes watering only; it does not count as your plan for this trigger.
+
+    Clear a mister's watchdog latch, or every mister's when line_id is left out; harmless with nothing latched. REST
+    twin: API-IRR-13 (POST /v1/irrigation/clear-fault). Returns the Command JSON (kind clear_fault; line_id null for every
+    mister): pending, then sent, or failed when not sent within 2 min. The line's fault in irrigation_status shows whether
+    the latch cleared.
+
+    Clear-fault never carries or checks manual. The same request_id (a UUID) and arguments return the stored command with
+    replayed: true. Refusals are the Problem JSON with isError: unknown_target (a line with no latch), request_id_reused,
+    forbidden, and unavailable (before the irrigation firmware, not retryable, and nothing is stored; the database,
+    retryable with the same request_id)."""
+    from verdify_services.irrigation import writes
+
+    async def write(conn, actor):
+        return await writes.clear_fault(conn, actor, line_id, reason=reason, request_id=request_id)
+
+    return await _irrigation_write("irrigation_clear_fault", write)
 
 
 # ═══════════════════════════════════════════════════════════════

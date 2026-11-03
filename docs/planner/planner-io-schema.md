@@ -42,8 +42,12 @@ two.
 
 ## 2. Outputs (3 MCP tools)
 
-The planner's entire write surface is three MCP tools. Each is typed and
-DB-validated before persistence — see `mcp/server.py`.
+The planner's plan and tunable write surface is three MCP tools. Each is typed
+and DB-validated before persistence — see `mcp/server.py`. Water has its own five
+writes, the same ones every agent uses (`irrigation_schedule_set`,
+`irrigation_line_set`, `irrigation_run`, `irrigation_stop` and
+`irrigation_clear_fault`; [irrigation §8.2](../design/dashboard/irrigation.md#82-mcp-tools-one-surface-for-every-agent)).
+They change watering only and never count as a plan for a trigger.
 
 | Tool | Pydantic model(s) | DB target | Purpose |
 |---|---|---|---|

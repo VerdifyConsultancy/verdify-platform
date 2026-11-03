@@ -136,7 +136,7 @@ are no longer the only boundaries. Every tool call resolves its bearer token to
 an **audience** (constant-time comparison) and is checked against the
 server-side `TOOL_AUDIENCES` inventory in `mcp/server.py`:
 
-- `iris` — exactly the 26 tools in the hermes-config `tools.include` list
+- `iris` — exactly the 31 tools in the hermes-config `tools.include` list
   (drift-guarded by `tests/test_mcp_audience_auth.py`); current behavior.
 - `experiment` — the blinded experiment planner arm: qualified
   climate/forecast/crop/topology reads + `acknowledge_trigger` only;
@@ -147,9 +147,10 @@ server-side `TOOL_AUDIENCES` inventory in `mcp/server.py`:
   table): `climate`, `forecast`, `equipment_state`, `history`, `plan_status`,
   `get_setpoints`, `scorecard`, `topology`, `position_current`, `alerts`,
   `irrigation_status`, `irrigation_schedule`, `irrigation_history`,
-  `irrigation_run` and `irrigation_stop`; `settings`, `activity`, `set_setting`
-  and the other irrigation writes join as they land. Never the planner, lessons,
-  crop or Slack writers. Each agent's key is
+  `irrigation_schedule_set`, `irrigation_line_set`, `irrigation_run`,
+  `irrigation_stop` and `irrigation_clear_fault`; `settings`, `activity` and
+  `set_setting` join as they land. Never the planner, lessons, crop or Slack
+  writers. Each agent's key is
   one entry of Secret `verdify-mcp-agents` (never an environment variable:
   `VERDIFY_MCP_TOKEN_AGENT` stays unrecognized), mounted read-only and re-read
   at most every 60 s, so adding or removing a key admits or refuses that agent
@@ -195,10 +196,9 @@ dark-launch credential is deliberately enabled. It also lists the named agents
 token, a token shared by two agents or equal to an environment token); agent
 keys never change readiness, so one bad key cannot take Iris's tool surface out
 of service. Hermes's own readiness (`tool-readiness.py` in hermes-config) wants
-every tool of its `REQUIRED` set from that report except `PLAN_OPTIONAL`
-(`irrigation_status`, `irrigation_schedule` and `irrigation_history`): Iris ends
-every trigger without them, and Hermes's config moves at any sync while the MCP
-image moves at its promotion.
+every tool of its `REQUIRED` set from that report except `PLAN_OPTIONAL` (the
+eight irrigation tools): Iris ends every trigger without them, and Hermes's
+config moves at any sync while the MCP image moves at its promotion.
 
 ### D. MCP server → TimescaleDB
 
