@@ -75,3 +75,17 @@ functions and phase helper as historical 2143. Function relocation annotations
 and solar-phase alignment padding differ. The host 46,080-reference differential
 checks this explicit instruction contract; it does not execute the Xtensa target
 or replace two fresh native full 48-component epochs and source-owned restoration.
+
+### Engine firmware
+
+`SUPPORTED_FIRMWARE` now binds the engine release `2026.11.3.0435.5e24d07c`,
+compiled from `5e24d07c3802958c5b7b09f560ab0e796a8f96bf` by the signed builder
+with the same GCC 14.2 (manifest
+`777bdb886a29791c4113ba98a67d81f13ac88db78ae3ce0ef156113524a037b0`, OTA binary
+`8d7621bdfed03a729df4e164c97d038ba74578062273c75b2dd794bddd791e79`). The move
+rests on source identity: `firmware/lib/greenhouse_solar.h` is byte-identical to
+620a218a's, and the differential above still passes against it. It is not a
+physical qualification claim. `TARGET_ELF_SHA256` still names 620a218a's ELF,
+the last one whose instructions were inspected. To move it, read `elf_sha256`
+from a verify Job's log (`docs/runbooks/firmware-signed-artifacts.md`), repeat
+the instruction inspection on that ELF, then change the constant and this section.
