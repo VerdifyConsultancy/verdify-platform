@@ -183,7 +183,7 @@ RUNNING · COMMANDED
 | Running | A chip per running actuator with "since HH:MM"; wet lines add the cause and, with the irrigation firmware, the time left; bursts from the controller's readback ("Fans burst · 12 min left"); and always one occupancy chip: "Someone inside: misters wait (Frigate, 4 min ago)", "Nobody seen: misters may run (last person 05:10)", "Occupancy unknown: misters may run", or, while `occupancy_inhibit` is off, "Occupancy mist hold is off: misters may run" | API-02; occupancy from API-IRR-01 | 15 s |
 | Water today | Minutes today by zone (wall, center, south, west); when each zone last got water ("Wall Fri 07:31, 12 min · Center now (VPD) · West 9 days ago"; a zone with no enabled line reads "not set up", never 0); the running line; the next run per enabled line; the flow state in words; SAF-4 used of 360 gal; a mister in watchdog back-off ("South: backing off until 13:20") or latched ("South: faulted, no misting until midnight (watchdog)", with Clear fault) | API-IRR-01 | 15 s |
 | Needs someone | Top 3 open alerts nobody has acknowledged, by severity (critical, warning, info) then age: plain title, zone or line, age, Acknowledge (`AlertRow`, shared with Activity), Open | API-14 | 15 s |
-| Coming up (Next) | Next plan transition (AI; manual settings left out), next Iris trigger, next run per line (pauses say by whom), sunrise and sunset | API-07, API-IRR-02 | 60 s |
+| Coming up (Next) | Next plan transition (AI; manual settings left out), next Iris trigger, next run per line (pauses say by whom), sunrise and sunset | API-07, API-IRR-02, API-IRR-01 | 60 s |
 | Zones (Next) | A tile per zone: temperature, RH and VPD against its target, tagged MEASURED, PEER or HOUSE; opens `/graphs/zones` | API-04, API-06, API-IRR-01 | 60 s |
 
 Mode words (one table in the app; an unmapped code shows raw): `IDLE` "In band, holding"; `VENTILATE` "Venting to
@@ -243,6 +243,19 @@ Acceptance:
 | Clear on a burst | One "Clear" after the burst chips, however many bursts run, because `{kind: "clear"}` ends them all. It shows while API-IRR-01 reads `engine: true`, so before the irrigation firmware, or while that read fails, a push-button burst keeps its chip with no Clear |
 | Clear fault | Beside the line's words on the water card, only on a `mister_fault` of L04, L07 or L09: API-IRR-13 names no other line, so a latch reported only on L08 or L10 reads in words with no button |
 | Last water | A mister that misted today reads "misted 09:58 (VPD)", as J9 has it, in place of VD-09's "misted today 09:58 (VPD)"; a drip keeps "today 07:31, 12 min" |
+
+**As built (VD-18).** Where the build settles a detail of Coming up and the zone tiles, or differs:
+
+| Topic | As built |
+|---|---|
+| Next transition | A waypoint that repeats what the lane already holds is no change, so it never counts as the transition or reads "1.60 → 1.60": Iris restates its whole plan at each time (39 waypoints at the next time on 2026-11-02, 9 of them real changes). The transition is the earliest time, after now, at which a lane's value changes; values compare as they print, so a binary32 readback's noise is no change. A switch (`sw_*`) reads ON or OFF, and a value keeps the decimals it carries. "From" is the device value, "—" when there is none. A time on another day carries its date |
+| Rows | Next change, Next Iris trigger, Next run and Sun, each failing alone with Retry ("Plan unavailable"), never "none". A failed API-IRR-01 reads "Next run unavailable", because a paused line would otherwise read as a run. Runs list soonest first. With the engine off they read "Schedules run with the irrigation firmware" |
+| Fallback slots | A `degraded_only` occurrence is the line's next run as the rule says, and carries its note: "L04 today 11:47 · 3 min · vanda-degraded · only if VPD sensing is degraded" |
+| Who | "by Jason" is the signed-in person's display name (API-01); anyone else reads by `paused_by.name` |
+| Zone reads | Three API-04 requests of at most 8 keys, each holding its zones' keys whole, over the last 15 minutes on the server's clock (API-02's skew), so a device clock running behind never reads a live probe as old; one API-06 per tile, once its tile draws; API-03's cadences. All poll every 60 s. A failed API-04 fails the panel with Retry; a failed API-06 reads "band unavailable" on that tile |
+| Freshness | A key's newest non-null bucket counts from its end, against the answer's `server_time`, as the charts' STALE does (`charts/retention.ts`). The sample's own time is somewhere in that bucket, and counting from its start would flag a healthy 60 s feed |
+| Peers | Each metric's PEER value is the mean of the peers fresh on that metric; none reads "—" with "No fresh peer probe". The tag itself follows the VPD keys alone |
+| Tile | Tag at the head: PEER, or HOUSE on a zone with a probe, in the warn family; center's HOUSE is neutral. A band line ("band 62–70 °F · 0.45–0.80 kPa"; north "house band …") and a target line ("target 0.60 kPa"; north "house target …"). RH says "no RH band" |
 
 ## 3. SCR-02 Graphs · `/graphs`
 
@@ -335,6 +348,18 @@ As built (VD-10, #1130). Where the build settles a detail above, or differs from
 | Scorecard CSV | The same 15 columns; the date as YYYY-MM-DD with its note in parentheses ("2026-11-01 (25 h)"), each value as the number in its canonical unit, each missing value as "— <reason>" |
 | Chart types | `dashboard/app/charts/types.ts` re-exports the generated client's types (through `Lenient`), so a parsed response goes to a chart unchanged |
 | Fixture | `scorecard-30d` joins the registry. The fixture API's day buckets now start at America/Denver midnights, as VD-56's do, and a request that names a `daily.*` key is daily |
+
+As built (VD-18). Where the build settles a detail of the outdoor and forecast overlay and `/graphs/zones`, or differs:
+
+| Topic | As built |
+|---|---|
+| Overlay reads | One API-04 request for `climate.outdoor_temp_f` and `climate.outdoor_rh_pct` over the measured window and one for the forecast keys over the part of the x range past now (hourly buckets through `points`), each failing alone, so a slow overlay never takes a panel down. Each key is asked for only if API-03 lists it, so before VD-57 serves the forecast keys none is drawn and nothing is refused |
+| Outdoor | Traces in `--c-outdoor` laid over each panel's own buckets; a bucket the outdoor read lacks stays a gap. Outdoor VPD heads the CSV as `derived.outdoor_vpd_kpa` and reads "Outdoor VPD · DERIVED" in the legend, tooltip and summary. The notes line reads "Outdoor · Tempest via the controller · 2 min ago", "under 1 min ago" within the first minute, in whole minutes so the page redraws at most once a minute. Over 31 days API-04's outdoor temperature has a daily low and high and no average, so that trace and the derived VPD stay gaps there while RH draws |
+| Forecast | Drawn in a hook from its own time array, not as a uPlot series, so measured buckets, coverage, gaps and STALE never see it: 2 px dashed [8,4], joined hour to hour, a missing hour left open, a lone hour a dot, and in the y range. "Forecast · issued 07:00" on the notes line and beside the line, with its date when issued on another day. It has a legend toggle, a tooltip line ("Forecast temperature 13:00 58.2 °F") and its own data table, and "CSV of this window" adds its hours as rows after the measured buckets |
+| Forecast keys and the picker | The Outdoor chip draws them. "+ Metric" does not list them, and an old link's `m=forecast.temp_f` is dropped with a notice, so a forecast never draws left of now |
+| Outdoor chip | First in "On charts:", a link with `aria-current` while on. `outdoor=0` stays in every link on the page, the custom range's form included |
+| `/graphs/zones` | No zone or an unknown one opens north, an unknown one with a notice. `from` and `to` read as on Graphs, though the page offers only the chips. A note under the chips says what the tag means for these charts, which only ever draw the zone's own samples: "South's tile reads the mean of the fresh peer probes while its probe is out. These charts draw only South's own samples: a missing sample stays a gap." The eyebrow's tag stands where Graphs states the provenance |
+| Target | Dotted [2,4] in `--c-setpoint`, scaled by the device pixel ratio as every series dash now is, with a note under the VPD eyebrow |
 
 ## 4. SCR-03 Plan · `/plan`
 
@@ -543,6 +568,22 @@ Acceptance:
 6. Minutes by zone draws a day with no data as a hatched "no data" gap, never 0, and marks today partial; south reads
    "VPD from peer probes" while its probe is out.
 
+As built (VD-17, `dashboard/app/components/schedule-editor.tsx` with `app/lib/schedule-preview.ts`), where the editor
+settles a detail this section leaves open:
+
+| Topic | As built |
+|---|---|
+| Opening | `?schedule=new` or `?schedule=<slot_id>` shows the next 7 days whatever `?past=` says, and "+ New schedule" and Edit drop `past`. A viewer gets no editor from any URL. A slot that is not stored opens the drawer with "This schedule no longer exists" and Done. A schedule deleted elsewhere while the form is open keeps the form, and Save or Delete then reads the same words |
+| Reaching a disabled schedule | A disabled schedule has no occurrences, so no block to select: "Disabled, so not in the week: L01 Wall MWF" under the week links each one to its editor |
+| Wide screens | The backdrop dims less at every width. From 1200 px the page also narrows beside the drawer, so all seven days and the outlines stay readable behind it. Below that the drawer covers part of the week, and its "Previewed in the week" section carries the totals, the cap and why a block will not run |
+| A new schedule's values | L01, today's weekday, sunrise + 0, the run dialog's amounts (10 min; 4 × 45 s with 60 s gaps; prewet 120 s, flush 240 s) |
+| Whole minutes | A drip's Run and a feed's Feed take whole minutes. A stored `on_s` that is not one (Iris's or an agent's 690 s) opens as "11.5" and, left as it is, saves unchanged, so a person can still enable, disable or relabel it; a new value must be whole minutes |
+| Edit and today | The draft replaces the schedule's blocks still ahead. A block already past stays as it ran, and that day draws no outline and adds no minutes, since an occurrence runs once per schedule and local day (irrigation §4.7) |
+| Totals | On a mister zone "8 of 60 min for schedules" is the busiest day in the week. A disabled draft draws nothing and reads "Disabled: this schedule will not run". Before the engine a draft reads hatched "arrives with the irrigation firmware", as its saved blocks will, and still counts against the cap with the occurrences then planned, which read `blocked`, so the bring-up can size a program ahead of the firmware |
+| CONFIRMED on a block | Only the schedule just saved here keeps CONFIRMED on its blocks after the hash arrives, until the next save or the page closes; every other confirmed schedule's blocks carry no badge. The banner reads CONFIRMED for the program |
+| The check and a refused schedule | A check recorded by a Save whose schedule was then refused stays recorded: the box goes and Save again sends only the schedule |
+| Save toast | "Requested Wall MWF on L01", "Requested deleting Wall MWF on L01" (design system §4.3) |
+
 As built (VD-69, #1182). Where the build settles a detail above, or differs from it:
 
 | Topic | As built |
@@ -553,7 +594,7 @@ As built (VD-69, #1182). Where the build settles a detail above, or differs from
 | A switch's own badge | `sync` is per line, so the client works out which switch shows it. While it settles, the switch pressed in this tab carries it, or both when none was pressed here (another writer, a reload). Once confirmed, a switch that is on or was pressed reads CONFIRMED; an untouched one that is off shows none. A press counts only while the line reads what it asked for, so a cancelled check sheet or a refused write carries none, and a press after the line has settled starts afresh, so a change confirmed earlier does not read REQUESTED again |
 | Pause words | "Paused until 14:00 · VPD misting continues · by jason: rain". The VPD clause shows only on a line with `vpd_member` on, so a drip reads "Paused until 14:00 · by jason"; who and why come last. Fog never reads paused, though `all` sets `paused_until` on it. A pause stored before the engine reads too, beside its REQUESTED |
 | Pause drawer | "Pause lines…" sits on the program banner's row on all three views. Until is an America/Denver wall clock in any browser zone, starts on the next whole hour at least 30 minutes ahead, and must be ahead of now, because a past time would resume. Resume sends now on the server's clock. "Resume all" shows while any line is paused, L03 and fog included: they have no card or Resume of their own, so `all` is what clears them |
-| Block menu | A block still planned ahead of now opens "Pause <line> until after this run", which sends at once and, since the pause starts now, skips that run and any earlier one on the line; a past, skipped or blocked block offers none, and neither does a viewer's week |
+| Block menu | Selecting a block opens its menu, one block at a time, and Escape closes it. A block still planned ahead of now offers "Pause <line> until after this run", which sends at once and, since the pause starts now, skips that run and any earlier one on the line; a past, skipped or blocked block offers no pause. Any block whose schedule is stored offers Edit (#1137), in Last 7 days too. A viewer's week offers neither |
 | Line options | The reserve's bound follows the typed cap, and a reserve above it is flagged in the hint and sent, so the API's `out_of_range` shows beside the field. The client refuses only what is not whole minutes from 0 to 480 |
 
 As built (VD-20, `dashboard/app/charts/daily-water-use.tsx` and `components/run-dialog.tsx`), where Daily water use and the Run dialog settle a detail this section leaves open:

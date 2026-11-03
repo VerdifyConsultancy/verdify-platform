@@ -8,6 +8,7 @@ export default [
   index("routes/now.tsx"),
   route("graphs", "routes/graphs.tsx"),
   route("graphs/scorecard", "routes/graphs-scorecard.tsx"),
+  route("graphs/zones", "routes/graphs.zones.tsx"),
   route("plan", "routes/plan.tsx"),
   route("water", "routes/water.tsx", [
     index("routes/water-board.tsx"),

@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 
-/** A chip that navigates: the current one carries `aria-current`. `keepScroll` holds the page where it is, for chips below the fold. */
+/** A chip that navigates: the current one carries `aria-current`; `keepScroll` keeps the page where it is, for a chip that changes a view in place or sits below the fold. */
 export type ChipLink = { key: string; label: ReactNode; to: string; current?: boolean; keepScroll?: boolean };
 /** A chip that toggles in place: `aria-pressed` says whether it is on. */
 export type ChipToggle = { key: string; label: ReactNode; pressed: boolean; onToggle: () => void; to?: undefined };

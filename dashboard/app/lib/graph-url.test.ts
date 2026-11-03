@@ -5,8 +5,8 @@
 import { expect, test } from "vitest";
 import { fixture } from "../../e2e/fixtures/index.mjs";
 import {
-  AHEAD_S, CAP_TEXT, LANES_MAX_S, MAX_WINDOW_S, daysProblem, dayCount, graphHref, graphSearch, graphWindow, instantOf, isDay, lanesAllowed, parseGraphUrl,
-  resolveView, settingEditHref, settingProblem, withMetrics, withSettings, withWindow, within400, type GraphView,
+  AHEAD_S, CAP_TEXT, LANES_MAX_S, MAX_WINDOW_S, daysProblem, dayCount, graphHref, graphSearch, graphWindow, instantOf, isDay, lanesAllowed, parseGraphUrl, parseZonesUrl,
+  resolveView, settingEditHref, settingProblem, withMetrics, withOutdoor, withSettings, withWindow, within400, zonesHref, type GraphView,
 } from "./graph-url";
 import type { MetricDef, Setting } from "./operator-api";
 
@@ -18,13 +18,13 @@ const SETTINGS = SET["API-09"].items as Setting[];
 const view = (search: string): GraphView => parseGraphUrl(search).view;
 
 test("the default view is 24 h with the default settings and no picked metric", () => {
-  expect(parseGraphUrl("")).toEqual({ view: { window: { kind: "range", range: "24h" }, settings: null, metrics: [] }, notices: [] });
+  expect(parseGraphUrl("")).toEqual({ view: { window: { kind: "range", range: "24h" }, settings: null, metrics: [], outdoor: true }, notices: [] });
   expect(graphSearch(view(""))).toBe("range=24h");
 });
 
 test("range, set and m round-trip; set= alone is none; duplicates collapse", () => {
   const parsed = view("range=72h&set=mister_engage_kpa&m=climate.flow_gpm&m=climate.flow_gpm&m=climate.soil_moisture_south_1");
-  expect(parsed).toEqual({ window: { kind: "range", range: "72h" }, settings: ["mister_engage_kpa"], metrics: ["climate.flow_gpm", "climate.soil_moisture_south_1"] });
+  expect(parsed).toEqual({ window: { kind: "range", range: "72h" }, settings: ["mister_engage_kpa"], metrics: ["climate.flow_gpm", "climate.soil_moisture_south_1"], outdoor: true });
   expect(graphHref(parsed)).toBe("/graphs?range=72h&set=mister_engage_kpa&m=climate.flow_gpm&m=climate.soil_moisture_south_1");
   expect(view(graphSearch(parsed))).toEqual(parsed);
   expect(view("set=").settings).toEqual([]);
@@ -33,6 +33,36 @@ test("range, set and m round-trip; set= alone is none; duplicates collapse", () 
   expect(graphSearch(withSettings(view(""), []))).toBe("range=24h&set=");
   expect(graphSearch(withMetrics(view("m=a"), ["a", "b", "a"]))).toBe("range=24h&m=a&m=b");
   expect(settingEditHref("mister_engage_kpa")).toBe("/settings?edit=mister_engage_kpa");
+});
+
+test("the overlay shows by default; outdoor=0 hides it, round-trips and stays in every link", () => {
+  expect(view("range=7d").outdoor).toBe(true);
+  expect(graphSearch(view("range=7d"))).toBe("range=7d");
+  const off = view("range=7d&m=climate.flow_gpm&outdoor=0");
+  expect(off.outdoor).toBe(false);
+  expect(graphHref(off)).toBe("/graphs?range=7d&m=climate.flow_gpm&outdoor=0");
+  expect(view(graphSearch(off))).toEqual(off);
+  expect(graphSearch(withWindow(off, { kind: "range", range: "24h" }))).toBe("range=24h&m=climate.flow_gpm&outdoor=0");
+  expect(graphSearch(withOutdoor(off, true))).toBe("range=7d&m=climate.flow_gpm");
+  expect(resolveView(off, METRICS, SETTINGS).view.outdoor).toBe(false);
+  // Anything else is not the off switch.
+  expect(view("outdoor=1").outdoor).toBe(true);
+});
+
+test("a forecast key from an old link is dropped: the Outdoor chip draws the forecast, right of now only", () => {
+  const { view: resolved, notices, picked } = resolveView(view("m=forecast.temp_f&m=climate.flow_gpm"), METRICS, SETTINGS);
+  expect(picked.map((metric) => metric.key)).toEqual(["climate.flow_gpm"]);
+  expect(resolved.metrics).toEqual(["climate.flow_gpm"]);
+  expect(notices).toEqual(["Removed forecast.temp_f: the Outdoor chip draws the forecast"]);
+});
+
+test("/graphs/zones: zone and range in the URL; an unknown zone falls back to the first chip with a notice", () => {
+  expect(parseZonesUrl("zone=south&range=72h")).toEqual({ zone: "south", window: { kind: "range", range: "72h" }, notices: [] });
+  expect(parseZonesUrl("")).toEqual({ zone: "north", window: { kind: "range", range: "24h" }, notices: [] });
+  expect(parseZonesUrl("zone=attic&range=fortnight")).toEqual({ zone: "north", window: { kind: "range", range: "24h" }, notices: ["Removed unknown zone attic", "Removed unknown range fortnight"] });
+  expect(zonesHref("south", { kind: "range", range: "72h" })).toBe("/graphs/zones?zone=south&range=72h");
+  expect(zonesHref("east", { kind: "days", from: "2026-10-31", to: "2026-11-01" })).toBe("/graphs/zones?zone=east&from=2026-10-31&to=2026-11-01");
+  expect(parseZonesUrl("zone=east&from=2026-10-31&to=2026-11-01").window).toEqual({ kind: "days", from: "2026-10-31", to: "2026-11-01" });
 });
 
 test("local days: To included, from local midnight of From to local midnight after To, so 2026-11-01 runs 25 hours", () => {
@@ -89,7 +119,7 @@ test("at most 400 days: the form says Up to 400 days; a URL past it is dropped w
   expect(daysProblem("2026-11-01", "")).toBe("Pick both days");
   expect(isDay("2026-02-30")).toBe(false);
   expect(parseGraphUrl("from=2025-09-28&to=2026-11-02&range=7d")).toEqual({
-    view: { window: { kind: "range", range: "7d" }, settings: null, metrics: [] },
+    view: { window: { kind: "range", range: "7d" }, settings: null, metrics: [], outdoor: true },
     notices: ["Removed the window 2025-09-28 to 2026-11-02: up to 400 days"],
   });
   expect(parseGraphUrl("from=2025-01-01T00:00:00Z&to=2026-11-01T00:00:00Z").notices).toEqual(["Removed the window 2025-01-01T00:00:00Z to 2026-11-01T00:00:00Z: up to 400 days"]);

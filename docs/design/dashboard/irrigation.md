@@ -198,7 +198,9 @@ schedule member") until that changes. Runs past the line's daily cap end `cap`. 
 of these before it happens, so schedules can be built ahead of a line's bring-up. Its "ends at the daily cap"
 note counts, per line and local day, the planned minutes that line's cap counts (§4.5): its own runs and
 pulses, the prewet and flush a feed puts on it as the clean partner, and, on a mister zone, the feed pulses of
-its fertilizer mister. A mister's budget is its cap less its VPD reserve.
+its fertilizer mister. A mister's budget is its cap less its VPD reserve. The editor's draft preview counts the same
+way in the browser (`dashboard/app/lib/schedule-preview.ts`, VD-17), from API-IRR-01 and API-IRR-02's `solar[]`, and
+leaves out `degraded_only` occurrences, which run only while VPD sensing is degraded.
 
 Examples (illustrative):
 

@@ -7,28 +7,21 @@ import { bandKindFor } from "../charts/marks";
 import type { Series, SettingHistory, SettingSteps } from "../charts/types";
 import { chartLinks } from "../charts/uplot-chart";
 import { PageHead } from "../components/common";
+import { useClockValue } from "../components/freshness";
 import { GraphNotices, OnCharts, RangeForm } from "../components/graphs/controls";
 import { ResolutionLine, panelEyebrow } from "../components/graphs/resolution-line";
 import { EmptyState, PanelError } from "../components/panel";
-import { GRAPH_POLL_MS, slotRead, useGraphClock, useWindowReads, type WindowRead } from "../lib/graph-reads";
+import { NO_OVERLAY, OUTDOOR_RH_KEY, OUTDOOR_TEMP_KEY, OUTDOOR_VPD_KEY, forecastSpan, outdoorOverlay, outdoorSource, withOutdoor } from "../lib/graph-overlay";
+import { GRAPH_POLL_MS, readFailure, slotRead, useGraphClock, useWindowReads, type WindowRead } from "../lib/graph-reads";
 import {
   CLIMATE_KEYS, LANES_TEXT, graphHref, graphWindow, isoOf, lanesAllowed, panelName, parseGraphUrl, resolveView, windowKey, withWindow, within400,
 } from "../lib/graph-url";
-import { ApiError } from "../lib/operator-api";
 import { useSettingsRead } from "../lib/queries";
+import { useShellNow } from "../lib/shell";
 import { unitLabel } from "../lib/setting-values";
-import { words } from "../lib/words";
 
 export const meta = () => [{ title: "Graphs · Verdify dashboard" }];
 export const links = () => chartLinks();
-
-export const TIMEOUT_TEXT = "This window took too long. Narrow it.";
-/** A failed read in words: API-04's 503 `query_timeout` asks for a narrower window; anything else names what failed. */
-export function readFailure(error: unknown, thing: string): string {
-  if (error instanceof ApiError && error.problem.code === "query_timeout") return TIMEOUT_TEXT;
-  if (error instanceof ApiError && error.problem.code === "window_too_large") return `${words("problem_code", "window_too_large")}.`;
-  return `Couldn't load ${thing}.`;
-}
 
 /** A setting history in its panel's unit: the registry's ASCII °F alias reads as the panel's °F. One copy per answer. */
 const unitFixed = new WeakMap<SettingHistory, SettingHistory>();
@@ -48,9 +41,10 @@ const REGISTRY = [{ id: "registry", params: {} }] as const;
 /**
  * SCR-02 Graphs (#1130): temperature, VPD and RH as linked panels with the band in force, the setting steps from API-12
  * and any picked metric in its unit's panel, the equipment lanes on the same cursor, all over the window the URL names.
- * One API-04 request per panel, so a slow panel fails alone. A window that includes now follows the clock every 60 s; a
- * closed window reads once. Graphs writes nothing. No greenhouse data renders in SSR: the page knows now only in the
- * browser.
+ * The Outdoor chip (#1138, `outdoor=0` hides it) lays the Tempest's traces and the forecast past now over the panels.
+ * One API-04 request per panel, one for outdoor and one for the forecast, so a slow panel fails alone. A window that
+ * includes now follows the clock every 60 s; a closed window reads once. Graphs writes nothing. No greenhouse data renders
+ * in SSR: the page knows now only in the browser.
  */
 export default function Graphs() {
   const [params] = useSearchParams();
@@ -85,10 +79,20 @@ export default function Graphs() {
   const lanesOn = window !== null && lanesAllowed(window);
   const lanesWindow = lanesOn ? window.measured : null;
   const lanes = slotRead(useWindowReads("API-05", lanesWindow ? [{ id: key, params: { from: isoOf(lanesWindow.from), to: isoOf(lanesWindow.to) } }] : [], null), key);
+  // The overlay reads what API-03 lists, so an API that does not serve the forecast keys yet is simply not asked for them.
+  const overlay = useMemo(() => (resolved.view.outdoor ? outdoorOverlay(metricsCatalog) : NO_OVERLAY), [resolved.view.outdoor, metricsCatalog]);
+  const outdoorId = `${key}|outdoor`, forecastId = `${key}|forecast`;
+  const outdoor = slotRead(useWindowReads("API-04", measured && overlay.keys.length ? [{ id: outdoorId, params: { metric: [...overlay.keys], from: isoOf(measured.from), to: isoOf(measured.to) } }] : [], null), outdoorId);
+  const ahead = window && now !== null && overlay.forecast.length ? forecastSpan(window, now) : null;
+  const forecastRead = slotRead(useWindowReads("API-04", ahead ? [{ id: forecastId, params: { metric: overlay.forecast.map((metric) => metric.key), from: isoOf(ahead.from), to: isoOf(ahead.to), points: ahead.points } }] : [], null), forecastId);
+  const forecast = useMemo(() => ({ metrics: overlay.forecast, series: forecastRead.data }), [overlay.forecast, forecastRead.data]);
+  const outdoorReading = useShellNow().data?.outdoor.temp_f ?? null;
+  const outdoorCadence = overlay.metrics.find((metric) => metric.key === OUTDOOR_TEMP_KEY)?.cadence_s ?? null;
+  const outdoorWords = useClockValue((clock) => outdoorSource(outdoorReading, outdoorCadence, clock));
 
   const panelReads = seriesSlots.map((slot) => seriesReads.get(slot.id)!);
   const historyList = historySlots.map((slot) => historyReads.get(slot.id)!);
-  const reads: WindowRead<unknown>[] = [registry, band, lanes, ...panelReads, ...historyList];
+  const reads: WindowRead<unknown>[] = [registry, band, lanes, outdoor, forecastRead, ...panelReads, ...historyList];
   // A failing read slows the clock to every second minute, as the polls back off.
   const anyError = reads.some((read) => read.error !== null);
   useEffect(() => { setFailing(anyError); }, [anyError]);
@@ -110,7 +114,8 @@ export default function Graphs() {
   const climate = panelReads.filter((_, index) => panels[index].metrics.some((metric) => (CLIMATE_KEYS as readonly string[]).includes(metric.key)));
   const climateBucket = climate.find((read) => read.data)?.data?.bucket_s ?? null;
   const daily = climate.some((read) => CLIMATE_KEYS.some((metric) => read.data?.series[metric]?.source === "daily_summary"));
-  const empty = panelReads.length > 0 && panelReads.every((read, index) => read.current && read.data && noValues(read.data, panels[index].metrics.map((metric) => metric.key)));
+  const outdoorEmpty = !outdoor.data || noValues(outdoor.data, overlay.keys);
+  const empty = outdoorEmpty && panelReads.length > 0 && panelReads.every((read, index) => read.current && read.data && noValues(read.data, panels[index].metrics.map((metric) => metric.key)));
   const failed = reads.filter((read) => read.error !== null && read.data === null);
   const notices = [...parsed.notices, ...resolved.notices];
   const lanesMessage = window === null ? "Loading equipment…"
@@ -119,12 +124,18 @@ export default function Graphs() {
     : lanes.error !== null ? readFailure(lanes.error, "the equipment lanes")
     : lanesWindow ? "Loading equipment…" : undefined;
   const last24h = spec.kind === "range" && spec.range === "24h" ? undefined : { to: graphHref(withWindow(resolved.view, { kind: "range", range: "24h" })), label: "Last 24 h" };
+  const outdoorNotes = overlay.metrics.length ? {
+    "°F": [{ key: OUTDOOR_TEMP_KEY, text: `Outdoor · ${outdoorWords}` }],
+    "%": [{ key: OUTDOOR_RH_KEY, text: `Outdoor · ${outdoorWords}` }],
+    kPa: [{ key: OUTDOOR_VPD_KEY, text: `Outdoor VPD · DERIVED · ${outdoorWords}` }],
+  } : undefined;
 
   return <>
     <PageHead eyebrow="Greenhouse history · America/Denver" title="Climate"
       lede={<ResolutionLine window={window} bucketSeconds={climateBucket} daily={daily} now={now} />} />
     <GraphNotices notices={notices} />
-    <LinkedPanels route="graphs" range={key} metrics={window ? panels.flatMap((panel) => panel.metrics) : []} series={panelReads.map((read) => read.data)}
+    <LinkedPanels route="graphs" range={key} metrics={window ? [...panels.flatMap((panel) => panel.metrics), ...overlay.metrics] : []}
+      series={panelReads.map((read, index) => withOutdoor(read.data, panels[index].unit, outdoor.data))} forecast={forecast} notes={outdoorNotes}
       band={band.data} settings={steps} now={now ?? 0} xRange={window?.x ?? { from: 0, to: 1 }} titles={titles} messages={messages} csvName="graphs"
       rangeHref={(range) => graphHref(withWindow(resolved.view, { kind: "range", range }))}
       tools={<RangeForm view={resolved.view} window={window} />}

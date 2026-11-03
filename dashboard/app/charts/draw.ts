@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 import type uPlot from "uplot";
 import type { RetentionNote } from "./retention";
-import { boundLabel, type BandRun, type Bound, type StepSegment } from "./marks";
+import { boundLabel, forecastRuns, type BandRun, type Bound, type ForecastLine, type StepSegment } from "./marks";
 
 /**
  * Canvas painting for the hook-drawn marks (design system §5.1). Positions are canvas pixels (`valToPos(…, true)`),
  * line widths and dashes scale by the device pixel ratio, and every colour is a design-system token value read by
  * UPlotChart. Layers: drawClear paints the retention shading and the band wash under the grid; drawAxes the band
- * edges; draw the steps, bounds, the now line and every label, which a collision check keeps apart.
+ * edges; draw the steps, the forecast, bounds, the now line and every label, which a collision check keeps apart.
  */
 export type ChartColors = Readonly<Record<string, string>>;
 /** The parts of a uPlot instance the painters use; tests pass a recording stand-in. */
@@ -163,6 +163,31 @@ export function paintSteps(plot: PaintTarget, steps: readonly StepSegment[], col
   });
 }
 
+/** draw: the forecast in `--c-outdoor`, 2px dashed [8,4], joined hour to hour; a lone hour is a dot. */
+export function paintForecast(plot: PaintTarget, lines: readonly ForecastLine[], colors: ChartColors, px: number) {
+  clipToPlot(plot, () => {
+    const { ctx } = plot;
+    ctx.strokeStyle = colors["--c-outdoor"];
+    ctx.fillStyle = colors["--c-outdoor"];
+    ctx.lineWidth = 2 * px;
+    ctx.setLineDash([8 * px, 4 * px]);
+    for (const line of lines) {
+      for (const [first, last] of forecastRuns(line)) {
+        if (first === last) {
+          ctx.fillRect(x(plot, line.t[first]) - 2 * px, y(plot, line.values[first]) - 2 * px, 4 * px, 4 * px);
+          continue;
+        }
+        ctx.beginPath();
+        for (let index = first; index <= last; index++) {
+          if (index === first) ctx.moveTo(x(plot, line.t[index]), y(plot, line.values[index]));
+          else ctx.lineTo(x(plot, line.t[index]), y(plot, line.values[index]));
+        }
+        ctx.stroke();
+      }
+    }
+  });
+}
+
 /** draw: min and max, 1px dotted, where they fall inside the y range. */
 export function paintBounds(plot: PaintTarget, bounds: readonly Bound[], colors: ChartColors, px: number) {
   const yMin = plot.scales.y.min ?? 0, yMax = plot.scales.y.max ?? 0;
@@ -206,12 +231,13 @@ export type LabelInput = {
   bounds: readonly Bound[];
   steps: readonly StepSegment[];
   runs: readonly BandRun[];
+  forecast?: readonly ForecastLine[];
 };
 
 /**
  * draw, last: every label, most important first (Now, retention, bounds, the plan ahead from the soonest step, the
- * request and the device from the newest, then the band's source), so a crowded chart drops band labels before it
- * drops a bound or the plan. A step's label sits at its start, else ends at its end.
+ * request and the device from the newest, the forecast's issue, then the band's source), so a crowded chart drops band
+ * labels before it drops a bound or the plan. A step's label sits at its start, else ends at its end.
  */
 export function paintLabels(plot: PaintTarget, input: LabelInput, colors: ChartColors, seriesColor: string, px: number) {
   // uPlot caches the context's font and colours between draws: every change here is undone on the way out.
@@ -249,6 +275,9 @@ function placeLabels(plot: PaintTarget, input: LabelInput, colors: ChartColors, 
       { at: Math.max(x(plot, step.start), bbox.left) + 4 * px, line, align: "left" },
       { at: Math.min(x(plot, step.end), bbox.left + bbox.width) - 4 * px, line, align: "right" },
     ], color);
+  }
+  for (const line of input.forecast ?? []) {
+    labels.place(line.text, [{ at: x(plot, line.t[0]) + 4 * px, line: y(plot, line.values[0]), align: "left" }], labelColor(colors["--c-outdoor"], colors["--ink"]));
   }
   for (const run of input.runs) {
     if (run.t.length < 2) continue;

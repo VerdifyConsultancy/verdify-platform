@@ -294,7 +294,7 @@ test("the limits strip's SAF-4 figure links to its Settings drawer", async () =>
   expect(text(link)).toBe("SAF-4 21 of 360 gal");
 });
 
-test("a planned block offers \"Pause <line> until after this run\": one minute past its planned end; it then reads skipped, and a past or skipped block offers none", async () => {
+test("a planned block offers \"Pause <line> until after this run\": one minute past its planned end; it then reads skipped, and a past or skipped block offers no pause, only Edit", async () => {
   const api = open("/water/schedules", { fixture: "schedules-paused" });
   await load();
   const block = () => document.querySelector<HTMLElement>('tr[data-line="L01"] td[data-day="2026-11-04"] .week-block')!;
@@ -304,10 +304,11 @@ test("a planned block offers \"Pause <line> until after this run\": one minute p
   expect(writes(api).map((row) => [row.path, row.body])).toEqual([["/api/v1/irrigation/lines/L01", { paused_until: new Date(start + 13 * 60_000).toISOString() }]]);
   expect(block().getAttribute("data-status")).toBe("skipped");
   expect(text(block())).toContain("line paused by jason");
-  expect(block().querySelector(".week-block-menu")).toBeNull();
+  expect(within(block()).queryByRole("button", { name: /until after this run/ })).toBeNull();
+  expect(within(block()).getByRole("link", { name: /^Edit/ })).toBeTruthy();
   cleanup(); stopFixtureApi();
   open("/water/schedules?past=7", { fixture: "schedules-paused" });
   await load();
-  expect(document.querySelector(".week-block")).not.toBeNull();
-  expect(document.querySelector(".week-block-menu")).toBeNull();
+  expect(document.querySelector(".week-block-menu")).not.toBeNull();
+  expect(screen.queryByRole("button", { name: /until after this run/ })).toBeNull();
 });

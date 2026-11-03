@@ -57,8 +57,8 @@ const PROBLEM_CODE = {
   manual: "Set by hand, so Iris leaves it alone",
   request_id_reused: "This change was already sent with other values",
   check_required: "This line needs its one-time check first",
-  too_close: "Too close to another start on this line",
-  too_many_schedules: "Too many schedules",
+  too_close: "Another schedule on this line starts within 30 min of this one",
+  too_many_schedules: "The controller holds 24 schedules; delete one first",
   line_disabled: "The line is disabled",
   line_paused: "The line is paused",
   line_faulted: "The line is faulted",
@@ -121,12 +121,16 @@ const PROGRAM_REJECT = {
 } as const;
 
 /**
- * `Occurrence.reason`, which the API already gives in words: the fixed ones read here as the week view says them; one
- * that names who or when (a pause: "line paused by jason: rain") reads as sent. #1137 adds its draft's phrases.
+ * `Occurrence.reason`, which the API already gives in words: the fixed ones (`REASON_WORDS` in
+ * verdify_schemas/irrigation.py) read here as the week view says them, so a saved block reads like the editor's draft
+ * (#1137); one that names who or when (a pause: "line paused by jason: rain") reads as sent.
  */
 const OCCURRENCE_REASON = {
   "only while VPD sensing is degraded": "only if VPD sensing is degraded",
   paused: "line paused",
+  "line disabled": "Skipped: line disabled",
+  "not a schedule member": "Skipped until Schedule is on",
+  "not a VPD member": "Skipped: VPD control is off",
 } as const;
 
 /**

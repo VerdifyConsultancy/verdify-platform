@@ -310,6 +310,12 @@ test("the Water families (#1135): every run outcome, VPD source, line fault and 
   // Occurrence reasons arrive in words: the fixed ones read as the week view says them, the rest as sent.
   expect(words("occurrence_reason", "only while VPD sensing is degraded")).toBe("only if VPD sensing is degraded");
   expect(words("occurrence_reason", "line paused by jason: rain")).toBe("line paused by jason: rain");
+  expect(words("occurrence_reason", "line disabled")).toBe("Skipped: line disabled");
+  expect(words("occurrence_reason", "not a schedule member")).toBe("Skipped until Schedule is on");
+  expect(words("occurrence_reason", "not a VPD member")).toBe("Skipped: VPD control is off");
+  // The refusals the schedule editor reads beside Start and above Save.
+  expect(words("problem_code", "too_many_schedules")).toBe("The controller holds 24 schedules; delete one first");
+  expect(words("problem_code", "too_close")).toBe("Another schedule on this line starts within 30 min of this one");
 });
 
 test("an unknown code or family renders raw, prototype names included", () => {

@@ -136,6 +136,10 @@ function nowBody(world) {
 
 const WAVES = {
   "climate.temp_avg": [66, 3], "climate.rh_avg": [70, -8], "climate.vpd_avg": [0.62, 0.12], "climate.temp_south": [66.6, 3.2],
+  "climate.temp_north": [65.2, 2.8], "climate.temp_east": [66.3, 3.1], "climate.temp_west": [65.8, 3], "climate.rh_north": [72, -8], "climate.rh_east": [69, -8],
+  "climate.rh_south": [68, -8], "climate.rh_west": [71, -8], "climate.vpd_north": [0.58, 0.11], "climate.vpd_east": [0.66, 0.12], "climate.vpd_south": [0.68, 0.13],
+  "climate.vpd_west": [0.6, 0.12], "climate.house_vpd_target": [0.62, 0.05], "climate.vpd_target_center": [0.65, 0.05], "climate.vpd_target_south": [0.6, 0.05],
+  "climate.vpd_target_west": [0.6, 0.05], "climate.vpd_target_east": [0.7, 0.05], "forecast.temp_f": [47, 11], "forecast.rh_pct": [52, -14], "forecast.vpd_kpa": [0.5, 0.25],
   "climate.soil_moisture_south_1": [38, -2], "climate.flow_gpm": [0, 0], "climate.outdoor_temp_f": [45, 10], "climate.outdoor_rh_pct": [55, -15],
   "diagnostics.heap_free_kb": [38, 1.5], "daily.temp_in_band_pct": [92, 4], "daily.vpd_in_band_pct": [88, 6], "daily.time_in_band_day_pct": [90, 3],
   "daily.time_in_band_night_pct": [81, 5], "daily.water_gal": [24, 0], "daily.iris_required_written": [3, 0], "daily.iris_required_missed": [0, 0],
@@ -143,9 +147,9 @@ const WAVES = {
 };
 const round = (value, places = 2) => Number(value.toFixed(places));
 const wave = (key, ms) => { const [mean, amplitude] = WAVES[key]; return mean + amplitude * Math.sin((2 * Math.PI * (ms - 14 * HOUR)) / DAY); };
-/** The newest sample each metric has: indoor readings, outdoor readings, the climate row or the diagnostics row. */
+/** The newest sample each metric has: indoor readings (the house, each zone and the on-chip targets), outdoor readings, the climate row or the diagnostics row. */
 function lastSample(world, key) {
-  if (["climate.temp_avg", "climate.rh_avg", "climate.vpd_avg", "climate.temp_south"].includes(key)) return Date.parse(world.indoor.temp_f.observed_at);
+  if (/^climate\.(temp|rh|vpd)_|^climate\.house_vpd_target$/.test(key)) return Date.parse(world.indoor.temp_f.observed_at);
   if (key.startsWith("climate.outdoor_")) return Date.parse(world.outdoor.temp_f.observed_at);
   if (key.startsWith("diagnostics.")) return Date.parse(world.freshness.diagnostics.observed_at);
   return key.startsWith("daily.") ? world.now : Date.parse(world.freshness.climate.observed_at);
@@ -170,6 +174,20 @@ function scorecardColumn(world, key, t) {
   }
   return column;
 }
+/**
+ * One forecast key's column, as #1170 serves it: the newest issue per hour, so below a 1 h bucket only the bucket holding
+ * each whole hour in [from, to) has a value; `issued_at` is that issue, null when the window holds no forecast row.
+ */
+function forecastColumn(world, key, t, bucket, from, to) {
+  const avg = t.map((start) => {
+    const begin = start * 1000;
+    const hour = Math.ceil(Math.max(begin, from) / HOUR) * HOUR;
+    return world.forecast && hour < begin + bucket * 1000 && hour < to ? round(wave(key, hour)) : null;
+  });
+  return { avg, min: avg, max: avg, count: avg.map((value) => (value === null ? 0 : 1)), source: "forecast", retained_from: null, issued_at: avg.some((value) => value !== null) ? world.forecast.issued_at : null };
+}
+/** A probe out over a span (`world.outages`): the bucket reads null, a gap. */
+const outage = (world, key, begin, end) => world.outages.some((span) => span.keys.includes(key) && span.from < end && begin < span.to);
 /** API-04: the bucket and source rules of the contract, over synthetic diurnal values; a bucket with no data is null. */
 function seriesBody(world, { query }) {
   const keys = query.getAll("metric");
@@ -188,6 +206,7 @@ function seriesBody(world, { query }) {
   else for (let start = Math.floor(from / 1000 / bucket) * bucket; start * 1000 < to; start += bucket) t.push(start);
   let watermark = null;
   const columns = Object.fromEntries(defs.map((metric) => {
+    if (metric.key.startsWith("forecast.")) return [metric.key, forecastColumn(world, metric.key, t, bucket, from, to)];
     const scorecard = metric.key.startsWith("daily.");
     if (scorecard && world.scorecard) {
       const column = scorecardColumn(world, metric.key, t);
@@ -200,7 +219,7 @@ function seriesBody(world, { query }) {
     const column = { avg: [], min: [], max: [], count: [], source, retained_from: retainedFrom === null ? null : iso(retainedFrom) };
     for (const start of t) {
       const begin = start * 1000;
-      const covered = begin <= last && (source !== "raw" || begin + bucket * 1000 > retainedFrom);
+      const covered = begin <= last && (source !== "raw" || begin + bucket * 1000 > retainedFrom) && !outage(world, metric.key, begin, begin + bucket * 1000);
       const value = covered ? wave(metric.key, begin + (bucket * 1000) / 2) : null;
       const spread = Math.abs(WAVES[metric.key][1]) * 0.1;
       column.avg.push(value === null ? null : round(value));
@@ -440,10 +459,11 @@ export function occurrences(world, first, last) {
       let status = "planned";
       let reason = null;
       if (!world.engine) [status, reason] = ["blocked", "arrives with the irrigation firmware"];
-      else if (schedule.degraded_only) [status, reason] = [at < world.now ? "skipped" : "planned", "only if VPD sensing is degraded"];
       else if (!line.enabled) [status, reason] = ["skipped", "line disabled"];
+      else if (mister && schedule.degraded_only && !line.vpd_member) [status, reason] = ["skipped", "not a VPD member"];
+      else if (mister && !schedule.degraded_only && !line.schedule_member) [status, reason] = ["skipped", "not a schedule member"];
       else if (pause) [status, reason] = ["skipped", `line paused by ${pause.by.name}${pause.reason ? `: ${pause.reason}` : ""}`];
-      else if (mister && !line.schedule_member) [status, reason] = ["skipped", "not a schedule member"];
+      else if (schedule.degraded_only) [status, reason] = [at < world.now ? "skipped" : "planned", "only if VPD sensing is degraded"];
       else if (at < world.now) status = "done";
       rows.push({
         slot_id: schedule.slot_id, line_id: schedule.line_id, planned_start: iso(at), status, outcome: status === "done" ? "ok" : null, reason,
@@ -695,21 +715,49 @@ function checkSchedule(world, schedule, slotId) {
   if (schedule.label !== undefined) text(schedule.label, "label", 60);
   const reference = "2026-11-02";
   const minutes = (item) => (startOf(item.start, reference) - localInstant(reference)) / MINUTE;
-  const clash = world.schedules.find((other) => other.slot_id !== slotId && other.line_id === schedule.line_id && other.days.some((day) => schedule.days.includes(day))
+  const clash = schedule.enabled && world.schedules.find((other) => other.enabled && other.slot_id !== slotId && other.line_id === schedule.line_id && other.days.some((day) => schedule.days.includes(day))
     && Math.abs(minutes(other) - minutes(schedule)) < 30);
   if (clash) throw refuse(422, "too_close", "Too close", `Starts within 30 min of schedule ${clash.slot_id} on ${schedule.line_id}`, { field: "start" });
 }
-function scheduleEffect(world, schedule, action, key, reason) {
-  return (next) => {
+/** A schedule write's program reaches the controller by the third API-IRR-02 poll after it: 10 s at the settling cadence. */
+const PROGRAM_SETTLES_AFTER_POLLS = 3;
+const PROGRAM_SETTLES_MS = 10_000;
+const programHash = (revision) => createHash("sha256").update(`program rev ${revision}`).digest("hex");
+/**
+ * A schedule write replayed: the schedule stored, reading `requested`, in a new program revision with a new hash, and
+ * its Activity row under the session's username. Three API-IRR-02 polls later the controller reports that hash, so the
+ * write, the program and the row read `confirmed` (with `confirm: false`, `not_confirmed` with a reject). Before the
+ * engine it stays `requested`.
+ */
+function scheduleEffect(world, schedule, action, { key, serial }, reason) {
+  const written = world.now;
+  return (next, history = { readsAfter: () => 0 }) => {
     next.schedules = action === "delete" ? next.schedules.filter((item) => item.slot_id !== schedule.slot_id)
       : [...next.schedules.filter((item) => item.slot_id !== schedule.slot_id), { ...schedule }].sort((a, b) => a.slot_id - b.slot_id);
-    if (next.engine) next.program = { ...next.program, state: "requested", revision: (next.program.revision ?? 0) + 1, pushed_at: iso(world.now), confirmed_at: next.program.confirmed_at };
-    activity(next, { ts: iso(world.now), actor: actorOf(next), action: `irrigation.schedule.${action}`, target: String(schedule.slot_id), detail: { line_id: schedule.line_id }, reason, state: next.engine ? "requested" : null, request_id: key });
+    let state = null;
+    let confirmedAt = null;
+    if (next.engine) {
+      const revision = (next.program.revision ?? 0) + 1;
+      const hash = programHash(revision);
+      state = "requested";
+      next.program = { ...next.program, state, revision, desired_sha256: hash, pushed_at: iso(written), reject_code: null, reason: null, next_retry_at: null };
+      if (history.readsAfter("API-IRR-02", serial) >= PROGRAM_SETTLES_AFTER_POLLS) {
+        const settled = iso(written + PROGRAM_SETTLES_MS);
+        state = next.flags.confirm ? "confirmed" : "not_confirmed";
+        confirmedAt = next.flags.confirm ? settled : null;
+        next.program = next.flags.confirm
+          ? { ...next.program, state, applied_revision: revision, applied_hash: hash.slice(0, 16), src: "nvs", confirmed_at: settled }
+          : { ...next.program, state, reject_code: "bad_slot", reason: "the controller refused a schedule", next_retry_at: iso(written + MINUTE) };
+      }
+      const stored = next.schedules.find((item) => item.slot_id === schedule.slot_id);
+      if (stored) stored.sync = state;
+    }
+    activity(next, { ts: iso(written), actor: actorOf(next), action: `irrigation.schedule.${action}`, target: String(schedule.slot_id), detail: { line_id: schedule.line_id }, reason, state, confirmed_at: confirmedAt, request_id: key });
   };
 }
-function createSchedule(world, { body, key }) {
+function createSchedule(world, { body, key, serial }) {
   const input = object(body);
-  if (world.schedules.length >= 24) throw refuse(422, "too_many_schedules", "Too many schedules", "At most 24 schedules");
+  if (world.schedules.length >= 24) throw refuse(422, "too_many_schedules", "Too many schedules", "At most 24 schedules", { current: world.schedules.length, max: 24 });
   const fields = Object.fromEntries(FIELDS.filter((field) => input[field] !== undefined).map((field) => [field, input[field]]));
   const schedule = {
     slot_id: Math.max(0, ...world.schedules.map((item) => item.slot_id)) + 1, enabled: true, count: 1, gap_s: 0, prewet_s: 0, flush_s: 0, degraded_only: false,
@@ -717,9 +765,9 @@ function createSchedule(world, { body, key }) {
   };
   checkSchedule(world, schedule, schedule.slot_id);
   const stored = { ...schedule, manual_before: null, sync: "requested", updated_by: actorOf(world), updated_at: iso(world.now) };
-  return { status: 201, body: stored, effect: scheduleEffect(world, stored, "create", key, text(input.reason, "reason")) };
+  return { status: 201, body: stored, effect: scheduleEffect(world, stored, "create", { key, serial }, text(input.reason, "reason")) };
 }
-function editSchedule(world, { params, body, key }) {
+function editSchedule(world, { params, body, key, serial }) {
   const existing = world.schedules.find((item) => item.slot_id === Number(params.slot_id));
   if (!existing) throw refuse(422, "unknown_target", "Unknown schedule", `No schedule ${params.slot_id}`, { field: "slot_id" });
   const input = object(body);
@@ -727,12 +775,12 @@ function editSchedule(world, { params, body, key }) {
   const schedule = { ...existing, ...fields, manual: input.manual ?? true };
   checkSchedule(world, schedule, existing.slot_id);
   const stored = { ...schedule, manual_before: existing.manual, sync: "requested", updated_by: actorOf(world), updated_at: iso(world.now) };
-  return { status: 200, body: stored, effect: scheduleEffect(world, stored, "update", key, text(input.reason, "reason")) };
+  return { status: 200, body: stored, effect: scheduleEffect(world, stored, "update", { key, serial }, text(input.reason, "reason")) };
 }
-function deleteSchedule(world, { params, query, key }) {
+function deleteSchedule(world, { params, query, key, serial }) {
   const existing = world.schedules.find((item) => item.slot_id === Number(params.slot_id));
   if (!existing) throw refuse(422, "unknown_target", "Unknown schedule", `No schedule ${params.slot_id}`, { field: "slot_id" });
-  return { status: 204, body: null, effect: scheduleEffect(world, existing, "delete", key, text(query.get("reason") ?? undefined, "reason")) };
+  return { status: 204, body: null, effect: scheduleEffect(world, existing, "delete", { key, serial }, text(query.get("reason") ?? undefined, "reason")) };
 }
 
 function command(world, kind, lineId, args, key) {
@@ -840,6 +888,9 @@ function updateLines(world, { params, body, key, serial }) {
     if (until <= world.now) until = null;
   }
   const ids = id === "all" ? LINES.map((line) => line.line_id) : [id];
+  const definition = DEFINITION.some((field) => input[field] !== undefined);
+  // A check or reason alone changes no program: no revision, and the line's sync stays as it reads.
+  const pushes = definition || "paused_until" in input;
   const updates = ids.map((lineId) => {
     const line = lineOf(world, lineId);
     if ((input.vpd_member !== undefined || input.schedule_member !== undefined) && !MISTERS.includes(lineId)) throw refuse(422, "unknown_target", "Not a mister zone", "vpd_member and schedule_member are for L04, L07 and L09", { field: input.vpd_member !== undefined ? "vpd_member" : "schedule_member" });
@@ -850,8 +901,7 @@ function updateLines(world, { params, body, key, serial }) {
     if ((input.enabled === true && !line.enabled && !line.check && !checkedNow) || (input.schedule_member === true && !line.schedule_member && !line.check && !checkedNow)) {
       throw refuse(422, "check_required", "Check required", `Record the one-time check of ${lineId} first`, { field: "checked" });
     }
-    const definition = DEFINITION.some((field) => input[field] !== undefined);
-    const changed = { ...line, manual_before: line.manual, sync: "requested" };
+    const changed = { ...line, manual_before: line.manual };
     for (const field of DEFINITION) if (input[field] !== undefined) changed[field] = input[field];
     if (definition) changed.manual = input.manual ?? true;
     if (checkedNow) changed.check = { checked_by: world.me.username, checked_at: iso(world.now), note };
@@ -863,8 +913,11 @@ function updateLines(world, { params, body, key, serial }) {
   const push = linePush(world, serial);
   const effect = (next, history) => {
     if (input.enabled === false) stopLines(next, ids, world.now);
-    const { sync, settledAt } = push(next, history);
-    for (const changed of updates) Object.assign(lineOf(next, changed.line_id), structuredClone(changed), { sync });
+    const { sync = null, settledAt = null } = pushes ? push(next, history) : {};
+    for (const changed of updates) {
+      const line = lineOf(next, changed.line_id);
+      Object.assign(line, structuredClone(changed), { sync: pushes ? sync : line.sync });
+    }
     activity(next, {
       ts: iso(world.now), actor: actorOf(next), action: "irrigation.line.update", target: id, detail: Object.fromEntries(Object.entries(input).filter(([field]) => field !== "reason")),
       reason, state: next.engine ? sync : null, confirmed_at: sync === "confirmed" ? iso(settledAt) : null, request_id: key,

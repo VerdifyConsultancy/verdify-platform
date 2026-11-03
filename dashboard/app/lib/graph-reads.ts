@@ -7,10 +7,11 @@
  */
 import { useContext, useEffect, useRef, useState } from "react";
 import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
-import { apiGet, type ParamsOf, type Parsed, type ReadOperationId } from "./operator-api";
+import { ApiError, apiGet, type ParamsOf, type Parsed, type ReadOperationId } from "./operator-api";
 import { nextPollDelay } from "./polling";
 import { readKey } from "./queries";
 import { PollingPaused } from "./use-current";
+import { words } from "./words";
 
 /** Graphs and the scorecard poll every 60 s while their window includes now (architecture §3). */
 export const GRAPH_POLL_MS = 60_000;
@@ -20,6 +21,13 @@ export const GRAPH_POLL_MS = 60_000;
  */
 export const GRAPH_READ_TIMEOUT_MS = 15_000;
 const MINUTE_MS = 60_000;
+export const TIMEOUT_TEXT = "This window took too long. Narrow it.";
+/** A failed read in words: API-04's 503 `query_timeout` asks for a narrower window; anything else names what failed. */
+export function readFailure(error: unknown, thing: string): string {
+  if (error instanceof ApiError && error.problem.code === "query_timeout") return TIMEOUT_TEXT;
+  if (error instanceof ApiError && error.problem.code === "window_too_large") return `${words("problem_code", "window_too_large")}.`;
+  return `Couldn't load ${thing}.`;
+}
 const hidden = () => typeof document !== "undefined" && document.visibilityState === "hidden";
 
 /**

@@ -89,11 +89,25 @@ const METRICS = [
   ["climate.temp_avg", "Indoor temperature", "house climate", "°F", 60, 365, "MEASURED", null, true],
   ["climate.rh_avg", "Indoor relative humidity", "house climate", "%", 60, 365, "MEASURED", null, true],
   ["climate.vpd_avg", "Indoor VPD", "house climate", "kPa", 60, 365, "MEASURED", null, true],
-  ["climate.temp_south", "South temperature", "zones", "°F", 60, 365, "MEASURED", "south", false],
+  ...["north", "east", "south", "west"].flatMap((zone) => {
+    const name = `${zone[0].toUpperCase()}${zone.slice(1)}`;
+    return [
+      [`climate.temp_${zone}`, `${name} temperature`, "zones", "°F", 60, 365, "MEASURED", zone, false],
+      [`climate.rh_${zone}`, `${name} relative humidity`, "zones", "%", 60, 365, "MEASURED", zone, false],
+      [`climate.vpd_${zone}`, `${name} VPD`, "zones", "kPa", 60, 365, "DERIVED", zone, false],
+    ];
+  }),
   ["climate.soil_moisture_south_1", "South soil moisture 1", "water and soil", "%", 60, 365, "MEASURED", "south", false],
   ["climate.flow_gpm", "Site water flow", "water and soil", "gal/min", 60, 365, "MEASURED", null, false],
   ["climate.outdoor_temp_f", "Outdoor temperature", "outdoor", "°F", 60, 365, "MEASURED", null, false],
   ["climate.outdoor_rh_pct", "Outdoor relative humidity", "outdoor", "%", 60, 365, "MEASURED", null, false],
+  // The forecast keys as #1170 registers them: the newest weather_forecast issue per hour.
+  ["forecast.temp_f", "Forecast temperature", "outdoor", "°F", 3600, 400, "DERIVED", null, false],
+  ["forecast.rh_pct", "Forecast relative humidity", "outdoor", "%", 3600, 400, "DERIVED", null, false],
+  ["forecast.vpd_kpa", "Forecast VPD", "outdoor", "kPa", 3600, 400, "DERIVED", null, false],
+  // The controller's on-chip targets, a cross-check for API-06 (house for north, which has no zone band).
+  ["climate.house_vpd_target", "House VPD target", "targets", "kPa", 60, 365, "DERIVED", "house", false],
+  ...["center", "south", "west", "east"].map((zone) => [`climate.vpd_target_${zone}`, `${zone[0].toUpperCase()}${zone.slice(1)} VPD target`, "targets", "kPa", 60, 365, "DERIVED", zone, false]),
   ["diagnostics.heap_free_kb", "Controller free heap", "controller", "kB", 60, 180, "MEASURED", null, false],
   // The scorecard keys as VD-56's registry names them (v_daily_scorecard, kept 400 days).
   ["daily.temp_in_band_pct", "Temperature time in band, whole day", "daily", "%", 86_400, 400, "DERIVED", null, true],
@@ -185,6 +199,10 @@ function inBand(now) {
     me: { username: "jason", display_name: "Jason", role: "operator", writes_enabled: true, source_revision: REVISION },
     indoor: { temp_f: reading(64.8, now - 20_000), rh_pct: reading(71.0, now - 20_000), vpd_kpa: reading(0.62, now - 20_000) },
     outdoor: { temp_f: reading(41.2, now - 2 * MINUTE), rh_pct: reading(58.0, now - 2 * MINUTE) },
+    // The newest weather_forecast issue (#1138); null: no forecast row in any window (no-forecast).
+    forecast: { issued_at: iso(at("07:00")) },
+    // Metric keys that read null over a span, a probe out: {keys, from, to} in epoch ms (south-probe-out).
+    outages: [],
     band: { temp_f: { low: 62.0, high: 70.0, verdict: "in" }, vpd_kpa: { low: 0.45, high: 0.8, verdict: "in" }, rh_pct: null, observed_at: iso(now - 4 * MINUTE) },
     mode: { code: "IDLE", stage: null, reason: "idle", since: iso(at("09:55")) },
     iris: { plan_id: planId, trigger: "SUNRISE", valid_until: iso(at("17:30")), required_trigger: "ok" },
@@ -386,7 +404,8 @@ function notReporting(world, since) {
     if (item.intent !== undefined && item.intent !== null) item.intent = "unknown";
     if (item.group === "light") item.observed_at = iso(Math.min(Date.parse(item.observed_at), world.now - 12 * MINUTE));
   }
-  for (const line of world.lines) line.state = { ...line.state, code: "unknown", cause: null, reason: "controller not reporting" };
+  // No irr_state reading while the controller is not reporting, so no VPD source either (`line_state`).
+  for (const line of world.lines) Object.assign(line, { state: { ...line.state, code: "unknown", cause: null, reason: "controller not reporting" }, vpd_source: null });
   world.irrFreshness = { ...world.irrFreshness, stale: true };
   // API-13's reasons (#1167): no code or since while the controller does not report, and the newest row's time stays.
   for (const reason of Object.values(world.reasons)) Object.assign(reason, { code: null, since: null });
@@ -411,6 +430,12 @@ export function flowWithValvesClosed(world, since) {
 function checked(world, id, by = "jason") {
   lineOf(world, id).check = { checked_by: by, checked_at: iso(clock(world.now)("09:10", -2)), note: null };
 }
+
+/** A stored schedule's row in API-IRR-02, confirmed and written by jason two days back. */
+const storedSchedule = (world) => (slot_id, line_id, label, days, start, fields) => ({
+  slot_id, line_id, label, enabled: true, days, start, count: 1, gap_s: 0, prewet_s: 0, flush_s: 0, degraded_only: false, manual: true, sync: "confirmed",
+  updated_by: JASON, updated_at: iso(clock(world.now)("09:20", -2)), ...fields,
+});
 
 // ---------------------------------------------------------------------------------------------------- named fixtures
 /** Each patches the base in place; screens §1.5 states and the issue's fixture table say what each serves. */
@@ -686,10 +711,7 @@ export const FIXTURES = {
   },
   "schedules-paused": (world) => {
     const at = clock(world.now);
-    const make = (slot_id, line_id, label, days, start, fields) => ({
-      slot_id, line_id, label, enabled: true, days, start, count: 1, gap_s: 0, prewet_s: 0, flush_s: 0, degraded_only: false, manual: true, sync: "confirmed",
-      updated_by: JASON, updated_at: iso(at("09:20", -2)), ...fields,
-    });
+    const make = storedSchedule(world);
     world.schedules = [
       make(11, "L01", "Wall MWF", ["mon", "wed", "fri"], { kind: "sunrise", offset_min: 60 }, { on_s: 720 }),
       make(12, "L02", "Weekly feed", ["sun"], { kind: "sunrise", offset_min: 60 }, { on_s: 300, prewet_s: 120, flush_s: 240 }),
@@ -701,6 +723,27 @@ export const FIXTURES = {
     checked(world, "L04");
     // L02 was paused across its last feed, so that block ended skipped.
     world.pauses.push({ line_id: "L02", from: world.now - 8 * DAY, until: world.now - MINUTE, by: JASON, reason: null });
+  },
+  // #1137: the controller's 24 schedules are stored, so a create answers too_many_schedules (with current and max, no field).
+  "schedules-full": (world) => {
+    const make = storedSchedule(world);
+    world.schedules = Array.from({ length: 24 }, (_, index) => make(index + 1, "L01", `Slot ${index + 1}`, ["sat"], { kind: "clock", clock: `${String(index).padStart(2, "0")}:00` }, { on_s: 60 }));
+  },
+  // #1137: an L01 schedule at sunrise + 60: a create starting within 30 min of it answers too_close.
+  "l01-schedule": (world) => {
+    world.schedules = [...world.schedules, storedSchedule(world)(11, "L01", "Wall MWF", ["mon", "wed", "fri"], { kind: "sunrise", offset_min: 60 }, { on_s: 720 })];
+  },
+  // #1137: L07 enabled with Schedule off: a mist schedule saves, and its blocks read "Skipped until Schedule is on".
+  "l07-schedule-off": (world) => { Object.assign(lineOf(world, "L07"), { enabled: true, schedule_member: false }); },
+  // #1137: L02 checked and enabled, so a feed's prewet and flush count on L01's cap.
+  "l02-enabled": (world) => {
+    Object.assign(lineOf(world, "L02"), { enabled: true, state: { code: "idle", cause: null, slot_id: null, reason: null, ends_at: null, observed_at: iso(clock(world.now)("09:00", -14)) } });
+    checked(world, "L02");
+  },
+  // #1137: L02 enabled with no check on record, as L01 is seeded: the editor offers L02's own Checked box.
+  "l02-enabled-unchecked": (world) => {
+    FIXTURES["l02-enabled"](world);
+    lineOf(world, "L02").check = null;
   },
   "grow-lights-differ": (world) => {
     Object.assign(itemOf(world, "grow_light_grow"), { intent: "on" });
@@ -765,6 +808,33 @@ export const FIXTURES = {
       details: { sensor: "climate_south" }, first_seen_at: iso(world.now - 50 * MINUTE),
     });
   },
+  // #1138: as south-peer, and the probe's own series read null for the last 20 minutes.
+  "south-probe-out": (world) => {
+    FIXTURES["south-peer"](world);
+    world.outages.push({ keys: ["climate.temp_south", "climate.rh_south", "climate.vpd_south"], from: world.now - 20 * MINUTE, to: Number.POSITIVE_INFINITY });
+  },
+  // #1138, Coming up: one manual lane whose earlier waypoint must not count, Iris's 13:00 waypoint with a forecast rule
+  // at the same time, and SOLAR_MAX already fired, so SUNSET is the next trigger.
+  "plan-next": (world) => {
+    const at = clock(world.now);
+    FIXTURES["manual-lane"](world);
+    laneOf(world, "mister_pulse_on_s").waypoints = [{ at: iso(at("12:00")), value: 75, source: "iris", effective: true }];
+    laneOf(world, "mister_engage_delay_s").waypoints = [{ at: iso(at("13:00")), value: 90, source: "preemptive", effective: true }];
+    Object.assign(world.plan.health.find((row) => row.trigger === "SOLAR_MAX" && row.outcome === "expected"), { outcome: "plan_written", resolved_at: iso(world.now - 5 * MINUTE) });
+  },
+  // #1138: the schedules of schedules-paused, and L01 paused until 14:00 by Jason because of rain.
+  "l01-paused": (world) => {
+    FIXTURES["schedules-paused"](world);
+    Object.assign(lineOf(world, "L01"), { paused_until: iso(clock(world.now)("14:00")), paused_by: JASON, pause_reason: "rain" });
+  },
+  // #1138: no weather_forecast row in any window, so `issued_at` is null and none is drawn.
+  "no-forecast": (world) => { world.forecast = null; },
+  // #1138: the API-04 example reads the forecast keys over the next 12 h, as Graphs does.
+  "forecast-window": (world) => {
+    world.seriesKeys = ["forecast.temp_f", "forecast.rh_pct", "forecast.vpd_kpa"];
+    world.seriesWindow = { from: world.now, to: world.now + 12 * HOUR };
+    world.seriesPoints = 13;
+  },
   // #1135: an ingestor outage three days back, so API-IRR-10 reads that day no_data (a gap, never 0) inside a 7-day
   // window; today reads partial, as always.
   "minutes-gap": (world) => { world.noDataDays.push(3); },
@@ -796,7 +866,8 @@ export const FIXTURES = {
     };
     // No program on the controller: the site caps read no value, with the reason (SCR-05 "—" with readback.reason).
     for (const param of SITE_CAPS) Object.assign(settingOf(world, param), { readback: reading(null, null, "no irrigation program on the controller yet"), state: "requested" });
-    for (const line of world.lines) line.sync = "requested";
+    // No irr_state before the engine, so no line has a VPD source (`line_state`).
+    for (const line of world.lines) Object.assign(line, { sync: "requested", vpd_source: null });
     // A site cap saved before the engine: stored, and requested with no_engine since that write until a program
     // compiled after it is confirmed.
     const saved = clock(world.now)("09:30");

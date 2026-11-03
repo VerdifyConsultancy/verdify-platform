@@ -25,7 +25,7 @@
 .chart-legend-items button{display:inline-flex;align-items:center;gap:.4rem;min-height:2.25rem;padding:0 .7rem;border-radius:999px;font-weight:500;color:var(--ink)}
 .chart-legend-items button[aria-pressed=false]{color:var(--muted);text-decoration:line-through}
 .chart-swatch{display:inline-block;width:1rem;height:3px;border-radius:2px;background:var(--muted)}
-.chart-swatch[data-token=c-temp]{background:var(--c-temp)}.chart-swatch[data-token=c-vpd]{background:var(--c-vpd)}.chart-swatch[data-token=c-rh]{background:var(--c-rh)}.chart-swatch[data-token=c-outdoor]{background:var(--c-outdoor)}
+.chart-swatch[data-token=c-temp]{background:var(--c-temp)}.chart-swatch[data-token=c-vpd]{background:var(--c-vpd)}.chart-swatch[data-token=c-rh]{background:var(--c-rh)}.chart-swatch[data-token=c-outdoor]{background:var(--c-outdoor)}.chart-swatch[data-token=c-setpoint]{background:var(--c-setpoint)}
 .chart-swatch[data-token=eq-fan2]{background:var(--eq-fan2)}.chart-swatch[data-token=eq-heat1]{background:var(--eq-heat1)}.chart-swatch[data-token=eq-vent]{background:var(--eq-vent)}.chart-swatch[data-token=eq-mister]{background:var(--eq-mister)}
 .chart-swatch[data-token=eq-light-grow]{background:var(--eq-light-grow)}.chart-swatch[data-token=eq-fert]{background:var(--eq-fert)}.chart-swatch[data-token=eq-heat2]{background:var(--eq-heat2)}.chart-swatch[data-token=eq-fog]{background:var(--eq-fog)}
 

@@ -111,7 +111,7 @@ test("the routes: SCR-01 to SCR-07, /more, SCR-09 through /auth/* and a catch-al
     return entry.children?.length ? leaves(entry.children, path) : [path];
   });
   const paths = leaves(routes as Entry[]);
-  expect(paths).toEqual(["/", "/graphs", "/graphs/scorecard", "/plan", "/water", "/water/schedules", "/water/history", "/settings", "/activity", "/equipment", "/more", "/auth/*", "/*"]);
+  expect(paths).toEqual(["/", "/graphs", "/graphs/scorecard", "/graphs/zones", "/plan", "/water", "/water/schedules", "/water/history", "/settings", "/activity", "/equipment", "/more", "/auth/*", "/*"]);
   expect(paths).not.toContain("/plants");
 });
 
@@ -125,10 +125,12 @@ test("in band: the shell reads API-01 and API-02 once each, shows no banner, and
   }
   requests = [];
   mount("/"); await advance(0);
-  // Now (#1129) reads the shell's API-02 poll, so one request serves both; it adds only its water and alert reads.
+  // Now (#1129) reads the shell's API-02 poll, so one request serves both; it adds its water and alert reads, and below
+  // them Coming up's plan and schedules and the zones' metric list and series (#1138), whose bands follow once they draw.
   const shellReads = (path: string) => path === "/api/v1/me" || path === "/api/v1/now";
+  const zoneReads = (path: string) => path.startsWith("/api/v1/series?") || path.startsWith("/api/v1/band?");
   expect(requests.filter(shellReads).sort()).toEqual(["/api/v1/me", "/api/v1/now"]);
-  expect(requests.filter((path) => !shellReads(path)).sort()).toEqual(["/api/v1/alerts?status=open", "/api/v1/irrigation"]);
+  expect(requests.filter((path) => !shellReads(path) && !zoneReads(path)).sort()).toEqual(["/api/v1/alerts?status=open", "/api/v1/irrigation", "/api/v1/irrigation/schedules?days=7", "/api/v1/metrics", "/api/v1/plan?hours=24"]);
   // API-02 every 15 s, API-01 every 60 s: one poll each, never a second.
   requests = [];
   await advance(NOW_POLL_MS);
