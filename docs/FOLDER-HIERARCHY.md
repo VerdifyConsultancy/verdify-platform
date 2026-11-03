@@ -246,7 +246,7 @@ github.com/jrvallery/verdify                 TimescaleDB (local SSD volume)
 Manual on VM:
   systemctl restart <svc>
   docker compose up -d <svc>
-  make firmware-deploy                Iris planner (Hermes) ──HTTP──▶ MCP (22 tools)
+  make firmware-deploy                Iris planner (Hermes) ──HTTP──▶ MCP (25 tools)
                                                                         │
                                                                         ▼
                                                             DB writes + ESP32 dispatches

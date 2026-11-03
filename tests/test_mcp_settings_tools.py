@@ -372,8 +372,11 @@ def test_a_replay_returns_the_stored_json_with_replayed_true(server, writes, ope
     [
         (asyncpg.QueryCanceledError("statement timeout"), "query_timeout"),
         (ConnectionRefusedError("refused"), "unavailable"),
+        (asyncpg.CannotConnectNowError("the database system is starting up"), "unavailable"),
+        (asyncpg.AdminShutdownError("terminating connection due to administrator command"), "unavailable"),
+        (asyncpg.TooManyConnectionsError("too many connections for role"), "unavailable"),
     ],
-    ids=["statement-timeout", "database-down"],
+    ids=["statement-timeout", "database-down", "starting-up", "shutting-down", "out-of-connections"],
 )
 def test_a_database_failure_is_a_retryable_problem(server, writes, opened, failure, code):
     writes.answer = failure
@@ -839,6 +842,13 @@ def test_resolve_takes_the_resolution_from_data_or_its_plain_text(server, alert_
     assert first["resolution"] == second["resolution"] == resolution
     assert first["resolved_by"] == "agent:steward"
     assert [row["action"] for row in alert_rows.activity] == ["alert.resolve"]
+
+
+def test_a_resolution_postgresql_cannot_store_is_refused_and_resolves_nothing(server, alert_rows):
+    row = alert_rows.add("relay_stuck", sensor_id="a")
+    reply = json.loads(run_as(server, steward(server), server.alerts("resolve", row["id"], "a\x00b")))
+    assert "NUL" in reply["error"]
+    assert row["resolved_at"] is None and alert_rows.activity == []
 
 
 def test_the_retrieval_check_runs_before_the_actor_check(server, monkeypatch):

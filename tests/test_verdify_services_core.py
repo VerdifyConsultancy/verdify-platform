@@ -571,6 +571,9 @@ def test_bad_request_ids_and_long_reasons_are_refused_before_anything_runs():
     with pytest.raises(ServiceError) as excinfo:
         write(conn, calls, reason="r" * 501)
     assert (refused(excinfo).code, refused(excinfo).field) == ("invalid_request", "reason")
+    with pytest.raises(ServiceError) as excinfo:
+        write(conn, calls, reason="a\x00b")  # PostgreSQL text cannot hold it: a refusal, not a database exception
+    assert (refused(excinfo).code, refused(excinfo).field) == ("invalid_request", "reason")
     assert conn.sql == [] and calls == []
 
 

@@ -418,6 +418,13 @@ def test_a_refusal_stores_nothing(server, dsn, param, value, code):  # noqa: F81
     assert desired_rows(dsn) == [] and activity_rows(dsn) == []
 
 
+def test_a_reason_postgresql_cannot_store_is_refused_and_stores_nothing(server, dsn):  # noqa: F811
+    result = run_as(server, steward(server), server.set_setting(PARAM, 1.5, reason="a\x00b"))
+    assert result.isError is True
+    assert (body(result)["code"], body(result)["field"]) == ("invalid_request", "reason")
+    assert desired_rows(dsn) == [] and activity_rows(dsn) == []
+
+
 def test_out_of_range_says_min_max_and_current(server, dsn):  # noqa: F811
     person_holds_manual(dsn, 1.7)
     answer = body(run_as(server, steward(server), server.set_setting(PARAM, 9.0)))

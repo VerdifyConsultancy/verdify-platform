@@ -1305,7 +1305,14 @@ def _answers_problems(tool):
         except asyncpg.QueryCanceledError:
             limit_s = MCP_DB_STATEMENT_TIMEOUT_MS // 1000
             return _tool_problem(problem("query_timeout", f"The database stopped the query at its {limit_s} s limit."))
-        except (OSError, asyncpg.PostgresConnectionError, asyncpg.InterfaceError):
+        except (
+            OSError,
+            asyncpg.PostgresConnectionError,
+            asyncpg.InterfaceError,
+            # Starting up or shutting down (57P0x), out of connections or memory (53xxx).
+            asyncpg.OperatorInterventionError,
+            asyncpg.InsufficientResourcesError,
+        ):
             return _tool_problem(problem("unavailable", "The database could not answer. Try again."))
 
     return answered
@@ -5432,8 +5439,9 @@ async def activity(
     changed the same target since.
 
     REST twin: API-17 `GET /v1/activity`. Returns ActivityPage `{items, next_cursor}`; each setting row carries its
-    readback state and confirmed_at. since maps to API-17's from. A bad filter, limit, cursor or time is
-    `invalid_request` as Problem JSON with isError."""
+    readback state and confirmed_at. since maps to API-17's from. Narrow it: a plan.write row lists every row its
+    plan wrote, up to hundreds. A bad filter, limit, cursor or time is `invalid_request` as Problem JSON with
+    isError."""
     from_ = _time_argument("since", since)
     async with _service_connection() as conn:
         return _tool_ok(

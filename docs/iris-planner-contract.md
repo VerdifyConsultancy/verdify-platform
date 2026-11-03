@@ -202,7 +202,10 @@ dark-launch credential is deliberately enabled. It also lists the named agents
 (`auth_agent_keys_rejected`: a bad name, the reserved `admin`, a malformed
 token, a token shared by two agents or equal to an environment token); agent
 keys never change readiness, so one bad key cannot take Iris's tool surface out
-of service.
+of service. Hermes's own readiness (`tool-readiness.py` in hermes-config) wants
+every tool of its `REQUIRED` set from that report except `PLAN_OPTIONAL`
+(`settings`, `activity` and `set_setting`): Iris ends every trigger without them,
+and Hermes's config moves at any sync while the MCP image moves at its promotion.
 
 ### D. MCP server → TimescaleDB
 
