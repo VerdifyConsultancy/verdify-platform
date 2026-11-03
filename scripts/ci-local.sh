@@ -92,6 +92,9 @@ $PY -m pytest -q -rs \
   tests/test_282_dashboard_login_delivery.py \
   tests/test_283_irrigation_tables_delivery.py \
   tests/test_284_dashboard_grants_delivery.py \
+  tests/test_285_daily_scorecard_delivery.py \
+  tests/test_metric_registry_completeness.py \
+  tests/test_verdify_services_series.py \
   tests/test_qualify_migration_successor.py \
   tests/test_verdify_services_core.py \
   tests/test_verdify_services_settings.py \
