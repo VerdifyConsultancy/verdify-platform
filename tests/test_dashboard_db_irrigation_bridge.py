@@ -274,8 +274,8 @@ def test_the_command_rolls_back_with_its_activity_row():
         (
             "INSERT INTO public.system_state (ts, entity, value, greenhouse_id) "
             "VALUES (now(), 'irr_engine', 'true', 'vallery')",
-            {},
-            "unavailable",
+            {},  # with the engine a run takes the body per line kind (VD-41), so L01 needs its minutes
+            "invalid_request",
         ),
     ],
 )

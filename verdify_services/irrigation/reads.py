@@ -5,7 +5,8 @@ committed OpenAPI schema of the same name (docs/design/dashboard/openapi/dashboa
 routes (``api/operator_routes/irrigation_reads.py``) and the MCP read tools (#1173) return the same models from these
 functions; the roles are the adapters' to check, so the actor changes nothing here.
 
-- ``status``: API-IRR-01, in one read-only snapshot, with ``lines``, the reader API-IRR-08's response reuses (#1156).
+- ``status``: API-IRR-01, in one read-only snapshot, with ``lines``, the reader API-IRR-08's response reuses (#1156),
+  and ``write_sync``, which API-IRR-03's and -04's responses use the same way.
 - ``agenda``: API-IRR-02, the week planned against actual.
 - ``minutes``: API-IRR-10, from M4's bounded ``fn_irrigation_minutes_daily``.
 - ``runs``: API-IRR-11, the ended runs, newest first.
@@ -100,6 +101,7 @@ __all__ = [
     "run_causes",
     "runs",
     "status",
+    "write_sync",
 ]
 
 NOT_ON_CONTROLLER = "engine not on controller"
@@ -916,6 +918,13 @@ async def lines(
     async with _snapshot(conn):
         base = await _base(conn)
         return (await _read_lines(conn, base, line_ids)).lines
+
+
+async def write_sync(conn: asyncpg.Connection, updated_at: datetime) -> ReadbackState:
+    """The ``sync`` of a schedule written at ``updated_at``, as of now: API-IRR-03 and -04's response (#1156) reads it
+    inside its write transaction, so the program it compiles holds that write."""
+    async with _snapshot(conn):
+        return (await _base(conn)).sync_of(updated_at)
 
 
 # ── API-IRR-01 ──────────────────────────────────────────────────────────────

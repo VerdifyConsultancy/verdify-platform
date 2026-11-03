@@ -10,7 +10,7 @@ page is the conventions every service here follows; VD-31 (#1147) set them.
 | `actor.py` | `Actor` (who is calling) and `ActorRef` (who wrote, as responses show it) |
 | `problems.py` | `ProblemCode`, `Problem`, `ServiceError` and `problem()` |
 | `activity.py` | `append`, `list` and `recorded_write`, the one write convention, with `WriteResult`, `ActivityEntry` and `ActivityPage` |
-| `irrigation/writes.py` | `run` and `stop` (API-IRR-06 and API-IRR-07, MCP `irrigation_run` and `irrigation_stop`) through the L01 bridge before the engine firmware (VD-64), with the `RunRequest` and `LineCommand` bodies |
+| `irrigation/writes.py` | `schedule_create`, `schedule_update`, `schedule_delete`, `line_update`, `run`, `stop`, `override` and `clear_fault` (VD-41: API-IRR-03 to -08, -12 and -13, the functions the MCP write tools call), with their bodies; `run` and `stop` go through the L01 bridge before the engine firmware (VD-64) |
 | `settings.py` | `catalog`, `validate`, `write`, `release`, `status` and `history` (VD-67), and the batched `statuses` and `desired_states` (VD-55): the one validator and writer for desired state, with `Setting`, `DesiredSetting`, `StateReason`, `SettingHistory` and `SettingStatus` |
 | `alerts.py` | `list`, `open_count`, `ack` and `resolve` (VD-67): merged alert rows, the one open-alert count, with `Alert`, `AlertPage` and `AlertCounts` |
 | `reads.py` | `now`, `plan` and `equipment` (VD-54: API-02, API-07 and API-13); `settings_rows`, `setting_history` and `activity_page` (VD-55: API-09, API-12 and API-17, which the MCP `settings` and `activity` tools call too), with `SettingRows`; and the shared `reporting()` (the one §7 test: heartbeat at most 180 s old, climate at most 300 s), which `settings.status` uses for its `writer_down` and `controller_not_reporting` reasons |
@@ -73,6 +73,9 @@ result = await activity.recorded_write(
     reason=reason,  # at most 500 characters, no NUL (400 invalid_request)
     perform=perform,  # async (conn) -> (value, detail): validate and write the domain row
     load=load,  # async (conn, ActivityLogRow) -> value: read the stored object back
+    lock=None,  # optional async (conn) -> None: the first thing in the transaction, before the replay read
+    target_of=None,  # optional (value) -> str: the activity row's target when only perform knows it (a new id)
+    finish=None,  # optional async (conn, value) -> value: the answer, read after the activity row in this transaction
 )
 ```
 
@@ -94,7 +97,8 @@ result = await activity.recorded_write(
    replay can `load` it, plus the before and after values the Activity screen shows. Then `append` writes
    the activity row with the request id, the hash and the experiment id, and the transaction commits.
 6. A concurrent duplicate that hits `UNIQUE (source, request_id)` rolls back and runs step 3 again in a new
-   transaction, where it replays (or is refused).
+   transaction, where it replays (or is refused). A write whose checks read what an earlier write stored passes
+   `lock`, so its duplicate waits before step 3, replays there and never meets those checks.
 
 Validate inside `perform`, so a retried request replays even if the rules changed since it was applied.
 A refusal raised there rolls back everything.
