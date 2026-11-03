@@ -512,9 +512,17 @@ SELECT w.equipment, coalesce(last_conflict.ts, first_on.ts) AS on_edge
                       ORDER BY es.ts
                       LIMIT 1) AS first_on ON true
 """
+# The newest sent run command at or before the run's ON edge, unless a ledger row holds that run: M3's rule asks the
+# ledger first, so such a run is no bridge run here, as in irrigation_status. It takes a rollback to the bridge with an
+# engine row whose end never arrived.
 _CONTEXT_BRIDGE_SQL = """
-SELECT max(sent_at) FROM irrigation_command
- WHERE greenhouse_id = $1 AND line_id = $2 AND kind = 'run' AND status = 'sent' AND sent_at <= $3::timestamptz
+SELECT max(c.sent_at) FROM irrigation_command AS c
+ WHERE c.greenhouse_id = $1 AND c.line_id = $2 AND c.kind = 'run' AND c.status = 'sent'
+   AND c.sent_at <= $3::timestamptz
+   AND NOT EXISTS (SELECT 1 FROM irrigation_ledger AS l
+                    WHERE l.greenhouse_id = $1 AND l.line_id = $2
+                      AND l.started_at <= $3::timestamptz AND l.started_at > $3::timestamptz - interval '24 hours'
+                      AND coalesce(l.ended_at, now()) >= $3::timestamptz)
 """
 # M4's day-bounded reader: the same rows as v_irrigation_minutes_daily, without its scan of every edge since 2024.
 _CONTEXT_MINUTES_SQL = """
@@ -880,6 +888,7 @@ async def _print_context(hours: int) -> None:
     conn = await asyncpg.connect(
         config.get_db_dsn(),
         timeout=CONTEXT_DB_TIMEOUT_S,
+        command_timeout=CONTEXT_DB_TIMEOUT_S,
         server_settings={
             "application_name": "verdify-iris-context",
             "statement_timeout": f"{CONTEXT_DB_TIMEOUT_S * 1000}",

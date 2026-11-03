@@ -736,6 +736,8 @@ sys.path.insert(0, str(repo))
 
 from verdify_schemas.tunable_registry import REGISTRY, planner_effective_bounds  # noqa: E402
 
+# All or nothing: the completeness check below reads any output as the whole list.
+rows = []
 for param in (
     "temp_low",
     "temp_high",
@@ -750,7 +752,8 @@ for param in (
     "irrig_wall_duration_min",
 ):
     low, high = planner_effective_bounds(param)
-    print(f"{param}: min={low:g} max={high:g} step={REGISTRY[param].step:g}")
+    rows.append(f"{param}: min={low:g} max={high:g} step={REGISTRY[param].step:g}")
+print("\n".join(rows))
 PY
 )"
 echo "${TUNABLE_CONSTRAINTS:-(tunable constraints unavailable)}"

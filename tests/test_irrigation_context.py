@@ -158,6 +158,7 @@ def test_the_rules_equal_the_services():
     assert section.GREENHOUSE_ID == water.GREENHOUSE_ID
     assert f"'{core.HEARTBEAT_ENTITY}'" in section._CONTEXT_CLOCK_SQL
     assert section.ENGINE_ENTITY == water.ENGINE_ENTITY
+    assert section._CONTEXT_OUTCOMES_SQL == water._LAST_OUTCOMES_SQL
 
 
 # ── The next hours ──────────────────────────────────────────────────────────
@@ -307,6 +308,56 @@ def test_the_entry_point_runs_from_the_pods_working_directory():
     assert result.returncode == 0, result.stderr
     assert result.stdout.startswith("usage: python3 -m tasks.irrigation context")
     assert "--hours" in result.stdout
+
+
+class ContextConnection:
+    closed = False
+
+    async def close(self):
+        self.closed = True
+
+
+def entry_point(monkeypatch, load):
+    """main() with a stand-in connection: what it connected with, and the connection."""
+    connection, connected = ContextConnection(), {}
+
+    async def connect(dsn, **kwargs):
+        connected.update(dsn=dsn, **kwargs)
+        return connection
+
+    monkeypatch.setattr(section.asyncpg, "connect", connect)
+    monkeypatch.setattr(section, "load_context", load)
+    return connection, connected
+
+
+def test_the_entry_point_prints_the_section_with_every_wait_bounded(monkeypatch, capsys):
+    import config
+
+    seen = []
+
+    async def load(conn, greenhouse_id, hours):
+        seen.append((conn, greenhouse_id, hours))
+        return fixture_context()
+
+    connection, connected = entry_point(monkeypatch, load)
+    assert section.main(["context", "--hours", "6"]) == 0
+    assert capsys.readouterr().out == section.render_context(fixture_context()) + "\n"
+    assert seen == [(connection, "vallery", 6)] and connection.closed
+    assert connected["dsn"] == config.get_db_dsn()
+    assert connected["timeout"] == connected["command_timeout"] == section.CONTEXT_DB_TIMEOUT_S
+    assert connected["server_settings"]["statement_timeout"] == str(section.CONTEXT_DB_TIMEOUT_S * 1000)
+
+
+def test_a_failed_read_prints_nothing_fails_the_command_and_closes_the_connection(monkeypatch, capsys):
+    """The gather script reads no output, or a failure, as "(irrigation context unavailable)"."""
+
+    async def load(conn, greenhouse_id, hours):
+        raise OSError("the database went away")
+
+    connection, _connected = entry_point(monkeypatch, load)
+    with pytest.raises(OSError, match="went away"):
+        section.main(["context"])
+    assert capsys.readouterr().out == "" and connection.closed
 
 
 @pytest.mark.parametrize("hours", ["0", "145", "soon"])

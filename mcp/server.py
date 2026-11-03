@@ -5980,9 +5980,9 @@ async def irrigation_schedule(
     and counts: schedules stored, against max_schedules 24. Before the irrigation firmware a planned occurrence reads
     blocked, "arrives with the irrigation firmware". Unknown values are null, never 0.
 
-    Refusals return the Problem JSON with isError: invalid_request (days or past_days out of range; field, min and max
-    say which), query_timeout and unavailable (the database; both retryable). Both windows are bounded, so
-    window_too_large never applies."""
+    Refusals return the Problem JSON with isError: query_timeout and unavailable (the database; both retryable). days
+    or past_days outside their ranges is the REST twin's invalid_request, refused before the tool runs with isError and
+    a plain message. Both windows are bounded, so window_too_large never applies."""
     from verdify_services.irrigation import reads
 
     async def read(conn, actor):
@@ -6027,7 +6027,7 @@ async def irrigation_history(
     Unknown values are null, never 0. Refusals return the Problem JSON with isError: window_too_large (a wider window;
     max gives the limit), invalid_request (a bad since, until or cursor, or an argument that does not belong to the
     view, such as outcome with minutes; field names it), query_timeout and unavailable (the database; both
-    retryable)."""
+    retryable). A value outside an enum is refused before the tool runs, with isError and a plain message."""
     from verdify_services.irrigation import reads
     from verdify_services.problems import ServiceError, problem
 

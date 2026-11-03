@@ -41,12 +41,13 @@ def script_section(number: int) -> str:
     return text[start : text.index(f"# ── {number + 1}. ", start)]
 
 
-def run_section(number: int, *, python: str = sys.executable, cwd: Path = ROOT) -> str:
+def run_section(number: int, *, python: str = sys.executable, cwd: Path = ROOT, script_root: Path | None = None) -> str:
     return subprocess.run(
         [
             "bash",
             "-c",
-            f"set -euo pipefail\nPYTHON_BIN={python!s}\nSCRIPT_ROOT={ROOT / 'scripts'}\n{script_section(number)}",
+            f"set -euo pipefail\nPYTHON_BIN={python!s}\nSCRIPT_ROOT={script_root or ROOT / 'scripts'}\n"
+            f"{script_section(number)}",
         ],
         cwd=cwd,
         env={**os.environ, "PYTHONPATH": str(ROOT)},
@@ -95,6 +96,23 @@ def test_section_18_says_so_when_the_registry_cannot_be_read(tmp_path):
     failing.write_text("#!/bin/bash\nexit 1\n")
     failing.chmod(0o755)
     assert "(tunable constraints unavailable)" in run_section(18, python=str(failing)).splitlines()
+
+
+def test_section_18_prints_nothing_of_a_registry_that_lacks_a_param(tmp_path):
+    """The completeness check reads any output as the whole list, so a stale image's registry must not print part."""
+    package = tmp_path / "verdify_schemas"
+    package.mkdir()
+    (package / "__init__.py").write_text("")
+    (package / "tunable_registry.py").write_text(
+        "from types import SimpleNamespace\n"
+        "REGISTRY = {'temp_low': SimpleNamespace(step=0.5)}\n"
+        "def planner_effective_bounds(param):\n"
+        "    return 30.0, 80.0\n"
+    )
+    (tmp_path / "scripts").mkdir()
+    rows = run_section(18, script_root=tmp_path / "scripts").splitlines()
+    assert "(tunable constraints unavailable)" in rows
+    assert not any(row.startswith("temp_low:") for row in rows)
 
 
 def test_the_completeness_check_is_the_registry_and_not_the_ha_token():

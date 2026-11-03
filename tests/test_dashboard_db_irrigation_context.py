@@ -196,6 +196,30 @@ def test_a_run_with_no_command_keeps_its_topology_cause_in_both(context_db, tool
     scenario(context_db, body)
 
 
+@pytest.mark.parametrize(
+    ("started", "ended", "cause"),
+    [
+        # A rollback to the bridge with an engine row whose end never arrived: the ledger goes first, in both.
+        (3 * H, None, irr.IrrigationCause.UNKNOWN),
+        (3 * H, 2 * H, irr.IrrigationCause.RUN_NOW),  # it ended before the run began
+        (25 * H, None, irr.IrrigationCause.RUN_NOW),  # past M3's 24 h bound
+    ],
+)
+def test_a_ledger_row_over_the_run_goes_before_the_bridge_command_in_both(context_db, tools, started, ended, cause):
+    async def body(f):
+        await f.reporting()
+        await f.state("irr_engine", "false", f.at - H)
+        edge = f.at - 8 * MIN
+        await f.ledger("L01", "schedule", f.at - started, None if ended is None else f.at - ended)
+        await f.command(edge - 5 * S)
+        await f.edge("drip_wall", edge, True)
+        context, status = await load(), await status_of(tools)
+        assert_line_fields_equal(context, status, open_runs=("L01",))
+        assert line_of(context.lines, "L01").state.cause == cause
+
+    scenario(context_db, body)
+
+
 def test_with_the_engine_the_tokens_pause_fault_and_last_outcome_equal_the_tool(context_db, tools):
     async def body(f):
         await f.reporting()

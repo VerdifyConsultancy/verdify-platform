@@ -863,9 +863,10 @@ trigger. Site values use `set_setting`.
 | `irrigation_clear_fault` | `line_id` (null for every mister), `reason`, `request_id` | API-IRR-13 |
 
 - **Typed and self-describing.** Arguments are typed, with enums for `line_id`, `start.kind`, `view` and
-  `group_by`, never a JSON string. A refusal returns the Problem JSON with MCP `isError` set. Each
-  description names its REST twin, its `manual` default and its refusal codes. The read tools join
-  `_TOOL_READ_ONLY`, and existing tools keep their signatures.
+  `group_by`, never a JSON string. A refusal returns the Problem JSON with MCP `isError` set; a value
+  outside the tool's schema (an enum, a bound) is refused by the MCP SDK before the tool runs, with
+  `isError` and a plain message. Each description names its REST twin, its `manual` default and its
+  refusal codes. The read tools join `_TOOL_READ_ONLY`, and existing tools keep their signatures.
 - **People only.** No tool takes `checked` or `check_note` (§4.2). The API-IRR-12 bursts have no MCP
   tool in MVP.
 - **Not a plan.** `trigger_id` and `planner_instance`, both optional, are stored only in the

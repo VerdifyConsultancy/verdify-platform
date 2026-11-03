@@ -439,18 +439,21 @@ def test_each_description_names_its_twin_says_it_reads_lists_its_codes_and_says_
 # ── The instructions check ──────────────────────────────────────────────────
 
 
+def instructions_named(text: str) -> set[str]:
+    """Backticked names, and bare ones with an underscore, which no English word has ("irrigation_stop always works")."""
+    return set(re.findall(r"`([a-z_]+)`", text)) | set(re.findall(r"\b[a-z]+(?:_[a-z]+)+\b", text))
+
+
 def instructions_problems(text: str, tool_names: frozenset[str], admin_tools: frozenset[str]) -> list[str]:
-    """Every backticked name in ``text`` that is a tool name, registered or designed, and that admin cannot call."""
-    return sorted(
-        name for name in set(re.findall(r"`([a-z_]+)`", text)) if name in tool_names and name not in admin_tools
-    )
+    """Every name ``text`` gives that is a tool name, registered or designed, and that admin cannot call."""
+    return sorted(name for name in instructions_named(text) if name in tool_names and name not in admin_tools)
 
 
 def test_the_server_instructions_name_only_tools_admin_can_call(mcp_server):  # noqa: F811
     admin = mcp_server.audience_allowlist("admin")
     assert admin == set(mcp_server.TOOL_AUDIENCES)
     assert instructions_problems(mcp_server.SERVER_INSTRUCTIONS, NEW_TOOLS | admin, admin) == []
-    named = set(re.findall(r"`([a-z_]+)`", mcp_server.SERVER_INSTRUCTIONS)) & (NEW_TOOLS | admin)
+    named = instructions_named(mcp_server.SERVER_INSTRUCTIONS) & (NEW_TOOLS | admin)
     assert named >= {*READ_TOOLS, "irrigation_run", "irrigation_stop"}
 
 
@@ -458,6 +461,13 @@ def test_the_instructions_check_fails_on_a_tool_that_is_not_registered_yet(mcp_s
     admin = frozenset(READ_TOOLS)
     text = "Use `irrigation_status`, `irrigation_line_set` and `set_setting`; `request_id` is no tool."
     assert instructions_problems(text, NEW_TOOLS | admin, admin) == ["irrigation_line_set", "set_setting"]
+    # Without backticks too: the design's own sentence names a tool bare.
+    assert instructions_problems("irrigation_clear_fault always works.", NEW_TOOLS | admin, admin) == [
+        "irrigation_clear_fault"
+    ]
+    # An ordinary word that is also a designed tool's name only counts when it is backticked.
+    assert instructions_problems("Recent activity and settings.", NEW_TOOLS | admin, admin) == []
+    assert instructions_problems("See `activity`.", NEW_TOOLS | admin, admin) == ["activity"]
 
 
 def test_the_instructions_are_the_constant_and_say_what_the_design_gives(mcp_server):  # noqa: F811
