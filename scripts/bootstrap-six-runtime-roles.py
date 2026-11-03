@@ -519,14 +519,14 @@ def sealed_sql_283():
 DASHBOARD_GRANTS_MIGRATION = (
     284,
     "284-dashboard-runtime-grants.sql",
-    "f1a51053c527e5dc5e5d2453823c871a0b7036870d7f628812ad5c807245afd2",
+    "559d8260ec7138a3bec502f7b29f50587f6a752cc5144fa31e15b406c4ddcaf4",
 )
 # 284's grants move both ordinary seals, which hash the dashboard duty's production
 # OID, and leave the MCP seal at 283's; the rolled-back native qualification, run
 # once 282 is applied, measures them.
 SUCCESSOR_284 = {
-    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
-    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "api": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
+    "ingestor": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
     "mcp": SUCCESSOR_283["mcp"],
 }
 

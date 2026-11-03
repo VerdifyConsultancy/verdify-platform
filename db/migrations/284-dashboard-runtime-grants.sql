@@ -22,16 +22,16 @@ DO $predecessor$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations'
         AND seq=283 AND filename='db/migrations/283-irrigation-tables.sql'
-        AND sha256='d38a1bfc62c326521c70e53143a14791d024821888f17b25c10cccfdb1dc8c78'
+        AND sha256='0b07a5042edc29cb90da4c800da6514e47517240d765c0da0217b68cc7fe92c2'
         AND stamp_method='runner')
         OR EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq>=284)
         OR (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts)<>2
         OR (SELECT count(*) FROM public.mcp_runtime_boundary_receipt)<>1
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7' OR
-        encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db' OR
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '030df35ca3b0bc8b94de5f394f96c2292674b2df58aea2d46990c53ad3bd1ad7' OR
+        encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM 'c03d427cbbf327c8843496c744d718e1fca70c1e6d98963022ac87e308954096' OR
         encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e'
-        OR NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts WHERE login_name='verdify_api_runtime_login' AND boundary_sha256=decode('aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7','hex'))
-        OR NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts WHERE login_name='verdify_ingestor_runtime_login' AND boundary_sha256=decode('2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db','hex'))
+        OR NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts WHERE login_name='verdify_api_runtime_login' AND boundary_sha256=decode('030df35ca3b0bc8b94de5f394f96c2292674b2df58aea2d46990c53ad3bd1ad7','hex'))
+        OR NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts WHERE login_name='verdify_ingestor_runtime_login' AND boundary_sha256=decode('c03d427cbbf327c8843496c744d718e1fca70c1e6d98963022ac87e308954096','hex'))
         OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton AND boundary_sha256=decode('6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e','hex'))
         OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='verdify_dashboard_runtime' AND NOT rolcanlogin)
         OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='verdify_dashboard_runtime_login' AND rolcanlogin)
@@ -88,14 +88,14 @@ GRANT UPDATE (value, width_below, width_above) ON public.crop_band_anchors TO ve
 -- receipt must still equal 283's, so this block re-seals only the two ordinary receipts.
 DO $successor$
 BEGIN
-    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7' OR
-        encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db' OR
+    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8' OR
+        encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM 'c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad' OR
         encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e'
         OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton
             AND boundary_sha256=public.fn_mcp_runtime_boundary_digest())
     THEN RAISE EXCEPTION '284 refuses an unqualified successor'; END IF;
-    UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7','hex'), captured_at=clock_timestamp() WHERE login_name='verdify_api_runtime_login';
+    UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8','hex'), captured_at=clock_timestamp() WHERE login_name='verdify_api_runtime_login';
     IF NOT FOUND THEN RAISE EXCEPTION '284 missing api receipt'; END IF;
-    UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db','hex'), captured_at=clock_timestamp() WHERE login_name='verdify_ingestor_runtime_login';
+    UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad','hex'), captured_at=clock_timestamp() WHERE login_name='verdify_ingestor_runtime_login';
     IF NOT FOUND THEN RAISE EXCEPTION '284 missing ingestor receipt'; END IF;
 END $successor$;

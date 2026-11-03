@@ -260,10 +260,10 @@ SUCCESSOR_283_MCP_DIGEST = "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed097623
 # measures them. Its fixture records whether these values are that measurement or
 # still 283's stand-ins.
 SUCCESSOR_284 = "284-dashboard-runtime-grants.sql"
-SUCCESSOR_284_SHA256 = "f1a51053c527e5dc5e5d2453823c871a0b7036870d7f628812ad5c807245afd2"
+SUCCESSOR_284_SHA256 = "559d8260ec7138a3bec502f7b29f50587f6a752cc5144fa31e15b406c4ddcaf4"
 SUCCESSOR_284_DIGESTS = {
-    "verdify_api_runtime_login": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
-    "verdify_ingestor_runtime_login": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "verdify_api_runtime_login": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
+    "verdify_ingestor_runtime_login": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
 }
 SUCCESSOR_284_MCP_DIGEST = SUCCESSOR_283_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this

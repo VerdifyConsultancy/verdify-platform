@@ -1,18 +1,68 @@
 {
   "migration": "284-dashboard-runtime-grants.sql",
-  "exact_final_migration_sha256": "f1a51053c527e5dc5e5d2453823c871a0b7036870d7f628812ad5c807245afd2",
-  "final_migration_qualification_pending": true,
-  "before": null,
+  "exact_final_migration_sha256": "559d8260ec7138a3bec502f7b29f50587f6a752cc5144fa31e15b406c4ddcaf4",
+  "final_migration_qualification_pending": false,
+  "before": {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
+  },
   "projected_successor": {
     "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
     "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
     "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
   },
   "projection": "2026-11-02, before any measurement: VD-74 had no production access. Every literal in the file and its registrations is a stand-in taken from 283's own registration, and 283's api and ingestor seals are themselves stand-ins until 283 is qualified. The ordinary seals cannot be projected: fn_runtime_ordinary_boundary_digest (217) hashes every ACL entry, by grantee OID, of each relation and helper the api or ingestor login can reach, and these grants add verdify_dashboard_runtime on them, so the file's own successor block refuses these stand-ins. The MCP seal is expected to stay 283's: fn_mcp_runtime_boundary_digest (263) hashes only the MCP roles, the database and public-schema ACLs and PUBLIC's and MCP's entries, and each hypertable grant reaches the chunks, so 263's boundary_matches_parent keeps them out. If the probe shows the MCP digest moved, stop: that is a finding, not a literal to update. Once 283's row and seals are final and 282 is applied, update the predecessor block, take the api and ingestor seals from --probe-only (with --apply-first db/migrations/283-irrigation-tables.sql while production is at 282: 283 creates no role and neither digest hashes a relation's OID), set them in the file and the c0-migration-delivery.py and bootstrap-six-runtime-roles.py registrations, and run the full qualification with --native-fixture.",
-  "qualified_successor": null,
-  "after_rollback": null,
-  "inside_transaction_receipts_match": false,
-  "final_migration_rollback_verified": false,
-  "native_fixture_sha256": "5b4bb85a9497d2fe298b4971fc1857aa2b1f0cf20aafda5db7d3ec076d9ec86f",
-  "native_fixture": null
+  "qualified_successor": {
+    "api": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
+    "ingestor": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "after_rollback": {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
+  },
+  "inside_transaction_receipts_match": true,
+  "final_migration_rollback_verified": true,
+  "measured_at": "2026-11-03T00:18:48Z",
+  "native_probe_source_sha256": "132bad71ac5817b6063eef207a7b694ac6006380a5dc0b0f9a87e715f3756347",
+  "qualification_source_sha256": "d46439e0f9239fd337b364bd315f47111107c34eedbabe04b06f0dc90cd46ee6",
+  "applied_first": [
+    {
+      "migration": "283-irrigation-tables.sql",
+      "seq": 283,
+      "sha256": "0b07a5042edc29cb90da4c800da6514e47517240d765c0da0217b68cc7fe92c2"
+    }
+  ],
+  "applied_first_seals": {
+    "api": "030df35ca3b0bc8b94de5f394f96c2292674b2df58aea2d46990c53ad3bd1ad7",
+    "ingestor": "c03d427cbbf327c8843496c744d718e1fca70c1e6d98963022ac87e308954096",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "native_fixture": {
+    "checks": [
+      "grants_exact",
+      "dashboard_reach",
+      "logins_attest",
+      "relations_read",
+      "functions_called",
+      "desired_state_and_activity_log_insert",
+      "alert_ack_and_resolve",
+      "anchor_edit",
+      "setpoint_changes_insert_denied",
+      "setpoint_plan_insert_denied",
+      "control_experiments_read_denied",
+      "other_columns_denied",
+      "append_only_tables_denied"
+    ],
+    "all_passed": true,
+    "attested": {
+      "api": true,
+      "ingestor": true,
+      "mcp": true,
+      "dashboard": true
+    }
+  },
+  "native_fixture_sha256": "5b4bb85a9497d2fe298b4971fc1857aa2b1f0cf20aafda5db7d3ec076d9ec86f"
 }
