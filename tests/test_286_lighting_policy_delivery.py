@@ -229,8 +229,9 @@ def test_sealed_sql_286_chains_from_the_predecessor_and_binds_the_exact_ledger_r
     assert six.sealed_sql_286() == expected
     assert "(SELECT max(seq) FROM public.schema_migrations WHERE source='db/migrations')=286" in expected
     assert "stamp_method='runner'" in six.ledger_row_sql(*six.LIGHTING_MANUAL_MIGRATION)
-    assert six.sealed_sql().endswith(" OR " + previous() + " OR " + expected + ")")
-    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_286() + ")") == 1
+    # 286 follows 285 in both ORs; a later successor (287) follows it.
+    assert six.sealed_sql().count(" OR " + previous() + " OR " + expected) == 1
+    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_286()) == 1
     assert (
         '"286-lighting-policy-ignores-manual.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
     )

@@ -349,6 +349,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "285-daily-scorecard-view.sql",
         # The lighting policy functions ignore manual rows; their seals run forward (VD-33).
         "286-lighting-policy-ignores-manual.sql",
+        # The high_wind forecast rule stays disabled on a rebuild; the row is data, so it runs forward.
+        "287-retire-high-wind-rule.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

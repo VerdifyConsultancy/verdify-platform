@@ -601,6 +601,30 @@ def sealed_sql_286():
     )
 
 
+RETIRE_HIGH_WIND_MIGRATION = (
+    287,
+    "287-retire-high-wind-rule.sql",
+    "c95444af3859465b89b6d3659de6aad2b91a00ade552ecfdca3072beec516933",
+)
+# One forecast_action_rules row is disabled. Data only, and neither digest hashes table rows,
+# so all three seals stay 286's. The rolled-back native qualification measured them.
+SUCCESSOR_287 = SUCCESSOR_286
+
+
+def sealed_sql_287():
+    # Keep every 286 predicate and bind the exact 287 runner stamp.
+    predecessor = sealed_sql_286()
+    current = seal_profile_sql(286, SUCCESSOR_286)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(287, SUCCESSOR_287), 1)
+        + " AND "
+        + ledger_row_sql(*RETIRE_HIGH_WIND_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -629,6 +653,8 @@ def sealed_sql():
         + sealed_sql_285()
         + " OR "
         + sealed_sql_286()
+        + " OR "
+        + sealed_sql_287()
         + ")"
     )
 

@@ -1023,7 +1023,7 @@ async def test_a_non_manual_row_loses_to_a_newer_forecast_rule_row(env):
 
 @pytest.mark.asyncio
 async def test_a_forecast_rule_row_reaches_a_writable_switch_that_is_not_planner_pushable(env):
-    """high_wind: sw_economiser_enabled goes out with source plan, under no misleading audit row."""
+    """A forecast rule's sw_economiser_enabled goes out with source plan, under no misleading audit row."""
     param = "sw_economiser_enabled"
     assert param not in PLANNER_PUSHABLE_REG and desired_write_rule(param)[0]
     connect(env, KNOBS[:1], **{param: 1.0})

@@ -94,6 +94,7 @@ $PY -m pytest -q -rs \
   tests/test_284_dashboard_grants_delivery.py \
   tests/test_285_daily_scorecard_delivery.py \
   tests/test_286_lighting_policy_delivery.py \
+  tests/test_287_retire_high_wind_delivery.py \
   tests/test_metric_registry_completeness.py \
   tests/test_verdify_services_series.py \
   tests/test_verdify_services_band_preview.py \
