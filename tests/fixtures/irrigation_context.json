@@ -1,0 +1,249 @@
+{
+  "at": "2026-11-02T21:00:00Z",
+  "hours": 24,
+  "engine": false,
+  "reporting": true,
+  "armed_experiment_id": null,
+  "lines": [
+    {
+      "line_id": "L01",
+      "enabled": true,
+      "vpd_member": null,
+      "schedule_member": null,
+      "manual": false,
+      "paused_until": null,
+      "fault": null,
+      "fault_until": null,
+      "minutes_today": 4.2,
+      "daily_cap_min": 60,
+      "last_outcome": null,
+      "state": {
+        "code": "running",
+        "observed_at": "2026-11-02T20:56:00Z",
+        "cause": "run_now"
+      }
+    },
+    {
+      "line_id": "L02",
+      "enabled": false,
+      "vpd_member": null,
+      "schedule_member": null,
+      "manual": false,
+      "paused_until": null,
+      "fault": null,
+      "fault_until": null,
+      "minutes_today": 0.0,
+      "daily_cap_min": 0,
+      "last_outcome": null,
+      "state": {
+        "code": "idle",
+        "observed_at": "2026-11-02T19:30:00Z"
+      }
+    },
+    {
+      "line_id": "L03",
+      "enabled": false,
+      "vpd_member": null,
+      "schedule_member": null,
+      "manual": false,
+      "paused_until": null,
+      "fault": null,
+      "fault_until": null,
+      "minutes_today": 0.0,
+      "daily_cap_min": 0,
+      "last_outcome": null,
+      "state": {
+        "code": "idle",
+        "observed_at": "2026-11-02T19:30:00Z"
+      }
+    },
+    {
+      "line_id": "L04",
+      "enabled": true,
+      "vpd_member": true,
+      "schedule_member": false,
+      "manual": true,
+      "paused_until": null,
+      "fault": null,
+      "fault_until": null,
+      "minutes_today": 13.5,
+      "daily_cap_min": 120,
+      "last_outcome": null,
+      "state": {
+        "code": "idle",
+        "observed_at": "2026-11-02T19:30:00Z"
+      }
+    },
+    {
+      "line_id": "L05",
+      "enabled": false,
+      "vpd_member": null,
+      "schedule_member": null,
+      "manual": false,
+      "paused_until": null,
+      "fault": null,
+      "fault_until": null,
+      "minutes_today": 0.0,
+      "daily_cap_min": 30,
+      "last_outcome": null,
+      "state": {
+        "code": "idle",
+        "observed_at": "2026-11-02T19:30:00Z"
+      }
+    },
+    {
+      "line_id": "L06",
+      "enabled": false,
+      "vpd_member": null,
+      "schedule_member": null,
+      "manual": false,
+      "paused_until": null,
+      "fault": null,
+      "fault_until": null,
+      "minutes_today": 0.0,
+      "daily_cap_min": 0,
+      "last_outcome": null,
+      "state": {
+        "code": "idle",
+        "observed_at": "2026-11-02T19:30:00Z"
+      }
+    },
+    {
+      "line_id": "L07",
+      "enabled": false,
+      "vpd_member": false,
+      "schedule_member": false,
+      "manual": false,
+      "paused_until": null,
+      "fault": null,
+      "fault_until": null,
+      "minutes_today": 0.0,
+      "daily_cap_min": 45,
+      "last_outcome": null,
+      "state": {
+        "code": "idle",
+        "observed_at": "2026-11-02T19:30:00Z"
+      }
+    },
+    {
+      "line_id": "L08",
+      "enabled": false,
+      "vpd_member": null,
+      "schedule_member": null,
+      "manual": false,
+      "paused_until": null,
+      "fault": null,
+      "fault_until": null,
+      "minutes_today": 0.0,
+      "daily_cap_min": 0,
+      "last_outcome": null,
+      "state": {
+        "code": "idle",
+        "observed_at": "2026-11-02T19:30:00Z"
+      }
+    },
+    {
+      "line_id": "L09",
+      "enabled": false,
+      "vpd_member": false,
+      "schedule_member": false,
+      "manual": false,
+      "paused_until": null,
+      "fault": null,
+      "fault_until": null,
+      "minutes_today": 0.0,
+      "daily_cap_min": 45,
+      "last_outcome": null,
+      "state": {
+        "code": "idle",
+        "observed_at": "2026-11-02T19:30:00Z"
+      }
+    },
+    {
+      "line_id": "L10",
+      "enabled": false,
+      "vpd_member": null,
+      "schedule_member": null,
+      "manual": false,
+      "paused_until": null,
+      "fault": null,
+      "fault_until": null,
+      "minutes_today": 0.0,
+      "daily_cap_min": 0,
+      "last_outcome": null,
+      "state": {
+        "code": "idle",
+        "observed_at": "2026-11-02T19:30:00Z"
+      }
+    },
+    {
+      "line_id": "L11",
+      "enabled": false,
+      "vpd_member": null,
+      "schedule_member": null,
+      "manual": false,
+      "paused_until": null,
+      "fault": null,
+      "fault_until": null,
+      "minutes_today": 2.0,
+      "daily_cap_min": 0,
+      "last_outcome": null,
+      "state": {
+        "code": "idle",
+        "observed_at": "2026-11-02T19:30:00Z"
+      }
+    }
+  ],
+  "occurrences": [
+    {
+      "slot_id": 4,
+      "line_id": "L01",
+      "planned_start": "2026-11-03T06:00:00-07:00",
+      "minutes": 12.0,
+      "pulses": null,
+      "status": "blocked",
+      "reason": "arrives with the irrigation firmware"
+    },
+    {
+      "slot_id": 1,
+      "line_id": "L04",
+      "planned_start": "2026-11-03T09:44:00-07:00",
+      "minutes": 3.0,
+      "pulses": 4,
+      "status": "blocked",
+      "reason": "only while VPD sensing is degraded; arrives with the irrigation firmware"
+    },
+    {
+      "slot_id": 2,
+      "line_id": "L04",
+      "planned_start": "2026-11-03T11:44:00-07:00",
+      "minutes": 3.0,
+      "pulses": 4,
+      "status": "blocked",
+      "reason": "only while VPD sensing is degraded; arrives with the irrigation firmware"
+    },
+    {
+      "slot_id": 3,
+      "line_id": "L04",
+      "planned_start": "2026-11-03T13:44:00-07:00",
+      "minutes": 3.0,
+      "pulses": 4,
+      "status": "blocked",
+      "reason": "only while VPD sensing is degraded; arrives with the irrigation firmware"
+    }
+  ],
+  "manual_items": [
+    {
+      "item": "line L04",
+      "updated_by": "jason",
+      "source": "dashboard",
+      "updated_at": "2026-11-01T18:00:00Z"
+    },
+    {
+      "item": "schedule 4 on L01 (wall morning)",
+      "updated_by": "jason",
+      "source": "dashboard",
+      "updated_at": "2026-11-02T14:00:00Z"
+    }
+  ]
+}

@@ -88,7 +88,7 @@ async def test_real_mcp_127_stateless_protocol_filters_exact_audience_inventorie
                 assert unauthenticated_list.status_code == 200
                 assert _protocol_payload(unauthenticated_list)["result"]["tools"] == []
 
-            expected_counts = {"iris": 23, "experiment": 8, "admin": 29, "observer": 0}
+            expected_counts = {"iris": 26, "experiment": 8, "admin": 32, "observer": 0}
             for request_id, (audience, token) in enumerate(tokens.items(), start=10):
                 auth_headers = {**common_headers, "authorization": f"Bearer {token}"}
                 initialized = await client.post("/mcp", headers=auth_headers, json=initialize)
@@ -104,6 +104,8 @@ async def test_real_mcp_127_stateless_protocol_filters_exact_audience_inventorie
                 names = {tool["name"] for tool in _protocol_payload(listed)["result"]["tools"]}
                 assert names == server.audience_allowlist(audience)
                 assert len(names) == expected_counts[audience]
+                reads = {"irrigation_status", "irrigation_schedule", "irrigation_history"}
+                assert reads <= names if audience in ("iris", "admin") else not reads & names
 
             if mode == "enforce":
                 iris_query = await client.post(
@@ -231,6 +233,7 @@ async def test_real_mcp_named_agent_inventory_attribution_and_revocation(monkeyp
             assert names == server.audience_allowlist("agent")
             # Within the architecture §5.6 agent column; later tools join by registering with `agent`.
             assert {"climate", "alerts"} <= names <= AGENT_TOOLS
+            assert {"irrigation_status", "irrigation_schedule", "irrigation_history"} <= names
 
             acknowledged = await client.post(
                 "/mcp",
@@ -255,3 +258,87 @@ async def test_real_mcp_named_agent_inventory_attribution_and_revocation(monkeyp
             revoked = await client.post("/mcp", headers=headers("runtime-test-steward"), json=initialize)
             assert revoked.status_code == 401
             assert (await client.post("/mcp", headers=headers("runtime-test-iris"), json=initialize)).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_real_mcp_irrigation_reads_are_typed_described_and_return_the_rest_or_problem_json(monkeypatch):
+    """VD-60: through the real SDK, the tools' schemas carry their enums and bounds, and FastMCP passes the REST JSON
+    and the Problem JSON with isError through unchanged."""
+    from verdify_schemas.irrigation import LINE_IDS, bounds_by_kind
+    from verdify_services.irrigation import reads
+
+    monkeypatch.setenv("VERDIFY_MCP_AUTH_MODE", "enforce")
+    monkeypatch.setenv("VERDIFY_MCP_TOKEN_IRIS", "runtime-test-iris")
+
+    server = _load_server()
+
+    class Connection:
+        async def close(self):
+            pass
+
+    async def db():
+        return Connection()
+
+    async def agenda(_conn, _actor, days, past_days):
+        return reads.ScheduleAgenda(
+            schedules=[],
+            occurrences=[],
+            counts=reads.AgendaCounts(schedules=days + past_days, max_schedules=24),
+            bounds=bounds_by_kind(),
+            solar=[],
+        )
+
+    monkeypatch.setattr(server, "_db", db)
+    monkeypatch.setattr(reads, "agenda", agenda)
+    app = server.mcp.streamable_http_app()
+    headers = {
+        "accept": "application/json, text/event-stream",
+        "content-type": "application/json",
+        "authorization": "Bearer runtime-test-iris",
+        "mcp-protocol-version": "2025-11-25",
+    }
+
+    async def call(client, name, arguments, request_id):
+        response = await client.post(
+            "/mcp", headers=headers, json=_request("tools/call", request_id, {"name": name, "arguments": arguments})
+        )
+        return _protocol_payload(response)["result"]
+
+    async with app.app.router.lifespan_context(app.app):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://127.0.0.1:8000"
+        ) as client:
+            listed = await client.post("/mcp", headers=headers, json=_request("tools/list", 1))
+            tools = {tool["name"]: tool for tool in _protocol_payload(listed)["result"]["tools"]}
+            assert "API-IRR-01" in tools["irrigation_status"]["description"]
+            assert tools["irrigation_status"]["inputSchema"]["properties"] == {}
+            schedule = tools["irrigation_schedule"]["inputSchema"]["properties"]
+            assert (schedule["days"]["minimum"], schedule["days"]["maximum"], schedule["days"]["default"]) == (1, 7, 7)
+            assert (schedule["past_days"]["minimum"], schedule["past_days"]["maximum"]) == (0, 7)
+            history = tools["irrigation_history"]["inputSchema"]
+            assert history["required"] == ["view", "since", "until"]
+            assert history["properties"]["view"]["enum"] == ["minutes", "runs"]
+            assert history["properties"]["group_by"]["enum"] == ["zone", "line", "cause"]
+            line_enum = next(item for item in history["properties"]["line"]["anyOf"] if "enum" in item)["enum"]
+            assert tuple(line_enum) == LINE_IDS
+
+            ok = await call(client, "irrigation_schedule", {"days": 2, "past_days": 1}, 2)
+            assert ok["isError"] is False
+            body = json.loads(ok["content"][0]["text"])
+            assert body["counts"] == {"schedules": 3, "max_schedules": 24}
+            assert set(body["bounds"]) == {"drip", "fert_drip", "mister", "fert_mister"}
+
+            refused = await call(
+                client,
+                "irrigation_history",
+                {"view": "minutes", "since": "2026-10-01", "until": "2026-10-02", "outcome": "ok"},
+                3,
+            )
+            assert refused["isError"] is True
+            problem = json.loads(refused["content"][0]["text"])
+            assert (problem["code"], problem["field"], problem["status"]) == ("invalid_request", "outcome", 400)
+
+            out_of_range = await call(client, "irrigation_schedule", {"days": 9}, 4)
+            assert out_of_range["isError"] is True
+            bad_enum = await call(client, "irrigation_history", {"view": "days", "since": "a", "until": "b"}, 5)
+            assert bad_enum["isError"] is True

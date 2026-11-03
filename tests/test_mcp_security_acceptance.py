@@ -23,7 +23,7 @@ def _module():
 def test_canonical_iris_inventory_is_bounded_and_excludes_admin_query() -> None:
     module = _module()
     tools = module.expected_iris_tools()
-    assert len(tools) == 23
+    assert len(tools) == 26
     assert "climate" in tools
     assert "query" not in tools
 

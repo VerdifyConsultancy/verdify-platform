@@ -757,7 +757,8 @@ wake and every 60 s:
 Iris's context pack, section 11 (`scripts/gather-plan-context.sh:435-470` and its copy in
 `deploy/k8s/components/ingestor-gather-script/gather-script-configmap.yaml`), reads the retired views
 `v_irrigation_schedule_current` and `v_irrigation_fertigation_runs`. It becomes the output of a new
-entry point in the ingestor image, `python3 -m ingestor.tasks.irrigation context --hours 24`. That reads
+entry point in the ingestor image, `python3 -m tasks.irrigation context --hours 24`, run from the image's
+working directory (`/app/ingestor`, where `ingestor` is `ingestor.py`, not a package). That reads
 the same M3 line-state view as `verdify_services.irrigation` status and the `verdify_schemas.irrigation`
 agenda, and prints, in about 60 lines at most: one row per line (enabled, flags, `manual`,
 `paused_until`, fault, today's minutes against the cap, the last outcome); the next 24 h of
@@ -922,9 +923,10 @@ trigger. Site values use `set_setting`.
 | `irrigation_clear_fault` | `line_id` (null for every mister), `reason`, `request_id` | API-IRR-13 |
 
 - **Typed and self-describing.** Arguments are typed, with enums for `line_id`, `start.kind`, `view` and
-  `group_by`, never a JSON string. A refusal returns the Problem JSON with MCP `isError` set. Each
-  description names its REST twin, its `manual` default and its refusal codes. The read tools join
-  `_TOOL_READ_ONLY`, and existing tools keep their signatures.
+  `group_by`, never a JSON string. A refusal returns the Problem JSON with MCP `isError` set; a value
+  outside the tool's schema (an enum, a bound) is refused by the MCP SDK before the tool runs, with
+  `isError` and a plain message. Each description names its REST twin, its `manual` default and its
+  refusal codes. The read tools join `_TOOL_READ_ONLY`, and existing tools keep their signatures.
 - **People only.** No tool takes `checked` or `check_note` (§4.2). The API-IRR-12 bursts have no MCP
   tool in MVP.
 - **Not a plan.** `trigger_id` and `planner_instance`, both optional, are stored only in the

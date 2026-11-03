@@ -93,8 +93,6 @@ data:
     DB+=(-t -A)
     mapfile -t DB_OPTIONAL < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_OPTIONAL_STATEMENT_TIMEOUT_MS}")
     DB_OPTIONAL+=(-t -A)
-    HA_TOKEN=$(cat "${HA_TOKEN_FILE:-/var/run/secrets/verdify/ha_token.txt}" 2>/dev/null || echo "")
-    HA_URL="http://192.168.30.107:8123"
     SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     PYTHON_BIN="${PYTHON:-python3}"
     STATIC_CONTEXT_FILE="${VERDIFY_PLANNER_STATIC_CONTEXT:-/srv/verdify/state/planner-static-context.md}"
@@ -468,40 +466,11 @@ data:
     echo ""
 
     # ── 11. IRRIGATION ────────────────────────────────────────────────
-    echo "--- IRRIGATION SCHEDULE ---"
-    "${DB[@]}" -c "
-    SELECT zone_path,
-           array_to_string(serves_zones, ',') AS serves_zones,
-           enabled,
-           start_time,
-           clean_duration_min,
-           fert_duration_min,
-           flush_min,
-           days_mask,
-           fert_days_mask,
-           schedule_source,
-           stale_readback_count,
-           readback_drift_count
-      FROM v_irrigation_schedule_current
-     ORDER BY schedule_id;
-    "
-    echo ""
-    echo "--- IRRIGATION / FERTIGATION RUNS (7 days) ---"
-    "${DB[@]}" -c "
-    SELECT to_char(run_start AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS mdt,
-           zone_path,
-           fert_relay,
-           flush_relay,
-           round(fert_duration_min::numeric, 1) AS fert_min,
-           round(flush_duration_min::numeric, 1) AS flush_min,
-           round(fert_master_overlap_min::numeric, 1) AS master_overlap_min,
-           round(COALESCE(meter_delta_gal, 0)::numeric, 1) AS meter_delta_gal,
-           quality_flag
-      FROM v_irrigation_fertigation_runs
-     WHERE run_start > now() - interval '7 days'
-     ORDER BY run_start DESC
-     LIMIT 10;
-    " 2>/dev/null || echo "(none)"
+    # The ingestor image's entry point (irrigation §6.4), which reads with the ingestor's own login. The pod's working
+    # directory, /app/ingestor, resolves `tasks` and its top-level imports; from there `ingestor` is ingestor.py, so it
+    # cannot be `-m ingestor.tasks.irrigation`. An image from before the entry point prints nothing and exits 0.
+    IRRIGATION_CONTEXT="$("$PYTHON_BIN" -m tasks.irrigation context --hours 24 2>/dev/null || true)"
+    echo "${IRRIGATION_CONTEXT:-(irrigation context unavailable)}"
     echo ""
 
     # ── 12. QUALIFIED LIGHT MINUTES + GROW LIGHTS ─────────────────────
@@ -791,31 +760,38 @@ data:
     " 2>/dev/null || echo "(n/a)"
     echo ""
 
-    # ── 18. ESP32 FIRMWARE MIN/MAX CONSTRAINTS ────────────────────────
+    # ── 18. TUNABLE MIN/MAX/STEP FROM THE REGISTRY ────────────────────
     echo "--- TUNABLE CONSTRAINTS (min/max/step) ---"
-    if [ -n "$HA_TOKEN" ]; then
-      if ! curl -fsS -H "Authorization: Bearer $HA_TOKEN" "$HA_URL/api/states" 2>/dev/null | python3 -c "
-    import json, sys
-    try:
-        data = json.load(sys.stdin)
-    except json.JSONDecodeError:
-        sys.exit(1)
-    key_params = ['set_temp_low_degf','set_temp_high_degf','set_vpd_low_kpa','set_vpd_high_kpa',
-      'vpd_mister_engage_kpa','vpd_mister_all_kpa','mister_water_budget_gal',
-      'gl_dli_target_mol','gl_lux_threshold','irrig_wall_duration_min']
-    for e in data:
-        eid = e['entity_id']
-        if eid.startswith('number.greenhouse_'):
-            name = eid.replace('number.greenhouse_','')
-            if name in key_params:
-                a = e.get('attributes',{})
-                print(f\"{name}: val={e['state']} min={a.get('min')} max={a.get('max')} step={a.get('step')}\")
-    " 2>/dev/null; then
-        echo "(HA states unavailable; tunable constraints omitted)"
-      fi
-    else
-      echo "(HA token unavailable; tunable constraints omitted)"
-    fi
+    TUNABLE_CONSTRAINTS="$("$PYTHON_BIN" - "$SCRIPT_ROOT/.." 2>/dev/null <<'PY' || true
+    import sys
+    from pathlib import Path
+
+    repo = Path(sys.argv[1]).resolve()
+    sys.path.insert(0, str(repo))
+
+    from verdify_schemas.tunable_registry import REGISTRY, planner_effective_bounds  # noqa: E402
+
+    # All or nothing: the completeness check below reads any output as the whole list.
+    rows = []
+    for param in (
+        "temp_low",
+        "temp_high",
+        "vpd_low",
+        "vpd_high",
+        "mister_engage_kpa",
+        "mister_all_kpa",
+        "mister_water_budget_gal",
+        "gl_dli_target",
+        "gl_main_lux_threshold",
+        "gl_grow_lux_threshold",
+        "irrig_wall_duration_min",
+    ):
+        low, high = planner_effective_bounds(param)
+        rows.append(f"{param}: min={low:g} max={high:g} step={REGISTRY[param].step:g}")
+    print("\n".join(rows))
+    PY
+    )"
+    echo "${TUNABLE_CONSTRAINTS:-(tunable constraints unavailable)}"
     echo ""
 
     # ── 19. FORECAST BIAS (7-day rolling correction) ──────────────────
@@ -1662,11 +1638,11 @@ data:
       _check "weather forecast fresh" fail "${fc_rows:-0} distinct future forecast hours; latest fetch age=${fc_age_s:-unknown}s — stale forecast is system health, not a climate-regime deviation"
     fi
 
-    # HA token readable (irrigation schedule + tunable readback sections)
-    if [ -n "${HA_TOKEN}" ]; then
-      _check "HA token loaded" ok "sections 19 (tunable constraints) + HA sync queries above are current"
+    # Tunable constraints (section 18): printed from the registry, no outside dependency
+    if [ -n "${TUNABLE_CONSTRAINTS}" ]; then
+      _check "tunable constraints from the registry" ok "section 18 lists min/max/step from verdify_schemas.tunable_registry"
     else
-      _check "HA token loaded" fail "HA queries in sections 19+ returned empty; tunable min/max constraints unknown — stay inside ranges in your _PLANNER_KNOWLEDGE block"
+      _check "tunable constraints from the registry" fail "section 18 could not read the registry; tunable min/max constraints unknown — stay inside ranges in your _PLANNER_KNOWLEDGE block"
     fi
 
     # Governing plan resolvable (section 15)
