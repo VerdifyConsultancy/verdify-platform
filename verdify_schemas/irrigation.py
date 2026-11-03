@@ -2121,9 +2121,10 @@ TOPOLOGY_CAUSE: Mapping[str, IrrigationCause] = MappingProxyType(
 )
 # An L01 ON edge at most this long after a sent bridge command is that command's run (M3, §6.5).
 BRIDGE_RUN_WINDOW_S = 30
-# A w= token whose run goes by itself once the manifold frees, the back-off ends or VPD sensing degrades reads
-# waiting; any other code names a rail that holds the run, which reads blocked.
-WAITING_REASONS: frozenset[str] = frozenset({"man", "bof", "vok"})
+# A w= token whose run goes by itself once the manifold or L03 frees, nobody is seen (US-WAT-16: "Waiting: someone
+# inside") or VPD sensing degrades reads waiting; any other code names a rail that holds the run (a limit, a cap, a
+# sensor fault, the watchdog's back-off or latch) and reads blocked.
+WAITING_REASONS: frozenset[str] = frozenset({"man", "l03", "occ", "vok"})
 _VPD_ZONE_OF_LINE: Mapping[str, str] = MappingProxyType({"L04": "center", "L07": "south", "L09": "west"})
 
 

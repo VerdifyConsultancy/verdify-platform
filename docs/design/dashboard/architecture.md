@@ -406,8 +406,9 @@ Plan values keep `readback_values_equivalent` and show as Iris stored them.
 `writer_down` (the ingestor heartbeat is stale, §7) or `no_match`. Before the engine an `irrigation_site` row
 stays requested with `no_engine` ("applies with the irrigation firmware"; `since` is the write). With the engine
 it reads confirmed once the confirmed push whose `sha256` starts with the `irr_program_id` hash has
-`site_desired_at` at or after the write, with the device value from that record, and not_confirmed 5 min after
-the write without one; `no_match` then names the first push compiled at or after it. The states are display only and add no alerts;
+`site_desired_at` at or after the write, with the device value from that record, or at once when that record
+already holds the written value (the hash does not change, so no push follows), and not_confirmed 5 min after
+the write without either; `no_match` then names the first push compiled at or after it. The states are display only and add no alerts;
 `setpoint_unconfirmed` (`ingestor/tasks/confirmation.py`) still covers device writes. With no desired row a
 setting's state is its plan value's, else the dispatcher's newest push's (VD-67); a `setpoint_changes` row the
 controller reported itself (source `esp32`) is never the push a reason's `since` names.

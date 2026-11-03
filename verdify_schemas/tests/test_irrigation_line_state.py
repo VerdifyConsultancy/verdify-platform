@@ -177,9 +177,11 @@ def test_paused_while_paused_until_is_in_the_future():
     ("token", "code", "words"),
     [
         ("w=0,man", "waiting", "waiting for the manifold"),
-        ("w=0,bof", "waiting", "backing off"),
+        ("w=0,l03", "waiting", "L03 open"),
+        ("w=0,occ", "waiting", "someone inside (Frigate)"),
         ("w=0,vok", "waiting", "VPD sensing is healthy"),
-        ("w=0,occ", "blocked", "someone inside (Frigate)"),
+        ("w=0,bof", "blocked", "backing off"),
+        ("w=0,flt", "blocked", "faulted"),
         ("w=0,rh", "blocked", "RH limit"),
         ("w=0,dew", "blocked", "dew limit"),
         ("w=0,clk", "blocked", "no clock"),

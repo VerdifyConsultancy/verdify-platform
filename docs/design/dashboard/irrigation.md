@@ -795,9 +795,10 @@ are written through the Settings write (API-10).
 
 As built (VD-40; `verdify_services/irrigation/reads.py`, with `runs.py` and `program.py` beside it):
 
-- **Waiting or blocked.** A `w=` token with `man`, `bof` or `vok` reads `waiting`: the run goes by itself once
-  the manifold frees, the back-off ends or VPD sensing degrades. Every other code names a rail that holds the
-  run and reads `blocked`. Its `until_epoch`, when known, is `LineState.ends_at`.
+- **Waiting or blocked.** A `w=` token with `man`, `l03`, `occ` or `vok` reads `waiting`: the run goes by itself
+  once the manifold or L03 frees, nobody is seen ("Waiting: someone inside") or VPD sensing degrades. Every other
+  code names a rail that holds the run (a limit, a cap, a sensor fault, the watchdog's back-off or latch) and reads
+  `blocked`. Its `until_epoch`, when known, is `LineState.ends_at`.
 - **Line state with no reading.** With the engine, an `irr_state` row that is missing or outside the grammar
   is no reading, so the line reads its relay as before the engine.
 - **While the controller is not reporting.** Beside the unknown line states, `active_runs` is empty,
@@ -810,7 +811,9 @@ As built (VD-40; `verdify_services/irrigation/reads.py`, with `runs.py` and `pro
   occurrence counts, as the agenda marks it planned; its `label` (`vanda-degraded`) says what it is.
 - **Agenda and pauses.** An occurrence `agenda()` skips for today's `paused_until` but with no pause row in
   force at its start was not skipped for that pause, so a past one reads as planned. A future one with no row
-  at all reads "paused".
+  at all reads "paused". Today's enable and membership flags say nothing about a past start either: with the
+  engine in effect at it, its ledger row answers, and with none it reads `done` with `unknown`. With no engine
+  in effect it keeps the agenda's skip.
 - **`Schedule`.** A row with no `label` or `reason` leaves the field out, because `ScheduleInput` types them
   as strings.
 

@@ -787,6 +787,22 @@ def test_a_program_compiled_before_the_write_does_not_confirm_it():
     assert result.readback.value == 90.0  # the device still runs the old one
 
 
+def test_a_site_write_the_applied_record_already_holds_confirms_at_once():
+    """Writing the value the controller runs leaves the hash as it is, so no push will ever be compiled after it."""
+    db = FakeDB()
+    write = ago(minutes=20)
+    db.add_desired("mister_daily_volume_max_gal", 360.0, at=write)
+    engine_on(db, site_record(saf4=360), compiled_at=None, pushed_at=ago(hours=2), confirmed_at=ago(hours=2))
+    result = status(db, "mister_daily_volume_max_gal")
+    assert (result.state, result.state_reason, result.confirmed_at) == ("confirmed", None, write)
+    assert (result.readback.value, result.readback.observed_at) == (360.0, ago(hours=2))
+    # Another site row's write can have compiled the record: the rule is the value, not whose write it was.
+    db = FakeDB()
+    db.add_desired("mister_daily_volume_max_gal", 360.0, at=write)
+    engine_on(db, site_record(saf4=360), compiled_at=ago(hours=1), pushed_at=ago(hours=1), confirmed_at=ago(hours=1))
+    assert status(db, "mister_daily_volume_max_gal").state == "confirmed"
+
+
 def test_a_site_write_reads_not_confirmed_at_5_min_and_no_match_names_the_first_push_after_it():
     db = FakeDB()
     write = ago(minutes=20)

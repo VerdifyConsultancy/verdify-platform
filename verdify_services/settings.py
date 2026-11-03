@@ -434,20 +434,24 @@ def _reason(
     return StateReason(code="no_match", since=push.at if push is not None else None)
 
 
-def _evaluate_site(request: _Request | None, facts: _Facts, shared: _Shared) -> _Evaluation:
+def _evaluate_site(param: str, request: _Request | None, facts: _Facts, shared: _Shared) -> _Evaluation:
     """An ``irrigation_site`` row against the program hash (irrigation §8.3). Before the engine a write stays
     requested (``no_engine``). It reads confirmed once the confirmed push whose ``sha256`` starts with the
-    ``irr_program_id`` hash was compiled at or after it, and not_confirmed 5 min after the write without one. With no
-    write, the applied program's value is confirmed."""
+    ``irr_program_id`` hash was compiled at or after it, or at once when that record already holds its value: such a
+    write leaves the hash as it is, and the ingestor adds a push row only when the hash changes (#1157), so none ever
+    carries it. Otherwise it reads not_confirmed 5 min after the write. With no write, the applied program's value is
+    confirmed."""
     program = shared.program
     if request is None:
         return _Evaluation("confirmed" if facts.readback is not None else "no_readback")
     if program is None or not program.engine:
         return _Evaluation("requested", StateReason(code="no_engine", detail=NO_PROGRAM_READBACK, since=request.since))
     confirmed = program.confirmed
-    if confirmed is not None and confirmed["site_desired_at"] is not None:
-        if confirmed["site_desired_at"] >= request.since:
+    if confirmed is not None:
+        if confirmed["site_desired_at"] is not None and confirmed["site_desired_at"] >= request.since:
             return _Evaluation("confirmed", confirmed_at=confirmed["confirmed_at"])
+        if facts.readback is not None and request.matches(param, facts.readback.value, request.value):
+            return _Evaluation("confirmed", confirmed_at=max(confirmed["confirmed_at"], request.since))
     state: ReadbackState = "requested" if shared.at - request.since < REQUESTED_FOR else "not_confirmed"
     return _Evaluation(state, _reason(None, False, facts.push, shared.reporting))
 
@@ -466,7 +470,7 @@ def evaluate(spec: TunableDef, facts: _Facts, shared: _Shared) -> _Evaluation:
     if kind == "overridden":
         return _Evaluation("overridden")
     if spec.control_class == "irrigation_site":
-        return _evaluate_site(request, facts, shared)
+        return _evaluate_site(spec.name, request, facts, shared)
     route = readback_via(spec)
     if request is None:
         if route == "none":

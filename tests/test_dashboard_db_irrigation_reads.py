@@ -631,7 +631,7 @@ def test_engine_tokens_active_runs_fallback_and_faults(database):
         assert (l01.state.code, l01.state.cause, l01.state.slot_id) == ("running", irr.IrrigationCause.SCHEDULE, 4)
         assert l01.state.ends_at.timestamp() == epoch + 540
         assert (l04.state.code, l04.state.cause, l04.vpd_source) == ("running", irr.IrrigationCause.FALLBACK, "own")
-        assert (l07.state.code, l07.state.reason, l07.vpd_source) == ("blocked", "someone inside (Frigate)", "peer")
+        assert (l07.state.code, l07.state.reason, l07.vpd_source) == ("waiting", "someone inside (Frigate)", "peer")
         assert (l09.state.code, l09.fault, l09.vpd_source) == ("disabled", "mister_fault", "house")
         assert l09.fault_until.timestamp() == epoch + 3600
         assert line_of(status, "L11").state.code == "running"  # never named by the engine; its relay reads
@@ -1446,13 +1446,13 @@ def test_the_labels_map_equals_the_seeded_lines(database):
 def test_site_values_no_match_since_the_first_push_compiled_after_the_write(database):
     async def body(f):
         await f.reporting()
+        applied = await f.compiled()  # 90, the registry default
         write = f.at - 20 * MIN
         await f.conn.execute(
             "INSERT INTO public.desired_state (param, value, manual, source, actor, created_at) "
             "VALUES ('sched_mist_rh_max_pct', 85, true, 'dashboard', 'jason', $1)",
             write,
         )
-        applied = await f.compiled()
         await f.state("irr_engine", "true", f.at - H)
         await f.state("irr_program_id", f"h={applied.hash16} src=nvs", f.at - H)
         await f.push(
@@ -1462,7 +1462,7 @@ def test_site_values_no_match_since_the_first_push_compiled_after_the_write(data
             pushed_at=f.at - 2 * H,
             confirmed_at=f.at - 2 * H,
         )
-        await f.push(applied, revision=41, site_desired_at=write, pushed_at=f.at - 19 * MIN)
+        await f.push(await f.compiled(), revision=41, site_desired_at=write, pushed_at=f.at - 19 * MIN)
 
         async def read(conn):
             return await settings.status(conn, "sched_mist_rh_max_pct")

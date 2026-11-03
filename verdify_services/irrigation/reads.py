@@ -1098,9 +1098,10 @@ def occurrences_read(
     One due before its schedule existed is left out, so a new schedule shows no invented history. A past one that has
     a ledger row reads ``done`` with its outcome (``unknown`` when the row has none); the newest due of a slot the
     controller is running reads ``running``. One the agenda skips stays ``skipped``, a pause naming who paused it,
-    from the pause row in force at its planned start: today's ``paused_until`` says nothing about a past start with
-    no such row, so that one reads as planned. A planned one with no engine in effect at its start reads ``blocked``;
-    a past one with the engine and no row reads ``done`` with ``unknown``, a gap, never missed.
+    from the pause row in force at its planned start. Today's flags say nothing about a past start, though: with no
+    such pause row, or with the engine in effect at a start skipped for the line's enable or membership, it reads as
+    planned. A planned one with no engine in effect at its start reads ``blocked``; a past one with the engine and no
+    row reads ``done`` with ``unknown``, a gap, never missed.
     """
     running = set(running_slots)
     in_progress: dict[int, irr.AgendaOccurrence] = {}
@@ -1123,6 +1124,8 @@ def occurrences_read(
                 reason = pause_words(pause)
             elif past:
                 status_, reason = "planned", None  # the pause came after this start
+        elif past and item.reason_code is not None and engine_at(engine_rows, item.planned_start):
+            status_, reason = "planned", None  # the ledger answers for it; today's flags do not
         if past and in_progress.get(item.slot_id) is item:
             status_, reason = "running", None
         elif rows:
@@ -1474,6 +1477,9 @@ async def runs(
         )
     if line is not None and line not in LINE_RELAY:
         raise ServiceError(problem("invalid_request", f"{line!r} is not a line", field="line"))
+    for name, value, known in (("cause", cause, IrrigationCause), ("outcome", outcome, RunOutcome)):
+        if value is not None and value not in tuple(known):
+            raise ServiceError(problem("invalid_request", f"{value!r} is not a {name}", field=name))
     after = decode_run_cursor(cursor) if cursor else None
     wanted = [line_id for line_id in LINE_RELAY if line_id != "L03" and (line is None or line_id == line)]
 

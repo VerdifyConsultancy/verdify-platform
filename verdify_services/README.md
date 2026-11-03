@@ -150,9 +150,10 @@ those at or after the request count. A desired value confirms by `readback_match
 desired row and no plan, the dispatcher's newest push) by `readback_values_equivalent()`. A clamp after the
 request holds the setting while the newest readback does not confirm it. `state_reason` (`clamped`,
 `experiment`, `deferred`, `push_failed`, `writer_down`, `controller_not_reporting`, `no_match`) carries its
-`since`; the two ages come from `reads.reporting()`. An `irrigation_site` row reads back through the program (#1155):
-a write stays `requested` until the confirmed push whose `sha256` starts with the `irr_program_id` hash has
-`site_desired_at` at or after it, then reads `confirmed` with the value from that record. With no engine it stays
+`since`; the two ages come from `reads.reporting()`. An `irrigation_site` row reads back through the program
+(#1155): a write stays `requested` until the confirmed push whose `sha256` starts with the `irr_program_id` hash has
+`site_desired_at` at or after it, then reads `confirmed` with the value from that record; a write of the value that
+record already holds changes no hash, so it reads `confirmed` at once. With no engine it stays
 `requested` with `no_engine`, its `since` the write; with the engine it reads `not_confirmed` 5 min after the write,
 and a `no_match` names the first push compiled at or after it. `statuses(conn, params)` is `status` for several
 settings in one batched read (API-07's lanes), and `desired_states(conn, ids)` gives named `desired_state` rows the

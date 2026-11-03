@@ -587,6 +587,25 @@ def test_a_past_start_is_not_skipped_for_a_pause_set_after_it():
     assert (item.status, item.reason) == ("skipped", "line paused by jason: rain")
 
 
+@pytest.mark.parametrize(
+    ("code", "words"),
+    [("dis", "line disabled"), ("nsm", "not a schedule member"), ("nvm", "not a VPD member")],
+)
+def test_todays_flags_say_nothing_about_a_past_start_with_the_engine(code, words):
+    earlier = plan_item("skipped", words, code, start=AT - H)
+    [item] = read_occurrences(earlier, engine=ENGINE)
+    assert (item.status, item.outcome, item.reason) == ("done", "unknown", water.NO_OUTCOME)
+    rows = {(5, MONDAY): [ledger_row(id=7, outcome="ok")]}
+    [item] = read_occurrences(earlier, ledger=rows, engine=ENGINE)
+    assert (item.status, item.outcome, item.run_id) == ("done", "ok", "ledger-7")
+    # With no engine in effect at its start nothing could have run, so the agenda's skip stands.
+    [item] = read_occurrences(earlier, engine=[])
+    assert (item.status, item.outcome, item.reason) == ("skipped", None, words)
+    # And a future start is the agenda's to call.
+    [item] = read_occurrences(plan_item("skipped", words, code), engine=ENGINE)
+    assert (item.status, item.reason) == ("skipped", words)
+
+
 def test_a_ledger_skip_for_a_pause_names_who_too():
     past = plan_item(start=AT - H)
     rows = {(5, MONDAY): [ledger_row(id=4, outcome="skipped", reason="pau", open_s=0)]}
@@ -731,6 +750,8 @@ def test_more_than_31_days_of_runs_is_window_too_large():
     assert refused(water.runs(None, None, AT, AT - H)).code == "invalid_request"
     assert refused(water.runs(None, None, datetime(2026, 11, 1), AT)).field == "from"  # noqa: DTZ001
     assert refused(water.runs(None, None, AT - H, AT, line="L12")).field == "line"
+    assert refused(water.runs(None, None, AT - H, AT, cause="rain")).field == "cause"
+    assert refused(water.runs(None, None, AT - H, AT, outcome="fine")).field == "outcome"
     for limit in (0, 201, True, "50"):
         problem = refused(water.runs(None, None, AT - H, AT, limit=limit))
         assert (problem.code, problem.field, problem.min, problem.max) == ("invalid_request", "limit", 1, 200)
