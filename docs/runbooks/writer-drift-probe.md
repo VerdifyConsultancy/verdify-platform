@@ -35,7 +35,15 @@ readback, lost lease, expired approval, or changed connection skips an unstarted
 probe and lets ordinary desired reconciliation continue. The approval remains
 conditional: the first probe command still requires a fresh exact match of the
 plan and all 48 readbacks within its expiry. Once an active probe state file
-exists, uncertainty holds the writer for receipt and cfg inspection.
+exists, a phase in flight or awaiting confirmation holds ordinary passes for at
+most its four-minute confirmation deadline; uncertainty then halts the probe.
+
+Since plain convergence (VD-62) a halted probe no longer holds the writer: the
+pass that halts it holds once, and every later pass dispatches as usual, so
+ordinary convergence repairs the field from the active plan. The next ingestor
+start renames a probe state that is not `complete`, with its approval, into
+`/srv/verdify/state/archived/<UTC yyyymmddThhmmssZ>/`
+(`docs/runbooks/writer-staged-reconcile.md`).
 
 ```bash
 scripts/k3s-smoke.sh device-monitor
@@ -57,6 +65,7 @@ it records, current-generation cfg readback, and `writer_drift_probe` plus
 `confirmed` with `confirmed_at`, exactly one transport `sent` event for the
 probe and one for the correction, no other command in between, one socket, and
 zero residual desired candidate. Save preview, approval, and final state
-outside the pod. If status is `halted` or `*_inflight`, preserve those receipts
-and inspect the live cfg before any recovery; never blindly replay the file or
-open a second client.
+outside the pod. If status is `halted`, the writer has already continued and
+repairs the field; preserve the receipts and inspect the live cfg, but never
+blindly replay the file or open a second client. A new probe starts only after
+the old state file is archived (the next ingestor start does that).

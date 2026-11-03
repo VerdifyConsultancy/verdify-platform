@@ -1,6 +1,6 @@
 """verdify_services.series and its routes (VD-56): pure rules and SQL routing on a fake connection.
 
-Covers the bucket choice, the daily switch, the retention marking, ``collapse()``, the band
+Covers the bucket choice, the daily switch, the retention marking, ``lane_runs()``, the band
 step and carry, the lanes' unknown spans, the scorecard reasons, the error codes and the four
 routes against the committed OpenAPI. The database itself is exercised by
 ``tests/test_dashboard_db_series.py`` on the in-cluster campaign database.
@@ -22,9 +22,9 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 from verdify_services import series as s
-from verdify_services.labels import EQUIPMENT_LABELS, LINE_IDS
+from verdify_services.labels import EQUIPMENT_LABELS, EQUIPMENT_LINE_IDS
 from verdify_services.problems import ServiceError
-from verdify_services.reads import Span, collapse
+from verdify_services.reads import Span
 
 ROOT = Path(__file__).resolve().parents[1]
 OPENAPI = yaml.safe_load((ROOT / "docs/design/dashboard/openapi/dashboard-api.v1.yaml").read_text())
@@ -78,18 +78,18 @@ def run(coroutine):
 def code_of(call) -> tuple[str, int]:
     with pytest.raises(ServiceError) as caught:
         run(call) if asyncio.iscoroutine(call) else call()
-    return caught.value.problem.code.value, caught.value.problem.status
+    return caught.value.problem.code, caught.value.problem.status
 
 
-# ─────────────────────────────────────────────────────────────── collapse()
-def test_collapse_merges_repeats_orders_rows_and_lets_the_later_row_win():
+# ─────────────────────────────────────────────────────────────── lane_runs()
+def test_lane_runs_merge_repeats_order_rows_and_let_the_later_row_win():
     t = at("2026-11-01T10:00:00+00:00")
     rows = [(t + 30 * MIN, False), (t, True), (t + 5 * MIN, True), (t + 30 * MIN, True), (t + 40 * MIN, False)]
-    spans = collapse(rows, end=t + 60 * MIN)
+    spans = s.lane_runs(rows, t + 60 * MIN)
     # 10:30 holds two rows; the later one (True) wins, so no zero-length run and no edge there.
     assert spans == [Span(True, t, t + 40 * MIN), Span(False, t + 40 * MIN, t + 60 * MIN)]
-    assert collapse([(t, "on"), (t + MIN, "on")]) == [Span("on", t, None)]
-    assert collapse([]) == []
+    assert s.lane_runs([(t, "on"), (t + MIN, "on")], t + 2 * MIN) == [Span("on", t, t + 2 * MIN)]
+    assert s.lane_runs([], t) == []
 
 
 # ─────────────────────────────────────────────────────────────── buckets and the daily switch
@@ -319,7 +319,7 @@ def test_a_statement_timeout_is_503_query_timeout():
     with pytest.raises(ServiceError) as caught:
         run(s.series(conn, ["climate.temp_avg"], NOW - timedelta(days=30), NOW, now=NOW))
     problem = caught.value.problem
-    assert (problem.code.value, problem.status, problem.retryable) == ("query_timeout", 503, True)
+    assert (problem.code, problem.status, problem.retryable) == ("query_timeout", 503, True)
     assert "Narrow" in problem.detail
 
 
@@ -540,7 +540,7 @@ def test_lane_list_and_labels_match_the_equipment_map():
         "vent",
         "heat1",
         "heat2",
-        *LINE_IDS,
+        *EQUIPMENT_LINE_IDS,
         "grow_light_main",
         "grow_light_grow",
         "occupancy",
@@ -548,7 +548,7 @@ def test_lane_list_and_labels_match_the_equipment_map():
         "water_flowing",
     ]
     assert set(EQUIPMENT_LABELS) == {name for name, _ in s.LANES}
-    assert list(LINE_IDS.values()) == [f"L{n:02d}" for n in range(1, 12)]
+    assert list(EQUIPMENT_LINE_IDS.values()) == [f"L{n:02d}" for n in range(1, 12)]
 
 
 # ─────────────────────────────────────────────────────────────── API-06 band

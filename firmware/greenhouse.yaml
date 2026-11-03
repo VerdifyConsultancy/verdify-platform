@@ -38,10 +38,15 @@ esphome:
     # engine + NVS journal glue (order matters; policy_vector.h needs the
     # generated headers, the glue needs policy_vector.h).
     - lib/policy_sha256.h
+    # VD-45 (#1160): the irrigation engine core (pure; needs greenhouse_solar.h and
+    # policy_sha256.h above) and its ESP32 glue (RTC block, NVS, relay grants; last,
+    # since it uses policy_vector.h and zone_vpd.h).
+    - lib/irrigation_program.h
     - lib/policy_vector_generated.h
     - lib/policy_rom_baseline_generated.h
     - lib/policy_vector.h
     - lib/policy_journal_esphome.h
+    - lib/irrigation_engine_esphome.h
   # Lutron LEAP TLS disabled (causes ESP32 crash — TLS heap exhaustion)
   # Grow lights use HA native service calls; no on-device HTTP client.
   # Cold-start safety: turn every relay OFF before the first control pass
@@ -84,85 +89,11 @@ esphome:
           if(id(min_fan_off_s) < 10){ id(min_fan_off_s) = 90; fixes++; }
           if(id(min_vent_on_s) < 5){ id(min_vent_on_s) = 30; fixes++; }
           if(id(min_vent_off_s) < 5){ id(min_vent_off_s) = 30; fixes++; }
-          // Burst durations — prevent 0 (which defaults to 60 min)
-          if(id(fan_burst_minutes) < 1){ id(fan_burst_minutes) = 10; fixes++; }
-          if(id(vent_bypass_minutes) < 1){ id(vent_bypass_minutes) = 10; fixes++; }
-          if(id(fog_burst_minutes) < 1){ id(fog_burst_minutes) = 8; fixes++; }
           // Setpoint sanity
           if(id(target_temp_low_f) < 40 || id(target_temp_low_f) > 80){ id(target_temp_low_f) = 58; fixes++; }
           if(id(target_temp_high_f) < 60 || id(target_temp_high_f) > 100){ id(target_temp_high_f) = 82; fixes++; }
           if(id(target_vpd_high_kpa) < 0.5 || id(target_vpd_high_kpa) > 4){ id(target_vpd_high_kpa) = 2.0; fixes++; }
           if(id(target_vpd_low_kpa) < 0.1 || id(target_vpd_low_kpa) > 2){ id(target_vpd_low_kpa) = 0.5; fixes++; }
-          // Retired fixed-clock/fertilizer fields remain readback-compatible
-          // but are ineligible for actuation and fixed at zero. Weekly wall
-          // feed uses the commissioned solar scheduler.
-          if(id(irrig_wall_start_hour) != 0){ id(irrig_wall_start_hour) = 0; fixes++; }
-          if(id(irrig_wall_start_minute) != 0){ id(irrig_wall_start_minute) = 0; fixes++; }
-          if(id(irrig_wall_duration_min) < 1 || id(irrig_wall_duration_min) > 120){ id(irrig_wall_duration_min) = 10; fixes++; }
-          if(id(irrig_wall_fert_duration_min) != 0){ id(irrig_wall_fert_duration_min) = 0; fixes++; }
-          if(id(irrig_wall_fert_every_n) != 0){ id(irrig_wall_fert_every_n) = 0; fixes++; }
-          if(id(irrig_wall_days_mask) != 0){ id(irrig_wall_days_mask) = 0; fixes++; }
-          if(id(irrig_wall_fert_days_mask) != 0){ id(irrig_wall_fert_days_mask) = 0; fixes++; }
-          if(id(irrig_wall_flush_min) != 0){ id(irrig_wall_flush_min) = 0; fixes++; }
-          if(id(irrig_wall_interval_days) != 0){ id(irrig_wall_interval_days) = 0; fixes++; }
-          if(id(irrig_center_start_hour) != 0){ id(irrig_center_start_hour) = 0; fixes++; }
-          if(id(irrig_center_start_minute) != 0){ id(irrig_center_start_minute) = 0; fixes++; }
-          if(id(irrig_center_duration_min) < 1 || id(irrig_center_duration_min) > 120){ id(irrig_center_duration_min) = 10; fixes++; }
-          if(id(irrig_center_fert_duration_min) != 0){ id(irrig_center_fert_duration_min) = 0; fixes++; }
-          if(id(irrig_center_fert_every_n) != 0){ id(irrig_center_fert_every_n) = 0; fixes++; }
-          if(id(irrig_center_days_mask) != 0){ id(irrig_center_days_mask) = 0; fixes++; }
-          if(id(irrig_center_fert_days_mask) != 0){ id(irrig_center_fert_days_mask) = 0; fixes++; }
-          if(id(irrig_center_flush_min) != 0){ id(irrig_center_flush_min) = 0; fixes++; }
-          if(id(irrig_center_interval_days) != 0){ id(irrig_center_interval_days) = 0; fixes++; }
-          if(id(sw_dawn_rehydrate_enabled)){ id(sw_dawn_rehydrate_enabled) = false; fixes++; }
-          if(id(sw_midday_drench_enabled)){ id(sw_midday_drench_enabled) = false; fixes++; }
-          if(id(dawn_boost_offset_min) != 0){ id(dawn_boost_offset_min) = 0; fixes++; }
-          if(id(midday_boost_offset_min) != 0){ id(midday_boost_offset_min) = 0; fixes++; }
-          // Commissioned weekly wall feed fails closed on every corrupt/missing
-          // input. Zero is the safe default; do not invent field values here.
-          if(id(wall_commissioning_evidence_mask) < 0 || id(wall_commissioning_evidence_mask) > WALL_COMMISSIONING_REQUIRED_MASK){ id(wall_commissioning_evidence_mask) = 0; fixes++; }
-          if(!std::isfinite(id(wall_flow_lpm)) || id(wall_flow_lpm) < 0.0f || id(wall_flow_lpm) > 100.0f){ id(wall_flow_lpm) = 0.0f; fixes++; }
-          if(!std::isfinite(id(wall_prewet_liters)) || id(wall_prewet_liters) < 0.0f || id(wall_prewet_liters) > 200.0f){ id(wall_prewet_liters) = 0.0f; fixes++; }
-          if(!std::isfinite(id(wall_feed_liters)) || id(wall_feed_liters) < 0.0f || id(wall_feed_liters) > 200.0f){ id(wall_feed_liters) = 0.0f; fixes++; }
-          if(!std::isfinite(id(wall_flush_liters)) || id(wall_flush_liters) < 0.0f || id(wall_flush_liters) > 400.0f){ id(wall_flush_liters) = 0.0f; fixes++; }
-          // An interrupted feed never resumes or re-doses after reboot. Mark the
-          // claimed solar day terminal/cancelled before normal intervals start.
-          {
-            if(id(wall_feed_stage) < static_cast<int>(WallFeedStage::IDLE)
-               || id(wall_feed_stage) > static_cast<int>(WallFeedStage::CANCELLED)) {
-              id(wall_feed_stage) = static_cast<int>(WallFeedStage::CANCELLED);
-              id(wall_feed_claimed_solar_day) = UINT32_MAX;
-              id(wall_feed_last_terminal_solar_day) = UINT32_MAX;
-              id(wall_feed_terminal_code) = 2;
-              fixes++;
-              ESP_LOGE("boot", "Invalid wall-feed stage -> cancelled/fail-closed");
-            }
-            WeeklyWallFeedState restored{
-              static_cast<WallFeedStage>(id(wall_feed_stage)),
-              id(wall_feed_claimed_solar_day),
-              id(wall_feed_last_terminal_solar_day),
-              id(wall_feed_claim_revision)};
-            auto cancelled = cancel_interrupted_wall_feed(restored, restored.claimed_solar_day);
-            if((restored.stage == WallFeedStage::PREWET
-                || restored.stage == WallFeedStage::FEED
-                || restored.stage == WallFeedStage::FLUSH)
-               && (restored.claimed_solar_day == 0 || restored.commissioning_revision == 0)) {
-              cancelled.stage = WallFeedStage::CANCELLED;
-              cancelled.claimed_solar_day = UINT32_MAX;
-              cancelled.last_terminal_solar_day = UINT32_MAX;
-            }
-            id(wall_feed_stage) = static_cast<int>(cancelled.stage);
-            id(wall_feed_last_terminal_solar_day) = cancelled.last_terminal_solar_day;
-            if(cancelled.stage == WallFeedStage::CANCELLED) id(wall_feed_terminal_code) = 2;
-          }
-          // Current physical topology wins over legacy restored NVS. These
-          // dormant paths can be explicitly enabled after boot if commissioned.
-          id(irrig_center_enabled) = false;
-          id(irrig_south_enabled) = false;
-          id(irrig_west_enabled) = false;
-          id(sw_irrig_center_enabled).publish_state(false);
-          id(sw_irrig_south_enabled).publish_state(false);
-          id(sw_irrig_west_enabled).publish_state(false);
           // VPD-primary state machine globals
           if(id(vpd_watch_dwell_s) < 15 || id(vpd_watch_dwell_s) > 120){ id(vpd_watch_dwell_s) = 60; fixes++; }
           if(id(mist_max_closed_vent_s) < 60){ id(mist_max_closed_vent_s) = 600; fixes++; }
@@ -190,7 +121,6 @@ esphome:
           if(id(bias_cool_f) < -10 || id(bias_cool_f) > 10){ id(bias_cool_f) = 0; fixes++; }
           // State machine corruption protection
           if(id(mister_state) < 0 || id(mister_state) > 2){ id(mister_state) = 0; fixes++; ESP_LOGE("boot","mister_state corrupted → 0"); }
-          if(id(irrig_state) < 0 || id(irrig_state) > 7){ id(irrig_state) = 0; fixes++; ESP_LOGE("boot","irrig_state corrupted → 0"); }
           // Zone VPD targets — prevent division issues in mister stress scoring
           if(id(vpd_target_south) < 0.1 || id(vpd_target_south) > 3){ id(vpd_target_south) = 1.3; fixes++; }
           if(id(vpd_target_west) < 0.1 || id(vpd_target_west) > 3){ id(vpd_target_west) = 1.3; fixes++; }
@@ -233,6 +163,7 @@ packages:
   control:   !include greenhouse/controls.yaml
   external:  !include greenhouse/external_sensors.yaml
   policy:    !include greenhouse/policy_engine.yaml
+  irrigation: !include greenhouse/irrigation_engine.yaml
 
 # ────────────────────────────── Networking ─────────────────────────────────
 wifi:
@@ -413,10 +344,8 @@ time:
               id(cnt_heat2_today) = 0;
               id(cnt_fog_today)   = 0;
               id(cnt_vent_today)  = 0;
-              id(mister_water_today) = 0.0f;
-              id(runtime_mister_south_ms) = 0;
-              id(runtime_mister_west_ms) = 0;
-              id(runtime_mister_center_ms) = 0;
+              /* mister_water_today and runtime_mister_*_ms mirror the irrigation
+                 engine's RTC block, which zeroes them on a new local day (#1160). */
               id(cnt_mister_fairness_overrides_today) = 0;
               /* sprint-7 per-zone cycle counters */
               id(cnt_mister_south_today)  = 0;
@@ -481,7 +410,12 @@ binary_sensor:
     lambda: "return id(fog_rly).state;"
     device_class: running
 
-  # Physical push buttons
+  # Physical push buttons (irrigation F12, VD-47). Each press toggles its
+  # deadline latch in its own handler: a running burst clears, otherwise it
+  # runs for manual_override_timeout_min minutes (manual_latch_toggle(),
+  # greenhouse_logic.h). The manual_override service (irrigation_engine.yaml)
+  # sets and clears the same latches; controls.yaml's override layer reads
+  # them. A press never touches occupancy.
   - platform: gpio
     id: fans_switch
     name: "PB • Fan Burst"
@@ -494,7 +428,9 @@ binary_sensor:
       - delayed_on_off: 30ms   # debounce the momentary PB (both edges); imperceptible
     on_press:
       then:
-        - button.press: fan_burst_btn
+        - lambda: |-
+            id(manual_fans_until_ms) = manual_latch_toggle(id(manual_fans_until_ms), millis(), id(manual_override_timeout_min));
+            ESP_LOGW("manual", "PB fan burst %s", id(manual_fans_until_ms) != 0 ? "latched" : "cleared");
 
   - platform: gpio
     id: vent_bypass_switch
@@ -508,7 +444,9 @@ binary_sensor:
       - delayed_on_off: 30ms   # debounce the momentary PB (both edges); imperceptible
     on_press:
       then:
-        - button.press: vent_bypass_btn
+        - lambda: |-
+            id(vent_bypass_until_ms) = manual_latch_toggle(id(vent_bypass_until_ms), millis(), id(manual_override_timeout_min));
+            ESP_LOGW("manual", "PB vent bypass %s", id(vent_bypass_until_ms) != 0 ? "latched" : "cleared");
 
   - platform: gpio
     id: fog_switch
@@ -522,33 +460,30 @@ binary_sensor:
       - delayed_on_off: 30ms   # debounce the momentary PB (both edges); imperceptible
     on_press:
       then:
-        - button.press: fog_burst_btn
+        - lambda: |-
+            id(manual_fog_until_ms) = manual_latch_toggle(id(manual_fog_until_ms), millis(), id(manual_override_timeout_min));
+            ESP_LOGW("manual", "PB fog burst %s", id(manual_fog_until_ms) != 0 ? "latched" : "cleared");
 
-  # Manual-override state indicators
+  # Manual-override state indicators: true while the deadline latch is set and
+  # still ahead. Their object ids are the fan_burst_active, vent_bypass_active
+  # and fog_burst_active routes (EQUIPMENT_BINARY_MAP), which confirm a burst.
   - platform: template
     id: bs_manual_fan
     name: "Fan Burst Active"
-    lambda: "return id(manual_fan_active);"
+    lambda: "return manual_latch_active(id(manual_fans_until_ms), millis());"
     device_class: running
 
   - platform: template
     id: bs_vent_lock
     name: "Vent Bypass Active"
-    lambda: "return id(vent_lock_active);"
+    lambda: "return manual_latch_active(id(vent_bypass_until_ms), millis());"
     device_class: running
 
   - platform: template
     id: bs_manual_fog
     name: "Fog Burst Active"
-    lambda: "return id(manual_fog_active);"
+    lambda: "return manual_latch_active(id(manual_fog_until_ms), millis());"
     device_class: running
-
-  - platform: template
-    id: bs_occupancy_quiet_override
-    name: "Occupancy Quiet Override Active"
-    lambda: |-
-      return id(occupancy_override_until_ms) != 0
-        && (int32_t)(id(occupancy_override_until_ms) - millis()) > 0;
 
   - platform: template
     id: bs_vent_state
@@ -735,107 +670,10 @@ interval:
                    free_kb, (up_ms - low_since_ms) / 1000.0f, up_ms / 1000.0f);
           App.safe_reboot();
 
-# ───────────────────── DASHBOARD BUTTONS ─────────────────────
-button:
-  - platform: restart
-    name: "Restart"
-    entity_category: config
-
-  - platform: template
-    id: fan_burst_btn
-    name: "Fan Cycle"
-    on_press:
-      - script.execute: occupancy_quiet_override
-      - if:
-          condition:
-            lambda: "return id(manual_fan_active);"
-          then:
-            - script.stop: manual_fan_burst
-            - lambda: "id(manual_fan_active) = false;"
-          else:
-            - script.execute: manual_fan_burst
-
-  - platform: template
-    id: vent_bypass_btn
-    name: "Vent Bypass Toggle"
-    on_press:
-      - script.execute: occupancy_quiet_override
-      - if:
-          condition:
-            lambda: "return id(vent_lock_active);"
-          then:
-            - script.stop: vent_bypass_timer
-            - lambda: "id(vent_lock_active) = false;"
-          else:
-            - script.execute: vent_bypass_timer
-
-  - platform: template
-    id: fog_burst_btn
-    name: "Fog Cycle"
-    on_press:
-      - script.execute: occupancy_quiet_override
-      - if:
-          condition:
-            lambda: "return id(manual_fog_active);"
-          then:
-            - script.stop: manual_fog_burst
-            - lambda: "id(manual_fog_active) = false;"
-          else:
-            - script.execute: manual_fog_burst
-
-# ───────────────────── SCRIPTS (0 min = 24 h) ────────────────────
-script:
-  - id: occupancy_quiet_override
-    mode: restart
-    then:
-      - lambda: |
-          id(occupancy_override_until_ms) = millis() + 3600000UL;
-          id(greenhouse_occupied) = false;
-          id(occupancy_last_true_ms) = 0;
-          id(sw_greenhouse_occupied).publish_state(false);
-          ESP_LOGW("occupancy","Local button override: occupancy ignored for 60 minutes");
-
-  # Manual fan burst script. Requests both fans for a user-defined number of
-  # minutes; the control loop remains the only relay actuator path.
-  - id: manual_fan_burst
-    mode: restart
-    then:
-      - lambda: |
-          id(manual_fan_active) = true;
-      - delay: !lambda |-
-          int minutes = id(fan_burst_minutes);
-          if(minutes <= 0 || minutes > 60) minutes = 60;
-          return (uint32_t)minutes * 60000UL;
-      - lambda: |
-          id(manual_fan_active) = false;
-
-  # Vent bypass timer. Requests a vent lockout for user-defined minutes; safety
-  # rails in the control loop decide whether the vent may actually close.
-  - id: vent_bypass_timer
-    mode: restart
-    then:
-      - lambda: |
-          id(vent_lock_active) = true;
-      - delay: !lambda |-
-          int minutes = id(vent_bypass_minutes);
-          if(minutes <= 0 || minutes > 30) minutes = 30;
-          return (uint32_t)minutes * 60000UL;
-      - lambda: |
-          id(vent_lock_active) = false;
-
-  # Manual fog burst script. Requests fog for a user-defined number of minutes;
-  # the control loop remains the only relay actuator path.
-  - id: manual_fog_burst
-    mode: restart
-    then:
-      - lambda: |
-          id(manual_fog_active) = true;
-      - delay: !lambda |-
-          int minutes = id(fog_burst_minutes);
-          if(minutes <= 0 || minutes > 60) minutes = 60;
-          return (uint32_t)minutes * 60000UL;
-      - lambda: |
-          id(manual_fog_active) = false;
+# Home Assistant has no buttons on this controller (D-IRP-24, irrigation §7):
+# bursts, their clear and the restart reach it only through the ingestor's
+# manual_override service (irrigation_engine.yaml), and the panel push buttons
+# above drive the same latches.
 
 ###############################################################################
 # END OF FILE

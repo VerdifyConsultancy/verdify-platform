@@ -20,8 +20,8 @@ REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "scripts/gen-config-revision.sh"
 
 # The long-running envFrom consumers carrying the annotation. Jobs/CronJobs
-# (migration-job, lab-publisher, ha-gap-backfill) read the ConfigMap fresh per
-# run and need no rollout trigger.
+# (migration-job, lab-publisher) read the ConfigMap fresh per run and need no
+# rollout trigger.
 ANNOTATED = [
     "deploy/k8s/base/api-deployment.yaml",
     "deploy/k8s/base/mcp-deployment.yaml",

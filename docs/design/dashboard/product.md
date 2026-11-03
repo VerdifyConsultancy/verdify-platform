@@ -335,7 +335,7 @@ API-IRR-NN) are the `operationId`s in the [OpenAPI](openapi/dashboard-api.v1.yam
 *P1 · Next · Now.* As the owner-operator, I want the next plan transition, the next Iris trigger, the next run per line and sunrise and sunset in one list, so that I anticipate instead of react.
 - The next transition shows its time, the settings it changes and an AI label; manual settings are left out.
 - The next occurrence per line shows time, minutes and schedule; a paused one says so, and by whom.
-- Sunrise and sunset come from `ingestor/solar.py`, which mirrors the firmware's solar code.
+- Sunrise and sunset come from `verdify_schemas/solar.py` (re-exported by `ingestor/solar.py`), which mirrors the firmware's solar code.
 
 #### US-NOW-06 · Honest degraded states
 *P1, P2 · MVP · every page.* As the owner-operator, I want "API unavailable", "ingestor not running", "controller not reporting" and "data stale" told apart and each panel to fail alone, so that I never mistake an outage for an all-clear or act on old numbers.
@@ -460,7 +460,7 @@ API-IRR-NN) are the `operationId`s in the [OpenAPI](openapi/dashboard-api.v1.yam
 #### US-WAT-03 · Watering minutes by zone and cause
 *P1, P2 · MVP · Water.* As the owner-operator, I want watering minutes per zone per day split by cause and chemistry, so that I know each zone got the water I intended.
 - `v_irrigation_minutes_daily` (API-IRR-10) gives valve-open minutes, pulses and gallons per America/Denver day for wall, center, south and west (fog on its own), stacked by cause (`vpd`, `schedule`, `run_now`, `feed`, `prewet`, `flush`, `fallback`, `unknown`) with clean below fertilizer and each zone's cap as a tick; today, 7 and 30 days.
-- Minutes come from the relay runs already recorded (`v_water_relay_runs`) and ship before the firmware, with history back to 2024-11-17 (before the engine, L04 and fog count as `vpd` and L01 as `unknown`); 23- and 25-hour days are correct.
+- Minutes come from the relay runs already recorded (`v_water_relay_runs`) and ship before the firmware, with history back to 2025-08-05, the first wet-relay row (before the engine, L04 and fog count as `vpd` and L01 as `unknown`); 23- and 25-hour days are correct.
 - Today and any day with an ingestor outage are marked partial; an outage shows as a gap, never as zero, and nothing is back-filled.
 
 #### US-WAT-04 · Run ledger
@@ -592,7 +592,7 @@ API-IRR-NN) are the `operationId`s in the [OpenAPI](openapi/dashboard-api.v1.yam
 *P1, P3 · MVP · Settings.* As the owner-operator, I want each setting to show the device value next to any pending request, so that I never mistake a request for a fact.
 - The device value is the newest `cfg_*` readback in `setpoint_snapshot`, in canonical decimals (float32 1.6 shows as 1.6), with its age; a readback matches within half a grid step, not a percentage dead-band, so `site_pressure_hpa` 840 → 845 reads REQUESTED until the device reports 845.
 - A request reads REQUESTED, then CONFIRMED, or NOT CONFIRMED with no match within 5 minutes, and a late readback turns it CONFIRMED by itself; the dispatcher re-sends a differing value on every pass, so there is no "Send again". The requested value never replaces the device value until confirmed.
-- A REQUESTED row older than 60 s, or a NOT CONFIRMED one, shows the platform's reason when it has one: "Clamped to 2.00 kPa: <guard>" (`setpoint_clamps`), "Waiting: controller heap low" or "Push failed: <status>" (`setpoint_changes.delivery_status`), "Sent HH:MM", "Held by experiment <id> until it ends", or "Ingestor not running since HH:MM"; otherwise "No matching readback yet".
+- A REQUESTED row older than 60 s, or a NOT CONFIRMED one, shows the platform's reason when it has one: "Clamped to 2.00 kPa: <guard>" (`setpoint_clamps`), "Sent HH:MM; waiting: controller heap low" or "Sent HH:MM; push failed: <status>" (`setpoint_changes.delivery_status`), "Held by experiment <id>: applies when it ends", "Ingestor not running since HH:MM" or "Controller not reporting since HH:MM"; otherwise "Sent HH:MM; no matching readback yet", or "No matching readback yet" when the send time is not known.
 
 #### US-SET-03 · Change a setting
 *P1 · MVP · Settings.* As the owner-operator, I want to change any editable setting from the dashboard, so that I never need SQL, ESPHome or Home Assistant for it.
@@ -631,7 +631,7 @@ API-IRR-NN) are the `operationId`s in the [OpenAPI](openapi/dashboard-api.v1.yam
 
 #### US-ACT-02 · Open alerts
 *P1, P2 · MVP · Activity.* As a caretaker, I want the open alerts in plain words with their age, so that I know what needs someone.
-- API-14 lists every `v_open_alerts` row by severity (critical, warning, info), then age, with a plain title, zone or line, first seen and the current value where the alert has one; repeats of one alert type and zone show as one row with a count and first and last seen, acknowledged ones collapse into "Acknowledged, still open (N)", and "recently resolved" covers the last 24 h. The nav, Now, Activity, API-02 `alerts`, API-14 and MCP `alerts` share one open-alert count: these rows nobody has acknowledged (disposition `open`), repeats counted once; a probe that stays offline keeps one row and auto-resolves after a set period (Round 2b C).
+- API-14 lists every `v_open_alerts` row by severity (critical, warning, info), then age, with a plain title, zone or line, first seen and the current value where the alert has one; repeats of one alert type and sensor show as one row with a count and first and last seen, acknowledged ones collapse into "Acknowledged, still open (N)", and "recently resolved" covers the last 24 h. The nav, Now, Activity, API-02 `alerts`, API-14 and MCP `alerts` share one open-alert count: these rows nobody has acknowledged (disposition `open`), repeats counted once; a probe that stays offline keeps one row and auto-resolves after a set period (Round 2b C).
 - "No open alerts" shows only when the read succeeded, the ingestor heartbeat is fresh and the newest `climate` row is at most 300 s old. With the heartbeat stale, Now's "Needs someone" and the alert list read "In-app alerts may be missing: ingestor not running since HH:MM"; with the controller not reporting, "In-app alerts may be missing: no data since HH:MM"; a failed read shows "Alerts unavailable".
 
 #### US-ACT-03 · Alert detail in place
@@ -850,6 +850,7 @@ the audiences by [architecture](architecture.md) §5.6.
 *P4 · MVP · platform.* As the platform maintainer, I want Home Assistant reduced to occupancy reads and the Lutron switches, so that no greenhouse feature depends on a second control path (D-IRP-24).
 - Every touchpoint in [irrigation](irrigation.md) §7 (HA-01 to HA-13) is removed or replaced, keeping only occupancy, Lutron (`verdify-setpoint-server`, the firmware grow-light calls and the light readback) and the YINMIK hydroponic probe until a direct reader without Home Assistant replaces it ([decisions](decisions.md), Round 2); `ha_sensor_sync` then reads only lights, occupancy and hydro. Outdoor weather already comes from the Tempest through the ESP32's UDP listener, so the HA `tempest_sync` remnant goes.
 - No dashboard or MCP feature calls Home Assistant except the grow-light route; `docs/SERVICE_MAP.md` and `scripts/health-check.sh` change in the same PRs.
+- The direct reader (VD-70) is the ingestor task `hydro_probe_sync`: every 300 s it reads the YINMIK meter over the Tuya local protocol (TCP 6668, `status()` only) into the `hydro_*` columns, and it idles while Secret `verdify-hydro-probe` is absent. It decodes the meter's own data points (DP 10 pH, DP 11 EC in µS/cm, DP 1 TDS, DP 2 water temperature, DP 7 battery), not Home Assistant's 2026-04-18 corrections, which read DP 107 (the pH alarm limit, a constant 14.00) as EC and crossed pH with TDS; the cutover compares its first rows with the YINMIK app. `_HYDRO_MAP` goes once those rows pass, and `ha_sensor_sync` then reads only lights and occupancy.
 
 #### US-PLAT-14 · Roll back a release
 *P4 · MVP · platform.* As the platform maintainer, I want a known way to back out a bad release, so that a broken release costs minutes, not a day.

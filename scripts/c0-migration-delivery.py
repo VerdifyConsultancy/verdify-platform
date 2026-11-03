@@ -215,12 +215,57 @@ SUCCESSOR_279_DIGESTS = {
     "verdify_ingestor_runtime_login": "0e03e19dd7ceaf65c54e14d8fa38dacffa8472e2173d0d7f41a6a03ea758d8f7",
 }
 SUCCESSOR_279_MCP_DIGEST = SUCCESSOR_278_MCP_DIGEST
-# VD-56 M6 adds one verdify-owned view with no grant (M2 grants it to the dashboard login),
-# so all three runtime seals keep their merged predecessor's exact values; the file proves it.
-SUCCESSOR_282 = "282-daily-scorecard-view.sql"
-SUCCESSOR_282_SHA256 = "cbe42b56747ec0dfc12746cabb964ad9b39c6cecc2d4ed3e4e9b67128e017fc1"
-SUCCESSOR_282_DIGESTS = SUCCESSOR_279_DIGESTS
-SUCCESSOR_282_MCP_DIGEST = SUCCESSOR_279_MCP_DIGEST
+# Exact280 (VD-30) desired state and activity log. Its grants move all three
+# ordinary seals; the rolled-back native qualification proves each successor.
+SUCCESSOR_280 = "280-desired-state-activity-log.sql"
+SUCCESSOR_280_SHA256 = "44531a0c3a9ddd48f64ce639f9f9f1c2d0f948960ba65a68943d5947881b8bfe"
+SUCCESSOR_280_DIGESTS = {
+    "verdify_api_runtime_login": "af3647c841270c17097fd00c5d27d8dd6b46413a15838f08fd5b6cbbcda343d7",
+    "verdify_ingestor_runtime_login": "4697e11eb2e66a73f727304df3419d3dd4635199bc346ba5e62cfe2f2a194103",
+}
+SUCCESSOR_280_MCP_DIGEST = "685212a93b79c980c422db5baacb8f61309af392a9a7a8e9a46baf8e55fde291"
+# Exact281 (VD-39, M4) minutes by zone. Its view and reader grants move all
+# three ordinary seals; the rolled-back native qualification, with 280 applied
+# first in the same session, proves each successor.
+SUCCESSOR_281 = "281-irrigation-minutes-by-zone.sql"
+SUCCESSOR_281_SHA256 = "45a6d18db74d6ae5f3744049b77a91f9fc243a099483949eb369a6a0e8d2f3f8"
+SUCCESSOR_281_DIGESTS = {
+    "verdify_api_runtime_login": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "verdify_ingestor_runtime_login": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+}
+SUCCESSOR_281_MCP_DIGEST = "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
+# Exact282 (VD-66, M2): the dashboard login and its sessions. It grants only on
+# the objects it creates, so all three seals stay 281's, as 276's duties kept
+# 275's; the rolled-back native qualification, with 280 and 281 applied first in
+# the same session, proves it.
+SUCCESSOR_282 = "282-dashboard-runtime-login.sql"
+SUCCESSOR_282_SHA256 = "b58f0df3b66f79dc968aee502d41b4860e269285c5369dc0a06273c44908377a"
+SUCCESSOR_282_DIGESTS = SUCCESSOR_281_DIGESTS
+SUCCESSOR_282_MCP_DIGEST = SUCCESSOR_281_MCP_DIGEST
+# Exact283 (VD-38, M3): the irrigation tables, seeds and grants. Its grants reach
+# 282's dashboard duty on relations the ingestor reads, so both ordinary seals
+# hash that duty's production OID: only a rolled-back native qualification run
+# once 282 is applied measures them (no --apply-first). Its fixture records
+# whether these values are that measurement or still the pre-R0 projection.
+SUCCESSOR_283 = "283-irrigation-tables.sql"
+SUCCESSOR_283_SHA256 = "0b07a5042edc29cb90da4c800da6514e47517240d765c0da0217b68cc7fe92c2"
+SUCCESSOR_283_DIGESTS = {
+    "verdify_api_runtime_login": "030df35ca3b0bc8b94de5f394f96c2292674b2df58aea2d46990c53ad3bd1ad7",
+    "verdify_ingestor_runtime_login": "c03d427cbbf327c8843496c744d718e1fca70c1e6d98963022ac87e308954096",
+}
+SUCCESSOR_283_MCP_DIGEST = "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+# Exact284 (VD-74, M2b): the dashboard login's grants on existing objects. They move
+# both ordinary seals, which hash the dashboard duty's production OID, and leave the
+# MCP seal at 283's: only a rolled-back native qualification run once 282 is applied
+# measures them. Its fixture records whether these values are that measurement or
+# still 283's stand-ins.
+SUCCESSOR_284 = "284-dashboard-runtime-grants.sql"
+SUCCESSOR_284_SHA256 = "559d8260ec7138a3bec502f7b29f50587f6a752cc5144fa31e15b406c4ddcaf4"
+SUCCESSOR_284_DIGESTS = {
+    "verdify_api_runtime_login": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
+    "verdify_ingestor_runtime_login": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
+}
+SUCCESSOR_284_MCP_DIGEST = SUCCESSOR_283_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.
@@ -265,7 +310,11 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_277,
         SUCCESSOR_278,
         SUCCESSOR_279,
+        SUCCESSOR_280,
+        SUCCESSOR_281,
         SUCCESSOR_282,
+        SUCCESSOR_283,
+        SUCCESSOR_284,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
@@ -299,7 +348,11 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_277_SHA256,
                 SUCCESSOR_278_SHA256,
                 SUCCESSOR_279_SHA256,
+                SUCCESSOR_280_SHA256,
+                SUCCESSOR_281_SHA256,
                 SUCCESSOR_282_SHA256,
+                SUCCESSOR_283_SHA256,
+                SUCCESSOR_284_SHA256,
             ),
             strict=True,
         ):
@@ -565,7 +618,11 @@ COMMIT;"""
         (SUCCESSOR_277, SUCCESSOR_277_DIGESTS),
         (SUCCESSOR_278, SUCCESSOR_278_DIGESTS),
         (SUCCESSOR_279, SUCCESSOR_279_DIGESTS),
+        (SUCCESSOR_280, SUCCESSOR_280_DIGESTS),
+        (SUCCESSOR_281, SUCCESSOR_281_DIGESTS),
         (SUCCESSOR_282, SUCCESSOR_282_DIGESTS),
+        (SUCCESSOR_283, SUCCESSOR_283_DIGESTS),
+        (SUCCESSOR_284, SUCCESSOR_284_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
@@ -637,8 +694,16 @@ COMMIT;"""
             expected_mcp = SUCCESSOR_278_MCP_DIGEST
         if SUCCESSOR_279 in later:
             expected_mcp = SUCCESSOR_279_MCP_DIGEST
+        if SUCCESSOR_280 in later:
+            expected_mcp = SUCCESSOR_280_MCP_DIGEST
+        if SUCCESSOR_281 in later:
+            expected_mcp = SUCCESSOR_281_MCP_DIGEST
         if SUCCESSOR_282 in later:
             expected_mcp = SUCCESSOR_282_MCP_DIGEST
+        if SUCCESSOR_283 in later:
+            expected_mcp = SUCCESSOR_283_MCP_DIGEST
+        if SUCCESSOR_284 in later:
+            expected_mcp = SUCCESSOR_284_MCP_DIGEST
         if hotfix_predecessor_263:
             require(
                 mcp_state.get("mcp")

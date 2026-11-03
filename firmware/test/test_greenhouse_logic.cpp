@@ -5058,6 +5058,52 @@ TEST(manual_fans_plus_humid_force_fans_vent_and_fog) {
     PASS();
 }
 
+// VD-47 (irrigation F12): the deadline latches the manual_override service sets
+// and the panel push buttons toggle. 0 means no burst; minutes clamp to 1-120.
+TEST(manual_override_minutes_clamp_to_1_through_120) {
+    ASSERT_EQ(manual_override_minutes(-5), 1);
+    ASSERT_EQ(manual_override_minutes(0), 1);
+    ASSERT_EQ(manual_override_minutes(1), 1);
+    ASSERT_EQ(manual_override_minutes(45), 45);
+    ASSERT_EQ(manual_override_minutes(120), 120);
+    ASSERT_EQ(manual_override_minutes(121), 120);
+    ASSERT_EQ(manual_override_minutes(100000), 120);
+    PASS();
+}
+
+TEST(manual_override_deadline_is_now_plus_minutes_and_never_zero) {
+    ASSERT_EQ(manual_override_deadline_ms(1000u, 10), 601000u);
+    ASSERT_EQ(manual_override_deadline_ms(1000u, 0), 61000u);       // clamped up to 1 min
+    ASSERT_EQ(manual_override_deadline_ms(1000u, 500), 7201000u);   // clamped down to 120 min
+    // millis() wraps and the deadline wraps with it; one that lands on exactly
+    // 0 is stored as 1, because 0 means no burst.
+    ASSERT_EQ(manual_override_deadline_ms(UINT32_MAX - 59999u, 1), 1u);
+    ASSERT_EQ(manual_override_deadline_ms(UINT32_MAX - 9u, 1), 59990u);
+    PASS();
+}
+
+TEST(manual_latch_is_active_until_its_deadline_across_the_millis_wrap) {
+    ASSERT_FALSE(manual_latch_active(0u, 1000u));             // no burst
+    ASSERT_TRUE(manual_latch_active(5000u, 1000u));
+    ASSERT_FALSE(manual_latch_active(1000u, 1000u));          // the deadline itself has expired
+    ASSERT_FALSE(manual_latch_active(999u, 1000u));
+    const uint32_t now = UINT32_MAX - 9u;
+    const uint32_t until = manual_override_deadline_ms(now, 1);  // wrapped past 0
+    ASSERT_TRUE(manual_latch_active(until, now));
+    ASSERT_TRUE(manual_latch_active(until, now + 59999u));
+    ASSERT_FALSE(manual_latch_active(until, now + 60000u));
+    PASS();
+}
+
+TEST(push_button_toggles_its_latch_on_then_off) {
+    const uint32_t on = manual_latch_toggle(0u, 1000u, 10);      // idle: start a 10 min burst
+    ASSERT_EQ(on, 601000u);
+    ASSERT_EQ(manual_latch_toggle(on, 2000u, 10), 0u);           // running: a press clears it
+    ASSERT_EQ(manual_latch_toggle(500u, 1000u, 10), 601000u);    // expired but not yet zeroed: re-arms
+    ASSERT_EQ(manual_latch_toggle(0u, 1000u, 0), 61000u);        // a 0 timeout still runs 1 min
+    PASS();
+}
+
 TEST(fan_requires_open_vent_carves_out_bypass_and_safety) {
     ASSERT_TRUE(fan_requires_open_vent(VENTILATE, true, false));    // normal: vent forced open
     ASSERT_FALSE(fan_requires_open_vent(VENTILATE, true, true));    // bypass carve-out (#290)
@@ -5244,22 +5290,8 @@ TEST(f7_vpd_min_safe_rescue_heats_on_cold_day) {
     PASS();
 }
 
-// ── Software-recovery irrigation topology / commissioned wall sequence ─────
-static WallFeedCommissioning ready_wall_commissioning() {
-    return {
-        .armed = true,
-        .revision = 7,
-        .evidence_mask = WALL_COMMISSIONING_REQUIRED_MASK,
-        .now_epoch_s = 1'800'000'000u,
-        .commissioning_valid_until_epoch_s = 1'800'086'400u,
-        .calibrated_flow_lpm = 10.0f,
-        .flow_valid_until_epoch_s = 1'800'086'400u,
-        .prewet_liters = 2.0f,
-        .feed_liters = 1.0f,
-        .flush_liters = 3.0f,
-    };
-}
-
+// ── Wet-request routing (center-only; the weekly wall-feed gate went with the job machine in
+//    #1160, and #1161 removes these with the resolver) ─────────────────────────────────────
 TEST(irrigation_climate_origins_always_resolve_center_mist_only) {
     WetTopologyPolicy policy{};
     for (WetZone stale_hint : {
@@ -5363,252 +5395,6 @@ TEST(irrigation_fixed_1030_legacy_schedule_is_ineligible) {
             ASSERT_FALSE(resolution.admitted);
         }
     }
-    PASS();
-}
-
-TEST(irrigation_commissioning_converts_positive_liters_to_bounded_durations) {
-    const auto commissioning = ready_wall_commissioning();
-    const auto durations = validate_wall_feed_commissioning(commissioning);
-    ASSERT_TRUE(durations.valid);
-    ASSERT_EQ(durations.status, WallFeedCommissioningStatus::READY);
-    ASSERT_EQ(durations.prewet_ms, 12'000u);
-    ASSERT_EQ(durations.feed_ms, 6'000u);
-    ASSERT_EQ(durations.flush_ms, 18'000u);
-    PASS();
-}
-
-TEST(irrigation_commissioning_fails_closed_for_missing_stale_zero_invalid_or_unbounded_inputs) {
-    {
-        auto c = ready_wall_commissioning(); c.armed = false;
-        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::NOT_ARMED);
-    }
-    {
-        auto c = ready_wall_commissioning(); c.revision = 0;
-        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::MISSING_REVISION);
-    }
-    {
-        auto c = ready_wall_commissioning(); c.evidence_mask &= ~WALL_PRODUCT_ANALYSIS_VERIFIED;
-        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::INCOMPLETE_EVIDENCE);
-    }
-    {
-        auto c = ready_wall_commissioning(); c.now_epoch_s = 0;
-        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::CLOCK_INVALID);
-    }
-    {
-        auto c = ready_wall_commissioning(); c.commissioning_valid_until_epoch_s = c.now_epoch_s;
-        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::COMMISSIONING_STALE);
-    }
-    for (float invalid_flow : {0.0f, -1.0f, NAN, INFINITY, 101.0f}) {
-        auto c = ready_wall_commissioning(); c.calibrated_flow_lpm = invalid_flow;
-        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::FLOW_MISSING_OR_INVALID);
-    }
-    {
-        auto c = ready_wall_commissioning(); c.flow_valid_until_epoch_s = c.now_epoch_s;
-        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::FLOW_STALE);
-    }
-    for (float invalid_volume : {0.0f, -1.0f, NAN, INFINITY}) {
-        auto c = ready_wall_commissioning(); c.feed_liters = invalid_volume;
-        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::VOLUME_MISSING_OR_INVALID);
-    }
-    {
-        auto c = ready_wall_commissioning(); c.calibrated_flow_lpm = 0.1f; c.flush_liters = 400.0f;
-        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::DURATION_OUT_OF_BOUNDS);
-    }
-    PASS();
-}
-
-TEST(irrigation_weekly_solar_eligibility_is_restart_missed_window_and_exact_once_safe) {
-    const auto durations = validate_wall_feed_commissioning(ready_wall_commissioning());
-    WeeklyWallFeedState state{};
-    WeeklyWallEligibilityInput input{true, false, 0.25f, 20'000u, 7u};
-    ASSERT_TRUE(weekly_wall_feed_eligible(input, state, durations));
-    state = claim_weekly_wall_feed(input, state, 7u);
-    ASSERT_EQ(state.stage, WallFeedStage::PREWET);
-    ASSERT_FALSE(weekly_wall_feed_eligible(input, state, durations)); // duplicate tick
-
-    auto restored = cancel_interrupted_wall_feed(state, input.solar_day);
-    ASSERT_EQ(restored.stage, WallFeedStage::CANCELLED);
-    ASSERT_EQ(restored.last_terminal_solar_day, input.solar_day);
-    ASSERT_FALSE(weekly_wall_feed_eligible(input, restored, durations)); // restart, same day
-
-    input.solar_day += 6u;
-    ASSERT_FALSE(weekly_wall_feed_eligible(input, restored, durations));
-    input.solar_phase = 1.25f;
-    input.solar_day += 1u;
-    ASSERT_FALSE(weekly_wall_feed_eligible(input, restored, durations)); // due but missed solar window
-    input.solar_phase = 0.10f;
-    input.solar_day += 1u;
-    ASSERT_TRUE(weekly_wall_feed_eligible(input, restored, durations)); // next solar window remains due
-
-    input.solar_day = restored.last_terminal_solar_day - 1u;
-    ASSERT_FALSE(weekly_wall_feed_eligible(input, restored, durations)); // clock regression fails closed
-    PASS();
-}
-
-struct FakeWallFeedJournalNvs {
-    bool save_allowed{true};
-    bool sync_allowed{true};
-    bool pending_valid{false};
-    bool durable_valid{false};
-    WeeklyWallFeedJournalRecord pending{};
-    WeeklyWallFeedJournalRecord durable{};
-
-    bool save(const WeeklyWallFeedJournalRecord& record) {
-        if (!save_allowed) return false;
-        pending = record;
-        pending_valid = true;
-        return true;
-    }
-
-    bool sync() {
-        if (!sync_allowed) {
-            pending_valid = false;
-            return false;
-        }
-        if (pending_valid) {
-            durable = pending;
-            durable_valid = true;
-            pending_valid = false;
-        }
-        return true;
-    }
-
-    void reboot() { pending_valid = false; }
-
-    bool load(WeeklyWallFeedJournalRecord& record) const {
-        if (!durable_valid) return false;
-        record = durable;
-        return true;
-    }
-};
-
-static bool commit_to_fake_journal(
-    FakeWallFeedJournalNvs& nvs,
-    const WeeklyWallFeedState& state,
-    uint8_t terminal_code,
-    uint32_t sequence,
-    WeeklyWallFeedJournalRecord& committed) {
-    return commit_wall_feed_journal(
-        state, terminal_code, sequence,
-        [&](const WeeklyWallFeedJournalRecord& record) { return nvs.save(record); },
-        [&]() { return nvs.sync(); },
-        committed);
-}
-
-TEST(wall_feed_journal_claim_is_durable_before_first_restore_poll) {
-    FakeWallFeedJournalNvs nvs{};
-    WeeklyWallFeedState state{};
-    const WeeklyWallEligibilityInput input{true, false, 0.2f, 41'000u, 7u};
-    state = claim_weekly_wall_feed(input, state, 19u);
-    WeeklyWallFeedJournalRecord committed{};
-
-    // This direct save+sync happens before any RestoringGlobalsComponent poll.
-    ASSERT_TRUE(commit_to_fake_journal(nvs, state, 0, 1u, committed));
-    nvs.reboot();
-    WeeklyWallFeedJournalRecord loaded{};
-    ASSERT_TRUE(nvs.load(loaded));
-    ASSERT_TRUE(wall_feed_journal_record_valid(loaded));
-    ASSERT_EQ(wall_feed_state_from_journal(loaded).stage, WallFeedStage::PREWET);
-    ASSERT_EQ(wall_feed_state_from_journal(loaded).claimed_solar_day, input.solar_day);
-
-    // First-tick reboot handling cancels an admitted active stage and durably
-    // records the terminal day, so the same weekly claim cannot re-dose.
-    auto cancelled = cancel_interrupted_wall_feed(
-        wall_feed_state_from_journal(loaded), input.solar_day);
-    ASSERT_TRUE(commit_to_fake_journal(nvs, cancelled, 2, 2u, committed));
-    nvs.reboot();
-    ASSERT_TRUE(nvs.load(loaded));
-    ASSERT_EQ(wall_feed_state_from_journal(loaded).stage, WallFeedStage::CANCELLED);
-    ASSERT_EQ(loaded.terminal_code, 2);
-    ASSERT_EQ(loaded.last_terminal_solar_day, input.solar_day);
-    PASS();
-}
-
-TEST(wall_feed_journal_each_stage_boundary_survives_immediate_reboot) {
-    WeeklyWallFeedState state{
-        WallFeedStage::PREWET, 52'000u, 0u, 23u};
-    const WallFeedStage stages[] = {
-        WallFeedStage::PREWET,
-        WallFeedStage::FEED,
-        WallFeedStage::FLUSH,
-        WallFeedStage::COMPLETE,
-    };
-
-    for (uint32_t i = 0; i < 4; ++i) {
-        state.stage = stages[i];
-        if (state.stage == WallFeedStage::COMPLETE) {
-            state.last_terminal_solar_day = state.claimed_solar_day;
-        }
-        const uint8_t terminal_code = state.stage == WallFeedStage::COMPLETE ? 1 : 0;
-        FakeWallFeedJournalNvs nvs{};
-        WeeklyWallFeedJournalRecord committed{};
-        ASSERT_TRUE(commit_to_fake_journal(nvs, state, terminal_code, i + 1u, committed));
-        nvs.reboot();
-        WeeklyWallFeedJournalRecord loaded{};
-        ASSERT_TRUE(nvs.load(loaded));
-        ASSERT_TRUE(wall_feed_journal_record_valid(loaded));
-        ASSERT_EQ(wall_feed_state_from_journal(loaded).stage, stages[i]);
-        ASSERT_EQ(loaded.terminal_code, terminal_code);
-        ASSERT_EQ(loaded.sequence, i + 1u);
-    }
-    PASS();
-}
-
-TEST(wall_feed_journal_requires_both_save_and_sync_ack_before_relay) {
-    const WeeklyWallFeedState claimed{
-        WallFeedStage::PREWET, 61'000u, 0u, 29u};
-    WeeklyWallFeedJournalRecord committed{};
-
-    FakeWallFeedJournalNvs save_fail{};
-    save_fail.save_allowed = false;
-    ASSERT_FALSE(commit_to_fake_journal(save_fail, claimed, 0, 1u, committed));
-    save_fail.reboot();
-    WeeklyWallFeedJournalRecord loaded{};
-    ASSERT_FALSE(save_fail.load(loaded));
-
-    FakeWallFeedJournalNvs sync_fail{};
-    sync_fail.sync_allowed = false;
-    ASSERT_FALSE(commit_to_fake_journal(sync_fail, claimed, 0, 1u, committed));
-    sync_fail.reboot();
-    ASSERT_FALSE(sync_fail.load(loaded));
-
-    auto corrupt = make_wall_feed_journal_record(claimed, 0, 1u);
-    corrupt.checksum ^= 1u;
-    ASSERT_FALSE(wall_feed_journal_record_valid(corrupt));
-    PASS();
-}
-
-TEST(irrigation_wall_sequence_is_prewet_feed_fertilizer_off_immediate_clean_flush) {
-    WeeklyWallFeedState state{};
-    WeeklyWallEligibilityInput input{true, false, 0.2f, 30'000u, 7u};
-    state = claim_weekly_wall_feed(input, state, 11u);
-
-    auto relays = wall_feed_relay_intent(state.stage);
-    ASSERT_TRUE(relays.wall_clean);
-    ASSERT_FALSE(relays.wall_fertilized);
-    ASSERT_FALSE(relays.fertilizer_master);
-
-    state = advance_wall_feed_sequence(state, true, false, input.solar_day);
-    ASSERT_EQ(state.stage, WallFeedStage::FEED);
-    relays = wall_feed_relay_intent(state.stage);
-    ASSERT_FALSE(relays.wall_clean);
-    ASSERT_TRUE(relays.wall_fertilized);
-    ASSERT_TRUE(relays.fertilizer_master);
-
-    state = advance_wall_feed_sequence(state, true, false, input.solar_day);
-    ASSERT_EQ(state.stage, WallFeedStage::FLUSH);
-    relays = wall_feed_relay_intent(state.stage);
-    ASSERT_TRUE(relays.wall_clean);             // immediate wall-local flush
-    ASSERT_FALSE(relays.wall_fertilized);       // fertilizer off before flush
-    ASSERT_FALSE(relays.fertilizer_master);     // no 90-minute global hold
-
-    state = advance_wall_feed_sequence(state, true, false, input.solar_day);
-    ASSERT_EQ(state.stage, WallFeedStage::COMPLETE);
-    ASSERT_EQ(state.last_terminal_solar_day, input.solar_day);
-    relays = wall_feed_relay_intent(state.stage);
-    ASSERT_FALSE(relays.wall_clean);
-    ASSERT_FALSE(relays.wall_fertilized);
-    ASSERT_FALSE(relays.fertilizer_master);
     PASS();
 }
 

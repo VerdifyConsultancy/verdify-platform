@@ -1,91 +1,73 @@
-"""Problem details shared by the operator API and MCP (OpenAPI ``Problem``, architecture §5.3).
+"""Refusals in one shape: the OpenAPI ``Problem`` (RFC 9457) and its ``ProblemCode`` list (architecture §5.3).
 
-A service raises ``ServiceError``; the REST adapter renders its ``Problem`` as
-``application/problem+json`` and the MCP adapter returns the same JSON with ``isError``.
+A service raises ``ServiceError(problem(code, detail, ...))``. REST adapters render ``problem.body()`` as
+``application/problem+json`` with ``problem.status``; MCP adapters return the same JSON with ``isError``, so
+people and agents read the same code, bounds and ``retryable`` (US-AGT-04).
 """
 
 from __future__ import annotations
 
-from enum import StrEnum
-from typing import Literal
+from collections.abc import Mapping
+from types import MappingProxyType
+from typing import Any, Literal, get_args
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+# The OpenAPI ProblemCode enum, verbatim and in its order.
+ProblemCode = Literal[
+    "invalid_request",
+    "unauthenticated",
+    "forbidden",
+    "origin_mismatch",
+    "not_found",
+    "writes_disabled",
+    "query_timeout",
+    "unavailable",
+    "window_too_large",
+    "unknown_target",
+    "read_only",
+    "out_of_range",
+    "manual",
+    "request_id_reused",
+    "check_required",
+    "too_close",
+    "too_many_schedules",
+    "line_disabled",
+    "line_paused",
+    "line_faulted",
+    "not_schedule_member",
+    "line_busy",
+    "manifold_busy",
+    "cap_reached",
+]
+PROBLEM_CODES: tuple[str, ...] = get_args(ProblemCode)
 
-class ProblemCode(StrEnum):
-    """The OpenAPI ``ProblemCode`` enum, verbatim."""
+# API-20 only, with unavailable: Home Assistant failed the call, Lutron did not reach the state, or no answer in 12 s.
+LightResult = Literal["ha_failed", "not_confirmed", "timeout"]
 
-    INVALID_REQUEST = "invalid_request"
-    UNAUTHENTICATED = "unauthenticated"
-    FORBIDDEN = "forbidden"
-    ORIGIN_MISMATCH = "origin_mismatch"
-    NOT_FOUND = "not_found"
-    WRITES_DISABLED = "writes_disabled"
-    QUERY_TIMEOUT = "query_timeout"
-    UNAVAILABLE = "unavailable"
-    WINDOW_TOO_LARGE = "window_too_large"
-    UNKNOWN_TARGET = "unknown_target"
-    READ_ONLY = "read_only"
-    OUT_OF_RANGE = "out_of_range"
-    MANUAL = "manual"
-    REQUEST_ID_REUSED = "request_id_reused"
-    CHECK_REQUIRED = "check_required"
-    TOO_CLOSE = "too_close"
-    TOO_MANY_SCHEDULES = "too_many_schedules"
-    LINE_DISABLED = "line_disabled"
-    LINE_PAUSED = "line_paused"
-    LINE_FAULTED = "line_faulted"
-    NOT_SCHEDULE_MEMBER = "not_schedule_member"
-    LINE_BUSY = "line_busy"
-    MANIFOLD_BUSY = "manifold_busy"
-    CAP_REACHED = "cap_reached"
-
-
-_STATUS = {
-    ProblemCode.INVALID_REQUEST: 400,
-    ProblemCode.UNAUTHENTICATED: 401,
-    ProblemCode.FORBIDDEN: 403,
-    ProblemCode.ORIGIN_MISMATCH: 403,
-    ProblemCode.NOT_FOUND: 404,
-    ProblemCode.WRITES_DISABLED: 503,
-    ProblemCode.QUERY_TIMEOUT: 503,
-    ProblemCode.UNAVAILABLE: 503,
+# Every validation and refusal code is 422; these are the others.
+_NOT_422 = {
+    "invalid_request": 400,
+    "unauthenticated": 401,
+    "forbidden": 403,
+    "origin_mismatch": 403,
+    "not_found": 404,
+    "writes_disabled": 503,
+    "query_timeout": 503,
+    "unavailable": 503,
 }
-
-_TITLE = {
-    ProblemCode.INVALID_REQUEST: "Invalid request",
-    ProblemCode.UNAUTHENTICATED: "Not signed in",
-    ProblemCode.FORBIDDEN: "Not allowed",
-    ProblemCode.ORIGIN_MISMATCH: "Origin mismatch",
-    ProblemCode.NOT_FOUND: "Not found",
-    ProblemCode.WRITES_DISABLED: "Changes are switched off",
-    ProblemCode.QUERY_TIMEOUT: "Query took too long",
-    ProblemCode.UNAVAILABLE: "Unavailable",
-    ProblemCode.WINDOW_TOO_LARGE: "Window too large",
-    ProblemCode.UNKNOWN_TARGET: "Unknown target",
-    ProblemCode.READ_ONLY: "Read only",
-    ProblemCode.OUT_OF_RANGE: "Out of range",
-    ProblemCode.MANUAL: "Manual setting",
-    ProblemCode.REQUEST_ID_REUSED: "Request id reused",
-    ProblemCode.CHECK_REQUIRED: "Check required",
-    ProblemCode.TOO_CLOSE: "Too close",
-    ProblemCode.TOO_MANY_SCHEDULES: "Too many schedules",
-    ProblemCode.LINE_DISABLED: "Line disabled",
-    ProblemCode.LINE_PAUSED: "Line paused",
-    ProblemCode.LINE_FAULTED: "Line faulted",
-    ProblemCode.NOT_SCHEDULE_MEMBER: "Not a schedule member",
-    ProblemCode.LINE_BUSY: "Line busy",
-    ProblemCode.MANIFOLD_BUSY: "Manifold busy",
-    ProblemCode.CAP_REACHED: "Cap reached",
-}
-
-_RETRYABLE = frozenset(
-    {ProblemCode.LINE_BUSY, ProblemCode.MANIFOLD_BUSY, ProblemCode.QUERY_TIMEOUT, ProblemCode.UNAVAILABLE}
-)
+STATUS: Mapping[str, int] = MappingProxyType({code: _NOT_422.get(code, 422) for code in PROBLEM_CODES})
+# Waiting can help only here. A caller sets retryable false where it cannot (the pre-engine unavailable).
+RETRYABLE_CODES = frozenset({"line_busy", "manifold_busy", "query_timeout", "unavailable"})
+# The code in words, e.g. "Out of range" (the same words as verdify_schemas.irrigation's refusals).
+TITLES: Mapping[str, str] = MappingProxyType({code: code.replace("_", " ").capitalize() for code in PROBLEM_CODES})
 
 
 class Problem(BaseModel):
-    """RFC 9457 problem details, field for field the OpenAPI ``Problem`` schema."""
+    """The OpenAPI ``Problem`` schema, field for field. ``status`` follows the code and ``retryable`` is
+    true only for ``line_busy``, ``manifold_busy``, ``query_timeout`` and ``unavailable``."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     type: str = "about:blank"
     title: str
@@ -94,48 +76,57 @@ class Problem(BaseModel):
     code: ProblemCode
     retryable: bool
     field: str | None = None
-    min: float | None = None
-    max: float | None = None
-    current: float | str | bool | None = None
-    retry_after_s: int | None = None
-    result: Literal["ha_failed", "not_confirmed", "timeout"] | None = None
+    min: int | float | None = None
+    max: int | float | None = None
+    current: bool | int | float | str | None = None
+    retry_after_s: int | None = Field(default=None, ge=0)
+    result: LightResult | None = None
     request_id: str | None = None
+
+    @model_validator(mode="after")
+    def _follows_its_code(self) -> Problem:
+        if self.status != STATUS[self.code]:
+            raise ValueError(f"{self.code} is status {STATUS[self.code]}, not {self.status}")
+        if self.retryable and self.code not in RETRYABLE_CODES:
+            raise ValueError(f"{self.code} is never retryable")
+        return self
+
+    def body(self) -> dict[str, Any]:
+        """The JSON both surfaces return: problem+json on REST, the ``isError`` content on MCP."""
+        return self.model_dump(mode="json", exclude_none=True)
 
 
 class ServiceError(Exception):
-    """A refusal or failure that carries exactly one ``Problem``."""
+    """A refusal: carries one ``Problem``. Nothing was stored or sent."""
 
     def __init__(self, problem: Problem) -> None:
-        super().__init__(problem.detail or problem.title)
+        super().__init__(f"{problem.code}: {problem.detail or problem.title}")
         self.problem = problem
 
 
 def problem(
-    code: ProblemCode | str,
+    code: ProblemCode,
     detail: str,
     *,
     field: str | None = None,
-    min: float | None = None,  # noqa: A002 - the OpenAPI field name
-    max: float | None = None,  # noqa: A002 - the OpenAPI field name
-    current: float | str | bool | None = None,
+    min: int | float | None = None,
+    max: int | float | None = None,
+    current: bool | int | float | str | None = None,
     retry_after_s: int | None = None,
-    result: Literal["ha_failed", "not_confirmed", "timeout"] | None = None,
+    result: LightResult | None = None,
     retryable: bool | None = None,
-) -> ServiceError:
-    """Build the ``ServiceError`` for ``code``: its words as the title and its HTTP status."""
-    code = ProblemCode(code)
-    return ServiceError(
-        Problem(
-            title=_TITLE[code],
-            status=_STATUS.get(code, 422),
-            detail=detail,
-            code=code,
-            retryable=code in _RETRYABLE if retryable is None else retryable,
-            field=field,
-            min=min,
-            max=max,
-            current=current,
-            retry_after_s=retry_after_s,
-            result=result,
-        )
+) -> Problem:
+    """Build the ``Problem`` for ``code``: its title in words, its status and its default ``retryable``."""
+    return Problem(  # an unknown code fails the model's ProblemCode check
+        title=TITLES.get(code, code),
+        status=STATUS.get(code, 0),
+        detail=detail,
+        code=code,
+        retryable=code in RETRYABLE_CODES if retryable is None else retryable,
+        field=field,
+        min=min,
+        max=max,
+        current=current,
+        retry_after_s=retry_after_s,
+        result=result,
     )

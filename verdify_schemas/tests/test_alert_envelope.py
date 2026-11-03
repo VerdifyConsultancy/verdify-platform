@@ -47,6 +47,7 @@ from verdify_schemas.alerts import (
     RelayStuckAlert,
     SafetyInvalidAlert,
     SensorOfflineAlert,
+    SetpointDeliveryStuckAlert,
     SetpointUnconfirmedAlert,
     SiteContentStaleAlert,
     SoilDryoutAlert,
@@ -151,6 +152,14 @@ CASES = {
     "esp32_push_failed": (
         ESP32PushFailedAlert,
         {"error": "timeout", "change_count": 3},
+    ),
+    "setpoint_delivery_stuck": (
+        SetpointDeliveryStuckAlert,
+        {
+            "differing": 2,
+            "params": ["mister_engage_kpa", "temp_low"],
+            "oldest_since": NOW,
+        },
     ),
     # NOTE: the dispatcher's terminal-failure shape (failure_reasons/parameters,
     # no `error`) is round-tripped in test_alert_producer_payloads.py.

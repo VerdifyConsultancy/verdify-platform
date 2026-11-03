@@ -1,0 +1,62 @@
+{
+  "migration": "283-irrigation-tables.sql",
+  "exact_final_migration_sha256": "0b07a5042edc29cb90da4c800da6514e47517240d765c0da0217b68cc7fe92c2",
+  "final_migration_qualification_pending": false,
+  "before": {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
+  },
+  "projected_successor": {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projection": "2026-11-02, read only, production at 279. The MCP seal is an exact projection: fn_mcp_runtime_boundary_digest (263) hashes the MCP roles and memberships, the database and public-schema ACLs, and only PUBLIC and MCP entries, so 282's dashboard duty never enters it. Its body, rebuilt as one SELECT under its search_path and hashed on production (en_US.utf8 ordering), reproduced the live MCP digest, and with 280's and 281's entries injected reproduced 281's measured seal 9cb30130 (the VD-39 method). Injecting 280's entries, 281's with 283's v_irrigation_minutes_daily and fn_irrigation_minutes_daily, and 283's own (the five tables, irrigation_slot_slot_id_seq and v_irrigation_line_state with their MCP ACL entries, the eleven irrigation_line column grants, and v_water_event_attribution's relation entry formatted on production with its MCP grant), deparsed on PostgreSQL 16 against production's column types and role OIDs, gives 6cab4f0f. The api and ingestor seals cannot be projected before 282 is applied: fn_runtime_ordinary_boundary_digest (217) hashes every ACL entry, by grantee OID, of each relation either login can read or that carries an api or ingestor entry, and 283 grants verdify_dashboard_runtime on the five tables and the line-state view the ingestor reads; production allocates that duty's OID when R0 applies 282. Until then the file carries 282's api and ingestor seals as stand-ins, which these grants move, so its successor block refuses it. v_water_event_attribution carries no api or ingestor entry, so its new grants move only the MCP seal. Once 280-282 are applied, the probe (--probe-only, no --apply-first) measures all three; the file's literals and the c0-migration-delivery.py and bootstrap-six-runtime-roles.py registrations take the measured values, then the full qualification runs with --native-fixture. The review's later edit to the file changed only the minutes view's COMMENT, which neither digest hashes, so the projection still holds for this file.",
+  "qualified_successor": {
+    "api": "030df35ca3b0bc8b94de5f394f96c2292674b2df58aea2d46990c53ad3bd1ad7",
+    "ingestor": "c03d427cbbf327c8843496c744d718e1fca70c1e6d98963022ac87e308954096",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "after_rollback": {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
+  },
+  "inside_transaction_receipts_match": true,
+  "final_migration_rollback_verified": true,
+  "measured_at": "2026-11-02T23:26:49Z",
+  "native_probe_source_sha256": "e9a3f8f6b18ce2fbe353edacc176a53ac3469ac88a1a8e1acde1a239fe8a08de",
+  "qualification_source_sha256": "d46439e0f9239fd337b364bd315f47111107c34eedbabe04b06f0dc90cd46ee6",
+  "native_fixture": {
+    "checks": [
+      "tables_view_sequence",
+      "seeds",
+      "grants_exact",
+      "dashboard_reach",
+      "line_state",
+      "reader_equals_view_30d",
+      "topology_cause_without_ledger",
+      "logins_attest",
+      "dashboard_and_mcp_reads_and_writes",
+      "mcp_check_denied",
+      "record_checks",
+      "ingestor_outcomes_and_armed_context",
+      "ingestor_slot_denied",
+      "api_denied"
+    ],
+    "all_passed": true,
+    "attested": {
+      "api": true,
+      "ingestor": true,
+      "mcp": true,
+      "dashboard": true
+    },
+    "rows_400d": 870,
+    "reader_30d_ms": 231,
+    "reader_400d_ms": 1402,
+    "view_30d_ms": 732,
+    "line_state_ms": 27
+  },
+  "native_fixture_sha256": "b911fd4e800a0591f3997d466461b2dd5a9abeb19aa729b0f5f26a10b542e14f"
+}

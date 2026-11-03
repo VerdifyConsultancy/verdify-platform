@@ -37,9 +37,11 @@ below 20 KiB for three minutes and both heater relays are off. A sample at or
 above 20 KiB, or an active heater, resets the timer. Largest-block fragmentation
 alone does not invoke it. No thresholds are changed here.
 
-The native Restart button also calls `App.safe_reboot()` but does not duplicate
-that heater check. The ingestor has no supported restart-button dispatch path;
-do not manufacture an extra API client or generic command to invoke it.
+The Home Assistant Restart button is gone (VD-47). Its replacement, the
+`manual_override` service with kind `restart`, also calls `App.safe_reboot()`
+without duplicating that heater check. Its only supported path is an API-IRR-12
+override command that the ingestor's irrigation step sends (irrigation design
+§6.1); do not manufacture an extra API client or generic command to invoke it.
 A graceful sole-ingestor replacement uses the existing disconnect/finally path
 and native API peer destruction; it can free peer buffers without a controller
 reset. It cannot free the server shared buffer or guarantee recovery of Wi-Fi,

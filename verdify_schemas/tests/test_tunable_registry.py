@@ -9,6 +9,9 @@ The test set that closes the sprint-15 / sprint-15.1 drift-class bug:
 - Every dispatcher-routed REGISTRY entry maps bidirectionally with
   `ingestor/entity_map.py::SETPOINT_MAP`; readback-only entries have
   `esp_object_id=None`.
+- Every number and switch in `firmware/greenhouse/tunables.yaml` has a
+  REGISTRY row or a `RETIRING_TUNABLES` entry, so the Settings catalog is
+  every setting (VD-63).
 
 Runs in <50ms — pure text parsing of tunables.yaml, no ESPHome build needed.
 Any drift → CI fails → operator fixes before merge.
@@ -21,23 +24,47 @@ import pathlib
 import re
 import runpy
 import sys
+import textwrap
 import types
 from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import NamedTuple
 
 import pytest
+import yaml
 
+from verdify_schemas.setpoint import SetpointSnapshot
 from verdify_schemas.tunable_registry import (
     _ENTITY_NAMES,
+    ACTIVE_TUNABLES_REG,
+    CFG_READBACK_ALIASES_REG,
+    CFG_READBACK_MAP_REG,
     FIRMWARE_V2_STAGED_REG,
+    IRRIGATION_SITE_PARAMS,
     PLANNER_PUSHABLE_REG,
     REGISTRY,
+    RETIRED_TUNABLES_REG,
+    RETIRING_TUNABLES,
+    SETPOINT_MAP_REG,
     TIER1_REG,
     TunableDef,
+    planner_effective_bounds,
     registry_value_error,
     split_entity_name,
+    tunable_control_class,
 )
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+
+
+def _entity_map() -> types.ModuleType:
+    """The ingestor's entity_map module, resolved the way the guards below do."""
+    for p in reversed((str(REPO_ROOT / "ingestor"), "/srv/verdify/ingestor", "/mnt/iris/verdify/ingestor")):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    import entity_map
+
+    return entity_map
 
 
 def _install_mcp_runtime_import_stubs(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -131,8 +158,13 @@ _BOOT_RANGE_RE = (
 
 
 def _esphome_object_id(name: str) -> str:
-    """Mirror ESPHome's object_id slug style used by entity_map.py."""
-    return re.sub(r"[^a-z0-9]", "_", name.lower())
+    """ESPHome's object_id for an entity name, as the device reports it.
+
+    Lower case, then each character outside [a-z0-9_-] becomes ``_`` on its
+    own: hyphens survive ("On-Chip Band Enabled" → ``on-chip_band_enabled``)
+    and underscores are neither collapsed nor trimmed.
+    """
+    return re.sub(r"[^a-z0-9_-]", "_", name.lower())
 
 
 def _parse_number_bounds(text: str) -> dict[str, tuple[float, float]]:
@@ -148,6 +180,77 @@ def _parse_number_bounds(text: str) -> dict[str, tuple[float, float]]:
             continue
         out[_esphome_object_id(name_m.group("name"))] = (float(min_m.group("value")), float(max_m.group("value")))
     return out
+
+
+# ─── Catalog completeness — every number and switch has a row (VD-63) ──────
+
+_GETTER_GLOBAL_RE = re.compile(r"\bid\((?P<global_id>[A-Za-z_][A-Za-z0-9_]*)\)")
+
+
+class _TunableEntity(NamedTuple):
+    section: str  # "number" or "switch"
+    entity_id: str
+    name: str
+    global_id: str | None
+
+
+def _tunable_entities(text: str) -> list[_TunableEntity]:
+    """Each ``number:`` and ``switch:`` entity of a tunables.yaml text.
+
+    ``global_id`` is the global the entity's getter ``lambda:`` returns, in
+    any of its forms (``return id(g);``, ``return (float)id(g);`` and the
+    ``verdify_policy::policy_read*(kPF_<field>, id(g))`` read), or None when
+    the getter names no global or more than one.
+    """
+    data = yaml.safe_load(text) or {}
+    entities: list[_TunableEntity] = []
+    for section in ("number", "switch"):
+        for entry in data.get(section) or []:
+            getter = entry.get("lambda")
+            found = _GETTER_GLOBAL_RE.findall(getter) if isinstance(getter, str) else []
+            entities.append(
+                _TunableEntity(
+                    section,
+                    str(entry.get("id")),
+                    str(entry.get("name") or ""),
+                    found[0] if len(found) == 1 else None,
+                )
+            )
+    return entities
+
+
+def _unregistered_entities(
+    text: str, registry: Mapping[str, TunableDef], retiring: frozenset[str] | set[str]
+) -> list[str]:
+    """Numbers and switches with neither a registry row nor a ``retiring`` entry.
+
+    An entity is registered when ``_esphome_object_id(name)`` is some row's
+    ``esp_object_id``, or the global its getter returns is a registry key.
+    Empty when the catalog is complete.
+    """
+    esp_object_ids = {spec.esp_object_id for spec in registry.values() if spec.esp_object_id}
+    return [
+        f"{entity.section} {entity.entity_id} (name {entity.name!r}, global {entity.global_id})"
+        for entity in _tunable_entities(text)
+        if _esphome_object_id(entity.name) not in esp_object_ids
+        and entity.global_id not in registry
+        and entity.entity_id not in retiring
+    ]
+
+
+# The L01 bridge's pre-engine entities (irrigation §6.5) and the REGISTRY rows that
+# stay for each until #1165's follow-up (VD-47): the sw_irrig_* switches with their
+# sw_irrigation_* alias rows, and the two run-now durations.
+_L01_BRIDGE_ROWS: dict[str, tuple[str, ...]] = {
+    "sw_irrig_enabled": ("sw_irrig_enabled", "sw_irrigation_enabled"),
+    "sw_irrig_wall_enabled": ("sw_irrig_wall_enabled", "sw_irrigation_wall_enabled"),
+    "sw_irrig_center_enabled": ("sw_irrig_center_enabled", "sw_irrigation_center_enabled"),
+    "sw_irrig_south_enabled": ("sw_irrig_south_enabled",),
+    "sw_irrig_west_enabled": ("sw_irrig_west_enabled",),
+    "sw_irrig_weather_skip": ("sw_irrigation_weather_skip",),
+    "num_irrig_wall_duration": ("irrig_wall_duration_min",),
+    "num_irrig_center_duration": ("irrig_center_duration_min",),
+}
 
 
 class TestDriftGuard:
@@ -182,6 +285,93 @@ class TestDriftGuard:
             )
         if mismatched:
             pytest.fail(f"Clamp drift detected in {len(mismatched)} tunables:\n  " + "\n  ".join(mismatched))
+
+    def test_every_tunables_number_and_switch_is_registered_or_retiring(self, tunables_yaml: str) -> None:
+        """US-SET-01: Settings lists every REGISTRY row, so the catalog is every setting (VD-63).
+
+        A tunables.yaml number or switch with no registry row is invisible in
+        Settings and its readback is rejected by SetpointSnapshot. Each one
+        needs a row (writable, or read-only with a reason) or an entry in
+        RETIRING_TUNABLES, the entities the engine release removes.
+        """
+        entities = _tunable_entities(tunables_yaml)
+        # 142 numbers and switches since VD-47 retired 25 of them.
+        assert len(entities) > 120, f"tunables.yaml entity parse came back short: {len(entities)}"
+        missing = _unregistered_entities(tunables_yaml, REGISTRY, RETIRING_TUNABLES)
+        assert not missing, (
+            f"{len(missing)} tunables.yaml entities have no REGISTRY row and are not in RETIRING_TUNABLES "
+            "(verdify_schemas/tunable_registry.py); add a row or, if the next release removes the entity, "
+            "a RETIRING_TUNABLES entry:\n  " + "\n  ".join(missing)
+        )
+
+    def test_catalog_guard_fails_on_an_unregistered_number(self) -> None:
+        """The guard above on a synthetic snippet: one unregistered number fails it."""
+        snippet = textwrap.dedent(
+            """\
+            number:
+              - platform: template
+                id: num_mister_hysteresis_kpa
+                name: "Mister Hysteresis (kPa)"
+                lambda: "return id(mister_hysteresis_kpa);"
+              - platform: template
+                id: num_renamed_engage
+                name: "Renamed Engage Threshold"
+                lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mister_engage_kpa, id(mister_engage_kpa));"
+              - platform: template
+                id: num_brand_new_knob
+                name: "Brand New Knob (s)"
+                lambda: "return id(brand_new_knob_s);"
+              - platform: template
+                id: num_post_feed_hold_min
+                name: "Post Feed Hold (min)"
+                lambda: "return id(post_feed_hold_min);"
+            switch:
+              - platform: template
+                id: sw_onchip_band_enabled_switch
+                name: "On-Chip Band Enabled"
+                lambda: "return id(sw_onchip_band_enabled);"
+            button:
+              - platform: template
+                id: btn_unregistered
+                name: "Unregistered Button"
+            """
+        )
+        assert len(_tunable_entities(snippet)) == 5
+        # Matched by object_id, by the getter's global (twice) and by the
+        # retiring set; only the brand-new number fails, named. (The set is
+        # explicit: since VD-47 RETIRING_TUNABLES holds only the L01 bridge's.)
+        retiring = frozenset({"num_post_feed_hold_min"})
+        assert _unregistered_entities(snippet, REGISTRY, retiring) == [
+            "number num_brand_new_knob (name 'Brand New Knob (s)', global brand_new_knob_s)"
+        ]
+        assert not _unregistered_entities(snippet, REGISTRY, retiring | {"num_brand_new_knob"})
+        # Without its retiring entry the unrowed hold fails too.
+        assert len(_unregistered_entities(snippet, REGISTRY, frozenset())) == 2
+
+    def test_retiring_tunables_are_live_or_the_l01_bridge(self, tunables_yaml: str) -> None:
+        """A RETIRING_TUNABLES entry is a live entity the next release removes, or one of the L01
+        bridge's pre-engine entities (VD-47, #1162): their entities left the YAML, but the rows
+        behind them stay, routed, until #1165's follow-up retires the rows and empties the set."""
+        entity_ids = {entity.entity_id for entity in _tunable_entities(tunables_yaml)}
+        gone = RETIRING_TUNABLES - entity_ids
+        assert gone == set(_L01_BRIDGE_ROWS), (
+            "RETIRING_TUNABLES names entities tunables.yaml no longer has that are not the L01 bridge's: "
+            f"{sorted(gone - set(_L01_BRIDGE_ROWS))}; bridge entities still listed: "
+            f"{sorted(set(_L01_BRIDGE_ROWS) - gone)}"
+        )
+        numbers, switches = _parse_entities(tunables_yaml)
+        for entity_id, rows in _L01_BRIDGE_ROWS.items():
+            for name in rows:
+                spec = REGISTRY[name]
+                # Still routed for the pre-engine firmware, but no entity in this release.
+                assert spec.esp_object_id and spec.esp_object_id not in numbers | switches, (entity_id, name)
+                assert name not in _ENTITY_NAMES, name
+                # Its own step, label and unit (the entity's), and no firmware clamp.
+                assert spec.step == 1.0 and spec.label and spec.notes, name
+                assert spec.fw_clamp_lo is None and spec.fw_clamp_hi is None, name
+                assert spec.control_class == "controller_safety" and not spec.planner_pushable, name
+        for name in ("irrig_wall_duration_min", "irrig_center_duration_min"):
+            assert (REGISTRY[name].unit, planner_effective_bounds(name)) == ("min", (1.0, 120.0))
 
     def test_controls_setpoints_are_not_literal_policy(self, controls_yaml: str) -> None:
         """Setpoints fields must come from globals/handler values, not local
@@ -355,6 +545,52 @@ class TestDriftGuard:
         assert "direct_wet_stress_latest_hour" not in TIER1_REG
         assert "direct_wet_stress_latest_hour" not in PLANNER_PUSHABLE_REG
         assert REGISTRY["direct_wet_stress_latest_hour"].control_class == "retired"
+        for param in IRRIGATION_SITE_PARAMS:
+            assert REGISTRY[param].control_class == "irrigation_site"
+            assert param not in PLANNER_PUSHABLE_REG
+
+    def test_irrigation_site_rows_are_program_bound_and_writable(self) -> None:
+        """#1152: the SAF-4 ceiling, the scheduled-mist RH ceiling and climate yield (irrigation §4.1).
+
+        Writable settings (a default, min, max and step; not retired) with no entity and no
+        cfg_* readback: they reach the controller only inside the irrigation program record,
+        so the dispatcher has no route for them and the program hash confirms them.
+        """
+        assert IRRIGATION_SITE_PARAMS == {"mister_daily_volume_max_gal", "sched_mist_rh_max_pct", "climate_yield_min"}
+        assert {n for n, d in REGISTRY.items() if d.control_class == "irrigation_site"} == IRRIGATION_SITE_PARAMS
+        expected = {
+            "mister_daily_volume_max_gal": (360.0, 100.0, 600.0, 10.0, "SAF-4 ceiling", "gal"),
+            "sched_mist_rh_max_pct": (90.0, 75.0, 98.0, 1.0, "Scheduled-mist RH ceiling", "%"),
+            "climate_yield_min": (15.0, 5.0, 30.0, 1.0, "Climate yield", "min"),
+        }
+        for name, (default, lo, hi, step, label, unit) in expected.items():
+            spec = REGISTRY[name]
+            assert (spec.default, spec.min, spec.max, spec.step, spec.label, spec.unit) == (
+                default,
+                lo,
+                hi,
+                step,
+                label,
+                unit,
+            )
+            assert spec.kind == "numeric"
+            assert spec.esp_object_id is None and spec.cfg_readback_object_id is None
+            assert spec.fw_clamp_lo is None and spec.fw_clamp_hi is None
+            assert spec.push_owner == "operator" and not spec.planner_pushable and spec.tier == 2
+            assert spec.wire_id is None
+            assert spec.notes == "Delivered in the irrigation program; confirmed by its hash"
+            assert name not in RETIRED_TUNABLES_REG and name in ACTIVE_TUNABLES_REG
+            assert name not in SETPOINT_MAP_REG.values() and name not in CFG_READBACK_MAP_REG.values()
+            assert planner_effective_bounds(name) == (lo, hi)
+            assert lo <= default <= hi and default % step == 0
+            assert registry_value_error(name, default) is None
+            assert registry_value_error(name, hi + step) is not None
+        # A planner-shaped row with no entity stays read-only context; the site rows are the exception.
+        assert REGISTRY["fallback_window_s"].control_class == "readback_context"
+        stray = REGISTRY["mister_daily_volume_max_gal"].model_copy(update={"name": "stray_site_value"})
+        assert tunable_control_class("stray_site_value", stray) == "readback_context"
+        # The retired check still wins.
+        assert tunable_control_class("mister_on_s", REGISTRY["mister_on_s"]) == "retired"
 
     def test_registry_value_error_reports_bounds_and_nearest_safe(self) -> None:
         err = registry_value_error("mister_all_kpa", 2.8)
@@ -416,14 +652,9 @@ class TestActivityDirectWetGuards:
             assert row.control_class == "scheduled_policy"
             assert row.push_owner == "schedule"
             assert row.cfg_readback_object_id  # readback visibility preserved
+        # VD-47 retired the day-mask rows with their cfg_* readbacks.
         for name in self.RETIRED_IRRIGATION_MASKS:
-            row = REGISTRY[name]
-            assert not row.planner_pushable
-            assert row.control_class == "retired"
-            assert row.push_owner == "firmware_internal"
-            assert row.esp_object_id is None
-            assert row.default == 0
-            assert row.cfg_readback_object_id
+            assert name not in REGISTRY
         for name in (
             "direct_wet_stress_vpd_margin_kpa",
             "direct_wet_stress_min_dew_margin_f",
@@ -447,11 +678,10 @@ class TestActivityDirectWetGuards:
             "const bool west_wet_allowed = false",
             "const bool center_wet_allowed = climate_wet_assist_demand",
             "direct_wet_relay_watchdog",
-            "id(south_wall_mister).turn_off();",
-            "id(west_wall_mister).turn_off();",
-            "id(south_wall_mister_fertilized).turn_off();",
-            "id(west_wall_mister_fertilized).turn_off();",
-            "id(center_drips_fertilized).turn_off();",
+            # #1160: the climate path closes only what the irrigation engine's own run does not hold.
+            "irr_climate_close(id(south_wall_mister), verdify_irr::kL07);",
+            "irr_climate_close(id(west_wall_mister), verdify_irr::kL09);",
+            "if(!center_wet_allowed) irr_climate_close(id(center_mister), verdify_irr::kL04);",
             "|| !any_mister_wet_allowed",
             "active_zone_gate_closed",
             "if(center_wet_allowed) return 3",
@@ -467,30 +697,32 @@ class TestActivityDirectWetGuards:
         assert not missing, f"Mister direct-wet gate coverage missing: {missing}"
         assert "crop_direct_wet_allowed" not in controls_yaml
 
-    def test_irrigation_state_machine_gates_explicit_clean_and_weekly_wall_feed(self, controls_yaml: str) -> None:
-        required = [
+    def test_the_irrigation_engine_replaced_the_job_machine(self, controls_yaml: str, greenhouse_yaml: str) -> None:
+        """#1160 (F1, F14): the engine package runs every drip, feed and scheduled window; the job
+        machine, its explicit-clean and weekly-feed gates and its leak cancel are gone."""
+        assert "irrigation: !include greenhouse/irrigation_engine.yaml" in greenhouse_yaml
+        for gone in (
             "WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED",
             "WetCommandOrigin::EXPLICIT_IRRIGATION",
-            "weekly_wall_feed_eligible(eligibility, weekly_state, durations)",
-            "persist_weekly_and_sync(claimed, 0)",
-            "return;  // weekly owner excludes every explicit clean writer",
-            "id(irrig_queue) &= (1 | 4);",
-            "id(wall_drips).turn_off();",
-            "id(wall_drips_fertilized).turn_off();",
-            "id(center_drips).turn_off();",
-            "id(center_drips_fertilized).turn_off();",
-            "id(fertilizer_master_valve).turn_off();",
-            "direct_wet_relay_watchdog",
-            'cancel_all("leak")',
-            'cancel_all("irrigation disabled")',
-            'ESP_LOGW("irrig", "EXPLICIT CLEAN REJECTED: %s"',
-        ]
-        missing = [needle for needle in required if needle not in controls_yaml]
-        assert not missing, f"Irrigation direct-wet gate coverage missing: {missing}"
+            "weekly_wall_feed_eligible",
+            "persist_weekly_and_sync",
+            "cancel_all(",
+            "irrig_state",
+            "id(irrig_queue)",
+            "water_controller_actuating",
+            "fert_controller_actuating",
+            "climate_wet_controller_actuating",
+        ):
+            assert gone not in controls_yaml, gone
+        # A drip run of the engine holds the water for climate mist and fog.
+        assert "const bool irrigation_water_conflict = irr_drip_active();" in controls_yaml
+        assert "bool irrigation_block = irrigation_water_conflict;" in controls_yaml
 
     def test_climate_wet_watchdog_covers_only_climate_owned_relays(
         self, controls_yaml: str, hardware_yaml: str
     ) -> None:
+        """#1160 (F5): the watchdog closes only climate misters the engine does not hold, and the
+        per-tick fertilizer offs are gone: the program's enables and the engine's runs decide."""
         wet_relays = {
             "south_wall_mister",
             "south_wall_mister_fertilized",
@@ -501,38 +733,45 @@ class TestActivityDirectWetGuards:
             "center_mister",
             "center_drips",
             "center_drips_fertilized",
+            "fertilizer_master_valve",
         }
         missing_hardware = [relay for relay in wet_relays if f"id: {relay}" not in hardware_yaml]
         assert not missing_hardware, f"Expected wet relay missing from hardware.yaml: {missing_hardware}"
 
         watchdog = controls_yaml.split("auto direct_wet_relay_watchdog", 1)[1].split("};", 1)[0]
-        climate_owned = {
-            "south_wall_mister",
-            "south_wall_mister_fertilized",
-            "west_wall_mister",
-            "west_wall_mister_fertilized",
-            "center_mister",
+        for relay, line in (("south_wall_mister", "L07"), ("west_wall_mister", "L09"), ("center_mister", "L04")):
+            assert f"irr_climate_close(id({relay}), verdify_irr::k{line});" in watchdog
+        assert ".turn_off();" not in watchdog
+        for engine_owned in (
+            "wall_drips",
+            "wall_drips_fertilized",
+            "center_drips",
             "center_drips_fertilized",
-        }
-        missing_watchdog = [relay for relay in climate_owned if f"id({relay}).turn_off();" not in watchdog]
-        assert not missing_watchdog, f"Direct-wet watchdog does not close relays: {missing_watchdog}"
-        for irrigation_owned in ("wall_drips", "wall_drips_fertilized", "center_drips"):
-            assert f"id({irrigation_owned}).turn_off();" not in watchdog
+            "south_wall_mister_fertilized",
+            "west_wall_mister_fertilized",
+            "fertilizer_master_valve",
+        ):
+            assert f"id({engine_owned})" not in watchdog
+        # No climate path writes a fertilizer relay's OFF every tick any more.
+        for relay in ("center_drips_fertilized", "wall_drips_fertilized", "fertilizer_master_valve"):
+            assert f"id({relay}).turn_off();" not in controls_yaml
 
-    def test_legacy_fert_day_masks_cannot_schedule_actuation(self, controls_yaml: str) -> None:
-        required = [
-            "WeeklyWallEligibilityInput eligibility",
-            "current_solar_phase",
-            "solar_day, 7u",
-            "weekly_wall_feed_eligible(eligibility, weekly_state, durations)",
-        ]
-        missing = [needle for needle in required if needle not in controls_yaml]
-        assert not missing, f"Weekly solar scheduler coverage missing: {missing}"
+    def test_legacy_schedule_globals_cannot_schedule_actuation(self, controls_yaml: str) -> None:
+        """#1160: schedules are the irrigation program's; no legacy schedule global or weekly
+        eligibility gate is read by the control path (VD-47 deleted the globals with their cfg
+        readbacks)."""
+        for gone in ("WeeklyWallEligibilityInput", "weekly_wall_feed_eligible", "solar_day, 7u"):
+            assert gone not in controls_yaml
         for retired_scheduler_field in (
             "irrig_wall_fert_days_mask",
             "irrig_wall_fert_every_n",
             "irrig_center_fert_days_mask",
             "irrig_center_fert_every_n",
+            "irrig_wall_duration_min",
+            "irrig_center_duration_min",
+            "irrig_wall_enabled",
+            "irrig_center_enabled",
+            "irrig_enabled",
         ):
             assert f"id({retired_scheduler_field})" not in controls_yaml
 
@@ -542,20 +781,26 @@ class TestActivityDirectWetGuards:
         assert not row.planner_pushable
         assert row.push_owner == "operator"
 
-    def test_wall_fert_is_automatic_wall_only_and_not_manually_queued(
-        self, controls_yaml: str, tunables_yaml: str
+    def test_fertilizer_runs_only_through_the_engine_grant(
+        self, controls_yaml: str, hardware_yaml: str, tunables_yaml: str
     ) -> None:
-        required = [
-            "WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED",
-            "WetZone::WALL_DRIP, WetChemistry::FERTILIZER",
-            "id(wall_drips_fertilized).turn_on();",
-            "id(fertilizer_master_valve).turn_on();",
-            "id(wall_drips_fertilized).turn_off();",
-            "id(fertilizer_master_valve).turn_off();",
-            "WALL IMMEDIATE CLEAN FLUSH",
-        ]
-        missing = [needle for needle in required if needle not in controls_yaml]
-        assert not missing, f"Automatic wall-only fertigation missing from controls.yaml: {missing}"
+        """#1160 (F5, D-IRP-14): every fertilizer line is a per-line enable in the program; its relay,
+        and L03, open only with the engine's grant, never unconditionally off and never from a button."""
+        for relay, line in (
+            ("wall_drips_fertilized", "L02"),
+            ("center_drips_fertilized", "L06"),
+            ("south_wall_mister_fertilized", "L08"),
+            ("west_wall_mister_fertilized", "L10"),
+            ("fertilizer_master_valve", "L03"),
+        ):
+            start = hardware_yaml.index(f"    id: {relay}\n")
+            end = hardware_yaml.find("\n  - platform:", start)
+            block = hardware_yaml[start:end]
+            guard = block.split("on_turn_on:", 1)[1].split("on_turn_off:", 1)[0]
+            assert f"if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::k{line}))) {{" in guard
+            assert f'ESP_LOGE("irrig","Blocked ungranted {relay} ON");' in guard
+            assert "Blocked disabled" not in block
+        assert "WALL IMMEDIATE CLEAN FLUSH" not in controls_yaml
         for retired_button in (
             "btn_wall_fert",
             "btn_center_fert",
@@ -687,24 +932,13 @@ class TestPlannerWriteContractLockout:
     def test_dehum_vent_hold_readback_route_is_registry_derived_only(self) -> None:
         """#420 reconciliation: exactly ONE authoritative CFG route.
 
-        The manual PR #421 entry in _CFG_READBACK_ADDED_FW_V2 merges LAST into
-        CFG_READBACK_MAP, so a leftover copy would shadow the registry-derived
-        route with the old unregistered param name and setpoint_snapshot rows
-        would keep being rejected (issue #420 break (b)).
+        A hand-written route for this readback would shadow the registry-derived
+        one with the old unregistered param name, and setpoint_snapshot rows
+        would keep being rejected (issue #420 break (b)). CFG_READBACK_MAP must
+        resolve it to the registry row.
         """
-        from verdify_schemas.tunable_registry import CFG_READBACK_MAP_REG
-
         assert CFG_READBACK_MAP_REG["cfg___dehum_vent_hold_enabled"] == "sw_dehum_vent_hold_enabled"
-        for p in reversed((str(REPO_ROOT / "ingestor"), "/srv/verdify/ingestor", "/mnt/iris/verdify/ingestor")):
-            if p not in sys.path:
-                sys.path.insert(0, p)
-        from entity_map import _CFG_READBACK_ADDED_FW_V2, CFG_READBACK_MAP
-
-        assert "cfg___dehum_vent_hold_enabled" not in _CFG_READBACK_ADDED_FW_V2, (
-            "manual #421 route resurrected — it shadows the registry-derived route "
-            "(merge order puts _CFG_READBACK_ADDED_FW_V2 last in CFG_READBACK_MAP)"
-        )
-        assert CFG_READBACK_MAP["cfg___dehum_vent_hold_enabled"] == "sw_dehum_vent_hold_enabled"
+        assert _entity_map().CFG_READBACK_MAP["cfg___dehum_vent_hold_enabled"] == "sw_dehum_vent_hold_enabled"
 
     def test_set_plan_drops_band_owned_before_insert_and_rejects_non_policy(self) -> None:
         """set_plan's write path enforces the contract: band-owned params are
@@ -839,11 +1073,6 @@ def _label_mismatches(registry: Mapping[str, TunableDef], tunables_text: str) ->
     return mismatches
 
 
-def _wire_slug(display_name: str) -> str:
-    """ESPHome's per-character object_id normalization (aioesphomeapi slug)."""
-    return "".join(char if char.isascii() and char.isalnum() else "_" for char in display_name.lower())
-
-
 class TestStepLabelUnitDriftGuard:
     def test_registry_steps_match_tunables_yaml(self, tunables_yaml: str) -> None:
         numbers, switches = _parse_entities(tunables_yaml)
@@ -965,7 +1194,7 @@ class TestStepLabelUnitDriftGuard:
             rebuilt = f"Cfg • {spec.label}" + (f" ({spec.unit})" if spec.unit else "")
             if rebuilt not in readback_names:
                 missing.append(f"{name}: {rebuilt!r}")
-            elif _wire_slug(rebuilt) != spec.cfg_readback_object_id:
+            elif _esphome_object_id(rebuilt) != spec.cfg_readback_object_id:
                 rewired.append(f"{name}: {spec.cfg_readback_object_id!r} != slug of {rebuilt!r}")
         assert not missing, "anchor label/unit match no sensors.yaml name:\n  " + "\n  ".join(missing)
         assert not rewired, "anchor cfg_readback_object_id changed:\n  " + "\n  ".join(rewired)
@@ -1011,3 +1240,142 @@ class TestStepLabelUnitDriftGuard:
     )
     def test_split_entity_name(self, name: str, expected: tuple[str, str | None]) -> None:
         assert split_entity_name(name) == expected
+
+
+# ─── VD-63: the six firmware tunables that had no row, and the dead fog rows ───
+#
+# name: (kind, min, max, step, default, esp_object_id, cfg_readback_object_id,
+#        push_owner, control_class). Bounds equal the fw_clamp pair. The ids are
+# what the device reports (the native-API capture under
+# docs/handoffs/s1-2026-10-05/evidence/424-source81/ lists the five live ones).
+_VD63_ROWS: dict[str, tuple] = {
+    "mister_hysteresis_kpa": (
+        "numeric",
+        0.05,
+        0.50,
+        0.01,
+        0.10,
+        "mister_hysteresis__kpa_",
+        "cfg___mister_hysteresis__kpa_",
+        "operator",
+        "controller_safety",
+    ),
+    "night_stress_min_dew_margin_f": (
+        "numeric",
+        3.0,
+        15.0,
+        0.5,
+        6.0,
+        "night_stress_min_dew_margin___f_",
+        "cfg___night_stress_min_dew_margin___f_",
+        "safety",
+        "controller_safety",
+    ),
+    "sw_night_econ_heat_suppress_enabled": (
+        "switch",
+        None,
+        None,
+        1.0,
+        1.0,
+        "night_econ_heat_suppress_enabled",
+        "cfg_night_econ_heat_suppress_enabled",
+        "operator",
+        "controller_safety",
+    ),
+    "sw_wet_taper_enabled": (
+        "switch",
+        None,
+        None,
+        1.0,
+        1.0,
+        "wet_taper_enabled",
+        "cfg_wet_taper_enabled",
+        "operator",
+        "controller_safety",
+    ),
+    "sw_night_stress_wet_enabled": (
+        "switch",
+        None,
+        None,
+        1.0,
+        1.0,
+        "night_stress_wet_enabled",
+        "cfg_night_stress_wet_enabled",
+        "operator",
+        "controller_safety",
+    ),
+    "sw_onchip_band_enabled": (
+        "switch",
+        None,
+        None,
+        None,
+        1.0,
+        None,
+        "cfg_on-chip_band_enabled",
+        "firmware_internal",
+        "readback_context",
+    ),
+}
+
+
+class TestRegisteredFirmwareTunables:
+    @pytest.mark.parametrize("name", sorted(_VD63_ROWS))
+    def test_row_contract(self, name: str) -> None:
+        kind, lo, hi, step, default, esp_id, cfg_id, owner, control_class = _VD63_ROWS[name]
+        spec = REGISTRY[name]
+        assert (spec.kind, spec.min, spec.max, spec.step, spec.default) == (kind, lo, hi, step, default)
+        assert (spec.fw_clamp_lo, spec.fw_clamp_hi) == (lo, hi)
+        assert (spec.esp_object_id, spec.cfg_readback_object_id) == (esp_id, cfg_id)
+        assert (spec.push_owner, spec.control_class) == (owner, control_class)
+        # Outside the policy wire and never planner-pushable: Iris's
+        # set_tunable keeps refusing it; set_setting writes it within bounds.
+        assert not spec.planner_pushable and spec.tier == 2 and spec.wire_id is None
+        assert name not in PLANNER_PUSHABLE_REG and name not in TIER1_REG
+        assert spec.label and spec.notes
+        if lo is not None:
+            assert registry_value_error(name, hi) is None
+            assert registry_value_error(name, hi + step) is not None
+
+    def test_onchip_band_is_read_only_with_its_reason(self, tunables_yaml: str) -> None:
+        spec = REGISTRY["sw_onchip_band_enabled"]
+        assert spec.esp_object_id is None, "a push route would make the band owner writable"
+        assert spec.notes.startswith("Decides which side owns the band.")
+        # With no esp_object_id the step and label guards skip this row, so its
+        # own label is checked here against the switch whose getter returns it.
+        (entity,) = [e for e in _tunable_entities(tunables_yaml) if e.global_id == "sw_onchip_band_enabled"]
+        assert entity.section == "switch"
+        assert (spec.label, spec.unit) == split_entity_name(entity.name) == ("On-Chip Band Enabled", None)
+
+    def test_readback_routes_derive_from_the_rows_only(self) -> None:
+        entity_map = _entity_map()
+        assert not hasattr(entity_map, "_CFG_READBACK_ADDED_FW_V2")
+        assert entity_map.CFG_READBACK_MAP == {**CFG_READBACK_MAP_REG, **CFG_READBACK_ALIASES_REG}
+        for name, row in _VD63_ROWS.items():
+            esp_id, cfg_id = row[5], row[6]
+            assert entity_map.CFG_READBACK_MAP[cfg_id] == name
+            if esp_id is None:
+                assert name not in entity_map.SETPOINT_MAP.values()
+            else:
+                assert entity_map.SETPOINT_MAP[esp_id] == name
+            # #420 break (b): the snapshot writer used to reject these params.
+            SetpointSnapshot(ts=datetime(2026, 11, 2, tzinfo=UTC), parameter=name, value=row[4])
+        # The stopgap's C++-id keys, which the device never sends, are gone.
+        stopgap_keys = {
+            "cfg_night_stress_min_dew_margin_f",
+            "cfg_sw_onchip_band_enabled",
+            "cfg_sw_wet_taper_enabled",
+            "cfg_sw_night_stress_wet_enabled",
+            "cfg_sw_night_econ_heat_suppress_enabled",
+        }
+        assert not stopgap_keys & set(entity_map.CFG_READBACK_MAP)
+
+    def test_fog_time_windows_are_retired_without_routes(self) -> None:
+        entity_map = _entity_map()
+        for name in ("fog_time_window_start", "fog_time_window_end"):
+            spec = REGISTRY[name]
+            assert name in RETIRED_TUNABLES_REG and spec.control_class == "retired"
+            assert spec.esp_object_id is None and spec.cfg_readback_object_id is None
+            assert name not in entity_map.SETPOINT_MAP.values()
+            assert name not in entity_map.CFG_READBACK_MAP.values()
+            # History rows still validate.
+            SetpointSnapshot(ts=datetime(2026, 6, 10, tzinfo=UTC), parameter=name, value=spec.default)

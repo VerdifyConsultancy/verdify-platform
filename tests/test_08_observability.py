@@ -212,7 +212,10 @@ class TestDispatcherWiring:
         assert "forcing %d band setpoint(s)" not in body
         assert "RECONNECT_UNOBSERVED_RESTORE_PARAMS" in body
         assert "MAX_RECONNECT_COMMANDS = 12" in body
-        assert "action=blocked_broad_restore" in body
+        # VD-62 plain convergence: a broad delta is paced, never blocked or staged.
+        assert "action=blocked_broad_restore" not in body
+        assert "action=blocked_stage" not in body
+        assert "_pace_ordinary_changes(" in body
         assert "shared.current_cfg_readbacks(reconnect_generation)" in body
         assert "shared.transport_readbacks_ready(reconnect_generation)" in body
         assert "action=awaiting_readbacks" in ingestor

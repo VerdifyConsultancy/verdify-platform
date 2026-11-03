@@ -1,4 +1,6 @@
 # #1022: sole ESP32 writer; exact Shelly TCP/502 exception approved by Jason.
+# #1183 (VD-70): the YINMIK hydro meter's reserved address on Tuya local TCP/6668,
+# read-only status() polls. No UDP 6666/6667: the reader never listens for discovery.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -40,12 +42,16 @@ spec:
       port: 502
   - to:
     - ipBlock:
+        cidr: 192.168.10.105/32
+    ports:
+    - protocol: TCP
+      port: 6668
+  - to:
+    - ipBlock:
         cidr: 192.168.30.107/32
     ports:
     - protocol: TCP
       port: 8123
-    - protocol: TCP
-      port: 1883
   - to:
     - podSelector:
         matchLabels:

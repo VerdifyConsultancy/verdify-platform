@@ -28,12 +28,16 @@ has prune off, and their `IgnoreExtraneous` annotation keeps them out of the syn
 
 ## Sign-in failures
 
+A refused sign-in is SCR-09's card at the URL that refused it, with the refusal's status and the request id, which
+is the `request_id` of the web pod's log line for that request.
+
 | What people see | Meaning | Look at |
 |---|---|---|
-| "Sign-in is unavailable. Try again in a minute." (503 from `/auth/login`) | The BFF cannot fetch the issuer's discovery document | `authentik` in `/readyz`; the discovery fetch below |
-| "Sign-in didn't complete" (400 from `/auth/callback`) | State mismatch, a login cookie older than 10 minutes, an Authentik error or a failed code exchange | The web pod's `/auth/callback` log lines; the redirect URI and the client secret |
+| The "Sign-in is unavailable" card (503 at `/auth/login`) | The BFF cannot fetch the issuer's discovery document | `authentik` in `/readyz`; the discovery fetch below |
+| The same card as a 503 at `/auth/callback` | Authentik's token endpoint did not answer (or answered 5xx), or the operator API refused or missed INT-01, for example a mismatched `operator-api-token` | `authentik` and `operator_api` in `/readyz`; the operator API's INT-01 line with the callback's `request_id` |
+| The "Sign-in didn't complete" card (400 at `/auth/callback`) | State mismatch, a login cookie older than 10 minutes, an Authentik error or a failed code exchange | The web pod's `/auth/callback` log lines; the redirect URI and the client secret |
 | An Authentik error page before the dashboard comes back | Authentik refused the authorize request, usually a redirect URI it does not list | The provider's redirect URIs |
-| "No access" (403), or Authentik's own permission page | The account is in neither dashboard group | The person's groups |
+| The "No dashboard access" card (403 at `/auth/callback`), or Authentik's own permission page | The account is in neither dashboard group | The person's groups |
 
 The discovery URL fetched from the web pod must print 200 (this is also R1's live check):
 
@@ -104,7 +108,15 @@ kubectl -n verdify-dashboard exec deploy/verdify-dashboard-web -- node -e \
 
 - Its `/readyz` answers `{status, source_revision}` once its pool runs `SELECT 1` as
   `verdify_dashboard_runtime_login`, which attests itself on connect. Not ready points at `verdify-db`, the
-  `allow-db-from-app` policy (it admits `operator-api`) or Secret `verdify-dashboard-runtime-db`.
+  `allow-db-from-app` policy (it admits `operator-api`) or Secret `verdify-dashboard-runtime-db`. The pod logs one
+  `{"event":"not_ready","error":...}` line each time the cause changes: `AttestationError` means the login connected
+  but `verdify_dashboard_runtime.fn_attest_login()` was not true (its role settings, membership or grants drifted).
+  `InvalidPasswordError` covers three causes, because `verdify-db` checks remote logins with `scram-sha-256` and
+  answers them alike: the login does not exist yet (migration 282 has not run), it has no password yet (the role
+  bootstrap has not set one from Secret `verdify-dashboard-runtime-db`), or the Secret holds another value. The
+  `verdify-db-0` log names which one. `TooManyConnectionsError` means the login's `CONNECTION LIMIT 8` is used up.
+  `TimeoutError` or a connection error points at `verdify-db` or the network path. A pod that exits at start with a
+  `ConfigError` names the setting it refused.
 - `/healthz` from the web pod timing out points at `allow-operator-api-from-dashboard-web` in `verdify-prod`. It
   admits TCP 8090 only from pods labelled `app.kubernetes.io/name: verdify-dashboard-web` in namespace
   `verdify-dashboard`, so a label change on either side breaks it.

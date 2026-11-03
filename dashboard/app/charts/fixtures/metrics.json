@@ -1,0 +1,9 @@
+[
+  {"key": "climate.temp_avg", "label": "Indoor temperature", "group": "house climate", "unit": "°F", "cadence_s": 60, "retention_days": 365, "provenance": "MEASURED", "zone": null, "daily": true, "note": null},
+  {"key": "climate.vpd_avg", "label": "Indoor VPD", "group": "house climate", "unit": "kPa", "cadence_s": 60, "retention_days": 365, "provenance": "DERIVED", "zone": null, "daily": true, "note": null},
+  {"key": "climate.rh_avg", "label": "Indoor RH", "group": "house climate", "unit": "%", "cadence_s": 60, "retention_days": 365, "provenance": "MEASURED", "zone": null, "daily": true, "note": null},
+  {"key": "climate.outdoor_temp_f", "label": "Outdoor temperature", "group": "outdoor", "unit": "°F", "cadence_s": 60, "retention_days": 365, "provenance": "MEASURED", "zone": null, "daily": false, "note": "Tempest, received by the ESP32 over UDP"},
+  {"key": "climate.soil_moisture_south_1", "label": "Soil moisture south 1", "group": "water and soil", "unit": "%", "cadence_s": 60, "retention_days": 365, "provenance": "MEASURED", "zone": "south", "daily": false, "note": null},
+  {"key": "climate.flow_gpm", "label": "Water flow", "group": "water and soil", "unit": "gal/min", "cadence_s": 60, "retention_days": 365, "provenance": "MEASURED", "zone": null, "daily": false, "note": null},
+  {"key": "diagnostics.heap_free_kb", "label": "Free heap", "group": "controller", "unit": "kB", "cadence_s": 60, "retention_days": 180, "provenance": "MEASURED", "zone": null, "daily": false, "note": null}
+]

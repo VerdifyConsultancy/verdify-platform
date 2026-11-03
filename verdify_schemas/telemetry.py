@@ -267,7 +267,7 @@ class Diagnostics(BaseModel):
 
 # Every equipment_state row asserts one of these. Must cover every value in
 # ingestor/entity_map.py EQUIPMENT_BINARY_MAP + EQUIPMENT_SWITCH_MAP plus the
-# HA-sync emission set in tasks.py (lights, config switches, occupancy).
+# HA-sync emission set in the ingestor tasks package (the Lutron grow lights).
 # Sprint 24 hotfix: added the 16 names topology Sprint 22 missed — without
 # these, equipment_state events were silently dropped at INSERT time.
 EquipmentId = Literal[
@@ -294,12 +294,16 @@ EquipmentId = Literal[
     # Water-safety status (ESP32 BinarySensor, derived in ingestor tasks)
     "water_flowing",
     "leak_detected",
-    # Grow lights — both the legacy short names and the live entity_map ones
+    # Grow lights — both the legacy short names and the live entity_map ones.
+    # grow_light_main/_grow are the Lutron readback (HA); the *_intent pair is
+    # the controller's own switch state (decisions Q-09).
     "gl1",
     "gl2",
     "grow_light",
     "grow_light_main",
     "grow_light_grow",
+    "grow_light_main_intent",
+    "grow_light_grow_intent",
     # Internal controller modes (not emitted today; reserved)
     "dehum",
     "safety_dehum",

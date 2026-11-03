@@ -86,14 +86,21 @@ $PY -m pytest -q -rs \
   tests/test_component_runtime_probe.py \
   tests/test_275_c0_delivery.py \
   tests/test_277_getter_delivery.py \
-  tests/test_282_daily_scorecard_delivery.py \
-  tests/test_metric_registry_completeness.py \
-  tests/test_verdify_services_series.py \
+  tests/test_279_source_clock_delivery.py \
+  tests/test_280_desired_state_delivery.py \
+  tests/test_281_irrigation_minutes_delivery.py \
+  tests/test_282_dashboard_login_delivery.py \
+  tests/test_283_irrigation_tables_delivery.py \
+  tests/test_284_dashboard_grants_delivery.py \
+  tests/test_qualify_migration_successor.py \
+  tests/test_verdify_services_core.py \
+  tests/test_verdify_services_settings.py \
+  tests/test_verdify_services_alerts.py \
   tests/test_realized_solar_night_dryout_timeline.py \
   tests/test_05_dispatcher.py \
+  tests/test_dispatcher_plain_convergence.py \
   tests/test_irrigation_stop_edges.py \
   tests/test_bounded_reconcile.py \
-  tests/test_recovered_confirmation_expiry.py \
   tests/test_10_planner_routing.py \
   tests/test_11_planner_milestones.py \
   tests/test_13_grafana_band_traceability.py \
@@ -145,6 +152,8 @@ $PY -m pytest -q -rs \
   tests/test_cnpg_policy_twin_count_time.py \
   tests/test_cnpg_policy_twin_endpoints.py \
   tests/test_cnpg_physical_client_qualification.py \
+  tests/test_dashboard_dockerfile.py \
+  tests/test_ci_validate_dockerfile.py \
   tests/test_db_backup_retry_classifier.py \
   tests/test_backup_freshness_exporter.py \
   tests/test_action_log_policy_identity.py \
@@ -159,6 +168,8 @@ $PY -m pytest -q -rs \
   tests/test_component_experiment_executor.py \
   tests/test_component_experiment_observability.py \
   tests/test_component_alert_scope.py \
+  tests/test_alert_probe_offline_lifecycle.py \
+  tests/test_alert_leak_lifecycle.py \
   tests/test_264_facility_safe_closure_delivery.py \
   tests/test_component_experiment_source.py \
   tests/test_native_transport_liveness.py \
@@ -167,6 +178,7 @@ $PY -m pytest -q -rs \
   tests/test_component_experiment_store.py \
   tests/test_component_experiment_writer.py \
   tests/test_component_grid_qualification.py \
+  tests/test_qualify_component_containment.py \
   tests/test_esp32_policy_transaction.py \
   tests/test_experiment_api.py \
   tests/test_experiment_gather_mode.py \
@@ -224,8 +236,10 @@ $PY -m pytest -q -rs \
   tests/test_generate_daily_plan.py \
   tests/test_grafana_cm_check.py \
   tests/test_grafana_manifest_security.py tests/test_grafana_saved_public.py tests/test_278_grafana_delivery.py \
-  tests/test_ha_gap_backfill_runtime_boundary.py \
   tests/test_ha_light_writer_boundary.py \
+  tests/test_ha_trim.py \
+  tests/test_hydro_probe.py \
+  tests/test_ingestor_heartbeat.py \
   tests/test_ingestor_setpoint_placement.py \
   tests/test_ingestor_gap_snapshot.py \
   tests/test_source_spool.py \
@@ -280,6 +294,11 @@ $PY -m pytest -q -rs \
   tests/test_twin_agreement_report.py \
   tests/test_twin_asof_migration.py \
   tests/test_twin_live_driver.py \
+  tests/test_verdify_services_reads.py \
+  tests/test_operator_api_contract.py \
+  tests/test_operator_api_auth.py \
+  tests/test_public_api_operator_paths.py \
+  tests/test_operator_api_manifests.py \
   tests/test_verdify_traefik_placement.py \
   tests/test_verdify_tier1_owner_exclusions.py \
   tests/test_dashboard_manifests.py \
@@ -313,7 +332,7 @@ step "firmware native tests: policy engine + §8.10 recovery-image proof (#586),
 # replay-corpus invariants run here and gate every firmware PR. Later suites
 # append their make targets to this list.
 if command -v g++ >/dev/null; then
-  make test-policy-engine test-policy-recovery test-zone-vpd test-greenhouse-logic firmware-invariants
+  make test-policy-engine test-policy-recovery test-zone-vpd test-greenhouse-logic firmware-invariants test-irrigation-program
 else
   echo "SKIP: g++ not available on this host (required in the CI image)"
 fi

@@ -188,11 +188,12 @@ for authoritative defaults, ranges, firmware evidence, readbacks, and live-use
 data.
 
 ### Mister pulse + timing
-- Deprecated/no-op legacy duty-cycle params, not planner-pushable: `mister_on_s`, `mister_off_s`, `mister_all_on_s`, `mister_all_off_s`, `mister_max_runtime_min`
+- Deprecated/no-op legacy duty-cycle params, not planner-pushable: `mister_on_s`, `mister_off_s`, `mister_all_on_s`, `mister_all_off_s` (`mister_max_runtime_min` retired in VD-47: L04's `daily_cap_min` in the irrigation program is the cap)
 - Readback-covered: `mister_engage_delay_s`, `mister_all_delay_s`, `mister_pulse_on_s`, `mister_pulse_gap_s`, `mister_water_budget_gal`, `mister_vpd_weight`
 
-### Equipment timing — relay min on/off (8 tunables)
-- `min_heat_on_s`, `min_heat_off_s`, `min_fan_on_s`, `min_fan_off_s`, `min_vent_on_s`, `min_vent_off_s`, `lead_rotate_s`, `fan_burst_min`, `vent_bypass_min`, `fog_burst_min`
+### Equipment timing — relay min on/off (7 tunables)
+- `min_heat_on_s`, `min_heat_off_s`, `min_fan_on_s`, `min_fan_off_s`, `min_vent_on_s`, `min_vent_off_s`, `lead_rotate_s`
+- Bursts are not tunables: `manual_override(kind, minutes)` and the panel push buttons set the burst latches (VD-47 retired `fan_burst_min`, `vent_bypass_min` and `fog_burst_min` with the Home Assistant buttons)
 - Readback-covered fog timing: `min_fog_on_s`, `min_fog_off_s`
 
 ### Controller dwell gate
@@ -201,6 +202,12 @@ data.
 
 ### Firmware internal (1 tunable)
 - `fallback_window_s` — sensor staleness → firmware reboot threshold
+
+### Firmware-v2 operator controls and the band owner (VD-63)
+- Controller safety, never planner-pushable: `mister_hysteresis_kpa`, `night_stress_min_dew_margin_f` (a safety rail), `sw_night_econ_heat_suppress_enabled`, `sw_wet_taper_enabled`, `sw_night_stress_wet_enabled`. Settings and MCP `set_setting` will write them within bounds once those ship; until then no plan, band or default pushes them, and the rows only route their readbacks.
+- Read-only: `sw_onchip_band_enabled` has no push route; it decides whether the on-chip curve or the dispatcher's legacy limits own the band. Its readback is `cfg_on-chip_band_enabled` (ESPHome keeps the hyphen).
+- Retired with no route: `fog_time_window_start`, `fog_time_window_end` (no firmware entity; the rows stay for history).
+- `test_every_tunables_number_and_switch_is_registered_or_retiring` fails when a `tunables.yaml` number or switch has no registry row and is not in `RETIRING_TUNABLES`. Since VD-47 that set holds only the L01 bridge's pre-engine entities (the `sw_irrig_*` switches and the two run-now durations), whose rows stay until #1165's follow-up retires them.
 
 ### Economiser (3 tunables)
 - `enthalpy_open`, `enthalpy_close`, `site_pressure_hpa`
@@ -214,18 +221,10 @@ data.
 - Firmware blocks misters, drips, fert paths, and flush paths outside the active zone window or below the minimum direct-wet temperature.
 - Stress overrides only bypass the direct-wet/fog time window; RH/temp, direct-wet min temp, occupancy, irrigation, water budget, dew-margin, and latest-hour gates remain deterministic.
 
-### Irrigation — wall
-- Schedule/runtime: `irrig_wall_start_hour`, `irrig_wall_start_min`, `irrig_wall_duration_min`, `irrig_wall_fert_duration_min`, `irrig_wall_flush_min`, `irrig_wall_interval_days`
-- Day masks: `irrig_wall_days_mask`, `irrig_wall_fert_days_mask`
-- Compatibility fallback: `irrig_wall_fert_every_n` only applies when `irrig_wall_fert_days_mask` is zero.
-
-### Irrigation — center
-- Schedule/runtime: `irrig_center_start_hour`, `irrig_center_start_min`, `irrig_center_duration_min`, `irrig_center_fert_duration_min`, `irrig_center_flush_min`, `irrig_center_interval_days`
-- Day masks: `irrig_center_days_mask`, `irrig_center_fert_days_mask`
-- Compatibility fallback: `irrig_center_fert_every_n` only applies when `irrig_center_fert_days_mask` is zero.
-
-### VPD boost (2 tunables)
-- `irrig_vpd_boost_pct`, `irrig_vpd_boost_threshold_hrs`
+### Irrigation
+- Schedules, line enables, caps and fertilizer runs are the irrigation program's (`verdify_schemas/irrigation.py`), pushed whole and confirmed by its hash; the site values `mister_daily_volume_max_gal`, `sched_mist_rh_max_pct` and `climate_yield_min` are registry rows with no entity.
+- The L01 bridge's rows stay until #1165's follow-up: `sw_irrig_enabled`, `sw_irrig_wall_enabled`, `sw_irrig_center_enabled`, `sw_irrig_south_enabled`, `sw_irrig_west_enabled` (with the `sw_irrigation_*` aliases) and `irrig_wall_duration_min`, `irrig_center_duration_min`. Their entities left the engine firmware.
+- Retired in VD-47 with their entities, readbacks and globals: the legacy `irrig_wall_*` and `irrig_center_*` schedule, day-mask and fertilizer-cadence rows, the weekly wall-feed commissioning rows (`sw_wall_fertigation_commissioned`, `wall_*`) and the VPD boost (`irrig_vpd_boost_pct`, `irrig_vpd_boost_threshold_hrs`). A stale plan row naming one is skipped (`RETIRED_UNROUTABLE_PARAMS`).
 
 ### Grow lights
 - Legacy/readback context: `gl_dli_target`, `gl_lux_threshold`, `gl_lux_hysteresis`, `gl_sunrise_hour`, `gl_sunset_hour`

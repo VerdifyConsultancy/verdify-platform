@@ -335,8 +335,16 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "278-grafana-public-saved-query-bounds.sql",
         # Authentic source-clock consumers and successor seals must run forward.
         "279-authentic-meter-source-clock-consumers.sql",
-        # The daily scorecard view and its unchanged-seal checks must run forward (VD-56).
-        "282-daily-scorecard-view.sql",
+        # Desired state, the activity log and their successor seals run forward (VD-30).
+        "280-desired-state-activity-log.sql",
+        # Minutes-by-zone views (M4) and their receipt re-seals run forward only.
+        "281-irrigation-minutes-by-zone.sql",
+        # The dashboard roles' OIDs must come from the forward hook, never baseline history (VD-66).
+        "282-dashboard-runtime-login.sql",
+        # Irrigation tables, seeds and grants (M3) and their receipt re-seals run forward (VD-38).
+        "283-irrigation-tables.sql",
+        # The dashboard login's grants on existing objects (M2b) and their receipt re-seals run forward (VD-74).
+        "284-dashboard-runtime-grants.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

@@ -46,13 +46,19 @@ for tag in ("!secret", "!lambda", "!include"):
     yaml.SafeLoader.add_constructor(tag, lambda loader, node: None)
 
 
-def _slugify(name: str) -> tuple[str, ...]:
-    """Approximate ESPHome's name-to-object_id slugification.
+def _esphome_slug(name: str) -> str:
+    """ESPHome's exact name-to-object_id rule, as the device reports it.
 
-    ESPHome's actual algorithm: lowercase, then replace each char that
-    isn't [a-z0-9] with `_` individually (no collapsing). Trailing
-    underscores are PRESERVED (e.g. "Vent Latch Timer (s)" →
-    `vent_latch_timer__s_`).
+    Lowercase, then replace each character outside [a-z0-9_-] with `_`
+    individually: hyphens survive and underscores are neither collapsed nor
+    trimmed ("Cfg On-Chip Band Enabled" → `cfg_on-chip_band_enabled`,
+    "Vent Latch Timer (s)" → `vent_latch_timer__s_`).
+    """
+    return re.sub(r"[^a-z0-9_-]", "_", name.lower())
+
+
+def _slugify(name: str) -> tuple[str, ...]:
+    """Candidate object_ids for one entity name.
 
     We emit several variants to match across edge cases:
       - tight: collapse runs, strip ends — matches simple names
@@ -60,13 +66,15 @@ def _slugify(name: str) -> tuple[str, ...]:
         with bullets, parens, units in ()
       - loose_stripped: per-char replace, strip ends — older entity_map
         keys sometimes used this style
+      - esphome: ESPHome's exact form (`_esphome_slug`), which keeps
+        hyphens; the other variants turn them into `_`
     """
     s = name.lower()
     tight = re.sub(r"[^a-z0-9]+", "_", s).strip("_")
     per_char = re.sub(r"[^a-z0-9]", "_", s)
     loose = per_char  # preserve all underscores including trailing
     loose_stripped = per_char.strip("_")
-    return (tight, loose, loose_stripped)
+    return (tight, loose, loose_stripped, _esphome_slug(name))
 
 
 def _firmware_entity_ids() -> set[str]:
@@ -74,8 +82,8 @@ def _firmware_entity_ids() -> set[str]:
 
     For each entity, we collect:
       - the explicit `object_id:` (highest precedence)
-      - otherwise both slugifications of `name:` (tight + loose, since
-        ESPHome's exact algorithm depends on platform & character class)
+      - otherwise every `_slugify` candidate of `name:` (ESPHome's exact
+        form plus the older tight/loose spellings entity_map keys used)
       - the C++ `id:` (last-resort match for entities used internally)
     """
     ids: set[str] = set()
@@ -160,7 +168,7 @@ def _firmware_cfg_sensor_wire_ids() -> dict[str, str]:
             name = entry.get("name")
             if not isinstance(sensor_id, str) or not sensor_id.startswith("cfg_") or not isinstance(name, str):
                 continue
-            wire_ids[sensor_id] = str(entry.get("object_id") or _slugify(name)[1])
+            wire_ids[sensor_id] = str(entry.get("object_id") or _esphome_slug(name))
     return wire_ids
 
 
@@ -260,19 +268,15 @@ KNOWN_PRE_EXISTING_DRIFT: dict[str, set[str]] = {
         "fog_stress_min_dew_margin_f",
         "fog_stress_window_extend_enabled",
         "fog_stress_window_latest_hour",
-        "fog_window_end__hr_",
-        "fog_window_start__hr_",
     },
     "CFG_READBACK_MAP": {
         # firmware-v2 (firmware/v2-solar-bands) removed the matching cfg_*
-        # readback sensors for the dropped fog-window / micropulse /
-        # dawn-rehydrate-start / midday-drench / overnight-micropulse /
-        # night-humidity-source entities. Registry rows persist (planner policy
-        # / schedule params), so the registry-derived CFG_READBACK_MAP keeps the
-        # routes. Dead firmware readbacks — accepted drift until the underlying
-        # registry rows are retired.
-        "cfg___fog_window_end__hour_",
-        "cfg___fog_window_start__hour_",
+        # readback sensors for the dropped micropulse / dawn-rehydrate-start /
+        # midday-drench / overnight-micropulse / night-humidity-source
+        # entities. Registry rows persist (planner policy / schedule params),
+        # so the registry-derived CFG_READBACK_MAP keeps the routes. Dead
+        # firmware readbacks — accepted drift until the underlying registry
+        # rows are retired. (VD-63 retired the fog-window rows without routes.)
         "cfg_dawn_rehydrate_start_minute",
         "cfg_direct_wet_stress_latest_hour",
         "cfg_fog_stress_min_dew_margin_f",
@@ -288,6 +292,42 @@ KNOWN_PRE_EXISTING_DRIFT: dict[str, set[str]] = {
         "cfg_overnight_micropulse_enabled",
     },
 }
+
+# The L01 bridge's routes (irrigation §6.5, VD-47, #1162): their entities left
+# the engine firmware, but the pre-engine firmware publishes them until the
+# engine is last-good, so the bridge's REGISTRY rows keep the setpoint and
+# readback routes and EQUIPMENT_SWITCH_MAP keeps the hand-written switch routes.
+# The follow-up that #1165 merges after `make firmware-promote-last-good`
+# retires them and removes these entries, and only these, from the allowlist.
+_L01_BRIDGE_ROUTES: dict[str, set[str]] = {
+    "EQUIPMENT_SWITCH_MAP": {
+        "irrigation_enabled",
+        "irrigation_wall_enabled",
+        "irrigation_center_enabled",
+        "irrigation_weather_skip",
+    },
+    "SETPOINT_MAP": {
+        "irrigation_enabled",
+        "irrigation_wall_enabled",
+        "irrigation_center_enabled",
+        "irrigation_south_enabled",
+        "irrigation_west_enabled",
+        "irrigation_weather_skip",
+        "irrig_wall_duration__min_",
+        "irrig_center_duration__min_",
+    },
+    "CFG_READBACK_MAP": {
+        "cfg_irrig_enabled",
+        "cfg_irrig_wall_enabled",
+        "cfg_irrig_center_enabled",
+        "cfg_irrig_south_enabled",
+        "cfg_irrig_west_enabled",
+        "cfg_irrig_wall_duration_min",
+        "cfg_irrig_center_duration_min",
+    },
+}
+for _map_name, _routes in _L01_BRIDGE_ROUTES.items():
+    KNOWN_PRE_EXISTING_DRIFT.setdefault(_map_name, set()).update(_routes)
 
 # Firmware-v2 STAGED contract (docs/design/firmware-v2-contract-2026-06-10.md
 # §B2/§B7): the dispatcher-side band-anchor tunables are registered and routed
@@ -317,25 +357,31 @@ KNOWN_PRE_EXISTING_DRIFT.setdefault("CFG_READBACK_MAP", set()).update(
 
 def test_retired_irrigation_clocks_fert_cadence_and_center_bursts_are_not_writable(entity_map):
     firmware_ids = _firmware_entity_ids()
+    # VD-47 (F13) deleted the 16 legacy schedule rows with their cfg_* readbacks and globals;
+    # only the two run-now durations stay, for the L01 bridge (irrigation §6.5).
+    legacy_schedule = {
+        f"irrig_{side}_{field}"
+        for side in ("wall", "center")
+        for field in (
+            "start_hour",
+            "start_min",
+            "fert_duration_min",
+            "fert_every_n",
+            "days_mask",
+            "fert_days_mask",
+            "flush_min",
+            "interval_days",
+        )
+    }
+    assert len(legacy_schedule) == 16
+    for name in legacy_schedule:
+        assert name not in REGISTRY, name
+        assert name not in entity_map.SETPOINT_MAP.values(), name
+        assert name not in entity_map.CFG_READBACK_MAP.values(), name
+        assert f"cfg_{name}" not in firmware_ids, name
     retired = {
         "feed_start_hour",
         "feed_end_hour",
-        "irrig_wall_start_hour",
-        "irrig_wall_start_min",
-        "irrig_wall_fert_duration_min",
-        "irrig_wall_fert_every_n",
-        "irrig_wall_days_mask",
-        "irrig_wall_fert_days_mask",
-        "irrig_wall_flush_min",
-        "irrig_wall_interval_days",
-        "irrig_center_start_hour",
-        "irrig_center_start_min",
-        "irrig_center_fert_duration_min",
-        "irrig_center_fert_every_n",
-        "irrig_center_days_mask",
-        "irrig_center_fert_days_mask",
-        "irrig_center_flush_min",
-        "irrig_center_interval_days",
         "sw_dawn_rehydrate_enabled",
         "dawn_rehydrate_window_min",
         "dawn_rehydrate_on_s",
@@ -509,59 +555,275 @@ def test_override_event_schema_matches_firmware_published_tags():
     )
 
 
-def test_irrigation_queue_callers_match_clean_route_matrix():
-    """Queue bit identities are a firmware wire contract, not scratch state.
+# The nine Home Assistant buttons (irrigation §7 HA-01 to HA-03): eight template buttons by id,
+# and the restart platform button, which had no id.
+HA_BUTTON_IDS = (
+    "btn_wall_clean",
+    "btn_center_clean",
+    "fan_burst_btn",
+    "vent_bypass_btn",
+    "fog_burst_btn",
+    "btn_manual_fans",
+    "btn_manual_humidify",
+    "btn_vent_bypass",
+)
+MANUAL_LATCHES = ("manual_fans_until_ms", "manual_fog_until_ms", "vent_bypass_until_ms")
+_ID_WRITE_RE = re.compile(
+    r"\bid\((\w+)\)\s*(?:[-+*/|&^]|<<|>>)?=(?!=)|(?:\+\+|--)\s*id\((\w+)\)|\bid\((\w+)\)\s*(?:\+\+|--)"
+)
 
-    Only the two actual clean buttons may write the queue. This prevents a
-    removed fertilizer button or unknown legacy bit from being reinterpreted as
-    a clean relay request when the scheduler changes.
-    """
-    tunables = (REPO_ROOT / "firmware" / "greenhouse" / "tunables.yaml").read_text()
-    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
 
-    queue_writes = re.findall(r"id\(irrig_queue\)\s*\|=\s*([^;]+);", tunables)
-    assert queue_writes == ["1", "4"], f"unexpected irrigation queue callers: {queue_writes}"
-    assert "id: btn_wall_clean" in tunables
-    assert "id: btn_center_clean" in tunables
-    for retired_button in (
-        "btn_wall_fert",
-        "btn_center_fert",
-        "btn_south_mister_fert",
-        "btn_west_mister_fert",
+def _firmware_sources() -> dict[Path, str]:
+    """Every text source under firmware/ (YAML, C++ headers and tests, includes, JSON, docs, scripts)."""
+    suffixes = {".yaml", ".h", ".cpp", ".inc", ".json", ".md", ".py"}
+    return {
+        path: path.read_text()
+        for path in sorted((REPO_ROOT / "firmware").rglob("*"))
+        if path.is_file() and path.suffix in suffixes and not {".esphome", ".pioenvs"} & set(path.parts)
+    }
+
+
+def _id_writes(code: str) -> set[str]:
+    """Globals a lambda assigns through ``id(x) =``, a compound assignment, or ++/--."""
+    return {next(group for group in match.groups() if group) for match in _ID_WRITE_RE.finditer(code)}
+
+
+def _firmware_yaml_docs() -> dict[str, dict]:
+    paths = [REPO_ROOT / "firmware" / "greenhouse.yaml", REPO_ROOT / "firmware" / "greenhouse-recovery.yaml"]
+    paths += sorted((REPO_ROOT / "firmware" / "greenhouse").glob("*.yaml"))
+    return {path.name: yaml.safe_load(path.read_text()) or {} for path in paths}
+
+
+def test_home_assistant_buttons_and_the_quiet_override_are_gone():
+    """F12 and HA-01 to HA-03 (VD-47, #1162): no Home Assistant button, no burst script and no
+    occupancy quiet override is left, and manual_override is the only remote way to a burst: its
+    lambda writes only the three deadline latches (restart only reboots), never a relay and never
+    occupancy, so a burst leaves mist and fog held while someone is inside."""
+    sources = _firmware_sources()
+    assert any(path.name == "irrigation_engine.yaml" for path in sources), "firmware sources not found"
+    entity_map_source = (REPO_ROOT / "ingestor" / "entity_map.py").read_text()
+    for token in ("occupancy_quiet_override", "occupancy_override_until_ms"):
+        assert token not in entity_map_source, token
+        hits = sorted(str(path.relative_to(REPO_ROOT)) for path, text in sources.items() if token in text)
+        assert not hits, f"{token} is still referenced under firmware/: {hits}"
+    # The burst scripts are checked by name; an unrelated internal script is not a Home Assistant
+    # touchpoint, so the firmware may still define one.
+    for token in (*HA_BUTTON_IDS, "manual_fan_burst", "manual_fog_burst", "vent_bypass_timer", "irrig_queue"):
+        hits = sorted(
+            str(path.relative_to(REPO_ROOT)) for path, text in sources.items() if re.search(rf"\b{token}\b", text)
+        )
+        assert not hits, f"{token} is still referenced under firmware/: {hits}"
+    docs = _firmware_yaml_docs()
+    for name, doc in docs.items():
+        assert "button" not in doc, (
+            f"{name} defines buttons: {[b.get('id') or b.get('platform') for b in doc['button']]}"
+        )
+    for path, text in sources.items():
+        if path.suffix == ".yaml":
+            assert "platform: restart" not in text, path.name
+            assert "button.press" not in text, path.name
+
+    services = docs["irrigation_engine.yaml"]["api"]["services"]
+    (override,) = [service for service in services if service["service"] == "manual_override"]
+    assert override["variables"] == {"kind": "string", "minutes": "int"}
+    (step,) = override["then"]
+    code = _code_only(step["lambda"])
+    assert _id_writes(code) == set(MANUAL_LATCHES), _id_writes(code)
+    for latch, kind in zip(MANUAL_LATCHES, ("fans", "humidify", "vent_bypass"), strict=True):
+        assert f'kind == "{kind}"' in code
+        assert f"id({latch}) = manual_override_deadline_ms(now_ms, minutes);" in code
+        assert f"id({latch}) = 0;" in code  # clear zeroes all three
+    restart = code[code.index('kind == "restart"') :]
+    assert code.count("App.safe_reboot();") == 1 and "App.safe_reboot();" in restart[: restart.index("}")]
+    for forbidden in ("occupan", "publish_state", "turn_on", "turn_off", "_rly", "irr_", "set_band_anchor"):
+        assert forbidden not in code, forbidden
+
+    # Occupancy is the ingestor's API push alone: the OCCUPIED action has no override branch.
+    hardware = docs["hardware.yaml"]
+    (occupied,) = [entry for entry in hardware["switch"] if entry.get("id") == "sw_greenhouse_occupied"]
+    (on_action,) = occupied["turn_on_action"]
+    assert _id_writes(_code_only(on_action["lambda"])) == {"greenhouse_occupied", "occupancy_last_true_ms"}
+
+
+def test_push_buttons_toggle_the_burst_latches_and_the_indicators_read_them():
+    """F12 (VD-47): each panel push button toggles its own latch in its own handler, and the three
+    burst indicators (fan_burst_active, vent_bypass_active, fog_burst_active) read the latches."""
+    root = yaml.safe_load((REPO_ROOT / "firmware" / "greenhouse.yaml").read_text())
+    sensors = {entry["id"]: entry for entry in root["binary_sensor"] if "id" in entry}
+    for button, latch in (
+        ("fans_switch", "manual_fans_until_ms"),
+        ("fog_switch", "manual_fog_until_ms"),
+        ("vent_bypass_switch", "vent_bypass_until_ms"),
     ):
-        assert f"id: {retired_button}" not in tunables
-
-    assert "id(irrig_queue) &= (1 | 4);" in controls
-    assert "if(id(irrig_queue) & 1) { job = 1; bit = 1; zone = WetZone::WALL_DRIP; }" in controls
-    assert "else if(id(irrig_queue) & 4) { job = 2; bit = 4; zone = WetZone::CENTER_DRIP; }" in controls
-    for retired_bit in (2, 8, 16, 32, 64, 128):
-        assert f"id(irrig_queue) & {retired_bit}" not in controls
-
-
-def test_weekly_wall_claim_syncs_before_first_relay_write():
-    """The exact-once claim must survive a reset before water can open."""
+        (action,) = sensors[button]["on_press"]["then"]
+        code = _code_only(action["lambda"])
+        assert _id_writes(code) == {latch}, (button, _id_writes(code))
+        assert f"id({latch}) = manual_latch_toggle(id({latch}), millis(), id(manual_override_timeout_min));" in code
+        assert "occupan" not in code, button
+    for indicator, name, latch in (
+        ("bs_manual_fan", "Fan Burst Active", "manual_fans_until_ms"),
+        ("bs_manual_fog", "Fog Burst Active", "manual_fog_until_ms"),
+        ("bs_vent_lock", "Vent Bypass Active", "vent_bypass_until_ms"),
+    ):
+        assert sensors[indicator]["name"] == name
+        assert sensors[indicator]["lambda"] == f"return manual_latch_active(id({latch}), millis());"
+    # The override layer reads only the latches.
     controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    for line in (
+        "const bool manual_fans_eff   = manual_fans_latched;",
+        "const bool manual_fog_eff    = manual_fog_latched;",
+        "const bool vent_bypass_eff   = vent_bypass_latched;",
+    ):
+        assert line in controls, line
 
-    helper_start = controls.index("auto persist_weekly_and_sync")
-    helper_end = controls.index("auto cancel_all", helper_start)
-    helper = controls[helper_start:helper_end]
-    assert helper.index("wall_feed_journal_pref.save(&candidate)") < helper.index("global_preferences->sync()")
-    assert helper.index("global_preferences->sync()") < helper.index("mirror_weekly_readbacks(state, terminal_code)")
-    assert "RestoringGlobalsComponent" not in helper
-    assert "->update()" not in helper
 
-    claim_start = controls.index("auto claimed = claim_weekly_wall_feed")
-    claim_end = controls.index("// Advance the wall sequence", claim_start)
-    claim = controls[claim_start:claim_end]
-    assert claim.index("claim_weekly_wall_feed") < claim.index("persist_weekly_and_sync(claimed, 0)")
-    assert claim.index("persist_weekly_and_sync(claimed, 0)") < claim.index("id(wall_drips).turn_on()")
-    assert "claim persistence sync failed" in claim
+# Each wet relay (hardware.yaml) and its device_idx in the irrigation program (irrigation §3).
+WET_RELAY_LINES = {
+    "wall_drips": "L01",
+    "wall_drips_fertilized": "L02",
+    "fertilizer_master_valve": "L03",
+    "center_mister": "L04",
+    "center_drips": "L05",
+    "center_drips_fertilized": "L06",
+    "south_wall_mister": "L07",
+    "south_wall_mister_fertilized": "L08",
+    "west_wall_mister": "L09",
+    "west_wall_mister_fertilized": "L10",
+}
 
-    # Every active/terminal transition uses the same sync gate; fertilizer and
-    # flush relay writes only occur after the corresponding call succeeds.
-    assert controls.count("persist_weekly_and_sync(next, 0)") == 2
-    assert "persist_weekly_and_sync(complete, 1)" in controls
-    assert "persist_weekly_and_sync(cancelled, 2)" in controls
+
+def _relay_block(hardware: str, relay: str) -> str:
+    start = hardware.index(f"    id: {relay}\n")
+    end = hardware.find("\n  - platform:", start)
+    return hardware[start : end if end != -1 else len(hardware)]
+
+
+def test_every_wet_relay_guard_tests_the_engine_grant():
+    """F5 (#1160): every wet relay's on_turn_on refuses an ON without its bit in irr_grant_mask,
+    first thing, and no other token, enable or commissioning flag opens it. Fog stays outside the
+    grant (climate only). With the engine trace tests (firmware/test/test_irrigation_program.cpp),
+    this is the replay suite for "no wet relay turns on without the engine grant"."""
+    hardware = (REPO_ROOT / "firmware" / "greenhouse" / "hardware.yaml").read_text()
+    globals_yaml = (REPO_ROOT / "firmware" / "greenhouse" / "globals.yaml").read_text()
+
+    grant = re.search(r"- id: irr_grant_mask\n(?P<body>.*?)(?=\n  - id:|\Z)", globals_yaml, re.S)
+    assert grant, "irr_grant_mask is a global"
+    assert "type: uint16_t" in grant["body"] and "restore_value: no" in grant["body"]
+    assert "initial_value: '0'" in grant["body"]
+
+    for relay, line in WET_RELAY_LINES.items():
+        block = _relay_block(hardware, relay)
+        assert "on_turn_on:" in block, relay
+        guard = block.split("on_turn_on:", 1)[1].split("on_turn_off:", 1)[0]
+        code = [
+            row.strip() for row in guard.splitlines() if row.strip() and not row.strip().startswith(("//", "-", "#"))
+        ]
+        assert code[0] == f"if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::k{line}))) {{", (
+            relay,
+            code[:1],
+        )
+        assert code[1] == f"id({relay}).turn_off();", relay
+        assert code[2] == f'ESP_LOGE("irrig","Blocked ungranted {relay} ON");', relay
+        for token in (
+            "water_controller_actuating",
+            "climate_wet_controller_actuating",
+            "fert_controller_actuating",
+            "irrig_wall_enabled",
+            "irrig_center_enabled",
+            "irrig_south_enabled",
+            "irrig_west_enabled",
+            "wall_feed",
+            "irrig_state",
+            "turn_on()",
+        ):
+            assert token not in guard, (relay, token)
+    # SAF-5 stays on the center mister: never on while the fertilizer master valve is open.
+    center_guard = _relay_block(hardware, "center_mister").split("on_turn_on:", 1)[1].split("on_turn_off:", 1)[0]
+    assert "if(id(fertilizer_master_valve).state) {" in center_guard
+    # L03's manual-off correction is gone; the fertilizer relays' on_turn_off still close L03.
+    assert "on_turn_off:" not in _relay_block(hardware, "fertilizer_master_valve")
+    for relay in (
+        "wall_drips_fertilized",
+        "center_drips_fertilized",
+        "south_wall_mister_fertilized",
+        "west_wall_mister_fertilized",
+    ):
+        assert "id(fertilizer_master_valve).turn_off();" in _relay_block(hardware, relay).split("on_turn_off:", 1)[1]
+    # Fog is climate only: no grant check.
+    assert "irr_grant_mask" not in _relay_block(hardware, "fog_rly")
+
+
+def _code_only(text: str) -> str:
+    """Drop /* */, // and # comments, so a comment that names a leak never counts as reading one."""
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    rows = []
+    for row in text.splitlines():
+        stripped = row.split("//", 1)[0]
+        if stripped.lstrip().startswith("#"):
+            continue
+        rows.append(stripped)
+    return "\n".join(rows)
+
+
+def test_no_engine_input_guard_or_reason_reads_the_leak():
+    """Q-05 (F14): leak_detected raises the leak alert only. No engine input, relay guard or irr_state
+    reason reads it; until #1161 only the climate fog and mist gates still do."""
+    lib = REPO_ROOT / "firmware" / "lib"
+    engine = _code_only((lib / "irrigation_program.h").read_text())
+    glue = _code_only((lib / "irrigation_engine_esphome.h").read_text())
+    package = _code_only((REPO_ROOT / "firmware" / "greenhouse" / "irrigation_engine.yaml").read_text())
+    hardware = (REPO_ROOT / "firmware" / "greenhouse" / "hardware.yaml").read_text()
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    for name, text in (
+        ("irrigation_program.h", engine),
+        ("irrigation_engine_esphome.h", glue),
+        ("irrigation_engine.yaml", package),
+    ):
+        assert "leak" not in text.lower(), f"{name} reads a leak"
+    for relay in WET_RELAY_LINES:
+        assert "leak" not in _relay_block(hardware, relay).lower(), relay
+    # The climate facts the engine reads are written in one block of the control loop.
+    start = controls.index("// ── Irrigation engine inputs (#1160)")
+    block = _code_only(controls[start : controls.index("/**************** 14 — Telemetry & debug", start)])
+    assert "irr_climate_inputs()" in block and "leak" not in block
+    yield_input = controls[controls.index("const bool climate_fog_wanted =") :]
+    assert "leak" not in _code_only(yield_input[: yield_input.index(";")])
+    reason_words = re.findall(r'"([a-z0-9]+)"', engine[engine.index("kReasonCodes[kReasonCount]") :].split(";", 1)[0])
+    assert reason_words and not [w for w in reason_words if "leak" in w]
+
+
+def test_engine_air_inputs_fall_back_to_the_case_probe():
+    """D-IRP-12 (#1160): degraded_only mist runs only while the average probes are out (SF1) and
+    needs a known dew margin, so the engine's RH and dew inputs come from the measured indoor pair:
+    the averages, else the controller-case probe while it answers, never the loop's fabricated RHin.
+    irr_air_inputs() itself is covered by firmware/test/test_irrigation_program.cpp."""
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    start = controls.index("// ── Irrigation engine inputs (#1160)")
+    block = _code_only(controls[start : controls.index("/**************** 14 — Telemetry & debug", start)])
+    assert "irr_in.sensor_degraded = sensor_in.sensor_degraded;" in block
+    assert "probe_sample_fresh(now_ms, id(last_case_ms), kZoneProbeStaleMs)" in block
+    assert "avg_ok ? id(average_temperature).state : irr_case_fresh ? id(case_temperature).state : NAN" in block
+    assert "avg_ok ? id(average_humidity).state : irr_case_fresh ? id(case_humidity).state : NAN" in block
+    for field in ("rh_pct", "dew_margin_known", "dew_breach"):
+        assert f"irr_in.{field} = irr_air.{field};" in block
+    assert "RHin" not in block, "the loop's RHin may be its fabricated 50 %"
+
+
+def test_engine_program_and_claims_save_then_sync():
+    """F2 and §4.7 (#1160): a committed push is saved to NVS and synced before it can run, and the
+    claims record the engine journals before a relay opens is saved then synced (irr_commit_claims()
+    keeps the claim only when both succeed; firmware/test/test_irrigation_program.cpp covers it)."""
+    glue = (REPO_ROOT / "firmware" / "lib" / "irrigation_engine_esphome.h").read_text()
+    commit = glue[glue.index("inline void irr_esp_program_commit()") :]
+    commit = commit[: commit.index("\n}\n")]
+    save = commit.index("g.program_pref.save(&g.staging.record)")
+    sync = commit.index("esphome::global_preferences->sync()", save)
+    stage = commit.index("irr_stage_program(g.eng, p, g.staging.record.sha256);", sync)
+    assert save < sync < stage
+    assert "irr_set_reject(g.eng, why);" in commit
+    assert "return static_cast<IrrEsp*>(ctx)->claims_pref.save(&c);" in glue
+    assert "return esphome::global_preferences->sync();" in glue
+    assert "RestoringGlobalsComponent" not in glue
 
 
 def test_heap_recovery_coalesces_diagnostics_and_records_loop_high_water():

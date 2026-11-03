@@ -149,7 +149,7 @@ API, program record and golden vectors, `desired_state`, `verdify_services` conv
 | Screens | 9: 8 MVP, Plants Later |
 | API operations | 31 on `/v1` (19 core: API-01 to API-07, API-09 to API-17 and API-19 to API-21; 12 irrigation: API-IRR-01 to API-IRR-08 and API-IRR-10 to API-IRR-13), plus 7 BFF, session and health routes: 38 operationIds; API-08, API-18, API-IRR-09 and OPS-03 are reserved |
 | MCP tools for every agent | 8 irrigation tools (3 read, 5 write), plus `set_setting`, `settings` and `activity`; Iris's `set_plan` and `set_tunable` keep writing plans |
-| Migrations and images | 6 additive migrations (M1 `desired_state` and `activity_log`, M2 dashboard login and sessions, M3 irrigation tables, M4 minutes by zone, M5 lighting release, M6 daily scorecard), and later the light meter's; 1 new image, `verdify-dashboard-web` |
+| Migrations and images | 7 additive migrations (M1 `desired_state` and `activity_log`, M2 dashboard login and sessions, M2b the dashboard login's reads and writes, M3 irrigation tables, M4 minutes by zone, M5 lighting release, M6 daily scorecard), and later the light meter's; 1 new image, `verdify-dashboard-web` |
 | Irrigation | 11 lines (L01–L11): 9 schedulable (L05 and L06 reserved, no bring-up now), L03 opens with feeds, L11 fog stays climate only; 4 wet zones; at most 24 schedules on the controller |
 | Issues | 71 (VD-01 to VD-73; VD-35 and VD-49 retired) under one program epic (VD-E0), in 7 lanes, 4 waves and 5 releases |
 

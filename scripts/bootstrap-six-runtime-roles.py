@@ -7,6 +7,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 
 DUTIES = ("grafana", "planner", "setpoint_server", "ha_backfill", "lab_publisher", "vision")
 PREDECESSORS = {
@@ -67,6 +68,15 @@ class BootstrapError(RuntimeError):
     pass
 
 
+# Linux caps one argv string at MAX_ARG_STRLEN (128 KiB), and exec fails with E2BIG
+# before psql starts. The sealed profile gains an alternative per successor
+# migration and passed that limit at 280, so longer SQL goes through --file on the
+# Job's private /tmp. psql runs --command and --file actions in the order given.
+# bootstrap-maintenance-runtime-roles.py shares this helper.
+# No command carries a credential: values stay in environment and stdin.
+COMMAND_ARG_MAX_BYTES = 64 * 1024
+
+
 def psql(user, password, commands, *, password_input="", transactional=False):
     # Values stay in environment/stdin. Never relay raw errors/SQL/verifiers.
     args = [
@@ -88,12 +98,25 @@ def psql(user, password, commands, *, password_input="", transactional=False):
     ]
     if transactional:
         args.append("--single-transaction")
-    for command in commands:
-        args.extend(["--command", command])
     env = dict(os.environ, PGPASSWORD=password)
-    result = subprocess.run(
-        args, input=password_input, text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, check=False
-    )
+    with tempfile.TemporaryDirectory(prefix="bootstrap-sql-") as workdir:
+        for index, command in enumerate(commands):
+            if len(command.encode()) <= COMMAND_ARG_MAX_BYTES:
+                args.extend(["--command", command])
+                continue
+            path = os.path.join(workdir, f"{index}.sql")
+            with open(path, "w", encoding="utf-8") as sql_file:
+                sql_file.write(command)
+            args.extend(["--file", path])
+        result = subprocess.run(
+            args,
+            input=password_input,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            env=env,
+            check=False,
+        )
     if result.returncode:
         raise BootstrapError("database bootstrap operation refused")
     return result.stdout.strip()
@@ -383,25 +406,142 @@ def sealed_sql_279():
     )
 
 
-DAILY_SCORECARD_MIGRATION = (
-    282,
-    "282-daily-scorecard-view.sql",
-    "cbe42b56747ec0dfc12746cabb964ad9b39c6cecc2d4ed3e4e9b67128e017fc1",
+DESIRED_STATE_MIGRATION = (
+    280,
+    "280-desired-state-activity-log.sql",
+    "44531a0c3a9ddd48f64ce639f9f9f1c2d0f948960ba65a68943d5947881b8bfe",
 )
-# One verdify-owned view and no grant: all three seals stay exactly the predecessor's.
-SUCCESSOR_282 = SUCCESSOR_279
+SUCCESSOR_280 = {
+    "api": "af3647c841270c17097fd00c5d27d8dd6b46413a15838f08fd5b6cbbcda343d7",
+    "ingestor": "4697e11eb2e66a73f727304df3419d3dd4635199bc346ba5e62cfe2f2a194103",
+    "mcp": "685212a93b79c980c422db5baacb8f61309af392a9a7a8e9a46baf8e55fde291",
+}
 
 
-def sealed_sql_282():
-    # Keep every279 authority predicate and seal; bind the exact282 runner stamp.
+def sealed_sql_280():
+    # Keep every279 predicate and bind the exact280 runner stamp with the three
+    # natively qualified seals its desired-state and activity-log grants move.
     predecessor = sealed_sql_279()
     current = seal_profile_sql(279, SUCCESSOR_279)
     assert predecessor.count(current) == 1
     return (
         "("
+        + predecessor.replace(current, seal_profile_sql(280, SUCCESSOR_280), 1)
+        + " AND "
+        + ledger_row_sql(*DESIRED_STATE_MIGRATION)
+        + ")"
+    )
+
+
+IRRIGATION_MINUTES_MIGRATION = (
+    281,
+    "281-irrigation-minutes-by-zone.sql",
+    "45a6d18db74d6ae5f3744049b77a91f9fc243a099483949eb369a6a0e8d2f3f8",
+)
+SUCCESSOR_281 = {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3",
+}
+
+
+def sealed_sql_281():
+    # Keep every 280 predicate and bind the exact 281 runner stamp with the three
+    # seals its minutes-by-zone view and reader grants move.
+    predecessor = sealed_sql_280()
+    current = seal_profile_sql(280, SUCCESSOR_280)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(281, SUCCESSOR_281), 1)
+        + " AND "
+        + ledger_row_sql(*IRRIGATION_MINUTES_MIGRATION)
+        + ")"
+    )
+
+
+DASHBOARD_LOGIN_MIGRATION = (
+    282,
+    "282-dashboard-runtime-login.sql",
+    "b58f0df3b66f79dc968aee502d41b4860e269285c5369dc0a06273c44908377a",
+)
+# 282 grants only on the objects it creates, so it moves no seal: its profile is
+# 281's qualified successor, as 276 kept 275's. The rolled-back native
+# qualification, with 280 and 281 applied first, measures it.
+SUCCESSOR_282 = SUCCESSOR_281
+
+
+def sealed_sql_282():
+    # Keep every 281 predicate and bind the exact 282 runner stamp; the dashboard
+    # duty, its schema and its sessions table change no seal.
+    predecessor = sealed_sql_281()
+    current = seal_profile_sql(281, SUCCESSOR_281)
+    assert predecessor.count(current) == 1
+    return (
+        "("
         + predecessor.replace(current, seal_profile_sql(282, SUCCESSOR_282), 1)
         + " AND "
-        + ledger_row_sql(*DAILY_SCORECARD_MIGRATION)
+        + ledger_row_sql(*DASHBOARD_LOGIN_MIGRATION)
+        + ")"
+    )
+
+
+IRRIGATION_TABLES_MIGRATION = (
+    283,
+    "283-irrigation-tables.sql",
+    "0b07a5042edc29cb90da4c800da6514e47517240d765c0da0217b68cc7fe92c2",
+)
+# 283's grants reach 282's dashboard duty on relations the ingestor reads, so its
+# ordinary seals hash that duty's production OID; the rolled-back native
+# qualification, run once 282 is applied, measures all three.
+SUCCESSOR_283 = {
+    "api": "030df35ca3b0bc8b94de5f394f96c2292674b2df58aea2d46990c53ad3bd1ad7",
+    "ingestor": "c03d427cbbf327c8843496c744d718e1fca70c1e6d98963022ac87e308954096",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e",
+}
+
+
+def sealed_sql_283():
+    # Keep every 282 predicate and bind the exact 283 runner stamp with the three
+    # seals its irrigation grants move.
+    predecessor = sealed_sql_282()
+    current = seal_profile_sql(282, SUCCESSOR_282)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(283, SUCCESSOR_283), 1)
+        + " AND "
+        + ledger_row_sql(*IRRIGATION_TABLES_MIGRATION)
+        + ")"
+    )
+
+
+DASHBOARD_GRANTS_MIGRATION = (
+    284,
+    "284-dashboard-runtime-grants.sql",
+    "559d8260ec7138a3bec502f7b29f50587f6a752cc5144fa31e15b406c4ddcaf4",
+)
+# 284's grants move both ordinary seals, which hash the dashboard duty's production
+# OID, and leave the MCP seal at 283's; the rolled-back native qualification, run
+# once 282 is applied, measures them.
+SUCCESSOR_284 = {
+    "api": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
+    "ingestor": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
+    "mcp": SUCCESSOR_283["mcp"],
+}
+
+
+def sealed_sql_284():
+    # Keep every 283 predicate and bind the exact 284 runner stamp with the two
+    # ordinary seals its dashboard grants move.
+    predecessor = sealed_sql_283()
+    current = seal_profile_sql(283, SUCCESSOR_283)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(284, SUCCESSOR_284), 1)
+        + " AND "
+        + ledger_row_sql(*DASHBOARD_GRANTS_MIGRATION)
         + ")"
     )
 
@@ -421,7 +561,15 @@ def sealed_sql():
         + " OR "
         + sealed_sql_279()
         + " OR "
+        + sealed_sql_280()
+        + " OR "
+        + sealed_sql_281()
+        + " OR "
         + sealed_sql_282()
+        + " OR "
+        + sealed_sql_283()
+        + " OR "
+        + sealed_sql_284()
         + ")"
     )
 

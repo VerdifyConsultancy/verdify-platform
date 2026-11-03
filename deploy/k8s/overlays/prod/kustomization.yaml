@@ -169,10 +169,6 @@ components:
   # ConfigMap does NOT touch the running ingestor; the mount + psql initContainer
   # ship in the gated ingestor patch (see PR / ingestor-gather-mount.patch.yaml).
   - ../../components/ingestor-gather-script
-  # HA gap backfill — hourly DB-first reconciliation from Home Assistant recorder
-  # history. Read-only against HA and writes only missing Verdify telemetry rows;
-  # mounted script means enabling the CronJob does NOT roll the live ingestor.
-  - ../../components/ha-gap-backfill
 
 patches:
   - path: source-owned-fields-ssa.patch.yaml
@@ -237,6 +233,8 @@ patches:
   # storage-flaky node6. Applying RESTARTS the single ESP32 writer (gated).
   - path: ingestor-resilience.patch.yaml
   - path: shelly-source-clock.patch.yaml
+  # VD-70: direct read-only YINMIK hydro meter reader; optional Secret mount.
+  - path: hydro-probe.patch.yaml
   # HA Sprint ha-1 / Lane A (#226/#227/#229): add verdify-serving priorityClass +
   # a CPU LIMIT (burst containment, NOT a tight throttle) + tuned mem to the
   # STATELESS surfaces (www/lab/api/mcp/planner/grafana). Strategic-merge by
@@ -319,16 +317,16 @@ patches:
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
     newName: registry.vallery.net/verdifyconsultancy/verdify-api
-    digest: sha256:88db09c67df2c24e80aa484068cce8deaf6b2f9abe1bee4e9ba2d5828256c260
+    digest: sha256:1fc5656662794659b7f483ab8573d59c6d2ef62105855ebd4212c82d990663e6
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
     newName: registry.vallery.net/verdifyconsultancy/verdify-mcp
-    digest: sha256:11b81f3392f95fd8062c4b79ee6ae6e406a52ba82f790200aa656f248809768b
+    digest: sha256:53c6a34139eb6acf9e7653739648d19d41184058962e6d8ae4eb1b1321104786
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
     newName: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-    digest: sha256:41aa82972d2c174503fd81f95c0f5312d9e5c12346f5cc315fec733ea5602e7d
+    digest: sha256:36093cad9b050585affdb792e2fba42d6be79b7fc1fd9419a7f752b177104cc9
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     newName: registry.vallery.net/verdifyconsultancy/verdify-migrate
-    digest: sha256:e11479fe4f8032f60ddc040c132ac2a21fdcb9cdd785a6086249517a2ad6f46c
+    digest: sha256:a37000e94c755ffb4bf5fcba77af0bb7ebee2fa79d0e67b1f8aec105b3776a79
   # Build candidate for the feature-off experiment-v2 orchestrator (its release
   # digest is in release-pins.yaml). The component remains inert until its
   # explicit GitOps feature gate.

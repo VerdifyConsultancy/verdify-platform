@@ -190,32 +190,6 @@ globals:
   # ─── Fog / evap-assist thresholds ───
   # (removed unused fog_offset_f and AH thresholds)
 
-  # ─── Manual overrides & timers ───
-  - id: fan_burst_minutes
-    type: int
-    restore_value: no
-    initial_value: '10'
-  - id: vent_bypass_minutes
-    type: int
-    restore_value: no
-    initial_value: '10'
-  - id: fog_burst_minutes
-    type: int
-    restore_value: no
-    initial_value: '10'
-  - id: manual_fan_active
-    type: bool
-    restore_value: no
-    initial_value: 'false'
-  - id: manual_fog_active
-    type: bool
-    restore_value: no
-    initial_value: 'false'
-  - id: vent_lock_active
-    type: bool
-    restore_value: no
-    initial_value: 'false'
-
   # (vent_debounce_ms removed: vent timing enforced via relay min_on/off)
 
   # ─── Misc state ───
@@ -638,12 +612,6 @@ globals:
     restore_value: no
     initial_value: '0'
 
-  # Legacy readback only; no control path consumes it.
-  - id: post_feed_hold_min
-    type: int
-    restore_value: no
-    initial_value: '0'
-
   # Retired fixed-clock feed-window compatibility readbacks. Commissioned wall
   # feed uses the solar scheduler; these values are inert and fixed at zero.
   - id: feed_start_hour
@@ -1014,7 +982,7 @@ globals:
     restore_value: no
     initial_value: '0'
 
-  # Manual button latch timeout (minutes) for the deadline latches below.
+  # Push-button latch timeout (minutes) for the deadline latches below.
   - id: manual_override_timeout_min
     type: int
     restore_value: yes
@@ -1022,9 +990,10 @@ globals:
 
   # ─── B5: manual button deadline latches (epoch-ms deadlines) ───
   # While now_ms < <x>_until_ms the latch is active. restore_value: no — a
-  # manual override must NOT survive a reboot. 0 = no latch. controls.yaml
-  # mirrors the active state into the existing manual_fan_active /
-  # manual_fog_active / vent_lock_active bools (kept above).
+  # manual override must NOT survive a reboot. 0 = no latch. Written only by
+  # the panel push buttons (greenhouse.yaml), the manual_override service
+  # (irrigation_engine.yaml) and the override layer's expiry (controls.yaml),
+  # which reads them (VD-47).
   - id: manual_fans_until_ms
     type: uint32_t
     restore_value: no
@@ -1170,12 +1139,6 @@ globals:
     restore_value: no
     initial_value: 'true'
 
-  # ─── Outdoor RH adaptive mode ───
-  - id: outdoor_rh_mode
-    type: int
-    restore_value: no
-    initial_value: '0'
-
     # ─── Mister state machine (HUMID_S2/S3) ───
   - id: mister_state
     type: int
@@ -1215,6 +1178,9 @@ globals:
     restore_value: no
     initial_value: '0'
 
+  # Gallons today through the misters and fog: a mirror of the irrigation engine's RTC block
+  # (centi-gallons / 100), which SAF-4 and the soft budget read. The block keeps it across a
+  # soft reset and zeroes it on a new local day (#1160).
   - id: mister_water_today
     type: float
     restore_value: no
@@ -1266,11 +1232,6 @@ globals:
     restore_value: no
     initial_value: '300.0'
 
-  - id: mister_max_runtime_min
-    type: int
-    restore_value: no
-    initial_value: '120'
-
   # ─── IRR-2: mister VPD hysteresis floor (kPa) ───
   # Raises the MISTER_HYST floor from the legacy 0.05 to 0.10 so the climate
   # mister state machine cannot chatter inside a tight band. The effective
@@ -1281,17 +1242,10 @@ globals:
     restore_value: no
     initial_value: '0.10'
 
-  # ─── SAF-4: absolute daily mister volume hard-ceiling (gal) ───
-  # A non-bypassable ceiling that sits ABOVE the VPD-emergency budget
-  # (mister_water_budget_gal, which climate_vpd_emergency can bypass). Even a
-  # VPD emergency cannot push center misting past this hard cap. Default 360 =
-  # 1.2x the 300-gal budget; tune per plumbing.
-  - id: mister_daily_volume_max_gal
-    type: float
-    restore_value: no
-    initial_value: '360.0'
-
-  # ─── Mister runtime counters (reset at midnight) ───
+  # ─── Mister runtime counters ───
+  # Mirrors of the irrigation engine's RTC block (zone seconds x 1000: south is L07 + L08,
+  # west L09 + L10, center L04), written each engine tick. The block zeroes them on a new
+  # local day and keeps them across a soft reset (#1160).
   - id: runtime_mister_south_ms
     type: uint32_t
     restore_value: no
@@ -1348,293 +1302,19 @@ globals:
     restore_value: no
     initial_value: '0'
 
-  # ─── Irrigation state machine ───
-  - id: irrig_state
-    type: int
-    restore_value: no
-    initial_value: '0'
-    # 0=idle, 1=wall_clean, 2=center_drip_clean,
-    # 5=weekly_wall_prewet, 6=weekly_wall_feed, 7=weekly_wall_flush
-
-  - id: irrig_timer_ms
-    type: uint32_t
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_queue
-    type: int
-    restore_value: no
-    initial_value: '0'
-    # Bitmask: bit0=wall_clean, bit2=center_drip_clean. All fertilizer queue
-    # bits and all mister irrigation jobs are retired.
-
-  # True only while the irrigation state machine is intentionally changing
-  # fertilized relays or the fertilizer master valve. Relay-level guards use
-  # this to reject direct HA/manual fert actuation.
-  - id: fert_controller_actuating
-    type: bool
-    restore_value: no
-    initial_value: 'false'
-
-  # True only while the climate controller or irrigation scheduler is
-  # intentionally changing clean-water drip/mister relays. Relay-level guards
-  # use this to reject direct HA/manual clean-water actuation.
-  - id: water_controller_actuating
-    type: bool
-    restore_value: no
-    initial_value: 'false'
-
-  # Reverse-exclusivity token: ONLY the climate/VPD resolver may energize the
-  # center mister. Irrigation/manual/schedule paths use water_controller_actuating.
-  - id: climate_wet_controller_actuating
-    type: bool
-    restore_value: no
-    initial_value: 'false'
-
-  - id: irrig_wall_cycle_count
-    type: int
+  # ─── Irrigation engine (#1160) ───
+  # The engine grant (F5): bit = device_idx (L01 = 0 to L10 = 9). Written only by the
+  # irrigation engine (lib/irrigation_engine_esphome.h): it sets a bit before the relay's
+  # turn_on() and clears it after the turn_off(); a climate VPD pulse gets its bit through
+  # irr_vpd_grant(). Every wet relay guard in hardware.yaml refuses an ON without its bit.
+  # Fog (fog_rly) is climate only and outside the grant.
+  - id: irr_grant_mask
+    type: uint16_t
     restore_value: no
     initial_value: '0'
 
-  - id: irrig_center_cycle_count
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_last_wall_doy
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_last_center_doy
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  # Retired fixed-clock/fertilizer schedule compatibility readbacks. These are
-  # inert, not persisted, and forced to zero at boot. Only explicit clean-water
-  # durations remain writable.
-  - id: irrig_wall_start_hour
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_wall_start_minute
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_wall_duration_min
-    type: int
-    restore_value: yes
-    initial_value: '10'
-
-  - id: irrig_wall_fert_duration_min
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_wall_fert_every_n
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_wall_days_mask
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_wall_fert_days_mask
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_wall_flush_min
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_wall_interval_days
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_center_start_hour
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_center_start_minute
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_center_duration_min
-    type: int
-    restore_value: yes
-    initial_value: '10'
-
-  - id: irrig_center_fert_duration_min
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_center_fert_every_n
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_center_days_mask
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_center_fert_days_mask
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_center_flush_min
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: irrig_center_interval_days
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  # VPD boost
-  - id: irrig_vpd_boost_pct
-    type: int
-    restore_value: no
-    initial_value: '25'
-
-  - id: irrig_vpd_boost_threshold_hrs
-    type: float
-    restore_value: no
-    initial_value: '3.0'
-
-  # Enable switches
-  - id: irrig_enabled
-    type: bool
-    restore_value: yes
-    initial_value: 'true'
-
-  - id: irrig_wall_enabled
-    type: bool
-    restore_value: yes
-    initial_value: 'true'
-
-  - id: irrig_center_enabled
-    type: bool
-    restore_value: yes
-    initial_value: 'false'
-
-  - id: irrig_south_enabled
-    type: bool
-    restore_value: yes
-    initial_value: 'false'
-
-  - id: irrig_west_enabled
-    type: bool
-    restore_value: yes
-    initial_value: 'false'
-
-  # ─── Commissioned weekly wall-only fertigation ───
-  # All operator inputs default missing/off. Every field is required by the
-  # pure irrigation policy before a relay can energize.
-  - id: wall_fertigation_commissioned
-    type: bool
-    restore_value: yes
-    initial_value: 'false'
-
-  - id: wall_commissioning_revision
-    type: uint32_t
-    restore_value: yes
-    initial_value: '0'
-
-  - id: wall_commissioning_evidence_mask
-    type: int
-    restore_value: yes
-    initial_value: '0'
-
-  - id: wall_commissioning_valid_until_epoch_s
-    type: uint32_t
-    restore_value: yes
-    initial_value: '0'
-
-  - id: wall_flow_lpm
-    type: float
-    restore_value: yes
-    initial_value: '0.0'
-
-  - id: wall_flow_valid_until_epoch_s
-    type: uint32_t
-    restore_value: yes
-    initial_value: '0'
-
-  - id: wall_prewet_liters
-    type: float
-    restore_value: yes
-    initial_value: '0.0'
-
-  - id: wall_feed_liters
-    type: float
-    restore_value: yes
-    initial_value: '0.0'
-
-  - id: wall_flush_liters
-    type: float
-    restore_value: yes
-    initial_value: '0.0'
-
-  # Persisted exact-once claim/terminal state. Active stages restored after a
-  # reboot are cancelled before any relay may turn on, preventing re-dose.
-  - id: wall_feed_stage
-    type: int
-    restore_value: yes
-    initial_value: '0'
-
-  - id: wall_feed_claimed_solar_day
-    type: uint32_t
-    restore_value: yes
-    initial_value: '0'
-
-  - id: wall_feed_last_terminal_solar_day
-    type: uint32_t
-    restore_value: yes
-    initial_value: '0'
-
-  - id: wall_feed_claim_revision
-    type: uint32_t
-    restore_value: yes
-    initial_value: '0'
-
-  # 0=none, 1=complete, 2=cancelled/faulted.
-  - id: wall_feed_terminal_code
-    type: int
-    restore_value: yes
-    initial_value: '0'
-
-  # Ephemeral relay guard asserted only after validation on the current tick.
-  - id: wall_feed_commissioning_ready
-    type: bool
-    restore_value: no
-    initial_value: 'false'
-
-  - id: irrig_weather_skip
-    type: bool
-    restore_value: yes
-    initial_value: 'false'
-
-  # VPD stress hours accumulator (local)
-  - id: irrig_vpd_stress_ms
-    type: uint32_t
-    restore_value: no
-    initial_value: '0'
-
-  # Daily irrigation runtime counters (reset at midnight)
+  # Daily irrigation runtime counters: mirrors of the irrigation engine's RTC block
+  # (L01, L05 and L03 seconds x 1000), zeroed by the block on a new local day (#1160).
   - id: runtime_wall_drip_ms
     type: uint32_t
     restore_value: no
@@ -1896,11 +1576,6 @@ globals:
     initial_value: 'true'
 
   - id: occupancy_last_true_ms
-    type: uint32_t
-    restore_value: no
-    initial_value: '0'
-
-  - id: occupancy_override_until_ms
     type: uint32_t
     restore_value: no
     initial_value: '0'

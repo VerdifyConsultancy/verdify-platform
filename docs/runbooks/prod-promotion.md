@@ -9,10 +9,19 @@ images, do not submit `repo-build` Workflows, and do not hand-edit the
 actuator's candidate entries. Promotion copies candidate digests into
 `deploy/k8s/overlays/prod/release-pins.yaml`, the digests production runs, with
 `scripts/promote-release-pins.py` (#808); the planner, setpoint-server and lab-publisher-k3s release pins are
-still edited by hand. An image outside `.agent-fleet/ci.yaml` (today
-`verdify-twin`, see `deploy/k8s/components/twin-builder/`) still uses the
+still edited by hand. An image outside `.agent-fleet/ci.yaml` still uses the
 manual `repo-build` submission in Flow step 3, which stays current for that
-case. The rest of the Flow and the Promotable Images list are historical; the
+case. Today there are two such images:
+
+- `verdify-twin` (see `deploy/k8s/components/twin-builder/`).
+- `verdify-ci-validate`, the in-cluster validate step's image with
+  PostgreSQL 16 preinstalled. Build it with the `repo-build-verdifyconsultancy`
+  WorkflowTemplate (dockerfile `ci/validate.Dockerfile`, image
+  `verdifyconsultancy/verdify-ci-validate`). The `jvallery/agents`
+  coordinator pins its digest in the `verdify-platform-ci` WorkflowTemplate's
+  `validate` template, not in this repository.
+
+The rest of the Flow and the Promotable Images list are historical; the
 current flow is `ARGOCD.md` (Promotion Model) and
 `docs/runbooks/laptop-operator.md` §2.
 
@@ -40,8 +49,8 @@ builds only (`Container Publish` runs every Dockerfile with `push: false`).
    2026-07-11 — `scripts/ci-local.sh` is the entire validation gate, runnable
    on any host or in the in-cluster `verdify-platform-ci` Workflow).
 3. (Current only for an image outside `.agent-fleet/ci.yaml`, such as
-   `verdify-twin`; merges build the rest.) Publish happens IN-CLUSTER: submit
-   one `repo-build-verdifyconsultancy` Argo Workflow per
+   `verdify-twin` or `verdify-ci-validate`; merges build the rest.) Publish
+   happens IN-CLUSTER: submit one `repo-build-verdifyconsultancy` Argo Workflow per
    changed image in namespace `agent-fleet-ci` (Kaniko builds the exact main
    revision and pushes `registry.vallery.net/verdifyconsultancy/<image>@sha256:…`
    using the org push secret `zot-origin-verdifyconsultancy-ci-dockerconfig`):

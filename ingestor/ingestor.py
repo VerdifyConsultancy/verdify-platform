@@ -34,7 +34,6 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 import asyncpg
-import paho.mqtt.client as paho_mqtt
 import shared
 from aioesphomeapi import APIClient, APIConnectionError, LogLevel
 from aioesphomeapi.model import (
@@ -55,7 +54,6 @@ from entity_map import (
     EQUIPMENT_SWITCH_MAP,
     ESPHOME_FEEDBACK_MAP,
     FEEDBACK_VALUE_RANGES,
-    MQTT_FEEDBACK_MAP,
     SETPOINT_MAP,
     STATE_MAP,
     normalize_feedback_value,
@@ -78,7 +76,7 @@ from mqtt_fanout import (
     subscribe_topic_filter,
 )
 from observation_spool import ObservationSpool
-from occupancy import refresh_latest_occupancy_state, sync_occupancy_state
+from occupancy import refresh_latest_occupancy_state
 from pydantic import ValidationError
 from soil_saturation import saturation_evaluation_status
 from source_spool import SourceSpool
@@ -102,7 +100,9 @@ from tasks import (
     gpu_power_sync,
     grow_light_daily,
     ha_sensor_sync,
+    hydro_probe_sync,
     infra_cpu_sync,
+    ingestor_heartbeat,
     matview_refresh,
     midnight_watch,
     planner_memory_ingest_sync,
@@ -120,7 +120,6 @@ from tasks import (
     shelly_sync,
     site_content_refresh,
     slack_operator_briefs,
-    tempest_sync,
     water_flowing_sync,
     water_meter_materialize,
 )
@@ -238,6 +237,14 @@ _EXPERIMENT_DIRECT_STATE_COMPONENTS = _EXPERIMENT_EQUIPMENT_STREAMS | {
     "mister_west_fert",
 }
 _COUNTER_INITIAL_BURST_MAX_SKEW = timedelta(seconds=60)
+# Q-09 (VD-48): the controller's own grow-light switches record their intent
+# beside the Lutron readback that ha_sensor_sync writes as grow_light_main/_grow.
+# public.fn_record_equipment_state_source_receipt (migration 216) admits only
+# its fixed stream list and raises on any other stream, which would stall the
+# whole durable receipt queue. These streams carry no experiment evidence, so
+# they are written through the ordinary telemetry view, with no continuity
+# receipt, in both writer modes.
+_ORDINARY_EQUIPMENT_STREAMS = frozenset({"grow_light_main_intent", "grow_light_grow_intent"})
 _COUNTER_DIAGNOSTIC_MAX_AGE = timedelta(seconds=90)
 _COUNTER_DEVICE_CLOCK_MAX_SKEW = timedelta(seconds=120)
 _DIRECT_STATE_SEED_OPEN = dt_time(5, 58, 30)
@@ -452,6 +459,9 @@ class State:
 
         # Pending equipment events to write
         self.pending_equipment: list[PendingEquipmentStateEvent] = []
+        # (ts, equipment, state) rows for _ORDINARY_EQUIPMENT_STREAMS, written
+        # through the ordinary view without a receipt.
+        self.pending_ordinary_equipment: list[tuple[datetime, str, bool]] = []
 
         # Pending state transitions to write
         self.pending_states: list[tuple[str, str]] = []
@@ -685,20 +695,6 @@ def _note_climate_provenance(column: str, transport: str) -> None:
         "transport": transport,
         "connection_generation": shared.transport_generation if transport == "esphome" else None,
     }
-
-
-def _record_mqtt_feedback(topic: str, payload: str) -> bool:
-    """Record a live MQTT feedback payload into the next climate flush."""
-    col = MQTT_FEEDBACK_MAP.get(topic)
-    if not col:
-        return False
-    val = normalize_feedback_value(col, payload)
-    if val is None:
-        log.warning("MQTT feedback rejected invalid value: %s column=%s payload=%r", topic, col, payload)
-        return False
-    state.climate[col] = val
-    _note_climate_provenance(col, "mqtt")
-    return True
 
 
 def _record_climate_sensor(obj_id: str, value: Any) -> bool:
@@ -1520,6 +1516,43 @@ async def write_equipment_events(pool: asyncpg.Pool, _ts: datetime) -> None:
                     "state": event.state,
                 },
             )
+
+
+async def write_ordinary_equipment_events(pool: asyncpg.Pool) -> None:
+    """Write the _ORDINARY_EQUIPMENT_STREAMS rows through the ordinary view.
+
+    These streams (the controller's grow-light intent, Q-09) are outside the
+    receipt function's stream list, so they never enter a continuity receipt.
+    A row that fails schema validation is dropped, not retried.
+    """
+    if not state.pending_ordinary_equipment:
+        return
+    pending = state.pending_ordinary_equipment.copy()
+    state.pending_ordinary_equipment.clear()
+    rows: list[tuple[datetime, str, bool]] = []
+    for observed_at, equipment, equipment_state in pending:
+        try:
+            EquipmentStateEvent(ts=observed_at, equipment=equipment, state=equipment_state, greenhouse_id=GREENHOUSE_ID)
+        except ValidationError as e:
+            log.error("equipment_state skipped (validation failed: %s): equipment=%s", e, equipment)
+            continue
+        rows.append((observed_at, equipment, equipment_state))
+    if not rows:
+        return
+    try:
+        async with pool.acquire() as conn:
+            await conn.executemany(
+                "INSERT INTO v_runtime_equipment_state_write (ts, equipment, state) VALUES ($1, $2, $3)",
+                rows,
+            )
+    except BaseException:
+        state.pending_ordinary_equipment[0:0] = rows
+        raise
+    for observed_at, equipment, equipment_state in rows:
+        _fanout_publish(
+            "equipment_state",
+            {"ts": observed_at, "equipment": equipment, "state": equipment_state},
+        )
 
 
 async def write_legacy_equipment_events(pool: asyncpg.Pool) -> None:
@@ -3448,6 +3481,26 @@ def _mirror_irrigation_number_readback(param: str, value: Any) -> None:
 # ──────────────────────────────────────────────────────────────
 # ESP32 callbacks
 # ──────────────────────────────────────────────────────────────
+def _record_ordinary_equipment_callback(
+    equipment: str,
+    value: object,
+    observed_at: datetime,
+    source_generation: int,
+    source_clock_valid: bool,
+) -> None:
+    """Queue an on-change row for a stream the receipt function does not admit."""
+    if type(value) is not bool:
+        return
+    old = state.equipment.get(equipment)
+    state.equipment[equipment] = value
+    if old == value or source_generation < 1 or not source_clock_valid:
+        return
+    if len(state.pending_ordinary_equipment) >= EQUIPMENT_STATE_EVENT_BUFFER_MAX_ROWS:
+        log.error("ordinary equipment state event dropped at bounded buffer equipment=%s", equipment)
+        return
+    state.pending_ordinary_equipment.append((observed_at, equipment, value))
+
+
 def _record_equipment_callback(
     equipment: str,
     value: object,
@@ -3455,6 +3508,9 @@ def _record_equipment_callback(
     source_generation: int,
     source_clock_valid: bool,
 ) -> None:
+    if equipment in _ORDINARY_EQUIPMENT_STREAMS:
+        _record_ordinary_equipment_callback(equipment, value, observed_at, source_generation, source_clock_valid)
+        return
     if type(value) is not bool:
         if source_generation >= 1:
             _mark_equipment_source_gap("invalid_equipment_state_value")
@@ -3932,6 +3988,14 @@ async def flush_loop(
         except Exception as e:
             log.error(f"equipment_state write error: {e}")
 
+        # Streams outside the receipt function's list (Q-09 grow-light intent)
+        # use the ordinary view in both writer modes.
+        if state.pending_ordinary_equipment:
+            try:
+                await write_ordinary_equipment_events(pool)
+            except Exception as e:
+                log.error("ordinary equipment_state write error: %s", e)
+
         # Raw device counters (flush immediately). These are source evidence,
         # not a derived daily summary; database errors retain the exact UUIDs
         # for a safe whole-batch retry.
@@ -4397,21 +4461,6 @@ def _launch_due_tasks(
     return started
 
 
-def _poll_stage_approval(
-    state_dir: Path,
-    observed: tuple[int, int, int] | None,
-    pending: tuple[int, int, int] | None,
-) -> tuple[tuple[int, int, int] | None, tuple[int, int, int] | None]:
-    stamp = bounded_reconcile.approval_file_stamp(state_dir)
-    if stamp != observed:
-        pending = stamp
-    # Reassert until a dispatcher launch consumes this replacement. A prior
-    # in-flight pass may clear the event after the file was replaced.
-    if pending is not None:
-        shared.setpoint_dispatch_requested.set()
-    return stamp, pending
-
-
 def _poll_drift_approval(
     state_dir: Path,
     observed: tuple[int, int, int] | None,
@@ -4484,12 +4533,18 @@ async def task_loop(
     }
     TASKS = [
         # (name, interval_seconds, coroutine_factory)
+        # VD-54 (Q-01): one system_state row every 60 s whether or not the ESP32
+        # session is up, so the dashboard tells a dead ingestor from a
+        # controller that stopped reporting.
+        ("ingestor_heartbeat", 60, ingestor_heartbeat),
         ("water_flowing", 60, water_flowing_sync),
         ("water_meter_materialize", 60, water_meter_materialize),
         ("matview_refresh", 300, matview_refresh),
         ("shelly_sync", 300, shelly_sync),
-        ("tempest_sync", 300, tempest_sync),
         ("ha_sensor_sync", 300, ha_sensor_sync),
+        # VD-70: read-only YINMIK hydro meter over Tuya local TCP 6668; idle until
+        # the optional verdify-hydro-probe Secret is mounted.
+        ("hydro_probe_sync", 300, hydro_probe_sync),
         ("alert_monitor", 300, alert_monitor),
         # #297: unavailable until measured saturation targets and alert adapter exist.
         ("soil_saturation_status", 3600, saturation_evaluation_status),
@@ -4538,8 +4593,6 @@ async def task_loop(
     ]
     last_run: dict[str, float] = {name: 0.0 for name, _, _ in TASKS}
     running: dict[str, asyncio.Task[None]] = {}
-    approval_stamp = None
-    pending_approval_stamp = None
     drift_approval_stamp = None
     pending_drift_approval_stamp = None
 
@@ -4551,9 +4604,8 @@ async def task_loop(
         while True:
             await asyncio.sleep(1)
             now = asyncio.get_running_loop().time()
-            approval_stamp, pending_approval_stamp = _poll_stage_approval(
-                STATE_DIR, approval_stamp, pending_approval_stamp
-            )
+            # Ordinary dispatch reads no approval file (VD-62); only the
+            # one-field drift probe and the C1 overlay keep their own files.
             drift_approval_stamp, pending_drift_approval_stamp = _poll_drift_approval(
                 STATE_DIR, drift_approval_stamp, pending_drift_approval_stamp
             )
@@ -4561,7 +4613,6 @@ async def task_loop(
             forced = {"setpoint_dispatch"} if shared.setpoint_dispatch_requested.is_set() else set()
             started = _launch_due_tasks(pool, TASKS, last_run, running, now, task_timeouts, forced)
             if "setpoint_dispatch" in started:
-                pending_approval_stamp = None
                 pending_drift_approval_stamp = None
             if started:
                 log.debug("Task scheduler launched: %s", ", ".join(started))
@@ -4671,68 +4722,6 @@ async def mqtt_subscribe_loop(pool: asyncpg.Pool) -> None:
             try:
                 client.loop_stop()
             except Exception:  # noqa: BLE001
-                pass
-            await asyncio.sleep(30)
-
-
-# ──────────────────────────────────────────────────────────────
-# MQTT loop — occupancy from Frigate/Sentinel + optional feedback sensors
-# ──────────────────────────────────────────────────────────────
-async def mqtt_loop(pool: asyncpg.Pool) -> None:
-    """Subscribe to MQTT for occupancy and optional irrigation feedback."""
-    from config import MQTT_HOST, MQTT_PASS, MQTT_PORT, MQTT_USER
-
-    OCCUPANCY_TOPIC = "sentinel/occupancy/greenhouse_zone"
-
-    event_loop = asyncio.get_event_loop()
-
-    async def _write_occupancy(val: str) -> None:
-        await sync_occupancy_state(pool, val == "occupied", "mqtt")
-
-    def on_connect(client, userdata, flags, rc):
-        if rc == 0:
-            topics = [(OCCUPANCY_TOPIC, 0), *((topic, 0) for topic in MQTT_FEEDBACK_MAP)]
-            client.subscribe(topics)
-            log.info("MQTT: subscribed to %s + %d feedback topic(s)", OCCUPANCY_TOPIC, len(MQTT_FEEDBACK_MAP))
-        else:
-            log.error("MQTT: connect failed rc=%d", rc)
-
-    def on_message(client, userdata, msg):
-        topic = msg.topic
-        if topic in MQTT_FEEDBACK_MAP:
-            if msg.retain:
-                log.debug("MQTT feedback retained message ignored: %s", topic)
-                return
-            payload = msg.payload.decode(errors="replace").strip()
-            event_loop.call_soon_threadsafe(_record_mqtt_feedback, topic, payload)
-            return
-
-        payload = msg.payload.decode().strip().upper()
-        occupied = payload == "ON"
-        val = "occupied" if occupied else "empty"
-        log.info("Occupancy: %s (via MQTT)", val)
-        asyncio.run_coroutine_threadsafe(_write_occupancy(val), event_loop)
-
-    client = paho_mqtt.Client(client_id="verdify-ingestor-occupancy")
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.username_pw_set(MQTT_USER, MQTT_PASS)
-
-    while True:
-        try:
-            client.connect(MQTT_HOST, MQTT_PORT, 60)
-            client.loop_start()
-            log.info("MQTT: connected to %s:%d", MQTT_HOST, MQTT_PORT)
-            while True:
-                await asyncio.sleep(60)
-                if not client.is_connected():
-                    log.warning("MQTT: disconnected — reconnecting")
-                    client.reconnect()
-        except Exception as e:
-            log.error("MQTT: %s — retry in 30s", e)
-            try:
-                client.loop_stop()
-            except Exception:
                 pass
             await asyncio.sleep(30)
 
@@ -5311,6 +5300,10 @@ async def main() -> None:
     # ── Capture mode (prod, and the legacy VM single-writer) ──────────────────
     log.info("Verdify ingestor starting (greenhouse: %s)...", GREENHOUSE_ID)
     await reconcile_interrupted_device_writes(pool)
+    # VD-62: ordinary dispatch no longer stages. Rename (never delete) any
+    # halted-run state, approval and halted drift-probe receipt into
+    # archived/<UTC stamp>/ before the task loop starts.
+    bounded_reconcile.archive_halted_runs(STATE_DIR)
 
     # #113: prod-only publish-all. Set up the bus publisher; the flush path
     # re-emits every flushed row. Best-effort connect — a bus outage must never
@@ -5398,7 +5391,6 @@ async def main() -> None:
         esp32_loop(pool),
         flush_loop(pool, equipment_source_pool),
         task_loop(pool, component_pool, equipment_source_pool),
-        mqtt_loop(pool),
         setpoint_listener(pool),
         _writer_failure_monitor(),
     )

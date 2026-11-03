@@ -24,6 +24,7 @@ from pathlib import Path
 
 import pytest
 
+from verdify_schemas.activity import ActivityLogRow, DesiredStateRow
 from verdify_schemas.alerts import AlertLogRow
 from verdify_schemas.crop_profiles import CropTargetProfile
 from verdify_schemas.crops import Crop, CropEvent, Observation
@@ -165,6 +166,30 @@ def _tasks_route_target_columns(repo_root: Path, *mapping_names: str) -> set[str
     return columns
 
 
+def _hydro_probe_target_columns(repo_root: Path) -> set[str]:
+    """Columns the direct hydro reader writes, read by AST so the guard needs no tinytuya.
+
+    ``DP_MAP`` is a literal dict whose tuple values start with the column name;
+    ``NULL_COLUMNS`` is a literal tuple of columns written NULL (VD-70).
+    """
+    body = ast.parse((repo_root / "ingestor" / "hydro_probe.py").read_text()).body
+    found: dict[str, ast.expr] = {
+        target.id: node.value
+        for node in body
+        if isinstance(node, ast.Assign)
+        for target in node.targets
+        if isinstance(target, ast.Name) and target.id in {"DP_MAP", "NULL_COLUMNS"}
+    }
+    assert set(found) == {"DP_MAP", "NULL_COLUMNS"}, "ingestor/hydro_probe.py must define DP_MAP and NULL_COLUMNS"
+    dp_map, null_columns = found["DP_MAP"], found["NULL_COLUMNS"]
+    assert isinstance(dp_map, ast.Dict) and isinstance(null_columns, ast.Tuple), "hydro maps must be literals"
+    names = [value.elts[0] for value in dp_map.values if isinstance(value, ast.Tuple) and value.elts]
+    names += null_columns.elts
+    assert len(names) == len(dp_map.values) + len(null_columns.elts), "hydro map entries must name a column first"
+    assert all(isinstance(name, ast.Constant) and isinstance(name.value, str) for name in names)
+    return {name.value for name in names}
+
+
 # (schema class, DB table name)
 DB_BACKED = [
     # Sprint 20/21 — telemetry + plan + setpoint + crops + lessons
@@ -223,6 +248,9 @@ DB_BACKED = [
     (CropTaskRow, "crop_tasks"),
     (SlackAlertRunbookRow, "slack_alert_runbooks"),
     (SlackAIWorkItemRow, "slack_ai_work_items"),
+    # Migration 280 (VD-30): the dashboard's write record. Skips until 280 is in the DB it reads.
+    (ActivityLogRow, "activity_log"),
+    (DesiredStateRow, "desired_state"),
 ]
 
 
@@ -372,8 +400,8 @@ def test_ingestor_climate_route_targets_declared_by_schema_and_db():
 
     mapped_columns = set(entity_map.CLIMATE_MAP.values())
     mapped_columns.update(entity_map.ESPHOME_FEEDBACK_MAP.values())
-    mapped_columns.update(entity_map.MQTT_FEEDBACK_MAP.values())
-    mapped_columns.update(_tasks_route_target_columns(repo_root, "_TEMPEST_MAP", "_HYDRO_MAP", "_CENTER_FEEDBACK_MAP"))
+    mapped_columns.update(_tasks_route_target_columns(repo_root, "_HYDRO_MAP"))
+    mapped_columns.update(_hydro_probe_target_columns(repo_root))
 
     schema_fields = set(ClimateRow.model_fields)
     db_cols = _table_columns("climate")

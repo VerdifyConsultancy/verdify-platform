@@ -1,28 +1,20 @@
-"""Route modules of the operator API (architecture §8, execution plan §2.1).
+"""Operator API route modules (architecture §6 and §8; execution plan §2.1).
 
-Rules for every module here (``reads``, ``series``, ``writes``, ``irrigation_reads``,
-``irrigation_writes``):
+The rules every module here follows:
 
-- One ``router = APIRouter()`` per module. Paths are written without the ``/v1`` prefix:
-  ``api/operator_api.py`` includes each router under ``/v1`` with the bearer, session and role
-  dependencies, so a module carries no auth of its own.
-- Every route sets ``operation_id`` to its design id (API-01 to API-21, API-IRR-01 to API-IRR-13).
-- No SQL: a route parses its request and calls ``verdify_services``; a ``ServiceError`` becomes
-  ``application/problem+json`` in the operator API's handler.
-- A route takes its database connection from ``connection``, which acquires one from the
-  operator API's asyncpg pool (``app.state.pool``) for the length of the request.
-- Whichever PR lands first creates a module's stub.
+- One ``router = APIRouter()`` per module: ``reads``, ``series``, ``writes``, ``irrigation_reads`` and
+  ``irrigation_writes``. #1148 created the ``writes``, ``irrigation_reads`` and ``irrigation_writes`` stubs;
+  ``series`` is #1169's to create, and the operator API includes it as soon as its file exists.
+- Paths are written without the ``/v1`` prefix; ``api/operator_api.py`` (#1148) includes each router under
+  ``/v1`` with ``include_v1()``.
+- Every route sets ``operation_id`` to its design id (``API-09``, ``API-IRR-06``, ...), the canonical
+  ``operationId`` in docs/design/dashboard/openapi/dashboard-api.v1.yaml; tests/test_operator_api_contract.py
+  checks every served route against it.
+- No auth dependencies: ``include_v1()`` adds the bearer, session and role checks (GET and HEAD for viewers and
+  operators, every other method for operators only) and sets ``request.state.actor`` to the signed-in person's
+  ``verdify_services.actor.Actor``, which a write passes to its service. A route never reads an actor, source or
+  ``*_by`` value from the request.
+- No SQL: a route only calls ``verdify_services``. A ``ServiceError`` propagates, and the operator API renders
+  it as ``application/problem+json`` (``problem.body()`` with ``problem.status``). A write passes the
+  ``Idempotency-Key`` header as ``request_id`` and returns ``WriteResult.rest_headers()`` with its body.
 """
-
-from __future__ import annotations
-
-from collections.abc import AsyncIterator
-
-import asyncpg
-from fastapi import Request
-
-
-async def connection(request: Request) -> AsyncIterator[asyncpg.Connection]:
-    """FastAPI dependency: one pooled connection for the request."""
-    async with request.app.state.pool.acquire() as conn:
-        yield conn

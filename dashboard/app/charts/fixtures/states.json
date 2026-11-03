@@ -1,0 +1,107 @@
+{
+  "from": "2026-11-01T06:00:00Z",
+  "to": "2026-11-01T10:00:00Z",
+  "lanes": [
+    {"equipment": "water_flowing", "label": "Water flowing", "group": "flag", "line_id": null, "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T07:31:00Z", "state": "off"},
+      {"start": "2026-11-01T07:31:00Z", "end": "2026-11-01T07:43:00Z", "state": "on"},
+      {"start": "2026-11-01T07:43:00Z", "end": "2026-11-01T10:00:00Z", "state": "off"}
+    ]},
+    {"equipment": "grow_light_main_intent", "label": "Main grow light (controller)", "group": "light", "line_id": null, "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "on"}
+    ]},
+    {"equipment": "fan1", "label": "Fan 1", "group": "climate", "line_id": null, "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T06:40:00Z", "state": "on"},
+      {"start": "2026-11-01T06:40:00Z", "end": "2026-11-01T07:30:00Z", "state": "off"},
+      {"start": "2026-11-01T07:30:00Z", "end": "2026-11-01T08:10:00Z", "state": "on"},
+      {"start": "2026-11-01T08:10:00Z", "end": "2026-11-01T09:10:00Z", "state": "off"},
+      {"start": "2026-11-01T09:10:00Z", "end": "2026-11-01T09:40:00Z", "state": "unknown"},
+      {"start": "2026-11-01T09:40:00Z", "end": "2026-11-01T10:00:00Z", "state": "off"}
+    ]},
+    {"equipment": "fan2", "label": "Fan 2", "group": "climate", "line_id": null, "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off"}
+    ]},
+    {"equipment": "vent", "label": "Vent", "group": "climate", "line_id": null, "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T09:10:00Z", "state": "off"},
+      {"start": "2026-11-01T09:10:00Z", "end": "2026-11-01T09:40:00Z", "state": "unknown"},
+      {"start": "2026-11-01T09:40:00Z", "end": "2026-11-01T10:00:00Z", "state": "off"}
+    ]},
+    {"equipment": "heat1", "label": "Heat 1 (electric)", "group": "climate", "line_id": null, "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T07:10:00Z", "state": "on"},
+      {"start": "2026-11-01T07:10:00Z", "end": "2026-11-01T09:10:00Z", "state": "off"},
+      {"start": "2026-11-01T09:10:00Z", "end": "2026-11-01T09:40:00Z", "state": "unknown"},
+      {"start": "2026-11-01T09:40:00Z", "end": "2026-11-01T10:00:00Z", "state": "off"}
+    ]},
+    {"equipment": "heat2", "label": "Heat 2 (gas)", "group": "climate", "line_id": null, "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T09:10:00Z", "state": "off"},
+      {"start": "2026-11-01T09:10:00Z", "end": "2026-11-01T09:40:00Z", "state": "unknown"},
+      {"start": "2026-11-01T09:40:00Z", "end": "2026-11-01T10:00:00Z", "state": "off"}
+    ]},
+    {"equipment": "mister_center", "label": "L04 Center mister", "group": "water", "line_id": "L04", "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T06:58:00Z", "state": "off", "cause": null},
+      {"start": "2026-11-01T06:58:00Z", "end": "2026-11-01T06:59:00Z", "state": "on", "cause": "vpd"},
+      {"start": "2026-11-01T06:59:00Z", "end": "2026-11-01T07:00:00Z", "state": "off", "cause": null},
+      {"start": "2026-11-01T07:00:00Z", "end": "2026-11-01T07:01:00Z", "state": "on", "cause": "vpd"},
+      {"start": "2026-11-01T07:01:00Z", "end": "2026-11-01T07:02:00Z", "state": "off", "cause": null},
+      {"start": "2026-11-01T07:02:00Z", "end": "2026-11-01T07:03:00Z", "state": "on", "cause": "vpd"},
+      {"start": "2026-11-01T07:03:00Z", "end": "2026-11-01T08:00:00Z", "state": "off", "cause": null},
+      {"start": "2026-11-01T08:00:00Z", "end": "2026-11-01T08:05:00Z", "state": "on", "cause": "schedule"},
+      {"start": "2026-11-01T08:05:00Z", "end": "2026-11-01T08:30:00Z", "state": "off", "cause": null},
+      {"start": "2026-11-01T08:30:00Z", "end": "2026-11-01T08:31:00Z", "state": "on", "cause": null},
+      {"start": "2026-11-01T08:31:00Z", "end": "2026-11-01T09:10:00Z", "state": "off", "cause": null},
+      {"start": "2026-11-01T09:10:00Z", "end": "2026-11-01T09:40:00Z", "state": "unknown", "cause": null},
+      {"start": "2026-11-01T09:40:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
+    ]},
+    {"equipment": "drip_wall", "label": "L01 Wall drip", "group": "water", "line_id": "L01", "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T07:31:00Z", "state": "off", "cause": null},
+      {"start": "2026-11-01T07:31:00Z", "end": "2026-11-01T07:43:00Z", "state": "on", "cause": "schedule"},
+      {"start": "2026-11-01T07:43:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
+    ]},
+    {"equipment": "drip_wall_fert", "label": "L02 Wall feed", "group": "water", "line_id": "L02", "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
+    ]},
+    {"equipment": "fert_master_valve", "label": "L03 Fert master", "group": "water", "line_id": "L03", "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
+    ]},
+    {"equipment": "drip_center", "label": "L05 Center drip", "group": "water", "line_id": "L05", "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
+    ]},
+    {"equipment": "drip_center_fert", "label": "L06 Center feed", "group": "water", "line_id": "L06", "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
+    ]},
+    {"equipment": "mister_south", "label": "L07 South mister", "group": "water", "line_id": "L07", "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
+    ]},
+    {"equipment": "mister_south_fert", "label": "L08 South feed mister", "group": "water", "line_id": "L08", "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
+    ]},
+    {"equipment": "mister_west", "label": "L09 West mister", "group": "water", "line_id": "L09", "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
+    ]},
+    {"equipment": "mister_west_fert", "label": "L10 West feed mister", "group": "water", "line_id": "L10", "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
+    ]},
+    {"equipment": "fog", "label": "L11 Fog", "group": "water", "line_id": "L11", "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
+    ]},
+    {"equipment": "grow_light_grow", "label": "Grow light (Lutron)", "group": "light", "line_id": null, "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T06:30:00Z", "state": "off"},
+      {"start": "2026-11-01T06:30:00Z", "end": "2026-11-01T08:00:00Z", "state": "on"},
+      {"start": "2026-11-01T08:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off"}
+    ]},
+    {"equipment": "grow_light_main", "label": "Main grow light (Lutron)", "group": "light", "line_id": null, "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T07:00:00Z", "state": "on"},
+      {"start": "2026-11-01T07:00:00Z", "end": "2026-11-01T09:10:00Z", "state": "off"},
+      {"start": "2026-11-01T09:10:00Z", "end": "2026-11-01T10:00:00Z", "state": "unknown"}
+    ]},
+    {"equipment": "grow_light_grow_intent", "label": "Grow light (controller)", "group": "light", "line_id": null, "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "on"}
+    ]},
+    {"equipment": "occupancy", "label": "Occupancy", "group": "flag", "line_id": null, "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off"}
+    ]},
+    {"equipment": "leak_detected", "label": "Unexplained flow", "group": "flag", "line_id": null, "intervals": [
+      {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off"}
+    ]}
+  ]
+}

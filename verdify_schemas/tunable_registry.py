@@ -142,7 +142,15 @@ class TunableDef(BaseModel):
     @property
     def control_class(
         self,
-    ) -> Literal["planner_policy", "crop_band", "scheduled_policy", "controller_safety", "readback_context", "retired"]:
+    ) -> Literal[
+        "planner_policy",
+        "crop_band",
+        "scheduled_policy",
+        "controller_safety",
+        "irrigation_site",
+        "readback_context",
+        "retired",
+    ]:
         """Canonical cleanup class used by planner/MCP/site surfaces."""
         return tunable_control_class(self.name, self)
 
@@ -156,6 +164,17 @@ class TunableDef(BaseModel):
 # operator toggles, safety rails, irrigation schedule knobs, readback-only
 # inputs, and retired aliases) is tier=2 context and MCP rejects planner writes.
 # ─────────────────────────────────────────────────────────────────────────────
+
+# The L01 bridge's rows (irrigation §6.5, #1177): the sw_irrig_* switches, their sw_irrigation_*
+# alias rows and the two irrig_*_duration_min rows. The engine release (VD-47, #1162) removed
+# their entities from the firmware YAML, but the bridge drives the pre-engine firmware through
+# them until the engine is last-good, so the rows and their routes stay until the follow-up
+# that #1165 merges after `make firmware-promote-last-good`. With no entity in tunables.yaml
+# they carry their own step, label and unit, and no firmware clamp (min/max keep the bounds).
+_L01_BRIDGE_NOTE = (
+    "L01 bridge (irrigation §6.5): pre-engine firmware only; the engine release removed the entity "
+    "(VD-47) and the follow-up that #1165 merges retires this row."
+)
 
 REGISTRY: dict[str, TunableDef] = {
     # ─────────────────────────────────────────────────────────────────────
@@ -729,21 +748,6 @@ REGISTRY: dict[str, TunableDef] = {
         wire_unit="gal",
         notes="Daily mister water cap. In MCP TIER1. Practical operating range tightened to 100-300 gal/day.",
     ),
-    "mister_max_runtime_min": TunableDef(
-        name="mister_max_runtime_min",
-        kind="numeric",
-        min=5,
-        max=480,
-        default=120,
-        fw_clamp_lo=5,
-        fw_clamp_hi=480,
-        esp_object_id="mister_max_runtime__min_",
-        cfg_readback_object_id=None,
-        push_owner="planner",
-        planner_pushable=False,
-        tier=2,
-        notes="Deprecated legacy runtime cap. Current water-budget logic uses mister_water_budget_gal.",
-    ),
     # ─────────────────────────────────────────────────────────────────────
     # Mister pulse-rotation model (tier=1). Phase-1c added cfg_* readbacks.
     # ─────────────────────────────────────────────────────────────────────
@@ -860,6 +864,106 @@ REGISTRY: dict[str, TunableDef] = {
         planner_pushable=False,
         tier=2,
         notes="Item-3 per-zone arbiter master enable. Default OFF — ships inert; the arbiter (select_arbiter_zone in controls.yaml) only drives select_zone_for_pulse when ON. The firmware publishes cfg_arbiter_zone_enabled (sensor name 'Cfg Arbiter Zone Enabled' → cfg_arbiter_zone_enabled); without this row the setpoint_snapshot rejected it every cycle. Flip after a corpus zone-distribution review.",
+    ),
+    # ─────────────────────────────────────────────────────────────────────
+    # VD-63: six live firmware tunables that had no row, so Settings could not
+    # list them and setpoint_snapshot rejected their readbacks. Shaped like
+    # sw_arbiter_zone_enabled: tier 2, never planner-pushable, no wire_id.
+    # Bounds and fw_clamp equal the tunables.yaml entity; defaults are the
+    # globals.yaml initial values. The ids are the object_ids the device
+    # reports: the entity or sensor name lower-cased, each character outside
+    # [a-z0-9_-] replaced by "_" (ESPHome keeps hyphens). No plan, band or
+    # default names these rows, so registering them pushes nothing.
+    # ─────────────────────────────────────────────────────────────────────
+    "mister_hysteresis_kpa": TunableDef(
+        name="mister_hysteresis_kpa",
+        kind="numeric",
+        min=0.05,
+        max=0.50,
+        default=0.10,
+        fw_clamp_lo=0.05,
+        fw_clamp_hi=0.50,
+        esp_object_id="mister_hysteresis__kpa_",
+        cfg_readback_object_id="cfg___mister_hysteresis__kpa_",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="IRR-2 mister VPD hysteresis floor, kPa. The mister state machine uses max(this, "
+        "mister_engage_kpa x 0.25), capped at the band width, so misting cannot chatter inside a "
+        "tight band. Its cfg_* readback ships with the engine release OTA; until then the native "
+        "number state is the readback.",
+    ),
+    "night_stress_min_dew_margin_f": TunableDef(
+        name="night_stress_min_dew_margin_f",
+        kind="numeric",
+        min=3.0,
+        max=15.0,
+        default=6.0,
+        fw_clamp_lo=3.0,
+        fw_clamp_hi=15.0,
+        esp_object_id="night_stress_min_dew_margin___f_",
+        cfg_readback_object_id="cfg___night_stress_min_dew_margin___f_",
+        push_owner="safety",
+        planner_pushable=False,
+        tier=2,
+        notes="BC-7 night wetting dew margin, °F. At night, wetting and fog need a temperature-dewpoint "
+        "spread of at least max(direct_wet_stress_min_dew_margin_f, this), so no crown condensation. "
+        "The default is the global's initial value (6.0); default_setpoints() in greenhouse_types.h "
+        "says 10.0, but the live global starts at 6.0.",
+    ),
+    "sw_night_econ_heat_suppress_enabled": TunableDef(
+        name="sw_night_econ_heat_suppress_enabled",
+        kind="switch",
+        default=1,
+        esp_object_id="night_econ_heat_suppress_enabled",
+        cfg_readback_object_id="cfg_night_econ_heat_suppress_enabled",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="ENV-2 night econ-heat suppression (default ON). Never heat to chase humidity at night: "
+        "the econ-rescue heat (heat1 lifting a low VPD) is suppressed for the whole solar night half; "
+        "safety heat is untouched.",
+    ),
+    "sw_wet_taper_enabled": TunableDef(
+        name="sw_wet_taper_enabled",
+        kind="switch",
+        default=1,
+        esp_object_id="wet_taper_enabled",
+        cfg_readback_object_id="cfg_wet_taper_enabled",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Wet taper master enable (default ON). Routine wetting stops wet_taper_before_sunset_min "
+        "before the on-chip sunset and stays off through the night half, so foliage dries before dark.",
+    ),
+    "sw_night_stress_wet_enabled": TunableDef(
+        name="sw_night_stress_wet_enabled",
+        kind="switch",
+        default=1,
+        esp_object_id="night_stress_wet_enabled",
+        cfg_readback_object_id="cfg_night_stress_wet_enabled",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Night stress wetting master enable (default ON). Lets the stress-wet rule fire at night "
+        "under the stricter night_stress_min_dew_margin_f; the mister machinery and SAF-4 caps bound the water.",
+    ),
+    # Read-only on purpose: no esp_object_id, so no route can push it and
+    # Settings shows it read-only with the reason in notes. Its readback
+    # (cfg_on-chip_band_enabled) still lands in setpoint_snapshot. Label set
+    # here because the row has no entity match (the switch name).
+    "sw_onchip_band_enabled": TunableDef(
+        name="sw_onchip_band_enabled",
+        kind="switch",
+        default=1,
+        esp_object_id=None,
+        cfg_readback_object_id="cfg_on-chip_band_enabled",
+        push_owner="firmware_internal",
+        planner_pushable=False,
+        tier=2,
+        label="On-Chip Band Enabled",
+        notes="Decides which side owns the band. Off hands the band to the dispatcher's legacy wide "
+        "limits, which Settings shows read-only; band_device_db_divergence alerts when it is off.",
     ),
     # ─────────────────────────────────────────────────────────────────────
     # Per-zone VPD targets (push_owner="band" — dispatcher pushes from crop
@@ -1117,51 +1221,6 @@ REGISTRY: dict[str, TunableDef] = {
         tier=2,
         notes="Lead/lag fan rotation timer. Operator-tuned.",
     ),
-    "fan_burst_min": TunableDef(
-        name="fan_burst_min",
-        kind="numeric",
-        min=1,
-        max=60,
-        default=10,
-        fw_clamp_lo=1,
-        fw_clamp_hi=60,
-        esp_object_id="fan_burst__min_",
-        cfg_readback_object_id="cfg___fan_burst__min_",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        notes="Manual fan-burst duration placeholder. Current firmware does not consume it for timing.",
-    ),
-    "vent_bypass_min": TunableDef(
-        name="vent_bypass_min",
-        kind="numeric",
-        min=1,
-        max=60,
-        default=10,
-        fw_clamp_lo=1,
-        fw_clamp_hi=60,
-        esp_object_id="vent_bypass__min_",
-        cfg_readback_object_id="cfg___vent_bypass__min_",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        notes="Manual vent-bypass duration placeholder. Current firmware does not consume it for timing.",
-    ),
-    "fog_burst_min": TunableDef(
-        name="fog_burst_min",
-        kind="numeric",
-        min=1,
-        max=60,
-        default=10,
-        fw_clamp_lo=1,
-        fw_clamp_hi=60,
-        esp_object_id="fog_burst__min_",
-        cfg_readback_object_id="cfg___fog_burst__min_",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        notes="Manual fog-burst duration placeholder. Current firmware updates the value but does not consume it for timing.",
-    ),
     # ─────────────────────────────────────────────────────────────────────
     # Fog safety gates. Tier=2 — operator rarely tunes.
     # ─────────────────────────────────────────────────────────────────────
@@ -1195,18 +1254,23 @@ REGISTRY: dict[str, TunableDef] = {
         tier=2,
         notes="Fog blocks when indoor temp below this (evap cooling hurts in cold).",
     ),
+    # RETIRED (VD-63): no firmware YAML has the fog_window_start__hr_ /
+    # fog_window_end__hr_ entities or their cfg_* readbacks, so both rows carry
+    # no route. They stay so the setpoint_changes history still validates;
+    # scripts/export-replay-overrides.sh reads only that history.
     "fog_time_window_start": TunableDef(
         name="fog_time_window_start",
         kind="numeric",
         min=5,
         max=12,
         default=6,
-        esp_object_id="fog_window_start__hr_",
-        cfg_readback_object_id="cfg___fog_window_start__hour_",
+        esp_object_id=None,
+        cfg_readback_object_id=None,
         push_owner="planner",
         planner_pushable=False,
         tier=2,
-        notes="Start hour for fog eligibility window.",
+        notes="Retired: start hour of the old fog eligibility window. The firmware has no such entity; "
+        "the row stays for setpoint_changes history.",
     ),
     "fog_time_window_end": TunableDef(
         name="fog_time_window_end",
@@ -1214,12 +1278,13 @@ REGISTRY: dict[str, TunableDef] = {
         min=14,
         max=20,
         default=18,
-        esp_object_id="fog_window_end__hr_",
-        cfg_readback_object_id="cfg___fog_window_end__hour_",
+        esp_object_id=None,
+        cfg_readback_object_id=None,
         push_owner="planner",
         planner_pushable=False,
         tier=2,
-        notes="End hour for fog eligibility window.",
+        notes="Retired: end hour of the old fog eligibility window. The firmware has no such entity; "
+        "the row stays for setpoint_changes history.",
     ),
     # BC-11 (ADR0003 §6.7): the fog_stress_* clock-window tunables are RETIRED dead
     # registry rows — replaced by the solar-phase curve-only fog gate (no firmware
@@ -1652,7 +1717,7 @@ REGISTRY: dict[str, TunableDef] = {
         ),
     ),
     # ─────────────────────────────────────────────────────────────────────
-    # Irrigation schedule (push_owner="operator"). Tier=2 across the board.
+    # The L01 bridge's irrigation rows (push_owner="operator", tier=2; _L01_BRIDGE_NOTE).
     # ─────────────────────────────────────────────────────────────────────
     "sw_irrig_enabled": TunableDef(
         name="sw_irrig_enabled",
@@ -1663,7 +1728,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=False,
         tier=2,
-        notes="Master explicit-irrigation enable; does not bypass wall commissioning.",
+        step=1.0,
+        label="Irrigation Enabled",
+        unit=None,
+        notes=_L01_BRIDGE_NOTE,
     ),
     "sw_irrig_wall_enabled": TunableDef(
         name="sw_irrig_wall_enabled",
@@ -1674,6 +1742,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=False,
         tier=2,
+        step=1.0,
+        label="Irrigation Wall Enabled",
+        unit=None,
+        notes=_L01_BRIDGE_NOTE,
     ),
     "sw_irrig_center_enabled": TunableDef(
         name="sw_irrig_center_enabled",
@@ -1684,7 +1756,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=False,
         tier=2,
-        notes="Unconnected center drip path; forced disabled at boot until explicitly commissioned.",
+        step=1.0,
+        label="Irrigation Center Enabled",
+        unit=None,
+        notes=_L01_BRIDGE_NOTE,
     ),
     "sw_irrig_south_enabled": TunableDef(
         name="sw_irrig_south_enabled",
@@ -1695,7 +1770,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=False,
         tier=2,
-        notes="Dormant south clean-irrigation path; never a climate route.",
+        step=1.0,
+        label="Irrigation South Enabled",
+        unit=None,
+        notes=_L01_BRIDGE_NOTE,
     ),
     "sw_irrig_west_enabled": TunableDef(
         name="sw_irrig_west_enabled",
@@ -1706,160 +1784,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=False,
         tier=2,
-        notes="Dormant west clean-irrigation path; never a climate route.",
-    ),
-    "sw_wall_fertigation_commissioned": TunableDef(
-        name="sw_wall_fertigation_commissioned",
-        kind="switch",
-        default=0,
-        esp_object_id="wall_fertigation_commissioned",
-        cfg_readback_object_id="cfg_wall_fertigation_commissioned",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        notes="Final operator arm; every current commissioning field is still validated on device.",
-    ),
-    "wall_commissioning_revision": TunableDef(
-        name="wall_commissioning_revision",
-        kind="numeric",
-        min=0,
-        max=1000000,
-        default=0,
-        fw_clamp_lo=0,
-        fw_clamp_hi=1000000,
-        esp_object_id="wall_commissioning_revision",
-        cfg_readback_object_id="cfg_wall_commissioning_revision",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-    ),
-    "wall_commissioning_evidence_mask": TunableDef(
-        name="wall_commissioning_evidence_mask",
-        kind="numeric",
-        min=0,
-        max=511,
-        default=0,
-        fw_clamp_lo=0,
-        fw_clamp_hi=511,
-        esp_object_id="wall_commissioning_evidence_mask",
-        cfg_readback_object_id="cfg_wall_commissioning_evidence_mask",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        notes="Bitmask for water, product, injector, flow, distribution, line fill, flush endpoint, delivered chemistry, and seasonal multiplier evidence.",
-    ),
-    "wall_commissioning_valid_until_epoch_s": TunableDef(
-        name="wall_commissioning_valid_until_epoch_s",
-        kind="numeric",
-        min=0,
-        max=2147483520,
-        default=0,
-        fw_clamp_lo=0,
-        fw_clamp_hi=2147483520,
-        esp_object_id="wall_commissioning_valid_until_epoch_s",
-        cfg_readback_object_id="cfg_wall_commissioning_valid_until_epoch_s",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-    ),
-    "wall_flow_lpm": TunableDef(
-        name="wall_flow_lpm",
-        kind="numeric",
-        min=0.0,
-        max=100.0,
-        default=0.0,
-        fw_clamp_lo=0.0,
-        fw_clamp_hi=100.0,
-        esp_object_id="wall_calibrated_flow_lpm",
-        cfg_readback_object_id="cfg_wall_flow_lpm",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-    ),
-    "wall_flow_valid_until_epoch_s": TunableDef(
-        name="wall_flow_valid_until_epoch_s",
-        kind="numeric",
-        min=0,
-        max=2147483520,
-        default=0,
-        fw_clamp_lo=0,
-        fw_clamp_hi=2147483520,
-        esp_object_id="wall_flow_valid_until_epoch_s",
-        cfg_readback_object_id="cfg_wall_flow_valid_until_epoch_s",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-    ),
-    "wall_prewet_liters": TunableDef(
-        name="wall_prewet_liters",
-        kind="numeric",
-        min=0.0,
-        max=200.0,
-        default=0.0,
-        fw_clamp_lo=0.0,
-        fw_clamp_hi=200.0,
-        esp_object_id="wall_prewet_liters",
-        cfg_readback_object_id="cfg_wall_prewet_liters",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-    ),
-    "wall_feed_liters": TunableDef(
-        name="wall_feed_liters",
-        kind="numeric",
-        min=0.0,
-        max=200.0,
-        default=0.0,
-        fw_clamp_lo=0.0,
-        fw_clamp_hi=200.0,
-        esp_object_id="wall_feed_liters",
-        cfg_readback_object_id="cfg_wall_feed_liters",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-    ),
-    "wall_flush_liters": TunableDef(
-        name="wall_flush_liters",
-        kind="numeric",
-        min=0.0,
-        max=400.0,
-        default=0.0,
-        fw_clamp_lo=0.0,
-        fw_clamp_hi=400.0,
-        esp_object_id="wall_flush_liters",
-        cfg_readback_object_id="cfg_wall_flush_liters",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-    ),
-    "irrig_wall_start_hour": TunableDef(
-        name="irrig_wall_start_hour",
-        kind="numeric",
-        min=0,
-        max=23,
-        default=10,
-        fw_clamp_lo=0,
-        fw_clamp_hi=23,
-        esp_object_id="irrig_wall_start_hour",
-        cfg_readback_object_id="cfg_irrig_wall_start_hour",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        notes="Wall-drip schedule — operator configures.",
-    ),
-    "irrig_wall_start_min": TunableDef(
-        name="irrig_wall_start_min",
-        kind="numeric",
-        min=0,
-        max=59,
-        default=30,
-        fw_clamp_lo=0,
-        fw_clamp_hi=59,
-        esp_object_id="irrig_wall_start_min",
-        cfg_readback_object_id="cfg_irrig_wall_start_min",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
+        step=1.0,
+        label="Irrigation West Enabled",
+        unit=None,
+        notes=_L01_BRIDGE_NOTE,
     ),
     "irrig_wall_duration_min": TunableDef(
         name="irrig_wall_duration_min",
@@ -1867,128 +1795,15 @@ REGISTRY: dict[str, TunableDef] = {
         min=1,
         max=120,
         default=10,
-        fw_clamp_lo=1,
-        fw_clamp_hi=120,
         esp_object_id="irrig_wall_duration__min_",
         cfg_readback_object_id="cfg_irrig_wall_duration_min",
         push_owner="operator",
         planner_pushable=False,
         tier=2,
-    ),
-    "irrig_wall_fert_duration_min": TunableDef(
-        name="irrig_wall_fert_duration_min",
-        kind="numeric",
-        min=0,
-        max=60,
-        default=6,
-        fw_clamp_lo=0,
-        fw_clamp_hi=60,
-        esp_object_id="irrig_wall_fert_duration__min_",
-        cfg_readback_object_id="cfg_irrig_wall_fert_duration_min",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-    ),
-    "irrig_wall_fert_every_n": TunableDef(
-        name="irrig_wall_fert_every_n",
-        kind="numeric",
-        min=0,
-        max=30,
-        default=0,
-        fw_clamp_lo=0,
-        fw_clamp_hi=30,
-        esp_object_id="irrig_wall_fert_every_n_cycles",
-        cfg_readback_object_id="cfg_irrig_wall_fert_every_n",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        notes="Naming quirk: canonical drops '_cycles' suffix that SETPOINT_MAP key carries.",
-    ),
-    "irrig_wall_days_mask": TunableDef(
-        name="irrig_wall_days_mask",
-        kind="numeric",
-        min=0,
-        max=127,
-        default=127,
-        fw_clamp_lo=0,
-        fw_clamp_hi=127,
-        esp_object_id="irrig_wall_days_mask",
-        cfg_readback_object_id="cfg_irrig_wall_days_mask",
-        push_owner="schedule",
-        planner_pushable=False,
-        tier=2,
-        notes="RETIRED 2026-07-11 (#450 recovery firmware removed the clocked schedule; no ESPHome entity). Explicit wall watering day mask, bit0=Sunday through bit6=Saturday.",
-    ),
-    "irrig_wall_fert_days_mask": TunableDef(
-        name="irrig_wall_fert_days_mask",
-        kind="numeric",
-        min=0,
-        max=127,
-        default=127,
-        fw_clamp_lo=0,
-        fw_clamp_hi=127,
-        esp_object_id="irrig_wall_fert_days_mask",
-        cfg_readback_object_id="cfg_irrig_wall_fert_days_mask",
-        push_owner="schedule",
-        planner_pushable=False,
-        tier=2,
-        notes="RETIRED 2026-07-11 (#450 recovery firmware removed the clocked schedule; no ESPHome entity). Explicit wall fertigation day mask. Nonzero supersedes irrig_wall_fert_every_n.",
-    ),
-    "irrig_wall_flush_min": TunableDef(
-        name="irrig_wall_flush_min",
-        kind="numeric",
-        min=0,
-        max=30,
-        default=2,
-        fw_clamp_lo=0,
-        fw_clamp_hi=30,
-        esp_object_id="irrig_wall_flush__min_",
-        cfg_readback_object_id="cfg_irrig_wall_flush_min",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-    ),
-    "irrig_wall_interval_days": TunableDef(
-        name="irrig_wall_interval_days",
-        kind="numeric",
-        min=1,
-        max=14,
-        default=1,
-        fw_clamp_lo=1,
-        fw_clamp_hi=14,
-        esp_object_id="irrig_wall_interval__days_",
-        cfg_readback_object_id="cfg_irrig_wall_interval_days",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-    ),
-    "irrig_center_start_hour": TunableDef(
-        name="irrig_center_start_hour",
-        kind="numeric",
-        min=0,
-        max=23,
-        default=10,
-        fw_clamp_lo=0,
-        fw_clamp_hi=23,
-        esp_object_id="irrig_center_start_hour",
-        cfg_readback_object_id="cfg_irrig_center_start_hour",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-    ),
-    "irrig_center_start_min": TunableDef(
-        name="irrig_center_start_min",
-        kind="numeric",
-        min=0,
-        max=59,
-        default=30,
-        fw_clamp_lo=0,
-        fw_clamp_hi=59,
-        esp_object_id="irrig_center_start_min",
-        cfg_readback_object_id="cfg_irrig_center_start_min",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
+        step=1.0,
+        label="Irrig Wall Duration",
+        unit="min",
+        notes=_L01_BRIDGE_NOTE,
     ),
     "irrig_center_duration_min": TunableDef(
         name="irrig_center_duration_min",
@@ -1996,130 +1811,15 @@ REGISTRY: dict[str, TunableDef] = {
         min=1,
         max=120,
         default=10,
-        fw_clamp_lo=1,
-        fw_clamp_hi=120,
         esp_object_id="irrig_center_duration__min_",
         cfg_readback_object_id="cfg_irrig_center_duration_min",
         push_owner="operator",
         planner_pushable=False,
         tier=2,
-    ),
-    "irrig_center_fert_duration_min": TunableDef(
-        name="irrig_center_fert_duration_min",
-        kind="numeric",
-        min=0,
-        max=60,
-        default=6,
-        fw_clamp_lo=0,
-        fw_clamp_hi=60,
-        esp_object_id="irrig_center_fert_duration__min_",
-        cfg_readback_object_id="cfg_irrig_center_fert_duration_min",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-    ),
-    "irrig_center_fert_every_n": TunableDef(
-        name="irrig_center_fert_every_n",
-        kind="numeric",
-        min=0,
-        max=30,
-        default=0,
-        fw_clamp_lo=0,
-        fw_clamp_hi=30,
-        esp_object_id="irrig_center_fert_every_n_cycles",
-        cfg_readback_object_id="cfg_irrig_center_fert_every_n",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        notes="Naming quirk: canonical drops '_cycles' suffix.",
-    ),
-    "irrig_center_days_mask": TunableDef(
-        name="irrig_center_days_mask",
-        kind="numeric",
-        min=0,
-        max=127,
-        default=127,
-        fw_clamp_lo=0,
-        fw_clamp_hi=127,
-        esp_object_id="irrig_center_days_mask",
-        cfg_readback_object_id="cfg_irrig_center_days_mask",
-        push_owner="schedule",
-        planner_pushable=False,
-        tier=2,
-        notes="RETIRED 2026-07-11 (#450 recovery firmware removed the clocked schedule; no ESPHome entity). Explicit center watering day mask, bit0=Sunday through bit6=Saturday.",
-    ),
-    "irrig_center_fert_days_mask": TunableDef(
-        name="irrig_center_fert_days_mask",
-        kind="numeric",
-        min=0,
-        max=127,
-        default=127,
-        fw_clamp_lo=0,
-        fw_clamp_hi=127,
-        esp_object_id="irrig_center_fert_days_mask",
-        cfg_readback_object_id="cfg_irrig_center_fert_days_mask",
-        push_owner="schedule",
-        planner_pushable=False,
-        tier=2,
-        notes="RETIRED 2026-07-11 (#450 recovery firmware removed the clocked schedule; no ESPHome entity). Explicit center fertigation day mask. Nonzero supersedes irrig_center_fert_every_n.",
-    ),
-    "irrig_center_flush_min": TunableDef(
-        name="irrig_center_flush_min",
-        kind="numeric",
-        min=0,
-        max=30,
-        default=2,
-        fw_clamp_lo=0,
-        fw_clamp_hi=30,
-        esp_object_id="irrig_center_flush__min_",
-        cfg_readback_object_id="cfg_irrig_center_flush_min",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-    ),
-    "irrig_center_interval_days": TunableDef(
-        name="irrig_center_interval_days",
-        kind="numeric",
-        min=1,
-        max=14,
-        default=1,
-        fw_clamp_lo=1,
-        fw_clamp_hi=14,
-        esp_object_id="irrig_center_interval__days_",
-        cfg_readback_object_id="cfg_irrig_center_interval_days",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-    ),
-    "irrig_vpd_boost_pct": TunableDef(
-        name="irrig_vpd_boost_pct",
-        kind="numeric",
-        min=0,
-        max=200,
-        default=25,
-        fw_clamp_lo=0,
-        fw_clamp_hi=200,
-        esp_object_id="irrig_vpd_boost__",
-        cfg_readback_object_id=None,
-        push_owner="planner",
-        planner_pushable=False,
-        tier=2,
-        notes="Irrigation duration boost after sustained high-VPD stress.",
-    ),
-    "irrig_vpd_boost_threshold_hrs": TunableDef(
-        name="irrig_vpd_boost_threshold_hrs",
-        kind="numeric",
-        min=0,
-        max=24,
-        default=3.0,
-        fw_clamp_lo=0,
-        fw_clamp_hi=24,
-        esp_object_id="irrig_vpd_boost_threshold__hrs_",
-        cfg_readback_object_id=None,
-        push_owner="planner",
-        planner_pushable=False,
-        tier=2,
-        notes="Accumulated high-VPD hours before irrigation boost applies.",
+        step=1.0,
+        label="Irrig Center Duration",
+        unit="min",
+        notes=_L01_BRIDGE_NOTE,
     ),
     # ─────────────────────────────────────────────────────────────────────
     # Grow lights.
@@ -2673,7 +2373,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=False,
         tier=2,
-        notes="Master irrigation enable.",
+        step=1.0,
+        label="Irrigation Enabled",
+        unit=None,
+        notes=_L01_BRIDGE_NOTE,
     ),
     "sw_irrigation_wall_enabled": TunableDef(
         name="sw_irrigation_wall_enabled",
@@ -2684,6 +2387,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=False,
         tier=2,
+        step=1.0,
+        label="Irrigation Wall Enabled",
+        unit=None,
+        notes=_L01_BRIDGE_NOTE,
     ),
     "sw_irrigation_center_enabled": TunableDef(
         name="sw_irrigation_center_enabled",
@@ -2694,6 +2401,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=False,
         tier=2,
+        step=1.0,
+        label="Irrigation Center Enabled",
+        unit=None,
+        notes=_L01_BRIDGE_NOTE,
     ),
     "sw_irrigation_weather_skip": TunableDef(
         name="sw_irrigation_weather_skip",
@@ -2704,7 +2415,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=False,
         tier=2,
-        notes="Operator-only legacy outdoor weather skip; default off for greenhouse irrigation.",
+        step=1.0,
+        label="Irrigation Weather Skip",
+        unit=None,
+        notes=_L01_BRIDGE_NOTE,
     ),
     "sw_occupancy_inhibit": TunableDef(
         name="sw_occupancy_inhibit",
@@ -3358,6 +3072,66 @@ REGISTRY: dict[str, TunableDef] = {
         tier=2,
         notes="CYC-4 min temp-dewpoint spread (°F) to micro-pulse — no crown condensation.",
     ),
+    # ─────────────────────────────────────────────────────────────────────
+    # Irrigation site values (VD-37, #1152; irrigation §4.1, architecture §5.3).
+    # Settings stored in desired_state (written through API-10 and MCP
+    # set_setting once those ship) and delivered to the controller only inside
+    # the irrigation program record (verdify_schemas.irrigation.compile_program,
+    # header bytes 4-7), so they have no esp_object_id and no cfg_* readback:
+    # the dispatcher never pushes them, and the program hash confirms them.
+    # control_class "irrigation_site" (IRRIGATION_SITE_PARAMS). With no routed
+    # entity, each row carries its own step, label and unit (the pre-engine
+    # SAF-4 number, num_mister_daily_volume_max, never had a route and left the
+    # firmware in VD-47).
+    # ─────────────────────────────────────────────────────────────────────
+    "mister_daily_volume_max_gal": TunableDef(
+        name="mister_daily_volume_max_gal",
+        kind="numeric",
+        min=100.0,
+        max=600.0,
+        default=360.0,
+        esp_object_id=None,
+        cfg_readback_object_id=None,
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        step=10.0,
+        label="SAF-4 ceiling",
+        unit="gal",
+        notes="Delivered in the irrigation program; confirmed by its hash",
+    ),
+    "sched_mist_rh_max_pct": TunableDef(
+        name="sched_mist_rh_max_pct",
+        kind="numeric",
+        min=75.0,
+        max=98.0,
+        default=90.0,
+        esp_object_id=None,
+        cfg_readback_object_id=None,
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        step=1.0,
+        label="Scheduled-mist RH ceiling",
+        unit="%",
+        notes="Delivered in the irrigation program; confirmed by its hash",
+    ),
+    "climate_yield_min": TunableDef(
+        name="climate_yield_min",
+        kind="numeric",
+        min=5.0,
+        max=30.0,
+        default=15.0,
+        esp_object_id=None,
+        cfg_readback_object_id=None,
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        step=1.0,
+        label="Climate yield",
+        unit="min",
+        notes="Delivered in the irrigation program; confirmed by its hash",
+    ),
 }
 
 
@@ -3447,12 +3221,15 @@ _FW2_WINDOW_PARAMS: dict[str, tuple[float, float, float, str]] = {
 def _esphome_wire_slug(display_name: str) -> str:
     """Apply ESPHome's exact per-character object-id normalization.
 
-    ESPHome lowercases the display name and replaces every non-ASCII
-    alphanumeric character independently.  It does not collapse or trim the
-    resulting underscores.  This is intentionally stricter than a web-style
+    ESPHome lowercases the display name and replaces every character outside
+    ``[a-z0-9_-]`` independently, so hyphens survive ("Cfg On-Chip Band
+    Enabled" is ``cfg_on-chip_band_enabled``).  It does not collapse or trim
+    the resulting underscores.  This is intentionally stricter than a web-style
     slugifier because ``Cfg • X (kPa)`` becomes ``cfg___x__kpa_`` on the API.
     """
-    return "".join(char if char.isascii() and char.isalnum() else "_" for char in display_name.lower())
+    return "".join(
+        char if (char.isascii() and char.isalnum()) or char in "-_" else "_" for char in display_name.lower()
+    )
 
 
 # Words the firmware writes in capitals in the staged readback names
@@ -3559,30 +3336,15 @@ assert not set(_FW2_STAGED_DEFS) & set(REGISTRY), "firmware-v2 staged names coll
 
 REGISTRY.update(_FW2_STAGED_DEFS)
 
-# Fixed-clock irrigation/fertilizer schedule controls and deliberate
-# dawn/midday center-watering controls are retired compatibility readbacks.
+# The fixed-clock feed window and the deliberate dawn/midday center-watering
+# controls are retired compatibility readbacks. (The legacy irrig_wall_* and
+# irrig_center_* schedule rows left with their cfg_* readbacks in VD-47.)
 # Normalize them here after the staged firmware-v2 rows are assembled so every
 # derived consumer sees the same fail-closed, non-writable contract.
 _INERT_IRRIGATION_COMPAT_TUNABLES: frozenset[str] = frozenset(
     {
         "feed_start_hour",
         "feed_end_hour",
-        "irrig_wall_start_hour",
-        "irrig_wall_start_min",
-        "irrig_wall_fert_duration_min",
-        "irrig_wall_fert_every_n",
-        "irrig_wall_days_mask",
-        "irrig_wall_fert_days_mask",
-        "irrig_wall_flush_min",
-        "irrig_wall_interval_days",
-        "irrig_center_start_hour",
-        "irrig_center_start_min",
-        "irrig_center_fert_duration_min",
-        "irrig_center_fert_every_n",
-        "irrig_center_days_mask",
-        "irrig_center_fert_days_mask",
-        "irrig_center_flush_min",
-        "irrig_center_interval_days",
         "sw_dawn_rehydrate_enabled",
         "dawn_rehydrate_start_minute",
         "dawn_rehydrate_window_min",
@@ -3676,8 +3438,6 @@ _ENTITY_STEPS: dict[str, float] = {
     "econ_heat_margin_f": 0.5,
     "enthalpy_close": 0.5,
     "enthalpy_open": 0.5,
-    "fan_burst_min": 1.0,
-    "fog_burst_min": 1.0,
     "fog_escalation_kpa": 0.1,
     "fog_min_temp_f": 5.0,
     "fog_rh_ceiling_pct": 1.0,
@@ -3707,10 +3467,6 @@ _ENTITY_STEPS: dict[str, float] = {
     "gl_sunrise_hour": 1.0,
     "gl_sunset_hour": 1.0,
     "heat_hysteresis": 0.1,
-    "irrig_center_duration_min": 1.0,
-    "irrig_vpd_boost_pct": 5.0,
-    "irrig_vpd_boost_threshold_hrs": 0.5,
-    "irrig_wall_duration_min": 1.0,
     "lead_rotate_s": 30.0,
     "max_relief_cycles": 1.0,
     "min_fan_off_s": 10.0,
@@ -3733,7 +3489,7 @@ _ENTITY_STEPS: dict[str, float] = {
     "mister_center_penalty": 0.1,
     "mister_engage_delay_s": 30.0,
     "mister_engage_kpa": 0.05,
-    "mister_max_runtime_min": 10.0,
+    "mister_hysteresis_kpa": 0.01,
     "mister_min_off_s": 5.0,
     "mister_off_s": 30.0,
     "mister_on_s": 30.0,
@@ -3741,6 +3497,7 @@ _ENTITY_STEPS: dict[str, float] = {
     "mister_pulse_on_s": 5.0,
     "mister_vpd_weight": 0.5,
     "mister_water_budget_gal": 10.0,
+    "night_stress_min_dew_margin_f": 0.5,
     "night_vpd_bias_kpa": 0.01,
     "outdoor_staleness_max_s": 30.0,
     "safety_max": 1.0,
@@ -3753,7 +3510,6 @@ _ENTITY_STEPS: dict[str, float] = {
     "temp_high": 0.5,
     "temp_hysteresis": 0.1,
     "temp_low": 0.5,
-    "vent_bypass_min": 1.0,
     "vent_exchange_fraction": 0.05,
     "vent_latch_timeout_ms": 60000.0,
     "vent_prefer_dp_delta_f": 0.5,
@@ -3766,14 +3522,6 @@ _ENTITY_STEPS: dict[str, float] = {
     "vpd_target_south": 0.05,
     "vpd_target_west": 0.05,
     "vpd_watch_dwell_s": 15.0,
-    "wall_commissioning_evidence_mask": 1.0,
-    "wall_commissioning_revision": 1.0,
-    "wall_commissioning_valid_until_epoch_s": 60.0,
-    "wall_feed_liters": 0.1,
-    "wall_flow_lpm": 0.1,
-    "wall_flow_valid_until_epoch_s": 60.0,
-    "wall_flush_liters": 0.1,
-    "wall_prewet_liters": 0.1,
 }
 
 # Number and switch entity ``name:`` per registry row; split_entity_name() of it
@@ -3808,8 +3556,6 @@ _ENTITY_NAMES: dict[str, str] = {
     "econ_heat_margin_f": "Econ Heat Margin °F",
     "enthalpy_close": "Enthalpy Close (kJ⁄kg)",
     "enthalpy_open": "Enthalpy Open (kJ⁄kg)",
-    "fan_burst_min": "Fan Burst (min)",
-    "fog_burst_min": "Fog Burst (min)",
     "fog_escalation_kpa": "Fog Escalation (kPa)",
     "fog_min_temp_f": "Fog Min Temp (F)",
     "fog_rh_ceiling_pct": "Fog RH Ceiling (%)",
@@ -3839,10 +3585,6 @@ _ENTITY_NAMES: dict[str, str] = {
     "gl_sunrise_hour": "GL Start Hour",
     "gl_sunset_hour": "GL Cutoff Hour",
     "heat_hysteresis": "Heat Hysteresis °F",
-    "irrig_center_duration_min": "Irrig Center Duration (min)",
-    "irrig_vpd_boost_pct": "Irrig VPD Boost %",
-    "irrig_vpd_boost_threshold_hrs": "Irrig VPD Boost Threshold (hrs)",
-    "irrig_wall_duration_min": "Irrig Wall Duration (min)",
     "lead_rotate_s": "Lead Rotate (s)",
     "max_relief_cycles": "Max Relief Cycles",
     "min_fan_off_s": "Min Fan OFF (s)",
@@ -3865,7 +3607,7 @@ _ENTITY_NAMES: dict[str, str] = {
     "mister_center_penalty": "Mister Center Penalty",
     "mister_engage_delay_s": "Mister Engage Delay (s)",
     "mister_engage_kpa": "VPD Mister Engage kPa",
-    "mister_max_runtime_min": "Mister Max Runtime (min)",
+    "mister_hysteresis_kpa": "Mister Hysteresis (kPa)",
     "mister_min_off_s": "Mister Min Off (s)",
     "mister_off_s": "Mister OFF (s)",
     "mister_on_s": "Mister ON (s)",
@@ -3873,6 +3615,7 @@ _ENTITY_NAMES: dict[str, str] = {
     "mister_pulse_on_s": "Mister Pulse ON (s)",
     "mister_vpd_weight": "Mister VPD Weight",
     "mister_water_budget_gal": "Mister Water Budget (gal)",
+    "night_stress_min_dew_margin_f": "Night Stress Min Dew Margin (°F)",
     "night_vpd_bias_kpa": "Night VPD Bias kPa",
     "outdoor_staleness_max_s": "Outdoor Staleness Max (s)",
     "safety_max": "Safety Max °F",
@@ -3898,23 +3641,15 @@ _ENTITY_NAMES: dict[str, str] = {
     "sw_gl_main_auto_mode": "GL Main Auto Mode",
     "sw_gl_main_out_of_service": "GL Main Out Of Service",
     "sw_gl_main_solar_phasing": "GL Main Solar Phasing",
-    "sw_irrig_center_enabled": "Irrigation Center Enabled",
-    "sw_irrig_enabled": "Irrigation Enabled",
-    "sw_irrig_south_enabled": "Irrigation South Enabled",
-    "sw_irrig_wall_enabled": "Irrigation Wall Enabled",
-    "sw_irrig_west_enabled": "Irrigation West Enabled",
-    "sw_irrigation_center_enabled": "Irrigation Center Enabled",
-    "sw_irrigation_enabled": "Irrigation Enabled",
-    "sw_irrigation_wall_enabled": "Irrigation Wall Enabled",
-    "sw_irrigation_weather_skip": "Irrigation Weather Skip",
     "sw_mister_closes_vent": "Mister Closes Vent",
+    "sw_night_econ_heat_suppress_enabled": "Night Econ Heat Suppress Enabled",
+    "sw_night_stress_wet_enabled": "Night Stress Wet Enabled",
     "sw_occupancy_inhibit": "Occupancy Mist Inhibit",
     "sw_summer_vent_enabled": "Summer Vent Enabled",
-    "sw_wall_fertigation_commissioned": "Wall Fertigation Commissioned",
+    "sw_wet_taper_enabled": "Wet Taper Enabled",
     "temp_high": "Set Temp High °F",
     "temp_hysteresis": "Temp Hysteresis °F",
     "temp_low": "Set Temp Low °F",
-    "vent_bypass_min": "Vent Bypass (min)",
     "vent_exchange_fraction": "Vent Exchange Fraction",
     "vent_latch_timeout_ms": "Vent Latch Timeout (ms)",
     "vent_prefer_dp_delta_f": "Vent Prefer DP Delta (F)",
@@ -3927,14 +3662,6 @@ _ENTITY_NAMES: dict[str, str] = {
     "vpd_target_south": "VPD Target South (kPa)",
     "vpd_target_west": "VPD Target West (kPa)",
     "vpd_watch_dwell_s": "VPD Watch Dwell (s)",
-    "wall_commissioning_evidence_mask": "Wall Commissioning Evidence Mask",
-    "wall_commissioning_revision": "Wall Commissioning Revision",
-    "wall_commissioning_valid_until_epoch_s": "Wall Commissioning Valid Until Epoch S",
-    "wall_feed_liters": "Wall Feed Liters",
-    "wall_flow_lpm": "Wall Calibrated Flow LPM",
-    "wall_flow_valid_until_epoch_s": "Wall Flow Valid Until Epoch S",
-    "wall_flush_liters": "Wall Flush Liters",
-    "wall_prewet_liters": "Wall Prewet Liters",
 }
 
 assert set(_ENTITY_STEPS) <= set(_ENTITY_NAMES), "every _ENTITY_STEPS row needs its entity name"
@@ -3967,26 +3694,67 @@ RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
         # #588 decision (wire schema v2): zero firmware presence — see the
         # registry row notes and RETIRED_WIRE_IDS ({6}).
         "direct_wet_stress_latest_hour",
-        "fan_burst_min",
-        "fog_burst_min",
+        # VD-63: no firmware entity or readback; the rows carry no route.
+        "fog_time_window_end",
+        "fog_time_window_start",
         "mist_vent_close_lead_s",
         "mist_vent_reopen_delay_s",
         "mister_all_off_s",
         "mister_all_on_s",
-        "mister_max_runtime_min",
         "mister_off_s",
         "mister_on_s",
         "sw_fsm_controller_enabled",
         "summer_vent_min_runtime_s",
-        "vent_bypass_min",
         *_INERT_IRRIGATION_COMPAT_TUNABLES,
     }
+)
+
+# Number and switch entity ids (ESPHome ``id:``) of the pre-engine firmware that
+# the irrigation engine release retires (irrigation design §5, F12 and F13). The
+# catalog drift test (verdify_schemas/tests/test_tunable_registry.py) accepts a
+# tunables.yaml entity listed here even when no REGISTRY row covers it. VD-47
+# (#1162) deleted those entities and shrank the set to the L01 bridge's
+# (irrigation §6.5): their entities left the YAML, but their REGISTRY rows and
+# routes stay while the pre-engine firmware may still run (a rollback flashes
+# it), so test_retiring_tunables_are_live_or_the_l01_bridge accepts exactly
+# these. The follow-up that #1165 merges after `make firmware-promote-last-good`
+# retires the rows and empties the set.
+RETIRING_TUNABLES: frozenset[str] = frozenset(
+    {
+        # The bridge toggles the master enable to end a legacy job on Stop, and the
+        # wall enable gates its run-now press; the rest are their alias rows' entities.
+        "sw_irrig_enabled",
+        "sw_irrig_wall_enabled",
+        "sw_irrig_center_enabled",
+        "sw_irrig_south_enabled",
+        "sw_irrig_west_enabled",
+        "sw_irrig_weather_skip",
+        # The run-now press runs for the controller's duration.
+        "num_irrig_wall_duration",
+        "num_irrig_center_duration",
+    }
+)
+
+# The three irrigation site values (VD-37, #1152): settings with no firmware
+# entity that reach the controller only inside the irrigation program record,
+# so the dispatcher never pushes them and the program hash confirms them
+# (irrigation §4.1, architecture §5.3 step 1).
+IRRIGATION_SITE_PARAMS: frozenset[str] = frozenset(
+    {"mister_daily_volume_max_gal", "sched_mist_rh_max_pct", "climate_yield_min"}
 )
 
 
 def tunable_control_class(
     name: str, spec: TunableDef
-) -> Literal["planner_policy", "crop_band", "scheduled_policy", "controller_safety", "readback_context", "retired"]:
+) -> Literal[
+    "planner_policy",
+    "crop_band",
+    "scheduled_policy",
+    "controller_safety",
+    "irrigation_site",
+    "readback_context",
+    "retired",
+]:
     """Classify a tunable for the cleanup contract.
 
     This is the single policy split used by MCP, planner context, and the
@@ -4011,9 +3779,16 @@ def tunable_control_class(
     Kept deliberately distinct from `crop_band` so the schedule layer does not
     leak into `CROP_BAND_REG`/`BAND_OWNED_REG` (which the dispatcher and the
     HTTP/setpoint-server fallbacks treat as the crop temp/VPD band surface).
+
+    `irrigation_site` is the three `IRRIGATION_SITE_PARAMS`: writable settings
+    with no entity, delivered inside the irrigation program rather than pushed
+    by the dispatcher. They are tested before the `esp_object_id is None` rule,
+    which would otherwise call them read-only context.
     """
     if name in RETIRED_TUNABLES_REG:
         return "retired"
+    if name in IRRIGATION_SITE_PARAMS:
+        return "irrigation_site"
     if spec.esp_object_id is None or spec.push_owner == "firmware_internal":
         return "readback_context"
     if spec.planner_pushable:
@@ -4260,6 +4035,104 @@ def normalize_planner_value(name: str, value: float) -> float:
     if upper is not None:
         numeric = min(float(upper), numeric)
     return numeric
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Desired-state writes (architecture §5.3 step 1, VD-67). One rule for every
+# side: verdify_services.settings validates writes with it, and the dispatcher
+# skips desired_state rows it refuses (#1149). The api and MCP images do not
+# carry ingestor/, and the ingestor does not import verdify_services, so the
+# rule lives here.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Classes a person or agent may write when the row has a controller entity.
+WRITABLE_CONTROL_CLASSES: frozenset[str] = frozenset(
+    {"planner_policy", "scheduled_policy", "controller_safety", "crop_band"}
+)
+# The legacy wide limits: the dispatcher derives them, and they are not the band
+# while the controller runs its on-chip curve.
+LEGACY_WIDE_LIMIT_PARAMS: frozenset[str] = frozenset(
+    {"temp_low", "temp_high", "vpd_low", "vpd_high"} | {name for name in REGISTRY if name.startswith("vpd_target_")}
+)
+# The activity mirror the dispatcher derives from the main-light schedule
+# (ingestor/tasks/_common.py ACTIVITY_MIRROR_PARAMS).
+ACTIVITY_MIRROR_PARAMS: frozenset[str] = frozenset(
+    {"activity_start_hour", "activity_start_minute", "activity_duration_min"}
+)
+# Decides which side owns the band; refused by name whatever its class.
+BAND_OWNER_SWITCH = "sw_onchip_band_enabled"
+
+READ_ONLY_REASONS: dict[str, str] = {
+    "unknown": "not a registered setting",
+    "band_owner": "decides which side owns the band",
+    "legacy_wide_limit": "legacy wide limit; not the band while the controller runs its on-chip curve",
+    "activity_mirror": "derived by the dispatcher from the main-light schedule",
+    "retired": "retired; the controller no longer uses it",
+    "readback_context": "readback context; the controller reports it and nothing sets it",
+    "no_entity": "no controller entity to write",
+}
+
+assert len(LEGACY_WIDE_LIMIT_PARAMS) == 8 and all(
+    REGISTRY[name].control_class == "crop_band" for name in LEGACY_WIDE_LIMIT_PARAMS
+), "the legacy wide limits drifted"
+assert ACTIVITY_MIRROR_PARAMS <= set(REGISTRY), "an activity-mirror row left the registry"
+
+
+def desired_write_rule(name: str) -> tuple[bool, str | None]:
+    """Architecture §5.3 step 1 without the anchor-row check: may a person or agent write ``name`` now?
+
+    Returns ``(True, None)``, or ``(False, reason)`` with the read-only reason the catalog shows.
+
+    * Writable: ``planner_policy``, ``scheduled_policy``, ``controller_safety`` and ``crop_band`` rows with an
+      ``esp_object_id`` (``irrig_*_duration_min``, ``sw_irrig_*`` and the ``gl_*`` rows among them), and the
+      ``irrigation_site`` rows, which reach the controller in the irrigation program.
+    * Read-only: ``readback_context`` and ``retired`` rows; the legacy wide limits; the activity mirror;
+      ``sw_onchip_band_enabled``, by name.
+
+    A ``crop_band`` row is writable only while ``crop_band_anchors`` holds its rows (the zone priorities and
+    the window values never do): ``verdify_services.settings`` adds that database check
+    (``verdify_schemas.band_rows``). An unknown name is not writable.
+    """
+    spec = REGISTRY.get(name)
+    if spec is None:
+        return False, READ_ONLY_REASONS["unknown"]
+    if name == BAND_OWNER_SWITCH:
+        return False, READ_ONLY_REASONS["band_owner"]
+    if name in LEGACY_WIDE_LIMIT_PARAMS:
+        return False, READ_ONLY_REASONS["legacy_wide_limit"]
+    if name in ACTIVITY_MIRROR_PARAMS:
+        return False, READ_ONLY_REASONS["activity_mirror"]
+    control_class = spec.control_class
+    if control_class == "retired":
+        return False, READ_ONLY_REASONS["retired"]
+    if control_class == "readback_context":
+        return False, READ_ONLY_REASONS["readback_context"]
+    if control_class == "irrigation_site":
+        return True, None
+    if control_class in WRITABLE_CONTROL_CLASSES and spec.esp_object_id is not None:
+        return True, None
+    return False, READ_ONLY_REASONS["no_entity"]
+
+
+# Switch params whose readback is an equipment_state mirror: param → equipment
+# key. It equals the ingestor's SWITCH_CONFIRM_EQUIPMENT (ingestor/tasks/
+# _common.py, built from entity_map.SWITCH_TO_ENTITY and EQUIPMENT_SWITCH_MAP);
+# verdify_schemas/tests/test_settings_rules.py rebuilds that map and keeps the two
+# equal. These switches have no cfg_* sensor: their native Switch state also
+# lands in setpoint_snapshot, and equipment_state records each change.
+SWITCH_READBACK_EQUIPMENT: dict[str, str] = {
+    "sw_economiser_enabled": "economiser_enabled",
+    "sw_fog_closes_vent": "fog_closes_vent",
+    "sw_gl_auto_mode": "gl_auto_mode",
+    "sw_irrigation_center_enabled": "irrigation_center_enabled",
+    "sw_irrigation_enabled": "irrigation_enabled",
+    "sw_irrigation_wall_enabled": "irrigation_wall_enabled",
+    "sw_irrigation_weather_skip": "irrigation_weather_skip",
+    "sw_occupancy_inhibit": "occupancy_inhibit",
+}
+assert all(REGISTRY[name].kind == "switch" and REGISTRY[name].esp_object_id for name in SWITCH_READBACK_EQUIPMENT), (
+    "SWITCH_READBACK_EQUIPMENT names a row that is not a routed switch"
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -10,50 +10,10 @@ HARDWARE = (ROOT / "firmware/greenhouse/hardware.yaml").read_text()
 
 def run_cpp(tmp_path, body):
     source = tmp_path / "case.cpp"
-    source.write_text(
-        '#include <cassert>\n#include <cstdint>\n#include <initializer_list>\n#include "irrigation_policy.h"\n#define id(x) x\n'
-        + body
-    )
+    source.write_text("#include <cassert>\n#include <cstdint>\n#include <initializer_list>\n#define id(x) x\n" + body)
     binary = tmp_path / "case"
     subprocess.run(["c++", "-std=c++17", "-I", str(ROOT / "firmware/lib"), str(source), "-o", str(binary)], check=True)
     subprocess.run([str(binary)], check=True)
-
-
-def test_active_wall_disable_cancels_every_stage_without_redose(tmp_path):
-    start = CONTROLS.index("if(weekly_active && (")
-    end = CONTROLS.index("if(!id(irrig_enabled))", start)
-    guard = CONTROLS[start:end]
-    run_cpp(
-        tmp_path,
-        """
-int main() {
- for(auto stage : {WallFeedStage::PREWET, WallFeedStage::FEED, WallFeedStage::FLUSH}) {
-  bool irrig_wall_enabled=false, clock_valid=true, weekly_active=true;
-  uint32_t wall_commissioning_revision=7;
-  WallFeedDurations durations{}; durations.valid=true;
-  WeeklyWallFeedState weekly_state{stage, 200, 193, 7};
-  bool cancelled=false, relay_on=true;
-  auto cancel_all=[&](const char*) {
-    relay_on=false;
-    weekly_state=advance_wall_feed_sequence(weekly_state,false,true,200);
-    cancelled=true;
-  };
-  auto tick=[&]() { """
-        + guard
-        + """ };
-  tick();
-  assert(cancelled && !relay_on);
-  assert(weekly_state.stage==WallFeedStage::CANCELLED);
-  assert(weekly_state.claimed_solar_day==200);
-  assert(!weekly_wall_feed_eligible({true,false,0.5f,200,7},weekly_state,durations));
-  assert(!weekly_wall_feed_eligible({true,false,0.5f,201,7},weekly_state,durations));
-  irrig_wall_enabled=true;cancelled=false;relay_on=true;
-  weekly_state={stage,200,193,7};tick();
-  assert(!cancelled && relay_on && weekly_state.stage==stage);
- }
-}
-""",
-    )
 
 
 def test_all_actual_clean_relay_falling_edges_enforce_existing_dwell(tmp_path):

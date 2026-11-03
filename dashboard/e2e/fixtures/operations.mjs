@@ -1,0 +1,940 @@
+// SPDX-License-Identifier: MIT
+/**
+ * Every operationId of docs/design/dashboard/openapi/dashboard-api.v1.yaml answered from a fixture world (VD-02):
+ * the reads, the writes as the contract says (validation, snapping, refusal codes, 202 commands), the roles, the
+ * writes flag and api-down. A write returns its response and an effect that the fixture API replays on every later
+ * request's fresh world. The snapping and bounds here only mimic the server for tests; the UI never re-implements
+ * them. API-08, API-18, API-IRR-09 and OPS-03 are reserved and never served.
+ */
+import { createHash } from "node:crypto";
+import { URLSearchParams } from "node:url";
+import {
+  DAY, JASON, LINES, MISTERS, REVISION, addDays, flowWithValvesClosed, iso, itemOf, laneOf, lineInfo, lineOf, local, localInstant, manifold,
+  minutesZone, nextId, runLine, settingOf, stopLines,
+} from "./world.mjs";
+
+const MINUTE = 60_000;
+const HOUR = 3_600_000;
+/** method, path and id for each operation, in the order of the OpenAPI file. */
+export const ROUTES = [
+  ["API-01", "GET", "/v1/me"], ["API-02", "GET", "/v1/now"], ["API-03", "GET", "/v1/metrics"], ["API-04", "GET", "/v1/series"],
+  ["API-05", "GET", "/v1/states"], ["API-06", "GET", "/v1/band"], ["API-07", "GET", "/v1/plan"], ["API-09", "GET", "/v1/settings"],
+  ["API-10", "PUT", "/v1/settings/{param}"], ["API-11", "DELETE", "/v1/settings/{param}"], ["API-12", "GET", "/v1/settings/{param}/history"],
+  ["API-13", "GET", "/v1/equipment"], ["API-14", "GET", "/v1/alerts"], ["API-15", "POST", "/v1/alerts/{id}/ack"],
+  ["API-16", "POST", "/v1/alerts/{id}/resolve"], ["API-17", "GET", "/v1/activity"], ["API-19", "GET", "/v1/band/preview"],
+  ["API-20", "POST", "/v1/equipment/lights/{light}/{state}"], ["API-21", "GET", "/v1/water/daily"], ["API-IRR-01", "GET", "/v1/irrigation"],
+  ["API-IRR-02", "GET", "/v1/irrigation/schedules"], ["API-IRR-03", "POST", "/v1/irrigation/schedules"],
+  ["API-IRR-04", "PUT", "/v1/irrigation/schedules/{slot_id}"], ["API-IRR-05", "DELETE", "/v1/irrigation/schedules/{slot_id}"],
+  ["API-IRR-06", "POST", "/v1/irrigation/lines/{line_id}/run"], ["API-IRR-07", "POST", "/v1/irrigation/stop"],
+  ["API-IRR-08", "PUT", "/v1/irrigation/lines/{line_id}"], ["API-IRR-10", "GET", "/v1/irrigation/minutes"], ["API-IRR-11", "GET", "/v1/irrigation/runs"],
+  ["API-IRR-12", "POST", "/v1/equipment/override"], ["API-IRR-13", "POST", "/v1/irrigation/clear-fault"], ["BFF-01", "GET", "/auth/login"],
+  ["BFF-02", "GET", "/auth/callback"], ["BFF-03", "POST", "/auth/logout"], ["INT-01", "POST", "/internal/sessions"],
+  ["INT-02", "DELETE", "/internal/sessions/current"], ["OPS-01", "GET", "/healthz"], ["OPS-02", "GET", "/readyz"],
+].map(([operationId, method, path]) => ({ operationId, method, path, pattern: new RegExp(`^${path.replace(/\{([a-z_]+)\}/g, "(?<$1>[^/]+)")}$`) }));
+export const OPERATION_IDS = ROUTES.map((route) => route.operationId);
+/** The browser reaches /v1 as /api/v1 through the BFF; the fixture accepts both, so a page can call it directly. */
+const apiPath = (path) => (path.startsWith("/api/v1/") ? path.slice(4) : path);
+/** The operation a method and path name, or null. */
+export function routeOf(method, path) {
+  return ROUTES.find((route) => route.method === method && route.pattern.test(apiPath(path)))?.operationId ?? null;
+}
+
+// ---------------------------------------------------------------------------------------------------- responses
+const NO_STORE = { "Cache-Control": "no-store" };
+const json = (status, body, headers = {}) => ({ status, headers: { "Content-Type": "application/json", ...NO_STORE, ...headers }, body });
+const RETRYABLE = new Set(["line_busy", "manifold_busy", "query_timeout", "unavailable"]);
+/** An application/problem+json answer; `retryable` follows the contract unless `fields` says otherwise. */
+export function problem(status, code, title, detail, fields = {}) {
+  return { status, headers: { "Content-Type": "application/problem+json", ...NO_STORE }, body: { type: "about:blank", title, status, code, detail, retryable: RETRYABLE.has(code), ...fields } };
+}
+/** A refusal thrown from inside an operation and answered as is. */
+class Refusal extends Error {
+  constructor(response) { super(response.body.code); this.response = response; }
+}
+const refuse = (...args) => new Refusal(problem(...args));
+const invalid = (detail, field) => refuse(400, "invalid_request", "Invalid request", detail, field ? { field } : {});
+const NOT_YET = { retryable: false };
+const notYet = () => refuse(503, "unavailable", "Not available yet", "arrives with the irrigation firmware", NOT_YET);
+const FAILED = {
+  400: ["invalid_request", "Invalid request"], 401: ["unauthenticated", "Sign in again"], 403: ["forbidden", "Not allowed"], 404: ["not_found", "Not found"],
+  422: ["unknown_target", "Refused"], 503: ["unavailable", "Unavailable"],
+};
+/** What `fail` makes an operation answer: its status with the matching Problem (a 503 readiness reads not_ready). */
+function failure(operationId, status) {
+  if (operationId === "OPS-02" && status === 503) return json(503, { status: "not_ready", source_revision: REVISION });
+  const [code, title] = FAILED[status] ?? [status >= 500 ? "unavailable" : "invalid_request", "Fixture failure"];
+  return problem(status, code, title, `The fixture fails ${operationId} with ${status}`);
+}
+export const uuidFrom = (text) => {
+  const hex = createHash("sha256").update(text).digest("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+};
+const actorOf = (world) => ({ source: "dashboard", name: world.me.username });
+const today = (world) => local(world.now).date;
+const hhmm = (ms) => { const { hour, minute } = local(ms); return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`; };
+
+// ---------------------------------------------------------------------------------------------------- parameters
+function instant(query, name) {
+  const value = query.get(name);
+  if (value === null) throw invalid(`${name} is required`, name);
+  const ms = Date.parse(value);
+  if (!Number.isFinite(ms)) throw invalid(`${name} must be a date-time with an offset`, name);
+  return ms;
+}
+function window(query) {
+  const from = instant(query, "from");
+  const to = instant(query, "to");
+  if (to <= from) throw invalid("to must be after from", "to");
+  return { from, to };
+}
+function integer(query, name, fallback, min, max) {
+  const value = query.get(name);
+  if (value === null) return fallback;
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < min || number > max) throw invalid(`${name} must be an integer from ${min} to ${max}`, name);
+  return number;
+}
+const DATE = /^\d{4}-\d\d-\d\d$/;
+function day(query, name, fallback) {
+  const value = query.get(name) ?? fallback;
+  if (value === null || value === undefined) throw invalid(`${name} is required`, name);
+  if (!DATE.test(value) || !Number.isFinite(Date.parse(`${value}T12:00:00Z`))) throw invalid(`${name} must be a date`, name);
+  return value;
+}
+function paged(items, query) {
+  const limit = integer(query, "limit", 50, 1, 200);
+  const cursor = query.get("cursor");
+  const start = cursor === null ? 0 : Number(cursor);
+  if (!Number.isInteger(start) || start < 0) throw invalid("cursor is not one this API gave", "cursor");
+  return { next_cursor: start + limit < items.length ? String(start + limit) : null, items: items.slice(start, start + limit) };
+}
+const text = (value, field, max = 500) => {
+  if (value === undefined) return null;
+  if (typeof value !== "string" || value.length > max) throw invalid(`${field} must be text of at most ${max} characters`, field);
+  return value;
+};
+const object = (body) => {
+  if (body === undefined || body === null) return {};
+  if (typeof body !== "object" || Array.isArray(body)) throw invalid("The body must be a JSON object");
+  return body;
+};
+
+// ---------------------------------------------------------------------------------------------------- reads
+function nowBody(world) {
+  const open = world.alerts.filter((alert) => alert.status === "open");
+  const count = (severity) => open.filter((alert) => alert.severity === severity).length;
+  const running = world.equipment.filter((item) => item.state === "on" && item.group !== "light").map((item) => {
+    const line = item.line_id ? lineOf(world, item.line_id) : null;
+    return { equipment: item.equipment, line_id: item.line_id ?? null, cause: line?.state.code === "running" ? line.state.cause : null, since: item.since };
+  });
+  return {
+    server_time: iso(world.now), indoor: world.indoor, outdoor: world.outdoor, band: world.band, mode: world.mode, iris: world.iris,
+    alerts: { open: open.length, critical: count("critical"), warning: count("warning"), info: count("info") }, running, overrides: world.overrides,
+    leak: world.leak, freshness: world.freshness, writer: world.writer, controller: world.controller,
+  };
+}
+
+const WAVES = {
+  "climate.temp_avg": [66, 3], "climate.rh_avg": [70, -8], "climate.vpd_avg": [0.62, 0.12], "climate.temp_south": [66.6, 3.2],
+  "climate.soil_moisture_south_1": [38, -2], "climate.flow_gpm": [0, 0], "climate.outdoor_temp_f": [45, 10], "climate.outdoor_rh_pct": [55, -15],
+  "diagnostics.heap_free_kb": [38, 1.5], "daily.temp_compliance_pct": [92, 4], "daily.vpd_compliance_pct": [88, 6],
+};
+const round = (value, places = 2) => Number(value.toFixed(places));
+const wave = (key, ms) => { const [mean, amplitude] = WAVES[key]; return mean + amplitude * Math.sin((2 * Math.PI * (ms - 14 * HOUR)) / DAY); };
+/** The newest sample each metric has: indoor readings, outdoor readings, the climate row or the diagnostics row. */
+function lastSample(world, key) {
+  if (["climate.temp_avg", "climate.rh_avg", "climate.vpd_avg", "climate.temp_south"].includes(key)) return Date.parse(world.indoor.temp_f.observed_at);
+  if (key.startsWith("climate.outdoor_")) return Date.parse(world.outdoor.temp_f.observed_at);
+  if (key.startsWith("diagnostics.")) return Date.parse(world.freshness.diagnostics.observed_at);
+  return key.startsWith("daily.") ? world.now : Date.parse(world.freshness.climate.observed_at);
+}
+const BUCKETS = [60, 300, 900, 3600, 10_800, 86_400];
+/** API-04: the bucket and source rules of the contract, over synthetic diurnal values; a bucket with no data is null. */
+function seriesBody(world, { query }) {
+  const keys = query.getAll("metric");
+  if (!keys.length || keys.length > 8) throw invalid("metric: give 1 to 8 keys from API-03", "metric");
+  const { from, to } = window(query);
+  const points = integer(query, "points", 1500, 10, 2000);
+  const unknown = keys.find((key) => !world.metrics.some((metric) => metric.key === key));
+  if (unknown) throw refuse(422, "unknown_target", "Unknown metric", `No metric ${unknown}`, { field: "metric" });
+  if (to - from > 400 * DAY) throw refuse(422, "window_too_large", "Window too large", "Windows cover at most 400 days", { field: "from" });
+  const defs = keys.map((key) => world.metrics.find((metric) => metric.key === key));
+  const daily = to - from > 31 * DAY || defs.some((metric) => metric.daily && from < world.now - metric.retention_days * DAY);
+  const bucket = daily ? 86_400 : BUCKETS.find((size) => Math.ceil((to - from) / 1000 / size) <= points) ?? 86_400;
+  const t = [];
+  for (let start = Math.floor(from / 1000 / bucket) * bucket; start * 1000 < to; start += bucket) t.push(start);
+  let watermark = null;
+  const columns = Object.fromEntries(defs.map((metric) => {
+    const scorecard = metric.key.startsWith("daily.");
+    const source = scorecard ? "scorecard" : daily && metric.daily ? "daily_summary" : "raw";
+    const retainedFrom = scorecard ? null : world.now - metric.retention_days * DAY;
+    const last = Math.min(lastSample(world, metric.key), to);
+    const column = { avg: [], min: [], max: [], count: [], source, retained_from: retainedFrom === null ? null : iso(retainedFrom) };
+    for (const start of t) {
+      const begin = start * 1000;
+      const covered = begin <= last && (source !== "raw" || begin + bucket * 1000 > retainedFrom);
+      const value = covered ? wave(metric.key, begin + (bucket * 1000) / 2) : null;
+      const spread = Math.abs(WAVES[metric.key][1]) * 0.1;
+      column.avg.push(value === null ? null : round(value));
+      column.min.push(value === null ? null : round(value - spread));
+      column.max.push(value === null ? null : round(value + spread));
+      column.count.push(!covered ? 0 : source === "raw" ? Math.max(1, Math.floor((Math.min(begin + bucket * 1000, last) - begin) / 1000 / metric.cadence_s)) : 1);
+      if (covered) watermark = Math.max(watermark ?? 0, Math.min(begin + bucket * 1000, last));
+    }
+    if (scorecard) column.reason = column.avg.map(() => null);
+    return [metric.key, column];
+  }));
+  return { from: iso(from), to: iso(to), bucket_s: bucket, t, series: columns, watermark: watermark === null ? null : iso(watermark), server_time: iso(world.now), gaps: [] };
+}
+
+/** The API-05 flags with their `EQUIPMENT_LABELS` (verdify_services/labels.py). */
+const FLAGS = [["occupancy", "Occupancy"], ["leak_detected", "Water flowing, valves closed"], ["water_flowing", "Water flowing"]];
+/** `spans` with each of `gaps` cut out of them and read unknown in their place, in time order. */
+function withGaps(spans, gaps, span) {
+  let out = spans;
+  for (const gap of gaps) {
+    out = out.flatMap((part) => (gap.end <= part.start || gap.start >= part.end ? [part] : [
+      ...(part.start < gap.start ? [{ ...part, end: gap.start }] : []),
+      ...(part.end > gap.end ? [{ ...part, start: gap.end }] : []),
+    ]));
+    out.push(span(gap.start, gap.end, "unknown"));
+  }
+  return out.sort((a, b) => a.start - b.start);
+}
+/**
+ * API-05: each relay's spans from its newest row, seeded before the window; unknown while the controller does not
+ * report, and over a `laneGaps` span (lanes-unknown).
+ */
+function statesBody(world, { query }) {
+  const { from, to } = window(query);
+  if (to - from > 31 * DAY) throw refuse(422, "window_too_large", "Window too large", "Equipment lanes cover at most 31 days", { field: "from" });
+  const wanted = query.getAll("equipment");
+  const end = Math.min(to, world.now);
+  const span = (start, stop, state, cause = null) => ({ start: Math.max(start, from), end: Math.min(stop, end), state, cause });
+  const lanes = world.equipment.map((item) => {
+    const line = item.line_id ? lineOf(world, item.line_id) : null;
+    const since = Date.parse(item.since ?? item.observed_at);
+    let spans;
+    if (item.state === "unknown") {
+      const lost = world.notReportingSince ?? Date.parse(item.observed_at);
+      spans = [span(from, lost, "off"), span(lost, end, "unknown")];
+    } else if (item.state === "on") {
+      spans = [span(from, since, "off"), span(since, end, "on", line?.state.cause ?? null)];
+    } else {
+      const ran = (item.runtime_today_s ?? 0) * 1000;
+      spans = ran > 0 ? [span(from, since - ran, "off"), span(since - ran, since, "on", line?.last_water?.cause ?? null), span(since, end, "off")] : [span(from, end, "off")];
+    }
+    spans = withGaps(spans, world.laneGaps.filter((gap) => gap.equipment === item.equipment), span);
+    return { equipment: item.equipment, label: item.label, group: item.group, line_id: item.line_id ?? null, spans };
+  });
+  const flowing = world.lines.filter((line) => line.state.code === "running").map((line) => Date.parse(line.state.observed_at));
+  if (world.leak.active) flowing.push(Date.parse(world.leak.since));
+  const flags = {
+    occupancy: [span(from, end, world.occupancy.occupied === null ? "unknown" : world.occupancy.occupied ? "on" : "off")],
+    leak_detected: world.leak.active ? [span(from, Date.parse(world.leak.since), "off"), span(Date.parse(world.leak.since), end, "on")] : [span(from, end, "off")],
+    water_flowing: flowing.length ? [span(from, Math.min(...flowing), "off"), span(Math.min(...flowing), end, "on")] : [span(from, end, "off")],
+  };
+  for (const [equipment, label] of FLAGS) lanes.push({ equipment, label, group: "flag", line_id: null, spans: flags[equipment] });
+  return {
+    from: iso(from), to: iso(to),
+    lanes: lanes.filter((lane) => !wanted.length || wanted.includes(lane.equipment)).map(({ spans, ...lane }) => ({
+      ...lane, intervals: spans.filter((item) => item.end > item.start).map((item) => ({ start: iso(item.start), end: iso(item.end), state: item.state, cause: item.cause })),
+    })),
+  };
+}
+
+const ZONES = ["house", "center", "south", "west", "east"];
+/** API-06: the band in force (null beyond its 90 days) and the crop band, flat at today's values. */
+function bandBody(world, { query }) {
+  const { from, to } = window(query);
+  const zone = query.get("zone") ?? "house";
+  if (!ZONES.includes(zone)) throw invalid(`zone must be one of ${ZONES.join(", ")}`, "zone");
+  const step = Math.max(300, Math.ceil((to - from) / 1000 / 2000 / 300) * 300);
+  const t = [];
+  for (let start = Math.floor(from / 1000 / step) * step; start * 1000 < to; start += step) t.push(start);
+  const vpd = (role) => settingOf(world, `band_${zone}_vpd_${role}`)?.readback?.value ?? world.band.vpd_kpa[role];
+  const values = { temp_low: world.band.temp_f.low, temp_high: world.band.temp_f.high, vpd_low: vpd("low"), vpd_high: vpd("high") };
+  const kept = world.now - 90 * DAY;
+  const columns = (retained) => Object.fromEntries(Object.entries(values).map(([name, value]) => [name, t.map((start) => (retained && start * 1000 < kept ? null : value))]));
+  return { from: iso(from), to: iso(to), step_s: step, t, band: columns(true), crop: columns(false) };
+}
+
+function planBody(world, { query }) {
+  const hours = integer(query, "hours", 24, 24, 72);
+  if (hours !== 24 && hours !== 72) throw invalid("hours must be 24 or 72", "hours");
+  const manual = world.settings.filter((row) => row.desired?.manual && row.desired.value !== null).length;
+  return {
+    ...world.plan, manual_count: manual,
+    lanes: world.plan.lanes.map((lane) => ({ ...lane, waypoints: lane.waypoints.filter((point) => Date.parse(point.at) <= world.now + hours * HOUR) })),
+  };
+}
+
+function historyBody(world, { params, query }) {
+  const row = settingOf(world, params.param);
+  if (!row) throw refuse(404, "not_found", "Not found", `No setting ${params.param}`);
+  const { from, to } = window(query);
+  const plan = laneOf(world, row.param)?.waypoints ?? (row.plan?.next ? [row.plan.next] : []);
+  return {
+    param: row.param, unit: row.unit, min: row.min, max: row.max, from: iso(from), to: iso(to),
+    desired: row.desired && Date.parse(row.desired.created_at) < to ? [row.desired] : [],
+    plan: plan.filter((point) => Date.parse(point.at) >= from), readback: row.readback ? [{ at: iso(from), value: row.readback.value }] : [],
+  };
+}
+
+const CLOSED = ["resolved", "false_positive", "suppressed"];
+const SEVERITY = ["critical", "warning", "info"];
+function alertsBody(world, { query }) {
+  const status = query.get("status") ?? "open";
+  if (status !== "open" && status !== "recent") throw invalid("status must be open or recent", "status");
+  const rows = world.alerts.filter((alert) => !CLOSED.includes(alert.status)
+    || (status === "recent" && alert.status === "resolved" && Date.parse(alert.resolved_at) >= world.now - DAY));
+  rows.sort((a, b) => SEVERITY.indexOf(a.severity) - SEVERITY.indexOf(b.severity) || Date.parse(a.first_seen_at) - Date.parse(b.first_seen_at));
+  return paged(rows, query);
+}
+
+function activityBody(world, { query }) {
+  const source = query.get("source");
+  const filters = [
+    (entry) => !source || entry.actor.source === source || (source === "agent" && entry.actor.source.startsWith("agent:")),
+    (entry) => !query.get("actor") || entry.actor.name === query.get("actor"),
+    (entry) => !query.get("action") || entry.action.startsWith(query.get("action")),
+    (entry) => !query.get("target") || entry.target === query.get("target"),
+    (entry) => !query.has("from") || Date.parse(entry.ts) >= instant(query, "from"),
+    (entry) => !query.has("to") || Date.parse(entry.ts) < instant(query, "to"),
+  ];
+  const rows = world.activity.filter((entry) => filters.every((keep) => keep(entry))).sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts) || b.id - a.id);
+  return paged(rows, query);
+}
+
+/** API-19: one day's curve at 10-min steps, current and with the draft value, peaking at the anchor at noon. */
+function previewBody(world, { query }) {
+  const param = query.get("param");
+  if (param === null) throw invalid("param is required", "param");
+  const raw = query.get("value");
+  const value = raw === null ? NaN : Number(raw);
+  if (!Number.isFinite(value)) throw invalid("value must be a number", "value");
+  const row = settingOf(world, param);
+  if (!row || row.control_class !== "crop_band" || !row.writable) throw refuse(422, "unknown_target", "Not a crop-band anchor", `${param} is not a crop-band anchor or width`, { field: "param" });
+  if (value < row.min || value > row.max) throw refuse(422, "out_of_range", "Out of range", `Must be ${row.min}-${row.max} ${row.unit}`, { field: "value", min: row.min, max: row.max, current: row.readback?.value ?? null });
+  const date = day(query, "day", today(world));
+  const start = localInstant(date);
+  const end = localInstant(addDays(date, 1));
+  const noon = localInstant(date, "12:00");
+  const [swing, width] = row.unit === "kPa" ? [0.2, 0.15] : [6, 4];
+  const t = [];
+  for (let at = start; at < end; at += 600_000) t.push(at / 1000);
+  const curve = (anchor) => {
+    const target = t.map((at) => round(anchor + (swing * (Math.cos((2 * Math.PI * (at * 1000 - noon)) / DAY) - 1)) / 2, 3));
+    return { low: target.map((v) => round(v - width, 3)), target, high: target.map((v) => round(v + width, 3)) };
+  };
+  return { param, unit: row.unit, day: date, step_s: 600, t, current: curve(row.readback?.value ?? value), draft: curve(value) };
+}
+
+const weekday = (date) => local(localInstant(date, "12:00")).weekday;
+const NO_DATA_DAYS_AGO = 9;
+/** Whole gallons per day: today from the lines, earlier days synthetic, a no-data day nine days back. */
+function dayWater(world, date) {
+  const ago = Math.round((localInstant(today(world)) - localInstant(date)) / DAY);
+  if (ago === NO_DATA_DAYS_AGO) return null;
+  if (ago === 0) {
+    const lines = Object.fromEntries(world.lines.filter((line) => (line.today?.gal ?? 0) > 0).map((line) => [line.line_id, line.today.gal]));
+    return { lines, causes: { vpd: (lines.L04 ?? 0) + (lines.L11 ?? 0), ...(lines.L01 ? { run_now: lines.L01 } : {}) }, noValve: world.leak.gal_last_10min ?? 0 };
+  }
+  const wall = ["mon", "wed", "fri"].includes(weekday(date)) ? 9 : 0;
+  const lines = { L04: 3 + (ago % 3), L11: 2, ...(wall ? { L01: wall } : {}) };
+  return { lines, causes: { vpd: lines.L04 + lines.L11, ...(wall ? { schedule: wall } : {}) }, noValve: ago % 5 === 0 ? 4 : 1 };
+}
+function waterBody(world, { query }) {
+  const days = integer(query, "days", 30, 30, 90);
+  if (days !== 30 && days !== 90) throw invalid("days must be 30 or 90", "days");
+  const last = today(world);
+  const from = addDays(last, -(days - 1));
+  return {
+    from, to: last,
+    days: Array.from({ length: days }, (_, index) => {
+      const date = addDays(from, index);
+      const water = dayWater(world, date);
+      if (!water) return { date, coverage: "no_data", meter_gal: null, by_line: null, by_cause: null, no_valve_gal: null };
+      const valve = Object.values(water.lines).reduce((sum, gal) => sum + gal, 0);
+      return { date, coverage: date === last ? "partial" : "complete", meter_gal: valve + water.noValve, by_line: water.lines, by_cause: water.causes, no_valve_gal: water.noValve };
+    }),
+  };
+}
+
+// ---------------------------------------------------------------------------------------------------- irrigation reads
+const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const SOLAR = { sunrise: "06:35", solar_noon: "11:47", sunset: "16:58" };
+const startOf = (start, date) => (start.kind === "clock" ? localInstant(date, start.clock) : localInstant(date, SOLAR[start.kind]) + (start.offset_min ?? 0) * MINUTE);
+/** The pause covering an occurrence: the line's current one, or a past one the fixture records. */
+const pauseAt = (world, line, at) => {
+  if (line.paused_until && at >= world.now && at < Date.parse(line.paused_until)) return { by: line.paused_by ?? JASON, reason: line.pause_reason };
+  return world.pauses.find((pause) => pause.line_id === line.line_id && pause.from <= at && at < pause.until) ?? null;
+};
+/** The week of occurrences per line and day, planned against what the world says happened. */
+export function occurrences(world, first, last) {
+  const rows = [];
+  for (let date = first; date <= last; date = addDays(date, 1)) {
+    for (const schedule of world.schedules.filter((item) => item.enabled && item.days.includes(weekday(date)))) {
+      const at = startOf(schedule.start, date);
+      const line = lineOf(world, schedule.line_id);
+      const pause = pauseAt(world, line, at);
+      const mister = lineInfo(schedule.line_id).kind === "mister";
+      let status = "planned";
+      let reason = null;
+      if (!world.engine) [status, reason] = ["blocked", "arrives with the irrigation firmware"];
+      else if (schedule.degraded_only) [status, reason] = [at < world.now ? "skipped" : "planned", "only if VPD sensing is degraded"];
+      else if (!line.enabled) [status, reason] = ["skipped", "line disabled"];
+      else if (pause) [status, reason] = ["skipped", `line paused by ${pause.by.name}${pause.reason ? `: ${pause.reason}` : ""}`];
+      else if (mister && !line.schedule_member) [status, reason] = ["skipped", "not a schedule member"];
+      else if (at < world.now) status = "done";
+      rows.push({
+        slot_id: schedule.slot_id, line_id: schedule.line_id, planned_start: iso(at), status, outcome: status === "done" ? "ok" : null, reason,
+        run_id: status === "done" ? `run-${schedule.slot_id}-${date}` : null,
+      });
+    }
+  }
+  return rows.sort((a, b) => Date.parse(a.planned_start) - Date.parse(b.planned_start) || a.slot_id - b.slot_id);
+}
+export const BOUNDS = {
+  drip: { on_s: { min: 10, max: 7200 }, count: { min: 1, max: 1 }, gap_s: { min: 0, max: 0 } },
+  fert_drip: { on_s: { min: 10, max: 7200 }, count: { min: 1, max: 1 }, gap_s: { min: 0, max: 0 }, prewet_s: { min: 0, max: 1800 }, flush_s: { min: 0, max: 1800 } },
+  mister: { on_s: { min: 10, max: 90 }, count: { min: 1, max: 60 }, gap_s: { min: 30, max: 600 } },
+  fert_mister: { on_s: { min: 10, max: 90 }, count: { min: 1, max: 60 }, gap_s: { min: 30, max: 600 }, prewet_s: { min: 0, max: 1800 }, flush_s: { min: 0, max: 1800 } },
+};
+function agendaBody(world, { query }) {
+  const days = integer(query, "days", 7, 1, 7);
+  const past = integer(query, "past_days", 0, 0, 7);
+  const first = addDays(today(world), -past);
+  const last = addDays(today(world), days - 1);
+  const solar = [];
+  for (let date = first; date <= last; date = addDays(date, 1)) {
+    solar.push({ date, sunrise: iso(localInstant(date, SOLAR.sunrise)), solar_noon: iso(localInstant(date, SOLAR.solar_noon)), sunset: iso(localInstant(date, SOLAR.sunset)) });
+  }
+  return { schedules: world.schedules, occurrences: occurrences(world, first, last), counts: { schedules: world.schedules.length, max_schedules: 24 }, bounds: BOUNDS, solar };
+}
+/** API-IRR-01, with each line's next run, the active runs and today's minutes by zone derived from the lines. */
+export function irrigationBody(world) {
+  const upcoming = world.engine ? occurrences(world, today(world), addDays(today(world), 7)).filter((row) => row.status === "planned" && Date.parse(row.planned_start) > world.now) : [];
+  const zones = { wall: 0, center: 0, south: 0, west: 0, fog: 0 };
+  for (const line of world.lines) {
+    const zone = minutesZone(lineInfo(line.line_id));
+    if (zone) zones[zone] += line.today?.minutes ?? 0;
+  }
+  return {
+    server_time: iso(world.now), engine: world.engine, program: world.program,
+    lines: world.lines.map((line) => {
+      const next = upcoming.find((row) => row.line_id === line.line_id && !world.schedules.find((item) => item.slot_id === row.slot_id).degraded_only);
+      const schedule = next && world.schedules.find((item) => item.slot_id === next.slot_id);
+      return {
+        ...line,
+        next_run: next ? { line_id: line.line_id, slot_id: next.slot_id, start_at: next.planned_start, label: schedule.label ?? null, minutes: round((schedule.on_s * schedule.count) / 60, 1) } : null,
+      };
+    }),
+    active_runs: world.lines.filter((line) => line.state.code === "running" && manifold(line.kind)).map((line) => ({
+      manifold: manifold(line.kind), line_id: line.line_id, cause: line.state.cause, slot_id: line.state.slot_id, started_at: line.state.observed_at,
+      ends_at: line.state.ends_at, pulses_done: null, pulses_total: null,
+    })),
+    today: { date: today(world), zones }, limits: world.limits, leak: world.leak, occupancy: world.occupancy, fallback_active: world.fallback_active,
+    freshness: world.irrFreshness,
+  };
+}
+
+/** API-IRR-10: minutes by zone, line or cause per day; today from the lines, a no-data day nine days back. */
+function minutesBody(world, { query }) {
+  const from = day(query, "from", null);
+  const to = day(query, "to", null);
+  if (to < from) throw invalid("to must not be before from", "to");
+  const groupBy = query.get("group_by") ?? "zone";
+  if (!["zone", "line", "cause"].includes(groupBy)) throw invalid("group_by must be zone, line or cause", "group_by");
+  if (Math.round((localInstant(to) - localInstant(from)) / DAY) + 1 > 400) throw refuse(422, "window_too_large", "Window too large", "Minutes cover at most 400 days", { field: "from" });
+  const periods = [];
+  const sums = new Map();
+  for (let date = from; date <= to; date = addDays(date, 1)) {
+    const ago = Math.round((localInstant(today(world)) - localInstant(date)) / DAY);
+    const coverage = ago < 0 || ago === NO_DATA_DAYS_AGO ? "no_data" : ago === 0 ? "partial" : "complete";
+    periods.push({ start: date, coverage });
+    if (coverage === "no_data") continue;
+    const runs = ago === 0
+      ? world.lines.filter((line) => (line.today?.minutes ?? 0) > 0).map((line) => [line.line_id, line.state.code === "running" ? line.state.cause : line.last_water?.cause ?? "vpd", line.today.minutes, line.today.pulses, line.today.gal])
+      : [["L04", "vpd", 12 + (ago % 4) * 2, 12 + (ago % 4) * 2, 3 + (ago % 3)], ["L11", "vpd", 5 + (ago % 3), 9, 2], ...(["mon", "wed", "fri"].includes(weekday(date)) ? [["L01", "schedule", 12, null, 9]] : [])];
+    for (const [lineId, cause, minutes, pulses, gal] of runs) {
+      const info = lineInfo(lineId);
+      const group = groupBy === "line" ? lineId : groupBy === "cause" ? cause : minutesZone(info);
+      if (group === null) continue;
+      const chemistry = info.kind.startsWith("fert") ? "fert" : "clean";
+      const key = `${date}|${group}|${cause}|${chemistry}`;
+      const row = sums.get(key) ?? { period: date, group, cause, chemistry, minutes: 0, pulses: null, gal: null };
+      row.minutes = round(row.minutes + minutes, 1);
+      if (pulses !== null) row.pulses = (row.pulses ?? 0) + pulses;
+      if (gal !== null) row.gal = (row.gal ?? 0) + gal;
+      sums.set(key, row);
+    }
+  }
+  return { from, to, group_by: groupBy, periods, rows: [...sums.values()] };
+}
+
+const LINE_ID = /^L(0[1-9]|1[01])$/;
+function runsBody(world, { query }) {
+  const { from, to } = window(query);
+  if (to - from > 31 * DAY) throw refuse(422, "window_too_large", "Window too large", "Runs cover at most 31 days per page", { field: "from" });
+  const [line, cause, outcome] = ["line", "cause", "outcome"].map((name) => query.get(name));
+  if (line !== null && !LINE_ID.test(line)) throw invalid("line must be L01-L11", "line");
+  const rows = world.runs.filter((run) => Date.parse(run.started_at) >= from && Date.parse(run.started_at) < to
+    && (line === null || run.line_id === line) && (cause === null || run.cause === cause) && (outcome === null || run.outcome === outcome));
+  return paged(rows, query);
+}
+
+const READS = {
+  "API-01": (world) => world.me,
+  "API-02": nowBody,
+  "API-03": (world) => ({ items: world.metrics }),
+  "API-04": seriesBody,
+  "API-05": statesBody,
+  "API-06": bandBody,
+  "API-07": planBody,
+  "API-09": (world) => ({ items: world.settings, server_time: iso(world.now) }),
+  "API-12": historyBody,
+  "API-13": (world) => ({ items: world.equipment, ...world.reasons }),
+  "API-14": alertsBody,
+  "API-17": activityBody,
+  "API-19": previewBody,
+  "API-21": waterBody,
+  "API-IRR-01": irrigationBody,
+  "API-IRR-02": agendaBody,
+  "API-IRR-10": minutesBody,
+  "API-IRR-11": runsBody,
+  "OPS-01": () => ({ status: "ok" }),
+  "OPS-02": () => ({ status: "ready", source_revision: REVISION }),
+};
+
+// ---------------------------------------------------------------------------------------------------- writes
+function activity(world, entry) {
+  world.activity.push({ id: nextId(world.activity), state: null, confirmed_at: null, experiment_id: null, ...entry, reason: entry.reason ?? null, request_id: entry.request_id ?? null });
+}
+/** A server-side snap: the nearest multiple of `step`, ties to even, kept inside [min, max]. */
+export function snap(value, step, min, max) {
+  if (!step) return value;
+  const places = Math.max(0, (String(step).split(".")[1] ?? "").length);
+  const ratio = Math.round((value / step) * 1e9) / 1e9;
+  const floor = Math.floor(ratio);
+  const count = ratio - floor === 0.5 ? (floor % 2 === 0 ? floor : floor + 1) : Math.round(ratio);
+  return Math.min(max ?? Infinity, Math.max(min ?? -Infinity, Number((count * step).toFixed(places))));
+}
+const shown = (value, step) => (step && step < 1 ? value.toFixed(String(step).split(".")[1].length) : String(value));
+function stateReason(world, row, created) {
+  if (row.control_class === "irrigation_site" && !world.engine) return { code: "no_engine", detail: "applies with the irrigation firmware", applied_value: null, since: iso(created) };
+  if (world.freshness.ingestor.stale) return { code: "writer_down", detail: null, applied_value: null, since: world.freshness.ingestor.observed_at };
+  if (world.freshness.climate.stale) return { code: "controller_not_reporting", detail: null, applied_value: null, since: world.freshness.climate.observed_at };
+  return null;
+}
+/** Stores a desired row on its setting and lane; under requested-to-confirmed it settles on the third API-09 read. */
+function applyDesired(world, history, serial, desired, request_id) {
+  const row = settingOf(world, desired.param);
+  const before = row.readback?.value ?? null;
+  let stored = { ...desired };
+  if (world.flags.progress && desired.value !== null && history.readsAfter("API-09", serial) >= 3) {
+    stored = world.flags.confirm
+      ? { ...desired, state: "confirmed", state_reason: null, confirmed_at: iso(Date.parse(desired.created_at) + 40_000) }
+      : { ...desired, state: "not_confirmed", state_reason: { code: "no_match", detail: null, applied_value: null, since: desired.created_at } };
+  }
+  const released = stored.value === null;
+  const appliedFrom = released ? (row.plan ? "plan" : row.control_class === "crop_band" ? "band" : "default") : stored.manual ? "manual" : "desired";
+  Object.assign(row, { desired: stored, state: stored.state, applied_from: appliedFrom });
+  if (stored.state === "confirmed") row.readback = { value: stored.value, observed_at: stored.confirmed_at, reason: null };
+  if (row.plan?.next) row.plan = { ...row.plan, next: { ...row.plan.next, effective: released } };
+  const lane = laneOf(world, row.param);
+  if (lane) Object.assign(lane, { desired: stored, applied_from: appliedFrom, waypoints: lane.waypoints.map((point) => ({ ...point, effective: released })) });
+  const detail = { before, value: stored.value, ...(stored.snapped_from === null ? {} : { requested: stored.snapped_from }), manual: { before: desired.manual_before, after: stored.manual } };
+  activity(world, { ts: desired.created_at, actor: desired.actor, action: released ? "setting.release" : "setting.write", target: row.param, detail, reason: desired.reason, state: stored.state, confirmed_at: stored.confirmed_at, request_id });
+}
+function writeSetting(world, { params, body, serial, key }, release) {
+  const row = settingOf(world, params.param);
+  if (!row) throw refuse(422, "unknown_target", "Unknown setting", `No setting ${params.param}`, { field: "param" });
+  if (!row.writable) throw refuse(422, "read_only", "Read-only setting", row.read_only_reason ?? "This setting is read-only", { field: "param" });
+  const created = world.now;
+  const base = { id: nextId(world.settings.map((item) => item.desired).filter(Boolean), 100), param: row.param, manual_before: row.desired?.manual ?? false, confirmed_at: null, actor: actorOf(world), created_at: iso(created) };
+  let desired;
+  if (release) {
+    desired = { ...base, value: null, snapped_from: null, manual: false, state: "released", state_reason: null, reason: text(body.reason, "reason") };
+  } else {
+    const input = object(body);
+    if (typeof input.value !== "number" || !Number.isFinite(input.value)) throw invalid("value must be a number", "value");
+    if (input.manual !== undefined && typeof input.manual !== "boolean") throw invalid("manual must be true or false", "manual");
+    const value = input.value;
+    const outside = (row.kind === "switch" && value !== 0 && value !== 1) || (row.min !== null && value < row.min) || (row.max !== null && value > row.max);
+    if (outside) {
+      throw refuse(422, "out_of_range", "Out of range", `Must be ${shown(row.min, row.step)}-${shown(row.max, row.step)}${row.unit ? ` ${row.unit}` : ""}`, { field: "value", min: row.min, max: row.max, current: row.readback?.value ?? null });
+    }
+    // A value equal to the device's is stored as is (architecture §5.3 step 4).
+    const stored = row.readback?.value === value ? value : snap(value, row.step, row.min, row.max);
+    desired = {
+      ...base, value: stored, snapped_from: stored === value ? null : value, manual: input.manual ?? true, state: "requested",
+      state_reason: stateReason(world, row, created), reason: text(input.reason, "reason"),
+    };
+  }
+  return { status: 200, body: desired, effect: (next, history) => applyDesired(next, history, serial, desired, key ?? null) };
+}
+
+function alertWrite(world, { params, body, key }, resolve) {
+  const id = Number(params.id);
+  if (!Number.isInteger(id)) throw invalid("id must be an integer", "id");
+  const alert = world.alerts.find((row) => row.id === id && !CLOSED.includes(row.status));
+  if (!alert) throw refuse(422, "unknown_target", "Unknown alert", `No open alert ${params.id}`, { field: "id" });
+  const input = object(body);
+  const at = iso(world.now);
+  const by = world.me.username;
+  const updated = resolve
+    ? { ...alert, status: "resolved", resolved_at: at, resolved_by: by, resolution: text(input.resolution, "resolution") }
+    : { ...alert, status: alert.status === "open" ? "acknowledged" : alert.status, acknowledged_at: alert.acknowledged_at ?? at, acknowledged_by: alert.acknowledged_by ?? by, notes: text(input.note, "note") ?? alert.notes };
+  const effect = (next) => {
+    next.alerts = next.alerts.map((row) => (row.id === id ? { ...updated } : row));
+    if (resolve && next.leak.alert_id === id) next.leak = { ...next.leak, alert_id: null };
+    activity(next, { ts: at, actor: actorOf(next), action: resolve ? "alert.resolve" : "alert.ack", target: String(id), detail: { alert_type: alert.alert_type }, reason: resolve ? updated.resolution : updated.notes, request_id: key });
+  };
+  return { status: 200, body: updated, effect };
+}
+
+function lights(world, { params, body, key }) {
+  if (!["main", "grow"].includes(params.light) || !["on", "off"].includes(params.state)) throw refuse(422, "unknown_target", "Unknown light", "light is main or grow and state on or off", { field: "light" });
+  const reason = text(object(body).reason, "reason");
+  const activityId = nextId(world.activity);
+  const effect = (next) => {
+    Object.assign(itemOf(next, `grow_light_${params.light}`), { state: params.state, since: iso(world.now), observed_at: iso(world.now) });
+    activity(next, { ts: iso(world.now), actor: actorOf(next), action: `light.${params.state}`, target: `grow_light_${params.light}`, detail: { light: params.light, state: params.state, result: "confirmed" }, reason, request_id: key });
+  };
+  return { status: 200, body: { light: params.light, state: params.state, result: "confirmed", activity_id: activityId }, effect };
+}
+
+const SCHEDULE_LINE = /^L(0[124-9]|10)$/;
+const FIELDS = ["line_id", "label", "enabled", "days", "start", "on_s", "count", "gap_s", "prewet_s", "flush_s", "degraded_only", "manual"];
+/** The schedule as stored, checked per line kind (irrigation §4.3); throws the contract's refusal. */
+function checkSchedule(world, schedule, slotId) {
+  if (typeof schedule.line_id !== "string" || !SCHEDULE_LINE.test(schedule.line_id)) throw refuse(422, "unknown_target", "Unknown line", "Schedules run on L01, L02 and L04-L10", { field: "line_id" });
+  const kind = lineInfo(schedule.line_id).kind;
+  const range = (field, min, max) => refuse(422, "out_of_range", "Out of range", `${field} must be ${min}-${max}`, { field, min, max, current: null });
+  if (!Array.isArray(schedule.days) || !schedule.days.length || new Set(schedule.days).size !== schedule.days.length || schedule.days.some((day) => !WEEKDAYS.includes(day))) throw invalid("days is one to seven weekdays", "days");
+  const start = schedule.start;
+  if (!start || typeof start !== "object" || !["clock", ...Object.keys(SOLAR)].includes(start.kind)) throw invalid("start.kind is clock, sunrise, solar_noon or sunset", "start");
+  if (start.kind === "clock" && !/^([01]\d|2[0-3]):[0-5]\d$/.test(start.clock ?? "")) throw invalid("start.clock is HH:MM", "start");
+  if (!Number.isInteger(start.offset_min ?? 0) || Math.abs(start.offset_min ?? 0) > 240) throw range("offset_min", -240, 240);
+  for (const field of ["on_s", "count", "gap_s", "prewet_s", "flush_s"]) {
+    const bounds = BOUNDS[kind][field] ?? { min: 0, max: 0 };
+    if (!Number.isInteger(schedule[field]) || schedule[field] < bounds.min || schedule[field] > bounds.max) throw range(field, bounds.min, bounds.max);
+  }
+  for (const field of ["enabled", "degraded_only", "manual"]) if (typeof schedule[field] !== "boolean") throw invalid(`${field} must be true or false`, field);
+  if (schedule.degraded_only && !MISTERS.includes(schedule.line_id)) throw invalid("degraded_only is for L04, L07 and L09", "degraded_only");
+  if (schedule.label !== undefined) text(schedule.label, "label", 60);
+  const reference = "2026-11-02";
+  const minutes = (item) => (startOf(item.start, reference) - localInstant(reference)) / MINUTE;
+  const clash = world.schedules.find((other) => other.slot_id !== slotId && other.line_id === schedule.line_id && other.days.some((day) => schedule.days.includes(day))
+    && Math.abs(minutes(other) - minutes(schedule)) < 30);
+  if (clash) throw refuse(422, "too_close", "Too close", `Starts within 30 min of schedule ${clash.slot_id} on ${schedule.line_id}`, { field: "start" });
+}
+function scheduleEffect(world, schedule, action, key, reason) {
+  return (next) => {
+    next.schedules = action === "delete" ? next.schedules.filter((item) => item.slot_id !== schedule.slot_id)
+      : [...next.schedules.filter((item) => item.slot_id !== schedule.slot_id), { ...schedule }].sort((a, b) => a.slot_id - b.slot_id);
+    if (next.engine) next.program = { ...next.program, state: "requested", revision: (next.program.revision ?? 0) + 1, pushed_at: iso(world.now), confirmed_at: next.program.confirmed_at };
+    activity(next, { ts: iso(world.now), actor: actorOf(next), action: `irrigation.schedule.${action}`, target: String(schedule.slot_id), detail: { line_id: schedule.line_id }, reason, state: next.engine ? "requested" : null, request_id: key });
+  };
+}
+function createSchedule(world, { body, key }) {
+  const input = object(body);
+  if (world.schedules.length >= 24) throw refuse(422, "too_many_schedules", "Too many schedules", "At most 24 schedules");
+  const fields = Object.fromEntries(FIELDS.filter((field) => input[field] !== undefined).map((field) => [field, input[field]]));
+  const schedule = {
+    slot_id: Math.max(0, ...world.schedules.map((item) => item.slot_id)) + 1, enabled: true, count: 1, gap_s: 0, prewet_s: 0, flush_s: 0, degraded_only: false,
+    manual: true, ...fields, start: input.start && typeof input.start === "object" ? { offset_min: 0, ...input.start } : input.start,
+  };
+  checkSchedule(world, schedule, schedule.slot_id);
+  const stored = { ...schedule, manual_before: null, sync: "requested", updated_by: actorOf(world), updated_at: iso(world.now) };
+  return { status: 201, body: stored, effect: scheduleEffect(world, stored, "create", key, text(input.reason, "reason")) };
+}
+function editSchedule(world, { params, body, key }) {
+  const existing = world.schedules.find((item) => item.slot_id === Number(params.slot_id));
+  if (!existing) throw refuse(422, "unknown_target", "Unknown schedule", `No schedule ${params.slot_id}`, { field: "slot_id" });
+  const input = object(body);
+  const fields = Object.fromEntries(FIELDS.filter((field) => input[field] !== undefined).map((field) => [field, input[field]]));
+  const schedule = { ...existing, ...fields, manual: input.manual ?? true };
+  checkSchedule(world, schedule, existing.slot_id);
+  const stored = { ...schedule, manual_before: existing.manual, sync: "requested", updated_by: actorOf(world), updated_at: iso(world.now) };
+  return { status: 200, body: stored, effect: scheduleEffect(world, stored, "update", key, text(input.reason, "reason")) };
+}
+function deleteSchedule(world, { params, query, key }) {
+  const existing = world.schedules.find((item) => item.slot_id === Number(params.slot_id));
+  if (!existing) throw refuse(422, "unknown_target", "Unknown schedule", `No schedule ${params.slot_id}`, { field: "slot_id" });
+  return { status: 204, body: null, effect: scheduleEffect(world, existing, "delete", key, text(query.get("reason") ?? undefined, "reason")) };
+}
+
+function command(world, kind, lineId, args, key) {
+  return {
+    command_id: uuidFrom(`${kind}:${lineId}:${world.now}:${key ?? JSON.stringify(args)}`), kind, line_id: lineId, args, status: "pending",
+    actor: actorOf(world), reason: args.reason ?? null, created_at: iso(world.now), sent_at: null,
+  };
+}
+const durationMs = (kind, args) => (manifold(kind) === "mister" ? (args.on_s * args.count + args.gap_s * (args.count - 1)) * 1000 : args.minutes * MINUTE);
+/** API-IRR-06: starts at once or is refused; before the engine only L01 runs, through the btn_wall_clean bridge. */
+function runNow(world, { params, body, key }) {
+  const id = params.line_id;
+  if (!LINE_ID.test(id)) throw refuse(422, "unknown_target", "Unknown line", "line_id is L01-L11", { field: "line_id" });
+  const args = { ...object(body) };
+  const line = lineOf(world, id);
+  const info = lineInfo(id);
+  const range = (field, min, max) => refuse(422, "out_of_range", "Out of range", `${field} must be ${min}-${max}`, { field, min, max, current: args[field] ?? null });
+  if (!world.engine) {
+    if (id !== "L01") throw notYet();
+    const minutes = settingOf(world, "irrig_wall_duration_min")?.readback?.value ?? 10;
+    if (args.minutes !== undefined && args.minutes !== minutes) throw range("minutes", minutes, minutes);
+    args.minutes = minutes;
+  } else {
+    if (!manifold(info.kind)) throw refuse(422, "unknown_target", "Not a run-now line", "L03 opens with fertilizer runs and L11 is climate only", { field: "line_id" });
+    const needed = manifold(info.kind) === "mister" ? [["on_s", 10, 90], ["count", 1, 60], ["gap_s", 30, 600]] : [["minutes", 1, 120]];
+    if (info.kind.startsWith("fert")) needed.push(["prewet_s", 0, 1800], ["flush_s", 0, 1800]);
+    for (const [field, min, max] of needed) if (!Number.isInteger(args[field]) || args[field] < min || args[field] > max) throw range(field, min, max);
+  }
+  if (!line.enabled) throw refuse(422, "line_disabled", "Line disabled", `${id} is disabled`);
+  if (line.paused_until && Date.parse(line.paused_until) > world.now) throw refuse(422, "line_paused", "Line paused", `${id} is paused`);
+  if (line.fault === "mister_fault") throw refuse(422, "line_faulted", "Line faulted", `${id} is latched off until midnight`);
+  if (line.state.code === "running") throw refuse(422, "line_busy", "Line busy", `${id} is already running`, { retry_after_s: line.state.ends_at ? Math.max(0, Math.round((Date.parse(line.state.ends_at) - world.now) / 1000)) : null });
+  const holder = world.lines.find((other) => other !== line && other.state.code === "running" && manifold(other.kind) === manifold(info.kind));
+  if (holder) {
+    const until = holder.state.ends_at ? Date.parse(holder.state.ends_at) : null;
+    throw refuse(422, "manifold_busy", "Manifold busy", `${holder.line_id} holds the ${manifold(info.kind)} manifold${until ? ` until ${hhmm(until)}` : ""}; stop it or try then`, { retry_after_s: until ? Math.max(0, Math.round((until - world.now) / 1000)) : null });
+  }
+  if (info.kind === "mister" && !line.schedule_member) throw refuse(422, "not_schedule_member", "Schedule is off", `${id} takes run-now only with Schedule on`);
+  const minutes = durationMs(info.kind, args) / MINUTE;
+  if (line.daily_cap_min > 0 && (line.today?.minutes ?? 0) + minutes > line.daily_cap_min) throw refuse(422, "cap_reached", "Daily cap reached", `${id} has ${line.daily_cap_min - (line.today?.minutes ?? 0)} of its ${line.daily_cap_min} min left today`);
+  const sent = command(world, "run", id, args, key);
+  const effect = (next) => {
+    runLine(next, id, { cause: "run_now", started: world.now, ends: world.now + durationMs(info.kind, args) });
+    activity(next, { ts: sent.created_at, actor: sent.actor, action: "irrigation.run", target: id, detail: { ...args, command_id: sent.command_id }, reason: sent.reason, request_id: key });
+  };
+  return { status: 202, body: sent, effect };
+}
+/** API-IRR-07: never blocked; every running line in scope reads OFF from the next read (L01 never does under stop-unconfirmed). */
+function stop(world, { body, key }) {
+  const args = object(body);
+  if (args.line_id !== undefined && (typeof args.line_id !== "string" || !LINE_ID.test(args.line_id))) throw refuse(422, "unknown_target", "Unknown line", "line_id is L01-L11, or omit it for every line", { field: "line_id" });
+  const sent = command(world, "stop", args.line_id ?? null, args, key);
+  const effect = (next) => {
+    const scope = args.line_id ? [args.line_id] : LINES.map((line) => line.line_id);
+    const stopped = stopLines(next, next.flags.stopUnconfirmed ? scope.filter((id) => id !== "L01") : scope, world.now);
+    if (next.flags.flowAfterStop && stopped.length && !next.leak.active) flowWithValvesClosed(next, world.now);
+    activity(next, { ts: sent.created_at, actor: sent.actor, action: "irrigation.stop", target: args.line_id ?? "all", detail: { command_id: sent.command_id, stopped }, reason: sent.reason, request_id: key });
+  };
+  return { status: 202, body: sent, effect };
+}
+const DEFINITION = ["enabled", "vpd_member", "schedule_member", "daily_cap_min", "vpd_reserve_min"];
+/** API-IRR-08: enable with the check, mister flags, caps, pause or resume, manual (irrigation §4.2, §8.3). */
+function updateLines(world, { params, body, key }) {
+  const id = params.line_id;
+  if (id !== "all" && !LINE_ID.test(id)) throw refuse(422, "unknown_target", "Unknown line", "line_id is L01-L11 or all", { field: "line_id" });
+  const input = object(body);
+  const unknownField = Object.keys(input).find((field) => ![...DEFINITION, "checked", "check_note", "paused_until", "manual", "reason"].includes(field));
+  if (unknownField) throw invalid(`${unknownField} is not a line field`, unknownField);
+  if (id === "all" && (!("paused_until" in input) || Object.keys(input).some((field) => !["paused_until", "reason"].includes(field)))) throw invalid("line_id all accepts only paused_until", "line_id");
+  for (const field of ["enabled", "vpd_member", "schedule_member", "checked", "manual"]) if (input[field] !== undefined && typeof input[field] !== "boolean") throw invalid(`${field} must be true or false`, field);
+  const reason = text(input.reason, "reason");
+  const note = text(input.check_note, "check_note");
+  let until = null;
+  if (input.paused_until !== undefined && input.paused_until !== null) {
+    until = Date.parse(input.paused_until);
+    if (!Number.isFinite(until)) throw invalid("paused_until must be a date-time", "paused_until");
+    if (until <= world.now) until = null;
+  }
+  const ids = id === "all" ? LINES.map((line) => line.line_id) : [id];
+  const updates = ids.map((lineId) => {
+    const line = lineOf(world, lineId);
+    if ((input.vpd_member !== undefined || input.schedule_member !== undefined) && !MISTERS.includes(lineId)) throw refuse(422, "unknown_target", "Not a mister zone", "vpd_member and schedule_member are for L04, L07 and L09", { field: input.vpd_member !== undefined ? "vpd_member" : "schedule_member" });
+    const cap = input.daily_cap_min ?? line.daily_cap_min;
+    if (!Number.isInteger(cap) || cap < 0 || cap > 480) throw refuse(422, "out_of_range", "Out of range", "daily_cap_min must be 0-480", { field: "daily_cap_min", min: 0, max: 480, current: line.daily_cap_min });
+    if (input.vpd_reserve_min !== undefined && (!Number.isInteger(input.vpd_reserve_min) || input.vpd_reserve_min < 0 || input.vpd_reserve_min > cap)) throw refuse(422, "out_of_range", "Out of range", `vpd_reserve_min must be 0-${cap}`, { field: "vpd_reserve_min", min: 0, max: cap, current: line.vpd_reserve_min });
+    const checkedNow = input.checked === true;
+    if ((input.enabled === true && !line.enabled && !line.check && !checkedNow) || (input.schedule_member === true && !line.schedule_member && !line.check && !checkedNow)) {
+      throw refuse(422, "check_required", "Check required", `Record the one-time check of ${lineId} first`, { field: "checked" });
+    }
+    const definition = DEFINITION.some((field) => input[field] !== undefined);
+    const changed = { ...line, manual_before: line.manual, sync: "requested" };
+    for (const field of DEFINITION) if (input[field] !== undefined) changed[field] = input[field];
+    if (definition) changed.manual = input.manual ?? true;
+    if (checkedNow) changed.check = { checked_by: world.me.username, checked_at: iso(world.now), note };
+    if ("paused_until" in input) Object.assign(changed, { paused_until: until === null ? null : iso(until), paused_by: until === null ? null : actorOf(world), pause_reason: until === null ? null : reason });
+    if (input.enabled === false) changed.state = { code: "disabled", cause: null, slot_id: null, reason: null, ends_at: null, observed_at: iso(world.now) };
+    else if (input.enabled === true && line.state.code === "disabled") changed.state = { code: "idle", cause: null, slot_id: null, reason: null, ends_at: null, observed_at: iso(world.now) };
+    return changed;
+  });
+  const effect = (next) => {
+    if (input.enabled === false) stopLines(next, ids, world.now);
+    for (const changed of updates) Object.assign(lineOf(next, changed.line_id), structuredClone(changed));
+    activity(next, { ts: iso(world.now), actor: actorOf(next), action: "irrigation.line.update", target: id, detail: Object.fromEntries(Object.entries(input).filter(([field]) => field !== "reason")), reason, request_id: key });
+  };
+  const after = structuredClone(world);
+  effect(after);
+  const lines = irrigationBody(after).lines.filter((line) => ids.includes(line.line_id));
+  return { status: 200, body: { lines }, effect };
+}
+const BURSTS = ["fans", "humidify", "vent_bypass"];
+function override(world, { body, key }) {
+  if (!world.engine) throw notYet();
+  const args = object(body);
+  if (![...BURSTS, "clear", "restart"].includes(args.kind)) throw refuse(422, "out_of_range", "Unknown action", "kind is fans, humidify, vent_bypass, clear or restart", { field: "kind" });
+  if (BURSTS.includes(args.kind) && (!Number.isInteger(args.minutes) || args.minutes < 1 || args.minutes > 120)) throw refuse(422, "out_of_range", "Out of range", "minutes must be 1-120", { field: "minutes", min: 1, max: 120, current: args.minutes ?? null });
+  const sent = command(world, "override", null, args, key);
+  const effect = (next) => {
+    if (args.kind === "clear") next.overrides = [];
+    else if (args.kind === "restart") next.controller = { ...next.controller, uptime_s: 0, reset_reason: "Software reset", observed_at: iso(world.now) };
+    else next.overrides = [...next.overrides.filter((item) => item.kind !== args.kind), { kind: args.kind, since: iso(world.now), ends_at: iso(world.now + args.minutes * MINUTE), held_reason: args.kind === "humidify" && next.occupancy.occupied ? "someone inside" : null }];
+    activity(next, { ts: sent.created_at, actor: sent.actor, action: "equipment.override", target: args.kind, detail: { ...args, command_id: sent.command_id }, reason: sent.reason, request_id: key });
+  };
+  return { status: 202, body: sent, effect };
+}
+function clearFault(world, { body, key }) {
+  if (!world.engine) throw notYet();
+  const args = object(body);
+  if (args.line_id !== undefined && !MISTERS.includes(args.line_id)) throw refuse(422, "unknown_target", "Not a mister zone", "line_id is L04, L07 or L09, or omit it for every mister", { field: "line_id" });
+  const sent = command(world, "clear_fault", args.line_id ?? null, args, key);
+  const effect = (next) => {
+    for (const id of args.line_id ? [args.line_id] : MISTERS) {
+      const line = lineOf(next, id);
+      if (line.fault) Object.assign(line, { fault: null, fault_until: null, state: { ...line.state, code: line.state.code === "blocked" ? "idle" : line.state.code, reason: null } });
+    }
+    activity(next, { ts: sent.created_at, actor: sent.actor, action: "irrigation.clear_fault", target: args.line_id ?? "all", detail: { command_id: sent.command_id }, reason: sent.reason, request_id: key });
+  };
+  return { status: 202, body: sent, effect };
+}
+
+const WRITES = {
+  "API-10": (world, request) => writeSetting(world, request, false),
+  "API-11": (world, request) => writeSetting(world, { ...request, body: { reason: request.query.get("reason") ?? undefined } }, true),
+  "API-15": (world, request) => alertWrite(world, request, false),
+  "API-16": (world, request) => alertWrite(world, request, true),
+  "API-20": lights,
+  "API-IRR-03": createSchedule,
+  "API-IRR-04": editSchedule,
+  "API-IRR-05": deleteSchedule,
+  "API-IRR-06": runNow,
+  "API-IRR-07": stop,
+  "API-IRR-08": updateLines,
+  "API-IRR-12": override,
+  "API-IRR-13": clearFault,
+};
+
+// ---------------------------------------------------------------------------------------------------- BFF and BFF-only routes
+const relative = (value) => (typeof value === "string" && value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") ? value : "/");
+const redirect = (status, location) => ({ status, headers: { Location: location, ...NO_STORE }, body: null });
+const SPECIAL = {
+  // Stub redirects: sign-in goes straight to the callback and back, with no Authentik and no cookies.
+  "BFF-01": (world, { query }) => redirect(302, `/auth/callback?code=fixture&state=${encodeURIComponent(relative(query.get("returnTo")))}`),
+  "BFF-02": (world, { query }) => (query.get("error")
+    ? { status: 400, headers: { "Content-Type": "text/html; charset=utf-8", ...NO_STORE }, body: "<!doctype html><title>Sign-in did not complete</title><p>Sign-in did not complete.</p>" }
+    : redirect(302, relative(query.get("state")))),
+  "BFF-03": () => redirect(303, "/"),
+  "INT-01": (world, { headers, body }) => {
+    if (headers["x-dashboard-session"]) throw refuse(403, "forbidden", "Not allowed", "A proxied request cannot create a session");
+    const input = object(body);
+    if (typeof input.username !== "string" || !input.username || !["operator", "viewer"].includes(input.role)) throw invalid("username and role (operator or viewer) are required");
+    const token = createHash("sha256").update(`${input.username}:${world.now}`).digest("base64url");
+    return { status: 201, body: { token, expires_at: iso(world.now + 12 * HOUR) } };
+  },
+  "INT-02": (world, { headers }) => {
+    if (!headers["x-dashboard-session"]) throw refuse(401, "unauthenticated", "Sign in again", "X-Dashboard-Session is required");
+    return { status: 204, body: null };
+  },
+};
+
+/**
+ * One answer: `{operationId, status, headers, body, effect}`. `request` is `{method, url, headers, body}` (headers in
+ * lower case, body parsed JSON) with the fixture API's `serial` and `key`; `history` counts earlier reads.
+ */
+export function answer(world, request, history = { readsAfter: () => 0 }) {
+  const method = (request.method ?? "GET").toUpperCase();
+  const target = new URL(request.url, "http://fixture.invalid");
+  const path = apiPath(target.pathname);
+  const matches = ROUTES.filter((route) => route.pattern.test(path));
+  if (!matches.length) return { operationId: null, ...problem(404, "not_found", "Not found", `No operation at ${path}`) };
+  const route = matches.find((item) => item.method === method);
+  if (!route) {
+    const response = problem(405, "invalid_request", "Method not allowed", `${path} takes ${matches.map((item) => item.method).join(", ")}`);
+    return { operationId: null, ...response, headers: { ...response.headers, Allow: matches.map((item) => item.method).join(", ") } };
+  }
+  const { operationId } = route;
+  const done = (response, effect = null) => ({ operationId, effect, ...response });
+  if (world.fail[operationId] !== undefined) return done(failure(operationId, world.fail[operationId]));
+  const api = path.startsWith("/v1/");
+  if (api && world.flags.apiDown) return done(problem(503, "unavailable", "Dashboard API unavailable", "The operator API is not answering"));
+  if (api && method !== "GET") {
+    // The BFF's writes flag first (Stop is never blocked), then the operator API's role check.
+    if (!world.me.writes_enabled && operationId !== "API-IRR-07") return done(problem(503, "writes_disabled", "Changes are switched off", "Changes are switched off; reading still works"));
+    if (world.me.role !== "operator") return done(problem(403, "forbidden", "Not allowed", "Viewers can read but not change anything"));
+  }
+  let params;
+  try {
+    params = Object.fromEntries(Object.entries(route.pattern.exec(path).groups ?? {}).map(([name, value]) => [name, decodeURIComponent(value)]));
+  } catch {
+    return done(problem(400, "invalid_request", "Invalid request", "The path is not valid"));
+  }
+  const context = { ...request, method, params, query: new URLSearchParams(target.search), headers: request.headers ?? {}, history };
+  try {
+    if (READS[operationId]) return done(json(200, READS[operationId](world, context)));
+    const handler = WRITES[operationId] ?? SPECIAL[operationId];
+    const result = handler(world, context);
+    if (result.headers) return done(result);
+    const response = result.body === null ? { status: result.status, headers: { ...NO_STORE }, body: null } : json(result.status, result.body);
+    return done(response, result.effect ?? null);
+  } catch (error) {
+    if (error instanceof Refusal) return done(error.response);
+    throw error;
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------- examples
+const get = (path, query = {}) => {
+  const search = new URLSearchParams();
+  for (const [name, value] of Object.entries(query)) for (const item of [value].flat()) search.append(name, item);
+  return { method: "GET", url: `${path}${search.size ? `?${search}` : ""}` };
+};
+const send = (method, url, body) => ({ method, url, headers: {}, body });
+const firstAlert = (world) => world.alerts.find((alert) => !CLOSED.includes(alert.status))?.id ?? 1;
+export const SERIES_METRICS = ["climate.temp_avg", "climate.vpd_avg", "climate.rh_avg"];
+/** The request behind each operation's entry in a fixture's response set, and the one the contract test sends. */
+export const EXAMPLES = {
+  "API-01": () => get("/v1/me"),
+  "API-02": () => get("/v1/now"),
+  "API-03": () => get("/v1/metrics"),
+  "API-04": (world) => { const { from, to } = world.seriesWindow ?? { from: world.now - DAY, to: world.now }; return get("/v1/series", { metric: SERIES_METRICS, from: iso(from), to: iso(to) }); },
+  "API-05": (world) => get("/v1/states", { from: iso(world.now - DAY), to: iso(world.now) }),
+  "API-06": (world) => get("/v1/band", { from: iso(world.now - DAY), to: iso(world.now) }),
+  "API-07": () => get("/v1/plan"),
+  "API-09": () => get("/v1/settings"),
+  "API-10": () => send("PUT", "/v1/settings/mister_engage_kpa", { value: 1.53, manual: true, reason: "Vandas drying" }),
+  "API-11": () => send("DELETE", "/v1/settings/mister_engage_kpa?reason=Back%20to%20the%20plan"),
+  "API-12": (world) => get("/v1/settings/mister_engage_kpa/history", { from: iso(world.now - DAY), to: iso(world.now) }),
+  "API-13": () => get("/v1/equipment"),
+  "API-14": () => get("/v1/alerts"),
+  "API-15": (world) => send("POST", `/v1/alerts/${firstAlert(world)}/ack`, { note: "On it" }),
+  "API-16": (world) => send("POST", `/v1/alerts/${firstAlert(world)}/resolve`, { resolution: "Fixed at the breaker" }),
+  "API-17": () => get("/v1/activity"),
+  "API-19": () => get("/v1/band/preview", { param: "band_vpd_low_sm", value: "0.5" }),
+  "API-20": () => send("POST", "/v1/equipment/lights/main/on", { reason: "Inspecting the Vandas" }),
+  "API-21": () => get("/v1/water/daily"),
+  "API-IRR-01": () => get("/v1/irrigation"),
+  // The week view with "Last 7 days" on, so past blocks and their outcomes are in the set.
+  "API-IRR-02": () => get("/v1/irrigation/schedules", { past_days: 7 }),
+  "API-IRR-03": () => send("POST", "/v1/irrigation/schedules", { line_id: "L01", label: "Wall MWF", days: ["mon", "wed", "fri"], start: { kind: "sunrise", offset_min: 60 }, on_s: 720, manual: true }),
+  "API-IRR-04": (world) => send("PUT", `/v1/irrigation/schedules/${world.schedules[0]?.slot_id ?? 1}`, { enabled: false, manual: true }),
+  "API-IRR-05": (world) => send("DELETE", `/v1/irrigation/schedules/${world.schedules[0]?.slot_id ?? 1}`),
+  "API-IRR-06": () => send("POST", "/v1/irrigation/lines/L01/run", { minutes: 12 }),
+  "API-IRR-07": () => send("POST", "/v1/irrigation/stop", {}),
+  "API-IRR-08": () => send("PUT", "/v1/irrigation/lines/L07", { vpd_member: true, manual: true }),
+  "API-IRR-10": (world) => get("/v1/irrigation/minutes", { from: addDays(today(world), -6), to: today(world) }),
+  "API-IRR-11": (world) => get("/v1/irrigation/runs", { from: iso(world.now - 7 * DAY), to: iso(world.now) }),
+  "API-IRR-12": () => send("POST", "/v1/equipment/override", { kind: "fans", minutes: 15 }),
+  "API-IRR-13": () => send("POST", "/v1/irrigation/clear-fault", { line_id: "L04" }),
+  "BFF-01": () => get("/auth/login", { returnTo: "/water" }),
+  "BFF-02": () => get("/auth/callback", { code: "fixture", state: "/water" }),
+  "BFF-03": () => send("POST", "/auth/logout"),
+  "INT-01": () => send("POST", "/internal/sessions", { username: "jason", display_name: "Jason", role: "operator" }),
+  "INT-02": () => ({ method: "DELETE", url: "/internal/sessions/current", headers: { "x-dashboard-session": "fixture-session" } }),
+  "OPS-01": () => get("/healthz"),
+  "OPS-02": () => get("/readyz"),
+};

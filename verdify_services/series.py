@@ -15,7 +15,7 @@ import re
 from bisect import bisect_right
 from collections.abc import AsyncIterator, Hashable, Iterable, Sequence
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
@@ -23,9 +23,9 @@ from zoneinfo import ZoneInfo
 import asyncpg
 from pydantic import BaseModel, ConfigDict, Field, model_serializer
 
-from verdify_services.labels import EQUIPMENT_LABELS, LINE_IDS
-from verdify_services.problems import problem
-from verdify_services.reads import collapse
+from verdify_services.labels import EQUIPMENT_LABELS, EQUIPMENT_LINE_IDS
+from verdify_services.problems import ServiceError, problem
+from verdify_services.reads import Span, collapse
 
 DENVER = ZoneInfo("America/Denver")
 STATEMENT_TIMEOUT = "10s"
@@ -587,15 +587,17 @@ def _validate_window(from_: datetime, to: datetime, max_window: timedelta) -> tu
     """Check a half-open window and return it in UTC."""
     for name, value in (("from", from_), ("to", to)):
         if value.tzinfo is None or value.utcoffset() is None:
-            raise problem("invalid_request", f"{name} needs a time zone offset", field=name)
+            raise ServiceError(problem("invalid_request", f"{name} needs a time zone offset", field=name))
     if from_ >= to:
-        raise problem("invalid_request", "from must be before to", field="from")
+        raise ServiceError(problem("invalid_request", "from must be before to", field="from"))
     if to - from_ > max_window:
-        raise problem(
-            "window_too_large",
-            f"A window covers at most {max_window.days} days; narrow it",
-            field="to",
-            max=max_window.days,
+        raise ServiceError(
+            problem(
+                "window_too_large",
+                f"A window covers at most {max_window.days} days; narrow it",
+                field="to",
+                max=max_window.days,
+            )
         )
     return from_.astimezone(UTC), to.astimezone(UTC)
 
@@ -614,7 +616,7 @@ async def _read_transaction(conn: asyncpg.Connection) -> AsyncIterator[None]:
             )
             yield
     except asyncpg.QueryCanceledError as exc:
-        raise problem("query_timeout", "This window took too long. Narrow it.") from exc
+        raise ServiceError(problem("query_timeout", "This window took too long. Narrow it.")) from exc
 
 
 def aligned_starts(from_: datetime, to: datetime, step_s: int) -> list[datetime]:
@@ -698,18 +700,22 @@ def is_daily_mode(bindings: Iterable[MetricBinding], from_: datetime, to: dateti
 def plan_series(keys: Sequence[str], from_: datetime, to: datetime, points: int, *, now: datetime) -> SeriesPlan:
     """Validate an API-04 request and decide its buckets and each key's source (pure)."""
     if not 1 <= len(keys) <= MAX_SERIES_KEYS:
-        raise problem("invalid_request", f"Ask for 1 to {MAX_SERIES_KEYS} metrics", field="metric")
+        raise ServiceError(problem("invalid_request", f"Ask for 1 to {MAX_SERIES_KEYS} metrics", field="metric"))
     wanted = list(dict.fromkeys(keys))
     unknown = [key for key in wanted if key not in METRICS]
     if unknown:
-        raise problem("unknown_target", f"Unknown metric {unknown[0]!r}; API-03 lists the keys", field="metric")
+        raise ServiceError(
+            problem("unknown_target", f"Unknown metric {unknown[0]!r}; API-03 lists the keys", field="metric")
+        )
     if not POINTS_MIN <= points <= POINTS_MAX:
-        raise problem(
-            "invalid_request",
-            f"points is {POINTS_MIN} to {POINTS_MAX}",
-            field="points",
-            min=POINTS_MIN,
-            max=POINTS_MAX,
+        raise ServiceError(
+            problem(
+                "invalid_request",
+                f"points is {POINTS_MIN} to {POINTS_MAX}",
+                field="points",
+                min=POINTS_MIN,
+                max=POINTS_MAX,
+            )
         )
     from_, to = _validate_window(from_, to, MAX_WINDOW)
     bindings = [METRICS[key] for key in wanted]
@@ -912,7 +918,7 @@ LANES: tuple[tuple[str, LaneGroup], ...] = (
     ("vent", "climate"),
     ("heat1", "climate"),
     ("heat2", "climate"),
-    *((equipment, "water") for equipment in LINE_IDS),
+    *((equipment, "water") for equipment in EQUIPMENT_LINE_IDS),
     ("grow_light_main", "light"),
     ("grow_light_grow", "light"),
     ("occupancy", "flag"),
@@ -1006,6 +1012,15 @@ def _state_word(state: bool | None) -> LaneState:
     return "unknown" if state is None else ("on" if state else "off")
 
 
+def lane_runs(rows: Iterable[tuple[datetime, Hashable]], end: datetime) -> list[Span]:
+    """``reads.collapse()`` for a lane: of two rows at one instant the later wins, so no run has zero length, and the
+    newest run ends at ``end`` rather than staying open."""
+    spans = collapse(dict(sorted(rows, key=lambda row: row[0])).items())
+    if spans:
+        spans[-1] = replace(spans[-1], end=end)
+    return spans
+
+
 def overlay_unknown(
     timeline: Sequence[tuple[datetime, Hashable]],
     unknown: Sequence[tuple[datetime, datetime]],
@@ -1013,7 +1028,7 @@ def overlay_unknown(
     end: datetime,
 ) -> list[tuple[LaneState, datetime, datetime]]:
     """Collapse a lane's (ts, state) timeline over [start, end) and mark the unknown spans (pure)."""
-    base = collapse(timeline, end=end)
+    base = lane_runs(timeline, end)
     if not base or start >= end:
         return []
     # Each piece runs from one cut to the next; no state change or unknown edge falls inside it.
@@ -1029,7 +1044,7 @@ def overlay_unknown(
         else:
             state = base[max(bisect_right(starts, cut) - 1, 0)].state
         pieces.append((cut, state))
-    return [(span.state, span.start, span.end) for span in collapse(pieces, end=end)]
+    return [(span.state, span.start, span.end) for span in lane_runs(pieces, end)]
 
 
 def lane_intervals(
@@ -1050,7 +1065,7 @@ def _select_lanes(equipment: Sequence[str] | None) -> tuple[tuple[str, LaneGroup
     wanted = set(equipment)
     unknown = sorted(wanted - _LANE_GROUPS.keys())
     if unknown:
-        raise problem("unknown_target", f"Unknown equipment {unknown[0]!r}", field="equipment")
+        raise ServiceError(problem("unknown_target", f"Unknown equipment {unknown[0]!r}", field="equipment"))
     return tuple(lane for lane in LANES if lane[0] in wanted)
 
 
@@ -1116,7 +1131,7 @@ async def states(
                 equipment=name,
                 label=EQUIPMENT_LABELS[name],
                 group=group,
-                line_id=LINE_IDS.get(name),
+                line_id=EQUIPMENT_LINE_IDS.get(name),
                 intervals=intervals,
             )
         )

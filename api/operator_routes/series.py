@@ -10,7 +10,7 @@ from pydantic import AwareDatetime
 
 from verdify_services import series as service
 
-from . import connection
+from .reads import connection
 
 router = APIRouter(tags=["graphs"])
 

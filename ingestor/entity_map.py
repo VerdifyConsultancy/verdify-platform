@@ -180,128 +180,6 @@ ESPHOME_FEEDBACK_MAP: dict[str, str] = {
     "center_tray_ec": "ec_runoff_center",
 }
 
-# Optional physical irrigation feedback sensors published directly to MQTT.
-# Retained broker state is ignored by the ingestor; only live messages should
-# populate climate. Legacy south topics are listed only in
-# MQTT_FEEDBACK_CANDIDATES for diagnostics and are intentionally not accepted
-# by MQTT_FEEDBACK_MAP.
-MQTT_FEEDBACK_MAP: dict[str, str] = {
-    "greenhouse/sensor/south_1_soil_moisture____/state": "soil_moisture_south_1",
-    "greenhouse/sensor/south_1_soil_ec____s___cm_/state": "soil_ec_south_1",
-    "greenhouse/sensor/south_1_soil_temp____f_/state": "soil_temp_south_1",
-    "greenhouse/sensor/center_soil_moisture____/state": "moisture_center",
-    "greenhouse/sensor/center_root_zone_moisture____/state": "moisture_center",
-    "greenhouse/sensor/center_root_zone_soil_moisture____/state": "moisture_center",
-    "greenhouse/sensor/center_rootzone_moisture____/state": "moisture_center",
-    "greenhouse/sensor/center_moisture____/state": "moisture_center",
-    "greenhouse/sensor/center_vwc/state": "moisture_center",
-    "greenhouse/sensor/center_substrate_vwc/state": "moisture_center",
-    "greenhouse/sensor/center_substrate_moisture/state": "moisture_center",
-    "greenhouse/sensor/center_substrate_moisture____/state": "moisture_center",
-    "greenhouse/sensor/center_root_zone_vwc/state": "moisture_center",
-    "greenhouse/sensor/middle_substrate_vwc/state": "moisture_center",
-    "greenhouse/sensor/middle_substrate_moisture/state": "moisture_center",
-    "greenhouse/sensor/middle_substrate_moisture____/state": "moisture_center",
-    "greenhouse/sensor/center_runoff_ph/state": "ph_runoff_center",
-    "greenhouse/sensor/center_runoff_p_h/state": "ph_runoff_center",
-    "greenhouse/sensor/center_run_off_ph/state": "ph_runoff_center",
-    "greenhouse/sensor/center_run_off_p_h/state": "ph_runoff_center",
-    "greenhouse/sensor/center_drain_ph/state": "ph_runoff_center",
-    "greenhouse/sensor/center_drain_p_h/state": "ph_runoff_center",
-    "greenhouse/sensor/center_drainage_ph/state": "ph_runoff_center",
-    "greenhouse/sensor/center_leachate_ph/state": "ph_runoff_center",
-    "greenhouse/sensor/center_effluent_ph/state": "ph_runoff_center",
-    "greenhouse/sensor/center_tray_ph/state": "ph_runoff_center",
-    "greenhouse/sensor/center_runoff_ec/state": "ec_runoff_center",
-    "greenhouse/sensor/center_runoff_ec_ms_cm/state": "ec_runoff_center",
-    "greenhouse/sensor/center_runoff_ec_us_cm/state": "ec_runoff_center",
-    "greenhouse/sensor/center_runoff_ec_u_s_cm/state": "ec_runoff_center",
-    "greenhouse/sensor/center_runoff_ec___s_cm_/state": "ec_runoff_center",
-    "greenhouse/sensor/center_runoff_ec____s___cm_/state": "ec_runoff_center",
-    "greenhouse/sensor/center_run_off_ec/state": "ec_runoff_center",
-    "greenhouse/sensor/center_run_off_ec_ms_cm/state": "ec_runoff_center",
-    "greenhouse/sensor/center_run_off_ec_us_cm/state": "ec_runoff_center",
-    "greenhouse/sensor/center_run_off_ec_u_s_cm/state": "ec_runoff_center",
-    "greenhouse/sensor/center_run_off_ec___s_cm_/state": "ec_runoff_center",
-    "greenhouse/sensor/center_run_off_ec____s___cm_/state": "ec_runoff_center",
-    "greenhouse/sensor/center_runoff_conductivity/state": "ec_runoff_center",
-    "greenhouse/sensor/center_runoff_electrical_conductivity/state": "ec_runoff_center",
-    "greenhouse/sensor/center_drain_ec/state": "ec_runoff_center",
-    "greenhouse/sensor/center_drain_ec_ms_cm/state": "ec_runoff_center",
-    "greenhouse/sensor/center_drain_ec_us_cm/state": "ec_runoff_center",
-    "greenhouse/sensor/center_drain_ec_u_s_cm/state": "ec_runoff_center",
-    "greenhouse/sensor/center_drain_ec___s_cm_/state": "ec_runoff_center",
-    "greenhouse/sensor/center_drain_ec____s___cm_/state": "ec_runoff_center",
-    "greenhouse/sensor/center_drainage_ec/state": "ec_runoff_center",
-    "greenhouse/sensor/center_leachate_ec/state": "ec_runoff_center",
-    "greenhouse/sensor/center_effluent_ec/state": "ec_runoff_center",
-    "greenhouse/sensor/center_tray_ec/state": "ec_runoff_center",
-}
-
-MQTT_FEEDBACK_CANDIDATES: dict[str, tuple[str, ...]] = {
-    "south_soil_probe_1": (
-        "greenhouse/sensor/south_1_soil_moisture____/state",
-        "greenhouse/sensor/south_1_soil_ec____s___cm_/state",
-        "greenhouse/sensor/south_1_soil_temp____f_/state",
-        "greenhouse/sensor/south_soil_moisture____/state",
-        "greenhouse/sensor/south_soil_ec____s___cm_/state",
-        "greenhouse/sensor/south_soil_temp____f_/state",
-    ),
-    "center_root_zone_moisture": (
-        "greenhouse/sensor/center_soil_moisture____/state",
-        "greenhouse/sensor/center_root_zone_moisture____/state",
-        "greenhouse/sensor/center_root_zone_soil_moisture____/state",
-        "greenhouse/sensor/center_rootzone_moisture____/state",
-        "greenhouse/sensor/center_moisture____/state",
-        "greenhouse/sensor/center_vwc/state",
-        "greenhouse/sensor/center_substrate_vwc/state",
-        "greenhouse/sensor/center_substrate_moisture/state",
-        "greenhouse/sensor/center_substrate_moisture____/state",
-        "greenhouse/sensor/center_root_zone_vwc/state",
-        "greenhouse/sensor/middle_substrate_vwc/state",
-        "greenhouse/sensor/middle_substrate_moisture/state",
-        "greenhouse/sensor/middle_substrate_moisture____/state",
-    ),
-    "center_runoff_ph": (
-        "greenhouse/sensor/center_runoff_ph/state",
-        "greenhouse/sensor/center_runoff_p_h/state",
-        "greenhouse/sensor/center_run_off_ph/state",
-        "greenhouse/sensor/center_run_off_p_h/state",
-        "greenhouse/sensor/center_drain_ph/state",
-        "greenhouse/sensor/center_drain_p_h/state",
-        "greenhouse/sensor/center_drainage_ph/state",
-        "greenhouse/sensor/center_leachate_ph/state",
-        "greenhouse/sensor/center_effluent_ph/state",
-        "greenhouse/sensor/center_tray_ph/state",
-    ),
-    "center_runoff_ec": (
-        "greenhouse/sensor/center_runoff_ec/state",
-        "greenhouse/sensor/center_runoff_ec_ms_cm/state",
-        "greenhouse/sensor/center_runoff_ec_us_cm/state",
-        "greenhouse/sensor/center_runoff_ec_u_s_cm/state",
-        "greenhouse/sensor/center_runoff_ec___s_cm_/state",
-        "greenhouse/sensor/center_runoff_ec____s___cm_/state",
-        "greenhouse/sensor/center_run_off_ec/state",
-        "greenhouse/sensor/center_run_off_ec_ms_cm/state",
-        "greenhouse/sensor/center_run_off_ec_us_cm/state",
-        "greenhouse/sensor/center_run_off_ec_u_s_cm/state",
-        "greenhouse/sensor/center_run_off_ec___s_cm_/state",
-        "greenhouse/sensor/center_run_off_ec____s___cm_/state",
-        "greenhouse/sensor/center_runoff_conductivity/state",
-        "greenhouse/sensor/center_runoff_electrical_conductivity/state",
-        "greenhouse/sensor/center_drain_ec/state",
-        "greenhouse/sensor/center_drain_ec_ms_cm/state",
-        "greenhouse/sensor/center_drain_ec_us_cm/state",
-        "greenhouse/sensor/center_drain_ec_u_s_cm/state",
-        "greenhouse/sensor/center_drain_ec___s_cm_/state",
-        "greenhouse/sensor/center_drain_ec____s___cm_/state",
-        "greenhouse/sensor/center_drainage_ec/state",
-        "greenhouse/sensor/center_leachate_ec/state",
-        "greenhouse/sensor/center_effluent_ec/state",
-        "greenhouse/sensor/center_tray_ec/state",
-    ),
-}
-
 FEEDBACK_VALUE_RANGES: dict[str, tuple[float | None, float | None]] = {
     "soil_moisture_south_1": (0.0, 100.0),
     "soil_ec_south_1": (0.0, None),
@@ -348,10 +226,12 @@ EQUIPMENT_BINARY_MAP: dict[str, str] = {
     "water_flowing": "water_flowing",
     "heap_pressure_warning": "heap_pressure_warning",
     "heap_pressure_critical": "heap_pressure_critical",
+    # The burst latches (manual_override and the panel push buttons, VD-47).
+    # The occupancy quiet-override route went with the override; equipment_state
+    # history keeps its name (verdify_schemas/telemetry.py).
     "fan_burst_active": "fan_burst_active",
     "fog_burst_active": "fog_burst_active",
     "vent_bypass_active": "vent_bypass_active",
-    "occupancy_quiet_override_active": "occupancy_quiet_override_active",
 }
 
 # ──────────────────────────────────────────────────────────────
@@ -369,11 +249,15 @@ EQUIPMENT_SWITCH_MAP: dict[str, str] = {
     "drip___center": "drip_center",
     "drip___center__fert__": "drip_center_fert",
     "valve___fert__master": "fert_master_valve",
-    "grow_light_main": "grow_light_main",
-    "grow_light_grow": "grow_light_grow",
+    # Controller intent (Q-09). grow_light_main/_grow are only the Lutron
+    # readback that ha_sensor_sync records from Home Assistant.
+    "grow_light_main": "grow_light_main_intent",
+    "grow_light_grow": "grow_light_grow_intent",
     # Config switches (boolean tunables exposed as HA switches)
     "economiser_enabled": "economiser_enabled",
     "fog_closes_vent": "fog_closes_vent",
+    # The L01 bridge's switches (irrigation §6.5): only the pre-engine firmware
+    # publishes them; they go with the bridge's rows in #1165's follow-up.
     "irrigation_enabled": "irrigation_enabled",
     "irrigation_wall_enabled": "irrigation_wall_enabled",
     "irrigation_center_enabled": "irrigation_center_enabled",
@@ -537,41 +421,15 @@ DAILY_ACCUM_MAP: dict[str, str] = {
 # Maps ESP32 object_id → canonical DB parameter name
 # Written to setpoint_snapshot table for ground-truth tracking
 # ──────────────────────────────────────────────────────────────
-# firmware-v2 (firmware/v2-solar-bands) added these cfg_* readback sensors
-# (firmware/greenhouse/sensors.yaml). The underlying number/switch entities live
-# only in firmware (no registry row), so route the readbacks here directly:
-# ESPHome sensor `id:` → canonical setpoint param name. The firmware-v2-dropped
-# fog-window / micropulse / dawn-rehydrate / midday-drench / overnight-micropulse
-# / night-humidity-source cfg_* readbacks remain in the registry-derived base
-# (their registry rows persist) but are now dead firmware routes — allow-listed
-# in verdify_schemas/tests/test_firmware_drift.py.
-_CFG_READBACK_ADDED_FW_V2 = {
-    "cfg_night_stress_min_dew_margin_f": "night_stress_min_dew_margin_f",
-    "cfg_sw_onchip_band_enabled": "sw_onchip_band_enabled",
-    "cfg_sw_wet_taper_enabled": "sw_wet_taper_enabled",
-    "cfg_sw_night_stress_wet_enabled": "sw_night_stress_wet_enabled",
-    # F9 (issue 5): night econ-heat suppression switch — was enforced firmware-side
-    # with no readback (fire-and-forget). sensors.yaml now publishes the cfg_*; map
-    # it so the ingestor can confirm the device holds the operator's value.
-    "cfg_sw_night_econ_heat_suppress_enabled": "sw_night_econ_heat_suppress_enabled",
-    # #410/#420: the vent+reheat held-temp dehum enable readback
-    # (cfg___dehum_vent_hold_enabled → sw_dehum_vent_hold_enabled) now flows
-    # from the registry's cfg_readback_object_id (CFG_READBACK_MAP_REG). The
-    # PR #421 manual route here was retired when the registry row landed —
-    # this dict merges LAST into CFG_READBACK_MAP, so keeping it would have
-    # shadowed the registry-derived route with a conflicting canonical name
-    # (dehum_vent_hold_enabled has no registry row; SetpointSnapshot would
-    # keep rejecting it — issue #420 break (b)). The 5 manual routes above
-    # remain #420 scope (their keys are id-form and wire-dead as documented
-    # in the issue).
-    # Item-3 arbiter switch readback (cfg_arbiter_zone_enabled →
-    # sw_arbiter_zone_enabled) now flows from the registry's cfg_readback_object_id
-    # (CFG_READBACK_MAP_REG); the manual alias here was redundant and is removed.
-}
+# Every route derives from the registry: each row's cfg_readback_object_id,
+# plus its alias table. No hand-written route lives here, so none can shadow
+# a registry route with a parameter name SetpointSnapshot rejects (#420). VD-63
+# registered the last six firmware tunables that had no row and removed the
+# _CFG_READBACK_ADDED_FW_V2 stopgap, whose C++-id keys never matched the
+# object_ids the device reports.
 CFG_READBACK_MAP: dict[str, str] = {
     **CFG_READBACK_MAP_REG,
     **CFG_READBACK_ALIASES_REG,
-    **_CFG_READBACK_ADDED_FW_V2,
 }
 
 # ──────────────────────────────────────────────────────────────
