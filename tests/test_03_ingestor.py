@@ -691,7 +691,7 @@ async def test_restart_terminalizes_only_unsent_in_memory_queue_states():
 
 
 @pytest.mark.asyncio
-async def test_cold_boot_nan_blocks_without_db_work_until_native_replay_and_reconnect_fences(caplog):
+async def test_cold_boot_nan_blocks_with_only_its_stage_row_until_native_replay_and_reconnect_fences(caplog):
     from tasks import dispatcher
 
     expected = frozenset({"mister_vpd_weight", "mister_on_s"})
@@ -702,7 +702,10 @@ async def test_cold_boot_nan_blocks_without_db_work_until_native_replay_and_reco
     pool = MagicMock()
     with caplog.at_level(logging.WARNING):
         await dispatcher.setpoint_dispatcher(pool)
-    pool.acquire.assert_not_called()
+    # No policy read and no command: at most one stage row, so the freeze cannot be silent (#1275).
+    assert pool.acquire.call_count <= 1
+    conn = pool.acquire.return_value.__aenter__.return_value
+    assert [name for name, _args, _kwargs in conn.method_calls] in ([], ["execute"])
     assert any("missing_params=mister_on_s,mister_vpd_weight" in r.getMessage() for r in caplog.records)
 
     ingestor._mirror_irrigation_number_readback("mister_on_s", 300.0)
@@ -717,8 +720,9 @@ async def test_cold_boot_nan_blocks_without_db_work_until_native_replay_and_reco
     assert not shared.note_cfg_readback_observed("mister_on_s", 300.0, generation)
     assert not shared.transport_readbacks_ready(second)
     assert ingestor._record_cfg_readback("cfg___mister_vpd_weight", float("nan"))
+    before = list(conn.method_calls)
     await dispatcher.setpoint_dispatcher(pool)
-    pool.acquire.assert_not_called()
+    assert conn.method_calls == before  # still held: the unchanged stage writes nothing, and no policy read or command
     ingestor._mirror_irrigation_number_readback("mister_on_s", 300.0)
     ingestor._mirror_irrigation_number_readback("mister_vpd_weight", 1.5)
     assert shared.transport_readbacks_ready(second)

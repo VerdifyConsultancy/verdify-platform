@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -130,17 +130,25 @@ def test_unchanged_anchor_probe_uses_observed_readback_not_constant(monkeypatch)
 
 
 @pytest.mark.asyncio
-async def test_reconnect_dispatch_never_queries_or_writes_before_current_readbacks(monkeypatch):
+async def test_reconnect_dispatch_writes_only_its_stage_before_current_readbacks(monkeypatch):
     monkeypatch.setattr(shared, "transport_generation", 12)
     monkeypatch.setattr(shared, "reconciled_transport_generation", 11)
     monkeypatch.setattr(shared, "transport_expected_cfg_readbacks", frozenset({"a", "b"}))
     monkeypatch.setattr(shared, "transport_observed_cfg_readbacks", {"a"})
     monkeypatch.setattr(shared, "transport_readbacks_generation", 0)
+    monkeypatch.setattr(shared, "dispatcher_stage", None)
+    monkeypatch.setattr(shared, "delivery_differing_since", {})
+    conn = AsyncMock()
     pool = MagicMock()
+    pool.acquire.return_value.__aenter__.return_value = conn
 
     await dispatcher.setpoint_dispatcher(pool)
 
-    pool.acquire.assert_not_called()
+    # No policy read and no command: one stage row, so the freeze cannot be silent (#1275).
+    pool.acquire.assert_called_once()
+    assert [name for name, _args, _kwargs in conn.method_calls] == ["execute"]
+    sql, _ts, *row = conn.execute.await_args.args
+    assert "v_runtime_system_state_write" in sql and row == ["dispatcher_stage", "held:readbacks"]
     assert shared.reconciled_transport_generation == 11
 
 

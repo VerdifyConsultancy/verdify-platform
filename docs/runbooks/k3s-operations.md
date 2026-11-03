@@ -151,14 +151,19 @@ secrets. The procedure and its traps:
   `FIRMWARE_DB_BACKEND` (default `kube`) through preflight, version wait, and
   both sensor-health sweeps. Older checkouts did not and could roll back a
   healthy OTA after querying the decommissioned Docker database. The manual
-  sequence remains useful when an operator needs to inspect each step. The
-  accepted version pin is written to `FIRMWARE_STATE_DIR` (default
-  `~/.verdify/state`) after the archived build and health sweep succeed:
+  sequence remains useful when an operator needs to inspect each step. After the
+  archived build and health sweep succeed, `make firmware-deploy` copies the
+  accepted version to `FIRMWARE_STATE_DIR` (default `~/.verdify/state`), a record
+  on the host that ran it. `alert_monitor` does not read that copy: it reads
+  `/srv/verdify/state/expected-firmware-version` in the ingestor pod, which only
+  `scripts/firmware-release-job.py pin` writes (step 5). Until then a healthy flash
+  opens `firmware_version_mismatch`, which the sweep reports as a warning while
+  live equals `EXPECTED_FW_VERSION`:
   1. `VERDIFY_DB_BACKEND=kube FIRMWARE_OTA_FREEZE_OVERRIDE_REASON="…" bash scripts/firmware-deploy-preflight.sh`
   2. `FW_VERSION="$(date +%Y.%-m.%-d.%H%M).$(git rev-parse --short HEAD)"; echo "$FW_VERSION" > firmware/artifacts/pending-fw-version.txt`
   3. `ESPHOME_BIN=<esphome> SECRETS_SRC=<secrets.yaml> scripts/firmware-esphome-worktree.sh -s fw_version "$FW_VERSION" compile && … upload --device 192.168.10.111`
   4. `VERDIFY_DB_BACKEND=kube bash scripts/wait-for-firmware-version.sh "$FW_VERSION" --timeout 180` then `VERDIFY_DB_BACKEND=kube EXPECTED_FW_VERSION="$FW_VERSION" make sensor-health SINCE='5 minutes'`
-  5. `bash scripts/archive-firmware-artifacts.sh "$FW_VERSION"` — **NOT** `--promote-last-good` (last-good stays on the prior baked binary through the 48 h bake; promote only after).
+  5. `bash scripts/archive-firmware-artifacts.sh "$FW_VERSION"` — **NOT** `--promote-last-good` (last-good stays on the prior baked binary through the 48 h bake; promote only after). Then pin the pod: `python3 scripts/firmware-release-job.py pin --firmware-version "$FW_VERSION" --submit`.
   6. **Pinch decision + bake record (#413):** the flash just cold-started
      `band_track_fraction` to `0.0` (see the pinch-reset bullet above). Execute the
      g-377 decision, then record in the bake report: `band_track_fraction`

@@ -844,7 +844,7 @@ the audiences by [architecture](architecture.md) §5.6.
 *P4 · MVP · platform.* As the platform maintainer, I want to flash the irrigation firmware as soon as it is ready, so that calendar rules do not hold up the water program.
 - The one release (irrigation F1–F14) ships through `make firmware-deploy`; if the preflight's weekly or 48-hour rule blocks a fix-forward, `FIRMWARE_OTA_FREEZE_OVERRIDE_REASON` is set to "irrigation v2 fix-forward (D-IRP-23)".
 - Verified by the `diagnostics.firmware_version` query, then `irr_program_id` showing `src=rom` before the first push and `src=nvs` after it; once the first push confirms and the first scheduled run lands, `make firmware-promote-last-good` makes the engine firmware last-good.
-- Until then a rollback (`make firmware-rollback`, or the deploy's own) means pre-engine firmware: the platform sees the engine services missing, reports "engine not on controller" (`program.src` null), runs L01 and stops every line through the bridge (US-WAT-23) and answers other runs and clear with `unavailable`, never a 202 that silently expires.
+- Until then a rollback (the flasher Job on the previous release's exact revision and manifest, `docs/runbooks/firmware-signed-artifacts.md`) means pre-engine firmware: the platform sees the engine services missing, reports "engine not on controller" (`program.src` null), runs L01 and stops every line through the bridge (US-WAT-23) and answers other runs and clear with `unavailable`, never a 202 that silently expires.
 
 #### US-PLAT-13 · Home Assistant only for occupancy and Lutron
 *P4 · MVP · platform.* As the platform maintainer, I want Home Assistant reduced to occupancy reads and the Lutron switches, so that no greenhouse feature depends on a second control path (D-IRP-24).

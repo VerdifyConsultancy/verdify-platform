@@ -2503,10 +2503,11 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                     }
                 )
 
-        # 12. Firmware version mismatch. The deploy path writes
-        # STATE_DIR/expected-firmware-version only after sensor-health accepts
-        # an OTA. If diagnostics later report a different build, the operator
-        # may be validating the wrong binary or an out-of-band OTA happened.
+        # 12. Firmware version mismatch. scripts/firmware-release-job.py pin writes
+        # STATE_DIR/expected-firmware-version once a flash is accepted, so a healthy
+        # flash reads as a mismatch until then. If diagnostics later report a
+        # different build, the operator may be validating the wrong binary or an
+        # out-of-band OTA happened.
         expected_fw = _expected_firmware_version()
         if expected_fw:
             latest_fw = await conn.fetchrow(

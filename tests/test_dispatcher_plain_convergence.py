@@ -956,3 +956,81 @@ def test_alert_monitor_raises_the_stuck_alert_from_shared_state():
     assert "_setpoint_delivery_stuck_alert(" in monitor
     assert "preserve_open_types=_setpoint_delivery_stuck_preserved(" in monitor
     assert "shared.delivery_differing_since" in monitor and "shared.dispatcher_stage" in monitor
+
+
+def _connect_with_replay_held_back(env, held_back: frozenset[str]) -> dict[str, float]:
+    """A connection whose readback replay never delivers ``held_back``."""
+    values = {param: device for param, device, _plan in PARAMS[:2]} | SAFETY_READBACKS
+    env.db.plan = {}
+    env.controller.values = dict(values)
+    env.controller.generation = shared.note_transport_connected(frozenset(values))
+    for param, value in values.items():
+        if param not in held_back:
+            shared.note_cfg_readback_observed(param, value, env.controller.generation)
+    return values
+
+
+@pytest.mark.asyncio
+async def test_blocked_readbacks_record_a_stage_and_raise_the_stuck_alert(plain):
+    """#1275: the replay gate returned before any stage row and any delivery entry: a silent freeze."""
+    missing = PARAMS[0][0]
+    values = _connect_with_replay_held_back(plain, frozenset({missing}))
+
+    await plain.run_pass()
+    assert plain.controller.sent == []
+    assert plain.db.stage_rows == ["held:readbacks"] and shared.dispatcher_stage == "held:readbacks"
+    since = plain.clock.now
+    assert shared.delivery_differing_since == {missing: since}
+
+    def stuck_alert():
+        return alerts._setpoint_delivery_stuck_alert(
+            shared.delivery_differing_since, shared.dispatcher_stage, plain.clock.now
+        )
+
+    # Normal for a few minutes after a connect: nothing is raised yet.
+    plain.clock.advance(14 * 60)
+    await plain.run_pass()
+    assert stuck_alert() is None
+    assert plain.db.stage_rows == ["held:readbacks"], "one row per stage change, however many passes"
+
+    plain.clock.advance(2 * 60)
+    await plain.run_pass()
+    envelope = AlertEnvelope.model_validate(stuck_alert())
+    assert envelope.alert_type == "setpoint_delivery_stuck" and envelope.details["params"] == [missing]
+    assert envelope.message == "1 setting not reaching the controller since 12:00 UTC"
+    assert alerts._setpoint_delivery_stuck_preserved(shared.delivery_differing_since, shared.dispatcher_stage) == {
+        "setpoint_delivery_stuck"
+    }
+
+    # The replay completes: the next pass names its real stage and the entry leaves by itself.
+    shared.note_cfg_readback_observed(missing, values[missing], plain.controller.generation)
+    await plain.run_pass()
+    assert plain.db.stage_rows == ["held:readbacks", "ordinary"] and shared.delivery_differing_since == {}
+    assert stuck_alert() is None
+    assert alerts._setpoint_delivery_stuck_preserved(shared.delivery_differing_since, "ordinary") == frozenset()
+
+
+@pytest.mark.asyncio
+async def test_a_connection_with_no_readback_inventory_alerts_instead_of_freezing_silently(plain):
+    plain.db.plan = {}
+    shared.note_transport_connected(frozenset())  # stays unready for good, with nothing "missing"
+    await plain.run_pass()
+    assert plain.db.stage_rows == ["held:readbacks"]
+    plain.clock.advance(16 * 60)
+    envelope = AlertEnvelope.model_validate(
+        alerts._setpoint_delivery_stuck_alert(shared.delivery_differing_since, shared.dispatcher_stage, plain.clock.now)
+    )
+    assert envelope.details["params"] == [dispatcher.NO_READBACK_INVENTORY] and envelope.details["differing"] == 1
+
+
+@pytest.mark.asyncio
+async def test_a_blocked_pass_survives_a_stage_record_that_cannot_reach_the_database(plain, caplog):
+    class BrokenPool:
+        def acquire(self):
+            raise OSError("connection refused")
+
+    missing = PARAMS[0][0]
+    _connect_with_replay_held_back(plain, frozenset({missing}))
+    await dispatcher.setpoint_dispatcher(BrokenPool())
+    assert set(shared.delivery_differing_since) == {missing}, "the alert still has its entry"
+    assert "dispatcher_stage record failed" in caplog.text and shared.dispatcher_stage is None

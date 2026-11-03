@@ -2,7 +2,8 @@
 """Bound archived firmware to an exact source and reviewed signed manifest.
 
 The flash Pod stages immutable private copies, verifies the manifest with cosign,
-then runs this verifier again immediately before the optional OTA call.
+then runs this verifier again immediately before the optional OTA call. The build
+Pod writes secrets.yaml here and checks its compile-time credentials, value-blind.
 """
 
 from __future__ import annotations
@@ -16,11 +17,35 @@ import re
 import shutil
 import stat
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 FILES = ("firmware.ota.bin", "firmware.bin", "firmware.elf", "firmware.map")
 SCHEMA = "verdify.firmware-release/v1"
 MAX_MANIFEST = 65536
+# secrets.yaml key -> the builder's environment variable.
+SECRET_KEYS = {
+    "wifi_ssid": "WIFI_SSID",
+    "wifi_password": "WIFI_PASSWORD",
+    "ota_password": "OTA_PASSWORD",
+    "api_encryption_key": "API_ENCRYPTION_KEY",
+}
+# ESPHome setter in the generated main.cpp -> the environment variable it must carry.
+CREDENTIAL_SETTERS = {"set_ssid": "WIFI_SSID", "set_password": "WIFI_PASSWORD", "set_auth_password": "OTA_PASSWORD"}
+GENERATED_MAIN_CPP = "generated-src/firmware/.esphome/build/greenhouse/src/main.cpp"
+C_ESCAPES = {
+    b"a": b"\a",
+    b"b": b"\b",
+    b"f": b"\f",
+    b"n": b"\n",
+    b"r": b"\r",
+    b"t": b"\t",
+    b"v": b"\v",
+    b"\\": b"\\",
+    b'"': b'"',
+    b"'": b"'",
+    b"?": b"?",
+}
 
 
 def sha256(path: Path) -> str:
@@ -49,6 +74,100 @@ def release_directory(root: Path, revision: str) -> Path:
     if directory.is_symlink() or directory.resolve(strict=True).parent != regular_root:
         raise ValueError("release directory escapes artifact root")
     return directory
+
+
+def yaml_double_quoted(value: str) -> str:
+    """One ASCII-only YAML double-quoted scalar that loads back as exactly ``value``."""
+    out = ['"']
+    for character in value:
+        code = ord(character)
+        if character in '"\\':
+            out.append("\\" + character)
+        elif 0x20 <= code < 0x7F:
+            out.append(character)
+        elif code <= 0xFFFF:
+            out.append(f"\\u{code:04x}")
+        else:
+            out.append(f"\\U{code:08x}")
+    out.append('"')
+    return "".join(out)
+
+
+def write_secrets(path: Path, environ: Mapping[str, str]) -> None:
+    """Write secrets.yaml from the environment with real escaping. Values never reach a log."""
+    lines = []
+    for key, name in SECRET_KEYS.items():
+        if not environ.get(name):
+            raise ValueError(f"{name} absent")
+        lines.append(f"{key}: {yaml_double_quoted(environ[name])}\n")
+    with os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w", encoding="ascii") as stream:
+        stream.writelines(lines)
+
+
+def c_string_bytes(literal: bytes) -> bytes:
+    """The bytes one C string literal stands for (ESPHome writes unsafe bytes as octal escapes)."""
+
+    def one(match: re.Match[bytes]) -> bytes:
+        body = match.group(1)
+        if body[:1] == b"x":
+            return bytes([int(body[1:], 16) & 0xFF])
+        if body[:1].isdigit():
+            return bytes([int(body, 8) & 0xFF])
+        if body not in C_ESCAPES:
+            raise ValueError("unsupported escape in a generated literal")
+        return C_ESCAPES[body]
+
+    return re.sub(rb"\\(x[0-9A-Fa-f]+|[0-7]{1,3}|.)", one, literal[1:-1], flags=re.S)
+
+
+def setter_literals(source: bytes, setter: str) -> list[bytes]:
+    pattern = rb"(?:\.|->)" + setter.encode() + rb'\(("(?:[^"\\]|\\.)*")\);'
+    return [c_string_bytes(literal) for literal in re.findall(pattern, source, flags=re.S)]
+
+
+def check_credentials(main_cpp: Path, binary: Path, environ: Mapping[str, str]) -> dict:
+    """Prove, value-blind, that each compile-time credential reached main.cpp intact and is in the binary.
+
+    A Wi-Fi mismatch is the one failure an OTA rollback cannot reach, so the build stops here,
+    before the archive and the signature. The report holds only setter names, counts and booleans.
+    """
+    source, image = main_cpp.read_bytes(), binary.read_bytes()
+    report = {}
+    for setter, name in CREDENTIAL_SETTERS.items():
+        literals = setter_literals(source, setter)
+        expected = os.fsencode(environ.get(name, ""))
+        report[setter] = {
+            "literals": len(literals),
+            "equals_secret": bool(expected) and literals == [expected],
+            "in_binary": image.count(expected + b"\0") if expected else 0,
+        }
+    if not all(entry["equals_secret"] and entry["in_binary"] for entry in report.values()):
+        raise ValueError("compile-time credential check failed: " + json.dumps(report, sort_keys=True))
+    return report
+
+
+def credential_parity(root: Path, candidate: str, running: str) -> dict:
+    """Value-blind pre-flash check: the running image already carries the candidate's credentials.
+
+    Holds no Secret: it compares the candidate's generated literals with both archived images
+    and reports only setter names and counts. Never send a firmware image through a pod log.
+    """
+    candidate_dir, running_dir = release_directory(root, candidate), release_directory(root, running)
+    source = (candidate_dir / GENERATED_MAIN_CPP).read_bytes()
+    images = {
+        "candidate": (candidate_dir / "firmware.ota.bin").read_bytes(),
+        "running": (running_dir / "firmware.ota.bin").read_bytes(),
+    }
+    report = {}
+    for setter in CREDENTIAL_SETTERS:
+        literals = setter_literals(source, setter)
+        entry = {"literals": len(literals)}
+        for label, image in images.items():
+            entry[label] = image.count(literals[0] + b"\0") if len(literals) == 1 else 0
+        report[setter] = entry
+    if not all(e["literals"] == 1 and e["candidate"] and e["running"] for e in report.values()):
+        raise ValueError("credential parity failed: " + json.dumps(report, sort_keys=True))
+    return report
 
 
 def write_manifest(root: Path, revision: str, firmware_version: str, toolchain: str) -> dict:
@@ -180,6 +299,7 @@ def finish(directory: Path, revision: str, expected: str, public_key: Path, flas
                 "source_revision": revision,
                 "firmware_version": manifest["firmware_version"],
                 "manifest_sha256": expected,
+                "elf_sha256": manifest["files"]["firmware.elf"]["sha256"],
                 "verified_artifact_bytes": True,
                 "device_contact": flash,
             },
@@ -190,7 +310,10 @@ def finish(directory: Path, revision: str, expected: str, public_key: Path, flas
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("manifest", "stage", "verify", "flash"))
+    parser.add_argument(
+        "action",
+        choices=("secrets-yaml", "check-credentials", "credential-parity", "manifest", "stage", "verify", "flash"),
+    )
     parser.add_argument("--root", type=Path, default=Path("/artifacts"))
     parser.add_argument("--staged", type=Path, default=Path("/verified"))
     parser.add_argument("--revision", default=os.environ.get("FW_REVISION", ""))
@@ -198,9 +321,19 @@ def main() -> int:
     parser.add_argument("--firmware-version", default=os.environ.get("FW_VERSION", ""))
     parser.add_argument("--toolchain", default=os.environ.get("FIRMWARE_TOOLCHAIN_IMAGE", ""))
     parser.add_argument("--public-key", type=Path, default=Path("/trust/cosign.pub"))
+    parser.add_argument("--output", type=Path, help="secrets-yaml: the file to create")
+    parser.add_argument("--main-cpp", type=Path, help="check-credentials: the generated main.cpp")
+    parser.add_argument("--binary", type=Path, help="check-credentials: the compiled firmware.ota.bin")
+    parser.add_argument("--running", default="", help="credential-parity: the running image's full source SHA")
     args = parser.parse_args()
     try:
-        if args.action == "manifest":
+        if args.action == "secrets-yaml":
+            write_secrets(args.output, os.environ)
+        elif args.action == "check-credentials":
+            print(json.dumps(check_credentials(args.main_cpp, args.binary, os.environ), sort_keys=True))
+        elif args.action == "credential-parity":
+            print(json.dumps(credential_parity(args.root, args.revision, args.running), sort_keys=True))
+        elif args.action == "manifest":
             write_manifest(args.root, args.revision, args.firmware_version, args.toolchain)
             print(
                 json.dumps(

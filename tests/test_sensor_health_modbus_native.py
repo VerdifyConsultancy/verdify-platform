@@ -42,14 +42,15 @@ if "FROM esp32_logs" in query:
             counts[address.group(1)] += 1
     for address, count in sorted(counts.items()):
         print(f"{address}|{count}")
-elif "FROM climate" in query:
-    print("1")
+elif "climate_source_events" in query:
+    for column in re.findall(r"'([a-z0-9_]+)'", query.split("ARRAY[")[1].split("]")[0]):
+        print(f"{column}|1|10")
 elif "active_probe_count" in query:
     print("4|300")
+elif "lag(uptime_s)" in query:
+    pass
 elif "FROM diagnostics" in query:
-    print("Software reset|fixture|−58|300")
-elif "FROM override_events" in query and "count(*)" in query:
-    print("0")
+    print("5|Software reset|fixture|-58|300")
 """
     )
     db.chmod(0o700)

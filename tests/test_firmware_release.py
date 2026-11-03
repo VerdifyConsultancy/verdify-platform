@@ -1,9 +1,13 @@
-"""Artifact substitution and signature failures must stop before device transport."""
+"""Artifact substitution and signature failures must stop before device transport.
+
+Compile-time credentials stay exact and out of every report, and the accepted version reaches the pod's pin.
+"""
 
 import base64
 import hashlib
 import importlib.util
 import json
+import stat
 from pathlib import Path
 
 import pytest
@@ -148,3 +152,248 @@ def test_build_job_binds_compiler_and_signer_to_same_reviewed_revision():
 def test_job_rejects_mutable_source_or_missing_review_digest(revision, expected):
     with pytest.raises(ValueError):
         jobs.make_job({}, "verify", revision, expected, "firmware-refusal-fixture")
+
+
+def cpp_string(value: bytes) -> bytes:
+    """A C literal the way ESPHome's cpp_string_escape writes it: unsafe bytes as three-digit octal."""
+    safe = (bytes([b]) if 32 <= b < 127 and b not in b'"\\' else b"\\%03o" % b for b in value)
+    return b'"' + b"".join(safe) + b'"'
+
+
+CREDENTIALS = {
+    "WIFI_SSID": 'devices."quoted" net',
+    "WIFI_PASSWORD": "pa$$w\\ord: #1 'x' {y} \u00e9",
+    "OTA_PASSWORD": "ota-\t-tab-\U0001f331",
+}
+
+
+def generated_main(credentials=CREDENTIALS, **literals) -> bytes:
+    lines = [b"#include <esphome.h>"]
+    for accessor, setter, name in (
+        (b".", "set_ssid", "WIFI_SSID"),
+        (b".", "set_password", "WIFI_PASSWORD"),
+        (b"->", "set_auth_password", "OTA_PASSWORD"),
+    ):
+        for value in literals.get(setter, [credentials[name].encode()]):
+            lines.append(b"  id" + accessor + setter.encode() + b"(" + cpp_string(value) + b");")
+    return b"\n".join(lines) + b"\n"
+
+
+def image_of(*values: bytes) -> bytes:
+    return b"\xe9firmware\0" + b"\0pad\0".join(values) + b"\0tail"
+
+
+def write_build(tmp_path, main: bytes, image: bytes):
+    main_cpp, binary = tmp_path / "main.cpp", tmp_path / "firmware.ota.bin"
+    main_cpp.write_bytes(main)
+    binary.write_bytes(image)
+    return main_cpp, binary
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        'quo"te',
+        "back\\slash\\",
+        "$fw_version ${x} $$",
+        ": # comment",
+        "'single' {flow} [seq] !tag &anchor *alias %d",
+        " leading and trailing ",
+        "new\nline\ttab\r",
+        "del\x7f c1\x85\x9f",
+        "caf\u00e9 \U0001f331",
+    ],
+)
+def test_secrets_yaml_loads_back_exactly_and_is_private(tmp_path, value):
+    path = tmp_path / "secrets.yaml"
+    environ = {name: value for name in release.SECRET_KEYS.values()}
+    release.write_secrets(path, environ)
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    assert yaml.safe_load(path.read_text()) == dict.fromkeys(release.SECRET_KEYS, value)
+    # Never overwrites a file it did not create.
+    with pytest.raises(OSError):
+        release.write_secrets(path, environ)
+
+
+def test_secrets_yaml_refuses_an_absent_credential_and_names_only_the_variable(tmp_path, monkeypatch, capsys):
+    # An empty OTA password would compile a device with no OTA authentication.
+    environ = {name: "s3cret-value" for name in release.SECRET_KEYS.values()}
+    environ["OTA_PASSWORD"] = ""
+    path = tmp_path / "secrets.yaml"
+    for name, value in environ.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setattr("sys.argv", ["firmware_release.py", "secrets-yaml", "--output", str(path)])
+    assert release.main() == 64
+    assert not path.exists()
+    captured = capsys.readouterr()
+    assert "OTA_PASSWORD absent" in captured.err and "s3cret-value" not in captured.err + captured.out
+
+
+def test_c_string_bytes_reads_what_esphome_and_a_compiler_would():
+    assert release.c_string_bytes(cpp_string(b'a"b\\c\xc3\xa9\x01')) == b'a"b\\c\xc3\xa9\x01'
+    assert release.c_string_bytes(rb'"\n\t\x41\101\?\""') == b'\n\tAA?"'
+    with pytest.raises(ValueError, match="unsupported escape"):
+        release.c_string_bytes(rb'"\q"')
+
+
+def test_check_credentials_passes_a_faithful_build_and_reports_no_value(tmp_path):
+    encoded = [value.encode() for value in CREDENTIALS.values()]
+    main_cpp, binary = write_build(tmp_path, generated_main(), image_of(*encoded))
+    report = release.check_credentials(main_cpp, binary, CREDENTIALS)
+    assert report == {
+        setter: {"literals": 1, "equals_secret": True, "in_binary": 1} for setter in release.CREDENTIAL_SETTERS
+    }
+    assert not any(value in json.dumps(report) for value in CREDENTIALS.values())
+
+
+@pytest.mark.parametrize(
+    "main,image_values",
+    [
+        # The shape YAML and substitution mangling leaves: the literal is not the Secret.
+        (generated_main(set_password=[b"mangled"]), [b"mangled", b'devices."quoted" net']),
+        # A second network or an absent setter is not the one credential this device joins with.
+        (generated_main(set_ssid=[b'devices."quoted" net', b"other"]), None),
+        (generated_main(set_auth_password=[]), None),
+        # The literal is right, the binary does not carry it.
+        (generated_main(), [b"unrelated"]),
+    ],
+)
+def test_check_credentials_refuses_before_archive_and_stays_value_blind(tmp_path, main, image_values):
+    values = image_values or [value.encode() for value in CREDENTIALS.values()]
+    main_cpp, binary = write_build(tmp_path, main, image_of(*values))
+    with pytest.raises(ValueError, match="compile-time credential check failed") as refused:
+        release.check_credentials(main_cpp, binary, CREDENTIALS)
+    for secret in (*CREDENTIALS.values(), "mangled", "other"):
+        assert secret not in str(refused.value)
+
+
+def test_check_credentials_command_reports_and_refuses_with_its_exit_code(tmp_path, monkeypatch, capsys):
+    encoded = [value.encode() for value in CREDENTIALS.values()]
+    main_cpp, binary = write_build(tmp_path, generated_main(), image_of(*encoded))
+    for name, value in CREDENTIALS.items():
+        monkeypatch.setenv(name, value)
+    argv = ["firmware_release.py", "check-credentials", "--main-cpp", str(main_cpp), "--binary", str(binary)]
+    monkeypatch.setattr("sys.argv", argv)
+    assert release.main() == 0
+    assert json.loads(capsys.readouterr().out)["set_auth_password"]["equals_secret"] is True
+    binary.write_bytes(image_of(b"unrelated"))
+    assert release.main() == 64
+    captured = capsys.readouterr()
+    assert "compile-time credential check failed" in captured.err
+    assert not any(value in captured.out + captured.err for value in CREDENTIALS.values())
+
+
+def parity_tree(tmp_path, running_values):
+    candidate, running = "c" * 40, "d" * 40
+    (tmp_path / candidate / Path(release.GENERATED_MAIN_CPP).parent).mkdir(parents=True)
+    (tmp_path / running).mkdir()
+    (tmp_path / candidate / release.GENERATED_MAIN_CPP).write_bytes(generated_main())
+    (tmp_path / candidate / "firmware.ota.bin").write_bytes(image_of(*(v.encode() for v in CREDENTIALS.values())))
+    (tmp_path / running / "firmware.ota.bin").write_bytes(image_of(*running_values))
+    return candidate, running
+
+
+def test_credential_parity_holds_no_secret_and_reports_only_counts(tmp_path, capsys, monkeypatch):
+    candidate, running = parity_tree(tmp_path, [v.encode() for v in CREDENTIALS.values()])
+    for name in CREDENTIALS:
+        monkeypatch.delenv(name, raising=False)
+    argv = ["firmware_release.py", "credential-parity", "--root", str(tmp_path)]
+    monkeypatch.setattr("sys.argv", [*argv, "--revision", candidate, "--running", running])
+    assert release.main() == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report == {setter: {"literals": 1, "candidate": 1, "running": 1} for setter in release.CREDENTIAL_SETTERS}
+
+
+def test_credential_parity_stops_when_the_running_image_lacks_a_candidate_credential(tmp_path):
+    candidate, running = parity_tree(tmp_path, [b'devices."quoted" net', b"an older password"])
+    with pytest.raises(ValueError, match="credential parity failed") as refused:
+        release.credential_parity(tmp_path, candidate, running)
+    assert '"running": 0' in str(refused.value)
+    assert not any(value in str(refused.value) for value in CREDENTIALS.values())
+
+
+def test_verify_receipt_carries_the_elf_hash_the_c1_pin_needs(signed, tmp_path, capsys):
+    directory, expected, public = signed
+    staged = tmp_path / "staged"
+    staged.mkdir()
+    release.stage(tmp_path, SHA, expected, staged)
+    release.finish(staged, SHA, expected, public, flash=False)
+    receipt = json.loads(capsys.readouterr().out)
+    assert receipt["elf_sha256"] == release.sha256(directory / "firmware.elf")
+
+
+def test_inspect_pod_is_read_only_and_can_reach_nothing():
+    docs = list(yaml.safe_load_all((COMPONENT / "firmware-flasher.yaml").read_text()))
+    template = next(d for d in docs if d["kind"] == "CronJob")
+    original = json.dumps(template, sort_keys=True)
+    pod = jobs.make_inspect_pod(template, "firmware-inspect-fixture")
+    assert json.dumps(template, sort_keys=True) == original
+    assert pod["kind"] == "Pod" and pod["metadata"]["namespace"] == "verdify-prod"
+    assert pod["metadata"]["labels"]["app.kubernetes.io/component"] == "firmware-artifact-verifier"
+    spec = pod["spec"]
+    assert spec["automountServiceAccountToken"] is False and spec["activeDeadlineSeconds"] == 300
+    assert "initContainers" not in spec and [c["name"] for c in spec["containers"]] == ["inspect"]
+    container = spec["containers"][0]
+    assert not any("valueFrom" in e for e in container["env"])
+    assert {"name": "artifacts", "mountPath": "/artifacts", "readOnly": True} in container["volumeMounts"]
+    assert container["securityContext"]["readOnlyRootFilesystem"] is True
+    claims = [v["persistentVolumeClaim"] for v in spec["volumes"] if "persistentVolumeClaim" in v]
+    assert claims == [{"claimName": "verdify-firmware-artifacts", "readOnly": True}]
+    assert not any("secret" in v for v in spec["volumes"])
+    with pytest.raises(ValueError):
+        jobs.make_inspect_pod(template, "")
+
+
+class FakeCluster:
+    """Answers the helper's kubectl calls; records every call without a cluster."""
+
+    def __init__(self, live, pin=""):
+        self.live, self.pin, self.calls, self.writes = live, pin, [], []
+
+    def check_output(self, argv, text=None):
+        self.calls.append(argv)
+        return (self.live if "psql" in argv else self.pin) + "\n"
+
+    def run(self, argv, input=None, text=None, check=None):  # noqa: A002 - subprocess's own keyword
+        self.calls.append(argv)
+        self.writes.append(argv)
+        self.pin = input.strip()
+
+
+def test_pin_writes_atomically_and_reads_back(monkeypatch):
+    cluster = FakeCluster("2026.11.3.0435.5e24d07c")
+    monkeypatch.setattr(jobs, "subprocess", cluster)
+    receipt = jobs.pin_expected_version(["kubectl"], "2026.11.3.0435.5e24d07c", submit=True)
+    assert receipt["written"] is True and cluster.pin == "2026.11.3.0435.5e24d07c"
+    write = cluster.writes[0]
+    assert write[write.index("--") - 3 : write.index("--")] == ["deploy/verdify-ingestor", "-c", "ingestor"]
+    assert write[-1] == (
+        "cat > /srv/verdify/state/.expected-firmware-version.tmp "
+        "&& mv /srv/verdify/state/.expected-firmware-version.tmp /srv/verdify/state/expected-firmware-version"
+    )
+    assert cluster.calls[-1][-2:] == ["cat", "/srv/verdify/state/expected-firmware-version"]
+
+
+def test_pin_without_submit_writes_nothing(monkeypatch):
+    cluster = FakeCluster("2026.11.3.0435.5e24d07c")
+    monkeypatch.setattr(jobs, "subprocess", cluster)
+    assert jobs.pin_expected_version(["kubectl"], "2026.11.3.0435.5e24d07c", submit=False)["written"] is False
+    assert cluster.writes == []
+
+
+@pytest.mark.parametrize("live", ["2026.10.2.0637.620a218a-wifi-bound", ""])
+def test_pin_refuses_a_version_the_controller_does_not_report(monkeypatch, live):
+    cluster = FakeCluster(live)
+    monkeypatch.setattr(jobs, "subprocess", cluster)
+    with pytest.raises(ValueError, match="pin refused"):
+        jobs.pin_expected_version(["kubectl"], "2026.11.3.0435.5e24d07c", submit=True)
+    assert cluster.writes == []
+
+
+@pytest.mark.parametrize("version", ["", "a b", "x;rm -rf /", "-flag", "a" * 129])
+def test_pin_refuses_a_malformed_version_before_any_call(monkeypatch, version):
+    cluster = FakeCluster(version)
+    monkeypatch.setattr(jobs, "subprocess", cluster)
+    with pytest.raises(ValueError, match="invalid firmware version"):
+        jobs.pin_expected_version(["kubectl"], version, submit=True)
+    assert cluster.calls == []
