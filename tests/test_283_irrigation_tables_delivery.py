@@ -439,8 +439,9 @@ def test_sealed_sql_283_chains_from_282_and_binds_the_exact_ledger_row():
     assert six.sealed_sql_283() == expected
     assert "(SELECT max(seq) FROM public.schema_migrations WHERE source='db/migrations')=283" in expected
     assert "stamp_method='runner'" in six.ledger_row_sql(*six.IRRIGATION_TABLES_MIGRATION)
-    assert six.sealed_sql().endswith(" OR " + six.sealed_sql_282() + " OR " + expected + ")")
-    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_283() + ")") == 1
+    # 283 follows 282 in both ORs; a later successor (284) follows it.
+    assert six.sealed_sql().count(" OR " + six.sealed_sql_282() + " OR " + expected) == 1
+    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_283()) == 1
     assert '"283-irrigation-tables.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
     assert "tests/test_283_irrigation_tables_delivery.py" in (ROOT / "scripts/ci-local.sh").read_text()
 
@@ -660,3 +661,13 @@ def test_native_qualification_is_recorded():
     evidence = receipt()
     assert_recorded(evidence)
     assert all(evidence["qualified_successor"][seal] != registered(282)[seal] for seal in SEALS)
+
+
+def test_production_reads_met_the_two_second_gate_in_the_native_qualification():
+    # The p95 gate's evidence (VD-39, VD-38): measured on production, inside the rolled-back run.
+    native = json.loads((ROOT / "tests/fixtures/283-irrigation-tables-native-qualification.json").read_text())[
+        "native_fixture"
+    ]
+    assert native["reader_30d_ms"] < 2000
+    assert native["view_30d_ms"] < 2000
+    assert native["reader_400d_ms"] < 10000

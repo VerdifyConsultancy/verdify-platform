@@ -1,6 +1,7 @@
 """verdify_schemas — shared Pydantic contracts.
 
-The database is the source of truth; every other layer (MCP tools, ingestor
+The database is the source of truth; every other layer (MCP tools, the operator
+API, ingestor
 tasks, ESP32 readback, vault writers, website renderer) validates through
 these schemas so malformed data fails at the boundary instead of
 partial-writing.

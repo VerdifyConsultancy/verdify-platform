@@ -1,4 +1,8 @@
-"""Execute the actual listener with DB doubles; never create a device client."""
+"""Execute the actual listener with DB doubles; never create a device client.
+
+The listener LISTENs on setpoint_changed and, since VD-64, on irrigation_changed: an irrigation write's NOTIFY
+sets shared.irrigation_sync_requested, which the task loop turns into a forced irrigation_sync pass.
+"""
 
 import ast
 import asyncio
@@ -6,8 +10,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+CHANNELS = ("setpoint_changed", "irrigation_changed")
 
-def listener(connect, reconcile):
+
+def listener(connect, reconcile, irrigation=None):
     tree = ast.parse(Path("ingestor/ingestor.py").read_text())
     function = next(
         node for node in tree.body if isinstance(node, ast.AsyncFunctionDef) and node.name == "setpoint_listener"
@@ -16,7 +22,10 @@ def listener(connect, reconcile):
         "asyncio": asyncio,
         "asyncpg": SimpleNamespace(connect=connect, Pool=object),
         "DB_DSN": "not-a-live-database",
-        "shared": SimpleNamespace(setpoint_dispatch_requested=reconcile),
+        "shared": SimpleNamespace(
+            setpoint_dispatch_requested=reconcile,
+            irrigation_sync_requested=irrigation if irrigation is not None else asyncio.Event(),
+        ),
         "log": Mock(),
         "_handle_setpoint_notification": Mock(),
     }
@@ -31,6 +40,7 @@ class Connection:
         self.closed = False
         self.termination = None
         self.close_count = 0
+        self.callbacks = {}
 
     def add_termination_listener(self, callback):
         self.termination = callback
@@ -40,8 +50,15 @@ class Connection:
         self.termination = None
 
     async def add_listener(self, channel, callback):
-        assert channel == "setpoint_changed"
-        self.listening.set()
+        assert channel in CHANNELS and channel not in self.callbacks
+        self.callbacks[channel] = callback
+        if set(self.callbacks) == set(CHANNELS):
+            self.listening.set()
+
+    async def notify(self, channel, payload=""):
+        result = self.callbacks[channel](self, 4242, channel, payload)
+        if asyncio.iscoroutine(result):
+            await result
 
     def is_closed(self):
         return self.closed
@@ -68,19 +85,20 @@ def test_server_disconnect_resubscribes_and_requests_durable_reconciliation():
     async def run():
         first, second = Connection(), Connection()
         connections = iter([first, second])
-        reconcile = asyncio.Event()
+        reconcile, irrigation = asyncio.Event(), asyncio.Event()
 
         async def connect(dsn, timeout):
             assert dsn == "not-a-live-database" and timeout == 10
             return next(connections)
 
-        task = asyncio.create_task(listener(connect, reconcile)(None))
+        task = asyncio.create_task(listener(connect, reconcile, irrigation)(None))
         try:
             await asyncio.wait_for(first.listening.wait(), 1)
-            assert not reconcile.is_set()
+            assert not reconcile.is_set() and not irrigation.is_set()
             first.terminate_from_server()
             await asyncio.wait_for(second.listening.wait(), 2)
-            assert reconcile.is_set()
+            # NOTIFY is not durable: both wakes are requested once the subscription returns.
+            assert reconcile.is_set() and irrigation.is_set()
         finally:
             await stop(task)
         assert first.termination is None and second.termination is None
@@ -108,5 +126,24 @@ def test_connection_failure_is_retried_without_escaping_worker():
         finally:
             await stop(task)
         assert connection.close_count == 1
+
+    asyncio.run(run())
+
+
+def test_an_irrigation_write_wakes_irrigation_sync_and_not_the_dispatcher():
+    async def run():
+        connection = Connection()
+        reconcile, irrigation = asyncio.Event(), asyncio.Event()
+
+        async def connect(dsn, timeout):
+            return connection
+
+        task = asyncio.create_task(listener(connect, reconcile, irrigation)(None))
+        try:
+            await asyncio.wait_for(connection.listening.wait(), 1)
+            await connection.notify("irrigation_changed", "")
+            assert irrigation.is_set() and not reconcile.is_set()
+        finally:
+            await stop(task)
 
     asyncio.run(run())

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Initial-only custody for the two fixed #643 maintenance duties."""
+"""Initial-only custody for the two fixed #643 maintenance duties and, when its Secret holds a value, the dashboard
+login (#1143): set a password only while it is NULL, attest as the login, and refuse a mismatch. Nothing rotates."""
 
 from __future__ import annotations
 
@@ -44,6 +45,70 @@ FUNCTIONS = {
         True,
     ),
 }
+# Optional: a missing or empty DASHBOARD_DB_PASSWORD skips this duty; any other value gets the same custody. Its exact
+# attestation body is bound from migration 282.
+DASHBOARD_DUTY = "dashboard"
+DASHBOARD_FUNCTION = (
+    "verdify_dashboard_runtime.fn_attest_login()",
+    "413fd2b6bb5947a7dfb3281381cfc6eb169794c9be108d874453c739c37d4e96",
+    False,
+)
+
+
+def duty_checks(duty):
+    role = "verdify_" + duty + "_runtime"
+    login = role + "_login"
+    common = _ordinary.identity_sql(login, role).split("AND NOT r.rolsuper", 1)[1]
+    common = "NOT r.rolsuper" + common.replace("current_user", "r.rolname")
+    return [
+        "EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname='"
+        + login
+        + "' AND "
+        + common
+        + " AND 'search_path="
+        + role
+        + ", pg_catalog, public, pg_temp'=ANY(r.rolconfig))",
+        "NOT has_schema_privilege('" + login + "','" + role + "','CREATE')",
+        "(SELECT count(*)=0 FROM pg_auth_members WHERE member=(SELECT oid FROM pg_roles WHERE rolname='" + role + "'))",
+        "(SELECT count(*)=1 FROM pg_auth_members WHERE roleid=(SELECT oid FROM pg_roles WHERE rolname='" + role + "'))",
+        "NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspowner IN (SELECT oid FROM pg_roles WHERE rolname IN ('"
+        + role
+        + "','"
+        + login
+        + "')))",
+        "NOT EXISTS(SELECT 1 FROM pg_class WHERE relowner IN (SELECT oid FROM pg_roles WHERE rolname IN ('"
+        + role
+        + "','"
+        + login
+        + "')))",
+        "NOT EXISTS(SELECT 1 FROM pg_proc WHERE proowner IN (SELECT oid FROM pg_roles WHERE rolname IN ('"
+        + role
+        + "','"
+        + login
+        + "')))",
+    ]
+
+
+def function_check(signature, body_sha, definer):
+    role = signature.split(".")[0]
+    return (
+        "EXISTS(SELECT 1 FROM pg_proc p WHERE p.oid=to_regprocedure('"
+        + signature
+        + "')"
+        + " AND pg_get_userbyid(p.proowner)='verdify' AND p.prosecdef="
+        + str(definer).upper()
+        + " AND 'search_path=pg_catalog, public, pg_temp'=ANY(p.proconfig)"
+        + " AND encode(sha256(convert_to(p.prosrc,'UTF8')),'hex')='"
+        + body_sha
+        + "'"
+        + " AND has_function_privilege('"
+        + role
+        + "',p.oid,'EXECUTE')"
+        + " AND NOT EXISTS(SELECT 1 FROM aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) a"
+        + " WHERE a.grantee NOT IN (p.proowner,(SELECT oid FROM pg_roles WHERE rolname='"
+        + role
+        + "'))))"
+    )
 
 
 def contract_sql():
@@ -64,48 +129,13 @@ def contract_sql():
         + _ordinary.sealed_sql_282()
         + " OR "
         + _ordinary.sealed_sql_283()
+        + " OR "
+        + _ordinary.sealed_sql_284()
         + ")"
     ]
     for duty in DUTIES:
-        role = "verdify_" + duty + "_runtime"
-        login = role + "_login"
-        common = _ordinary.identity_sql(login, role).split("AND NOT r.rolsuper", 1)[1]
-        common = "NOT r.rolsuper" + common.replace("current_user", "r.rolname")
-        checks.append(
-            "EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname='"
-            + login
-            + "' AND "
-            + common
-            + " AND 'search_path="
-            + role
-            + ", pg_catalog, public, pg_temp'=ANY(r.rolconfig))"
-        )
-        checks.extend(
-            [
-                "NOT has_schema_privilege('" + login + "','" + role + "','CREATE')",
-                "(SELECT count(*)=0 FROM pg_auth_members WHERE member=(SELECT oid FROM pg_roles WHERE rolname='"
-                + role
-                + "'))",
-                "(SELECT count(*)=1 FROM pg_auth_members WHERE roleid=(SELECT oid FROM pg_roles WHERE rolname='"
-                + role
-                + "'))",
-                "NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspowner IN (SELECT oid FROM pg_roles WHERE rolname IN ('"
-                + role
-                + "','"
-                + login
-                + "')))",
-                "NOT EXISTS(SELECT 1 FROM pg_class WHERE relowner IN (SELECT oid FROM pg_roles WHERE rolname IN ('"
-                + role
-                + "','"
-                + login
-                + "')))",
-                "NOT EXISTS(SELECT 1 FROM pg_proc WHERE proowner IN (SELECT oid FROM pg_roles WHERE rolname IN ('"
-                + role
-                + "','"
-                + login
-                + "')))",
-            ]
-        )
+        login = "verdify_" + duty + "_runtime_login"
+        checks.extend(duty_checks(duty))
         for table in (
             "alert_log",
             "climate",
@@ -129,26 +159,13 @@ def contract_sql():
                 ]
             )
     for signature, (body_sha, definer) in FUNCTIONS.items():
-        role = signature.split(".")[0]
-        checks.append(
-            "EXISTS(SELECT 1 FROM pg_proc p WHERE p.oid=to_regprocedure('"
-            + signature
-            + "')"
-            + " AND pg_get_userbyid(p.proowner)='verdify' AND p.prosecdef="
-            + str(definer).upper()
-            + " AND 'search_path=pg_catalog, public, pg_temp'=ANY(p.proconfig)"
-            + " AND encode(sha256(convert_to(p.prosrc,'UTF8')),'hex')='"
-            + body_sha
-            + "'"
-            + " AND has_function_privilege('"
-            + role
-            + "',p.oid,'EXECUTE')"
-            + " AND NOT EXISTS(SELECT 1 FROM aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) a"
-            + " WHERE a.grantee NOT IN (p.proowner,(SELECT oid FROM pg_roles WHERE rolname='"
-            + role
-            + "'))))"
-        )
+        checks.append(function_check(signature, body_sha, definer))
     return "(" + " AND ".join(checks) + ")"
+
+
+def dashboard_contract_sql():
+    # fn_attest_login(), bound by its body, checks the login's guardrails and denials when the login attests.
+    return "(" + " AND ".join([*duty_checks(DASHBOARD_DUTY), function_check(*DASHBOARD_FUNCTION)]) + ")"
 
 
 def bootstrap():
@@ -156,14 +173,19 @@ def bootstrap():
     if os.environ.get("DB_ADMIN_USER") != "verdify" or not os.environ.get("DB_NAME") or not admin:
         raise BootstrapError("owner/configured database custody required")
     credentials = {d: os.environ.get(d.upper() + "_DB_PASSWORD", "") for d in DUTIES}
+    dashboard = os.environ.get(DASHBOARD_DUTY.upper() + "_DB_PASSWORD", "")
+    if dashboard:
+        credentials[DASHBOARD_DUTY] = dashboard
     if any(not re.fullmatch(r"[A-Za-z0-9_-]{64}", v) for v in credentials.values()):
         raise BootstrapError("credential shape refused")
-    if len(set(credentials.values())) != 2 or admin in credentials.values():
+    if len(set(credentials.values())) != len(credentials) or admin in credentials.values():
         raise BootstrapError("distinct bounded custody required")
     guard = contract_sql()
+    if dashboard:
+        guard = "(" + guard + " AND " + dashboard_contract_sql() + ")"
     if psql("verdify", admin, ["SELECT " + guard]) != "t":
         raise BootstrapError("exact migration/role/function contract refused")
-    names = ",".join("'verdify_" + d + "_runtime_login'" for d in DUTIES)
+    names = ",".join("'verdify_" + d + "_runtime_login'" for d in credentials)
     state = json.loads(
         psql(
             "verdify",
@@ -173,20 +195,20 @@ def bootstrap():
     )
     if (
         not isinstance(state, dict)
-        or set(state) != {"verdify_" + d + "_runtime_login" for d in DUTIES}
+        or set(state) != {"verdify_" + d + "_runtime_login" for d in credentials}
         or any(type(v) is not bool for v in state.values())
     ):
-        raise BootstrapError("exact two role states required")
+        raise BootstrapError("exact role states required")
 
     def attest(duty):
         role = "verdify_" + duty + "_runtime"
         if psql(role + "_login", credentials[duty], ["SELECT " + role + ".fn_attest_login()"]) != "t":
             raise BootstrapError("actual bounded login attestation refused")
 
-    for duty in DUTIES:
+    for duty in credentials:
         if not state["verdify_" + duty + "_runtime_login"]:
             attest(duty)  # A mismatched existing credential grants no rotation.
-    missing = [d for d in DUTIES if state["verdify_" + d + "_runtime_login"]]
+    missing = [d for d in credentials if state["verdify_" + d + "_runtime_login"]]
     if missing:
         unchanged = " AND ".join(
             "(SELECT rolpassword IS NULL FROM pg_authid WHERE rolname='"
@@ -222,11 +244,14 @@ def bootstrap():
             password_input="".join(credentials[d] + "\n" + credentials[d] + "\n" for d in missing),
             transactional=True,
         )
-    for duty in DUTIES:
+    for duty in credentials:
         attest(duty)
     if psql("verdify", admin, ["SELECT " + guard]) != "t":
         raise BootstrapError("ending maintenance contract changed")
-    print("[maintenance-runtime-bootstrap] two exact logins attested; initial-only custody; prior seals unchanged")
+    count = "three" if dashboard else "two"
+    print(f"[maintenance-runtime-bootstrap] {count} exact logins attested; initial-only custody; prior seals unchanged")
+    if not dashboard:
+        print("[maintenance-runtime-bootstrap] dashboard duty skipped: no DASHBOARD_DB_PASSWORD value")
 
 
 if __name__ == "__main__":

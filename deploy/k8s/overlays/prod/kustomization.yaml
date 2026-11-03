@@ -131,6 +131,13 @@ components:
   # Protocol-only MCP observer. The credential is owned by the agents KSOPS
   # lane and was reconciled before this workload reference.
   - ../../components/mcp-observer
+  # verdify-operator-api (#1148, wired by R1, #1143): the dashboard's private API, a
+  # second Deployment of the verdify-api image at its release digest, on ClusterIP
+  # :8090 with no route. Only the dashboard BFF reaches it, and egress-deny-management
+  # covers it. Its Secrets, verdify-operator-api and verdify-dashboard-runtime-db, live
+  # in the agents KSOPS lane; its login's password comes from the PreSync hook in
+  # runtime-role-boundary. It is not a device writer.
+  - ../../components/operator-api
   # Gate 2 experiment credential activation. This remains non-actuating and
   # uses a one-container wave-2 hook while capability and active ID stay off.
   - ../../components/experiment-v2-credential-bootstrap
@@ -317,16 +324,16 @@ patches:
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
     newName: registry.vallery.net/verdifyconsultancy/verdify-api
-    digest: sha256:1fc5656662794659b7f483ab8573d59c6d2ef62105855ebd4212c82d990663e6
+    digest: sha256:48814272172679e9907a54b2faffd3158cf6bc5bd84a4dbf500804e24649da8b
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
     newName: registry.vallery.net/verdifyconsultancy/verdify-mcp
-    digest: sha256:53c6a34139eb6acf9e7653739648d19d41184058962e6d8ae4eb1b1321104786
+    digest: sha256:140b8e8f69657052376a3eebc5ae005dee5257321dc76e22cc44685a533c497d
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
     newName: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-    digest: sha256:36093cad9b050585affdb792e2fba42d6be79b7fc1fd9419a7f752b177104cc9
+    digest: sha256:f1d0dcc6b3378d52966d2b257a6d981a5394a548cd05a1bbb3b59b1a40ff4dae
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     newName: registry.vallery.net/verdifyconsultancy/verdify-migrate
-    digest: sha256:a37000e94c755ffb4bf5fcba77af0bb7ebee2fa79d0e67b1f8aec105b3776a79
+    digest: sha256:f09c54cf3c904bed80aada42f8b5629cd41bb3bae57385977cb36eb4ddccae6f
   # Build candidate for the feature-off experiment-v2 orchestrator (its release
   # digest is in release-pins.yaml). The component remains inert until its
   # explicit GitOps feature gate.

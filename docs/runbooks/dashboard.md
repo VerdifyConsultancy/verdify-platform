@@ -26,6 +26,13 @@ kubectl -n verdify-dashboard exec deploy/verdify-dashboard-web -- node -e \
 keeps existing sessions' reads and Stop. Superseded `verdify-dashboard-web-<hash>` ConfigMaps are expected: the app
 has prune off, and their `IgnoreExtraneous` annotation keeps them out of the sync status.
 
+The live check needs no sign-in, prints only check names, HTTP statuses and PASS or FAIL, and exits non-zero on any
+FAIL. Its header lists the checks; it mints a viewer session in the web pod and deletes it at the end:
+
+```bash
+scripts/dashboard-smoke.sh --expected-web-sha <build commit of the pinned digest>
+```
+
 ## Sign-in failures
 
 A refused sign-in is SCR-09's card at the URL that refused it, with the refusal's status and the request id, which
@@ -62,7 +69,7 @@ kubectl -n verdify-dashboard exec deploy/verdify-dashboard-web -- node -e \
   the new value. A new `cookie-secret` voids only sign-ins in progress; sessions survive.
 - No access: membership of `verdify-dashboard-operators` (operator) or `verdify-dashboard-viewers` (viewer) in
   Authentik decides the role. A group change applies at the person's next sign-in, at most 12 hours later.
-  Adding, changing and removing people is R1's access runbook (#1143).
+  Adding, changing and removing people: [access runbook](dashboard-access.md).
 - Request logs are one JSON line per request with the route template and status, never cookies, tokens, bodies or
   query strings: `kubectl -n verdify-dashboard logs deploy/verdify-dashboard-web --since=15m | grep '/auth/'`.
 
@@ -76,7 +83,7 @@ BFF: MCP and Iris writes are unaffected.
 2. `verdify-dashboard` auto-syncs at its next refresh. The ConfigMap gets a new hash-suffixed name, so the
    Deployment's `envFrom` changes and a new pod rolls out (`maxSurge` 1, `maxUnavailable` 0).
 3. Within 5 minutes of the merge, `/api/v1/me` reads `writes_enabled: false`: a signed-in operator sees the banner
-   "Changes are switched off; reading still works", and `scripts/dashboard-smoke.sh` (#1143) reads it as its
+   "Changes are switched off; reading still works", and `scripts/dashboard-smoke.sh` reads it as its
    viewer session. The pod's own value:
 
    ```bash
@@ -117,6 +124,9 @@ kubectl -n verdify-dashboard exec deploy/verdify-dashboard-web -- node -e \
   `verdify-db-0` log names which one. `TooManyConnectionsError` means the login's `CONNECTION LIMIT 8` is used up.
   `TimeoutError` or a connection error points at `verdify-db` or the network path. A pod that exits at start with a
   `ConfigError` names the setting it refused.
+- In a `verdify-prod-dark` sync this Deployment is the last wave (50). A pod that does not turn Ready ends that sync
+  Failed once the Deployment passes its 10-minute progress deadline, with everything else applied, MCP and the ingestor
+  included. During a rollout the old pod keeps serving (`maxUnavailable` 0).
 - `/healthz` from the web pod timing out points at `allow-operator-api-from-dashboard-web` in `verdify-prod`. It
   admits TCP 8090 only from pods labelled `app.kubernetes.io/name: verdify-dashboard-web` in namespace
   `verdify-dashboard`, so a label change on either side breaks it.
@@ -128,7 +138,7 @@ kubectl -n verdify-dashboard exec deploy/verdify-dashboard-web -- node -e \
   kubectl -n verdify-prod describe secret verdify-operator-api
   ```
 
-  A mismatch is not visible value-blind; `scripts/dashboard-smoke.sh` (#1143) proves the shared token through
+  A mismatch is not visible value-blind; `scripts/dashboard-smoke.sh` proves the shared token through
   INT-01. Jason re-seals both in one jvallery/agents PR; once both have synced, delete both pods
   (`kubectl -n verdify-dashboard delete pod -l app.kubernetes.io/name=verdify-dashboard-web` and
   `kubectl -n verdify-prod delete pod -l app.kubernetes.io/component=operator-api`).
@@ -155,4 +165,5 @@ writes flag instead.
 
 `verdify-prod` (the operator API, migrations and the tier-1 route) rolls back separately, through a digest-only
 `release-pins.yaml` commit to the promotion receipt's rollback pins and the gated full sync
-(`docs/runbooks/prod-promotion.md`).
+(`docs/runbooks/prod-promotion.md`; AGENTS.md "Rollback" says what an API pin from before #1148 does to the operator
+API).
