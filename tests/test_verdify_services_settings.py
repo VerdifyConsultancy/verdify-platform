@@ -25,7 +25,6 @@ from verdify_schemas.tunable_registry import (
     LEGACY_WIDE_LIMIT_PARAMS,
     REGISTRY,
     SWITCH_READBACK_EQUIPMENT,
-    WEEKLY_FEED_PARAMS,
     desired_write_rule,
 )
 from verdify_services import activity, reads, settings
@@ -381,7 +380,7 @@ def test_every_registry_row_gets_a_write_decision_with_a_reason_when_refused():
 
 @pytest.mark.parametrize(
     "param",
-    sorted(WEEKLY_FEED_PARAMS | LEGACY_WIDE_LIMIT_PARAMS | ACTIVITY_MIRROR_PARAMS | {"sw_onchip_band_enabled"}),
+    sorted(LEGACY_WIDE_LIMIT_PARAMS | ACTIVITY_MIRROR_PARAMS | {"sw_onchip_band_enabled"}),
 )
 def test_the_read_only_list_is_refused_read_only_with_its_reason(param):
     db = FakeDB()
@@ -392,21 +391,22 @@ def test_the_read_only_list_is_refused_read_only_with_its_reason(param):
     assert problem.detail == f"{param} is read-only: {desired_write_rule(param)[1]}"
 
 
-def test_the_two_named_switches_carry_their_own_reasons_and_never_unknown_target():
+def test_the_band_owner_switch_carries_its_own_reason():
     db = FakeDB()
-    reasons = {}
-    for param in ("sw_wall_fertigation_commissioned", "sw_onchip_band_enabled"):
-        with pytest.raises(ServiceError) as excinfo:
-            run(settings.validate(db, PERSON, param, 1))
-        reasons[param] = refusal(excinfo)
-    assert {p: problem.code for p, problem in reasons.items()} == dict.fromkeys(reasons, "read_only")
-    assert "retiring with the irrigation engine" in reasons["sw_wall_fertigation_commissioned"].detail
-    assert "decides which side owns the band" in reasons["sw_onchip_band_enabled"].detail
+    with pytest.raises(ServiceError) as excinfo:
+        run(settings.validate(db, PERSON, "sw_onchip_band_enabled", 1))
+    problem = refusal(excinfo)
+    assert problem.code == "read_only"
+    assert "decides which side owns the band" in problem.detail
 
 
-def test_the_nine_weekly_feed_rows_are_the_switch_and_the_eight_wall_rows():
-    assert len(WEEKLY_FEED_PARAMS) == 9
-    assert WEEKLY_FEED_PARAMS - {"sw_wall_fertigation_commissioned"} == {n for n in REGISTRY if n.startswith("wall_")}
+@pytest.mark.parametrize("param", ["sw_wall_fertigation_commissioned", "wall_commissioning_revision", "wall_flow_lpm"])
+def test_the_retired_weekly_feed_rows_read_unknown_target(param):
+    # #1162 deleted the weekly-feed commissioning rows from REGISTRY.
+    assert param not in REGISTRY
+    with pytest.raises(ServiceError) as excinfo:
+        run(settings.validate(FakeDB(), PERSON, param, 1))
+    assert refusal(excinfo).code == "unknown_target"
 
 
 @pytest.mark.parametrize("control_class", ["readback_context", "retired"])
@@ -989,7 +989,7 @@ def test_catalog_groups_and_read_only_reasons():
     assert rows["zone_vpd_target_center_sm"].group == "crop_band"
     assert rows["zone_vpd_target_east_sm"].group == "read_only"  # no pepper rows in this fixture
     assert rows["zone_priority_center"].read_only_reason == settings.NO_ANCHOR_ROW
-    for name in ("temp_low", "sw_onchip_band_enabled", "sw_wall_fertigation_commissioned", "activity_start_hour"):
+    for name in ("temp_low", "sw_onchip_band_enabled", "activity_start_hour"):
         assert (rows[name].group, rows[name].writable) == ("read_only", False)
         assert rows[name].read_only_reason == desired_write_rule(name)[1]
     for row in rows.values():
