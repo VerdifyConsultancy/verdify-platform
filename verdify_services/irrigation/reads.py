@@ -784,13 +784,14 @@ async def _last_water(conn: asyncpg.Connection, line_ids: Sequence[str], at: dat
         for line_id in line_ids
         if LINE_RELAY[line_id] in newest
     }
-    out: dict[str, LastWater] = {}
+    newest_runs: dict[str, RunGroup] = {}
     for group in group_runs(await attributed_runs(conn, windows, at)):
-        if group.line_id not in out or group.start > out[group.line_id].at:
-            out[group.line_id] = LastWater(
-                at=group.start, open_s=group.open_s, pulses=group.pulses, cause=IrrigationCause(group.cause)
-            )
-    return out
+        if group.line_id not in newest_runs or group.end > newest_runs[group.line_id].end:
+            newest_runs[group.line_id] = group
+    return {
+        line_id: LastWater(at=group.start, open_s=group.open_s, pulses=group.pulses, cause=IrrigationCause(group.cause))
+        for line_id, group in newest_runs.items()
+    }
 
 
 def _next_runs(base: _Base, today: date) -> dict[str, NextRun]:

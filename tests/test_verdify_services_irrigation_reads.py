@@ -337,6 +337,35 @@ def test_the_relay_runs_of_one_ledger_row_are_one_run_and_an_unjoined_pulse_is_n
     assert [(group.pulses, group.cause, group.ledger) for group in groups] == [(2, "schedule", row), (1, "vpd", None)]
 
 
+def test_a_ledger_row_is_one_run_even_with_another_rows_run_between_its_relay_runs():
+    """A row whose end never arrived spans a later row, so run_id stays one per ledger row."""
+    start = AT - 30 * H
+    lost_end = ledger_row("L04", started_at=start - S, ended_at=None, id=8, outcome=None)
+    between = ledger_row("L04", started_at=start + 10 * MIN, ended_at=start + 12 * MIN, id=9)
+    parts = [
+        item_of(relay_run("L04", start=start, end=start + MIN), "schedule", ledger=lost_end),
+        item_of(relay_run("L04", start=start + 11 * MIN, end=start + 12 * MIN), "schedule", ledger=between),
+        item_of(relay_run("L04", start=start + 15 * MIN, end=start + 16 * MIN), "schedule", ledger=lost_end),
+    ]
+    groups = sorted(runs.group_runs(parts), key=lambda group: group.start)
+    assert [(group.ledger["id"], group.pulses, group.start, group.end) for group in groups] == [
+        (8, 2, start, start + 16 * MIN),
+        (9, 1, start + 11 * MIN, start + 12 * MIN),
+    ]
+
+
+def test_a_joined_run_ends_an_episode():
+    start = AT - 2 * H
+    row = ledger_row("L04", started_at=start + 2 * MIN - S, ended_at=start + 3 * MIN, id=8)
+    parts = [
+        item_of(relay_run("L04", start=start, end=start + MIN)),
+        item_of(relay_run("L04", start=start + 2 * MIN, end=start + 3 * MIN), "schedule", ledger=row),
+        item_of(relay_run("L04", start=start + 4 * MIN, end=start + 5 * MIN)),
+    ]
+    groups = sorted(runs.group_runs(parts), key=lambda group: group.start)
+    assert [(group.cause, group.pulses) for group in groups] == [("vpd", 1), ("schedule", 1), ("vpd", 1)]
+
+
 def test_a_groups_open_flag_follows_its_parts():
     start = AT - 10 * MIN
     group = runs.group_runs(

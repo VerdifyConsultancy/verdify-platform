@@ -321,29 +321,35 @@ def pulsing(line_id: str) -> bool:
     return LINE_KIND[line_id] in PULSING_KINDS
 
 
-def _same_run(group: list[AttributedRun], item: AttributedRun) -> bool:
-    last = group[-1]
-    if last.ledger is not None or item.ledger is not None:
-        return last.ledger is not None and item.ledger is not None and last.ledger["id"] == item.ledger["id"]
+def _same_episode(last: AttributedRun, item: AttributedRun) -> bool:
     return pulsing(item.run.line_id) and item.cause == last.cause and item.run.start - last.run.end <= EPISODE_GAP
 
 
 def group_runs(items: Iterable[AttributedRun]) -> list[RunGroup]:
-    """Relay runs as runs, by line and start: the relay runs of one ledger row are one run, and a line's unjoined
-    pulses of one cause with gaps of 10 min or less are one episode. Every other relay run stands alone."""
+    """Relay runs as runs, by line and start: all the relay runs of one ledger row are one run, even with another
+    row's between them (a row whose end never arrived spans the later ones), and a line's unjoined pulses of one cause
+    with gaps of 10 min or less and no joined run between them are one episode. Every other relay run stands alone."""
     by_line: dict[str, list[AttributedRun]] = defaultdict(list)
     for item in items:
         by_line[item.run.line_id].append(item)
     out: list[RunGroup] = []
     for line_id, line_items in by_line.items():
-        current: list[AttributedRun] = []
+        joined: dict[Any, list[AttributedRun]] = {}
+        episode: list[AttributedRun] = []
         for item in sorted(line_items, key=lambda part: part.run.start):
-            if current and not _same_run(current, item):
-                out.append(RunGroup(line_id, tuple(current)))
-                current = []
-            current.append(item)
-        if current:
-            out.append(RunGroup(line_id, tuple(current)))
+            if item.ledger is None and (not episode or _same_episode(episode[-1], item)):
+                episode.append(item)
+                continue
+            if episode:
+                out.append(RunGroup(line_id, tuple(episode)))
+            if item.ledger is None:
+                episode = [item]
+            else:
+                episode = []
+                joined.setdefault(item.ledger["id"], []).append(item)
+        if episode:
+            out.append(RunGroup(line_id, tuple(episode)))
+        out.extend(RunGroup(line_id, tuple(parts)) for parts in joined.values())
     return out
 
 
