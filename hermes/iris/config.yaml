@@ -75,6 +75,12 @@ mcp_servers:
         - acknowledge_trigger
         - plan_evaluate
         - lessons_manage
+        # Water writes — change watering only; never count as a plan for a trigger
+        - irrigation_schedule_set
+        - irrigation_line_set
+        - irrigation_run
+        - irrigation_stop
+        - irrigation_clear_fault
       exclude:
         - query  # raw-SQL escape hatch — deliberately denied in production
       resources: false

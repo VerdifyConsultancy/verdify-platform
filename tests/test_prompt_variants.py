@@ -222,7 +222,7 @@ class TestPromptBuilders:
         message = builder("<context stub>", "<label stub>", instance)
         assert isinstance(message, str) and len(message) > 1000
         # Every prompt carries the standing directives so Iris sees the Hermes MCP tool inventory.
-        assert "25 production tools" in message
+        assert "30 production tools" in message
         assert "The raw SQL `query` tool and operator `plan_run` tool are not exposed to Hermes." in message
 
     @pytest.mark.parametrize("event", PROMPT_EVENTS)

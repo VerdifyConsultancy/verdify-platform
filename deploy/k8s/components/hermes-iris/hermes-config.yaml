@@ -45,8 +45,9 @@ data:
     REQUIRED = {
         "acknowledge_trigger", "alerts", "climate", "crop_history",
         "crop_lifecycle", "crops", "equipment_state", "forecast",
-        "get_setpoints", "history", "irrigation_history", "irrigation_schedule",
-        "irrigation_status", "knowledge_search", "lessons",
+        "get_setpoints", "history", "irrigation_clear_fault", "irrigation_history",
+        "irrigation_line_set", "irrigation_run", "irrigation_schedule", "irrigation_schedule_set",
+        "irrigation_status", "irrigation_stop", "knowledge_search", "lessons",
         "lessons_manage", "lessons_search", "observations", "plan_evaluate",
         "plan_status", "position_current", "scorecard", "set_plan",
         "set_tunable", "slack_ops", "topology",
@@ -54,7 +55,10 @@ data:
     # Iris ends every trigger without these. The config moves at any sync and the MCP image at its promotion, so an
     # image from before them must not take the planner out of service. A newer image's own /readyz still fails if it
     # stops registering one.
-    PLAN_OPTIONAL = {"irrigation_history", "irrigation_schedule", "irrigation_status"}
+    PLAN_OPTIONAL = {
+        "irrigation_clear_fault", "irrigation_history", "irrigation_line_set", "irrigation_run",
+        "irrigation_schedule", "irrigation_schedule_set", "irrigation_status", "irrigation_stop",
+    }
     PROBE_STATE_SCHEMA = 1
     MCP_LOG_LINE = re.compile(
         r"^(?P<stamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) "
@@ -467,6 +471,12 @@ data:
             - acknowledge_trigger
             - plan_evaluate
             - lessons_manage
+            # Water writes — change watering only; never count as a plan for a trigger
+            - irrigation_schedule_set
+            - irrigation_line_set
+            - irrigation_run
+            - irrigation_stop
+            - irrigation_clear_fault
           exclude:
             - query  # raw-SQL escape hatch — deliberately denied in production
           resources: false

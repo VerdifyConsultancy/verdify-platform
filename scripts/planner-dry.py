@@ -7,7 +7,7 @@ regressions can't land silently.
 Checks:
   1. iris_planner imports (fails on Python syntax, missing dependency, or
      missing playbook at PLANNER_PLAYBOOK_PATH).
-  2. `_STANDING_DIRECTIVES` still says "25 production tools" — Hermes tool-inventory guard.
+  2. `_STANDING_DIRECTIVES` still says "30 production tools" — Hermes tool-inventory guard.
   3. `_PLANNER_CORE` still carries the "Structured hypothesis" section —
      G7 write-side guard (CORE must include it so both opus and local see it).
   4. Sprint-3 split invariants: `_PLANNER_CORE` has the Tier 1 table;
@@ -19,7 +19,7 @@ Checks:
       - preamble ≤ ~52000 Claude tokens (≈ 208000 chars at 4:1; we
          approximate with char-length since the anthropic tokenizer hits
          the network and this script must stay offline).
-      - "25 production tools" preamble appears in both.
+      - "30 production tools" preamble appears in both.
   6. The context each builder gets holds section 11 (`render_context()` over
      tests/fixtures/irrigation_context.json), within its 60-line budget.
 """
@@ -41,7 +41,7 @@ import iris_planner as p  # noqa: E402
 PREAMBLE_MAX_CHARS = 52_000 * 4
 
 # Invariants that must hold regardless of instance.
-assert "25 production tools" in p._STANDING_DIRECTIVES, "tool-count guard: '25 production tools' missing"
+assert "30 production tools" in p._STANDING_DIRECTIVES, "tool-count guard: '30 production tools' missing"
 assert "`query` tool" in p._STANDING_DIRECTIVES, "Hermes prompt must document that raw SQL is denied"
 assert "operator `plan_run` tool" in p._STANDING_DIRECTIVES, "Hermes prompt must document that plan_run is denied"
 assert p.PLANNER_PLAYBOOK_PATH.exists(), f"playbook missing at {p.PLANNER_PLAYBOOK_PATH}"
@@ -100,7 +100,7 @@ for event in ("SUNRISE", "SUNSET", "SOLAR_MAX", "TRANSITION", "FORECAST_DEVIATIO
             f"{event}/{instance} prompt suspiciously short: {len(message)} chars"
         )
         assert IRRIGATION_HEADER in message, f"{event}/{instance} prompt missing section 11"
-        assert "25 production tools" in message, f"{event}/{instance} prompt missing _STANDING_DIRECTIVES preamble"
+        assert "30 production tools" in message, f"{event}/{instance} prompt missing _STANDING_DIRECTIVES preamble"
         print(f"  {event:10s} {instance:5s} {len(message):>6} chars")
 
 print("planner-dry: all prompts render; Hermes invariants hold")
