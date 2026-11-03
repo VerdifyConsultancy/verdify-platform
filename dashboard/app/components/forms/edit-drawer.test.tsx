@@ -6,6 +6,7 @@ import { useState } from "react";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import type { Session } from "../../lib/session";
+import { Button } from "../button";
 import { renderUi } from "../test-render";
 import { EditDrawer, graphLink, ManualToggle, NumberField, Reason } from "./index";
 
@@ -13,7 +14,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 const OPERATOR = { role: "operator", writesEnabled: true } as const;
 const dialog = () => document.querySelector("dialog")!;
 
-function Screen({ onSave = () => {}, saving = false, unit = "kPa" }: { onSave?: () => void; saving?: boolean; unit?: string | null }) {
+function Screen({ onSave = () => {}, saving = false, unit = "kPa", readOnly = false }: { onSave?: () => void; saving?: boolean; unit?: string | null; readOnly?: boolean }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("1.60");
   const [manual, setManual] = useState(true);
@@ -21,7 +22,8 @@ function Screen({ onSave = () => {}, saving = false, unit = "kPa" }: { onSave?: 
   return <>
     <button type="button" onClick={() => setOpen(true)}>Edit</button>
     <EditDrawer open={open} onClose={() => setOpen(false)} title="Edit setting" eyebrow="PLANNER POLICY · mister_engage_kpa" heading="VPD Mister Engage"
-      status="Device 1.60 kPa · CONFIRMED" graph={{ param: "mister_engage_kpa", unit }} onSave={onSave} saving={saving}>
+      status="Device 1.60 kPa · CONFIRMED" graph={{ param: "mister_engage_kpa", unit }} onSave={onSave} saving={saving} readOnly={readOnly}
+      actions={<Button write>Release to auto</Button>}>
       <NumberField label="New value" value={value} onChange={setValue} min={0.5} max={2.5} step={0.05} unit={unit} />
       <ManualToggle checked={manual} onChange={setManual} />
       <Reason value={reason} onChange={setReason} />
@@ -131,4 +133,21 @@ test("\"Graph this setting ›\" shows only for a unit a Graphs panel draws (°F
   expect(graphLink("temp_low", "degF")).toBe("/graphs?set=temp_low");
   expect(graphLink("irrig_wall_duration_min", "min")).toBeNull();
   expect(graphLink("sw_gl_main_auto_mode", null)).toBeNull();
+});
+
+test("readOnly (a setting the API serves with writable false): read-only for an operator too, with Done and no Save or actions", () => {
+  const onSave = vi.fn();
+  open(OPERATOR, { onSave, readOnly: true });
+  expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Release to auto" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull();
+  expect(screen.getByLabelText("New value").matches(":disabled")).toBe(true);
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Done" }));
+  fireEvent.submit(dialog().querySelector("form")!);
+  expect(onSave).not.toHaveBeenCalled();
+  cleanup();
+  // Without it, an operator keeps Cancel, the actions and Save.
+  open(OPERATOR);
+  expect(screen.getByRole("button", { name: "Release to auto" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
 });

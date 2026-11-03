@@ -5,9 +5,13 @@
  * greenhouse; each named fixture patches it, and a list of names applies in order. Clock times in the screens'
  * examples (07:02, 13:00) are kept as offsets from now as they stand at 10:42, so pinning now to 10:42 America/Denver
  * reproduces them exactly. Nothing here reaches a database, MCP, Home Assistant or a device, and no value is a secret.
- * Later issues add the fixtures they need to `FIXTURES`. A setting's `label` and `unit` are its `TunableDef.label` and
- * `unit` (VD-29): an entity's name without its unit, and that unit; the site caps carry their own.
+ * Later issues add the fixtures they need to `FIXTURES`. The settings (API-09) are rendered at test time from
+ * verdify_schemas/tunable_registry.py into `settings.json` beside this file (scripts/gen-dashboard-settings-fixture.py,
+ * `pnpm fixtures:settings`; never committed): one row per registry row with its `TunableDef` label, unit and step, and
+ * the Band in force rows. That file is the base API-09 response, and the named fixtures below patch it.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 export const ZONE = "America/Denver";
 export const REVISION = "0123456789abcdef0123456789abcdef01234567";
@@ -110,26 +114,45 @@ export const freshness = (now, ageS, cadenceS, staleAfter = 2 * cadenceS) => ({ 
 const actor = (source, name) => ({ source, name });
 export const JASON = actor("dashboard", "jason");
 
-function setting(row) {
-  return {
-    unit: null, min: null, max: null, step: null, writable: true, read_only_reason: null, readback_via: "cfg", readback: null, desired: null, plan: null,
-    applied_from: "default", state: "confirmed", ...row,
-  };
+// ---------------------------------------------------------------------------------------------------- settings
+// A path, not a URL: under jsdom the global URL is not the one node:fs accepts.
+/** The rendered base API-09 response (scripts/gen-dashboard-settings-fixture.py), never committed. */
+export const SETTINGS_FILE = join(import.meta.dirname, "settings.json");
+let settingsBase = null;
+/** `settings.json`, read once: `{items, server_time}`, every time in it relative to `server_time`. */
+function loadSettings() {
+  if (settingsBase) return settingsBase;
+  let text;
+  try {
+    text = readFileSync(SETTINGS_FILE, "utf8");
+  } catch (error) {
+    throw new Error(`${SETTINGS_FILE} is missing: render it with "pnpm fixtures:settings" (scripts/gen-dashboard-settings-fixture.py)`, { cause: error });
+  }
+  const body = JSON.parse(text);
+  if (!Array.isArray(body?.items) || !Number.isFinite(Date.parse(body.server_time))) throw new Error(`${SETTINGS_FILE} is not an API-09 response; render it again`);
+  settingsBase = body;
+  return body;
 }
-/** The three irrigation_site rows (param, label, unit, min, max, step, value in program rev 42). */
-const SITE_CAPS = [
-  ["mister_daily_volume_max_gal", "SAF-4 ceiling", "gal", 100, 600, 10, 360], ["sched_mist_rh_max_pct", "Scheduled-mist RH ceiling", "%", 75, 98, 1, 90],
-  ["climate_yield_min", "Climate yield", "min", 5, 30, 1, 15],
-];
+const TIME_FIELDS = new Set(["observed_at", "created_at", "confirmed_at", "since", "written_at", "at"]);
+/** A deep copy of `value` with every time in it moved by `shift` ms. */
+function rebased(value, shift) {
+  if (Array.isArray(value)) return value.map((item) => rebased(item, shift));
+  if (value === null || typeof value !== "object") return value;
+  const copy = {};
+  for (const [key, item] of Object.entries(value)) copy[key] = TIME_FIELDS.has(key) && typeof item === "string" ? iso(Date.parse(item) + shift) : rebased(item, shift);
+  return copy;
+}
+/** Every setting row as API-09 serves it at `now`: the rendered rows, their times moved from `server_time` to `now`. */
+export function baseSettings(now) {
+  const base = loadSettings();
+  return rebased(base.items, now - Date.parse(base.server_time));
+}
+/** The three irrigation_site rows, the site caps (VD-37): their label, unit and bounds are the registry's. */
+const SITE_CAPS = ["mister_daily_volume_max_gal", "sched_mist_rh_max_pct", "climate_yield_min"];
 /** Program rev 42 as the controller confirmed it, with the site caps inside it. */
 const programRev42 = (now) => ({
   state: "confirmed", revision: 42, desired_sha256: PROGRAM_SHA256, applied_revision: 42, applied_hash: PROGRAM_SHA256.slice(0, 16), src: "nvs", reason: null,
   pushed_at: iso(now - 3 * MINUTE), confirmed_at: iso(now - 2 * MINUTE), reject_code: null, next_retry_at: null,
-});
-/** A site cap row as program rev 42 holds it: confirmed by the program hash, read back from the applied program. */
-const siteCap = (now, [param, label, unit, min, max, step, value]) => setting({
-  param, label, control_class: "irrigation_site", group: "site_water_caps", kind: "numeric", unit, min, max, step, readback_via: "program",
-  readback: reading(value, now - 2 * MINUTE),
 });
 
 /** The base greenhouse, `in-band`: screens SCR-01 with nothing running and nothing open. */
@@ -138,7 +161,6 @@ function inBand(now) {
   const written = at("07:02");
   const planId = `iris-${local(written).date.replaceAll("-", "")}-${hhmm(written)}`;
   const waypoint = (time, value) => ({ at: iso(time), value, source: "iris", effective: true });
-  const planned = (value, next) => ({ value, plan_id: planId, source: "iris", written_at: iso(written), next });
   const kpaNext = waypoint(at("13:00"), 1.7);
   const gapNext = waypoint(at("16:30"), 55);
   const device = (value, minutes) => reading(value, now - minutes * MINUTE);
@@ -220,26 +242,9 @@ function inBand(now) {
         resolved_at: outcome === "expected" ? null : iso(expected + 2 * MINUTE), failure_class: null,
       })),
     },
-    settings: [
-      setting({ param: "mister_engage_kpa", label: "VPD Mister Engage", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "kPa", min: 0.5, max: 2.5, step: 0.05, readback: device(1.6, 2), plan: planned(1.6, kpaNext), applied_from: "plan" }),
-      setting({ param: "mister_engage_delay_s", label: "Mister Engage Delay", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "s", min: 30, max: 300, step: 30, readback: device(60, 3), plan: planned(60, null), applied_from: "plan" }),
-      setting({ param: "mister_pulse_gap_s", label: "Mister Pulse Gap", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "s", min: 10, max: 60, step: 5, readback: device(45, 1), plan: planned(45, gapNext), applied_from: "plan" }),
-      setting({ param: "mister_pulse_on_s", label: "Mister Pulse ON", control_class: "planner_policy", group: "planner_policy", kind: "numeric", unit: "s", min: 30, max: 90, step: 5, readback: device(60, 1) }),
-      setting({ param: "irrig_wall_duration_min", label: "Irrig Wall Duration", control_class: "scheduled_policy", group: "scheduled_policy", kind: "numeric", unit: "min", min: 1, max: 120, step: 1, readback: device(12, 5) }),
-      setting({ param: "sw_gl_main_auto_mode", label: "GL Main Auto Mode", control_class: "scheduled_policy", group: "scheduled_policy", kind: "switch", min: 0, max: 1, step: 1, readback: device(1, 5) }),
-      setting({ param: "fog_rh_ceiling_pct", label: "Fog RH Ceiling", control_class: "controller_safety", group: "controller_safety", kind: "numeric", unit: "%", min: 75, max: 98, step: 1, readback: device(90, 1) }),
-      setting({ param: "band_vpd_low_sm", label: "Band VPD Low SM", control_class: "crop_band", group: "crop_band", kind: "numeric", unit: "kPa", min: 0.3, max: 1.2, step: 0.01, readback: device(0.45, 4), applied_from: "band" }),
-      ...SITE_CAPS.map((cap) => siteCap(now, cap)),
-      setting({ param: "temp_low", label: "Set Temp Low", control_class: "crop_band", group: "read_only", kind: "numeric", unit: "°F", min: 30, max: 80, step: 0.5, writable: false, read_only_reason: "legacy limit, not the band while the on-chip band runs", readback: device(40, 4), applied_from: "band" }),
-      // The Band in force rows as API-09 serves them (VD-55): the dispatcher's DERIVED band_<zone>_<role> rows, with
-      // their value and time as the readback, no readback path and no desired or plan row.
-      ...[["house", "temp", "°F", 62.0, 70.0], ["house", "vpd", "kPa", 0.45, 0.8], ["center", "vpd", "kPa", 0.5, 0.85], ["south", "vpd", "kPa", 0.45, 0.8], ["west", "vpd", "kPa", 0.45, 0.8]]
-        .flatMap(([zone, series, unit, low, high]) => [["low", low], ["high", high]].map(([role, value]) => setting({
-          param: `band_${zone}_${series}_${role}`, label: `${zone[0].toUpperCase()}${zone.slice(1)} ${series === "temp" ? "temp" : "VPD"} ${role}`, control_class: "crop_band",
-          group: "band_in_force", kind: "numeric", unit, writable: false, read_only_reason: "derived by the dispatcher from the crop band anchors", readback_via: "none",
-          readback: device(value, 4), applied_from: "band", state: "no_readback",
-        }))),
-    ],
+    // Every registry row and the Band in force rows, rendered from the registry (settings.json); Iris's plan rows carry
+    // this world's plan id.
+    settings: baseSettings(now).map((row) => (row.plan?.source === "iris" ? { ...row, plan: { ...row.plan, plan_id: planId } } : row)),
     activity: [
       { id: 14, ts: iso(written), actor: actor("iris", "iris"), action: "plan.write", target: planId, detail: { trigger: "SUNRISE", changes: [{ param: "mister_engage_kpa", at: iso(at("13:00")), value: 1.7 }, { param: "mister_pulse_gap_s", at: iso(at("16:30")), value: 55 }] }, reason: "Hot, dry afternoon: engage misting earlier from 13:00 and widen the pulse gap at dusk.", state: "confirmed", confirmed_at: iso(written + 2 * MINUTE), experiment_id: null, request_id: null },
       { id: 13, ts: iso(at("06:30")), actor: actor("system", "forecast-engine"), action: "setting.write", target: "mister_pulse_gap_s", detail: { before: 45, value: 50 }, reason: "Forecast rule: hot afternoon", state: "confirmed", confirmed_at: iso(at("06:31")), experiment_id: null, request_id: null },
@@ -538,7 +543,8 @@ export const FIXTURES = {
   "program-rev-42": (world) => {
     // The base's program, whatever came before it in a list: rev 42 confirmed, the site caps and every line inside it.
     Object.assign(world, { engine: true, program: programRev42(world.now) });
-    for (const cap of SITE_CAPS) Object.assign(settingOf(world, cap[0]), siteCap(world.now, cap));
+    const base = baseSettings(world.now);
+    for (const param of SITE_CAPS) Object.assign(settingOf(world, param), base.find((row) => row.param === param));
     for (const line of world.lines) line.sync = "confirmed";
   },
   "reserved-lines": (world) => {
@@ -550,7 +556,8 @@ export const FIXTURES = {
       state: "requested", revision: null, desired_sha256: PROGRAM_SHA256, applied_revision: null, applied_hash: null, src: null,
       reason: "engine not on controller", pushed_at: null, confirmed_at: null, reject_code: null, next_retry_at: null,
     };
-    for (const row of world.settings.filter((row) => row.control_class === "irrigation_site")) Object.assign(row, { readback: null, state: "requested" });
+    // No program on the controller: the site caps read no value, with the reason (SCR-05 "—" with readback.reason).
+    for (const param of SITE_CAPS) Object.assign(settingOf(world, param), { readback: reading(null, null, "no irrigation program on the controller yet"), state: "requested" });
     for (const line of world.lines) line.sync = "requested";
     // A site cap saved before the engine: stored, and requested with no_engine since that write until a program
     // compiled after it is confirmed.
