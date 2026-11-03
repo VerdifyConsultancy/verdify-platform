@@ -277,14 +277,12 @@ SUCCESSOR_285_MCP_DIGEST = SUCCESSOR_284_MCP_DIGEST
 # Exact286 (VD-33, #1149): the lighting policy functions ignore manual rows. Both
 # functions are in the ordinary digest's helper closure, which hashes their source,
 # so the api and ingestor seals move, as 275's jit change did; the MCP digest takes
-# in neither, so its seal should stay 285's. These are 285's values as stand-ins
-# until a rolled-back native qualification measures 286; its fixture records which
-# they are.
+# in neither, so its seal stays 285's. The rolled-back native qualification measured them.
 SUCCESSOR_286 = "286-lighting-policy-ignores-manual.sql"
-SUCCESSOR_286_SHA256 = "60654e0450c1ce2b891397e1ec6d696d3715a11311609072a2a8ff4c819e3fa7"
+SUCCESSOR_286_SHA256 = "6bacb419d3aa6d1d16f05c5a1d451f78001db1cedf3315539853f69bf3144eee"
 SUCCESSOR_286_DIGESTS = {
-    "verdify_api_runtime_login": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
-    "verdify_ingestor_runtime_login": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
+    "verdify_api_runtime_login": "6b43af2ab8da8871469a379b1c322ade82481a92a7d32300381ea5e60fd2dd8c",
+    "verdify_ingestor_runtime_login": "6b0c82221c3d826a83b8c7a5cd674c23d4bc39ee9c9912a9aaa5bae0d90dbdcc",
 }
 SUCCESSOR_286_MCP_DIGEST = SUCCESSOR_285_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this

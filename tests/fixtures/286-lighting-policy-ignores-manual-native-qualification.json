@@ -1,16 +1,53 @@
 {
   "migration": "286-lighting-policy-ignores-manual.sql",
-  "exact_final_migration_sha256": "60654e0450c1ce2b891397e1ec6d696d3715a11311609072a2a8ff4c819e3fa7",
-  "final_migration_qualification_pending": true,
-  "before": null,
+  "exact_final_migration_sha256": "6bacb419d3aa6d1d16f05c5a1d451f78001db1cedf3315539853f69bf3144eee",
+  "final_migration_qualification_pending": false,
+  "before": {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
+  },
   "projected_successor": {
     "api": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
     "ingestor": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
     "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
   },
   "projection": "2026-11-02, before any measurement: the re-chain onto 285 (VD-56) had no production access. Every seal in the file and its registrations is a stand-in: the predecessor block carries 285's registered sha and seals (285's are themselves 284's stand-ins until 285 is measured), and the successor block and registrations carry those same seals. The api and ingestor seals are expected to move, so the file's own successor block refuses these stand-ins: fn_lighting_circuit_policy and fn_lighting_minutes_policy are in fn_runtime_ordinary_boundary_digest's invoker helper closure (217), whose function entries hash the definition and prosrc for both logins, as 275's jit change moved them. The MCP seal is expected to stay 285's: fn_mcp_runtime_boundary_digest (263) takes in a function only if an MCP role owns it or PUBLIC or an MCP role holds an ACL entry on it, 217 left neither function with one and no later migration grants them, and 275 changed fn_lighting_minutes_policy without moving it. If the probe shows the MCP digest moved, stop: that is a finding, not a literal to update. The function literals were checked read only on 2026-11-02: each live prosrc SHA-256 equals the file's predecessor value, each override predicate occurs once in pg_get_functiondef, and the server's own SHA-256 of each replaced prosrc equals the file's successor value. Once 285's row and seals are final, update the predecessor block if they changed, take the api and ingestor seals from --probe-only (with --apply-first for each of 283, 284 and 285 production lacks), set them in the file's successor block and receipt UPDATEs and in the c0-migration-delivery.py and bootstrap-six-runtime-roles.py registrations, update the file's sha at those registrations and here, and run the full qualification with --fixture.",
-  "qualified_successor": null,
-  "after_rollback": null,
-  "inside_transaction_receipts_match": false,
-  "final_migration_rollback_verified": false
+  "qualified_successor": {
+    "api": "6b43af2ab8da8871469a379b1c322ade82481a92a7d32300381ea5e60fd2dd8c",
+    "ingestor": "6b0c82221c3d826a83b8c7a5cd674c23d4bc39ee9c9912a9aaa5bae0d90dbdcc",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "after_rollback": {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
+  },
+  "inside_transaction_receipts_match": true,
+  "final_migration_rollback_verified": true,
+  "measured_at": "2026-11-03T00:54:17Z",
+  "native_probe_source_sha256": "242a4a115e43478fa9096013f0f28e44789d4f18301e7d15f7015ca2c61d6688",
+  "qualification_source_sha256": "d46439e0f9239fd337b364bd315f47111107c34eedbabe04b06f0dc90cd46ee6",
+  "applied_first": [
+    {
+      "migration": "283-irrigation-tables.sql",
+      "seq": 283,
+      "sha256": "0b07a5042edc29cb90da4c800da6514e47517240d765c0da0217b68cc7fe92c2"
+    },
+    {
+      "migration": "284-dashboard-runtime-grants.sql",
+      "seq": 284,
+      "sha256": "559d8260ec7138a3bec502f7b29f50587f6a752cc5144fa31e15b406c4ddcaf4"
+    },
+    {
+      "migration": "285-daily-scorecard-view.sql",
+      "seq": 285,
+      "sha256": "89db770e96f030d2836fe033dce035e8c244d7b08a52c7f6ac378f5526c9ca77"
+    }
+  ],
+  "applied_first_seals": {
+    "api": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
+    "ingestor": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  }
 }

@@ -574,15 +574,14 @@ def sealed_sql_285():
 LIGHTING_MANUAL_MIGRATION = (
     286,
     "286-lighting-policy-ignores-manual.sql",
-    "60654e0450c1ce2b891397e1ec6d696d3715a11311609072a2a8ff4c819e3fa7",
+    "6bacb419d3aa6d1d16f05c5a1d451f78001db1cedf3315539853f69bf3144eee",
 )
 # Both lighting policy functions are in the ordinary digest's helper closure, so the
 # api and ingestor seals move, as 275's jit change did; the MCP seal should stay 285's.
-# These are 285's values as stand-ins until the rolled-back native qualification
-# measures 286; its fixture records which they are.
+# The rolled-back native qualification measured them.
 SUCCESSOR_286 = {
-    "api": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
-    "ingestor": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
+    "api": "6b43af2ab8da8871469a379b1c322ade82481a92a7d32300381ea5e60fd2dd8c",
+    "ingestor": "6b0c82221c3d826a83b8c7a5cd674c23d4bc39ee9c9912a9aaa5bae0d90dbdcc",
     "mcp": SUCCESSOR_285["mcp"],
 }
 

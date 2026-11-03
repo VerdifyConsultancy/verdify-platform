@@ -92,12 +92,12 @@ END $manual_override$;
 -- ingestor seals, as 275's jit change did; MCP's stays its predecessor's.
 DO $successor$
 BEGIN
-    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8' OR
-        encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM 'c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad' OR
+    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '6b43af2ab8da8871469a379b1c322ade82481a92a7d32300381ea5e60fd2dd8c' OR
+        encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '6b0c82221c3d826a83b8c7a5cd674c23d4bc39ee9c9912a9aaa5bae0d90dbdcc' OR
         encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e'
     THEN RAISE EXCEPTION '286 refuses an unqualified successor'; END IF;
-    UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8','hex'), captured_at=clock_timestamp() WHERE login_name='verdify_api_runtime_login';
+    UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('6b43af2ab8da8871469a379b1c322ade82481a92a7d32300381ea5e60fd2dd8c','hex'), captured_at=clock_timestamp() WHERE login_name='verdify_api_runtime_login';
     IF NOT FOUND THEN RAISE EXCEPTION '286 missing api receipt'; END IF;
-    UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad','hex'), captured_at=clock_timestamp() WHERE login_name='verdify_ingestor_runtime_login';
+    UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('6b0c82221c3d826a83b8c7a5cd674c23d4bc39ee9c9912a9aaa5bae0d90dbdcc','hex'), captured_at=clock_timestamp() WHERE login_name='verdify_ingestor_runtime_login';
     IF NOT FOUND THEN RAISE EXCEPTION '286 missing ingestor receipt'; END IF;
 END $successor$;
