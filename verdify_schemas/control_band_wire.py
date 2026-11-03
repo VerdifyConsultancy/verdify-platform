@@ -232,7 +232,8 @@ def resolve_served_wire(desired: dict, sample: datetime, night_bias: float) -> d
     }
 
 
-# The engine release. Its solar and band sources equal the inspected firmware's (docs/runbooks/c1-native-capture.md).
+# The engine release. greenhouse_solar.h is byte-identical to the inspected firmware's and the solar and band
+# expressions in controls.yaml are unchanged (docs/runbooks/c1-native-capture.md).
 SUPPORTED_FIRMWARE = "2026.11.3.0435.5e24d07c"
 # The ELF whose solar and band instructions were last inspected: 620a218a's, not yet the engine's.
 TARGET_ELF_SHA256 = "39a237cfb044e72633d52646c203d27b1217ba9f9de3d4a8308798b1b7a96b5b"
