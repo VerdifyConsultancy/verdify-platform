@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { formatValue } from "../lib/format";
-import type { BandTimeline, PlanWaypoint, ReadbackState, SettingSteps } from "./types";
+import { isAiSource } from "../lib/vocab";
+import type { Actor, BandTimeline, PlanWaypoint, ReadbackState, SettingSteps } from "./types";
 import { epochOf } from "./time-axis";
 
 /**
@@ -97,8 +98,12 @@ export type StepSegment = {
   value: number;
   /** Drawn beside the step. */
   label: string;
+  /** Drawn where the step ends: "Released" when a release ended it. */
+  endLabel?: string;
   /** The tooltip and data-table words. */
   detail: string;
+  /** A request's writer in words (`requesterWords`), when every desired row draws. */
+  who?: string;
   /** `iris`, or `preemptive` for the forecast rule; a newer source reads as a forecast rule, never AI. */
   source?: PlanWaypoint["source"];
   state?: ReadbackState;
@@ -108,6 +113,18 @@ const REQUESTED_WORDS: Partial<Record<ReadbackState, string>> = { requested: "RE
 export const PLANNED_AI = "PLANNED · AI";
 export const FORECAST_RULE = "Forecast rule · system";
 export const SUPERSEDED = "SUPERSEDED";
+export const RELEASED = "Released";
+const STATE_WORDS: Partial<Record<ReadbackState, string>> = { ...REQUESTED_WORDS, confirmed: "CONFIRMED" };
+
+/**
+ * Who asked, as a history chart labels a request: the actor and source ("jason · dashboard", "forecast-engine · system"),
+ * and AI in words for Iris and the named agents ("iris · AI", "steward · agent · AI"), as a canvas draws no badge.
+ */
+export function requesterWords(actor: Actor): string {
+  if (actor.source === "iris") return `${actor.name} · AI`;
+  if (isAiSource(actor.source)) return `${actor.name} · agent · AI`;
+  return `${actor.name} · ${actor.source}`;
+}
 
 const byTime = <T,>(items: readonly T[], at: (item: T) => string) => items
   .map((item) => ({ item, at: epochOf(at(item)) }))
@@ -117,15 +134,17 @@ const byTime = <T,>(items: readonly T[], at: (item: T) => string) => items
 /**
  * The steps of one setting (API-12). Device: each readback change point held until the next point, the last until now.
  * Requested: each desired row still requested, not confirmed or held, from its request until it was confirmed, the
- * next desired row or now, whichever comes first; never drawn as the device line. Planned: Iris and forecast-rule
- * waypoints right of now only, each until the next waypoint or the window's end; a waypoint the API marks not
- * effective is SUPERSEDED, never the plan ahead, and says which value holds it off; a forecast rule never reads AI.
+ * next desired row or now, whichever comes first; never drawn as the device line. With `allRequests` every desired row
+ * draws until the next desired row or now, labelled with who asked, and a release ends the step before it with
+ * "Released". Planned: Iris and forecast-rule waypoints right of now only, each until the next waypoint or the window's
+ * end; a waypoint the API marks not effective is SUPERSEDED, never the plan ahead, and says which value holds it off; a
+ * forecast rule never reads AI.
  */
 export function settingSteps(input: SettingSteps, unit: string, now: number, windowEnd: number, prefix = false): StepSegment[] {
   const { history } = input;
   const setting = input.label || history.param;
   const named = (text: string) => (prefix ? `${setting} ${text}` : text);
-  const value = (number: number) => formatValue(number, unit);
+  const value = input.format ?? ((number: number) => formatValue(number, unit));
   const steps: StepSegment[] = [];
 
   const readback = byTime(history.readback, (point) => point.at);
@@ -138,6 +157,20 @@ export function settingSteps(input: SettingSteps, unit: string, now: number, win
 
   const desired = byTime(history.desired, (row) => row.created_at);
   desired.forEach(({ item, at }, index) => {
+    if (input.allRequests) {
+      if (item.value === null) return;
+      const next = desired[index + 1];
+      const end = next ? Math.min(next.at, now) : now;
+      if (end <= at) return;
+      const who = requesterWords(item.actor);
+      const released = next !== undefined && next.item.value === null && next.at <= now;
+      const parts = [`${setting} requested ${value(item.value)}`, who, STATE_WORDS[item.state], released ? RELEASED : null, item.reason ? `“${item.reason}”` : null];
+      steps.push({
+        kind: "requested", param: history.param, setting, start: at, end, value: item.value, state: item.state, who, label: named(who),
+        ...(released ? { endLabel: RELEASED } : {}), detail: parts.filter(Boolean).join(" · "),
+      });
+      return;
+    }
     const word = REQUESTED_WORDS[item.state];
     if (!word || item.value === null) return;
     const ends = [now, epochOf(item.confirmed_at), index + 1 < desired.length ? desired[index + 1].at : null].filter((end): end is number => end !== null);
@@ -202,11 +235,12 @@ export type Bound = { kind: "min" | "max"; value: number; setting: string; text:
 export function settingBounds(input: SettingSteps, unit: string, prefix = false): Bound[] {
   const { history } = input;
   const setting = input.label || history.param;
+  const words = input.format ?? ((number: number) => formatValue(number, unit));
   const bounds: Bound[] = [];
   for (const kind of ["min", "max"] as const) {
     const value = history[kind];
     if (value === null || value === undefined || !Number.isFinite(value)) continue;
-    bounds.push({ kind, value, setting, text: `${prefix ? `${setting} ` : ""}${kind} ${formatValue(value, unit)}` });
+    bounds.push({ kind, value, setting, text: `${prefix ? `${setting} ` : ""}${kind} ${words(value)}` });
   }
   return bounds;
 }

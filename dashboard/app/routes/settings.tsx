@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 import { useId, useState, type ReactNode } from "react";
 import { useLocation, useSearchParams } from "react-router";
+import { chartLinks } from "../charts/uplot-chart";
+import { BandPreviewPanel, hasBandCurve } from "../components/band-preview";
 import { Button } from "../components/button";
 import { Chips, type ChipLink } from "../components/chips";
 import { PageHead } from "../components/common";
 import { EditDrawer, ManualToggle, MANUAL_DEFAULT, NumberField, Reason, Select, Switch } from "../components/forms";
 import { EmptyState, Panel } from "../components/panel";
+import { SettingHistoryPanel } from "../components/setting-history";
 import { SETTING_GROUPS, SettingRow, SettingStatus, changedByAgent, classLabel, groupLabel, valueInForce } from "../components/setting-row";
 import type { Setting } from "../lib/operator-api";
 import { useProgramRevisionRead, useSettingsRead } from "../lib/queries";
@@ -15,12 +18,14 @@ import { useShellNow, useShellStatus } from "../lib/shell";
 import { errorFor, formError, useSettingWrite } from "../lib/writes";
 
 export const meta = () => [{ title: "Settings · Verdify dashboard" }];
+export const links = () => chartLinks();
 
 /**
  * SCR-05 Settings (`/settings`, `/settings?edit=<param>`): every registry row from API-09 in fixed groups, each with
  * the device's own value beside any request and its reason, MANUAL, who wrote the value in force, the next planned
- * value, and bounds and step; the edit drawer saves through API-10 and releases through API-11 (the S hook). Search
- * (`q`), the chips (`filter`) and the open drawer (`edit`) are in the URL. No greenhouse data renders in SSR.
+ * value, and bounds and step; the edit drawer saves through API-10 and releases through API-11 (the S hook), with the
+ * setting's history and Revert, and a crop-band anchor's curve preview. Search (`q`), the chips (`filter`), the open
+ * drawer (`edit`) and its history window (`hist`) are in the URL. No greenhouse data renders in SSR.
  */
 
 // ---------------------------------------------------------------------------------------------------- filters
@@ -78,11 +83,11 @@ export default function Settings() {
   const chips: ChipLink[] = SETTING_FILTERS.map((item) => ({
     key: item.key,
     label: item.key === "all" ? item.label : <>{item.label} <span className="chip-count">{items ? items.filter(item.test).length : "—"}</span></>,
-    to: withParams(pathname, params, { filter: item.key === "all" ? null : item.key, edit: null }),
+    to: withParams(pathname, params, { filter: item.key === "all" ? null : item.key, edit: null, hist: null }),
     current: item.key === filter.key,
   }));
-  const editTo = (param: string) => withParams(pathname, params, { edit: param });
-  const close = () => setParams((current) => { const next = new URLSearchParams(current); next.delete("edit"); return next; }, { replace: true });
+  const editTo = (param: string) => withParams(pathname, params, { edit: param, hist: null });
+  const close = () => setParams((current) => { const next = new URLSearchParams(current); next.delete("edit"); next.delete("hist"); return next; }, { replace: true });
   const editRow = items && editing ? items.find((row) => row.param === editing) ?? null : null;
   const panelState = items ? (shown.length ? "ready" : "empty") : read.isError ? "error" : "loading";
   const emptyText = query.trim() ? `No setting matches “${query.trim()}”` : filter.empty;
@@ -157,9 +162,10 @@ function SiteCapStatus({ setting, readbackStale }: { setting: Setting; readbackS
 
 /**
  * `?edit=<param>`: the one edit drawer (#1125). Class and key, the device value and its badge, the field for the kind
- * (NumberField, Switch or Select) starting at the value in force, Manual ticked, Reason, Save and Release to auto. A
- * viewer, or anyone on a row the API serves with `writable: false`, gets it read-only (value, badge, bounds and the
- * reason); with changes switched off an operator's Save and Release are disabled.
+ * (NumberField, Switch or Select) starting at the value in force, a crop-band anchor's curve preview, Manual ticked,
+ * Reason, the history with Revert, Save and Release to auto. A viewer, or anyone on a row the API serves with
+ * `writable: false`, gets it read-only (value, badge, bounds, the reason and the history); with changes switched off an
+ * operator's Save, Release and Revert are disabled. A Band in force row is derived, so it has no history of its own.
  */
 function SettingDrawer({ setting, onClose }: { setting: Setting; onClose: () => void }) {
   const operator = useRole() === "operator";
@@ -201,6 +207,7 @@ function SettingDrawer({ setting, onClose }: { setting: Setting; onClose: () => 
   const switchError = setting.kind === "switch" ? typed : null;
   // Only while Save is live: with changes switched off it is disabled, and the shell's banner says so.
   const notReporting = !readOnly && writesEnabled && (status.ingestorRunning === false || status.controllerReporting === false);
+  const curved = hasBandCurve(setting);
   return <EditDrawer open onClose={onClose} title={readOnly ? "Setting" : "Edit setting"} eyebrow={`${classLabel(setting.control_class)} · ${setting.param}`}
     heading={setting.label} graph={setting.group === "band_in_force" ? undefined : { param: setting.param, unit: setting.unit }} readOnly={!setting.writable}
     status={<div className="drawer-setting">
@@ -209,8 +216,10 @@ function SettingDrawer({ setting, onClose }: { setting: Setting; onClose: () => 
       {notReporting && <p className="state-note">Save still works: the change applies when the controller reports again.</p>}
     </div>}
     onSave={save} saving={write.sending} error={switchError ?? formError(write.error, setting.kind === "switch" ? ["reason"] : ["value", "reason"])}
-    actions={<Button write onClick={release} disabled={write.sending}>Release to auto</Button>}>
+    actions={<Button write onClick={release} disabled={write.sending}>Release to auto</Button>}
+    below={setting.group === "band_in_force" ? undefined : <SettingHistoryPanel setting={setting} manual={manual} onReverted={onClose} band={curved} busy={write.sending} />}>
     {field}
+    {curved && <BandPreviewPanel setting={setting} draft={parseDecimal(text)} />}
     {!readOnly && <ManualToggle checked={manual} onChange={setManual} />}
     {!readOnly && <Reason value={reason} onChange={setReason} error={errorFor(write.error, "reason")} />}
   </EditDrawer>;

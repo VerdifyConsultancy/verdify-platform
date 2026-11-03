@@ -6,7 +6,7 @@ import type { MetricDef, Series, XRange } from "./types";
  * "CSV of this window" (design system §5.3): exactly the plotted columns, the local time with its offset and then each
  * trace's `avg` in canonical units, an empty cell for a gap. Built in the browser; nothing is fetched.
  */
-export type CsvColumn = { header: string; values: readonly (number | null | undefined)[] };
+export type CsvColumn = { header: string; values: readonly (number | string | null | undefined)[] };
 /** One chart's columns on its own bucket starts. */
 export type CsvBlock = { t: readonly number[]; columns: readonly CsvColumn[] };
 
@@ -16,7 +16,7 @@ export const TIME_HEADER = "time (America/Denver)";
 export function csvCell(text: string): string {
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
-const numberCell = (value: number | null | undefined) => (value === null || value === undefined || !Number.isFinite(value) ? "" : String(value));
+const valueCell = (value: number | string | null | undefined) => (typeof value === "string" ? value : value === null || value === undefined || !Number.isFinite(value) ? "" : String(value));
 const line = (cells: readonly string[]) => cells.map(csvCell).join(",");
 
 /** The CSV text: a byte-order mark (spreadsheets then read the units' UTF-8), a header row and one row per bucket. */
@@ -36,7 +36,7 @@ export function windowCsv(blocks: readonly CsvBlock[]): string {
     const cells = [isoLocal(at)];
     blocks.forEach((block, position) => {
       const index = lookups[position].get(at);
-      for (const column of block.columns) cells.push(index === undefined ? "" : numberCell(column.values[index]));
+      for (const column of block.columns) cells.push(index === undefined ? "" : valueCell(column.values[index]));
     });
     rows.push(line(cells));
   }

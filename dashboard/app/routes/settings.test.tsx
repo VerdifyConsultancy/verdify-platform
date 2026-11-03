@@ -3,18 +3,30 @@
 // SCR-05 Settings (#1132) inside the shell, against #1122's fixture API in process: API-09's base is the settings
 // fixture rendered at test time from verdify_schemas/tunable_registry.py (pnpm fixtures:settings). Fake timers at
 // 10:42 America/Denver on 2026-11-02.
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { createRoutesStub, useLocation } from "react-router";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { fixture } from "../../e2e/fixtures/index.mjs";
+import { FakeResizeObserver, MockPlot, created, media, setTokens } from "../charts/fixtures/uplot-mock";
 import { AppShell } from "../components/app-shell";
 import { SETTING_GROUPS } from "../components/setting-row";
 import { text } from "../components/test-render";
 import { unitLabel } from "../lib/setting-values";
-import { NOW, UUID, advance, sentAt, startFixtureApi, stopFixtureApi, writes, type FixtureOptions } from "../lib/test-fixture-api";
-import Settings from "./settings";
+import { NOW, UUID, advance, requests, sentAt, startFixtureApi, stopFixtureApi, writes, type FixtureOptions } from "../lib/test-fixture-api";
+import Settings, { links } from "./settings";
 
-afterEach(() => { cleanup(); stopFixtureApi(); });
+vi.mock("uplot", async () => ({ default: (await import("../charts/fixtures/uplot-mock")).MockPlot }));
+
+const { createObjectURL, revokeObjectURL } = URL;
+beforeEach(() => {
+  MockPlot.reset(); FakeResizeObserver.instances = [];
+  URL.createObjectURL = vi.fn(() => "blob:csv");
+  URL.revokeObjectURL = vi.fn();
+});
+afterEach(() => {
+  cleanup(); stopFixtureApi(); document.documentElement.removeAttribute("style");
+  URL.createObjectURL = createObjectURL; URL.revokeObjectURL = revokeObjectURL;
+});
 const BUILD = "fedcba9876543210fedcba9876543210fedcba98";
 type Row = {
   param: string; label: string; group: string; unit: string | null; writable: boolean; readback: { value: number | null } | null; readback_via: string;
@@ -39,6 +51,9 @@ function patchSettings(patch: (items: Row[]) => Row[]) {
 /** The shell with Settings at `path`, served by the fixture API; the shell's reads and API-09 have answered. */
 async function open(path: string, { patch, ...options }: FixtureOptions & { patch?: (items: Row[]) => Row[] } = {}) {
   const api = startFixtureApi(options);
+  vi.stubGlobal("ResizeObserver", FakeResizeObserver);
+  vi.stubGlobal("matchMedia", media({ fine: true }));
+  setTokens();
   if (patch) patchSettings(patch);
   const Stub = createRoutesStub([{
     path: "/", Component: () => <AppShell build={BUILD} authError={null} />,
@@ -50,7 +65,10 @@ async function open(path: string, { patch, ...options }: FixtureOptions & { patc
 }
 /** Lets the requests a render starts answer and render. */
 async function settle() {
-  for (let pass = 0; pass < 3; pass += 1) await advance(10);
+  for (let pass = 0; pass < 3; pass += 1) {
+    await advance(10);
+    await act(async () => { await vi.dynamicImportSettled(); });
+  }
 }
 const here = () => screen.getByTestId("here").textContent;
 const shown = () => [...document.querySelectorAll("tr.setting-row")].map((row) => row.getAttribute("data-param"));
@@ -426,4 +444,199 @@ test("device values read STALE with their age while readbacks are stale, and Sav
   expect(screen.getByText("Couldn't load settings.")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
   expect(shown()).toEqual([]);
+});
+
+// ---------------------------------------------------------------------------------------------------- history and revert (#1139)
+const ENGAGE = "/settings?q=mister_engage_kpa&edit=mister_engage_kpa";
+const CENTER = "zone_vpd_target_center_sm";
+const CENTER_DRAWER = `/settings?q=${CENTER}&edit=${CENTER}`;
+const plain = (value: Element | null) => text(value).replaceAll("\u00a0", " ");
+const revert = () => within(dialog()).queryByRole("button", { name: /^Revert to / });
+const lastPlot = () => created.filter((item) => !item.destroyed).at(-1)!;
+/** The band preview's chart: its target series as stored, then the draft's. */
+const previewPlot = () => created.filter((item) => !item.destroyed && item.opts.series.length === 5).at(-1)!;
+const historyKey = () => [...dialog().querySelectorAll(".drawer-history .chart-key li")].map((item) => text(item));
+
+test("the Settings route loads the chart styles its drawer needs", () => {
+  expect(links()).toHaveLength(2);
+});
+
+test("the drawer shows the history under the fields, the signed-in person by display name; Revert writes API-10 and the row reads REQUESTED, then CONFIRMED", async () => {
+  const api = await open(ENGAGE, { fixture: ["setting-history", "requested-to-confirmed"] });
+  expect(dialog().querySelector(".drawer-fields .drawer-history")).toBeNull();
+  expect(dialog().querySelector(".drawer-body > .drawer-history")).not.toBeNull();
+  expect(historyKey()).toEqual(["Device readback", "iris · AI", "Jason · dashboard", "SUPERSEDED", "Min and max"]);
+  expect(plain(revert())).toBe("Revert to 1.60 kPa (iris, 11/02 07:02)");
+  fireEvent.click(revert()!);
+  await settle();
+  expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-10", method: "PUT", body: { value: 1.6, manual: true, reason: "Revert to 1.60 kPa (iris, 11/02 07:02)" } })]);
+  expect(drawerOpen()).toBe(false);
+  expect(here()).toBe("/settings?q=mister_engage_kpa");
+  expect(toasts()).toEqual(["Requested 1.60 kPa for VPD Mister Engage"]);
+  expect(rowOf("mister_engage_kpa").querySelector(".setting-request [data-badge=requested]")).not.toBeNull();
+  await advance(5_000);
+  await advance(5_000);
+  await settle();
+  expect(linesOf("mister_engage_kpa", ".setting-request")).toEqual([]);
+  expect(linesOf("mister_engage_kpa", ".setting-value")[0]).toMatch(/^1\.60 kPa Confirmed · /);
+  expect(writes(api)).toHaveLength(1);
+});
+
+test("the drawer's Manual box goes with Revert, and the history window leaves the URL when the drawer closes", async () => {
+  const api = await open(`${ENGAGE}&hist=30d`, { fixture: "setting-history" });
+  fireEvent.click(screen.getByRole("checkbox", { name: "Manual: Iris skips this" }));
+  fireEvent.click(revert()!);
+  await settle();
+  expect(writes(api).map((row) => (row.body as { manual: boolean }).manual)).toEqual([false]);
+  expect(here()).toBe("/settings?q=mister_engage_kpa");
+  cleanup();
+  stopFixtureApi();
+  await open(`${ENGAGE}&hist=30d`, { fixture: "setting-history" });
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Cancel" }));
+  await settle();
+  expect(here()).toBe("/settings?q=mister_engage_kpa");
+});
+
+test("a Save reopened in the same instant shows the new row: the drawer never reuses an answer from before the write", async () => {
+  const api = await open(ENGAGE, { fixture: "setting-history" });
+  fireEvent.change(screen.getByLabelText("New value"), { target: { value: "1.70" } });
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Save" }));
+  await settle();
+  fireEvent.click(screen.getByRole("link", { name: "Edit VPD Mister Engage" }));
+  await settle();
+  expect(requests(api, "API-12").length).toBeGreaterThanOrEqual(2);
+  expect(plain(revert())).toBe("Revert to 1.55 kPa (Jason, 11/02 08:00)");
+});
+
+test("with setting-history-release Revert sends one API-11; the row reads Released, then shows the readback", async () => {
+  const api = await open(ENGAGE, { fixture: "setting-history-release" });
+  expect(text(revert())).toBe("Revert to auto");
+  fireEvent.click(revert()!);
+  await settle();
+  expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-11", method: "DELETE", body: null })]);
+  expect(new URL(writes(api)[0].path, "http://x").searchParams.get("reason")).toBe("Revert to auto (Jason, 11/02 07:02)");
+  expect(drawerOpen()).toBe(false);
+  expect(toasts()).toEqual(["Released VPD Mister Engage: plan, band or default applies"]);
+  expect(linesOf("mister_engage_kpa", ".setting-writer")).toEqual(["Released: plan, band or default applies"]);
+  expect(linesOf("mister_engage_kpa", ".setting-value")[0]).toMatch(/^1\.55 kPa Confirmed · /);
+});
+
+test("a 422 reads beside Revert, the drawer stays open and Save keeps its own field clear", async () => {
+  const api = await open(ENGAGE, { fixture: "setting-history" });
+  const fixtureFetch = globalThis.fetch;
+  vi.stubGlobal("fetch", async (input: string, init: RequestInit = {}) => {
+    if ((init.method ?? "GET") !== "PUT") return fixtureFetch(input, init);
+    const problem = { type: "about:blank", title: "Out of range", status: 422, code: "out_of_range", retryable: false, field: "value", min: 1.7, max: 2.5 };
+    return { status: 422, ok: false, type: "basic", headers: new Headers(), json: async () => problem, text: async () => "" } as unknown as Response;
+  });
+  fireEvent.click(revert()!);
+  await settle();
+  expect(plain(dialog().querySelector(".drawer-revert .field-error"))).toBe("Must be 1.70–2.50 kPa");
+  expect(dialog().querySelector(".number-field .field-error")).toBeNull();
+  expect(drawerOpen()).toBe(true);
+  expect(writes(api)).toEqual([]);
+});
+
+test("a viewer and a read-only row see the history with no Revert; a Band in force row has no history", async () => {
+  const api = await open(ENGAGE, { fixture: ["setting-history", "viewer-session"] });
+  expect(historyKey()).toContain("Device readback");
+  expect(revert()).toBeNull();
+  expect(requests(api, "API-12")).toHaveLength(1);
+  cleanup();
+  stopFixtureApi();
+  await open("/settings?q=temp_low&edit=temp_low");
+  expect(dialog().querySelector(".drawer-history")).not.toBeNull();
+  expect(revert()).toBeNull();
+  // Retry and Reset zoom stay live though the fields are disabled: the history is outside their fieldset.
+  expect(dialog().querySelector(".drawer-history")!.closest("fieldset")).toBeNull();
+  cleanup();
+  stopFixtureApi();
+  const band = await open("/settings?q=band_house_temp_low&edit=band_house_temp_low");
+  expect(dialog().querySelector(".drawer-history")).toBeNull();
+  expect(requests(band, "API-12")).toEqual([]);
+});
+
+test("no curve on a row with none; the preview sits under the value field on an anchor", async () => {
+  const none = await open(ENGAGE);
+  expect(dialog().querySelector(".band-preview")).toBeNull();
+  expect(requests(none, "API-19")).toEqual([]);
+  cleanup();
+  stopFixtureApi();
+  await open(CENTER_DRAWER, { fixture: "band-preview-center" });
+  const preview = dialog().querySelector(".drawer-fields > .band-preview");
+  expect(preview).not.toBeNull();
+  expect(preview!.previousElementSibling!.className).toContain("number-field");
+});
+
+test("a band edit previews before Save and Save is the ordinary API-10; a draft outside the bounds reads Must be … and Save still works", async () => {
+  const api = await open(CENTER_DRAWER, { fixture: "band-preview-center" });
+  const asked = () => requests(api, "API-19").map((row) => new URL(row.path, "http://x").searchParams.get("value"));
+  expect(asked()).toEqual(["1.1"]);
+  const field = screen.getByLabelText("New value");
+  fireEvent.change(field, { target: { value: "3.5" } });
+  await advance(300);
+  await settle();
+  expect(asked()).toEqual(["1.1", "3.5"]);
+  expect(plain(dialog().querySelector(".band-preview .chart-message"))).toBe("Must be 0.10–3.00 kPa");
+  // Only the panel changed: Save is live, and refuses the value beside the field as it always does.
+  const save = within(dialog()).getByRole("button", { name: "Save" });
+  expect(save.hasAttribute("disabled")).toBe(false);
+  fireEvent.click(save);
+  await settle();
+  expect(plain(dialog().querySelector(".number-field .field-error"))).toBe("Must be 0.10–3.00 kPa");
+  expect(writes(api)).toEqual([]);
+  fireEvent.change(field, { target: { value: "1.25" } });
+  await advance(300);
+  await settle();
+  expect(dialog().querySelector(".band-preview .chart-message")).toBeNull();
+  expect(writes(api)).toEqual([]);
+  expect((previewPlot().data[2] as number[]).some((value) => value === 1.25)).toBe(true);
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Save" }));
+  await settle();
+  expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-10", body: { value: 1.25, manual: true } })]);
+  expect(drawerOpen()).toBe(false);
+});
+
+test("with the preview failing Save still sends", async () => {
+  const api = await open(CENTER_DRAWER, { fixture: "band-preview-center", fail: { "API-19": 500 } });
+  expect(text(dialog().querySelector(".band-preview .chart-message"))).toBe("Preview unavailable");
+  fireEvent.change(screen.getByLabelText("New value"), { target: { value: "1.25" } });
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Save" }));
+  await settle();
+  expect(writes(api).map((row) => row.operationId)).toEqual(["API-10"]);
+});
+
+test("after saving an anchor, Revert restores the previous one through API-10, and the preview's current curve is the previous one again", async () => {
+  const api = await open(CENTER_DRAWER, { fixture: "band-preview-center" });
+  const target = () => [...(previewPlot().data[1] as number[])];
+  const before = target();
+  expect(Math.max(...before)).toBe(1.1);
+  const reopen = async () => {
+    fireEvent.click(screen.getByRole("link", { name: /^Edit Zone VPD Target Center SM$/ }));
+    await settle();
+  };
+  fireEvent.change(screen.getByLabelText("New value"), { target: { value: "1.25" } });
+  await advance(300);
+  await settle();
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Save" }));
+  await settle();
+  await reopen();
+  // The first dashboard edit of this anchor: no earlier row, and a release would leave crop_band_anchors as it is, so
+  // Revert goes back to what the device held before.
+  expect(Math.max(...target())).toBe(1.25);
+  expect(plain(revert())).toBe("Revert to 1.10 kPa (device, 10/31 07:00)");
+  fireEvent.click(revert()!);
+  await settle();
+  const sent = writes(api);
+  expect(sent.map((row) => [row.operationId, (row.body as { value: number }).value])).toEqual([["API-10", 1.25], ["API-10", 1.1]]);
+  await reopen();
+  expect(target()).toEqual(before);
+  // With an earlier row, Revert names it.
+  expect(plain(revert())).toBe("Revert to 1.25 kPa (Jason, 11/02 10:42)");
+});
+
+test("the plot in the drawer is the setting's own: a settings-only chart in the setting's unit", async () => {
+  await open(`${ENGAGE}&hist=24h`, { fixture: "setting-history" });
+  expect(lastPlot().opts.series).toHaveLength(1);
+  expect(text(dialog().querySelector(".drawer-history figcaption"))).toBe("VPD Mister Engage · kPa");
 });

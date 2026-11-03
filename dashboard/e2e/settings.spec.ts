@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SCR-05 Settings (#1132): the catalog from the rendered registry fixture, the chips in the URL, a setting going
 // REQUESTED → CONFIRMED or NOT CONFIRMED, the refusal beside the field, Release, the site caps, and read-only drawers.
+// #1139: the drawer's history with Revert, and a crop-band anchor's curve preview.
 import type { Page } from "@playwright/test";
-import { expect, fixtureWrites, load, test, toastLines, untilPolled, useScreensClock } from "./support";
+import { NOW, expect, fixtureRequests, fixtureWrites, load, test, toastLines, untilPolled, useScreensClock } from "./support";
 
 const row = (page: Page, param: string) => page.locator(`tr.setting-row[data-param="${param}"]`);
 const drawer = (page: Page) => page.locator("dialog[open]");
@@ -144,4 +145,128 @@ test("with changes switched off an operator's Save and Release are disabled besi
   await expect(page.locator("[data-banner=warn]")).toHaveText("Changes are switched off; reading still works");
   await expect(drawer(page).getByRole("button", { name: "Save" })).toBeDisabled();
   await expect(drawer(page).getByRole("button", { name: "Release to auto" })).toBeDisabled();
+});
+
+// ---------------------------------------------------------------------------------------------------- history and revert (#1139)
+const CENTER = "/settings?q=zone_vpd_target_center_sm&edit=zone_vpd_target_center_sm";
+const history = (page: Page) => drawer(page).locator(".drawer-history");
+const preview = (page: Page) => drawer(page).locator(".band-preview");
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+const iso = (ms: number) => new Date(ms).toISOString();
+const windowOf = (path: string) => { const query = new URL(path, "http://x").searchParams; return [query.get("from"), query.get("to")]; };
+
+test("the history reads 7 d to 12 h ahead by default, with its window chips in the URL; the key names each source present", async ({ page, request }) => {
+  await useScreensClock(page, request, "setting-history");
+  await load(page, ENGAGE);
+  const now = Date.parse(NOW);
+  await expect(history(page).getByRole("link", { name: "7 d" })).toHaveAttribute("aria-current", "true");
+  await expect(history(page).locator(".plot canvas").first()).toBeVisible();
+  await expect(history(page).locator(".chart-key li")).toHaveText(["Device readback", "iris · AI", "Jason · dashboard", "SUPERSEDED", "Min and max"]);
+  expect((await fixtureRequests(request, "API-12")).map((row) => windowOf(row.path))).toEqual([[iso(now - 7 * DAY_MS), iso(now + 12 * HOUR_MS)]]);
+  await history(page).getByRole("link", { name: "30 d" }).click();
+  await expect(page).toHaveURL(/edit=mister_engage_kpa&hist=30d$/);
+  await expect(history(page).getByRole("link", { name: "30 d" })).toHaveAttribute("aria-current", "true");
+  await expect.poll(async () => (await fixtureRequests(request, "API-12")).map((row) => windowOf(row.path)[0])).toEqual([iso(now - 7 * DAY_MS), iso(now - 30 * DAY_MS)]);
+  // The tooltip's and the table's words, and the CSV.
+  await history(page).locator("summary").click();
+  await expect(history(page).locator("tbody")).toContainText("requested 1.60 kPa · iris · AI · CONFIRMED");
+  await expect(history(page).locator("tbody")).toContainText("requested 1.55 kPa · Jason · dashboard · CONFIRMED · “Vandas drying”");
+  await expect(history(page).getByRole("link", { name: "CSV of this window" })).toHaveAttribute("href", /^blob:/);
+  // Closing the drawer drops its window from the URL.
+  await drawer(page).getByRole("button", { name: "Cancel" }).click();
+  await expect(page).toHaveURL(/\/settings\?q=mister_engage_kpa$/);
+});
+
+test("with setting-history Revert reads Revert to 1.60 kPa and sends one API-10; the row reads REQUESTED, then CONFIRMED", async ({ page, request }) => {
+  await useScreensClock(page, request, ["setting-history", "requested-to-confirmed"]);
+  await load(page, ENGAGE);
+  await expect(drawer(page).getByLabel("Revert reason")).toHaveValue("Revert to 1.60 kPa (iris, 11/02 07:02)");
+  await drawer(page).getByRole("button", { name: "Revert to 1.60 kPa (iris, 11/02 07:02)" }).click();
+  await expect(drawer(page)).toHaveCount(0);
+  await expect(toastLines(page)).toHaveText(["Requested 1.60 kPa for VPD Mister Engage"]);
+  const engage = row(page, "mister_engage_kpa");
+  await expect(engage.locator(".setting-request [data-badge=requested]")).toBeVisible();
+  await untilPolled(page, () => expect(engage.locator(".setting-request")).toHaveCount(0, { timeout: 500 }));
+  await expect(engage.locator(".setting-value").first()).toContainText("1.60 kPa");
+  await expect(engage.locator(".setting-value [data-badge=confirmed]").first()).toBeVisible();
+  const writes = await fixtureWrites(request);
+  expect(writes.map((write) => [write.operationId, write.body])).toEqual([["API-10", { value: 1.6, manual: true, reason: "Revert to 1.60 kPa (iris, 11/02 07:02)" }]]);
+  expect(writes[0].idempotency_key).toBeTruthy();
+});
+
+test("with setting-history-release Revert to auto sends one API-11 and the row reads Released, then the readback", async ({ page, request }) => {
+  await useScreensClock(page, request, "setting-history-release");
+  await load(page, ENGAGE);
+  await drawer(page).getByRole("button", { name: "Revert to auto" }).click();
+  await expect(drawer(page)).toHaveCount(0);
+  const engage = row(page, "mister_engage_kpa");
+  await expect(engage.locator(".setting-writer")).toHaveText("Released: plan, band or default applies");
+  await expect(engage.locator(".setting-value").first()).toContainText("1.55 kPa");
+  expect((await fixtureWrites(request)).map((write) => [write.operationId, write.method, write.body])).toEqual([["API-11", "DELETE", null]]);
+});
+
+test("with no earlier row in 90 days Revert reads 90 days back once, then goes back to auto; with an older row, to that row", async ({ page, request }) => {
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/settings?q=fog_rh_ceiling_pct&edit=fog_rh_ceiling_pct");
+  await expect(drawer(page).getByRole("button", { name: "Revert to auto" })).toBeVisible();
+  const now = Date.parse(NOW);
+  expect((await fixtureRequests(request, "API-12")).map((row) => windowOf(row.path)[0])).toEqual([iso(now - 7 * DAY_MS), iso(now - 90 * DAY_MS)]);
+  await useScreensClock(page, request, "setting-history-older");
+  await load(page, ENGAGE);
+  await expect(drawer(page).getByRole("button", { name: "Revert to 1.60 kPa (steward, 10/21 08:02)" })).toBeVisible();
+});
+
+test("a setting with no desired row has no Revert; a viewer sees the history and no Revert", async ({ page, request }) => {
+  await useScreensClock(page, request, "in-band");
+  await load(page, ENGAGE);
+  await expect(history(page).locator(".plot canvas").first()).toBeVisible();
+  await expect(history(page).getByRole("button", { name: /^Revert/ })).toHaveCount(0);
+  await useScreensClock(page, request, ["setting-history", "viewer-session"]);
+  await load(page, ENGAGE);
+  await expect(history(page).locator(".chart-key li").first()).toHaveText("Device readback");
+  await expect(history(page).locator(".drawer-revert")).toHaveCount(0);
+});
+
+test("a band edit redraws the API-19 preview before Save; a draft outside the bounds reads Must be … and Save still works", async ({ page, request }) => {
+  await useScreensClock(page, request, "band-preview-center");
+  await load(page, CENTER);
+  await expect(preview(page).locator("figcaption")).toHaveText("Center zone VPD · kPa · America/Denver");
+  await expect(preview(page).locator(".plot canvas").first()).toBeVisible();
+  await expect(preview(page).locator(".chart-notes li")).toHaveText(["Sunrise 06:35", "Solar noon 11:47", "Sunset 16:58"]);
+  const field = drawer(page).getByLabel("New value");
+  await field.fill("1.25");
+  await expect(preview(page).locator(".chart-key li")).toHaveText(["Band as stored", "Target as stored", "PREVIEW"]);
+  expect((await fixtureRequests(request, "API-19")).at(-1)?.path).toMatch(/\/band\/preview\?param=zone_vpd_target_center_sm&value=1\.25$/);
+  await field.fill("3.5");
+  await expect(preview(page).locator(".chart-message")).toHaveText("Must be 0.10–3.00 kPa");
+  expect(await fixtureWrites(request)).toEqual([]);
+  await expect(drawer(page).getByRole("button", { name: "Save" })).toBeEnabled();
+  await field.fill("1.25");
+  await expect(preview(page).locator(".chart-message")).toHaveCount(0);
+  await drawer(page).getByRole("button", { name: "Save" }).click();
+  await expect(drawer(page)).toHaveCount(0);
+  expect((await fixtureWrites(request)).map((write) => [write.operationId, write.body])).toEqual([["API-10", { value: 1.25, manual: true }]]);
+});
+
+test("after saving an anchor, Revert restores the previous one through API-10, and the preview's current curve is the previous one again", async ({ page, request }) => {
+  await useScreensClock(page, request, "band-preview-center");
+  await load(page, CENTER);
+  const edit = page.getByRole("link", { name: "Edit Zone VPD Target Center SM" });
+  // Row 72 of the table is 12:00, where the fixture's curve reaches the anchor.
+  const noonTarget = async () => {
+    await preview(page).locator("summary").click();
+    return preview(page).locator("tbody tr").nth(72).locator("td").nth(1);
+  };
+  await expect(await noonTarget()).toHaveText("1.10 kPa");
+  await drawer(page).getByLabel("New value").fill("1.25");
+  await drawer(page).getByRole("button", { name: "Save" }).click();
+  await expect(drawer(page)).toHaveCount(0);
+  await edit.click();
+  await expect(await noonTarget()).toHaveText("1.25 kPa");
+  await drawer(page).getByRole("button", { name: "Revert to 1.10 kPa (device, 10/31 07:00)" }).click();
+  await expect(drawer(page)).toHaveCount(0);
+  await edit.click();
+  await expect(await noonTarget()).toHaveText("1.10 kPa");
+  expect((await fixtureWrites(request)).map((write) => [write.operationId, (write.body as { value: number }).value])).toEqual([["API-10", 1.25], ["API-10", 1.1]]);
 });

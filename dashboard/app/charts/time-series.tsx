@@ -5,8 +5,8 @@ import { formatValue, unitDecimals } from "../lib/format";
 import { csvFilename, csvText, type CsvBlock } from "./csv";
 import { CsvLink, DataTable, TimeCell, type DataTableBlock } from "./data-table";
 import { paintBandEdges, paintBandFill, paintBounds, paintLabels, paintNow, paintRetention, paintSteps, type ChartColors } from "./draw";
-import { Legend } from "./legend";
-import { bandAt, bandKindFor, bandRuns, groupSteps, marksExtent, paddedRange, settingBounds, settingSteps, stepsAt, type BandRun, type Bound, type StepSegment } from "./marks";
+import { ChartKey, Legend, type KeyItem } from "./legend";
+import { FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandKindFor, bandRuns, groupSteps, marksExtent, paddedRange, settingBounds, settingSteps, stepsAt, type BandRun, type Bound, type StepKind, type StepSegment } from "./marks";
 import { DAILY_SUMMARY_NOTE, retentionNote, runAt, staleness, traceGaps, type RetentionNote, type Staleness, type TraceGaps } from "./retention";
 import { seriesSummary, summaryText, whenText, type SeriesSummary } from "./summary";
 import { AXIS_FONT, epochOf, fullTime, timeAxis } from "./time-axis";
@@ -308,12 +308,47 @@ export function dataTables(model: TimeSeriesModel, hidden: ReadonlySet<string>):
     caption: `Setting steps${bounds ? ` · bounds ${bounds}` : ""}`, headers: ["From", "Until", "Step"], count: model.steps.length,
     rows: () => model.steps.map((step) => [<TimeCell key="from" at={step.start} />, <TimeCell key="to" at={step.end} />, step.detail]),
   };
-  return [buckets, steps];
+  // A settings-only chart has no buckets to list.
+  return model.t.length ? [buckets, steps] : [steps];
 }
 
 /** The CSV block: exactly the plotted series, `avg` in canonical units. */
 export function csvBlock(model: TimeSeriesModel, hidden: ReadonlySet<string>): CsvBlock {
   return { t: model.t, columns: shownTraces(model, hidden).map((trace) => ({ header: `${trace.key} (${model.unit})`, values: trace.values })) };
+}
+
+const STEP_KINDS: readonly StepKind[] = ["device", "requested", "planned", "superseded"];
+/**
+ * A settings-only chart's CSV: one row at each step's start and end, one column per setting and kind of step drawn, in
+ * canonical units, with who asked beside each request; an empty cell where no such step holds.
+ */
+export function stepsCsvBlock(model: TimeSeriesModel): CsvBlock {
+  const t = [...new Set(model.steps.flatMap((step) => [step.start, step.end]))].sort((a, b) => a - b);
+  const held = t.map((at) => stepsAt(model.stepGroups, at));
+  const unit = model.unit ? ` (${model.unit})` : "";
+  const params = [...new Set(model.steps.map((step) => step.param))];
+  const columns = params.flatMap((param) => STEP_KINDS.flatMap((kind) => {
+    if (!model.steps.some((step) => step.param === param && step.kind === kind)) return [];
+    const at = (index: number) => held[index].find((step) => step.param === param && step.kind === kind);
+    const value = { header: `${param} ${kind}${unit}`, values: t.map((_, index) => at(index)?.value ?? null) };
+    return kind === "requested" ? [value, { header: `${param} requested by`, values: t.map((_, index) => at(index)?.who ?? null) }] : [value];
+  }));
+  return { t, columns };
+}
+
+/** A settings-only chart's legend: the device line, each source present, the plan and the bounds, as drawn. */
+export function stepKey(model: TimeSeriesModel): KeyItem[] {
+  const items = new Map<string, KeyItem>();
+  const add = (item: KeyItem) => { if (!items.has(item.key)) items.set(item.key, item); };
+  for (const step of model.steps) {
+    if (step.kind === "device") add({ key: "device", label: "Device readback", token: "--c-setpoint", kind: "line" });
+    else if (step.kind === "requested") add({ key: `request:${step.who ?? ""}`, label: step.who ?? "Requested", token: "--c-requested", kind: "dashed" });
+    else if (step.kind === "superseded") add({ key: "superseded", label: SUPERSEDED, token: "--c-bound", kind: "dashed" });
+    else if (step.source === "iris") add({ key: "plan:iris", label: PLANNED_AI, token: model.seriesToken, kind: "dashed" });
+    else add({ key: "plan:rule", label: FORECAST_RULE, token: model.seriesToken, kind: "dashed" });
+  }
+  if (model.bounds.length) add({ key: "bounds", label: "Min and max", token: "--c-bound", kind: "dotted" });
+  return [...items.values()];
 }
 
 export function chartTitle(model: TimeSeriesModel): string {
@@ -388,6 +423,9 @@ export function TimeSeries(props: TimeSeriesProps) {
   // A message stands in for a panel whose series failed or has not loaded; otherwise the band and steps still draw.
   const drawable = !(props.series === null && props.message) && (model.t.length > 0 || model.steps.length > 0 || model.runs.length > 0);
   const traces = shownTraces(model, hidden);
+  // A chart with no metric at all draws only setting steps (the setting drawer's history), so they are what its CSV holds.
+  const stepsOnly = model.traces.length === 0;
+  const csvRows = stepsOnly ? model.steps.length > 0 : traces.length > 0;
   const notes = chartNotes(model, hidden);
   const when = (at: number) => whenText(at, model.bucketSeconds, model.windowFrom, model.windowTo);
   const onZoom = (state: boolean) => { setZoomed(state); props.onZoom?.(state); };
@@ -402,11 +440,12 @@ export function TimeSeries(props: TimeSeriesProps) {
       ? <UPlotChart options={(env) => timeSeriesOptions(env, modelRef, hiddenRef)} data={data} xRange={xRange} structure={structure} className={plotClass} label={chartLabel(model)} syncKey={syncKey} marks={model} onZoom={onZoom} onPlot={(plot) => { plotRef.current = plot; }} />
       : <div className={`${plotClass} chart-message`}><p>{props.message ?? "No data in this window"}</p></div>}
     <Legend items={model.traces.map((trace) => ({ key: trace.key, label: trace.label, token: trace.token, shown: !hidden.has(trace.key) }))} onToggle={toggle} />
+    {stepsOnly && drawable && <ChartKey items={stepKey(model)} />}
     {traces.length > 0 && <ul className="plot-summary">{traces.map((trace) => <li key={trace.key}>{summaryText(trace.label, model.unit, trace.summary, when)}</li>)}</ul>}
-    {((props.csv ?? true) && traces.length > 0) || ((props.zoomControl ?? true) && zoomed)
+    {((props.csv ?? true) && csvRows) || ((props.zoomControl ?? true) && zoomed)
       ? <div className="chart-tools">
         {(props.zoomControl ?? true) && zoomed && <button type="button" onClick={reset}>Reset zoom</button>}
-        {(props.csv ?? true) && traces.length > 0 && <CsvLink filename={csvFilename(props.title ?? chartTitle(model), xRange)} build={() => csvText(csvBlock(model, hidden))} version={csvVersion} />}
+        {(props.csv ?? true) && csvRows && <CsvLink filename={csvFilename(props.title ?? chartTitle(model), xRange)} build={() => csvText(stepsOnly ? stepsCsvBlock(model) : csvBlock(model, hidden))} version={csvVersion} />}
       </div>
       : null}
     {drawable && <DataTable tables={dataTables(model, hidden)} />}

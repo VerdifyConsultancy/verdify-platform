@@ -7,6 +7,8 @@
 @media(max-width:860px){.chart .plot{height:220px}}
 .chart .plot.plot-small{height:150px}
 .chart .eyebrow{margin:0 0 .35rem}
+/* The band preview (VD-19): under the drawer's value field, so Manual and Reason stay in sight. */
+.band-preview .chart .plot{height:220px}
 .chart-message{display:flex;align-items:center;justify-content:center;border:1px dashed var(--line-strong);border-radius:var(--radius);color:var(--muted);font-size:.875rem;text-align:center;padding:1rem}
 .chart-message p{margin:0}
 .chart-notes{list-style:none;padding:0;margin:0 0 .35rem;display:flex;flex-wrap:wrap;gap:.15rem 1rem;font-size:.8rem;color:var(--muted)}
@@ -100,7 +102,10 @@
 .chart-key-swatch[data-kind=hatch]{background:repeating-linear-gradient(135deg,currentColor 0 1px,transparent 1px 4px);border:1px solid var(--line)}
 .chart-key-swatch[data-kind=dashed]{background:transparent;border:1px dashed currentColor}
 .chart-key-swatch[data-kind=dotted]{height:0;border-radius:0;background:none;border-top:2px dotted currentColor}
+.chart-key-swatch[data-kind=line]{height:0;border-radius:0;background:none;border-top:2px solid currentColor}
 .chart-key-swatch[data-token=ink]{color:var(--ink)}.chart-key-swatch[data-token=c-bound]{color:var(--c-bound)}
+.chart-key-swatch[data-token=c-setpoint]{color:var(--c-setpoint)}.chart-key-swatch[data-token=c-requested]{color:var(--c-requested)}.chart-key-swatch[data-token=c-band-edge]{color:var(--c-band-edge)}
+.chart-key-swatch[data-token=c-temp]{color:var(--c-temp)}.chart-key-swatch[data-token=c-vpd]{color:var(--c-vpd)}.chart-key-swatch[data-token=c-rh]{color:var(--c-rh)}
 .chart-key-swatch[data-token=eq-mister]{color:var(--eq-mister)}.chart-key-swatch[data-token=eq-water]{color:var(--eq-water)}
 .chart-key-swatch[data-token=eq-master]{color:var(--eq-master)}.chart-key-swatch[data-token=eq-fert]{color:var(--eq-fert)}
 .chart-key-swatch[data-token=eq-fog]{color:var(--eq-fog)}.chart-key-swatch[data-token=eq-heat1]{color:var(--eq-heat1)}
