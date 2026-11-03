@@ -120,7 +120,7 @@ test("Now's reads cover every zone's keys within API-04's 8 per request, each ke
   expect(PROBE_VPD_KEYS).toEqual(["climate.vpd_north", "climate.vpd_east", "climate.vpd_south", "climate.vpd_west"]);
 });
 
-test("served by the fixture: south's probe out reads null for 20 minutes, its peers keep reading", () => {
+test("the south-probe-out fixture reports L07 on its peers; fixture-api.test.ts checks its series", () => {
   const set = fixture("south-probe-out", { now: NOW * 1000 });
   expect((set["API-IRR-01"].lines as { line_id: string; vpd_source: string }[]).find((line) => line.line_id === "L07")?.vpd_source).toBe("peer");
 });

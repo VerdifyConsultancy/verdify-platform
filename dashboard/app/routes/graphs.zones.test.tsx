@@ -83,8 +83,9 @@ test("?zone=south&range=72h: temperature, VPD and RH of south's own columns, its
   expect(temp.opts.series.slice(1).map((series) => series.label)).toEqual(["South temperature"]);
   // The ribbon on temperature and VPD only: RH has no band.
   expect([temp, vpd, rh].map((plot) => { plot.draw(); return plot.ctx.fills.length > 0; })).toEqual([true, true, false]);
-  // The band's values are south's own: 0.45–0.80 in the fixture.
-  expect(Math.min(...vpd.ctx.fills[0].path.map(([, y]) => y))).toBeGreaterThanOrEqual(0);
+  // The ribbon's values are south's own: the y range reaches its 0.45 and 0.80, below and above south's own trace and target.
+  expect(vpd.scales.y.min).toBeLessThanOrEqual(0.45);
+  expect(vpd.scales.y.max).toBeGreaterThanOrEqual(0.8);
   expect(text(document.querySelector("[data-zone-tag]"))).toBe("MEASURED");
   expect(text(document.querySelector(".zone-tag-note"))).toContain("South's tile reads its own probe.");
   expect(text(document.querySelector(".resolution-line"))).toContain("one point per 5 minutes");
