@@ -1,5 +1,6 @@
 # The operator API's database identity: migration 282's login, which api/operator_api.py requires (it refuses to
 # start with any other DB_USER). DB_PASS and OPERATOR_API_TOKEN come from Secrets (deployment.yaml).
+# SETPOINT_SERVER_URL is API-20's grow-light path (#1170); the setpoint server takes no token.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -11,3 +12,4 @@ data:
   DB_HOST: verdify-db
   DB_NAME: verdify
   DB_USER: verdify_dashboard_runtime_login
+  SETPOINT_SERVER_URL: http://verdify-setpoint-server.verdify-prod.svc:8200

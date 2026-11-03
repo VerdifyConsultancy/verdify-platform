@@ -121,7 +121,12 @@ def test_the_deployment_keeps_the_verdify_api_security_context_with_a_writable_t
 
 def test_the_configmap_names_the_dashboard_login(rendered):
     data = one(rendered, "ConfigMap", NAME)["data"]
-    assert data == {"DB_HOST": "verdify-db", "DB_NAME": "verdify", "DB_USER": "verdify_dashboard_runtime_login"}
+    assert data == {
+        "DB_HOST": "verdify-db",
+        "DB_NAME": "verdify",
+        "DB_USER": "verdify_dashboard_runtime_login",
+        "SETPOINT_SERVER_URL": "http://verdify-setpoint-server.verdify-prod.svc:8200",
+    }
 
 
 def test_the_service_is_clusterip_on_8090_with_no_route(rendered):
