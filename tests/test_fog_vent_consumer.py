@@ -83,10 +83,13 @@ def test_generated_original_and_mutants_change_only_consumer():
 
 def test_scenario_inventory_is_bounded_and_matches_native_template():
     source, _ = fog.generate_cpp()
-    assert len(fog.SCENARIOS) == len(set(fog.SCENARIOS)) == 28
+    # #1161 (F9): blocked_leak went with the leak interlock; blocked_drip_relay and the six survival
+    # fog scenarios came with the shared fog force-off.
+    assert len(fog.SCENARIOS) == len(set(fog.SCENARIOS)) == 34
     assert all(f'"{name}"' in source for name in fog.SCENARIOS)
     assert set(fog.NEGATIVE_WITNESSES) <= set(fog.SCENARIOS)
-    assert len(fog.SCENARIOS) * len(fog.SELECTIONS) == 56
+    assert len(fog.SCENARIOS) * len(fog.SELECTIONS) == 68
+    assert "blocked_leak" not in fog.SCENARIOS and "leak_block" not in source
     assert len(fog.NEGATIVE_WITNESSES) * len(fog.SELECTIONS) * 2 == 8
     assert "BEHAVIOR_ASSERT" in source and "SCENARIO_COMPLETE" in source
 

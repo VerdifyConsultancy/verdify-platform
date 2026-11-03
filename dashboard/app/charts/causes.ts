@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: MIT
-import type { IrrigationCause } from "./types";
+import type { components } from "../generated/operator-api";
+
+/** The causes the contract lists today; a newer one reaches the charts as a string and reads raw. */
+type Cause = components["schemas"]["IrrigationCause"];
 
 /**
  * The cause words and colours (design system §5.1, cause table): what made a wet line run, for the equipment lanes,
@@ -7,7 +10,7 @@ import type { IrrigationCause } from "./types";
  * causes reuse existing ones; the words are what every surface prints, so colour is never alone. A cause the table
  * does not know renders raw, in the "cause unknown" colour.
  */
-export const IRRIGATION_CAUSES = ["vpd", "schedule", "run_now", "feed", "prewet", "flush", "fallback", "unknown"] as const satisfies readonly IrrigationCause[];
+export const IRRIGATION_CAUSES = ["vpd", "schedule", "run_now", "feed", "prewet", "flush", "fallback", "unknown"] as const satisfies readonly Cause[];
 
 export const CAUSE_WORDS = {
   vpd: "VPD",
@@ -18,7 +21,7 @@ export const CAUSE_WORDS = {
   flush: "flush",
   fallback: "fallback",
   unknown: "cause unknown",
-} as const satisfies Record<IrrigationCause, string>;
+} as const satisfies Record<Cause, string>;
 
 export const CAUSE_TOKENS = {
   vpd: "--eq-mister",
@@ -29,9 +32,9 @@ export const CAUSE_TOKENS = {
   flush: "--eq-fog",
   fallback: "--eq-heat1",
   unknown: "--c-bound",
-} as const satisfies Record<IrrigationCause, string>;
+} as const satisfies Record<Cause, string>;
 
-const known = (cause: string): cause is IrrigationCause => Object.hasOwn(CAUSE_WORDS, cause);
+const known = (cause: string): cause is Cause => Object.hasOwn(CAUSE_WORDS, cause);
 
 /** The words for a cause ("run now"), or the code itself when the table has none. */
 export function causeWords(cause: string): string {

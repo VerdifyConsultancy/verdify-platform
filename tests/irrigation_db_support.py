@@ -1,9 +1,10 @@
-"""Database helpers for the irrigation minutes tests (VD-39, #1154).
+"""Database helpers for the irrigation minutes and tables tests (VD-39, #1154; VD-38, #1153).
 
-``tests/test_dashboard_db_irrigation_minutes.py`` uses them on the private
-PostgreSQL that jvallery/agents#5994's campaign step starts; M3 (#1153) and the
-irrigation reads (#1155) reuse the schema subset, the role setup and the
-production-sized generator for their own timing cases.
+``tests/test_dashboard_db_irrigation_minutes.py`` (M4) and
+``tests/test_dashboard_db_irrigation_tables.py`` (M3) use them on the private
+PostgreSQL that jvallery/agents#5994's campaign step starts; the irrigation
+reads (#1155) reuse the schema subset, the role setup, M3's setup and the
+production-sized generators for their own timing cases.
 
 Nothing here reaches production: every connection comes from
 ``isolated_mutation_test_dsn()`` (a loopback ``verdify_test_*`` database).
@@ -15,6 +16,7 @@ import bisect
 import datetime as dt
 import random
 import re
+import uuid
 from collections import defaultdict
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
@@ -158,6 +160,68 @@ async def prepare_database(conn, *, hypertable: bool = True, migration: Path = M
         await conn.execute("INSERT INTO public.greenhouses (id, name) VALUES ('vallery', 'Vallery greenhouse')")
         await conn.execute(migration_body(migration))
     finally:
+        await conn.execute("RESET ROLE")
+    return timescale
+
+
+# ── M3 (VD-38, #1153): the irrigation tables on top of M4 ──────────────────────
+
+DASHBOARD_MIGRATION = REPO_ROOT / "db" / "migrations" / "282-dashboard-runtime-login.sql"
+TABLES_MIGRATION = REPO_ROOT / "db" / "migrations" / "283-irrigation-tables.sql"
+MCP_BOUNDARY_MIGRATION = REPO_ROOT / "db" / "migrations" / "259-mcp-ordinary-runtime-boundary.sql"
+# What M3's line-state view reads and what the logins must stay off, from db/schema.sql.
+M3_OBJECTS = (
+    ("system_state", "TABLE"),
+    ("system_state_ts_idx", "INDEX"),
+    ("setpoint_changes", "TABLE"),
+    ("setpoint_plan", "TABLE"),
+)
+# The dump predates these; production owns each with no grant to the logins tested here.
+# 259's armed-assignment function reads the two experiment tables (production has more
+# columns), and 282's attestor checks the dashboard login holds nothing on all five.
+M3_STAND_INS = """
+CREATE TABLE public.control_experiments (
+    experiment_id uuid PRIMARY KEY, greenhouse_id text NOT NULL, status text NOT NULL, armed_at timestamptz);
+CREATE TABLE public.control_assignments (
+    assignment_id uuid PRIMARY KEY, experiment_id uuid NOT NULL, status text NOT NULL,
+    valid_range tstzrange NOT NULL);
+CREATE TABLE public.effective_policy_vectors (id bigint PRIMARY KEY);
+CREATE TABLE public.policy_delivery_outbox (id bigint PRIMARY KEY);
+CREATE TABLE public.policy_exposures (id bigint PRIMARY KEY);
+"""
+
+
+def armed_context_sql() -> str:
+    """259's fn_mcp_armed_assignment_context(), its REVOKE and its MCP grant, verbatim."""
+    text = MCP_BOUNDARY_MIGRATION.read_text()
+    start = text.index("CREATE FUNCTION public.fn_mcp_armed_assignment_context()")
+    end = text.index("TO verdify_mcp_runtime;", start) + len("TO verdify_mcp_runtime;")
+    return text[start:end]
+
+
+async def prepare_irrigation_tables(conn, *, hypertable: bool = True) -> bool:
+    """M4's database (``prepare_database``), what M3 reads, then 282's and 283's bodies.
+
+    PUBLIC gets USAGE on public, as production's schema gives it (282's login relies on it).
+    282 creates roles, so its body runs as the connecting superuser; 283's runs as the owner
+    under the runner's search_path. Returns whether equipment_state is a hypertable.
+    """
+    timescale = await prepare_database(conn, hypertable=hypertable)
+    sections = schema_sections()
+    await conn.execute("GRANT USAGE ON SCHEMA public TO PUBLIC")
+    await conn.execute("SET ROLE verdify")
+    try:
+        await conn.execute("\n".join(sections[(name, kind, "public")] for name, kind in M3_OBJECTS))
+        await conn.execute(M3_STAND_INS)
+        await conn.execute(armed_context_sql())
+    finally:
+        await conn.execute("RESET ROLE")
+    await conn.execute(migration_body(DASHBOARD_MIGRATION))
+    await conn.execute("SET ROLE verdify")
+    try:
+        await conn.execute("SET search_path = pg_catalog, public, pg_temp;\n" + migration_body(TABLES_MIGRATION))
+    finally:
+        await conn.execute("RESET search_path")
         await conn.execute("RESET ROLE")
     return timescale
 
@@ -423,3 +487,129 @@ async def load_production_sized(conn, edges, events, gaps) -> None:
         records=[(i, a, b, (b - a).total_seconds()) for i, a, b in gaps],
     )
     await conn.execute("ANALYZE public.equipment_state; ANALYZE public.water_meter_events; ANALYZE public.data_gaps")
+
+
+# Production-sized program rows (M3, #1153): the ledger and bridge commands the
+# redefined minutes view and reader probe for every run. Slot ids per line for the
+# generated occurrences; each (slot, local day, cause) occurs at most once.
+LEDGER_SLOTS = {
+    "drip_wall": 10,
+    "drip_wall_fert": 11,
+    "drip_center": 12,
+    "drip_center_fert": 13,
+    "mister_south_fert": 14,
+    "mister_west_fert": 15,
+    "mister_center": 20,
+}
+LEDGER_CAUSES = {"drip_wall": "schedule", "drip_center": "schedule"}  # the fertilizer lines feed
+
+
+def production_sized_ledger(edges, seed: int = 1153):
+    """irrigation_ledger and irrigation_command rows for ``production_sized_rows``' edges.
+
+    Each day: an L04 schedule window from 5 s before the day's first center pulse to 10
+    min after it, and the three seeded fallback slots skipped without opening a valve
+    (started_at NULL). Every drip and fertilizer run gets its occurrence row, except every
+    other L01 run, which gets a sent run command 10 s before it (the bridge) instead.
+    Returns (ledger, commands) in ``load_production_sized_ledger``'s column orders.
+    """
+    rng = random.Random(seed)  # noqa: S311 - deterministic test data, not a secret
+    by_relay: dict = defaultdict(list)
+    for ts, relay, state, _greenhouse in edges:
+        by_relay[relay].append((ts, state))
+    runs: dict = defaultdict(list)
+    for relay, rows in by_relay.items():
+        rows.sort()
+        start = None
+        for ts, state in rows:
+            if state and start is None:
+                start = ts
+            elif not state and start is not None:
+                runs[relay].append((start, ts))
+                start = None
+    ledger, commands, seq = [], [], 0
+    days = sorted({local_day(ts) for ts, *_ in edges})
+    first_center = {}
+    for start, end in runs["mister_center"]:
+        first_center.setdefault(local_day(start), (start, end))
+    for day in days:
+        for slot in (1, 2, 3):
+            seq = (seq + 1) % 0x10000
+            ledger.append(("L04", slot, day, "fallback", None, None, 0, 0, "skipped", "vok", seq, None))
+        if day in first_center:
+            start, _ = first_center[day]
+            seq = (seq + 1) % 0x10000
+            window = (start - dt.timedelta(seconds=5), start + dt.timedelta(minutes=10))
+            ledger.append(
+                ("L04", LEDGER_SLOTS["mister_center"], day, "schedule", *window, 600, 4, "ok", None, seq, None)
+            )
+    for relay, slot in LEDGER_SLOTS.items():
+        if relay == "mister_center":
+            continue
+        for index, (start, end) in enumerate(runs[relay]):
+            if relay == "drip_wall" and index % 2:
+                sent = start - dt.timedelta(seconds=10)
+                commands.append(
+                    (
+                        uuid.UUID(int=rng.getrandbits(128)),
+                        "run",
+                        "L01",
+                        "sent",
+                        "dashboard",
+                        "jason",
+                        sent - dt.timedelta(seconds=2),
+                        sent,
+                    )
+                )
+                continue
+            seq = (seq + 1) % 0x10000
+            line = LINE_MAP[relay][0]
+            cause = LEDGER_CAUSES.get(relay, "feed")
+            open_s = int((end - start).total_seconds())
+            ledger.append(
+                (
+                    line,
+                    slot,
+                    local_day(start),
+                    cause,
+                    start - dt.timedelta(seconds=1),
+                    end,
+                    open_s,
+                    1,
+                    "ok",
+                    None,
+                    seq,
+                    None,
+                )
+            )
+    return ledger, commands
+
+
+async def load_production_sized_ledger(conn, ledger, commands) -> None:
+    """COPY the generated program rows in and refresh planner statistics (same transaction)."""
+    await conn.copy_records_to_table(
+        "irrigation_ledger",
+        schema_name="public",
+        columns=[
+            "line_id",
+            "slot_id",
+            "local_day",
+            "cause",
+            "started_at",
+            "ended_at",
+            "open_s",
+            "pulses",
+            "outcome",
+            "reason",
+            "event_seq",
+            "actor",
+        ],
+        records=ledger,
+    )
+    await conn.copy_records_to_table(
+        "irrigation_command",
+        schema_name="public",
+        columns=["command_id", "kind", "line_id", "status", "source", "actor", "created_at", "sent_at"],
+        records=commands,
+    )
+    await conn.execute("ANALYZE public.irrigation_ledger; ANALYZE public.irrigation_command")

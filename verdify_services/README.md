@@ -10,9 +10,9 @@ page is the conventions every service here follows; VD-31 (#1147) set them.
 | `actor.py` | `Actor` (who is calling) and `ActorRef` (who wrote, as responses show it) |
 | `problems.py` | `ProblemCode`, `Problem`, `ServiceError` and `problem()` |
 | `activity.py` | `append`, `list` and `recorded_write`, the one write convention, with `WriteResult`, `ActivityEntry` and `ActivityPage` |
-| `settings.py` | `catalog`, `validate`, `write`, `release`, `status` and `history` (VD-67): the one validator and writer for desired state, with `Setting`, `DesiredSetting`, `StateReason`, `SettingHistory` and `SettingStatus` |
+| `settings.py` | `catalog`, `validate`, `write`, `release`, `status` and `history` (VD-67), and the batched `statuses` and `desired_states` (VD-55): the one validator and writer for desired state, with `Setting`, `DesiredSetting`, `StateReason`, `SettingHistory` and `SettingStatus` |
 | `alerts.py` | `list`, `open_count`, `ack` and `resolve` (VD-67): merged alert rows, the one open-alert count, with `Alert`, `AlertPage` and `AlertCounts` |
-| `reads.py` | `now`, `plan` and `equipment` (VD-54: API-02, API-07 and API-13), and the shared `reporting()` (the one §7 test: heartbeat at most 180 s old, climate at most 300 s), which `settings.status` uses for its `writer_down` and `controller_not_reporting` reasons |
+| `reads.py` | `now`, `plan` and `equipment` (VD-54: API-02, API-07 and API-13); `settings_rows`, `setting_history` and `activity_page` (VD-55: API-09, API-12 and API-17, which the MCP `settings` and `activity` tools call too), with `SettingRows`; and the shared `reporting()` (the one §7 test: heartbeat at most 180 s old, climate at most 300 s), which `settings.status` uses for its `writer_down` and `controller_not_reporting` reasons |
 
 Later modules (`series`, `irrigation`) follow the same rules.
 
@@ -148,8 +148,41 @@ desired row and no plan, the dispatcher's newest push) by `readback_values_equiv
 request holds the setting while the newest readback does not confirm it. `state_reason` (`clamped`,
 `experiment`, `deferred`, `push_failed`, `writer_down`, `controller_not_reporting`, `no_match`) carries its
 `since`; the two ages come from `reads.reporting()`. An `irrigation_site` write stays `requested` until #1155
-adds the program readback. `catalog` and `history` serve API-09 and API-12; #1168 adds the plan block, the
-waypoints and the Band in force rows.
+adds the program readback. `statuses(conn, params)` is `status` for several settings in one batched read (API-07's
+lanes), and `desired_states(conn, ids)` gives named `desired_state` rows the state `history` gives them: the newest
+row of a setting its full status, an older one released, confirmed (a readback before the next row matched) or
+not_confirmed (API-17's setting writes). `catalog` and `history` serve API-09 and API-12 through `reads` (below).
+
+`reads` imports this module, so `settings` imports `reads` inside `_shared()` only, where it calls
+`reads.reporting()`: either module may be imported first.
+
+## Reads: `reads` (API-09, API-12 and API-17)
+
+The composition VD-55 adds over the services, called by the REST routes and by the MCP `settings` and `activity`
+tools (#1171), so both return the same rows. Each runs in one read-only snapshot.
+
+- `settings_rows(conn) -> SettingRows` (`{items, server_time}`, API-09): `settings.catalog`, then each row's
+  `plan` while a `v_active_plan` value is in force: the value as stored (Iris's 48.75 stays 48.75, unsnapped),
+  `plan_id`, `source` (`setpoint_plan.source`: `iris`, or `preemptive` for the forecast engine), `written_at` and
+  `next`, the first `plan_waypoints()` waypoint after now with its `effective`. Then the 30 Band in force rows:
+  the newest `setpoint_snapshot` band row of each zone (house, center, south, west, east) and role in the last
+  hour, `group` `band_in_force`, read-only ("derived by the dispatcher from the crop band anchors"), labelled
+  "House temp low" in °F or "West VPD high" in kPa, `readback_via` `none`, state `no_readback`, and a null value
+  with its reason when the dispatcher wrote none.
+- `setting_history(conn, param, from_, to) -> SettingHistory` (API-12): `settings.history` (desired rows from the
+  one in force at `from_`, readback change points; 404 `not_found` for an unknown setting) plus
+  `plan_history()`: every `iris` and `preemptive` `setpoint_plan` row of the setting in the window, past,
+  superseded and future, one per `ts` (the newest `created_at`). `effective` is false under the desired row in
+  force at that time (`resolve_effective()`), and for a full Iris plan's row once another, newer full plan was
+  written at or before it (`plan_journal`), so Graphs marks SUPERSEDED. Every list is bounded by the window, and
+  readbacks by their 90-day retention: the window is not clamped, because Graphs asks for up to 400 days.
+- `activity_page(conn, *, source, actor, action, target, from_, to, limit=50, cursor) -> ActivityPage`
+  (API-17): `activity.list` with each `setting.write` and `setting.release` row's `state` and `confirmed_at`
+  from `settings.desired_states` for its `detail.desired_id`.
+- API-02's `alerts` is `alerts.open_count`, and its leak and stuck-delivery facts read `alert_log` under the
+  same predicate; API-07's lanes take `applied_from` and `desired` from `settings.statuses`. `reads` reuses the
+  models of the schemas the services own (`reads.DesiredSetting is settings.DesiredSetting`, `reads.AlertCounts is
+  alerts.AlertCounts`).
 
 ## Alerts: `alerts`
 
@@ -190,5 +223,10 @@ them, and M2 (#1179) and its successor the dashboard login.
   cursor, all against in-memory connections.
 - `tests/test_dashboard_db_settings_alerts.py` (the campaign step): the same as the MCP login, the crop band
   rows through `fn_zone_vpd_targets` and `band_anchors`, and the open set against `v_open_alerts`.
+- `tests/test_operator_routes_reads.py` (in `scripts/ci-local.sh`): the API-09, API-12, API-14 and API-17
+  adapters against fake services: operation ids, query parameters, the cursor and the Problem mapping.
+  `tests/test_verdify_services_reads.py` adds the compositions against in-memory connections.
+- `tests/test_dashboard_db_settings_reads.py` (the campaign step): VD-55's acceptance fixtures, the
+  MCP-shared reads as a role with only the MCP login's production grants.
 - `verdify_schemas/tests/test_band_rows.py` and `test_settings_rules.py`: the band row map against the
   dispatcher's overlay, and `SWITCH_READBACK_EQUIPMENT` and the activity mirror against the ingestor.

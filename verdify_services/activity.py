@@ -31,6 +31,7 @@ LIMIT_DEFAULT = 50
 LIMIT_MAX = 200
 # UNIQUE (source, request_id) on activity_log (migration 280): a request id applies once per source.
 REQUEST_KEY_CONSTRAINT = "activity_log_source_request_id_key"
+_BIGINT_MAX = 2**63 - 1
 ARMED_EXPERIMENT_SQL = "SELECT experiment_id FROM public.fn_mcp_armed_assignment_context()"
 _COLUMNS = (
     "id, greenhouse_id, ts, source, actor, action, target, detail::text AS detail, reason, "
@@ -180,7 +181,12 @@ def _decode_cursor(cursor: str) -> tuple[datetime, int]:
     try:
         ts_text, row_id = json.loads(base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4)))
         ts = datetime.fromisoformat(ts_text)
-        if ts.utcoffset() is None or isinstance(row_id, bool) or not isinstance(row_id, int):
+        if (
+            ts.utcoffset() is None
+            or isinstance(row_id, bool)
+            or not isinstance(row_id, int)
+            or not 1 <= row_id <= _BIGINT_MAX  # activity_log.id: a forged id must not reach the bind
+        ):
             raise ValueError("not a cursor")
     except (TypeError, ValueError) as exc:  # binascii.Error, JSONDecodeError and UnicodeDecodeError included
         raise ServiceError(
@@ -352,6 +358,9 @@ async def list(  # activity.list, as the operator API and MCP call it
         raise ServiceError(
             problem("invalid_request", "source is dashboard, iris, system, agent or agent:<name>", field="source")
         )
+    for name, value in (("actor", actor), ("action", action), ("target", target)):
+        if value and "\x00" in value:  # PostgreSQL text cannot hold it, so no row can match
+            raise ServiceError(problem("invalid_request", f"{name} holds a NUL character", field=name))
     for name, value in (("from", from_), ("to", to)):
         if value is not None and (not isinstance(value, datetime) or value.utcoffset() is None):
             raise ServiceError(problem("invalid_request", f"{name} needs a time with its UTC offset", field=name))

@@ -265,9 +265,13 @@ CLIMATE_RELAY_FIELD_DENYLIST: frozenset[str] = frozenset(
 # `feed_hold`/`dusk_cutoff`/`below_threshold`/`dew_margin`/`time_window`/
 # `rh_ceiling`/`temp_low`/`occupancy`) plus the ESPHome manual/safety + interlock
 # path (firmware/greenhouse/controls.yaml → `served`/`vent_interlock`/
-# `irrigation`/`resource_budget`/`time_invalid`/`leak_detected`/`relay_min_off`).
+# `relay_min_off`, plus the fog force-off words of greenhouse_logic.h
+# `fog_force_off_reason()`: `sensor_fault`/`occupancy`/`fert_master`/
+# `irrigation`/`resource_budget`/`water_ceiling`/`time_invalid`, #1161).
 # `wet_taper` is retained for historical rows written by the pre-curve-only
-# firmware even though the current shared-logic taper is inert.
+# firmware even though the current shared-logic taper is inert, and
+# `leak_detected` for rows from before the engine release (Q-05: the leak
+# signal no longer holds fog).
 # test_climate_intent.test_fog_block_reasons_cover_stored_db_values guards this
 # against the live climate_action_log column.
 FOG_BLOCK_REASONS: tuple[str, ...] = (
@@ -285,10 +289,14 @@ FOG_BLOCK_REASONS: tuple[str, ...] = (
     "irrigation",  # mutual-exclusion with an active irrigation job
     "vent_interlock",  # vent open → fog suppressed (SAF interlock)
     "time_invalid",  # controller clock not yet valid (RTC/NTP unsynced)
-    "leak_detected",  # leak-detect safety lock
+    "leak_detected",  # historical: the leak lock before the engine release (Q-05)
     "feed_hold",  # FRT-6 absorption hold after a feed
     "dusk_cutoff",  # SAF-3 VPD-independent dusk cutoff rail
     "wet_taper",  # historical pre-curve-only firmware observation truth
+    # #1161 (F9): the fog force-off reports every term that holds fog.
+    "sensor_fault",  # SENSOR_FAULT relay lock
+    "fert_master",  # SAF-5: L03 open or about to open
+    "water_ceiling",  # the SAF-4 daily ceiling (outside SAFETY_COOL)
 )
 
 

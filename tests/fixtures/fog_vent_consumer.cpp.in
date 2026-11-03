@@ -64,7 +64,7 @@ struct Input {
   Mode mode;
   bool controller_fog, fog_before, vent_requested;
   bool manual_fog_force, fan_requires_vent;
-  bool controller_time_valid, leak_block, occupancy_moisture_block;
+  bool controller_time_valid, drip_relay_open, occupancy_moisture_block;
   bool irrigation_water_conflict, climate_water_budget_block;
   bool mister_volume_hard_block, fert_master_on;
 };
@@ -83,7 +83,7 @@ Observation tick(const Input &in) {
   const bool manual_fog_force = in.manual_fog_force;
   const bool fan_requires_vent = in.fan_requires_vent;
   const bool controller_time_valid = in.controller_time_valid;
-  const bool leak_block = in.leak_block;
+  const bool drip_relay_open = in.drip_relay_open;
   const bool occupancy_moisture_block = in.occupancy_moisture_block;
   const bool irrigation_water_conflict = in.irrigation_water_conflict;
   const bool climate_water_budget_block = in.climate_water_budget_block;
@@ -95,6 +95,7 @@ Observation tick(const Input &in) {
 @@sensor_fault_lock@@
 @@vent_readback@@
 @@fog_assist@@
+@@fog_rails@@
 @@safety_suppression@@
 @@fog_consumer@@
 @@vent_apply@@
@@ -206,7 +207,7 @@ int scenario(const std::string &name) {
     }
     return 0;
   }
-  if (name == "blocked_clock" || name == "blocked_leak" ||
+  if (name == "blocked_clock" || name == "blocked_drip_relay" ||
       name == "blocked_occupancy" || name == "blocked_irrigation" ||
       name == "blocked_budget" || name == "blocked_hard_limit" ||
       name == "blocked_fertilizer" || name == "sensor_fault_preblocked") {
@@ -214,7 +215,7 @@ int scenario(const std::string &name) {
     EXPECT("interlock_initially_on", r.fog);
     in.now_ms += 1U;
     if (name == "blocked_clock") in.controller_time_valid = false;
-    if (name == "blocked_leak") in.leak_block = true;
+    if (name == "blocked_drip_relay") in.drip_relay_open = true;
     if (name == "blocked_occupancy") in.occupancy_moisture_block = true;
     if (name == "blocked_irrigation") in.irrigation_water_conflict = true;
     if (name == "blocked_budget") in.climate_water_budget_block = true;
@@ -231,6 +232,36 @@ int scenario(const std::string &name) {
     EXPECT("interlock_suppressed", !r.request);
     EXPECT("interlock_forced_before_minimum_on", !r.fog && r.last_off == start + 1U);
     EXPECT("interlock_history", r.runtime == 1U && r.on_stamp == 0U && r.transitions == 2U);
+    return 0;
+  }
+  // #1161 (F9): survival fog. In SAFETY_COOL the engine's drip, the soft budget and SAF-4 no
+  // longer force fog off; confirmed occupancy, L03 and an open drip relay still do.
+  if (name == "survival_past_irrigation" || name == "survival_past_budget" ||
+      name == "survival_past_hard_limit") {
+    in.mode = SAFETY_COOL;
+    auto r = tick(in);
+    EXPECT("survival_initially_on", r.fog);
+    in.now_ms += 1U;
+    if (name == "survival_past_irrigation") in.irrigation_water_conflict = true;
+    if (name == "survival_past_budget") in.climate_water_budget_block = true;
+    if (name == "survival_past_hard_limit") in.mister_volume_hard_block = true;
+    r = tick(in);
+    EXPECT("survival_request_kept", r.request);
+    EXPECT("survival_relay_kept", r.fog && r.transitions == 1U);
+    return 0;
+  }
+  if (name == "survival_held_by_occupancy" || name == "survival_held_by_fertilizer" ||
+      name == "survival_held_by_drip_relay") {
+    in.mode = SAFETY_COOL;
+    auto r = tick(in);
+    EXPECT("survival_initially_on", r.fog);
+    in.now_ms += 1U;
+    if (name == "survival_held_by_occupancy") in.occupancy_moisture_block = true;
+    if (name == "survival_held_by_fertilizer") in.fert_master_on = true;
+    if (name == "survival_held_by_drip_relay") in.drip_relay_open = true;
+    r = tick(in);
+    EXPECT("survival_interlock_suppressed", !r.request);
+    EXPECT("survival_interlock_forced", !r.fog && r.last_off == start + 1U);
     return 0;
   }
   std::fprintf(stderr, "UNKNOWN_SCENARIO\n");

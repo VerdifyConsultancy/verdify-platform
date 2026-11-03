@@ -171,3 +171,58 @@ test("a report grouped by cause has no zones to draw, and the server markup has 
   expect(container.querySelector(".chart-message")!.textContent).toBe("Minutes by zone needs the report by line or by zone");
   expect(created).toHaveLength(0);
 });
+
+test("Group by line (#1135): one row per line in the report, in line order, each line's own cap and plan; fog keeps its scale", async () => {
+  const { container } = await mount({ group: "line", caps: { L01: 60, L04: 120, L07: 45 }, planned: { L01: 12 } });
+  expect(container.querySelector("figcaption")!.textContent).toBe("Watering minutes by line · last 7 days");
+  expect([...container.querySelectorAll(".minutes-row")].map((row) => row.getAttribute("data-row"))).toEqual(["L01", "L02", "L03", "L04", "L07", "L11"]);
+  expect([...container.querySelectorAll(".minutes-label")].map((label) => label.textContent)).toEqual(["L01 Wall drip", "L02 Wall feed", "L03", "L04 Center mister", "L07 South mister", "L11 Fog humidification"]);
+  const model = buildMinutes({ report: load<MinutesReport>(minutesFixture), group: "line", now: NOW });
+  expect(model.zones.map((row) => [row.key, row.zone, row.fog, row.days.map((day) => day.total)])).toEqual([
+    ["L01", null, false, [12, 5, 10, null, 5, 12, 0]], ["L02", null, false, [0, 8, 0, null, 0, 0, 0]], ["L03", null, false, [0, 8, 0, null, 0, 0, 0]],
+    ["L04", null, false, [52, 47, 61, null, 54, 58, 46]], ["L07", null, false, [0, 0, 12, null, 0, 0, 0]], ["L11", null, true, [30, 18, 24, null, 9, 21, 6]],
+  ]);
+  // Caps and the planned outline are keyed by the row's line; the watering rows share one scale, fog has its own.
+  expect([...container.querySelectorAll(".minutes-today")].map((cell) => cell.textContent)).toEqual([
+    `today ${min(0)} (partial) · cap 60`, `today ${min(0)} (partial)`, `today ${min(0)} (partial)`, `today ${min(46)} (partial) · cap 120`, `today ${min(0)} (partial) · cap 45`, `today ${min(6)} (partial)`,
+  ]);
+  expect(created.map((plot) => plot.scales.y.max)).toEqual([138, 138, 138, 138, 138, 35]);
+  expect(created[0].ctx.outlines.filter((rect) => rect.color === TOKENS["--muted"])).toHaveLength(1);
+});
+
+test("Group by cause (#1135): one row per cause in cause order, fog apart, the fertilizer master never counted twice", async () => {
+  const { container } = await mount({ group: "cause", caps: undefined, planned: { schedule: 12 } });
+  expect(container.querySelector("figcaption")!.textContent).toBe("Watering minutes by cause · last 7 days");
+  expect([...container.querySelectorAll(".minutes-label")].map((label) => label.textContent)).toEqual(["VPD", "Schedule", "Run now", "Feed", "Prewet", "Flush", "Cause unknown", "Fog humidification"]);
+  const model = buildMinutes({ report: load<MinutesReport>(minutesFixture), group: "cause", now: NOW });
+  expect(Object.fromEntries(model.zones.map((row) => [row.key, row.days.map((day) => day.total)]))).toEqual({
+    vpd: [52, 47, 73, null, 44, 58, 46], schedule: [12, 0, 0, null, 10, 12, 0], run_now: [0, 0, 10, null, 0, 0, 0], feed: [0, 8, 0, null, 0, 0, 0],
+    prewet: [0, 2, 0, null, 0, 0, 0], flush: [0, 3, 0, null, 0, 0, 0], unknown: [0, 0, 0, null, 5, 0, 0], fog: [30, 18, 24, null, 9, 21, 6],
+  });
+  // A cause row splits by line in the tooltip and the table: L04 and L07 both mist on VPD.
+  const vpd = created[0];
+  vpd.hover((vpd.data[0] as number[])[2], 2, 30);
+  expect(tooltip(vpd)).toEqual(["Oct 29 · VPD", min(73), `L04 Center mister · VPD · ${min(61)} · 4 gal`, `L07 South mister · VPD · ${min(12)} · 1 gal`]);
+  expect(container.querySelector("[data-row=schedule] .minutes-today")!.textContent).toBe(`today ${min(0)} (partial)`);
+  expect(created.map((plot) => plot.scales.y.max)).toEqual([84, 84, 84, 84, 84, 84, 84, 35]);
+});
+
+test("Group by from a report by zone: by cause still works, by line says it needs the report by line", async () => {
+  const zones: MinutesReport = {
+    from: "2026-11-01", to: "2026-11-02", group_by: "zone", periods: [{ start: "2026-11-01", coverage: "complete" }, { start: "2026-11-02", coverage: "partial" }],
+    rows: [
+      { period: "2026-11-01", group: "center", cause: "vpd", chemistry: "clean", minutes: 40 }, { period: "2026-11-01", group: "wall", cause: "schedule", chemistry: "clean", minutes: 12 },
+      { period: "2026-11-01", group: "fog", cause: "vpd", chemistry: "clean", minutes: 20 },
+    ],
+  };
+  expect(buildMinutes({ report: zones, group: "cause", now: NOW }).zones.map((row) => [row.key, row.days.map((day) => day.total)])).toEqual([["vpd", [40, 0]], ["schedule", [12, 0]], ["fog", [20, 0]]]);
+  const { container } = render(<MinutesByZone {...props({ report: zones, group: "line" })} />);
+  await settle();
+  expect(container.querySelector(".chart-message")!.textContent).toBe("Minutes by line needs the report by line");
+  cleanup();
+  // A report with no watering at all has no line to draw.
+  const quiet = { ...load<MinutesReport>(minutesFixture), rows: [] };
+  const empty = render(<MinutesByZone {...props({ report: quiet, group: "line" })} />);
+  await settle();
+  expect(empty.container.querySelector(".chart-message")!.textContent).toBe("No watering data in this window");
+});
