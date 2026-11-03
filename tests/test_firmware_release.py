@@ -267,6 +267,22 @@ def test_check_credentials_refuses_before_archive_and_stays_value_blind(tmp_path
         assert secret not in str(refused.value)
 
 
+def test_check_credentials_command_reports_and_refuses_with_its_exit_code(tmp_path, monkeypatch, capsys):
+    encoded = [value.encode() for value in CREDENTIALS.values()]
+    main_cpp, binary = write_build(tmp_path, generated_main(), image_of(*encoded))
+    for name, value in CREDENTIALS.items():
+        monkeypatch.setenv(name, value)
+    argv = ["firmware_release.py", "check-credentials", "--main-cpp", str(main_cpp), "--binary", str(binary)]
+    monkeypatch.setattr("sys.argv", argv)
+    assert release.main() == 0
+    assert json.loads(capsys.readouterr().out)["set_auth_password"]["equals_secret"] is True
+    binary.write_bytes(image_of(b"unrelated"))
+    assert release.main() == 64
+    captured = capsys.readouterr()
+    assert "compile-time credential check failed" in captured.err
+    assert not any(value in captured.out + captured.err for value in CREDENTIALS.values())
+
+
 def parity_tree(tmp_path, running_values):
     candidate, running = "c" * 40, "d" * 40
     (tmp_path / candidate / Path(release.GENERATED_MAIN_CPP).parent).mkdir(parents=True)
