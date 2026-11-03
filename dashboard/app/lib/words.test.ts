@@ -1,19 +1,23 @@
 // SPDX-License-Identifier: MIT
-// The one words table is complete: every code the OpenAPI file, the controller header and the alert schema define has
-// words, so a PR that adds a ProblemCode, a StateReason or line-state code, a mode, a mist stage or an alert type
-// fails here until it adds them. jvallery/agents#5994's dashboard step runs this file when any of those sources change.
+// The one words table is complete: every code the OpenAPI file, the controller header, the alert schema, the trigger
+// ledger's status check (db/schema.sql) and the plan schema (verdify_schemas/plan.py) define has words, so a PR that
+// adds a ProblemCode, a StateReason or line-state code, a mode, a mist stage, an alert type, a trigger outcome or a
+// stress window kind or severity fails here until it adds them. jvallery/agents#5994's dashboard step runs this file
+// when any of those sources change.
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import { parse as parseYaml } from "yaml";
-import { ALERT_SEVERITIES, LINE_STATE_CODES, PROBLEM_CODES, STATE_REASON_CODES } from "./vocab";
+import { OUTCOMES } from "./operator-api";
+import { ALERT_SEVERITIES, ALERT_STATUSES, BAND_VERDICTS, BURST_KINDS, LINE_FAULTS, LINE_STATE_CODES, PROBLEM_CODES, REQUIRED_TRIGGERS, STATE_REASON_CODES, TRIGGER_OUTCOMES, VPD_SOURCES } from "./vocab";
 import { WORDS, hasWords, modeWords, words } from "./words";
 
 const repo = (path: string) => readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
-type Schema = { enum?: string[]; properties?: Record<string, Schema> };
+type Schema = { enum?: (string | null)[]; properties?: Record<string, Schema> };
 const SCHEMAS = (parseYaml(repo("docs/design/dashboard/openapi/dashboard-api.v1.yaml")) as { components: { schemas: Record<string, Schema> } }).components.schemas;
+/** A schema's enum without its null (a nullable enum lists null as a value). */
 const enumOf = (schema: Schema | undefined): string[] => {
   if (!schema?.enum?.length) throw new Error("no enum");
-  return schema.enum;
+  return schema.enum.filter((value): value is string => value !== null);
 };
 
 /** The quoted names of a C array initialiser in firmware/lib/greenhouse_types.h, e.g. `MODE_NAMES[] = {...};`. */
@@ -27,6 +31,25 @@ function alertTypes(): string[] {
   const block = /^ALERT_TYPES: tuple\[str, \.\.\.\] = \(([\s\S]*?)^\)/m.exec(repo("verdify_schemas/alerts.py"));
   if (!block) throw new Error("no ALERT_TYPES in verdify_schemas/alerts.py");
   return [...block[1].matchAll(/"([a-z0-9_]+)"/g)].map((match) => match[1]);
+}
+/** The statuses `planner_trigger_ledger_status_check` allows in db/schema.sql. */
+function ledgerStatuses(): string[] {
+  const check = /CONSTRAINT planner_trigger_ledger_status_check CHECK \(\(status = ANY \(ARRAY\[([^\]]*)\]\)\)\)/.exec(repo("db/schema.sql"));
+  if (!check) throw new Error("no planner_trigger_ledger_status_check in db/schema.sql");
+  return [...check[1].matchAll(/'([a-z_]+)'::text/g)].map((match) => match[1]);
+}
+/** A `Literal[...]` field of `StressWindow` in verdify_schemas/plan.py. */
+function stressWindowLiteral(field: "kind" | "severity"): string[] {
+  const model = /^class StressWindow\(BaseModel\):([\s\S]*?)^class /m.exec(repo("verdify_schemas/plan.py"));
+  const literal = model && new RegExp(`^\\s+${field}: Literal\\[([^\\]]*)\\]`, "m").exec(model[1]);
+  if (!literal) throw new Error(`no StressWindow.${field} Literal in verdify_schemas/plan.py`);
+  return [...literal[1].matchAll(/"([a-z_]+)"/g)].map((match) => match[1]);
+}
+/** `RejectCode` in verdify_schemas/irrigation.py: why the controller refused a pushed program. */
+function rejectCodes(): string[] {
+  const literal = /^RejectCode = Literal\[([^\]]*)\]/m.exec(repo("verdify_schemas/irrigation.py"));
+  if (!literal) throw new Error("no RejectCode in verdify_schemas/irrigation.py");
+  return [...literal[1].matchAll(/"([a-z_]+)"/g)].map((match) => match[1]);
 }
 /** The codes `gh_fog_block_reason` publishes (firmware/greenhouse/controls.yaml, `fog_safety_block_reason`'s included). */
 const FOG_BLOCK_REASONS = [
@@ -44,7 +67,7 @@ function expectWorded(family: string, codes: readonly string[]) {
   }
 }
 
-test("every ProblemCode, StateReason code and line-state code in the OpenAPI file has words", () => {
+test("every ProblemCode, StateReason code, line-state code and alert status in the OpenAPI file has words", () => {
   const problemCodes = enumOf(SCHEMAS.ProblemCode);
   const stateReasons = enumOf(SCHEMAS.StateReason?.properties?.code);
   const lineStates = enumOf(SCHEMAS.LineState?.properties?.code);
@@ -57,6 +80,9 @@ test("every ProblemCode, StateReason code and line-state code in the OpenAPI fil
   expect([...LINE_STATE_CODES].sort()).toEqual([...lineStates].sort());
   expect([...ALERT_SEVERITIES].sort()).toEqual([...enumOf(SCHEMAS.Alert?.properties?.severity)].sort());
   expect(ALERT_SEVERITIES.map((severity) => words("alert_severity", severity))).toEqual(["Critical", "Warning", "Info"]);
+  const statuses = enumOf(SCHEMAS.Alert?.properties?.status);
+  expectWorded("alert_status", statuses);
+  expect([...ALERT_STATUSES].sort()).toEqual([...statuses].sort());
 });
 
 test("every mode and mist stage in firmware/lib/greenhouse_types.h has words, in screens SCR-01's", () => {
@@ -84,10 +110,104 @@ test("every alert type in ALERT_TYPES has words, the leak alert titled as the ba
   expect(words("alert_type", "leak_detected")).toBe("Water flowing with every Verdify valve closed");
 });
 
+/** The `equipment_state` keys `ingestor/entity_map.py` maps the controller's relays and switches to. */
+function entityMapEquipment(): string[] {
+  const source = repo("ingestor/entity_map.py");
+  return ["EQUIPMENT_BINARY_MAP", "EQUIPMENT_SWITCH_MAP"].flatMap((name) => {
+    const block = new RegExp(`^${name}: dict\\[str, str\\] = \\{([\\s\\S]*?)^\\}`, "m").exec(source);
+    if (!block) throw new Error(`no ${name} in ingestor/entity_map.py`);
+    return [...block[1].matchAll(/"[^"]+":\s*"([a-z0-9_]+)"/g)].map((match) => match[1]);
+  });
+}
+/** Architecture §7's fixed actuator list: the climate relays, the eleven wet relays, the Lutron readback and the controller's light switches. */
+const FIXED_ACTUATORS = [
+  "fan1", "fan2", "vent", "heat1", "heat2",
+  "drip_wall", "drip_wall_fert", "fert_master_valve", "mister_center", "drip_center", "drip_center_fert", "mister_south", "mister_south_fert",
+  "mister_west", "mister_west_fert", "fog",
+  "grow_light_main", "grow_light_grow", "grow_light_main_intent", "grow_light_grow_intent",
+];
+
+test("every actuator of the fixed list has its plain name, in screens SCR-01's words", () => {
+  // Every key but the Lutron readback (written by the Home Assistant sync, not the controller) is one entity_map.py maps.
+  const mapped = entityMapEquipment();
+  expect(FIXED_ACTUATORS.filter((key) => !mapped.includes(key))).toEqual(["grow_light_main", "grow_light_grow"]);
+  expectWorded("equipment", FIXED_ACTUATORS);
+  expect(Object.keys(WORDS.equipment).sort()).toEqual([...FIXED_ACTUATORS].sort());
+  expect(["fan1", "heat1", "heat2", "mister_center", "drip_wall"].map((key) => words("equipment", key))).toEqual(["Fan 1", "Heat 1 (electric)", "Heat 2 (gas)", "Center mister", "Wall drip"]);
+  expect(words("equipment", "pump")).toBe("pump");
+});
+
+test("every band verdict, required-trigger state and burst kind in the OpenAPI file has words", () => {
+  const verdicts = enumOf(SCHEMAS.BandPosition?.properties?.verdict);
+  const triggers = enumOf(SCHEMAS.Now?.properties?.iris?.properties?.required_trigger);
+  const bursts = enumOf((SCHEMAS.Now?.properties?.overrides as { items?: Schema } | undefined)?.items?.properties?.kind);
+  expectWorded("band_verdict", verdicts);
+  expectWorded("required_trigger", triggers);
+  expectWorded("burst", bursts);
+  expect([...BAND_VERDICTS].sort()).toEqual([...verdicts].sort());
+  expect([...REQUIRED_TRIGGERS].sort()).toEqual([...triggers].sort());
+  expect([...BURST_KINDS].sort()).toEqual([...bursts].sort());
+  expect(BAND_VERDICTS.map((verdict) => words("band_verdict", verdict))).toEqual(["in band", "above band", "below band", "band unavailable"]);
+  expect(REQUIRED_TRIGGERS.map((state) => words("required_trigger", state))).toEqual(["OK", "Late", "Missed", "Failed"]);
+  expect(words("burst", "fans")).toBe("Fans burst");
+  expect(words("mode", "UNKNOWN")).toBe("Mode unknown");
+});
+
 test("the table has words for every code gh_fog_block_reason publishes", () => {
   expect(FOG_BLOCK_REASONS).toHaveLength(14);
   expectWorded("fog_block_reason", FOG_BLOCK_REASONS);
   expect(Object.keys(WORDS.fog_block_reason).sort()).toEqual([...FOG_BLOCK_REASONS].sort());
+});
+
+test("every planner trigger outcome has its words, from the OpenAPI enum and the ledger's status check alike", () => {
+  const outcomes = enumOf(SCHEMAS.PlannerTrigger?.properties?.outcome);
+  expect([...TRIGGER_OUTCOMES].sort()).toEqual([...outcomes].sort());
+  expect([...ledgerStatuses()].sort()).toEqual([...outcomes].sort());
+  expect(Object.keys(WORDS.trigger_outcome).sort()).toEqual([...outcomes].sort());
+  // "delivered" and "missed" are their own words, so the words may equal the code but never keep an underscore.
+  for (const outcome of outcomes) expect(words("trigger_outcome", outcome), outcome).not.toMatch(/_/);
+  expect(TRIGGER_OUTCOMES.map((outcome) => words("trigger_outcome", outcome))).toEqual([
+    "due", "delivered", "acknowledged", "plan written", "setting changed", "fallback", "wrong action", "delivery failed", "timed out", "missed",
+  ]);
+  expect(words("trigger_outcome", "rescheduled")).toBe("rescheduled");
+});
+
+test("every stress window kind and severity in verdify_schemas/plan.py has words", () => {
+  const kinds = stressWindowLiteral("kind");
+  const severities = stressWindowLiteral("severity");
+  expect(kinds).toEqual(["heat", "cold", "vpd_high", "vpd_low"]);
+  expectWorded("stress_kind", kinds);
+  expectWorded("stress_severity", severities);
+  expect(Object.keys(WORDS.stress_kind).sort()).toEqual([...kinds].sort());
+  expect(Object.keys(WORDS.stress_severity).sort()).toEqual([...severities].sort());
+  expect(words("stress_kind", "vpd_high")).toBe("VPD high");
+  expect(words("stress_severity", "high")).toBe("high severity");
+});
+
+test("every activity action the services write has words, each one an action the server can log", () => {
+  const source = /ACTIVITY_ACTION_PATTERN = \(\s*r"([^"]+)"\s*\)/.exec(repo("verdify_schemas/activity.py"));
+  if (!source) throw new Error("no ACTIVITY_ACTION_PATTERN in verdify_schemas/activity.py");
+  const server = new RegExp(source[1]);
+  // The fixed actions (architecture §9) and the irrigation ones #1156 writes; light.on and light.off come with #1140.
+  const actions = [
+    "setting.write", "setting.release", "plan.write", "alert.ack", "alert.resolve", "irrigation.run", "irrigation.stop", "irrigation.clear_fault",
+    "irrigation.override", "irrigation.schedule.create", "irrigation.schedule.update", "irrigation.schedule.delete", "irrigation.line.update",
+  ];
+  expectWorded("activity_action", actions);
+  expect(Object.keys(WORDS.activity_action).sort()).toEqual([...actions].sort());
+  for (const action of actions) expect(server.test(action), action).toBe(true);
+  expect(words("activity_action", "plan.write")).toBe("Plan");
+  // An action this build does not know reads raw.
+  expect(words("activity_action", "equipment.override")).toBe("equipment.override");
+});
+
+test("every schedule, line and run field an irrigation write carries has words", () => {
+  const props = (name: string) => Object.keys(SCHEMAS[name]?.properties ?? {});
+  // line_id is the row's target, and manual and reason have their own words in the row.
+  const fields = [...new Set(["ScheduleInput", "LineUpdate", "RunRequest"].flatMap(props))].filter((field) => !["line_id", "manual", "reason"].includes(field));
+  expect(fields.length).toBeGreaterThanOrEqual(17);
+  expectWorded("irrigation_field", fields);
+  expect(Object.keys(WORDS.irrigation_field).sort()).toEqual([...fields].sort());
 });
 
 test("the existing families keep their words", () => {
@@ -95,6 +215,28 @@ test("the existing families keep their words", () => {
   expect(words("state_reason", "no_match")).toBe("No matching readback yet");
   expect(words("state_reason", "no_engine")).toBe("Applies with the irrigation firmware");
   expect(words("problem_code", "writes_disabled")).toBe("Changes are switched off; reading still works");
+});
+
+test("the Water families (#1135): every run outcome, VPD source, line fault and program reject has words", () => {
+  const outcomes = enumOf(SCHEMAS.RunOutcome);
+  expect(Object.keys(WORDS.run_outcome).sort()).toEqual([...outcomes].sort());
+  expect([...OUTCOMES].sort()).toEqual([...outcomes].sort());
+  // The outcome words are the outcomes, except the gap: an outcome that never reached the platform.
+  expect(outcomes.map((outcome) => words("run_outcome", outcome))).toEqual(["ok", "short", "stopped", "preempted", "skipped", "missed", "cap", "no outcome received"]);
+  const sources = enumOf(SCHEMAS.IrrigationLine?.properties?.vpd_source);
+  expect([...VPD_SOURCES].sort()).toEqual([...sources].sort());
+  expectWorded("vpd_source", sources);
+  expect(sources.map((source) => words("vpd_source", source))).toEqual(["VPD from its own probe", "VPD from peer probes", "VPD from the house average"]);
+  const faults = enumOf(SCHEMAS.IrrigationLine?.properties?.fault);
+  expect([...LINE_FAULTS].sort()).toEqual([...faults].sort());
+  expectWorded("line_fault", faults);
+  const rejects = rejectCodes();
+  expect(rejects).toEqual(["bad_length", "bad_magic", "bad_hash", "bad_header", "bad_line", "bad_slot"]);
+  expectWorded("program_reject", rejects);
+  expect(Object.keys(WORDS.program_reject).sort()).toEqual([...rejects].sort());
+  // Occurrence reasons arrive in words: the fixed ones read as the week view says them, the rest as sent.
+  expect(words("occurrence_reason", "only while VPD sensing is degraded")).toBe("only if VPD sensing is degraded");
+  expect(words("occurrence_reason", "line paused by jason: rain")).toBe("line paused by jason: rain");
 });
 
 test("an unknown code or family renders raw, prototype names included", () => {
@@ -105,4 +247,14 @@ test("an unknown code or family renders raw, prototype names included", () => {
   expect(words("toString", "valueOf")).toBe("valueOf");
   expect(hasWords("state_reason", "__proto__")).toBe(false);
   expect(hasWords("mode", "hasOwnProperty")).toBe(false);
+});
+
+test("the scorecard reasons: the water day's quality in words, and the reasons VD-56 sends in words already as sent", () => {
+  expect(["partial_day", "unavailable", "ledger_incomplete", "discontinuous", "incomplete"].map((code) => words("scorecard_reason", code))).toEqual([
+    "day not finished", "no meter readings", "meter totals not caught up", "meter readings broken up", "meter readings miss part of the day",
+  ]);
+  expectWorded("scorecard_reason", Object.keys(WORDS.scorecard_reason));
+  expect(words("scorecard_reason", "no meter data")).toBe("no meter data");
+  expect(words("scorecard_reason", "band grade kept 3 days")).toBe("band grade kept 3 days");
+  expect(words("scorecard_reason", "meter_offline")).toBe("meter_offline");
 });

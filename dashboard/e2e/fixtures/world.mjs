@@ -514,6 +514,17 @@ export const FIXTURES = {
     Object.assign(row, { plan: { ...row.plan, value: 48.75 }, readback: reading(48.75, world.now - 3 * MINUTE) });
     laneOf(world, "mister_engage_delay_s").device = reading(48.75, world.now - 3 * MINUTE);
   },
+  // #1129, Now: answer row 5 alone (a fresh 84.1 °F above the 62.0–70.0 °F band), a null RH with its reason, band rows
+  // with no time, and the occupancy chip's states.
+  "too-hot": (world) => {
+    world.indoor.temp_f = reading(84.1, world.now - 20_000);
+    world.band.temp_f = { ...world.band.temp_f, verdict: "above" };
+  },
+  "rh-missing": (world) => { world.indoor.rh_pct = reading(null, world.now - 20_000, "No indoor RH"); },
+  "band-age-unknown": (world) => { world.band = { ...world.band, observed_at: null }; },
+  "occupied": (world) => { world.occupancy = { occupied: true, seen_at: iso(world.now - 4 * MINUTE), hold_enabled: true }; },
+  "occupancy-unknown": (world) => { world.occupancy = { occupied: null, seen_at: null, hold_enabled: true }; },
+  "occupancy-hold-off": (world) => { world.occupancy = { ...world.occupancy, hold_enabled: false }; },
 };
 
 /**

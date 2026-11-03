@@ -223,6 +223,19 @@ Acceptance:
 5. Occupancy always shows: confirmed reads "Someone inside: misters wait (Frigate, 4 min ago)"; unknown reads
    "Occupancy unknown: misters may run".
 
+**As built (VD-09).** Where the build settles a detail this section leaves open, or differs from it:
+
+| Topic | As built |
+|---|---|
+| The answer's stale row | "Waiting for fresh data" holds while API-02 marks the climate source stale, and also while an indoor reading is older than twice the climate cadence at the answer's `server_time`, or a reading with a band in force (temperature, VPD) has no value. In production the readings come from the newest climate row, so this is the same test; it also covers the `stale-data` fixture (climate fresh, readings 14 min old) and a probe that drops out of a fresh row. A missing RH with no RH band is not stale. Before API-02 first answers the sentence reads "Checking the greenhouse…" and claims nothing |
+| One API-02 request | Now reads the shell's API-02 poll; the shell polls under the same key the write hooks read, so Stop notes what runs from it and reads it every 5 s while it confirms, and an Acknowledge refetches the one count there. The answer's first row follows the newest read of that entry (the poll or a Stop's readback), and a 401 is the session-ended card, never "Can't reach the greenhouse data" |
+| VPD and RH beside the hero value | At 860 px and below, where their tiles move under "All readings", a line under the hero value reads "VPD 0.62 kPa · in band · RH 71.0% · no RH band" (verdicts hidden while the answer mutes them) |
+| Phones | 860 px and below throughout (§1.1): the hero keeps Mode, Iris, Water and Alerts 2-up, and a button marked wide (Stop all water and Acknowledge here) is full width. A tighter hero (1rem padding, a 2.75rem hero value, smaller tiles), tighter gaps and a 0.9rem minutes line keep Stop all water above the fold at 390 × 844, with water running and a two-line mode too (measured in Chrome on static renders of the fixtures; #1128's e2e measures it in CI); the static chips are 32 px tall, as they are not targets. Opening `/#data` on a phone (the ingestor banner's link) opens "All readings" at the Data tile |
+| Water card | DOM order is the title, the minutes line, the actions row (Stop all water for operators, "Water ›" for everyone), then the rest; above 860 px the actions row moves to the card's end, as drawn. Stop sits outside the card's error boundaries, so it renders in every state. Last water reads "misted Fri 14:20 (VPD)" for a mister and "Fri 08:31, 12 min" for a drip (times are the instant's own clock, so a Friday before the fall-back reads MDT) |
+| Tile values | A tile's value wraps rather than truncating, at every width, so the mode in words ("Sensor fault: equipment off") and the count by severity ("1 warning · 1 info") always read whole; a muted value (STALE) never turns the Iris tile amber. An age or reading the API lacks reads "—" with why ("writer — (no push on record)", "RH — (No outdoor RH in the last hour)") |
+| Line states before the irrigation firmware | The Water tile and the card's running line read Unknown only while an enabled line's state is unknown, or, with the firmware, while `irr_state` is stale. Before it no `irr_state` exists (a source never seen reads stale), and the relay states stand alone (irrigation §9) |
+| Needs someone | The top three keep API-14's order (severity, then age as the API sorts it: last seen, newest first), so they are the first unacknowledged rows Activity lists. A row acknowledged on the page stays in place for the visit, reading "Acknowledged by jason · 10:42"; the head and the answer follow the one count as API-02 refetches |
+
 ## 3. SCR-02 Graphs · `/graphs`
 
 **Purpose:** past, present and plan in one view: climate against the band, any measured signal, setting steps and
