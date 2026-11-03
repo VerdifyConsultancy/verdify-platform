@@ -261,6 +261,61 @@ test("the base, in-band, is the screens' SCR-01 greenhouse", () => {
   expect(set["API-21"].days.every((day: Body) => day.meter_gal === null || Number.isInteger(day.meter_gal))).toBe(true);
 });
 
+test("API-12 lists the desired rows from the one in force at from, a write joins them, and the readback log follows a confirmed write", () => {
+  const api = createFixtureHandler({ fixture: ["setting-history", "requested-to-confirmed"], clock: () => NOW });
+  const history = (daysBack: number, hoursAhead = 12) => api.respond({ url: `/v1/settings/mister_engage_kpa/history?from=${new Date(NOW - daysBack * 86_400_000).toISOString()}&to=${new Date(NOW + hoursAhead * 3_600_000).toISOString()}` }).body;
+  const week = history(7);
+  expect(week.desired.map((row: Body) => [row.id, row.value, row.manual, (row.actor as Body).name])).toEqual([[201, 1.6, false, "iris"], [202, 1.55, true, "jason"]]);
+  expect(week.readback.map((point: Body) => point.value)).toEqual([1.5, 1.6, 1.55]);
+  expect(week.plan).toEqual([expect.objectContaining({ source: "iris", value: 1.7, effective: false })]);
+  // The two hours since 08:30 hold no row: the one in force at from comes first.
+  const short = history(2 / 24);
+  expect(short.desired.map((row: Body) => row.id)).toEqual([202]);
+  expect(short.readback.map((point: Body) => point.value)).toEqual([1.55]);
+  // to is exclusive, so the 13:00 waypoint is out of a window ending now.
+  expect(history(7, 0).plan).toEqual([]);
+  expect(api.respond({ method: "PUT", url: "/v1/settings/mister_engage_kpa", headers: { "Idempotency-Key": KEY }, body: { value: 1.6, manual: true } }).status).toBe(200);
+  const after = history(7);
+  expect(after.desired.map((row: Body) => [row.value, row.state])).toEqual([[1.6, "confirmed"], [1.55, "confirmed"], [1.6, "requested"]]);
+  for (let read = 0; read < 3; read += 1) api.respond({ url: "/v1/settings" });
+  expect(history(7).readback.at(-1)).toEqual({ at: new Date(NOW + 40_000).toISOString(), value: 1.6 });
+  // A row with no log keeps the base's one row and one reading.
+  const base = createFixtureHandler({ clock: () => NOW }).respond({ url: `/v1/settings/fog_rh_ceiling_pct/history?from=${new Date(NOW - 86_400_000).toISOString()}&to=${new Date(NOW).toISOString()}` }).body;
+  expect(base.desired.map((row: Body) => row.id)).toEqual([41]);
+  expect(base.readback).toEqual([{ at: new Date(NOW - 86_400_000).toISOString(), value: 88 }]);
+  // setting-history-release: the row before Jason's is a release.
+  const released = fixture("setting-history-release", { now: NOW })["API-12"];
+  expect(released.desired.map((row: Body) => [row.value, row.state])).toEqual([[null, "released"], [1.55, "confirmed"]]);
+  // setting-history-older: the window holds the newest row alone; 90 days back holds the row before it too.
+  const older = createFixtureHandler({ fixture: "setting-history-older", clock: () => NOW });
+  const reach = (daysBack: number) => older.respond({ url: `/v1/settings/mister_engage_kpa/history?from=${new Date(NOW - daysBack * 86_400_000).toISOString()}&to=${new Date(NOW).toISOString()}` }).body.desired.map((row: Body) => row.id);
+  expect([reach(7), reach(90)]).toEqual([[202], [201, 202]]);
+});
+
+test("API-19: current is the band as stored, which API-10 moves and API-11 leaves; a zone reads its target ∓ its widths; outside the bounds it refuses", () => {
+  const api = createFixtureHandler({ fixture: "band-preview-center", clock: () => NOW });
+  expect(fixture("band-preview-center", { now: NOW })["API-19"]).toMatchObject({ param: "zone_vpd_target_center_sm", unit: "kPa", step_s: 600 });
+  const preview = (value: number, param = "zone_vpd_target_center_sm") => api.respond({ url: `/v1/band/preview?param=${param}&value=${value}` });
+  const noon = 72;
+  const first = preview(1.25).body;
+  expect(first.current.target[noon]).toBe(1.1);
+  expect(first.draft.target[noon]).toBe(1.25);
+  expect(first.current.low[noon]).toBe(0.9);
+  expect(first.current.high[noon]).toBe(1.45);
+  const refused = preview(3.5);
+  expect(refused.status).toBe(422);
+  expect(refused.body).toMatchObject({ code: "out_of_range", field: "value", min: 0.1, max: 3 });
+  // A width moves its own edge from the zone's target.
+  const width = preview(0.3, "zone_vpd_width_below_center").body;
+  expect(width.draft.target[noon]).toBe(1.1);
+  expect(width.draft.low[noon]).toBe(0.8);
+  expect(width.draft.high[noon]).toBe(1.45);
+  expect(api.respond({ method: "PUT", url: "/v1/settings/zone_vpd_target_center_sm", headers: { "Idempotency-Key": KEY }, body: { value: 1.25, manual: true } }).status).toBe(200);
+  expect(preview(1.25).body.current.target[noon]).toBe(1.25);
+  expect(api.respond({ method: "DELETE", url: "/v1/settings/zone_vpd_target_center_sm", headers: { "Idempotency-Key": OTHER_KEY } }).status).toBe(200);
+  expect(preview(1.25).body.current.target[noon]).toBe(1.25);
+});
+
 test("every equipment label the fixture serves is the API's: EQUIPMENT_LABELS in verdify_services/labels.py", () => {
   const source = readFileSync(new URL("../../../verdify_services/labels.py", import.meta.url), "utf8");
   const block = /EQUIPMENT_LABELS[^{]*\{([^}]*)\}/.exec(source)![1];

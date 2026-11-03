@@ -35,7 +35,7 @@ export type EditDrawerProps = {
   saveLabel?: string;
   /** Save stays disabled until the form can be sent ("Enable" until Checked is ticked). */
   saveDisabled?: boolean;
-  /** A refusal that names no field shown here, in words, above the actions. */
+  /** A refusal that names no field shown here, in words, under the fields. */
   error?: string | null;
   /** More actions beside Save, for operators ("Release to auto"). */
   actions?: ReactNode;
@@ -48,6 +48,11 @@ export type EditDrawerProps = {
   children?: ReactNode;
   /** One more class on the dialog: the schedule editor keeps the week readable beside it. */
   className?: string;
+  /**
+   * What reads alongside the fields (a setting's history): under them and outside their fieldset, so read-only never
+   * disables its controls. It still sits in the drawer's form, so any button of its own stays `type="button"`.
+   */
+  below?: ReactNode;
 };
 
 /**
@@ -57,7 +62,7 @@ export type EditDrawerProps = {
  * read-only (the values and Done, no Save), and so does everyone for an item marked `readOnly`; with changes switched
  * off an operator sees the fields and Save disabled.
  */
-export function EditDrawer({ open, onClose, title, eyebrow, heading, status, graph, onSave, saving = false, saveLabel = "Save", saveDisabled = false, error, actions, readOnly: fixed = false, children, className }: EditDrawerProps) {
+export function EditDrawer({ open, onClose, title, eyebrow, heading, status, graph, onSave, saving = false, saveLabel = "Save", saveDisabled = false, error, actions, readOnly: fixed = false, children, className, below }: EditDrawerProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const errorId = useId();
@@ -89,6 +94,7 @@ export function EditDrawer({ open, onClose, title, eyebrow, heading, status, gra
           {children}
         </fieldset>
         {error && <FieldError id={errorId}>{error}</FieldError>}
+        {below}
       </div>
       <div className="drawer-actions">
         <Button onClick={onClose}>{changes ? "Cancel" : "Done"}</Button>

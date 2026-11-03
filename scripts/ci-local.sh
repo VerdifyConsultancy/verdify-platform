@@ -96,6 +96,7 @@ $PY -m pytest -q -rs \
   tests/test_286_lighting_policy_delivery.py \
   tests/test_metric_registry_completeness.py \
   tests/test_verdify_services_series.py \
+  tests/test_verdify_services_band_preview.py \
   tests/test_qualify_migration_successor.py \
   tests/test_verdify_services_core.py \
   tests/test_verdify_services_settings.py \
@@ -114,6 +115,7 @@ $PY -m pytest -q -rs \
   tests/test_irrigation_writes_rest.py \
   tests/test_dashboard_db_irrigation_writes.py \
   tests/test_dashboard_db_forecast_engine.py \
+  tests/test_dashboard_db_next_reads.py \
   tests/test_bounded_reconcile.py \
   tests/test_10_planner_routing.py \
   tests/test_11_planner_milestones.py \
@@ -267,9 +269,15 @@ $PY -m pytest -q -rs \
   tests/test_mcp_audience_auth.py \
   tests/test_mcp_named_agents.py \
   tests/test_mcp_irrigation_read_tools.py \
+  tests/test_mcp_irrigation_write_tools.py \
+  tests/test_dashboard_db_mcp_irrigation_writes.py \
   tests/test_irrigation_context.py \
   tests/test_dashboard_db_irrigation_context.py \
   tests/test_gather_no_home_assistant.py \
+  tests/test_mcp_settings_tools.py \
+  tests/test_dashboard_db_mcp_settings.py \
+  tests/test_dashboard_db_settings_parity.py \
+  tests/test_gather_manual_settings.py \
   tests/test_mcp_transport_runtime.py \
   tests/test_outcome_kpi_dryout_projection.py \
   tests/test_scorecard_realized_dryout.py \
@@ -318,6 +326,8 @@ $PY -m pytest -q -rs \
   tests/test_operator_api_contract.py \
   tests/test_operator_api_auth.py \
   tests/test_operator_writes.py \
+  tests/test_operator_lights.py \
+  tests/test_setpoint_server_ingress.py \
   tests/test_public_api_operator_paths.py \
   tests/test_operator_api_manifests.py \
   tests/test_verdify_traefik_placement.py \

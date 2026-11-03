@@ -454,7 +454,7 @@ def test_the_server_instructions_name_only_tools_admin_can_call(mcp_server):  # 
     assert admin == set(mcp_server.TOOL_AUDIENCES)
     assert instructions_problems(mcp_server.SERVER_INSTRUCTIONS, NEW_TOOLS | admin, admin) == []
     named = instructions_named(mcp_server.SERVER_INSTRUCTIONS) & (NEW_TOOLS | admin)
-    assert named >= {*READ_TOOLS, "irrigation_run", "irrigation_stop"}
+    assert named >= {t for t in mcp_server.TOOL_AUDIENCES if t.startswith("irrigation_")}
 
 
 def test_the_instructions_check_fails_on_a_tool_that_is_not_registered_yet(mcp_server):  # noqa: F811

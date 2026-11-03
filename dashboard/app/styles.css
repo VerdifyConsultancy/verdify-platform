@@ -480,6 +480,15 @@ a.picker-item:hover{background:var(--field)}
   .setting-actions .setting-edit{flex:1 1 100%}
   .setting-history{margin-left:0}
 }
+/* Settings depth (VD-19, screens SCR-05): the drawer's history with Revert and a crop-band anchor's curve preview, each a panel without its card frame. The Revert button's words wrap, so a long one fits the drawer at 320 px. */
+.drawer-history{margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--line)}
+.drawer-history>.card,.band-preview>.card{padding:0;border:0;box-shadow:none}
+.band-preview{margin:0 0 .9rem}
+.history-no-readback{margin:0 0 .35rem}
+.drawer-revert{margin-top:.75rem}
+.drawer-revert .btn{width:100%}
+.drawer-revert .field-error{margin-top:.35rem}
+
 /* Activity and alerts (screens §7): the alert groups and the expanded alert, its runbook as text with its line breaks, and the log's filters and plan changes. */
 .panel-link,.alert-toggle a,.alert-graph a,.log-filters a{display:inline-flex;align-items:center;min-height:2.75rem;font-size:.875rem;font-weight:700}
 .event .alert-toggle{margin:0}

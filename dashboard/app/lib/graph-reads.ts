@@ -6,7 +6,7 @@
  * answer on screen until the next one arrives (screens §1.5: a refetch keeps the previous render). Nothing loads in SSR.
  */
 import { useContext, useEffect, useRef, useState } from "react";
-import { useQueries } from "@tanstack/react-query";
+import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import { apiGet, type ParamsOf, type Parsed, type ReadOperationId } from "./operator-api";
 import { nextPollDelay } from "./polling";
 import { readKey } from "./queries";
@@ -106,6 +106,27 @@ export function useWindowReads<K extends ReadOperationId>(operationId: K, slots:
   });
   for (const id of [...kept.current.keys()]) if (!reads.has(id)) kept.current.delete(id);
   return reads;
+}
+
+/**
+ * One read a drawer shows (SCR-05's setting history and band preview): sent when it mounts and each time `params` change,
+ * never polled, and dropped with its last observer, so a drawer opened after a write never shows the answer from before
+ * it. The previous answer stays on screen while the next loads (`isPlaceholderData` says so). `params` null reads
+ * nothing. It stops while the session has ended.
+ */
+export function useFreshRead<K extends ReadOperationId>(operationId: K, params: ParamsOf<K> | null) {
+  const paused = useContext(PollingPaused);
+  return useQuery<Parsed<K>>({
+    queryKey: readKey(operationId, params ?? undefined),
+    queryFn: () => apiGet(operationId, params as ParamsOf<K>, { signal: AbortSignal.timeout(GRAPH_READ_TIMEOUT_MS) }),
+    enabled: params !== null && !paused,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    placeholderData: keepPreviousData,
+  });
 }
 
 /** The one read of a slot list that has a single slot (API-03, the band, the lanes), or an idle read when there is none. */

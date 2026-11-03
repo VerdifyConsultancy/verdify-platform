@@ -321,8 +321,8 @@ dispatcher, the API's `applied_from` and the services resolve a setting the same
   `v_runtime_setpoint_changes_write` inserts go, its `setpoint_plan` rows (source `preemptive`) stay, and each plan
   appends one `activity_log` row (source `system`, actor `forecast-engine`, the rule as reason; labelled "Forecast
   rule · system") and applies through the next normal dispatcher pass. The dispatcher admits a forecast-rule plan
-  row (`plan_id` `preemptive-*`) for any writable parameter (§5.3 step 1), so `high_wind` still reaches
-  `sw_economiser_enabled`, which is not planner-pushable; Iris's rows keep today's filter. Band-owned `temp_low`
+  row (`plan_id` `preemptive-*`) for any writable parameter (§5.3 step 1), including ones that are not
+  planner-pushable; Iris's rows keep today's filter. Band-owned `temp_low`
   and `temp_high` keep the band. As built: a forecast-rule row for a read-only parameter is audited as
   `planner_param_not_pushable` and goes nowhere, so no forecast-rule value reaches the controller around the fences.
 - **Release.** A released row with no plan, band or dispatcher default gets its registry default
@@ -618,6 +618,7 @@ column with neither a key nor a `series.EXCLUDED_COLUMNS` reason. Heap keys are 
 | Query | `time_bucket_gapfill(bucket, ts)` with `avg`, `min`, `max` and `count`; every hypertable query is bounded by `ts` |
 | Long windows | Over 31 days, or when `from` is older than the raw retention of a requested metric with a daily binding, buckets are 1 d: each metric with a daily binding reads `daily_summary` (its `source` and the chart say so); others use raw data. Maximum window 400 days |
 | Gaps | `null`, never 0; `count[]` gives coverage. Raw buckets older than `retention_days` are marked "beyond retention (N days kept)", never clamped and never counted as gaps |
+| Forecast keys (Next, VD-57) | `forecast.temp_f`, `forecast.rh_pct` and `forecast.vpd_kpa` read the newest `weather_forecast` issue per hour and bucket like raw keys, with `source` `forecast` and `issued_at`, the newest `fetched_at` used. Below 1 h a value sits only in the bucket that holds its hour. They have no part in `watermark`, the newest sample measured |
 | Shape | uPlot columns: `{t: [epoch s], series: {key: {avg, min, max, count, source, retained_from}}, bucket_s, watermark, server_time}` |
 | Cost | The dashboard login has `statement_timeout = 10s`; a timeout returns 503 "narrow the window" |
 
@@ -774,7 +775,8 @@ coordinator's train and consolidated pin PR deliver them); network-infra and mon
 | traefik-apps pods → web | 3000 | `verdify-dashboard` ingress (default-deny ingress otherwise) |
 | web egress: `egress-deny-management` | any but the management set | `verdify-dashboard`: network-infra#839's vendored policy, as in `verdify-prod` (#1114) and `verdify-descheduler` (#1116). kube-dns, the operator API and `auth.vallery.net` (traefik-apps) lie outside the set, so no `egress-allow-management-*` policy is needed; from the pod, the issuer's `.well-known/openid-configuration` returns 200 |
 | web → `verdify-operator-api` | 8090 | `verdify-prod` ingress (namespace and pod selector) |
-| operator API → `verdify-db` | 5432 | `verdify-prod`: `allow-db-from-app` (`deploy/k8s/base/networkpolicy.yaml`) gains `operator-api`; it needs no other egress, so `egress-deny-management` keeps covering it |
+| operator API → `verdify-db` | 5432 | `verdify-prod`: `allow-db-from-app` (`deploy/k8s/base/networkpolicy.yaml`) gains `operator-api`; it needs no egress allowlist of its own, so `egress-deny-management` keeps covering it |
+| operator API → `verdify-setpoint-server` | 8200 | `verdify-prod`: the new `allow-setpoint-from-operator-api` (VD-57, API-20; `deploy/k8s/components/setpoint-server/`). The setpoint server takes no token, so this allow is its guard; `egress-deny-management` already leaves in-cluster pods reachable |
 | named agents → `verdify-mcp` | 8000 | `verdify-prod`: the new `allow-mcp-from-named-agents` (VD-59, §5.6) |
 
 Secrets, by name only, added to `deploy/k8s/SECRETS.md` with a Rotate line each (who seals it, what restarts).

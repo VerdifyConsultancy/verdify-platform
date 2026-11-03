@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // The caretaker's phone: no page scrolls sideways at 360 or 390 px and the bottom bar holds the five tabs; and with
 // reduced motion emulated, nothing moves.
-import { CARD_PAGES, ROUTES } from "./routes";
+import { CARD_PAGES, ROUTES, SETTING_DRAWERS } from "./routes";
 import { PHONE, SMALL_PHONE, WEBKIT, bottomBar, expect, expectNoHorizontalScroll, load, test, useFixture } from "./support";
 
 for (const viewport of [SMALL_PHONE, PHONE]) {
@@ -13,6 +13,17 @@ for (const viewport of [SMALL_PHONE, PHONE]) {
       await load(page, path);
       await expectNoHorizontalScroll(page);
       await expect(bottomBar(page).getByRole("link")).toHaveText([/^Now/, /^Water/, /^Graphs/, /^Activity/, /^More/]);
+    });
+  }
+  for (const { path, fixture, charts } of SETTING_DRAWERS) {
+    test(`${path} under ${fixture} · ${size}: the drawer's charts fit, with no horizontal scroll`, WEBKIT, async ({ page, request }) => {
+      await useFixture(request, fixture);
+      await page.setViewportSize(viewport);
+      await load(page, path);
+      const body = page.locator("dialog[open] .drawer-body");
+      await expect(body.locator(".plot canvas")).toHaveCount(charts);
+      await expectNoHorizontalScroll(page);
+      expect(await body.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(0);
     });
   }
   for (const { path, status, heading } of CARD_PAGES) {

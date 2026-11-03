@@ -251,6 +251,11 @@ def test_it_serves_its_own_operations_and_every_included_route_module():
         ("PUT", "/v1/irrigation/lines/{line_id}", "API-IRR-08"),
         ("POST", "/v1/equipment/override", "API-IRR-12"),
         ("POST", "/v1/irrigation/clear-fault", "API-IRR-13"),
+        ("GET", "/v1/series", "API-04"),
+        ("GET", "/v1/band", "API-06"),
+        ("GET", "/v1/band/preview", "API-19"),
+        ("POST", "/v1/equipment/lights/{light}/{state}", "API-20"),
+        ("GET", "/v1/water/daily", "API-21"),
     }
     # Committed operations not served yet are allowed: the other reads follow.
     committed = {

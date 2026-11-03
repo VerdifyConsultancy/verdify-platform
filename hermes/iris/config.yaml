@@ -58,6 +58,8 @@ mcp_servers:
         - irrigation_status
         - irrigation_schedule
         - irrigation_history
+        - settings
+        - activity
         # Knowledge
         - lessons
         - lessons_search       # Phase 3
@@ -72,9 +74,16 @@ mcp_servers:
         # Writes — all carry trigger_id + planner_instance audit
         - set_plan
         - set_tunable
+        - set_setting          # desired_state; never satisfies a trigger
         - acknowledge_trigger
         - plan_evaluate
         - lessons_manage
+        # Water writes — change watering only; never count as a plan for a trigger
+        - irrigation_schedule_set
+        - irrigation_line_set
+        - irrigation_run
+        - irrigation_stop
+        - irrigation_clear_fault
       exclude:
         - query  # raw-SQL escape hatch — deliberately denied in production
       resources: false

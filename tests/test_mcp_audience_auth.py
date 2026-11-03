@@ -45,10 +45,8 @@ MCP_DEPLOYMENT_PATH = REPO_ROOT / "deploy" / "k8s" / "base" / "mcp-deployment.ya
 BASE_CONFIG_PATH = REPO_ROOT / "deploy" / "k8s" / "base" / "configmap.yaml"
 PROD_OVERLAY_PATH = REPO_ROOT / "deploy" / "k8s" / "overlays" / "prod"
 
-# Architecture §5.6, the whole `agent` column (VD-59). The reads, alerts and the
-# irrigation reads, run and stop (#1173, #1177) are registered now; settings, activity
-# and set_setting (#1171) and the other irrigation writes (#1174) join by registering
-# with `agent`.
+# Architecture §5.6, the whole `agent` column (VD-59): the reads, alerts, settings,
+# activity and set_setting (#1171) and the eight irrigation tools (#1173, #1174, #1177).
 AGENT_TOOLS = frozenset(
     {
         "climate",
@@ -446,15 +444,7 @@ class TestAudienceMatrix:
         allowed = mcp_server.audience_allowlist("iris")
         assert allowed == mcp_server.HERMES_REQUIRED_TOOLS
         denied = set(mcp_server.TOOL_AUDIENCES) - allowed
-        # VD-64's irrigation writes are the agent column's until #1174 adds iris.
-        assert denied == {
-            "outcome_kpi",
-            "plan_run",
-            "query",
-            "policy_template_propose",
-            "irrigation_run",
-            "irrigation_stop",
-        }
+        assert denied == {"outcome_kpi", "plan_run", "query", "policy_template_propose"}
         for tool in allowed:
             mcp_server.authorize_tool_call(tool, "tok-iris")
         for tool in denied:
@@ -514,8 +504,8 @@ class TestAudienceMatrix:
     def test_agent_audience_is_the_architecture_agent_column(self, mcp_server):
         """VD-59: the agent column of architecture §5.6, for the tools registered so far.
 
-        settings, activity, set_setting and the other irrigation writes pass this
-        test by registering with `agent` (#1171, #1174).
+        settings, activity and set_setting pass this test by registering with
+        `agent` (#1171).
         """
         registered = {tool.name for tool in mcp_server.mcp._registered_tools}
         assert mcp_server.AGENT_AUDIENCE == "agent" and "agent" in mcp_server.KNOWN_AUDIENCES
@@ -712,7 +702,7 @@ class TestListToolsAudienceFiltering:
     @pytest.mark.parametrize("mode", ["log", "enforce"])
     @pytest.mark.parametrize(
         ("audience", "token", "expected_count"),
-        [("iris", "tok-iris", 26), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 32)],
+        [("iris", "tok-iris", 34), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 38)],
     )
     def test_protocol_inventory_matches_exact_audience_allowlist(
         self, mcp_server, monkeypatch, mode, audience, token, expected_count
@@ -1171,10 +1161,10 @@ def _payload(result) -> dict:
 
 
 class TestIrrigationWriteTools:
-    def test_both_tools_are_for_named_agents_and_admin_only(self, mcp_server, monkeypatch, tmp_path):
+    def test_both_tools_are_for_iris_named_agents_and_admin(self, mcp_server, monkeypatch, tmp_path):
         for tool in IRRIGATION_WRITE_TOOLS:
-            assert mcp_server.TOOL_AUDIENCES[tool] == frozenset({"agent", "admin"})
-            assert tool not in mcp_server.HERMES_REQUIRED_TOOLS and tool not in mcp_server._TOOL_READ_ONLY
+            assert mcp_server.TOOL_AUDIENCES[tool] == frozenset({"iris", "agent", "admin"})
+            assert tool in mcp_server.HERMES_REQUIRED_TOOLS and tool not in mcp_server._TOOL_READ_ONLY
         keys = tmp_path / "agent-keys"
         keys.mkdir()
         (keys / "steward").write_text("tok-steward\n")
@@ -1183,9 +1173,9 @@ class TestIrrigationWriteTools:
         for tool in IRRIGATION_WRITE_TOOLS:
             mcp_server.authorize_tool_call(tool, "tok-steward")
             mcp_server.authorize_tool_call(tool, "tok-admin")
-            for token in ("tok-iris", "tok-exp"):
-                with pytest.raises(mcp_server.ToolAccessDenied):
-                    mcp_server.authorize_tool_call(tool, token)
+            mcp_server.authorize_tool_call(tool, "tok-iris")
+            with pytest.raises(mcp_server.ToolAccessDenied):
+                mcp_server.authorize_tool_call(tool, "tok-exp")
 
     def test_line_id_is_an_enum_of_the_eleven_lines(self, mcp_server):
         from typing import Literal, get_args, get_origin
@@ -1199,7 +1189,19 @@ class TestIrrigationWriteTools:
             assert inspect.signature(getattr(mcp_server, tool)).return_annotation is inspect.Signature.empty
         run_params = list(inspect.signature(mcp_server.irrigation_run).parameters)
         stop_params = list(inspect.signature(mcp_server.irrigation_stop).parameters)
-        assert run_params == ["line_id", "minutes", "reason", "request_id", "trigger_id", "planner_instance"]
+        assert run_params == [
+            "line_id",
+            "minutes",
+            "prewet_s",
+            "flush_s",
+            "on_s",
+            "count",
+            "gap_s",
+            "reason",
+            "request_id",
+            "trigger_id",
+            "planner_instance",
+        ]
         assert stop_params == ["line_id", "reason", "request_id"]
 
     def test_descriptions_say_what_an_agent_needs_and_name_only_tools_it_can_call(self, mcp_server):
@@ -1211,7 +1213,7 @@ class TestIrrigationWriteTools:
         assert "Before the irrigation firmware, run works on L01 only" in run_doc
         for code in ("unavailable", "out_of_range", "line_disabled", "line_paused", "line_busy", "unknown_target"):
             assert code in run_doc, code
-        assert "After a Stop, VPD misting may pulse again." in stop_doc
+        assert "After a Stop, VPD misting may pulse again; to keep a line off, disable it." in stop_doc
         named = {word for word in re.findall(r"\b[a-z_]+\b", run_doc + stop_doc) if word in mcp_server.TOOL_AUDIENCES}
         assert named and named <= mcp_server.audience_allowlist("agent")
 
@@ -1262,6 +1264,11 @@ class TestIrrigationWriteTools:
             "request_id": "k-1",
             "trigger_id": "t-1",
             "planner_instance": None,
+            "prewet_s": None,
+            "flush_s": None,
+            "on_s": None,
+            "count": None,
+            "gap_s": None,
         }
 
     def test_stop_writes_as_admin_and_a_refusal_is_problem_json(self, mcp_server, mcp_types, monkeypatch):

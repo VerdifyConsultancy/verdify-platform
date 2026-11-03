@@ -648,6 +648,24 @@ Acceptance:
 5. With the fixture's program at rev 42, `mister_daily_volume_max_gal` reads "On controller · rev 42: 360 gal";
    before the irrigation firmware, saving it reads REQUESTED with "applies with the irrigation firmware".
 
+### 6.1 As built: history, Revert and the band preview (VD-19)
+
+The drawer's depth is `dashboard/app/components/setting-history.tsx`, `band-preview.tsx` and `lib/revert.ts` (#1139). Where
+it settles a detail this section leaves open, or differs from it:
+
+| Topic | As built |
+|---|---|
+| Place | Band preview under the value field, inside the fields. History and Revert under Reason, outside the fieldset the read-only state disables (`EditDrawer`'s `below`), so a viewer keeps Retry and Reset zoom. A Band in force row is derived and has no history |
+| Reads | API-12 and API-19 are not polled and not cached past the drawer, so a drawer opened after a write never shows the answer from before it. API-12 reads again if the setting's newest desired row changes while the drawer is open; Revert is disabled until that answer arrives |
+| Chart | A `TimeSeries` with no metric: its `SettingSteps` take `allRequests` (every desired row is a request, up to the next row or now) and `format` (values as stored, a switch ON or OFF). Canvas labels read "Jason · dashboard", "steward · agent · AI", "iris · AI", as a canvas draws no badge. The legend is a key of each source present, the plan and the bounds; the data table lists the steps with who asked, the row's state and its reason; the CSV has one row at each step's start and end inside the window, with who asked beside each request. A crowded chart drops labels by the order in design system §5.5, and a bound outside the y range is an edge label as on Graphs, so the key and the table keep the words. A window chip starts its chart on that window, as a Graphs range does, so a zoom ends with it |
+| Device line | Readings that print alike are one step, as the ingestor's 0.83 and the snapshot's 0.8299999833 alternate in `setpoint_snapshot` (`mister_engage_kpa` has about 7,500 change points in 90 days, half of them this). Only the newest device step is labelled, as a tuned setting moves dozens of times a day; the tooltip and the table carry the rest. Graphs keeps every change point |
+| Revert reason | Its own "Revert reason" field beside the button, prefilled and editable; the drawer's Reason stays Save's. Enter in it presses nothing (the drawer is one form) |
+| After Revert | As after a Save: the drawer closes, the toast names the value, and the row reads REQUESTED, then CONFIRMED. A refusal stays open with its words beside the button. Revert has its own write hook, so a refusal never lands beside the value field; one write goes at a time, as Save and Release wait for a Revert that is out and it waits for them |
+| A crop-band row with no earlier value | API-11 appends a release and leaves `crop_band_anchors` as the last write set it, so a release would not bring the previous band back. Where a crop-band anchor or width's previous row is a release or missing, Revert writes the value the device reported just before the newest row through API-10, without its binary32 noise: "Revert to 1.10 kPa (device, 10/31 07:00)". With no such reading, or with the device already on the newest row's value (that write changed only Manual), it reads "Revert to auto". Every other setting releases as this section says |
+| Nothing to go back to | A setting whose newest row is a release with no value before it is already on auto, so it has no Revert, as with no desired row at all |
+| Preview | On opening the panel reads the value in force, so the band as stored shows before any edit, and a draft that changes nothing draws no PREVIEW. The draft is dashed `--c-requested`, labelled PREVIEW where it stands furthest from the target. The solar times also read under the plot, as a crowded plot may drop a mark's label. The tooltip, a data table and a CSV follow the rest of the charts. A field that is not a number reads nothing |
+| Fixtures | `setting-history`, `setting-history-release` and `band-preview-center` as the issue names them, plus `setting-history-older` (the earlier row lies before the 7 d window, so Revert reads 90 days back). API-12 now serves `desiredLog` and `readbackLog` with a write appended, and API-19's `current` follows API-10, never API-11 |
+
 ## 7. SCR-06 Activity and alerts · `/activity`
 
 **Purpose:** what needs someone, and who changed what: every write by a person, Iris, another agent or the system in

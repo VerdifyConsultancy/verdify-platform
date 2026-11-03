@@ -26,7 +26,7 @@ export function Legend({ items, onToggle }: { items: readonly LegendItem[]; onTo
  * planned outline and the cap): the same swatch-and-words items as the legend, without toggles, so colour, hatch and
  * line style always carry words.
  */
-export type KeyItem = { key: string; label: string; token: string; kind: "fill" | "outline" | "hatch" | "dashed" | "dotted" };
+export type KeyItem = { key: string; label: string; token: string; kind: "fill" | "line" | "outline" | "hatch" | "dashed" | "dotted" };
 
 export function ChartKey({ items }: { items: readonly KeyItem[] }) {
   if (!items.length) return null;

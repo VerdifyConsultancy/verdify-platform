@@ -129,8 +129,9 @@ class ConfigError(RuntimeError):
 
 @dataclass(frozen=True)
 class Settings:
-    """Read once at start: OPERATOR_API_TOKEN and DB_PASS from Secrets, DB_HOST, DB_NAME and DB_USER from the
-    ConfigMap, and the build commit the image bakes into /etc/verdify/source-revision."""
+    """Read once at start: OPERATOR_API_TOKEN and DB_PASS from Secrets, DB_HOST, DB_NAME, DB_USER and
+    SETPOINT_SERVER_URL from the ConfigMap, and the build commit the image bakes into /etc/verdify/source-revision.
+    Without SETPOINT_SERVER_URL the app still starts and reads; API-20 answers 503 with result timeout (no connection)."""
 
     token: str = field(repr=False)
     db_host: str
@@ -138,6 +139,7 @@ class Settings:
     db_user: str
     db_password: str = field(repr=False)
     source_revision: str = "unknown"
+    setpoint_server_url: str = ""
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None, revision_path: Path = SOURCE_REVISION_PATH) -> Settings:
@@ -158,6 +160,7 @@ class Settings:
             db_password=env["DB_PASS"],
             # The baked receipt only: 40 hex characters, else "unknown" (also when the file is absent).
             source_revision=image_git_sha("", revision_path),
+            setpoint_server_url=env.get("SETPOINT_SERVER_URL", ""),
         )
 
 

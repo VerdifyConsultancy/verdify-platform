@@ -1,10 +1,12 @@
-"""The operator API's write routes: settings and alerts, API-10, API-11, API-15 and API-16 (#1150).
+"""The operator API's write routes: settings and alerts, API-10, API-11, API-15 and API-16 (#1150); the grow lights,
+API-20 (#1170).
 
-Each route runs one ``verdify_services`` call, which commits the domain row and its ``activity_log`` row in one
-transaction: a ``desired_state`` row, plus the ``crop_band_anchors`` rows of a crop-band setting, or the ``alert_log``
-updates on every repeat merged into the row. The ``desired_state`` insert trigger wakes the dispatcher, so no route
-sends a NOTIFY. Bounds, snapping and every refusal live in the services; a ``ServiceError`` propagates and the operator
-API renders it as ``application/problem+json``.
+Each settings and alert route runs one ``verdify_services`` call, which commits the domain row and its ``activity_log``
+row in one transaction: a ``desired_state`` row, plus the ``crop_band_anchors`` rows of a crop-band setting, or the
+``alert_log`` updates on every repeat merged into the row. The ``desired_state`` insert trigger wakes the dispatcher, so
+no route sends a NOTIFY. Bounds, snapping and every refusal live in the services; a ``ServiceError`` propagates and the
+operator API renders it as ``application/problem+json``. API-20 calls ``verdify-setpoint-server`` between two service
+calls, outside any database transaction (``verdify_services/lights.py``).
 
 No auth and no SQL (``operator_routes/__init__.py`` has the rules). ``api/operator_api.py`` (#1148) includes ``router``
 under ``/v1`` with the bearer, session and role checks, so a viewer's write is 403 before a route runs, and the session
@@ -22,9 +24,10 @@ from fastapi import APIRouter, Depends, Header, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat
 
+from operator_routes import setpoint_server
 from operator_routes.reads import Connection
 from verdify_schemas.activity import REASON_MAX_LENGTH
-from verdify_services import alerts, settings
+from verdify_services import alerts, lights, settings
 from verdify_services.activity import WriteResult
 from verdify_services.problems import ServiceError, problem
 
@@ -84,8 +87,17 @@ class AlertResolve(BaseModel):
     resolution: str = Field(default=None, max_length=REASON_MAX_LENGTH)
 
 
+class LightSwitch(BaseModel):
+    """API-20's optional body."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(default=None, max_length=REASON_MAX_LENGTH)
+
+
 NO_NOTE = AlertAck()
 NO_RESOLUTION = AlertResolve()
+NO_REASON = LightSwitch()
 
 
 def _answer(result: WriteResult) -> JSONResponse:
@@ -129,3 +141,39 @@ async def resolve_alert(
     """Resolve every unresolved repeat merged into the row, under the person's name; returns the merged row. Never
     refused for its type: MCP's adapter alone keeps the retrieval check for ``planner_tool_dependency_failed``."""
     return _answer(await alerts.resolve(conn, request.state.actor, id, body.resolution, key))
+
+
+def _light_answer(request: Request, written: WriteResult[lights.LightRecord]) -> JSONResponse:
+    """200 ``LightCommand`` when Lutron reached the state, else the 503 Problem with its ``result``; a replay of either
+    carries ``Idempotency-Replayed: true``, which an exception handler could not add."""
+    refusal = written.value.refusal()
+    if refusal is None:
+        return JSONResponse(written.value.command().model_dump(mode="json"), headers=written.rest_headers())
+    stamped = refusal.model_copy(update={"request_id": getattr(request.state, "request_id", None)})
+    return JSONResponse(
+        stamped.body(),
+        status_code=stamped.status,
+        media_type="application/problem+json",
+        headers=written.rest_headers(),
+    )
+
+
+@router.post(
+    "/equipment/lights/{light}/{state}", operation_id="API-20", tags=["equipment"], response_model=lights.LightCommand
+)
+async def switch_light(
+    key: IdempotencyKey,
+    conn: Connection,
+    request: Request,
+    light: lights.Light,
+    state: lights.LightState,
+    body: LightSwitch = NO_REASON,
+) -> JSONResponse:
+    """Turn a grow light on or off through verdify-setpoint-server, with one ``activity_log`` row for the attempt. A
+    replayed key returns the stored result, a 503 included, and calls nothing, so a retry after a 503 sends a new key."""
+    actor = request.state.actor
+    written = await lights.stored(conn, actor, light, state, body.reason, key)
+    if written is None:
+        result = await setpoint_server.switch(request.app.state.settings.setpoint_server_url, light, state)
+        written = await lights.record(conn, actor, light, state, result, body.reason, key)
+    return _light_answer(request, written)

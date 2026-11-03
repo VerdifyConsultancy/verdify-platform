@@ -292,6 +292,13 @@ function inBand(now) {
     notReportingSince: null,
     // API-05 spans the API marks unknown inside a lane's window: {equipment, start, end} (lanes-unknown).
     laneGaps: [],
+    // API-12 by param, oldest first (setting-history); with no entry a setting has only its API-09 desired row and readback.
+    // A write appends to them, and a crop-band value write sets `bandStored`, as API-10 updates crop_band_anchors.
+    desiredLog: {},
+    readbackLog: {},
+    bandStored: {},
+    // The API-19 example request's param and value, unless a fixture names others.
+    preview: { param: "band_vpd_low_sm", value: "0.5" },
     /** Days back that API-IRR-10 reads no_data, beside the base's nine days back (`minutes-gap` adds one). */
     noDataDays: [],
   };
@@ -606,6 +613,45 @@ export const FIXTURES = {
     Object.assign(row, { desired, applied_from: "desired", readback: reading(1.55, at("08:01")), plan: { ...row.plan, next: { ...row.plan.next, effective: false } } });
     const lane = laneOf(world, "mister_engage_kpa");
     Object.assign(lane, { desired, applied_from: "desired", device: reading(1.55, at("08:01")), waypoints: lane.waypoints.map((point) => ({ ...point, effective: false })) });
+  },
+  // #1139: iris asked for 1.60 at 07:02, then Jason took it manual at 1.55 at 08:00, so the 13:00 waypoint is held off.
+  "setting-history": (world) => {
+    const at = clock(world.now);
+    const row = settingOf(world, "mister_engage_kpa");
+    const asked = (id, value, manual, who, written, confirmed, reason) => ({
+      id, param: row.param, value, snapped_from: null, manual, manual_before: false, state: "confirmed", state_reason: null, confirmed_at: iso(confirmed), actor: who, reason, created_at: iso(written),
+    });
+    const newest = asked(202, 1.55, true, JASON, at("08:00"), at("08:01"), "Vandas drying");
+    world.desiredLog[row.param] = [asked(201, 1.6, false, actor("iris", "iris"), at("07:02"), at("07:03"), null), newest];
+    world.readbackLog[row.param] = [{ at: iso(at("05:40", -1)), value: 1.5 }, { at: iso(at("07:03")), value: 1.6 }, { at: iso(at("08:01")), value: 1.55 }];
+    Object.assign(row, { desired: newest, applied_from: "manual", state: "confirmed", readback: reading(1.55, at("08:01")), plan: { ...row.plan, next: { ...row.plan.next, effective: false } } });
+    const lane = laneOf(world, row.param);
+    Object.assign(lane, { desired: newest, applied_from: "manual", device: reading(1.55, at("08:01")), waypoints: lane.waypoints.map((point) => ({ ...point, effective: false })) });
+  },
+  // #1139: as setting-history, but the row before Jason's is a release, so Revert goes back to auto.
+  "setting-history-release": (world) => {
+    FIXTURES["setting-history"](world);
+    const [released] = world.desiredLog.mister_engage_kpa;
+    Object.assign(released, { value: null, state: "released", confirmed_at: null, actor: JASON, reason: "Back to the plan" });
+  },
+  // #1139: the history lies before the 7 d window: steward's 1.60 twelve days back, then Jason's 1.55 nine days back, the
+  // row in force at the window's start. The window holds it alone, so Revert reads 90 days back to find steward's.
+  "setting-history-older": (world) => {
+    FIXTURES["setting-history"](world);
+    const at = clock(world.now);
+    const [earlier, newest] = world.desiredLog.mister_engage_kpa;
+    Object.assign(earlier, { actor: actor("agent:steward", "steward"), created_at: iso(at("07:02", -12)), confirmed_at: iso(at("07:03", -12)) });
+    Object.assign(newest, { created_at: iso(at("08:00", -9)), confirmed_at: iso(at("08:01", -9)) });
+    const readback = reading(1.55, at("08:01", -9));
+    world.readbackLog.mister_engage_kpa = [{ at: iso(at("05:40", -13)), value: 1.5 }, { at: iso(at("07:03", -12)), value: 1.6 }, { at: iso(at("08:01", -9)), value: 1.55 }];
+    settingOf(world, "mister_engage_kpa").readback = readback;
+    laneOf(world, "mister_engage_kpa").device = readback;
+  },
+  // #1139: a center VPD anchor no dashboard write has touched: the API-19 example previews it, its device value has held
+  // at 1.10 since 10/31 (in binary32, as setpoint_snapshot reports it), and a draft outside 0.10–3.00 is refused.
+  "band-preview-center": (world) => {
+    world.preview = { param: "zone_vpd_target_center_sm", value: "1.25" };
+    world.readbackLog.zone_vpd_target_center_sm = [{ at: iso(clock(world.now)("06:00", -2)), value: 1.100000023841858 }];
   },
   "missed-sunset": (world) => {
     const sunset = world.plan.health.find((row) => row.trigger === "SUNSET" && row.outcome !== "expected");
