@@ -1,5 +1,6 @@
-"""Irrigation program record VIP1, the controller's irrigation text sensors (VD-36, #1151) and the
-schedule model that compiles into the record (VD-37, #1152).
+"""Irrigation program record VIP1, the controller's irrigation text sensors (VD-36, #1151), the
+schedule model that compiles into the record (VD-37, #1152) and the run and stop commands (VD-64,
+#1177).
 
 This module is the frozen contract between the platform and the ESP32 irrigation engine
 (irrigation §5, ADR-0011). The compiler below packs schedules into the record here, the
@@ -87,11 +88,19 @@ America/Denver clock reads it on that day: a time in the spring-forward gap runs
 jumps past it, a repeated fall-back time runs the first time, and a solar start past midnight
 (sunset + 240 min in June) falls early the next morning. Starts are returned at the fixed local
 offset then in force, so they compare and serialize safely; spacing is measured between instants.
+
+Commands (VD-64; irrigation §6.1 and §6.5). ``IrrigationCommandRow`` is M3's ``irrigation_command``
+row: the services insert it ``pending`` and the ingestor validates each status update through it
+(``sent`` with ``sent_at`` just before the device call, or ``failed`` with a ``fail_reason``).
+``Command`` is the OpenAPI ``Command`` that run-now and stop answer with. ``COMMAND_SEND_WINDOW_S``
+and ``STOP_RESEND_WINDOW_S`` are §6.1's two-minute limits: a command not sent within the first is
+never sent, and a Stop's relays that have not read OFF are switched off again within the second.
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import re
 import struct
@@ -102,6 +111,7 @@ from functools import lru_cache
 from itertools import pairwise
 from types import MappingProxyType
 from typing import Annotated, Any, Literal, get_args
+from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from pydantic import (
@@ -116,14 +126,19 @@ from pydantic import (
     model_validator,
 )
 
+from verdify_schemas.activity import ACTOR_NAME_MAX_LENGTH, ACTOR_SOURCE_PATTERN, REASON_MAX_LENGTH
 from verdify_schemas.setting_values import snap, snap_setting
 from verdify_schemas.solar import SolarTimes, compute_solar_times
 from verdify_schemas.tunable_registry import IRRIGATION_SITE_PARAMS, REGISTRY
 
 __all__ = [
     "BOUNDS_BY_KIND",
+    "BRIDGE_RUN_LINE",
     "CAP_NOTE",
     "CLEAN_PARTNER",
+    "COMMAND_KINDS",
+    "COMMAND_SEND_WINDOW_S",
+    "COMMAND_STATUSES",
     "DEGRADED_ONLY_IDX",
     "DEGRADED_ONLY_NOTE",
     "DEVICE_IDX",
@@ -162,10 +177,15 @@ __all__ = [
     "SLOT_FLAG_DEGRADED_ONLY",
     "START_KIND",
     "START_RANGE",
+    "STOP_RESEND_WINDOW_S",
     "VPD_SOURCE_CODES",
     "WEEKDAYS",
     "Agenda",
     "AgendaOccurrence",
+    "Command",
+    "CommandActor",
+    "CommandKind",
+    "CommandStatus",
     "CompiledProgram",
     "DripRunArgs",
     "FaultKind",
@@ -177,6 +197,7 @@ __all__ = [
     "IrrState",
     "IrrWaiting",
     "IrrigationCause",
+    "IrrigationCommandRow",
     "LineId",
     "LineKind",
     "LineSpec",
@@ -2081,3 +2102,108 @@ def agenda(
         occurrences=tuple(occurrences),
         solar=tuple(_solar_day(day) for day in window),
     )
+
+
+# ── Commands: run-now and stop (VD-64, #1177) ────────────────────────────────
+
+CommandKind = Literal["run", "stop", "clear_fault", "override"]
+CommandStatus = Literal["pending", "sent", "failed"]
+COMMAND_KINDS: tuple[str, ...] = get_args(CommandKind)
+COMMAND_STATUSES: tuple[str, ...] = get_args(CommandStatus)
+# A command not sent within this many seconds of its request ends failed ("too old") and is never
+# sent, so a queued run never starts late; a Stop's relays that have not read OFF are switched off
+# again for at most this long after it was sent (irrigation §6.1).
+COMMAND_SEND_WINDOW_S = 120
+STOP_RESEND_WINDOW_S = 120
+# Before the engine firmware only L01 runs (the btn_wall_clean bridge, irrigation §6.5).
+BRIDGE_RUN_LINE = "L01"
+
+
+class CommandActor(BaseModel):
+    """Who asked: the OpenAPI ``Actor`` (``source`` in the R4 vocabulary and the actor's name)."""
+
+    model_config = _FROZEN
+
+    source: Annotated[str, Field(pattern=ACTOR_SOURCE_PATTERN)]
+    name: Annotated[str, Field(min_length=1, max_length=ACTOR_NAME_MAX_LENGTH)]
+
+
+class IrrigationCommandRow(BaseModel):
+    """An ``irrigation_command`` row (M3, migration 283): a run, stop, clear-fault or override request.
+
+    The services insert it ``pending``; only the ingestor turns it into a device call, marking it
+    ``sent`` (with ``sent_at``) in a committed transaction just before the call, or ``failed`` with
+    a ``fail_reason``. ``line_id`` None means every line. ``args`` holds the request as stored plus
+    what the ingestor records on it (a bridge Stop's ``relays_on``, ``restore_irrig_enabled`` and
+    ``restored``). Idempotency lives on the write's ``activity_log`` row, not here.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    command_id: UUID | None = None
+    greenhouse_id: str = "vallery"
+    kind: CommandKind
+    line_id: LineId | None = None
+    args: dict[str, Any] = Field(default_factory=dict)
+    status: CommandStatus = "pending"
+    fail_reason: str | None = None
+    source: Annotated[str, Field(pattern=ACTOR_SOURCE_PATTERN)]
+    actor: Annotated[str, Field(min_length=1, max_length=ACTOR_NAME_MAX_LENGTH)]
+    reason: Annotated[str, Field(max_length=REASON_MAX_LENGTH)] | None = None
+    created_at: AwareDatetime | None = None
+    sent_at: AwareDatetime | None = None
+
+    @field_validator("args", mode="before")
+    @classmethod
+    def _args_from_json(cls, value: object) -> object:
+        # asyncpg returns jsonb as text unless a codec is set.
+        return json.loads(value) if isinstance(value, str | bytes) else value
+
+    @model_validator(mode="after")
+    def _status_and_sent_at(self) -> IrrigationCommandRow:
+        if self.status == "sent" and self.sent_at is None:
+            raise ValueError("a sent command records sent_at")
+        if self.status == "pending" and self.sent_at is not None:
+            raise ValueError("a pending command has no sent_at")
+        return self
+
+    @classmethod
+    def from_row(cls, row: Any) -> IrrigationCommandRow:
+        """From an ``irrigation_command`` row (a mapping or an asyncpg record)."""
+        return cls.model_validate(dict(row))
+
+
+class Command(BaseModel):
+    """The OpenAPI ``Command``: what API-IRR-06 and API-IRR-07 (and MCP ``irrigation_run`` and
+    ``irrigation_stop``) answer with 202. Relay edges and ``irr_state``, never this row, show
+    whether water started or stopped."""
+
+    model_config = _FROZEN
+
+    command_id: UUID
+    kind: CommandKind
+    line_id: LineId | None
+    args: dict[str, Any] = Field(default_factory=dict)
+    status: CommandStatus
+    actor: CommandActor
+    reason: str | None = None
+    created_at: AwareDatetime
+    sent_at: AwareDatetime | None = None
+
+    @classmethod
+    def from_row(cls, row: Any) -> Command:
+        """From a stored ``irrigation_command`` row (validated as ``IrrigationCommandRow`` first)."""
+        stored = row if isinstance(row, IrrigationCommandRow) else IrrigationCommandRow.from_row(row)
+        if stored.command_id is None or stored.created_at is None:
+            raise ValueError("a Command is read from a stored row, with its command_id and created_at")
+        return cls(
+            command_id=stored.command_id,
+            kind=stored.kind,
+            line_id=stored.line_id,
+            args=stored.args,
+            status=stored.status,
+            actor=CommandActor(source=stored.source, name=stored.actor),
+            reason=stored.reason,
+            created_at=stored.created_at,
+            sent_at=stored.sent_at,
+        )

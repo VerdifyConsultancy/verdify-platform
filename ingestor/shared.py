@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import re
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 log = logging.getLogger("shadow")
@@ -258,6 +259,64 @@ _cfg_drift_version = 0
 
 # Wake the scheduler for targeted cfg drift without advancing transport state.
 setpoint_dispatch_requested = asyncio.Event()
+
+# VD-64 (irrigation §6.1): setpoint_listener sets this on NOTIFY irrigation_changed and the task loop
+# force-launches irrigation_sync while it is set. The pass reads pending commands every 5 s whether or
+# not it is set; #1157's program steps clear it.
+irrigation_sync_requested = asyncio.Event()
+
+# The ten wet relays of L01-L10 by equipment_state name, in line order: the relays an irrigation Stop may
+# switch off before the engine firmware (the L01 bridge, irrigation §6.5). L11's fog_rly is internal to
+# the controller and has no switch to send.
+WET_RELAYS: tuple[str, ...] = (
+    "drip_wall",
+    "drip_wall_fert",
+    "fert_master_valve",
+    "mister_center",
+    "drip_center",
+    "drip_center_fert",
+    "mister_south",
+    "mister_south_fert",
+    "mister_west",
+    "mister_west_fert",
+)
+
+
+@dataclass(frozen=True)
+class WetRelayReading:
+    """A wet relay's newest native reading: its state, the transport generation it came from, and when it
+    last read OFF on any generation (the bridge Stop's "read OFF once since it was sent")."""
+
+    on: bool
+    generation: int
+    observed_at: datetime
+    off_at: datetime | None
+
+
+# equipment -> newest reading, mirrored by ingestor._record_equipment_callback from the live session.
+wet_relays: dict[str, WetRelayReading] = {}
+
+
+def note_wet_relay(equipment: str, on: object, generation: int, observed_at: datetime) -> None:
+    """Mirror one native wet-relay state callback; anything that is not a live boolean reading is ignored."""
+    if equipment not in WET_RELAYS or type(on) is not bool or int(generation) < 1:
+        return
+    previous = wet_relays.get(equipment)
+    off_at = observed_at if not on else (previous.off_at if previous is not None else None)
+    wet_relays[equipment] = WetRelayReading(on, int(generation), observed_at, off_at)
+
+
+def live_wet_relays(generation: int | None = None) -> dict[str, bool]:
+    """Each wet relay's state as read on the current (or the given) transport generation; unread ones are absent."""
+    current = transport_generation if generation is None else generation
+    return {name: reading.on for name, reading in wet_relays.items() if reading.generation == current}
+
+
+def wet_relay_read_off_since(equipment: str, since: datetime) -> bool:
+    """True once the relay has read OFF at or after ``since``, on any generation."""
+    reading = wet_relays.get(equipment)
+    return reading is not None and reading.off_at is not None and reading.off_at >= since
+
 
 # The existing flush_loop is the only publisher. A writer admission can ask
 # that same task for a committed batch; readers and native observation clocks

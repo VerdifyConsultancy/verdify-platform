@@ -718,6 +718,32 @@ because until then a rollback flashes pre-engine firmware (§5 Ship). Its regist
 switch routes) retire in VD-47's follow-up, merged after that promotion. L01 is the first line
 scheduled once the engine runs.
 
+**As built (VD-64).** `verdify_services.irrigation.writes` stores the commands; step 0 of
+`irrigation_sync` (`ingestor/tasks/irrigation.py`) sends them through `esp32_push.press_wall_clean`,
+`bridge_stop`, `bridge_switch_off` and `bridge_set_irrigation_enabled`. Where the build settles what this
+section leaves open:
+
+- While `irr_engine` reads true, run-now is 503 `unavailable` (not retryable) until #1156 adds the engine
+  path, and Stop is still stored.
+- `line_busy` lasts to the planned end of the newest pending or sent L01 run, or less when a later Stop
+  covering L01 was requested; with only the relay ON, `retry_after_s` counts from its ON edge plus
+  `irrig_wall_duration_min`.
+- The ingestor also refuses a press (`line_busy`) while an earlier bridge run has not reached its planned
+  end. A press that never reached the transport ends `failed` with its reason; one whose outcome is
+  unknown stays `sent`.
+- `args.relays_on` holds the relays in scope not read OFF on the current connection, so a Stop in the state
+  burst after a reconnect also switches off the relays not read yet.
+- `sw_irrig_enabled` is toggled only when the switch's own state reads on, through its `sw_irrigation_enabled`
+  alias row: the `cfg_irrig_enabled` readback publishes every 30 s and reads the old value around a toggle. A
+  Stop before that state has been read on the connection closes its relays without ending the job, so the job's
+  timer holds fog and the misters until it runs out. A cut-short toggle is restored for up to a day after the Stop.
+- A `setpoint_snapshot` row taken during the toggle can read `sw_irrig_enabled` off for a minute, so for 2 min
+  after a Stop that toggled it run-now ignores that reading; `sw_irrig_wall_enabled` still refuses.
+- A row the model refuses is logged and dropped by the pass, so it never keeps a Stop from going out, and it
+  expires like any other.
+- On L01 a run body with mister or rinse fields is 400 `invalid_request`; `trigger_id` and
+  `planner_instance` are 1-64 characters.
+
 ## 7. Home Assistant decommission
 
 Home Assistant keeps occupancy data, Lutron switch control and, until a direct reader with no Home

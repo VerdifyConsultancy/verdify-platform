@@ -27,6 +27,7 @@ import importlib.util
 import inspect
 import json
 import logging
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -444,7 +445,15 @@ class TestAudienceMatrix:
         allowed = mcp_server.audience_allowlist("iris")
         assert allowed == mcp_server.HERMES_REQUIRED_TOOLS
         denied = set(mcp_server.TOOL_AUDIENCES) - allowed
-        assert denied == {"outcome_kpi", "plan_run", "query", "policy_template_propose"}
+        # VD-64's irrigation writes are the agent column's until #1174 adds iris.
+        assert denied == {
+            "outcome_kpi",
+            "plan_run",
+            "query",
+            "policy_template_propose",
+            "irrigation_run",
+            "irrigation_stop",
+        }
         for tool in allowed:
             mcp_server.authorize_tool_call(tool, "tok-iris")
         for tool in denied:
@@ -702,7 +711,7 @@ class TestListToolsAudienceFiltering:
     @pytest.mark.parametrize("mode", ["log", "enforce"])
     @pytest.mark.parametrize(
         ("audience", "token", "expected_count"),
-        [("iris", "tok-iris", 26), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 30)],
+        [("iris", "tok-iris", 26), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 32)],
     )
     def test_protocol_inventory_matches_exact_audience_allowlist(
         self, mcp_server, monkeypatch, mode, audience, token, expected_count
@@ -1098,3 +1107,207 @@ def test_rendered_prod_mcp_uses_only_dedicated_ordinary_db_secret() -> None:
     assert env["DB_PASSWORD"]["valueFrom"]["secretKeyRef"] == {"name": "verdify-mcp-runtime-db", "key": "password"}
     assert env["VERDIFY_MCP_RUNTIME_DB_ROLE_REQUIRED"]["value"] == "1"
     assert "POSTGRES_PASSWORD" not in env and "DB_PASS" not in env
+
+
+# ─── VD-64: irrigation_run and irrigation_stop ─────────────────────────────
+
+
+IRRIGATION_WRITE_TOOLS = ("irrigation_run", "irrigation_stop")
+NO_PLAN = "Changes watering only; it does not count as your plan for this trigger."
+
+
+@pytest.fixture()
+def mcp_types(monkeypatch):
+    """A stand-in for mcp.types (the CI image has no MCP runtime): the two classes the result helpers build."""
+
+    class TextContent:
+        def __init__(self, *, type, text):
+            self.type, self.text = type, text
+
+    class CallToolResult:
+        def __init__(self, *, content, isError=False):
+            self.content, self.isError = content, isError
+
+    module = ModuleType("mcp.types")
+    module.TextContent, module.CallToolResult = TextContent, CallToolResult
+    monkeypatch.setitem(sys.modules, "mcp.types", module)
+    monkeypatch.setattr(sys.modules["mcp"], "types", module, raising=False)
+    return module
+
+
+def _command_json(**overrides):
+    return {
+        "command_id": "8f0d6f8e-5c4e-4b52-9a51-2b0a6c4b8f10",
+        "kind": "run",
+        "line_id": "L01",
+        "args": {"minutes": 10, "bridge": True},
+        "status": "pending",
+        "actor": {"source": "agent:steward", "name": "steward"},
+        "reason": None,
+        "created_at": "2026-11-02T18:00:00Z",
+        "sent_at": None,
+        **overrides,
+    }
+
+
+class _Conn:
+    def __init__(self):
+        self.closed = False
+
+    async def close(self):
+        self.closed = True
+
+
+def _as(mcp_server, source: str, name: str):
+    """Run the next tool call as this request actor (what call_tool sets from the caller's token)."""
+    return mcp_server._REQUEST_ACTOR.set(mcp_server.McpActor(source=source, name=name))
+
+
+def _payload(result) -> dict:
+    [content] = result.content
+    assert content.type == "text"
+    return json.loads(content.text)
+
+
+class TestIrrigationWriteTools:
+    def test_both_tools_are_for_named_agents_and_admin_only(self, mcp_server, monkeypatch, tmp_path):
+        for tool in IRRIGATION_WRITE_TOOLS:
+            assert mcp_server.TOOL_AUDIENCES[tool] == frozenset({"agent", "admin"})
+            assert tool not in mcp_server.HERMES_REQUIRED_TOOLS and tool not in mcp_server._TOOL_READ_ONLY
+        keys = tmp_path / "agent-keys"
+        keys.mkdir()
+        (keys / "steward").write_text("tok-steward\n")
+        _configure(monkeypatch, mode="enforce", iris="tok-iris", admin="tok-admin", experiment="tok-exp")
+        monkeypatch.setenv("VERDIFY_MCP_AGENT_KEYS_DIR", str(keys))
+        for tool in IRRIGATION_WRITE_TOOLS:
+            mcp_server.authorize_tool_call(tool, "tok-steward")
+            mcp_server.authorize_tool_call(tool, "tok-admin")
+            for token in ("tok-iris", "tok-exp"):
+                with pytest.raises(mcp_server.ToolAccessDenied):
+                    mcp_server.authorize_tool_call(tool, token)
+
+    def test_line_id_is_an_enum_of_the_eleven_lines(self, mcp_server):
+        from typing import Literal, get_args, get_origin
+
+        lines = tuple(f"L{index:02d}" for index in range(1, 12))
+        for tool, optional in (("irrigation_run", False), ("irrigation_stop", True)):
+            annotation = inspect.signature(getattr(mcp_server, tool)).parameters["line_id"].annotation
+            base = get_args(annotation)[0]  # Annotated[...] -> the type
+            literal = next(arg for arg in get_args(base) if get_origin(arg) is Literal) if optional else base
+            assert get_args(literal) == lines, tool
+            assert inspect.signature(getattr(mcp_server, tool)).return_annotation is inspect.Signature.empty
+        run_params = list(inspect.signature(mcp_server.irrigation_run).parameters)
+        stop_params = list(inspect.signature(mcp_server.irrigation_stop).parameters)
+        assert run_params == ["line_id", "minutes", "reason", "request_id", "trigger_id", "planner_instance"]
+        assert stop_params == ["line_id", "reason", "request_id"]
+
+    def test_descriptions_say_what_an_agent_needs_and_name_only_tools_it_can_call(self, mcp_server):
+        run_doc, stop_doc = mcp_server.irrigation_run.__doc__, mcp_server.irrigation_stop.__doc__
+        for doc, twin in ((run_doc, "API-IRR-06"), (stop_doc, "API-IRR-07")):
+            assert doc.startswith(NO_PLAN) and twin in doc
+            assert "never carry manual" in doc and "irrigation_stop always works" in doc
+            assert "request_id" in doc and "replayed: true" in doc and "isError" in doc
+        assert "Before the irrigation firmware, run works on L01 only" in run_doc
+        for code in ("unavailable", "out_of_range", "line_disabled", "line_paused", "line_busy", "unknown_target"):
+            assert code in run_doc, code
+        assert "After a Stop, VPD misting may pulse again." in stop_doc
+        named = {word for word in re.findall(r"\b[a-z_]+\b", run_doc + stop_doc) if word in mcp_server.TOOL_AUDIENCES}
+        assert named and named <= mcp_server.audience_allowlist("agent")
+
+    def test_the_result_helpers_return_the_rest_json_and_the_problem_json(self, mcp_server, mcp_types):
+        from verdify_schemas.irrigation import Command
+        from verdify_services.problems import problem
+
+        command = Command.model_validate(_command_json())
+        ok = mcp_server._tool_ok(command)
+        assert isinstance(ok, mcp_types.CallToolResult) and ok.isError is False
+        assert _payload(ok) == command.model_dump(mode="json")
+        assert _payload(mcp_server._tool_ok(command, replayed=True)) == {
+            **command.model_dump(mode="json"),
+            "replayed": True,
+        }
+        refusal = problem("unavailable", "Run-now on L04 arrives with the irrigation firmware", retryable=False)
+        bad = mcp_server._tool_problem(refusal)
+        assert bad.isError is True and _payload(bad) == refusal.body()
+
+    def test_run_writes_through_the_service_as_the_request_actor(self, mcp_server, mcp_types, monkeypatch):
+        from verdify_schemas.irrigation import Command
+        from verdify_services import activity
+        from verdify_services.irrigation import writes
+
+        conn, seen = _Conn(), []
+
+        async def db():
+            return conn
+
+        async def run(connection, actor, line_id, **kwargs):
+            seen.append((connection, actor, line_id, kwargs))
+            return activity.WriteResult(value=Command.model_validate(_command_json()), replayed=True)
+
+        monkeypatch.setattr(mcp_server, "_db", db)
+        monkeypatch.setattr(writes, "run", run)
+        token = _as(mcp_server, "agent:steward", "steward")
+        try:
+            result = _run(mcp_server.irrigation_run("L01", minutes=10, request_id="k-1", trigger_id="t-1"))
+        finally:
+            mcp_server._REQUEST_ACTOR.reset(token)
+        assert result.isError is False and _payload(result) == {**_command_json(), "replayed": True}
+        [(connection, actor, line_id, kwargs)] = seen
+        assert connection is conn and conn.closed and line_id == "L01"
+        assert (actor.source, actor.name, actor.role) == ("agent:steward", "steward", None)
+        assert kwargs == {
+            "minutes": 10,
+            "reason": None,
+            "request_id": "k-1",
+            "trigger_id": "t-1",
+            "planner_instance": None,
+        }
+
+    def test_stop_writes_as_admin_and_a_refusal_is_problem_json(self, mcp_server, mcp_types, monkeypatch):
+        from verdify_services.irrigation import writes
+        from verdify_services.problems import ServiceError, problem
+
+        conn, seen = _Conn(), []
+
+        async def db():
+            return conn
+
+        async def stop(connection, actor, line_id, **kwargs):
+            seen.append((actor.source, line_id, kwargs))
+            raise ServiceError(problem("unknown_target", "'L12' is not a line", field="line_id"))
+
+        monkeypatch.setattr(mcp_server, "_db", db)
+        monkeypatch.setattr(writes, "stop", stop)
+        token = _as(mcp_server, "agent:admin", "admin")
+        try:
+            result = _run(mcp_server.irrigation_stop(None, reason="hose", request_id=None))
+        finally:
+            mcp_server._REQUEST_ACTOR.reset(token)
+        assert seen == [("agent:admin", None, {"reason": "hose", "request_id": None})]
+        assert result.isError is True and _payload(result)["code"] == "unknown_target" and conn.closed
+
+    def test_without_a_resolved_caller_both_tools_are_forbidden_before_any_database_call(
+        self, mcp_server, mcp_types, monkeypatch
+    ):
+        async def db():
+            raise AssertionError("no connection without an actor")
+
+        monkeypatch.setattr(mcp_server, "_db", db)
+        assert mcp_server.current_actor() is None
+        for result in (_run(mcp_server.irrigation_run("L01")), _run(mcp_server.irrigation_stop())):
+            assert result.isError is True
+            assert (_payload(result)["code"], _payload(result)["status"]) == ("forbidden", 403)
+
+    def test_a_database_failure_is_a_retryable_unavailable_problem(self, mcp_server, mcp_types, monkeypatch):
+        async def db():
+            raise OSError("connection refused")
+
+        monkeypatch.setattr(mcp_server, "_db", db)
+        token = _as(mcp_server, "agent:steward", "steward")
+        try:
+            result = _run(mcp_server.irrigation_stop("L01"))
+        finally:
+            mcp_server._REQUEST_ACTOR.reset(token)
+        body = _payload(result)
+        assert result.isError is True and (body["code"], body["retryable"]) == ("unavailable", True)
+        assert "connection refused" not in body["detail"]

@@ -31,6 +31,7 @@ from . import (  # noqa: F401
     ha,
     heartbeat,
     hydro,
+    irrigation,
     liveness,
     policy_arbiter,
     policy_delivery,
@@ -197,6 +198,7 @@ from .heartbeat import (  # noqa: F401
     _trigger_spec_for_event,
 )
 from .hydro import hydro_probe_sync  # noqa: F401
+from .irrigation import irrigation_sync, record_engine_capability  # noqa: F401
 from .liveness import ingestor_heartbeat  # noqa: F401
 from .policy_arbiter import (  # noqa: F401
     policy_arbiter_admissions,
