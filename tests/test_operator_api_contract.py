@@ -235,8 +235,12 @@ def test_it_serves_its_own_operations_and_every_included_route_module():
         ("GET", "/v1/now", "API-02"),
         ("GET", "/v1/plan", "API-07"),
         ("GET", "/v1/equipment", "API-13"),
+        ("GET", "/v1/irrigation", "API-IRR-01"),
+        ("GET", "/v1/irrigation/schedules", "API-IRR-02"),
+        ("GET", "/v1/irrigation/minutes", "API-IRR-10"),
+        ("GET", "/v1/irrigation/runs", "API-IRR-11"),
     }
-    # Committed operations not served yet are allowed: API-10 to API-21 and the irrigation operations follow.
+    # Committed operations not served yet are allowed: API-10 to API-21 and the irrigation writes follow.
     committed = {
         (method.upper(), path, operation["operationId"])
         for path, item in SPEC["paths"].items()

@@ -404,7 +404,11 @@ Plan values keep `readback_values_equivalent` and show as Iris stored them.
 `state_reason` says why a value is not confirmed or held, when known: `clamped` (applied value and guard),
 `experiment`, `deferred` (heap) or `push_failed` (`setpoint_changes.delivery_status` after the request),
 `writer_down` (the ingestor heartbeat is stale, §7) or `no_match`. Before the engine an `irrigation_site` row
-stays requested ("applies with the irrigation firmware"). The states are display only and add no alerts;
+stays requested with `no_engine` ("applies with the irrigation firmware"; `since` is the write). With the engine
+it reads confirmed once the confirmed push whose `sha256` starts with the `irr_program_id` hash has
+`site_desired_at` at or after the write, with the device value from that record, or at once when that record
+already holds the written value (the hash does not change, so no push follows), and not_confirmed 5 min after
+the write without either; `no_match` then names the first push compiled at or after it. The states are display only and add no alerts;
 `setpoint_unconfirmed` (`ingestor/tasks/confirmation.py`) still covers device writes. With no desired row a
 setting's state is its plan value's, else the dispatcher's newest push's (VD-67); a `setpoint_changes` row the
 controller reported itself (source `esp32`) is never the push a reason's `since` names.
@@ -544,7 +548,7 @@ bounded `time_bucket_gapfill` series endpoint. There is no new rollup layer in t
 | Band | In force: the newest `setpoint_snapshot` rows with `band_role` (zone `house` for the hero and Graphs, each zone for its tile), computed every pass by the dispatcher from `crop_band_anchors` with the controller's formula (`band_anchors.emit_band_audit`), provenance DERIVED, kept 90 days. Older windows use `fn_band_setpoints(ts)` over the step series, which gives the same crop values as `fn_band_timeline`, labelled "reconstructed from today's anchors". The device-reported targets (`climate.house_temp_target_f`, `house_vpd_target`, `vpd_target_<zone>`) are cross-check metrics |
 | Settings | `verdify_schemas/tunable_registry.py` (code), `v_desired_state_current`, `v_active_plan`, the newest readbacks in `setpoint_snapshot` and `equipment_state`, `setpoint_changes` and `setpoint_clamps` rows after each request, `irrigation_push` |
 | Daily | `daily_summary` (temperature, RH and VPD min, max and mean; `water_used_gal`; mister runtimes) and the new `v_daily_scorecard`: time in band day and night (`mv_zone_band_grade`), gallons, Iris's required plans written and missed (`planner_trigger_ledger`) and alerts by severity |
-| Water | `v_water_meter_daily`, `v_water_relay_runs`, plus [irrigation](irrigation.md)'s tables |
+| Water | `v_water_meter_daily`, `v_water_relay_runs` (API-21); API-IRR-01 and API-IRR-11 read a window's own `equipment_state` rows by that view's rules, never the view, and API-IRR-10 reads `fn_irrigation_minutes_daily`; plus [irrigation](irrigation.md)'s tables |
 
 - **Reporting.** One test says whether the controller is reporting: the ingestor heartbeat is fresh (at most
   180 s old) and the newest `climate` row is at most 300 s old (the `GET /health` threshold in `api/main.py`).

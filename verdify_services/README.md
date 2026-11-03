@@ -14,8 +14,11 @@ page is the conventions every service here follows; VD-31 (#1147) set them.
 | `settings.py` | `catalog`, `validate`, `write`, `release`, `status` and `history` (VD-67), and the batched `statuses` and `desired_states` (VD-55): the one validator and writer for desired state, with `Setting`, `DesiredSetting`, `StateReason`, `SettingHistory` and `SettingStatus` |
 | `alerts.py` | `list`, `open_count`, `ack` and `resolve` (VD-67): merged alert rows, the one open-alert count, with `Alert`, `AlertPage` and `AlertCounts` |
 | `reads.py` | `now`, `plan` and `equipment` (VD-54: API-02, API-07 and API-13); `settings_rows`, `setting_history` and `activity_page` (VD-55: API-09, API-12 and API-17, which the MCP `settings` and `activity` tools call too), with `SettingRows`; and the shared `reporting()` (the one §7 test: heartbeat at most 180 s old, climate at most 300 s), which `settings.status` uses for its `writer_down` and `controller_not_reporting` reasons |
+| `irrigation/reads.py` | `status`, `lines`, `agenda`, `minutes` and `runs` (VD-40: API-IRR-01, -02, -10 and -11), the functions the MCP read tools wrap (#1173) |
+| `irrigation/runs.py` | The relay-edge runs, their cause (`run_causes`, for API-02 and API-05), a day's minutes by M4's rules and a run's gallons |
+| `irrigation/program.py` | The controller's program: the `irr_engine` flag, `irr_program_id` and its pushes, for the reads and for the `irrigation_site` readback in `settings.status` |
 
-Later modules (`series`, `irrigation`) follow the same rules.
+Later modules (`series`) follow the same rules. The irrigation reads take an `Actor` too, as #1173's tools pass it; it changes nothing.
 
 ## Rules
 
@@ -148,11 +151,16 @@ those at or after the request count. A desired value confirms by `readback_match
 desired row and no plan, the dispatcher's newest push) by `readback_values_equivalent()`. A clamp after the
 request holds the setting while the newest readback does not confirm it. `state_reason` (`clamped`,
 `experiment`, `deferred`, `push_failed`, `writer_down`, `controller_not_reporting`, `no_match`) carries its
-`since`; the two ages come from `reads.reporting()`. An `irrigation_site` write stays `requested` until #1155
-adds the program readback. `statuses(conn, params)` is `status` for several settings in one batched read (API-07's
-lanes), and `desired_states(conn, ids)` gives named `desired_state` rows the state `history` gives them: the newest
-row of a setting its full status, an older one released, confirmed (a readback before the next row matched) or
-not_confirmed (API-17's setting writes). `catalog` and `history` serve API-09 and API-12 through `reads` (below).
+`since`; the two ages come from `reads.reporting()`. An `irrigation_site` row reads back through the program
+(#1155): a write stays `requested` until the confirmed push whose `sha256` starts with the `irr_program_id` hash has
+`site_desired_at` at or after it, then reads `confirmed` with the value from that record; a write of the value that
+record already holds changes no hash, so it reads `confirmed` at once. With no engine it stays
+`requested` with `no_engine`, its `since` the write; with the engine it reads `not_confirmed` 5 min after the write,
+and a `no_match` names the first push compiled at or after it. `statuses(conn, params)` is `status` for several
+settings in one batched read (API-07's lanes), and `desired_states(conn, ids)` gives named `desired_state` rows the
+state `history` gives them: the newest row of a setting its full status, an older one released, confirmed (a readback
+before the next row matched) or not_confirmed (API-17's setting writes). `catalog` and `history` serve API-09 and
+API-12 through `reads` (below).
 
 `reads` imports this module, so `settings` imports `reads` inside `_shared()` only, where it calls
 `reads.reporting()`: either module may be imported first.
@@ -200,7 +208,8 @@ The login needs SELECT on `alert_log`, `slack_alert_runbooks`, `setpoint_snapsho
 `desired_state` and `v_desired_state_current`, UPDATE on the `alert_log` ack and resolve columns and the three
 `crop_band_anchors` columns, and EXECUTE on `fn_current_season()` and `fn_mcp_armed_assignment_context()`
 (the experiment check every read and write makes): migrations 259, 261 and 280 grant the MCP login all of
-them, and M2 (#1179) and its successor the dashboard login.
+them, and M2 (#1179) and its successor the dashboard login. The `irrigation_site` rows also read `irrigation_push`
+(M3, #1153, both logins).
 
 ## Route modules and images
 
@@ -228,5 +237,9 @@ them, and M2 (#1179) and its successor the dashboard login.
   `tests/test_verdify_services_reads.py` adds the compositions against in-memory connections.
 - `tests/test_dashboard_db_settings_reads.py` (the campaign step): VD-55's acceptance fixtures, the
   MCP-shared reads as a role with only the MCP login's production grants.
+- `tests/test_verdify_services_irrigation_reads.py` (in `scripts/ci-local.sh`) and
+  `verdify_schemas/tests/test_irrigation_line_state.py`: the run, cause, minutes, gallons, sync and agenda rules and
+  `line_state()`, with no database. `tests/test_dashboard_db_irrigation_reads.py` (the campaign step): the four reads
+  as the dashboard and the MCP logins, against the committed OpenAPI and API-IRR-10's own rows, and the timing case.
 - `verdify_schemas/tests/test_band_rows.py` and `test_settings_rules.py`: the band row map against the
   dispatcher's overlay, and `SWITCH_READBACK_EQUIPMENT` and the activity mirror against the ingestor.
