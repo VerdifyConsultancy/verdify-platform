@@ -42,6 +42,10 @@ export function useNow(): number {
   const skew = useContext(SkewContext);
   return useSyncExternalStore(subscribe, currentSecond, currentSecond) - skew;
 }
+/** The device clock's lead over the server's (ms, 0 within 2 s), for a time read once rather than ticking. */
+export function useServerClockSkew(): number {
+  return useContext(SkewContext);
+}
 
 export type FreshnessTone = "ok" | "stale" | "off";
 /**
