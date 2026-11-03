@@ -310,9 +310,9 @@ dispatcher, the API's `applied_from` and the services resolve a setting the same
   `RECONNECT_UNOBSERVED_RESTORE_PARAMS` is empty today.
 - **Wake:** the insert trigger sends `NOTIFY desired_state_changed` with an empty payload. The existing listener
   (`setpoint_listener`, `ingestor/ingestor.py:5012`) also subscribes to `irrigation_changed` (§5.8) and only sets
-  `shared.setpoint_dispatch_requested` (or `shared.irrigation_sync_requested`), forcing the next normal, fenced
-  pass: dispatch in seconds, confirmation 30-90 s later (`cfg_*` sensors every 30 s, snapshots every 60 s). A
-  lost wake waits for the 300 s pass.
+  `shared.setpoint_dispatch_requested`, forcing the next normal, fenced pass, or `shared.irrigation_sync_requested`,
+  which the next 5 s `irrigation_sync` pass reads: dispatch in seconds, confirmation 30-90 s later (`cfg_*` sensors
+  every 30 s, snapshots every 60 s). A lost wake waits for the 300 s pass.
 - **Never the NOTIFY fast path.** `trg_setpoint_notify` on `setpoint_changes` (`db/migrations/055-realtime-sync.sql`)
   skips the physics invariants, moisture guardrails, heap deferral and the 12-command limit (the Lease, the
   device-write gate and the experiment holds still apply), and the next pass would overwrite the value anyway.
@@ -504,12 +504,12 @@ flags, minutes by zone, and the firmware. Architecturally it follows the same ru
   `irrigation_push`, `irrigation_ledger`), with the same attribution, `manual` rule and `activity_log` rows. The
   three site values are `irrigation_site` rows in `desired_state` (R12): written through API-10 or `set_setting`,
   skipped by the dispatcher, compiled into the program by `irrigation_sync` from `v_desired_state_current`.
-- The ingestor stays the only writer. `irrigation_sync` (every 60 s, plus a wake) compiles the program, pushes it
-  when the controller's published hash differs, and sends pending run, stop, clear-fault and override commands,
-  never through `setpoint_changes` (irrigation §6.1). Every irrigation or `irrigation_site` write runs
-  `pg_notify('irrigation_changed', '')` in its transaction; the listener sets `irrigation_sync_requested`, the
-  task loop force-launches the pass, and pending stops are also polled every 5 s. Stop goes first, as its own push
-  ahead of any program push, and is never heap-deferred.
+- The ingestor stays the only writer. `irrigation_sync` runs every 5 s and sends pending run, stop, clear-fault and
+  override commands; on a wake, and every 60 s, it also compiles the program and pushes it when the controller's
+  published hash differs, never through `setpoint_changes` (irrigation §6.1). Every irrigation or `irrigation_site`
+  write runs `pg_notify('irrigation_changed', '')` in its transaction; the listener sets
+  `irrigation_sync_requested`, which the next pass reads and clears (no forced launch). Stop goes first, as its own
+  push ahead of any program push, and is never heap-deferred.
 - Commands are `pending` until the ingestor marks the row `sent` in the transaction before it calls the device
   (sent at most once); one not sent within 2 min is `failed`, never sent late. Stop is re-sent each pass until the
   relays that were on read OFF, for at most 2 min. Relay edges and the line's `irr_state` show what happened.

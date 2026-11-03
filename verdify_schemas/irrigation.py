@@ -81,6 +81,10 @@ schedule on a zone that is not a member, a pause or a cap overrun settles at run
 ``compile_program`` packs the rows into the record above; ``agenda`` resolves the occurrences of
 1-7 days ahead (and 0-7 back) in America/Denver with ``verdify_schemas.solar``.
 
+Ingestor rows (VD-42, #1157). ``IrrigationPushRow`` and ``IrrigationLedgerRow`` are M3's ``irrigation_push`` and
+``irrigation_ledger`` rows, and ``RunClose`` a ledger row's closing columns; the ingestor validates its writes through
+them. Only the ingestor writes these tables.
+
 Line state (VD-40, #1155). ``line_state`` turns one ``v_irrigation_line_state`` row (M3, #1153) into a
 line's state fields, pure, so the API and MCP (``verdify_services.irrigation.reads``) and Iris's context
 (#1173, in the ingestor image) read water the same way.
@@ -206,6 +210,8 @@ __all__ = [
     "IrrWaiting",
     "IrrigationCause",
     "IrrigationCommandRow",
+    "IrrigationLedgerRow",
+    "IrrigationPushRow",
     "LineId",
     "LineKind",
     "LineSpec",
@@ -223,6 +229,7 @@ __all__ = [
     "RefusalCode",
     "RejectCode",
     "RunArgs",
+    "RunClose",
     "RunOutcome",
     "ScheduleSpec",
     "SiteValues",
@@ -2221,6 +2228,67 @@ class Command(BaseModel):
             created_at=stored.created_at,
             sent_at=stored.sent_at,
         )
+
+
+# ── The ingestor's program and outcome rows (VD-42, #1157; irrigation §6.1 and §6.2) ──
+
+
+class IrrigationPushRow(BaseModel):
+    """An ``irrigation_push`` row (M3, migration 283): one compiled program sent, as the ingestor records it just before
+    the device call. A re-push of the same hash updates the row (``pushed_at``, cleared ``reject_code`` and
+    ``confirmed_at``); ``confirmed_at`` is set once ``irr_program_id`` reports the hash."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    revision: int | None = None
+    greenhouse_id: str = "vallery"
+    sha256: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    bytes: Annotated[bytes, Field(min_length=PROGRAM_RECORD_LEN, max_length=PROGRAM_RECORD_LEN)]
+    site_desired_at: AwareDatetime | None = None
+    pushed_at: AwareDatetime | None = None
+    confirmed_at: AwareDatetime | None = None
+    reject_code: RejectCode | None = None
+
+    @model_validator(mode="after")
+    def _hash_of_the_record(self) -> IrrigationPushRow:
+        if self.sha256 != program_sha256(self.bytes):
+            raise ValueError("sha256 is not the record's hash")
+        return self
+
+
+class IrrigationLedgerRow(BaseModel):
+    """An ``irrigation_ledger`` row (M3, migration 283): one occurrence stage or run-now, written only by the ingestor.
+    ``slot_id`` is None for a run-now (M3's unique key skips those); ``started_at`` is None for one that never opened a
+    valve; ``outcome`` is None until ``irr_events`` names it. ``reason`` holds the ``REASON_WORDS`` code."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: int | None = None
+    greenhouse_id: str = "vallery"
+    line_id: LineId
+    slot_id: _SlotId | None = None
+    local_day: date
+    cause: IrrigationCause
+    started_at: AwareDatetime | None = None
+    ended_at: AwareDatetime | None = None
+    open_s: Annotated[int, Field(strict=True, ge=0)] = 0
+    pulses: Annotated[int, Field(strict=True, ge=0)] | None = None
+    outcome: RunOutcome | None = None
+    reason: Annotated[str, Field(max_length=REASON_MAX_LENGTH)] | None = None
+    event_seq: _U16 | None = None
+    command_id: UUID | None = None
+    actor: str | None = None
+    recorded_at: AwareDatetime | None = None
+
+
+class RunClose(BaseModel):
+    """A ledger row's closing columns, from the line's relay edges when its run token leaves ``irr_state``."""
+
+    model_config = _FROZEN
+
+    ended_at: AwareDatetime
+    open_s: Annotated[int, Field(strict=True, ge=0)]
+    pulses: Annotated[int, Field(strict=True, ge=0)]
 
 
 # ── Line state (VD-40, #1155; irrigation §6.2 and §8.1) ──────────────────────

@@ -12,10 +12,13 @@ Nothing here reaches production: every connection comes from
 
 from __future__ import annotations
 
+import ast
 import bisect
 import datetime as dt
 import random
 import re
+import sys
+import types
 import uuid
 from collections import defaultdict
 from decimal import ROUND_HALF_UP, Decimal
@@ -224,6 +227,22 @@ async def prepare_irrigation_tables(conn, *, hypertable: bool = True) -> bool:
         await conn.execute("RESET search_path")
         await conn.execute("RESET ROLE")
     return timescale
+
+
+def load_irrigation_task() -> dict:
+    """ingestor/tasks/irrigation.py's own source as a namespace, without the ingestor's device imports (``esp32_push``,
+    ``shared``, ``.dispatcher``). Executed as a real module, so its dataclasses resolve their annotations."""
+    task = REPO_ROOT / "ingestor" / "tasks" / "irrigation.py"
+    body = [
+        node
+        for node in ast.parse(task.read_text()).body
+        if not (isinstance(node, ast.Import) and {alias.name for alias in node.names} & {"esp32_push", "shared"})
+        and not (isinstance(node, ast.ImportFrom) and node.level)
+    ]
+    module = types.ModuleType("irrigation_task_under_test")
+    sys.modules[module.__name__] = module
+    exec(compile(ast.Module(body=body, type_ignores=[]), str(task), "exec"), module.__dict__)  # noqa: S102
+    return module.__dict__
 
 
 # ── Independent edge walk: the expected rows, computed in plain Python ─────────

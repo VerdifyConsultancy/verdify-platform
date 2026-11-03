@@ -1,8 +1,8 @@
 """Execute the actual listener with DB doubles; never create a device client.
 
 The listener LISTENs on setpoint_changed, on irrigation_changed (VD-64) and on desired_state_changed (VD-33). An
-irrigation write's NOTIFY sets shared.irrigation_sync_requested, which the task loop turns into a forced
-irrigation_sync pass; a desired_state write's wake sets that and shared.setpoint_dispatch_requested.
+irrigation write's NOTIFY sets shared.irrigation_sync_requested, which the next irrigation_sync pass reads;
+a desired_state write's wake sets that and shared.setpoint_dispatch_requested.
 """
 
 import ast

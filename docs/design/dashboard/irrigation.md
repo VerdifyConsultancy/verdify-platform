@@ -559,8 +559,8 @@ Stop again (§6.5).
 irrigation write (dashboard / MCP) -> verdify_services.irrigation -> irrigation_* rows
                                    + activity_log (one txn) -> NOTIFY irrigation_changed
 site value write (API-10 / set_setting) -> desired_state row -> NOTIFY desired_state_changed
-ingestor irrigation_sync (ingestor/tasks/irrigation.py): on either wake, every 5 s while a command
-is pending, and every 60 s in full:
+ingestor irrigation_sync (ingestor/tasks/irrigation.py): every 5 s steps 0 and 1; steps 2-4 on either
+wake and every 60 s:
   0. no engine services on this connection -> only the L01 bridge (§6.5); nothing else is sent
   1. irrigation_command rows: each stop first, as its own push request; then run, clear_fault, override
   2. compile_program(lines, slots, site values) in one REPEATABLE READ snapshot -> 584 B + sha256
@@ -572,8 +572,11 @@ is pending, and every 60 s in full:
 - **Wake and cadence.** Every irrigation write sends `NOTIFY irrigation_changed` (empty payload) in its
   transaction. The ingestor's existing listener (`setpoint_listener`) also listens on that channel and
   sets `irrigation_sync_requested`, and it sets the same flag on `desired_state_changed` (site values).
-  The task loop force-launches `irrigation_sync` on that flag, as it does `setpoint_dispatch`. The 5 s
-  check of pending commands covers a lost NOTIFY. One cadence everywhere: 60 s plus the wake.
+  The task loop runs `irrigation_sync` every 5 s, which bounds command latency, and never force-launches
+  it (`_FORCED_TASK_RETRY_MIN_S` would allow that once per 30 s): the pass reads the flag itself, clearing
+  it before it reads, and runs steps 2-4 then or 60 s after its last full pass. A lost NOTIFY costs at
+  most 60 s for the program and 5 s for a command. The task's timeout is 150 s, above
+  `push_policy_transaction`'s 120 s budget, so it never cancels a push between begin and commit.
 - **Same writer, same fences.** The step uses the same fences as every device write: writer lease,
   transport fence, the `push_policy_transaction` pattern (`ingestor/esp32_push.py:1307-1392`) and
   heap deferral below 30 kB free or an 18 kB largest block (`ingestor/tasks/_common.py:939-942`).
@@ -602,6 +605,32 @@ is pending, and every 60 s in full:
   (`ingestor/ingestor.py:4485-4531`), with `push_irrigation_program()` and `send_irrigation_command()`
   in `ingestor/esp32_push.py`. Route `irr_program_id`, `irr_state` and `irr_events` to `system_state`
   in `ingestor/entity_map.py`.
+- **As built (VD-42).** `ingestor/tasks/irrigation.py` (`_engine_pass`). Where the build settles what this
+  section leaves open:
+  - The text-sensor handler keeps the three values for the current connection in
+    `shared.irrigation_readback` and every `irr_state` reading, in order, in `shared.irr_state_changes`, so
+    a token that comes and goes while a pass is busy pushing still gets its ledger row. `""` is a reading
+    (no token, no outcome), so a run's last token leaving is seen; a sensor that has not published yet is
+    not. A new connection clears the values, and the pass compares the hash as soon as it reads one.
+  - A Stop's "read OFF" is the native relay callback (`shared.wet_relay_read_off_since`, as the bridge
+    reads it), the same callback that writes the `equipment_state` row, so it needs no query. A relay that
+    read OFF once is done, so VPD misting may pulse again. A Stop goes even with no open relay in scope,
+    because a mist window between pulses has none; one whose send failed goes again on the next pass.
+  - A Stop fails only the pending runs in its scope requested before it, as designed here. The bridge
+    keeps its own rule (every run pending when the Stop goes).
+  - `run`, `clear_fault` and `override` also wait for this connection's first `irr_program_id`: until its
+    first tick the engine logs and ignores a service call, so a run sent then would read `sent` and be
+    lost. A Stop does not wait. A command whose `args` cannot make a call ends `failed` (`bad_args`), and
+    one that provably never reached the transport ends `failed` with its reason; an unknown outcome (a
+    timeout, a socket error) stays `sent`.
+  - A reject is read at least 6 s after the commit goes out, because an accepted commit clears an old `j=`
+    at once and a rejected one may publish nothing new. The retries are the delays between attempts: 1,
+    5 and 15 min, then every 15 min. A push with neither a reject nor the hash after 30 s (the controller's
+    NVS save failed) goes again on the next full pass; until then a wake never repeats it.
+  - A re-push also clears `confirmed_at`: the controller is not running that hash when it is pushed again,
+    so the row is unconfirmed until `irr_program_id` reports it.
+  - Writes validate through `IrrigationPushRow`, `IrrigationLedgerRow` and `RunClose`
+    (`verdify_schemas/irrigation.py`), M3's row models, which M3 left to the first issue that writes them.
 
 ### 6.2 Runs, outcomes and minutes by zone
 
@@ -669,6 +698,26 @@ is pending, and every 60 s in full:
   run-now) or its schedule is gone, with `gal` 0. A run whose ledger row is still open stays out of API-IRR-11
   until the row ends or is 24 h old (the bound M3's join uses), because a mist window keeps its row open
   between pulses.
+- **As built (VD-42).** `_sync_ledger` in `ingestor/tasks/irrigation.py`. Where the build settles what this
+  section leaves open:
+  - A token's identity is its line, cause, slot and start. Its end moves on a pause or resume and changes
+    nothing. A token gone for 15 s (`equipment_state` is flushed every 5 s) closes its row, waiting up to
+    2 min for an OFF edge the flush has not written. A token that comes back (a VPD pulse held the `m=`
+    token, or occupancy blocked the window) is the same run: its row opens again and closes on all its
+    edges. A VPD pulse on the relay inside the span counts toward it, as M3's join counts it.
+  - `ended_at` is the last OFF edge. When the token left across a reconnect the reconnect's own relay row is
+    not an edge, so it is the token's planned end (no later than the reconnect). After an ingestor restart
+    the planned end is gone and the OFF edge stands.
+  - A slot's `local_day` is the day `irr_events` names, the day its weekday matched: a solar start past
+    midnight or a late start opens the next morning and belongs to the day before (`occurrence_day`).
+  - A fertilizer run's flush starts after its outcome is published, so its row takes the outcome of its
+    occurrence's other rows (a run-now's: of the rows that share its command).
+  - An entry counts as stored when a row holds its sequence, slot and day, not when it is older than the
+    newest stored sequence: a power cut zeroes the RTC block and restarts the sequence, and comparing with
+    the old newest would drop every outcome for thousands of runs. A row that has an outcome keeps it.
+  - A run-now's outcome finds the newest row on its line and local day with no outcome that opened a valve
+    and is not still running; entries are applied newest first, so two in one text find their own rows. A
+    `skipped` or `missed` run-now opened nothing and gets its own row.
 
 ### 6.3 Alerts (in-app `alert_log`, category `water`)
 
@@ -685,6 +734,14 @@ is pending, and every 60 s in full:
 - Both new types go in `verdify_schemas/alerts.py`. Nothing else is new: the leak and heap alerts
   already exist, and with no leak latch (Round 2 #3) and no leak force-off in the engine (F14), the
   leak alert is the whole leak response.
+- **As built (VD-42).** `ingestor/tasks/alerts.py`. All three need an `irr_engine` row reading `true`, and
+  the new two an `irr_program_id` reading, so nothing new appears before the engine or after a rollback.
+  The applied program is the newest push of the reported hash; with none (or on `src=rom`) today's three
+  fence rules stay, and an unconfirmed one checks nothing until it is confirmed. `irrigation_run_missed`
+  counts an occurrence as having no outcome only when it left no ledger row: a row means it opened, and a
+  long mist window or a blocked one may still be running 2 h after its planned start. A slot the compiler
+  left off the controller raises nothing, and a reported miss whose schedule is gone has no window to check,
+  so it raises nothing either. A failed read keeps every open water alert open, as unknown is not recovery.
 - **The leak alert outlives the flag (VD-72).** While `leak_detected` is on it reads "Water flowing
   with every Verdify valve closed since HH:MM". Once the flag clears the row stays open: after two
   meter readings under 0.1 gal/min it reads "Flow stopped at HH:MM" (America/Denver;

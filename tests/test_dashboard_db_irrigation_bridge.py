@@ -18,7 +18,6 @@ and ``irr_engine`` false.
 
 from __future__ import annotations
 
-import ast
 import asyncio
 import datetime as dt
 import json
@@ -44,7 +43,6 @@ pytestmark = pytest.mark.skipif(DSN is None, reason="needs VERDIFY_ISOLATED_TEST
 INGESTOR, MCP = "verdify_ingestor_runtime_login", "verdify_mcp_runtime_login"
 DASHBOARD = "verdify_dashboard_runtime_login"
 ACTIVITY_MIGRATION = support.REPO_ROOT / "db" / "migrations" / "280-desired-state-activity-log.sql"
-TASK = support.REPO_ROOT / "ingestor" / "tasks" / "irrigation.py"
 ACTORS = {DASHBOARD: Actor.person("jason", "operator"), MCP: Actor.agent("steward")}
 
 STAND_IN_GRANTS = """
@@ -163,17 +161,7 @@ async def as_login(user: str, write):
 
 def load_command_store():
     """CommandStore from ingestor/tasks/irrigation.py's own source, without the ingestor's device imports."""
-    tree = ast.parse(TASK.read_text())
-    device_side = {"esp32_push", "shared"}
-    body = [
-        node
-        for node in tree.body
-        if not (isinstance(node, ast.Import) and {alias.name for alias in node.names} & device_side)
-        and not (isinstance(node, ast.ImportFrom) and node.level)  # .dispatcher: the heap guard, not tested here
-    ]
-    namespace: dict = {"__name__": "irrigation_task_under_test"}
-    exec(compile(ast.Module(body=body, type_ignores=[]), str(TASK), "exec"), namespace)  # noqa: S102
-    return namespace
+    return support.load_irrigation_task()
 
 
 class OnePool:

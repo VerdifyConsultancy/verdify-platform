@@ -5,7 +5,23 @@ original module. The tasks package __init__ re-exports the public
 surface so every `from tasks import X` still resolves.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from datetime import date
+
+from verdify_schemas.irrigation import (
+    DEVICE_IDX,
+    REASON_WORDS,
+    IrrState,
+    ProgramId,
+    ProgramRecordError,
+    agenda,
+    irr_state_reading,
+    local_tz,
+    occurrence_start,
+    parse_irr_program_id,
+    unpack_program,
+)
 
 from ._common import (
     _FORECAST_STALE_SENSOR_ID,
@@ -56,6 +72,7 @@ from .daily import (
 from .heartbeat import (
     _expire_planner_trigger_slas,
 )
+from .irrigation import LINE_RELAYS, _schedule_specs, read_program
 
 # Plain convergence (VD-62): a setting whose outgoing value has differed from
 # the controller for longer than this is not reaching it.
@@ -342,6 +359,343 @@ async def _leak_cycle_alert(conn):
 # ═════════════════════════════════════════════════════════════════
 # 6. ALERT MONITOR (every 300s)
 # ═════════════════════════════════════════════════════════════════
+# ── Irrigation alerts (VD-42, irrigation §6.3). All of it is inert until irr_program_id appears. ──
+
+_IRR_FENCED_LINES = ("L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10")
+_IRR_FERT_RELAYS = ("drip_wall_fert", "drip_center_fert", "mister_south_fert", "mister_west_fert")
+_IRR_MASTER_RELAY = "fert_master_valve"
+_IRR_FENCE_WINDOW = _td(minutes=15)
+# An occurrence with no outcome this long after its planned start counts as missed.
+_IRR_NO_OUTCOME_AFTER = _td(hours=2)
+_IRR_MISSED_WINDOW = _td(hours=24)
+_IRR_CLIMATE_GAP = _td(seconds=300)
+_IRR_NEWEST_STATE_WINDOW = "400 days"  # all three change rarely and system_state keeps every row
+_IRR_NEWEST_STATES_SQL = f"""
+SELECT e.entity, s.value
+  FROM unnest($1::text[]) AS e(entity)
+  LEFT JOIN LATERAL (SELECT value FROM system_state
+                      WHERE entity = e.entity AND ts > now() - interval '{_IRR_NEWEST_STATE_WINDOW}'
+                      ORDER BY ts DESC
+                      LIMIT 1) AS s ON true
+"""
+_IRR_APPLIED_PUSH_SQL = """
+SELECT revision, sha256, bytes, confirmed_at
+  FROM irrigation_push
+ WHERE left(sha256, 16) = $1
+ ORDER BY revision DESC
+ LIMIT 1
+"""
+_IRR_LINE_ZONES_SQL = "SELECT line_id, zone FROM irrigation_line"
+# Each relay's newest ON row in the window, and whether it was already on when the window opened.
+_IRR_FENCE_RELAYS_SQL = """
+SELECT equipment,
+       max(ts) FILTER (WHERE state AND ts >= $1) AS last_on_ts,
+       (array_agg(state ORDER BY ts DESC) FILTER (WHERE ts < $1))[1] AS on_before
+  FROM equipment_state
+ WHERE ts >= now() - interval '1 day' AND equipment = ANY($2::text[])
+ GROUP BY equipment
+"""
+_IRR_MISSED_ROWS_SQL = """
+SELECT line_id, slot_id, local_day, reason, recorded_at
+  FROM irrigation_ledger
+ WHERE outcome = 'missed' AND slot_id IS NOT NULL AND recorded_at > $1
+"""
+_IRR_OCCURRENCE_ROWS_SQL = "SELECT DISTINCT slot_id, local_day FROM irrigation_ledger WHERE local_day >= $1"
+_IRR_SLOTS_SQL = """
+SELECT slot_id, line_id, enabled, days, start_kind, start_min, on_s, count, gap_s, prewet_s, flush_s, degraded_only,
+       label, manual
+  FROM irrigation_slot
+ WHERE slot_id = ANY($1::integer[])
+"""
+_IRR_WATCH_SQL = """
+SELECT (SELECT array_agg(ts ORDER BY ts) FROM climate WHERE ts >= $1 AND ts <= $2) AS climate,
+       (SELECT array_agg(ts) FROM system_state WHERE entity = 'irr_engine' AND ts >= $1 AND ts <= $2) AS reconnects
+"""
+
+
+@dataclass(frozen=True)
+class _IrrigationView:
+    """What the controller runs, from its newest rows. ``applied`` is the newest push of the ``irr_program_id`` hash;
+    with no row for it, before the engine or on ``src=rom`` it is None."""
+
+    engine: bool = False
+    program_id: ProgramId | None = None
+    applied: Mapping | None = None
+    state: IrrState | None = None
+    zones: Mapping[str, str] | None = None
+
+
+@dataclass(frozen=True)
+class _MissedOccurrence:
+    line_id: str
+    slot_id: int
+    local_day: date
+    planned_start: datetime
+    watch_until: datetime
+    rule: str
+    reason: str | None = None
+
+
+async def _irrigation_view(conn) -> _IrrigationView:
+    rows = {
+        row["entity"]: row["value"]
+        for row in await conn.fetch(_IRR_NEWEST_STATES_SQL, ["irr_engine", "irr_program_id", "irr_state"])
+    }
+    if rows.get("irr_engine") != "true":
+        return _IrrigationView()
+    try:
+        program_id = parse_irr_program_id(rows.get("irr_program_id") or "")
+    except ValueError:
+        return _IrrigationView(engine=True)
+    applied = None
+    if program_id.src == "nvs":
+        applied = await conn.fetchrow(_IRR_APPLIED_PUSH_SQL, program_id.hash16)
+    return _IrrigationView(
+        engine=True,
+        program_id=program_id,
+        applied=applied,
+        state=irr_state_reading(rows.get("irr_state")),
+        zones={row["line_id"]: row["zone"] for row in await conn.fetch(_IRR_LINE_ZONES_SQL)},
+    )
+
+
+def _applied_fence_hits(rows: Sequence[Mapping], enabled_mask: int) -> list[tuple[str, str, datetime, str]]:
+    """``(rule, equipment, ON row ts, line)`` from ``_IRR_FENCE_RELAYS_SQL`` over the window: the relay of L01, L02 or
+    L04-L10 with an ON row while the applied program disables its line, and L03 with an ON row and no fertilizer relay
+    on in the window. L03 has only its own rule, and fog (L11) is not fence-checked."""
+    by_relay = {row["equipment"]: row for row in rows}
+    hits = []
+    for line_id in _IRR_FENCED_LINES:
+        row = by_relay.get(LINE_RELAYS[line_id])
+        if row is not None and row["last_on_ts"] is not None and not enabled_mask >> DEVICE_IDX[line_id] & 1:
+            hits.append(("relay_on_line_disabled", row["equipment"], row["last_on_ts"], line_id))
+    master = by_relay.get(_IRR_MASTER_RELAY)
+    if master is not None and master["last_on_ts"] is not None:
+        fert = (by_relay.get(relay) for relay in _IRR_FERT_RELAYS)
+        if not any(row is not None and (row["last_on_ts"] is not None or row["on_before"]) for row in fert):
+            hits.append(("fert_master_without_fert_run", _IRR_MASTER_RELAY, master["last_on_ts"], "L03"))
+    return hits
+
+
+async def _irrigation_fence_alerts(conn, applied: Mapping, now: datetime) -> list[dict]:
+    """``irrigation_fence_breach`` against the applied program, counting only ON rows of the last 15 min after that push
+    was confirmed: a line someone just disabled while it ran raises nothing, and neither does an unconfirmed push."""
+    if applied["confirmed_at"] is None:
+        return []
+    try:
+        record = unpack_program(applied["bytes"])
+    except ProgramRecordError as exc:
+        log.warning("irrigation fence: revision %s does not decode: %s", applied["revision"], exc.code)
+        return []
+    since = max(now - _IRR_FENCE_WINDOW, applied["confirmed_at"])
+    relays = [*(LINE_RELAYS[line_id] for line_id in _IRR_FENCED_LINES), _IRR_MASTER_RELAY]
+    rows = await conn.fetch(_IRR_FENCE_RELAYS_SQL, since, relays)
+    alerts = []
+    for rule, equipment, on_ts, line_id in _applied_fence_hits(rows, record.enabled_mask):
+        what = (
+            f"while the applied program disables {line_id}"
+            if rule == "relay_on_line_disabled"
+            else "with no fertilizer relay on"
+        )
+        alerts.append(
+            {
+                "alert_type": "irrigation_fence_breach",
+                "severity": "critical",
+                "category": "water",
+                "sensor_id": f"equipment.{equipment}",
+                "zone": None,
+                "message": (
+                    f"IRRIGATION FENCE BREACH ({rule}): `{equipment}` reported ON at {on_ts.isoformat()} {what}. "
+                    "Verify relay truth and close the water paths before anything else."
+                ),
+                "details": {
+                    "rule": rule,
+                    "equipment": equipment,
+                    "observed_at": on_ts.isoformat(),
+                    "context": {"line_id": line_id, "revision": applied["revision"]},
+                },
+                "metric_value": None,
+                "threshold_value": None,
+            }
+        )
+    return alerts
+
+
+def _irrigation_watched(
+    start: datetime, end: datetime, *, climate: Sequence[datetime], reconnects: Sequence[datetime]
+) -> bool:
+    """The ingestor watched all of [``start``, ``end``]: no ``irr_engine`` row in it (no reconnect) and no gap over 300 s
+    between ``climate`` rows, the window's own two ends included."""
+    if any(start <= ts <= end for ts in reconnects):
+        return False
+    previous = start
+    for ts in climate:
+        if start <= ts <= end:
+            if ts - previous > _IRR_CLIMATE_GAP:
+                return False
+            previous = ts
+    return end - previous <= _IRR_CLIMATE_GAP
+
+
+async def _irrigation_reported_missed(conn, now: datetime) -> list[_MissedOccurrence]:
+    """(a) A ledger row with outcome ``missed`` in the last 24 h. With its schedule gone its planned start, and so the
+    window to check, is unknown, and nothing is raised."""
+    rows = await conn.fetch(_IRR_MISSED_ROWS_SQL, now - _IRR_MISSED_WINDOW)
+    if not rows:
+        return []
+    slots = _schedule_specs(await conn.fetch(_IRR_SLOTS_SQL, sorted({row["slot_id"] for row in rows})))
+    by_id = {slot.slot_id: slot for slot in slots}
+    found = []
+    for row in rows:
+        slot = by_id.get(row["slot_id"])
+        if slot is not None:
+            found.append(
+                _MissedOccurrence(
+                    row["line_id"],
+                    row["slot_id"],
+                    row["local_day"],
+                    occurrence_start(slot.start, row["local_day"]),
+                    row["recorded_at"],
+                    "reported_missed",
+                    row["reason"],
+                )
+            )
+    return found
+
+
+async def _irrigation_no_outcome(conn, applied: Mapping, now: datetime) -> list[_MissedOccurrence]:
+    """(b) An enabled schedule's occurrence on the controller that left no ledger row 2 h after its planned start, while
+    the applied hash equals the compiled one and that push was confirmed before the planned start. A row means it opened
+    (a long mist window may still run) or has its outcome. A ``degraded_only`` slot runs only while VPD sensing is
+    degraded, so one that does not fire is expected."""
+    confirmed_at = applied["confirmed_at"]
+    if confirmed_at is None:
+        return []
+    program = await read_program(conn)
+    if program.compiled.sha256 != applied["sha256"]:
+        return []
+    today = now.astimezone(local_tz()).date()
+    slots = {slot.slot_id: slot for slot in program.slots}
+    week = agenda(program.lines, program.slots, today=today, days=1, past_days=2)
+    rows = await conn.fetch(_IRR_OCCURRENCE_ROWS_SQL, week.first_day)
+    recorded = {(row["slot_id"], row["local_day"]) for row in rows}
+    found = []
+    for occurrence in week.occurrences:
+        start = occurrence.planned_start
+        if (
+            occurrence.status == "planned"
+            and occurrence.slot_id in program.compiled.slot_ids
+            and not slots[occurrence.slot_id].degraded_only
+            and confirmed_at < start
+            and now - _IRR_MISSED_WINDOW <= start <= now - _IRR_NO_OUTCOME_AFTER
+            and (occurrence.slot_id, occurrence.local_day) not in recorded
+        ):
+            found.append(
+                _MissedOccurrence(
+                    occurrence.line_id,
+                    occurrence.slot_id,
+                    occurrence.local_day,
+                    start,
+                    start + _IRR_NO_OUTCOME_AFTER,
+                    "no_outcome",
+                )
+            )
+    return found
+
+
+async def _irrigation_run_missed_alerts(conn, view: _IrrigationView, now: datetime) -> list[dict]:
+    """``irrigation_run_missed``: one per line, its newest occurrence, only when the ingestor watched the whole window
+    from the planned start to the outcome or to the 2 h mark. Otherwise nothing is raised: an outcome that never came
+    through a gap is a gap, never a missed run."""
+    candidates = await _irrigation_reported_missed(conn, now)
+    if view.applied is not None:
+        candidates += await _irrigation_no_outcome(conn, view.applied, now)
+    if not candidates:
+        return []
+    watch = await conn.fetchrow(_IRR_WATCH_SQL, min(item.planned_start for item in candidates), now)
+    climate, reconnects = watch["climate"] or [], watch["reconnects"] or []
+    newest: dict[str, _MissedOccurrence] = {}
+    for item in candidates:
+        if _irrigation_watched(item.planned_start, item.watch_until, climate=climate, reconnects=reconnects) and (
+            item.line_id not in newest or item.planned_start > newest[item.line_id].planned_start
+        ):
+            newest[item.line_id] = item
+    alerts = []
+    for line_id, item in sorted(newest.items()):
+        words = REASON_WORDS.get(item.reason or "")
+        when = item.planned_start.astimezone(local_tz()).strftime("%H:%M")
+        what = "the controller reported it missed" if item.rule == "reported_missed" else "no outcome after 2 h"
+        alerts.append(
+            {
+                "alert_type": "irrigation_run_missed",
+                "severity": "warning",
+                "category": "water",
+                "sensor_id": f"irrigation.{line_id}",
+                "zone": (view.zones or {}).get(line_id),
+                "message": (
+                    f"{line_id}: the {when} run on {item.local_day} did not happen ({what}"
+                    + (f": {words}" if words else "")
+                    + ")."
+                ),
+                "details": {
+                    "line_id": line_id,
+                    "slot_id": item.slot_id,
+                    "local_day": item.local_day.isoformat(),
+                    "planned_start": item.planned_start.isoformat(),
+                    "rule": item.rule,
+                    "reason": item.reason,
+                },
+                "metric_value": None,
+                "threshold_value": None,
+            }
+        )
+    return alerts
+
+
+def _irrigation_line_faulted_alerts(view: _IrrigationView) -> list[dict]:
+    """``irrigation_line_faulted``: open while the newest ``irr_state`` has a latch (``f=<line>,l``) for the line. The
+    monitor resolves it once the latch clears (local midnight or ``clear_fault``). A back-off alone raises nothing."""
+    if view.state is None:
+        return []
+    alerts = []
+    for fault in view.state.faults:
+        if fault.fault != "mister_fault":
+            continue
+        until = datetime.fromtimestamp(fault.until_epoch, UTC) if fault.until_epoch else None
+        alerts.append(
+            {
+                "alert_type": "irrigation_line_faulted",
+                "severity": "warning",
+                "category": "water",
+                "sensor_id": f"irrigation.{fault.line_id}",
+                "zone": (view.zones or {}).get(fault.line_id),
+                "message": (
+                    f"{fault.line_id}: the mister watchdog latched this zone off"
+                    + (f" until {until.astimezone(local_tz()).strftime('%H:%M')}" if until else "")
+                    + ". Clear the fault to run it again."
+                ),
+                "details": {
+                    "line_id": fault.line_id,
+                    "fault_until": None if until is None else until.isoformat(),
+                },
+                "metric_value": None,
+                "threshold_value": None,
+            }
+        )
+    return alerts
+
+
+async def _irrigation_engine_alerts(conn, view: _IrrigationView, now: datetime) -> list[dict]:
+    """The alerts that need the engine: none until ``irr_program_id`` appears."""
+    if not view.engine or view.program_id is None:
+        return []
+    alerts = await _irrigation_run_missed_alerts(conn, view, now)
+    alerts += _irrigation_line_faulted_alerts(view)
+    if view.applied is not None:
+        alerts += await _irrigation_fence_alerts(conn, view.applied, now)
+    return alerts
+
+
 async def alert_monitor(pool: asyncpg.Pool) -> None:
     try:
         await _expire_planner_trigger_slas(pool)
@@ -693,7 +1047,20 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # recovery irrigation contracts are observable there. Assert them on
         # live relay truth instead. Any breach is CRITICAL: these relays are
         # supposed to be unconditionally fenced in firmware, so one ON edge
-        # means the fence itself failed (or firmware regressed).
+        # means the fence itself failed (or firmware regressed). With an applied
+        # irrigation program (VD-42) the check is against that program instead:
+        # these three rules hold only before the engine, or on src=rom.
+        irrigation_preserved: frozenset[str] = frozenset()
+        try:
+            irrigation_view = await _irrigation_view(conn)
+            alerts.extend(await _irrigation_engine_alerts(conn, irrigation_view, datetime.now(UTC)))
+        except Exception as e:
+            # Unknown state is never evidence that an open water alert recovered.
+            log.warning("irrigation alert cycle unavailable: %s", type(e).__name__)
+            irrigation_view = None
+            irrigation_preserved = frozenset(
+                {"irrigation_fence_breach", "irrigation_run_missed", "irrigation_line_faulted"}
+            )
         fence_rows = await conn.fetch(
             """
             SELECT equipment,
@@ -719,17 +1086,18 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             return bool(row and row["latest_state"])
 
         fence_hits: list[tuple[str, str]] = []
-        for equipment in ("drip_center_fert", "mister_south_fert", "mister_west_fert"):
-            # Post-#450 these paths are relay-level blocked (hardware.yaml
-            # unconditional turn_off) — any persisted ON is a fence failure.
-            if _fence_on(equipment):
-                fence_hits.append(("blocked_fert_path_on", equipment))
-        # Window-based pairing (not event ordering) so a legitimate wall feed
-        # that batches master+drip edges in either order cannot false-positive.
-        if _fence_on("fert_master_valve") and not _fence_on("drip_wall_fert"):
-            fence_hits.append(("fert_master_without_wall_drip", "fert_master_valve"))
-        if _fence_on("drip_center") and not _fence_latest("irrigation_center_enabled"):
-            fence_hits.append(("center_drip_while_disabled", "drip_center"))
+        if irrigation_view is not None and irrigation_view.applied is None:
+            for equipment in ("drip_center_fert", "mister_south_fert", "mister_west_fert"):
+                # Post-#450 these paths are relay-level blocked (hardware.yaml
+                # unconditional turn_off) — any persisted ON is a fence failure.
+                if _fence_on(equipment):
+                    fence_hits.append(("blocked_fert_path_on", equipment))
+            # Window-based pairing (not event ordering) so a legitimate wall feed
+            # that batches master+drip edges in either order cannot false-positive.
+            if _fence_on("fert_master_valve") and not _fence_on("drip_wall_fert"):
+                fence_hits.append(("fert_master_without_wall_drip", "fert_master_valve"))
+            if _fence_on("drip_center") and not _fence_latest("irrigation_center_enabled"):
+                fence_hits.append(("center_drip_while_disabled", "drip_center"))
         latest_state = {equipment: bool(row["latest_state"]) for equipment, row in fence.items()}
         for rule, equipment in fence_hits:
             row = fence[equipment]
@@ -2512,7 +2880,8 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             # stays open while this process's delivery state is unknown).
             preserve_open_types=_setpoint_delivery_stuck_preserved(
                 shared.delivery_differing_since, shared.dispatcher_stage
-            ),
+            )
+            | irrigation_preserved,
         )
 
 

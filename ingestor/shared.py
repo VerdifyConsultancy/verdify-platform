@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import re
+from collections import deque
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -260,12 +261,45 @@ _cfg_drift_version = 0
 # Wake the scheduler for targeted cfg drift without advancing transport state.
 setpoint_dispatch_requested = asyncio.Event()
 
-# Wake irrigation_sync (irrigation §6.1). setpoint_listener sets this on NOTIFY irrigation_changed (VD-64), on
-# desired_state_changed, because the irrigation_site values live in desired_state (VD-33), and after the
-# listener reconnects. Only a flag: the task re-reads its own tables. The task loop force-launches
-# irrigation_sync while it is set. The pass reads pending commands every 5 s whether or not it is set; #1157's
-# program steps clear it.
+# Wake irrigation_sync's program steps (irrigation §6.1). setpoint_listener sets this on NOTIFY irrigation_changed
+# (VD-64), on desired_state_changed, because the irrigation_site values live in desired_state (VD-33), and after the
+# listener reconnects. Only a flag: the task re-reads its own tables. The task loop runs irrigation_sync every 5 s
+# and no forced launch is involved: each pass reads pending commands, and runs the compile, push and confirm steps
+# when this flag is set (clearing it before it reads) or 60 s after its last full pass (VD-42).
 irrigation_sync_requested = asyncio.Event()
+
+# The irrigation engine's three text sensors (irrigation §5 F3), by object id. Each value for the current connection
+# is kept here, as policy_readback keeps its echo, so irrigation_sync's 5 s tick needs no query; note_transport_connected
+# clears them, so a key is present only once this connection has read it. "" is a reading (no token, no outcome).
+IRR_PROGRAM_ID = "irr_program_id"
+IRR_STATE = "irr_state"
+IRR_EVENTS = "irr_events"
+IRRIGATION_TEXT_SENSORS: frozenset[str] = frozenset({IRR_PROGRAM_ID, IRR_STATE, IRR_EVENTS})
+irrigation_readback: dict[str, str] = {}
+
+
+@dataclass(frozen=True)
+class IrrStateChange:
+    """One irr_state reading, in the order it arrived: the ledger reads every one, so a run token that comes and goes
+    while a pass is busy pushing still gets its row."""
+
+    generation: int
+    observed_at: datetime
+    text: str
+
+
+# Bounded: at a VPD pulse's two changes a minute this holds hours, far past a pass's 150 s timeout.
+irr_state_changes: deque[IrrStateChange] = deque(maxlen=1024)
+
+
+def note_irrigation_readback(object_id: str, text: str, generation: int, observed_at: datetime) -> None:
+    """Mirror one irrigation text sensor from the live session."""
+    if object_id not in IRRIGATION_TEXT_SENSORS or not isinstance(text, str):
+        return
+    irrigation_readback[object_id] = text
+    if object_id == IRR_STATE:
+        irr_state_changes.append(IrrStateChange(int(generation), observed_at, text))
+
 
 # The ten wet relays of L01-L10 by equipment_state name, in line order: the relays an irrigation Stop may
 # switch off before the engine firmware (the L01 bridge, irrigation §6.5). L11's fog_rly is internal to
@@ -417,6 +451,7 @@ def note_transport_connected(expected_cfg_readbacks: frozenset[str] = frozenset(
     transport_readbacks_generation = 0
     cfg_readback.clear()
     cfg_readback_generation.clear()
+    irrigation_readback.clear()
     setpoint_snapshot_requested.clear()
     fail_setpoint_snapshot_publication()
     force_setpoint_push.clear()

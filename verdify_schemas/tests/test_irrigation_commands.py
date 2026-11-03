@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import get_args
 
@@ -119,3 +119,55 @@ def test_the_bridge_constants():
     assert json.loads(json.dumps(irr.Command.model_json_schema()))["properties"]["line_id"]["anyOf"][0]["enum"] == list(
         irr.LINE_IDS
     )
+
+
+# ── The ingestor's program and outcome rows (VD-42) ──────────────────────────
+
+
+def _push_row(**changes):
+    record = irr.pack_program(
+        irr.ProgramRecord(
+            saf4_gal=300,
+            rh_ceiling_pct=90,
+            climate_yield_min=15,
+            lines=tuple(irr.RecordLine() for _ in irr.LINE_IDS),
+        )
+    )
+    return {"sha256": irr.program_sha256(record), "bytes": record, **changes}
+
+
+def test_a_push_row_holds_its_record_and_that_records_hash():
+    row = irr.IrrigationPushRow(**_push_row(reject_code="bad_slot"))
+    assert row.greenhouse_id == "vallery" and len(row.bytes) == irr.PROGRAM_RECORD_LEN
+    with pytest.raises(ValidationError, match="not the record's hash"):
+        irr.IrrigationPushRow(**_push_row(sha256="0" * 64))
+    with pytest.raises(ValidationError):
+        irr.IrrigationPushRow(sha256="0" * 64, bytes=b"short")
+    with pytest.raises(ValidationError):
+        irr.IrrigationPushRow(**_push_row(reject_code="storage"))  # not a j= code
+
+
+def test_a_ledger_row_holds_what_m3_allows():
+    day = date(2026, 11, 2)
+    row = irr.IrrigationLedgerRow(line_id="L01", local_day=day, cause="run_now", outcome="ok", event_seq=65535)
+    assert row.slot_id is None and row.open_s == 0 and row.outcome is irr.RunOutcome.OK
+    for bad in (
+        {"line_id": "L12"},
+        {"cause": "bogus"},
+        {"outcome": "bogus"},
+        {"slot_id": 0},  # slot 0 is never stored as 0
+        {"event_seq": 65536},
+        {"open_s": -1},
+        {"pulses": -1},
+        {"reason": "x" * 501},
+    ):
+        with pytest.raises(ValidationError):
+            irr.IrrigationLedgerRow(**{"line_id": "L01", "local_day": day, "cause": "schedule", **bad})
+
+
+def test_a_close_needs_an_aware_end_and_whole_counts():
+    end = datetime(2026, 11, 2, tzinfo=UTC)
+    assert irr.RunClose(ended_at=end, open_s=299, pulses=1).pulses == 1
+    for bad in ({"ended_at": datetime(2026, 11, 2)}, {"open_s": -1}, {"pulses": -1}, {"open_s": 1.5}):
+        with pytest.raises(ValidationError):
+            irr.RunClose(**{"ended_at": end, "open_s": 1, "pulses": 1, **bad})
