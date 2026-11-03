@@ -436,6 +436,81 @@ export const FIXTURES = {
       acknowledged_by: "jason", notes: "breaker reset",
     });
   },
+  // #1133: the south fert mister's valve (L08) opened outside its program, so its relay is ON and the breach is open.
+  "fence-breach": (world) => {
+    const opened = world.now - 3 * MINUTE;
+    runLine(world, "L08", { cause: "unknown", started: opened });
+    openAlert(world, {
+      id: 501, alert_type: "irrigation_fence_breach", category: "water", severity: "critical",
+      message: "IRRIGATION FENCE BREACH (blocked_fert_path_on): `mister_south_fert` reported ON. Verify relay truth and close the water paths before anything else.",
+      details: { rule: "blocked_fert_path_on", equipment: "mister_south_fert", observed_at: iso(opened), context: { mister_south_fert: true } },
+      first_seen_at: iso(opened + 30_000),
+      runbook: "1. Stop all water.\n2. Check that the south fert mister (L08) relay reads OFF.\n3. If water still flows, close the spigot.",
+    });
+  },
+  // #1133: the 07:35 weekly feed on L02 never ran (irrigation §6.3).
+  "run-missed": (world) => {
+    const at = clock(world.now);
+    openAlert(world, {
+      id: 502, alert_type: "irrigation_run_missed", category: "water", severity: "warning", message: "The 07:35 Weekly feed on L02 did not run",
+      details: { line_id: "L02", slot_id: 12, planned_start: iso(at("07:35")), outcome: "missed" }, first_seen_at: iso(at("09:35")),
+    });
+  },
+  // #1133: one more repeat merges into each open alert: the same id, its count up by one and a newer last seen.
+  "alert-repeat": (world) => {
+    for (const alert of world.alerts.filter((row) => !["resolved", "false_positive", "suppressed"].includes(row.status))) {
+      Object.assign(alert, { count: (alert.count ?? 1) + 1, last_seen_at: iso(world.now - 5_000) });
+    }
+  },
+  // #1133: one API-17 page with every kind of writer: a dashboard write, an Iris plan of several {ts, param, value}
+  // changes, an agent write on L01 that cleared manual, a forecast-rule plan with one {param, before, value} change and
+  // its rule, plus an acknowledgement and the base's run on L01.
+  "activity-mixed": (world) => {
+    const at = clock(world.now);
+    const plan = world.plan.plan;
+    const entry = (row) => ({ detail: {}, reason: null, state: null, confirmed_at: null, experiment_id: null, request_id: null, ...row });
+    world.activity = [
+      ...world.activity.filter((row) => row.action === "irrigation.run").slice(0, 1),
+      entry({
+        id: 21, ts: iso(at("06:30")), actor: actor("system", "forecast-engine"), action: "plan.write", target: `preemptive-${local(at("06:30")).date.replaceAll("-", "")}-0630`,
+        detail: { changes: [{ param: "mister_pulse_gap_s", before: 45, value: 60 }], rule: "hot afternoon", rule_id: 3 },
+        // The engine's setpoint_plan.reason, which VD-65 also logs as the row's reason.
+        reason: "Forecast: hot afternoon — temp_f > 88 (actual 92 at 14:00)",
+      }),
+      entry({
+        id: 22, ts: iso(at("06:45")), actor: JASON, action: "alert.ack", target: "88", detail: { alert_type: "relay_stuck" }, reason: "breaker reset",
+        request_id: "4f9d2c1e-7b8a-4c3d-9e2f-1a2b3c4d5e6f",
+      }),
+      entry({
+        id: 23, ts: iso(at("06:47")), actor: actor("agent:steward", "steward"), action: "irrigation.line.update", target: "L01",
+        detail: { before: { daily_cap_min: 60 }, value: { daily_cap_min: 45 }, manual: { before: true, after: false } }, reason: "forecast 92 °F",
+        state: "confirmed", confirmed_at: iso(at("06:49")), experiment_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7", request_id: "9b2e4c6a-1d3f-4a5b-8c7d-0e1f2a3b4c5d",
+      }),
+      entry({
+        id: 24, ts: plan.written_at, actor: actor("iris", "iris"), action: "plan.write", target: plan.plan_id,
+        detail: {
+          changes: [
+            { ts: iso(at("13:00")), param: "mister_engage_kpa", value: 1.7 }, { ts: iso(at("16:30")), param: "mister_pulse_gap_s", value: 55 },
+            { ts: iso(at("19:00")), param: "mister_engage_delay_s", value: 90 },
+          ],
+          trigger_id: "5f0c6a1e-2b7d-4c9a-8e3f-1d2c3b4a5e6f", planner_instance: "iris",
+        },
+        reason: plan.hypothesis,
+      }),
+      entry({
+        id: 25, ts: iso(at("07:41")), actor: JASON, action: "setting.write", target: "mister_engage_kpa",
+        detail: { before: 1.6, value: 1.55, requested: 1.53, manual: { before: false, after: true } }, reason: "Vandas drying", state: "confirmed",
+        confirmed_at: iso(at("07:42")), request_id: "2c4e6a8b-0d1f-4e3a-9b5c-7d9e1f3a5b7c",
+      }),
+    ];
+  },
+  // #1133: more activity than one API-17 page holds at its default limit of 50, so the log offers Load older.
+  "activity-paged": (world) => {
+    world.activity = Array.from({ length: 60 }, (_, index) => ({
+      id: 100 + index, ts: iso(world.now - (index + 1) * MINUTE), actor: JASON, action: "setting.write", target: "mister_pulse_gap_s",
+      detail: { before: 45, value: 50 }, reason: null, state: null, confirmed_at: null, experiment_id: null, request_id: null,
+    }));
+  },
   "flow-valves-closed": (world) => { flowWithValvesClosed(world, world.now - 4 * MINUTE); },
   "flow-after-stop": (world) => {
     runLine(world, "L01", { cause: "run_now", started: world.now - 5 * MINUTE, ends: world.now + 7 * MINUTE });
@@ -444,7 +519,16 @@ export const FIXTURES = {
   },
   "flow-stopped": (world) => {
     flowWithValvesClosed(world, world.now - 12 * MINUTE);
-    world.leak = { ...world.leak, active: false, flow_gpm: 0, gal_last_10min: 2, stopped_at: iso(world.now - 2 * MINUTE) };
+    const stopped = world.now - 2 * MINUTE;
+    world.leak = { ...world.leak, active: false, flow_gpm: 0, gal_last_10min: 2, stopped_at: iso(stopped) };
+    // The open row as the ingestor rewrites it once the meter reads under 0.1 gal/min twice (VD-72): its message and
+    // details.stopped_at say when flow stopped.
+    const { hour, minute } = local(stopped);
+    const alert = world.alerts.find((row) => row.id === world.leak.alert_id);
+    Object.assign(alert, {
+      message: `Flow stopped at ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+      details: { since: world.leak.since, stopped_at: iso(stopped) },
+    });
   },
   "l01-running": (world) => {
     runLine(world, "L01", { cause: "run_now", started: world.now - 12 * MINUTE, ends: world.now + 3 * MINUTE });
