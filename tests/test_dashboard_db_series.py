@@ -78,7 +78,7 @@ def dump_statements(sql: str):
 
 
 def scorecard_view_sql() -> str:
-    migration = (ROOT / "db/migrations/282-daily-scorecard-view.sql").read_text()
+    migration = (ROOT / "db/migrations/285-daily-scorecard-view.sql").read_text()
     body = migration.split("CREATE VIEW public.v_daily_scorecard AS", 1)[1].split(";\n", 1)[0]
     return "CREATE VIEW public.v_daily_scorecard AS" + body
 

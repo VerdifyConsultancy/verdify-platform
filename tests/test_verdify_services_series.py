@@ -398,7 +398,7 @@ def test_target_deltas_read_as_the_distance_from_target():
 
 
 def test_the_scorecard_view_has_every_bound_column():
-    sql = (ROOT / "db/migrations/282-daily-scorecard-view.sql").read_text()
+    sql = (ROOT / "db/migrations/285-daily-scorecard-view.sql").read_text()
     body = sql.split("CREATE VIEW public.v_daily_scorecard AS", 1)[1].split(";\n", 1)[0]
     for binding in s.METRICS.values():
         if binding.daily is not None and binding.daily.view == s.SCORECARD_VIEW:

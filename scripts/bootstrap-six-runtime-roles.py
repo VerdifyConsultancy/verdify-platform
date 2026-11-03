@@ -546,6 +546,31 @@ def sealed_sql_284():
     )
 
 
+DAILY_SCORECARD_MIGRATION = (
+    285,
+    "285-daily-scorecard-view.sql",
+    "89db770e96f030d2836fe033dce035e8c244d7b08a52c7f6ac378f5526c9ca77",
+)
+# One verdify-owned view, granted to the dashboard duty alone: neither digest takes it in, so all
+# three seals should stay 284's. These are 284's values as stand-ins until the rolled-back native
+# qualification measures 285; its fixture records which they are.
+SUCCESSOR_285 = SUCCESSOR_284
+
+
+def sealed_sql_285():
+    # Keep every 284 predicate and bind the exact 285 runner stamp.
+    predecessor = sealed_sql_284()
+    current = seal_profile_sql(284, SUCCESSOR_284)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(285, SUCCESSOR_285), 1)
+        + " AND "
+        + ledger_row_sql(*DAILY_SCORECARD_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -570,6 +595,8 @@ def sealed_sql():
         + sealed_sql_283()
         + " OR "
         + sealed_sql_284()
+        + " OR "
+        + sealed_sql_285()
         + ")"
     )
 

@@ -1,0 +1,18 @@
+{
+  "migration": "285-daily-scorecard-view.sql",
+  "exact_final_migration_sha256": "89db770e96f030d2836fe033dce035e8c244d7b08a52c7f6ac378f5526c9ca77",
+  "final_migration_qualification_pending": true,
+  "before": null,
+  "projected_successor": {
+    "api": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
+    "ingestor": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projection": "2026-11-02, before any measurement: VD-56 had no production access. Every literal in the file's successor block and its registrations is a stand-in taken from 284's measured registration. All three seals are expected to stay 284's. fn_runtime_ordinary_boundary_digest (217) takes in a relation only if the api or ingestor login can reach it, one of their roles owns it, 217 protects it by name, or PUBLIC or one of their roles holds an ACL entry on it. fn_mcp_runtime_boundary_digest (263) does the same for PUBLIC and the MCP roles. A view whose only grant is verdify_dashboard_runtime's SELECT meets none of these, 285 changes no other ACL, and fn_solar_phase keeps 217's exact PUBLIC EXECUTE, so neither digest's input changes. If the probe shows any digest moved, stop: that is a finding, not a literal to update, because the file re-seals no receipt. Otherwise run the full qualification with --native-fixture; no literal changes and the file's sha stays.",
+  "qualified_successor": null,
+  "after_rollback": null,
+  "inside_transaction_receipts_match": false,
+  "final_migration_rollback_verified": false,
+  "native_fixture_sha256": "591f83a59ab4a6610b52027e74ad6c0286c4795cbb1f2bafd4130ca46c77d97f",
+  "native_fixture": null
+}

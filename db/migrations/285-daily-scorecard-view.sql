@@ -1,8 +1,14 @@
 -- VD-56 (#1169) M6: v_daily_scorecard, one row per daily_summary.date (an America/Denver day;
 -- daily_summary_live keeps today's row current, and a day with no summary row is a gap) for
--- the Graphs scorecard's daily.* keys on API-04. Additive: one view owned by verdify and no
--- grant (M2, #1179, grants it to the dashboard login), so every runtime receipt keeps its
--- exact predecessor value; the two checks below prove all three seals before and after.
+-- the Graphs scorecard's daily.* keys on API-04. Additive: one view owned by verdify, granted
+-- only to the dashboard duty, whose login would otherwise get 42501 on those keys. It reads
+-- with its owner's rights, and its one helper, fn_solar_phase, keeps PUBLIC's EXECUTE (217's
+-- transitive helpers), so nothing else is granted. No runtime seal should move: the ordinary and
+-- MCP digests take in a relation only if their own logins or PUBLIC can reach it, and neither
+-- reaches this view, so no receipt is re-sealed. The predecessor block pins exact284's seals. The
+-- successor block's literals are those same values, stand-ins until the rolled-back native
+-- qualification measures this file; tests/fixtures/285-daily-scorecard-native-qualification.json
+-- records which they are.
 SET LOCAL search_path=pg_catalog,public,pg_temp;
 LOCK TABLE public.schema_migrations,public.runtime_ordinary_login_attestation_receipts,
     public.mcp_runtime_boundary_receipt IN SHARE ROW EXCLUSIVE MODE;
@@ -10,21 +16,21 @@ DO $predecessor$
 BEGIN
     IF current_user <> 'verdify'
         OR NOT EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations'
-            AND seq=279 AND filename='db/migrations/279-authentic-meter-source-clock-consumers.sql'
-            AND sha256='e610493bc9c8b9ec376b520e0c304f7bbd9f4d73d6d98e765e54408758eb3114'
+            AND seq=284 AND filename='db/migrations/284-dashboard-runtime-grants.sql'
+            AND sha256='559d8260ec7138a3bec502f7b29f50587f6a752cc5144fa31e15b406c4ddcaf4'
             AND stamp_method='runner')
-        OR EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq>279)
+        OR EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq>284)
         OR (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts)<>2
         OR (SELECT count(*) FROM public.mcp_runtime_boundary_receipt)<>1
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '9904555fb62c32503b99cd3cd447c4412afd0451782d7216cf7a21557339357e'
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '0e03e19dd7ceaf65c54e14d8fa38dacffa8472e2173d0d7f41a6a03ea758d8f7'
-        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM 'c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad'
+        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e'
         OR EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r
             WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))
         OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton
             AND boundary_sha256=public.fn_mcp_runtime_boundary_digest())
         OR to_regclass('public.v_daily_scorecard') IS NOT NULL
-    THEN RAISE EXCEPTION '282 refuses an unqualified predecessor'; END IF;
+    THEN RAISE EXCEPTION '285 refuses an unqualified predecessor'; END IF;
 END $predecessor$;
 
 -- Each column is a scalar subquery bounded to its day, so a read evaluates only the columns
@@ -104,16 +110,19 @@ COMMENT ON VIEW public.v_daily_scorecard IS
     'does not cover whole; gallons with water_reason (partial_day, unavailable or incomplete); '
     'Iris required plans written and missed; alerts raised by severity. Null means no data, never 0.';
 
+-- 284 left this one to M6. Before the successor block, so the probe measures it.
+GRANT SELECT ON public.v_daily_scorecard TO verdify_dashboard_runtime;
+
 DO $successor$
 BEGIN
-    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '9904555fb62c32503b99cd3cd447c4412afd0451782d7216cf7a21557339357e'
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '0e03e19dd7ceaf65c54e14d8fa38dacffa8472e2173d0d7f41a6a03ea758d8f7'
-        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '1cd20508c9196bf9758d7df40ae699e6b83aefccb91a4c5242492f7993f6eb02'
+    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM 'c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad'
+        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e'
         OR EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r
             WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))
         OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton
             AND boundary_sha256=public.fn_mcp_runtime_boundary_digest())
         OR NOT EXISTS(SELECT 1 FROM pg_class c WHERE c.oid='public.v_daily_scorecard'::regclass
-            AND c.relkind='v' AND c.relacl IS NULL AND pg_get_userbyid(c.relowner)='verdify')
-    THEN RAISE EXCEPTION '282 changed a runtime boundary'; END IF;
+            AND c.relkind='v' AND pg_get_userbyid(c.relowner)='verdify')
+    THEN RAISE EXCEPTION '285 changed a runtime boundary'; END IF;
 END $successor$;
