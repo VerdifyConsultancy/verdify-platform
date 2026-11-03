@@ -2,19 +2,20 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import {
-  DEFAULT_SETTINGS, daysProblem, graphHref, settingEditHref, withMetrics, withSettings, withWindow, type GraphView, type GraphWindow, type WindowSpec,
+  DEFAULT_SETTINGS, DEFAULT_ZONE, daysProblem, graphHref, settingEditHref, withMetrics, withOutdoor, withSettings, withWindow, zonesHref, type GraphView, type GraphWindow, type WindowSpec,
 } from "../../lib/graph-url";
 import type { MetricDef, Setting } from "../../lib/operator-api";
 import { localDay } from "../../charts/time-axis";
+import { Chips } from "../chips";
 import { FieldError, describedBy, useFieldIds } from "../forms/field";
 import { MetricPicker } from "./metric-picker";
 import { SettingChooser, settingChipText } from "./setting-chooser";
 
 /**
- * Graphs' controls (SCR-02): the custom range beside the range chips, and the row of what is on the charts: each setting
- * drawn as steps (its chip links to its drawer on Settings, × takes it off), each picked metric (× takes it off),
- * "+ Setting", "+ Metric" and "Scorecard ›". Every control is a link or a form that changes the URL; Graphs writes
- * nothing.
+ * Graphs' controls (SCR-02): the custom range beside the range chips, and the row of what is on the charts: the Outdoor
+ * chip, each setting drawn as steps (its chip links to its drawer on Settings, × takes it off), each picked metric (×
+ * takes it off), "+ Setting", "+ Metric", "Zones ›" and "Scorecard ›". Every control is a link or a form that changes the
+ * URL; Graphs writes nothing.
  */
 
 /** The days the custom range opens with: the window's own, else the local days the window covers. */
@@ -56,6 +57,7 @@ function RangeFields({ view, initial }: { view: GraphView; initial: { from: stri
     <input id={toIds.id} type="date" name="to" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} aria-invalid={invalid} aria-describedby={describedBy(error && fromIds.errorId)} />
     {view.settings !== null && (view.settings.length ? view.settings.map((param) => <input key={param} type="hidden" name="set" value={param} />) : <input type="hidden" name="set" value="" />)}
     {view.metrics.map((key) => <input key={key} type="hidden" name="m" value={key} />)}
+    {!view.outdoor && <input type="hidden" name="outdoor" value="0" />}
     <button type="submit" className="btn">Show</button>
     {error && <FieldError id={fromIds.errorId}>{error}</FieldError>}
   </form>;
@@ -82,6 +84,7 @@ export function OnCharts({ view, settings, picked, units, metricsCatalog, settin
   const params = settingParams(view, settings);
   return <div className="graph-on-charts">
     <span className="graph-on-label">On charts:</span>
+    <Chips small label="Overlays" items={[{ key: "outdoor", label: "Outdoor", to: graphHref(withOutdoor(view, !view.outdoor)), current: view.outdoor, keepScroll: true }]} />
     {settings.length > 0 && <ul className="graph-chips" aria-label="Settings drawn as steps">
       {settings.map((row) => <li key={row.param} className="graph-chip">
         <Link to={settingEditHref(row.param)} title={`${row.label}: edit it on Settings`}>{settingChipText(row)}</Link>
@@ -96,6 +99,7 @@ export function OnCharts({ view, settings, picked, units, metricsCatalog, settin
     </ul>}
     <SettingChooser view={view} settings={settingsCatalog} failed={settingsFailed} chosen={settings} units={units} />
     <MetricPicker view={view} metrics={metricsCatalog} failed={metricsFailed} picked={picked} />
+    <Link className="graph-zones" to={zonesHref(DEFAULT_ZONE, view.window)}>Zones<span aria-hidden="true"> ›</span></Link>
     <Link className="graph-scorecard" to="/graphs/scorecard">Scorecard<span aria-hidden="true"> ›</span></Link>
   </div>;
 }

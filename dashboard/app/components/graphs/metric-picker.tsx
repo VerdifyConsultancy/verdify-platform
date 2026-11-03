@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 import { useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
-import { CAP_TEXT, CLIMATE_KEYS, DAILY_GROUP, MAX_PICKED, graphHref, withMetrics, type GraphView } from "../../lib/graph-url";
+import { CAP_TEXT, CLIMATE_KEYS, DAILY_GROUP, MAX_PICKED, graphHref, isForecastKey, withMetrics, type GraphView } from "../../lib/graph-url";
 import type { MetricDef } from "../../lib/operator-api";
 import { useModalDialog } from "../forms/modal";
 
 /**
- * "+ Metric" (SCR-02, US-GRF-07): a native `<dialog>` listing every API-03 metric but the daily scorecard keys, by
- * group, each with its label, key, unit, cadence, provenance and note, and a filter box. A choice is a link that adds
+ * "+ Metric" (SCR-02, US-GRF-07): a native `<dialog>` listing every API-03 metric but the daily scorecard keys and the
+ * forecast keys, which the Outdoor chip draws, by group, each with its label, key, unit, cadence, provenance and note, and a filter box. A choice is a link that adds
  * `m=<key>` to the URL; the metric then joins its unit's panel or opens a new one. Keys come only from API-03: nothing
  * is hard-coded here, so DLI appears only once the PAR meter's keys do (#1184). At 8 metrics per window the picker says
  * so and offers no more.
@@ -25,12 +25,12 @@ export function cadenceWords(seconds: number): string {
 export type MetricGroup = { readonly group: string; readonly items: readonly MetricDef[] };
 const matches = (needle: string, fields: readonly (string | null | undefined)[]) => !needle || fields.join(" ").toLowerCase().includes(needle);
 
-/** Every metric but group `daily`, in the picker's group order (a group it does not name follows), matching `filter`. */
+/** Every metric but group `daily` and the forecast keys, in the picker's group order (a group it does not name follows), matching `filter`. */
 export function pickerGroups(metrics: readonly MetricDef[], filter = ""): MetricGroup[] {
   const needle = filter.trim().toLowerCase();
   const groups = new Map<string, MetricDef[]>(PICKER_GROUPS.map((group) => [group, []]));
   for (const metric of metrics) {
-    if (metric.group === DAILY_GROUP || !matches(needle, [metric.label, metric.key, metric.unit, metric.group, metric.provenance, metric.zone, metric.note])) continue;
+    if (metric.group === DAILY_GROUP || isForecastKey(metric.key) || !matches(needle, [metric.label, metric.key, metric.unit, metric.group, metric.provenance, metric.zone, metric.note])) continue;
     const list = groups.get(metric.group);
     if (list) list.push(metric); else groups.set(metric.group, [metric]);
   }

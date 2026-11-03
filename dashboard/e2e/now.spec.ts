@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SCR-01 Now (#1129) at the screens' clock: the answer and Stop all water above a phone's fold, the honest states, Stop
-// with and without the irrigation firmware, the occupancy chip, the Iris tile and Acknowledge. That a viewer sees no
-// Stop or Acknowledge is roles.spec.ts.
+// with and without the irrigation firmware, the occupancy chip, the Iris tile and Acknowledge; Coming up and the zone tiles
+// (#1138). That a viewer sees no Stop or Acknowledge is roles.spec.ts.
 import type { Page } from "@playwright/test";
 import { CAN_STILL_START, CAN_STILL_START_NO_ENGINE, PHONE, SMALL_PHONE, STOPPED, expect, expectAboveTheFold, fixtureRequests, fixtureWrites, load, test, toastLines, untilPolled, useScreensClock } from "./support";
 
@@ -119,4 +119,50 @@ test("Acknowledge sends one API-15 and the answer follows the one count", async 
   await expect(answer(page)).toHaveText("1 thing needs someone");
   await expect(needsSomeone).toContainText("Acknowledged by jason · 10:42");
   expect((await fixtureRequests(request, "API-15")).map((row) => row.path)).toEqual(["/v1/alerts/101/ack"]);
+});
+
+test("Coming up: the next transition without manual settings, the next trigger, each line's next run with who paused it and why, and the sun; a forecast rule never reads AI", async ({ page, request }) => {
+  await useScreensClock(page, request, ["plan-next", "l01-paused"]);
+  await load(page, "/");
+  const coming = page.locator("#coming-up");
+  await expect(coming.locator("[data-coming=plan] li")).toHaveText(["13:00 · VPD Mister Engage 1.60 → 1.70 kPa · AI", "13:00 · Mister Engage Delay 60.0 → 90.0 s · Forecast rule · system"]);
+  await expect(coming.locator("[data-coming=iris] dd")).toHaveText("SUNSET at 16:50");
+  await expect(coming.locator("[data-coming=runs] li").filter({ hasText: "L01" })).toHaveText("L01 Paused until 14:00 by Jason: rain · next Wed 07:35");
+  await expect(coming.locator("[data-coming=sun] dd")).toHaveText("Sunrise 06:35 · Sunset 16:58");
+  expect((await fixtureRequests(request, "API-07")).map((row) => row.path)).toEqual(["/v1/plan?hours=24"]);
+  expect((await fixtureRequests(request, "API-IRR-02")).map((row) => row.path)).toEqual(["/v1/irrigation/schedules?days=7"]);
+});
+
+test("Coming up and the zones sit below Needs someone, so the hero and the water card keep their place", async ({ page, request }) => {
+  await page.setViewportSize(PHONE);
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/");
+  const top = async (selector: string) => (await page.locator(selector).boundingBox())?.y ?? Number.NaN;
+  const [alerts, coming, zones] = [await top("#needs-someone"), await top("#coming-up"), await top("#zones")];
+  expect(alerts).toBeLessThan(coming);
+  expect(coming).toBeLessThan(zones);
+  await expectAboveTheFold(page, stopAll(page));
+});
+
+const zoneTile = (page: Page, zone: string) => page.locator(`#zones [data-zone=${zone}]`);
+
+test("the zone tiles: five with live values and tags; north says house band, center reads HOUSE, and a tile opens its zone's charts", async ({ page, request }) => {
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/");
+  await expect(page.locator("#zones [data-zone]")).toHaveCount(5);
+  await expect(page.locator("#zones [data-zone-tag]")).toHaveText(["MEASURED", "MEASURED", "MEASURED", "MEASURED", "HOUSE"]);
+  await expect(zoneTile(page, "north").locator(".zone-band").first()).toHaveText("house band 62–70 °F · 0.45–0.80 kPa");
+  await expect(zoneTile(page, "north").locator(".zone-band").nth(1)).toHaveText(/^house target \d\.\d\d\skPa$/);
+  await expect(zoneTile(page, "south").locator(".zone-band").first()).toHaveText("band 62–70 °F · 0.45–0.80 kPa");
+  await zoneTile(page, "south").getByRole("link").click();
+  await expect(page).toHaveURL(/\/graphs\/zones\?zone=south$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("South zone");
+});
+
+test("south's tile reads PEER while its probe is out, with the peers' value and no STALE", async ({ page, request }) => {
+  await useScreensClock(page, request, "south-probe-out");
+  await load(page, "/");
+  await expect(zoneTile(page, "south").locator("[data-zone-tag]")).toHaveText("PEER");
+  await expect(zoneTile(page, "south").locator("[data-tile=vpd] dd")).toContainText(/^\d\.\d\d\skPa/);
+  await expect(zoneTile(page, "south").locator("[data-badge=stale]")).toHaveCount(0);
 });

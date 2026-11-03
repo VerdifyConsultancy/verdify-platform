@@ -12,12 +12,14 @@
  * - `set=<param>`, repeated: settings drawn as steps. No `set` is the defaults (`mister_engage_kpa` on VPD,
  *   `fog_rh_ceiling_pct` on RH); `set=` alone is none.
  * - `m=<key>`, repeated: picked metrics (API-03 keys), at most 5 beside the three climate traces, 8 per window.
+ * - `outdoor=0`: hides the outdoor and forecast overlay, which shows by default (#1138).
  */
 import { RANGES, type RangeId } from "../charts/range-chips";
 import type { XRange } from "../charts/types";
 import { dateShift, localDayStart } from "./format";
 import type { MetricDef, Setting } from "./operator-api";
 import { unitLabel } from "./setting-values";
+import { isZone, type Zone } from "./zone-source";
 
 export type { RangeId };
 export const DEFAULT_RANGE: RangeId = "24h";
@@ -40,6 +42,8 @@ export const OVER_TEXT = "Up to 400 days";
 export const LANES_TEXT = "Equipment lanes cover at most 31 days. Narrow the range to see them";
 /** API-03's group for the scorecard keys: they show on /graphs/scorecard, never on a panel. */
 export const DAILY_GROUP = "daily";
+/** The forecast keys draw through the Outdoor chip, dashed past now, never as a picked trace (#1138). */
+export const isForecastKey = (key: string): boolean => key.startsWith("forecast.");
 /** The three climate units' panel names; any other panel is named by its metrics. */
 export const PANEL_NAMES: Readonly<Record<string, string>> = { "°F": "Temperature", kPa: "VPD", "%": "RH" };
 export const panelName = (unit: string): string => PANEL_NAMES[unit] ?? unit;
@@ -56,6 +60,8 @@ export type GraphView = {
   readonly settings: readonly string[] | null;
   /** Picked metrics, in the order they were added. */
   readonly metrics: readonly string[];
+  /** The outdoor and forecast overlay is on. */
+  readonly outdoor: boolean;
 };
 export type ParsedView = { readonly view: GraphView; readonly notices: readonly string[] };
 
@@ -133,30 +139,31 @@ export function parseGraphUrl(search: URLSearchParams | string): ParsedView {
   }
   const settings = params.has("set") ? unique(params.getAll("set").filter(Boolean)) : null;
   const metrics = unique(params.getAll("m").filter(Boolean));
-  return { view: { window, settings, metrics }, notices };
+  return { view: { window, settings, metrics, outdoor: params.get("outdoor") !== "0" }, notices };
 }
 
 // ---------------------------------------------------------------------------------------------------- links
 /** A query value with `:` kept readable (it is legal in a query); everything else is encoded. */
 const encode = (value: string) => encodeURIComponent(value).replace(/%3A/gi, ":");
 
-/** The view's query: the window, then each `set` (`set=` for none, nothing for the defaults), then each `m`. */
+/** The window's part of a query. */
+const windowQuery = (window: WindowSpec): string[] => (window.kind === "range" ? [`range=${window.range}`] : [`from=${encode(window.from)}`, `to=${encode(window.to)}`]);
+/** The view's query: the window, then each `set` (`set=` for none, nothing for the defaults), each `m`, and `outdoor=0` when it is off. */
 export function graphSearch(view: GraphView): string {
-  const parts: string[] = [];
-  const { window } = view;
-  if (window.kind === "range") parts.push(`range=${window.range}`);
-  else parts.push(`from=${encode(window.from)}`, `to=${encode(window.to)}`);
+  const parts = windowQuery(view.window);
   if (view.settings !== null) {
     if (!view.settings.length) parts.push("set=");
     for (const param of view.settings) parts.push(`set=${encode(param)}`);
   }
   for (const key of view.metrics) parts.push(`m=${encode(key)}`);
+  if (!view.outdoor) parts.push("outdoor=0");
   return parts.join("&");
 }
 export const graphHref = (view: GraphView): string => `/graphs?${graphSearch(view)}`;
 export const withWindow = (view: GraphView, window: WindowSpec): GraphView => ({ ...view, window });
 export const withMetrics = (view: GraphView, metrics: readonly string[]): GraphView => ({ ...view, metrics: unique(metrics) });
 export const withSettings = (view: GraphView, settings: readonly string[]): GraphView => ({ ...view, settings: unique(settings) });
+export const withOutdoor = (view: GraphView, outdoor: boolean): GraphView => ({ ...view, outdoor });
 /** The setting edit drawer on Settings (SCR-05); Graphs itself writes nothing. */
 export const settingEditHref = (param: string): string => `/settings?edit=${encode(param)}`;
 
@@ -202,6 +209,7 @@ export function resolveView(view: GraphView, metrics: readonly MetricDef[] | nul
       const metric = byKey.get(key);
       if (!metric) notices.push(`Removed unknown metric ${quoted(key)}`);
       else if (metric.group === DAILY_GROUP) notices.push(`Removed ${quoted(key)}: daily keys show on the scorecard`);
+      else if (isForecastKey(key)) notices.push(`Removed ${quoted(key)}: the Outdoor chip draws the forecast`);
       else valid.push(metric);
     }
     picked.push(...valid.slice(0, MAX_PICKED));
@@ -227,6 +235,7 @@ export function resolveView(view: GraphView, metrics: readonly MetricDef[] | nul
     window: view.window,
     settings: view.settings === null || !settings || !metrics ? view.settings : drawn.map((row) => row.param),
     metrics: metrics ? picked.map((metric) => metric.key) : view.metrics,
+    outdoor: view.outdoor,
   };
   return { view: sanitized, ready: metrics !== null, climate, picked, units: panelUnits, settings: drawn, notices };
 }
@@ -277,3 +286,17 @@ export function within400(range: XRange): XRange {
   return { from: Math.max(range.from, range.to - MAX_WINDOW_S), to: range.to };
 }
 export const isoOf = (epochSeconds: number): string => new Date(epochSeconds * 1000).toISOString();
+
+// ---------------------------------------------------------------------------------------------------- /graphs/zones
+/** The first zone chip: `/graphs/zones` with no zone, or one it does not know. */
+export const DEFAULT_ZONE: Zone = "north";
+export type ZonesView = { readonly zone: Zone; readonly window: WindowSpec; readonly notices: readonly string[] };
+/** `/graphs/zones`' view: `zone` and the window, read as Graphs reads it; what it cannot use is dropped with a notice. */
+export function parseZonesUrl(search: string): ZonesView {
+  const params = new URLSearchParams(search);
+  const { view, notices } = parseGraphUrl(params);
+  const asked = params.get("zone");
+  const known = isZone(asked);
+  return { zone: known ? asked : DEFAULT_ZONE, window: view.window, notices: known || asked === null ? notices : [`Removed unknown zone ${quoted(asked)}`, ...notices] };
+}
+export const zonesHref = (zone: Zone, window: WindowSpec): string => `/graphs/zones?${[`zone=${zone}`, ...windowQuery(window)].join("&")}`;

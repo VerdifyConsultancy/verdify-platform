@@ -2,8 +2,8 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 
-/** A chip that navigates: the current one carries `aria-current`. */
-export type ChipLink = { key: string; label: ReactNode; to: string; current?: boolean };
+/** A chip that navigates: the current one carries `aria-current`; `keepScroll` keeps the page where it is, for a chip that changes a view in place. */
+export type ChipLink = { key: string; label: ReactNode; to: string; current?: boolean; keepScroll?: boolean };
 /** A chip that toggles in place: `aria-pressed` says whether it is on. */
 export type ChipToggle = { key: string; label: ReactNode; pressed: boolean; onToggle: () => void; to?: undefined };
 
@@ -11,7 +11,7 @@ export type ChipToggle = { key: string; label: ReactNode; pressed: boolean; onTo
 export function Chips({ label, items, small = false }: { label: string; items: readonly (ChipLink | ChipToggle)[]; small?: boolean }) {
   return <ul className={small ? "chips chips-sm" : "chips"} aria-label={label}>{items.map((item) => <li key={item.key}>
     {item.to !== undefined
-      ? <Link to={item.to} aria-current={item.current ? "true" : undefined}>{item.label}</Link>
+      ? <Link to={item.to} aria-current={item.current ? "true" : undefined} preventScrollReset={item.keepScroll}>{item.label}</Link>
       : <button type="button" className="chip" aria-pressed={item.pressed} onClick={item.onToggle}>{item.label}</button>}
   </li>)}</ul>;
 }

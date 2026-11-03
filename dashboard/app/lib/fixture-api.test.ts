@@ -619,3 +619,63 @@ test("caretaker-visit, J9's morning: nothing open or running, the wall watered a
   expect(line(api, "L04")).toMatchObject({ last_water: { at: "2026-11-02T16:58:00.000Z", cause: "vpd" } });
   expect(get(api, "/v1/irrigation").occupancy).toEqual({ occupied: true, seen_at: minutesAgo(1), hold_enabled: true });
 });
+
+test("API-06 serves each zone's band with the house temperature band, and refuses north, which has none", () => {
+  const api = handler();
+  const band = (zone: string) => get(api, `/v1/band?zone=${zone}&from=${minutesAgo(15)}&to=${minutesAgo(0)}`).band as Record<string, number[]>;
+  expect(band("south").vpd_low.at(-1)).toBe(0.45);
+  expect(band("east").vpd_high.at(-1)).toBe(0.9);
+  expect(band("center").vpd_low.at(-1)).toBe(0.5);
+  expect(band("house").vpd_low.at(-1)).toBe(0.45);
+  for (const zone of ["south", "east", "center", "house"]) expect([band(zone).temp_low.at(-1), band(zone).temp_high.at(-1)]).toEqual([62, 70]);
+  expect(api.respond({ url: `/v1/band?zone=north&from=${minutesAgo(15)}&to=${minutesAgo(0)}` }).body).toMatchObject({ status: 400, code: "invalid_request", field: "zone" });
+});
+
+test("south-probe-out: south's series read null for the last 20 minutes and L07 reads peer; its peers keep reading", () => {
+  const api = handler("south-probe-out");
+  const series = get(api, `/v1/series?metric=climate.vpd_south&metric=climate.temp_south&metric=climate.vpd_west&from=${minutesAgo(30)}&to=${minutesAgo(0)}`);
+  const t = series.t as number[];
+  const avg = (key: string) => series.series[key].avg as (number | null)[];
+  const outage = t.findIndex((start) => start * 1000 >= NOW - 20 * 60_000);
+  for (const key of ["climate.vpd_south", "climate.temp_south"]) {
+    expect(avg(key).slice(0, outage).every((value) => value !== null)).toBe(true);
+    expect(avg(key).slice(outage).every((value) => value === null)).toBe(true);
+  }
+  expect(avg("climate.vpd_west").slice(outage).some((value) => value !== null)).toBe(true);
+  expect(line(api, "L07")).toMatchObject({ vpd_source: "peer" });
+});
+
+test("the forecast keys read source forecast with issued_at; below a 1 h bucket only the bucket holding each hour has a value", () => {
+  const api = handler();
+  const to = new Date(NOW + 2 * 3_600_000).toISOString();
+  const series = get(api, `/v1/series?metric=forecast.temp_f&from=${minutesAgo(0)}&to=${to}`);
+  expect(series.bucket_s).toBe(60);
+  const column = series.series["forecast.temp_f"];
+  expect(column).toMatchObject({ source: "forecast", issued_at: "2026-11-02T14:00:00.000Z" });
+  const valued = (series.t as number[]).filter((_, index) => column.avg[index] !== null);
+  expect(valued.map((start) => new Date(start * 1000).toISOString())).toEqual(["2026-11-02T18:00:00.000Z", "2026-11-02T19:00:00.000Z"]);
+  // In hourly buckets, the hour the window starts inside has none: its row is before `from`.
+  const hourly = get(api, `/v1/series?metric=forecast.temp_f&from=${minutesAgo(0)}&to=${new Date(NOW + 12 * 3_600_000).toISOString()}&points=13`);
+  expect(hourly.bucket_s).toBe(3600);
+  expect(hourly.t).toHaveLength(13);
+  expect(hourly.series["forecast.temp_f"].avg[0]).toBeNull();
+  expect((hourly.series["forecast.temp_f"].avg as unknown[]).slice(1).every((value) => value !== null)).toBe(true);
+  // No forecast row in the window: issued_at null and every value null.
+  const none = get(handler("no-forecast"), `/v1/series?metric=forecast.temp_f&from=${minutesAgo(0)}&to=${to}`).series["forecast.temp_f"];
+  expect(none.issued_at).toBeNull();
+  expect((none.avg as unknown[]).every((value) => value === null)).toBe(true);
+});
+
+test("plan-next: a manual lane with a waypoint, Iris's 13:00 and a forecast rule at the same time, and SUNSET the next trigger; l01-paused names who paused it and why", () => {
+  const plan = get(handler("plan-next"), "/v1/plan");
+  const lane = (param: string) => (plan.lanes as Body[]).find((row) => row.param === param)!;
+  expect(lane("mister_pulse_on_s")).toMatchObject({ applied_from: "manual", waypoints: [{ value: 75, source: "iris", effective: true }] });
+  expect(lane("mister_engage_kpa")).toMatchObject({ waypoints: [{ value: 1.7, source: "iris", at: "2026-11-02T20:00:00.000Z" }] });
+  expect(lane("mister_engage_delay_s")).toMatchObject({ waypoints: [{ value: 90, source: "preemptive", at: "2026-11-02T20:00:00.000Z" }] });
+  const ahead = (plan.health as Body[]).filter((row) => row.outcome === "expected").map((row) => row.trigger);
+  expect(ahead).toEqual(["SUNSET", "MIDNIGHT"]);
+  const paused = handler("l01-paused");
+  expect(line(paused, "L01")).toMatchObject({ paused_until: "2026-11-02T21:00:00.000Z", paused_by: { source: "dashboard", name: "jason" }, pause_reason: "rain" });
+  const occurrences = get(paused, "/v1/irrigation/schedules?days=7").occurrences as Body[];
+  expect(occurrences.find((row) => row.line_id === "L01" && row.status === "planned")).toMatchObject({ planned_start: "2026-11-04T14:35:00.000Z" });
+});
