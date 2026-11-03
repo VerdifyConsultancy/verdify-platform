@@ -351,6 +351,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "286-lighting-policy-ignores-manual.sql",
         # The high_wind forecast rule stays disabled on a rebuild; the row is data, so it runs forward.
         "287-retire-high-wind-rule.sql",
+        # The retired equipment.irrigation_* registry rows stay inactive on a rebuild; the rows are data.
+        "288-retire-irrigation-registry-rows.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

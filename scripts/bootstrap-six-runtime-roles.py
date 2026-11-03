@@ -625,6 +625,30 @@ def sealed_sql_287():
     )
 
 
+RETIRE_IRRIGATION_REGISTRY_MIGRATION = (
+    288,
+    "288-retire-irrigation-registry-rows.sql",
+    "120241a0adf859dad4fb0fa741b15b4c1e7fcf1940165b5f83f3c067178002fe",
+)
+# Four sensor_registry rows go inactive. Data only, and neither digest hashes table rows,
+# so all three seals stay 287's. The rolled-back native qualification measures them.
+SUCCESSOR_288 = SUCCESSOR_287
+
+
+def sealed_sql_288():
+    # Keep every 287 predicate and bind the exact 288 runner stamp.
+    predecessor = sealed_sql_287()
+    current = seal_profile_sql(287, SUCCESSOR_287)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(288, SUCCESSOR_288), 1)
+        + " AND "
+        + ledger_row_sql(*RETIRE_IRRIGATION_REGISTRY_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -655,6 +679,8 @@ def sealed_sql():
         + sealed_sql_286()
         + " OR "
         + sealed_sql_287()
+        + " OR "
+        + sealed_sql_288()
         + ")"
     )
 
