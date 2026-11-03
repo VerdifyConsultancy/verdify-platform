@@ -221,18 +221,19 @@ export function programBody<K extends ProgramOperationId>(operation: K, body: Bo
  * `programSyncText`) and is read every 5 s until its `sync` is `confirmed` from `irr_program_id`, or "Not confirmed:
  * <reject>" after 5 min. Before the irrigation firmware (`engine: false`) it stays REQUESTED with "Applies with the
  * irrigation firmware". `send` makes the request's key, unless a Save that sends two requests made both when pressed.
+ * `unitsOf` gives a field's refusal its unit ("Must be 0–130 min").
  */
-export function useProgramWrite<K extends ProgramOperationId>(operation: K, { onSaved }: { onSaved?: (data: Parsed<K>) => void } = {}) {
+export function useProgramWrite<K extends ProgramOperationId>(operation: K, { onSaved, unitsOf }: { onSaved?: (data: Parsed<K>) => void; unitsOf?: (field: string | null) => FieldUnits } = {}) {
   const client = useQueryClient();
   const action = useAction();
-  const latest = useLatest(onSaved);
+  const latest = useLatest({ onSaved, unitsOf });
   const { run } = action;
   const send = useCallback(async (params: ParamsOf<K>, body: BodyOf<K>, idempotencyKey?: string): Promise<WriteOutcome<Parsed<K>>> => {
     const input = (body ?? {}) as Record<string, unknown>;
     const check = () => tooLong("reason", typeof input.reason === "string" ? input.reason : null) ?? tooLong("check_note", typeof input.check_note === "string" ? input.check_note : null);
-    const outcome = await run((key) => apiWrite(operation, params, programBody(operation, body), idempotencyKey ?? key), { check });
+    const outcome = await run((key) => apiWrite(operation, params, programBody(operation, body), idempotencyKey ?? key), { check, unitsOf: latest.current.unitsOf });
     if (outcome.ok) {
-      latest.current?.(outcome.data);
+      latest.current.onSaved?.(outcome.data);
       refresh(client, ["API-IRR-01", "API-IRR-02", "API-17"]);
     }
     return outcome;
@@ -244,10 +245,10 @@ export function useProgramWrite<K extends ProgramOperationId>(operation: K, { on
  * The words beside a program item's badge and on the program banner (screens §1.4 P): REQUESTED reads "rev 43 sending",
  * or "Applies with the irrigation firmware" before the engine; NOT CONFIRMED reads "Not confirmed: <reject in words>".
  */
-export function programSyncText(sync: string, status: Pick<IrrigationStatus, "engine" | "program"> | null | undefined): string | null {
+export function programSyncText(sync: string, status: (Pick<IrrigationStatus, "engine"> & Partial<Pick<IrrigationStatus, "program">>) | null | undefined): string | null {
   if (sync === "requested") {
     if (status?.engine === false) return words("state_reason", "no_engine");
-    const revision = status?.program.revision;
+    const revision = status?.program?.revision;
     return revision !== null && revision !== undefined ? `rev ${revision} sending` : "Sending";
   }
   if (sync === "not_confirmed") {

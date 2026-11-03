@@ -568,9 +568,10 @@ def test_bad_request_ids_and_long_reasons_are_refused_before_anything_runs():
     with pytest.raises(ServiceError) as excinfo:
         write(conn, calls, request_id="not-a-uuid")
     assert (refused(excinfo).code, refused(excinfo).field) == ("invalid_request", "request_id")
-    with pytest.raises(ServiceError) as excinfo:
-        write(conn, calls, reason="r" * 501)
-    assert (refused(excinfo).code, refused(excinfo).field) == ("invalid_request", "reason")
+    for reason in ("r" * 501, "a\x00b"):  # PostgreSQL text cannot hold a NUL, so no retry could store it
+        with pytest.raises(ServiceError) as excinfo:
+            write(conn, calls, reason=reason)
+        assert (refused(excinfo).code, refused(excinfo).field) == ("invalid_request", "reason")
     assert conn.sql == [] and calls == []
 
 

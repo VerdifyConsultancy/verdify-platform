@@ -235,8 +235,12 @@ def test_it_serves_its_own_operations_and_every_included_route_module():
         ("GET", "/v1/now", "API-02"),
         ("GET", "/v1/plan", "API-07"),
         ("GET", "/v1/equipment", "API-13"),
+        ("PUT", "/v1/settings/{param}", "API-10"),
+        ("DELETE", "/v1/settings/{param}", "API-11"),
+        ("POST", "/v1/alerts/{id}/ack", "API-15"),
+        ("POST", "/v1/alerts/{id}/resolve", "API-16"),
     }
-    # Committed operations not served yet are allowed: API-10 to API-21 and the irrigation operations follow.
+    # Committed operations not served yet are allowed: the other reads and the irrigation operations follow.
     committed = {
         (method.upper(), path, operation["operationId"])
         for path, item in SPEC["paths"].items()
@@ -244,7 +248,6 @@ def test_it_serves_its_own_operations_and_every_included_route_module():
         if isinstance(operation, dict) and "operationId" in operation
     }
     assert served <= committed
-    assert ("PUT", "/v1/settings/{param}", "API-10") in committed - served
 
 
 def test_every_served_route_is_an_api_route_and_no_bff_path_is_served():

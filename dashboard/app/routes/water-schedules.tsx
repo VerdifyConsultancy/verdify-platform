@@ -4,12 +4,13 @@ import { Link, useSearchParams } from "react-router";
 import { Chips } from "../components/chips";
 import { useClockValue } from "../components/freshness";
 import { PanelError } from "../components/panel";
+import { PauseAfterRun } from "../components/pause-lines";
 import { ScheduleEditor } from "../components/schedule-editor";
-import { ScheduleWeek } from "../components/schedule-week";
+import { ScheduleWeek, type BlockMenu } from "../components/schedule-week";
 import { useSchedulesRead } from "../lib/queries";
 import { previewSchedule, type ScheduleDraft } from "../lib/schedule-preview";
 import { useRole } from "../lib/session";
-import { localDay, useWaterOutlet } from "../lib/water";
+import { localDay, pauseAfterRun, useWaterOutlet } from "../lib/water";
 
 export const meta = () => [{ title: "Water schedules · Verdify dashboard" }];
 
@@ -19,10 +20,11 @@ const editorTo = (schedule: number | typeof NEW_SCHEDULE) => `/water/schedules?s
 
 /**
  * SCR-04 Schedules (`/water/schedules`): the week of API-IRR-02 (every 60 s, 5 s while a schedule settles), today and
- * the next six days, or the last seven with `?past=7` (`past_days=7`), past blocks with their outcome words. Operators
- * open the schedule editor (#1137) from "+ New schedule" (`?schedule=new`) or from Edit on a block
- * (`?schedule=<slot_id>`); while it is open the week shows the next seven days with the draft as PLANNED outlines.
- * Viewers see no editor, whatever the URL says.
+ * the next six days, or the last seven with `?past=7` (`past_days=7`), past blocks with their outcome words. Selecting
+ * a block offers operators Edit and, on one still planned, "Pause <line> until after this run". Operators open the
+ * schedule editor (#1137) from "+ New schedule" (`?schedule=new`) or from Edit on a block (`?schedule=<slot_id>`); while
+ * it is open the week shows the next seven days with the draft as PLANNED outlines. Viewers see no editor, whatever the
+ * URL says.
  */
 export default function WaterSchedules() {
   const { irrigation } = useWaterOutlet();
@@ -44,6 +46,15 @@ export default function WaterSchedules() {
   const preview = editing !== null && draft && agenda.data
     ? previewSchedule(draft, { agenda: agenda.data, lines: status?.lines ?? [], engine: status ? status.engine : null, today, now })
     : null;
+  const blockMenu: BlockMenu = (occurrence, schedule) => {
+    // A deleted schedule's past block has nothing to edit or pause.
+    if (!schedule) return null;
+    const until = pauseAfterRun(occurrence, schedule, now);
+    return <>
+      {until && <PauseAfterRun lineId={occurrence.line_id} until={until} />}
+      <Link className="button-link" to={editorTo(schedule.slot_id)} preventScrollReset data-write-control="true">Edit<span className="screen-reader"> this schedule</span></Link>
+    </>;
+  };
   const views = <Chips label="Week" items={[
     { key: "next", label: "Next 7 days", to: "/water/schedules", current: !past },
     { key: "past", label: "Last 7 days", to: "/water/schedules?past=7", current: past },
@@ -53,7 +64,7 @@ export default function WaterSchedules() {
     {agenda.isError && <PanelError thing="schedules" onRetry={() => void agenda.refetch()} />}
     {agenda.data
       ? <ScheduleWeek agenda={agenda.data} lines={status?.lines} program={status} past={past} today={today} now={now} views={views} draft={preview} saved={saved}
-        editTo={operator ? editorTo : undefined}
+        editTo={operator ? editorTo : undefined} blockMenu={operator ? blockMenu : undefined}
         actions={operator ? <Link className="button-link btn-primary" to={editorTo(NEW_SCHEDULE)} preventScrollReset data-write-control="true">+ New schedule</Link> : null} />
       : !agenda.isError && <div className="skeleton skeleton-lg" aria-hidden="true" />}
     {editing !== null && agenda.data && <ScheduleEditor key={editing} slotId={slotId} schedule={agenda.data.schedules.find((row) => row.slot_id === slotId) ?? null}

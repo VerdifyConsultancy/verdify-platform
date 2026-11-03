@@ -8,18 +8,19 @@ import { unitLabel } from "../../lib/setting-values";
 import { PickerDialog } from "./metric-picker";
 
 /**
- * "+ Setting" (SCR-02, US-GRF-01): the API-09 settings Graphs can draw as steps, in the picker's dialog: numeric rows
- * whose unit has an open panel, never the read-only "Band in force" rows the ribbon already draws. A choice is a link
- * that adds `set=<param>` to the URL; on the charts it reads "VPD · mister_engage_kpa ×".
+ * "+ Setting" (SCR-02, US-GRF-01): the API-09 settings a person would chart as steps, in the picker's dialog: numeric
+ * rows whose unit has an open panel, never the "Band in force" rows the ribbon already draws or the rows in the
+ * read-only group. A choice is a link that adds `set=<param>` to the URL; on the charts it reads "VPD ·
+ * mister_engage_kpa ×". The chooser only leaves those rows out: a `set=` link to a read-only row still draws.
  */
 export type SettingGroup = { readonly unit: string; readonly items: readonly Setting[] };
 
-/** The drawable settings by open panel, in the panels' order, matching `filter`. */
+/** The settings to offer by open panel, in the panels' order, matching `filter`. */
 export function chooserGroups(settings: readonly Setting[], units: readonly string[], filter = ""): SettingGroup[] {
   const needle = filter.trim().toLowerCase();
   return units.map((unit) => ({
     unit,
-    items: settings.filter((row) => unitLabel(row.unit) === unit && settingProblem(row, units) === null
+    items: settings.filter((row) => row.group !== "read_only" && unitLabel(row.unit) === unit && settingProblem(row, units) === null
       && (!needle || [row.label, row.param, row.unit, row.control_class].join(" ").toLowerCase().includes(needle))),
   })).filter((group) => group.items.length > 0);
 }

@@ -323,8 +323,9 @@ def test_sealed_sql_284_chains_from_283_and_binds_the_exact_ledger_row():
     assert six.sealed_sql_284() == expected
     assert "(SELECT max(seq) FROM public.schema_migrations WHERE source='db/migrations')=284" in expected
     assert "stamp_method='runner'" in six.ledger_row_sql(*six.DASHBOARD_GRANTS_MIGRATION)
-    assert six.sealed_sql().endswith(" OR " + six.sealed_sql_283() + " OR " + expected + ")")
-    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_284() + ")") == 1
+    # 284 follows 283 in both ORs; a later successor (285) follows it.
+    assert six.sealed_sql().count(" OR " + six.sealed_sql_283() + " OR " + expected) == 1
+    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_284()) == 1
     assert '"284-dashboard-runtime-grants.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
     assert "tests/test_284_dashboard_grants_delivery.py" in (ROOT / "scripts/ci-local.sh").read_text()
 

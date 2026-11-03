@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { checkPrompt } from "../lib/line-checks";
+import { checkedLabel } from "../lib/line-checks";
 import { lineById } from "../lib/lines";
 import { newIdempotencyKey, type IrrigationLine, type IrrigationStatus, type Schedule, type ScheduleAgenda } from "../lib/operator-api";
 import { PAST_CAP_TEXT, previewSchedule, weekdayOf, type ScheduleDraft } from "../lib/schedule-preview";
@@ -304,7 +304,7 @@ export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, o
     {askCheck && <>
       <label className="check field-check" htmlFor={checkId}>
         <input id={checkId} type="checkbox" name="checked" checked={form.checked} onChange={(event) => update({ checked: event.target.checked })} />
-        <span>{checkPrompt(form.lineId)}</span>
+        <span>{checkedLabel(form.lineId)}</span>
       </label>
       {form.checked && <Reason label="Note (optional)" value={form.note} onChange={(note) => update({ note })} error={fieldError("check_note")} />}
       {fieldError("checked") && <FieldError id={`${checkId}-error`}>{fieldError("checked")}</FieldError>}

@@ -543,7 +543,7 @@ bounded `time_bucket_gapfill` series endpoint. There is no new rollup layer in t
 | Plan | Effective `plan_journal` row (hypothesis, experiment, expected outcome, valid window), future `setpoint_plan` waypoints with their `source` (`iris` or `preemptive`), `v_active_plan`; `planner_trigger_ledger` for the 36 h list and `v_planner_trigger_health` for counts. The latest required trigger (Now's Iris tile) is the newest MIDNIGHT, SUNRISE or SUNSET ledger row that has fired (`expected_at` at or before now): the ledger also holds the day's expected rows ahead, which say nothing yet, so the view's first `latest_required` element would read OK over a missed SUNRISE. A health row's `due_at` is the ledger's own deadline: `expected_at` plus the SLA until delivery, then the delivery time plus the SLA, the deadline its `missed` and `timed_out` sweeps use |
 | Band | In force: the newest `setpoint_snapshot` rows with `band_role` (zone `house` for the hero and Graphs, each zone for its tile), computed every pass by the dispatcher from `crop_band_anchors` with the controller's formula (`band_anchors.emit_band_audit`), provenance DERIVED, kept 90 days. Older windows use `fn_band_setpoints(ts)` over the step series, which gives the same crop values as `fn_band_timeline`, labelled "reconstructed from today's anchors". The device-reported targets (`climate.house_temp_target_f`, `house_vpd_target`, `vpd_target_<zone>`) are cross-check metrics |
 | Settings | `verdify_schemas/tunable_registry.py` (code), `v_desired_state_current`, `v_active_plan`, the newest readbacks in `setpoint_snapshot` and `equipment_state`, `setpoint_changes` and `setpoint_clamps` rows after each request, `irrigation_push` |
-| Daily | `daily_summary` (temperature, RH and VPD min, max and mean; `water_used_gal`; mister runtimes) and the new `v_daily_scorecard`: time in band day and night (`mv_zone_band_grade`), gallons, Iris's required plans written and missed (`planner_trigger_ledger`) and alerts by severity |
+| Daily | `daily_summary` (temperature, RH and VPD min, max and mean; `water_used_gal`; mister runtimes) and the new `v_daily_scorecard` (M6), one row per `daily_summary.date`: whole-day temperature and VPD time in band for every day (`daily_summary.temp_compliance_pct` and `vpd_compliance_pct`, Q-12); time in band by day and night from `mv_zone_band_grade`, which keeps 3 days, so only the days it covers whole get a value and the rest are null with `band_reason` 'band grade kept 3 days'; gallons, with `water_reason` from bounded checks when null (`partial_day` today, `unavailable` with no meter reading that day, otherwise `incomplete`), because `v_water_meter_daily` has no time bound; Iris's required plans written and missed (`planner_trigger_ledger`) and alerts by severity, each null for days before its source existed |
 | Water | `v_water_meter_daily`, `v_water_relay_runs`, plus [irrigation](irrigation.md)'s tables |
 
 - **Reporting.** One test says whether the controller is reporting: the ingestor heartbeat is fresh (at most
@@ -613,10 +613,13 @@ operation ids are canonical (R1); API-08, API-18, API-IRR-09 and OPS-03 are rese
 
 Conventions: JSON; ISO 8601 times with an offset and `observed_at` on every reading; canonical units (°F, %, kPa,
 gal, min); `null` means unavailable; `application/problem+json` errors (§5.3). Every write takes an optional
-`Idempotency-Key`. Setting writes return 200 with the stored row and state; run, stop and clear-fault return 202
-and a `command_id`. [`openapi/dashboard-api.v1.yaml`](openapi/dashboard-api.v1.yaml) is hand-maintained and
-canonical: new operations land there first, every FastAPI route sets `operation_id` to its id, and a test checks
-each served method, path, `operationId` and schema against it (unserved committed operations are allowed).
+`Idempotency-Key`. A request the contract cannot read is 400 `invalid_request`: a wrong JSON type, a body key it does
+not list, a path id that is not an integer, a key that is not a uuid, text holding a NUL character. §5.3's codes judge
+what it can read, so `{"value": NaN}` is `out_of_range`. Setting writes return 200 with the stored row and state; run,
+stop and clear-fault return 202 and a `command_id`. [`openapi/dashboard-api.v1.yaml`](openapi/dashboard-api.v1.yaml)
+is hand-maintained and canonical: new operations land there first, every FastAPI route sets `operation_id` to its id,
+and a test checks each served method, path, `operationId` and schema against it (unserved committed operations are
+allowed).
 
 Roles: V = viewer, O = operator. Screens follow [screens](screens.md).
 
@@ -700,7 +703,7 @@ after M2 is applied too.
 | M3 | VD-38 | Per [irrigation](irrigation.md): the irrigation tables, granted to the dashboard, MCP and ingestor logins; SELECT on `v_water_event_attribution` (per-run gallons) for the dashboard and MCP logins; EXECUTE on `fn_mcp_armed_assignment_context()` for the ingestor login (Iris's irrigation context says whether an experiment is armed) |
 | M4 | VD-39 | `v_irrigation_minutes_daily` and `v_irrigation_day_coverage` (each day complete, partial or no data), and `fn_irrigation_minutes_daily(from, to)`, the minutes for a day range with the scan bounded by it (the view rebuilds every run on each read; [irrigation](irrigation.md) §6.2). SELECT on the views and EXECUTE on the function for the MCP and ingestor duties (the dashboard login exists only after M2; M2b grants all three); none for the api login. Re-seals the api, ingestor and MCP receipts |
 | M5 | VD-33 | The lighting policy functions ignore `source = 'manual'` rows (§5.2), keeping 275's `SET jit = off` on `fn_lighting_minutes_policy` (`CREATE OR REPLACE FUNCTION` resets it) |
-| M6 | VD-56 | `v_daily_scorecard` (§7), granted to the dashboard login |
+| M6 | VD-56 | Migration 285: `v_daily_scorecard` (§7), granted to the dashboard login. Neither runtime digest takes in a view only that login can read, so no receipt changes; the native qualification measures it |
 | PAR | VD-71 (Next) | The PAR meter's PPFD `climate` column. It re-creates the `v_runtime_climate_write` facade with the column and re-seals the api and ingestor receipts, or every climate write fails once the firmware publishes PPFD. It drops 195's `dli_validity_release_unavailable` CHECK and opens a new validity interval; the DLI views rebind to the column (§7) |
 
 ```sql

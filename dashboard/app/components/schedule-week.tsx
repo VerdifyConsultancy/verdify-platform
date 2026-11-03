@@ -23,6 +23,9 @@ export function weekDayLabel(day: string): string {
   return `${WEEKDAY.format(new Date(`${day}T12:00:00Z`))} ${month}/${date}`;
 }
 
+/** What selecting a block offers: the pause (#1182) and Edit (#1137); null or nothing for a block that offers none. */
+export type BlockMenu = (occurrence: Occurrence, schedule: Schedule | undefined) => ReactNode;
+
 /** A row of a cell: a saved occurrence, or one of the editor's outlines. */
 type Entry = {
   readonly occurrence: Occurrence;
@@ -39,19 +42,19 @@ type BlockProps = Entry & {
   program: Pick<IrrigationStatus, "engine" | "program"> | null | undefined;
   /** The schedule just saved here: its blocks keep their badge through CONFIRMED. */
   saved: number | null | undefined;
-  /** Where Edit goes, when this block has a menu. */
-  editTo: string | null;
+  /** What selecting this block offers; without it the block is not selectable. */
+  menu: ReactNode;
   open: boolean;
   onToggle: () => void;
 };
 
 /**
  * A block: start time, amount, FERT, MANUAL or "Iris may adjust", then its label, a feed's stages and its notes; while a
- * write settles, the schedule's sync with its words ("REQUESTED rev 43 sending"). For an operator, selecting it opens
- * the small block menu (#1137 Edit; #1182 adds "Pause <line> until after this run").
+ * write settles, the schedule's sync with its words ("REQUESTED rev 43 sending"). Selecting one that has a menu opens it,
+ * and Escape closes it and puts focus back on the block.
  */
-function Block({ occurrence, schedule, draft, pastCap, replaced, kind, now, program, saved, editTo, open, onToggle }: BlockProps) {
-  const select = useRef<HTMLButtonElement>(null);
+function Block({ occurrence, schedule, draft, pastCap, replaced, kind, now, program, saved, menu, open, onToggle }: BlockProps) {
+  const select = useRef<HTMLElement>(null);
   const fert = kind === "fert_drip" || kind === "fert_mister";
   const hatched = occurrence.status === "skipped" || occurrence.status === "blocked";
   const past = Date.parse(occurrence.planned_start) < now;
@@ -85,12 +88,16 @@ function Block({ occurrence, schedule, draft, pastCap, replaced, kind, now, prog
       onToggle();
       select.current?.focus();
     }}>
-    {editTo
-      ? <button ref={select} type="button" className="week-block-select" aria-expanded={open} onClick={onToggle}>{body}</button>
+    {menu
+      // The state decides, not the browser's own toggle, so one menu is open at a time.
+      ? <details className="week-block-menu" open={open}>
+        <summary ref={select} onClick={(event) => {
+          event.preventDefault();
+          onToggle();
+        }}>{body}</summary>
+        <div className="week-block-actions">{menu}</div>
+      </details>
       : body}
-    {editTo && open && <div className="week-block-menu">
-      <Link className="button-link" to={editTo} preventScrollReset data-write-control="true">Edit<span className="screen-reader"> this schedule</span></Link>
-    </div>}
   </li>;
 }
 
@@ -112,10 +119,12 @@ export type ScheduleWeekProps = {
   actions?: ReactNode;
   /** The open editor's draft, drawn as PLANNED outlines (#1137): it replaces the saved schedule's blocks still ahead. */
   draft?: SchedulePreview | null;
-  /** The URL that edits a schedule (`?schedule=<slot_id>`), for operators: blocks then open the block menu. */
+  /** The URL that edits a schedule (`?schedule=<slot_id>`), for operators: a disabled schedule has no block, so the line under the week links here. */
   editTo?: (slotId: number) => string;
   /** The schedule just saved here, whose blocks read REQUESTED and then stay CONFIRMED. */
   saved?: number | null;
+  /** What selecting a block offers; without it a block is not selectable. */
+  blockMenu?: BlockMenu;
 };
 
 const startOf = (entry: Entry) => Date.parse(entry.occurrence.planned_start);
@@ -124,11 +133,11 @@ const startOf = (entry: Entry) => Date.parse(entry.occurrence.planned_start);
  * ScheduleWeek (design system §4.6): rows L01, L02 and L04–L10 (L05 and L06 marked reserved while disabled), columns
  * today and the next six days, or the seven before today. Each API-IRR-02 occurrence sits in its line × local-day cell,
  * joined to its schedule by `slot_id`: start time, "12m" or "8×60s", FERT on a fertilizer line, MANUAL or "Iris may
- * adjust"; one that will not run is hatched with why, and a past one carries its outcome word. The editor's draft
- * previews as PLANNED outlines. A disabled schedule has no occurrences, so the line under the week reaches it. At phone
- * width a day switcher shows one day for every line.
+ * adjust"; one that will not run is hatched with why, and a past one carries its outcome word. Selecting a block that
+ * has a `blockMenu` opens it, one at a time. The editor's draft previews as PLANNED outlines. A disabled schedule has no
+ * occurrences, so the line under the week reaches it. At phone width a day switcher shows one day for every line.
  */
-export function ScheduleWeek({ agenda, lines = [], program, past, today, now, views, actions, draft, editTo, saved }: ScheduleWeekProps) {
+export function ScheduleWeek({ agenda, lines = [], program, past, today, now, views, actions, draft, editTo, saved, blockMenu }: ScheduleWeekProps) {
   const headingId = useId();
   const days = weekDays(agenda, today, past);
   const [chosen, setChosen] = useState<string | null>(null);
@@ -179,9 +188,9 @@ export function ScheduleWeek({ agenda, lines = [], program, past, today, now, vi
                 return <td key={day} data-day={day} className={dayClass(day)}>
                   {blocks.length > 0 && <ul className="week-blocks">{blocks.map((entry) => {
                     const key = `${entry.draft ? "draft" : entry.occurrence.slot_id}-${entry.occurrence.planned_start}`;
-                    // Selecting a block needs its schedule; a draft is the form's, and a deleted schedule's past block has nothing to edit.
-                    const edit = editTo && !entry.draft && entry.schedule ? editTo(entry.occurrence.slot_id) : null;
-                    return <Block key={key} {...entry} kind={kind} now={now} program={program} saved={saved} editTo={edit} open={menu === key} onToggle={() => setMenu((current) => (current === key ? null : key))} />;
+                    // A draft's outline is the form's: it has no menu.
+                    const offered = entry.draft ? null : blockMenu?.(entry.occurrence, schedules.get(entry.occurrence.slot_id));
+                    return <Block key={key} {...entry} kind={kind} now={now} program={program} saved={saved} menu={offered} open={menu === key} onToggle={() => setMenu((current) => (current === key ? null : key))} />;
                   })}</ul>}
                   {blocks.every((entry) => entry.replaced) && <span className="week-none" aria-hidden="true">·</span>}
                 </td>;
@@ -190,7 +199,7 @@ export function ScheduleWeek({ agenda, lines = [], program, past, today, now, vi
           })}</tbody>
         </table>
       </div>
-      <p className="week-key small">MANUAL: Iris skips it · Iris may adjust: Iris can change it · hatched: will not run, with why · FERT: prewet and flush on the clean line, feed through L03{draft && " · PLANNED outline: the draft you are editing"}</p>
+      <p className="week-key small">MANUAL: Iris skips it · Iris may adjust: Iris can change it · hatched: will not run, with why · FERT: prewet and flush on the clean line, feed through L03{draft && " · PLANNED outline: the draft you are editing"}{blockMenu && " · select a block to edit its schedule or, while it is planned, pause its line until after it"}</p>
     </>}
     {disabled.length > 0 && <p className="week-disabled small">Disabled, so not in the week: {disabled.map((schedule, index) => {
       const name = `${schedule.line_id} ${schedule.label || `slot ${schedule.slot_id}`}`;

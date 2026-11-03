@@ -677,6 +677,14 @@ export const FIXTURES = {
     });
     for (const line of world.lines) line.sync = "requested";
   },
+  // #1182: what the line controls act on: L02 disabled and unchecked, L04 enabled with no check and Schedule off, and
+  // L07 as product J4 finds it, disabled and unchecked with both flags off.
+  "lines-unchecked": (world) => {
+    const disabled = (id) => ({ enabled: false, check: null, state: { ...lineOf(world, id).state, code: "disabled", cause: null, slot_id: null, reason: null, ends_at: null } });
+    Object.assign(lineOf(world, "L02"), disabled("L02"));
+    Object.assign(lineOf(world, "L04"), { enabled: true, check: null, schedule_member: false });
+    Object.assign(lineOf(world, "L07"), disabled("L07"), { vpd_member: false, schedule_member: false });
+  },
   "reserved-lines": (world) => {
     for (const id of ["L05", "L06"]) Object.assign(lineOf(world, id), { reserved: true, enabled: false, state: { ...lineOf(world, id).state, code: "disabled" } });
   },

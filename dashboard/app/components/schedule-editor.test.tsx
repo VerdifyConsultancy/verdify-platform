@@ -432,7 +432,7 @@ test("Edit on a block opens the stored schedule in the drawer; Save sends every 
   const api = open("/water/schedules", { fixture: "schedules-paused" });
   await advance(0);
   const block = () => cell("L01", "2026-11-04").querySelector<HTMLElement>(".week-block")!;
-  fireEvent.click(within(block()).getByRole("button"));
+  fireEvent.click(block().querySelector("summary")!);
   fireEvent.click(within(block()).getByRole("link", { name: /^Edit/ }));
   await advance(0);
   expect(where()).toBe("/water/schedules?schedule=11");
@@ -581,7 +581,7 @@ test("Cancel and Escape close at once and leave the week as it was; focus goes b
   expect(document.activeElement).toBe(opener);
   // Edit's own link takes focus back too, though the draft hid its block while the drawer was open.
   const block = () => cell("L01", "2026-11-04").querySelector<HTMLElement>(".week-block")!;
-  fireEvent.click(within(block()).getByRole("button"));
+  fireEvent.click(block().querySelector("summary")!);
   const edit = within(block()).getByRole("link", { name: /^Edit/ });
   edit.focus();
   fireEvent.click(edit);
@@ -599,7 +599,7 @@ test("a viewer sees no editor, New schedule or block menu, whatever the URL says
   await advance(0);
   expect(drawer()).toBeNull();
   expect(screen.queryByRole("link", { name: "+ New schedule" })).toBeNull();
-  expect(document.querySelector(".week-block-select")).toBeNull();
+  expect(document.querySelector(".week-block-menu")).toBeNull();
   expect(document.querySelectorAll("[data-write-control]")).toHaveLength(0);
   cleanup(); stopFixtureApi();
   const api = open("/water/schedules?schedule=2", { fixture: "writes-off" });

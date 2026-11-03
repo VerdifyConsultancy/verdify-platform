@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 /**
- * The one-time physical check of each wet line (irrigation §3, D-IRP-07 and D-IRP-08), as the Checked box names it. The
- * schedule editor (#1137) and the check sheet (#1182) share these prompts. L03 is checked together with L02, and fog
- * L11 takes no check.
+ * The one-time physical check of each wet line (irrigation §3; D-IRP-07, D-IRP-08): the words beside the one "Checked"
+ * box, on the check sheet (#1182) and in the schedule editor (#1137). L03 is checked together with L02, and L11 is
+ * climate only, so neither has a check of its own.
  */
 export const LINE_CHECKS: Readonly<Record<string, string>> = {
   L01: "line flushed, emitters checked",
@@ -16,7 +16,7 @@ export const LINE_CHECKS: Readonly<Record<string, string>> = {
   L10: "line, tank and injector checked",
 };
 
-/** "Checked: line flushed, emitters checked". */
-export function checkPrompt(lineId: string): string {
-  return `Checked: ${Object.hasOwn(LINE_CHECKS, lineId) ? LINE_CHECKS[lineId] : "line checked"}`;
+/** The box's words for a line ("Checked: line flushed, emitters checked"); null for a line with no check of its own. */
+export function checkedLabel(lineId: string): string | null {
+  return Object.hasOwn(LINE_CHECKS, lineId) ? `Checked: ${LINE_CHECKS[lineId]}` : null;
 }

@@ -154,6 +154,69 @@ test("requested-to-confirmed: two API-09 reads requested, then confirmed; with c
   expect([1, 2, 3].map(() => setting(api, "mister_engage_kpa").state)).toEqual(["requested", "requested", "not_confirmed"]);
 });
 
+test("a line write reads requested on the next two API-IRR-01 reads, then confirmed by a new program hash; with confirm false, not_confirmed with its reject", () => {
+  for (const confirm of [true, false]) {
+    const api = handler("in-band", { confirm });
+    const before = get(api, "/v1/irrigation");
+    const written = at(api, "PUT", "/v1/irrigation/lines/L07", { vpd_member: true, manual: true }, KEY);
+    expect(written.status).toBe(200);
+    expect(written.body.lines).toEqual([expect.objectContaining({ line_id: "L07", vpd_member: true, manual: true, sync: "requested" })]);
+    const first = get(api, "/v1/irrigation");
+    expect(first.program).toMatchObject({ state: "requested", revision: 43, applied_revision: 42 });
+    expect(first.program.desired_sha256).not.toBe(before.program.desired_sha256);
+    expect(line(api, "L07").sync).toBe("requested");
+    const third = get(api, "/v1/irrigation");
+    const settled = (third.lines as Body[]).find((row) => row.line_id === "L07");
+    if (confirm) {
+      expect(settled?.sync).toBe("confirmed");
+      expect(third.program).toMatchObject({ state: "confirmed", revision: 43, applied_revision: 43, applied_hash: first.program.desired_sha256.slice(0, 16), src: "nvs" });
+    } else {
+      expect(settled?.sync).toBe("not_confirmed");
+      expect(third.program).toMatchObject({ state: "not_confirmed", revision: 43, applied_revision: 42, reject_code: "bad_line" });
+    }
+    // Only the written line waited.
+    expect(line(api, "L09").sync).toBe("confirmed");
+  }
+});
+
+test("before the engine a line write is stored and stays requested with no program; every read after it says the same", () => {
+  const api = handler("before-engine");
+  expect(at(api, "PUT", "/v1/irrigation/lines/L04", { daily_cap_min: 130, vpd_reserve_min: 60, manual: true }, KEY).status).toBe(200);
+  for (let index = 0; index < 5; index += 1) {
+    expect(line(api, "L04")).toMatchObject({ daily_cap_min: 130, vpd_reserve_min: 60, sync: "requested" });
+    expect(get(api, "/v1/irrigation").program).toMatchObject({ state: "requested", revision: null, src: null });
+  }
+});
+
+test("lines-unchecked: L02 disabled with no check, L04 enabled with no check and Schedule off; each asks for the check until it comes, then never again", () => {
+  const api = handler("lines-unchecked");
+  expect(line(api, "L02")).toMatchObject({ enabled: false, check: null, state: { code: "disabled" } });
+  expect(line(api, "L04")).toMatchObject({ enabled: true, check: null, schedule_member: false });
+  expect(line(api, "L07")).toMatchObject({ enabled: false, check: null, vpd_member: false, schedule_member: false });
+  expect(at(api, "PUT", "/v1/irrigation/lines/L02", { enabled: true, manual: true }).body).toMatchObject({ code: "check_required", field: "checked" });
+  expect(at(api, "PUT", "/v1/irrigation/lines/L04", { schedule_member: true, manual: true }).body).toMatchObject({ code: "check_required", field: "checked" });
+  expect(at(api, "PUT", "/v1/irrigation/lines/L02", { enabled: true, checked: true, check_note: "No leaks", manual: true }).status).toBe(200);
+  expect(line(api, "L02")).toMatchObject({ enabled: true, check: { checked_by: "jason", note: "No leaks" }, state: { code: "idle" } });
+  expect(at(api, "PUT", "/v1/irrigation/lines/L02", { enabled: false, manual: true }).status).toBe(200);
+  expect(at(api, "PUT", "/v1/irrigation/lines/L02", { enabled: true, manual: true }).status).toBe(200);
+});
+
+test("line_id all pauses every line with only paused_until and a reason, and now resumes them; neither changes manual; enabling L05 reads like any enabled line", () => {
+  const api = handler("reserved-lines");
+  const lines = () => get(api, "/v1/irrigation").lines as Body[];
+  const manual = lines().map((row) => row.manual);
+  const until = "2026-11-02T21:00:00.000Z";
+  expect(at(api, "PUT", "/v1/irrigation/lines/all", { paused_until: until, manual: true }).body).toMatchObject({ code: "invalid_request", field: "line_id" });
+  expect(at(api, "PUT", "/v1/irrigation/lines/all", { paused_until: until, reason: "rain" }).status).toBe(200);
+  expect(lines().map((row) => [row.paused_until, row.pause_reason])).toEqual(lines().map(() => [until, "rain"]));
+  expect(lines().map((row) => row.manual)).toEqual(manual);
+  expect(at(api, "PUT", "/v1/irrigation/lines/all", { paused_until: new Date(NOW).toISOString() }).status).toBe(200);
+  expect(lines().map((row) => row.paused_until)).toEqual(lines().map(() => null));
+  expect(lines().map((row) => row.manual)).toEqual(manual);
+  expect(at(api, "PUT", "/v1/irrigation/lines/L05", { enabled: true, checked: true, manual: true }).status).toBe(200);
+  expect(line(api, "L05")).toMatchObject({ reserved: true, enabled: true, state: { code: "idle" }, check: { checked_by: "jason" } });
+});
+
 test("fail makes single operations answer a status; api-down fails every /v1 operation", () => {
   const api = handler("in-band", { fail: { "API-14": 503, "API-02": 401 } });
   expect(at(api, "GET", "/v1/alerts").body).toMatchObject({ status: 503, code: "unavailable" });

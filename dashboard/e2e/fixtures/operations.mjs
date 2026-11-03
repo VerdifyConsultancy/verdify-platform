@@ -782,8 +782,36 @@ function stop(world, { body, key }) {
   return { status: 202, body: sent, effect };
 }
 const DEFINITION = ["enabled", "vpd_member", "schedule_member", "daily_cap_min", "vpd_reserve_min"];
+/** How many later API-IRR-01 reads a line write stays requested: it settles on the third. */
+const LINE_WRITE_SETTLES_ON_READ = 3;
+/**
+ * A line write's push, replayed on every later read (#1182). Before the engine it is stored and stays requested, with
+ * the program untouched. With the engine it adds a revision with a new hash and reads requested on the next two
+ * API-IRR-01 reads, then confirmed by that hash, or not_confirmed with its reject under `confirm: false`. Only the
+ * program hash confirms a write. Returns the line's `sync` and when the push settled.
+ */
+function linePush(world, serial) {
+  let settledAt = null;
+  return (next, history) => {
+    if (!next.engine) return { sync: "requested", settledAt: null };
+    const revision = (next.program.revision ?? 0) + 1;
+    const hash = createHash("sha256").update(`program:${revision}`).digest("hex");
+    const pushed = { ...next.program, revision, desired_sha256: hash, pushed_at: iso(world.now) };
+    if ((history?.readsAfter("API-IRR-01", serial) ?? 0) < LINE_WRITE_SETTLES_ON_READ) {
+      next.program = { ...pushed, state: "requested" };
+      return { sync: "requested", settledAt: null };
+    }
+    settledAt ??= next.now;
+    if (!next.flags.confirm) {
+      next.program = { ...pushed, state: "not_confirmed", reject_code: "bad_line", next_retry_at: iso(settledAt + MINUTE) };
+      return { sync: "not_confirmed", settledAt };
+    }
+    next.program = { ...pushed, state: "confirmed", applied_revision: revision, applied_hash: hash.slice(0, 16), src: "nvs", confirmed_at: iso(settledAt), reject_code: null, next_retry_at: null };
+    return { sync: "confirmed", settledAt };
+  };
+}
 /** API-IRR-08: enable with the check, mister flags, caps, pause or resume, manual (irrigation §4.2, §8.3). */
-function updateLines(world, { params, body, key }) {
+function updateLines(world, { params, body, key, serial }) {
   const id = params.line_id;
   if (id !== "all" && !LINE_ID.test(id)) throw refuse(422, "unknown_target", "Unknown line", "line_id is L01-L11 or all", { field: "line_id" });
   const input = object(body);
@@ -800,6 +828,9 @@ function updateLines(world, { params, body, key }) {
     if (until <= world.now) until = null;
   }
   const ids = id === "all" ? LINES.map((line) => line.line_id) : [id];
+  const definition = DEFINITION.some((field) => input[field] !== undefined);
+  // A check or reason alone changes no program: no revision, and the line's sync stays as it reads.
+  const pushes = definition || "paused_until" in input;
   const updates = ids.map((lineId) => {
     const line = lineOf(world, lineId);
     if ((input.vpd_member !== undefined || input.schedule_member !== undefined) && !MISTERS.includes(lineId)) throw refuse(422, "unknown_target", "Not a mister zone", "vpd_member and schedule_member are for L04, L07 and L09", { field: input.vpd_member !== undefined ? "vpd_member" : "schedule_member" });
@@ -810,9 +841,7 @@ function updateLines(world, { params, body, key }) {
     if ((input.enabled === true && !line.enabled && !line.check && !checkedNow) || (input.schedule_member === true && !line.schedule_member && !line.check && !checkedNow)) {
       throw refuse(422, "check_required", "Check required", `Record the one-time check of ${lineId} first`, { field: "checked" });
     }
-    const definition = DEFINITION.some((field) => input[field] !== undefined);
-    // A check or reason alone changes no program, so the line's sync stays as it reads.
-    const changed = { ...line, manual_before: line.manual, sync: definition || "paused_until" in input ? "requested" : line.sync };
+    const changed = { ...line, manual_before: line.manual };
     for (const field of DEFINITION) if (input[field] !== undefined) changed[field] = input[field];
     if (definition) changed.manual = input.manual ?? true;
     if (checkedNow) changed.check = { checked_by: world.me.username, checked_at: iso(world.now), note };
@@ -821,10 +850,18 @@ function updateLines(world, { params, body, key }) {
     else if (input.enabled === true && line.state.code === "disabled") changed.state = { code: "idle", cause: null, slot_id: null, reason: null, ends_at: null, observed_at: iso(world.now) };
     return changed;
   });
-  const effect = (next) => {
+  const push = linePush(world, serial);
+  const effect = (next, history) => {
     if (input.enabled === false) stopLines(next, ids, world.now);
-    for (const changed of updates) Object.assign(lineOf(next, changed.line_id), structuredClone(changed));
-    activity(next, { ts: iso(world.now), actor: actorOf(next), action: "irrigation.line.update", target: id, detail: Object.fromEntries(Object.entries(input).filter(([field]) => field !== "reason")), reason, request_id: key });
+    const { sync = null, settledAt = null } = pushes ? push(next, history) : {};
+    for (const changed of updates) {
+      const line = lineOf(next, changed.line_id);
+      Object.assign(line, structuredClone(changed), { sync: pushes ? sync : line.sync });
+    }
+    activity(next, {
+      ts: iso(world.now), actor: actorOf(next), action: "irrigation.line.update", target: id, detail: Object.fromEntries(Object.entries(input).filter(([field]) => field !== "reason")),
+      reason, state: next.engine ? sync : null, confirmed_at: sync === "confirmed" ? iso(settledAt) : null, request_id: key,
+    });
   };
   const after = structuredClone(world);
   effect(after);

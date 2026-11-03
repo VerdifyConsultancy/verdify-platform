@@ -537,8 +537,6 @@ a.picker-item:hover{background:var(--field)}
 .week-block-past{border-color:var(--line)}
 .week-block-hatched{border-style:dashed;color:var(--muted);background:repeating-linear-gradient(135deg,var(--field) 0 .3rem,#fff .3rem .6rem)}
 .week-block[hidden]{display:none}
-.week-block-select{display:grid;gap:.1rem;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
-.week-block-menu{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.3rem}
 .week-block-draft{border:1px dashed var(--muted);background:transparent}
 .week-block-draft.week-block-hatched{background:repeating-linear-gradient(135deg,var(--field) 0 .3rem,#fff .3rem .6rem)}
 .week-none{color:var(--muted)}
@@ -571,6 +569,25 @@ a.picker-item:hover{background:var(--field)}
   .week-table th[scope=row]{width:40%}
   .week-table [data-day]:not(.is-day){display:none}
 }
+
+/* Water's line controls (VD-69, screens SCR-04): the enable and mister switches, each line's program state, Pause and the week view's block menu. The §2.2 block below stays last. */
+.water-program{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem 1rem;margin:0 0 1rem}
+.water-program .program-banner{flex:1 1 20rem;margin:0}
+.pause-controls{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
+.pause-controls .field-error{flex-basis:100%}
+.line-sync{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .4rem;margin:.3rem 0}
+.line-enable{flex-basis:100%}
+.line-enable .field-switch,.mister-flag .field-switch{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .6rem;margin:0}
+.mister-switches{display:grid;gap:.5rem}
+.mister-flag{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .6rem}
+.mister-flag .field-label{min-width:5.5rem}
+.mister-flag .field-error{flex-basis:100%}
+.field-flag{font-weight:600;color:var(--warn-text)}
+.week-block-menu{margin:0}
+.week-block-menu summary{position:relative;display:grid;align-items:start;gap:.1rem;padding-right:1rem;font-size:inherit;font-weight:inherit;color:inherit}
+.week-block-menu summary::before{position:absolute;top:.35rem;right:.15rem}
+.week-block-actions{display:grid;gap:.3rem;margin-top:.35rem}
+.week-block-actions .btn,.week-block-actions .button-link{height:auto;white-space:normal;font-size:.78rem}
 
 /* Dashboard (design system §2.2): added tokens, the two AA fixes and the new badges. Weather's tokens above are never edited. This block comes last: its :focus-visible and input,select,textarea rules have the same specificity as weather's and win by order. */
 :root{

@@ -140,29 +140,35 @@ test("an empty week still draws the first draft", () => {
   expect(blocks("L01", "2026-11-04")).toEqual([["07:35 12m Manual Planned", true, false]]);
 });
 
-test("selecting a block opens its menu for an operator: Edit goes to the schedule, Escape closes it, one menu at a time; viewers' blocks stay plain", () => {
+test("selecting a block opens the menu it is offered, one at a time; Escape closes it and puts focus back; a draft's outline has none", () => {
   const served = set("schedules-paused");
   const agenda = served["API-IRR-02"] as ScheduleAgenda;
   const lines = (served["API-IRR-01"] as IrrigationStatus).lines;
-  const week = <ScheduleWeek agenda={agenda} lines={lines} past={false} today={TODAY} now={NOW} editTo={(slot) => `/water/schedules?schedule=${slot}`} />;
-  renderUi(week, { role: "operator", writesEnabled: true });
-  const block = (line: string, day: string) => screen.getByRole("table").querySelector<HTMLElement>(`tr[data-line="${line}"] td[data-day="${day}"] .week-block`)!;
-  const select = (line: string, day: string) => block(line, day).querySelector<HTMLButtonElement>(".week-block-select")!;
-  expect(select("L01", "2026-11-04").getAttribute("aria-expanded")).toBe("false");
-  expect(block("L01", "2026-11-04").querySelector(".week-block-menu")).toBeNull();
+  renderUi(<ScheduleWeek agenda={agenda} lines={lines} past={false} today={TODAY} now={NOW} blockMenu={(occurrence) => <button type="button">Do {occurrence.slot_id}</button>} />);
+  const menu = (line: string, day: string) => screen.getByRole("table").querySelector<HTMLDetailsElement>(`tr[data-line="${line}"] td[data-day="${day}"] .week-block-menu`)!;
+  const select = (line: string, day: string) => menu(line, day).querySelector<HTMLElement>("summary")!;
+  expect(menu("L01", "2026-11-04").open).toBe(false);
   fireEvent.click(select("L01", "2026-11-04"));
-  expect(select("L01", "2026-11-04").getAttribute("aria-expanded")).toBe("true");
-  expect(within(block("L01", "2026-11-04")).getByRole("link", { name: /^Edit/ }).getAttribute("href")).toBe("/water/schedules?schedule=11");
-  // Another block's menu replaces it; a past block's schedule can be edited too.
+  expect(menu("L01", "2026-11-04").open).toBe(true);
+  expect(within(menu("L01", "2026-11-04")).getByRole("button", { name: "Do 11" })).toBeTruthy();
+  // Another block's menu replaces it; selecting it again closes it.
   fireEvent.click(select("L02", "2026-11-08"));
-  expect(block("L01", "2026-11-04").querySelector(".week-block-menu")).toBeNull();
-  expect(within(block("L02", "2026-11-08")).getByRole("link", { name: /^Edit/ }).getAttribute("href")).toBe("/water/schedules?schedule=12");
-  fireEvent.keyDown(block("L02", "2026-11-08"), { key: "Escape" });
-  expect(block("L02", "2026-11-08").querySelector(".week-block-menu")).toBeNull();
+  expect(menu("L01", "2026-11-04").open).toBe(false);
+  expect(menu("L02", "2026-11-08").open).toBe(true);
+  fireEvent.click(select("L02", "2026-11-08"));
+  expect(menu("L02", "2026-11-08").open).toBe(false);
+  fireEvent.click(select("L02", "2026-11-08"));
+  fireEvent.keyDown(menu("L02", "2026-11-08"), { key: "Escape" });
+  expect(menu("L02", "2026-11-08").open).toBe(false);
   expect(document.activeElement).toBe(select("L02", "2026-11-08"));
   cleanup();
-  renderUi(<ScheduleWeek agenda={agenda} lines={lines} past={false} today={TODAY} now={NOW} />);
-  expect(document.querySelector(".week-block-select")).toBeNull();
+  drawn("schedules-paused", { ...dripDraft, slot_id: 11 }, { blockMenu: () => <button type="button">Do</button> });
+  expect(document.querySelector(".week-block-draft")).not.toBeNull();
+  expect(document.querySelector(".week-block-draft .week-block-menu")).toBeNull();
+  // The key names the outline and the selection.
+  const key = text(document.querySelector(".week-key"));
+  expect(key).toContain("PLANNED outline: the draft you are editing");
+  expect(key).toContain("select a block to edit its schedule");
 });
 
 test("a schedule's blocks show its sync while it settles, with the program's words, and CONFIRMED only for the one just saved", () => {
@@ -192,4 +198,17 @@ test("the agenda's fixed skip reasons read as the editor's draft does, hatched",
   renderUi(<ScheduleWeek agenda={agenda} lines={(served["API-IRR-01"] as IrrigationStatus).lines} past={false} today={TODAY} now={NOW} />);
   const row = screen.getByRole("table").querySelector('tr[data-line="L04"]')!;
   expect([...row.querySelectorAll(".week-block-hatched .week-block-note")].map((node) => text(node))).toEqual(["Skipped: line disabled", "Skipped until Schedule is on", "Skipped: VPD control is off"]);
+});
+
+test("a block with a menu opens it when selected; a menu that offers nothing, and a week with no menu, leave the block as it was", () => {
+  const served = set("schedules-paused");
+  renderUi(<ScheduleWeek agenda={served["API-IRR-02"] as ScheduleAgenda} lines={(served["API-IRR-01"] as IrrigationStatus).lines} past={false} today={TODAY} now={NOW}
+    blockMenu={(occurrence) => (occurrence.line_id === "L01" ? <button type="button">Do {occurrence.slot_id}</button> : null)} />);
+  const table = screen.getByRole("table");
+  const offered = table.querySelector<HTMLElement>('tr[data-line="L01"] td[data-day="2026-11-04"] .week-block')!;
+  expect(offered.querySelector("summary .week-block-head")).not.toBeNull();
+  expect(within(offered).getByRole("button", { name: "Do 11" })).toBeTruthy();
+  expect(table.querySelector('tr[data-line="L04"] .week-block-menu')).toBeNull();
+  cleanup();
+  expect(week("schedules-paused", false).table.querySelector(".week-block-menu")).toBeNull();
 });
