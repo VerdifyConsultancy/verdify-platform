@@ -11,6 +11,7 @@ import { createRoutesStub, useLoaderData, useLocation } from "react-router";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { createFixtureHandler } from "../../e2e/fixture-api.mjs";
 import { REVISION } from "../../e2e/fixtures/world.mjs";
+import { FakeResizeObserver, MockPlot } from "../charts/fixtures/uplot-mock";
 import routes from "../routes";
 import Activity from "../routes/activity";
 import Equipment from "../routes/equipment";
@@ -21,6 +22,7 @@ import Now from "../routes/now";
 import Plan from "../routes/plan";
 import Settings from "../routes/settings";
 import WaterRoute from "../routes/water";
+import WaterBoard from "../routes/water-board";
 import WaterHistory from "../routes/water-history";
 import WaterSchedules from "../routes/water-schedules";
 import { apiWrite } from "../lib/operator-api";
@@ -32,13 +34,24 @@ import { Button } from "./button";
 import { FreshnessDot } from "./freshness";
 import { text } from "./test-render";
 
+// Graphs (#1130) and Water history (#1127's bars) draw charts: uPlot and ResizeObserver are stand-ins here, as in the chart tests.
+vi.mock("uplot", async () => ({ default: (await import("../charts/fixtures/uplot-mock")).MockPlot }));
+
 const NOW = Date.parse("2026-11-02T17:42:00Z");
 const BUILD = "fedcba9876543210fedcba9876543210fedcba98";
-/** Every screen route of app/routes.ts by path, with its component. */
+/** Every screen route of app/routes.ts by path, with its component; Water's three views render inside its layout. */
 const SCREENS = [
-  ["/", Now], ["/graphs", Graphs], ["/graphs/scorecard", Scorecard], ["/plan", Plan], ["/water", WaterRoute], ["/water/schedules", WaterSchedules],
+  ["/", Now], ["/graphs", Graphs], ["/graphs/scorecard", Scorecard], ["/plan", Plan], ["/water", WaterBoard], ["/water/schedules", WaterSchedules],
   ["/water/history", WaterHistory], ["/settings", Settings], ["/activity", Activity], ["/equipment", Equipment], ["/more", More],
 ] as const;
+const WATER_VIEWS: readonly string[] = ["/water", "/water/schedules", "/water/history"];
+/** The screens as the route stub nests them, as app/routes.ts does: the Water views under `routes/water.tsx`. */
+function screenRoutes() {
+  return [
+    ...SCREENS.filter(([to]) => !WATER_VIEWS.includes(to)).map(([to, Component]) => (to === "/" ? { index: true, Component } : { path: to.slice(1), Component })),
+    { path: "water", Component: WaterRoute, children: [{ index: true, Component: WaterBoard }, { path: "schedules", Component: WaterSchedules }, { path: "history", Component: WaterHistory }] },
+  ];
+}
 /** A page with one write control, Stop and a freshness dot and green badge, to see role gating and API down on. */
 function Probe() {
   return <div>
@@ -70,7 +83,7 @@ function serve(fixture: string | string[], { fail }: Options = {}) {
 }
 function mount(path: string, { authError = null, probe = false }: { authError?: AuthError | null; probe?: boolean } = {}) {
   const children = [
-    ...SCREENS.map(([to, Component]) => (to === "/" ? { index: true, Component } : { path: to.slice(1), Component })),
+    ...screenRoutes(),
     { path: "probe", Component: Probe },
     { path: "write", Component: WriteProbe },
     { path: "auth/*", Component: () => null },
@@ -85,11 +98,19 @@ const nav = (label: string) => screen.getByRole("navigation", { name: label });
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(new Date(NOW));
   Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+  MockPlot.reset();
+  vi.stubGlobal("ResizeObserver", FakeResizeObserver);
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 test("the routes: SCR-01 to SCR-07, /more, SCR-09 through /auth/* and a catch-all; no /plants", () => {
-  const paths = routes.map((route) => ("index" in route && route.index ? "/" : `/${route.path}`));
+  // A layout's own path is its index child's: Water's three views nest under routes/water.tsx.
+  type Entry = { path?: string; index?: boolean; children?: Entry[] };
+  const leaves = (entries: readonly Entry[], base = ""): string[] => entries.flatMap((entry) => {
+    const path = entry.index ? base || "/" : `${base}/${entry.path}`;
+    return entry.children?.length ? leaves(entry.children, path) : [path];
+  });
+  const paths = leaves(routes as Entry[]);
   expect(paths).toEqual(["/", "/graphs", "/graphs/scorecard", "/plan", "/water", "/water/schedules", "/water/history", "/settings", "/activity", "/equipment", "/more", "/auth/*", "/*"]);
   expect(paths).not.toContain("/plants");
 });
@@ -102,19 +123,23 @@ test("in band: the shell reads API-01 and API-02 once each, shows no banner, and
     expect(screen.getAllByRole("heading", { level: 1 }), path).toHaveLength(1);
     cleanup();
   }
+  requests = [];
   mount("/"); await advance(0);
-  expect(requests.slice(-2).sort()).toEqual(["/api/v1/me", "/api/v1/now"]);
+  // Now (#1129) reads the shell's API-02 poll, so one request serves both; it adds only its water and alert reads.
+  const shellReads = (path: string) => path === "/api/v1/me" || path === "/api/v1/now";
+  expect(requests.filter(shellReads).sort()).toEqual(["/api/v1/me", "/api/v1/now"]);
+  expect(requests.filter((path) => !shellReads(path)).sort()).toEqual(["/api/v1/alerts?status=open", "/api/v1/irrigation"]);
   // API-02 every 15 s, API-01 every 60 s: one poll each, never a second.
   requests = [];
   await advance(NOW_POLL_MS);
-  expect(requests).toEqual(["/api/v1/now"]);
+  expect(requests.filter(shellReads)).toEqual(["/api/v1/now"]);
   await advance(60_000 - NOW_POLL_MS);
   expect(requests.filter((path) => path === "/api/v1/me")).toHaveLength(1);
 });
 
 test("a server render carries no greenhouse data: no banner, count, role, name or API build, and no request", () => {
   serve("alerts-merged");
-  const Stub = createRoutesStub([{ path: "/", Component: () => <AppShell build={BUILD} authError={null} />, children: SCREENS.map(([to, Component]) => (to === "/" ? { index: true, Component } : { path: to.slice(1), Component })) }]);
+  const Stub = createRoutesStub([{ path: "/", Component: () => <AppShell build={BUILD} authError={null} />, children: screenRoutes() }]);
   const html = renderToString(<Stub initialEntries={["/activity"]} />);
   expect(html).toContain('aria-label="Verdify dashboard, home"');
   expect(html).toContain("fedcba987654");

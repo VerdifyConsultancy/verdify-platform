@@ -458,6 +458,35 @@ def test_fog_block_reasons_cover_stored_db_values() -> None:
         assert decision.fog_block_reason == atom
 
 
+def test_every_firmware_fog_block_word_is_a_known_reason() -> None:
+    """#1161 (F9): fog_force_off_reason() in greenhouse_logic.h now supplies the force-off words of
+    the fog_block_reason ladder, three of them new (sensor_fault, fert_master, water_ceiling). The
+    strict ClimateActionDecision validator refuses any word missing from FOG_BLOCK_REASONS, so a
+    persisted climate_action_log row carrying one cannot be decoded (B16/M8): every word the
+    firmware can publish must be a member before a firmware that emits it is flashed."""
+    logic = (REPO_ROOT / "firmware" / "lib" / "greenhouse_logic.h").read_text()
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+
+    rule = logic[logic.index("inline const char* fog_force_off_reason(") :]
+    rule = rule[: rule.index("\n}\n")]
+    words = set(re.findall(r'return "([a-z_]+)";', rule))
+    assert {"sensor_fault", "occupancy", "fert_master", "irrigation", "resource_budget", "water_ceiling"} <= words
+
+    ladder = controls[
+        controls.index("char fog_block_reason[64];") : controls.index("static char last_fog_block_reason")
+    ]
+    assert "fog_force_off_reason(mode, fog_rails)" in ladder
+    words |= set(re.findall(r'snprintf\(fog_block_reason, sizeof\(fog_block_reason\), "([a-z_]+)"\)', ladder))
+    # The manual HUMID path publishes fog_safety_block_reason()'s word as the ladder's next rung.
+    safety = controls[controls.index("auto fog_safety_block_reason = [&]() -> const char* {") :]
+    safety = safety[: safety.index("};")]
+    words |= set(re.findall(r'return "([a-z_]+)";', safety))
+
+    unknown = sorted(words - set(FOG_BLOCK_REASONS))
+    assert not unknown, f"firmware fog_block_reason words missing from FOG_BLOCK_REASONS: {unknown}"
+    assert "leak_detected" not in words  # Q-05: the leak signal holds no fog
+
+
 def test_planner_mirror_emits_every_canonical_climate_intent_field() -> None:
     """The folded standalone planner (#102) keeps a local ClimateIntent mirror in
     planner_graph/verdify_contract.py. MCP's set_plan path requires every
