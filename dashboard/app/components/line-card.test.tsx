@@ -128,7 +128,7 @@ test("a card reads its program state: REQUESTED with the revision, CONFIRMED by 
   expect(sync({ ...lineOf(rev, "L01"), sync: "requested" }, { program: sending })).toEqual(["requested", "Requestedrev 43 sending"]);
   expect(sync({ ...lineOf(rev, "L01"), sync: "requested" }, { program: undefined })).toEqual(["requested", "RequestedSending"]);
   const refused = { ...rev.program, state: "not_confirmed", revision: 43, reject_code: "bad_line" };
-  expect(sync({ ...lineOf(rev, "L01"), sync: "not_confirmed" }, { program: refused })).toEqual(["not_confirmed", "Not confirmedNot confirmed: the controller refused a line's settings"]);
+  expect(sync({ ...lineOf(rev, "L01"), sync: "not_confirmed" }, { program: refused })).toEqual(["not_confirmed", "Not confirmedNot confirmed: the controller refused a line's settings · retrying at 1, 5 and 15 min"]);
   const before = status("before-engine");
   expect(sync(lineOf(before, "L01"), { engine: false, program: before.program })).toEqual(["requested", "RequestedApplies with the irrigation firmware"]);
   expect(card(lineOf(rev, "L11")).article.querySelector(".line-sync")).toBeNull();
@@ -138,6 +138,10 @@ test("a pause reads before the engine too, since it is stored; fog, which a paus
   const pause = { paused_until: denver("14:00"), paused_by: null, pause_reason: null };
   const before = status("before-engine");
   expect(card({ ...lineOf(before, "L04"), ...pause }, { engine: false }).lines).toContain("Paused until 14:00 · VPD misting continues");
+  cleanup();
+  // Whatever code the API gives it: the state line shows the relay until the engine.
+  const coded = lineOf(before, "L04");
+  expect(card({ ...coded, ...pause, state: { ...coded.state, code: "paused" } }, { engine: false }).lines).toContain("Paused until 14:00 · VPD misting continues");
   cleanup();
   expect(text(card({ ...lineOf(status(), "L11"), ...pause }).article)).not.toContain("Paused");
 });

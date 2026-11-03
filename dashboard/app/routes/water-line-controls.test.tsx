@@ -88,7 +88,7 @@ test("a change the controller refuses reads \"Not confirmed: <reject in words>\"
   await press(within(card("L04")).getByRole("switch", { name: "Enabled L04" }));
   expect(lastWrite(api)?.body).toEqual({ enabled: false, manual: true });
   await settle();
-  expect(sync("L04")).toBe("Not confirmedNot confirmed: the controller refused a line's settings");
+  expect(sync("L04")).toBe("Not confirmedNot confirmed: the controller refused a line's settings · retrying at 1, 5 and 15 min");
 });
 
 test("turning Schedule on for L04 with no check asks for the check; each switch has its own badge; both off reads \"This zone will not mist automatically\"", async () => {
@@ -116,6 +116,42 @@ test("turning Schedule on for L04 with no check asks for the check; each switch 
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(text(zone("L04"))).toContain(WILL_NOT_MIST_TEXT);
   expect(WILL_NOT_MIST_TEXT).toBe("This zone will not mist automatically");
+});
+
+test("a badge follows what changed: a cancelled Schedule press carries none, and a change confirmed earlier does not read REQUESTED again", async () => {
+  open("/water", { fixture: "lines-unchecked" });
+  await load();
+  const mister = () => within(zone("L04"));
+  await press(mister().getByRole("switch", { name: "Schedule L04" }));
+  await press(dialog().getByRole("button", { name: "Cancel" }));
+  expect(flag("L04", "schedule_member")).not.toContain("Confirmed");
+  await press(mister().getByRole("switch", { name: "VPD control L04" }));
+  expect(flag("L04", "vpd_member")).toContain("Requested");
+  expect(flag("L04", "schedule_member")).not.toContain("Requested");
+  await settle();
+  expect(flag("L04", "vpd_member")).toContain("Confirmed");
+  await press(mister().getByRole("switch", { name: "Schedule L04" }));
+  fireEvent.click(dialog().getByRole("checkbox", { name: /^Checked:/ }));
+  await press(dialog().getByRole("button", { name: "Turn on Schedule" }));
+  expect(flag("L04", "schedule_member")).toContain("Requested");
+  expect(flag("L04", "vpd_member")).not.toContain("Requested");
+});
+
+test("a failed status read says so behind an open drawer and leaves what was typed in it, which then saves", async () => {
+  const api = open("/water?check=L02", { fixture: "lines-unchecked" });
+  await load();
+  const note = () => dialog().getByLabelText<HTMLInputElement>("Note (optional)");
+  fireEvent.click(dialog().getByRole("checkbox", { name: /^Checked:/ }));
+  fireEvent.change(note(), { target: { value: "No leaks" } });
+  api.respond({ method: "POST", url: "/__control", body: { fixture: "lines-unchecked", fail: { "API-IRR-01": 503 } } });
+  await advance(15_000);
+  await advance(5);
+  expect(document.querySelector(".line-card")).toBeNull();
+  expect(text(document.body)).toContain("Water status unavailable");
+  expect(note().value).toBe("No leaks");
+  await press(dialog().getByRole("button", { name: "Enable" }));
+  expect(lastWrite(api)?.body).toEqual({ enabled: true, checked: true, check_note: "No leaks", manual: true });
+  expect(screen.queryByRole("dialog")).toBeNull();
 });
 
 test("product J4: L07 disabled and unchecked is enabled with its check, then VPD control and Schedule go on at once; Schedule pressed first asks for that", async () => {

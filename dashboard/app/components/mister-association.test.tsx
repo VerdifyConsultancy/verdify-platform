@@ -146,12 +146,29 @@ test("a refusal shows beside its switch; a viewer sees no switch; with changes o
 });
 
 test("each flag has its own badge from the line's one sync: the one pressed here, or both when nothing was; then CONFIRMED on the pressed one and any that is on", () => {
-  const none = new Set<"vpd_member" | "schedule_member">();
-  const pressedVpd = new Set(["vpd_member"] as const);
+  const none = new Map<"vpd_member" | "schedule_member", boolean>();
+  const pressedVpd = new Map([["vpd_member", false]] as const);
   const requested = { sync: "requested", vpd_member: false, schedule_member: false };
   expect([flagShowsBadge(requested, "vpd_member", none), flagShowsBadge(requested, "schedule_member", none)]).toEqual([true, true]);
   expect([flagShowsBadge(requested, "vpd_member", pressedVpd), flagShowsBadge(requested, "schedule_member", pressedVpd)]).toEqual([true, false]);
   const confirmed = { sync: "confirmed", vpd_member: false, schedule_member: true };
   expect([flagShowsBadge(confirmed, "vpd_member", none), flagShowsBadge(confirmed, "schedule_member", none)]).toEqual([false, true]);
   expect([flagShowsBadge(confirmed, "vpd_member", pressedVpd), flagShowsBadge({ ...confirmed, schedule_member: false }, "schedule_member", pressedVpd)]).toEqual([true, false]);
+});
+
+test("a press the line does not read, a cancelled sheet or a refused write, carries no badge: settled it shows none, settling the switches read as if nothing was pressed", () => {
+  const asked = new Map([["schedule_member", true]] as const);
+  const unchanged = { vpd_member: true, schedule_member: false };
+  expect(flagShowsBadge({ ...unchanged, sync: "confirmed" }, "schedule_member", asked)).toBe(false);
+  expect(flagShowsBadge({ ...unchanged, sync: "confirmed" }, "vpd_member", asked)).toBe(true);
+  expect([flagShowsBadge({ ...unchanged, sync: "requested" }, "vpd_member", asked), flagShowsBadge({ ...unchanged, sync: "requested" }, "schedule_member", asked)]).toEqual([true, true]);
+  // The sheet saved: the line now reads what the press asked for.
+  const saved = { vpd_member: true, schedule_member: true, sync: "requested" };
+  expect([flagShowsBadge(saved, "vpd_member", asked), flagShowsBadge(saved, "schedule_member", asked)]).toEqual([false, true]);
+});
+
+test("not confirmed reads the reject in words and the retries", () => {
+  const from = status();
+  const refused = { ...from, program: { ...from.program, state: "not_confirmed", reject_code: "bad_line" } };
+  expect(zone({ ...lineOf(from, "L04"), sync: "not_confirmed" }, refused).section.querySelector(".state-note")?.textContent).toBe("Not confirmed: the controller refused a line's settings · retrying at 1, 5 and 15 min");
 });

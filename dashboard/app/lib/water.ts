@@ -197,6 +197,11 @@ export const UNAVAILABLE_TEXT = "Water status unavailable.";
 export const NO_ENGINE_TEXT = "No irrigation engine on the controller yet: relay states only; L01 runs, and every line stops, through the bridge";
 export const ROM_TEXT = "Running the built-in program: L04 VPD only, L01 run-now, no schedules";
 export const RETRYING_TEXT = "retrying at 1, 5 and 15 min";
+/** A program item's words beside its badge (screens SCR-04 "Not confirmed"): `programSyncText`, then the retries while the controller refuses it. */
+export function lineSyncWords(sync: string, status: Parameters<typeof programSyncText>[1]): string | null {
+  const text = programSyncText(sync, status);
+  return sync === "not_confirmed" ? `${text} · ${RETRYING_TEXT}` : text;
+}
 
 export type ProgramBannerInput = {
   /** API-IRR-01's newest read failed. */

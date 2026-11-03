@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 import { useId, type ReactNode } from "react";
 import { Link } from "react-router";
-import { CheckSheet } from "../components/check-sheet";
 import { cls } from "../components/common";
 import { useClockValue, useNow } from "../components/freshness";
 import { LineCard } from "../components/line-card";
 import { LineEnable } from "../components/line-enable";
-import { LineOptions, OptionsButton } from "../components/line-options";
+import { OptionsButton } from "../components/line-options";
 import { MisterAssociation } from "../components/mister-association";
 import { PanelError } from "../components/panel";
 import { ResumeLine } from "../components/pause-lines";
@@ -47,8 +46,7 @@ function Section({ title, folded, children }: { title: string; folded: boolean; 
 /**
  * SCR-04 Board (`/water`): the limits strip, the three mister zones and a card per line, from the layout's API-IRR-01
  * read (schedule labels from API-IRR-02). At phone width running lines sort first and the limits and mister zones fold
- * below the cards. A failed status read says "Water status unavailable", never idle. The check sheet and line options
- * open here from the URL (`?check=<line_id>`, `?options=<line_id>`).
+ * below the cards. A failed status read says "Water status unavailable", never idle.
  */
 export default function WaterBoard() {
   const { irrigation } = useWaterOutlet();
@@ -82,7 +80,5 @@ export default function WaterBoard() {
     </section>
     {phone && limits}
     {phone && misters}
-    <CheckSheet lines={status.lines} />
-    <LineOptions lines={status.lines} />
   </div>;
 }

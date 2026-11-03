@@ -72,7 +72,7 @@ test("a time already past would resume, so it is refused beside the field and no
   expect(writes(api)).toEqual([]);
 });
 
-test("Resume all shows only while a wet line is paused and sends {paused_until: <now>} to all, with no manual", async () => {
+test("Resume all shows only while a line is paused and sends {paused_until: <now>} to all, with no manual", async () => {
   const paused = lines().map((row) => (row.line_id === "L04" ? { ...row, paused_until: AT_14 } : row));
   const api = controls("/water", OPERATOR, paused);
   fireEvent.click(screen.getByRole("button", { name: "Resume all" }));
@@ -82,10 +82,13 @@ test("Resume all shows only while a wet line is paused and sends {paused_until: 
   controls("/water", OPERATOR, lines());
   expect(screen.queryByRole("button", { name: "Resume all" })).toBeNull();
   cleanup(); stopFixtureApi();
-  // A pause only on fog, or one that has passed, is no reason to offer it.
-  controls("/water", OPERATOR, lines().map((row) => (row.line_id === "L11" ? { ...row, paused_until: AT_14 } : row)));
-  expect(screen.queryByRole("button", { name: "Resume all" })).toBeNull();
-  cleanup(); stopFixtureApi();
+  // Fog and L03 have no Resume of their own, so what `all` left on them is still `all`'s to clear.
+  for (const id of ["L03", "L11"]) {
+    controls("/water", OPERATOR, lines().map((row) => (row.line_id === id ? { ...row, paused_until: AT_14 } : row)));
+    expect(screen.getByRole("button", { name: "Resume all" })).toBeTruthy();
+    cleanup(); stopFixtureApi();
+  }
+  // One that has passed is no reason to offer it.
   controls("/water", OPERATOR, lines().map((row) => (row.line_id === "L04" ? { ...row, paused_until: "2026-11-02T17:00:00.000Z" } : row)));
   expect(screen.queryByRole("button", { name: "Resume all" })).toBeNull();
 });
@@ -98,6 +101,9 @@ test("Resume on a paused line sends {paused_until: <now>} with no manual; nothin
   expect(writes(api).map((row) => [row.path, row.body])).toEqual([["/api/v1/irrigation/lines/L04", { paused_until: new Date(NOW).toISOString() }]]);
   cleanup();
   renderWithApi(<ResumeLine line={{ line_id: "L04", paused_until: null }} />);
+  expect(screen.queryByRole("button")).toBeNull();
+  cleanup();
+  renderWithApi(<ResumeLine line={{ line_id: "L04", paused_until: AT_14 }} />, { role: "viewer" });
   expect(screen.queryByRole("button")).toBeNull();
 });
 

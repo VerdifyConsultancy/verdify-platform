@@ -74,7 +74,8 @@ export function PauseControls({ lines }: { lines: readonly IrrigationLine[] | un
   const { value, open, close } = useWaterDrawer("pause");
   const resume = useProgramWrite("API-IRR-08");
   const skew = useServerClockSkew();
-  const anyPaused = useClockValue((now) => wetLines(lines ?? []).some((line) => pausedNow(line, now)));
+  // Any line, L03 and fog included: they have no card or Resume of their own, and `all` is what pauses and clears them.
+  const anyPaused = useClockValue((now) => (lines ?? []).some((line) => pausedNow(line, now)));
   if (!operator) return null;
   const target = lines && (value === ALL || wetLines(lines).some((line) => line.line_id === value)) ? value : null;
   return <div className="pause-controls">

@@ -2,8 +2,10 @@
 import { Link, Outlet, useLocation } from "react-router";
 import { Badge } from "../components/badge";
 import { Button } from "../components/button";
+import { CheckSheet } from "../components/check-sheet";
 import { PageHead, cls } from "../components/common";
 import { Ago } from "../components/line-card";
+import { LineOptions } from "../components/line-options";
 import { PauseControls } from "../components/pause-lines";
 import { useIrrigationRead } from "../lib/queries";
 import { useShellNow, useShellStatus } from "../lib/shell";
@@ -54,8 +56,9 @@ function ProgramBanner({ irrigation }: WaterOutlet) {
 /**
  * SCR-04 Water's layout: the page head, the Board, Schedules and History tabs with Stop all water, the program banner
  * with Pause lines…, then the view. It polls API-IRR-01 once for all three views (every 15 s, 5 s while an item settles
- * with the engine on), under the key Now's water card and `useStop` share, and hands it to them. No greenhouse data
- * renders in SSR.
+ * with the engine on), under the key Now's water card and `useStop` share, and hands it to them. The check sheet and
+ * line options open here from the URL, as Pause does, so a failed read that replaces the Board with its error leaves an
+ * open drawer and what was typed in it. No greenhouse data renders in SSR.
  */
 export default function Water() {
   const irrigation = useIrrigationRead();
@@ -71,5 +74,7 @@ export default function Water() {
       <PauseControls lines={irrigation.data?.lines} />
     </div>
     <Outlet context={context} />
+    {irrigation.data && <CheckSheet lines={irrigation.data.lines} />}
+    {irrigation.data && <LineOptions lines={irrigation.data.lines} />}
   </div>;
 }

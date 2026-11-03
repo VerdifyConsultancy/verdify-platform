@@ -4,8 +4,7 @@ import { Link } from "react-router";
 import { causeWords } from "../charts/causes";
 import { localTime } from "../lib/format";
 import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
-import { agoWords, faultWords, lastWaterWords, nextRunWords, pauseWords, timeLeftWords, todayWords } from "../lib/water";
-import { programSyncText } from "../lib/writes";
+import { agoWords, faultWords, lastWaterWords, lineSyncWords, nextRunWords, pauseWords, timeLeftWords, todayWords } from "../lib/water";
 import { Badge, ChemistryBadge, EquipmentStateBadge, LineStateBadge, ReadbackBadge, lineChemistry } from "./badge";
 import { LocalTime, cls } from "./common";
 import { useClockValue, useNow } from "./freshness";
@@ -63,20 +62,21 @@ export function LineStateText({ line, engine, today, scheduleLabels }: { line: I
 }
 
 /** A pause the state line does not already show: VPD misting can run on a paused zone. */
-function PauseNote({ line, today }: { line: IrrigationLine; today: string }) {
+function PauseNote({ line, engine, today }: { line: IrrigationLine; engine: boolean; today: string }) {
   const until = line.paused_until;
   const ahead = useClockValue((now) => validTime(until) && Date.parse(until) > now);
-  if (line.state.code === "paused" || !ahead) return null;
+  // Before the engine the state line shows the relay, so a stored pause says itself here whatever the code.
+  if ((engine && line.state.code === "paused") || !ahead) return null;
   return <p className="line-note">{pauseWords(line, today)}</p>;
 }
 
 /**
  * Whether the controller has the program that carries this line (screens §1.4 P), for every role: REQUESTED with "rev 43
  * sending", or "Applies with the irrigation firmware" before the engine; CONFIRMED by the program hash; "Not confirmed:
- * <reject in words>" after 5 min.
+ * <reject in words> · retrying at 1, 5 and 15 min" after 5 min.
  */
 function LineSync({ line, engine, program }: { line: IrrigationLine; engine: boolean; program?: IrrigationStatus["program"] }) {
-  const words = programSyncText(line.sync, { engine, program });
+  const words = lineSyncWords(line.sync, { engine, program });
   return <div className="line-sync" data-sync={line.sync}><ReadbackBadge state={line.sync} />{words && <span className="state-note">{words}</span>}</div>;
 }
 
@@ -132,7 +132,7 @@ export function LineCard({ line, master = null, engine, program, today, schedule
     {!engine && !fog && <p className="line-note">{BEFORE_ENGINE_TEXT}</p>}
     {!fog && <LineSync line={line} engine={engine} program={program} />}
     {engine && <FaultLine line={line} today={today} />}
-    {!fog && <PauseNote line={line} today={today} />}
+    {!fog && <PauseNote line={line} engine={engine} today={today} />}
     <p>{lastWaterWords(line, today)}</p>
     <p>{todayWords(line)}</p>
     {next && <p>{next}</p>}
