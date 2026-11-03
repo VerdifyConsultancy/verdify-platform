@@ -1,18 +1,70 @@
 {
   "migration": "285-daily-scorecard-view.sql",
   "exact_final_migration_sha256": "89db770e96f030d2836fe033dce035e8c244d7b08a52c7f6ac378f5526c9ca77",
-  "final_migration_qualification_pending": true,
-  "before": null,
+  "final_migration_qualification_pending": false,
+  "before": {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
+  },
   "projected_successor": {
     "api": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
     "ingestor": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
     "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
   },
   "projection": "2026-11-02, before any measurement: VD-56 had no production access. Every literal in the file's successor block and its registrations is a stand-in taken from 284's measured registration. All three seals are expected to stay 284's. fn_runtime_ordinary_boundary_digest (217) takes in a relation only if the api or ingestor login can reach it, one of their roles owns it, 217 protects it by name, or PUBLIC or one of their roles holds an ACL entry on it. fn_mcp_runtime_boundary_digest (263) does the same for PUBLIC and the MCP roles. A view whose only grant is verdify_dashboard_runtime's SELECT meets none of these, 285 changes no other ACL, and fn_solar_phase keeps 217's exact PUBLIC EXECUTE, so neither digest's input changes. If the probe shows any digest moved, stop: that is a finding, not a literal to update, because the file re-seals no receipt. Otherwise run the full qualification with --native-fixture; no literal changes and the file's sha stays.",
-  "qualified_successor": null,
-  "after_rollback": null,
-  "inside_transaction_receipts_match": false,
-  "final_migration_rollback_verified": false,
-  "native_fixture_sha256": "591f83a59ab4a6610b52027e74ad6c0286c4795cbb1f2bafd4130ca46c77d97f",
-  "native_fixture": null
+  "qualified_successor": {
+    "api": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
+    "ingestor": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "after_rollback": {
+    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
+    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "mcp": "9cb30130e47e95af13af14f2fc08c89e2422e89e14bd3b448e4448849ab194b3"
+  },
+  "inside_transaction_receipts_match": true,
+  "final_migration_rollback_verified": true,
+  "measured_at": "2026-11-03T00:53:22Z",
+  "native_probe_source_sha256": "a7291ead50267100e9489faa1fd26cf4dd7018889f6c0324a7717590f14ef4cc",
+  "qualification_source_sha256": "d46439e0f9239fd337b364bd315f47111107c34eedbabe04b06f0dc90cd46ee6",
+  "applied_first": [
+    {
+      "migration": "283-irrigation-tables.sql",
+      "seq": 283,
+      "sha256": "0b07a5042edc29cb90da4c800da6514e47517240d765c0da0217b68cc7fe92c2"
+    },
+    {
+      "migration": "284-dashboard-runtime-grants.sql",
+      "seq": 284,
+      "sha256": "559d8260ec7138a3bec502f7b29f50587f6a752cc5144fa31e15b406c4ddcaf4"
+    }
+  ],
+  "applied_first_seals": {
+    "api": "03d2a7ce5efd2eecee965672175585bad43194b5fea85d99739efe70e01a81a8",
+    "ingestor": "c571ff1bdc212ca84815718406aaa6b7242ba9f86a2727d3855168dcd4ed81ad",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "native_fixture": {
+    "checks": [
+      "one_row_per_day",
+      "compliance_copied",
+      "reasons_complete",
+      "counts_not_negative",
+      "read_within_5_s",
+      "grant_exact",
+      "dashboard_login_attests",
+      "dashboard_login_reads_every_column",
+      "solar_phase_through_public"
+    ],
+    "days": 31,
+    "split_days": 0,
+    "null_gallon_days": 7,
+    "read_ms": 601,
+    "all_passed": true,
+    "attested": {
+      "dashboard": true
+    }
+  },
+  "native_fixture_sha256": "591f83a59ab4a6610b52027e74ad6c0286c4795cbb1f2bafd4130ca46c77d97f"
 }
