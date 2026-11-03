@@ -46,6 +46,7 @@ from verdify_schemas.tunable_registry import (  # noqa: E402
 T0 = datetime(2026, 11, 2, 12, 0, tzinfo=UTC)
 SAFETY_READBACKS = {"safety_max": 100.0, "safety_min": 40.0}
 SITE_PRESSURE = "site_pressure_hpa"
+FORECAST_PLAN = "preemptive-20261102-1159"
 
 
 @dataclass(frozen=True)
@@ -169,12 +170,19 @@ class Database:
         self.clamp_rows: list[dict] = []
         self.alert_types: list[str] = []
 
-    def set_plan(self, param: str, value: float, created_at: datetime, trigger_id: str | None = None) -> None:
+    def set_plan(
+        self,
+        param: str,
+        value: float,
+        created_at: datetime,
+        trigger_id: str | None = None,
+        plan_id: str = "iris-vd33",
+    ) -> None:
         self.plan[param] = {
             "parameter": param,
             "value": value,
             "ts": created_at,
-            "plan_id": "iris-vd33",
+            "plan_id": plan_id,
             "reason": "test",
             "created_at": created_at,
             "trigger_id": trigger_id,
@@ -985,6 +993,84 @@ async def test_a_held_desired_value_is_not_fenced_until_the_hold_ends(env, monke
     await env.run_pass()
     assert [(sent.param, sent.value) for sent in env.controller.sent] == [(knob.param, limit)]
     assert [(row["parameter"], row["applied"]) for row in env.db.clamp_rows] == [(knob.param, limit)]
+
+
+# ── VD-65: a forecast-rule plan row, off the NOTIFY fast path ─────────────────
+
+
+@pytest.mark.asyncio
+async def test_a_manual_row_beats_a_newer_forecast_rule_row(env):
+    """heat_misting never pushes a MANUAL mister_pulse_on_s to another value (US-SET-04)."""
+    param = "mister_pulse_on_s"
+    connect(env, KNOBS[:1], **{param: 45.0})
+    env.db.write(param, 45.0, manual=True, at=T0 - timedelta(hours=1))
+    env.db.set_plan(param, 90.0, created_at=T0 - timedelta(minutes=1), plan_id=FORECAST_PLAN)
+    await env.run_pass()
+    await settle(env)
+    assert env.controller.sent == [] and env.db.rows_for(param) == [] and env.db.clamp_rows == []
+
+
+@pytest.mark.asyncio
+async def test_a_non_manual_row_loses_to_a_newer_forecast_rule_row(env):
+    param = "mister_pulse_on_s"
+    connect(env, KNOBS[:1], **{param: 45.0})
+    env.db.write(param, 60.0, manual=False, at=T0 - timedelta(hours=1))
+    env.db.set_plan(param, 90.0, created_at=T0 - timedelta(minutes=1), plan_id=FORECAST_PLAN)
+    await env.run_pass()
+    assert [(sent.param, sent.value, sent.desired) for sent in env.controller.sent] == [(param, 90.0, False)]
+    assert env.db.rows_for(param)[0]["source"] == "plan"
+
+
+@pytest.mark.asyncio
+async def test_a_forecast_rule_row_reaches_a_writable_switch_that_is_not_planner_pushable(env):
+    """high_wind: sw_economiser_enabled goes out with source plan, under no misleading audit row."""
+    param = "sw_economiser_enabled"
+    assert param not in PLANNER_PUSHABLE_REG and desired_write_rule(param)[0]
+    connect(env, KNOBS[:1], **{param: 1.0})
+    env.db.set_plan(param, 0.0, created_at=T0 - timedelta(minutes=1), plan_id=FORECAST_PLAN)
+    await env.run_pass()
+    assert [(sent.param, sent.value, sent.desired) for sent in env.controller.sent] == [(param, 0.0, False)]
+    assert env.db.rows_for(param)[0]["source"] == "plan"
+    assert env.db.clamp_rows == []
+
+
+@pytest.mark.asyncio
+async def test_a_forecast_rule_value_passes_the_fences_with_its_clamp_recorded(env, monkeypatch):
+    """Before VD-65 the fences never saw a non-pushable plan value: the later loop sent it raw."""
+    knob = next(knob for knob in KNOBS if knob.param not in PLANNER_PUSHABLE_REG)
+    connect(env, [knob])
+    limit = _between(knob, knob.device, knob.plan)
+    upper = knob.plan > knob.device
+    monkeypatch.setitem(dispatcher._PHYSICS_INVARIANTS, knob.param, (None, limit) if upper else (limit, None))
+    env.db.set_plan(knob.param, knob.plan, created_at=T0 - timedelta(minutes=1), plan_id=FORECAST_PLAN)
+    await env.run_pass()
+    assert [(sent.param, sent.value) for sent in env.controller.sent] == [(knob.param, limit)]
+    assert env.db.rows_for(knob.param)[0]["source"] == "plan"
+    side = "above" if upper else "below"
+    assert [(row["parameter"], row["reason"], row["applied"], row["plan_id"]) for row in env.db.clamp_rows] == [
+        (knob.param, f"invariant_violation:{side}_{limit}", limit, FORECAST_PLAN)
+    ]
+
+
+@pytest.mark.asyncio
+async def test_a_forecast_rule_row_for_a_read_only_setting_never_reaches_the_controller(env):
+    """bias_cool is the retired target of the disabled test_trigger rule: the fences cannot see it, so nothing goes out."""
+    param = "bias_cool"
+    assert not desired_write_rule(param)[0] and param not in _common.RETIRED_UNROUTABLE_PARAMS
+    connect(env, KNOBS[:1])
+    env.db.set_plan(param, 1.0, created_at=T0 - timedelta(minutes=1), plan_id=FORECAST_PLAN)
+    await env.run_pass()
+    assert env.controller.sent == [] and env.db.rows_for(param) == []
+    assert [(row["parameter"], row["reason"]) for row in env.db.clamp_rows] == [(param, "planner_param_not_pushable")]
+
+
+@pytest.mark.asyncio
+async def test_an_iris_row_for_a_writable_switch_keeps_the_planner_filter(env):
+    param = "sw_economiser_enabled"
+    connect(env, KNOBS[:1], **{param: 1.0})
+    env.db.set_plan(param, 0.0, created_at=T0 - timedelta(minutes=1))
+    await env.run_pass()
+    assert [(row["parameter"], row["reason"]) for row in env.db.clamp_rows] == [(param, "planner_param_not_pushable")]
 
 
 # ── Pure helpers ──────────────────────────────────────────────────────────────
