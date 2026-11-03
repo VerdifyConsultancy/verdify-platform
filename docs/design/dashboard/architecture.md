@@ -294,7 +294,7 @@ dispatcher, the API's `applied_from` and the services resolve a setting the same
   goes after every value not yet sent, and the dispatcher wakes itself only while a value not yet sent is left
   over, so values the controller never takes cannot keep it waking. The stuck alert stays open while any setting
   differs, across an ingestor restart too. Each change of stage is one `system_state` row, entity
-  `dispatcher_stage`: `ordinary`, `paced <sent>/<pending>` or `held:<c1|heap|lease|drift_probe>`.
+  `dispatcher_stage`: `ordinary`, `paced <sent>/<pending>` or `held:<c1|heap|lease|drift_probe|readbacks>`.
 - **Fences unchanged:** registry clamp (`_coerce_registry_value`), physics invariants (`_validate_physics`),
   the VPD-high moisture guardrails (clamps recorded in `setpoint_clamps`), heap deferral, the writer Lease and
   `VERDIFY_DEVICE_WRITE_ENABLED`.

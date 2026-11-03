@@ -53,7 +53,7 @@ new last-good image automatically.
 
 ## Signed flash procedure
 
-The order the engine release used on 2026-11-03. `make firmware-deploy`,
+The procedure the engine release followed on 2026-11-03. `make firmware-deploy`,
 `make firmware-rollback` and `scripts/firmware-rollback.sh` are not part of it:
 they need a host with `firmware/artifacts`, esphome and the OTA secret, and the
 rollback target flashes `last-good`, which need not be the release that ran last.
@@ -83,13 +83,18 @@ of connect.
 
 ```sh
 python3 scripts/firmware-release-job.py verify --revision "$CAND_REV" --expected "$CAND_MANIFEST" --name JOB_NAME --submit
-python3 scripts/firmware-release-job.py verify --revision "$RB_REV" --expected "$RB_MANIFEST" --name OTHER_JOB_NAME --submit
+k wait job/JOB_NAME --for=condition=Complete --timeout=180s
 k logs job/JOB_NAME -c flash-reviewed-artifact
+# Then the same for "$RB_REV" and "$RB_MANIFEST", under another Job name.
 ```
 
 Each must print `verified_artifact_bytes: true`, `device_contact: false` and the
 receipt's version and manifest. A difference is a stop. The artifacts PVC is RWO,
 so no flash Job may start until these pods have finished.
+
+`$RV` must be what the controller runs now, or the parity check below says nothing
+about the connected image. `python3 scripts/firmware-release-job.py pin
+--firmware-version "$RV"`, without `--submit`, refuses anything else and writes nothing.
 
 ### 2. Credential parity and rollback bytes
 
@@ -182,7 +187,7 @@ flow by up to about 2 minutes. Record `u0` as U0, and the full row in the receip
 ```sh
 python3 scripts/firmware-release-job.py flash --revision "$CAND_REV" --expected "$CAND_MANIFEST" --name JOB_NAME      # inspect only
 python3 scripts/firmware-release-job.py flash --revision "$CAND_REV" --expected "$CAND_MANIFEST" --name JOB_NAME --submit
-k logs -f job/JOB_NAME -c flash-reviewed-artifact
+k logs -f job/JOB_NAME -c flash-reviewed-artifact    # retry until the init containers finish
 ```
 
 This is the only device write. If `--submit` errors, run `k get job JOB_NAME`
@@ -260,7 +265,7 @@ and erases its fallback slot, so a speculative one gives up any automatic revert
 | Trigger | Threshold |
 |---|---|
 | Crash | `reset_reason` Task WDT, Guru/Panic, Interrupt WDT or Other WDT |
-| Resets | Two or more further resets in 30 minutes, or a Software reset in the first 60 minutes without about 300 s of silence before it. One after that silence fits `reboot_timeout`: re-baseline B |
+| Resets | Two or more further resets in 30 minutes, or a Software reset in the first 60 minutes without about 300 s of silence before it. One after that silence fits `reboot_timeout`: re-baseline B. One Power-on, Brown-out or External reset is site power or a person: confirm the relays read OFF, re-baseline B, and roll back only if it repeats |
 | Heap | `heap_bytes` under 30 KB on 3 consecutive rows, or largest block under 16 KB on 5, after uptime 300 s. Under 15 KB on any row in the first 60 minutes |
 | Loop | Two consecutive `heap_profile` lines with `floor=FAIL`, `loop_15m_overruns` above 0 or `loop_15m_max` above 250 ms |
 | Probes | `active_probe_count` below its pre-flash value for 10 minutes. `temp_avg` or `rh_avg` NULL for 5 minutes after B+10 |
@@ -270,6 +275,14 @@ and erases its fallback slot, so a speculative one gives up any automatic revert
 | Log | `Blocked ungranted`, `Blocked center_mister`, `Mister watchdog`, `Heap-guard`, `ALL probes silent` or `No probe update` |
 | Sweep | A FAIL that survives one re-run with the device connected |
 | Dark | No diagnostics row for 10 minutes in the first hour, or 30 minutes after it, with the ingestor heartbeat fresh and the ingestor retrying |
+
+An unattended session sends the Stop as a direct row, because the operator API admits
+only the dashboard's server: `scripts/verdify-db.sh prod -c "INSERT INTO
+public.irrigation_command (kind, source, actor, reason) VALUES ('stop', 'system',
+'flash-operator', 'post-flash water check') RETURNING command_id, status"`. `source` must
+match the actor pattern or the ingestor drops the row. Read it back within 30 s: status
+`sent`, and an OFF row for each relay in `args.relays_on`. A Stop needs a connected
+writer, disables nothing and does not cover L11 fog.
 
 Telemetry silence inside those limits is not a trigger. No attempt runs inside an
 announced network window. Confirm no flasher Job is active, read the wet gate

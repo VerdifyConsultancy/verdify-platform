@@ -52,7 +52,7 @@ source-derived desired-policy path.
 
 ### Measured consumed-evidence firmware successor
 
-The source consumer now binds firmware `2026.10.2.0637.620a218a-wifi-bound`,
+The source consumer then bound firmware `2026.10.2.0637.620a218a-wifi-bound`,
 compiled from frozen source `620a218a93cf24ca1e1b49dfed617cc97de7d258`.
 Its measured ELF SHA256 is
 `39a237cfb044e72633d52646c203d27b1217ba9f9de3d4a8308798b1b7a96b5b`;
@@ -84,8 +84,9 @@ with the same GCC 14.2 (manifest
 `777bdb886a29791c4113ba98a67d81f13ac88db78ae3ce0ef156113524a037b0`, OTA binary
 `8d7621bdfed03a729df4e164c97d038ba74578062273c75b2dd794bddd791e79`). The move
 rests on source identity: `firmware/lib/greenhouse_solar.h` is byte-identical to
-620a218a's, and the differential above still passes against it. It is not a
-physical qualification claim. `TARGET_ELF_SHA256` still names 620a218a's ELF,
+620a218a's, the solar and band expressions in `firmware/greenhouse/controls.yaml`
+are unchanged, and the differential above still passes. It is not a physical
+qualification claim. `TARGET_ELF_SHA256` still names 620a218a's ELF,
 the last one whose instructions were inspected. To move it, read `elf_sha256`
 from a verify Job's log (`docs/runbooks/firmware-signed-artifacts.md`), repeat
 the instruction inspection on that ELF, then change the constant and this section.
