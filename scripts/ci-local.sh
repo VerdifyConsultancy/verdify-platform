@@ -243,6 +243,7 @@ $PY -m pytest -q -rs \
   tests/test_api_deferred_batch_patch.py \
   tests/test_api_overflow_patch.py tests/test_api_heap_owner_counters.py tests/test_api_iterator_backpressure.py \
   tests/test_sensor_health_modbus_native.py \
+  tests/test_sensor_health_sweep.py \
   tests/test_probe_diagnostics_native.py \
   tests/test_policy_relay_dwell_refresh.py \
   tests/test_firmware_builder_image.py \
