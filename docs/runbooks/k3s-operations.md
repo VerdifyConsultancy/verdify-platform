@@ -143,6 +143,10 @@ secrets. The procedure and its traps:
     192.168.10.0/24); `wifi_password` ← that WLAN's passphrase in the fleet net
     audit (`~/Agents/nexus/state/net-audit-*/raw/wlanconf.json` on the laptop;
     re-home this into a k8s Secret for k3s).
+- **Wet relays during an upload (#1276):** the upload blocks the main loop, so once
+  the password check passes `ota.on_begin` closes every wet relay (L01-L10 and fog).
+  Fans, vent and heat keep their state until the reboot. The running image owns the
+  hook, so it protects uploads from the flash after the one that installs it.
 - **The post-OTA DB backend:** `make firmware-deploy` now passes its
   `FIRMWARE_DB_BACKEND` (default `kube`) through preflight, version wait, and
   both sensor-health sweeps. Older checkouts did not and could roll back a

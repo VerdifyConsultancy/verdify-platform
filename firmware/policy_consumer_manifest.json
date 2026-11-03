@@ -1867,7 +1867,7 @@
         },
         {
           "file": "firmware/greenhouse.yaml",
-          "line": 511,
+          "line": 530,
           "category": "boot_or_diag",
           "access": "read",
           "migrated_to_snapshot": true

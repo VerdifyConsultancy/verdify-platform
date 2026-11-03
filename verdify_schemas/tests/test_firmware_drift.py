@@ -823,6 +823,21 @@ def test_engine_counts_degraded_sensing_only_after_its_grace():
     assert ".sensor_degraded = !avg_ok," in code
 
 
+def test_ota_on_begin_closes_every_wet_relay():
+    """#1276: the upload blocks the main loop, so every wet relay (L01-L10 and fog) closes in on_begin, L03
+    last as the engine does it, and only those: fans, vent and heat keep their state through an upload."""
+    lines = (REPO_ROOT / "firmware" / "greenhouse.yaml").read_text().splitlines()
+    start = lines.index("ota:") + 1
+    end = next(i for i in range(start, len(lines)) if lines[i] and not lines[i].startswith((" ", "#")))
+    code = [row.strip() for row in lines[start:end] if row.strip() and not row.strip().startswith("#")]
+    assert code[:4] == ["- platform: esphome", "password: !secret ota_password", "on_begin:", "then:"]
+    actions = code[4:]
+    assert all(action.startswith("- switch.turn_off: ") for action in actions), "no delay, no other action"
+    closed = [action.removeprefix("- switch.turn_off: ") for action in actions]
+    assert sorted(closed) == sorted([*WET_RELAY_LINES, "fog_rly"])
+    assert closed[-1] == "fertilizer_master_valve"
+
+
 def test_engine_program_and_claims_save_then_sync():
     """F2 and §4.7 (#1160): a committed push is saved to NVS and synced before it can run, and the
     claims record the engine journals before a relay opens is saved then synced (irr_commit_claims()

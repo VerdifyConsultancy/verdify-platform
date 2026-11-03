@@ -289,6 +289,25 @@ api:
 ota:
   - platform: esphome
     password: !secret ota_password
+    # The upload blocks the main loop, so no pulse timer, engine tick or watchdog runs until the
+    # reboot or an abort: a relay left ON stays ON, and its time is not counted (#1276). This runs
+    # after the password check and before the flash is touched. Close every wet relay (L01-L10 and
+    # fog, kWetMask), L03 last as the engine does, with no delay: nothing after a delay would run.
+    # After a good upload on_boot forces them off again; after an abort the engine reopens what its
+    # run still wants, under its grant. Fans, vent and heat are not wet and keep their state.
+    on_begin:
+      then:
+        - switch.turn_off: center_mister
+        - switch.turn_off: south_wall_mister
+        - switch.turn_off: south_wall_mister_fertilized
+        - switch.turn_off: west_wall_mister
+        - switch.turn_off: west_wall_mister_fertilized
+        - switch.turn_off: fog_rly
+        - switch.turn_off: wall_drips
+        - switch.turn_off: wall_drips_fertilized
+        - switch.turn_off: center_drips
+        - switch.turn_off: center_drips_fertilized
+        - switch.turn_off: fertilizer_master_valve
 
 # ───────────────────────── TIME / CONTROLLER CLOCK ─────────────────────────
 time:

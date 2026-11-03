@@ -545,6 +545,11 @@ validation can be) is left out and reported the same way, so one bad row never b
 **Heap.** The release adds 5 services, 3 text sensors and a 584 B program held in RAM and NVS, with
 static 256 B buffers. It removes about 70 entities (F12, F13). Free heap goes up.
 
+**Upload.** The OTA upload blocks the main loop, so no pulse timer, engine tick or watchdog runs until
+the reboot or an abort. `ota.on_begin` in `firmware/greenhouse.yaml` closes every wet relay before the
+upload starts, L03 last (#1276). The running image owns that hook, so it protects uploads from the flash
+after the one that installs it.
+
 **Ship.** Use `make firmware-deploy`. It compiles the image on the host that runs it, so where it runs
 follows Q-11 in [decisions](decisions.md): no exception is assumed, R3 asks Jason before it runs, and
 nothing is compiled on the Mac until he answers. If the preflight's weekly or 48-hour rule blocks a
