@@ -125,5 +125,6 @@ KUBECONFIG=/path/to/verdify-agent.config scripts/k3s-smoke.sh device-monitor
 Set `API_BUILD_SHA` and `API_DIGEST` from the reviewed API build and Git pin
 receipt before running smoke. It checks exact API source and running digest,
 fresh climate/action data and complete cfg readbacks, authenticated MCP tools,
-DB health, and the operator API (Ready, the same digest, `/readyz` at that source). `device-monitor` checks that exactly one pod holds the ESP32
-native API connection.
+DB health, and the operator API (Ready, the same digest, `/readyz` at that
+source). `device-monitor` checks that exactly one pod holds the ESP32 native API
+connection.

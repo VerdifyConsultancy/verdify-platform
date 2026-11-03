@@ -124,6 +124,9 @@ kubectl -n verdify-dashboard exec deploy/verdify-dashboard-web -- node -e \
   `verdify-db-0` log names which one. `TooManyConnectionsError` means the login's `CONNECTION LIMIT 8` is used up.
   `TimeoutError` or a connection error points at `verdify-db` or the network path. A pod that exits at start with a
   `ConfigError` names the setting it refused.
+- In a `verdify-prod-dark` sync this Deployment is the last wave (50). A pod that does not turn Ready ends that sync
+  Failed once the Deployment passes its 10-minute progress deadline, with everything else applied, MCP and the ingestor
+  included. During a rollout the old pod keeps serving (`maxUnavailable` 0).
 - `/healthz` from the web pod timing out points at `allow-operator-api-from-dashboard-web` in `verdify-prod`. It
   admits TCP 8090 only from pods labelled `app.kubernetes.io/name: verdify-dashboard-web` in namespace
   `verdify-dashboard`, so a label change on either side breaks it.

@@ -55,8 +55,8 @@ Do all three steps. The first two stop new sign-ins, but an open session keeps w
 because the operator API checks the session row and not Authentik.
 
 1. Remove the user from both dashboard groups.
-2. Deactivate the user (Directory → Users). This ends their access to every Authentik application, so for someone who
-   keeps other apps, skip this step.
+2. Deactivate the user (Directory → Users). This ends their access to every Authentik application, so if they keep
+   other apps, Jason decides whether it stays active; the first step alone already denies the dashboard at Authentik.
 3. Delete their sessions with the command above. They end within 30 s.
 
 Writes they made stay in Activity under their name.
