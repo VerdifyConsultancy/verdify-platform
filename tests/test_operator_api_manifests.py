@@ -200,6 +200,20 @@ def test_in_prod_it_runs_the_verdify_api_release_digest(prod):
     assert one(prod, "NetworkPolicy", POLICY)["metadata"]["namespace"] == "verdify-prod"
 
 
+def test_in_prod_the_operator_api_syncs_after_everything_else_with_no_pod_template_churn(prod):
+    # Argo stops at a wave that does not turn Healthy: an operator API that cannot start must hold nothing else.
+    annotation = "argocd.argoproj.io/sync-wave"
+    operator = one(prod, "Deployment", NAME)
+    others = [
+        int(annotations.get(annotation, "0"))
+        for doc in prod
+        if doc is not operator
+        and "argocd.argoproj.io/hook" not in (annotations := doc["metadata"].get("annotations") or {})
+    ]
+    assert int(operator["metadata"]["annotations"][annotation]) > max(others)
+    assert annotation not in (operator["spec"]["template"]["metadata"].get("annotations") or {})
+
+
 def test_in_prod_allow_db_from_app_admits_the_operator_api(prod):
     labels = one(prod, "Deployment", NAME)["spec"]["template"]["metadata"]["labels"]
     policy = one(prod, "NetworkPolicy", "allow-db-from-app")["spec"]

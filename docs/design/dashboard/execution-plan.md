@@ -164,7 +164,10 @@ bridge), Iris's context (VD-60), the L01 bridge (VD-64) and the MCP tools: `set_
 VD-58 (it reaches the device once VD-33 is live) and the irrigation write tools after VD-61. A new Secret reference
 reaches `overlays/prod` only in the release issue that waits for its sealing (VD-26's wiring PR) or as an optional
 reference that a missing Secret leaves idle (VD-70's hydro key), and a retired Secret leaves the role bootstrap before
-it leaves KSOPS.
+it leaves KSOPS. VD-26's wiring PR is the one render that needs its own promotion: until the promoted api and migrate
+digests contain the operator API and the login's bootstrap entry, the operator API cannot turn Ready, so a sync in that
+window ends Failed at wave 50, its last, with everything else applied and no device effect. The wiring PR, its promotion
+and the sync therefore run in one attended session.
 
 | Release | Issue | Waits for | Live check |
 |---|---|---|---|

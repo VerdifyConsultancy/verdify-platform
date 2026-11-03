@@ -162,4 +162,5 @@ writes flag instead.
 
 `verdify-prod` (the operator API, migrations and the tier-1 route) rolls back separately, through a digest-only
 `release-pins.yaml` commit to the promotion receipt's rollback pins and the gated full sync
-(`docs/runbooks/prod-promotion.md`).
+(`docs/runbooks/prod-promotion.md`; AGENTS.md "Rollback" says what an API pin from before #1148 does to the operator
+API).
