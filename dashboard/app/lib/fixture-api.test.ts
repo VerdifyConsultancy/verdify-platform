@@ -316,6 +316,46 @@ test("API-19: current is the band as stored, which API-10 moves and API-11 leave
   expect(preview(1.25).body.current.target[noon]).toBe(1.25);
 });
 
+test("#1140's fixtures: the reasons, the lights' answers and readbacks, and 90 days of water", () => {
+  const set = (name: string | string[]) => fixture(name, { now: NOW });
+  expect(set("why-reasons")["API-13"]).toMatchObject({
+    mode_reason: { code: "temp_high", since: "2026-11-01T20:40:00.000Z" }, fog_block_reason: { code: "rh_ceiling", since: "2026-11-02T16:12:00.000Z" }, moisture_block_reason: { code: "no_vpd_demand", since: "2026-11-02T14:12:00.000Z" },
+  });
+  expect(set("why-unknown-code")["API-13"].mode_reason.code).toBe("brand_new_code");
+  // Not reporting: no code or since on any reason, and the newest row's time stays.
+  const quiet = set("controller-not-reporting")["API-13"];
+  for (const name of ["mode_reason", "fog_block_reason", "moisture_block_reason"]) expect(quiet[name], name).toMatchObject({ code: null, since: null, observed_at: expect.any(String) });
+  expect(set("lights-intent-unknown")["API-13"].items.filter((item: Body) => item.group === "light").map((item: Body) => [item.intent, item.state])).toEqual([[null, "off"], [null, "off"]]);
+
+  const lights = handler("lights-confirmed");
+  const main = () => (at(lights, "GET", "/v1/equipment").body.items as Body[]).find((item) => item.equipment === "grow_light_main");
+  expect(main()).toMatchObject({ intent: "off", state: "off" });
+  expect(at(lights, "POST", "/api/v1/equipment/lights/main/on", undefined, KEY)).toMatchObject({ status: 200, body: { light: "main", state: "on", result: "confirmed" } });
+  expect(main()).toMatchObject({ intent: "off", state: "on" });
+  expect((at(lights, "GET", "/v1/activity").body.items as Body[])[0]).toMatchObject({ action: "light.on", target: "grow_light_main", actor: { source: "dashboard", name: "jason" }, detail: { light: "main", state: "on", result: "confirmed" } });
+
+  for (const [name, result] of [["lights-ha-fail", "ha_failed"], ["lights-not-confirmed", "not_confirmed"]]) {
+    const failing = handler(name);
+    expect(at(failing, "POST", "/v1/equipment/lights/main/on").body, name).toMatchObject({ status: 503, code: "unavailable", retryable: true, result });
+    expect((at(failing, "GET", "/v1/equipment").body.items as Body[]).find((item) => item.equipment === "grow_light_main"), name).toMatchObject({ state: "off" });
+    // The call is still logged, with what came of it.
+    expect((at(failing, "GET", "/v1/activity").body.items as Body[])[0], name).toMatchObject({ action: "light.on", detail: { result } });
+  }
+
+  const days = set("water-use-90d")["API-21"].days as Body[];
+  expect(days).toHaveLength(90);
+  const ago = (count: number) => days[days.length - 1 - count];
+  expect(ago(0).coverage).toBe("partial");
+  expect(ago(9)).toEqual({ date: "2026-10-24", coverage: "no_data", meter_gal: null, by_line: null, by_cause: null, no_valve_gal: null });
+  expect(ago(4)).toMatchObject({ coverage: "complete", meter_gal: 0, by_line: {}, by_cause: {}, no_valve_gal: 0 });
+  expect(ago(6)).toMatchObject({ coverage: "complete", meter_gal: 20, by_line: { L04: 4, L11: 2 }, by_cause: { vpd: 6 }, no_valve_gal: 14 });
+  expect(days.filter((day) => day.coverage === "no_data")).toHaveLength(1);
+  // The same fixture answers the 30-day chip, with those days inside it.
+  const window = at(handler("water-use-90d"), "GET", "/v1/water/daily?days=30").body.days as Body[];
+  expect(window).toHaveLength(30);
+  expect(window[window.length - 7]).toMatchObject({ no_valve_gal: 14 });
+});
+
 test("every equipment label the fixture serves is the API's: EQUIPMENT_LABELS in verdify_services/labels.py", () => {
   const source = readFileSync(new URL("../../../verdify_services/labels.py", import.meta.url), "utf8");
   const block = /EQUIPMENT_LABELS[^{]*\{([^}]*)\}/.exec(source)![1];
@@ -570,6 +610,84 @@ test("as a server it starts only in approved in-cluster CI", () => {
   expect(() => startFixtureServer({ DASHBOARD_CI_IN_CLUSTER: "0" })).toThrow("Fixture API requires approved in-cluster CI");
 });
 
+// ---------------------------------------------------------------------------------------------------- #1137
+test("a schedule create reads requested, confirms with a new program hash after three polls, and logs under the session's username", () => {
+  const api = handler("in-band");
+  const created = api.respond({ method: "POST", url: "/v1/irrigation/schedules", headers: { "Idempotency-Key": KEY }, body: { line_id: "L01", label: "Wall MWF", days: ["mon", "wed", "fri"], start: { kind: "sunrise", offset_min: 60 }, on_s: 720, manual: true } });
+  expect(created.status).toBe(201);
+  expect(created.body).toMatchObject({ slot_id: 4, sync: "requested", updated_by: { source: "dashboard", name: "jason" } });
+  const row = () => (get(api, "/v1/activity").items as Body[]).find((item) => item.action === "irrigation.schedule.create");
+  const program = () => get(api, "/v1/irrigation").program as Body;
+  const stored = () => (get(api, "/v1/irrigation/schedules").schedules as Body[]).find((item) => item.slot_id === 4);
+  const hash = program().desired_sha256;
+  expect(program()).toMatchObject({ state: "requested", revision: 43, applied_revision: 42 });
+  expect(hash).not.toBe(fixture("in-band", { now: NOW })["API-IRR-01"].program.desired_sha256);
+  expect(stored()).toMatchObject({ sync: "requested" }); // the first poll
+  expect(stored()).toMatchObject({ sync: "requested" }); // the second
+  expect(row()).toMatchObject({ actor: { source: "dashboard", name: "jason" }, target: "4", state: "requested", request_id: KEY });
+  expect(stored()).toMatchObject({ sync: "confirmed" }); // the third
+  expect(program()).toMatchObject({ state: "confirmed", revision: 43, applied_revision: 43, desired_sha256: hash, applied_hash: (hash as string).slice(0, 16), reject_code: null });
+  expect(row()).toMatchObject({ state: "confirmed" });
+  expect(get(api, "/v1/irrigation/schedules").counts).toEqual({ schedules: 4, max_schedules: 24 });
+});
+
+test("with confirm false the program reads not_confirmed with a reject; before the engine a create stays requested", () => {
+  const send = (api: ReturnType<typeof handler>) => api.respond({ method: "POST", url: "/v1/irrigation/schedules", body: { line_id: "L01", days: ["mon"], start: { kind: "sunrise", offset_min: 60 }, on_s: 720 } });
+  const refused = createFixtureHandler({ fixture: "in-band", confirm: false, clock: () => NOW });
+  send(refused);
+  for (let poll = 0; poll < 3; poll += 1) get(refused, "/v1/irrigation/schedules");
+  expect(get(refused, "/v1/irrigation").program).toMatchObject({ state: "not_confirmed", reject_code: "bad_slot", applied_revision: 42 });
+  expect((get(refused, "/v1/irrigation/schedules").schedules as Body[]).find((item) => item.slot_id === 4)).toMatchObject({ sync: "not_confirmed" });
+  const engineless = handler("before-engine");
+  send(engineless);
+  for (let poll = 0; poll < 4; poll += 1) get(engineless, "/v1/irrigation/schedules");
+  expect((get(engineless, "/v1/irrigation/schedules").schedules as Body[]).find((item) => item.slot_id === 4)).toMatchObject({ sync: "requested" });
+  expect(get(engineless, "/v1/irrigation")).toMatchObject({ engine: false, program: { state: "requested", revision: null } });
+});
+
+test("the editor's fixtures: 24 stored refuses a create with current and max, an L01 at sunrise + 60 refuses a start within 30 min, L07 with Schedule off", () => {
+  const body = { line_id: "L01", days: ["mon"], start: { kind: "sunrise", offset_min: 80 }, on_s: 720 };
+  const full = handler("schedules-full");
+  expect(get(full, "/v1/irrigation/schedules").counts).toEqual({ schedules: 24, max_schedules: 24 });
+  const refused = full.respond({ method: "POST", url: "/v1/irrigation/schedules", body });
+  expect(refused.status).toBe(422);
+  expect(refused.body).toMatchObject({ code: "too_many_schedules", current: 24, max: 24 });
+  expect(refused.body.field).toBeUndefined();
+  const close = handler("l01-schedule").respond({ method: "POST", url: "/v1/irrigation/schedules", body });
+  expect(close.status).toBe(422);
+  expect(close.body).toMatchObject({ code: "too_close", field: "start" });
+  expect(handler("l01-schedule").respond({ method: "POST", url: "/v1/irrigation/schedules", body: { ...body, start: { kind: "sunrise", offset_min: 90 } } }).status).toBe(201);
+  // A disabled schedule, stored or sent, holds no start.
+  expect(handler("l01-schedule").respond({ method: "POST", url: "/v1/irrigation/schedules", body: { ...body, enabled: false } }).status).toBe(201);
+  const south = handler("l07-schedule-off");
+  expect((get(south, "/v1/irrigation").lines as Body[]).find((row) => row.line_id === "L07")).toMatchObject({ enabled: true, schedule_member: false, vpd_member: false });
+  expect(south.respond({ method: "POST", url: "/v1/irrigation/schedules", body: { line_id: "L07", days: ["tue"], start: { kind: "clock", clock: "14:00" }, on_s: 45, count: 4, gap_s: 60 } }).status).toBe(201);
+  const week = get(south, "/v1/irrigation/schedules").occurrences as Body[];
+  expect(week.filter((row) => row.line_id === "L07")).toEqual([expect.objectContaining({ status: "skipped", reason: "not a schedule member" })]);
+});
+
+test("an occurrence's skip reads as verdify_schemas' agenda does: disabled first, a fallback slot on VPD control, then the pause", () => {
+  const api = handler("in-band");
+  const stored = { days: ["tue"], start: { kind: "clock", clock: "14:00" }, on_s: 45, count: 4, gap_s: 60 };
+  const week = (target: ReturnType<typeof handler>) => get(target, "/v1/irrigation/schedules").occurrences as Body[];
+  const created = api.respond({ method: "POST", url: "/v1/irrigation/schedules", body: { ...stored, line_id: "L07", degraded_only: true } });
+  expect(created.status).toBe(201);
+  expect(week(api).filter((row) => row.line_id === "L07")).toEqual([expect.objectContaining({ status: "skipped", reason: "not a VPD member" })]);
+  const line = (fields: Body) => expect(api.respond({ method: "PUT", url: "/v1/irrigation/lines/L07", body: fields }).status).toBe(200);
+  line({ vpd_member: true, manual: true });
+  expect(week(api).filter((row) => row.line_id === "L07")).toEqual([expect.objectContaining({ status: "planned" })]);
+  line({ paused_until: "2026-11-05T00:00:00Z" });
+  expect(week(api).filter((row) => row.line_id === "L07")).toEqual([expect.objectContaining({ status: "skipped", reason: "line paused by jason" })]);
+  line({ enabled: false, manual: true });
+  expect(week(api).filter((row) => row.line_id === "L07")).toEqual([expect.objectContaining({ status: "skipped", reason: "line disabled" })]);
+});
+
+test("a check alone leaves a line's sync as it reads", () => {
+  const api = handler("in-band");
+  const out = api.respond({ method: "PUT", url: "/v1/irrigation/lines/L01", body: { checked: true, check_note: "flushed" } });
+  expect(out.body.lines[0]).toMatchObject({ sync: "confirmed", manual: false, check: { checked_by: "jason", note: "flushed" } });
+});
+
 test("run-dialogs and manifold-busy: L02 and L08 enabled with a check, L04 on a schedule, and a run on L02 refused with the holder and until when", () => {
   const api = handler("run-dialogs");
   for (const id of ["L02", "L08"]) expect(line(api, id)).toMatchObject({ enabled: true, check: { checked_by: "jason" }, state: { code: "idle" } });
@@ -618,4 +736,64 @@ test("caretaker-visit, J9's morning: nothing open or running, the wall watered a
   expect(line(api, "L01")).toMatchObject({ last_water: { at: "2026-11-02T14:31:00.000Z", open_s: 720, cause: "schedule" }, today: { minutes: 12 } });
   expect(line(api, "L04")).toMatchObject({ last_water: { at: "2026-11-02T16:58:00.000Z", cause: "vpd" } });
   expect(get(api, "/v1/irrigation").occupancy).toEqual({ occupied: true, seen_at: minutesAgo(1), hold_enabled: true });
+});
+
+test("API-06 serves each zone's band with the house temperature band, and refuses north, which has none", () => {
+  const api = handler();
+  const band = (zone: string) => get(api, `/v1/band?zone=${zone}&from=${minutesAgo(15)}&to=${minutesAgo(0)}`).band as Record<string, number[]>;
+  expect(band("south").vpd_low.at(-1)).toBe(0.45);
+  expect(band("east").vpd_high.at(-1)).toBe(0.9);
+  expect(band("center").vpd_low.at(-1)).toBe(0.5);
+  expect(band("house").vpd_low.at(-1)).toBe(0.45);
+  for (const zone of ["south", "east", "center", "house"]) expect([band(zone).temp_low.at(-1), band(zone).temp_high.at(-1)]).toEqual([62, 70]);
+  expect(api.respond({ url: `/v1/band?zone=north&from=${minutesAgo(15)}&to=${minutesAgo(0)}` }).body).toMatchObject({ status: 400, code: "invalid_request", field: "zone" });
+});
+
+test("south-probe-out: south's series read null for the last 20 minutes and L07 reads peer; its peers keep reading", () => {
+  const api = handler("south-probe-out");
+  const series = get(api, `/v1/series?metric=climate.vpd_south&metric=climate.temp_south&metric=climate.vpd_west&from=${minutesAgo(30)}&to=${minutesAgo(0)}`);
+  const t = series.t as number[];
+  const avg = (key: string) => series.series[key].avg as (number | null)[];
+  const outage = t.findIndex((start) => start * 1000 >= NOW - 20 * 60_000);
+  for (const key of ["climate.vpd_south", "climate.temp_south"]) {
+    expect(avg(key).slice(0, outage).every((value) => value !== null)).toBe(true);
+    expect(avg(key).slice(outage).every((value) => value === null)).toBe(true);
+  }
+  expect(avg("climate.vpd_west").slice(outage).some((value) => value !== null)).toBe(true);
+  expect(line(api, "L07")).toMatchObject({ vpd_source: "peer" });
+});
+
+test("the forecast keys read source forecast with issued_at; below a 1 h bucket only the bucket holding each hour has a value", () => {
+  const api = handler();
+  const to = new Date(NOW + 2 * 3_600_000).toISOString();
+  const series = get(api, `/v1/series?metric=forecast.temp_f&from=${minutesAgo(0)}&to=${to}`);
+  expect(series.bucket_s).toBe(60);
+  const column = series.series["forecast.temp_f"];
+  expect(column).toMatchObject({ source: "forecast", issued_at: "2026-11-02T14:00:00.000Z" });
+  const valued = (series.t as number[]).filter((_, index) => column.avg[index] !== null);
+  expect(valued.map((start) => new Date(start * 1000).toISOString())).toEqual(["2026-11-02T18:00:00.000Z", "2026-11-02T19:00:00.000Z"]);
+  // In hourly buckets, the hour the window starts inside has none: its row is before `from`.
+  const hourly = get(api, `/v1/series?metric=forecast.temp_f&from=${minutesAgo(0)}&to=${new Date(NOW + 12 * 3_600_000).toISOString()}&points=13`);
+  expect(hourly.bucket_s).toBe(3600);
+  expect(hourly.t).toHaveLength(13);
+  expect(hourly.series["forecast.temp_f"].avg[0]).toBeNull();
+  expect((hourly.series["forecast.temp_f"].avg as unknown[]).slice(1).every((value) => value !== null)).toBe(true);
+  // No forecast row in the window: issued_at null and every value null.
+  const none = get(handler("no-forecast"), `/v1/series?metric=forecast.temp_f&from=${minutesAgo(0)}&to=${to}`).series["forecast.temp_f"];
+  expect(none.issued_at).toBeNull();
+  expect((none.avg as unknown[]).every((value) => value === null)).toBe(true);
+});
+
+test("plan-next: a manual lane with a waypoint, Iris's 13:00 and a forecast rule at the same time, and SUNSET the next trigger; l01-paused names who paused it and why", () => {
+  const plan = get(handler("plan-next"), "/v1/plan");
+  const lane = (param: string) => (plan.lanes as Body[]).find((row) => row.param === param)!;
+  expect(lane("mister_pulse_on_s")).toMatchObject({ applied_from: "manual", waypoints: [{ value: 75, source: "iris", effective: true }] });
+  expect(lane("mister_engage_kpa")).toMatchObject({ waypoints: [{ value: 1.7, source: "iris", at: "2026-11-02T20:00:00.000Z" }] });
+  expect(lane("mister_engage_delay_s")).toMatchObject({ waypoints: [{ value: 90, source: "preemptive", at: "2026-11-02T20:00:00.000Z" }] });
+  const ahead = (plan.health as Body[]).filter((row) => row.outcome === "expected").map((row) => row.trigger);
+  expect(ahead).toEqual(["SUNSET", "MIDNIGHT"]);
+  const paused = handler("l01-paused");
+  expect(line(paused, "L01")).toMatchObject({ paused_until: "2026-11-02T21:00:00.000Z", paused_by: { source: "dashboard", name: "jason" }, pause_reason: "rain" });
+  const occurrences = get(paused, "/v1/irrigation/schedules?days=7").occurrences as Body[];
+  expect(occurrences.find((row) => row.line_id === "L01" && row.status === "planned")).toMatchObject({ planned_start: "2026-11-04T14:35:00.000Z" });
 });

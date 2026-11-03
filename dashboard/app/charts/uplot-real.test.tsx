@@ -11,7 +11,8 @@ import bandFixture from "./fixtures/band.json";
 import metricsFixture from "./fixtures/metrics.json";
 import holeFixture from "./fixtures/series-hole.json";
 import historyFixture from "./fixtures/setting-history.json";
-import { FakeResizeObserver, RecordingContext, load, media, setTokens } from "./fixtures/uplot-mock";
+import { DailyWaterUse } from "./daily-water-use";
+import { FakeResizeObserver, RecordingContext, TOKENS, load, media, setTokens } from "./fixtures/uplot-mock";
 import { TimeSeries } from "./time-series";
 import type { BandTimeline, MetricDef, Series, SettingHistory } from "./types";
 import { resetZoom } from "./uplot-chart";
@@ -41,7 +42,7 @@ let contexts: RecordingContext[] = [];
 // jsdom lays nothing out: the plot box gets the size the stylesheet reserves at 1440 px.
 const clientWidth = Object.getOwnPropertyDescriptor(Element.prototype, "clientWidth")!;
 const clientHeight = Object.getOwnPropertyDescriptor(Element.prototype, "clientHeight")!;
-const box = (size: number, fallback: PropertyDescriptor) => ({ configurable: true, get(this: HTMLElement) { return this.classList.contains("plot") ? size : fallback.get!.call(this); } });
+const box = (size: number, fallback: PropertyDescriptor) => ({ configurable: true, get(this: HTMLElement) { return this.classList.contains("plot") || this.classList.contains("plot-water-use") ? size : fallback.get!.call(this); } });
 
 beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, "clientWidth", box(1200, clientWidth));
@@ -111,6 +112,17 @@ test("a settings-only chart: uPlot takes no data at all, ranges y from the steps
   act(() => plot.setCursor({ left: 100, top: 40 }));
   expect(tip.hidden).toBe(false);
   expect(tip.textContent).toContain("mister_engage_kpa");
+});
+
+test("uPlot takes the daily water use options: the stack and the no-valve bar build, and the hatch and partial edge paint over them", async () => {
+  const day = (date: string, coverage: string, gallons: number | null) => ({
+    date, coverage, meter_gal: gallons, by_line: gallons === null ? null : { L01: gallons, L02: 1 }, by_cause: gallons === null ? null : { schedule: gallons, feed: 1 }, no_valve_gal: gallons === null ? null : 2,
+  });
+  render(<DailyWaterUse data={{ days: [day("2026-10-31", "complete", 4), day("2026-11-01", "no_data", null), day("2026-11-02", "partial", 3)] }} split="line" />);
+  await act(async () => { await vi.dynamicImportSettled(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+  const strokes = contexts.flatMap((context) => context.strokes);
+  expect(strokes.some((stroke) => stroke.stroke === TOKENS["--muted"] && stroke.dash.length === 0 && stroke.path.length > 0)).toBe(true);
+  expect(strokes.some((stroke) => stroke.stroke === TOKENS["--ink"] && JSON.stringify(stroke.dash) === "[3,2]")).toBe(true);
 });
 
 test("a zoom survives new data, and Reset zoom restores the window", async () => {

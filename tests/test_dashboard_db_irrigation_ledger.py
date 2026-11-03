@@ -345,7 +345,9 @@ def token(key: str, line: int, cause: str, slot: int, start: datetime, end: date
 
 
 def whole(moment: datetime) -> datetime:
-    return datetime.fromtimestamp(int(moment.timestamp()), UTC)
+    """A whole second, on the first pass of a time the fall-back clock repeats: where a clock schedule of it starts."""
+    second = datetime.fromtimestamp(int(moment.timestamp()), UTC)
+    return second - timedelta(hours=1) if second.astimezone(irr.local_tz()).fold else second
 
 
 # ── The golden replay ─────────────────────────────────────────────────────────
@@ -933,7 +935,7 @@ def test_an_occurrence_with_no_outcome_2_h_after_its_planned_start_raises(task, 
 
 
 def test_nothing_raises_before_the_2_h_mark_or_while_a_run_is_open(replay, task, alerts):
-    planned = whole(now() - timedelta(hours=1))
+    planned = whole(now() - timedelta(minutes=50))  # under 2 h ago even when whole() moves it back an hour
     schedule("L01", planned)
     applied = push_applied(task, confirmed_at=planned - timedelta(hours=2))
     engine_on(applied, at=planned - timedelta(hours=1))

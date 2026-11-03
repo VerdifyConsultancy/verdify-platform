@@ -294,8 +294,9 @@ def test_the_next_hours_match_the_schedule_tool(context_db, tools, engine):
         else:
             await f.state("irr_engine", "false", f.at - H)
         local = f.at.astimezone(support.DENVER)
-        await f.slot("L01", minute=(local.hour * 60 + local.minute + 90) % 1440)
-        await f.slot("L05", minute=(local.hour * 60 + local.minute + 95) % 1440)  # L05 is seeded disabled
+        # 150 wall-clock minutes are at least 90 real ones, so past the next hour even across the spring clock change.
+        await f.slot("L01", minute=(local.hour * 60 + local.minute + 150) % 1440)
+        await f.slot("L05", minute=(local.hour * 60 + local.minute + 155) % 1440)  # L05 is seeded disabled
         context = await load()
         agenda = tool_body(await tools.irrigation_schedule(days=2))
         until = f.at + 24 * H

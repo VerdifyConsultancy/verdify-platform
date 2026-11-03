@@ -282,6 +282,10 @@ test("one unit per plot: a metric in another unit is left out; colours never rep
   expect(traceTokens([metric("climate.rh_avg"), metric("climate.soil_moisture_south_1")], "%")).toEqual(["--c-rh", "--eq-fan2"]);
   expect(traceTokens([metric("climate.soil_moisture_south_1"), metric("climate.rh_avg")], "%")).toEqual(["--eq-fan2", "--c-rh"]);
   expect(traceTokens([metric("climate.flow_gpm")], "gal/min")).toEqual(["--eq-fan2"]);
+  // The setpoint token is for a dotted cross-check alone: a target picked on Graphs is a line like any other, not the device step.
+  const target = { ...metric("climate.vpd_avg"), key: "climate.vpd_target_south" };
+  expect(traceTokens([metric("climate.vpd_avg"), target], "kPa")).toEqual(["--c-vpd", "--eq-fan2"]);
+  expect(traceTokens([metric("climate.vpd_avg"), target], "kPa", [target.key])).toEqual(["--c-vpd", "--c-setpoint"]);
   expect(tickIncrements(2).slice(0, 6)).toEqual([0.01, 0.02, 0.05, 0.1, 0.2, 0.25]);
 });
 
@@ -352,4 +356,98 @@ test("a settings-only chart with no step shows the message and no key", async ()
   expect(container.querySelector(".chart-message")!.textContent).toBe("No data in this window");
   expect(container.querySelector(".chart-key")).toBeNull();
   expect(screen.queryByRole("link", { name: "CSV of this window" })).toBeNull();
+});
+
+// ---------------------------------------------------------------- the forecast and the cross-check (#1138)
+const forecastDef = (key: string, unit: string, label: string): MetricDef => ({ ...metric("climate.temp_avg"), key, unit, label, group: "outdoor", cadence_s: 3600, retention_days: 400, provenance: "DERIVED" });
+const FORECAST_TEMP = forecastDef("forecast.temp_f", "°F", "Forecast temperature");
+/** A forecast read past NOW (03:00 MST): an hour apiece from 04:00, the issue at 03:00. */
+function forecastInput(avg: (number | null)[] = [50, 52, 54]) {
+  const t = avg.map((_, index) => NOW + (index + 1) * 3600);
+  const series: Series = {
+    from: "", to: "", bucket_s: 3600, t, watermark: null, server_time: "", gaps: [],
+    series: { [FORECAST_TEMP.key]: { avg, min: avg, max: avg, count: avg.map((value) => (value === null ? 0 : 1)), source: "forecast", retained_from: null, issued_at: "2026-11-01T10:00:00Z" } },
+  };
+  return { metrics: [FORECAST_TEMP], series };
+}
+const dashedStrokes = (plot: MockPlot) => plot.ctx.strokes.filter((stroke) => stroke.dash.join() === "8,4");
+
+test("the forecast: dashed in the outdoor token, its label, its note, in the y range and the tooltip; a data table and CSV rows of its own", async () => {
+  const urls: Blob[] = [];
+  URL.createObjectURL = vi.fn((blob: Blob) => { urls.push(blob); return `blob:csv-${urls.length}`; });
+  const { plot, container } = await mount({ forecast: forecastInput() });
+  plot.draw();
+  // Joined hour to hour, from its own time arrays: the data columns never hold it.
+  const [line] = dashedStrokes(plot);
+  expect(line.stroke).toBe(TOKENS["--c-outdoor"]);
+  expect(line.width).toBe(2);
+  expect(line.path).toHaveLength(3);
+  expect(plot.data).toHaveLength(2);
+  expect(plot.ctx.texts.map((item) => item.text)).toContain("Forecast · issued 03:00");
+  expect([...container.querySelectorAll(".chart-notes li")].map((node) => node.textContent)).toEqual(["Forecast · issued 03:00"]);
+  // The y range reaches it even though no trace does.
+  expect(plot.scales.y.max).toBeGreaterThan(54);
+  // Left of now the tooltip has no forecast; right of now, the hour in force.
+  plot.hover(NOW + 3600 + 600, null);
+  expect(tooltip(plot)).toContain(`Forecast temperature 04:00 50.0${NBSP}°F`);
+  plot.hover(NOW - 600, 0);
+  expect(tooltip(plot).some((row) => row?.startsWith("Forecast temperature"))).toBe(false);
+  const details = await openTable(container);
+  const table = [...details.querySelectorAll("table")].find((item) => item.caption?.textContent?.includes("Forecast · issued 03:00"))!;
+  expect(table.querySelectorAll("tbody tr")).toHaveLength(3);
+  const csv = (await urls[urls.length - 1].text()).trimEnd().split("\r\n");
+  expect(csv[0]).toBe("time (America/Denver),climate.temp_avg (°F),forecast.temp_f (°F)");
+  expect(csv.at(-1)).toBe("2026-11-01T06:00:00-07:00,,54");
+});
+
+test("the legend hides the forecast: its line, label, note and CSV column go, and the chart repaints with no rebuild", async () => {
+  const urls: Blob[] = [];
+  URL.createObjectURL = vi.fn((blob: Blob) => { urls.push(blob); return `blob:csv-${urls.length}`; });
+  const { plot, container } = await mount({ forecast: forecastInput() });
+  const before = plot.dataUpdates.length;
+  fireEvent.click(within(container.querySelector<HTMLElement>(".chart-legend")!).getByRole("button", { name: "Forecast temperature" }));
+  await waitFor(() => expect(plot.dataUpdates.length).toBeGreaterThan(before));
+  expect(plot.destroyed).toBe(false);
+  plot.draw();
+  expect(dashedStrokes(plot)).toEqual([]);
+  expect(plot.ctx.texts.map((item) => item.text)).not.toContain("Forecast · issued 03:00");
+  expect(container.querySelector(".chart-notes")).toBeNull();
+  await waitFor(() => expect(urls.length).toBeGreaterThan(1));
+  expect((await urls[urls.length - 1].text()).split("\r\n")[0]).toBe("time (America/Denver),climate.temp_avg (°F)");
+});
+
+test("a forecast hour missing stays a gap, and a lone hour draws as a dot", async () => {
+  const { plot } = await mount({ forecast: forecastInput([50, null, 54]) });
+  plot.draw();
+  expect(dashedStrokes(plot)).toEqual([]);
+  expect(plot.ctx.rects.filter((rect) => rect.color === TOKENS["--c-outdoor"])).toHaveLength(2);
+});
+
+test("a dotted key draws dotted in the setpoint token; a caller's note goes with its series", async () => {
+  const south = { ...metric("climate.vpd_avg"), key: "climate.vpd_south", label: "South VPD" };
+  const target = { ...metric("climate.vpd_avg"), key: "climate.vpd_target_south", label: "South VPD target" };
+  const series = load<Series>(holeFixture);
+  const column = series.series["climate.temp_avg"];
+  series.series = { [south.key]: column, [target.key]: column };
+  const notes = [{ key: target.key, text: "Dotted: the controller's own target, a cross-check" }, { text: "A note on the panel" }];
+  const { plot, container } = await mount({ series, metrics: [south, target], unit: "kPa", dotted: [target.key], notes });
+  expect(plot.opts.series.slice(1).map((item) => [item.label, item.stroke, item.dash ?? null])).toEqual([["South VPD", TOKENS["--c-vpd"], null], ["South VPD target", TOKENS["--c-setpoint"], [2, 4]]]);
+  const note = () => [...container.querySelectorAll(".chart-notes li")].map((node) => node.textContent);
+  expect(note()).toEqual(expect.arrayContaining(notes.map((item) => item.text)));
+  fireEvent.click(within(container.querySelector<HTMLElement>(".chart-legend")!).getByRole("button", { name: "South VPD target" }));
+  expect(note()).not.toContain("Dotted: the controller's own target, a cross-check");
+  expect(note()).toContain("A note on the panel");
+});
+
+test("a series dash scales with the device pixel ratio, as uPlot's canvas is in device pixels", async () => {
+  MockPlot.pxRatio = 2;
+  try {
+    const target = { ...metric("climate.vpd_avg"), key: "climate.vpd_target_south", label: "South VPD target" };
+    const series = load<Series>(holeFixture);
+    series.series = { [target.key]: series.series["climate.temp_avg"] };
+    const { plot } = await mount({ series, metrics: [target], unit: "kPa", dotted: [target.key] });
+    expect(plot.opts.series[1].dash).toEqual([4, 8]);
+  } finally {
+    MockPlot.pxRatio = 1;
+  }
 });

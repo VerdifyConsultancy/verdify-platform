@@ -265,3 +265,39 @@ test("the server render carries no greenhouse data: Now's loading state only, an
   expect(html).not.toMatch(/All OK|64\.8|Nothing running|No open alerts|Stop all water|Nobody seen/);
   expect(fetch).not.toHaveBeenCalled();
 });
+
+// Lets the panels' reads answer, then the zone tiles they then draw read their band.
+const settled = async () => { await advance(0); await advance(0); };
+const coming = (name: string) => plain(text(document.querySelector(`[data-coming=${name}]`)));
+
+test("Coming up and the zone tiles sit below Needs someone, with five zones and the plan, the trigger, the runs and the sun", async () => {
+  await open(["plan-next", "l01-paused"]);
+  await settled();
+  const order = ["needs-someone", "coming-up", "zones"].map((id) => document.getElementById(id)!);
+  expect(order[0].compareDocumentPosition(order[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(order[1].compareDocumentPosition(order[2]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(document.querySelector(".now-water")!.compareDocumentPosition(order[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(coming("plan")).toContain("13:00 · VPD Mister Engage 1.60 → 1.70 kPa · AI");
+  expect(coming("plan")).toContain("Forecast rule · system");
+  expect(coming("iris")).toContain("SUNSET at 16:50");
+  // Now is in the shell, so the signed-in person reads by display name.
+  expect(coming("runs")).toContain("L01 Paused until 14:00 by Jason: rain · next Wed 07:35");
+  expect(coming("sun")).toContain("Sunrise 06:35 · Sunset 16:58");
+  expect(document.querySelectorAll("#zones [data-zone]")).toHaveLength(5);
+  expect(document.querySelector("#zones [data-zone=north] .zone-band")?.textContent).toContain("house band");
+  expect(document.querySelector("#zones [data-zone=center] [data-zone-tag]")?.textContent).toBe("HOUSE");
+});
+
+test("another person's pause reads by username: the display name is the signed-in person's only", async () => {
+  await open(["l01-paused", "viewer-session"]);
+  await settled();
+  expect(coming("runs")).toContain("L01 Paused until 14:00 by jason: rain");
+});
+
+test("south's tile reads PEER while its probe is out, and opens its charts", async () => {
+  await open("south-probe-out");
+  await settled();
+  const south = document.querySelector<HTMLElement>("#zones [data-zone=south]")!;
+  expect(south.querySelector("[data-zone-tag]")?.textContent).toBe("PEER");
+  expect(within(south).getByRole("link").getAttribute("href")).toBe("/graphs/zones?zone=south");
+});

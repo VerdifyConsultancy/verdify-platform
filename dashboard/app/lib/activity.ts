@@ -154,7 +154,7 @@ export function planChangeText(change: PlanChange, catalog: Catalog, day?: strin
   return `${setting?.label ?? change.param} ${changeText(change.before, change.value, setting)}${when}`;
 }
 
-/** The target as a row names it: a setting's label, an alert's title, "every line" for `all`; else as the API gives it. */
+/** The target as a row names it: a setting's label, an alert's title, "every line" for `all`, a light's name; else as the API gives it. */
 function targetLabel(entry: ActivityEntry, catalog: Catalog): string {
   const { action, target } = entry;
   const detail: Detail = entry.detail ?? {};
@@ -162,6 +162,7 @@ function targetLabel(entry: ActivityEntry, catalog: Catalog): string {
   if (action === "plan.write") return typeof detail.trigger === "string" && detail.trigger ? `${target} (${detail.trigger})` : target;
   if (action.startsWith("alert.")) return typeof detail.alert_type === "string" ? `“${words("alert_type", detail.alert_type)}”` : `alert ${target}`;
   if (action.startsWith("irrigation.") && target === "all") return "every line";
+  if (action.startsWith("light.")) return words("light_target", target);
   return target;
 }
 /** A row's title: the action in words, then its target ("Set VPD Mister Engage"). An action this build lacks reads raw. */
@@ -222,8 +223,8 @@ function runText(written: Detail): string | null {
  * What a row changed, after its writer: before → after, with "requested 1.53" when the server snapped the value (the
  * service stores `requested` on every write, so only one that differs from `value` says so); a plan's one change with
  * its rule by name (the forecast engine's, its id only when it has no name) or trigger (Iris's); a run's length; a
- * schedule or line update's fields; "manual" or "manual cleared"; and "during experiment <id>" for a write made while
- * one was armed.
+ * schedule or line update's fields; a light command Lutron did not confirm, in the words of its result; "manual" or
+ * "manual cleared"; and "during experiment <id>" for a write made while one was armed.
  */
 export function entryFacts(entry: ActivityEntry, catalog: Catalog): string[] {
   const detail: Detail = entry.detail ?? {};
@@ -246,6 +247,8 @@ export function entryFacts(entry: ActivityEntry, catalog: Catalog): string[] {
   } else if (action.startsWith("irrigation.")) {
     if (typeof detail.line_id === "string" && detail.line_id !== entry.target) facts.push(detail.line_id);
     if (action.endsWith(".update")) facts.push(...fieldChanges(detail));
+  } else if (action.startsWith("light.")) {
+    if (typeof detail.result === "string" && detail.result !== "confirmed") facts.push(words("light_result", detail.result));
   } else if (!action.startsWith("alert.") && "value" in detail && !isRecord(detail.value)) {
     facts.push(changeText("before" in detail ? detail.before : undefined, detail.value));
   }

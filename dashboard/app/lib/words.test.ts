@@ -51,11 +51,43 @@ function rejectCodes(): string[] {
   if (!literal) throw new Error("no RejectCode in verdify_schemas/irrigation.py");
   return [...literal[1].matchAll(/"([a-z_]+)"/g)].map((match) => match[1]);
 }
-/** The codes `gh_fog_block_reason` publishes (firmware/greenhouse/controls.yaml, `fog_safety_block_reason`'s included). */
+/**
+ * The codes `gh_fog_block_reason` publishes (firmware/greenhouse/controls.yaml, `fog_safety_block_reason`'s and
+ * `fog_force_off_reason`'s included); `leak_detected` is today's firmware, which the engine release drops (Q-05).
+ */
 const FOG_BLOCK_REASONS = [
   "none", "served", "leak_detected", "occupancy", "irrigation", "resource_budget", "time_invalid", "time_window", "dew_margin", "wet_taper", "rh_ceiling",
-  "temp_low", "vent_interlock", "relay_min_off",
+  "temp_low", "vent_interlock", "relay_min_off", "sensor_fault", "fert_master", "water_ceiling",
 ];
+/** `last_mode_reason` in firmware/lib/greenhouse_logic.h, `init` from greenhouse_types.h and `unknown` from controls.yaml's publish. */
+const MODE_REASONS = [
+  "init", "unknown", "idle", "idle_default", "sensor_fault", "safety_cool", "safety_heat", "heat_stage1", "heat_stage2", "temp_high", "temp_vent", "summer_vent",
+  "summer_vent_preempt", "vent_mist_assist", "vent_fog_assist", "vent_humidify", "humidify_enter", "humidify_continue", "humidify_resolved", "fog_enter", "fog_continue",
+  "seal_enter", "seal_continue", "seal_exit", "thermal_relief", "thermal_relief_forced", "relief_cycle_breaker", "vpd_low", "vpd_too_low", "dehum_continue",
+  "dehum_vent_heat", "heat_dehum", "dry_override", "vpd_min_safe_rescue", "vpd_min_safe_heat_rescue", "mist_backoff", "moisture_blocked", "dwell_hold",
+];
+/** The codes `gh_moisture_block_reason` publishes (firmware/greenhouse/controls.yaml); `leak_detected` is today's firmware, which the engine release drops (Q-05). */
+const MOISTURE_BLOCK_REASONS = [
+  "none", "served", "pulse_gap", "leak_detected", "water_budget", "vent_interlock", "no_humidity_demand", "no_vpd_demand", "engage_delay", "below_threshold",
+  "dew_margin", "wet_taper", "no_zone_available", "direct_wet_time_invalid", "direct_wet_temp", "direct_wet_window", "irrigation", "occupancy",
+];
+const quoted = (block: string) => [...block.matchAll(/"([a-z0-9_]+)"/g)].map((match) => match[1]);
+/** Every code `last_mode_reason` is assigned in firmware/lib/greenhouse_logic.h, ternaries included. */
+function modeReasonsInFirmware(): string[] {
+  return [...repo("firmware/lib/greenhouse_logic.h").matchAll(/state\.last_mode_reason\s*=\s*([^;]+);/g)].flatMap((match) => quoted(match[1]));
+}
+/** Every code controls.yaml writes into `name` with snprintf, ternaries included. */
+function snprintfCodes(name: string): string[] {
+  return [...repo("firmware/greenhouse/controls.yaml").matchAll(new RegExp(`snprintf\\(\\s*${name}\\s*,\\s*sizeof\\(${name}\\)\\s*,([\\s\\S]*?)\\);`, "g"))]
+    .flatMap((match) => quoted(match[1]));
+}
+/** Every word `fog_force_off_reason()` and `fog_safety_block_reason` can return. */
+function fogBlockReturns(): string[] {
+  const force = /inline const char\* fog_force_off_reason\([\s\S]*?\n\}/.exec(repo("firmware/lib/greenhouse_logic.h"));
+  const safety = /auto fog_safety_block_reason = \[&\]\(\) -> const char\* \{([\s\S]*?)\};/.exec(repo("firmware/greenhouse/controls.yaml"));
+  if (!force || !safety) throw new Error("no fog_force_off_reason or fog_safety_block_reason in the firmware");
+  return [...force[0].matchAll(/return "([a-z0-9_]+)"/g), ...safety[1].matchAll(/return "([a-z0-9_]+)"/g)].map((match) => match[1]);
+}
 
 /** Every code in `codes` has words in `family`: words, not the code, and no underscore left in them. */
 function expectWorded(family: string, codes: readonly string[]) {
@@ -154,9 +186,50 @@ test("every band verdict, required-trigger state and burst kind in the OpenAPI f
 });
 
 test("the table has words for every code gh_fog_block_reason publishes", () => {
-  expect(FOG_BLOCK_REASONS).toHaveLength(14);
+  expect(FOG_BLOCK_REASONS).toHaveLength(17);
   expectWorded("fog_block_reason", FOG_BLOCK_REASONS);
   expect(Object.keys(WORDS.fog_block_reason).sort()).toEqual([...FOG_BLOCK_REASONS].sort());
+  // A code the firmware adds fails here until it has words, because the engine release edits these sources.
+  const published = [...fogBlockReturns(), ...snprintfCodes("fog_block_reason")];
+  expect(published.length).toBeGreaterThanOrEqual(12);
+  expect(published.filter((code) => !hasWords("fog_block_reason", code))).toEqual([]);
+});
+
+test("the table has words for every mode_reason the firmware sets, in the issue's tone", () => {
+  expect(MODE_REASONS).toHaveLength(38);
+  expectWorded("mode_reason", MODE_REASONS);
+  expect(Object.keys(WORDS.mode_reason).sort()).toEqual([...MODE_REASONS].sort());
+  const published = modeReasonsInFirmware();
+  expect(published.length).toBeGreaterThanOrEqual(30);
+  expect(published.filter((code) => !hasWords("mode_reason", code))).toEqual([]);
+  expect(repo("firmware/lib/greenhouse_types.h")).toContain('.last_mode_reason = "init"');
+  expect(repo("firmware/greenhouse/controls.yaml")).toContain('reason ? reason : "unknown"');
+  expect(words("mode_reason", "temp_high")).toBe("Venting: too warm");
+  expect(words("mode_reason", "heat_stage2")).toBe("Heating with heat2 (gas)");
+  expect(words("mode_reason", "brand_new_code")).toBe("brand_new_code");
+});
+
+test("the table has words for every code gh_moisture_block_reason publishes, in the issue's tone", () => {
+  expect(MOISTURE_BLOCK_REASONS).toHaveLength(18);
+  expectWorded("moisture_block_reason", MOISTURE_BLOCK_REASONS);
+  expect(Object.keys(WORDS.moisture_block_reason).sort()).toEqual([...MOISTURE_BLOCK_REASONS].sort());
+  const published = snprintfCodes("moisture_block_reason");
+  expect(published.length).toBeGreaterThanOrEqual(15);
+  expect(published.filter((code) => !hasWords("moisture_block_reason", code))).toEqual([]);
+  expect(words("moisture_block_reason", "no_vpd_demand")).toBe("VPD in band: no misting needed");
+  expect(words("moisture_block_reason", "water_budget")).toBe("Misting held: today's soft water budget is used");
+  expect(words("moisture_block_reason", "leak_detected")).toBe("Held: water flowing with every Verdify valve closed");
+});
+
+test("the API-20 results in Problem.result and its targets have words", () => {
+  const results = enumOf(SCHEMAS.Problem?.properties?.result);
+  expectWorded("light_result", results);
+  expect(Object.keys(WORDS.light_result).sort()).toEqual([...results].sort());
+  expect(results.map((result) => words("light_result", result))).toEqual([
+    "Lutron did not switch: Home Assistant did not answer", "Lutron did not reach the state", "No answer yet: Lutron may still switch",
+  ]);
+  expect(words("light_target", "grow_light_main")).toBe("Main lights");
+  expect(words("light_target", "grow_light_grow")).toBe("Grow lights");
 });
 
 test("every planner trigger outcome has its words, from the OpenAPI enum and the ledger's status check alike", () => {
@@ -188,10 +261,10 @@ test("every activity action the services write has words, each one an action the
   const source = /ACTIVITY_ACTION_PATTERN = \(\s*r"([^"]+)"\s*\)/.exec(repo("verdify_schemas/activity.py"));
   if (!source) throw new Error("no ACTIVITY_ACTION_PATTERN in verdify_schemas/activity.py");
   const server = new RegExp(source[1]);
-  // The fixed actions (architecture §9) and the irrigation ones #1156 writes; light.on and light.off come with #1140.
+  // The fixed actions (architecture §9), the irrigation ones #1156 writes and API-20's light.on and light.off.
   const actions = [
     "setting.write", "setting.release", "plan.write", "alert.ack", "alert.resolve", "irrigation.run", "irrigation.stop", "irrigation.clear_fault",
-    "irrigation.override", "irrigation.schedule.create", "irrigation.schedule.update", "irrigation.schedule.delete", "irrigation.line.update",
+    "irrigation.override", "irrigation.schedule.create", "irrigation.schedule.update", "irrigation.schedule.delete", "irrigation.line.update", "light.on", "light.off",
   ];
   expectWorded("activity_action", actions);
   expect(Object.keys(WORDS.activity_action).sort()).toEqual([...actions].sort());
@@ -237,12 +310,18 @@ test("the Water families (#1135): every run outcome, VPD source, line fault and 
   // Occurrence reasons arrive in words: the fixed ones read as the week view says them, the rest as sent.
   expect(words("occurrence_reason", "only while VPD sensing is degraded")).toBe("only if VPD sensing is degraded");
   expect(words("occurrence_reason", "line paused by jason: rain")).toBe("line paused by jason: rain");
+  expect(words("occurrence_reason", "line disabled")).toBe("Skipped: line disabled");
+  expect(words("occurrence_reason", "not a schedule member")).toBe("Skipped until Schedule is on");
+  expect(words("occurrence_reason", "not a VPD member")).toBe("Skipped: VPD control is off");
+  // The refusals the schedule editor reads beside Start and above Save.
+  expect(words("problem_code", "too_many_schedules")).toBe("The controller holds 24 schedules; delete one first");
+  expect(words("problem_code", "too_close")).toBe("Another schedule on this line starts within 30 min of this one");
 });
 
 test("an unknown code or family renders raw, prototype names included", () => {
   expect(words("state_reason", "brownout")).toBe("brownout");
   expect(words("alert_type", "pump_cavitation")).toBe("pump_cavitation");
-  expect(words("mode_reason", "vpd_high")).toBe("vpd_high");
+  expect(words("no_such_family", "vpd_high")).toBe("vpd_high");
   expect(words("state_reason", "constructor")).toBe("constructor");
   expect(words("toString", "valueOf")).toBe("valueOf");
   expect(hasWords("state_reason", "__proto__")).toBe(false);

@@ -24,7 +24,7 @@ const CLIENT_DIR = fileURLToPath(new URL("./build/client", import.meta.url));
 // raw. The operator API's line, joined by request_id, has its own route template.
 const ROUTES = new Set(["/", "/healthz", "/readyz", "/auth/login", "/auth/callback", "/auth/logout"]);
 // The screens' routes (app/routes.ts, #1124). Any other /auth path, the catch-all and unknown paths stay "/other".
-const PAGES = new Set(["/graphs", "/graphs/scorecard", "/plan", "/water", "/water/schedules", "/water/history", "/settings", "/activity", "/equipment", "/more"]);
+const PAGES = new Set(["/graphs", "/graphs/scorecard", "/graphs/zones", "/plan", "/water", "/water/schedules", "/water/history", "/settings", "/activity", "/equipment", "/more"]);
 function routeName(path) {
   if (path.startsWith("/assets/") || path.startsWith("/fonts/") || path === "/favicon.svg") return "assets";
   if (path.startsWith("/api/v1/")) return "/api/v1/*";

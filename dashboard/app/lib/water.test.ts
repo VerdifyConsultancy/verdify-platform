@@ -9,7 +9,7 @@ import type { IrrigationStatus, MinutesReport, Occupancy, ScheduleAgenda } from 
 import {
   NO_ENGINE_TEXT, RETRYING_TEXT, ROM_TEXT, agoWords, barsReport, blockAmount, boardLines, faultWords, feedStages, flowWords, headroomWords, lastWaterWords, limitItems,
   minutesCaps, misterLines, nextRunWords, occupancyWords, occurrenceReasonWords, occurrenceWords, pauseAfterRun, pauseWords, pausedNow, plannedToday, programBanner, runAmountWords,
-  runGallons, runSpanWords, runsFilters, runsWindow, timeLeftWords, todayWords, weekDays, wetLines, whenWords, type ProgramBannerInput,
+  runGallons, runSpanWords, runsFilters, runsWindow, timeLeftWords, todayWords, weekDays, wetLines, whenWords, waterUseDays, waterUseSplit, type ProgramBannerInput,
 } from "./water";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
@@ -161,7 +161,11 @@ test("week blocks: drips in minutes, misters as pulses × seconds, a feed's stag
   expect(occurrenceWords({ status: "done", outcome: "unknown", reason: null, planned_start: at("07:35") }, NOW)).toBe("no outcome received");
   expect(occurrenceWords({ status: "done", outcome: "missed", reason: "no clock", planned_start: at("07:35") }, NOW)).toBe("missed · no clock");
   expect(occurrenceWords({ status: "skipped", outcome: null, reason: "line paused by jason", planned_start: "2026-11-01T15:35:00Z" }, NOW)).toBe("skipped · line paused by jason");
-  expect(occurrenceWords({ status: "skipped", outcome: null, reason: "line disabled", planned_start: "2026-11-08T14:35:00Z" }, NOW)).toBe("line disabled");
+  expect(occurrenceWords({ status: "skipped", outcome: null, reason: "line paused by jason", planned_start: "2026-11-08T14:35:00Z" }, NOW)).toBe("line paused by jason");
+  // The agenda's fixed skip reasons read as the editor's draft does, ahead or past, with the outcome word once.
+  expect(occurrenceWords({ status: "skipped", outcome: null, reason: "line disabled", planned_start: "2026-11-08T14:35:00Z" }, NOW)).toBe("Skipped: line disabled");
+  expect(occurrenceWords({ status: "skipped", outcome: null, reason: "not a schedule member", planned_start: "2026-11-01T14:35:00Z" }, NOW)).toBe("Skipped until Schedule is on");
+  expect(occurrenceWords({ status: "done", outcome: "skipped", reason: "not a VPD member", planned_start: "2026-11-01T14:35:00Z" }, NOW)).toBe("Skipped: VPD control is off");
   // The API's fixed notes read in the week view's words, each "; "-joined note on its own; others read as sent.
   expect(occurrenceReasonWords("only while VPD sensing is degraded; ends at the daily cap")).toBe("only if VPD sensing is degraded · ends at the daily cap");
   expect(occurrenceReasonWords("paused")).toBe("line paused");
@@ -273,4 +277,9 @@ test("a pause until after a block ends one minute past its planned end, for a dr
   expect(pauseAfterRun({ ...planned, status: "skipped" }, drip, now)).toBeNull();
   expect(pauseAfterRun({ ...planned, status: "blocked" }, drip, now)).toBeNull();
   expect(pauseAfterRun(planned, drip, Date.parse(start))).toBeNull();
+});
+
+test("daily water use's URL: 30 days split by line unless it says 90d or cause", () => {
+  expect([waterUseDays(null), waterUseDays("30d"), waterUseDays("90d"), waterUseDays("7d")]).toEqual([30, 30, 90, 30]);
+  expect([waterUseSplit(null), waterUseSplit("line"), waterUseSplit("cause"), waterUseSplit("zone")]).toEqual(["line", "line", "cause", "line"]);
 });

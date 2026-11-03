@@ -90,7 +90,12 @@ test("irrigation rows: the action in words with its line, a run's length, the fi
   // A row that carries only the request lists the fields it set; a schedule names its line.
   expect(plain(entryFacts(entry({ action: "irrigation.schedule.update", target: "11", detail: { line_id: "L01", on_s: 900, days: ["mon"] } }), CATALOG))).toEqual(["L01", "On 900 s"]);
   expect(entryFacts(entry({ action: "irrigation.schedule.delete", target: "11", detail: { line_id: "L01", before: { on_s: 720 } } }), CATALOG)).toEqual(["L01"]);
-  expect(entryTitle(entry({ action: "light.on", target: "grow_light_main" }), CATALOG)).toBe("light.on grow_light_main");
+  expect(entryTitle(entry({ action: "light.on", target: "grow_light_main" }), CATALOG)).toBe("Lights on Main lights");
+  expect(entryTitle(entry({ action: "light.off", target: "grow_light_grow" }), CATALOG)).toBe("Lights off Grow lights");
+  expect(entryTitle(entry({ action: "light.on", target: "grow_light_side" }), CATALOG)).toBe("Lights on grow_light_side");
+  // Each API-20 call is one row: a confirmed one needs no words, and one Lutron did not confirm says so.
+  expect(entryFacts(entry({ action: "light.on", target: "grow_light_main", detail: { light: "main", state: "on", result: "confirmed" } }), CATALOG)).toEqual([]);
+  expect(entryFacts(entry({ action: "light.on", target: "grow_light_main", detail: { light: "main", state: "on", result: "not_confirmed" } }), CATALOG)).toEqual(["Lutron did not reach the state"]);
   expect(entryTitle(entry({ action: "alert.ack", target: "88", detail: { alert_type: "relay_stuck" } }), CATALOG)).toBe("Acknowledged “Relay stuck”");
   expect(entryTitle(entry({ action: "alert.resolve", target: "88" }), CATALOG)).toBe("Resolved alert 88");
 });

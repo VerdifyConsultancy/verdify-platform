@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { unitLabel } from "../../lib/setting-values";
 import { useRole, useWritesEnabled } from "../../lib/session";
 import { Button } from "../button";
+import { cls } from "../common";
 import { FieldError } from "./field";
 import { firstField, focusables, useModalDialog } from "./modal";
 
@@ -45,6 +46,8 @@ export type EditDrawerProps = {
   readOnly?: boolean;
   /** The fields: `NumberField`, `Switch`, `Select`, `TimeField`, `ManualToggle`, `Reason`. */
   children?: ReactNode;
+  /** One more class on the dialog: the schedule editor keeps the week readable beside it. */
+  className?: string;
   /**
    * What reads alongside the fields (a setting's history): under them and outside their fieldset, so read-only never
    * disables its controls. It still sits in the drawer's form, so any button of its own stays `type="button"`.
@@ -59,7 +62,7 @@ export type EditDrawerProps = {
  * read-only (the values and Done, no Save), and so does everyone for an item marked `readOnly`; with changes switched
  * off an operator sees the fields and Save disabled.
  */
-export function EditDrawer({ open, onClose, title, eyebrow, heading, status, graph, onSave, saving = false, saveLabel = "Save", saveDisabled = false, error, actions, readOnly: fixed = false, children, below }: EditDrawerProps) {
+export function EditDrawer({ open, onClose, title, eyebrow, heading, status, graph, onSave, saving = false, saveLabel = "Save", saveDisabled = false, error, actions, readOnly: fixed = false, children, className, below }: EditDrawerProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const errorId = useId();
@@ -74,7 +77,7 @@ export function EditDrawer({ open, onClose, title, eyebrow, heading, status, gra
     event.preventDefault();
     if (!readOnly && !saving && !saveDisabled) onSave();
   };
-  return <dialog ref={ref} className="drawer" aria-labelledby={titleId} aria-modal="true" onKeyDown={onKeyDown} onCancel={onCancel}>
+  return <dialog ref={ref} className={cls("drawer", className)} aria-labelledby={titleId} aria-modal="true" onKeyDown={onKeyDown} onCancel={onCancel}>
     <form className="drawer-form" onSubmit={submit} noValidate>
       <div className="drawer-head">
         <h2 id={titleId}>{title}</h2>

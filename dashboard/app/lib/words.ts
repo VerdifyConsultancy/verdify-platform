@@ -11,8 +11,9 @@ import type { AlertSeverity, AlertStatus, BandVerdict, BurstKind, LineFault, Lin
  * (`planner_trigger_ledger`'s status check) or stress window kind or severity (`StressWindow` in
  * `verdify_schemas/plan.py`) without an entry here, and on an activity action the services write without one, so a PR
  * that adds one adds its words; the Water families (run outcomes, VPD sources, line faults and program rejects, #1135)
- * are checked the same way. The `mode_reason` and `moisture_block_reason` families come with #1140 and read raw until
- * then; a trigger's `failure_class` is open-ended text the ledger writers choose, with no family yet, so it reads raw.
+ * are checked the same way, as are the reason families the controller publishes (`mode_reason`, `moisture_block_reason`
+ * and `fog_block_reason`, read from the firmware sources). A trigger's `failure_class` is open-ended text the ledger
+ * writers choose, with no family yet, so it reads raw.
  */
 const STATE_REASON = {
   clamped: "Clamped",
@@ -56,8 +57,8 @@ const PROBLEM_CODE = {
   manual: "Set by hand, so Iris leaves it alone",
   request_id_reused: "This change was already sent with other values",
   check_required: "This line needs its one-time check first",
-  too_close: "Too close to another start on this line",
-  too_many_schedules: "Too many schedules",
+  too_close: "Another schedule on this line starts within 30 min of this one",
+  too_many_schedules: "The controller holds 24 schedules; delete one first",
   line_disabled: "The line is disabled",
   line_paused: "The line is paused",
   line_faulted: "The line is faulted",
@@ -120,12 +121,16 @@ const PROGRAM_REJECT = {
 } as const;
 
 /**
- * `Occurrence.reason`, which the API already gives in words: the fixed ones read here as the week view says them; one
- * that names who or when (a pause: "line paused by jason: rain") reads as sent. #1137 adds its draft's phrases.
+ * `Occurrence.reason`, which the API already gives in words: the fixed ones (`REASON_WORDS` in
+ * verdify_schemas/irrigation.py) read here as the week view says them, so a saved block reads like the editor's draft
+ * (#1137); one that names who or when (a pause: "line paused by jason: rain") reads as sent.
  */
 const OCCURRENCE_REASON = {
   "only while VPD sensing is degraded": "only if VPD sensing is degraded",
   paused: "line paused",
+  "line disabled": "Skipped: line disabled",
+  "not a schedule member": "Skipped until Schedule is on",
+  "not a VPD member": "Skipped: VPD control is off",
 } as const;
 
 /**
@@ -190,9 +195,10 @@ const MIST_STAGE = {
 } as const;
 
 /**
- * The codes `gh_fog_block_reason` publishes (firmware/greenhouse/controls.yaml, with `fog_safety_block_reason`'s):
- * why fog is held, or that it runs. Now's burst `held_reason` reads from here. `FogBlockReason` in
- * verdify_schemas/climate_intent.py is a different enum.
+ * The codes `gh_fog_block_reason` publishes (firmware/greenhouse/controls.yaml, with `fog_safety_block_reason`'s and
+ * `fog_force_off_reason`'s in firmware/lib/greenhouse_logic.h): why fog is held, or that it runs. Now's burst
+ * `held_reason` reads from here. `FogBlockReason` in verdify_schemas/climate_intent.py is a different enum.
+ * `leak_detected` is today's firmware only: the engine release drops it from every force-off (Q-05).
  */
 const FOG_BLOCK_REASON = {
   none: "Nothing holding fog",
@@ -209,6 +215,94 @@ const FOG_BLOCK_REASON = {
   temp_low: "Too cold to fog",
   vent_interlock: "Waiting for the vent to close",
   relay_min_off: "Fog resting between runs",
+  sensor_fault: "Sensor fault: equipment off",
+  fert_master: "The fertilizer line is open",
+  water_ceiling: "Today's water ceiling is reached",
+} as const;
+
+/**
+ * `last_mode_reason` in firmware/lib/greenhouse_logic.h (`init` in greenhouse_types.h; controls.yaml publishes `unknown`
+ * for a null pointer): which branch chose the climate mode, as Equipment's Why panel reads it (#1140). `unknown` is the
+ * controller's own word, an ordinary value; a null `code` from the API is what "not reporting" looks like.
+ */
+const MODE_REASON = {
+  init: "Controller just started",
+  unknown: "The controller gave no reason",
+  idle: "In band, holding",
+  idle_default: "Nothing needed, holding",
+  sensor_fault: "Sensor fault: equipment off",
+  safety_cool: "Emergency cooling: at the high safety limit",
+  safety_heat: "Emergency heating: at the low safety limit",
+  heat_stage1: "Heating with heat1 (electric)",
+  heat_stage2: "Heating with heat2 (gas)",
+  temp_high: "Venting: too warm",
+  temp_vent: "Venting: too warm",
+  summer_vent: "Venting: summer vent is on",
+  summer_vent_preempt: "Venting: summer vent came before sealing",
+  vent_mist_assist: "Venting with misters helping to cool",
+  vent_fog_assist: "Venting with fog helping to cool",
+  vent_humidify: "Venting to bring in moister outside air",
+  humidify_enter: "Sealing to raise humidity",
+  humidify_continue: "Sealed, still raising humidity",
+  humidify_resolved: "Air no longer too dry: no longer sealed",
+  fog_enter: "Sealing to fog",
+  fog_continue: "Sealed, still fogging",
+  seal_enter: "Sealing to raise humidity",
+  seal_continue: "Sealed, still raising humidity",
+  seal_exit: "No longer sealed: air recovered or someone inside",
+  thermal_relief: "Venting a heat burst",
+  thermal_relief_forced: "Venting a heat burst: sealed too long or too hot",
+  relief_cycle_breaker: "Venting: too many sealed and relief cycles in a row",
+  vpd_low: "Venting to dry the air: VPD too low",
+  vpd_too_low: "Venting to dry the air: VPD too low",
+  dehum_continue: "Still venting to dry the air",
+  dehum_vent_heat: "Venting with heat to dry the air",
+  heat_dehum: "Heating with heat1 to dry the air, vent closed",
+  dry_override: "Sealed: VPD above its safe limit",
+  vpd_min_safe_rescue: "Venting: VPD below its safe limit",
+  vpd_min_safe_heat_rescue: "Heating: VPD below its safe limit",
+  mist_backoff: "Resting: sealed for its longest allowed run",
+  moisture_blocked: "No longer sealed: someone inside",
+  dwell_hold: "Holding the mode for its minimum time",
+} as const;
+
+/**
+ * The codes `gh_moisture_block_reason` publishes (firmware/greenhouse/controls.yaml): why the misters are held, or that
+ * they run. `water_budget` is the soft budget (`mister_water_budget_gal`, lifted in a VPD emergency); the SAF-4 ceiling
+ * publishes no reason of its own. `leak_detected` is today's firmware only: the engine release drops it (Q-05).
+ */
+const MOISTURE_BLOCK_REASON = {
+  none: "Nothing holding the misters",
+  served: "Misting now",
+  pulse_gap: "Resting between mist pulses",
+  leak_detected: "Held: water flowing with every Verdify valve closed",
+  water_budget: "Misting held: today's soft water budget is used",
+  vent_interlock: "Waiting for the vent to close",
+  no_humidity_demand: "Humidity in band: no misting needed",
+  no_vpd_demand: "VPD in band: no misting needed",
+  engage_delay: "Waiting out the misting engage delay",
+  below_threshold: "VPD not high enough to wet the plants",
+  dew_margin: "Too close to the dew point",
+  wet_taper: "Wetting tapered off for the time of day",
+  no_zone_available: "No mister zone can run now",
+  direct_wet_time_invalid: "The controller's clock is not set yet",
+  direct_wet_temp: "Too cold to mist",
+  direct_wet_window: "Outside the hours misting may run",
+  irrigation: "A watering run is using the water",
+  occupancy: "Someone inside",
+} as const;
+
+/** `Problem.result` on an API-20 503 (architecture §5.7): why Lutron did not confirm. The light may still switch late. */
+const LIGHT_RESULT = {
+  ha_failed: "Lutron did not switch: Home Assistant did not answer",
+  not_confirmed: "Lutron did not reach the state",
+  timeout: "No answer yet: Lutron may still switch",
+} as const;
+
+/** The target API-20 records (`activity_log.target`), as an Activity row names it. */
+const LIGHT_TARGET = {
+  grow_light_main: "Main lights",
+  grow_light_grow: "Grow lights",
 } as const;
 
 /**
@@ -304,8 +398,8 @@ const STRESS_SEVERITY = { low: "low severity", medium: "medium severity", high: 
 
 /**
  * `activity_log.action` (`ACTIVITY_ACTION_PATTERN` in verdify_schemas/activity.py), as an Activity row's title begins:
- * the words, then the target's label ("Set VPD Mister Engage", "Changed line L01"). The irrigation actions are the ones
- * #1156's services write. `light.on` and `light.off` come with #1140 and read raw until then.
+ * the words, then the target's label ("Set VPD Mister Engage", "Changed line L01", "Lights on Main lights"). The
+ * irrigation actions are the ones #1156's services write, and the light actions API-20's.
  */
 const ACTIVITY_ACTION = {
   "setting.write": "Set",
@@ -321,6 +415,8 @@ const ACTIVITY_ACTION = {
   "irrigation.schedule.update": "Changed schedule",
   "irrigation.schedule.delete": "Deleted schedule",
   "irrigation.line.update": "Changed line",
+  "light.on": "Lights on",
+  "light.off": "Lights off",
 } as const;
 
 /**
@@ -357,6 +453,10 @@ export const WORDS: { readonly [family: string]: { readonly [code: string]: stri
   mode: MODE,
   mist_stage: MIST_STAGE,
   fog_block_reason: FOG_BLOCK_REASON,
+  mode_reason: MODE_REASON,
+  moisture_block_reason: MOISTURE_BLOCK_REASON,
+  light_result: LIGHT_RESULT,
+  light_target: LIGHT_TARGET,
   alert_type: ALERT_TYPE,
   equipment: EQUIPMENT,
   burst: BURST,
@@ -375,7 +475,7 @@ export const WORDS: { readonly [family: string]: { readonly [code: string]: stri
   occurrence_reason: OCCURRENCE_REASON,
 };
 export type WordFamily = "state_reason" | "alert_severity" | "alert_status" | "problem_code" | "line_state" | "mode" | "mist_stage" | "fog_block_reason"
-  | "alert_type" | "equipment" | "burst" | "required_trigger" | "band_verdict" | "scorecard_reason" | "trigger_outcome" | "stress_kind" | "stress_severity"
+  | "mode_reason" | "moisture_block_reason" | "light_result" | "light_target" | "alert_type" | "equipment" | "burst" | "required_trigger" | "band_verdict" | "scorecard_reason" | "trigger_outcome" | "stress_kind" | "stress_severity"
   | "activity_action" | "irrigation_field" | "run_outcome" | "vpd_source" | "line_fault" | "program_reject" | "occurrence_reason";
 
 /** True when the table has words for `code` in `family`. */

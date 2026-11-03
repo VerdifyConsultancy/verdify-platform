@@ -205,9 +205,10 @@ test("minutes by zone draws a no-data day as a hatched gap, never 0, and marks t
   expect(tab("History").getAttribute("aria-current")).toBe("page");
   expect(requests(api, "API-IRR-10").map((row) => row.path)).toEqual(["/api/v1/irrigation/minutes?from=2026-10-27&to=2026-11-02&group_by=line"]);
   expect([...document.querySelectorAll(".minutes-row")].map((row) => row.getAttribute("data-row"))).toEqual(["wall", "center", "south", "west", "fog"]);
-  expect(created).toHaveLength(5);
+  const rows = created.filter((plot) => plot.target.className.includes("plot-bars"));
+  expect(rows).toHaveLength(5);
   // 10/30 (index 3) has no data: every stacked series is null there, in every row.
-  for (const plot of created) for (const values of plot.data.slice(1)) expect((values as (number | null)[])[3]).toBeNull();
+  for (const plot of rows) for (const values of plot.data.slice(1)) expect((values as (number | null)[])[3]).toBeNull();
   expect([...document.querySelectorAll(".minutes-today")].map((cell) => text(cell))).toEqual([
     "today 0 min (partial) · cap 60", "today 14 min (partial) · cap 120", "today 0 min (partial) · cap 45", "today 0 min (partial) · cap 45", "today 6 min (partial)",
   ]);
@@ -219,13 +220,61 @@ test("Group by line and cause cut the same line report into rows; the choice and
   await load();
   expect(requests(api, "API-IRR-10").map((row) => row.path)).toEqual(["/api/v1/irrigation/minutes?from=2026-10-04&to=2026-11-02&group_by=line"]);
   expect([...document.querySelectorAll(".minutes-label")].map((label) => text(label))).toEqual(["L01 Drip • Wall", "L04 Mister • Center", "L11 Fog humidification"]);
-  expect(screen.getByRole("link", { name: "30 d" }).getAttribute("aria-current")).toBe("true");
-  expect(screen.getByRole("link", { name: "7 d" }).getAttribute("href")).toBe("/water/history?group=line");
-  fireEvent.click(screen.getByRole("link", { name: "cause" }));
+  const days = within(screen.getByRole("list", { name: "Days" }));
+  expect(days.getByRole("link", { name: "30 d" }).getAttribute("aria-current")).toBe("true");
+  expect(days.getByRole("link", { name: "7 d" }).getAttribute("href")).toBe("/water/history?group=line");
+  fireEvent.click(within(screen.getByRole("list", { name: "Group by" })).getByRole("link", { name: "cause" }));
   await load();
   expect([...document.querySelectorAll(".minutes-label")].map((label) => text(label))).toEqual(["VPD", "Schedule", "Fog humidification"]);
   // One read serves every grouping: the report stays by line.
   expect(new Set(requests(api, "API-IRR-10").map((row) => new URL(row.path, "http://x").searchParams.get("group_by")))).toEqual(new Set(["line"]));
+});
+
+test("daily water use: 30 days by line by default, the chips in the URL, and the no-valve bar apart from each day's stack", async () => {
+  const api = open("/water/history", { fixture: "water-use-90d" });
+  await load();
+  expect(requests(api, "API-21").map((row) => row.path)).toEqual(["/api/v1/water/daily?days=30"]);
+  const section = screen.getByRole("region", { name: "Daily water use" });
+  const days = within(section).getByRole("list", { name: "Water use days" });
+  const split = within(section).getByRole("list", { name: "Split water use by" });
+  expect(within(days).getByRole("link", { name: "30 d" }).getAttribute("aria-current")).toBe("true");
+  expect(within(split).getByRole("link", { name: "line" }).getAttribute("aria-current")).toBe("true");
+  expect(text(section.querySelector("figcaption"))).toBe("Gallons per day by line · last 30 days");
+  const plot = created.find((item) => item.target.className.includes("plot-water-use"))!;
+  // The base's no-data day nine days back is null in every series, 0 gal four days back stays 0, and the no-valve series is last.
+  const at = (ago: number) => plot.data.slice(1).map((values) => (values as (number | null)[])[29 - ago]);
+  expect(at(9).every((value) => value === null)).toBe(true);
+  expect(at(4).every((value) => value === 0)).toBe(true);
+  expect(at(6).at(-1)).toBe(14);
+  expect(plot.opts.series.at(-1)?.label).toBe("No Verdify valve open: hose, sink, hydro or a leak");
+  fireEvent.click(within(days).getByRole("link", { name: "90 d" }));
+  await load();
+  expect(requests(api, "API-21").at(-1)?.path).toBe("/api/v1/water/daily?days=90");
+  fireEvent.click(within(split).getByRole("link", { name: "cause" }));
+  await load();
+  expect(text(section.querySelector("figcaption"))).toBe("Gallons per day by cause · last 90 days");
+  expect(within(screen.getByRole("list", { name: "Water use days" })).getByRole("link", { name: "30 d" }).getAttribute("href")).toBe("/water/history?water_use_by=cause");
+  expect(within(screen.getByRole("list", { name: "Split water use by" })).getByRole("link", { name: "line" }).getAttribute("href")).toBe("/water/history?water_use=90d");
+  // The split needs no new read, and the minutes' own controls stay where they were.
+  expect(requests(api, "API-21")).toHaveLength(2);
+  expect(within(screen.getByRole("list", { name: "Days" })).getByRole("link", { name: "7 d" }).getAttribute("aria-current")).toBe("true");
+});
+
+test("daily water use reads the URL it is linked with, and a failed read says so in its own panel with Retry", async () => {
+  const api = open("/water/history?water_use=90d&water_use_by=cause", { fail: { "API-21": 503 } });
+  await load();
+  expect(requests(api, "API-21").map((row) => row.path)).toEqual(["/api/v1/water/daily?days=90"]);
+  const section = screen.getByRole("region", { name: "Daily water use" });
+  expect(text(section.querySelector(".panel-error .fault"))).toBe("Couldn't load daily water use.");
+  expect(section.querySelector("figure")).toBeNull();
+  // The other panels keep working.
+  expect(document.querySelectorAll(".minutes-row")).toHaveLength(5);
+  api.respond({ method: "POST", url: "/__control", body: { fixture: "water-use-90d" } });
+  fireEvent.click(within(section).getByRole("button", { name: "Retry" }));
+  await load();
+  await advance(1);
+  expect(section.querySelector(".panel-error")).toBeNull();
+  expect(text(section.querySelector("figcaption"))).toBe("Gallons per day by cause · last 90 days");
 });
 
 test("the run ledger: whole gallons (0 gal for no water, — with no meter data), no rate or flow flag, each run linked to its Graphs window", async () => {
@@ -358,6 +407,48 @@ test("a latched mister has Clear fault on its card and its zone: one API-IRR-13,
   await advance(1);
   expect(card("L04").querySelector(".line-fault")).toBeNull();
   expect(screen.queryByRole("button", { name: /^Clear fault/ })).toBeNull();
+});
+
+test("a failed status read says so behind the open Run dialog and leaves what was typed in it, which then runs", async () => {
+  const api = open("/water", { fixture: "run-dialogs" });
+  await load();
+  fireEvent.click(screen.getByRole("button", { name: "Run… L01" }));
+  await advance(1);
+  const dialog = () => document.querySelector("dialog")!;
+  const duration = () => within(dialog()).getByLabelText(/^Duration/) as HTMLInputElement;
+  fireEvent.change(duration(), { target: { value: "7" } });
+  fireEvent.change(within(dialog()).getByLabelText(/^Reason/), { target: { value: "Dry bench" } });
+  api.respond({ method: "POST", url: "/__control", body: { fixture: "run-dialogs", fail: { "API-IRR-01": 503 } } });
+  await advance(15_000);
+  await advance(5);
+  expect(document.querySelector(".line-card")).toBeNull();
+  expect(text(document.body)).toContain("Water status unavailable");
+  expect(duration().value).toBe("7");
+  expect((within(dialog()).getByLabelText(/^Reason/) as HTMLInputElement).value).toBe("Dry bench");
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Run 7 min" }));
+  await advance(0);
+  expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-06", path: "/api/v1/irrigation/lines/L01/run", body: { minutes: 7, reason: "Dry bench" } })]);
+  expect(document.querySelector("dialog")).toBeNull();
+});
+
+test("?run= opens the dialog from a link; a line that offers no Run…, and a viewer, get none; closing leaves the rest of the URL", async () => {
+  open("/water?run=L01", { fixture: "run-dialogs" });
+  await load();
+  expect(text(document.querySelector("dialog h2"))).toBe("Run L01 Wall drip (clean) for 10 min?");
+  fireEvent.click(within(document.querySelector("dialog")!).getByRole("button", { name: "Cancel" }));
+  await advance(1);
+  expect(document.querySelector("dialog")).toBeNull();
+  cleanup();
+  stopFixtureApi();
+  open("/water?run=L05", { fixture: "run-dialogs" });
+  await load();
+  expect(document.querySelector("dialog")).toBeNull();
+  expect(document.querySelector(".line-card")).not.toBeNull();
+  cleanup();
+  stopFixtureApi();
+  open("/water?run=L01", { fixture: ["run-dialogs", "viewer-session"] });
+  await load();
+  expect(document.querySelector("dialog")).toBeNull();
 });
 
 test("with changes switched off Run… and Clear fault are disabled and Stop stays live; a viewer sees none of them, and no words about them", async () => {

@@ -9,19 +9,22 @@ import { chartLinks } from "../charts/uplot-chart";
 import { Badge } from "../components/badge";
 import { BurstPanel } from "../components/burst-panel";
 import { PageHead } from "../components/common";
-import { useNow } from "../components/freshness";
+import { LIGHTS, LightControls, lightsDiffer, useLightControl, type LightControl } from "../components/equipment/light-controls";
+import { Ago, Since } from "../components/equipment/report-times";
+import { WhyPanel } from "../components/equipment/why-panel";
 import { Panel, PanelError, type PanelState } from "../components/panel";
-import { TIME_UNAVAILABLE, duration, formatValue, localTime, sinceClock } from "../lib/format";
+import { formatValue } from "../lib/format";
 import { LINES } from "../lib/lines";
-import type { Equipment as EquipmentAnswer, StateLanes } from "../lib/operator-api";
-import { useEquipmentRead, useStatesWindowRead } from "../lib/queries";
+import type { Equipment as EquipmentAnswer, Setting, StateLanes } from "../lib/operator-api";
+import { useEquipmentRead, useSettingsRead, useStatesWindowRead } from "../lib/queries";
 
 /**
  * SCR-07 Equipment (#1134): the bursts and Restart controller (#1136), the board of every actuator from API-13, polled
- * every 15 s, and the equipment lanes from API-05 over the last 24 h or 72 h (`?range=`), polled every 60 s. The board and
- * the lanes are read-only for every role, and only operators see the bursts' controls. Every state, since, runtime,
- * cycle count and unknown is the API's; the page never collapses edges, counts cycles or decides from an age that a state
- * is unknown. No greenhouse data renders here or in SSR: data loads in the browser.
+ * every 15 s, the grow lights' controls and the Why panel from that same read (#1140), and the equipment lanes from API-05
+ * over the last 24 h or 72 h (`?range=`), polled every 60 s. The board and the lanes read the same for every role, and only
+ * operators see the controls. Every state, since, runtime, cycle count and unknown is the API's; the page never collapses
+ * edges, counts cycles or decides from an age that a state is unknown. No greenhouse data renders here or in SSR: data
+ * loads in the browser.
  */
 export const meta = () => [{ title: "Equipment · Verdify dashboard" }];
 export const links = () => chartLinks();
@@ -50,10 +53,7 @@ export function boardRows(group: BoardGroup, items: readonly EquipmentItem[]): B
 }
 
 const known = (state: string | null | undefined): state is "on" | "off" => state === "on" || state === "off";
-/** The controller's intent and the Lutron readback are both known and say different things. */
-export function lightsDiffer(intent: string | null | undefined, state: string | null | undefined): boolean {
-  return known(intent) && known(state) && intent !== state;
-}
+export { lightsDiffer };
 
 /** A read as its panel shows it (screens §1.5): a skeleton until the first answer, its own error while the newest read failed. */
 export function readState(query: { readonly data: unknown; readonly error: unknown }): PanelState {
@@ -67,20 +67,6 @@ function StateBadge({ equipment, state }: { equipment: string; state: string }) 
   if (state === "on") return <Badge kind="on">{equipment === "vent" ? "Open" : "On"}</Badge>;
   if (state === "off") return <Badge kind="off">{equipment === "vent" ? "Closed" : "Off"}</Badge>;
   return <Badge kind="unknown" />;
-}
-
-/** When the current run began: "08:31" today, "10/27 04:26" before, on the server's clock; the full time in `title`. */
-function Since({ at }: { at: string }) {
-  const now = useNow();
-  return <time dateTime={at} title={Number.isFinite(Date.parse(at)) ? localTime(at) : undefined}>{sinceClock(at, now)}</time>;
-}
-
-/** How long ago a report came ("14 min ago"), ticking silently on the server's clock; the full time in `title`. */
-function Ago({ at }: { at: string }) {
-  const now = useNow();
-  const ms = Date.parse(at);
-  if (!Number.isFinite(ms)) return <>{TIME_UNAVAILABLE}</>;
-  return <time dateTime={at} title={localTime(at)}>{duration(Math.max(0, Math.floor((now - ms) / 1000)))} ago</time>;
 }
 
 const runtime = (seconds: number | null | undefined) => (seconds === null || seconds === undefined ? "—" : formatValue(seconds / 60, "min"));
@@ -122,9 +108,9 @@ function RelayRow({ item }: { item: EquipmentItem }) {
 /**
  * A grow light: the controller's intent beside the Lutron readback, and an amber "differ" marker in words when both are
  * known and differ. An unknown Lutron state reads with its age (Home Assistant down) and never marks a difference; an
- * intent the API does not serve yet reads "—".
+ * intent the API does not serve yet reads "—". The controls are held above the board (`useLightControl`).
  */
-function LightRow({ item }: { item: EquipmentItem }) {
+function LightRow({ item, control }: { item: EquipmentItem; control?: LightControl }) {
   const unknown = !known(item.state);
   const intent = item.intent === null || item.intent === undefined
     ? <span title="The controller has not reported its intent">—</span>
@@ -139,6 +125,7 @@ function LightRow({ item }: { item: EquipmentItem }) {
       </span>
     </div>
     <Facts item={item} age={!unknown} />
+    {control && <LightControls control={control} item={item} />}
   </li>;
 }
 
@@ -154,22 +141,38 @@ function MissingRow({ equipment }: { equipment: string }) {
  * The three groups in `.grid-3` (stacked on phones), each a skeleton until API-13 first answers. A failed read replaces
  * them with one "Couldn't load equipment." and Retry; the lanes keep working.
  */
-export function EquipmentGroups({ items, state, onRetry }: { items: readonly EquipmentItem[]; state: PanelState; onRetry?: () => void }) {
+export function EquipmentGroups({ items, state, onRetry, lights }: { items: readonly EquipmentItem[]; state: PanelState; onRetry?: () => void; lights?: readonly LightControl[] }) {
   if (state === "error") return <section className="card equipment-error" aria-label="Equipment board"><PanelError thing="equipment" onRetry={onRetry} /></section>;
   return <div className="grid grid-3 equipment-board">
     {BOARD_GROUPS.map((group) => <Panel key={group.group} title={group.title} thing={`${group.group} equipment`} state={state} reserve={group.reserve} onRetry={onRetry}>
       <ul className="equipment-rows">
         {boardRows(group, items).map(({ key, item }) => (item === null ? <MissingRow key={key} equipment={key} />
-          : group.group === "light" ? <LightRow key={key} item={item} /> : <RelayRow key={key} item={item} />))}
+          : group.group === "light" ? <LightRow key={key} item={item} control={lights?.find((light) => light.equipment === key)} /> : <RelayRow key={key} item={item} />))}
       </ul>
       {group.group === "light" && <p className="small equipment-note">(controller) is the state the controller set; Lutron is the state the switch reports (sensed). Since, time on and cycles follow the Lutron readback.</p>}
     </Panel>)}
   </div>;
 }
 
+const settingOf = (items: readonly Setting[] | undefined, param: string) => items?.find((row) => row.param === param);
+
+/**
+ * The board and the Why panel on one API-13 poll, with the lights' controls held here: a failed read replaces the groups
+ * with its error, and the answer and resync of a light command in progress outlive that. While API-09's newest read
+ * fails, the automatic switches read as not known, never their last values as current.
+ */
 function EquipmentBoard() {
   const equipment = useEquipmentRead();
-  return <EquipmentGroups items={equipment.data?.items ?? []} state={readState(equipment)} onRetry={() => void equipment.refetch()} />;
+  const settings = useSettingsRead();
+  const rows = settings.error ? undefined : settings.data?.items;
+  const [main, grow] = LIGHTS;
+  const lights = [useLightControl(main, settingOf(rows, main.autoParam)), useLightControl(grow, settingOf(rows, grow.autoParam))];
+  const state = readState(equipment);
+  const retry = () => void equipment.refetch();
+  return <>
+    <EquipmentGroups items={equipment.data?.items ?? []} state={state} onRetry={retry} lights={lights} />
+    <div className="section"><WhyPanel equipment={equipment.data} state={state} onRetry={retry} /></div>
+  </>;
 }
 
 // ---------------------------------------------------------------------------------------------------- the lanes

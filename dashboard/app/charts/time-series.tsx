@@ -2,23 +2,26 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import type uPlot from "uplot";
 import { formatValue, unitDecimals } from "../lib/format";
-import { csvFilename, csvText, type CsvBlock } from "./csv";
+import { csvFilename, windowCsv, type CsvBlock } from "./csv";
 import { CsvLink, DataTable, TimeCell, type DataTableBlock } from "./data-table";
-import { paintBandEdges, paintBandFill, paintBounds, paintLabels, paintNow, paintRetention, paintSteps, type ChartColors } from "./draw";
+import { paintBandEdges, paintBandFill, paintBounds, paintForecast, paintLabels, paintNow, paintRetention, paintSteps, type ChartColors } from "./draw";
 import { ChartKey, Legend, type KeyItem } from "./legend";
-import { FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandKindFor, bandRuns, groupSteps, marksExtent, paddedRange, settingBounds, settingSteps, stepFinder, stepsAt, type BandRun, type Bound, type StepKind, type StepSegment } from "./marks";
+import {
+  FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandKindFor, bandRuns, extentUnion, forecastAt, forecastExtent, forecastLines, groupSteps, marksExtent, paddedRange, settingBounds, settingSteps, stepFinder, stepsAt,
+  type BandRun, type Bound, type ForecastInput, type ForecastLine, type StepKind, type StepSegment,
+} from "./marks";
 import { DAILY_SUMMARY_NOTE, retentionNote, runAt, staleness, traceGaps, type RetentionNote, type Staleness, type TraceGaps } from "./retention";
 import { seriesSummary, summaryText, whenText, type SeriesSummary } from "./summary";
-import { AXIS_FONT, epochOf, fullTime, timeAxis } from "./time-axis";
+import { AXIS_FONT, clockTime, epochOf, fullTime, localDay, timeAxis } from "./time-axis";
 import { cursorX, tooltipPlugin } from "./tooltip";
 import type { BandTimeline, MetricDef, Series, SeriesColumns, SettingSteps, XRange } from "./types";
 import { UPlotChart, resetZoom, useStableArray, type ChartEnv, type ChartOptions } from "./uplot-chart";
 
 /**
  * TimeSeries (design system §5.2): one unit per plot. Each metric's `avg` is a uPlot series, 2px, `spanGaps: false`,
- * nulls kept as nulls. The band ribbon, the device, requested and planned setting steps, the bounds and the now line
- * are drawn in hooks from their own time arrays (marks.ts, draw.ts), never as series and never joined. The chart draws
- * only what its caller passes and never fetches.
+ * nulls kept as nulls. The band ribbon, the device, requested and planned setting steps, the bounds, the forecast and the
+ * now line are drawn in hooks from their own time arrays (marks.ts, draw.ts), never as series. The chart draws only what
+ * its caller passes and never fetches.
  */
 export type TimeSeriesInput = {
   /** API-04; null while there is no measured trace to draw (a settings-only chart, or nothing loaded). */
@@ -31,6 +34,10 @@ export type TimeSeriesInput = {
   band?: BandTimeline | null;
   /** API-12 per setting in this unit. */
   settings?: readonly SettingSteps[];
+  /** API-04's forecast keys over the window past now; the key in this unit draws dashed right of now. */
+  forecast?: ForecastInput | null;
+  /** Keys drawn dotted: a cross-check beside the measured trace (the controller's own target on `/graphs/zones`). */
+  dotted?: readonly string[];
   /** Epoch seconds. */
   now: number;
   xRange: XRange;
@@ -42,7 +49,7 @@ export type Trace = {
   label: string;
   /** Design-system token for the line. */
   token: string;
-  /** Forecast keys draw dashed [8,4]. */
+  /** Forecast keys draw dashed [8,4], the `dotted` keys dotted. */
   dash: number[] | null;
   columns: SeriesColumns | null;
   /** `avg` aligned to `t`; a gap is null, never 0. */
@@ -65,6 +72,7 @@ export type TimeSeriesModel = {
   /** The steps in non-overlapping runs, for the tooltip's binary search. */
   stepGroups: StepSegment[][];
   bounds: Bound[];
+  forecast: ForecastLine[];
   now: number;
   xRange: XRange;
   windowFrom: number;
@@ -76,15 +84,17 @@ export type TimeSeriesModel = {
 };
 
 const KEY_TOKENS: Readonly<Record<string, string>> = { "climate.temp_avg": "--c-temp", "climate.vpd_avg": "--c-vpd", "climate.rh_avg": "--c-rh" };
+/** A dotted line: 2 px dots, with the 2 px width a trace has. */
+const DOTTED_DASH = [2, 4];
 const UNIT_TOKENS: Readonly<Record<string, string>> = { "°F": "--c-temp", kPa: "--c-vpd", "%": "--c-rh" };
 /** More lines in one unit take the equipment tokens, each at least 3:1 on white (design system §5.1). */
 const EXTRA_TOKENS = ["--eq-fan2", "--eq-heat1", "--eq-vent", "--eq-mister", "--eq-light-grow", "--eq-fert", "--eq-heat2", "--eq-fog"];
 
-/** One token per metric: the climate keys their own, outdoor and forecast keys `--c-outdoor`, then the unit's, then the rest. */
-export function traceTokens(metrics: readonly MetricDef[], unit: string): string[] {
+/** One token per metric: the climate keys their own, outdoor and forecast keys `--c-outdoor`, a dotted cross-check `--c-setpoint`, then the unit's, then the rest. */
+export function traceTokens(metrics: readonly MetricDef[], unit: string, dotted: readonly string[] = []): string[] {
   const used = new Set<string>();
   const claimed = metrics.map((metric) => {
-    const token = KEY_TOKENS[metric.key] ?? (/outdoor|forecast/.test(metric.key) ? "--c-outdoor" : null);
+    const token = KEY_TOKENS[metric.key] ?? (/outdoor|forecast/.test(metric.key) ? "--c-outdoor" : dotted.includes(metric.key) ? "--c-setpoint" : null);
     if (!token || used.has(token)) return null;
     used.add(token);
     return token;
@@ -108,7 +118,7 @@ export function buildTimeSeriesModel(input: TimeSeriesInput): TimeSeriesModel {
   const windowFrom = epochOf(series?.from) ?? xRange.from;
   const windowTo = epochOf(series?.to) ?? xRange.to;
   const dataEnd = Math.min(windowTo, epochOf(series?.server_time) ?? windowTo);
-  const tokens = traceTokens(metrics, unit);
+  const tokens = traceTokens(metrics, unit, input.dotted);
   const traces = metrics.map((metric, position): Trace => {
     const columns = series?.series[metric.key] ?? null;
     const values = t.map((_, index) => {
@@ -118,7 +128,7 @@ export function buildTimeSeriesModel(input: TimeSeriesInput): TimeSeriesModel {
     const gaps = traceGaps(t, values, columns, bucketSeconds, series?.gaps ?? []);
     return {
       metric, key: metric.key, label: metric.label, token: tokens[position],
-      dash: columns?.source === "forecast" ? [8, 4] : null,
+      dash: columns?.source === "forecast" ? [8, 4] : input.dotted?.includes(metric.key) ? DOTTED_DASH : null,
       columns, values, daily: columns?.source === "daily_summary", gaps,
       retention: retentionNote(metric, columns, windowFrom, windowTo),
       staleness: staleness(metric, t, gaps.lastValued, bucketSeconds, dataEnd),
@@ -133,14 +143,16 @@ export function buildTimeSeriesModel(input: TimeSeriesInput): TimeSeriesModel {
     runs: bandRuns(input.band, bandKindFor(unit), now),
     steps, stepGroups: groupSteps(steps),
     bounds: settings.flatMap((setting) => settingBounds(setting, unit, prefix)),
+    forecast: forecastLines(input.forecast, unit, now),
     now, xRange, windowFrom, windowTo, dataEnd,
     seriesToken: tokens[0] ?? UNIT_TOKENS[unit] ?? "--c-temp",
   };
 }
 
 const shownTraces = (model: TimeSeriesModel, hidden: ReadonlySet<string>) => model.traces.filter((trace) => !hidden.has(trace.key));
+const shownForecast = (model: TimeSeriesModel, hidden: ReadonlySet<string>) => model.forecast.filter((line) => !hidden.has(line.key));
 
-/** The statements over the plot: daily summaries, retention and STALE, named when the panel has several lines. */
+/** The statements over the plot: daily summaries, retention, STALE, named when the panel has several lines, and the forecast's issue. */
 export function chartNotes(model: TimeSeriesModel, hidden: ReadonlySet<string> = new Set()): string[] {
   const traces = shownTraces(model, hidden);
   const named = (trace: Trace, text: string) => (model.traces.length > 1 ? `${trace.label}: ${text}` : text);
@@ -150,6 +162,7 @@ export function chartNotes(model: TimeSeriesModel, hidden: ReadonlySet<string> =
     if (trace.retention) notes.push(named(trace, trace.retention.text));
     if (trace.staleness.text) notes.push(named(trace, trace.staleness.text));
   }
+  for (const line of shownForecast(model, hidden)) notes.push(line.text);
   return [...new Set(notes)];
 }
 
@@ -173,9 +186,9 @@ const traceValue = (model: TimeSeriesModel, trace: Trace, index: number) => form
 
 /**
  * The tooltip at the cursor: the time with its offset, each shown series with its unit (a null run's "No data …" line
- * below them), then the band and every step at the cursor's x, found by binary search.
+ * below them), then the band, every step and the forecast hour at the cursor's x, found by binary search.
  */
-export function tooltipLines(model: TimeSeriesModel, plot: Pick<uPlot, "cursor" | "posToVal">, shown: (position: number) => boolean): string[] | null {
+export function tooltipLines(model: TimeSeriesModel, plot: Pick<uPlot, "cursor" | "posToVal">, shown: (position: number) => boolean, hidden: ReadonlySet<string> = new Set()): string[] | null {
   const x = cursorX(plot as uPlot);
   if (x === null) return null;
   const index = plot.cursor.idx;
@@ -192,6 +205,10 @@ export function tooltipLines(model: TimeSeriesModel, plot: Pick<uPlot, "cursor" 
   const band = bandAt(model.runs, x);
   if (band) lines.push(`${band.label} ${formatValue(band.low, model.unit)}–${formatValue(band.high, model.unit)}`);
   for (const step of stepsAt(model.stepGroups, x)) lines.push(step.detail);
+  for (const line of shownForecast(model, hidden)) {
+    const hour = forecastAt(line, x);
+    if (hour) lines.push(`${line.label} ${clockTime(hour.at, localDay(hour.at) !== localDay(model.now))} ${formatValue(hour.value, model.unit)}`);
+  }
   return lines;
 }
 
@@ -234,6 +251,8 @@ export function isolatedPoints(plot: uPlot, seriesIndex: number, show: boolean):
 /** The uPlot options; hooks read the latest model, so new marks repaint without a rebuild. */
 export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<TimeSeriesModel>, hiddenRef: MutableRefObject<ReadonlySet<string>>): ChartOptions {
   const { colors, px } = env;
+  // uPlot does not scale a series' dash: its canvas is in device pixels.
+  const scaled = (dash: readonly number[]) => dash.map((length) => length * px());
   const model = modelRef.current;
   const unit = model.unit;
   const color = (token: string) => colors[token] ?? "";
@@ -242,7 +261,7 @@ export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<Time
     series: [{}, ...model.traces.map((trace): uPlot.Series => ({
       label: trace.label, scale: "y", show: !hiddenRef.current.has(trace.key),
       stroke: color(trace.token), width: 2, spanGaps: false,
-      ...(trace.dash ? { dash: trace.dash } : {}),
+      ...(trace.dash ? { dash: scaled(trace.dash) } : {}),
       points: trace.daily ? { show: true, size: 6, fill: color(trace.token), stroke: color(trace.token) } : { size: 6, filter: isolatedPoints },
       value: (_plot, value) => formatValue(value, unit),
     }))],
@@ -250,7 +269,8 @@ export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<Time
       y: {
         range: (_plot, min, max) => {
           const current = modelRef.current;
-          return paddedRange([min, max], marksExtent(current.runs, current.steps, ...env.xWindow()));
+          const [x0, x1] = env.xWindow();
+          return paddedRange([min, max], extentUnion(marksExtent(current.runs, current.steps, x0, x1), forecastExtent(shownForecast(current, hiddenRef.current), x0, x1)));
         },
       },
     },
@@ -266,13 +286,15 @@ export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<Time
         const current = modelRef.current;
         const seriesColor = color(current.seriesToken);
         const ratio = px();
+        const forecast = shownForecast(current, hiddenRef.current);
         paintSteps(plot, current.steps, colors, seriesColor, ratio);
+        paintForecast(plot, forecast, colors, ratio);
         paintBounds(plot, current.bounds, colors, ratio);
         const nowShown = paintNow(plot, current.now, colors, ratio);
-        paintLabels(plot, { now: nowShown ? current.now : null, retention: visibleRetention(current, hiddenRef.current), bounds: current.bounds, steps: current.steps, runs: current.runs }, colors, seriesColor, ratio);
+        paintLabels(plot, { now: nowShown ? current.now : null, retention: visibleRetention(current, hiddenRef.current), bounds: current.bounds, steps: current.steps, runs: current.runs, forecast }, colors, seriesColor, ratio);
       }],
     },
-    plugins: [tooltipPlugin((plot) => tooltipLines(modelRef.current, plot, (position) => plot.series[position + 1]?.show !== false))],
+    plugins: [tooltipPlugin((plot) => tooltipLines(modelRef.current, plot, (position) => plot.series[position + 1]?.show !== false, hiddenRef.current))],
   };
 }
 
@@ -302,19 +324,27 @@ export function dataTables(model: TimeSeriesModel, hidden: ReadonlySet<string>):
       return [<TimeCell key="t" at={at} />, ...traces.map((trace) => traceValue(model, trace, index)), ...bandCells, notes.join("; ")];
     }),
   };
-  if (!model.steps.length && !model.bounds.length) return [buckets];
+  const forecast = shownForecast(model, hidden).map((line): DataTableBlock => ({
+    caption: `${line.label} · ${line.text}`, headers: ["Time", `${line.label} (${unit})`], count: line.t.length,
+    rows: () => line.t.map((at, index) => [<TimeCell key="t" at={at} />, formatValue(line.values[index], unit)]),
+  }));
+  if (!model.steps.length && !model.bounds.length) return [buckets, ...forecast];
   const bounds = model.bounds.map((bound) => bound.text).join(", ");
   const steps: DataTableBlock = {
     caption: `Setting steps${bounds ? ` · bounds ${bounds}` : ""}`, headers: ["From", "Until", "Step"], count: model.steps.length,
     rows: () => model.steps.map((step) => [<TimeCell key="from" at={step.start} />, <TimeCell key="to" at={step.end} />, step.detail]),
   };
   // A settings-only chart has no buckets to list.
-  return model.t.length ? [buckets, steps] : [steps];
+  return model.t.length ? [buckets, steps, ...forecast] : [steps, ...forecast];
 }
 
 /** The CSV block: exactly the plotted series, `avg` in canonical units. */
 export function csvBlock(model: TimeSeriesModel, hidden: ReadonlySet<string>): CsvBlock {
   return { t: model.t, columns: shownTraces(model, hidden).map((trace) => ({ header: `${trace.key} (${model.unit})`, values: trace.values })) };
+}
+/** The forecast's CSV blocks: its plotted hours, on their own rows after the measured buckets. */
+export function forecastCsvBlocks(lines: readonly ForecastLine[], unit: string, hidden: ReadonlySet<string>): CsvBlock[] {
+  return lines.filter((line) => !hidden.has(line.key)).map((line) => ({ t: line.t, columns: [{ header: `${line.key} (${unit})`, values: line.values }] }));
 }
 
 const STEP_KINDS: readonly StepKind[] = ["device", "requested", "planned", "superseded"];
@@ -367,6 +397,7 @@ export function chartLabel(model: TimeSeriesModel): string {
   if (sources.length) parts.push(`with the band ribbon (${sources.join("; ")})`);
   const settings = [...new Set(model.steps.map((step) => step.setting))];
   if (settings.length) parts.push(`with setting steps for ${settings.join(", ")}`);
+  if (model.forecast.length) parts.push(`with the forecast dashed past now (${model.forecast[0].text})`);
   return `${parts.join(", ")}. Gaps are left empty, never zero. The data table follows.`;
 }
 
@@ -387,13 +418,19 @@ export type TimeSeriesProps = TimeSeriesInput & {
   csv?: boolean;
   /** Shown in the reserved frame when there is nothing to draw. */
   message?: string;
+  /** Words under the eyebrow, each with the series it is about, so a hidden series takes its note with it. */
+  notes?: readonly ChartNote[];
 };
+/** A statement a caller adds over the plot. */
+export type ChartNote = { text: string; key?: string };
 
 export function TimeSeries(props: TimeSeriesProps) {
   const { series, unit, band, now, xRange, linked = false, syncKey } = props;
   const metrics = useStableArray(props.metrics)!;
   const settings = useStableArray(props.settings, (setting) => [setting.history, setting.label]);
-  const model = useMemo(() => buildTimeSeriesModel({ series, metrics, unit, band, settings, now, xRange: { from: xRange.from, to: xRange.to } }), [series, metrics, unit, band, settings, now, xRange.from, xRange.to]);
+  const dotted = useStableArray(props.dotted);
+  const { forecast } = props;
+  const model = useMemo(() => buildTimeSeriesModel({ series, metrics, unit, band, settings, forecast, dotted, now, xRange: { from: xRange.from, to: xRange.to } }), [series, metrics, unit, band, settings, forecast, dotted, now, xRange.from, xRange.to]);
   const modelRef = useRef(model);
   modelRef.current = model;
   const [ownHidden, setOwnHidden] = useState<ReadonlySet<string>>(() => new Set());
@@ -420,16 +457,16 @@ export function TimeSeries(props: TimeSeriesProps) {
     });
   }, [hidden, model]);
 
-  // The CSV is rebuilt only when what is plotted changes.
-  const csvVersion = useMemo(() => ({ model, hidden }), [model, hidden]);
+  // What is plotted: the CSV is rebuilt only when it changes, and a legend toggle repaints the marks drawn in hooks.
+  const plotted = useMemo(() => ({ model, hidden }), [model, hidden]);
   const plotClass = linked ? "plot plot-small" : "plot";
   // A message stands in for a panel whose series failed or has not loaded; otherwise the band and steps still draw.
-  const drawable = !(props.series === null && props.message) && (model.t.length > 0 || model.steps.length > 0 || model.runs.length > 0);
+  const drawable = !(props.series === null && props.message) && (model.t.length > 0 || model.steps.length > 0 || model.runs.length > 0 || model.forecast.length > 0);
   const traces = shownTraces(model, hidden);
   // A chart with no metric at all draws only setting steps (the setting drawer's history), so they are what its CSV holds.
   const stepsOnly = model.traces.length === 0;
   const csvRows = stepsOnly ? model.steps.length > 0 : traces.length > 0;
-  const notes = chartNotes(model, hidden);
+  const notes = [...new Set([...(props.notes ?? []).filter((note) => !note.key || !hidden.has(note.key)).map((note) => note.text), ...chartNotes(model, hidden)])];
   const when = (at: number) => whenText(at, model.bucketSeconds, model.windowFrom, model.windowTo);
   const onZoom = (state: boolean) => { setZoomed(state); props.onZoom?.(state); };
   const reset = () => {
@@ -440,15 +477,18 @@ export function TimeSeries(props: TimeSeriesProps) {
     <figcaption className="eyebrow">{props.title ?? chartTitle(model)}</figcaption>
     {notes.length > 0 && <ul className="chart-notes">{notes.map((note) => <li key={note} className={note.includes("STALE") ? "chart-note-stale" : undefined}>{note}</li>)}</ul>}
     {drawable
-      ? <UPlotChart options={(env) => timeSeriesOptions(env, modelRef, hiddenRef)} data={data} xRange={xRange} structure={structure} className={plotClass} label={chartLabel(model)} syncKey={syncKey} marks={model} onZoom={onZoom} onPlot={(plot) => { plotRef.current = plot; }} />
+      ? <UPlotChart options={(env) => timeSeriesOptions(env, modelRef, hiddenRef)} data={data} xRange={xRange} structure={structure} className={plotClass} label={chartLabel(model)} syncKey={syncKey} marks={plotted} onZoom={onZoom} onPlot={(plot) => { plotRef.current = plot; }} />
       : <div className={`${plotClass} chart-message`}><p>{props.message ?? "No data in this window"}</p></div>}
-    <Legend items={model.traces.map((trace) => ({ key: trace.key, label: trace.label, token: trace.token, shown: !hidden.has(trace.key) }))} onToggle={toggle} />
+    <Legend items={[
+      ...model.traces.map((trace) => ({ key: trace.key, label: trace.label, token: trace.token, shown: !hidden.has(trace.key) })),
+      ...model.forecast.map((line) => ({ key: line.key, label: line.label, token: "--c-outdoor", shown: !hidden.has(line.key) })),
+    ]} onToggle={toggle} />
     {stepsOnly && drawable && <ChartKey items={stepKey(model)} />}
     {traces.length > 0 && <ul className="plot-summary">{traces.map((trace) => <li key={trace.key}>{summaryText(trace.label, model.unit, trace.summary, when)}</li>)}</ul>}
     {((props.csv ?? true) && csvRows) || ((props.zoomControl ?? true) && zoomed)
       ? <div className="chart-tools">
         {(props.zoomControl ?? true) && zoomed && <button type="button" onClick={reset}>Reset zoom</button>}
-        {(props.csv ?? true) && csvRows && <CsvLink filename={csvFilename(props.title ?? chartTitle(model), xRange)} build={() => csvText(stepsOnly ? stepsCsvBlock(model) : csvBlock(model, hidden))} version={csvVersion} />}
+        {(props.csv ?? true) && csvRows && <CsvLink filename={csvFilename(props.title ?? chartTitle(model), xRange)} build={() => windowCsv(stepsOnly ? [stepsCsvBlock(model)] : [csvBlock(model, hidden), ...forecastCsvBlocks(model.forecast, model.unit, hidden)])} version={plotted} />}
       </div>
       : null}
     {drawable && <DataTable tables={dataTables(model, hidden)} />}

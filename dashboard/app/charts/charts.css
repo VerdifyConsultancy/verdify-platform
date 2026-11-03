@@ -25,7 +25,7 @@
 .chart-legend-items button{display:inline-flex;align-items:center;gap:.4rem;min-height:2.25rem;padding:0 .7rem;border-radius:999px;font-weight:500;color:var(--ink)}
 .chart-legend-items button[aria-pressed=false]{color:var(--muted);text-decoration:line-through}
 .chart-swatch{display:inline-block;width:1rem;height:3px;border-radius:2px;background:var(--muted)}
-.chart-swatch[data-token=c-temp]{background:var(--c-temp)}.chart-swatch[data-token=c-vpd]{background:var(--c-vpd)}.chart-swatch[data-token=c-rh]{background:var(--c-rh)}.chart-swatch[data-token=c-outdoor]{background:var(--c-outdoor)}
+.chart-swatch[data-token=c-temp]{background:var(--c-temp)}.chart-swatch[data-token=c-vpd]{background:var(--c-vpd)}.chart-swatch[data-token=c-rh]{background:var(--c-rh)}.chart-swatch[data-token=c-outdoor]{background:var(--c-outdoor)}.chart-swatch[data-token=c-setpoint]{background:var(--c-setpoint)}
 .chart-swatch[data-token=eq-fan2]{background:var(--eq-fan2)}.chart-swatch[data-token=eq-heat1]{background:var(--eq-heat1)}.chart-swatch[data-token=eq-vent]{background:var(--eq-vent)}.chart-swatch[data-token=eq-mister]{background:var(--eq-mister)}
 .chart-swatch[data-token=eq-light-grow]{background:var(--eq-light-grow)}.chart-swatch[data-token=eq-fert]{background:var(--eq-fert)}.chart-swatch[data-token=eq-heat2]{background:var(--eq-heat2)}.chart-swatch[data-token=eq-fog]{background:var(--eq-fog)}
 
@@ -88,6 +88,9 @@
 .minutes-today{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .chart .plot-bars{position:relative;height:84px;overflow:hidden;min-width:0}
 .chart .plot-bars.plot-bars-axis{height:112px}
+/* Daily water use (VD-20): its height reserved here; the summary is one line, where .plot-summary is a list. */
+.chart .plot-water-use{position:relative;height:220px;overflow:hidden;min-width:0}
+.water-summary{display:block}
 @media(max-width:860px){
   .minutes-row{grid-template-columns:minmax(0,1fr) auto}
   .minutes-row .plot-bars{grid-column:1/-1;grid-row:2}
@@ -103,7 +106,7 @@
 .chart-key-swatch[data-kind=dashed]{background:transparent;border:1px dashed currentColor}
 .chart-key-swatch[data-kind=dotted]{height:0;border-radius:0;background:none;border-top:2px dotted currentColor}
 .chart-key-swatch[data-kind=line]{height:0;border-radius:0;background:none;border-top:2px solid currentColor}
-.chart-key-swatch[data-token=ink]{color:var(--ink)}.chart-key-swatch[data-token=c-bound]{color:var(--c-bound)}
+.chart-key-swatch[data-token=ink]{color:var(--ink)}.chart-key-swatch[data-token=c-bound]{color:var(--c-bound)}.chart-key-swatch[data-token=fault]{color:var(--fault)}
 .chart-key-swatch[data-token=c-setpoint]{color:var(--c-setpoint)}.chart-key-swatch[data-token=c-requested]{color:var(--c-requested)}.chart-key-swatch[data-token=c-band-edge]{color:var(--c-band-edge)}
 .chart-key-swatch[data-token=c-temp]{color:var(--c-temp)}.chart-key-swatch[data-token=c-vpd]{color:var(--c-vpd)}.chart-key-swatch[data-token=c-rh]{color:var(--c-rh)}
 .chart-key-swatch[data-token=eq-mister]{color:var(--eq-mister)}.chart-key-swatch[data-token=eq-water]{color:var(--eq-water)}
