@@ -68,12 +68,12 @@ export const writes = (api: FixtureApi): Recorded[] => requests(api).filter((row
 /** When each request for `operationId` was sent, in ms after NOW. */
 export const sentAt = (operationId: string): number[] => sent.filter((row) => row.operationId === operationId).map((row) => row.at - NOW);
 
-/** Renders `ui` with a fresh query client, a router, a session (an operator with writes on unless `session` says otherwise) and toasts. */
-export function renderWithApi(ui: ReactElement, session: Partial<Session> = OPERATOR): RenderResult & { client: QueryClient } {
+/** Renders `ui` with a fresh query client, a router at `path`, a session (an operator with writes on unless `session` says otherwise) and toasts. */
+export function renderWithApi(ui: ReactElement, session: Partial<Session> = OPERATOR, path = "/"): RenderResult & { client: QueryClient } {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false, refetchOnReconnect: false } } });
   const value = { ...DEFAULT_SESSION, ...session };
   const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>
-    <MemoryRouter><SessionProvider {...value}><ToastProvider>{children}</ToastProvider></SessionProvider></MemoryRouter>
+    <MemoryRouter initialEntries={[path]}><SessionProvider {...value}><ToastProvider>{children}</ToastProvider></SessionProvider></MemoryRouter>
   </QueryClientProvider>;
   return Object.assign(render(ui, { wrapper }), { client });
 }

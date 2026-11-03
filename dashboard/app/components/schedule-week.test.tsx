@@ -101,3 +101,16 @@ test("with no schedules the week says so", () => {
   expect(NO_SCHEDULES_TEXT).toBe("No schedules yet. Lines water only from VPD control and Run now.");
   expect(screen.queryByRole("table")).toBeNull();
 });
+
+test("a block with a menu opens it when selected; a menu that offers nothing, and a week with no menu, leave the block as it was", () => {
+  const served = set("schedules-paused");
+  renderUi(<ScheduleWeek agenda={served["API-IRR-02"] as ScheduleAgenda} lines={(served["API-IRR-01"] as IrrigationStatus).lines} past={false} today={TODAY} now={NOW}
+    blockMenu={(occurrence) => (occurrence.line_id === "L01" ? <button type="button">Do {occurrence.slot_id}</button> : null)} />);
+  const table = screen.getByRole("table");
+  const offered = table.querySelector<HTMLElement>('tr[data-line="L01"] td[data-day="2026-11-04"] .week-block')!;
+  expect(offered.querySelector("summary .week-block-head")).not.toBeNull();
+  expect(within(offered).getByRole("button", { name: "Do 11" })).toBeTruthy();
+  expect(table.querySelector('tr[data-line="L04"] .week-block-menu')).toBeNull();
+  cleanup();
+  expect(week("schedules-paused", false).table.querySelector(".week-block-menu")).toBeNull();
+});

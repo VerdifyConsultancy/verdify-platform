@@ -7,9 +7,9 @@ import { fixture } from "../../e2e/fixtures/index.mjs";
 import { NBSP, denver } from "../components/test-render";
 import type { IrrigationStatus, MinutesReport, Occupancy, ScheduleAgenda } from "./operator-api";
 import {
-  NO_ENGINE_TEXT, RETRYING_TEXT, ROM_TEXT, agoWords, barsReport, blockAmount, boardLines, faultWords, feedStages, flowWords, lastWaterWords, limitItems,
-  minutesCaps, misterLines, nextRunWords, occupancyWords, occurrenceReasonWords, occurrenceWords, pauseWords, plannedToday, programBanner, runAmountWords,
-  runGallons, runSpanWords, runsFilters, runsWindow, timeLeftWords, todayWords, weekDays, whenWords, type ProgramBannerInput,
+  NO_ENGINE_TEXT, RETRYING_TEXT, ROM_TEXT, agoWords, barsReport, blockAmount, boardLines, faultWords, feedStages, flowWords, headroomWords, lastWaterWords, limitItems,
+  minutesCaps, misterLines, nextRunWords, occupancyWords, occurrenceReasonWords, occurrenceWords, pauseAfterRun, pauseWords, pausedNow, plannedToday, programBanner, runAmountWords,
+  runGallons, runSpanWords, runsFilters, runsWindow, timeLeftWords, todayWords, weekDays, wetLines, whenWords, type ProgramBannerInput,
 } from "./water";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
@@ -141,7 +141,9 @@ test("a card's words: last water and its outcome, today against the cap, the nex
   expect(plain(nextRunWords({ line_id: "L01", slot_id: 11, start_at: "2026-11-04T14:35:00Z", minutes: 12 }, TODAY) ?? "")).toBe("next Wed 07:35 · 12 min");
   expect(nextRunWords(null, TODAY)).toBeNull();
   const paused = { paused_until: denver("14:00"), paused_by: { source: "dashboard", name: "jason" }, pause_reason: "rain", vpd_member: true };
-  expect(pauseWords(paused, TODAY)).toBe("Paused until 14:00 by jason: rain · VPD misting continues");
+  expect(pauseWords(paused, TODAY)).toBe("Paused until 14:00 · VPD misting continues · by jason: rain");
+  expect(pauseWords({ ...paused, pause_reason: null }, TODAY)).toBe("Paused until 14:00 · VPD misting continues · by jason");
+  expect(pauseWords({ ...paused, paused_by: null, vpd_member: null }, TODAY)).toBe("Paused until 14:00 · rain");
   expect(pauseWords({ ...paused, paused_by: null, pause_reason: null, vpd_member: null }, TODAY)).toBe("Paused until 14:00");
   expect(pauseWords({ ...paused, paused_until: null }, TODAY)).toBeNull();
 });
@@ -238,4 +240,37 @@ test("a run's cells: its span, minutes or pulses, and whole gallons (0 gal moved
     .toEqual(["12 min", "14 pulses · 14 min", "1 pulse · 1 min"]);
   expect([runGallons(0), runGallons(9), runGallons(null)].map((gallons) => ({ ...gallons, text: plain(gallons.text) })))
     .toEqual([{ text: "0 gal", reason: null }, { text: "9 gal", reason: null }, { text: "—", reason: "no meter data" }]);
+});
+
+test("a cap's headroom follows the typed cap: minutes left, no cap at 0, the minutes alone until it is a number", () => {
+  expect(plain(headroomWords(14, 130))).toBe("Today 14 of 130 min · 116 min left");
+  expect(plain(headroomWords(14, 10))).toBe("Today 14 of 10 min · 0 min left");
+  expect(plain(headroomWords(14, 0))).toBe("Today 14 min · no cap");
+  expect(plain(headroomWords(14, null))).toBe("Today 14 min");
+  expect(plain(headroomWords(null, 130))).toBe("Today — of 130 min");
+});
+
+test("a pause is ahead of now or it is over; L03 and fog are never paused from the board", () => {
+  const at = Date.parse("2026-11-02T21:00:00Z");
+  expect(pausedNow({ paused_until: "2026-11-02T21:00:00Z" }, at - 1)).toBe(true);
+  expect(pausedNow({ paused_until: "2026-11-02T21:00:00Z" }, at)).toBe(false);
+  expect(pausedNow({ paused_until: null }, at)).toBe(false);
+  expect(wetLines(status().lines).map((item) => item.line_id)).toEqual(["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10"]);
+});
+
+test("a pause until after a block ends one minute past its planned end, for a drip, a mist run and a feed; only a block still planned ahead offers it", () => {
+  const start = "2026-11-04T14:35:00Z";
+  const planned = { status: "planned", planned_start: start };
+  const now = Date.parse("2026-11-02T17:42:00Z");
+  const end = (seconds: number) => new Date(Date.parse(start) + seconds * 1000).toISOString();
+  const drip = { on_s: 720, count: 1, gap_s: 0, prewet_s: 0, flush_s: 0 };
+  expect(pauseAfterRun(planned, drip, now)).toBe(end(720 + 60));
+  // 8 pulses of 60 s with seven 60 s gaps between them.
+  expect(pauseAfterRun(planned, { on_s: 60, count: 8, gap_s: 60, prewet_s: 0, flush_s: 0 }, now)).toBe(end(480 + 420 + 60));
+  // Prewet 2 min, feed 5 min, flush 4 min.
+  expect(pauseAfterRun(planned, { on_s: 300, count: 1, gap_s: 0, prewet_s: 120, flush_s: 240 }, now)).toBe(end(660 + 60));
+  expect(pauseAfterRun(planned, undefined, now)).toBeNull();
+  expect(pauseAfterRun({ ...planned, status: "skipped" }, drip, now)).toBeNull();
+  expect(pauseAfterRun({ ...planned, status: "blocked" }, drip, now)).toBeNull();
+  expect(pauseAfterRun(planned, drip, Date.parse(start))).toBeNull();
 });
