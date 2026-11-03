@@ -479,6 +479,9 @@ async def on_service_error(request: Request, exc: ServiceError) -> JSONResponse:
     return problem_response(request, exc.problem)
 
 
+_UNION_BRANCH = re.compile(r"constrained-.*|.*\[.*\]")  # constrained-int, function-before[...], literal[...]
+
+
 async def on_invalid_request(request: Request, exc: RequestValidationError) -> JSONResponse:
     errors = exc.errors()
     if any(error.get("type") == "json_invalid" for error in errors):
@@ -487,8 +490,14 @@ async def on_invalid_request(request: Request, exc: RequestValidationError) -> J
         if refusal is not None:
             return problem_response(request, refusal)
     first: Mapping[str, Any] = errors[0] if errors else {}
-    # The field names after the location ("body", "query", ...); never the input itself.
-    field_name = ".".join(part for part in first.get("loc", ())[1:] if isinstance(part, str)) or None
+    # The field names after the location ("body", "query", ...), never the input itself, and never the branch pydantic
+    # tried when the field is a union ("minutes", "constrained-int"): the dashboard shows an error beside its exact field.
+    field_name = (
+        ".".join(
+            part for part in first.get("loc", ())[1:] if isinstance(part, str) and not _UNION_BRANCH.fullmatch(part)
+        )
+        or None
+    )
     detail = str(first.get("msg") or "The request is not valid.")
     return problem_response(request, problem("invalid_request", detail, field=field_name))
 

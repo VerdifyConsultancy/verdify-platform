@@ -73,6 +73,7 @@ result = await activity.recorded_write(
     reason=reason,  # at most 500 characters
     perform=perform,  # async (conn) -> (value, detail): validate and write the domain row
     load=load,  # async (conn, ActivityLogRow) -> value: read the stored object back
+    lock=None,  # optional async (conn) -> None: the first thing in the transaction, before the replay read
     target_of=None,  # optional (value) -> str: the activity row's target when only perform knows it (a new id)
     finish=None,  # optional async (conn, value) -> value: the answer, read after the activity row in this transaction
 )
@@ -96,7 +97,8 @@ result = await activity.recorded_write(
    replay can `load` it, plus the before and after values the Activity screen shows. Then `append` writes
    the activity row with the request id, the hash and the experiment id, and the transaction commits.
 6. A concurrent duplicate that hits `UNIQUE (source, request_id)` rolls back and runs step 3 again in a new
-   transaction, where it replays (or is refused).
+   transaction, where it replays (or is refused). A write whose checks read what an earlier write stored passes
+   `lock`, so its duplicate waits before step 3, replays there and never meets those checks.
 
 Validate inside `perform`, so a retried request replays even if the rules changed since it was applied.
 A refusal raised there rolls back everything.

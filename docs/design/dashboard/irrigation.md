@@ -917,6 +917,9 @@ trigger. Site values use `set_setting`.
 As built (VD-41; `verdify_services/irrigation/writes.py` and `api/operator_routes/irrigation_writes.py`). Where the
 build settles what this section and §4.7 leave open:
 
+- **The lock comes first**, before the replay read, as `recorded_write`'s `lock`. So a duplicate sent while the first
+  is still in flight waits and replays it; a read before the lock would have sent it on to the checks, to be refused by
+  what the first just stored (`too_close`, `line_busy`, `unknown_target`).
 - **Run-now checks** run in the order §4.7's API rules list them, after the body per line kind: `line_disabled`,
   `line_paused`, `line_faulted`, `not_schedule_member`, `line_busy`, `manifold_busy`, `cap_reached`.
 - **One run at a time.** The engine holds one run, whichever manifold it is on (`irr_run_now`), so another line's
@@ -955,6 +958,9 @@ build settles what this section and §4.7 leave open:
   the types, so only `validate_schedule` and `validate_line` answer with `min` and `max`. Run-now's bounds stay
   `RunRequest`'s (400). Fractional numbers snap to whole ones in all of them.
 - **Identity fields** (`actor`, `source`, `*_by`) in a body are dropped unread; any other unknown field is 400.
+- **What the database cannot hold** is 400 `invalid_request`, not a server error: a NUL character in a label, check
+  note, reason, `trigger_id` or `planner_instance`, and a `paused_until` with no UTC form (the last hours of year 9999
+  behind UTC). A pause further ahead than the record's 32-bit time (2106) is stored, and the compiler sends that limit.
 
 ## 9. Water screen
 

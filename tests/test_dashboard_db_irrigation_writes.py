@@ -811,6 +811,49 @@ def test_each_write_replays_its_stored_object_and_refuses_another_payload():
     assert other_source.replayed is False and other_source.value.slot_id != created.value.slot_id
 
 
+@pytest.mark.parametrize("login", LOGINS)
+def test_the_same_request_twice_at_once_replays_and_is_never_refused_by_what_the_first_stored(login):
+    """The lock comes before the replay read (irrigation §8.3 step order). Both requests wait behind a held lock, so
+    both are past any read made before it: the first creates, runs or deletes, and the second must replay it, not meet
+    its own schedule (too_close), its own run (line_busy) or its own delete (unknown_target)."""
+    actor = ACTORS[login]
+    set_engine()
+    made = call(login, writes.schedule_create, actor, schedule_fields("L05"), manual=True).value
+
+    async def twice(write, *args, **kwargs):
+        key = uuid.uuid4()
+        holder = await connect()
+        try:
+            async with holder.transaction():
+                await holder.execute(writes._LOCK_SQL, "vallery")
+                tasks = [
+                    asyncio.create_task(as_login(login, write, actor, *args, request_id=key, **kwargs))
+                    for _ in range(2)
+                ]
+                await asyncio.sleep(0.3)
+            return await asyncio.gather(*tasks, return_exceptions=True)
+        finally:
+            await holder.close()
+
+    for write, args, kwargs in (
+        (writes.schedule_create, (schedule_fields(),), {"manual": True}),
+        (writes.run, ("L01",), {"minutes": 5}),
+        (writes.schedule_delete, (made.slot_id,), {}),
+        (writes.line_update, ("L01",), {"fields": {"daily_cap_min": 45}, "manual": True}),
+        (writes.stop, ("L01",), {}),
+    ):
+        stored = counts()
+        results = run(twice(write, *args, **kwargs))
+        assert sorted(result.replayed for result in results if not isinstance(result, Exception)) == [False, True], (
+            write.__name__,
+            results,
+        )
+        assert results[0].value == results[1].value, write.__name__
+        slots = {"schedule_create": 1, "schedule_delete": -1}.get(write.__name__, 0)
+        commands = int(write in (writes.run, writes.stop))
+        assert counts() == (stored[0] + slots, stored[1] + commands, stored[2] + 1), write.__name__
+
+
 def test_a_request_hashes_alike_from_a_model_and_from_a_mapping_of_the_same_fields():
     model = writes.ScheduleCreate(**schedule_fields(), manual=False, reason="why")
     assert writes._hashed_request(model, True, "why") == writes._hashed_request(
@@ -1157,6 +1200,42 @@ def test_the_rest_bodies_reach_the_tables_as_a_mapping_of_the_same_fields_does()
     [line] = call(DASHBOARD, writes.line_update, PERSON, "L01", pause).value.lines
     assert line.paused_until == until and line.pause_reason == "rain" and line.manual is False
     assert activity_rows()[-1]["reason"] == "rain"
+
+
+# ── what the database cannot hold ─────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("write", "args", "kwargs", "field"),
+    [
+        (writes.schedule_create, (schedule_fields(label="a\x00b"),), {"manual": True}, "label"),
+        (writes.schedule_create, (schedule_fields(),), {"manual": True, "reason": "a\x00b"}, "reason"),
+        (writes.schedule_create, (schedule_fields(),), {"manual": True, "trigger_id": "a\x00b"}, "trigger_id"),
+        (writes.schedule_update, (1, {"label": "a\x00b"}), {}, "label"),
+        (writes.schedule_delete, (1,), {"reason": "a\x00b"}, "reason"),
+        (writes.line_update, ("L06", {"checked": True, "check_note": "a\x00b"}), {}, "check_note"),
+        (writes.line_update, ("L06", {"paused_until": None}), {"reason": "a\x00b"}, "reason"),
+        (writes.line_update, ("L06", {"paused_until": None}), {"planner_instance": "a\x00b"}, "planner_instance"),
+        (writes.line_update, ("all", {"paused_until": None}), {"reason": "a\x00b"}, "reason"),
+        (writes.line_update, ("L06", {"paused_until": "9999-12-31T23:59:59-12:00"}), {}, "paused_until"),
+        (writes.line_update, ("all", {"paused_until": "9999-12-31T23:59:59-12:00"}), {}, "paused_until"),
+        (writes.run, ("L01",), {"reason": "a\x00b"}, "reason"),
+        (writes.stop, ("L01",), {"reason": "a\x00b"}, "reason"),
+        (writes.clear_fault, ("L04",), {"reason": "a\x00b"}, "reason"),
+        (writes.override, ("fans",), {"minutes": 5, "reason": "a\x00b"}, "reason"),
+    ],
+)
+def test_text_or_a_time_the_database_cannot_hold_is_invalid_request_and_stores_nothing(write, args, kwargs, field):
+    problem = refused(DASHBOARD, write, PERSON, *args, **kwargs)
+    assert (problem.code, problem.status, problem.field) == ("invalid_request", 400, field)
+    assert counts() == (0, 0, 0)
+
+
+def test_a_pause_far_ahead_is_stored_and_one_from_before_the_calendar_starts_resumes():
+    far = call(MCP, writes.line_update, AGENT, "L01", {"paused_until": "2200-01-01T00:00:00+02:00"}).value.lines[0]
+    assert far.paused_until == dt.datetime(2199, 12, 31, 22, tzinfo=dt.UTC)
+    early = call(MCP, writes.line_update, AGENT, "L01", {"paused_until": "0001-01-01T00:00:00+12:00"}).value.lines[0]
+    assert early.paused_until is None
 
 
 # ── who writes ────────────────────────────────────────────────────────────────

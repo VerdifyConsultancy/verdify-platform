@@ -6,8 +6,9 @@ ingestor's ``irrigation_sync`` (ingestor/tasks/irrigation.py) compiles, pushes a
 Nothing here touches ``setpoint_changes`` or the NOTIFY fast path, and nothing reads ``DASHBOARD_WRITES_ENABLED``:
 the BFF alone enforces it, and never on Stop.
 
-- Every write takes ``pg_advisory_xact_lock(hashtext('irrigation:' || greenhouse_id))`` before its checks
-  (irrigation §8.3), so two writers never both take the 24th slot or both pass a busy check.
+- Every write takes ``pg_advisory_xact_lock(hashtext('irrigation:' || greenhouse_id))`` first, before its replay read
+  and its checks (irrigation §8.3), so two writers never both take the 24th slot or both pass a busy check, and a
+  concurrent duplicate replays the first instead of being refused by what the first stored.
 - Fields: a function takes the REST body's model or a mapping of the same fields, and applies only the fields it
   carries (``model_fields_set``). ``actor``, ``source`` and ``*_by`` are dropped unread.
 - ``manual``: stored exactly as given and never defaulted here. ``None`` leaves an edit's stored flag alone, and a
@@ -48,6 +49,7 @@ from uuid import UUID
 
 import asyncpg
 from pydantic import (
+    AfterValidator,
     AwareDatetime,
     BaseModel,
     BeforeValidator,
@@ -219,6 +221,13 @@ SELECT coalesce(sum(m.minutes), 0)
 """
 
 
+def _no_nul(text: str) -> str:
+    """Stored free text: PostgreSQL cannot hold a NUL, so it is a bad request here, not a database error there."""
+    if "\x00" in text:
+        raise ValueError("must not hold a NUL character")
+    return text
+
+
 def _bounded(name: str) -> Any:
     """An optional whole number inside its RUN_BOUNDS_BY_KIND range; absent, never null, in the schema."""
     low, high = _RANGES[name]
@@ -288,7 +297,7 @@ class ScheduleInput(_Body):
     """API-IRR-04's body, the OpenAPI ``ScheduleInput``: only the fields an edit changes."""
 
     line_id: str = None
-    label: Annotated[str, Field(max_length=60)] = None
+    label: Annotated[str, Field(max_length=60), AfterValidator(_no_nul)] = None
     enabled: StrictBool = None
     days: Annotated[list[Weekday], Field(min_length=1)] = None
     start: ScheduleStartBody = None
@@ -327,7 +336,7 @@ class LineUpdate(_Body):
     vpd_member: StrictBool = None
     schedule_member: StrictBool = None
     checked: StrictBool = None
-    check_note: Annotated[str, Field(max_length=CHECK_NOTE_MAX_LENGTH)] = None
+    check_note: Annotated[str, Field(max_length=CHECK_NOTE_MAX_LENGTH), AfterValidator(_no_nul)] = None
     daily_cap_min: _Whole = None
     vpd_reserve_min: _Whole = None
     paused_until: AwareDatetime | None = None
@@ -373,7 +382,9 @@ def _invalid(exc: ValidationError) -> ServiceError:
 
 def _check_audit(trigger_id: str | None, planner_instance: str | None) -> None:
     for field, value in (("trigger_id", trigger_id), ("planner_instance", planner_instance)):
-        if value is not None and (not isinstance(value, str) or not 1 <= len(value) <= AUDIT_MAX_LENGTH):
+        if value is not None and (
+            not isinstance(value, str) or not 1 <= len(value) <= AUDIT_MAX_LENGTH or "\x00" in value
+        ):
             raise ServiceError(
                 problem("invalid_request", f"{field} is 1-{AUDIT_MAX_LENGTH} characters when sent", field=field)
             )
@@ -780,7 +791,6 @@ async def run(
     target = str(line_id)
 
     async def perform(conn: asyncpg.Connection) -> tuple[Command, dict[str, Any]]:
-        await _lock(conn)
         if target not in LINE_IDS:
             raise _unknown_line(line_id)
         if await engine_on(conn):
@@ -832,6 +842,7 @@ async def run(
         request_id=request_id,
         reason=body.reason,
         perform=perform,
+        lock=_lock,
         load=_load,
     )
 
@@ -855,7 +866,6 @@ async def stop(
     target = "all" if line_id is None else str(line_id)
 
     async def perform(conn: asyncpg.Connection) -> tuple[Command, dict[str, Any]]:
-        await _lock(conn)
         if line_id is not None and line_id not in LINE_IDS:
             raise _unknown_line(line_id)
         bridge = not await engine_on(conn)
@@ -874,6 +884,7 @@ async def stop(
         request_id=request_id,
         reason=reason,
         perform=perform,
+        lock=_lock,
         load=_load,
     )
 
@@ -893,7 +904,6 @@ async def clear_fault(
     target = "all" if line_id is None else str(line_id)
 
     async def perform(conn: asyncpg.Connection) -> tuple[Command, dict[str, Any]]:
-        await _lock(conn)
         if line_id is not None and line_id not in LINE_IDS:
             raise _unknown_line(line_id)
         if not await engine_on(conn):
@@ -919,6 +929,7 @@ async def clear_fault(
         request_id=request_id,
         reason=reason,
         perform=perform,
+        lock=_lock,
         load=_load,
     )
 
@@ -948,9 +959,8 @@ async def override(
     args = body.model_dump(exclude_none=True, exclude={"reason"})
 
     async def perform(conn: asyncpg.Connection) -> tuple[Command, dict[str, Any]]:
-        await _lock(conn)
         if not await engine_on(conn):
-            raise _no_engine("Bursts and restart from here")
+            raise _no_engine("A burst or a restart from here")
         command = await _insert(conn, actor, kind="override", line_id=None, args=args, reason=body.reason)
         return command, _command_detail(command, args=args)
 
@@ -964,6 +974,7 @@ async def override(
         request_id=request_id,
         reason=body.reason,
         perform=perform,
+        lock=_lock,
         load=_load,
     )
 
@@ -1121,7 +1132,6 @@ async def schedule_create(
     changes = _carried(body)
 
     async def perform(conn: asyncpg.Connection) -> tuple[Schedule, dict[str, Any]]:
-        await _lock(conn)
         spec = _schedule_spec(changes["line_id"], ScheduleSpec.model_validate, {**changes, "manual": manual})
         refusal = validate_schedule(spec, await _stored_slots(conn), await _stored_lines(conn))
         if refusal is not None:
@@ -1142,6 +1152,7 @@ async def schedule_create(
         request_id=request_id,
         reason=reason,
         perform=perform,
+        lock=_lock,
         load=_load_schedule,
         target_of=lambda schedule: str(schedule.slot_id),
     )
@@ -1173,7 +1184,6 @@ async def schedule_update(
         changes["manual"] = manual
 
     async def perform(conn: asyncpg.Connection) -> tuple[Schedule, dict[str, Any]]:
-        await _lock(conn)
         key = _slot_key(slot_id)
         slots = await _stored_slots(conn)
         before = next((slot for slot in slots if slot.slot_id == key), None)
@@ -1200,6 +1210,7 @@ async def schedule_update(
         request_id=request_id,
         reason=reason,
         perform=perform,
+        lock=_lock,
         load=_load_schedule,
     )
 
@@ -1220,7 +1231,6 @@ async def schedule_delete(
     request = {} if reason is None else {"reason": reason}
 
     async def perform(conn: asyncpg.Connection) -> tuple[ScheduleDeleted, dict[str, Any]]:
-        await _lock(conn)
         key = _slot_key(slot_id)
         before = next((slot for slot in await _stored_slots(conn) if slot.slot_id == key), None)
         if before is None:
@@ -1245,6 +1255,7 @@ async def schedule_delete(
         request_id=request_id,
         reason=reason,
         perform=perform,
+        lock=_lock,
         load=load,
     )
 
@@ -1253,8 +1264,16 @@ async def schedule_delete(
 
 
 def _stored_pause(paused_until: datetime | None, now: datetime) -> datetime | None:
-    """What a pause stores: null, or a time at or before now, resumes."""
-    return None if paused_until is None or paused_until <= now else paused_until
+    """What a pause stores: null, or a time at or before now, resumes. The last hours of the calendar, in a zone behind
+    UTC, have no UTC form, so the database cannot take them."""
+    if paused_until is None or paused_until <= now:
+        return None
+    try:
+        return paused_until.astimezone(UTC)
+    except OverflowError as exc:
+        raise ServiceError(
+            problem("invalid_request", "paused_until is past the last time that can be stored", field="paused_until")
+        ) from exc
 
 
 async def _update_every_line(
@@ -1428,7 +1447,6 @@ async def line_update(
     target = str(line_id)
 
     async def perform(conn: asyncpg.Connection) -> tuple[dict[str, bool], dict[str, Any]]:
-        await _lock(conn)
         if target == "all":
             return await _update_every_line(conn, actor, changes, manual, reason, audit)
         if target not in LINE_IDS:
@@ -1454,6 +1472,7 @@ async def line_update(
         request_id=request_id,
         reason=reason,
         perform=perform,
+        lock=_lock,
         load=load,
         finish=answer,
     )

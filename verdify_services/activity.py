@@ -253,6 +253,7 @@ async def recorded_write(
     reason: str | None,
     perform: Callable[[asyncpg.Connection], Awaitable[tuple[Any, Mapping[str, Any]]]],
     load: Callable[[asyncpg.Connection, ActivityLogRow], Awaitable[Any]],
+    lock: Callable[[asyncpg.Connection], Awaitable[None]] | None = None,
     target_of: Callable[[Any], str] | None = None,
     finish: Callable[[asyncpg.Connection, Any], Awaitable[Any]] | None = None,
 ) -> WriteResult:
@@ -272,8 +273,11 @@ async def recorded_write(
     6. A concurrent duplicate that hits UNIQUE (source, request_id) rolls back and runs step 3 again in a
        new transaction, where it replays (or is refused).
 
-    Two optional hooks serve a write that needs more than that. ``target_of(value)`` names the activity row's
-    target when only ``perform`` can know it (a create's new id; ``target`` still goes into the hash).
+    Three optional hooks serve a write that needs more than that. ``lock(conn)`` runs first in the transaction,
+    before step 3's read, for a write whose checks read what an earlier write stored: a concurrent duplicate waits
+    behind the first, sees its row and replays, where a read before the lock would have sent it on to those checks
+    and a refusal (API-IRR-03's ``too_close``, API-IRR-06's ``line_busy``). ``target_of(value)`` names the activity
+    row's target when only ``perform`` can know it (a create's new id; ``target`` still goes into the hash).
     ``finish(conn, value)`` runs after the activity row, in the same transaction, and returns the answer, so a
     response read from the log (API-IRR-08's ``paused_by``) names this write.
 
@@ -284,6 +288,8 @@ async def recorded_write(
         raise ServiceError(
             problem("invalid_request", f"reason is at most {REASON_MAX_LENGTH} characters", field="reason")
         )
+    if reason is not None and "\x00" in reason:  # PostgreSQL text cannot hold it
+        raise ServiceError(problem("invalid_request", "reason holds a NUL character", field="reason"))
     key = _request_key(request_id)
     digest = request_hash(op, target, request)
     if conn.is_in_transaction():
@@ -292,6 +298,8 @@ async def recorded_write(
     while True:
         try:
             async with conn.transaction():
+                if lock is not None:
+                    await lock(conn)
                 if key is not None:
                     stored = await conn.fetchrow(
                         f"SELECT {_COLUMNS} FROM public.activity_log WHERE source = $1 AND request_id = $2",

@@ -405,7 +405,14 @@ def test_the_retryable_flag_follows_the_code_and_the_pre_engine_unavailable_says
         ("POST", "/v1/equipment/override", {"minutes": 5}, "kind"),
         ("POST", "/v1/equipment/override", {"kind": "lights"}, "kind"),
         ("POST", "/v1/equipment/override", {"kind": "fans", "minutes": 121}, "minutes"),
+        ("POST", "/v1/equipment/override", {"kind": "fans", "minutes": 5, "reason": "r" * 501}, "reason"),
         ("POST", "/v1/irrigation/clear-fault", {"line_id": "L12"}, "line_id"),
+        ("POST", "/v1/irrigation/stop", {"line_id": "L12"}, "line_id"),
+        ("POST", "/v1/irrigation/lines/L01/run", {"minutes": 121}, "minutes"),
+        ("POST", "/v1/irrigation/lines/L04/run", {"on_s": 9, "count": 2, "gap_s": 60}, "on_s"),
+        ("POST", "/v1/irrigation/lines/L12/run", {"minutes": 5}, "line_id"),
+        ("POST", "/v1/irrigation/schedules", {**SCHEDULE_BODY, "label": "a\x00b"}, "label"),
+        ("PUT", "/v1/irrigation/lines/L01", {"checked": True, "check_note": "a\x00b"}, "check_note"),
     ],
 )
 def test_a_body_or_path_outside_the_contract_is_400_invalid_request_and_never_reaches_a_service(
@@ -415,7 +422,7 @@ def test_a_body_or_path_outside_the_contract_is_400_invalid_request_and_never_re
     assert response.status_code == 400, response.text
     answer = response.json()
     assert (answer["code"], answer["retryable"]) == ("invalid_request", False)
-    assert answer["field"].split(".")[0] == field
+    assert answer["field"] == field  # exactly: the dashboard shows the error beside the field of this name
     assert stubs.calls == []
 
 
