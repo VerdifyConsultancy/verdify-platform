@@ -380,6 +380,8 @@ async def _act(
     sql: str,
 ) -> WriteResult[Alert]:
     key = _alert_id(alert_id)
+    if text is not None and "\x00" in text:  # PostgreSQL text cannot hold it, so no retry could store it
+        raise ServiceError(problem("invalid_request", f"{field} holds a NUL character", field=field))
 
     async def perform(tx: asyncpg.Connection) -> tuple[Alert, dict[str, Any]]:
         row = await _row(tx, key)
@@ -426,7 +428,8 @@ async def ack(conn: asyncpg.Connection, actor: Actor, id: int, note: str | None,
     One ``recorded_write`` transaction sets ``disposition`` acknowledged, ``acknowledged_at``,
     ``acknowledged_by`` (the username for a person, ``actor.source`` otherwise) and, when given, ``notes``, and
     writes one ``alert.ack`` activity row (detail: the ids). Returns the merged row. An unknown id is
-    ``unknown_target``; a resolved row acknowledges nothing and returns its resolved merged row.
+    ``unknown_target``; a resolved row acknowledges nothing and returns its resolved merged row. A note holding a
+    NUL, which PostgreSQL text cannot store, is ``invalid_request``.
     """
     return await _act(conn, actor, id, note, request_id, op="API-15", action="alert.ack", field="note", sql=_ACK_SQL)
 
@@ -434,11 +437,12 @@ async def ack(conn: asyncpg.Connection, actor: Actor, id: int, note: str | None,
 async def resolve(
     conn: asyncpg.Connection, actor: Actor, id: int, resolution: str | None, request_id: Any
 ) -> WriteResult[Alert]:
-    """API-16: resolve every unresolved repeat of the merged row ``id`` belongs to. Never refused.
+    """API-16: resolve every unresolved repeat of the merged row ``id`` belongs to, whatever its type.
 
     One ``recorded_write`` transaction sets ``disposition`` resolved, ``resolved_at``, ``resolved_by`` and
     ``resolution``, as the MCP tool does today, and writes one ``alert.resolve`` activity row (detail: the
-    ids). Returns the merged row. An unknown id is ``unknown_target``. The MCP adapter keeps its
+    ids). Returns the merged row. An unknown id is ``unknown_target``, and a resolution holding a NUL, which
+    PostgreSQL text cannot store, is ``invalid_request``; nothing else refuses it. The MCP adapter keeps its
     ``planner_tool_dependency_failed`` retrieval check; this service has none.
     """
     return await _act(

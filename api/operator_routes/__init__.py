@@ -3,8 +3,8 @@
 The rules every module here follows:
 
 - One ``router = APIRouter()`` per module: ``reads``, ``series``, ``writes``, ``irrigation_reads`` and
-  ``irrigation_writes``. #1148 created the ``writes``, ``irrigation_reads`` and ``irrigation_writes`` stubs;
-  ``series`` is #1169's to create, and the operator API includes it as soon as its file exists.
+  ``irrigation_writes``. #1148 created the ``irrigation_reads`` and ``irrigation_writes`` stubs; ``series`` is
+  #1169's to create, and the operator API includes it as soon as its file exists.
 - Paths are written without the ``/v1`` prefix; ``api/operator_api.py`` (#1148) includes each router under
   ``/v1`` with ``include_v1()``.
 - Every route sets ``operation_id`` to its design id (``API-09``, ``API-IRR-06``, ...), the canonical
@@ -15,6 +15,6 @@ The rules every module here follows:
   ``verdify_services.actor.Actor``, which a write passes to its service. A route never reads an actor, source or
   ``*_by`` value from the request.
 - No SQL: a route only calls ``verdify_services``. A ``ServiceError`` propagates, and the operator API renders
-  it as ``application/problem+json`` (``problem.body()`` with ``problem.status``). A write passes the
-  ``Idempotency-Key`` header as ``request_id`` and returns ``WriteResult.rest_headers()`` with its body.
+  it as ``application/problem+json`` (``problem.body()`` with ``problem.status``). A write takes
+  ``writes.IdempotencyKey``, passes it as ``request_id`` and returns ``WriteResult.rest_headers()`` with its body.
 """

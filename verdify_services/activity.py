@@ -277,6 +277,8 @@ async def recorded_write(
         raise ServiceError(
             problem("invalid_request", f"reason is at most {REASON_MAX_LENGTH} characters", field="reason")
         )
+    if reason is not None and "\x00" in reason:  # PostgreSQL text cannot hold it, so no retry could store it
+        raise ServiceError(problem("invalid_request", "reason holds a NUL character", field="reason"))
     key = _request_key(request_id)
     digest = request_hash(op, target, request)
     if conn.is_in_transaction():

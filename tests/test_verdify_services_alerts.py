@@ -417,6 +417,15 @@ def test_a_retried_ack_replays_and_a_long_resolution_is_never_refused():
     assert len(db.activity[-1]["reason"]) == REASON_MAX_LENGTH
 
 
+@pytest.mark.parametrize(("call", "field"), [(alerts.ack, "note"), (alerts.resolve, "resolution")])
+def test_text_with_a_nul_is_refused_by_its_field_past_the_activity_reason_cut(call, field):
+    db, repeats, _ = relay_stuck_fixture()
+    with pytest.raises(ServiceError) as excinfo:
+        run(call(db, AGENT, repeats[0]["id"], "x" * 1200 + "\x00", None))
+    assert (excinfo.value.problem.code, excinfo.value.problem.field) == ("invalid_request", field)
+    assert db.activity == [] and db.sql == []
+
+
 def test_a_viewer_cannot_ack():
     db, repeats, _ = relay_stuck_fixture()
     with pytest.raises(ServiceError) as excinfo:
