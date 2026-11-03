@@ -837,7 +837,8 @@ def test_module_is_pure_and_import_light() -> None:
     """Nothing from ingestor/ (or any other repo package): the api, MCP and ingestor images all load it.
 
     The schedule model (VD-37, #1152) adds its sibling modules only: the shared solar code, the
-    snap rule and the registry's site rows.
+    snap rule and the registry's site rows. The command rows (VD-64, #1177) add the activity
+    module's actor vocabulary, and json and uuid for the row's args and id.
     """
     imported: set[str] = set()
     siblings: set[str] = set()
@@ -857,15 +858,22 @@ def test_module_is_pure_and_import_light() -> None:
         "functools",
         "hashlib",
         "itertools",
+        "json",
         "math",
         "re",
         "struct",
         "types",
         "typing",
+        "uuid",
         "zoneinfo",
     }
     assert imported <= stdlib | {"pydantic", "verdify_schemas"}
-    assert siblings == {"verdify_schemas.setting_values", "verdify_schemas.solar", "verdify_schemas.tunable_registry"}
+    assert siblings == {
+        "verdify_schemas.activity",
+        "verdify_schemas.setting_values",
+        "verdify_schemas.solar",
+        "verdify_schemas.tunable_registry",
+    }
 
 
 REEXPORTED = (

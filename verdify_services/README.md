@@ -10,6 +10,7 @@ page is the conventions every service here follows; VD-31 (#1147) set them.
 | `actor.py` | `Actor` (who is calling) and `ActorRef` (who wrote, as responses show it) |
 | `problems.py` | `ProblemCode`, `Problem`, `ServiceError` and `problem()` |
 | `activity.py` | `append`, `list` and `recorded_write`, the one write convention, with `WriteResult`, `ActivityEntry` and `ActivityPage` |
+| `irrigation/writes.py` | `run` and `stop` (API-IRR-06 and API-IRR-07, MCP `irrigation_run` and `irrigation_stop`) through the L01 bridge before the engine firmware (VD-64), with the `RunRequest` and `LineCommand` bodies |
 | `settings.py` | `catalog`, `validate`, `write`, `release`, `status` and `history` (VD-67), and the batched `statuses` and `desired_states` (VD-55): the one validator and writer for desired state, with `Setting`, `DesiredSetting`, `StateReason`, `SettingHistory` and `SettingStatus` |
 | `alerts.py` | `list`, `open_count`, `ack` and `resolve` (VD-67): merged alert rows, the one open-alert count, with `Alert`, `AlertPage` and `AlertCounts` |
 | `reads.py` | `now`, `plan` and `equipment` (VD-54: API-02, API-07 and API-13); `settings_rows`, `setting_history` and `activity_page` (VD-55: API-09, API-12 and API-17, which the MCP `settings` and `activity` tools call too), with `SettingRows`; and the shared `reporting()` (the one §7 test: heartbeat at most 180 s old, climate at most 300 s), which `settings.status` uses for its `writer_down` and `controller_not_reporting` reasons |
