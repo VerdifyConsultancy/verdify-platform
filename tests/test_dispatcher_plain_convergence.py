@@ -140,6 +140,8 @@ class Database:
             return self.plan_rows()
         if "fn_lighting_minutes_policy" in sql or "FROM system_state" in sql or "FROM equipment_state" in sql:
             return []
+        if "FROM v_desired_state_current" in sql:
+            return []  # tests/test_dispatcher_desired_state.py covers desired state (VD-33)
         raise AssertionError(sql)
 
     async def fetchrow(self, sql, *_args):
@@ -248,11 +250,12 @@ class Controller:
         expected_connection_generation=None,
         source_fence=None,
         source_guard=None,
+        desired_params=frozenset(),
     ):
         outcomes = []
         for index, (object_id, value, entity_type) in enumerate(routes):
             param = ENTITY_PARAMS[object_id]
-            hold = esp32_push._experiment_hold_failure(param)
+            hold = esp32_push._experiment_hold_failure(param, param in desired_params)
             if not shared.writer_lease_held():
                 status, reason = "failed", "writer_lease_not_held"
             elif hold:

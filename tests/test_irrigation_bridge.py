@@ -172,13 +172,18 @@ class FakeStore:
         ]
         return sorted(rows, key=lambda row: row.created_at)
 
-    async def mark_stop_sent(self, stop, sent_at, relays_on):
+    async def mark_stop_sent(self, stop, sent_at, relays_on, *, earlier_runs_only=False):
         current = self.rows[stop.command_id]
         if current.status != "pending" or current.created_at < now() - bridge.SEND_WINDOW:
             return False
         self._set(stop.command_id, status="sent", sent_at=sent_at, args={**current.args, "relays_on": relays_on})
         for row in list(self.rows.values()):
-            if row.kind == "run" and row.status == "pending" and (stop.line_id is None or row.line_id == stop.line_id):
+            if (
+                row.kind == "run"
+                and row.status == "pending"
+                and (stop.line_id is None or row.line_id == stop.line_id)
+                and (not earlier_runs_only or row.created_at <= stop.created_at)
+            ):
                 self._set(row.command_id, status="failed", fail_reason=bridge.STOPPED)
         self.events.append(("stop_sent", stop.command_id))
         return True
@@ -512,12 +517,16 @@ def test_the_equipment_callback_mirrors_wet_relays_before_any_dedupe(monkeypatch
 # ── irrigation_sync: step 0 ─────────────────────────────────────────────────────
 
 
-def test_with_the_engine_on_the_connection_the_pass_does_nothing(client, store, events, monkeypatch):
+def test_with_the_engine_on_the_connection_the_bridge_stands_down(client, store, events, monkeypatch):
+    """No press and no relay switch: tests/test_irrigation_sync.py covers what the engine's pass sends instead."""
     monkeypatch.setitem(shared.esp32, "services", {"irr_command": object(), "irr_program_begin": object()})
-    old = store.add("run", "L01", age_s=300)
-    store.add("stop", None)
+    monkeypatch.setattr(bridge, "_memory", bridge.EngineMemory())
+    monkeypatch.setattr(shared, "irrigation_readback", {})
+    run = store.add("run", "L01", age_s=300)
+    stop = store.add("stop", None)
     sync(store)
-    assert store.row(old).status == "pending" and calls(events) == []
+    assert store.row(run).fail_reason == bridge.TOO_OLD and store.row(stop).status == "sent"
+    assert calls(events) == []
 
 
 def test_a_command_not_sent_within_2_min_fails_too_old_and_is_never_sent(client, store, events):
@@ -806,7 +815,7 @@ def _task_loop() -> ast.AsyncFunctionDef:
     return loop
 
 
-def test_the_task_loop_runs_irrigation_sync_every_5_s_with_a_30_s_timeout_and_forces_it_on_the_wake():
+def test_the_task_loop_runs_irrigation_sync_every_5_s_above_the_push_budget_and_never_forces_it():
     loop = _task_loop()
     source = ast.unparse(loop)
     [tasks_assign] = [
@@ -816,8 +825,9 @@ def test_the_task_loop_runs_irrigation_sync_every_5_s_with_a_30_s_timeout_and_fo
     ]
     entries = [ast.unparse(entry) for entry in tasks_assign.value.elts]
     assert "('irrigation_sync', 5, irrigation_sync)" in entries
-    assert "'irrigation_sync': 30" in source
-    assert "if shared.irrigation_sync_requested.is_set():\n                forced.add('irrigation_sync')" in source
+    assert "'irrigation_sync': 150" in source and esp32_push._POLICY_TRANSACTION_BUDGET_S < 150
+    # A forced launch comes at most once per 30 s (_FORCED_TASK_RETRY_MIN_S), so the pass reads the flag itself.
+    assert "forced.add('irrigation_sync')" not in source
     assert tasks.irrigation_sync is bridge.irrigation_sync
     assert tasks.record_engine_capability is bridge.record_engine_capability
 

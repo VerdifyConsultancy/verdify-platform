@@ -321,6 +321,11 @@ STATE_MAP: dict[str, str] = {
     "gl_grow_state": "gl_grow_state",
     "gl_grow_reason": "gl_grow_reason",
     "gl_grow_decision_epoch": "gl_grow_decision_epoch",  # TextSensorInfo exact epoch string
+    # The irrigation engine's published job state (irrigation §5 F3, VD-42): each change lands in system_state, and
+    # ingestor.on_state_change also keeps the three values for irrigation_sync (shared.irrigation_readback).
+    "irr_program_id": "irr_program_id",
+    "irr_state": "irr_state",
+    "irr_events": "irr_events",
 }
 
 # ──────────────────────────────────────────────────────────────

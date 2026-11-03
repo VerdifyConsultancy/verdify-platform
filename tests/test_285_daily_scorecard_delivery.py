@@ -89,8 +89,9 @@ def test_successor_keeps_every_seal_and_binds_its_exact_ledger_row():
     assert six.sealed_sql_285() == expected
     assert "(SELECT max(seq) FROM public.schema_migrations WHERE source='db/migrations')=285" in expected
     assert "stamp_method='runner'" in six.ledger_row_sql(*six.DAILY_SCORECARD_MIGRATION)
-    assert six.sealed_sql().endswith(" OR " + expected + ")")
-    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_285() + ")") == 1
+    # 285 follows 284 in both ORs; a later successor (286) follows it.
+    assert six.sealed_sql().count(" OR " + six.sealed_sql_284() + " OR " + expected) == 1
+    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_285()) == 1
     assert '"285-daily-scorecard-view.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
     assert "tests/test_285_daily_scorecard_delivery.py" in (ROOT / "scripts/ci-local.sh").read_text()
 

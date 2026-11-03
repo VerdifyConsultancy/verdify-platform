@@ -239,8 +239,12 @@ def test_it_serves_its_own_operations_and_every_included_route_module():
         ("DELETE", "/v1/settings/{param}", "API-11"),
         ("POST", "/v1/alerts/{id}/ack", "API-15"),
         ("POST", "/v1/alerts/{id}/resolve", "API-16"),
+        ("GET", "/v1/irrigation", "API-IRR-01"),
+        ("GET", "/v1/irrigation/schedules", "API-IRR-02"),
+        ("GET", "/v1/irrigation/minutes", "API-IRR-10"),
+        ("GET", "/v1/irrigation/runs", "API-IRR-11"),
     }
-    # Committed operations not served yet are allowed: the other reads and the irrigation operations follow.
+    # Committed operations not served yet are allowed: the other reads and the irrigation writes follow.
     committed = {
         (method.upper(), path, operation["operationId"])
         for path, item in SPEC["paths"].items()

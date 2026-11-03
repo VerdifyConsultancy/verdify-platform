@@ -4,14 +4,16 @@ jvallery/agents#5994's campaign step starts a fresh server for each
 tests/test_dashboard_db_*.py file and sets VERDIFY_ISOLATED_TEST_DSN; without
 it this file skips. It builds a private schema from db/schema.sql's own DDL
 for every table and view the reads touch, migration 280's desired_state and
-v_desired_state_current, and migration 259's fn_mcp_armed_assignment_context()
-over stand-ins for the two experiment tables db/schema.sql predates (with a
-public stand-in that answers from it, because verdify_services.settings names
-the public function). The reads run as a role holding only SELECT on those
-relations and EXECUTE on that function (a subset of what M2b, #1233, grants the
-dashboard login), so a read of anything else fails here. Since VD-55 the alert
-count and the leak rows read alert_log, not v_open_alerts. The reads measure
-every age from the server's now(), so each fixture is placed relative to it.
+v_desired_state_current, migration 283's irrigation_line, irrigation_command and
+irrigation_ledger (running[].cause, #1155), and migration 259's
+fn_mcp_armed_assignment_context() over stand-ins for the two experiment tables
+db/schema.sql predates (with a public stand-in that answers from it, because
+verdify_services.settings names the public function). The reads run as a role
+holding only SELECT on those relations and EXECUTE on that function (a subset of
+what M2b, #1233, and migration 283 grant the dashboard login), so a read of
+anything else fails here. Since VD-55 the alert count and the leak rows read
+alert_log, not v_open_alerts. The reads measure every age from the server's
+now(), so each fixture is placed relative to it.
 """
 
 from __future__ import annotations
@@ -65,6 +67,9 @@ MIGRATION_DDL = (
         "CREATE FUNCTION public.fn_mcp_armed_assignment_context()",
         "$body$;\n",
     ),
+    ("db/migrations/283-irrigation-tables.sql", "CREATE TABLE public.irrigation_line (", ");\n"),
+    ("db/migrations/283-irrigation-tables.sql", "CREATE TABLE public.irrigation_command (", ");\n"),
+    ("db/migrations/283-irrigation-tables.sql", "CREATE TABLE public.irrigation_ledger (", ");\n"),
 )
 # Only the columns fn_mcp_armed_assignment_context() reads (migration 207 made the real ones).
 EXPERIMENT_STAND_INS = f"""
@@ -87,9 +92,11 @@ READ_TABLES = (
     "setpoint_clamps",
     "water_meter_events",
     "alert_log",  # VD-55: alerts.open_count and the leak rows read alert_log under v_open_alerts' predicate
+    "irrigation_command",
+    "irrigation_ledger",
 )
 READ_VIEWS = ("v_active_plan", "v_desired_state_current")
-ALL_TABLES = (*READ_TABLES, "desired_state", "control_experiments", "control_assignments")
+ALL_TABLES = (*READ_TABLES, "desired_state", "control_experiments", "control_assignments", "irrigation_line")
 # verdify_services.settings (API-07's lanes, VD-55) checks for an armed experiment through
 # activity.ARMED_EXPERIMENT_SQL, which names public.fn_mcp_armed_assignment_context(): a
 # stand-in there answers from this schema's copy, and remove() drops only the stand-in.
@@ -342,6 +349,58 @@ def test_now_reports_the_house_band_not_the_legacy_limits(dsn):
 # ── API-13 and API-02: equipment, running, bursts, mode ─────────────────────
 
 
+async def irrigation_line(conn, line_id, name, zone, kind, relay, equipment, device_idx):
+    """One line row, as M3 seeds it (only what its checks need)."""
+    await conn.execute(
+        "INSERT INTO irrigation_line (line_id, name, zone, kind, relay, equipment, device_idx, source, updated_by) "
+        "VALUES ($1, $2, $3, $4, $5, $6, $7, 'system', 'fixture')",
+        line_id,
+        name,
+        zone,
+        kind,
+        relay,
+        equipment,
+        device_idx,
+    )
+
+
+def test_running_names_why_each_wet_line_is_on(dsn):
+    """run_causes()'s join (#1155): the ledger row, the bridge command, then the line's topology cause."""
+
+    async def body(conn, t0):
+        await reporting_now(conn, t0)
+        await irrigation_line(conn, "L01", "Drip • Wall", "wall", "drip", "wall_drips", "drip_wall", 0)
+        await irrigation_line(conn, "L06", "Drip • Center (Fert.)", "center", "fert_drip", "cdf", "drip_center_fert", 5)
+        await states(conn, "heat1", [(t0 - 10 * MIN, True)])
+        await states(conn, "mister_center", [(t0 - 7 * MIN, True)])
+        await states(conn, "drip_center", [(t0 - 5 * MIN, True)])
+        # An L01 run 10 s after a sent bridge command.
+        await states(conn, "drip_wall", [(t0 - 3 * MIN, True)])
+        await conn.execute(
+            "INSERT INTO irrigation_command (kind, line_id, status, source, actor, sent_at) "
+            "VALUES ('run', 'L01', 'sent', 'dashboard', 'jason', $1)",
+            t0 - 3 * MIN - 10 * S,
+        )
+        # A feed on L06 already on well before the lookback, joined to its ledger row by its true start.
+        await states(conn, "drip_center_fert", [(t0 - 2 * H, False), (t0 - H, True), (t0 - 30 * MIN, True)])
+        await conn.execute(
+            "INSERT INTO irrigation_ledger (line_id, slot_id, local_day, cause, started_at) "
+            "VALUES ('L06', 9, current_date, 'feed', $1)",
+            t0 - H - S,
+        )
+        await states(conn, "drip_wall_fert", [(t0 - 4 * MIN, True), (t0 - MIN, False)])  # on and off: not running
+
+        running = {item.equipment: item for item in (await as_reader(conn, reads.now)).running}
+        assert set(running) == {"heat1", "mister_center", "drip_center", "drip_wall", "drip_center_fert"}
+        assert running["heat1"].cause is None
+        assert (running["mister_center"].line_id, running["mister_center"].cause) == ("L04", "vpd")
+        assert (running["drip_center"].line_id, running["drip_center"].cause) == ("L05", "unknown")
+        assert (running["drip_wall"].line_id, running["drip_wall"].cause) == ("L01", "run_now")
+        assert (running["drip_center_fert"].line_id, running["drip_center_fert"].cause) == ("L06", "feed")
+
+    scenario(dsn, body)
+
+
 def test_equipment_reads_the_newest_state_and_collapses_repeats(dsn):
     async def body(conn, t0):
         await reporting_now(conn, t0)
@@ -385,6 +444,7 @@ def test_equipment_reads_the_newest_state_and_collapses_repeats(dsn):
         assert set(running) == {"heat1", "mister_center", "grow_light_main"}
         assert (running["heat1"].since, running["heat1"].line_id, running["heat1"].cause) == (t0 - 10 * MIN, None, None)
         assert (running["mister_center"].since, running["mister_center"].line_id) == (t0 - 7 * MIN, "L04")
+        assert running["mister_center"].cause == "vpd"
         assert now.overrides == [
             reads.Override(kind="fans", since=t0 - 3 * MIN, ends_at=None, held_reason=None),
             reads.Override(kind="humidify", since=t0 - 2 * MIN, ends_at=None, held_reason="occupancy"),
@@ -395,32 +455,30 @@ def test_equipment_reads_the_newest_state_and_collapses_repeats(dsn):
 
 
 def test_a_burst_ends_at_its_sent_commands_minutes(dsn):
-    """ends_at reads the override command sent within 2 min before the edge, once irrigation_command exists (M3)."""
+    """ends_at reads the override command sent within 2 min before the edge, where the login can read it (M3)."""
 
     async def body(conn, t0):
         await reporting_now(conn, t0)
         await states(conn, "fan_burst_active", [(t0 - 1 * H, False), (t0 - 3 * MIN, True)])
         await states(conn, "vent_bypass_active", [(t0 - 1 * H, False), (t0 - 5 * MIN, True)])
-        await conn.execute(
-            f"CREATE TABLE {SCHEMA}.irrigation_command (kind text, args jsonb, status text, sent_at timestamptz)"
+        commands = [
+            ({"kind": "fans", "minutes": 15}, "sent", t0 - 3 * MIN - 30 * S),
+            ({"kind": "fans", "minutes": 99}, "sent", t0 - 10 * MIN),  # more than 2 min before the edge
+            ({"kind": "vent_bypass", "minutes": 20}, "failed", t0 - 5 * MIN - 10 * S),  # never sent
+        ]
+        await conn.executemany(
+            "INSERT INTO irrigation_command (kind, args, status, sent_at, source, actor) "
+            "VALUES ('override', $1::jsonb, $2, $3, 'dashboard', 'jason')",
+            [(json.dumps(args), status, sent_at) for args, status, sent_at in commands],
         )
+        await conn.execute(f"REVOKE SELECT ON {SCHEMA}.irrigation_command FROM {ROLE}")
         try:
-            commands = [
-                ({"kind": "fans", "minutes": 15}, "sent", t0 - 3 * MIN - 30 * S),
-                ({"kind": "fans", "minutes": 99}, "sent", t0 - 10 * MIN),  # more than 2 min before the edge
-                ({"kind": "vent_bypass", "minutes": 20}, "failed", t0 - 5 * MIN - 10 * S),  # never sent
-            ]
-            await conn.executemany(
-                "INSERT INTO irrigation_command (kind, args, status, sent_at) VALUES ('override', $1::jsonb, $2, $3)",
-                [(json.dumps(args), status, sent_at) for args, status, sent_at in commands],
-            )
             # Without a grant on it the read cannot see it, and no burst has an end time.
             assert {item.ends_at for item in (await as_reader(conn, reads.now)).overrides} == {None}
-            await conn.execute(f"GRANT SELECT ON {SCHEMA}.irrigation_command TO {ROLE}")
-            ends = {item.kind: item.ends_at for item in (await as_reader(conn, reads.now)).overrides}
-            assert ends == {"fans": t0 + 12 * MIN, "vent_bypass": None}  # a push-button burst has none
         finally:
-            await conn.execute(f"DROP TABLE {SCHEMA}.irrigation_command")
+            await conn.execute(f"GRANT SELECT ON {SCHEMA}.irrigation_command TO {ROLE}")
+        ends = {item.kind: item.ends_at for item in (await as_reader(conn, reads.now)).overrides}
+        assert ends == {"fans": t0 + 12 * MIN, "vent_bypass": None}  # a push-button burst has none
 
     scenario(dsn, body)
 
