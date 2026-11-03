@@ -151,8 +151,9 @@ weaken the alert and telemetry guards.
 
 ### 4. Wet gate
 
-The upload blocks the main loop and the firmware does not close relays first, so a
-relay that is ON when the upload starts stays ON until the reboot or the abort.
+The upload blocks the main loop. A running image without the `ota.on_begin` hook
+(#1276) does not close relays first, so a relay that is ON when the upload starts
+stays ON until the reboot or the abort.
 Uploads have held about 10 s, and some up to about 6 minutes. Pulse timers do not
 count during the hold. Re-read this every 30 s and submit on the first clean read
 (`scripts/verdify-db.sh prod -c "$GATE"`):
