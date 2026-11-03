@@ -45,7 +45,7 @@ nothing below runs unless it is named. All of them take `--expected-web-sha`.
 
 | Run | As | What it writes | Needs | Release |
 |---|---|---|---|---|
-| `scripts/dashboard-smoke.sh --sweep` | viewer | one session row, deleted | | #1181, #1186 |
+| `scripts/dashboard-smoke.sh --sweep` | viewer | its session rows, deleted | | #1181, #1186 |
 | `scripts/dashboard-smoke.sh --agent-write <name> [--param <setting>]` | agent `<name>` | one grid step, released at once; one Job, deleted | key `<name>` in Secret `verdify-mcp-agents` | #1144 |
 | `scripts/dashboard-smoke.sh --role operator [--param <setting>]` | `dashboard-smoke` operator | one grid step, manual, released | `writes_enabled: true` | #1144 |
 | `scripts/dashboard-smoke.sh --role operator --revert [--param <setting>]` | `dashboard-smoke` operator | three writes within one grid step, manual, released | `writes_enabled: true` | #1186 |
@@ -75,22 +75,26 @@ asks. Each moves a setting by one grid step at most, and they keep these rules:
   state known and equal, and `sw_gl_main_auto_mode` reading 1.
 - `--role operator`, `--revert` and `--lights` need `writes_enabled: true`, because the BFF answers 503 `writes_disabled`
   otherwise. `--agent-write` does not: the flag gates only the BFF.
-- Before it releases, a leg re-reads the newest desired row. Another writer's row stays, and a FAIL says so.
+- Before it releases, a leg re-reads the newest desired row, the agent Job included, because an agent's release takes
+  any row. Another writer's row stays, and a FAIL says so.
 - `FAIL` after 5 minutes means the setting did not read `confirmed`; the leg still released it. `HELD` means an armed
-  experiment serves that field, so repeat the leg after disarm or with another `--param`.
+  experiment serves that field (API-10's own answer then reads `held`), so repeat the leg after disarm or with another
+  `--param`.
 - `--lights` runs Back to automatic even after a failed readback, so it ends with the light at the controller's intent,
-  unless a person wrote `sw_gl_main_auto_mode` meanwhile; then it touches neither again. Its first call goes through `allow-setpoint-from-operator-api`, so when a sync adds that policy, hold the edge-write
-  lock through this leg (#1186).
+  unless a person wrote `sw_gl_main_auto_mode` meanwhile or API-09 cannot show that nobody did; then it touches neither
+  again. Its first call goes through `allow-setpoint-from-operator-api`, so when a sync adds that policy, hold the
+  edge-write lock through this leg (#1186).
 - `--agent-write` without the key fails with that message and creates nothing. Jason seals the key in jvallery/agents
   (jvallery/agents#6017), and MCP admits it within 3 minutes. The host reads the Secret's key names only, with
-  `kubectl describe secret`.
+  `kubectl describe secret`. The Job prints the state `set_setting` answers (`requested`, or `held` under an armed
+  experiment) and waits for no readback, so `HELD` is not a result of this leg.
 
 **If a write leg did not finish** (the run prints "did not finish", or its host died): the program in the pod keeps
 running on its own deadlines and releases what it wrote, within 25 minutes at most, unless the web pod itself restarted.
 After that, read the setting on Settings or in API-09. If its newest desired row is still `dashboard-smoke`'s, use
 Release to auto. For `--lights`, Back to automatic on `/equipment` returns the light to the controller's intent; then
-Release to auto on `sw_gl_main_auto_mode`. An `--agent-write` Job releases on SIGTERM, and a Job left behind deletes
-itself 10 minutes after it ends:
+Release to auto on `sw_gl_main_auto_mode`. An `--agent-write` Job still runs its release on SIGTERM, and a Job left
+behind deletes itself 10 minutes after it ends:
 
 ```bash
 kubectl -n verdify-prod get jobs -l app.kubernetes.io/component=dashboard-smoke

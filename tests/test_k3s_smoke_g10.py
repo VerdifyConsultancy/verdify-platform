@@ -379,9 +379,9 @@ class FakeDashboard:
                 "kind": "switch",
                 "control_class": "scheduled_policy",
                 "writable": True,
-                "step": None,
-                "min": 0,
-                "max": 1,
+                "step": 1.0,
+                "min": None,
+                "max": None,
                 "readback": {"value": options.get("auto_mode", 1)},
                 "desired": options.get("auto_desired"),
                 "plan": None,
@@ -443,10 +443,13 @@ class FakeDashboard:
             else:
                 row["state"] = "confirmed"
                 row["readback"]["value"] = desired["value"]
+            person = {"source": "dashboard", "name": "jason"}
             if self.options.get("person_writes_at") == self.reads_since_write:
-                person = {"source": "dashboard", "name": "jason"}
                 row["desired"] = self._row(row["param"], 2.0, True, person, "mine")
                 row["state"] = "requested"
+            if self.options.get("person_releases_at") == self.reads_since_write:
+                row["desired"] = self._row(row["param"], None, False, person, "mine")
+                row["state"] = "released"
         return {"items": list(self.rows.values()), "server_time": "2026-11-03T21:00:00Z"}
 
     def _equipment(self):
@@ -537,6 +540,9 @@ class FakeDashboard:
                 stored = round(round(body["value"] / step) * step, 6)
                 row["desired"] = self._row(param, stored, body["manual"], actor, body.get("reason"))
                 row["state"] = "requested"
+                if self.options.get("held"):
+                    # settings.write answers the state now: an armed experiment holds a policy field at once.
+                    row["desired"].update(state="held", state_reason={"code": "experiment", "detail": None})
                 self.history = [*self.history, row["desired"]]
                 self._log("setting.write", param, key, actor)
                 return 200, row["desired"]
@@ -547,6 +553,8 @@ class FakeDashboard:
         if path.startswith("/api/v1/equipment/lights/main/"):
             state = parts[6]
             self._log(f"light.{state}", "grow_light_main", key, actor)
+            if self.options.get("settings_down_after_switch"):
+                self.statuses["/api/v1/settings"] = 500
             if self.options.get("person_takes_the_switch"):
                 person = {"source": "dashboard", "name": "jason"}
                 switch = self.rows["sw_gl_main_auto_mode"]
@@ -625,9 +633,11 @@ class _Serve:
         self.server.server_close()
 
 
-def fake_mcp(calls, status=None, row=None, set_setting=None, stream=False):
+def fake_mcp(calls, status=None, row=None, set_setting=None, stream=False, row_after_write=None):
     """The MCP tools the smoke calls. Each tool answer carries a value that must never be printed. With ``stream``
-    it answers as an event stream with a notification first, as the live MCP may."""
+    it answers as an event stream with a notification first, as the live MCP may. ``row_after_write`` is what the
+    settings tool reads once a set_setting has run."""
+    wrote = []
 
     def answer(method, _path, headers, body):
         calls.append({"authorization": headers.get("authorization"), **body})
@@ -639,10 +649,13 @@ def fake_mcp(calls, status=None, row=None, set_setting=None, stream=False):
         if name == "irrigation_status":
             content = status if status is not None else irrigation_status()
         elif name == "settings":
-            content = {"items": [row] if row else [], "secret_body": "BODY-VALUE"}
+            current = row_after_write if wrote and row_after_write else row
+            content = {"items": [current] if current else [], "secret_body": "BODY-VALUE"}
         elif set_setting is not None:
+            wrote.append(arguments)
             content, is_error = set_setting(arguments)
         else:
+            wrote.append(arguments)
             state = "released" if arguments.get("release") else "requested"
             content = {"id": 1, "state": state, "value": arguments.get("value"), "secret_body": "BODY-VALUE"}
         text = json.dumps(content)
@@ -903,13 +916,17 @@ def test_operator_leg_releases_a_write_that_never_confirms(tmp_path):
 
 
 @needs_node
-def test_operator_leg_prints_held_and_still_releases(tmp_path):
+@pytest.mark.parametrize("arguments", [["--role", "operator"], ["--role", "operator", "--revert"]])
+def test_setting_legs_print_held_from_the_writes_own_answer_and_still_release(tmp_path, arguments):
     world = FakeDashboard(held=True)
-    result, _, _ = run_leg(tmp_path, world, "--role", "operator")
+    result, _, _ = run_leg(tmp_path, world, *arguments)
     assert result.returncode == 1
+    assert "PASS  API-10 writes mister_engage_kpa one grid step, manual, and answers held (200)" in result.stdout
     assert "HELD  API-09 holds mister_engage_kpa for an armed experiment (exp-7 armed)" in result.stdout
     assert "NOT GREEN" in result.stdout
-    assert world.calls_writing()[-1]["method"] == "DELETE"
+    # One write on either leg: a held value is not stepped further.
+    operator_writes = [call["method"] for call in world.calls_writing() if call["role"] == "operator"]
+    assert operator_writes == ["PUT", "DELETE"]
 
 
 @needs_node
@@ -920,6 +937,15 @@ def test_operator_leg_never_releases_another_writers_row(tmp_path):
     assert "another writer's, so it stays" in result.stdout
     assert [call["method"] for call in world.calls_writing()] == ["PUT", "PUT"]
     assert world.rows["mister_engage_kpa"]["desired"]["actor"]["name"] == "jason"
+
+
+@needs_node
+def test_operator_leg_is_not_green_when_someone_else_released_its_write(tmp_path):
+    world = FakeDashboard(person_releases_at=2)
+    result, _, _ = run_leg(tmp_path, world, "--role", "operator")
+    assert result.returncode == 1
+    assert "FAIL  API-17 lists setting.write, then setting.release (this check released nothing)" in result.stdout
+    assert [call["method"] for call in world.calls_writing()] == ["PUT", "PUT"]
 
 
 @needs_node
@@ -949,6 +975,22 @@ def test_revert_leg_goes_up_back_and_reverts_then_releases(tmp_path):
     )
     assert result.stdout.count("PASS  API-09 reads mister_engage_kpa confirmed") == 3
     assert "PASS  API-09 reads mister_engage_kpa released (200)" in result.stdout
+
+
+@needs_node
+def test_setting_legs_step_from_a_plan_value_off_the_grid(tmp_path):
+    # The live mister_engage_kpa on 2026-11-03: Iris planned 0.958 on a 0.05 grid, and the server snaps what it is sent.
+    device = 0.9580000042915344
+    world = FakeDashboard(device=device)
+    result, _, _ = run_leg(tmp_path, world, "--role", "operator")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert world.calls_writing()[1]["body"]["value"] == 1.0
+    assert "PASS  the device leaves the check's mister_engage_kpa once it is released" in result.stdout
+
+    world = FakeDashboard(device=device)
+    result, _, _ = run_leg(tmp_path, world, "--role", "operator", "--revert")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert [call["body"]["value"] for call in world.calls_writing()[:3]] == [1.0, device, 1.0]
 
 
 @needs_node
@@ -1006,11 +1048,12 @@ def test_lights_leg_fails_on_the_readback_and_still_goes_back_to_automatic(tmp_p
 
 
 @needs_node
-def test_lights_leg_goes_back_to_automatic_after_a_5xx_because_it_may_have_switched(tmp_path):
-    world = FakeDashboard(statuses={"/api/v1/equipment/lights/main/off": 500})
+@pytest.mark.parametrize("status", [500, 200])
+def test_lights_leg_goes_back_to_automatic_after_any_answer_but_a_4xx_because_it_may_have_switched(tmp_path, status):
+    world = FakeDashboard(statuses={"/api/v1/equipment/lights/main/off": status})
     result, _, _ = run_leg(tmp_path, world, "--role", "operator", "--lights")
     assert result.returncode == 1
-    assert "API-20 main off has no confirmation yet, and Lutron may still switch late (500)" in result.stdout
+    assert f"API-20 main off has no confirmation yet, and Lutron may still switch late ({status})" in result.stdout
     assert [call["method"] for call in world.calls_writing()] == ["POST", "PUT", "DELETE"]
 
 
@@ -1021,6 +1064,29 @@ def test_lights_leg_leaves_a_persons_switch_and_the_light_alone(tmp_path):
     assert result.returncode == 1
     assert "has another writer's row now, so this leg leaves it and the light as they are" in result.stdout
     assert [call["method"] for call in world.calls_writing()] == ["POST"]
+    assert world.rows["sw_gl_main_auto_mode"]["desired"]["actor"]["name"] == "jason"
+
+
+@needs_node
+def test_lights_leg_writes_nothing_over_a_switch_it_cannot_read(tmp_path):
+    world = FakeDashboard(settings_down_after_switch=True)
+    result, _, _ = run_leg(tmp_path, world, "--role", "operator", "--lights")
+    assert result.returncode == 1
+    assert (
+        "sw_gl_main_auto_mode could not be read, so this leg leaves it and the light as they are (500)" in result.stdout
+    )
+    assert [call["method"] for call in world.calls_writing()] == ["POST"]
+
+
+@needs_node
+def test_lights_leg_leaves_the_light_when_a_person_takes_the_switch_during_the_wait(tmp_path):
+    world = FakeDashboard(person_writes_at=1)
+    result, _, _ = run_leg(tmp_path, world, "--role", "operator", "--lights")
+    assert result.returncode == 1
+    assert "has another writer's row now, so this leg leaves it and the light as they are" in result.stdout
+    # The switch off, its one write, and nothing after the person's row: no switch back and no release.
+    assert [call["method"] for call in world.calls_writing()] == ["POST", "PUT"]
+    assert world.light["state"] == "off"
     assert world.rows["sw_gl_main_auto_mode"]["desired"]["actor"]["name"] == "jason"
 
 
@@ -1110,6 +1176,7 @@ def test_agent_leg_creates_the_labelled_job_deletes_it_and_reads_api_17(tmp_path
     env = {item["name"]: item for item in container["env"]}
     assert env["MCP_URL"]["value"] == "http://verdify-mcp.verdify-prod.svc:8000/mcp"
     assert env["SMOKE_PARAM"]["value"] == "mister_engage_kpa"
+    assert env["SMOKE_AGENT"]["value"] == "orbit"
     assert env["MCP_AGENT_KEY"]["valueFrom"]["secretKeyRef"] == {"name": "verdify-mcp-agents", "key": "orbit"}
 
     name = job["metadata"]["name"]
@@ -1165,6 +1232,21 @@ def test_agent_leg_reads_no_activity_when_the_job_wrote_nothing(tmp_path):
     assert not world.calls
 
 
+def test_agent_leg_is_not_green_when_a_complete_jobs_log_shows_no_write(tmp_path):
+    world = FakeDashboard()
+    result, _, _ = run_leg(
+        tmp_path,
+        world,
+        "--agent-write",
+        "orbit",
+        MOCK_SECRET=SECRET_NAMES.format(key="orbit"),
+        MOCK_MCP_IMAGE=MCP_IMAGE,
+    )
+    assert result.returncode == 1
+    assert "FAIL  the agent Job ended Complete but its log shows no write" in result.stdout
+    assert not world.calls
+
+
 def test_agent_leg_needs_a_pinned_mcp_image(tmp_path):
     world = FakeDashboard()
     result, kube_calls, _ = run_leg(
@@ -1203,7 +1285,7 @@ def agent_program():
 
 def agent_env(url):
     env = dict(os.environ)
-    env.update(MCP_URL=f"{url}/mcp", MCP_AGENT_KEY="KEY-VALUE", SMOKE_PARAM="mister_engage_kpa")
+    env.update(MCP_URL=f"{url}/mcp", MCP_AGENT_KEY="KEY-VALUE", SMOKE_PARAM="mister_engage_kpa", SMOKE_AGENT="orbit")
     return env
 
 
@@ -1226,8 +1308,9 @@ def test_agent_program_writes_one_step_releases_and_prints_only_states_and_codes
         "PASS set_setting(release=true) answers state released",
     ]
     tools = [call["params"] for call in calls if call["method"] == "tools/call"]
-    assert [tool["name"] for tool in tools] == ["settings", "set_setting", "set_setting"]
-    write, release = tools[1]["arguments"], tools[2]["arguments"]
+    # The second settings read is the check before the release.
+    assert [tool["name"] for tool in tools] == ["settings", "set_setting", "settings", "set_setting"]
+    write, release = tools[1]["arguments"], tools[3]["arguments"]
     assert (write["param"], write["value"], write["reason"]) == ("mister_engage_kpa", 1.65, "R2 live check")
     assert "manual" not in write
     assert release["release"] is True and "value" not in release
@@ -1243,6 +1326,54 @@ def test_agent_program_refuses_a_row_it_did_not_write_before_any_write():
     assert "refused: its newest desired row is neither absent nor released" in result.stdout
     assert "WRITING" not in result.stdout
     assert [call["params"]["name"] for call in calls if call["method"] == "tools/call"] == ["settings"]
+
+
+def test_agent_program_steps_from_a_plan_value_off_the_grid():
+    calls = []
+    row = {**AGENT_ROW, "readback": {"value": 0.9580000042915344}}
+    result = run_agent_program(fake_mcp(calls, row=row))
+    assert result.returncode == 0, result.stdout + result.stderr
+    writes = [
+        call["params"]["arguments"]
+        for call in calls
+        if call["method"] == "tools/call" and "value" in call["params"]["arguments"]
+    ]
+    assert [write["value"] for write in writes] == [1.0]
+
+
+def agent_released(calls):
+    return [call for call in calls if call["method"] == "tools/call" and call["params"]["arguments"].get("release")]
+
+
+def test_agent_program_leaves_a_row_another_writer_wrote_after_its_own():
+    calls = []
+    person = {"id": 5, "value": 1.2, "manual": True, "actor": {"source": "dashboard", "name": "jason"}}
+    result = run_agent_program(fake_mcp(calls, row=AGENT_ROW, row_after_write={**AGENT_ROW, "desired": person}))
+    assert result.returncode == 1
+    assert "FAIL mister_engage_kpa's newest desired row is another writer's, so it stays" in result.stdout
+    assert agent_released(calls) == []
+
+
+def test_agent_program_releases_its_own_row():
+    calls = []
+    own = {"id": 1, "value": 1.65, "manual": False, "actor": {"source": "agent:orbit", "name": "orbit"}}
+    result = run_agent_program(fake_mcp(calls, row=AGENT_ROW, row_after_write={**AGENT_ROW, "desired": own}))
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert len(agent_released(calls)) == 1
+
+
+def test_agent_program_prints_a_held_write_and_still_releases():
+    calls = []
+
+    def held(arguments):
+        if arguments.get("release"):
+            return {"id": 2, "state": "released"}, False
+        return {"id": 1, "state": "held", "state_reason": {"code": "experiment"}}, False
+
+    result = run_agent_program(fake_mcp(calls, row=AGENT_ROW, set_setting=held))
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "PASS set_setting answers state held" in result.stdout
+    assert len(agent_released(calls)) == 1
 
 
 def test_agent_program_prints_a_refusals_code_and_releases_nothing():
@@ -1308,5 +1439,4 @@ def test_agent_program_releases_on_sigterm_after_the_write():
         stdout, _ = process.communicate(timeout=25)
     assert process.returncode == 143
     assert "PASS set_setting(release=true) answers state released" in stdout
-    released = [call for call in calls if call["method"] == "tools/call" and call["params"]["arguments"].get("release")]
-    assert len(released) == 1
+    assert len(agent_released(calls)) == 1

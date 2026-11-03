@@ -14,8 +14,8 @@
 #   scripts/dashboard-smoke.sh --role operator --revert [--param <setting>] [--expected-web-sha <40 hex>]
 #   scripts/dashboard-smoke.sh --role operator --lights [--expected-web-sha <40 hex>]
 #
-# Every leg's run starts with /readyz: status ready at --expected-web-sha, or at any full SHA without it. <setting>
-# defaults to mister_engage_kpa.
+# Every run in the web pod starts with /readyz: status ready at --expected-web-sha, or at any full SHA without it;
+# --agent-write reads it after the Job, for API-17. <setting> defaults to mister_engage_kpa.
 #
 # BASELINE (no flag). Inside the web pod:
 #   - INT-01 mints a viewer session named dashboard-smoke (201), which proves the token the web pod
@@ -58,7 +58,9 @@
 #     token, restricted, backoffLimit 0, activeDeadlineSeconds 120, with that key as an env var. It retries its first
 #     connect for up to 30 s, reads the setting through MCP settings, refuses unless the newest desired row is absent or
 #     released, then calls set_setting with the device value plus one step (minus at the max) and set_setting(release=
-#     true), and prints only the returned state and codes. A SIGTERM still runs the release.
+#     true), and prints only the returned state and codes (held under an armed experiment, which is not a failure here:
+#     this leg waits for no readback). A SIGTERM still runs the release. A Job that ended Complete with no write in its
+#     log is a FAIL, because nothing then shows what it did.
 #   - This host deletes the Job, and a viewer session reads API-17 ?source=agent:<name>&target=<setting>: both writes
 #     with actor source agent:<name> and name <name>, which Activity shows as "<name> · agent".
 #
@@ -68,11 +70,11 @@
 # its newest desired row is absent or released; a crop-band or irrigation-site setting is refused too, because a
 # release does not undo the first and the second cannot confirm before the engine firmware.
 #   - --role operator: a viewer's same PUT answers 403 forbidden and adds no row. API-10 writes the device value plus
-#     one step (minus at the max), manual, and answers requested; API-09, polled every 5 s, reads confirmed (FAIL after
-#     5 minutes; held by an armed experiment prints HELD with its detail, so repeat it after disarm or with another
-#     --param). API-11 releases it, the row reads released and the device leaves the check's value within 5 minutes,
-#     for its plan, band or default value. API-17 lists setting.write, then setting.release, source dashboard, actor
-#     dashboard-smoke.
+#     one step (minus at the max), manual, and answers requested, or held under an armed experiment; API-09, polled
+#     every 5 s, reads confirmed (FAIL after 5 minutes; held by an armed experiment prints HELD with its detail, so
+#     repeat it after disarm or with another --param). API-11 releases it, the row reads released and the device leaves
+#     the check's value within 5 minutes, for its plan, band or default value. API-17 lists setting.write, then
+#     setting.release, source dashboard, actor dashboard-smoke.
 #   - --revert: API-10 writes one step, then the device value, each manual and each read to confirmed; then, as the
 #     drawer does, the desired row before the newest in API-12, back through API-10: requested, then confirmed. API-11
 #     releases it.
@@ -85,7 +87,8 @@
 #   - Back to automatic as /equipment does it: API-10 sw_gl_main_auto_mode 1, manual, requested, then API-09 confirmed
 #     within 5 minutes. With the intent and Lutron known and different, one API-20 to the intent, read within 30 s. That
 #     runs even after a failure above, so the leg ends with the light at the intent, unless a person wrote
-#     sw_gl_main_auto_mode meanwhile: then the leg touches neither it nor the light again, and a FAIL says so.
+#     sw_gl_main_auto_mode meanwhile, or API-09 cannot show that nobody did: then the leg touches neither it nor the light
+#     again, and a FAIL says so.
 #   - API-11 releases sw_gl_main_auto_mode. API-17 lists the light.on and light.off rows it sent (target
 #     grow_light_main) and the write and release (target sw_gl_main_auto_mode), all by dashboard-smoke.
 #
@@ -173,7 +176,7 @@ elif [ -n "${ROLE}" ]; then
   if [ "${LIGHTS}${REVERT}" = "11" ]; then usage_error "--lights and --revert are two runs."; fi
   if [ "${LIGHTS}" -eq 1 ] && [ -n "${PARAM}" ]; then usage_error "--lights writes sw_gl_main_auto_mode; it takes no --param."; fi
   LEG="operator"
-  WEB_POD_DEADLINE_S=900
+  WEB_POD_DEADLINE_S=1000
   if [ "${LIGHTS}" -eq 1 ]; then LEG="lights"; fi
   if [ "${REVERT}" -eq 1 ]; then LEG="revert"; WEB_POD_DEADLINE_S=1500; fi
 elif [ "${LIGHTS}${REVERT}" != "00" ]; then
@@ -456,15 +459,17 @@ function oneStep(row) {
   return row.max == null || up <= row.max ? up : onGrid(row.readback.value - row.step);
 }
 
-// API-10, with the same key if an answer is lost: the row, or null after a FAIL line.
+// API-10, with the same key if an answer is lost: the row, or null after a FAIL line. An armed experiment serves the
+// policy fields, so the write's own answer already reads held, and untilConfirmed then prints HELD.
 async function writeSetting(bff, param, value, reason, what) {
   const key = randomUUID();
   let answer = { status: null };
   for (let attempt = 0; attempt < RELEASE_TRIES && answer.status === null; attempt++) {
     answer = await bff(`/api/v1/settings/${param}`, { method: "PUT", origin: ORIGIN, key, body: { value, manual: true, reason } });
   }
-  const ok = answer.status === 200 && answer.json?.state === "requested" && Number.isInteger(answer.json?.id);
-  check(`API-10 writes ${param} ${what} and answers requested`, answer, ok);
+  const held = answer.json?.state === "held" && answer.json?.state_reason?.code === "experiment";
+  const ok = answer.status === 200 && (answer.json?.state === "requested" || held) && Number.isInteger(answer.json?.id);
+  check(`API-10 writes ${param} ${what} and answers ${held ? "held" : "requested"}`, answer, ok);
   return ok ? { id: answer.json.id, value: answer.json.value, key } : null;
 }
 
@@ -516,7 +521,7 @@ async function release(bff, param, reason) {
     if (!newest || newest.value === null) {
       if (sent) {
         said(true, `API-11 releases ${param}`, "its answer was lost; the row reads released");
-        return { id: newest.id, key };
+        return { id: newest?.id, key };
       }
       said(true, `${param} holds no write of this check's, so nothing is released`, read.status);
       return null;
@@ -604,7 +609,11 @@ async function operatorWrite(bff, viewer, param) {
   } finally {
     released = await release(bff, param, R2_REASON);
   }
-  if (!released || !written) return;
+  if (!written) return;
+  if (!released) {
+    said(false, "API-17 lists setting.write, then setting.release", "this check released nothing");
+    return;
+  }
   await readsReleased(bff, param, released);
   if (confirmed) await untilBack(bff, param, written.value, row.step);
   const { answer, rows } = await activitySinceStart(bff, `source=dashboard&target=${param}`);
@@ -644,18 +653,18 @@ async function revertLeg(bff, param) {
 const known = (state) => state === "on" || state === "off";
 const mainLight = (board) => (Array.isArray(board.json?.items) ? board.json.items.find((item) => item.equipment === MAIN_LIGHT) ?? null : null);
 
-// API-20: true when it may have switched, a 5xx or no answer included, so the readback decides; a light never passes
-// on this answer. A 4xx switched nothing.
+// API-20: true when it may have switched, so the readback decides; a light never passes on this answer. A 4xx switched
+// nothing, and anything else may have: a 5xx, no answer or a 200 it cannot read.
 async function switchMain(bff, state, sent) {
   const key = randomUUID();
   const answer = await bff(`/api/v1/equipment/lights/main/${state}`, { method: "POST", origin: ORIGIN, key, body: { reason: R4_REASON } });
   const confirmed = answer.status === 200 && answer.json?.result === "confirmed";
-  const late = answer.status === null || answer.status >= 500;
+  const refused = answer.status !== null && answer.status >= 400 && answer.status < 500;
   if (confirmed) check(`API-20 main ${state} answers confirmed`, answer, true);
-  else if (late) said(true, `API-20 main ${state} has no confirmation yet, and Lutron may still switch late`, `${answer.status ?? "no answer"}${answer.json?.result ? ` ${String(answer.json.result).replace(/[^a-z_]/g, "")}` : ""}`);
-  else check(`API-20 main ${state}`, answer, false);
-  if (confirmed || late) sent.push({ state, key });
-  return confirmed || late;
+  else if (refused) check(`API-20 main ${state}`, answer, false);
+  else said(true, `API-20 main ${state} has no confirmation yet, and Lutron may still switch late`, `${answer.status ?? "no answer"}${answer.json?.result ? ` ${String(answer.json.result).replace(/[^a-z_]/g, "")}` : ""}`);
+  if (!refused) sent.push({ state, key });
+  return !refused;
 }
 
 async function untilLutron(bff, state) {
@@ -678,6 +687,21 @@ async function untilLutron(bff, state) {
   }
 }
 
+// Whether this leg may still touch the automatic switch and the light, or a FAIL line. A person's row has the last word,
+// and so does a read that failed, because it cannot show there is none. afterItsWrite lets this leg's own row through.
+async function switchStillFree(bff, afterItsWrite) {
+  let read = await settingRow(bff, MAIN_AUTO);
+  for (let attempt = 1; attempt < RELEASE_TRIES && !read.row; attempt++) {
+    await sleep(POLL_MS);
+    read = await settingRow(bff, MAIN_AUTO);
+  }
+  const newest = read.row?.desired;
+  if (read.row && (!newest || newest.value === null || (afterItsWrite && isSmoke(newest.actor)))) return true;
+  const why = read.row ? "has another writer's row now" : "could not be read";
+  said(false, `${MAIN_AUTO} ${why}, so this leg leaves it and the light as they are`, read.answer.status ?? "no answer");
+  return false;
+}
+
 async function lights(bff) {
   if (!(await writesAreOn(bff))) return;
   const board = await bff("/api/v1/equipment");
@@ -697,17 +721,16 @@ async function lights(bff) {
   } finally {
     // Back to automatic, as /equipment does it. It runs whatever the readback above said, because a light that
     // answered late may have switched, and the leg must end with the light at the controller's intent. A person who
-    // took the automatic switch meanwhile has the last word: this leg touches neither it nor the light again.
-    const { answer: read, row } = await settingRow(bff, MAIN_AUTO);
-    if (row?.desired && row.desired.value !== null) {
-      said(false, `${MAIN_AUTO} has another writer's row now, so this leg leaves it and the light as they are`, read.status);
-    } else {
+    // takes the automatic switch at any point in this has the last word: this leg touches neither it nor the light again.
+    if (await switchStillFree(bff, false)) {
       try {
         written = await writeSetting(bff, MAIN_AUTO, 1, R4_REASON, "1, manual,");
         if (written) await untilConfirmed(bff, MAIN_AUTO, written);
-        const now = mainLight(await bff("/api/v1/equipment"));
-        if (known(now?.intent) && known(now?.state) && now.intent !== now.state && (await switchMain(bff, now.intent, sent))) {
-          await untilLutron(bff, now.intent);
+        if (await switchStillFree(bff, true)) {
+          const now = mainLight(await bff("/api/v1/equipment"));
+          if (known(now?.intent) && known(now?.state) && now.intent !== now.state && (await switchMain(bff, now.intent, sent))) {
+            await untilLutron(bff, now.intent);
+          }
         }
       } finally {
         released = await release(bff, MAIN_AUTO, R4_REASON);
@@ -725,6 +748,8 @@ async function lights(bff) {
   if (written && released) {
     const autoRows = await activitySinceStart(bff, `target=${MAIN_AUTO}`);
     check(`API-17 lists the ${MAIN_AUTO} write and release by ${SMOKE_USER}`, autoRows.answer, bothWritesListed(autoRows.rows, written, released));
+  } else if (written) {
+    said(false, `API-17 lists the ${MAIN_AUTO} write and release by ${SMOKE_USER}`, "this check released nothing");
   }
 }
 
@@ -857,6 +882,7 @@ import uuid
 URL = os.environ["MCP_URL"]
 KEY = os.environ["MCP_AGENT_KEY"]
 PARAM = os.environ["SMOKE_PARAM"]
+SOURCE = "agent:" + os.environ["SMOKE_AGENT"]
 REASON = "R2 live check"
 PROTOCOL = "2025-11-25"
 CONNECT_RETRY_S = 30
@@ -909,6 +935,10 @@ def code_of(body):
     return re.sub(r"[^a-z0-9_]", "", str(body.get("code", "no_code")))[:40]
 
 
+def state_of(body):
+    return re.sub(r"[^a-z_]", "", str(body.get("state", "")))[:40]
+
+
 def connect():
     """The CNI can refuse a brand-new pod for its first seconds, so the first connect retries for up to 30 s."""
     deadline = time.monotonic() + CONNECT_RETRY_S
@@ -926,6 +956,23 @@ def connect():
                 say("FAIL", f"MCP did not answer within {CONNECT_RETRY_S} s")
                 return False
             time.sleep(2)
+
+
+def read_row():
+    """The setting's row from the settings tool, tried like a write: (True, row or None), or (False, None)."""
+    for attempt in range(TRIES):
+        try:
+            ok, body = tool("settings", {"param": PARAM})
+            if ok:
+                return True, next((item for item in body.get("items", []) if item.get("param") == PARAM), None)
+        except urllib.error.HTTPError as refused:
+            if refused.code < 500:
+                return False, None
+        except TRANSPORT:
+            pass
+        if attempt + 1 < TRIES:
+            time.sleep(2)
+    return False, None
 
 
 def why_not_checkable(row):
@@ -968,7 +1015,16 @@ def with_tries(arguments):
 
 
 def release():
+    """An agent's release takes any row, a person's included, so another writer's newest row stays and a FAIL says so."""
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    answered, row = read_row()
+    if not answered:
+        say("FAIL", f"the settings tool did not answer, so nothing was released: read {PARAM} on Settings")
+        return False
+    newest = (row or {}).get("desired") or {}
+    if newest.get("value") is not None and (newest.get("actor") or {}).get("source") != SOURCE:
+        say("FAIL", f"{PARAM}'s newest desired row is another writer's, so it stays and this check releases nothing")
+        return False
     ok, body = with_tries({"param": PARAM, "release": True, "reason": REASON, "request_id": str(uuid.uuid4())})
     if ok and body.get("state") == "released":
         say("PASS", "set_setting(release=true) answers state released")
@@ -981,18 +1037,10 @@ def main():
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     if not connect():
         return 1
-    try:
-        ok, body = tool("settings", {"param": PARAM})
-    except urllib.error.HTTPError as refused:
-        say("FAIL", f"settings refused ({refused.code})")
+    answered, row = read_row()
+    if not answered:
+        say("FAIL", "the settings tool did not answer")
         return 1
-    except TRANSPORT:
-        say("FAIL", "settings did not answer")
-        return 1
-    if not ok:
-        say("FAIL", f"settings refused: {code_of(body)}")
-        return 1
-    row = next((item for item in body.get("items", []) if item.get("param") == PARAM), None)
     why = why_not_checkable(row)
     if why:
         say("FAIL", f"{PARAM} refused: {why}")
@@ -1006,11 +1054,11 @@ def main():
         arguments = {"param": PARAM, "value": one_step(row), "reason": REASON, "request_id": str(uuid.uuid4())}
         ok, body = with_tries(arguments)
         stored = ok is not False
-        if ok and body.get("state") == "requested":
-            say("PASS", "set_setting answers state requested")
+        if ok and state_of(body):
+            say("PASS", f"set_setting answers state {state_of(body)}")
         else:
             failed = True
-            say("FAIL", f"set_setting answered {'another state' if ok else code_of(body)}")
+            say("FAIL", f"set_setting answered {'no state' if ok else code_of(body)}")
     finally:
         if stored and not release():
             failed = True
@@ -1066,6 +1114,8 @@ $(agent_job_program | sed 's/^/              /')
               value: http://verdify-mcp.verdify-prod.svc:8000/mcp
             - name: SMOKE_PARAM
               value: "${PARAM}"
+            - name: SMOKE_AGENT
+              value: "${AGENT}"
             - name: MCP_AGENT_KEY
               valueFrom:
                 secretKeyRef:
@@ -1225,6 +1275,10 @@ run_agent_leg() {
     fail "could not delete the agent Job ${AGENT_JOB}; its ttlSecondsAfterFinished removes it"
   fi
   if [ "${writing}" -ne 1 ]; then
+    # A Job ends Complete only after its write and release, so a log that does not say so shows nothing was checked.
+    if [ "${ended}" -eq 1 ] && [[ " ${conditions} " != *" Failed "* ]]; then
+      fail "the agent Job ended Complete but its log shows no write, so nothing was checked"
+    fi
     return
   fi
   if ! [[ "${started_at}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]+Z$ ]]; then
