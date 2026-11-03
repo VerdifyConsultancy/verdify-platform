@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
 // Now's water card (#1129, US-NOW-04, US-WAT-13, US-WAT-18, US-WAT-22) over #1122's fixtures at 10:42: minutes by zone,
-// last water, the running line, next runs, the flow in words, SAF-4, a mister's back-off or latch, the line before the
-// irrigation firmware, "Water status unavailable" with Retry, and Stop all water in every state, for operators only.
+// last water, the running line, next runs, the flow in words, SAF-4, a mister's back-off or latch with Clear fault, the
+// line before the irrigation firmware, "Water status unavailable" with Retry, and Stop all water in every state, for
+// operators only.
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { fixture } from "../../../e2e/fixtures/index.mjs";
@@ -22,7 +24,7 @@ const statusOf = (names: string | string[]): IrrigationStatus => parseIrrigation
 const read = (data: IrrigationStatus | null, failed = false): PanelRead<IrrigationStatus> => ({ data, failed, pending: data === null && !failed, retry: vi.fn() });
 const stopControl = (patch: Partial<StopControl> = {}): StopControl => ({ stop: vi.fn(), sending: false, confirming: false, ...patch });
 function renderCard(irrigation: PanelRead<IrrigationStatus>, { stop = stopControl(), session = OPERATOR }: { stop?: StopControl; session?: Partial<Session> } = {}) {
-  renderUi(<WaterCard irrigation={irrigation} stop={stop} />, session);
+  renderUi(<QueryClientProvider client={new QueryClient()}><WaterCard irrigation={irrigation} stop={stop} /></QueryClientProvider>, session);
   return { stop, irrigation };
 }
 const line = (name: string) => plain(text(document.querySelector(`[data-water="${name}"]`)));
@@ -32,7 +34,7 @@ test("in band: minutes by zone, last water per zone, running, next, flow and SAF
   renderCard(read(statusOf("in-band")));
   expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Water today");
   expect(line("minutes")).toBe("Center 14 min · Wall 0 · South 0 · West 0");
-  expect(line("last")).toBe("Last water: Wall Fri 08:31, 12 min · Center misted today 06:58 (VPD) · South misted Fri 14:20 (VPD) · West misted 9 days ago (VPD)");
+  expect(line("last")).toBe("Last water: Wall Fri 08:31, 12 min · Center misted 06:58 (VPD) · South misted Fri 14:20 (VPD) · West misted 9 days ago (VPD)");
   expect(line("running")).toBe("Running: none");
   expect(line("next")).toBe("Next: none scheduled");
   expect(line("flow")).toBe("Unexplained flow: none");
@@ -83,6 +85,16 @@ test("SAF-4 with an unknown use reads —; a mister in back-off or latched says 
   const status = statusOf("in-band");
   const backingOff = status.lines.map((row) => (row.line_id === "L07" ? { ...row, fault: "backing_off", fault_until: new Date(Date.UTC(2026, 10, 2, 20, 20)).toISOString() } : row));
   expect(faultLines({ lines: backingOff })).toEqual(["South: backing off until 13:20"]);
+  // A latch has Clear fault beside it for an operator; a back-off shows its end time and no Clear; a viewer has neither.
+  expect(screen.getByRole("button", { name: "Clear fault on L04" })).toBeTruthy();
+  cleanup();
+  renderCard(read({ ...status, lines: backingOff }));
+  expect(line("fault")).toBe("South: backing off until 13:20");
+  expect(screen.queryByRole("button", { name: /^Clear fault/ })).toBeNull();
+  cleanup();
+  renderCard(read(statusOf("mister-fault")), { session: { role: "viewer", writesEnabled: false } });
+  expect(line("fault")).toBe("Center: faulted, no misting until midnight (watchdog)");
+  expect(screen.queryByRole("button", { name: /^Clear fault/ })).toBeNull();
   expect(plain(minutesLine({ wall: null, center: 3, south: 0, west: 0 }))).toBe("Center 3 min · South 0 · West 0 · Wall —");
 });
 

@@ -181,7 +181,7 @@ function inBand(now) {
   const water = (id, since, fields = {}) => item(lineInfo(id).equipment, lineInfo(id).label, "water", since, { line_id: id, ...fields });
   return {
     now,
-    flags: { apiDown: false, progress: false, confirm: true, flowAfterStop: false, stopUnconfirmed: false },
+    flags: { apiDown: false, progress: false, confirm: true, flowAfterStop: false, stopUnconfirmed: false, lateOverride: false },
     me: { username: "jason", display_name: "Jason", role: "operator", writes_enabled: true, source_revision: REVISION },
     indoor: { temp_f: reading(64.8, now - 20_000), rh_pct: reading(71.0, now - 20_000), vpd_kpa: reading(0.62, now - 20_000) },
     outdoor: { temp_f: reading(41.2, now - 2 * MINUTE), rh_pct: reading(58.0, now - 2 * MINUTE) },
@@ -540,6 +540,46 @@ export const FIXTURES = {
   "stop-unconfirmed": (world) => {
     if (lineOf(world, "L01").state.code !== "running") FIXTURES["l01-running"](world);
     world.flags.stopUnconfirmed = true;
+  },
+  // #1136: the two FERT dialogs and Mist now: L02 and L08 enabled with a check, and L04 on a schedule.
+  "run-dialogs": (world) => {
+    for (const id of ["L02", "L08"]) {
+      Object.assign(lineOf(world, id), { enabled: true, state: { ...lineOf(world, id).state, code: "idle" } });
+      checked(world, id);
+    }
+    Object.assign(lineOf(world, "L04"), { schedule_member: true });
+    checked(world, "L04");
+  },
+  // #1136: L01 holds the drip manifold for 7 more minutes, so a run on L02 is refused manifold_busy.
+  "manifold-busy": (world) => {
+    FIXTURES["run-dialogs"](world);
+    runLine(world, "L01", { cause: "schedule", started: world.now - 5 * MINUTE, ends: world.now + 7 * MINUTE });
+  },
+  // #1136: `fan_burst_active` reads back ON 10 s after the command (or on the third API-02 read on a pinned clock), and
+  // only then does a burst show.
+  "burst-readback-late": (world) => { world.flags.lateOverride = true; },
+  // #1136: `uptime_s` resets 60 s after a restart (or on the third API-02 read on a pinned clock), so "Restart sent" stands
+  // until then.
+  "restart-uptime-reset": (world) => { world.flags.lateOverride = true; },
+  // #1136: a burst from the controller's own push button: it reads back with no deadline.
+  "push-button-burst": (world) => { world.overrides = [{ kind: "fans", since: iso(world.now - 2 * MINUTE), ends_at: null, held_reason: null }]; },
+  // #1136: emergency cooling, when the controller ignores bursts.
+  "safety-cool": (world) => { world.mode = { code: "SAFETY_COOL", stage: null, reason: "safety_cool", since: iso(world.now - 3 * MINUTE) }; },
+  // J9 (#1136): the caretaker's morning, in band with nothing open: the wall watered at 07:31 for 12 min, center misted at
+  // 09:58 on VPD, and Frigate saw someone a minute ago.
+  "caretaker-visit": (world) => {
+    const at = clock(world.now);
+    world.occupancy = { occupied: true, seen_at: iso(world.now - MINUTE), hold_enabled: true };
+    Object.assign(lineOf(world, "L01"), {
+      state: { ...lineOf(world, "L01").state, observed_at: iso(at("07:43")) }, today: { minutes: 12, pulses: null, gal: 9 },
+      last_water: { at: iso(at("07:31")), open_s: 720, pulses: null, cause: "schedule" }, last_outcome: { outcome: "ok", at: iso(at("07:43")), reason: null },
+    });
+    Object.assign(itemOf(world, "drip_wall"), { since: iso(at("07:43")), observed_at: iso(at("07:43")), runtime_today_s: 720, cycles_today: 1 });
+    Object.assign(lineOf(world, "L04"), {
+      state: { ...lineOf(world, "L04").state, observed_at: iso(at("09:59")) }, today: { minutes: 15, pulses: 15, gal: 3 },
+      last_water: { at: iso(at("09:58")), open_s: 60, pulses: 1, cause: "vpd" }, last_outcome: { outcome: "ok", at: iso(at("09:59")), reason: null },
+    });
+    Object.assign(itemOf(world, "mister_center"), { since: iso(at("09:59")), observed_at: iso(at("09:59")), runtime_today_s: 900, cycles_today: 15 });
   },
   "mister-fault": (world) => {
     const line = lineOf(world, "L04");

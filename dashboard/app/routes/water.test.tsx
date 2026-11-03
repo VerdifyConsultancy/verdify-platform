@@ -268,6 +268,114 @@ test("ledger filters live in the URL and narrow the read; Load older passes the 
   expect([...table().querySelectorAll("tbody tr")].map((row) => text(row.children[1]).slice(0, 3))).toEqual(["L01"]);
 });
 
+// ---------------------------------------------------------------------------------------------------- a line's controls (#1136)
+const CARDS = ["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11"];
+/** A card's controls in order. ON or OFF is its enable switch and Options comes after Stop (#1182), as SCR-04 draws them. */
+const controls = (id: string) => [...card(id).querySelectorAll("[data-write-control]")].map((node) => text(node));
+const everyCard = () => Object.fromEntries(CARDS.map((id) => [id, controls(id)]));
+const zoneCard = (id: string) => document.querySelector<HTMLElement>(`.mister-zone[data-line="${id}"]`)!;
+
+test("each card's controls with the irrigation firmware: Run… on an enabled line, Mist now… with Schedule on, Stop on every card but fog", async () => {
+  open("/water", { fixture: "run-dialogs" });
+  await load();
+  expect(everyCard()).toEqual({
+    L01: ["ON", "Run… L01", "Stop L01", "Options of L01"], L02: ["ON", "Run… L02", "Stop L02", "Options of L02"], L04: ["ON", "Mist now… L04", "Stop L04", "Options of L04"],
+    L05: ["OFF", "Stop L05", "Options of L05"], L06: ["OFF", "Stop L06", "Options of L06"], L07: ["ON", "Stop L07", "Options of L07"],
+    L08: ["ON", "Run… L08", "Stop L08", "Options of L08"], L09: ["ON", "Stop L09", "Options of L09"], L10: ["OFF", "Stop L10", "Options of L10"], L11: [],
+  });
+  expect(card("L01").querySelector(".btn-stop")).not.toBeNull();
+  expect(screen.getByRole("button", { name: "Run… L01" }).className).toContain("btn-wide");
+  expect(document.querySelector("[data-arrives]")).toBeNull();
+});
+
+test("before the irrigation firmware every card but fog has Stop, only L01 has Run…, and the rest say when they arrive", async () => {
+  const api = open("/water", { fixture: "before-engine" });
+  await load();
+  expect(everyCard()).toEqual({
+    L01: ["ON", "Run… L01", "Stop L01", "Options of L01"], L02: ["OFF", "Stop L02", "Options of L02"], L04: ["ON", "Stop L04", "Options of L04"],
+    L05: ["OFF", "Stop L05", "Options of L05"], L06: ["OFF", "Stop L06", "Options of L06"], L07: ["ON", "Stop L07", "Options of L07"],
+    L08: ["OFF", "Stop L08", "Options of L08"], L09: ["ON", "Stop L09", "Options of L09"], L10: ["OFF", "Stop L10", "Options of L10"], L11: [],
+  });
+  for (const id of ["L02", "L05", "L06", "L08", "L10"]) expect(text(card(id).querySelector("[data-arrives=run]")), id).toBe("Run arrives with the irrigation firmware");
+  expect(card("L01").querySelector("[data-arrives=run]")).toBeNull();
+  expect(card("L11").querySelector("[data-arrives]")).toBeNull();
+  for (const id of ["L04", "L07", "L09"]) {
+    expect(text(card(id).querySelector("[data-arrives=clear-fault]")), id).toBe("Clear fault arrives with the irrigation firmware");
+    expect(text(zoneCard(id).querySelector("[data-arrives=clear-fault]")), id).toBe("Clear fault arrives with the irrigation firmware");
+  }
+  // L01's dialog names its setting, and a Stop on any line gives the toast with no Disable.
+  fireEvent.click(screen.getByRole("button", { name: "Run… L01" }));
+  await advance(1);
+  expect(text(document.querySelector("dialog .dialog-note"))).toBe("Runs for the Wall drip duration (irrig_wall_duration_min): 12 min");
+  fireEvent.click(within(document.querySelector("dialog")!).getByRole("button", { name: "Cancel" }));
+  fireEvent.click(screen.getByRole("button", { name: "Stop L07" }));
+  await advance(0);
+  expect(writes(api).map((row) => [row.operationId, row.body])).toEqual([["API-IRR-07", { line_id: "L07" }]]);
+  await advance(5000);
+  await advance(1);
+  expect(toasts("status")).toEqual(["Stopped every running valve. VPD misting and fog can still start on their own."]);
+  expect(screen.queryByRole("button", { name: /^Disable/ })).toBeNull();
+});
+
+test("Stop on a running card: one API-IRR-07 {line_id: L01} with no dialog, the relay edge turns the card off, and the toast offers Disable for it", async () => {
+  const api = open("/water", { fixture: "l01-running" });
+  await load();
+  expect(card("L01").getAttribute("data-state")).toBe("running");
+  fireEvent.click(screen.getByRole("button", { name: "Stop L01" }));
+  expect(document.querySelector("dialog")).toBeNull();
+  await advance(0);
+  expect(writes(api)).toEqual([expect.objectContaining({ method: "POST", operationId: "API-IRR-07", body: { line_id: "L01" } })]);
+  await advance(5000);
+  await advance(1);
+  expect(card("L01").getAttribute("data-state")).toBe("idle");
+  expect(toasts("status")).toEqual([STOPPED]);
+  expect(screen.getByRole("button", { name: "Disable L01" })).toBeTruthy();
+  expect(writes(api)).toHaveLength(1);
+});
+
+test("before the irrigation firmware the relay edge turns a running card's relay off too", async () => {
+  open("/water", { fixture: ["l01-running", "before-engine"] });
+  await load();
+  expect(cardText("L01", ".line-state")).toMatch(/^Relay On since /);
+  fireEvent.click(screen.getByRole("button", { name: "Stop L01" }));
+  await advance(0);
+  await advance(5000);
+  await advance(1);
+  expect(cardText("L01", ".line-state")).toMatch(/^Relay Off since /);
+});
+
+test("a latched mister has Clear fault on its card and its zone: one API-IRR-13, and the latch reads gone", async () => {
+  const api = open("/water", { fixture: "mister-fault" });
+  await load();
+  expect(controls("L04")).toEqual(["ON", "Stop L04", "Options of L04", "Clear fault on L04"]);
+  // The zone's VPD control and Schedule switches (#1182), then its Clear fault.
+  expect([...zoneCard("L04").querySelectorAll("[data-write-control]")].map((node) => text(node))).toEqual(["ON", "OFF", "Clear fault on L04"]);
+  expect(zoneCard("L07").querySelector(".actions button")).toBeNull();
+  fireEvent.click(within(zoneCard("L04")).getByRole("button", { name: "Clear fault on L04" }));
+  await advance(0);
+  expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-13", body: { line_id: "L04" } })]);
+  await advance(5000);
+  await advance(1);
+  expect(card("L04").querySelector(".line-fault")).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Clear fault/ })).toBeNull();
+});
+
+test("with changes switched off Run… and Clear fault are disabled and Stop stays live; a viewer sees none of them, and no words about them", async () => {
+  open("/water", { fixture: ["run-dialogs", "mister-fault", "writes-off"] });
+  await load();
+  const disabled = (name: string) => screen.getAllByRole("button", { name }).every((button) => button.hasAttribute("disabled"));
+  for (const name of ["Run… L01", "Run… L02", "Mist now… L04", "Clear fault on L04"]) expect(disabled(name), name).toBe(true);
+  for (const id of CARDS.slice(0, -1)) expect(screen.getByRole("button", { name: `Stop ${id}` }).hasAttribute("disabled"), id).toBe(false);
+  cleanup(); stopFixtureApi();
+  open("/water", { fixture: ["run-dialogs", "mister-fault", "l01-running", "viewer-session"] });
+  await load();
+  expect(document.querySelectorAll("[data-write-control], dialog")).toHaveLength(0);
+  cleanup(); stopFixtureApi();
+  open("/water", { fixture: ["before-engine", "viewer-session"] });
+  await load();
+  expect(document.querySelectorAll("[data-write-control], [data-arrives]")).toHaveLength(0);
+});
+
 // ---------------------------------------------------------------------------------------------------- Stop all water
 test.each(VIEWS)("an operator's Stop all water on %s sends one API-IRR-07 with no dialog, then the Stop result with Disable for L01", async (path) => {
   const api = open(path, { fixture: "l01-running" });

@@ -150,6 +150,58 @@ test("Stop all water before the irrigation firmware: the same one request, and t
   expect(screen.queryByRole("button", { name: /^Disable/ })).toBeNull();
 });
 
+test("a running burst's chip gains Clear for an operator: one {kind: clear}, and the chip goes once the readback reads off", async () => {
+  const api = await open("push-button-burst");
+  expect(chips()).toEqual(["Fans burst · since 10:40", "Nobody seen: misters may run (last person 05:10)"]);
+  fireEvent.click(screen.getByRole("button", { name: "Clear bursts" }));
+  await advance(0);
+  expect(writes(api)).toEqual([expect.objectContaining({ method: "POST", operationId: "API-IRR-12", body: { kind: "clear" } })]);
+  await advance(5000);
+  await advance(1);
+  expect(chips()).toEqual(["Nobody seen: misters may run (last person 05:10)"]);
+  expect(screen.queryByRole("button", { name: "Clear bursts" })).toBeNull();
+  expect(writes(api)).toHaveLength(1);
+});
+
+test("the burst's chip reads from the readback alone, and its one Clear covers every burst", async () => {
+  const api = await open("in-band");
+  api.respond({ method: "POST", url: "/api/v1/equipment/override", headers: {}, body: { kind: "fans", minutes: 15 } });
+  api.respond({ method: "POST", url: "/api/v1/equipment/override", headers: {}, body: { kind: "vent_bypass", minutes: 10 } });
+  expect(screen.queryByRole("button", { name: "Clear bursts" })).toBeNull();
+  await advance(15_000);
+  await advance(1);
+  expect(chips()).toEqual(["Fans burst · 14 min left", "Vent bypass · 9 min left", "Nobody seen: misters may run (last person 05:10)"]);
+  expect(screen.getAllByRole("button", { name: "Clear bursts" })).toHaveLength(1);
+});
+
+test("before the irrigation firmware a push-button burst shows its chip with no Clear; so it does while the engine is unknown; a viewer has none", async () => {
+  await open(["push-button-burst", "before-engine"]);
+  expect(chips()[0]).toBe("Fans burst · since 10:40");
+  expect(screen.queryByRole("button", { name: "Clear bursts" })).toBeNull();
+  cleanup();
+  stopFixtureApi();
+  await open("push-button-burst", { fail: { "API-IRR-01": 404 } });
+  expect(chips()[0]).toBe("Fans burst · since 10:40");
+  expect(screen.queryByRole("button", { name: "Clear bursts" })).toBeNull();
+  cleanup();
+  stopFixtureApi();
+  await open(["push-button-burst", "viewer-session"]);
+  expect(chips()[0]).toBe("Fans burst · since 10:40");
+  expect(screen.queryByRole("button", { name: "Clear bursts" })).toBeNull();
+});
+
+test("a latched mister on the water card: Clear fault beside the line sends one API-IRR-13, and the line goes once the latch reads gone", async () => {
+  const api = await open("mister-fault");
+  expect(plain(text(document.querySelector("[data-water=fault]")))).toBe("Center: faulted, no misting until midnight (watchdog)");
+  fireEvent.click(within(document.querySelector<HTMLElement>(".water-fault")!).getByRole("button", { name: "Clear fault on L04" }));
+  await advance(0);
+  expect(writes(api)).toEqual([expect.objectContaining({ method: "POST", operationId: "API-IRR-13", body: { line_id: "L04" } })]);
+  await advance(5000);
+  await advance(1);
+  expect(document.querySelector("[data-water=fault]")).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Clear fault/ })).toBeNull();
+});
+
 test("as at R1, before API-IRR-01 is served: Water status unavailable with Retry, Stop all water still sends, the engine is unknown so no Disable", async () => {
   const api = await open("l01-running", { fail: { "API-IRR-01": 404 } });
   expect(text(document.querySelector(".now-water"))).toContain("Water status unavailable.");

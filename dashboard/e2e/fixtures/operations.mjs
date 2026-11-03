@@ -835,16 +835,25 @@ function updateLines(world, { params, body, key, serial }) {
   return { status: 200, body: { lines }, effect };
 }
 const BURSTS = ["fans", "humidify", "vent_bypass"];
-function override(world, { body, key }) {
+/** How long the controller takes to answer an override under `lateOverride`: the burst flag's ON edge, and the restart. */
+const LATE_MS = { burst: 10_000, restart: 60_000 };
+function override(world, { body, key, serial }) {
   if (!world.engine) throw notYet();
   const args = object(body);
   if (![...BURSTS, "clear", "restart"].includes(args.kind)) throw refuse(422, "out_of_range", "Unknown action", "kind is fans, humidify, vent_bypass, clear or restart", { field: "kind" });
   if (BURSTS.includes(args.kind) && (!Number.isInteger(args.minutes) || args.minutes < 1 || args.minutes > 120)) throw refuse(422, "out_of_range", "Out of range", "minutes must be 1-120", { field: "minutes", min: 1, max: 120, current: args.minutes ?? null });
   const sent = command(world, "override", null, args, key);
-  const effect = (next) => {
+  const effect = (next, history) => {
+    // Under `lateOverride` the readback changes once that long has passed or on the third API-02 read after the command,
+    // so a test on a pinned clock moves it on by polling, as `requested-to-confirmed` does.
+    const answered = (ms) => !next.flags.lateOverride || next.now - world.now >= ms || (history?.readsAfter("API-02", serial) ?? 0) >= 3;
     if (args.kind === "clear") next.overrides = [];
-    else if (args.kind === "restart") next.controller = { ...next.controller, uptime_s: 0, reset_reason: "Software reset", observed_at: iso(world.now) };
-    else next.overrides = [...next.overrides.filter((item) => item.kind !== args.kind), { kind: args.kind, since: iso(world.now), ends_at: iso(world.now + args.minutes * MINUTE), held_reason: args.kind === "humidify" && next.occupancy.occupied ? "someone inside" : null }];
+    else if (args.kind === "restart") {
+      if (answered(LATE_MS.restart)) next.controller = { ...next.controller, uptime_s: 0, reset_reason: "Software reset", observed_at: iso(world.now) };
+    } else if (answered(LATE_MS.burst)) {
+      const on = world.now + (next.flags.lateOverride ? LATE_MS.burst : 0);
+      next.overrides = [...next.overrides.filter((item) => item.kind !== args.kind), { kind: args.kind, since: iso(on), ends_at: iso(on + args.minutes * MINUTE), held_reason: args.kind === "humidify" && next.occupancy.occupied ? "occupancy" : null }];
+    }
     activity(next, { ts: sent.created_at, actor: sent.actor, action: "equipment.override", target: args.kind, detail: { ...args, command_id: sent.command_id }, reason: sent.reason, request_id: key });
   };
   return { status: 202, body: sent, effect };

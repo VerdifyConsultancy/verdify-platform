@@ -88,6 +88,11 @@ export function duration(seconds: number): string {
   if (seconds < 86_400) return `${Math.floor(seconds / 3600)}${NBSP}h`;
   return `${Math.floor(seconds / 86_400)}${NBSP}d`;
 }
+/** "12 min left" while `endsAt` is ahead of `clock` (epoch ms); null otherwise, a missing or unreadable time included. */
+export function leftWords(endsAt: string | null | undefined, clock: number): string | null {
+  const seconds = Math.floor((Date.parse(endsAt ?? "") - clock) / 1000);
+  return seconds > 0 ? `${duration(seconds)} left` : null;
+}
 const POINTS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
 /** The 16-point compass name of a direction in degrees ("from"), or null. */
 export function compass(degrees: number | null): string | null {

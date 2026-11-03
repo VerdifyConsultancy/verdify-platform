@@ -2,9 +2,9 @@
 /**
  * Now's water card (screens SCR-01, US-NOW-04, US-WAT-13, US-WAT-18, US-WAT-22) from API-IRR-01: minutes today by zone,
  * when each zone last got water (`last-water.ts`), the running line, the next run per enabled line, the flow in words,
- * SAF-4 used of its ceiling and a mister's watchdog back-off or latch. Before the irrigation firmware it shows relay
- * states only and says where L01 runs from. A failed or not yet served API-IRR-01 reads "Water status unavailable" with
- * Retry, never idle.
+ * SAF-4 used of its ceiling and a mister's watchdog back-off or latch, with Clear fault beside a latch (#1136). Before the
+ * irrigation firmware it shows relay states only and says where L01 runs from. A failed or not yet served API-IRR-01 reads
+ * "Water status unavailable" with Retry, never idle.
  *
  * Stop all water (operators only) renders in every state of the card, outside its error boundaries, so nothing the
  * card fails to draw can take it away. It is one tap, no dialog, never disabled by the writes flag, and goes through
@@ -20,6 +20,7 @@ import type { IrrigationStatus, Leak } from "../../lib/operator-api";
 import type { PanelRead } from "../../lib/queries";
 import { OperatorOnly } from "../../lib/session";
 import { Button } from "../button";
+import { ClearFaultButton } from "../clear-fault-button";
 import { useNow } from "../freshness";
 import { PanelError, PanelErrorBoundary } from "../panel";
 import { lineName, lineStatesUnknown } from "./tiles";
@@ -84,15 +85,16 @@ export function saf4Text(saf4: IrrigationStatus["limits"]["saf4_gal"]): string {
   return `SAF-4 ${number(saf4.used)} of ${number(saf4.max)} gal`;
 }
 
-/** A mister's watchdog back-off or latch (D-IRP-19): "South: backing off until 13:20", "South: faulted, no misting until midnight (watchdog)". */
+/** One line's watchdog back-off or latch in words (D-IRP-19): "South: backing off until 13:20", "South: faulted, no misting until midnight (watchdog)". */
+function faultText(line: IrrigationStatus["lines"][number]): string {
+  const zone = line.kind === "mister" && Object.hasOwn(WATER_ZONE_WORDS, line.zone) ? WATER_ZONE_WORDS[line.zone as keyof typeof WATER_ZONE_WORDS] : lineName(line);
+  if (line.fault === "backing_off") return `${zone}: backing off${validTime(line.fault_until) ? ` until ${shortTime(line.fault_until)}` : ""}`;
+  if (line.fault === "mister_fault") return `${zone}: faulted, no misting until midnight (watchdog)`;
+  return `${zone}: ${line.fault}`;
+}
+/** Every line in a back-off or latch, in words. */
 export function faultLines(status: Pick<IrrigationStatus, "lines">): string[] {
-  return status.lines.flatMap((line) => {
-    if (!line.fault) return [];
-    const zone = line.kind === "mister" && Object.hasOwn(WATER_ZONE_WORDS, line.zone) ? WATER_ZONE_WORDS[line.zone as keyof typeof WATER_ZONE_WORDS] : lineName(line);
-    if (line.fault === "backing_off") return [`${zone}: backing off${validTime(line.fault_until) ? ` until ${shortTime(line.fault_until)}` : ""}`];
-    if (line.fault === "mister_fault") return [`${zone}: faulted, no misting until midnight (watchdog)`];
-    return [`${zone}: ${line.fault}`];
-  });
+  return status.lines.filter((line) => line.fault).map(faultText);
 }
 
 /** Stop all water for operators, then "Water ›" for everyone: the card's actions row. */
@@ -118,7 +120,10 @@ function WaterDetails({ status, clock }: { status: IrrigationStatus; clock: numb
       : <p data-water="before-engine">{BEFORE_ENGINE_LINE}</p>}
     <p data-water="flow" className={flow.flowing ? "fault" : undefined}>{flow.text}</p>
     <p data-water="saf4">{saf4Text(status.limits.saf4_gal)}</p>
-    {faultLines(status).map((line) => <p key={line} className="fault" data-water="fault">{line}</p>)}
+    {status.lines.filter((line) => line.fault).map((line) => <div key={line.line_id} className="water-fault">
+      <p className="fault" data-water="fault">{faultText(line)}</p>
+      <ClearFaultButton line={line} engine={status.engine} />
+    </div>)}
   </div>;
 }
 

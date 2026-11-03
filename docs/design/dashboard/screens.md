@@ -236,6 +236,14 @@ Acceptance:
 | Line states before the irrigation firmware | The Water tile and the card's running line read Unknown only while an enabled line's state is unknown, or, with the firmware, while `irr_state` is stale. Before it no `irr_state` exists (a source never seen reads stale), and the relay states stand alone (irrigation §9) |
 | Needs someone | The top three keep API-14's order (severity, then age as the API sorts it: last seen, newest first), so they are the first unacknowledged rows Activity lists. A row acknowledged on the page stays in place for the visit, reading "Acknowledged by jason · 10:42"; the head and the answer follow the one count as API-02 refetches |
 
+**As built (VD-16).** The commands on Now, where the build settles a detail this section leaves open:
+
+| Topic | As built |
+|---|---|
+| Clear on a burst | One "Clear" after the burst chips, however many bursts run, because `{kind: "clear"}` ends them all. It shows while API-IRR-01 reads `engine: true`, so before the irrigation firmware, or while that read fails, a push-button burst keeps its chip with no Clear |
+| Clear fault | Beside the line's words on the water card, only on a `mister_fault` of L04, L07 or L09: API-IRR-13 names no other line, so a latch reported only on L08 or L10 reads in words with no button |
+| Last water | A mister that misted today reads "misted 09:58 (VPD)", as J9 has it, in place of VD-09's "misted today 09:58 (VPD)"; a drip keeps "today 07:31, 12 min" |
+
 ## 3. SCR-02 Graphs · `/graphs`
 
 **Purpose:** past, present and plan in one view: climate against the band, any measured signal, setting steps and
@@ -548,6 +556,15 @@ As built (VD-69, #1182). Where the build settles a detail above, or differs from
 | Block menu | A block still planned ahead of now opens "Pause <line> until after this run", which sends at once and, since the pause starts now, skips that run and any earlier one on the line; a past, skipped or blocked block offers none, and neither does a viewer's week |
 | Line options | The reserve's bound follows the typed cap, and a reserve above it is flagged in the hint and sent, so the API's `out_of_range` shows beside the field. The client refuses only what is not whole minutes from 0 to 480 |
 
+As built (VD-16), where the commands settle a detail this section leaves open:
+
+| Topic | As built |
+|---|---|
+| Run dialog | Every dialog also has "Reason (optional)", sent only when typed. A cap of 0 reads "wall feed today 0 min, no cap". "Mist now…" opens the same dialog, titled "Run L04 Center mister (clean) for 4 × 45 s?". `manifold_busy` reads the API's `detail`, gaining "until HH:MM" from `retry_after_s` if it has no end time; every other code reads the words table. After the 202 the card reads "Waiting for the valve to open" until the relay edge shows RUNNING, or within 30 s the line's reason or "Not started", which goes if a later poll shows it running |
+| A feed's start | A fertilizer run counts as started once its clean partner reads `running` with cause `prewet`, because its own relay opens only after the prewet |
+| Stop | On every card but fog, in every state, a disabled line included, since a relay can be on outside its program. While it confirms, the card reads "Waiting for the valve to read off" and API-IRR-01 is read every 5 s. The lines Stop must see go OFF are those running in the newest API-02 answer or in API-IRR-01, so a Stop right after a Run still confirms and offers Disable |
+| Before the irrigation firmware | Operators read "Run arrives with the irrigation firmware" on the other lines and "Clear fault arrives with the irrigation firmware" on the L04, L07 and L09 cards and zones. Viewers read neither, as they have no such control |
+
 ## 6. SCR-05 Settings · `/settings`
 
 **Purpose:** "control all settings": every registry row in one list with its device value, and one change path for
@@ -754,6 +771,15 @@ As built (VD-14, `dashboard/app/routes/equipment.tsx`), where the board settles 
 | Omitted actuator | Its `equipment_state` key, with "—" and "no data", never a made-up name or OFF. An item outside the fixed list follows its group's fixed rows; an `_intent` key is never a row |
 | Errors | A failed API-13 read replaces the three groups with one "Couldn't load equipment." and Retry; a failed API-05 read shows "Couldn't load equipment lanes." and Retry in the lanes panel |
 | Lanes | The panel reads "Last 24 h" or "Last 72 h" with "Updated N s ago". Each 60 s read asks API-05 for the window ending at that moment on the server's clock (API-02's skew), and the lanes draw the window it answered for, on the sync key `verdify:equipment:<range>` |
+
+As built (VD-16, `dashboard/app/components/burst-panel.tsx`), where the panel settles a detail this section leaves open:
+
+| Topic | As built |
+|---|---|
+| Panel | A card under the page head. Running bursts are chips after "Running:", the same words for viewers and operators; while API-02 fails, the ingestor is not running or the controller is not reporting it reads "Running: unknown", never none |
+| Bursts | "Fans burst · 12 min left"; a held burst reads only "Humidify held off: someone inside", with the code in words and no time left |
+| Engine flag | Read from API-IRR-01 at the 60 s cadence. Until it answers nothing is offered; while it fails the panel says so with Retry. Before the firmware operators read "Bursts arrive with the irrigation firmware (`manual_override`)" and "Restart arrives with the irrigation firmware"; a running burst still shows |
+| Restart | The button reads "Restart sent" and is disabled until `controller.uptime_s` falls below its last read, the one held at the press included (with none held, under 180 s), then "The controller restarted". After 3 min with no drop it reads "The controller has not restarted" and can be pressed again, and a later drop still reads restarted |
 
 ## 9. SCR-08 Plants (Later) · `/plants`
 

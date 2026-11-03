@@ -21,8 +21,8 @@ const problem = (status, code, title, detail, fields = {}) => ({
   status, headers: { "Content-Type": "application/problem+json", ...NO_STORE }, body: { type: "about:blank", title, status, code, detail, retryable: false, ...fields },
 });
 const MAX_BODY = 16_384;
-/** The reads a write's fixture settles on: a requested setting on the third API-09, a line write on the third API-IRR-01. */
-const COUNTED_READS = ["API-09", "API-IRR-01"];
+/** The reads a write's fixture settles on: a requested setting on the third API-09, a line write on the third API-IRR-01, a late override on the third API-02. */
+const COUNTED_READS = ["API-09", "API-IRR-01", "API-02"];
 /** JSON with every object's keys sorted, so one payload hashes the same whatever order its keys were sent in. */
 const canonical = (value) => JSON.stringify(value ?? null, (_key, item) => (item && typeof item === "object" && !Array.isArray(item)
   ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))

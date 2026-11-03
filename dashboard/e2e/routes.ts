@@ -20,7 +20,6 @@ export const CARD_PAGES = [
 /**
  * The routes that hold a write control for an operator under the roles fixtures (`alerts-merged`, `l01-running`,
  * `mister-fault`), so a viewer's "no write control" means something there. The other routes write nothing: Graphs, its
- * scorecard and More by design, Plan because Open is a link, and Equipment until #1136 adds its bursts and Restart
- * (that issue adds it here).
+ * scorecard and More by design, and Plan because Open is a link.
  */
-export const WRITE_ROUTES: readonly RoutePath[] = ["/", "/water", "/water/schedules", "/water/history", "/settings", "/activity"];
+export const WRITE_ROUTES: readonly RoutePath[] = ["/", "/water", "/water/schedules", "/water/history", "/settings", "/activity", "/equipment"];

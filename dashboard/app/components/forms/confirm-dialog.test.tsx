@@ -86,7 +86,8 @@ test("FERT in the title on a fertilizer line; drips add prewet and flush, mister
   expect(lineLabel({ zone: "supply", kind: "master", name: "Valve • Fert. Master" })).toBe("Fert master");
   await openRun({ lineId: "L02" });
   expect(title()).toBe("Run L02 Wall feed (FERT) for 10 min?");
-  expect(text(document.getElementById(dialog().getAttribute("aria-describedby")!))).toBe("Starts now · wall feed today 0 min");
+  expect(text(document.getElementById(dialog().getAttribute("aria-describedby")!))).toBe("Starts now · wall feed today 0 min, no cap");
+  expect(text(dialog().querySelector(".dialog-note"))).toBe("Prewets on L01, feeds through L03 from the tank, then flushes");
   expect(["Duration", "Prewet on the clean line", "Flush on the clean line"].map((label) => (screen.getByLabelText(label) as HTMLInputElement).value)).toEqual(["10", "120", "240"]);
   cleanup();
   stopFixtureApi();
@@ -107,12 +108,22 @@ test("before the irrigation firmware L01 runs in fixed mode: no Duration, its ir
   const api = await openRun({ lineId: "L01", fixed: 12 }, "before-engine");
   expect(title()).toBe("Run L01 Wall drip (clean) for 12 min?");
   expect(screen.queryByLabelText("Duration")).toBeNull();
-  expect(text(dialog().querySelector(".dialog-note"))).toBe("Runs for the wall drip duration setting, irrig_wall_duration_min: 12 min.");
+  expect(text(dialog().querySelector(".dialog-note"))).toBe("Runs for the Wall drip duration (irrig_wall_duration_min): 12 min");
   expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));
   fireEvent.click(screen.getByRole("button", { name: "Run 12 min" }));
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-06", body: {} })]);
   expect(dialog().hasAttribute("open")).toBe(false);
+});
+
+test("the optional reason goes with the run only when typed, and each opening starts empty", async () => {
+  const api = await openRun({ lineId: "L01" });
+  fireEvent.change(screen.getByLabelText("Reason (optional)"), { target: { value: "  Flush the stagnant line " } });
+  fireEvent.click(screen.getByRole("button", { name: "Run 10 min" }));
+  await advance(0);
+  expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-06", body: { minutes: 10, reason: "Flush the stagnant line" } })]);
+  fireEvent.click(screen.getByRole("button", { name: "Run…" }));
+  expect((screen.getByLabelText("Reason (optional)") as HTMLInputElement).value).toBe("");
 });
 
 test("out of bounds reads beside the field and sends nothing; the server's 422 does the same with its own bounds; busy reads its reason", async () => {

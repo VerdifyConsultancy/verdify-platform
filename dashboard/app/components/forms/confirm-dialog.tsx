@@ -7,8 +7,9 @@ import type { WriteError } from "../../lib/writes";
 import { lineChemistry } from "../badge";
 import { Button } from "../button";
 import { FieldError } from "./field";
-import { firstField, useModalDialog } from "./modal";
+import { useModalDialog } from "./modal";
 import { NumberField } from "./number-field";
+import { Reason } from "./reason";
 
 /** A run-now body (API-IRR-06): drips `{minutes}`, misters `{on_s, count, gap_s}`, fertilizer lines add prewet and flush. */
 export type RunBody = components["schemas"]["RunRequest"];
@@ -58,8 +59,8 @@ function lengthText(kind: string, values: Partial<Record<RunField, number | null
 export type ConfirmDialogProps = {
   open: boolean;
   onClose: () => void;
-  /** The line from API-IRR-01: its kind picks the fields, `today.minutes` and `daily_cap_min` fill the line under the title. */
-  line: Pick<IrrigationLine, "line_id" | "name" | "zone" | "kind" | "daily_cap_min" | "today">;
+  /** The line from API-IRR-01: its kind picks the fields, `today.minutes` and `daily_cap_min` fill the line under the title, and a feed names its `clean_partner`. */
+  line: Pick<IrrigationLine, "line_id" | "name" | "zone" | "kind" | "daily_cap_min" | "today"> & Partial<Pick<IrrigationLine, "clean_partner">>;
   /** The line's name on the board; by default from its zone and kind ("Wall drip"). */
   label?: string;
   /**
@@ -80,8 +81,9 @@ export type ConfirmDialogProps = {
 
 /**
  * The app's only confirmation, for starting water (design system §4.4): "Run L01 Wall drip (clean) for 10 min?", FERT in
- * the title on L02, L06, L08 and L10; "Starts now · wall drip today 10 of 60 min"; the fields for the line's kind; Cancel
- * and "Run 10 min". Before the irrigation firmware L01 runs in fixed mode, naming its `irrig_wall_duration_min`.
+ * the title on L02, L06, L08 and L10 with what a feed does; "Starts now · wall drip today 10 of 60 min" ("no cap" for a
+ * cap of 0); the fields for the line's kind and the optional reason; Cancel and "Run 10 min". Before the irrigation
+ * firmware L01 runs in fixed mode, naming its `irrig_wall_duration_min`.
  */
 export function ConfirmDialog({ open, onClose, line, label, fixed = null, bounds, defaults, onRun, sending = false, error }: ConfirmDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -92,14 +94,17 @@ export function ConfirmDialog({ open, onClose, line, label, fixed = null, bounds
   const initial = useRef(defaults);
   const [draft, setDraft] = useState<Draft>(() => startDraft(defaults));
   const [checks, setChecks] = useState<Partial<Record<RunField, string>>>({});
+  const [reason, setReason] = useState("");
   useEffect(() => { initial.current = defaults; });
   // Each opening starts from the defaults, not from what the last run typed.
   useEffect(() => {
     if (!open) return;
     setDraft(startDraft(initial.current));
     setChecks({});
+    setReason("");
   }, [open]);
-  const { onKeyDown, onCancel } = useModalDialog(ref, open, onClose, (dialog) => firstField(dialog) ?? dialog.querySelector<HTMLElement>(".dialog-actions .btn"));
+  // The first number, else Cancel: a run with no fields opens no phone keyboard for its optional reason.
+  const { onKeyDown, onCancel } = useModalDialog(ref, open, onClose, (dialog) => dialog.querySelector<HTMLElement>(".dialog-fields input") ?? dialog.querySelector<HTMLElement>(".dialog-actions .btn"));
   const name = label ?? lineLabel(line);
   const chemistry = lineChemistry(line.kind) === "fert" ? "FERT" : "clean";
   const boundsOf = (field: RunField): Bounds => bounds?.[field] ?? RUN_BOUNDS[field];
@@ -108,19 +113,19 @@ export function ConfirmDialog({ open, onClose, line, label, fixed = null, bounds
   const today = line.today?.minutes;
   const facts = today === null || today === undefined || !Number.isFinite(today)
     ? "Starts now"
-    : `Starts now · ${name.toLowerCase()} today ${Math.round(today)}${line.daily_cap_min > 0 ? ` of ${line.daily_cap_min}` : ""} min`;
+    : `Starts now · ${name.toLowerCase()} today ${Math.round(today)}${line.daily_cap_min > 0 ? ` of ${line.daily_cap_min} min` : " min, no cap"}`;
   const serverError = (field: RunField) => {
     if (!error || error.field !== field) return null;
     // The hook does not know the field's unit; the 422's bounds read with it here.
     if (error.code === "out_of_range" && error.min !== null && error.max !== null) return `Must be ${rangeText(error.min, error.max, FIELD_TEXT[field].unit)}`;
     return error.message;
   };
-  const formError = error && (error.field === null || !fields.includes(error.field as RunField)) ? error.message : null;
+  const formError = error && (error.field === null || !(fields as string[]).concat("reason").includes(error.field)) ? error.message : null;
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (sending) return;
     const found: Partial<Record<RunField, string>> = {};
-    const body: Record<string, number> = {};
+    const body: Record<string, number | string> = {};
     for (const field of fields) {
       const value = values[field];
       const range = boundsOf(field);
@@ -133,13 +138,15 @@ export function ConfirmDialog({ open, onClose, line, label, fixed = null, bounds
     }
     setChecks(found);
     if (Object.keys(found).length) return;
+    if (reason.trim()) body.reason = reason.trim();
     if (await onRun(body as RunBody)) onClose();
   };
   return <dialog ref={ref} className="confirm-dialog" aria-labelledby={titleId} aria-describedby={factsId} aria-modal="true" onKeyDown={onKeyDown} onCancel={onCancel}>
     <form className="dialog-form" onSubmit={(event) => void submit(event)} noValidate>
       <h2 id={titleId}>Run {line.line_id} {name} ({chemistry}){length ? ` for ${length}` : ""}?</h2>
       <p id={factsId} className="dialog-facts">{facts}</p>
-      {fixed && <p className="dialog-note">Runs for the {name.toLowerCase()} duration setting, <code>irrig_wall_duration_min</code>{fixed.minutes !== null ? `: ${fixed.minutes} min` : ""}.</p>}
+      {chemistry === "FERT" && <p className="dialog-note">Prewets on {line.clean_partner ?? "the clean line"}, feeds through L03 from the tank, then flushes</p>}
+      {fixed && <p className="dialog-note">Runs for the {name} duration (<code>irrig_wall_duration_min</code>){fixed.minutes !== null ? `: ${fixed.minutes} min` : ""}</p>}
       {fields.length > 0 && <div className="dialog-fields">
         {fields.map((field) => {
           const range = boundsOf(field);
@@ -147,6 +154,7 @@ export function ConfirmDialog({ open, onClose, line, label, fixed = null, bounds
             error={checks[field] ?? serverError(field)} onChange={(text) => setDraft((current) => ({ ...current, [field]: text }))} />;
         })}
       </div>}
+      <Reason value={reason} onChange={setReason} error={error?.field === "reason" ? error.message : null} />
       {formError && <FieldError id={errorId}>{formError}</FieldError>}
       <div className="dialog-actions">
         <Button onClick={onClose}>Cancel</Button>

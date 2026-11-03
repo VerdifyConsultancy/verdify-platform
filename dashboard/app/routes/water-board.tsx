@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { useId, type ReactNode } from "react";
 import { Link } from "react-router";
+import { ClearFaultButton } from "../components/clear-fault-button";
 import { cls } from "../components/common";
 import { useClockValue, useNow } from "../components/freshness";
 import { LineCard } from "../components/line-card";
@@ -9,6 +10,8 @@ import { OptionsButton } from "../components/line-options";
 import { MisterAssociation } from "../components/mister-association";
 import { PanelError } from "../components/panel";
 import { ResumeLine } from "../components/pause-lines";
+import { RunControl } from "../components/run-dialog";
+import { StopButton } from "../components/stop-button";
 import { usePhone } from "../lib/narrow";
 import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
 import { useSchedulesRead } from "../lib/queries";
@@ -27,12 +30,15 @@ function LimitsStrip({ status, today }: { status: IrrigationStatus; today: strin
     </li>)}
   </ul>;
 }
-/** A card's line controls (#1182): the enable switch, Resume while paused and Options. Viewers see none of them. */
-function LineControls({ line }: { line: IrrigationLine }) {
+/** A card's controls: the enable switch, Run… or Mist now…, Stop, Resume while paused, Options and, on a latched mister, Clear fault (#1136, #1182). Viewers see none of them; L11 has none. */
+function LineControls({ line, engine }: { line: IrrigationLine; engine: boolean }) {
   return <>
     <LineEnable line={line} />
+    <RunControl line={line} engine={engine} />
+    <StopButton lineId={line.line_id} />
     <ResumeLine line={line} />
     <OptionsButton line={line} />
+    <ClearFaultButton line={line} engine={engine} />
   </>;
 }
 
@@ -66,7 +72,7 @@ export default function WaterBoard() {
   const master = status.lines.find(isMaster) ?? null;
   const limits = <Section title="Limits today" folded={phone}><LimitsStrip status={status} today={today} /></Section>;
   const misters = <Section title="Mister zones" folded={phone}>
-    <div className="grid grid-3 mister-zones">{misterLines(status.lines).map((line) => <MisterAssociation key={line.line_id} line={line} status={status} today={today} />)}</div>
+    <div className="grid grid-3 mister-zones">{misterLines(status.lines).map((line) => <MisterAssociation key={line.line_id} line={line} status={status} today={today} actions={<ClearFaultButton line={line} engine={status.engine} />} />)}</div>
   </Section>;
   return <div className="water-board">
     {!phone && limits}
@@ -75,7 +81,7 @@ export default function WaterBoard() {
       <h2 id={linesId} className="eyebrow">Lines</h2>
       <div className="grid grid-3 line-cards">
         {boardLines(status.lines, phone).map((line) => <LineCard key={line.line_id} line={line} master={line.line_id === "L02" ? master : null} engine={status.engine} program={status.program}
-          today={today} scheduleLabels={labels} actions={<LineControls line={line} />} />)}
+          today={today} scheduleLabels={labels} actions={<LineControls line={line} engine={status.engine} />} />)}
       </div>
     </section>
     {phone && limits}
