@@ -35,6 +35,7 @@ from verdify_schemas.daily import (
 )
 from verdify_schemas.forecast import ForecastHour
 from verdify_schemas.forecast_ops import ForecastActionLog, ForecastActionRule
+from verdify_schemas.irrigation import IrrigationCommandRow
 from verdify_schemas.lessons import PlannerLesson
 from verdify_schemas.mcp_responses import OUTCOME_COMPOSITE_METRICS, ScorecardResponse
 from verdify_schemas.media import ImageObservation
@@ -251,6 +252,9 @@ DB_BACKED = [
     # Migration 280 (VD-30): the dashboard's write record. Skips until 280 is in the DB it reads.
     (ActivityLogRow, "activity_log"),
     (DesiredStateRow, "desired_state"),
+    # Migration 283 (VD-38): M3 leaves row models to the first issue that writes a table; VD-64 writes
+    # irrigation_command (the services insert, the ingestor's status updates validate through it).
+    (IrrigationCommandRow, "irrigation_command"),
 ]
 
 
