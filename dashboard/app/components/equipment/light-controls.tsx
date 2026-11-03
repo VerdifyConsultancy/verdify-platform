@@ -76,12 +76,15 @@ export function useLightControl({ light, equipment, autoParam }: (typeof LIGHTS)
   const turn = (state: LightState) => {
     presses.current += 1;
     setPressed(state);
+    write.clearError();
     setAutomatic((current) => (current && current.resync !== "done" ? { ...current, resync: "done" } : current));
     void switchTo(state, undefined);
   };
   const backToAutomatic = async () => {
     presses.current += 1;
     setPressed("automatic");
+    // What the last command said and is still waiting for no longer stands: this press takes its place.
+    command.reset();
     setAutomatic((current) => (current?.resync === "unread" ? { ...current, resync: "done" } : current));
     const outcome = await write.save({ value: 1, manual: true, reason: BACK_TO_AUTOMATIC });
     if (outcome.ok) setAutomatic({ writeId: outcome.data.id, resync: "waiting" });

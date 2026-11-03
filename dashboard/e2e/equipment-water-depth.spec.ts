@@ -35,7 +35,7 @@ for (const viewport of VIEWPORTS) {
     await expect(reason(page, "mode_reason").getByRole("link", { name: /^Graphs/ })).toHaveAttribute("href", "/graphs?from=2026-11-01T18:40:00Z&to=2026-11-01T22:40:00Z");
     await expect(reason(page, "fog_block_reason").getByRole("link", { name: /^Graphs/ })).toHaveAttribute("href", "/graphs?from=2026-11-02T14:12:00Z&to=2026-11-02T18:12:00Z");
     // One card under the three groups, above the lanes, with no page scroll sideways.
-    const [board, why, lanes] = await Promise.all([page.locator(".equipment-board").boundingBox(), page.getByRole("region", { name: "Why" }).boundingBox(), page.getByRole("heading", { level: 2, name: "Last 24 h" }).boundingBox()]);
+    const [board, why, lanes] = await Promise.all([page.locator(".equipment-board").boundingBox(), page.getByRole("region", { name: "Why", exact: true }).boundingBox(), page.getByRole("heading", { level: 2, name: "Last 24 h" }).boundingBox()]);
     expect(why!.y).toBeGreaterThanOrEqual(board!.y + board!.height);
     expect(lanes!.y).toBeGreaterThanOrEqual(why!.y + why!.height);
     await expectNoHorizontalScroll(page);
@@ -109,6 +109,12 @@ test("Back to automatic: one API-10 write reads REQUESTED then CONFIRMED, and on
   await expect.poll(() => sentWrites(request)).toEqual([TURN_ON, AUTO_MAIN, ["POST", "/v1/equipment/lights/main/off", { reason: "Back to automatic" }]]);
   await untilPolled(page, () => expect(lutron(page, MAIN)).toHaveText("Off (controller) · Lutron Off", { timeout: 500 }));
   await expect(page.locator("[data-differ]")).toHaveCount(0);
+  // Both show in Activity: the command with its reason, under the light's own link, and the write under the switch.
+  await light(page, MAIN).getByRole("link", { name: "Activity of Main" }).click();
+  const log = page.getByRole("region", { name: "Activity log", exact: true }).locator("li.event");
+  await expect(log.filter({ has: page.locator("h3", { hasText: "Lights off Main lights" }) }).locator(".event-reason")).toHaveText("“Back to automatic”");
+  await load(page, "/activity?target=sw_gl_main_auto_mode");
+  await expect(log.filter({ has: page.locator("h3", { hasText: "Set GL Main Auto Mode" }) }).locator(".event-reason")).toHaveText("“Back to automatic”");
 });
 
 test("grow-lights-differ: Back to automatic sends one on request once CONFIRMED", async ({ page, request }) => {
@@ -189,7 +195,7 @@ for (const viewport of VIEWPORTS) {
     await page.setViewportSize(viewport);
     await useScreensClock(page, request, "water-use-90d");
     await load(page, "/water/history");
-    const panel = page.getByRole("region", { name: "Daily water use" });
+    const panel = page.getByRole("region", { name: "Daily water use", exact: true });
     await expect(panel.locator("figcaption")).toHaveText("Gallons per day by line · last 30 days");
     await expect(panel.locator(".plot-water-use canvas").first()).toBeVisible();
     await expect(panel.getByRole("list", { name: "Water use days" }).getByRole("link", { name: "30 d" })).toHaveAttribute("aria-current", "true");
@@ -205,9 +211,10 @@ for (const viewport of VIEWPORTS) {
     await panel.locator("details.chart-table summary").click();
     const rows = panel.locator("details.chart-table tbody tr");
     await expect(rows).toHaveCount(30);
-    const cells = (hasText: string) => rows.filter({ has: page.locator("th", { hasText }) }).locator("th, td").allInnerTexts();
+    const cells = (hasText: string) => rows.filter({ has: page.locator("th", { hasText }) }).locator("th, td").allTextContents();
     const flat = async (hasText: string) => (await cells(hasText)).map((cell) => cell.replaceAll(String.fromCharCode(0xa0), " "));
-    const headers = await panel.locator("details.chart-table thead th").allInnerTexts();
+    // textContent: the stylesheet uppercases table headers, and innerText reads them as drawn.
+    const headers = await panel.locator("details.chart-table thead th").allTextContents();
     expect(headers.slice(0, 2)).toEqual(["Day", "Total"]);
     expect(headers.slice(-2)).toEqual(["No valve", "Coverage"]);
     // Nine days back has no data: every value is —, never 0.
@@ -230,7 +237,7 @@ for (const viewport of VIEWPORTS) {
 test("the 90 d and cause chips ask API-21 for 90 days and cut the same days by cause, in the URL; a reload keeps them", async ({ page, request }) => {
   await useScreensClock(page, request, "water-use-90d");
   await load(page, "/water/history");
-  const panel = page.getByRole("region", { name: "Daily water use" });
+  const panel = page.getByRole("region", { name: "Daily water use", exact: true });
   await panel.getByRole("list", { name: "Water use days" }).getByRole("link", { name: "90 d" }).click();
   await expect(page).toHaveURL(/\/water\/history\?water_use=90d$/);
   await expect(panel.locator("figcaption")).toHaveText("Gallons per day by line · last 90 days");
@@ -250,7 +257,7 @@ test("the 90 d and cause chips ask API-21 for 90 days and cut the same days by c
 test("a failed API-21 read says so in its own panel with Retry; the minutes and the ledger keep working", async ({ page, request }) => {
   await useScreensClock(page, request, "water-use-90d", { fail: { "API-21": 503 } });
   await load(page, "/water/history");
-  const panel = page.getByRole("region", { name: "Daily water use" });
+  const panel = page.getByRole("region", { name: "Daily water use", exact: true });
   await expect(panel.locator(".panel-error")).toContainText("Couldn't load daily water use.");
   await expect(panel.getByRole("button", { name: "Retry" })).toBeVisible();
   await expect(page.locator(".minutes-row")).toHaveCount(5);

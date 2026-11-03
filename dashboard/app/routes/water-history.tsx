@@ -84,7 +84,7 @@ function WaterUseSection({ names, search }: { names: Readonly<Record<string, str
   const days = waterUseDays(search.get("water_use"));
   const split = waterUseSplit(search.get("water_use_by"));
   const use = useApiRead("API-21", { days }, { intervalMs: HISTORY_POLL_MS });
-  return <section className="water-section water-use" aria-labelledby={headingId}>
+  return <section className="water-section" aria-labelledby={headingId}>
     <div className="section-head history-head">
       <h2 id={headingId} className="eyebrow">Daily water use</h2>
       <div className="history-controls">

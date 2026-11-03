@@ -396,6 +396,37 @@ test("a Turn on while the write waits supersedes the resync: nothing but that Tu
   expect(lightWrites(api)).toEqual([["/api/v1/equipment/lights/grow/off", null]]);
 });
 
+test("Back to automatic takes the place of the last command's words, and a Turn on of a refused write's", async () => {
+  const api = await load({ fixture: ["lights-not-confirmed", "requested-to-confirmed"] });
+  const says = () => row("grow_light_main").querySelector(".light-controls .field-error");
+  press("grow_light_main", /^Turn on/);
+  await advance(0);
+  await tick(30_000);
+  expect(text(says())).toBe("Lutron did not reach the state");
+  expect(note("grow_light_main")).toBe("Lutron hasn't confirmed: still OFF");
+  press("grow_light_main", /^Back to automatic/);
+  await advance(0);
+  expect(says()).toBeNull();
+  expect(note("grow_light_main")).toBeNull();
+  // The intent and Lutron agree, so no command follows, and the row says nothing of the old one.
+  await poll(() => auto("grow_light_main").startsWith("Confirmed"));
+  await tick(5000);
+  expect(lightWrites(api)).toEqual([["/api/v1/equipment/lights/main/on", null]]);
+  expect(says()).toBeNull();
+  expect(note("grow_light_main")).toBeNull();
+  cleanup();
+  stopFixtureApi();
+  chartStubs();
+  await load({ fixture: "lights-confirmed", fail: { "API-10": 503 } });
+  press("grow_light_main", /^Back to automatic/);
+  await advance(0);
+  expect(says()).not.toBeNull();
+  press("grow_light_main", /^Turn on/);
+  await advance(0);
+  expect(says()).toBeNull();
+  expect(note("grow_light_main")).toBe("Waiting for Lutron");
+});
+
 /** API-13 answers 503 while `failing` says so; every other read goes on to the fixture API. */
 function failingBoard(failing: () => boolean) {
   const real = globalThis.fetch;

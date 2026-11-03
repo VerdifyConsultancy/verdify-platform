@@ -385,7 +385,8 @@ export function commandBody<K extends CommandOperationId>(body: BodyOf<K>): Body
  * `overrides` for a burst); a function gets the request's params and body.
  *
  * A failure `readbackAfter` names may still take effect late (API-20's 503, whose light can still switch): the readback
- * runs just the same, `phase` following it with `error` beside it, and the state showing clears the error.
+ * runs just the same, `phase` following it with `error` beside it, and the state showing clears the error. `reset` ends
+ * a readback and its words when another action takes the command's place.
  */
 export function useCommand<K extends CommandOperationId>({ operation, readback: chosen, readbackAfter }: {
   operation: K;
@@ -398,10 +399,16 @@ export function useCommand<K extends CommandOperationId>({ operation, readback: 
   const latest = useLatest({ chosen, readbackAfter });
   const watching = useRef<AbortController | null>(null);
   const watchingFailed = useRef(false);
-  useEffect(() => () => watching.current?.abort(), []);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; watching.current?.abort(); };
+  }, []);
   const { run, clearError } = action;
   const send = useCallback(async (params: ParamsOf<K>, body: BodyOf<K>): Promise<WriteOutcome<Parsed<K>>> => {
     const outcome = await run((key) => apiWrite(operation, params, commandBody<K>(body), key));
+    // Answered after the screen left: there is no one to read back for, and an abort that already ran cannot stop a new watch.
+    if (!mounted.current) return outcome;
     const failed = !outcome.ok;
     if (!outcome.ok && !(outcome.error && latest.current.readbackAfter?.(outcome.error))) {
       // A failure with no readback of its own ends the one an earlier failure left running: its words are the newest.
@@ -440,8 +447,14 @@ export function useCommand<K extends CommandOperationId>({ operation, readback: 
     });
     return outcome;
   }, [operation, run, clearError, client, latest]);
+  const reset = useCallback(() => {
+    watching.current?.abort();
+    watchingFailed.current = false;
+    clearError();
+    setProgress({ phase: "idle", message: null });
+  }, [clearError]);
   const phase: CommandPhase = action.sending ? "sending" : action.error && !progress.failed ? "failed" : progress.phase;
-  return { send, phase, sending: action.sending, message: progress.message, error: action.error, clearError };
+  return { send, phase, sending: action.sending, message: progress.message, error: action.error, clearError, reset };
 }
 
 // ---------------------------------------------------------------------------------------------------- R records

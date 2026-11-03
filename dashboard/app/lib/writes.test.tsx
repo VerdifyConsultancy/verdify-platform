@@ -344,6 +344,7 @@ function LightCommandHarness({ after }: { after: boolean }) {
   return <div>
     <p data-testid="light">{command.phase}{command.error ? ` · ${command.error.message}` : ""}</p>
     <Button write busy={command.sending} onClick={() => void command.send({ light: "main", state: "on" }, undefined)}>Turn on</Button>
+    <Button onClick={command.reset}>Reset</Button>
   </div>;
 }
 const lightState = () => screen.getByTestId("light").textContent;
@@ -393,6 +394,32 @@ test("C: a failure nothing names reads as failed with no readback, and ends the 
   const after = sentAt("API-13").length;
   await advance(COMMAND_WINDOW_MS);
   expect(sentAt("API-13")).toHaveLength(after);
+});
+
+test("C: reset ends a readback and its words", async () => {
+  startFixtureApi({ fixture: "lights-not-confirmed" });
+  renderWithApi(<LightCommandHarness after />);
+  await turnOn();
+  expect(lightState()).toBe("waiting · Lutron did not reach the state");
+  fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+  await advance(0);
+  expect(lightState()).toBe("idle");
+  const reads = sentAt("API-13").length;
+  await advance(COMMAND_WINDOW_MS);
+  expect(sentAt("API-13")).toHaveLength(reads);
+  expect(lightState()).toBe("idle");
+});
+
+test("C: a command answered after its screen left reads nothing back", async () => {
+  const api = startFixtureApi({ fixture: "lights-confirmed" });
+  const view = renderWithApi(<LightCommandHarness after />);
+  fireEvent.click(screen.getByRole("button", { name: "Turn on" }));
+  view.unmount();
+  await advance(0);
+  expect(requests(api, "API-20")).toHaveLength(1);
+  const reads = sentAt("API-13").length;
+  await advance(COMMAND_WINDOW_MS);
+  expect(sentAt("API-13")).toHaveLength(reads);
 });
 
 test("a Problem's result reads in the light_result words; an unknown one raw; none its detail", () => {
