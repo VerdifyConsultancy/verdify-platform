@@ -10,6 +10,7 @@ from pathlib import Path
 import httpx
 import pytest
 from test_mcp_audience_auth import AGENT_TOOLS
+from test_mcp_named_agents import AlertConnection
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -88,7 +89,7 @@ async def test_real_mcp_127_stateless_protocol_filters_exact_audience_inventorie
                 assert unauthenticated_list.status_code == 200
                 assert _protocol_payload(unauthenticated_list)["result"]["tools"] == []
 
-            expected_counts = {"iris": 26, "experiment": 8, "admin": 32, "observer": 0}
+            expected_counts = {"iris": 34, "experiment": 8, "admin": 38, "observer": 0}
             for request_id, (audience, token) in enumerate(tokens.items(), start=10):
                 auth_headers = {**common_headers, "authorization": f"Bearer {token}"}
                 initialized = await client.post("/mcp", headers=auth_headers, json=initialize)
@@ -192,19 +193,10 @@ async def test_real_mcp_named_agent_inventory_attribution_and_revocation(monkeyp
     now = [1000.0]
     monkeypatch.setattr(server, "_agent_keys_clock", lambda: now[0])
 
-    class AlertConnection:
-        updates: list[tuple] = []
-
-        async def fetchrow(self, sql, *args):
-            assert sql.startswith("UPDATE alert_log SET acknowledged_at")
-            self.updates.append(args)
-            return {"id": args[0], "disposition": "acknowledged"}
-
-        async def close(self):
-            pass
+    alert_db = AlertConnection()
 
     async def db():
-        return AlertConnection()
+        return alert_db
 
     monkeypatch.setattr(server, "_db", db)
     app = server.mcp.streamable_http_app()
@@ -243,14 +235,18 @@ async def test_real_mcp_named_agent_inventory_attribution_and_revocation(monkeyp
                     3,
                     {
                         "name": "alerts",
-                        "arguments": {"action": "acknowledge", "alert_id": 7, "data": '{"acknowledged_by": "jason"}'},
+                        "arguments": {
+                            "action": "acknowledge",
+                            "alert_id": alert_db.row["id"],
+                            "data": '{"acknowledged_by": "jason"}',
+                        },
                     },
                 ),
             )
             result = _protocol_payload(acknowledged)["result"]
             assert result["isError"] is False
             assert json.loads(result["content"][0]["text"])["action"] == "acknowledged"
-            assert AlertConnection.updates == [(7, "agent:steward")]
+            assert alert_db.row["acknowledged_by"] == "agent:steward"
             assert "runtime-test-steward" not in acknowledged.text
 
             (keys / "steward").unlink()
@@ -342,3 +338,283 @@ async def test_real_mcp_irrigation_reads_are_typed_described_and_return_the_rest
             assert out_of_range["isError"] is True
             bad_enum = await call(client, "irrigation_history", {"view": "days", "since": "a", "until": "b"}, 5)
             assert bad_enum["isError"] is True
+
+
+@pytest.mark.asyncio
+async def test_real_mcp_irrigation_writes_are_typed_and_reach_the_services_as_the_request_actor(monkeypatch):
+    """VD-61: through the real SDK, the five tools' schemas carry their enums and bounds and no check argument; a nested
+    start, a date-time and a fertilizer mister's fields reach the services; a value outside the schema is refused before
+    the tool runs; and FastMCP passes the stored JSON and the Problem JSON with isError through unchanged."""
+    from verdify_schemas.irrigation import LINE_IDS, Command
+    from verdify_services import activity
+    from verdify_services.irrigation import writes
+    from verdify_services.problems import ServiceError, problem
+
+    monkeypatch.setenv("VERDIFY_MCP_AUTH_MODE", "enforce")
+    monkeypatch.setenv("VERDIFY_MCP_TOKEN_IRIS", "runtime-test-iris")
+
+    server = _load_server()
+    calls = []
+    command = Command.model_validate(
+        {
+            "command_id": "8f0d6f8e-5c4e-4b52-9a51-2b0a6c4b8f10",
+            "kind": "run",
+            "line_id": "L08",
+            "args": {},
+            "status": "pending",
+            "actor": {"source": "iris", "name": "iris"},
+            "reason": None,
+            "created_at": "2026-11-02T18:00:00Z",
+            "sent_at": None,
+        }
+    )
+
+    class Connection:
+        async def close(self):
+            pass
+
+    async def db():
+        return Connection()
+
+    def service(name, value, replayed=False):
+        async def call(_conn, actor, *args, **kwargs):
+            calls.append((name, actor.source, args, kwargs))
+            return activity.WriteResult(value=value, replayed=replayed)
+
+        return call
+
+    async def refused_create(_conn, _actor, *_args, **_kwargs):
+        raise ServiceError(problem("manual", "Schedule 7 is manual, so Iris leaves it alone", field="slot_id"))
+
+    monkeypatch.setattr(server, "_db", db)
+    monkeypatch.setattr(writes, "run", service("run", command, replayed=True))
+    monkeypatch.setattr(writes, "stop", service("stop", command))
+    monkeypatch.setattr(writes, "clear_fault", service("clear_fault", command))
+    monkeypatch.setattr(writes, "schedule_create", service("schedule_create", command))
+    monkeypatch.setattr(writes, "schedule_update", refused_create)
+    monkeypatch.setattr(writes, "schedule_delete", service("schedule_delete", writes.ScheduleDeleted(slot_id=7)))
+    monkeypatch.setattr(writes, "line_update", service("line_update", writes.LinesUpdated(lines=[])))
+    app = server.mcp.streamable_http_app()
+    headers = {
+        "accept": "application/json, text/event-stream",
+        "content-type": "application/json",
+        "authorization": "Bearer runtime-test-iris",
+        "mcp-protocol-version": "2025-11-25",
+    }
+
+    async def call(client, name, arguments, request_id):
+        response = await client.post(
+            "/mcp", headers=headers, json=_request("tools/call", request_id, {"name": name, "arguments": arguments})
+        )
+        return _protocol_payload(response)["result"]
+
+    def optional(schema, key="type", value="integer"):
+        return next(item for item in schema["anyOf"] if item.get(key) == value)
+
+    async with app.app.router.lifespan_context(app.app):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://127.0.0.1:8000"
+        ) as client:
+            listed = await client.post("/mcp", headers=headers, json=_request("tools/list", 1))
+            tools = {tool["name"]: tool for tool in _protocol_payload(listed)["result"]["tools"]}
+            for name in (
+                "irrigation_schedule_set",
+                "irrigation_line_set",
+                "irrigation_run",
+                "irrigation_stop",
+                "irrigation_clear_fault",
+            ):
+                assert tools[name]["description"].startswith(
+                    "Changes watering only; it does not count as your plan for this trigger."
+                )
+                properties = tools[name]["inputSchema"]["properties"]
+                assert not {"checked", "check_note", "actor", "source"} & set(properties)
+            run_schema = tools["irrigation_run"]["inputSchema"]
+            assert run_schema["required"] == ["line_id"]
+            assert tuple(run_schema["properties"]["line_id"]["enum"]) == LINE_IDS
+            on_s = optional(run_schema["properties"]["on_s"])
+            assert (on_s["minimum"], on_s["maximum"]) == (10, 90)
+            schedule = tools["irrigation_schedule_set"]["inputSchema"]
+            assert "required" not in schedule
+            days = optional(schedule["properties"]["days"], value="array")
+            assert days["minItems"] == 1 and days["items"]["enum"] == ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+            start = schedule["$defs"]["ScheduleStart"]
+            assert start["properties"]["kind"]["enum"] == ["clock", "sunrise", "solar_noon", "sunset"]
+            assert optional(start["properties"]["offset_min"])["minimum"] == -240
+            assert "L03" not in optional(schedule["properties"]["line_id"], "type", "string")["enum"]
+            line = tools["irrigation_line_set"]["inputSchema"]
+            assert line["required"] == ["line_id"]
+            assert tuple(line["properties"]["line_id"]["enum"]) == (*LINE_IDS, "all")
+            paused = optional(line["properties"]["paused_until"], "type", "string")
+            assert paused["format"] == "date-time"
+            clear = tools["irrigation_clear_fault"]["inputSchema"]["properties"]["line_id"]
+            assert optional(clear, "type", "string")["enum"] == ["L04", "L07", "L09"]
+
+            fields = {"on_s": 30, "count": 4, "gap_s": 60, "prewet_s": 120, "flush_s": 240}
+            ran = await call(client, "irrigation_run", {"line_id": "L08", **fields}, 2)
+            assert ran["isError"] is False
+            assert json.loads(ran["content"][0]["text"])["replayed"] is True
+            (name, source, args, kwargs) = calls.pop()
+            assert (name, source, args) == ("run", "iris", ("L08",))
+            assert {field: kwargs[field] for field in fields} == fields and kwargs["minutes"] is None
+
+            stop = await call(client, "irrigation_stop", {}, 3)
+            assert stop["isError"] is False and calls.pop()[:3] == ("stop", "iris", (None,))
+            assert (await call(client, "irrigation_clear_fault", {"line_id": "L07"}, 4))["isError"] is False
+            assert calls.pop()[2] == ("L07",)
+
+            created = await call(
+                client,
+                "irrigation_schedule_set",
+                {
+                    "line_id": "L01",
+                    "days": ["mon", "fri"],
+                    "start": {"kind": "sunrise", "offset_min": 60},
+                    "on_s": 720,
+                },
+                5,
+            )
+            assert created["isError"] is False
+            (name, _source, (body,), kwargs) = calls.pop()
+            assert name == "schedule_create" and kwargs["manual"] is False
+            assert body == {
+                "line_id": "L01",
+                "days": ["mon", "fri"],
+                "start": {"kind": "sunrise", "offset_min": 60},
+                "on_s": 720,
+            }
+
+            refused = await call(client, "irrigation_schedule_set", {"slot_id": 7, "on_s": 720}, 6)
+            assert refused["isError"] is True
+            assert json.loads(refused["content"][0]["text"])["code"] == "manual"
+
+            deleted = await call(client, "irrigation_schedule_set", {"slot_id": 7, "delete": True}, 7)
+            assert json.loads(deleted["content"][0]["text"]) == {"slot_id": 7, "deleted": True, "manual_before": None}
+            calls.clear()
+
+            # A check argument from an old or careless client is dropped unread: the service never sees it.
+            paused_line = await call(
+                client,
+                "irrigation_line_set",
+                {"line_id": "all", "paused_until": "2026-11-03T18:00:00-07:00", "checked": True},
+                8,
+            )
+            assert paused_line["isError"] is False
+            assert json.loads(paused_line["content"][0]["text"]) == {"lines": []}
+            (name, _source, (target, body), kwargs) = calls.pop()
+            assert (name, target, kwargs["manual"]) == ("line_update", "all", None)
+            assert set(body) == {"paused_until"} and body["paused_until"].utcoffset() is not None
+
+            for tool, arguments in (
+                ("irrigation_run", {"line_id": "L01", "minutes": 121}),
+                ("irrigation_run", {"line_id": "L12"}),
+                ("irrigation_schedule_set", {"line_id": "L03"}),
+                ("irrigation_schedule_set", {"days": []}),
+                ("irrigation_schedule_set", {"start": {"kind": "noon"}}),
+                ("irrigation_schedule_set", {"start": {"kind": "clock", "clock": "25:00"}}),
+                ("irrigation_schedule_set", {"start": {"kind": "sunrise", "offset_min": 241}}),
+                ("irrigation_line_set", {"line_id": "L01", "daily_cap_min": 481}),
+                ("irrigation_line_set", {"line_id": "L01", "paused_until": "2026-11-03T18:00:00"}),
+                ("irrigation_clear_fault", {"line_id": "L08"}),
+            ):
+                result = await call(client, tool, arguments, 9)
+                assert result["isError"] is True, (tool, arguments)
+                assert calls == [], (tool, arguments)
+
+
+@pytest.mark.asyncio
+async def test_real_mcp_service_tools_list_typed_schemas_and_pass_their_results_through(monkeypatch, tmp_path):
+    """VD-58 through the real SDK: no output schema, and FastMCP leaves the CallToolResult alone, so the REST JSON
+    and a refusal's Problem JSON with isError reach the client unchanged, attributed from the request actor."""
+    import os
+    from datetime import UTC, datetime
+
+    from verdify_services.activity import WriteResult
+    from verdify_services.actor import ActorRef
+    from verdify_services.settings import DesiredSetting
+
+    for key in [k for k in os.environ if k.startswith("VERDIFY_MCP_TOKEN_")]:
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("VERDIFY_MCP_AUTH_MODE", "enforce")
+    keys = tmp_path / "mcp-agents"
+    keys.mkdir()
+    (keys / "steward").write_text("runtime-test-steward\n")
+    monkeypatch.setenv("VERDIFY_MCP_AGENT_KEYS_DIR", str(keys))
+    server = _load_server()
+    writes = []
+
+    async def write(_conn, actor, param, value, manual, reason, request_id, extra_detail=None):
+        writes.append((actor.source, param, value, manual))
+        return WriteResult(
+            value=DesiredSetting(
+                id=1,
+                param=param,
+                value=1.55,
+                snapped_from=value,
+                manual=manual,
+                manual_before=False,
+                state="requested",
+                actor=ActorRef(source=actor.source, name=actor.name),
+                created_at=datetime(2026, 11, 2, 18, tzinfo=UTC),
+            )
+        )
+
+    alert_db = AlertConnection()
+
+    async def db():
+        return alert_db
+
+    monkeypatch.setattr(server, "_db", db)
+    monkeypatch.setattr(server.settings_service, "write", write)
+    app = server.mcp.streamable_http_app()
+    transport = httpx.ASGITransport(app=app)
+    headers = {
+        "accept": "application/json, text/event-stream",
+        "content-type": "application/json",
+        "authorization": "Bearer runtime-test-steward",
+        "mcp-protocol-version": "2025-11-25",
+    }
+
+    async def call(client, request_id, name, arguments):
+        answered = await client.post(
+            "/mcp", headers=headers, json=_request("tools/call", request_id, {"name": name, "arguments": arguments})
+        )
+        return _protocol_payload(answered)["result"]
+
+    async with app.app.router.lifespan_context(app.app):
+        async with httpx.AsyncClient(transport=transport, base_url="http://127.0.0.1:8000") as client:
+            listed = await client.post("/mcp", headers=headers, json=_request("tools/list", 2))
+            tools = {tool["name"]: tool for tool in _protocol_payload(listed)["result"]["tools"]}
+            for name in ("set_setting", "settings", "activity"):
+                assert "outputSchema" not in tools[name]
+                assert tools[name]["description"]
+            assert tools["set_setting"]["inputSchema"]["required"] == ["param"]
+            assert {"since", "until", "group"} <= set(tools["settings"]["inputSchema"]["properties"])
+            group = tools["settings"]["inputSchema"]["properties"]["group"]
+            enum = next(option["enum"] for option in group["anyOf"] if "enum" in option)
+            assert set(enum) == {
+                "planner_policy",
+                "scheduled_policy",
+                "controller_safety",
+                "crop_band",
+                "site_water_caps",
+                "read_only",
+                "band_in_force",
+            }
+
+            stored = await call(client, 3, "set_setting", {"param": "mister_engage_kpa", "value": 1.53})
+            assert stored["isError"] is False
+            body = json.loads(stored["content"][0]["text"])
+            assert (body["value"], body["snapped_from"], body["manual"], body["state"]) == (
+                1.55,
+                1.53,
+                False,
+                "requested",
+            )
+            assert body["actor"] == {"source": "agent:steward", "name": "steward"}
+            assert writes == [("agent:steward", "mister_engage_kpa", 1.53, False)]
+
+            refused = await call(client, 4, "set_setting", {"param": "mister_engage_kpa"})
+            assert refused["isError"] is True
+            assert json.loads(refused["content"][0]["text"])["code"] == "invalid_request"
+            assert len(writes) == 1

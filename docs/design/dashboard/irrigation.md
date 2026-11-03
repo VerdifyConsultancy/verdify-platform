@@ -940,6 +940,28 @@ trigger. Site values use `set_setting`.
   with `make planner-dry`. The server instructions in `mcp/server.py` gain one paragraph on these
   tools, `manual`, `request_id`, the refusal codes and "irrigation_stop always works".
 
+As built (VD-61; `mcp/server.py`). Where the build settles what this section leaves open:
+
+- **`paused_until`** is an ISO date-time with its UTC offset. A time at or before now resumes the line, as REST's null
+  or now does. The tool has no null for it: leaving it out changes nothing.
+- **Delete.** `delete=true` answers `{"slot_id": <id>, "deleted": true, "manual_before": <flag>}`, because REST answers
+  204 with no body. Without a `slot_id`, or with a schedule field (`manual: true` included), it is `invalid_request`,
+  before any connection opens.
+- **`manual` on a line.** The tool follows REST's `line_edit_manual` with false for its default. A definition field
+  passes the flag the call carries, false when omitted. `paused_until` on one line with no definition field passes
+  none, even with `manual` beside it, so a pause never changes the flag. `manual` with no other field sets it, and
+  `all` passes what it was sent, so the service refuses `manual` beside `all`.
+- **Run with the engine.** A drip needs `minutes`: `irrigation_run('L01')` with none is `invalid_request` naming it.
+  Only the bridge runs L01 for `irrig_wall_duration_min` with `minutes` left out.
+- **Schemas.** `irrigation_schedule_set` takes L01, L02 and L04-L10 and `irrigation_clear_fault` takes L04, L07 and L09,
+  so the SDK refuses another line before the tool runs; `unknown_target` is then a schedule that does not exist. Numbers
+  are integers within the widest bounds of any line kind, so a fractional one is refused too, where a REST body snaps
+  it; `validate_schedule` holds each line kind to its own, as `out_of_range`.
+- **Triggers.** `trigger_id` and `planner_instance` are free text of 1-64 characters, stored in the activity detail and
+  never looked up, so an unknown id is not a refusal.
+- **Hermes.** All eight tools are in `PLAN_OPTIONAL` in `hermes-config.yaml`: Hermes stays ready on an MCP image from
+  before them, because Iris ends every trigger without them.
+
 ### 8.3 Write rules (API and MCP alike)
 
 - **Validation on submit.** The checks are those in §4.3, the run-now refusals in §4.7,

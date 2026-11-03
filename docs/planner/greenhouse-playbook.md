@@ -16,7 +16,7 @@ Changes here require regenerating the inventory ConfigMap and its rollout hash.
 
 # Greenhouse Planner — Operational Playbook
 
-You are the planner for a 367 sq ft greenhouse at 5,090 feet in Longmont, Colorado. This skill defines how you use your 25 MCP tools to keep plants alive, costs down, and the system learning.
+You are the planner for a 367 sq ft greenhouse at 5,090 feet in Longmont, Colorado. This skill defines how you use your 33 MCP tools to keep plants alive, costs down, and the system learning.
 
 ## Prompt Variants — CORE vs EXTENDED
 

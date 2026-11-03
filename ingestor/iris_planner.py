@@ -84,10 +84,12 @@ if not _planner_playbook_available:  # pragma: no cover — host-path check
 _STANDING_DIRECTIVES = """
 ## Standing Directives (MANDATORY — read before every action)
 
-1. **Use MCP tools ONLY.** Hermes exposes 25 production tools:
+1. **Use MCP tools ONLY.** Hermes exposes 33 production tools:
    **Monitoring:** `climate`, `scorecard`, `equipment_state`, `forecast`, `history`, `alerts`
-   **Irrigation (read only):** `irrigation_status`, `irrigation_schedule`, `irrigation_history`
+   **Irrigation reads:** `irrigation_status`, `irrigation_schedule`, `irrigation_history`
+   **Irrigation writes (never your plan for a trigger):** `irrigation_schedule_set`, `irrigation_line_set`, `irrigation_run`, `irrigation_stop`, `irrigation_clear_fault`
    **Control:** `get_setpoints`, `set_tunable`, `set_plan`, `acknowledge_trigger`, `plan_status`, `plan_evaluate`
+   **Settings:** `settings`, `set_setting`, `activity`
    **Knowledge:** `lessons`, `lessons_manage`, `lessons_search`, `knowledge_search`
    **Crops:** `crops`, `observations`, `crop_history`, `crop_lifecycle`
    **Topology:** `topology`, `position_current`
@@ -540,7 +542,8 @@ Use tactical knobs below to shift behavior instead.
 - `direct_wet_stress_min_dew_margin_f` °F, [3-15], def 8 — minimum temp-dewpoint margin for direct-wet stress override.
 - RETIRED (recovery firmware 2026-07-10): the clocked/day-mask irrigation schedule (`irrig_wall_days_mask`, `irrig_wall_fert_days_mask`, `irrig_center_days_mask`, `irrig_center_fert_days_mask`) no longer exists in firmware. Wall fertigation runs via the commissioned weekly wall-feed state machine; do NOT emit day-mask parameters.
 - Irrigation program: your context's IRRIGATION section has each line, the next 24 h and what a person holds manual. Read more with `irrigation_status` (lines, runs, today's minutes), `irrigation_schedule` (schedules, occurrences, bounds per line kind, at most 24 schedules) and `irrigation_history` (minutes by day, runs); they show what the Water screen shows, and unknown is null, never 0.
-- Before the irrigation firmware the schedules do not run: each occurrence reads "arrives with the irrigation firmware", only L01 (the wall drip) can run, for `irrig_wall_duration_min`, and Stop works on every wet line. People and named agents make those requests; your irrigation tools only read.
+- Before the irrigation firmware the schedules do not run: each occurrence reads "arrives with the irrigation firmware", only L01 (the wall drip) can run, for `irrig_wall_duration_min`, and Stop works on every wet line. Schedule and line writes are stored and reach the controller with the first program push; `irrigation_run` on another line and `irrigation_clear_fault` return `unavailable`, not retryable.
+- Change water with `irrigation_schedule_set` (create, edit or delete), `irrigation_line_set` (enables, mister flags, caps, pause), `irrigation_run`, `irrigation_stop` and `irrigation_clear_fault`, with a `reason`, a new `request_id` per change, and `trigger_id` and `planner_instance` where the tool takes them. They answer with the stored object or a `code`: `manual` means a person holds that schedule or line, so leave it alone; `check_required` means only a person can record the line's check, on the dashboard, so say so in your report; `retryable` is true only where waiting helps. `irrigation_stop` always works; after a Stop, VPD misting may pulse again, and to keep a line off, disable it.
 - The irrigation tools change watering only; they do not count as your plan for a trigger. Still end every trigger with `set_plan` or `acknowledge_trigger`.
 
 **Lighting policy (schedule-layer owned; main/overhead + grow/secondary circuits):**

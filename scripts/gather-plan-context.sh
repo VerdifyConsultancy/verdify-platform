@@ -252,6 +252,25 @@ ORDER BY ts;
 " 2>/dev/null || echo "(no active plan)"
 echo ""
 
+# ── 1b. MANUAL SETTINGS ───────────────────────────────────────────
+echo "--- MANUAL SETTINGS: held by a person; your plan values for these are ignored ---"
+echo "parameter|value|who|since"
+if manual_settings=$("${DB[@]}" -c "
+SELECT param || '|' || value || '|' || actor || ' (' || source || ')|' ||
+       to_char(created_at AT TIME ZONE 'America/Denver', 'YYYY-MM-DD HH24:MI')
+FROM v_desired_state_current
+WHERE greenhouse_id = '${GREENHOUSE_ID}'
+  AND manual
+  AND value IS NOT NULL
+ORDER BY param;
+" 2>/dev/null); then
+  echo "${manual_settings:-(none)}"
+else
+  echo "(manual settings unavailable)"
+fi
+echo "set_plan still requires every Tier-1 parameter: keep them in your plan; the dispatcher keeps the person's value."
+echo ""
+
 # ── 2. CURRENT ZONE-LEVEL CONDITIONS ──────────────────────────────
 echo "--- ZONE CONDITIONS ---"
 "${DB[@]}" -c "

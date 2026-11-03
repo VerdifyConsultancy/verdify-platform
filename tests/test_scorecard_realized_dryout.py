@@ -239,7 +239,7 @@ def test_authorized_inventory_unchanged_and_doc_exposes_honest_opt_in():
     # VD-59 adds the named-agent audience to scorecard (architecture §5.6).
     assert namespace["TOOL_AUDIENCES"]["scorecard"] == frozenset({"iris", "agent", "admin"})
     assert namespace["TOOL_AUDIENCES"]["outcome_kpi"] == frozenset({"admin"})
-    assert sum("iris" in value for value in namespace["TOOL_AUDIENCES"].values()) == 26
+    assert sum("iris" in value for value in namespace["TOOL_AUDIENCES"].values()) == 34
     node = next(n for n in tree.body if isinstance(n, ast.AsyncFunctionDef) and n.name == "scorecard")
     doc = ast.get_docstring(node)
     assert "include_realized_dryout=true" in doc and "night START date" in doc
