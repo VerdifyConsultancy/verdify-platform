@@ -76,7 +76,8 @@ class PrefixPreparationError(ValueError):
     """The offline inputs cannot produce a truthful replay corpus."""
 
 
-FOG_VENT_INPUT_SCHEMA = "verdify-fog-vent-consumer-inputs-v1"
+# v2 (#1161): the fog force-off has no leak input and reads whether a drip relay is open.
+FOG_VENT_INPUT_SCHEMA = "verdify-fog-vent-consumer-inputs-v2"
 FOG_VENT_DWELL_FIELDS = tuple(
     f"min_{relay}_{edge}_s" for relay in ("fan", "fog", "heat", "vent") for edge in ("on", "off")
 )
@@ -88,8 +89,8 @@ FOG_VENT_BOOLEAN_INPUTS = (
     "fan_requires_vent",
     "sensor_fault_relay_lock",
     "controller_time_valid",
-    "leak_block",
     "occupancy_moisture_block",
+    "drip_relay_open",
     "irrigation_water_conflict",
     "climate_water_budget_block",
     "mister_volume_hard_block",

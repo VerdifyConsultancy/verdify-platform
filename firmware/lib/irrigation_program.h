@@ -22,7 +22,11 @@
  *     irrigation_engine_esphome.h): the irr_program_id, irr_state and irr_events text
  *     (irr_format_program_id, irr_format_state, irr_format_events), the relay grant plan
  *     (irr_apply_plan), the program push staging (IrrStaging), the irr_command arguments,
- *     the clock offset and the flow-meter centi-gallons.
+ *     the clock offset and the flow-meter centi-gallons;
+ *   - the mist path (VD-46, #1161): which zone a climate VPD pulse may use
+ *     (irr_vpd_zone_allowed, irr_rank_vpd_zone) and the D-IRP-19 mister watchdog
+ *     (irr_watchdog_step, with its per-zone faults in the RTC block, irr_apply_faults,
+ *     irr_fault_masks, irr_fault_tokens, irr_fault_clear).
  *
  * It touches no relay. Every entry point fills IrrOutputs: the grant mask (bit =
  * device_idx) that the wet relay guards check, the relays the engine wants ON, the
@@ -605,7 +609,8 @@ inline bool irr_claim(IrrClaims& claims, uint16_t slot_id, uint16_t local_day, S
 // ── RTC no-init block: daily counters, the active clean run, the outcome ring ──
 
 constexpr uint32_t kRtcMagic = 0x31524956u;  // "VIR1" in memory order
-constexpr uint16_t kRtcVersion = 1;
+// 2: the mister watchdog's per-zone faults (#1161). A block of another version is zeroed.
+constexpr uint16_t kRtcVersion = 2;
 constexpr uint8_t kRingSize = 8;
 
 struct IrrEventEntry {
@@ -636,6 +641,21 @@ struct IrrRtcRun {
 };
 static_assert(sizeof(IrrRtcRun) == 24, "active-run layout");
 
+// One mister zone's D-IRP-19 watchdog state (F10, #1161; irr_watchdog_step()). The fault count
+// and the latch are daily: local midnight zeroes them, and clear_fault does. A back-off is a
+// countdown that runs across midnight and survives a soft reset with the block (the seconds a
+// reboot takes are not counted down). A power cut zeroes the whole block, faults included.
+struct IrrRtcFault {
+  uint8_t count;             // watchdog faults on the zone today
+  uint8_t latched;           // 1: latched until local midnight or clear_fault
+  uint8_t backing_off;       // 1: backing off for backoff_left_ms more
+  uint8_t line;              // the mister line of the zone's last fault (its f= token names it)
+  uint32_t backoff_left_ms;
+  uint32_t until_epoch;      // the published end: the back-off's end or the latch's local midnight
+                             // (UTC seconds; 0 until a valid clock gives it)
+};
+static_assert(sizeof(IrrRtcFault) == 12, "watchdog fault layout");
+
 struct IrrRtcBlock {
   uint32_t magic;
   uint16_t version;
@@ -652,8 +672,10 @@ struct IrrRtcBlock {
   uint8_t ring_count;
   uint8_t ring_head;  // index of the oldest entry
   uint16_t next_seq;
+  // The mister watchdog's faults per zone (center, south, west; D-IRP-19).
+  IrrRtcFault fault[kZoneCount];
 };
-static_assert(sizeof(IrrRtcBlock) == 180, "IrrRtcBlock layout (RTC_NOINIT_ATTR on the device)");
+static_assert(sizeof(IrrRtcBlock) == 216, "IrrRtcBlock layout (RTC_NOINIT_ATTR on the device)");
 static_assert(std::is_trivially_copyable<IrrRtcBlock>::value, "IrrRtcBlock is a POD");
 constexpr size_t kRtcCrcOffset = offsetof(IrrRtcBlock, crc32);
 
@@ -664,12 +686,19 @@ inline void irr_rtc_zero_daily(IrrRtcBlock& b) {
   b.water_centigal = 0;
   std::memset(b.line_on_s, 0, sizeof(b.line_on_s));
   std::memset(b.zone_pulse_s, 0, sizeof(b.zone_pulse_s));
+  // The watchdog's daily fault counts and latches (D-IRP-19); a back-off runs to its end.
+  for (IrrRtcFault& f : b.fault) {
+    f.count = 0;
+    f.latched = 0;
+    if (!f.backing_off) f = IrrRtcFault{};
+  }
 }
 
 // On power-on, or a bad magic, version or CRC32 (or an impossible ring index), zero
-// the whole block. On a new local day zero only the daily counters: the ring, its
-// sequence and the active clean run stay. local_day 0 means the time is not known
-// yet; a block whose day is still unknown adopts the first known day without zeroing.
+// the whole block. On a new local day zero only the daily counters (the watchdog's
+// fault counts and latches among them): the ring, its sequence, the active clean run
+// and a running back-off stay. local_day 0 means the time is not known yet; a block
+// whose day is still unknown adopts the first known day without zeroing.
 // Returns true when the whole block was zeroed.
 inline bool irr_rtc_validate(IrrRtcBlock& b, bool power_on, uint16_t local_day) {
   const bool bad = power_on || b.magic != kRtcMagic || b.version != kRtcVersion || b.crc32 != irr_rtc_crc(b) ||
@@ -2456,6 +2485,47 @@ inline void irr_refresh_outputs(IrrEngine& e, uint32_t now_ms, IrrOutputs& out) 
   detail::build_outputs(e, now_ms, out);
 }
 
+// D-IRP-19 (F10, #1161): the mister watchdog's faults reach the engine at once, not at its next
+// tick, so a VPD request or a run-now in between already sees a new back-off or latch (or a
+// cleared one). `faulted`: the misters the watchdog just forced OFF. A climate VPD grant on one
+// of them is dropped, and the engine's own open there is closed, so nothing reopens the relay: a
+// pulse counts as delivered and the next waits for the fault to end; a prewet or flush on a
+// mister stops its clock and waits on mist_tail_hold(). With `faulted` 0 only the masks change.
+inline void irr_apply_faults(IrrEngine& e, uint16_t faulted, uint16_t backoff_mask, uint16_t latch_mask,
+                             uint32_t now_ms, IrrOutputs& out) {
+  using namespace detail;
+  e.in.backoff_mask = backoff_mask;
+  e.in.latch_mask = latch_mask;
+  if (e.vpd_line != kNoLine && (faulted & irr_bit(e.vpd_line))) {
+    stamp_close(e, e.vpd_line, now_ms);  // the watchdog closed it inside this call
+    e.vpd_line = kNoLine;
+    e.sched_turn = true;
+    if (e.run.yielding) e.run.yield_vpd_done = true;
+  }
+  IrrRun& r = e.run;
+  const uint16_t held = uint16_t(run_relays(r) & faulted & kMistManifoldMask);
+  if (r.kind != IrrRunKind::kNone && held != 0) {
+    uint8_t line = kNoLine;
+    for (uint8_t i = 0; i < kLineCount; ++i) {
+      if (held & irr_bit(i)) line = i;
+    }
+    const IrrReason why = (latch_mask & zone_lines(line)) ? IrrReason::kFlt : IrrReason::kBof;
+    if (r.pulse_open) {
+      close_pulse(e, r, now_ms);
+      ++r.done;
+      const uint16_t min_off = e.in.mister_min_off_s;
+      r.next_pulse_ms = now_ms + uint32_t(r.gap_s > min_off ? r.gap_s : min_off) * 1000u;
+    } else if (r.open) {
+      close_continuous(r, now_ms);
+      stamp_close(e, line, now_ms);
+    }
+    r.block = why;
+    r.last_block = why;
+    rtc_mirror_run(e);
+  }
+  build_outputs(e, now_ms, out);
+}
+
 // ── Device wiring, the pure half (VD-45, #1160) ──────────────────────────────
 // firmware/greenhouse/irrigation_engine.yaml and firmware/lib/irrigation_engine_esphome.h
 // call these; the native tests cover them on the same inputs.
@@ -2488,7 +2558,8 @@ inline size_t irr_format_program_id(bool nvs, const uint8_t hash8[8], char* buf,
 }
 
 // An f= token: a mister line backing off (b) or latched (l) by the D-IRP-19 watchdog, and until
-// when. #1161's watchdog fills these; the engine wiring only publishes them.
+// when. irr_fault_tokens() fills these from the RTC block (one per faulted zone); the engine wiring
+// publishes them.
 struct IrrFaultToken {
   uint8_t line;          // a mister: L04, L07, L08, L09 or L10
   bool latched;          // l: latched until local midnight or clear_fault; b: backing off
@@ -2751,6 +2822,272 @@ inline IrrAirInputs irr_air_inputs(float temp_f, float rh_pct, float min_margin_
   a.dew_margin_known = true;
   a.dew_breach = std::isfinite(min_margin_f) && temp_f - dew_f < min_margin_f;
   return a;
+}
+
+// ── The mist path (F6, F10; VD-46, #1161) ───────────────────────────────────
+// The climate VPD path of controls.yaml and the engine glue call these; the native tests cover
+// them. Scheduled, run-now and fertilizer mist are the engine's own runs (above); these settle
+// which zone a climate VPD pulse may use and the D-IRP-19 mister watchdog.
+
+// An effective VPD member (F6): a clean mister (L04, L07, L09) whose program VPD-member bit and
+// line enable bit are both set. With no program the ROM default makes L04 the only one.
+inline bool irr_effective_vpd_member(const IrrProgram& p, uint8_t idx) {
+  return idx < kLineCount && kMisterMaskBit[idx] != 255 && (p.enabled_mask & irr_bit(idx)) != 0 &&
+         (p.vpd_member_mask & (1u << kMisterMaskBit[idx])) != 0;
+}
+
+// The effective VPD members as a line mask (bit = device_idx).
+inline uint16_t irr_vpd_member_lines(const IrrProgram& p) {
+  uint16_t m = 0;
+  for (uint8_t z = 0; z < kZoneCount; ++z) {
+    if (irr_effective_vpd_member(p, kZoneCleanLine[z])) m = uint16_t(m | irr_bit(kZoneCleanLine[z]));
+  }
+  return m;
+}
+
+// What the climate path knows each second that irr_vpd_zone_allowed() reads beside the program,
+// the RTC block and the watchdog's masks.
+struct IrrVpdZoneGate {
+  bool demand;            // climate_wet_assist_demand: SEALED_MIST past fog, or the VENTILATE mist assist
+  bool safety_ok;         // climate_wet_assist_safety_ok: a valid clock and climate_wet_assist_permitted()
+  bool saf4_tripped;      // mister_volume_hard_block: the SAF-4 ceiling is reached
+  uint16_t backoff_mask;  // mister lines backing off (D-IRP-19)
+  uint16_t latch_mask;    // mister lines latched (D-IRP-19)
+};
+
+// F6: may a climate VPD pulse use clean mister `idx` (L04 center, L07 south, L09 west) now? One
+// rule per zone: the climate's demand and its safety gate, the zone an effective VPD member, not
+// backing off or latched (a fault on any line of the zone, D-IRP-19), its duty cap not reached
+// (the clean line's daily_cap_min, 0 = none, against every mister second on the zone today,
+// whatever opened it) and SAF-4 not tripped. Confirmed occupancy, the soft budget, a drip and the
+// vent interlock hold VPD pulses in mister_blocked (controls.yaml); the engine's grant settles
+// the manifold.
+inline bool irr_vpd_zone_allowed(const IrrProgram& p, const IrrRtcBlock& rtc, uint8_t idx,
+                                 const IrrVpdZoneGate& g) {
+  if (!g.demand || !g.safety_ok || g.saf4_tripped || !irr_effective_vpd_member(p, idx)) return false;
+  if ((g.backoff_mask | g.latch_mask) & detail::zone_lines(idx)) return false;
+  const uint32_t cap_s = uint32_t(p.lines[idx].daily_cap_min) * 60u;
+  return cap_s == 0 || rtc.zone_pulse_s[kMistZone[idx]] < cap_s;
+}
+
+// F6 zone choice among the zones a climate VPD pulse may use now (`allowed` by ZoneId: center,
+// south, west; the east entry is ignored, east has no mister). With more than one allowed the rank
+// arbiter picks, whatever sw_arbiter_zone_enabled says: arbitrate_wet_zone() takes the best owner
+// rank among the zones whose VPD is above their band target (center rank 1 by
+// zone_priority_center), and when none is (the house-level stress asked for the pulse) the
+// best-ranked allowed zone gets it, ties to the lower ZoneId. The legacy stress score halves center
+// (mister_center_penalty), so it never chooses between members. Returns the ZoneId, or -1 with
+// fewer than two zones allowed: the caller keeps today's single-zone path.
+inline int irr_rank_vpd_zone(const bool (&allowed)[ZONE_COUNT], const ZoneWetIntent (&intents)[ZONE_COUNT],
+                             const int (&rank)[ZONE_COUNT]) {
+  bool act[ZONE_COUNT] = {};
+  int n = 0;
+  for (int z = 0; z < ZONE_COUNT; ++z) {
+    act[z] = allowed[z] && z != ZONE_EAST;
+    n += act[z] ? 1 : 0;
+  }
+  if (n < 2) return -1;
+  const int won = arbitrate_wet_zone(intents, rank, act);
+  if (won >= 0) return won;
+  int best = -1;
+  for (int z = 0; z < ZONE_COUNT; ++z) {
+    if (act[z] && (best < 0 || rank[z] < rank[best])) best = z;
+  }
+  return best;
+}
+
+// ── The D-IRP-19 mister watchdog (F10) ──
+// Each call (the climate loop's 1 s tick on the device) it forces OFF every wet relay (L01-L10)
+// that reads ON without its bit in irr_grant_mask, and every mister (L04, L07-L10) that has been ON
+// longer than its commanded length + 30 s, or 300 s when no length is known. The commanded length
+// is the climate VPD pulse's (its grant carries the weighted length, from its grant) or the engine
+// open's (IrrOutputs::mist_cmd_s: a window or run-now pulse's on_s, a feed pulse's, or a mist
+// prewet's or flush's seconds, from the ON edge). Each overrun faults the mister's zone for the
+// local day: on an effective VPD member the first fault backs the zone off 10 min and the second
+// 30 min, and the third latches it; on any other mister (schedule-only, and the fertilizer misters
+// L08 and L10) the first fault latches it. A latch holds until local midnight or clear_fault. The
+// faults live in the RTC block (IrrRtcFault); irr_state publishes each end time as an f= token.
+
+constexpr uint32_t kWatchdogSlackMs = 30000u;     // a mister may stay ON its commanded length + 30 s
+constexpr uint32_t kWatchdogCeilingMs = 300000u;  // the limit when no commanded length is known
+constexpr uint32_t kBackoffFirstMs = 600000u;     // a VPD member's first fault of the day: 10 min
+constexpr uint32_t kBackoffSecondMs = 1800000u;   // its second: 30 min; its third latches
+
+// What one watchdog call samples.
+struct IrrWatchdogInputs {
+  uint32_t now_ms;
+  uint32_t epoch;          // UTC now; 0: no valid clock
+  uint32_t next_midnight;  // UTC epoch of the next local midnight, a latch's end; 0: not known
+  uint16_t relay_on;       // wet relays reading ON (bit = device_idx; fog is not watched)
+  uint16_t grant;          // irr_grant_mask
+  uint16_t vpd_members;    // the effective VPD member lines (irr_vpd_member_lines())
+  uint8_t engine_line;     // the mister the engine's own run holds open (IrrOutputs::mist_on), or kNoLine
+  uint16_t engine_cmd_s;   // its commanded length (IrrOutputs::mist_cmd_s)
+  uint8_t vpd_line;        // the mister a climate VPD grant names, or kNoLine
+  uint16_t vpd_on_s;       // that pulse's commanded length
+  uint32_t vpd_since_ms;   // when it was granted
+};
+
+// The watchdog's RAM: each mister's ON edge and the commanded length of its current open.
+struct IrrWatchdog {
+  uint16_t on_mask;               // the misters ON at the last call
+  uint32_t since_ms[kLineCount];  // their ON edges (a VPD pulse: its grant)
+  uint16_t cmd_s[kLineCount];     // their commanded lengths (0: not known, the 300 s ceiling)
+  bool have_last;
+  uint32_t last_ms;               // the last call, for the back-off countdowns
+};
+
+struct IrrWatchdogResult {
+  uint16_t force_off;  // wet relays to turn OFF now: a mister past its limit, or any wet relay with no grant bit
+  uint16_t faulted;    // the misters that faulted in this call
+  bool changed;        // the fault state changed: masks and f= tokens
+};
+
+// The inputs from the engine's state as it stands (`out`: its last outputs).
+inline IrrWatchdogInputs irr_watchdog_inputs(const IrrEngine& e, const IrrOutputs& out, uint32_t now_ms,
+                                             uint16_t relay_on, uint16_t grant) {
+  IrrWatchdogInputs in{};
+  in.now_ms = now_ms;
+  in.epoch = detail::epoch_now(e, now_ms);
+  const int64_t midnight =
+      e.in.clock.valid ? irr_local_midnight(e.in.clock, uint16_t(e.in.clock.local_day + 1)) : int64_t(0);
+  in.next_midnight = midnight > 0 && midnight <= int64_t(UINT32_MAX) ? uint32_t(midnight) : 0u;
+  in.relay_on = uint16_t(relay_on & kGrantableMask);
+  in.grant = grant;
+  in.vpd_members = irr_vpd_member_lines(e.prog);
+  in.engine_line = out.mist_on;
+  in.engine_cmd_s = out.mist_cmd_s;
+  in.vpd_line = e.vpd_line;
+  in.vpd_on_s = e.vpd_on_s;
+  in.vpd_since_ms = e.vpd_since_ms;
+  return in;
+}
+
+namespace detail {
+
+// The mister line a zone's f= token and masks name: its last faulted line, else its clean line.
+inline uint8_t fault_line(const IrrRtcFault& f, uint8_t zone) {
+  return is_mister(f.line) && kMistZone[f.line] == zone ? f.line : kZoneCleanLine[zone];
+}
+
+// One overrun on mister `line`: count it on its zone, then back the zone off or latch it.
+inline void count_fault(IrrRtcBlock& rtc, uint8_t line, bool vpd_member, uint32_t epoch, uint32_t next_midnight) {
+  const uint8_t z = kMistZone[line];
+  if (z >= kZoneCount) return;
+  IrrRtcFault& f = rtc.fault[z];
+  if (f.count < 255) ++f.count;
+  f.line = line;
+  if (vpd_member && f.count <= 2) {
+    f.backing_off = 1;
+    f.backoff_left_ms = f.count == 1 ? kBackoffFirstMs : kBackoffSecondMs;
+    f.until_epoch = epoch != 0 ? epoch + f.backoff_left_ms / 1000u : 0u;
+  } else {
+    f.latched = 1;
+    f.backing_off = 0;
+    f.backoff_left_ms = 0;
+    f.until_epoch = next_midnight;
+  }
+}
+
+}  // namespace detail
+
+// One watchdog call: count the back-offs down, track each mister's open, fault the overruns, and
+// list every relay to force OFF. The caller turns those relays off, then hands `faulted` and the
+// new masks to the engine (irr_apply_faults()) when `changed`.
+inline IrrWatchdogResult irr_watchdog_step(IrrWatchdog& w, IrrRtcBlock& rtc, const IrrWatchdogInputs& in) {
+  IrrWatchdogResult res{};
+  bool touched = false;
+  // The back-off countdowns. The first call after a boot counts nothing.
+  const uint32_t dt = w.have_last ? in.now_ms - w.last_ms : 0u;
+  w.have_last = true;
+  w.last_ms = in.now_ms;
+  for (IrrRtcFault& f : rtc.fault) {
+    if (f.backing_off) {
+      touched = true;
+      if (dt >= f.backoff_left_ms) {
+        f.backing_off = 0;
+        f.backoff_left_ms = 0;
+        if (!f.latched) f.until_epoch = 0;
+        res.changed = true;
+      } else {
+        f.backoff_left_ms -= dt;
+      }
+    }
+    // An end time the clock could not give when the fault came.
+    if ((f.backing_off || f.latched) && f.until_epoch == 0 && in.epoch != 0) {
+      f.until_epoch = f.latched ? in.next_midnight : in.epoch + (f.backoff_left_ms + 999u) / 1000u;
+      if (f.until_epoch != 0) touched = res.changed = true;
+    }
+  }
+  // Each mister's open: its ON edge (a VPD pulse: its grant, also when a new grant reopens a relay
+  // the watchdog never saw OFF) and its commanded length; past the limit, a fault.
+  for (uint8_t i = 0; i < kLineCount; ++i) {
+    const uint16_t b = irr_bit(i);
+    if (!detail::is_mister(i)) continue;
+    if (!(in.relay_on & b)) {
+      w.on_mask = uint16_t(w.on_mask & ~b);
+      continue;
+    }
+    const bool vpd = in.vpd_line == i;
+    if (!(w.on_mask & b) || (vpd && w.since_ms[i] != in.vpd_since_ms)) {
+      w.on_mask = uint16_t(w.on_mask | b);
+      w.since_ms[i] = vpd ? in.vpd_since_ms : in.now_ms;
+      w.cmd_s[i] = vpd ? in.vpd_on_s : in.engine_line == i ? in.engine_cmd_s : uint16_t(0);
+    }
+    const uint32_t limit_ms = w.cmd_s[i] != 0 ? uint32_t(w.cmd_s[i]) * 1000u + kWatchdogSlackMs : kWatchdogCeilingMs;
+    if (in.now_ms - w.since_ms[i] < limit_ms) continue;  // wrap-safe
+    res.force_off = uint16_t(res.force_off | b);
+    res.faulted = uint16_t(res.faulted | b);
+    w.on_mask = uint16_t(w.on_mask & ~b);
+    detail::count_fault(rtc, i, (in.vpd_members & b) != 0, in.epoch, in.next_midnight);
+    touched = res.changed = true;
+  }
+  // Every wet relay ON without its grant bit goes OFF (not a fault: no length was overrun).
+  res.force_off = uint16_t(res.force_off | (in.relay_on & kGrantableMask & ~in.grant));
+  if (touched) irr_rtc_seal(rtc);
+  return res;
+}
+
+// The back-off and latch masks the engine (IrrInputs) and irr_vpd_zone_allowed() read: one bit per
+// faulted zone, its faulted line (both test every line of the zone).
+inline void irr_fault_masks(const IrrRtcBlock& rtc, uint16_t& backoff, uint16_t& latch) {
+  backoff = 0;
+  latch = 0;
+  for (uint8_t z = 0; z < kZoneCount; ++z) {
+    const IrrRtcFault& f = rtc.fault[z];
+    const uint16_t b = irr_bit(detail::fault_line(f, z));
+    if (f.latched) latch = uint16_t(latch | b);
+    else if (f.backing_off) backoff = uint16_t(backoff | b);
+  }
+}
+
+// irr_state's f= tokens (F3): each zone backing off or latched, named by its last faulted line,
+// with the back-off's end or the latch's local midnight.
+inline void irr_fault_tokens(const IrrRtcBlock& rtc, IrrStateExtras& x) {
+  x.fault_count = 0;
+  for (uint8_t z = 0; z < kZoneCount && x.fault_count < kMaxFaults; ++z) {
+    const IrrRtcFault& f = rtc.fault[z];
+    if (!f.latched && !f.backing_off) continue;
+    x.faults[x.fault_count++] = {detail::fault_line(f, z), f.latched != 0, f.until_epoch};
+  }
+}
+
+// clear_fault (irr_command, F4): zero the zone's fault count and its latch, for the zone of mister
+// `line`, or every zone (kAllLines). A back-off still running ends at its own time. Returns true
+// when anything changed.
+inline bool irr_fault_clear(IrrRtcBlock& rtc, uint8_t line) {
+  bool changed = false;
+  for (uint8_t z = 0; z < kZoneCount; ++z) {
+    if (line != kAllLines && (line >= kLineCount || kMistZone[line] != z)) continue;
+    IrrRtcFault& f = rtc.fault[z];
+    if (f.count == 0 && !f.latched) continue;
+    f.count = 0;
+    f.latched = 0;
+    if (!f.backing_off) f = IrrRtcFault{};
+    changed = true;
+  }
+  if (changed) irr_rtc_seal(rtc);
+  return changed;
 }
 
 }  // namespace verdify_irr

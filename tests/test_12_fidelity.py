@@ -1031,25 +1031,34 @@ def test_firmware_lighting_telemetry_fails_closed_when_time_invalid():
 def test_controller_time_failure_is_final_fog_rail():
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
     sensors = Path("firmware/greenhouse/sensors.yaml").read_text()
+    logic = Path("firmware/lib/greenhouse_logic.h").read_text()
 
     assert "const bool controller_time_valid = sntp_now.is_valid() && !id(sntp_failed);" in controls
     assert "int local_hour = controller_time_valid ? sntp_now.hour : 12;" in controls
     assert 'if(!controller_time_valid) return "time_invalid";' in controls
 
-    final_gate_start = controls.index("const bool climate_water_budget_block =")
+    # #1161 (F9): the clock is a term of the one fog force-off rule, in every mode (survival fog too).
+    rule = logic[logic.index("inline const char* fog_force_off_reason(") :]
+    rule = rule[: rule.index("\n}\n")]
+    survival = rule[rule.index("if (mode != SAFETY_COOL) {") :]
+    survival = survival[: survival.index("    }\n")]
+    assert 'if (!in.controller_time_valid) return "time_invalid";' in rule
+    assert "controller_time_valid" not in survival
+
+    final_gate_start = controls.index("const FogForceOffInputs fog_rails{")
     final_gate_end = controls.index("/**************** 10", final_gate_start)
     final_gate = controls[final_gate_start:final_gate_end]
-    assert "!controller_time_valid" in final_gate
-    assert final_gate.index("!controller_time_valid") < final_gate.index("willFog = false;")
+    assert "              controller_time_valid,\n" in final_gate
+    assert final_gate.index("if (fog_forced_off(mode, fog_rails)) {") < final_gate.index("willFog = false;")
 
     relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
-    assert "|| !controller_time_valid" in relay_apply
+    assert "fog_forced_off(mode, fog_rails));" in relay_apply
 
     fog_start = controls.index("char fog_block_reason")
     fog_end = controls.index("static char last_fog_block_reason", fog_start)
     fog_block = controls[fog_start:fog_end]
-    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "time_invalid")' in fog_block
-    assert fog_block.index("!controller_time_valid") < fog_block.index("manual_fog_requested")
+    assert "fog_force_off_reason(mode, fog_rails)" in fog_block
+    assert fog_block.index("fog_force_off_reason(mode, fog_rails)") < fog_block.index("manual_fog_requested")
     assert "if(!now.is_valid() || id(sntp_failed)) return NAN;" in sensors
 
 
@@ -2612,27 +2621,60 @@ def test_climate_decision_surface_excludes_fert_and_drip_relays():
 
 
 def test_climate_wet_assist_is_separate_from_crop_direct_wet_windows():
+    """#1161 (F6): ADR-0007's center-only routing is gone. Each mister zone takes climate VPD pulses
+    by one rule, irr_vpd_zone_allowed(): the climate demand and its safety gate, an effective VPD
+    member of the irrigation program, no watchdog back-off or latch, the zone's duty cap and SAF-4."""
     controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    engine = (REPO_ROOT / "firmware" / "lib" / "irrigation_program.h").read_text()
+    greenhouse = (REPO_ROOT / "firmware" / "greenhouse.yaml").read_text()
 
     assert "const bool climate_wet_assist_safety_ok" in controls
     assert "climate_wet_assist_permitted(sensor_in, setpts)" in controls
-    assert "const WetTopologyPolicy climate_topology{};" in controls
-    assert "WetCommandOrigin::CLIMATE_VPD" in controls
-    assert "climate_wet_resolution.relay == WetRelay::CENTER_MISTER" in controls
-    assert "const bool south_wet_allowed = false;" in controls
-    assert "const bool west_wet_allowed = false;" in controls
-    assert "const bool center_wet_allowed = climate_wet_assist_demand" in controls
+    for gone in (
+        "WetTopologyPolicy",
+        "resolve_wet_request",
+        "WetCommandOrigin",
+        "WetRelay::CENTER_MISTER",
+        "const bool south_wet_allowed = false;",
+        "const bool west_wet_allowed = false;",
+        "id(sw_arbiter_zone_enabled)",
+    ):
+        assert gone not in controls, gone
+    assert not (REPO_ROOT / "firmware" / "lib" / "irrigation_policy.h").exists()
+    assert "lib/irrigation_policy.h" not in greenhouse
+    for zone, line in (("center", "kL04"), ("south", "kL07"), ("west", "kL09")):
+        assert (
+            f"const bool {zone}_wet_allowed = irr_climate_zone_allowed(\n"
+            f"              verdify_irr::{line}, climate_wet_assist_demand, climate_wet_assist_safety_ok, "
+            "mister_volume_hard_block);"
+        ) in controls
+    rule = engine[engine.index("inline bool irr_vpd_zone_allowed(") :]
+    rule = rule[: rule.index("\n}\n")]
+    for term in (
+        "!g.demand",
+        "!g.safety_ok",
+        "g.saf4_tripped",
+        "!irr_effective_vpd_member(p, idx)",
+        "(g.backoff_mask | g.latch_mask) & detail::zone_lines(idx)",
+        "rtc.zone_pulse_s[kMistZone[idx]] < cap_s",
+    ):
+        assert term in rule, term
+    member = engine[engine.index("inline bool irr_effective_vpd_member(") :]
+    member = member[: member.index("\n}\n")]
+    assert "(p.enabled_mask & irr_bit(idx)) != 0" in member
+    assert "(p.vpd_member_mask & (1u << kMisterMaskBit[idx])) != 0" in member
     assert "auto crop_direct_wet_allowed" not in controls
     assert "direct_wet_window_open" not in controls
 
     watchdog = controls[
         controls.index("auto direct_wet_relay_watchdog") : controls.index("direct_wet_relay_watchdog();")
     ]
-    # #1160: the watchdog closes only what the irrigation engine's own run does not hold; the
-    # per-tick fertilizer offs went (the program's enables and the engine's runs decide).
+    # #1161 (F10): the D-IRP-19 watchdog runs first; the climate path then closes only its own VPD
+    # pulse on a zone that may not mist (irr_climate_close() never closes an engine-held relay).
+    assert "const uint16_t faulted = irr_mister_watchdog();" in watchdog
     for forced_off in (
-        "irr_climate_close(id(south_wall_mister), verdify_irr::kL07);",
-        "irr_climate_close(id(west_wall_mister), verdify_irr::kL09);",
+        "if(!south_wet_allowed) irr_climate_close(id(south_wall_mister), verdify_irr::kL07);",
+        "if(!west_wet_allowed) irr_climate_close(id(west_wall_mister), verdify_irr::kL09);",
         "if(!center_wet_allowed) irr_climate_close(id(center_mister), verdify_irr::kL04);",
     ):
         assert forced_off in watchdog
@@ -2737,8 +2779,9 @@ def test_fert_master_valve_is_wired_and_interlocked_with_fert_relays():
 
 def test_clean_water_relays_reject_direct_on_and_keep_controller_paths():
     """#1160 (F5): one engine grant replaces the per-origin tokens. A clean relay opens only with its
-    bit; the climate path opens center only after irr_vpd_grant(); nothing in controls.yaml opens a
-    drip or a wall mister, and the RUN CLEAN buttons and their queue are gone (VD-47, HA-01)."""
+    bit; the climate path opens a VPD zone's mister (center, and since #1161 south and west, F6) only
+    after irr_vpd_grant(); nothing in controls.yaml opens a drip, and the RUN CLEAN buttons and their
+    queue are gone (VD-47, HA-01)."""
     hardware = Path("firmware/greenhouse/hardware.yaml").read_text()
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
     globals_yaml = Path("firmware/greenhouse/globals.yaml").read_text()
@@ -2771,12 +2814,18 @@ def test_clean_water_relays_reject_direct_on_and_keep_controller_paths():
     assert "Blocked ungranted center_mister ON" in center_block
 
     climate_on = controls[controls.index("auto turn_on_zone =") : controls.index("auto turn_off_all_misters")]
-    assert climate_on.index("irr_vpd_grant(verdify_irr::kL04, pulse_ms)") < climate_on.index(
-        "id(center_mister).turn_on();"
-    )
-    assert "id(south_wall_mister).turn_on();" not in climate_on
-    assert "id(west_wall_mister).turn_on();" not in climate_on
-    for relay in ("wall_drips", "center_drips", "south_wall_mister", "west_wall_mister"):
+    grant = climate_on.index("if(!irr_vpd_grant(zone_line, pulse_ms)) {")
+    for relay in ("center_mister", "south_wall_mister", "west_wall_mister"):
+        assert grant < climate_on.index(f"id({relay}).turn_on();")
+        assert controls.count(f"id({relay}).turn_on();") == 1  # only the granted climate pulse
+    for relay in (
+        "wall_drips",
+        "center_drips",
+        "wall_drips_fertilized",
+        "center_drips_fertilized",
+        "south_wall_mister_fertilized",
+        "west_wall_mister_fertilized",
+    ):
         assert f"id({relay}).turn_on();" not in controls
 
     assert "\nbutton:" not in tunables_yaml
@@ -2913,7 +2962,7 @@ def test_irrigation_engine_holds_the_water_for_its_drip_runs():
 def test_mister_budget_emergency_uses_house_average_vpd():
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
     start = controls.index("// FW-9: VPD emergency override")
-    end = controls.index("static bool leak_water_interlock_prev", start)
+    end = controls.index("static bool occupancy_water_interlock_prev", start)
     block = controls[start:end]
 
     assert "float budget_vpd_max = VPD;" in block
@@ -2927,40 +2976,59 @@ def test_mister_budget_emergency_uses_house_average_vpd():
 
 
 def test_leak_detected_locks_water_actuators():
+    """Q-05 (#1161, F14): leak_detected locks nothing any more. The one site meter also counts the
+    hose, sink and hydro, so the signal raises the leak alert and does nothing else: no fog, mister
+    or drip force-off and no irrigation cancel reads it, survival fog included. (The name is the
+    issue's pin; the test now asserts the reverse of what it used to.)"""
     greenhouse_yaml = Path("firmware/greenhouse.yaml").read_text()
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
+    logic = Path("firmware/lib/greenhouse_logic.h").read_text()
 
-    assert "id: bs_leak_detected" in greenhouse_yaml
-    assert "const bool leak_block = id(bs_leak_detected).state;" in controls
-    assert "Leak detected: forcing fog, misters, and irrigation off" in controls
+    assert "id: bs_leak_detected" in greenhouse_yaml  # the leak alert's input stays
+    for gone in (
+        "leak_block",
+        "bs_leak_detected",
+        "leak_water_interlock_prev",
+        "Leak detected: forcing fog, misters, and irrigation off",
+        '"leak_detected"',
+    ):
+        assert gone not in controls, gone
     relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
     assert "set_relay(\n              R[4]," in relay_apply
-    for guard in (
+    assert "fog_forced_off(mode, fog_rails));" in relay_apply
+
+    rails = logic[logic.index("struct FogForceOffInputs {") :]
+    rails = rails[: rails.index("};")]
+    assert "leak" not in rails
+    for term in (
         "sensor_fault_relay_lock",
-        "leak_block",
-        "occupancy_moisture_block",
+        "controller_time_valid",
+        "occupancy_block",
+        "fert_master_on",
+        "drip_relay_open",
         "irrigation_water_conflict",
         "climate_water_budget_block",
+        "mister_volume_hard_block",
     ):
-        assert guard in relay_apply
+        assert f"bool {term};" in rails, term
 
     mister_start = controls.index("bool mister_blocked =")
     mister_end = controls.index("if(mister_blocked && id(mister_state) > 0)", mister_start)
     mister_block = controls[mister_start:mister_end]
-    assert "leak_block" in mister_block
-    assert '"leak_detected"' in mister_block
+    assert "leak" not in mister_block
 
     fog_start = controls.index("char fog_block_reason")
     fog_end = controls.index("static char last_fog_block_reason", fog_start)
     fog_block = controls[fog_start:fog_end]
-    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "leak_detected")' in fog_block
-    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "occupancy")' in fog_block
-    assert fog_block.index("leak_block") < fog_block.index("id(fog_rly)->state")
+    assert "leak" not in fog_block
 
-    # Q-05 (#1160): the irrigation engine has no leak cancel and reads no leak; the leak alert is the
-    # whole leak response for irrigation (the fog and mist gates above go with #1161).
+    # The irrigation engine has no leak cancel and reads no leak (#1160); neither does the mist path.
     assert 'cancel_all("leak")' not in controls
-    for path in ("firmware/greenhouse/irrigation_engine.yaml", "firmware/lib/irrigation_engine_esphome.h"):
+    for path in (
+        "firmware/greenhouse/irrigation_engine.yaml",
+        "firmware/lib/irrigation_engine_esphome.h",
+        "firmware/lib/irrigation_program.h",
+    ):
         source = Path(path).read_text()
         assert "bs_leak_detected" not in source and "leak_block" not in source
 
@@ -2974,11 +3042,11 @@ def test_irrigation_disable_cannot_suppress_climate_center_mist():
     glue = Path("firmware/lib/irrigation_engine_esphome.h").read_text()
 
     assert "id(irrig_enabled)" not in controls
-    assert "id(center_mister).turn_on();" in controls
     climate_on = controls[controls.index("auto turn_on_zone =") : controls.index("auto turn_off_all_misters")]
-    assert climate_on.index("irr_vpd_grant(verdify_irr::kL04, pulse_ms)") < climate_on.index(
-        "id(center_mister).turn_on();"
-    )
+    # #1161 (F6): every VPD zone asks the engine for the manifold before its relay turns on.
+    grant = climate_on.index("if(!irr_vpd_grant(zone_line, pulse_ms)) {")
+    for relay in ("south_wall_mister", "west_wall_mister", "center_mister"):
+        assert grant < climate_on.index(f"id({relay}).turn_on();")
     assert "} else if (!line_enabled(e, idx)) {\n    res.reason = IrrReason::kDis;" in engine
     assert "p.vpd_member_mask = uint8_t(1u << kMisterMaskBit[kL04]);" in engine
     close = glue[glue.index("inline void irr_climate_close(") :]
@@ -3014,7 +3082,11 @@ def test_engine_relay_boundaries_require_a_durable_claim():
 
 
 def test_occupancy_inhibit_is_final_fog_force_off():
+    """F7/F9 (#1161): confirmed occupancy is one rule for every kind of mist and fog. It is a term of
+    the fog force-off in every mode (survival fog too), holds VPD mist in mister_blocked, and reaches
+    scheduled, run-now and fertilizer mist as the engine's `occupied` input; drips never read it."""
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
+    logic = Path("firmware/lib/greenhouse_logic.h").read_text()
 
     manual_fog = "const bool manual_fog_force = manual_force.fog;"
     occupancy_gate = "const bool occupancy_moisture_block = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);"
@@ -3025,21 +3097,23 @@ def test_occupancy_inhibit_is_final_fog_force_off():
     final_gate_start = controls.index(occupancy_gate)
     final_gate_end = controls.index("/**************** 10", final_gate_start)
     final_gate = controls[final_gate_start:final_gate_end]
-    assert (
-        "if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block || mister_volume_hard_block || fert_master_on)"
-        in final_gate
-    )
-    assert "Occupancy inhibit: forcing fog and climate misters off" in final_gate
+    assert "              occupancy_moisture_block,\n" in final_gate
+    assert "if (fog_forced_off(mode, fog_rails)) {\n              willFog = false;" in final_gate
+    assert "Occupancy confirmed: holding fog and every mist (drips run)" in final_gate
+
+    rule = logic[logic.index("inline const char* fog_force_off_reason(") :]
+    rule = rule[: rule.index("\n}\n")]
+    assert rule.index('if (in.occupancy_block) return "occupancy";') < rule.index("if (mode != SAFETY_COOL)")
 
     relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
-    assert "irrigation_water_conflict" in relay_apply
-    assert "climate_water_budget_block" in relay_apply
+    assert "fog_forced_off(mode, fog_rails));" in relay_apply
     assert "bool occupancy_blocks = occupancy_moisture_block;" in controls
+    assert "irr_in.occupied = occupancy_moisture_block;" in controls
 
     fog_start = controls.index("char fog_block_reason")
     fog_end = controls.index("static char last_fog_block_reason", fog_start)
     fog_block = controls[fog_start:fog_end]
-    assert fog_block.index("occupancy_moisture_block") < fog_block.index("id(fog_rly)->state")
+    assert fog_block.index("fog_force_off_reason(mode, fog_rails)") < fog_block.index("id(fog_rly)->state")
 
 
 def test_manual_fog_cannot_bypass_final_fog_safety_rails():
@@ -3126,36 +3200,64 @@ def test_manual_climate_buttons_are_flag_only_controller_path():
 
 
 def test_fog_respects_conflict_and_budget_before_reporting_served():
+    """F9 (#1161): outside SAFETY_COOL an engine drip, the soft budget and SAF-4 hold fog before the
+    ladder can report `served`; in SAFETY_COOL survival fog runs past all three (its water still
+    counts), while a drip relay that reads ON still holds it. F6: the flow meter counts every mister
+    relay and fog, whatever opened it, outside the mister_blocked branch."""
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
+    logic = Path("firmware/lib/greenhouse_logic.h").read_text()
 
-    final_gate_start = controls.index("const bool climate_water_budget_block =")
+    rule = logic[logic.index("inline const char* fog_force_off_reason(") :]
+    rule = rule[: rule.index("\n}\n")]
+    survival = rule[rule.index("if (mode != SAFETY_COOL) {") :]
+    survival = survival[: survival.index("    }\n")]
+    for term, word in (
+        ("irrigation_water_conflict", "irrigation"),
+        ("climate_water_budget_block", "resource_budget"),
+        ("mister_volume_hard_block", "water_ceiling"),
+    ):
+        assert f'if (in.{term}) return "{word}";' in survival
+    assert 'if (in.drip_relay_open) return "irrigation";' in rule
+    assert "drip_relay_open" not in survival
+
+    final_gate_start = controls.index("const FogForceOffInputs fog_rails{")
     final_gate_end = controls.index("/**************** 10", final_gate_start)
     final_gate = controls[final_gate_start:final_gate_end]
-    assert (
-        "if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block || mister_volume_hard_block || fert_master_on)"
-        in final_gate
-    )
+    for term in (
+        "drip_relay_open",
+        "irrigation_water_conflict",
+        "climate_water_budget_block",
+        "mister_volume_hard_block",
+        "fert_master_on",
+    ):
+        assert f"              {term},\n" in final_gate, term
+    assert "if (fog_forced_off(mode, fog_rails)) {" in final_gate
 
     relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
-    assert "irrigation_water_conflict" in relay_apply
-    assert "climate_water_budget_block" in relay_apply
+    assert "fog_forced_off(mode, fog_rails));" in relay_apply
 
     fog_start = controls.index("char fog_block_reason")
     fog_end = controls.index("static char last_fog_block_reason", fog_start)
     fog_block = controls[fog_start:fog_end]
-    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "irrigation")' in fog_block
-    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "resource_budget")' in fog_block
-    assert fog_block.index("irrigation_water_conflict") < fog_block.index("id(fog_rly)->state")
-    assert fog_block.index("climate_water_budget_block") < fog_block.index("id(fog_rly)->state")
+    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "%s", fog_forced_reason);' in fog_block
+    assert fog_block.index("fog_force_off_reason(mode, fog_rails)") < fog_block.index("id(fog_rly)->state")
 
-    water_tracking_start = controls.index("// Water tracking (flow meter during climate wet assist)")
+    water_tracking_start = controls.index("            // Water tracking (F6, #1161)")
     water_tracking_end = controls.index("}", controls.index("irr_add_water(gpm, dt_ms);", water_tracking_start)) + 1
     water_tracking = controls[water_tracking_start:water_tracking_end]
     assert (
-        "const bool climate_mister_flow_active = id(mister_pulse_zone) > 0 && id(mister_state) > 0;" in water_tracking
+        "const bool mister_flow_active = id(center_mister).state\n"
+        "                  || id(south_wall_mister).state || id(south_wall_mister_fertilized).state\n"
+        "                  || id(west_wall_mister).state || id(west_wall_mister_fertilized).state;"
+    ) in water_tracking
+    assert "const bool fog_flow_active = id(fog_rly)->state;" in water_tracking
+    assert "if(mister_flow_active || fog_flow_active)" in water_tracking
+    # Outside if(!mister_blocked): the block opens after that branch has closed.
+    blocked_branch = controls.index("if(!mister_blocked){")
+    assert controls.index("const bool mister_flow_active", blocked_branch) > controls.index(
+        '"pulse_gap");\n              }\n            }\n', blocked_branch
     )
-    assert "const bool climate_fog_flow_active = id(fog_rly)->state;" in water_tracking
-    assert "if(climate_mister_flow_active || climate_fog_flow_active)" in water_tracking
+    assert "climate_mister_flow_active" not in controls
 
 
 def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
