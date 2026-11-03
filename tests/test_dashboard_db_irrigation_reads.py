@@ -176,10 +176,12 @@ class Fixture:
         self.midnight = reads.local_midnight(self.at)
 
     def today_at(self, fraction: float) -> dt.datetime:
-        """A moment of today so far (0 is local midnight, 1 is now), so a run stays today at any hour."""
-        return self.midnight + (self.at - self.midnight) * fraction
+        """A moment of today so far (0 is local midnight, 1 is now), so a run stays today at any hour. In UTC: adding to
+        a time in the local zone would count wall-clock hours, and land past now on the 25-hour day."""
+        return self.midnight.astimezone(dt.UTC) + (self.at - self.midnight) * fraction
 
-    async def reporting(self, *, climate_age=30 * S, heartbeat_age=30 * S, **climate):
+    async def reporting(self, *, climate_age=0 * S, heartbeat_age=30 * S, **climate):
+        """A fresh heartbeat and climate row. The row is stamped now, so today has one even just after local midnight."""
         await self.state("ingestor_heartbeat", "alive", self.at - heartbeat_age)
         await self.climate(self.at - climate_age, **climate)
 
@@ -754,21 +756,17 @@ def test_last_outcome_is_the_newest_ended_ledger_row_and_unknown_with_no_outcome
     async def body(f):
         await f.reporting()
         slot = await f.slot("L01")
-        await f.ledger("L01", "schedule", f.at - 2 * D, f.at - 2 * D + H, slot_id=slot, outcome="short", reason="cap")
-        await f.ledger(
-            "L01",
-            "schedule",
-            f.at - D,
-            f.at - D + H,
-            slot_id=slot,
-            event_seq=None,
-            local_day=support.local_day(f.at - D),
-        )
+        # One row per local day, by the calendar: two 24-hour steps can land on one day across the 25-hour day.
+        today = support.local_day(f.at)
+        older, _ = support.day_bounds(today - 2 * D)
+        newer, _ = support.day_bounds(today - D)
+        await f.ledger("L01", "schedule", older + H, older + 2 * H, slot_id=slot, outcome="short", reason="cap")
+        await f.ledger("L01", "schedule", newer + H, newer + 2 * H, slot_id=slot, event_seq=None)
         await f.ledger("L01", "run_now", f.at - MIN, None)  # not ended: it does not count
         await f.ledger("L04", "fallback", None, None, slot_id=1, outcome="skipped", reason="vok", open_s=0)
         status = (await as_both(status_read))[0]
         l01 = line_of(status, "L01").last_outcome
-        assert (l01.outcome, l01.at, l01.reason) == (irr.RunOutcome.UNKNOWN, f.at - D + H, None)
+        assert (l01.outcome, l01.at, l01.reason) == (irr.RunOutcome.UNKNOWN, newer + 2 * H, None)
         l04 = line_of(status, "L04").last_outcome
         assert (l04.outcome, l04.reason) == (irr.RunOutcome.SKIPPED, "VPD sensing is healthy")
 
@@ -899,7 +897,7 @@ def test_todays_minutes_equal_api_irr_10s_rows(database):
         slot = await f.slot("L04", degraded_only=False, on_s=45, count=4, gap_s=60, created=f.at - D)
         started, ended = f.today_at(0.35), f.today_at(0.4)
         await f.run("mister_center", started, ended)
-        await f.ledger("L04", "schedule", started - S, ended, slot_id=slot, outcome="ok")
+        await f.ledger("L04", "schedule", f.today_at(0.32), ended, slot_id=slot, outcome="ok")
         await f.run("drip_wall_fert", f.today_at(0.42), f.today_at(0.44))
         await f.run("fert_master_valve", f.today_at(0.42), f.today_at(0.44))
         await f.run("mister_south", f.today_at(0.5), f.today_at(0.6))
@@ -943,7 +941,10 @@ def test_todays_minutes_equal_api_irr_10s_rows(database):
                 assert line.today.minutes == pytest.approx(total["minutes"], abs=1e-9), line.line_id
                 assert line.today.pulses == total["pulses"], line.line_id
                 assert line.today.gal == total["gal"], line.line_id
-            assert line_of(status, "L05").today.pulses == 0 and line_of(status, "L05").today.minutes > 0
+            # Counted from midnight, not from its start: minutes round to 0.1, so just after midnight this is 0.0.
+            since_midnight = (f.today_at(0.1) - f.midnight).total_seconds() / 60
+            assert line_of(status, "L05").today.pulses == 0
+            assert line_of(status, "L05").today.minutes == pytest.approx(since_midnight, abs=0.051)
             assert line_of(status, "L03").today.gal is None
             causes = {(row.group, row.cause) for row in by_line.rows}
             assert ("L04", "schedule") in causes and ("L04", "vpd") in causes
@@ -1142,7 +1143,19 @@ def _local_minute(moment: dt.datetime) -> int:
 def test_ledger_rows_that_opened_no_valve_list_with_open_s_0(database):
     async def body(f):
         await f.reporting()
-        await f.ledger("L04", "fallback", None, None, slot_id=1, outcome="skipped", reason="vok", open_s=0, pulses=0)
+        # Yesterday's: this row lists at its slot's start, which today can still be ahead, and the engine writes it then.
+        await f.ledger(
+            "L04",
+            "fallback",
+            None,
+            None,
+            slot_id=1,
+            outcome="skipped",
+            reason="vok",
+            open_s=0,
+            pulses=0,
+            local_day=support.local_day(f.at) - D,
+        )
         await f.ledger("L01", "run_now", None, None, outcome="skipped", reason="man", open_s=0)
         for page in await as_both(runs_read(f)):
             found = {run.line_id: run for run in page.items}
@@ -1332,9 +1345,10 @@ def test_past_occurrences_read_done_and_a_new_schedule_shows_no_invented_history
         await f.state("irr_program_id", "h=0000000000000000 src=rom", f.at - 10 * D)
         await f.state("irr_state", "", f.at - 10 * D)
         await f.set_line("L01", enabled=True)
-        two_days_back = f.at - 2 * D
+        today = support.local_day(f.at)
+        ran_day = today - 2 * D  # by the calendar: 24-hour steps can name one local day twice across the 25-hour day
+        two_days_back = support.day_bounds(ran_day)[0] + H
         slot = await f.slot("L01", created=f.at - 3 * D, minute=_local_minute(f.at - H))
-        ran_day = support.local_day(two_days_back)
         ran = await f.ledger(
             "L01",
             "schedule",
@@ -1357,14 +1371,14 @@ def test_past_occurrences_read_done_and_a_new_schedule_shows_no_invented_history
             f"ledger-{ran}",
             "cap reached",
         )
-        no_row = done[support.local_day(f.at - D)]
+        no_row = done[today - D]
         assert (no_row.status, no_row.outcome, no_row.run_id, no_row.reason) == (
             "done",
             irr.RunOutcome.UNKNOWN,
             None,
             "no outcome received",
         )
-        # Its start today came before the schedule was created, and so did each earlier day's.
+        # Its newest start, an hour ago, came before the schedule was created, and so did each earlier day's.
         assert [item for item in found.occurrences if item.slot_id == newer and item.planned_start <= f.at] == []
         assert {item.status for item in found.occurrences if item.slot_id == newer} <= {"planned"}
 
@@ -1414,22 +1428,22 @@ def test_an_occurrence_skipped_for_a_pause_says_who_and_why(database):
 def test_a_past_occurrence_reads_blocked_only_while_no_engine_was_in_effect_at_its_start(database):
     async def body(f):
         await f.reporting()
-        # The engine arrived 2 h ago, so yesterday's start had none and a start an hour ago did.
+        # The engine arrived 3 h ago, so a start an hour ago had it and the same schedule's start a day earlier did not.
         await f.state("irr_engine", "false", f.at - 3 * D)
-        await f.state("irr_engine", "true", f.at - 2 * H)
-        await f.state("irr_program_id", "h=0000000000000000 src=rom", f.at - 2 * H)
+        await f.state("irr_engine", "true", f.at - 3 * H)
+        await f.state("irr_program_id", "h=0000000000000000 src=rom", f.at - 3 * H)
         minute = _local_minute(f.at - H)
         slot = await f.slot("L01", created=f.at - 5 * D, minute=minute)
-        found = (await as_both(agenda_read(days=1, past_days=1)))[0]
+        found = (await as_both(agenda_read(days=1, past_days=2)))[0]
         statuses = {
             item.planned_start.astimezone(support.DENVER).date(): item.status
             for item in found.occurrences
             if item.slot_id == slot and item.planned_start <= f.at
         }
-        yesterday = support.local_day(f.at - D)
-        assert statuses[yesterday] == "blocked"
-        if support.local_day(f.at - H) == support.local_day(f.at):  # the hour before now is today
-            assert statuses[support.local_day(f.at)] == "done"
+        # Today and yesterday, except in a local day's first hour, when the start an hour ago is yesterday's.
+        an_hour_ago = support.local_day(f.at - H)
+        assert statuses[an_hour_ago] == "done"
+        assert statuses[an_hour_ago - D] == "blocked"
 
     scenario(database, body)
 
