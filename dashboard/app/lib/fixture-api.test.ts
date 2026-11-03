@@ -368,6 +368,22 @@ test("schedules-paused shows three schedules and a past L02 block skipped becaus
   expect((get(api, "/v1/irrigation/schedules").occurrences as Body[]).every((row) => Date.parse(row.planned_start as string) >= Date.parse("2026-11-02T07:00:00Z"))).toBe(true);
 });
 
+test("#1135's fixtures: south's probe out, a minutes gap inside the week, and the built-in program", () => {
+  const south = fixture("south-peer", { now: NOW });
+  expect((south["API-IRR-01"].lines as Body[]).find((row) => row.line_id === "L07")).toMatchObject({ vpd_member: true, vpd_source: "peer" });
+  expect(south["API-14"].items).toEqual([expect.objectContaining({ alert_type: "sensor_offline", zone: "south", status: "open" })]);
+  // Three days back has no data (a gap, never 0), inside the 7-day window; today is partial.
+  const gap = fixture("minutes-gap", { now: NOW })["API-IRR-10"];
+  expect(gap.periods.map((period: Body) => [period.start, period.coverage])).toEqual([
+    ["2026-10-27", "complete"], ["2026-10-28", "complete"], ["2026-10-29", "complete"], ["2026-10-30", "no_data"], ["2026-10-31", "complete"], ["2026-11-01", "complete"], ["2026-11-02", "partial"],
+  ]);
+  expect((gap.rows as Body[]).filter((row) => row.period === "2026-10-30")).toEqual([]);
+  expect(fixture("in-band", { now: NOW })["API-IRR-10"].periods.every((period: Body) => period.coverage !== "no_data")).toBe(true);
+  const rom = fixture("program-rom", { now: NOW })["API-IRR-01"];
+  expect(rom).toMatchObject({ engine: true, program: { src: "rom", state: "requested", revision: 42, applied_revision: null, applied_hash: "0000000000000000", confirmed_at: null } });
+  expect((rom.lines as Body[]).every((row) => row.sync === "requested")).toBe(true);
+});
+
 test("flow-after-stop: after a Stop the relays read OFF while the flow continues", () => {
   const api = handler("flow-after-stop");
   expect(get(api, "/v1/now").leak).toMatchObject({ active: false });
