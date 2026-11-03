@@ -253,6 +253,12 @@ interval:
             all_probes_nan_ms = 0;
           }
 
+          // D-IRP-12 (#1271): what the irrigation engine counts as degraded sensing. A
+          // degraded_only slot opens its mister by time, not VPD, so the averages must have
+          // been out for 300 s straight, never just the seconds they read NaN after a boot.
+          static verdify_irr::IrrDegradedGrace degraded_grace{};
+          const bool irr_degraded = verdify_irr::irr_degraded_after_grace(degraded_grace, avg_ok, now_ms);
+
           // Sanity check: reject physically impossible indoor readings
           if(Tin < -20.0f || Tin > 150.0f){
             ESP_LOGE("sensor","Tin=%.1f out of range — clamping to 65°F", Tin);
@@ -525,7 +531,9 @@ interval:
               // suppressed in the header and only conservative timed center
               // bursts + temp control remain. SENSOR_FAULT (inf/garbage) still
               // takes over via sensors_plausible() when even the fabricated
-              // value is implausible.
+              // value is implausible. No grace here (#1271): this gate only holds
+              // VPD wetting back, so it trips at once; irr_degraded, which can open
+              // a mister, is what waits.
               .sensor_degraded = !avg_ok,
               // Firmware-v2 on-chip solar inputs (offline-first time-of-day).
               .now_minute = sv2_now_minute,
@@ -1649,7 +1657,7 @@ interval:
               verdify_irr::IrrInputs& irr_in = irr_climate_inputs();
               irr_in.sensor_fault = mode == SENSOR_FAULT;
               irr_in.safety_cool = mode == SAFETY_COOL;
-              irr_in.sensor_degraded = sensor_in.sensor_degraded;
+              irr_in.sensor_degraded = irr_degraded;
               irr_in.vpd_emergency = climate_vpd_emergency;
               // Climate wetting that only a drip holds back (the climate yield, D-IRP-03).
               const bool climate_mist_wanted = zone_mister_demand && any_mister_wet_allowed
@@ -2032,7 +2040,7 @@ interval:
               id(sensor_degraded_active).publish_state((float)degraded_now);
               last_degraded = degraded_now;
               if(degraded_now)
-                ESP_LOGW("sensor","DEGRADED — avg probes down; VPD-chasing suppressed, timed wetting only");
+                ESP_LOGW("sensor","DEGRADED — avg probes down; VPD-chasing suppressed, timed wetting after 300 s");
               else
                 ESP_LOGI("sensor","Sensor-degraded cleared — VPD control restored");
             }

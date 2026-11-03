@@ -366,7 +366,8 @@ as the core settles them:
   `manifold_busy`.
 - **`degraded_only`.** Outside daylight such an occurrence ends `skipped` with no reason, and a
   fallback window still running at sunset ends there, `short` with no reason. One that never fires ends
-  `skipped` with its last waiting reason: `vok` while VPD sensing stayed healthy, `sf` in SENSOR_FAULT.
+  `skipped` with its last waiting reason: `vok` while VPD sensing stayed healthy or was out for under
+  300 s, `sf` in SENSOR_FAULT.
 - **Drip yield.** A clean drip, and the clean flush tail of a fertilizer drip run, yields as D-IRP-03
   says. A yield ends after one VPD pulse, after 120 s of fog, or after 60 s in which no climate relay
   turned on. A fertilizer prewet or feed never yields, because it is never paused: it holds climate mist
@@ -417,13 +418,15 @@ points the design left open, as the wiring settles them:
   `runtime_*_drip_ms` at each tick. Since VD-46 (§4.10) the flow meter counts while any mister relay or
   fog is ON, whatever opened it.
 - **Climate inputs.** Each second the climate loop writes the engine's inputs: SENSOR_FAULT and
-  SAFETY_COOL from the mode, degraded sensing (the average probes are out), the VPD emergency, the
+  SAFETY_COOL from the mode, degraded sensing (the average probes out for 300 s straight, so a reboot
+  inside a due window never counts, #1271), the VPD emergency, the
   measured RH and the dew margin, the soft budget, `mister_min_off_s`, confirmed occupancy, the VPD source
   per zone and the climate-yield demand (fog or VPD mist that only a drip holds back). None reads the
   leak. The RH and the dew margin come from one measured pair: the average probes, else the
   controller-case probe while it answers, never the loop's fabricated fallback values. With neither the
-  RH reads missing (it never blocks) and the margin unknown. Degraded sensing means the averages are out,
-  so the case probe is what lets a `degraded_only` window run (D-IRP-12).
+  RH reads missing (it never blocks) and the margin unknown. Degraded sensing means the averages have been
+  out for 300 s, so the case probe is what lets a `degraded_only` window run (D-IRP-12). The climate loop's
+  own VPD trust gate takes no grace: it only holds VPD wetting back, so it trips at once.
 
 ### 4.10 What the mist path settles (VD-46)
 
@@ -541,6 +544,11 @@ validation can be) is left out and reported the same way, so one bad row never b
 
 **Heap.** The release adds 5 services, 3 text sensors and a 584 B program held in RAM and NVS, with
 static 256 B buffers. It removes about 70 entities (F12, F13). Free heap goes up.
+
+**Upload.** The OTA upload blocks the main loop, so no pulse timer, engine tick or watchdog runs until
+the reboot or an abort. `ota.on_begin` in `firmware/greenhouse.yaml` closes every wet relay before the
+upload starts, L03 last (#1276). The running image owns that hook, so it protects uploads from the flash
+after the one that installs it.
 
 **Ship.** Use `make firmware-deploy`. It compiles the image on the host that runs it, so where it runs
 follows Q-11 in [decisions](decisions.md): no exception is assumed, R3 asks Jason before it runs, and
