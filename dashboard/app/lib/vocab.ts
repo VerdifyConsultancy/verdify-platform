@@ -32,11 +32,25 @@ export const PROBLEM_CODES = everyMember<ProblemCode>()([
 export type LineStateCode = Schemas["LineState"]["code"];
 export const LINE_STATE_CODES = everyMember<LineStateCode>()(["idle", "running", "waiting", "blocked", "paused", "disabled", "unknown"]);
 
+/** `RunOutcome`: how an occurrence or run ended; `unknown` never reached the platform. */
+export type RunOutcomeCode = Schemas["RunOutcome"];
+/** `IrrigationLine.vpd_source` (D-IRP-13) and `IrrigationLine.fault` (D-IRP-19), without their null. */
+export type VpdSource = NonNullable<Schemas["IrrigationLine"]["vpd_source"]>;
+export const VPD_SOURCES = everyMember<VpdSource>()(["own", "peer", "house"]);
+export type LineFault = NonNullable<Schemas["IrrigationLine"]["fault"]>;
+export const LINE_FAULTS = everyMember<LineFault>()(["backing_off", "mister_fault"]);
+
 /** `Alert.severity` and `Alert.status` (the disposition). */
 export type AlertSeverity = Schemas["Alert"]["severity"];
 export const ALERT_SEVERITIES = everyMember<AlertSeverity>()(["critical", "warning", "info"]);
 export type AlertStatus = Schemas["Alert"]["status"];
 export const ALERT_STATUSES = everyMember<AlertStatus>()(["open", "acknowledged", "resolved", "false_positive", "suppressed"]);
+
+/** `PlannerTrigger.outcome`: a `planner_trigger_ledger` status, verbatim (its status check in db/schema.sql). */
+export type TriggerOutcome = Schemas["PlannerTrigger"]["outcome"];
+export const TRIGGER_OUTCOMES = everyMember<TriggerOutcome>()([
+  "expected", "delivered", "acked", "plan_written", "action_completed", "neutral_fallback", "wrong_action", "delivery_failed", "timed_out", "missed",
+]);
 
 /** `Actor.source`: who wrote (R4). `system` is the platform itself, for example the forecast action engine. */
 export const ACTOR_SOURCE_PATTERN = /^(dashboard|iris|system|agent:[a-z0-9][a-z0-9_-]*)$/;
@@ -45,6 +59,14 @@ export type ActorSource = "dashboard" | "iris" | "system" | `agent:${string}`;
 export function isAiSource(source: string): boolean {
   return source === "iris" || (source.startsWith("agent:") && ACTOR_SOURCE_PATTERN.test(source));
 }
+
+/** `BandPosition.verdict`, API-02 `iris.required_trigger` and API-02 `overrides[].kind`, which Now words. */
+export type BandVerdict = Schemas["BandPosition"]["verdict"];
+export const BAND_VERDICTS = everyMember<BandVerdict>()(["in", "above", "below", "unavailable"]);
+export type RequiredTrigger = Schemas["Now"]["iris"]["required_trigger"];
+export const REQUIRED_TRIGGERS = everyMember<RequiredTrigger>()(["ok", "late", "missed", "failed"]);
+export type BurstKind = Schemas["Now"]["overrides"][number]["kind"];
+export const BURST_KINDS = everyMember<BurstKind>()(["fans", "humidify", "vent_bypass"]);
 
 /** `Setting.readback_via`, `Equipment` item `state` and `IrrigationLine.kind`, which the badges key on. */
 export type ReadbackVia = Schemas["Setting"]["readback_via"];

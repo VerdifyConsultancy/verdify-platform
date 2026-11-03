@@ -24,6 +24,9 @@
  *   eq_fog, eq_vent, eq_fan1, eq_fan2, eq_heat1, eq_heat2,
  *   eq_mister_south, eq_mister_west, eq_mister_center
  *
+ * Optional columns, defaulted when absent: eq_fertilizer_master, feed_hold_active,
+ * and (#1161) mister_engine_cause, eq_mister_south_fert, eq_mister_west_fert.
+ *
  * Policy-vector injection (--policy-state, see policy_injection.h). The corpus
  * carries only a subset of the 48-field executor policy vector, and it is a
  * tracked 296k-row artifact that must not be rewritten to grow columns. So a
@@ -551,6 +554,12 @@ int main(int argc, char** argv) {
         // climate-only corpus and become active once exported.
         r.eq_fertilizer_master = parse_int(get("eq_fertilizer_master"), 0);
         r.feed_hold_active = parse_bool(get("feed_hold_active"), false);
+        // Irrigation F6 (#1161): the engine's own mist (schedule, run_now, fallback,
+        // feed, prewet, flush) and the fertilizer misters L08/L10. The climate-only
+        // corpus has none of them: false/0 absent the columns.
+        r.mister_engine_cause = parse_bool(get("mister_engine_cause"), false);
+        r.eq_mister_south_fert = parse_int(get("eq_mister_south_fert"), 0);
+        r.eq_mister_west_fert = parse_int(get("eq_mister_west_fert"), 0);
 
         // ENV-2 night-drop / dusk-cutoff config. Absent → invariant #17 uses
         // its built-in 20:00→06:00 default night window (Ctx17).

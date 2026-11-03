@@ -1,3 +1,6 @@
 # Build outputs; node_modules/ is ignored repo-wide.
 build/
 .react-router/
+# The settings fixture, rendered at test time from the tunable registry (pnpm fixtures:settings); never committed.
+e2e/fixtures/settings.json
+e2e/fixtures/.settings-*.json

@@ -527,6 +527,16 @@ class TestDriftGuard:
         assert REGISTRY["fallback_window_s"].control_class == "readback_context"
         assert REGISTRY["mister_on_s"].control_class == "retired"
         assert REGISTRY["d_cool_stage_2"].control_class == "retired"
+        # VD-46 (#1161): the rank arbiter runs whenever more than one zone is a VPD member, so the
+        # switch decides nothing; Settings and MCP show it read-only with this reason.
+        assert REGISTRY["sw_arbiter_zone_enabled"].control_class == "retired"
+        assert "sw_arbiter_zone_enabled" in RETIRED_TUNABLES_REG
+        assert "sw_arbiter_zone_enabled" not in PLANNER_PUSHABLE_REG
+        assert (
+            REGISTRY["sw_arbiter_zone_enabled"].notes
+            == "Retired: the engine ranks zones whenever more than one is a VPD member."
+        )
+        assert REGISTRY["sw_arbiter_zone_enabled"].cfg_readback_object_id == "cfg_arbiter_zone_enabled"
         for param in (
             "cool_stage2_over_high_f",
             "cool_exit_hysteresis_f",
@@ -670,21 +680,26 @@ class TestActivityDirectWetGuards:
         assert REGISTRY["sw_direct_wet_gate_enabled"].planner_pushable
         assert REGISTRY["sw_direct_wet_gate_enabled"].cfg_readback_object_id
 
-    def test_mister_state_machine_routes_climate_only_to_center(self, controls_yaml: str) -> None:
+    def test_mister_state_machine_routes_climate_by_vpd_membership(self, controls_yaml: str) -> None:
+        """#1161 (F6): ADR-0007's center-only routing is gone. Each mister zone (L04 center, L07
+        south, L09 west) takes climate VPD pulses by one rule, irr_vpd_zone_allowed() on the
+        irrigation program; the rank arbiter chooses among several whatever sw_arbiter_zone_enabled
+        says, and turn_on_zone() asks the engine for the zone's grant before the relay opens."""
         required = [
-            "WetCommandOrigin::CLIMATE_VPD",
-            "climate_wet_resolution.relay == WetRelay::CENTER_MISTER",
-            "const bool south_wet_allowed = false",
-            "const bool west_wet_allowed = false",
-            "const bool center_wet_allowed = climate_wet_assist_demand",
+            "const bool center_wet_allowed = irr_climate_zone_allowed(",
+            "const bool south_wet_allowed = irr_climate_zone_allowed(",
+            "const bool west_wet_allowed = irr_climate_zone_allowed(",
+            "verdify_irr::kL07, climate_wet_assist_demand, climate_wet_assist_safety_ok, mister_volume_hard_block);",
             "direct_wet_relay_watchdog",
-            # #1160: the climate path closes only what the irrigation engine's own run does not hold.
-            "irr_climate_close(id(south_wall_mister), verdify_irr::kL07);",
-            "irr_climate_close(id(west_wall_mister), verdify_irr::kL09);",
+            "const uint16_t faulted = irr_mister_watchdog();",
+            # The climate path closes only its own VPD pulse on a zone that may no longer mist.
+            "if(!south_wet_allowed) irr_climate_close(id(south_wall_mister), verdify_irr::kL07);",
+            "if(!west_wet_allowed) irr_climate_close(id(west_wall_mister), verdify_irr::kL09);",
             "if(!center_wet_allowed) irr_climate_close(id(center_mister), verdify_irr::kL04);",
             "|| !any_mister_wet_allowed",
             "active_zone_gate_closed",
-            "if(center_wet_allowed) return 3",
+            "const int won = verdify_irr::irr_rank_vpd_zone(zact, zi, prank);",
+            "if(!irr_vpd_grant(zone_line, pulse_ms)) {",
             "wet_dew_margin_f",
             "climate_wet_assist_permitted(sensor_in, setpts)",
             # Tranche 2 (#586): the dew-margin gate reads the runtime-gated
@@ -695,7 +710,15 @@ class TestActivityDirectWetGuards:
         ]
         missing = [needle for needle in required if needle not in controls_yaml]
         assert not missing, f"Mister direct-wet gate coverage missing: {missing}"
-        assert "crop_direct_wet_allowed" not in controls_yaml
+        for gone in (
+            "WetCommandOrigin::CLIMATE_VPD",
+            "climate_wet_resolution",
+            "const bool south_wet_allowed = false",
+            "const bool west_wet_allowed = false",
+            "id(sw_arbiter_zone_enabled)",
+            "crop_direct_wet_allowed",
+        ):
+            assert gone not in controls_yaml, gone
 
     def test_the_irrigation_engine_replaced_the_job_machine(self, controls_yaml: str, greenhouse_yaml: str) -> None:
         """#1160 (F1, F14): the engine package runs every drip, feed and scheduled window; the job
@@ -721,8 +744,13 @@ class TestActivityDirectWetGuards:
     def test_climate_wet_watchdog_covers_only_climate_owned_relays(
         self, controls_yaml: str, hardware_yaml: str
     ) -> None:
-        """#1160 (F5): the watchdog closes only climate misters the engine does not hold, and the
-        per-tick fertilizer offs are gone: the program's enables and the engine's runs decide."""
+        """#1161 (F10): the D-IRP-19 mister watchdog (irr_mister_watchdog() in the engine glue,
+        irr_watchdog_step() in lib/irrigation_program.h) covers every wet relay L01-L10 through the
+        grant rail and every mister L04, L07-L10 through the commanded-length limit; the climate
+        lambda around it closes only the climate's own VPD misters, never an engine-held or
+        fertilizer relay."""
+        glue = (REPO_ROOT / "firmware" / "lib" / "irrigation_engine_esphome.h").read_text()
+        engine = (REPO_ROOT / "firmware" / "lib" / "irrigation_program.h").read_text()
         wet_relays = {
             "south_wall_mister",
             "south_wall_mister_fertilized",
@@ -739,8 +767,13 @@ class TestActivityDirectWetGuards:
         assert not missing_hardware, f"Expected wet relay missing from hardware.yaml: {missing_hardware}"
 
         watchdog = controls_yaml.split("auto direct_wet_relay_watchdog", 1)[1].split("};", 1)[0]
-        for relay, line in (("south_wall_mister", "L07"), ("west_wall_mister", "L09"), ("center_mister", "L04")):
-            assert f"irr_climate_close(id({relay}), verdify_irr::k{line});" in watchdog
+        assert "const uint16_t faulted = irr_mister_watchdog();" in watchdog
+        for zone, relay, line in (
+            ("south", "south_wall_mister", "L07"),
+            ("west", "west_wall_mister", "L09"),
+            ("center", "center_mister", "L04"),
+        ):
+            assert f"if(!{zone}_wet_allowed) irr_climate_close(id({relay}), verdify_irr::k{line});" in watchdog
         assert ".turn_off();" not in watchdog
         for engine_owned in (
             "wall_drips",
@@ -755,6 +788,22 @@ class TestActivityDirectWetGuards:
         # No climate path writes a fertilizer relay's OFF every tick any more.
         for relay in ("center_drips_fertilized", "wall_drips_fertilized", "fertilizer_master_valve"):
             assert f"id({relay}).turn_off();" not in controls_yaml
+
+        # The watchdog's relay list: the grant rail over L01-L10 (kGrantableMask), the overrun rule
+        # over every mister (detail::is_mister: the mist manifold), fog never.
+        step = engine[engine.index("inline IrrWatchdogResult irr_watchdog_step(") :]
+        step = step[: step.index("\n}\n")]
+        assert "if (!detail::is_mister(i)) continue;" in step
+        assert "res.force_off = uint16_t(res.force_off | (in.relay_on & kGrantableMask & ~in.grant));" in step
+        assert "kWatchdogSlackMs" in step and "kWatchdogCeilingMs" in step
+        assert (
+            "constexpr uint16_t kMistManifoldMask = irr_bit(kL04) | irr_bit(kL07) | irr_bit(kL08) | irr_bit(kL09) |"
+            in engine
+        )
+        call = glue[glue.index("inline uint16_t irr_mister_watchdog()") :]
+        call = call[: call.index("\n}\n")]
+        assert call.index("irr_watchdog_step(") < call.index("g.b.relay[i]->turn_off();")
+        assert call.index("g.b.relay[i]->turn_off();") < call.index("esp_faults_changed(g, r.faulted, now_ms)")
 
     def test_legacy_schedule_globals_cannot_schedule_actuation(self, controls_yaml: str) -> None:
         """#1160: schedules are the irrigation program's; no legacy schedule global or weekly

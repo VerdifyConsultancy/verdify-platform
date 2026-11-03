@@ -22,9 +22,11 @@ FIRMWARE_SOURCES = {
     "firmware/lib/greenhouse_solar.h": "dd0557760ac17fd61eca8a0449d0060f8452d418616edda2ab95892408a2fb0e",
     # VD-47 (#1162) drops the occupancy quiet override, the outdoor-RH fog-burst
     # block and the legacy burst flags (the override layer reads only the
-    # latches); solar/band expressions are unchanged. New captures bind this
-    # source; historical receipts stay frozen.
-    "firmware/greenhouse/controls.yaml": "11d3a5f642fe002bd80242d806ff73411258502de60b570a9a6698deb5db1a48",
+    # latches); VD-46 (#1161) reworks the mist path (per-zone VPD membership, the
+    # rank arbiter, the shared fog force-off, the D-IRP-19 watchdog, no leak
+    # lock). Solar/band expressions are unchanged. New captures bind this source;
+    # historical receipts stay frozen.
+    "firmware/greenhouse/controls.yaml": "761efb1f554fbcc26c1b1e47078b6537eb2845bb69243dca1db0e12722a3de77",
 }
 SERIES = ("temp_low", "temp_high", "temp_target", "vpd_low", "vpd_high", "vpd_target")
 ANCHORS = ("sr", "sm", "ss", "mid")

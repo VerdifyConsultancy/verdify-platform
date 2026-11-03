@@ -303,7 +303,10 @@ async def _with_connection(work):
         await conn.close()
 
 
-def test_a_thirty_day_six_metric_read_answers_under_two_seconds_at_p95(db):
+# Not collected by the campaign (the name is not test_*): see the same note in
+# tests/test_dashboard_db_irrigation_minutes.py. Run by hand with VERDIFY_ISOLATED_TEST_DSN set:
+# pytest -o python_functions='perf_*' <this file>
+def perf_a_thirty_day_six_metric_read_answers_under_two_seconds_at_p95(db):
     async def work(conn):
         timings, result = [], None
         for _ in range(20):

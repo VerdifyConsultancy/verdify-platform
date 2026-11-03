@@ -23,6 +23,11 @@ export type HeroProps = {
   reason?: string | null;
   /** The value's verdict against the band; shown only on a value that is there, fresh and with the API up. */
   verdict?: ReactNode;
+  /**
+   * Readings that sit beside the hero value where their tiles move away (Now: VPD and RH at 860 px and below, `.hero-beside`).
+   * The caller leaves verdicts out of it while the hero is stale.
+   */
+  beside?: ReactNode;
   sub?: ReactNode;
   /** The hero source's newest observation, whether the API marks it stale, and whether its source is not reporting. */
   observedAt: string | null | undefined;
@@ -45,7 +50,7 @@ function phoneTiles(tiles: readonly HeroTile[]): Set<number> {
  * tiles. On phones the tiles not kept in the band move into the "All readings" disclosure (copied there without their
  * ids). It fetches nothing: Now (#1129) passes the API's values in.
  */
-export function Hero({ eyebrow, title, headingLevel = 1, value, unit, reason, verdict, sub, observedAt, stale = false, notReporting = false, tiles, readings, readingsLabel = "All readings" }: HeroProps) {
+export function Hero({ eyebrow, title, headingLevel = 1, value, unit, reason, verdict, beside, sub, observedAt, stale = false, notReporting = false, tiles, readings, readingsLabel = "All readings" }: HeroProps) {
   const headingId = useId();
   const apiDown = useApiDown();
   const Heading = headingLevel === 1 ? "h1" : "h2";
@@ -62,6 +67,7 @@ export function Hero({ eyebrow, title, headingLevel = 1, value, unit, reason, ve
         <p className={cls("hero-temp", panelStale && "value-muted")} data-hero-value="">{formatValue(missing ? null : value, unit)}</p>
         {missing && <p className="hero-meta">{reason || "No reading"}</p>}
         {verdict && !missing && info.verdict && <p className="hero-meta">{verdict}</p>}
+        {beside && <p className={cls("hero-meta", "hero-beside", panelStale && "value-muted")}>{beside}</p>}
         {sub && <p className="hero-meta">{sub}</p>}
         <p className="hero-meta"><FreshnessDot stale={stale} notReporting={notReporting} /><AgeLabel observedAt={observedAt} stale={panelStale} />{panelStale && <> <Badge kind="stale" /></>}</p>
       </div>

@@ -232,6 +232,41 @@ are one tap with no dialog; settings and schedule saves never confirm. Values ar
 | `ScheduleWeek` | Week grid: rows L01, L02 and L04–L10 (L05 and L06 marked reserved), columns today and the next 6 days. Each occurrence is a block with its time, minutes or pulses and MANUAL when set; one that will not run is hatched with why (line paused or disabled, Schedule off); "Last 7 days" shows past blocks with their outcome word; the editor's draft previews as PLANNED outlines; selecting a block offers Edit, or Pause the line until after it ([screens](screens.md) SCR-04) | At 390 a day switcher shows one day for every line, with no horizontal scroll |
 | `MisterAssociation` | Two `Switch`es per mister zone, "VPD control" and "Schedule", a one-line summary and the zone's VPD source; a change reads REQUESTED until the controller reports the program that carries it, then CONFIRMED | Any combination; both off reads "This zone will not mist automatically"; a watchdog back-off or fault shows on the `LineCard` |
 
+As built (VD-12): `SettingRow` (`dashboard/app/components/setting-row.tsx`) shows each row as API-09 serves it and
+decides nothing. The device line is the readback with its unit, CONFIRMED and "· 2 min ago"; STALE with "Last data …
+ago (HH:MM)" while readbacks are stale or the controller is not reporting; "—" with `readback.reason` when there is no
+value; keyed on `group`, a Band in force row reads "62.0 °F · DERIVED · 4 min ago" and NO READBACK shows only for
+another row with `readback_via` none; a site cap reads "On controller · rev 42: 360 gal", without the rev while
+API-IRR-01 fails, and STALE like any device value. Under it sits the request line while REQUESTED, NOT CONFIRMED or
+HELD ("→ 1.55 kPa REQUESTED · 20 s · MANUAL · jason · “Vandas drying”", then `StateReasonLine` with the desired row's
+`state_reason`; a plan value carries none, so it reads the default), a write to a row with no readback path while it
+is in force ("Sent. This setting has no readback, so it can never show CONFIRMED"), else who wrote the value in force
+("Iris changed this at 07:02" or "steward changed this at 06:47" with AI, "jason changed this at 08:00 · Iris may
+adjust", "Forecast rule · system", "Released: plan, band or default applies"), and a read-only row's
+`read_only_reason` verbatim. Values keep the decimals they carry (`keptValueText`: Iris's 48.75 on a 30 s grid reads
+48.75), and so does the Save toast. `EditDrawer` gained `readOnly` for a row served with `writable: false`: read-only
+for operators too, with Done and no Save or actions.
+### 4.7 As built (VD-15)
+
+The Water screen is `dashboard/app/routes/water.tsx` (the layout) with `water-board.tsx`, `water-schedules.tsx` and
+`water-history.tsx`, the composites `line-card.tsx`, `mister-association.tsx` and `schedule-week.tsx`, and the rules in
+`dashboard/app/lib/water.ts` (#1135). Where it settles a detail §4.6 and screens SCR-04 leave open, or differs:
+
+| Topic | As built |
+|---|---|
+| Phone layout | "At 390" is the shell's phone breakpoint, 860 px and below: the tabs and Stop all water ("■ Stop all") are one sticky row under the header (on a phone too narrow for both, under about 360 px, Stop wraps below the tabs inside that row rather than widening the page), running lines sort first, and the limits strip and mister zones fold into two disclosures below the cards |
+| Program banner | Not a shell banner: one `.notice` line per the first rule that holds. REQUESTED names what the controller holds too ("On controller: rev 42 · rev 43 sending"); not reporting with the built-in program says it keeps running "the built-in program" |
+| Status read failing | The board shows "Water status unavailable." with Retry in place of the cards whenever API-IRR-01's newest read failed, even with an older answer cached, so no line ever reads idle from old data |
+| Line head | ON or OFF is the line's enable ("Enabled:" for screen readers); a reserved line still disabled reads DISABLED Reserved there, before the engine too, and has no second DISABLED state line |
+| Last water and last run | `last_water` (the newest run that opened a valve, VPD episodes included) and `last_outcome` (the newest ended ledger row) are separate facts. The outcome follows the last water ("Last water Fri 07:31, 12 min · ok") only when it is that run's own: a run that watered, stamped no earlier than the water began. A skip, miss or cap after it, or an older run's outcome beside a newer VPD episode, reads with its own time ("Last water Fri 07:31, 12 min · last run Mon 07:35 · skipped · line paused") |
+| Running schedule | "RUNNING · schedule · Wall MWF" takes the label from API-IRR-02, which the Board also reads (60 s); without it the slot reads "slot 11" |
+| Mister fault | The watchdog line shows on both the zone and its `LineCard` (L08 and L10 latch too and have no zone); a blocked zone with a fault shows the fault line alone |
+| Limits strip | Mister zones first, then capped drips named by zone and kind ("Wall drip", "Center feed"); a reserved line still disabled is left out |
+| Week | "Last 7 days" (`past_days=7`) shows the seven days before today; today stays in "Next 7 days", where its past blocks already read their outcome. A past skipped block reads "skipped · <reason>", one ahead the reason alone. L05 and L06 are marked Reserved while they are disabled, as their cards are. The API's fixed occurrence notes pass through the words table (`occurrence_reason`): "only while VPD sensing is degraded" reads "only if VPD sensing is degraded" |
+| Run ledger | The window is `from` and `to` local days in the URL (To inclusive, the last 7 days by default, cut to 31 days, or 30 when 31 local days hold the fall-back day and so run 31 days and an hour); older pages load once and stay, and only the newest page polls |
+| Graphs link | `graphWindowUrl` writes whole seconds in UTC (`2026-11-01T08:00:00Z`), and `runGraphUrl` links an unreadable time to Graphs' default view |
+| Stop | `useStop` notes the running lines from the newest API-02 answer the page holds, the shell's own poll included, so Water offers Disable for L01 without a second API-02 poll |
+
 ## 5. Charts on uPlot
 
 Four primitives share one `UPlotChart` wrapper (`dashboard/app/charts/`) on uPlot 1.6.32, loaded with
@@ -361,6 +396,7 @@ detail §5.2 leaves open, or differ from it:
 | Minutes rows | Wall, Center, South, West, then Fog (humidification), one 84 px bars chart each (the last 112 px, with the day labels). The four watering zones share one minutes scale so their bars compare; fog has its own. The y axis is whole minutes at one width on every row, so the rows' days line up. Stacks use uPlot's bands (each cause's bar runs from the total below it). Drag zoom is off on the bars (UPlotChart `zoom={false}`) |
 | Minutes marks | A no-data day is hatched the full plot height; a partial day has a dashed `--ink` top edge; today's still-planned minutes are a dashed `--muted` outline on today's bar; the cap is a dotted `--c-bound` line across the row. The right reads "today 46 min · cap 120", with "(partial)" while today is partial |
 | Minutes words | The tooltip and the data table split each day by line and cause ("L04 Center mister · VPD · 46 min · 3 gal"); the line's name comes from the screen (API-IRR-01 `name`), and without it the line id stands alone. L03's supply minutes and a report grouped by cause draw no bar |
+| Group by (VD-15) | `group` cuts the same report into rows: zone (the default, above); line, one row per line in the report in L01–L11 order, L03's supply row included, and L11 as fog; cause, one row per cause in the cause table's order, then fog. Fog keeps its own scale and the humidification note in every grouping; by cause L03 is left out, as each feed would count twice. `caps` and `planned` are keyed as the rows are (a zone, a line id or a cause). By line needs a report by line; by cause works from a report by line or by zone |
 
 ## 6. Responsive rules
 

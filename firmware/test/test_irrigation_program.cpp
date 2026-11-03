@@ -22,6 +22,7 @@
 //   cd firmware && g++ -std=c++17 -I lib -o test/test_irrigation_program test/test_irrigation_program.cpp
 //   ./test/test_irrigation_program
 
+#include "greenhouse_logic.h"  // the fog force-off (F9, #1161) the device model's climate side uses
 #include "irrigation_program.h"
 
 #include <algorithm>
@@ -869,6 +870,36 @@ static void rtc_block_rules() {
   IrrRtcBlock flip = b;
   flip.zone_pulse_s[2] ^= 0x10;
   CHECK(irr_rtc_validate(flip, false, kDayNum) && flip.water_centigal == 0, "a flipped counter fails the CRC");
+
+  // #1161: the mister watchdog's faults (D-IRP-19). Power-on garbage zeroes them; a soft reset
+  // keeps them; a new local day zeroes each zone's count and latch, while a back-off still running
+  // keeps its countdown, line and end time.
+  IrrRtcBlock g{};
+  for (size_t i = 0; i < sizeof(g); ++i) reinterpret_cast<uint8_t*>(&g)[i] = uint8_t(std::rand() & 0xFF);
+  irr_rtc_validate(g, true, kDayNum);
+  bool faults_zero = true;
+  for (const IrrRtcFault& f : g.fault) {
+    faults_zero = faults_zero && f.count == 0 && !f.latched && !f.backing_off && f.line == 0 &&
+                  f.backoff_left_ms == 0 && f.until_epoch == 0;
+  }
+  CHECK(faults_zero, "power-on zeroes the watchdog faults");
+  CHECK(kRtcVersion == 2, "the fault area is RTC block layout version 2");
+  g.fault[0] = IrrRtcFault{3, 1, 0, kL04, 0, kDay0 + 86400u};             // center latched
+  g.fault[1] = IrrRtcFault{1, 0, 1, kL07, 420000u, at(1430)};             // south backing off
+  irr_rtc_seal(g);
+  IrrRtcBlock kept = g;
+  CHECK(!irr_rtc_validate(kept, false, kDayNum) && kept.fault[0].latched && kept.fault[1].backing_off,
+        "a soft reset keeps the faults");
+  IrrRtcBlock rolled = g;
+  irr_rtc_validate(rolled, false, kDayNum + 1);
+  CHECK(rolled.fault[0].count == 0 && !rolled.fault[0].latched && rolled.fault[0].until_epoch == 0,
+        "local midnight ends the latch and zeroes the count");
+  CHECK(rolled.fault[1].count == 0 && rolled.fault[1].backing_off && rolled.fault[1].backoff_left_ms == 420000u &&
+            rolled.fault[1].line == kL07 && rolled.fault[1].until_epoch == at(1430),
+        "a back-off runs across midnight to its own end");
+  IrrRtcBlock torn = g;
+  torn.fault[2].count = 7;  // not re-sealed
+  CHECK(irr_rtc_validate(torn, false, kDayNum) && !torn.fault[0].latched, "a changed fault fails the CRC");
 }
 
 static void ring_sequence_and_grammar() {
@@ -2503,6 +2534,303 @@ static void wiring_air_inputs() {
   CHECK(!irr_air_inputs(70.0f, 60.0f, NAN).dew_breach, "no threshold, no breach");
 }
 
+// ── G. The mist path (VD-46, #1161): the D-IRP-19 mister watchdog and the per-zone rules ──────
+
+// The watchdog alone, called once a second as the climate loop calls it on the device. The clock
+// starts at 10:00 on day 0; next_midnight is day 1's local midnight (a latch's end).
+struct Wd {
+  IrrRtcBlock rtc{};
+  IrrWatchdog w{};
+  IrrWatchdogInputs in{};
+  Wd() {
+    irr_rtc_validate(rtc, true, kDayNum);
+    in.now_ms = 5000000u;
+    in.epoch = at(600);
+    in.next_midnight = kDay0 + 86400u;
+    in.vpd_members = irr_bit(kL04);
+    in.engine_line = kNoLine;
+    in.vpd_line = kNoLine;
+  }
+  IrrWatchdogResult step() { return irr_watchdog_step(w, rtc, in); }
+  void second() {
+    in.now_ms += 1000u;
+    if (in.epoch != 0) in.epoch += 1u;
+  }
+  void on(uint8_t line) {
+    in.relay_on = uint16_t(in.relay_on | irr_bit(line));
+    in.grant = uint16_t(in.grant | irr_bit(line));
+  }
+  void off(uint8_t line) {
+    in.relay_on = uint16_t(in.relay_on & ~irr_bit(line));
+    in.grant = uint16_t(in.grant & ~irr_bit(line));
+    if (in.vpd_line == line) in.vpd_line = kNoLine;
+    if (in.engine_line == line) in.engine_line = kNoLine;
+  }
+  // A climate VPD pulse granted now (irr_vpd_grant() carries its commanded length).
+  void vpd_pulse(uint8_t line, uint16_t on_s) {
+    in.vpd_line = line;
+    in.vpd_on_s = on_s;
+    in.vpd_since_ms = in.now_ms;
+    on(line);
+  }
+  // An engine open (a window or run-now pulse, a feed pulse, a mist prewet or flush).
+  void engine_open(uint8_t line, uint16_t cmd_s) {
+    in.engine_line = line;
+    in.engine_cmd_s = cmd_s;
+    on(line);
+  }
+  // Seconds from now until a call forces `line` OFF (the relay then reads OFF), or -1.
+  int until_forced(uint8_t line, int max_s, IrrWatchdogResult* last = nullptr) {
+    for (int s = 0; s <= max_s; ++s) {
+      const IrrWatchdogResult r = step();
+      if (r.force_off & irr_bit(line)) {
+        if (last != nullptr) *last = r;
+        off(line);
+        return s;
+      }
+      second();
+    }
+    return -1;
+  }
+  // Seconds from now until `zone` stops backing off, or -1.
+  int until_backoff_ends(uint8_t zone, int max_s) {
+    for (int s = 0; s <= max_s; ++s) {
+      second();
+      step();
+      if (!rtc.fault[zone].backing_off) return s + 1;
+    }
+    return -1;
+  }
+  // irr_state as the device publishes it with these faults and v=hoo.
+  void state(char* buf, size_t cap) const {
+    IrrStateExtras x{};
+    std::memcpy(x.vpd_source, "hoo", 3);
+    irr_fault_tokens(rtc, x);
+    irr_format_state(IrrStateFields{}, x, buf, cap);
+  }
+  bool rtc_sealed() const { return rtc.crc32 == irr_rtc_crc(rtc); }
+};
+
+// Acceptance (F10): a mister held ON beyond its commanded pulse + 30 s is forced OFF. On a VPD
+// member the first two faults of the day back the zone off 10 and 30 min and the third latches it
+// until clear_fault (or local midnight); each end time is in irr_state.
+static void watchdog_backs_a_vpd_member_off_then_latches() {
+  Wd d;
+  char text[kTextBufLen];
+  // A 60 s VPD pulse on L04 that the climate path never closes: OFF at exactly 60 + 30 s.
+  d.vpd_pulse(kL04, 60);
+  IrrWatchdogResult r{};
+  CHECK(d.until_forced(kL04, 400, &r) == 90, "a 60 s VPD pulse is forced OFF at its grant + 90 s");
+  CHECK(r.faulted == irr_bit(kL04) && r.changed, "an overrun is a fault");
+  CHECK(d.rtc.fault[0].count == 1 && d.rtc.fault[0].backing_off && !d.rtc.fault[0].latched &&
+            d.rtc.fault[0].line == kL04 && d.rtc.fault[0].until_epoch == at(600, 90) + 600u && d.rtc_sealed(),
+        "the first fault backs center off 10 min, in the RTC block");
+  d.state(text, sizeof(text));
+  EXPECT_IRR_STATE(text, "f=3,b,1793639490 v=hoo");
+  uint16_t backoff = 0, latch = 0;
+  irr_fault_masks(d.rtc, backoff, latch);
+  CHECK(backoff == irr_bit(kL04) && latch == 0, "the back-off mask names the zone's line");
+  CHECK(d.until_backoff_ends(0, 700) == 600, "the back-off ends 600 s after the fault");
+  d.state(text, sizeof(text));
+  EXPECT_IRR_STATE(text, "v=hoo");
+  CHECK(d.rtc.fault[0].count == 1 && d.rtc.fault[0].until_epoch == 0, "the count stays; the end is gone");
+  // The second fault: 30 min.
+  d.second();
+  d.vpd_pulse(kL04, 45);
+  CHECK(d.until_forced(kL04, 400) == 75, "a 45 s pulse is forced OFF at + 75 s");
+  CHECK(d.rtc.fault[0].count == 2 && d.rtc.fault[0].backing_off &&
+            d.rtc.fault[0].backoff_left_ms == kBackoffSecondMs,
+        "the second fault backs off 30 min");
+  CHECK(d.until_backoff_ends(0, 2000) == 1800, "the second back-off ends after 1800 s");
+  // The third fault latches until local midnight.
+  d.second();
+  d.vpd_pulse(kL04, 30);
+  CHECK(d.until_forced(kL04, 400) == 60, "a 30 s pulse is forced OFF at + 60 s");
+  CHECK(d.rtc.fault[0].count == 3 && d.rtc.fault[0].latched && !d.rtc.fault[0].backing_off &&
+            d.rtc.fault[0].until_epoch == kDay0 + 86400u,
+        "the third fault latches center until midnight");
+  d.state(text, sizeof(text));
+  EXPECT_IRR_STATE(text, "f=3,l,1793689200 v=hoo");
+  irr_fault_masks(d.rtc, backoff, latch);
+  CHECK(latch == irr_bit(kL04) && backoff == 0, "the latch mask");
+  for (int s = 0; s < 3600; ++s) {
+    d.second();
+    d.step();
+  }
+  CHECK(d.rtc.fault[0].latched, "a latch does not time out");
+  // clear_fault zeroes the zone's count and latch; the next fault backs off 10 min again.
+  CHECK(irr_fault_clear(d.rtc, kL04) && d.rtc_sealed(), "clear_fault on L04");
+  CHECK(d.rtc.fault[0].count == 0 && !d.rtc.fault[0].latched, "count and latch zeroed");
+  d.state(text, sizeof(text));
+  EXPECT_IRR_STATE(text, "v=hoo");
+  CHECK(!irr_fault_clear(d.rtc, kL04), "nothing left to clear");
+  d.vpd_pulse(kL04, 30);
+  CHECK(d.until_forced(kL04, 400) == 60 && d.rtc.fault[0].backing_off &&
+            d.rtc.fault[0].backoff_left_ms == kBackoffFirstMs,
+        "after a clear the next fault backs off 10 min");
+  // Local midnight zeroes a latch (irr_rtc_validate() on the engine's tick).
+  d.rtc.fault[0] = IrrRtcFault{3, 1, 0, kL04, 0, kDay0 + 86400u};
+  irr_rtc_seal(d.rtc);
+  irr_rtc_validate(d.rtc, false, kDayNum + 1);
+  irr_fault_masks(d.rtc, backoff, latch);
+  CHECK(latch == 0 && d.rtc.fault[0].count == 0, "a new local day ends the latch");
+}
+
+// Acceptance (F10): a zone that is not a VPD member (schedule-only), and the fertilizer misters L08
+// and L10, latch on their first fault; the limit is the engine's commanded length + 30 s, or 300 s
+// when no length is known.
+static void watchdog_latches_schedule_only_and_fertilizer_misters_at_once() {
+  {
+    Wd d;  // L07 schedule-only: an engine window pulse of 30 s that stays ON.
+    d.engine_open(kL07, 30);
+    CHECK(d.until_forced(kL07, 400) == 60, "a 30 s window pulse is forced OFF at + 60 s");
+    CHECK(d.rtc.fault[1].count == 1 && d.rtc.fault[1].latched && d.rtc.fault[1].until_epoch == kDay0 + 86400u,
+          "a schedule-only zone latches on its first fault");
+    char text[kTextBufLen];
+    d.state(text, sizeof(text));
+    EXPECT_IRR_STATE(text, "f=6,l,1793689200 v=hoo");
+  }
+  {
+    Wd d;  // L08, south's fertilizer mister, latches even though L07 is a VPD member.
+    d.in.vpd_members = uint16_t(irr_bit(kL04) | irr_bit(kL07));
+    d.engine_open(kL08, 20);
+    CHECK(d.until_forced(kL08, 400) == 50, "a 20 s feed pulse is forced OFF at + 50 s");
+    CHECK(d.rtc.fault[1].latched && d.rtc.fault[1].line == kL08, "L08 latches the south zone on its first fault");
+    uint16_t backoff = 0, latch = 0;
+    irr_fault_masks(d.rtc, backoff, latch);
+    CHECK(latch == irr_bit(kL08), "the latch names L08");
+    IrrProgram p = irr_rom_default();
+    enable(p, kL07);
+    members(p, kL07, true, false);
+    CHECK(!irr_vpd_zone_allowed(p, d.rtc, kL07, IrrVpdZoneGate{true, true, false, backoff, latch}),
+          "L07's VPD pulses wait for the south latch");
+    char text[kTextBufLen];
+    d.state(text, sizeof(text));
+    EXPECT_IRR_STATE(text, "f=7,l,1793689200 v=hoo");
+    CHECK(irr_fault_clear(d.rtc, kL07) && !d.rtc.fault[1].latched, "clear_fault names either line of the zone");
+  }
+  {
+    Wd d;  // L10 and a mist prewet on L09 of 1800 s: the limit follows the engine's length.
+    d.engine_open(kL09, 1800);
+    CHECK(d.until_forced(kL09, 2000) == 1830, "a 1800 s mist flush is forced OFF only at + 1830 s");
+    CHECK(d.rtc.fault[2].latched, "west is not a VPD member here: it latches");
+    d.engine_open(kL10, 15);
+    CHECK(d.until_forced(kL10, 400) == 45 && d.rtc.fault[2].count == 2, "L10 counts on the west zone");
+  }
+  {
+    Wd d;  // A mister ON with its grant bit but no known holder: the 300 s ceiling.
+    d.on(kL09);
+    CHECK(d.until_forced(kL09, 400) == 300, "no commanded length: 300 s");
+  }
+}
+
+// F10: the grant rail and the edge rules.
+static void watchdog_grant_rail_and_edges() {
+  {
+    // Any wet relay ON without its grant bit goes OFF at once, and it is not a fault.
+    Wd d;
+    d.in.relay_on = uint16_t(irr_bit(kL01) | irr_bit(kL07) | irr_bit(kL03) | irr_bit(kL11));
+    d.in.grant = 0;
+    const IrrWatchdogResult r = d.step();
+    CHECK(r.force_off == uint16_t(irr_bit(kL01) | irr_bit(kL07) | irr_bit(kL03)) && r.faulted == 0,
+          "every ungranted wet relay is forced OFF; fog (L11) is not watched");
+    CHECK(d.rtc.fault[0].count == 0 && d.rtc.fault[1].count == 0, "no fault counted");
+  }
+  {
+    // A new VPD grant on a relay the watchdog never saw OFF restarts its clock.
+    Wd d;
+    d.vpd_pulse(kL04, 60);
+    for (int s = 0; s < 50; ++s) {
+      d.step();
+      d.second();
+    }
+    d.in.vpd_since_ms = d.in.now_ms;  // regranted without an OFF sample
+    CHECK(d.until_forced(kL04, 400) == 90, "the regrant's own 90 s");
+  }
+  {
+    // A drip running for an hour is never a mister fault; only its grant matters.
+    Wd d;
+    d.on(kL01);
+    bool forced = false;
+    for (int s = 0; s < 3600; ++s) {
+      forced = forced || (d.step().force_off & irr_bit(kL01));
+      d.second();
+    }
+    CHECK(!forced, "a granted drip is never forced OFF");
+  }
+  {
+    // With no valid clock the end time waits for one; millis() wraps safely.
+    Wd d;
+    d.in.epoch = 0;
+    d.in.next_midnight = 0;
+    d.in.now_ms = 0xFFFFFFFFu - 30000u;
+    d.vpd_pulse(kL04, 30);
+    CHECK(d.until_forced(kL04, 400) == 60, "the limit holds across the millis() wrap");
+    CHECK(d.rtc.fault[0].backing_off && d.rtc.fault[0].until_epoch == 0, "no clock: no end time yet");
+    d.in.epoch = at(700);
+    d.in.next_midnight = kDay0 + 86400u;
+    d.second();
+    const IrrWatchdogResult r = d.step();
+    CHECK(r.changed && d.rtc.fault[0].until_epoch == at(700, 1) + 599u,
+          "a valid clock gives the remaining back-off its end time");
+  }
+  {
+    // A soft reset: the watchdog's RAM is lost, the RTC block keeps the back-off, and the first
+    // call after the boot counts nothing (a reboot's seconds are not counted down).
+    Wd d;
+    d.vpd_pulse(kL04, 30);
+    d.until_forced(kL04, 400);
+    for (int s = 0; s < 100; ++s) {
+      d.second();
+      d.step();
+    }
+    const uint32_t left = d.rtc.fault[0].backoff_left_ms;
+    d.w = IrrWatchdog{};
+    d.in.now_ms = 1000u;
+    d.step();
+    CHECK(d.rtc.fault[0].backoff_left_ms == left && d.rtc.fault[0].backing_off, "a reboot keeps the back-off");
+    CHECK(d.until_backoff_ends(0, 700) == int(left / 1000u), "and it runs on from where it was");
+  }
+}
+
+// F6: irr_vpd_zone_allowed() reads the same masks the engine does, and the effective membership.
+static void vpd_zone_allowed_follows_membership_and_faults() {
+  IrrRtcBlock rtc{};
+  irr_rtc_validate(rtc, true, kDayNum);
+  const IrrVpdZoneGate go{true, true, false, 0, 0};
+  IrrProgram rom = irr_rom_default();
+  CHECK(irr_vpd_zone_allowed(rom, rtc, kL04, go) && !irr_vpd_zone_allowed(rom, rtc, kL07, go) &&
+            !irr_vpd_zone_allowed(rom, rtc, kL09, go),
+        "the ROM default: center only, as before");
+  IrrProgram p = open_program();
+  for (uint8_t line : {kL04, kL07, kL09}) CHECK(irr_vpd_zone_allowed(p, rtc, line, go), "every member");
+  CHECK(irr_vpd_member_lines(p) == uint16_t(irr_bit(kL04) | irr_bit(kL07) | irr_bit(kL09)), "member lines");
+  enable(p, kL09, false);
+  CHECK(!irr_vpd_zone_allowed(p, rtc, kL09, go), "a disabled line is not an effective member");
+  members(p, kL07, false, true);
+  CHECK(!irr_vpd_zone_allowed(p, rtc, kL07, go), "a schedule-only zone takes no VPD pulse");
+}
+
+// Acceptance (F6, §4.4): a center window opens L04 once center is a schedule member, and ends
+// skipped ("not a schedule member") before that.
+static void center_window_needs_schedule_membership() {
+  IrrProgram p = irr_rom_default();  // L04: VPD member only
+  add_slot(p, 1, kL04, 420, 30, 3, 60);
+  Sim s;
+  s.epoch = at(419, 55);
+  s.boot(true, &p);
+  s.run_for(120);
+  CHECK(event_is(s.find_event(1, kL04), IrrOutcome::kSkipped, IrrReason::kNsm) && s.open_s[kL04] == 0,
+        "07:00: L04 is not a schedule member, the window ends skipped (nsm) and nothing opens");
+  IrrProgram q = p;
+  members(q, kL04, true, true);
+  add_slot(q, 2, kL04, 480, 30, 3, 60);  // 08:00 (slot 1's occurrence today is claimed: skipped)
+  s.push(q);
+  s.run_until(485);
+  CHECK(event_is(s.find_event(2, kL04), IrrOutcome::kOk, IrrReason::kNone) && s.open_s[kL04] >= 90,
+        "08:00: with schedule_member on, the window opens L04 and ends ok");
+}
+
 // The controller as irrigation_engine.yaml, irrigation_engine_esphome.h, hardware.yaml and the
 // climate path of controls.yaml wire it: the engine with its RTC block and NVS (claims and the
 // program record), the eleven relays and their guards, irr_grant_mask, the three text sensors,
@@ -2542,17 +2870,30 @@ struct Dev {
   bool two_misters = false;
   bool drip_with_mist = false;
   bool l03_alone = false;
-  // The climate path: one VPD pulse train through irr_vpd_grant()/irr_vpd_release(), fog, and
-  // today's leak interlock, which until #1161 holds climate fog and mist and nothing else.
-  bool leak = false;
+  // The climate path of controls.yaml (#1161): one VPD pulse train through
+  // irr_vpd_grant()/irr_vpd_release(), held by a drip, confirmed occupancy and SENSOR_FAULT as
+  // mister_blocked holds it; fog through the shared force-off (fog_force_off_reason(), F9); the
+  // flow meter counted into SAF-4 while any mister or fog relay is ON (F6); and the D-IRP-19
+  // mister watchdog each second (irr_mister_watchdog()). Nothing here reads a leak (Q-05).
   bool fog_want = false;
-  uint8_t vpd_want = kNoLine;
+  uint8_t vpd_want = kNoLine;  // the zone it pulses, or with vpd_auto the F6 zone choice
+  bool vpd_auto = false;       // irr_rank_vpd_zone() over the zones irr_vpd_zone_allowed() allows
+  ZoneWetIntent intents[ZONE_COUNT] = {};
+  int ranks[ZONE_COUNT] = {1, 2, 3, 4};  // zone_priority_* (center rank 1)
+  bool vpd_stuck = false;      // a fault: the climate path never closes its own pulse
   uint16_t vpd_on_s = 30;
   uint16_t vpd_gap_s = 45;
   uint8_t vpd_on = kNoLine;
   uint32_t vpd_until = 0;
   uint32_t vpd_next = 0;
   int vpd_pulses = 0;
+  float gpm = 0.0f;            // the site meter's flow while a mister or fog relay is ON
+  float water_carry = 0.0f;
+  int fog_s = 0;               // seconds fog (L11) ran
+  IrrWatchdog wd{};
+  uint16_t faults_seen = 0;    // misters the watchdog faulted
+  int forced_off[kLineCount] = {};
+  char mist_edges[512] = "";   // the mister ON edges in order: C center, S south, W west, s L08, w L10
   bool started = false;  // the device grants nothing before the engine's first tick
 
   Dev() { std::memcpy(extras.vpd_source, "hoo", 3); }
@@ -2579,6 +2920,8 @@ struct Dev {
     relays = uint16_t(relays | irr_bit(i));
     ++on_edges[i];
     if (i != kL11 && !named(i)) ++uncaused;
+    const char* code = i == kL04 ? "C" : i == kL07 ? "S" : i == kL09 ? "W" : i == kL08 ? "s" : i == kL10 ? "w" : "";
+    if (code[0] != '\0' && std::strlen(mist_edges) + 1 < sizeof(mist_edges)) std::strcat(mist_edges, code);
   }
   // The fertilizer relays' on_turn_off closes L03 with the last of them.
   void turn_off(uint8_t i) {
@@ -2659,36 +3002,114 @@ struct Dev {
     vpd_on = kNoLine;
     state_pub = events_pub = false;
     started = false;
+    wd = IrrWatchdog{};  // RAM: lost on every reboot (the faults themselves are in the RTC block)
+    extras.fault_count = 0;
   }
+  bool saf4() const { return rtc.water_centigal >= uint32_t(eng.prog.saf4_gal) * 100u; }
+  bool soft_budget() const {
+    return climate.soft_budget_centigal > 0 && rtc.water_centigal >= climate.soft_budget_centigal &&
+           !climate.vpd_emergency;
+  }
+  // The zone of the next climate VPD pulse: vpd_want, or with vpd_auto the F6 choice of
+  // controls.yaml's select_zone_for_pulse() (the fairness override aside): irr_rank_vpd_zone()
+  // among the zones irr_vpd_zone_allowed() allows, else the one zone allowed.
+  uint8_t vpd_zone() const {
+    if (!vpd_auto) return vpd_want;
+    IrrVpdZoneGate g{true, true, saf4(), 0, 0};
+    irr_fault_masks(rtc, g.backoff_mask, g.latch_mask);
+    const uint8_t line_of[3] = {kL04, kL07, kL09};  // ZoneId center, south, west
+    bool allowed[ZONE_COUNT] = {};
+    for (int z = 0; z < 3; ++z) allowed[z] = irr_vpd_zone_allowed(eng.prog, rtc, line_of[z], g);
+    int z = irr_rank_vpd_zone(allowed, intents, ranks);
+    for (int k = 2; z < 0 && k >= 0; --k) {
+      if (allowed[k]) z = k;
+    }
+    return z < 0 ? kNoLine : line_of[z];
+  }
+  // irr_mister_watchdog() (irrigation_engine_esphome.h): the step, the forced OFFs, then the
+  // faults into the engine and irr_state.
+  uint16_t watchdog() {
+    if (!started) return 0;
+    const IrrWatchdogResult r = irr_watchdog_step(wd, rtc, irr_watchdog_inputs(eng, out, ms, relays, grant));
+    for (uint8_t i = 0; i < kLineCount; ++i) {
+      if (!(r.force_off & irr_bit(i)) || !(relays & irr_bit(i))) continue;
+      ++forced_off[i];
+      turn_off(i);
+    }
+    if (r.changed || r.faulted != 0) {
+      uint16_t backoff = 0, latch = 0;
+      irr_fault_masks(rtc, backoff, latch);
+      irr_fault_tokens(rtc, extras);
+      irr_apply_faults(eng, r.faulted, backoff, latch, ms, out);
+      apply();
+    }
+    faults_seen = uint16_t(faults_seen | r.faulted);
+    return r.faulted;
+  }
+  // irr_command("clear_fault", line, ...).
+  void clear_fault(uint8_t line) {
+    irr_fault_clear(rtc, line);
+    uint16_t backoff = 0, latch = 0;
+    irr_fault_masks(rtc, backoff, latch);
+    irr_fault_tokens(rtc, extras);
+    irr_apply_faults(eng, 0, backoff, latch, ms, out);
+    apply();
+  }
+  // controls.yaml's 1 s loop, in its order: the fog gate (F9), the mister watchdog (F10), the VPD
+  // pulse train (F6, mister_blocked), the flow meter (F6).
   void climate_second() {
     ms += 1000u;
     epoch += 1u;
     const bool drip = irr_drip_active(eng);
-    // Fog: irrigation_water_conflict, SAF-5 (L03 open or l03_hold) and, until #1161, the leak.
-    const bool fog = fog_want && !drip && !(relays & irr_bit(kL03)) && !out.l03_hold && !leak && !climate.sensor_fault;
+    const bool budget = soft_budget();
+    const Mode mode = climate.sensor_fault ? SENSOR_FAULT : climate.safety_cool ? SAFETY_COOL : SEALED_MIST;
+    const FogForceOffInputs rails{climate.sensor_fault,
+                                  true,
+                                  climate.occupied,
+                                  (relays & irr_bit(kL03)) != 0 || out.l03_hold,
+                                  (relays & kDripManifoldMask) != 0,
+                                  drip,
+                                  budget,
+                                  saf4()};
+    const bool fog = fog_want && !fog_forced_off(mode, rails);
     relays = fog ? uint16_t(relays | kFogMask) : uint16_t(relays & ~kFogMask);
-    // The VPD pulse closes at its end or when the climate path's own gates close it.
-    if (vpd_on != kNoLine && (irr_reached(ms, vpd_until) || drip || leak || climate.sensor_fault)) {
+    if (fog) ++fog_s;
+    watchdog();
+    // The climate's own pulse closed by someone else (a stop, the watchdog): it sees its relay OFF.
+    if (vpd_on != kNoLine && !(relays & irr_bit(vpd_on))) {
+      vpd_on = kNoLine;
+      vpd_next = ms + uint32_t(vpd_gap_s) * 1000u;
+    }
+    // The VPD pulse closes at its end or when mister_blocked closes it (the soft budget, a drip,
+    // confirmed occupancy, SENSOR_FAULT); a stuck pulse never closes on its own.
+    const bool vpd_blocked = budget || drip || climate.occupied || climate.sensor_fault;
+    if (vpd_on != kNoLine && !vpd_stuck && (irr_reached(ms, vpd_until) || vpd_blocked)) {
       turn_off(vpd_on);
       irr_vpd_release(eng, vpd_on, ms, out);
       apply();
       vpd_on = kNoLine;
       vpd_next = ms + uint32_t(vpd_gap_s) * 1000u;
     }
-    // turn_on_zone(): the grant first; with none the FSM asks again one pulse later.
-    if (started && vpd_on == kNoLine && vpd_want != kNoLine && irr_reached(ms, vpd_next) && !drip && !leak &&
-        !climate.sensor_fault) {
-      const IrrVpdResult r = irr_vpd_request(eng, vpd_want, vpd_on_s, ms, out);
+    // turn_on_zone(): the zone (F6), then the grant; with none the FSM asks again one pulse later.
+    const uint8_t zone_line = vpd_zone();
+    if (started && vpd_on == kNoLine && zone_line != kNoLine && irr_reached(ms, vpd_next) && !vpd_blocked) {
+      const IrrVpdResult r = irr_vpd_request(eng, zone_line, vpd_on_s, ms, out);
       apply();
-      if (r.answer == IrrVpdAnswer::kGrant) turn_on(vpd_want);
-      if (r.answer == IrrVpdAnswer::kGrant && (relays & irr_bit(vpd_want))) {
-        vpd_on = vpd_want;
+      if (r.answer == IrrVpdAnswer::kGrant) turn_on(zone_line);
+      if (r.answer == IrrVpdAnswer::kGrant && (relays & irr_bit(zone_line))) {
+        vpd_on = zone_line;
         vpd_until = ms + uint32_t(vpd_on_s) * 1000u;
         ++vpd_pulses;
       } else {
         vpd_next = ms + uint32_t(vpd_on_s) * 1000u;
       }
     }
+    // F6: the flow meter counts into SAF-4 and the soft budget while any mister or fog relay is ON.
+    if (relays & (kMistManifoldMask | kFogMask)) irr_count_water(eng, irr_water_centigal(gpm, 1000u, water_carry));
+  }
+  // The climate loop running while the engine's 5 s tick does not (a stalled engine interval).
+  void climate_only(int seconds) {
+    for (int k = 0; k < seconds; ++k) climate_second();
   }
   void tick() {
     for (int k = 0; k < 5; ++k) climate_second();
@@ -2702,8 +3123,14 @@ struct Dev {
     }
     in.clock = irr_clock_from_epoch(epoch, off);
     in.relay_on_mask = relays;
+    // irr_esp_tick(): the watchdog's back-offs and latches from the RTC block, the f= tokens after.
+    uint16_t backoff = 0, latch = 0;
+    irr_fault_masks(rtc, backoff, latch);
+    in.backoff_mask = uint16_t(in.backoff_mask | backoff);
+    in.latch_mask = uint16_t(in.latch_mask | latch);
     irr_tick(eng, in, out);
     started = true;
+    irr_fault_tokens(rtc, extras);
     apply();
     const uint16_t mist = uint16_t(relays & kMistManifoldMask);
     if (mist & (mist - 1)) two_misters = true;
@@ -3011,60 +3438,57 @@ static void wiring_no_relay_without_the_grant() {
   CHECK(d.vpd_pulses > 20, "center VPD misting carried on");
 }
 
-// Acceptance (Q-05): with leak_detected on, a due L01 schedule starts, a running L02 feed continues
-// to its flush, and only the leak alert fires: nothing the engine reads, no guard and no irr_state
-// reason reads the leak (IrrInputs has no leak field; the static_assert above).
+// Acceptance (Q-05, F14; #1161): water flowing with every Verdify valve closed (the hose, sink or
+// hydro on the one site meter, leak_detected) changes nothing. No input of the engine, of this
+// device model's climate side or of the fog force-off reads it (IrrInputs has no leak field, the
+// static_assert above; FogForceOffInputs has none, test_greenhouse_logic.cpp), so with fog and
+// center VPD demand up the whole time, as on a hot afternoon with the hose running, a running L02
+// feed (prewet, feed with L03, flush) and the 07:00 L01 schedule take the water in turn, fog and
+// the VPD pulses carry on around them, and the drips never overlap mist or fog.
 static void wiring_leak_changes_nothing_in_irrigation() {
-  auto trace = [](bool leak, uint16_t* seq, int& n, char* events) {
-    IrrProgram p = irr_rom_default();
-    enable(p, kL02);
-    p.lines[kL01].daily_cap_min = 0;
-    add_slot(p, 1, kL01, 420, 600);  // L01 at 07:00 for 10 min
-    Dev d;
-    d.store(p);
-    d.epoch = at(405);
-    d.boot(true);
-    d.leak = leak;
-    d.vpd_want = kL04;
-    d.fog_want = true;
-    d.run_until(410);
-    CHECK(d.run(kL02, 300, 1, 0, 120, 240) == IrrRunResult::kStarted, "06:50 an L02 feed starts");
-    n = 0;
-    uint16_t last = 0;
-    if (d.relays & kDripManifoldMask) seq[n++] = last = uint16_t(d.relays & (kDripManifoldMask | irr_bit(kL03)));
-    while (d.epoch < at(450)) {
-      d.tick();
-      const uint16_t drips = uint16_t(d.relays & (kDripManifoldMask | irr_bit(kL03)));
-      if (drips != last && n < 64 && (n > 0 || drips != 0)) seq[n++] = drips;
-      last = drips;
-      if (!leak) continue;
-      // With the leak on, climate fog and VPD mist are held (until #1161), so the prewet opened
-      // with the run-now call at 06:50:00; each stage names its relay before it opens.
-      if (d.epoch == at(411)) EXPECT_IRR_STATE(d.state, "d=0,prewet,0,1793627400,1793627520 v=hoo");
-      if (d.epoch == at(415)) EXPECT_IRR_STATE(d.state, "d=1,feed,0,1793627520,1793627820 v=hoo");
-      if (d.epoch == at(420, 30)) {
-        EXPECT_IRR_STATE(d.state, "d=0,flush,0,1793627825,1793628065 w=0,man,1793628065 v=hoo");
-      }
-      if (d.epoch == at(425)) EXPECT_IRR_STATE(d.state, "d=0,schedule,1,1793628065,1793628665 v=hoo");
+  IrrProgram p = irr_rom_default();
+  enable(p, kL02);
+  p.lines[kL01].daily_cap_min = 0;
+  add_slot(p, 1, kL01, 420, 600);  // L01 at 07:00 for 10 min
+  Dev d;
+  d.store(p);
+  d.epoch = at(405);
+  d.boot(true);
+  d.vpd_want = kL04;
+  d.fog_want = true;
+  d.run_until(410);
+  const int vpd_before = d.vpd_pulses;
+  const int fog_before = d.fog_s;
+  CHECK(vpd_before > 0 && (d.relays & kFogMask), "06:50: fog and center VPD pulses run");
+  CHECK(d.run(kL02, 300, 1, 0, 120, 240) == IrrRunResult::kStarted, "06:50 an L02 feed starts");
+  uint16_t seq[64];
+  int n = 0;
+  uint16_t last = 0;
+  if (d.relays & kDripManifoldMask) seq[n++] = last = uint16_t(d.relays & (kDripManifoldMask | irr_bit(kL03)));
+  while (d.epoch < at(450)) {
+    d.tick();
+    const uint16_t drips = uint16_t(d.relays & (kDripManifoldMask | irr_bit(kL03)));
+    if (drips != last && n < 64 && (n > 0 || drips != 0)) seq[n++] = drips;
+    last = drips;
+    // Fog was on when the feed was asked for, so its prewet opens at the next tick, once the
+    // drip's water conflict has turned fog off; each stage names its relay before it opens.
+    if (d.epoch == at(411)) EXPECT_IRR_STATE(d.state, "d=0,prewet,0,1793627405,1793627525 v=hoo");
+    if (d.epoch == at(415)) EXPECT_IRR_STATE(d.state, "d=1,feed,0,1793627525,1793627825 v=hoo");
+    if (d.epoch == at(420, 30)) {
+      EXPECT_IRR_STATE(d.state, "d=0,flush,0,1793627830,1793628070 w=0,man,1793628070 v=hoo");
     }
-    std::memcpy(events, d.events, sizeof(d.events));
-    CHECK(d.refused == 0 && d.uncaused == 0, "granted, with causes");
-    CHECK(std::strstr(d.state, "leak") == nullptr, "no irr_state token names a leak");
-  };
-  uint16_t a[64], b[64];
-  int na = 0, nb = 0;
-  char ea[kTextBufLen], eb[kTextBufLen];
-  trace(false, a, na, ea);
-  trace(true, b, nb, eb);
-  CHECK(na == nb && std::memcmp(a, b, sizeof(uint16_t) * size_t(na)) == 0,
-        "the drip and fertilizer relays run the same sequence with and without the leak");
+    if (d.epoch == at(425)) EXPECT_IRR_STATE(d.state, "d=0,schedule,1,1793628070,1793628670 v=hoo");
+  }
   const uint16_t prewet = irr_bit(kL01), feed = uint16_t(irr_bit(kL02) | irr_bit(kL03));
   // The flush hands L01 straight to the 07:00 schedule that waited for it (one relay edge).
   const uint16_t expect[] = {prewet, feed, 0, prewet, 0};
-  CHECK(nb == 5 && std::memcmp(b, expect, sizeof(expect)) == 0,
+  CHECK(n == 5 && std::memcmp(seq, expect, sizeof(expect)) == 0,
         "prewet, feed with L03, the flush, then the 07:00 L01 schedule");
-  EXPECT_IRR_EVENTS(eb, "0,1,0,20759,ok 1,0,1,20759,ok");
-  CHECK(std::strcmp(ea, eb) == 0, "the same outcomes with and without the leak");
+  EXPECT_IRR_EVENTS(d.events, "0,1,0,20759,ok 1,0,1,20759,ok");
+  CHECK(d.vpd_pulses > vpd_before && d.fog_s > fog_before && (d.relays & kFogMask),
+        "fog and center VPD misting carried on around the drips");
+  CHECK(d.refused == 0 && d.uncaused == 0 && !d.drip_with_mist && !d.l03_alone, "granted, with causes, no overlap");
+  CHECK(std::strstr(d.state, "leak") == nullptr, "no irr_state token names a leak");
 }
 
 // Acceptance: irr_command("stop", 255, ...) turns every open wet relay off inside the service call;
@@ -3187,6 +3611,243 @@ static void wiring_local_time_rules() {
   }
 }
 
+// ── The mist path on the device model (VD-46, #1161) ─────────────────────────
+
+static ZoneWetIntent intent_at(float vpd) { return zone_wet_intent(vpd, ZoneBand{1.0f, 0.8f, 1.2f}); }
+
+// Acceptance (F6): with L04, L07 and L09 enabled VPD members, all wanting water and none past the
+// 10 min fairness window, the rank arbiter picks the zone for every VPD pulse: center at rank 1,
+// although south's VPD is furthest above its band. No switch is read (sw_arbiter_zone_enabled is
+// retired). With center latched by the watchdog, south (rank 2) takes the pulses.
+static void wiring_arbiter_picks_the_zone() {
+  IrrProgram p = irr_rom_default();
+  for (uint8_t line : {kL04, kL07, kL09}) {
+    enable(p, line);
+    members(p, line, true, false);
+  }
+  Dev d;
+  d.store(p);
+  d.epoch = at(600);
+  d.boot(true);
+  d.vpd_auto = true;
+  for (ZoneWetIntent& z : d.intents) z = intent_at(1.5f);
+  d.intents[ZONE_SOUTH] = intent_at(1.9f);
+  d.vpd_on_s = 45;
+  d.vpd_gap_s = 45;
+  d.run_until(630);
+  CHECK(d.vpd_pulses >= 15 && d.on_edges[kL04] == d.vpd_pulses && d.on_edges[kL07] == 0 && d.on_edges[kL09] == 0,
+        "every VPD pulse on center (rank 1)");
+  // Center latched (as a third watchdog fault of the day leaves it): south, rank 2.
+  d.rtc.fault[0] = IrrRtcFault{3, 1, 0, kL04, 0, kDay0 + 86400u};
+  irr_rtc_seal(d.rtc);
+  const int center = d.on_edges[kL04];
+  d.run_until(660);
+  CHECK(d.on_edges[kL04] <= center + 1 && d.on_edges[kL07] >= 15 && d.on_edges[kL09] == 0,
+        "with center latched every pulse goes to south");
+  EXPECT_IRR_STATE(d.state, "f=3,l,1793689200 v=hoo");
+  CHECK(d.refused == 0 && d.uncaused == 0 && !d.two_misters, "granted, with causes, one mister at a time");
+}
+
+// Acceptance (F6, D-IRP-05): a scheduled pulse and a VPD pulse both pending alternate at the pulse
+// boundary. L07's window (Schedule on) and center's VPD pulses share the manifold: from the
+// window's first pulse to its last, no two window pulses run without a VPD pulse between them.
+static void wiring_vpd_and_schedule_alternate_at_the_boundary() {
+  IrrProgram p = irr_rom_default();
+  enable(p, kL07);
+  members(p, kL07, false, true);
+  add_slot(p, 1, kL07, 600, 30, 6, 30);  // 10:00, six 30 s pulses
+  Dev d;
+  d.store(p);
+  d.epoch = at(590);
+  d.boot(true);
+  d.vpd_want = kL04;
+  d.vpd_on_s = 30;
+  d.vpd_gap_s = 30;
+  d.run_until(630);
+  const char* first = std::strchr(d.mist_edges, 'S');
+  const char* last = std::strrchr(d.mist_edges, 'S');
+  CHECK(first != nullptr && d.on_edges[kL07] == 6, "the window delivered its six pulses");
+  bool alternates = true;
+  for (const char* c = first; c != nullptr && c < last; ++c) {
+    if (c[0] == 'S' && c[1] == 'S') alternates = false;
+  }
+  CHECK(alternates, "no two window pulses without a VPD pulse between them");
+  CHECK(d.count_events(1, kL07) == 1 && event_is(d.last_event(), IrrOutcome::kOk, IrrReason::kNone),
+        "the window ends ok");
+  CHECK(!d.two_misters && d.refused == 0 && d.uncaused == 0, "one mister relay at a time, granted");
+}
+
+// Acceptance (F6, F11): L07 enabled with Schedule on and VPD control off, no humidity demand: its
+// window opens L07, and the pulses add to the south duty minutes and to the SAF-4 count (the site
+// meter's water while a mister relay is ON, whatever opened it).
+static void wiring_schedule_only_window_counts_duty_and_saf4() {
+  IrrProgram p = irr_rom_default();
+  enable(p, kL07);
+  members(p, kL07, false, true);
+  add_slot(p, 1, kL07, 600, 40, 5, 60);  // 10:00, five 40 s pulses
+  Dev d;
+  d.store(p);
+  d.epoch = at(595);
+  d.boot(true);
+  d.gpm = 1.2f;  // 2 centi-gallons a second
+  d.run_until(600, 5);
+  EXPECT_IRR_STATE(d.state, "m=6,schedule,1,1793638800,1793639240 v=hoo");
+  d.run_until(620);
+  CHECK(d.on_edges[kL07] == 5 && d.vpd_pulses == 0, "five pulses open L07 with no VPD demand");
+  CHECK(d.rtc.zone_pulse_s[1] == 200 && d.rtc.line_on_s[kL07] == 200, "200 s on the south duty minutes");
+  CHECK(d.rtc.water_centigal == 400, "4 gal into the SAF-4 count");
+  CHECK(event_is(d.last_event(), IrrOutcome::kOk, IrrReason::kNone), "the window ends ok");
+}
+
+// Acceptance (F7, D-IRP-10): with occupancy unknown (no confirmed detection) VPD and scheduled mist
+// run; with Frigate confirming someone inside both wait, and the drips still run.
+static void wiring_occupancy_holds_every_mist_but_not_drips() {
+  IrrProgram p = irr_rom_default();
+  enable(p, kL07);
+  members(p, kL07, false, true);
+  p.lines[kL01].daily_cap_min = 0;
+  add_slot(p, 1, kL07, 590, 30, 3, 60);   // 09:50 L07 window
+  add_slot(p, 2, kL07, 605, 30, 3, 60);   // 10:05 L07 window
+  add_slot(p, 3, kL01, 610, 300);         // 10:10 L01 for 5 min
+  Dev d;
+  d.store(p);
+  d.epoch = at(585);
+  d.boot(true);
+  d.vpd_want = kL04;
+  d.vpd_on_s = 30;
+  d.vpd_gap_s = 30;
+  d.run_until(600);
+  CHECK(d.on_edges[kL07] == 3 && d.vpd_pulses >= 4 && d.count_events(1, kL07) == 1,
+        "occupancy unknown: the 09:50 window and the VPD pulses run");
+  d.climate.occupied = true;  // Frigate confirms someone inside
+  const int vpd = d.vpd_pulses;
+  d.run_until(607);
+  EXPECT_IRR_STATE(d.state, "w=6,occ v=hoo");
+  d.run_until(612);
+  EXPECT_IRR_STATE(d.state, "d=0,schedule,3,1793639400,1793639700 w=6,man,1793639700 v=hoo");
+  CHECK((d.relays & irr_bit(kL01)) && !(d.relays & kMistManifoldMask), "10:12: the drip runs, no mister");
+  d.run_until(620);
+  CHECK(d.vpd_pulses == vpd && d.on_edges[kL07] == 3, "confirmed occupancy: no VPD or window pulse");
+  CHECK(d.count_events(3, kL01) == 1, "the drip ran to its end");
+  d.climate.occupied = false;
+  d.run_until(640);
+  CHECK(d.on_edges[kL07] == 6 && d.vpd_pulses > vpd, "once it clears, the window and VPD resume");
+  CHECK(!d.drip_with_mist && d.refused == 0 && d.uncaused == 0, "no overlap, granted");
+}
+
+// Acceptance (F9, D-IRP-04, Q-05): survival fog runs in SAFETY_COOL past the SAF-4 ceiling and the
+// soft budget, and stays OFF with L03 open or with confirmed occupancy. Outside SAFETY_COOL the same
+// caps hold it.
+static void wiring_survival_fog_runs_past_the_caps() {
+  IrrProgram p = irr_rom_default();
+  enable(p, kL08);
+  enable(p, kL07);
+  Dev d;
+  d.store(p);
+  d.epoch = at(780);
+  d.boot(true);
+  d.fog_want = true;
+  d.climate.soft_budget_centigal = 30000;     // 300 gal
+  d.rtc.water_centigal = 36000;               // the SAF-4 ceiling (360 gal) and the budget reached
+  irr_rtc_seal(d.rtc);
+  d.tick();
+  CHECK(!(d.relays & kFogMask), "13:00 SEALED: SAF-4 and the soft budget hold fog");
+  d.climate.safety_cool = true;
+  d.tick();
+  CHECK((d.relays & kFogMask) && d.fog_s > 0, "SAFETY_COOL: survival fog runs past both");
+  d.gpm = 0.3f;
+  const uint32_t before = d.rtc.water_centigal;
+  d.run_for_minutes(2);
+  CHECK(d.rtc.water_centigal > before, "its water still counts (D-IRP-04)");
+  d.climate.occupied = true;
+  d.tick();
+  CHECK(!(d.relays & kFogMask), "confirmed occupancy holds survival fog");
+  d.climate.occupied = false;
+  d.tick();
+  CHECK(d.relays & kFogMask, "it resumes");
+  // L03 open with a feed: SAFETY_COOL ends a feed at once, so the L08 run-now is refused; a feed
+  // already running when the house is fine holds fog (SAF-5).
+  d.climate.safety_cool = false;
+  d.rtc.water_centigal = 0;
+  irr_rtc_seal(d.rtc);
+  d.tick();
+  CHECK(d.run(kL08, 20, 2, 60) == IrrRunResult::kStarted, "an L08 feed");
+  d.climate.safety_cool = true;
+  bool fog_with_l03 = false;
+  for (int k = 0; k < 24; ++k) {
+    d.tick();
+    if ((d.relays & kFogMask) && (d.relays & irr_bit(kL03))) fog_with_l03 = true;
+  }
+  CHECK(!fog_with_l03, "fog never runs with L03 open (SAF-5)");
+  CHECK(d.relays & kFogMask, "survival fog runs once the feed has ended");
+}
+
+// Acceptance (F10, D-IRP-19) end to end: a center VPD pulse the climate path never closes is forced
+// OFF at its commanded length + 30 s, center backs off 10 min (irr_state carries the end) and VPD
+// misting resumes after it; a schedule-only zone whose window pulse overruns (the engine's tick
+// stalled) latches on its first fault, run-now there is refused line_faulted, and clear_fault
+// frees it.
+static void wiring_watchdog_backs_off_then_resumes_and_latches() {
+  IrrProgram p = irr_rom_default();
+  enable(p, kL07);
+  members(p, kL07, false, true);
+  add_slot(p, 1, kL07, 660, 40, 4, 60);  // 11:00 L07 window
+  Dev d;
+  d.store(p);
+  d.epoch = at(600);
+  d.boot(true);
+  d.vpd_want = kL04;
+  d.vpd_on_s = 60;
+  d.vpd_gap_s = 45;
+  d.vpd_stuck = true;
+  while (!(d.relays & irr_bit(kL04))) d.tick();
+  EXPECT_IRR_STATE(d.state, "m=3,vpd,0,1793638806,1793638866 v=hoo");
+  while (d.relays & irr_bit(kL04)) d.climate_only(1);
+  CHECK(d.epoch == 1793638806u + 90u, "the stuck 60 s pulse is forced OFF at its grant + 90 s");
+  EXPECT_IRR_STATE(d.state, "f=3,b,1793639496 v=hoo");
+  CHECK(d.forced_off[kL04] == 1 && d.faults_seen == irr_bit(kL04), "forced OFF by the watchdog, a fault");
+  d.vpd_stuck = false;
+  const int pulses = d.vpd_pulses;
+  d.run_until_epoch(1793639496u - 5u);
+  CHECK(d.vpd_pulses == pulses && d.rtc.fault[0].backing_off, "center backs off: no VPD pulse for 10 min");
+  d.run_for_minutes(2);
+  CHECK(d.vpd_pulses > pulses && std::strstr(d.state, "f=") == nullptr, "after 10 min VPD misting resumes");
+  CHECK(d.rtc.fault[0].count == 1, "the day's count stays at one");
+  // The engine's 5 s tick stalls with L07's window pulse open; the climate loop's watchdog closes
+  // it at 40 + 30 s, and the schedule-only zone latches on this first fault.
+  d.vpd_want = kNoLine;
+  d.run_until(660, 5);
+  CHECK(d.relays & irr_bit(kL07), "11:00:05 the window pulse is open");
+  d.climate_only(80);
+  CHECK(!(d.relays & irr_bit(kL07)) && d.forced_off[kL07] == 1 && d.rtc.fault[1].latched,
+        "the overrun pulse is forced OFF and the schedule-only zone latches");
+  EXPECT_IRR_STATE(d.state, "w=6,flt f=6,l,1793689200 v=hoo");
+  // Nothing reopens L07 while it is latched; the window ends short at its deadline.
+  d.run_until(730);
+  CHECK(d.on_edges[kL07] == 1, "no pulse while latched");
+  CHECK(event_is(d.last_event(), IrrOutcome::kShort, IrrReason::kFlt), "the window ends short (flt)");
+  CHECK(d.run(kL07, 30, 2, 60) == IrrRunResult::kLineFaulted, "run-now on the latched zone: line_faulted");
+  CHECK(event_is(d.last_event(), IrrOutcome::kSkipped, IrrReason::kFlt), "the refusal is an outcome");
+  d.clear_fault(kL07);
+  CHECK(!d.rtc.fault[1].latched && d.rtc.fault[1].count == 0 && std::strstr(d.state, "f=") == nullptr,
+        "clear_fault frees the zone and clears f=");
+  CHECK(d.run(kL07, 30, 2, 60) == IrrRunResult::kStarted && (d.relays & irr_bit(kL07)), "run-now runs again");
+  CHECK(d.refused == 0 && d.uncaused == 0 && !d.two_misters, "granted, with causes");
+}
+
+// F10: a wet relay ON without its grant bit (nothing the engine or the climate path opened) is
+// forced OFF by the next watchdog call, which is not a fault.
+static void wiring_ungranted_relay_forced_off() {
+  Dev d;
+  d.epoch = at(600);
+  d.boot(true);
+  d.tick();
+  d.relays = uint16_t(d.relays | irr_bit(kL05) | irr_bit(kL09));  // driven around every guard
+  d.climate_only(1);
+  CHECK(!(d.relays & (irr_bit(kL05) | irr_bit(kL09))) && d.faults_seen == 0,
+        "both are forced OFF at once, with no fault counted");
+}
+
 int main() {
   codes_match_python();
   decoder_accepts_the_golden_vectors();
@@ -3236,6 +3897,18 @@ int main() {
   wiring_leak_changes_nothing_in_irrigation();
   wiring_stop_and_run_now_commands();
   wiring_local_time_rules();
+  watchdog_backs_a_vpd_member_off_then_latches();
+  watchdog_latches_schedule_only_and_fertilizer_misters_at_once();
+  watchdog_grant_rail_and_edges();
+  vpd_zone_allowed_follows_membership_and_faults();
+  center_window_needs_schedule_membership();
+  wiring_arbiter_picks_the_zone();
+  wiring_vpd_and_schedule_alternate_at_the_boundary();
+  wiring_schedule_only_window_counts_duty_and_saf4();
+  wiring_occupancy_holds_every_mist_but_not_drips();
+  wiring_survival_fog_runs_past_the_caps();
+  wiring_watchdog_backs_off_then_resumes_and_latches();
+  wiring_ungranted_relay_forced_off();
   std::printf("test_irrigation_program: %d checks, %d failed\n", checks_run, checks_failed);
   return checks_failed == 0 ? 0 : 1;
 }

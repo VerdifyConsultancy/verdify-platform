@@ -37,10 +37,23 @@ export function serverClockSkew(serverTime: string | null | undefined, receivedA
 }
 /** The device clock's lead over the server's in ms (0 until API-02 first answers), for a read that asks up to now. */
 export const useServerSkew = (): number => useContext(SkewContext);
+/**
+ * A value worked out from now on the server's clock (`select` gets epoch ms), re-rendering only when it changes: the
+ * local date, or the current minute, where a once-a-second render of a whole view would be waste.
+ */
+export function useClockValue<T extends string | number | boolean>(select: (now: number) => T): T {
+  const skew = useContext(SkewContext);
+  const snapshot = () => select(currentSecond() - skew);
+  return useSyncExternalStore(subscribe, snapshot, snapshot);
+}
 /** Now on the server's clock, in epoch ms, re-rendering once a second. */
 export function useNow(): number {
   const skew = useContext(SkewContext);
   return useSyncExternalStore(subscribe, currentSecond, currentSecond) - skew;
+}
+/** The device clock's lead over the server's (ms, 0 within 2 s), for a time read once rather than ticking. */
+export function useServerClockSkew(): number {
+  return useContext(SkewContext);
 }
 
 export type FreshnessTone = "ok" | "stale" | "off";

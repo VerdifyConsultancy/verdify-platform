@@ -60,8 +60,11 @@ The system was deliberately rebuilt (firmware-v2, 2026-06) around a single idea:
   The dispatcher syncs anchors only when they change (rare). A dead network, a
   dead planner, or a dead dispatcher does not stop correct climate control.
 - **Safety rails are absolute.** `safety_min/max` (temp), `safety_vpd_min/max`,
-  anti-short-cycle min-run, leak/heap watchdogs — these override the band, the
-  planner, and everything else, on-chip.
+  anti-short-cycle min-run, the SAF-4 daily water ceiling, the D-IRP-19 mister
+  watchdog and the heap watchdog — these override the band, the planner, and
+  everything else, on-chip. Since the irrigation engine release the leak signal
+  (`leak_detected`, the one site meter) raises an alert only and forces nothing off
+  (Q-05), and survival fog in `SAFETY_COOL` runs past SAF-4 and the soft budget.
 
 ---
 
@@ -179,7 +182,7 @@ the diurnal program autonomously and the dispatcher only re-syncs on a DB change
 | **Temperature** | `band_temp_low/target/high` | heat1→heat2, vent, fan1→fan2, economizer (dehum-vent) | `bias_heat`, `stage2_heat/cool`, `hyst_temp`, escalation/lead-rotate timeouts | **house-wide** (one air mass) |
 | **Humidity / VPD** | `zone_vpd_target_*` + `band_vpd_*` | center fog, S/W wall misters, vent (to dry), heat (warm→drier) | `mister_pulse_on/gap`, `mister_vpd_weight`, `engage_kpa`, `mister_center_penalty`, `east_adjacency_factor`, **`zone_priority_*`** | **per-zone** (misters/fog) + house (vent/heat) |
 | **Lighting** | DLI + photoperiod policy (2 circuits: `gl_main_*`, `gl_grow_*`) | `grow_light_main`, `grow_light_grow` | lux thresholds/hysteresis, sunrise/sunset, min on/off, DLI target | per-circuit |
-| **Irrigation** | the irrigation program: line enables, schedules and caps (`verdify_schemas/irrigation.py`) | drip valves, fert master valve | program lines and schedules (dashboard and MCP; the VD-47 release retired the legacy durations, day masks and VPD boost) | per-line |
+| **Irrigation** | the irrigation program: schedules, line enables, mister flags (`vpd_member`, `schedule_member`), caps (`verdify_schemas/irrigation.py`) | every wet relay through the engine's grant (drips, fertilizer runs, mist windows); misters shared with VPD control | none: people and agents edit the program through the dashboard and MCP (the VD-47 release retired the legacy durations, day masks and VPD boost) | per-line |
 
 **The tie-breaker primitive:** because temperature is house-wide and the air mass
 can't satisfy every crop at once, a **settable ranked crop/zone priority**
@@ -199,8 +202,10 @@ important control lever and is the intended (but see §9a) arbitration axis.
 - **Device-write gate**: `VERDIFY_DEVICE_WRITE_ENABLED=1` only in prod; dev is
   device-dark by construction (`replicas:0` + deny-egress).
 - **Safety rails (on-chip, absolute)**: `safety_min/max` temp, `safety_vpd_min/max`,
-  anti-short-cycle min-run, leak/heap watchdogs. They clamp the final setpoints
-  regardless of band/planner — so even an over/under-shooting band edit is bounded.
+  anti-short-cycle min-run, SAF-4, the D-IRP-19 mister watchdog (a mister ON past its
+  commanded pulse + 30 s is forced off; its zone backs off, then latches) and the heap
+  watchdog. They clamp the final setpoints regardless of band/planner — so even an
+  over/under-shooting band edit is bounded. The leak signal raises an alert only (Q-05).
 
 ---
 
@@ -240,17 +245,19 @@ retired. **To change the band, edit `crop_band_anchors`, not firmware globals.**
 
 Ranked roughly by leverage. Items (a)–(c) are the highest-value control gaps.
 
-**(a) Wire the per-zone arbiter to actuation (currently dead code).** The owner's
-`arbitrate_wet_zone` / `zone_wet_intent` / `zone_priority_*` design is computed
-**telemetry-only**; the relays actually fire off legacy flat scalars
-(`vpd_target_south=1.3`/`west=1.2`) via `select_most_stressed_zone`. So the
-deterministic per-zone band + center=rank-1 priority don't yet control misting.
-Wiring them is the single biggest correctness win (firmware OTA + replay-diff).
+**(a) Wire the per-zone arbiter to actuation. [DONE, #1161; ships in the engine OTA]**
+Each mister zone is on VPD control, a schedule, both or neither (the irrigation
+program's `vpd_member` and `schedule_member`). With more than one VPD member allowed,
+`arbitrate_wet_zone` / `zone_wet_intent` / `zone_priority_*` pick the zone
+(`irr_rank_vpd_zone()`, center rank 1) whatever the retired `sw_arbiter_zone_enabled`
+says; the legacy `select_most_stressed_zone` (which halves center) only runs with one
+zone allowed, where it can pick nothing else.
 
-**(b) Per-zone runtime caps for south/west.** Only `center` has a duty cap; S/W
-have none, so they can over-water the pots (west soil saturated at ~85%). Add a
-daily runtime ceiling gated on rising soil moisture (firmware OTA). The daytime
-duty cuts (`mister_pulse_on_s`, `vpd_weight`) help but don't bound the total.
+**(b) Per-zone runtime caps for south/west. [DONE, #1160/#1161]** Every mister zone
+has a daily duty cap in the irrigation program (`daily_cap_min`: center 120, south 45,
+west 45 min by default), counted over every mister relay of the zone whatever opened
+it, plus a VPD reserve that schedules cannot use. Gating the cap on rising soil
+moisture remains a future refinement.
 
 **(c) Stop the dispatcher tracking fw-v2-stripped params.** `direct_wet_stress`/
 `fog_stress_*` no longer exist on the device but are still pushed on every
