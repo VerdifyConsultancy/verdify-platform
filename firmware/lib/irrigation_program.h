@@ -792,7 +792,7 @@ struct IrrInputs {
   uint32_t now_ms;                // monotonic millis (wrap-safe)
   IrrClock clock;                 // America/Denver from NTP; !valid: nothing starts on schedule
   bool sensor_fault;              // controller mode SENSOR_FAULT: no engine mist at all (invariant 26)
-  bool sensor_degraded;           // VPD sensing degraded (SF1): degraded_only slots may run
+  bool sensor_degraded;           // VPD sensing degraded (SF1) past its 300 s grace: degraded_only slots may run
   bool safety_cool;               // controller mode SAFETY_COOL: survival fog preempts drips
   bool vpd_emergency;             // climate_vpd_emergency: VPD first, clean drips pause
   bool climate_demand;            // VPD mist or fog demand the climate path holds back for a drip
@@ -2822,6 +2822,34 @@ inline IrrAirInputs irr_air_inputs(float temp_f, float rh_pct, float min_margin_
   a.dew_margin_known = true;
   a.dew_breach = std::isfinite(min_margin_f) && temp_f - dew_f < min_margin_f;
   return a;
+}
+
+// Degraded sensing as the engine counts it (D-IRP-12, #1271). A degraded_only window opens its
+// mister by time, not VPD, so only an outage that lasts may start one. The averages read NaN for
+// the first seconds after every boot, until the probes first answer and the 15 s template sensors
+// run; a reboot inside a due window must not look degraded. An outage counts once the averages
+// have been out for 300 s straight, and the first call with both back clears it at once. Only
+// this engine input waits: the climate path's own trust gate (vpd_control_trusted(), fed !avg_ok)
+// only holds VPD wetting back, so it stays immediate and a fabricated VPD is never chased.
+constexpr uint32_t kDegradedGraceMs = 300000u;
+
+struct IrrDegradedGrace {
+  bool out;           // the averages were out at the last call
+  bool counted;       // the grace ran out; a latch, so a millis() wrap cannot clear it
+  uint32_t since_ms;  // when they went out
+};
+
+inline bool irr_degraded_after_grace(IrrDegradedGrace& g, bool averages_ok, uint32_t now_ms) {
+  if (averages_ok) {
+    g = IrrDegradedGrace{};
+    return false;
+  }
+  if (!g.out) {
+    g.out = true;
+    g.since_ms = now_ms;
+  }
+  if (uint32_t(now_ms - g.since_ms) >= kDegradedGraceMs) g.counted = true;
+  return g.counted;
 }
 
 // ── The mist path (F6, F10; VD-46, #1161) ───────────────────────────────────

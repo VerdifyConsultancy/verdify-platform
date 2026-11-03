@@ -1167,6 +1167,91 @@ static void degraded_only_fallback() {
   }
 }
 
+// #1271: the engine counts degraded sensing only after 300 s of continuous outage, so a reboot
+// inside a due window opens no fallback mist, and a real outage still gets its window late.
+static void degraded_sensing_grace() {
+  {
+    IrrDegradedGrace g{};
+    const uint32_t t = 2000u;
+    CHECK(!irr_degraded_after_grace(g, true, t - 1000u), "averages up: not degraded");
+    CHECK(!irr_degraded_after_grace(g, false, t), "averages out: the count starts");
+    CHECK(!irr_degraded_after_grace(g, false, t + kDegradedGraceMs - 1u), "not at 299.999 s");
+    CHECK(irr_degraded_after_grace(g, false, t + kDegradedGraceMs), "counted at 300 s");
+    CHECK(irr_degraded_after_grace(g, false, t + kDegradedGraceMs + 3600000u), "counted while they stay out");
+    CHECK(!irr_degraded_after_grace(g, true, t + kDegradedGraceMs + 3601000u), "averages back: cleared at once");
+    const uint32_t u = t + 5000000u;
+    CHECK(!irr_degraded_after_grace(g, false, u), "a new outage counts from zero");
+    CHECK(!irr_degraded_after_grace(g, false, u + 299000u), "299 s in");
+    CHECK(!irr_degraded_after_grace(g, true, u + 300000u), "one good tick breaks the outage");
+    CHECK(!irr_degraded_after_grace(g, false, u + 301000u), "the count starts again");
+    CHECK(!irr_degraded_after_grace(g, false, u + 600999u), "299.999 s into the new outage");
+    CHECK(irr_degraded_after_grace(g, false, u + 601000u), "300 s of the new outage");
+  }
+  {
+    IrrDegradedGrace g{};
+    const uint32_t t = 0xFFFFFFFFu - 100000u;  // 100 s before millis() wraps
+    CHECK(!irr_degraded_after_grace(g, false, t), "the count starts before the wrap");
+    CHECK(!irr_degraded_after_grace(g, false, t + 299999u), "it runs across the wrap");
+    CHECK(irr_degraded_after_grace(g, false, t + 300000u), "and counts at 300 s");
+    CHECK(irr_degraded_after_grace(g, false, t + 1000u), "49.7 days on the difference comes round: still counted");
+  }
+  IrrProgram seed{};
+  CHECK(decode_vector(1, seed), "seed decodes");
+  const SolarTimes st = day0_solar();
+  // Healthy up to a minute into the slot's due window, then a soft reset.
+  auto reboot_in_window = [&](Sim& s) {
+    s.epoch = at(st.solar_noon_min - 121);
+    s.boot(true, &seed);
+    s.run_until(st.solar_noon_min - 119);
+    CHECK(has_wait(s.out, kL04, IrrReason::kVok) && s.open_s[kL04] == 0, "before the reset: w=3,vok");
+    s.boot(false, &seed);
+  };
+  // The climate loop's call, once per tick.
+  auto step = [](Sim& s, IrrDegradedGrace& g, bool averages_ok) {
+    s.in.sensor_degraded = irr_degraded_after_grace(g, averages_ok, s.ms);
+    s.tick();
+  };
+  {
+    // What the grace stops: the raw !avg_ok opens the center mister by time on the first tick.
+    Sim s;
+    reboot_in_window(s);
+    s.in.sensor_degraded = true;
+    s.tick();
+    CHECK((s.relays & irr_bit(kL04)) && s.out.state.mist.cause == IrrCause::kFallback, "no grace: a fallback pulse");
+  }
+  {
+    // The averages read NaN for the first 30 s after the reset, then answer.
+    Sim s;
+    reboot_in_window(s);
+    IrrDegradedGrace g{};
+    for (int i = 0; i < 6; ++i) step(s, g, false);
+    CHECK(!(s.relays & irr_bit(kL04)) && s.open_s[kL04] == 0 && has_wait(s.out, kL04, IrrReason::kVok),
+          "30 s out after the reset: L04 stays shut, w=3,vok");
+    while (s.epoch < at(st.solar_noon_min - 59)) step(s, g, true);
+    CHECK(event_is(s.find_event(1, kL04), IrrOutcome::kSkipped, IrrReason::kVok) && s.open_s[kL04] == 0,
+          "the window passes: skipped (vok), no water");
+  }
+  {
+    // A real outage from the reset on: L04 waits out the 300 s, then the window runs whole.
+    Sim s;
+    reboot_in_window(s);
+    IrrDegradedGrace g{};
+    bool opened_early = false;
+    for (int i = 0; i < 60; ++i) {
+      step(s, g, false);
+      if (s.relays & irr_bit(kL04)) opened_early = true;
+    }
+    CHECK(!opened_early && has_wait(s.out, kL04, IrrReason::kVok), "300 s out: still waiting, L04 shut");
+    step(s, g, false);
+    CHECK((s.relays & irr_bit(kL04)) && s.out.state.mist.valid && s.out.state.mist.line == kL04 &&
+              s.out.state.mist.cause == IrrCause::kFallback && s.out.state.mist.slot_id == 1,
+          "past 300 s: m=3,fallback,1");
+    while (s.epoch < at(st.solar_noon_min - 100)) step(s, g, false);
+    CHECK(event_is(s.find_event(1, kL04), IrrOutcome::kOk, IrrReason::kNone), "all four pulses: ok");
+    CHECK(s.open_s[kL04] >= 175 && s.open_s[kL04] <= 185, "4 x 45 s of mist");
+  }
+}
+
 // Acceptance: two outcomes in one tick both get sequence numbers, consecutive, and
 // 65535 wraps to 0, each with its line, slot and reason in #1151's grammar.
 static void two_outcomes_in_one_tick() {
@@ -3866,6 +3951,7 @@ int main() {
   reboot_after_a_claim();
   sensor_fault_refuses_all_engine_mist();
   degraded_only_fallback();
+  degraded_sensing_grace();
   two_outcomes_in_one_tick();
   fertilizer_drip_sequence();
   l08_occupancy_skips_feed_pulses();

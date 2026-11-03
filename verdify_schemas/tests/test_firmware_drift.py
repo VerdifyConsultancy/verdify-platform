@@ -800,13 +800,27 @@ def test_engine_air_inputs_fall_back_to_the_case_probe():
     controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
     start = controls.index("// ── Irrigation engine inputs (#1160)")
     block = _code_only(controls[start : controls.index("/**************** 14 — Telemetry & debug", start)])
-    assert "irr_in.sensor_degraded = sensor_in.sensor_degraded;" in block
+    assert "irr_in.sensor_degraded = irr_degraded;" in block
     assert "probe_sample_fresh(now_ms, id(last_case_ms), kZoneProbeStaleMs)" in block
     assert "avg_ok ? id(average_temperature).state : irr_case_fresh ? id(case_temperature).state : NAN" in block
     assert "avg_ok ? id(average_humidity).state : irr_case_fresh ? id(case_humidity).state : NAN" in block
     for field in ("rh_pct", "dew_margin_known", "dew_breach"):
         assert f"irr_in.{field} = irr_air.{field};" in block
     assert "RHin" not in block, "the loop's RHin may be its fabricated 50 %"
+
+
+def test_engine_counts_degraded_sensing_only_after_its_grace():
+    """#1271: the engine's degraded input runs through irr_degraded_after_grace() on every climate tick,
+    before any branch can skip it (test_irrigation_program.cpp covers the 300 s count). The climate trust
+    gate keeps the raw !avg_ok: with a grace there, a boot or an outage would chase a fabricated VPD."""
+    code = _code_only((REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text())
+    call = "const bool irr_degraded = verdify_irr::irr_degraded_after_grace(degraded_grace, avg_ok, now_ms);"
+    assert code.count(call) == 1
+    assert "static verdify_irr::IrrDegradedGrace degraded_grace{};" in code
+    assert code.index("bool avg_ok =") < code.index(call) < code.index("SensorInputs sensor_in = {")
+    assert code.count("sensor_in.sensor_degraded") == 1, "the engine no longer reads the raw flag"
+    assert code.count("irr_in.sensor_degraded") == 1
+    assert ".sensor_degraded = !avg_ok," in code
 
 
 def test_engine_program_and_claims_save_then_sync():
