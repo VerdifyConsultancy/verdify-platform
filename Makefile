@@ -456,6 +456,9 @@ firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sw
 	# Rollback target stays on the prior last-good until an explicit
 	# firmware-promote-last-good after the 48-hour bake.
 	# Fail → flash the preflight-verified rollback binary via firmware-rollback.sh.
+	# The copy below is a record on this host. alert_monitor reads the pod's
+	# /srv/verdify/state/expected-firmware-version, which only
+	# scripts/firmware-release-job.py pin writes.
 	@if VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) bash scripts/wait-for-firmware-version.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" --timeout 180 && \
 		VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) EXPECTED_FW_VERSION="$$(cat firmware/artifacts/pending-fw-version.txt)" $(MAKE) sensor-health SINCE='5 minutes'; then \
 		FIRMWARE_DEPLOYED_AT="$$(date '+%Y-%m-%dT%H:%M:%S%z')" bash scripts/archive-firmware-artifacts.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" || exit 1 ; \
@@ -474,7 +477,7 @@ firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sw
 		exit 1 ; \
 	fi
 
-firmware-rollback: ## Manually flash the saved last-good.ota.bin back onto the ESP32
+firmware-rollback: ## Flash this host's last-good.ota.bin back onto the ESP32 (the signed path uses the flasher Job instead)
 	bash scripts/firmware-rollback.sh firmware/artifacts/last-good.ota.bin
 
 sensor-health: ## Run sensor health sweep (layer 3 of Firmware Change Protocol)

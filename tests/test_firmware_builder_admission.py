@@ -71,3 +71,17 @@ def test_builder_private_networks_and_device_are_excluded():
         }
     ]
     assert sorted((p["port"], p["protocol"]) for p in dns["ports"]) == [(53, "TCP"), (53, "UDP")]
+
+
+def test_secrets_are_escaped_and_checked_before_the_archive_and_the_signature():
+    script = builder()["args"][0]
+    assert "<<SECRETS" not in script
+    assert "${WIFI_PASSWORD}" not in script and "${OTA_PASSWORD}" not in script
+    write = script.index("firmware_release.py secrets-yaml --output /work/firmware/secrets.yaml")
+    compile_step = script.index("esphome -s fw_version")
+    check = script.index("firmware_release.py check-credentials")
+    archive = script.index("scripts/archive-firmware-artifacts.sh")
+    manifest = script.index("firmware_release.py manifest")
+    assert write < compile_step < check < archive < manifest
+    assert '--main-cpp "${ESPHOME_DATA_DIR}/build/greenhouse/src/main.cpp"' in script
+    assert '--binary "${BUILD_DIR}/firmware.ota.bin"' in script

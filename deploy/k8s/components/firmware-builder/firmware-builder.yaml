@@ -206,12 +206,7 @@ spec:
               # secrets.yaml lives only in the pod's tmpfs-backed workdir;
               # values are NEVER echoed.
               umask 077
-              cat > /work/firmware/secrets.yaml <<SECRETS
-              wifi_ssid: "${WIFI_SSID}"
-              wifi_password: "${WIFI_PASSWORD}"
-              ota_password: "${OTA_PASSWORD}"
-              api_encryption_key: "${API_ENCRYPTION_KEY}"
-              SECRETS
+              python3 /release-tools/firmware_release.py secrets-yaml --output /work/firmware/secrets.yaml
 
               cd /work/firmware
               echo "[builder] compiling (downloads the xtensa toolchain into the per-Job cache)"
@@ -220,6 +215,12 @@ spec:
               BUILD_DIR="${ESPHOME_DATA_DIR}/build/greenhouse/.pioenvs/greenhouse"
               echo "[builder] build dir: ${BUILD_DIR}"
               sha256sum "${BUILD_DIR}/firmware.ota.bin"
+
+              # Value-blind, before the archive and the signature: a Wi-Fi mismatch
+              # is the one failure an OTA rollback cannot reach.
+              echo "[builder] checking the compile-time credentials"
+              python3 /release-tools/firmware_release.py check-credentials \
+                --main-cpp "${ESPHOME_DATA_DIR}/build/greenhouse/src/main.cpp" --binary "${BUILD_DIR}/firmware.ota.bin"
 
               echo "[builder] archiving to the artifacts PVC"
               cd /work
