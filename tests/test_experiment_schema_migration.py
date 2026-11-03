@@ -347,6 +347,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "284-dashboard-runtime-grants.sql",
         # The daily scorecard view and its dashboard grant run forward only (VD-56).
         "285-daily-scorecard-view.sql",
+        # The lighting policy functions ignore manual rows; their seals run forward (VD-33).
+        "286-lighting-policy-ignores-manual.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

@@ -402,7 +402,7 @@ class TestForecastEngineDemotion:
         assert "if not DRY_RUN and demotion is None:" in source
         assert "demotion = await demoted_policy_write_gate(conn)" in source
         assert "INSERT INTO v_runtime_setpoint_plan_write" in source
-        assert "INSERT INTO v_runtime_setpoint_changes_write" in source
+        assert "v_runtime_setpoint_changes_write" not in source  # VD-65: off the NOTIFY fast path
         assert "INSERT INTO setpoint_plan" not in source
         assert "INSERT INTO setpoint_changes" not in source
         # Both write branches resolve action_taken through the demotion state.

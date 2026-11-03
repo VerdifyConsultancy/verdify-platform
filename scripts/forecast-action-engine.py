@@ -3,7 +3,8 @@
 forecast-action-engine.py — Evaluate forecast data against rules, trigger preemptive adjustments.
 
 Runs every 15 minutes. Reads weather_forecast for next 24-48h, evaluates rules from
-forecast_action_rules table, writes preemptive setpoint adjustments or alerts.
+forecast_action_rules table, writes preemptive setpoint_plan rows or alerts. A plan
+row is attributed in activity_log and applied by the next normal dispatcher pass.
 
 Usage:
     forecast-action-engine.py           # evaluate and act
@@ -26,6 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 from slack_config import build_slack_payload, load_slack_settings, read_slack_token  # noqa: E402
+from verdify_schemas.activity import ActivityLogRow  # noqa: E402
 from verdify_schemas.experiment_config import (  # noqa: E402
     demoted_policy_write_gate,
     submit_policy_proposal,
@@ -214,6 +216,48 @@ async def submit_demoted_proposal(conn, rule_name, params, forecast_snapshot):
         return None
 
 
+async def write_preemptive_plan(conn, *, param, value, before, plan_id, reason, rule_id, rule_name):
+    """Write one forecast-rule plan row, attributed, and wake the dispatcher (VD-65).
+
+    The plan row, its activity_log row and the wake commit together. Postgres delivers
+    the NOTIFY at commit, so the dispatcher never wakes before the plan row is visible;
+    its next normal pass applies the value through the fences. The engine never queues
+    a device command itself.
+    """
+    activity = ActivityLogRow(
+        source="system",
+        actor="forecast-engine",
+        action="plan.write",
+        target=plan_id,
+        detail={
+            "changes": [{"param": param, "before": float(before) if before is not None else None, "value": value}],
+            "rule": rule_name,
+            "rule_id": rule_id,
+        },
+        reason=reason,
+    )
+    async with conn.transaction():
+        await conn.execute(
+            "INSERT INTO v_runtime_setpoint_plan_write (ts, parameter, value, plan_id, source, reason) "
+            "VALUES (now(), $1, $2, $3, 'preemptive', $4)",
+            param,
+            value,
+            plan_id,
+            reason,
+        )
+        await conn.execute(
+            "INSERT INTO activity_log (source, actor, action, target, detail, reason) "
+            "VALUES ($1, $2, $3, $4, $5::jsonb, $6)",
+            activity.source,
+            activity.actor,
+            activity.action,
+            activity.target,
+            json.dumps(activity.detail),
+            activity.reason,
+        )
+        await conn.execute("SELECT pg_notify('desired_state_changed', '')")
+
+
 async def main():
     conn = await asyncpg.connect(get_db_url())
     now = datetime.now(UTC)
@@ -223,7 +267,7 @@ async def main():
 
         # Lane C (#584): while an experiment assignment is armed (or legacy
         # direct writes are disabled) the engine becomes a proposal producer —
-        # no direct setpoint_plan/setpoint_changes writes. Feature-off
+        # no setpoint_plan write and so no activity row. Feature-off
         # (default env) this gate takes no query and behavior is unchanged.
         demotion = await demoted_policy_write_gate(conn)
         if demotion is not None:
@@ -336,19 +380,15 @@ async def main():
                         f"re-routed from band-owned {param} to {precool_param}"
                     )
                     if not DRY_RUN and demotion is None:
-                        await conn.execute(
-                            "INSERT INTO v_runtime_setpoint_plan_write (ts, parameter, value, plan_id, source, reason) "
-                            "VALUES (now(), $1, $2, $3, 'preemptive', $4)",
-                            precool_param,
-                            float(precool_value),
-                            plan_id,
-                            reason,
-                        )
-                        await conn.execute(
-                            "INSERT INTO v_runtime_setpoint_changes_write (ts, parameter, value, source) "
-                            "VALUES (now(), $1, $2, 'preemptive')",
-                            precool_param,
-                            float(precool_value),
+                        await write_preemptive_plan(
+                            conn,
+                            param=precool_param,
+                            value=float(precool_value),
+                            before=old_val,
+                            plan_id=plan_id,
+                            reason=reason,
+                            rule_id=rule_id,
+                            rule_name=name,
                         )
                     if DRY_RUN:
                         action_taken = "dry_run"
@@ -432,20 +472,15 @@ async def main():
                         conn, name, {param: float(adj_value)}, forecast_snapshot
                     )
                 elif not DRY_RUN:
-                    await conn.execute(
-                        "INSERT INTO v_runtime_setpoint_plan_write (ts, parameter, value, plan_id, source, reason) "
-                        "VALUES (now(), $1, $2, $3, 'preemptive', $4)",
-                        param,
-                        float(adj_value),
-                        plan_id,
-                        f"Forecast: {name} — {metric} {op} {threshold} (actual {trigger_val} at {trigger_ts.strftime('%H:%M')})",
-                    )
-
-                    # Also write to setpoint_changes for immediate dispatch
-                    await conn.execute(
-                        "INSERT INTO v_runtime_setpoint_changes_write (ts, parameter, value, source) VALUES (now(), $1, $2, 'preemptive')",
-                        param,
-                        float(adj_value),
+                    await write_preemptive_plan(
+                        conn,
+                        param=param,
+                        value=float(adj_value),
+                        before=old_val,
+                        plan_id=plan_id,
+                        reason=f"Forecast: {name} — {metric} {op} {threshold} (actual {trigger_val} at {trigger_ts.strftime('%H:%M')})",
+                        rule_id=rule_id,
+                        rule_name=name,
                     )
 
                 if DRY_RUN:

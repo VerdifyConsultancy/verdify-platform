@@ -1,59 +1,126 @@
-"""tasks.irrigation — the ingestor's irrigation step, step 0: the L01 bridge (VD-64; irrigation §6.1 and §6.5).
+"""tasks.irrigation — the ingestor's irrigation step: the L01 bridge (VD-64) and the engine's steps (VD-42; irrigation
+§6.1, §6.2 and §6.5).
 
-The services (``verdify_services.irrigation``) only store ``irrigation_command`` rows; this pass is the only
-code that turns them into device calls, through ``esp32_push`` under the writer fences. The task loop runs
-``irrigation_sync`` every 5 s and force-launches it while ``shared.irrigation_sync_requested`` is set
-(``NOTIFY irrigation_changed``). Step 0 reads pending commands on every pass, so a lost NOTIFY costs at most
-5 s. #1157 adds steps 1-4 (compile, push and the engine commands) to the same pass.
+The services (``verdify_services.irrigation``) only store ``irrigation_command`` rows and the program's tables; this
+pass is the only code that turns them into device calls, through ``esp32_push`` under the writer fences. The task loop
+runs ``irrigation_sync`` every 5 s, with no forced launch: every pass runs step 0 and the commands, so a lost NOTIFY
+costs at most 5 s, and the program steps run when ``shared.irrigation_sync_requested`` is set (the pass clears it before
+it reads) or 60 s after the last full pass.
 
-1. With the irrigation engine on this connection (the ``irr_command`` and ``irr_program_begin`` services both
-   offered), return: the bridge is for pre-engine firmware, including after a rollback to it.
-2. Pending commands older than 2 min end ``failed`` ("too old") and are never sent. While the writer preflight
+Step 0 chooses by the services on the current connection. Without ``irr_command`` and ``irr_program_begin`` the pass logs
+"irrigation engine not on controller" once per connection and only the bridge acts: no program, no ledger row and no
+``irr_command``. ``record_engine_capability`` writes one ``system_state`` row, entity ``irr_engine``, on every ESP32
+connect, ``true`` only when both services exist; the services read it to choose this path.
+
+The bridge, for pre-engine firmware, including after a rollback to it:
+
+1. Pending commands older than 2 min end ``failed`` ("too old") and are never sent. While the writer preflight
    reports a reason (no transport, no writer lease, device writes off, shadow mode), the pass marks nothing
    ``sent``: commands stay pending and expire, so a ``sent`` row always reached a live connection.
-3. Stops first, oldest first, never heap-deferred: in one committed transaction mark the row ``sent`` with
+2. Stops first, oldest first, never heap-deferred: in one committed transaction mark the row ``sent`` with
    ``sent_at`` and ``args.relays_on`` (the wet relays in its scope that this connection has not read OFF: open
    ones, and in the state burst after a reconnect the ones not read yet) and mark every pending run in its scope
    ``failed`` ("stopped"), so a run requested just before a Stop is never pressed after it;
    then ``esp32_push.bridge_stop``, which records ``args.restore_irrig_enabled`` before it toggles
    ``sw_irrig_enabled``; ``args.restored`` once the switch is back.
-4. Re-sends: for each Stop sent in the last 2 min, every relay in ``args.relays_on`` that has not read OFF since
+3. Re-sends: for each Stop sent in the last 2 min, every relay in ``args.relays_on`` that has not read OFF since
    is switched off again; one that read OFF once is done, so VPD misting may pulse again. A Stop that recorded
    ``args.restore_irrig_enabled`` but not ``args.restored`` (a restart or a transport change cut its toggle
    short) gets ``sw_irrig_enabled`` set back to that value.
-5. Runs, oldest first: while heap deferral holds (``dispatcher._heap_push_defer_active``: under 30 kB free or an
+4. Runs, oldest first: while heap deferral holds (``dispatcher._heap_push_defer_active``: under 30 kB free or an
    18 kB largest block) they stay pending for the next pass. One on a line other than L01 cannot run without the
    engine and ends ``failed``. If ``drip_wall`` reads ON, or an earlier bridge run has not reached its planned end,
    it ends ``failed`` ("line_busy") and is never pressed: a press during a run queues a second full run.
    Otherwise it is marked ``sent`` and ``esp32_push.press_wall_clean`` presses "Wall Drips - RUN CLEAN"; a press
    that provably never reached the transport ends ``failed`` with its reason.
 
-Relay edges in ``equipment_state``, never an ack, show whether water started or stopped. On every ESP32 connect
-``record_engine_capability`` writes one ``system_state`` row, entity ``irr_engine``, ``true`` only when both
-engine services exist; the services read it to choose this path.
+With the engine on the connection (``_engine_pass``):
+
+1. Commands. Expiry and the preflight as above. Each Stop goes first as its own push request, never heap-deferred, with
+   the same committed transaction before ``esp32_push.send_irrigation_command`` (it fails only the pending runs
+   requested before it), and is re-sent each pass until its ``args.relays_on`` read OFF, for at most 2 min (or until a
+   send returned, when the first one failed). Then ``run``, ``clear_fault`` and ``override``, oldest first, which wait
+   out heap deferral and are each marked ``sent`` first, so each goes at most once.
+2. Compile, in one read-only REPEATABLE READ snapshot (``read_program``): ``irrigation_line``, the enabled
+   ``irrigation_slot`` rows and the three ``irrigation_site`` values, into VD-37's 584 B record and its SHA-256.
+3. Push when the hash differs from ``irr_program_id``, no Stop is pending, heap deferral is off and this SHA-256 is not
+   waiting out a reject back-off: ``irrigation_push`` records it first (a new row only when the hash differs from the
+   newest row's; a re-push updates that row), then ``esp32_push.push_irrigation_program``. A reject (``j=``) goes to
+   ``reject_code`` and the same program is retried 1, 5 and 15 min later, then every 15 min; a transport failure
+   retries on the next pass.
+4. Confirm: ``confirmed_at`` once ``irr_program_id`` reports the push's hash.
+
+The ledger (``_sync_ledger``), inert until ``irr_program_id`` appears: one ``irrigation_ledger`` row per occurrence stage
+or run-now from the ``irr_state`` run tokens (never per VPD pulse), closed from the line's relay edges when the token
+leaves, and ``outcome``, ``reason`` and ``event_seq`` from ``irr_events``. Outcomes are never invented: one that aged out
+of the ring stays null.
+
+Relay edges in ``equipment_state``, never an ack, show whether water started or stopped.
+
+Iris's context pack, section 11 (VD-60; irrigation §6.4), is ``python3 -m tasks.irrigation context --hours 24``, run
+from the ingestor's working directory: ``load_context`` reads it with SQL and ``verdify_schemas``, because this image
+does not carry ``verdify_services``, and ``render_context`` prints it. It only reads. Importing this module starts
+nothing: ``python3 -m`` runs the ``tasks`` package first, which imports it once before it runs again as ``__main__``.
 """
 
 from __future__ import annotations
 
+import argparse
+import asyncio
 import json
 import logging
-from collections.abc import Iterable, Mapping
-from datetime import UTC, datetime, timedelta
+import time
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass, field
+from datetime import UTC, date, datetime, timedelta
+from datetime import time as time_of_day
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import asyncpg
 import esp32_push
 import shared
-from pydantic import ValidationError
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError
 
 from verdify_schemas.irrigation import (
     BRIDGE_RUN_LINE,
+    CLEAN_PARTNER,
     COMMAND_SEND_WINDOW_S,
+    LINE_KIND,
+    LOCAL_TZ_NAME,
+    REASON_WORDS,
     STOP_RESEND_WINDOW_S,
+    WEEKDAYS,
+    Agenda,
+    CompiledProgram,
+    FaultKind,
+    IrrEvent,
+    IrrigationCause,
     IrrigationCommandRow,
+    IrrigationLedgerRow,
+    IrrigationPushRow,
+    IrrRun,
+    LineId,
+    LineSpec,
+    LineState,
+    ProgramId,
+    RunClose,
+    RunOutcome,
+    ScheduleSpec,
+    agenda,
+    compile_program,
+    irr_state_reading,
+    line_state,
+    local_tz,
+    occurrence_start,
+    parse_irr_events,
+    parse_irr_program_id,
+    site_values,
 )
 from verdify_schemas.telemetry import SystemStateRow
+from verdify_schemas.tunable_registry import IRRIGATION_SITE_PARAMS
 
 from .dispatcher import _heap_push_defer_active
 
@@ -110,7 +177,7 @@ _SEND_SQL = (
 _RUNS_IN_SCOPE_SQL = (
     f"SELECT {_COLUMNS} FROM public.irrigation_command "
     "WHERE kind = 'run' AND status = 'pending' AND greenhouse_id = $1 AND ($2::text IS NULL OR line_id = $2) "
-    "ORDER BY created_at, command_id"
+    "AND ($3::timestamptz IS NULL OR created_at <= $3) ORDER BY created_at, command_id"
 )
 _MERGE_ARGS_SQL = "UPDATE public.irrigation_command SET args = args || $2::text::jsonb WHERE command_id = $1"
 _SENT_STOPS_SQL = (
@@ -217,21 +284,26 @@ class CommandStore:
         async with self.pool.acquire() as conn:
             return _rows(await conn.fetch(_PENDING_SQL, kind, SEND_WINDOW))
 
-    async def mark_stop_sent(self, stop: IrrigationCommandRow, sent_at: datetime, relays_on: list[str]) -> bool:
+    async def mark_stop_sent(
+        self, stop: IrrigationCommandRow, sent_at: datetime, relays_on: list[str], *, earlier_runs_only: bool = False
+    ) -> bool:
         """One transaction: the Stop ``sent`` with ``sent_at`` and ``args.relays_on``, and every pending run in
-        its scope ``failed`` ("stopped"). False when the Stop is no longer pending."""
+        its scope ``failed`` ("stopped"): on the engine path only those requested before it, because a run requested
+        after a Stop starts after it, as asked. False when the Stop is no longer pending."""
         sent = _transition(stop, status="sent", sent_at=sent_at, args={**stop.args, "relays_on": relays_on})
         async with self.pool.acquire() as conn, conn.transaction():
             if await conn.fetchval(_SEND_SQL, sent.command_id, sent_at, _json(sent.args), SEND_WINDOW) is None:
                 return False
-            runs = _rows(await conn.fetch(_RUNS_IN_SCOPE_SQL, stop.greenhouse_id, stop.line_id))
+            before = stop.created_at if earlier_runs_only else None
+            runs = _rows(await conn.fetch(_RUNS_IN_SCOPE_SQL, stop.greenhouse_id, stop.line_id, before))
             stopped = [_transition(run, status="failed", fail_reason=STOPPED) for run in runs]
             if stopped:
                 await conn.execute(_FAIL_SQL, [run.command_id for run in stopped], STOPPED, "pending")
         return True
 
     async def mark_run_sent(self, run: IrrigationCommandRow, sent_at: datetime) -> bool:
-        """The run ``sent`` with ``sent_at``, committed before the press. False when it is no longer pending."""
+        """The command ``sent`` with ``sent_at``, committed before the device call. False when it is no longer
+        pending."""
         sent = _transition(run, status="sent", sent_at=sent_at)
         async with self.pool.acquire() as conn:
             return await conn.fetchval(_SEND_SQL, sent.command_id, sent_at, _json(sent.args), SEND_WINDOW) is not None
@@ -274,9 +346,9 @@ def _note_blocked(reason: str | None) -> None:
     global _last_block_reason
     if reason != _last_block_reason:
         if reason is None:
-            log.info("irrigation bridge: writer preflight clear; commands can be sent")
+            log.info("irrigation commands: writer preflight clear; commands can be sent")
         else:
-            log.warning("irrigation bridge: nothing sent while the writer preflight reports %s", reason)
+            log.warning("irrigation commands: nothing sent while the writer preflight reports %s", reason)
     _last_block_reason = reason
 
 
@@ -400,11 +472,8 @@ async def _send_run(store: CommandStore, run: IrrigationCommandRow) -> None:
     )
 
 
-async def irrigation_sync(pool: asyncpg.Pool, *, store: CommandStore | None = None) -> None:
-    """One pass of the irrigation step; step 0 (the L01 bridge) only while the engine is not on the controller."""
-    if engine_on_connection():
-        return
-    store = store or CommandStore(pool)
+async def _bridge_pass(store: CommandStore) -> None:
+    """Step 0's other half: the L01 bridge, while the engine is not on the controller."""
     for row in await store.expire():
         log.info("irrigation bridge command=%s kind=%s failed: %s", row.command_id, row.kind, TOO_OLD)
     failure = esp32_push.bridge_preflight_failure()
@@ -424,3 +493,1355 @@ async def irrigation_sync(pool: asyncpg.Pool, *, store: CommandStore | None = No
         return
     for run in runs:
         await _send_run(store, run)
+
+
+# ── Commands with the engine (irrigation §6.1, step 1) ───────────────────────
+
+# Every command but a Stop waits out heap deferral, oldest first across the kinds.
+ENGINE_COMMAND_KINDS = ("run", "clear_fault", "override")
+BAD_ARGS = "bad_args"
+
+
+async def _send_engine_stop(store: CommandStore, stop: IrrigationCommandRow, memory: EngineMemory) -> None:
+    if esp32_push.bridge_preflight_failure() is not None:
+        return  # the writer went away mid-pass: the Stop stays pending
+    # sent_at first, then the relay snapshot, so any OFF read after the snapshot counts as read since sent_at.
+    sent_at = datetime.now(UTC)
+    live = shared.live_wet_relays()
+    relays_on = [relay for relay in stop_scope(stop.line_id) if live.get(relay) is not False]
+    if not await store.mark_stop_sent(stop, sent_at, relays_on, earlier_runs_only=True):
+        return
+    sent = _transition(stop, status="sent", sent_at=sent_at, args={**stop.args, "relays_on": relays_on})
+    # A Stop goes even with no open relay: a mist window between pulses and a run waiting to open have none.
+    result = await esp32_push.send_irrigation_command(sent)
+    if not result.ok:
+        memory.undelivered_stops.add(stop.command_id)
+    log.info(
+        "irrigation stop command=%s line=%s relays_on=%s ok=%s failure=%s",
+        stop.command_id,
+        stop.line_id or "all",
+        ",".join(relays_on) or "none",
+        result.ok,
+        result.failure.reason if result.failure else None,
+    )
+
+
+async def _resend_engine_stops(store: CommandStore, skip: set[UUID | None], memory: EngineMemory) -> None:
+    """Each Stop sent in the last 2 min goes again until its relays have read OFF since it was sent (one that read OFF
+    once is done, so VPD misting may pulse again), and until a send has returned when the first one failed."""
+    stops = await store.sent_stops(RESEND_WINDOW)
+    memory.undelivered_stops &= {stop.command_id for stop in stops}
+    for stop in stops:
+        if stop.command_id in skip or stop.sent_at is None:
+            continue
+        relays = stop.args.get("relays_on") or ()
+        waiting = [relay for relay in relays if not shared.wet_relay_read_off_since(relay, stop.sent_at)]
+        if not waiting and stop.command_id not in memory.undelivered_stops:
+            continue
+        result = await esp32_push.send_irrigation_command(stop)
+        if result.ok:
+            memory.undelivered_stops.discard(stop.command_id)
+        log.info(
+            "irrigation stop re-send command=%s line=%s waiting=%s ok=%s failure=%s",
+            stop.command_id,
+            stop.line_id or "all",
+            ",".join(waiting) or "none",
+            result.ok,
+            result.failure.reason if result.failure else None,
+        )
+
+
+async def _send_engine_command(store: CommandStore, row: IrrigationCommandRow) -> None:
+    """A run, clear-fault or override: marked ``sent`` first, so it goes at most once and never late."""
+    try:
+        esp32_push.irrigation_command_call(row)
+    except ValueError as exc:
+        log.error("irrigation command=%s kind=%s failed: %s", row.command_id, row.kind, exc)
+        await store.mark_failed(row, BAD_ARGS)
+        return
+    if esp32_push.bridge_preflight_failure() is not None:
+        return  # the writer went away mid-pass: the command stays pending
+    sent_at = datetime.now(UTC)
+    if not await store.mark_run_sent(row, sent_at):
+        return
+    sent = _transition(row, status="sent", sent_at=sent_at)
+    result = await esp32_push.send_irrigation_command(sent)
+    failure = result.failure.reason if result.failure else None
+    if esp32_push.policy_call_unsent(result):
+        await store.mark_failed(sent, failure)
+    log.info(
+        "irrigation command=%s kind=%s line=%s ok=%s failure=%s",
+        row.command_id,
+        row.kind,
+        row.line_id or "all",
+        result.ok,
+        failure,
+    )
+
+
+async def _send_engine_commands(store: CommandStore, memory: EngineMemory) -> None:
+    sent_now: set[UUID | None] = set()
+    for stop in await store.pending("stop"):
+        await _send_engine_stop(store, stop, memory)
+        sent_now.add(stop.command_id)
+    await _resend_engine_stops(store, sent_now, memory)
+    if shared.IRR_PROGRAM_ID not in shared.irrigation_readback:
+        return  # the engine ignores them until its first tick has started it: they wait, or expire
+    rows = [row for kind in ENGINE_COMMAND_KINDS for row in await store.pending(kind)]
+    if not rows:
+        return
+    if await store.heap_deferred():
+        log.info("irrigation: heap deferral holds %d pending command(s) for the next pass", len(rows))
+        return
+    for row in sorted(rows, key=lambda row: row.created_at or datetime.min.replace(tzinfo=UTC)):
+        await _send_engine_command(store, row)
+
+
+# ── The program: compile, push, confirm (irrigation §6.1, steps 2-4) ─────────
+
+GREENHOUSE_ID = "vallery"
+FULL_PASS_INTERVAL_S = 60.0
+# A commit's reject shows at once and its hash at the engine's next 5 s tick, so an old j= still showing this long after
+# the commit went out is this push's. A push with neither by the later mark is pushed again by the next full pass.
+REJECT_SETTLE_S = 6.0
+PUSH_SETTLE_S = 30.0
+# The delay before each retry of a rejected program; the last one repeats.
+REJECT_RETRY_S = (60.0, 300.0, 900.0)
+
+_LINES_SQL = (
+    "SELECT line_id, kind, device_idx, clean_partner, reserved, enabled, vpd_member, schedule_member, "
+    "daily_cap_min, vpd_reserve_min, paused_until, manual "
+    "FROM public.irrigation_line WHERE greenhouse_id = $1 ORDER BY device_idx"
+)
+_SLOT_COLUMNS = (
+    "slot_id, line_id, enabled, days, start_kind, start_min, on_s, count, gap_s, prewet_s, flush_s, degraded_only, "
+    "label, manual"
+)
+_ENABLED_SLOTS_SQL = (
+    f"SELECT {_SLOT_COLUMNS} FROM public.irrigation_slot WHERE greenhouse_id = $1 AND enabled ORDER BY slot_id"
+)
+_SITE_SQL = (
+    "SELECT id, param, value, created_at FROM public.v_desired_state_current "
+    "WHERE greenhouse_id = $1 AND param = ANY($2::text[])"
+)
+_NEWEST_PUSH_SQL = (
+    "SELECT revision, sha256 FROM public.irrigation_push WHERE greenhouse_id = $1 ORDER BY revision DESC LIMIT 1"
+)
+_PUSH_OF_HASH_SQL = (
+    "SELECT revision, confirmed_at FROM public.irrigation_push "
+    "WHERE greenhouse_id = $1 AND left(sha256, 16) = $2 ORDER BY revision DESC LIMIT 1"
+)
+_INSERT_PUSH_SQL = (
+    "INSERT INTO public.irrigation_push (greenhouse_id, sha256, bytes, site_desired_at, pushed_at) "
+    "VALUES ($1, $2, $3, $4, $5) RETURNING revision"
+)
+# The controller is not running this hash when it is pushed again, so the row is unconfirmed until it reports it.
+_REPUSH_SQL = (
+    "UPDATE public.irrigation_push SET pushed_at = $2, reject_code = NULL, confirmed_at = NULL WHERE revision = $1"
+)
+_CONFIRM_PUSH_SQL = "UPDATE public.irrigation_push SET confirmed_at = $2 WHERE revision = $1 AND confirmed_at IS NULL"
+_REJECT_PUSH_SQL = "UPDATE public.irrigation_push SET reject_code = $2 WHERE revision = $1"
+
+
+@dataclass(frozen=True)
+class ProgramSnapshot:
+    """One compile's inputs and result, from one read-only snapshot. ``site_desired_at`` is the newest ``created_at``
+    among the site rows."""
+
+    lines: tuple[LineSpec, ...]
+    slots: tuple[ScheduleSpec, ...]
+    compiled: CompiledProgram
+    site_desired_at: datetime | None
+
+
+def _schedule_specs(rows: Iterable[Any]) -> tuple[ScheduleSpec, ...]:
+    """The rows the model accepts. One it refuses is logged and left off the program, so it never blocks the others."""
+    specs = []
+    for row in rows:
+        try:
+            specs.append(ScheduleSpec.from_row(row))
+        except (ValidationError, ValueError) as exc:
+            log.error("irrigation_slot %s left off the program: %s", row["slot_id"], type(exc).__name__)
+    return tuple(specs)
+
+
+async def read_program(conn: asyncpg.Connection) -> ProgramSnapshot:
+    """The lines, the enabled schedules and the site values in one read-only REPEATABLE READ transaction, compiled.
+    A value with no row, or a released one, falls back to its registry default (``site_values``)."""
+    async with conn.transaction(isolation="repeatable_read", readonly=True):
+        line_rows = await conn.fetch(_LINES_SQL, GREENHOUSE_ID)
+        slot_rows = await conn.fetch(_ENABLED_SLOTS_SQL, GREENHOUSE_ID)
+        site_rows = await conn.fetch(_SITE_SQL, GREENHOUSE_ID, sorted(IRRIGATION_SITE_PARAMS))
+    lines = tuple(LineSpec.from_row(row) for row in line_rows)
+    slots = _schedule_specs(slot_rows)
+    return ProgramSnapshot(
+        lines=lines,
+        slots=slots,
+        compiled=compile_program(lines, slots, site_values(site_rows)),
+        site_desired_at=max((row["created_at"] for row in site_rows), default=None),
+    )
+
+
+class ProgramStore:
+    """The compile's read and ``irrigation_push``. The ingestor login holds INSERT on the table and UPDATE of
+    ``pushed_at``, ``confirmed_at`` and ``reject_code`` (migration 283)."""
+
+    def __init__(self, pool: asyncpg.Pool) -> None:
+        self.pool = pool
+
+    async def snapshot(self) -> ProgramSnapshot:
+        async with self.pool.acquire() as conn:
+            return await read_program(conn)
+
+    async def push_of_hash(self, hash16: str) -> Mapping[str, Any] | None:
+        """The newest push of the hash the controller reports, which need not be the newest push."""
+        async with self.pool.acquire() as conn:
+            return await conn.fetchrow(_PUSH_OF_HASH_SQL, GREENHOUSE_ID, hash16)
+
+    async def record_push(self, snapshot: ProgramSnapshot, pushed_at: datetime) -> int:
+        """Just before the device call: a new row only when the SHA-256 differs from the newest row's; a re-push of the
+        same hash (a retry, or a controller back on ``src=rom``) updates that row. Returns its revision."""
+        compiled = snapshot.compiled
+        async with self.pool.acquire() as conn, conn.transaction():
+            newest = await conn.fetchrow(_NEWEST_PUSH_SQL, GREENHOUSE_ID)
+            if newest is not None and newest["sha256"] == compiled.sha256:
+                await conn.execute(_REPUSH_SQL, newest["revision"], pushed_at)
+                return newest["revision"]
+            row = IrrigationPushRow(
+                sha256=compiled.sha256,
+                bytes=compiled.record,
+                site_desired_at=snapshot.site_desired_at,
+                pushed_at=pushed_at,
+            )
+            return await conn.fetchval(
+                _INSERT_PUSH_SQL, row.greenhouse_id, row.sha256, row.bytes, row.site_desired_at, row.pushed_at
+            )
+
+    async def confirm(self, revision: int, confirmed_at: datetime) -> None:
+        async with self.pool.acquire() as conn:
+            await conn.execute(_CONFIRM_PUSH_SQL, revision, confirmed_at)
+
+    async def record_reject(self, revision: int, code: str) -> None:
+        async with self.pool.acquire() as conn:
+            await conn.execute(_REJECT_PUSH_SQL, revision, code)
+
+
+def _program_id_reading() -> ProgramId | None:
+    """This connection's ``irr_program_id``, with no reading or text outside the grammar treated as none."""
+    text = shared.irrigation_readback.get(shared.IRR_PROGRAM_ID)
+    if text is None:
+        return None
+    try:
+        return parse_irr_program_id(text)
+    except ValueError:
+        return None
+
+
+def _push_reject() -> str | None:
+    state = irr_state_reading(shared.irrigation_readback.get(shared.IRR_STATE))
+    return None if state is None else state.reject
+
+
+async def _settle_attempt(program: ProgramStore, memory: EngineMemory, reading: ProgramId) -> None:
+    """Step 4 and the reject check of the last push: every pass, from memory, with no query until there is an answer."""
+    attempt = memory.attempt
+    if attempt is None:
+        return
+    if attempt.generation != shared.transport_generation:
+        memory.attempt = None  # a new connection: the next full pass compares the hash it reports
+        return
+    now = time.monotonic()
+    if attempt.sha256.startswith(reading.hash16):
+        await program.confirm(attempt.revision, datetime.now(UTC))
+        memory.attempt = None
+        memory.backoff = None
+        log.info("irrigation program confirmed revision=%s hash=%s", attempt.revision, reading.hash16)
+        return
+    if now - attempt.sent_at < REJECT_SETTLE_S:
+        return
+    code = _push_reject()
+    if code is None:
+        if now - attempt.sent_at >= PUSH_SETTLE_S:
+            memory.attempt = None
+        return
+    await program.record_reject(attempt.revision, code)
+    backoff = memory.backoff
+    stage = backoff.stage + 1 if backoff is not None and backoff.sha256 == attempt.sha256 else 1
+    delay = REJECT_RETRY_S[min(stage, len(REJECT_RETRY_S)) - 1]
+    memory.backoff = RejectBackoff(attempt.sha256, stage, now + delay)
+    memory.attempt = None
+    log.warning(
+        "irrigation program rejected revision=%s reject=%s stage=%d retry_in_s=%.0f",
+        attempt.revision,
+        code,
+        stage,
+        delay,
+    )
+
+
+def _full_pass_due(memory: EngineMemory) -> bool:
+    """On the wake flag, for a new connection, 60 s after the last full pass, or when a reject's retry falls due."""
+    if shared.irrigation_sync_requested.is_set() or memory.full_generation != shared.transport_generation:
+        return True
+    now = time.monotonic()
+    if memory.last_full_at is None or now - memory.last_full_at >= FULL_PASS_INTERVAL_S:
+        return True
+    backoff = memory.backoff
+    return backoff is not None and memory.attempt is None and memory.last_full_at < backoff.next_at <= now
+
+
+async def _push_program(
+    store: CommandStore, program: ProgramStore, memory: EngineMemory, snapshot: ProgramSnapshot
+) -> None:
+    """Step 3, once the compiled hash differs from the controller's."""
+    compiled = snapshot.compiled
+    if memory.attempt is not None and memory.attempt.sha256 == compiled.sha256:
+        return  # this push is still waiting for its readback
+    backoff = memory.backoff
+    if backoff is not None and backoff.sha256 == compiled.sha256 and time.monotonic() < backoff.next_at:
+        return
+    if esp32_push.bridge_preflight_failure() is not None:
+        return
+    if await store.pending("stop"):
+        shared.irrigation_sync_requested.set()  # the next pass, once the Stop has gone
+        return
+    if await store.heap_deferred():
+        log.info("irrigation: heap deferral holds the program push")
+        return
+    if backoff is not None and backoff.sha256 != compiled.sha256:
+        memory.backoff = None  # a newly edited program goes at once
+    revision = await program.record_push(snapshot, datetime.now(UTC))
+    result = await esp32_push.push_irrigation_program(compiled.record, compiled.sha256)
+    if result.ok:
+        memory.attempt = PushAttempt(compiled.sha256, revision, shared.transport_generation, time.monotonic())
+    else:
+        memory.attempt = None
+        shared.irrigation_sync_requested.set()  # a transport failure retries on the next pass
+    log.info(
+        "irrigation program push revision=%s hash=%s ok=%s failure=%s",
+        revision,
+        compiled.hash16,
+        result.ok,
+        result.failure.reason if result.failure else None,
+    )
+
+
+def _note_left_off(memory: EngineMemory, compiled: CompiledProgram) -> None:
+    if compiled.not_on_controller != memory.not_on_controller:
+        memory.not_on_controller = compiled.not_on_controller
+        if compiled.not_on_controller:
+            log.warning("irrigation schedules not on the controller: %s", list(compiled.not_on_controller))
+
+
+async def _program_steps(store: CommandStore, program: ProgramStore, memory: EngineMemory) -> None:
+    """Steps 2-4, inert until ``irr_program_id`` appears on this connection. The flag stays set until then, so the first
+    reading is compared at once."""
+    reading = _program_id_reading()
+    if reading is None:
+        return
+    await _settle_attempt(program, memory, reading)
+    if not _full_pass_due(memory):
+        return
+    shared.irrigation_sync_requested.clear()  # before the read, so a write during it wakes the next pass
+    memory.last_full_at = time.monotonic()
+    memory.full_generation = shared.transport_generation
+    snapshot = await program.snapshot()
+    _note_left_off(memory, snapshot.compiled)
+    # By the reported hash: an unconfirmed push the controller runs would leave the fence alert checking nothing.
+    reported = await program.push_of_hash(reading.hash16)
+    if reported is not None and reported["confirmed_at"] is None:
+        await program.confirm(reported["revision"], datetime.now(UTC))
+    if snapshot.compiled.hash16 == reading.hash16:
+        memory.attempt = None
+        memory.backoff = None
+        return
+    await _push_program(store, program, memory, snapshot)
+
+
+# ── The ledger (irrigation §6.1 and §6.2) ────────────────────────────────────
+
+# A token gone this long closes its row. It leaves just before the relay closes, and equipment_state is flushed every 5 s.
+LEDGER_CLOSE_AFTER = timedelta(seconds=15)
+# How long a closing row waits for an OFF edge the flush has not written yet.
+LEDGER_EDGE_WAIT = timedelta(seconds=120)
+# M3's bound: no occurrence lasts 24 h, and its join ignores a row older than that.
+LEDGER_OPEN_WINDOW = timedelta(hours=24)
+# A start reads a minute later here than on the controller at most; this absorbs that when finding an occurrence's day.
+OCCURRENCE_DAY_SLACK = timedelta(minutes=5)
+# A run-now opens at once; a later send on the line is not this run's command.
+RUN_COMMAND_SLACK = timedelta(seconds=30)
+_FERT_LINE_OF_PARTNER: Mapping[str, str] = {partner: fert for fert, partner in CLEAN_PARTNER.items()}
+_RINSE_CAUSES = frozenset({IrrigationCause.PREWET.value, IrrigationCause.FLUSH.value})
+# Outcomes that never opened a valve, so a run-now's has a row of its own.
+_UNOPENED_OUTCOMES = frozenset({RunOutcome.SKIPPED, RunOutcome.MISSED})
+
+_LEDGER_OPEN_ROWS_SQL = (
+    "SELECT id, line_id, slot_id, cause, started_at FROM public.irrigation_ledger "
+    "WHERE greenhouse_id = $1 AND ended_at IS NULL AND started_at > $2"
+)
+_SLOT_SQL = f"SELECT {_SLOT_COLUMNS} FROM public.irrigation_slot WHERE greenhouse_id = $1 AND slot_id = $2"
+_SLOT_ROW_SQL = (
+    "SELECT id FROM public.irrigation_ledger "
+    "WHERE greenhouse_id = $1 AND slot_id = $2 AND local_day = $3 AND cause = $4"
+)
+_RUN_NOW_ROW_SQL = (
+    "SELECT id FROM public.irrigation_ledger "
+    "WHERE greenhouse_id = $1 AND slot_id IS NULL AND line_id = $2 AND cause = $3 AND started_at = $4"
+)
+_RUN_COMMAND_SQL = (
+    "SELECT command_id, actor FROM public.irrigation_command "
+    "WHERE greenhouse_id = $1 AND kind = 'run' AND status = 'sent' AND line_id = ANY($2::text[]) "
+    "AND sent_at > $3 AND sent_at <= $4 ORDER BY sent_at DESC LIMIT 1"
+)
+_SLOT_OUTCOME_SQL = (
+    "SELECT outcome, reason, event_seq FROM public.irrigation_ledger "
+    "WHERE greenhouse_id = $1 AND slot_id = $2 AND local_day = $3 AND outcome IS NOT NULL LIMIT 1"
+)
+_COMMAND_OUTCOME_SQL = (
+    "SELECT outcome, reason, event_seq FROM public.irrigation_ledger "
+    "WHERE greenhouse_id = $1 AND command_id = $2 AND outcome IS NOT NULL LIMIT 1"
+)
+_INSERT_LEDGER_SQL = (
+    "INSERT INTO public.irrigation_ledger (greenhouse_id, line_id, slot_id, local_day, cause, started_at, open_s, "
+    "outcome, reason, event_seq, command_id, actor) "
+    "VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $8, $9, $10, $11) "
+    "ON CONFLICT (greenhouse_id, slot_id, local_day, cause) WHERE slot_id IS NOT NULL DO NOTHING RETURNING id"
+)
+_REOPEN_LEDGER_SQL = "UPDATE public.irrigation_ledger SET ended_at = NULL WHERE id = $1 AND ended_at IS NOT NULL"
+_CLOSE_LEDGER_SQL = "UPDATE public.irrigation_ledger SET ended_at = $2, open_s = $3, pulses = $4 WHERE id = $1"
+_RELAY_SEED_SQL = (
+    "SELECT bool_or(state) FROM public.equipment_state "
+    "WHERE equipment = $1 AND COALESCE(greenhouse_id, 'vallery') = $2 AND ts < $3 AND ts > $3 - interval '24 hours' "
+    "GROUP BY ts ORDER BY ts DESC LIMIT 1"
+)
+_RELAY_EDGES_SQL = (
+    "SELECT ts, bool_or(state) AS state FROM public.equipment_state "
+    "WHERE equipment = $1 AND COALESCE(greenhouse_id, 'vallery') = $2 AND ts >= $3 AND ts <= $4 "
+    "GROUP BY ts ORDER BY ts"
+)
+_STORED_EVENTS_SQL = (
+    "SELECT event_seq, slot_id, local_day FROM public.irrigation_ledger "
+    "WHERE greenhouse_id = $1 AND event_seq = ANY($2::integer[])"
+)
+_OCCURRENCE_ROWS_SQL = (
+    "SELECT count(*) FROM public.irrigation_ledger WHERE greenhouse_id = $1 AND slot_id = $2 AND local_day = $3"
+)
+_SLOT_DEGRADED_SQL = "SELECT degraded_only FROM public.irrigation_slot WHERE greenhouse_id = $1 AND slot_id = $2"
+_OCCURRENCE_OUTCOME_SQL = (
+    "UPDATE public.irrigation_ledger SET outcome = $4, reason = $5, event_seq = $6 "
+    "WHERE greenhouse_id = $1 AND slot_id = $2 AND local_day = $3 AND outcome IS NULL"
+)
+# A run-now's row by line: the newest on this local day with no outcome that opened a valve. A fertilizer run-now's
+# feed is on its own line and its prewet or flush on the clean partner.
+_RUN_NOW_CANDIDATE_SQL = (
+    "SELECT id, command_id FROM public.irrigation_ledger "
+    "WHERE greenhouse_id = $1 AND slot_id IS NULL AND outcome IS NULL AND local_day = $2 AND started_at IS NOT NULL "
+    "AND ((line_id = $3 AND cause = $4) OR (line_id = $5 AND cause = ANY($6::text[]))) "
+    "AND NOT (id = ANY($7::bigint[])) ORDER BY started_at DESC, id DESC LIMIT 1"
+)
+_ROW_OUTCOME_SQL = "UPDATE public.irrigation_ledger SET outcome = $2, reason = $3, event_seq = $4 WHERE id = $1"
+_COMMAND_ROWS_OUTCOME_SQL = (
+    "UPDATE public.irrigation_ledger SET outcome = $3, reason = $4, event_seq = $5 "
+    "WHERE greenhouse_id = $1 AND command_id = $2 AND outcome IS NULL"
+)
+
+
+def occurrence_day(spec: ScheduleSpec | None, started_at: datetime) -> date:
+    """The local day a slot's run belongs to, the day ``irr_events`` names: its weekday matched that day, although a
+    solar start past midnight or a late start can open the next morning. With its schedule gone, the day it opened."""
+    opened = started_at.astimezone(local_tz()).date()
+    if spec is not None:
+        for day in (opened, opened - timedelta(days=1)):
+            if WEEKDAYS[day.weekday()] in spec.days and occurrence_start(spec.start, day) <= (
+                started_at + OCCURRENCE_DAY_SLACK
+            ):
+                return day
+    return opened
+
+
+def _run_started_at(run: IrrRun, observed_at: datetime) -> datetime:
+    """A token's start; with no valid clock on the controller it reads 0, and when the ingestor saw it stands in."""
+    return datetime.fromtimestamp(run.start_epoch, UTC) if run.start_epoch else observed_at
+
+
+def _occurrence_cause(line_id: str, degraded_only: bool) -> IrrigationCause:
+    """The cause of a slot's outcome with no row: it never opened a valve, so no token named it."""
+    if LINE_KIND[line_id] in ("fert_drip", "fert_mister"):
+        return IrrigationCause.FEED
+    return IrrigationCause.FALLBACK if degraded_only else IrrigationCause.SCHEDULE
+
+
+def run_close(
+    edges: Sequence[tuple[datetime, bool]],
+    *,
+    started_at: datetime,
+    left_at: datetime,
+    planned_end: datetime | None,
+    seed_on: bool,
+    watched: bool,
+    now: datetime,
+) -> RunClose | None:
+    """``ended_at``, ``open_s`` and ``pulses`` from the line's relay edges since ``started_at``, or None while the OFF
+    edge may still be on its way.
+
+    ``ended_at`` is the last OFF edge, or the token's planned end (never past when the token left) if the ingestor missed
+    the edge. It missed it when the token left across a reconnect (``watched`` false): the reconnect's own relay row is
+    not an edge. ``seed_on`` is the relay's state before ``started_at``. An ON edge after the token left is another run's.
+    """
+    known_end = None if planned_end is None else min(planned_end, left_at)
+    on_since = started_at if seed_on else None
+    spans: list[tuple[datetime, datetime]] = []
+    for ts, on in edges:
+        if on:
+            if on_since is None and ts <= left_at:
+                on_since = ts
+        elif on_since is not None:
+            spans.append((on_since, ts))
+            on_since = None
+    if watched or known_end is None:
+        if on_since is not None and now - left_at < LEDGER_EDGE_WAIT:
+            return None
+        ended = spans[-1][1] if on_since is None and spans else (known_end or left_at)
+    else:
+        ended = known_end
+    ended = max(ended, started_at)
+    if on_since is not None:
+        spans.append((on_since, ended))
+    open_seconds = [(min(off, ended) - on).total_seconds() for on, off in spans]
+    return RunClose(
+        ended_at=ended,
+        open_s=round(sum(seconds for seconds in open_seconds if seconds > 0)),
+        pulses=sum(seconds > 0 for seconds in open_seconds),
+    )
+
+
+class LedgerStore:
+    """``irrigation_ledger``, written only by the ingestor: INSERT, and UPDATE of ``ended_at``, ``open_s``, ``pulses``,
+    ``outcome``, ``reason`` and ``event_seq`` (migration 283)."""
+
+    def __init__(self, pool: asyncpg.Pool) -> None:
+        self.pool = pool
+
+    async def open_rows(self, now: datetime) -> list[Any]:
+        """Rows left open, as a restart finds them."""
+        async with self.pool.acquire() as conn:
+            return await conn.fetch(_LEDGER_OPEN_ROWS_SQL, GREENHOUSE_ID, now - LEDGER_OPEN_WINDOW)
+
+    async def _insert(self, conn: Any, row: IrrigationLedgerRow) -> int | None:
+        """One row, validated first. None when the occurrence stage already has one."""
+        return await conn.fetchval(
+            _INSERT_LEDGER_SQL,
+            row.greenhouse_id,
+            row.line_id,
+            row.slot_id,
+            row.local_day,
+            row.cause.value,
+            row.started_at,
+            None if row.outcome is None else row.outcome.value,
+            row.reason,
+            row.event_seq,
+            row.command_id,
+            row.actor,
+        )
+
+    async def _run_command(self, conn: Any, line_ids: list[str], at: datetime) -> Any:
+        return await conn.fetchrow(
+            _RUN_COMMAND_SQL, GREENHOUSE_ID, line_ids, at - LEDGER_OPEN_WINDOW, at + RUN_COMMAND_SLACK
+        )
+
+    async def record_start(self, run: IrrRun, observed_at: datetime) -> int:
+        """A new run token's row, or the row it already has: a token back after a block, a VPD pulse or a restart with
+        its row closed is the same run, so the row opens again. A fertilizer stage's flush starts after the outcome,
+        so it takes its occurrence's (a run-now's: its command's)."""
+        started_at = _run_started_at(run, observed_at)
+        cause = run.cause.value
+        async with self.pool.acquire() as conn, conn.transaction():
+            command = None
+            if run.slot_id is None:
+                row_id = await conn.fetchval(_RUN_NOW_ROW_SQL, GREENHOUSE_ID, run.line_id, cause, started_at)
+                local_day = started_at.astimezone(local_tz()).date()
+                if row_id is None:
+                    # A prewet or flush names the clean partner; its command is on the fertilizer line.
+                    line = (
+                        _FERT_LINE_OF_PARTNER.get(run.line_id, run.line_id) if cause in _RINSE_CAUSES else run.line_id
+                    )
+                    command = await self._run_command(conn, [line], started_at)
+            else:
+                slot = await conn.fetchrow(_SLOT_SQL, GREENHOUSE_ID, run.slot_id)
+                spec = None if slot is None else _schedule_specs([slot])
+                local_day = occurrence_day(spec[0] if spec else None, started_at)
+                row_id = await conn.fetchval(_SLOT_ROW_SQL, GREENHOUSE_ID, run.slot_id, local_day, cause)
+            if row_id is not None:
+                await conn.execute(_REOPEN_LEDGER_SQL, row_id)
+                return row_id
+            settled = None
+            if run.cause is IrrigationCause.FLUSH:
+                if run.slot_id is not None:
+                    settled = await conn.fetchrow(_SLOT_OUTCOME_SQL, GREENHOUSE_ID, run.slot_id, local_day)
+                elif command is not None:
+                    settled = await conn.fetchrow(_COMMAND_OUTCOME_SQL, GREENHOUSE_ID, command["command_id"])
+            return await self._insert(
+                conn,
+                IrrigationLedgerRow(
+                    line_id=run.line_id,
+                    slot_id=run.slot_id,
+                    local_day=local_day,
+                    cause=run.cause,
+                    started_at=started_at,
+                    outcome=None if settled is None else settled["outcome"],
+                    reason=None if settled is None else settled["reason"],
+                    event_seq=None if settled is None else settled["event_seq"],
+                    command_id=None if command is None else command["command_id"],
+                    actor=None if command is None else command["actor"],
+                ),
+            )
+
+    async def relay_edges(self, relay: str, start: datetime, end: datetime) -> tuple[bool, list[tuple[datetime, bool]]]:
+        """The relay's state before ``start`` and its edges from then to ``end``, read as v_water_relay_runs reads them:
+        any row on at a timestamp."""
+        async with self.pool.acquire() as conn:
+            seed = await conn.fetchval(_RELAY_SEED_SQL, relay, GREENHOUSE_ID, start)
+            rows = await conn.fetch(_RELAY_EDGES_SQL, relay, GREENHOUSE_ID, start, end)
+        return bool(seed), [(row["ts"], bool(row["state"])) for row in rows]
+
+    async def close(self, row_id: int, closing: RunClose) -> None:
+        async with self.pool.acquire() as conn:
+            await conn.execute(_CLOSE_LEDGER_SQL, row_id, closing.ended_at, closing.open_s, closing.pulses)
+
+    async def _record_occurrence_outcome(self, conn: Any, event: IrrEvent) -> None:
+        """Every stage of the occurrence takes it. A row already settled keeps its first outcome, so an old entry never
+        rewrites one. An entry with no row (``skipped``, ``missed`` or ``cap`` before a valve opened) inserts one."""
+        reason, seq = event.reason, event.seq
+        outcome = event.outcome.value
+        if await conn.fetchval(_OCCURRENCE_ROWS_SQL, GREENHOUSE_ID, event.slot_id, event.local_day):
+            await conn.execute(
+                _OCCURRENCE_OUTCOME_SQL, GREENHOUSE_ID, event.slot_id, event.local_day, outcome, reason, seq
+            )
+            return
+        degraded = await conn.fetchval(_SLOT_DEGRADED_SQL, GREENHOUSE_ID, event.slot_id)
+        await self._insert(
+            conn,
+            IrrigationLedgerRow(
+                line_id=event.line_id,
+                slot_id=event.slot_id,
+                local_day=event.local_day,
+                cause=_occurrence_cause(event.line_id, bool(degraded)),
+                outcome=event.outcome,
+                reason=reason,
+                event_seq=seq,
+            ),
+        )
+
+    async def _record_run_now_outcome(self, conn: Any, event: IrrEvent, running: Sequence[int], now: datetime) -> None:
+        """A run-now has no key, so it finds its row by line: the newest with no outcome that is not still running. A
+        fertilizer run-now's stages share its command. A refusal opened nothing and gets a row of its own."""
+        outcome, reason, seq = event.outcome.value, event.reason, event.seq
+        if event.outcome not in _UNOPENED_OUTCOMES:
+            partner = CLEAN_PARTNER.get(event.line_id)
+            own_cause = IrrigationCause.FEED if partner else IrrigationCause.RUN_NOW
+            row = await conn.fetchrow(
+                _RUN_NOW_CANDIDATE_SQL,
+                GREENHOUSE_ID,
+                event.local_day,
+                event.line_id,
+                own_cause.value,
+                partner,
+                sorted(_RINSE_CAUSES),
+                list(running),
+            )
+            if row is not None:
+                await conn.execute(_ROW_OUTCOME_SQL, row["id"], outcome, reason, seq)
+                if row["command_id"] is not None:
+                    await conn.execute(
+                        _COMMAND_ROWS_OUTCOME_SQL, GREENHOUSE_ID, row["command_id"], outcome, reason, seq
+                    )
+                return
+        command = await self._run_command(conn, [event.line_id], now)
+        await self._insert(
+            conn,
+            IrrigationLedgerRow(
+                line_id=event.line_id,
+                local_day=event.local_day,
+                cause=IrrigationCause.RUN_NOW,
+                outcome=event.outcome,
+                reason=reason,
+                event_seq=seq,
+                command_id=None if command is None else command["command_id"],
+                actor=None if command is None else command["actor"],
+            ),
+        )
+
+    async def record_outcomes(self, events: Sequence[IrrEvent], running: Sequence[int], now: datetime) -> None:
+        """The ring's entries, in one transaction. An entry already stored (its sequence, slot and day) inserts nothing,
+        so a replayed text does nothing and the first read after a reconnect fills what the ring still holds. Matching on
+        identity rather than on the newest stored sequence also survives a power cut, which restarts the sequence. Newest
+        first, so two run-nows' outcomes in one text find their own rows: each takes the newest row left."""
+        if not events:
+            return
+        async with self.pool.acquire() as conn, conn.transaction():
+            stored = {
+                (row["event_seq"], row["slot_id"], row["local_day"])
+                for row in await conn.fetch(_STORED_EVENTS_SQL, GREENHOUSE_ID, [event.seq for event in events])
+            }
+            for event in reversed(events):
+                if (event.seq, event.slot_id, event.local_day) in stored:
+                    continue
+                if event.slot_id is None:
+                    await self._record_run_now_outcome(conn, event, running, now)
+                else:
+                    await self._record_occurrence_outcome(conn, event)
+
+
+def _run_key(run: IrrRun) -> tuple[str, str, int | None, int]:
+    return (run.line_id, run.cause.value, run.slot_id, run.start_epoch)
+
+
+async def _apply_state_change(ledger: LedgerStore, memory: EngineMemory, change: shared.IrrStateChange) -> None:
+    """One ``irr_state`` reading: a new non-VPD run token gets its row, and a tracked one no longer named has left."""
+    state = irr_state_reading(change.text)
+    if state is None:
+        if change.text != memory.bad_state_text:
+            memory.bad_state_text = change.text
+            log.error("irr_state outside the grammar ignored (%d characters)", len(change.text))
+        return
+    named = set()
+    for run in state.runs:
+        if run.cause is IrrigationCause.VPD:
+            continue
+        key = _run_key(run)
+        named.add(key)
+        tracked = memory.open_runs.get(key)
+        if tracked is None:
+            row_id = await ledger.record_start(run, change.observed_at)
+            tracked = OpenRun(row_id, run.line_id, _run_started_at(run, change.observed_at))
+            memory.open_runs[key] = tracked
+        tracked.left_at = tracked.left_generation = None
+        tracked.generation = change.generation
+        if run.end_epoch:
+            tracked.planned_end = datetime.fromtimestamp(run.end_epoch, UTC)
+    for key, tracked in memory.open_runs.items():
+        if key not in named and tracked.left_at is None:
+            tracked.left_at = change.observed_at
+            tracked.left_generation = change.generation
+
+
+async def _close_left_runs(ledger: LedgerStore, memory: EngineMemory, now: datetime) -> None:
+    for key, tracked in list(memory.open_runs.items()):
+        if tracked.left_at is None or now - tracked.left_at < LEDGER_CLOSE_AFTER:
+            continue
+        relay = LINE_RELAYS.get(tracked.line_id)
+        until = min(now, tracked.left_at + LEDGER_EDGE_WAIT)
+        seed_on, edges = (False, []) if relay is None else await ledger.relay_edges(relay, tracked.started_at, until)
+        closing = run_close(
+            edges,
+            started_at=tracked.started_at,
+            left_at=tracked.left_at,
+            planned_end=tracked.planned_end,
+            seed_on=seed_on,
+            watched=tracked.generation == tracked.left_generation,
+            now=now,
+        )
+        if closing is None:
+            continue
+        await ledger.close(tracked.row_id, closing)
+        del memory.open_runs[key]
+
+
+async def _sync_ledger(ledger: LedgerStore, memory: EngineMemory) -> None:
+    now = datetime.now(UTC)
+    # Read first: the controller publishes irr_state before irr_events, so every reading this text follows is queued
+    # below. A text read after them could name a run whose token has not left yet, and take a row of its own.
+    text = shared.irrigation_readback.get(shared.IRR_EVENTS)
+    if not memory.open_runs_loaded:
+        for row in await ledger.open_rows(now):
+            key = (row["line_id"], row["cause"], row["slot_id"], int(row["started_at"].timestamp()))
+            memory.open_runs.setdefault(key, OpenRun(row["id"], row["line_id"], row["started_at"]))
+        memory.open_runs_loaded = True
+    changes = shared.irr_state_changes
+    while changes:
+        try:
+            await _apply_state_change(ledger, memory, changes[0])
+        except ValidationError as exc:
+            log.error("irrigation_ledger row dropped: %d validation error(s)", exc.error_count())
+        changes.popleft()  # only now: a database error keeps the reading for the next pass
+    await _close_left_runs(ledger, memory, now)
+    if text is None or text == memory.events_text:
+        return
+    running = [tracked.row_id for tracked in memory.open_runs.values() if tracked.left_at is None]
+    try:
+        await ledger.record_outcomes(parse_irr_events(text), running, now)
+    except ValueError as exc:  # text outside the grammar, or a row the model refuses (ValidationError is a ValueError)
+        log.error("irr_events ignored (%d characters): %s", len(text), type(exc).__name__)
+    memory.events_text = text
+
+
+# ── One pass ─────────────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class PushAttempt:
+    """The last push that went out, waiting for ``irr_program_id`` or a reject."""
+
+    sha256: str
+    revision: int
+    generation: int
+    sent_at: float  # monotonic
+
+
+@dataclass(frozen=True)
+class RejectBackoff:
+    """A rejected program's retry stage, kept in memory: a newly edited program goes at once."""
+
+    sha256: str
+    stage: int
+    next_at: float  # monotonic
+
+
+@dataclass
+class OpenRun:
+    """A ledger row whose run token is out, or has left and is waiting to close."""
+
+    row_id: int
+    line_id: str
+    started_at: datetime
+    planned_end: datetime | None = None
+    generation: int | None = None  # the connection that last named the token
+    left_at: datetime | None = None
+    left_generation: int | None = None
+
+
+@dataclass
+class EngineMemory:
+    """What the pass keeps between ticks. All of it can be lost: a restart compares the hash again, reloads the open
+    rows and rereads the ring."""
+
+    last_full_at: float | None = None
+    full_generation: int | None = None
+    attempt: PushAttempt | None = None
+    backoff: RejectBackoff | None = None
+    undelivered_stops: set[UUID | None] = field(default_factory=set)
+    open_runs: dict[tuple[str, str, int | None, int], OpenRun] = field(default_factory=dict)
+    open_runs_loaded: bool = False
+    events_text: str | None = None
+    not_on_controller: tuple[int, ...] = ()
+    bad_state_text: str | None = None
+    no_engine_generation: int | None = None
+
+
+_memory = EngineMemory()
+
+
+def _note_no_engine(memory: EngineMemory) -> None:
+    """Once per connection. VD-64's ``irr_engine`` row tells the API, which reports ``program.src`` null."""
+    if shared.esp32.get("client") is None or memory.no_engine_generation == shared.transport_generation:
+        return
+    memory.no_engine_generation = shared.transport_generation
+    log.info("irrigation engine not on controller: only the L01 bridge acts on this connection")
+
+
+async def _engine_pass(store: CommandStore, program: ProgramStore, ledger: LedgerStore, memory: EngineMemory) -> None:
+    """Commands on every pass; the ledger and the program steps once ``irr_program_id`` has appeared. Neither of those
+    can keep a command from going out, or each other from running."""
+    for row in await store.expire():
+        log.info("irrigation command=%s kind=%s failed: %s", row.command_id, row.kind, TOO_OLD)
+    failure = esp32_push.bridge_preflight_failure()
+    _note_blocked(failure)
+    if failure is None:
+        await _send_engine_commands(store, memory)
+    if shared.IRR_PROGRAM_ID not in shared.irrigation_readback:
+        return
+    try:
+        await _sync_ledger(ledger, memory)
+    except Exception as exc:
+        log.error("irrigation ledger step failed: %s", type(exc).__name__)
+    await _program_steps(store, program, memory)
+
+
+async def irrigation_sync(
+    pool: asyncpg.Pool,
+    *,
+    store: CommandStore | None = None,
+    program: ProgramStore | None = None,
+    ledger: LedgerStore | None = None,
+) -> None:
+    """One pass of the irrigation step: the engine's when both its services are on this connection, else the bridge."""
+    store = store or CommandStore(pool)
+    if engine_on_connection():
+        await _engine_pass(store, program or ProgramStore(pool), ledger or LedgerStore(pool), _memory)
+        return
+    _note_no_engine(_memory)
+    await _bridge_pass(store)
+
+
+# ── Section 11 of Iris's context pack (VD-60) ───────────────────────────────
+
+GREENHOUSE_ID = "vallery"
+# The architecture §7 test, as verdify_services.reads holds it (this image does not carry verdify_services).
+HEARTBEAT_STALE_S = 180
+CLIMATE_REPORTING_S = 300
+CONTEXT_DEFAULT_HOURS = 24
+CONTEXT_MAX_HOURS = 144  # always inside agenda()'s 7 local days
+CONTEXT_MAX_LINES = 60
+# With the 11 lines these leave the section under its budget whatever is stored.
+CONTEXT_MAX_OCCURRENCES = 24
+CONTEXT_MAX_MANUAL = 14
+CONTEXT_FOOTER = "The irrigation tools change watering only; they do not count as your plan for a trigger."
+CONTEXT_DB_TIMEOUT_S = 15
+
+_CONTEXT_CLOCK_SQL = """
+SELECT now() AS at,
+       (SELECT max(ts) FROM system_state
+         WHERE entity = 'ingestor_heartbeat' AND ts > now() - interval '1 day') AS heartbeat_at,
+       (SELECT max(ts) FROM climate WHERE ts > now() - interval '1 day') AS climate_at,
+       (SELECT value FROM system_state
+         WHERE entity = $1 AND coalesce(greenhouse_id, 'vallery') = $2 AND ts > now() - interval '400 days'
+         ORDER BY ts DESC LIMIT 1) AS engine
+"""
+_CONTEXT_LINES_SQL = """
+SELECT line_id, name, zone, kind, device_idx, clean_partner, reserved, enabled, vpd_member, schedule_member,
+       daily_cap_min, vpd_reserve_min, paused_until, manual, source, updated_by, updated_at, equipment,
+       relay_on, relay_at, irr_state, irr_state_at
+  FROM v_irrigation_line_state
+ WHERE greenhouse_id = $1
+ ORDER BY device_idx
+"""
+_CONTEXT_SLOTS_SQL = """
+SELECT slot_id, line_id, enabled, days, start_kind, start_min, on_s, count, gap_s, prewet_s, flush_s, degraded_only,
+       label, manual, source, updated_by, updated_at
+  FROM irrigation_slot
+ WHERE greenhouse_id = $1
+ ORDER BY slot_id
+"""
+# Where each relay's run still on began, as M3 and irrigation_status start it: the newest conflicting timestamp since
+# the relay was last off, else the first timestamp after that. The view's relay_at is the newest row, which a
+# reconnect snapshot moves, so it cannot say whether a run started within 30 s of its command.
+_CONTEXT_ON_EDGES_SQL = """
+SELECT w.equipment, coalesce(last_conflict.ts, first_on.ts) AS on_edge
+  FROM unnest($1::text[]) AS w(equipment)
+  LEFT JOIN LATERAL (SELECT es.ts FROM equipment_state AS es
+                      WHERE es.equipment = w.equipment AND coalesce(es.greenhouse_id, 'vallery') = $2
+                        AND es.ts < now()
+                      GROUP BY es.ts
+                     HAVING NOT bool_or(es.state)
+                      ORDER BY es.ts DESC
+                      LIMIT 1) AS last_off ON true
+  LEFT JOIN LATERAL (SELECT es.ts FROM equipment_state AS es
+                      WHERE es.equipment = w.equipment AND coalesce(es.greenhouse_id, 'vallery') = $2
+                        AND es.ts < now() AND (last_off.ts IS NULL OR es.ts > last_off.ts)
+                      GROUP BY es.ts
+                     HAVING count(DISTINCT es.state) > 1
+                      ORDER BY es.ts DESC
+                      LIMIT 1) AS last_conflict ON true
+  LEFT JOIN LATERAL (SELECT es.ts FROM equipment_state AS es
+                      WHERE last_conflict.ts IS NULL
+                        AND es.equipment = w.equipment AND coalesce(es.greenhouse_id, 'vallery') = $2
+                        AND es.ts < now() AND (last_off.ts IS NULL OR es.ts > last_off.ts)
+                      ORDER BY es.ts
+                      LIMIT 1) AS first_on ON true
+"""
+# The newest sent run command at or before the run's ON edge, unless a ledger row holds that run: M3's rule asks the
+# ledger first, so such a run is no bridge run here, as in irrigation_status. It takes a rollback to the bridge with an
+# engine row whose end never arrived.
+_CONTEXT_BRIDGE_SQL = """
+SELECT max(c.sent_at) FROM irrigation_command AS c
+ WHERE c.greenhouse_id = $1 AND c.line_id = $2 AND c.kind = 'run' AND c.status = 'sent'
+   AND c.sent_at <= $3::timestamptz
+   AND NOT EXISTS (SELECT 1 FROM irrigation_ledger AS l
+                    WHERE l.greenhouse_id = $1 AND l.line_id = $2
+                      AND l.started_at <= $3::timestamptz AND l.started_at > $3::timestamptz - interval '24 hours'
+                      AND coalesce(l.ended_at, now()) >= $3::timestamptz)
+"""
+# M4's day-bounded reader: the same rows as v_irrigation_minutes_daily, without its scan of every edge since 2024.
+_CONTEXT_MINUTES_SQL = """
+SELECT line_id, minutes FROM fn_irrigation_minutes_daily($1::date, $1::date) WHERE greenhouse_id = $2
+"""
+_CONTEXT_OUTCOMES_SQL = """
+SELECT DISTINCT ON (line_id) line_id, outcome, reason, coalesce(ended_at, started_at, recorded_at) AS at
+  FROM irrigation_ledger
+ WHERE greenhouse_id = $1 AND (ended_at IS NOT NULL OR outcome IS NOT NULL)
+ ORDER BY line_id, coalesce(ended_at, started_at, recorded_at) DESC, id DESC
+"""
+_CONTEXT_ARMED_SQL = "SELECT experiment_id FROM fn_mcp_armed_assignment_context()"
+
+
+class _ContextModel(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class ContextOutcome(_ContextModel):
+    outcome: RunOutcome
+    at: AwareDatetime
+    reason: str | None = None
+
+
+class ContextLine(_ContextModel):
+    """One line's row: the fields ``irrigation_status`` gives it, with its state from the same ``line_state()``."""
+
+    line_id: LineId
+    enabled: bool
+    vpd_member: bool | None = None
+    schedule_member: bool | None = None
+    manual: bool
+    paused_until: AwareDatetime | None = None
+    fault: FaultKind | None = None
+    fault_until: AwareDatetime | None = None
+    minutes_today: float | None = None  # null for a day with no data, never 0
+    daily_cap_min: int
+    last_outcome: ContextOutcome | None = None
+    state: LineState
+
+
+class ContextOccurrence(_ContextModel):
+    slot_id: int
+    line_id: LineId
+    planned_start: AwareDatetime
+    minutes: float
+    pulses: int | None = None
+    status: str
+    reason: str | None = None
+
+
+class ContextManualItem(_ContextModel):
+    """A schedule or a line a person holds: who and since."""
+
+    item: str
+    updated_by: str
+    source: str
+    updated_at: AwareDatetime
+
+
+class IrrigationContext(_ContextModel):
+    at: AwareDatetime
+    hours: int = Field(ge=1, le=CONTEXT_MAX_HOURS)
+    engine: bool
+    reporting: bool
+    armed_experiment_id: str | None = None
+    lines: tuple[ContextLine, ...]
+    occurrences: tuple[ContextOccurrence, ...] = ()
+    manual_items: tuple[ContextManualItem, ...] = ()
+
+
+def context_occurrences(plan: Agenda, *, at: datetime, hours: int, engine: bool) -> list[ContextOccurrence]:
+    """The agenda's occurrences in [``at``, ``at`` + ``hours``). With no engine nothing runs them, so each one says
+    it arrives with the irrigation firmware, and a planned one reads blocked, as API-IRR-02 reads it."""
+    until = at + timedelta(hours=hours)
+    out = []
+    for item in plan.occurrences:
+        if not at <= item.planned_start < until:
+            continue
+        status, reason = item.status, item.reason
+        if not engine:
+            status = "blocked" if item.status == "planned" else item.status
+            reason = NO_ENGINE if reason is None else f"{reason}; {NO_ENGINE}"
+        out.append(
+            ContextOccurrence(
+                slot_id=item.slot_id,
+                line_id=item.line_id,
+                planned_start=item.planned_start,
+                minutes=item.minutes,
+                pulses=item.pulses,
+                status=status,
+                reason=reason,
+            )
+        )
+    return out
+
+
+def _context_minutes(rows: Iterable[Mapping[str, Any]], line_id: str, *, no_data: bool) -> float | None:
+    """A line's minutes today: null for a day with no data; a line that did not run read 0."""
+    if no_data:
+        return None
+    return float(sum((Decimal(str(row["minutes"])) for row in rows if row["line_id"] == line_id), Decimal(0)))
+
+
+def context_lines(
+    line_rows: Sequence[Mapping[str, Any]],
+    *,
+    engine: bool,
+    reporting: bool,
+    now: datetime,
+    on_edges: Mapping[str, datetime],
+    bridge_run_at: datetime | None,
+    minutes_rows: Sequence[Mapping[str, Any]],
+    outcome_rows: Sequence[Mapping[str, Any]],
+    no_data_today: bool,
+) -> list[ContextLine]:
+    """Each ``v_irrigation_line_state`` row through ``line_state()``, with the keyword arguments
+    ``verdify_services.irrigation.reads.status`` gives it, and the rest of the line's row."""
+    outcomes = {row["line_id"]: row for row in outcome_rows}
+    lines = []
+    for row in line_rows:
+        line_id = row["line_id"]
+        edge = on_edges.get(row["equipment"])
+        source = {**dict(row), "relay_at": edge} if edge is not None else row
+        fields = line_state(
+            source,
+            engine=engine,
+            reporting=reporting,
+            now=now,
+            bridge_run_at=bridge_run_at if line_id == BRIDGE_RUN_LINE else None,
+        )
+        outcome = outcomes.get(line_id)
+        lines.append(
+            ContextLine(
+                line_id=line_id,
+                enabled=row["enabled"],
+                vpd_member=row["vpd_member"],
+                schedule_member=row["schedule_member"],
+                manual=row["manual"],
+                paused_until=row["paused_until"],
+                fault=fields.fault,
+                fault_until=fields.fault_until,
+                minutes_today=_context_minutes(minutes_rows, line_id, no_data=no_data_today),
+                daily_cap_min=row["daily_cap_min"],
+                last_outcome=(
+                    None
+                    if outcome is None
+                    else ContextOutcome(
+                        outcome=outcome["outcome"] or RunOutcome.UNKNOWN,
+                        at=outcome["at"],
+                        reason=None
+                        if outcome["reason"] is None
+                        else REASON_WORDS.get(outcome["reason"], outcome["reason"]),
+                    )
+                ),
+                state=fields.state,
+            )
+        )
+    return lines
+
+
+def _manual_items(
+    line_rows: Iterable[Mapping[str, Any]], slot_rows: Iterable[Mapping[str, Any]]
+) -> list[ContextManualItem]:
+    items = [
+        ContextManualItem(
+            item=f"line {row['line_id']}",
+            updated_by=row["updated_by"],
+            source=row["source"],
+            updated_at=row["updated_at"],
+        )
+        for row in line_rows
+        if row["manual"]
+    ]
+    for row in slot_rows:
+        if row["manual"]:
+            name = f"schedule {row['slot_id']} on {row['line_id']}"
+            items.append(
+                ContextManualItem(
+                    item=f"{name} ({row['label']})" if row["label"] else name,
+                    updated_by=row["updated_by"],
+                    source=row["source"],
+                    updated_at=row["updated_at"],
+                )
+            )
+    return items
+
+
+async def load_context(conn: asyncpg.Connection, greenhouse_id: str, hours: int) -> IrrigationContext:
+    """Section 11's facts in one read-only ``REPEATABLE READ`` snapshot, so every ``now()`` in them agrees."""
+    if isinstance(hours, bool) or not isinstance(hours, int) or not 1 <= hours <= CONTEXT_MAX_HOURS:
+        raise ValueError(f"hours must be 1-{CONTEXT_MAX_HOURS}, not {hours!r}")
+    zone = ZoneInfo(LOCAL_TZ_NAME)
+    async with conn.transaction(isolation="repeatable_read", readonly=True):
+        clock = await conn.fetchrow(_CONTEXT_CLOCK_SQL, ENGINE_ENTITY, greenhouse_id)
+        at: datetime = clock["at"]
+        local_today: date = at.astimezone(zone).date()
+        midnight = datetime.combine(local_today, time_of_day(0), tzinfo=zone)
+        last_local_day = (at + timedelta(hours=hours)).astimezone(zone).date()
+        engine = isinstance(clock["engine"], str) and clock["engine"].strip().lower() == "true"
+        heartbeat_at, climate_at = clock["heartbeat_at"], clock["climate_at"]
+        reporting = (
+            heartbeat_at is not None
+            and (at - heartbeat_at).total_seconds() <= HEARTBEAT_STALE_S
+            and climate_at is not None
+            and (at - climate_at).total_seconds() <= CLIMATE_REPORTING_S
+        )
+        line_rows = await conn.fetch(_CONTEXT_LINES_SQL, greenhouse_id)
+        slot_rows = await conn.fetch(_CONTEXT_SLOTS_SQL, greenhouse_id)
+        on_edges: dict[str, datetime] = {}
+        bridge_run_at: datetime | None = None
+        if reporting:
+            running = [row["equipment"] for row in line_rows if row["relay_on"]]
+            if running:
+                rows = await conn.fetch(_CONTEXT_ON_EDGES_SQL, running, greenhouse_id)
+                on_edges = {row["equipment"]: row["on_edge"] for row in rows if row["on_edge"] is not None}
+            bridge_edge = next(
+                (on_edges.get(row["equipment"]) for row in line_rows if row["line_id"] == BRIDGE_RUN_LINE), None
+            )
+            if bridge_edge is not None:
+                bridge_run_at = await conn.fetchval(_CONTEXT_BRIDGE_SQL, greenhouse_id, BRIDGE_RUN_LINE, bridge_edge)
+        minutes_rows = await conn.fetch(_CONTEXT_MINUTES_SQL, local_today, greenhouse_id)
+        outcome_rows = await conn.fetch(_CONTEXT_OUTCOMES_SQL, greenhouse_id)
+        armed = await conn.fetchval(_CONTEXT_ARMED_SQL)
+
+    plan = agenda(
+        tuple(LineSpec.from_row(row) for row in line_rows),
+        tuple(ScheduleSpec.from_row(row) for row in slot_rows),
+        today=local_today,
+        days=min(7, (last_local_day - local_today).days + 1),
+    )
+    return IrrigationContext(
+        at=at,
+        hours=hours,
+        engine=engine,
+        reporting=reporting,
+        armed_experiment_id=None if armed is None else str(armed),
+        lines=context_lines(
+            line_rows,
+            engine=engine,
+            reporting=reporting,
+            now=at,
+            on_edges=on_edges,
+            bridge_run_at=bridge_run_at,
+            minutes_rows=minutes_rows,
+            outcome_rows=outcome_rows,
+            # No climate row today: API-IRR-10 reads the day no_data, so it is a gap here too.
+            no_data_today=climate_at is None or climate_at < midnight,
+        ),
+        occurrences=context_occurrences(plan, at=at, hours=hours, engine=engine),
+        manual_items=_manual_items(line_rows, slot_rows),
+    )
+
+
+def _cell(value: object) -> str:
+    """One table cell on one line. Unknown prints as null, so a gap never reads as 0."""
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return " ".join(str(value).split()).replace("|", "/")
+
+
+def _local_time(moment: datetime | None) -> str:
+    return "null" if moment is None else moment.astimezone(ZoneInfo(LOCAL_TZ_NAME)).strftime("%m-%d %H:%M")
+
+
+def _state_cell(state: LineState) -> str:
+    parts = [state.code]
+    if state.cause is not None:
+        parts.append(f"cause={state.cause.value}")
+    if state.slot_id is not None:
+        parts.append(f"schedule={state.slot_id}")
+    if state.reason is not None:
+        parts.append(f"reason={state.reason}")
+    if state.ends_at is not None:
+        parts.append(f"until={_local_time(state.ends_at)}")
+    return _cell(" ".join(parts))
+
+
+def _line_row(line: ContextLine) -> str:
+    fault = _cell(line.fault)
+    if line.fault_until is not None:
+        fault += f" until {_local_time(line.fault_until)}"
+    outcome = "null"
+    if line.last_outcome is not None:
+        outcome = f"{line.last_outcome.outcome.value} {_local_time(line.last_outcome.at)}"
+        if line.last_outcome.reason is not None:
+            outcome += f" ({_cell(line.last_outcome.reason)})"
+    return "|".join(
+        (
+            line.line_id,
+            _cell(line.enabled),
+            _cell(line.vpd_member),
+            _cell(line.schedule_member),
+            _cell(line.manual),
+            _local_time(line.paused_until),
+            fault,
+            f"{_cell(line.minutes_today)}/{line.daily_cap_min}",
+            outcome,
+            _state_cell(line.state),
+        )
+    )
+
+
+def _capped(rows: list[str], limit: int, more: str) -> list[str]:
+    """Rows within their part of the budget; what is left out is counted and says where it is."""
+    if not rows:
+        return ["(none)"]
+    if len(rows) <= limit:
+        return rows
+    return [*rows[:limit], f"... and {len(rows) - limit} more: {more}"]
+
+
+def render_context(ctx: IrrigationContext) -> str:
+    """Section 11 as Iris reads it: one row per line, the next hours of occurrences and the manual items, within
+    ``CONTEXT_MAX_LINES``. Pure. Times are local; unknown prints as null, never 0."""
+    occurrences = [
+        "|".join(
+            (
+                _local_time(item.planned_start),
+                item.line_id,
+                str(item.slot_id),
+                f"{item.minutes:g}",
+                _cell(item.pulses),
+                item.status,
+                _cell(item.reason),
+            )
+        )
+        for item in ctx.occurrences
+    ]
+    manual = [
+        "|".join((_cell(item.item), _cell(item.updated_by), _cell(item.source), _local_time(item.updated_at)))
+        for item in ctx.manual_items
+    ]
+    return "\n".join(
+        (
+            f"--- IRRIGATION (lines, next {ctx.hours} h, manual items) ---",
+            f"now={_local_time(ctx.at)} {LOCAL_TZ_NAME} engine={_cell(ctx.engine)} reporting={_cell(ctx.reporting)}",
+            f"experiment_armed={ctx.armed_experiment_id or 'none'}",
+            "line|enabled|vpd_member|schedule_member|manual|paused_until|fault|minutes_today/daily_cap_min"
+            "|last_outcome|state",
+            *(_line_row(line) for line in ctx.lines),
+            f"next {ctx.hours} h: start|line|schedule|minutes|pulses|status|reason",
+            *_capped(occurrences, CONTEXT_MAX_OCCURRENCES, "irrigation_schedule has them all"),
+            "manual schedules and lines: item|who|source|since",
+            *_capped(manual, CONTEXT_MAX_MANUAL, "irrigation_status and irrigation_schedule have them all"),
+            CONTEXT_FOOTER,
+        )
+    )
+
+
+def _context_hours(text: str) -> int:
+    hours = int(text)
+    if not 1 <= hours <= CONTEXT_MAX_HOURS:
+        raise argparse.ArgumentTypeError(f"--hours must be 1-{CONTEXT_MAX_HOURS}")
+    return hours
+
+
+async def _print_context(hours: int) -> None:
+    import config  # the ingestor's own settings; only this entry point needs them
+
+    conn = await asyncpg.connect(
+        config.get_db_dsn(),
+        timeout=CONTEXT_DB_TIMEOUT_S,
+        command_timeout=CONTEXT_DB_TIMEOUT_S,
+        server_settings={
+            "application_name": "verdify-iris-context",
+            "statement_timeout": f"{CONTEXT_DB_TIMEOUT_S * 1000}",
+        },
+    )
+    try:
+        context = await load_context(conn, GREENHOUSE_ID, hours)
+    finally:
+        await conn.close()
+    print(render_context(context))
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="python3 -m tasks.irrigation", description="The ingestor's irrigation step.")
+    commands = parser.add_subparsers(dest="command", required=True)
+    context = commands.add_parser("context", help="Print section 11 of Iris's context pack. Only reads.")
+    context.add_argument(
+        "--hours",
+        type=_context_hours,
+        default=CONTEXT_DEFAULT_HOURS,
+        help=f"Hours of occurrences ahead, 1-{CONTEXT_MAX_HOURS} (default {CONTEXT_DEFAULT_HOURS}).",
+    )
+    args = parser.parse_args(argv)
+    asyncio.run(_print_context(args.hours))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -471,8 +471,10 @@ def test_forecast_action_engine_does_not_write_dispatcher_owned_setpoints():
     end = script.index('if action_type == "setpoint" and param and adj_value is not None', start + 1)
     body = script[start:end]
     assert "INSERT INTO v_runtime_setpoint_plan_write" not in body
-    assert "INSERT INTO v_runtime_setpoint_changes_write" not in body
     assert "INSERT INTO setpoint_plan" not in script
+    # VD-65: the whole engine stays off the NOTIFY fast path. Its values reach the
+    # controller only through setpoint_plan and the next normal dispatcher pass.
+    assert "v_runtime_setpoint_changes_write" not in script
     assert "INSERT INTO setpoint_changes" not in script
 
 
@@ -3427,11 +3429,10 @@ def test_ingestor_records_esphome_feedback_with_value_ranges():
 def test_planner_context_uses_canonical_irrigation_sources():
     script = Path("scripts/gather-plan-context.sh").read_text()
 
-    assert "v_irrigation_schedule_current" in script
-    assert "v_irrigation_fertigation_runs" in script
-    assert "IRRIGATION / FERTIGATION RUNS" in script
-    assert "fert_master_overlap_min" in script
-    assert "meter_delta_gal" in script
+    # VD-60: section 11 is the ingestor's entry point over M3's line state; the retired views are gone.
+    assert "-m tasks.irrigation context --hours 24" in script
+    assert "v_irrigation_schedule_current" not in script
+    assert "v_irrigation_fertigation_runs" not in script
     assert "FROM irrigation_schedule" not in script
     assert "FROM irrigation_log" not in script
     assert "SELECT zone, start_time, duration_s" not in script

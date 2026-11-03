@@ -22,7 +22,7 @@ test("each zone: today with the minutes, a weekday within six days, else N days 
   // The fixture keeps its times 72 h apart, so Friday's runs read an hour later on the MDT clock of that day.
   expect(words(status("in-band").lines)).toEqual([
     "wall: Fri 08:31, 12 min",
-    "center: misted today 06:58 (VPD)",
+    "center: misted 06:58 (VPD)",
     "south: misted Fri 14:20 (VPD)",
     "west: misted 9 days ago (VPD)",
   ]);

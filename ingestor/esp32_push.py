@@ -24,6 +24,14 @@ from typing import Literal
 import shared
 from entity_map import EQUIPMENT_SWITCH_MAP, SETPOINT_MAP
 
+from verdify_schemas.irrigation import (
+    DEVICE_IDX,
+    LINE_KIND,
+    PROGRAM_RECORD_LEN,
+    IrrigationCommandRow,
+    program_chunks,
+)
+
 log = logging.getLogger("esp32_push")
 
 # firmware-v2 anchors-mode: the single on-chip API service that writes any
@@ -186,6 +194,9 @@ class _WriteRequest:
     command_versions: tuple[float, ...]
     source_fence: Callable[[], str | None] | None = None
     source_guard: Callable[[], Awaitable[str | None]] | None = None
+    # Parameters whose value in this batch is a desired-state value (VD-33):
+    # they pass component_authority_hold; every other hold still applies.
+    desired_params: frozenset[str] = frozenset()
     next_index: int = 0
     outcomes: list[DeviceCommandOutcome] = field(default_factory=list)
     cancel_requested: bool = False
@@ -299,12 +310,19 @@ def component_authority_hold() -> tuple[bool, frozenset[str]]:
     return _COMPONENT_AUTHORITY_HOLD_ACTIVE, _COMPONENT_AUTHORITY_HOLD_PARAMS
 
 
-def _experiment_hold_failure(parameter: str) -> str | None:
+def _experiment_hold_failure(parameter: str, desired: bool = False) -> str | None:
+    """The hold that refuses an ordinary write of ``parameter``, or None.
+
+    A desired-state value (``desired``, VD-33) passes only
+    ``component_authority_hold``: nothing is refused because an experiment is
+    armed (decisions Round 2 #2). It still waits out ``experiment_policy_hold``,
+    whose armed vector the firmware serves, and a bounded component bundle.
+    """
     if _EXPERIMENT_HOLD_ACTIVE and parameter in _EXPERIMENT_HOLD_PARAMS:
         return "experiment_policy_hold"
     if _COMPONENT_BUNDLE_HOLD_ACTIVE and parameter in _COMPONENT_BUNDLE_HOLD_PARAMS:
         return "component_bundle_hold"
-    if _COMPONENT_AUTHORITY_HOLD_ACTIVE and parameter in _COMPONENT_AUTHORITY_HOLD_PARAMS:
+    if not desired and _COMPONENT_AUTHORITY_HOLD_ACTIVE and parameter in _COMPONENT_AUTHORITY_HOLD_PARAMS:
         return "component_authority_hold"
     return None
 
@@ -487,10 +505,12 @@ async def _execute_one(request: _WriteRequest, index: int) -> DeviceCommandOutco
         return _outcome(request, index, "failed", failure)
 
     obj_id, value, entity_type = request.changes[index]
+    parameter = _parameter_for(obj_id, entity_type)
+    desired = parameter in request.desired_params
     # Lane C (#584): experiment-owned parameters are delivered ONLY through the
     # atomic policy transaction while an assignment is armed. Terminal,
     # non-retryable — the dispatcher records it like any other rejection.
-    if hold_failure := _experiment_hold_failure(_parameter_for(obj_id, entity_type)):
+    if hold_failure := _experiment_hold_failure(parameter, desired):
         return _outcome(request, index, "failed", hold_failure)
     client = shared.esp32["client"]
     keys = shared.esp32["keys"]
@@ -514,7 +534,7 @@ async def _execute_one(request: _WriteRequest, index: int) -> DeviceCommandOutco
             # Re-check after lock acquisition: an ordinary request may have
             # queued before component authority armed while it waited behind
             # an exclusive prefix.
-            if hold_failure := _experiment_hold_failure(_parameter_for(obj_id, entity_type)):
+            if hold_failure := _experiment_hold_failure(parameter, desired):
                 return _outcome(request, index, "failed", hold_failure)
             if entity_type == "service":
                 service = (shared.esp32.get("services") or {}).get(_BAND_ANCHOR_SERVICE)
@@ -821,12 +841,15 @@ async def push_to_esp32_detailed(
     expected_connection_generation: int | None = None,
     source_fence: Callable[[], str | None] | None = None,
     source_guard: Callable[[], Awaitable[str | None]] | None = None,
+    desired_params: frozenset[str] = frozenset(),
 ) -> PushBatchResult:
     """Queue a bounded batch and return a truthful terminal result per command.
 
     Caller cancellation does not cancel an in-flight physical command.  It marks
     the request cancelled; the worker reports the command already returned by
     the API as ``sent`` and every still-unsent command as ``cancelled``.
+    ``desired_params`` names the parameters whose value is a desired-state
+    value; only those pass ``component_authority_hold`` (VD-33).
     """
     global _PENDING_REQUESTS, _LIFECYCLE_BLOCKED
     loop = asyncio.get_running_loop()
@@ -866,6 +889,7 @@ async def push_to_esp32_detailed(
         command_versions=versions,
         source_fence=source_fence,
         source_guard=source_guard,
+        desired_params=frozenset(desired_params),
     )
     superseded = _supersede_older_queued_commands(request)
     if superseded:
@@ -1701,3 +1725,110 @@ async def bridge_set_irrigation_enabled(value: bool) -> BridgeOutcome:
     if failure is not None:
         return BridgeOutcome(failure=failure, unsent=failure in _BRIDGE_UNSENT_REASONS)
     return BridgeOutcome(sent=(f"{IRRIGATION_ENABLED_SWITCH}={'on' if value else 'off'}",), restored=True)
+
+
+# ── Irrigation engine services (VD-42, irrigation §6.1) ──────────────────────
+# With the engine firmware on the controller, tasks.irrigation.irrigation_sync pushes the compiled program and sends
+# commands here. Each call is one push_policy_transaction(), which brings the writer lease, the transport generation
+# and client fence, the VERDIFY_DEVICE_WRITE_ENABLED gate and pacing. Whether water started or stopped comes from relay
+# edges and irr_state, never from a return here: execute_service only writes to the socket.
+
+IRR_PROGRAM_BEGIN_SERVICE = "irr_program_begin"
+IRR_PROGRAM_CHUNK_SERVICE = "irr_program_chunk"
+IRR_PROGRAM_COMMIT_SERVICE = "irr_program_commit"
+IRR_COMMAND_SERVICE = "irr_command"
+MANUAL_OVERRIDE_SERVICE = "manual_override"
+# irr_command's line for every line (stop) or every mister (clear_fault).
+IRR_ALL_LINES = 255
+_DRIP_KINDS = frozenset({"drip", "fert_drip"})
+_MISTER_KINDS = frozenset({"mister", "fert_mister"})
+_FERT_KINDS = frozenset({"fert_drip", "fert_mister"})
+# Why a one-call transaction provably never reached the transport.
+_POLICY_UNSENT_REASONS = _BRIDGE_FENCE_REASONS | {
+    "policy_service_unavailable",
+    "transaction_budget_exceeded",
+    "transaction_call_limit_exceeded",
+}
+
+
+def policy_call_unsent(result: PolicyTransactionResult) -> bool:
+    """True when a one-call transaction's failure means nothing reached the transport, so the request can honestly
+    be marked failed. A timeout or a command error leaves the outcome unknown."""
+    failure = result.failure
+    return failure is not None and failure.reason in _POLICY_UNSENT_REASONS
+
+
+def _whole_arg(args: dict, name: str) -> int:
+    value = args.get(name)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{name}={value!r} is not a whole number")
+    return value
+
+
+def _irr_command_payload(
+    cmd: str, line: int, *, on_s: int = 0, count: int = 0, gap_s: int = 0, prewet_s: int = 0, flush_s: int = 0
+) -> dict:
+    return {
+        "cmd": cmd,
+        "line": line,
+        "on_s": on_s,
+        "count": count,
+        "gap_s": gap_s,
+        "prewet_s": prewet_s,
+        "flush_s": flush_s,
+    }
+
+
+def _run_payload(row: IrrigationCommandRow) -> dict:
+    """One run's irr_command arguments. A drip's minutes become one pulse; a mister's pulses pass through unchanged,
+    and both fertilizer kinds add their prewet and flush. Raises ValueError when the row's args do not fit its line."""
+    if row.line_id is None:
+        raise ValueError("a run names its line")
+    kind = LINE_KIND[row.line_id]
+    args = row.args
+    fields: dict[str, int] = {}
+    if kind in _DRIP_KINDS:
+        fields |= {"on_s": _whole_arg(args, "minutes") * 60, "count": 1, "gap_s": 0}
+    elif kind in _MISTER_KINDS:
+        fields |= {name: _whole_arg(args, name) for name in ("on_s", "count", "gap_s")}
+    else:
+        raise ValueError(f"{row.line_id} takes no runs")
+    if kind in _FERT_KINDS:
+        fields |= {name: _whole_arg(args, name) for name in ("prewet_s", "flush_s")}
+    return _irr_command_payload("run", DEVICE_IDX[row.line_id], **fields)
+
+
+def irrigation_command_call(row: IrrigationCommandRow) -> PolicyServiceCall:
+    """The native-API call for one irrigation_command row. Raises ValueError when its args cannot make one, which is
+    checked before the row is marked sent."""
+    line = IRR_ALL_LINES if row.line_id is None else DEVICE_IDX[row.line_id]
+    if row.kind == "run":
+        return PolicyServiceCall(IRR_COMMAND_SERVICE, _run_payload(row))
+    if row.kind in ("stop", "clear_fault"):
+        return PolicyServiceCall(IRR_COMMAND_SERVICE, _irr_command_payload(row.kind, line))
+    if row.kind == "override":
+        kind = row.args.get("kind")
+        if not isinstance(kind, str) or not kind:
+            raise ValueError(f"override kind={kind!r}")
+        minutes = _whole_arg(row.args, "minutes") if row.args.get("minutes") is not None else 0
+        return PolicyServiceCall(MANUAL_OVERRIDE_SERVICE, {"kind": kind, "minutes": minutes})
+    raise ValueError(f"unknown command kind {row.kind!r}")
+
+
+async def send_irrigation_command(row: IrrigationCommandRow) -> PolicyTransactionResult:
+    """One command as one push request, so a Stop overtakes an ordinary dispatch batch at the push lock."""
+    return await push_policy_transaction((irrigation_command_call(row),))
+
+
+async def push_irrigation_program(record: bytes, sha256_hex: str) -> PolicyTransactionResult:
+    """irr_program_begin, one irr_program_chunk for each 192, 192, 192 and 8 B, and irr_program_commit as one
+    non-interleavable transaction. The controller keeps its old program unless the commit decodes against the hash."""
+    calls = [
+        PolicyServiceCall(IRR_PROGRAM_BEGIN_SERVICE, {"len": PROGRAM_RECORD_LEN, "sha256_hex": sha256_hex}),
+        *(
+            PolicyServiceCall(IRR_PROGRAM_CHUNK_SERVICE, {"offset": offset, "data_hex": data_hex})
+            for offset, data_hex in program_chunks(record)
+        ),
+        PolicyServiceCall(IRR_PROGRAM_COMMIT_SERVICE, {}),
+    ]
+    return await push_policy_transaction(calls)

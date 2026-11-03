@@ -3,17 +3,21 @@
  * What runs now (screens SCR-01, US-NOW-03): a chip per API-02 `running` item with its plain name and "since HH:MM";
  * a wet line adds its cause in words and, with the irrigation firmware, the time left from API-IRR-01
  * `active_runs[].ends_at`; a burst from the controller's readback (API-02 `overrides`) reads "Fans burst · 12 min
- * left". While the answer says the greenhouse data is out of reach, the ingestor is not running or the controller is
- * not reporting (rows 1 to 3), one line reads "Equipment state unknown since HH:MM" instead, never "Nothing running".
- * The occupancy chip always shows (US-WAT-16, D-IRP-10: unknown occupancy never holds mist).
+ * left", with one Clear for operators (#1136) while the irrigation firmware runs; before it a push-button burst still
+ * shows, with no Clear, since API-IRR-12 answers 503. While the answer says the greenhouse data is out of reach, the
+ * ingestor is not running or the controller is not reporting (rows 1 to 3), one line reads "Equipment state unknown since
+ * HH:MM" instead, never "Nothing running". The occupancy chip always shows (US-WAT-16, D-IRP-10: unknown occupancy never
+ * holds mist).
  */
 import { useId } from "react";
 import { causeWords } from "../../charts/causes";
-import { duration, localDate, shortDateTime, shortTime } from "../../lib/format";
+import { duration, leftWords, localDate, shortDateTime, shortTime } from "../../lib/format";
 import type { NowAnswer } from "../../lib/now-answer";
 import type { IrrigationStatus, Now } from "../../lib/operator-api";
 import type { PanelRead } from "../../lib/queries";
+import { OperatorOnly } from "../../lib/session";
 import { words } from "../../lib/words";
+import { ClearBursts } from "../burst-panel";
 import { useNow } from "../freshness";
 
 export type RunningChip = { readonly key: string; readonly kind: "wet" | "dry" | "burst"; readonly text: string };
@@ -22,9 +26,8 @@ export const NOTHING_RUNNING = "Nothing running";
 const validTime = (value: string | null | undefined): value is string => typeof value === "string" && Number.isFinite(Date.parse(value));
 /** " · 12 min left" while `endsAt` is ahead of the clock; empty otherwise. */
 function left(endsAt: string | null | undefined, clock: number): string {
-  if (!validTime(endsAt)) return "";
-  const seconds = Math.floor((Date.parse(endsAt) - clock) / 1000);
-  return seconds > 0 ? ` · ${duration(seconds)} left` : "";
+  const time = leftWords(endsAt, clock);
+  return time ? ` · ${time}` : "";
 }
 const sinceText = (value: string | null | undefined) => (validTime(value) ? ` · since ${shortTime(value)}` : "");
 
@@ -90,8 +93,12 @@ export function RunningPanel({ now, answer, irrigation }: RunningPanelProps) {
     body = <p className="state-note" data-running="unknown">Equipment state unknown{validTime(at) ? ` since ${shortTime(at)}` : ""}</p>;
   } else {
     const chips = runningChips(now, irrigation.failed ? null : irrigation.data, clock);
+    const clearable = chips.some((chip) => chip.kind === "burst") && !irrigation.failed && irrigation.data?.engine === true;
     body = chips.length
-      ? <ul className="chips now-chips" aria-labelledby={headingId}>{chips.map((chip) => <li key={chip.key}><span className="chip chip-static" data-chip={chip.kind}>{chip.text}</span></li>)}</ul>
+      ? <ul className="chips now-chips" aria-labelledby={headingId}>
+        {chips.map((chip) => <li key={chip.key}><span className="chip chip-static" data-chip={chip.kind}>{chip.text}</span></li>)}
+        {clearable && <OperatorOnly><li className="now-chip-action"><ClearBursts /></li></OperatorOnly>}
+      </ul>
       : <p className="state-note" data-running="none">{NOTHING_RUNNING}</p>;
   }
   return <section className="now-running" aria-labelledby={headingId} aria-busy={answer.kind === "loading" || undefined}>

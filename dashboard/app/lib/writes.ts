@@ -58,10 +58,21 @@ export type WriteOutcome<T> = { readonly ok: true; readonly data: T; readonly re
 export type FieldUnits = { readonly unit?: string | null; readonly step?: number | null };
 
 /**
+ * `manifold_busy` in the API's own sentence, which names the holder ("L01 holds the drip manifold until 07:42; stop it or
+ * try then"). A detail with no end time gains one from `retry_after_s`, and with no detail the words table's line stands.
+ */
+function manifoldBusyText(problem: Problem): string {
+  const detail = problem.detail?.trim() || words("problem_code", "manifold_busy");
+  if (/\buntil\b/.test(detail) || problem.retry_after_s === null || problem.retry_after_s === undefined) return detail;
+  const holder = detail.replace(/[;.].*$/, "");
+  return `${holder} until ${shortTime(new Date(Date.now() + problem.retry_after_s * 1000).toISOString())}; stop it or try then`;
+}
+
+/**
  * A Problem in words. `out_of_range` reads "Must be 0.50–2.50 kPa" from `min`, `max` and the field's unit;
- * `writes_disabled` "Changes are switched off"; `unavailable` its detail ("arrives with the irrigation firmware"). Any
- * other code reads through `words("problem_code", code)`; until #1124 fills that family, a code without words reads as
- * the Problem's own detail (plain words), else raw.
+ * `writes_disabled` "Changes are switched off"; `unavailable` its detail ("arrives with the irrigation firmware");
+ * `manifold_busy` the holder and until when. Any other code reads through `words("problem_code", code)`; until #1124
+ * fills that family, a code without words reads as the Problem's own detail (plain words), else raw.
  */
 export function problemMessage(problem: Problem, units: FieldUnits = {}): string {
   if (problem.code === "out_of_range" && problem.min !== null && problem.min !== undefined && problem.max !== null && problem.max !== undefined) {
@@ -69,6 +80,7 @@ export function problemMessage(problem: Problem, units: FieldUnits = {}): string
   }
   if (problem.code === "writes_disabled") return "Changes are switched off";
   if (problem.code === "unavailable") return problem.detail || problem.title;
+  if (problem.code === "manifold_busy") return manifoldBusyText(problem);
   if (hasWords("problem_code", problem.code)) return words("problem_code", problem.code);
   return problem.detail || problem.code;
 }
@@ -270,6 +282,8 @@ export type Readback<R extends ReadOperationId = ReadOperationId> = {
   readonly reason?: (data: Parsed<R>) => string | null;
   /** True when the read already decides the outcome, so waiting longer cannot change it. */
   readonly decided?: (data: Parsed<R>) => boolean;
+  /** How long to read before the command reads late: 30 s unless it says (a restart takes up to 3 min). */
+  readonly windowMs?: number;
 };
 /** Builds a typed readback (the read's type flows into `done` and `reason`). */
 export const readback = <R extends ReadOperationId>(check: Readback<R>): Readback<R> => check;
@@ -283,11 +297,11 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 type Watched = { done: boolean; data: unknown };
-/** Reads `check` every 5 s for up to 30 s (6 reads), stopping at the first that is done or decided. A failed read waits on. */
+/** Reads `check` every 5 s for up to its window, 30 s (6 reads) by default, stopping at the first that is done or decided. A failed read waits on. */
 async function watch(client: QueryClient, check: Readback, signal?: AbortSignal): Promise<Watched> {
   let data: unknown;
-  const loose = check as unknown as { operationId: ReadOperationId; params?: object; done: (data: unknown) => boolean; decided?: (data: unknown) => boolean };
-  for (let waited = READBACK_POLL_MS; waited <= COMMAND_WINDOW_MS; waited += READBACK_POLL_MS) {
+  const loose = check as unknown as { operationId: ReadOperationId; params?: object; done: (data: unknown) => boolean; decided?: (data: unknown) => boolean; windowMs?: number };
+  for (let waited = READBACK_POLL_MS; waited <= (loose.windowMs ?? COMMAND_WINDOW_MS); waited += READBACK_POLL_MS) {
     await sleep(READBACK_POLL_MS, signal);
     let read: unknown;
     try {
@@ -302,6 +316,18 @@ async function watch(client: QueryClient, check: Readback, signal?: AbortSignal)
   }
   return { done: false, data };
 }
+/** After its window a readback can still come true on the page's own polls of that entry: `settled` then runs once, unless `signal` aborts first. */
+function settleLate(client: QueryClient, check: Readback, signal: AbortSignal, settled: () => void) {
+  const loose = check as unknown as { operationId: ReadOperationId; params?: object; done: (data: unknown) => boolean };
+  const key = readKey(loose.operationId, loose.params as never);
+  const stop = client.getQueryCache().subscribe(() => {
+    const data = client.getQueryData(key);
+    if (data === undefined || !loose.done(data)) return;
+    stop();
+    settled();
+  });
+  signal.addEventListener("abort", stop, { once: true });
+}
 
 // ---------------------------------------------------------------------------------------------------- C commands
 export type CommandOperationId = "API-IRR-06" | "API-IRR-07" | "API-IRR-12" | "API-IRR-13" | "API-20";
@@ -311,17 +337,24 @@ export const NOT_STARTED = "Not started";
 
 const lineIn = (status: IrrigationStatus, id: string): IrrigationLine | undefined => status.lines.find((line) => line.line_id === id);
 const lineReason = (status: IrrigationStatus, ids: readonly string[]) => ids.map((id) => lineIn(status, id)?.state.reason).find((reason) => Boolean(reason)) ?? null;
+/** A run has started once its line's relay is on, or a feed's clean partner has opened for the prewet. */
+function runStarted(status: IrrigationStatus, id: string): boolean {
+  const line = lineIn(status, id);
+  if (line?.state.code === "running") return true;
+  const partner = line?.clean_partner ? lineIn(status, line.clean_partner) : undefined;
+  return partner?.state.code === "running" && partner.state.cause === "prewet";
+}
 /**
- * The default readback: API-IRR-01 and the line's relay edge, RUNNING after a run and OFF after a stop (every line for
- * a stop with no `line_id`); a cleared fault, the watchdog latch (`mister_fault`) gone from that line, or from every
- * line for a clear with no `line_id`, which clears every latch (the fertilizer misters L08 and L10 latch too,
- * irrigation F10; a back-off is no latch). Overrides (API-IRR-12) and lights (API-20) have none: their screens pass
- * API-02 `overrides` or API-13.
+ * The default readback: API-IRR-01 and the line's relay edge, RUNNING after a run (a feed starts on its prewet) and OFF
+ * after a stop (every line for a stop with no `line_id`); a cleared fault, the watchdog latch (`mister_fault`) gone from
+ * that line, or from every line for a clear with no `line_id`, which clears every latch (the fertilizer misters L08 and
+ * L10 latch too, irrigation F10; a back-off is no latch). Overrides (API-IRR-12) and lights (API-20) have none: their
+ * screens pass API-02 `overrides` or API-13.
  */
 export function defaultReadback(operation: CommandOperationId, params: Record<string, unknown>, body: Record<string, unknown>): Readback | null {
   const target = typeof params.line_id === "string" ? params.line_id : typeof body.line_id === "string" ? body.line_id : null;
   if (operation === "API-IRR-06" && target) {
-    return readback({ operationId: "API-IRR-01", done: (status) => lineIn(status, target)?.state.code === "running", reason: (status) => lineReason(status, [target]) });
+    return readback({ operationId: "API-IRR-01", done: (status) => runStarted(status, target), reason: (status) => lineReason(status, [target]) });
   }
   if (operation === "API-IRR-07") {
     const ids = (status: IrrigationStatus) => (target ? [target] : status.lines.map((line) => line.line_id));
@@ -346,9 +379,9 @@ export function commandBody<K extends CommandOperationId>(body: BodyOf<K>): Body
  * **C**: one command (API-IRR-06 run, -07 stop, -12 burst, -13 clear fault; API-20 for the grow lights). "Sending…"
  * until the answer (a 202 `Command`, or API-20's 200), when `send` resolves (a dialog closes on it); then the readback
  * every 5 s until it shows the expected state (`phase` done). If nothing has changed within 30 s, `phase` is late and
- * `message` the line's reason in words, or "Not started". A refusal keeps the dialog open with `error` beside its
- * field. Pass `readback` for another read and test (API-02 `overrides` for a burst); a function gets the request's
- * params and body.
+ * `message` the line's reason in words, or "Not started", until the page's own polls show the state (`phase` done). A
+ * refusal keeps the dialog open with `error` beside its field. Pass `readback` for another read and test (API-02
+ * `overrides` for a burst); a function gets the request's params and body.
  */
 export function useCommand<K extends CommandOperationId>({ operation, readback: chosen }: {
   operation: K;
@@ -381,6 +414,7 @@ export function useCommand<K extends CommandOperationId>({ operation, readback: 
       if (seen.done) { setProgress({ phase: "done", message: null }); return; }
       const reason = seen.data === undefined ? null : (check.reason as ((data: unknown) => string | null) | undefined)?.(seen.data) ?? null;
       setProgress({ phase: "late", message: reason || NOT_STARTED });
+      settleLate(client, check, controller.signal, () => setProgress({ phase: "done", message: null }));
     }, () => {
       // Unmounted or replaced by a newer command: nothing to show.
     });
@@ -430,6 +464,14 @@ const controllerReporting = (climate: Freshness) => climate.age_s !== null && cl
 export function runningLines(now: Pick<Now, "running"> | null | undefined, scope: string | null = null): string[] {
   const ids = (now?.running ?? []).map((entry) => entry.line_id).filter((id): id is string => typeof id === "string" && id.length > 0);
   return [...new Set(ids)].filter((id) => scope === null || id === scope);
+}
+/**
+ * The lines the shared API-IRR-01 entry reads as running, within the Stop's scope. A line card shows that read, and it can
+ * be newer than the API-02 answer the page holds (a Run's readback), so a line seen running there counts as running too.
+ */
+function runningOnCards(client: QueryClient, scope: string | null): string[] {
+  const lines = client.getQueryData<IrrigationStatus>(readKey("API-IRR-01"))?.lines ?? [];
+  return lines.filter((line) => line.state.code === "running" && (scope === null || line.line_id === scope)).map((line) => line.line_id);
 }
 
 /**
@@ -505,8 +547,8 @@ export function stopToast(result: StopResult): ToastOptions {
  * the irrigation firmware the server turns every open wet relay off through the run-now bridge.
  *
  * Before sending it notes the wet lines running in the newest API-02 answer the page holds (`newestNow`: the shell's
- * poll, or a screen's own read) and the `engine` flag of the shared API-IRR-01 entry (unknown while that read fails or
- * is not served). `stop` resolves at the 202; then it reads API-02 every 5 s for up to 30 s until each of those lines
+ * poll, or a screen's own read) and in the shared API-IRR-01 entry, and that entry's `engine` flag (unknown while that
+ * read fails or is not served). `stop` resolves at the 202; then it reads API-02 every 5 s for up to 30 s until each of those lines
  * has left `running`, takes `freshness` from the same reads, and shows one result toast that stays until dismissed
  * (`stopResult`). With no API-02 data before the Stop, the first read after it says what must go OFF. The check runs on
  * after the screen that pressed Stop goes away, since the toast belongs to the app; a newer Stop from the same control
@@ -523,7 +565,7 @@ export function useStop() {
     inFlight.current = true;
     const run = ++generation.current;
     const before = newestNow(client);
-    let running: string[] | null = before ? runningLines(before, lineId) : null;
+    let running: string[] | null = before ? [...new Set([...runningLines(before, lineId), ...runningOnCards(client, lineId)])] : null;
     const engine = engineFlag(client);
     setPhase("sending");
     let accepted: WriteResult<Parsed<"API-IRR-07">>;

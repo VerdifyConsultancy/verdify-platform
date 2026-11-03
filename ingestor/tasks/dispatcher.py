@@ -8,6 +8,12 @@ Plain convergence (VD-62): an ordinary pass sends at most
 ``MAX_RECONNECT_COMMANDS`` commands, oldest difference first, and wakes the
 next pass for the rest. It never stages, waits for an approval file or holds
 on halted-run custody; only the C1 qualification overlay still stages.
+
+Desired state (VD-33): each pass also reads ``v_desired_state_current`` and,
+through ``resolve_effective()``, lets a person's or an agent's value replace the
+plan, band or default value of that parameter before the dedupe, through the
+same fences; its pushes carry source ``manual``. A release with no plan, band or
+dispatcher default returns the setting to its registry default.
 """
 
 from entity_map import CFG_READBACK_MAP, SETPOINT_MAP
@@ -15,8 +21,10 @@ from esp32_push import (
     DeviceCommandOutcome,
     LifecyclePersistenceError,
     _experiment_hold_failure,
+    component_bundle_hold,
     delivery_failure_retryable,
     delivery_transition_prior_statuses,
+    experiment_policy_hold,
     preserved_terminal_status,
     push_to_esp32_detailed,
 )
@@ -26,10 +34,13 @@ from esp32_push import (
 # through the tasks star import, so they stay importable from here.
 from verdify_schemas.setting_values import (
     readback_abs_tolerance,  # noqa: F401 - re-exported for tasks.readback_abs_tolerance
+    readback_matches,
     readback_values_equivalent,
+    resolve_effective,
     within_relative_deadband,
 )
 from verdify_schemas.telemetry import SystemStateRow
+from verdify_schemas.tunable_registry import desired_write_rule
 
 from . import band_anchors, bounded_reconcile, c1_overlay, drift_probe
 from ._common import (
@@ -44,6 +55,7 @@ from ._common import (
     FIRMWARE_HAS_LIGHTING_TARGET_MINUTES,
     FIRMWARE_HAS_PER_CIRCUIT_LIGHTING,
     FORCED_ON_SWITCH_PARAMS,
+    GREENHOUSE_ID,
     HEAP_DEFER_FREE_KB,
     HEAP_DEFER_LARGEST_BLOCK_KB,
     HOUSE_BAND_PARAMS,
@@ -113,6 +125,47 @@ MAX_RECONNECT_COMMANDS = 12
 # its readback is pending: cfg_* sensors publish every 30 s (VD-62).
 SENT_READBACK_WAIT_S = 90.0
 DISPATCHER_STAGE_ENTITY = "dispatcher_stage"
+# The plan_id of a forecast-rule plan row (VD-65). v_active_plan carries no source column.
+FORECAST_RULE_PLAN_PREFIX = "preemptive-"
+# Desired state (VD-33). crop_band values reach the controller through
+# crop_band_anchors and the anchor sync, irrigation_site values through
+# irrigation_sync: the dispatcher sends nothing for their desired rows.
+DESIRED_OTHER_PATH_CLASSES = frozenset({"crop_band", "irrigation_site"})
+# The per-circuit values the lighting circuit block of setpoint_dispatcher
+# resolves from fn_lighting_minutes_policy, nine per circuit. The wider
+# LIGHTING_CIRCUIT_DEFAULT_PARAMS also holds the solar-phasing, offset and
+# out-of-service values, which no dispatcher block resolves.
+LIGHTING_CIRCUIT_RESOLVED_PARAMS = frozenset(
+    f"{prefix}{circuit}_{field}"
+    for circuit in ("main", "grow")
+    for prefix, field in (
+        ("gl_", "dli_target"),
+        ("gl_", "target_light_minutes"),
+        ("gl_", "sunrise_hour"),
+        ("gl_", "sunset_hour"),
+        ("gl_", "lux_threshold"),
+        ("gl_", "lux_hysteresis"),
+        ("gl_", "min_on_s"),
+        ("gl_", "min_off_s"),
+        ("sw_gl_", "auto_mode"),
+    )
+)
+# The values the dispatcher's own blocks resolve each pass: the band, the
+# lighting policy (per circuit, or the legacy shared values on firmware without
+# per-circuit lighting), the direct-wet activity window, the safety limits and
+# the mister defaults. _dispatch_source() labels each of them band. A released
+# parameter none of them resolves, and with no plan, returns to its registry
+# default (architecture §5.2 Release, API-11).
+DISPATCHER_DEFAULT_PARAMS = frozenset(
+    CROP_BAND_REG
+    | LIGHTING_POLICY_PARAMS
+    | LIGHTING_CIRCUIT_RESOLVED_PARAMS
+    | DIRECT_WET_POLICY_PARAMS
+    | SAFETY_PARAMS
+    | MISTER_DEFAULTS
+)
+# (parameter, reason) pairs already logged, so a skipped row logs once.
+_DESIRED_SKIPS_LOGGED: set[tuple[str, str]] = set()
 
 
 def _clock() -> datetime:
@@ -130,8 +183,23 @@ def _upsert_change(changes: list[tuple[str, float]], param: str, value: float) -
     changes.append((param, clean_value))
 
 
+def _same_value(param: str, observed: float, value: float, grid_params: frozenset[str] = frozenset()) -> bool:
+    """Whether ``observed`` already is the outgoing ``value``.
+
+    A desired-state value or a release to the registry default (``grid_params``,
+    VD-33) uses the grid comparator ``readback_matches()``, so a one-step change
+    such as ``site_pressure_hpa`` 845 -> 840 is a difference (architecture §5.5).
+    Plan, band and default values keep ``readback_values_equivalent()``.
+    """
+    if param in grid_params:
+        return readback_matches(param, observed, value)
+    return readback_values_equivalent(param, observed, value)
+
+
 def _without_equivalent_duration_candidates(
-    changes: list[tuple[str, float]], readbacks: dict[str, float]
+    changes: list[tuple[str, float]],
+    readbacks: dict[str, float],
+    grid_params: frozenset[str] = frozenset(),
 ) -> list[tuple[str, float]]:
     """Avoid repushing firmware-quantized seconds already equivalent on cfg."""
     return [
@@ -139,7 +207,7 @@ def _without_equivalent_duration_candidates(
         for param, value in changes
         if param not in SECOND_READBACK_ABS_TOLERANCE_PARAMS
         or param not in readbacks
-        or not readback_values_equivalent(param, readbacks[param], value)
+        or not _same_value(param, readbacks[param], value, grid_params)
     ]
 
 
@@ -148,6 +216,7 @@ def _note_delivery_differences(
     held_on_purpose: set[str],
     generation: int,
     now: datetime,
+    grid_params: frozenset[str] = frozenset(),
 ) -> None:
     """Track since when each outgoing value has differed from the controller.
 
@@ -155,7 +224,8 @@ def _note_delivery_differences(
     value first differs from ``_last_pushed`` or its readback (it is a
     candidate) and leaves when its readback matches or it is no longer a
     candidate. What the platform holds on purpose stays out: the parameters
-    clamped in this pass and those under ``experiment_policy_hold``.
+    clamped in this pass and those under ``experiment_policy_hold``. A
+    desired-state value leaves only when ``readback_matches()`` holds.
     """
     readbacks = shared.current_cfg_readbacks(generation)
     previous = dict(shared.delivery_differing_since)
@@ -164,32 +234,39 @@ def _note_delivery_differences(
         if param in held_on_purpose or _experiment_hold_failure(param) == "experiment_policy_hold":
             continue
         observed = readbacks.get(param)
-        if observed is not None and readback_values_equivalent(param, observed, value):
+        if observed is not None and _same_value(param, observed, value, grid_params):
             continue
         current[param] = previous.get(param, now)
     shared.delivery_differing_since.clear()
     shared.delivery_differing_since.update(current)
 
 
-def _sent_on_connection(param: str, value: float, generation: int) -> datetime | None:
+def _sent_on_connection(
+    param: str, value: float, generation: int, grid_params: frozenset[str] = frozenset()
+) -> datetime | None:
     """When this same value was last sent on this connection, or None if it was not."""
     sent = _last_sent_at.get(param)
     if sent is None:
         return None
     sent_at, sent_generation, sent_value = sent
-    if sent_generation != generation or not readback_values_equivalent(param, sent_value, value):
+    if sent_generation != generation or not _same_value(param, sent_value, value, grid_params):
         return None
     return sent_at
 
 
-def _sent_awaiting_readback(param: str, value: float, generation: int, now: datetime) -> bool:
+def _sent_awaiting_readback(
+    param: str, value: float, generation: int, now: datetime, grid_params: frozenset[str] = frozenset()
+) -> bool:
     """True for the same value sent on this connection within SENT_READBACK_WAIT_S."""
-    sent_at = _sent_on_connection(param, value, generation)
+    sent_at = _sent_on_connection(param, value, generation, grid_params)
     return sent_at is not None and 0.0 <= (now - sent_at).total_seconds() < SENT_READBACK_WAIT_S
 
 
 def _pace_ordinary_changes(
-    changes: list[tuple[str, float]], generation: int, now: datetime
+    changes: list[tuple[str, float]],
+    generation: int,
+    now: datetime,
+    grid_params: frozenset[str] = frozenset(),
 ) -> tuple[list[tuple[str, float]], list[tuple[str, float]], int, bool]:
     """Select one paced ordinary batch: (send now, left over, awaiting readback, wake).
 
@@ -204,7 +281,9 @@ def _pace_ordinary_changes(
     cannot keep the dispatcher waking itself, however many there are.
     """
     eligible = [
-        (param, value) for param, value in changes if not _sent_awaiting_readback(param, value, generation, now)
+        (param, value)
+        for param, value in changes
+        if not _sent_awaiting_readback(param, value, generation, now, grid_params)
     ]
     awaiting = len(changes) - len(eligible)
     if len(eligible) > MAX_RECONNECT_COMMANDS:
@@ -212,13 +291,13 @@ def _pace_ordinary_changes(
         newest = datetime.max.replace(tzinfo=UTC)
         eligible.sort(
             key=lambda item: (
-                _sent_on_connection(item[0], item[1], generation) or not_sent,
+                _sent_on_connection(item[0], item[1], generation, grid_params) or not_sent,
                 shared.delivery_differing_since.get(item[0], newest),
                 item[0],
             )
         )
     batch, left = eligible[:MAX_RECONNECT_COMMANDS], eligible[MAX_RECONNECT_COMMANDS:]
-    wake = any(_sent_on_connection(param, value, generation) is None for param, value in left)
+    wake = any(_sent_on_connection(param, value, generation, grid_params) is None for param, value in left)
     return batch, left, awaiting, wake
 
 
@@ -255,9 +334,16 @@ async def _record_dispatcher_stage(conn, stage: str) -> None:
 
 
 def _c1_policy_inputs(planned, anchors, origin, lighting, circuits, activity, safety, quiet, direct_wet, ai_moisture):
-    """Stable policy provenance; SQL function query timestamps are not identities."""
+    """Stable policy provenance; SQL function query timestamps are not identities.
+
+    The plan rows' ``created_at`` (read for desired-state resolution, VD-33)
+    stays out, so the C1 provenance is the one the source guard recomputes.
+    """
     return {
-        "iris": [dict(row) for row in sorted(planned, key=lambda row: row["parameter"])],
+        "iris": [
+            {key: value for key, value in dict(row).items() if key != "created_at"}
+            for row in sorted(planned, key=lambda row: row["parameter"])
+        ],
         "band_source": band_anchors.band_source(),
         "crop_anchors": anchors,
         "anchor_origin": origin,
@@ -460,10 +546,23 @@ def _mirror_activity_to_anchored_window(
     return mirrored
 
 
-def _dispatch_source(param: str, planner_params: dict[str, float], quiet_params: set[str]) -> str:
-    """Return the setpoint_changes source for a dispatcher write."""
-    if param in quiet_params:
+def _dispatch_source(
+    param: str,
+    planner_params: dict[str, float],
+    quiet_params: set[str],
+    desired_params: frozenset[str] | set[str] = frozenset(),
+    released_params: frozenset[str] | set[str] = frozenset(),
+) -> str:
+    """Return the setpoint_changes source for a dispatcher write.
+
+    A desired-state value in force (``desired_params``, VD-33) is ``manual``;
+    a release returned to its registry default (``released_params``) is
+    ``band``, like the dispatcher's own defaults.
+    """
+    if param in quiet_params or param in desired_params:
         return "manual"
+    if param in released_params:
+        return "band"
     if param in BAND_DRIVEN_PARAMS:
         return "band"
     if param in LIGHTING_CIRCUIT_DEFAULT_PARAMS and param not in planner_params:
@@ -479,6 +578,151 @@ def _dispatch_source(param: str, planner_params: dict[str, float], quiet_params:
     if param in FORCED_ON_SWITCH_PARAMS:
         return "manual"
     return "plan"
+
+
+def _is_forecast_rule_plan(plan_id: object) -> bool:
+    """Whether a plan row is the forecast action engine's (scripts/forecast-action-engine.py)."""
+    return str(plan_id).startswith(FORECAST_RULE_PLAN_PREFIX)
+
+
+def _plan_row_admitted(param: str, plan_id: object) -> bool:
+    """Whether a v_active_plan row reaches the fences and ``planner_params``.
+
+    Iris's row needs a planner-pushable parameter. A forecast rule's row needs a
+    writable one (VD-65, architecture §5.3 step 1), so ``high_wind`` still reaches
+    ``sw_economiser_enabled``, through the same fences as any plan value.
+    """
+    if param in PLANNER_PUSHABLE_REG:
+        return True
+    return _is_forecast_rule_plan(plan_id) and desired_write_rule(param)[0]
+
+
+def _log_desired_skip_once(param: str, reason: str, *, warning: bool = False) -> None:
+    """Log a skipped desired_state row once per parameter and reason."""
+    if (param, reason) in _DESIRED_SKIPS_LOGGED:
+        return
+    _DESIRED_SKIPS_LOGGED.add((param, reason))
+    (log.warning if warning else log.info)("desired_state skipped param=%s reason=%s", param, reason)
+
+
+def _dispatcher_resolves(param: str, *, lighting_circuit: bool) -> bool:
+    """Whether a band, lighting-policy or default block of a pass resolves ``param``.
+
+    The per-circuit lighting values are resolved on firmware with per-circuit
+    lighting, the legacy shared ones only on firmware without it. A release of a
+    parameter no block resolves (a lighting offset, solar phasing or
+    out-of-service switch, or a legacy shared lighting value on per-circuit
+    firmware) and with no plan goes to its registry default, not nowhere.
+    """
+    if param in LIGHTING_POLICY_PARAMS:
+        return not lighting_circuit
+    if param in LIGHTING_CIRCUIT_RESOLVED_PARAMS:
+        return lighting_circuit
+    return param in DISPATCHER_DEFAULT_PARAMS
+
+
+async def _fetch_desired_state(conn: asyncpg.Connection) -> dict[str, object]:
+    """The newest desired_state row per parameter, keyed by parameter (VD-33).
+
+    Before migration 280 is applied, or without its SELECT grant, there is no
+    desired state to apply: the pass goes on with plans, band and defaults
+    (logged once). Any other error fails the pass, so a transient error can
+    never hand a person's setting back to the plan for one pass.
+    """
+    try:
+        rows = await conn.fetch(
+            "SELECT param, value, manual, created_at FROM v_desired_state_current WHERE greenhouse_id = $1",
+            GREENHOUSE_ID,
+        )
+    except (asyncpg.UndefinedTableError, asyncpg.InsufficientPrivilegeError) as error:
+        _log_desired_skip_once("*", f"v_desired_state_current unreadable ({type(error).__name__})", warning=True)
+        return {}
+    return {str(row["param"]): row for row in rows or []}
+
+
+def _desired_route_exists(param: str) -> bool:
+    """Whether the dispatcher can address ``param`` as a number or switch entity."""
+    if param.startswith("sw_"):
+        return SWITCH_TO_ENTITY.get(param) is not None
+    return PARAM_TO_ENTITY.get(param) is not None
+
+
+def _desired_skip_reason(
+    param: str,
+    *,
+    lighting_circuit: bool,
+    lighting_target_minutes: bool,
+    direct_wet: bool,
+    ai_moisture_stress: bool,
+) -> str | None:
+    """Why the dispatcher sends nothing for this desired_state row, or None.
+
+    Architecture §5.2: a row that is not writable now (§5.3 step 1) is skipped,
+    and so is every crop_band and irrigation_site row. A row the connected
+    firmware has no route or entity for is skipped as a plan row would be. An
+    unknown or retired parameter is skipped and never fails the pass.
+    """
+    writable, reason = desired_write_rule(param)
+    if not writable:
+        return f"not writable: {reason}"
+    control_class = get_tunable(param).control_class
+    if control_class in DESIRED_OTHER_PATH_CLASSES:
+        return f"{control_class} reaches the controller by its own path"
+    if param in RETIRED_UNROUTABLE_PARAMS or not _desired_route_exists(param):
+        return "no dispatcher route"
+    if param in LIGHTING_CIRCUIT_DEFAULT_PARAMS and not lighting_circuit:
+        return "firmware has no per-circuit lighting"
+    if param in LIGHTING_TARGET_MINUTE_PARAMS and not lighting_target_minutes:
+        return "firmware has no lighting target minutes"
+    if param in DIRECT_WET_POLICY_PARAMS and not direct_wet:
+        return "firmware has no direct-wet policy"
+    if param in AI_MOISTURE_STRESS_POLICY_PARAMS and not ai_moisture_stress:
+        return "firmware has no moisture-stress policy"
+    return None
+
+
+def _fenced_desired_value(param: str, requested: float, moisture_guardrails: dict[str, float], audit) -> float:
+    """A desired value through the fences a plan value passes (architecture §5.2).
+
+    The physics invariants, the forced-on guardrail and the VPD-high moisture
+    guardrails; each clamp is recorded through ``audit`` (``add_clamp_audit``),
+    so ``setpoint_clamps`` shows the value held. The registry clamp
+    (``_coerce_registry_value``) runs at push time, as for every change.
+    """
+    value, violation = _validate_physics(param, requested)
+    if violation is not None:
+        audit(param, requested, value, 0.0, 0.0, violation, from_plan=False)
+        log.warning("FW-3 invariant: desired %s=%s clamped to %s (%s)", param, requested, value, violation)
+    if param in FORCED_ON_SWITCH_PARAMS and value < 0.5:
+        audit(param, requested, 1.0, 1.0, 1.0, "forced_on_guardrail", from_plan=False)
+        value = 1.0
+    guardrail_max = moisture_guardrails.get(param)
+    if guardrail_max is not None and value > guardrail_max:
+        audit(
+            param,
+            requested,
+            float(guardrail_max),
+            0.0,
+            float(guardrail_max),
+            "vpd_high_moisture_guardrail",
+            from_plan=False,
+        )
+        log.warning("VPD-high moisture guardrail: desired %s=%s clamped to %s", param, requested, guardrail_max)
+        value = float(guardrail_max)
+    if param.startswith("sw_"):
+        value = 1.0 if value > 0.5 else 0.0
+    return float(value)
+
+
+def _desired_differs(param: str, value: float, last: float | None, readback: float | None) -> bool:
+    """Whether a desired value (or a release's registry default) needs a command.
+
+    It does when it differs from ``_last_pushed`` or from the current readback
+    under the grid comparator ``readback_matches()`` (architecture §5.5), not the
+    1 % dead-band, so a one-step change is not hidden; with neither known, too.
+    """
+    known = [observed for observed in (last, readback) if observed is not None]
+    return not known or not all(readback_matches(param, observed, value) for observed in known)
 
 
 async def _fetch_quiet_state(conn: asyncpg.Connection) -> dict[str, str]:
@@ -944,8 +1188,9 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 solar_ctx.phase,
             )
 
+        # created_at decides last write wins against desired state (VD-33).
         planned = await conn.fetch(
-            "SELECT parameter, value, ts, plan_id, reason, trigger_id, planner_instance FROM v_active_plan"
+            "SELECT parameter, value, ts, plan_id, reason, created_at, trigger_id, planner_instance FROM v_active_plan"
         )
         raw_planner_params = {r["parameter"]: r["value"] for r in (planned or [])}
         lighting_circuit_supported = FIRMWARE_HAS_PER_CIRCUIT_LIGHTING or any(
@@ -985,8 +1230,11 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             band_lo: float,
             band_hi: float,
             reason: str,
+            *,
+            from_plan: bool = True,
         ) -> None:
-            meta = planner_meta.get(param, {})
+            # A desired-state value's clamp names no plan (VD-33).
+            meta = planner_meta.get(param, {}) if from_plan else {}
             clamps_to_log.append(
                 {
                     "parameter": param,
@@ -1004,7 +1252,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
 
         planner_params: dict[str, float] = {}
         for param, raw_val in raw_planner_params.items():
-            if param not in PLANNER_PUSHABLE_REG:
+            if not _plan_row_admitted(param, planner_meta[param]["plan_id"]):
                 add_clamp_audit(
                     param,
                     float(raw_val),
@@ -1262,6 +1510,8 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             if param in RETIRED_UNROUTABLE_PARAMS:
                 log.info("Dispatcher skipping retired unroutable param from plan row: %s", param)
                 continue
+            if param not in planner_params and _is_forecast_rule_plan(row["plan_id"]):
+                continue  # read-only: a forecast rule never reaches the controller around the fences
             planned_val = planner_params.get(param, row["value"])
             if param in LIGHTING_CIRCUIT_DEFAULT_PARAMS and not lighting_circuit_supported:
                 continue
@@ -1318,6 +1568,70 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             await _record_quiet_mode(conn, "expired_no_overlay")
             log.info("Dispatcher: recording quiet mode expired; no restore overlay applied")
 
+        # Desired state (VD-33, architecture §5.2). A person's or an agent's
+        # value replaces what the plan, band and default blocks above put in
+        # changes for its parameter, through the same fences, before the dedupe,
+        # the drift probe, C1 and the 12-command limit. resolve_effective() is
+        # the one control rule: a manual row beats Iris's plan, a newer plan
+        # beats a non-manual row, NULL releases. Only a plan row the dispatcher
+        # admits (planner_params) counts as the plan.
+        desired_rows = await _fetch_desired_state(conn)
+        plan_rows = {str(row["parameter"]): row for row in planned or []}
+        desired_readbacks = shared.current_cfg_readbacks(reconnect_generation)
+        policy_hold_active, policy_hold_params = experiment_policy_hold()
+        bundle_hold_active, bundle_hold_params = component_bundle_hold()
+        # param -> the value this block put in changes: a desired value, or a
+        # release's registry default.
+        desired_values: dict[str, float] = {}
+        released_values: dict[str, float] = {}
+        desired_held: list[str] = []
+        for param, desired in sorted(desired_rows.items()):
+            skip = _desired_skip_reason(
+                param,
+                lighting_circuit=lighting_circuit_supported,
+                lighting_target_minutes=lighting_target_minutes_supported,
+                direct_wet=direct_wet_supported,
+                ai_moisture_stress=ai_moisture_stress_supported,
+            )
+            if skip is None and desired["value"] is not None and not math.isfinite(float(desired["value"])):
+                skip = "non-finite value"
+            if skip is not None:
+                _log_desired_skip_once(param, skip)
+                continue
+            plan_row = plan_rows.get(param) if param in planner_params else None
+            resolved = resolve_effective(desired, plan_row)
+            if resolved is None:
+                # Released: the plan, band or dispatcher default above applies.
+                # With none of them the setting returns to its registry default.
+                if plan_row is not None or _dispatcher_resolves(param, lighting_circuit=lighting_circuit_supported):
+                    continue
+                released = True
+                requested = float(get_tunable(param).default)
+            elif resolved.applied_from == "plan":
+                continue  # a newer plan wins (last write wins): today's behaviour
+            else:
+                released = False
+                requested = resolved.value
+                # Iris's value for this parameter is not applied, nor its clamps.
+                clamps_to_log[:] = [row for row in clamps_to_log if row["parameter"] != param]
+            changes = [(name, change) for name, change in changes if name != param]
+            if (policy_hold_active and param in policy_hold_params) or (
+                bundle_hold_active and param in bundle_hold_params
+            ):
+                # The armed vector or a component bundle owns it: it reads held
+                # and goes out on the first pass after the hold ends. Nothing is
+                # fenced, so no clamp row claims a guardrail held it.
+                desired_held.append(param)
+                continue
+            value = _fenced_desired_value(param, requested, moisture_guardrails, add_clamp_audit)
+            if not _desired_differs(param, value, _last_pushed.get(param), desired_readbacks.get(param)):
+                continue
+            changes.append((param, value))
+            (released_values if released else desired_values)[param] = value
+        if desired_held:
+            log.info("desired_state held params=%s reason=experiment_hold", ",".join(desired_held))
+        grid_params = frozenset(desired_values) | frozenset(released_values)
+
         # Multiple policy layers can resolve the same parameter.  One physical
         # command and one lifecycle row per parameter keeps ordering explicit.
         deduped_changes: dict[str, float] = {}
@@ -1327,7 +1641,9 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
 
         # Only current-generation cfg values may suppress an equivalent
         # duration. Apply this before the drift probe, C1 and pacing.
-        changes = _without_equivalent_duration_candidates(changes, shared.current_cfg_readbacks(reconnect_generation))
+        changes = _without_equivalent_duration_candidates(
+            changes, shared.current_cfg_readbacks(reconnect_generation), grid_params
+        )
 
         # Plain convergence (VD-62): the complete candidate set is what still
         # differs from the controller. Record since when, for pacing order and
@@ -1338,6 +1654,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             {str(row["parameter"]) for row in clamps_to_log},
             reconnect_generation,
             pass_started,
+            grid_params,
         )
 
         probe_decision = await drift_probe.choose(
@@ -1415,7 +1732,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         awaiting_readback = 0
         if c1_selection.phase == "ordinary" and probe_decision.action != "send":
             changes, paced_unsent, awaiting_readback, paced_wake = _pace_ordinary_changes(
-                changes, reconnect_generation, pass_started
+                changes, reconnect_generation, pass_started, grid_params
             )
             pending_count = len(changes) + len(paced_unsent)
             if paced_unsent or awaiting_readback:
@@ -1490,6 +1807,22 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         )
         heap_defer_active = _heap_push_defer_active(bool(heap_alert_open), heap_free, heap_largest)
 
+        # A command is a desired-state value (source manual, past
+        # component_authority_hold, no plan trigger) or a release (source band)
+        # only when it carries the very value the desired-state block resolved
+        # (VD-33): a drift probe, a C1 target or a C1 restore of the same field
+        # is none of them.
+        outgoing_desired: frozenset[str] = frozenset()
+        outgoing_released: frozenset[str] = frozenset()
+        if probe_decision.action != "send":
+            outgoing = {param: float(value) for param, value in changes if param not in c1_selection.override_fields}
+            outgoing_desired = frozenset(
+                param for param, value in desired_values.items() if outgoing.get(param) == value
+            )
+            outgoing_released = frozenset(
+                param for param, value in released_values.items() if outgoing.get(param) == value
+            )
+
         dispatchable_changes: list[tuple[str, float, str]] = []
         delivery_records: list[dict[str, object]] = []
         prequeue_failures: list[tuple[str, str]] = []
@@ -1498,8 +1831,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             source = (
                 "manual"
                 if probe_decision.phase == "probe" or param in c1_selection.override_fields
-                else _dispatch_source(param, planner_params, quiet_params)
+                else _dispatch_source(param, planner_params, quiet_params, outgoing_desired, outgoing_released)
             )
+            # A desired-state value or a release carries no plan's trigger (VD-33).
+            plan_owned = param not in outgoing_desired and param not in outgoing_released
 
             requested_val = float(val)
             registry_val, registry_violation = _coerce_registry_value(param, requested_val)
@@ -1512,10 +1847,11 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     0.0,
                     0.0,
                     registry_violation or "registry_violation",
+                    from_plan=plan_owned,
                 )
                 continue
             if registry_violation is not None:
-                add_clamp_audit(param, requested_val, registry_val, 0.0, 0.0, registry_violation)
+                add_clamp_audit(param, requested_val, registry_val, 0.0, 0.0, registry_violation, from_plan=plan_owned)
                 log.warning(
                     "Dispatcher registry guard: %s=%s clamped to %s (%s)",
                     param,
@@ -1532,7 +1868,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             # cheap (one row at a time) vs. downstream where it blows up a
             # grafana panel or planner scorecard.
             try:
-                meta = planner_meta.get(param, {})
+                meta = planner_meta.get(param, {}) if plan_owned else {}
                 change_trigger_id = meta.get("trigger_id")
                 change_planner_instance = meta.get("planner_instance")
                 if param in c1_selection.override_fields:
@@ -1653,6 +1989,9 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 "Dispatcher: held full %d-row setpoint snapshot during active heap pressure",
                 skipped_heap_deferred,
             )
+        # Desired-state values pass component_authority_hold at the physical
+        # chokepoint (VD-33); a probe or C1 value for the same field does not.
+        desired_push = frozenset(param for param, _value, _source in dispatchable_changes if param in outgoing_desired)
         # Tier 1 #2: persist guardrail audit. Rows are written even when the
         # guardrail intentionally holds an unchanged applied value and no
         # setpoint_changes row is emitted.
@@ -1815,6 +2154,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             if c1_selection.phase == "send"
             else None,
             source_guard=(lambda: _c1_source_guard(pool, c1_selection)) if c1_selection.phase == "send" else None,
+            desired_params=desired_push,
         )
         if result.fatal_error:
             raise LifecyclePersistenceError(result.fatal_error)

@@ -17,7 +17,8 @@ one exception is the writer age, the newest ``setpoint_changes`` row, which the
 dashboard login has a 10 s ``statement_timeout``.
 
 Helpers other reads share: ``reporting()``, the one §7 test (#1155 and #1180
-use it too); ``collapse()``, which merges repeated state rows into runs; and
+use it too); ``collapse()``, which merges repeated state rows into runs;
+``equipment_tracks()`` and ``leak_block()``, which API-IRR-01 (#1155) reuses; and
 ``plan_waypoints()`` and ``plan_history()``, the plan values with their
 ``effective`` flag. API-02's alert count is ``alerts.open_count``, the one
 count API-14 and every other surface show (Round 2b C), and API-07's lanes
@@ -50,6 +51,7 @@ from verdify_schemas.tunable_registry import BAND_OWNED_REG, LIGHTING_CIRCUIT_DE
 from verdify_schemas.tunable_registry import get as registry_get
 from verdify_services import activity, alerts, settings
 from verdify_services.actor import ActorRef as ActorRef  # re-exported: the OpenAPI Actor of DesiredSetting
+from verdify_services.irrigation.runs import run_causes
 from verdify_services.labels import EQUIPMENT_LABELS, EQUIPMENT_LINE_IDS
 
 DENVER = ZoneInfo("America/Denver")
@@ -77,6 +79,8 @@ STATE_WINDOW = timedelta(days=31)  # runs older than this have since null
 NEWEST_ROW_WINDOW = timedelta(days=90)
 DIFFERING_AFTER = timedelta(minutes=10)
 OVERRIDE_COMMAND_LEAD = timedelta(minutes=2)
+# run_causes() looks this far back for what is on now; a run already on keeps its true start.
+RUNNING_CAUSE_LOOKBACK = timedelta(minutes=1)
 LEAK_STOPPED_BELOW_GPM = 0.1
 LEAK_STOPPED_READINGS = 2
 
@@ -1048,6 +1052,11 @@ async def _tracks(conn: asyncpg.Connection, sql: str, keys: Sequence[str]) -> di
     return {key: Track(tuple(collapse(edges.get(key, ()))), newest.get(key)) for key in keys}
 
 
+async def equipment_tracks(conn: asyncpg.Connection, keys: Sequence[str]) -> dict[str, Track]:
+    """Each ``equipment_state`` key's runs over the state window, with the key's newest row."""
+    return await _tracks(conn, _EQUIPMENT_TRACKS_SQL, keys)
+
+
 async def reporting(conn: asyncpg.Connection) -> Reporting:
     """The one §7 test: heartbeat at most 180 s old, and climate at most 300 s old for the controller."""
     row = await conn.fetchrow(_REPORTING_SQL, HEARTBEAT_ENTITY)
@@ -1274,7 +1283,7 @@ async def _overrides(
     return out
 
 
-async def _leak(
+async def leak_block(
     conn: asyncpg.Connection,
     track: Track,
     alert_facts: Mapping[str, Any],
@@ -1317,6 +1326,19 @@ async def _leak(
     )
 
 
+async def _running_causes(
+    conn: asyncpg.Connection, tracks: Mapping[str, Track], rep: Reporting
+) -> dict[str | None, IrrigationCause]:
+    """Why each wet line on now is running: ``run_causes()``'s newest run per line (#1155)."""
+    wet_on = any(tracks[name].spans and tracks[name].spans[-1].state for name in EQUIPMENT_LINE_IDS)
+    if not rep.controller_reporting or not wet_on:
+        return {}
+    causes: dict[str | None, IrrigationCause] = {}
+    for run in sorted(await run_causes(conn, rep.at - RUNNING_CAUSE_LOOKBACK, rep.at), key=lambda run: run.start):
+        causes[run.line_id] = run.cause
+    return causes
+
+
 # ── API-02 ──────────────────────────────────────────────────────────────────
 
 
@@ -1342,13 +1364,14 @@ async def now(conn: asyncpg.Connection) -> Now:
         alert_counts = await alerts.open_count(conn)
         alert_facts = await conn.fetchrow(_ALERT_FACTS_SQL)
         flow_gpm = _finite(climate["flow_gpm"])
-        leak = await _leak(conn, tracks[LEAK_FLAG], alert_facts, flow_gpm, clock["gal_10min"], rep)
+        leak = await leak_block(conn, tracks[LEAK_FLAG], alert_facts, flow_gpm, clock["gal_10min"], rep)
         overrides = await _overrides(conn, tracks, texts.get("fog_block_reason"), rep)
         values = values_in_force(
             await _desired_rows(conn), await _active_plan_rows(conn), experiment_armed=clock["experiment_armed"]
         )
         due = [item for item in values if at - item.since > DIFFERING_AFTER]
         facts = await _readback_facts(conn, [(item.param, item.since, item.value) for item in due])
+        causes = await _running_causes(conn, tracks, rep)
 
     indoor_at = climate["ts"]
     no_row = "No climate row in the last 24 h"
@@ -1396,7 +1419,7 @@ async def now(conn: asyncpg.Connection) -> Now:
 
     items = _equipment_items(tracks, rep)
     running = [
-        Running(equipment=item.equipment, line_id=item.line_id, cause=None, since=item.since)
+        Running(equipment=item.equipment, line_id=item.line_id, cause=causes.get(item.line_id), since=item.since)
         for item in items
         if rep.controller_reporting and item.state == "on"
     ]

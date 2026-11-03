@@ -9,7 +9,8 @@ functions, so a person and an agent get the same answer for the same input.
 - ``write(...)`` and ``release(...)``: one ``activity.recorded_write`` transaction each: the ``desired_state`` row,
   for a crop-band setting its ``crop_band_anchors`` rows, and one ``activity_log`` row. The ``desired_state``
   insert trigger is the only wake; nothing here writes ``setpoint_changes``.
-- ``status(conn, param)``: whose value applies and the readback state (§5.5). Display only: it raises no alert.
+- ``status(conn, param)``: whose value applies and the readback state (§5.5). Display only: it raises no alert. The
+  ``irrigation_site`` rows read back through the program the controller confirms (irrigation §4.1 and §8.3, #1155).
   ``statuses(conn, params)`` is the same for several settings in one batched read (API-07's lanes).
 - ``history(conn, param, from_, to)``: the desired rows and the readback change points over a window.
 - ``desired_states(conn, ids)``: named ``desired_state`` rows with their readback state, by ``history``'s rule
@@ -56,6 +57,7 @@ from verdify_schemas.tunable_registry import (
 from verdify_services import activity
 from verdify_services.activity import ReadbackState, WriteResult
 from verdify_services.actor import Actor, ActorRef
+from verdify_services.irrigation.program import ControllerProgram, controller_program, first_pushes, site_value
 from verdify_services.problems import ServiceError, problem
 
 if TYPE_CHECKING:  # reads imports this module; _shared() imports reads when it runs
@@ -79,6 +81,7 @@ POLICY_FIELDS = frozenset(spec.name for spec in wire_fields())
 NO_ANCHOR_ROW = "no crop_band_anchors row holds it"
 NO_READBACK_REASON = "no readback in the last 24 h"
 NO_PROGRAM_READBACK = "applies with the irrigation firmware"
+NO_CONFIRMED_PROGRAM = "no confirmed program on the controller"
 
 ReasonCode = Literal[
     "clamped",
@@ -295,6 +298,7 @@ class _Facts:
 class _Shared:
     reporting: Reporting
     experiment_armed: bool
+    program: ControllerProgram | None = None  # read when an irrigation_site setting is in question
 
     @property
     def at(self) -> datetime:
@@ -430,6 +434,28 @@ def _reason(
     return StateReason(code="no_match", since=push.at if push is not None else None)
 
 
+def _evaluate_site(param: str, request: _Request | None, facts: _Facts, shared: _Shared) -> _Evaluation:
+    """An ``irrigation_site`` row against the program hash (irrigation §8.3). Before the engine a write stays
+    requested (``no_engine``). It reads confirmed once the confirmed push whose ``sha256`` starts with the
+    ``irr_program_id`` hash was compiled at or after it, or at once when that record already holds its value: such a
+    write leaves the hash as it is, and the ingestor adds a push row only when the hash changes (#1157), so none ever
+    carries it. Otherwise it reads not_confirmed 5 min after the write. With no write, the applied program's value is
+    confirmed."""
+    program = shared.program
+    if request is None:
+        return _Evaluation("confirmed" if facts.readback is not None else "no_readback")
+    if program is None or not program.engine:
+        return _Evaluation("requested", StateReason(code="no_engine", detail=NO_PROGRAM_READBACK, since=request.since))
+    confirmed = program.confirmed
+    if confirmed is not None:
+        if confirmed["site_desired_at"] is not None and confirmed["site_desired_at"] >= request.since:
+            return _Evaluation("confirmed", confirmed_at=confirmed["confirmed_at"])
+        if facts.readback is not None and request.matches(param, facts.readback.value, request.value):
+            return _Evaluation("confirmed", confirmed_at=max(confirmed["confirmed_at"], request.since))
+    state: ReadbackState = "requested" if shared.at - request.since < REQUESTED_FOR else "not_confirmed"
+    return _Evaluation(state, _reason(None, False, facts.push, shared.reporting))
+
+
 def evaluate(spec: TunableDef, facts: _Facts, shared: _Shared) -> _Evaluation:
     """§5.5 readback state: the first that holds of released, overridden, held, confirmed, no_readback,
     requested and not_confirmed, with ``state_reason`` for requested, not_confirmed and held.
@@ -444,11 +470,7 @@ def evaluate(spec: TunableDef, facts: _Facts, shared: _Shared) -> _Evaluation:
     if kind == "overridden":
         return _Evaluation("overridden")
     if spec.control_class == "irrigation_site":
-        # Before the engine firmware a site value is stored and stays requested (§5.8); #1155 adds the program
-        # hash readback and no_engine.
-        if request is None:
-            return _Evaluation("no_readback")
-        return _Evaluation("requested", _reason(None, False, None, shared.reporting))
+        return _evaluate_site(spec.name, request, facts, shared)
     route = readback_via(spec)
     if request is None:
         if route == "none":
@@ -597,12 +619,13 @@ def _tolerance(param: str, value: float) -> float:
         return -1.0
 
 
-async def _shared(conn: asyncpg.Connection) -> _Shared:
+async def _shared(conn: asyncpg.Connection, *, site: bool = False) -> _Shared:
     from verdify_services import reads  # here, not at the top: reads imports this module
 
     reporting = await reads.reporting(conn)
     armed = await conn.fetchval(activity.ARMED_EXPERIMENT_SQL)
-    return _Shared(reporting=reporting, experiment_armed=armed is not None)
+    program = await controller_program(conn) if site else None
+    return _Shared(reporting=reporting, experiment_armed=armed is not None, program=program)
 
 
 async def _readbacks(conn: asyncpg.Connection, names: Sequence[str]) -> dict[str, _Readback]:
@@ -654,6 +677,27 @@ async def _first_matches(
     return out
 
 
+async def _gather_site(
+    conn: asyncpg.Connection,
+    specs: Sequence[TunableDef],
+    requests: Mapping[str, tuple[str, _Request | None]],
+    facts: Mapping[str, _Facts],
+    program: ControllerProgram,
+) -> None:
+    """With the engine: each site row's value in the confirmed applied program, its one readback, and the first push
+    compiled at or after its write, the "Sent HH:MM" a ``no_match`` names."""
+    confirmed = program.confirmed
+    writes: list[tuple[str, datetime]] = []
+    for spec in specs:
+        if confirmed is not None:
+            facts[spec.name].readback = _Readback(site_value(confirmed, spec.name), confirmed["confirmed_at"])
+        request = requests[spec.name][1]
+        if request is not None:
+            writes.append((spec.name, request.since))
+    for param, pushed_at in (await first_pushes(conn, writes)).items():
+        facts[param].push = _Push(pushed_at, None)
+
+
 async def _gather(
     conn: asyncpg.Connection,
     specs: Sequence[TunableDef],
@@ -665,7 +709,8 @@ async def _gather(
     ``desired_rows`` replaces the ``v_desired_state_current`` read (a write's own row, or a replayed one).
     """
     names = [spec.name for spec in specs]
-    shared = await _shared(conn)
+    site_specs = [spec for spec in specs if spec.control_class == "irrigation_site"]
+    shared = await _shared(conn, site=bool(site_specs))
     if desired_rows is None:
         desired_rows = {row["param"]: row for row in await conn.fetch(_DESIRED_SQL, GREENHOUSE_ID, names)}
     plans = {row["parameter"]: row for row in await conn.fetch(_ACTIVE_PLAN_SQL, names)}
@@ -697,12 +742,14 @@ async def _gather(
                 item.push = _Push(row["push_at"], row["delivery_status"])
             if row["clamp_at"] is not None:
                 item.clamp = _Clamp(row["clamp_at"], _finite(row["applied"]), row["reason"])
+    if site_specs and shared.program is not None and shared.program.engine:
+        await _gather_site(conn, site_specs, requests, facts, shared.program)
     # confirmed_at: the first readback that confirms a desired value, for the desired values that read confirmed.
     confirmed = []
     for spec in specs:
         kind, request = requests[spec.name]
-        if kind != "desired" or request is None:
-            continue
+        if kind != "desired" or request is None or spec.control_class == "irrigation_site":
+            continue  # a site row's confirmed_at is its push's
         if evaluate(spec, facts[spec.name], shared).state == "confirmed":
             confirmed.append((len(confirmed), spec.name, request.since, None, request.value))
     for index, at in (await _first_matches(conn, confirmed)).items():
@@ -743,12 +790,13 @@ def _desired_setting(
     )
 
 
-def _reading(spec: TunableDef, facts: _Facts) -> Reading | None:
+def _reading(spec: TunableDef, facts: _Facts, *, engine: bool = False) -> Reading | None:
     route = readback_via(spec)
     if route == "none":
         return None
-    if route == "program":
-        return Reading(value=None, observed_at=None, reason=NO_PROGRAM_READBACK)
+    if route == "program" and facts.readback is None:
+        reason = NO_PROGRAM_READBACK if not engine else NO_CONFIRMED_PROGRAM
+        return Reading(value=None, observed_at=None, reason=reason)
     if facts.readback is None:
         return Reading(value=None, observed_at=None, reason=NO_READBACK_REASON)
     return Reading(value=facts.readback.value, observed_at=facts.readback.at)
@@ -764,7 +812,7 @@ def _setting_status(spec: TunableDef, facts: _Facts, shared: _Shared) -> Setting
         state_reason=evaluation.reason,
         confirmed_at=evaluation.confirmed_at,
         readback_via=readback_via(spec),
-        readback=_reading(spec, facts),
+        readback=_reading(spec, facts, engine=shared.program is not None and shared.program.engine),
         desired=_desired_setting(desired, evaluation) if desired is not None else None,
     )
 

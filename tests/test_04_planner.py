@@ -420,7 +420,7 @@ class TestMCPToolAvailability:
         with open(path) as f:
             body = f.read()
         assert body.startswith("---\nname: greenhouse-planner"), "Playbook YAML frontmatter missing"
-        assert "22 MCP tools" in body, "Playbook tool count out of sync with _STANDING_DIRECTIVES"
+        assert "25 MCP tools" in body, "Playbook tool count out of sync with _STANDING_DIRECTIVES"
         assert "READ → DIAGNOSE → DECIDE → ACT → REPORT" in body, "Playbook planning cycle section missing"
 
     def test_vendored_and_host_playbooks_in_sync(self):

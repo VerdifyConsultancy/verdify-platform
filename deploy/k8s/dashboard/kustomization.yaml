@@ -49,11 +49,12 @@ generatorOptions:
 
 # The web ships only through a digest-only pin PR to this entry: the digest of the build's
 # sha-<first 12 characters of the commit> tag on registry.vallery.net, or the build step's digest
-# output. No digest and no pod until R1's pin PR (#1143) sets the first digest and count 1.
+# output.
 images:
   - name: verdify-dashboard-web
     newName: registry.vallery.net/verdifyconsultancy/verdify-dashboard-web
+    digest: sha256:203cfeaa2a90d458524fef2145e5e45f53511125769534e960f46980e361a3d0
 
 replicas:
   - name: verdify-dashboard-web
-    count: 0
+    count: 1
