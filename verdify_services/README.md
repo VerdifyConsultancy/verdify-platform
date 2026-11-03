@@ -108,7 +108,7 @@ with a top-level `replayed: true` on a replay (MCP has no headers).
   kind of write. A write with a request id uses `recorded_write`, which stores the id and the hash together.
   The log takes a reason of any length, as its column does (Iris's unchanged `set_tunable` is never
   refused, R5); `recorded_write` refuses one over 500 characters with `invalid_request`, as the REST
-  bodies do.
+  bodies do, and one holding a NUL, which PostgreSQL text cannot store.
 - `list(conn, *, source=None, actor=None, action=None, target=None, from_=None, to=None, limit=50,
   cursor=None) -> ActivityPage` (API-17, MCP `activity`): newest first by (`ts`, `id`); `source='agent'`
   matches every `agent:<name>`; `action` is a prefix match; `actor` and `target` are exact; `from_` is
@@ -159,7 +159,8 @@ probe on; resolved rows merge apart. A merged row keeps the oldest unresolved re
 `details.count` and is `open` while any repeat is. `open_count` merges the same rows, so it always equals the
 open rows `list` returns. `ack` and `resolve` act on every repeat in one `recorded_write` transaction, write
 `acknowledged_by` or `resolved_by` as the username for a person and `actor.source` otherwise, and never refuse
-a resolve (the MCP adapter keeps its `planner_tool_dependency_failed` retrieval check).
+a resolve for its alert type (the MCP adapter keeps its `planner_tool_dependency_failed` retrieval check); only
+an unknown id or text holding a NUL is refused.
 
 The login needs SELECT on `alert_log`, `slack_alert_runbooks`, `setpoint_snapshot`, `equipment_state`,
 `setpoint_changes`, `setpoint_clamps`, `system_state`, `climate`, `crop_band_anchors`, `v_active_plan`,
