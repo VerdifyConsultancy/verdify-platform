@@ -30,8 +30,9 @@ INPUTS = {
     "RelayMeta[4,5]": "persistent last_on_ms,last_off_ms,on_stamp_ms,runtime_ms; initialized once per process and advanced by actual relay code",
     "manual_fog_force/fan_requires_vent": "bool; upstream authority decisions, not reconstructed here",
     "controller_time_valid": "bool",
-    "leak_block/occupancy_moisture_block/irrigation_water_conflict/climate_water_budget_block/mister_volume_hard_block/fert_master_on": "six explicit bool upstream safety decisions",
+    "occupancy_moisture_block/drip_relay_open/irrigation_water_conflict/climate_water_budget_block/mister_volume_hard_block/fert_master_on": "six explicit bool upstream safety decisions",
     "sensor_fault_relay_lock": "actual extracted expression mode == SENSOR_FAULT",
+    "fog_rails": "actual extracted FogForceOffInputs the fog gate, the relay force-off and the ladder share (#1161)",
 }
 SCENARIOS = (
     "gate_true_open_close",
@@ -55,13 +56,21 @@ SCENARIOS = (
     "minimum_off",
     "manual_force_on",
     "blocked_clock",
-    "blocked_leak",
+    "blocked_drip_relay",
     "blocked_occupancy",
     "blocked_irrigation",
     "blocked_budget",
     "blocked_hard_limit",
     "blocked_fertilizer",
     "sensor_fault_preblocked",
+    # #1161 (F9): survival fog in SAFETY_COOL runs past the engine's drip, the soft budget and
+    # SAF-4, and still stops for confirmed occupancy, L03 and an open drip relay.
+    "survival_past_irrigation",
+    "survival_past_budget",
+    "survival_past_hard_limit",
+    "survival_held_by_occupancy",
+    "survival_held_by_fertilizer",
+    "survival_held_by_drip_relay",
 )
 NEGATIVE_WITNESSES = ("gate_true_open_close", "gate_true_open_open")
 
@@ -110,10 +119,8 @@ def extract_fragments(root: Path = ROOT, controls_text: str | None = None) -> di
         "sensor_fault_lock": _statement(controls, "const bool sensor_fault_relay_lock = mode == SENSOR_FAULT"),
         "vent_readback": _statement(controls, "const bool vent_is_open = id(vent_rly)->state"),
         "fog_assist": _statement(controls, "const bool open_vent_fog_assist ="),
-        "safety_suppression": _block(
-            controls,
-            "if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block || mister_volume_hard_block || fert_master_on)",
-        ),
+        "fog_rails": _statement(controls, "const FogForceOffInputs fog_rails{"),
+        "safety_suppression": _block(controls, "if (fog_forced_off(mode, fog_rails))"),
         "fog_consumer": _block(
             controls,
             "if (polb(verdify_policy::kPF_sw_fog_closes_vent, id(fog_closes_vent)) && vent_is_open && !open_vent_fog_assist)",

@@ -13,7 +13,8 @@
     "start": "node server.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "pnpm fixtures:settings && vitest run",
+    "fixtures:settings": "uv run --no-project --with 'pydantic>=2.8,<3' --with 'pyyaml>=6,<7' python ../scripts/gen-dashboard-settings-fixture.py",
     "contract:write": "pnpm --dir contract-tools install --frozen-lockfile --ignore-scripts --reporter=silent && node contract-tools/generate.mjs --write",
     "contract:check": "pnpm --dir contract-tools install --frozen-lockfile --ignore-scripts --reporter=silent && node contract-tools/generate.mjs --check"
   },

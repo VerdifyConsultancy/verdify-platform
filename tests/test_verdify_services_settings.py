@@ -326,6 +326,16 @@ class FakeDB:
         if sql == settings._DESIRED_BY_ID_SQL:
             (row_id,) = args
             return [row for row in self.desired if row["id"] == row_id]
+        if sql == settings._DESIRED_ROWS_SQL:  # VD-55: named rows, each with its setting's next row's time
+            _gh, ids = args
+            ordered = sorted(self.desired, key=lambda r: (r["created_at"], r["id"]))
+            out = []
+            for row in ordered:
+                if row["id"] in ids:
+                    key = (row["created_at"], row["id"])
+                    later = [r for r in ordered if r["param"] == row["param"] and (r["created_at"], r["id"]) > key]
+                    out.append({**row, "until": later[0]["created_at"] if later else None})
+            return out
         if sql == settings._HISTORY_DESIRED_SQL:
             _gh, param, start, end = args
             rows = sorted((r for r in self.desired if r["param"] == param), key=lambda r: (r["created_at"], r["id"]))
@@ -1067,3 +1077,55 @@ def test_history_refuses_a_backwards_or_naive_window():
         with pytest.raises(ServiceError) as excinfo:
             run(settings.history(FakeDB(), PRESSURE, start, end))
         assert refusal(excinfo).code == "invalid_request"
+
+
+# ── Batched reads for API-07 and API-17 (VD-55) ─────────────────────────────
+
+
+def test_statuses_is_status_for_each_setting_in_one_batch_and_leaves_unknown_names_out():
+    db = FakeDB()
+    db.add_desired(KPA, 1.55, manual=True, at=ago(minutes=10))
+    db.snapshots.append((KPA, ago(minutes=1), 1.55))
+    db.add_plan(DELAY, 48.75, created_at=ago(hours=1))
+    db.snapshots.append((DELAY, ago(minutes=1), 48.75))
+    db.add_desired(PRESSURE, 845.0, at=ago(minutes=10))
+    db.clamps.append({"parameter": PRESSURE, "ts": ago(minutes=9), "applied": 840.0, "reason": "guard_x"})
+    db.snapshots.append((PRESSURE, ago(minutes=1), 840.0))
+    expected = {param: status(db, param) for param in (KPA, DELAY, PRESSURE)}
+    db.sql.clear()
+    batched = run(settings.statuses(db, [KPA, DELAY, "no_such_setting", PRESSURE, KPA]))
+    assert batched == expected
+    assert [result.state for result in batched.values()] == ["confirmed", "confirmed", "held"]
+    assert db.sql.count(reads._REPORTING_SQL) == 1  # one gather for all three
+    assert run(settings.statuses(db, ["no_such_setting"])) == {}
+
+
+def test_desired_states_give_each_named_row_the_state_history_gives_it():
+    db = FakeDB()
+    old = db.add_desired(PRESSURE, 840.0, at=ago(hours=8))
+    mid = db.add_desired(PRESSURE, 845.0, at=ago(hours=5))
+    released = db.add_desired(PRESSURE, None, at=ago(hours=4))
+    unconfirmed = db.add_desired(PRESSURE, 850.0, at=ago(hours=3))
+    newest = db.add_desired(PRESSURE, 855.0, at=ago(minutes=2))
+    other = db.add_desired(KPA, 1.55, at=ago(minutes=30))
+    db.snapshots += [
+        (PRESSURE, ago(hours=7), 840.0),
+        (PRESSURE, ago(hours=5, minutes=-1), 845.0),
+        (PRESSURE, ago(hours=1), 845.0),  # 850 never read back before the next row
+        (KPA, ago(minutes=29), 1.55),
+    ]
+    ids = [row["id"] for row in (old, mid, released, unconfirmed, newest, other)]
+    states = run(settings.desired_states(db, [*ids, 999_999, True, "7", 2**70]))
+    assert set(states) == set(ids)  # an id naming no row, or not an id, is left out
+    assert {row_id: (states[row_id].state, states[row_id].confirmed_at) for row_id in ids} == {
+        old["id"]: ("confirmed", ago(hours=7)),
+        mid["id"]: ("confirmed", ago(hours=5, minutes=-1)),
+        released["id"]: ("released", None),
+        unconfirmed["id"]: ("not_confirmed", None),
+        newest["id"]: ("requested", None),  # the newest row reads its full status
+        other["id"]: ("confirmed", ago(minutes=29)),
+    }
+    assert states[newest["id"]] == status(db, PRESSURE).desired
+    history = run(settings.history(db, PRESSURE, ago(hours=9), NOW))
+    assert {row.id: row for row in history.desired} == {row_id: states[row_id] for row_id in ids[:5]}
+    assert run(settings.desired_states(db, [])) == {} and run(settings.desired_states(db, [999_999])) == {}

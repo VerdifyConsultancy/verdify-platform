@@ -13,7 +13,8 @@
 //     counter mirrors, set by the first run of the 5 s loop in irrigation_engine.yaml, which
 //     starts the engine;
 //   - the entry points of irrigation_engine.yaml (the tick and the four services) and of the
-//     climate path in controls.yaml (irr_vpd_grant, irr_vpd_release, irr_drip_active, the caps).
+//     climate path in controls.yaml (irr_vpd_grant, irr_vpd_release, irr_drip_active, the caps,
+//     irr_climate_zone_allowed for F6's per-zone rule and irr_mister_watchdog for D-IRP-19, #1161).
 //
 // Before the engine starts (the first ~2.5 s after boot) irr_grant_mask is 0, so every wet relay
 // guard refuses; the climate helpers answer as if nothing runs and no grant is given, and the
@@ -71,6 +72,7 @@ struct IrrEsp {
   IrrOutputs out{};
   IrrInputs climate = irr_inputs_idle();  // the climate loop's part of the inputs (controls.yaml)
   IrrStateExtras extras{};
+  IrrWatchdog wd{};                       // the D-IRP-19 mister watchdog's RAM (its faults are in the RTC block)
   IrrStaging staging{};
   uint16_t held = 0;                      // the engine relays the device opened at the last call
   float water_carry = 0.0f;               // the fraction below one centi-gallon
@@ -170,12 +172,14 @@ inline void esp_apply(IrrEsp& g, uint16_t stop_scope) {
   esp_mirror(g);
 }
 
-inline uint16_t esp_fault_mask(const IrrEsp& g, bool latched) {
-  uint16_t m = 0;
-  for (uint8_t i = 0; i < g.extras.fault_count && i < kMaxFaults; ++i) {
-    if (g.extras.faults[i].latched == latched) m = uint16_t(m | irr_bit(g.extras.faults[i].line));
-  }
-  return m;
+// The watchdog's faults (the RTC block) into the engine at once and into irr_state's f= tokens:
+// `faulted`, the misters just forced OFF, lose their open; then publish and apply.
+inline void esp_faults_changed(IrrEsp& g, uint16_t faulted, uint32_t now_ms) {
+  uint16_t backoff = 0, latch = 0;
+  irr_fault_masks(*g.eng.rtc, backoff, latch);
+  irr_fault_tokens(*g.eng.rtc, g.extras);
+  irr_apply_faults(g.eng, faulted, backoff, latch, now_ms, g.out);
+  esp_apply(g, 0);
 }
 
 }  // namespace detail
@@ -228,9 +232,11 @@ inline void irr_esp_tick(const verdify_irr::IrrEspBindings& b, bool clock_valid,
   in.now_ms = esphome::millis();
   in.clock = clock_valid ? verdify_irr::irr_clock_from_epoch(epoch, utc_offset_min) : verdify_irr::irr_clock_invalid();
   in.relay_on_mask = verdify_irr::detail::esp_relays_on(g);
-  in.backoff_mask = verdify_irr::detail::esp_fault_mask(g, false);
-  in.latch_mask = verdify_irr::detail::esp_fault_mask(g, true);
+  // The watchdog's back-offs and latches (D-IRP-19, #1161) from the RTC block.
+  verdify_irr::irr_fault_masks(*g.eng.rtc, in.backoff_mask, in.latch_mask);
   verdify_irr::irr_tick(g.eng, in, g.out);
+  // irr_state's f= tokens after the tick: a new local day has cleared the latches.
+  verdify_irr::irr_fault_tokens(*g.eng.rtc, g.extras);
   verdify_irr::detail::esp_apply(g, 0);
 }
 
@@ -296,7 +302,8 @@ inline void irr_esp_program_commit() {
 // irr_command(cmd, line, on_s, count, gap_s, prewet_s, flush_s) (F4), line the device_idx or 255.
 // run: irr_run_now() starts it at once or refuses it (a repeated send is line_busy and starts
 // nothing). stop: ends the runs in scope (stopped), clears their grant bits and turns their relays
-// off inside this call, never deferred. clear_fault: clears a mister zone's latch (#1161 sets it).
+// off inside this call, never deferred. clear_fault: zeroes a mister zone's watchdog fault count
+// and latch (D-IRP-19, #1161; irr_fault_clear()), or every zone's with 255.
 inline void irr_esp_command(const std::string& cmd, int32_t line, int32_t on_s, int32_t count, int32_t gap_s,
                             int32_t prewet_s, int32_t flush_s) {
   using verdify_irr::IrrCmd;
@@ -329,23 +336,16 @@ inline void irr_esp_command(const std::string& cmd, int32_t line, int32_t on_s, 
       return;
     }
     case IrrCmd::kClearFault: {
-      // A latch is a mister zone's (D-IRP-19): clear every token of the line's zone, or all (255).
+      // A latch is a mister zone's (D-IRP-19): zero the line's zone's count and latch, or every
+      // zone's (255). A back-off still running ends at its own time.
       const bool all = line == verdify_irr::kAllLines;
       if (!all && !(line >= 0 && line < verdify_irr::kLineCount && verdify_irr::kMistZone[line] < verdify_irr::kZoneCount)) {
         ESP_LOGW("irrig", "irr_command clear_fault line=%d: not a mister", int(line));
         return;
       }
-      uint8_t kept = 0;
-      for (uint8_t i = 0; i < g.extras.fault_count && i < verdify_irr::kMaxFaults; ++i) {
-        const verdify_irr::IrrFaultToken f = g.extras.faults[i];
-        const bool in_scope =
-            all || (f.line < verdify_irr::kLineCount && verdify_irr::kMistZone[f.line] == verdify_irr::kMistZone[line]);
-        if (in_scope) continue;
-        g.extras.faults[kept++] = f;
-      }
-      g.extras.fault_count = kept;
-      verdify_irr::detail::esp_apply(g, 0);
-      ESP_LOGW("irrig", "irr_command clear_fault line=%d", int(line));
+      const bool cleared = verdify_irr::irr_fault_clear(*g.eng.rtc, all ? verdify_irr::kAllLines : uint8_t(line));
+      verdify_irr::detail::esp_faults_changed(g, 0, now_ms);
+      ESP_LOGW("irrig", "irr_command clear_fault line=%d: %s", int(line), cleared ? "cleared" : "nothing to clear");
       return;
     }
     case IrrCmd::kUnknown:
@@ -393,15 +393,44 @@ inline unsigned irr_saf4_gal() {
   return g.ready ? unsigned(g.eng.prog.saf4_gal) : 0u;
 }
 
-// A mister zone's duty cap (F11): its clean line's daily_cap_min from the program (0 = none)
-// against the RTC block's seconds for the zone (every mister relay of the zone, any origin).
-inline bool irr_zone_cap_reached(uint8_t clean_line) {
+// F6 (#1161): may a climate VPD pulse use clean mister `idx` (L04, L07, L09) now?
+// irr_vpd_zone_allowed() on the running program: the climate's demand and safety gate, an
+// effective VPD member, no watchdog back-off or latch on the zone, its duty cap (F11: the clean
+// line's daily_cap_min against every mister second on the zone, any origin) and SAF-4. Before the
+// engine starts nothing may pulse (no grant could be given either).
+inline bool irr_climate_zone_allowed(uint8_t idx, bool demand, bool safety_ok, bool saf4_tripped) {
   const verdify_irr::IrrEsp& g = verdify_irr::irr_esp();
-  if (!g.ready || clean_line >= verdify_irr::kLineCount) return false;
-  const uint8_t z = verdify_irr::kMistZone[clean_line];
-  if (z >= verdify_irr::kZoneCount) return false;
-  const uint32_t cap_s = uint32_t(g.eng.prog.lines[clean_line].daily_cap_min) * 60u;
-  return cap_s > 0 && g.eng.rtc->zone_pulse_s[z] >= cap_s;
+  if (!g.ready) return false;
+  verdify_irr::IrrVpdZoneGate gate{demand, safety_ok, saf4_tripped, 0, 0};
+  verdify_irr::irr_fault_masks(*g.eng.rtc, gate.backoff_mask, gate.latch_mask);
+  return verdify_irr::irr_vpd_zone_allowed(g.eng.prog, *g.eng.rtc, idx, gate);
+}
+
+// F10 (D-IRP-19, #1161): the mister watchdog, from the climate loop each second
+// (irr_watchdog_step()). Every wet relay that reads ON without its grant bit, and every mister ON
+// longer than its commanded length + 30 s (300 s when none is known), is turned OFF here; an
+// overrun faults its zone (back-off or latch, in the RTC block), the engine drops the faulted
+// open at once (irr_apply_faults()) and irr_state carries the end time. Returns the misters that
+// faulted, so the climate path ends its own pulse train on them.
+inline uint16_t irr_mister_watchdog() {
+  verdify_irr::IrrEsp& g = verdify_irr::irr_esp();
+  if (!g.ready || g.b.grant_mask == nullptr) return 0;
+  const uint32_t now_ms = esphome::millis();
+  const verdify_irr::IrrWatchdogInputs in = verdify_irr::irr_watchdog_inputs(
+      g.eng, g.out, now_ms, verdify_irr::detail::esp_relays_on(g), *g.b.grant_mask);
+  const verdify_irr::IrrWatchdogResult r = verdify_irr::irr_watchdog_step(g.wd, *g.eng.rtc, in);
+  for (uint8_t i = 0; i < verdify_irr::kLineCount; ++i) {
+    if (!(r.force_off & verdify_irr::irr_bit(i)) || g.b.relay[i] == nullptr) continue;
+    g.b.relay[i]->turn_off();
+    if (r.faulted & verdify_irr::irr_bit(i)) {
+      ESP_LOGE("irrig", "Mister watchdog: %s ON past its commanded pulse + 30 s, forced OFF (D-IRP-19)",
+               verdify_irr::kLineIds[i]);
+    } else {
+      ESP_LOGE("irrig", "Mister watchdog: %s ON without its engine grant, forced OFF", verdify_irr::kLineIds[i]);
+    }
+  }
+  if (r.changed || r.faulted != 0) verdify_irr::detail::esp_faults_changed(g, r.faulted, now_ms);
+  return r.faulted;
 }
 
 // Flow-meter water for SAF-4 and the soft budget: centi-gallons into the RTC block, the fraction
@@ -424,8 +453,9 @@ inline bool irr_engine_holds(uint8_t idx) {
   return g.ready && (g.out.relay_mask & verdify_irr::irr_bit(idx)) != 0;
 }
 
-// A climate VPD pulse asks the engine for the mist manifold before id(center_mister).turn_on()
-// (F5): true only on a grant, whose bit is then set and whose m=<idx>,vpd token is published.
+// A climate VPD pulse asks the engine for the mist manifold before it turns its zone's mister on
+// (F5; L04, L07 or L09, F6): true only on a grant, whose bit is then set and whose m=<idx>,vpd
+// token is published.
 // `pulse_ms` is the pulse's commanded length: the token's planned end, and the grant lapses
 // 30 s after it if never released.
 inline bool irr_vpd_grant(uint8_t idx, uint32_t pulse_ms) {

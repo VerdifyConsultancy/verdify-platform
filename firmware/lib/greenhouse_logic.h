@@ -420,6 +420,50 @@ inline bool fog_permitted(const SensorInputs& in, const Setpoints& sp) noexcept 
         && (in.temp_f  >= sp.fog_min_temp);    // physics: warm enough to evaporate
 }
 
+// ── The fog force-off (irrigation F9, #1161) ──────────────────────────────
+// What forces fog (L11) OFF whatever the climate wants, in one place: the
+// fog gate, the fog relay's force-off and the fog_block_reason ladder in
+// controls.yaml all call it. In every mode: SENSOR_FAULT's relay lock,
+// confirmed occupancy (D-IRP-10), L03 open or about to open (SAF-5), a drip
+// relay reading ON (drips never overlap fog) and an invalid controller clock.
+// Outside SAFETY_COOL also a drip run of the irrigation engine holding the
+// water, the soft water budget and the SAF-4 daily ceiling; in SAFETY_COOL
+// survival fog runs past all three (D-IRP-03, D-IRP-04: its water still
+// counts, and the engine pauses a clean drip at its next tick, after which no
+// drip relay reads ON). leak_detected is not an input: it raises the leak
+// alert and nothing else (Q-05). The fog RH ceiling stays in fog_permitted().
+struct FogForceOffInputs {
+    bool sensor_fault_relay_lock;     // mode == SENSOR_FAULT
+    bool controller_time_valid;
+    bool occupancy_block;             // occupancy_moisture_block: Frigate confirms someone inside
+    bool fert_master_on;              // L03 open, or the engine's l03_hold (SAF-5)
+    bool drip_relay_open;             // a drip relay (L01, L02, L05, L06) reads ON
+    bool irrigation_water_conflict;   // irr_drip_active(): an engine drip run holds the water
+    bool climate_water_budget_block;  // the soft budget (bypassed in a VPD emergency)
+    bool mister_volume_hard_block;    // the SAF-4 daily ceiling
+};
+
+// The fog_block_reason word of the first term that forces fog OFF, or "" when
+// none does. The order keeps the ladder's earlier words in their old order:
+// occupancy, irrigation, resource_budget, time_invalid.
+inline const char* fog_force_off_reason(Mode mode, const FogForceOffInputs& in) noexcept {
+    if (in.sensor_fault_relay_lock) return "sensor_fault";
+    if (in.occupancy_block) return "occupancy";
+    if (in.fert_master_on) return "fert_master";
+    if (in.drip_relay_open) return "irrigation";
+    if (mode != SAFETY_COOL) {
+        if (in.irrigation_water_conflict) return "irrigation";
+        if (in.climate_water_budget_block) return "resource_budget";
+        if (in.mister_volume_hard_block) return "water_ceiling";
+    }
+    if (!in.controller_time_valid) return "time_invalid";
+    return "";
+}
+
+inline bool fog_forced_off(Mode mode, const FogForceOffInputs& in) noexcept {
+    return fog_force_off_reason(mode, in)[0] != '\0';
+}
+
 inline const char* climate_fog_assist_block_reason(const SensorInputs& in, const Setpoints& sp) noexcept {
     if (moisture_blocked_by_occupancy(in, sp)) return "occupancy";
     // SAF-6: at/above the safety_max rail, evaporative fog is a survival
@@ -2623,7 +2667,8 @@ inline RelayOutputs resolve_equipment(
 //   VENT-BYPASS → both fans ON, vent CLOSED (winter house-air pull). It implies
 //                 fans, so the button alone produces the documented behavior.
 //   HUMID       → fogger ON, unless a genuine fog safety block (dew margin / RH
-//                 ceiling / temp floor / time window / leak) is active.
+//                 ceiling / temp floor / time window) is active; the fog
+//                 force-off (fog_force_off_reason()) still holds it OFF.
 // Returns the ManualForce flags identifying which relays are force-applied so
 // the caller passes force_on= and the press engages within one loop tick,
 // bypassing relay min-off dwell (the #289 root-cause fix: a FANS press was
@@ -2706,7 +2751,8 @@ inline bool fan_requires_open_vent(Mode mode,
 // can request vented fog even after vent_mist_assist_active drops at that
 // margin; SAFETY_COOL can request fog above the hard temperature rail too.
 // This only exempts an explicit controller fog request from the vent interlock.
-// The caller still applies leak, occupancy, feed, clock and water limits.
+// The caller still applies the fog force-off (fog_force_off_reason(): occupancy,
+// SAF-5, drips, the clock and the water limits).
 inline bool open_vent_fog_assist_permitted(Mode mode,
                                            const RelayOutputs& requested) noexcept {
     return requested.fog && (mode == VENTILATE || mode == SAFETY_COOL);

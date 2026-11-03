@@ -152,6 +152,65 @@ test("with no plan in force the lanes hold the device values to the horizon; 72 
   expect([...container.querySelectorAll(".plan-status")].map((item) => item.textContent)).toEqual(["MANUAL · Iris skips · Jason since 10/30"]);
 });
 
+test("stale marks each device value STALE and muted, with when it was read, while the waypoints still draw", async () => {
+  const { container, plot } = await mount({ stale: true });
+  // 16:58Z is 09:58 in America/Denver.
+  expect([...container.querySelectorAll(".chart-note-stale")].map((note) => note.textContent)).toEqual(["STALE · device values last read 09:58"]);
+  const devices = [...container.querySelectorAll(".plan-device")];
+  expect(devices.map((cell) => [cell.textContent, cell.classList.contains("plan-device-stale"), cell.getAttribute("title")])).toEqual([
+    [`1.60${NBSP}kPa`, true, "STALE · read 09:58"], [`60.0${NBSP}s`, true, "STALE · read 09:58"], ["88.0%", true, "STALE · read 09:58"],
+    [`60.0${NBSP}s`, true, "STALE · read 09:58"],
+    // No value: "—" with the API's reason, never STALE.
+    ["—", false, "no readback yet"],
+  ]);
+  const ctx = plot.ctx;
+  // Mister pulse gap: the device value muted and labelled STALE up to the first waypoint, then Iris's waypoints dashed as before.
+  expect(ctx.strokes.filter((stroke) => onRow(stroke, 1)).map((stroke) => [stroke.stroke, stroke.dash, ...stroke.path.map(([px]) => Math.round(px))])).toEqual([
+    [TOKENS["--c-bound"], [], 0, Math.round(x("2026-11-02T18:00:00Z"))],
+    [TOKENS["--ink"], [8, 4], Math.round(x("2026-11-02T18:00:00Z")), Math.round(x("2026-11-02T22:00:00Z"))],
+    [TOKENS["--ink"], [8, 4], Math.round(x("2026-11-02T22:00:00Z")), Math.round(x("2026-11-03T00:30:00Z"))],
+  ]);
+  expect(ctx.texts.filter((text) => text.y === labelY(1)).map((text) => [text.text, text.color])).toEqual([
+    ["STALE", TOKENS["--c-bound"]], [`50.0${NBSP}s PLANNED · AI`, TOKENS["--ink"]], [`60.0${NBSP}s`, TOKENS["--ink"]],
+  ]);
+  // The forecast rule's waypoint still draws after the stale device value.
+  expect(ctx.strokes.filter((stroke) => onRow(stroke, 2)).map((stroke) => [stroke.stroke, stroke.dash])).toEqual([[TOKENS["--c-bound"], []], [TOKENS["--ink"], [8, 4]]]);
+  expect(ctx.strokes.some((stroke) => stroke.stroke === TOKENS["--c-setpoint"])).toBe(false);
+  plot.hover(NOW + 1800, null, 1 * 44 + 30);
+  expect(tooltip(plot).slice(1)).toEqual(["Mister pulse gap", `Device 60.0${NBSP}s · STALE`, PLANNED_AI]);
+  const details = container.querySelector<HTMLDetailsElement>("details.chart-table")!;
+  act(() => { details.open = true; details.dispatchEvent(new Event("toggle")); });
+  await waitFor(() => expect(details.querySelector("table")).toBeTruthy());
+  const what = [...details.querySelectorAll("tbody tr")].map((row) => [row.children[0].textContent, row.children[4].textContent]);
+  expect(what.filter(([, words]) => words?.startsWith("Device"))).toEqual([
+    ["Mister pulse gap", "Device · STALE"], ["Fog RH ceiling", "Device · STALE"], ["Fan stage temperature", "Device"],
+  ]);
+  cleanup();
+  // Fresh values carry no STALE anywhere.
+  const fresh = await mount({ stale: false });
+  expect(fresh.container.querySelector(".chart-note-stale")).toBeNull();
+  expect(fresh.container.querySelector(".plan-device-stale")).toBeNull();
+  expect(fresh.plot.ctx.texts.some((text) => text.text === "STALE")).toBe(false);
+});
+
+test("rowEnd ends every row with the screen's control in a column beside the plot", async () => {
+  const { container } = await mount({ rowEnd: (row) => <a href={`/settings?edit=${row.key}`}>Open{" "}<span className="screen-reader">{row.label}</span></a> });
+  expect(container.querySelector(".lanes")!.classList.contains("lanes-plan-end")).toBe(true);
+  const ends = [...container.querySelectorAll(".plan-row")].map((row) => [row.getAttribute("data-param"), row.querySelector(".plan-end a")?.getAttribute("href")]);
+  expect(ends).toEqual([
+    ["mister_engage_kpa", "/settings?edit=mister_engage_kpa"], ["mister_pulse_gap_s", "/settings?edit=mister_pulse_gap_s"],
+    ["fog_rh_ceiling_pct", "/settings?edit=fog_rh_ceiling_pct"], ["mister_pulse_on_s", "/settings?edit=mister_pulse_on_s"],
+    ["fan_stage_temp_f", "/settings?edit=fan_stage_temp_f"],
+  ]);
+  // The end sits after the row's two lines, outside the canvas, which keeps its own role and label.
+  expect([...container.querySelector("[data-param=mister_pulse_on_s]")!.children].map((child) => child.className)).toEqual(["plan-head", "plan-line", "plan-end"]);
+  expect(container.querySelector(".lanes-canvas")!.querySelector("a")).toBeNull();
+  cleanup();
+  const plain = await mount();
+  expect(plain.container.querySelector(".plan-end")).toBeNull();
+  expect(plain.container.querySelector(".lanes")!.classList.contains("lanes-plan-end")).toBe(false);
+});
+
 test("values in the header use the unit's decimals without the unit, and the server markup has no style attribute", () => {
   expect(plainValue(1.55, "kPa")).toBe("1.55");
   expect(plainValue(72.04, "°F")).toBe("72.0");

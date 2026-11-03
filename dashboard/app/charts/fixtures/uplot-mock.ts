@@ -181,5 +181,8 @@ export function setTokens(root: HTMLElement = document.documentElement) {
   for (const [token, value] of Object.entries(TOKENS)) root.style.setProperty(token, value);
 }
 
-/** A fresh copy of a JSON fixture, typed. */
-export const load = <T,>(value: unknown): T => structuredClone(value) as T;
+/** A type with every field writable, arrays included: the API types are read-only, and a test edits its own copy. */
+export type Writable<T> = T extends string | number | boolean | null | undefined ? T
+  : T extends readonly (infer U)[] ? Writable<U>[] : { -readonly [K in keyof T]: Writable<T[K]> };
+/** A fresh copy of a JSON fixture, typed, that the test may change. */
+export const load = <T,>(value: unknown): Writable<T> => structuredClone(value) as Writable<T>;

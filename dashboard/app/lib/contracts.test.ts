@@ -254,7 +254,8 @@ test("the file and the client carry the fields the screens read and API-19 to AP
   expect(parsePlan(set("in-band")["API-07"])!.health.every((row) => row.expected_at && row.due_at)).toBe(true);
   expect(parseRunPage(set("runs-zero-and-unknown")["API-IRR-11"])!.items.map((run) => [run.gal, run.outcome])).toEqual(expect.arrayContaining([[0, "ok"], [null, "unknown"]]));
   expect(parseIrrigationStatus(set("in-band")["API-IRR-01"])!.lines.filter((line) => line.reserved).map((line) => line.line_id)).toEqual(["L05", "L06"]);
-  expect(parseSettings(set("in-band")["API-09"])!.items.filter((row) => row.group === "band_in_force")).toHaveLength(10);
+  // Band in force: the house and each of the four zones, six roles each (VD-55), as the rendered settings fixture serves them.
+  expect(parseSettings(set("in-band")["API-09"])!.items.filter((row) => row.group === "band_in_force")).toHaveLength(30);
   const series = parseSeries(set("in-band")["API-04"])!;
   expect(series.gaps).toEqual([]);
   expect(series.series["climate.temp_avg"]).toMatchObject({ source: "raw", issued_at: null });

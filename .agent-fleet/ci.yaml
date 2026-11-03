@@ -27,6 +27,9 @@ images:
 - name: verdify-lab-publisher-k3s
   dockerfile: scripts/Dockerfile.lab-publisher
   context: .
+- name: verdify-dashboard-web
+  dockerfile: dashboard/Dockerfile
+  context: .
 checks:
   steps:
   - name: platform-static

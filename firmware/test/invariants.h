@@ -88,6 +88,16 @@ struct TraceRow {
     // FRT-6: absorption hold flag (controls.yaml computes now_ms <
     // feed_hold_until_ms). Default 0 absent the column.
     bool feed_hold_active;
+    // Irrigation F6 (#1161): the open mister belongs to the irrigation engine's
+    // own run, whose cause is schedule, run_now, fallback, feed, prewet or flush
+    // (irr_state's m= token), not a climate VPD pulse. Those run outside
+    // SEALED_MIST by design, so invariants #2 and #15 exempt them. Defaults to
+    // false when a corpus lacks the `mister_engine_cause` column.
+    bool mister_engine_cause;
+    // The fertilizer misters L08 (south) and L10 (west), for invariant #26.
+    // Default 0 absent the `eq_mister_south_fert` / `eq_mister_west_fert`
+    // columns (the climate-only corpus never opens them).
+    int eq_mister_south_fert, eq_mister_west_fert;
 
     // Night-window / dusk-cutoff config the firmware was running with
     // (defaults applied when absent; see Setpoints). Used by the ENV-2
@@ -144,12 +154,16 @@ inline bool check_1_fog_vent_exclusive(const TraceRow& r, ReportFn report = defa
     return true;
 }
 
-// #2: mister_* only fires in SEALED_MIST (or safety cool for mist-fog edge)
+// #2: a climate VPD mister only fires in SEALED_MIST or the VENTILATE mist
+// assist; the irrigation engine's own mist (mister_engine_cause) is exempt.
 inline bool check_2_mister_only_sealed(const TraceRow& r, ReportFn report = default_report) {
     const bool any_mister = r.eq_mister_south || r.eq_mister_west || r.eq_mister_center;
     const bool vent_mist_assist_ok = mode_is_ventilate(r.greenhouse_state)
                                   && r.vent_mist_assist_active;
-    if (any_mister && !mode_is_sealed(r.greenhouse_state) && !vent_mist_assist_ok) {
+    // #1161 (F6): a scheduled, run-now, fallback, feed, prewet or flush mister
+    // needs no humidity demand and runs in any mode but SENSOR_FAULT (#26).
+    if (any_mister && !mode_is_sealed(r.greenhouse_state) && !vent_mist_assist_ok
+        && !r.mister_engine_cause) {
         report(2, "mister_only_in_sealed", r,
                "mister_* ON in non-SEALED_MIST mode");
         return false;
@@ -222,14 +236,19 @@ inline bool check_11_fog_heat_exclusive(const TraceRow& r, ReportFn report = def
     return true;
 }
 
-// #15: equipment-mode consistency — mode implies relay set.
+// #15: equipment-mode consistency — mode implies relay set (an engine-run
+// mister, mister_engine_cause, is exempt: it is not climate equipment).
 // Loose form: flag gross violations (e.g., IDLE with fan1=ON sustained).
 // Tight form: resolve_equipment(mode, in, sp, st, lead) matches eq_* bitmask.
 // For now, use loose form; the tight form requires reconstructing ControlState
 // and setpoints, which replay_diff.cpp already does per-row via determine_mode.
 inline bool check_15_mode_equipment_consistent(const TraceRow& r, ReportFn report = default_report) {
+    // #1161 (F6): an engine-run mister (schedule, run_now, fallback, feed,
+    // prewet or flush) is not climate equipment and may run in IDLE.
+    const bool climate_mister = (r.eq_mister_south || r.eq_mister_west || r.eq_mister_center)
+                                && !r.mister_engine_cause;
     if (mode_is_idle(r.greenhouse_state) && (r.eq_fan1 || r.eq_fan2 || r.eq_vent || r.eq_fog
-                                              || r.eq_mister_south || r.eq_mister_west || r.eq_mister_center)) {
+                                              || climate_mister)) {
         report(15, "idle_with_active_relay", r,
                "mode=IDLE but fan/vent/fog/mister ON");
         return false;
@@ -462,11 +481,15 @@ inline bool check_25_safety_heat_engaged(const TraceRow& r, ReportFn report = de
 // blind software. Any relay ON while the recorded mode is SENSOR_FAULT is a
 // fault. (Vacuous on corpora with no SENSOR_FAULT rows — a standing guard like
 // #18/#19; it pins the all-off contract so a future executor change cannot let
-// an actuator run during a sensor blackout.)
+// an actuator run during a sensor blackout.) #1161: every climate relay and
+// every mister relay, whatever opened it, L08 and L10 included (the irrigation
+// engine refuses all mist in SENSOR_FAULT); drips are outside it (D-IRP-02:
+// clean water fails open within its caps).
 inline bool check_26_sensor_fault_all_off(const TraceRow& r, ReportFn report = default_report) {
     if (r.greenhouse_state != "SENSOR_FAULT") return true;
     if (r.eq_fog || r.eq_vent || r.eq_fan1 || r.eq_fan2 || r.eq_heat1 || r.eq_heat2
-        || r.eq_mister_south || r.eq_mister_west || r.eq_mister_center) {
+        || r.eq_mister_south || r.eq_mister_west || r.eq_mister_center
+        || r.eq_mister_south_fert || r.eq_mister_west_fert) {
         report(26, "sensor_fault_all_off", r,
                "relay ON while mode == SENSOR_FAULT (must be all-off)");
         return false;

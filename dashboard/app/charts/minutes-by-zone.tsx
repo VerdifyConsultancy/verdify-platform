@@ -2,7 +2,7 @@
 import { useMemo, useRef, type MutableRefObject } from "react";
 import type uPlot from "uplot";
 import { dayTitle, formatValue, localDayStart } from "../lib/format";
-import { MINUTES_ZONES, ZONE_WORDS, minutesZone, type MinutesZone } from "../lib/lines";
+import { LINES, MINUTES_ZONES, ZONE_WORDS, lineById, minutesZone, type MinutesZone } from "../lib/lines";
 import { causeRank, causeToken, causeWords } from "./causes";
 import { DataTable, type DataTableBlock } from "./data-table";
 import type { ChartColors, PaintTarget } from "./draw";
@@ -19,15 +19,23 @@ import { UPlotChart, type ChartEnv, type ChartOptions } from "./uplot-chart";
  * Fog as humidification), from API-IRR-10 by line. Bars are `uPlot.paths.bars`, stacked by cause with clean below
  * fertilizer. A no-data day is a hatched full-height gap, never a zero bar; a partial day (today, an outage) has a
  * dashed top edge; today's still-planned minutes are a dashed outline on today's bar; the daily cap is a dotted line.
- * The four watering zones share one minutes scale, so their bars compare; fog has its own.
+ * The watering rows share one minutes scale, so their bars compare; fog has its own. Water's Group by (#1135) draws
+ * the same report one row per line in it (`group: "line"`) or one row per cause (`"cause"`), fog apart in each.
  */
 export type Coverage = MinutesPeriod["coverage"];
 export type ZonePart = { line: string | null; cause: string; chemistry: "clean" | "fert"; minutes: number; pulses: number | null; gal: number | null };
 export type ZoneDay = { day: string; at: number; coverage: Coverage; total: number | null; parts: ZonePart[] };
 /** One stacked series: a cause within a chemistry. */
 export type StackSegment = { key: string; cause: string; chemistry: "clean" | "fert"; token: string; label: string };
+/** How the rows are cut: by zone (the default), one per line in the report, or one per cause. */
+export type MinutesGroup = "zone" | "line" | "cause";
 export type ZoneBars = {
-  zone: MinutesZone;
+  /** The row: a zone, a line id or a cause; fog's row is "fog" by zone and by cause, and "L11" by line. */
+  key: string;
+  /** The zone of a zone row; null for a line or cause row. */
+  zone: MinutesZone | null;
+  /** Humidification (fog, L11): its own scale. */
+  fog: boolean;
   label: string;
   days: ZoneDay[];
   segments: StackSegment[];
@@ -40,24 +48,63 @@ export type ZoneBars = {
   today: number;
   yMax: number;
 };
-export type MinutesModel = { days: { day: string; at: number; coverage: Coverage }[]; zones: ZoneBars[]; xRange: XRange; byLine: boolean };
+export type MinutesModel = { days: { day: string; at: number; coverage: Coverage }[]; zones: ZoneBars[]; xRange: XRange; byLine: boolean; group: MinutesGroup };
 
 export type MinutesInput = {
   report: MinutesReport;
-  /** Daily cap minutes per zone, as the screen passes them (API-IRR-01 `daily_cap_min`). */
-  caps?: Partial<Record<MinutesZone, number | null>>;
-  /** Today's minutes still planned per zone (API-IRR-02). */
-  planned?: Partial<Record<MinutesZone, number | null>>;
+  /** The rows (#1135 Group by): zone (the default), one per line in the report, or one per cause. */
+  group?: MinutesGroup;
+  /** Daily cap minutes per row, keyed as the rows are (a zone, or a line id), as the screen passes them (API-IRR-01 `daily_cap_min`). */
+  caps?: Partial<Record<string, number | null>>;
+  /** Today's minutes still planned per row, keyed as the rows are (API-IRR-02). */
+  planned?: Partial<Record<string, number | null>>;
+  /** Line names from API-IRR-01 (`name`), for line rows' labels; the line id alone without them. */
+  names?: Readonly<Record<string, string>>;
   /** Epoch seconds: which local day is today. */
   now: number;
 };
 
 const DAY = 86_400;
 const valued = (value: number | null | undefined): value is number => value !== null && value !== undefined && Number.isFinite(value);
+const isZone = (value: string): value is MinutesZone => (MINUTES_ZONES as readonly string[]).includes(value);
+/** True when the bars can cut this report into these rows: zone and cause rows need it by zone or line, line rows by line. */
+export function drawableAs(report: Pick<MinutesReport, "group_by">, group: MinutesGroup): boolean {
+  return group === "line" ? report.group_by === "line" : report.group_by !== "cause";
+}
+const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+/** A line row's place: the register's order, an id it does not know after. */
+const lineRank = (id: string) => {
+  const rank = LINES.findIndex((line) => line.id === id);
+  return rank < 0 ? LINES.length : rank;
+};
 
-/** The bars: one row per zone, each day's parts by line and cause, the stacks and the shared scale. */
+/**
+ * The row a report row counts in, or null. By zone: its zone (L03's supply minutes count in none). By line: its line.
+ * By cause: its cause, except fog's, which stays apart as humidification, and L03's, which would count each feed twice.
+ */
+function rowKey(group: MinutesGroup, byLine: boolean, row: MinutesReport["rows"][number]): string | null {
+  const zone = byLine ? minutesZone(row.group) : isZone(row.group) ? row.group : null;
+  if (group === "line") return byLine ? row.group : null;
+  if (group === "zone") return zone;
+  if (zone === "fog") return "fog";
+  return zone === null && byLine && lineById(row.group) !== undefined ? null : row.cause;
+}
+
+/** Each row's key, zone, fog flag and label, in order: zones as MINUTES_ZONES; lines in register order; causes in the cause table's, fog last. */
+function rowsFor(group: MinutesGroup, keys: ReadonlySet<string>, names?: Readonly<Record<string, string>>): { key: string; zone: MinutesZone | null; fog: boolean; label: string }[] {
+  if (group === "zone") return MINUTES_ZONES.map((zone) => ({ key: zone, zone, fog: zone === "fog", label: ZONE_WORDS[zone] }));
+  if (group === "line") {
+    return [...keys].sort((a, b) => lineRank(a) - lineRank(b) || a.localeCompare(b))
+      .map((key) => ({ key, zone: null, fog: minutesZone(key) === "fog", label: lineWords(key, names) }));
+  }
+  const causes = [...keys].filter((key) => key !== "fog").sort((a, b) => causeRank(a) - causeRank(b) || a.localeCompare(b));
+  return [...causes.map((key) => ({ key, zone: null, fog: false, label: capital(causeWords(key)) })), ...(keys.has("fog") ? [{ key: "fog", zone: null, fog: true, label: ZONE_WORDS.fog }] : [])];
+}
+
+/** The bars: one row per zone, line or cause, each day's parts by line and cause, the stacks and the shared scale. */
 export function buildMinutes(input: MinutesInput): MinutesModel {
   const { report } = input;
+  const group = input.group ?? "zone";
   const byLine = report.group_by === "line";
   const days = [...report.periods]
     .map((period) => ({ day: period.start, at: Date.parse(localDayStart(period.start)) / 1000, coverage: period.coverage }))
@@ -65,17 +112,18 @@ export function buildMinutes(input: MinutesInput): MinutesModel {
     .sort((a, b) => a.at - b.at);
   const index = new Map(days.map((day, position) => [day.day, position]));
   const today = localDay(input.now);
-  const parts = new Map<MinutesZone, ZonePart[][]>(MINUTES_ZONES.map((zone) => [zone, days.map(() => [])]));
-  if (report.group_by !== "cause") {
+  const parts = new Map<string, ZonePart[][]>();
+  if (drawableAs(report, group)) {
     for (const row of report.rows) {
-      const zone = byLine ? minutesZone(row.group) : (MINUTES_ZONES as readonly string[]).includes(row.group) ? (row.group as MinutesZone) : null;
+      const key = rowKey(group, byLine, row);
       const position = index.get(row.period);
-      if (!zone || position === undefined || days[position].coverage === "no_data" || !valued(row.minutes)) continue;
-      parts.get(zone)![position].push({ line: byLine ? row.group : null, cause: row.cause, chemistry: row.chemistry === "fert" ? "fert" : "clean", minutes: row.minutes, pulses: row.pulses ?? null, gal: row.gal ?? null });
+      if (key === null || position === undefined || days[position].coverage === "no_data" || !valued(row.minutes)) continue;
+      if (!parts.has(key)) parts.set(key, days.map(() => []));
+      parts.get(key)![position].push({ line: byLine ? row.group : null, cause: row.cause, chemistry: row.chemistry === "fert" ? "fert" : "clean", minutes: row.minutes, pulses: row.pulses ?? null, gal: row.gal ?? null });
     }
   }
-  const zones = MINUTES_ZONES.map((zone): ZoneBars => {
-    const dayParts = parts.get(zone)!;
+  const zones = rowsFor(group, new Set(parts.keys()), input.names).map(({ key, zone, fog, label }): ZoneBars => {
+    const dayParts = parts.get(key) ?? days.map(() => []);
     const zoneDays = days.map((day, position): ZoneDay => {
       const list = dayParts[position].sort((a, b) => (a.line ?? "").localeCompare(b.line ?? "") || causeRank(a.cause) - causeRank(b.cause));
       return { ...day, total: day.coverage === "no_data" ? null : list.reduce((sum, part) => sum + part.minutes, 0), parts: list };
@@ -92,24 +140,24 @@ export function buildMinutes(input: MinutesInput): MinutesModel {
       const below = new Set(segments.slice(0, level + 1).map((segment) => segment.key));
       return day.parts.filter((part) => below.has(`${part.chemistry}:${part.cause}`)).reduce((sum, part) => sum + part.minutes, 0);
     }));
-    const cap = input.caps?.[zone];
-    const planned = input.planned?.[zone];
+    const cap = input.caps?.[key];
+    const planned = input.planned?.[key];
     return {
-      zone, label: ZONE_WORDS[zone], days: zoneDays, segments, stacks,
+      key, zone, fog, label, days: zoneDays, segments, stacks,
       cap: valued(cap) && cap > 0 ? cap : null, planned: valued(planned) && planned > 0 ? planned : null,
       today: zoneDays.findIndex((day) => day.day === today), yMax: 0,
     };
   });
-  // The four watering zones share a scale; fog, humidification, has its own.
+  // The watering rows share a scale; fog, humidification, has its own.
   const top = (zone: ZoneBars) => Math.max(
     0, ...zone.days.map((day) => day.total ?? 0), zone.cap ?? 0,
     zone.today >= 0 && zone.planned !== null ? (zone.days[zone.today].total ?? 0) + zone.planned : 0,
   );
   const scale = (value: number) => Math.max(10, Math.ceil(value * 1.15));
-  const shared = scale(Math.max(...zones.filter((zone) => zone.zone !== "fog").map(top)));
-  for (const zone of zones) zone.yMax = zone.zone === "fog" ? scale(top(zone)) : shared;
+  const shared = scale(Math.max(0, ...zones.filter((zone) => !zone.fog).map(top)));
+  for (const zone of zones) zone.yMax = zone.fog ? scale(top(zone)) : shared;
   const first = days[0]?.at ?? input.now, last = days[days.length - 1]?.at ?? input.now;
-  return { days, zones, xRange: { from: first - DAY / 2, to: last + DAY / 2 }, byLine };
+  return { days, zones, xRange: { from: first - DAY / 2, to: last + DAY / 2 }, byLine, group };
 }
 
 /** "L04 Center mister" with the API's name for the line, else the line id. */
@@ -250,10 +298,10 @@ export function minutesOptions(env: ChartEnv, zoneRef: MutableRefObject<ZoneBars
   };
 }
 
-/** The data table: per zone, one row per day with its minutes, the split by line and cause in words, and coverage. */
+/** The data table: per row, one row per day with its minutes, the split by line and cause in words, and coverage. */
 export function minutesTables(model: MinutesModel, names?: Readonly<Record<string, string>>): DataTableBlock[] {
   return model.zones.map((zone) => ({
-    caption: `${zone.label}${zone.zone === "fog" ? " (humidification)" : ""} · minutes by day · America/Denver`,
+    caption: `${zone.label}${zone.fog ? " (humidification)" : ""} · minutes by day · America/Denver`,
     headers: ["Day", "Minutes", "By line and cause", "Coverage"], count: zone.days.length,
     rows: () => zone.days.map((day, position) => [
       <time key="day" dateTime={day.day}>{dayTitle(day.day, "short")}</time>,
@@ -277,7 +325,7 @@ export function minutesKey(model: MinutesModel): KeyItem[] {
   return items;
 }
 
-export type MinutesByZoneProps = MinutesInput & {
+export type MinutesByZoneProps = Omit<MinutesInput, "names"> & {
   /** Line names from API-IRR-01 (`name`), for the tooltip and the data table; the line id alone without them. */
   lineNames?: Readonly<Record<string, string>>;
   /** The rows share it, so the cursor sits on one day in every row. */
@@ -293,31 +341,34 @@ function ZoneChart({ zone, last, xRange, syncKey, names }: { zone: ZoneBars; las
   const namesRef = useRef(names);
   namesRef.current = names;
   const data = useMemo<uPlot.AlignedData>(() => [zone.days.map((day) => day.at), ...zone.stacks], [zone]);
-  const structure = `minutes|${zone.zone}|${last}|${syncKey}|${zone.segments.map((segment) => segment.key).join(",")}`;
-  const label = `${zone.label} watering minutes per day${zone.zone === "fog" ? " (humidification)" : ""}, stacked by cause with clean below fertilizer. No-data days are hatched, never zero. The data table follows.`;
+  const structure = `minutes|${zone.key}|${last}|${syncKey}|${zone.segments.map((segment) => segment.key).join(",")}`;
+  const label = `${zone.label} watering minutes per day${zone.fog ? " (humidification)" : ""}, stacked by cause with clean below fertilizer. No-data days are hatched, never zero. The data table follows.`;
   return <UPlotChart options={(env) => minutesOptions(env, zoneRef, last, namesRef)} data={data} xRange={xRange} structure={structure}
     className={last ? "plot-bars plot-bars-axis" : "plot-bars"} label={label} syncKey={syncKey} marks={zone} zoom={false} />;
 }
 
 export function MinutesByZone(props: MinutesByZoneProps) {
   const { report, caps, planned, now } = props;
-  // Caps and plans arrive as literals on every render: they rebuild the bars only when their values change.
-  const limits = JSON.stringify([caps ?? null, planned ?? null]);
-  const model = useMemo(() => buildMinutes({ report, caps, planned, now }), [report, limits, now]);
+  const group = props.group ?? "zone";
+  // Caps, plans and names arrive as literals on every render: they rebuild the bars only when their values change.
+  const limits = JSON.stringify([caps ?? null, planned ?? null, props.lineNames ?? null]);
+  const model = useMemo(() => buildMinutes({ report, group, caps, planned, now, names: props.lineNames }), [report, group, limits, now]);
   const syncKey = props.syncKey ?? `verdify:minutes:${report.from}:${report.to}`;
-  const title = props.title ?? `Watering minutes by zone · last ${model.days.length} days`;
-  const drawable = !props.message && report.group_by !== "cause" && model.days.length > 0;
+  const title = props.title ?? `Watering minutes by ${group} · last ${model.days.length} days`;
+  const fits = drawableAs(report, group);
+  const drawable = !props.message && fits && model.days.length > 0 && model.zones.length > 0;
+  const refusal = group === "line" ? "Minutes by line needs the report by line" : "Minutes by zone needs the report by line or by zone";
   return <figure className="chart chart-minutes">
     <figcaption className="eyebrow">{title}</figcaption>
     {drawable
       ? <ul className="minutes-rows">
-        {model.zones.map((zone, position) => <li key={zone.zone} className="minutes-row" data-zone={zone.zone}>
-          <span className="minutes-label">{zone.label}{zone.zone === "fog" && <span className="minutes-note"> humidification</span>}</span>
+        {model.zones.map((zone, position) => <li key={zone.key} className="minutes-row" data-row={zone.key} data-zone={zone.zone ?? undefined}>
+          <span className="minutes-label">{zone.label}{zone.fog && <span className="minutes-note"> humidification</span>}</span>
           <ZoneChart zone={zone} last={position === model.zones.length - 1} xRange={model.xRange} syncKey={syncKey} names={props.lineNames} />
           <span className="minutes-today">{todayText(zone)}</span>
         </li>)}
       </ul>
-      : <div className="plot plot-small chart-message"><p>{props.message ?? (report.group_by === "cause" ? "Minutes by zone needs the report by line or by zone" : "No watering data in this window")}</p></div>}
+      : <div className="plot plot-small chart-message"><p>{props.message ?? (fits ? "No watering data in this window" : refusal)}</p></div>}
     {drawable && <ChartKey items={minutesKey(model)} />}
     {drawable && <DataTable tables={minutesTables(model, props.lineNames)} />}
   </figure>;
