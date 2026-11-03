@@ -14,3 +14,5 @@ resources:
   # #312: DB-ingress allow for the setpoint-server (base allow-db-from-app
   # omits it; default-deny otherwise wedges its wait-for-db init forever).
   - allow-db-from-setpoint.yaml
+  # #1170: API-20's grow-light path. The setpoint server takes no token, so this allow is its guard.
+  - allow-setpoint-from-operator-api.yaml

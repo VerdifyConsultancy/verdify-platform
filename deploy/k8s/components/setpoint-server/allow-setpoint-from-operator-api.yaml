@@ -1,0 +1,23 @@
+# API-20 (#1170): the operator API calls POST /lights/{light}/{state} on the setpoint server. The setpoint server takes
+# no token, so this allow is its guard: only operator API pods, on TCP 8200. default-deny-ingress refuses everything
+# else. The operator API needs no egress policy for it: egress-deny-management leaves in-cluster pods reachable.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-setpoint-from-operator-api
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: setpoint-server
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: setpoint-server
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: operator-api
+      ports:
+        - protocol: TCP
+          port: 8200

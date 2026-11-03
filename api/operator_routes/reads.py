@@ -1,4 +1,4 @@
-"""The operator reads: API-02, API-07 and API-13 (VD-54); API-09, API-12, API-14 and API-17 (VD-55).
+"""The operator reads: API-02, API-07 and API-13 (VD-54); API-09, API-12, API-14 and API-17 (VD-55); API-21 (VD-57).
 
 No auth and no SQL: ``api/operator_api.py`` (#1148) includes ``router`` under
 ``/v1`` with its bearer, session and role dependencies, and each route calls
@@ -49,8 +49,14 @@ async def get_plan(conn: Connection, hours: reads.PlanHours = 24) -> reads.Plan:
 
 @router.get("/equipment", operation_id="API-13", tags=["equipment"], response_model=reads.Equipment)
 async def get_equipment(conn: Connection) -> reads.Equipment:
-    """Equipment now: state and since, runtime and cycles today, the grow lights' Lutron state and intent."""
+    """Equipment now: state and since, runtime and cycles today, the grow lights' Lutron state and intent, and why."""
     return await reads.equipment(conn)
+
+
+@router.get("/water/daily", operation_id="API-21", tags=["irrigation"], response_model=reads.WaterUse)
+async def get_water_daily(conn: Connection, days: reads.WaterDays = 30) -> reads.WaterUse:
+    """Daily water use from the site meter by line and cause, with the water that ran while no valve was open apart."""
+    return await reads.water_daily(conn, days=days)
 
 
 @router.get("/settings", operation_id="API-09", tags=["settings"], response_model=reads.SettingRows)

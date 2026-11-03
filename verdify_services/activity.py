@@ -79,12 +79,13 @@ class ActivityPage(BaseModel):
 
 
 class WriteResult[T](BaseModel):
-    """A write's answer: the stored object, and whether the request replayed an earlier one."""
+    """A write's answer: the stored object, whether the request replayed an earlier one, and its activity row's id."""
 
     model_config = ConfigDict(frozen=True)
 
     value: T
     replayed: bool = False
+    activity_id: int | None = None
 
     def rest_json(self) -> Any:
         """The REST response body: the stored object's JSON."""
@@ -152,6 +153,15 @@ def _request_key(request_id: UUID | str | None) -> UUID | None:
         return UUID(str(request_id))
     except ValueError as exc:
         raise ServiceError(problem("invalid_request", "request_id must be a UUID", field="request_id")) from exc
+
+
+def _check_reason(reason: str | None) -> None:
+    if reason is not None and len(reason) > REASON_MAX_LENGTH:
+        raise ServiceError(
+            problem("invalid_request", f"reason is at most {REASON_MAX_LENGTH} characters", field="reason")
+        )
+    if reason is not None and "\x00" in reason:  # PostgreSQL text cannot hold it, so no retry could store it
+        raise ServiceError(problem("invalid_request", "reason holds a NUL character", field="reason"))
 
 
 def _row(record: Mapping[str, Any]) -> ActivityLogRow:
@@ -241,6 +251,61 @@ async def append(
     )
 
 
+async def _replay(
+    conn: asyncpg.Connection,
+    actor: Actor,
+    key: UUID,
+    digest: bytes,
+    load: Callable[[asyncpg.Connection, ActivityLogRow], Awaitable[Any]],
+) -> WriteResult | None:
+    """The stored answer of (``actor.source``, ``key``), or None; another hash raises ``request_id_reused``."""
+    stored = await conn.fetchrow(
+        f"SELECT {_COLUMNS} FROM public.activity_log WHERE source = $1 AND request_id = $2",
+        actor.source,
+        key,
+    )
+    if stored is None:
+        return None
+    row = _row(stored)
+    if row.request_sha256 != digest:
+        raise ServiceError(
+            problem(
+                "request_id_reused",
+                "This request id was already used for a different request; send a new one",
+                field="request_id",
+            )
+        )
+    return WriteResult(value=await load(conn, row), replayed=True, activity_id=row.id)
+
+
+async def stored_write(
+    conn: asyncpg.Connection,
+    actor: Actor,
+    *,
+    op: str,
+    target: str,
+    request: Any,
+    request_id: UUID | str | None,
+    reason: str | None,
+    load: Callable[[asyncpg.Connection, ActivityLogRow], Awaitable[Any]],
+) -> WriteResult | None:
+    """``recorded_write``'s refusals and replay alone, for a write that calls something outside the database before
+    its row exists (API-20). None means go ahead; the row then goes through ``recorded_write`` with the same arguments.
+
+    Call it outside a transaction: it opens its own and closes it before returning.
+    """
+    _require_writer(actor)
+    _check_reason(reason)
+    key = _request_key(request_id)
+    digest = request_hash(op, target, request)
+    if conn.is_in_transaction():
+        raise RuntimeError("stored_write opens its own transaction; call it outside one")
+    if key is None:
+        return None
+    async with conn.transaction():
+        return await _replay(conn, actor, key, digest, load)
+
+
 async def recorded_write(
     conn: asyncpg.Connection,
     actor: Actor,
@@ -284,12 +349,7 @@ async def recorded_write(
     Call it outside a transaction: it opens its own.
     """
     _require_writer(actor)
-    if reason is not None and len(reason) > REASON_MAX_LENGTH:
-        raise ServiceError(
-            problem("invalid_request", f"reason is at most {REASON_MAX_LENGTH} characters", field="reason")
-        )
-    if reason is not None and "\x00" in reason:  # PostgreSQL text cannot hold it, so no retry could store it
-        raise ServiceError(problem("invalid_request", "reason holds a NUL character", field="reason"))
+    _check_reason(reason)
     key = _request_key(request_id)
     digest = request_hash(op, target, request)
     if conn.is_in_transaction():
@@ -301,25 +361,12 @@ async def recorded_write(
                 if lock is not None:
                     await lock(conn)
                 if key is not None:
-                    stored = await conn.fetchrow(
-                        f"SELECT {_COLUMNS} FROM public.activity_log WHERE source = $1 AND request_id = $2",
-                        actor.source,
-                        key,
-                    )
-                    if stored is not None:
-                        row = _row(stored)
-                        if row.request_sha256 != digest:
-                            raise ServiceError(
-                                problem(
-                                    "request_id_reused",
-                                    "This request id was already used for a different request; send a new one",
-                                    field="request_id",
-                                )
-                            )
-                        return WriteResult(value=await load(conn, row), replayed=True)
+                    replayed = await _replay(conn, actor, key, digest, load)
+                    if replayed is not None:
+                        return replayed
                 experiment_id = await conn.fetchval(ARMED_EXPERIMENT_SQL)
                 value, detail = await perform(conn)
-                await append(
+                activity_id = await append(
                     conn,
                     actor,
                     action=action,
@@ -332,7 +379,7 @@ async def recorded_write(
                 )
                 if finish is not None:
                     value = await finish(conn, value)
-            return WriteResult(value=value, replayed=False)
+            return WriteResult(value=value, replayed=False, activity_id=activity_id)
         except asyncpg.exceptions.UniqueViolationError as exc:
             if retried or key is None or exc.constraint_name != REQUEST_KEY_CONSTRAINT:
                 raise

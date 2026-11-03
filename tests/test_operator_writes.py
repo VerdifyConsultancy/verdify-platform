@@ -177,6 +177,7 @@ def test_the_module_writes_its_paths_without_v1_and_the_app_serves_them_with_the
         ("/settings/{param}", "DELETE", "API-11"),
         ("/alerts/{id}/ack", "POST", "API-15"),
         ("/alerts/{id}/resolve", "POST", "API-16"),
+        ("/equipment/lights/{light}/{state}", "POST", "API-20"),  # tests/test_operator_lights.py
     }
     served = {(method, route.path) for route in served_routes(operator_api.app) for method in route.methods}
     assert served >= {
