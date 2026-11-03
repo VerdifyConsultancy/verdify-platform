@@ -109,6 +109,8 @@ $PY -m pytest -q -rs \
   tests/test_irrigation_bridge.py \
   tests/test_irrigation_bridge_writes.py \
   tests/test_dashboard_db_irrigation_bridge.py \
+  tests/test_irrigation_writes_rest.py \
+  tests/test_dashboard_db_irrigation_writes.py \
   tests/test_bounded_reconcile.py \
   tests/test_10_planner_routing.py \
   tests/test_11_planner_milestones.py \

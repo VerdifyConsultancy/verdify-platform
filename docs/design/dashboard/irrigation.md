@@ -735,8 +735,7 @@ scheduled once the engine runs.
 `bridge_stop`, `bridge_switch_off` and `bridge_set_irrigation_enabled`. Where the build settles what this
 section leaves open:
 
-- While `irr_engine` reads true, run-now is 503 `unavailable` (not retryable) until #1156 adds the engine
-  path, and Stop is still stored.
+- While `irr_engine` reads true, run-now takes the engine path (VD-41, §8.3), and Stop is still stored.
 - `line_busy` lasts to the planned end of the newest pending or sent L01 run, or less when a later Stop
   covering L01 was requested; with only the relay ON, `retry_after_s` counts from its ON edge plus
   `irrig_wall_duration_min`.
@@ -914,6 +913,48 @@ trigger. Site values use `set_setting`.
   `blocked` ("arrives with the irrigation firmware"), and `next_run` is null. A command returns 202 with
   status `pending`, then `sent` (or `failed` when too old); the relay edge and `irr_state` show whether
   water started or stopped.
+
+As built (VD-41; `verdify_services/irrigation/writes.py` and `api/operator_routes/irrigation_writes.py`). Where the
+build settles what this section and §4.7 leave open:
+
+- **Run-now checks** run in the order §4.7's API rules list them, after the body per line kind: `line_disabled`,
+  `line_paused`, `line_faulted`, `not_schedule_member`, `line_busy`, `manifold_busy`, `cap_reached`.
+- **One run at a time.** The engine holds one run, whichever manifold it is on (`irr_run_now`), so another line's
+  run token that is not a VPD pulse is `manifold_busy` on either manifold; the API refuses at once what the device
+  would refuse. The detail names the line and its planned end on the America/Denver clock, and `current` holds the
+  end as a time.
+- **`line_faulted`** is a latch (`f=...,l`) on any line of the mister's zone, as `zone_lines()` does on the device: a
+  latch on L08 refuses L07 too. A back-off refuses nothing.
+- **`line_busy`, requested.** A pending run older than the 2 min send window never counts, and neither does a run
+  ended by a later Stop that covers its line.
+- **`cap_reached`** reads today's minutes through `fn_irrigation_minutes_daily`, M4's reader that holds the
+  `equipment_state` scan to the day, because it runs under the write lock. A day with no data counts 0, and the device
+  still enforces its own counters.
+- **What the device still refuses.** The API checks the requested line only. A fertilizer run whose prewet or flush
+  would open a disabled clean partner returns 202 and ends `skipped` ("line disabled") on the device, so enable L07
+  or L09 before running L08 or L10 with a rinse.
+- **The check.** `enabled: true` or `schedule_member: true` needs a check whatever the line reads now, so a line
+  enabled without one (the L01 and L04 seeds) is refused the same way. `check_note` without `checked: true` is 400
+  `invalid_request`. `checked: false` records nothing, and only a dashboard actor may send it. A new check replaces
+  the old one's who, when and note.
+- **`manual` on REST.** A body with `paused_until` or the check and no definition field passes no flag even if it
+  carries `manual`, so a pause never changes it. A body with only `manual` and a reason sets it. An empty body or one
+  with only a reason passes none and updates only the row's attribution.
+- **`manual` in the services.** A create with no flag is 400 `invalid_request`: the services never default it.
+- **`line_id` `all`** needs `paused_until` (400 without it), and a `manual` beside it is 400 too. Its activity row
+  keeps each line's old pause and flag in `detail.lines_before`.
+- **Activity detail.** The values after a write are `detail.value`, beside `detail.before`, as the Activity screen
+  and the settings writes read them. A schedule write holds the whole schedule on both sides; a line write holds the
+  fields the request carried. A create's `target` is its new `slot_id`.
+- **Replays.** A schedule's replay answers from its activity row, so it works after the schedule was deleted; a
+  line's reads the line as it is now.
+- **Override.** `args` is `{kind, minutes}` for a burst and `{kind}` for `clear` and `restart`, where `minutes` is 400
+  `invalid_request`. The activity `target` is the kind. Run-now's `args` are the body per line kind as sent.
+- **Delete on MCP.** REST answers 204; `schedule_delete` returns `{slot_id, deleted, manual_before}` for the MCP tool.
+- **Bounds.** A schedule's or a line's number outside its bounds is 422 `out_of_range`. The REST bodies check only
+  the types, so only `validate_schedule` and `validate_line` answer with `min` and `max`. Run-now's bounds stay
+  `RunRequest`'s (400). Fractional numbers snap to whole ones in all of them.
+- **Identity fields** (`actor`, `source`, `*_by`) in a body are dropped unread; any other unknown field is 400.
 
 ## 9. Water screen
 

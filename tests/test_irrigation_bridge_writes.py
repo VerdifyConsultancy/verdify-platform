@@ -308,12 +308,14 @@ def test_any_line_but_l01_is_unavailable_until_the_firmware_and_stores_nothing(l
     assert db.stored() == (0, 0, 0)
 
 
-def test_with_the_engine_on_a_run_waits_for_the_engine_path_and_a_stop_is_still_stored():
+def test_with_the_engine_on_a_run_leaves_the_bridge_and_a_stop_is_still_stored():
+    """The engine path (VD-41, tests/test_dashboard_db_irrigation_writes.py): a body per line kind, so no minutes is a
+    bad request where the bridge would have run the configured duration."""
     db = BridgeDB()
     db.engine = "true"
     with pytest.raises(ServiceError) as excinfo:
         do_run(db)
-    assert (refused(excinfo).code, refused(excinfo).retryable) == ("unavailable", False)
+    assert (refused(excinfo).code, refused(excinfo).field) == ("invalid_request", "minutes")
     assert db.stored() == (0, 0, 0)
     stop = do_stop(db, line_id="L01").value
     assert stop.args == {} and db.stored() == (1, 1, 1)
@@ -572,7 +574,7 @@ def test_the_routes_are_the_design_operations_with_202():
     served = {
         (route.path, frozenset(route.methods), route.operation_id, route.status_code) for route in routes.router.routes
     }
-    assert served == {
+    assert served >= {
         ("/irrigation/lines/{line_id}/run", frozenset({"POST"}), "API-IRR-06", 202),
         ("/irrigation/stop", frozenset({"POST"}), "API-IRR-07", 202),
     }
