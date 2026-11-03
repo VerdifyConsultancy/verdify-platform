@@ -1,8 +1,14 @@
-"""Now, plan and equipment reads (VD-54): API-02, API-07 and API-13.
+"""The operator reads: Now, plan and equipment (VD-54) and settings, history and activity (VD-55).
+
+API-02, API-07 and API-13 (VD-54); API-09, API-12 and API-17 (VD-55), whose
+composition over ``verdify_services.settings`` and ``.activity`` lives here:
+``settings_rows()``, ``setting_history()`` and ``activity_page()``, which the
+MCP ``settings`` and ``activity`` tools call too (#1171). API-14 is
+``alerts.list`` itself.
 
 Architecture §7 (read model) and §8 (API surface). Each read is ``async``,
 takes an asyncpg connection, needs no ``Actor`` and returns a Pydantic model
-shaped like the committed OpenAPI ``Now``, ``Plan`` or ``Equipment``
+shaped like its committed OpenAPI schema
 (docs/design/dashboard/openapi/dashboard-api.v1.yaml). A read runs all of its
 statements in one read-only snapshot, so every age in a response is measured
 from one database ``now()``. Every hypertable query is bounded by ``ts``; the
@@ -12,7 +18,10 @@ dashboard login has a 10 s ``statement_timeout``.
 
 Helpers other reads share: ``reporting()``, the one §7 test (#1155 and #1180
 use it too); ``collapse()``, which merges repeated state rows into runs; and
-``plan_waypoints()``, which API-12 (#1168) reuses.
+``plan_waypoints()`` and ``plan_history()``, the plan values with their
+``effective`` flag. API-02's alert count is ``alerts.open_count``, the one
+count API-14 and every other surface show (Round 2b C), and API-07's lanes
+take their state from ``settings.statuses``, so Plan and Settings agree.
 
 Unknown is never off, null is never 0, and gaps stay gaps. Nothing here writes,
 and the leak is an alert only (Q-05).
@@ -22,6 +31,7 @@ from __future__ import annotations
 
 import json
 import math
+from bisect import bisect_right
 from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
@@ -30,13 +40,16 @@ from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
 
 import asyncpg
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, BeforeValidator, ConfigDict, Field
 
 from verdify_schemas.alerts import flow_stopped_at
+from verdify_schemas.band_rows import HOUSE_SERIES, ZONES
 from verdify_schemas.policy_vector import wire_fields
 from verdify_schemas.setting_values import readback_matches, readback_tolerance, resolve_effective
-from verdify_schemas.tunable_registry import BAND_OWNED_REG, LIGHTING_CIRCUIT_DEFAULT_REG
+from verdify_schemas.tunable_registry import BAND_OWNED_REG, LIGHTING_CIRCUIT_DEFAULT_REG, desired_write_rule
 from verdify_schemas.tunable_registry import get as registry_get
+from verdify_services import activity, alerts, settings
+from verdify_services.actor import ActorRef as ActorRef  # re-exported: the OpenAPI Actor of DesiredSetting
 from verdify_services.labels import EQUIPMENT_LABELS, EQUIPMENT_LINE_IDS
 
 DENVER = ZoneInfo("America/Denver")
@@ -63,7 +76,6 @@ STATE_WINDOW = timedelta(days=31)  # runs older than this have since null
 # known, with since null.
 NEWEST_ROW_WINDOW = timedelta(days=90)
 DIFFERING_AFTER = timedelta(minutes=10)
-REQUESTED_FOR = timedelta(minutes=5)
 OVERRIDE_COMMAND_LEAD = timedelta(minutes=2)
 LEAK_STOPPED_BELOW_GPM = 0.1
 LEAK_STOPPED_READINGS = 2
@@ -118,12 +130,44 @@ _LIGHTING_LUX_PARAMS = frozenset(
 _POLICY_WIRE_FIELDS = frozenset(spec.name for spec in wire_fields())
 _IRRIGATION_COMMAND_COLUMNS = ("kind", "args", "status", "sent_at")
 
+# API-09's Band in force rows: the dispatcher's band_<zone>_<role> setpoint_snapshot
+# rows (band_anchors.emit_band_audit, every pass), house then each zone, six roles.
+BAND_ZONES = ("house", *ZONES)
+BAND_ROLES = HOUSE_SERIES
+BAND_IN_FORCE_WINDOW = timedelta(hours=1)
+BAND_IN_FORCE_REASON = "derived by the dispatcher from the crop band anchors"
+NO_BAND_ROW = "No band row in the last hour"
+# Setting.plan.next: the first waypoint after now. A plan row expires 78 h after it
+# is written (setpoint_plan.expires_at), so none applies past this horizon.
+NEXT_WAYPOINT_HORIZON = timedelta(days=4)
+PLAN_SOURCES = ("iris", "preemptive")
+SETTING_WRITE_ACTIONS = frozenset({"setting.write", "setting.release"})
+
 
 # ── Response models (the committed OpenAPI schemas) ─────────────────────────
 
 
 class _Model(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+
+# One model per OpenAPI schema: the services that own these define them.
+AlertCounts = alerts.AlertCounts
+PlanWaypoint = settings.PlanWaypoint
+StateReason = settings.StateReason
+DesiredSetting = settings.DesiredSetting
+ReadbackState = activity.ReadbackState
+AppliedFrom = settings.AppliedFrom
+Setting = settings.Setting
+SettingHistory = settings.SettingHistory
+ActivityPage = activity.ActivityPage
+
+
+class SettingRows(_Model):
+    """API-09 ``GET /v1/settings``: every registry row and the Band in force rows, with the read's time."""
+
+    items: list[Setting]
+    server_time: AwareDatetime
 
 
 class Reading(_Model):
@@ -178,13 +222,6 @@ class Iris(_Model):
     trigger: str | None
     valid_until: datetime | None
     required_trigger: RequiredTrigger
-
-
-class AlertCounts(_Model):
-    open: int
-    critical: int
-    warning: int
-    info: int
 
 
 IrrigationCause = Literal["vpd", "schedule", "run_now", "feed", "prewet", "flush", "fallback", "unknown"]
@@ -293,55 +330,6 @@ class PlannerTrigger(_Model):
     outcome: TriggerOutcome
     resolved_at: datetime | None
     failure_class: str | None
-
-
-class PlanWaypoint(_Model):
-    at: datetime
-    value: float | None
-    source: Literal["iris", "preemptive"]
-    effective: bool
-
-
-class ActorRef(_Model):
-    source: str
-    name: str
-
-
-ReadbackState = Literal["requested", "confirmed", "not_confirmed", "held", "no_readback", "overridden", "released"]
-
-
-class StateReason(_Model):
-    code: Literal[
-        "clamped",
-        "experiment",
-        "deferred",
-        "push_failed",
-        "writer_down",
-        "controller_not_reporting",
-        "no_engine",
-        "no_match",
-    ]
-    detail: str | None = None
-    applied_value: float | None = None
-    since: datetime | None = None
-
-
-class DesiredSetting(_Model):
-    id: int
-    param: str
-    value: float | None
-    snapped_from: float | None = None
-    manual: bool
-    manual_before: bool | None = None
-    state: ReadbackState
-    state_reason: StateReason | None = None
-    confirmed_at: datetime | None
-    actor: ActorRef
-    reason: str | None
-    created_at: datetime
-
-
-AppliedFrom = Literal["manual", "desired", "plan", "band", "default"]
 
 
 class PlanLane(_Model):
@@ -567,56 +555,98 @@ def required_trigger_state(status: str | None, due_at: datetime | None, at: date
     return "failed"
 
 
-def applied_from(param: str, desired: Mapping[str, Any] | None, plan_row: Mapping[str, Any] | None) -> AppliedFrom:
-    """Whose value the dispatcher applies now (architecture §5.2; #1180's settings.status uses the same order)."""
-    if desired is not None and desired["value"] is not None and desired["manual"]:
-        return "manual"
+def waypoint_effective(param: str, desired: Any | None, plan_row: Any, *, superseded: bool = False) -> bool:
+    """Whether a plan value applies at its time (architecture §5.2), the ``effective`` of every ``PlanWaypoint``.
+
+    ``desired`` is the setting's desired row in force then (a mapping or a ``DesiredSetting``) and ``plan_row``
+    the plan row (``value``, ``created_at``). False when ``superseded`` (a newer full Iris plan was written by
+    then) or when ``resolve_effective()`` picks the desired row: a manual row, or a non-manual row written after
+    the plan. A desired row of a setting that is not writable now never counts: the dispatcher skips it.
+    """
+    if superseded:
+        return False
+    if desired is not None and not desired_write_rule(param)[0]:
+        desired = None
     resolved = resolve_effective(desired, plan_row)
-    if resolved is not None:
-        return resolved.applied_from
-    if plan_row is not None:
-        return "plan"
-    spec = registry_get(param)
-    if spec is not None and spec.push_owner in ("band", "schedule"):
-        return "band"
-    return "default"
+    return resolved is None or resolved.applied_from == "plan"
 
 
 @dataclass(frozen=True)
 class ReadbackFacts:
-    """Readbacks of one value since a time: the newest, and the first and last that match it."""
+    """Readbacks of one value since a time: the newest, and the last that matches it."""
 
     newest_value: float | None
     newest_at: datetime | None
-    first_match_at: datetime | None
     last_match_at: datetime | None
     clamped: bool
 
 
-def desired_state(
-    desired: Mapping[str, Any],
-    plan_row: Mapping[str, Any] | None,
-    facts: ReadbackFacts | None,
-    at: datetime,
-) -> tuple[ReadbackState, datetime | None]:
-    """The interim readback state of a desired row and when it was confirmed.
+def superseded_at(plan_row: Mapping[str, Any], full_plans: Sequence[tuple[datetime, str]]) -> bool:
+    """Whether a full Iris plan's row (not ``iris-oneshot-*``) no longer applied at its own time.
 
-    released, overridden (not manual and a newer plan wins), confirmed (the
-    newest readback since the write matches, by ``readback_matches``),
-    requested (under 5 min, nothing matched yet) or not_confirmed. #1168
-    switches this to ``settings.status``.
+    ``full_plans`` is the (``created_at``, ``plan_id``) of every full plan, ascending: a newer one written at or
+    before the row's ``ts`` replaced the row's plan, since ``v_active_plan`` reads only the effective plan. The
+    row's own plan never counts: before set_plan wrote both in one transaction (the last such plan is from
+    2026-04), a plan's journal row can be up to 54 s newer than its waypoints. One-shots and forecast-rule rows
+    are never superseded this way.
     """
-    if desired["value"] is None:
-        return "released", None
-    resolved = resolve_effective(desired, plan_row)
-    if resolved is not None and resolved.applied_from == "plan":
-        return "overridden", None
-    if facts is not None and readback_matches(desired["param"], facts.newest_value, desired["value"]):
-        return "confirmed", facts.first_match_at
-    matched_before = facts is not None and facts.first_match_at is not None
-    if not matched_before and at - desired["created_at"] < REQUESTED_FOR:
-        return "requested", None
-    return "not_confirmed", None
+    plan_id = plan_row["plan_id"]
+    if plan_row["source"] != "iris" or str(plan_id).startswith("iris-oneshot-"):
+        return False
+    index = bisect_right(full_plans, plan_row["created_at"], key=lambda plan: plan[0])
+    # plan_id is unique in plan_journal, so the first newer plan that is not the row's own is one of these two.
+    return any(written <= plan_row["ts"] and other != plan_id for written, other in full_plans[index : index + 2])
+
+
+def band_label(zone: str, role: str) -> str:
+    """A Band in force row's name in words: ``House temp low``, ``West VPD high``."""
+    axis, _, side = role.partition("_")
+    return f"{zone.capitalize()} {'VPD' if axis == 'vpd' else axis} {side}"
+
+
+def band_in_force_row(zone: str, role: str, value: object, observed_at: datetime | None) -> settings.Setting:
+    """One read-only Band in force row (API-09 ``group`` ``band_in_force``): DERIVED by the dispatcher, no edit.
+
+    It has no registry row, so its label and unit are set here: °F for the ``temp_*`` roles, kPa for ``vpd_*``.
+    """
+    number = _finite(value)
+    readback = settings.Reading(
+        value=number,
+        observed_at=observed_at if number is not None else None,
+        reason=None if number is not None else NO_BAND_ROW,
+    )
+    return settings.Setting(
+        param=f"band_{zone}_{role}",
+        label=band_label(zone, role),
+        control_class="crop_band",
+        group="band_in_force",
+        kind="numeric",
+        unit="°F" if role.startswith("temp") else "kPa",
+        writable=False,
+        read_only_reason=BAND_IN_FORCE_REASON,
+        readback_via="none",
+        readback=readback,
+        desired=None,
+        plan=None,
+        applied_from="band",
+        state="no_readback",
+    )
+
+
+def setting_plan(plan_row: Mapping[str, Any], upcoming: Sequence[PlanWaypoint]) -> settings.SettingPlan | None:
+    """API-09's ``plan`` block: the value in force as stored (Iris's 48.75 stays 48.75), its plan, its source and
+    when it was written, and ``next``, the first waypoint after now with its ``effective``. None for a row whose
+    source is not ``iris`` or ``preemptive``."""
+    source = plan_row["source"]
+    if source not in PLAN_SOURCES:
+        return None
+    return settings.SettingPlan(
+        value=_finite(plan_row["value"]),
+        plan_id=plan_row["plan_id"],
+        source=source,
+        written_at=plan_row["created_at"],
+        next=upcoming[0] if upcoming else None,
+    )
 
 
 @dataclass(frozen=True)
@@ -856,25 +886,16 @@ SELECT event_type, expected_at, due_at, status, resolved_at, failure_class
  ORDER BY expected_at, id
 """
 
-# One open-alert count (Round 2b C): repeats of one alert_type and zone count
-# once, under their newest row's severity, while any of them is unacknowledged.
-# #1168 replaces it with verdify_services.alerts.open_count (#1180).
-_ALERTS_SQL = """
-WITH grouped AS (
-    SELECT alert_type, zone,
-           bool_or(disposition = 'open') AS unacknowledged,
-           (array_agg(severity ORDER BY ts DESC, id DESC))[1] AS severity
-      FROM v_open_alerts
-     GROUP BY alert_type, zone
-)
-SELECT count(*) FILTER (WHERE unacknowledged)::int AS open,
-       count(*) FILTER (WHERE unacknowledged AND severity = 'critical')::int AS critical,
-       count(*) FILTER (WHERE unacknowledged AND severity = 'warning')::int AS warning,
-       count(*) FILTER (WHERE unacknowledged AND severity = 'info')::int AS info,
-       (SELECT id FROM v_open_alerts WHERE alert_type = 'leak_detected' ORDER BY ts, id LIMIT 1) AS leak_alert_id,
-       (SELECT max(ts) FROM v_open_alerts WHERE alert_type = 'leak_detected') AS leak_open_since,
-       EXISTS (SELECT 1 FROM v_open_alerts WHERE alert_type = 'setpoint_delivery_stuck') AS stuck
-  FROM grouped
+# The open leak rows and the stuck-delivery flag, from alert_log under v_open_alerts'
+# own predicate: the rows alerts.open_count (the one count, Round 2b C) merges. The
+# leak's one sensor keeps the oldest open row's id, its merged row's id in API-14.
+_ALERT_FACTS_SQL = f"""
+SELECT (SELECT id FROM alert_log WHERE ({alerts.OPEN_PREDICATE}) AND alert_type = 'leak_detected'
+         ORDER BY ts, id LIMIT 1) AS leak_alert_id,
+       (SELECT max(ts) FROM alert_log
+         WHERE ({alerts.OPEN_PREDICATE}) AND alert_type = 'leak_detected') AS leak_open_since,
+       EXISTS (SELECT 1 FROM alert_log
+                WHERE ({alerts.OPEN_PREDICATE}) AND alert_type = 'setpoint_delivery_stuck') AS stuck
 """
 
 # The trailing quiet run of the site meter since the open leak row (as the
@@ -896,16 +917,10 @@ SELECT id, param, value, manual, source, actor, reason, created_at
 _ACTIVE_PLAN_SQL = "SELECT parameter, value, ts, plan_id, created_at FROM v_active_plan"
 
 # Readbacks of each value since it took force. The last match is the newest
-# readback when that matches, and is only searched for when it does not; the
-# first match (a desired row's confirmed_at) only when $5 asks for it.
+# readback when that matches, and is only searched for when it does not. (A
+# desired row's confirmed_at is settings.status's, VD-55.)
 _READBACK_FACTS_SQL = """
 SELECT c.param, newest.value AS newest_value, newest.ts AS newest_at,
-       CASE WHEN $5::boolean THEN
-           (SELECT s.ts FROM setpoint_snapshot AS s
-             WHERE s.parameter = c.param AND s.band_role IS NULL AND s.ts >= c.since
-               AND abs(s.value - c.value) <= c.tol
-             ORDER BY s.ts LIMIT 1)
-       END AS first_match_at,
        CASE WHEN abs(newest.value - c.value) <= c.tol THEN newest.ts ELSE
            (SELECT s.ts FROM setpoint_snapshot AS s
              WHERE s.parameter = c.param AND s.band_role IS NULL AND s.ts >= c.since
@@ -941,6 +956,42 @@ SELECT sp.parameter, sp.ts, sp.value, sp.source, sp.created_at
              ORDER BY pj.created_at DESC LIMIT 1)))
         OR sp.source = 'preemptive')
  ORDER BY sp.parameter, sp.ts, sp.created_at
+"""
+
+# API-12's plan values: every row of the setting in the window, past and superseded
+# plans included (set_plan deactivates the older ones), one per ts (the newest write).
+_PLAN_HISTORY_SQL = """
+SELECT DISTINCT ON (sp.ts) sp.ts, sp.value, sp.source, sp.plan_id, sp.created_at
+  FROM setpoint_plan AS sp
+ WHERE sp.parameter = $1 AND sp.ts >= $2 AND sp.ts < $3 AND sp.source = ANY($4::text[])
+ ORDER BY sp.ts, sp.created_at DESC
+"""
+
+# When each full Iris plan was written (plan_journal holds the full plans only).
+_FULL_PLANS_SQL = """
+SELECT created_at, plan_id FROM plan_journal
+ WHERE plan_id NOT LIKE 'iris-oneshot-%' AND created_at > $1 AND created_at <= $2
+ ORDER BY created_at
+"""
+
+# API-09's plan block: the v_active_plan row of each setting with its setpoint_plan
+# source (iris, or preemptive for the forecast engine).
+_SETTING_PLANS_SQL = """
+SELECT a.parameter, a.value, a.ts, a.plan_id, a.created_at, s.source
+  FROM v_active_plan AS a
+  JOIN LATERAL (SELECT sp.source FROM setpoint_plan AS sp
+                 WHERE sp.ts = a.ts AND sp.ts <= now() AND sp.parameter = a.parameter AND sp.plan_id = a.plan_id
+                 LIMIT 1) AS s ON true
+"""
+
+# API-09's Band in force rows: each zone and role's newest band row in the window.
+_BAND_IN_FORCE_SQL = """
+SELECT r.zone, r.role, s.value, s.ts
+  FROM unnest($1::text[], $2::text[], $3::text[]) AS r(zone, role, parameter)
+  LEFT JOIN LATERAL (SELECT value, ts FROM setpoint_snapshot
+                      WHERE parameter = r.parameter AND zone = r.zone AND band_role = r.role
+                        AND ts > now() - $4::interval
+                      ORDER BY ts DESC LIMIT 1) AS s ON true
 """
 
 # irrigation_command arrives with M3 (#1153); until then a burst has no end time.
@@ -1013,7 +1064,7 @@ async def _active_plan_rows(conn: asyncpg.Connection) -> dict[str, asyncpg.Recor
 
 
 async def _readback_facts(
-    conn: asyncpg.Connection, items: Sequence[tuple[str, datetime, float]], *, first_match: bool = False
+    conn: asyncpg.Connection, items: Sequence[tuple[str, datetime, float]]
 ) -> dict[str, ReadbackFacts]:
     """Readback facts of each (param, since, value), matched with the readback comparator's tolerance."""
     if not items:
@@ -1024,13 +1075,11 @@ async def _readback_facts(
         [since for _, since, _ in items],
         [value for _, _, value in items],
         [_tolerance(param, value) for param, _, value in items],
-        first_match,
     )
     return {
         row["param"]: ReadbackFacts(
             newest_value=_finite(row["newest_value"]),
             newest_at=row["newest_at"],
-            first_match_at=row["first_match_at"],
             last_match_at=row["last_match_at"],
             clamped=row["clamped"],
         )
@@ -1049,24 +1098,63 @@ async def plan_waypoints(
     """Plan values with ``from_ <= ts < to``, by param (every param when ``params`` is None).
 
     The rows of the plan in force, active Iris one-shots and active
-    forecast-rule rows. ``effective`` is true when ``resolve_effective()``
-    picks the plan row over the param's newest desired row: false under a
-    manual row, or a non-manual row newer than the plan row's ``created_at``.
-    ``desired`` (the ``v_desired_state_current`` rows by param) is read when
-    not given.
+    forecast-rule rows. ``effective`` is ``waypoint_effective()`` against the
+    param's newest desired row: false under a manual row, or a non-manual row
+    newer than the plan row's ``created_at``. ``desired`` (the
+    ``v_desired_state_current`` rows by param) is read when not given.
     """
     rows = await conn.fetch(_PLAN_WAYPOINTS_SQL, from_, to, list(params) if params is not None else None)
     if desired is None:
         desired = await _desired_rows(conn, sorted({row["parameter"] for row in rows}))
     out: dict[str, list[PlanWaypoint]] = {}
     for row in rows:
-        resolved = resolve_effective(desired.get(row["parameter"]), row)
         out.setdefault(row["parameter"], []).append(
             PlanWaypoint(
                 at=row["ts"],
                 value=_finite(row["value"]),
                 source=row["source"],
-                effective=resolved is None or resolved.applied_from == "plan",
+                effective=waypoint_effective(row["parameter"], desired.get(row["parameter"]), row),
+            )
+        )
+    return out
+
+
+async def plan_history(
+    conn: asyncpg.Connection,
+    param: str,
+    from_: datetime,
+    to: datetime,
+    desired: Sequence[DesiredSetting],
+) -> list[PlanWaypoint]:
+    """API-12's plan values: ``plan_waypoints()`` extended to every ``setpoint_plan`` row of ``param`` with
+    ``from_ <= ts < to``, past and superseded plans and future waypoints included, one per ``ts`` (the newest
+    ``created_at``), oldest first.
+
+    ``desired`` is the setting's desired rows from the one in force at ``from_`` (``settings.history`` gives
+    them). ``effective`` is ``waypoint_effective()`` against the desired row in force at the waypoint, and false
+    for a full Iris plan's row once a newer full plan was written at or before it (``superseded_at()``), so the
+    Graphs steps mark SUPERSEDED. Only ``iris`` and ``preemptive`` (forecast rule) rows are plan values.
+    """
+    rows = await conn.fetch(_PLAN_HISTORY_SQL, param, from_, to, list(PLAN_SOURCES))
+    if not rows:
+        return []
+    written_after = min(row["created_at"] for row in rows)
+    newest_at = max(row["ts"] for row in rows)
+    full_plans = [
+        (row["created_at"], row["plan_id"]) for row in await conn.fetch(_FULL_PLANS_SQL, written_after, newest_at)
+    ]
+    ordered = sorted(desired, key=lambda row: (row.created_at, row.id))
+    written = [row.created_at for row in ordered]
+    out: list[PlanWaypoint] = []
+    for row in rows:
+        index = bisect_right(written, row["ts"])
+        in_force = ordered[index - 1] if index else None
+        out.append(
+            PlanWaypoint(
+                at=row["ts"],
+                value=_finite(row["value"]),
+                source=row["source"],
+                effective=waypoint_effective(param, in_force, row, superseded=superseded_at(row, full_plans)),
             )
         )
     return out
@@ -1189,7 +1277,7 @@ async def _overrides(
 async def _leak(
     conn: asyncpg.Connection,
     track: Track,
-    alerts_row: Mapping[str, Any],
+    alert_facts: Mapping[str, Any],
     flow_gpm: float | None,
     gal_10min: int | None,
     rep: Reporting,
@@ -1203,8 +1291,8 @@ async def _leak(
     """
     flag_on = bool(track.spans and track.spans[-1].state)
     active = flag_on if rep.controller_reporting and track.spans else None
-    alert_id = alerts_row["leak_alert_id"]
-    open_since = alerts_row["leak_open_since"]
+    alert_id = alert_facts["leak_alert_id"]
+    open_since = alert_facts["leak_open_since"]
     stopped_at = None
     if open_since is not None and not flag_on:
         rows = await conn.fetch(_LEAK_READINGS_SQL, open_since, LEAK_STOPPED_BELOW_GPM, LEAK_STOPPED_READINGS)
@@ -1251,9 +1339,10 @@ async def now(conn: asyncpg.Connection) -> Now:
         tracks = await _tracks(conn, _EQUIPMENT_TRACKS_SQL, _NOW_EQUIPMENT_KEYS)
         plan_row = await conn.fetchrow(_PLAN_IN_FORCE_SQL)
         required = await conn.fetchrow(_REQUIRED_TRIGGER_SQL, list(REQUIRED_TRIGGERS))
-        alerts_row = await conn.fetchrow(_ALERTS_SQL)
+        alert_counts = await alerts.open_count(conn)
+        alert_facts = await conn.fetchrow(_ALERT_FACTS_SQL)
         flow_gpm = _finite(climate["flow_gpm"])
-        leak = await _leak(conn, tracks[LEAK_FLAG], alerts_row, flow_gpm, clock["gal_10min"], rep)
+        leak = await _leak(conn, tracks[LEAK_FLAG], alert_facts, flow_gpm, clock["gal_10min"], rep)
         overrides = await _overrides(conn, tracks, texts.get("fog_block_reason"), rep)
         values = values_in_force(
             await _desired_rows(conn), await _active_plan_rows(conn), experiment_armed=clock["experiment_armed"]
@@ -1316,7 +1405,7 @@ async def now(conn: asyncpg.Connection) -> Now:
     writer = Writer(
         last_at=clock["writer_at"],
         age_s=_age_s(clock["writer_at"], at),
-        stuck=alerts_row["stuck"],
+        stuck=alert_facts["stuck"],
         differing=differing,
         oldest_since=oldest_since,
     )
@@ -1338,12 +1427,7 @@ async def now(conn: asyncpg.Connection) -> Now:
         band=band,
         mode=mode,
         iris=iris,
-        alerts=AlertCounts(
-            open=alerts_row["open"],
-            critical=alerts_row["critical"],
-            warning=alerts_row["warning"],
-            info=alerts_row["info"],
-        ),
+        alerts=alert_counts,
         running=running,
         overrides=overrides,
         leak=leak,
@@ -1365,25 +1449,13 @@ async def now(conn: asyncpg.Connection) -> Now:
 # ── API-07 ──────────────────────────────────────────────────────────────────
 
 
-def _desired_setting(
-    row: Mapping[str, Any], plan_row: Mapping[str, Any] | None, facts: ReadbackFacts | None, at: datetime
-) -> DesiredSetting:
-    state, confirmed_at = desired_state(row, plan_row, facts, at)
-    return DesiredSetting(
-        id=row["id"],
-        param=row["param"],
-        value=_finite(row["value"]),
-        manual=row["manual"],
-        state=state,
-        confirmed_at=confirmed_at,
-        actor=ActorRef(source=row["source"], name=row["actor"]),
-        reason=row["reason"],
-        created_at=row["created_at"],
-    )
-
-
 async def plan(conn: asyncpg.Connection, hours: int = 24) -> Plan:
-    """API-07 ``GET /v1/plan``: the plan in force, one lane per planned setting, and planner health."""
+    """API-07 ``GET /v1/plan``: the plan in force, one lane per planned setting, and planner health.
+
+    Each lane's ``applied_from`` and ``desired`` (with its state and reason) are ``settings.statuses``, so Plan
+    and Settings show the same state. A lane for a setting outside ``REGISTRY`` has no desired row and reads
+    ``plan`` while a plan value is in force, else ``default``.
+    """
     if hours not in (24, 72):
         raise ValueError("hours must be 24 or 72")
     async with _snapshot(conn):
@@ -1396,24 +1468,17 @@ async def plan(conn: asyncpg.Connection, hours: int = 24) -> Plan:
         manual = {param for param, row in desired.items() if row["manual"] and row["value"] is not None}
         params = sorted(set(active) | set(waypoints) | manual)
         device = {row["param"]: row for row in await conn.fetch(_DEVICE_READBACKS_SQL, params)}
-        lane_desired = {param: desired[param] for param in params if param in desired}
-        facts = await _readback_facts(
-            conn,
-            [
-                (param, row["created_at"], row["value"])
-                for param, row in lane_desired.items()
-                if row["value"] is not None
-            ],
-            first_match=True,
-        )
+        statuses = await settings.statuses(conn, params)
         health_rows = await conn.fetch(_HEALTH_SQL)
 
     lanes: list[PlanLane] = []
     for param in params:
         spec = registry_get(param)
-        desired_row = lane_desired.get(param)
-        plan_value = active.get(param)
-        source = applied_from(param, desired_row, plan_value)
+        status = statuses.get(param)
+        if status is not None:
+            source = status.applied_from
+        else:
+            source = "plan" if param in active else "default"
         readback = device.get(param)
         lanes.append(
             PlanLane(
@@ -1426,9 +1491,7 @@ async def plan(conn: asyncpg.Connection, hours: int = 24) -> Plan:
                     "No readback in the last 24 h",
                 ),
                 waypoints=[] if source == "manual" else waypoints.get(param, []),
-                desired=(
-                    _desired_setting(desired_row, plan_value, facts.get(param), at) if desired_row is not None else None
-                ),
+                desired=status.desired if status is not None else None,
                 applied_from=source,
             )
         )
@@ -1461,3 +1524,117 @@ async def equipment(conn: asyncpg.Connection) -> Equipment:
         rep = await reporting(conn)
         tracks = await _tracks(conn, _EQUIPMENT_TRACKS_SQL, _EQUIPMENT_KEYS)
     return Equipment(items=_equipment_items(tracks, rep))
+
+
+# ── API-09 ──────────────────────────────────────────────────────────────────
+
+
+async def settings_rows(conn: asyncpg.Connection) -> SettingRows:
+    """API-09 ``GET /v1/settings`` and the MCP ``settings`` tool: every setting, then the Band in force rows.
+
+    The registry rows are ``settings.catalog`` (``REGISTRY`` order, each with ``TunableDef``'s label and unit,
+    its readback, desired row, ``applied_from`` and state), each given its ``plan`` block while a
+    ``v_active_plan`` value is in force (``setting_plan()``: the value as stored, unsnapped, its plan, source,
+    when it was written and ``next``, the first ``plan_waypoints()`` waypoint after now with its ``effective``).
+    Then one read-only row per zone (house, center, south, west, east) and band role from the dispatcher's newest
+    band row in the last hour (``band_in_force_row()``). One snapshot; ``server_time`` is its ``now()``.
+    """
+    async with _snapshot(conn):
+        at: datetime = await conn.fetchval("SELECT now()")
+        rows = await settings.catalog(conn)
+        plans = {row["parameter"]: row for row in await conn.fetch(_SETTING_PLANS_SQL)}
+        upcoming = await plan_waypoints(conn, sorted(plans), at, at + NEXT_WAYPOINT_HORIZON) if plans else {}
+        keys = [(zone, role) for zone in BAND_ZONES for role in BAND_ROLES]
+        band = await conn.fetch(
+            _BAND_IN_FORCE_SQL,
+            [zone for zone, _ in keys],
+            [role for _, role in keys],
+            [f"band_{zone}_{role}" for zone, role in keys],
+            BAND_IN_FORCE_WINDOW,
+        )
+    items: list[settings.Setting] = []
+    for setting in rows:
+        plan_row = plans.get(setting.param)
+        if plan_row is not None:
+            later = [waypoint for waypoint in upcoming.get(setting.param, []) if waypoint.at > at]
+            setting = setting.model_copy(update={"plan": setting_plan(plan_row, later)})
+        items.append(setting)
+    newest = {(row["zone"], row["role"]): row for row in band}
+    for zone, role in keys:
+        found = newest.get((zone, role))
+        value, observed_at = (found["value"], found["ts"]) if found is not None else (None, None)
+        items.append(band_in_force_row(zone, role, value, observed_at))
+    return SettingRows(items=items, server_time=at)
+
+
+# ── API-12 ──────────────────────────────────────────────────────────────────
+
+
+async def setting_history(conn: asyncpg.Connection, param: str, from_: datetime, to: datetime) -> SettingHistory:
+    """API-12 ``GET /v1/settings/{param}/history`` and the MCP ``settings(param, since, until)`` tool.
+
+    ``settings.history`` gives ``unit``, ``min`` and ``max`` (the registry's, as API-09), ``desired`` (oldest
+    first, from the row in force at ``from_``) and ``readback`` (the change points; ``setpoint_snapshot`` keeps 90
+    days), and refuses an unknown setting (404 ``not_found``) or a window that is not two times with an offset,
+    ``from_`` first (400 ``invalid_request``). ``plan`` is ``plan_history()`` over the same window, so the Graphs
+    device, requested and planned steps come from this one read. Every list is bounded by the window.
+    """
+    async with _snapshot(conn):
+        history = await settings.history(conn, param, from_, to)
+        plan_values = await plan_history(conn, param, history.from_, history.to, history.desired)
+    return history.model_copy(update={"plan": plan_values})
+
+
+# ── API-17 ──────────────────────────────────────────────────────────────────
+
+
+def _desired_id(detail: Mapping[str, Any]) -> int | None:
+    value = detail.get("desired_id")
+    return value if type(value) is int else None
+
+
+async def activity_page(
+    conn: asyncpg.Connection,
+    *,
+    source: str | None = None,
+    actor: str | None = None,
+    action: str | None = None,
+    target: str | None = None,
+    from_: datetime | None = None,
+    to: datetime | None = None,
+    limit: int = activity.LIMIT_DEFAULT,
+    cursor: str | None = None,
+) -> ActivityPage:
+    """API-17 ``GET /v1/activity`` and the MCP ``activity`` tool: ``activity.list`` with readback outcomes.
+
+    Newest first by (``ts``, ``id``), keyset-paged: ``source`` is ``dashboard``, ``iris``, ``system``, ``agent``
+    (every agent) or ``agent:<name>``; ``action`` is a prefix, ``actor`` and ``target`` are exact; ``from_`` is
+    inclusive and ``to`` exclusive; ``limit`` is 1 to 200; ``cursor`` is the previous page's ``next_cursor``.
+    A bad filter is 400 ``invalid_request``. Each ``setting.write`` and ``setting.release`` row gets ``state``
+    and ``confirmed_at`` from ``settings.desired_states`` for the row its ``detail.desired_id`` names.
+    """
+    async with _snapshot(conn):
+        page = await activity.list(
+            conn,
+            source=source,
+            actor=actor,
+            action=action,
+            target=target,
+            from_=from_,
+            to=to,
+            limit=limit,
+            cursor=cursor,
+        )
+        named = {
+            entry.id: desired_id
+            for entry in page.items
+            if entry.action in SETTING_WRITE_ACTIONS and (desired_id := _desired_id(entry.detail)) is not None
+        }
+        states = await settings.desired_states(conn, sorted(set(named.values()))) if named else {}
+    items = []
+    for entry in page.items:
+        written = states.get(named[entry.id]) if entry.id in named else None
+        if written is not None:
+            entry = entry.model_copy(update={"state": written.state, "confirmed_at": written.confirmed_at})
+        items.append(entry)
+    return page.model_copy(update={"items": items})

@@ -65,9 +65,17 @@
 @media(max-width:860px){
   .lanes{--lanes-label:6rem;--lanes-stat:4.5rem;--lanes-pitch:24px;--lanes-axis:32px}
   .lanes .lanes-wide,.lanes-columns .lanes-wide{display:none}
-  .lanes-plan{--lanes-stat:0px;--plan-head:36px;--lanes-pitch:60px;--lanes-label:5rem}
+  .lanes-plan{--lanes-stat:0px;--plan-head:36px;--lanes-pitch:60px;--lanes-label:6rem}
   .plan-head{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;white-space:normal}
 }
+/* A stale device value is muted; the row end (Plan's Open) is a column beside the plot, the row's full height. */
+.plan-device-stale{color:var(--muted)}
+.lanes-plan.lanes-plan-end{--lanes-stat:3.5rem}
+.lanes-plan-end .plan-row{display:grid;grid-template-columns:minmax(0,1fr) var(--lanes-stat);grid-template-rows:var(--plan-head) 24px}
+.lanes-plan-end .plan-head{grid-area:1/1}
+.lanes-plan-end .plan-line{grid-area:2/1}
+.plan-end{grid-area:1/2/3/3;display:flex;align-items:stretch;justify-content:flex-end;min-width:0}
+.plan-end a{display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:2.75rem;font-size:.8rem;font-weight:700}
 
 /* Minutes by zone (#1127): one small bars chart per zone; the zone's label left, today and the cap right. */
 .minutes-rows{list-style:none;margin:0;padding:0}

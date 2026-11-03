@@ -263,8 +263,9 @@ def test_sealed_sql_282_chains_from_281_and_binds_the_exact_ledger_row():
     # The same seals, but max(seq) pins 282 and the exact 282 runner stamp is required.
     assert "(SELECT max(seq) FROM public.schema_migrations WHERE source='db/migrations')=282" in expected
     assert "stamp_method='runner'" in six.ledger_row_sql(*six.DASHBOARD_LOGIN_MIGRATION)
-    assert six.sealed_sql().endswith(" OR " + six.sealed_sql_281() + " OR " + expected + ")")
-    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_282() + ")") == 1
+    # 282 follows 281 in both ORs; a later successor (283) follows it.
+    assert six.sealed_sql().count(" OR " + six.sealed_sql_281() + " OR " + expected) == 1
+    assert maintenance.contract_sql().count(" OR " + six.sealed_sql_282()) == 1
     assert '"282-dashboard-runtime-login.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
     assert "tests/test_282_dashboard_login_delivery.py" in (ROOT / "scripts/ci-local.sh").read_text()
 

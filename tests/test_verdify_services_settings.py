@@ -25,7 +25,6 @@ from verdify_schemas.tunable_registry import (
     LEGACY_WIDE_LIMIT_PARAMS,
     REGISTRY,
     SWITCH_READBACK_EQUIPMENT,
-    WEEKLY_FEED_PARAMS,
     desired_write_rule,
 )
 from verdify_services import activity, reads, settings
@@ -327,6 +326,16 @@ class FakeDB:
         if sql == settings._DESIRED_BY_ID_SQL:
             (row_id,) = args
             return [row for row in self.desired if row["id"] == row_id]
+        if sql == settings._DESIRED_ROWS_SQL:  # VD-55: named rows, each with its setting's next row's time
+            _gh, ids = args
+            ordered = sorted(self.desired, key=lambda r: (r["created_at"], r["id"]))
+            out = []
+            for row in ordered:
+                if row["id"] in ids:
+                    key = (row["created_at"], row["id"])
+                    later = [r for r in ordered if r["param"] == row["param"] and (r["created_at"], r["id"]) > key]
+                    out.append({**row, "until": later[0]["created_at"] if later else None})
+            return out
         if sql == settings._HISTORY_DESIRED_SQL:
             _gh, param, start, end = args
             rows = sorted((r for r in self.desired if r["param"] == param), key=lambda r: (r["created_at"], r["id"]))
@@ -381,7 +390,7 @@ def test_every_registry_row_gets_a_write_decision_with_a_reason_when_refused():
 
 @pytest.mark.parametrize(
     "param",
-    sorted(WEEKLY_FEED_PARAMS | LEGACY_WIDE_LIMIT_PARAMS | ACTIVITY_MIRROR_PARAMS | {"sw_onchip_band_enabled"}),
+    sorted(LEGACY_WIDE_LIMIT_PARAMS | ACTIVITY_MIRROR_PARAMS | {"sw_onchip_band_enabled"}),
 )
 def test_the_read_only_list_is_refused_read_only_with_its_reason(param):
     db = FakeDB()
@@ -392,21 +401,22 @@ def test_the_read_only_list_is_refused_read_only_with_its_reason(param):
     assert problem.detail == f"{param} is read-only: {desired_write_rule(param)[1]}"
 
 
-def test_the_two_named_switches_carry_their_own_reasons_and_never_unknown_target():
+def test_the_band_owner_switch_carries_its_own_reason():
     db = FakeDB()
-    reasons = {}
-    for param in ("sw_wall_fertigation_commissioned", "sw_onchip_band_enabled"):
-        with pytest.raises(ServiceError) as excinfo:
-            run(settings.validate(db, PERSON, param, 1))
-        reasons[param] = refusal(excinfo)
-    assert {p: problem.code for p, problem in reasons.items()} == dict.fromkeys(reasons, "read_only")
-    assert "retiring with the irrigation engine" in reasons["sw_wall_fertigation_commissioned"].detail
-    assert "decides which side owns the band" in reasons["sw_onchip_band_enabled"].detail
+    with pytest.raises(ServiceError) as excinfo:
+        run(settings.validate(db, PERSON, "sw_onchip_band_enabled", 1))
+    problem = refusal(excinfo)
+    assert problem.code == "read_only"
+    assert "decides which side owns the band" in problem.detail
 
 
-def test_the_nine_weekly_feed_rows_are_the_switch_and_the_eight_wall_rows():
-    assert len(WEEKLY_FEED_PARAMS) == 9
-    assert WEEKLY_FEED_PARAMS - {"sw_wall_fertigation_commissioned"} == {n for n in REGISTRY if n.startswith("wall_")}
+@pytest.mark.parametrize("param", ["sw_wall_fertigation_commissioned", "wall_commissioning_revision", "wall_flow_lpm"])
+def test_the_retired_weekly_feed_rows_read_unknown_target(param):
+    # #1162 deleted the weekly-feed commissioning rows from REGISTRY.
+    assert param not in REGISTRY
+    with pytest.raises(ServiceError) as excinfo:
+        run(settings.validate(FakeDB(), PERSON, param, 1))
+    assert refusal(excinfo).code == "unknown_target"
 
 
 @pytest.mark.parametrize("control_class", ["readback_context", "retired"])
@@ -989,7 +999,7 @@ def test_catalog_groups_and_read_only_reasons():
     assert rows["zone_vpd_target_center_sm"].group == "crop_band"
     assert rows["zone_vpd_target_east_sm"].group == "read_only"  # no pepper rows in this fixture
     assert rows["zone_priority_center"].read_only_reason == settings.NO_ANCHOR_ROW
-    for name in ("temp_low", "sw_onchip_band_enabled", "sw_wall_fertigation_commissioned", "activity_start_hour"):
+    for name in ("temp_low", "sw_onchip_band_enabled", "activity_start_hour"):
         assert (rows[name].group, rows[name].writable) == ("read_only", False)
         assert rows[name].read_only_reason == desired_write_rule(name)[1]
     for row in rows.values():
@@ -1067,3 +1077,55 @@ def test_history_refuses_a_backwards_or_naive_window():
         with pytest.raises(ServiceError) as excinfo:
             run(settings.history(FakeDB(), PRESSURE, start, end))
         assert refusal(excinfo).code == "invalid_request"
+
+
+# ── Batched reads for API-07 and API-17 (VD-55) ─────────────────────────────
+
+
+def test_statuses_is_status_for_each_setting_in_one_batch_and_leaves_unknown_names_out():
+    db = FakeDB()
+    db.add_desired(KPA, 1.55, manual=True, at=ago(minutes=10))
+    db.snapshots.append((KPA, ago(minutes=1), 1.55))
+    db.add_plan(DELAY, 48.75, created_at=ago(hours=1))
+    db.snapshots.append((DELAY, ago(minutes=1), 48.75))
+    db.add_desired(PRESSURE, 845.0, at=ago(minutes=10))
+    db.clamps.append({"parameter": PRESSURE, "ts": ago(minutes=9), "applied": 840.0, "reason": "guard_x"})
+    db.snapshots.append((PRESSURE, ago(minutes=1), 840.0))
+    expected = {param: status(db, param) for param in (KPA, DELAY, PRESSURE)}
+    db.sql.clear()
+    batched = run(settings.statuses(db, [KPA, DELAY, "no_such_setting", PRESSURE, KPA]))
+    assert batched == expected
+    assert [result.state for result in batched.values()] == ["confirmed", "confirmed", "held"]
+    assert db.sql.count(reads._REPORTING_SQL) == 1  # one gather for all three
+    assert run(settings.statuses(db, ["no_such_setting"])) == {}
+
+
+def test_desired_states_give_each_named_row_the_state_history_gives_it():
+    db = FakeDB()
+    old = db.add_desired(PRESSURE, 840.0, at=ago(hours=8))
+    mid = db.add_desired(PRESSURE, 845.0, at=ago(hours=5))
+    released = db.add_desired(PRESSURE, None, at=ago(hours=4))
+    unconfirmed = db.add_desired(PRESSURE, 850.0, at=ago(hours=3))
+    newest = db.add_desired(PRESSURE, 855.0, at=ago(minutes=2))
+    other = db.add_desired(KPA, 1.55, at=ago(minutes=30))
+    db.snapshots += [
+        (PRESSURE, ago(hours=7), 840.0),
+        (PRESSURE, ago(hours=5, minutes=-1), 845.0),
+        (PRESSURE, ago(hours=1), 845.0),  # 850 never read back before the next row
+        (KPA, ago(minutes=29), 1.55),
+    ]
+    ids = [row["id"] for row in (old, mid, released, unconfirmed, newest, other)]
+    states = run(settings.desired_states(db, [*ids, 999_999, True, "7", 2**70]))
+    assert set(states) == set(ids)  # an id naming no row, or not an id, is left out
+    assert {row_id: (states[row_id].state, states[row_id].confirmed_at) for row_id in ids} == {
+        old["id"]: ("confirmed", ago(hours=7)),
+        mid["id"]: ("confirmed", ago(hours=5, minutes=-1)),
+        released["id"]: ("released", None),
+        unconfirmed["id"]: ("not_confirmed", None),
+        newest["id"]: ("requested", None),  # the newest row reads its full status
+        other["id"]: ("confirmed", ago(minutes=29)),
+    }
+    assert states[newest["id"]] == status(db, PRESSURE).desired
+    history = run(settings.history(db, PRESSURE, ago(hours=9), NOW))
+    assert {row.id: row for row in history.desired} == {row_id: states[row_id] for row_id in ids[:5]}
+    assert run(settings.desired_states(db, [])) == {} and run(settings.desired_states(db, [999_999])) == {}

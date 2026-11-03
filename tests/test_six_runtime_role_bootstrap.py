@@ -108,6 +108,36 @@ def test_real_psql_boundary_keeps_values_out_of_argv_and_errors(configured):
     assert secret not in str(error.value)
 
 
+def test_sealed_check_sql_stays_out_of_argv_and_keeps_command_order(configured):
+    # Linux MAX_ARG_STRLEN: a longer argv string fails exec with E2BIG before psql
+    # starts, which the bootstrap reports only as fail-closed.
+    max_arg_strlen = 128 * 1024
+    for name, value in {"DB_HOST": "db", "DB_PORT": "5432", "DB_NAME": "fixture"}.items():
+        configured.setenv(name, value)
+    sealed = "SELECT " + module.sealed_sql() + " AND " + module.admin_role_contract_sql()
+    assert len(sealed.encode()) > max_arg_strlen
+    observed = {}
+
+    def run(args, **kwargs):
+        observed["args"] = list(args)
+        observed["files"] = [
+            Path(args[index + 1]).read_text(encoding="utf-8") for index, arg in enumerate(args) if arg == "--file"
+        ]
+        return type("Result", (), {"returncode": 0, "stdout": "t\n"})()
+
+    configured.setattr(module.subprocess, "run", run)
+    password_command = "\\password verdify_planner_runtime_login"
+    assert module.psql("verdify", "fixture", ["SET a=1", sealed, password_command], transactional=True) == "t"
+    args = observed["args"]
+    assert max(len(arg.encode()) for arg in args) < max_arg_strlen
+    assert observed["files"] == [sealed]
+    actions = [arg for arg in args if arg in ("--command", "--file")]
+    assert actions == ["--command", "--file", "--command"]
+    assert args[args.index("--command") + 1] == "SET a=1"
+    assert args[-2:] == ["--command", password_command]
+    assert "--single-transaction" in args
+
+
 def test_mixed_existing_and_missing_never_reinstalls_existing(configured):
     calls = executor(configured)
     original = module.psql

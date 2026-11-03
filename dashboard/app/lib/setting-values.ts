@@ -4,7 +4,7 @@
  * decimals with its unit, the bounds as "0.50–2.50 kPa", and typed text read back as a number. The client only reads
  * and shows numbers here: it checks min and max and never snaps; snapping and validation are the server's.
  */
-import { formatNumber } from "./format";
+import { formatNumber, unitDecimals } from "./format";
 
 const NBSP = "\u00a0";
 const MINUS = "\u2212";
@@ -30,6 +30,20 @@ function fixed(value: number, digits: number): string {
 export function steppedNumber(value: number, step?: number | null): string {
   if (step !== null && step !== undefined && Number.isFinite(step) && step > 0) return fixed(value, decimals(step));
   return fixed(value, Math.min(decimals(value), 3));
+}
+
+/** Decimals a stored value carries beyond its step, at most this many (a binary32 readback's noise drops out). */
+export const KEPT_DECIMALS = 4;
+/**
+ * A value as it is stored: at its step's decimals, or more when it carries more (Iris's 48.75 on a 30 s grid reads
+ * 48.75, never 49), up to `KEPT_DECIMALS`. A value with no step and a unit takes at least the unit's decimals (°F
+ * 1 dp, kPa 2 dp: design system §5.4). The forms and rows show values this way; only the server snaps.
+ */
+export function keptNumber(value: number, step?: number | null, unit?: string | null): string {
+  const own = Number.isFinite(value) ? decimals(Number(value.toFixed(KEPT_DECIMALS))) : 0;
+  const stepped = step !== null && step !== undefined && Number.isFinite(step) && step > 0;
+  const least = stepped ? decimals(step) : unit ? unitDecimals(unit) : 0;
+  return fixed(value, Math.max(own, least));
 }
 
 /** The display unit: the registry's (`TunableDef.unit`), with the ASCII °F alias printed as its symbol. */
@@ -89,4 +103,13 @@ export function settingValueText(value: number, setting: SettingShape): string {
     if (option) return option.label;
   }
   return withUnit(steppedNumber(value, setting.step), setting.unit);
+}
+
+/**
+ * A device, request or plan value on Settings (SCR-05): as `settingValueText`, but a number keeps the decimals it
+ * carries (`keptNumber`), so a value stored off the grid, such as Iris's 48.75, reads as stored.
+ */
+export function keptValueText(value: number, setting: SettingShape): string {
+  if (setting.kind === "switch" || setting.kind === "enum") return settingValueText(value, setting);
+  return withUnit(keptNumber(value, setting.step, setting.unit), setting.unit);
 }

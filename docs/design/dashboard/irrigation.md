@@ -298,8 +298,8 @@ and centi-gallons), so they are never NaN, and SAF-4 still trips after a power c
   valid time it starts nothing on schedule, and a running drip finishes on its own timer. Run-now and
   stop still work.
 - **Exactly once.** Each occurrence, keyed by `(slot_id, local day)`, is claimed before its relay
-  opens: the claim is saved and `global_preferences->sync()` runs first (the save-then-sync pattern in
-  `firmware/lib/irrigation_policy.h`), at most 24 times a day. A clean run cut by a soft reset resumes
+  opens: the claim is saved and `global_preferences->sync()` runs first (the save-then-sync pattern of
+  `irr_commit_claims()` in `firmware/lib/irrigation_program.h`), at most 24 times a day. A clean run cut by a soft reset resumes
   its remainder from the RTC block; after a power cut it is not repeated. A start may be up to 60 min
   late; after that the occurrence is `missed`.
 - **Outcomes.** Every occurrence ends in exactly one outcome: `ok`, `short`, `stopped`, `preempted`,
@@ -412,8 +412,8 @@ points the design left open, as the wiring settles them:
   storage), and the ingestor's next pass pushes again. A commit with no begin does nothing.
 - **Water and mirrors.** The flow accrual adds integer centi-gallons to the RTC block and carries the
   fraction; `mister_water_today` mirrors the block at once, and `runtime_mister_*_ms` and
-  `runtime_*_drip_ms` at each tick. Until VD-46 the accrual runs for climate pulses and fog only, as
-  before.
+  `runtime_*_drip_ms` at each tick. Since VD-46 (§4.10) the flow meter counts while any mister relay or
+  fog is ON, whatever opened it.
 - **Climate inputs.** Each second the climate loop writes the engine's inputs: SENSOR_FAULT and
   SAFETY_COOL from the mode, degraded sensing (the average probes are out), the VPD emergency, the
   measured RH and the dew margin, the soft budget, `mister_min_off_s`, confirmed occupancy, the VPD source
@@ -422,6 +422,55 @@ points the design left open, as the wiring settles them:
   controller-case probe while it answers, never the loop's fabricated fallback values. With neither the
   RH reads missing (it never blocks) and the margin unknown. Degraded sensing means the averages are out,
   so the case probe is what lets a `degraded_only` window run (D-IRP-12).
+
+### 4.10 What the mist path settles (VD-46)
+
+`firmware/greenhouse/controls.yaml` (sections 9 to 14) and the mist-path half of
+`firmware/lib/irrigation_program.h` carry F6, F7, F9, F10 and the mist and fog part of F14. These are the
+points the design left open, as the implementation settles them:
+
+- **Which zone may take a VPD pulse.** `irr_vpd_zone_allowed()` is the one rule per zone: the climate's
+  demand and its safety gate, an effective VPD member (the program's VPD-member bit and the line's enable
+  bit), no back-off or latch on any line of the zone (a fault on L08 holds L07 too), the zone's duty cap
+  (the clean line's `daily_cap_min` against every mister second on the zone, any origin) and SAF-4.
+  Confirmed occupancy, the soft budget, a drip and the vent interlock stay in `mister_blocked`. Before
+  the engine starts no zone is allowed (no grant could be given either).
+- **Zone choice.** The 10 min fairness override goes first. With two or more zones allowed,
+  `irr_rank_vpd_zone()` picks: the best owner rank (`zone_priority_*`, center 1) among the zones above
+  their VPD band target, and when none is (the house-level stress asked for the pulse) the best-ranked
+  allowed zone. With one zone allowed the legacy stress score runs as before; it can only pick that zone,
+  and it keeps `mister_center_penalty` a live policy consumer. No control path reads
+  `sw_arbiter_zone_enabled`; only its `cfg_arbiter_zone_enabled` readback does.
+- **Scheduled pulses at the boundary.** The engine's manifold arbitration (§4.8, VD-44) already
+  alternates VPD and window pulses, puts VPD first in an emergency and serves both with one window pulse
+  on the same zone. The climate path now asks it for any zone's grant at each pulse boundary
+  (`irr_vpd_grant(zone_line, pulse_ms)`); the vent kill closes only the climate's own VPD pulses, never
+  an engine-held relay (D-IRP-09).
+- **Water.** The flow meter counts into SAF-4 and the soft budget whenever any mister relay (L04,
+  L07-L10) or fog reads ON, outside the `mister_blocked` branch. Runtime per zone is the engine's (every
+  relay ON).
+- **Survival fog (F9).** `fog_force_off_reason()` in `greenhouse_logic.h` is the one force-off rule for
+  the fog gate, the relay and the `fog_block_reason` ladder. Every mode: SENSOR_FAULT (`sensor_fault`),
+  confirmed occupancy (`occupancy`), L03 open or about to open (`fert_master`), a drip relay reading ON
+  (`irrigation`) and an invalid clock (`time_invalid`). Outside SAFETY_COOL also the engine's drip
+  (`irrigation`), the soft budget (`resource_budget`) and SAF-4 (`water_ceiling`). The drip-relay term
+  keeps drips and fog apart for the up to 5 s before the engine's tick pauses a clean drip in
+  SAFETY_COOL. `sensor_fault`, `fert_master` and `water_ceiling` are new ladder words
+  (`verdify_schemas.climate_intent.FOG_BLOCK_REASONS`); `leak_detected` stays there for history.
+- **The watchdog (F10).** `irr_watchdog_step()` runs in the climate loop each second. A mister's limit
+  is its commanded length + 30 s: the VPD pulse's from its grant (the lapse of an unreleased grant
+  coincides with it), an engine open's (`mist_cmd_s`) from its ON edge, else 300 s. An overrun is forced
+  OFF and counted on the zone; the engine drops the open at once (`irr_apply_faults()`): a pulse counts as
+  delivered and the next waits, a mist prewet or flush stops its clock. Whether a fault backs off or
+  latches follows the faulted line: an effective VPD member backs off 10, then 30 min, then latches; any
+  other mister, L08 and L10 included, latches at once. A wet relay ON without its grant bit is forced
+  OFF too, with no fault counted.
+- **Fault state.** Per zone in the RTC block (layout version 2): the count and the latch zero at local
+  midnight, a back-off is a countdown that runs across midnight and survives a soft reset (a power cut
+  clears all of it). irr_state's `f=` token names the zone's last faulted line with the back-off's end or
+  the latch's local midnight; with no valid clock the end is filled in once there is one.
+  `clear_fault` zeroes the zone's count and latch (255: every zone); a back-off still running ends at its
+  own time.
 
 ## 5. Firmware changes
 
@@ -438,7 +487,7 @@ in `firmware/test/test_irrigation_program.cpp` on the golden vectors.
 | F6 | Mister membership and schedules | `irrigation_policy.h:66-79`; `controls.yaml:1029-1053, 1282-1504, 1600-1618` | Delete center-only routing and reverse exclusivity. `south_wet_allowed` and `west_wet_allowed` come from the engine's effective VPD membership. The rank arbiter is on when there is more than one member. Scheduled pulses enter at the pulse boundary. Water and runtime accrue for every mister relay ON |
 | F7 | Occupancy rule | `controls.yaml:856, 911, 1147` | Scheduled and fertilizer mist use the same `occupancy_moisture_block` as VPD mist and fog. It is true only while a detection pushed by the ingestor holds (§7); the firmware's 60 min expiry (`controls.yaml:106-129`) is a fail-safe. Drips ignore occupancy |
 | F8 | Peer-probe fallback | New `zone_vpd_with_fallback()` in `firmware/lib/`, used by zone choice (`controls.yaml:1282-1320`) | Own probe, then peers, then house average |
-| F9 | Survival fog | `controls.yaml:911, 958-973` | In SAFETY_COOL, drop `irrigation_water_conflict`, `mister_volume_hard_block` and `climate_water_budget_block` from the fog force-off. Every other term stays except the leak (F14): L03 open, no valid controller time, confirmed occupancy, the SENSOR_FAULT lock and the fog RH ceiling |
+| F9 | Survival fog | `controls.yaml:911, 958-973` | In SAFETY_COOL, drop `irrigation_water_conflict`, `mister_volume_hard_block` and `climate_water_budget_block` from the fog force-off. Every other term stays except the leak (F14): L03 open, no valid controller time, confirmed occupancy, the SENSOR_FAULT lock and the fog RH ceiling; a drip relay that still reads ON holds fog until the engine's next tick pauses it (§4.10) |
 | F10 | Relay watchdog (D-IRP-19) | `controls.yaml:1074-1094` | A wet relay ON without a grant is forced off. A mister ON longer than its commanded pulse + 30 s (ROM ceiling 300 s) is forced off. A VPD-member zone backs off 10 min, then 30 min; a third fault in a day latches it until midnight or `clear_fault`. A mister zone that is not a VPD member (schedule-only, and the fertilizer misters L08 and L10) latches on its first fault |
 | F11 | Caps from the program | `controls.yaml:876-883, 1040-1042`; `globals.yaml:1218-1221, 1269-1272, 1284-1292` | SAF-4 and per-line caps come from the program; L04's `daily_cap_min` replaces `mister_max_runtime_min`. The daily counters move to the RTC block (§4.5) |
 | F12 | HA buttons out, `manual_override` in | `tunables.yaml:2410-2425`; `greenhouse.yaml:484-524, 736-784`; `hardware.yaml:815-878` | Below |
@@ -564,10 +613,14 @@ is pending, and every 60 s in full:
   ships first and covers the history back to 2025-08-05, the first wet-relay `equipment_state` row
   (2024-11-17 is the first grow-light row).
 - **Cause.** In M4, cause comes from today's topology: L04, L07, L09 and fog are `vpd`, L02 and L03 are
-  `feed`, and the rest are `unknown`. M3, which adds `irrigation_command`, extends the view: an L01 run
-  that starts within 30 s of a bridge command (§6.5) is `run_now`, and each run matches its
-  `irrigation_ledger` row (same line, overlapping time) for cause and slot; any other run keeps its M4
-  cause.
+  `feed`, and the rest are `unknown`. M3 (migration 283), which adds `irrigation_command`, extends the
+  view: each run takes cause and slot from the newest `irrigation_ledger` row on its line that started
+  at most 24 hours before it and whose span (to now while it is open) contains the run's start; an
+  unmatched L01 run that starts within 30 s after the `sent_at` of a sent bridge run command (§6.5) is
+  `run_now`; any other run keeps its M4 cause. No occurrence lasts 24 hours (a 60-pulse mist window
+  with 600 s gaps and its 60 min tail, or a feed with its prewet, flush and waits, is under 16), and the
+  bound keeps the per-run lookup on an index and keeps a row whose end never arrived from claiming
+  later runs.
 - **`irrigation_ledger`** (written by the ingestor): one row per engine occurrence or run-now, with
   `line_id`, `slot_id`, `local_day`, `cause` (`vpd`, `schedule`, `run_now`, `feed`, `prewet`, `flush`,
   `fallback`, `unknown`) and start from `irr_state`, which names them before the relay opens, and
@@ -594,7 +647,9 @@ is pending, and every 60 s in full:
   closing edge, so its gallons match the view's. It is SECURITY DEFINER and granted like the views.
   API-IRR-10 reads it, and API-IRR-01's minutes and MCP `irrigation_history` get the same numbers from
   it; a 30-day read is about 0.7 s on production and a 400-day read about 1.7 s. M3 redefines it with
-  the view.
+  the view, and starts a run already on at `from` where the view starts it (the newest conflicting
+  timestamp since the relay was last off, else the first timestamp after that), so the run matches
+  the same ledger row and bridge command in both.
 - **Gallons (D-IRP-18, Round 2b B), informational.** Whole gallons per run and per day: `gal` is the
   whole-gallon meter delta attributed to the run or mist episode (±1 gal; the meter also counts the
   hose, sink and hydro). There is no per-run rate and no flow flag; a run that moved no water reads

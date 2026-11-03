@@ -239,6 +239,25 @@ test("each named fixture serves what the table says", () => {
   expect(missed["API-02"].iris.required_trigger).toBe("missed");
   expect(missed["API-07"].health.find((row: Body) => row.outcome === "missed")).toMatchObject({ trigger: "SUNSET", required: true });
   expect(Date.parse(missed["API-07"].health.find((row: Body) => row.outcome === "missed").due_at)).toBeLessThan(NOW);
+  // #1131: no plan in force since 09:30, with device values only; one manual lane, counted; a forecast rule's waypoint.
+  const unplanned = set("no-plan");
+  expect(unplanned["API-07"]).toMatchObject({ plan: null, no_plan_since: "2026-11-02T16:30:00.000Z", manual_count: 0 });
+  expect((unplanned["API-07"].lanes as Body[]).map((row) => [row.param, row.waypoints, row.applied_from])).toEqual([
+    ["mister_engage_kpa", [], "default"], ["mister_pulse_gap_s", [], "default"], ["mister_engage_delay_s", [], "default"],
+  ]);
+  expect(unplanned["API-02"].iris).toMatchObject({ plan_id: null, trigger: null, valid_until: null });
+  expect((unplanned["API-09"].items as Body[]).filter((row) => row.plan !== null)).toEqual([]);
+  const manualLane = set("manual-lane")["API-07"];
+  expect(manualLane.manual_count).toBe(1);
+  expect((manualLane.lanes as Body[]).find((row) => row.param === "mister_pulse_on_s")).toMatchObject({
+    applied_from: "manual", waypoints: [], desired: { value: 60, manual: true, actor: { source: "dashboard", name: "jason" }, created_at: "2026-10-30T16:00:00.000Z" },
+  });
+  expect(set("manual-lane")["API-09"].items.find((row: Body) => row.param === "mister_pulse_on_s")).toMatchObject({ applied_from: "manual", desired: { manual: true } });
+  const rule = set("forecast-rule");
+  expect(rule["API-07"].lanes.find((row: Body) => row.param === "mister_engage_delay_s").waypoints).toEqual([
+    { at: "2026-11-02T21:00:00.000Z", value: 90, source: "preemptive", effective: true },
+  ]);
+  expect(rule["API-09"].items.find((row: Body) => row.param === "mister_engage_delay_s").plan).toMatchObject({ source: "iris", next: { source: "preemptive", value: 90 } });
   const lights = set("grow-lights-differ")["API-13"].items.find((item: Body) => item.equipment === "grow_light_grow");
   expect(lights).toMatchObject({ state: "off", intent: "on" });
   // The base's Lutron rows are one Home Assistant poll old: known. Down, they are 11 min old: unknown, the intent kept.
@@ -262,7 +281,8 @@ test("each named fixture serves what the table says", () => {
   // before-engine serves a site cap saved before the engine, requested with no_engine since that write.
   const engineless = set("before-engine");
   expect(engineless["API-09"].items.find((row: Body) => row.param === "mister_daily_volume_max_gal")).toMatchObject({
-    state: "requested", readback: null, desired: { value: 300, manual: true, state: "requested", state_reason: { code: "no_engine", since: "2026-11-02T16:30:00.000Z" }, created_at: "2026-11-02T16:30:00.000Z" },
+    state: "requested", readback: { value: null, observed_at: null, reason: "no irrigation program on the controller yet" },
+    desired: { value: 300, manual: true, state: "requested", state_reason: { code: "no_engine", since: "2026-11-02T16:30:00.000Z" }, created_at: "2026-11-02T16:30:00.000Z" },
   });
   expect(engineless["API-17"].items).toEqual(expect.arrayContaining([expect.objectContaining({ action: "setting.write", target: "mister_daily_volume_max_gal", state: "requested" })]));
   // program-rev-42 is the base's program even after before-engine: the site caps and every line confirmed inside it.
@@ -286,10 +306,38 @@ test("each named fixture serves what the table says", () => {
   expect(series.bucket_s).toBe(86_400);
   expect(Date.parse(series.to) - Date.parse(series.from)).toBe(400 * 86_400_000);
   for (const key of ["climate.temp_avg", "climate.vpd_avg", "climate.rh_avg"]) expect(series.series[key], key).toMatchObject({ source: "daily_summary", retained_from: new Date(NOW - 365 * 86_400_000).toISOString() });
+  // scorecard-30d: the scorecard's first API-04 request, 30 America/Denver day buckets with the 25-hour 2026-11-01,
+  // whole-day time in band every day but the day with no row, the day/night split for the last 3 days, and the gallons'
+  // reasons; API-IRR-10 covers the same 30 days with its outage day and today partial.
+  const scorecard = set("scorecard-30d");
+  const daily = scorecard["API-04"];
+  expect(daily).toMatchObject({ bucket_s: 86_400, from: "2026-10-04T06:00:00.000Z", to: "2026-11-03T07:00:00.000Z" });
+  expect(daily.t).toHaveLength(30);
+  expect(daily.t.at(-1) - daily.t.at(-2)).toBe(25 * 3600);
+  expect(Object.keys(daily.series)).toHaveLength(8);
+  const water = daily.series["daily.water_gal"];
+  expect(water).toMatchObject({ source: "scorecard", retained_from: null });
+  expect(water.reason.filter(Boolean)).toEqual(["no meter data", "discontinuous", "partial_day"]);
+  expect(daily.series["daily.temp_in_band_pct"].avg.filter((value: number | null) => value === null)).toHaveLength(1);
+  expect(daily.series["daily.time_in_band_day_pct"].reason.filter(Boolean)).toHaveLength(26);
+  expect(scorecard["API-IRR-10"]).toMatchObject({ from: "2026-10-04", to: "2026-11-02" });
+  expect(scorecard["API-IRR-10"].periods.filter((period: Body) => period.coverage !== "complete")).toEqual([{ start: "2026-10-24", coverage: "no_data" }, { start: "2026-11-02", coverage: "partial" }]);
   const stuck = set("stuck-delivery");
   expect(stuck["API-02"].writer).toMatchObject({ stuck: true, differing: 4, oldest_since: "2026-11-02T13:10:00.000Z" });
   expect(stuck["API-14"].items).toEqual([expect.objectContaining({ alert_type: "setpoint_delivery_stuck" })]);
   expect(set("iris-unsnapped")["API-09"].items.find((row: Body) => row.param === "mister_engage_delay_s")).toMatchObject({ step: 30, plan: { value: 48.75 } });
+});
+
+test("Now's fixtures (#1129): too hot alone, a null RH, band rows with no time, and the occupancy states", () => {
+  const set = (name: string | string[]) => fixture(name, { now: NOW });
+  const hot = set("too-hot")["API-02"];
+  expect(hot).toMatchObject({ indoor: { temp_f: { value: 84.1, observed_at: minutesAgo(1 / 3) } }, band: { temp_f: { low: 62, high: 70, verdict: "above" } }, alerts: { open: 0 } });
+  expect(hot.freshness).toMatchObject({ ingestor: { stale: false }, climate: { stale: false } });
+  expect(set("rh-missing")["API-02"].indoor.rh_pct).toEqual({ value: null, observed_at: minutesAgo(1 / 3), reason: "No indoor RH" });
+  expect(set("band-age-unknown")["API-02"].band).toMatchObject({ temp_f: { low: 62, high: 70 }, observed_at: null });
+  expect(set("occupied")["API-IRR-01"].occupancy).toEqual({ occupied: true, seen_at: minutesAgo(4), hold_enabled: true });
+  expect(set("occupancy-unknown")["API-IRR-01"].occupancy).toEqual({ occupied: null, seen_at: null, hold_enabled: true });
+  expect(set("occupancy-hold-off")["API-IRR-01"].occupancy).toMatchObject({ hold_enabled: false });
 });
 
 test("fixture() reads requested-to-confirmed and flow-after-stop after their writes; the fixture API starts before them", () => {
@@ -320,6 +368,22 @@ test("schedules-paused shows three schedules and a past L02 block skipped becaus
   expect((get(api, "/v1/irrigation/schedules").occurrences as Body[]).every((row) => Date.parse(row.planned_start as string) >= Date.parse("2026-11-02T07:00:00Z"))).toBe(true);
 });
 
+test("#1135's fixtures: south's probe out, a minutes gap inside the week, and the built-in program", () => {
+  const south = fixture("south-peer", { now: NOW });
+  expect((south["API-IRR-01"].lines as Body[]).find((row) => row.line_id === "L07")).toMatchObject({ vpd_member: true, vpd_source: "peer" });
+  expect(south["API-14"].items).toEqual([expect.objectContaining({ alert_type: "sensor_offline", zone: "south", status: "open" })]);
+  // Three days back has no data (a gap, never 0), inside the 7-day window; today is partial.
+  const gap = fixture("minutes-gap", { now: NOW })["API-IRR-10"];
+  expect(gap.periods.map((period: Body) => [period.start, period.coverage])).toEqual([
+    ["2026-10-27", "complete"], ["2026-10-28", "complete"], ["2026-10-29", "complete"], ["2026-10-30", "no_data"], ["2026-10-31", "complete"], ["2026-11-01", "complete"], ["2026-11-02", "partial"],
+  ]);
+  expect((gap.rows as Body[]).filter((row) => row.period === "2026-10-30")).toEqual([]);
+  expect(fixture("in-band", { now: NOW })["API-IRR-10"].periods.every((period: Body) => period.coverage !== "no_data")).toBe(true);
+  const rom = fixture("program-rom", { now: NOW })["API-IRR-01"];
+  expect(rom).toMatchObject({ engine: true, program: { src: "rom", state: "requested", revision: 42, applied_revision: null, applied_hash: "0000000000000000", confirmed_at: null } });
+  expect((rom.lines as Body[]).every((row) => row.sync === "requested")).toBe(true);
+});
+
 test("flow-after-stop: after a Stop the relays read OFF while the flow continues", () => {
   const api = handler("flow-after-stop");
   expect(get(api, "/v1/now").leak).toMatchObject({ active: false });
@@ -336,6 +400,33 @@ test("acknowledging lowers the one open-alert count by one and logs alert.ack", 
   expect(get(api, "/v1/now").alerts.open).toBe(before - 1);
   expect(get(api, "/v1/activity?action=alert.ack").items[0]).toMatchObject({ target: "101", request_id: KEY });
   expect(at(api, "POST", "/v1/alerts/999/ack", {}).body).toMatchObject({ status: 422, code: "unknown_target" });
+});
+
+test("the Activity fixtures (#1133): a fence breach with its valve on, a missed run, a repeat that keeps the id, a mixed and a paged log", () => {
+  const breach = handler("fence-breach");
+  expect(get(breach, "/v1/alerts").items).toEqual([expect.objectContaining({
+    id: 501, alert_type: "irrigation_fence_breach", category: "water", severity: "critical", status: "open", details: expect.objectContaining({ equipment: "mister_south_fert" }),
+  })]);
+  expect(get(breach, "/v1/now").running).toEqual([expect.objectContaining({ equipment: "mister_south_fert", line_id: "L08" })]);
+  at(breach, "POST", "/v1/irrigation/stop", {}, KEY);
+  expect(get(breach, "/v1/now").running).toEqual([]);
+  expect(fixture("run-missed", { now: NOW })["API-14"].items).toEqual([expect.objectContaining({
+    alert_type: "irrigation_run_missed", severity: "warning", details: expect.objectContaining({ line_id: "L02" }),
+  })]);
+  // One more repeat merges into each open alert: the same id, its count up by one and a newer last seen.
+  const [before] = fixture("flow-valves-closed", { now: NOW })["API-14"].items as Body[];
+  const [after] = fixture(["flow-valves-closed", "alert-repeat"], { now: NOW })["API-14"].items as Body[];
+  expect(after).toMatchObject({ id: before.id, count: (before.count as number) + 1 });
+  expect(Date.parse(after.last_seen_at as string)).toBeGreaterThan(Date.parse(before.last_seen_at as string));
+  const mixed = handler("activity-mixed");
+  expect((get(mixed, "/v1/activity").items as Body[]).map((row) => [(row.actor as Body).source, row.action])).toEqual([
+    ["dashboard", "setting.write"], ["iris", "plan.write"], ["agent:steward", "irrigation.line.update"], ["dashboard", "alert.ack"], ["system", "plan.write"],
+    ["dashboard", "irrigation.run"],
+  ]);
+  expect((get(mixed, "/v1/activity?target=L01").items as Body[]).map((row) => row.target)).toEqual(["L01", "L01"]);
+  const paged = handler("activity-paged");
+  expect(get(paged, "/v1/activity")).toMatchObject({ next_cursor: "50" });
+  expect(get(paged, "/v1/activity?cursor=50")).toMatchObject({ next_cursor: null, items: expect.arrayContaining([expect.objectContaining({ id: 159 })]) });
 });
 
 test("the listener serves HTTP with no-store, the /api prefix and a 16 KiB body cap", async () => {
