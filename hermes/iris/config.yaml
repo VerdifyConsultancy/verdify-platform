@@ -58,6 +58,8 @@ mcp_servers:
         - irrigation_status
         - irrigation_schedule
         - irrigation_history
+        - settings
+        - activity
         # Knowledge
         - lessons
         - lessons_search       # Phase 3
@@ -72,6 +74,7 @@ mcp_servers:
         # Writes — all carry trigger_id + planner_instance audit
         - set_plan
         - set_tunable
+        - set_setting          # desired_state; never satisfies a trigger
         - acknowledge_trigger
         - plan_evaluate
         - lessons_manage

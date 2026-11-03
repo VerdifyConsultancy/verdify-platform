@@ -45,9 +45,8 @@ MCP_DEPLOYMENT_PATH = REPO_ROOT / "deploy" / "k8s" / "base" / "mcp-deployment.ya
 BASE_CONFIG_PATH = REPO_ROOT / "deploy" / "k8s" / "base" / "configmap.yaml"
 PROD_OVERLAY_PATH = REPO_ROOT / "deploy" / "k8s" / "overlays" / "prod"
 
-# Architecture §5.6, the whole `agent` column (VD-59). The reads, alerts and the eight
-# irrigation tools (#1173, #1174, #1177) are registered now; settings, activity and
-# set_setting (#1171) join by registering with `agent`.
+# Architecture §5.6, the whole `agent` column (VD-59): the reads, alerts, settings,
+# activity and set_setting (#1171) and the eight irrigation tools (#1173, #1174, #1177).
 AGENT_TOOLS = frozenset(
     {
         "climate",
@@ -703,7 +702,7 @@ class TestListToolsAudienceFiltering:
     @pytest.mark.parametrize("mode", ["log", "enforce"])
     @pytest.mark.parametrize(
         ("audience", "token", "expected_count"),
-        [("iris", "tok-iris", 31), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 35)],
+        [("iris", "tok-iris", 34), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 38)],
     )
     def test_protocol_inventory_matches_exact_audience_allowlist(
         self, mcp_server, monkeypatch, mode, audience, token, expected_count

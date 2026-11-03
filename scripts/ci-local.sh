@@ -272,6 +272,9 @@ $PY -m pytest -q -rs \
   tests/test_irrigation_context.py \
   tests/test_dashboard_db_irrigation_context.py \
   tests/test_gather_no_home_assistant.py \
+  tests/test_mcp_settings_tools.py \
+  tests/test_dashboard_db_mcp_settings.py \
+  tests/test_gather_manual_settings.py \
   tests/test_mcp_transport_runtime.py \
   tests/test_outcome_kpi_dryout_projection.py \
   tests/test_scorecard_realized_dryout.py \

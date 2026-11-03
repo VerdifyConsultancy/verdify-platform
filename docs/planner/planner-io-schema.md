@@ -40,11 +40,11 @@ The `planner_graph.contracts.PlannerContextPack` model is the run-store *wire
 summary* of a planning run, **not** the live Hermes text pack — don't confuse the
 two.
 
-## 2. Outputs (3 MCP tools)
+## 2. Outputs (4 MCP tools)
 
-The planner's plan and tunable write surface is three MCP tools. Each is typed
-and DB-validated before persistence — see `mcp/server.py`. Water has its own five
-writes, the same ones every agent uses (`irrigation_schedule_set`,
+The planner's plan, tunable and setting write surface is four MCP tools. Each is
+typed and DB-validated before persistence — see `mcp/server.py`. Water has its own
+five writes, the same ones every agent uses (`irrigation_schedule_set`,
 `irrigation_line_set`, `irrigation_run`, `irrigation_stop` and
 `irrigation_clear_fault`; [irrigation §8.2](../design/dashboard/irrigation.md#82-mcp-tools-one-surface-for-every-agent)).
 They change watering only and never count as a plan for a trigger.
@@ -54,6 +54,7 @@ They change watering only and never count as a plan for a trigger.
 | `set_plan` | `Plan` / `PlanTransition` / `ClimateIntent` (`verdify_schemas/plan.py`, `climate_intent.py`) + `PlanHypothesisStructured` | `setpoint_plan` (tactical waypoints) + `plan_journal` (hypothesis/experiment/expected) + `plan_delivery_log` (correlation) | write a 72h plan of time-based waypoints |
 | `set_tunable` | registry-validated single param | `setpoint_plan` (`source='iris'`) | nudge one bounded tunable now |
 | `acknowledge_trigger` | — | `plan_delivery_log` (`status='acked'`) | record "no change needed" for a trigger |
+| `set_setting` | `DesiredSetting` (`verdify_services/settings.py`, the dashboard's validator) | `desired_state` + `activity_log` | change any writable setting within registry min/max; refused with `manual` on a manual setting; never ends a trigger |
 
 `set_plan` requires a `climate_intent` on every transition and a `trigger_id`
 (UUID, from the prompt's audit-headers banner); a write missing the trigger_id is
@@ -61,8 +62,9 @@ rejected. The tactical Tier-1 params are required on every transition.
 
 ## 3. Allowed tunables + bounds (AC3)
 
-The planner may write **only** `planner_pushable=True` registry tunables, each
-clamped to its registry min/max (the same bounds the firmware enforces). As of
+Through `set_plan` and `set_tunable` the planner may write **only**
+`planner_pushable=True` registry tunables, each clamped to its registry min/max
+(the same bounds the firmware enforces); `set_setting` takes any writable row. As of
 2026-06-17: **42 pushable of 229 total**. The directional-lever map:
 
 1. **Night-dry bias — `night_vpd_bias_kpa`** (pushable, live). Bounds 0–0.25 kPa,

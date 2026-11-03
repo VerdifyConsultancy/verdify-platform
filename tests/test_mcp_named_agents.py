@@ -35,12 +35,13 @@ from types import ModuleType, SimpleNamespace
 import pytest
 import yaml
 from test_mcp_audience_auth import AGENT_TOOLS
+from test_verdify_services_alerts import FakeAlertDB
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROD_OVERLAY = REPO_ROOT / "deploy" / "k8s" / "overlays" / "prod"
 
 # The reads and alerts VD-59 grants. The rest of the architecture §5.6 agent
-# column (AGENT_TOOLS) joins as #1171 registers it (#1173, #1174 and #1177 have).
+# column (AGENT_TOOLS) joined with #1171, #1173, #1174 and #1177.
 VD59_AGENT_TOOLS = frozenset(
     {
         "climate",
@@ -583,34 +584,25 @@ class TestReadyz:
 # ─── alerts attribution ────────────────────────────────────────────────────
 
 
-class AlertConnection:
+class AlertConnection(FakeAlertDB):
+    """One alert in memory, through the real verdify_services.alerts, plus the adapter's retrieval check."""
+
     def __init__(self, *, alert_type: str = "vpd_high", source: str = "system") -> None:
-        self.alert_type = alert_type
+        super().__init__()
         self.source = source
-        self.statements: list[tuple[str, tuple]] = []
+        self.row = self.add(alert_type)
         self.closed = False
 
     async def fetchrow(self, sql, *args):
-        self.statements.append((sql, args))
-        if sql.startswith("UPDATE alert_log SET acknowledged_at"):
-            return {"id": args[0], "disposition": "acknowledged"}
         if sql.startswith("SELECT alert_type, source FROM alert_log"):
-            return {"alert_type": self.alert_type, "source": self.source}
-        raise AssertionError(f"unexpected fetchrow: {sql}")
-
-    async def fetch(self, sql, *args):
-        self.statements.append((sql, args))
-        return []
-
-    async def execute(self, sql, *args):
-        self.statements.append((sql, args))
-        return "UPDATE 1"
+            return {"alert_type": self.row["alert_type"], "source": self.source}
+        return await super().fetchrow(sql, *args)
 
     async def close(self) -> None:
         self.closed = True
 
-    def updates(self) -> list[tuple[str, tuple]]:
-        return [(sql, args) for sql, args in self.statements if sql.startswith("UPDATE")]
+    def updates(self) -> list[dict]:
+        return [row for row in self.rows if row["acknowledged_at"] is not None or row["resolved_at"] is not None]
 
 
 @pytest.fixture()
@@ -634,25 +626,26 @@ class TestAlertsAttribution:
         self, server, two_agents, alert_db, monkeypatch, token, recorded
     ):
         _as_caller(server, monkeypatch, token)
-        arguments = {"action": "acknowledge", "alert_id": 7, "data": json.dumps({"acknowledged_by": "jason"})}
+        alert_id = alert_db.row["id"]
+        arguments = {"action": "acknowledge", "alert_id": alert_id, "data": json.dumps({"acknowledged_by": "jason"})}
         result = json.loads(_run(server.mcp.call_tool("alerts", arguments)))
-        assert result == {"ok": True, "alert_id": 7, "action": "acknowledged"}
-        ((_sql, args),) = alert_db.updates()
-        assert args == (7, recorded)
+        assert result == {"ok": True, "alert_id": alert_id, "action": "acknowledged"}
+        assert alert_db.row["acknowledged_by"] == recorded
+        assert (alert_db.activity[0]["action"], alert_db.activity[0]["source"]) == ("alert.ack", recorded)
 
     def test_iris_acknowledge_still_records_iris(self, server, alert_db, monkeypatch):
         _as_caller(server, monkeypatch, IRIS_TOKEN)
-        _run(server.mcp.call_tool("alerts", {"action": "acknowledge", "alert_id": 3, "data": ""}))
-        ((_sql, args),) = alert_db.updates()
-        assert args == (3, "iris")
+        _run(server.mcp.call_tool("alerts", {"action": "acknowledge", "alert_id": alert_db.row["id"], "data": ""}))
+        assert alert_db.row["acknowledged_by"] == "iris"
 
     def test_resolve_records_the_caller_and_keeps_the_resolution_text(self, server, two_agents, alert_db, monkeypatch):
         _as_caller(server, monkeypatch, STEWARD_TOKEN)
+        alert_id = alert_db.row["id"]
         data = json.dumps({"resolved_by": "jason", "resolution": "fixture fixed the fan"})
-        result = json.loads(_run(server.mcp.call_tool("alerts", {"action": "resolve", "alert_id": 9, "data": data})))
-        assert result == {"ok": True, "alert_id": 9, "action": "resolved"}
-        ((_sql, args),) = alert_db.updates()
-        assert args == (9, "agent:steward", "fixture fixed the fan")
+        arguments = {"action": "resolve", "alert_id": alert_id, "data": data}
+        result = json.loads(_run(server.mcp.call_tool("alerts", arguments)))
+        assert result == {"ok": True, "alert_id": alert_id, "action": "resolved"}
+        assert (alert_db.row["resolved_by"], alert_db.row["resolution"]) == ("agent:steward", "fixture fixed the fan")
 
     @pytest.mark.parametrize(
         ("token", "resolution"),
@@ -661,21 +654,20 @@ class TestAlertsAttribution:
     )
     def test_default_resolution_names_the_caller(self, server, alert_db, monkeypatch, token, resolution):
         _as_caller(server, monkeypatch, token)
-        _run(server.mcp.call_tool("alerts", {"action": "resolve", "alert_id": 4, "data": ""}))
-        ((_sql, args),) = alert_db.updates()
-        assert args == (4, *resolution)
+        _run(server.mcp.call_tool("alerts", {"action": "resolve", "alert_id": alert_db.row["id"], "data": ""}))
+        assert (alert_db.row["resolved_by"], alert_db.row["resolution"]) == resolution
 
     @pytest.mark.parametrize("action", ["acknowledge", "resolve"])
     def test_writes_without_a_resolved_caller_are_forbidden(self, server, alert_db, action):
         # A direct call has no request actor (as auth mode off or an unresolved token would).
         data = json.dumps({"acknowledged_by": "iris", "resolved_by": "iris"})
-        result = json.loads(_run(server.alerts(action, 5, data)))
+        result = json.loads(_run(server.alerts(action, alert_db.row["id"], data)))
         assert result == {"error": "forbidden: no resolved caller"}
-        assert alert_db.updates() == []
+        assert alert_db.updates() == [] and alert_db.activity == []
         assert alert_db.closed
 
     def test_list_needs_no_actor(self, server, alert_db):
-        assert json.loads(_run(server.alerts("list"))) == []
+        assert [row["id"] for row in json.loads(_run(server.alerts("list")))] == [alert_db.row["id"]]
 
     def test_semantic_dependency_refusal_runs_before_the_actor(self, server, two_agents, monkeypatch):
         connection = AlertConnection(alert_type="planner_tool_dependency_failed", source="mcp")
@@ -685,7 +677,8 @@ class TestAlertsAttribution:
 
         monkeypatch.setattr(server, "_db", db)
         _as_caller(server, monkeypatch, STEWARD_TOKEN)
-        result = json.loads(_run(server.mcp.call_tool("alerts", {"action": "resolve", "alert_id": 12, "data": ""})))
+        arguments = {"action": "resolve", "alert_id": connection.row["id"], "data": ""}
+        result = json.loads(_run(server.mcp.call_tool("alerts", arguments)))
         assert "successful same-tool" in result["error"]
         assert connection.updates() == []
 

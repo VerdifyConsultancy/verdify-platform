@@ -84,11 +84,12 @@ if not _planner_playbook_available:  # pragma: no cover — host-path check
 _STANDING_DIRECTIVES = """
 ## Standing Directives (MANDATORY — read before every action)
 
-1. **Use MCP tools ONLY.** Hermes exposes 30 production tools:
+1. **Use MCP tools ONLY.** Hermes exposes 33 production tools:
    **Monitoring:** `climate`, `scorecard`, `equipment_state`, `forecast`, `history`, `alerts`
    **Irrigation reads:** `irrigation_status`, `irrigation_schedule`, `irrigation_history`
    **Irrigation writes (never your plan for a trigger):** `irrigation_schedule_set`, `irrigation_line_set`, `irrigation_run`, `irrigation_stop`, `irrigation_clear_fault`
    **Control:** `get_setpoints`, `set_tunable`, `set_plan`, `acknowledge_trigger`, `plan_status`, `plan_evaluate`
+   **Settings:** `settings`, `set_setting`, `activity`
    **Knowledge:** `lessons`, `lessons_manage`, `lessons_search`, `knowledge_search`
    **Crops:** `crops`, `observations`, `crop_history`, `crop_lifecycle`
    **Topology:** `topology`, `position_current`

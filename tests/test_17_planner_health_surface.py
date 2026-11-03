@@ -963,26 +963,26 @@ def test_hermes_mcp_server_ready_checks_http_status_payload_and_required_tools(m
     assert namespace["mcp_server_ready"]() == (False, [], "TimeoutError")
 
 
-def test_an_mcp_image_from_before_the_irrigation_tools_does_not_block_hermes(monkeypatch):
-    """VD-60, VD-61: the config moves at any sync and the image at its promotion, and Iris ends every trigger without
-    them."""
+def test_an_mcp_image_from_before_the_irrigation_and_settings_tools_does_not_block_hermes(monkeypatch):
+    """VD-58, VD-60, VD-61: the config moves at any sync and the image at its promotion, and Iris ends every trigger
+    without them."""
     _manifest, _profile, source = _hermes_config_documents()
     namespace = _hermes_probe_namespace(source)
     optional = namespace["PLAN_OPTIONAL"]
-    assert (
-        {
-            "irrigation_history",
-            "irrigation_schedule",
-            "irrigation_status",
-            "irrigation_schedule_set",
-            "irrigation_line_set",
-            "irrigation_run",
-            "irrigation_stop",
-            "irrigation_clear_fault",
-        }
-        <= optional
-        <= namespace["REQUIRED"]
-    )
+    assert optional == {
+        "activity",
+        "irrigation_clear_fault",
+        "irrigation_history",
+        "irrigation_line_set",
+        "irrigation_run",
+        "irrigation_schedule",
+        "irrigation_schedule_set",
+        "irrigation_status",
+        "irrigation_stop",
+        "set_setting",
+        "settings",
+    }
+    assert optional <= namespace["REQUIRED"]
     assert not {"set_plan", "acknowledge_trigger"} & optional
 
     def serves(tools):
