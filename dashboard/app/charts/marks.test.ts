@@ -163,3 +163,23 @@ test("allRequests: every desired row draws as a request labelled with who asked,
   // `format` words the bounds too.
   expect(settingBounds({ history, format: (value) => `${value} kPa` }, "kPa").map((bound) => bound.text)).toEqual(["min 0.5 kPa", "max 2.5 kPa"]);
 });
+
+test("allRequests: readings that print alike are one device step, a gap stays a gap, and only the newest step is labelled", () => {
+  const point = (hour: number, value: number | null) => ({ at: `2026-11-01T${String(hour).padStart(2, "0")}:00:00Z`, value });
+  const epoch = (hour: number) => Date.parse(point(hour, null).at) / 1000;
+  const history = {
+    param: "mister_engage_kpa", unit: "kPa", from: "2026-11-01T00:00:00Z", to: "2026-11-01T22:00:00Z", plan: [], desired: [],
+    // The ingestor's value and the snapshot's binary32 reading of it alternate.
+    readback: [point(1, 0.83), point(2, 0.8299999833106995), point(3, 0.83), point(4, 0.84), point(5, null), point(6, 0.84), point(7, 0.8199999928474426), point(8, 0.82)],
+  };
+  const now = epoch(10);
+  const history24 = settingSteps({ history, allRequests: true, format: (value) => value.toFixed(2) }, "kPa", now, now + 3600);
+  expect(history24.map((step) => [step.value, step.start, step.end, step.label])).toEqual([
+    [0.83, epoch(1), epoch(4), ""],
+    [0.84, epoch(4), epoch(5), ""],
+    [0.84, epoch(6), epoch(7), ""],
+    [0.8199999928474426, epoch(7), now, "0.82 device"],
+  ]);
+  // Graphs keeps every change point and its label.
+  expect(settingSteps({ history }, "kPa", now, now + 3600).map((step) => step.label)).toHaveLength(7);
+});

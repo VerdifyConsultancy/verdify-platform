@@ -15,13 +15,13 @@ for (const viewport of [SMALL_PHONE, PHONE]) {
       await expect(bottomBar(page).getByRole("link")).toHaveText([/^Now/, /^Water/, /^Graphs/, /^Activity/, /^More/]);
     });
   }
-  for (const { path, fixture } of SETTING_DRAWERS) {
+  for (const { path, fixture, charts } of SETTING_DRAWERS) {
     test(`${path} under ${fixture} · ${size}: the drawer's charts fit, with no horizontal scroll`, WEBKIT, async ({ page, request }) => {
       await useFixture(request, fixture);
       await page.setViewportSize(viewport);
       await load(page, path);
       const body = page.locator("dialog[open] .drawer-body");
-      await expect(body.locator(".plot canvas").first()).toBeVisible();
+      await expect(body.locator(".plot canvas")).toHaveCount(charts);
       await expectNoHorizontalScroll(page);
       expect(await body.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(0);
     });

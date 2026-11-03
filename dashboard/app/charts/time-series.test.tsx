@@ -327,11 +327,12 @@ test("a settings-only chart: the plot holds only steps; the legend, the data tab
   const details = await openTable(container);
   expect([...details.querySelectorAll("table")].map((table) => table.querySelector("caption")!.textContent)).toEqual([`Setting steps · bounds min 0.50${NBSP}kPa, max 2.50${NBSP}kPa`]);
   expect(details.querySelector("summary")!.textContent).toBe("Data table · 8 rows");
-  // One row at each step's start and end, a column per kind drawn, and who asked beside each request.
+  // One row at each step's start and end inside the window, a column per kind drawn, and who asked beside each request.
   const rows = (await urls[0].text()).split("\r\n");
   expect(rows[0]).toBe("time (America/Denver),mister_engage_kpa device (kPa),mister_engage_kpa requested (kPa),mister_engage_kpa requested by,mister_engage_kpa planned (kPa),mister_engage_kpa superseded (kPa)");
   expect(rows.slice(1, -1)).toEqual([
-    "2026-10-31T23:58:00-06:00,1.6,,,,",
+    // The device's 05:58 Z step was in force when the window opened at 06:00 Z.
+    "2026-11-01T00:00:00-06:00,1.6,,,,",
     "2026-11-01T01:25:00-07:00,1.6,1.5,jason · dashboard,,",
     "2026-11-01T01:31:00-07:00,1.5,1.5,jason · dashboard,,",
     "2026-11-01T02:45:00-07:00,1.5,1.55,jason · dashboard,,",

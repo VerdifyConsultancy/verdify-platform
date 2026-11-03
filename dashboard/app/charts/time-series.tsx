@@ -6,7 +6,7 @@ import { csvFilename, csvText, type CsvBlock } from "./csv";
 import { CsvLink, DataTable, TimeCell, type DataTableBlock } from "./data-table";
 import { paintBandEdges, paintBandFill, paintBounds, paintLabels, paintNow, paintRetention, paintSteps, type ChartColors } from "./draw";
 import { ChartKey, Legend, type KeyItem } from "./legend";
-import { FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandKindFor, bandRuns, groupSteps, marksExtent, paddedRange, settingBounds, settingSteps, stepsAt, type BandRun, type Bound, type StepKind, type StepSegment } from "./marks";
+import { FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandKindFor, bandRuns, groupSteps, marksExtent, paddedRange, settingBounds, settingSteps, stepFinder, stepsAt, type BandRun, type Bound, type StepKind, type StepSegment } from "./marks";
 import { DAILY_SUMMARY_NOTE, retentionNote, runAt, staleness, traceGaps, type RetentionNote, type Staleness, type TraceGaps } from "./retention";
 import { seriesSummary, summaryText, whenText, type SeriesSummary } from "./summary";
 import { AXIS_FONT, epochOf, fullTime, timeAxis } from "./time-axis";
@@ -319,12 +319,15 @@ export function csvBlock(model: TimeSeriesModel, hidden: ReadonlySet<string>): C
 
 const STEP_KINDS: readonly StepKind[] = ["device", "requested", "planned", "superseded"];
 /**
- * A settings-only chart's CSV: one row at each step's start and end, one column per setting and kind of step drawn, in
- * canonical units, with who asked beside each request; an empty cell where no such step holds.
+ * A settings-only chart's CSV: one row at each step's start and end inside the window (a step in force at its start may
+ * have begun long before), one column per setting and kind of step drawn, in canonical units, with who asked beside
+ * each request; an empty cell where no such step holds.
  */
 export function stepsCsvBlock(model: TimeSeriesModel): CsvBlock {
-  const t = [...new Set(model.steps.flatMap((step) => [step.start, step.end]))].sort((a, b) => a - b);
-  const held = t.map((at) => stepsAt(model.stepGroups, at));
+  const inWindow = (at: number) => Math.min(Math.max(at, model.xRange.from), model.xRange.to);
+  const t = [...new Set(model.steps.flatMap((step) => [inWindow(step.start), inWindow(step.end)]))].sort((a, b) => a - b);
+  const stepsHeld = stepFinder(model.stepGroups);
+  const held = t.map((at) => stepsHeld(at));
   const unit = model.unit ? ` (${model.unit})` : "";
   const params = [...new Set(model.steps.map((step) => step.param))];
   const columns = params.flatMap((param) => STEP_KINDS.flatMap((kind) => {

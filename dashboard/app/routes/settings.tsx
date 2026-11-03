@@ -183,6 +183,8 @@ function SettingDrawer({ setting, onClose }: { setting: Setting; onClose: () => 
   const [manual, setManual] = useState(MANUAL_DEFAULT);
   const [reason, setReason] = useState("");
   const [typed, setTyped] = useState<string | null>(null);
+  // One write at a time from this drawer: Revert has its own hook, so Save and Release wait for it, as it waits for them.
+  const [reverting, setReverting] = useState(false);
   const readbackStale = shellNow.data?.freshness.readback.stale === true || status.controllerReporting === false;
   const save = () => {
     const value = setting.kind === "numeric" ? parseDecimal(text) : choice;
@@ -215,9 +217,9 @@ function SettingDrawer({ setting, onClose }: { setting: Setting; onClose: () => 
       <DrawerStatus setting={setting} readbackStale={readbackStale} />
       {notReporting && <p className="state-note">Save still works: the change applies when the controller reports again.</p>}
     </div>}
-    onSave={save} saving={write.sending} error={switchError ?? formError(write.error, setting.kind === "switch" ? ["reason"] : ["value", "reason"])}
-    actions={<Button write onClick={release} disabled={write.sending}>Release to auto</Button>}
-    below={setting.group === "band_in_force" ? undefined : <SettingHistoryPanel setting={setting} manual={manual} onReverted={onClose} band={curved} busy={write.sending} />}>
+    onSave={save} saving={write.sending} saveDisabled={reverting} error={switchError ?? formError(write.error, setting.kind === "switch" ? ["reason"] : ["value", "reason"])}
+    actions={<Button write onClick={release} disabled={write.sending || reverting}>Release to auto</Button>}
+    below={setting.group === "band_in_force" ? undefined : <SettingHistoryPanel setting={setting} manual={manual} onReverted={onClose} band={curved} busy={write.sending} onSending={setReverting} />}>
     {field}
     {curved && <BandPreviewPanel setting={setting} draft={parseDecimal(text)} />}
     {!readOnly && <ManualToggle checked={manual} onChange={setManual} />}

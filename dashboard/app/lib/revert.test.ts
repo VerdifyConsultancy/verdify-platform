@@ -65,6 +65,14 @@ test("a crop-band anchor with no earlier value goes back to the device's value b
   expect(revertTarget(history([newest], readback), anchor, JASON)).toMatchObject({ kind: "release" });
 });
 
+test("a crop-band target from the device is written without its binary32 noise; a device already on the newest value releases", () => {
+  const anchor = { kind: "numeric", unit: "kPa", step: 0.01 };
+  const noisy = [{ at: "2026-10-31T12:00:00Z", value: 1.100000023841858 }];
+  expect(revertTarget(history([row(1.25, "2026-11-02T15:00:00Z")], noisy), anchor, JASON, { band: true })).toMatchObject({ kind: "value", value: 1.1 });
+  // The newest write changed only Manual: the anchor never moved, so there is no value to restore.
+  expect(revertTarget(history([row(1.1, "2026-11-02T15:00:00Z")], noisy), anchor, JASON, { band: true })).toEqual({ kind: "release", text: "Revert to auto", reason: "Revert to auto" });
+});
+
 test("only a window holding exactly the newest row reads further back", () => {
   expect(needsLookback([])).toBe(false);
   expect(needsLookback([NEWEST])).toBe(true);

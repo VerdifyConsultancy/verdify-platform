@@ -96,7 +96,7 @@ export type StepSegment = {
   start: number;
   end: number;
   value: number;
-  /** Drawn beside the step. */
+  /** Drawn beside the step; empty draws none (a history chart's older device steps). */
   label: string;
   /** Drawn where the step ends: "Released" when a release ended it. */
   endLabel?: string;
@@ -136,7 +136,8 @@ const byTime = <T,>(items: readonly T[], at: (item: T) => string) => items
  * Requested: each desired row still requested, not confirmed or held, from its request until it was confirmed, the
  * next desired row or now, whichever comes first; never drawn as the device line. With `allRequests` every desired row
  * draws until the next desired row or now, labelled with who asked, and a release ends the step before it with
- * "Released". Planned: Iris and forecast-rule waypoints right of now only, each until the next waypoint or the window's
+ * "Released"; its device line is one step for readings that print alike (the ingestor's 0.83 and the snapshot's
+ * 0.8299999833 alternate) and only its newest step is labelled, as a tuned setting changes dozens of times a day. Planned: Iris and forecast-rule waypoints right of now only, each until the next waypoint or the window's
  * end; a waypoint the API marks not effective is SUPERSEDED, never the plan ahead, and says which value holds it off; a
  * forecast rule never reads AI.
  */
@@ -152,8 +153,12 @@ export function settingSteps(input: SettingSteps, unit: string, now: number, win
     if (item.value === null || at > now) return;
     const end = index + 1 < readback.length ? Math.min(readback[index + 1].at, now) : now;
     if (end <= at) return;
-    steps.push({ kind: "device", param: history.param, setting, start: at, end, value: item.value, label: named(`${value(item.value)} device`), detail: `${setting} device ${value(item.value)}` });
+    const detail = `${setting} device ${value(item.value)}`;
+    const held = steps[steps.length - 1];
+    if (input.allRequests && held && held.end === at && held.detail === detail) { held.end = end; return; }
+    steps.push({ kind: "device", param: history.param, setting, start: at, end, value: item.value, label: named(`${value(item.value)} device`), detail });
   });
+  if (input.allRequests) for (const step of steps.slice(0, -1)) step.label = "";
 
   const desired = byTime(history.desired, (row) => row.created_at);
   desired.forEach(({ item, at }, index) => {
@@ -219,14 +224,22 @@ export function groupSteps(steps: readonly StepSegment[]): StepSegment[][] {
   return [...groups.values()].map((group) => group.sort((a, b) => a.start - b.start));
 }
 
-/** The steps covering `x`, one binary search per run. */
+/** The steps covering any `x`, one binary search per run: for many lookups, as each run's starts are read once. */
+export function stepFinder(groups: readonly (readonly StepSegment[])[]): (x: number) => StepSegment[] {
+  const runs = groups.map((group) => ({ group, starts: group.map((step) => step.start) }));
+  return (x) => {
+    const found: StepSegment[] = [];
+    for (const { group, starts } of runs) {
+      const index = lastAtOrBefore(starts, x);
+      if (index >= 0 && x < group[index].end) found.push(group[index]);
+    }
+    return found;
+  };
+}
+
+/** The steps covering `x`. */
 export function stepsAt(groups: readonly (readonly StepSegment[])[], x: number): StepSegment[] {
-  const found: StepSegment[] = [];
-  for (const group of groups) {
-    const index = lastAtOrBefore(group.map((step) => step.start), x);
-    if (index >= 0 && x < group[index].end) found.push(group[index]);
-  }
-  return found;
+  return stepFinder(groups)(x);
 }
 
 /** A setting's min or max (API-12), drawn dotted and labelled at the right edge. */

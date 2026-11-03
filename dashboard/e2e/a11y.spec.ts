@@ -17,12 +17,12 @@ for (const width of [320, 768, 1440]) for (const { path, status } of PAGES) {
   });
 }
 
-for (const width of [320, 768, 1440]) for (const { path, fixture } of SETTING_DRAWERS) {
+for (const width of [320, 768, 1440]) for (const { path, fixture, charts } of SETTING_DRAWERS) {
   test(`${path} under ${fixture} · ${width} px · WCAG 2.2 AA`, async ({ page, request }) => {
     await useFixture(request, fixture);
     await page.setViewportSize({ width, height: 900 });
     await load(page, path);
-    await expect(page.locator("dialog[open] .plot canvas").first()).toBeVisible();
+    await expect(page.locator("dialog[open] .plot canvas")).toHaveCount(charts);
     await axe(page);
   });
 }

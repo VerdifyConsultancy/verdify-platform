@@ -245,7 +245,7 @@ function placeLabels(plot: PaintTarget, input: LabelInput, colors: ChartColors, 
     if (step.endLabel && ends >= bbox.left && ends <= bbox.left + bbox.width) {
       labels.place(step.endLabel, [{ at: ends - 4 * px, line, align: "right" }, { at: ends + 4 * px, line, align: "left" }], color);
     }
-    labels.place(step.label, [
+    if (step.label) labels.place(step.label, [
       { at: Math.max(x(plot, step.start), bbox.left) + 4 * px, line, align: "left" },
       { at: Math.min(x(plot, step.end), bbox.left + bbox.width) - 4 * px, line, align: "right" },
     ], color);

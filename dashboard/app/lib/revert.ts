@@ -11,12 +11,13 @@
  *
  * One exception, for a crop-band anchor or width (`band`): API-11 leaves `crop_band_anchors` as the last write set it,
  * so a release would not bring the previous band back. When the row before the newest is a release or missing, the
- * target there is the value the device reported just before the newest row, written through API-10.
+ * target there is the value the device reported just before the newest row, written through API-10. A device that
+ * already held the newest row's value means that write changed only Manual, so a release is still the way back.
  */
 import { shownActor, type SignedIn } from "./activity";
 import { monthDayClock } from "./format";
 import type { DesiredSetting, SettingHistory } from "./operator-api";
-import { keptValueText, type SettingShape } from "./setting-values";
+import { KEPT_DECIMALS, keptValueText, type SettingShape } from "./setting-values";
 
 export const REVERT_TO_AUTO = "Revert to auto";
 /** Who a target taken from the readback is named after: nobody wrote it through the dashboard. */
@@ -42,12 +43,15 @@ function toAuto(row: DesiredSetting | null, me: SignedIn): RevertTarget {
   return { kind: "release", text: REVERT_TO_AUTO, reason: row ? `${REVERT_TO_AUTO} ${stamp(shownActor(row.actor, me).name, row.created_at)}` : REVERT_TO_AUTO };
 }
 
+/** A reading as a value to write: the binary32 noise off (1.100000023841858 is 1.1), as the drawer's field reads it. */
+const kept = (value: number): number => Number(value.toFixed(KEPT_DECIMALS));
+
 /** The newest readback with a value from before `at`, or null. */
-function readingBefore(readback: SettingHistory["readback"], at: string): SettingHistory["readback"][number] | null {
+function readingBefore(readback: SettingHistory["readback"], at: string): { at: string; value: number } | null {
   const limit = Date.parse(at);
   for (let index = readback.length - 1; index >= 0; index--) {
-    const point = readback[index];
-    if (point.value !== null && Date.parse(point.at) < limit) return point;
+    const { at: seen, value } = readback[index];
+    if (value !== null && Date.parse(seen) < limit) return { at: seen, value };
   }
   return null;
 }
@@ -64,5 +68,5 @@ export function revertTarget(history: Pick<SettingHistory, "desired" | "readback
   if (previous && previous.value !== null) return toValue(previous.value, shape, shownActor(previous.actor, me).name, previous.created_at);
   if (newest.value === null) return null;
   const before = band ? readingBefore(history.readback, newest.created_at) : null;
-  return before && before.value !== null ? toValue(before.value, shape, DEVICE_WORD, before.at) : toAuto(previous, me);
+  return before && kept(before.value) !== kept(newest.value) ? toValue(kept(before.value), shape, DEVICE_WORD, before.at) : toAuto(previous, me);
 }

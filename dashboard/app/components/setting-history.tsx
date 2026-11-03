@@ -61,9 +61,11 @@ export type SettingHistoryProps = {
   band?: boolean;
   /** Save is out: Revert waits for it. */
   busy?: boolean;
+  /** A Revert went out or came back: Save and Release wait for it in turn. */
+  onSending?: (sending: boolean) => void;
 };
 
-export function SettingHistoryPanel({ setting, manual, onReverted, band = false, busy = false }: SettingHistoryProps) {
+export function SettingHistoryPanel({ setting, manual, onReverted, band = false, busy = false, onSending }: SettingHistoryProps) {
   // A viewer, or anyone on a read-only row, sees the history with no Revert.
   const canRevert = useRole() === "operator" && setting.writable;
   const [params] = useSearchParams();
@@ -103,9 +105,9 @@ export function SettingHistoryPanel({ setting, manual, onReverted, band = false,
       </ul>}>
       {noReadback && <p className="state-note history-no-readback">{NO_READBACK_TEXT}</p>}
       {drawn && now !== null && <TimeSeries title={unit ? `${setting.label} · ${unit}` : setting.label} series={null} metrics={NO_METRICS} unit={unit} settings={steps} now={now}
-        xRange={{ from: now - chosen.seconds, to: now + PLAN_AHEAD_S }} />}
+        xRange={{ from: now - chosen.seconds, to: now + PLAN_AHEAD_S }} syncKey={`verdify:setting-history:${chosen.id}`} />}
       {wantOlder && older.isError && <PanelError thing="older history" text="Couldn't check the older history for Revert." onRetry={() => { void older.refetch(); }} />}
-      {target && <RevertControl key={target.text} setting={setting} target={target} manual={manual} onReverted={onReverted} disabled={busy || !current} />}
+      {target && <RevertControl key={target.text} setting={setting} target={target} manual={manual} onReverted={onReverted} onSending={onSending} disabled={busy || !current} />}
     </Panel>
   </div>;
 }
@@ -114,9 +116,15 @@ export function SettingHistoryPanel({ setting, manual, onReverted, band = false,
  * The reason, prefilled and editable, and the one button, which says what it does. Revert has its own write hook, so its
  * refusal shows here in words and never beside the drawer's value field; it sends nothing else.
  */
-function RevertControl({ setting, target, manual, onReverted, disabled }: { setting: Setting; target: RevertTarget; manual: boolean; onReverted: () => void; disabled: boolean }) {
+function RevertControl({ setting, target, manual, onReverted, onSending, disabled }: { setting: Setting; target: RevertTarget; manual: boolean; onReverted: () => void; onSending?: (sending: boolean) => void; disabled: boolean }) {
   const write = useSettingWrite(setting, { onSaved: onReverted });
   const writesEnabled = useWritesEnabled();
+  const { sending } = write;
+  useEffect(() => {
+    if (!sending || !onSending) return;
+    onSending(true);
+    return () => onSending(false);
+  }, [sending, onSending]);
   const [reason, setReason] = useState(target.reason);
   const ids = useFieldIds();
   const refusal = write.error ? formError(write.error, ["reason"]) : null;

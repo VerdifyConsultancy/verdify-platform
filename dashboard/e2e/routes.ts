@@ -17,10 +17,10 @@ export const CARD_PAGES = [
   { path: "/auth/login", status: 503, heading: "Sign-in is unavailable" },
 ] as const;
 
-/** The setting drawer with its charts open (#1139): the history with Revert, and a crop-band anchor's curve preview. */
+/** The setting drawer with its charts drawn (#1139): the history with Revert, and a crop-band anchor's curve preview above its history. */
 export const SETTING_DRAWERS = [
-  { path: "/settings?q=mister_engage_kpa&edit=mister_engage_kpa", fixture: "setting-history" },
-  { path: "/settings?q=zone_vpd_target_center_sm&edit=zone_vpd_target_center_sm", fixture: "band-preview-center" },
+  { path: "/settings?q=mister_engage_kpa&edit=mister_engage_kpa", fixture: "setting-history", charts: 1 },
+  { path: "/settings?q=zone_vpd_target_center_sm&edit=zone_vpd_target_center_sm", fixture: "band-preview-center", charts: 2 },
 ] as const;
 
 /**

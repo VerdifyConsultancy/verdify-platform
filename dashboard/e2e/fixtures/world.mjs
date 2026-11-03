@@ -642,10 +642,10 @@ export const FIXTURES = {
     laneOf(world, "mister_engage_kpa").device = readback;
   },
   // #1139: a center VPD anchor no dashboard write has touched: the API-19 example previews it, its device value has held
-  // at 1.10 since 10/31, and a draft outside 0.10–3.00 is refused.
+  // at 1.10 since 10/31 (in binary32, as setpoint_snapshot reports it), and a draft outside 0.10–3.00 is refused.
   "band-preview-center": (world) => {
     world.preview = { param: "zone_vpd_target_center_sm", value: "1.25" };
-    world.readbackLog.zone_vpd_target_center_sm = [{ at: iso(clock(world.now)("06:00", -2)), value: 1.1 }];
+    world.readbackLog.zone_vpd_target_center_sm = [{ at: iso(clock(world.now)("06:00", -2)), value: 1.100000023841858 }];
   },
   "missed-sunset": (world) => {
     const sunset = world.plan.health.find((row) => row.trigger === "SUNSET" && row.outcome !== "expected");

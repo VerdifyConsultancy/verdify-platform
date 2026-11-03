@@ -82,6 +82,16 @@ test("API-12 reads from the window's start to 12 h after now, 7 d by default; th
   expect(chips().find(([, current]) => current)?.[0]).toBe("7 d");
 });
 
+test("a window chip starts the chart on that window, whatever was zoomed before", async () => {
+  await mount({ fixture: "setting-history" });
+  act(() => plot().setScale("x", { min: S - DAY_S, max: S }));
+  expect(screen.getByRole("button", { name: "Reset zoom" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("link", { name: "30 d" }));
+  await settle();
+  expect(screen.queryByRole("button", { name: "Reset zoom" })).toBeNull();
+  expect(plot().scales.x).toMatchObject({ min: S - 30 * DAY_S, max: S + PLAN_AHEAD_S });
+});
+
 test("the chart: the device line solid, requests dashed amber and labelled by who asked, the plan ahead and the bounds", async () => {
   // Over 24 h the plan has room for its label; over 7 d a crowded chart may drop it (the key and the table keep its words).
   await mount({ fixture: "setting-history", path: `/settings?edit=${ENGAGE}&hist=24h` });

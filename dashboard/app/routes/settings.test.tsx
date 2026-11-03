@@ -535,6 +535,21 @@ test("a 422 reads beside Revert, the drawer stays open and Save keeps its own fi
   expect(dialog().querySelector(".number-field .field-error")).toBeNull();
   expect(drawerOpen()).toBe(true);
   expect(writes(api)).toEqual([]);
+  // The refusal ends the wait: Save and Release are live again.
+  expect(within(dialog()).getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(false);
+  expect(within(dialog()).getByRole("button", { name: "Release to auto" }).hasAttribute("disabled")).toBe(false);
+});
+
+test("while a Revert is out Save and Release to auto wait for it, Enter in the value field too: one write at a time", async () => {
+  const api = await open(ENGAGE, { fixture: "setting-history" });
+  fireEvent.click(revert()!);
+  const save = within(dialog()).getByRole("button", { name: "Save" });
+  expect(save.hasAttribute("disabled")).toBe(true);
+  expect(within(dialog()).getByRole("button", { name: "Release to auto" }).hasAttribute("disabled")).toBe(true);
+  fireEvent.submit(save.closest("form")!);
+  await settle();
+  expect(writes(api).map((row) => (row.body as { value: number }).value)).toEqual([1.6]);
+  expect(drawerOpen()).toBe(false);
 });
 
 test("a viewer and a read-only row see the history with no Revert; a Band in force row has no history", async () => {
