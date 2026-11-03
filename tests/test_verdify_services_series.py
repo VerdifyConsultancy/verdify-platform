@@ -1,9 +1,10 @@
-"""verdify_services.series and its routes (VD-56): pure rules and SQL routing on a fake connection.
+"""verdify_services.series and its routes (VD-56, VD-57): pure rules and SQL routing on a fake connection.
 
 Covers the bucket choice, the daily switch, the retention marking, ``lane_runs()``, the band
-step and carry, the lanes' unknown spans, the scorecard reasons, the error codes and the four
-routes against the committed OpenAPI. The database itself is exercised by
-``tests/test_dashboard_db_series.py`` on the in-cluster campaign database.
+step and carry, the lanes' unknown spans, the scorecard reasons, the forecast keys, API-06's
+zone, the error codes and the routes against the committed OpenAPI. The database itself is
+exercised by ``tests/test_dashboard_db_series.py`` and ``tests/test_dashboard_db_next_reads.py``
+on the in-cluster campaign database; ``tests/test_verdify_services_band_preview.py`` has API-19.
 """
 
 from __future__ import annotations
@@ -335,6 +336,10 @@ def test_registry_bindings_follow_the_issue():
             assert binding.cadence_s == (300 if binding.raw.column.startswith("hydro_") else 60)
         elif binding.key.startswith("diagnostics."):
             assert binding.retention_days == 180 and binding.cadence_s == 60 and binding.group == "controller"
+        elif binding.key.startswith("forecast."):
+            assert binding.raw is None and binding.daily is None and binding.provenance == "DERIVED"
+            assert binding.forecast.column == binding.key.removeprefix("forecast.")
+            assert (binding.retention_days, binding.cadence_s, binding.group) == (400, 3600, "outdoor")
         else:
             assert binding.key.startswith("daily.") and binding.raw is None
             assert (binding.retention_days, binding.cadence_s, binding.group) == (400, 86400, "daily")
@@ -405,6 +410,124 @@ def test_the_scorecard_view_has_every_bound_column():
             for column in (binding.daily.avg, binding.daily.reason, binding.daily.stamp):
                 if column:
                     assert f" AS {column}" in body or f"d.{column}\n" in body, column
+
+
+# ─────────────────────────────────────────────────────────────── the forecast keys (API-04)
+FORECAST = ["forecast.temp_f", "forecast.rh_pct", "forecast.vpd_kpa"]
+
+
+def forecast_row(ts, fetched_at, temp_f=None, rh_pct=None, vpd_kpa=None):
+    return {"ts": ts, "temp_f": temp_f, "rh_pct": rh_pct, "vpd_kpa": vpd_kpa, "fetched_at": fetched_at}
+
+
+def test_the_forecast_keys_are_in_the_registry_and_say_what_they_are():
+    items = {item.key: item for item in s.metric_list().items}
+    assert {key: items[key].unit for key in FORECAST} == {
+        "forecast.temp_f": "°F",
+        "forecast.rh_pct": "%",
+        "forecast.vpd_kpa": "kPa",
+    }
+    assert all(items[key].daily is False and items[key].group == "outdoor" for key in FORECAST)
+
+
+def test_a_forecast_key_never_turns_a_window_daily_and_stays_a_forecast_when_it_is_daily():
+    from_, to = NOW, NOW + timedelta(days=3)
+    plan = s.plan_series(FORECAST, from_, to, 1500, now=NOW)
+    assert not plan.daily_mode and plan.bucket_s == 300
+    assert [read.source for read in plan.reads] == ["forecast"] * 3
+    assert all(read.retained_from is None for read in plan.reads)
+    wide = s.plan_series(["forecast.temp_f", "climate.temp_avg"], NOW - timedelta(days=60), NOW, 1500, now=NOW)
+    assert wide.daily_mode and wide.bucket_s == s.DAY_S
+    assert [read.source for read in wide.reads] == ["forecast", "daily_summary"]
+
+
+def test_below_an_hour_a_forecast_value_sits_only_in_the_bucket_that_holds_its_hour():
+    from_ = at("2026-11-03T00:30:00+00:00")
+    to = at("2026-11-03T02:30:00+00:00")
+    rows = [
+        forecast_row(at("2026-11-03T01:00:00+00:00"), NOW, temp_f=48.8),
+        forecast_row(at("2026-11-03T02:00:00+00:00"), NOW + MIN, temp_f=47.1),
+    ]
+    conn = FakeConnection([("weather_forecast", rows)])
+    result = run(s.series(conn, ["forecast.temp_f"], from_, to, now=NOW))
+    assert result.bucket_s == 60 and len(result.t) == 120
+    temp = result.series["forecast.temp_f"]
+    assert temp.source == "forecast" and temp.retained_from is None
+    assert {result.t[i]: temp.avg[i] for i, count in enumerate(temp.count) if count} == {
+        int(at("2026-11-03T01:00:00+00:00").timestamp()): 48.8,
+        int(at("2026-11-03T02:00:00+00:00").timestamp()): 47.1,
+    }
+    assert sum(temp.count) == 2 and temp.issued_at == NOW + MIN
+
+
+def test_the_forecast_query_is_the_newest_issue_per_hour_bounded_by_the_window():
+    from_, to = NOW, NOW + timedelta(hours=6)
+    conn = FakeConnection([("weather_forecast", [])])
+    result = run(s.series(conn, FORECAST, from_, to, now=NOW))
+    sql, args = next(call for call in conn.fetches if "weather_forecast" in call[0])
+    assert sql == (
+        'SELECT DISTINCT ON (ts) ts, "temp_f", "rh_pct", "vpd_kpa", fetched_at FROM public.weather_forecast '
+        "WHERE ts >= $1::timestamptz AND ts < $2::timestamptz ORDER BY ts, fetched_at DESC"
+    )
+    assert args == (from_, to)
+    assert [call[0] for call in conn.fetches if '"climate"' in call[0] or '"diagnostics"' in call[0]] == []
+    for key in FORECAST:  # the window holds no forecast row: every bucket is a gap, and no issue time
+        column = result.series[key]
+        assert column.avg == [None] * len(result.t) and column.count == [0] * len(result.t)
+        assert column.issued_at is None
+    assert result.watermark is None
+
+
+def test_forecast_buckets_aggregate_like_raw_keys_with_each_columns_own_issue():
+    from_ = at("2026-11-03T00:00:00+00:00")
+    axis = s.aligned_starts(from_, from_ + timedelta(hours=6), 10800)
+    reads = [
+        s.KeyRead(s.METRICS["forecast.temp_f"], "forecast", None),
+        s.KeyRead(s.METRICS["forecast.rh_pct"], "forecast", None),
+    ]
+    newest, older = NOW, NOW - timedelta(hours=1)
+    rows = [
+        forecast_row(from_, older, temp_f=40.0, rh_pct=30.0),
+        forecast_row(from_ + timedelta(hours=1), older, temp_f=44.0),
+        forecast_row(from_ + timedelta(hours=2), older, temp_f=48.0, rh_pct=float("nan")),
+        forecast_row(from_ + timedelta(hours=3), newest, temp_f=50.0),  # a null rh_pct is not used for rh_pct
+    ]
+    columns = s.forecast_columns(axis, rows, reads)
+    temp, rh = columns["forecast.temp_f"], columns["forecast.rh_pct"]
+    assert (temp.avg, temp.min, temp.max, temp.count) == ([44.0, 50.0], [40.0, 50.0], [48.0, 50.0], [3, 1])
+    assert (rh.avg, rh.count) == ([30.0, None], [1, 0])
+    assert (temp.issued_at, rh.issued_at) == (newest, older)
+
+
+def test_forecast_day_buckets_are_denver_days_and_the_25_hour_day_counts_its_hours():
+    from_, to = s.denver_midnight(date(2026, 10, 1)), s.denver_midnight(date(2026, 11, 3))
+    rows = [
+        forecast_row(s.denver_midnight(date(2026, 11, 1)) + timedelta(hours=hour), NOW, vpd_kpa=1.0 + hour)
+        for hour in range(25)
+    ]
+    conn = FakeConnection([("weather_forecast", rows)])
+    result = run(s.series(conn, ["forecast.vpd_kpa"], from_, to, now=NOW))
+    assert result.bucket_s == s.DAY_S and len(result.t) == 33
+    column = result.series["forecast.vpd_kpa"]
+    assert sum(column.count) == 25 and column.count[-2] == 25 and column.max[-2] == 25.0
+
+
+def test_a_measured_key_keeps_its_watermark_beside_a_forecast_and_issued_at_is_only_on_forecast_keys():
+    from_, to = NOW - timedelta(minutes=5), NOW + timedelta(minutes=5)
+    measured_at = NOW - timedelta(minutes=1)
+    climate = [
+        {"bucket": from_, "a0": 50.0, "n0": 50.0, "x0": 50.0, "c0": 1, "last_ts": measured_at},
+    ]
+    forecast = [forecast_row(NOW + timedelta(minutes=2), NOW, temp_f=48.0)]
+    conn = FakeConnection([('"climate"', climate), ("weather_forecast", forecast)])
+    result = run(s.series(conn, ["climate.outdoor_temp_f", "forecast.temp_f"], from_, to, now=NOW))
+    assert result.watermark == measured_at  # never the forecast's hour ahead, nor its issue time
+    payload = result.model_dump(mode="json", by_alias=True)
+    assert "issued_at" not in payload["series"]["climate.outdoor_temp_f"]
+    assert payload["series"]["forecast.temp_f"]["issued_at"] == "2026-11-02T18:00:00Z"
+    empty = s.series(FakeConnection(), ["forecast.temp_f"], from_, to, now=NOW)
+    payload = run(empty).model_dump(mode="json", by_alias=True)["series"]["forecast.temp_f"]
+    assert payload["issued_at"] is None and payload["source"] == "forecast"  # present, and null
 
 
 # ─────────────────────────────────────────────────────────────── API-05 lanes
@@ -632,7 +755,85 @@ def test_band_parameters_are_the_names_emit_band_audit_writes():
     source = (ROOT / "ingestor/tasks/band_anchors.py").read_text()
     emit = source.split("async def emit_band_audit", 1)[1].split("\n\n\n", 1)[0]
     assert '(f"band_{zone}_{role}", value, zone, role, value)' in emit
-    assert s.BAND_PARAMETERS == tuple(f"band_house_{role}" for role in s.BAND_ROLES)
+    assert set(s.BAND_SQL) == set(s.BAND_SEED_SQL) == {"house", "center", "south", "west", "east"}
+    for zone, sql in s.BAND_SQL.items():
+        names = ", ".join(f"'band_{zone}_{role}'" for role in s.BAND_ROLES)
+        for statement in (sql, s.BAND_SEED_SQL[zone]):
+            assert f"parameter IN ({names})" in statement and f"zone = '{zone}'" in statement
+
+
+def test_a_zone_reads_its_own_band_rows_and_the_house_temperature_with_its_vpd_widths():
+    from_, to = at("2026-11-01T21:00:00+00:00"), at("2026-11-01T22:00:00+00:00")
+    passed = at("2026-11-01T21:44:19+00:00")
+    bucket = at("2026-11-01T21:40:00+00:00")
+    rows = [
+        {
+            "bucket": bucket,
+            "temp_low": 64.34,
+            "temp_low_ts": passed,
+            "temp_high": 74.34,
+            "temp_high_ts": passed,
+            "vpd_low": 0.612,
+            "vpd_low_ts": passed,
+            "vpd_high": 1.012,
+            "vpd_high_ts": passed,
+        }
+    ]
+    anchors = [
+        {
+            "series": "vpd_target",
+            "anchor": anchor,
+            "season": "all",
+            "value": 0.8,
+            "width_below": 0.18,
+            "width_above": 0.22,
+            "current_season": "fall",
+        }
+        for anchor in ("sr", "sm", "ss", "mid")
+    ]
+
+    def crop(steps, below, above):
+        assert (below, above) == (0.18, 0.22)
+        return [{"ts": t, "temp_low": 70.0, "temp_high": 80.0, "vpd_low": 0.6, "vpd_high": 1.0} for t in steps]
+
+    conn = FakeConnection(
+        [
+            ("DISTINCT ON (band_role)", []),
+            ("crop_band_anchors", anchors),
+            ("fn_zone_vpd_targets", crop),
+            ("setpoint_snapshot", rows),
+        ]
+    )
+    result = run(s.band(conn, from_, to, "south", now=NOW))
+    index = result.t.index(int(bucket.timestamp()))
+    assert (result.band.temp_low[index], result.band.vpd_high[index]) == (64.34, 1.012)
+    assert result.crop.temp_low == [70.0] * 12 and result.crop.vpd_high == [1.0] * 12
+    band_sql = next(sql for sql, _ in conn.fetches if "time_bucket_gapfill" in sql)
+    assert "zone = 'south'" in band_sql and "'band_south_temp_low'" in band_sql and "band_house" not in band_sql
+    crop_sql = next(sql for sql, _ in conn.fetches if "fn_zone_vpd_targets" in sql)
+    assert "target.vpd_target_south - $2" in crop_sql and "target.vpd_target_south + $3" in crop_sql
+    assert "crop.temp_low" in crop_sql and "fn_band_setpoints" in crop_sql
+    assert "fn_band_timeline" not in crop_sql and "fn_zone_band" not in crop_sql
+    anchor_args = next(args for sql, args in conn.fetches if "crop_band_anchors" in sql)
+    assert anchor_args == ("vallery", "cannabis", ["vpd_target"])
+
+
+def test_the_house_needs_no_widths_and_a_zone_outside_the_list_is_refused():
+    conn = FakeConnection([("fn_band_setpoints", lambda steps: [])])
+    run(s.band(conn, NOW - timedelta(hours=1), NOW, now=NOW))
+    assert not any("crop_band_anchors" in sql or "fn_zone_vpd_targets" in sql for sql, _ in conn.fetches)
+    assert code_of(s.band(conn, NOW - timedelta(hours=1), NOW, "north", now=NOW)) == ("invalid_request", 400)
+
+
+def test_zone_widths_take_the_current_seasons_row_and_stay_null_when_no_row_holds_one():
+    row = {"width_below": None, "width_above": None, "current_season": "fall"}
+    assert s.zone_widths([]) == (None, None)
+    assert s.zone_widths([{**row, "season": "all"}]) == (None, None)
+    rows = [
+        {**row, "season": "all", "width_below": 0.18, "width_above": 0.22},
+        {**row, "season": "fall", "width_below": 0.3},
+    ]
+    assert s.zone_widths(rows) == (0.3, 0.22)
 
 
 def test_band_skips_the_rows_query_past_retention_and_still_reconstructs_the_crop_band():
@@ -700,6 +901,7 @@ def test_routes_serve_the_committed_operations():
         ("/v1/series", "get"): "API-04",
         ("/v1/states", "get"): "API-05",
         ("/v1/band", "get"): "API-06",
+        ("/v1/band/preview", "get"): "API-19",
     }
     for (path, method), operation_id in served.items():
         assert OPENAPI["paths"][path][method]["operationId"] == operation_id
@@ -714,6 +916,8 @@ def test_routes_serve_the_committed_operations():
         (s.StateLanes, "StateLanes"),
         (s.BandTimeline, "BandTimeline"),
         (s.BandColumns, "BandColumns"),
+        (s.BandPreview, "BandPreview"),
+        (s.BandCurve, "BandCurve"),
     ],
 )
 def test_response_models_follow_the_committed_schemas(model, component):
@@ -729,7 +933,7 @@ def test_lane_and_enum_values_stay_inside_the_committed_enums():
     assert {"on", "off", "unknown"} == set(interval["state"]["enum"])
     assert {group for _, group in s.LANES} <= set(lanes["properties"]["group"]["enum"])
     columns = OPENAPI["components"]["schemas"]["SeriesColumns"]["properties"]
-    assert {"raw", "daily_summary", "scorecard"} <= set(columns["source"]["enum"])
+    assert {"raw", "daily_summary", "scorecard", "forecast"} <= set(columns["source"]["enum"])
     assert set(s.BUCKETS_S) == set(OPENAPI["components"]["schemas"]["Series"]["properties"]["bucket_s"]["enum"])
     provenance = set(OPENAPI["components"]["schemas"]["MetricDef"]["properties"]["provenance"]["enum"])
     assert {binding.provenance for binding in s.METRICS.values()} <= provenance
@@ -762,3 +966,7 @@ def test_routes_parse_queries_call_the_service_and_render_problems():
         assert wide.status_code == 422 and wide.json()["code"] == "window_too_large"
         naive = http.get("/v1/band", params={"from": "2026-11-01T00:00:00", "to": "2026-11-01T01:00:00"})
         assert naive.status_code == 422  # FastAPI's own validation; the operator API maps it to 400
+        window = {"from": "2026-11-01T00:00:00Z", "to": "2026-11-01T01:00:00Z"}
+        assert http.get("/v1/band", params=window).status_code == 200
+        assert http.get("/v1/band", params={**window, "zone": "south"}).status_code == 200
+        assert http.get("/v1/band", params={**window, "zone": "north"}).status_code == 422  # not offered

@@ -15,10 +15,11 @@ import os
 import re
 import subprocess
 import sys
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import jsonschema
 import pytest
 import yaml
 
@@ -580,6 +581,7 @@ def test_the_routes_are_the_committed_operations():
         ("/settings/{param}/history", "GET", "API-12"),
         ("/alerts", "GET", "API-14"),
         ("/activity", "GET", "API-17"),
+        ("/water/daily", "GET", "API-21"),  # VD-57
     }
     for path, method, operation_id in served:
         assert spec[f"/v1{path}"][method.lower()]["operationId"] == operation_id
@@ -611,13 +613,24 @@ def test_routes_call_the_services_and_validate_hours(monkeypatch):
         return reads.Plan(plan=None, no_plan_since=AT, lanes=[], manual_count=0, health=[])
 
     async def fake_equipment(conn):
-        return reads.Equipment(items=reads._equipment_items({}, reporting()))
+        reason = reads.reason_state(None, reporting())
+        return reads.Equipment(
+            items=reads._equipment_items({}, reporting()),
+            mode_reason=reason,
+            fog_block_reason=reason,
+            moisture_block_reason=reason,
+        )
+
+    async def fake_water(conn, days=30):
+        calls.append((conn, days))
+        return reads.WaterUse(from_=den(1, 12).date(), to=den(2, 12).date(), days=[])
 
     async def fake_connection():
         yield "conn"
 
     monkeypatch.setattr(reads, "plan", fake_plan)
     monkeypatch.setattr(reads, "equipment", fake_equipment)
+    monkeypatch.setattr(reads, "water_daily", fake_water)
     app = FastAPI()
     app.include_router(routes.router, prefix="/v1")
     app.dependency_overrides[routes.connection] = fake_connection
@@ -639,6 +652,173 @@ def test_routes_call_the_services_and_validate_hours(monkeypatch):
         "intent": None,
         "observed_at": None,
     }
+    empty = {"code": None, "since": None, "observed_at": None}
+    assert (body["mode_reason"], body["fog_block_reason"], body["moisture_block_reason"]) == (empty, empty, empty)
+    calls.clear()
+    assert client.get("/v1/water/daily").json() == {"from": "2026-11-01", "to": "2026-11-02", "days": []}
+    assert client.get("/v1/water/daily?days=90").status_code == 200
+    assert calls == [("conn", 30), ("conn", 90)]
+    assert client.get("/v1/water/daily?days=45").status_code == 422
+
+
+# ── API-13's reasons ────────────────────────────────────────────────────────
+
+
+def test_a_reason_is_its_newest_value_with_the_start_of_its_run():
+    rows = [(den(2, 9), "seal_enter"), (den(2, 10), "temp_high"), (den(2, 11), "temp_high")]
+    state = reads.reason_state(track(rows), reporting())
+    assert (state.code, state.since, state.observed_at) == ("temp_high", den(2, 10), den(2, 11))
+
+
+def test_a_reason_that_has_not_changed_in_the_window_has_no_since():
+    state = reads.reason_state(track([(den(1, 9), "none"), (den(2, 9), "none")]), reporting())
+    assert (state.code, state.since, state.observed_at) == ("none", None, den(2, 9))
+
+
+def test_a_reason_is_null_while_the_controller_is_not_reporting_and_keeps_its_newest_time():
+    rows = [(den(2, 9), "seal_enter"), (den(2, 10), "temp_high")]
+    for rep in (reporting(climate_s=301), reporting(heartbeat_s=181)):
+        state = reads.reason_state(track(rows), rep)
+        assert (state.code, state.since, state.observed_at) == (None, None, den(2, 10))
+
+
+def test_a_reason_with_no_row_is_null_throughout():
+    for empty in (None, track([])):
+        state = reads.reason_state(empty, reporting())
+        assert (state.code, state.since, state.observed_at) == (None, None, None)
+
+
+def test_equipment_reads_the_three_reasons_in_its_snapshot():
+    clock = {"heartbeat_at": AT - timedelta(seconds=30), "climate_at": AT - timedelta(seconds=20), "at": AT}
+    reason_edges = [
+        {"key": "mode_reason", "ts": den(2, 9), "state": "seal_enter", "newest_at": den(2, 13)},
+        {"key": "mode_reason", "ts": den(2, 10), "state": "temp_high", "newest_at": den(2, 13)},
+    ]
+    conn = ReadsConn(
+        {
+            reads._REPORTING_SQL: [clock],
+            reads._EQUIPMENT_TRACKS_SQL: [],
+            reads._EQUIPMENT_NEWEST_SQL: [],
+            reads._SYSTEM_TRACKS_SQL: reason_edges,
+            reads._SYSTEM_NEWEST_SQL: [{"key": "fog_block_reason", "ts": den(1, 9), "state": "none"}],
+        }
+    )
+    result = asyncio.run(reads.equipment(conn))
+    assert (result.mode_reason.code, result.mode_reason.since) == ("temp_high", den(2, 10))
+    assert result.mode_reason.observed_at == den(2, 13)
+    assert (result.fog_block_reason.code, result.fog_block_reason.since) == ("none", None)
+    assert result.fog_block_reason.observed_at == den(1, 9)
+    assert result.moisture_block_reason.model_dump() == {"code": None, "since": None, "observed_at": None}
+    sent = next(args for sql, args in conn.sent if sql == reads._SYSTEM_TRACKS_SQL)
+    assert sent == (list(reads.REASON_ENTITIES), reads.STATE_WINDOW)  # bounded by the state window
+    # Served as the committed OpenAPI says.
+    spec = yaml.safe_load(OPENAPI.read_text())["components"]
+    errors = jsonschema.Draft202012Validator(
+        {"$ref": "#/components/schemas/Equipment", "components": spec}
+    ).iter_errors(result.model_dump(mode="json"))
+    assert [error.message for error in errors] == []
+
+
+def test_the_reasons_are_controller_entities_the_ingestor_writes():
+    from_map = (ROOT / "ingestor/entity_map.py").read_text()
+    for entity in reads.REASON_ENTITIES:
+        assert f'"{entity}": "{entity}"' in from_map, entity
+
+
+# ── API-21 ──────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("quality", "coverage"),
+    [
+        ("ok", "complete"),
+        ("unavailable", "no_data"),
+        (None, "no_data"),
+        ("partial_day", "partial"),
+        ("discontinuous", "partial"),
+        ("incomplete", "partial"),
+        ("ledger_incomplete", "partial"),
+    ],
+)
+def test_water_coverage_follows_the_meter_views_quality(quality, coverage):
+    assert reads.water_coverage(quality) == coverage
+
+
+def water_fixture():
+    first = date(2026, 10, 29)
+    meter = {
+        date(2026, 10, 29): {"quality": "ok", "gal": 78},
+        date(2026, 10, 30): {"quality": "unavailable", "gal": 0},  # the view coalesces it to 0
+        date(2026, 11, 1): {"quality": "discontinuous", "gal": 2},
+        date(2026, 11, 2): {"quality": "partial_day", "gal": 8},
+    }
+    runs = [
+        {"local_day": date(2026, 10, 29), "line_id": "L11", "cause": "vpd", "gal": 37},
+        {"local_day": date(2026, 10, 29), "line_id": "L01", "cause": "schedule", "gal": 4},
+        {"local_day": date(2026, 10, 29), "line_id": "L01", "cause": "run_now", "gal": 1},
+        {"local_day": date(2026, 10, 29), "line_id": "L04", "cause": "vpd", "gal": 0},
+        {"local_day": date(2026, 10, 29), "line_id": "L03", "cause": "feed", "gal": None},  # the supply valve
+        {"local_day": date(2026, 10, 30), "line_id": "L11", "cause": "vpd", "gal": 3},
+    ]
+    no_valve = {date(2026, 10, 29): 41, date(2026, 10, 30): 0, date(2026, 11, 1): 1, date(2026, 11, 2): 0}
+    return first, date(2026, 11, 2), meter, runs, no_valve
+
+
+def test_water_days_are_oldest_first_with_the_no_valve_gallons_apart_and_gaps_null():
+    days = reads.water_days(*water_fixture())
+    assert [day.date for day in days] == [date(2026, 10, 29) + timedelta(days=n) for n in range(5)]
+    assert days[0].model_dump(exclude={"date"}) == {
+        "coverage": "complete",
+        "meter_gal": 78,
+        "by_line": {"L11": 37, "L01": 5, "L04": 0},
+        "by_cause": {"vpd": 37, "schedule": 4, "run_now": 1},
+        "no_valve_gal": 41,
+    }
+    nothing = {"meter_gal": None, "by_line": None, "by_cause": None, "no_valve_gal": None}
+    assert days[1].model_dump(exclude={"date"}) == {"coverage": "no_data", **nothing}  # unavailable: never 0
+    assert days[2].model_dump(exclude={"date"}) == {"coverage": "no_data", **nothing}  # no row
+    assert days[3].model_dump(exclude={"date"}) == {
+        "coverage": "partial",
+        "meter_gal": 2,
+        "by_line": {},  # a day with data and no run
+        "by_cause": {},
+        "no_valve_gal": 1,
+    }
+    assert days[4].coverage == "partial" and days[4].meter_gal == 8
+
+
+def test_water_daily_reads_each_view_by_day_in_one_snapshot():
+    first, last, meter, runs, no_valve = water_fixture()
+    window = []
+
+    def meter_rows(greenhouse, low, high):
+        window.append((greenhouse, low, high))
+        return [{"date": day, **row} for day, row in meter.items()]
+
+    conn = ReadsConn(
+        {
+            reads._WATER_METER_SQL: meter_rows,
+            reads._WATER_NO_VALVE_SQL: [{"date": day, "gal": gal} for day, gal in no_valve.items()],
+            reads._WATER_RUNS_SQL: runs,
+        }
+    )
+    result = asyncio.run(reads.water_daily(conn, days=30))
+    today = AT.astimezone(DENVER).date()
+    assert (result.from_, result.to) == (today - timedelta(days=29), today) and len(result.days) == 30
+    assert result.days[-1].date == today == last and result.days[0].date == today - timedelta(days=29)
+    assert window == [("vallery", today - timedelta(days=29), today)]
+    assert {args[1:] for _, args in conn.sent} == {(today - timedelta(days=29), today)}
+    assert len(asyncio.run(reads.water_daily(conn, days=90)).days) == 90
+    with pytest.raises(ValueError):
+        asyncio.run(reads.water_daily(conn, days=45))
+    for sql in (reads._WATER_METER_SQL, reads._WATER_NO_VALVE_SQL, reads._WATER_RUNS_SQL):
+        assert "$2::date" in sql and "$3::date" in sql, sql  # bounded by day
+    assert "meter_id = 'main_pulse'" in reads._WATER_METER_SQL
+    spec = yaml.safe_load(OPENAPI.read_text())["components"]
+    errors = jsonschema.Draft202012Validator({"$ref": "#/components/schemas/WaterUse", "components": spec}).iter_errors(
+        result.model_dump(mode="json", by_alias=True)
+    )
+    assert [error.message for error in errors] == []
 
 
 # ── boundaries: imports, writes and bounded queries ─────────────────────────

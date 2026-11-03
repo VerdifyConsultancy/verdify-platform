@@ -1183,6 +1183,11 @@ def _check_value(spec: TunableDef, value: object, current: float | None) -> floa
     return number
 
 
+def check_range(param: str, value: float) -> float:
+    """§5.3 step 2 alone, for a value that is not being stored: API-19's draft gets the refusal a Save would get."""
+    return _check_value(REGISTRY[param], value, None)
+
+
 def _snap(spec: TunableDef, number: float, facts: _Facts) -> float:
     """§5.3 step 4: the registry step, half to even; a value equal (within its binary32 ULP) to the value in
     force or the device value is stored as is, so taking Iris's 48.75 manual keeps 48.75."""

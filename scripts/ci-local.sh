@@ -97,6 +97,7 @@ $PY -m pytest -q -rs \
   tests/test_287_retire_high_wind_delivery.py \
   tests/test_metric_registry_completeness.py \
   tests/test_verdify_services_series.py \
+  tests/test_verdify_services_band_preview.py \
   tests/test_qualify_migration_successor.py \
   tests/test_verdify_services_core.py \
   tests/test_verdify_services_settings.py \
@@ -115,6 +116,7 @@ $PY -m pytest -q -rs \
   tests/test_irrigation_writes_rest.py \
   tests/test_dashboard_db_irrigation_writes.py \
   tests/test_dashboard_db_forecast_engine.py \
+  tests/test_dashboard_db_next_reads.py \
   tests/test_bounded_reconcile.py \
   tests/test_10_planner_routing.py \
   tests/test_11_planner_milestones.py \
@@ -325,6 +327,8 @@ $PY -m pytest -q -rs \
   tests/test_operator_api_contract.py \
   tests/test_operator_api_auth.py \
   tests/test_operator_writes.py \
+  tests/test_operator_lights.py \
+  tests/test_setpoint_server_ingress.py \
   tests/test_public_api_operator_paths.py \
   tests/test_operator_api_manifests.py \
   tests/test_verdify_traefik_placement.py \

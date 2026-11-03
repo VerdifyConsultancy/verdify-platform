@@ -4,7 +4,8 @@ The rules every module here follows:
 
 - One ``router = APIRouter()`` per module: ``reads``, ``series``, ``writes``, ``irrigation_reads`` and
   ``irrigation_writes``. #1148 created the ``irrigation_reads`` and ``irrigation_writes`` stubs; ``series`` is
-  #1169's to create, and the operator API includes it as soon as its file exists.
+  #1169's to create, and the operator API includes it as soon as its file exists. ``setpoint_server`` is no route
+  module: it is API-20's one HTTP call, which ``verdify_services`` may not make (#1170).
 - Paths are written without the ``/v1`` prefix; ``api/operator_api.py`` (#1148) includes each router under
   ``/v1`` with ``include_v1()``.
 - Every route sets ``operation_id`` to its design id (``API-09``, ``API-IRR-06``, ...), the canonical

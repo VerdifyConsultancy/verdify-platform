@@ -151,3 +151,13 @@ test("readOnly (a setting the API serves with writable false): read-only for an 
   expect(screen.getByRole("button", { name: "Release to auto" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
 });
+
+test("what reads alongside the fields sits under them and outside their fieldset, so read-only never disables it", () => {
+  renderUi(<EditDrawer open onClose={() => {}} title="Setting" onSave={() => {}} readOnly below={<button type="button">Retry</button>}>
+    <NumberField label="New value" value="1.60" onChange={() => {}} />
+  </EditDrawer>, OPERATOR);
+  expect(screen.getByLabelText("New value").matches(":disabled")).toBe(true);
+  expect(screen.getByRole("button", { name: "Retry" }).matches(":disabled")).toBe(false);
+  expect(screen.getByRole("button", { name: "Retry" }).closest("fieldset")).toBeNull();
+  expect(screen.getByRole("button", { name: "Retry" }).closest(".drawer-body")).not.toBeNull();
+});

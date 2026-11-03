@@ -306,7 +306,9 @@ def test_every_relation_and_function_the_services_name_is_granted():
     # A failure here is a 503 on its screen: grant it to the duty in a new migration, as this file does.
     for privilege, names in wanted.items():
         assert names <= granted[privilege], (privilege, sorted(names - granted[privilege]))
-    assert functions <= granted["execute"], sorted(functions - granted["execute"])
+    # fn_solar_phase has no direct grant because it keeps PostgreSQL's default EXECUTE for PUBLIC (live proacl
+    # {=X/verdify}); tests/test_dashboard_db_next_reads.py calls it under the dashboard login on a fresh database.
+    assert functions <= granted["execute"] | {"fn_solar_phase"}, sorted(functions - granted["execute"])
     # The scan itself sees the reads and writes it guards, so it can never pass by finding nothing.
     assert {"climate", "system_state", "activity_log"} <= wanted["select"]
     assert "activity_log" in wanted["insert"]

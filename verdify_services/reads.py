@@ -1,10 +1,10 @@
-"""The operator reads: Now, plan and equipment (VD-54) and settings, history and activity (VD-55).
+"""The operator reads: Now, plan and equipment (VD-54), settings, history and activity (VD-55), and water (VD-57).
 
 API-02, API-07 and API-13 (VD-54); API-09, API-12 and API-17 (VD-55), whose
 composition over ``verdify_services.settings`` and ``.activity`` lives here:
 ``settings_rows()``, ``setting_history()`` and ``activity_page()``, which the
 MCP ``settings`` and ``activity`` tools call too (#1171). API-14 is
-``alerts.list`` itself.
+``alerts.list`` itself. API-21 is ``water_daily()``.
 
 Architecture §7 (read model) and §8 (API surface). Each read is ``async``,
 takes an asyncpg connection, needs no ``Actor`` and returns a Pydantic model
@@ -36,7 +36,7 @@ from bisect import bisect_right
 from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
 
@@ -116,6 +116,9 @@ _EQUIPMENT_KEYS = tuple(name for name, _ in EQUIPMENT_LIST) + tuple(GROW_LIGHT_I
 _NOW_EQUIPMENT_KEYS = _EQUIPMENT_KEYS + tuple(BURSTS) + (LEAK_FLAG,)
 MODE_ENTITY = "greenhouse_state"
 _NOW_NEWEST_ENTITIES = ("mister_state", "mode_reason", "fog_block_reason")
+# API-13's reasons (entity_map's controller text entities): which branch chose the mode, what holds fog (L11) off and
+# what holds the misters off.
+REASON_ENTITIES = ("mode_reason", "fog_block_reason", "moisture_block_reason")
 # In SEALED_MIST the firmware publishes greenhouse_state as SEALED_MIST_<stage>
 # (controls.yaml, MIST_NAMES in greenhouse_types.h), so the label carries the stage.
 SEALED_MIST = "SEALED_MIST"
@@ -367,16 +370,44 @@ class EquipmentItem(_Model):
     observed_at: datetime | None
 
 
+class ReasonState(_Model):
+    code: str | None
+    since: datetime | None
+    observed_at: datetime | None
+
+
 class Equipment(_Model):
     items: list[EquipmentItem]
+    mode_reason: ReasonState
+    fog_block_reason: ReasonState
+    moisture_block_reason: ReasonState
 
 
-def _hours_from_query(value: object) -> object:
+class WaterDay(_Model):
+    date: date
+    coverage: Literal["complete", "partial", "no_data"]
+    meter_gal: int | None
+    by_line: dict[str, int] | None
+    by_cause: dict[str, int] | None
+    no_valve_gal: int | None
+
+
+class WaterUse(_Model):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    from_: date = Field(alias="from")
+    to: date
+    days: list[WaterDay]
+
+
+def _int_from_query(value: object) -> object:
     return int(value) if isinstance(value, str) and value.isdigit() else value
 
 
 # API-07's ``hours``: 24 (default) or 72, as the query string carries it.
-PlanHours = Annotated[Literal[24, 72], BeforeValidator(_hours_from_query)]
+PlanHours = Annotated[Literal[24, 72], BeforeValidator(_int_from_query)]
+# API-21's ``days``: 30 (default) or 90.
+WaterDays = Annotated[Literal[30, 90], BeforeValidator(_int_from_query)]
 
 
 # ── Pure rules ──────────────────────────────────────────────────────────────
@@ -856,6 +887,29 @@ SELECT e.entity, s.value, s.ts
                       ORDER BY ts DESC LIMIT 1) AS s ON true
 """
 
+# API-21. Neither view has an inner time bound, so each statement filters by day and reads the whole ledger beneath
+# it: about 2 s and 1.5 s for 90 days on production's 15 months of rows (2026-11-02), inside the 10 s limit.
+_WATER_METER_SQL = """
+SELECT (day AT TIME ZONE 'America/Denver')::date AS date, quality, round(used_gal::numeric)::integer AS gal
+  FROM v_water_meter_daily
+ WHERE greenhouse_id = $1 AND meter_id = 'main_pulse'
+   AND day >= $2::date::timestamp AT TIME ZONE 'America/Denver'
+   AND day < ($3::date + 1)::timestamp AT TIME ZONE 'America/Denver'
+"""
+
+_WATER_NO_VALVE_SQL = """
+SELECT date, round(manual_or_unattributed_gal::numeric)::integer AS gal
+  FROM v_water_attribution_daily
+ WHERE greenhouse_id = $1 AND date >= $2::date AND date <= $3::date
+"""
+
+# M4's reader for v_irrigation_minutes_daily's rows, with its equipment_state scan bounded by the days.
+_WATER_RUNS_SQL = """
+SELECT local_day, line_id, cause, gal
+  FROM fn_irrigation_minutes_daily($2::date, $3::date)
+ WHERE greenhouse_id = $1
+"""
+
 _PLAN_IN_FORCE_SQL = """
 SELECT pj.plan_id, pj.created_at, pj.valid_from, pj.expires_at, pj.lifecycle_status, pj.hypothesis,
        pj.experiment, pj.expected_outcome, pj.conditions_summary, pj.outcome_score, pj.lesson_extracted,
@@ -1249,6 +1303,69 @@ def _newest_text(track: Track | None) -> str | None:
     return str(value) if value is not None else None
 
 
+def reason_state(track: Track | None, rep: Reporting) -> ReasonState:
+    """The newest row of one controller reason entity. ``code`` and ``since`` are null while the controller is not
+    reporting or there is no row; ``observed_at`` keeps the newest row's time. ``since`` is null too when the value has
+    not changed in the state window, because the run's start is not known."""
+    code = _newest_text(track) if rep.controller_reporting else None
+    return ReasonState(
+        code=code,
+        since=run_since(track.spans) if track is not None and code is not None else None,
+        observed_at=track.newest_at if track is not None else None,
+    )
+
+
+def water_coverage(quality: str | None) -> Literal["complete", "partial", "no_data"]:
+    """API-21's coverage from ``v_water_meter_daily.quality``: ``unavailable``, or no row, is no_data."""
+    if quality is None or quality == "unavailable":
+        return "no_data"
+    return "complete" if quality == "ok" else "partial"
+
+
+def water_days(
+    first: date,
+    last: date,
+    meter: Mapping[date, Mapping[str, Any]],
+    runs: Iterable[Mapping[str, Any]],
+    no_valve: Mapping[date, int | None],
+) -> list[WaterDay]:
+    """API-21's days, oldest first, in whole gallons (pure). ``meter`` is keyed by day (``quality``, ``gal``), ``runs``
+    are the minutes rows (``local_day``, ``line_id``, ``cause``, ``gal``) and ``no_valve`` the attribution view's
+    gallons by day. A no_data day is null throughout, never 0, though the views coalesce to 0. A day with data and no
+    run has empty splits. A run with no gallons (L03, or no meter data) adds nothing. Nothing is rescaled, so the parts
+    can sit a gallon off the total."""
+    by_line: dict[date, dict[str, int]] = {}
+    by_cause: dict[date, dict[str, int]] = {}
+    for run in runs:
+        if run["gal"] is None:
+            continue
+        lines = by_line.setdefault(run["local_day"], {})
+        lines[run["line_id"]] = lines.get(run["line_id"], 0) + run["gal"]
+        causes = by_cause.setdefault(run["local_day"], {})
+        causes[run["cause"]] = causes.get(run["cause"], 0) + run["gal"]
+    days: list[WaterDay] = []
+    for offset in range((last - first).days + 1):
+        day = first + timedelta(days=offset)
+        row = meter.get(day)
+        coverage = water_coverage(row["quality"] if row is not None else None)
+        if coverage == "no_data":
+            days.append(
+                WaterDay(date=day, coverage=coverage, meter_gal=None, by_line=None, by_cause=None, no_valve_gal=None)
+            )
+            continue
+        days.append(
+            WaterDay(
+                date=day,
+                coverage=coverage,
+                meter_gal=row["gal"],
+                by_line=by_line.get(day, {}),
+                by_cause=by_cause.get(day, {}),
+                no_valve_gal=no_valve.get(day),
+            )
+        )
+    return days
+
+
 async def _overrides(
     conn: asyncpg.Connection, tracks: Mapping[str, Track], fog_block_reason: str | None, rep: Reporting
 ) -> list[Override]:
@@ -1546,7 +1663,39 @@ async def equipment(conn: asyncpg.Connection) -> Equipment:
     async with _snapshot(conn):
         rep = await reporting(conn)
         tracks = await _tracks(conn, _EQUIPMENT_TRACKS_SQL, _EQUIPMENT_KEYS)
-    return Equipment(items=_equipment_items(tracks, rep))
+        reasons = await _tracks(conn, _SYSTEM_TRACKS_SQL, REASON_ENTITIES)
+    return Equipment(
+        items=_equipment_items(tracks, rep),
+        mode_reason=reason_state(reasons.get("mode_reason"), rep),
+        fog_block_reason=reason_state(reasons.get("fog_block_reason"), rep),
+        moisture_block_reason=reason_state(reasons.get("moisture_block_reason"), rep),
+    )
+
+
+# ── API-21 ──────────────────────────────────────────────────────────────────
+
+
+async def water_daily(conn: asyncpg.Connection, days: int = 30) -> WaterUse:
+    """API-21 ``GET /v1/water/daily``: the 30 or 90 America/Denver days ending today, today a partial day."""
+    if days not in (30, 90):
+        raise ValueError("days must be 30 or 90")
+    async with _snapshot(conn):
+        last: date = (await conn.fetchval("SELECT now()")).astimezone(DENVER).date()
+        first = last - timedelta(days=days - 1)
+        meter = await conn.fetch(_WATER_METER_SQL, GREENHOUSE_ID, first, last)
+        no_valve = await conn.fetch(_WATER_NO_VALVE_SQL, GREENHOUSE_ID, first, last)
+        runs = await conn.fetch(_WATER_RUNS_SQL, GREENHOUSE_ID, first, last)
+    return WaterUse(
+        from_=first,
+        to=last,
+        days=water_days(
+            first,
+            last,
+            {row["date"]: row for row in meter},
+            runs,
+            {row["date"]: row["gal"] for row in no_valve},
+        ),
+    )
 
 
 # ── API-09 ──────────────────────────────────────────────────────────────────

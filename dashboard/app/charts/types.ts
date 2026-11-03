@@ -37,4 +37,14 @@ export type MinutesRow = MinutesReport["rows"][number];
 export type XRange = { from: number; to: number };
 
 /** One setting drawn as steps on a panel: its API-12 history and the words to call it. */
-export type SettingSteps = { history: SettingHistory; label?: string };
+export type SettingSteps = {
+  history: SettingHistory;
+  label?: string;
+  /**
+   * Every desired row draws as a request labelled with who asked, and a release ends the step before it (the setting
+   * drawer's history). Otherwise only the rows still on their way draw (Graphs). Read with the first answer, as `format`.
+   */
+  allRequests?: boolean;
+  /** A value in words; `formatValue` in the panel's unit when omitted. */
+  format?: (value: number) => string;
+};

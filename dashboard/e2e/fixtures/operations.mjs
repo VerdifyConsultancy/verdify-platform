@@ -297,15 +297,25 @@ function planBody(world, { query }) {
   };
 }
 
+/** The rows of `log` (oldest first) from the one in force at `from` up to `to`, as API-12 bounds its lists. */
+function inWindow(log, from, to, at) {
+  const before = log.filter((item) => Date.parse(at(item)) < from).slice(-1);
+  return [...before, ...log.filter((item) => Date.parse(at(item)) >= from && Date.parse(at(item)) < to)];
+}
+/** A setting's desired rows: its log, or the one API-09 row. As API-12 reads them, an older row is no longer requested. */
+const desiredRows = (world, row) => world.desiredLog[row.param] ?? (row.desired ? [row.desired] : []);
 function historyBody(world, { params, query }) {
   const row = settingOf(world, params.param);
   if (!row) throw refuse(404, "not_found", "Not found", `No setting ${params.param}`);
   const { from, to } = window(query);
   const plan = laneOf(world, row.param)?.waypoints ?? (row.plan?.next ? [row.plan.next] : []);
+  const log = desiredRows(world, row);
+  const readback = world.readbackLog[row.param];
   return {
     param: row.param, unit: row.unit, min: row.min, max: row.max, from: iso(from), to: iso(to),
-    desired: row.desired && Date.parse(row.desired.created_at) < to ? [row.desired] : [],
-    plan: plan.filter((point) => Date.parse(point.at) >= from), readback: row.readback ? [{ at: iso(from), value: row.readback.value }] : [],
+    desired: inWindow(log, from, to, (item) => item.created_at).map((item) => (item !== log.at(-1) && item.state === "requested" ? { ...item, state: "not_confirmed" } : item)),
+    plan: plan.filter((point) => Date.parse(point.at) >= from && Date.parse(point.at) < to),
+    readback: readback ? inWindow(readback, from, to, (point) => point.at) : row.readback ? [{ at: iso(from), value: row.readback.value }] : [],
   };
 }
 
@@ -334,7 +344,14 @@ function activityBody(world, { query }) {
   return paged(rows, query);
 }
 
-/** API-19: one day's curve at 10-min steps, current and with the draft value, peaking at the anchor at noon. */
+const ZONE_TARGET = /^zone_vpd_target_(center|south|west|east)_(?:sr|sm|ss|mid)$/;
+const ZONE_WIDTH = /^zone_vpd_width_(below|above)_(center|south|west|east)$/;
+/** A crop-band value as stored: the last API-10 write, else the device's. */
+const bandValue = (world, param) => world.bandStored[param] ?? settingOf(world, param)?.readback?.value ?? null;
+/**
+ * API-19: one day's curve at 10-min steps, current (as stored) and with the draft value, peaking at the anchor at noon. A
+ * house param moves that axis's curve by a fixed width; a zone param gives the zone's target and the target ∓ its widths.
+ */
 function previewBody(world, { query }) {
   const param = query.get("param");
   if (param === null) throw invalid("param is required", "param");
@@ -351,11 +368,23 @@ function previewBody(world, { query }) {
   const [swing, width] = row.unit === "kPa" ? [0.2, 0.15] : [6, 4];
   const t = [];
   for (let at = start; at < end; at += 600_000) t.push(at / 1000);
-  const curve = (anchor) => {
+  const stored = bandValue(world, param) ?? value;
+  const curve = (anchor, below = width, above = width) => {
     const target = t.map((at) => round(anchor + (swing * (Math.cos((2 * Math.PI * (at * 1000 - noon)) / DAY) - 1)) / 2, 3));
-    return { low: target.map((v) => round(v - width, 3)), target, high: target.map((v) => round(v + width, 3)) };
+    return { low: target.map((v) => round(v - below, 3)), target, high: target.map((v) => round(v + above, 3)) };
   };
-  return { param, unit: row.unit, day: date, step_s: 600, t, current: curve(row.readback?.value ?? value), draft: curve(value) };
+  const zoneTarget = ZONE_TARGET.exec(param);
+  const zoneWidth = ZONE_WIDTH.exec(param);
+  const zone = zoneTarget?.[1] ?? zoneWidth?.[2];
+  if (!zone) return { param, unit: row.unit, day: date, step_s: 600, t, current: curve(stored), draft: curve(value) };
+  const widthOf = (side) => bandValue(world, `zone_vpd_width_${side}_${zone}`) ?? width;
+  const [below, above] = [widthOf("below"), widthOf("above")];
+  const anchor = zoneTarget ? null : bandValue(world, `zone_vpd_target_${zone}_sm`) ?? 1;
+  return {
+    param, unit: row.unit, day: date, step_s: 600, t,
+    current: curve(anchor ?? stored, below, above),
+    draft: curve(anchor ?? value, zoneWidth?.[1] === "below" ? value : below, zoneWidth?.[1] === "above" ? value : above),
+  };
 }
 
 const weekday = (date) => local(localInstant(date, "12:00")).weekday;
@@ -559,6 +588,7 @@ function stateReason(world, row, created) {
 function applyDesired(world, history, serial, desired, request_id) {
   const row = settingOf(world, desired.param);
   const before = row.readback?.value ?? null;
+  const log = world.desiredLog[row.param] ??= desiredRows(world, row);
   let stored = { ...desired };
   if (world.flags.progress && desired.value !== null && history.readsAfter("API-09", serial) >= 3) {
     stored = world.flags.confirm
@@ -567,8 +597,14 @@ function applyDesired(world, history, serial, desired, request_id) {
   }
   const released = stored.value === null;
   const appliedFrom = released ? (row.plan ? "plan" : row.control_class === "crop_band" ? "band" : "default") : stored.manual ? "manual" : "desired";
+  log.push(stored);
+  // API-10 updates the crop_band_anchors rows in its own transaction; API-11 leaves them as they are.
+  if (!released && row.control_class === "crop_band") world.bandStored[row.param] = stored.value;
   Object.assign(row, { desired: stored, state: stored.state, applied_from: appliedFrom });
-  if (stored.state === "confirmed") row.readback = { value: stored.value, observed_at: stored.confirmed_at, reason: null };
+  if (stored.state === "confirmed") {
+    row.readback = { value: stored.value, observed_at: stored.confirmed_at, reason: null };
+    (world.readbackLog[row.param] ??= before === null ? [] : [{ at: iso(world.now - 200 * DAY), value: before }]).push({ at: stored.confirmed_at, value: stored.value });
+  }
   if (row.plan?.next) row.plan = { ...row.plan, next: { ...row.plan.next, effective: released } };
   const lane = laneOf(world, row.param);
   if (lane) Object.assign(lane, { desired: stored, applied_from: appliedFrom, waypoints: lane.waypoints.map((point) => ({ ...point, effective: released })) });
@@ -987,7 +1023,7 @@ export const EXAMPLES = {
   "API-15": (world) => send("POST", `/v1/alerts/${firstAlert(world)}/ack`, { note: "On it" }),
   "API-16": (world) => send("POST", `/v1/alerts/${firstAlert(world)}/resolve`, { resolution: "Fixed at the breaker" }),
   "API-17": () => get("/v1/activity"),
-  "API-19": () => get("/v1/band/preview", { param: "band_vpd_low_sm", value: "0.5" }),
+  "API-19": (world) => get("/v1/band/preview", world.preview),
   "API-20": () => send("POST", "/v1/equipment/lights/main/on", { reason: "Inspecting the Vandas" }),
   "API-21": () => get("/v1/water/daily"),
   "API-IRR-01": () => get("/v1/irrigation"),

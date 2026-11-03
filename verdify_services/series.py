@@ -1,4 +1,4 @@
-"""Graph reads: the metric registry and API-03 to API-06 (architecture §7).
+"""Graph reads: the metric registry, API-03 to API-06 and the band preview API-19 (architecture §7).
 
 Column names never come from the browser: a request names registry keys, and only the
 columns bound in ``METRICS`` reach SQL. Every hypertable query is bounded by ``ts`` and runs in
@@ -17,15 +17,26 @@ from collections.abc import AsyncIterator, Hashable, Iterable, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 from zoneinfo import ZoneInfo
 
 import asyncpg
 from pydantic import BaseModel, ConfigDict, Field, model_serializer
 
+from verdify_schemas.band_rows import (
+    ANCHOR_KEYS,
+    BAND_PARAM_ROWS,
+    HOUSE_CROP,
+    WIDTH_COLUMNS,
+    ZONE_CROP,
+    ZONE_SERIES,
+    ZONES,
+)
+from verdify_schemas.tunable_registry import REGISTRY
+from verdify_services import settings
 from verdify_services.labels import EQUIPMENT_LABELS, EQUIPMENT_LINE_IDS
 from verdify_services.problems import ServiceError, problem
-from verdify_services.reads import Span, collapse
+from verdify_services.reads import GREENHOUSE_ID, Span, collapse
 
 DENVER = ZoneInfo("America/Denver")
 STATEMENT_TIMEOUT = "10s"
@@ -53,9 +64,12 @@ DAILY_RETENTION_DAYS = 400
 BUCKET_ORIGIN = datetime(2000, 1, 3, tzinfo=UTC)
 BAND_ROLES = ("temp_low", "temp_high", "vpd_low", "vpd_high")
 SCORECARD_VIEW = "v_daily_scorecard"
+PREVIEW_STEP_S = 600
+PREVIEW_MAX_DAYS_AWAY = MAX_WINDOW.days
 
 Provenance = Literal["MEASURED", "DERIVED", "PLANNED", "MANUAL", "AI"]
 Source = Literal["raw", "daily_summary", "scorecard", "forecast"]
+BandZone = Literal["house", "center", "south", "west", "east"]
 IrrigationCause = Literal["vpd", "schedule", "run_now", "feed", "prewet", "flush", "fallback", "unknown"]
 LaneGroup = Literal["climate", "water", "light", "flag"]
 LaneState = Literal["on", "off", "unknown"]
@@ -88,12 +102,16 @@ class SeriesColumns(BaseModel):
     retained_from: datetime | None = None
     # daily.* keys only; omitted from the JSON for every other key (the schema says array).
     reason: list[str | None] = Field(default=None)
+    # forecast.* keys only, where null is an answer (the window holds no forecast row); omitted for every other key.
+    issued_at: datetime | None = None
 
     @model_serializer(mode="wrap")
-    def _omit_absent_reason(self, handler):
+    def _omit_absent_fields(self, handler):
         data = handler(self)
         if self.reason is None:
             data.pop("reason", None)
+        if self.source != "forecast":
+            data.pop("issued_at", None)
         return data
 
 
@@ -157,6 +175,22 @@ class BandTimeline(BaseModel):
     crop: BandColumns
 
 
+class BandCurve(BaseModel):
+    low: list[float | None]
+    target: list[float | None]
+    high: list[float | None]
+
+
+class BandPreview(BaseModel):
+    param: str
+    unit: str
+    day: date
+    step_s: Literal[600]
+    t: list[int]
+    current: BandCurve
+    draft: BandCurve
+
+
 # ─────────────────────────────────────────────────────────────── the metric registry (API-03)
 @dataclass(frozen=True, slots=True)
 class RawBinding:
@@ -183,6 +217,13 @@ class DailyBinding:
 
 
 @dataclass(frozen=True, slots=True)
+class ForecastBinding:
+    """A ``weather_forecast`` column: ``plan_series`` gives the key source ``forecast``, whatever the window."""
+
+    column: str
+
+
+@dataclass(frozen=True, slots=True)
 class MetricBinding:
     key: str
     label: str
@@ -195,6 +236,7 @@ class MetricBinding:
     retention_days: int
     zone: str | None = None
     note: str | None = None
+    forecast: ForecastBinding | None = None
 
     def definition(self) -> MetricDef:
         return MetricDef(
@@ -288,6 +330,22 @@ def _scorecard(
         cadence_s=DAY_S,
         retention_days=DAILY_RETENTION_DAYS,
         note=note,
+    )
+
+
+def _forecast(column: str, label: str, unit: str) -> MetricBinding:
+    return MetricBinding(
+        key=f"forecast.{column}",
+        label=label,
+        group=_OUTDOOR,
+        unit=unit,
+        provenance="DERIVED",
+        raw=None,
+        daily=None,
+        cadence_s=3600,
+        retention_days=DAILY_RETENTION_DAYS,  # the table has no retention policy; a window reaches at most this far
+        note="Open-Meteo hourly forecast, the newest issue per hour",
+        forecast=ForecastBinding(column),
     )
 
 
@@ -425,6 +483,9 @@ _REGISTRY: tuple[MetricBinding, ...] = (
     _climate("temp_intake", "Intake temperature", _OUTDOOR, "°F", note="Exterior intake probe"),
     _climate("intake_rh", "Intake relative humidity", _OUTDOOR, "%", note="Exterior intake probe"),
     _climate("intake_vpd", "Intake VPD", _OUTDOOR, "kPa", provenance="DERIVED", note="Exterior intake probe"),
+    _forecast("temp_f", "Forecast temperature", "°F"),
+    _forecast("rh_pct", "Forecast relative humidity", "%"),
+    _forecast("vpd_kpa", "Forecast VPD", "kPa"),
     # targets: the controller's on-chip targets, a cross-check for API-06, and how far the
     # measured value sits from each (the firmware publishes Tin - target and VPD - target)
     _climate(
@@ -670,7 +731,7 @@ def choose_bucket(from_: datetime, to: datetime, points: int) -> int:
 @dataclass(frozen=True, slots=True)
 class KeyRead:
     binding: MetricBinding
-    source: Literal["raw", "daily_summary", "scorecard"]
+    source: Source
     retained_from: datetime | None
 
 
@@ -686,11 +747,12 @@ class SeriesPlan:
 
 def is_daily_mode(bindings: Iterable[MetricBinding], from_: datetime, to: datetime, now: datetime) -> bool:
     """Day buckets over 31 days, or when ``from_`` is older than the raw retention of a key with a
-    daily binding. A ``daily.*`` key has no raw data at all, so a request that names one is daily."""
+    daily binding. A ``daily.*`` key has no raw data at all, so a request that names one is daily. A forecast key
+    has neither a raw table nor a daily view, and buckets with whatever the window chooses."""
     if to - from_ > DAILY_MODE_OVER:
         return True
     for binding in bindings:
-        if binding.raw is None:
+        if binding.raw is None and binding.forecast is None:
             return True
         if binding.daily is not None and from_ < now - timedelta(days=binding.retention_days):
             return True
@@ -723,7 +785,9 @@ def plan_series(keys: Sequence[str], from_: datetime, to: datetime, points: int,
     bucket_s = DAY_S if daily_mode else choose_bucket(from_, to, points)
     reads = []
     for binding in bindings:
-        if binding.raw is None or (daily_mode and binding.daily is not None):
+        if binding.forecast is not None:
+            reads.append(KeyRead(binding, "forecast", None))
+        elif binding.raw is None or (daily_mode and binding.daily is not None):
             reads.append(KeyRead(binding, binding.daily.source, None))
         else:
             reads.append(KeyRead(binding, "raw", now - timedelta(days=binding.retention_days)))
@@ -759,6 +823,15 @@ def daily_rows_sql(view: str, columns: Sequence[str], stamp: str) -> str:
     return (
         f"SELECT date, {selected}, {_ident(stamp)} AS stamp FROM public.{_ident(view)} "
         "WHERE date >= $1::date AND date <= $2::date ORDER BY date"
+    )
+
+
+def forecast_rows_sql(columns: Sequence[str]) -> str:
+    """The newest issue of each forecast hour in [$1, $2); idx_forecast_ts_fetched (ts, fetched_at DESC) answers it."""
+    selected = ", ".join(_ident(column) for column in columns)
+    return (
+        f"SELECT DISTINCT ON (ts) ts, {selected}, fetched_at FROM public.weather_forecast "
+        "WHERE ts >= $1::timestamptz AND ts < $2::timestamptz ORDER BY ts, fetched_at DESC"
     )
 
 
@@ -846,6 +919,37 @@ def daily_columns(
     return columns, watermark
 
 
+def forecast_columns(
+    axis: Sequence[datetime], rows: Iterable[Any], reads: Sequence[KeyRead]
+) -> dict[str, SeriesColumns]:
+    """Bucket the newest issue of each hour as raw keys bucket: avg, min, max and count (pure).
+
+    Below a 3600 s bucket a value sits only in the bucket that holds its hour; the key's ``cadence_s`` tells the chart
+    to join them. ``issued_at`` is the newest ``fetched_at`` behind the column's values, null when it has none.
+    """
+    columns = {read.binding.key: _empty_columns(len(axis), "forecast", None) for read in reads}
+    values: dict[tuple[str, int], list[float]] = {}
+    for row in rows:
+        position = bisect_right(axis, row["ts"]) - 1
+        if position < 0:
+            continue
+        for read in reads:
+            value = _number(row[read.binding.forecast.column])
+            if value is None:
+                continue
+            values.setdefault((read.binding.key, position), []).append(value)
+            target = columns[read.binding.key]
+            target.issued_at = (
+                row["fetched_at"] if target.issued_at is None else max(target.issued_at, row["fetched_at"])
+            )
+    for (key, position), bucket in values.items():
+        target = columns[key]
+        target.avg[position] = sum(bucket) / len(bucket)
+        target.min[position], target.max[position] = min(bucket), max(bucket)
+        target.count[position] = len(bucket)
+    return columns
+
+
 async def series(
     conn: asyncpg.Connection,
     keys: Sequence[str],
@@ -855,7 +959,11 @@ async def series(
     *,
     now: datetime | None = None,
 ) -> Series:
-    """API-04: up to 8 registry keys over [from_, to) as uPlot columns, with the window's outages."""
+    """API-04: up to 8 registry keys over [from_, to) as uPlot columns, with the window's outages.
+
+    ``watermark`` is the newest sample measured: a forecast key has no part in it (its hours lie ahead, and its
+    ``issued_at`` says how fresh it is), so a window of forecast keys alone has none.
+    """
     now = _now(now)
     plan = plan_series(keys, from_, to, points, now=now)
     from_, to = plan.from_, plan.to
@@ -880,9 +988,13 @@ async def series(
             columns.update(placed)
             if stamp is not None:
                 stamps.append(stamp)
+        forecast_reads = [read for read in plan.reads if read.source == "forecast"]
+        if forecast_reads:
+            sql = forecast_rows_sql([read.binding.forecast.column for read in forecast_reads])
+            columns.update(forecast_columns(axis, await conn.fetch(sql, from_, to), forecast_reads))
         daily_reads: dict[tuple[str, str], list[KeyRead]] = {}
         for read in plan.reads:
-            if read.source != "raw":
+            if read.source in ("daily_summary", "scorecard"):
                 daily_reads.setdefault((read.binding.daily.view, read.binding.daily.stamp), []).append(read)
         for (view, stamp_column), reads in daily_reads.items():
             needed: list[str] = []
@@ -1139,32 +1251,65 @@ async def states(
 
 
 # ─────────────────────────────────────────────────────────────── API-06 band
+BAND_ZONES: tuple[str, ...] = get_args(BandZone)
+assert BAND_ZONES == ("house", *ZONES), BAND_ZONES  # north has no zone band
+
+
 # emit_band_audit names each row band_<zone>_<role>. Filtering on that parameter lets
 # idx_snapshot_param (parameter, ts DESC) read only the band rows; zone and band_role alone
 # would scan every readback row in the window (about 400,000 a day).
-BAND_PARAMETERS = tuple(f"band_house_{role}" for role in BAND_ROLES)
-_BAND_ROWS = (
-    "FROM public.setpoint_snapshot WHERE parameter IN ("
-    + ", ".join(f"'{name}'" for name in BAND_PARAMETERS)
-    + ") AND zone = 'house' AND band_role IN ("
-    + ", ".join(f"'{role}'" for role in BAND_ROLES)
-    + ") AND ts >= $1::timestamptz AND ts < $2::timestamptz"
-)
-BAND_SQL = (
-    "SELECT time_bucket_gapfill($3::interval, ts, $1::timestamptz, $2::timestamptz) AS bucket, "
-    + ", ".join(
-        f"last(value, ts) FILTER (WHERE band_role = '{role}') AS {role}, "
-        f"max(ts) FILTER (WHERE band_role = '{role}') AS {role}_ts"
-        for role in BAND_ROLES
+def _band_rows_clause(zone: str) -> str:
+    """Every value here comes from the constants above, never from a request."""
+    return (
+        "FROM public.setpoint_snapshot WHERE parameter IN ("
+        + ", ".join(f"'band_{zone}_{role}'" for role in BAND_ROLES)
+        + f") AND zone = '{zone}' AND band_role IN ("
+        + ", ".join(f"'{role}'" for role in BAND_ROLES)
+        + ") AND ts >= $1::timestamptz AND ts < $2::timestamptz"
     )
-    + f" {_BAND_ROWS} GROUP BY 1 ORDER BY 1"
-)
-BAND_SEED_SQL = f"SELECT DISTINCT ON (band_role) band_role, value, ts {_BAND_ROWS} ORDER BY band_role, ts DESC"
+
+
+BAND_SQL: dict[str, str] = {
+    zone: (
+        "SELECT time_bucket_gapfill($3::interval, ts, $1::timestamptz, $2::timestamptz) AS bucket, "
+        + ", ".join(
+            f"last(value, ts) FILTER (WHERE band_role = '{role}') AS {role}, "
+            f"max(ts) FILTER (WHERE band_role = '{role}') AS {role}_ts"
+            for role in BAND_ROLES
+        )
+        + f" {_band_rows_clause(zone)} GROUP BY 1 ORDER BY 1"
+    )
+    for zone in BAND_ZONES
+}
+BAND_SEED_SQL: dict[str, str] = {
+    zone: f"SELECT DISTINCT ON (band_role) band_role, value, ts {_band_rows_clause(zone)} ORDER BY band_role, ts DESC"
+    for zone in BAND_ZONES
+}
 # fn_band_timeline's crop columns: fn_band_setpoints evaluates the same house curves of
 # fn_crop_band_value, without the timeline's per-step telemetry joins.
 CROP_SQL = (
     "SELECT step.ts, crop.temp_low, crop.temp_high, crop.vpd_low, crop.vpd_high "
     "FROM unnest($1::timestamptz[]) AS step(ts) CROSS JOIN LATERAL public.fn_band_setpoints(step.ts) AS crop"
+)
+# A zone's crop band: the house temperature band (one air mass), and its VPD target ∓ the zone crop's widths ($2, $3),
+# the dispatcher's formula (band_anchors.zone_band_values). Never fn_band_timeline, on which the dashboard login holds
+# no EXECUTE, nor fn_zone_band, which reads the grading profiles in crop_target_profiles and not the band.
+ZONE_CROP_SQL: dict[str, str] = {
+    zone: (
+        "SELECT step.ts, crop.temp_low, crop.temp_high, "
+        f"target.vpd_target_{zone} - $2::double precision AS vpd_low, "
+        f"target.vpd_target_{zone} + $3::double precision AS vpd_high "
+        "FROM unnest($1::timestamptz[]) AS step(ts) "
+        "CROSS JOIN LATERAL public.fn_band_setpoints(step.ts) AS crop "
+        "CROSS JOIN LATERAL public.fn_zone_vpd_targets(step.ts) AS target"
+    )
+    for zone in ZONES
+}
+# The rows fn_crop_band_value reads for one crop: growth stage default, the current season or all.
+ANCHOR_ROWS_SQL = (
+    "SELECT series, anchor, season, value, width_below, width_above, public.fn_current_season() AS current_season "
+    "FROM public.crop_band_anchors WHERE greenhouse_id = $1 AND crop_type = $2 AND series = ANY($3::text[]) "
+    "AND growth_stage = 'default' AND season IN (public.fn_current_season(), 'all')"
 )
 
 
@@ -1218,6 +1363,18 @@ def band_columns(
     return BandColumns(**out)
 
 
+def zone_widths(rows: Iterable[Any]) -> tuple[float | None, float | None]:
+    """A zone's (width_below, width_above) from its crop's ``vpd_target`` rows, null when no row holds one (pure).
+
+    Widths ride every anchor row of the crop and a write sets them all; the current season's rows win over ``all``'s,
+    as the dispatcher overlays them.
+    """
+    ordered = sorted(rows, key=lambda row: row["season"] != row["current_season"])
+    below = next((row["width_below"] for row in ordered if row["width_below"] is not None), None)
+    above = next((row["width_above"] for row in ordered if row["width_above"] is not None), None)
+    return _number(below), _number(above)
+
+
 def crop_columns(axis: Sequence[datetime], rows: Iterable[Any]) -> BandColumns:
     index = {_epoch(start): position for position, start in enumerate(axis)}
     out: dict[str, list[float | None]] = {role: [None] * len(axis) for role in BAND_ROLES}
@@ -1234,11 +1391,14 @@ async def band(
     conn: asyncpg.Connection,
     from_: datetime,
     to: datetime,
+    zone: BandZone = "house",
     *,
     now: datetime | None = None,
 ) -> BandTimeline:
-    """API-06 for the house: the band in force (DERIVED, kept 90 days) and the crop band
-    reconstructed from today's anchors, one point per step."""
+    """API-06 for the house or one zone: the band in force (DERIVED, that zone's rows, kept 90 days) and the crop
+    band reconstructed from today's anchors, one point per step."""
+    if zone not in BAND_ZONES:
+        raise ServiceError(problem("invalid_request", f"zone is one of {', '.join(BAND_ZONES)}", field="zone"))
     now = _now(now)
     from_, to = _validate_window(from_, to, MAX_WINDOW)
     step_s = band_step(from_, to)
@@ -1249,12 +1409,16 @@ async def band(
     seeds: dict[str, tuple[float, datetime]] = {}
     async with _read_transaction(conn):
         if low < to:
-            band_rows = await conn.fetch(BAND_SQL, low, to, timedelta(seconds=step_s))
+            band_rows = await conn.fetch(BAND_SQL[zone], low, to, timedelta(seconds=step_s))
             seeds = {
                 row["band_role"]: (row["value"], row["ts"])
-                for row in await conn.fetch(BAND_SEED_SQL, low - BAND_CARRY, low)
+                for row in await conn.fetch(BAND_SEED_SQL[zone], low - BAND_CARRY, low)
             }
-        crop_rows = await conn.fetch(CROP_SQL, list(axis))
+        if zone == "house":
+            crop_rows = await conn.fetch(CROP_SQL, list(axis))
+        else:
+            below, above = zone_widths(await conn.fetch(ANCHOR_ROWS_SQL, GREENHOUSE_ID, ZONE_CROP[zone], [ZONE_SERIES]))
+            crop_rows = await conn.fetch(ZONE_CROP_SQL[zone], list(axis), below, above)
     return BandTimeline(
         from_=from_,
         to=to,
@@ -1262,4 +1426,138 @@ async def band(
         t=[_epoch(start) for start in axis],
         band=band_columns(axis, band_rows, seeds, retained_from),
         crop=crop_columns(axis, crop_rows),
+    )
+
+
+# ─────────────────────────────────────────────────────────────── API-19 band preview
+# Each house axis's low, target and high series; a house edit previews the axis it belongs to.
+_HOUSE_AXES = {
+    "temp": ("temp_low", "temp_target", "temp_high"),
+    "vpd": ("vpd_low", "vpd_target", "vpd_high"),
+}
+PREVIEW_PHASES_SQL = (
+    "SELECT ts, public.fn_solar_phase(ts) AS phase "
+    "FROM generate_series($1::timestamptz, $2::timestamptz, interval '10 minutes') AS ts ORDER BY ts"
+)
+
+
+def harmonic(sr: float, sm: float, ss: float, mid: float, phase: float) -> float:
+    """``fn_crop_band_value``'s four-anchor harmonic, which ``ingestor/solar.py`` ``band_value_at_phase`` mirrors."""
+    theta = math.pi * phase / 2.0
+    c0 = (sr + sm + ss + mid) / 4.0
+    c1 = (sr - ss) / 2.0
+    s1 = (sm - mid) / 2.0
+    c2 = (sr - sm + ss - mid) / 4.0
+    return c0 + c1 * math.cos(theta) + s1 * math.sin(theta) + c2 * math.cos(2.0 * theta)
+
+
+def resolve_anchors(rows: Iterable[Any]) -> dict[tuple[str, str], float]:
+    """{(series, anchor): value} as ``fn_crop_band_value`` resolves its rows: the current season's, else ``all``'s."""
+    current_season: set[tuple[str, str]] = set()
+    values: dict[tuple[str, str], float] = {}
+    for row in rows:
+        key = (row["series"], row["anchor"])
+        if row["season"] == row["current_season"]:
+            current_season.add(key)
+            values[key] = row["value"]
+        elif key not in current_season:
+            values[key] = row["value"]
+    return values
+
+
+def _series_curve(
+    anchors: dict[tuple[str, str], float], series_name: str, phases: Sequence[float]
+) -> list[float | None]:
+    """One series over the phases; null at every step when an anchor is missing, as ``fn_crop_band_value`` returns."""
+    points = [anchors.get((series_name, key)) for key in ANCHOR_KEYS]
+    if any(point is None for point in points):
+        return [None] * len(phases)
+    return [harmonic(*points, phase) for phase in phases]
+
+
+def house_curve(anchors: dict[tuple[str, str], float], names: Sequence[str], phases: Sequence[float]) -> BandCurve:
+    """A house axis's low, target and high curves, from its three series."""
+    low, target, high = (_series_curve(anchors, name, phases) for name in names)
+    return BandCurve(low=low, target=target, high=high)
+
+
+def zone_curve(
+    anchors: dict[tuple[str, str], float],
+    below: float | None,
+    above: float | None,
+    phases: Sequence[float],
+) -> BandCurve:
+    """A zone's VPD target and the target ∓ its widths, as ``band_anchors.zone_band_values`` computes them."""
+    target = _series_curve(anchors, ZONE_SERIES, phases)
+    return BandCurve(
+        low=[None if value is None or below is None else value - below for value in target],
+        target=target,
+        high=[None if value is None or above is None else value + above for value in target],
+    )
+
+
+def _preview_day(day: date | None, now: datetime) -> date:
+    today = now.astimezone(DENVER).date()
+    if day is None:
+        return today
+    if abs((day - today).days) > PREVIEW_MAX_DAYS_AWAY:
+        raise ServiceError(
+            problem("invalid_request", f"day is at most {PREVIEW_MAX_DAYS_AWAY} days from today", field="day")
+        )
+    return day
+
+
+async def band_preview(
+    conn: asyncpg.Connection,
+    param: str,
+    value: float,
+    day: date | None = None,
+    *,
+    now: datetime | None = None,
+) -> BandPreview:
+    """API-19: one America/Denver day of the band as stored (``current``) and with ``value`` on ``param`` (``draft``).
+
+    Read-only: Save stays API-10. It overlays the draft on the ``crop_band_anchors`` rows ``fn_crop_band_value`` reads
+    and applies that function's harmonic at 10-min steps of the day's ``fn_solar_phase``, so ``current`` equals the
+    function at every step. ``param`` outside the 48 crop-band anchors and widths is 422 ``unknown_target``, and
+    ``value`` outside ``planner_effective_bounds`` 422 ``out_of_range``.
+    """
+    rows = BAND_PARAM_ROWS.get(param)
+    if rows is None:
+        raise ServiceError(problem("unknown_target", f"{param!r} is not a crop-band anchor or width", field="param"))
+    value = settings.check_range(param, value)
+    day = _preview_day(day, _now(now))
+    if rows.zone is None:
+        crop, names = HOUSE_CROP, _HOUSE_AXES[rows.series.split("_")[0]]
+    else:
+        crop, names = ZONE_CROP[rows.zone], (ZONE_SERIES,)
+    start = denver_midnight(day)
+    last = denver_midnight(day + timedelta(days=1)) - timedelta(seconds=PREVIEW_STEP_S)
+    async with _read_transaction(conn):
+        anchor_rows = await conn.fetch(ANCHOR_ROWS_SQL, GREENHOUSE_ID, crop, list(names))
+        phase_rows = await conn.fetch(PREVIEW_PHASES_SQL, start, last)
+    phases = [row["phase"] for row in phase_rows]
+    current = resolve_anchors(anchor_rows)
+    draft = dict(current)
+    if rows.anchor is not None:
+        draft[(rows.series, rows.anchor)] = value
+    if rows.zone is None:
+        current_curve, draft_curve = house_curve(current, names, phases), house_curve(draft, names, phases)
+    else:
+        below, above = zone_widths(anchor_rows)
+        current_curve = zone_curve(current, below, above, phases)
+        draft_curve = zone_curve(
+            draft,
+            value if rows.column == WIDTH_COLUMNS["below"] else below,
+            value if rows.column == WIDTH_COLUMNS["above"] else above,
+            phases,
+        )
+    return BandPreview(
+        param=param,
+        unit=REGISTRY[param].unit,
+        day=day,
+        step_s=PREVIEW_STEP_S,
+        t=[_epoch(row["ts"]) for row in phase_rows],
+        current=current_curve,
+        draft=draft_curve,
     )
