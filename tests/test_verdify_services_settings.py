@@ -18,6 +18,7 @@ import jsonschema
 import pytest
 import yaml
 
+from verdify_schemas import irrigation
 from verdify_schemas.band_rows import BAND_PARAM_ROWS
 from verdify_schemas.policy_vector import wire_fields
 from verdify_schemas.tunable_registry import (
@@ -29,6 +30,7 @@ from verdify_schemas.tunable_registry import (
 )
 from verdify_services import activity, reads, settings
 from verdify_services.actor import Actor
+from verdify_services.irrigation import program
 from verdify_services.problems import ServiceError
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -98,6 +100,8 @@ class FakeDB:
         self.clamps: list[dict] = []
         self.anchors: list[dict] = []
         self.activity: list[dict] = []
+        self.system_state: dict[str, tuple[str, datetime]] = {}  # the newest irr_engine and irr_program_id rows
+        self.pushes: list[dict] = []
         self.sql: list[str] = []
         self.next_id = 1000
         self.depth = 0
@@ -212,6 +216,32 @@ class FakeDB:
     def answer(self, sql, args):  # noqa: C901 - one branch per statement
         if sql == reads._REPORTING_SQL:
             return [{"at": self.at, "heartbeat_at": self.heartbeat_at, "climate_at": self.climate_at}]
+        if sql == program._STATES_SQL:
+            entities, _gh, _window = args
+            return [
+                {"entity": name, "value": self.system_state[name][0], "ts": self.system_state[name][1]}
+                if name in self.system_state
+                else {"entity": name, "value": None, "ts": None}
+                for name in entities
+            ]
+        if sql == program._PUSHES_OF_HASH_SQL:
+            _gh, hash16 = args
+            found = [row for row in self.pushes if row["sha256"].startswith(hash16)]
+            return sorted(found, key=lambda row: row["revision"], reverse=True)
+        if sql == program._FIRST_PUSH_SQL:
+            _gh, params, sinces = args
+            out = []
+            for param, since in zip(params, sinces, strict=True):
+                later = [
+                    row
+                    for row in sorted(self.pushes, key=lambda row: row["revision"])
+                    if row["site_desired_at"] is not None
+                    and row["site_desired_at"] >= since
+                    and row["pushed_at"] is not None
+                ]
+                if later:
+                    out.append({"param": param, "pushed_at": later[0]["pushed_at"]})
+            return out
         if sql == settings._DESIRED_SQL:
             _gh, names = args
             newest = self.newest_desired()
@@ -677,10 +707,140 @@ def test_no_readback_only_for_a_setting_with_no_readback_route():
 
 def test_an_irrigation_site_write_stays_requested_before_the_engine():
     db = FakeDB()
-    db.add_desired("sched_mist_rh_max_pct", 90.0, at=ago(hours=3))
+    write = ago(hours=3)
+    db.add_desired("sched_mist_rh_max_pct", 90.0, at=write)
     result = status(db, "sched_mist_rh_max_pct")
     assert (result.state, result.readback_via) == ("requested", "program")
     assert result.readback.reason == settings.NO_PROGRAM_READBACK
+    assert result.state_reason.code == "no_engine"
+    assert result.state_reason.detail == settings.NO_PROGRAM_READBACK
+    assert result.state_reason.since == write
+    assert result.desired.state_reason.code == "no_engine"
+
+
+def test_a_site_write_never_reads_not_confirmed_with_irr_engine_false_or_absent():
+    for engine_row in (("false", ago(minutes=1)), None):
+        db = FakeDB()
+        if engine_row:
+            db.system_state["irr_engine"] = engine_row
+        db.add_desired("climate_yield_min", 20.0, at=ago(days=2))
+        assert status(db, "climate_yield_min").state == "requested"
+
+
+def site_record(*, saf4=360, rh=90, climate_yield=15):
+    """A compiled program with these three site values, as irrigation_push stores it."""
+    lines = [irrigation.LineSpec(line_id=line_id) for line_id in irrigation.LINE_IDS]
+    site = irrigation.SiteValues(saf4_gal=saf4, rh_ceiling_pct=rh, climate_yield_min=climate_yield)
+    return irrigation.compile_program(lines, [], site)
+
+
+def engine_on(db, record, *, revision=42, compiled_at=None, pushed_at=None, confirmed_at=None, src="nvs"):
+    """The engine on the controller, reporting ``record``'s hash, with its push row."""
+    db.system_state["irr_engine"] = ("true", ago(hours=6))
+    db.system_state["irr_program_id"] = (f"h={record.hash16} src={src}", ago(minutes=1))
+    db.pushes.append(
+        {
+            "revision": revision,
+            "sha256": record.sha256,
+            "bytes": record.record,
+            "site_desired_at": compiled_at,
+            "pushed_at": pushed_at,
+            "confirmed_at": confirmed_at,
+            "reject_code": None,
+        }
+    )
+
+
+def test_program_rev_42_confirmed_after_a_site_write_reads_confirmed_with_360_as_its_device_value():
+    db = FakeDB()
+    write = ago(minutes=30)
+    db.add_desired("mister_daily_volume_max_gal", 360.0, at=write)
+    engine_on(db, site_record(saf4=360), compiled_at=write, pushed_at=ago(minutes=29), confirmed_at=ago(minutes=28))
+    result = status(db, "mister_daily_volume_max_gal")
+    assert result.state == "confirmed"
+    assert result.state_reason is None
+    assert result.confirmed_at == ago(minutes=28)
+    assert (result.readback.value, result.readback.observed_at) == (360.0, ago(minutes=28))
+
+
+def test_each_site_row_reads_its_own_header_field():
+    db = FakeDB()
+    engine_on(db, site_record(saf4=400, rh=85, climate_yield=20), compiled_at=ago(hours=1), confirmed_at=ago(hours=1))
+    values = {
+        param: status(db, param).readback.value
+        for param in ("mister_daily_volume_max_gal", "sched_mist_rh_max_pct", "climate_yield_min")
+    }
+    assert values == {"mister_daily_volume_max_gal": 400.0, "sched_mist_rh_max_pct": 85.0, "climate_yield_min": 20.0}
+    # With no write the applied program's value is what applies.
+    assert status(db, "climate_yield_min").state == "confirmed"
+
+
+def test_a_program_compiled_before_the_write_does_not_confirm_it():
+    db = FakeDB()
+    write = ago(minutes=3)
+    db.add_desired("sched_mist_rh_max_pct", 85.0, at=write)
+    engine_on(db, site_record(), compiled_at=ago(hours=2), pushed_at=ago(hours=2), confirmed_at=ago(hours=2))
+    result = status(db, "sched_mist_rh_max_pct")
+    assert result.state == "requested"
+    assert result.state_reason.code == "no_match"
+    assert result.state_reason.since is None  # no push has been compiled at or after the write
+    assert result.readback.value == 90.0  # the device still runs the old one
+
+
+def test_a_site_write_reads_not_confirmed_at_5_min_and_no_match_names_the_first_push_after_it():
+    db = FakeDB()
+    write = ago(minutes=20)
+    db.add_desired("sched_mist_rh_max_pct", 85.0, at=write)
+    engine_on(db, site_record(), compiled_at=ago(hours=2), pushed_at=ago(hours=2), confirmed_at=ago(hours=2))
+    db.pushes.append(
+        {
+            "revision": 43,
+            "sha256": "ab" * 32,
+            "bytes": site_record(rh=85).record,
+            "site_desired_at": write,
+            "pushed_at": ago(minutes=19),
+            "confirmed_at": None,
+            "reject_code": None,
+        }
+    )
+    db.pushes.append({**db.pushes[-1], "revision": 44, "pushed_at": ago(minutes=2)})
+    result = status(db, "sched_mist_rh_max_pct")
+    assert result.state == "not_confirmed"
+    assert (result.state_reason.code, result.state_reason.since) == ("no_match", ago(minutes=19))
+
+
+def test_a_site_write_with_the_engine_takes_the_shared_reasons():
+    db = FakeDB()
+    db.add_desired("sched_mist_rh_max_pct", 85.0, at=ago(minutes=20))
+    engine_on(db, site_record(), compiled_at=ago(hours=2), confirmed_at=ago(hours=2))
+    db.heartbeat_at = ago(minutes=4)
+    result = status(db, "sched_mist_rh_max_pct")
+    assert (result.state_reason.code, result.state_reason.since) == ("writer_down", db.heartbeat_at)
+    db.heartbeat_at = ago(seconds=30)
+    db.climate_at = ago(minutes=6)
+    result = status(db, "sched_mist_rh_max_pct")
+    assert (result.state_reason.code, result.state_reason.since) == ("controller_not_reporting", db.climate_at)
+
+
+def test_a_controller_back_on_the_built_in_program_confirms_nothing():
+    db = FakeDB()
+    db.add_desired("sched_mist_rh_max_pct", 85.0, at=ago(minutes=20))
+    db.system_state["irr_engine"] = ("true", ago(minutes=1))
+    db.system_state["irr_program_id"] = ("h=0000000000000000 src=rom", ago(minutes=1))
+    result = status(db, "sched_mist_rh_max_pct")
+    assert result.state == "not_confirmed"
+    assert result.readback.reason == settings.NO_CONFIRMED_PROGRAM
+
+
+def test_an_old_confirmed_program_counts_for_nothing_once_the_engine_is_gone():
+    db = FakeDB()
+    write = ago(minutes=30)
+    db.add_desired("sched_mist_rh_max_pct", 90.0, at=write)
+    engine_on(db, site_record(), compiled_at=write, pushed_at=write, confirmed_at=ago(minutes=29))
+    db.system_state["irr_engine"] = ("false", ago(minutes=1))  # a rollback to pre-engine firmware
+    result = status(db, "sched_mist_rh_max_pct")
+    assert (result.state, result.state_reason.code) == ("requested", "no_engine")
+    assert result.readback.value is None
 
 
 # ── Each reason's since ──────────────────────────────────────────────────────

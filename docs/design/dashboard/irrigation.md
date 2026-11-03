@@ -657,6 +657,18 @@ is pending, and every 60 s in full:
   over the runs that start that day; when none of them overlapped an accepted delta it reads 0 if the
   meter recorded one that day and NULL if it recorded none. L03's valve minutes have no gallons: its
   water counts on the line it feeds.
+- **As built (VD-40).** `verdify_services/irrigation/runs.py` builds runs from a window's own
+  `equipment_state` rows, seeded as `fn_irrigation_minutes_daily` seeds them (any row on at the newest
+  timestamp before the window, and a run already on keeps its true start) rather than with `fn_equip_at`'s
+  single row, so API-IRR-01's today equals API-IRR-10's rows. The relay runs that join one ledger row are one
+  run however far apart they are; a line's unjoined pulses of one cause with gaps of 10 min or less are one
+  episode. A run's `gal` with no overlapping delta reads 0 when `climate.water_total_gal` has a reading from
+  the run's start to 5 min past its end (the longest accepted delta) and null when it has none: the test is
+  per run, so a meter gap inside a 31-day read stays a gap. A ledger row with no `started_at` (it opened no
+  valve) lists at its occurrence's planned start, or when it was recorded if it has no slot (a refused
+  run-now) or its schedule is gone, with `gal` 0. A run whose ledger row is still open stays out of API-IRR-11
+  until the row ends or is 24 h old (the bound M3's join uses), because a mist window keeps its row open
+  between pulses.
 
 ### 6.3 Alerts (in-app `alert_log`, category `water`)
 
@@ -780,6 +792,27 @@ are written through the Settings write (API-10).
 | API-IRR-11 | `GET /v1/irrigation/runs?from&to&line&cause&outcome` | Runs and outcomes, at most 31 days per page |
 | API-IRR-12 | `POST /v1/equipment/override` | `{kind: fans\|humidify\|vent_bypass\|clear\|restart, minutes}`. The replacement for the HA buttons (HA-02, HA-03); engine release only. Returns 202 |
 | API-IRR-13 | `POST /v1/irrigation/clear-fault` | `{line_id}`, or omit it for every mister: clears a mister watchdog latch (D-IRP-19). Returns 202 |
+
+As built (VD-40; `verdify_services/irrigation/reads.py`, with `runs.py` and `program.py` beside it):
+
+- **Waiting or blocked.** A `w=` token with `man`, `bof` or `vok` reads `waiting`: the run goes by itself once
+  the manifold frees, the back-off ends or VPD sensing degrades. Every other code names a rail that holds the
+  run and reads `blocked`. Its `until_epoch`, when known, is `LineState.ends_at`.
+- **Line state with no reading.** With the engine, an `irr_state` row that is missing or outside the grammar
+  is no reading, so the line reads its relay as before the engine.
+- **While the controller is not reporting.** Beside the unknown line states, `active_runs` is empty,
+  `fallback_active` false and `occupancy.hold_enabled` null: an old token says nothing about now.
+- **A day with no data.** With no `climate` row today, each zone's and line's `today` is null, as API-IRR-10
+  reads that day `no_data`; a zone with no enabled line is null whatever its relays did today.
+- **Program with no engine.** `applied_hash` and `applied_revision` are null too, whatever an old
+  `irr_program_id` row says.
+- **`next_run`** looks 8 days ahead, so a weekly schedule past its time today still has one. A `degraded_only`
+  occurrence counts, as the agenda marks it planned; its `label` (`vanda-degraded`) says what it is.
+- **Agenda and pauses.** An occurrence `agenda()` skips for today's `paused_until` but with no pause row in
+  force at its start was not skipped for that pause, so a past one reads as planned. A future one with no row
+  at all reads "paused".
+- **`Schedule`.** A row with no `label` or `reason` leaves the field out, because `ScheduleInput` types them
+  as strings.
 
 ### 8.2 MCP tools (one surface for every agent)
 

@@ -80,6 +80,10 @@ schedule on a zone that is not a member, a pause or a cap overrun settles at run
 ``compile_program`` packs the rows into the record above; ``agenda`` resolves the occurrences of
 1-7 days ahead (and 0-7 back) in America/Denver with ``verdify_schemas.solar``.
 
+Line state (VD-40, #1155). ``line_state`` turns one ``v_irrigation_line_state`` row (M3, #1153) into a
+line's state fields, pure, so the API and MCP (``verdify_services.irrigation.reads``) and Iris's context
+(#1173, in the ingestor image) read water the same way.
+
 A start is a minute on the local wall clock: a clock time, or that day's sunrise, solar noon or
 sunset (``solar_times``: NOAA with the date's UTC offset at local noon, the math of the firmware's
 ``greenhouse_solar.h``) plus the offset. ``local_start`` places it at the first instant the
@@ -122,6 +126,7 @@ from verdify_schemas.tunable_registry import IRRIGATION_SITE_PARAMS, REGISTRY
 
 __all__ = [
     "BOUNDS_BY_KIND",
+    "BRIDGE_RUN_WINDOW_S",
     "CAP_NOTE",
     "CLEAN_PARTNER",
     "DEGRADED_ONLY_IDX",
@@ -154,6 +159,7 @@ __all__ = [
     "PROGRAM_SLOTS_OFFSET",
     "REASON_WORDS",
     "REJECT_CODES",
+    "RELAY_ONLY_LINES",
     "ROM_HASH16",
     "RUN_ARGS_BY_KIND",
     "RUN_BOUNDS_BY_KIND",
@@ -162,7 +168,9 @@ __all__ = [
     "SLOT_FLAG_DEGRADED_ONLY",
     "START_KIND",
     "START_RANGE",
+    "TOPOLOGY_CAUSE",
     "VPD_SOURCE_CODES",
+    "WAITING_REASONS",
     "WEEKDAYS",
     "Agenda",
     "AgendaOccurrence",
@@ -180,6 +188,9 @@ __all__ = [
     "LineId",
     "LineKind",
     "LineSpec",
+    "LineState",
+    "LineStateCode",
+    "LineStateFields",
     "MisterRunArgs",
     "ProgramId",
     "ProgramRecord",
@@ -208,6 +219,8 @@ __all__ = [
     "format_irr_events",
     "format_irr_program_id",
     "format_irr_state",
+    "irr_state_reading",
+    "line_state",
     "local_start",
     "local_tz",
     "occurrence_start",
@@ -218,6 +231,7 @@ __all__ = [
     "program_chunks",
     "program_hash16",
     "program_sha256",
+    "relay_cause",
     "run_args",
     "seq_newer",
     "site_values",
@@ -2080,4 +2094,155 @@ def agenda(
         last_day=window[-1],
         occurrences=tuple(occurrences),
         solar=tuple(_solar_day(day) for day in window),
+    )
+
+
+# ── Line state (VD-40, #1155; irrigation §6.2 and §8.1) ──────────────────────
+
+LineStateCode = Literal["idle", "running", "waiting", "blocked", "paused", "disabled", "unknown"]
+# The engine names neither: L03 opens only inside a feed and L11 fog is climate only, so both always read
+# their relay, never disabled.
+RELAY_ONLY_LINES: frozenset[str] = frozenset({"L03", "L11"})
+# M4's line map (migration 281): why a relay ran when only its edge says so. M3's ledger and bridge rules go first.
+TOPOLOGY_CAUSE: Mapping[str, IrrigationCause] = MappingProxyType(
+    {
+        "L01": IrrigationCause.UNKNOWN,
+        "L02": IrrigationCause.FEED,
+        "L03": IrrigationCause.FEED,
+        "L04": IrrigationCause.VPD,
+        "L05": IrrigationCause.UNKNOWN,
+        "L06": IrrigationCause.UNKNOWN,
+        "L07": IrrigationCause.VPD,
+        "L08": IrrigationCause.UNKNOWN,
+        "L09": IrrigationCause.VPD,
+        "L10": IrrigationCause.UNKNOWN,
+        "L11": IrrigationCause.VPD,
+    }
+)
+# An L01 ON edge at most this long after a sent bridge command is that command's run (M3, §6.5).
+BRIDGE_RUN_WINDOW_S = 30
+# A w= token whose run goes by itself once the manifold frees, the back-off ends or VPD sensing degrades reads
+# waiting; any other code names a rail that holds the run, which reads blocked.
+WAITING_REASONS: frozenset[str] = frozenset({"man", "bof", "vok"})
+_VPD_ZONE_OF_LINE: Mapping[str, str] = MappingProxyType({"L04": "center", "L07": "south", "L09": "west"})
+
+
+class LineState(BaseModel):
+    """The OpenAPI ``LineState``: what a line is doing now and how old that knowledge is."""
+
+    model_config = _FROZEN
+
+    code: LineStateCode
+    cause: IrrigationCause | None = None
+    slot_id: int | None = None
+    reason: str | None = None
+    ends_at: AwareDatetime | None = None
+    observed_at: AwareDatetime | None = None
+
+
+class LineStateFields(BaseModel):
+    """``line_state()``'s answer: the ``IrrigationLine`` fields a ``v_irrigation_line_state`` row decides."""
+
+    model_config = _FROZEN
+
+    state: LineState
+    fault: FaultKind | None = None
+    fault_until: AwareDatetime | None = None
+    vpd_source: VpdSource | None = None
+
+
+def relay_cause(line_id: str, on_edge: datetime | None, bridge_run_at: datetime | None = None) -> IrrigationCause:
+    """Why a relay ran when no ledger row says: ``run_now`` for an L01 ON edge within 30 s after a sent bridge
+    command (its ``sent_at``), else M4's topology cause."""
+    if line_id == "L01" and on_edge is not None and bridge_run_at is not None:
+        if timedelta(0) <= on_edge - bridge_run_at <= timedelta(seconds=BRIDGE_RUN_WINDOW_S):
+            return IrrigationCause.RUN_NOW
+    return TOPOLOGY_CAUSE[line_id]
+
+
+def _epoch_time(epoch: int | None) -> datetime | None:
+    return None if epoch is None else datetime.fromtimestamp(epoch, UTC)
+
+
+def irr_state_reading(text: object) -> IrrState | None:
+    """``parse_irr_state``, with no row or text outside the grammar treated as no reading."""
+    if not isinstance(text, str):
+        return None
+    try:
+        return parse_irr_state(text)
+    except ValueError:
+        return None
+
+
+def line_state(
+    row: Any,
+    *,
+    engine: bool,
+    reporting: bool,
+    now: datetime,
+    bridge_run_at: datetime | None = None,
+) -> LineStateFields:
+    """One ``v_irrigation_line_state`` row (a mapping or an asyncpg record) as a line's state fields. Pure.
+
+    ``reporting`` is the architecture §7 test, computed by the caller. Not reporting, or no relay row and no
+    ``irr_state``, reads ``unknown`` with ``observed_at`` of the newest row, so the age shows. ``irr_state`` is
+    published on change, so its age alone never makes a line unknown.
+
+    With the engine, this line's run token gives ``running`` with its cause, slot and planned end; otherwise a
+    stored ``enabled`` false reads ``disabled``, a future ``paused_until`` ``paused``, a ``w=`` token ``waiting``
+    or ``blocked`` (``WAITING_REASONS``) with its reason in words and, when known, until when in ``ends_at``, and
+    anything else ``idle``. The ``f=`` and ``v=`` tokens give ``fault``, ``fault_until`` and ``vpd_source``.
+
+    Before the engine, for L03 and L11 always, and with the engine while ``irr_state`` has no reading: relay state
+    only. ON is ``running`` with ``relay_cause()`` (``relay_at`` is taken as the ON edge, so a caller that knows the
+    edge passes it there), OFF is ``idle``.
+    """
+    data = dict(row)
+    line_id = data["line_id"]
+    relay_at, irr_at = data.get("relay_at"), data.get("irr_state_at")
+    newest = max((at for at in (relay_at, irr_at) if at is not None), default=None)
+    unknown = LineStateFields(state=LineState(code="unknown", observed_at=newest))
+    if not reporting or newest is None:
+        return unknown
+    reading = irr_state_reading(data.get("irr_state")) if engine and line_id not in RELAY_ONLY_LINES else None
+    if reading is None:
+        if relay_at is None or data.get("relay_on") is None:
+            return unknown
+        if data["relay_on"]:
+            cause = relay_cause(line_id, relay_at, bridge_run_at)
+            return LineStateFields(state=LineState(code="running", cause=cause, observed_at=relay_at))
+        return LineStateFields(state=LineState(code="idle", observed_at=relay_at))
+
+    run = next((token for token in reading.runs if token.line_id == line_id), None)
+    wait = next((token for token in reading.waiting if token.line_id == line_id), None)
+    paused_until = data.get("paused_until")
+    if run is not None:
+        state = LineState(
+            code="running",
+            cause=run.cause,
+            slot_id=run.slot_id,
+            ends_at=_epoch_time(run.end_epoch),
+            observed_at=irr_at,
+        )
+    elif not data.get("enabled"):
+        state = LineState(code="disabled", reason=REASON_WORDS["dis"], observed_at=irr_at)
+    elif paused_until is not None and paused_until > now:
+        state = LineState(code="paused", reason=REASON_WORDS["pau"], observed_at=irr_at)
+    elif wait is not None:
+        state = LineState(
+            code="waiting" if wait.reason in WAITING_REASONS else "blocked",
+            reason=REASON_WORDS[wait.reason],
+            ends_at=_epoch_time(wait.until_epoch),
+            observed_at=irr_at,
+        )
+    else:
+        state = LineState(code="idle", observed_at=irr_at)
+    fault = next((token for token in reading.faults if token.line_id == line_id), None)
+    sources = reading.vpd_source
+    zone = _VPD_ZONE_OF_LINE.get(line_id)
+    return LineStateFields(
+        state=state,
+        fault=None if fault is None else fault.fault,
+        fault_until=None if fault is None else _epoch_time(fault.until_epoch),
+        vpd_source=None if sources is None or zone is None else getattr(sources, zone),
     )

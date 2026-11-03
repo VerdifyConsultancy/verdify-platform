@@ -240,9 +240,9 @@ def test_the_leak_block_uses_the_one_flow_stopped_rule():
 def test_the_leak_block_reads_nothing_as_clear_while_the_controller_is_not_reporting():
     quiet = track([(AT - timedelta(hours=2), True), (AT - timedelta(hours=1), False)])
     no_alert = {"leak_alert_id": None, "leak_open_since": None}  # no open row: the read needs no query
-    leak = asyncio.run(reads._leak(None, quiet, no_alert, 0.0, None, reporting(climate_s=360)))
+    leak = asyncio.run(reads.leak_block(None, quiet, no_alert, 0.0, None, reporting(climate_s=360)))
     assert (leak.active, leak.flow_gpm, leak.gal_last_10min, leak.since) == (None, None, None, None)
-    leak = asyncio.run(reads._leak(None, quiet, no_alert, 0.0, None, reporting()))
+    leak = asyncio.run(reads.leak_block(None, quiet, no_alert, 0.0, None, reporting()))
     assert (leak.active, leak.flow_gpm, leak.gal_last_10min, leak.since) == (False, 0.0, 0, None)
 
 
