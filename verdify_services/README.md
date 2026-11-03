@@ -249,5 +249,7 @@ them, and M2 (#1179) and its successor the dashboard login. The `irrigation_site
 - `tests/test_mcp_settings_tools.py` (in `scripts/ci-local.sh`) and `tests/test_dashboard_db_mcp_settings.py` (the
   campaign step): the MCP `set_setting`, `settings`, `activity` and `alerts` adapters and the `plan.write` rows of
   `set_plan` and `set_tunable` (VD-58), against stubs and then as the MCP login's grants.
+- `tests/test_dashboard_db_settings_parity.py` (the campaign step): MCP `set_setting` and API-10 store the same
+  `desired_state` and `activity_log` rows, column by column.
 - `verdify_schemas/tests/test_band_rows.py` and `test_settings_rules.py`: the band row map against the
   dispatcher's overlay, and `SWITCH_READBACK_EQUIPMENT` and the activity mirror against the ingestor.
