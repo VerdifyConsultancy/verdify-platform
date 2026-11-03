@@ -660,3 +660,13 @@ def test_native_qualification_is_recorded():
     evidence = receipt()
     assert_recorded(evidence)
     assert all(evidence["qualified_successor"][seal] != registered(282)[seal] for seal in SEALS)
+
+
+def test_production_reads_met_the_two_second_gate_in_the_native_qualification():
+    # The p95 gate's evidence (VD-39, VD-38): measured on production, inside the rolled-back run.
+    native = json.loads((ROOT / "tests/fixtures/283-irrigation-tables-native-qualification.json").read_text())[
+        "native_fixture"
+    ]
+    assert native["reader_30d_ms"] < 2000
+    assert native["view_30d_ms"] < 2000
+    assert native["reader_400d_ms"] < 10000

@@ -284,7 +284,8 @@ def test_one_insert_statement_sends_exactly_one_empty_wake(dsn):
             "AND tgrelid = 'public.desired_state'::regclass",
         )
         # 4 = AFTER INSERT FOR EACH STATEMENT (no ROW, BEFORE or INSTEAD bits).
-        assert [tuple(row) for row in trigger] == [(4, "O")]
+        # asyncpg returns the "char" type as bytes.
+        assert [tuple(row) for row in trigger] == [(4, b"O")]
         received: list[tuple[str, str]] = []
         first = asyncio.Event()
 
