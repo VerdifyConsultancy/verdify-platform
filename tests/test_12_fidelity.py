@@ -471,8 +471,10 @@ def test_forecast_action_engine_does_not_write_dispatcher_owned_setpoints():
     end = script.index('if action_type == "setpoint" and param and adj_value is not None', start + 1)
     body = script[start:end]
     assert "INSERT INTO v_runtime_setpoint_plan_write" not in body
-    assert "INSERT INTO v_runtime_setpoint_changes_write" not in body
     assert "INSERT INTO setpoint_plan" not in script
+    # VD-65: the whole engine stays off the NOTIFY fast path. Its values reach the
+    # controller only through setpoint_plan and the next normal dispatcher pass.
+    assert "v_runtime_setpoint_changes_write" not in script
     assert "INSERT INTO setpoint_changes" not in script
 
 

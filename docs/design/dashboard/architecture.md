@@ -323,7 +323,8 @@ dispatcher, the API's `applied_from` and the services resolve a setting the same
   rule · system") and applies through the next normal dispatcher pass. The dispatcher admits a forecast-rule plan
   row (`plan_id` `preemptive-*`) for any writable parameter (§5.3 step 1), so `high_wind` still reaches
   `sw_economiser_enabled`, which is not planner-pushable; Iris's rows keep today's filter. Band-owned `temp_low`
-  and `temp_high` keep the band.
+  and `temp_high` keep the band. As built: a forecast-rule row for a read-only parameter is audited as
+  `planner_param_not_pushable` and goes nowhere, so no forecast-rule value reaches the controller around the fences.
 - **Release.** A released row with no plan, band or dispatcher default gets its registry default
   (`TunableDef.default`). The lighting policy functions treat the newest confirmed non-`esp32` `setpoint_changes`
   row as an override, so a released `gl_*` value would stick. Migration M5 (VD-33) makes them ignore

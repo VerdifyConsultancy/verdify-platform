@@ -125,6 +125,8 @@ MAX_RECONNECT_COMMANDS = 12
 # its readback is pending: cfg_* sensors publish every 30 s (VD-62).
 SENT_READBACK_WAIT_S = 90.0
 DISPATCHER_STAGE_ENTITY = "dispatcher_stage"
+# The plan_id of a forecast-rule plan row (VD-65). v_active_plan carries no source column.
+FORECAST_RULE_PLAN_PREFIX = "preemptive-"
 # Desired state (VD-33). crop_band values reach the controller through
 # crop_band_anchors and the anchor sync, irrigation_site values through
 # irrigation_sync: the dispatcher sends nothing for their desired rows.
@@ -576,6 +578,23 @@ def _dispatch_source(
     if param in FORCED_ON_SWITCH_PARAMS:
         return "manual"
     return "plan"
+
+
+def _is_forecast_rule_plan(plan_id: object) -> bool:
+    """Whether a plan row is the forecast action engine's (scripts/forecast-action-engine.py)."""
+    return str(plan_id).startswith(FORECAST_RULE_PLAN_PREFIX)
+
+
+def _plan_row_admitted(param: str, plan_id: object) -> bool:
+    """Whether a v_active_plan row reaches the fences and ``planner_params``.
+
+    Iris's row needs a planner-pushable parameter. A forecast rule's row needs a
+    writable one (VD-65, architecture §5.3 step 1), so ``high_wind`` still reaches
+    ``sw_economiser_enabled``, through the same fences as any plan value.
+    """
+    if param in PLANNER_PUSHABLE_REG:
+        return True
+    return _is_forecast_rule_plan(plan_id) and desired_write_rule(param)[0]
 
 
 def _log_desired_skip_once(param: str, reason: str, *, warning: bool = False) -> None:
@@ -1233,7 +1252,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
 
         planner_params: dict[str, float] = {}
         for param, raw_val in raw_planner_params.items():
-            if param not in PLANNER_PUSHABLE_REG:
+            if not _plan_row_admitted(param, planner_meta[param]["plan_id"]):
                 add_clamp_audit(
                     param,
                     float(raw_val),
@@ -1491,6 +1510,8 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             if param in RETIRED_UNROUTABLE_PARAMS:
                 log.info("Dispatcher skipping retired unroutable param from plan row: %s", param)
                 continue
+            if param not in planner_params and _is_forecast_rule_plan(row["plan_id"]):
+                continue  # read-only: a forecast rule never reaches the controller around the fences
             planned_val = planner_params.get(param, row["value"])
             if param in LIGHTING_CIRCUIT_DEFAULT_PARAMS and not lighting_circuit_supported:
                 continue

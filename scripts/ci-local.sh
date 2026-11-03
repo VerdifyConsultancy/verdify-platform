@@ -113,6 +113,7 @@ $PY -m pytest -q -rs \
   tests/test_dashboard_db_irrigation_ledger.py \
   tests/test_irrigation_writes_rest.py \
   tests/test_dashboard_db_irrigation_writes.py \
+  tests/test_dashboard_db_forecast_engine.py \
   tests/test_bounded_reconcile.py \
   tests/test_10_planner_routing.py \
   tests/test_11_planner_milestones.py \
