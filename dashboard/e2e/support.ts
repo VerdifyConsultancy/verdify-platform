@@ -153,8 +153,13 @@ export async function axe(page: Page) {
 }
 
 export async function expectNoHorizontalScroll(page: Page) {
-  const { scrollWidth, innerWidth } = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth }));
-  expect(scrollWidth).toBeLessThanOrEqual(innerWidth);
+  const { scrollWidth, innerWidth, reaching } = await page.evaluate(() => {
+    const widest = document.documentElement.scrollWidth;
+    const past = widest <= window.innerWidth ? [] : [...document.querySelectorAll("body *")].filter((element) => Math.ceil(element.getBoundingClientRect().right) >= widest);
+    return { scrollWidth: widest, innerWidth: window.innerWidth, reaching: [...new Set(past.map((element) => `${element.tagName.toLowerCase()}.${String(element.className)}`))] };
+  });
+  // CI's traces leave with its pod, so the failure names what reaches the page's right edge.
+  expect(scrollWidth, `what reaches the right edge: ${reaching.join(", ")}`).toBeLessThanOrEqual(innerWidth);
 }
 
 /** The phone's fixed bottom bar. */

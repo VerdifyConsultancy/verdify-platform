@@ -21,7 +21,7 @@ const BFF = {
 export default defineConfig({
   // forbidOnly: a stray test.only would otherwise pass the step having skipped every route but one.
   testDir: "./e2e", testMatch: "**/*.spec.ts", forbidOnly: true, fullyParallel: false, workers: 1,
-  // expect: a role query across /settings' hundreds of rows on the CI pod can outlast the 5 s default.
+  // expect: the CI pod is shared and runs about five times slower than a laptop.
   timeout: 30_000, expect: { timeout: 10_000 }, retries: 0, outputDir: "../artifacts/playwright",
   reporter: [["list"], ["json", { outputFile: "../artifacts/playwright-results.json" }]],
   use: { baseURL: "http://localhost:4173", trace: "retain-on-failure" },
