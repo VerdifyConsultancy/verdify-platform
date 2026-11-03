@@ -334,6 +334,74 @@ test("C: nothing changed within 30 s reads the line's reason in words, or \"Not 
   expect(screen.getByTestId("command").textContent).toBe(`running · late · ${NOT_STARTED}`);
 });
 
+/** One light's Turn on with API-13's Lutron state as its readback, reading it back after a 503 too when `after` says so. */
+function LightCommandHarness({ after }: { after: boolean }) {
+  const command = useCommand({
+    operation: "API-20",
+    readback: (params) => readback({ operationId: "API-13", done: (answer) => answer.items.find((item) => item.equipment === "grow_light_main")?.state === params.state }),
+    readbackAfter: after ? (error) => error.code === "unavailable" : undefined,
+  });
+  return <div>
+    <p data-testid="light">{command.phase}{command.error ? ` · ${command.error.message}` : ""}</p>
+    <Button write busy={command.sending} onClick={() => void command.send({ light: "main", state: "on" }, undefined)}>Turn on</Button>
+  </div>;
+}
+const lightState = () => screen.getByTestId("light").textContent;
+const turnOn = async () => { fireEvent.click(screen.getByRole("button", { name: "Turn on" })); await advance(0); };
+
+test("C: a failure readbackAfter names reads back all the same with its words beside it, and goes late after 30 s", async () => {
+  startFixtureApi({ fixture: "lights-not-confirmed" });
+  renderWithApi(<LightCommandHarness after />);
+  await turnOn();
+  expect(lightState()).toBe("waiting · Lutron did not reach the state");
+  const reads = sentAt("API-13").length;
+  await advance(COMMAND_WINDOW_MS);
+  expect(sentAt("API-13")).toHaveLength(reads + 6);
+  expect(lightState()).toBe("late · Lutron did not reach the state");
+});
+
+test("C: a late switch after a failure clears its words", async () => {
+  const api = startFixtureApi({ fixture: "lights-ha-fail" });
+  renderWithApi(<LightCommandHarness after />);
+  await turnOn();
+  expect(lightState()).toBe("waiting · Lutron did not switch: Home Assistant did not answer");
+  // Lutron answers late: the readback turns on.
+  api.respond({ method: "POST", url: "/__control", body: { fixture: "lights-confirmed" } });
+  api.respond({ method: "POST", url: "/v1/equipment/lights/main/on" });
+  await advance(5000);
+  await advance(1);
+  expect(lightState()).toBe("done");
+});
+
+test("C: a failure nothing names reads as failed with no readback, and ends the readback an earlier failure left running", async () => {
+  startFixtureApi({ fixture: "lights-ha-fail" });
+  const first = renderWithApi(<LightCommandHarness after={false} />);
+  await turnOn();
+  expect(lightState()).toBe("failed · Lutron did not switch: Home Assistant did not answer");
+  const reads = sentAt("API-13").length;
+  await advance(COMMAND_WINDOW_MS);
+  expect(sentAt("API-13")).toHaveLength(reads);
+  first.unmount();
+  const api = startFixtureApi({ fixture: "lights-ha-fail" });
+  renderWithApi(<LightCommandHarness after />);
+  await turnOn();
+  expect(lightState()).toContain("waiting");
+  // Changes switched off while it reads back: nothing reached the light, so no readback of its own, and the old one ends.
+  api.respond({ method: "POST", url: "/__control", body: { fixture: "writes-off" } });
+  await turnOn();
+  expect(lightState()).toBe("failed · Changes are switched off");
+  const after = sentAt("API-13").length;
+  await advance(COMMAND_WINDOW_MS);
+  expect(sentAt("API-13")).toHaveLength(after);
+});
+
+test("a Problem's result reads in the light_result words; an unknown one raw; none its detail", () => {
+  const unavailable = { type: "about:blank", title: "Unavailable", status: 503, code: "unavailable", retryable: true, min: null, max: null, current: null, retry_after_s: null };
+  expect(problemMessage({ ...unavailable, detail: "The light may still switch", result: "timeout" })).toBe("No answer yet: Lutron may still switch");
+  expect(problemMessage({ ...unavailable, detail: "The light may still switch", result: "fuse_blown" })).toBe("fuse_blown");
+  expect(problemMessage({ ...unavailable, detail: "arrives with the irrigation firmware" })).toBe("arrives with the irrigation firmware");
+});
+
 test("C: Clear fault sends one API-IRR-13 request with no manual; before the engine its 503 shows the detail", async () => {
   const api = startFixtureApi({ fixture: "mister-fault" });
   const view = renderWithApi(<Command lineId="L04" />);

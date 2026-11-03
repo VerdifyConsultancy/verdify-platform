@@ -203,13 +203,13 @@ export function minutesTooltip(zone: ZoneBars, plot: Pick<uPlot, "cursor">, name
 /** The bar geometry uPlot's bars use: 60% of the narrowest day spacing, at most 48 px, centred on the day. */
 export const BAR_SIZE = 0.6;
 export const BAR_MAX = 48;
-function barWidth(plot: PaintTarget, zone: ZoneBars, px: number): number {
+export function dayBarWidth(plot: PaintTarget, days: readonly { readonly at: number }[], px: number, size = BAR_SIZE, max = BAR_MAX): number {
   let narrowest = Infinity;
-  for (let position = 1; position < zone.days.length; position++) {
-    narrowest = Math.min(narrowest, Math.abs(plot.valToPos(zone.days[position].at, "x", true) - plot.valToPos(zone.days[position - 1].at, "x", true)));
+  for (let position = 1; position < days.length; position++) {
+    narrowest = Math.min(narrowest, Math.abs(plot.valToPos(days[position].at, "x", true) - plot.valToPos(days[position - 1].at, "x", true)));
   }
   if (!Number.isFinite(narrowest)) narrowest = plot.bbox.width;
-  return Math.max(px, Math.min(narrowest * BAR_SIZE, BAR_MAX * px));
+  return Math.max(px, Math.min(narrowest * size, max * px));
 }
 
 /**
@@ -218,7 +218,7 @@ function barWidth(plot: PaintTarget, zone: ZoneBars, px: number): number {
  */
 export function paintMinutes(plot: PaintTarget, zone: ZoneBars, colors: ChartColors, px: number) {
   const { ctx, bbox } = plot;
-  const width = barWidth(plot, zone, px);
+  const width = dayBarWidth(plot, zone.days, px);
   const y = (value: number) => plot.valToPos(value, "y", true);
   ctx.save();
   try {
@@ -260,7 +260,7 @@ export function paintMinutes(plot: PaintTarget, zone: ZoneBars, colors: ChartCol
 }
 
 /** Day labels ("10/28") under the last row only; ticks a day or more apart. */
-function dayAxis(colors: ChartColors, show: boolean): uPlot.Axis {
+export function dayAxis(colors: ChartColors, show: boolean): uPlot.Axis {
   return {
     show, stroke: colors["--muted"], font: AXIS_FONT, size: 28, space: 44, grid: { show: false },
     ticks: { stroke: colors["--c-grid"], width: 1, size: 4 },
@@ -269,8 +269,8 @@ function dayAxis(colors: ChartColors, show: boolean): uPlot.Axis {
   };
 }
 
-/** Whole minutes up the left, one width on every row, so the rows' bars line up. */
-function minutesAxis(colors: ChartColors): uPlot.Axis {
+/** Whole minutes or gallons up the left, one width on every row, so the rows' bars line up. */
+export function wholeAxis(colors: ChartColors): uPlot.Axis {
   return {
     stroke: colors["--muted"], font: AXIS_FONT, size: 44, space: 24,
     grid: { stroke: colors["--c-grid"], width: 1 }, ticks: { stroke: colors["--c-grid"], width: 1, size: 4 },
@@ -291,7 +291,7 @@ export function minutesOptions(env: ChartEnv, zoneRef: MutableRefObject<ZoneBars
     // Each segment's bar runs from the running total below it (uPlot's stacked bars).
     bands: zone.segments.slice(1).map((_, level) => ({ series: [level + 2, level + 1] as [number, number] })),
     scales: { y: { range: () => [0, zoneRef.current.yMax] } },
-    axes: [dayAxis(colors, last), minutesAxis(colors)],
+    axes: [dayAxis(colors, last), wholeAxis(colors)],
     cursor: { points: { show: false } },
     hooks: { draw: [(plot) => paintMinutes(plot, zoneRef.current, colors, px())] },
     plugins: [tooltipPlugin((plot) => minutesTooltip(zoneRef.current, plot, namesRef.current))],

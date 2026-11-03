@@ -316,6 +316,46 @@ test("API-19: current is the band as stored, which API-10 moves and API-11 leave
   expect(preview(1.25).body.current.target[noon]).toBe(1.25);
 });
 
+test("#1140's fixtures: the reasons, the lights' answers and readbacks, and 90 days of water", () => {
+  const set = (name: string | string[]) => fixture(name, { now: NOW });
+  expect(set("why-reasons")["API-13"]).toMatchObject({
+    mode_reason: { code: "temp_high", since: "2026-11-01T20:40:00.000Z" }, fog_block_reason: { code: "rh_ceiling", since: "2026-11-02T16:12:00.000Z" }, moisture_block_reason: { code: "no_vpd_demand", since: "2026-11-02T14:12:00.000Z" },
+  });
+  expect(set("why-unknown-code")["API-13"].mode_reason.code).toBe("brand_new_code");
+  // Not reporting: no code or since on any reason, and the newest row's time stays.
+  const quiet = set("controller-not-reporting")["API-13"];
+  for (const name of ["mode_reason", "fog_block_reason", "moisture_block_reason"]) expect(quiet[name], name).toMatchObject({ code: null, since: null, observed_at: expect.any(String) });
+  expect(set("lights-intent-unknown")["API-13"].items.filter((item: Body) => item.group === "light").map((item: Body) => [item.intent, item.state])).toEqual([[null, "off"], [null, "off"]]);
+
+  const lights = handler("lights-confirmed");
+  const main = () => (at(lights, "GET", "/v1/equipment").body.items as Body[]).find((item) => item.equipment === "grow_light_main");
+  expect(main()).toMatchObject({ intent: "off", state: "off" });
+  expect(at(lights, "POST", "/api/v1/equipment/lights/main/on", undefined, KEY)).toMatchObject({ status: 200, body: { light: "main", state: "on", result: "confirmed" } });
+  expect(main()).toMatchObject({ intent: "off", state: "on" });
+  expect((at(lights, "GET", "/v1/activity").body.items as Body[])[0]).toMatchObject({ action: "light.on", target: "grow_light_main", actor: { source: "dashboard", name: "jason" }, detail: { light: "main", state: "on", result: "confirmed" } });
+
+  for (const [name, result] of [["lights-ha-fail", "ha_failed"], ["lights-not-confirmed", "not_confirmed"]]) {
+    const failing = handler(name);
+    expect(at(failing, "POST", "/v1/equipment/lights/main/on").body, name).toMatchObject({ status: 503, code: "unavailable", retryable: true, result });
+    expect((at(failing, "GET", "/v1/equipment").body.items as Body[]).find((item) => item.equipment === "grow_light_main"), name).toMatchObject({ state: "off" });
+    // The call is still logged, with what came of it.
+    expect((at(failing, "GET", "/v1/activity").body.items as Body[])[0], name).toMatchObject({ action: "light.on", detail: { result } });
+  }
+
+  const days = set("water-use-90d")["API-21"].days as Body[];
+  expect(days).toHaveLength(90);
+  const ago = (count: number) => days[days.length - 1 - count];
+  expect(ago(0).coverage).toBe("partial");
+  expect(ago(9)).toEqual({ date: "2026-10-24", coverage: "no_data", meter_gal: null, by_line: null, by_cause: null, no_valve_gal: null });
+  expect(ago(4)).toMatchObject({ coverage: "complete", meter_gal: 0, by_line: {}, by_cause: {}, no_valve_gal: 0 });
+  expect(ago(6)).toMatchObject({ coverage: "complete", meter_gal: 20, by_line: { L04: 4, L11: 2 }, by_cause: { vpd: 6 }, no_valve_gal: 14 });
+  expect(days.filter((day) => day.coverage === "no_data")).toHaveLength(1);
+  // The same fixture answers the 30-day chip, with those days inside it.
+  const window = at(handler("water-use-90d"), "GET", "/v1/water/daily?days=30").body.days as Body[];
+  expect(window).toHaveLength(30);
+  expect(window[window.length - 7]).toMatchObject({ no_valve_gal: 14 });
+});
+
 test("every equipment label the fixture serves is the API's: EQUIPMENT_LABELS in verdify_services/labels.py", () => {
   const source = readFileSync(new URL("../../../verdify_services/labels.py", import.meta.url), "utf8");
   const block = /EQUIPMENT_LABELS[^{]*\{([^}]*)\}/.exec(source)![1];

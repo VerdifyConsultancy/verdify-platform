@@ -36,10 +36,11 @@ export const useWaterOutlet = (): WaterOutlet => useOutletContext<WaterOutlet>()
 /** Why `?check=` is open when the line alone does not say: `for=schedule`, on a disabled line whose Schedule was pressed. */
 const CHECK_FOR = "for";
 /**
- * One of Water's drawers in the URL (#1182): `?check=<line_id>`, `?options=<line_id>` or `?pause=<line_id|all>`. Opening
- * pushes, so Back closes it; closing replaces, and neither moves the page. `wanted` is `?check=`'s `for`.
+ * One of Water's drawers in the URL (#1182): `?check=<line_id>`, `?options=<line_id>` or `?pause=<line_id|all>`, and the
+ * Run dialog's `?run=<line_id>`. Opening pushes, so Back closes it; closing replaces, and neither moves the page. `wanted`
+ * is `?check=`'s `for`.
  */
-export function useWaterDrawer(name: "check" | "options" | "pause") {
+export function useWaterDrawer(name: "check" | "options" | "pause" | "run") {
   const [params, setParams] = useSearchParams();
   const open = useCallback((value: string, wanted?: "schedule") => setParams((current) => {
     const next = new URLSearchParams(current);
@@ -489,6 +490,12 @@ export function barsReport(report: MinutesReport): BarsReport {
     })),
   };
 }
+
+// ---------------------------------------------------------------------------------------------------- daily water use
+/** `?water_use=`: API-21's `days`, 90 for `90d`, else the default 30. */
+export const waterUseDays = (value: string | null): 30 | 90 => (value === "90d" ? 90 : 30);
+/** `?water_use_by=`: `cause`, else the default `line`. */
+export const waterUseSplit = (value: string | null): "line" | "cause" => (value === "cause" ? "cause" : "line");
 
 // ---------------------------------------------------------------------------------------------------- the run ledger
 const DATE = /^\d{4}-\d\d-\d\d$/;

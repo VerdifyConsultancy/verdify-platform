@@ -9,17 +9,17 @@ import type { IrrigationLine } from "../lib/operator-api";
 import { useIrrigationRead } from "../lib/queries";
 import { OPERATOR, UUID, advance, renderWithApi, requests, startFixtureApi, stopFixtureApi, writes, type FixtureOptions } from "../lib/test-fixture-api";
 import { words } from "../lib/words";
-import { RUN_ARRIVES_TEXT, RunControl, runOffer } from "./run-dialog";
+import { RUN_ARRIVES_TEXT, RunControl, WaterRuns, runOffer } from "./run-dialog";
 import { text } from "./test-render";
 
 afterEach(() => { cleanup(); stopFixtureApi(); });
 
-/** One line's Run control over the shared API-IRR-01 read, and its state as the card would show it. */
+/** One line's Run control over the shared API-IRR-01 read, and its state as the card would show it, under the Water layout's holder. */
 function Card({ lineId }: { lineId: string }) {
   const status = useIrrigationRead();
   const line = status.data?.lines.find((item) => item.line_id === lineId);
   if (!status.data || !line) return <p>Loading</p>;
-  return <div><p data-testid="state">{line.state.code}</p><RunControl line={line} engine={status.data.engine} /></div>;
+  return <WaterRuns status={status.data}><div><p data-testid="state">{line.state.code}</p><RunControl line={line} engine={status.data.engine} /></div></WaterRuns>;
 }
 async function open(lineId: string, options: FixtureOptions = {}, session = OPERATOR) {
   const api = startFixtureApi(options);

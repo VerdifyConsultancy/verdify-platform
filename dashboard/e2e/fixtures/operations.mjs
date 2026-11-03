@@ -393,6 +393,7 @@ const NO_DATA_DAYS_AGO = 9;
 function dayWater(world, date) {
   const ago = Math.round((localInstant(today(world)) - localInstant(date)) / DAY);
   if (ago === NO_DATA_DAYS_AGO) return null;
+  if (world.waterOverrides[ago]) return world.waterOverrides[ago];
   if (ago === 0) {
     const lines = Object.fromEntries(world.lines.filter((line) => (line.today?.gal ?? 0) > 0).map((line) => [line.line_id, line.today.gal]));
     return { lines, causes: { vpd: (lines.L04 ?? 0) + (lines.L11 ?? 0), ...(lines.L01 ? { run_now: lines.L01 } : {}) }, noValve: world.leak.gal_last_10min ?? 0 };
@@ -662,9 +663,13 @@ function lights(world, { params, body, key }) {
   if (!["main", "grow"].includes(params.light) || !["on", "off"].includes(params.state)) throw refuse(422, "unknown_target", "Unknown light", "light is main or grow and state on or off", { field: "light" });
   const reason = text(object(body).reason, "reason");
   const activityId = nextId(world.activity);
+  const logged = (next, result) => activity(next, { ts: iso(world.now), actor: actorOf(next), action: `light.${params.state}`, target: `grow_light_${params.light}`, detail: { light: params.light, state: params.state, result }, reason, request_id: key });
+  // Lutron did not confirm: one logged call and a 503 with its result; the readback stays as it was.
+  const result = world.flags.lightResult;
+  if (result) return { ...problem(503, "unavailable", "Lutron did not confirm", "The light may still switch", { result }), effect: (next) => logged(next, result) };
   const effect = (next) => {
     Object.assign(itemOf(next, `grow_light_${params.light}`), { state: params.state, since: iso(world.now), observed_at: iso(world.now) });
-    activity(next, { ts: iso(world.now), actor: actorOf(next), action: `light.${params.state}`, target: `grow_light_${params.light}`, detail: { light: params.light, state: params.state, result: "confirmed" }, reason, request_id: key });
+    logged(next, "confirmed");
   };
   return { status: 200, body: { light: params.light, state: params.state, result: "confirmed", activity_id: activityId }, effect };
 }
@@ -1025,7 +1030,7 @@ export const EXAMPLES = {
   "API-17": () => get("/v1/activity"),
   "API-19": (world) => get("/v1/band/preview", world.preview),
   "API-20": () => send("POST", "/v1/equipment/lights/main/on", { reason: "Inspecting the Vandas" }),
-  "API-21": () => get("/v1/water/daily"),
+  "API-21": (world) => get("/v1/water/daily", { days: String(world.waterUseDays) }),
   "API-IRR-01": () => get("/v1/irrigation"),
   // The week view with "Last 7 days" on, so past blocks and their outcomes are in the set.
   "API-IRR-02": () => get("/v1/irrigation/schedules", { past_days: 7 }),

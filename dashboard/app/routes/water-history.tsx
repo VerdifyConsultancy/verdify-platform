@@ -3,6 +3,7 @@ import { useId, useMemo, useState } from "react";
 import { Link, useSearchParams, type SetURLSearchParams } from "react-router";
 import { useQueries } from "@tanstack/react-query";
 import { causeWords } from "../charts/causes";
+import { DailyWaterUse } from "../charts/daily-water-use";
 import { MinutesByZone, lineWords } from "../charts/minutes-by-zone";
 import { chartLinks } from "../charts/uplot-chart";
 import { ChemistryBadge } from "../components/badge";
@@ -18,14 +19,14 @@ import { CAUSES, OUTCOMES, apiGet, type IrrigationLine, type Run } from "../lib/
 import { readKey, useApiRead, useSchedulesRead } from "../lib/queries";
 import {
   RUNS_MAX_DAYS, barsReport, localDay, minutesCaps, minutesDays, minutesGroup, plannedToday, runAmountWords, runGallons, runSpanWords, runsFilters, runsWindow,
-  toMinute, useWaterOutlet, zoneWord,
+  toMinute, useWaterOutlet, waterUseDays, waterUseSplit, zoneWord,
 } from "../lib/water";
 import { words } from "../lib/words";
 
 export const meta = () => [{ title: "Water history · Verdify dashboard" }];
 export const links = () => chartLinks();
 
-/** API-IRR-10 and -11 are read every 60 s on this view. */
+/** API-IRR-10, API-IRR-11 and API-21 are read every 60 s on this view. */
 const HISTORY_POLL_MS = 60_000;
 const NO_LINES: readonly IrrigationLine[] = [];
 const LINE_IDS = LINES.map((line) => line.id);
@@ -71,6 +72,31 @@ function MinutesSection({ lines, names, today, search }: { lines: readonly Irrig
     {report
       ? <MinutesByZone report={report} group={group} caps={minutesCaps(lines, group)} planned={planned[group]} now={noon} lineNames={names} />
       : !minutes.isError && <div className="skeleton skeleton-lg" aria-hidden="true" />}
+  </section>;
+}
+
+/**
+ * Daily water use (#1140's bars) from API-21: 30 or 90 days (`?water_use=`), split by line or cause (`?water_use_by=`),
+ * with the water that ran while no Verdify valve was open apart. Whole gallons only (Q-10).
+ */
+function WaterUseSection({ names, search }: { names: Readonly<Record<string, string>>; search: URLSearchParams }) {
+  const headingId = useId();
+  const days = waterUseDays(search.get("water_use"));
+  const split = waterUseSplit(search.get("water_use_by"));
+  const use = useApiRead("API-21", { days }, { intervalMs: HISTORY_POLL_MS });
+  return <section className="water-section water-use" aria-labelledby={headingId}>
+    <div className="section-head history-head">
+      <h2 id={headingId} className="eyebrow">Daily water use</h2>
+      <div className="history-controls">
+        <Chips label="Water use days" small items={([30, 90] as const).map((value) => ({ key: String(value), label: `${value} d`, to: withParams(search, { water_use: value === 30 ? null : "90d" }), current: days === value, keepScroll: true }))} />
+        <span className="chips-label">Split by</span>
+        <Chips label="Split water use by" small items={(["line", "cause"] as const).map((value) => ({ key: value, label: value, to: withParams(search, { water_use_by: value === "line" ? null : "cause" }), current: split === value, keepScroll: true }))} />
+      </div>
+    </div>
+    {use.isError && <PanelError thing="daily water use" onRetry={() => void use.refetch()} />}
+    {use.data
+      ? <DailyWaterUse data={use.data} split={split} lineNames={names} />
+      : !use.isError && <div className="skeleton skeleton-lg" aria-hidden="true" />}
   </section>;
 }
 
@@ -161,7 +187,7 @@ function RunsSection({ names, today, search, setSearch }: { names: Readonly<Reco
   </section>;
 }
 
-/** SCR-04 History (`/water/history`): watering minutes by zone, line or cause, and the run ledger. */
+/** SCR-04 History (`/water/history`): watering minutes by zone, line or cause, daily water use, and the run ledger. */
 export default function WaterHistory() {
   const { irrigation } = useWaterOutlet();
   const [search, setSearch] = useSearchParams();
@@ -170,6 +196,7 @@ export default function WaterHistory() {
   const names = useMemo(() => Object.fromEntries(lines.map((line) => [line.line_id, line.name])), [lines]);
   return <>
     <MinutesSection lines={lines} names={names} today={today} search={search} />
+    <WaterUseSection names={names} search={search} />
     <RunsSection names={names} today={today} search={search} setSearch={setSearch} />
   </>;
 }
