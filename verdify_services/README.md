@@ -227,5 +227,8 @@ them, and M2 (#1179) and its successor the dashboard login.
   `tests/test_verdify_services_reads.py` adds the compositions against in-memory connections.
 - `tests/test_dashboard_db_settings_reads.py` (the campaign step): VD-55's acceptance fixtures, the
   MCP-shared reads as a role with only the MCP login's production grants.
+- `tests/test_mcp_settings_tools.py` (in `scripts/ci-local.sh`) and `tests/test_dashboard_db_mcp_settings.py` (the
+  campaign step): the MCP `set_setting`, `settings`, `activity` and `alerts` adapters and the `plan.write` rows of
+  `set_plan` and `set_tunable` (VD-58), against stubs and then as the MCP login's grants.
 - `verdify_schemas/tests/test_band_rows.py` and `test_settings_rules.py`: the band row map against the
   dispatcher's overlay, and `SWITCH_READBACK_EQUIPMENT` and the activity mirror against the ingestor.

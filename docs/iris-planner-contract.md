@@ -136,7 +136,7 @@ are no longer the only boundaries. Every tool call resolves its bearer token to
 an **audience** (constant-time comparison) and is checked against the
 server-side `TOOL_AUDIENCES` inventory in `mcp/server.py`:
 
-- `iris` — exactly the 23 tools in the hermes-config `tools.include` list
+- `iris` — exactly the 26 tools in the hermes-config `tools.include` list
   (drift-guarded by `tests/test_mcp_audience_auth.py`); current behavior.
 - `experiment` — the blinded experiment planner arm: qualified
   climate/forecast/crop/topology reads + `acknowledge_trigger` only;
@@ -145,8 +145,8 @@ server-side `TOOL_AUDIENCES` inventory in `mcp/server.py`:
   `policy_template_propose` joins this audience in Lane C/D tranche 2.
 - `agent` — named in-cluster agents (VD-59; architecture §5.6 holds the
   table): `climate`, `forecast`, `equipment_state`, `history`, `plan_status`,
-  `get_setpoints`, `scorecard`, `topology`, `position_current` and `alerts`;
-  `settings`, `activity`, `set_setting` and the irrigation tools join as they
+  `get_setpoints`, `scorecard`, `topology`, `position_current`, `alerts`,
+  `settings`, `activity` and `set_setting`; the irrigation tools join as they
   land. Never the planner, lessons, crop or Slack writers. Each agent's key is
   one entry of Secret `verdify-mcp-agents` (never an environment variable:
   `VERDIFY_MCP_TOKEN_AGENT` stays unrecognized), mounted read-only and re-read
@@ -163,6 +163,16 @@ actor only from it, never from arguments: `alerts` records acknowledgements and
 resolutions as the caller and ignores `acknowledged_by` and `resolved_by` in
 `data`, and refuses them when no caller resolved. The `mcp_tool_call` audit
 line carries the same `actor` source.
+
+`set_setting` (`iris`, `agent`, `admin`) writes `desired_state` through
+`verdify_services.settings` and stores the `manual` flag it carries (default
+false); Iris's write or release of a manual setting is refused with `manual`, and
+the call never touches a trigger, so Iris still ends every trigger with `set_plan`
+or `acknowledge_trigger`. `set_plan` and `set_tunable` keep their arguments, replies
+and `setpoint_plan` rows and never refuse on a manual setting: the dispatcher keeps
+the person's value, and the context pack's MANUAL SETTINGS section names it. Each
+appends one `plan.write` row to `activity_log` in its `setpoint_plan` transaction,
+attributed to the request actor, or (`iris`, `iris`) when there is none.
 
 Config: `VERDIFY_MCP_TOKEN_IRIS` / `VERDIFY_MCP_TOKEN_EXPERIMENT` /
 `VERDIFY_MCP_TOKEN_ADMIN` on the MCP server (the iris value is the same secret

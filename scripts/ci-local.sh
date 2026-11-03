@@ -252,6 +252,9 @@ $PY -m pytest -q -rs \
   tests/test_lab_publish_k3s_guard.py \
   tests/test_mcp_audience_auth.py \
   tests/test_mcp_named_agents.py \
+  tests/test_mcp_settings_tools.py \
+  tests/test_dashboard_db_mcp_settings.py \
+  tests/test_gather_manual_settings.py \
   tests/test_mcp_transport_runtime.py \
   tests/test_outcome_kpi_dryout_projection.py \
   tests/test_scorecard_realized_dryout.py \
@@ -317,6 +320,9 @@ $PY scripts/gen-grafana-dashboard-cms.py --check
 
 step "solar site constants SSOT guard (#393)"
 $PY scripts/check-solar-constants.py
+
+step "gather ConfigMap matches its source scripts"
+$PY scripts/gen-gather-configmap.py --check
 
 step "config-revision annotations match verdify-config sources (#587)"
 bash scripts/gen-config-revision.sh --check

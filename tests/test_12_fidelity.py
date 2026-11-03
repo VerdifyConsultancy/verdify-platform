@@ -327,10 +327,14 @@ def test_resolve_plan_context_failures_marks_open_alerts_resolved():
 
 
 def test_mcp_alert_ack_does_not_unresolve_resolved_alerts():
+    # verdify_services.alerts.ack touches only rows with resolved_at IS NULL; the adapter keeps the reply.
+    service = Path("verdify_services/alerts.py").read_text()
+    ack_sql = service[service.index("_ACK_SQL = ") : service.index("# Every unresolved repeat")]
+    assert "resolved_at IS NULL" in ack_sql
     src = Path("mcp/server.py").read_text()
     start = src.index('elif action == "acknowledge"')
     block = src[start : src.index('elif action == "resolve"', start)]
-    assert "resolved_at IS NULL" in block
+    assert "alerts_service.ack" in block
     assert "already_resolved" in block
 
 

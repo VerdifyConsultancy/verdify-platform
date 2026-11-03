@@ -10,6 +10,7 @@ Transport: streamable-http on port 8400
 """
 
 import asyncio
+import functools
 import hashlib
 import hmac
 import ipaddress
@@ -22,11 +23,13 @@ import stat
 import sys
 import time
 import urllib.parse
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any, Literal
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
@@ -41,7 +44,6 @@ from slack_config import load_slack_settings  # noqa: E402
 from slack_ops.service import handle_slack_command  # noqa: E402
 from verdify_schemas import (  # noqa: E402
     ALL_TUNABLES,
-    AlertAckPayload,
     AlertEnvelope,
     AlertResolvePayload,
     ClimateSnapshot,
@@ -108,6 +110,12 @@ from verdify_schemas.tunable_registry import (  # noqa: E402
     normalize_planner_value,
     registry_value_error,
 )
+from verdify_services import activity as activity_service  # noqa: E402
+from verdify_services import alerts as alerts_service  # noqa: E402
+from verdify_services import reads as reads_service  # noqa: E402
+from verdify_services import settings as settings_service  # noqa: E402
+from verdify_services.actor import Actor as ServiceActor  # noqa: E402
+from verdify_services.problems import Problem, ServiceError, problem  # noqa: E402
 
 # ── Config ──
 # Read DB password from .env
@@ -994,6 +1002,8 @@ _TOOL_READ_ONLY = frozenset(
         "position_current",
         "crop_history",
         "crop_lifecycle",
+        "settings",
+        "activity",
     }
 )
 
@@ -1015,9 +1025,9 @@ class AudienceAuthorizedFastMCP(FastMCP):
     """FastMCP with server-side audience authorization at the dispatch choke point.
 
     FastMCP.call_tool is the single public method the low-level MCP server
-    invokes for every tool call, so overriding it covers all 27 registered
-    tools without touching any tool body or signature (and without the
-    26-decorator / ASGI-middleware fallback). A raised ToolAccessDenied is
+    invokes for every tool call, so overriding it covers every registered
+    tool without touching any tool body or signature (and without a
+    per-tool decorator or ASGI-middleware fallback). A raised ToolAccessDenied is
     converted by the low-level server into an isError tool result with this
     message — the session stays healthy.
 
@@ -1094,16 +1104,22 @@ class AudienceAuthorizedFastMCP(FastMCP):
         )
 
 
-mcp = AudienceAuthorizedFastMCP(
-    "verdify",
-    instructions="""Verdify greenhouse control tools. Use these to monitor climate,
+SERVER_INSTRUCTIONS = """Verdify greenhouse control tools. Use these to monitor climate,
     manage setpoints, run the AI planner, and review performance.
     The greenhouse has temp/VPD bands, misters, fog, fans, heaters, and a vent.
     The planner emits bounded ClimateIntent in set_plan transitions; MCP
     materializes it into registry-valid tunables that shape how the controller responds.
     Band params (temp_low, temp_high, vpd_low, vpd_high) are dispatcher-owned
     read-only context in routine plans. Temp comes from crop policy; house VPD is
-    derived from crop + zone policy. Use direct tunable pushes only for explicit overrides.""",
+    derived from crop + zone policy. Use direct tunable pushes only for explicit overrides.
+
+    `set_setting` changes any writable setting within registry min/max and stores the
+    `manual` flag it carries (default false); `settings` and `activity` read the catalog,
+    history and every write; Iris's `set_setting` on a manual setting is refused with `manual`."""
+
+mcp = AudienceAuthorizedFastMCP(
+    "verdify",
+    instructions=SERVER_INSTRUCTIONS,
     # Bind explicitly so MCP_HTTP_HOST/PORT env vars actually take effect.
     # FastMCP only auto-reads FASTMCP_-prefixed env vars, so the
     # os.environ.setdefault block in __main__ was dead code. Reading the env
@@ -1122,6 +1138,7 @@ mcp = AudienceAuthorizedFastMCP(
 HERMES_REQUIRED_TOOLS = frozenset(
     {
         "acknowledge_trigger",
+        "activity",
         "alerts",
         "climate",
         "crop_history",
@@ -1141,7 +1158,9 @@ HERMES_REQUIRED_TOOLS = frozenset(
         "position_current",
         "scorecard",
         "set_plan",
+        "set_setting",
         "set_tunable",
+        "settings",
         "slack_ops",
         "topology",
     }
@@ -1153,7 +1172,7 @@ HERMES_REQUIRED_TOOLS = frozenset(
 # drift, so a new tool cannot silently skip authorization.
 #
 # Audiences:
-#   iris       — the current Hermes Iris profile. Exactly the 23 tools of
+#   iris       — the current Hermes Iris profile. Exactly the 26 tools of
 #                hermes-config.yaml tools.include (== HERMES_REQUIRED_TOOLS);
 #                tests/test_mcp_audience_auth.py holds the three surfaces in
 #                lockstep. Current behavior is preserved.
@@ -1165,9 +1184,9 @@ HERMES_REQUIRED_TOOLS = frozenset(
 #                unused until Lane C/D tranche 2 issues its credential.
 #   agent      — named in-cluster agents (VD-59, architecture §5.6), one key
 #                each in Secret verdify-mcp-agents (agent_key_registry). The
-#                live greenhouse reads plus alerts; settings, activity,
-#                set_setting and the eight irrigation tools join this column
-#                with #1171, #1173, #1174 and #1177. Never the planner, lessons,
+#                live greenhouse reads plus alerts, settings, activity and
+#                set_setting (#1171); the eight irrigation tools join this
+#                column with #1173, #1174 and #1177. Never the planner, lessons,
 #                crop or Slack writers. Calls are attributed agent:<name>.
 #   admin      — operator/debug credential; every tool. Its writes are
 #                attributed agent:admin.
@@ -1183,6 +1202,8 @@ TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     "plan_status": frozenset({"iris", "agent", "admin"}),
     "history": frozenset({"iris", "agent", "admin"}),
     "alerts": frozenset({"iris", "agent", "admin"}),
+    "settings": frozenset({"iris", "agent", "admin"}),
+    "activity": frozenset({"iris", "agent", "admin"}),
     "slack_ops": frozenset({"iris", "admin"}),
     # Knowledge
     "lessons": frozenset({"iris", "admin"}),
@@ -1199,6 +1220,7 @@ TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     # Writes
     "set_plan": frozenset({"iris", "admin"}),
     "set_tunable": frozenset({"iris", "admin"}),
+    "set_setting": frozenset({"iris", "agent", "admin"}),
     # Lane C (#584): the experiment arm's only actuation-eligible output — an
     # opaque policy_template_id proposal (registered with tranche 2, audit §8.8).
     "policy_template_propose": frozenset({"experiment", "admin"}),
@@ -1241,6 +1263,117 @@ async def _db() -> asyncpg.Connection:
         await conn.close()
         raise
     return conn
+
+
+# ── Service-layer tools (architecture §5.6) ──
+# Thin adapters over verdify_services: the REST JSON from the same Pydantic
+# models, a refusal as its Problem JSON with isError, and the actor only from
+# the request. The new tools carry no return annotation, so FastMCP passes the
+# CallToolResult through unchanged.
+
+
+def _tool_result(body: dict[str, Any], *, is_error: bool = False):
+    # Imported here: CI loads this module under a FastMCP stub without the MCP runtime.
+    import mcp.types as mcp_types
+
+    return mcp_types.CallToolResult(
+        content=[mcp_types.TextContent(type="text", text=json.dumps(body))],
+        isError=is_error,
+    )
+
+
+def _tool_ok(model, replayed: bool = False):
+    """The REST JSON of ``model``, with a top-level ``replayed: true`` on a replay (MCP has no headers)."""
+    body = model.model_dump(mode="json")
+    return _tool_result({**body, "replayed": True} if replayed else body)
+
+
+def _tool_problem(refusal: Problem):
+    """The Problem JSON REST sends as application/problem+json, with isError."""
+    return _tool_result(refusal.body(), is_error=True)
+
+
+def _answers_problems(tool):
+    """Answer a service refusal, a query over the database's limit or a database outage as Problem JSON."""
+
+    @functools.wraps(tool)
+    async def answered(*args, **kwargs):
+        try:
+            return await tool(*args, **kwargs)
+        except ServiceError as refused:
+            return _tool_problem(refused.problem)
+        except asyncpg.QueryCanceledError:
+            limit_s = MCP_DB_STATEMENT_TIMEOUT_MS // 1000
+            return _tool_problem(problem("query_timeout", f"The database stopped the query at its {limit_s} s limit."))
+        except (OSError, asyncpg.PostgresConnectionError, asyncpg.InterfaceError):
+            return _tool_problem(problem("unavailable", "The database could not answer. Try again."))
+
+    return answered
+
+
+@asynccontextmanager
+async def _service_connection() -> AsyncIterator[asyncpg.Connection]:
+    conn = await _db()
+    try:
+        yield conn
+    finally:
+        await conn.close()
+
+
+def _service_actor() -> ServiceActor | None:
+    """The request's actor as verdify_services takes it: never an argument of the tool."""
+    actor = current_actor()
+    return None if actor is None else ServiceActor(source=actor.source, name=actor.name)
+
+
+def _uuid_argument(name: str, value: str | None) -> str | None:
+    """A UUID string argument in its canonical form; ``invalid_request`` when it is not one."""
+    if value is None:
+        return None
+    try:
+        return str(UUID(value))
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise ServiceError(problem("invalid_request", f"{name} must be a UUID", field=name)) from exc
+
+
+def _time_argument(name: str, value: str | None) -> datetime | None:
+    """An ISO-8601 time argument with its UTC offset; ``invalid_request`` when it is not one."""
+    if value is None:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except (TypeError, ValueError) as exc:
+        raise ServiceError(
+            problem("invalid_request", f"{name} must be an ISO-8601 time with its UTC offset", field=name)
+        ) from exc
+    if parsed.utcoffset() is None:
+        raise ServiceError(problem("invalid_request", f"{name} needs its UTC offset", field=name))
+    return parsed
+
+
+async def _append_plan_activity(
+    conn: asyncpg.Connection,
+    *,
+    plan_id: str,
+    changes: list[dict[str, Any]],
+    reason: str | None,
+    trigger_id: str | None,
+    planner_instance: str | None,
+) -> None:
+    """The one ``plan.write`` activity row of a set_plan or set_tunable, in its setpoint_plan transaction.
+
+    Their contract is unchanged, so neither refuses for a missing actor: with none (auth mode off, a direct call)
+    the row records (iris, iris), as their setpoint_plan rows do.
+    """
+    await activity_service.append(
+        conn,
+        _service_actor() or ServiceActor.iris(),
+        action="plan.write",
+        target=plan_id,
+        detail={"changes": changes, "trigger_id": trigger_id, "planner_instance": planner_instance},
+        reason=reason,
+        experiment_id=await conn.fetchval(activity_service.ARMED_EXPERIMENT_SQL),
+    )
 
 
 # #387: outcome_kpi() fans its independent section fetches out concurrently,
@@ -3306,6 +3439,14 @@ async def set_tunable(
                     )
                     if updated_ledger_id != ledger["id"]:
                         raise RuntimeError("planner ledger attempt lost its set_tunable completion fence")
+            await _append_plan_activity(
+                conn,
+                plan_id=plan_id,
+                changes=[{"ts": wrote_at, "param": parameter, "value": value}],
+                reason=reason,
+                trigger_id=normalized_trigger_id,
+                planner_instance=planner_instance,
+            )
         return json.dumps(
             {
                 "ok": True,
@@ -4031,6 +4172,7 @@ async def set_plan(
             rows_written = 0
             band_params_dropped = 0
             forced_on_params = 0
+            changes: list[dict[str, Any]] = []
             for wp in plan.transitions:
                 for param, value in wp.params.items():
                     if param in BAND_OWNED_PARAMS:
@@ -4054,6 +4196,7 @@ async def set_plan(
                         plan.expires_at,
                     )
                     rows_written += 1
+                    changes.append({"ts": wp.ts, "param": param, "value": float(value)})
 
             # Write journal entry — structured JSONB column populated only if
             # the PlanHypothesisStructured block was present AND valid.
@@ -4137,6 +4280,14 @@ async def set_plan(
                     )
                     if updated_ledger_id != ledger["id"]:
                         raise RuntimeError("planner trigger ledger attempt lost its write fence")
+            await _append_plan_activity(
+                conn,
+                plan_id=plan.plan_id,
+                changes=changes,
+                reason=None,
+                trigger_id=normalized_trigger_id,
+                planner_instance=planner_instance,
+            )
 
         # Sprint 20 Phase 6: drop a trigger file so verdify-plan-publish.path
         # fires and regenerates the daily plan page. Local-SSD location so
@@ -5016,65 +5167,82 @@ async def observations(action: str, crop_id: int = 0, data: str = "") -> str:
 # ═══════════════════════════════════════════════════════════════
 
 
+def _alert_row(alert: alerts_service.Alert) -> dict[str, Any]:
+    """A merged alert in the tool's row shape. ``acknowledged`` is false exactly while the merged status is open
+    (a resolved row needs no acknowledgement), so the unacknowledged rows equal ``alerts.open_count()``."""
+    seen = alert.last_seen_at or alert.first_seen_at
+    return {
+        "id": alert.id,
+        "time": seen.astimezone(ZoneInfo("America/Denver")).strftime("%m-%d %H:%M"),
+        "alert_type": alert.alert_type,
+        "severity": alert.severity,
+        "message": alert.message,
+        "disposition": alert.status,
+        "acknowledged": alert.status != "open",
+        "resolved": alert.status == "resolved",
+        "count": alert.count,
+    }
+
+
+async def _recent_alert_rows(conn: asyncpg.Connection) -> list[dict[str, Any]]:
+    """Every page of ``alerts.list(status="recent")``: every open alert plus the last 24 h of resolved ones."""
+    rows: list[dict[str, Any]] = []
+    cursor: str | None = None
+    while True:
+        page = await alerts_service.list(conn, status="recent", limit=alerts_service.LIMIT_MAX, cursor=cursor)
+        rows.extend(_alert_row(alert) for alert in page.items)
+        cursor = page.next_cursor
+        if cursor is None:
+            return rows
+
+
+def _alert_refusal(alert_id: int, refused: ServiceError) -> str:
+    if refused.problem.code == "unknown_target":
+        return json.dumps({"error": f"alert_id {alert_id} not found"})
+    return json.dumps({"error": refused.problem.detail})
+
+
 @mcp.tool()
 async def alerts(action: str = "list", alert_id: int = 0, data: str = "") -> str:
     """Manage greenhouse alerts. Actions: list, acknowledge, resolve.
-    list: active/recent alerts (last 24h by default)
-    acknowledge: mark as seen
-    resolve: close with resolution notes (data can be JSON or plain text)
+    list: every open alert plus those resolved in the last 24 h, repeats merged into one row with their count;
+    disposition is the merged status and the unacknowledged rows are the open-alert count
+    acknowledge: mark every repeat as seen
+    resolve: close every repeat with resolution notes (data can be JSON or plain text)
     acknowledge and resolve are recorded as the calling credential (iris,
     agent:<name> or agent:admin); acknowledged_by and resolved_by in data are ignored."""
+    d: dict[str, Any] = {}
     if data:
         try:
-            d = json.loads(data)
-        except (json.JSONDecodeError, ValueError):
-            d = {"resolution": data}
-    else:
-        d = {}
+            parsed = json.loads(data)
+        except ValueError:
+            parsed = None
+        d = parsed if isinstance(parsed, dict) else {"resolution": data}
     conn = await _db()
     try:
         if action == "list":
-            hours = d.get("hours", 24)
-            rows = await conn.fetch(
-                """
-                SELECT id, to_char(ts AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS time,
-                       alert_type, severity, message, disposition,
-                       acknowledged_at IS NOT NULL AS acknowledged,
-                       resolved_at IS NOT NULL AS resolved
-                FROM alert_log WHERE ts > now() - ($1::int || ' hours')::interval
-                ORDER BY ts DESC LIMIT 50""",
-                hours,
-            )
-            return _json([dict(r) for r in rows])
+            return _json(await _recent_alert_rows(conn))
 
         elif action == "acknowledge" and alert_id:
             # VD-59: the actor comes only from the request, never from data.
-            actor = current_actor()
+            actor = _service_actor()
             if actor is None:
                 return json.dumps({"error": "forbidden: no resolved caller"})
             try:
-                ack = AlertAckPayload.model_validate({"acknowledged_by": actor.source})
-            except ValidationError as e:
-                return json.dumps({"error": "AlertAckPayload validation failed", "details": json.loads(e.json())})
-            row = await conn.fetchrow(
-                "UPDATE alert_log SET acknowledged_at = now(), acknowledged_by = $2, "
-                "disposition = 'acknowledged' WHERE id = $1 AND resolved_at IS NULL "
-                "RETURNING id, disposition",
-                alert_id,
-                ack.acknowledged_by,
-            )
-            if row is None:
-                existing = await conn.fetchrow(
-                    "SELECT id, disposition, resolved_at IS NOT NULL AS resolved FROM alert_log WHERE id = $1", alert_id
-                )
-                if existing and existing["resolved"]:
-                    return json.dumps({"ok": True, "alert_id": alert_id, "action": "already_resolved"})
-                if existing is None:
-                    return json.dumps({"error": f"alert_id {alert_id} not found"})
-            return json.dumps({"ok": True, "alert_id": alert_id, "action": "acknowledged"})
+                acknowledged = await alerts_service.ack(conn, actor, alert_id, None, None)
+            except ServiceError as refused:
+                return _alert_refusal(alert_id, refused)
+            # ack touches only rows with resolved_at IS NULL: a resolved row's merged row reads resolved.
+            done = "already_resolved" if acknowledged.value.status == "resolved" else "acknowledged"
+            return json.dumps({"ok": True, "alert_id": alert_id, "action": done})
 
         elif action == "resolve" and alert_id:
-            dependency = await conn.fetchrow("SELECT alert_type, source FROM alert_log WHERE id=$1", alert_id)
+            # alert_log.id is an integer, so an id beyond it is simply unknown, as the service answers.
+            dependency = (
+                await conn.fetchrow("SELECT alert_type, source FROM alert_log WHERE id=$1", alert_id)
+                if abs(alert_id) < 2**31
+                else None
+            )
             if (
                 dependency
                 and dependency["alert_type"] == "planner_tool_dependency_failed"
@@ -5085,7 +5253,7 @@ async def alerts(action: str = "list", alert_id: int = 0, data: str = "") -> str
                 )
             # VD-59: after the retrieval check, so a semantic dependency alert
             # keeps its own refusal; the actor never comes from data.
-            actor = current_actor()
+            actor = _service_actor()
             if actor is None:
                 return json.dumps({"error": "forbidden: no resolved caller"})
             default_resolution = "Resolved by Iris" if actor.source == "iris" else f"Resolved by {actor.source}"
@@ -5098,18 +5266,188 @@ async def alerts(action: str = "list", alert_id: int = 0, data: str = "") -> str
                 )
             except ValidationError as e:
                 return json.dumps({"error": "AlertResolvePayload validation failed", "details": json.loads(e.json())})
-            await conn.execute(
-                "UPDATE alert_log SET resolved_at = now(), resolved_by = $2, "
-                "resolution = $3, disposition = 'resolved' WHERE id = $1",
-                alert_id,
-                res.resolved_by,
-                res.resolution,
-            )
+            try:
+                await alerts_service.resolve(conn, actor, alert_id, res.resolution, None)
+            except ServiceError as refused:
+                return _alert_refusal(alert_id, refused)
             return json.dumps({"ok": True, "alert_id": alert_id, "action": "resolved"})
 
         return json.dumps({"error": f"Unknown action '{action}'. Use: list, acknowledge, resolve"})
     finally:
         await conn.close()
+
+
+# ═══════════════════════════════════════════════════════════════
+# SETTINGS AND ACTIVITY (architecture §5.6)
+# ═══════════════════════════════════════════════════════════════
+
+
+@mcp.tool()
+@_answers_problems
+async def set_setting(
+    param: Annotated[str, Field(description="The setting's registry name, as the settings tool lists it.")],
+    value: Annotated[
+        float | None, Field(description="The value to store, in the setting's unit. Omit it with release=true.")
+    ] = None,
+    release: Annotated[
+        bool, Field(description="True, with no value: release the setting to its plan, band or default.")
+    ] = False,
+    manual: Annotated[
+        bool, Field(description="Hold the value manual: Iris's plan values for it lose. Stored as passed.")
+    ] = False,
+    reason: Annotated[str | None, Field(description="Why, at most 500 characters.")] = None,
+    request_id: Annotated[
+        str | None, Field(description="A UUID you generate; a retry with the same one and payload changes nothing.")
+    ] = None,
+    trigger_id: Annotated[
+        str | None, Field(description="Optional planning trigger UUID, kept only in the activity log.")
+    ] = None,
+    planner_instance: Annotated[
+        Literal["local", "opus"] | None, Field(description="Optional planner instance, kept only in the activity log.")
+    ] = None,
+):
+    """Change any writable setting within registry min/max, or release it. No trigger is needed.
+
+    REST twins: API-10 `PUT /v1/settings/{param}` (a write: pass value) and API-11
+    `DELETE /v1/settings/{param}` (a release: release=true and no value). Any other combination is
+    `invalid_request`. The change reaches the controller through the dispatcher's next pass.
+
+    manual defaults to false here; a write stores the flag it carries, so writing a manual setting without
+    manual=true clears it (manual_before and the activity log say so).
+
+    Returns the API-10 DesiredSetting: the snapped value, snapped_from when snapping changed it, manual,
+    manual_before and state `requested`. The same request_id and payload return the stored JSON with a top-level
+    replayed: true and append nothing.
+
+    Refusals are Problem JSON with isError: `unknown_target`; `read_only` with the reason; `out_of_range` with min,
+    max and current; `manual` when Iris writes or releases a setting whose newest row is manual (a person's value
+    stays; other agents' writes win); `request_id_reused` when the same request_id carries another payload;
+    `invalid_request` when request_id or trigger_id is not a UUID; `forbidden` when the call has no resolved caller.
+
+    trigger_id and planner_instance only annotate the activity log; it does not count as your plan for a trigger:
+    Iris still ends every trigger with set_plan or acknowledge_trigger."""
+    actor = _service_actor()
+    if actor is None:
+        raise ServiceError(problem("forbidden", "set_setting needs a resolved caller"))
+    if release:
+        if value is not None:
+            raise ServiceError(problem("invalid_request", "A release takes no value", field="value"))
+        if manual:
+            raise ServiceError(problem("invalid_request", "A release cannot be manual", field="manual"))
+    elif value is None:
+        raise ServiceError(problem("invalid_request", "Pass value, or release=true with no value", field="value"))
+    request_key = _uuid_argument("request_id", request_id)
+    trigger = _uuid_argument("trigger_id", trigger_id)
+    # Only the activity detail: nothing here reads, locks or updates a planner delivery or trigger ledger row.
+    extra_detail = {
+        name: audit
+        for name, audit in (("trigger_id", trigger), ("planner_instance", planner_instance))
+        if audit is not None
+    }
+    async with _service_connection() as conn:
+        if release:
+            result = await settings_service.release(conn, actor, param, reason, request_key, extra_detail=extra_detail)
+        else:
+            result = await settings_service.write(
+                conn, actor, param, value, manual, reason, request_key, extra_detail=extra_detail
+            )
+    return _tool_ok(result.value, replayed=result.replayed)
+
+
+def _setting_selected(
+    setting: settings_service.Setting,
+    param: str | None,
+    group: str | None,
+    writable_only: bool,
+    manual_only: bool,
+) -> bool:
+    return (
+        (param is None or setting.param == param)
+        and (group is None or setting.group == group)
+        and (not writable_only or setting.writable)
+        and (not manual_only or (setting.desired is not None and setting.desired.manual))
+    )
+
+
+@mcp.tool()
+@_answers_problems
+async def settings(
+    param: Annotated[str | None, Field(description="One setting's registry name.")] = None,
+    group: Annotated[
+        settings_service.SettingGroup | None, Field(description="Only the rows of this Setting.group.")
+    ] = None,
+    writable_only: Annotated[bool, Field(description="Only the rows a write can change now.")] = False,
+    manual_only: Annotated[bool, Field(description="Only the rows whose newest desired row is manual.")] = False,
+    since: Annotated[
+        str | None, Field(description="History start, ISO-8601 with its UTC offset (API-12's from).")
+    ] = None,
+    until: Annotated[str | None, Field(description="History end, ISO-8601 with its UTC offset (API-12's to).")] = None,
+):
+    """Read the settings catalog, or one setting's history.
+
+    REST twins: API-09 `GET /v1/settings` and API-12 `GET /v1/settings/{param}/history`.
+
+    With no window: API-09's `{items, server_time}`, filtered by param, group, writable_only and manual_only. Each
+    row carries applied_from (whose value is in force: manual, desired, plan, band or default), min, max, step,
+    its desired row, its plan value and its readback state. Narrow it: the whole catalog is large.
+
+    With param, since and until all given: API-12's SettingHistory over [since, until), the desired rows, plan
+    values and readback change points; since and until map to API-12's from and to, and the other filters do not
+    apply. since or until without the other two is `invalid_request`. An unknown param in a history read is
+    `not_found`. Refusals are Problem JSON with isError."""
+    if since is None and until is None:
+        async with _service_connection() as conn:
+            rows = await reads_service.settings_rows(conn)
+        items = [row for row in rows.items if _setting_selected(row, param, group, writable_only, manual_only)]
+        return _tool_ok(rows.model_copy(update={"items": items}))
+    if param is None or since is None or until is None:
+        raise ServiceError(
+            problem(
+                "invalid_request",
+                "A history read needs param, since and until together",
+                field="since" if since is None else "until" if until is None else "param",
+            )
+        )
+    from_, to = _time_argument("since", since), _time_argument("until", until)
+    async with _service_connection() as conn:
+        return _tool_ok(await reads_service.setting_history(conn, param, from_, to))
+
+
+@mcp.tool()
+@_answers_problems
+async def activity(
+    source: Annotated[
+        str | None, Field(description="dashboard, iris, system, agent (every agent) or agent:<name>.")
+    ] = None,
+    actor: Annotated[str | None, Field(description="The actor's exact name.")] = None,
+    action: Annotated[str | None, Field(description="A prefix, such as setting.write or irrigation.")] = None,
+    target: Annotated[str | None, Field(description="The exact target: a setting, plan id, alert id or line.")] = None,
+    since: Annotated[
+        str | None, Field(description="Oldest time, ISO-8601 with its UTC offset (API-17's from).")
+    ] = None,
+    limit: Annotated[int, Field(description="Rows per page, 1 to 200.")] = activity_service.LIMIT_DEFAULT,
+    cursor: Annotated[str | None, Field(description="The previous page's next_cursor.")] = None,
+):
+    """Read every write by people, Iris, agents and the system, newest first: what happened to your writes and who
+    changed the same target since.
+
+    REST twin: API-17 `GET /v1/activity`. Returns ActivityPage `{items, next_cursor}`; each setting row carries its
+    readback state and confirmed_at. since maps to API-17's from. A bad filter, limit, cursor or time is
+    `invalid_request` as Problem JSON with isError."""
+    from_ = _time_argument("since", since)
+    async with _service_connection() as conn:
+        return _tool_ok(
+            await reads_service.activity_page(
+                conn,
+                source=source,
+                actor=actor,
+                action=action,
+                target=target,
+                from_=from_,
+                limit=limit,
+                cursor=cursor,
+            )
+        )
 
 
 # ═══════════════════════════════════════════════════════════════

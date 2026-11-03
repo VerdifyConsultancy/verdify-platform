@@ -44,7 +44,7 @@ All source-of-truth content lives on NFS (`/mnt/iris/` or `/mnt/jason/`). Three 
 │   ├── main.py                    builds Docker image verdify-api
 │   └── Dockerfile
 │
-├── mcp/                        MCP server (22 production tools exposed to Iris planner)
+├── mcp/                        MCP server (25 production tools exposed to Iris planner)
 │   └── server.py                  systemd verdify-mcp.service on localhost:8000
 │
 ├── firmware/                   ESPHome + C++ logic + native tests + replay harness

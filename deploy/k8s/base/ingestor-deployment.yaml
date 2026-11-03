@@ -50,7 +50,7 @@ spec:
         # (the CI gate recomputes it). NOTE: a revision bump makes the NEXT
         # gated ArgoCD sync Recreate the single writer — same gated-restart
         # semantics as any other pod-template change here.
-        verdify.io/config-revision: "8a6126c56dd2"
+        verdify.io/config-revision: "fc0039a6de60"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: ingestor
