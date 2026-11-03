@@ -723,7 +723,7 @@ def test_the_compile_reads_the_seed_program_and_its_hash_is_the_golden_vectors(t
     seed = next(v for v in json.loads(VECTORS.read_text())["vectors"] if v["name"] == "seed")
     assert snapshot.compiled.sha256 == seed["sha256"]
     assert snapshot.compiled.record.hex() == seed["hex"]
-    assert snapshot.site_desired_at is None and snapshot.zones["L01"] == "wall" and len(snapshot.lines) == 11
+    assert snapshot.site_desired_at is None and len(snapshot.lines) == 11
 
 
 def test_the_compile_takes_site_values_and_the_newest_of_their_times(task):
@@ -786,8 +786,9 @@ def test_a_new_hash_adds_a_revision_and_a_repush_updates_that_row(task):
             snapshot = await store.snapshot()
             pushed = now() - timedelta(minutes=5)
             first = await store.record_push(snapshot, pushed)
-            newest = await store.newest_push()
-            assert (newest["revision"], newest["sha256"]) == (first, snapshot.compiled.sha256)
+            reported = await store.push_of_hash(snapshot.compiled.hash16)
+            assert (reported["revision"], reported["confirmed_at"]) == (first, None)
+            assert await store.push_of_hash("0" * 16) is None
 
             # Rejected, then pushed again: the same row, with a later pushed_at and no reject_code.
             await store.record_reject(first, "bad_slot")
@@ -931,7 +932,7 @@ def test_an_occurrence_with_no_outcome_2_h_after_its_planned_start_raises(task, 
     assert datetime.fromisoformat(alert["details"]["planned_start"]) == planned.replace(second=0)
 
 
-def test_nothing_raises_before_the_2_h_mark_or_once_a_row_exists(replay, task, alerts):
+def test_nothing_raises_before_the_2_h_mark_or_while_a_run_is_open(replay, task, alerts):
     planned = whole(now() - timedelta(hours=1))
     schedule("L01", planned)
     applied = push_applied(task, confirmed_at=planned - timedelta(hours=2))
@@ -955,6 +956,59 @@ def test_nothing_raises_before_the_2_h_mark_or_once_a_row_exists(replay, task, a
         for alert in of_type(engine_alerts(alerts), "irrigation_run_missed")
         if alert["details"]["slot_id"] == slot
     ] == []
+
+
+def test_a_run_that_opened_and_closed_with_no_outcome_raises_until_its_outcome_arrives(replay, task, alerts):
+    planned = whole(now() - timedelta(hours=3))
+    slot = schedule("L01", planned)
+    applied = push_applied(task, confirmed_at=planned - timedelta(hours=2))
+    engine_on(applied, at=planned - timedelta(hours=1))
+    climate_rows(planned - timedelta(minutes=10), now())
+    start = planned.replace(second=0)
+    replay.state(start, token("d", 0, "schedule", slot, start, start + timedelta(seconds=300)) + " v=hhh")
+    edge("drip_wall", start + timedelta(seconds=1), True)
+    replay.tick()
+    assert of_type(engine_alerts(alerts), "irrigation_run_missed") == []  # open: its token is still out
+
+    edge("drip_wall", start + timedelta(seconds=300), False)
+    replay.state(start + timedelta(seconds=300), "v=hhh")
+    replay.tick()
+    [row] = rows_of(slot_id=slot)
+    assert row["ended_at"] == start + timedelta(seconds=300) and row["outcome"] is None
+    [alert] = of_type(engine_alerts(alerts), "irrigation_run_missed")
+    assert alert["details"]["rule"] == "no_outcome" and alert["details"]["slot_id"] == slot
+    assert "has no outcome" in alert["message"] and "did not happen" not in alert["message"]
+
+    replay.events(f"70,0,{slot},{day_number(local_day(start))},ok")
+    replay.tick()
+    assert of_type(engine_alerts(alerts), "irrigation_run_missed") == []
+
+
+def test_a_long_window_with_its_token_gone_still_has_its_planned_span_to_run(replay, task, alerts):
+    planned = whole(now() - timedelta(hours=3))
+    slot = schedule("L04", planned)
+    # 60 pulses 600 s apart: about 10 h, so a pulse blocked now can still be delivered.
+    execute("UPDATE public.irrigation_slot SET count = 60, gap_s = 600 WHERE slot_id = $1", slot)
+    execute("UPDATE public.irrigation_line SET schedule_member = true WHERE line_id = 'L04'")
+    applied = push_applied(task, confirmed_at=planned - timedelta(hours=2))
+    engine_on(applied, at=planned - timedelta(hours=1))
+    climate_rows(planned - timedelta(minutes=10), now())
+    start = planned.replace(second=0)
+    replay.state(start, token("m", 3, "schedule", slot, start, start + timedelta(hours=10)) + " v=hhh")
+    replay.tick()
+    replay.state(now() - timedelta(minutes=5), "w=3,occ v=hhh")
+    replay.tick()
+    [row] = rows_of(slot_id=slot)
+    assert row["ended_at"] is not None and row["outcome"] is None
+    missed = of_type(engine_alerts(alerts), "irrigation_run_missed")
+    assert [alert for alert in missed if alert["details"]["slot_id"] == slot] == []
+
+    # The whole span later, it is due: the alert's clock is pushed on, not its rule.
+    later = of_type(engine_alerts(alerts, now() + timedelta(hours=10)), "irrigation_run_missed")
+    assert [alert["details"]["slot_id"] for alert in later if alert["details"]["slot_id"] == slot] == []  # unwatched
+    climate_rows(now(), now() + timedelta(hours=10))
+    later = of_type(engine_alerts(alerts, now() + timedelta(hours=10)), "irrigation_run_missed")
+    assert [alert["details"]["rule"] for alert in later if alert["details"]["slot_id"] == slot] == ["no_outcome"]
 
 
 def test_a_degraded_only_slot_that_does_not_fire_raises_nothing(task, alerts):

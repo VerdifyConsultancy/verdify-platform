@@ -11,6 +11,7 @@ flip, the 2 min expiry, heap deferral, and the text-sensor routes.
 
 from __future__ import annotations
 
+import ast
 import asyncio
 import hashlib
 import logging
@@ -59,6 +60,7 @@ from verdify_schemas.irrigation import (  # noqa: E402
     PROGRAM_RECORD_LEN,
     IrrigationCommandRow,
     LineSpec,
+    ProgramId,
     ScheduleSpec,
     SiteValues,
     Start,
@@ -128,8 +130,9 @@ class FakeProgram:
             self.on_read()
         return self.current
 
-    async def newest_push(self):
-        return self.rows[-1] if self.rows else None
+    async def push_of_hash(self, hash16):
+        matching = [row for row in self.rows if row is not None and row["sha256"].startswith(hash16)]
+        return matching[-1] if matching else None
 
     async def record_push(self, snapshot, pushed_at):
         compiled = snapshot.compiled
@@ -222,7 +225,6 @@ def snapshot(*minutes_of_day: int) -> task.ProgramSnapshot:
     return task.ProgramSnapshot(
         lines=all_lines,
         slots=specs,
-        zones={},
         compiled=compile_program(all_lines, specs, site),
         site_desired_at=datetime(2026, 11, 1, tzinfo=UTC),
     )
@@ -435,6 +437,29 @@ def test_a_full_pass_confirms_after_a_restart_lost_the_push_from_memory(client, 
     readback("irr_program_id", f"h={compiled.hash16} src=nvs")
     sync(store, program, ledger)
     assert program.rows[8]["confirmed_at"] is not None
+
+
+def test_the_hash_the_controller_reports_is_confirmed_even_when_a_newer_push_never_landed(
+    client, store, program, ledger, clock, events
+):
+    # The controller ran the first program before its readback was settled; the edit's push then went nowhere.
+    on_rom()
+    client.silent = True
+    sync(store, program, ledger)
+    first = program.rows[0]
+    program.current = snapshot(420)
+    shared.irrigation_sync_requested.set()
+    sync(store, program, ledger)
+    assert [row["confirmed_at"] for row in program.rows] == [None, None]
+
+    # Back to the first program, which the controller reports: no push, and its row reads confirmed.
+    readback("irr_program_id", f"h={first['sha256'][:16]} src=nvs")
+    program.current = snapshot(360)
+    pushes = len(services(events))
+    clock.t += 60
+    sync(store, program, ledger)
+    assert first["confirmed_at"] is not None and program.rows[1]["confirmed_at"] is None
+    assert len(services(events)) == pushes
 
 
 def test_only_a_changed_hash_adds_a_revision_and_a_repush_updates_that_row(
@@ -1083,6 +1108,34 @@ def test_a_reading_outside_the_grammar_is_no_reading(client, store, program, led
     assert ledger.started == [] and ledger.outcomes == []
 
 
+def test_a_ring_text_that_arrives_while_the_readings_are_applied_waits_for_its_token_to_leave(
+    client, store, program, ledger
+):
+    """The controller publishes irr_state, then irr_events: a text read after the queue was drained could name a run
+    whose token has not left yet, so it waits for the next pass."""
+    in_sync(program)
+    start = EARLIER
+    readback("irr_state", f"d=0,schedule,11,{start},{start + 300} v=hhh", at=now() - timedelta(seconds=30))
+    readback("irr_state", "v=hhh", at=now() - timedelta(seconds=20))
+    run_now = f"m=3,run_now,0,{start + 60},{start + 120} v=hhh"
+    real = ledger.relay_edges
+
+    async def run_now_ends_during_the_close(*args):
+        if ledger.outcomes == [] and shared.irrigation_readback.get("irr_events") is None:
+            readback("irr_state", "v=hhh")
+            readback("irr_events", "5,3,0,20395,ok")
+        return await real(*args)
+
+    readback("irr_state", f"{run_now}")
+    ledger.relay_edges = run_now_ends_during_the_close
+    sync(store, program, ledger)
+    assert ledger.outcomes == [] and [run.line_id for run in ledger.started] == ["L01", "L04"]
+
+    sync(store, program, ledger)
+    [(events_seen, running)] = ledger.outcomes
+    assert [event.seq for event in events_seen] == [5] and running == []  # the run-now's token has left by now
+
+
 def test_outcomes_are_read_once_per_text_with_the_running_rows_set_aside(client, store, program, ledger):
     in_sync(program)
     start = EARLIER
@@ -1222,6 +1275,29 @@ def test_a_feed_already_on_when_the_window_opened_covers_l03():
 
 def minutes(*values: int) -> list[datetime]:
     return [T0 + timedelta(minutes=value) for value in values]
+
+
+def test_todays_fence_rules_hold_only_with_no_applied_program():
+    """Enabling L06 raises no breach: with an applied program today's rules are off, whatever the relays did."""
+    on = {"any_on_15m": True, "latest_state": True}
+    fence = {"drip_center_fert": on, "fert_master_valve": on, "drip_center": on}
+    today = [
+        ("blocked_fert_path_on", "drip_center_fert"),
+        ("fert_master_without_wall_drip", "fert_master_valve"),
+        ("center_drip_while_disabled", "drip_center"),
+    ]
+    assert alert_tasks._no_program_fence_hits(alert_tasks._IrrigationView(), fence) == today  # before the engine
+    on_rom_view = alert_tasks._IrrigationView(engine=True, program_id=ProgramId(hash16="0" * 16, src="rom"))
+    assert alert_tasks._no_program_fence_hits(on_rom_view, fence) == today
+    applied = alert_tasks._IrrigationView(
+        engine=True, program_id=ProgramId(hash16="a" * 16, src="nvs"), applied={"revision": 1}
+    )
+    assert alert_tasks._no_program_fence_hits(applied, fence) == []
+    assert alert_tasks._no_program_fence_hits(None, fence) == []  # a failed read decides nothing
+
+    monitor = ast.parse(Path(alert_tasks.__file__).read_text())
+    [function] = [node for node in monitor.body if getattr(node, "name", "") == "alert_monitor"]
+    assert "fence_hits = _no_program_fence_hits(irrigation_view, fence)" in ast.unparse(function)
 
 
 def test_a_window_is_watched_with_climate_rows_and_no_reconnect():

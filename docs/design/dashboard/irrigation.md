@@ -628,7 +628,9 @@ wake and every 60 s:
     5 and 15 min, then every 15 min. A push with neither a reject nor the hash after 30 s (the controller's
     NVS save failed) goes again on the next full pass; until then a wake never repeats it.
   - A re-push also clears `confirmed_at`: the controller is not running that hash when it is pushed again,
-    so the row is unconfirmed until `irr_program_id` reports it.
+    so the row is unconfirmed until `irr_program_id` reports it. Confirming goes by the reported hash, whichever
+    row holds it: a newer push that never landed must not leave the program the controller runs unconfirmed,
+    because the fence alert checks nothing against an unconfirmed program.
   - Writes validate through `IrrigationPushRow`, `IrrigationLedgerRow` and `RunClose`
     (`verdify_schemas/irrigation.py`), M3's row models, which M3 left to the first issue that writes them.
 
@@ -737,11 +739,13 @@ wake and every 60 s:
 - **As built (VD-42).** `ingestor/tasks/alerts.py`. All three need an `irr_engine` row reading `true`, and
   the new two an `irr_program_id` reading, so nothing new appears before the engine or after a rollback.
   The applied program is the newest push of the reported hash; with none (or on `src=rom`) today's three
-  fence rules stay, and an unconfirmed one checks nothing until it is confirmed. `irrigation_run_missed`
-  counts an occurrence as having no outcome only when it left no ledger row: a row means it opened, and a
-  long mist window or a blocked one may still be running 2 h after its planned start. A slot the compiler
-  left off the controller raises nothing, and a reported miss whose schedule is gone has no window to check,
-  so it raises nothing either. A failed read keeps every open water alert open, as unknown is not recovery.
+  fence rules stay, and an unconfirmed one checks nothing until it is confirmed. For `irrigation_run_missed`
+  an occurrence with an open ledger row is still running, and one that opened and closed with no outcome
+  counts only 2 h past its planned start plus its planned span (prewet, pulses and gaps), with the window
+  watched to there: a long mist window can be blocked with its token gone and still have pulses to deliver.
+  One with no row counts at the 2 h mark. A slot the compiler left off the controller raises nothing, and a
+  reported miss whose schedule is gone has no window to check, so it raises nothing either. A failed read
+  keeps every open water alert open, as unknown is not recovery.
 - **The leak alert outlives the flag (VD-72).** While `leak_detected` is on it reads "Water flowing
   with every Verdify valve closed since HH:MM". Once the flag clears the row stays open: after two
   meter readings under 0.1 gal/min it reads "Flow stopped at HH:MM" (America/Denver;

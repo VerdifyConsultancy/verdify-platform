@@ -48,7 +48,7 @@ With the engine on the connection (``_engine_pass``):
    newest row's; a re-push updates that row), then ``esp32_push.push_irrigation_program``. A reject (``j=``) goes to
    ``reject_code`` and the same program is retried 1, 5 and 15 min later, then every 15 min; a transport failure
    retries on the next pass.
-4. Confirm: ``confirmed_at`` once ``irr_program_id`` reports the newest push's hash.
+4. Confirm: ``confirmed_at`` once ``irr_program_id`` reports the push's hash.
 
 The ledger (``_sync_ledger``), inert until ``irr_program_id`` appears: one ``irrigation_ledger`` row per occurrence stage
 or run-now from the ``irr_state`` run tokens (never per VPD pulse), closed from the line's relay edges when the token
@@ -591,7 +591,7 @@ PUSH_SETTLE_S = 30.0
 REJECT_RETRY_S = (60.0, 300.0, 900.0)
 
 _LINES_SQL = (
-    "SELECT line_id, zone, kind, device_idx, clean_partner, reserved, enabled, vpd_member, schedule_member, "
+    "SELECT line_id, kind, device_idx, clean_partner, reserved, enabled, vpd_member, schedule_member, "
     "daily_cap_min, vpd_reserve_min, paused_until, manual "
     "FROM public.irrigation_line WHERE greenhouse_id = $1 ORDER BY device_idx"
 )
@@ -607,8 +607,11 @@ _SITE_SQL = (
     "WHERE greenhouse_id = $1 AND param = ANY($2::text[])"
 )
 _NEWEST_PUSH_SQL = (
-    "SELECT revision, sha256, confirmed_at, reject_code FROM public.irrigation_push "
-    "WHERE greenhouse_id = $1 ORDER BY revision DESC LIMIT 1"
+    "SELECT revision, sha256 FROM public.irrigation_push WHERE greenhouse_id = $1 ORDER BY revision DESC LIMIT 1"
+)
+_PUSH_OF_HASH_SQL = (
+    "SELECT revision, confirmed_at FROM public.irrigation_push "
+    "WHERE greenhouse_id = $1 AND left(sha256, 16) = $2 ORDER BY revision DESC LIMIT 1"
 )
 _INSERT_PUSH_SQL = (
     "INSERT INTO public.irrigation_push (greenhouse_id, sha256, bytes, site_desired_at, pushed_at) "
@@ -629,7 +632,6 @@ class ProgramSnapshot:
 
     lines: tuple[LineSpec, ...]
     slots: tuple[ScheduleSpec, ...]
-    zones: Mapping[str, str]
     compiled: CompiledProgram
     site_desired_at: datetime | None
 
@@ -657,7 +659,6 @@ async def read_program(conn: asyncpg.Connection) -> ProgramSnapshot:
     return ProgramSnapshot(
         lines=lines,
         slots=slots,
-        zones={row["line_id"]: row["zone"] for row in line_rows},
         compiled=compile_program(lines, slots, site_values(site_rows)),
         site_desired_at=max((row["created_at"] for row in site_rows), default=None),
     )
@@ -674,9 +675,10 @@ class ProgramStore:
         async with self.pool.acquire() as conn:
             return await read_program(conn)
 
-    async def newest_push(self) -> Mapping[str, Any] | None:
+    async def push_of_hash(self, hash16: str) -> Mapping[str, Any] | None:
+        """The newest push of the hash the controller reports, which need not be the newest push."""
         async with self.pool.acquire() as conn:
-            return await conn.fetchrow(_NEWEST_PUSH_SQL, GREENHOUSE_ID)
+            return await conn.fetchrow(_PUSH_OF_HASH_SQL, GREENHOUSE_ID, hash16)
 
     async def record_push(self, snapshot: ProgramSnapshot, pushed_at: datetime) -> int:
         """Just before the device call: a new row only when the SHA-256 differs from the newest row's; a re-push of the
@@ -827,9 +829,10 @@ async def _program_steps(store: CommandStore, program: ProgramStore, memory: Eng
     memory.full_generation = shared.transport_generation
     snapshot = await program.snapshot()
     _note_left_off(memory, snapshot.compiled)
-    newest = await program.newest_push()
-    if newest is not None and newest["confirmed_at"] is None and newest["sha256"].startswith(reading.hash16):
-        await program.confirm(newest["revision"], datetime.now(UTC))
+    # By the reported hash: an unconfirmed push the controller runs would leave the fence alert checking nothing.
+    reported = await program.push_of_hash(reading.hash16)
+    if reported is not None and reported["confirmed_at"] is None:
+        await program.confirm(reported["revision"], datetime.now(UTC))
     if snapshot.compiled.hash16 == reading.hash16:
         memory.attempt = None
         memory.backoff = None
@@ -1228,6 +1231,9 @@ async def _close_left_runs(ledger: LedgerStore, memory: EngineMemory, now: datet
 
 async def _sync_ledger(ledger: LedgerStore, memory: EngineMemory) -> None:
     now = datetime.now(UTC)
+    # Read first: the controller publishes irr_state before irr_events, so every reading this text follows is queued
+    # below. A text read after them could name a run whose token has not left yet, and take a row of its own.
+    text = shared.irrigation_readback.get(shared.IRR_EVENTS)
     if not memory.open_runs_loaded:
         for row in await ledger.open_rows(now):
             key = (row["line_id"], row["cause"], row["slot_id"], int(row["started_at"].timestamp()))
@@ -1241,7 +1247,6 @@ async def _sync_ledger(ledger: LedgerStore, memory: EngineMemory) -> None:
             log.error("irrigation_ledger row dropped: %d validation error(s)", exc.error_count())
         changes.popleft()  # only now: a database error keeps the reading for the next pass
     await _close_left_runs(ledger, memory, now)
-    text = shared.irrigation_readback.get(shared.IRR_EVENTS)
     if text is None or text == memory.events_text:
         return
     running = [tracked.row_id for tracked in memory.open_runs.values() if tracked.left_at is None]

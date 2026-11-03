@@ -400,7 +400,13 @@ SELECT line_id, slot_id, local_day, reason, recorded_at
   FROM irrigation_ledger
  WHERE outcome = 'missed' AND slot_id IS NOT NULL AND recorded_at > $1
 """
-_IRR_OCCURRENCE_ROWS_SQL = "SELECT DISTINCT slot_id, local_day FROM irrigation_ledger WHERE local_day >= $1"
+# Each occurrence's rows: whether one holds its outcome, and whether one is still open.
+_IRR_OCCURRENCE_ROWS_SQL = """
+SELECT slot_id, local_day, bool_or(outcome IS NOT NULL) AS settled, bool_or(ended_at IS NULL) AS running
+  FROM irrigation_ledger
+ WHERE slot_id IS NOT NULL AND local_day >= $1
+ GROUP BY slot_id, local_day
+"""
 _IRR_SLOTS_SQL = """
 SELECT slot_id, line_id, enabled, days, start_kind, start_min, on_s, count, gap_s, prewet_s, flush_s, degraded_only,
        label, manual
@@ -474,6 +480,36 @@ def _applied_fence_hits(rows: Sequence[Mapping], enabled_mask: int) -> list[tupl
         fert = (by_relay.get(relay) for relay in _IRR_FERT_RELAYS)
         if not any(row is not None and (row["last_on_ts"] is not None or row["on_before"]) for row in fert):
             hits.append(("fert_master_without_fert_run", _IRR_MASTER_RELAY, master["last_on_ts"], "L03"))
+    return hits
+
+
+def _no_program_fence_hits(view: _IrrigationView | None, fence: Mapping[str, Mapping]) -> list[tuple[str, str]]:
+    """``(rule, equipment)``: today's three rules, which hold only with no applied program (before the engine, or on
+    ``src=rom``). With one ``_irrigation_fence_alerts`` checks the relays instead, or enabling L06 would raise a false
+    critical; after a failed read (``view`` None) neither does, and an open alert stays as it is."""
+    if view is None or view.applied is not None:
+        return []
+
+    def on(equipment: str) -> bool:
+        row = fence.get(equipment)
+        return bool(row and row["any_on_15m"])
+
+    def latest(equipment: str) -> bool:
+        row = fence.get(equipment)
+        return bool(row and row["latest_state"])
+
+    hits: list[tuple[str, str]] = []
+    for equipment in ("drip_center_fert", "mister_south_fert", "mister_west_fert"):
+        # Post-#450 these paths are relay-level blocked (hardware.yaml
+        # unconditional turn_off) — any persisted ON is a fence failure.
+        if on(equipment):
+            hits.append(("blocked_fert_path_on", equipment))
+    # Window-based pairing (not event ordering) so a legitimate wall feed
+    # that batches master+drip edges in either order cannot false-positive.
+    if on("fert_master_valve") and not on("drip_wall_fert"):
+        hits.append(("fert_master_without_wall_drip", "fert_master_valve"))
+    if on("drip_center") and not latest("irrigation_center_enabled"):
+        hits.append(("center_drip_while_disabled", "drip_center"))
     return hits
 
 
@@ -563,11 +599,18 @@ async def _irrigation_reported_missed(conn, now: datetime) -> list[_MissedOccurr
     return found
 
 
+def _irrigation_planned_span(slot) -> _td:
+    """How long an occurrence that opened runs up to its outcome. A blocked pulse waits, so its token can be gone while
+    it still has this much to run, on top of the 2 h: a start up to 60 min late and a window's 60 min of grace."""
+    return _td(seconds=slot.prewet_s + slot.open_s + (slot.count - 1) * slot.gap_s)
+
+
 async def _irrigation_no_outcome(conn, applied: Mapping, now: datetime) -> list[_MissedOccurrence]:
-    """(b) An enabled schedule's occurrence on the controller that left no ledger row 2 h after its planned start, while
-    the applied hash equals the compiled one and that push was confirmed before the planned start. A row means it opened
-    (a long mist window may still run) or has its outcome. A ``degraded_only`` slot runs only while VPD sensing is
-    degraded, so one that does not fire is expected."""
+    """(b) An enabled schedule's occurrence on the controller with no outcome 2 h after its planned start, while the
+    applied hash equals the compiled one and that push was confirmed before the planned start. One that opened and has
+    not closed is still running, and one that opened and closed counts only past its planned span too: a long mist
+    window may still have pulses to deliver. A ``degraded_only`` slot runs only while VPD sensing is degraded, so one
+    that does not fire is expected."""
     confirmed_at = applied["confirmed_at"]
     if confirmed_at is None:
         return []
@@ -578,17 +621,24 @@ async def _irrigation_no_outcome(conn, applied: Mapping, now: datetime) -> list[
     slots = {slot.slot_id: slot for slot in program.slots}
     week = agenda(program.lines, program.slots, today=today, days=1, past_days=2)
     rows = await conn.fetch(_IRR_OCCURRENCE_ROWS_SQL, week.first_day)
-    recorded = {(row["slot_id"], row["local_day"]) for row in rows}
+    recorded = {(row["slot_id"], row["local_day"]): row for row in rows}
     found = []
     for occurrence in week.occurrences:
         start = occurrence.planned_start
+        slot = slots[occurrence.slot_id]
+        opened = recorded.get((occurrence.slot_id, occurrence.local_day))
+        if opened is not None and (opened["settled"] or opened["running"]):
+            continue
+        watch_until = start + _IRR_NO_OUTCOME_AFTER
+        if opened is not None:
+            watch_until += _irrigation_planned_span(slot)
         if (
             occurrence.status == "planned"
             and occurrence.slot_id in program.compiled.slot_ids
-            and not slots[occurrence.slot_id].degraded_only
+            and not slot.degraded_only
             and confirmed_at < start
-            and now - _IRR_MISSED_WINDOW <= start <= now - _IRR_NO_OUTCOME_AFTER
-            and (occurrence.slot_id, occurrence.local_day) not in recorded
+            and now - _IRR_MISSED_WINDOW <= start
+            and watch_until <= now
         ):
             found.append(
                 _MissedOccurrence(
@@ -596,7 +646,7 @@ async def _irrigation_no_outcome(conn, applied: Mapping, now: datetime) -> list[
                     occurrence.slot_id,
                     occurrence.local_day,
                     start,
-                    start + _IRR_NO_OUTCOME_AFTER,
+                    watch_until,
                     "no_outcome",
                 )
             )
@@ -605,8 +655,8 @@ async def _irrigation_no_outcome(conn, applied: Mapping, now: datetime) -> list[
 
 async def _irrigation_run_missed_alerts(conn, view: _IrrigationView, now: datetime) -> list[dict]:
     """``irrigation_run_missed``: one per line, its newest occurrence, only when the ingestor watched the whole window
-    from the planned start to the outcome or to the 2 h mark. Otherwise nothing is raised: an outcome that never came
-    through a gap is a gap, never a missed run."""
+    from the planned start to the outcome or to the mark it counts at. Otherwise nothing is raised: an outcome that
+    never came through a gap is a gap, never a missed run."""
     candidates = await _irrigation_reported_missed(conn, now)
     if view.applied is not None:
         candidates += await _irrigation_no_outcome(conn, view.applied, now)
@@ -624,7 +674,11 @@ async def _irrigation_run_missed_alerts(conn, view: _IrrigationView, now: dateti
     for line_id, item in sorted(newest.items()):
         words = REASON_WORDS.get(item.reason or "")
         when = item.planned_start.astimezone(local_tz()).strftime("%H:%M")
-        what = "the controller reported it missed" if item.rule == "reported_missed" else "no outcome after 2 h"
+        what = (
+            "did not happen (the controller reported it missed" + (f": {words}" if words else "") + ")"
+            if item.rule == "reported_missed"
+            else "has no outcome 2 h after its planned start"
+        )
         alerts.append(
             {
                 "alert_type": "irrigation_run_missed",
@@ -632,11 +686,7 @@ async def _irrigation_run_missed_alerts(conn, view: _IrrigationView, now: dateti
                 "category": "water",
                 "sensor_id": f"irrigation.{line_id}",
                 "zone": (view.zones or {}).get(line_id),
-                "message": (
-                    f"{line_id}: the {when} run on {item.local_day} did not happen ({what}"
-                    + (f": {words}" if words else "")
-                    + ")."
-                ),
+                "message": f"{line_id}: the {when} run on {item.local_day} {what}.",
                 "details": {
                     "line_id": line_id,
                     "slot_id": item.slot_id,
@@ -1076,28 +1126,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             """
         )
         fence = {r["equipment"]: r for r in fence_rows}
-
-        def _fence_on(equipment: str) -> bool:
-            row = fence.get(equipment)
-            return bool(row and row["any_on_15m"])
-
-        def _fence_latest(equipment: str) -> bool:
-            row = fence.get(equipment)
-            return bool(row and row["latest_state"])
-
-        fence_hits: list[tuple[str, str]] = []
-        if irrigation_view is not None and irrigation_view.applied is None:
-            for equipment in ("drip_center_fert", "mister_south_fert", "mister_west_fert"):
-                # Post-#450 these paths are relay-level blocked (hardware.yaml
-                # unconditional turn_off) — any persisted ON is a fence failure.
-                if _fence_on(equipment):
-                    fence_hits.append(("blocked_fert_path_on", equipment))
-            # Window-based pairing (not event ordering) so a legitimate wall feed
-            # that batches master+drip edges in either order cannot false-positive.
-            if _fence_on("fert_master_valve") and not _fence_on("drip_wall_fert"):
-                fence_hits.append(("fert_master_without_wall_drip", "fert_master_valve"))
-            if _fence_on("drip_center") and not _fence_latest("irrigation_center_enabled"):
-                fence_hits.append(("center_drip_while_disabled", "drip_center"))
+        fence_hits = _no_program_fence_hits(irrigation_view, fence)
         latest_state = {equipment: bool(row["latest_state"]) for equipment, row in fence.items()}
         for rule, equipment in fence_hits:
             row = fence[equipment]
