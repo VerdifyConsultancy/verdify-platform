@@ -432,7 +432,8 @@ def test_native_fixture_attests_every_login_and_exercises_each_grant():
         assert f"IF {attestor}() IS NOT TRUE THEN" in bodies[login], login
     dashboard = bodies[LOGIN]
     loop = re.search(r"FOREACH statement IN ARRAY ARRAY\[(.*?)\] LOOP", dashboard, re.S)[1]
-    assert re.findall(r"'SELECT 1 FROM public\.(\w+) LIMIT 0'", loop) == [*TABLES, *VIEWS]
+    # Every column: a view's unused columns plan away, and with them the EXECUTE check on what they call.
+    assert re.findall(r"'SELECT \* FROM public\.(\w+) LIMIT 0'", loop) == [*TABLES, *VIEWS]
     assert re.findall(r"public\.(fn_\w+)\(", loop) == [function.split("(")[0] for function in FUNCTIONS]
     # Each read's locks end with its block: planning locks every chunk of a hypertable, and one
     # transaction holding them all at once could fill the shared lock table production's writers use.

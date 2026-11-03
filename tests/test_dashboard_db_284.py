@@ -6,9 +6,10 @@ a skip fails campaign qualification. The migration chain cannot replay there (25
 digest literals), so irrigation_db_support.prepare_irrigation_tables creates the roles and runs the bodies of
 281, 282 and 283. This file adds the other objects 284 names from db/schema.sql and 280's body, sets the ACLs
 217 left on the functions it grants, records what each login reaches, and only then runs 284's body. Every list
-of granted objects comes from parsing that body, so a removed grant fails here. The seals and the api, ingestor
-and MCP attestations need the production catalog: the rolled-back native qualification proves them
-(tests/test_284_dashboard_grants_delivery.py). Every write rolls back.
+of granted objects comes from parsing that body; test_284_dashboard_grants_delivery.py pins the body, so a removed
+grant fails there, and here too when a service read needs it. The seals and the api, ingestor and MCP attestations
+need the production catalog: the rolled-back native qualification proves them (the same delivery test). Every write
+rolls back.
 """
 
 from __future__ import annotations
@@ -324,7 +325,19 @@ def test_the_parsed_list_has_each_kind_of_grant():
     assert GRANTS.inserts == ["public.desired_state", "public.activity_log"]
     assert GRANTS.sequences == ["public.desired_state_id_seq", "public.activity_log_id_seq"]
     assert set(GRANTS.functions) == set(CALLS)
-    assert set(GRANTS.columns) == {"public.alert_log", "public.crop_band_anchors"}
+    # The issue's column lists, so a wider grant cannot pass the update test below by widening what it parses.
+    assert GRANTS.columns == {
+        "public.alert_log": [
+            "disposition",
+            "acknowledged_at",
+            "acknowledged_by",
+            "notes",
+            "resolved_at",
+            "resolved_by",
+            "resolution",
+        ],
+        "public.crop_band_anchors": ["value", "width_below", "width_above"],
+    }
 
 
 def test_the_login_reads_each_listed_relation_and_nothing_before_284(before):
@@ -333,9 +346,9 @@ def test_the_login_reads_each_listed_relation_and_nothing_before_284(before):
     assert not held & set(GRANTS.selects)  # 283 keeps its own grants; 284 repeats none of them
 
 
-def test_the_login_executes_each_listed_function_and_none_before_284(before):
+def test_the_login_executes_each_listed_function(before):
+    # test_284_adds_exactly_its_list_to_the_login_and_nothing_to_any_other shows it held none of them before.
     assert run(attempts([(CALLS[name],) for name in GRANTS.functions])) == [OK] * len(GRANTS.functions)
-    assert not before[LOGIN]["functions"] & set(GRANTS.functions)
 
 
 def test_the_band_functions_return_values_through_the_helpers_beneath_them(before):

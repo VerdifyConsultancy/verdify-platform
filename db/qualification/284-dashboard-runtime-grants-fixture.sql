@@ -4,15 +4,15 @@
 -- every dashboard grant exactly as listed, across 282, 283 and 284 (relations, columns,
 -- sequences and functions), and a login that reaches nothing else. Then each runtime
 -- login under SET SESSION AUTHORIZATION attests, the api login reaches nothing new,
--- and the dashboard login reads each relation (LIMIT 0: the
--- privilege check runs, no scan does), calls each function, writes its two append-only
--- tables, edits one sentinel alert and one sentinel anchor through its column grants,
--- and is refused the rest. Each read and call runs in its own block that ends by
--- raising, so the locks planning takes on every chunk of a hypertable end with it and
--- the transaction never holds them all at once. Nothing touches an existing row. The
--- sentinels, the new rows, the queued notification and every authorization change end
--- with the rollback; sequences may skip a value. The last line reports the result to
--- the qualifier.
+-- and the dashboard login reads every column of each relation (LIMIT 0: the privilege
+-- checks run, also on a function a view's columns call, and no scan does), calls each
+-- function, writes its two append-only tables, edits one sentinel alert and one sentinel
+-- anchor through its column grants, and is refused the rest. Each read and call runs in
+-- its own block that ends by raising, so the locks planning takes on every chunk of a
+-- hypertable end with it and the transaction never holds them all at once. Nothing
+-- touches an existing row. The sentinels, the new rows, the queued notification and every
+-- authorization change end with the rollback; sequences may skip a value. The last line
+-- reports the result to the qualifier.
 DO $catalog$
 DECLARE
     duty constant regrole := 'verdify_dashboard_runtime'::regrole;
@@ -192,37 +192,37 @@ BEGIN
     -- The band functions run as the caller, so their calls prove the helpers beneath them too.
     -- A missing privilege raises 42501, which leaves the block and fails the session.
     FOREACH statement IN ARRAY ARRAY[
-        'SELECT 1 FROM public.activity_log LIMIT 0',
-        'SELECT 1 FROM public.alert_log LIMIT 0',
-        'SELECT 1 FROM public.climate LIMIT 0',
-        'SELECT 1 FROM public.crop_band_anchors LIMIT 0',
-        'SELECT 1 FROM public.daily_summary LIMIT 0',
-        'SELECT 1 FROM public.data_gaps LIMIT 0',
-        'SELECT 1 FROM public.desired_state LIMIT 0',
-        'SELECT 1 FROM public.diagnostics LIMIT 0',
-        'SELECT 1 FROM public.equipment_state LIMIT 0',
-        'SELECT 1 FROM public.plan_journal LIMIT 0',
-        'SELECT 1 FROM public.planner_trigger_ledger LIMIT 0',
-        'SELECT 1 FROM public.setpoint_changes LIMIT 0',
-        'SELECT 1 FROM public.setpoint_clamps LIMIT 0',
-        'SELECT 1 FROM public.setpoint_plan LIMIT 0',
-        'SELECT 1 FROM public.setpoint_snapshot LIMIT 0',
-        'SELECT 1 FROM public.slack_alert_runbooks LIMIT 0',
-        'SELECT 1 FROM public.system_state LIMIT 0',
-        'SELECT 1 FROM public.water_meter_events LIMIT 0',
-        'SELECT 1 FROM public.weather_forecast LIMIT 0',
-        'SELECT 1 FROM public.v_active_plan LIMIT 0',
-        'SELECT 1 FROM public.v_data_pipeline_health LIMIT 0',
-        'SELECT 1 FROM public.v_desired_state_current LIMIT 0',
-        'SELECT 1 FROM public.v_equipment_relay_map LIMIT 0',
-        'SELECT 1 FROM public.v_irrigation_day_coverage LIMIT 0',
-        'SELECT 1 FROM public.v_irrigation_minutes_daily LIMIT 0',
-        'SELECT 1 FROM public.v_open_alerts LIMIT 0',
-        'SELECT 1 FROM public.v_planner_trigger_health LIMIT 0',
-        'SELECT 1 FROM public.v_sensor_staleness LIMIT 0',
-        'SELECT 1 FROM public.v_water_attribution_daily LIMIT 0',
-        'SELECT 1 FROM public.v_water_meter_daily LIMIT 0',
-        'SELECT 1 FROM public.v_water_relay_runs LIMIT 0',
+        'SELECT * FROM public.activity_log LIMIT 0',
+        'SELECT * FROM public.alert_log LIMIT 0',
+        'SELECT * FROM public.climate LIMIT 0',
+        'SELECT * FROM public.crop_band_anchors LIMIT 0',
+        'SELECT * FROM public.daily_summary LIMIT 0',
+        'SELECT * FROM public.data_gaps LIMIT 0',
+        'SELECT * FROM public.desired_state LIMIT 0',
+        'SELECT * FROM public.diagnostics LIMIT 0',
+        'SELECT * FROM public.equipment_state LIMIT 0',
+        'SELECT * FROM public.plan_journal LIMIT 0',
+        'SELECT * FROM public.planner_trigger_ledger LIMIT 0',
+        'SELECT * FROM public.setpoint_changes LIMIT 0',
+        'SELECT * FROM public.setpoint_clamps LIMIT 0',
+        'SELECT * FROM public.setpoint_plan LIMIT 0',
+        'SELECT * FROM public.setpoint_snapshot LIMIT 0',
+        'SELECT * FROM public.slack_alert_runbooks LIMIT 0',
+        'SELECT * FROM public.system_state LIMIT 0',
+        'SELECT * FROM public.water_meter_events LIMIT 0',
+        'SELECT * FROM public.weather_forecast LIMIT 0',
+        'SELECT * FROM public.v_active_plan LIMIT 0',
+        'SELECT * FROM public.v_data_pipeline_health LIMIT 0',
+        'SELECT * FROM public.v_desired_state_current LIMIT 0',
+        'SELECT * FROM public.v_equipment_relay_map LIMIT 0',
+        'SELECT * FROM public.v_irrigation_day_coverage LIMIT 0',
+        'SELECT * FROM public.v_irrigation_minutes_daily LIMIT 0',
+        'SELECT * FROM public.v_open_alerts LIMIT 0',
+        'SELECT * FROM public.v_planner_trigger_health LIMIT 0',
+        'SELECT * FROM public.v_sensor_staleness LIMIT 0',
+        'SELECT * FROM public.v_water_attribution_daily LIMIT 0',
+        'SELECT * FROM public.v_water_meter_daily LIMIT 0',
+        'SELECT * FROM public.v_water_relay_runs LIMIT 0',
         'SELECT 1 FROM public.fn_band_setpoints(now())',
         'SELECT public.fn_crop_band_value(''house'', ''temp_low'', now())',
         'SELECT public.fn_current_season()',

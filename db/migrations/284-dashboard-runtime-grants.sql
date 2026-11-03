@@ -9,8 +9,8 @@
 -- setpoint_changes or setpoint_plan, anything on the experiment and policy tables the attestor
 -- denies (the login sees an armed experiment only through the definer function), and
 -- mv_zone_band_grade (M6's scorecard view reads it with its owner's rights). fn_solar_phase beneath
--- the band functions keeps PUBLIC's EXECUTE (217's transitive helpers). M6's v_daily_scorecard
--- does not exist yet, so M6 grants it itself.
+-- the band functions keeps PUBLIC's EXECUTE (217's transitive helpers). M6 grants its own
+-- v_daily_scorecard.
 -- The grants move both ordinary seals: fn_runtime_ordinary_boundary_digest hashes every grantee, by
 -- OID, on each relation and helper the api or ingestor login can reach. fn_mcp_runtime_boundary_digest
 -- hashes only PUBLIC's and the MCP duty's entries, and each hypertable grant reaches its chunks, so
@@ -82,11 +82,10 @@ GRANT UPDATE (disposition, acknowledged_at, acknowledged_by, notes, resolved_at,
     ON public.alert_log TO verdify_dashboard_runtime;
 GRANT UPDATE (value, width_below, width_above) ON public.crop_band_anchors TO verdify_dashboard_runtime;
 
--- Successor seals. Both ordinary digests hash the dashboard duty's OID, so only a rolled-back
--- native qualification run once 282 is applied can measure them
--- (tests/fixtures/284-dashboard-runtime-grants-native-qualification.json). Until then this file
--- carries 283's literals here and in its predecessor block as stand-ins, which the successor
--- block refuses; test_native_qualification_is_recorded is the merge gate.
+-- Successor seals: the grants above move the api and ingestor digests. Both hash the dashboard
+-- duty's OID, so only a rolled-back native qualification run once 282 is applied can measure them
+-- (tests/fixtures/284-dashboard-runtime-grants-native-qualification.json). The MCP digest and
+-- receipt must still equal 283's, so this block re-seals only the two ordinary receipts.
 DO $successor$
 BEGIN
     IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7' OR

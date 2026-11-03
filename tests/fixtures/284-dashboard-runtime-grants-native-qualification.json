@@ -1,6 +1,6 @@
 {
   "migration": "284-dashboard-runtime-grants.sql",
-  "exact_final_migration_sha256": "5ee3c9bda4905de3739eb1ec98d56ce5a770026f6329260016716d23acaf05c5",
+  "exact_final_migration_sha256": "f1a51053c527e5dc5e5d2453823c871a0b7036870d7f628812ad5c807245afd2",
   "final_migration_qualification_pending": true,
   "before": null,
   "projected_successor": {
@@ -13,6 +13,6 @@
   "after_rollback": null,
   "inside_transaction_receipts_match": false,
   "final_migration_rollback_verified": false,
-  "native_fixture_sha256": "7112e231ec4f18f5bcf6f67d743288dbdf2a3e932dcf02279d50daefb72f35ff",
+  "native_fixture_sha256": "5b4bb85a9497d2fe298b4971fc1857aa2b1f0cf20aafda5db7d3ec076d9ec86f",
   "native_fixture": null
 }
