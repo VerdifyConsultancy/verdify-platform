@@ -84,8 +84,9 @@ if not _planner_playbook_available:  # pragma: no cover — host-path check
 _STANDING_DIRECTIVES = """
 ## Standing Directives (MANDATORY — read before every action)
 
-1. **Use MCP tools ONLY.** Hermes exposes 22 production tools:
+1. **Use MCP tools ONLY.** Hermes exposes 25 production tools:
    **Monitoring:** `climate`, `scorecard`, `equipment_state`, `forecast`, `history`, `alerts`
+   **Irrigation (read only):** `irrigation_status`, `irrigation_schedule`, `irrigation_history`
    **Control:** `get_setpoints`, `set_tunable`, `set_plan`, `acknowledge_trigger`, `plan_status`, `plan_evaluate`
    **Knowledge:** `lessons`, `lessons_manage`, `lessons_search`, `knowledge_search`
    **Crops:** `crops`, `observations`, `crop_history`, `crop_lifecycle`
@@ -538,6 +539,9 @@ Use tactical knobs below to shift behavior instead.
 - `direct_wet_stress_vpd_margin_kpa` kPa, [0-0.5], def 0.05 — VPD excess over `vpd_high` required before the stress override can open drydown-gated zones.
 - `direct_wet_stress_min_dew_margin_f` °F, [3-15], def 8 — minimum temp-dewpoint margin for direct-wet stress override.
 - RETIRED (recovery firmware 2026-07-10): the clocked/day-mask irrigation schedule (`irrig_wall_days_mask`, `irrig_wall_fert_days_mask`, `irrig_center_days_mask`, `irrig_center_fert_days_mask`) no longer exists in firmware. Wall fertigation runs via the commissioned weekly wall-feed state machine; do NOT emit day-mask parameters.
+- Irrigation program: your context's IRRIGATION section has each line, the next 24 h and what a person holds manual. Read more with `irrigation_status` (lines, runs, today's minutes), `irrigation_schedule` (schedules, occurrences, bounds per line kind, at most 24 schedules) and `irrigation_history` (minutes by day, runs); they show what the Water screen shows, and unknown is null, never 0.
+- Before the irrigation firmware the schedules do not run: each occurrence reads "arrives with the irrigation firmware", only L01 (the wall drip) can run, for `irrig_wall_duration_min`, and Stop works on every wet line. People and named agents make those requests; your irrigation tools only read.
+- The irrigation tools change watering only; they do not count as your plan for a trigger. Still end every trigger with `set_plan` or `acknowledge_trigger`.
 
 **Lighting policy (schedule-layer owned; main/overhead + grow/secondary circuits):**
 The light window also mirrors into the global activity window above, so moving

@@ -44,7 +44,7 @@ All source-of-truth content lives on NFS (`/mnt/iris/` or `/mnt/jason/`). Three 
 │   ├── main.py                    builds Docker image verdify-api
 │   └── Dockerfile
 │
-├── mcp/                        MCP server (22 production tools exposed to Iris planner)
+├── mcp/                        MCP server (25 production tools exposed to Iris planner)
 │   └── server.py                  systemd verdify-mcp.service on localhost:8000
 │
 ├── firmware/                   ESPHome + C++ logic + native tests + replay harness
@@ -246,7 +246,7 @@ github.com/jrvallery/verdify                 TimescaleDB (local SSD volume)
 Manual on VM:
   systemctl restart <svc>
   docker compose up -d <svc>
-  make firmware-deploy                Iris planner (Hermes) ──HTTP──▶ MCP (22 tools)
+  make firmware-deploy                Iris planner (Hermes) ──HTTP──▶ MCP (25 tools)
                                                                         │
                                                                         ▼
                                                             DB writes + ESP32 dispatches

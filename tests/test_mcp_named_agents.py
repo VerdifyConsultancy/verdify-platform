@@ -40,7 +40,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PROD_OVERLAY = REPO_ROOT / "deploy" / "k8s" / "overlays" / "prod"
 
 # The reads and alerts VD-59 grants. The rest of the architecture §5.6 agent
-# column (AGENT_TOOLS) joins as #1171, #1173, #1174 and #1177 register it.
+# column (AGENT_TOOLS) joins as #1171 and #1174 register it (#1173 and #1177 have).
 VD59_AGENT_TOOLS = frozenset(
     {
         "climate",

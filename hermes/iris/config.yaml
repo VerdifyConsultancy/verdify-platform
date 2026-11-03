@@ -55,6 +55,9 @@ mcp_servers:
         - history
         - alerts
         - slack_ops
+        - irrigation_status
+        - irrigation_schedule
+        - irrigation_history
         # Knowledge
         - lessons
         - lessons_search       # Phase 3
