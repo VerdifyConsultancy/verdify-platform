@@ -109,7 +109,7 @@ def test_complete_explicit_scenario_is_not_a_historical_prefix_pass(explicit_fix
 
 def test_explicit_blocked_safety_scenario_is_valid_input_not_permission(explicit_fixture):
     explicit_fixture["branch"]["controller_time_valid"] = False
-    explicit_fixture["branch"]["leak_block"] = True
+    explicit_fixture["branch"]["occupancy_moisture_block"] = True
     report = prep.fog_vent_input_admission(explicit_fixture)
     assert report["scenario_inputs_admissible"] is True  # P1 must exercise the denial.
     assert report["historical_prefix_admitted"] is False
@@ -123,8 +123,8 @@ def test_no_safety_or_request_default_when_a_required_boolean_is_missing(explici
 
 @pytest.mark.parametrize("value", [None, 0, 1, "false", float("nan")])
 def test_safety_flags_are_exact_booleans(explicit_fixture, value):
-    explicit_fixture["branch"]["leak_block"] = value
-    refused(explicit_fixture, "missing_or_nonboolean:branch.leak_block")
+    explicit_fixture["branch"]["drip_relay_open"] = value
+    refused(explicit_fixture, "missing_or_nonboolean:branch.drip_relay_open")
 
 
 @pytest.mark.parametrize("value", [None, float("nan"), float("inf"), -float("inf"), 10**400, True])
@@ -151,7 +151,7 @@ def test_outputs_and_defaults_cannot_be_relabelled_pre_tick_state(explicit_fixtu
         ({"sampled_now_ms": 299999}, "stale_or_future"),
         ({"sampled_now_ms": 300001}, "stale_or_future"),
         ({"stage": "post_relay_output"}, "wrong_causal_stage"),
-        ({"defaults_used": ["leak_block=false"]}, "permissive_defaults"),
+        ({"defaults_used": ["drip_relay_open=false"]}, "permissive_defaults"),
         ({"boot_id": "different-boot"}, "incoherent_tick:boot_id"),
         ({"tick_id": "previous-tick"}, "incoherent_tick:tick_id"),
     ],

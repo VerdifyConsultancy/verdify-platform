@@ -827,12 +827,22 @@ interval:
               open_vent_fog_assist_permitted(mode, relay_out);
           const bool open_vent_mister_assist =
               (mode == VENTILATE) && ctl_state.vent_mist_assist_active;
+          // F7 (#1161): one occupancy rule for every kind of mist and fog. True only while a
+          // detection the ingestor pushed holds (1b's 60 min fail-safe ends it); unknown or
+          // missing occupancy leaves it false, so mist runs (D-IRP-10). VPD mist and fog read it
+          // here; scheduled, run-now and fertilizer mist read it as the engine's `occupied`
+          // input below. Drips never read it. leak_detected is read nowhere in this loop: it
+          // raises the leak alert only (Q-05, F14).
           const bool occupancy_moisture_block = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);
-          const bool leak_block = id(bs_leak_detected).state;
           // #1160: a drip run of the irrigation engine holds the water (irr_drip_active(),
           // the engine's drip-manifold state): climate mist and fog wait. A clean drip that
           // pauses or yields for climate demand releases it (D-IRP-03).
           const bool irrigation_water_conflict = irr_drip_active();
+          // F9 (#1161): a drip relay reads ON. Drips never overlap fog, so even survival fog
+          // waits for it; in SAFETY_COOL the engine pauses a clean drip, and ends a feed, at
+          // its next 5 s tick.
+          const bool drip_relay_open = id(wall_drips).state || id(wall_drips_fertilized).state
+              || id(center_drips).state || id(center_drips_fertilized).state;
           // FW-9: VPD emergency override — allow wet assist even if the daily
           // water budget is exhausted. Include house and zone VPD so a
           // safety miss is not hidden by stale/missing local sensors.
@@ -859,7 +869,6 @@ interval:
           // the count the engine's RTC block (integer centi-gallons; it survives a
           // soft reset and zeroes on a new local day).
           const bool mister_volume_hard_block = irr_saf4_tripped();
-          static bool leak_water_interlock_prev = false;
           static bool occupancy_water_interlock_prev = false;
           static bool mister_volume_hard_block_prev = false;
           if (mister_volume_hard_block != mister_volume_hard_block_prev) {
@@ -887,24 +896,34 @@ interval:
           // plumbing-independent assertion of the invariant. #1160: the engine's
           // l03_hold also holds fog OFF while a feed pulse waits to open L03.
           const bool fert_master_on = id(fertilizer_master_valve).state || irr_l03_hold();
+          // F9 (#1161): the fog force-off is one pure rule, fog_force_off_reason() in
+          // greenhouse_logic.h, which this gate, the fog relay's force-off (11) and the
+          // fog_block_reason ladder (14) all read. Every mode keeps SENSOR_FAULT's lock,
+          // confirmed occupancy, SAF-5, a drip relay reading OFF and a valid clock; outside
+          // SAFETY_COOL an engine drip, the soft budget and SAF-4 also hold fog, while
+          // survival fog runs past them (D-IRP-03, D-IRP-04).
+          const FogForceOffInputs fog_rails{
+              sensor_fault_relay_lock,
+              controller_time_valid,
+              occupancy_moisture_block,
+              fert_master_on,
+              drip_relay_open,
+              irrigation_water_conflict,
+              climate_water_budget_block,
+              mister_volume_hard_block,
+          };
           // The engine's climate-yield input (D-IRP-03): fog the climate wants that
-          // only a drip holds back (leak_detected is not an engine input, Q-05).
-          const bool climate_fog_wanted = willFog && controller_time_valid && !occupancy_moisture_block
-              && !climate_water_budget_block && !mister_volume_hard_block && !fert_master_on;
-          if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block || mister_volume_hard_block || fert_master_on) {
+          // only a drip holds back.
+          FogForceOffInputs fog_rails_but_drips = fog_rails;
+          fog_rails_but_drips.drip_relay_open = false;
+          fog_rails_but_drips.irrigation_water_conflict = false;
+          const bool climate_fog_wanted = willFog && !fog_forced_off(mode, fog_rails_but_drips);
+          if (fog_forced_off(mode, fog_rails)) {
               willFog = false;
-          }
-          if (leak_block != leak_water_interlock_prev) {
-              if (leak_block) {
-                  ESP_LOGE("interlock","Leak detected: forcing fog, misters, and irrigation off");
-              } else {
-                  ESP_LOGW("interlock","Leak lock cleared: water actuators may resume");
-              }
-              leak_water_interlock_prev = leak_block;
           }
           if (occupancy_moisture_block != occupancy_water_interlock_prev) {
               if (occupancy_moisture_block) {
-                  ESP_LOGW("interlock","Occupancy inhibit: forcing fog and climate misters off");
+                  ESP_LOGW("interlock","Occupancy confirmed: holding fog and every mist (drips run)");
               } else {
                   ESP_LOGI("interlock","Occupancy inhibit cleared: moisture actuators may resume");
               }
@@ -944,16 +963,11 @@ interval:
               // CYC-4: force_on bypasses MIN_FOG_OFF_MS so a ≤5s micro-pulse can
               // start even if the fogger toggled recently; force_off bypasses
               // MIN_FOG_ON_MS so the pulse is cut at its ≤5s cap (and on any
-              // safety interlock). The safety disjunction below is unchanged.
+              // safety interlock). F9 (#1161): the force-off is the shared fog
+              // rule, so survival fog in SAFETY_COOL runs past an engine drip,
+              // the soft budget and SAF-4, and no leak signal forces it off.
               manual_fog_force,
-              sensor_fault_relay_lock
-                  || leak_block
-                  || occupancy_moisture_block
-                  || irrigation_water_conflict
-                  || !controller_time_valid
-                  || climate_water_budget_block
-                  || mister_volume_hard_block
-                  || fert_master_on);
+              fog_forced_off(mode, fog_rails));
 
           /**************** 12 — MISTER STATE MACHINE *****************************/
           // Runs only for SEALED_MIST or explicit VENTILATE assist. Zone stress
@@ -1008,32 +1022,22 @@ interval:
             // controls.yaml-side wall-clock recompute — same code as the FSM.
             const bool climate_wet_assist_safety_ok =
               wet_time_valid && climate_wet_assist_permitted(sensor_in, setpts);
-            // ADR-007: command origin, not an availability window, owns relay
-            // selection. Every climate/VPD wet request resolves to center mist;
-            // dormant irrigation enables are irrelevant to this path.
-            const WetTopologyPolicy climate_topology{};
-            const WetResolution climate_wet_resolution = resolve_wet_request(
-              {WetCommandOrigin::CLIMATE_VPD, WetZone::NONE, WetChemistry::CLEAN},
-              climate_topology);
-            // SAF-4/IRR-5: non-bypassable per-zone (center) cumulative-runtime
-            // duty cap. Once the center zone has run its cap today it is locked
-            // out for the rest of the day — regardless of VPD emergency — so the
-            // bare-root Vanda velamen cycles green<->silver instead of staying
-            // continuously saturated. #1160 (F11): the cap is L04's daily_cap_min
-            // in the irrigation program (120 min in the ROM default; 0 = none),
-            // counted by the engine's RTC block over every center mister ON.
-            const bool center_duty_cap_reached = irr_zone_cap_reached(verdify_irr::kL04);
-            // SAF-4: absolute daily volume hard-ceiling — blocks ALL climate
-            // misting even under a VPD emergency (mister_volume_hard_block is
-            // computed earlier from the RTC block against the program's ceiling).
-            const bool south_wet_allowed = false;
-            const bool west_wet_allowed = false;
-            const bool center_wet_allowed = climate_wet_assist_demand
-                                            && climate_wet_assist_safety_ok
-                                            && climate_wet_resolution.admitted
-                                            && climate_wet_resolution.relay == WetRelay::CENTER_MISTER
-                                            && !center_duty_cap_reached
-                                            && !mister_volume_hard_block;
+            // F6 (#1161): one rule per mister zone (L04 center, L07 south, L09 west),
+            // irr_vpd_zone_allowed() in lib/irrigation_program.h: the climate demand and
+            // its safety gate, the zone an effective VPD member of the irrigation program
+            // (its VPD-member bit and its line's enable bit), not backing off or latched by
+            // the mister watchdog (D-IRP-19), its duty cap not reached (SAF-4/IRR-5: the
+            // clean line's daily_cap_min against every mister second on the zone today,
+            // whatever opened it, so the bare-root Vanda velamen cycles green<->silver; 120
+            // min for center in the ROM default) and the SAF-4 ceiling not reached, even in
+            // a VPD emergency. With no program the ROM default makes L04 the only member,
+            // so center VPD misting runs as before.
+            const bool center_wet_allowed = irr_climate_zone_allowed(
+              verdify_irr::kL04, climate_wet_assist_demand, climate_wet_assist_safety_ok, mister_volume_hard_block);
+            const bool south_wet_allowed = irr_climate_zone_allowed(
+              verdify_irr::kL07, climate_wet_assist_demand, climate_wet_assist_safety_ok, mister_volume_hard_block);
+            const bool west_wet_allowed = irr_climate_zone_allowed(
+              verdify_irr::kL09, climate_wet_assist_demand, climate_wet_assist_safety_ok, mister_volume_hard_block);
             const bool any_mister_wet_allowed = south_wet_allowed || west_wet_allowed || center_wet_allowed;
             {
               direct_wet_zone_mask[0] = '\0';
@@ -1065,28 +1069,47 @@ interval:
               irr_climate_close(id(west_wall_mister_fertilized), verdify_irr::kL10);
               irr_climate_close(id(center_mister), verdify_irr::kL04);
             };
+            // F10 (D-IRP-19, #1161): the mister watchdog. irr_mister_watchdog() (the fault
+            // logic is irr_watchdog_step() in lib/irrigation_program.h) forces OFF every wet
+            // relay that reads ON without its engine grant, and every mister ON longer than
+            // its commanded pulse + 30 s (300 s when no length is known), whoever opened it.
+            // An overrun faults the zone: a VPD member backs off 10, then 30 min, and latches
+            // on its third fault of the day; a schedule-only zone, L08 or L10 latches on its
+            // first. A latch holds until local midnight or clear_fault; irr_state carries each
+            // end time. The climate path then closes its own VPD pulse on a zone that may not
+            // mist and ends a pulse train the watchdog cut.
             auto direct_wet_relay_watchdog = [&]() {
-              // Climate owns center only; south and west open only in the engine's runs.
-              irr_climate_close(id(south_wall_mister), verdify_irr::kL07);
-              irr_climate_close(id(west_wall_mister), verdify_irr::kL09);
+              const uint16_t faulted = irr_mister_watchdog();
+              if(!south_wet_allowed) irr_climate_close(id(south_wall_mister), verdify_irr::kL07);
+              if(!west_wet_allowed) irr_climate_close(id(west_wall_mister), verdify_irr::kL09);
               if(!center_wet_allowed) irr_climate_close(id(center_mister), verdify_irr::kL04);
+              const int pulse_zone = id(mister_pulse_zone);
               bool active_zone_gate_closed =
-                  (id(mister_pulse_zone) == 1 && !south_wet_allowed) ||
-                  (id(mister_pulse_zone) == 2 && !west_wet_allowed) ||
-                  (id(mister_pulse_zone) == 3 && !center_wet_allowed);
+                  (pulse_zone == 1 && (!south_wet_allowed || (faulted & verdify_irr::irr_bit(verdify_irr::kL07)))) ||
+                  (pulse_zone == 2 && (!west_wet_allowed || (faulted & verdify_irr::irr_bit(verdify_irr::kL09)))) ||
+                  (pulse_zone == 3 && (!center_wet_allowed || (faulted & verdify_irr::irr_bit(verdify_irr::kL04))));
               if(active_zone_gate_closed) {
                 id(mister_pulse_zone) = 0;
                 id(mister_pulse_timer_ms) = 0;
               }
             };
             direct_wet_relay_watchdog();
+            auto zone_wet_allowed = [&](int z) -> bool {
+              return (z == 1 && south_wet_allowed) || (z == 2 && west_wet_allowed) || (z == 3 && center_wet_allowed);
+            };
+            // F6: the first zone allowed now, center first (rank 1 by default), then south, west.
             auto first_allowed_mister_zone = [&]() -> int {
-              if(center_wet_allowed) return 3;
+              for (int z : {3, 1, 2}) {
+                if(zone_wet_allowed(z)) return z;
+              }
               return 0;
             };
 
               // If misters WERE firing but vent just opened, kill the zone
               // drivers immediately so we don't wait for the pulse timer.
+              // F6 (D-IRP-09): this vent kill is for VPD pulses only. A scheduled
+              // window pulse has no vent gate, and irr_climate_close() never
+              // closes a relay the engine's own run holds.
             if (!mister_vent_ok && id(mister_pulse_zone) > 0) {
                 close_climate_misters();
                 id(mister_pulse_zone) = 0;
@@ -1120,17 +1143,16 @@ interval:
               bool budget_block = climate_water_budget_block;
               bool irrigation_block = irrigation_water_conflict;
               bool zone_mister_demand = humidity_demand && mister_vent_ok;
+              // Q-05 (F14): no leak term. leak_detected raises the leak alert and
+              // holds nothing, so VPD misting runs while the hose runs.
               bool mister_blocked =
-                  leak_block
-                  || budget_block
+                  budget_block
                   || !zone_mister_demand
                   || !any_mister_wet_allowed
                   || irrigation_block
                   || occupancy_blocks;
               if(mister_blocked) {
-                if(leak_block) {
-                  snprintf(moisture_block_reason, sizeof(moisture_block_reason), "leak_detected");
-                } else if(budget_block) {
+                if(budget_block) {
                   snprintf(moisture_block_reason, sizeof(moisture_block_reason), "water_budget");
                 } else if(!zone_mister_demand) {
                   snprintf(
@@ -1216,8 +1238,8 @@ interval:
               const uint32_t PULSE_GAP_MS =
                   uint32_t(pol(verdify_policy::kPF_mister_pulse_gap_s, id(mister_pulse_gap_s))) * 1000UL;
 
-              // Center mist is climate/VPD-only. Every zone uses the base pulse
-              // cadence; there is no dawn or midday watering substitution.
+              // Climate VPD pulses: every zone uses the base pulse cadence; there is no
+              // dawn or midday watering substitution (schedules are the engine's, #1161).
               ctl_state.center_burst = CENTER_BURST_NONE;
               auto pulse_on_ms_for  = [&](int) -> uint32_t { return PULSE_ON_MS; };
               auto pulse_gap_ms_for = [&](int) -> uint32_t { return PULSE_GAP_MS; };
@@ -1298,25 +1320,28 @@ interval:
               };
 
               // pulse_ms: the pulse's commanded length, which the engine's grant carries
-              // as the m= token's planned end (#1160).
+              // as the m= token's planned end (#1160) and the mister watchdog's limit
+              // (D-IRP-19: pulse_ms + 30 s).
               auto turn_on_zone = [&](int zone, uint32_t pulse_ms) {
                 close_climate_misters();
-                // Resolve every climate selection through the pure topology;
-                // stale fairness/zone hints cannot route away from center.
-                if(zone != 3) zone = first_allowed_mister_zone();
-                if(zone == 3 && !center_wet_allowed) zone = first_allowed_mister_zone();
+                // F6 (#1161): only a zone allowed now pulses; a stale fairness or zone
+                // hint falls to the first allowed zone (center first).
+                if(!zone_wet_allowed(zone)) zone = first_allowed_mister_zone();
                 if(zone == 0) { id(mister_pulse_zone) = 0; return; }
                 // Mister re-fire dwell fence (mister_min_off_s): if the chosen
-                // zone is still inside its min-off hold, try the other eligible
-                // zone; if none is ready, hold this cycle (all misters stay off,
-                // mister_pulse_zone=0). The caller arms mister_pulse_timer_ms =
+                // zone is still inside its min-off hold, try another allowed zone
+                // (center first); if none is ready, hold this cycle (all misters stay
+                // off, mister_pulse_zone=0). The caller arms mister_pulse_timer_ms =
                 // pulse_on_ms_for(0) = PULSE_ON_MS, so the FSM re-evaluates ~one
                 // gap later — by which point min_off has elapsed and it fires.
                 // Suppression only DELAYS a re-fire; it never forces a relay on
                 // and never extends a normal pulse, so the failure mode is benign.
                 if(!mister_zone_can_on(zone)) {
-                  int alt = first_allowed_mister_zone();
-                  if(alt > 0 && alt != zone && mister_zone_can_on(alt)) {
+                  int alt = 0;
+                  for (int z : {3, 1, 2}) {
+                    if(z != zone && zone_wet_allowed(z) && mister_zone_can_on(z)) { alt = z; break; }
+                  }
+                  if(alt > 0) {
                     zone = alt;
                   } else {
                     ESP_LOGI("mister","DWELL-HOLD zone=%d (min_off %us)", zone, (unsigned)pol(verdify_policy::kPF_mister_min_off_s, id(mister_min_off_s)));
@@ -1325,10 +1350,14 @@ interval:
                   }
                 }
                 // #1160 (F5): the irrigation engine grants the mist manifold. With no
-                // grant (another mister holds it, a drip runs, L03 is open, or a
-                // scheduled pulse on this zone already serves it) nothing opens and
-                // the FSM asks again one pulse later, as for the dwell hold above.
-                if(zone == 3 && !irr_vpd_grant(verdify_irr::kL04, pulse_ms)) {
+                // grant (another mister holds it, a drip runs, L03 is open, it is the
+                // turn of a scheduled pulse waiting at this boundary, or a scheduled
+                // pulse on this zone already serves it) nothing opens and the FSM asks
+                // again one pulse later, as for the dwell hold above.
+                const uint8_t zone_line = zone == 1 ? verdify_irr::kL07
+                                        : zone == 2 ? verdify_irr::kL09
+                                                    : verdify_irr::kL04;
+                if(!irr_vpd_grant(zone_line, pulse_ms)) {
                   ESP_LOGI("mister","MANIFOLD-HOLD zone=%d", zone);
                   id(mister_pulse_zone) = 0;
                   return;
@@ -1337,7 +1366,9 @@ interval:
                 // sprint-7: per-zone cycle counters at the rising edge
                 //          (turn_on_zone is always preceded by all-off,
                 //          so every call is an off→on transition).
-                if(zone == 3) { id(center_mister).turn_on(); id(last_fire_center_ms) = now_ms; id(cnt_mister_center_today) += 1; }
+                if(zone == 1)      { id(south_wall_mister).turn_on(); id(last_fire_south_ms)  = now_ms; id(cnt_mister_south_today)  += 1; }
+                else if(zone == 2) { id(west_wall_mister).turn_on();  id(last_fire_west_ms)   = now_ms; id(cnt_mister_west_today)   += 1; }
+                else               { id(center_mister).turn_on();     id(last_fire_center_ms) = now_ms; id(cnt_mister_center_today) += 1; }
                 id(mister_pulse_zone) = zone;
                 id(mister_selected_zone) = zone;
               };
@@ -1383,16 +1414,18 @@ interval:
                 return candidate;
               };
 
-              // Pulse-zone selector: watchdog first, then EITHER the per-zone band
-              // arbiter (item 3, when sw_arbiter_zone_enabled) OR the legacy stress
-              // scoring. Caller decided "fire a pulse now"; this answers "which zone."
+              // Pulse-zone selector: the fairness watchdog first; then, with more than
+              // one zone allowed, the per-zone band arbiter; with one, the legacy stress
+              // scoring, which can only pick that zone. Caller decided "fire a pulse
+              // now"; this answers "which zone."
                 // Item-3 arbiter: choose the wet zone from the deterministic per-zone
                 // VPD band + owner priority (center=rank 1) — the SAME math the diag
-                // block already publishes as gh_zone_wet_granted, now wired to relays.
-                // Gated by sw_arbiter_zone_enabled (default OFF) so it ships inert and
-                // replay-clean; flip on after a corpus zone-distribution review. Maps
-                // the solar.h ZoneId (center0/south1/west2/east3) → legacy misting
-                // numbering (none0/south1/west2/center3). EAST has no mister relay.
+                // block publishes as gh_zone_wet_granted. F6 (#1161): it runs whenever
+                // more than one zone is allowed, whatever sw_arbiter_zone_enabled says
+                // (that switch is retired); among the allowed zones none above its band
+                // target, the best-ranked one pulses (irr_rank_vpd_zone()). Maps the
+                // solar.h ZoneId (center0/south1/west2/east3) → legacy misting numbering
+                // (none0/south1/west2/center3). EAST has no mister relay.
                 auto select_arbiter_zone = [&]() -> int {
                   ZoneBand zb[ZONE_COUNT];
                   zb[ZONE_CENTER] = zone_band_at_phase({id(zone_vpd_target_center_sr),id(zone_vpd_target_center_sm),id(zone_vpd_target_center_ss),id(zone_vpd_target_center_mid)}, id(zone_vpd_width_below_center), id(zone_vpd_width_above_center), sv2_phase);
@@ -1405,11 +1438,11 @@ interval:
                   for (int z = 0; z < ZONE_COUNT; z++) zi[z] = zone_wet_intent(zvpd[z], zb[z]);
                   const int prank[ZONE_COUNT] = { id(zone_priority_center), id(zone_priority_south), id(zone_priority_west), id(zone_priority_east) };
                   const bool zact[ZONE_COUNT] = { center_wet_allowed, south_wet_allowed, west_wet_allowed, false };
-                  const int won = arbitrate_wet_zone(zi, prank, zact);
+                  const int won = verdify_irr::irr_rank_vpd_zone(zact, zi, prank);
                   if (won == ZONE_SOUTH)  return 1;
                   if (won == ZONE_WEST)   return 2;
                   if (won == ZONE_CENTER) return 3;
-                  return 0;  // none, or EAST (no relay)
+                  return 0;  // fewer than two zones allowed, or EAST (no relay)
                 };
                 auto select_zone_for_pulse = [&]() -> int {
                   int overdue = select_overdue_zone();
@@ -1419,17 +1452,14 @@ interval:
                              zone_names[overdue]);
                     return overdue;
                   }
-                  if (id(sw_arbiter_zone_enabled)) {
-                    const int az = select_arbiter_zone();
-                    if (az > 0) return az;  // arbiter granted a zone; else fall through to legacy
-                  }
+                  // F6: the stress score halves center (mister_center_penalty), so it never
+                  // chooses between VPD members; the rank arbiter does.
+                  const int az = select_arbiter_zone();
+                  if (az > 0) return az;
                   return select_most_stressed_zone();
                 };
                 auto fallback_wet_zone = [&]() -> int {
-                  if(south_wet_allowed) return 1;
-                  if(west_wet_allowed) return 2;
-                  if(center_wet_allowed) return 3;
-                  return 0;
+                  return first_allowed_mister_zone();
                 };
 
               // --- S1 ENGAGE: misters start only under humidity demand; zone/global
@@ -1587,11 +1617,21 @@ interval:
               } else if(humidity_demand && id(mister_state) > 0 && id(mister_pulse_zone) == 0) {
                 snprintf(moisture_block_reason, sizeof(moisture_block_reason), "pulse_gap");
               }
+            }
 
-              // Water tracking (flow meter during climate wet assist)
-              const bool climate_mister_flow_active = id(mister_pulse_zone) > 0 && id(mister_state) > 0;
-              const bool climate_fog_flow_active = id(fog_rly)->state;
-              if(climate_mister_flow_active || climate_fog_flow_active){
+            // Water tracking (F6, #1161): the flow meter counts into SAF-4 and the soft
+            // budget whenever any mister relay is ON, whatever its origin (a VPD pulse, a
+            // scheduled or run-now window, a feed on L08 or L10, a mist prewet or flush),
+            // or fog is, survival fog included (D-IRP-04: exempt from both caps, still
+            // counted). It runs outside the mister_blocked branch, so blocked VPD misting
+            // never stops the count; drips never overlap mist or fog, so no drip water is
+            // counted. Runtime per zone is the engine's (its RTC block, every relay ON).
+            {
+              const bool mister_flow_active = id(center_mister).state
+                  || id(south_wall_mister).state || id(south_wall_mister_fertilized).state
+                  || id(west_wall_mister).state || id(west_wall_mister_fertilized).state;
+              const bool fog_flow_active = id(fog_rly)->state;
+              if(mister_flow_active || fog_flow_active){
                 float gpm = id(water_flow_rate).state;
                 if(!isnan(gpm) && gpm > 0.0f){
                   // #1160: SAF-4 and the soft budget count integer centi-gallons in the
@@ -1935,17 +1975,13 @@ interval:
               snprintf(last_overrides, sizeof(last_overrides), "%s", overrides);
             }
 
+            // F9 (#1161): the force-off words come from the same rule as the fog gate and
+            // the relay (fog_force_off_reason()), so while survival fog runs in SAFETY_COOL
+            // this never reads irrigation, resource_budget or water_ceiling, and no leak.
             char fog_block_reason[64];
-            if(leak_block) {
-              snprintf(fog_block_reason, sizeof(fog_block_reason), "leak_detected");
-            } else if(occupancy_moisture_block) {
-              snprintf(fog_block_reason, sizeof(fog_block_reason), "occupancy");
-            } else if(irrigation_water_conflict) {
-              snprintf(fog_block_reason, sizeof(fog_block_reason), "irrigation");
-            } else if(climate_water_budget_block) {
-              snprintf(fog_block_reason, sizeof(fog_block_reason), "resource_budget");
-            } else if(!controller_time_valid) {
-              snprintf(fog_block_reason, sizeof(fog_block_reason), "time_invalid");
+            const char* fog_forced_reason = fog_force_off_reason(mode, fog_rails);
+            if(fog_forced_reason[0] != '\0') {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "%s", fog_forced_reason);
             } else if(manual_fog_requested && manual_fog_safety_block[0] != '\0') {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "%s", manual_fog_safety_block);
             } else if(id(fog_rly)->state) {
@@ -2319,9 +2355,11 @@ interval:
   # engine loop of greenhouse/irrigation_engine.yaml (lib/irrigation_program.h);
   # every wet relay opens only with its bit in irr_grant_mask (hardware.yaml).
   # The climate path above reads the engine through irr_drip_active(),
-  # irr_l03_hold(), irr_saf4_tripped() and irr_zone_cap_reached(), asks for the
-  # mist manifold with irr_vpd_grant()/irr_vpd_release(), and never closes a
-  # relay the engine's own run holds. leak_detected cancels nothing (Q-05).
+  # irr_l03_hold(), irr_saf4_tripped() and irr_climate_zone_allowed() (F6: one
+  # rule per mister zone), asks for the mist manifold with
+  # irr_vpd_grant()/irr_vpd_release() for any VPD-member zone, runs the D-IRP-19
+  # mister watchdog (irr_mister_watchdog(), F10) each second, and never closes a
+  # relay the engine's own run holds. leak_detected holds and cancels nothing (Q-05).
   ################################################################################
 
 ################################################################################

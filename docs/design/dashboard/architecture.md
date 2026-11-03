@@ -527,10 +527,10 @@ MCP and the dashboard both need, so validation and writes exist once.
 
 | Module | Functions | Operator API | MCP |
 |---|---|---|---|
-| `settings` | `catalog`, `validate`, `write`, `release`, `status`, `history` | API-09 to API-12 | `settings`, `set_setting` (new) |
+| `settings` | `catalog`, `validate`, `write`, `release`, `status`, `statuses`, `history`, `desired_states` | API-09 to API-12, API-17's readback state | `settings`, `set_setting` (new) |
 | `activity` | `append`, `list` | API-17 | `activity` (new); written by every write tool |
 | `alerts` | `list`, `open_count`, `ack`, `resolve`, extracted from the MCP `alerts` tool; the shared resolve never refuses, and the MCP adapter keeps its retrieval check for `planner_tool_dependency_failed` | API-02 (`alerts`), API-14 to API-16 | `alerts` (becomes an adapter) |
-| `reads` | `now`, `plan`, `equipment` | API-02, -07, -13 | none (existing read tools keep their LLM formatting) |
+| `reads` | `now`, `plan`, `equipment`; `settings_rows`, `setting_history`, `activity_page` (VD-55) | API-02, -07, -13; API-09, -12, -17 | `settings` and `activity` (new) call the last three; the existing read tools keep their LLM formatting |
 | `series` | metric registry, `series`, `states`, `band` | API-03 to API-06 | none (`history` stays) |
 | `irrigation` | per [irrigation](irrigation.md) | API-IRR-01 to API-IRR-13 | the irrigation tools |
 

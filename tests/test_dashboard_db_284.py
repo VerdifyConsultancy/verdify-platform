@@ -239,7 +239,8 @@ async def reach(conn, login: str) -> dict[str, set]:
         """SELECT format('%I.%I', n.nspname, c.relname) AS name, p.privilege
              FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
             CROSS JOIN unnest(ARRAY['USAGE','SELECT','UPDATE']) p(privilege)
-            WHERE n.nspname = 'public' AND c.relkind = 'S' AND has_sequence_privilege($1, c.oid, p.privilege)""",
+            WHERE n.nspname = 'public'
+              AND CASE WHEN c.relkind = 'S' THEN has_sequence_privilege($1, c.oid, p.privilege) ELSE FALSE END""",
         login,
     )
     functions = await conn.fetch(

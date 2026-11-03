@@ -103,6 +103,7 @@ from tasks import (
     hydro_probe_sync,
     infra_cpu_sync,
     ingestor_heartbeat,
+    irrigation_sync,
     matview_refresh,
     midnight_watch,
     planner_memory_ingest_sync,
@@ -115,6 +116,7 @@ from tasks import (
     record_component_device_uptime,
     record_component_entity_inventory,
     record_component_grid_firmware_revision,
+    record_engine_capability,
     setpoint_confirmation_monitor,
     setpoint_dispatcher,
     shelly_sync,
@@ -3508,6 +3510,9 @@ def _record_equipment_callback(
     source_generation: int,
     source_clock_valid: bool,
 ) -> None:
+    # VD-64: the irrigation bridge reads the wet relays' live states (and when each last read OFF) from here,
+    # before any dedupe, so a new transport generation re-labels an unchanged state.
+    shared.note_wet_relay(equipment, value, source_generation, observed_at)
     if equipment in _ORDINARY_EQUIPMENT_STREAMS:
         _record_ordinary_equipment_callback(equipment, value, observed_at, source_generation, source_clock_valid)
         return
@@ -4233,6 +4238,14 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                 observed_at=datetime.now(UTC),
             )
             if pool is not None:
+                # VD-64: whether this connection has the irrigation engine, as one irr_engine row on every
+                # connect; the services read it to choose the L01 bridge, also after a firmware rollback.
+                # Only after the generation advance above: nothing may await between sharing the new client
+                # and that advance, or a task would write to it against the old generation's readbacks.
+                try:
+                    await asyncio.wait_for(record_engine_capability(pool, shared.esp32["services"]), timeout=10)
+                except Exception as e:
+                    log.warning("irr_engine capability row not written: %s", type(e).__name__)
                 try:
                     await refresh_latest_occupancy_state(pool, "esp32_reconnect")
                 except Exception as e:
@@ -4530,6 +4543,8 @@ async def task_loop(
         # is bounded by the component writer to 120s.
         "component_experiment": 150,
         "equipment_direct_snapshot": 30,
+        # VD-64: a bridge Stop holds the writer for one 6 s job tick plus a paced call per open relay.
+        "irrigation_sync": 30,
     }
     TASKS = [
         # (name, interval_seconds, coroutine_factory)
@@ -4556,6 +4571,9 @@ async def task_loop(
         # reactive_planner removed in Sprint 5 P6 — replaced by forecast deviation monitor
         ("setpoint_dispatch", 300, setpoint_dispatcher),
         ("setpoint_confirmation", 300, setpoint_confirmation_monitor),
+        # VD-64 (irrigation §6.1): run-now and stop commands every 5 s. NOTIFY irrigation_changed forces
+        # a pass below, at most every 30 s (_FORCED_TASK_RETRY_MIN_S), so the 5 s cadence bounds latency.
+        ("irrigation_sync", 5, irrigation_sync),
         ("forecast_sync", 3600, forecast_sync),
         ("forecast_actions", 900, forecast_action_engine),
         ("deviation_check", 900, forecast_deviation_check),
@@ -4611,6 +4629,8 @@ async def task_loop(
             )
             c1_overlay.poll(STATE_DIR)
             forced = {"setpoint_dispatch"} if shared.setpoint_dispatch_requested.is_set() else set()
+            if shared.irrigation_sync_requested.is_set():
+                forced.add("irrigation_sync")
             started = _launch_due_tasks(pool, TASKS, last_run, running, now, task_timeouts, forced)
             if "setpoint_dispatch" in started:
                 pending_drift_approval_stamp = None
@@ -5004,6 +5024,10 @@ async def setpoint_listener(pool: asyncpg.Pool) -> None:
     async def _on_notify(_conn, _pid, _channel, payload):
         await _handle_setpoint_notification(pool, payload)
 
+    def _on_irrigation_notify(_conn, _pid, _channel, _payload):
+        # VD-64: an irrigation write committed; wake irrigation_sync. The payload is empty by design.
+        shared.irrigation_sync_requested.set()
+
     def _on_desired_state_changed(_conn, _pid, _channel, _payload):
         # VD-33: a wake only. The payload is always empty and never read, and
         # nothing is pushed here: the next normal, fenced dispatcher pass reads
@@ -5024,15 +5048,18 @@ async def setpoint_listener(pool: asyncpg.Pool) -> None:
             conn = await asyncpg.connect(DB_DSN, timeout=10)
             conn.add_termination_listener(_on_disconnect)
             await conn.add_listener("setpoint_changed", _on_notify)
+            await conn.add_listener("irrigation_changed", _on_irrigation_notify)
             await conn.add_listener("desired_state_changed", _on_desired_state_changed)
             if connected_once:
                 # NOTIFY is not durable. Reuse the normal fenced dispatcher to
                 # reconcile eligible pending rows after the subscription returns,
-                # and wake both tasks for any desired_state write the gap hid.
+                # and wake both tasks for any desired_state or irrigation write the gap hid.
                 shared.setpoint_dispatch_requested.set()
                 shared.irrigation_sync_requested.set()
             connected_once = True
-            log.info("Setpoint listener: LISTEN on setpoint_changed and desired_state_changed channels")
+            log.info(
+                "Setpoint listener: LISTEN on setpoint_changed, irrigation_changed and desired_state_changed channels"
+            )
             if conn.is_closed():
                 disconnected.set()
             await disconnected.wait()

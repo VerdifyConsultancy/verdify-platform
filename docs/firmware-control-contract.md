@@ -146,6 +146,48 @@ The live controller must now satisfy these cross-layer invariants:
   moisture assist carries the VPD correction; planner policy should tune
   intensity, not delay correction until far above the active band.
 
+## 2026-11-02 Mist Path (#1161, irrigation F6-F10, F14)
+
+Ships in the irrigation engine OTA (R3, #1164). Until that release is flashed,
+the running firmware keeps center-only routing and its leak interlock.
+
+- **Membership, not routing.** Each mister zone (L04 center, L07 south, L09
+  west) takes climate VPD pulses only while `irr_vpd_zone_allowed()` says so:
+  climate demand and its safety gate, an effective VPD member of the irrigation
+  program (its `vpd_member` flag and its line enabled), no watchdog back-off or
+  latch, the zone's duty cap and SAF-4. With no stored program the ROM default
+  makes L04 the only member, so center VPD misting behaves as before. Schedules
+  and run-now are the engine's own windows, on zones with `schedule_member` on.
+- **Zone choice.** The 10 min fairness override first; then, with more than one
+  zone allowed, the rank arbiter (`zone_priority_*`, center rank 1).
+  `sw_arbiter_zone_enabled` is retired in the registry (read-only, "Retired: the
+  engine ranks zones whenever more than one is a VPD member."); its switch and
+  `cfg_arbiter_zone_enabled` readback stay on the device, read by nothing.
+- **One manifold.** Every climate VPD pulse asks the engine for its zone's grant;
+  VPD and scheduled pulses alternate at the boundary, VPD goes first in a VPD
+  emergency, and one window pulse serves both on the same zone. One mister relay
+  is ON at a time. The vent interlock (`sw_mister_closes_vent`) holds VPD pulses
+  only; a scheduled pulse has no vent gate (D-IRP-09).
+- **Occupancy.** `occupancy_moisture_block` (a confirmed detection the ingestor
+  pushed, with the 60 min fail-safe) holds VPD, scheduled, run-now and fertilizer
+  mist and fog alike; unknown occupancy holds nothing (D-IRP-10); drips never read
+  it.
+- **Survival fog.** `fog_force_off_reason()` is the one fog force-off rule. In
+  `SAFETY_COOL` fog runs past an engine drip, the soft budget and SAF-4 (still
+  counted); SENSOR_FAULT, confirmed occupancy, L03 (SAF-5), a drip relay reading
+  ON and an invalid clock hold it in every mode. `fog_block_reason` gains
+  `sensor_fault`, `fert_master` and `water_ceiling`.
+- **Water.** SAF-4 and the soft budget count the site meter whenever any mister
+  relay or fog is ON, whatever opened it.
+- **Leak.** `leak_detected` raises the leak alert and nothing else: no fog,
+  mister or drip force-off and no `moisture_block_reason`/`fog_block_reason` word.
+- **Mister watchdog (D-IRP-19).** A wet relay ON without its engine grant, or a
+  mister ON past its commanded pulse + 30 s (300 s when no length is known), is
+  forced OFF. Per zone per local day (RTC block): a VPD member backs off 10 min,
+  then 30 min, and latches on its third fault; a schedule-only zone, L08 or L10
+  latches on its first. A latch holds until local midnight or `clear_fault`;
+  `irr_state` publishes each end time (`f=`).
+
 ## Removed HTTP Poller
 
 The earlier HTTP `/setpoints` poller is intentionally absent from v1.0. It

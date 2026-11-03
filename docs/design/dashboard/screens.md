@@ -223,6 +223,19 @@ Acceptance:
 5. Occupancy always shows: confirmed reads "Someone inside: misters wait (Frigate, 4 min ago)"; unknown reads
    "Occupancy unknown: misters may run".
 
+**As built (VD-09).** Where the build settles a detail this section leaves open, or differs from it:
+
+| Topic | As built |
+|---|---|
+| The answer's stale row | "Waiting for fresh data" holds while API-02 marks the climate source stale, and also while an indoor reading is older than twice the climate cadence at the answer's `server_time`, or a reading with a band in force (temperature, VPD) has no value. In production the readings come from the newest climate row, so this is the same test; it also covers the `stale-data` fixture (climate fresh, readings 14 min old) and a probe that drops out of a fresh row. A missing RH with no RH band is not stale. Before API-02 first answers the sentence reads "Checking the greenhouse…" and claims nothing |
+| One API-02 request | Now reads the shell's API-02 poll; the shell polls under the same key the write hooks read, so Stop notes what runs from it and reads it every 5 s while it confirms, and an Acknowledge refetches the one count there. The answer's first row follows the newest read of that entry (the poll or a Stop's readback), and a 401 is the session-ended card, never "Can't reach the greenhouse data" |
+| VPD and RH beside the hero value | At 860 px and below, where their tiles move under "All readings", a line under the hero value reads "VPD 0.62 kPa · in band · RH 71.0% · no RH band" (verdicts hidden while the answer mutes them) |
+| Phones | 860 px and below throughout (§1.1): the hero keeps Mode, Iris, Water and Alerts 2-up, and a button marked wide (Stop all water and Acknowledge here) is full width. A tighter hero (1rem padding, a 2.75rem hero value, smaller tiles), tighter gaps and a 0.9rem minutes line keep Stop all water above the fold at 390 × 844, with water running and a two-line mode too (measured in Chrome on static renders of the fixtures; #1128's e2e measures it in CI); the static chips are 32 px tall, as they are not targets. Opening `/#data` on a phone (the ingestor banner's link) opens "All readings" at the Data tile |
+| Water card | DOM order is the title, the minutes line, the actions row (Stop all water for operators, "Water ›" for everyone), then the rest; above 860 px the actions row moves to the card's end, as drawn. Stop sits outside the card's error boundaries, so it renders in every state. Last water reads "misted Fri 14:20 (VPD)" for a mister and "Fri 08:31, 12 min" for a drip (times are the instant's own clock, so a Friday before the fall-back reads MDT) |
+| Tile values | A tile's value wraps rather than truncating, at every width, so the mode in words ("Sensor fault: equipment off") and the count by severity ("1 warning · 1 info") always read whole; a muted value (STALE) never turns the Iris tile amber. An age or reading the API lacks reads "—" with why ("writer — (no push on record)", "RH — (No outdoor RH in the last hour)") |
+| Line states before the irrigation firmware | The Water tile and the card's running line read Unknown only while an enabled line's state is unknown, or, with the firmware, while `irr_state` is stale. Before it no `irr_state` exists (a source never seen reads stale), and the relay states stand alone (irrigation §9) |
+| Needs someone | The top three keep API-14's order (severity, then age as the API sorts it: last seen, newest first), so they are the first unacknowledged rows Activity lists. A row acknowledged on the page stays in place for the visit, reading "Acknowledged by jason · 10:42"; the head and the answer follow the one count as API-02 refetches |
+
 ## 3. SCR-02 Graphs · `/graphs`
 
 **Purpose:** past, present and plan in one view: climate against the band, any measured signal, setting steps and
@@ -297,6 +310,24 @@ Acceptance:
    90-day window shows the lanes message and still renders the climate panels; a 400-day window labels the span past
    climate's 365 days "Daily summaries before …".
 
+As built (VD-10, #1130). Where the build settles a detail above, or differs from it:
+
+| Topic | As built |
+|---|---|
+| Files | `dashboard/app/routes/graphs.tsx` and `graphs-scorecard.tsx` (the route file #1124 named, kept rather than renamed `graphs.scorecard.tsx`), `components/graphs/` (controls, metric picker, setting chooser, resolution line, scorecard table), `lib/graph-url.ts` (the URL and the window) and `lib/graph-reads.ts` (the page clock and the window reads) |
+| Controls | Row one is LinkedPanels' tools row: the range chips, the custom range (From, To, Show), "Reset zoom" while zoomed and "CSV of this window". Row two, "On charts:", holds the setting chips, the metric chips, "+ Setting", "+ Metric" and "Scorecard ›". Both pickers are native modal `<dialog>`s in the drawer's frame with a filter box |
+| Settings legend | The setting chips are the settings' legend: each reads "VPD · mister_engage_kpa" and links to `/settings?edit=<param>`; × takes it off. Removing one default names the other, so the URL keeps it; removing the last writes `set=` |
+| URL notices | A range, window, metric or setting the page cannot use is dropped from the view with a notice in words ("Removed unknown metric …", "Removed setting mister_pulse_gap_s: no chart in s", "Removed daily.water_gal: daily keys show on the scorecard"). The address bar is left as it was; every link on the page starts from the cleaned view. A climate key in `m` is always drawn and drops silently |
+| Window | A window of 400 local days can run 400 d 1 h across a net fall-back; each read then keeps its last 400 days, which moves only the start of a window whose buckets are whole days. The lanes rule counts the window without a chip's 12 h ahead, so a 31-day custom range that spans the fall-back (31 d 1 h) shows the lanes message, as API-05 would refuse it. An ISO time whose `+` offset reached the link unencoded (read as a space) counts as `+`, and links write it as `%2B`; a day that does not exist ("2026-02-30T08:00Z") is refused with the window's notice |
+| Empty | "No data in this window" shows when no panel, a picked metric's included, has a value in the window |
+| Polling | The page clock is the current minute. A window that reaches now moves with it every 60 s (every second minute while a read fails) while the tab is visible, and shows its previous answer until the next minute's arrives; a custom or exact window that reaches now keeps its x range, so its band and setting history poll every 60 s instead. Reads are keyed by their exact request, so a closed window reads once. The scorecard polls its 30-day reads every 60 s |
+| Eyebrow and line | The eyebrow spells the bucket out: "Temperature · °F · MEASURED · Band in force · one point per 5 minutes". STALE reads on the notes line under it (VD-06). The resolution line adds the year when the window leaves the current one, and reads "across N clock changes" when more than one falls inside |
+| Scorecard columns | Keyed by VD-56's registry keys (`daily.temp_in_band_pct`, `daily.vpd_in_band_pct`, `daily.time_in_band_day_pct`, `daily.time_in_band_night_pct`, `daily.water_gal`, `daily.iris_required_written`, `daily.iris_required_missed`, `daily.alerts_critical`, `_warning`, `_info`). A `daily` key API-03 lists beyond these follows as its own column; one it does not list reads "— not served"; a failed read "— couldn't load" with a Retry |
+| Scorecard rows | The date cell carries the day's length when it is not 24 h ("Sun, Nov 1 · 25 h") and "partial" for today and API-IRR-10's partial days. A complete minutes day with no watering in a zone is a true 0 |
+| Scorecard CSV | The same 15 columns; the date as YYYY-MM-DD with its note in parentheses ("2026-11-01 (25 h)"), each value as the number in its canonical unit, each missing value as "— <reason>" |
+| Chart types | `dashboard/app/charts/types.ts` re-exports the generated client's types (through `Lenient`), so a parsed response goes to a chart unchanged |
+| Fixture | `scorecard-30d` joins the registry. The fixture API's day buckets now start at America/Denver midnights, as VD-56's do, and a request that names a `daily.*` key is daily |
+
 ## 4. SCR-03 Plan · `/plan`
 
 **Purpose:** what Iris has told and will tell the controller, why and until when, whether Iris is healthy, and a
@@ -347,6 +378,21 @@ Acceptance:
 3. With a fixture plan written 07:02 (13:00 waypoint 1.70) and a non-manual desired row at 08:00 (1.55), the lane
    reads "holds until Iris's next plan" and the 13:00 waypoint is muted and labelled SUPERSEDED.
 4. A missed SUNSET trigger in the fixture shows "missed" with its failure class here and turns Now's Iris tile amber.
+
+### 4.1 As built (VD-11)
+
+The screen is `dashboard/app/routes/plan.tsx` with `components/plan-card.tsx` and `components/planner-health.tsx`
+(#1131). Where it settles a detail this section leaves open, or differs from it:
+
+| Topic | As built |
+|---|---|
+| Reads | One API-07 read under its shared key, every 60 s and paused while the tab is hidden; the window is in the URL (`?hours=72`, anything else 24 h). Device staleness is the shell's API-02 `freshness.readback.stale`. The time left, a trigger's lateness and the lanes' window count from when API-07 answered, on the server's clock (the shell's API-02 skew, as every age on the page), so a device clock running ahead never marks a trigger late early |
+| Card | "iris-20261102-0702 · SUNRISE · written 07:02 · to 17:30 (6 h left)"; a time on another local day carries its date ("to Nov 5, 12:00 (71 h left)"), and under an hour the time left reads in minutes. The hypothesis is quoted with AI; with none it reads "— no hypothesis recorded" and carries no AI. Details lists Conditions (`conditions_summary`) and Expected outcome ("—" with "not recorded" when null), the stress windows of `detail.hypothesis_structured` (kind and severity in words, local times, mitigation), the per-setting rationale (`hypothesis_structured.rationale`: label, key, old → new, expected effect, evidence; also a climate intent that names its setting) and, under Waypoint reasons, each other `climate_intents` reason at its time. The intents' knob values are not listed |
+| Names | An actor reads as API-07 sends it, the Authentik username: "YOUR VALUE 1.55 · jason 08:00 · holds until Iris's next plan". "Jason" in this doc is illustrative |
+| Health | Newest first by `expected_at`. The ledger seeds a whole day's rows at midnight, so the expected rows ahead would fill "the five newest": the list shows the next row ahead (it reads "due"), the five newest that have fired and every marked required trigger, and "All triggers · N more" opens the rest, the later rows ahead included. The time shown is `due_at`, with its date on another day. A row still due or delivered after `due_at` adds "· late" (a due time that does not parse is never late); only a required one gets ▲ and the amber rule. `failure_class` reads raw: the ledger's classes are open-ended and the words table has no family for them yet |
+| Lanes | `PlanLanes` gains `stale` (each device value muted with "STALE · read HH:MM" in its title, "STALE · device values last read HH:MM" over the rows, the device segment muted and labelled STALE; waypoints draw as before) and `rowEnd`, a 3.5rem column beside the plot where Plan puts Open, a link to `/settings?edit=<param>` named "Open <label>". The plan lanes' labels are 6rem at every width. The head reads "1 setting MANUAL · Iris skips it" ("N settings … them") beside the 24 h and 72 h chips, and nothing when none is manual |
+| States | One read feeds all three panels, so API-07 failing shows "Couldn't load …" with Retry in each; a poll that fails after an answer replaces it, so no earlier plan stays on screen. No panel shows an age line, so nothing green shows |
+| Fixtures | `no-plan` (no plan since 09:30, device values only), `manual-lane` (`mister_pulse_on_s`, manual by jason since 10/30) and `forecast-rule` (`mister_engage_delay_s` 90 s from 14:00, `preemptive`) join `superseded-lane` and `missed-sunset`. The browser flows at 1440 and 390 px (`e2e/plan.spec.ts`) come with #1128's harness |
 
 ## 5. SCR-04 Water · `/water`
 
@@ -521,7 +567,7 @@ At 390 rows become stacked cards with the device value large and Edit full width
 | Panel | Shows | Data | Refresh |
 |---|---|---|---|
 | Search and filters | Search on name, key and plain label; chips All, Manual, Requested, Not confirmed, Changed by an agent, Read-only; all in the URL | API-09 | — |
-| Catalog | Groups by `control_class`: planner policy, scheduled policy, controller safety and crop band (anchors and widths edit through the same drawer; the curve preview is Next), plus "Site water caps" for the three irrigation site values, and the read-only "Band in force" (API-09 `group` `band_in_force`, VD-55): the house and per-zone band the controller runs, DERIVED with its age; then read-only rows with their reason: the legacy wide limits (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`, `vpd_target_*`: "legacy limit, not the band while the on-chip band runs"), values the dispatcher derives (the activity mirror), the old commissioning rows ("retiring with the irrigation engine"), readback context and retired. Fixed order, no column sort | API-09 | 60 s; 5 s while a row is REQUESTED |
+| Catalog | Groups by `control_class`: planner policy, scheduled policy, controller safety and crop band (anchors and widths edit through the same drawer; the curve preview is Next), plus "Site water caps" for the three irrigation site values, and the read-only "Band in force" (API-09 `group` `band_in_force`, VD-55): the house and per-zone band the controller runs, DERIVED with its age; then read-only rows with their reason: the legacy wide limits (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`, `vpd_target_*`: "legacy limit, read-only: not the band while the on-chip band runs"), values the dispatcher derives (the activity mirror), the old commissioning rows ("retiring with the irrigation engine"), readback context and retired. Fixed order, no column sort | API-09 | 60 s; 5 s while a row is REQUESTED |
 | Row | Label and key; device value with age and badge (CONFIRMED, NOT CONFIRMED, HELD, or NO READBACK only for a setting with no readback at all; switches confirm from their equipment mirror); the pending request under it, with its reason once late: "Clamped to 2.00 kPa: <guardrail>", "Sent 06:02; waiting: controller heap low", "Sent 06:02; push failed: <status>", "Held by experiment <id>: applies when it ends", "Ingestor not running since 03:12", "Controller not reporting since 03:12", else "Sent 06:02; no matching readback yet" (with no send time known: "Waiting: controller heap low", "Push failed: <status>", "No matching readback yet"); MANUAL; AI with the agent name ("Iris changed this at 07:02"), or "Forecast rule · system"; the next PLANNED value, or "superseded until Iris's next plan" while a newer non-manual value holds; bounds and step; read-only reason. Iris's values show as stored, unsnapped. A site cap's device value is the one in the program on the controller ("On controller · rev 42: 360 gal"); before the irrigation firmware a site cap still saves and reads REQUESTED with "applies with the irrigation firmware" (§1.4 S) | API-09 | as above |
 | Drawer `?edit=<param>` | Class and key, device value and badge, NumberField, Switch or Select, Manual (ticked), Reason, Save, Release to auto; "Graph this setting ›" (`/graphs?set=<param>`) only when its unit has a Graphs panel. Escape and × close without asking | API-09 | on open |
 | History (Next) | Requests stepped by source, the readback line, Iris's planned values ahead and the bounds over a chosen window; Revert | API-12 | on open |
@@ -539,7 +585,7 @@ At 390 rows become stacked cards with the device value large and Edit full width
 | Loading | Skeleton rows per group |
 | Empty | "No setting matches 'pulse gap x'" |
 | Stale | The device value muted with STALE and its age; a REQUESTED row stays REQUESTED |
-| Not reporting | Save still works: "Saved; it applies when the controller reports again" |
+| Not reporting | Save still works; while the ingestor or controller is down the drawer says so before Save: "Save still works: the change applies when the controller reports again" |
 | Error | The catalog shows Retry; a failed Save keeps the drawer open with the message |
 | No readback | "Sent. This setting has no readback, so it can never show CONFIRMED" |
 
@@ -613,6 +659,20 @@ Acceptance:
 4. The fixture flow alert reads "Water flowing with every Verdify valve closed", expands at `/activity?alert=<id>` to
    its runbook and "Open in Graphs", and offers no Stop.
 5. `/activity?target=L01` lists only L01 entries.
+
+As built (VD-13, `dashboard/app/routes/activity.tsx` with `app/lib/activity.ts`), where it settles a detail this section
+leaves open:
+
+| Topic | As built |
+|---|---|
+| Names | The API names people by Authentik username (`Actor.name`, `acknowledged_by`, `resolved_by`). The signed-in person reads by their API-01 display name ("Jason · dashboard", "Acknowledged by Jason · 06:47"), anyone else by username |
+| Log rows | The title is the action in words, then its target: "Set VPD Mister Engage", "Plan iris-20261102-0702", "Changed line L01", "Acknowledged “Relay stuck”"; an action the words table lacks reads raw. The writer's line carries the change: before → after, with "requested 1.53" only when the server snapped the value (the service stores `requested` on every write), "manual" or "manual cleared", a plan's one change with its rule by name (its id only when it has none) or Iris's trigger, a run's length, an update's fields, "during experiment <id>". Setting labels and units are API-09's as written ("Mister Pulse Gap 45 → 60 s"), so the page reads API-09 every 60 s; a param it lacks reads raw |
+| Alert rows | Each row expands and collapses with its own "Details ›" or "Hide details" link, which keeps the scroll position. Acknowledge and Resolve each leave a toast ("“Relay stuck” acknowledged by Jason · 10:42"), because a collapsed row moves into the collapsed group. A closed alert reads "Resolved by Jason · 10:42" with its resolution. Expanded, every code reads through the words table, the type as the title does. An open flow alert says its live lines once (the gallons or "Flow stopped at HH:MM"); its message, the ingestor's words for the same facts, shows only among the fields. "Acknowledged, still open" opens when it holds the expanded alert and otherwise stays as the person leaves it |
+| Linked alert | An `alert=<id>` missing from the rows shown sits under "Linked alert" at the top of the panel: the row the open list still holds (an alert just resolved here), else API-14 `status=recent`'s, else "Alert <id> is not open or resolved in the last 24 h" |
+| Reads | API-14 with `limit=200` every 15 s; API-17, API-IRR-01 and API-09 every 60 s. Load older asks for one more API-17 page, and each poll reads every page shown again from the newest, so a refresh leaves no gap between them |
+| Shell | The shell polls API-01 and API-02 under the shared read keys, so the R hook's refresh lowers the nav count at once and Stop notes what the shell's API-02 says is running |
+| Words and fixtures | The words table adds the activity actions, the schedule, line and run fields and the alert statuses. The fixtures add `fence-breach`, `run-missed`, `activity-mixed`, `alert-repeat` and `activity-paged` (60 rows, for Load older) |
+| Browser test | `dashboard/e2e/activity.spec.ts` waits for #1128's Playwright harness; `routes/activity.test.tsx` covers the acceptance against the fixture API |
 
 ## 8. SCR-07 Equipment and controller · `/equipment`
 
