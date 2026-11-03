@@ -113,7 +113,8 @@ interlock so hot/dry cooling can add bounded moisture without closing the vent.
 | `mist_vent_close_lead_s` | ESPHome number + cfg readback exists, but firmware does not consume it |
 | `mist_vent_reopen_delay_s` | ESPHome number + cfg readback exists, but firmware does not consume it |
 | `summer_vent_min_runtime_s` | `Setpoints` field exists and is clamped/read back, but the summer-vent gate does not use it |
-| `mister_on_s`, `mister_off_s`, `mister_all_on_s`, `mister_all_off_s`, `mister_max_runtime_min` | Deprecated legacy duty-cycle values; current pulse controller uses `mister_pulse_*`, `mister_all_kpa`, and `mister_water_budget_gal` |
+| `mister_on_s`, `mister_off_s`, `mister_all_on_s`, `mister_all_off_s` | Deprecated legacy duty-cycle values; current pulse controller uses `mister_pulse_*`, `mister_all_kpa`, and `mister_water_budget_gal` |
+| `mister_max_runtime_min` | Retired in VD-47 (#1162) with its number entity and global: the center mister's daily cap is L04's `daily_cap_min` in the irrigation program (irrigation F11). No registry row; a stale plan row naming it is skipped (`RETIRED_UNROUTABLE_PARAMS`) |
 
 ## 2026-05-12 Control Invariants
 

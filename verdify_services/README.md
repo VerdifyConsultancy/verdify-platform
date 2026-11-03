@@ -10,8 +10,11 @@ page is the conventions every service here follows; VD-31 (#1147) set them.
 | `actor.py` | `Actor` (who is calling) and `ActorRef` (who wrote, as responses show it) |
 | `problems.py` | `ProblemCode`, `Problem`, `ServiceError` and `problem()` |
 | `activity.py` | `append`, `list` and `recorded_write`, the one write convention, with `WriteResult`, `ActivityEntry` and `ActivityPage` |
+| `settings.py` | `catalog`, `validate`, `write`, `release`, `status` and `history` (VD-67): the one validator and writer for desired state, with `Setting`, `DesiredSetting`, `StateReason`, `SettingHistory` and `SettingStatus` |
+| `alerts.py` | `list`, `open_count`, `ack` and `resolve` (VD-67): merged alert rows, the one open-alert count, with `Alert`, `AlertPage` and `AlertCounts` |
+| `reads.py` | `now`, `plan` and `equipment` (VD-54: API-02, API-07 and API-13), and the shared `reporting()` (the one §7 test: heartbeat at most 180 s old, climate at most 300 s), which `settings.status` uses for its `writer_down` and `controller_not_reporting` reasons |
 
-Later modules (`settings`, `alerts`, `reads`, `series`, `irrigation`) follow the same rules.
+Later modules (`series`, `irrigation`) follow the same rules.
 
 ## Rules
 
@@ -117,6 +120,54 @@ The connection's login needs SELECT and INSERT on `activity_log`, USAGE on its s
 `fn_mcp_armed_assignment_context()`: the MCP login has them (migrations 259 and 280); the dashboard login
 gets them in M2.
 
+## Settings: `settings`
+
+Architecture §5.2 to §5.5. `validate(conn, actor, param, value)` is the only validator for desired state; REST
+(API-10) and MCP (`set_setting`) call it through `write` and never re-implement bounds.
+
+1. **Known and writable.** `unknown_target` for a name outside `REGISTRY`; `read_only` with the reason for
+   every row `verdify_schemas.tunable_registry.desired_write_rule()` refuses (the dispatcher skips the same
+   rows, #1149), and for a `crop_band` row while `crop_band_anchors` holds none of its rows in force
+   (`verdify_schemas.band_rows`).
+2. **Type and range.** `out_of_range` with `min` and `max` (`planner_effective_bounds`).
+3. **Manual.** `manual` for an `iris` write (or release) of a setting whose newest row is manual.
+4. **Snap** to the registry `step`, half to even, unless the value equals the value in force or the device
+   value within its binary32 ULP; `snapped_from` says when snapping changed it.
+
+Every refusal is 422 with `field`, `min`, `max`, `current` and `retryable` false. `write` and `release` run in
+one `recorded_write` transaction: the `desired_state` row (with `manual` exactly as passed: the services have no
+default), for a crop-band setting the `UPDATE` of its `crop_band_anchors` rows at the best season score present
+(only `value`, `width_below` or `width_above`), and the `setting.write` or `setting.release` activity row with
+`{ref, desired_id, before, value, requested, manual: {before, after}}` (plus `anchor_rows`) merged with the
+caller's `extra_detail`. Nothing writes `setpoint_changes`; the `desired_state` insert trigger is the only wake.
+
+`status(conn, param)` computes the readback state on every read and raises no alert. Readbacks are the newest
+`setpoint_snapshot` row and, for a switch in `SWITCH_READBACK_EQUIPMENT`, its `equipment_state` mirror; only
+those at or after the request count. A desired value confirms by `readback_matches()`, a plan value (or, with no
+desired row and no plan, the dispatcher's newest push) by `readback_values_equivalent()`. A clamp after the
+request holds the setting while the newest readback does not confirm it. `state_reason` (`clamped`,
+`experiment`, `deferred`, `push_failed`, `writer_down`, `controller_not_reporting`, `no_match`) carries its
+`since`; the two ages come from `reads.reporting()`. An `irrigation_site` write stays `requested` until #1155
+adds the program readback. `catalog` and `history` serve API-09 and API-12; #1168 adds the plan block, the
+waypoints and the Band in force rows.
+
+## Alerts: `alerts`
+
+Open rows are `alert_log` under `v_open_alerts`' own predicate (the MCP login cannot read the view). Repeats
+merge by (`alert_type`, `sensor_id`), NULL with NULL, the key the ingestor's alert monitor keeps one row per
+probe on; resolved rows merge apart. A merged row keeps the oldest unresolved repeat's `id`, sums
+`details.count` and is `open` while any repeat is. `open_count` merges the same rows, so it always equals the
+open rows `list` returns. `ack` and `resolve` act on every repeat in one `recorded_write` transaction, write
+`acknowledged_by` or `resolved_by` as the username for a person and `actor.source` otherwise, and never refuse
+a resolve (the MCP adapter keeps its `planner_tool_dependency_failed` retrieval check).
+
+The login needs SELECT on `alert_log`, `slack_alert_runbooks`, `setpoint_snapshot`, `equipment_state`,
+`setpoint_changes`, `setpoint_clamps`, `system_state`, `climate`, `crop_band_anchors`, `v_active_plan`,
+`desired_state` and `v_desired_state_current`, UPDATE on the `alert_log` ack and resolve columns and the three
+`crop_band_anchors` columns, and EXECUTE on `fn_current_season()` and `fn_mcp_armed_assignment_context()`
+(the experiment check every read and write makes): migrations 259, 261 and 280 grant the MCP login all of
+them, and M2 (#1179) and its successor the dashboard login.
+
 ## Route modules and images
 
 `api/operator_routes/__init__.py` holds the route-module rules: one `router` per module, paths without
@@ -132,3 +183,11 @@ gets them in M2.
 - `tests/test_dashboard_db_services.py` (the campaign step's private TimescaleDB): replay,
   `request_id_reused`, the experiment stamp, a concurrent duplicate, atomicity and `list` as the MCP login.
 - `verdify_schemas/tests/test_activity.py`: the row models against migration 280.
+- `tests/test_verdify_services_settings.py` and `tests/test_verdify_services_alerts.py` (in
+  `scripts/ci-local.sh`): validation, snapping, the read-only list, the state precedence and each reason's
+  `since`, `applied_from`, the catalog against `TunableDef` and the OpenAPI, the merge, the count and the
+  cursor, all against in-memory connections.
+- `tests/test_dashboard_db_settings_alerts.py` (the campaign step): the same as the MCP login, the crop band
+  rows through `fn_zone_vpd_targets` and `band_anchors`, and the open set against `v_open_alerts`.
+- `verdify_schemas/tests/test_band_rows.py` and `test_settings_rules.py`: the band row map against the
+  dispatcher's overlay, and `SWITCH_READBACK_EQUIPMENT` and the activity mirror against the ingestor.

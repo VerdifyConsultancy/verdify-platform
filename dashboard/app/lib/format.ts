@@ -58,6 +58,18 @@ export function shortDateTime(instant: string): string {
   const date = instantDate(instant);
   return date ? withRepeatedOffset(date, DATE_CLOCK.format(date)) : TIME_UNAVAILABLE;
 }
+const DAY_KEY = new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" });
+const MONTH_DAY = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, month: "2-digit", day: "2-digit" });
+/**
+ * When a run began, as the Equipment board reads it (screens SCR-07): "06:42" on the America/Denver day of `now`
+ * (epoch ms), "10/27 06:42" on any other day; 24-hour, and a time in the repeated hour adds its offset.
+ */
+export function sinceClock(instant: string, now: number): string {
+  const date = instantDate(instant);
+  if (!date) return TIME_UNAVAILABLE;
+  const today = Number.isFinite(now) && DAY_KEY.format(new Date(now)) === DAY_KEY.format(date);
+  return withRepeatedOffset(date, today ? CLOCK.format(date) : `${MONTH_DAY.format(date)} ${CLOCK.format(date)}`);
+}
 /** A calendar date (YYYY-MM-DD) as words: "Tuesday, Oct 27, 2026"; `short` drops the weekday and year. */
 export function dayTitle(value: string, style: "long" | "short" = "long"): string {
   const date = new Date(`${value}T12:00:00Z`);

@@ -248,10 +248,10 @@ SUCCESSOR_282_MCP_DIGEST = SUCCESSOR_281_MCP_DIGEST
 # once 282 is applied measures them (no --apply-first). Its fixture records
 # whether these values are that measurement or still the pre-R0 projection.
 SUCCESSOR_283 = "283-irrigation-tables.sql"
-SUCCESSOR_283_SHA256 = "d38a1bfc62c326521c70e53143a14791d024821888f17b25c10cccfdb1dc8c78"
+SUCCESSOR_283_SHA256 = "0b07a5042edc29cb90da4c800da6514e47517240d765c0da0217b68cc7fe92c2"
 SUCCESSOR_283_DIGESTS = {
-    "verdify_api_runtime_login": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
-    "verdify_ingestor_runtime_login": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "verdify_api_runtime_login": "030df35ca3b0bc8b94de5f394f96c2292674b2df58aea2d46990c53ad3bd1ad7",
+    "verdify_ingestor_runtime_login": "c03d427cbbf327c8843496c744d718e1fca70c1e6d98963022ac87e308954096",
 }
 SUCCESSOR_283_MCP_DIGEST = "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
 # Exact284 (VD-74, M2b): the dashboard login's grants on existing objects. They move

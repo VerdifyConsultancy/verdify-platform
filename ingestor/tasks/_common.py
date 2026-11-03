@@ -942,17 +942,48 @@ DIRECT_WET_DEFAULTS = {
 }
 
 
-# Retired with the #450 recovery firmware: the clocked/day-mask irrigation
-# schedule has no ESPHome entity and no tunables.yaml entry, so these params
-# are permanently unroutable. The dispatcher SKIPS them (with one log line)
-# instead of failing them every cycle — pre-#450 plan rows may still carry
-# them. Do not re-add to DIRECT_WET_DEFAULTS without a firmware route.
+# Parameters with no registry row and no firmware route any more. The
+# dispatcher SKIPS them (with one info line) and expires their requests
+# quietly instead of failing them every cycle as unroutable: an old plan or
+# desired row may still name one. Do not re-add to DIRECT_WET_DEFAULTS
+# without a firmware route.
 RETIRED_UNROUTABLE_PARAMS = frozenset(
     {
+        # The clocked/day-mask irrigation schedule (#450 recovery firmware).
         "irrig_wall_days_mask",
         "irrig_wall_fert_days_mask",
         "irrig_center_days_mask",
         "irrig_center_fert_days_mask",
+        # VD-47 (irrigation F12, F13): the Home Assistant burst timers, the
+        # caps the irrigation program carries, the VPD boost, the weekly
+        # wall-feed commissioning rows and the rest of the legacy schedule.
+        "fan_burst_min",
+        "vent_bypass_min",
+        "fog_burst_min",
+        "mister_max_runtime_min",
+        "irrig_vpd_boost_pct",
+        "irrig_vpd_boost_threshold_hrs",
+        "sw_wall_fertigation_commissioned",
+        "wall_commissioning_revision",
+        "wall_commissioning_evidence_mask",
+        "wall_commissioning_valid_until_epoch_s",
+        "wall_flow_lpm",
+        "wall_flow_valid_until_epoch_s",
+        "wall_prewet_liters",
+        "wall_feed_liters",
+        "wall_flush_liters",
+        "irrig_wall_start_hour",
+        "irrig_wall_start_min",
+        "irrig_wall_fert_duration_min",
+        "irrig_wall_fert_every_n",
+        "irrig_wall_flush_min",
+        "irrig_wall_interval_days",
+        "irrig_center_start_hour",
+        "irrig_center_start_min",
+        "irrig_center_fert_duration_min",
+        "irrig_center_fert_every_n",
+        "irrig_center_flush_min",
+        "irrig_center_interval_days",
     }
 )
 

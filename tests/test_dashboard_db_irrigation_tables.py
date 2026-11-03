@@ -491,7 +491,7 @@ def test_ingestor_records_outcomes_and_asks_whether_an_experiment_is_armed(datab
         DENIED,  # nor a line
         DENIED,  # nor request commands
         OK,  # Iris's irrigation context: is an experiment armed (SECURITY DEFINER)
-        DENIED,  # still no SELECT on control_experiments
+        DENIED,  # 283 grants no SELECT on control_experiments
         DENIED,  # this grant set reaches nothing on setpoint_changes
     ]
 
