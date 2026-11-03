@@ -14,6 +14,7 @@ for (const viewport of [DESKTOP, PHONE]) {
     await page.setViewportSize(viewport);
     await useScreensClock(page, request, "schedules-paused");
     await load(page, "/water");
+    await expect(page.locator(".line-card")).toHaveCount(10);
     const ids = await page.locator(".line-card").evaluateAll((cards) => cards.map((node) => node.getAttribute("data-line")));
     expect(ids).toEqual(["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11"]);
     await expect(card(page, "L01")).toContainText("Today 0 of 60 min");

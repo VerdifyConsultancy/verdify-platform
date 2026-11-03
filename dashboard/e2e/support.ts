@@ -5,6 +5,7 @@
  * fixture API holds one state, and the suite runs on one worker). No test passes by loosening the app: a CSP violation,
  * a page error or a request off localhost fails it.
  */
+import { setTimeout as sleep } from "node:timers/promises";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test as base, type APIRequestContext, type Locator, type Page, type Response } from "@playwright/test";
 
@@ -22,7 +23,7 @@ export const SMALL_PHONE = { width: 360, height: 740 };
 export const DESKTOP = { width: 1440, height: 900 };
 
 // ---------------------------------------------------------------------------------------------------- the guard
-type Guard = { readonly problems: string[]; axeRan: boolean };
+type Guard = { readonly problems: string[]; axeRan: boolean; inFlight: number; busyAt: number };
 type Guarded = Window & { __reportCspViolation?: (directive: string, selects: number) => void };
 const guards = new WeakMap<Page, Guard>();
 
@@ -34,13 +35,17 @@ const guards = new WeakMap<Page, Guard>();
  * probes add inline styles once it has started, so `axe()` checks the page first.
  */
 export async function guardPage(page: Page, browserName: string): Promise<Guard> {
-  const guard: Guard = { problems: [], axeRan: false };
+  const guard: Guard = { problems: [], axeRan: false, inFlight: 0, busyAt: 0 };
   guards.set(page, guard);
+  const busy = (change: number) => { guard.inFlight += change; guard.busyAt = Date.now(); };
   page.on("pageerror", (error) => guard.problems.push(`page error: ${error.message}`));
   page.on("request", (request) => {
+    busy(1);
     const url = new URL(request.url());
     if (/^(?:https?|wss?):$/.test(url.protocol) && url.hostname !== "localhost") guard.problems.push(`request off localhost: ${request.url()}`);
   });
+  page.on("requestfinished", () => busy(-1));
+  page.on("requestfailed", () => busy(-1));
   await page.exposeFunction("__reportCspViolation", (directive: string, selects: number) => {
     const styleAttribute = directive === "style-src-attr";
     if (styleAttribute && (guard.axeRan || (browserName === "webkit" && selects > 0))) return;
@@ -98,14 +103,34 @@ export async function fixtureWrites(request: APIRequestContext): Promise<Fixture
 }
 
 // ---------------------------------------------------------------------------------------------------- pages
-/** Loads `path` and waits for its fonts and for the network to go quiet (a poll's next tick is 15 s away). */
-export async function load(page: Page, path: string): Promise<Response> {
-  const response = await page.goto(path);
-  if (!response) throw new Error(`No response for ${path}`);
-  await page.evaluate(async () => { await document.fonts.ready; });
+const QUIET_MS = 500;
+const QUIET_WITHIN_MS = 5_000;
+
+/**
+ * Navigates, then waits until the page has read its data and drawn with its fonts. Network idle alone cannot say so: it
+ * fires once per load, 500 ms after the last asset, and on the CI pod hydration can outlast that, so a check would see
+ * the skeleton and pass on nothing. A page with the shell therefore also waits for API-02's first answer (an SCR-09 card
+ * has no shell and reads nothing), then for 500 ms with no request in flight (a poll's next tick is 15 s away). A page
+ * that stays busy past 5 s goes on to its checks, which say what they found.
+ */
+async function arrive(page: Page, what: string, navigate: () => Promise<Response | null>): Promise<Response> {
+  const shellRead = page.waitForResponse((answer) => new URL(answer.url()).pathname === "/api/v1/now").catch(() => null);
+  const guard = guards.get(page);
+  if (guard) guard.inFlight = 0;
+  const response = await navigate();
+  if (!response) throw new Error(`No response for ${what}`);
   await page.waitForLoadState("networkidle");
+  if (response.ok()) await shellRead;
+  const giveUp = Date.now() + QUIET_WITHIN_MS;
+  while (guard && Date.now() < giveUp && (guard.inFlight > 0 || Date.now() - guard.busyAt < QUIET_MS)) await sleep(50);
+  await page.evaluate(async () => { await document.fonts.ready; });
   return response;
 }
+
+/** Loads `path`, as `arrive` says. */
+export const load = (page: Page, path: string) => arrive(page, path, () => page.goto(path));
+/** Reloads the page, as `arrive` says, for a check that counts what the new load read. */
+export const reload = (page: Page) => arrive(page, "the reload", () => page.reload());
 
 /**
  * Moves the page's timers on, a poll at a time, until `check` passes, so a test waits for no real poll. The clock fires
@@ -150,8 +175,8 @@ export const CAN_STILL_START = "VPD misting, fog and the next scheduled run can 
 export const CAN_STILL_START_NO_ENGINE = "VPD misting and fog can still start on their own.";
 
 // ---------------------------------------------------------------------------------------------------- roles
-/** Screens §1.3's write controls by accessible name: "Run…" covers each Run, and "Stop" Stop all water and a line's Stop. */
-export const WRITE_CONTROLS = /^(?:Edit|Save|Release|Run|Stop|Pause|Resume|New schedule|Clear fault|Acknowledge|Resolve|Fans|Humidify|Vent bypass|Restart)\b/;
+/** Screens §1.3's write controls by accessible name: "Run…" covers each Run, "Stop" Stop all water and a line's Stop, and SCR-04's New schedule reads "+ New schedule". */
+export const WRITE_CONTROLS = /^\+?\s*(?:Edit|Save|Release|Run|Stop|Pause|Resume|New schedule|Clear fault|Acknowledge|Resolve|Fans|Humidify|Vent bypass|Restart)\b/;
 
 /** Each write control on the page by role and name, plus any switch. `includeHidden` also finds one rendered but hidden. */
 export function writeControls(page: Page, { includeHidden = false }: { includeHidden?: boolean } = {}): Locator {

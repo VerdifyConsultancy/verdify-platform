@@ -45,6 +45,8 @@ for (const path of [...ROUTES, ...CARD_PAGES.map((card) => card.path)]) {
           if (!still(style.transitionDuration) || !still(style.animationDuration)) found.push(`${element.tagName.toLowerCase()}.${element.className}${pseudo ?? ""}`);
         }
       }
+      // What computed styles cannot show: anything running now, a script's element.animate() included.
+      for (const animation of document.getAnimations()) found.push(`running: ${animation.constructor.name}`);
       return found;
     });
     expect(moving).toEqual([]);

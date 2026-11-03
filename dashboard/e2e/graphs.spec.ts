@@ -3,7 +3,7 @@
 // resolution stated, the lanes' limits, the tooltip and both CSV files. The screens' clock is pinned, so each window is.
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
-import { expect, fixtureRequests, load, test, useScreensClock } from "./support";
+import { expect, fixtureRequests, load, reload, test, useScreensClock } from "./support";
 
 const captions = (page: Page) => page.locator(".linked-panels figcaption");
 const panels = (page: Page) => page.locator(".plot.plot-small");
@@ -37,8 +37,7 @@ test("/graphs?range=72h&set=mister_engage_kpa: three linked panels, the setting'
   await expect(page.locator(".chart-lanes .chart-key li").filter({ hasText: /^VPD$/ })).toHaveCount(1);
   const first = await windowReads(request);
   const line = await resolution(page).textContent();
-  await page.reload();
-  await page.waitForLoadState("networkidle");
+  await reload(page);
   await expect(resolution(page)).toHaveText(line ?? "");
   await expect(panels(page).locator("canvas")).toHaveCount(3);
   expect((await windowReads(request)).slice(first.length).sort()).toEqual([...first].sort());

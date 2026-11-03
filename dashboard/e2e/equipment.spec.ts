@@ -71,11 +71,10 @@ test("the 72 h chip sets ?range=72h and redraws the lanes from API-05, and a rel
   await expect(page).toHaveURL(/\/equipment\?range=72h$/);
   await expect(page.getByRole("heading", { level: 2, name: "Last 72 h" })).toBeVisible();
   await expect(page.locator(".lanes-canvas canvas")).toHaveCount(1);
-  const hours = (await fixtureRequests(request, "API-05")).map((read) => {
+  await expect.poll(async () => (await fixtureRequests(request, "API-05")).map((read) => {
     const query = new URL(read.path, "http://fixture.invalid").searchParams;
     return (Date.parse(query.get("to") ?? "") - Date.parse(query.get("from") ?? "")) / 3_600_000;
-  });
-  expect(hours).toEqual([24, 72]);
+  })).toEqual([24, 72]);
   await page.reload();
   await expect(page.getByRole("heading", { level: 2, name: "Last 72 h" })).toBeVisible();
 });
