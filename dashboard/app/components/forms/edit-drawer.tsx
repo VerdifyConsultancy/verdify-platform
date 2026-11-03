@@ -32,6 +32,8 @@ export type EditDrawerProps = {
   onSave: () => void;
   saving?: boolean;
   saveLabel?: string;
+  /** Save stays disabled until the form can be sent ("Enable" until Checked is ticked). */
+  saveDisabled?: boolean;
   /** A refusal that names no field shown here, in words, above the actions. */
   error?: string | null;
   /** More actions beside Save, for operators ("Release to auto"). */
@@ -52,7 +54,7 @@ export type EditDrawerProps = {
  * read-only (the values and Done, no Save), and so does everyone for an item marked `readOnly`; with changes switched
  * off an operator sees the fields and Save disabled.
  */
-export function EditDrawer({ open, onClose, title, eyebrow, heading, status, graph, onSave, saving = false, saveLabel = "Save", error, actions, readOnly: fixed = false, children }: EditDrawerProps) {
+export function EditDrawer({ open, onClose, title, eyebrow, heading, status, graph, onSave, saving = false, saveLabel = "Save", saveDisabled = false, error, actions, readOnly: fixed = false, children }: EditDrawerProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const errorId = useId();
@@ -65,7 +67,7 @@ export function EditDrawer({ open, onClose, title, eyebrow, heading, status, gra
   const graphTo = graph ? graphLink(graph.param, graph.unit) : null;
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!readOnly && !saving) onSave();
+    if (!readOnly && !saving && !saveDisabled) onSave();
   };
   return <dialog ref={ref} className="drawer" aria-labelledby={titleId} aria-modal="true" onKeyDown={onKeyDown} onCancel={onCancel}>
     <form className="drawer-form" onSubmit={submit} noValidate>
@@ -88,7 +90,7 @@ export function EditDrawer({ open, onClose, title, eyebrow, heading, status, gra
       <div className="drawer-actions">
         <Button onClick={onClose}>{changes ? "Cancel" : "Done"}</Button>
         {changes && actions}
-        {changes && <Button write variant="primary" type="submit" busy={saving}>{saveLabel}</Button>}
+        {changes && <Button write variant="primary" type="submit" busy={saving} disabled={saveDisabled}>{saveLabel}</Button>}
       </div>
     </form>
   </dialog>;

@@ -251,7 +251,7 @@ function Program() {
   </div>;
 }
 
-test("P: a schedule and an inline switch send manual true, a pause none; the item reads \"rev 43 sending\" and API-IRR-01 and -02 poll every 5 s", async () => {
+test("P: a schedule and an inline switch send manual true, a pause none; the item reads \"rev 45 sending\" and API-IRR-01 and -02 poll every 5 s", async () => {
   const api = startFixtureApi();
   renderWithApi(<Program />);
   await advance(0);
@@ -266,7 +266,8 @@ test("P: a schedule and an inline switch send manual true, a pause none; the ite
     ["API-IRR-03", { line_id: "L01", days: ["mon", "wed", "fri"], start: { kind: "sunrise", offset_min: 60 }, on_s: 720, manual: true }],
     ["API-IRR-08", { paused_until: new Date(NOW + 3_600_000).toISOString() }],
   ]);
-  expect(screen.getByTestId("sync").textContent).toBe("requested · rev 43 sending");
+  // Three writes, three revisions on top of rev 42; the pause is the newest, still sending.
+  expect(screen.getByTestId("sync").textContent).toBe("requested · rev 45 sending");
   const irrigation = sentAt("API-IRR-01").length;
   const schedules = sentAt("API-IRR-02").length;
   await advance(5000);

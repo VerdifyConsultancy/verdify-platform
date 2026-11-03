@@ -3,9 +3,10 @@ import { useId, type ReactNode } from "react";
 import { Link } from "react-router";
 import { causeWords } from "../charts/causes";
 import { localTime } from "../lib/format";
-import type { IrrigationLine } from "../lib/operator-api";
+import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
 import { agoWords, faultWords, lastWaterWords, nextRunWords, pauseWords, timeLeftWords, todayWords } from "../lib/water";
-import { Badge, ChemistryBadge, EquipmentStateBadge, LineStateBadge, lineChemistry } from "./badge";
+import { programSyncText } from "../lib/writes";
+import { Badge, ChemistryBadge, EquipmentStateBadge, LineStateBadge, ReadbackBadge, lineChemistry } from "./badge";
 import { LocalTime, cls } from "./common";
 import { useClockValue, useNow } from "./freshness";
 
@@ -69,6 +70,16 @@ function PauseNote({ line, today }: { line: IrrigationLine; today: string }) {
   return <p className="line-note">{pauseWords(line, today)}</p>;
 }
 
+/**
+ * Whether the controller has the program that carries this line (screens §1.4 P), for every role: REQUESTED with "rev 43
+ * sending", or "Applies with the irrigation firmware" before the engine; CONFIRMED by the program hash; "Not confirmed:
+ * <reject in words>" after 5 min.
+ */
+function LineSync({ line, engine, program }: { line: IrrigationLine; engine: boolean; program?: IrrigationStatus["program"] }) {
+  const words = programSyncText(line.sync, { engine, program });
+  return <div className="line-sync" data-sync={line.sync}><ReadbackBadge state={line.sync} />{words && <span className="state-note">{words}</span>}</div>;
+}
+
 /** The fault line: "Backing off until 13:20" (warn) or "Faulted: no misting until midnight (watchdog)" (fault). */
 export function FaultLine({ line, today }: { line: Pick<IrrigationLine, "fault" | "fault_until">; today: string }) {
   const text = faultWords(line, today);
@@ -82,21 +93,24 @@ export type LineCardProps = {
   master?: IrrigationLine | null;
   /** API-IRR-01 `engine`: false before the irrigation firmware, when the card shows the relay state. */
   engine: boolean;
+  /** API-IRR-01 `program`, for "rev 43 sending" and the reject in words. */
+  program?: IrrigationStatus["program"];
   /** Today's America/Denver date, for "today 07:31". */
   today: string;
   /** Schedule labels by slot id (API-IRR-02), for "RUNNING · schedule · Wall MWF". */
   scheduleLabels?: ReadonlyMap<number, string>;
-  /** Run…, Stop, Clear fault and the enable switch (#1136, #1182). */
+  /** Run…, Stop and Clear fault (#1136); Resume, Options and the enable switch (#1182). */
   actions?: ReactNode;
 };
 
 /**
  * LineCard (design system §4.6): one line's card on the Water board. The head names the line with CLEAN or FERT and
  * whether it is enabled; a reserved line still disabled (L05, L06) reads Reserved with DISABLED, and fog (L11) reads
- * "Climate only" with no controls. Then its state in words, any watchdog fault, when it last watered and how that
- * ended, today's minutes against its cap, the next run, whether its one-time check is recorded, and History.
+ * "Climate only" with no controls. Then its state in words, whether the controller has its program, any watchdog fault
+ * or pause, when it last watered and how that ended, today's minutes against its cap, the next run, whether its one-time
+ * check is recorded, and History.
  */
-export function LineCard({ line, master = null, engine, today, scheduleLabels, actions }: LineCardProps) {
+export function LineCard({ line, master = null, engine, program, today, scheduleLabels, actions }: LineCardProps) {
   const headingId = useId();
   const fog = line.kind === "fog";
   // L05 and L06 (Round 2b E): reserved, and DISABLED until a person enables them, before the engine too.
@@ -116,8 +130,9 @@ export function LineCard({ line, master = null, engine, today, scheduleLabels, a
     </div>
     {!(engine && reserved && line.state.code === "disabled") && <p className="line-state"><LineStateText line={line} engine={engine} today={today} scheduleLabels={scheduleLabels} /></p>}
     {!engine && !fog && <p className="line-note">{BEFORE_ENGINE_TEXT}</p>}
+    {!fog && <LineSync line={line} engine={engine} program={program} />}
     {engine && <FaultLine line={line} today={today} />}
-    {engine && <PauseNote line={line} today={today} />}
+    {!fog && <PauseNote line={line} today={today} />}
     <p>{lastWaterWords(line, today)}</p>
     <p>{todayWords(line)}</p>
     {next && <p>{next}</p>}

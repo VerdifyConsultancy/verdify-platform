@@ -102,14 +102,42 @@ test("a latched mister says so with its end; a back-off is quieter", () => {
 test("paused, waiting and unknown read in words; unknown only because the API says so", () => {
   const paused = { paused_until: denver("14:00"), paused_by: { source: "dashboard", name: "jason" }, pause_reason: "rain" };
   const base = lineOf(status(), "L04");
-  expect(card({ ...base, ...paused, state: { ...base.state, code: "paused" } }).state).toBe("Paused until 14:00 by jason: rain · VPD misting continues");
+  expect(card({ ...base, ...paused, state: { ...base.state, code: "paused" } }).state).toBe("Paused until 14:00 · VPD misting continues · by jason: rain");
   cleanup();
   // VPD misting runs on a paused zone: the pause shows beside the running state.
   const misting = card({ ...base, ...paused, state: { ...base.state, code: "running", cause: "vpd", ends_at: null } });
   expect(misting.state).toBe("Running · VPD");
-  expect(misting.lines).toContain("Paused until 14:00 by jason: rain · VPD misting continues");
+  expect(misting.lines).toContain("Paused until 14:00 · VPD misting continues · by jason: rain");
   cleanup();
   expect(card({ ...base, state: { ...base.state, code: "waiting", reason: "waiting for the manifold" } }).state).toBe("Waiting · waiting for the manifold");
   cleanup();
   expect(card(lineOf(status("controller-not-reporting"), "L01")).state).toBe("Unknown · 3 days ago");
+});
+
+test("a card reads its program state: REQUESTED with the revision, CONFIRMED by the hash, the reject in words, and before the engine why it waits; fog has none", () => {
+  const rev = status();
+  const sync = (line: IrrigationLine, props: Partial<LineCardProps> = {}) => {
+    const { article } = card(line, { program: rev.program, ...props });
+    const node = article.querySelector(".line-sync");
+    const words = [node?.getAttribute("data-sync"), text(node)];
+    cleanup();
+    return words;
+  };
+  expect(sync(lineOf(rev, "L01"))).toEqual(["confirmed", "Confirmed"]);
+  const sending = { ...rev.program, state: "requested", revision: 43 };
+  expect(sync({ ...lineOf(rev, "L01"), sync: "requested" }, { program: sending })).toEqual(["requested", "Requestedrev 43 sending"]);
+  expect(sync({ ...lineOf(rev, "L01"), sync: "requested" }, { program: undefined })).toEqual(["requested", "RequestedSending"]);
+  const refused = { ...rev.program, state: "not_confirmed", revision: 43, reject_code: "bad_line" };
+  expect(sync({ ...lineOf(rev, "L01"), sync: "not_confirmed" }, { program: refused })).toEqual(["not_confirmed", "Not confirmedNot confirmed: the controller refused a line's settings"]);
+  const before = status("before-engine");
+  expect(sync(lineOf(before, "L01"), { engine: false, program: before.program })).toEqual(["requested", "RequestedApplies with the irrigation firmware"]);
+  expect(card(lineOf(rev, "L11")).article.querySelector(".line-sync")).toBeNull();
+});
+
+test("a pause reads before the engine too, since it is stored; fog, which a pause of every line leaves alone, never reads paused", () => {
+  const pause = { paused_until: denver("14:00"), paused_by: null, pause_reason: null };
+  const before = status("before-engine");
+  expect(card({ ...lineOf(before, "L04"), ...pause }, { engine: false }).lines).toContain("Paused until 14:00 · VPD misting continues");
+  cleanup();
+  expect(text(card({ ...lineOf(status(), "L11"), ...pause }).article)).not.toContain("Paused");
 });

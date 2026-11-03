@@ -94,13 +94,35 @@ export function compass(degrees: number | null): string | null {
   if (degrees === null || !Number.isFinite(degrees)) return null;
   return POINTS[Math.round((((degrees % 360) + 360) % 360) / 22.5) % 16];
 }
+/** America/Denver's offset from UTC at epoch ms, in hours (−7 or −6). */
+function offsetHours(epochMs: number): number {
+  const name = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, timeZoneName: "shortOffset" }).formatToParts(new Date(epochMs)).find((part) => part.type === "timeZoneName")?.value || "GMT-7";
+  return Number(/GMT([+-]\d+)/.exec(name)?.[1] ?? -7);
+}
 /** The UTC instant of local midnight (America/Denver) starting a calendar date. */
 export function localDayStart(value: string): string {
   const midnight = Date.parse(`${value}T00:00:00Z`);
   // The offset in force at UTC midnight is the one at the following local midnight: DST changes at 02:00.
-  const name = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, timeZoneName: "shortOffset" }).formatToParts(new Date(midnight)).find((part) => part.type === "timeZoneName")?.value || "GMT-7";
-  const hours = Number(/GMT([+-]\d+)/.exec(name)?.[1] ?? -7);
-  return new Date(midnight - hours * 3_600_000).toISOString();
+  return new Date(midnight - offsetHours(midnight) * 3_600_000).toISOString();
+}
+/** Epoch ms as an America/Denver wall clock, "2026-11-02T14:00": what `<input type="datetime-local">` holds. */
+export function localWallClock(epochMs: number): string {
+  const date = new Date(epochMs);
+  return `${DAY_KEY.format(date)}T${CLOCK.format(date)}`;
+}
+const WALL_TEXT = /^\d{4}-\d\d-\d\dT\d\d:\d\d$/;
+/**
+ * The instant of an America/Denver wall clock typed as "2026-11-02T14:00", whatever zone the browser is in; null when
+ * it is not one ("", "2026-02-30T08:00"). A time in the repeated fall-back hour is its first occurrence; a time the
+ * spring change skips reads on the old offset, so 02:30 is 03:30.
+ */
+export function wallClockInstant(text: string): string | null {
+  if (!WALL_TEXT.test(text)) return null;
+  const asUtc = Date.parse(`${text}:00Z`);
+  if (!Number.isFinite(asUtc) || new Date(asUtc).toISOString().slice(0, 16) !== text) return null;
+  const day = 86_400_000;
+  const [first, second] = [asUtc - offsetHours(asUtc - day) * 3_600_000, asUtc - offsetHours(asUtc + day) * 3_600_000].sort((a, b) => a - b);
+  return new Date(localWallClock(first) === text ? first : second).toISOString();
 }
 
 // Units are fixed and canonical (design system §5.4); there is no °C toggle. ASCII aliases print their symbol.

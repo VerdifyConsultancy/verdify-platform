@@ -6,7 +6,8 @@
  * the adapter from API-IRR-10 to the bars. A line's state, `engine`, `vpd_source`, `fault`, `fallback_active`, coverage,
  * an occurrence's status and every outcome are the API's: nothing here infers a state from an age.
  */
-import { useOutletContext } from "react-router";
+import { useCallback } from "react";
+import { useOutletContext, useSearchParams } from "react-router";
 import type { MinutesGroup } from "../charts/minutes-by-zone";
 import type { MinutesReport as BarsReport } from "../charts/types";
 import { TIME_UNAVAILABLE, TIME_ZONE, dateShift, duration, formatValue, localDate, localDayStart, shortDateTime, shortTime } from "./format";
@@ -30,6 +31,30 @@ const whole = (value: number | null | undefined): string => (finite(value) ? Str
 /** What the Water layout hands its three views: its one API-IRR-01 poll, under the key Now's water card and Stop share. */
 export type WaterOutlet = { readonly irrigation: PolledQueryResult<IrrigationStatus> };
 export const useWaterOutlet = (): WaterOutlet => useOutletContext<WaterOutlet>();
+
+// ---------------------------------------------------------------------------------------------------- the drawers
+/** Why `?check=` is open when the line alone does not say: `for=schedule`, on a disabled line whose Schedule was pressed. */
+const CHECK_FOR = "for";
+/**
+ * One of Water's drawers in the URL (#1182): `?check=<line_id>`, `?options=<line_id>` or `?pause=<line_id|all>`. Opening
+ * pushes, so Back closes it; closing replaces, and neither moves the page. `wanted` is `?check=`'s `for`.
+ */
+export function useWaterDrawer(name: "check" | "options" | "pause") {
+  const [params, setParams] = useSearchParams();
+  const open = useCallback((value: string, wanted?: "schedule") => setParams((current) => {
+    const next = new URLSearchParams(current);
+    next.set(name, value);
+    if (wanted) next.set(CHECK_FOR, wanted); else next.delete(CHECK_FOR);
+    return next;
+  }, { preventScrollReset: true }), [name, setParams]);
+  const close = useCallback(() => setParams((current) => {
+    const next = new URLSearchParams(current);
+    next.delete(name);
+    next.delete(CHECK_FOR);
+    return next;
+  }, { replace: true, preventScrollReset: true }), [name, setParams]);
+  return { value: params.get(name), wanted: params.get(CHECK_FOR), open, close };
+}
 
 // ---------------------------------------------------------------------------------------------------- times
 const WEEKDAY = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, weekday: "short" });
@@ -274,15 +299,31 @@ export function lastWaterWords(line: Pick<IrrigationLine, "last_water" | "last_o
   return [head, ...(outcome && outcomeOfLastWater(water, outcome) ? ended : lastRun)].join(" · ");
 }
 
+/** A pause's end: "14:00" today, else "Tue 14:00" or "Nov 20, 14:00". */
+export const pauseUntilWords = (at: string, today: string): string => (localDate(at) === today ? shortTime(at) : whenWords(at, today));
 /**
- * A pause (irrigation §4.2): "Paused until 14:00 by jason: rain", with "· VPD misting continues" on a VPD zone, since a
- * pause stops scheduled and run-now water only; null while the line has no `paused_until`.
+ * A pause (irrigation §4.2): "Paused until 14:00", then "VPD misting continues" on a VPD zone, since a pause stops
+ * scheduled and run-now water only, then who and why ("by jason: rain"); null while the line has no `paused_until`.
  */
 export function pauseWords(line: Pick<IrrigationLine, "paused_until" | "paused_by" | "pause_reason" | "vpd_member">, today: string): string | null {
   if (!validTime(line.paused_until)) return null;
-  const until = localDate(line.paused_until) === today ? shortTime(line.paused_until) : whenWords(line.paused_until, today);
-  const by = line.paused_by ? ` by ${line.paused_by.name}${line.pause_reason ? `: ${line.pause_reason}` : ""}` : line.pause_reason ? ` (${line.pause_reason})` : "";
-  return `Paused until ${until}${by}${line.vpd_member ? " · VPD misting continues" : ""}`;
+  const by = line.paused_by ? `by ${line.paused_by.name}${line.pause_reason ? `: ${line.pause_reason}` : ""}` : line.pause_reason;
+  return [`Paused until ${pauseUntilWords(line.paused_until, today)}`, ...(line.vpd_member ? ["VPD misting continues"] : []), ...(by ? [by] : [])].join(" · ");
+}
+/** True while the line's `paused_until` is ahead of now (epoch ms, on the server's clock). */
+export const pausedNow = (line: Pick<IrrigationLine, "paused_until">, now: number): boolean => validTime(line.paused_until) && Date.parse(line.paused_until) > now;
+/** The lines a person pauses, enables and caps: L01, L02 and L04–L10; L03 has no card and L11 is climate only. */
+export const wetLines = (lines: readonly IrrigationLine[]): IrrigationLine[] => boardLines(lines).filter((line) => line.kind !== "fog");
+
+/**
+ * Today's minutes against a cap as it is typed, with the headroom (US-WAT-19): "Today 14 of 130 min · 116 min left",
+ * "Today 14 min · no cap" at 0, "Today 14 min" while the cap is not a number yet.
+ */
+export function headroomWords(minutes: number | null | undefined, cap: number | null): string {
+  if (cap === null) return `Today ${whole(minutes)}${NBSP}min`;
+  const used = todayWords({ today: { minutes }, daily_cap_min: cap });
+  if (cap === 0) return `${used} · no cap`;
+  return finite(minutes) ? `${used} · ${Math.max(0, Math.round(cap - minutes))}${NBSP}min left` : used;
 }
 
 /** "next Mon 07:34 · 12 min" from `next_run`; null when nothing is planned. */
@@ -349,6 +390,19 @@ export function occurrenceWords(occurrence: Pick<Occurrence, "status" | "outcome
   if (occurrence.status === "skipped") return Date.parse(occurrence.planned_start) < now ? join(words("run_outcome", "skipped"), reason) : reason;
   if (occurrence.status === "running") return join("running now", reason);
   return reason;
+}
+
+/**
+ * "Pause <line> until after this run" (#1182): one minute past the block's planned end, its start plus prewet, every
+ * pulse and gap, and flush. The pause starts now, so it skips that run and any earlier one on the line. Null for a block
+ * that is not still planned ahead of `now` (epoch ms), or whose schedule is not known.
+ */
+export function pauseAfterRun(occurrence: Pick<Occurrence, "status" | "planned_start">, schedule: Pick<Schedule, "on_s" | "count" | "gap_s" | "prewet_s" | "flush_s"> | undefined, now: number): string | null {
+  const start = Date.parse(occurrence.planned_start);
+  if (occurrence.status !== "planned" || !schedule || !Number.isFinite(start) || start <= now) return null;
+  const { on, count, prewet, flush } = seconds(schedule);
+  const planned = prewet + on * count + (schedule.gap_s ?? 0) * Math.max(0, count - 1) + flush;
+  return new Date(start + planned * 1000 + 60_000).toISOString();
 }
 
 // ---------------------------------------------------------------------------------------------------- minutes by zone

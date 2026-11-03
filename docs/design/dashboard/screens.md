@@ -315,7 +315,7 @@ As built (VD-10, #1130). Where the build settles a detail above, or differs from
 | Topic | As built |
 |---|---|
 | Files | `dashboard/app/routes/graphs.tsx` and `graphs-scorecard.tsx` (the route file #1124 named, kept rather than renamed `graphs.scorecard.tsx`), `components/graphs/` (controls, metric picker, setting chooser, resolution line, scorecard table), `lib/graph-url.ts` (the URL and the window) and `lib/graph-reads.ts` (the page clock and the window reads) |
-| Controls | Row one is LinkedPanels' tools row: the range chips, the custom range (From, To, Show), "Reset zoom" while zoomed and "CSV of this window". Row two, "On charts:", holds the setting chips, the metric chips, "+ Setting", "+ Metric" and "Scorecard ›". Both pickers are native modal `<dialog>`s in the drawer's frame with a filter box |
+| Controls | Row one is LinkedPanels' tools row: the range chips, the custom range (From, To, Show), "Reset zoom" while zoomed and "CSV of this window". Row two, "On charts:", holds the setting chips, the metric chips, "+ Setting", "+ Metric" and "Scorecard ›". Both pickers are native modal `<dialog>`s in the drawer's frame with a filter box. "+ Setting" offers numeric settings in an open panel's unit and leaves out the Band in force rows and the rows in the read-only group; a `set=` link to a read-only row still draws |
 | Settings legend | The setting chips are the settings' legend: each reads "VPD · mister_engage_kpa" and links to `/settings?edit=<param>`; × takes it off. Removing one default names the other, so the URL keeps it; removing the last writes `set=` |
 | URL notices | A range, window, metric or setting the page cannot use is dropped from the view with a notice in words ("Removed unknown metric …", "Removed setting mister_pulse_gap_s: no chart in s", "Removed daily.water_gal: daily keys show on the scorecard"). The address bar is left as it was; every link on the page starts from the cleaned view. A climate key in `m` is always drawn and drops silently |
 | Window | A window of 400 local days can run 400 d 1 h across a net fall-back; each read then keeps its last 400 days, which moves only the start of a window whose buckets are whole days. The lanes rule counts the window without a chip's 12 h ahead, so a 31-day custom range that spans the fall-back (31 d 1 h) shows the lanes message, as API-05 would refuse it. An ISO time whose `+` offset reached the link unencoded (read as a space) counts as `+`, and links write it as `%2B`; a day that does not exist ("2026-02-30T08:00Z") is refused with the window's notice |
@@ -534,6 +534,19 @@ Acceptance:
    Clear fault sends one API-IRR-13 request.
 6. Minutes by zone draws a day with no data as a hatched "no data" gap, never 0, and marks today partial; south reads
    "VPD from peer probes" while its probe is out.
+
+As built (VD-69, #1182). Where the build settles a detail above, or differs from it:
+
+| Topic | As built |
+|---|---|
+| Files | `dashboard/app/components/line-enable.tsx`, `check-sheet.tsx`, `line-options.tsx` and `pause-lines.tsx`, with `lib/line-checks.ts`, wired into `LineCard`, `MisterAssociation`, the Water layout and the Board and Schedules views |
+| Drawers in the URL | `?check=<line_id>`, `?options=<line_id>` and `?pause=<line_id or all>`. Schedule pressed on a disabled mister with no check adds `&for=schedule`, since the line alone reads as an enable. A viewer gets no drawer from any of these links, and a link to L03, L11, a line with nothing to ask or a stray id opens nothing. Each drawer closes on a 200 with a toast ("Requested: L04 daily cap 130 min, 60 min kept for VPD") |
+| A card's program state | Every card but fog shows `lines[].sync` under its state: CONFIRMED by the program hash, REQUESTED with "rev 43 sending", or "Not confirmed: <reject in words>". Before the engine every line reads REQUESTED with "Applies with the irrigation firmware", because `sync` is always `requested` then, not only for the change just made |
+| A switch's own badge | `sync` is per line, so the client works out which switch shows it. While it settles, the switch pressed in this tab carries it, or both when none was pressed here (another writer, a reload). Once confirmed, a switch that is on or was pressed reads CONFIRMED; an untouched one that is off shows none |
+| Pause words | "Paused until 14:00 · VPD misting continues · by jason: rain". The VPD clause shows only on a line with `vpd_member` on, so a drip reads "Paused until 14:00 · by jason"; who and why come last. Fog never reads paused, though `all` sets `paused_until` on it. A pause stored before the engine reads too, beside its REQUESTED |
+| Pause drawer | "Pause lines…" sits on the program banner's row on all three views. Until is an America/Denver wall clock in any browser zone, starts on the next whole hour at least 30 minutes ahead, and must be ahead of now, because a past time would resume. Resume sends now on the server's clock |
+| Block menu | A block still planned ahead of now opens "Pause <line> until after this run", which sends at once; a past, skipped or blocked block offers none, and neither does a viewer's week |
+| Line options | The reserve's bound follows the typed cap, and a reserve above it is flagged in the hint and sent, so the API's `out_of_range` shows beside the field. The client refuses only what is not whole minutes from 0 to 480 |
 
 ## 6. SCR-05 Settings · `/settings`
 

@@ -20,7 +20,10 @@ export function weekDayLabel(day: string): string {
   return `${WEEKDAY.format(new Date(`${day}T12:00:00Z`))} ${month}/${date}`;
 }
 
-function Block({ occurrence, schedule, kind, now }: { occurrence: Occurrence; schedule: Schedule | undefined; kind: string | undefined; now: number }) {
+/** What selecting a block offers: the pause (#1182) and Edit (#1137); null or nothing for a block that offers none. */
+export type BlockMenu = (occurrence: Occurrence, schedule: Schedule | undefined) => ReactNode;
+
+function Block({ occurrence, schedule, kind, now, menu }: { occurrence: Occurrence; schedule: Schedule | undefined; kind: string | undefined; now: number; menu?: BlockMenu }) {
   const fert = kind === "fert_drip" || kind === "fert_mister";
   const hatched = occurrence.status === "skipped" || occurrence.status === "blocked";
   const past = Date.parse(occurrence.planned_start) < now;
@@ -28,7 +31,8 @@ function Block({ occurrence, schedule, kind, now }: { occurrence: Occurrence; sc
   // The fallback slots say when they run even where the API's note does not.
   const degraded = schedule?.degraded_only && !(note ?? "").includes("VPD sensing is degraded") ? DEGRADED_TEXT : null;
   const stages = schedule ? feedStages(schedule, kind) : null;
-  return <li className={cls("week-block", hatched && "week-block-hatched", past && "week-block-past")} data-status={occurrence.status} data-slot={occurrence.slot_id}>
+  const offered = menu?.(occurrence, schedule);
+  const body = <>
     <span className="week-block-head">
       <LocalTime at={occurrence.planned_start} />
       {schedule && <> <span className="week-block-amount">{blockAmount(schedule, kind)}</span></>}
@@ -39,6 +43,11 @@ function Block({ occurrence, schedule, kind, now }: { occurrence: Occurrence; sc
     {stages && <span className="week-block-detail">{stages}</span>}
     {degraded && <span className="week-block-note">{degraded}</span>}
     {note && <span className="week-block-note">{note}</span>}
+  </>;
+  return <li className={cls("week-block", hatched && "week-block-hatched", past && "week-block-past")} data-status={occurrence.status} data-slot={occurrence.slot_id}>
+    {offered
+      ? <details className="week-block-menu"><summary>{body}</summary><div className="week-block-actions">{offered}</div></details>
+      : body}
   </li>;
 }
 
@@ -56,16 +65,18 @@ export type ScheduleWeekProps = {
   views?: ReactNode;
   /** "+ New schedule" (#1137). */
   actions?: ReactNode;
+  /** What selecting a block offers; without it a block is not selectable. */
+  blockMenu?: BlockMenu;
 };
 
 /**
  * ScheduleWeek (design system §4.6): rows L01, L02 and L04–L10 (L05 and L06 marked reserved while disabled), columns
  * today and the next six days, or the seven before today. Each API-IRR-02 occurrence sits in its line × local-day cell,
  * joined to its schedule by `slot_id`: start time, "12m" or "8×60s", FERT on a fertilizer line, MANUAL or "Iris may
- * adjust"; one that will not run is hatched with why, and a past one carries its outcome word. At phone width a day
- * switcher shows one day for every line.
+ * adjust"; one that will not run is hatched with why, and a past one carries its outcome word. Selecting a block that
+ * has a `blockMenu` opens it. At phone width a day switcher shows one day for every line.
  */
-export function ScheduleWeek({ agenda, lines = [], past, today, now, views, actions }: ScheduleWeekProps) {
+export function ScheduleWeek({ agenda, lines = [], past, today, now, views, actions, blockMenu }: ScheduleWeekProps) {
   const headingId = useId();
   const days = weekDays(agenda, today, past);
   const [chosen, setChosen] = useState<string | null>(null);
@@ -107,7 +118,7 @@ export function ScheduleWeek({ agenda, lines = [], past, today, now, views, acti
                 const blocks = cells.get(`${id}|${day}`) ?? [];
                 return <td key={day} data-day={day} className={dayClass(day)}>
                   {blocks.length
-                    ? <ul className="week-blocks">{blocks.map((occurrence) => <Block key={`${occurrence.slot_id}-${occurrence.planned_start}`} occurrence={occurrence} schedule={schedules.get(occurrence.slot_id)} kind={kind} now={now} />)}</ul>
+                    ? <ul className="week-blocks">{blocks.map((occurrence) => <Block key={`${occurrence.slot_id}-${occurrence.planned_start}`} occurrence={occurrence} schedule={schedules.get(occurrence.slot_id)} kind={kind} now={now} menu={blockMenu} />)}</ul>
                     : <span className="week-none" aria-hidden="true">·</span>}
                 </td>;
               })}
@@ -115,7 +126,7 @@ export function ScheduleWeek({ agenda, lines = [], past, today, now, views, acti
           })}</tbody>
         </table>
       </div>
-      <p className="week-key small">MANUAL: Iris skips it · Iris may adjust: Iris can change it · hatched: will not run, with why · FERT: prewet and flush on the clean line, feed through L03</p>
+      <p className="week-key small">MANUAL: Iris skips it · Iris may adjust: Iris can change it · hatched: will not run, with why · FERT: prewet and flush on the clean line, feed through L03{blockMenu && " · select a planned block to pause its line until after it"}</p>
     </>}
   </section>;
 }

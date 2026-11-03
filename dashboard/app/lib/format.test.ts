@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { expect, test } from "vitest";
-import { TIME_UNAVAILABLE, ageSeconds, duration, formatNumber, formatValue, localDate, localDayStart, localTime, plotTime, repeatedLocalTime, shortDateTime, shortTime, sinceClock, unitDecimals } from "./format";
+import { TIME_UNAVAILABLE, ageSeconds, duration, formatNumber, formatValue, localDate, localDayStart, localTime, localWallClock, plotTime, repeatedLocalTime, shortDateTime, shortTime, sinceClock, unitDecimals, wallClockInstant } from "./format";
 
 const NBSP = " ";
 const MINUS = "−";
@@ -113,4 +113,17 @@ test("a number with no unit keeps up to 3 decimals, a true minus and no negative
   expect(formatNumber(-0.0001)).toBe("0");
   expect(formatNumber(1200)).toBe("1,200");
   for (const missing of [null, undefined, Number.NaN]) expect(formatNumber(missing)).toBe("—");
+});
+
+test("a typed America/Denver wall clock is its instant, whatever the browser's zone; the fall-back's repeated hour is its first, the spring gap reads on", () => {
+  expect(wallClockInstant("2026-11-02T14:00")).toBe("2026-11-02T21:00:00.000Z");
+  expect(wallClockInstant("2026-07-04T14:00")).toBe("2026-07-04T20:00:00.000Z");
+  // 01:30 happens twice on 2026-11-01; 02:30 never happens on 2026-03-08.
+  expect(wallClockInstant("2026-11-01T01:30")).toBe("2026-11-01T07:30:00.000Z");
+  expect(wallClockInstant("2026-03-08T02:30")).toBe("2026-03-08T09:30:00.000Z");
+  for (const text of ["", "14:00", "2026-02-30T08:00", "2026-11-02T24:00", "2026-11-02 14:00"]) expect(wallClockInstant(text), text).toBeNull();
+  expect(localWallClock(Date.parse("2026-11-02T21:00:00Z"))).toBe("2026-11-02T14:00");
+  expect(localWallClock(Date.parse("2026-11-03T06:59:00Z"))).toBe("2026-11-02T23:59");
+  expect(localWallClock(Date.parse("2026-11-03T07:00:00Z"))).toBe("2026-11-03T00:00");
+  for (const instant of ["2026-11-02T21:00:00.000Z", "2026-07-04T20:00:00.000Z"]) expect(wallClockInstant(localWallClock(Date.parse(instant)))).toBe(instant);
 });
