@@ -29,11 +29,11 @@ augmented on demand by MCP read tools (`climate`, `history`, `forecast`,
 | 3 | Forecast-vs-observed drift | gather §1 (forecast column) + the FORECAST_DEVIATION σ-watcher; `v_forecast_accuracy_daily` | drift breach is itself a trigger (see §4 triggers) |
 | 4 | Current 72h forecast | gather §1 core view; MCP `forecast(hours=72)` | Open-Meteo feed |
 | 5 | Compliance KPIs | gather §5 scorecard (today + 7-day trend) + §6 compliance (24h by zone); MCP `scorecard` | feasibility-aware grade (`fn_zone_band_grade`) |
-| 6 | Mechanical runtime history | gather §9 equipment + §10 energy + §11 irrigation | |
+| 6 | Mechanical runtime history | gather §9 equipment + §10 energy + §11 irrigation (`python3 -m tasks.irrigation context`: each line, the next 24 h, manual items; MCP `irrigation_status`, `irrigation_schedule`, `irrigation_history`) | |
 | 7 | Greenhouse lessons | MCP `lessons` / `lessons_search`; `planner_lessons` | extracted from prior plan outcomes |
 | 8 | Current tunables | MCP `get_setpoints`; gather §1/§3 | live device-confirmed values |
 | 9 | Safety constraints | registry bounds (`_PLANNER_CORE` inline table) + gather §3 switches | the rails are read-only context (see §4 lockout) |
-| 10 | Firmware-supported setpoints / bounds | `tunable_registry.py` — the authoritative per-tunable min/max + the MCP `registry_value_error` gate | **registry is authoritative**; the HA "TUNABLE CONSTRAINTS" block in the pack is a best-effort cross-check that may be absent |
+| 10 | Firmware-supported setpoints / bounds | `tunable_registry.py` — the authoritative per-tunable min/max + the MCP `registry_value_error` gate | **registry is authoritative**; the pack's "TUNABLE CONSTRAINTS" block (gather §18) prints min/max/step for the key params from it |
 | 11 | Physical-limit assumptions | gather §8 hydroponic + site pressure + the firmware physics invariants | |
 
 The `planner_graph.contracts.PlannerContextPack` model is the run-store *wire

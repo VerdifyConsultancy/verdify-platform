@@ -575,6 +575,87 @@ def test_bad_request_ids_and_long_reasons_are_refused_before_anything_runs():
     assert conn.sql == [] and calls == []
 
 
+def test_the_activity_target_can_come_from_the_value_and_the_answer_from_after_the_activity_row():
+    """A create's new id, and a response read from the log (API-IRR-08's paused_by), inside the one transaction."""
+    conn, calls = FakeConnection(), []
+    seen: list[tuple] = []
+
+    async def finish(tx, value):
+        seen.append((tx.is_in_transaction(), [row["target"] for row in tx.pending["activity"]], value))
+        return "the answer"
+
+    key = uuid.uuid4()
+    result = run(
+        activity.recorded_write(
+            conn,
+            AGENT,
+            op="API-IRR-03",
+            action="irrigation.schedule.create",
+            target="new",
+            request=REQUEST,
+            request_id=key,
+            reason=None,
+            perform=setting_write(calls),
+            load=load,
+            target_of=lambda value: f"slot-{value.id}",
+            finish=finish,
+        )
+    )
+    assert result.value == "the answer" and conn.outcomes == ["commit"]
+    assert seen == [(True, ["slot-1"], Stored(id=1, value=1.55))]
+    [row] = conn.activity
+    assert row["target"] == "slot-1"
+    assert row["request_sha256"] == activity.request_hash("API-IRR-03", "new", REQUEST)  # the given target is hashed
+
+
+def test_the_lock_comes_first_in_the_transaction_before_the_replay_read():
+    """So a concurrent duplicate waits behind the first and replays it (irrigation §8.3, tests/test_dashboard_db_*)."""
+    conn, calls = FakeConnection(), []
+    seen: list[tuple] = []
+
+    async def lock(tx):
+        seen.append((tx.is_in_transaction(), list(tx.sql)))
+
+    key = uuid.uuid4()
+    write = {
+        "op": "API-IRR-03",
+        "action": "irrigation.schedule.create",
+        "target": "new",
+        "request": REQUEST,
+        "request_id": key,
+        "reason": None,
+        "perform": setting_write(calls),
+        "load": load,
+        "lock": lock,
+    }
+    first = run(activity.recorded_write(conn, AGENT, **write))
+    conn.sql.clear()
+    again = run(activity.recorded_write(conn, AGENT, **write))
+    assert (first.replayed, again.replayed) == (False, True) and len(calls) == 1
+    assert seen == [(True, []), (True, [])]  # nothing read before it, on the write and on its replay
+
+
+def test_a_nul_in_a_reason_is_refused_before_anything_runs():
+    conn, calls = FakeConnection(), []
+    with pytest.raises(ServiceError) as excinfo:
+        run(
+            activity.recorded_write(
+                conn,
+                AGENT,
+                op="API-IRR-07",
+                action="irrigation.stop",
+                target="all",
+                request=REQUEST,
+                request_id=None,
+                reason="a\x00b",
+                perform=setting_write(calls),
+                load=load,
+            )
+        )
+    assert (excinfo.value.problem.code, excinfo.value.problem.field) == ("invalid_request", "reason")
+    assert conn.sql == [] and calls == []
+
+
 def test_recorded_write_opens_its_own_transaction():
     conn, calls = FakeConnection(), []
     conn.pending = {"activity": [], "domain": []}

@@ -3690,7 +3690,15 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
 
     elif etype == "text":
         val = entity_state.state
-        if not val:
+        # VD-42: the irrigation engine's readbacks, for irrigation_sync's 5 s tick. Here "" is a reading (no token, no
+        # outcome), so a run's last token leaving is never lost; only a sensor that has not published has no state.
+        irrigation_text = obj_id in shared.IRRIGATION_TEXT_SENSORS
+        if irrigation_text and getattr(entity_state, "missing_state", False):
+            return
+        if irrigation_text:
+            val = val or ""
+            shared.note_irrigation_readback(obj_id, val, source_generation, source_observed_at)
+        elif not val:
             return
 
         # Lane C/E contract v2 (#586): the ONE aggregated policy-identity echo.
@@ -4543,8 +4551,9 @@ async def task_loop(
         # is bounded by the component writer to 120s.
         "component_experiment": 150,
         "equipment_direct_snapshot": 30,
-        # VD-64: a bridge Stop holds the writer for one 6 s job tick plus a paced call per open relay.
-        "irrigation_sync": 30,
+        # VD-42: above push_policy_transaction's 120 s budget, so a timeout never cancels a program push between
+        # irr_program_begin and irr_program_commit.
+        "irrigation_sync": 150,
     }
     TASKS = [
         # (name, interval_seconds, coroutine_factory)
@@ -4571,8 +4580,8 @@ async def task_loop(
         # reactive_planner removed in Sprint 5 P6 — replaced by forecast deviation monitor
         ("setpoint_dispatch", 300, setpoint_dispatcher),
         ("setpoint_confirmation", 300, setpoint_confirmation_monitor),
-        # VD-64 (irrigation §6.1): run-now and stop commands every 5 s. NOTIFY irrigation_changed forces
-        # a pass below, at most every 30 s (_FORCED_TASK_RETRY_MIN_S), so the 5 s cadence bounds latency.
+        # VD-42 (irrigation §6.1): commands every 5 s, which bounds their latency. NOTIFY irrigation_changed sets a
+        # flag the pass reads itself: a forced launch could come only once per 30 s (_FORCED_TASK_RETRY_MIN_S).
         ("irrigation_sync", 5, irrigation_sync),
         ("forecast_sync", 3600, forecast_sync),
         ("forecast_actions", 900, forecast_action_engine),
@@ -4629,8 +4638,6 @@ async def task_loop(
             )
             c1_overlay.poll(STATE_DIR)
             forced = {"setpoint_dispatch"} if shared.setpoint_dispatch_requested.is_set() else set()
-            if shared.irrigation_sync_requested.is_set():
-                forced.add("irrigation_sync")
             started = _launch_due_tasks(pool, TASKS, last_run, running, now, task_timeouts, forced)
             if "setpoint_dispatch" in started:
                 pending_drift_approval_stamp = None
@@ -5028,6 +5035,13 @@ async def setpoint_listener(pool: asyncpg.Pool) -> None:
         # VD-64: an irrigation write committed; wake irrigation_sync. The payload is empty by design.
         shared.irrigation_sync_requested.set()
 
+    def _on_desired_state_changed(_conn, _pid, _channel, _payload):
+        # VD-33: a wake only. The payload is always empty and never read, and
+        # nothing is pushed here: the next normal, fenced dispatcher pass reads
+        # v_desired_state_current itself, and irrigation_sync its site values.
+        shared.setpoint_dispatch_requested.set()
+        shared.irrigation_sync_requested.set()
+
     connected_once = False
     while True:
         conn = None
@@ -5042,13 +5056,17 @@ async def setpoint_listener(pool: asyncpg.Pool) -> None:
             conn.add_termination_listener(_on_disconnect)
             await conn.add_listener("setpoint_changed", _on_notify)
             await conn.add_listener("irrigation_changed", _on_irrigation_notify)
+            await conn.add_listener("desired_state_changed", _on_desired_state_changed)
             if connected_once:
                 # NOTIFY is not durable. Reuse the normal fenced dispatcher to
-                # reconcile eligible pending rows after the subscription returns.
+                # reconcile eligible pending rows after the subscription returns,
+                # and wake both tasks for any desired_state or irrigation write the gap hid.
                 shared.setpoint_dispatch_requested.set()
                 shared.irrigation_sync_requested.set()
             connected_once = True
-            log.info("Setpoint listener: LISTEN on setpoint_changed and irrigation_changed channels")
+            log.info(
+                "Setpoint listener: LISTEN on setpoint_changed, irrigation_changed and desired_state_changed channels"
+            )
             if conn.is_closed():
                 disconnected.set()
             await disconnected.wait()

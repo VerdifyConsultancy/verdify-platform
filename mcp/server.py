@@ -26,7 +26,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
@@ -995,6 +995,9 @@ _TOOL_READ_ONLY = frozenset(
         "position_current",
         "crop_history",
         "crop_lifecycle",
+        "irrigation_status",
+        "irrigation_schedule",
+        "irrigation_history",
     }
 )
 
@@ -1095,16 +1098,29 @@ class AudienceAuthorizedFastMCP(FastMCP):
         )
 
 
-mcp = AudienceAuthorizedFastMCP(
-    "verdify",
-    instructions="""Verdify greenhouse control tools. Use these to monitor climate,
+# Every backticked tool name here must be registered: tests/test_mcp_irrigation_read_tools.py fails on one that
+# tools/list for admin does not return, so the paragraph grows with each tool (#1171, #1174).
+SERVER_INSTRUCTIONS = """Verdify greenhouse control tools. Use these to monitor climate,
     manage setpoints, run the AI planner, and review performance.
     The greenhouse has temp/VPD bands, misters, fog, fans, heaters, and a vent.
     The planner emits bounded ClimateIntent in set_plan transitions; MCP
     materializes it into registry-valid tunables that shape how the controller responds.
     Band params (temp_low, temp_high, vpd_low, vpd_high) are dispatcher-owned
     read-only context in routine plans. Temp comes from crop policy; house VPD is
-    derived from crop + zone policy. Use direct tunable pushes only for explicit overrides.""",
+    derived from crop + zone policy. Use direct tunable pushes only for explicit overrides.
+
+    Irrigation: `irrigation_status`, `irrigation_schedule` and `irrigation_history` only read
+    the water program, in the operator API's JSON, with unknown as null, never 0. Named agents
+    and admin also have `irrigation_run` and `irrigation_stop`: before the irrigation firmware,
+    run works on L01 only, and irrigation_stop always works. `request_id` makes a write safe to
+    retry: the same id and payload returns the stored result with `replayed: true`. A refusal
+    is the Problem JSON with isError: its code is from the OpenAPI ProblemCode list, and
+    `retryable` is true only where waiting helps. None of these tools counts as a plan for a
+    trigger."""
+
+mcp = AudienceAuthorizedFastMCP(
+    "verdify",
+    instructions=SERVER_INSTRUCTIONS,
     # Bind explicitly so MCP_HTTP_HOST/PORT env vars actually take effect.
     # FastMCP only auto-reads FASTMCP_-prefixed env vars, so the
     # os.environ.setdefault block in __main__ was dead code. Reading the env
@@ -1132,6 +1148,9 @@ HERMES_REQUIRED_TOOLS = frozenset(
         "forecast",
         "get_setpoints",
         "history",
+        "irrigation_history",
+        "irrigation_schedule",
+        "irrigation_status",
         "knowledge_search",
         "lessons",
         "lessons_manage",
@@ -1154,7 +1173,7 @@ HERMES_REQUIRED_TOOLS = frozenset(
 # drift, so a new tool cannot silently skip authorization.
 #
 # Audiences:
-#   iris       — the current Hermes Iris profile. Exactly the 23 tools of
+#   iris       — the current Hermes Iris profile. Exactly the 26 tools of
 #                hermes-config.yaml tools.include (== HERMES_REQUIRED_TOOLS);
 #                tests/test_mcp_audience_auth.py holds the three surfaces in
 #                lockstep. Current behavior is preserved.
@@ -1166,10 +1185,10 @@ HERMES_REQUIRED_TOOLS = frozenset(
 #                unused until Lane C/D tranche 2 issues its credential.
 #   agent      — named in-cluster agents (VD-59, architecture §5.6), one key
 #                each in Secret verdify-mcp-agents (agent_key_registry). The
-#                live greenhouse reads plus alerts; settings, activity,
-#                set_setting and the eight irrigation tools join this column
-#                with #1171, #1173, #1174 and #1177. Never the planner, lessons,
-#                crop or Slack writers. Calls are attributed agent:<name>.
+#                live greenhouse reads plus alerts and the irrigation reads, run
+#                and stop; settings, activity, set_setting and the other irrigation
+#                writes join this column with #1171 and #1174. Never the planner,
+#                lessons, crop or Slack writers. Calls are attributed agent:<name>.
 #   admin      — operator/debug credential; every tool. Its writes are
 #                attributed agent:admin.
 #   observer   — protocol-only availability probe; no tools.
@@ -1185,6 +1204,10 @@ TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     "history": frozenset({"iris", "agent", "admin"}),
     "alerts": frozenset({"iris", "agent", "admin"}),
     "slack_ops": frozenset({"iris", "admin"}),
+    # Irrigation reads (VD-60, #1173): the REST JSON of API-IRR-01, -02, -10 and -11.
+    "irrigation_status": frozenset({"iris", "agent", "admin"}),
+    "irrigation_schedule": frozenset({"iris", "agent", "admin"}),
+    "irrigation_history": frozenset({"iris", "agent", "admin"}),
     # Knowledge
     "lessons": frozenset({"iris", "admin"}),
     "lessons_search": frozenset({"iris", "admin"}),
@@ -5855,6 +5878,181 @@ async def irrigation_stop(
         return await writes.stop(conn, actor, line_id, reason=reason, request_id=request_id)
 
     return await _irrigation_write("irrigation_stop", write)
+
+
+# ═══════════════════════════════════════════════════════════════
+# IRRIGATION READS (VD-60, #1173)
+# ═══════════════════════════════════════════════════════════════
+# Thin adapters over verdify_services.irrigation.reads, the functions the operator API's API-IRR-01, -02, -10 and -11
+# call: the same models, so the same JSON, and the same Problem JSON with isError on a refusal.
+
+IrrigationCauseArgument = Literal["vpd", "schedule", "run_now", "feed", "prewet", "flush", "fallback", "unknown"]
+RunOutcomeArgument = Literal["ok", "short", "stopped", "preempted", "skipped", "missed", "cap", "unknown"]
+# The REST names of the window arguments: `from` is a Python keyword, so the tool says since and until.
+_HISTORY_WINDOW_FIELDS = {"from": "since", "to": "until"}
+
+
+async def _irrigation_read(tool: str, read):
+    """Run one irrigation read on its own connection: the REST JSON, or the Problem JSON with isError. The actor
+    comes from the request (current_actor(), never an argument); a read records nothing, so it may be None."""
+    from verdify_services.actor import Actor
+    from verdify_services.problems import ServiceError, problem
+
+    conn = None
+    try:
+        caller = current_actor()
+        actor = None if caller is None else Actor(source=caller.source, name=caller.name)
+        conn = await _db()
+        model = await read(conn, actor)
+    except ServiceError as refused:
+        field = _HISTORY_WINDOW_FIELDS.get(refused.problem.field)
+        return _tool_problem(refused.problem.model_copy(update={"field": field}) if field else refused.problem)
+    except asyncpg.QueryCanceledError:
+        return _tool_problem(
+            problem(
+                "query_timeout",
+                f"The database stopped the query at its {MCP_DB_STATEMENT_TIMEOUT_MS // 1000} s limit. "
+                "Narrow the window or retry.",
+            )
+        )
+    except Exception as exc:  # the database or its connection; never a refusal
+        print(f"[mcp.{tool}] failed: {type(exc).__name__}", file=sys.stderr)
+        return _tool_problem(problem("unavailable", "The irrigation service could not answer. Retry."))
+    finally:
+        if conn is not None:
+            await conn.close()
+    return _tool_ok(model)
+
+
+def _history_local_day(name: str, value: str) -> date:
+    from verdify_services.problems import ServiceError, problem
+
+    try:
+        return date.fromisoformat(value)
+    except (TypeError, ValueError) as exc:
+        raise ServiceError(
+            problem("invalid_request", f"With view minutes, {name} is a local date, YYYY-MM-DD.", field=name)
+        ) from exc
+
+
+def _history_moment(name: str, value: str) -> datetime:
+    from verdify_services.problems import ServiceError, problem
+
+    try:
+        moment = datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        moment = None
+    if moment is None or moment.utcoffset() is None:
+        raise ServiceError(
+            problem("invalid_request", f"With view runs, {name} is a date-time with its UTC offset.", field=name)
+        )
+    return moment
+
+
+@mcp.tool()
+async def irrigation_status():
+    """Read the irrigation program as it is now. REST twin: API-IRR-01 (GET /v1/irrigation); the same JSON.
+
+    It only reads and does not count as your plan for a trigger. Returns server_time, the engine flag and the
+    program sync, every line (state with its cause and observed_at, flags, manual, pause, fault, today's minutes
+    and gallons, next run, last water, last outcome), the active runs, today's minutes by zone, the limits, the leak
+    state, occupancy and freshness. Unknown values are null, never 0; a line reads state unknown while the controller
+    is not reporting.
+
+    It takes no arguments, so invalid_request and window_too_large never apply. Refusals return the Problem JSON with
+    isError: query_timeout (the database stopped the query) and unavailable (the database is out of reach); both are
+    retryable."""
+    from verdify_services.irrigation import reads
+
+    return await _irrigation_read("irrigation_status", reads.status)
+
+
+@mcp.tool()
+async def irrigation_schedule(
+    days: Annotated[int, Field(ge=1, le=7, description="Days ahead, today included: 1-7.")] = 7,
+    past_days: Annotated[int, Field(ge=0, le=7, description="Days back, planned against actual: 0-7.")] = 0,
+):
+    """Read the schedules and the week planned against actual. REST twin: API-IRR-02 (GET /v1/irrigation/schedules);
+    the same JSON.
+
+    It only reads and does not count as your plan for a trigger. Returns every schedule with its sync, each occurrence
+    with its status, the solar times per day, the bounds per line kind (bounds: drip, fert_drip, mister, fert_mister)
+    and counts: schedules stored, against max_schedules 24. Before the irrigation firmware a planned occurrence reads
+    blocked, "arrives with the irrigation firmware". Unknown values are null, never 0.
+
+    Refusals return the Problem JSON with isError: query_timeout and unavailable (the database; both retryable). days
+    or past_days outside their ranges is the REST twin's invalid_request, refused before the tool runs with isError and
+    a plain message. Both windows are bounded, so window_too_large never applies."""
+    from verdify_services.irrigation import reads
+
+    async def read(conn, actor):
+        return await reads.agenda(conn, actor, days=days, past_days=past_days)
+
+    return await _irrigation_read("irrigation_schedule", read)
+
+
+@mcp.tool()
+async def irrigation_history(
+    view: Annotated[Literal["minutes", "runs"], Field(description="minutes per day, or the ended runs.")],
+    since: Annotated[
+        str,
+        Field(description="The REST from. minutes: a local date, YYYY-MM-DD. runs: a date-time with its UTC offset."),
+    ],
+    until: Annotated[
+        str,
+        Field(
+            description="The REST to. minutes: a local date, included. runs: a date-time with its UTC offset, "
+            "not included."
+        ),
+    ],
+    group_by: Annotated[
+        Literal["zone", "line", "cause"], Field(description="minutes only: what each row totals by.")
+    ] = "zone",
+    line: Annotated[LineId | None, Field(description="runs only: one line, L01-L11.")] = None,
+    cause: Annotated[IrrigationCauseArgument | None, Field(description="runs only: why water ran.")] = None,
+    outcome: Annotated[RunOutcomeArgument | None, Field(description="runs only: how a run ended.")] = None,
+    cursor: Annotated[str | None, Field(description="runs only: next_cursor of the page before.")] = None,
+):
+    """Read watering history. REST twins: view minutes is API-IRR-10 (GET /v1/irrigation/minutes) and view runs is
+    API-IRR-11 (GET /v1/irrigation/runs); the same JSON.
+
+    It only reads and does not count as your plan for a trigger. since and until are the REST from and to.
+
+    View minutes: minutes, pulses and whole gallons per local day (America/Denver), up to 400 days, by group_by and
+    always split by cause and chemistry. A day with coverage no_data has no rows: a gap, never 0.
+
+    View runs: the ended runs, newest first, up to 31 days, 50 to a page, filtered by line, cause and outcome; pass
+    next_cursor as cursor for the next page. The run in progress is in irrigation_status.
+
+    Unknown values are null, never 0. Refusals return the Problem JSON with isError: window_too_large (a wider window;
+    max gives the limit), invalid_request (a bad since, until or cursor, or an argument that does not belong to the
+    view, such as outcome with minutes; field names it), query_timeout and unavailable (the database; both
+    retryable). A value outside an enum is refused before the tool runs, with isError and a plain message."""
+    from verdify_services.irrigation import reads
+    from verdify_services.problems import ServiceError, problem
+
+    try:
+        if view == "minutes":
+            other_view = {"line": line, "cause": cause, "outcome": outcome, "cursor": cursor}
+            for name, value in other_view.items():
+                if value is not None:
+                    raise ServiceError(problem("invalid_request", f"{name} belongs to view runs.", field=name))
+            first, last = _history_local_day("since", since), _history_local_day("until", until)
+
+            async def read(conn, actor):
+                return await reads.minutes(conn, actor, first, last, group_by)
+
+        else:
+            if group_by != "zone":
+                raise ServiceError(problem("invalid_request", "group_by belongs to view minutes.", field="group_by"))
+            start, end = _history_moment("since", since), _history_moment("until", until)
+
+            async def read(conn, actor):
+                return await reads.runs(conn, actor, start, end, line=line, cause=cause, outcome=outcome, cursor=cursor)
+
+    except ServiceError as refused:
+        return _tool_problem(refused.problem)
+    return await _irrigation_read("irrigation_history", read)
 
 
 # ═══════════════════════════════════════════════════════════════

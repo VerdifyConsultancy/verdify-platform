@@ -32,6 +32,8 @@ from verdify_schemas.alerts import (
     HouseBandDriftAlert,
     IrrigationFeedbackGapAlert,
     IrrigationFenceBreachAlert,
+    IrrigationLineFaultedAlert,
+    IrrigationRunMissedAlert,
     LeakDetectedAlert,
     LightingCfgThresholdDriftAlert,
     PlanContextFailedAlert,
@@ -104,6 +106,21 @@ CASES = {
             "observed_at": NOW,
             "context": {"state": True},
         },
+    ),
+    "irrigation_run_missed": (
+        IrrigationRunMissedAlert,
+        {
+            "line_id": "L01",
+            "slot_id": 4,
+            "local_day": "2026-11-02",
+            "planned_start": NOW,
+            "rule": "reported_missed",
+            "reason": "sf",
+        },
+    ),
+    "irrigation_line_faulted": (
+        IrrigationLineFaultedAlert,
+        {"line_id": "L07", "fault_until": NOW},
     ),
     "planner_tool_dependency_failed": (
         PlannerToolDependencyFailedAlert,

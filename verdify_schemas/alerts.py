@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, TypeAdapter, model_validator
@@ -97,6 +97,8 @@ AlertType = Literal[
     "telemetry_stall",
     "deploy_override",
     "irrigation_fence_breach",
+    "irrigation_run_missed",
+    "irrigation_line_faulted",
 ]
 
 ALERT_TYPES: tuple[str, ...] = (
@@ -148,6 +150,8 @@ ALERT_TYPES: tuple[str, ...] = (
     "telemetry_stall",
     "deploy_override",
     "irrigation_fence_breach",
+    "irrigation_run_missed",
+    "irrigation_line_faulted",
 )
 
 
@@ -884,8 +888,16 @@ class DeployOverrideAlert(_AlertBase):
 class IrrigationFenceBreachDetails(_DetailsBase):
     # Live-truth invariant on equipment_state (2026-07-11 audit: replay/
     # invariants cannot see irrigation, so the #450 fencing contracts are
-    # asserted against what the relays actually did).
-    rule: Literal["blocked_fert_path_on", "fert_master_without_wall_drip", "center_drip_while_disabled"]
+    # asserted against what the relays actually did). With an applied program
+    # (VD-42) the last two rules apply; before the engine, or on src=rom, the
+    # first three.
+    rule: Literal[
+        "blocked_fert_path_on",
+        "fert_master_without_wall_drip",
+        "center_drip_while_disabled",
+        "relay_on_line_disabled",
+        "fert_master_without_fert_run",
+    ]
     equipment: str
     observed_at: AwareDatetime
     context: dict[str, Any] = Field(default_factory=dict)
@@ -894,6 +906,37 @@ class IrrigationFenceBreachDetails(_DetailsBase):
 class IrrigationFenceBreachAlert(_AlertBase):
     alert_type: Literal["irrigation_fence_breach"]
     details: IrrigationFenceBreachDetails
+
+
+_IrrigationLineId = Annotated[str, Field(pattern=r"^L(0[1-9]|1[01])$")]
+
+
+class IrrigationRunMissedDetails(_DetailsBase):
+    # irrigation §6.3 (VD-42): the controller reported the occurrence missed, or it has
+    # no outcome 2 h after its planned start, under a window the ingestor fully watched.
+    line_id: _IrrigationLineId
+    slot_id: int = Field(..., ge=1, le=65535)
+    local_day: date
+    planned_start: AwareDatetime
+    rule: Literal["reported_missed", "no_outcome"]
+    reason: str | None = None
+
+
+class IrrigationRunMissedAlert(_AlertBase):
+    alert_type: Literal["irrigation_run_missed"]
+    details: IrrigationRunMissedDetails
+
+
+class IrrigationLineFaultedDetails(_DetailsBase):
+    # irrigation §6.3 (VD-42): irr_state's f= latch on a mister (D-IRP-19). fault_until
+    # is local midnight; null until the controller has a valid clock to fill it in.
+    line_id: _IrrigationLineId
+    fault_until: AwareDatetime | None = None
+
+
+class IrrigationLineFaultedAlert(_AlertBase):
+    alert_type: Literal["irrigation_line_faulted"]
+    details: IrrigationLineFaultedDetails
 
 
 AlertEnvelopeUnion = Annotated[
@@ -944,7 +987,9 @@ AlertEnvelopeUnion = Annotated[
     | WriterAbsentAlert
     | TelemetryStallAlert
     | DeployOverrideAlert
-    | IrrigationFenceBreachAlert,
+    | IrrigationFenceBreachAlert
+    | IrrigationRunMissedAlert
+    | IrrigationLineFaultedAlert,
     Field(discriminator="alert_type"),
 ]
 

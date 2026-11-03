@@ -7,7 +7,7 @@ regressions can't land silently.
 Checks:
   1. iris_planner imports (fails on Python syntax, missing dependency, or
      missing playbook at PLANNER_PLAYBOOK_PATH).
-  2. `_STANDING_DIRECTIVES` still says "22 production tools" — Hermes tool-inventory guard.
+  2. `_STANDING_DIRECTIVES` still says "25 production tools" — Hermes tool-inventory guard.
   3. `_PLANNER_CORE` still carries the "Structured hypothesis" section —
      G7 write-side guard (CORE must include it so both opus and local see it).
   4. Sprint-3 split invariants: `_PLANNER_CORE` has the Tier 1 table;
@@ -19,13 +19,16 @@ Checks:
       - preamble ≤ ~52000 Claude tokens (≈ 208000 chars at 4:1; we
          approximate with char-length since the anthropic tokenizer hits
          the network and this script must stay offline).
-      - "22 production tools" preamble appears in both.
+      - "25 production tools" preamble appears in both.
+  6. The context each builder gets holds section 11 (`render_context()` over
+     tests/fixtures/irrigation_context.json), within its 60-line budget.
 """
 
 from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 
 os.environ.setdefault("HERMES_URL", "http://127.0.0.1:8642")
 os.environ.setdefault("HERMES_IRIS_API_KEY", "x")
@@ -38,7 +41,7 @@ import iris_planner as p  # noqa: E402
 PREAMBLE_MAX_CHARS = 52_000 * 4
 
 # Invariants that must hold regardless of instance.
-assert "22 production tools" in p._STANDING_DIRECTIVES, "tool-count guard: '22 production tools' missing"
+assert "25 production tools" in p._STANDING_DIRECTIVES, "tool-count guard: '25 production tools' missing"
 assert "`query` tool" in p._STANDING_DIRECTIVES, "Hermes prompt must document that raw SQL is denied"
 assert "operator `plan_run` tool" in p._STANDING_DIRECTIVES, "Hermes prompt must document that plan_run is denied"
 assert p.PLANNER_PLAYBOOK_PATH.exists(), f"playbook missing at {p.PLANNER_PLAYBOOK_PATH}"
@@ -77,14 +80,27 @@ print(f"  preamble opus  = {len(opus_preamble):>6} chars (≈ {len(opus_preamble
 print(f"  preamble local = {len(local_preamble):>6} chars (≈ {len(local_preamble) // 4:>5} Claude-tokens)")
 print(f"  delta          = {len(opus_preamble) - len(local_preamble):>6} chars")
 
+# The context step: section 11 rendered over its fixture, appended to the context every builder gets.
+from tasks.irrigation import CONTEXT_MAX_LINES, IrrigationContext, render_context  # noqa: E402
+
+IRRIGATION_HEADER = "--- IRRIGATION (lines, next 24 h, manual items) ---"
+_fixture = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "irrigation_context.json"
+section_11 = render_context(IrrigationContext.model_validate_json(_fixture.read_text()))
+_section_lines = len(section_11.splitlines())
+assert section_11.startswith(IRRIGATION_HEADER), "section 11 lost its header"
+assert _section_lines <= CONTEXT_MAX_LINES, f"section 11 is {_section_lines} lines, over {CONTEXT_MAX_LINES}"
+print(f"  section 11     = {len(section_11):>6} chars ({_section_lines} lines)")
+context = f"<context stub>\n{section_11}"
+
 # Every event-type builder renders cleanly for both instances.
 for event in ("SUNRISE", "SUNSET", "SOLAR_MAX", "TRANSITION", "FORECAST_DEVIATION"):
     for instance in ("opus", "local"):
-        message = p._PROMPT_BUILDERS[event]("<context stub>", "<label stub>", instance)
+        message = p._PROMPT_BUILDERS[event](context, "<label stub>", instance)
         assert isinstance(message, str) and len(message) > 1000, (
             f"{event}/{instance} prompt suspiciously short: {len(message)} chars"
         )
-        assert "22 production tools" in message, f"{event}/{instance} prompt missing _STANDING_DIRECTIVES preamble"
+        assert IRRIGATION_HEADER in message, f"{event}/{instance} prompt missing section 11"
+        assert "25 production tools" in message, f"{event}/{instance} prompt missing _STANDING_DIRECTIVES preamble"
         print(f"  {event:10s} {instance:5s} {len(message):>6} chars")
 
 print("planner-dry: all prompts render; Hermes invariants hold")

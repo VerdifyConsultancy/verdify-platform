@@ -45,9 +45,10 @@ MCP_DEPLOYMENT_PATH = REPO_ROOT / "deploy" / "k8s" / "base" / "mcp-deployment.ya
 BASE_CONFIG_PATH = REPO_ROOT / "deploy" / "k8s" / "base" / "configmap.yaml"
 PROD_OVERLAY_PATH = REPO_ROOT / "deploy" / "k8s" / "overlays" / "prod"
 
-# Architecture §5.6, the whole `agent` column (VD-59). The reads and alerts are
-# registered now; settings, activity and set_setting (#1171) and the eight
-# irrigation tools (#1173, #1174, #1177) join by registering with `agent`.
+# Architecture §5.6, the whole `agent` column (VD-59). The reads, alerts and the
+# irrigation reads, run and stop (#1173, #1177) are registered now; settings, activity
+# and set_setting (#1171) and the other irrigation writes (#1174) join by registering
+# with `agent`.
 AGENT_TOOLS = frozenset(
     {
         "climate",
@@ -513,8 +514,8 @@ class TestAudienceMatrix:
     def test_agent_audience_is_the_architecture_agent_column(self, mcp_server):
         """VD-59: the agent column of architecture §5.6, for the tools registered so far.
 
-        settings, activity, set_setting and the irrigation tools pass this test
-        by registering with `agent` (#1171, #1173, #1174, #1177).
+        settings, activity, set_setting and the other irrigation writes pass this
+        test by registering with `agent` (#1171, #1174).
         """
         registered = {tool.name for tool in mcp_server.mcp._registered_tools}
         assert mcp_server.AGENT_AUDIENCE == "agent" and "agent" in mcp_server.KNOWN_AUDIENCES
@@ -711,7 +712,7 @@ class TestListToolsAudienceFiltering:
     @pytest.mark.parametrize("mode", ["log", "enforce"])
     @pytest.mark.parametrize(
         ("audience", "token", "expected_count"),
-        [("iris", "tok-iris", 23), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 29)],
+        [("iris", "tok-iris", 26), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 32)],
     )
     def test_protocol_inventory_matches_exact_audience_allowlist(
         self, mcp_server, monkeypatch, mode, audience, token, expected_count

@@ -310,9 +310,9 @@ dispatcher, the API's `applied_from` and the services resolve a setting the same
   `RECONNECT_UNOBSERVED_RESTORE_PARAMS` is empty today.
 - **Wake:** the insert trigger sends `NOTIFY desired_state_changed` with an empty payload. The existing listener
   (`setpoint_listener`, `ingestor/ingestor.py:5012`) also subscribes to `irrigation_changed` (§5.8) and only sets
-  `shared.setpoint_dispatch_requested` (or `shared.irrigation_sync_requested`), forcing the next normal, fenced
-  pass: dispatch in seconds, confirmation 30-90 s later (`cfg_*` sensors every 30 s, snapshots every 60 s). A
-  lost wake waits for the 300 s pass.
+  `shared.setpoint_dispatch_requested`, forcing the next normal, fenced pass, or `shared.irrigation_sync_requested`,
+  which the next 5 s `irrigation_sync` pass reads: dispatch in seconds, confirmation 30-90 s later (`cfg_*` sensors
+  every 30 s, snapshots every 60 s). A lost wake waits for the 300 s pass.
 - **Never the NOTIFY fast path.** `trg_setpoint_notify` on `setpoint_changes` (`db/migrations/055-realtime-sync.sql`)
   skips the physics invariants, moisture guardrails, heap deferral and the 12-command limit (the Lease, the
   device-write gate and the experiment holds still apply), and the next pass would overwrite the value anyway.
@@ -323,11 +323,30 @@ dispatcher, the API's `applied_from` and the services resolve a setting the same
   rule · system") and applies through the next normal dispatcher pass. The dispatcher admits a forecast-rule plan
   row (`plan_id` `preemptive-*`) for any writable parameter (§5.3 step 1), so `high_wind` still reaches
   `sw_economiser_enabled`, which is not planner-pushable; Iris's rows keep today's filter. Band-owned `temp_low`
-  and `temp_high` keep the band.
+  and `temp_high` keep the band. As built: a forecast-rule row for a read-only parameter is audited as
+  `planner_param_not_pushable` and goes nowhere, so no forecast-rule value reaches the controller around the fences.
 - **Release.** A released row with no plan, band or dispatcher default gets its registry default
   (`TunableDef.default`). The lighting policy functions treat the newest confirmed non-`esp32` `setpoint_changes`
   row as an override, so a released `gl_*` value would stick. Migration M5 (VD-33) makes them ignore
   `source = 'manual'` rows, so after a release the next pass applies the policy's own value.
+- **As built (VD-33).** The plan in `resolve_effective()` and in the release rule is the `v_active_plan` row the
+  dispatcher admits (it is in `planner_params`), so a plan row the dispatcher ignores never hides a desired value.
+  Besides the §5.3 step 1 rows (`desired_write_rule()` in `verdify_schemas.tunable_registry`), `crop_band` and
+  `irrigation_site`, a row is skipped and logged once when the dispatcher has no number or switch route for it
+  (`sw_irrig_*` today, which the L01 bridge owns), when the connected firmware lacks the feature a plan row would
+  need too, or when its value is not finite. A dispatcher default is a value one of its blocks resolves: the band,
+  the lighting policy (nine values per circuit, or the legacy shared `gl_*` values only on firmware without
+  per-circuit lighting), the direct-wet window, the safety limits and the mister defaults. No block resolves the
+  per-circuit offsets, solar phasing and out-of-service switches, so their release, like a legacy shared value's on
+  per-circuit firmware, goes to the registry default, which is also the controller's boot value. A release to the
+  registry default goes out with source `band`; it waits out `experiment_policy_hold` and a component bundle as a
+  desired value does, but only a desired value passes `component_authority_hold`. A held value is fenced only once
+  its hold ends, so no clamp row claims a guardrail held it. A command counts as a desired value (source `manual`,
+  past `component_authority_hold`, no plan trigger) or a release only when it carries the value the desired-state
+  step resolved: a drift-probe, C1 target or C1 restore value for the same field does not. When a desired value
+  wins, the plan's clamp audits for that parameter are dropped. Before M1 is applied, or without its grant, the pass
+  runs without desired state (a warning, logged once); any other read error fails the pass, so a transient error
+  never hands a manual value back to the plan.
 
 ### 5.3 Validation on submit
 
@@ -404,7 +423,11 @@ Plan values keep `readback_values_equivalent` and show as Iris stored them.
 `state_reason` says why a value is not confirmed or held, when known: `clamped` (applied value and guard),
 `experiment`, `deferred` (heap) or `push_failed` (`setpoint_changes.delivery_status` after the request),
 `writer_down` (the ingestor heartbeat is stale, §7) or `no_match`. Before the engine an `irrigation_site` row
-stays requested ("applies with the irrigation firmware"). The states are display only and add no alerts;
+stays requested with `no_engine` ("applies with the irrigation firmware"; `since` is the write). With the engine
+it reads confirmed once the confirmed push whose `sha256` starts with the `irr_program_id` hash has
+`site_desired_at` at or after the write, with the device value from that record, or at once when that record
+already holds the written value (the hash does not change, so no push follows), and not_confirmed 5 min after
+the write without either; `no_match` then names the first push compiled at or after it. The states are display only and add no alerts;
 `setpoint_unconfirmed` (`ingestor/tasks/confirmation.py`) still covers device writes. With no desired row a
 setting's state is its plan value's, else the dispatcher's newest push's (VD-67); a `setpoint_changes` row the
 controller reported itself (source `esp32`) is never the push a reason's `since` names.
@@ -482,12 +505,12 @@ flags, minutes by zone, and the firmware. Architecturally it follows the same ru
   `irrigation_push`, `irrigation_ledger`), with the same attribution, `manual` rule and `activity_log` rows. The
   three site values are `irrigation_site` rows in `desired_state` (R12): written through API-10 or `set_setting`,
   skipped by the dispatcher, compiled into the program by `irrigation_sync` from `v_desired_state_current`.
-- The ingestor stays the only writer. `irrigation_sync` (every 60 s, plus a wake) compiles the program, pushes it
-  when the controller's published hash differs, and sends pending run, stop, clear-fault and override commands,
-  never through `setpoint_changes` (irrigation §6.1). Every irrigation or `irrigation_site` write runs
-  `pg_notify('irrigation_changed', '')` in its transaction; the listener sets `irrigation_sync_requested`, the
-  task loop force-launches the pass, and pending stops are also polled every 5 s. Stop goes first, as its own push
-  ahead of any program push, and is never heap-deferred.
+- The ingestor stays the only writer. `irrigation_sync` runs every 5 s and sends pending run, stop, clear-fault and
+  override commands; on a wake, and every 60 s, it also compiles the program and pushes it when the controller's
+  published hash differs, never through `setpoint_changes` (irrigation §6.1). Every irrigation or `irrigation_site`
+  write runs `pg_notify('irrigation_changed', '')` in its transaction; the listener sets
+  `irrigation_sync_requested`, which the next pass reads and clears (no forced launch). Stop goes first, as its own
+  push ahead of any program push, and is never heap-deferred.
 - Commands are `pending` until the ingestor marks the row `sent` in the transaction before it calls the device
   (sent at most once); one not sent within 2 min is `failed`, never sent late. Stop is re-sent each pass until the
   relays that were on read OFF, for at most 2 min. Relay edges and the line's `irr_state` show what happened.
@@ -544,7 +567,7 @@ bounded `time_bucket_gapfill` series endpoint. There is no new rollup layer in t
 | Band | In force: the newest `setpoint_snapshot` rows with `band_role` (zone `house` for the hero and Graphs, each zone for its tile), computed every pass by the dispatcher from `crop_band_anchors` with the controller's formula (`band_anchors.emit_band_audit`), provenance DERIVED, kept 90 days. Older windows use `fn_band_setpoints(ts)` over the step series, which gives the same crop values as `fn_band_timeline`, labelled "reconstructed from today's anchors". The device-reported targets (`climate.house_temp_target_f`, `house_vpd_target`, `vpd_target_<zone>`) are cross-check metrics |
 | Settings | `verdify_schemas/tunable_registry.py` (code), `v_desired_state_current`, `v_active_plan`, the newest readbacks in `setpoint_snapshot` and `equipment_state`, `setpoint_changes` and `setpoint_clamps` rows after each request, `irrigation_push` |
 | Daily | `daily_summary` (temperature, RH and VPD min, max and mean; `water_used_gal`; mister runtimes) and the new `v_daily_scorecard` (M6), one row per `daily_summary.date`: whole-day temperature and VPD time in band for every day (`daily_summary.temp_compliance_pct` and `vpd_compliance_pct`, Q-12); time in band by day and night from `mv_zone_band_grade`, which keeps 3 days, so only the days it covers whole get a value and the rest are null with `band_reason` 'band grade kept 3 days'; gallons, with `water_reason` from bounded checks when null (`partial_day` today, `unavailable` with no meter reading that day, otherwise `incomplete`), because `v_water_meter_daily` has no time bound; Iris's required plans written and missed (`planner_trigger_ledger`) and alerts by severity, each null for days before its source existed |
-| Water | `v_water_meter_daily`, `v_water_relay_runs`, plus [irrigation](irrigation.md)'s tables |
+| Water | `v_water_meter_daily`, `v_water_relay_runs` (API-21); API-IRR-01 and API-IRR-11 read a window's own `equipment_state` rows by that view's rules, never the view, and API-IRR-10 reads `fn_irrigation_minutes_daily`; plus [irrigation](irrigation.md)'s tables |
 
 - **Reporting.** One test says whether the controller is reporting: the ingestor heartbeat is fresh (at most
   180 s old) and the newest `climate` row is at most 300 s old (the `GET /health` threshold in `api/main.py`).
@@ -702,7 +725,7 @@ after M2 is applied too.
 | M2b | VD-74 | Migration 284, measured once M2 is applied in production. Grants to `verdify_dashboard_runtime`, each listed in the file and covered by a database test: SELECT on every relation and function the MVP reads (§7; not `v_greenhouse_now`), `v_water_attribution_daily`, `data_gaps`, `desired_state`, the view, `activity_log`, `setpoint_changes` and `setpoint_clamps`, and M4's `v_irrigation_minutes_daily`, `v_irrigation_day_coverage` and `fn_irrigation_minutes_daily(date, date)` (EXECUTE); VD-57's `weather_forecast` and `fn_zone_vpd_targets(timestamptz)`, so R4 needs no second re-seal. All direct: no read needs a migration 268-style wrapper. M6 grants its own `v_daily_scorecard`. EXECUTE on `fn_mcp_armed_assignment_context()` (no SELECT on `control_experiments`); INSERT on `desired_state` and `activity_log` with USAGE on their sequences; UPDATE on `alert_log` (ack and resolve columns) and `crop_band_anchors` (the three columns); no INSERT on `setpoint_changes`. Re-seals the api and ingestor receipts; the MCP seal stays M3's |
 | M3 | VD-38 | Per [irrigation](irrigation.md): the irrigation tables, granted to the dashboard, MCP and ingestor logins; SELECT on `v_water_event_attribution` (per-run gallons) for the dashboard and MCP logins; EXECUTE on `fn_mcp_armed_assignment_context()` for the ingestor login (Iris's irrigation context says whether an experiment is armed) |
 | M4 | VD-39 | `v_irrigation_minutes_daily` and `v_irrigation_day_coverage` (each day complete, partial or no data), and `fn_irrigation_minutes_daily(from, to)`, the minutes for a day range with the scan bounded by it (the view rebuilds every run on each read; [irrigation](irrigation.md) §6.2). SELECT on the views and EXECUTE on the function for the MCP and ingestor duties (the dashboard login exists only after M2; M2b grants all three); none for the api login. Re-seals the api, ingestor and MCP receipts |
-| M5 | VD-33 | The lighting policy functions ignore `source = 'manual'` rows (§5.2), keeping 275's `SET jit = off` on `fn_lighting_minutes_policy` (`CREATE OR REPLACE FUNCTION` resets it) |
+| M5 | VD-33 | Migration 286: the lighting policy functions ignore `source = 'manual'` rows (§5.2), keeping 275's `SET jit = off` on `fn_lighting_minutes_policy` (`CREATE OR REPLACE FUNCTION` resets it). As built: it replaces only the override predicate inside each function's live `pg_get_functiondef`, between `prosrc` SHA-256 checks before and after, and refuses any other catalog change (owner, ACL, `ROWS`, `SET`; the argument defaults compare deparsed). It re-seals the api and ingestor receipts; MCP's is projected unchanged, as for 275. It changes no output today: on 2026-11-02 every newest non-`esp32` lighting row was `band` |
 | M6 | VD-56 | Migration 285: `v_daily_scorecard` (§7), granted to the dashboard login. Neither runtime digest takes in a view only that login can read, so no receipt changes; the native qualification measures it |
 | PAR | VD-71 (Next) | The PAR meter's PPFD `climate` column. It re-creates the `v_runtime_climate_write` facade with the column and re-seals the api and ingestor receipts, or every climate write fails once the firmware publishes PPFD. It drops 195's `dli_validity_release_unavailable` CHECK and opens a new validity interval; the DLI views rebind to the column (§7) |
 

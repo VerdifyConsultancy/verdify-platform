@@ -1,10 +1,81 @@
-"""The irrigation reads: API-IRR-01, API-IRR-02, API-IRR-10 and API-IRR-11 (#1155).
+"""API-IRR-01, -02, -10 and -11: the irrigation reads (VD-40, #1155).
 
-A stub until #1155 fills it. ``api/operator_api.py`` (#1148) already includes ``router`` under ``/v1`` with the
-bearer, session and role checks, so this module carries no auth of its own (``operator_routes/__init__.py`` has the
-rules).
+No auth and no SQL: ``api/operator_api.py`` (#1148) includes ``router`` under ``/v1`` with its bearer, session and
+role checks, and each route calls one ``verdify_services.irrigation.reads`` function, the same ones the MCP read tools
+call (#1173). ``request.state.actor`` is the signed-in person the session check set.
 """
 
-from fastapi import APIRouter
+from __future__ import annotations
+
+from datetime import date
+from typing import Annotated
+
+from fastapi import APIRouter, Query, Request
+from pydantic import AwareDatetime
+
+from operator_routes.reads import Connection
+from verdify_schemas.irrigation import IrrigationCause, RunOutcome
+from verdify_services.irrigation import reads as irrigation
 
 router = APIRouter()
+
+LineFilter = Annotated[str | None, Query(pattern=r"^L(0[1-9]|1[01])$")]
+
+
+@router.get("/irrigation", operation_id="API-IRR-01", tags=["irrigation"], response_model=irrigation.IrrigationStatus)
+async def get_status(conn: Connection, request: Request) -> irrigation.IrrigationStatus:
+    """Lines, active runs, program sync and the engine flag, minutes today, limits, leak and occupancy."""
+    return await irrigation.status(conn, request.state.actor)
+
+
+@router.get(
+    "/irrigation/schedules", operation_id="API-IRR-02", tags=["irrigation"], response_model=irrigation.ScheduleAgenda
+)
+async def get_agenda(
+    conn: Connection,
+    request: Request,
+    days: Annotated[int, Query(ge=1, le=7)] = 7,
+    past_days: Annotated[int, Query(ge=0, le=7)] = 0,
+) -> irrigation.ScheduleAgenda:
+    """Schedules with their sync, the week planned against actual, bounds per line kind and solar times."""
+    return await irrigation.agenda(conn, request.state.actor, days=days, past_days=past_days)
+
+
+@router.get(
+    "/irrigation/minutes", operation_id="API-IRR-10", tags=["irrigation"], response_model=irrigation.MinutesReport
+)
+async def get_minutes(
+    conn: Connection,
+    request: Request,
+    from_: Annotated[date, Query(alias="from")],
+    to: date,
+    group_by: irrigation.GroupBy = "zone",
+) -> irrigation.MinutesReport:
+    """Minutes, pulses and gallons per day by zone, line or cause, up to 400 days."""
+    return await irrigation.minutes(conn, request.state.actor, from_, to, group_by)
+
+
+@router.get("/irrigation/runs", operation_id="API-IRR-11", tags=["irrigation"], response_model=irrigation.RunPage)
+async def get_runs(
+    conn: Connection,
+    request: Request,
+    from_: Annotated[AwareDatetime, Query(alias="from")],
+    to: AwareDatetime,
+    line: LineFilter = None,
+    cause: IrrigationCause | None = None,
+    outcome: RunOutcome | None = None,
+    limit: Annotated[int, Query(ge=1, le=irrigation.LIMIT_MAX)] = irrigation.LIMIT_DEFAULT,
+    cursor: str | None = None,
+) -> irrigation.RunPage:
+    """The run ledger, newest first; windows up to 31 days."""
+    return await irrigation.runs(
+        conn,
+        request.state.actor,
+        from_,
+        to,
+        line=line,
+        cause=None if cause is None else cause.value,
+        outcome=None if outcome is None else outcome.value,
+        limit=limit,
+        cursor=cursor,
+    )

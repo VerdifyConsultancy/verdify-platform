@@ -93,6 +93,7 @@ $PY -m pytest -q -rs \
   tests/test_283_irrigation_tables_delivery.py \
   tests/test_284_dashboard_grants_delivery.py \
   tests/test_285_daily_scorecard_delivery.py \
+  tests/test_286_lighting_policy_delivery.py \
   tests/test_metric_registry_completeness.py \
   tests/test_verdify_services_series.py \
   tests/test_qualify_migration_successor.py \
@@ -103,10 +104,16 @@ $PY -m pytest -q -rs \
   tests/test_realized_solar_night_dryout_timeline.py \
   tests/test_05_dispatcher.py \
   tests/test_dispatcher_plain_convergence.py \
+  tests/test_dispatcher_desired_state.py \
   tests/test_irrigation_stop_edges.py \
   tests/test_irrigation_bridge.py \
   tests/test_irrigation_bridge_writes.py \
   tests/test_dashboard_db_irrigation_bridge.py \
+  tests/test_irrigation_sync.py \
+  tests/test_dashboard_db_irrigation_ledger.py \
+  tests/test_irrigation_writes_rest.py \
+  tests/test_dashboard_db_irrigation_writes.py \
+  tests/test_dashboard_db_forecast_engine.py \
   tests/test_bounded_reconcile.py \
   tests/test_10_planner_routing.py \
   tests/test_11_planner_milestones.py \
@@ -259,6 +266,10 @@ $PY -m pytest -q -rs \
   tests/test_lab_publish_k3s_guard.py \
   tests/test_mcp_audience_auth.py \
   tests/test_mcp_named_agents.py \
+  tests/test_mcp_irrigation_read_tools.py \
+  tests/test_irrigation_context.py \
+  tests/test_dashboard_db_irrigation_context.py \
+  tests/test_gather_no_home_assistant.py \
   tests/test_mcp_transport_runtime.py \
   tests/test_outcome_kpi_dryout_projection.py \
   tests/test_scorecard_realized_dryout.py \
@@ -303,6 +314,7 @@ $PY -m pytest -q -rs \
   tests/test_twin_asof_migration.py \
   tests/test_twin_live_driver.py \
   tests/test_verdify_services_reads.py \
+  tests/test_verdify_services_irrigation_reads.py \
   tests/test_operator_api_contract.py \
   tests/test_operator_api_auth.py \
   tests/test_operator_writes.py \
@@ -325,6 +337,9 @@ $PY scripts/gen-grafana-dashboard-cms.py --check
 
 step "solar site constants SSOT guard (#393)"
 $PY scripts/check-solar-constants.py
+
+step "gather ConfigMap matches its source scripts"
+$PY scripts/gen-gather-configmap.py --check
 
 step "config-revision annotations match verdify-config sources (#587)"
 bash scripts/gen-config-revision.sh --check
