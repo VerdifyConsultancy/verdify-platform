@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 import bandFixture from "./fixtures/band.json";
 import historyFixture from "./fixtures/setting-history.json";
 import { load } from "./fixtures/uplot-mock";
-import { BAND_IN_FORCE, BAND_RETENTION_S, CROP_BAND, bandAt, bandKindFor, bandRuns, boundLabel, groupSteps, lastAtOrBefore, marksExtent, paddedRange, settingBounds, settingSteps, stepsAt } from "./marks";
+import { BAND_IN_FORCE, BAND_RETENTION_S, CROP_BAND, bandAt, bandKindFor, bandRuns, boundLabel, groupSteps, lastAtOrBefore, marksExtent, paddedRange, requesterWords, settingBounds, settingSteps, stepsAt } from "./marks";
 import type { BandTimeline, SettingHistory } from "./types";
 
 const NBSP = "\u00a0";
@@ -130,4 +130,56 @@ test("the y range is the union of traces, band and steps in view, padded 5%", ()
   expect(marksExtent([], steps, epoch("2026-11-01T06:00:00Z"), epoch("2026-11-01T08:00:00Z"))).toEqual([1.6, 1.6]);
   expect(paddedRange([null, null], null)).toEqual([0, 1]);
   expect(paddedRange([2, 2], null)).toEqual([1.9, 2.1]);
+});
+
+test("allRequests: every desired row draws as a request labelled with who asked, up to the next row or now, and a release ends the one before it", () => {
+  const asked = (id: number, value: number | null, created_at: string, source: string, name: string, state: string, reason: string | null = null) => ({ id, param: "mister_engage_kpa", value, manual: false, state, actor: { source, name }, reason, created_at });
+  const history = {
+    param: "mister_engage_kpa", unit: "kPa", min: 0.5, max: 2.5, from: "2026-11-01T06:00:00Z", to: "2026-11-01T22:00:00Z", plan: [], readback: [],
+    desired: [
+      asked(1, 1.5, "2026-11-01T05:00:00Z", "system", "forecast-engine", "confirmed"),
+      asked(2, 1.55, "2026-11-01T07:00:00Z", "dashboard", "Jason", "confirmed", "drier nights"),
+      asked(3, null, "2026-11-01T08:00:00Z", "dashboard", "Jason", "released"),
+      asked(4, 1.6, "2026-11-01T09:00:00Z", "agent:steward", "steward", "not_confirmed"),
+      asked(5, 1.65, "2026-11-01T09:30:00Z", "iris", "iris", "requested"),
+    ],
+  };
+  const now = Date.parse("2026-11-01T10:00:00Z") / 1000;
+  const epoch = (instant: string) => Date.parse(instant) / 1000;
+  const steps = settingSteps({ history, allRequests: true, format: (value) => value.toFixed(2) }, "kPa", now, now + 3600);
+  expect(steps.map((step) => [step.kind, step.value, step.who, step.endLabel, step.start, step.end])).toEqual([
+    ["requested", 1.5, "forecast-engine · system", undefined, epoch("2026-11-01T05:00:00Z"), epoch("2026-11-01T07:00:00Z")],
+    ["requested", 1.55, "Jason · dashboard", "Released", epoch("2026-11-01T07:00:00Z"), epoch("2026-11-01T08:00:00Z")],
+    ["requested", 1.6, "steward · agent · AI", undefined, epoch("2026-11-01T09:00:00Z"), epoch("2026-11-01T09:30:00Z")],
+    ["requested", 1.65, "iris · AI", undefined, epoch("2026-11-01T09:30:00Z"), now],
+  ]);
+  expect(steps.map((step) => step.label)).toEqual(["forecast-engine · system", "Jason · dashboard", "steward · agent · AI", "iris · AI"]);
+  expect(steps[1].detail).toBe("mister_engage_kpa requested 1.55 · Jason · dashboard · CONFIRMED · Released · “drier nights”");
+  expect(steps[2].detail).toBe("mister_engage_kpa requested 1.60 · steward · agent · AI · NOT CONFIRMED");
+  // Without it, only a row still on its way draws, as on Graphs.
+  expect(settingSteps({ history }, "kPa", now, now + 3600).map((step) => [step.value, step.label])).toEqual([[1.6, "1.60 kPa NOT CONFIRMED"], [1.65, "1.65 kPa REQUESTED"]]);
+  // A malformed agent source is not AI.
+  expect(requesterWords({ source: "agent:", name: "x" })).toBe("x · agent:");
+  // `format` words the bounds too.
+  expect(settingBounds({ history, format: (value) => `${value} kPa` }, "kPa").map((bound) => bound.text)).toEqual(["min 0.5 kPa", "max 2.5 kPa"]);
+});
+
+test("allRequests: readings that print alike are one device step, a gap stays a gap, and only the newest step is labelled", () => {
+  const point = (hour: number, value: number | null) => ({ at: `2026-11-01T${String(hour).padStart(2, "0")}:00:00Z`, value });
+  const epoch = (hour: number) => Date.parse(point(hour, null).at) / 1000;
+  const history = {
+    param: "mister_engage_kpa", unit: "kPa", from: "2026-11-01T00:00:00Z", to: "2026-11-01T22:00:00Z", plan: [], desired: [],
+    // The ingestor's value and the snapshot's binary32 reading of it alternate.
+    readback: [point(1, 0.83), point(2, 0.8299999833106995), point(3, 0.83), point(4, 0.84), point(5, null), point(6, 0.84), point(7, 0.8199999928474426), point(8, 0.82)],
+  };
+  const now = epoch(10);
+  const history24 = settingSteps({ history, allRequests: true, format: (value) => value.toFixed(2) }, "kPa", now, now + 3600);
+  expect(history24.map((step) => [step.value, step.start, step.end, step.label])).toEqual([
+    [0.83, epoch(1), epoch(4), ""],
+    [0.84, epoch(4), epoch(5), ""],
+    [0.84, epoch(6), epoch(7), ""],
+    [0.8199999928474426, epoch(7), now, "0.82 device"],
+  ]);
+  // Graphs keeps every change point and its label.
+  expect(settingSteps({ history }, "kPa", now, now + 3600).map((step) => step.label)).toHaveLength(7);
 });

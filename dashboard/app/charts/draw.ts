@@ -241,7 +241,11 @@ function placeLabels(plot: PaintTarget, input: LabelInput, colors: ChartColors, 
   for (const step of [...ahead, ...behind]) {
     const color = labelColor(stepStyle(step.kind, colors, seriesColor, px).stroke, colors[step.kind === "requested" ? "--warn-text" : "--ink"]);
     const line = y(plot, step.value);
-    labels.place(step.label, [
+    const ends = x(plot, step.end);
+    if (step.endLabel && ends >= bbox.left && ends <= bbox.left + bbox.width) {
+      labels.place(step.endLabel, [{ at: ends - 4 * px, line, align: "right" }, { at: ends + 4 * px, line, align: "left" }], color);
+    }
+    if (step.label) labels.place(step.label, [
       { at: Math.max(x(plot, step.start), bbox.left) + 4 * px, line, align: "left" },
       { at: Math.min(x(plot, step.end), bbox.left + bbox.width) - 4 * px, line, align: "right" },
     ], color);

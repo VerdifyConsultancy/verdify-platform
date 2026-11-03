@@ -302,3 +302,54 @@ test("a parent re-render with fresh arrays of the same data repaints nothing; a 
   expect((plot.dataUpdates[0][1] as (number | null)[])[47]).toBe(0.97);
   expect(created).toHaveLength(1);
 });
+
+test("a settings-only chart: the plot holds only steps; the legend, the data table and the CSV all follow them", async () => {
+  const history = load<SettingHistory>(historyFixture);
+  const urls: Blob[] = [];
+  URL.createObjectURL = vi.fn((blob: Blob) => { urls.push(blob); return `blob:csv-${urls.length}`; });
+  const { plot, container } = await mount({ series: null, metrics: [], unit: "kPa", settings: [{ history, label: "VPD Mister Engage", allRequests: true }] });
+  expect(plot.data).toEqual([[]]);
+  expect(plot.opts.series).toHaveLength(1);
+  plot.draw();
+  const label = (text: string) => plot.ctx.texts.find((item) => item.text === text);
+  expect(label("jason · dashboard")).toMatchObject({ color: TOKENS["--warn-text"] });
+  // The key names what is drawn: no toggles, as a step is no series.
+  expect(container.querySelector(".chart-legend")).toBeNull();
+  const key = [...container.querySelectorAll(".chart-key li")];
+  expect(key.map((item) => item.textContent)).toEqual(["Device readback", "jason · dashboard", "SUPERSEDED", "PLANNED · AI", "Forecast rule · system", "Min and max"]);
+  expect(key.map((item) => [item.querySelector(".chart-key-swatch")!.getAttribute("data-token"), item.querySelector(".chart-key-swatch")!.getAttribute("data-kind")])).toEqual([
+    ["c-setpoint", "line"], ["c-requested", "dashed"], ["c-bound", "dashed"], ["c-vpd", "dashed"], ["c-vpd", "dashed"], ["c-bound", "dotted"],
+  ]);
+  // The tooltip at a time with no bucket still names the steps there.
+  plot.hover(epoch("2026-11-01T09:50:00Z"), null);
+  expect(tooltip(plot)).toEqual(["11/01/2026 02:50 GMT-07:00", `VPD Mister Engage device 1.50${NBSP}kPa`, `VPD Mister Engage requested 1.55${NBSP}kPa · jason · dashboard · REQUESTED · “drier nights”`]);
+  // No empty table of buckets: only the steps.
+  const details = await openTable(container);
+  expect([...details.querySelectorAll("table")].map((table) => table.querySelector("caption")!.textContent)).toEqual([`Setting steps · bounds min 0.50${NBSP}kPa, max 2.50${NBSP}kPa`]);
+  expect(details.querySelector("summary")!.textContent).toBe("Data table · 8 rows");
+  // One row at each step's start and end inside the window, a column per kind drawn, and who asked beside each request.
+  const rows = (await urls[0].text()).split("\r\n");
+  expect(rows[0]).toBe("time (America/Denver),mister_engage_kpa device (kPa),mister_engage_kpa requested (kPa),mister_engage_kpa requested by,mister_engage_kpa planned (kPa),mister_engage_kpa superseded (kPa)");
+  expect(rows.slice(1, -1)).toEqual([
+    // The device's 05:58 Z step was in force when the window opened at 06:00 Z.
+    "2026-11-01T00:00:00-06:00,1.6,,,,",
+    "2026-11-01T01:25:00-07:00,1.6,1.5,jason · dashboard,,",
+    "2026-11-01T01:31:00-07:00,1.5,1.5,jason · dashboard,,",
+    "2026-11-01T02:45:00-07:00,1.5,1.55,jason · dashboard,,",
+    "2026-11-01T03:00:00-07:00,,,,,1.6",
+    "2026-11-01T06:00:00-07:00,,,,1.7,",
+    "2026-11-01T08:00:00-07:00,,,,1.65,",
+    "2026-11-01T11:00:00-07:00,,,,,1.8",
+    "2026-11-01T15:00:00-07:00,,,,,",
+  ]);
+  expect(screen.getByRole("link", { name: "CSV of this window" }).getAttribute("download")).toMatch(/^verdify-vpd-mister-engage-kpa-/);
+});
+
+test("a settings-only chart with no step shows the message and no key", async () => {
+  const history = { ...load<SettingHistory>(historyFixture), desired: [], plan: [], readback: [] };
+  const { container } = render(<TimeSeries series={null} metrics={[]} unit="kPa" settings={[{ history }]} now={NOW} xRange={RANGE} />);
+  await settle();
+  expect(container.querySelector(".chart-message")!.textContent).toBe("No data in this window");
+  expect(container.querySelector(".chart-key")).toBeNull();
+  expect(screen.queryByRole("link", { name: "CSV of this window" })).toBeNull();
+});

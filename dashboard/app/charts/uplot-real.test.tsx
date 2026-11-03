@@ -91,6 +91,28 @@ test("uPlot takes the options: x is the window, y the padded union, the nulls st
   expect(painted.some((text) => text.endsWith("Forecast rule · system"))).toBe(true);
 });
 
+test("a settings-only chart: uPlot takes no data at all, ranges y from the steps and paints them", async () => {
+  const history = load<SettingHistory>(historyFixture);
+  render(<TimeSeries series={null} metrics={[]} unit="kPa" settings={[{ history, allRequests: true }]} now={NOW} xRange={RANGE} syncKey={KEY} />);
+  await act(async () => { await vi.dynamicImportSettled(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+  const UPlot = (await import("uplot")).default;
+  const [plot] = UPlot.sync(KEY).plots as uPlot[];
+  expect([plot.scales.x.min, plot.scales.x.max]).toEqual([RANGE.from, RANGE.to]);
+  // The lowest step is 1.50 kPa and the highest 1.80: the y range holds both, padded 5%.
+  expect(plot.scales.y.min).toBeCloseTo(1.5 - 0.3 * 0.05, 9);
+  expect(plot.scales.y.max).toBeCloseTo(1.8 + 0.3 * 0.05, 9);
+  const painted = contexts.flatMap((context) => context.texts.map((text) => text.text));
+  expect(painted).toContain("Now");
+  expect(painted).toContain("jason · dashboard");
+  expect(painted.some((text) => text.endsWith("PLANNED · AI"))).toBe(true);
+  // The cursor over no data still names the steps at that time.
+  const over = plot.over;
+  const tip = over.querySelector<HTMLElement>(".chart-tooltip")!;
+  act(() => plot.setCursor({ left: 100, top: 40 }));
+  expect(tip.hidden).toBe(false);
+  expect(tip.textContent).toContain("mister_engage_kpa");
+});
+
 test("a zoom survives new data, and Reset zoom restores the window", async () => {
   const { plot, rerender } = await chart();
   act(() => plot.setScale("x", { min: RANGE.from + 3600, max: RANGE.from + 7200 }));
