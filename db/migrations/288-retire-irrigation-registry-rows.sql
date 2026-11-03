@@ -1,8 +1,14 @@
--- 288: retire the four equipment.irrigation_* sensor_registry rows. The engine firmware
--- (2026.11.3.0435.5e24d07c, VD-47) removed those config switches, so their equipment_state rows
--- stopped on 2026-11-02 and nothing writes them again. Each row allows 604800 s twice over, so
--- each would open a false sensor_offline about 2026-11-16. v_sensor_staleness reads only active
--- rows. The rows stay, inactive, as history, so a rebuild from migrations cannot resurrect them.
+-- 288: retire six sensor_registry rows whose feeds ended by design; each holds or would open a
+-- false sensor_offline. v_sensor_staleness reads only active rows. The rows stay, inactive, as
+-- history, so a rebuild from migrations cannot resurrect them.
+-- Four equipment.irrigation_* rows: the engine firmware (2026.11.3.0435.5e24d07c, VD-47) removed
+-- those config switches, so their equipment_state rows stopped on 2026-11-02 and nothing writes
+-- them again. Each row allows 604800 s twice over, so each would open an alert about 2026-11-16.
+-- climate.wet_bulb_temp_f and climate.feels_like_f: the Home Assistant feed was their only source
+-- and was trimmed by design (d35d7984a, VD-48), so their values stopped on 2026-11-03. Each holds
+-- an open alert. The alert monitor resolves both on its next cycle because neither key is raised
+-- any more; the resolution text reads "probe reporting again", which here means only that.
+-- climate.hydro_tds_ppm stays active: it comes back with the YINMIK repair.
 -- A controller rolled back to pre-engine firmware keeps working: nothing reads these rows but the
 -- staleness view. Data only: no runtime seal moves and no receipt is re-sealed; both blocks pin
 -- exact287's seals.
@@ -29,7 +35,7 @@ BEGIN
     THEN RAISE EXCEPTION '288 refuses an unqualified predecessor'; END IF;
 END $predecessor$;
 
-UPDATE public.sensor_registry SET active = false WHERE sensor_id IN ('equipment.irrigation_enabled', 'equipment.irrigation_wall_enabled', 'equipment.irrigation_center_enabled', 'equipment.irrigation_weather_skip') AND active;
+UPDATE public.sensor_registry SET active = false WHERE sensor_id IN ('equipment.irrigation_enabled', 'equipment.irrigation_wall_enabled', 'equipment.irrigation_center_enabled', 'equipment.irrigation_weather_skip', 'climate.wet_bulb_temp_f', 'climate.feels_like_f') AND active;
 
 DO $successor$
 BEGIN

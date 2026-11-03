@@ -292,11 +292,11 @@ SUCCESSOR_287 = "287-retire-high-wind-rule.sql"
 SUCCESSOR_287_SHA256 = "c95444af3859465b89b6d3659de6aad2b91a00ade552ecfdca3072beec516933"
 SUCCESSOR_287_DIGESTS = SUCCESSOR_286_DIGESTS
 SUCCESSOR_287_MCP_DIGEST = SUCCESSOR_286_MCP_DIGEST
-# Exact288 (#1278): the four equipment.irrigation_* registry rows are retired. Data only, and
-# neither digest hashes table rows, so all three seals stay 287's. The rolled-back native
-# qualification measures them.
+# Exact288 (#1278): the four equipment.irrigation_* registry rows and the two climate rows the
+# Home Assistant trim ended are retired. Data only, and neither digest hashes table rows, so all
+# three seals stay 287's. The rolled-back native qualification measures them.
 SUCCESSOR_288 = "288-retire-irrigation-registry-rows.sql"
-SUCCESSOR_288_SHA256 = "120241a0adf859dad4fb0fa741b15b4c1e7fcf1940165b5f83f3c067178002fe"
+SUCCESSOR_288_SHA256 = "124d2b86136db77eb453fb854485cb2248a994e55dd12711c2b833b9c54245f2"
 SUCCESSOR_288_DIGESTS = SUCCESSOR_287_DIGESTS
 SUCCESSOR_288_MCP_DIGEST = SUCCESSOR_287_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this

@@ -1,8 +1,9 @@
 """Exact288 delivery: ordered admission, the one registry update, unchanged seals, native evidence.
 
 The engine firmware removed four config switches, so their sensor_registry rows would open four false sensor_offline
-alerts about 2026-11-16 (#1278). 288 makes them inactive and keeps them as history. Neither runtime digest hashes table
-rows, so every runtime seal keeps its merged predecessor 287's exact value and no receipt is re-sealed.
+alerts about 2026-11-16 (#1278). The Home Assistant trim (VD-48) ended two climate columns, whose rows hold open
+sensor_offline alerts. 288 makes all six inactive and keeps them as history. Neither runtime digest hashes table rows,
+so every runtime seal keeps its merged predecessor 287's exact value and no receipt is re-sealed.
 test_native_qualification_is_recorded is the merge gate for the rolled-back production run that measures that.
 """
 
@@ -25,6 +26,8 @@ RETIRED = (
     "equipment.irrigation_wall_enabled",
     "equipment.irrigation_center_enabled",
     "equipment.irrigation_weather_skip",
+    "climate.wet_bulb_temp_f",
+    "climate.feels_like_f",
 )
 RETIRE = (
     "UPDATE public.sensor_registry SET active = false WHERE sensor_id IN ("
@@ -114,7 +117,7 @@ def test_migration_pins_its_predecessor_and_proves_the_seals_unchanged():
     assert qualifier.successor_literals(SOURCE) == six.SUCCESSOR_288
 
 
-def test_the_file_only_retires_the_four_registry_rows():
+def test_the_file_only_retires_the_six_registry_rows():
     # Its one write anywhere, the two blocks included, and the only statement between them.
     code = re.sub(r"--[^\n]*", "", SOURCE)
     writes = r"\b(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|CREATE|ALTER|DROP|GRANT|REVOKE|COPY)\b"

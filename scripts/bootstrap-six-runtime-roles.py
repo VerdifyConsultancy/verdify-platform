@@ -628,9 +628,9 @@ def sealed_sql_287():
 RETIRE_IRRIGATION_REGISTRY_MIGRATION = (
     288,
     "288-retire-irrigation-registry-rows.sql",
-    "120241a0adf859dad4fb0fa741b15b4c1e7fcf1940165b5f83f3c067178002fe",
+    "124d2b86136db77eb453fb854485cb2248a994e55dd12711c2b833b9c54245f2",
 )
-# Four sensor_registry rows go inactive. Data only, and neither digest hashes table rows,
+# Six sensor_registry rows go inactive. Data only, and neither digest hashes table rows,
 # so all three seals stay 287's. The rolled-back native qualification measures them.
 SUCCESSOR_288 = SUCCESSOR_287
 
