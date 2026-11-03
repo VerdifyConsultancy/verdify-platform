@@ -159,7 +159,11 @@ test("week blocks: drips in minutes, misters as pulses × seconds, a feed's stag
   expect(occurrenceWords({ status: "done", outcome: "unknown", reason: null, planned_start: at("07:35") }, NOW)).toBe("no outcome received");
   expect(occurrenceWords({ status: "done", outcome: "missed", reason: "no clock", planned_start: at("07:35") }, NOW)).toBe("missed · no clock");
   expect(occurrenceWords({ status: "skipped", outcome: null, reason: "line paused by jason", planned_start: "2026-11-01T15:35:00Z" }, NOW)).toBe("skipped · line paused by jason");
-  expect(occurrenceWords({ status: "skipped", outcome: null, reason: "line disabled", planned_start: "2026-11-08T14:35:00Z" }, NOW)).toBe("line disabled");
+  expect(occurrenceWords({ status: "skipped", outcome: null, reason: "line paused by jason", planned_start: "2026-11-08T14:35:00Z" }, NOW)).toBe("line paused by jason");
+  // The agenda's fixed skip reasons read as the editor's draft does, ahead or past, with the outcome word once.
+  expect(occurrenceWords({ status: "skipped", outcome: null, reason: "line disabled", planned_start: "2026-11-08T14:35:00Z" }, NOW)).toBe("Skipped: line disabled");
+  expect(occurrenceWords({ status: "skipped", outcome: null, reason: "not a schedule member", planned_start: "2026-11-01T14:35:00Z" }, NOW)).toBe("Skipped until Schedule is on");
+  expect(occurrenceWords({ status: "done", outcome: "skipped", reason: "not a VPD member", planned_start: "2026-11-01T14:35:00Z" }, NOW)).toBe("Skipped: VPD control is off");
   // The API's fixed notes read in the week view's words, each "; "-joined note on its own; others read as sent.
   expect(occurrenceReasonWords("only while VPD sensing is degraded; ends at the daily cap")).toBe("only if VPD sensing is degraded · ends at the daily cap");
   expect(occurrenceReasonWords("paused")).toBe("line paused");

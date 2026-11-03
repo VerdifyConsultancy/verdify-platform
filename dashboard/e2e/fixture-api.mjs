@@ -8,7 +8,8 @@
  * Control, as in weather: `POST /__control {"fixture": "<name or list>", "fail": {"API-14": 503}, "confirm": false,
  * "now": "<ISO time>"}` selects the fixture and resets the requests, writes and keys; `GET /__requests` lists every
  * request since: method, path, operationId, Idempotency-Key and body. Each request rebuilds the fixture at its own
- * time (or the pinned `now`) and replays the writes made since, so ages read the same in every run.
+ * time (or the pinned `now`) and replays the writes made since, so ages read the same in every run. A schedule write
+ * reads `requested` until the third API-IRR-02 read after it, which carries the new program hash (#1137).
  */
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
@@ -91,7 +92,7 @@ export function createFixtureHandler({ clock = () => Date.now(), ...start } = {}
     const key = lower["idempotency-key"];
     requests.push({ method: verb, path: `${target.pathname}${target.search}`, operationId, idempotency_key: key ?? null, body: malformed ? raw : parsed ?? null });
     if (malformed) return problem(400, "invalid_request", "Invalid request", "The body is not JSON");
-    if (operationId === "API-09") reads.push({ operationId, serial });
+    if (operationId === "API-09" || operationId === "API-IRR-02") reads.push({ operationId, serial });
     const world = buildWorld(selected.names, { ...selected.options, now: selected.options.now ?? clock() });
     for (const effect of effects) effect(world, history);
     const write = verb !== "GET" && verb !== "HEAD";

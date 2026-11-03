@@ -7,6 +7,7 @@ import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
 import { fixture } from "../../e2e/fixtures/index.mjs";
 import type { IrrigationStatus, ScheduleAgenda } from "../lib/operator-api";
+import { previewSchedule, type ScheduleDraft } from "../lib/schedule-preview";
 import { NO_SCHEDULES_TEXT, ScheduleWeek, weekDayLabel } from "./schedule-week";
 import { renderUi, text } from "./test-render";
 
@@ -100,4 +101,95 @@ test("with no schedules the week says so", () => {
   expect(screen.getByText(NO_SCHEDULES_TEXT)).toBeTruthy();
   expect(NO_SCHEDULES_TEXT).toBe("No schedules yet. Lines water only from VPD control and Run now.");
   expect(screen.queryByRole("table")).toBeNull();
+});
+
+// ---------------------------------------------------------------------------------------------------- #1137
+const dripDraft = { slot_id: null, line_id: "L01", label: "Wall MWF", enabled: true, days: ["mon", "wed", "fri"], start: { kind: "sunrise", offset_min: 60 }, on_s: 720, count: 1, gap_s: 0, prewet_s: 0, flush_s: 0, degraded_only: false, manual: true };
+function drawn(names: string | string[], draft: ScheduleDraft, props: Partial<Parameters<typeof ScheduleWeek>[0]> = {}) {
+  const served = set(names);
+  const agenda = (props.agenda ?? served["API-IRR-02"]) as ScheduleAgenda;
+  const lines = (served["API-IRR-01"] as IrrigationStatus).lines;
+  const preview = previewSchedule(draft, { agenda, lines, engine: (served["API-IRR-01"] as IrrigationStatus).engine, today: TODAY, now: NOW });
+  renderUi(<ScheduleWeek agenda={agenda} lines={lines} past={false} today={TODAY} now={NOW} draft={preview} {...props} />);
+  return (line: string, day: string) => [...screen.getByRole("table").querySelectorAll(`tr[data-line="${line}"] td[data-day="${day}"] .week-block:not([hidden])`)].map((block) => [text(block.querySelector(".week-block-head")), block.classList.contains("week-block-draft"), block.classList.contains("week-block-hatched")]);
+}
+
+test("the draft draws as PLANNED outlines in its line's row, sorted among the saved blocks, with the key saying so", () => {
+  const blocks = drawn("schedules-paused", { ...dripDraft, label: undefined, days: ["sun"], start: { kind: "clock", clock: "12:00" }, line_id: "L02", on_s: 300 });
+  expect(blocks("L02", "2026-11-08")).toEqual([["07:35 5m Fert Manual", false, false], ["12:00 5m Fert Manual Planned", true, false]]);
+  expect(text(screen.getByRole("table").parentElement?.nextElementSibling)).toContain("PLANNED outline: the draft you are editing");
+});
+
+test("the draft replaces the saved schedule's blocks still ahead; a day it has already had keeps its block and draws no outline", () => {
+  const blocks = drawn("schedules-paused", { ...dripDraft, slot_id: 11 });
+  expect(blocks("L01", "2026-11-02")).toEqual([["07:35 12m Manual", false, false]]);
+  expect(blocks("L01", "2026-11-04")).toEqual([["07:35 12m Manual Planned", true, false]]);
+  // Moved off Friday: that cell reads empty, though the hidden block is still in the document for Edit's focus.
+  cleanup();
+  const moved = drawn("schedules-paused", { ...dripDraft, slot_id: 11, days: ["wed"] });
+  expect(moved("L01", "2026-11-06")).toEqual([]);
+  const friday = screen.getByRole("table").querySelector('tr[data-line="L01"] td[data-day="2026-11-06"]')!;
+  expect(friday.querySelector(".week-none")).not.toBeNull();
+  expect(friday.querySelectorAll(".week-block[hidden]")).toHaveLength(1);
+});
+
+test("an empty week still draws the first draft", () => {
+  const empty = { ...(set("in-band")["API-IRR-02"] as ScheduleAgenda), schedules: [], occurrences: [], counts: { schedules: 0, max_schedules: 24 } };
+  const blocks = drawn("in-band", dripDraft, { agenda: empty });
+  expect(screen.queryByText(NO_SCHEDULES_TEXT)).toBeNull();
+  expect(blocks("L01", "2026-11-04")).toEqual([["07:35 12m Manual Planned", true, false]]);
+});
+
+test("selecting a block opens its menu for an operator: Edit goes to the schedule, Escape closes it, one menu at a time; viewers' blocks stay plain", () => {
+  const served = set("schedules-paused");
+  const agenda = served["API-IRR-02"] as ScheduleAgenda;
+  const lines = (served["API-IRR-01"] as IrrigationStatus).lines;
+  const week = <ScheduleWeek agenda={agenda} lines={lines} past={false} today={TODAY} now={NOW} editTo={(slot) => `/water/schedules?schedule=${slot}`} />;
+  renderUi(week, { role: "operator", writesEnabled: true });
+  const block = (line: string, day: string) => screen.getByRole("table").querySelector<HTMLElement>(`tr[data-line="${line}"] td[data-day="${day}"] .week-block`)!;
+  const select = (line: string, day: string) => block(line, day).querySelector<HTMLButtonElement>(".week-block-select")!;
+  expect(select("L01", "2026-11-04").getAttribute("aria-expanded")).toBe("false");
+  expect(block("L01", "2026-11-04").querySelector(".week-block-menu")).toBeNull();
+  fireEvent.click(select("L01", "2026-11-04"));
+  expect(select("L01", "2026-11-04").getAttribute("aria-expanded")).toBe("true");
+  expect(within(block("L01", "2026-11-04")).getByRole("link", { name: /^Edit/ }).getAttribute("href")).toBe("/water/schedules?schedule=11");
+  // Another block's menu replaces it; a past block's schedule can be edited too.
+  fireEvent.click(select("L02", "2026-11-08"));
+  expect(block("L01", "2026-11-04").querySelector(".week-block-menu")).toBeNull();
+  expect(within(block("L02", "2026-11-08")).getByRole("link", { name: /^Edit/ }).getAttribute("href")).toBe("/water/schedules?schedule=12");
+  fireEvent.keyDown(block("L02", "2026-11-08"), { key: "Escape" });
+  expect(block("L02", "2026-11-08").querySelector(".week-block-menu")).toBeNull();
+  expect(document.activeElement).toBe(select("L02", "2026-11-08"));
+  cleanup();
+  renderUi(<ScheduleWeek agenda={agenda} lines={lines} past={false} today={TODAY} now={NOW} />);
+  expect(document.querySelector(".week-block-select")).toBeNull();
+});
+
+test("a schedule's blocks show its sync while it settles, with the program's words, and CONFIRMED only for the one just saved", () => {
+  const served = set("schedules-paused");
+  const base = served["API-IRR-02"] as ScheduleAgenda;
+  const status = served["API-IRR-01"] as IrrigationStatus;
+  const withSync = (sync: string): ScheduleAgenda => ({ ...base, schedules: base.schedules.map((row) => (row.slot_id === 11 ? { ...row, sync } : row)) });
+  const notes = (agenda: ScheduleAgenda, program: Pick<IrrigationStatus, "engine" | "program">, saved: number | null = null) => {
+    cleanup();
+    renderUi(<ScheduleWeek agenda={agenda} lines={status.lines} program={program} past={false} today={TODAY} now={NOW} saved={saved} />);
+    const block = screen.getByRole("table").querySelector('tr[data-line="L01"] td[data-day="2026-11-04"] .week-block')!;
+    return [text(block.querySelector(".week-block-head")), [...block.querySelectorAll(".week-block-note")].map((node) => text(node))];
+  };
+  const sending = { engine: true, program: { ...status.program, state: "requested", revision: 43 } };
+  expect(notes(withSync("requested"), sending)).toEqual(["07:35 12m Manual Requested", ["rev 43 sending"]]);
+  expect(notes(withSync("requested"), { engine: false, program: status.program })).toEqual(["07:35 12m Manual Requested", ["Applies with the irrigation firmware"]]);
+  expect(notes(withSync("not_confirmed"), { engine: true, program: { ...status.program, state: "not_confirmed", reject_code: "bad_hash" } })).toEqual(["07:35 12m Manual Not confirmed", ["Not confirmed: the program failed its checksum · retrying at 1, 5 and 15 min"]]);
+  expect(notes(withSync("confirmed"), status)).toEqual(["07:35 12m Manual", []]);
+  expect(notes(withSync("confirmed"), status, 11)).toEqual(["07:35 12m Manual Confirmed", []]);
+});
+
+test("the agenda's fixed skip reasons read as the editor's draft does, hatched", () => {
+  const served = set("schedules-paused");
+  const base = served["API-IRR-02"] as ScheduleAgenda;
+  const reasons = ["line disabled", "not a schedule member", "not a VPD member"];
+  const agenda: ScheduleAgenda = { ...base, occurrences: reasons.map((reason, index) => ({ slot_id: 13, line_id: "L04", planned_start: `2026-11-0${index + 4}T13:50:00Z`, status: "skipped", reason, outcome: null, run_id: null })) };
+  renderUi(<ScheduleWeek agenda={agenda} lines={(served["API-IRR-01"] as IrrigationStatus).lines} past={false} today={TODAY} now={NOW} />);
+  const row = screen.getByRole("table").querySelector('tr[data-line="L04"]')!;
+  expect([...row.querySelectorAll(".week-block-hatched .week-block-note")].map((node) => text(node))).toEqual(["Skipped: line disabled", "Skipped until Schedule is on", "Skipped: VPD control is off"]);
 });

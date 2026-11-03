@@ -536,8 +536,28 @@ a.picker-item:hover{background:var(--field)}
 .week-block-note{font-weight:500}
 .week-block-past{border-color:var(--line)}
 .week-block-hatched{border-style:dashed;color:var(--muted);background:repeating-linear-gradient(135deg,var(--field) 0 .3rem,#fff .3rem .6rem)}
+.week-block[hidden]{display:none}
+.week-block-select{display:grid;gap:.1rem;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.week-block-menu{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.3rem}
+.week-block-draft{border:1px dashed var(--muted);background:transparent}
+.week-block-draft.week-block-hatched{background:repeating-linear-gradient(135deg,var(--field) 0 .3rem,#fff .3rem .6rem)}
 .week-none{color:var(--muted)}
 .week-key{margin:.5rem 0 0}
+.week-disabled{margin:.35rem 0 0}
+/* The schedule editor (SCR-04): the page dims less and, on a wide screen, the week fits beside the drawer, so the draft's outlines can be read as it is typed. */
+.drawer-schedule::backdrop{background:color-mix(in srgb,var(--ink) 12%,transparent)}
+@media(min-width:1200px){
+  body:has(.drawer-schedule[open]) .water-page{margin-right:calc(28rem - max(0px,(100vw - var(--shell))/2) - var(--gutter))}
+  body:has(.drawer-schedule[open]) .table-wrap .week-table{min-width:0}
+}
+.schedule-count{margin:0;font-weight:600}
+.schedule-fert{margin:.25rem 0 .75rem}
+.schedule-preview{margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--line)}
+.schedule-preview h3{margin:0 0 .35rem}
+.schedule-preview p{margin:.15rem 0}
+.schedule-preview-line{margin-bottom:.5rem}
+.schedule-preview-note{font-size:.875rem;font-weight:500}
+.schedule-past-cap{font-size:.875rem;font-weight:600;color:var(--warn-text)}
 .history-head{align-items:center}
 .history-controls{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem}
 .chips-label{font-size:.8rem;font-weight:600;color:var(--muted)}

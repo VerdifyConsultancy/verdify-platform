@@ -131,7 +131,8 @@ export function zoneWord(zone: string): string {
   if (zone === "house") return ZONE_WORDS.fog;
   return Object.hasOwn(ZONE_WORDS, zone) ? ZONE_WORDS[zone as MinutesZone] : zone;
 }
-const CAPPED_KIND: Readonly<Record<string, string>> = { drip: "drip", fert_drip: "feed", fert_mister: "feed mister" };
+/** A capped line's kind in the limits strip and the editor's cap line: "Wall drip", "Center feed". */
+export const CAPPED_KIND: Readonly<Record<string, string>> = { drip: "drip", fert_drip: "feed", fert_mister: "feed mister" };
 /** The line register's order (L01–L11), unknown ids after. */
 const lineRank = (id: string) => {
   const rank = LINES.findIndex((line) => line.id === id);
@@ -340,13 +341,15 @@ export function occurrenceReasonWords(reason: string | null | undefined): string
 /**
  * What a block says after its time and amount: a past one its outcome word (ok, short, stopped, preempted, skipped,
  * missed, cap; `unknown` "no outcome received") with any reason, so a skipped past L02 block reads "skipped · line
- * paused by jason"; one that will not run, why; a planned one its notes ("only if VPD sensing is degraded").
+ * paused by jason"; one that will not run, why ("Skipped: line disabled", the outcome word once); a planned one its
+ * notes ("only if VPD sensing is degraded").
  */
 export function occurrenceWords(occurrence: Pick<Occurrence, "status" | "outcome" | "reason" | "planned_start">, now: number): string | null {
   const reason = occurrenceReasonWords(occurrence.reason);
   const join = (...parts: (string | null)[]) => parts.filter(Boolean).join(" · ") || null;
-  if (occurrence.outcome) return join(words("run_outcome", occurrence.outcome), reason);
-  if (occurrence.status === "skipped") return Date.parse(occurrence.planned_start) < now ? join(words("run_outcome", "skipped"), reason) : reason;
+  const ended = (word: string) => (reason?.toLowerCase().startsWith(word.toLowerCase()) ? reason : join(word, reason));
+  if (occurrence.outcome) return ended(words("run_outcome", occurrence.outcome));
+  if (occurrence.status === "skipped") return Date.parse(occurrence.planned_start) < now ? ended(words("run_outcome", "skipped")) : reason;
   if (occurrence.status === "running") return join("running now", reason);
   return reason;
 }

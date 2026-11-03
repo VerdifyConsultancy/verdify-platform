@@ -535,6 +535,22 @@ Acceptance:
 6. Minutes by zone draws a day with no data as a hatched "no data" gap, never 0, and marks today partial; south reads
    "VPD from peer probes" while its probe is out.
 
+As built (VD-17, `dashboard/app/components/schedule-editor.tsx` with `app/lib/schedule-preview.ts`), where the editor
+settles a detail this section leaves open:
+
+| Topic | As built |
+|---|---|
+| Opening | `?schedule=new` or `?schedule=<slot_id>` shows the next 7 days whatever `?past=` says, and "+ New schedule" and Edit drop `past`. A viewer gets no editor from any URL. A slot that is not stored opens the drawer with "This schedule no longer exists" and Done. A schedule deleted elsewhere while the form is open keeps the form, and Save or Delete then reads the same words |
+| Reaching a disabled schedule | A disabled schedule has no occurrences, so no block to select: "Disabled, so not in the week: L01 Wall MWF" under the week links each one to its editor |
+| Wide screens | From 1200 px the page narrows beside the drawer and the backdrop dims less, so all seven days and the outlines stay readable behind it. Below that the drawer covers part of the week, and its "Previewed in the week" section carries the totals, the cap and why a block will not run |
+| A new schedule's values | L01, today's weekday, sunrise + 0, the run dialog's amounts (10 min; 4 × 45 s with 60 s gaps; prewet 120 s, flush 240 s) |
+| Whole minutes | A drip's Run and a feed's Feed take whole minutes. A stored `on_s` that is not one (an agent's 90 s) opens as "1.5" and must be made whole to save, so nothing changes it unseen |
+| Edit and today | The draft replaces the schedule's blocks still ahead. A block already past stays as it ran, and that day draws no outline and adds no minutes, since an occurrence runs once per schedule and local day (irrigation §4.7) |
+| Totals | On a mister zone "8 of 60 min for schedules" is the busiest day in the week. A disabled draft draws nothing and reads "Disabled: this schedule will not run". Before the engine a draft reads hatched "arrives with the irrigation firmware", as its saved blocks will, and still counts against the cap with the occurrences then planned, which read `blocked`, so the bring-up can size a program ahead of the firmware |
+| CONFIRMED on a block | Only the schedule just saved here keeps CONFIRMED on its blocks after the hash arrives, until the next save or the page closes; every other confirmed schedule's blocks carry no badge. The banner reads CONFIRMED for the program |
+| The check and a refused schedule | A check recorded by a Save whose schedule was then refused stays recorded: the box goes and Save again sends only the schedule |
+| Save toast | "Requested Wall MWF on L01", "Requested deleting Wall MWF on L01" (design system §4.3) |
+
 ## 6. SCR-05 Settings · `/settings`
 
 **Purpose:** "control all settings": every registry row in one list with its device value, and one change path for

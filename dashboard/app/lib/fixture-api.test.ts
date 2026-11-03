@@ -451,3 +451,81 @@ test("as a server it starts only in approved in-cluster CI", () => {
   expect(() => startFixtureServer({})).toThrow("Fixture API requires approved in-cluster CI");
   expect(() => startFixtureServer({ DASHBOARD_CI_IN_CLUSTER: "0" })).toThrow("Fixture API requires approved in-cluster CI");
 });
+
+// ---------------------------------------------------------------------------------------------------- #1137
+test("a schedule create reads requested, confirms with a new program hash after three polls, and logs under the session's username", () => {
+  const api = handler("in-band");
+  const created = api.respond({ method: "POST", url: "/v1/irrigation/schedules", headers: { "Idempotency-Key": KEY }, body: { line_id: "L01", label: "Wall MWF", days: ["mon", "wed", "fri"], start: { kind: "sunrise", offset_min: 60 }, on_s: 720, manual: true } });
+  expect(created.status).toBe(201);
+  expect(created.body).toMatchObject({ slot_id: 4, sync: "requested", updated_by: { source: "dashboard", name: "jason" } });
+  const row = () => (get(api, "/v1/activity").items as Body[]).find((item) => item.action === "irrigation.schedule.create");
+  const program = () => get(api, "/v1/irrigation").program as Body;
+  const stored = () => (get(api, "/v1/irrigation/schedules").schedules as Body[]).find((item) => item.slot_id === 4);
+  const hash = program().desired_sha256;
+  expect(program()).toMatchObject({ state: "requested", revision: 43, applied_revision: 42 });
+  expect(hash).not.toBe(fixture("in-band", { now: NOW })["API-IRR-01"].program.desired_sha256);
+  expect(stored()).toMatchObject({ sync: "requested" }); // the first poll
+  expect(stored()).toMatchObject({ sync: "requested" }); // the second
+  expect(row()).toMatchObject({ actor: { source: "dashboard", name: "jason" }, target: "4", state: "requested", request_id: KEY });
+  expect(stored()).toMatchObject({ sync: "confirmed" }); // the third
+  expect(program()).toMatchObject({ state: "confirmed", revision: 43, applied_revision: 43, desired_sha256: hash, applied_hash: (hash as string).slice(0, 16), reject_code: null });
+  expect(row()).toMatchObject({ state: "confirmed" });
+  expect(get(api, "/v1/irrigation/schedules").counts).toEqual({ schedules: 4, max_schedules: 24 });
+});
+
+test("with confirm false the program reads not_confirmed with a reject; before the engine a create stays requested", () => {
+  const send = (api: ReturnType<typeof handler>) => api.respond({ method: "POST", url: "/v1/irrigation/schedules", body: { line_id: "L01", days: ["mon"], start: { kind: "sunrise", offset_min: 60 }, on_s: 720 } });
+  const refused = createFixtureHandler({ fixture: "in-band", confirm: false, clock: () => NOW });
+  send(refused);
+  for (let poll = 0; poll < 3; poll += 1) get(refused, "/v1/irrigation/schedules");
+  expect(get(refused, "/v1/irrigation").program).toMatchObject({ state: "not_confirmed", reject_code: "bad_slot", applied_revision: 42 });
+  expect((get(refused, "/v1/irrigation/schedules").schedules as Body[]).find((item) => item.slot_id === 4)).toMatchObject({ sync: "not_confirmed" });
+  const engineless = handler("before-engine");
+  send(engineless);
+  for (let poll = 0; poll < 4; poll += 1) get(engineless, "/v1/irrigation/schedules");
+  expect((get(engineless, "/v1/irrigation/schedules").schedules as Body[]).find((item) => item.slot_id === 4)).toMatchObject({ sync: "requested" });
+  expect(get(engineless, "/v1/irrigation")).toMatchObject({ engine: false, program: { state: "requested", revision: null } });
+});
+
+test("the editor's fixtures: 24 stored refuses a create with current and max, an L01 at sunrise + 60 refuses a start within 30 min, L07 with Schedule off", () => {
+  const body = { line_id: "L01", days: ["mon"], start: { kind: "sunrise", offset_min: 80 }, on_s: 720 };
+  const full = handler("schedules-full");
+  expect(get(full, "/v1/irrigation/schedules").counts).toEqual({ schedules: 24, max_schedules: 24 });
+  const refused = full.respond({ method: "POST", url: "/v1/irrigation/schedules", body });
+  expect(refused.status).toBe(422);
+  expect(refused.body).toMatchObject({ code: "too_many_schedules", current: 24, max: 24 });
+  expect(refused.body.field).toBeUndefined();
+  const close = handler("l01-schedule").respond({ method: "POST", url: "/v1/irrigation/schedules", body });
+  expect(close.status).toBe(422);
+  expect(close.body).toMatchObject({ code: "too_close", field: "start" });
+  expect(handler("l01-schedule").respond({ method: "POST", url: "/v1/irrigation/schedules", body: { ...body, start: { kind: "sunrise", offset_min: 90 } } }).status).toBe(201);
+  // A disabled schedule, stored or sent, holds no start.
+  expect(handler("l01-schedule").respond({ method: "POST", url: "/v1/irrigation/schedules", body: { ...body, enabled: false } }).status).toBe(201);
+  const south = handler("l07-schedule-off");
+  expect((get(south, "/v1/irrigation").lines as Body[]).find((row) => row.line_id === "L07")).toMatchObject({ enabled: true, schedule_member: false, vpd_member: false });
+  expect(south.respond({ method: "POST", url: "/v1/irrigation/schedules", body: { line_id: "L07", days: ["tue"], start: { kind: "clock", clock: "14:00" }, on_s: 45, count: 4, gap_s: 60 } }).status).toBe(201);
+  const week = get(south, "/v1/irrigation/schedules").occurrences as Body[];
+  expect(week.filter((row) => row.line_id === "L07")).toEqual([expect.objectContaining({ status: "skipped", reason: "not a schedule member" })]);
+});
+
+test("an occurrence's skip reads as verdify_schemas' agenda does: disabled first, a fallback slot on VPD control, then the pause", () => {
+  const api = handler("in-band");
+  const stored = { days: ["tue"], start: { kind: "clock", clock: "14:00" }, on_s: 45, count: 4, gap_s: 60 };
+  const week = (target: ReturnType<typeof handler>) => get(target, "/v1/irrigation/schedules").occurrences as Body[];
+  const created = api.respond({ method: "POST", url: "/v1/irrigation/schedules", body: { ...stored, line_id: "L07", degraded_only: true } });
+  expect(created.status).toBe(201);
+  expect(week(api).filter((row) => row.line_id === "L07")).toEqual([expect.objectContaining({ status: "skipped", reason: "not a VPD member" })]);
+  const line = (fields: Body) => expect(api.respond({ method: "PUT", url: "/v1/irrigation/lines/L07", body: fields }).status).toBe(200);
+  line({ vpd_member: true, manual: true });
+  expect(week(api).filter((row) => row.line_id === "L07")).toEqual([expect.objectContaining({ status: "planned" })]);
+  line({ paused_until: "2026-11-05T00:00:00Z" });
+  expect(week(api).filter((row) => row.line_id === "L07")).toEqual([expect.objectContaining({ status: "skipped", reason: "line paused by jason" })]);
+  line({ enabled: false, manual: true });
+  expect(week(api).filter((row) => row.line_id === "L07")).toEqual([expect.objectContaining({ status: "skipped", reason: "line disabled" })]);
+});
+
+test("a check alone leaves a line's sync as it reads", () => {
+  const api = handler("in-band");
+  const out = api.respond({ method: "PUT", url: "/v1/irrigation/lines/L01", body: { checked: true, check_note: "flushed" } });
+  expect(out.body.lines[0]).toMatchObject({ sync: "confirmed", manual: false, check: { checked_by: "jason", note: "flushed" } });
+});
