@@ -11,6 +11,7 @@ import { createRoutesStub, useLoaderData, useLocation } from "react-router";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { createFixtureHandler } from "../../e2e/fixture-api.mjs";
 import { REVISION } from "../../e2e/fixtures/world.mjs";
+import { FakeResizeObserver, MockPlot } from "../charts/fixtures/uplot-mock";
 import routes from "../routes";
 import Activity from "../routes/activity";
 import Equipment from "../routes/equipment";
@@ -31,6 +32,9 @@ import { Badge } from "./badge";
 import { Button } from "./button";
 import { FreshnessDot } from "./freshness";
 import { text } from "./test-render";
+
+// Graphs (#1130) and Water history (#1127's bars) draw charts: uPlot and ResizeObserver are stand-ins here, as in the chart tests.
+vi.mock("uplot", async () => ({ default: (await import("../charts/fixtures/uplot-mock")).MockPlot }));
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
 const BUILD = "fedcba9876543210fedcba9876543210fedcba98";
@@ -85,6 +89,8 @@ const nav = (label: string) => screen.getByRole("navigation", { name: label });
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(new Date(NOW));
   Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+  MockPlot.reset();
+  vi.stubGlobal("ResizeObserver", FakeResizeObserver);
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 

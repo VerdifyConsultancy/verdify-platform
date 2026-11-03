@@ -9,8 +9,8 @@
 import { createHash } from "node:crypto";
 import { URLSearchParams } from "node:url";
 import {
-  DAY, JASON, LINES, MISTERS, REVISION, addDays, flowWithValvesClosed, iso, itemOf, laneOf, lineInfo, lineOf, local, localInstant, manifold,
-  minutesZone, nextId, runLine, settingOf, stopLines,
+  DAY, JASON, LINES, MISTERS, REVISION, SCORECARD_REASON_COLUMNS, addDays, flowWithValvesClosed, iso, itemOf, laneOf, lineInfo, lineOf, local, localInstant,
+  manifold, minutesZone, nextId, runLine, settingOf, stopLines,
 } from "./world.mjs";
 
 const MINUTE = 60_000;
@@ -137,7 +137,9 @@ function nowBody(world) {
 const WAVES = {
   "climate.temp_avg": [66, 3], "climate.rh_avg": [70, -8], "climate.vpd_avg": [0.62, 0.12], "climate.temp_south": [66.6, 3.2],
   "climate.soil_moisture_south_1": [38, -2], "climate.flow_gpm": [0, 0], "climate.outdoor_temp_f": [45, 10], "climate.outdoor_rh_pct": [55, -15],
-  "diagnostics.heap_free_kb": [38, 1.5], "daily.temp_compliance_pct": [92, 4], "daily.vpd_compliance_pct": [88, 6],
+  "diagnostics.heap_free_kb": [38, 1.5], "daily.temp_in_band_pct": [92, 4], "daily.vpd_in_band_pct": [88, 6], "daily.time_in_band_day_pct": [90, 3],
+  "daily.time_in_band_night_pct": [81, 5], "daily.water_gal": [24, 0], "daily.iris_required_written": [3, 0], "daily.iris_required_missed": [0, 0],
+  "daily.alerts_critical": [0, 0], "daily.alerts_warning": [1, 0], "daily.alerts_info": [2, 0],
 };
 const round = (value, places = 2) => Number(value.toFixed(places));
 const wave = (key, ms) => { const [mean, amplitude] = WAVES[key]; return mean + amplitude * Math.sin((2 * Math.PI * (ms - 14 * HOUR)) / DAY); };
@@ -149,6 +151,25 @@ function lastSample(world, key) {
   return key.startsWith("daily.") ? world.now : Date.parse(world.freshness.climate.observed_at);
 }
 const BUCKETS = [60, 300, 900, 3600, 10_800, 86_400];
+/** Day buckets start at the local midnights of the America/Denver days covering [from, to), as VD-56 serves them: a 25-hour day is one bucket. */
+function dayStarts(from, to) {
+  const starts = [];
+  for (let date = local(from).date, start = localInstant(date); start < to; date = addDays(date, 1), start = localInstant(date)) starts.push(start / 1000);
+  return starts;
+}
+/** One scorecard key's column from the fixture's v_daily_scorecard rows: a day with no row is null with count 0 and no reason. */
+function scorecardColumn(world, key, t) {
+  const name = key.slice("daily.".length);
+  const reasonColumn = SCORECARD_REASON_COLUMNS[name] ?? null;
+  const column = { avg: [], min: [], max: [], count: [], source: "scorecard", retained_from: null, reason: [] };
+  for (const start of t) {
+    const row = world.scorecard.get(local(start * 1000).date) ?? null;
+    const value = row?.[name] ?? null;
+    column.avg.push(value); column.min.push(value); column.max.push(value); column.count.push(value === null ? 0 : 1);
+    column.reason.push(value === null && row && reasonColumn ? row[reasonColumn] ?? null : null);
+  }
+  return column;
+}
 /** API-04: the bucket and source rules of the contract, over synthetic diurnal values; a bucket with no data is null. */
 function seriesBody(world, { query }) {
   const keys = query.getAll("metric");
@@ -159,13 +180,20 @@ function seriesBody(world, { query }) {
   if (unknown) throw refuse(422, "unknown_target", "Unknown metric", `No metric ${unknown}`, { field: "metric" });
   if (to - from > 400 * DAY) throw refuse(422, "window_too_large", "Window too large", "Windows cover at most 400 days", { field: "from" });
   const defs = keys.map((key) => world.metrics.find((metric) => metric.key === key));
-  const daily = to - from > 31 * DAY || defs.some((metric) => metric.daily && from < world.now - metric.retention_days * DAY);
+  // A daily.* key has no raw data, so a request naming one is daily (VD-56).
+  const daily = keys.some((key) => key.startsWith("daily.")) || to - from > 31 * DAY || defs.some((metric) => metric.daily && from < world.now - metric.retention_days * DAY);
   const bucket = daily ? 86_400 : BUCKETS.find((size) => Math.ceil((to - from) / 1000 / size) <= points) ?? 86_400;
   const t = [];
-  for (let start = Math.floor(from / 1000 / bucket) * bucket; start * 1000 < to; start += bucket) t.push(start);
+  if (bucket === 86_400) t.push(...dayStarts(from, to));
+  else for (let start = Math.floor(from / 1000 / bucket) * bucket; start * 1000 < to; start += bucket) t.push(start);
   let watermark = null;
   const columns = Object.fromEntries(defs.map((metric) => {
     const scorecard = metric.key.startsWith("daily.");
+    if (scorecard && world.scorecard) {
+      const column = scorecardColumn(world, metric.key, t);
+      column.avg.forEach((value, index) => { if (value !== null) watermark = Math.max(watermark ?? 0, Math.min((t[index] + bucket) * 1000, world.now)); });
+      return [metric.key, column];
+    }
     const source = scorecard ? "scorecard" : daily && metric.daily ? "daily_summary" : "raw";
     const retainedFrom = scorecard ? null : world.now - metric.retention_days * DAY;
     const last = Math.min(lastSample(world, metric.key), to);
@@ -901,7 +929,10 @@ export const EXAMPLES = {
   "API-01": () => get("/v1/me"),
   "API-02": () => get("/v1/now"),
   "API-03": () => get("/v1/metrics"),
-  "API-04": (world) => { const { from, to } = world.seriesWindow ?? { from: world.now - DAY, to: world.now }; return get("/v1/series", { metric: SERIES_METRICS, from: iso(from), to: iso(to) }); },
+  "API-04": (world) => {
+    const { from, to } = world.seriesWindow ?? { from: world.now - DAY, to: world.now };
+    return get("/v1/series", { metric: world.seriesKeys ?? SERIES_METRICS, from: iso(from), to: iso(to), ...(world.seriesPoints ? { points: String(world.seriesPoints) } : {}) });
+  },
   "API-05": (world) => get("/v1/states", { from: iso(world.now - DAY), to: iso(world.now) }),
   "API-06": (world) => get("/v1/band", { from: iso(world.now - DAY), to: iso(world.now) }),
   "API-07": () => get("/v1/plan"),
@@ -926,7 +957,7 @@ export const EXAMPLES = {
   "API-IRR-06": () => send("POST", "/v1/irrigation/lines/L01/run", { minutes: 12 }),
   "API-IRR-07": () => send("POST", "/v1/irrigation/stop", {}),
   "API-IRR-08": () => send("PUT", "/v1/irrigation/lines/L07", { vpd_member: true, manual: true }),
-  "API-IRR-10": (world) => get("/v1/irrigation/minutes", { from: addDays(today(world), -6), to: today(world) }),
+  "API-IRR-10": (world) => get("/v1/irrigation/minutes", { from: addDays(today(world), -(world.minutesDays - 1)), to: today(world) }),
   "API-IRR-11": (world) => get("/v1/irrigation/runs", { from: iso(world.now - 7 * DAY), to: iso(world.now) }),
   "API-IRR-12": () => send("POST", "/v1/equipment/override", { kind: "fans", minutes: 15 }),
   "API-IRR-13": () => send("POST", "/v1/irrigation/clear-fault", { line_id: "L04" }),

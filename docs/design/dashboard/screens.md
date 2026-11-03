@@ -310,6 +310,24 @@ Acceptance:
    90-day window shows the lanes message and still renders the climate panels; a 400-day window labels the span past
    climate's 365 days "Daily summaries before …".
 
+As built (VD-10, #1130). Where the build settles a detail above, or differs from it:
+
+| Topic | As built |
+|---|---|
+| Files | `dashboard/app/routes/graphs.tsx` and `graphs-scorecard.tsx` (the route file #1124 named, kept rather than renamed `graphs.scorecard.tsx`), `components/graphs/` (controls, metric picker, setting chooser, resolution line, scorecard table), `lib/graph-url.ts` (the URL and the window) and `lib/graph-reads.ts` (the page clock and the window reads) |
+| Controls | Row one is LinkedPanels' tools row: the range chips, the custom range (From, To, Show), "Reset zoom" while zoomed and "CSV of this window". Row two, "On charts:", holds the setting chips, the metric chips, "+ Setting", "+ Metric" and "Scorecard ›". Both pickers are native modal `<dialog>`s in the drawer's frame with a filter box |
+| Settings legend | The setting chips are the settings' legend: each reads "VPD · mister_engage_kpa" and links to `/settings?edit=<param>`; × takes it off. Removing one default names the other, so the URL keeps it; removing the last writes `set=` |
+| URL notices | A range, window, metric or setting the page cannot use is dropped from the view with a notice in words ("Removed unknown metric …", "Removed setting mister_pulse_gap_s: no chart in s", "Removed daily.water_gal: daily keys show on the scorecard"). The address bar is left as it was; every link on the page starts from the cleaned view. A climate key in `m` is always drawn and drops silently |
+| Window | A window of 400 local days can run 400 d 1 h across a net fall-back; each read then keeps its last 400 days, which moves only the start of a window whose buckets are whole days. The lanes rule counts the window without a chip's 12 h ahead, so a 31-day custom range that spans the fall-back (31 d 1 h) shows the lanes message, as API-05 would refuse it. An ISO time whose `+` offset reached the link unencoded (read as a space) counts as `+`, and links write it as `%2B`; a day that does not exist ("2026-02-30T08:00Z") is refused with the window's notice |
+| Empty | "No data in this window" shows when no panel, a picked metric's included, has a value in the window |
+| Polling | The page clock is the current minute. A window that reaches now moves with it every 60 s (every second minute while a read fails) while the tab is visible, and shows its previous answer until the next minute's arrives; a custom or exact window that reaches now keeps its x range, so its band and setting history poll every 60 s instead. Reads are keyed by their exact request, so a closed window reads once. The scorecard polls its 30-day reads every 60 s |
+| Eyebrow and line | The eyebrow spells the bucket out: "Temperature · °F · MEASURED · Band in force · one point per 5 minutes". STALE reads on the notes line under it (VD-06). The resolution line adds the year when the window leaves the current one, and reads "across N clock changes" when more than one falls inside |
+| Scorecard columns | Keyed by VD-56's registry keys (`daily.temp_in_band_pct`, `daily.vpd_in_band_pct`, `daily.time_in_band_day_pct`, `daily.time_in_band_night_pct`, `daily.water_gal`, `daily.iris_required_written`, `daily.iris_required_missed`, `daily.alerts_critical`, `_warning`, `_info`). A `daily` key API-03 lists beyond these follows as its own column; one it does not list reads "— not served"; a failed read "— couldn't load" with a Retry |
+| Scorecard rows | The date cell carries the day's length when it is not 24 h ("Sun, Nov 1 · 25 h") and "partial" for today and API-IRR-10's partial days. A complete minutes day with no watering in a zone is a true 0 |
+| Scorecard CSV | The same 15 columns; the date as YYYY-MM-DD with its note in parentheses ("2026-11-01 (25 h)"), each value as the number in its canonical unit, each missing value as "— <reason>" |
+| Chart types | `dashboard/app/charts/types.ts` re-exports the generated client's types (through `Lenient`), so a parsed response goes to a chart unchanged |
+| Fixture | `scorecard-30d` joins the registry. The fixture API's day buckets now start at America/Denver midnights, as VD-56's do, and a request that names a `daily.*` key is daily |
+
 ## 4. SCR-03 Plan · `/plan`
 
 **Purpose:** what Iris has told and will tell the controller, why and until when, whether Iris is healthy, and a

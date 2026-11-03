@@ -91,8 +91,17 @@ const METRICS = [
   ["climate.outdoor_temp_f", "Outdoor temperature", "outdoor", "°F", 60, 365, "MEASURED", null, false],
   ["climate.outdoor_rh_pct", "Outdoor relative humidity", "outdoor", "%", 60, 365, "MEASURED", null, false],
   ["diagnostics.heap_free_kb", "Controller free heap", "controller", "kB", 60, 180, "MEASURED", null, false],
-  ["daily.temp_compliance_pct", "Time in band, temperature (whole day)", "daily", "%", 86_400, 3650, "DERIVED", null, true],
-  ["daily.vpd_compliance_pct", "Time in band, VPD (whole day)", "daily", "%", 86_400, 3650, "DERIVED", null, true],
+  // The scorecard keys as VD-56's registry names them (v_daily_scorecard, kept 400 days).
+  ["daily.temp_in_band_pct", "Temperature time in band, whole day", "daily", "%", 86_400, 400, "DERIVED", null, true],
+  ["daily.vpd_in_band_pct", "VPD time in band, whole day", "daily", "%", 86_400, 400, "DERIVED", null, true],
+  ["daily.time_in_band_day_pct", "Time in band, day", "daily", "%", 86_400, 400, "DERIVED", null, true],
+  ["daily.time_in_band_night_pct", "Time in band, night", "daily", "%", 86_400, 400, "DERIVED", null, true],
+  ["daily.water_gal", "Water used", "daily", "gal", 86_400, 400, "MEASURED", null, true],
+  ["daily.iris_required_written", "Iris required plans written", "daily", "count", 86_400, 400, "DERIVED", null, true],
+  ["daily.iris_required_missed", "Iris required plans missed", "daily", "count", 86_400, 400, "DERIVED", null, true],
+  ["daily.alerts_critical", "Critical alerts raised", "daily", "count", 86_400, 400, "DERIVED", null, true],
+  ["daily.alerts_warning", "Warning alerts raised", "daily", "count", 86_400, 400, "DERIVED", null, true],
+  ["daily.alerts_info", "Info alerts raised", "daily", "count", 86_400, 400, "DERIVED", null, true],
 ].map(([key, label, group, unit, cadence_s, retention_days, provenance, zone, daily]) => ({ key, label, group, unit, cadence_s, retention_days, provenance, zone, daily, note: null }));
 
 const reading = (value, at, reason = null) => ({ value, observed_at: at === null ? null : iso(at), reason });
@@ -268,10 +277,49 @@ function inBand(now) {
       { run_id: "run-l01-3", line_id: "L01", zone: "wall", chemistry: "clean", cause: "run_now", slot_id: null, schedule_label: null, command_id: "0b6c3f52-1d4e-4a7b-8c9d-2e3f4a5b6c7d", actor: JASON, started_at: iso(at("07:31", -3)), ended_at: iso(at("07:43", -3)), open_s: 720, pulses: null, gal: 9, outcome: "ok", reason: null },
     ].sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at)),
     seriesWindow: null,
+    // The API-04 and API-IRR-10 example requests: the climate keys over 24 h and 7 days of minutes unless a fixture
+    // names others (scorecard-30d asks for the daily keys over 30 days, as the scorecard does).
+    seriesKeys: null,
+    seriesPoints: null,
+    minutesDays: 7,
+    // v_daily_scorecard rows by local date (scorecard-30d); null serves every day's daily.* keys from the waves.
+    scorecard: null,
     notReportingSince: null,
     // API-05 spans the API marks unknown inside a lane's window: {equipment, start, end} (lanes-unknown).
     laneGaps: [],
   };
+}
+
+/** The scorecard's `daily.*` keys, in VD-56's registry order. @type {string[]} */
+export const DAILY_KEYS = METRICS.filter((metric) => metric.group === "daily").map((metric) => String(metric.key));
+/** Which scorecard column carries each key's reason (VD-56: band_reason, water_reason; the rest have none). */
+export const SCORECARD_REASON_COLUMNS = { time_in_band_day_pct: "band_reason", time_in_band_night_pct: "band_reason", water_gal: "water_reason" };
+/** The scorecard-30d day with no v_daily_scorecard row, in days before today. */
+export const SCORECARD_NO_ROW_AGO = 12;
+const tenths = (value) => Math.round(value * 10) / 10;
+/**
+ * v_daily_scorecard for the 30 local days ending today (#1130): whole-day time in band on every day; the day and night
+ * split only for the last 3 days, null with 'band grade kept 3 days' before them; gallons whole, except today
+ * (partial_day), one discontinuous day and one 'no meter data' day; one day with no row at all. With now on
+ * 2026-11-02 the 25-hour 2026-11-01 is one of the graded days.
+ */
+function scorecardRows(now) {
+  const today = local(now).date;
+  const rows = new Map();
+  for (let ago = 0; ago < 30; ago += 1) {
+    const date = addDays(today, -ago);
+    if (ago === SCORECARD_NO_ROW_AGO) { rows.set(date, null); continue; }
+    const graded = ago < 3;
+    const [water_gal, water_reason] = ago === 0 ? [null, "partial_day"] : ago === 5 ? [null, "discontinuous"] : ago === 16 ? [null, "no meter data"] : [18 + (ago % 7), null];
+    rows.set(date, {
+      temp_in_band_pct: tenths(91.5 - (ago % 5) * 1.5), vpd_in_band_pct: tenths(84 + (ago % 4) * 2.5),
+      time_in_band_day_pct: graded ? tenths(88.4 - ago * 1.2) : null, time_in_band_night_pct: graded ? tenths(79.6 + ago * 2.1) : null,
+      band_reason: graded ? null : "band grade kept 3 days", water_gal, water_reason,
+      iris_required_written: ago === 0 || ago === 9 ? 2 : 3, iris_required_missed: ago === 9 ? 1 : 0,
+      alerts_critical: ago === 14 ? 1 : 0, alerts_warning: ago % 4 === 1 ? 2 : 1, alerts_info: ago % 3,
+    });
+  }
+  return rows;
 }
 
 // ---------------------------------------------------------------------------------------------------- helpers
@@ -501,6 +549,15 @@ export const FIXTURES = {
     world.runs.sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at));
   },
   "series-400d": (world) => { world.seriesWindow = { from: world.now - 400 * DAY, to: world.now }; },
+  // The scorecard (#1130): 30 days of daily.* buckets and minutes; the example reads the first 8 keys as the page does.
+  "scorecard-30d": (world) => {
+    const today = local(world.now).date;
+    world.scorecard = scorecardRows(world.now);
+    world.seriesKeys = DAILY_KEYS.slice(0, 8);
+    world.seriesWindow = { from: localInstant(addDays(today, -29)), to: nextMidnight(world.now) };
+    world.seriesPoints = 31;
+    world.minutesDays = 30;
+  },
   "stuck-delivery": (world) => {
     const since = clock(world.now)("06:10");
     world.writer = { last_at: iso(since), age_s: Math.round((world.now - since) / 1000), stuck: true, differing: 4, oldest_since: iso(since) };

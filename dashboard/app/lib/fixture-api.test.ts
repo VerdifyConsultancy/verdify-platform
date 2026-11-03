@@ -286,6 +286,22 @@ test("each named fixture serves what the table says", () => {
   expect(series.bucket_s).toBe(86_400);
   expect(Date.parse(series.to) - Date.parse(series.from)).toBe(400 * 86_400_000);
   for (const key of ["climate.temp_avg", "climate.vpd_avg", "climate.rh_avg"]) expect(series.series[key], key).toMatchObject({ source: "daily_summary", retained_from: new Date(NOW - 365 * 86_400_000).toISOString() });
+  // scorecard-30d: the scorecard's first API-04 request, 30 America/Denver day buckets with the 25-hour 2026-11-01,
+  // whole-day time in band every day but the day with no row, the day/night split for the last 3 days, and the gallons'
+  // reasons; API-IRR-10 covers the same 30 days with its outage day and today partial.
+  const scorecard = set("scorecard-30d");
+  const daily = scorecard["API-04"];
+  expect(daily).toMatchObject({ bucket_s: 86_400, from: "2026-10-04T06:00:00.000Z", to: "2026-11-03T07:00:00.000Z" });
+  expect(daily.t).toHaveLength(30);
+  expect(daily.t.at(-1) - daily.t.at(-2)).toBe(25 * 3600);
+  expect(Object.keys(daily.series)).toHaveLength(8);
+  const water = daily.series["daily.water_gal"];
+  expect(water).toMatchObject({ source: "scorecard", retained_from: null });
+  expect(water.reason.filter(Boolean)).toEqual(["no meter data", "discontinuous", "partial_day"]);
+  expect(daily.series["daily.temp_in_band_pct"].avg.filter((value: number | null) => value === null)).toHaveLength(1);
+  expect(daily.series["daily.time_in_band_day_pct"].reason.filter(Boolean)).toHaveLength(26);
+  expect(scorecard["API-IRR-10"]).toMatchObject({ from: "2026-10-04", to: "2026-11-02" });
+  expect(scorecard["API-IRR-10"].periods.filter((period: Body) => period.coverage !== "complete")).toEqual([{ start: "2026-10-24", coverage: "no_data" }, { start: "2026-11-02", coverage: "partial" }]);
   const stuck = set("stuck-delivery");
   expect(stuck["API-02"].writer).toMatchObject({ stuck: true, differing: 4, oldest_since: "2026-11-02T13:10:00.000Z" });
   expect(stuck["API-14"].items).toEqual([expect.objectContaining({ alert_type: "setpoint_delivery_stuck" })]);
