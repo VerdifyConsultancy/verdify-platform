@@ -178,7 +178,7 @@ test("before the engine a draft reads as its saved blocks will, and the occurren
   expect(row(previewSchedule(draft({ days: ["sun"], start: { kind: "clock", clock: "12:00" } }), context(["schedules-paused", "before-engine"])), "L01")?.totals).toBe("Mon 12 · Wed 12 · Fri 12 · Sun 18 min");
 });
 
-test("with API-IRR-01 not answered the draft still expands, with the register's kinds and no cap or skip", () => {
+test("with API-IRR-01 not answered the draft still expands, with no cap, clean partner or skip", () => {
   const preview = previewSchedule(draft(), { ...context("in-band"), lines: [], engine: null });
   expect(preview.blocks.map((block) => block.occurrence.status)).toEqual(["planned", "planned", "planned"]);
   expect(row(preview, "L01")).toEqual({ totals: "Mon 12 · Wed 12 · Fri 12 min", cap: null, past: null });

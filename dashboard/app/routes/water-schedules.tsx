@@ -39,7 +39,7 @@ export default function WaterSchedules() {
     const next = new URLSearchParams(current);
     next.delete("schedule");
     return next;
-  }, { replace: true }), [setSearch]);
+  }, { replace: true, preventScrollReset: true }), [setSearch]);
   const status = irrigation.data ?? null;
   const preview = editing !== null && draft && agenda.data
     ? previewSchedule(draft, { agenda: agenda.data, lines: status?.lines ?? [], engine: status ? status.engine : null, today, now })
@@ -54,7 +54,7 @@ export default function WaterSchedules() {
     {agenda.data
       ? <ScheduleWeek agenda={agenda.data} lines={status?.lines} program={status} past={past} today={today} now={now} views={views} draft={preview} saved={saved}
         editTo={operator ? editorTo : undefined}
-        actions={operator ? <Link className="button-link btn-primary" to={editorTo(NEW_SCHEDULE)} data-write-control="true">+ New schedule</Link> : null} />
+        actions={operator ? <Link className="button-link btn-primary" to={editorTo(NEW_SCHEDULE)} preventScrollReset data-write-control="true">+ New schedule</Link> : null} />
       : !agenda.isError && <div className="skeleton skeleton-lg" aria-hidden="true" />}
     {editing !== null && agenda.data && <ScheduleEditor key={editing} slotId={slotId} schedule={agenda.data.schedules.find((row) => row.slot_id === slotId) ?? null}
       agenda={agenda.data} status={status} today={today} now={now} onClose={close} onDraft={setDraft}

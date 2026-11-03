@@ -30,6 +30,8 @@ type Form = {
   readonly days: readonly Weekday[];
   readonly start: StartDraft;
   readonly minutes: string;
+  /** A stored drip run that is not whole minutes (Iris's or an agent's 690 s): kept as stored while `minutes` reads as it opened. */
+  readonly storedRun: { readonly text: string; readonly on_s: number } | null;
   readonly pulse: string;
   readonly pulses: string;
   readonly gap: string;
@@ -58,7 +60,7 @@ const isDrip = (kind: string) => kind === "drip" || kind === "fert_drip";
 const isFert = (kind: string) => kind === "fert_drip" || kind === "fert_mister";
 
 /** The number fields a line kind takes (irrigation §4.3), their min and max from API-IRR-02 `bounds[kind]`. */
-export function numberFields(kind: string, partner: string | null | undefined, bounds: Bounds): NumberSpec[] {
+function numberFields(kind: string, partner: string | null | undefined, bounds: Bounds): NumberSpec[] {
   const seconds = (field: NumberKey, text: TextKey, label: string, hint?: string): NumberSpec => ({ field, text, label, unit: "s", scale: 1, ...bounds?.[field], hint });
   const onS = bounds?.on_s;
   const main: NumberSpec[] = isDrip(kind)
@@ -71,16 +73,22 @@ export function numberFields(kind: string, partner: string | null | undefined, b
 /**
  * The form's numbers as seconds and counts, the rest a line of that kind stores: a drip `count` 1 and `gap_s` 0; a
  * clean line no prewet or flush. `numbers` is null while a field holds no whole number; a value outside its bounds is
- * still a number (the preview draws what was typed), and `errors` says so.
+ * still a number (the preview draws what was typed), and `errors` says so. A stored run that is not whole minutes passes
+ * as stored until its text changes, so editing anything else about the schedule keeps it.
  */
 function readNumbers(form: Form, specs: readonly NumberSpec[]) {
   const values: Partial<Record<NumberKey, number>> = {};
   const errors: Partial<Record<NumberKey, string>> = {};
   let complete = true;
   for (const spec of specs) {
+    if (spec.text === "minutes" && form.storedRun?.text === form.minutes) {
+      values.on_s = form.storedRun.on_s;
+      continue;
+    }
     const typed = parseWhole(form[spec.text]);
     if (typed === null) {
-      errors[spec.field] = spec.unit === "min" && spec.min !== undefined && spec.max !== undefined ? `Must be ${rangeText(spec.min, spec.max, spec.unit)}` : "Enter a whole number";
+      const whole = spec.min !== undefined && spec.max !== undefined ? `Must be whole minutes, ${rangeText(spec.min, spec.max, spec.unit)}` : "Enter whole minutes";
+      errors[spec.field] = spec.text === "minutes" ? whole : "Enter a whole number";
       complete = false;
       continue;
     }
@@ -96,7 +104,7 @@ function readNumbers(form: Form, specs: readonly NumberSpec[]) {
 function startForm(schedule: Schedule | null, kindOf: (id: string) => string, today: string): Form {
   const defaults: Form = {
     lineId: SCHEDULE_LINES[0], label: "", enabled: true, days: WEEKDAYS.filter((day) => day === weekdayOf(today)), start: startDraft(),
-    minutes: String(RUN_DEFAULTS.minutes), pulse: String(RUN_DEFAULTS.on_s), pulses: String(RUN_DEFAULTS.count), gap: String(RUN_DEFAULTS.gap_s),
+    minutes: String(RUN_DEFAULTS.minutes), storedRun: null, pulse: String(RUN_DEFAULTS.on_s), pulses: String(RUN_DEFAULTS.count), gap: String(RUN_DEFAULTS.gap_s),
     prewet: String(RUN_DEFAULTS.prewet_s), flush: String(RUN_DEFAULTS.flush_s), degradedOnly: false, manual: MANUAL_DEFAULT, reason: "", checked: false, note: "",
   };
   if (!schedule) return defaults;
@@ -104,24 +112,27 @@ function startForm(schedule: Schedule | null, kindOf: (id: string) => string, to
   const lineId = schedule.line_id ?? defaults.lineId;
   const onS = schedule.on_s ?? 0;
   const kind = kindOf(lineId);
+  const minutes = String(Number((onS / 60).toFixed(2)));
   return {
     ...defaults, lineId, label: schedule.label ?? "", enabled: schedule.enabled ?? true, days: WEEKDAYS.filter((day) => schedule.days?.includes(day)),
     start: startDraft(schedule.start), degradedOnly: schedule.degraded_only ?? false,
-    ...(isDrip(kind) ? { minutes: String(onS / 60) } : { pulse: String(onS), pulses: String(schedule.count ?? 1), gap: String(schedule.gap_s ?? 0) }),
+    ...(isDrip(kind) ? { minutes, storedRun: onS % 60 === 0 ? null : { text: minutes, on_s: onS } } : { pulse: String(onS), pulses: String(schedule.count ?? 1), gap: String(schedule.gap_s ?? 0) }),
     ...(isFert(kind) ? { prewet: String(schedule.prewet_s ?? 0), flush: String(schedule.flush_s ?? 0) } : {}),
   };
 }
 
 /** A refusal, beside the field it names or (`field` null, or one this form does not show) above Save. */
 type Refusal = { readonly field: string | null; readonly message: string };
-const UNITS: Readonly<Record<string, string>> = { on_s: "s", gap_s: "s", prewet_s: "s", flush_s: "s", offset_min: "min" };
+const UNITS: Readonly<Record<string, string>> = { on_s: "s", gap_s: "s", prewet_s: "s", flush_s: "s", offset_min: "min", "start.offset_min": "min" };
+/** The Problem fields a start is refused under: `start.clock` and `start.offset_min` (verdify_schemas), or the bare `offset_min`. */
+const START_PARTS: readonly (string | null)[] = ["start.clock", "start.offset_min", "offset_min"];
 /**
  * A write's refusal in words (#1124's table; screens SCR-04): `out_of_range` with its bounds and the field's unit, a
- * drip's `on_s` in the minutes its field takes; `too_close` beside Start, naming the line; `unknown_target` on an edit,
- * unless it names the line, "This schedule no longer exists".
+ * drip's `on_s` in the minutes its field takes; a start's parts and `too_close` beside Start, naming the line;
+ * `unknown_target` on an edit, unless it names the line, "This schedule no longer exists".
  */
 export function refusalWords(error: WriteError, { lineId, kind, editing }: { lineId: string; kind: string; editing: boolean }): Refusal {
-  const field = error.field === "offset_min" ? "start" : error.field;
+  const field = START_PARTS.includes(error.field) ? "start" : error.field;
   if (error.code === "too_close") return { field: "start", message: `Another ${lineId} schedule starts within 30 min of this one` };
   if (error.code === "unknown_target" && editing && field !== "line_id") return { field: null, message: GONE_TEXT };
   if (error.code === "out_of_range" && error.min !== null && error.max !== null) {
@@ -300,7 +311,7 @@ export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, o
     </>}
     <section className="schedule-preview" aria-label="Preview">
       <h3 className="eyebrow">Previewed in the week</h3>
-      {!preview && <p className="field-hint">Enter a whole number in each field to preview it.</p>}
+      {!preview && <p className="field-hint">Enter a valid start and a whole number in each field to preview it.</p>}
       {preview?.totals.map((row) => <div key={row.line_id} className="schedule-preview-line" data-line={row.line_id}>
         <p><strong>{row.line_id}</strong> {row.totals ?? "no minutes planned"}</p>
         {row.cap && <p className="field-hint">{row.cap}</p>}

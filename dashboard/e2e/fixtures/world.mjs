@@ -630,6 +630,11 @@ export const FIXTURES = {
     Object.assign(lineOf(world, "L02"), { enabled: true, state: { code: "idle", cause: null, slot_id: null, reason: null, ends_at: null, observed_at: iso(clock(world.now)("09:00", -14)) } });
     checked(world, "L02");
   },
+  // #1137: L02 enabled with no check on record, as L01 is seeded: the editor offers L02's own Checked box.
+  "l02-enabled-unchecked": (world) => {
+    FIXTURES["l02-enabled"](world);
+    lineOf(world, "L02").check = null;
+  },
   "grow-lights-differ": (world) => {
     Object.assign(itemOf(world, "grow_light_grow"), { intent: "on" });
   },

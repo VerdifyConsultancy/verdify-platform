@@ -23,8 +23,9 @@ function Where() {
   const { pathname, search } = useLocation();
   return <span data-testid="where">{`${pathname}${search}`}</span>;
 }
-function open(path: string, options: FixtureOptions = {}) {
+function open(path: string, options: FixtureOptions = {}, before?: (api: ReturnType<typeof startFixtureApi>) => void) {
   const api = startFixtureApi(options);
+  before?.(api);
   const Stub = createRoutesStub([{
     path: "/", Component: () => <><AppShell build={BUILD} authError={null} /><Where /></>,
     children: [
@@ -270,6 +271,12 @@ test("the box shows only for an enabled drip line with no check: never a mister,
   // L02 is checked in this fixture; its check prompt shows only without one.
   setLine("L02");
   expect(box()).toBeNull();
+  cleanup(); stopFixtureApi();
+  // A fertilizer drip enabled with no check asks too, in its own words.
+  open(NEW, { fixture: "l02-enabled-unchecked" });
+  await advance(0);
+  setLine("L02");
+  expect(box()?.closest("label")?.textContent).toBe("Checked: line, tank and injector checked, no leaks");
 });
 
 test("a refusal of the check keeps the drawer open and sends nothing else", async () => {
@@ -371,9 +378,9 @@ test("the client checks only min and max, beside the field, and sends nothing pa
   expect(text(inDrawer().getByLabelText("Run").closest(".field")?.querySelector(".field-error"))).toBe("Must be 1–120 min");
   change("Run", "12.5");
   await save();
-  expect(text(inDrawer().getByLabelText("Run").closest(".field")?.querySelector(".field-error"))).toBe("Must be 1–120 min");
+  expect(text(inDrawer().getByLabelText("Run").closest(".field")?.querySelector(".field-error"))).toBe("Must be whole minutes, 1–120 min");
   // A draft holding no number has nothing to preview.
-  expect(preview()).toContain("Enter a whole number in each field to preview it.");
+  expect(preview()).toContain("Enter a valid start and a whole number in each field to preview it.");
   change("Run", "12");
   setLine("L04");
   change("Pulse", "5");
@@ -409,6 +416,9 @@ test("a refusal reads in words beside its field: out_of_range with its unit, on_
   expect(plain(refusalWords(error({ field: "on_s", min: 10, max: 7200 }), drip))).toEqual({ field: "on_s", message: "Must be 1–120 min" });
   expect(plain(refusalWords(error({ field: "count", min: 1, max: 60 }), mister))).toEqual({ field: "count", message: "Must be 1–60" });
   expect(plain(refusalWords(error({ field: "offset_min", min: -240, max: 240 }), drip))).toEqual({ field: "start", message: "Must be −240–240 min" });
+  // As verdify_schemas names a start's parts.
+  expect(plain(refusalWords(error({ field: "start.offset_min", min: -240, max: 240 }), drip))).toEqual({ field: "start", message: "Must be −240–240 min" });
+  expect(refusalWords(error({ field: "start.clock", min: 0, max: 1439 }), drip).field).toBe("start");
   expect(refusalWords(error({ code: "too_close", field: "start" }), drip)).toEqual({ field: "start", message: "Another L01 schedule starts within 30 min of this one" });
   expect(refusalWords(error({ code: "too_many_schedules", message: "The controller holds 24 schedules; delete one first" }), drip)).toEqual({ field: null, message: "The controller holds 24 schedules; delete one first" });
   expect(refusalWords(error({ code: "unknown_target", field: "line_id", message: "Nothing by that name" }), drip)).toEqual({ field: "line_id", message: "Nothing by that name" });
@@ -449,6 +459,24 @@ test("Edit on a block opens the stored schedule in the drawer; Save sends every 
   expect(blocks("L01", "2026-11-04")[0].head).toBe("07:35 10m Manual Requested");
 });
 
+test("a stored run that is not whole minutes opens as it is and saves unchanged, so editing anything else keeps it; a new one must be whole minutes", async () => {
+  // Iris may adjust this one: 690 s through MCP, which takes any on_s from 10 to 7200.
+  const api = open("/water/schedules?schedule=11", { fixture: "schedules-paused" }, (fixtureApi) => fixtureApi.respond({ method: "PUT", url: "/v1/irrigation/schedules/11", body: { on_s: 690 } }));
+  await advance(0);
+  const run = () => inDrawer().getByLabelText("Run") as HTMLInputElement;
+  expect(run().value).toBe("11.5");
+  expect(previewLine("L01")).toContain("Wed 11.5");
+  change("Run", "11.6");
+  await save();
+  expect(text(run().closest(".field")?.querySelector(".field-error"))).toBe("Must be whole minutes, 1–120 min");
+  expect(drawer()).not.toBeNull();
+  change("Run", "11.5");
+  fireEvent.click(inDrawer().getByRole("switch", { name: "Enabled" }));
+  await save();
+  expect(drawer()).toBeNull();
+  expect(writes(api).at(-1)?.body).toMatchObject({ on_s: 690, enabled: false });
+});
+
 test("a mister and a feed open with their own fields filled in", async () => {
   open("/water/schedules?schedule=13", { fixture: "schedules-paused" });
   await advance(0);
@@ -480,12 +508,12 @@ test("disabling a schedule takes it out of the week, and the line under the week
   expect(writes(api)[1].body).toMatchObject({ enabled: true });
 });
 
-test("Delete is one tap with no dialog and carries the reason; the schedule leaves the week and the banner reads REQUESTED", async () => {
+test("Delete is one tap with no dialog and carries the reason, a double tap sending one; the schedule leaves the week and the banner reads REQUESTED", async () => {
   const api = open("/water/schedules?schedule=11", { fixture: "schedules-paused" });
   await advance(0);
   change("Reason (optional)", "Moved to the feed");
-  fireEvent.click(inDrawer().getByRole("button", { name: "Delete" }));
-  await advance(0);
+  const remove = inDrawer().getByRole("button", { name: "Delete" });
+  await act(async () => { fireEvent.click(remove); fireEvent.click(remove); await vi.advanceTimersByTimeAsync(0); });
   expect(writes(api).map((row) => [row.operationId, row.path])).toEqual([["API-IRR-05", "/api/v1/irrigation/schedules/11?reason=Moved+to+the+feed"]]);
   expect(writes(api)[0].idempotency_key).toMatch(UUID);
   expect(document.querySelector("dialog")).toBeNull();

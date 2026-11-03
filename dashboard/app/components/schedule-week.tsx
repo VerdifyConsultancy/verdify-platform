@@ -89,7 +89,7 @@ function Block({ occurrence, schedule, draft, pastCap, replaced, kind, now, prog
       ? <button ref={select} type="button" className="week-block-select" aria-expanded={open} onClick={onToggle}>{body}</button>
       : body}
     {editTo && open && <div className="week-block-menu">
-      <Link className="button-link" to={editTo} data-write-control="true">Edit<span className="screen-reader"> this schedule</span></Link>
+      <Link className="button-link" to={editTo} preventScrollReset data-write-control="true">Edit<span className="screen-reader"> this schedule</span></Link>
     </div>}
   </li>;
 }
@@ -194,7 +194,7 @@ export function ScheduleWeek({ agenda, lines = [], program, past, today, now, vi
     </>}
     {disabled.length > 0 && <p className="week-disabled small">Disabled, so not in the week: {disabled.map((schedule, index) => {
       const name = `${schedule.line_id} ${schedule.label || `slot ${schedule.slot_id}`}`;
-      return <Fragment key={schedule.slot_id}>{index > 0 && " · "}{editTo ? <Link to={editTo(schedule.slot_id)}>{name}</Link> : name}</Fragment>;
+      return <Fragment key={schedule.slot_id}>{index > 0 && " · "}{editTo ? <Link to={editTo(schedule.slot_id)} preventScrollReset>{name}</Link> : name}</Fragment>;
     })}</p>}
   </section>;
 }

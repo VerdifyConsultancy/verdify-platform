@@ -8,7 +8,6 @@
  * `solar[]`. Validation stays on submit; a draft past a cap still saves, and the controller ends the run at the cap.
  */
 import { TIME_ZONE, localDate, shortTime } from "./format";
-import { lineById } from "./lines";
 import type { IrrigationLine, Occurrence, Schedule, ScheduleAgenda } from "./operator-api";
 import { CAPPED_KIND, occurrenceWords, whenWords, zoneWord } from "./water";
 
@@ -40,7 +39,7 @@ export type ScheduleDraft = {
 };
 export type PreviewContext = {
   readonly agenda: Pick<ScheduleAgenda, "schedules" | "occurrences" | "solar">;
-  /** API-IRR-01's lines; empty while that read has not answered, when only the register's kinds are known. */
+  /** API-IRR-01's lines; empty while that read has not answered, when no cap, clean partner or skip is known. */
   readonly lines: readonly IrrigationLine[];
   /** API-IRR-01's `engine`; null while unknown. */
   readonly engine: boolean | null;
@@ -144,10 +143,9 @@ type Run = Pick<Schedule, "on_s" | "count" | "prewet_s" | "flush_s">;
 /** Valve-open seconds one occurrence adds to each line's cap counter (irrigation §4.5). */
 function charges(run: Run, lineId: string, line: IrrigationLine | undefined): (readonly [string, number])[] {
   const open = (run.on_s ?? 0) * (run.count ?? 1);
-  const kind = line?.kind ?? lineById(lineId)?.kind;
   const partner = line?.clean_partner;
   if (!partner) return [[lineId, open]];
-  return [[lineId, open], [partner, (run.prewet_s ?? 0) + (run.flush_s ?? 0) + (kind === "fert_mister" ? open : 0)]];
+  return [[lineId, open], [partner, (run.prewet_s ?? 0) + (run.flush_s ?? 0) + (line?.kind === "fert_mister" ? open : 0)]];
 }
 
 /** A day's budget for schedules, in minutes: the cap, less the VPD reserve on a mister zone; null with no cap (0). */
