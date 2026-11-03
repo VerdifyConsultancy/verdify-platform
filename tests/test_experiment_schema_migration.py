@@ -341,6 +341,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "281-irrigation-minutes-by-zone.sql",
         # The dashboard roles' OIDs must come from the forward hook, never baseline history (VD-66).
         "282-dashboard-runtime-login.sql",
+        # Irrigation tables, seeds and grants (M3) and their receipt re-seals run forward (VD-38).
+        "283-irrigation-tables.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
