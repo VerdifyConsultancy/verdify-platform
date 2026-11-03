@@ -5,6 +5,7 @@ Each section runs by itself in bash, cut out of scripts/gather-plan-context.sh, 
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import subprocess
 import sys
@@ -151,6 +152,18 @@ def test_section_11_uses_the_module_path_the_pods_working_directory_resolves():
     assert not (ROOT / "ingestor" / "ingestor").exists()
     assert "-m tasks.irrigation context --hours 24" in script_section(11)
     assert "-m ingestor.tasks" not in script_section(11).replace("`-m ingestor.tasks.irrigation`", "")
+
+
+def test_the_irrigation_stack_validator_takes_section_11_as_the_canonical_source(monkeypatch):
+    """`make irrigation-stack-software-check` and the completion audit read the script through this check."""
+    spec = importlib.util.spec_from_file_location(
+        "irrigation_stack_under_test", ROOT / "scripts/validate-irrigation-stack.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, spec.name, module)  # its dataclasses resolve their annotations through it
+    spec.loader.exec_module(module)
+    check = module._check_planner_context_uses_canonical_irrigation()
+    assert check.status == "pass", check.detail
 
 
 def test_the_config_revision_renderer_is_current():

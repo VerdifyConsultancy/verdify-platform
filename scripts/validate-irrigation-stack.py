@@ -568,8 +568,15 @@ def _check_planner_context_uses_canonical_irrigation() -> Check:
     except OSError as exc:
         return Check("planner context canonical irrigation source", "fail", str(exc))
 
-    required = ("v_irrigation_schedule_current", "v_irrigation_fertigation_runs")
-    forbidden = ("FROM irrigation_schedule", "FROM irrigation_log", "SELECT zone, start_time, duration_s")
+    # Section 11 is the ingestor's entry point over M3's line state (VD-60); these views and tables are retired.
+    required = ("-m tasks.irrigation context --hours 24",)
+    forbidden = (
+        "FROM irrigation_schedule",
+        "FROM irrigation_log",
+        "SELECT zone, start_time, duration_s",
+        "v_irrigation_schedule_current",
+        "v_irrigation_fertigation_runs",
+    )
     missing = [token for token in required if token not in script]
     legacy = [token for token in forbidden if token in script]
     status = "pass" if not missing and not legacy else "fail"
