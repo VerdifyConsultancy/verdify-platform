@@ -543,6 +543,22 @@ Acceptance:
 6. Minutes by zone draws a day with no data as a hatched "no data" gap, never 0, and marks today partial; south reads
    "VPD from peer probes" while its probe is out.
 
+As built (VD-17, `dashboard/app/components/schedule-editor.tsx` with `app/lib/schedule-preview.ts`), where the editor
+settles a detail this section leaves open:
+
+| Topic | As built |
+|---|---|
+| Opening | `?schedule=new` or `?schedule=<slot_id>` shows the next 7 days whatever `?past=` says, and "+ New schedule" and Edit drop `past`. A viewer gets no editor from any URL. A slot that is not stored opens the drawer with "This schedule no longer exists" and Done. A schedule deleted elsewhere while the form is open keeps the form, and Save or Delete then reads the same words |
+| Reaching a disabled schedule | A disabled schedule has no occurrences, so no block to select: "Disabled, so not in the week: L01 Wall MWF" under the week links each one to its editor |
+| Wide screens | The backdrop dims less at every width. From 1200 px the page also narrows beside the drawer, so all seven days and the outlines stay readable behind it. Below that the drawer covers part of the week, and its "Previewed in the week" section carries the totals, the cap and why a block will not run |
+| A new schedule's values | L01, today's weekday, sunrise + 0, the run dialog's amounts (10 min; 4 × 45 s with 60 s gaps; prewet 120 s, flush 240 s) |
+| Whole minutes | A drip's Run and a feed's Feed take whole minutes. A stored `on_s` that is not one (Iris's or an agent's 690 s) opens as "11.5" and, left as it is, saves unchanged, so a person can still enable, disable or relabel it; a new value must be whole minutes |
+| Edit and today | The draft replaces the schedule's blocks still ahead. A block already past stays as it ran, and that day draws no outline and adds no minutes, since an occurrence runs once per schedule and local day (irrigation §4.7) |
+| Totals | On a mister zone "8 of 60 min for schedules" is the busiest day in the week. A disabled draft draws nothing and reads "Disabled: this schedule will not run". Before the engine a draft reads hatched "arrives with the irrigation firmware", as its saved blocks will, and still counts against the cap with the occurrences then planned, which read `blocked`, so the bring-up can size a program ahead of the firmware |
+| CONFIRMED on a block | Only the schedule just saved here keeps CONFIRMED on its blocks after the hash arrives, until the next save or the page closes; every other confirmed schedule's blocks carry no badge. The banner reads CONFIRMED for the program |
+| The check and a refused schedule | A check recorded by a Save whose schedule was then refused stays recorded: the box goes and Save again sends only the schedule |
+| Save toast | "Requested Wall MWF on L01", "Requested deleting Wall MWF on L01" (design system §4.3) |
+
 As built (VD-69, #1182). Where the build settles a detail above, or differs from it:
 
 | Topic | As built |
@@ -553,7 +569,7 @@ As built (VD-69, #1182). Where the build settles a detail above, or differs from
 | A switch's own badge | `sync` is per line, so the client works out which switch shows it. While it settles, the switch pressed in this tab carries it, or both when none was pressed here (another writer, a reload). Once confirmed, a switch that is on or was pressed reads CONFIRMED; an untouched one that is off shows none. A press counts only while the line reads what it asked for, so a cancelled check sheet or a refused write carries none, and a press after the line has settled starts afresh, so a change confirmed earlier does not read REQUESTED again |
 | Pause words | "Paused until 14:00 · VPD misting continues · by jason: rain". The VPD clause shows only on a line with `vpd_member` on, so a drip reads "Paused until 14:00 · by jason"; who and why come last. Fog never reads paused, though `all` sets `paused_until` on it. A pause stored before the engine reads too, beside its REQUESTED |
 | Pause drawer | "Pause lines…" sits on the program banner's row on all three views. Until is an America/Denver wall clock in any browser zone, starts on the next whole hour at least 30 minutes ahead, and must be ahead of now, because a past time would resume. Resume sends now on the server's clock. "Resume all" shows while any line is paused, L03 and fog included: they have no card or Resume of their own, so `all` is what clears them |
-| Block menu | A block still planned ahead of now opens "Pause <line> until after this run", which sends at once and, since the pause starts now, skips that run and any earlier one on the line; a past, skipped or blocked block offers none, and neither does a viewer's week |
+| Block menu | Selecting a block opens its menu, one block at a time, and Escape closes it. A block still planned ahead of now offers "Pause <line> until after this run", which sends at once and, since the pause starts now, skips that run and any earlier one on the line; a past, skipped or blocked block offers no pause. Any block whose schedule is stored offers Edit (#1137), in Last 7 days too. A viewer's week offers neither |
 | Line options | The reserve's bound follows the typed cap, and a reserve above it is flagged in the hint and sent, so the API's `out_of_range` shows beside the field. The client refuses only what is not whole minutes from 0 to 480 |
 
 As built (VD-16), where the commands settle a detail this section leaves open:

@@ -407,6 +407,12 @@ function checked(world, id, by = "jason") {
   lineOf(world, id).check = { checked_by: by, checked_at: iso(clock(world.now)("09:10", -2)), note: null };
 }
 
+/** A stored schedule's row in API-IRR-02, confirmed and written by jason two days back. */
+const storedSchedule = (world) => (slot_id, line_id, label, days, start, fields) => ({
+  slot_id, line_id, label, enabled: true, days, start, count: 1, gap_s: 0, prewet_s: 0, flush_s: 0, degraded_only: false, manual: true, sync: "confirmed",
+  updated_by: JASON, updated_at: iso(clock(world.now)("09:20", -2)), ...fields,
+});
+
 // ---------------------------------------------------------------------------------------------------- named fixtures
 /** Each patches the base in place; screens §1.5 states and the issue's fixture table say what each serves. */
 export const FIXTURES = {
@@ -681,10 +687,7 @@ export const FIXTURES = {
   },
   "schedules-paused": (world) => {
     const at = clock(world.now);
-    const make = (slot_id, line_id, label, days, start, fields) => ({
-      slot_id, line_id, label, enabled: true, days, start, count: 1, gap_s: 0, prewet_s: 0, flush_s: 0, degraded_only: false, manual: true, sync: "confirmed",
-      updated_by: JASON, updated_at: iso(at("09:20", -2)), ...fields,
-    });
+    const make = storedSchedule(world);
     world.schedules = [
       make(11, "L01", "Wall MWF", ["mon", "wed", "fri"], { kind: "sunrise", offset_min: 60 }, { on_s: 720 }),
       make(12, "L02", "Weekly feed", ["sun"], { kind: "sunrise", offset_min: 60 }, { on_s: 300, prewet_s: 120, flush_s: 240 }),
@@ -696,6 +699,27 @@ export const FIXTURES = {
     checked(world, "L04");
     // L02 was paused across its last feed, so that block ended skipped.
     world.pauses.push({ line_id: "L02", from: world.now - 8 * DAY, until: world.now - MINUTE, by: JASON, reason: null });
+  },
+  // #1137: the controller's 24 schedules are stored, so a create answers too_many_schedules (with current and max, no field).
+  "schedules-full": (world) => {
+    const make = storedSchedule(world);
+    world.schedules = Array.from({ length: 24 }, (_, index) => make(index + 1, "L01", `Slot ${index + 1}`, ["sat"], { kind: "clock", clock: `${String(index).padStart(2, "0")}:00` }, { on_s: 60 }));
+  },
+  // #1137: an L01 schedule at sunrise + 60: a create starting within 30 min of it answers too_close.
+  "l01-schedule": (world) => {
+    world.schedules = [...world.schedules, storedSchedule(world)(11, "L01", "Wall MWF", ["mon", "wed", "fri"], { kind: "sunrise", offset_min: 60 }, { on_s: 720 })];
+  },
+  // #1137: L07 enabled with Schedule off: a mist schedule saves, and its blocks read "Skipped until Schedule is on".
+  "l07-schedule-off": (world) => { Object.assign(lineOf(world, "L07"), { enabled: true, schedule_member: false }); },
+  // #1137: L02 checked and enabled, so a feed's prewet and flush count on L01's cap.
+  "l02-enabled": (world) => {
+    Object.assign(lineOf(world, "L02"), { enabled: true, state: { code: "idle", cause: null, slot_id: null, reason: null, ends_at: null, observed_at: iso(clock(world.now)("09:00", -14)) } });
+    checked(world, "L02");
+  },
+  // #1137: L02 enabled with no check on record, as L01 is seeded: the editor offers L02's own Checked box.
+  "l02-enabled-unchecked": (world) => {
+    FIXTURES["l02-enabled"](world);
+    lineOf(world, "L02").check = null;
   },
   "grow-lights-differ": (world) => {
     Object.assign(itemOf(world, "grow_light_grow"), { intent: "on" });

@@ -439,10 +439,11 @@ export function occurrences(world, first, last) {
       let status = "planned";
       let reason = null;
       if (!world.engine) [status, reason] = ["blocked", "arrives with the irrigation firmware"];
-      else if (schedule.degraded_only) [status, reason] = [at < world.now ? "skipped" : "planned", "only if VPD sensing is degraded"];
       else if (!line.enabled) [status, reason] = ["skipped", "line disabled"];
+      else if (mister && schedule.degraded_only && !line.vpd_member) [status, reason] = ["skipped", "not a VPD member"];
+      else if (mister && !schedule.degraded_only && !line.schedule_member) [status, reason] = ["skipped", "not a schedule member"];
       else if (pause) [status, reason] = ["skipped", `line paused by ${pause.by.name}${pause.reason ? `: ${pause.reason}` : ""}`];
-      else if (mister && !line.schedule_member) [status, reason] = ["skipped", "not a schedule member"];
+      else if (schedule.degraded_only) [status, reason] = [at < world.now ? "skipped" : "planned", "only if VPD sensing is degraded"];
       else if (at < world.now) status = "done";
       rows.push({
         slot_id: schedule.slot_id, line_id: schedule.line_id, planned_start: iso(at), status, outcome: status === "done" ? "ok" : null, reason,
@@ -690,21 +691,49 @@ function checkSchedule(world, schedule, slotId) {
   if (schedule.label !== undefined) text(schedule.label, "label", 60);
   const reference = "2026-11-02";
   const minutes = (item) => (startOf(item.start, reference) - localInstant(reference)) / MINUTE;
-  const clash = world.schedules.find((other) => other.slot_id !== slotId && other.line_id === schedule.line_id && other.days.some((day) => schedule.days.includes(day))
+  const clash = schedule.enabled && world.schedules.find((other) => other.enabled && other.slot_id !== slotId && other.line_id === schedule.line_id && other.days.some((day) => schedule.days.includes(day))
     && Math.abs(minutes(other) - minutes(schedule)) < 30);
   if (clash) throw refuse(422, "too_close", "Too close", `Starts within 30 min of schedule ${clash.slot_id} on ${schedule.line_id}`, { field: "start" });
 }
-function scheduleEffect(world, schedule, action, key, reason) {
-  return (next) => {
+/** A schedule write's program reaches the controller by the third API-IRR-02 poll after it: 10 s at the settling cadence. */
+const PROGRAM_SETTLES_AFTER_POLLS = 3;
+const PROGRAM_SETTLES_MS = 10_000;
+const programHash = (revision) => createHash("sha256").update(`program rev ${revision}`).digest("hex");
+/**
+ * A schedule write replayed: the schedule stored, reading `requested`, in a new program revision with a new hash, and
+ * its Activity row under the session's username. Three API-IRR-02 polls later the controller reports that hash, so the
+ * write, the program and the row read `confirmed` (with `confirm: false`, `not_confirmed` with a reject). Before the
+ * engine it stays `requested`.
+ */
+function scheduleEffect(world, schedule, action, { key, serial }, reason) {
+  const written = world.now;
+  return (next, history = { readsAfter: () => 0 }) => {
     next.schedules = action === "delete" ? next.schedules.filter((item) => item.slot_id !== schedule.slot_id)
       : [...next.schedules.filter((item) => item.slot_id !== schedule.slot_id), { ...schedule }].sort((a, b) => a.slot_id - b.slot_id);
-    if (next.engine) next.program = { ...next.program, state: "requested", revision: (next.program.revision ?? 0) + 1, pushed_at: iso(world.now), confirmed_at: next.program.confirmed_at };
-    activity(next, { ts: iso(world.now), actor: actorOf(next), action: `irrigation.schedule.${action}`, target: String(schedule.slot_id), detail: { line_id: schedule.line_id }, reason, state: next.engine ? "requested" : null, request_id: key });
+    let state = null;
+    let confirmedAt = null;
+    if (next.engine) {
+      const revision = (next.program.revision ?? 0) + 1;
+      const hash = programHash(revision);
+      state = "requested";
+      next.program = { ...next.program, state, revision, desired_sha256: hash, pushed_at: iso(written), reject_code: null, reason: null, next_retry_at: null };
+      if (history.readsAfter("API-IRR-02", serial) >= PROGRAM_SETTLES_AFTER_POLLS) {
+        const settled = iso(written + PROGRAM_SETTLES_MS);
+        state = next.flags.confirm ? "confirmed" : "not_confirmed";
+        confirmedAt = next.flags.confirm ? settled : null;
+        next.program = next.flags.confirm
+          ? { ...next.program, state, applied_revision: revision, applied_hash: hash.slice(0, 16), src: "nvs", confirmed_at: settled }
+          : { ...next.program, state, reject_code: "bad_slot", reason: "the controller refused a schedule", next_retry_at: iso(written + MINUTE) };
+      }
+      const stored = next.schedules.find((item) => item.slot_id === schedule.slot_id);
+      if (stored) stored.sync = state;
+    }
+    activity(next, { ts: iso(written), actor: actorOf(next), action: `irrigation.schedule.${action}`, target: String(schedule.slot_id), detail: { line_id: schedule.line_id }, reason, state, confirmed_at: confirmedAt, request_id: key });
   };
 }
-function createSchedule(world, { body, key }) {
+function createSchedule(world, { body, key, serial }) {
   const input = object(body);
-  if (world.schedules.length >= 24) throw refuse(422, "too_many_schedules", "Too many schedules", "At most 24 schedules");
+  if (world.schedules.length >= 24) throw refuse(422, "too_many_schedules", "Too many schedules", "At most 24 schedules", { current: world.schedules.length, max: 24 });
   const fields = Object.fromEntries(FIELDS.filter((field) => input[field] !== undefined).map((field) => [field, input[field]]));
   const schedule = {
     slot_id: Math.max(0, ...world.schedules.map((item) => item.slot_id)) + 1, enabled: true, count: 1, gap_s: 0, prewet_s: 0, flush_s: 0, degraded_only: false,
@@ -712,9 +741,9 @@ function createSchedule(world, { body, key }) {
   };
   checkSchedule(world, schedule, schedule.slot_id);
   const stored = { ...schedule, manual_before: null, sync: "requested", updated_by: actorOf(world), updated_at: iso(world.now) };
-  return { status: 201, body: stored, effect: scheduleEffect(world, stored, "create", key, text(input.reason, "reason")) };
+  return { status: 201, body: stored, effect: scheduleEffect(world, stored, "create", { key, serial }, text(input.reason, "reason")) };
 }
-function editSchedule(world, { params, body, key }) {
+function editSchedule(world, { params, body, key, serial }) {
   const existing = world.schedules.find((item) => item.slot_id === Number(params.slot_id));
   if (!existing) throw refuse(422, "unknown_target", "Unknown schedule", `No schedule ${params.slot_id}`, { field: "slot_id" });
   const input = object(body);
@@ -722,12 +751,12 @@ function editSchedule(world, { params, body, key }) {
   const schedule = { ...existing, ...fields, manual: input.manual ?? true };
   checkSchedule(world, schedule, existing.slot_id);
   const stored = { ...schedule, manual_before: existing.manual, sync: "requested", updated_by: actorOf(world), updated_at: iso(world.now) };
-  return { status: 200, body: stored, effect: scheduleEffect(world, stored, "update", key, text(input.reason, "reason")) };
+  return { status: 200, body: stored, effect: scheduleEffect(world, stored, "update", { key, serial }, text(input.reason, "reason")) };
 }
-function deleteSchedule(world, { params, query, key }) {
+function deleteSchedule(world, { params, query, key, serial }) {
   const existing = world.schedules.find((item) => item.slot_id === Number(params.slot_id));
   if (!existing) throw refuse(422, "unknown_target", "Unknown schedule", `No schedule ${params.slot_id}`, { field: "slot_id" });
-  return { status: 204, body: null, effect: scheduleEffect(world, existing, "delete", key, text(query.get("reason") ?? undefined, "reason")) };
+  return { status: 204, body: null, effect: scheduleEffect(world, existing, "delete", { key, serial }, text(query.get("reason") ?? undefined, "reason")) };
 }
 
 function command(world, kind, lineId, args, key) {
@@ -835,6 +864,9 @@ function updateLines(world, { params, body, key, serial }) {
     if (until <= world.now) until = null;
   }
   const ids = id === "all" ? LINES.map((line) => line.line_id) : [id];
+  const definition = DEFINITION.some((field) => input[field] !== undefined);
+  // A check or reason alone changes no program: no revision, and the line's sync stays as it reads.
+  const pushes = definition || "paused_until" in input;
   const updates = ids.map((lineId) => {
     const line = lineOf(world, lineId);
     if ((input.vpd_member !== undefined || input.schedule_member !== undefined) && !MISTERS.includes(lineId)) throw refuse(422, "unknown_target", "Not a mister zone", "vpd_member and schedule_member are for L04, L07 and L09", { field: input.vpd_member !== undefined ? "vpd_member" : "schedule_member" });
@@ -845,8 +877,7 @@ function updateLines(world, { params, body, key, serial }) {
     if ((input.enabled === true && !line.enabled && !line.check && !checkedNow) || (input.schedule_member === true && !line.schedule_member && !line.check && !checkedNow)) {
       throw refuse(422, "check_required", "Check required", `Record the one-time check of ${lineId} first`, { field: "checked" });
     }
-    const definition = DEFINITION.some((field) => input[field] !== undefined);
-    const changed = { ...line, manual_before: line.manual, sync: "requested" };
+    const changed = { ...line, manual_before: line.manual };
     for (const field of DEFINITION) if (input[field] !== undefined) changed[field] = input[field];
     if (definition) changed.manual = input.manual ?? true;
     if (checkedNow) changed.check = { checked_by: world.me.username, checked_at: iso(world.now), note };
@@ -858,8 +889,11 @@ function updateLines(world, { params, body, key, serial }) {
   const push = linePush(world, serial);
   const effect = (next, history) => {
     if (input.enabled === false) stopLines(next, ids, world.now);
-    const { sync, settledAt } = push(next, history);
-    for (const changed of updates) Object.assign(lineOf(next, changed.line_id), structuredClone(changed), { sync });
+    const { sync = null, settledAt = null } = pushes ? push(next, history) : {};
+    for (const changed of updates) {
+      const line = lineOf(next, changed.line_id);
+      Object.assign(line, structuredClone(changed), { sync: pushes ? sync : line.sync });
+    }
     activity(next, {
       ts: iso(world.now), actor: actorOf(next), action: "irrigation.line.update", target: id, detail: Object.fromEntries(Object.entries(input).filter(([field]) => field !== "reason")),
       reason, state: next.engine ? sync : null, confirmed_at: sync === "confirmed" ? iso(settledAt) : null, request_id: key,

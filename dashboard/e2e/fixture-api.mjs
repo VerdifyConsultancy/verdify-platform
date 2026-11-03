@@ -8,7 +8,8 @@
  * Control, as in weather: `POST /__control {"fixture": "<name or list>", "fail": {"API-14": 503}, "confirm": false,
  * "now": "<ISO time>"}` selects the fixture and resets the requests, writes and keys; `GET /__requests` lists every
  * request since: method, path, operationId, Idempotency-Key and body. Each request rebuilds the fixture at its own
- * time (or the pinned `now`) and replays the writes made since, so ages read the same in every run.
+ * time (or the pinned `now`) and replays the writes made since, so ages read the same in every run. A schedule write
+ * reads `requested` until the third API-IRR-02 read after it, which carries the new program hash (#1137).
  */
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
@@ -21,8 +22,8 @@ const problem = (status, code, title, detail, fields = {}) => ({
   status, headers: { "Content-Type": "application/problem+json", ...NO_STORE }, body: { type: "about:blank", title, status, code, detail, retryable: false, ...fields },
 });
 const MAX_BODY = 16_384;
-/** The reads a write's fixture settles on: a requested setting on the third API-09, a line write on the third API-IRR-01, a late override on the third API-02. */
-const COUNTED_READS = ["API-09", "API-IRR-01", "API-02"];
+/** The reads a write's fixture settles on: a late override on the third API-02, a requested setting on the third API-09, a line write on the third API-IRR-01, a schedule write on the third API-IRR-02. */
+const COUNTED_READS = ["API-02", "API-09", "API-IRR-01", "API-IRR-02"];
 /** JSON with every object's keys sorted, so one payload hashes the same whatever order its keys were sent in. */
 const canonical = (value) => JSON.stringify(value ?? null, (_key, item) => (item && typeof item === "object" && !Array.isArray(item)
   ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))

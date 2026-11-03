@@ -547,8 +547,26 @@ a.picker-item:hover{background:var(--field)}
 .week-block-note{font-weight:500}
 .week-block-past{border-color:var(--line)}
 .week-block-hatched{border-style:dashed;color:var(--muted);background:repeating-linear-gradient(135deg,var(--field) 0 .3rem,#fff .3rem .6rem)}
+.week-block[hidden]{display:none}
+.week-block-draft{border:1px dashed var(--muted);background:transparent}
+.week-block-draft.week-block-hatched{background:repeating-linear-gradient(135deg,var(--field) 0 .3rem,#fff .3rem .6rem)}
 .week-none{color:var(--muted)}
 .week-key{margin:.5rem 0 0}
+.week-disabled{margin:.35rem 0 0}
+/* The schedule editor (SCR-04): the page dims less and, on a wide screen, the week fits beside the drawer, so the draft's outlines can be read as it is typed. */
+.drawer-schedule::backdrop{background:color-mix(in srgb,var(--ink) 12%,transparent)}
+@media(min-width:1200px){
+  body:has(.drawer-schedule[open]) .water-page{margin-right:calc(28rem - max(0px,(100vw - var(--shell))/2) - var(--gutter))}
+  body:has(.drawer-schedule[open]) .table-wrap .week-table{min-width:0}
+}
+.schedule-count{margin:0;font-weight:600}
+.schedule-fert{margin:.25rem 0 .75rem}
+.schedule-preview{margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--line)}
+.schedule-preview h3{margin:0 0 .35rem}
+.schedule-preview p{margin:.15rem 0}
+.schedule-preview-line{margin-bottom:.5rem}
+.schedule-preview-note{font-size:.875rem;font-weight:500}
+.schedule-past-cap{font-size:.875rem;font-weight:600;color:var(--warn-text)}
 .history-head{align-items:center}
 .history-controls{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem}
 .chips-label{font-size:.8rem;font-weight:600;color:var(--muted)}
@@ -580,7 +598,7 @@ a.picker-item:hover{background:var(--field)}
 .week-block-menu summary{position:relative;display:grid;align-items:start;gap:.1rem;padding-right:1rem;font-size:inherit;font-weight:inherit;color:inherit}
 .week-block-menu summary::before{position:absolute;top:.35rem;right:.15rem}
 .week-block-actions{display:grid;gap:.3rem;margin-top:.35rem}
-.week-block-actions .btn{height:auto;white-space:normal;font-size:.78rem}
+.week-block-actions .btn,.week-block-actions .button-link{height:auto;white-space:normal;font-size:.78rem}
 
 /* Water and equipment commands (SCR-01, SCR-04, SCR-07, VD-16): the notes beside a line's Run…, Stop and Clear fault, Clear fault beside Now's fault line and the burst panel. At phone width Run… and the burst buttons are full width (.btn-wide), and every target is a 44 px .btn. */
 .line-card-actions .state-note,.line-card-actions .field-error,.mister-zone .actions .state-note,.mister-zone .actions .field-error{flex:1 1 100%;margin:0}
