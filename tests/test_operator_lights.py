@@ -11,13 +11,15 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import logging
+import runpy
 import socket
 import sys
 import threading
 import time
 import uuid
 from datetime import UTC, datetime
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 from pathlib import Path
 
 import jsonschema
@@ -227,9 +229,56 @@ def test_no_connection_is_timeout_and_writes_its_row_too(sessions, operator, log
 
 
 @pytest.mark.parametrize("status", [400, 404, 500])
-def test_an_answer_this_contract_does_not_know_claims_nothing_about_the_light(status, fake):
+def test_an_answer_this_contract_does_not_know_claims_nothing_about_the_light(status, fake, caplog):
     fake.status = status
-    assert asyncio.run(setpoint_server.switch(fake.url, "main", "on")) == "timeout"
+    with caplog.at_level(logging.WARNING, logger=setpoint_server.__name__):
+        assert asyncio.run(setpoint_server.switch(fake.url, "main", "on")) == "timeout"
+    assert str(status) in caplog.text  # the log alone tells this from no answer
+
+
+def test_no_connection_logs_its_cause_by_type_and_not_the_url(caplog):
+    url = f"http://127.0.0.1:{free_port()}"
+    with caplog.at_level(logging.WARNING, logger=setpoint_server.__name__):
+        assert asyncio.run(setpoint_server.switch(url, "main", "on")) == "timeout"
+    assert "ConnectError" in caplog.text and url not in caplog.text
+
+
+# ── the real server's handler ───────────────────────────────────────────────
+
+
+@pytest.fixture(scope="module")
+def real_server() -> dict:
+    """The globals of scripts/setpoint-server.py's own handler (``main()`` stays un-run), for patching out Home
+    Assistant and the database."""
+    loaded = runpy.run_path(str(ROOT / "scripts/setpoint-server.py"), run_name="_test_setpoint_server_lights")
+    return loaded["LutronHandler"].do_POST.__globals__
+
+
+@pytest.mark.parametrize(
+    ("accepted", "reached", "result"),
+    [(True, True, "confirmed"), (False, False, "ha_failed"), (True, False, "not_confirmed")],
+)
+def test_the_real_handler_answers_what_the_call_maps(real_server, monkeypatch, accepted, reached, result):
+    """The fake above answers what this file assumes; here the path, the statuses and the framing are the server's."""
+    calls = []
+
+    def ha_call(service, entity):
+        calls.append((service, entity))
+        return accepted
+
+    monkeypatch.setitem(real_server, "ha_call", ha_call)
+    monkeypatch.setitem(real_server, "ha_confirm_state", lambda entity, expected: reached)
+    monkeypatch.setitem(real_server, "ha_get_state", lambda entity: "off")
+    monkeypatch.setitem(real_server, "record_state_change_sync", lambda equipment, is_on: True)
+    server = HTTPServer(("127.0.0.1", 0), real_server["LutronHandler"])
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        url = f"http://127.0.0.1:{server.server_address[1]}"
+        assert asyncio.run(setpoint_server.switch(url, "main", "on")) == result
+    finally:
+        server.shutdown()
+        server.server_close()
+    assert calls == [("turn_on", "switch.greenhouse_main")]
 
 
 def test_the_call_runs_outside_any_database_transaction(client, operator, fake, log):

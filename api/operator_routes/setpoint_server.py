@@ -13,21 +13,28 @@ API-13 then shows what happened. The route calls this outside any database trans
 from __future__ import annotations
 
 import asyncio
+import logging
 
 import httpx
 
 from verdify_services.lights import Light, LightResult, LightState
 
+log = logging.getLogger(__name__)
 TIMEOUT_S = 12.0
 _RESULTS: dict[int, LightResult] = {200: "confirmed", 502: "ha_failed", 504: "not_confirmed"}
 
 
 async def switch(base_url: str, light: Light, state: LightState) -> LightResult:
     """The call's result. No answer in 12 s, no connection or an answer this contract does not know is ``timeout``:
-    nothing says what the light did, so only the readback can."""
+    nothing says what the light did, so only the readback can. The log line alone tells those causes apart."""
     try:
         async with asyncio.timeout(TIMEOUT_S), httpx.AsyncClient(timeout=TIMEOUT_S, trust_env=False) as client:
             response = await client.post(f"{base_url.rstrip('/')}/lights/{light}/{state}")
-    except (TimeoutError, httpx.HTTPError, httpx.InvalidURL):
+    except (TimeoutError, httpx.HTTPError, httpx.InvalidURL) as failure:
+        log.warning("setpoint server call failed: %s", type(failure).__name__)
         return "timeout"
-    return _RESULTS.get(response.status_code, "timeout")
+    result = _RESULTS.get(response.status_code)
+    if result is None:
+        log.warning("setpoint server answered %d, which API-20 does not know", response.status_code)
+        return "timeout"
+    return result
