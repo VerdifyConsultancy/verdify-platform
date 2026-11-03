@@ -415,7 +415,8 @@ detail §5.2 leaves open, or differ from it:
 ## 7. Accessibility basics
 
 Target: WCAG 2.2 AA, checked in VD-08 by Playwright and axe (`wcag2a`, `wcag2aa`, `wcag21aa`, `wcag22aa`) against the
-fixture API at 320, 768 and 1440 px, with no-horizontal-scroll assertions at 360 and 390 px and a reduced-motion check.
+fixture API at 320, 768 and 1440 px, with no-horizontal-scroll assertions at 360 and 390 px (also on WebKit) and a
+reduced-motion check.
 - **Contrast:** text at least 4.5:1; focus ring, input borders, chart lines and lanes at least 3:1 (§2, §5.1).
 - **Keyboard:** every action reachable; the focus ring is never removed; drawer and dialog use native `<dialog>` (focus
   trapped and returned to the opener); targets 44 px (24 px minimum, SC 2.5.8).

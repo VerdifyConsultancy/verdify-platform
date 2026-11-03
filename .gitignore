@@ -66,6 +66,8 @@ reports
 firmware/test/replay_overrides
 firmware/test/test_policy_vector
 firmware/artifacts/
+# The dashboard browser suite's traces and results (dashboard/playwright.config.ts).
+/artifacts/
 
 # Claude Code local settings — per-worktree, never committed
 .claude/settings.local.json

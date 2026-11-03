@@ -685,7 +685,7 @@ leaves open:
 | Reads | API-14 with `limit=200` every 15 s; API-17, API-IRR-01 and API-09 every 60 s. Load older asks for one more API-17 page, and each poll reads every page shown again from the newest, so a refresh leaves no gap between them |
 | Shell | The shell polls API-01 and API-02 under the shared read keys, so the R hook's refresh lowers the nav count at once and Stop notes what the shell's API-02 says is running |
 | Words and fixtures | The words table adds the activity actions, the schedule, line and run fields and the alert statuses. The fixtures add `fence-breach`, `run-missed`, `activity-mixed`, `alert-repeat` and `activity-paged` (60 rows, for Load older) |
-| Browser test | `dashboard/e2e/activity.spec.ts` waits for #1128's Playwright harness; `routes/activity.test.tsx` covers the acceptance against the fixture API |
+| Browser test | `dashboard/e2e/activity.spec.ts` runs on #1128's Playwright harness; `routes/activity.test.tsx` covers the acceptance against the fixture API |
 
 ## 8. SCR-07 Equipment and controller · `/equipment`
 
