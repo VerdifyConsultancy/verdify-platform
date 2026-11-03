@@ -93,6 +93,8 @@ $PY -m pytest -q -rs \
   tests/test_283_irrigation_tables_delivery.py \
   tests/test_qualify_migration_successor.py \
   tests/test_verdify_services_core.py \
+  tests/test_verdify_services_settings.py \
+  tests/test_verdify_services_alerts.py \
   tests/test_realized_solar_night_dryout_timeline.py \
   tests/test_05_dispatcher.py \
   tests/test_dispatcher_plain_convergence.py \
@@ -295,6 +297,10 @@ $PY -m pytest -q -rs \
   tests/test_twin_asof_migration.py \
   tests/test_twin_live_driver.py \
   tests/test_verdify_services_reads.py \
+  tests/test_operator_api_contract.py \
+  tests/test_operator_api_auth.py \
+  tests/test_public_api_operator_paths.py \
+  tests/test_operator_api_manifests.py \
   tests/test_verdify_traefik_placement.py \
   tests/test_verdify_tier1_owner_exclusions.py \
   tests/test_dashboard_manifests.py \

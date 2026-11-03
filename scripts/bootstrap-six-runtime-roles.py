@@ -7,6 +7,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 
 DUTIES = ("grafana", "planner", "setpoint_server", "ha_backfill", "lab_publisher", "vision")
 PREDECESSORS = {
@@ -67,6 +68,15 @@ class BootstrapError(RuntimeError):
     pass
 
 
+# Linux caps one argv string at MAX_ARG_STRLEN (128 KiB), and exec fails with E2BIG
+# before psql starts. The sealed profile gains an alternative per successor
+# migration and passed that limit at 280, so longer SQL goes through --file on the
+# Job's private /tmp. psql runs --command and --file actions in the order given.
+# bootstrap-maintenance-runtime-roles.py shares this helper.
+# No command carries a credential: values stay in environment and stdin.
+COMMAND_ARG_MAX_BYTES = 64 * 1024
+
+
 def psql(user, password, commands, *, password_input="", transactional=False):
     # Values stay in environment/stdin. Never relay raw errors/SQL/verifiers.
     args = [
@@ -88,12 +98,25 @@ def psql(user, password, commands, *, password_input="", transactional=False):
     ]
     if transactional:
         args.append("--single-transaction")
-    for command in commands:
-        args.extend(["--command", command])
     env = dict(os.environ, PGPASSWORD=password)
-    result = subprocess.run(
-        args, input=password_input, text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, check=False
-    )
+    with tempfile.TemporaryDirectory(prefix="bootstrap-sql-") as workdir:
+        for index, command in enumerate(commands):
+            if len(command.encode()) <= COMMAND_ARG_MAX_BYTES:
+                args.extend(["--command", command])
+                continue
+            path = os.path.join(workdir, f"{index}.sql")
+            with open(path, "w", encoding="utf-8") as sql_file:
+                sql_file.write(command)
+            args.extend(["--file", path])
+        result = subprocess.run(
+            args,
+            input=password_input,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            env=env,
+            check=False,
+        )
     if result.returncode:
         raise BootstrapError("database bootstrap operation refused")
     return result.stdout.strip()
@@ -466,14 +489,14 @@ def sealed_sql_282():
 IRRIGATION_TABLES_MIGRATION = (
     283,
     "283-irrigation-tables.sql",
-    "7570dbc9e603df7ccbec68450da88e1d60fc6cd5c93bd3454ef3911e16ab3e57",
+    "0b07a5042edc29cb90da4c800da6514e47517240d765c0da0217b68cc7fe92c2",
 )
 # 283's grants reach 282's dashboard duty on relations the ingestor reads, so its
 # ordinary seals hash that duty's production OID; the rolled-back native
 # qualification, run once 282 is applied, measures all three.
 SUCCESSOR_283 = {
-    "api": "aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7",
-    "ingestor": "2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db",
+    "api": "030df35ca3b0bc8b94de5f394f96c2292674b2df58aea2d46990c53ad3bd1ad7",
+    "ingestor": "c03d427cbbf327c8843496c744d718e1fca70c1e6d98963022ac87e308954096",
     "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e",
 }
 

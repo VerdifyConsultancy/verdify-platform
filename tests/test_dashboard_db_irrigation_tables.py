@@ -491,7 +491,7 @@ def test_ingestor_records_outcomes_and_asks_whether_an_experiment_is_armed(datab
         DENIED,  # nor a line
         DENIED,  # nor request commands
         OK,  # Iris's irrigation context: is an experiment armed (SECURITY DEFINER)
-        DENIED,  # still no SELECT on control_experiments
+        DENIED,  # 283 grants no SELECT on control_experiments
         DENIED,  # this grant set reaches nothing on setpoint_changes
     ]
 
@@ -822,8 +822,9 @@ COMMAND = (
 )
 
 
-async def scenario_rows(edges=(), ledger=(), commands=(), queries=()):
-    """Add rows, then read the view and each (sql, *args) in the same rolled-back transaction."""
+async def scenario_rows(edges=(), ledger=(), commands=(), queries=(), statements=()):
+    """Add rows and run each write (sql, *args) in ``statements``, then read the view and each
+    (sql, *args) in ``queries``, all in the same rolled-back transaction."""
     conn = await connect()
     try:
         tr = conn.transaction()
@@ -835,6 +836,8 @@ async def scenario_rows(edges=(), ledger=(), commands=(), queries=()):
                 await conn.execute(LEDGER, *row)
             for kind, line, status, sent in commands:
                 await conn.execute(COMMAND, kind, line, status, sent)
+            for sql, *args in statements:
+                await conn.execute(sql, *args)
             return [await snapshot(conn), *[await snapshot(conn, sql, *args) for sql, *args in queries]]
         finally:
             await tr.rollback()
@@ -922,6 +925,70 @@ def test_ledger_rows_give_cause_and_slot_and_others_keep_the_topology_cause(data
     assert [r[2:] for r in lines["L03"]] == [("supply", "L03", "feed", "fert", None, 5.0, 1, None, False)]
     assert [r[4:7] for r in lines["L07"]] == [("schedule", "clean", 4)]
     assert [r[4:7] for r in lines["L09"]] == [("vpd", "clean", None)]
+    assert reader == {r for r in view if r[1] == day}
+
+
+def test_the_newest_containing_row_wins_the_bridge_window_is_inclusive_and_greenhouses_stay_apart(database):
+    """When several ledger rows on a line contain a run's start, the newest started one gives its
+    cause and slot, an earlier row left open included; a run starting exactly 30 s after a sent
+    bridge command is run_now and 31 s after is not; another greenhouse's rows match nothing."""
+    day = DAY(2026, 9, 1)
+    t = local
+    edges = [
+        # L04: an earlier window left open (its outcome never arrived) and a newer closed one.
+        (t("2026-09-01 10:05:00"), "mister_center", True), (t("2026-09-01 10:05:45"), "mister_center", False),
+        (t("2026-09-01 11:00:00"), "mister_center", True), (t("2026-09-01 11:00:45"), "mister_center", False),
+        # L05: touching occurrences; a run starting on the boundary takes the newer one.
+        (t("2026-09-01 12:30:00"), "drip_center", True), (t("2026-09-01 12:40:00"), "drip_center", False),
+        # L01: 30 s and 31 s after a sent bridge command.
+        (t("2026-09-01 06:00:30"), "drip_wall", True), (t("2026-09-01 06:02:30"), "drip_wall", False),
+        (t("2026-09-01 06:30:31"), "drip_wall", True), (t("2026-09-01 06:32:31"), "drip_wall", False),
+        # Runs that only another greenhouse's occurrence and bridge command would hold.
+        (t("2026-09-01 14:10:00"), "mister_south", True), (t("2026-09-01 14:10:45"), "mister_south", False),
+        (t("2026-09-01 16:00:10"), "drip_wall", True), (t("2026-09-01 16:01:10"), "drip_wall", False),
+    ]  # fmt: skip
+    ledger = [
+        ("L04", 21, day, "schedule", t("2026-09-01 09:00:00"), None, None),
+        ("L04", 22, day, "schedule", t("2026-09-01 10:00:00"), t("2026-09-01 10:10:00"), "ok"),
+        ("L05", 31, day, "schedule", t("2026-09-01 12:00:00"), t("2026-09-01 12:30:00"), "ok"),
+        ("L05", 32, day, "schedule", t("2026-09-01 12:30:00"), t("2026-09-01 13:00:00"), "ok"),
+    ]
+    commands = [("run", "L01", "sent", t("2026-09-01 06:00:00")), ("run", "L01", "sent", t("2026-09-01 06:30:00"))]
+    elsewhere = [
+        (
+            "INSERT INTO public.irrigation_ledger (greenhouse_id, line_id, slot_id, local_day, cause, started_at, "
+            "ended_at) VALUES ('elsewhere', 'L07', 41, $1, 'schedule', $2, $3)",
+            day,
+            t("2026-09-01 14:00:00"),
+            t("2026-09-01 15:00:00"),
+        ),
+        (
+            "INSERT INTO public.irrigation_command (greenhouse_id, kind, line_id, status, source, actor, sent_at) "
+            "VALUES ('elsewhere', 'run', 'L01', 'sent', 'dashboard', 'jason', $1)",
+            t("2026-09-01 16:00:00"),
+        ),
+    ]
+    view, reader = run(
+        scenario_rows(
+            edges,
+            ledger,
+            commands,
+            queries=[("SELECT * FROM public.fn_irrigation_minutes_daily($1, $1)", day)],
+            statements=elsewhere,
+        )
+    )
+    lines = by_line(view, day)
+    # The 10:05 pulse is in both L04 windows and takes the newer; the 11:00 pulse only the open one.
+    assert [r[4:] for r in lines["L04"]] == [
+        ("schedule", "clean", 21, 0.8, 1, None, False),
+        ("schedule", "clean", 22, 0.8, 1, None, False),
+    ]
+    assert [r[4:] for r in lines["L05"]] == [("schedule", "clean", 32, 10.0, 1, None, False)]
+    assert [r[4:] for r in lines["L01"]] == [
+        ("run_now", "clean", None, 2.0, 1, None, False),
+        ("unknown", "clean", None, 3.0, 2, None, False),  # 31 s after, and the 16:00:10 run
+    ]
+    assert [r[4:] for r in lines["L07"]] == [("vpd", "clean", None, 0.8, 1, None, False)]
     assert reader == {r for r in view if r[1] == day}
 
 

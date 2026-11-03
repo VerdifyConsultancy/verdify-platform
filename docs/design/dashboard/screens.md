@@ -64,7 +64,7 @@ no wizards and no screen exists only to confirm something.
 | Header tools | Role pill (OPERATOR or VIEWER), name (desktop), Sign out (a POST form) | API-01 | load, 60 s |
 | Fault banners, one at a time, worst first | "Dashboard API unavailable" after two failed polls in a row; nothing green shows while it is up. "Ingestor not running since 03:12. The controller keeps running on its own." while the ingestor heartbeat (`freshness.ingestor`, a `system_state` row every 60 s, Q-01) is older than 180 s. "Controller not reporting since 03:12. If it has power, it keeps running VPD misting, its caps and (with the irrigation firmware) its schedules" while the heartbeat is fresh and the newest `climate` row is older than 300 s; no page ever says "Controller offline". "Water flowing with every Verdify valve closed since 03:02 · 3 gal in 10 min: a leak, or the hose, sink or hydro in use. If no one is using water, close the spigot" while the `leak_detected` alert is open, with no Stop (no Verdify valve is open); once the meter reads under 0.1 gal/min twice it reads "Flow stopped at 03:20", never an all clear | API-02 `freshness`, `leak` and alerts | 15 s |
 | Warn banners | "Settings not reaching the controller since 06:10 (4 differ)" while `setpoint_delivery_stuck` is open (API-02 `writer.stuck`, VD-62; Round 2 #1); "Changes are switched off; reading still works" (`writes_enabled: false`) | API-02, API-01 | 15 s, 60 s |
-| Activity count | The one open-alert count (VD-55, VD-72): unacknowledged (disposition open) `v_open_alerts` rows, repeats of one `alert_type` and zone counted once, so it equals the unacknowledged rows Activity lists (API-02 `alerts.open`). It shows as text in the nav; Now's hero and Alerts tile, Activity and MCP use the same count | API-02 | 15 s |
+| Activity count | The one open-alert count (VD-55, VD-72): unacknowledged (disposition open) `v_open_alerts` rows, repeats of one `alert_type` and `sensor_id` counted once, so it equals the unacknowledged rows Activity lists (API-02 `alerts.open`). It shows as text in the nav; Now's hero and Alerts tile, Activity and MCP use the same count | API-02 | 15 s |
 | Footer | "Verdify dashboard · build `<sha>` · API `<sha>`", graphs.verdify.ai ↗, lab.verdify.ai ↗ | BFF `SOURCE_REVISION`, API-01 | load |
 | Toasts | After each write ([design system](design-system.md) §4.5); Stop's stays until dismissed | — | — |
 
@@ -584,7 +584,7 @@ At 390 alerts come first, then the log; alert rows stack with full-width buttons
 
 | Panel | Shows | Data | Refresh |
 |---|---|---|---|
-| Open alerts | `v_open_alerts` rows nobody has acknowledged, by severity (critical, warning, info) then age: the plain title from the one words table (`leak_detected` reads "Water flowing with every Verdify valve closed", with "a leak, or the hose, sink or hydro in use" beneath), zone or line, first and last seen, how many times a repeat of the same type and zone was seen (repeats merge into one row, and a long-offline probe's alert resolves itself, VD-72), current value. Acknowledged ones collapse into "Acknowledged, still open (N)" with who acknowledged; "Show resolved in the last 24 h". Expanding a row (`/activity?alert=<id>`) shows every field, the runbook from `slack_alert_runbooks` when one exists, and "Open in Graphs": the ±2 h window with the climate panels and the equipment lanes, wet relays and the flow lanes included | API-14 | 15 s |
+| Open alerts | `v_open_alerts` rows nobody has acknowledged, by severity (critical, warning, info) then age: the plain title from the one words table (`leak_detected` reads "Water flowing with every Verdify valve closed", with "a leak, or the hose, sink or hydro in use" beneath), zone or line, first and last seen, how many times a repeat of the same type and sensor was seen (repeats merge into one row, and a long-offline probe's alert resolves itself, VD-72), current value. Acknowledged ones collapse into "Acknowledged, still open (N)" with who acknowledged; "Show resolved in the last 24 h". Expanding a row (`/activity?alert=<id>`) shows every field, the runbook from `slack_alert_runbooks` when one exists, and "Open in Graphs": the ±2 h window with the climate panels and the equipment lanes, wet relays and the flow lanes included | API-14 | 15 s |
 | Activity log | Time; actor and source ("Jason · dashboard", "iris" with AI, "steward · agent" with AI, "forecast-engine · system"); action in words; target; before → after, with "manual cleared" when a write took an item off manual; reason; readback outcome. An Iris plan is one entry with its changes in a disclosure; a change made while an experiment is armed carries the experiment's id. Filters for source, actor, action and target in the URL; Load older (cursor) | API-17 | 60 s |
 
 | Action (operator) | Operation | Feedback |
@@ -669,6 +669,18 @@ Acceptance:
 4. Restart sends one API-IRR-12 `{kind: "restart"}`; the fixture's uptime resets and `irr_program_id` returns
    `src=nvs` with the same hash after the reconnect.
 5. Viewers see the board and the lanes with no burst, clear or restart control.
+
+As built (VD-14, `dashboard/app/routes/equipment.tsx`), where the board settles a detail this section leaves open:
+
+| Topic | As built |
+|---|---|
+| Row | The API's label and state (ON, OFF or UNKNOWN; the vent OPEN or CLOSED) over one line of facts in words: "since 08:31 · on today 2 h 10 min · cycles 6 · reported 2 h ago" (the vent "open today"). A null since, time on or cycle count reads "—" |
+| Since | "HH:MM" on today's America/Denver day and "MM/DD HH:MM" before it, 24-hour, where the wireframe's "Fri 07:43" reads "10/30 07:43"; the full time is in the `title`. A known state whose run has not changed within API-13's 31-day edge window (#1167) has a null since and reads "since — (no change in 31 days)" |
+| Unknown | "UNKNOWN · last report 14 min ago" beside the name, and the facts read "since — · on today — · cycles —", because API-13 serves none of them while the state is unknown |
+| Grow lights | "OFF (controller) · Lutron OFF", with "▲ DIFFER" in an amber tag when both are known and differ; an unknown Lutron state reads "Lutron UNKNOWN · 11 min ago"; a null intent reads "— (controller)". A note in the Light card calls the Lutron state sensed and says since, time on and cycles follow it |
+| Omitted actuator | Its `equipment_state` key, with "—" and "no data", never a made-up name or OFF. An item outside the fixed list follows its group's fixed rows; an `_intent` key is never a row |
+| Errors | A failed API-13 read replaces the three groups with one "Couldn't load equipment." and Retry; a failed API-05 read shows "Couldn't load equipment lanes." and Retry in the lanes panel |
+| Lanes | The panel reads "Last 24 h" or "Last 72 h" with "Updated N s ago". Each 60 s read asks API-05 for the window ending at that moment on the server's clock (API-02's skew), and the lanes draw the window it answered for, on the sync key `verdify:equipment:<range>` |
 
 ## 9. SCR-08 Plants (Later) · `/plants`
 

@@ -420,7 +420,7 @@ JOIN coverage c
 WHERE c.coverage <> 'no_data';
 
 COMMENT ON VIEW public.v_irrigation_minutes_daily IS
-'Valve-open minutes (0.1), pulses (runs starting that day) and whole gallons per America/Denver day by greenhouse, zone, line, cause, chemistry and slot. Cause and slot_id come from the irrigation_ledger row whose span contains a run''s start; an unmatched L01 run within 30 s after a sent run command reads run_now; other runs keep the line''s topology cause and a NULL slot_id. gal is NULL for L03, and when a row''s runs had no accepted delta it is 0 if the meter recorded one that day and NULL if not. partial marks a day whose coverage is not complete; no_data days have no rows.';
+'Valve-open minutes (0.1), pulses (runs starting that day) and whole gallons per America/Denver day by greenhouse, zone, line, cause, chemistry and slot. Cause and slot_id come from the newest irrigation_ledger row on the run''s line that started at most 24 hours before it and whose span (to now while open) contains its start; an unmatched L01 run starting 0-30 s after the sent_at of a sent L01 run command reads run_now; other runs keep the line''s topology cause and a NULL slot_id. gal is NULL for L03, and when a row''s runs had no accepted delta it is 0 if the meter recorded one that day and NULL if not. partial marks a day whose coverage is not complete; no_data days have no rows.';
 
 -- The view's rows for local days p_from..p_to, with the equipment_state scan bounded by the day
 -- range: seeded with each relay's state at p_from's local midnight (read as v_water_relay_runs
@@ -683,7 +683,7 @@ COMMENT ON FUNCTION public.fn_irrigation_minutes_daily(date, date) IS
 -- commands and edit a line's enable, flags, caps, pause and manual. Only the dashboard login
 -- records a check: only a person does (D-IRP-07). The ingestor reads them, marks commands,
 -- records pushes and outcomes, and asks whether an experiment is armed through the definer
--- function, with still no SELECT on control_experiments. Sequence USAGE goes wherever INSERT
+-- function; this file grants nothing on control_experiments. Sequence USAGE goes wherever INSERT
 -- does. Nothing for PUBLIC or the api login, and nothing on setpoint_changes.
 REVOKE ALL ON public.irrigation_line, public.irrigation_slot, public.irrigation_command, public.irrigation_push,
     public.irrigation_ledger, public.v_irrigation_line_state FROM PUBLIC;
@@ -714,13 +714,13 @@ GRANT EXECUTE ON FUNCTION public.fn_mcp_armed_assignment_context() TO verdify_in
 -- applied can measure them (tests/fixtures/283-irrigation-tables-native-qualification.json).
 DO $successor$
 BEGIN
-    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7' OR
-        encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db' OR
+    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '030df35ca3b0bc8b94de5f394f96c2292674b2df58aea2d46990c53ad3bd1ad7' OR
+        encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM 'c03d427cbbf327c8843496c744d718e1fca70c1e6d98963022ac87e308954096' OR
         encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e'
     THEN RAISE EXCEPTION '283 refuses an unqualified successor'; END IF;
-    UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('aa226e5fb29a9aa0548c597ef718236d0d83737cb23c322920977a9655958dc7','hex'), captured_at=clock_timestamp() WHERE login_name='verdify_api_runtime_login';
+    UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('030df35ca3b0bc8b94de5f394f96c2292674b2df58aea2d46990c53ad3bd1ad7','hex'), captured_at=clock_timestamp() WHERE login_name='verdify_api_runtime_login';
     IF NOT FOUND THEN RAISE EXCEPTION '283 missing api receipt'; END IF;
-    UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('2449cf2fc05464a4deedb5f78de6da6d3208c870dd9f841133d3c8fe5f0513db','hex'), captured_at=clock_timestamp() WHERE login_name='verdify_ingestor_runtime_login';
+    UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('c03d427cbbf327c8843496c744d718e1fca70c1e6d98963022ac87e308954096','hex'), captured_at=clock_timestamp() WHERE login_name='verdify_ingestor_runtime_login';
     IF NOT FOUND THEN RAISE EXCEPTION '283 missing ingestor receipt'; END IF;
     UPDATE public.mcp_runtime_boundary_receipt SET boundary_sha256=decode('6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e','hex') WHERE singleton;
     IF NOT FOUND THEN RAISE EXCEPTION '283 missing mcp receipt'; END IF;

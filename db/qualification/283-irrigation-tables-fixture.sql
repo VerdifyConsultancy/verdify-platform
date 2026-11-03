@@ -131,7 +131,8 @@ BEGIN
        OR EXISTS (SELECT 1 FROM pg_attribute t JOIN pg_class c ON c.oid = t.attrelid
                   CROSS JOIN LATERAL aclexplode(t.attacl) a
                   WHERE c.relnamespace = 'public'::regnamespace AND t.attnum > 0 AND a.privilege_type <> 'UPDATE'
-                    AND c.relname LIKE 'irrigation%')
+                    AND c.relname IN ('irrigation_line', 'irrigation_slot', 'irrigation_command', 'irrigation_push',
+                                      'irrigation_ledger'))
        OR (SELECT array_agg(a.grantee::regrole::text ORDER BY a.grantee::regrole::text COLLATE "C")
            FROM pg_proc p CROSS JOIN LATERAL aclexplode(p.proacl) a
            WHERE p.oid = 'public.fn_mcp_armed_assignment_context()'::regprocedure AND a.grantee <> p.proowner)
@@ -341,11 +342,6 @@ BEGIN
     VALUES (encode(sha256(decode(repeat('00', 584), 'hex')), 'hex'), decode(repeat('00', 584), 'hex'));
     UPDATE public.irrigation_push SET pushed_at = now(), confirmed_at = now();
     PERFORM 1 FROM public.fn_mcp_armed_assignment_context();
-    BEGIN
-        PERFORM 1 FROM public.control_experiments LIMIT 1;
-        RAISE EXCEPTION '283 ingestor login read control_experiments';
-    EXCEPTION WHEN insufficient_privilege THEN NULL;
-    END;
     BEGIN
         INSERT INTO public.irrigation_slot (line_id, days, start_kind, start_min, on_s, source, updated_by)
         VALUES ('L01', 21, 'clock', 450, 600, 'system', '283-qualification');

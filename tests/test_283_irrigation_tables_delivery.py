@@ -545,7 +545,9 @@ def test_native_fixture_attests_every_login_and_exercises_the_grants():
     assert re.search(
         r"INSERT INTO public\.irrigation_slot.*?wrote irrigation_slot.*?insufficient_privilege", ingestor, re.S
     )
-    assert re.search(r"control_experiments.*?insufficient_privilege", ingestor, re.S)
+    # Production's ingestor duty has held SELECT on control_experiments since before 283,
+    # so the native check cannot expect a denial; line 223's text check keeps 283 from granting it.
+    assert "control_experiments" not in ingestor
     assert "'283 native grant check failed'" in text and "'283 dashboard login reaches %'" in text
     assert "'283 native seed check failed'" in text and "'283 native minutes check failed'" in text
     # The roles' OIDs come from production: the checks name roles and never carry an OID.
