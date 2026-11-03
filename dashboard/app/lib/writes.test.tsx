@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { QueryClient } from "@tanstack/react-query";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { AlertRow } from "../components/alert-row";
 import { ReadbackBadge } from "../components/badge";
 import { Button } from "../components/button";
@@ -21,8 +21,9 @@ import { parseDecimal } from "./setting-values";
 import { NOW_POLL_MS, NOW_QUERY_KEY, fetchNow } from "./shell";
 import { NOW, UUID, advance, renderWithApi, requests, sentAt, startFixtureApi, stopFixtureApi, writes } from "./test-fixture-api";
 import { usePolledQuery } from "./use-current";
+import { words } from "./words";
 import {
-  COMMAND_WINDOW_MS, NOT_STARTED, defaultReadback, errorFor, formError, newestNow, programBody, programSyncText, readback, runningLines, settingToast, stopResult,
+  COMMAND_WINDOW_MS, NOT_STARTED, defaultReadback, errorFor, formError, newestNow, problemMessage, programBody, programSyncText, readback, runningLines, settingToast, stopResult,
   useCommand, useProgramWrite, useRecordWrite, useSettingWrite, useStop,
 } from "./writes";
 
@@ -391,6 +392,18 @@ test("two presses before a render send one request with one key: Save, Run and S
   const sent = writes(api);
   expect(sent.map((row) => row.operationId)).toEqual(["API-10", "API-IRR-06", "API-IRR-07"]);
   expect(new Set(sent.map((row) => row.idempotency_key)).size).toBe(3);
+});
+
+test("C: manifold_busy reads the API's sentence naming the holder; a detail with no end time gains one from retry_after_s", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(NOW);
+  const busy = { type: "about:blank", title: "Manifold busy", status: 422, code: "manifold_busy", retryable: true, min: null, max: null, current: null };
+  expect(problemMessage({ ...busy, detail: "L01 holds the drip manifold until 07:42; stop it or try then", retry_after_s: 60 })).toBe("L01 holds the drip manifold until 07:42; stop it or try then");
+  expect(problemMessage({ ...busy, detail: "L01 holds the drip manifold", retry_after_s: 420 })).toBe("L01 holds the drip manifold until 10:49; stop it or try then");
+  expect(problemMessage({ ...busy, detail: "L01 holds the drip manifold; stop it or try again", retry_after_s: 420 })).toBe("L01 holds the drip manifold until 10:49; stop it or try then");
+  expect(problemMessage({ ...busy, detail: "L01 holds the drip manifold", retry_after_s: null })).toBe("L01 holds the drip manifold");
+  expect(problemMessage({ ...busy, retry_after_s: null })).toBe(words("problem_code", "manifold_busy"));
+  vi.useRealTimers();
 });
 
 // ---------------------------------------------------------------------------------------------------- R

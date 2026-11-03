@@ -514,3 +514,53 @@ test("as a server it starts only in approved in-cluster CI", () => {
   expect(() => startFixtureServer({})).toThrow("Fixture API requires approved in-cluster CI");
   expect(() => startFixtureServer({ DASHBOARD_CI_IN_CLUSTER: "0" })).toThrow("Fixture API requires approved in-cluster CI");
 });
+
+test("run-dialogs and manifold-busy: L02 and L08 enabled with a check, L04 on a schedule, and a run on L02 refused with the holder and until when", () => {
+  const api = handler("run-dialogs");
+  for (const id of ["L02", "L08"]) expect(line(api, id)).toMatchObject({ enabled: true, check: { checked_by: "jason" }, state: { code: "idle" } });
+  expect(line(api, "L04")).toMatchObject({ schedule_member: true, check: { checked_by: "jason" } });
+  expect(at(api, "POST", "/v1/irrigation/lines/L08/run", { on_s: 45, count: 4, gap_s: 60, prewet_s: 120, flush_s: 240 }, KEY).status).toBe(202);
+  const busy = handler("manifold-busy");
+  expect(at(busy, "POST", "/v1/irrigation/lines/L02/run", { minutes: 5, prewet_s: 120, flush_s: 240 }, KEY).body).toMatchObject({
+    status: 422, code: "manifold_busy", retryable: true, retry_after_s: 420, detail: "L01 holds the drip manifold until 10:49; stop it or try then",
+  });
+  expect(get(busy, "/v1/activity?action=irrigation.run").items).toHaveLength(1);
+});
+
+test("burst-readback-late: a burst reads back 10 s after the command, or on the third API-02 read on a pinned clock; its deadline runs from the ON edge", () => {
+  let clock = NOW;
+  const api = createFixtureHandler({ fixture: "burst-readback-late", clock: () => clock });
+  expect(at(api, "POST", "/v1/equipment/override", { kind: "fans", minutes: 15 }, KEY).status).toBe(202);
+  clock = NOW + 5000;
+  expect(get(api, "/v1/now").overrides).toEqual([]);
+  clock = NOW + 10_000;
+  expect(get(api, "/v1/now").overrides).toEqual([{ kind: "fans", since: new Date(NOW + 10_000).toISOString(), ends_at: new Date(NOW + 10_000 + 15 * 60_000).toISOString(), held_reason: null }]);
+  const pinned = handler("burst-readback-late");
+  expect(at(pinned, "POST", "/v1/equipment/override", { kind: "fans", minutes: 15 }, KEY).status).toBe(202);
+  expect(get(pinned, "/v1/now").overrides).toEqual([]);
+  expect(get(pinned, "/v1/now").overrides).toEqual([]);
+  expect(get(pinned, "/v1/now").overrides).toHaveLength(1);
+  expect(at(pinned, "POST", "/v1/equipment/override", { kind: "clear" }, OTHER_KEY).status).toBe(202);
+  expect(get(pinned, "/v1/now").overrides).toEqual([]);
+});
+
+test("restart-uptime-reset: uptime_s holds, then resets; with no such fixture it resets at once, and a burst held off carries the code", () => {
+  const api = handler("restart-uptime-reset");
+  expect(get(api, "/v1/now").controller.uptime_s).toBe(271_840);
+  expect(at(api, "POST", "/v1/equipment/override", { kind: "restart" }, KEY).status).toBe(202);
+  expect([get(api, "/v1/now"), get(api, "/v1/now"), get(api, "/v1/now")].map((now) => now.controller.uptime_s)).toEqual([271_840, 271_840, 0]);
+  const base = handler("occupied");
+  expect(at(base, "POST", "/v1/equipment/override", { kind: "restart" }, KEY).status).toBe(202);
+  expect(get(base, "/v1/now").controller.uptime_s).toBe(0);
+  expect(at(base, "POST", "/v1/equipment/override", { kind: "humidify", minutes: 5 }, OTHER_KEY).status).toBe(202);
+  expect(get(base, "/v1/now").overrides).toEqual([expect.objectContaining({ kind: "humidify", held_reason: "occupancy" })]);
+});
+
+test("caretaker-visit, J9's morning: nothing open or running, the wall watered at 07:31, center misted at 09:58, someone seen a minute ago", () => {
+  const api = handler("caretaker-visit");
+  const now = get(api, "/v1/now");
+  expect(now).toMatchObject({ alerts: { open: 0 }, running: [] });
+  expect(line(api, "L01")).toMatchObject({ last_water: { at: "2026-11-02T14:31:00.000Z", open_s: 720, cause: "schedule" }, today: { minutes: 12 } });
+  expect(line(api, "L04")).toMatchObject({ last_water: { at: "2026-11-02T16:58:00.000Z", cause: "vpd" } });
+  expect(get(api, "/v1/irrigation").occupancy).toEqual({ occupied: true, seen_at: minutesAgo(1), hold_enabled: true });
+});

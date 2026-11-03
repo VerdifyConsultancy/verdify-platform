@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
-// SCR-04 Water (#1135) at 1440 and 390 px: the board, the week and its day switcher, minutes by zone, the run ledger, the
-// program banner, and Stop all water on all three views. That a viewer sees no Stop is roles.spec.ts.
+// SCR-04 Water (#1135, #1136) at 1440 and 390 px: the board, the week and its day switcher, minutes by zone, the run ledger,
+// the program banner, Stop all water on all three views, and a card's targets and the run dialog. That a viewer sees no
+// Stop is roles.spec.ts, and a card's Run… and Stop in a visit are caretaker-visit.spec.ts.
 import type { Page } from "@playwright/test";
-import { CAN_STILL_START, CAN_STILL_START_NO_ENGINE, DESKTOP, PHONE, STOPPED, expect, expectNoHorizontalScroll, fixtureWrites, load, test, toastLines, untilPolled, useScreensClock } from "./support";
+import { CAN_STILL_START, CAN_STILL_START_NO_ENGINE, DESKTOP, PHONE, STOPPED, axe, expect, expectNoHorizontalScroll, fixtureWrites, load, test, toastLines, untilPolled, useScreensClock } from "./support";
 
 const VIEWS = ["/water", "/water/schedules", "/water/history"];
 const card = (page: Page, id: string) => page.locator(`.line-card[data-line="${id}"]`);
@@ -121,6 +122,28 @@ for (const [fixture, result] of [["writes-off", CAN_STILL_START], ["before-engin
     expect((await fixtureWrites(request)).map((write) => write.operationId)).toEqual(["API-IRR-07"]);
   });
 }
+
+test("at 390 px a card's Run… is full width and each of its targets is at least 44 px", async ({ page, request }) => {
+  await page.setViewportSize(PHONE);
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/water");
+  const actions = card(page, "L01").locator(".line-card-actions");
+  const run = actions.getByRole("button", { name: /^Run…/ });
+  const [row, wide] = await Promise.all([actions.boundingBox(), run.boundingBox()]);
+  expect(wide?.width).toBeCloseTo(row?.width ?? 0, 0);
+  for (const target of [run, actions.getByRole("button", { name: /^Stop/ }), actions.getByRole("link")]) expect((await target.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  await expectNoHorizontalScroll(page);
+});
+
+test("the run dialog with its most fields passes WCAG 2.2 AA at 390 px", async ({ page, request }) => {
+  test.slow();
+  await page.setViewportSize(PHONE);
+  await useScreensClock(page, request, "run-dialogs");
+  await load(page, "/water");
+  await card(page, "L08").getByRole("button", { name: /^Run…/ }).click();
+  await expect(page.locator("dialog[open]")).toContainText("Run L08 South feed (FERT)");
+  await axe(page);
+});
 
 test("at 390 px Stop reads ■ Stop all and stays reachable while the page scrolls", async ({ page, request }) => {
   await page.setViewportSize(PHONE);

@@ -5,7 +5,7 @@
  *
  * - A line of the zone running: "now (VPD)", with its cause in words.
  * - Today: "today 07:31, 12 min"; within the last six days, the weekday: "Fri 07:31, 12 min"; older: "9 days ago".
- * - A mister says "misted" with the cause instead of the minutes: "misted today 06:58 (VPD)".
+ * - A mister says "misted" with the cause instead of the minutes: "misted 06:58 (VPD)" today, "misted Fri 13:20 (VPD)".
  * - A zone with no enabled line reads "not set up", never 0; a set-up zone with no run on record reads "—" with why.
  */
 import { causeWords } from "../charts/causes";
@@ -71,7 +71,7 @@ export function zoneLastWater(zone: WaterZone, lines: readonly IrrigationLine[],
   // A time a moment ahead of this clock reads as today.
   const days = ago === null ? 0 : Math.max(0, ago);
   const when = days === 0 ? `today ${shortTime(water.at)}` : days <= 6 ? `${WEEKDAY.format(new Date(water.at))} ${shortTime(water.at)}` : `${days} days ago`;
-  if (isMister(newest.line)) return { zone, state: "watered", text: `misted ${when} (${cause(water.cause)})`, reason: null };
+  if (isMister(newest.line)) return { zone, state: "watered", text: `misted ${when.replace(/^today /, "")} (${cause(water.cause)})`, reason: null };
   const minutes = days <= 6 && Number.isFinite(water.open_s) ? `, ${formatValue(water.open_s / 60, "min")}` : "";
   return { zone, state: "watered", text: `${when}${minutes}`, reason: null };
 }

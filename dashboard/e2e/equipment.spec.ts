@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
-// SCR-07 Equipment (#1134): the board's states and the unknown rule, both grow lights, the lanes' window in the URL and
-// their unknown span in words. That the board has no write control for a viewer is roles.spec.ts.
+// SCR-07 Equipment (#1134, #1136): the board's states and the unknown rule, both grow lights, the lanes' window in the URL
+// and their unknown span in words, then the bursts and Restart controller. That a viewer has no write control is
+// roles.spec.ts.
 import type { Page } from "@playwright/test";
-import { PHONE, expect, expectNoHorizontalScroll, fixtureRequests, load, test, useScreensClock } from "./support";
+import { PHONE, expect, expectNoHorizontalScroll, fixtureRequests, fixtureWrites, load, test, untilPolled, useScreensClock } from "./support";
 
 const board = (page: Page) => page.locator(".equipment-row");
 const row = (page: Page, key: string) => page.locator(`.equipment-row[data-equipment="${key}"]`);
@@ -89,4 +90,45 @@ test("the lanes-unknown span reads unknown in the key and the data table, betwee
   await expect(fan1.locator("td").first()).toBeVisible();
   const states = await fan1.evaluateAll((rows) => rows.map((node) => node.children[1]?.textContent));
   expect(states).toEqual(["off", "unknown", "off"]);
+});
+
+test("Fans 15 min sends one API-IRR-12 with no dialog, and reads Fans burst · 15 min left once the readback turns on", async ({ page, request }) => {
+  await useScreensClock(page, request, "burst-readback-late");
+  await load(page, "/equipment");
+  await expect(page.locator("[data-bursts=none]")).toHaveText("Running: none");
+  await page.getByRole("button", { name: "Fans 15 min" }).click();
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
+  await untilPolled(page, () => expect(page.locator(".burst-panel [data-chip=burst]")).toHaveText("Fans burst · 15 min left", { timeout: 500 }));
+  expect((await fixtureWrites(request)).map((write) => [write.operationId, write.body])).toEqual([["API-IRR-12", { kind: "fans", minutes: 15 }]]);
+});
+
+test("Restart controller under More actions sends one API-IRR-12 and reads Restart sent until the uptime drops", async ({ page, request }) => {
+  await useScreensClock(page, request, "restart-uptime-reset");
+  await load(page, "/equipment");
+  await page.locator(".burst-more summary").click();
+  await page.getByRole("button", { name: "Restart controller" }).click();
+  await expect(page.getByRole("button", { name: "Restart sent" })).toBeDisabled();
+  await untilPolled(page, () => expect(page.getByRole("button", { name: "Restart controller" })).toBeEnabled({ timeout: 500 }));
+  expect((await fixtureWrites(request)).map((write) => [write.operationId, write.body])).toEqual([["API-IRR-12", { kind: "restart" }]]);
+});
+
+test("before the irrigation firmware the bursts and Restart say when they arrive, with no button", async ({ page, request }) => {
+  await useScreensClock(page, request, "before-engine");
+  await load(page, "/equipment");
+  await expect(page.locator("[data-arrives=bursts]")).toHaveText("Bursts arrive with the irrigation firmware (manual_override)");
+  await expect(page.locator("[data-arrives=restart]")).toHaveText("Restart arrives with the irrigation firmware");
+  await expect(page.locator(".burst-panel [data-write-control]")).toHaveCount(0);
+});
+
+test("at 390 px the burst buttons are full width and at least 44 px", async ({ page, request }) => {
+  await page.setViewportSize(PHONE);
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/equipment");
+  const row = await page.locator(".burst-panel .burst-actions").first().boundingBox();
+  for (const name of ["Fans 15 min", "Humidify 5 min", "Vent bypass 10 min", "Clear bursts"]) {
+    const box = await page.getByRole("button", { name }).boundingBox();
+    expect(box?.width, name).toBeCloseTo(row?.width ?? 0, 0);
+    expect(box?.height, name).toBeGreaterThanOrEqual(44);
+  }
+  await expectNoHorizontalScroll(page);
 });

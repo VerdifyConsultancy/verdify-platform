@@ -7,6 +7,7 @@ import { epochOf } from "../charts/time-axis";
 import type { StateInterval, StateLane, StateLanes as LaneWindow } from "../charts/types";
 import { chartLinks } from "../charts/uplot-chart";
 import { Badge } from "../components/badge";
+import { BurstPanel } from "../components/burst-panel";
 import { PageHead } from "../components/common";
 import { useNow } from "../components/freshness";
 import { Panel, PanelError, type PanelState } from "../components/panel";
@@ -16,11 +17,11 @@ import type { Equipment as EquipmentAnswer, StateLanes } from "../lib/operator-a
 import { useEquipmentRead, useStatesWindowRead } from "../lib/queries";
 
 /**
- * SCR-07 Equipment (#1134): the board of every actuator from API-13, polled every 15 s, and the equipment lanes from
- * API-05 over the last 24 h or 72 h (`?range=`), polled every 60 s. Read-only: there is no control for any role, so
- * viewers and operators see the same page. Every state, since, runtime, cycle count and unknown is the API's; the page
- * never collapses edges, counts cycles or decides from an age that a state is unknown. No greenhouse data renders here
- * or in SSR: data loads in the browser.
+ * SCR-07 Equipment (#1134): the bursts and Restart controller (#1136), the board of every actuator from API-13, polled
+ * every 15 s, and the equipment lanes from API-05 over the last 24 h or 72 h (`?range=`), polled every 60 s. The board and
+ * the lanes are read-only for every role, and only operators see the bursts' controls. Every state, since, runtime,
+ * cycle count and unknown is the API's; the page never collapses edges, counts cycles or decides from an age that a state
+ * is unknown. No greenhouse data renders here or in SSR: data loads in the browser.
  */
 export const meta = () => [{ title: "Equipment · Verdify dashboard" }];
 export const links = () => chartLinks();
@@ -214,8 +215,8 @@ function LanesPanel() {
 
 export default function Equipment() {
   return <>
-    {/* The page head's actions slot stays free for the bursts and Restart controller (#1136). */}
     <PageHead eyebrow="EQUIPMENT · COMMANDED STATE · AMERICA/DENVER" title="Equipment and controller" lede="What the controller has each actuator doing now, since when, and today's time on and cycles." />
+    <BurstPanel />
     <EquipmentBoard />
     <div className="section"><LanesPanel /></div>
   </>;

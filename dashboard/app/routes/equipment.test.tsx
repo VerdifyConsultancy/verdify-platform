@@ -289,7 +289,7 @@ test("the lanes-unknown span is hatched where API-05 returns it, never drawn as 
   expect(cells.filter((row) => row[0] === "Fan 1").map((row) => row[1])).toEqual(["off", "unknown", "off"]);
 });
 
-test("viewers see the board and the lanes with no controls: the page has no write control for any role", async () => {
+test("viewers see the board and the lanes with no controls; an operator gets the bursts and Restart controller, and nothing more", async () => {
   const controls = () => ({
     buttons: [...document.body.querySelectorAll("button")].map((button) => text(button)),
     writes: document.querySelectorAll("[data-write-control], form, input, select, textarea").length,
@@ -297,12 +297,12 @@ test("viewers see the board and the lanes with no controls: the page has no writ
   await load({ fixture: "viewer-session" }, { role: "viewer" });
   expect(document.querySelectorAll(".equipment-row")).toHaveLength(18);
   expect(document.querySelector(".lanes")).toBeTruthy();
-  const viewer = controls();
   // The one button is the lanes' fold of the idle rows: a view control, the same for every role.
-  expect(viewer).toEqual({ buttons: [expect.stringMatching(/^\d+ idle rows$/)], writes: 0 });
+  const fold = expect.stringMatching(/^\d+ idle rows$/);
+  expect(controls()).toEqual({ buttons: [fold], writes: 0 });
   cleanup(); stopFixtureApi(); chartStubs();
   await load({}, { role: "operator" });
-  expect(controls()).toEqual(viewer);
+  expect(controls()).toEqual({ buttons: ["Fans 15 min", "Humidify 5 min", "Vent bypass 10 min", "Clear bursts", "Restart controller", fold], writes: 5 });
 });
 
 test("a failed board read shows Couldn't load equipment with Retry on the board alone; the lanes keep working, and Retry reads again", async () => {

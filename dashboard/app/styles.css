@@ -573,6 +573,21 @@ a.picker-item:hover{background:var(--field)}
 .week-block-actions{display:grid;gap:.3rem;margin-top:.35rem}
 .week-block-actions .btn{height:auto;white-space:normal;font-size:.78rem}
 
+/* Water and equipment commands (SCR-01, SCR-04, SCR-07, VD-16): the notes beside a line's Run…, Stop and Clear fault, Clear fault beside Now's fault line and the burst panel. At phone width Run… and the burst buttons are full width (.btn-wide), and every target is a 44 px .btn. */
+.line-card-actions .state-note,.line-card-actions .field-error,.mister-zone .actions .state-note{flex:1 1 100%;margin:0}
+.mister-zone .actions:empty{display:none}
+.water-fault{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .75rem}
+.now-chip-action{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem}
+.burst-panel{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem;margin:0 0 1rem}
+.burst-panel>*{margin:0}
+.burst-panel>.skeleton,.burst-panel>.panel-error{flex:1 1 100%}
+.burst-actions .state-note,.burst-actions .field-error{flex-basis:100%}
+.burst-more{margin-left:auto}
+.burst-more[open]{flex:1 1 100%;margin-left:0}
+.burst-more[open] .burst-actions{margin-top:.5rem}
+.burst-running{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem}
+@media(max-width:860px){.burst-panel>*{flex:1 1 100%}.burst-more{margin-left:0}}
+
 /* Dashboard (design system §2.2): added tokens, the two AA fixes and the new badges. Weather's tokens above are never edited. This block comes last: its :focus-visible and input,select,textarea rules have the same specificity as weather's and win by order. */
 :root{
   --focus:#0e5a43;--control-border:#6f867d;
