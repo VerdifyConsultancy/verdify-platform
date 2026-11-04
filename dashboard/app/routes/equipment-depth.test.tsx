@@ -130,7 +130,11 @@ test("a viewer gets the board's words and no light control; with changes switche
   await load({ fixture: "in-band" }, { role: "viewer", writesEnabled: false });
   for (const key of ["grow_light_main", "grow_light_grow"]) {
     expect(within(row(key)).queryAllByRole("button"), key).toEqual([]);
-    expect(within(row(key)).queryByRole("link"), key).toBeNull();
+    // The one link is the automatic switch's setting, which a viewer opens read-only.
+    const light = key === "grow_light_main" ? "Main" : "Grow";
+    expect(within(row(key)).getAllByRole("link").map((link) => [text(link), link.getAttribute("href")]), key).toEqual([
+      [`Automation setting of ${light}›`, `/equipment?edit=sw_gl_${key === "grow_light_main" ? "main" : "grow"}_auto_mode`],
+    ]);
     expect(auto(key), key).toBe("Automatic");
   }
   cleanup();
@@ -144,10 +148,11 @@ test("a viewer gets the board's words and no light control; with changes switche
   }
 });
 
-test("each light links to its Activity, and each button is a wide 44 px write control", async () => {
+test("each light links to its Activity log and its automatic switch's setting, and each button is a wide 44 px write control", async () => {
   await load({ fixture: "in-band" });
-  expect(within(row("grow_light_main")).getByRole("link", { name: "Activity of Main" }).getAttribute("href")).toBe("/activity?target=grow_light_main");
-  expect(within(row("grow_light_grow")).getByRole("link", { name: "Activity of Grow" }).getAttribute("href")).toBe("/activity?target=grow_light_grow");
+  expect(within(row("grow_light_main")).getByRole("link", { name: "Activity of Main" }).getAttribute("href")).toBe("/activity/log?target=grow_light_main");
+  expect(within(row("grow_light_grow")).getByRole("link", { name: "Activity of Grow" }).getAttribute("href")).toBe("/activity/log?target=grow_light_grow");
+  expect(within(row("grow_light_main")).getByRole("link", { name: "Automation setting of Main" }).getAttribute("href")).toBe("/equipment?edit=sw_gl_main_auto_mode");
   for (const name of [/^Turn on/, /^Turn off/, /^Back to automatic/]) {
     const node = button("grow_light_main", name)!;
     expect(node.className).toContain("btn-wide");
@@ -444,7 +449,7 @@ test("a failed API-13 poll replaces the groups, and the write and its resync out
   await advance(0);
   failing = true;
   await tick(3000);
-  expect(document.querySelector(".equipment-board")).toBeNull();
+  expect(document.querySelector(".equipment-rows")).toBeNull();
   expect(text(document.querySelector(".equipment-error .fault"))).toBe("Couldn't load equipment.");
   expect(requests(api, "API-10")).toHaveLength(1);
   failing = false;
@@ -452,7 +457,7 @@ test("a failed API-13 poll replaces the groups, and the write and its resync out
   await poll(() => lightWrites(api).length > 0);
   expect(lightWrites(api)).toEqual([["/api/v1/equipment/lights/grow/on", { reason: "Back to automatic" }]]);
   await tick(5000);
-  expect(document.querySelector(".equipment-board")).not.toBeNull();
+  expect(document.querySelector(".equipment-rows")).not.toBeNull();
   expect(auto("grow_light_grow")).toBe("Confirmed Automatic");
 });
 

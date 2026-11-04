@@ -1,86 +1,119 @@
 /* SPDX-License-Identifier: MIT */
 /* Section: Control (WP4) */
-/* Settings (SCR-05), Plan (SCR-03) and Equipment (SCR-07): the rules moved from styles.css unchanged in WP0.1; new classes use the prefix ctl-. Loaded by root.tsx after styles.css and tokens.css, in the fixed order of redesign §10.1. Colours are tokens only (white the one literal); this file never redefines :focus-visible or the input borders that the §2.2 block in styles.css sets. */
+/* Settings (SCR-05), Plan (SCR-03) and Equipment (SCR-07) as redesign §5.10 to §5.12 lay them out, and the setting drawer they share. New classes use the prefix ctl-; the hooks the specs keep (setting-*, plan-*, trigger-*, equipment-*, why-*, light-*) keep their names. Loaded by root.tsx after styles.css and tokens.css, in the fixed order of redesign §10.1. Colours are tokens only (white the one literal); this file never redefines :focus-visible or the input borders that the §2.2 block in styles.css sets. */
 
-/* Equipment (screens SCR-07): each board row is the name and state over one line of facts; both wrap, so a row fits from 320 px up. */
-.equipment-rows{list-style:none;margin:0;padding:0}
-.equipment-row{padding:.55rem 0;border-top:1px solid var(--line);min-width:0}
-.equipment-row:first-child{padding-top:0;border-top:0}
-.equipment-row:last-child{padding-bottom:0}
-.equipment-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:.15rem .75rem}
-.equipment-name{font-weight:600;min-width:0}
-.equipment-key{font:500 .85rem/1.4 var(--mono);color:var(--muted)}
-.equipment-state{font-size:.85rem;font-variant-numeric:tabular-nums}
-.equipment-facts{margin:.15rem 0 0;font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
-.equipment-note{margin:.75rem 0 0}
-/* Equipment depth (SCR-07, VD-20): the Why panel, one row per reason at every width (at phone width its label heads the row), and a grow light's controls, each a 44 px target, the buttons full width on phones (.btn-wide). */
-.why-rows{list-style:none;margin:0;padding:0}
-.why-row{display:grid;grid-template-columns:14rem minmax(0,1fr) auto;align-items:center;gap:0 .75rem;border-top:1px solid var(--line);min-width:0}
-.why-row:first-child{border-top:0}
-.why-label{font-weight:600}
-.why-words{min-width:0;padding:.35rem 0;font-size:.9rem}
-.why-since{color:var(--muted);font-variant-numeric:tabular-nums}
-.why-raw{font:500 .85rem/1.4 var(--mono);overflow-wrap:anywhere}
-.why-link,.light-actions a{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
-@media(max-width:860px){.why-row{grid-template-columns:minmax(0,1fr) auto;padding-top:.35rem}.why-label{grid-column:1/-1}}
-.light-controls{margin-top:.35rem}
-.light-auto{margin:0;font-size:.85rem}
-.light-actions{margin:.5rem 0 0}
-.light-controls .state-note,.light-controls .field-error{margin:.35rem 0 0}
+/* The header's search (Settings) and "Find a setting" (Plan, Equipment): an input and its button, full width under the status line on phones. */
+.ctl-find{display:flex;align-items:center;gap:var(--space-2);margin:0;min-width:0}
+.ctl-find input{width:min(20rem,100%);min-height:var(--tap)}
+.ctl-find .btn{flex:none}
+.ctl-search input{width:min(24rem,100%)}
 
-/* Plan (SCR-03): the plan in force, planner health and the lanes' head. Card and health sit in .grid-2, which stacks below 600 px; long ids, codes and stored times wrap, so nothing scrolls the page sideways at 390 px. */
-.plan-top{margin-bottom:1rem}
-.plan-facts{margin:0 0 .5rem;font-size:.9rem;overflow-wrap:anywhere}
-.plan-hypothesis{margin:0;overflow-wrap:anywhere}
-.plan-none{margin:0}
-.plan-after{margin:.25rem 0 0;font-size:.875rem;color:var(--muted)}
-.plan-detail{overflow-wrap:anywhere}
-.plan-detail h3{margin:.75rem 0 .3rem;font-size:.9rem}
-.plan-detail ul{margin:0;padding-left:1.1rem;font-size:.875rem}
-.plan-detail li+li{margin-top:.25rem}
-.plan-detail .setting-key{font:400 .78rem/1.3 var(--mono);color:var(--muted)}
-.trigger-list{list-style:none;margin:0;padding:0}
-.trigger-row{display:grid;grid-template-columns:1rem minmax(0,1fr) auto minmax(0,1fr);align-items:baseline;gap:.15rem .6rem;padding:.4rem .25rem .4rem .5rem;border-top:1px solid var(--line);border-left:3px solid transparent;font-size:.875rem}
-.trigger-row:first-child{border-top:0}
-.trigger-marked{border-left-color:var(--amber)}
-.trigger-mark{color:var(--warn-text);font-size:.8rem}
-.trigger-name{font:500 .78rem/1.3 var(--mono);overflow-wrap:anywhere}
-.trigger-due{font-variant-numeric:tabular-nums;white-space:nowrap}
-.trigger-class{grid-column:2/-1;font:400 .72rem/1.3 var(--mono);color:var(--muted);overflow-wrap:anywhere}
-.trigger-more{font-weight:400;color:var(--muted)}
-.plan-lane-tools{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem}
-.plan-manual{margin:0;font:500 .72rem/1.3 var(--mono);letter-spacing:.04em;color:var(--manual-text)}
+/* Text marks (D-UX-07): AI, DERIVED and NO READBACK sit after a value in muted mono, never as pills. */
+.ctl-mark{font:500 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
+.ctl-sep{color:var(--muted)}
 
-/* Settings (screens SCR-05, design system §4.6 SettingRow): the catalog's rows, a table at 1440 px and a stacked card each at 860 px and below. */
-.settings-tools{display:grid;gap:.25rem;margin:0 0 1rem}
-.settings-tools .filters{margin:0 0 .5rem}
-.settings-tools .filters label{flex:1 1 18rem;max-width:32rem}
-.chip-count,.table-group-count{font-variant-numeric:tabular-nums}
-.table-group-count{font-weight:400}
-.setting-name{min-width:11rem}
-.setting-label{display:block;font-weight:600}
-.setting-param{display:block;font-size:.78rem;color:var(--muted)}
-.setting-line{display:flex;flex-wrap:wrap;align-items:center;gap:.2rem .4rem;margin:0}
-.setting-line+.setting-line,.setting-line+.state-reason,.state-reason+.setting-line{margin-top:.25rem}
-.setting-device-value{font-weight:600;font-variant-numeric:tabular-nums}
-.setting-note{font-size:.85rem;color:var(--muted)}
-.setting-next-text{display:inline-flex;flex-wrap:wrap;align-items:center;gap:.2rem .4rem}
-.setting-cell-label{display:none}
-.setting-actions{white-space:nowrap}
-.setting-actions a{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
-.setting-history{margin-left:.6rem}
-.drawer-setting .eyebrow{margin-bottom:.15rem}
+/* ---------------------------------------------------------------- Settings (redesign §5.10) */
+/* The rail: Show and Groups, each item a row of name and count; the current filter carries a forest rule and bold words. At 860 px and below the same choices are two selects. */
+.ctl-rail{min-width:0}
+@media(min-width:861px){.ctl-rail{max-height:calc(100vh - var(--shell-header-h,4.3rem) - var(--space-6));overflow-y:auto;overscroll-behavior:contain}}
+.ctl-rail-label{margin:0 0 var(--space-1)}
+.ctl-rail-label+.ctl-rail-list{margin-bottom:var(--space-5)}
+.ctl-rail-list{list-style:none;margin:0;padding:0;display:grid;gap:1px}
+.ctl-rail-item{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);min-height:2.25rem;padding:0 var(--space-3);border-left:3px solid transparent;border-radius:0 var(--radius-sm) var(--radius-sm) 0;color:var(--ink);font-size:var(--fs-sm);text-decoration:none}
+a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
+.ctl-rail-item[aria-current=true]{border-left-color:var(--forest);background:var(--field);font-weight:620}
+.ctl-rail-count{font:500 var(--fs-xs)/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.ctl-rail-item.is-empty{color:var(--muted)}
+.ctl-rail-selects{display:none;gap:var(--space-3);grid-template-columns:repeat(2,minmax(0,1fr))}
+.ctl-rail-selects .field{margin:0}
+.ctl-rail-selects select{width:100%;min-height:var(--tap)}
+.ctl-settings-main{min-width:0}
+.ctl-stale-note{display:flex;flex-wrap:wrap;gap:0 var(--space-2);margin:0 0 var(--space-3)}
+
+/* The catalog: one card, one table, a sticky head per group. It is never a scroll container, so the group heads stick to the page under the header. */
+.ctl-catalog{border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-xs);min-width:0}
+.ctl-catalog-state{padding:var(--space-4)}
+.ctl-catalog-state p{margin:0}
+.ctl-catalog-empty p{display:flex;flex-wrap:wrap;align-items:center;gap:0 var(--space-3)}
+.ctl-empty-action{display:inline-flex;align-items:center;min-height:var(--tap);font-weight:700}
+.ctl-catalog-table{width:100%;border-collapse:separate;border-spacing:0}
+.ctl-catalog-table thead th{padding:var(--space-2) var(--space-4);border-bottom:1px solid var(--line)}
+.ctl-catalog-table thead th:first-child{border-top-left-radius:var(--radius)}
+.ctl-catalog-table thead th:last-child{border-top-right-radius:var(--radius)}
+.ctl-group-head th{position:sticky;top:var(--shell-header-h,4.3rem);z-index:var(--z-raised);padding:var(--space-2) var(--space-4);border-bottom:1px solid var(--line);scroll-margin-top:calc(var(--shell-header-h,4.3rem) + var(--space-2))}
+.ctl-group-name{margin-right:var(--space-3)}
+.ctl-group-note{font:400 var(--fs-xs)/1.4 "IBM Plex Sans",system-ui,sans-serif;text-transform:none;letter-spacing:0;color:var(--muted)}
+.table-group-count{font-weight:400;font-variant-numeric:tabular-nums}
+
+/* A row: the label and key, then the device value large, its bounds bar and its one pill on one line, and one meta line under them. */
+.setting-row>th,.setting-row>td{padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+.ctl-catalog-table tbody:last-child .setting-row:last-child>th,.ctl-catalog-table tbody:last-child .setting-row:last-child>td{border-bottom:0}
+.setting-name{width:30%;min-width:11rem;font-weight:400}
+.setting-label{display:block;font-weight:600;overflow-wrap:anywhere}
+.setting-param{display:block;margin-top:.1rem;font-size:var(--fs-xs);color:var(--muted);overflow-wrap:anywhere}
+.setting-read-only .setting-label{color:var(--muted)}
+.ctl-row-line{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-4);min-width:0}
+.setting-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:.15rem .4rem;margin:0}
+.ctl-row-line>.setting-value{flex:0 0 9.5rem;min-width:0}
+.setting-device-value{font-size:var(--fs-lg);font-weight:600;line-height:1.25;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.setting-value[data-device=program] .setting-device-value{font-size:var(--fs-md)}
+.ctl-row-line>.setting-value[data-device=derived]{flex:0 1 auto}
+.ctl-row-pill:empty{display:none}
+.ctl-row-meta{margin:var(--space-1) 0 0;max-width:46rem}
+.ctl-row-meta .state-reason,.ctl-status-lines .state-reason{display:inline}
+.ctl-meta-request .state-reason::before{content:" · "}
+.setting-request-value{font-weight:600;color:var(--ink)}
+.setting-reason{overflow-wrap:anywhere}
+.setting-actions{width:6rem;text-align:right;white-space:nowrap}
+.ctl-row-link{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap);padding:0 var(--space-3);border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:#fff;color:var(--forest);font-size:var(--fs-sm);font-weight:700;text-decoration:none}
+.ctl-row-link:hover{border-color:var(--leaf);color:var(--leaf)}
+.ctl-details{border-color:transparent}
+
+/* The bounds bar (BandBar's grammar on a setting's allowed range): the ends in mono, a 2 px track, the value as an ink dot with a white ring, the next plan a hollow ring, a request a dashed amber ring. */
+.ctl-bounds{flex:0 0 13rem;display:grid;grid-template-columns:auto minmax(3rem,1fr) auto;align-items:center;gap:var(--space-2);min-width:0}
+.ctl-bounds-none{min-height:1px}
+.ctl-bounds-end{font:400 var(--fs-xs)/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.ctl-bounds-bar{display:block;overflow:visible}
+.ctl-bounds-track{fill:var(--line-strong)}
+.ctl-bounds-dot{fill:var(--ink);stroke:#fff;stroke-width:2}
+.ctl-bounds-planned{fill:#fff;stroke:var(--ink);stroke-width:1.5}
+.ctl-bounds-requested{fill:none;stroke:var(--c-requested);stroke-width:1.5;stroke-dasharray:2 2}
+.ctl-bounds-clamp{fill:var(--ink)}
+.ctl-bounds.is-stale .ctl-bounds-dot{fill:var(--muted)}
+.ctl-bounds.is-neutral .ctl-bounds-requested{stroke:var(--muted)}
+
+/* Phones (860 px and below): the rail becomes two selects, each row a stacked card (label, value and pill, meta line) whose Edit or Details covers the row; no bounds bar and no key. */
 @media(max-width:860px){
-  .settings-table table,.settings-table tbody,.settings-table tr,.settings-table th,.settings-table td{display:block;width:auto}
-  .settings-table thead{display:none}
-  .settings-table .setting-row{padding:.65rem .75rem;border-bottom:1px solid var(--line)}
-  .settings-table .setting-row th,.settings-table .setting-row td{padding:.15rem 0;border:0}
-  .setting-row .setting-device-value{font-size:1.25rem}
-  .setting-cell-label{display:inline;font-size:.78rem;color:var(--muted)}
-  .setting-actions{display:flex;flex-wrap:wrap;gap:.25rem .75rem;white-space:normal;padding-top:.4rem}
-  .setting-actions .setting-edit{flex:1 1 100%}
-  .setting-history{margin-left:0}
+  .ctl-rail-lists{display:none}
+  .ctl-rail-selects{display:grid}
+  .ctl-catalog-table,.ctl-catalog-table tbody,.ctl-catalog-table tr,.ctl-catalog-table th,.ctl-catalog-table td{display:block;width:auto}
+  .ctl-catalog-table thead{display:none}
+  /* As blocks, a cell can stick only inside its row: the group head's row sticks instead, inside its group. */
+  .ctl-catalog-table .ctl-group-head{position:sticky;top:var(--shell-header-h,calc(var(--header-h-phone) + 1px));z-index:var(--z-raised)}
+  .ctl-group-head th{position:static;border-top:1px solid var(--line)}
+  .ctl-catalog-table tbody:first-of-type .ctl-group-head th{border-top:0;border-radius:var(--radius) var(--radius) 0 0}
+  .ctl-catalog-table .setting-row{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name actions" "device device";gap:0 var(--space-3);padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line)}
+  .setting-row>th,.setting-row>td{padding:0;border:0}
+  .setting-row>.setting-name{grid-area:name;width:auto;min-width:0;align-self:center}
+  .setting-row>.setting-device{grid-area:device}
+  .setting-row>.setting-actions{grid-area:actions;width:auto}
+  .setting-param,.ctl-row-line>.ctl-bounds{display:none}
+  .ctl-row-line{margin-top:var(--space-1)}
+  .ctl-row-line>.setting-value{flex:0 1 auto}
+  /* The row's one link covers the whole card, so a tap anywhere opens the drawer. */
+  .ctl-row-link::after{content:"";position:absolute;inset:0}
+  .ctl-find input,.ctl-search input{width:100%;flex:1 1 auto}
 }
+
+/* The drawer's state: the device value, its pill, the bounds bar and the request, writer and plan lines; "Activity for this setting ›" under the history. */
+.drawer-setting .eyebrow{margin-bottom:.15rem}
+.ctl-setting-status{display:grid;gap:var(--space-2)}
+.ctl-setting-status .ctl-row-line>.setting-value{flex:0 1 auto}
+.ctl-setting-status .ctl-bounds{max-width:18rem}
+.ctl-status-lines{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-1)}
+.ctl-drawer-links{margin:var(--space-2) 0 0}
+.ctl-drawer-links a{display:inline-flex;align-items:center;min-height:var(--tap);font-weight:700}
+
 /* Settings depth (VD-19, screens SCR-05): the drawer's history with Revert and a crop-band anchor's curve preview, each a panel without its card frame. The Revert button's words wrap, so a long one fits the drawer at 320 px. */
 .drawer-history{margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--line)}
 .drawer-history>.card,.band-preview>.card{padding:0;border:0;box-shadow:none}
@@ -89,3 +122,161 @@
 .drawer-revert{margin-top:.75rem}
 .drawer-revert .btn{width:100%}
 .drawer-revert .field-error{margin-top:.35rem}
+
+/* ---------------------------------------------------------------- Plan (redesign §5.11) */
+/* Plan in force and Planner health side by side from 600 px (l-cols-2), then the lanes full width. Long ids, codes and stored times wrap, so nothing scrolls the page sideways at 390 px. */
+.ctl-plan-top{margin-bottom:var(--space-4)}
+.ctl-plan-top>.card{height:100%}
+.plan-facts{margin:0 0 var(--space-2);font-size:var(--fs-sm);overflow-wrap:anywhere}
+.plan-trigger{font-weight:600}
+.plan-id{color:var(--muted)}
+.ctl-validity-row{display:grid;gap:var(--space-1);margin:0 0 var(--space-3)}
+.ctl-validity{display:block;overflow:visible}
+.ctl-validity-track{fill:var(--field);stroke:var(--line-strong);stroke-width:1}
+.ctl-validity-fill{fill:var(--c-setpoint)}
+.ctl-validity-now{stroke:var(--ink);stroke-width:2}
+.ctl-validity.is-neutral .ctl-validity-fill{fill:var(--muted)}
+.ctl-validity-words{margin:0;font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
+.plan-left{font-weight:620}
+.plan-hypothesis{margin:0;overflow-wrap:anywhere}
+.plan-none{margin:0}
+.plan-after{margin:var(--space-2) 0 0}
+.plan-detail{overflow-wrap:anywhere}
+.plan-detail h3{margin:.75rem 0 .3rem;font-size:.9rem}
+.plan-detail ul{margin:0;padding-left:1.1rem;font-size:.875rem}
+.plan-detail li+li{margin-top:.25rem}
+.plan-detail .setting-key{font:400 .78rem/1.3 var(--mono);color:var(--muted)}
+
+/* Planner health: the last 36 h as marks (quiet when done, amber when late, fault when failed; an optional trigger shorter), the next trigger, the triggers that need someone, the 14-day strip and the ledger in a disclosure. */
+.ctl-health-label{margin:0 0 var(--space-1)}
+.ctl-trigger-marks{display:flex;flex-wrap:wrap;align-items:flex-end;gap:3px;margin:0;padding:0;list-style:none;min-height:1.25rem}
+.ctl-trigger-mark{width:.75rem;height:1.25rem;border:1px solid var(--line-strong);border-radius:2px;background:var(--tint-ok)}
+.ctl-trigger-mark:not([data-required]){height:.75rem}
+.ctl-trigger-mark[data-kind=late]{background:var(--amber);border-color:var(--amber)}
+.ctl-trigger-mark[data-kind=failed]{background:var(--fault);border-color:var(--fault)}
+.ctl-trigger-mark[data-kind=other]{background:var(--field)}
+.ctl-trigger-swatch{display:inline-block;width:.75rem;height:.75rem}
+.ctl-trigger-legend{margin-top:var(--space-1)}
+.ctl-next-trigger{margin:var(--space-3) 0 0;font-size:var(--fs-sm)}
+.ctl-reliability{margin-top:var(--space-4)}
+.ctl-reliability-words{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--space-2);margin:0 0 var(--space-1);font-size:var(--fs-sm)}
+.ctl-reliability-words .eyebrow{margin:0}
+.ctl-reliability-count{font-weight:600;font-variant-numeric:tabular-nums}
+.ctl-inline-retry{min-height:2.25rem;padding:0 .6rem}
+.trigger-list{list-style:none;margin:var(--space-3) 0 0;padding:0}
+.trigger-row{display:grid;grid-template-columns:1rem minmax(0,1fr) auto minmax(0,1fr);align-items:baseline;gap:.15rem .6rem;padding:.4rem .25rem .4rem .5rem;border-top:1px solid var(--line);border-left:3px solid transparent;font-size:.875rem}
+.trigger-row:first-child{border-top:0}
+.trigger-marked{border-left-color:var(--amber)}
+.trigger-mark{color:var(--warn-text);font-size:.8rem}
+.trigger-name{font:500 .78rem/1.3 var(--mono);overflow-wrap:anywhere}
+.trigger-due{font-variant-numeric:tabular-nums;white-space:nowrap}
+.trigger-class{grid-column:2/-1;font:400 .72rem/1.3 var(--mono);color:var(--muted);overflow-wrap:anywhere}
+.trigger-more{font-weight:400;color:var(--muted)}
+.trigger-all{margin:var(--space-3) 0 0}
+
+/* The lanes' head: the manual count and the window chips. */
+.plan-lane-tools{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem}
+.plan-manual{margin:0;font:500 .72rem/1.3 var(--mono);letter-spacing:.04em;color:var(--manual-text)}
+/* A lane's label opens its setting drawer in place: the link lies over the lane's head row, where the label is printed (now underlined, as a link), and a lane's newest write shows its one pill at the head's end. The plot keeps its full width. */
+.ctl-plan-lanes .lanes-plan.lanes-plan-end{--lanes-stat:0px}
+.ctl-plan-lanes .lanes-plan-end .plan-row{position:relative}
+.ctl-plan-lanes .plan-end{position:absolute;grid-area:auto;top:0;left:0;right:0;display:block;height:max(var(--plan-head),24px);z-index:var(--z-raised)}
+.ctl-plan-lanes .plan-end .ctl-lane-link{position:absolute;inset:0;display:block;width:auto;min-height:0;border-radius:var(--radius-sm)}
+.ctl-plan-lanes .plan-label{color:var(--forest);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.2em}
+.ctl-plan-lanes .plan-row:has(.ctl-lane-link:hover) .plan-label{color:var(--leaf)}
+.ctl-lane-pill{position:absolute;top:50%;right:0;transform:translateY(-50%);pointer-events:none}
+.ctl-plan-lanes .plan-row:has(.ctl-lane-pill) .plan-head{padding-right:8.5rem}
+@media(max-width:860px){.ctl-plan-lanes .plan-end{height:var(--tap)}.ctl-lane-pill{top:.6rem;transform:none}}
+
+/* ---------------------------------------------------------------- Equipment (redesign §5.12) */
+/* Two balanced columns from 861 px (Climate, Lights and Flags; Water relays and the Controller), then the bursts, Why, the lanes and the daily runtime full width. */
+.ctl-board{display:grid;gap:var(--space-4);grid-template-columns:minmax(0,1fr);align-items:start}
+.ctl-board-col{display:grid;gap:var(--space-4);align-content:start;min-width:0}
+.ctl-equipment-more{display:grid;gap:var(--space-4);margin-top:var(--space-4);min-width:0}
+.ctl-equipment-more>*{margin:0}
+@media(min-width:861px){.ctl-board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* A board row: the name, the state as a word with a dot, then since, time on today and cycles; one line from 1200 px, two below. Unknown is muted with a hatched dot. */
+.equipment-rows{list-style:none;margin:0;padding:0}
+.equipment-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:.1rem var(--space-3);padding:var(--space-2) 0;border-top:1px solid var(--line);min-width:0}
+.equipment-row:first-child{padding-top:0;border-top:0}
+.equipment-row:last-child{padding-bottom:0}
+.equipment-name{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.equipment-key{font:500 .85rem/1.4 var(--mono);color:var(--muted)}
+.equipment-state{font-size:var(--fs-sm);text-align:right;font-variant-numeric:tabular-nums}
+.equipment-facts{grid-column:1/-1;margin:0;font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums}
+.equipment-row-light .light-controls{grid-column:1/-1}
+.equipment-note{font-size:var(--fs-xs)}
+@media(min-width:1200px){
+  .equipment-rows-climate .equipment-row,.equipment-rows-water .equipment-row{grid-template-columns:minmax(8rem,1fr) 6.5rem minmax(0,1.4fr)}
+  .equipment-rows-climate .equipment-state,.equipment-rows-water .equipment-state{text-align:left}
+  .equipment-rows-climate .equipment-facts,.equipment-rows-water .equipment-facts{grid-column:auto;text-align:right}
+}
+.ctl-state{display:inline-flex;align-items:center;gap:.35rem;font:600 var(--fs-label)/1.4 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--ink);white-space:nowrap}
+.ctl-dot{flex:none;width:.55rem;height:.55rem;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.ctl-state.is-on .ctl-dot{box-shadow:none;background:var(--ink)}
+.ctl-state.is-unknown{color:var(--muted)}
+.ctl-state.is-unknown .ctl-dot{background:repeating-linear-gradient(135deg,var(--muted) 0 1px,transparent 1px 3px)}
+.ctl-dot[data-token=eq-fan1]{background:var(--eq-fan1)}.ctl-dot[data-token=eq-fan2]{background:var(--eq-fan2)}.ctl-dot[data-token=eq-vent]{background:var(--eq-vent)}
+.ctl-dot[data-token=eq-heat1]{background:var(--eq-heat1)}.ctl-dot[data-token=eq-heat2]{background:var(--eq-heat2)}.ctl-dot[data-token=eq-water]{background:var(--eq-water)}
+.ctl-dot[data-token=eq-fert]{background:var(--eq-fert)}.ctl-dot[data-token=eq-master]{background:var(--eq-master)}.ctl-dot[data-token=eq-mister]{background:var(--eq-mister)}
+.ctl-dot[data-token=eq-fog]{background:var(--eq-fog)}.ctl-dot[data-token=eq-light-main]{background:var(--eq-light-main)}.ctl-dot[data-token=eq-light-grow]{background:var(--eq-light-grow)}
+.ctl-state.is-neutral .ctl-dot[data-token]{background:var(--muted)}
+
+/* The Controller card: free heap against the 32 kB floor as a meter (fault below it), then the facts as a data list. */
+.ctl-heap-row{display:grid;gap:var(--space-1);margin:0 0 var(--space-3)}
+.ctl-heap-words{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--space-2);margin:0}
+.ctl-heap-words .eyebrow{flex-basis:100%;margin:0}
+.ctl-heap-value{font-size:var(--fs-xl);font-weight:620;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.ctl-heap-low{color:var(--fault);font-weight:600}
+.ctl-heap{display:block;overflow:visible}
+.ctl-heap-track{fill:var(--field);stroke:var(--line);stroke-width:1}
+.ctl-heap-fill{fill:var(--muted)}
+.ctl-heap.is-below .ctl-heap-fill{fill:var(--fault)}
+.ctl-heap-floor{stroke:var(--ink);stroke-width:2}
+.ctl-firmware{overflow-wrap:anywhere}
+
+/* Flags: occupancy, the leak flag and the site flow, each a name and its state in words; fault and warn in their text colours. */
+.ctl-flags{list-style:none;margin:0;padding:0}
+.ctl-flag{display:grid;grid-template-columns:minmax(0,8rem) minmax(0,1fr);gap:0 var(--space-3);padding:var(--space-2) 0;border-top:1px solid var(--line);font-size:var(--fs-sm)}
+.ctl-flag:first-child{padding-top:0;border-top:0}
+.ctl-flag:last-child{padding-bottom:0}
+.ctl-flag-name{font-weight:600}
+.ctl-flag[data-state=unknown] .ctl-flag-state{color:var(--muted)}
+.ctl-flag.is-fault .ctl-flag-state{color:var(--fault);font-weight:600}
+.ctl-flag.is-warn .ctl-flag-state{color:var(--warn-text)}
+
+/* Daily runtime: one bar row per actuator on a shared scale, each in its equipment's colour, with its daily average; the table is under it. */
+.ctl-runtime{list-style:none;margin:0;padding:0}
+.ctl-runtime-row{display:grid;grid-template-columns:minmax(6rem,10rem) minmax(0,1fr) 8rem;align-items:center;gap:0 var(--space-4);padding:var(--space-2) 0;border-top:1px solid var(--line)}
+.ctl-runtime-row:first-child{border-top:0}
+.ctl-runtime-name{font-size:var(--fs-sm);font-weight:600;overflow-wrap:anywhere}
+.ctl-runtime-bars{min-width:0}
+.ctl-runtime-average{text-align:right;font-variant-numeric:tabular-nums}
+.ctl-runtime-figure{font-weight:600}
+.ctl-runtime-row[data-equipment=heat1] .spark:not(.is-neutral):not(.is-stale) .spark-bar{fill:var(--eq-heat1)}
+.ctl-runtime-row[data-equipment=heat2] .spark:not(.is-neutral):not(.is-stale) .spark-bar{fill:var(--eq-heat2)}
+.ctl-runtime-row[data-equipment=fan1] .spark:not(.is-neutral):not(.is-stale) .spark-bar{fill:var(--eq-fan1)}
+.ctl-runtime-row[data-equipment=fan2] .spark:not(.is-neutral):not(.is-stale) .spark-bar{fill:var(--eq-fan2)}
+.ctl-runtime-row[data-equipment=vent] .spark:not(.is-neutral):not(.is-stale) .spark-bar{fill:var(--eq-vent)}
+.ctl-runtime-row[data-equipment=fog] .spark:not(.is-neutral):not(.is-stale) .spark-bar{fill:var(--eq-fog)}
+.ctl-runtime-table .table-wrap{max-height:24rem;overflow:auto}
+.ctl-num{text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:600px){.ctl-runtime-row{grid-template-columns:minmax(0,1fr) auto}.ctl-runtime-bars{grid-column:1/-1;grid-row:2}}
+
+/* Equipment depth (SCR-07, VD-20): the Why panel, one row per reason at every width (at phone width its label heads the row), and a grow light's controls, each a 44 px target, the buttons full width on phones (.btn-wide). */
+.why-rows{list-style:none;margin:0;padding:0}
+.why-row{display:grid;grid-template-columns:14rem minmax(0,1fr) auto;align-items:center;gap:0 .75rem;border-top:1px solid var(--line);min-width:0}
+.why-row:first-child{border-top:0}
+.why-label{font-weight:600}
+.why-words{min-width:0;padding:.35rem 0;font-size:.9rem}
+.why-since{color:var(--muted);font-variant-numeric:tabular-nums}
+.why-raw{font:500 .85rem/1.4 var(--mono);overflow-wrap:anywhere}
+.why-link,.light-actions a,.light-auto-link{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
+@media(max-width:860px){.why-row{grid-template-columns:minmax(0,1fr) auto;padding-top:.35rem}.why-label{grid-column:1/-1}}
+.light-controls{margin-top:.35rem}
+.light-auto-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 var(--space-3)}
+.light-auto{margin:0;font-size:.85rem}
+.light-auto-link{font-size:var(--fs-sm)}
+.light-actions{margin:.5rem 0 0}
+.light-controls .state-note,.light-controls .field-error{margin:.35rem 0 0}

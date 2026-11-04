@@ -111,7 +111,7 @@ export function useLightControl({ light, equipment, autoParam }: (typeof LIGHTS)
   }, [confirmed, superseded]);
 
   return {
-    equipment, setting, turn, backToAutomatic, pressed,
+    equipment, autoParam, setting, turn, backToAutomatic, pressed,
     command: { phase: command.phase, sending: command.sending, error: command.error },
     write: { sending: write.sending, error: write.error },
     /** This control's own write: CONFIRMED reads on the row for as long as it stands. */
@@ -148,24 +148,28 @@ function AutomationLine({ control }: { control: LightControl }) {
 }
 
 /**
- * What a light row gains (SCR-07, US-EQP-05): Turn on, Turn off and Back to automatic at 44 px, full width on phones, and
- * "Activity ›", for operators only, disabled with changes switched off. One tap and no dialog. The board's state only ever
- * comes from the Lutron readback; here are what was said and what is awaited: a 503's `Problem.result` in words, and after
- * 30 s without a match "Lutron hasn't confirmed: still OFF".
+ * What a light row gains (SCR-07, US-EQP-05): its automatic line with the link to that switch's setting drawer, opened
+ * in place (`settingTo`, for every role: a viewer's is read-only); then, for operators only, Turn on, Turn off and Back
+ * to automatic at 44 px, full width on phones, and "Activity ›", disabled with changes switched off. One tap and no
+ * dialog. The board's state only ever comes from the Lutron readback; here are what was said and what is awaited: a
+ * 503's `Problem.result` in words, and after 30 s without a match "Lutron hasn't confirmed: still OFF".
  */
-export function LightControls({ control, item }: { control: LightControl; item: Pick<LightItem, "label" | "state"> }) {
+export function LightControls({ control, item, settingTo }: { control: LightControl; item: Pick<LightItem, "label" | "state">; settingTo?: string }) {
   const { command, write, pressed } = control;
   const busy = command.sending || write.sending;
   // Reading back: a second tap on the same button has nothing to add, though after a refusal it may retry.
   const answering = (state: LightState) => command.phase === "waiting" && pressed === state && !command.error;
   return <div className="light-controls">
-    <AutomationLine control={control} />
+    <div className="light-auto-row">
+      <AutomationLine control={control} />
+      {settingTo && <Link className="light-auto-link" to={settingTo} preventScrollReset>Automation setting <span className="screen-reader">of {item.label}</span><span aria-hidden="true">›</span></Link>}
+    </div>
     <OperatorOnly>
       <div className="actions light-actions">
         <Button write wide busy={command.sending && pressed === "on"} disabled={busy || answering("on")} onClick={() => control.turn("on")}>Turn on <span className="screen-reader">{item.label}</span></Button>
         <Button write wide busy={command.sending && pressed === "off"} disabled={busy || answering("off")} onClick={() => control.turn("off")}>Turn off <span className="screen-reader">{item.label}</span></Button>
         <Button write wide busy={write.sending || (command.sending && pressed === "automatic")} disabled={busy || control.awaitingConfirm} onClick={() => void control.backToAutomatic()}>Back to automatic <span className="screen-reader">{item.label}</span></Button>
-        <Link to={`/activity?target=${encodeURIComponent(control.equipment)}`}>Activity <span className="screen-reader">of {item.label}</span><span aria-hidden="true">›</span></Link>
+        <Link to={`/activity/log?target=${encodeURIComponent(control.equipment)}`}>Activity <span className="screen-reader">of {item.label}</span><span aria-hidden="true">›</span></Link>
       </div>
       {command.phase === "waiting" && !command.error && <p className="state-note" data-light-note="waiting">Waiting for Lutron</p>}
       {command.phase === "late" && <p className="state-note" data-light-note="late">{unconfirmedWords(item.state)}</p>}

@@ -9,4 +9,10 @@
  *
  * @type {Readonly<Record<string, (world: any) => void>>}
  */
-export const FIXTURES = {};
+export const FIXTURES = {
+  // Equipment's Controller card (redesign §5.12): free heap under the 32 kB floor the firmware restarts under (#429), so
+  // the card's rule and the heap meter turn fault, in words.
+  "controller-heap-low": (world) => {
+    world.controller = { ...world.controller, heap_free_kb: 28.4, heap_largest_block_kb: 9.6 };
+  },
+};

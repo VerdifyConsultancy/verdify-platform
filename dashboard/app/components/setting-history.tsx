@@ -4,23 +4,29 @@ import { Link, useLocation, useSearchParams } from "react-router";
 import { TimeSeries } from "../charts/time-series";
 import type { SettingSteps } from "../charts/types";
 import { shownActor } from "../lib/activity";
+import { localDate } from "../lib/format";
 import { useFreshRead } from "../lib/graph-reads";
-import type { Setting, SettingHistory } from "../lib/operator-api";
+import type { DesiredSetting, Setting, SettingHistory } from "../lib/operator-api";
+import { isAiSource } from "../lib/vocab";
 import { needsLookback, revertTarget, type RevertTarget } from "../lib/revert";
 import { useRole, useWritesEnabled } from "../lib/session";
 import { keptValueText, unitLabel } from "../lib/setting-values";
 import { useMe } from "../lib/shell";
 import { errorFor, formError, useSettingWrite } from "../lib/writes";
 import { Button } from "./button";
+import { LocalTime } from "./common";
+import { Mark } from "./control/marks";
 import { FieldError, Reason, useFieldIds } from "./forms";
-import { useServerSkew } from "./freshness";
+import { useClockValue, useServerSkew } from "./freshness";
 import { Panel, PanelError } from "./panel";
 
 /**
- * The setting drawer's History and Revert (US-SET-06, screens SCR-05). API-12 over a chosen window, read when the drawer
- * opens and again when the setting's newest desired row changes: requests stepped by who asked, the readback line, the
- * plan ahead and the bounds, on #1126's `TimeSeries` with its tooltip, data table and CSV. Revert is one tap, with no
- * dialog, and writes through API-10 or API-11 (`lib/revert.ts`), so a viewer or a read-only row sees the history alone.
+ * The setting drawer's change history and Revert (US-SET-06, screens SCR-05, redesign §5.10). API-12 over a chosen
+ * window, read when the drawer opens and again when the setting's newest desired row changes: requests stepped by who
+ * asked, the readback line, the plan ahead and the bounds, on #1126's `TimeSeries` with its tooltip, data table and CSV;
+ * then the changes in words, newest first ("1.60 → 1.55 · Jason · manual · “Vandas drying” · Confirmed 08:01"). Revert
+ * is one tap, with no dialog, and writes through API-10 or API-11 (`lib/revert.ts`), so a viewer or a read-only row sees
+ * the history alone.
  */
 
 const DAY_S = 86_400;
@@ -42,6 +48,35 @@ const NO_METRICS: readonly never[] = [];
 export const historyWindow = (id: string | null) => HISTORY_WINDOWS.find((item) => item.id === id) ?? DEFAULT_WINDOW;
 const iso = (epochSeconds: number) => new Date(epochSeconds * 1000).toISOString();
 const windowParams = (param: string, now: number, seconds: number) => ({ param, from: iso(now - seconds), to: iso(now + PLAN_AHEAD_S) });
+
+/** The changes the entries list shows, newest first. */
+export const CHANGES_SHOWN = 5;
+/** One change in words: from, to, who, manual, the quoted reason, and its readback state with its time. */
+export type ChangeEntry = { readonly id: number; readonly from: number | null; readonly row: DesiredSetting };
+/** The window's desired rows as changes, newest first: each from the row before it (unknown for the window's first). */
+export function changeEntries(desired: readonly DesiredSetting[], shown = CHANGES_SHOWN): ChangeEntry[] {
+  return desired.map((row, index) => ({ id: row.id, row, from: index > 0 ? desired[index - 1].value : null })).reverse().slice(0, shown);
+}
+
+function ChangeLine({ entry, setting, me }: { entry: ChangeEntry; setting: Setting; me: ReturnType<typeof useMe> }) {
+  const { row, from } = entry;
+  const today = useClockValue((now) => localDate(new Date(now).toISOString()));
+  const when = (at: string | null | undefined) => (at && Number.isFinite(Date.parse(at)) ? <LocalTime at={at} date={localDate(at) !== today} /> : null);
+  const actor = shownActor(row.actor, me);
+  const state = row.state === "confirmed" ? <>Confirmed {when(row.confirmed_at) ?? when(row.created_at)}</>
+    : row.state === "requested" ? <>Requested {when(row.created_at)}</>
+      : row.state === "not_confirmed" ? <>Not confirmed · sent {when(row.created_at)}</>
+        : row.state === "released" ? <>Released {when(row.created_at)}</>
+          : <>{row.state.replaceAll("_", " ")} · {when(row.created_at)}</>;
+  return <li className="ctl-change" data-state={row.state}>
+    {row.value === null
+      ? <span className="ctl-change-value">Released to auto</span>
+      : <span className="ctl-change-value">{from !== null && <>{keptValueText(from, setting)} <span aria-hidden="true">→</span><span className="screen-reader">to</span> </>}{keptValueText(row.value, setting)}</span>}
+    {" · "}{actor.name}{isAiSource(actor.source) && <> · <Mark kind="ai" /></>}{row.value !== null && row.manual && " · manual"}
+    {row.reason && <> · <span className="setting-reason">“{row.reason}”</span></>}
+    {" · "}<span className="ctl-change-state">{state}</span>
+  </li>;
+}
 
 /** The history as the chart draws it: its unit as the panel prints it, people by name, no device line without a readback. */
 function drawnHistory(history: SettingHistory, me: ReturnType<typeof useMe>, noReadback: boolean): SettingHistory {
@@ -95,8 +130,9 @@ export function SettingHistoryPanel({ setting, manual, onReverted, band = false,
     next.set("hist", id);
     return `${pathname}?${next.toString()}`;
   };
+  const entries = answer ? changeEntries(answer.desired) : [];
   return <div className="drawer-history">
-    <Panel title="History" eyebrow="Requests, readback and plan · America/Denver" headingLevel={3} thing="history" reserve="lg"
+    <Panel title="Change history" eyebrow="Requests, readback and plan · America/Denver" headingLevel={3} thing="history" reserve="lg"
       state={answer ? "ready" : read.isError ? "error" : "loading"} onRetry={() => { void read.refetch(); }}
       actions={<ul className="chips chips-sm" aria-label="History window">
         {HISTORY_WINDOWS.map((item) => <li key={item.id}>
@@ -106,6 +142,12 @@ export function SettingHistoryPanel({ setting, manual, onReverted, band = false,
       {noReadback && <p className="state-note history-no-readback">{NO_READBACK_TEXT}</p>}
       {drawn && now !== null && <TimeSeries title={unit ? `${setting.label} · ${unit}` : setting.label} series={null} metrics={NO_METRICS} unit={unit} settings={steps} now={now}
         xRange={{ from: now - chosen.seconds, to: now + PLAN_AHEAD_S }} syncKey={`verdify:setting-history:${chosen.id}`} />}
+      {answer && <div className="ctl-changes">
+        <p className="eyebrow">Changes in this window</p>
+        {entries.length
+          ? <ol className="ctl-change-list">{entries.map((entry) => <ChangeLine key={entry.id} entry={entry} setting={setting} me={me} />)}</ol>
+          : <p className="meta">No change was asked for in this window.</p>}
+      </div>}
       {wantOlder && older.isError && <PanelError thing="older history" text="Couldn't check the older history for Revert." onRetry={() => { void older.refetch(); }} />}
       {target && <RevertControl key={target.text} setting={setting} target={target} manual={manual} onReverted={onReverted} onSending={onSending} disabled={busy || !current} />}
     </Panel>
