@@ -333,8 +333,8 @@ dispatcher, the API's `applied_from` and the services resolve a setting the same
   dispatcher admits (it is in `planner_params`), so a plan row the dispatcher ignores never hides a desired value.
   Besides the §5.3 step 1 rows (`desired_write_rule()` in `verdify_schemas.tunable_registry`), `crop_band` and
   `irrigation_site`, a row is skipped and logged once when the dispatcher has no number or switch route for it
-  (`sw_irrig_*` until #1165's follow-up retired the L01 bridge's rows), when the connected firmware lacks the
-  feature a plan row would need too, or when its value is not finite. A dispatcher default is a value one of its blocks resolves: the band,
+  (`sw_irrig_*` until #1165's follow-up retired them), when the connected firmware lacks the feature a plan row would
+  need too, or when its value is not finite. A dispatcher default is a value one of its blocks resolves: the band,
   the lighting policy (nine values per circuit, or the legacy shared `gl_*` values only on firmware without
   per-circuit lighting), the direct-wet window, the safety limits and the mister defaults. No block resolves the
   per-circuit offsets, solar phasing and out-of-service switches, so their release, like a legacy shared value's on
