@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
-// The schedule editor (#1137, screens SCR-04) on the Schedules view against #1122's fixture API in process, at 10:42
-// America/Denver on Monday 2026-11-02: the fields per line kind, the draft in the week and against the caps, Save with
-// the one-time check, the refusals in words, REQUESTED to CONFIRMED on the program hash, and delete.
+// The schedule editor (#1137, screens SCR-04, redesign §6.5) on the Schedules view against #1122's fixture API in
+// process, at 10:42 America/Denver on Monday 2026-11-02: the fields per line kind, the draft on the day timeline and
+// against the caps, the refusals and waits read out before Save, Save with the one-time check, the refusals in words,
+// REQUESTED to CONFIRMED on the program hash in the rules list and the status line, and delete.
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { createRoutesStub, useLocation } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
@@ -57,15 +58,22 @@ const save = async () => {
   fireEvent.click(inDrawer().getByRole("button", { name: "Save" }));
   await advance(0);
 };
-const week = () => document.querySelector<HTMLElement>(".week-table")!;
-const cell = (line: string, day: string) => week().querySelector<HTMLElement>(`tr[data-line="${line}"] td[data-day="${day}"]`)!;
-const blocks = (line: string, day: string) => [...cell(line, day).querySelectorAll<HTMLElement>(".week-block:not([hidden])")].map((block) => ({
-  head: text(block.querySelector(".week-block-head")), draft: block.classList.contains("week-block-draft"), hatched: block.classList.contains("week-block-hatched"),
-  notes: [...block.querySelectorAll(".week-block-label, .week-block-detail, .week-block-note")].map((node) => text(node)),
+/** The day timeline's blocks on `line`, the day it shows (the draft's next day while the editor is open). */
+const day = () => document.querySelector<HTMLElement>(".sch-day")!;
+const shownDay = () => text(day().querySelector("h2"));
+const blocks = (line: string) => [...day().querySelectorAll<HTMLElement>(`.sch-row[data-line="${line}"] .sch-block:not(.sch-part)`)].map((block) => ({
+  name: (block.getAttribute("aria-label") ?? block.getAttribute("title") ?? "").replaceAll("\u00a0", " "), draft: block.classList.contains("sch-draft"),
+  hatched: block.classList.contains("sch-skipped") || block.classList.contains("sch-blocked"), capped: block.classList.contains("sch-capped"), conflict: block.classList.contains("sch-conflict"),
 }));
+/** A rule in the rules list: its one pill and its meta line. */
+const rule = (slot: number) => document.querySelector<HTMLElement>(`.sch-rules [data-slot="${slot}"]`);
+const pill = (slot: number) => text(rule(slot)?.querySelector(".object-row-pill"));
+const ruleMeta = (slot: number) => text(rule(slot)?.querySelector(".object-row-meta"));
+const checks = () => [...drawer()!.querySelectorAll(".sch-checks li")].map((node) => text(node));
 const preview = () => text(drawer()!.querySelector(".schedule-preview"));
 const previewLine = (id: string) => text(drawer()!.querySelector(`.schedule-preview-line[data-line="${id}"]`));
 const banner = () => text(document.querySelector("[data-program]"));
+const count = () => text(document.querySelector(".sch-count-words"));
 const errors = () => [...drawer()!.querySelectorAll(".field-error")].map((node) => text(node));
 /** L01, Mon, Wed, Fri at sunrise + 60 for 12 min: the acceptance's schedule. */
 async function fillWallMwf() {
@@ -80,11 +88,11 @@ async function fillWallMwf() {
 test("creating L01 Mon, Wed, Fri at sunrise + 60 for 12 min previews against the 60 min cap, then reads REQUESTED, then CONFIRMED on the hash, and Activity lists it", async () => {
   const api = open(NEW);
   await fillWallMwf();
-  // PLANNED outlines in L01's row and the totals in the drawer; nothing sent yet.
-  expect(blocks("L01", "2026-11-04")).toEqual([{ head: "07:35 12m Manual Planned", draft: true, hatched: false, notes: ["Wall MWF"] }]);
-  expect(blocks("L01", "2026-11-02").map((block) => block.draft)).toEqual([true]);
-  expect(blocks("L01", "2026-11-03")).toEqual([]);
+  // The draft draws dashed on the timeline of the next day it runs (today), and the drawer reads its totals; nothing sent yet.
+  expect(shownDay()).toBe("Monday, Nov 2 · today");
+  expect(blocks("L01")).toEqual([{ name: "L01 Wall drip · Wall MWF, Mon 07:35, 12 min, draft, not saved, planned", draft: true, hatched: false, capped: false, conflict: false }]);
   expect(previewLine("L01")).toBe("L01 Mon 12 · Wed 12 · Fri 12 minWall drip cap 60 min a day");
+  expect(checks()).toEqual([]);
   expect(writes(api)).toEqual([]);
   expect(text(drawer()!.querySelector(".field-resolved"))).toBe("→ 07:35 today");
   expect(text(drawer()!.querySelector(".schedule-count"))).toBe("3 of 24 schedules");
@@ -96,19 +104,23 @@ test("creating L01 Mon, Wed, Fri at sunrise + 60 for 12 min previews against the
     degraded_only: false, manual: true,
   });
   expect(writes(api)[0].idempotency_key).toMatch(UUID);
-  // The drawer closes; the schedule's blocks and the banner read REQUESTED, and the head counts it.
+  // The drawer closes; the rule and the status line read REQUESTED, and the rules list counts it.
   expect(drawer()).toBeNull();
   expect(where()).toBe("/water/schedules");
-  expect(blocks("L01", "2026-11-04")).toEqual([{ head: "07:35 12m Manual Requested", draft: false, hatched: false, notes: ["Wall MWF", "rev 43 sending"] }]);
-  expect(banner()).toBe("On controller: rev 42 · rev 43 sending Requested");
-  expect(text(document.querySelector(".week-count"))).toBe("4 of 24 schedules");
-  // API-IRR-02 and API-IRR-01 read every 5 s; the third read since the write carries the new hash.
+  // The one pill is REQUESTED (redesign §4.4's priority), so MANUAL moves into the meta line meanwhile.
+  expect([pill(4), ruleMeta(4)]).toEqual(["Requested", "manual · changed by jason 0 s ago · rev 43 sending"]);
+  expect(banner()).toBe("Program rev 42 on controller · rev 43 sending Requested");
+  expect(count()).toBe("4 of 24 schedules");
+  // API-IRR-02 and API-IRR-01 read every 5 s; the third read since the write carries the new hash: CONFIRMED, for 10 minutes.
   await advance(5_000);
-  expect(blocks("L01", "2026-11-04")[0].head).toBe("07:35 12m Manual Requested");
+  expect(pill(4)).toBe("Requested");
   await advance(5_000);
-  expect(blocks("L01", "2026-11-04")).toEqual([{ head: "07:35 12m Manual Confirmed", draft: false, hatched: false, notes: ["Wall MWF"] }]);
+  await advance(5);
+  // CONFIRMED is news for 10 minutes (D-UX-07), but MANUAL outranks it: the meta says confirmed meanwhile.
+  expect(pill(4)).toBe("Manual");
+  expect(ruleMeta(4)).toMatch(/ · confirmed$/);
   await advance(5_000);
-  expect(banner()).toMatch(/^On controller: rev 43 · Confirmed \d+ s ago$/);
+  expect(banner()).toMatch(/^Program rev 43 on controller · confirmed \d+ s ago$/);
   // Activity's Log lists the create under the operator's name.
   fireEvent.click(screen.getAllByRole("link", { name: /^Activity/ })[0]);
   await advance(0);
@@ -120,10 +132,11 @@ test("creating L01 Mon, Wed, Fri at sunrise + 60 for 12 min previews against the
   expect(api.respond({ url: "/v1/activity" }).body.items.find((row: { action: string }) => row.action === "irrigation.schedule.create")).toMatchObject({ actor: { source: "dashboard", name: "jason" }, target: "4", state: "confirmed" });
 });
 
-test("a 25th schedule is refused above Save, as the refusal names no field, and the drawer stays open with nothing else sent", async () => {
+test("a 25th schedule reads as the refusal it will be before Save, is refused above Save, and the drawer stays open with nothing else sent", async () => {
   const api = open(NEW, { fixture: "schedules-full" });
   await fillWallMwf();
   expect(text(drawer()!.querySelector(".schedule-count"))).toBe("24 of 24 schedules");
+  expect(checks()).toContain("This would be the 25th schedule; the controller holds 24");
   await save();
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-03"]);
   expect(drawer()).not.toBeNull();
@@ -134,10 +147,13 @@ test("a 25th schedule is refused above Save, as the refusal names no field, and 
   expect(drawer()!.querySelector(".drawer-body > .field-error")).not.toBeNull();
 });
 
-test("two L01 schedules 20 min apart are refused with too_close beside Start, naming the line", async () => {
+test("two L01 schedules 20 min apart read too close as it is typed, the draft outlined in fault; Save is refused with too_close beside Start", async () => {
   const api = open(NEW, { fixture: "l01-schedule" });
   await fillWallMwf();
   setSunrise(80);
+  expect(checks()).toContain("Starts 20 min after Wall MWF on L01: schedules on one line need 30 min");
+  expect(blocks("L01").find((block) => block.draft)?.conflict).toBe(true);
+  // Save stays open: the server decides.
   await save();
   expect(drawer()).not.toBeNull();
   expect(text(drawer()!.querySelector(".time-field .field-error"))).toBe("Another L01 schedule starts within 30 min of this one");
@@ -145,6 +161,7 @@ test("two L01 schedules 20 min apart are refused with too_close beside Start, na
   expect(writes(api)).toHaveLength(1);
   // Far enough apart it saves, with one more request under its own key.
   setSunrise(120);
+  expect(checks()).toEqual([]);
   await save();
   expect(drawer()).toBeNull();
   const sent = writes(api);
@@ -159,30 +176,32 @@ test("a mist schedule on L07 with Schedule off saves, and its blocks read \"Skip
   setDays("tue");
   change("Start: at a clock time or from the sun", "clock");
   change("Clock time (HH:MM)", "14:00");
-  // The draft reads as its saved blocks will: hatched, with why, and counted in no total.
-  expect(blocks("L07", "2026-11-03")).toEqual([{ head: "14:00 4×45s Manual Planned", draft: true, hatched: true, notes: ["Skipped until Schedule is on"] }]);
+  // The draft reads as its saved blocks will: hatched, with why, on Tuesday's timeline, and counted in no total.
+  expect(shownDay()).toBe("Tuesday, Nov 3");
+  expect(blocks("L07")).toEqual([{ name: "L07 South mister, Tue 14:00, 4 × 45 s, draft, not saved, Skipped until Schedule is on", draft: true, hatched: true, capped: false, conflict: false }]);
   expect(preview()).toContain("Skipped until Schedule is on");
   expect(previewLine("L07")).toBe("L07 no minutes plannedSouth: 0 of 30 min for schedules; 15 kept for VPD");
   await save();
   expect(writes(api)[0].body).toMatchObject({ line_id: "L07", days: ["tue"], start: { kind: "clock", clock: "14:00" }, on_s: 45, count: 4, gap_s: 60, degraded_only: false });
   expect(drawer()).toBeNull();
-  expect(blocks("L07", "2026-11-03")).toEqual([{ head: "14:00 4×45s Manual Requested", draft: false, hatched: true, notes: ["Skipped until Schedule is on", "rev 43 sending"] }]);
+  expect(pill(4)).toBe("Requested");
 });
 
-test("a degraded_only draft follows VPD control: on L04 unhatched \"only if VPD sensing is degraded\", on L07 \"Skipped: VPD control is off\"", async () => {
+test("a degraded_only draft follows VPD control: on L04 \"only if VPD sensing is degraded\" in the fallback's colour, on L07 \"Skipped: VPD control is off\"", async () => {
   open(NEW);
   await advance(0);
   setLine("L04");
   setDays("tue");
   setSunrise(15);
   // Without the box, a mist schedule on L04 (VPD on, Schedule off, as seeded) is skipped.
-  expect(blocks("L04", "2026-11-03").find((block) => block.draft)?.notes).toEqual(["Skipped until Schedule is on"]);
+  expect(blocks("L04").find((block) => block.draft)?.name).toMatch(/Skipped until Schedule is on$/);
   fireEvent.click(inDrawer().getByLabelText("Only if VPD sensing is degraded"));
-  expect(blocks("L04", "2026-11-03").find((block) => block.draft)).toEqual({ head: "06:50 4×45s Manual Planned", draft: true, hatched: false, notes: ["only if VPD sensing is degraded"] });
+  expect(blocks("L04").find((block) => block.draft)).toMatchObject({ name: "L04 Center mister, Tue 06:50, 4 × 45 s, draft, not saved, planned, only if VPD sensing is degraded", hatched: false });
+  expect(day().querySelector('.sch-row[data-line="L04"] .sch-draft')?.className).toContain("sch-eq-heat1");
   expect(preview()).toContain("only if VPD sensing is degraded");
   expect(previewLine("L04")).toBe("L04 no minutes plannedCenter: 0 of 60 min for schedules; 60 kept for VPD");
   setLine("L07");
-  expect(blocks("L07", "2026-11-03")).toEqual([{ head: "06:50 4×45s Manual Planned", draft: true, hatched: true, notes: ["Skipped: VPD control is off"] }]);
+  expect(blocks("L07")).toEqual([{ name: "L07 South mister, Tue 06:50, 4 × 45 s, draft, not saved, Skipped: VPD control is off", draft: true, hatched: true, capped: false, conflict: false }]);
   expect(preview()).toContain("Skipped: VPD control is off");
 });
 
@@ -192,9 +211,10 @@ test("the Manual box starts ticked, unticking it saves manual: false, and it sta
   const manual = () => inDrawer().getByLabelText("Manual: Iris skips this") as HTMLInputElement;
   expect(manual().checked).toBe(true);
   fireEvent.click(manual());
-  expect(blocks("L01", "2026-11-04")[0].head).toBe("07:35 12m Iris may adjust Planned");
   await save();
   expect(writes(api)[0].body).toMatchObject({ manual: false });
+  // The rule says Iris may adjust it.
+  expect(ruleMeta(4)).toMatch(/^Iris may adjust · /);
   cleanup(); stopFixtureApi();
   const again = open("/water/schedules?schedule=13", { fixture: "schedules-paused" });
   await advance(0);
@@ -204,7 +224,7 @@ test("the Manual box starts ticked, unticking it saves manual: false, and it sta
   expect(writes(again)[0].operationId).toBe("API-IRR-04");
 });
 
-test("an L02 feed shows FERT and the partner's note, sends prewet_s and flush_s, and counts 6 min on L01's cap", async () => {
+test("an L02 feed shows FERT and the partner's note, sends prewet_s and flush_s, counts 6 min on L01's cap, and draws its prewet and flush on L01's row", async () => {
   const api = open(NEW, { fixture: "l02-enabled" });
   await advance(0);
   setLine("L02");
@@ -217,7 +237,11 @@ test("an L02 feed shows FERT and the partner's note, sends prewet_s and flush_s,
   expect(preview()).toContain("Sun 5 min");
   expect(text(drawer()!.querySelector(".schedule-fert"))).toBe("Prewets on L01, feeds through L03 from the tank, then flushes on L01");
   expect(previewLine("L01")).toBe("L01 Sun 6 minWall drip cap 60 min a day");
-  expect(blocks("L02", "2026-11-08")).toEqual([{ head: "07:35 5m Fert Manual Planned", draft: true, hatched: false, notes: ["prewet 2 min · feed 5 min · flush 4 min"] }]);
+  expect(shownDay()).toBe("Sunday, Nov 8");
+  expect(blocks("L02")).toEqual([{ name: "L02 Wall feed, Sun 07:35, 5 min, draft, not saved, planned", draft: true, hatched: false, capped: false, conflict: false }]);
+  expect([...day().querySelectorAll('.sch-row[data-line="L01"] .sch-part')].map((node) => node.getAttribute("title")?.replaceAll("\u00a0", " "))).toEqual([
+    "prewet 2 min before L02 Wall feed's 07:35 feed, planned", "flush 4 min after L02 Wall feed's 07:35 feed, planned",
+  ]);
   await save();
   expect(writes(api)[0].body).toEqual({
     line_id: "L02", enabled: true, days: ["sun"], start: { kind: "sunrise", offset_min: 60 }, on_s: 300, count: 1, gap_s: 0, prewet_s: 120, flush_s: 240, degraded_only: false, manual: true,
@@ -312,19 +336,18 @@ test("before the engine the schedule stays REQUESTED with \"Applies with the irr
   const api = open(NEW, { fixture: "before-engine" });
   await fillWallMwf();
   // The draft reads as a blocked occurrence does, and still counts against the cap.
-  expect(blocks("L01", "2026-11-04")).toEqual([{ head: "07:35 12m Manual Planned", draft: true, hatched: true, notes: ["Wall MWF", "arrives with the irrigation firmware"] }]);
+  expect(blocks("L01")).toEqual([{ name: "L01 Wall drip · Wall MWF, Mon 07:35, 12 min, draft, not saved, will not run, arrives with the irrigation firmware", draft: true, hatched: true, capped: false, conflict: false }]);
   expect(previewLine("L01")).toBe("L01 Mon 12 · Wed 12 · Fri 12 minWall drip cap 60 min a day");
   fireEvent.click(inDrawer().getByLabelText("Checked: line flushed, emitters checked"));
   await save();
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-08", "API-IRR-03"]);
-  const read = () => blocks("L01", "2026-11-04");
-  expect(read()).toEqual([{ head: "07:35 12m Manual Requested", draft: false, hatched: true, notes: ["Wall MWF", "Applies with the irrigation firmware"] }]);
+  expect([pill(4), ruleMeta(4)]).toEqual(["Requested", "manual · changed by jason 0 s ago · Applies with the irrigation firmware"]);
   const before = requests(api, "API-IRR-02").length;
   await advance(6 * 60_000);
   // The slow cadence, since it cannot settle before the firmware ships.
   expect(requests(api, "API-IRR-02").length - before).toBe(6);
-  expect(read()[0].head).toBe("07:35 12m Manual Requested");
-  expect(text(document.querySelector(".schedule-week"))).not.toMatch(/not confirmed/i);
+  expect(pill(4)).toBe("Requested");
+  expect(text(document.querySelector(".sch-rules"))).not.toMatch(/not confirmed/i);
 });
 
 test("with no matching hash the schedule reads \"Not confirmed\" with the reject in words", async () => {
@@ -332,11 +355,10 @@ test("with no matching hash the schedule reads \"Not confirmed\" with the reject
   await fillWallMwf();
   await save();
   await advance(15_000);
-  expect(blocks("L01", "2026-11-04")).toEqual([{ head: "07:35 12m Manual Not confirmed", draft: false, hatched: false, notes: ["Wall MWF", "Not confirmed: the controller refused a schedule · retrying at 1, 5 and 15 min"] }]);
+  expect([pill(4), ruleMeta(4)]).toEqual(["Not confirmed", expect.stringMatching(/ · Not confirmed: the controller refused a schedule · retrying at 1, 5 and 15 min$/)]);
   expect(banner()).toBe("Not confirmed: the controller refused a schedule · retrying at 1, 5 and 15 min");
 });
 
-// ---------------------------------------------------------------------------------------------------- the fields and the client's bounds
 test("the line's kind picks the fields, their min and max from API-IRR-02 bounds, and only L01, L02 and L04–L10 are offered", async () => {
   open(NEW);
   await advance(0);
@@ -400,15 +422,48 @@ test("the client checks only min and max, beside the field, and sends nothing pa
   expect(writes(api)).toEqual([]);
 });
 
-test("a day past the cap reads so, and Save still sends", async () => {
+test("a day past the cap reads so before Save, the block outlined amber, and Save still sends", async () => {
   const api = open(NEW);
   await advance(0);
   change("Run", "90");
   expect(preview()).toContain("Past the cap: the controller ends the run at the cap (Mon)");
-  expect(blocks("L01", "2026-11-02")[0].notes).toEqual(["Past the cap: the controller ends the run at the cap"]);
+  expect(checks()).toContain("Mon would reach 90 of 60 min: runs past the cap end at the cap");
+  expect(blocks("L01")[0]).toMatchObject({ capped: true, name: expect.stringMatching(/ends at the daily cap$/) });
   await save();
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-03"]);
   expect(drawer()).toBeNull();
+});
+
+test("a start inside another line's run on the same manifold reads as a wait, which saves", async () => {
+  open(NEW, { fixture: ["l01-schedule", "l02-enabled"] });
+  await advance(0);
+  setLine("L02");
+  setDays("wed");
+  change("Start: at a clock time or from the sun", "clock");
+  change("Clock time (HH:MM)", "07:40");
+  expect(checks()).toContain("Shares the drip manifold with L01's 07:35 Wall MWF: it waits until 07:47");
+});
+
+test("the day shortcuts set every day or the weekdays, and an empty slot, a line's + Schedule and Duplicate prefill a new schedule", async () => {
+  open(NEW);
+  await advance(0);
+  fireEvent.click(inDrawer().getByRole("button", { name: "Daily" }));
+  expect(Object.values(NAMES).map((name) => inDrawer().getByRole("button", { name }).getAttribute("aria-pressed"))).toEqual(["true", "true", "true", "true", "true", "true", "true"]);
+  fireEvent.click(inDrawer().getByRole("button", { name: "Weekdays" }));
+  expect(inDrawer().getByRole("button", { name: "Weekdays" }).getAttribute("aria-pressed")).toBe("true");
+  expect(inDrawer().getByRole("button", { name: "Saturday" }).getAttribute("aria-pressed")).toBe("false");
+  cleanup(); stopFixtureApi();
+  open("/water/schedules?schedule=new&line=L04&at=13%3A15&day=2026-11-05", { fixture: "schedules-paused" });
+  await advance(0);
+  expect((inDrawer().getByLabelText("Line") as HTMLSelectElement).selectedOptions[0].textContent).toMatch(/^L04/);
+  expect((inDrawer().getByLabelText("Clock time (HH:MM)") as HTMLInputElement).value).toBe("13:15");
+  expect(inDrawer().getByRole("button", { name: "Thursday" }).getAttribute("aria-pressed")).toBe("true");
+  expect(shownDay()).toBe("Thursday, Nov 5");
+  cleanup(); stopFixtureApi();
+  open("/water/schedules?schedule=new&copy=12", { fixture: "schedules-paused" });
+  await advance(0);
+  expect([(inDrawer().getByLabelText("Label (optional)") as HTMLInputElement).value, (inDrawer().getByLabelText("Feed") as HTMLInputElement).value]).toEqual(["Weekly feed (copy)", "5"]);
+  expect(text(inDrawer().getByRole("heading", { level: 2 }))).toBe("New schedule Fert");
 });
 
 test("a refusal reads in words beside its field: out_of_range with its unit, on_s in a drip's minutes, unknown_target beside Line or gone on an edit", () => {
@@ -432,14 +487,14 @@ test("a refusal reads in words beside its field: out_of_range with its unit, on_
 });
 
 // ---------------------------------------------------------------------------------------------------- edit, disable, delete
-test("Edit on a block opens the stored schedule in the drawer; Save sends every field and manual, and the draft replaces its blocks still ahead", async () => {
-  const api = open("/water/schedules", { fixture: "schedules-paused" });
+test("Edit from a block's popover opens the stored schedule over it; Save sends every field and manual, and the draft replaces its blocks still ahead", async () => {
+  const api = open("/water/schedules?day=2026-11-04", { fixture: "schedules-paused" });
   await advance(0);
-  const block = () => cell("L01", "2026-11-04").querySelector<HTMLElement>(".week-block")!;
-  fireEvent.click(block().querySelector("summary")!);
-  fireEvent.click(within(block()).getByRole("link", { name: /^Edit/ }));
+  fireEvent.click(day().querySelector<HTMLElement>('.sch-row[data-line="L01"] .sch-block')!);
   await advance(0);
-  expect(where()).toBe("/water/schedules?schedule=11");
+  fireEvent.click(within(document.querySelector<HTMLElement>("dialog.popover")!).getByRole("link", { name: "Edit schedule" }));
+  await advance(0);
+  expect(where()).toBe("/water/schedules?day=2026-11-04&block=11-1793802900&schedule=11");
   expect(text(inDrawer().getByRole("heading", { level: 2 }))).toBe("Edit schedule");
   expect((inDrawer().getByLabelText("Run") as HTMLInputElement).value).toBe("12");
   expect((inDrawer().getByLabelText("Label (optional)") as HTMLInputElement).value).toBe("Wall MWF");
@@ -448,9 +503,9 @@ test("Edit on a block opens the stored schedule in the drawer; Save sends every 
   expect(inDrawer().getByRole("button", { name: "Tuesday" }).getAttribute("aria-pressed")).toBe("false");
   change("Run", "10");
   change("Reason (optional)", "Rain this week");
-  // Monday's has run and stays; Wednesday's and Friday's are the draft's.
-  expect(blocks("L01", "2026-11-02").map((row) => row.draft)).toEqual([false]);
-  expect(blocks("L01", "2026-11-04")).toEqual([{ head: "07:35 10m Manual Planned", draft: true, hatched: false, notes: ["Wall MWF"] }]);
+  // Wednesday's saved block gives way to the draft; Monday's has run and stays.
+  expect(shownDay()).toBe("Wednesday, Nov 4");
+  expect(blocks("L01")).toEqual([{ name: "L01 Wall drip · Wall MWF, Wed 07:35, 10 min, draft, not saved, planned", draft: true, hatched: false, capped: false, conflict: false }]);
   expect(previewLine("L01")).toBe("L01 Wed 10 · Fri 10 · Sun 6 minWall drip cap 60 min a day");
   await save();
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-04"]);
@@ -459,8 +514,11 @@ test("Edit on a block opens the stored schedule in the drawer; Save sends every 
     line_id: "L01", label: "Wall MWF", enabled: true, days: ["mon", "wed", "fri"], start: { kind: "sunrise", offset_min: 60 }, on_s: 600, count: 1, gap_s: 0, prewet_s: 0, flush_s: 0,
     degraded_only: false, manual: true, reason: "Rain this week",
   });
+  // The editor closes onto the popover it opened from, which reads the change travelling.
   expect(drawer()).toBeNull();
-  expect(blocks("L01", "2026-11-04")[0].head).toBe("07:35 10m Manual Requested");
+  expect(where()).toBe("/water/schedules?day=2026-11-04&block=11-1793802900");
+  expect(text(document.querySelector("dialog.popover"))).toContain("Requested");
+  expect(pill(11)).toBe("Requested");
 });
 
 test("a stored run that is not whole minutes opens as it is and saves unchanged, so editing anything else keeps it; a new one must be whole minutes", async () => {
@@ -494,17 +552,16 @@ test("a mister and a feed open with their own fields filled in", async () => {
   expect(previewLine("L01")).toBe("L01 Wed 12 · Fri 12 · Sun 6 minWall drip cap 60 min a day");
 });
 
-test("disabling a schedule takes it out of the week, and the line under the week reaches it to enable it again", async () => {
+test("disabling a schedule takes its blocks off the timeline; it stays muted under its line in the rules list, which reaches it to enable it again", async () => {
   const api = open("/water/schedules?schedule=11", { fixture: "schedules-paused" });
   await advance(0);
   fireEvent.click(inDrawer().getByRole("switch", { name: "Enabled" }));
   expect(preview()).toContain("Disabled: this schedule will not run");
-  expect(blocks("L01", "2026-11-04")).toEqual([]);
   await save();
   expect(writes(api)[0].body).toMatchObject({ enabled: false });
-  expect(blocks("L01", "2026-11-04")).toEqual([]);
-  expect(text(document.querySelector(".week-disabled"))).toBe("Disabled, so not in the week: L01 Wall MWF");
-  fireEvent.click(within(document.querySelector<HTMLElement>(".week-disabled")!).getByRole("link", { name: "L01 Wall MWF" }));
+  expect(rule(11)?.className).toContain("is-muted");
+  expect(ruleMeta(11)).toContain("disabled: will not run");
+  fireEvent.click(within(rule(11)!).getByRole("link", { name: "Edit Wall MWF" }));
   await advance(0);
   expect(where()).toBe("/water/schedules?schedule=11");
   fireEvent.click(inDrawer().getByRole("switch", { name: "Enabled" }));
@@ -512,7 +569,7 @@ test("disabling a schedule takes it out of the week, and the line under the week
   expect(writes(api)[1].body).toMatchObject({ enabled: true });
 });
 
-test("Delete is one tap with no dialog and carries the reason, a double tap sending one; the schedule leaves the week and the banner reads REQUESTED", async () => {
+test("Delete is one tap with no dialog and carries the reason, a double tap sending one; the schedule leaves the rules and the status line reads REQUESTED", async () => {
   const api = open("/water/schedules?schedule=11", { fixture: "schedules-paused" });
   await advance(0);
   change("Reason (optional)", "Moved to the feed");
@@ -521,9 +578,9 @@ test("Delete is one tap with no dialog and carries the reason, a double tap send
   expect(writes(api).map((row) => [row.operationId, row.path])).toEqual([["API-IRR-05", "/api/v1/irrigation/schedules/11?reason=Moved+to+the+feed"]]);
   expect(writes(api)[0].idempotency_key).toMatch(UUID);
   expect(document.querySelector("dialog")).toBeNull();
-  expect(blocks("L01", "2026-11-04")).toEqual([]);
-  expect(banner()).toBe("On controller: rev 42 · rev 43 sending Requested");
-  expect(text(document.querySelector(".week-count"))).toBe("2 of 24 schedules");
+  expect(rule(11)).toBeNull();
+  expect(banner()).toBe("Program rev 42 on controller · rev 43 sending Requested");
+  expect(count()).toBe("2 of 24 schedules");
   expect(api.respond({ url: "/v1/activity" }).body.items.find((row: { action: string }) => row.action === "irrigation.schedule.delete")).toMatchObject({ actor: { name: "jason" }, reason: "Moved to the feed" });
   // A new schedule has nothing to delete.
   fireEvent.click(screen.getByRole("link", { name: "+ New schedule" }));
@@ -537,7 +594,7 @@ test("a schedule deleted elsewhere reads \"This schedule no longer exists\": fro
   await advance(0);
   expect(errors()).toEqual([GONE_TEXT]);
   expect(inDrawer().queryByRole("button", { name: "Save" })).toBeNull();
-  expect(document.querySelectorAll(".week-block-draft")).toHaveLength(0);
+  expect(document.querySelectorAll(".sch-draft")).toHaveLength(0);
   fireEvent.click(inDrawer().getByRole("button", { name: "Done" }));
   await advance(0);
   expect(drawer()).toBeNull();
@@ -558,18 +615,18 @@ test("a schedule deleted elsewhere reads \"This schedule no longer exists\": fro
   expect(drawer()).not.toBeNull();
 });
 
-test("Last 7 days gives way to the next seven while the editor is open, and + New schedule leaves it", async () => {
-  const api = open("/water/schedules?past=7", { fixture: "schedules-paused" });
+test("while the editor is open the timeline shows the next day the draft runs, and goes back to the chosen day when it closes", async () => {
+  open("/water/schedules?day=2026-11-03&schedule=new", { fixture: "schedules-paused" });
   await advance(0);
-  expect(text(document.querySelector(".schedule-week h2"))).toBe("Week · last 7 days");
-  fireEvent.click(screen.getByRole("link", { name: "+ New schedule" }));
+  // Prefilled with the chosen day's weekday? No line or slot was chosen: today's weekday, Monday, so Monday shows.
+  setDays("thu");
+  expect(shownDay()).toBe("Thursday, Nov 5");
+  fireEvent.click(inDrawer().getByRole("button", { name: "Cancel" }));
   await advance(0);
-  expect(where()).toBe(NEW);
-  expect(text(document.querySelector(".schedule-week h2"))).toBe("Week · planned");
-  expect(requests(api, "API-IRR-02").map((row) => row.path)).toEqual(["/api/v1/irrigation/schedules?past_days=7", "/api/v1/irrigation/schedules"]);
+  expect(shownDay()).toBe("Tuesday, Nov 3");
 });
 
-test("Cancel and Escape close at once and leave the week as it was; focus goes back to the opener", async () => {
+test("Cancel and Escape close at once and leave the timeline as it was; focus goes back to the opener", async () => {
   const api = open("/water/schedules", { fixture: "schedules-paused" });
   await advance(0);
   const opener = screen.getByRole("link", { name: "+ New schedule" });
@@ -581,20 +638,16 @@ test("Cancel and Escape close at once and leave the week as it was; focus goes b
   await advance(0);
   expect(drawer()).toBeNull();
   expect(where()).toBe("/water/schedules");
-  expect(document.querySelectorAll(".week-block-draft")).toHaveLength(0);
+  expect(document.querySelectorAll(".sch-draft")).toHaveLength(0);
   expect(document.activeElement).toBe(opener);
-  // Edit's own link takes focus back too, though the draft hid its block while the drawer was open.
-  const block = () => cell("L01", "2026-11-04").querySelector<HTMLElement>(".week-block")!;
-  fireEvent.click(block().querySelector("summary")!);
-  const edit = within(block()).getByRole("link", { name: /^Edit/ });
+  // A rule's Edit takes focus back too.
+  const edit = within(rule(11)!).getByRole("link", { name: "Edit Wall MWF" });
   edit.focus();
   fireEvent.click(edit);
   await advance(0);
-  expect(block().hasAttribute("hidden")).toBe(true);
   fireEvent.click(inDrawer().getByRole("button", { name: "Cancel" }));
   await advance(0);
-  expect(block().hasAttribute("hidden")).toBe(false);
-  expect(document.activeElement).toBe(within(block()).getByRole("link", { name: /^Edit/ }));
+  expect(document.activeElement).toBe(within(rule(11)!).getByRole("link", { name: "Edit Wall MWF" }));
   expect(writes(api)).toEqual([]);
 });
 
@@ -603,7 +656,7 @@ test("a viewer sees no editor, New schedule or block menu, whatever the URL says
   await advance(0);
   expect(drawer()).toBeNull();
   expect(screen.queryByRole("link", { name: "+ New schedule" })).toBeNull();
-  expect(document.querySelector(".week-block-menu")).toBeNull();
+  expect(document.querySelector(".sch-add")).toBeNull();
   expect(document.querySelectorAll("[data-write-control]")).toHaveLength(0);
   cleanup(); stopFixtureApi();
   const api = open("/water/schedules?schedule=2", { fixture: "writes-off" });

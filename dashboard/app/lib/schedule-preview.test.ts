@@ -183,3 +183,34 @@ test("with API-IRR-01 not answered the draft still expands, with no cap, clean p
   expect(preview.blocks.map((block) => block.occurrence.status)).toEqual(["planned", "planned", "planned"]);
   expect(row(preview, "L01")).toEqual({ totals: "Mon 12 · Wed 12 · Fri 12 min", cap: null, past: null });
 });
+
+// ---------------------------------------------------------------------------------------------------- the checks (redesign §6.5)
+const checks = (preview: ReturnType<typeof previewSchedule>) => preview.checks.map((check) => [check.code, plain(check.text), check.kind]);
+
+test("too_close reads before Save, naming the other schedule and the minutes, and marks the draft's blocks that would be refused", () => {
+  const preview = previewSchedule(draft({ start: { kind: "sunrise", offset_min: 80 } }), context("l01-schedule"));
+  expect(checks(preview)).toContainEqual(["too_close", "Starts 20 min after Wall MWF on L01: schedules on one line need 30 min", "refusal"]);
+  // Monday's too: the API refuses the schedule, whichever of its days collides.
+  expect(preview.blocks.filter((block) => block.conflict).map((block) => localDate(block.occurrence.planned_start))).toEqual(["2026-11-02", "2026-11-04", "2026-11-06"]);
+  // 40 min before: fine; an edit of the same schedule is never too close to itself.
+  expect(checks(previewSchedule(draft({ start: { kind: "sunrise", offset_min: 20 } }), context("l01-schedule"))).map((check) => check[0])).not.toContain("too_close");
+  expect(checks(previewSchedule(draft({ slot_id: 11, start: { kind: "sunrise", offset_min: 70 } }), context("l01-schedule"))).map((check) => check[0])).not.toContain("too_close");
+});
+
+test("the 24-schedule limit reads for a new schedule only; a day past the cap reads its total", () => {
+  expect(checks(previewSchedule(draft(), context("schedules-full")))).toContainEqual(["too_many_schedules", "This would be the 25th schedule; the controller holds 24", "refusal"]);
+  expect(checks(previewSchedule(draft({ slot_id: 3 }), context("schedules-full"))).map((check) => check[0])).not.toContain("too_many_schedules");
+  const over = previewSchedule(draft({ on_s: 90 * 60 }), context("in-band"));
+  expect(checks(over)).toContainEqual(["cap", "Mon would reach 90 of 60 min: runs past the cap end at the cap", "note"]);
+  // A feed charges its prewet and flush to the clean partner's cap, and says so on that line.
+  const feed = previewSchedule(draft({ line_id: "L02", days: ["sun"], on_s: 300, prewet_s: 1800, flush_s: 1800 }), context("l02-enabled", (item) => (item.line_id === "L01" ? { ...item, daily_cap_min: 45 } : item)));
+  expect(checks(feed)).toContainEqual(["cap", "Sun would reach 60 of 45 min on L01: runs past the cap end at the cap", "note"]);
+});
+
+test("a shared manifold reads as a wait: a drip start inside another drip line's run", () => {
+  // Wall MWF runs 07:35–07:47 on L01; an L02 feed at 07:40 on Wednesday waits for it.
+  const wait = previewSchedule(draft({ line_id: "L02", days: ["wed"], start: { kind: "clock", clock: "07:40" }, on_s: 300 }), context(["l01-schedule", "l02-enabled"]));
+  expect(checks(wait)).toContainEqual(["manifold", "Shares the drip manifold with L01's 07:35 Wall MWF: it waits until 07:47", "note"]);
+  // A mister is on the other manifold.
+  expect(checks(previewSchedule(draft({ line_id: "L04", days: ["wed"], start: { kind: "clock", clock: "07:40" }, on_s: 45, count: 4, gap_s: 60 }), context("l01-schedule"))).map((check) => check[0])).not.toContain("manifold");
+});

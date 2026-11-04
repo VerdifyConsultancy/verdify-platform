@@ -63,27 +63,36 @@ function PauseForm({ lines, target, onClose }: { lines: readonly IrrigationLine[
 }
 
 /**
- * "Pause lines…" and, while any line is paused, "Resume all", for operators, on the page head of all three Water views.
- * The drawer (`?pause=<line_id|all>`, the one edit drawer) takes a Line, one or "All lines", Until (a local date and
- * time, which must be ahead) and Reason, and sends `PUT /v1/irrigation/lines/{line_id}` or `/lines/all` with
- * `{paused_until, reason}`. Resume all sends `{paused_until: <now>}` to `all`. Neither carries `manual`. Viewers get
- * neither the buttons nor the drawer; until API-IRR-01 answers there is no line to pause.
+ * "Pause lines…" and, while any line is paused, "Resume all", for operators: the actions of Water → Today's page header
+ * (redesign §5.2). Pause lines… opens the drawer (`?pause=all`); Resume all sends `{paused_until: <now>}` to `all`.
+ * Neither carries `manual`. Viewers get neither; until API-IRR-01 answers there is no line to pause.
  */
-export function PauseControls({ lines }: { lines: readonly IrrigationLine[] | undefined }) {
+export function PauseActions({ lines }: { lines: readonly IrrigationLine[] | undefined }) {
   const operator = useRole() === "operator";
-  const { value, open, close } = useWaterDrawer("pause");
+  const { open } = useWaterDrawer("pause");
   const resume = useProgramWrite("API-IRR-08");
   const skew = useServerClockSkew();
-  // Any line, L03 and fog included: they have no card or Resume of their own, and `all` is what pauses and clears them.
+  // Any line, L03 and fog included: they have no row or Resume of their own, and `all` is what pauses and clears them.
   const anyPaused = useClockValue((now) => (lines ?? []).some((line) => pausedNow(line, now)));
   if (!operator) return null;
-  const target = lines && (value === ALL || wetLines(lines).some((line) => line.line_id === value)) ? value : null;
-  return <div className="pause-controls">
+  return <>
     {anyPaused && <Button write busy={resume.sending} onClick={() => void resume.send({ line_id: ALL }, resumeBody(skew))}>Resume all</Button>}
     <Button write disabled={!lines} aria-haspopup="dialog" onClick={() => open(ALL)}>Pause lines…</Button>
     {resume.error && <p className="field-error" role="alert">{resume.error.message}</p>}
-    {lines && target && <PauseForm key={target} lines={lines} target={target} onClose={close} />}
-  </div>;
+  </>;
+}
+
+/**
+ * The pause drawer (`?pause=<line_id|all>`, the one edit drawer), on all three Water views, so a line's "Pause until…"
+ * and a link open it wherever they are: a Line, one or "All lines", Until (a local date and time, which must be ahead)
+ * and Reason, sending `PUT /v1/irrigation/lines/{line_id}` or `/lines/all` with `{paused_until, reason}`. Viewers get none.
+ */
+export function PauseDrawer({ lines }: { lines: readonly IrrigationLine[] | undefined }) {
+  const operator = useRole() === "operator";
+  const { value, close } = useWaterDrawer("pause");
+  if (!operator || !lines) return null;
+  const target = value === ALL || wetLines(lines).some((line) => line.line_id === value) ? value : null;
+  return target ? <PauseForm key={target} lines={lines} target={target} onClose={close} /> : null;
 }
 
 /** "Resume" on a paused line's card, for operators: `{paused_until: <now>}`, with no `manual`. Nothing while it is not paused. */
@@ -98,7 +107,7 @@ export function ResumeLine({ line }: { line: Pick<IrrigationLine, "line_id" | "p
   </>;
 }
 
-/** "Pause <line> until after this run" in `ScheduleWeek`'s block menu, for operators; `until` comes from `pauseAfterRun`. */
+/** "Pause <line> until after this run" in a block's popover (redesign §6.2), for operators; `until` comes from `pauseAfterRun`. */
 export function PauseAfterRun({ lineId, until }: { lineId: string; until: string }) {
   const write = useProgramWrite("API-IRR-08");
   return <>

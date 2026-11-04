@@ -28,8 +28,11 @@ const finite = (value: number | null | undefined): value is number => typeof val
 const whole = (value: number | null | undefined): string => (finite(value) ? String(Math.round(value)) : "—");
 
 // ---------------------------------------------------------------------------------------------------- the layout's read
-/** What the Water layout hands its three views: its one API-IRR-01 poll, under the key Now's water card and Stop share. */
-export type WaterOutlet = { readonly irrigation: PolledQueryResult<IrrigationStatus> };
+/**
+ * What the Water layout hands its three views: its one API-IRR-01 poll, under the key Now's water card and Stop share,
+ * and the slot for History's status line (its period summary), which the layout's page header shows.
+ */
+export type WaterOutlet = { readonly irrigation: PolledQueryResult<IrrigationStatus>; readonly setSummary?: (summary: string | null) => void };
 export const useWaterOutlet = (): WaterOutlet => useOutletContext<WaterOutlet>();
 
 // ---------------------------------------------------------------------------------------------------- the drawers
@@ -555,3 +558,294 @@ export function runAmountWords(run: Pick<Run, "open_s" | "pulses">): string {
 export function runGallons(gal: number | null | undefined): { readonly text: string; readonly reason: string | null } {
   return finite(gal) ? { text: formatValue(gal, "gal"), reason: null } : { text: "—", reason: "no meter data" };
 }
+
+// ==================================================================================================== redesign §5.2–§5.4, §6
+// The rebuilt Water views (WP3): zone cards, the header's status line, the schedule words of the rules list and the
+// popover, and History's period, KPIs and summary. Everything above stays as it was, for Now and the views that still
+// read it.
+
+// ---------------------------------------------------------------------------------------------------- zones (Today)
+export type WaterZone = "wall" | "center" | "south" | "west" | "fog";
+/** Water → Today's zone cards, in their fixed order: the order never changes with state, which keeps spatial memory. */
+export const WATER_ZONES: readonly WaterZone[] = ["wall", "center", "south", "west", "fog"];
+/** What each zone card holds, beside its name. */
+export const ZONE_KIND_WORDS: Readonly<Record<WaterZone, string>> = {
+  wall: "drip and feed", center: "mister and drips", south: "mister and feed", west: "mister and feed", fog: "humidification · climate only",
+};
+/** The line whose daily cap a zone's minutes count against (the cap ticks of minutes by zone); fog has none. */
+export const ZONE_CAP_LINE: Readonly<Record<WaterZone, string | null>> = { wall: "L01", center: "L04", south: "L07", west: "L09", fog: null };
+const ZONE_OF_API: Readonly<Record<string, WaterZone>> = { wall: "wall", center: "center", south: "south", west: "west", house: "fog", supply: "wall" };
+
+/** A line's zone card: its API zone, with L03's supply on the wall card (it rides on L02) and L11's house as fog. */
+export function lineZone(line: Pick<IrrigationLine, "line_id" | "zone">): WaterZone {
+  return ZONE_OF_API[line.zone] ?? minutesZone(line.line_id) ?? "wall";
+}
+
+export type ZoneSummary = {
+  readonly zone: WaterZone;
+  /** The zone's lines in register order, L03 left out (it rides on L02 as a sub-row). */
+  readonly lines: readonly IrrigationLine[];
+  /** L03, the fertilizer master, on the wall card. */
+  readonly master: IrrigationLine | null;
+  /** The zone's mister (L04, L07, L09): its card head holds VPD control and Schedule. */
+  readonly mister: IrrigationLine | null;
+  /** Valve-open minutes today (API-IRR-01 `today.zones`); null when the API has none. */
+  readonly minutes: number | null;
+  /** Minutes still planned today (API-IRR-02), by zone; null while unknown. */
+  readonly planned: number | null;
+  /** The cap line's `daily_cap_min`; null for none (0) or no cap line. */
+  readonly cap: number | null;
+  readonly capLine: string | null;
+  /** Minutes the mister keeps for VPD out of its cap; null on a drip zone. */
+  readonly reserve: number | null;
+  /** The newest `last_water.at` among the zone's lines. */
+  readonly lastAt: string | null;
+};
+
+/** The five zone cards' facts from API-IRR-01, with today's still-planned minutes from `plannedToday` when known. */
+export function zoneSummaries(status: Pick<IrrigationStatus, "lines" | "today">, planned: PlannedToday | null): ZoneSummary[] {
+  return WATER_ZONES.map((zone) => {
+    const inZone = [...status.lines].filter((line) => lineZone(line) === zone).sort(byLineId);
+    const lines = inZone.filter((line) => !isMaster(line));
+    const capLine = ZONE_CAP_LINE[zone];
+    const capped = capLine ? lines.find((line) => line.line_id === capLine) ?? null : null;
+    const served = status.today?.zones?.[zone];
+    const summed = lines.map((line) => line.today?.minutes);
+    const minutes = finite(served) ? served : summed.length && summed.every(finite) ? summed.reduce((sum, value) => sum + value, 0) : null;
+    const newest = lines.map((line) => line.last_water?.at).filter(validTime).sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null;
+    const mister = lines.find((line) => line.kind === "mister") ?? null;
+    return {
+      zone, lines, master: inZone.find(isMaster) ?? null, mister, minutes, planned: planned ? planned.zone[zone] ?? 0 : null,
+      cap: capped && capped.daily_cap_min > 0 ? capped.daily_cap_min : null, capLine: capped?.line_id ?? null,
+      reserve: mister && finite(mister.vpd_reserve_min) && mister.vpd_reserve_min > 0 ? mister.vpd_reserve_min : null, lastAt: newest,
+    };
+  });
+}
+
+/** The lines running now (`state.code` running), in register order; L03 and fog included, since a running valve is news. */
+export const runningLines = (lines: readonly IrrigationLine[]): IrrigationLine[] => lines.filter((line) => line.state.code === "running").sort(byLineId);
+/** The earliest `next_run` among the lines; null when nothing is planned in the agenda's week. */
+export function nextRunOf(lines: readonly IrrigationLine[]): { readonly line: IrrigationLine; readonly next: NonNullable<IrrigationLine["next_run"]> } | null {
+  let best: { line: IrrigationLine; next: NonNullable<IrrigationLine["next_run"]> } | null = null;
+  for (const line of lines) {
+    const next = line.next_run;
+    if (!next || !validTime(next.start_at)) continue;
+    if (!best || Date.parse(next.start_at) < Date.parse(best.next.start_at)) best = { line, next };
+  }
+  return best;
+}
+
+// ---------------------------------------------------------------------------------------------------- schedule words
+const DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const DAY_SHORT: Readonly<Record<string, string>> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
+/** A schedule's days: "Daily", "Weekdays", "Weekends", else "Mon Wed Fri" in week order; "No days" for none. */
+export function daysWords(days: readonly string[] | null | undefined): string {
+  const set = new Set(days ?? []);
+  const has = (list: readonly string[]) => list.length === set.size && list.every((day) => set.has(day));
+  if (has(DAY_ORDER)) return "Daily";
+  if (has(DAY_ORDER.slice(0, 5))) return "Weekdays";
+  if (has(DAY_ORDER.slice(5))) return "Weekends";
+  const ordered = DAY_ORDER.filter((day) => set.has(day)).map((day) => DAY_SHORT[day]);
+  const other = [...set].filter((day) => !DAY_ORDER.includes(day));
+  return [...ordered, ...other].join(" ") || "No days";
+}
+
+const SOLAR_WORDS: Readonly<Record<string, string>> = { sunrise: "sunrise", solar_noon: "solar noon", sunset: "sunset" };
+const MINUS_SIGN = "−";
+/**
+ * A start in words with today's resolved time: "16:00", "sunrise + 60 (07:31 today)", "solar noon − 120"; the resolved
+ * time only from `solar[]` (the browser never computes the sun). A kind this build does not know reads raw.
+ */
+export function startWords(start: { readonly kind: string; readonly clock?: string; readonly offset_min?: number } | null | undefined, solarToday?: Pick<ScheduleAgenda["solar"][number], "sunrise" | "solar_noon" | "sunset"> | null): string {
+  if (!start) return "—";
+  if (start.kind === "clock") return start.clock ?? "—";
+  const word = SOLAR_WORDS[start.kind];
+  if (!word) return start.kind;
+  const offset = start.offset_min ?? 0;
+  const base = `${word}${offset === 0 ? "" : ` ${offset > 0 ? "+" : MINUS_SIGN} ${Math.abs(offset)}`}`;
+  const at = solarToday ? Date.parse(solarToday[start.kind as "sunrise" | "solar_noon" | "sunset"]) : Number.NaN;
+  return Number.isFinite(at) ? `${base} (${shortTime(new Date(at + offset * 60_000).toISOString())} today)` : base;
+}
+
+/** A mist window: "4 × 45 s, 60 s gap"; one pulse reads "45 s". */
+function pulsesWords(on: number, count: number, gap: number): string {
+  return count > 1 ? `${count} × ${on}${NBSP}s${gap > 0 ? `, ${gap}${NBSP}s gap` : ""}` : `${on}${NBSP}s`;
+}
+/**
+ * A schedule's amount in words: "12 min" for a drip, "4 × 45 s, 60 s gap" for a mister, "feed 5 min · prewet 2 min ·
+ * flush 4 min on L01" for a fertilizer line, whose prewet and flush run on its clean partner.
+ */
+export function amountWords(schedule: Pick<Schedule, "on_s" | "count" | "gap_s" | "prewet_s" | "flush_s">, kind: string | undefined, partner?: string | null): string {
+  const { on, count, prewet, flush } = seconds(schedule);
+  const gap = schedule.gap_s ?? 0;
+  const main = misterKind(kind) ? pulsesWords(on, count, gap) : secondsWords(on);
+  if (!fertKind(kind)) return main;
+  const sides = [prewet > 0 ? `prewet ${secondsWords(prewet)}` : null, flush > 0 ? `flush ${secondsWords(flush)}` : null].filter(Boolean);
+  return [`feed ${main}`, ...sides].join(" · ") + (sides.length && partner ? ` on ${partner}` : "");
+}
+/** The short amount on a block or an agenda row: "12 min", "4 × 45 s". */
+export function amountShort(schedule: Pick<Schedule, "on_s" | "count">, kind: string | undefined): string {
+  const { on, count } = seconds(schedule);
+  return misterKind(kind) ? (count > 1 ? `${count} × ${on}${NBSP}s` : `${on}${NBSP}s`) : secondsWords(on);
+}
+/** Valve-open seconds of one run on its own line: the pulses and the gaps between them; prewet and flush are the partner's. */
+export function runSeconds(schedule: Pick<Schedule, "on_s" | "count" | "gap_s">): number {
+  const { on, count } = seconds({ ...schedule, prewet_s: 0, flush_s: 0 });
+  return on * count + (schedule.gap_s ?? 0) * Math.max(0, count - 1);
+}
+
+// ---------------------------------------------------------------------------------------------------- History (redesign §5.4)
+export const HISTORY_DAYS = [7, 30, 90, 365] as const;
+export type HistoryDays = (typeof HISTORY_DAYS)[number];
+/** `?range=7d|30d|90d|365d` (the default 7d); an old link's `?days=30` still reads. */
+export function historyDays(range: string | null, legacy: string | null = null): HistoryDays {
+  const match = /^(\d+)d$/.exec(range ?? "");
+  const days = match ? Number(match[1]) : legacy === "30" ? 30 : 7;
+  return (HISTORY_DAYS as readonly number[]).includes(days) ? days as HistoryDays : 7;
+}
+/** `?measure=min|gal`: watering minutes (the default) or whole gallons. */
+export const historyMeasure = (value: string | null): "min" | "gal" => (value === "gal" ? "gal" : "min");
+/** The previous equal period's window: the `days` before the current one. */
+export function historyWindows(today: string, days: number): { readonly current: { from: string; to: string }; readonly previous: { from: string; to: string } } {
+  return {
+    current: { from: dateShift(today, -(days - 1)), to: today },
+    previous: { from: dateShift(today, -(2 * days - 1)), to: dateShift(today, -days) },
+  };
+}
+
+/** The lines whose minutes count as watering: every wet line but L03 (it opens with each feed) and fog (humidification). */
+const isWatering = (lineId: string) => lineId !== "L03" && lineId !== "L11";
+export type MinutesTally = {
+  /** Watering minutes over the period; null when no day has data. */
+  readonly minutes: number | null;
+  /** Whole gallons over the period where the meter gave them; null when none did. */
+  readonly gal: number | null;
+  /** Report rows with minutes but no gallons: the gallons total is then a floor. */
+  readonly galMissing: number;
+  readonly noDataDays: number;
+  /** Fog's humidification minutes, apart. */
+  readonly fog: number | null;
+  /** Per day, oldest first: minutes and gallons, null on a no-data day. */
+  readonly days: readonly { readonly day: string; readonly minutes: number | null; readonly gal: number | null }[];
+};
+/** API-IRR-10 by line, summed for the KPIs: no-data days stay out (never 0), L03 and fog are not watering. */
+export function tallyMinutes(report: Pick<MinutesReport, "periods" | "rows" | "group_by">): MinutesTally {
+  const days = [...report.periods].sort((a, b) => (a.start < b.start ? -1 : 1));
+  const counted = new Set(days.filter((period) => period.coverage !== "no_data").map((period) => period.start));
+  const perDay = new Map(days.map((period) => [period.start, { minutes: 0, gal: 0, missing: false }]));
+  let fog = 0, galMissing = 0;
+  for (const row of report.rows) {
+    if (!counted.has(row.period) || !finite(row.minutes)) continue;
+    if (report.group_by === "line" ? row.group === "L11" : row.group === "fog") { fog += row.minutes; continue; }
+    if (report.group_by === "line" ? !isWatering(row.group) : row.group === "L03") continue;
+    const day = perDay.get(row.period)!;
+    day.minutes += row.minutes;
+    if (finite(row.gal)) day.gal += row.gal; else if (row.minutes > 0) { day.missing = true; galMissing += 1; }
+  }
+  const series = days.map((period) => {
+    const day = perDay.get(period.start)!;
+    return { day: period.start, minutes: counted.has(period.start) ? day.minutes : null, gal: counted.has(period.start) ? day.gal : null };
+  });
+  const sum = (pick: (day: (typeof series)[number]) => number | null) => series.reduce((total, day) => total + (pick(day) ?? 0), 0);
+  const any = counted.size > 0;
+  const metered = series.some((day) => finite(day.gal) && day.gal > 0) || (any && galMissing === 0);
+  return { minutes: any ? sum((day) => day.minutes) : null, gal: any && metered ? sum((day) => day.gal) : null, galMissing, noDataDays: days.length - counted.size, fog: any ? fog : null, days: series };
+}
+
+/** Runs are counted over one ledger window of 31 days at most (API-IRR-11), so the KPIs say so past it. */
+export const RUNS_TALLY_MAX_DAYS = RUNS_MAX_DAYS;
+const SHORTFALLS = ["missed", "short", "cap"] as const;
+export type RunsTally = {
+  readonly runs: number;
+  readonly missed: number;
+  readonly short: number;
+  readonly cap: number;
+  /** The newest missed, short or cap run, for its words. */
+  readonly newest: Run | null;
+  /** False when the ledger had more pages than were read: the counts are then a floor. */
+  readonly complete: boolean;
+};
+/** The ledger's runs counted: watering lines only (not L03 or fog), and how many ended missed, short or at the cap. */
+export function tallyRuns(runs: readonly Run[], complete = true): RunsTally {
+  const watering = runs.filter((run) => isWatering(run.line_id));
+  const count = (outcome: string) => watering.filter((run) => run.outcome === outcome).length;
+  const newest = watering.filter((run) => (SHORTFALLS as readonly string[]).includes(run.outcome))
+    .sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at))[0] ?? null;
+  return { runs: watering.length, missed: count("missed"), short: count("short"), cap: count("cap"), newest, complete };
+}
+/** "1 missed", "1 missed, 2 short", "none"; the words of the fourth KPI. */
+export function shortfallWords(tally: Pick<RunsTally, "missed" | "short" | "cap">): string {
+  const parts = [tally.missed ? `${tally.missed} missed` : null, tally.short ? `${tally.short} short` : null, tally.cap ? `${tally.cap} at the cap` : null].filter(Boolean);
+  return parts.join(", ") || "none";
+}
+/** The newest shortfall in words: "Oct 31 L09: no valid clock", its reason or else its outcome. */
+export function shortfallNote(run: Pick<Run, "started_at" | "line_id" | "outcome" | "reason"> | null): string | null {
+  if (!run || !validTime(run.started_at)) return null;
+  const day = localDate(run.started_at);
+  const month = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" }).format(new Date(`${day}T12:00:00Z`));
+  return `${month} ${run.line_id}: ${run.reason || words("run_outcome", run.outcome)}`;
+}
+/** A period in words: "Last 7 days", "Last 365 days". */
+export const periodWords = (days: number): string => `Last ${days} days`;
+/**
+ * History's status line: "Last 7 days: 6 h 12 min watering · 412 gal · 21 runs, 1 missed". A part the API has not
+ * answered is left out, never 0; the runs part only where the ledger is counted (31 days at most).
+ */
+export function historySummary(days: number, minutes: MinutesTally | null, runs: RunsTally | null): string | null {
+  if (!minutes) return null;
+  const parts = [`${formatValue(minutes.minutes, "min")} watering`];
+  if (finite(minutes.gal)) parts.push(`${minutes.galMissing ? "at least " : ""}${formatValue(minutes.gal, "gal")}`);
+  if (runs) {
+    const shortfall = runs.missed + runs.short + runs.cap;
+    parts.push(`${runs.complete ? "" : "at least "}${runs.runs} ${runs.runs === 1 ? "run" : "runs"}${shortfall ? `, ${shortfallWords(runs)}` : ""}`);
+  }
+  return `${periodWords(days)}: ${parts.join(" · ")}`;
+}
+
+/** "07:31" today, "Fri 07:31" this week, "Oct 25, 07:31" before: a run's time on a line row. */
+const rowWhen = (at: string, today: string) => (localDate(at) === today ? shortTime(at) : whenWords(at, today));
+/**
+ * A line row's last water in its state sentence (redesign §5.2): "last 07:31, 12 min · ok" when that outcome is the last
+ * water's own, else "last 07:31, 12 min" with the other run in `meta` ("last run Mon 07:35 · skipped · line paused");
+ * "no water recorded" when there is none.
+ */
+export function lastWaterParts(line: Pick<IrrigationLine, "last_water" | "last_outcome">, today: string): { readonly state: string; readonly meta: string | null } {
+  const { last_water: water, last_outcome: outcome } = line;
+  const ended = outcome ? [words("run_outcome", outcome.outcome), ...(outcome.reason ? [outcome.reason] : [])].join(" · ") : null;
+  const otherRun = outcome ? `last run ${rowWhen(outcome.at, today)} · ${ended}` : null;
+  if (!water || !validTime(water.at)) return { state: "no water recorded", meta: otherRun };
+  const head = `last ${rowWhen(water.at, today)}, ${formatValue(water.open_s / 60, "min")}`;
+  if (outcome && outcomeOfLastWater(water, outcome)) return { state: `${head} · ${ended}`, meta: null };
+  return { state: head, meta: otherRun };
+}
+/** "next 16:00 · 10 min" (today's time alone), "next Wed 07:35 · 4 × 45 s": the next run, read the same everywhere (redesign §6.1). */
+export function nextRunShort(next: IrrigationLine["next_run"], today: string, amount?: string | null): string | null {
+  if (!next || !validTime(next.start_at)) return null;
+  const part = amount ?? (finite(next.minutes) ? formatValue(next.minutes, "min") : null);
+  return `next ${rowWhen(next.start_at, today)}${part ? ` · ${part}` : ""}`;
+}
+/** "07:31" today, "Fri 07:31" this week, "Oct 25, 07:31" before: when something last happened, as a row reads it. */
+export const dayClockWords = (at: string, today: string): string => (validTime(at) ? rowWhen(at, today) : TIME_UNAVAILABLE);
+
+// ---------------------------------------------------------------------------------------------------- reads and URLs
+/** The wet relays API-05 reads for the day views: every line's valve but L03's (it opens with each feed). */
+export const WET_EQUIPMENT: readonly string[] = LINES.filter((line) => line.kind !== "master").map((line) => line.equipment);
+/** API-05 over one local day (local midnight to the next): stable all day, so the read keeps one key. */
+export function dayStatesParams(day: string): { from: string; to: string; equipment: string[] } {
+  return { from: localDayStart(day), to: localDayStart(dateShift(day, 1)), equipment: [...WET_EQUIPMENT] };
+}
+/** A Water view's URL with `changes` applied (null removes a parameter), so every view state is in the link. */
+export function waterUrl(path: string, search: URLSearchParams, changes: Readonly<Record<string, string | null>>): string {
+  const next = new URLSearchParams(search);
+  for (const [name, value] of Object.entries(changes)) {
+    if (value === null || value === "") next.delete(name);
+    else next.set(name, value);
+  }
+  const query = next.toString();
+  return `${path}${query ? `?${query}` : ""}`;
+}
+/** The editor's prefill parameters (redesign §6.5): cleared together when the editor closes. */
+export const EDITOR_PARAMS = ["schedule", "line", "at", "copy"] as const;
+/** "+ New schedule" from wherever Schedules stands: the editor for a new one, its prefill and any popover cleared. */
+export const newScheduleUrl = (search: URLSearchParams, prefill: Readonly<Record<string, string | null>> = {}): string =>
+  waterUrl("/water/schedules", search, { block: null, line: null, at: null, copy: null, ...prefill, schedule: "new" });

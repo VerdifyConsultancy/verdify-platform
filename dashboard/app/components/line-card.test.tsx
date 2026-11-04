@@ -1,147 +1,183 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
-// LineCard (#1135, design system §4.6) over #1122's fixture lines, with the clock at 10:42 on Monday 2026-11-02.
-import { act, cleanup } from "@testing-library/react";
+// A line's row on Water → Today (#1135, redesign §5.2, `ObjectRow`) over #1122's fixture lines, at 10:42 on Monday
+// 2026-11-02: the title, kind and one pill, the state sentence, the primary action by state, the state-aware Stop and ⋯.
+import { act, cleanup, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { fixture } from "../../e2e/fixtures/index.mjs";
 import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
-import { Button } from "./button";
-import { BEFORE_ENGINE_TEXT, LineCard, MASTER_TEXT, type LineCardProps } from "./line-card";
-import { denver, renderUi, text } from "./test-render";
+import type { Session } from "../lib/session";
+import { renderWithApi } from "../lib/test-fixture-api";
+import { LineCard, MASTER_TEXT, type LineCardProps } from "./line-card";
+import { denver, text } from "./test-render";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
 const TODAY = "2026-11-02";
 const status = (names: string | string[] = "in-band") => fixture(names, { now: NOW })["API-IRR-01"] as IrrigationStatus;
 const lineOf = (from: IrrigationStatus, id: string) => from.lines.find((line) => line.line_id === id)!;
+const OPERATOR: Partial<Session> = { role: "operator", writesEnabled: true };
 
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
-function card(line: IrrigationLine, props: Partial<LineCardProps> = {}) {
-  renderUi(<LineCard line={line} engine today={TODAY} {...props} />, { role: "operator", writesEnabled: true });
-  const article = document.querySelector<HTMLElement>(`.line-card[data-line="${line.line_id}"]`)!;
+function row(line: IrrigationLine, props: Partial<LineCardProps> = {}, session: Partial<Session> = OPERATOR) {
+  renderWithApi(<LineCard line={line} engine today={TODAY} {...props} />, session);
+  const article = document.querySelector<HTMLElement>(`article[data-line="${line.line_id}"]`)!;
+  const actions = article.querySelector<HTMLElement>(":scope > .object-row-actions");
   return {
     article,
-    head: text(article.querySelector(".line-card-head")),
+    title: text(article.querySelector("h3")),
+    head: text(article.querySelector(".object-row-head")),
     state: text(article.querySelector(".line-state")),
-    lines: [...article.querySelectorAll(":scope > p")].map((node) => text(node)),
+    meta: text(article.querySelector(".object-row-meta")),
+    // The buttons outside the ⋯ menu: the primary action and Stop.
+    buttons: actions ? [...actions.querySelectorAll(":scope > button")].map((node) => text(node)) : [],
+    menu: article.querySelector<HTMLElement>("details.menu"),
   };
 }
 
-test("an idle line: name, CLEAN and enabled; its state, last water and outcome, today against its cap, no check, History", () => {
-  const { head, state, lines, article } = card(lineOf(status(), "L01"));
-  expect(head).toBe("L01 Drip • WallClean Enabled: On");
-  expect(state).toBe("Idle");
-  // The fixture's "07:31" three days back, in MDT.
-  expect(lines).toEqual(["Idle", expect.stringMatching(/^Last water Fri \d\d:\d\d, 12 min · ok$/), "Today 0 of 60 min", "No check recorded"]);
-  const history = article.querySelector("a")!;
-  expect([history.getAttribute("href"), text(history)]).toEqual(["/activity?target=L01", "History of L01 ›"]);
+test("an idle line: its title from zone and kind, CLEAN, its state with its last water, then Run…, the quiet Stop and ⋯", () => {
+  const { article, title, head, state, buttons } = row(lineOf(status(), "L01"));
+  expect(article.className).toContain("line-card");
+  expect([article.getAttribute("data-state"), article.getAttribute("aria-labelledby") !== null]).toEqual(["idle", true]);
+  expect(title).toBe("L01 Wall drip");
+  expect(head).toBe("L01 Wall dripClean");
+  // The fixture's "07:31" three days back.
+  expect(state).toMatch(/^Idle · last Fri \d\d:\d\d, 12 min · ok$/);
+  expect(buttons).toEqual(["Run… L01", "Stop L01"]);
+  expect(article.querySelector(".btn-stop")).toBeNull();
+  expect(article.querySelector(".btn-stop-quiet")).not.toBeNull();
 });
 
-test("a running line: RUNNING with its cause, schedule and the time left, counting down", () => {
-  const { state } = card(lineOf(status("l01-running"), "L01"));
-  expect(state).toBe("Running · run now · 3:00 left");
+test("a running line: the cause's dot, Running with its cause, schedule and time left counting down, and one filled Stop as its primary", () => {
+  const running = row(lineOf(status("l01-running"), "L01"));
+  expect(running.state).toBe("Running · run now · 3:00 left");
+  expect(running.article.querySelector(".wat-dot")?.getAttribute("data-cause")).toBe("run_now");
   act(() => { vi.advanceTimersByTime(1000); });
-  expect(text(document.querySelector(".line-state"))).toBe("Running · run now · 2:59 left");
+  expect(text(running.article.querySelector(".line-state"))).toBe("Running · run now · 2:59 left");
+  expect(running.buttons).toEqual(["Stop L01"]);
+  expect(running.article.querySelector(".btn-stop")).not.toBeNull();
+  expect(running.article.className).toMatch(/tone-running tone-eq-master/);
   cleanup();
   const scheduled = { ...lineOf(status(), "L01"), state: { code: "running", cause: "schedule", slot_id: 11, reason: null, ends_at: new Date(Date.now() + 40_000).toISOString(), observed_at: denver("10:30") } };
-  expect(card(scheduled, { scheduleLabels: new Map([[11, "Wall MWF"]]) }).state).toBe("Running · schedule · Wall MWF · 0:40 left");
+  expect(row(scheduled, { scheduleLabels: new Map([[11, "Wall MWF"]]) }).state).toBe("Running · schedule · Wall MWF · 0:40 left");
   cleanup();
-  expect(card(scheduled).state).toBe("Running · schedule · slot 11 · 0:40 left");
+  // VPD misting with no end: since when.
+  const misting = { ...lineOf(status(), "L04"), state: { code: "running", cause: "vpd", slot_id: null, reason: null, ends_at: null, observed_at: denver("10:30") } };
+  expect(row(misting).state).toBe("Running · VPD · since 10:30");
 });
 
-test("L05 and L06 read Reserved with DISABLED; L11 reads Climate only with no controls", () => {
-  const reserved = card(lineOf(status("reserved-lines"), "L05"));
-  expect(reserved.head).toBe("L05 Drip • CenterClean Disabled Reserved");
-  // DISABLED is in the head once, not again as the state.
-  expect(reserved.article.querySelector(".line-state")).toBeNull();
+test("unknown fills the Stop too (the relay may be on); a disabled line has only Stop and ⋯; L05 reads Reserved · disabled", () => {
+  const unknown = row(lineOf(status("controller-not-reporting"), "L01"));
+  expect(unknown.state).toBe("Unknown · 3 days ago");
+  expect(unknown.article.querySelector(".btn-stop")).not.toBeNull();
   cleanup();
-  const fog = card(lineOf(status(), "L11"), { actions: <Button write>Run L11</Button> });
+  const disabled = row(lineOf(status(), "L02"));
+  expect(disabled.state).toBe("Off · no check recorded");
+  expect(disabled.buttons).toEqual(["Stop L02"]);
+  cleanup();
+  const reserved = row(lineOf(status("reserved-lines"), "L05"));
+  expect(reserved.state).toBe("Reserved · disabled");
+  expect(reserved.head).toBe("L05 Center dripClean");
+});
+
+test("L11 fog is climate only: no Stop and no write control, and its menu keeps its links", () => {
+  const fog = row(lineOf(status(), "L11"));
   expect(fog.head).toBe("L11 FogClimate only");
-  expect(fog.article.querySelector("button")).toBeNull();
-  expect(fog.lines).toEqual(["Idle", expect.stringMatching(/^Last water today 05:10, 6 min$/), "Today 6 min"]);
-  cleanup();
-  // Any other line holds the controls #1136 and #1182 add.
-  expect(card(lineOf(status(), "L01"), { actions: <Button write>Run L01</Button> }).article.querySelector("button")?.textContent).toBe("Run L01");
+  expect(fog.buttons).toEqual([]);
+  expect(fog.article.querySelectorAll("[data-write-control]")).toHaveLength(0);
+  expect([...fog.menu!.querySelectorAll("a")].map((link) => [text(link), link.getAttribute("href")])).toEqual([
+    ["Activity for L11 ›", "/activity/log?target=L11"], ["Runs of L11 ›", "/water/history?line=L11"], [expect.stringMatching(/^Graphs around L11's last run ›$/), expect.stringMatching(/^\/graphs\?from=/)],
+  ]);
 });
 
-test("before the irrigation firmware a card shows its relay and says live job state comes with the firmware", () => {
-  const idle = card(lineOf(status("before-engine"), "L01"), { engine: false });
-  expect(idle.state).toMatch(/^Relay Off since \d\d:\d\d$/);
-  expect(idle.lines).toContain(BEFORE_ENGINE_TEXT);
-  expect(BEFORE_ENGINE_TEXT).toBe("Live job state arrives with the irrigation firmware");
+test("⋯ holds the enable switch with its hint, Options…, Pause until…, the links and the check on record; a viewer's keeps the links alone", () => {
+  const { menu } = row(lineOf(status("schedules-paused"), "L02"));
+  const panel = within(menu!);
+  expect(panel.getByRole("switch", { name: "Enabled L02" }).getAttribute("aria-checked")).toBe("true");
+  expect(menu!.querySelector("[data-menu-keep]")?.textContent).toContain("Off stops all water on this line, VPD misting included");
+  expect(panel.getByRole("button", { name: "Options… of L02" })).toBeTruthy();
+  expect(panel.getByRole("button", { name: "Pause until… L02" })).toBeTruthy();
+  expect(panel.getByRole("link", { name: "Activity for L02" }).getAttribute("href")).toBe("/activity/log?target=L02");
+  expect(panel.getByRole("link", { name: "Runs of L02" }).getAttribute("href")).toBe("/water/history?line=L02");
+  expect(text(menu!.querySelector(".wat-menu-check"))).toMatch(/^Checked by jason Oct 31, \d\d:\d\d$/);
   cleanup();
-  expect(card(lineOf(status(["l01-running", "before-engine"]), "L01"), { engine: false }).state).toBe("Relay On since 10:30");
-  cleanup();
-  // Reserved lines read DISABLED before the engine too.
-  expect(card(lineOf(status(["before-engine", "reserved-lines"]), "L06"), { engine: false }).head).toBe("L06 Drip • Center (Fert.)Fert Disabled Reserved");
+  const viewer = row(lineOf(status("schedules-paused"), "L02"), {}, { role: "viewer" });
+  expect(viewer.article.querySelectorAll("[data-write-control], [role=switch]")).toHaveLength(0);
+  expect([...viewer.menu!.querySelectorAll("a")].map((link) => text(link).slice(0, 8))).toEqual(["Activity", "Runs of ", "Graphs a"]);
 });
 
-test("L02's card carries L03, the fertilizer master, as a sub-row with its state and today's minutes", () => {
+test("L02's row carries L03, the fertilizer master, as its sub-row", () => {
   const from = status("schedules-paused");
-  const { article } = card(lineOf(from, "L02"), { master: lineOf(from, "L03") });
+  const { article } = row(lineOf(from, "L02"), { master: lineOf(from, "L03") });
   const sub = article.querySelector(".line-subrow")!;
   expect(sub.getAttribute("data-line")).toBe("L03");
-  expect([...sub.querySelectorAll("p")].map((node) => text(node))).toEqual([`Fert master L03 · ${MASTER_TEXT}`, "Disabled · Today 0 min"]);
+  expect(text(sub)).toBe(`└ L03 Fert master: ${MASTER_TEXT} · Off · no check recorded`);
   expect(MASTER_TEXT).toBe("opens the injector line from the tank with each feed");
-  expect(text(article.querySelector(".line-card-head"))).toBe("L02 Drip • Wall (Fert.)Fert Enabled: On");
-  // The fixture's "09:10" two days back, in MDT.
-  expect(text(article)).toMatch(/Checked by jason Oct 31, \d\d:\d\d/);
 });
 
-test("a latched mister says so with its end; a back-off is quieter", () => {
-  const latched = card(lineOf(status("mister-fault"), "L04"));
-  expect(latched.state).toBe("Can't run now");
+test("a latched mister reads its fault as its state, in fault, with Clear fault as its primary; a back-off is quieter", () => {
+  const latched = row(lineOf(status("mister-fault"), "L04"));
   const fault = latched.article.querySelector(".line-fault")!;
   expect([text(fault), fault.className]).toEqual(["Faulted: no misting until midnight (watchdog)", "line-fault fault"]);
+  expect(latched.buttons).toEqual(["Clear fault on L04", "Stop L04"]);
+  expect(latched.article.className).toContain("tone-fault");
   cleanup();
-  const backing = card({ ...lineOf(status(), "L07"), fault: "backing_off", fault_until: denver("13:20") });
-  expect([text(backing.article.querySelector(".line-fault")), backing.article.querySelector(".line-fault")?.className]).toEqual(["Backing off until 13:20", "line-fault line-fault-warn"]);
+  const backing = row({ ...lineOf(status(), "L07"), fault: "backing_off", fault_until: denver("13:20"), state: { ...lineOf(status(), "L07").state, code: "blocked", reason: "backing off" } });
+  expect([backing.state, backing.article.querySelector(".line-fault")?.className]).toEqual(["Backing off until 13:20", "line-fault line-fault-warn"]);
+  expect(backing.article.className).toContain("tone-warn");
 });
 
-test("paused, waiting and unknown read in words; unknown only because the API says so", () => {
+test("paused, waiting and unknown read in words; a paused line's primary is Resume, and VPD misting on a paused zone shows the pause in the meta", () => {
   const paused = { paused_until: denver("14:00"), paused_by: { source: "dashboard", name: "jason" }, pause_reason: "rain" };
   const base = lineOf(status(), "L04");
-  expect(card({ ...base, ...paused, state: { ...base.state, code: "paused" } }).state).toBe("Paused until 14:00 · VPD misting continues · by jason: rain");
+  const held = row({ ...base, ...paused, state: { ...base.state, code: "paused" } });
+  expect(held.state).toBe("Paused until 14:00 · VPD misting continues · by jason: rain");
+  expect(held.buttons).toEqual(["Resume L04", "Stop L04"]);
   cleanup();
-  // VPD misting runs on a paused zone: the pause shows beside the running state.
-  const misting = card({ ...base, ...paused, state: { ...base.state, code: "running", cause: "vpd", ends_at: null } });
-  expect(misting.state).toBe("Running · VPD");
-  expect(misting.lines).toContain("Paused until 14:00 · VPD misting continues · by jason: rain");
+  const misting = row({ ...base, ...paused, state: { ...base.state, code: "running", cause: "vpd", ends_at: null } });
+  expect(misting.state).toMatch(/^Running · VPD/);
+  expect(misting.meta).toBe("Paused until 14:00 · VPD misting continues · by jason: rain");
   cleanup();
-  expect(card({ ...base, state: { ...base.state, code: "waiting", reason: "waiting for the manifold" } }).state).toBe("Waiting · waiting for the manifold");
-  cleanup();
-  expect(card(lineOf(status("controller-not-reporting"), "L01")).state).toBe("Unknown · 3 days ago");
+  expect(row({ ...base, state: { ...base.state, code: "waiting", reason: "waiting for the manifold" } }).state).toBe("Waiting · waiting for the manifold");
 });
 
-test("a card reads its program state: REQUESTED with the revision, CONFIRMED by the hash, the reject in words, and before the engine why it waits; fog has none", () => {
+test("one pill: REQUESTED with the revision while it travels, NOT CONFIRMED with the reject in words; none before the engine, where the status line says why", () => {
   const rev = status();
-  const sync = (line: IrrigationLine, props: Partial<LineCardProps> = {}) => {
-    const { article } = card(line, { program: rev.program, ...props });
-    const node = article.querySelector(".line-sync");
-    const words = [node?.getAttribute("data-sync"), text(node)];
+  const pill = (line: IrrigationLine, props: Partial<LineCardProps> = {}) => {
+    const { article, meta } = row(line, { program: rev.program, ...props });
+    const words = [text(article.querySelector(".object-row-pill")), meta];
     cleanup();
     return words;
   };
-  expect(sync(lineOf(rev, "L01"))).toEqual(["confirmed", "Confirmed"]);
+  expect(pill(lineOf(rev, "L01"))).toEqual(["", ""]);
   const sending = { ...rev.program, state: "requested", revision: 43 };
-  expect(sync({ ...lineOf(rev, "L01"), sync: "requested" }, { program: sending })).toEqual(["requested", "Requestedrev 43 sending"]);
-  expect(sync({ ...lineOf(rev, "L01"), sync: "requested" }, { program: undefined })).toEqual(["requested", "RequestedSending"]);
+  expect(pill({ ...lineOf(rev, "L01"), sync: "requested" }, { program: sending })).toEqual(["Requested", "rev 43 sending"]);
   const refused = { ...rev.program, state: "not_confirmed", revision: 43, reject_code: "bad_line" };
-  expect(sync({ ...lineOf(rev, "L01"), sync: "not_confirmed" }, { program: refused })).toEqual(["not_confirmed", "Not confirmedNot confirmed: the controller refused a line's settings · retrying at 1, 5 and 15 min"]);
+  expect(pill({ ...lineOf(rev, "L01"), sync: "not_confirmed" }, { program: refused })).toEqual(["Not confirmed", "Not confirmed: the controller refused a line's settings · retrying at 1, 5 and 15 min"]);
   const before = status("before-engine");
-  expect(sync(lineOf(before, "L01"), { engine: false, program: before.program })).toEqual(["requested", "RequestedApplies with the irrigation firmware"]);
-  expect(card(lineOf(rev, "L11")).article.querySelector(".line-sync")).toBeNull();
+  expect(pill(lineOf(before, "L01"), { engine: false, program: before.program })).toEqual(["", ""]);
 });
 
-test("a pause reads before the engine too, since it is stored; fog, which a pause of every line leaves alone, never reads paused", () => {
-  const pause = { paused_until: denver("14:00"), paused_by: null, pause_reason: null };
+test("before the irrigation firmware a row shows its relay; only L01 runs, through the bridge, and the rest say when Run arrives in ⋯", () => {
   const before = status("before-engine");
-  expect(card({ ...lineOf(before, "L04"), ...pause }, { engine: false }).lines).toContain("Paused until 14:00 · VPD misting continues");
+  const idle = row(lineOf(before, "L01"), { engine: false });
+  expect(idle.state).toMatch(/^Relay Off since \d\d:\d\d$/);
+  expect(idle.buttons).toEqual(["Run… L01", "Stop L01"]);
   cleanup();
-  // Whatever code the API gives it: the state line shows the relay until the engine.
-  const coded = lineOf(before, "L04");
-  expect(card({ ...coded, ...pause, state: { ...coded.state, code: "paused" } }, { engine: false }).lines).toContain("Paused until 14:00 · VPD misting continues");
+  const other = row(lineOf(before, "L04"), { engine: false });
+  expect(other.buttons).toEqual(["Stop L04"]);
+  expect(text(other.menu!.querySelector("[data-arrives=clear-fault]"))).toBe("Clear fault arrives with the irrigation firmware");
   cleanup();
-  expect(text(card({ ...lineOf(status(), "L11"), ...pause }).article)).not.toContain("Paused");
+  const feed = row(lineOf(before, "L02"), { engine: false });
+  expect(text(feed.menu!.querySelector("[data-arrives=run]"))).toBe("Run arrives with the irrigation firmware");
+  cleanup();
+  expect(row(lineOf(status(["l01-running", "before-engine"]), "L01"), { engine: false }).state).toBe("Relay On since 10:30");
+});
+
+test("the row carries no style attribute and keeps its hooks: data-line, data-state, its h3 name and the strip slot", () => {
+  const { article } = row(lineOf(status(), "L01"), { strip: <div className="wat-day">strip</div> });
+  expect(article.outerHTML).not.toMatch(/\sstyle=/);
+  expect(article.id).toBe("line-L01");
+  expect(article.querySelector(":scope > .wat-day")).not.toBeNull();
 });

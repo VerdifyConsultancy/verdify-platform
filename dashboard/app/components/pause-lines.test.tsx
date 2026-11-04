@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
-// Pause and Resume (#1182) against #1122's fixture API, at 10:42 on Monday 2026-11-02.
+// Pause and Resume (#1182, redesign §5.2) against #1122's fixture API, at 10:42 on Monday 2026-11-02: Water → Today's
+// header actions, the layout's drawer, a row's Resume and a block's "until after this run".
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { useLocation } from "react-router";
 import { afterEach, expect, test } from "vitest";
@@ -8,7 +9,12 @@ import { fixture } from "../../e2e/fixtures/index.mjs";
 import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
 import type { Session } from "../lib/session";
 import { NOW, OPERATOR, advance, renderWithApi, startFixtureApi, stopFixtureApi, writes } from "../lib/test-fixture-api";
-import { PAUSE_TEXT, PauseAfterRun, PauseControls, ResumeLine, defaultPauseUntil } from "./pause-lines";
+import { PAUSE_TEXT, PauseActions, PauseAfterRun, PauseDrawer, ResumeLine, defaultPauseUntil } from "./pause-lines";
+
+/** Water → Today's header actions and the layout's drawer, as the Water layout renders them. */
+function PauseControls({ lines: from }: { lines: readonly IrrigationLine[] | undefined }) {
+  return <><PauseActions lines={from} /><PauseDrawer lines={from} /></>;
+}
 
 afterEach(() => { cleanup(); stopFixtureApi(); });
 
