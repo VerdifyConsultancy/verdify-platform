@@ -76,7 +76,7 @@ export function SiteHeader() {
   return <header className="site-header"><div className="shell">
     <Brand />
     <nav className="primary-nav" aria-label="Sections">
-      {SECTIONS.map((item) => <Link key={item.to} to={item.to} aria-current={item.owns(pathname) ? "page" : undefined}>{item.to === "/plan" ? null : <SectionLabel item={item} count={count} />}</Link>)}
+      {SECTIONS.map((item) => <Link key={item.to} to={item.to} aria-current={item.owns(pathname) ? "page" : undefined}><SectionLabel item={item} count={count} /></Link>)}
     </nav>
     <div className="header-tools">
       {me && <RolePill role={me.role} />}

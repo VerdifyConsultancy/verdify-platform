@@ -159,7 +159,7 @@ test("the header: lockup, sections with the count, role pill, name and Sign out;
   expect(brand.querySelectorAll(".brand-leaf, .brand-mark, .brand-dot")).toHaveLength(3);
   expect(text(brand)).toBe("erdify · Dashboard");
   const sections = within(nav("Sections")).getAllByRole("link");
-  expect(sections.map(text)).toEqual(["Now", "Graphs", "", "Water", "Settings", "Activity 2 open alerts", "Equipment"]);
+  expect(sections.map(text)).toEqual(["Now", "Graphs", "Plan", "Water", "Settings", "Activity 2 open alerts", "Equipment"]);
   expect(sections.filter((link) => link.getAttribute("aria-current") === "page").map(text)).toEqual(["Activity 2 open alerts"]);
   expect(text(document.querySelector(".role-pill"))).toBe("Operator");
   expect(text(document.querySelector(".header-name"))).toBe("Jason");
