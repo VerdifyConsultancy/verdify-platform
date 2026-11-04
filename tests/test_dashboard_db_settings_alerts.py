@@ -284,8 +284,10 @@ def test_status_reasons_and_their_since(dsn):
         [climate] = await owner_fetch(
             dsn, "INSERT INTO public.climate (ts) VALUES (now() - interval '6 minutes') RETURNING ts"
         )
-        await settings.write(mcp, PERSON, "irrig_wall_duration_min", 12, True, None, None)
-        status = await settings.status(mcp, "irrig_wall_duration_min")
+        # A writable controller row outside the 48 policy fields, with no clamp or push of its own (#1165's
+        # follow-up retired irrig_wall_duration_min, which this check used before).
+        await settings.write(mcp, PERSON, "max_relief_cycles", 4, True, None, None)
+        status = await settings.status(mcp, "max_relief_cycles")
         assert (status.state, status.state_reason.code, status.state_reason.since) == (
             "requested",
             "controller_not_reporting",
