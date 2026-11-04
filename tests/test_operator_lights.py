@@ -4,13 +4,17 @@ The route runs in the real app (``operator_api.create_app``), so the real bearer
 test_operator_api_auth's in-memory ``dashboard_session``. ``verdify_services.lights`` and ``activity.recorded_write`` run
 for real over test_verdify_services_core's in-memory ``activity_log``. The setpoint server is a real local HTTP server
 that answers what a test tells it to, so the httpx call, its 12 s cap and a refused connection are the real ones.
-tests/test_dashboard_db_next_reads.py writes the same row as the dashboard login.
+tests/test_dashboard_db_next_reads.py writes the same row as the dashboard login. The last part is the Back to automatic
+resync an API-10 write starts (``operator_routes.light_resync``, #1300), over scripted settings, equipment and activity
+reads, the same fake setpoint server and the real API-20 row.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
+import inspect
 import logging
 import runpy
 import socket
@@ -18,7 +22,7 @@ import sys
 import threading
 import time
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 from pathlib import Path
 
@@ -35,11 +39,12 @@ if str(API) not in sys.path:
     sys.path.insert(0, str(API))
 
 import operator_api  # noqa: E402
+from operator_routes import light_resync, setpoint_server  # noqa: E402
 from operator_routes import reads as read_routes  # noqa: E402
-from operator_routes import setpoint_server  # noqa: E402
 
-from verdify_services import activity, lights  # noqa: E402
-from verdify_services.actor import Actor  # noqa: E402
+from verdify_services import activity, lights, reads, settings  # noqa: E402
+from verdify_services.activity import WriteResult  # noqa: E402
+from verdify_services.actor import Actor, ActorRef  # noqa: E402
 from verdify_services.problems import ServiceError  # noqa: E402
 
 SPEC = yaml.safe_load((ROOT / "docs/design/dashboard/openapi/dashboard-api.v1.yaml").read_text())
@@ -454,3 +459,302 @@ def test_the_settings_read_the_url_from_the_configmap_and_start_without_it():
     assert operator_api.Settings.from_env(env).setpoint_server_url == ""
     url = "http://verdify-setpoint-server.verdify-prod.svc:8200"
     assert operator_api.Settings.from_env({**env, "SETPOINT_SERVER_URL": url}).setpoint_server_url == url
+
+
+# ── Back to automatic, finished on the server (#1300) ───────────────────────
+
+AUTO = "sw_gl_main_auto_mode"
+WRITE_ID = 41
+WRITTEN_AT = datetime(2026, 11, 4, 20, 20, 25, tzinfo=UTC)
+WRITE = settings.DesiredSetting(
+    id=WRITE_ID,
+    param=AUTO,
+    value=1.0,
+    manual=True,
+    state="requested",
+    actor=ActorRef(source="dashboard", name="jason"),
+    reason=light_resync.BACK_TO_AUTOMATIC,
+    created_at=WRITTEN_AT,
+)
+
+
+def status(state: str, desired_id: int = WRITE_ID, param: str = AUTO) -> settings.SettingStatus:
+    """What API-09's rule reads for the switch: its newest desired row and that row's state."""
+    desired = WRITE.model_copy(update={"id": desired_id, "param": param, "state": state})
+    return settings.SettingStatus(
+        param=param, applied_from="manual", state=state, readback_via="cfg", readback=None, desired=desired
+    )
+
+
+def board(intent: str | None, state: str, light: str = "main") -> reads.Equipment:
+    """API-13 with the light's intent and Lutron state; the other light reads on and on, so a mix-up shows."""
+
+    def item(name: str, intent: str | None, state: str) -> reads.EquipmentItem:
+        return reads.EquipmentItem(
+            equipment=name,
+            label=name,
+            group="light",
+            line_id=None,
+            state=state,
+            since=None,
+            runtime_today_s=None,
+            cycles_today=None,
+            intent=intent,
+            observed_at=None,
+        )
+
+    other = "grow" if light == "main" else "main"
+    reason = reads.ReasonState(code=None, since=None, observed_at=None)
+    return reads.Equipment(
+        items=[item(f"grow_light_{light}", intent, state), item(f"grow_light_{other}", "on", "on")],
+        mode_reason=reason,
+        fog_block_reason=reason,
+        moisture_block_reason=reason,
+    )
+
+
+def light_row(state: str, reason: str | None) -> activity.ActivityEntry:
+    """A command for the main light recorded after the write: a Turn on or Turn off, or the page's own resync."""
+    return activity.ActivityEntry(
+        id=205,
+        ts=WRITTEN_AT + timedelta(seconds=70),
+        actor=ActorRef(source="dashboard", name="jason"),
+        action=f"light.{state}",
+        target="grow_light_main",
+        detail={"light": "main", "state": state, "result": "confirmed"},
+        reason=reason,
+    )
+
+
+HANG = object()  # a read that never answers
+
+
+class Greenhouse:
+    """The three reads the resync makes, each bound to the real service's signature. ``settings.status`` and
+    ``reads.equipment`` answer in turn (the last answer repeats; an exception is a failed read, ``HANG`` one that never
+    answers), and ``activity.list`` answers the light rows recorded since the write."""
+
+    def __init__(self, monkeypatch, *, states, boards, rows=(), param: str = AUTO) -> None:
+        self.states, self.boards, self.rows, self.param = list(states), list(boards), list(rows), param
+        self.listed: list[dict] = []
+        self.boards_read = 0
+        for module, name, fake in (
+            (settings, "status", self.status),
+            (reads, "equipment", self.equipment),
+            (activity, "list", self.activity),
+        ):
+            monkeypatch.setattr(module, name, self._bound(getattr(module, name), fake))
+
+    @staticmethod
+    def _bound(real, fake):
+        async def call(*args, **kwargs):
+            inspect.signature(real).bind(*args, **kwargs)  # a call the real service would refuse fails here
+            return await fake(*args, **kwargs)
+
+        return call
+
+    @staticmethod
+    def _next(answers: list):
+        answer = answers.pop(0) if len(answers) > 1 else answers[0]
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    async def status(self, conn, param):
+        assert param == self.param
+        answer = self._next(self.states)
+        if answer is HANG:
+            await asyncio.Event().wait()
+        return answer
+
+    async def equipment(self, conn):
+        self.boards_read += 1
+        return self._next(self.boards)
+
+    async def activity(self, conn, **filters):
+        self.listed.append(filters)
+        return activity.ActivityPage(items=self.rows[: filters["limit"]])
+
+
+class Lent:
+    """A pool that lends the one in-memory ``activity_log`` connection, as often as it is asked."""
+
+    def __init__(self, conn: FakeConnection) -> None:
+        self.conn = conn
+
+    @contextlib.asynccontextmanager
+    async def acquire(self):
+        yield self.conn
+
+
+@pytest.fixture
+def quick(monkeypatch):
+    """The page's 5 s reads, its 5 min window and its head start, in milliseconds."""
+    monkeypatch.setattr(light_resync, "POLL_S", 0.01)
+    monkeypatch.setattr(light_resync, "WINDOW_S", 0.3)
+    monkeypatch.setattr(light_resync, "PAGE_FIRST_S", 0.0)
+
+
+def resync(fake: FakeSetpointServer, log: FakeConnection, light: str = "main", write=WRITE) -> str:
+    return asyncio.run(light_resync.resync(Lent(log), fake.url, JASON, light, write))
+
+
+def test_it_waits_by_the_pages_reads_and_window_and_lets_the_page_go_first():
+    assert light_resync.POLL_S == 5.0  # the page reads a REQUESTED row every 5 s
+    assert light_resync.WINDOW_S == 300.0  # then the row reads NOT CONFIRMED (settings.REQUESTED_FOR)
+    assert light_resync.PAGE_FIRST_S == 22.0  # the page's next read, its API-20 under the 12 s cap, and 5 s
+    assert light_resync.BACK_TO_AUTOMATIC == "Back to automatic"  # the reason the page's write and resync carry
+
+
+@pytest.mark.parametrize("light", ["main", "grow"])
+def test_confirmed_with_the_light_off_its_intent_sends_one_command_recorded_as_api20_records_it(
+    quick, monkeypatch, fake, log, light
+):
+    param = f"sw_gl_{light}_auto_mode"
+    world = Greenhouse(
+        monkeypatch,
+        states=[status("requested", param=param), status("confirmed", param=param)],
+        boards=[board("off", "on", light)],
+        param=param,
+    )
+    assert resync(fake, log, light, WRITE.model_copy(update={"param": param})) == "sent"
+    (call,) = fake.calls
+    assert call["path"] == f"/lights/{light}/off" and call["in_transaction"] is False
+    (row,) = log.activity
+    assert (row["source"], row["actor"], row["action"], row["target"], row["reason"], row["request_id"]) == (
+        "dashboard",
+        "jason",
+        "light.off",
+        f"grow_light_{light}",
+        "Back to automatic",
+        None,
+    )
+    assert row["detail"] == {"light": light, "state": "off", "result": "confirmed"}
+    assert log.outcomes == ["commit"]  # the row alone: no key, so nothing to replay before the call
+    assert world.listed == [{"action": "light.", "target": f"grow_light_{light}", "from_": WRITTEN_AT, "limit": 1}]
+
+
+@pytest.mark.parametrize(
+    ("intent", "state"),
+    [("on", "on"), ("off", "off"), ("off", "unknown"), ("unknown", "on"), (None, "on")],
+    ids=["both on", "both off", "lutron unknown", "intent unknown", "no intent row"],
+)
+def test_confirmed_with_the_light_at_its_intent_or_either_unknown_sends_none(
+    quick, monkeypatch, fake, log, intent, state
+):
+    world = Greenhouse(monkeypatch, states=[status("confirmed")], boards=[board(intent, state)])
+    assert resync(fake, log) == "matched"
+    assert fake.calls == [] and log.activity == [] and world.listed == []
+
+
+@pytest.mark.parametrize(
+    ("states", "rows"),
+    [
+        ([status("requested"), status("requested", WRITE_ID + 1)], []),
+        ([status("confirmed"), status("requested", WRITE_ID + 1)], []),
+        ([status("confirmed")], [light_row("on", None)]),
+    ],
+    ids=["a newer write while it waits", "a newer write before it sends", "a turn on since the write"],
+)
+def test_a_newer_write_of_the_switch_or_a_newer_light_command_supersedes_it_and_sends_none(
+    quick, monkeypatch, fake, log, states, rows
+):
+    Greenhouse(monkeypatch, states=states, boards=[board("off", "on")], rows=rows)
+    assert resync(fake, log) == "superseded"
+    assert fake.calls == [] and log.activity == []
+
+
+@pytest.mark.parametrize(
+    ("boards", "rows", "outcome"),
+    [
+        ([board("off", "on")], [light_row("off", "Back to automatic")], "superseded"),
+        ([board("off", "on"), board("off", "off")], [], "matched"),
+    ],
+    ids=["its row", "lutron reads the intent"],
+)
+def test_the_page_already_switched_the_light_so_none_is_sent(quick, monkeypatch, fake, log, boards, rows, outcome):
+    Greenhouse(monkeypatch, states=[status("confirmed")], boards=boards, rows=rows)
+    assert resync(fake, log) == outcome
+    assert fake.calls == [] and log.activity == []
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [status("requested"), status("held"), status("not_confirmed"), HANG],
+    ids=["requested", "held", "not_confirmed", "a read that never answers"],
+)
+def test_not_confirmed_in_the_window_sends_none_and_records_nothing(quick, monkeypatch, fake, log, caplog, answer):
+    world = Greenhouse(monkeypatch, states=[answer], boards=[board("off", "on")])
+    started = time.perf_counter()
+    with caplog.at_level(logging.WARNING, logger=light_resync.__name__):
+        assert resync(fake, log) == "not_confirmed"
+    assert time.perf_counter() - started < 2.0  # the window is 0.3 s here
+    assert fake.calls == [] and log.activity == [] and world.boards_read == 0
+    assert "sw_gl_main_auto_mode did not read confirmed" in caplog.text
+
+
+def test_a_failed_read_waits_on(quick, monkeypatch, fake, log):
+    Greenhouse(monkeypatch, states=[OSError("database down"), status("confirmed")], boards=[board("on", "off")])
+    assert resync(fake, log) == "sent"
+    assert [call["path"] for call in fake.calls] == ["/lights/main/on"] and len(log.activity) == 1
+
+
+@pytest.mark.parametrize(("answer", "result"), [(502, "ha_failed"), (504, "not_confirmed"), (None, "timeout")])
+def test_a_setpoint_server_failure_is_logged_and_recorded_as_api20_records_its_503(
+    quick, monkeypatch, fake, log, caplog, answer, result
+):
+    if answer is None:
+        fake.url = f"http://127.0.0.1:{free_port()}"  # no connection
+    else:
+        fake.status = answer
+    Greenhouse(monkeypatch, states=[status("confirmed")], boards=[board("off", "on")])
+    with caplog.at_level(logging.WARNING, logger=light_resync.__name__):
+        assert resync(fake, log) == "failed"
+    assert len(fake.calls) == (answer is not None)
+    (row,) = log.activity
+    assert (row["action"], row["target"], row["reason"]) == ("light.off", "grow_light_main", "Back to automatic")
+    assert row["detail"] == {"light": "main", "state": "off", "result": result}
+    assert f"the main light was not switched off ({result})" in caplog.text
+
+
+def test_api10_starts_it_for_an_automatic_switch_set_to_1_and_a_stop_cancels_it(
+    fake, sessions, operator, log, monkeypatch
+):
+    started = []
+    replayed = False
+
+    async def waits(pool, url, actor, light, write):
+        started.append((url, actor, light, write.param, write.id))
+        await asyncio.Event().wait()  # until the operator API stops
+
+    async def write(conn, actor, param, value, manual, reason, key):
+        return WriteResult(value=WRITE.model_copy(update={"param": param, "value": value}), replayed=replayed)
+
+    async def lent():
+        yield log
+
+    monkeypatch.setattr(light_resync, "resync", waits)
+    monkeypatch.setattr(settings, "write", write)
+    app = operator_api.create_app(
+        settings=dataclasses.replace(SETTINGS, setpoint_server_url=fake.url), pool=FakePool(sessions)
+    )
+    app.dependency_overrides[read_routes.connection] = lent
+    with TestClient(app) as client:
+        for param, value in (
+            (AUTO, 1),
+            ("sw_gl_grow_auto_mode", 1),
+            (AUTO, 0),  # automation off: nothing to match
+            ("mister_engage_kpa", 1),  # not a light's switch
+        ):
+            answer = client.put(f"/v1/settings/{param}", headers=operator, json={"value": value})
+            assert answer.status_code == 200, answer.text
+        replayed = True  # a replayed key answers the stored write and starts nothing
+        assert client.put(f"/v1/settings/{AUTO}", headers=keyed(operator), json={"value": 1}).status_code == 200
+        background = set(app.state.background)
+        assert started == [
+            (fake.url, JASON, "main", AUTO, WRITE_ID),
+            (fake.url, JASON, "grow", "sw_gl_grow_auto_mode", WRITE_ID),
+        ]
+        assert len(background) == 2 and not any(task.done() for task in background)
+    # The operator API stopped: a resync still waiting is lost, as light_resync's docstring says.
+    assert all(task.cancelled() for task in background)

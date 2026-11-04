@@ -609,6 +609,9 @@ def _lifespan(settings: Settings | None, pool: Any | None) -> Callable[[FastAPI]
         app.state.pool = database
         app.state.sessions = SessionCache()
         app.state.readiness = "unchecked"
+        # Tasks a request starts and leaves running: API-10's Back to automatic resyncs (operator_routes.light_resync).
+        # Stopping cancels them, so one still waiting when the operator API restarts is lost.
+        app.state.background = set()
         purge = asyncio.create_task(purge_expired_sessions(database))
         try:
             yield
@@ -616,6 +619,10 @@ def _lifespan(settings: Settings | None, pool: Any | None) -> Callable[[FastAPI]
             purge.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await purge
+            running = list(app.state.background)
+            for task in running:
+                task.cancel()
+            await asyncio.gather(*running, return_exceptions=True)
             if pool is None:
                 await database.close()
 
