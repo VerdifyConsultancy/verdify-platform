@@ -26,8 +26,10 @@ const openIt = () => { details().open = true; };
 test("a ⋯ button named in words over a panel of links and buttons; a disclosure, never an ARIA menu", () => {
   const { container } = mount();
   expect(details().className).toBe("menu menu-dots");
-  expect(summary().getAttribute("aria-label")).toBe("More for L01 Wall drip");
-  expect(summary().textContent).toBe("⋯");
+  // Named in words inside the button; the ⋯ is decoration.
+  expect(summary().querySelector(".screen-reader")?.textContent).toBe("More for L01 Wall drip");
+  expect(summary().querySelector("[aria-hidden=true]")?.textContent).toBe("⋯");
+  expect(summary().hasAttribute("aria-label")).toBe(false);
   expect(container.querySelector("[role=menu], [role=menuitem]")).toBeNull();
   expect(container.querySelector("[style]")).toBeNull();
   expect(details().open).toBe(false);

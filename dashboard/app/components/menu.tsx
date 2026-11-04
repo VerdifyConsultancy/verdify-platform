@@ -45,7 +45,7 @@ export function useDismissable(ref: { readonly current: HTMLDetailsElement | nul
 export type MenuProps = {
   /** What a `kind="button"` menu's button shows (the account's role pill and name); a dots menu shows "⋯". */
   label?: ReactNode;
-  /** The button's accessible name when its label is a symbol ("More for L01 Wall drip"). */
+  /** A dots menu's name for screen readers ("More for L01 Wall drip"), as text inside its button. */
   name?: string;
   /** Links and buttons, each a 44 px item; a viewer's menu keeps its links and has no write control. */
   children?: ReactNode;
@@ -65,7 +65,7 @@ export function Menu({ label, name, children, align = "end", kind = "dots", clas
   const ref = useRef<HTMLDetailsElement>(null);
   useDismissable(ref);
   return <details ref={ref} className={cls("menu", kind === "dots" && "menu-dots", align === "start" && "menu-start", className)}>
-    <summary className="menu-button" aria-label={name}>{kind === "dots" ? <span aria-hidden="true">⋯</span> : label}</summary>
+    <summary className="menu-button">{kind === "dots" ? <><span aria-hidden="true">⋯</span>{name && <span className="screen-reader">{name}</span>}</> : label}</summary>
     <div className="menu-panel">{children}</div>
   </details>;
 }

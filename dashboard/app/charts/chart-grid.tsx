@@ -85,7 +85,7 @@ export function ChartGrid({ label, columns, rows, now, xRange, syncKey, height =
   const hidden = useMemo<ReadonlySet<string>>(() => new Set(), []);
   const withDate = localDay(xRange.from) !== localDay(xRange.to - 1);
   return <section className="chart-grid" aria-label={label} ref={cssVars({ "--grid-cell-h": `${height}px`, "--grid-columns": columns.length })}>
-    <div className="grid-heads" aria-hidden={phone || undefined}>
+    <div className="grid-heads">
       <span className="grid-corner" />
       {columns.map((column) => <div key={column.key} className="grid-head">{column.head}</div>)}
     </div>
