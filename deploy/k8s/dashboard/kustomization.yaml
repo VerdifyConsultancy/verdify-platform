@@ -36,7 +36,7 @@ configMapGenerator:
       - OIDC_ISSUER=https://auth.vallery.net/application/o/verdify-dashboard/
       - OIDC_CLIENT_ID=verdify-dashboard
       - OPERATOR_API_URL=http://verdify-operator-api.verdify-prod.svc:8090
-      - DASHBOARD_WRITES_ENABLED=false
+      - DASHBOARD_WRITES_ENABLED=true
 
 # The app has prune off, so each superseded ConfigMap stays in the namespace. IgnoreExtraneous keeps
 # it from holding verdify-dashboard OutOfSync after the first flag change.
