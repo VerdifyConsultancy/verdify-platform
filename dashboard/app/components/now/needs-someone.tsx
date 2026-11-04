@@ -93,8 +93,9 @@ export function NeedsSomeone({ alerts, now, answer, apiFailed, openCount, irriga
   const anything = items.length > 0 || faults.length > 0 || differing > 0;
   const state: PanelState = alerts.failed && !anything ? "error" : waiting || (!alerts.data && !alerts.failed) ? "loading" : anything ? "ready" : "empty";
   const coverage = alertListEmptyText({ readOk: true, ingestor: freshness?.ingestor, climate: freshness?.climate });
-  const counted = answer.kind === "alerts";
-  return <ListCard id="needs-someone" title="Needs someone" count={counted ? null : openCount} thing="alerts" state={state} reserve="sm" onRetry={alerts.retry}
+  // The count shows once in the page body: here, unless the answer already reads it; and never "· 0" beside the empty line.
+  const count = answer.kind === "alerts" || openCount === null || openCount < 1 ? null : openCount;
+  return <ListCard id="needs-someone" title="Needs someone" count={count} thing="alerts" state={state} reserve="sm" onRetry={alerts.retry}
     errorText={ALERTS_UNAVAILABLE} link={{ to: "/activity", label: "All alerts" }}
     empty={{ message: coverage, widen: coverage === NO_OPEN_ALERTS ? { to: "/activity?resolved=24h", label: <>Resolved in the last 24 h<span aria-hidden="true"> ›</span></> } : undefined }}>
     {alerts.failed && <p className="fault now-needs-note">{ALERTS_UNAVAILABLE}. <Button onClick={alerts.retry}>Retry</Button></p>}

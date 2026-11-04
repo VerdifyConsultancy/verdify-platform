@@ -59,7 +59,7 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .now-skeleton-status{grid-column:1/-1;min-height:2.5rem}
 
 /* Quick actions (operators): Stop all water first, then the three bursts, each a name over its length on a phone. */
-.now-actions{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--space-2) var(--space-3)}
+.now-actions{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--space-2) var(--space-5)}
 .now-stop{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3)}
 .now-bursts{display:flex;flex-wrap:wrap;gap:var(--space-2)}
 .now-burst{display:grid;gap:var(--space-1);justify-items:start;min-width:0}
@@ -93,7 +93,7 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .now-unconfirmed a{display:inline-flex;align-items:center;min-height:24px;font-weight:700;text-decoration:none}
 
 /* Water today: a row per zone, its minutes against the cap and when it last got water, then SAF-4 and the flow. */
-.now-water-zones{display:grid;gap:var(--space-2);margin:0;padding:0;list-style:none}
+.now-water-zones{display:grid;gap:var(--space-2);margin:0;padding:0;list-style:none;container-type:inline-size}
 .now-water-row{display:grid;grid-template-columns:3.75rem minmax(0,1fr) minmax(0,9.5rem);align-items:center;gap:var(--space-1) var(--space-3);min-height:1.75rem}
 .now-water-name{font-size:var(--fs-sm);font-weight:600}
 .now-water-meter{display:flex;align-items:center;gap:var(--space-3);min-width:0}
@@ -106,6 +106,8 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .now-water p{margin:var(--space-3) 0 0}
 .now-water-flow{font-size:var(--fs-sm)}
 .now-water-flow.fault{font-weight:600}
+/* In a narrow card (a phone, or the pair below 1100 px) when it last got water goes under the meter. */
+@container (max-width:28rem){.now-water-row{grid-template-columns:3.5rem minmax(0,1fr)}.now-water-last{grid-column:2;white-space:normal}}
 
 /* Running and next: what runs now as chips with a dot in the equipment's token, then the track from 861 px or the two lists below it. */
 .now-sub{margin:0 0 var(--space-2);font-size:var(--fs-sm);font-weight:620;color:var(--ink)}
@@ -137,8 +139,8 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 /* The zone strip: five tiles, each its values, a band bar of its VPD and a 24 h sparkline; the title's link covers the tile. */
 .now-zones{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3);margin:0;padding:0;list-style:none}
 .now-zone{position:relative;display:grid;align-content:start;gap:var(--space-2);min-width:0;padding:var(--space-3);border:1px solid var(--line);border-radius:var(--radius);background:#fff}
-.now-zone:hover{border-color:var(--line-strong)}
-.now-zone-off{border-left:3px solid var(--amber)}
+.now-zone:hover{border-color:var(--leaf)}
+.now-zone-off,.now-zone-off:hover{border-left:3px solid var(--amber)}
 .now-zone-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:0 var(--space-2)}
 .now-zone-name{margin:0;font-size:var(--fs-md)}
 .now-zone-link{display:inline-flex;align-items:center;min-height:24px;color:var(--ink);text-decoration:none}
@@ -236,8 +238,6 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
   .now-burst{justify-items:stretch}
   .now-burst-button{flex-direction:column;gap:0;width:100%;min-height:3rem;padding:var(--space-1) var(--space-2);line-height:1.2}
   .now-burst-length{font-size:var(--fs-xs)}
-  .now-water-row{grid-template-columns:3.5rem minmax(0,1fr)}
-  .now-water-last{grid-column:2;white-space:normal}
   .now-chip{min-height:var(--tap)}
   .now-running{display:grid;justify-items:start}
   .now-track{display:none}

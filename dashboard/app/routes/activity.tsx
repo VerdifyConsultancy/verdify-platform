@@ -172,7 +172,8 @@ function AlertItem({ alert, context }: { alert: Alert; context: ItemContext }) {
     setNote("");
   };
   const detailId = `alert-${alert.id}-detail`;
-  const toggle = <Link className="alert-open" to={expanded ? activityHref(params, { alert: null }) : activityHref(params, { alert: String(alert.id) })} preventScrollReset
+  // Opening pushes, so Back closes it; closing replaces, so Back never reopens it (redesign §2.4).
+  const toggle = <Link className="alert-open" to={expanded ? activityHref(params, { alert: null }) : activityHref(params, { alert: String(alert.id) })} preventScrollReset replace={expanded}
     aria-expanded={expanded} aria-controls={expanded ? detailId : undefined}>
     {expanded ? "Hide details" : <>Details <span className="screen-reader">of {title} </span><span aria-hidden="true">›</span></>}
   </Link>;
