@@ -94,6 +94,7 @@ test("an operator's visit at 360 × 740: a burst from Now, a run and its stop on
   await flow.getByLabel("Note (optional)").fill("me, hose");
   await flow.getByRole("button", { name: /^Acknowledge/ }).click();
   await expect(flow).toContainText("Acknowledged by Jason · 10:42");
+  await expect(flow).toBeVisible();
   expect(writes).toHaveLength(4);
   expect(writes[3]).toMatchObject({ method: "POST", path: "/api/v1/alerts/201/ack", body: { note: "me, hose" } });
   expect(new Set(writes.map((write) => write.key)).size).toBe(4);

@@ -52,6 +52,9 @@ test("Acknowledge in one tap with a note: one API-15, who and when, the acknowle
   await row.getByRole("button", { name: /^Acknowledge/ }).click();
   await expect(alertRow(page, 101)).toContainText("Acknowledged by Jason · 10:42");
   await expect(group(page, /^Acknowledged, still open/).locator("summary")).toHaveText("Acknowledged, still open (2)");
+  // The group opens to show the row just acknowledged here.
+  await expect(group(page, /^Acknowledged, still open/)).toHaveAttribute("open", "");
+  await expect(alertRow(page, 101)).toBeVisible();
   await expect(nav).toContainText("Activity 1");
   await expect(status(page)).toHaveText("1 open · 2 acknowledged");
   const sent = await fixtureRequests(request, "API-15");

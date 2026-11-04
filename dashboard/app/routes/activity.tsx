@@ -86,7 +86,11 @@ export default function Activity() {
 }
 
 // ---------------------------------------------------------------------------------------------------- the groups
-type ItemContext = { readonly me: SignedIn; readonly now: Now | null; readonly irrigation: IrrigationStatus | null; readonly params: URLSearchParams; readonly expandedId: number | null };
+type ItemContext = {
+  readonly me: SignedIn; readonly now: Now | null; readonly irrigation: IrrigationStatus | null; readonly params: URLSearchParams; readonly expandedId: number | null;
+  /** An Acknowledge on this page names its alert, so the acknowledged group opens to show who and when. */
+  readonly onAcknowledged: (id: number) => void;
+};
 
 /**
  * "Needs action" while anything is unacknowledged (a failed read says "Alerts unavailable." with Retry, never that
@@ -96,7 +100,8 @@ type ItemContext = { readonly me: SignedIn; readonly now: Now | null; readonly i
 function AlertGroups({ view, params, alerts, me, now, irrigation, loading }: { view: ActivityView; params: URLSearchParams; alerts: PanelRead<AlertPage>; me: SignedIn; now: Now | null; irrigation: IrrigationStatus | null; loading: boolean }) {
   const groups = groupAlerts(alerts.data?.items ?? []);
   const expandedId = alertIdOf(view.alert);
-  const context: ItemContext = { me, now, irrigation, params, expandedId };
+  const [acknowledgedHere, setAcknowledgedHere] = useState<number | null>(null);
+  const context: ItemContext = { me, now, irrigation, params, expandedId, onAcknowledged: setAcknowledgedHere };
   const item = (alert: Alert) => <AlertItem key={alert.id} alert={alert} context={context} />;
   const all = [...groups.open, ...groups.acknowledged, ...groups.closed];
   const state: PanelState = alerts.failed && !alerts.data ? "error" : loading ? "loading" : "ready";
@@ -109,7 +114,7 @@ function AlertGroups({ view, params, alerts, me, now, irrigation, loading }: { v
     {(state !== "ready" || groups.open.length > 0) && <ListCard id="alerts" title="Needs action" thing="alerts" state={state} reserve="md" errorText={`${ALERTS_UNAVAILABLE}.`} onRetry={alerts.retry}>
       <ol className="alert-list act-alert-list">{groups.open.map(item)}</ol>
     </ListCard>}
-    {groups.acknowledged.length > 0 && <AlertGroup summary={`Acknowledged, still open (${groups.acknowledged.length})`} holdsExpanded={groups.acknowledged.some((row) => row.id === expandedId)}>
+    {groups.acknowledged.length > 0 && <AlertGroup summary={`Acknowledged, still open (${groups.acknowledged.length})`} holdsExpanded={groups.acknowledged.some((row) => row.id === expandedId || row.id === acknowledgedHere)}>
       {groups.acknowledged.map(item)}
     </AlertGroup>}
     {groups.closed.length > 0 && <AlertGroup summary={`Resolved in the last 24 h (${groups.closed.length})`} start={view.resolved} holdsExpanded={groups.closed.some((row) => row.id === expandedId)}>
@@ -146,7 +151,7 @@ function AlertGroup({ summary, holdsExpanded, start = false, children }: { summa
  * Acknowledge and Resolve send.
  */
 function AlertItem({ alert, context }: { alert: Alert; context: ItemContext }) {
-  const { me, now, irrigation, params, expandedId } = context;
+  const { me, now, irrigation, params, expandedId, onAcknowledged } = context;
   const record = useRecordWrite();
   const toast = useToast();
   const [note, setNote] = useState("");
@@ -169,6 +174,7 @@ function AlertItem({ alert, context }: { alert: Alert; context: ItemContext }) {
     setSending(null);
     if (!outcome.ok) return;
     said(kind, outcome.data);
+    if (kind === "ack") onAcknowledged(outcome.data.id);
     setNote("");
   };
   const detailId = `alert-${alert.id}-detail`;
@@ -183,7 +189,7 @@ function AlertItem({ alert, context }: { alert: Alert; context: ItemContext }) {
   const named: Alert = { ...alert, acknowledged_by: alert.acknowledged_by ? personName(alert.acknowledged_by, me) : alert.acknowledged_by };
   const action = breach || faulted ? <>{breach && <StopAllWater />}{faulted && <ClearFault lineId={lineId} />}</> : undefined;
   return <AlertRow alert={named} title={title} id={`alert-${alert.id}`} details={toggle} action={action} message={!leakOpen}
-    acknowledge={!expanded && unacknowledged ? <Acknowledge alert={alert} onAcknowledged={(updated) => said("ack", updated)} /> : undefined}>
+    acknowledge={!expanded && unacknowledged ? <Acknowledge alert={alert} onAcknowledged={(updated) => { said("ack", updated); onAcknowledged(updated.id); }} /> : undefined}>
     {leakOpen && <LeakLines alert={alert} now={now} />}
     {alert.alert_type === "irrigation_fence_breach" && <ValveLine alert={alert} irrigation={irrigation} />}
     {closed && <ClosedLine alert={alert} me={me} />}

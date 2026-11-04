@@ -145,9 +145,10 @@ test("Acknowledge in one tap with an optional note: one API-15 with the note, wh
   expect(sent[0].idempotency_key).toMatch(UUID);
   await advance(0);
   expect(politeToasts()).toEqual(["“Relay stuck” acknowledged by Jason · 10:42"]);
-  // The row reads who and when at once, under the acknowledged group.
+  // The row reads who and when at once, under the acknowledged group, which opens to show it.
   expect(text(alertRow(101))).toContain("Acknowledged by Jason · 10:42");
   expect(text(group(/^Acknowledged/)!.querySelector("summary"))).toBe("Acknowledged, still open (2)");
+  expect(group(/^Acknowledged/)!.open).toBe(true);
   expect(openList()).toEqual(["alert-102"]);
   // The one count: the nav and the status line both read API-02's, refreshed at once.
   expect(navCount()).toBe("Activity 1 open alerts");
