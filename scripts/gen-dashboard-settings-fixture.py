@@ -222,7 +222,6 @@ SCENARIO: dict[str, dict[str, Any]] = {
         },
         "applied_from": "plan",
     },
-    "irrig_wall_duration_min": {"readback": reading(12.0, ago(300))},
     "temp_low": {"readback": reading(40.0, ago(240))},
     "outdoor_temp_f": {"readback": reading(41.2, ago(120))},
     "outdoor_dewpoint_f": {"readback": reading(28.4, ago(120))},
@@ -329,8 +328,8 @@ def build_payload() -> dict[str, Any]:
 
 
 def unused_scenario() -> list[str]:
-    """Scenario rows the registry no longer has. They are skipped, so another issue retiring a row (VD-47 retires the
-    L01 bridge's rows) never breaks the render."""
+    """Scenario rows the registry no longer has. They are skipped, so another issue retiring a row (as #1165's
+    follow-up retired the L01 bridge's rows) never breaks the render."""
     return sorted(set(SCENARIO) - set(REGISTRY))
 
 

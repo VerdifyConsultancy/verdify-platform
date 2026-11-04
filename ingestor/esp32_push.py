@@ -1454,9 +1454,11 @@ WALL_CLEAN_BUTTON = "wall_drips_-_run_clean"
 # sw_irrig_enabled: off for one job tick runs the legacy job machine's cancel_all,
 # which closes the irrigation valves and clears the job, its queue and its timer.
 IRRIGATION_ENABLED_SWITCH = "irrigation_enabled"
-# The native switch state reaches cfg_readback at once under this alias row of sw_irrig_enabled (SETPOINT_MAP).
+# The native switch state reached cfg_readback at once under this alias row of sw_irrig_enabled (SETPOINT_MAP).
 # sw_irrig_enabled itself comes from the cfg_irrig_enabled sensor, which publishes only every 30 s, so around a
-# toggle it reads the old value: never decide a toggle or a restore from it.
+# toggle it reads the old value: never decide a toggle or a restore from it. Both rows and their routes retired once
+# the engine was last-good (#1165), so this reads None on every connection and a Stop closes its relays without the
+# toggle, as one sent before the switch's state arrives always did.
 IRRIGATION_ENABLED_PARAM = "sw_irrigation_enabled"
 # The legacy irrigation job machine ticks every 5 s; wait out one tick and a margin.
 BRIDGE_JOB_TICK_WAIT_S = 6.0

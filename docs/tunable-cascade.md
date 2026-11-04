@@ -207,7 +207,7 @@ data.
 - Controller safety, never planner-pushable: `mister_hysteresis_kpa`, `night_stress_min_dew_margin_f` (a safety rail), `sw_night_econ_heat_suppress_enabled`, `sw_wet_taper_enabled`, `sw_night_stress_wet_enabled`. Settings and MCP `set_setting` will write them within bounds once those ship; until then no plan, band or default pushes them, and the rows only route their readbacks.
 - Read-only: `sw_onchip_band_enabled` has no push route; it decides whether the on-chip curve or the dispatcher's legacy limits own the band. Its readback is `cfg_on-chip_band_enabled` (ESPHome keeps the hyphen).
 - Retired with no route: `fog_time_window_start`, `fog_time_window_end` (no firmware entity; the rows stay for history).
-- `test_every_tunables_number_and_switch_is_registered_or_retiring` fails when a `tunables.yaml` number or switch has no registry row and is not in `RETIRING_TUNABLES`. Since VD-47 that set holds only the L01 bridge's pre-engine entities (the `sw_irrig_*` switches and the two run-now durations), whose rows stay until #1165's follow-up retires them.
+- `test_every_tunables_number_and_switch_is_registered_or_retiring` fails when a `tunables.yaml` number or switch has no registry row and is not in `RETIRING_TUNABLES`. The set is empty since #1165's follow-up retired the L01 bridge's rows (VD-47 retired the rest with the engine release).
 
 ### Economiser (3 tunables)
 - `enthalpy_open`, `enthalpy_close`, `site_pressure_hpa`
@@ -223,7 +223,7 @@ data.
 
 ### Irrigation
 - Schedules, line enables, caps and fertilizer runs are the irrigation program's (`verdify_schemas/irrigation.py`), pushed whole and confirmed by its hash; the site values `mister_daily_volume_max_gal`, `sched_mist_rh_max_pct` and `climate_yield_min` are registry rows with no entity.
-- The L01 bridge's rows stay until #1165's follow-up: `sw_irrig_enabled`, `sw_irrig_wall_enabled`, `sw_irrig_center_enabled`, `sw_irrig_south_enabled`, `sw_irrig_west_enabled` (with the `sw_irrigation_*` aliases) and `irrig_wall_duration_min`, `irrig_center_duration_min`. Their entities left the engine firmware.
+- Retired once the engine was last-good (#1165's follow-up), with their setpoint, readback and `irrigation_*` switch routes: the L01 bridge's rows `sw_irrig_enabled`, `sw_irrig_wall_enabled`, `sw_irrig_center_enabled`, `sw_irrig_south_enabled`, `sw_irrig_west_enabled` (with the `sw_irrigation_*` aliases) and `irrig_wall_duration_min`, `irrig_center_duration_min`. Their entities left with the engine firmware, and a stale plan or desired row naming one is skipped (`RETIRED_UNROUTABLE_PARAMS`).
 - Retired in VD-47 with their entities, readbacks and globals: the legacy `irrig_wall_*` and `irrig_center_*` schedule, day-mask and fertilizer-cadence rows, the weekly wall-feed commissioning rows (`sw_wall_fertigation_commissioned`, `wall_*`) and the VPD boost (`irrig_vpd_boost_pct`, `irrig_vpd_boost_threshold_hrs`). A stale plan row naming one is skipped (`RETIRED_UNROUTABLE_PARAMS`).
 
 ### Grow lights

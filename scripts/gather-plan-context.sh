@@ -768,7 +768,6 @@ for param in (
     "gl_dli_target",
     "gl_main_lux_threshold",
     "gl_grow_lux_threshold",
-    "irrig_wall_duration_min",
 ):
     low, high = planner_effective_bounds(param)
     rows.append(f"{param}: min={low:g} max={high:g} step={REGISTRY[param].step:g}")

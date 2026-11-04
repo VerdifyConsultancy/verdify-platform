@@ -602,9 +602,10 @@ test("before the irrigation firmware every row but fog has Stop, only L01 has Ru
   });
   for (const id of ["L02", "L05", "L06", "L08", "L10"]) expect(text(row(id).querySelector(".menu [data-arrives=run]")), id).toBe("Run arrives with the irrigation firmware");
   for (const id of ["L04", "L07", "L09"]) expect(text(row(id).querySelector(".menu [data-arrives=clear-fault]")), id).toBe("Clear fault arrives with the irrigation firmware");
+  // L01's dialog names its setting (API-09 has no row for it since the bridge's rows retired, #1165).
   fireEvent.click(screen.getByRole("button", { name: "Run… L01" }));
   await advance(1);
-  expect(text(document.querySelector("dialog .dialog-note"))).toBe("Runs for the Wall drip duration (irrig_wall_duration_min): 12 min");
+  expect(text(document.querySelector("dialog .dialog-note"))).toBe("Runs for the Wall drip duration (irrig_wall_duration_min)");
   fireEvent.click(within(document.querySelector("dialog")!).getByRole("button", { name: "Cancel" }));
   fireEvent.click(screen.getByRole("button", { name: "Stop L07" }));
   await advance(0);

@@ -73,7 +73,8 @@ def relay(equipment: str, on: bool, *, at: datetime | None = None, generation: i
 
 
 def irrig_enabled(on: bool | None) -> None:
-    """The switch's native state, which reaches cfg_readback at once (see the on_state_change test below)."""
+    """The switch's native state as it reached cfg_readback while its route lasted. Its route retired with the bridge's
+    rows (#1165; see the on_state_change test below), so only these tests set it: they keep the toggle logic honest."""
     param = esp32_push.IRRIGATION_ENABLED_PARAM
     if on is None:
         shared.cfg_readback.pop(param, None)
@@ -417,9 +418,10 @@ def test_the_bridge_object_ids_are_the_firmware_entity_names():
     assert esp32_push.BRIDGE_STOP_ORDER[-1] == "fert_master_valve"
     assert BUTTON == _esphome_wire_slug("Wall Drips - RUN CLEAN") == "wall_drips_-_run_clean"
     assert ENABLED == _esphome_wire_slug("Irrigation Enabled") == "irrigation_enabled"
-    assert EQUIPMENT_SWITCH_MAP[ENABLED] == "irrigation_enabled"
-    # The switch's native state reaches cfg_readback under this name, which irrigation_enabled_reading reads.
-    assert SETPOINT_MAP[ENABLED] == esp32_push.IRRIGATION_ENABLED_PARAM == "sw_irrigation_enabled"
+    # The switch's routes retired with the bridge's rows once the engine was last-good (#1165): its native state no
+    # longer reaches cfg_readback under this name, so irrigation_enabled_reading reads None.
+    assert ENABLED not in EQUIPMENT_SWITCH_MAP and ENABLED not in SETPOINT_MAP
+    assert esp32_push.IRRIGATION_ENABLED_PARAM == "sw_irrigation_enabled"
 
 
 def test_each_line_stops_the_relay_migration_283_seeds_for_it():
@@ -456,9 +458,12 @@ def test_wet_relays_are_mirrored_with_their_generation_and_last_off(monkeypatch)
     assert set(shared.wet_relays) == {"drip_wall"} and shared.live_wet_relays() == {"drip_wall": True}
 
 
-def test_the_switch_reading_is_the_native_state_and_never_the_30_s_cfg_sensor(client, monkeypatch):
-    """The real callback path. cfg_irrig_enabled (sw_irrig_enabled) publishes every 30 s, so around a toggle it reads
-    the old value; only the native switch state may decide a toggle or a restore."""
+def test_with_its_routes_retired_the_switch_never_reads_so_a_stop_never_toggles(client, monkeypatch):
+    """The real callback path. The switch's native state (and its 30 s cfg_irrig_enabled sensor) reached cfg_readback
+    only through the bridge's rows, which retired once the engine was last-good (#1165). On pre-engine firmware the
+    reading stays None, so a Stop closes its relays without the toggle, as one in the state burst after a reconnect
+    always did (test_a_stop_in_the_state_burst_after_a_reconnect_closes_the_relays_not_read_yet). The wet relays
+    still route."""
     import ingestor
 
     monkeypatch.setattr(ingestor, "state", ingestor.State())
@@ -468,17 +473,14 @@ def test_the_switch_reading_is_the_native_state_and_never_the_30_s_cfg_sensor(cl
     ingestor.state.key_to_type = {1: "switch", 2: "sensor", 3: "switch"}
 
     irrig_enabled(None)
-    assert esp32_push.irrigation_enabled_reading() is None
-    ingestor.on_state_change(SimpleNamespace(key=2, state=1.0))  # the sensor's last publish
-    assert esp32_push.irrigation_enabled_reading() is None  # the sensor alone says nothing about the switch
-    ingestor.on_state_change(SimpleNamespace(key=1, state=False))  # switched off; the sensor has not caught up
-    assert esp32_push.irrigation_enabled_reading() is False
-    assert shared.current_cfg_readbacks()["sw_irrig_enabled"] == 1.0
+    ingestor.on_state_change(SimpleNamespace(key=2, state=1.0))  # the sensor's publish
+    ingestor.on_state_change(SimpleNamespace(key=1, state=False))  # the switch's native state
     ingestor.on_state_change(SimpleNamespace(key=1, state=True))
-    ingestor.on_state_change(SimpleNamespace(key=2, state=0.0))  # the sensor published inside the toggle
-    assert esp32_push.irrigation_enabled_reading() is True
+    assert esp32_push.irrigation_enabled_reading() is None
+    assert "sw_irrig_enabled" not in shared.current_cfg_readbacks()
+    assert "irrigation_enabled" not in ingestor.state.equipment
 
-    ingestor.on_state_change(SimpleNamespace(key=3, state=True))  # and the wet relays come the same way
+    ingestor.on_state_change(SimpleNamespace(key=3, state=True))  # the wet relays still come the same way
     assert shared.live_wet_relays() == {"drip_wall": True}
 
 

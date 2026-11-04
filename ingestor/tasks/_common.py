@@ -984,6 +984,19 @@ RETIRED_UNROUTABLE_PARAMS = frozenset(
         "irrig_center_fert_every_n",
         "irrig_center_flush_min",
         "irrig_center_interval_days",
+        # The L01 bridge's rows (irrigation §6.5), retired once the irrigation
+        # engine was last-good (#1165).
+        "sw_irrig_enabled",
+        "sw_irrig_wall_enabled",
+        "sw_irrig_center_enabled",
+        "sw_irrig_south_enabled",
+        "sw_irrig_west_enabled",
+        "sw_irrigation_enabled",
+        "sw_irrigation_wall_enabled",
+        "sw_irrigation_center_enabled",
+        "sw_irrigation_weather_skip",
+        "irrig_wall_duration_min",
+        "irrig_center_duration_min",
     }
 )
 

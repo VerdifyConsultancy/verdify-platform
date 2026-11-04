@@ -181,18 +181,19 @@ test("each refusal reads its code in words from the words table, and the dialog 
   await refused("L04", "not_schedule_member", "run-dialogs", update("L04", { schedule_member: false }));
 });
 
-test("before the irrigation firmware L01 has no Duration: the dialog names irrig_wall_duration_min with API-09's device value and sends {} plus the reason", async () => {
+test("before the irrigation firmware L01 has no Duration: API-09 has no irrig_wall_duration_min row, so the dialog names the setting and sends {} plus the reason", async () => {
   const api = await open("L01", { fixture: "before-engine" });
-  // API-09 is read when the dialog opens, not with the card.
+  // API-09 is read when the dialog opens, not with the card. The bridge's rows retired once the engine was last-good
+  // (#1165), so its answer carries no device value for the run.
   expect(requests(api, "API-09")).toEqual([]);
   press("Run… L01");
   await advance(0);
   expect(requests(api, "API-09")).toHaveLength(1);
   expect(screen.queryByLabelText("Duration")).toBeNull();
-  expect(notes()).toEqual(["Runs for the Wall drip duration (irrig_wall_duration_min): 12 min"]);
-  expect(title()).toBe("Run L01 Wall drip (clean) for 12 min?");
+  expect(notes()).toEqual(["Runs for the Wall drip duration (irrig_wall_duration_min)"]);
+  expect(title()).toBe("Run L01 Wall drip (clean)?");
   fireEvent.change(screen.getByLabelText("Reason (optional)"), { target: { value: "Wall plants are dry" } });
-  press("Run 12 min");
+  press("Run");
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-06", path: "/api/v1/irrigation/lines/L01/run", body: { reason: "Wall plants are dry" } })]);
   expect(dialog()).toBeNull();

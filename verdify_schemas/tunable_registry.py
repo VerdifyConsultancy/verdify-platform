@@ -165,17 +165,6 @@ class TunableDef(BaseModel):
 # inputs, and retired aliases) is tier=2 context and MCP rejects planner writes.
 # ─────────────────────────────────────────────────────────────────────────────
 
-# The L01 bridge's rows (irrigation §6.5, #1177): the sw_irrig_* switches, their sw_irrigation_*
-# alias rows and the two irrig_*_duration_min rows. The engine release (VD-47, #1162) removed
-# their entities from the firmware YAML, but the bridge drives the pre-engine firmware through
-# them until the engine is last-good, so the rows and their routes stay until the follow-up
-# that #1165 merges after `make firmware-promote-last-good`. With no entity in tunables.yaml
-# they carry their own step, label and unit, and no firmware clamp (min/max keep the bounds).
-_L01_BRIDGE_NOTE = (
-    "L01 bridge (irrigation §6.5): pre-engine firmware only; the engine release removed the entity "
-    "(VD-47) and the follow-up that #1165 merges retires this row."
-)
-
 REGISTRY: dict[str, TunableDef] = {
     # ─────────────────────────────────────────────────────────────────────
     # Crop band (push_owner="band"). Dispatcher pushes every planner cycle
@@ -1719,111 +1708,6 @@ REGISTRY: dict[str, TunableDef] = {
         ),
     ),
     # ─────────────────────────────────────────────────────────────────────
-    # The L01 bridge's irrigation rows (push_owner="operator", tier=2; _L01_BRIDGE_NOTE).
-    # ─────────────────────────────────────────────────────────────────────
-    "sw_irrig_enabled": TunableDef(
-        name="sw_irrig_enabled",
-        kind="switch",
-        default=1,
-        esp_object_id="irrigation_enabled",
-        cfg_readback_object_id="cfg_irrig_enabled",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        step=1.0,
-        label="Irrigation Enabled",
-        unit=None,
-        notes=_L01_BRIDGE_NOTE,
-    ),
-    "sw_irrig_wall_enabled": TunableDef(
-        name="sw_irrig_wall_enabled",
-        kind="switch",
-        default=1,
-        esp_object_id="irrigation_wall_enabled",
-        cfg_readback_object_id="cfg_irrig_wall_enabled",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        step=1.0,
-        label="Irrigation Wall Enabled",
-        unit=None,
-        notes=_L01_BRIDGE_NOTE,
-    ),
-    "sw_irrig_center_enabled": TunableDef(
-        name="sw_irrig_center_enabled",
-        kind="switch",
-        default=0,
-        esp_object_id="irrigation_center_enabled",
-        cfg_readback_object_id="cfg_irrig_center_enabled",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        step=1.0,
-        label="Irrigation Center Enabled",
-        unit=None,
-        notes=_L01_BRIDGE_NOTE,
-    ),
-    "sw_irrig_south_enabled": TunableDef(
-        name="sw_irrig_south_enabled",
-        kind="switch",
-        default=0,
-        esp_object_id="irrigation_south_enabled",
-        cfg_readback_object_id="cfg_irrig_south_enabled",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        step=1.0,
-        label="Irrigation South Enabled",
-        unit=None,
-        notes=_L01_BRIDGE_NOTE,
-    ),
-    "sw_irrig_west_enabled": TunableDef(
-        name="sw_irrig_west_enabled",
-        kind="switch",
-        default=0,
-        esp_object_id="irrigation_west_enabled",
-        cfg_readback_object_id="cfg_irrig_west_enabled",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        step=1.0,
-        label="Irrigation West Enabled",
-        unit=None,
-        notes=_L01_BRIDGE_NOTE,
-    ),
-    "irrig_wall_duration_min": TunableDef(
-        name="irrig_wall_duration_min",
-        kind="numeric",
-        min=1,
-        max=120,
-        default=10,
-        esp_object_id="irrig_wall_duration__min_",
-        cfg_readback_object_id="cfg_irrig_wall_duration_min",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        step=1.0,
-        label="Irrig Wall Duration",
-        unit="min",
-        notes=_L01_BRIDGE_NOTE,
-    ),
-    "irrig_center_duration_min": TunableDef(
-        name="irrig_center_duration_min",
-        kind="numeric",
-        min=1,
-        max=120,
-        default=10,
-        esp_object_id="irrig_center_duration__min_",
-        cfg_readback_object_id="cfg_irrig_center_duration_min",
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        step=1.0,
-        label="Irrig Center Duration",
-        unit="min",
-        notes=_L01_BRIDGE_NOTE,
-    ),
-    # ─────────────────────────────────────────────────────────────────────
     # Grow lights.
     # ─────────────────────────────────────────────────────────────────────
     "gl_dli_target": TunableDef(
@@ -2366,62 +2250,6 @@ REGISTRY: dict[str, TunableDef] = {
     # Operator switches (push_owner="operator", tier=2). Planner reads these
     # as context; operator tooling owns changes.
     # ─────────────────────────────────────────────────────────────────────
-    "sw_irrigation_enabled": TunableDef(
-        name="sw_irrigation_enabled",
-        kind="switch",
-        default=1,
-        esp_object_id="irrigation_enabled",
-        cfg_readback_object_id=None,
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        step=1.0,
-        label="Irrigation Enabled",
-        unit=None,
-        notes=_L01_BRIDGE_NOTE,
-    ),
-    "sw_irrigation_wall_enabled": TunableDef(
-        name="sw_irrigation_wall_enabled",
-        kind="switch",
-        default=1,
-        esp_object_id="irrigation_wall_enabled",
-        cfg_readback_object_id=None,
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        step=1.0,
-        label="Irrigation Wall Enabled",
-        unit=None,
-        notes=_L01_BRIDGE_NOTE,
-    ),
-    "sw_irrigation_center_enabled": TunableDef(
-        name="sw_irrigation_center_enabled",
-        kind="switch",
-        default=1,
-        esp_object_id="irrigation_center_enabled",
-        cfg_readback_object_id=None,
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        step=1.0,
-        label="Irrigation Center Enabled",
-        unit=None,
-        notes=_L01_BRIDGE_NOTE,
-    ),
-    "sw_irrigation_weather_skip": TunableDef(
-        name="sw_irrigation_weather_skip",
-        kind="switch",
-        default=0,
-        esp_object_id="irrigation_weather_skip",
-        cfg_readback_object_id=None,
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        step=1.0,
-        label="Irrigation Weather Skip",
-        unit=None,
-        notes=_L01_BRIDGE_NOTE,
-    ),
     "sw_occupancy_inhibit": TunableDef(
         name="sw_occupancy_inhibit",
         kind="switch",
@@ -3714,31 +3542,14 @@ RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
     }
 )
 
-# Number and switch entity ids (ESPHome ``id:``) of the pre-engine firmware that
-# the irrigation engine release retires (irrigation design §5, F12 and F13). The
-# catalog drift test (verdify_schemas/tests/test_tunable_registry.py) accepts a
-# tunables.yaml entity listed here even when no REGISTRY row covers it. VD-47
-# (#1162) deleted those entities and shrank the set to the L01 bridge's
-# (irrigation §6.5): their entities left the YAML, but their REGISTRY rows and
-# routes stay while the pre-engine firmware may still run (a rollback flashes
-# it), so test_retiring_tunables_are_live_or_the_l01_bridge accepts exactly
-# these. The follow-up that #1165 merges after `make firmware-promote-last-good`
-# retires the rows and empties the set.
-RETIRING_TUNABLES: frozenset[str] = frozenset(
-    {
-        # The bridge toggles the master enable to end a legacy job on Stop, and the
-        # wall enable gates its run-now press; the rest are their alias rows' entities.
-        "sw_irrig_enabled",
-        "sw_irrig_wall_enabled",
-        "sw_irrig_center_enabled",
-        "sw_irrig_south_enabled",
-        "sw_irrig_west_enabled",
-        "sw_irrig_weather_skip",
-        # The run-now press runs for the controller's duration.
-        "num_irrig_wall_duration",
-        "num_irrig_center_duration",
-    }
-)
+# tunables.yaml number and switch entity ids (ESPHome ``id:``) that the next
+# firmware release removes. The catalog drift test
+# (verdify_schemas/tests/test_tunable_registry.py) accepts an entity listed here
+# even when no REGISTRY row covers it, and fails an entry whose entity is gone.
+# Empty since #1165's follow-up retired the L01 bridge's rows once the
+# irrigation engine was last-good (VD-47 retired the rest with the engine
+# release, irrigation §5 F12 and F13).
+RETIRING_TUNABLES: frozenset[str] = frozenset()
 
 # The three irrigation site values (VD-37, #1152): settings with no firmware
 # entity that reach the controller only inside the irrigation program record,
@@ -4089,8 +3900,8 @@ def desired_write_rule(name: str) -> tuple[bool, str | None]:
     Returns ``(True, None)``, or ``(False, reason)`` with the read-only reason the catalog shows.
 
     * Writable: ``planner_policy``, ``scheduled_policy``, ``controller_safety`` and ``crop_band`` rows with an
-      ``esp_object_id`` (``irrig_*_duration_min``, ``sw_irrig_*`` and the ``gl_*`` rows among them), and the
-      ``irrigation_site`` rows, which reach the controller in the irrigation program.
+      ``esp_object_id`` (the ``gl_*`` rows among them), and the ``irrigation_site`` rows, which reach the
+      controller in the irrigation program.
     * Read-only: ``readback_context`` and ``retired`` rows; the legacy wide limits; the activity mirror;
       ``sw_onchip_band_enabled``, by name.
 
@@ -4129,10 +3940,6 @@ SWITCH_READBACK_EQUIPMENT: dict[str, str] = {
     "sw_economiser_enabled": "economiser_enabled",
     "sw_fog_closes_vent": "fog_closes_vent",
     "sw_gl_auto_mode": "gl_auto_mode",
-    "sw_irrigation_center_enabled": "irrigation_center_enabled",
-    "sw_irrigation_enabled": "irrigation_enabled",
-    "sw_irrigation_wall_enabled": "irrigation_wall_enabled",
-    "sw_irrigation_weather_skip": "irrigation_weather_skip",
     "sw_occupancy_inhibit": "occupancy_inhibit",
 }
 assert all(REGISTRY[name].kind == "switch" and REGISTRY[name].esp_object_id for name in SWITCH_READBACK_EQUIPMENT), (

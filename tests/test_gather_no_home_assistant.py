@@ -31,7 +31,6 @@ CONSTRAINT_PARAMS = (
     "gl_dli_target",
     "gl_main_lux_threshold",
     "gl_grow_lux_threshold",
-    "irrig_wall_duration_min",
 )
 
 

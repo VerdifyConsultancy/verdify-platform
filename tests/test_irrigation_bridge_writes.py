@@ -292,6 +292,7 @@ def test_minutes_must_repeat_irrig_wall_duration_min_and_otherwise_nothing_is_st
 
 
 def test_without_a_readback_the_run_lasts_the_registry_default():
+    """The default the retired irrig_wall_duration_min row held (#1165) is the firmware's, kept in the service."""
     db = BridgeDB()
     db.l01["duration_min"] = None
     assert do_run(db).value.args["minutes"] == 10

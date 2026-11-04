@@ -32,6 +32,20 @@ WEEKLY_FEED_ROWS = (
     "wall_feed_liters",
     "wall_flush_liters",
 )
+# #1165's follow-up retired the L01 bridge's rows and routes once the irrigation engine was last-good.
+L01_BRIDGE_ROWS = (
+    "sw_irrig_enabled",
+    "sw_irrig_wall_enabled",
+    "sw_irrig_center_enabled",
+    "sw_irrig_south_enabled",
+    "sw_irrig_west_enabled",
+    "sw_irrigation_enabled",
+    "sw_irrigation_wall_enabled",
+    "sw_irrigation_center_enabled",
+    "sw_irrigation_weather_skip",
+    "irrig_wall_duration_min",
+    "irrig_center_duration_min",
+)
 
 
 @pytest.mark.parametrize(
@@ -41,8 +55,6 @@ WEEKLY_FEED_ROWS = (
         "gl_main_lux_threshold",  # scheduled_policy
         "gl_main_dli_target",  # gl_* rows stay writable: a release hands them back to the policy
         "site_pressure_hpa",  # controller_safety
-        "irrig_wall_duration_min",  # stays writable for the L01 bridge
-        "sw_irrig_enabled",
         "zone_priority_south",  # crop_band; the services check its crop_band_anchors row
         *sorted(IRRIGATION_SITE_PARAMS),
     ],
@@ -67,6 +79,12 @@ def test_the_activity_mirror_is_read_only(name: str) -> None:
 
 @pytest.mark.parametrize("name", WEEKLY_FEED_ROWS)
 def test_a_stale_row_naming_a_retired_weekly_feed_value_is_refused(name: str) -> None:
+    assert name not in REGISTRY
+    assert desired_write_rule(name) == (False, READ_ONLY_REASONS["unknown"])
+
+
+@pytest.mark.parametrize("name", L01_BRIDGE_ROWS)
+def test_a_stale_row_naming_a_retired_l01_bridge_value_is_refused(name: str) -> None:
     assert name not in REGISTRY
     assert desired_write_rule(name) == (False, READ_ONLY_REASONS["unknown"])
 
