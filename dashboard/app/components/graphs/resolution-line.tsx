@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 import { TIME_ZONE } from "../../lib/format";
-import { PANEL_NAMES, isoOf, panelName, type GraphWindow } from "../../lib/graph-url";
-import type { MetricDef } from "../../lib/operator-api";
+import { isoOf, type GraphWindow } from "../../lib/graph-url";
 
 /**
  * Graphs' resolution line (SCR-02): the window in local time with its offsets and elapsed time ("36 h across the
  * fall-back" when a clock change falls inside it), the climate panels' bucket in words from API-04's `bucket_s`,
- * "daily summaries" when a series reads `daily_summary`, and "gaps stay empty, never zero". A panel whose bucket
- * differs states its own in its eyebrow (`panelEyebrow`).
+ * "daily summaries" when a series reads `daily_summary`, and "gaps stay empty, never zero". It sits in the foot of
+ * the chart stack (redesign §5.5).
  */
 const BUCKET_WORDS: Readonly<Record<number, string>> = {
   60: "one point per minute", 300: "one point per 5 minutes", 900: "one point per 15 minutes", 3600: "one point per hour",
@@ -84,14 +83,4 @@ export function ResolutionLine({ window, bucketSeconds, daily, now }: Resolution
     <time dateTime={isoOf(from)}>{windowTime(from, withYear)}</time> → <time dateTime={isoOf(to)}>{windowTime(to, withYear)}</time> ({spanWords(from, to)})
     {bucketSeconds !== null && ` · ${bucketWords(bucketSeconds)}`}{daily && " · daily summaries"} · gaps stay empty, never zero
   </span>;
-}
-
-/**
- * A panel's eyebrow: what it shows, its unit, provenance and resolution, "Band in force" where the ribbon draws.
- * "Temperature · °F · MEASURED · Band in force · one point per 5 minutes" (the eyebrow style sets it in capitals).
- */
-export function panelEyebrow(unit: string, metrics: readonly MetricDef[], bucketSeconds: number | null, banded: boolean): string {
-  const name = Object.hasOwn(PANEL_NAMES, unit) ? panelName(unit) : metrics.map((metric) => metric.label).join(", ") || unit;
-  const provenance = [...new Set(metrics.map((metric) => metric.provenance))].join(" and ");
-  return [name, unit, provenance, banded ? "Band in force" : null, bucketSeconds !== null ? bucketWords(bucketSeconds) : null].filter(Boolean).join(" · ");
 }

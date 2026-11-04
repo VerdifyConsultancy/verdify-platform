@@ -141,3 +141,16 @@ export function useFreshRead<K extends ReadOperationId>(operationId: K, params: 
 export function slotRead<T>(reads: ReadonlyMap<string, WindowRead<T>>, id: string): WindowRead<T> {
   return reads.get(id) ?? { data: null, current: false, loading: false, error: null, refetch: () => {} };
 }
+
+const identities = new WeakMap<object, number>();
+let lastIdentity = 0;
+/**
+ * An answer's identity as text ("-" for none), for a memo that rebuilds only when one of a list of answers changes: the
+ * reads keep each answer object until a new one arrives.
+ */
+export function identity(value: object | null | undefined): string {
+  if (!value) return "-";
+  let id = identities.get(value);
+  if (id === undefined) { id = ++lastIdentity; identities.set(value, id); }
+  return String(id);
+}

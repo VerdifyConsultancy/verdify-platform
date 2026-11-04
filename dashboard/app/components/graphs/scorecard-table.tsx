@@ -1,21 +1,23 @@
 // SPDX-License-Identifier: MIT
+import { Link } from "react-router";
 import { csvCell } from "../../charts/csv";
 import { CsvLink } from "../../charts/data-table";
 import { localDay } from "../../charts/time-axis";
 import type { SeriesColumns } from "../../charts/types";
 import { dateShift, formatValue, localDayStart } from "../../lib/format";
-import { DAILY_GROUP } from "../../lib/graph-url";
+import { DAILY_GROUP, dayHref } from "../../lib/graph-url";
 import { ZONE_WORDS, type MinutesZone } from "../../lib/lines";
 import type { MetricDef, MinutesReport, Series } from "../../lib/operator-api";
 import { words } from "../../lib/words";
 
 /**
- * The daily scorecard (SCR-02 `/graphs/scorecard`, US-GRF-09): one row per America/Denver day for 30 days, newest
- * first, from API-04's `daily.*` keys (`v_daily_scorecard`) and API-IRR-10's minutes by zone. Rows are keyed by the
- * America/Denver date of each bucket's `t`, never by adding 86,400 s, so a 23- or 25-hour day counts as it ran. A
- * missing value reads "—" with its reason, never 0: the bucket's `SeriesColumns.reason` in words, else "no data that
- * day", and for minutes a `no_data` day reads "no data (outage)". Whole-day time in band has a value every day; the
- * day/night split only for the 3 days `mv_zone_band_grade` keeps (Q-12). "CSV of this table" is exactly these rows.
+ * The daily table of Graphs → Statistics' "Data" (redesign §5.7, US-GRF-09, the former scorecard): one row per
+ * America/Denver day of the window, newest first, from API-04's `daily.*` keys (`v_daily_scorecard`) and API-IRR-10's
+ * minutes by zone. Rows are keyed by the America/Denver date of each bucket's `t`, never by adding 86,400 s, so a 23- or
+ * 25-hour day counts as it ran. A missing value reads "—" with its reason, never 0: the bucket's `SeriesColumns.reason`
+ * in words, else "no data that day", and for minutes a `no_data` day reads "no data (outage)". Whole-day time in band
+ * has a value every day; the day/night split only for the 3 days `mv_zone_band_grade` keeps (Q-12). Each day opens in
+ * Climate. "CSV of this table" is exactly these rows.
  */
 export const SCORECARD_DAYS = 30;
 export type ScorecardColumn = {
@@ -64,13 +66,20 @@ export type ScorecardRow = {
 export type ScorecardModel = { readonly columns: readonly ScorecardColumn[]; readonly rows: readonly ScorecardRow[] };
 
 export type ScorecardWindow = { readonly from: string; readonly to: string; readonly start: string; readonly end: string };
-/** The 30 days ending today: dates for API-IRR-10 (To included), and local midnights for API-04's [start, end). */
-export function scorecardWindow(today: string, days = SCORECARD_DAYS): ScorecardWindow {
-  const from = dateShift(today, -(days - 1));
-  return { from, to: today, start: localDayStart(from), end: localDayStart(dateShift(today, 1)) };
+/** The local days From to To: dates for API-IRR-10 (To included), and local midnights for API-04's [start, end). */
+export function daysWindow(from: string, to: string): ScorecardWindow {
+  return { from, to, start: localDayStart(from), end: localDayStart(dateShift(to, 1)) };
 }
+/** The 30 days ending today. */
+export const scorecardWindow = (today: string, days = SCORECARD_DAYS): ScorecardWindow => daysWindow(dateShift(today, -(days - 1)), today);
 /** Newest first. */
 export const scorecardDays = (today: string, days = SCORECARD_DAYS): string[] => Array.from({ length: days }, (_, ago) => dateShift(today, -ago));
+/** The window's days, newest first. */
+export function windowDays(window: Pick<ScorecardWindow, "from" | "to">): string[] {
+  const out: string[] = [];
+  for (let day = window.to; day >= window.from; day = dateShift(day, -1)) out.push(day);
+  return out;
+}
 /** A local day's length in hours, as it ran. */
 export const dayHours = (date: string): number => Math.round((Date.parse(localDayStart(dateShift(date, 1))) - Date.parse(localDayStart(date))) / 3_600_000);
 
@@ -90,6 +99,8 @@ const missing = (reason: string): ScorecardCell => ({ value: null, text: "—", 
 
 export type ScorecardInput = {
   readonly today: string;
+  /** The days to show; the 30 ending today when omitted. */
+  readonly window?: Pick<ScorecardWindow, "from" | "to">;
   /** API-03. */
   readonly metrics: readonly MetricDef[];
   /** The API-04 answers for the `daily.*` keys, at most 8 keys each. */
@@ -137,7 +148,7 @@ export function buildScorecard(input: ScorecardInput): ScorecardModel {
     const value = zoneMinutes.get(`${date}|${zone}`) ?? 0;
     return { value, text: cellText(value, "min"), reason: null };
   };
-  const rows = scorecardDays(input.today).map((date): ScorecardRow => ({
+  const rows = (input.window ? windowDays(input.window) : scorecardDays(input.today)).map((date): ScorecardRow => ({
     date, hours: dayHours(date), partial: date === input.today || coverage.get(date) === "partial",
     cells: columns.map((column) => (column.zone ? minutesCell(column.zone, date) : dailyCell(column, date))),
   }));
@@ -202,7 +213,7 @@ export function ScorecardTable({ model, window }: { model: ScorecardModel; windo
           {model.rows.map((row) => {
             const note = dayNote(row);
             return <tr key={row.date} data-date={row.date}>
-              <th scope="row"><time dateTime={row.date}>{dayLabel(row.date)}</time>{note && <span className="scorecard-note"> · {note}</span>}</th>
+              <th scope="row"><Link to={dayHref(row.date)}><time dateTime={row.date}>{dayLabel(row.date)}</time></Link>{note && <span className="scorecard-note"> · {note}</span>}</th>
               {row.cells.map((cell, index) => <td key={model.columns[index].id} className={cell.value === null ? "scorecard-missing" : undefined}>
                 {cell.value === null ? <>—{cell.reason && <span className="scorecard-reason"> {cell.reason}</span>}</> : cell.text}
               </td>)}

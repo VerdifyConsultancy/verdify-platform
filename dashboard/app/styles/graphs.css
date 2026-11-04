@@ -1,22 +1,18 @@
 /* SPDX-License-Identifier: MIT */
 /* Section: Graphs (WP2) */
-/* Graphs (SCR-02): the rules moved from styles.css unchanged in WP0.1; new classes use the prefix gr-. The charts are styled in app/charts/charts.css. Loaded by root.tsx after styles.css and tokens.css, in the fixed order of redesign §10.1. Colours are tokens only (white the one literal); this file never redefines :focus-visible or the input borders that the §2.2 block in styles.css sets. */
+/* Graphs → Climate, Zones and Statistics (redesign §5.5–§5.7, §7): the toolbar and its menus, the story line, the chips of what the charts draw, the zones' grid heads and the Statistics page. New classes use the prefix gr-; the charts themselves are styled in app/charts/charts.css. Loaded by root.tsx after styles.css and tokens.css, in the fixed order of redesign §10.1. Colours are tokens only (white the one literal); this file never redefines :focus-visible or the input borders that the §2.2 block in styles.css sets. */
 
-/* Graphs (SCR-02, VD-10): the resolution line, the custom range, what is on the charts, the pickers and the daily scorecard. The charts themselves are styled in app/charts/charts.css. */
+/* The resolution line (in the stack's foot), the custom range, the chips of settings and metrics, the pickers and the daily table. */
 .resolution-line{font-variant-numeric:tabular-nums}
 .range-form{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .5rem;margin:0}
 .range-form label{font-size:.8rem;font-weight:600;color:var(--muted)}
 .range-form input[type=date]{min-height:2.25rem;padding:.2rem .45rem;border:1px solid var(--control-border);border-radius:var(--radius-sm);font:inherit;font-size:.85rem}
 .range-form .field-error{flex-basis:100%}
-.graph-on-charts{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .6rem;margin:.25rem 0 .75rem}
-.graph-on-label{font-size:.8rem;font-weight:600;color:var(--muted)}
 .graph-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:0;padding:0;list-style:none}
 .graph-chip{display:inline-flex;align-items:stretch;min-height:2.25rem;border:1px solid var(--line-strong);border-radius:999px;background:#fff;font-size:.8rem;overflow:hidden}
 .graph-chip>a,.graph-chip>span{display:inline-flex;align-items:center;padding:0 .7rem;color:var(--ink);text-decoration:none;white-space:nowrap}
 .graph-chip>a:hover{color:var(--forest)}
 .graph-chip>a:last-child{justify-content:center;min-width:2.25rem;padding:0 .55rem;border-left:1px solid var(--line);font-size:1rem}
-.graph-scorecard,.graph-back{display:inline-flex;align-items:center;min-height:2.75rem;font-size:.875rem;font-weight:700;text-decoration:none}
-.graph-scorecard{margin-left:auto}
 .graph-notices{list-style:none;display:grid;gap:.4rem;margin:0 0 1rem;padding:0}
 .graph-notices .notice{margin:0}
 .picker-dialog .field{margin-bottom:.75rem}
@@ -35,13 +31,121 @@ a.picker-item:hover{background:var(--field)}
 .scorecard-tools{display:flex;justify-content:flex-end;margin:0 0 .5rem}
 .scorecard-wrap{max-height:none}
 .scorecard th[scope=row]{white-space:nowrap}
+.scorecard th[scope=row] a{color:inherit;text-decoration-color:var(--line-strong)}
+.scorecard th[scope=row] a:hover{color:var(--forest)}
 .scorecard thead th{white-space:nowrap}
 .scorecard td{white-space:nowrap;font-variant-numeric:tabular-nums}
 .scorecard-note{font-size:.75rem;font-weight:400;color:var(--muted)}
 .scorecard-missing{color:var(--muted)}
 .scorecard-reason{font-size:.75rem;white-space:normal}
-@media(max-width:860px){.graph-scorecard{margin-left:0}.range-form{flex-basis:100%}}
+.zone-tag-note{max-width:46rem;margin:0 0 var(--space-3);font-size:var(--fs-sm);color:var(--muted)}
 
-/* Moved from "Coming up and the zones" (VD-18): /graphs/zones' chips and the tag note. */
-.zone-controls{display:grid;gap:.5rem;margin:.25rem 0 .75rem}
-.zone-tag-note{margin:0;font-size:.85rem;color:var(--muted)}
+/* The toolbar (redesign §5.5): range chips, ‹ › and Zoom out, Custom…, then Preset, Layers, + Metric and + Setting at the right. Every control is one height, 36 px (44 px on phones). */
+.gr-toolbar{position:relative;margin:0 0 var(--space-2)}
+.gr-toolbar .range-toolbar{margin:0}
+.gr-toolbar .range-tools>.btn{min-height:2.25rem;padding:0 .8rem;font-size:var(--fs-sm)}
+.gr-toolbar .menu{position:relative}
+.gr-menu>summary{min-height:2.25rem;padding:0 .8rem 0 .7rem;border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:#fff;font-size:var(--fs-sm);white-space:nowrap}
+.gr-menu>summary:hover{border-color:var(--leaf)}
+.gr-menu[open]>summary{border-color:var(--ink)}
+.gr-menu-value{font-weight:500;color:var(--ink)}
+.gr-menu>.menu-panel{left:auto;right:0;width:max-content;min-width:14rem;max-width:min(24rem,calc(100vw - 2 * var(--gutter)))}
+.gr-menu-list{display:grid;gap:var(--space-1);margin:0;padding:0;list-style:none}
+.gr-menu-list a{display:flex;align-items:center;min-height:var(--tap);padding:0 var(--space-3);border-radius:var(--radius-sm);color:var(--forest);font-size:var(--fs-sm);font-weight:700;text-decoration:none}
+.gr-menu-list a:hover{background:var(--field);color:var(--leaf)}
+.gr-menu-list a[aria-current=true]{background:var(--ink);color:#fff}
+.gr-menu-list a[aria-current=true] .meta{color:var(--ink-muted)}
+.gr-menu-groups{display:grid;gap:var(--space-3);padding:var(--space-1)}
+.gr-menu-group .eyebrow{margin:0 0 var(--space-2)}
+.gr-menu-note{max-width:20rem;margin:var(--space-2) 0 0;font-size:var(--fs-xs)}
+/* What the charts draw beyond the climate traces, and the notes about the window, between the toolbar and the stack. */
+.gr-on{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3);margin:var(--space-3) 0 0}
+.gr-notes{margin:var(--space-3) 0 0}
+/* The story line: one line of state, its excursions links to their windows. */
+.gr-story a{font-weight:600;text-decoration-thickness:1px;text-underline-offset:.2em}
+
+/* Zones (redesign §5.6): the grid in one card; each column head names its zone, a link that focuses it, and where its numbers come from as a text mark, amber words when it reads its peers. */
+.gr-zones{display:grid;gap:var(--space-3)}
+.gr-grid-card{padding:var(--space-3) var(--space-4) var(--space-4)}
+.gr-grid-card .chart-grid{margin:0}
+.gr-grid-foot{margin:var(--space-3) 0 0}
+.gr-zone-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--space-2);min-width:0}
+.gr-zone-link{display:inline-flex;align-items:center;min-height:24px;font-weight:700;text-decoration:none}
+.gr-zone-tag{font:500 var(--fs-label)/1.3 var(--mono);letter-spacing:.08em;color:var(--muted)}
+.gr-zone-tag-peer{color:var(--warn-text)}
+.gr-phone-only{display:none}
+.gr-wide-only,.gr-phone-only{align-items:center;gap:var(--space-2);min-width:0}
+.gr-wide-only{display:flex}
+.gr-chips-label{font-size:var(--fs-sm);font-weight:600;color:var(--muted)}
+
+/* Statistics (redesign §5.7): the period, the key figures, the day-by-day strip, the typical day beside the daily range, time in band per day and the data. */
+.gr-stats-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3);margin-bottom:var(--space-5)}
+.gr-stats-toolbar .range-custom>summary{min-height:2.25rem}
+.gr-stats-none{margin:var(--space-4) 0}
+.gr-stats-loading{display:grid;gap:var(--space-6)}
+.gr-skeleton-strip{height:12rem}
+.gr-kpis{align-items:stretch}
+.gr-kpis .metric-tile{min-height:10rem}
+.gr-unit{font-size:var(--fs-sm);font-weight:500;letter-spacing:0;color:var(--muted)}
+.gr-days-wrap{display:grid;gap:var(--space-3);min-width:0}
+.gr-days{padding-bottom:var(--space-1)}
+.gr-days-grid{display:grid;gap:var(--space-2);min-width:calc(var(--gr-days, 30) * .625rem + 9.75rem)}
+.gr-days-row{display:grid;grid-template-columns:9rem minmax(0,1fr);align-items:center;gap:0 var(--space-3)}
+.gr-days-label{position:sticky;left:0;z-index:var(--z-raised);align-self:stretch;display:flex;align-items:center;padding-right:var(--space-2);background:#fff;font-size:var(--fs-sm);font-weight:600;white-space:nowrap}
+.gr-days .strip>li{max-width:none}
+.gr-days .strip-cell{height:1.75rem}
+.gr-days-pad{padding:0 2px}
+/* The gallons: cells sized as the strip's cells (flex 1 from 8 px, 2 px apart), each a bar from the bottom. */
+.gr-gallons{display:flex;align-items:stretch;gap:2px;height:2.25rem}
+.gr-bar-cell{display:flex;flex:1 0 .5rem;align-items:flex-end;min-width:.5rem;border-bottom:1px solid var(--line-strong)}
+.gr-bar-cell[data-none=true]{background:repeating-linear-gradient(135deg,var(--line-strong) 0 2px,transparent 2px 5px)}
+.gr-bar{display:block;width:100%;height:var(--gr-h,0);min-height:2px;border-radius:2px 2px 0 0;background:var(--eq-water)}
+.gr-bar-cell[data-partial=true] .gr-bar{background:#fff;outline:1px dashed var(--eq-water);outline-offset:-1px}
+.gr-gallons.is-neutral .gr-bar{background:var(--muted)}
+.gr-days-axis>li{position:relative;height:1.1rem}
+.gr-days-tick{position:absolute;top:0;left:50%;transform:translateX(-50%);font:400 var(--fs-xs)/1.2 var(--mono);color:var(--muted);white-space:nowrap}
+.gr-days-tick-start{left:0;transform:none}
+.gr-days-tick-end{left:auto;right:0;transform:none}
+.gr-pair{align-items:stretch}
+.gr-chart-card{display:grid;align-content:start;gap:var(--space-2)}
+.gr-chart-card .card-head{margin-bottom:0}
+.gr-chart-head{display:flex;align-items:baseline;gap:var(--space-2);margin:0 0 var(--space-1);font:600 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
+.gr-chart-head .stack-unit{text-transform:none;letter-spacing:0;color:var(--muted)}
+.gr-typical,.gr-range,.gr-in-band{margin:0}
+.chart .gr-plot{position:relative;min-height:0;overflow:hidden;min-width:0}
+.chart .gr-plot-typical{height:240px}
+.chart .gr-plot-range{height:200px}
+.chart .gr-plot-bars{height:110px}
+.chart .gr-plot-bars.gr-plot-bars-axis{height:138px}
+.gr-bars-row+.gr-bars-row{margin-top:var(--space-2);padding-top:var(--space-2);border-top:1px solid var(--line)}
+.gr-bars-name{margin:0 0 var(--space-1);font:600 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
+.gr-chart-key,.gr-bars-key{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-2);margin:var(--space-1) 0 0}
+.gr-key-line,.gr-key-dash,.gr-key-target{display:inline-block;width:1rem;height:0;border-top:2px solid var(--ink)}
+.gr-key-dash{border-top:1px dashed var(--ink)}
+.gr-key-target{border-top:2px dotted var(--ink)}
+.gr-key-band{display:inline-block;width:1rem;height:.6rem;border:1px solid var(--c-band-edge);border-width:1px 0;background:var(--c-band-wash)}
+.gr-data{margin:0}
+.gr-data>summary{width:fit-content}
+.gr-data[open]>summary{margin-bottom:var(--space-2)}
+
+@media(max-width:860px){
+  .gr-toolbar .range-tools>.btn,.gr-menu>summary,.gr-stats-toolbar .range-custom>summary{min-height:var(--tap)}
+  /* On a phone a menu opens under the whole toolbar, full width, so it never runs off the screen. */
+  .gr-toolbar .menu{position:static}
+  .gr-menu>.menu-panel{left:0;right:0;width:auto;max-width:none}
+  .gr-wide-only{display:none}
+  .gr-phone-only{display:flex}
+  .gr-grid-card{padding:var(--space-2) var(--space-2) var(--space-3)}
+  /* One metric at a time, the five zones stacked, each plot 110 px (redesign §5.6). */
+  .gr-zones .chart-grid .stack-plot,.gr-zones .chart-grid .grid-plot{height:110px}
+  .gr-zones .chart-grid .grid-cell-axis .stack-plot{height:142px}
+  .gr-zone-link{min-height:var(--tap)}
+  /* On a phone each row's name sits above its cells, so 30 days fit at once at 360 px (cells at least 8 px); longer
+     windows scroll inside the region, the names staying at its left edge. */
+  .gr-days-card{padding:var(--space-3)}
+  .gr-days-row{grid-template-columns:minmax(0,1fr);gap:var(--space-1) 0}
+  .gr-days-grid{min-width:calc(var(--gr-days, 30) * .625rem + 4px)}
+  .gr-days-label{justify-self:start;padding:0;font-size:var(--fs-xs)}
+  .gr-days-axis-row .gr-days-label{display:none}
+  .gr-kpis .metric-tile{min-height:9rem}
+}

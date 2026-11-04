@@ -1,15 +1,16 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
-// Graphs' controls (#1130): the custom range writes local days to the URL and refuses more than 400 days; what is on
-// the charts is a row of chips whose × takes one off, a setting's chip opens its drawer on Settings, and Scorecard ›.
+// Graphs' controls (redesign §5.5): the custom range writes local days to the URL and refuses more than 400 days; the
+// chips of what the charts draw take one off with ×, a setting's chip opens its drawer on Settings; Preset sets a
+// group's metrics; Layers toggles the overlay, the envelope, each event source and the comparison, all in the URL.
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { createRoutesStub, useLocation } from "react-router";
 import { afterEach, expect, test } from "vitest";
 import { fixture } from "../../../e2e/fixtures/index.mjs";
-import { graphWindow, parseGraphUrl, resolveView } from "../../lib/graph-url";
+import { graphHref, graphWindow, parseGraphUrl, resolveView, withWindow } from "../../lib/graph-url";
 import type { MetricDef, Setting } from "../../lib/operator-api";
 import { text } from "../test-render";
-import { GraphNotices, OnCharts, RangeForm, rangeDays } from "./controls";
+import { ChartChips, GraphNotices, LayersMenu, PresetMenu, RangeForm, rangeDays, viewFields } from "./controls";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z") / 1000;
 const SET = fixture("in-band", { now: NOW * 1000 });
@@ -24,27 +25,31 @@ function Where() {
 function Controls() {
   const { search } = useLocation();
   const resolved = resolveView(parseGraphUrl(search).view, METRICS, SETTINGS);
+  const view = resolved.view;
   return <>
-    <RangeForm view={resolved.view} window={graphWindow(resolved.view.window, NOW)} />
-    <OnCharts view={resolved.view} settings={resolved.settings} picked={resolved.picked} units={resolved.units} metricsCatalog={METRICS} settingsCatalog={SETTINGS} />
+    <RangeForm initial={rangeDays(view.window, graphWindow(view.window, NOW))} action="/graphs" hidden={viewFields(view)} href={(from, to) => graphHref(withWindow(view, { kind: "days", from, to }))} />
+    <ChartChips view={view} settings={resolved.settings} picked={resolved.picked} catalog={METRICS} />
+    <PresetMenu view={view} catalog={METRICS} />
+    <LayersMenu view={view} long={false} />
     <Where />
   </>;
 }
 function mount(path: string) {
-  const Stub = createRoutesStub([{ path: "/graphs", Component: Controls }, { path: "/settings", Component: Where }, { path: "/graphs/scorecard", Component: Where }]);
+  const Stub = createRoutesStub([{ path: "/graphs", Component: Controls }, { path: "/settings", Component: Where }]);
   render(<Stub initialEntries={[path]} />);
 }
 const where = () => screen.getByTestId("where").textContent;
+const chips = (name: string) => within(screen.getByRole("list", { name })).getAllByRole("link");
 
-test("the custom range opens on the window's local days and Show writes from and to, keeping the settings and metrics", () => {
-  mount("/graphs?range=7d&set=mister_engage_kpa&m=climate.flow_gpm");
+test("the custom range opens on the window's local days and Show writes from and to, keeping the rest of the view", () => {
+  mount("/graphs?range=7d&set=mister_engage_kpa&m=climate.flow_gpm&cmp=day");
   const form = screen.getByRole("form", { name: "Custom range" });
   expect((within(form).getByLabelText("From") as HTMLInputElement).value).toBe("2026-10-26");
   expect((within(form).getByLabelText("To") as HTMLInputElement).value).toBe("2026-11-02");
   fireEvent.change(within(form).getByLabelText("From"), { target: { value: "2026-10-31" } });
   fireEvent.change(within(form).getByLabelText("To"), { target: { value: "2026-11-01" } });
   fireEvent.click(within(form).getByRole("button", { name: "Show" }));
-  expect(where()).toBe("/graphs?from=2026-10-31&to=2026-11-01&set=mister_engage_kpa&m=climate.flow_gpm");
+  expect(where()).toBe("/graphs?from=2026-10-31&to=2026-11-01&set=mister_engage_kpa&m=climate.flow_gpm&cmp=day");
   // The new window starts the fields over from it.
   expect((within(screen.getByRole("form", { name: "Custom range" })).getByLabelText("From") as HTMLInputElement).value).toBe("2026-10-31");
 });
@@ -63,15 +68,17 @@ test("more than 400 days is refused beside the fields: Up to 400 days", () => {
   expect(where()).toBe("/graphs?from=2025-09-29&to=2026-11-02");
 });
 
-test("without script the form submits the same query: from, to and the hidden set and m", () => {
-  mount("/graphs?range=24h&set=&m=climate.flow_gpm");
+test("without script the form submits the same query: from, to and every other part of the view as hidden fields", () => {
+  mount("/graphs?range=24h&preset=water-soil&set=&m=climate.temp_south&outdoor=0&events=alerts&env=0&cmp=week");
   const form = screen.getByRole("form", { name: "Custom range" }) as HTMLFormElement;
   expect([form.method, new URL(form.action).pathname]).toEqual(["get", "/graphs"]);
-  expect([...new FormData(form).entries()]).toEqual([["from", "2026-11-01"], ["to", "2026-11-02"], ["set", ""], ["m", "climate.flow_gpm"]]);
+  expect([...new FormData(form).entries()]).toEqual([
+    ["from", "2026-11-01"], ["to", "2026-11-02"], ["preset", "water-soil"], ["set", ""], ["m", "climate.temp_south"], ["outdoor", "0"], ["events", "alerts"], ["env", "0"], ["cmp", "week"],
+  ]);
   expect(rangeDays({ kind: "exact", from: "a", to: "b", start: NOW - 7200, end: NOW }, graphWindow({ kind: "exact", from: "a", to: "b", start: NOW - 7200, end: NOW }, NOW))).toEqual({ from: "2026-11-02", to: "2026-11-02" });
 });
 
-test("on the charts: a setting chip opens its drawer on Settings and × takes it off; a metric chip's × takes it off", () => {
+test("the chips: a setting chip opens its drawer on Settings and × takes it off; a metric chip's × takes it off", () => {
   mount("/graphs?range=72h&m=climate.flow_gpm");
   const settings = screen.getByRole("list", { name: "Settings drawn as steps" });
   expect(within(settings).getAllByRole("listitem").map(text)).toEqual(["VPD · mister_engage_kpa×", "RH · fog_rh_ceiling_pct×"]);
@@ -87,9 +94,39 @@ test("on the charts: a setting chip opens its drawer on Settings and × takes it
   fireEvent.click(screen.getByRole("link", { name: "Take mister_engage_kpa off the charts" }));
   expect(where()).toBe("/graphs?range=72h&set=");
   expect(screen.queryByRole("list", { name: "Settings drawn as steps" })).toBeNull();
-  expect(screen.getByRole("link", { name: "Scorecard" }).getAttribute("href")).toBe("/graphs/scorecard");
-  fireEvent.click(screen.getByRole("link", { name: "Scorecard" }));
-  expect(where()).toBe("/graphs/scorecard");
+});
+
+test("Preset: each a link that sets the preset and takes the picked metrics off; a group with nothing reads none yet", () => {
+  mount("/graphs?range=7d&m=climate.flow_gpm");
+  expect(text(document.querySelector(".gr-menu > summary"))).toBe("Preset Climate");
+  expect(chips("Presets").map((link) => [text(link), link.getAttribute("href"), link.getAttribute("aria-current")])).toEqual([
+    ["Climate", "/graphs?range=7d", "true"], ["Water and soil", "/graphs?range=7d&preset=water-soil", null],
+    ["Light · none yet", "/graphs?range=7d&preset=light", null], ["Controller", "/graphs?range=7d&preset=controller", null],
+  ]);
+  fireEvent.click(screen.getByRole("link", { name: "Water and soil" }));
+  expect(where()).toBe("/graphs?range=7d&preset=water-soil");
+  // A preset's metric chip turns the preset into the metrics left.
+  expect(within(screen.getByRole("list", { name: "Metrics on the charts" })).getByRole("link", { name: "Take South soil moisture 1 off the charts" }).getAttribute("href")).toBe("/graphs?range=7d&m=climate.flow_gpm");
+});
+
+test("Layers: the overlay and the envelope, each event source and the comparison are chips in the URL; the menu stays open while they change", () => {
+  mount("/graphs?range=24h");
+  expect(text(document.querySelector(".gr-layers > summary"))).toBe("Layers");
+  expect(chips("Overlays").map((link) => [link.textContent, link.getAttribute("aria-current"), link.getAttribute("href")])).toEqual([
+    ["Outdoor", "true", "/graphs?range=24h&outdoor=0"], ["Min–max", "true", "/graphs?range=24h&env=0"],
+  ]);
+  expect(chips("Compare with").map((link) => [link.textContent, link.getAttribute("aria-current"), link.getAttribute("href")])).toEqual([
+    ["None", "true", "/graphs?range=24h"], ["Yesterday", null, "/graphs?range=24h&cmp=day"], ["Last week", null, "/graphs?range=24h&cmp=week"],
+  ]);
+  expect(screen.getByRole("list", { name: "Event sources" }).closest("[data-menu-keep]")).not.toBeNull();
+  fireEvent.click(screen.getByRole("link", { name: "Yesterday" }));
+  expect(where()).toBe("/graphs?range=24h&cmp=day");
+  fireEvent.click(screen.getByRole("link", { name: "Runs" }));
+  expect(where()).toBe("/graphs?range=24h&events=people,iris,agents,system,alerts&cmp=day");
+  expect(text(document.querySelector(".gr-layers .gr-menu-value"))).toBe(" · 2 changed");
+  // Turning the last one back on is every source again: no parameter.
+  fireEvent.click(screen.getByRole("link", { name: "Runs" }));
+  expect(where()).toBe("/graphs?range=24h&cmp=day");
 });
 
 test("notices list what the page dropped from the link", () => {

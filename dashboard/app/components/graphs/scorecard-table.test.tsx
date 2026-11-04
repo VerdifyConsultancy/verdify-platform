@@ -4,13 +4,16 @@
 // band on every day, the day/night split for the last 3, each missing value as "—" with its reason (the API's first,
 // then the fallbacks), the 25-hour 2026-11-01 as one row, today partial, and a CSV of exactly the rows shown.
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { createFixtureHandler } from "../../../e2e/fixture-api.mjs";
 import { DAILY_KEYS, SCORECARD_NO_ROW_AGO } from "../../../e2e/fixtures/world.mjs";
 import type { MetricDef, MinutesReport, Series } from "../../lib/operator-api";
 import { text } from "../test-render";
 import {
-  NOT_LOADED, NOT_SERVED, ScorecardTable, buildScorecard, dayHours, dayLabel, scorecardColumns, scorecardCsv, scorecardDays, scorecardWindow, type ScorecardModel,
+  NOT_LOADED, NOT_SERVED, ScorecardTable, buildScorecard, dayHours, dayLabel, daysWindow, scorecardColumns, scorecardCsv, scorecardDays, scorecardWindow, windowDays,
+  type ScorecardModel,
 } from "./scorecard-table";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
@@ -96,7 +99,10 @@ test("a key API-03 does not list reads not served; a failed request couldn't loa
 
 test("the table: grouped headers, 30 rows newest first, missing cells as — with their reason, and CSV of this table is exactly those rows", async () => {
   const built = model();
-  const { rerender } = render(<ScorecardTable model={built} window={WINDOW} />);
+  // Each day's header links to the day in Climate, so the table sits in a router.
+  const routed = (ui: ReactElement) => <MemoryRouter>{ui}</MemoryRouter>;
+  const { rerender: again } = render(routed(<ScorecardTable model={built} window={WINDOW} />));
+  const rerender = (ui: ReactElement) => again(routed(ui));
   const table = within(screen.getByRole("region", { name: /Daily scorecard/ })).getByRole("table");
   const heads = [...table.querySelectorAll("thead tr")].map((row) => [...row.querySelectorAll("th")].map(text));
   expect(heads).toEqual([
@@ -107,6 +113,7 @@ test("the table: grouped headers, 30 rows newest first, missing cells as — wit
   expect(rows).toHaveLength(30);
   expect(rows.map((row) => row.getAttribute("data-date")).slice(0, 2)).toEqual([TODAY, "2026-11-01"]);
   expect(text(rows[0].querySelector("th"))).toBe("Mon, Nov 2 · partial");
+  expect(rows[0].querySelector("th a")!.getAttribute("href")).toBe("/graphs?from=2026-11-02&to=2026-11-02");
   expect(text(rows[1].querySelector("th"))).toBe("Sun, Nov 1 · 25 h");
   expect([...rows[3].querySelectorAll("td")].slice(2, 4).map(text)).toEqual(["— band grade kept 3 days", "— band grade kept 3 days"]);
   expect(text(rows[0].querySelectorAll("td")[4])).toBe("— day not finished");
@@ -135,4 +142,11 @@ test("the table: grouped headers, 30 rows newest first, missing cells as — wit
   // New rows make a new file.
   rerender(<ScorecardTable model={model({ minutes: null, minutesFailed: true })} window={WINDOW} />);
   await waitFor(() => expect(link.getAttribute("href")).toBe("blob:2"));
+});
+
+test("any window of days: its rows newest first, today partial only when it is in the window", () => {
+  expect(daysWindow("2026-10-30", "2026-11-01")).toEqual({ from: "2026-10-30", to: "2026-11-01", start: "2026-10-30T06:00:00.000Z", end: "2026-11-02T07:00:00.000Z" });
+  expect(windowDays({ from: "2026-10-30", to: "2026-11-01" })).toEqual(["2026-11-01", "2026-10-31", "2026-10-30"]);
+  const built = model({ window: { from: "2026-10-30", to: "2026-11-01" } });
+  expect(built.rows.map((row) => [row.date, row.partial, row.hours])).toEqual([["2026-11-01", false, 25], ["2026-10-31", false, 24], ["2026-10-30", false, 24]]);
 });
