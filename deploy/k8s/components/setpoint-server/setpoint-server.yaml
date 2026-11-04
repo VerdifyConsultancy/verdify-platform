@@ -52,11 +52,13 @@ spec:
       imagePullSecrets:
         - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
         - name: ghcr-jvallery-readonly
-      # The HA writer needs services-VLAN access but no GPU. Select the general
-      # worker class without hard-pinning a hostname so scheduler failover stays
-      # available across the eligible pool.
+      # The HA writer needs services-VLAN access but no GPU. Every worker is on
+      # the services VLAN, so select any non-control-plane worker without
+      # hard-pinning a hostname; node8 stays out through its untolerated
+      # dedicated=frigate taint. Its only off-cluster peer is Home Assistant
+      # (192.168.30.107:8123, same VLAN), so the node does not change its path.
       nodeSelector:
-        agentfleet.vallery.net/node-class: general
+        agentfleet.vallery.net/control-plane: "false"
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000

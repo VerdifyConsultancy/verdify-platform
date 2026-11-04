@@ -14,6 +14,13 @@
 # acceptable. Concurrency Forbid + leader-election lease (RBAC role) so two
 # runs never overlap. priorityClassName verdify-batch (1000) — the descheduler
 # is itself the lowest-priority workload (it must never preempt anything).
+#
+# Maintenance gate (sched audit 2026-11-04, rule L5): the maintenance-gate init
+# container reads Lease kube-system/k3s-planned-maintenance and hands the
+# descheduler a no-op policy while the Lease has a holder, so this CronJob never
+# evicts next to a cordon or drain. It needs `get` on that one Lease, granted by
+# the fleet control plane beside the verdify-descheduler ClusterRole. Without
+# that grant the gate fails closed (Job fails, nothing evicted).
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -61,6 +68,30 @@ spec:
             runAsUser: 1000
             seccompProfile:
               type: RuntimeDefault
+          initContainers:
+            - name: maintenance-gate
+              # Same digest-pinned image as the estate descheduler's gate.
+              image: python:3.13.5-alpine3.22@sha256:37b14db89f587f9eaa890e4a442a3fe55db452b69cca1403cc730bd0fbdc8aaf
+              imagePullPolicy: IfNotPresent
+              command: ["python3", "-I", "/policy-src/gate.py"]
+              resources:
+                requests:
+                  cpu: "10m"
+                  memory: "32Mi"
+                limits:
+                  memory: "64Mi"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              volumeMounts:
+                - name: policy-src
+                  mountPath: /policy-src
+                  readOnly: true
+                - name: policy-volume
+                  mountPath: /policy-dir
           containers:
             - name: descheduler
               # registry.k8s.io/descheduler/descheduler:v0.36.0 (k8s 1.35 deps),
@@ -99,6 +130,11 @@ spec:
                 initialDelaySeconds: 3
                 periodSeconds: 10
           volumes:
+            # The gate copies the selected policy here; the descheduler reads
+            # only this directory.
             - name: policy-volume
+              emptyDir:
+                sizeLimit: 1Mi
+            - name: policy-src
               configMap:
                 name: descheduler-policy

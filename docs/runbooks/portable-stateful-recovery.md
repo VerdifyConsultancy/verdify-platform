@@ -1,8 +1,10 @@
 # Portable stateful recovery (#218)
 
 Production keeps one TimescaleDB writer and existing Longhorn claims. DB,
-Grafana and Hermes can schedule on either Linux general worker advertising
-`storage.vallery.net/longhorn-attach=true`. Source no longer pins hostnames.
+Grafana and Hermes can schedule on any Linux non-control-plane worker
+(`agentfleet.vallery.net/control-plane=false`) advertising
+`storage.vallery.net/longhorn-attach=true`; node8 stays out through its
+untolerated `dedicated=frigate` taint. Source no longer pins hostnames.
 The ingestor's image, Pod template and existing ESP32 connection are unchanged.
 
 Before each attended operation, record fresh workload/claim UIDs, healthy volume

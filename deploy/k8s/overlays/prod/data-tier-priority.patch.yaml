@@ -1,0 +1,28 @@
+# Sched audit 2026-11-04 (#15, #16): assign the PriorityClasses designed for the
+# data and device tiers (priorityclasses.yaml), which no pod used. The single
+# database writer gets verdify-data-critical; the setpoint server gets
+# verdify-device-writer, the class reserved for the ingestor/setpoint device
+# path. Both stay above the descheduler's priorityThreshold (100001).
+#
+# verdify-db also drops the stale maintenance.vallery.net/longhorn-recovery
+# toleration from the July 2026 recovery. No node carries that taint. It was
+# kubectl-patched live and is not declared anywhere in source; the explicit
+# empty list lets Argo's server-side apply take the atomic field and clear it.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: verdify-db
+spec:
+  template:
+    spec:
+      priorityClassName: verdify-data-critical
+      tolerations: []
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-setpoint-server
+spec:
+  template:
+    spec:
+      priorityClassName: verdify-device-writer

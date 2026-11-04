@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the production tier-2 proxy's general-worker HA contract."""
+"""Validate the production tier-2 proxy's worker-pool HA contract."""
 
 from __future__ import annotations
 
@@ -24,9 +24,9 @@ def placement_violations(deployment: dict) -> list[str]:
     spec = deployment.get("spec", {})
     pod = spec.get("template", {}).get("spec", {})
 
-    expected_selector = {"agentfleet.vallery.net/node-class": "general"}
+    expected_selector = {"agentfleet.vallery.net/control-plane": "false"}
     if pod.get("nodeSelector") != expected_selector:
-        violations.append("verdify-traefik must require exactly the general-worker selector")
+        violations.append("verdify-traefik must require exactly the non-control-plane worker selector")
 
     strategy = spec.get("strategy", {})
     rolling = strategy.get("rollingUpdate", {})
@@ -41,6 +41,7 @@ def placement_violations(deployment: dict) -> list[str]:
     expected_spread = [
         {
             "maxSkew": 1,
+            "nodeTaintsPolicy": "Honor",
             "topologyKey": "kubernetes.io/hostname",
             "whenUnsatisfiable": "DoNotSchedule",
             "matchLabelKeys": ["pod-template-hash"],

@@ -42,9 +42,10 @@ def test_source_contract_passes() -> None:
 @pytest.mark.parametrize(
     ("mutation", "expected"),
     [
-        ("gpu", "exactly the general-worker selector"),
-        ("hard_hostname", "exactly the general-worker selector"),
+        ("control_plane", "exactly the non-control-plane worker selector"),
+        ("hard_hostname", "exactly the non-control-plane worker selector"),
         ("soft_spread", "retain hard hostname spread"),
+        ("ignore_taints", "retain hard hostname spread"),
         ("allow_unavailable", "two-replica zero-unavailable rollout"),
         ("pvc", "must remain stateless"),
         ("dedicated_toleration", "must not tolerate a dedicated worker"),
@@ -55,12 +56,14 @@ def test_negative_placement_contracts(tmp_path: Path, mutation: str, expected: s
     workload = deployment(documents)
     pod = workload["spec"]["template"]["spec"]
 
-    if mutation == "gpu":
-        pod["nodeSelector"]["agentfleet.vallery.net/node-class"] = "gpu"
+    if mutation == "control_plane":
+        pod["nodeSelector"]["agentfleet.vallery.net/control-plane"] = "true"
     elif mutation == "hard_hostname":
         pod["nodeSelector"]["kubernetes.io/hostname"] = "vm-k3s-node5"
     elif mutation == "soft_spread":
         pod["topologySpreadConstraints"][0]["whenUnsatisfiable"] = "ScheduleAnyway"
+    elif mutation == "ignore_taints":
+        del pod["topologySpreadConstraints"][0]["nodeTaintsPolicy"]
     elif mutation == "allow_unavailable":
         workload["spec"]["strategy"]["rollingUpdate"]["maxUnavailable"] = 1
     elif mutation == "pvc":

@@ -20,14 +20,34 @@ def workloads():
         ("Deployment", "verdify-hermes-iris"),
     ],
 )
-def test_retained_state_has_two_worker_eligibility_without_hostname(workloads, kind, name):
+def test_retained_state_has_worker_pool_eligibility_without_hostname(workloads, kind, name):
     spec = workloads[kind, name]["spec"]["template"]["spec"]
     assert spec["nodeSelector"] == {
         "kubernetes.io/os": "linux",
-        "agentfleet.vallery.net/node-class": "general",
+        "agentfleet.vallery.net/control-plane": "false",
         "storage.vallery.net/longhorn-attach": "true",
     }
     assert "nodeAffinity" not in spec.get("affinity", {})
+
+
+def test_database_runs_on_data_tier_priority_sized_to_use(workloads):
+    spec = workloads["StatefulSet", "verdify-db"]["spec"]["template"]["spec"]
+    assert spec["priorityClassName"] == "verdify-data-critical"
+    assert spec["tolerations"] == []
+    postgres = next(c for c in spec["containers"] if c["name"] == "postgres")
+    assert postgres["resources"] == {
+        "requests": {"cpu": "1500m", "memory": "3584Mi"},
+        "limits": {"memory": "6Gi"},
+    }
+
+
+def test_single_replica_planner_has_no_spread_and_replicated_tiers_honor_taints(workloads):
+    planner = workloads["Deployment", "verdify-planner"]["spec"]
+    assert planner["replicas"] == 1
+    assert "topologySpreadConstraints" not in planner["template"]["spec"]
+    for name in ("verdify-api", "verdify-lab", "verdify-mcp", "verdify-traefik", "verdify-grafana-render-cache"):
+        constraints = workloads["Deployment", name]["spec"]["template"]["spec"]["topologySpreadConstraints"]
+        assert constraints and all(c["nodeTaintsPolicy"] == "Honor" for c in constraints)
 
 
 def test_portability_keeps_singleton_storage_and_recreate_boundaries(workloads):

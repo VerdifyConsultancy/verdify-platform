@@ -19,10 +19,14 @@ spec:
         kubernetes.io/os: linux
       containers:
         - name: postgres
+          # Sched audit 2026-11-04 (#15): requests sized to measured use. 7-day
+          # Prometheus readback: CPU p50 0.90 / p95 1.47 / max 2.46 cores;
+          # working set p50 2.8Gi / p95 4.2Gi (RSS p95 ~0.7Gi, the rest page
+          # cache). The 6Gi limit is unchanged.
           resources:
             requests:
-              cpu: "250m"
-              memory: "512Mi"
+              cpu: "1500m"
+              memory: "3584Mi"
             limits:
               memory: "6Gi"
   volumeClaimTemplates:

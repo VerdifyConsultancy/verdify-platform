@@ -4,7 +4,12 @@ import subprocess
 
 import yaml
 
-EXPECTED_SELECTOR = {"agentfleet.vallery.net/node-class": "general"}
+# The ingestor keeps the general class: its ESP32/Shelly egress source set is
+# the node4/node5 SNAT addresses (staged gateway rule GAP #11). The setpoint
+# server's only off-cluster peer is Home Assistant on the services VLAN, so it
+# may run on any non-control-plane worker.
+INGESTOR_SELECTOR = {"agentfleet.vallery.net/node-class": "general"}
+SETPOINT_SELECTOR = {"agentfleet.vallery.net/control-plane": "false"}
 
 
 def rendered_deployments() -> dict[str, dict]:
@@ -21,12 +26,14 @@ def rendered_deployments() -> dict[str, dict]:
     }
 
 
-def test_prod_device_writers_require_exact_general_worker_selector() -> None:
+def test_prod_device_writers_require_exact_worker_selectors() -> None:
     deployments = rendered_deployments()
 
-    for name in ("verdify-ingestor", "verdify-setpoint-server"):
-        pod_spec = deployments[name]["spec"]["template"]["spec"]
-        assert pod_spec["nodeSelector"] == EXPECTED_SELECTOR
+    ingestor = deployments["verdify-ingestor"]["spec"]["template"]["spec"]
+    assert ingestor["nodeSelector"] == INGESTOR_SELECTOR
+    setpoint = deployments["verdify-setpoint-server"]["spec"]["template"]["spec"]
+    assert setpoint["nodeSelector"] == SETPOINT_SELECTOR
+    assert setpoint["priorityClassName"] == "verdify-device-writer"
 
 
 def test_ingestor_retains_soft_node6_avoidance_and_single_writer_strategy() -> None:

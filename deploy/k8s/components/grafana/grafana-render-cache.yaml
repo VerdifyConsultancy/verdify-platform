@@ -26,7 +26,7 @@ spec:
     spec:
       automountServiceAccountToken: false
       nodeSelector:
-        agentfleet.vallery.net/node-class: general
+        agentfleet.vallery.net/control-plane: "false"
       securityContext:
         runAsNonRoot: true
         seccompProfile:
@@ -34,8 +34,8 @@ spec:
       topologySpreadConstraints:
         - maxSkew: 1
           minDomains: 2
-          # Cordoned control-plane nodes share the general class but cannot
-          # receive this pod. Exclude their NoSchedule taints from skew math.
+          # Exclude cordoned and tainted nodes (node8 dedicated=frigate) from
+          # the skew math.
           nodeTaintsPolicy: Honor
           # Count the new ReplicaSet independently while old pods retire.
           matchLabelKeys: [pod-template-hash]
