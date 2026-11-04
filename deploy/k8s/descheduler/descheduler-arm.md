@@ -13,6 +13,15 @@ The source runs in enforce mode, matching the live CronJob since #234 GATE 6
 --v=4
 ```
 
+Since the 2026-11-04 scheduling audit, `/policy-dir` is an emptyDir. The
+`maintenance-gate` init container reads Lease `kube-system/k3s-planned-maintenance`
+and copies `policy.yaml`, or the no-op `skip-policy.yaml` while the Lease has a
+holder, from the `descheduler-policy` ConfigMap (mounted at `/policy-src`). A
+Lease read error fails the Job before any eviction. The ServiceAccount's `get`
+on that one Lease is granted by the fleet control plane with the
+`verdify-descheduler` ClusterRole, and must be live before this source is
+delivered.
+
 This adoption changes ownership only. It preserves the pinned image, policy,
 RBAC, resource limits, cadence and pod-template `evict: "true"` annotation.
 The policy restricts candidates to labelled pods in `verdify-prod`; existing

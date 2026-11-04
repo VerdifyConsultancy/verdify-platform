@@ -44,8 +44,10 @@ spec:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: edge-traefik
     spec:
+      # Any non-control-plane worker; node8 stays out through its untolerated
+      # dedicated=frigate taint.
       nodeSelector:
-        agentfleet.vallery.net/node-class: general
+        agentfleet.vallery.net/control-plane: "false"
       serviceAccountName: verdify-traefik
       automountServiceAccountToken: false
       volumes:
@@ -60,9 +62,12 @@ spec:
       # (DoNotSchedule) — 4 schedulable workers >= 2 replicas => always
       # satisfiable, so the hard guarantee carries no Pending risk.
       # matchLabelKeys:[pod-template-hash] so a rolling update's surging replica
-      # also lands on a distinct node.
+      # also lands on a distinct node. nodeTaintsPolicy Honor keeps the
+      # cordoned control plane and the tainted node8 out of the skew math, so
+      # they do not count as permanent zero-pod domains.
       topologySpreadConstraints:
         - maxSkew: 1
+          nodeTaintsPolicy: Honor
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: DoNotSchedule
           matchLabelKeys:

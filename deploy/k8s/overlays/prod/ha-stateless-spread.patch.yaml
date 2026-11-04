@@ -27,6 +27,11 @@
 # Lab serving caches are independent emptyDir generations. Required anti-affinity
 # separates the two live serving replicas; the publisher retains its RWO origin.
 #
+# Sched audit 2026-11-04: every TSC here sets nodeTaintsPolicy: Honor. With the
+# default Ignore, the cordoned node1-3 and the dedicated=frigate node8 count as
+# permanent zero-pod domains, so maxSkew 1 silently meant one pod per node. The
+# single-replica planner carries no TSC: one pod can never be skewed.
+#
 # ha-5 (#230, this commit): verdify-planner added — the last replicas:1
 # stateless serving surface. It is a stateless HTTP service (run state lives in
 # Postgres via PostgresRunStore) reached in-cluster via Hermes/Iris, NOT a
@@ -55,6 +60,7 @@ spec:
               topologyKey: kubernetes.io/hostname
       topologySpreadConstraints:
         - maxSkew: 1
+          nodeTaintsPolicy: Honor
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: DoNotSchedule
           matchLabelKeys:
@@ -78,6 +84,7 @@ spec:
     spec:
       topologySpreadConstraints:
         - maxSkew: 1
+          nodeTaintsPolicy: Honor
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: DoNotSchedule
           matchLabelKeys:
@@ -103,6 +110,7 @@ spec:
     spec:
       topologySpreadConstraints:
         - maxSkew: 1
+          nodeTaintsPolicy: Honor
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: DoNotSchedule
           matchLabelKeys:

@@ -47,6 +47,64 @@ metadata:
   labels:
     app.kubernetes.io/name: descheduler
 data:
+  # Sched audit 2026-11-04 (#26, rule L5): maintenance gate, copied from the
+  # fleet estate-descheduler. The CronJob's init container runs gate.py, which
+  # reads Lease kube-system/k3s-planned-maintenance with the pod's own token
+  # and copies policy.yaml, or skip-policy.yaml while the Lease has a holder,
+  # into the emptyDir the descheduler reads. A read error exits 1: the Job
+  # fails visibly and nothing is evicted.
+  gate.py: |
+    """Maintenance gate for the Verdify descheduler (copy of the estate gate)."""
+    import json
+    import os
+    import shutil
+    import ssl
+    import sys
+    import urllib.request
+
+    SA = "/var/run/secrets/kubernetes.io/serviceaccount"
+    LEASE = "/apis/coordination.k8s.io/v1/namespaces/kube-system/leases/k3s-planned-maintenance"
+
+
+    def main():
+        host = os.environ["KUBERNETES_SERVICE_HOST"]
+        port = os.environ.get("KUBERNETES_SERVICE_PORT", "443")
+        with open(SA + "/token", encoding="utf-8") as fh:
+            token = fh.read().strip()
+        req = urllib.request.Request(
+            f"https://{host}:{port}{LEASE}",
+            headers={"Authorization": "Bearer " + token, "Accept": "application/json"},
+        )
+        ctx = ssl.create_default_context(cafile=SA + "/ca.crt")
+        try:
+            with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
+                lease = json.load(resp)
+        except Exception as exc:  # fail closed: no policy file, Job fails
+            print(json.dumps({"gate": "error", "error": type(exc).__name__}), flush=True)
+            return 1
+        holder = (lease.get("spec") or {}).get("holderIdentity") or ""
+        src = "/policy-src/skip-policy.yaml" if holder else "/policy-src/policy.yaml"
+        shutil.copyfile(src, "/policy-dir/policy.yaml")
+        print(json.dumps({
+            "gate": "skipped" if holder else "run",
+            "lease": "kube-system/k3s-planned-maintenance",
+            "held": bool(holder),
+            "holder": holder,
+        }), flush=True)
+        return 0
+
+
+    if __name__ == "__main__":
+        sys.exit(main())
+  # Copied in place of policy.yaml while the maintenance Lease has a holder. No
+  # profile, no eligible node and a zero eviction budget: the descheduler logs
+  # "Skipping descheduling cycle" and exits 0.
+  skip-policy.yaml: |
+    apiVersion: "descheduler/v1alpha2"
+    kind: "DeschedulerPolicy"
+    maxNoOfPodsToEvictTotal: 0
+    nodeSelector: "descheduler.vallery.net/maintenance-skip=no-such-node"
+    profiles: []
   policy.yaml: |
     apiVersion: "descheduler/v1alpha2"
     kind: "DeschedulerPolicy"

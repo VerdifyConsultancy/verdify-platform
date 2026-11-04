@@ -274,6 +274,9 @@ patches:
 
   # #218: adopt the legacy DB selector owner before making retained state portable.
   - path: portable-db-ssa.patch.yaml
+  # Sched audit 2026-11-04: data/device-tier PriorityClasses on verdify-db and
+  # setpoint-server, and the stale longhorn-recovery toleration off verdify-db.
+  - path: data-tier-priority.patch.yaml
   # Portable retained state; no device-writer placement or image change.
   - path: portable-stateful-placement.patch.yaml
     target:
