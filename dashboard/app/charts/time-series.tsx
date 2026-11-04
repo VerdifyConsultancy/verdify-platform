@@ -5,6 +5,7 @@ import { formatValue, unitDecimals } from "../lib/format";
 import { csvFilename, windowCsv, type CsvBlock } from "./csv";
 import { CsvLink, DataTable, TimeCell, type DataTableBlock } from "./data-table";
 import { paintBandEdges, paintBandFill, paintBounds, paintForecast, paintLabels, paintNow, paintRetention, paintSteps, type ChartColors } from "./draw";
+import { ENVELOPE_MIN_BUCKET_S, compareExtent, envelopeBars, envelopeExtent, excursions, paintCompare, paintEnvelope, paintExcursions, type CompareLine, type EnvelopeBar, type Excursion } from "./layers";
 import { ChartKey, Legend, type KeyItem } from "./legend";
 import {
   FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandKindFor, bandRuns, extentUnion, forecastAt, forecastExtent, forecastLines, groupSteps, marksExtent, paddedRange, settingBounds, settingSteps, stepFinder, stepsAt,
@@ -81,6 +82,15 @@ export type TimeSeriesModel = {
   dataEnd: number;
   /** The planned steps' colour: the panel's first series. */
   seriesToken: string;
+  /**
+   * The measured trace the band is about: the first that is neither outdoor, a forecast nor a dotted cross-check; -1 when
+   * there is none. Excursions, the envelope, the compare line and the band readout follow it.
+   */
+  primary: number;
+  /** Where the primary trace leaves the band (redesign §7.1); drawn only when the stack asks. */
+  excursions: Excursion[];
+  /** The primary trace's min–max per bucket; drawn only when asked, and at 30 min buckets and coarser. */
+  envelope: EnvelopeBar[];
 };
 
 const KEY_TOKENS: Readonly<Record<string, string>> = { "climate.temp_avg": "--c-temp", "climate.vpd_avg": "--c-vpd", "climate.rh_avg": "--c-rh" };
@@ -138,14 +148,18 @@ export function buildTimeSeriesModel(input: TimeSeriesInput): TimeSeriesModel {
   const settings = (input.settings ?? []).filter((setting) => (setting.history.unit ?? "") === unit);
   const prefix = settings.length > 1;
   const steps = settings.flatMap((setting) => settingSteps(setting, unit, now, xRange.to, prefix));
+  const runs = bandRuns(input.band, bandKindFor(unit), now);
+  const primary = traces.findIndex((trace) => !/outdoor|forecast/.test(trace.key) && trace.dash === null);
   return {
-    unit, t, bucketSeconds, traces,
-    runs: bandRuns(input.band, bandKindFor(unit), now),
+    unit, t, bucketSeconds, traces, runs,
     steps, stepGroups: groupSteps(steps),
     bounds: settings.flatMap((setting) => settingBounds(setting, unit, prefix)),
     forecast: forecastLines(input.forecast, unit, now),
     now, xRange, windowFrom, windowTo, dataEnd,
     seriesToken: tokens[0] ?? UNIT_TOKENS[unit] ?? "--c-temp",
+    primary,
+    excursions: primary >= 0 && runs.length ? excursions(t, traces[primary].values, runs) : [],
+    envelope: primary >= 0 ? envelopeBars(t, traces[primary].columns) : [],
   };
 }
 
@@ -225,15 +239,52 @@ export function tickIncrements(decimals: number): number[] {
   return increments;
 }
 
-/** The one y axis: the unit's own format on every tick. */
-export function valueAxis(unit: string, colors: ChartColors): uPlot.Axis {
+/** The one y axis: the unit's own format on every tick; `size` fixes its width, so stacked panels' plots line up. */
+export function valueAxis(unit: string, colors: ChartColors, size?: number): uPlot.Axis {
   return {
     stroke: colors["--muted"], font: AXIS_FONT,
     grid: { stroke: colors["--c-grid"], width: 1 }, ticks: { stroke: colors["--c-grid"], width: 1, size: 4 },
     incrs: tickIncrements(unitDecimals(unit)),
-    size: (_plot, values) => Math.max(48, Math.ceil(Math.max(0, ...(values || []).map((value) => String(value).length)) * 7.2) + 16),
+    size: size ?? ((_plot, values) => Math.max(48, Math.ceil(Math.max(0, ...(values || []).map((value) => String(value).length)) * 7.2) + 16)),
     values: (_plot, splits) => splits.map((value) => formatValue(value, unit)),
   };
+}
+
+/**
+ * What a chart stack asks of a panel (redesign §7.1), read through a ref, so the hooks see the newest without a rebuild:
+ * - `excursions`, `envelope`, `compare`: the layers, each drawn only when asked (the envelope also needs buckets of
+ *   30 min or more);
+ * - `tooltip: false`: no floating box (the stack's header rows read the cursor instead);
+ * - `xLabels: false`: the time axis keeps its grid but draws no labels and takes no height (every panel but the last);
+ * - `yAxisSize`: one y-axis width for every panel;
+ * - `yLabels: false`: the y axis keeps its grid but draws no labels and takes no width (a small multiple past the first
+ *   column); `yRange`: one y range for a row of small multiples, so they compare;
+ * - `onCursor` and `onScale`: the stack follows the cursor and the zoom.
+ * `tooltip`, `xLabels`, `yLabels` and `yAxisSize` are read when the chart is built: the caller puts them in its
+ * structure key.
+ */
+export type SeriesLayers = {
+  readonly excursions?: boolean;
+  readonly envelope?: boolean;
+  readonly compare?: CompareLine | null;
+  readonly tooltip?: boolean;
+  readonly xLabels?: boolean;
+  readonly yAxisSize?: number;
+  readonly yLabels?: boolean;
+  readonly yRange?: readonly [number, number] | null;
+  readonly onCursor?: (plot: uPlot) => void;
+  readonly onScale?: (min: number, max: number) => void;
+};
+const NO_LAYERS: SeriesLayers = {};
+/** The primary trace is shown: its layers draw only while it does. */
+const primaryShown = (model: TimeSeriesModel, hidden: ReadonlySet<string>) => model.primary >= 0 && !hidden.has(model.traces[model.primary].key);
+/** The time axis of a stacked panel above the last: the same splits (so its grid lines up), no labels, no height. */
+function silentTimeAxis(colors: ChartColors): uPlot.Axis {
+  return { ...timeAxis({ muted: colors["--muted"], grid: colors["--c-grid"] }), size: 0, ticks: { show: false }, values: (_plot, splits) => splits.map(() => "") };
+}
+/** The y axis of a small multiple past the first column: the same grid, no labels, no width. */
+function silentValueAxis(unit: string, colors: ChartColors): uPlot.Axis {
+  return { ...valueAxis(unit, colors, 0), ticks: { show: false }, values: (_plot, splits) => splits.map(() => "") };
 }
 
 /** Points only where a value has no neighbour, so a lone sample between gaps still shows (all of them when sparse). */
@@ -249,8 +300,10 @@ export function isolatedPoints(plot: uPlot, seriesIndex: number, show: boolean):
 }
 
 /** The uPlot options; hooks read the latest model, so new marks repaint without a rebuild. */
-export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<TimeSeriesModel>, hiddenRef: MutableRefObject<ReadonlySet<string>>): ChartOptions {
+export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<TimeSeriesModel>, hiddenRef: MutableRefObject<ReadonlySet<string>>, layersRef?: MutableRefObject<SeriesLayers>): ChartOptions {
   const { colors, px } = env;
+  const layers = () => layersRef?.current ?? NO_LAYERS;
+  const built = layers();
   // uPlot does not scale a series' dash: its canvas is in device pixels.
   const scaled = (dash: readonly number[]) => dash.map((length) => length * px());
   const model = modelRef.current;
@@ -270,31 +323,49 @@ export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<Time
         range: (_plot, min, max) => {
           const current = modelRef.current;
           const [x0, x1] = env.xWindow();
-          return paddedRange([min, max], extentUnion(marksExtent(current.runs, current.steps, x0, x1), forecastExtent(shownForecast(current, hiddenRef.current), x0, x1)));
+          const { envelope, compare, yRange } = layers();
+          if (yRange) return [yRange[0], yRange[1]];
+          const extra = extentUnion(
+            envelope && current.bucketSeconds >= ENVELOPE_MIN_BUCKET_S && primaryShown(current, hiddenRef.current) ? envelopeExtent(current.envelope, x0, x1) : null,
+            compare ? compareExtent(compare, x0, x1) : null,
+          );
+          return paddedRange([min, max], extentUnion(extentUnion(marksExtent(current.runs, current.steps, x0, x1), forecastExtent(shownForecast(current, hiddenRef.current), x0, x1)), extra));
         },
       },
     },
-    axes: [timeAxis({ muted: colors["--muted"], grid: colors["--c-grid"] }), valueAxis(unit, colors)],
+    axes: [
+      built.xLabels === false ? silentTimeAxis(colors) : timeAxis({ muted: colors["--muted"], grid: colors["--c-grid"] }),
+      built.yLabels === false ? silentValueAxis(unit, colors) : valueAxis(unit, colors, built.yAxisSize),
+    ],
     hooks: {
       drawClear: [(plot) => {
         const current = modelRef.current;
         paintRetention(plot, visibleRetention(current, hiddenRef.current), colors);
         paintBandFill(plot, current.runs, colors);
+        if (layers().excursions && primaryShown(current, hiddenRef.current)) paintExcursions(plot, current.excursions, colors);
       }],
-      drawAxes: [(plot) => paintBandEdges(plot, modelRef.current.runs, colors, px())],
+      drawAxes: [(plot) => {
+        const current = modelRef.current;
+        paintBandEdges(plot, current.runs, colors, px());
+        if (layers().envelope && current.bucketSeconds >= ENVELOPE_MIN_BUCKET_S && primaryShown(current, hiddenRef.current)) paintEnvelope(plot, current.envelope, colors, px());
+      }],
       draw: [(plot) => {
         const current = modelRef.current;
         const seriesColor = color(current.seriesToken);
         const ratio = px();
         const forecast = shownForecast(current, hiddenRef.current);
+        const compare = layers().compare;
+        if (compare) paintCompare(plot, compare, colors, ratio);
         paintSteps(plot, current.steps, colors, seriesColor, ratio);
         paintForecast(plot, forecast, colors, ratio);
         paintBounds(plot, current.bounds, colors, ratio);
         const nowShown = paintNow(plot, current.now, colors, ratio);
         paintLabels(plot, { now: nowShown ? current.now : null, retention: visibleRetention(current, hiddenRef.current), bounds: current.bounds, steps: current.steps, runs: current.runs, forecast }, colors, seriesColor, ratio);
       }],
+      setCursor: [(plot) => layers().onCursor?.(plot)],
+      setScale: [(plot, key) => { if (key === "x") layers().onScale?.(plot.scales.x.min ?? 0, plot.scales.x.max ?? 0); }],
     },
-    plugins: [tooltipPlugin((plot) => tooltipLines(modelRef.current, plot, (position) => plot.series[position + 1]?.show !== false, hiddenRef.current))],
+    plugins: built.tooltip === false ? [] : [tooltipPlugin((plot) => tooltipLines(modelRef.current, plot, (position) => plot.series[position + 1]?.show !== false, hiddenRef.current), env.syncKey)],
   };
 }
 

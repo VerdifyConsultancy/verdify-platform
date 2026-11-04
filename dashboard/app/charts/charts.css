@@ -112,3 +112,81 @@
 .chart-key-swatch[data-token=eq-mister]{color:var(--eq-mister)}.chart-key-swatch[data-token=eq-water]{color:var(--eq-water)}
 .chart-key-swatch[data-token=eq-master]{color:var(--eq-master)}.chart-key-swatch[data-token=eq-fert]{color:var(--eq-fert)}
 .chart-key-swatch[data-token=eq-fog]{color:var(--eq-fog)}.chart-key-swatch[data-token=eq-heat1]{color:var(--eq-heat1)}
+
+/* ChartStack (redesign §7.1): one card of panels on one x scale. Every panel's y axis is 56 px (STACK_AXIS_PX) and its right padding 10 px, so the rail, the hairline and the plots line up; only the last panel adds the time axis to its reserved height. */
+.chart-stack{position:relative;margin:.75rem 0;padding:var(--space-3) var(--space-4) var(--space-4);border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-xs);min-width:0}
+.stack-panels{position:relative}
+.stack-panel{--plot-h:160px;padding-top:var(--space-2)}
+.stack-panel+.stack-panel{border-top:1px solid var(--line)}
+.stack-panel[data-panel=temperature]{--plot-h:220px}
+.stack-panel[data-panel=vpd]{--plot-h:200px}
+.chart-stack .stack-plot{position:relative;height:var(--plot-h);min-height:0;overflow:hidden}
+.chart-stack .stack-panel-last .stack-plot{height:calc(var(--plot-h) + 54px)}
+.stack-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-1) var(--space-3);min-height:1.75rem}
+.stack-name{margin:0;font:600 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
+.stack-unit{text-transform:none;letter-spacing:0;color:var(--muted)}
+.stack-stats{flex:1 1 20rem;min-width:0;margin:0;font-size:var(--fs-sm);color:var(--ink);font-variant-numeric:tabular-nums}
+.stack-swatches{margin:0}
+.stack-chip{position:absolute;top:0;left:0;z-index:var(--z-raised);transform:translateX(calc(var(--chip-x,0px) - 50%));padding:.1rem .4rem;border-radius:var(--radius-sm);background:var(--ink);color:#fff;font:500 var(--fs-xs)/1.4 var(--mono);white-space:nowrap;pointer-events:none}
+.stack-chip[hidden]{display:none}
+.stack-overlay{position:absolute;top:0;bottom:0;left:56px;right:10px;z-index:1;pointer-events:none}
+.stack-hairline{position:absolute;top:0;bottom:0;left:calc(var(--at) * 1%);border-left:1px solid var(--ink)}
+.stack-lanes,.stack-events{margin:var(--space-2) 0 0}
+.stack-event-list{display:grid;gap:var(--space-1);margin:0;padding:0 0 0 var(--space-4);font-size:var(--fs-sm)}
+.stack-foot{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-4);margin-top:var(--space-2);font-size:var(--fs-sm);color:var(--muted)}
+.stack-foot .button-link{min-height:2.25rem}
+
+/* The event rail: a 20 px strip over the plots, one mark per event or cluster; a write is a diamond (hollow for the system), an alert a triangle (hollow once resolved), a run a 3 px bar, a cluster a count. Colour is the token in data-token, never alone: each mark is named in words. */
+.stack-rail-wrap{position:relative;margin:0 10px var(--space-1) 56px}
+.stack-rail{position:relative;height:20px;border-bottom:1px solid var(--line)}
+.rail-mark{position:absolute;top:3px;left:calc(var(--at) * 1%);width:12px;height:12px;min-height:0;margin:0 0 0 -6px;padding:0;border:0;background:none;color:var(--muted);font:600 .62rem/12px var(--mono);text-align:center}
+.rail-mark::before,.rail-mark::after{content:"";position:absolute}
+.rail-mark[data-mark=diamond]::before{inset:2px;background:currentColor;transform:rotate(45deg)}
+.rail-mark[data-mark=diamond-hollow]::before{inset:2px;border:1.5px solid currentColor;background:#fff;transform:rotate(45deg)}
+.rail-mark[data-mark=triangle]::before{inset:1px;background:currentColor;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.rail-mark[data-mark=triangle-hollow]::before{inset:1px;background:currentColor;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.rail-mark[data-mark=triangle-hollow]::after{inset:5px 3.5px 2.5px;background:#fff;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.rail-mark[data-mark=bar]::before{top:0;bottom:0;left:4.5px;width:3px;background:currentColor}
+.rail-mark[data-mark=cluster]{top:2px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--ink);color:#fff;line-height:16px}
+.rail-mark:hover,.rail-mark[aria-expanded=true]{outline:1px solid var(--ink);outline-offset:1px}
+.rail-mark[data-token=forest]{color:var(--forest)}.rail-mark[data-token=ink]{color:var(--ink)}.rail-mark[data-token=eq-fan2]{color:var(--eq-fan2)}
+.rail-mark[data-token=fault]{color:var(--fault)}.rail-mark[data-token=warn-text]{color:var(--warn-text)}.rail-mark[data-token=muted]{color:var(--muted)}
+.rail-mark[data-token=eq-water]{color:var(--eq-water)}.rail-mark[data-token=eq-fert]{color:var(--eq-fert)}.rail-mark[data-token=eq-fog]{color:var(--eq-fog)}
+.rail-mark[data-token=eq-mister]{color:var(--eq-mister)}.rail-mark[data-token=eq-heat1]{color:var(--eq-heat1)}.rail-mark[data-token=eq-master]{color:var(--eq-master)}
+.rail-list{position:absolute;top:22px;left:min(calc(var(--at) * 1%),calc(100% - 18rem));z-index:var(--z-popover);display:grid;gap:var(--space-1);width:18rem;max-width:100%;margin:0;padding:var(--space-2) var(--space-3);list-style:none;border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-sm);font-size:var(--fs-sm)}
+.rail-list a{display:inline-flex;align-items:center;min-height:2.25rem}
+
+/* ChartGrid (redesign §7.1, §5.6): small multiples, one column per zone, one row per metric; the y axis on the first column, the time axis on the last row. On a phone the cells stack, each headed by its column. */
+.chart-grid{display:grid;gap:var(--space-2);margin:.75rem 0;min-width:0}
+.grid-heads,.grid-row{display:grid;grid-template-columns:6rem repeat(var(--grid-columns,5),minmax(0,1fr));gap:0 var(--space-2);align-items:start}
+.grid-head{min-width:0;font-size:var(--fs-sm)}
+.grid-row-name{align-self:center;margin:0;font:600 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
+.grid-cell{min-width:0}
+.grid-cell-head{display:none}
+.chart-grid .stack-plot,.chart-grid .grid-plot{position:relative;height:var(--grid-cell-h,120px);min-height:0;overflow:hidden}
+.chart-grid .grid-cell-axis .stack-plot{height:calc(var(--grid-cell-h,120px) + 54px)}
+.grid-readout{margin:var(--space-1) 0 0;font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* RangeToolbar (redesign §7.1): presets as nav chips, the window steps, Zoom out and Custom…, then the page's own tools. */
+.range-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3);margin:var(--space-2) 0 var(--space-3)}
+.range-steps{display:flex;align-items:center;gap:var(--space-1)}
+.range-step,.range-zoom{display:inline-flex;align-items:center;justify-content:center;min-width:2.25rem;min-height:2.25rem;padding:0 .6rem;border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:#fff;color:var(--forest);font-size:var(--fs-sm);font-weight:700;text-decoration:none}
+.range-step[aria-disabled=true],.range-zoom[aria-disabled=true]{border-color:var(--line);color:var(--muted)}
+.range-custom{margin:0}
+.range-custom>summary{min-height:2.25rem}
+.range-custom-body{padding-top:var(--space-2)}
+.range-tools{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin-left:auto}
+
+@media(max-width:860px){
+  .chart-stack{padding:var(--space-2) var(--space-2) var(--space-3)}
+  .stack-panel[data-panel=temperature]{--plot-h:160px}
+  .stack-panel[data-panel=vpd]{--plot-h:150px}
+  .stack-panel:not([data-panel=temperature]):not([data-panel=vpd]){--plot-h:120px}
+  .chart-stack .stack-panel-last .stack-plot{height:calc(var(--plot-h) + 32px)}
+  .grid-heads{display:none}
+  .grid-row{grid-template-columns:minmax(0,1fr);gap:var(--space-2)}
+  .grid-cell-head{display:block;font-size:var(--fs-sm)}
+  .chart-grid .grid-cell-axis .stack-plot{height:calc(var(--grid-cell-h,120px) + 32px)}
+  .range-step,.range-zoom,.range-custom>summary{min-height:var(--tap)}
+  .range-tools{margin-left:0}
+}

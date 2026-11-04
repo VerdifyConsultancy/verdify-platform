@@ -2,14 +2,28 @@
 import type uPlot from "uplot";
 
 /**
- * One tooltip per chart, inside `plot.over` (design system §5.3). Its lines are set with `textContent` only, and it moves
+ * One tooltip per chart, inside `plot.over` (design system §5.3), shown only by the chart under the pointer when charts
+ * share a sync key. Its lines are set with `textContent` only, and it moves
  * with `style.transform` (CSSOM), which the `style-src 'self'` CSP allows; no markup carries a style attribute. The data
  * table is the keyboard and screen-reader equivalent, so the tooltip is hidden from assistive technology.
  */
 export type TooltipLines = (plot: uPlot) => readonly string[] | null;
 
-export function tooltipPlugin(lines: TooltipLines): uPlot.Plugin {
+/**
+ * The chart each sync key's pointer is over. Charts on one key share a cursor, and only the one under the pointer shows
+ * its tooltip (redesign §7.1: one tooltip per synced group, never a stack of boxes). A cursor set with no pointer on any
+ * chart of the key (a programmatic `setCursor`) shows its tooltip as before.
+ */
+const pointerOn = new Map<string, uPlot>();
+/** True while the pointer is over another chart on `syncKey`. */
+export function pointerElsewhere(plot: uPlot, syncKey: string | undefined): boolean {
+  const owner = syncKey ? pointerOn.get(syncKey) : undefined;
+  return owner !== undefined && owner !== plot;
+}
+
+export function tooltipPlugin(lines: TooltipLines, syncKey?: string): uPlot.Plugin {
   let box: HTMLDivElement | null = null;
+  let release = () => {};
   return {
     hooks: {
       ready: (plot: uPlot) => {
@@ -18,9 +32,16 @@ export function tooltipPlugin(lines: TooltipLines): uPlot.Plugin {
         box.hidden = true;
         box.setAttribute("aria-hidden", "true");
         plot.over.appendChild(box);
+        if (!syncKey) return;
+        const enter = () => { pointerOn.set(syncKey, plot); };
+        const leave = () => { if (pointerOn.get(syncKey) === plot) pointerOn.delete(syncKey); };
+        plot.over.addEventListener("mouseenter", enter);
+        plot.over.addEventListener("mouseleave", leave);
+        release = () => { leave(); plot.over.removeEventListener("mouseenter", enter); plot.over.removeEventListener("mouseleave", leave); };
       },
       setCursor: (plot: uPlot) => {
         if (!box) return;
+        if (pointerElsewhere(plot, syncKey)) { box.hidden = true; return; }
         const text = lines(plot);
         if (!text || !text.length) { box.hidden = true; return; }
         box.replaceChildren(...text.map((line) => {
@@ -31,7 +52,7 @@ export function tooltipPlugin(lines: TooltipLines): uPlot.Plugin {
         box.hidden = false;
         place(plot, box);
       },
-      destroy: () => { box?.remove(); box = null; },
+      destroy: () => { release(); box?.remove(); box = null; },
     },
   };
 }

@@ -20,7 +20,7 @@ export const chartLinks = () => [{ rel: "stylesheet", href: uplotStyles }, { rel
 
 /** Every token a chart reads (design system §2.1 and §2.2). Charts never carry a hex literal. */
 export const CHART_TOKENS = [
-  "--ink", "--muted", "--line", "--field", "--fault", "--warn-text",
+  "--ink", "--muted", "--line", "--field", "--fault", "--warn-text", "--tint-warn", "--ink-muted", "--forest", "--amber",
   "--c-temp", "--c-vpd", "--c-rh", "--c-outdoor", "--c-band-wash", "--c-band-edge", "--c-setpoint", "--c-requested", "--c-bound", "--c-grid",
   "--eq-mister", "--eq-fog", "--eq-fan1", "--eq-fan2", "--eq-vent", "--eq-heat1", "--eq-heat2", "--eq-light-main", "--eq-light-grow",
   "--eq-water", "--eq-fert", "--eq-master",
@@ -105,6 +105,8 @@ export type ChartEnv = {
   fine: boolean;
   /** The x window uPlot is ranging or last ranged, zoom included, for a y range that follows it. */
   xWindow: () => [number, number];
+  /** The chart's sync key, for a tooltip that shows only on the chart under the pointer. */
+  syncKey?: string;
 };
 export type ChartOptions = Omit<uPlot.Options, "width" | "height">;
 
@@ -156,7 +158,7 @@ export function UPlotChart(props: UPlotChartProps) {
       shown.current = xRange;
       let xWindow: [number, number] = [xRange.from, xRange.to];
       const fine = finePointer() && latest.current.zoom !== false;
-      const env: ChartEnv = { UPlot, colors: readColors(), px: () => UPlot.pxRatio || 1, fine, xWindow: () => xWindow };
+      const env: ChartEnv = { UPlot, colors: readColors(), px: () => UPlot.pxRatio || 1, fine, xWindow: () => xWindow, syncKey };
       const built = options(env);
       const setScale = (self: uPlot, key: string) => {
         if (key !== "x") return;

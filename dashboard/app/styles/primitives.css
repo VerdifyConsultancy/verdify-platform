@@ -6,6 +6,8 @@
 .page-header{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"crumbs crumbs" "title actions" "status status";align-items:end;gap:0 var(--space-5);margin:0 0 var(--space-4)}
 .page-crumbs{grid-area:crumbs;margin:0 0 var(--space-1)}
 .page-crumbs a{color:inherit;text-decoration-thickness:1px;text-underline-offset:.25em}
+/* Short links in a line of text (the breadcrumb, a row's title, a tile's label): a 24 px hit area (44 px on phones, redesign §8) that keeps the line's own height, since the negative margins give back what the min-height adds. */
+.page-crumbs a,.object-row-title a,.metric-label a{display:inline-flex;align-items:center;min-height:24px;margin-block:calc((24px - 1.3em) / -2)}
 .page-crumbs a:hover{color:var(--leaf)}
 .page-header>h1{grid-area:title;min-width:0}
 .page-status{grid-area:status;max-width:46rem;min-height:1.5em;margin:var(--space-2) 0 0}
@@ -245,6 +247,7 @@ button.tt-span{cursor:pointer}
   .page-tabs{margin-bottom:var(--space-4)}
   .page-tabs .chips a{min-height:var(--tap);padding:0 .6rem}
   /* Water's tabs and Stop all water stay reachable while scrolling, right under the header (its height from SiteHeader, fault row included). */
+  .page-crumbs a,.object-row-title a,.metric-label a{min-height:var(--tap);margin-block:calc((var(--tap) - 1.3em) / -2)}
   .page-tabs-sticky{position:sticky;top:var(--shell-header-h,calc(var(--header-h-phone) + 1px));z-index:var(--z-raised);margin-inline:calc(-1 * var(--gutter));padding:var(--space-2) var(--gutter);background:#fff;border-bottom:1px solid var(--line)}
   .stop-all-water-compact{flex:none;padding-inline:.6rem}
   .stop-all-water-compact .stop-all-water-word{display:none}

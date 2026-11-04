@@ -4,12 +4,13 @@ import type uPlot from "uplot";
 import { LINES, lineByEquipment, lineById } from "../lib/lines";
 import type { LineKind } from "../lib/vocab";
 import { causeRank, causeToken, causeWords } from "./causes";
-import { DataTable, TimeCell, type DataTableBlock } from "./data-table";
+import { csvFilename, tableCsv } from "./csv";
+import { CsvLink, DataTable, TimeCell, type DataTableBlock } from "./data-table";
 import { labelColor, paintNow, type ChartColors, type PaintTarget } from "./draw";
 import { LANE_PITCH, RowLabels, clipColumns, intervalText, paintHatch, rowBand, spanDuration, spanPixels, type RowLayout } from "./lanes-draw";
 import { ChartKey, type KeyItem } from "./legend";
 import { lastAtOrBefore } from "./marks";
-import { epochOf, spanText, timeAxis } from "./time-axis";
+import { epochOf, isoLocal, spanText, timeAxis } from "./time-axis";
 import { cursorX, tooltipPlugin } from "./tooltip";
 import type { IrrigationCause, StateLane, StateLanes, XRange } from "./types";
 import { UPlotChart, useNarrow, useZoomReset, type ChartEnv, type ChartOptions } from "./uplot-chart";
@@ -225,6 +226,20 @@ export function lanesTable(model: LanesModel): DataTableBlock {
   };
 }
 
+/**
+ * "CSV of these lanes" (redesign §7.1): every interval of every row, in row order, with its local start and end, its
+ * length and a wet line's cause; unknown is its own state, never off.
+ */
+export function lanesCsv(model: LanesModel): string {
+  return tableCsv(
+    ["equipment", "label", "state", "start (America/Denver)", "end (America/Denver)", "seconds", "cause"],
+    model.rows.flatMap((row) => row.spans.map((span) => [
+      row.equipment, row.label, row.sensed ? `${span.state} sensed` : span.state, isoLocal(span.start), isoLocal(span.end), Math.round(span.end - span.start),
+      row.wet && span.state === "on" ? span.cause ?? "" : "",
+    ])),
+  );
+}
+
 /** The key: each cause on a wet line, unknown's hatch and the sensed outline, in words; only marks that are drawn. */
 export function lanesKey(model: LanesModel): KeyItem[] {
   const causes = new Set<string>();
@@ -308,7 +323,10 @@ export function EquipmentLanes(props: EquipmentLanesProps) {
           syncKey={syncKey} marks={marks} onZoom={zoom.onZoom} onPlot={zoom.onPlot} />
       </div>
       : <div className="plot plot-small chart-message"><p>{props.message ?? "No equipment data in this window"}</p></div>}
-    {drawable && (props.zoomControl ?? true) && zoom.zoomed && <div className="chart-tools"><button type="button" onClick={zoom.reset}>Reset zoom</button></div>}
+    {drawable && <div className="chart-tools">
+      {(props.zoomControl ?? true) && zoom.zoomed && <button type="button" onClick={zoom.reset}>Reset zoom</button>}
+      <CsvLink filename={csvFilename("equipment-lanes", xRange)} build={() => lanesCsv(model)} version={model} label="CSV of these lanes" />
+    </div>}
     {drawable && <ChartKey items={lanesKey(model)} />}
     {drawable && <DataTable tables={[lanesTable(model)]} />}
   </figure>;

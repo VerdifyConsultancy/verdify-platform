@@ -5,7 +5,8 @@ import { dayTitle, formatValue, localDayStart } from "../lib/format";
 import { LINES, lineById } from "../lib/lines";
 import type { WaterUse } from "../lib/operator-api";
 import { causeRank, causeToken, causeWords } from "./causes";
-import { DataTable, type DataTableBlock } from "./data-table";
+import { dayCsvFilename, tableCsv } from "./csv";
+import { CsvLink, DataTable, type DataTableBlock } from "./data-table";
 import type { ChartColors, PaintTarget } from "./draw";
 import { paintHatch } from "./lanes-draw";
 import { ChartKey, type KeyItem } from "./legend";
@@ -212,6 +213,17 @@ export function waterTable(model: WaterModel): DataTableBlock {
   };
 }
 
+/**
+ * "CSV of this chart" (redesign §7.1): one row per local day with the meter's total, each line or cause, the no-valve
+ * water and coverage, in whole gallons; a no-data day is empty cells, never 0.
+ */
+export function waterUseCsv(model: WaterModel): string {
+  return tableCsv(
+    ["day (America/Denver)", "total (gal)", ...model.segments.map((segment) => `${segment.label} (gal)`), "no valve (gal)", "coverage"],
+    model.days.map((day) => [day.date, day.meter, ...model.segments.map((segment) => (day.parts === null ? null : day.parts[segment.key] ?? 0)), day.noValve, day.coverage]),
+  );
+}
+
 /** The key: one entry per colour drawn (the lines of one kind share theirs), the no-valve bar, then the marks that are not water. */
 export function waterKey(model: WaterModel): KeyItem[] {
   const fills = new Map<string, KeyItem>();
@@ -248,6 +260,9 @@ export function DailyWaterUse({ data, split, lineNames }: DailyWaterUseProps) {
         <UPlotChart options={(env) => waterOptions(env, modelRef)} data={columns} xRange={model.xRange} structure={structure} className="plot-water-use" label={label} marks={model} zoom={false} />
         <ChartKey items={waterKey(model)} />
         <p className="plot-summary water-summary">{waterSummary(model)}</p>
+        <div className="chart-tools">
+          <CsvLink filename={dayCsvFilename(`water-use-by-${split}`, model.days[0].date, model.days[model.days.length - 1].date)} build={() => waterUseCsv(model)} version={model} label="CSV of this chart" />
+        </div>
         <DataTable tables={[waterTable(model)]} />
       </>
       : <div className="plot plot-small chart-message"><p>No water data in this window</p></div>}

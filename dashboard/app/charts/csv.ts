@@ -43,6 +43,19 @@ export function windowCsv(blocks: readonly CsvBlock[]): string {
   return `\uFEFF${rows.join("\r\n")}\r\n`;
 }
 
+/**
+ * A table as CSV ("CSV of this chart", "CSV of these lanes"): a header row and one row per entry, an empty cell for a
+ * gap (never 0), with the byte-order mark.
+ */
+export function tableCsv(headers: readonly string[], rows: readonly (readonly (number | string | null | undefined)[])[]): string {
+  return `\uFEFF${[line(headers), ...rows.map((row) => line(row.map(valueCell)))].join("\r\n")}\r\n`;
+}
+/** "verdify-water-use-2026-10-04-2026-11-02.csv": a file name from local days. */
+export function dayCsvFilename(name: string, first: string, last: string): string {
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "chart";
+  return `verdify-${slug}-${first}-${last}.csv`;
+}
+
 /** A column per metric's `avg`, headed with its key and unit; a metric the Series lacks is all gaps. */
 export function seriesCsvBlock(series: Series | null | undefined, metrics: readonly MetricDef[], unit: string): CsvBlock {
   if (!series) return { t: [], columns: [] };
