@@ -65,7 +65,9 @@ test("a server render of a Water view carries its head and no greenhouse data, a
   const Stub = waterStub();
   for (const path of VIEWS) {
     const html = renderToString(<Stub initialEntries={[path]} />);
-    expect(html, path).toContain("Water · America/Denver");
+    // The page header (redesign §2.1): the section's name, the view's h1 and the Today, Schedules and History tabs.
+    expect(html, path).toContain('<p class="eyebrow page-crumbs">');
+    expect(html, path).toContain('aria-label="Water views"');
     expect(html, path).not.toMatch(/line-card|week-table|minutes-row|Stop all|Relay|Running|SAF-4|rev 42/);
   }
   expect(requests(api)).toEqual([]);
@@ -75,9 +77,9 @@ test("a server render of a Water view carries its head and no greenhouse data, a
 test("the board shows every line L01–L11: enabled, state in words, last water, today, next and last run; L05, L06 reserved; L11 climate only", async () => {
   open("/water", { fixture: "schedules-paused" });
   await load();
-  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Water");
-  expect(text(document.querySelector(".page-head .eyebrow"))).toBe("Water · America/Denver");
-  expect(tab("Board").getAttribute("aria-current")).toBe("page");
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Water today");
+  expect(text(document.querySelector(".page-crumbs"))).toBe("Water");
+  expect(tab("Today").getAttribute("aria-current")).toBe("page");
   expect([...document.querySelectorAll(".line-card")].map((node) => node.getAttribute("data-line"))).toEqual(["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11"]);
   // L01: enabled, idle, this morning's scheduled run and Wednesday's next.
   expect(cardText("L01", ".line-card-head")).toBe("L01 Drip • WallClean Enabled: On");
@@ -472,7 +474,8 @@ test.each(VIEWS)("an operator's Stop all water on %s sends one API-IRR-07 with n
   const api = open(path, { fixture: "l01-running" });
   await load();
   const button = stopAll()!;
-  expect(button.closest(".water-bar")).not.toBeNull();
+  // The page header's tab row, which sticks under the header at phone width.
+  expect(button.closest(".page-tabs.page-tabs-sticky")).not.toBeNull();
   fireEvent.click(button);
   expect(text(button)).toBe("Sending…");
   fireEvent.click(button);
@@ -509,11 +512,12 @@ test("a viewer sees no Stop on any Water view; at phone width Stop reads \"■ S
   open("/water");
   await load();
   const button = stopAll()!;
-  expect(button.className).toBe("btn btn-stop stop-all");
+  // The one shared Stop all water (redesign §2.5), compact in Water's tab row.
+  expect(button.className).toBe("btn btn-stop stop-all-water stop-all-water-compact");
   expect(text(button)).toBe("■ Stop all water");
-  expect(text(button.querySelector(".stop-all-rest"))).toBe("water");
-  const css = readFileSync(join(process.cwd(), "app/styles/water.css"), "utf8");
-  const phone = css.slice(css.indexOf("@media(max-width:860px){\n  .water-bar"));
-  expect(phone).toMatch(/^@media\(max-width:860px\)\{\n {2}\.water-bar\{position:sticky;/);
-  expect(phone).toContain(".stop-all-rest{display:none}");
+  expect(text(button.querySelector(".stop-all-water-word"))).toBe("water");
+  const css = readFileSync(join(process.cwd(), "app/styles/primitives.css"), "utf8");
+  const phone = css.slice(css.lastIndexOf("@media(max-width:860px){"));
+  expect(phone).toMatch(/\.page-tabs-sticky\{position:sticky;/);
+  expect(phone).toContain(".stop-all-water-compact .stop-all-water-word{display:none}");
 });

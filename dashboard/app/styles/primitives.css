@@ -1,3 +1,41 @@
 /* SPDX-License-Identifier: MIT */
 /* Section: Primitives (WP0) */
 /* The layout primitives, the card system and the micro-visualizations of redesign §3 and §4 (components/layout, components/data and the shared components). Loaded by root.tsx after styles.css and tokens.css, in the fixed order of redesign §10.1. Colours are tokens only (white the one literal); this file never redefines :focus-visible or the input borders that the §2.2 block in styles.css sets. */
+
+/* Page header (redesign §3.1, §3.5): the eyebrow is the breadcrumb, then the one h1 with its actions at the right, the status line (one .meta line whose height is reserved) and the section's tabs. On phones the actions sit under the status line and a primary action is full width. */
+.page-header{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"crumbs crumbs" "title actions" "status status";align-items:end;gap:0 var(--space-5);margin:0 0 var(--space-4)}
+.page-crumbs{grid-area:crumbs;margin:0 0 var(--space-1)}
+.page-crumbs a{color:inherit;text-decoration-thickness:1px;text-underline-offset:.25em}
+.page-crumbs a:hover{color:var(--leaf)}
+.page-header>h1{grid-area:title;min-width:0}
+.page-status{grid-area:status;max-width:46rem;min-height:1.5em;margin:var(--space-2) 0 0}
+.page-actions{grid-area:actions;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--space-2)}
+.page-tabs{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2) var(--space-4);margin:0 0 var(--space-5)}
+.page-tabs .chips{flex-wrap:nowrap}
+.page-tabs-end{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin-left:auto}
+
+/* The meta line (redesign §3.4): the one muted small style, at --fs-sm. */
+.meta{font-size:var(--fs-sm);color:var(--muted)}
+
+/* The ⋯ menu and the account menu (redesign §4.5): a disclosure whose panel floats under its button; every item is a 44 px target. */
+.menu{position:relative;margin:0}
+.menu-dots>summary{justify-content:center;min-width:var(--tap);padding:0;border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:#fff;color:var(--forest);font-size:1.2rem;line-height:1}
+.menu-dots>summary::before{content:none}
+.menu-dots>summary:hover{border-color:var(--leaf)}
+.menu-panel{position:absolute;top:calc(100% + var(--space-1));right:0;z-index:var(--z-popover);display:grid;gap:var(--space-1);min-width:13rem;max-width:min(22rem,calc(100vw - 2 * var(--gutter)));padding:var(--space-2);border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-sm)}
+.menu-start>.menu-panel{right:auto;left:0}
+.menu-panel>p{margin:0;padding:var(--space-1) var(--space-3);font-size:var(--fs-sm)}
+.menu-panel>a,.menu-panel>button,.menu-panel>form>button{display:flex;align-items:center;width:100%;min-height:var(--tap);padding:0 var(--space-3);border:0;border-radius:var(--radius-sm);background:#fff;color:var(--forest);font-size:var(--fs-sm);font-weight:700;text-align:left;text-decoration:none}
+.menu-panel>a:hover,.menu-panel>button:hover,.menu-panel>form>button:hover{background:var(--field);color:var(--leaf)}
+
+@media(max-width:860px){
+  .page-header{grid-template-columns:minmax(0,1fr);grid-template-areas:"crumbs" "title" "status" "actions";margin-bottom:var(--space-3)}
+  .page-actions{justify-content:stretch;margin-top:var(--space-3)}
+  .page-actions>*{flex:1 1 auto}
+  .page-tabs{margin-bottom:var(--space-4)}
+  .page-tabs .chips a{min-height:var(--tap);padding:0 .6rem}
+  /* Water's tabs and Stop all water stay reachable while scrolling, right under the header (its height from SiteHeader, fault row included). */
+  .page-tabs-sticky{position:sticky;top:var(--shell-header-h,calc(var(--header-h-phone) + 1px));z-index:var(--z-raised);margin-inline:calc(-1 * var(--gutter));padding:var(--space-2) var(--gutter);background:#fff;border-bottom:1px solid var(--line)}
+  .stop-all-water-compact{flex:none;padding-inline:.6rem}
+  .stop-all-water-compact .stop-all-water-word{display:none}
+}

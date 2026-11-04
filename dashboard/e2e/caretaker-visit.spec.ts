@@ -38,10 +38,12 @@ async function expectMorning(page: Page) {
   await expect(page.locator("[data-chip=occupancy]")).toHaveText(OCCUPIED);
   await expectNoHorizontalScroll(page);
 }
+/** Equipment is a Control view (redesign §2.1): the Control tab opens Settings, and the Equipment tab is beside it. */
 const toEquipment = async (page: Page) => {
-  await tab(page, /^More/).click();
-  await page.locator(".more-list").getByRole("link", { name: /^Equipment/ }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Equipment and controller");
+  await tab(page, /^Control/).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Settings");
+  await page.getByRole("navigation", { name: "Control views" }).getByRole("link", { name: "Equipment" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Equipment");
 };
 
 test("an operator's visit at 360 × 740: a burst, a run and its stop, then a note on the flow alert, each one request", WEBKIT, async ({ page, request }) => {

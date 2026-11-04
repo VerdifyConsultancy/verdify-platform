@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Outlet, useLocation } from "react-router";
+import { Outlet, useLocation, useMatches } from "react-router";
 import { SIGN_IN_REFUSALS, type AuthError } from "../lib/page-context";
 import { SessionProvider } from "../lib/session";
 import { ShellContext, createQueryClient, revisionLabel, signInHref, useShell, useShellPolls, useShellStatus } from "../lib/shell";
 import { PollingPaused } from "../lib/use-current";
 import { Banner } from "./banner";
+import { cls } from "./common";
 import { ServerClockProvider } from "./freshness";
 import { BottomNav, PlainHeader, SignOutForm, SiteHeader } from "./site-header";
 import { ToastProvider } from "./toast";
@@ -26,14 +27,28 @@ export function ShellProvider({ build, children }: { build: string; children?: R
   </ShellContext.Provider>;
 }
 
-/** The banner row under the header, only while one is true: the one fault banner, then each warn (screens §1.2). */
-export function ShellBanners() {
-  const { fault, warns } = useShellStatus();
-  const banners = fault ? [fault, ...warns] : warns;
-  if (!banners.length) return null;
+/**
+ * The warn banners, one line each, in flow at the top of `<main>` above the page header, only while true (redesign
+ * §2.5). The one fault banner is not here: it is a row inside the sticky header (`SiteHeader`), so it never scrolls away.
+ */
+export function ShellNotices() {
+  const { warns } = useShellStatus();
+  if (!warns.length) return null;
   return <div className="banners">
-    {banners.map((banner) => <Banner key={banner.kind} tone={banner.tone} link={banner.link}>{banner.text}</Banner>)}
+    {warns.map((banner) => <Banner key={banner.kind} tone={banner.tone} link={banner.link}>{banner.text}</Banner>)}
   </div>;
+}
+
+/**
+ * What a route module may say about its page through `export const handle`: `wide` gives it `--shell-wide` (96rem)
+ * instead of the 80rem shell, for charts and timelines (Graphs and Water → Schedules, redesign §3.2).
+ */
+export type PageHandle = { readonly wide?: boolean };
+const isWide = (handle: unknown) => typeof handle === "object" && handle !== null && (handle as PageHandle).wide === true;
+/** True when the deepest route that says asks for the wide page. */
+export function useWidePage(): boolean {
+  const matches = useMatches();
+  return matches.some((match) => isWide(match.handle));
 }
 
 /** "Verdify dashboard · build <12 hex> · API <12 hex>"; the API's build reads "—" until API-01 answers. */
@@ -103,19 +118,21 @@ export function SignInRefusalPage({ build, refusal }: { build: string; refusal: 
 }
 
 /**
- * The page around every screen: header and nav, the banner row, the screen, the footer, the phone bar and the toasts.
+ * The page around every screen: the header with its nav, account menu and fault row, the warn notices, the screen,
+ * the footer, the phone bar and the toasts.
  * It owns the page's query client; a `SessionEnded` from any query or mutation raises the session-ended card. A sign-in
  * refusal (`authError`) renders SCR-09's card in place of the screen, with no polls (there is no session to poll with).
  */
 export function AppShell({ build, authError }: { build: string; authError: AuthError | null }) {
   const [ended, setEnded] = useState(false);
   const [client] = useState(() => createQueryClient(() => setEnded(true)));
+  const wide = useWidePage();
   if (authError) return <SignInRefusalPage build={build} refusal={authError} />;
   return <QueryClientProvider client={client}><PollingPaused.Provider value={ended}><ShellProvider build={build}><ToastProvider>
     <div className="app-page" inert={ended}>
       <a href="#main-content" className="skip-link">Skip to content</a>
       <SiteHeader />
-      <main id="main-content" className="shell" tabIndex={-1}><ShellBanners /><Outlet /></main>
+      <main id="main-content" className={cls("shell", wide && "page-wide")} tabIndex={-1}><ShellNotices /><Outlet /></main>
       <ShellFooter />
       <BottomNav />
     </div>

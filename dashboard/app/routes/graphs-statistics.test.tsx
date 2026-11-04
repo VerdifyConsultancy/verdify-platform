@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
-// SCR-02's daily scorecard (#1130) against the scorecard-30d fixture: the daily.* keys API-03 lists, read 8 at a time
-// over the 30 local days with points=31, API-IRR-10 by zone over the same dates, a 60 s poll, and 30 rows.
+// Graphs → Statistics (redesign §5.7), for now SCR-02's daily scorecard (#1130), moved from /graphs/scorecard, which
+// redirects here with its query: against the scorecard-30d fixture, the daily.* keys API-03 lists, read 8 at a time over
+// the 30 local days with points=31, API-IRR-10 by zone over the same dates, a 60 s poll, and 30 rows.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { createRoutesStub } from "react-router";
@@ -10,13 +11,14 @@ import { DAILY_KEYS } from "../../e2e/fixtures/world.mjs";
 import { text } from "../components/test-render";
 import { SessionProvider } from "../lib/session";
 import { advance, requests, startFixtureApi, stopFixtureApi, type FixtureOptions } from "../lib/test-fixture-api";
-import Scorecard, { chunks } from "./graphs-scorecard";
+import { clientLoader, loader, statisticsHref } from "./graphs-scorecard";
+import Statistics, { chunks, meta } from "./graphs-statistics";
 
-const Stub = createRoutesStub([{ path: "/graphs/scorecard", Component: Scorecard }, { path: "/graphs", Component: () => <h1>Graphs</h1> }]);
+const Stub = createRoutesStub([{ path: "/graphs/statistics", Component: Statistics }, { path: "/graphs", Component: () => <h1>Graphs</h1> }]);
 async function open(options: FixtureOptions = { fixture: "scorecard-30d" }) {
   const api = startFixtureApi(options);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(<QueryClientProvider client={client}><SessionProvider><Stub initialEntries={["/graphs/scorecard"]} /></SessionProvider></QueryClientProvider>);
+  render(<QueryClientProvider client={client}><SessionProvider><Stub initialEntries={["/graphs/statistics"]} /></SessionProvider></QueryClientProvider>);
   // A read that starts in a render another read's answer caused re-renders once a little time has passed.
   for (let pass = 0; pass < 6; pass++) await advance(10);
   return api;
@@ -36,7 +38,7 @@ test("chunks: at most 8 keys per request", () => {
 
 test("the scorecard reads the daily keys 8 at a time over 30 local days, minutes by zone over the same dates, and shows 30 rows", async () => {
   const api = await open();
-  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Daily scorecard");
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Statistics");
   const series = requests(api, "API-04").map((row) => query(row.path));
   expect(series.map((params) => params.getAll("metric"))).toEqual([DAILY_KEYS.slice(0, 8), DAILY_KEYS.slice(8)]);
   for (const params of series) {
@@ -70,4 +72,15 @@ test("a failed minutes read reads couldn't load in its columns, with a Retry, wh
   const today = [...table.querySelectorAll("tbody tr")][0];
   expect([...today.querySelectorAll("td")].map(text).slice(4, 6)).toEqual(["24 gal", "— couldn't load"]);
   expect(screen.getByText(/Some columns couldn't load/)).toBeTruthy();
+});
+
+test("/graphs/scorecard redirects to /graphs/statistics with its query, replacing the history entry, from the server and in the browser", () => {
+  expect(meta()).toEqual([{ title: "Statistics · Graphs · Verdify dashboard" }]);
+  expect(statisticsHref("https://dashboard.verdify.ai/graphs/scorecard?x=1&days=90")).toBe("/graphs/statistics?x=1&days=90");
+  for (const load of [loader, clientLoader]) {
+    const response = load({ request: new Request("https://dashboard.verdify.ai/graphs/scorecard?x=1") });
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBe("/graphs/statistics?x=1");
+    expect(response.headers.get("X-Remix-Replace")).toBe("true");
+  }
 });

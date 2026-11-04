@@ -16,6 +16,7 @@ import { dateShift, localDayStart } from "../lib/format";
 import { runGraphUrl } from "../lib/graph-link";
 import { LINES } from "../lib/lines";
 import { CAUSES, OUTCOMES, apiGet, type IrrigationLine, type Run } from "../lib/operator-api";
+import { viewMeta } from "../lib/sections";
 import { readKey, useApiRead, useSchedulesRead } from "../lib/queries";
 import {
   RUNS_MAX_DAYS, barsReport, localDay, minutesCaps, minutesDays, minutesGroup, plannedToday, runAmountWords, runGallons, runSpanWords, runsFilters, runsWindow,
@@ -23,7 +24,7 @@ import {
 } from "../lib/water";
 import { words } from "../lib/words";
 
-export const meta = () => [{ title: "Water history · Verdify dashboard" }];
+export const meta = () => viewMeta("water-history");
 export const links = () => chartLinks();
 
 /** API-IRR-10, API-IRR-11 and API-21 are read every 60 s on this view. */

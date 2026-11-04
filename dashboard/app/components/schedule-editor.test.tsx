@@ -10,6 +10,7 @@ import { UUID, advance, requests, startFixtureApi, stopFixtureApi, writes, type 
 import { SCHEDULE_LINES } from "../lib/water";
 import type { WriteError } from "../lib/writes";
 import Activity from "../routes/activity";
+import ActivityLog from "../routes/activity-log";
 import Water from "../routes/water";
 import WaterSchedules from "../routes/water-schedules";
 import { AppShell } from "./app-shell";
@@ -31,6 +32,7 @@ function open(path: string, options: FixtureOptions = {}, before?: (api: ReturnT
     children: [
       { path: "water", Component: Water, children: [{ path: "schedules", Component: WaterSchedules }] },
       { path: "activity", Component: Activity },
+      { path: "activity/log", Component: ActivityLog },
     ],
   }]);
   render(<Stub initialEntries={[path]} />);
@@ -107,8 +109,10 @@ test("creating L01 Mon, Wed, Fri at sunrise + 60 for 12 min previews against the
   expect(blocks("L01", "2026-11-04")).toEqual([{ head: "07:35 12m Manual Confirmed", draft: false, hatched: false, notes: ["Wall MWF"] }]);
   await advance(5_000);
   expect(banner()).toMatch(/^On controller: rev 43 · Confirmed \d+ s ago$/);
-  // Activity lists the create under the operator's name.
+  // Activity's Log lists the create under the operator's name.
   fireEvent.click(screen.getAllByRole("link", { name: /^Activity/ })[0]);
+  await advance(0);
+  fireEvent.click(within(screen.getByRole("navigation", { name: "Activity views" })).getByRole("link", { name: "Log" }));
   await advance(0);
   const rows = [...document.querySelectorAll("main li, main tr, main article")].filter((node) => text(node).includes("Added schedule"));
   expect(rows.length).toBeGreaterThan(0);

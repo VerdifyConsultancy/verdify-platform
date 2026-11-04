@@ -6,9 +6,10 @@ import { LinkedPanels, groupByUnit, syncKey } from "../charts/linked-panels";
 import { bandKindFor } from "../charts/marks";
 import type { Series, SettingHistory, SettingSteps } from "../charts/types";
 import { chartLinks } from "../charts/uplot-chart";
-import { PageHead } from "../components/common";
+import type { PageHandle } from "../components/app-shell";
 import { useClockValue } from "../components/freshness";
 import { GraphNotices, OnCharts, RangeForm } from "../components/graphs/controls";
+import { PageHeader } from "../components/layout/page-header";
 import { ResolutionLine, panelEyebrow } from "../components/graphs/resolution-line";
 import { EmptyState, PanelError } from "../components/panel";
 import { NO_OVERLAY, OUTDOOR_RH_KEY, OUTDOOR_TEMP_KEY, OUTDOOR_VPD_KEY, forecastSpan, outdoorOverlay, outdoorSource, withOutdoor } from "../lib/graph-overlay";
@@ -17,10 +18,12 @@ import {
   CLIMATE_KEYS, LANES_TEXT, graphHref, graphWindow, isoOf, lanesAllowed, panelName, parseGraphUrl, resolveView, windowKey, withWindow, within400,
 } from "../lib/graph-url";
 import { useSettingsRead } from "../lib/queries";
+import { viewMeta } from "../lib/sections";
 import { useShellNow } from "../lib/shell";
 import { unitLabel } from "../lib/setting-values";
 
-export const meta = () => [{ title: "Graphs · Verdify dashboard" }];
+export const meta = () => viewMeta("graphs-climate");
+export const handle: PageHandle = { wide: true };
 export const links = () => chartLinks();
 
 /** A setting history in its panel's unit: the registry's ASCII °F alias reads as the panel's °F. One copy per answer. */
@@ -131,8 +134,7 @@ export default function Graphs() {
   } : undefined;
 
   return <>
-    <PageHead eyebrow="Greenhouse history · America/Denver" title="Climate"
-      lede={<ResolutionLine window={window} bucketSeconds={climateBucket} daily={daily} now={now} />} />
+    <PageHeader view="graphs-climate" status={<ResolutionLine window={window} bucketSeconds={climateBucket} daily={daily} now={now} />} />
     <GraphNotices notices={notices} />
     <LinkedPanels route="graphs" range={key} metrics={window ? [...panels.flatMap((panel) => panel.metrics), ...overlay.metrics] : []}
       series={panelReads.map((read, index) => withOutdoor(read.data, panels[index].unit, outdoor.data))} forecast={forecast} notes={outdoorNotes}

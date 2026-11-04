@@ -14,10 +14,11 @@ import { RunControl } from "../components/run-dialog";
 import { StopButton } from "../components/stop-button";
 import { usePhone } from "../lib/narrow";
 import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
+import { viewMeta } from "../lib/sections";
 import { useSchedulesRead } from "../lib/queries";
 import { UNAVAILABLE_TEXT, boardLines, isMaster, limitItems, localDay, misterLines, useWaterOutlet } from "../lib/water";
 
-export const meta = () => [{ title: "Water · Verdify dashboard" }];
+export const meta = () => viewMeta("water-today");
 
 /** Where the SAF-4 figure leads: the site caps save through API-10 in the Settings drawer, not on Water (#1182). */
 const SAF4_LINK = "/settings?edit=mister_daily_volume_max_gal";

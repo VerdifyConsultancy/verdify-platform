@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-// SCR-02 Graphs and its scorecard (#1130) on real uPlot canvases: the views the URL names and their reload, the
-// resolution stated, the lanes' limits, the tooltip and both CSV files; the outdoor and forecast overlay and /graphs/zones
-// (#1138). The screens' clock is pinned, so each window is.
+// SCR-02 Graphs (#1130), as Climate, Zones and Statistics (redesign §2.1), on real uPlot canvases: the views the URL names
+// and their reload, the resolution stated, the lanes' limits, the tooltip and both CSV files; the outdoor and forecast
+// overlay and /graphs/zones (#1138); the daily scorecard, now under Statistics. The screens' clock is pinned, so each
+// window is.
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { expect, fixtureRequests, load, reload, test, useScreensClock } from "./support";
@@ -106,10 +107,11 @@ test("CSV of this window holds exactly the plotted columns, with local times and
   expect(lines.at(-1)).toMatch(/^2026-11-02T10:41:00-07:00,[\d.]+,[\d.]+,[\d.]+,0$/);
 });
 
-test("/graphs/scorecard shows 30 rows, and CSV of this table is exactly those rows with each missing value's reason", async ({ page, request }) => {
+test("/graphs/statistics shows 30 rows, and CSV of this table is exactly those rows with each missing value's reason", async ({ page, request }) => {
   await useScreensClock(page, request, "scorecard-30d");
-  await load(page, "/graphs/scorecard");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Daily scorecard");
+  await load(page, "/graphs/statistics");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Statistics");
+  await expect(page.getByRole("navigation", { name: "Graphs views" }).getByRole("link", { name: "Statistics" })).toHaveAttribute("aria-current", "page");
   const rows = page.getByRole("region", { name: /Daily scorecard/ }).locator("tbody tr");
   await expect(rows).toHaveCount(30);
   await expect(rows.nth(0).locator("th")).toHaveText("Mon, Nov 2 · partial");
@@ -174,6 +176,9 @@ test("/graphs/zones?zone=south&range=72h: south's own panels, band and target; t
   await useScreensClock(page, request, "in-band");
   await load(page, "/graphs/zones?zone=south&range=72h");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("South zone");
+  // A focused zone: the eyebrow is the breadcrumb GRAPHS › ZONES, both parts links.
+  await expect(page.locator(".page-crumbs")).toHaveText("Graphs › Zones");
+  await expect(page.locator(".page-crumbs").getByRole("link")).toHaveCount(2);
   await expect(captions(page)).toHaveText([
     "Temperature · °F · MEASURED · Band in force · one point per 5 minutes", "VPD · kPa · MEASURED · Band in force · one point per 5 minutes",
     "RH · % · MEASURED · one point per 5 minutes",

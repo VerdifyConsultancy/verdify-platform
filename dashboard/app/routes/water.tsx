@@ -1,40 +1,27 @@
 // SPDX-License-Identifier: MIT
-import { Link, Outlet, useLocation } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import { Badge } from "../components/badge";
 import { Button } from "../components/button";
 import { CheckSheet } from "../components/check-sheet";
-import { PageHead, cls } from "../components/common";
+import { cls } from "../components/common";
+import { PageHeader } from "../components/layout/page-header";
 import { Ago } from "../components/line-card";
 import { LineOptions } from "../components/line-options";
 import { PauseControls } from "../components/pause-lines";
 import { WaterRuns } from "../components/run-dialog";
+import { StopAllWater } from "../components/stop-all-water";
 import { useIrrigationRead } from "../lib/queries";
+import { viewFor, viewMeta, type ViewId } from "../lib/sections";
 import { useShellNow, useShellStatus } from "../lib/shell";
 import { programBanner, type WaterOutlet } from "../lib/water";
-import { useStop } from "../lib/writes";
 
-export const meta = () => [{ title: "Water · Verdify dashboard" }];
+export const meta = () => viewMeta("water-today");
 
-const VIEWS = [{ to: "/water", label: "Board" }, { to: "/water/schedules", label: "Schedules" }, { to: "/water/history", label: "History" }] as const;
-
-/** Board, Schedules and History; the current one carries `aria-current="page"`. Sticky with Stop all water at phone width. */
-function WaterTabs() {
-  const path = useLocation().pathname.replace(/\/+$/, "") || "/";
-  return <nav className="water-tabs" aria-label="Water views"><ul className="chips">
-    {VIEWS.map((view) => <li key={view.to}><Link to={view.to} aria-current={path === view.to ? "page" : undefined}>{view.label}</Link></li>)}
-  </ul></nav>;
-}
-
-/**
- * Stop all water (API-IRR-07 `{}` through `useStop`): operators only, one tap, no dialog, one Idempotency-Key per tap,
- * "Sending…" until the 202, then the Stop result toast. Never disabled by the writes flag, and shown whatever the
- * program banner says; before the engine the bridge stops every wet line. At phone width it reads "■ Stop all".
- */
-function StopAllWater() {
-  const { stop, sending } = useStop();
-  return <Button variant="stop" write busy={sending} className="stop-all" onClick={() => void stop()}>
-    <span aria-hidden="true">■ </span>Stop all <span className="stop-all-rest">water</span>
-  </Button>;
+const WATER_VIEWS: readonly ViewId[] = ["water-today", "water-schedules", "water-history"];
+/** The Water view at `path` (Today, Schedules or History). */
+function waterView(path: string): ViewId {
+  const id = viewFor(path)?.id;
+  return id && WATER_VIEWS.includes(id) ? id : "water-today";
 }
 
 /** The program banner (#1135): one line from API-IRR-01 `engine` and `program` and the shell's reporting state. */
@@ -55,21 +42,19 @@ function ProgramBanner({ irrigation }: WaterOutlet) {
 }
 
 /**
- * SCR-04 Water's layout: the page head, the Board, Schedules and History tabs with Stop all water, the program banner
- * with Pause lines…, then the view. It polls API-IRR-01 once for all three views (every 15 s, 5 s while an item settles
+ * SCR-04 Water's layout: the page header (redesign §5.2) with the Today, Schedules and History tabs and Stop all water,
+ * which shares the tabs' sticky row on phones (where it reads "■ Stop all"), the program banner with Pause lines…, then
+ * the view. Stop all water is shown whatever the program banner says; before the engine the bridge stops every wet line. It polls API-IRR-01 once for all three views (every 15 s, 5 s while an item settles
  * with the engine on), under the key Now's water card and `useStop` share, and hands it to them. The check sheet, line
  * options and Run dialog open here from the URL, as Pause does, so a failed read that replaces the Board with its error
  * leaves an open drawer or dialog and what was typed in it. No greenhouse data renders in SSR.
  */
 export default function Water() {
   const irrigation = useIrrigationRead();
+  const view = waterView(useLocation().pathname);
   const context: WaterOutlet = { irrigation };
   return <div className="water-page">
-    <PageHead eyebrow="Water · America/Denver" title="Water" />
-    <div className="water-bar">
-      <WaterTabs />
-      <div className="water-actions"><StopAllWater /></div>
-    </div>
+    <PageHeader view={view} tabsEnd={<StopAllWater compact />} stickyTabs />
     <div className="water-program">
       <ProgramBanner irrigation={irrigation} />
       <PauseControls lines={irrigation.data?.lines} />

@@ -55,7 +55,20 @@ export type ShellStatus = {
   readonly ingestorRunning: boolean | null;
   /** The heartbeat is fresh and the newest climate row at most 300 s old (architecture §7, the reporting test). */
   readonly controllerReporting: boolean | null;
+  /**
+   * The worst severity among the open alerts (API-02 `alerts`), which fills the nav's count pill (redesign §2.2); null
+   * whenever `openAlerts` is.
+   */
+  readonly alertSeverity: AlertSeverity | null;
 };
+export type AlertSeverity = "critical" | "warning" | "info";
+
+/** The worst severity with an open alert, from API-02's counts by severity; info when only info (or none) is open. */
+export function worstSeverity(alerts: Pick<Now["alerts"], "critical" | "warning">): AlertSeverity {
+  if (Number.isFinite(alerts.critical) && alerts.critical > 0) return "critical";
+  if (Number.isFinite(alerts.warning) && alerts.warning > 0) return "warning";
+  return "info";
+}
 
 /** The ingestor heartbeat (a `system_state` row every 60 s, Q-01) is fresh: at most 180 s old and not stale. */
 export function heartbeatFresh(ingestor: Freshness | null | undefined): boolean {
@@ -124,6 +137,7 @@ export function shellStatus(me: Me | null, now: Now | null, consecutiveFailures:
     // While the API is down the last answer is old news: the count and whether anything reports are unknown. A stale
     // "Activity 0" beside the API banner would read as an all clear.
     openAlerts: !apiDown && now && Number.isFinite(now.alerts.open) ? now.alerts.open : null,
+    alertSeverity: !apiDown && now && Number.isFinite(now.alerts.open) ? worstSeverity(now.alerts) : null,
     ingestorRunning: apiDown ? null : ingestorRunning,
     controllerReporting: apiDown || ingestorRunning === null ? null : ingestorRunning && Boolean(climateReporting),
   };

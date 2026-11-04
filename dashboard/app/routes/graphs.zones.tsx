@@ -1,22 +1,33 @@
 // SPDX-License-Identifier: MIT
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { useSearchParams, type MetaArgs } from "react-router";
 import { LinkedPanels, groupByUnit } from "../charts/linked-panels";
 import { bandKindFor } from "../charts/marks";
 import type { MetricDef } from "../charts/types";
 import { chartLinks } from "../charts/uplot-chart";
 import { Chips } from "../components/chips";
-import { PageHead } from "../components/common";
+import type { PageHandle } from "../components/app-shell";
 import { GraphNotices } from "../components/graphs/controls";
 import { ResolutionLine, bucketWords } from "../components/graphs/resolution-line";
+import { PageHeader } from "../components/layout/page-header";
 import { EmptyState, PanelError } from "../components/panel";
 import { ZoneTagBadge } from "../components/zone-tiles";
 import { GRAPH_POLL_MS, readFailure, slotRead, useGraphClock, useWindowReads, type WindowRead } from "../lib/graph-reads";
 import { graphWindow, isoOf, panelName, parseZonesUrl, windowKey, within400, zonesHref } from "../lib/graph-url";
 import { READ_INTERVAL_MS, panelRead, useApiRead, useSeriesWindowRead } from "../lib/queries";
+import { viewMeta } from "../lib/sections";
 import { PROBE_VPD_KEYS, ZONES, ZONE_WINDOW_S, ZONE_WORDS, bandZone, targetKey, zoneKey, zoneTag, type Zone, type ZoneTag } from "../lib/zone-source";
 
-export const meta = () => [{ title: "Zones · Verdify dashboard" }];
+/**
+ * "South zone" while `?zone=` focuses one (redesign §2.1: the eyebrow then reads GRAPHS › ZONES); an unknown zone
+ * focuses the one it falls back to. Null on the unfocused Zones view.
+ */
+export function focusedTitle(search: string): string | null {
+  if (!new URLSearchParams(search).has("zone")) return null;
+  return `${ZONE_WORDS[parseZonesUrl(search).zone]} zone`;
+}
+export const meta = ({ location }: MetaArgs) => viewMeta("graphs-zones", focusedTitle(location.search) ?? undefined);
+export const handle: PageHandle = { wide: true };
 export const links = () => chartLinks();
 
 const REGISTRY = [{ id: "registry", params: {} }] as const;
@@ -96,10 +107,7 @@ export default function GraphZones() {
   const last24h = spec.kind === "range" && spec.range === "24h" ? undefined : { to: zonesHref(zone, { kind: "range", range: "24h" }), label: "Last 24 h" };
 
   return <>
-    <PageHead eyebrow="Greenhouse zones · America/Denver" title={`${ZONE_WORDS[zone]} zone`}
-      lede={<ResolutionLine window={window} bucketSeconds={bucket} daily={daily} now={now} />}>
-      <Link className="graph-back" to="/graphs"><span aria-hidden="true">‹ </span>Graphs</Link>
-    </PageHead>
+    <PageHeader view="graphs-zones" title={focusedTitle(search) ?? undefined} status={<ResolutionLine window={window} bucketSeconds={bucket} daily={daily} now={now} />} />
     <GraphNotices notices={notices} />
     <LinkedPanels route="graphs-zones" range={key} metrics={window ? panels.flatMap((panel) => panel.metrics) : []} series={panelReads.map((read) => read.data)}
       band={band.data} dotted={[target]} now={now ?? 0} xRange={window?.x ?? { from: 0, to: 1 }} titles={titles} messages={messages} csvName={`zone-${zone}`}

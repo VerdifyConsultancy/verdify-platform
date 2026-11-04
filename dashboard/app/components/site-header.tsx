@@ -1,28 +1,13 @@
 // SPDX-License-Identifier: MIT
+import { useLayoutEffect, useRef, type RefObject } from "react";
 import { Link, useLocation } from "react-router";
-import { useMe, useShellStatus } from "../lib/shell";
+import { SECTIONS, sectionFor, type Section } from "../lib/sections";
+import { useShellStatus, type AlertSeverity } from "../lib/shell";
+import { AccountMenu } from "./account-menu";
+import { Banner } from "./banner";
+import { SectionIcon } from "./icons";
 
-type Section = { readonly label: string; readonly to: string; readonly owns: (path: string) => boolean };
-const under = (base: string) => (path: string) => path === base || path.startsWith(`${base}/`);
-
-/** Sections and the paths each one owns (weather's `SECTIONS` model): `/graphs/scorecard` belongs to Graphs. */
-export const SECTIONS: readonly Section[] = [
-  { label: "Now", to: "/", owns: (path: string) => path === "/" },
-  { label: "Graphs", to: "/graphs", owns: under("/graphs") },
-  { label: "Plan", to: "/plan", owns: under("/plan") },
-  { label: "Water", to: "/water", owns: under("/water") },
-  { label: "Settings", to: "/settings", owns: under("/settings") },
-  { label: "Activity", to: "/activity", owns: under("/activity") },
-  { label: "Equipment", to: "/equipment", owns: under("/equipment") },
-];
-const section = (to: string) => SECTIONS.find((item) => item.to === to)!;
-/** What `/more` lists on a phone, where the bottom bar has no room for them. */
-export const MORE_SECTIONS: readonly Section[] = [section("/plan"), section("/settings"), section("/equipment")];
-/** The phone's bottom bar: More owns `/more` and every section it lists. */
-export const TABS: readonly Section[] = [
-  section("/"), section("/water"), section("/graphs"), section("/activity"),
-  { label: "More", to: "/more", owns: (path: string) => under("/more")(path) || MORE_SECTIONS.some((item) => item.owns(path)) },
-];
+export { RolePill, SignOutForm } from "./account-menu";
 
 /**
  * The V of the lockup: the `verdify-v-glyph` group of site/quartz/static/brand/verdify-wordmark.svg (leaf, ink stroke
@@ -46,52 +31,78 @@ export function Brand({ reloadDocument = false }: { reloadDocument?: boolean }) 
   return <Link className="brand" to="/" reloadDocument={reloadDocument} aria-label="Verdify dashboard, home"><span className="brand-word"><BrandGlyph /><span>erdify<small> · Dashboard</small></span></span></Link>;
 }
 
-/** "Activity 2": the one open-alert count (API-02 `alerts.open`) as plain text, once API-02 has answered. */
-function SectionLabel({ item, count }: { item: Section; count: number | null }) {
-  if (item.to !== "/activity" || count === null) return <>{item.label}</>;
-  return <>{item.label} <span className="nav-count">{count}</span><span className="screen-reader"> open alerts</span></>;
+/**
+ * The one open-alert count after "Activity" (redesign §2.2): API-02 `alerts.open` as a pill filled by the worst open
+ * severity (critical `--fault`, warning `--tint-warn`, info `--field`). Nothing until API-02 answers, and nothing while
+ * the API is down, when the last count is old news. Zero draws no pill, so the quiet state is quiet; a screen reader
+ * still hears "0 open alerts", and "N open alerts" otherwise.
+ */
+export function CountPill({ count, severity }: { count: number | null; severity: AlertSeverity | null }) {
+  if (count === null) return null;
+  return <>{" "}{count > 0 ? <span className="nav-count" data-severity={severity ?? "info"}>{count}</span> : <span className="screen-reader">{count}</span>}<span className="screen-reader"> open alerts</span></>;
 }
 
-/** The role from API-01: OPERATOR or VIEWER (the stylesheet uppercases it). */
-export function RolePill({ role }: { role: string }) {
-  const operator = role === "operator";
-  return <span className="tag role-pill" data-role={operator ? "operator" : "viewer"}>{operator ? "Operator" : "Viewer"}</span>;
-}
-
-/** Sign out is a plain POST form: the BFF checks its exact Origin, deletes the session and ends at Authentik (#1141). */
-export function SignOutForm({ className }: { className?: string }) {
-  return <form className={className ? `signout-form ${className}` : "signout-form"} method="post" action="/auth/logout"><button type="submit">Sign out</button></form>;
+function useCurrentSection(): Section | null {
+  return sectionFor(useLocation().pathname);
 }
 
 /**
- * Weather's header (`site-header.tsx`) with the Verdify lockup and no units toggle. Above 860 px: every section with
- * the open-alert count, then the role pill, the display name and Sign out. At 860 px and below the stylesheet keeps
- * the lockup and the pill, and `BottomNav` takes over the sections.
+ * Keeps `--shell-header-h` on the document at the sticky header's height, fault row included, so a row that sticks
+ * under it (Water's tabs at phone width) sits right below it. Set through CSSOM, never a style attribute.
  */
-export function SiteHeader() {
-  const { pathname } = useLocation();
-  const count = useShellStatus().openAlerts;
-  const me = useMe();
-  const name = me ? me.display_name || me.username : null;
-  return <header className="site-header"><div className="shell">
-    <Brand />
-    <nav className="primary-nav" aria-label="Sections">
-      {SECTIONS.map((item) => <Link key={item.to} to={item.to} aria-current={item.owns(pathname) ? "page" : undefined}><SectionLabel item={item} count={count} /></Link>)}
-    </nav>
-    <div className="header-tools">
-      {me && <RolePill role={me.role} />}
-      {name && <span className="header-name">{name}</span>}
-      <SignOutForm className="header-signout" />
-    </div>
-  </div></header>;
+function useHeaderHeight(ref: RefObject<HTMLElement | null>) {
+  useLayoutEffect(() => {
+    const header = ref.current;
+    if (!header || typeof ResizeObserver !== "function") return;
+    const root = header.ownerDocument.documentElement;
+    const update = () => root.style.setProperty("--shell-header-h", `${Math.ceil(header.getBoundingClientRect().height)}px`);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(header);
+    return () => { observer.disconnect(); root.style.removeProperty("--shell-header-h"); };
+  }, [ref]);
 }
 
-/** The phone's fixed bottom bar (860 px and below): Now, Water, Graphs, Activity with the count, and More. */
+/**
+ * Weather's sticky header with the Verdify lockup (redesign §2.2): the five sections with the 2 px forest underline
+ * on the current one and the count after Activity, then the account button. The one fault banner, worst first, is a
+ * row inside the header while it is true, so it never scrolls away. At 860 px and below the stylesheet keeps the lockup
+ * and the account button, and `BottomNav` takes over the sections. Nothing else goes here: no Stop, no freshness, no
+ * search (D-UX-11).
+ */
+export function SiteHeader() {
+  const current = useCurrentSection();
+  const { openAlerts, alertSeverity, fault } = useShellStatus();
+  const header = useRef<HTMLElement>(null);
+  useHeaderHeight(header);
+  return <header ref={header} className="site-header">
+    <div className="shell">
+      <Brand />
+      <nav className="primary-nav" aria-label="Sections">
+        {SECTIONS.map((section) => <Link key={section.id} to={section.to} aria-current={current?.id === section.id ? "page" : undefined}>
+          {section.label}{section.id === "activity" && <CountPill count={openAlerts} severity={alertSeverity} />}
+        </Link>)}
+      </nav>
+      <AccountMenu />
+    </div>
+    {fault && <div className="header-fault"><div className="shell"><Banner tone="fault" link={fault.link}>{fault.text}</Banner></div></div>}
+  </header>;
+}
+
+/**
+ * The phone's fixed bottom bar (860 px and below, redesign §2.3): the same five sections in the same order, each a
+ * fifth of the width and at least 44 px, an icon over a one-word label; the count rides the Activity icon's corner. The
+ * label comes first in the markup, so the link reads "Activity 2 open alerts".
+ */
 export function BottomNav() {
-  const { pathname } = useLocation();
-  const count = useShellStatus().openAlerts;
+  const current = useCurrentSection();
+  const { openAlerts, alertSeverity } = useShellStatus();
   return <nav className="bottom-nav" aria-label="Sections, phone">
-    {TABS.map((item) => <Link key={item.to} to={item.to} aria-current={item.owns(pathname) ? "page" : undefined}><SectionLabel item={item} count={count} /></Link>)}
+    {SECTIONS.map((section) => <Link key={section.id} className="tab" to={section.to} aria-current={current?.id === section.id ? "page" : undefined}>
+      <SectionIcon section={section.id} className="tab-icon" />
+      <span className="tab-label">{section.label}</span>
+      {section.id === "activity" && <CountPill count={openAlerts} severity={alertSeverity} />}
+    </Link>)}
   </nav>;
 }
 

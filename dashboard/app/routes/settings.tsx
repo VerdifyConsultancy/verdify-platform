@@ -5,19 +5,20 @@ import { chartLinks } from "../charts/uplot-chart";
 import { BandPreviewPanel, hasBandCurve } from "../components/band-preview";
 import { Button } from "../components/button";
 import { Chips, type ChipLink } from "../components/chips";
-import { PageHead } from "../components/common";
 import { EditDrawer, ManualToggle, MANUAL_DEFAULT, NumberField, Reason, Select, Switch } from "../components/forms";
+import { PageHeader } from "../components/layout/page-header";
 import { EmptyState, Panel } from "../components/panel";
 import { SettingHistoryPanel } from "../components/setting-history";
 import { SETTING_GROUPS, SettingRow, SettingStatus, changedByAgent, classLabel, groupLabel, valueInForce } from "../components/setting-row";
 import type { Setting } from "../lib/operator-api";
 import { useProgramRevisionRead, useSettingsRead } from "../lib/queries";
+import { viewMeta } from "../lib/sections";
 import { useRole, useWritesEnabled } from "../lib/session";
 import { keptNumber, parseDecimal } from "../lib/setting-values";
 import { useShellNow, useShellStatus } from "../lib/shell";
 import { errorFor, formError, useSettingWrite } from "../lib/writes";
 
-export const meta = () => [{ title: "Settings · Verdify dashboard" }];
+export const meta = () => viewMeta("control-settings");
 export const links = () => chartLinks();
 
 /**
@@ -92,8 +93,7 @@ export default function Settings() {
   const panelState = items ? (shown.length ? "ready" : "empty") : read.isError ? "error" : "loading";
   const emptyText = query.trim() ? `No setting matches “${query.trim()}”` : filter.empty;
   return <>
-    <PageHead eyebrow="Settings · device values from readbacks · America/Denver" title="Settings"
-      lede="Every setting, the value the controller reports, any change on its way and what Iris plans next." />
+    <PageHeader view="control-settings" status="Every setting, the value the controller reports, any change on its way and what Iris plans next." />
     <div className="settings-tools">
       <div className="filters">
         <label htmlFor={searchId}>Search settings

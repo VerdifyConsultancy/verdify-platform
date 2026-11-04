@@ -30,15 +30,28 @@ export function readView(params: URLSearchParams): ActivityView {
   return { alert: params.get("alert")?.trim() || null, resolved: params.get("resolved") === RESOLVED_24H, filters };
 }
 
-/** `/activity` with some parameters changed (null or "" removes one) and the others kept, so the rest of the view stays. */
-export function activityHref(current: URLSearchParams, changes: Readonly<Record<string, string | null>>): string {
+/**
+ * `/activity` (or `base`, the log at `/activity/log`) with some parameters changed (null or "" removes one) and the
+ * others kept, so the rest of the view stays.
+ */
+export function activityHref(current: URLSearchParams, changes: Readonly<Record<string, string | null>>, base: "/activity" | "/activity/log" = "/activity"): string {
   const next = new URLSearchParams(current);
   for (const [name, value] of Object.entries(changes)) {
     if (value === null || value === "") next.delete(name);
     else next.set(name, value);
   }
   const search = next.toString();
-  return search ? `/activity?${search}` : "/activity";
+  return search ? `${base}?${search}` : base;
+}
+/** The log's own address with some parameters changed: `/activity/log?…` (redesign §2.1, D-UX-03). */
+export const logHref = (current: URLSearchParams, changes: Readonly<Record<string, string | null>>): string => activityHref(current, changes, "/activity/log");
+
+/**
+ * Where an old log link lands (D-UX-03): `/activity` with any log filter is the log now, at `/activity/log` with the same
+ * query; anything else (`?alert=7`, `?resolved=24h`) stays on Alerts, and null says so.
+ */
+export function logRedirect(url: URL): string | null {
+  return LOG_FILTERS.some((name) => url.searchParams.has(name)) ? `/activity/log${url.search}` : null;
 }
 
 /** The alert id `alert=<id>` names, or null when it names nothing an alert id could be. */

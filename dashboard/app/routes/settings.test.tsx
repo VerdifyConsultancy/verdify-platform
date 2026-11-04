@@ -77,7 +77,8 @@ const linesOf = (param: string, selector: string) => [...rowOf(param).querySelec
 const dialog = () => document.querySelector("dialog")!;
 const drawerOpen = () => document.querySelector("dialog")?.hasAttribute("open") ?? false;
 const toasts = () => [...document.querySelectorAll(".toasts [role=status] .toast-body")].map((body) => text(body));
-const chips = () => [...document.querySelectorAll(".chips a")].map((chip) => [text(chip), chip.getAttribute("aria-current")]);
+// The filter chips, not the Control tabs above them.
+const chips = () => [...document.querySelectorAll('ul[aria-label="Filter settings"] a')].map((chip) => [text(chip), chip.getAttribute("aria-current")]);
 const served = (names: string | string[] = "in-band"): Row[] => fixture(names, { now: NOW })["API-09"].items as Row[];
 /** Params as the page lists them: by group in the fixed order, the API's order within a group. */
 const inGroupOrder = (rows: readonly Row[]) => SETTING_GROUPS.flatMap(([group]) => rows.filter((row) => row.group === group).map((row) => row.param));

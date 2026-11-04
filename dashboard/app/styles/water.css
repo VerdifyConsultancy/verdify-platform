@@ -51,10 +51,10 @@
 .week-none{color:var(--muted)}
 .week-key{margin:.5rem 0 0}
 .week-disabled{margin:.35rem 0 0}
-/* The schedule editor (SCR-04): the page dims less and, on a wide screen, the week fits beside the drawer, so the draft's outlines can be read as it is typed. */
+/* The schedule editor (SCR-04): the page dims less and, on a wide screen, the week fits beside the drawer, so the draft's outlines can be read as it is typed. Schedules is a wide page (--shell-wide, redesign §3.2). */
 .drawer-schedule::backdrop{background:color-mix(in srgb,var(--ink) 12%,transparent)}
 @media(min-width:1200px){
-  body:has(.drawer-schedule[open]) .water-page{margin-right:calc(28rem - max(0px,(100vw - var(--shell))/2) - var(--gutter))}
+  body:has(.drawer-schedule[open]) .water-page{margin-right:calc(28rem - max(0px,(100vw - var(--shell-wide))/2) - var(--gutter))}
   body:has(.drawer-schedule[open]) .table-wrap .week-table{min-width:0}
 }
 .schedule-count{margin:0;font-weight:600}

@@ -8,15 +8,16 @@ import type { StateInterval, StateLane, StateLanes as LaneWindow } from "../char
 import { chartLinks } from "../charts/uplot-chart";
 import { Badge } from "../components/badge";
 import { BurstPanel } from "../components/burst-panel";
-import { PageHead } from "../components/common";
 import { LIGHTS, LightControls, lightsDiffer, useLightControl, type LightControl } from "../components/equipment/light-controls";
 import { Ago, Since } from "../components/equipment/report-times";
 import { WhyPanel } from "../components/equipment/why-panel";
+import { PageHeader } from "../components/layout/page-header";
 import { Panel, PanelError, type PanelState } from "../components/panel";
 import { formatValue } from "../lib/format";
 import { LINES } from "../lib/lines";
 import type { Equipment as EquipmentAnswer, Setting, StateLanes } from "../lib/operator-api";
 import { useEquipmentRead, useSettingsRead, useStatesWindowRead } from "../lib/queries";
+import { viewMeta } from "../lib/sections";
 
 /**
  * SCR-07 Equipment (#1134): the bursts and Restart controller (#1136), the board of every actuator from API-13, polled
@@ -26,7 +27,7 @@ import { useEquipmentRead, useSettingsRead, useStatesWindowRead } from "../lib/q
  * edges, counts cycles or decides from an age that a state is unknown. No greenhouse data renders here or in SSR: data
  * loads in the browser.
  */
-export const meta = () => [{ title: "Equipment · Verdify dashboard" }];
+export const meta = () => viewMeta("control-equipment");
 export const links = () => chartLinks();
 
 export type EquipmentItem = EquipmentAnswer["items"][number];
@@ -218,7 +219,7 @@ function LanesPanel() {
 
 export default function Equipment() {
   return <>
-    <PageHead eyebrow="EQUIPMENT · COMMANDED STATE · AMERICA/DENVER" title="Equipment and controller" lede="What the controller has each actuator doing now, since when, and today's time on and cycles." />
+    <PageHeader view="control-equipment" status="What the controller has each actuator doing now, since when, and today's time on and cycles." />
     <BurstPanel />
     <EquipmentBoard />
     <div className="section"><LanesPanel /></div>

@@ -3,8 +3,17 @@
  * What the browser suite walks (#1128). `app/routes.test.ts` fails when `app/routes.ts` gains a path `ROUTES` lacks, so
  * a new screen cannot skip axe: an issue that adds a route adds its path here in the same PR.
  */
-export const ROUTES = ["/", "/graphs", "/graphs/scorecard", "/graphs/zones", "/plan", "/water", "/water/schedules", "/water/history", "/settings", "/activity", "/equipment", "/more"] as const;
+export const ROUTES = [
+  "/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/plan",
+  "/equipment",
+] as const;
 export type RoutePath = (typeof ROUTES)[number];
+
+/**
+ * The paths app/routes.ts keeps only to redirect (redesign §2.1): each answers a redirect to `to` with its query, so the
+ * suites walk `to` among ROUTES rather than the same page twice. layout.spec.ts checks each lands where it says.
+ */
+export const REDIRECTS = [{ path: "/graphs/scorecard", to: "/graphs/statistics" }] as const;
 
 /**
  * The SCR-09 cards the root renders, with no nav, role pill or banner. Each has its status and its one heading. Sign-in
@@ -25,7 +34,7 @@ export const SETTING_DRAWERS = [
 
 /**
  * The routes that hold a write control for an operator under the roles fixtures (`alerts-merged`, `l01-running`,
- * `mister-fault`), so a viewer's "no write control" means something there. The other routes write nothing: Graphs, its
- * scorecard and zones and More by design, and Plan because Open is a link.
+ * `mister-fault`), so a viewer's "no write control" means something there. The other routes write nothing: the Graphs
+ * views and the Activity log by design, and Plan because it writes only through a drawer opened from a lane.
  */
 export const WRITE_ROUTES: readonly RoutePath[] = ["/", "/water", "/water/schedules", "/water/history", "/settings", "/activity", "/equipment"];

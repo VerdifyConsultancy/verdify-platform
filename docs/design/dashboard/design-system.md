@@ -133,22 +133,26 @@ whose relative order changed between files style different screens' elements. Th
 
 ## 3. Shell and header
 
-Weather's header, nav and footer, with a Verdify lockup.
+Weather's header, nav and footer, with a Verdify lockup, rebuilt for the five sections of [redesign](redesign.md) §2
+(D-UX-01). The section model is one file, `app/lib/sections.ts`: the nav, the phone bar, each page's tabs, its
+breadcrumb and its document title read it.
 
 ```text
-1440 │ [leaf]erdify · DASHBOARD   Now  Graphs  Plan  Water  Settings  Activity 2  Equipment   [OPERATOR] Jason  Sign out │
-390  │ [leaf]erdify · DASHBOARD                  [OPERATOR] │
-     │  Now  │  Water  │  Graphs  │  Activity 2  │  More    │   fixed bar: 56 px plus the safe-area inset
+1440 │ [leaf]erdify · DASHBOARD    Now   Water   Graphs   Activity (2)   Control              [OPERATOR  Jason  v] │
+     │ ▌Controller not reporting since 03:12. It keeps running VPD misting and its caps.          Equipment > │  only while a fault is true
+360  │ [leaf]erdify · DASHBOARD [OPERATOR v] │   52 px
+     │ (ic)Now │ (ic)Water │ (ic)Graphs │ (ic)2 Activity │ (ic)Control │   fixed bar: 56 px plus the safe-area inset
 ```
 
 | Part | Spec |
 |---|---|
 | Lockup | Link `.brand`, `aria-label="Verdify dashboard, home"`. The glyph is `#verdify-v-glyph` from `site/quartz/static/brand/verdify-wordmark.svg`, inlined as JSX without its `<style>` and Inter `<text>`: leaf path `.brand-leaf`, ink path `.brand-mark`, dot `.brand-dot`. About 1.2em tall, it is the V, so no gap follows it; then "erdify" in Plex Sans 620 at 1.1rem, then `<small> · DASHBOARD</small>` (weather `.brand small`). Never animated. Favicon: `site/quartz/static/brand/favicon.svg`. |
-| Nav | Weather's `SECTIONS` model (label, path, `owns(path)`), `aria-current="page"`; the open-alert count is plain text in the link ("Activity 2"): unacknowledged `v_open_alerts` rows, repeats of one `alert_type` and `sensor_id` counted once (as Activity lists them), the one count every surface uses. Above 860 px the top nav lists every section with weather's 2px forest underline ([screens](screens.md) §1.1). At 860 px and below a fixed bottom bar (a labelled `nav`) holds Now, Water, Graphs, Activity and More as text tabs of at least 44 px, the current one ink with a 2px forest top rule; More opens `/more`: Plan, Settings, Equipment, Sign out and the build line. |
-| Header tools | Role pill (OPERATOR or VIEWER); above 860 px also the display name and "Sign out" (POST form), which move to More at 860 px and below. No units or theme toggle. |
-| Banners | Under the header, only while true: one fault banner at a time, worst first (API down, ingestor not running, controller not reporting, leak), then warn, one line each, each linking to the page that explains it. [Screens](screens.md) §1.2 lists the banners, when they show and their words; §4.5 has the states |
+| Sections | Now · Water · Graphs · Activity · Control, in that order at every width (`SECTIONS`, `aria-current="page"` on the section that owns the path). Control's link goes to Settings and it owns `/settings`, `/plan` and `/equipment`. Above 860 px the top nav lists the five with weather's 2px forest underline and never scrolls sideways. At 860 px and below a fixed bottom bar (`navigation "Sections, phone"`) holds the same five, each a fifth of the width and at least 44 px: an inline SVG icon (`components/icons.tsx`: gauge, droplet, line chart, bell, sliders; `currentColor`, 1.75 px stroke) over a one-word label, the current one ink with a 2px forest top rule. There is no More and no `/more`. |
+| Count | API-02 `alerts.open`, the one open-alert count every surface uses (unacknowledged `v_open_alerts` rows, repeats of one `alert_type` and `sensor_id` counted once), as a pill after "Activity" (`.nav-count`) and on the phone's Activity icon. Its fill is the worst open severity (`data-severity`): critical `--fault` with white, warning `--tint-warn` with `--warn-text`, info `--field` with ink. Zero draws no pill; the link still reads "Activity 0 open alerts" to a screen reader. Unknown (no answer yet, or the API down) draws nothing. |
+| Account | The account button at the header's right (`components/account-menu.tsx`, a `Menu` disclosure): the role pill (OPERATOR or VIEWER) at every width and the display name from 1100 px. It opens to "Signed in as Jason (jason)", "Operator: can change anything" or "Viewer: read-only", and Sign out (the POST form). Before API-01 answers it reads "Account" and still holds Sign out. No units or theme toggle, no Stop, no freshness, no search in the header. |
+| Banners | The one fault banner, worst first (API down, ingestor not running, controller not reporting, leak), is a row inside the sticky header while it is true, so it never scrolls away (two lines at most on a phone, its link in view). Warn banners sit in flow at the top of `<main>`, above the page header, one line each. Each links to the page that explains it. [Screens](screens.md) §1.2 lists the banners, when they show and their words; §4.5 has the states |
 | Footer | Weather `.site-footer`: "Verdify dashboard · build `<sha>` · API `<sha>`", graphs.verdify.ai ↗, lab.verdify.ai ↗, IBM Plex licences |
-| Page grammar | `.page-head` (eyebrow, one h1, lede, actions) → sections with `.section-head` (eyebrow, h2, "All … →") → cards in `.grid-2`, `.grid-3` or `.grid-auto`. The ink hero appears on Now only. |
+| Page grammar | `PageHeader` (`components/layout/page-header.tsx`): the eyebrow is the breadcrumb (the section, a link to its default view except on that view; a focused state reads section › view, both links), one h1 named by the view, the status line (one `.meta` sentence of state, its height reserved), at most two actions, then the section's tabs (`SectionTabs`, nav chips with `aria-current="page"`; sticky under the header on Water's phones, beside Stop all water). Then sections and cards ([redesign](redesign.md) §3, §4). The ink hero appears on Now only, which has no page header. A route's `handle = { wide: true }` gives its page `--shell-wide` (Graphs, Water → Schedules). |
 | Sign-in pages | The same header without nav or tools; one card with the message and a forest "Sign in" button |
 
 ## 4. Components

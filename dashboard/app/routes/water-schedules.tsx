@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { useCallback, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import type { PageHandle } from "../components/app-shell";
 import { Chips } from "../components/chips";
 import { useClockValue } from "../components/freshness";
 import { PanelError } from "../components/panel";
@@ -9,10 +10,13 @@ import { ScheduleEditor } from "../components/schedule-editor";
 import { ScheduleWeek, type BlockMenu } from "../components/schedule-week";
 import { useSchedulesRead } from "../lib/queries";
 import { previewSchedule, type ScheduleDraft } from "../lib/schedule-preview";
+import { viewMeta } from "../lib/sections";
 import { useRole } from "../lib/session";
 import { localDay, pauseAfterRun, useWaterOutlet } from "../lib/water";
 
-export const meta = () => [{ title: "Water schedules · Verdify dashboard" }];
+export const meta = () => viewMeta("water-schedules");
+/** Timelines gain from width: Schedules takes the wide page (redesign §3.2). */
+export const handle: PageHandle = { wide: true };
 
 const minute = (now: number) => Math.floor(now / 60_000) * 60_000;
 const NEW_SCHEDULE = "new";

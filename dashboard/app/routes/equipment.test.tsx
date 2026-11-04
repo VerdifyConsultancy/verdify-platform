@@ -75,10 +75,10 @@ function windowOf(row: Recorded) {
 }
 const inBand = (equipment: string) => fixture("in-band", { now: NOW })["API-13"].items.find((item: EquipmentItem) => item.equipment === equipment) as EquipmentItem;
 
-test("the page states commanded state and its time zone once, and links the chart stylesheets for the lanes", async () => {
+test("the page header reads Control, then Equipment, and the page links the chart stylesheets for the lanes", async () => {
   await load();
-  expect(text(document.querySelector(".page-head .eyebrow"))).toBe("EQUIPMENT · COMMANDED STATE · AMERICA/DENVER");
-  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Equipment and controller");
+  expect(text(document.querySelector(".page-crumbs"))).toBe("Control");
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Equipment");
   expect(links().map((link) => link.rel)).toEqual(["stylesheet", "stylesheet"]);
 });
 

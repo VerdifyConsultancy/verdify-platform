@@ -3,15 +3,16 @@ import { Link, useSearchParams } from "react-router";
 import { PlanLanes, type PlanRow } from "../charts/plan-lanes";
 import { chartLinks } from "../charts/uplot-chart";
 import { Chips } from "../components/chips";
-import { PageHead } from "../components/common";
 import { useServerClockSkew } from "../components/freshness";
+import { PageHeader } from "../components/layout/page-header";
 import { Panel, type PanelState } from "../components/panel";
 import { PlanCard } from "../components/plan-card";
 import { PlannerHealth } from "../components/planner-health";
 import { useApiRead } from "../lib/queries";
+import { viewMeta } from "../lib/sections";
 import { useShellNow } from "../lib/shell";
 
-export const meta = () => [{ title: "Plan · Verdify dashboard" }];
+export const meta = () => viewMeta("control-plan");
 export const links = () => chartLinks();
 
 /** API-07 every 60 s (architecture §3); `usePolledQuery` pauses it while the tab is hidden. */
@@ -62,7 +63,7 @@ export default function Plan() {
     { key: "72", label: "72 h", to: "/plan?hours=72", current: hours === 72 },
   ];
   return <>
-    <PageHead eyebrow="Iris plan · AI · America/Denver" title="Plan" />
+    <PageHeader view="control-plan" />
     <div className="grid grid-2 plan-top">
       <PlanCard data={data} state={state} now={now} onRetry={retry} />
       <PlannerHealth health={data?.health ?? []} state={state} now={now} onRetry={retry} />

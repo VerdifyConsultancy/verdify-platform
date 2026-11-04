@@ -2,34 +2,67 @@
 /* Section: Shell (WP0) */
 /* The header, the phone bar, the account menu, the banners and SCR-09's one-card pages. Loaded by root.tsx after styles.css and tokens.css, in the fixed order of redesign §10.1. Colours are tokens only (white the one literal); this file never redefines :focus-visible or the input borders that the §2.2 block in styles.css sets. */
 
-/* Shell (design system §3, §6): the lockup, the header tools, the banner row, the phone bar and /more, and SCR-09's one-card pages with the session-ended card. */
+/* The lockup: the glyph is the V, so "erdify" follows it with no gap. */
 .brand-word{display:inline-flex;align-items:baseline}
 .brand .brand-glyph{width:auto;height:1.2em;margin-right:-.2em}
+
+/* The header row (redesign §2.2): the lockup, the five sections and the account button. Five links fit from 861 px, so the nav never scrolls sideways; the current section keeps weather's 2 px forest underline. */
+.site-header .primary-nav{overflow:visible}
+.site-header .primary-nav a{gap:.4rem}
+/* The one open-alert count, filled by the worst open severity: critical white on --fault (6.54:1), warning --warn-text on --tint-warn (7.81:1), info ink on --field. */
+.nav-count{display:inline-flex;align-items:center;justify-content:center;min-width:1.35rem;height:1.35rem;padding:0 .35rem;border:1px solid var(--line-strong);border-radius:999px;background:var(--field);color:var(--ink);font:600 var(--fs-label)/1 var(--mono);letter-spacing:0;font-variant-numeric:tabular-nums}
+.nav-count[data-severity=critical]{background:var(--fault);border-color:var(--fault);color:#fff}
+.nav-count[data-severity=warning]{background:var(--tint-warn);border-color:var(--warn-border);color:var(--warn-text)}
+
+/* The account button: the role pill at every width, the name from 1100 px, then weather's chevron. Its panel is the generic menu panel (primitives.css). */
 .role-pill{flex:none}
-.header-name{font-size:.85rem;color:var(--muted);white-space:nowrap}
+.account-menu{margin-left:auto;flex:none}
+.account-menu>summary{gap:.5rem;padding:0 .35rem 0 .5rem;border-radius:var(--radius-sm);color:var(--ink);font-weight:500}
+.account-menu>summary:hover{background:var(--field)}
+.account-menu>summary::before{order:2}
+.account-name{font-size:var(--fs-sm);color:var(--muted);white-space:nowrap}
+.account-unknown{color:var(--forest);font-weight:700}
+.account-menu .menu-panel{min-width:16rem}
+.account-who{font-weight:600}
+.account-signout{margin:var(--space-1) 0 0;padding-top:var(--space-1);border-top:1px solid var(--line)}
+@media(max-width:1099px){.account-menu .account-name:not(.account-unknown){display:none}}
 .signout-form{margin:0}
 .signout-form button{background:#fff;border-color:var(--line-strong);color:var(--forest)}
 .signout-form button:hover{background:#fff;border-color:var(--leaf);color:var(--leaf)}
-.nav-count{font-variant-numeric:tabular-nums}
+
+/* The fault row inside the sticky header (redesign §2.5): the one fault banner while it is true, so it never scrolls away. At most two lines on a phone, its link always in view. */
+.header-fault{border-top:1px solid var(--line)}
+.site-header .header-fault .shell{display:block;min-height:0;padding-block:var(--space-2)}
+.header-fault .banner{flex-wrap:nowrap;margin:0}
+.header-fault .banner>span{flex:1;min-width:0}
+.header-fault .banner>a{flex:none}
+
+/* Warn notices: in flow at the top of <main>, above the page header, one line each. */
 .banners{display:grid;gap:.5rem;margin:0 0 1rem}
 .banners .banner{margin:0}
+
+/* The wide page (redesign §3.2): Graphs and Water → Schedules use --shell-wide, through their route's handle. */
+.shell.page-wide{width:min(100%,var(--shell-wide))}
+
 .bottom-nav{display:none}
-.more-list{list-style:none;margin:0 0 1.5rem;padding:0;border:1px solid var(--line);border-radius:var(--radius);background:#fff}
-.more-list li+li{border-top:1px solid var(--line)}
-.more-list a{display:flex;align-items:center;justify-content:space-between;min-height:2.75rem;padding:0 1rem;color:var(--ink);font-weight:600;text-decoration:none}
-.more-session{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem;margin:0 0 1rem}
-.more-session p{margin:0}
 .page-card-main{padding-block:2.5rem 3rem}
 .page-card{max-width:32rem}
 .page-card h1,.page-card h2{font-size:clamp(1.35rem,3vw,1.75rem);margin-bottom:.5rem}
 .page-card .actions{margin-bottom:0}
-.session-ended{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:1rem}
+.session-ended{position:fixed;inset:0;z-index:var(--z-toast);display:grid;place-items:center;padding:1rem}
 .session-ended::before{content:"";position:absolute;inset:0;background:var(--ink);opacity:.5}
 .session-ended .page-card{position:relative;width:min(28rem,100%);box-shadow:var(--shadow-sm)}
+
+/* Phones (860 px and below, redesign §2.3): a 52 px header with the lockup and the account button, and the fixed bar of the five sections, an icon over a one-word label, each a fifth of the width and at least 44 px. */
 @media(max-width:860px){
-  .site-header .primary-nav,.header-tools .header-name,.header-tools .header-signout{display:none}
-  .bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));min-height:calc(3.5rem + env(safe-area-inset-bottom));padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);background:#fff;border-top:1px solid var(--line)}
-  .bottom-nav a{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:0 .25rem;min-width:0;min-height:3.5rem;padding:0 .125rem;color:var(--muted);font-size:.8rem;font-weight:600;line-height:1.15;text-align:center;text-decoration:none;overflow-wrap:normal}
-  .bottom-nav a[aria-current=page]{color:var(--ink);box-shadow:inset 0 2px 0 var(--forest)}
-  .app-page .site-footer{padding-bottom:calc(3.5rem + env(safe-area-inset-bottom))}
+  .site-header>.shell{min-height:var(--header-h-phone);padding-block:var(--space-1)}
+  .site-header .primary-nav{display:none}
+  .header-fault .banner>span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+  .bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:var(--z-nav);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));min-height:calc(var(--bar-h) + env(safe-area-inset-bottom));padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);background:#fff;border-top:1px solid var(--line)}
+  .bottom-nav .tab{position:relative;display:grid;justify-items:center;align-content:center;gap:.2rem;min-width:0;min-height:var(--bar-h);padding:0 .125rem;color:var(--muted);font-size:var(--fs-xs);font-weight:600;line-height:1.15;text-align:center;text-decoration:none;overflow-wrap:normal}
+  .bottom-nav .tab-icon{display:block;width:1.25rem;height:1.25rem}
+  .bottom-nav .tab-label{display:block;max-width:100%}
+  .bottom-nav .tab[aria-current=page]{color:var(--ink);box-shadow:inset 0 2px 0 var(--forest)}
+  .bottom-nav .nav-count{position:absolute;top:.3rem;left:calc(50% + .4rem);min-width:1.1rem;height:1.1rem;padding:0 .3rem;font-size:var(--fs-label)}
+  .app-page .site-footer{padding-bottom:calc(var(--bar-h) + env(safe-area-inset-bottom))}
 }

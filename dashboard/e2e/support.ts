@@ -164,6 +164,25 @@ export async function expectNoHorizontalScroll(page: Page) {
 
 /** The phone's fixed bottom bar. */
 export const bottomBar = (page: Page) => page.getByRole("navigation", { name: "Sections, phone" });
+/** The desktop nav in the header (above 860 px). */
+export const sectionsNav = (page: Page) => page.getByRole("navigation", { name: "Sections", exact: true });
+/** The five sections in their one order, at every width (redesign §2.1, D-UX-01). */
+export const SECTION_LINKS = [/^Now/, /^Water/, /^Graphs/, /^Activity/, /^Control/];
+
+/**
+ * The account button at the header's right edge (redesign §2.2): a disclosure whose summary holds the role pill (and,
+ * from 1100 px, the name) and whose panel holds who is signed in, the role's words and Sign out. `open()` opens it.
+ */
+export function accountMenu(page: Page) {
+  const menu = page.locator("header details.account-menu");
+  return {
+    menu,
+    button: menu.locator(":scope > summary"),
+    panel: menu.locator(".menu-panel"),
+    signOut: menu.getByRole("button", { name: "Sign out" }),
+    open: async () => { if (!(await menu.evaluate((element) => (element as HTMLDetailsElement).open))) await menu.locator(":scope > summary").click(); },
+  };
+}
 
 /** `target` ends above the bottom bar's top edge, in the first screen of the page. */
 export async function expectAboveTheFold(page: Page, target: Locator) {

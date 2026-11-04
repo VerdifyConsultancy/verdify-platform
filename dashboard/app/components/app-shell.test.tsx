@@ -14,10 +14,11 @@ import { REVISION } from "../../e2e/fixtures/world.mjs";
 import { FakeResizeObserver, MockPlot } from "../charts/fixtures/uplot-mock";
 import routes from "../routes";
 import Activity from "../routes/activity";
+import ActivityLog from "../routes/activity-log";
 import Equipment from "../routes/equipment";
 import Graphs from "../routes/graphs";
-import Scorecard from "../routes/graphs-scorecard";
-import More from "../routes/more";
+import Statistics from "../routes/graphs-statistics";
+import GraphZones from "../routes/graphs.zones";
 import Now from "../routes/now";
 import Plan from "../routes/plan";
 import Settings from "../routes/settings";
@@ -41,8 +42,8 @@ const NOW = Date.parse("2026-11-02T17:42:00Z");
 const BUILD = "fedcba9876543210fedcba9876543210fedcba98";
 /** Every screen route of app/routes.ts by path, with its component; Water's three views render inside its layout. */
 const SCREENS = [
-  ["/", Now], ["/graphs", Graphs], ["/graphs/scorecard", Scorecard], ["/plan", Plan], ["/water", WaterBoard], ["/water/schedules", WaterSchedules],
-  ["/water/history", WaterHistory], ["/settings", Settings], ["/activity", Activity], ["/equipment", Equipment], ["/more", More],
+  ["/", Now], ["/water", WaterBoard], ["/water/schedules", WaterSchedules], ["/water/history", WaterHistory], ["/graphs", Graphs], ["/graphs/zones", GraphZones],
+  ["/graphs/statistics", Statistics], ["/activity", Activity], ["/activity/log", ActivityLog], ["/settings", Settings], ["/plan", Plan], ["/equipment", Equipment],
 ] as const;
 const WATER_VIEWS: readonly string[] = ["/water", "/water/schedules", "/water/history"];
 /** The screens as the route stub nests them, as app/routes.ts does: the Water views under `routes/water.tsx`. */
@@ -103,7 +104,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
-test("the routes: SCR-01 to SCR-07, /more, SCR-09 through /auth/* and a catch-all; no /plants", () => {
+test("the routes: the five sections' views, the scorecard's redirect, SCR-09 through /auth/* and a catch-all; no /more or /plants", () => {
   // A layout's own path is its index child's: Water's three views nest under routes/water.tsx.
   type Entry = { path?: string; index?: boolean; children?: Entry[] };
   const leaves = (entries: readonly Entry[], base = ""): string[] => entries.flatMap((entry) => {
@@ -111,8 +112,12 @@ test("the routes: SCR-01 to SCR-07, /more, SCR-09 through /auth/* and a catch-al
     return entry.children?.length ? leaves(entry.children, path) : [path];
   });
   const paths = leaves(routes as Entry[]);
-  expect(paths).toEqual(["/", "/graphs", "/graphs/scorecard", "/graphs/zones", "/plan", "/water", "/water/schedules", "/water/history", "/settings", "/activity", "/equipment", "/more", "/auth/*", "/*"]);
+  expect(paths).toEqual([
+    "/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/statistics", "/graphs/scorecard", "/activity", "/activity/log",
+    "/settings", "/plan", "/equipment", "/auth/*", "/*",
+  ]);
   expect(paths).not.toContain("/plants");
+  expect(paths).not.toContain("/more");
 });
 
 test("in band: the shell reads API-01 and API-02 once each, shows no banner, and every route renders its head", async () => {
@@ -146,12 +151,14 @@ test("a server render carries no greenhouse data: no banner, count, role, name o
   expect(html).toContain('aria-label="Verdify dashboard, home"');
   expect(html).toContain("fedcba987654");
   expect(html).toContain('action="/auth/logout"');
-  expect(html).not.toMatch(/data-banner|nav-count|role-pill|header-name|Jason|Operator|open alerts/);
+  expect(html).not.toMatch(/data-banner|nav-count|role-pill|account-name"|Jason|Operator|open alerts/);
+  // Before API-01 answers the account button reads Account and still holds Sign out.
+  expect(html).toContain("Account");
   expect(html).not.toContain(REVISION.slice(0, 12));
   expect(requests).toEqual([]);
 });
 
-test("the header: lockup, sections with the count, role pill, name and Sign out; the footer names both builds", async () => {
+test("the header: lockup, the five sections with the count, the account button; the footer names both builds", async () => {
   serve("alerts-merged");
   mount("/activity"); await advance(0);
   const brand = screen.getByRole("link", { name: "Verdify dashboard, home" });
@@ -159,38 +166,80 @@ test("the header: lockup, sections with the count, role pill, name and Sign out;
   expect(brand.querySelectorAll(".brand-leaf, .brand-mark, .brand-dot")).toHaveLength(3);
   expect(text(brand)).toBe("erdify · Dashboard");
   const sections = within(nav("Sections")).getAllByRole("link");
-  expect(sections.map(text)).toEqual(["Now", "Graphs", "Plan", "Water", "Settings", "Activity 2 open alerts", "Equipment"]);
+  expect(sections.map(text)).toEqual(["Now", "Water", "Graphs", "Activity 2 open alerts", "Control"]);
+  expect(sections.map((link) => link.getAttribute("href"))).toEqual(["/", "/water", "/graphs", "/activity", "/settings"]);
   expect(sections.filter((link) => link.getAttribute("aria-current") === "page").map(text)).toEqual(["Activity 2 open alerts"]);
-  expect(text(document.querySelector(".role-pill"))).toBe("Operator");
-  expect(text(document.querySelector(".header-name"))).toBe("Jason");
-  const signOut = document.querySelector<HTMLFormElement>(".header-signout")!;
+  // The count is a pill filled by the worst open severity; the account button holds the role pill and the name.
+  expect(nav("Sections").querySelector(".nav-count")?.getAttribute("data-severity")).toBe("warning");
+  const account = document.querySelector<HTMLDetailsElement>("details.account-menu")!;
+  expect(text(account.querySelector("summary .role-pill"))).toBe("Operator");
+  expect(text(account.querySelector("summary .account-name"))).toBe("Jason");
+  expect(account.open).toBe(false);
+  expect([...account.querySelectorAll(".menu-panel > p")].map(text)).toEqual(["Signed in as Jason (jason)", "Operator: can change anything"]);
+  const signOut = account.querySelector<HTMLFormElement>("form.signout-form")!;
   expect([signOut.method, signOut.getAttribute("action"), text(signOut)]).toEqual(["post", "/auth/logout", "Sign out"]);
+  expect(document.querySelectorAll(".role-pill")).toHaveLength(1);
   const footer = document.querySelector("footer")!;
   expect(text(footer.querySelector(".build-line"))).toBe(`Verdify dashboard · build fedcba987654 · API ${REVISION.slice(0, 12)}`);
   expect(within(footer).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["https://graphs.verdify.ai/", "https://lab.verdify.ai/", "/fonts/OFL-sans.txt", "/fonts/OFL-mono.txt"]);
 });
 
-test("the phone bar holds Now, Water, Graphs, Activity with the count and More; More owns the sections it lists", async () => {
+test("the phone bar holds the same five, each an icon over its label; Control owns Settings, Plan and Equipment", async () => {
   serve("alerts-merged");
-  mount("/plan"); await advance(0);
-  const tabs = within(nav("Sections, phone")).getAllByRole("link");
-  expect(tabs.map(text)).toEqual(["Now", "Water", "Graphs", "Activity 2 open alerts", "More"]);
-  expect(tabs.map((tab) => tab.getAttribute("href"))).toEqual(["/", "/water", "/graphs", "/activity", "/more"]);
-  expect(tabs.filter((tab) => tab.getAttribute("aria-current") === "page").map(text)).toEqual(["More"]);
-  cleanup();
-  mount("/more"); await advance(0);
-  const main = screen.getByRole("main");
-  expect(within(main).getAllByRole("link").map(text)).toEqual(["Plan ›", "Settings ›", "Equipment ›"]);
-  expect(text(within(main).getByText(/Signed in as/))).toBe("Signed in as Jason");
-  expect(within(main).getByRole("button", { name: "Sign out" }).closest("form")?.getAttribute("action")).toBe("/auth/logout");
-  expect(text(main.querySelector(".build-line"))).toBe(`Verdify dashboard · build fedcba987654 · API ${REVISION.slice(0, 12)}`);
+  for (const path of ["/settings", "/plan", "/equipment"]) {
+    mount(path); await advance(0);
+    const tabs = within(nav("Sections, phone")).getAllByRole("link");
+    expect(tabs.map(text), path).toEqual(["Now", "Water", "Graphs", "Activity 2 open alerts", "Control"]);
+    expect(tabs.map((tab) => tab.getAttribute("href"))).toEqual(["/", "/water", "/graphs", "/activity", "/settings"]);
+    expect(tabs.filter((tab) => tab.getAttribute("aria-current") === "page").map(text), path).toEqual(["Control"]);
+    expect(tabs.map((tab) => tab.querySelectorAll("svg.tab-icon[aria-hidden=true]").length)).toEqual([1, 1, 1, 1, 1]);
+    const current = within(nav("Sections")).getAllByRole("link").filter((link) => link.getAttribute("aria-current") === "page");
+    expect(current.map(text), path).toEqual(["Control"]);
+    cleanup();
+  }
+  // Sub-views mark their own section: the log is Activity, Statistics is Graphs.
+  for (const [path, section] of [["/activity/log", "Activity 2 open alerts"], ["/graphs/statistics", "Graphs"], ["/water/history", "Water"]] as const) {
+    mount(path); await advance(0);
+    expect(within(nav("Sections, phone")).getAllByRole("link").filter((tab) => tab.getAttribute("aria-current") === "page").map(text), path).toEqual([section]);
+    cleanup();
+  }
 });
 
-test("a heartbeat 4 min old reads Ingestor not running on every page", async () => {
+test("with no open alert the count draws no pill, and a screen reader still hears 0 open alerts", async () => {
+  serve("in-band");
+  mount("/"); await advance(0);
+  const activity = within(nav("Sections")).getByRole("link", { name: /^Activity/ });
+  expect(text(activity)).toBe("Activity 0 open alerts");
+  expect(activity.querySelector(".nav-count")).toBeNull();
+});
+
+test("every page has a page header: the eyebrow names the section, the h1 the view, and a tabbed section its tabs", async () => {
+  serve("in-band");
+  const expected: Record<string, [string, string, string[]]> = {
+    "/water": ["Water", "Water today", ["Today", "Schedules", "History"]], "/water/schedules": ["Water", "Schedules", ["Today", "Schedules", "History"]],
+    "/water/history": ["Water", "Water history", ["Today", "Schedules", "History"]], "/graphs": ["Graphs", "Climate", ["Climate", "Zones", "Statistics"]],
+    "/graphs/zones": ["Graphs", "Zones", ["Climate", "Zones", "Statistics"]], "/graphs/statistics": ["Graphs", "Statistics", ["Climate", "Zones", "Statistics"]],
+    "/activity": ["Activity", "Alerts", ["Alerts", "Log"]], "/activity/log": ["Activity", "Activity log", ["Alerts", "Log"]],
+    "/settings": ["Control", "Settings", ["Settings", "Plan", "Equipment"]], "/plan": ["Control", "Plan", ["Settings", "Plan", "Equipment"]],
+    "/equipment": ["Control", "Equipment", ["Settings", "Plan", "Equipment"]],
+  };
+  for (const [path, [eyebrow, h1, tabs]] of Object.entries(expected)) {
+    mount(path); await advance(0);
+    expect(text(document.querySelector(".page-crumbs")), path).toBe(eyebrow);
+    expect(screen.getByRole("heading", { level: 1 }).textContent, path).toBe(h1);
+    const views = screen.getByRole("navigation", { name: `${eyebrow} views` });
+    expect(within(views).getAllByRole("link").map(text), path).toEqual(tabs);
+    expect(within(views).getAllByRole("link").filter((tab) => tab.getAttribute("aria-current") === "page").map((tab) => tab.getAttribute("href")), path).toEqual([path]);
+    cleanup();
+  }
+});
+
+test("a heartbeat 4 min old reads Ingestor not running on every page, in a row of the sticky header", async () => {
   serve("ingestor-not-running");
   for (const [path] of SCREENS) {
     mount(path); await advance(0);
     expect(banners(), path).toEqual([{ tone: "fault", text: "Ingestor not running since 10:38. The controller keeps running on its own. Data on Now ›" }]);
+    expect(document.querySelector("header.site-header .header-fault [data-banner=fault]"), path).not.toBeNull();
     cleanup();
   }
 });
@@ -251,6 +300,9 @@ test("stuck delivery and changes off are warn banners; with changes off an opera
     { tone: "warn", text: "Changes are switched off; reading still works" },
   ]);
   expect(screen.getByRole("link", { name: /Requested settings/ }).getAttribute("href")).toBe("/settings?filter=requested");
+  // Warn banners sit in flow at the top of the page, never in the header.
+  expect(document.querySelectorAll("main [data-banner=warn]")).toHaveLength(2);
+  expect(document.querySelector("header [data-banner]")).toBeNull();
   expect(screen.getByRole("button", { name: "Save" }).hasAttribute("disabled")).toBe(true);
   expect(screen.getByRole("button", { name: "Stop all water" }).hasAttribute("disabled")).toBe(false);
 });
@@ -316,7 +368,7 @@ test.each([
   if (action === "Sign in") expect(control.getAttribute("href")).toBe("/auth/login");
   else expect(control.closest("form")?.getAttribute("action")).toBe("/auth/logout");
   expect(screen.queryByRole("navigation")).toBeNull();
-  expect(document.querySelector(".role-pill, .header-signout, [data-banner]")).toBeNull();
+  expect(document.querySelector(".role-pill, .account-menu, [data-banner]")).toBeNull();
   expect(text(document.querySelector(".build-line"))).toBe("Verdify dashboard · build fedcba987654 · API —");
   expect(screen.getByText(/Request id/).textContent).toBe("Request id 4f9d2c1e-7b8a-4c3d-9e2f-1a2b3c4d5e6f");
   expect(requests).toEqual([]);
