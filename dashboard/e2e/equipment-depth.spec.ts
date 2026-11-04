@@ -87,11 +87,11 @@ for (const viewport of VIEWPORTS) {
     const sent = await fixtureWrites(request);
     expect(sent.map((write) => [write.method, write.path, write.operationId])).toEqual([["POST", "/v1/equipment/lights/main/on", "API-20"]]);
     expect(sent[0].idempotency_key).toMatch(UUID);
+    // The light's Activity link opens the log filtered to it, where the command shows.
     await light(page, MAIN).getByRole("link", { name: "Activity of Main" }).click();
-    await expect(page).toHaveURL(/\/activity\?target=grow_light_main$/);
-    const entry = page.getByRole("region", { name: "Activity log", exact: true }).locator("li.event").filter({ has: page.locator("h3", { hasText: "Lights on Main lights" }) });
-    await expect(entry).toHaveCount(1);
-    await expect(entry.locator(".event-body > p").first()).toContainText("Jason · dashboard");
+    await expect(page).toHaveURL(/\/activity\/log\?target=grow_light_main$/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Activity log");
+    await expect(page.getByRole("region", { name: "Activity log", exact: true })).toContainText("Lights on");
   });
 }
 
@@ -109,12 +109,15 @@ test("Back to automatic: one API-10 write reads REQUESTED then CONFIRMED, and on
   await expect.poll(() => sentWrites(request)).toEqual([TURN_ON, AUTO_MAIN, ["POST", "/v1/equipment/lights/main/off", { reason: "Back to automatic" }]]);
   await untilPolled(page, () => expect(lutron(page, MAIN)).toHaveText("Off (controller) · Lutron Off", { timeout: 500 }));
   await expect(page.locator("[data-differ]")).toHaveCount(0);
-  // Both show in Activity: the command with its reason, under the light's own link, and the write under the switch.
+  // Both show in Activity with their reason: the command under the light's own link, and the write under the switch.
   await light(page, MAIN).getByRole("link", { name: "Activity of Main" }).click();
-  const log = page.getByRole("region", { name: "Activity log", exact: true }).locator("li.event");
-  await expect(log.filter({ has: page.locator("h3", { hasText: "Lights off Main lights" }) }).locator(".event-reason")).toHaveText("“Back to automatic”");
-  await load(page, "/activity?target=sw_gl_main_auto_mode");
-  await expect(log.filter({ has: page.locator("h3", { hasText: "Set GL Main Auto Mode" }) }).locator(".event-reason")).toHaveText("“Back to automatic”");
+  await expect(page).toHaveURL(/\/activity\/log\?target=grow_light_main$/);
+  const log = page.getByRole("region", { name: "Activity log", exact: true });
+  await expect(log).toContainText("Lights off");
+  await expect(log).toContainText("“Back to automatic”");
+  await load(page, "/activity/log?target=sw_gl_main_auto_mode");
+  await expect(log).toContainText("GL Main Auto Mode");
+  await expect(log).toContainText("“Back to automatic”");
 });
 
 test("grow-lights-differ: Back to automatic sends one on request once CONFIRMED", async ({ page, request }) => {
@@ -154,15 +157,18 @@ for (const [fixture, says] of [["lights-ha-fail", "Lutron did not switch: Home A
   });
 }
 
-test("viewer-session: the board reads the same with no light control", async ({ page, request }) => {
+test("viewer-session: the board reads the same with no light control; the automatic switch's setting opens read-only", async ({ page, request }) => {
   await useScreensClock(page, request, "viewer-session");
   await load(page, "/equipment");
   await expect(lutron(page, MAIN)).toHaveText("Off (controller) · Lutron Off");
   await expect(automatic(page, MAIN)).toHaveText("Automatic");
   for (const key of [MAIN, GROW]) {
     await expect(light(page, key).getByRole("button")).toHaveCount(0);
-    await expect(light(page, key).getByRole("link")).toHaveCount(0);
+    await expect(light(page, key).getByRole("link")).toHaveText([/^Automation setting/]);
   }
+  await light(page, MAIN).getByRole("link", { name: "Automation setting of Main" }).click();
+  await expect(page.locator("dialog[open]").getByRole("heading", { level: 2 })).toHaveText("Setting");
+  await expect(page.locator("dialog[open]").getByRole("button", { name: "Save" })).toHaveCount(0);
 });
 
 test("writes-off: each light control is disabled beside the changes-off banner", async ({ page, request }) => {

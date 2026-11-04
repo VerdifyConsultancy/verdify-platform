@@ -2,8 +2,9 @@
 import { formatNumber, formatValue, localDate } from "../lib/format";
 import type { Plan } from "../lib/operator-api";
 import { words } from "../lib/words";
-import { Badge } from "./badge";
 import { LocalTime } from "./common";
+import { Mark } from "./control/marks";
+import { ValidityBar } from "./control/validity-bar";
 import { Details } from "./details";
 import { Kv } from "./kv";
 import { Panel, type PanelState } from "./panel";
@@ -18,13 +19,14 @@ export function otherDay(instant: string, nowMs: number): boolean {
   return localDate(instant) !== localDate(new Date(nowMs).toISOString());
 }
 
-/** "10 h left" (whole hours), "40 min left" under an hour, "ended" once past; null when the time is unreadable. */
+/** "6 h 48 min left" (hours and minutes), "40 min left" under an hour, "ended" once past; null when the time is unreadable. */
 export function timeLeft(until: string, nowMs: number): string | null {
   const seconds = (Date.parse(until) - nowMs) / 1000;
   if (!Number.isFinite(seconds)) return null;
   if (seconds <= 0) return "ended";
   if (seconds < HOUR_S) return `${Math.max(1, Math.floor(seconds / 60))}${NBSP}min left`;
-  return `${Math.floor(seconds / HOUR_S)}${NBSP}h left`;
+  const hours = Math.floor(seconds / HOUR_S), minutes = Math.floor((seconds % HOUR_S) / 60);
+  return `${hours}${NBSP}h${minutes ? `${NBSP}${minutes}${NBSP}min` : ""} left`;
 }
 
 /** One stress window of a plan (`StressWindow`, verdify_schemas/plan.py), its codes still raw. */
@@ -105,7 +107,7 @@ function RationaleItem({ line, names }: { line: RationaleLine; names: SettingNam
 /** The disclosure: conditions and expected outcome, then the stress windows, per-setting rationale and intent reasons. */
 function PlanDetails({ plan, names, now }: { plan: PlanRecord; names: SettingNames; now: number }) {
   const detail = planDetail(plan.detail);
-  return <Details summary="Conditions, stress windows and per-setting rationale" className="plan-detail">
+  return <Details summary="Conditions, stress windows and rationale" className="plan-detail">
     <Kv items={[
       { key: "conditions", term: "Conditions", value: plan.conditions_summary || null, reason: "not recorded" },
       { key: "outcome", term: "Expected outcome", value: plan.expected_outcome || null, reason: "not recorded" },
@@ -121,20 +123,28 @@ function PlanDetails({ plan, names, now }: { plan: PlanRecord; names: SettingNam
   </Details>;
 }
 
-/** The plan in force: id, trigger, written, until when and the time left; the hypothesis with AI; what applies after. */
+/**
+ * The plan in force (redesign §5.11): its trigger and id, the validity bar from when it was written to when it ends with
+ * now marked and the time left, Iris's hypothesis marked AI, the disclosure, and what applies after it.
+ */
 function InForce({ plan, names, now }: { plan: PlanRecord; names: SettingNames; now: number }) {
   const until = plan.valid_until ?? null;
   const left = until ? timeLeft(until, now) : null;
   return <>
-    <p className="plan-facts">
-      <span className="mono">{plan.plan_id}</span> · <span className="mono">{plan.trigger}</span> · written <When at={plan.written_at} now={now} /> · to{" "}
-      {until ? <><When at={until} now={now} />{left && <> ({left})</>}</> : <>— <span className="muted">no end time recorded</span></>}
-    </p>
+    <p className="plan-facts"><span className="mono plan-trigger">{plan.trigger}</span> · <span className="mono plan-id">{plan.plan_id}</span></p>
+    <div className="ctl-validity-row">
+      {until && <ValidityBar from={plan.written_at} to={until} now={now} />}
+      <p className="ctl-validity-words">
+        written <When at={plan.written_at} now={now} /> <span aria-hidden="true">→</span> {until
+          ? <>valid to <When at={until} now={now} />{left && <> · <strong className="plan-left">{left}</strong></>}</>
+          : <span className="muted">no end time recorded</span>}
+      </p>
+    </div>
     {plan.hypothesis
-      ? <p className="plan-hypothesis">“{plan.hypothesis}” <Badge kind="ai" /></p>
+      ? <p className="plan-hypothesis">“{plan.hypothesis}” <Mark kind="ai" /></p>
       : <p className="plan-hypothesis">— <span className="muted">no hypothesis recorded</span></p>}
     <PlanDetails plan={plan} names={names} now={now} />
-    {until && <p className="plan-after">After <When at={until} now={now} />: band and defaults until the next plan</p>}
+    {until && <p className="plan-after meta">After <When at={until} now={now} />: band and defaults until the next plan</p>}
   </>;
 }
 
