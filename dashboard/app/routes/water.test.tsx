@@ -512,7 +512,7 @@ test("a viewer sees no Stop on any Water view; at phone width Stop reads \"■ S
   expect(button.className).toBe("btn btn-stop stop-all");
   expect(text(button)).toBe("■ Stop all water");
   expect(text(button.querySelector(".stop-all-rest"))).toBe("water");
-  const css = readFileSync(join(process.cwd(), "app/styles.css"), "utf8");
+  const css = readFileSync(join(process.cwd(), "app/styles/water.css"), "utf8");
   const phone = css.slice(css.indexOf("@media(max-width:860px){\n  .water-bar"));
   expect(phone).toMatch(/^@media\(max-width:860px\)\{\n {2}\.water-bar\{position:sticky;/);
   expect(phone).toContain(".stop-all-rest{display:none}");

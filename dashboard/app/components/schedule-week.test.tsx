@@ -85,7 +85,7 @@ test("at phone width a day switcher shows one day for every line, with no horizo
   expect(within(switcher).getByRole("button", { name: "Wed 11/4" }).getAttribute("aria-pressed")).toBe("true");
   // The stylesheet hides every other day at 860 px and below, where the switcher shows.
   // jsdom's import.meta.url is no file URL: vitest runs from the dashboard package.
-  const css = readFileSync(join(process.cwd(), "app/styles.css"), "utf8");
+  const css = readFileSync(join(process.cwd(), "app/styles/water.css"), "utf8");
   const phone = css.slice(css.indexOf("@media(max-width:860px){\n  .water-bar"));
   expect(phone).toContain(".week-days{display:block");
   expect(phone).toContain(".week-table [data-day]:not(.is-day){display:none}");

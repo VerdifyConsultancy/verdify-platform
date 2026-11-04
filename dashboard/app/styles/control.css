@@ -1,0 +1,91 @@
+/* SPDX-License-Identifier: MIT */
+/* Section: Control (WP4) */
+/* Settings (SCR-05), Plan (SCR-03) and Equipment (SCR-07): the rules moved from styles.css unchanged in WP0.1; new classes use the prefix ctl-. Loaded by root.tsx after styles.css and tokens.css, in the fixed order of redesign §10.1. Colours are tokens only (white the one literal); this file never redefines :focus-visible or the input borders that the §2.2 block in styles.css sets. */
+
+/* Equipment (screens SCR-07): each board row is the name and state over one line of facts; both wrap, so a row fits from 320 px up. */
+.equipment-rows{list-style:none;margin:0;padding:0}
+.equipment-row{padding:.55rem 0;border-top:1px solid var(--line);min-width:0}
+.equipment-row:first-child{padding-top:0;border-top:0}
+.equipment-row:last-child{padding-bottom:0}
+.equipment-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:.15rem .75rem}
+.equipment-name{font-weight:600;min-width:0}
+.equipment-key{font:500 .85rem/1.4 var(--mono);color:var(--muted)}
+.equipment-state{font-size:.85rem;font-variant-numeric:tabular-nums}
+.equipment-facts{margin:.15rem 0 0;font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.equipment-note{margin:.75rem 0 0}
+/* Equipment depth (SCR-07, VD-20): the Why panel, one row per reason at every width (at phone width its label heads the row), and a grow light's controls, each a 44 px target, the buttons full width on phones (.btn-wide). */
+.why-rows{list-style:none;margin:0;padding:0}
+.why-row{display:grid;grid-template-columns:14rem minmax(0,1fr) auto;align-items:center;gap:0 .75rem;border-top:1px solid var(--line);min-width:0}
+.why-row:first-child{border-top:0}
+.why-label{font-weight:600}
+.why-words{min-width:0;padding:.35rem 0;font-size:.9rem}
+.why-since{color:var(--muted);font-variant-numeric:tabular-nums}
+.why-raw{font:500 .85rem/1.4 var(--mono);overflow-wrap:anywhere}
+.why-link,.light-actions a{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
+@media(max-width:860px){.why-row{grid-template-columns:minmax(0,1fr) auto;padding-top:.35rem}.why-label{grid-column:1/-1}}
+.light-controls{margin-top:.35rem}
+.light-auto{margin:0;font-size:.85rem}
+.light-actions{margin:.5rem 0 0}
+.light-controls .state-note,.light-controls .field-error{margin:.35rem 0 0}
+
+/* Plan (SCR-03): the plan in force, planner health and the lanes' head. Card and health sit in .grid-2, which stacks below 600 px; long ids, codes and stored times wrap, so nothing scrolls the page sideways at 390 px. */
+.plan-top{margin-bottom:1rem}
+.plan-facts{margin:0 0 .5rem;font-size:.9rem;overflow-wrap:anywhere}
+.plan-hypothesis{margin:0;overflow-wrap:anywhere}
+.plan-none{margin:0}
+.plan-after{margin:.25rem 0 0;font-size:.875rem;color:var(--muted)}
+.plan-detail{overflow-wrap:anywhere}
+.plan-detail h3{margin:.75rem 0 .3rem;font-size:.9rem}
+.plan-detail ul{margin:0;padding-left:1.1rem;font-size:.875rem}
+.plan-detail li+li{margin-top:.25rem}
+.plan-detail .setting-key{font:400 .78rem/1.3 var(--mono);color:var(--muted)}
+.trigger-list{list-style:none;margin:0;padding:0}
+.trigger-row{display:grid;grid-template-columns:1rem minmax(0,1fr) auto minmax(0,1fr);align-items:baseline;gap:.15rem .6rem;padding:.4rem .25rem .4rem .5rem;border-top:1px solid var(--line);border-left:3px solid transparent;font-size:.875rem}
+.trigger-row:first-child{border-top:0}
+.trigger-marked{border-left-color:var(--amber)}
+.trigger-mark{color:var(--warn-text);font-size:.8rem}
+.trigger-name{font:500 .78rem/1.3 var(--mono);overflow-wrap:anywhere}
+.trigger-due{font-variant-numeric:tabular-nums;white-space:nowrap}
+.trigger-class{grid-column:2/-1;font:400 .72rem/1.3 var(--mono);color:var(--muted);overflow-wrap:anywhere}
+.trigger-more{font-weight:400;color:var(--muted)}
+.plan-lane-tools{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem}
+.plan-manual{margin:0;font:500 .72rem/1.3 var(--mono);letter-spacing:.04em;color:var(--manual-text)}
+
+/* Settings (screens SCR-05, design system §4.6 SettingRow): the catalog's rows, a table at 1440 px and a stacked card each at 860 px and below. */
+.settings-tools{display:grid;gap:.25rem;margin:0 0 1rem}
+.settings-tools .filters{margin:0 0 .5rem}
+.settings-tools .filters label{flex:1 1 18rem;max-width:32rem}
+.chip-count,.table-group-count{font-variant-numeric:tabular-nums}
+.table-group-count{font-weight:400}
+.setting-name{min-width:11rem}
+.setting-label{display:block;font-weight:600}
+.setting-param{display:block;font-size:.78rem;color:var(--muted)}
+.setting-line{display:flex;flex-wrap:wrap;align-items:center;gap:.2rem .4rem;margin:0}
+.setting-line+.setting-line,.setting-line+.state-reason,.state-reason+.setting-line{margin-top:.25rem}
+.setting-device-value{font-weight:600;font-variant-numeric:tabular-nums}
+.setting-note{font-size:.85rem;color:var(--muted)}
+.setting-next-text{display:inline-flex;flex-wrap:wrap;align-items:center;gap:.2rem .4rem}
+.setting-cell-label{display:none}
+.setting-actions{white-space:nowrap}
+.setting-actions a{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
+.setting-history{margin-left:.6rem}
+.drawer-setting .eyebrow{margin-bottom:.15rem}
+@media(max-width:860px){
+  .settings-table table,.settings-table tbody,.settings-table tr,.settings-table th,.settings-table td{display:block;width:auto}
+  .settings-table thead{display:none}
+  .settings-table .setting-row{padding:.65rem .75rem;border-bottom:1px solid var(--line)}
+  .settings-table .setting-row th,.settings-table .setting-row td{padding:.15rem 0;border:0}
+  .setting-row .setting-device-value{font-size:1.25rem}
+  .setting-cell-label{display:inline;font-size:.78rem;color:var(--muted)}
+  .setting-actions{display:flex;flex-wrap:wrap;gap:.25rem .75rem;white-space:normal;padding-top:.4rem}
+  .setting-actions .setting-edit{flex:1 1 100%}
+  .setting-history{margin-left:0}
+}
+/* Settings depth (VD-19, screens SCR-05): the drawer's history with Revert and a crop-band anchor's curve preview, each a panel without its card frame. The Revert button's words wrap, so a long one fits the drawer at 320 px. */
+.drawer-history{margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--line)}
+.drawer-history>.card,.band-preview>.card{padding:0;border:0;box-shadow:none}
+.band-preview{margin:0 0 .9rem}
+.history-no-readback{margin:0 0 .35rem}
+.drawer-revert{margin-top:.75rem}
+.drawer-revert .btn{width:100%}
+.drawer-revert .field-error{margin-top:.35rem}

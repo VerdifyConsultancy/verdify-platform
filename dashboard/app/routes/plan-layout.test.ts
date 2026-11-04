@@ -6,7 +6,8 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
-const styles = read("../styles.css");
+// Weather's grids stay in styles.css; Plan's own rules moved to its section file (redesign §10.2, WP0.1).
+const styles = `${read("../styles.css")}\n${read("../styles/control.css")}`;
 const charts = read("../charts/charts.css");
 /** The declarations of the first rule whose selector is `selector`, after `from`. */
 function rule(css: string, selector: string, from = 0): string {

@@ -25,6 +25,7 @@ import { RunningPanel } from "../components/now/running";
 import { WaterCard, type StopControl } from "../components/now/water-card";
 import { PanelErrorBoundary } from "../components/panel";
 import { ZoneTiles } from "../components/zone-tiles";
+import { PHONE_QUERY } from "../lib/narrow";
 import { nowAnswer } from "../lib/now-answer";
 import { SessionEnded } from "../lib/operator-api";
 import { READ_INTERVAL_MS, SETTLING_INTERVAL_MS, irrigationSettling, panelRead, readKey, useApiRead } from "../lib/queries";
@@ -35,8 +36,6 @@ export const meta = () => [{ title: "Now · Verdify dashboard" }];
 /** Needs someone reads API-14 every 15 s. */
 export const ALERTS_POLL_MS = 15_000;
 const OPEN_ALERTS = { status: "open" } as const;
-/** Phones: Mode, Iris, Water and Alerts stay in the hero; Data and the rest move under "All readings". */
-const PHONE = "(max-width: 860px)";
 
 /**
  * The ingestor banner and the answer link to `#data`, the Data tile. On a phone that tile sits in the closed "All
@@ -45,7 +44,7 @@ const PHONE = "(max-width: 860px)";
 function useDataTileOnPhones(drawn: boolean) {
   const { hash } = useLocation();
   useEffect(() => {
-    if (!drawn || hash !== "#data" || typeof window.matchMedia !== "function" || !window.matchMedia(PHONE).matches) return;
+    if (!drawn || hash !== "#data" || typeof window.matchMedia !== "function" || !window.matchMedia(PHONE_QUERY).matches) return;
     const details = document.querySelector<HTMLDetailsElement>(".hero details");
     if (!details) return;
     details.open = true;

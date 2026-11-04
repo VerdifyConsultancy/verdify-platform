@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: MIT
 import type uPlot from "uplot";
 import { TIME_ZONE, dayTitle, repeatedLocalTime } from "../lib/format";
+import { NARROW_QUERY, narrowViewport } from "../lib/narrow";
 
 /**
  * America/Denver time for charts (design system §5.4). X values are UTC epoch seconds; every label is formatted with
- * `Intl.DateTimeFormat` in America/Denver on a 24-hour clock, never in the browser's zone.
+ * `Intl.DateTimeFormat` in America/Denver on a 24-hour clock, never in the browser's zone. The 860 px breakpoint the
+ * axes switch at is declared once in lib/narrow.ts (redesign §9.9) and re-exported here for the chart code.
  */
-export const NARROW_QUERY = "(max-width: 860px)";
+export { NARROW_QUERY, narrowViewport };
 export const AXIS_FONT = '12px "IBM Plex Sans", system-ui, sans-serif';
 const DAY = 86_400;
-
-/** True at 860 px and below, the breakpoint the stylesheet uses; false where there is no window (SSR, tests). */
-export function narrowViewport(): boolean {
-  return typeof globalThis.matchMedia === "function" && globalThis.matchMedia(NARROW_QUERY).matches;
-}
 
 const LOCAL = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23", timeZoneName: "longOffset" });
 type LocalParts = { year: string; month: string; day: string; hour: string; minute: string; second: string; offset: string };

@@ -47,3 +47,11 @@ test("chart code: colours only from tokens, no style attribute or HTML strings, 
     expect(text, path).not.toMatch(/\bdli\b|par_today/i);
   }
 });
+
+test("components/data draws without chart code: SVG and HTML only, so Now never loads uPlot (redesign §4.6, §9.7)", () => {
+  const data = sources.filter((source) => source.path.startsWith("components/data/"));
+  for (const { path, text } of data) {
+    expect(text, path).not.toMatch(/from\s+["'][./]*charts\//);
+    expect(text, path).not.toMatch(/["']uplot["']|import\(["']uplot/);
+  }
+});

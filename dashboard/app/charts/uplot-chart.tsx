@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type uPlot from "uplot";
 import uplotStyles from "uplot/dist/uPlot.min.css?url";
 import { TIME_ZONE } from "../lib/format";
+import { narrowViewport, usePhone } from "../lib/narrow";
 import chartStyles from "./charts.css?url";
 import type { ChartColors } from "./draw";
-import { NARROW_QUERY, narrowViewport } from "./time-axis";
 import type { XRange } from "./types";
 
 /**
@@ -55,19 +55,12 @@ export function resetZoom(key: string, range: XRange) {
 export const FINE_POINTER = "(pointer: fine)";
 const finePointer = () => typeof globalThis.matchMedia === "function" && globalThis.matchMedia(FINE_POINTER).matches;
 
-function subscribeNarrow(change: () => void): () => void {
-  if (typeof globalThis.matchMedia !== "function") return () => {};
-  const query = globalThis.matchMedia(NARROW_QUERY);
-  query.addEventListener("change", change);
-  return () => query.removeEventListener("change", change);
-}
 /**
- * True at 860 px and below; follows the viewport. The server and the hydrating render read the wide value, as the server
- * has no viewport, so the hydrated markup matches; React then re-renders with the phone value.
+ * True at 860 px and below; follows the viewport. It is `usePhone` from lib/narrow.ts, the one breakpoint hook: the
+ * server and the hydrating render read the wide value, so the hydrated markup matches; React then re-renders with the
+ * phone value.
  */
-export function useNarrow(): boolean {
-  return useSyncExternalStore(subscribeNarrow, narrowViewport, () => false);
-}
+export const useNarrow = usePhone;
 
 const ids = new WeakMap<object, number>();
 let lastId = 0;

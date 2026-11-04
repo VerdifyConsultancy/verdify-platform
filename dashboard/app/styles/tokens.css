@@ -1,0 +1,9 @@
+/* SPDX-License-Identifier: MIT */
+/* Section: Tokens */
+/* Layout tokens of redesign §3.3 (D-UX-09): space, type, widths, heights and z-index. There are no colour tokens here: every colour is a token of styles.css (weather's :root and the §2.2 block). Loaded by root.tsx right after styles.css, so styles.css keeps exactly its two :root blocks. */
+:root{
+  --space-1:.25rem;--space-2:.5rem;--space-3:.75rem;--space-4:1rem;--space-5:1.5rem;--space-6:2rem;--space-7:3rem;
+  --fs-label:.72rem;--fs-xs:.75rem;--fs-sm:.875rem;--fs-md:1rem;--fs-lg:1.25rem;--fs-xl:1.75rem;
+  --shell-wide:96rem;--aside:22rem;--rail:15rem;--tap:2.75rem;--bar-h:3.5rem;--header-h-phone:3.25rem;
+  --z-raised:3;--z-sticky:10;--z-nav:20;--z-popover:30;--z-toast:40;
+}

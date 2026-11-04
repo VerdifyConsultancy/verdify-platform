@@ -928,6 +928,21 @@ export const FIXTURES = {
 };
 
 /**
+ * Adds a screen package's named fixtures (`e2e/fixtures/<package>.mjs`, redesign §10.1) to `FIXTURES`; index.mjs calls
+ * it once per package before anything reads the names. A name that is already registered throws, so a package never
+ * shadows a base fixture or another package's.
+ * @param {string} owner the package file, for the error
+ * @param {Readonly<Record<string, (world: any) => void>>} fixtures
+ */
+export function registerFixtures(owner, fixtures) {
+  for (const [name, patch] of Object.entries(fixtures)) {
+    if (Object.hasOwn(FIXTURES, name)) throw new Error(`Fixture ${name} from ${owner} is already registered`);
+    if (typeof patch !== "function") throw new Error(`Fixture ${name} from ${owner} is not a function of the world`);
+    FIXTURES[name] = patch;
+  }
+}
+
+/**
  * The world for `names` (one name or a list, applied in order over `in-band`) at `now`. Options: `now` (epoch ms or
  * an ISO time; default the current time), `confirm` (`requested-to-confirmed` only: false makes the write read
  * not_confirmed) and `fail` ({operationId: status}).

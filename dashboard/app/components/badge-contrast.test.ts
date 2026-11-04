@@ -71,7 +71,7 @@ test("AlertRow's 3px rule takes its severity colour from the row's own classes, 
   expect(rule("alert-warning")).toContainEqual(["border-left-color", "var(--amber)"]);
 });
 
-test("the components use tokens only: no colour literal but white in their stylesheet section, and no hex or inline style in their source", () => {
+test("the components use tokens only: no colour literal but white in their stylesheet section, and no hex, rgb(, hsl( or inline style in their source", () => {
   const raw = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
   const start = raw.indexOf("/* Dashboard components");
   const end = raw.indexOf("/* Dashboard (design system §2.2)");
@@ -80,13 +80,15 @@ test("the components use tokens only: no colour literal but white in their style
   const section = raw.slice(raw.indexOf("*/", start) + 2, end);
   expect([...section.matchAll(/#[0-9a-f]{3,8}\b/gi)].map((match) => match[0].toLowerCase()).filter((hex) => hex !== "#fff")).toEqual([]);
   expect(section).not.toMatch(/rgb\(|hsl\(/);
+  // Every component source, in every folder (redesign §9.5): now, graphs, equipment, forms, layout and data included.
   const directory = new URL("./", import.meta.url);
-  const sources = readdirSync(directory).filter((name) => name.endsWith(".tsx") && !name.includes(".test.") && name !== "test-render.tsx");
-  expect(sources.length).toBeGreaterThanOrEqual(17);
+  const sources = (readdirSync(directory, { recursive: true }) as string[]).filter((name) => /\.tsx?$/.test(name) && !name.includes(".test.") && !name.endsWith("test-render.tsx"));
+  expect(sources.length).toBeGreaterThanOrEqual(40);
   for (const name of sources) {
     // Comments name issues (#1124), so they are dropped before looking for colour literals.
     const code = readFileSync(new URL(name, directory), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
     expect(code, name).not.toMatch(/#[0-9a-f]{3,8}\b/i);
-    expect(code, name).not.toMatch(/\sstyle=\{/);
+    expect(code, name).not.toMatch(/\b(?:rgba?|hsla?)\(/);
+    expect(code, name).not.toMatch(/\sstyle=\{|\sstyle="/);
   }
 });

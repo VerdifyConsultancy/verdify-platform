@@ -101,6 +101,36 @@ Both weather values fail WCAG 2.2 SC 1.4.11 (3:1); chips and outline buttons kee
 | Space, targets | Weather's literals (.25 to 3rem), grid gap 1rem, card padding 1rem; 44 px (2.75rem) buttons, inputs, nav and summary; chips 2.5rem; checkboxes 24 px |
 | Numbers | Tabular figures; a no-break space before units ("72.4 °F"), none before % ("61.8%"); true minus ("−0.4 °F") |
 
+### 2.4 Layout tokens and stylesheet sections ([redesign](redesign.md) §3.3, §10.1)
+
+`app/styles.css` keeps weather's copy and the §2.2 block last, with exactly its two `:root` blocks. Everything else is
+one file per owner under `app/styles/`, which `root.tsx` loads after `styles.css` in this fixed order (`STYLESHEETS`):
+
+| File | Section | Owner |
+|---|---|---|
+| `tokens.css` | Tokens: the layout tokens below, and no colour | WP0 |
+| `primitives.css` | Primitives: layout classes, the card system, the micro-visualizations | WP0 |
+| `shell.css` | Shell: header, account menu, phone bar, banners, SCR-09's cards | WP0 |
+| `now-activity.css` | Now and Activity (prefixes `now-`, `act-`) | WP1 |
+| `graphs.css` | Graphs (prefix `gr-`) | WP2 |
+| `water.css` | Water (prefixes `wat-`, `sch-`) | WP3 |
+| `control.css` | Control (prefix `ctl-`) | WP4 |
+
+```css
+:root{
+  --space-1:.25rem;--space-2:.5rem;--space-3:.75rem;--space-4:1rem;--space-5:1.5rem;--space-6:2rem;--space-7:3rem;
+  --fs-label:.72rem;--fs-xs:.75rem;--fs-sm:.875rem;--fs-md:1rem;--fs-lg:1.25rem;--fs-xl:1.75rem;
+  --shell-wide:96rem;--aside:22rem;--rail:15rem;--tap:2.75rem;--bar-h:3.5rem;--header-h-phone:3.25rem;
+  --z-raised:3;--z-sticky:10;--z-nav:20;--z-popover:30;--z-toast:40;
+}
+```
+
+The section files load after the §2.2 block, so none may redefine `:focus-visible` or the input borders, and none
+carries a colour literal but white (`app/styles/sections.test.ts`). WP0.1 moved the screen rules out of `styles.css`
+unchanged; no moved rule sets a property a §2.2 rule sets on the same element at the same specificity, and the rules
+whose relative order changed between files style different screens' elements. The breakpoints are declared once in
+`app/lib/narrow.ts` (`PHONE_PX = 600`, `NARROW_PX = 860`, `WIDE_PX = 1200`) and mirrored by the media queries.
+
 ## 3. Shell and header
 
 Weather's header, nav and footer, with a Verdify lockup.
