@@ -264,7 +264,8 @@ test("a missed SUNSET turns the Iris phrase amber; Acknowledge sends one API-15 
   await advance(0);
   expect(writes(api).map((row) => [row.operationId, row.path])).toEqual([["API-15", "/api/v1/alerts/101/ack"]]);
   expect(answer()).toBe("1 thing needs someone");
-  expect(text(document.querySelector("#needs-someone"))).toContain("Acknowledged by jason · 10:42");
+  // In the shell the signed-in person reads by name, as on Activity.
+  expect(text(document.querySelector("#needs-someone"))).toContain("Acknowledged by Jason · 10:42");
 });
 
 test("the answer links to what explains it; the ingestor banner's #data opens All readings in place", async () => {

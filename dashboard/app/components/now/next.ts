@@ -221,11 +221,12 @@ export function trackRows(input: TrackInput, window: NextWindow): TrackRow[] {
     key: `plan-${at}`, at, label: `${clockOf(at)} ${changes[0].text}${changes.length > 1 ? ` +${changes.length - 1}` : ""}${isAiSource(changes[0].source) ? " · AI" : ""}`,
   }));
   const sun: TrackMarker[] = sunTimes(input.agenda?.solar, window).map(({ at, kind }) => ({ key: `${kind}-${at}`, at, label: `${kind === "sunrise" ? "Sunrise" : "Sunset"} ${clockOf(at)}` }));
+  const row = (key: RowKey, rest: Pick<TrackRow, "spans" | "markers">): TrackRow => ({ key, label: ROW_LABELS[key], data: { "data-row": key }, ...rest });
   return [
-    ...(["heat", "air", "mist", "drip"] as const).map((key): TrackRow => ({ key, label: ROW_LABELS[key], spans: spans(key) })),
-    { key: "iris", label: ROW_LABELS.iris, spans: [], markers: iris },
-    { key: "plan", label: ROW_LABELS.plan, spans: [], markers: plan },
-    { key: "sun", label: ROW_LABELS.sun, spans: [], markers: sun },
+    ...(["heat", "air", "mist", "drip"] as const).map((key) => row(key, { spans: spans(key) })),
+    row("iris", { spans: [], markers: iris }),
+    row("plan", { spans: [], markers: plan }),
+    row("sun", { spans: [], markers: sun }),
   ];
 }
 

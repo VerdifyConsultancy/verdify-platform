@@ -6,7 +6,7 @@ import { fixture } from "../../../e2e/fixtures/index.mjs";
 import { nowAnswer } from "../../lib/now-answer";
 import { parseIrrigationStatus, parseNow, type IrrigationStatus, type Now } from "../../lib/operator-api";
 import type { PanelRead } from "../../lib/queries";
-import { irisText, irisWarns, lineName, lineStatesUnknown, lineTitle, modeText, occupancyText, planLine } from "./status";
+import { irisText, irisWarns, lineName, lineStatesUnknown, modeText, occupancyText, planLine } from "./status";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); });
@@ -48,7 +48,7 @@ test("occupancy: someone inside, nobody seen, unknown, the hold off, and unknown
 
 test("lines: the plain name from the relay, the states unknown only from the API, never from an age before the firmware", () => {
   const lines = statusOf("in-band").lines;
-  expect([lineName(lines[0]), lineTitle(lines[3]), lineName({ line_id: "L99", name: "Hose bib" })]).toEqual(["Wall drip", "L04 Center mister", "Hose bib"]);
+  expect([lineName(lines[0]), lineName(lines[3]), lineName({ line_id: "L99", name: "Hose bib" })]).toEqual(["Wall drip", "Center mister", "Hose bib"]);
   expect(lineStatesUnknown(statusOf("in-band"))).toBe(false);
   expect(lineStatesUnknown(statusOf("controller-not-reporting"))).toBe(true);
   const before = statusOf("before-engine");

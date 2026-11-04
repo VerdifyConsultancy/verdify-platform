@@ -206,7 +206,7 @@ test("Acknowledge sends one API-15 and the answer follows the one count", async 
   const needsSomeone = page.locator("#needs-someone");
   await needsSomeone.getByRole("button", { name: /^Acknowledge/ }).first().click();
   await expect(answer(page)).toHaveText("1 thing needs someone");
-  await expect(needsSomeone).toContainText("Acknowledged by jason · 10:42");
+  await expect(needsSomeone).toContainText("Acknowledged by Jason · 10:42");
   expect((await fixtureRequests(request, "API-15")).map((row) => row.path)).toEqual(["/v1/alerts/101/ack"]);
 });
 

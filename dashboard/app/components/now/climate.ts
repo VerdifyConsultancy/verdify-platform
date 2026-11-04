@@ -126,8 +126,6 @@ export function bandWords(row: Pick<BandRow, "band" | "unit" | "key" | "verdict"
   if (row.band) return `band ${rangeWords(row.band.low, row.band.high, row.unit)}`;
   return row.key === "rh" && row.verdict === null ? "no band" : "band unavailable";
 }
-/** "today 61.2–71.9 °F"; null without today's range. */
-export const todayWords = (row: Pick<BandRow, "today" | "unit">): string | null => (row.today ? `today ${rangeWords(row.today.low, row.today.high, row.unit)}` : null);
 /** The reading in its unit, or "—". */
 export const readingText = (reading: Reading, unit: string): string => formatValue(finite(reading.value) ? reading.value : null, unit);
 /** The verdict a row shows: only when out of band ("above band"), never "in band" (the normal state is quiet). */

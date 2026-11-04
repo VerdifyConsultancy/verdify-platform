@@ -5,7 +5,7 @@
  * - The top three alerts nobody has acknowledged (API-14 rows with `status` open), in API-14's order (by severity then
  *   age), each an `AlertRow` with "Details ›" into Activity and, for operators, Acknowledge with an optional note in an
  *   "Add a note" disclosure. Acknowledge sends one API-15 request with one `Idempotency-Key`; the row then reads
- *   "Acknowledged by jason · 06:47" and stays in place for this visit so that answer can be read.
+ *   "Acknowledged by Jason · 06:47" (the signed-in person by name) and stays in place for this visit so that answer can be read.
  * - A mister's watchdog back-off or latch (API-IRR-01 `lines[].fault`), with Clear fault on a latch. A latch whose
  *   `irrigation_line_faulted` alert is in the list carries its Clear fault on that alert's row instead, so it reads once.
  * - "N settings not confirmed ›" (API-02 `writer.differing`), into Settings' Not confirmed filter, unless the stuck
@@ -21,7 +21,9 @@ import { Link } from "react-router";
 import { shortTime } from "../../lib/format";
 import type { NowAnswer } from "../../lib/now-answer";
 import type { Alert, AlertPage, IrrigationLine, IrrigationStatus, Now } from "../../lib/operator-api";
+import { personName } from "../../lib/activity";
 import type { PanelRead } from "../../lib/queries";
+import { useMe } from "../../lib/shell";
 import { words } from "../../lib/words";
 import { Acknowledge } from "../activity/acknowledge";
 import { ALERTS_UNAVAILABLE, AlertRow, NO_OPEN_ALERTS, alertListEmptyText } from "../alert-row";
@@ -79,6 +81,7 @@ export type NeedsSomeoneProps = {
 };
 
 export function NeedsSomeone({ alerts, now, answer, apiFailed, openCount, irrigation }: NeedsSomeoneProps) {
+  const me = useMe();
   // Alerts acknowledged on this page stay in place, so their row can say who acknowledged them and when.
   const [acknowledged, setAcknowledged] = useState<ReadonlySet<number>>(() => new Set());
   const keep = useCallback((alert: Alert) => setAcknowledged((ids) => new Set(ids).add(alert.id)), []);
@@ -105,7 +108,9 @@ export function NeedsSomeone({ alerts, now, answer, apiFailed, openCount, irriga
         const line = faultedLine(alert);
         const latch = line ? status?.lines.find((row) => row.line_id === line) : undefined;
         const breach = alert.alert_type === "irrigation_fence_breach" && alert.status === "open";
-        return <AlertRow key={alert.id} alert={alert} openTo={`/activity?alert=${alert.id}`}
+        // The API names people by username; the signed-in person reads by name, as on Activity.
+        const named = alert.acknowledged_by ? { ...alert, acknowledged_by: personName(alert.acknowledged_by, me) } : alert;
+        return <AlertRow key={alert.id} alert={named} openTo={`/activity?alert=${alert.id}`}
           action={latch && status ? <ClearFaultButton line={latch} engine={status.engine} /> : undefined}
           acknowledge={alert.status === "open" ? <Acknowledge alert={alert} onAcknowledged={keep} /> : undefined}>
           {breach && <p className="meta now-breach-note">Stop all water is in the quick actions above.</p>}

@@ -2,13 +2,12 @@
 // What Now's hero and zone strip draw from the climate series (redesign §5.1): today's low and high from local midnight,
 // the zones' last 24 h, time in band today and yesterday, and the band rows' words; a gap stays a gap, never 0.
 import { expect, test } from "vitest";
-import { answer, buildWorld } from "../../../e2e/fixtures/index.mjs";
+import { answer, buildWorld, fixture } from "../../../e2e/fixtures/index.mjs";
 import { dateShift, localDayStart } from "../../lib/format";
 import { parseNow, parseSeries, type Series } from "../../lib/operator-api";
-import { fixture } from "../../../e2e/fixtures/index.mjs";
 import {
   DAY_KEYS, DAY_POINTS, DAY_WINDOW_S, HOUSE_KEYS, TIB_KEYS, ZONE_VPD_KEYS, bandRows, bandWords, hasTimeInBand, outOfBand, percentText, rangeSince, timeInBand,
-  todayStartS, todayWords, valuesSince,
+  todayStartS, valuesSince,
 } from "./climate";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
@@ -65,8 +64,7 @@ test("the band rows: temperature, VPD and RH with their bands, RH's no band, a v
   expect(rows.map((row) => [row.key, plain(bandWords(row)), row.href])).toEqual([
     ["temp", "band 62.0–70.0 °F", "/graphs?range=24h#temperature"], ["vpd", "band 0.45–0.80 kPa", "/graphs?range=24h#vpd"], ["rh", "no band", "/graphs?range=24h#rh"],
   ]);
-  expect(plain(todayWords(rows[0]))).toMatch(/^today \d\d\.\d–\d\d\.\d °F$/);
-  expect(todayWords({ today: null, unit: "°F" })).toBeNull();
+  expect(rows[0].today?.low).toBeLessThan(rows[0].today?.high ?? Number.NaN);
   expect([outOfBand("in"), outOfBand("above"), outOfBand("below"), outOfBand("unavailable"), outOfBand(null)]).toEqual([null, "above", "below", null, null]);
   expect(bandWords({ band: null, unit: "°F", key: "temp", verdict: "unavailable" })).toBe("band unavailable");
 });

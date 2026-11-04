@@ -123,7 +123,11 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .now-dot.is-neutral{background:var(--muted)}
 .now-track{min-height:15.5rem}
 .now-track-caption{font-weight:400;color:var(--muted)}
-.now-track .tt-marker-label{font-size:var(--fs-xs)}
+.now-track .tt-track{overflow:hidden}
+.now-track .tt-marker-label{max-width:22rem;overflow:hidden;font-size:var(--fs-xs);text-overflow:ellipsis}
+/* The plan's changes can fall a few hours apart: their labels take turns above and below, in a taller row. */
+.now-track .tt-row[data-row=plan]{--tt-row:2.25rem}
+.now-track .tt-row[data-row=plan] .tt-marker:nth-child(even of .tt-marker) .tt-marker-label{top:auto;bottom:1px}
 .now-next{display:none}
 .now-next-list{margin:0;padding:0;list-style:none}
 .now-next-item{display:grid;grid-template-columns:3.5rem minmax(0,1fr);gap:var(--space-3);padding:var(--space-2) 0;border-top:1px solid var(--line);font-size:var(--fs-sm)}

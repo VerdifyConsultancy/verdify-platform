@@ -312,11 +312,6 @@ export function facetsWith(facets: readonly Facet[], current: string | undefined
   const agent = current.startsWith("agent:") ? `${current.slice("agent:".length)} · agent` : current;
   return [...facets, [current, agent]];
 }
-const sorted = (values: Iterable<string>) => [...new Set(values)].sort((a, b) => a.localeCompare(b));
-/** Each `agent:<name>` source among the entries. */
-export const seenAgents = (entries: readonly ActivityEntry[]): string[] => sorted(entries.map((entry) => entry.actor.source).filter((source) => source.startsWith("agent:")));
-/** Each actor name among the entries. */
-export const seenActors = (entries: readonly ActivityEntry[]): string[] => sorted(entries.map((entry) => entry.actor.name));
 
 // ---------------------------------------------------------------------------------------------------- the log, one line an entry
 const DAY_HEAD = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" });

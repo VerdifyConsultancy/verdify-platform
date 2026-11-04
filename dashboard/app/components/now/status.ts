@@ -71,5 +71,3 @@ export function lineName(line: Pick<IrrigationLine, "line_id" | "name">): string
   const equipment = lineById(line.line_id)?.equipment;
   return equipment ? words("equipment", equipment) : line.name;
 }
-/** "L04 Center mister". */
-export const lineTitle = (line: Pick<IrrigationLine, "line_id" | "name">): string => `${line.line_id} ${lineName(line)}`;
