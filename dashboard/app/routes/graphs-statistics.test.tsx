@@ -134,9 +134,9 @@ test("day by day: a strip row each for temperature and VPD in band, Iris missed 
   expect(missed.filter((cell) => cell.getAttribute("data-level") === "2").map((cell) => cell.getAttribute("aria-label"))).toEqual(["Oct 24: Iris missed 1 required plan"]);
   expect(strip("Alerts raised")[29].getAttribute("aria-label")).toBe("Nov 2: 1 alert raised (0 critical, 1 warning)");
   // The gallons: one bar per day with a reading, today and the days with no meter reading hatched.
-  const gallons = document.querySelector(".gr-bars")!;
+  const gallons = document.querySelector(".gr-gallons")!;
   expect(gallons.getAttribute("role")).toBe("img");
-  expect(gallons.querySelectorAll("li")).toHaveLength(30);
+  expect(gallons.querySelectorAll(".gr-bar-cell")).toHaveLength(30);
   expect(gallons.querySelectorAll("[data-none=true]").length).toBeGreaterThanOrEqual(3);
   expect(document.querySelector(".strip-legend")).not.toBeNull();
 });

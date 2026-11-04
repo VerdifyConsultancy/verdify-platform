@@ -55,15 +55,13 @@ function GallonsRow({ days }: { days: readonly StatDay[] }) {
   const label = known.length
     ? `Gallons per day, ${dayTitle(days[0].date, "short")} to ${dayTitle(days[days.length - 1].date, "short")}: ${formatValue(Math.min(...known), "gal")} to ${formatValue(Math.max(...known), "gal")} a day, ${formatValue(total, "gal")} in all. The data table below has each day.`
     : "Gallons per day: no meter readings in this period";
-  // The strip's own 2 px inset, so these cells sit under its cells.
+  // The strip's own 2 px inset, so these cells sit under its cells; an image named by its numbers, not a list.
   return <div className="gr-days-pad">
-    <ol className={cls("strip", "gr-bars", apiDown && "is-neutral")} role="img" aria-label={label}>
-      {days.map((day) => <li key={day.date}>
-        <span className="gr-bar-cell" data-none={day.values.water === null ? "true" : undefined} data-partial={day.partial ? "true" : undefined}>
-          {day.values.water !== null && <span className="gr-bar" ref={cssVars({ "--gr-h": `${Math.round((day.values.water / peak) * 100)}%` })} />}
-        </span>
-      </li>)}
-    </ol>
+    <div className={cls("gr-gallons", apiDown && "is-neutral")} role="img" aria-label={label}>
+      {days.map((day) => <span key={day.date} className="gr-bar-cell" data-none={day.values.water === null ? "true" : undefined} data-partial={day.partial ? "true" : undefined}>
+        {day.values.water !== null && <span className="gr-bar" ref={cssVars({ "--gr-h": `${Math.round((day.values.water / peak) * 100)}%` })} />}
+      </span>)}
+    </div>
   </div>;
 }
 

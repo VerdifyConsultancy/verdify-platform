@@ -147,8 +147,8 @@ export default function GraphZones() {
             ...GRID_ZONES.map((item) => ({ key: item, label: ZONE_WORDS[item], to: zonesHref(item, spec, rows), current: item === zone, keepScroll: true })),
           ]} />
           : <>
-            <div className="gr-wide-only"><Chips small label="Metrics" items={metricChips(false)} /></div>
-            <div className="gr-phone-only"><Chips small label="Metric" items={metricChips(true)} /></div>
+            <div className="gr-wide-only"><span className="gr-chips-label" aria-hidden="true">Metrics</span><Chips small label="Metrics" items={metricChips(false)} /></div>
+            <div className="gr-phone-only"><span className="gr-chips-label" aria-hidden="true">Metric</span><Chips small label="Metric" items={metricChips(true)} /></div>
           </>}
       </RangeToolbar>
     </div>

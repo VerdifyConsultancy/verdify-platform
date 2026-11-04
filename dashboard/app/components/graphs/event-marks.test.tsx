@@ -67,7 +67,7 @@ test("day by day: one region holding the strips, the gallons as bars on the same
   expect(region.getAttribute("tabindex")).toBe("0");
   // No data at all: every cell hatched, never good, and the gallons say so.
   expect(within(region).getAllByRole("link").every((cell) => cell.getAttribute("data-level") === "none")).toBe(true);
-  expect(region.querySelector(".gr-bars")!.getAttribute("aria-label")).toBe("Gallons per day: no meter readings in this period");
+  expect(region.querySelector(".gr-gallons")!.getAttribute("aria-label")).toBe("Gallons per day: no meter readings in this period");
   expect([...region.querySelectorAll(".gr-days-tick")].map(text)).toEqual(["Oct 5", "Oct 12", "Oct 19", "Oct 26", "Nov 2"]);
   expect(region.querySelector(".gr-days-tick-end")?.textContent).toBe("Nov 2");
 });
