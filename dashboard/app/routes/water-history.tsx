@@ -285,7 +285,8 @@ function RunsSection({ names, today, days, search, setSearch }: { names: Readonl
         {failedOlder && <PanelError thing="older runs" onRetry={() => void failedOlder.refetch()} />}
         <div className="actions wat-runs-actions">
           {(next || loadingOlder) && <Button disabled={loadingOlder} onClick={() => { if (next) setOlder({ key: pageKey, pages: [...pages, next] }); }}>Load older</Button>}
-          {runs.length > 0 && <CsvLink filename={dayCsvFilename("runs", range.from, range.to)} build={() => runsCsv(runs, names, today)} version={runs} label="CSV of these runs" />}
+          {/* Rebuilt only when the loaded runs change, not on every render. */}
+          {runs.length > 0 && <CsvLink filename={dayCsvFilename("runs", range.from, range.to)} build={() => runsCsv(runs, names, today)} version={runs.map((run) => `${run.run_id}:${run.outcome}`).join(",")} label="CSV of these runs" />}
         </div>
       </>
       : !first.isError && <div className="skeleton skeleton-md" aria-hidden="true" />}

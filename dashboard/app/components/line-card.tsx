@@ -75,7 +75,8 @@ export function LineStateText({ line, engine, today, scheduleLabels }: { line: I
       // A watchdog fault says it with its end time.
       return fault ? <span className={cls("line-fault", line.fault === "mister_fault" ? "fault" : "line-fault-warn")} data-fault={line.fault}>{fault}</span> : <>Can't run now{state.reason && <> · {state.reason}</>}</>;
     case "disabled":
-      return line.reserved ? <>Reserved · disabled</> : <>Off{!line.check && line.kind !== "fog" ? " · no check recorded" : ""}</>;
+      // L03 is checked with L02 and fog is climate only: neither has a check of its own.
+      return line.reserved ? <>Reserved · disabled</> : <>Off{!line.check && line.kind !== "fog" && line.kind !== "master" ? " · no check recorded" : ""}</>;
     case "idle":
       return <>Idle · {lastWaterParts(line, today).state}</>;
     default:

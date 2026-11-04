@@ -112,7 +112,7 @@ test("L02's row carries L03, the fertilizer master, as its sub-row", () => {
   const { article } = row(lineOf(from, "L02"), { master: lineOf(from, "L03") });
   const sub = article.querySelector(".line-subrow")!;
   expect(sub.getAttribute("data-line")).toBe("L03");
-  expect(text(sub)).toBe(`└ L03 Fert master: ${MASTER_TEXT} · Off · no check recorded`);
+  expect(text(sub)).toBe(`└ L03 Fert master: ${MASTER_TEXT} · Off`);
   expect(MASTER_TEXT).toBe("opens the injector line from the tank with each feed");
 });
 

@@ -19,16 +19,20 @@ export function meterDomain(kind: string): MeterDomain {
   return kind === "mister" ? "mister" : kind === "fert_drip" || kind === "fert_mister" ? "fert" : kind === "drip" ? "water" : "neutral";
 }
 
-/** A block on its track: a button with its name in words, or a draft's outline (not saved, nothing to open). */
-export function Block({ block, scale, onSelect, selected = false }: { block: DayBlock; scale: TimeScale; onSelect?: (block: DayBlock, opener: HTMLElement) => void; selected?: boolean }) {
+/**
+ * A block on its track: a button with its name in words, or a draft's outline (not saved, nothing to open). A running
+ * one is solid up to now and dashed after it (redesign §6.2), through `--sch-done`.
+ */
+export function Block({ block, scale, onSelect, selected = false, now = null }: { block: DayBlock; scale: TimeScale; onSelect?: (block: DayBlock, opener: HTMLElement) => void; selected?: boolean; now?: number | null }) {
   const place = scale.span(block.start, block.end);
   if (!place) return null;
+  const done = block.status === "running" && now !== null ? Math.min(100, Math.max(0, ((now - block.start) / Math.max(1, block.end - block.start)) * 100)) : 100;
   const narrow = place.width < ROOM_PERCENT;
   const className = cls(
     "sch-block", `sch-${block.status}`, `sch-${block.token}`, block.part !== "run" && "sch-part", narrow && (place.start > LATE_PERCENT ? "sch-narrow-end" : "sch-narrow"),
     block.capped && "sch-capped", block.draft && "sch-draft", block.conflict && "sch-conflict", selected && "is-selected",
   );
-  const vars = cssVars({ "--sch-start": place.start, "--sch-width": place.width });
+  const vars = cssVars({ "--sch-start": place.start, "--sch-width": place.width, "--sch-done": done });
   const time = block.label.slice(0, 5);
   const words = block.part === "run" && block.label ? <span className="sch-block-label" aria-hidden="true">{narrow ? time : block.label}</span> : null;
   if (block.part !== "run") return <span ref={vars} className={className} title={block.name} aria-hidden="true" />;
@@ -137,8 +141,8 @@ export function DayTimeline({ model, now, head, label, selected, onBlock, newTo,
     if (box.width <= 0) return;
     onSlot(row.lineId, slotClock(model.day, (event.clientX - box.left) / box.width));
   };
-  return <section className={cls("sch-day", apiDown && "is-neutral")} aria-labelledby={headingId}>
-    <div className="sch-day-head" id={headingId}>{head}</div>
+  return <section className={cls("sch-day", apiDown && "is-neutral")}>
+    <div className="sch-day-head">{head}</div>
     <div className="sch-day-body" role="group" aria-label={label} tabIndex={0} onKeyDown={rovingKeys()}>
       <div className="sch-axis-row"><span className="sch-axis-gap" /><DayAxis scale={scale} /><span className="sch-axis-end meta">today / cap</span></div>
       {model.groups.map((group) => <div key={group.key} className="sch-group">
@@ -156,7 +160,7 @@ export function DayTimeline({ model, now, head, label, selected, onBlock, newTo,
                 return place && <span ref={cssVars({ "--sch-start": place.start, "--sch-width": place.width })} className="sch-pause"><span className="sch-pause-words">{row.pause.words}</span></span>;
               })()}
               <Ticks episodes={row.episodes} scale={scale} token={row.kind === "mister" || row.kind === "fert_mister" ? "mister" : row.kind === "fert_drip" ? "fert" : "water"} />
-              {row.blocks.map((block) => <Block key={block.key} block={block} scale={scale} onSelect={onBlock} selected={selected === block.blockKey && block.blockKey !== ""} />)}
+              {row.blocks.map((block) => <Block key={block.key} block={block} scale={scale} onSelect={onBlock} selected={selected === block.blockKey && block.blockKey !== ""} now={nowS} />)}
               {row.episodes.length > 0 && <span className="screen-reader">{row.episodes.map(episodeWords).join("; ")}</span>}
             </div>
             <div className="sch-row-end">

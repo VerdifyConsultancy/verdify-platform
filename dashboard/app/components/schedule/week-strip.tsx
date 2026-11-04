@@ -33,13 +33,14 @@ export function WeekStrip({ cells, selected, dayTo, previousTo, nextTo }: WeekSt
   const last = cells.at(-1)?.date ?? selected;
   const span = `${MONTH.format(noon(first))} ${DAY_NUMBER(first)} – ${MONTH.format(noon(last)) === MONTH.format(noon(first)) ? "" : `${MONTH.format(noon(last))} `}${DAY_NUMBER(last)}`;
   return <nav className={cls("sch-week", apiDown && "is-neutral")} aria-label="Week">
-    {previousTo ? <Link className="button-link sch-week-step" to={previousTo} preventScrollReset><span aria-hidden="true">‹</span><span className="screen-reader">Previous week</span></Link>
-      : <span className="sch-week-step is-off" aria-hidden="true">‹</span>}
+    <p className="sch-week-span" aria-hidden="true">{span}</p>
+    {previousTo ? <Link className="button-link sch-week-step sch-week-prev" to={previousTo} preventScrollReset><span aria-hidden="true">‹</span><span className="screen-reader">Previous week</span></Link>
+      : <span className="sch-week-step sch-week-prev is-off" aria-hidden="true">‹</span>}
     <ol className="week-days sch-week-days" aria-label={`Week of ${span}`}>
       {cells.map((cell) => {
         const name = weekCellName(cell);
         const body = <>
-          <span className="sch-day-date"><span className="sch-day-weekday">{WEEKDAY.format(noon(cell.date))}</span> {DAY_NUMBER(cell.date)}{cell.when === "today" && <span className="sch-day-today"> today</span>}</span>
+          <span className="sch-day-date"><span className="sch-day-weekday">{WEEKDAY.format(noon(cell.date))}</span> <span className="sch-day-number">{DAY_NUMBER(cell.date)}</span>{cell.when === "today" && <span className="sch-day-today"> today</span>}</span>
           <span className="sch-day-summary">{cell.summary}</span>
           <span className="sch-day-level" data-level={cell.level === null ? "none" : cell.level === undefined ? "ahead" : String(cell.level)} data-partial={cell.when === "today" ? "true" : undefined} aria-hidden="true" />
         </>;
@@ -50,8 +51,8 @@ export function WeekStrip({ cells, selected, dayTo, previousTo, nextTo }: WeekSt
         </li>;
       })}
     </ol>
-    {nextTo ? <Link className="button-link sch-week-step" to={nextTo} preventScrollReset><span aria-hidden="true">›</span><span className="screen-reader">Next week</span></Link>
-      : <span className="sch-week-step is-off" aria-hidden="true">›</span>}
+    {nextTo ? <Link className="button-link sch-week-step sch-week-next" to={nextTo} preventScrollReset><span aria-hidden="true">›</span><span className="screen-reader">Next week</span></Link>
+      : <span className="sch-week-step sch-week-next is-off" aria-hidden="true">›</span>}
   </nav>;
 }
 

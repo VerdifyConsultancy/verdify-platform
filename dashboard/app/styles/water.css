@@ -53,7 +53,6 @@ a.wat-site-term{display:inline-flex;align-items:center;min-height:24px;text-unde
 .mister-off{flex-basis:100%;margin:0;font-size:var(--fs-sm);font-weight:600}
 
 /* A line's row (ObjectRow): its state sentence, the today strip with its next run full width under it, Run…, Stop and ⋯. */
-.wat-line .object-row-head h3{font-size:var(--fs-md)}
 .wat-line .object-row-state{font-size:var(--fs-sm)}
 .line-state{display:inline-flex;flex-wrap:wrap;align-items:center;gap:0 var(--space-1)}
 .line-fault{font-weight:600}
@@ -89,7 +88,8 @@ a.wat-site-term{display:inline-flex;align-items:center;min-height:24px;text-unde
 
 /* ---------------------------------------------------------------------------------------------------- the day's marks */
 /* Shared by the day timeline, the today strips, the week matrix and the key: positions are CSSOM custom properties (--sch-start, --sch-width, --sch-at), never style attributes. Done is solid in the cause's colour, planned a dashed outline, will-not-run hatched, missed a fault outline, an unknown outcome a muted hatch. */
-.sch-track{position:relative;height:var(--sch-row,28px);min-width:0;border-radius:var(--radius-sm);background:#fff;box-shadow:inset 0 0 0 1px var(--line)}
+/* Each track is its own stacking context, so the now rule rides over its blocks but never over the sticky tab row. */
+.sch-track{position:relative;isolation:isolate;height:var(--sch-row,28px);min-width:0;border-radius:var(--radius-sm);background:#fff;box-shadow:inset 0 0 0 1px var(--line)}
 .sch-track-new{cursor:cell}
 .sch-night{position:absolute;top:0;bottom:0;left:calc(var(--sch-start) * 1%);width:calc(var(--sch-width) * 1%);background:var(--field)}
 .sch-now{position:absolute;top:-3px;bottom:-3px;z-index:var(--z-raised);left:calc(var(--sch-at) * 1%);border-left:1.5px solid var(--ink);pointer-events:none}
@@ -103,8 +103,8 @@ a.wat-site-term{display:inline-flex;align-items:center;min-height:24px;text-unde
 button.sch-block{cursor:pointer}
 button.sch-block:hover,.sch-block.is-selected{box-shadow:0 0 0 2px var(--ink)}
 .sch-part{top:9px;bottom:9px}
-.sch-done,.sch-running{background:var(--sch-fill)}
-.sch-running{box-shadow:0 0 0 1.5px var(--ink)}
+.sch-done{background:var(--sch-fill)}
+.sch-running{border:1.5px dashed var(--sch-fill);background:linear-gradient(to right,var(--sch-fill) calc(var(--sch-done,100) * 1%),#fff calc(var(--sch-done,100) * 1%))}
 .sch-planned{background:#fff;border:1.5px dashed var(--sch-fill)}
 .sch-skipped,.sch-blocked{background:repeating-linear-gradient(135deg,var(--line-strong) 0 2px,#fff 2px 5px);border:1px solid var(--muted)}
 .sch-missed{background:#fff;border:1.5px solid var(--fault)}
@@ -115,8 +115,9 @@ button.sch-block:hover,.sch-block.is-selected{box-shadow:0 0 0 2px var(--ink)}
 .sch-block-label{position:absolute;top:50%;left:3px;padding:1px 3px;border-radius:2px;background:#fff;white-space:nowrap;pointer-events:none;transform:translateY(-50%)}
 .sch-narrow .sch-block-label{left:calc(100% + 3px);background:transparent}
 .sch-narrow-end .sch-block-label{left:auto;right:calc(100% + 3px);background:transparent}
-.is-neutral .sch-done,.is-neutral .sch-running,.is-neutral .sch-tick{background:var(--muted)}
-.is-neutral .sch-planned,.is-neutral .sch-missed{border-color:var(--muted)}
+.is-neutral .sch-done,.is-neutral .sch-tick{background:var(--muted)}
+.is-neutral .sch-running{background:linear-gradient(to right,var(--muted) calc(var(--sch-done,100) * 1%),#fff calc(var(--sch-done,100) * 1%))}
+.is-neutral .sch-planned,.is-neutral .sch-missed,.is-neutral .sch-running{border-color:var(--muted)}
 
 /* The hour ticks over a day's tracks: every 3 h from 861 px, every 6 h below. */
 .sch-axis{position:relative;height:1.1rem;min-width:0}
@@ -132,9 +133,13 @@ button.sch-block:hover,.sch-block.is-selected{box-shadow:0 0 0 2px var(--ink)}
 .sch-key-button{min-height:2.5rem}
 
 /* The week strip: Monday to Sunday, past outcomes and future counts side by side; the selected day ringed in ink. */
-.sch-week{display:flex;flex:1 1 44rem;align-items:stretch;gap:var(--space-2);min-width:0}
+.sch-week{display:grid;flex:1 1 44rem;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"prev days next";align-items:stretch;gap:var(--space-2);min-width:0}
+.sch-week-span{display:none}
+.sch-week-prev{grid-area:prev}
+.sch-week-next{grid-area:next}
+.sch-week-days{grid-area:days}
 .sch-week-step{flex:none;min-width:var(--tap);padding:0;font-size:1.2rem}
-span.sch-week-step.is-off{color:var(--line-strong)}
+span.sch-week-step.is-off{display:inline-flex;align-items:center;justify-content:center;color:var(--line-strong)}
 .sch-week-days{display:grid;flex:1;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--space-1);min-width:0;margin:0;padding:0;list-style:none}
 .sch-week-day{min-width:0}
 .sch-week-day>a,.sch-week-none{display:grid;align-content:start;gap:3px;height:100%;min-height:var(--tap);padding:var(--space-2);border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff;color:var(--ink);text-decoration:none}
@@ -306,8 +311,11 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
 @media(max-width:860px){
   .sch-views-desktop,.sch-only-desktop{display:none}
   .sch-views-phone,.sch-only-phone{display:block}
-  .sch-week{flex-basis:100%;gap:var(--space-1)}
-  .sch-week-day>a,.sch-week-none{padding:var(--space-1);text-align:center}
+  /* Phones: the week's span and ‹ › over a row of seven 44 px days, so every target keeps its size. */
+  .sch-week{flex-basis:100%;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"span prev next" "days days days";gap:var(--space-1) var(--space-2)}
+  .sch-week-span{display:block;grid-area:span;align-self:center;margin:0;font-weight:620}
+  .sch-week-day>a,.sch-week-none{justify-items:center;padding:var(--space-1) 2px;text-align:center}
+  .sch-day-date{display:grid;justify-items:center;line-height:1.2}
   .sch-day-summary{display:none}
   .sch-day-weekday{letter-spacing:.02em}
   .sch-day-today{display:none}
@@ -321,11 +329,12 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
   .sch-row .sch-track{grid-area:track}
   .sch-cap{width:8.5rem;flex:none}
   .sch-add{min-width:var(--tap);min-height:var(--tap)}
-  .sch-block-label{display:none}
+  .sch-block-label,.sch-axis-wide{display:none}
   .wat-day-row{grid-template-columns:minmax(0,1fr);gap:var(--space-1)}
   .wat-day-axis{margin-right:0}
   .wat-zone-today{justify-content:flex-start;max-width:none}
   .wat-runs-table{display:none}
+  a.wat-site-term{min-height:var(--tap)}
   .wat-line .object-row-actions .state-note,.wat-line .object-row-actions .field-error{text-align:left}
 }
 @media(max-width:600px){

@@ -1,0 +1,111 @@
+// @vitest-environment jsdom
+// SPDX-License-Identifier: MIT
+// The schedule views on their own (redesign §6, §4.6): the day timeline, the today strip, the week strip and the agenda
+// over #1122's schedules-paused week at 10:42 on Monday 2026-11-02 — what the server sends, the API-down neutral state,
+// the timeline's one tab stop with arrow keys along its blocks, and an empty slot's click.
+import { renderToString } from "react-dom/server";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
+import { afterEach, expect, test, vi } from "vitest";
+import { fixture } from "../../../e2e/fixtures/index.mjs";
+import type { IrrigationStatus, ScheduleAgenda, StateLanes } from "../../lib/operator-api";
+import { SessionProvider } from "../../lib/session";
+import { renderUi, text } from "../test-render";
+import { DayStrip } from "../water/day-strip";
+import { Agenda } from "./agenda";
+import { DayTimeline } from "./day-timeline";
+import { agendaDays, dayModel, entriesOf, mondayOf, weekCells } from "./model";
+import { WeekStrip } from "./week-strip";
+
+const NOW = Date.parse("2026-11-02T17:42:00Z");
+const TODAY = "2026-11-02";
+const served = fixture("schedules-paused", { now: NOW });
+const agenda = served["API-IRR-02"] as ScheduleAgenda;
+const status = served["API-IRR-01"] as IrrigationStatus;
+const lanes = served["API-05"] as StateLanes;
+const entries = entriesOf(agenda, null, NOW);
+const model = (day = TODAY) => dayModel({ day, today: TODAY, now: NOW, agenda, lines: status.lines, lanes: day <= TODAY ? lanes : null, entries });
+
+afterEach(cleanup);
+
+test("the server sends the timeline's rows and words with no style attribute: positions are CSSOM custom properties set on mount", () => {
+  const html = renderToString(<MemoryRouter><DayTimeline model={model()} now={NOW} head={<h2>Monday</h2>} label="Runs on Monday by line" /></MemoryRouter>);
+  expect(html).toContain('data-line="L01"');
+  expect(html).not.toMatch(/\sstyle=/);
+  const strip = renderToString(<DayStrip name="L04 Center mister" from={model().from} to={model().to} night={model().night} blocks={[]} episodes={[]} now={NOW} token="mister" />);
+  expect(strip).not.toMatch(/\sstyle=/);
+  expect(strip).toContain('role="img"');
+});
+
+test("the timeline is one tab stop: its blocks are out of the tab order and the arrow keys move along them; an operator's empty slot gives its line and time", () => {
+  const onSlot = vi.fn();
+  const onBlock = vi.fn();
+  renderUi(<DayTimeline model={model("2026-11-04")} now={NOW} head={<h2>Wednesday</h2>} label="Runs on Wednesday by line" onBlock={onBlock} onSlot={onSlot} newTo={(line) => `/new?line=${line}`} />, { role: "operator", writesEnabled: true });
+  const group = screen.getByRole("group", { name: "Runs on Wednesday by line" });
+  expect(group.getAttribute("tabindex")).toBe("0");
+  const blocks = [...group.querySelectorAll<HTMLElement>("button.sch-block")];
+  expect(blocks.map((block) => block.getAttribute("tabindex"))).toEqual(blocks.map(() => "-1"));
+  expect(blocks.map((block) => block.getAttribute("aria-label")?.slice(0, 13))).toEqual(["L01 Wall drip", "L04 Center mi"]);
+  group.focus();
+  fireEvent.keyDown(group, { key: "ArrowRight" });
+  expect(document.activeElement).toBe(blocks[0]);
+  fireEvent.keyDown(group, { key: "End" });
+  expect(document.activeElement).toBe(blocks.at(-1));
+  fireEvent.click(blocks[0]);
+  expect(onBlock).toHaveBeenCalledWith(expect.objectContaining({ blockKey: "11-1793802900" }), blocks[0]);
+  // A click on a block never makes a new schedule; one on the empty track does, rounded to 15 min.
+  expect(onSlot).not.toHaveBeenCalled();
+  const track = group.querySelector<HTMLElement>('.sch-row[data-line="L09"] .sch-track')!;
+  track.getBoundingClientRect = () => ({ left: 0, width: 960, top: 0, height: 28, right: 960, bottom: 28, x: 0, y: 0, toJSON: () => ({}) });
+  fireEvent.click(track, { clientX: 960 * (15.1 / 24) });
+  expect(onSlot).toHaveBeenCalledWith("L09", "15:00");
+  expect(screen.getByRole("link", { name: "New schedule on L09 West mister" }).getAttribute("href")).toBe("/new?line=L09");
+});
+
+test("a viewer's timeline offers no new schedule: no [+], and the track takes no click", () => {
+  renderUi(<DayTimeline model={model()} now={NOW} head={<h2>Monday</h2>} label="Runs on Monday by line" />);
+  expect(document.querySelector(".sch-add, .sch-track-new")).toBeNull();
+  // Without onBlock the blocks are words, not buttons.
+  expect(document.querySelectorAll("button.sch-block")).toHaveLength(0);
+});
+
+test("with the API down the timeline, the strip, the week and the agenda go neutral: nothing green, no verdict colour", () => {
+  const down = { role: "viewer" as const, writesEnabled: false, apiDown: true };
+  const cells = weekCells(mondayOf(TODAY), { agenda, lines: status.lines, today: TODAY, first: "2026-10-26", last: "2026-11-08" });
+  renderUi(<>
+    <DayTimeline model={model()} now={NOW} head={<h2>Monday</h2>} label="Runs" />
+    <DayStrip name="L04" from={model().from} to={model().to} night={[]} blocks={[]} episodes={[]} now={NOW} token="mister" />
+    <WeekStrip cells={cells} selected={TODAY} dayTo={(date) => `/d/${date}`} previousTo={null} nextTo={null} />
+    <Agenda days={agendaDays(entries, { first: TODAY, days: 1, last: "2026-11-08", today: TODAY, now: NOW, lines: status.lines })} />
+  </>, down);
+  expect([".sch-day", ".wat-day", ".sch-week", ".sch-agenda"].map((selector) => document.querySelector(selector)?.classList.contains("is-neutral"))).toEqual([true, true, true, true]);
+});
+
+test("the week strip: seven days with their summaries and levels, the selected one current; a day outside what is served is not a link", () => {
+  const cells = weekCells("2026-11-02", { agenda, lines: status.lines, today: TODAY, first: "2026-10-26", last: "2026-11-05" });
+  renderUi(<WeekStrip cells={cells} selected="2026-11-04" dayTo={(date) => `/d/${date}`} previousTo="/d/2026-10-28" nextTo={null} />);
+  const list = screen.getByRole("list", { name: "Week of Nov 2 – 8" });
+  expect([...list.querySelectorAll("li")].map((item) => text(item.querySelector(".sch-day-summary")))).toEqual(["2 ok", "1 next", "2 next", "1 next", "no data", "no data", "no data"]);
+  expect(screen.getAllByRole("link").filter((link) => link.closest("ol")).map((link) => link.getAttribute("aria-current"))).toEqual([null, null, "date", null]);
+  expect([...list.querySelectorAll(".sch-day-level")].map((level) => level.getAttribute("data-level"))).toEqual(["0", "ahead", "ahead", "ahead", "none", "none", "none"]);
+  expect(list.querySelector('.sch-day-level[data-partial="true"]')).not.toBeNull();
+  expect(screen.getByRole("link", { name: "Previous week" }).getAttribute("href")).toBe("/d/2026-10-28");
+  expect(screen.queryByRole("link", { name: "Next week" })).toBeNull();
+});
+
+test("the agenda: a row is a button that opens its popover, NEXT on the next planned run, and the pauses above the days", () => {
+  const onOpen = vi.fn();
+  renderUi(<Agenda days={agendaDays(entries, { first: TODAY, days: 2, last: "2026-11-08", today: TODAY, now: NOW, lines: status.lines })} pauses={["L01 Wall drip: paused until 14:00 by jason"]} onOpen={onOpen} />);
+  expect(text(document.querySelector(".sch-agenda-pauses"))).toBe("L01 Wall drip: paused until 14:00 by jason");
+  const rows = screen.getAllByRole("button");
+  expect(rows.map((row) => row.getAttribute("aria-label")?.replaceAll(" ", " "))).toEqual([
+    "06:50 L04 Center mister · 8 × 60 s, Dawn drench · ok, done", "07:35 L01 Wall drip · 12 min, Wall MWF · ok, done", "06:50 L04 Center mister · 8 × 60 s, Dawn drench · Iris may adjust, next",
+  ]);
+  fireEvent.click(rows[2]);
+  expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ next: true, lineId: "L04" }), rows[2]);
+});
+
+test("a session provider is all the timeline needs to render for a viewer, with no router write path", () => {
+  const html = renderToString(<MemoryRouter><SessionProvider role="viewer"><DayTimeline model={model()} now={NOW} head={null} label="Runs" /></SessionProvider></MemoryRouter>);
+  expect(html).not.toContain("data-write-control");
+});

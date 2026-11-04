@@ -47,7 +47,7 @@ export function DayStrip({ name, from, to, night, blocks, episodes, now, token, 
       <div className="sch-track wat-track" role="img" aria-label={stripWords(name, blocks, episodes)}>
         <DayBackdrop night={night} scale={scale} now={now / 1000} />
         <Ticks episodes={episodes} scale={scale} token={token} />
-        {blocks.map((block) => <Block key={block.key} block={block} scale={scale} />)}
+        {blocks.map((block) => <Block key={block.key} block={block} scale={scale} now={now / 1000} />)}
       </div>
       {next !== undefined && <p className="wat-next">{next ?? <span className="meta">nothing planned</span>}</p>}
     </div>
