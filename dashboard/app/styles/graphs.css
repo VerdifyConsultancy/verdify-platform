@@ -140,8 +140,12 @@ a.picker-item:hover{background:var(--field)}
   .gr-zones .chart-grid .stack-plot,.gr-zones .chart-grid .grid-plot{height:110px}
   .gr-zones .chart-grid .grid-cell-axis .stack-plot{height:142px}
   .gr-zone-link{min-height:var(--tap)}
-  .gr-days-row{grid-template-columns:6.5rem minmax(0,1fr);gap:0 var(--space-2)}
-  .gr-days-grid{min-width:calc(var(--gr-days, 30) * .625rem + 7rem)}
-  .gr-days-label{font-size:var(--fs-xs)}
+  /* On a phone each row's name sits above its cells, so 30 days fit at once at 360 px (cells at least 8 px); longer
+     windows scroll inside the region, the names staying at its left edge. */
+  .gr-days-card{padding:var(--space-3)}
+  .gr-days-row{grid-template-columns:minmax(0,1fr);gap:var(--space-1) 0}
+  .gr-days-grid{min-width:calc(var(--gr-days, 30) * .625rem + 4px)}
+  .gr-days-label{justify-self:start;padding:0;font-size:var(--fs-xs)}
+  .gr-days-axis-row .gr-days-label{display:none}
   .gr-kpis .metric-tile{min-height:9rem}
 }

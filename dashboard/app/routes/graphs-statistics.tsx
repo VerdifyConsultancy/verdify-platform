@@ -131,7 +131,7 @@ export default function Statistics() {
       {failed.length > 0 && <PanelError thing="part of the statistics" text="Couldn't load part of the statistics." onRetry={() => { for (const read of failed) read.refetch(); }} />}
       <StatsKpis kpis={figures} days={days} vs={vs} waterHref={waterHref} />
       <Section header={<SectionHeader title="Day by day" meta={`${dayTitle(window.from, "short")}–${dayTitle(window.to, "short")} · each day opens in Climate`} />}>
-        <div className="card"><DayByDay days={days} /></div>
+        <div className="card gr-days-card"><DayByDay days={days} /></div>
       </Section>
       <div className="l-cols-2 gr-pair">
         <Card title="Typical day" className="gr-chart-card"

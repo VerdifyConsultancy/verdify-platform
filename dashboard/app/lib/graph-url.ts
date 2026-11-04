@@ -477,7 +477,7 @@ export function stepSpec(spec: WindowSpec, window: GraphWindow, direction: -1 | 
  */
 export function zoomOutSpec(spec: WindowSpec, window: GraphWindow, now: number): WindowSpec | null {
   if (window.length >= MAX_WINDOW_S) return null;
-  if (spec.kind === "range") return { kind: "range", range: rangeText(Math.min(MAX_WINDOW_S, Math.max(2 * window.length, 2 * DAY_S))) };
+  if (spec.kind === "range") return { kind: "range", range: rangeText(Math.min(MAX_WINDOW_S, 2 * window.length)) };
   if (spec.kind === "days") {
     const count = dayCount(spec.from, spec.to);
     const grown = Math.min(MAX_DAYS, 2 * count);

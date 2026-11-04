@@ -204,6 +204,8 @@ test("‹ and › step by the window's own length; Zoom out doubles it, a live w
   expect(zoomOutSpec(at("range=72h").spec, at("range=72h").window, NOW)).toEqual({ kind: "range", range: "6d" });
   expect(zoomOutSpec(at("range=90d").spec, at("range=90d").window, NOW)).toEqual({ kind: "range", range: "180d" });
   expect(zoomOutSpec(at("range=400d").spec, at("range=400d").window, NOW)).toBeNull();
+  expect(zoomOutSpec(at("range=300d").spec, at("range=300d").window, NOW)).toEqual({ kind: "range", range: "400d" });
+  expect(zoomOutSpec(at("range=3h").spec, at("range=3h").window, NOW)).toEqual({ kind: "range", range: "6h" });
   // Today steps to yesterday, as a day.
   const today = at("range=today");
   expect(stepSpec(today.spec, today.window, -1, NOW)).toEqual({ kind: "days", from: "2026-11-01", to: "2026-11-01" });
