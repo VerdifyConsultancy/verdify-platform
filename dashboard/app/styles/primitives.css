@@ -28,6 +28,216 @@
 .menu-panel>a,.menu-panel>button,.menu-panel>form>button{display:flex;align-items:center;width:100%;min-height:var(--tap);padding:0 var(--space-3);border:0;border-radius:var(--radius-sm);background:#fff;color:var(--forest);font-size:var(--fs-sm);font-weight:700;text-align:left;text-decoration:none}
 .menu-panel>a:hover,.menu-panel>button:hover,.menu-panel>form>button:hover{background:var(--field);color:var(--leaf)}
 
+/* Layout primitives (redesign §3.2): one job per breakpoint, 600 px (card grids go to two columns), 861 px (navigation, axes, tables to rows) and 1200 px (the main and aside split). Weather's .grid-* stay for weather's sections; new code uses these. */
+.page{display:grid;gap:var(--space-6);min-width:0}
+.page-section{min-width:0}
+.l-stack{display:grid;gap:var(--space-4);min-width:0}
+.l-stack-sm{display:grid;gap:var(--space-2);min-width:0}
+.l-stack-lg{display:grid;gap:var(--space-6);min-width:0}
+.l-cluster{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)}
+.l-cols-2,.l-cols-3,.l-cols-4{display:grid;gap:var(--space-3);grid-template-columns:minmax(0,1fr);align-items:start}
+.l-cols-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+.l-split,.l-rail{display:grid;gap:var(--space-4);grid-template-columns:minmax(0,1fr);align-items:start}
+.l-scroll-x{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+@media(max-width:359px){.l-cols-4{grid-template-columns:minmax(0,1fr)}}
+@media(min-width:600px){.l-cols-2,.l-cols-3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:861px){
+  .l-cols-2,.l-cols-3,.l-cols-4{gap:var(--space-4)}
+  .l-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .l-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .l-rail{grid-template-columns:var(--rail) minmax(0,1fr);gap:var(--space-5)}
+  .l-rail>:first-child{position:sticky;top:calc(var(--shell-header-h,4.3rem) + var(--space-4))}
+}
+@media(min-width:1200px){.l-split{grid-template-columns:minmax(0,1fr) var(--aside);gap:var(--space-5)}}
+
+/* Section header (redesign §3.5): the only section heading, an h2 at weather's size with its meta, chips and one "All … ›" link. */
+.section-header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--space-1) var(--space-4);margin:0 0 var(--space-3)}
+.section-header-title{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-1) var(--space-2);min-width:0}
+.section-header-chips{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)}
+.section-link,.card-link-all{display:inline-flex;align-items:center;min-height:var(--tap);font-size:var(--fs-sm);font-weight:700;text-decoration:none;white-space:nowrap}
+
+/* The card system (redesign §4.1): one head (eyebrow, title with at most one pill, then actions, "All … ›" and ⋯), the body and a meta foot. Abnormal is a 3 px rule on the left; the background stays white. */
+.card-title{min-width:0}
+.card-title-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-2)}
+.card-head-end{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin-left:auto}
+.card-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-1) var(--space-3);margin-top:var(--space-3)}
+.list-count{font-weight:400;color:var(--muted)}
+.tone-warn{border-left:3px solid var(--amber)}
+.tone-fault{border-left:3px solid var(--fault)}
+.tone-running{border-left:3px solid var(--forest)}
+.tone-eq-water{border-left-color:var(--eq-water)}.tone-eq-mister{border-left-color:var(--eq-mister)}.tone-eq-fert{border-left-color:var(--eq-fert)}.tone-eq-fog{border-left-color:var(--eq-fog)}
+.tone-eq-heat1{border-left-color:var(--eq-heat1)}.tone-eq-heat2{border-left-color:var(--eq-heat2)}.tone-eq-fan1{border-left-color:var(--eq-fan1)}.tone-eq-fan2{border-left-color:var(--eq-fan2)}
+.tone-eq-vent{border-left-color:var(--eq-vent)}.tone-eq-master{border-left-color:var(--eq-master)}
+
+/* ObjectRow (redesign §4.2, §4.5): title and kind, one state sentence and one pill, a visual and the meta line, then one primary action, Stop and ⋯ at the end. Rows inside a card are divided by a 1 px line. */
+.object-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--space-2) var(--space-4);padding:var(--space-3) 0;border-top:1px solid var(--line);min-width:0}
+.object-row:first-child{border-top:0}
+.object-row[class*=tone-]{padding-left:var(--space-3)}
+.object-row-main{flex:1 1 16rem;min-width:0}
+.object-row-head{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-2)}
+.object-row-title{font-size:var(--fs-md)}
+.object-row-state{margin:var(--space-1) 0 0}
+.object-row-visual{margin:var(--space-2) 0 0}
+.object-row-meta{margin:var(--space-1) 0 0}
+.object-row-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:var(--space-2)}
+.object-row>:not(.object-row-main):not(.object-row-actions){flex-basis:100%;min-width:0}
+
+/* MetricTile (redesign §4.2): the label, the value at --fs-xl in tabular figures, the delta, one visual and the meta line, at one reserved height. */
+.metric-tile{display:grid;align-content:start;gap:var(--space-1);min-height:9rem}
+.metric-label{margin:0}
+.metric-label a{color:inherit}
+.metric-value{margin:0;font-size:var(--fs-xl);font-weight:620;letter-spacing:-.02em;line-height:1.15;font-variant-numeric:tabular-nums}
+.metric-reason{font-weight:400;letter-spacing:0}
+.metric-delta,.metric-meta{margin:0}
+.metric-visual{margin-top:var(--space-1);min-width:0}
+.metric-skeleton{height:4.5rem}
+.metric-error p,.metric-empty{margin:0}
+
+/* DataList (redesign §3.6): short mono terms over their values, in pairs that wrap. */
+.data-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,10rem),1fr));gap:var(--space-2) var(--space-4);margin:0}
+.data-pair{min-width:0}
+.data-list dt{font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--forest)}
+.data-list dd{margin:0;font-variant-numeric:tabular-nums}
+.data-list-inline{display:flex;flex-wrap:wrap;gap:var(--space-1) var(--space-4)}
+.data-list-inline .data-pair{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--space-1)}
+
+/* Micro-visualizations (redesign §4.6): SVG and HTML on tokens, at their final height in every state. Unknown is hatched, stale is muted, and while the API is down nothing is green. */
+.viz-skeleton{display:block;background:var(--field);border-radius:var(--radius-sm)}
+.viz-hatch{stroke:var(--line-strong);stroke-width:1.5}
+span.viz-skeleton.bb{height:16px}span.viz-skeleton.bb-hero{height:18px}span.viz-skeleton.meter{height:8px}
+span.viz-skeleton.spark-tile{height:28px}span.viz-skeleton.spark-row{height:20px}
+
+.bb{display:block;overflow:visible}
+.bb-track{fill:var(--line-strong)}
+.bb-band{fill:var(--c-band-wash)}
+.bb-edge{stroke:var(--c-band-edge);stroke-width:1}
+.bb-today{fill:var(--muted)}
+.bb-dot{fill:var(--ink);stroke:#fff;stroke-width:2}
+.bb-clamp{fill:var(--ink)}
+.bb.is-stale .bb-dot{fill:var(--muted)}
+.bb.is-neutral .bb-band{fill:var(--field)}.bb.is-neutral .bb-edge{stroke:var(--line-strong)}
+.bb-hero .bb-track,.bb-hero .bb-today{fill:var(--ink-muted)}
+.bb-hero .bb-band{fill:var(--c-band-edge)}
+.bb-hero .bb-edge{stroke:var(--c-band-edge)}
+.bb-hero .bb-dot{fill:var(--mint);stroke:var(--ink)}
+.bb-hero .bb-clamp{fill:var(--mint)}
+.bb-hero .viz-hatch{stroke:var(--ink-muted)}
+.bb-hero.is-stale .bb-dot,.bb-hero.is-neutral .bb-dot{fill:var(--ink-muted)}
+.bb-hero.is-neutral .bb-band{fill:var(--ink-2)}.bb-hero.is-neutral .bb-edge{stroke:var(--ink-muted)}
+
+.meter{display:flex;align-items:center;gap:var(--space-2);min-width:0}
+.meter-bar{display:block;flex:1 1 4rem;min-width:3rem;overflow:visible}
+.meter-track{fill:var(--field);stroke:var(--line);stroke-width:1}
+.meter-fill{fill:var(--muted)}
+.meter-planned{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:3 2}
+.meter-water .meter-fill{fill:var(--eq-water)}.meter-water .meter-planned{stroke:var(--eq-water)}
+.meter-mister .meter-fill{fill:var(--eq-mister)}.meter-mister .meter-planned{stroke:var(--eq-mister)}
+.meter-fert .meter-fill{fill:var(--eq-fert)}.meter-fert .meter-planned{stroke:var(--eq-fert)}
+.meter-cap{stroke:var(--ink);stroke-width:2}
+.meter.is-capped .meter-cap{stroke:var(--fault)}
+.meter-words{flex:none;font-size:var(--fs-sm);font-variant-numeric:tabular-nums;white-space:nowrap}
+.meter-over{font-weight:600;color:var(--fault)}
+.meter.is-stale .meter-fill,.meter.is-neutral .meter-fill{fill:var(--muted)}
+.meter.is-stale .meter-planned,.meter.is-neutral .meter-planned{stroke:var(--muted)}
+.meter.is-neutral .meter-cap{stroke:var(--ink)}
+.meter.is-neutral .meter-over{color:inherit}
+
+.spark{display:block;overflow:visible}
+.spark-line{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
+.spark-point,.spark-dot{fill:none;stroke:var(--muted);stroke-width:3;stroke-linecap:round}
+.spark-band{fill:var(--c-band-wash)}
+.spark-bar{fill:var(--muted)}
+.spark-temp .spark-line,.spark-temp .spark-point,.spark-temp .spark-dot{stroke:var(--c-temp)}
+.spark-vpd .spark-line,.spark-vpd .spark-point,.spark-vpd .spark-dot{stroke:var(--c-vpd)}
+.spark-rh .spark-line,.spark-rh .spark-point,.spark-rh .spark-dot{stroke:var(--c-rh)}
+.spark-water .spark-bar{fill:var(--eq-water)}.spark-mister .spark-bar{fill:var(--eq-mister)}.spark-fert .spark-bar{fill:var(--eq-fert)}
+.spark.is-stale .spark-line,.spark.is-stale .spark-point,.spark.is-stale .spark-dot{stroke:var(--muted)}
+.spark.is-stale .spark-bar{fill:var(--muted)}
+.spark.is-neutral .spark-band{fill:var(--field)}
+
+.delta{color:var(--ink);font-variant-numeric:tabular-nums}
+.delta-vs,.delta-unknown{color:var(--muted)}
+
+/* StatusStrip (redesign §4.6): day cells at least 8 px wide with 2 px gaps, quiet when good and loud when bad; no data hatched, a partial day outlined. Class prefix strip-, never weather's calendar classes. */
+.strip-wrap{min-width:0}
+.strip-scroll{padding:2px}
+.strip-scroll.viz-skeleton{min-height:1.75rem}
+.strip{display:flex;gap:2px;margin:0;padding:0;list-style:none}
+.strip>li{flex:1 0 .5rem;min-width:.5rem;max-width:2rem}
+.strip-cell,.strip-swatch{display:block;height:1.5rem;border-radius:2px;background:var(--tint-ok)}
+button.strip-cell{width:100%;min-height:0;padding:0;border:0}
+.strip-cell[data-level="1"],.strip-swatch[data-level="1"]{background:var(--tint-warn)}
+.strip-cell[data-level="2"],.strip-swatch[data-level="2"]{background:var(--amber)}
+.strip-cell[data-level="3"],.strip-swatch[data-level="3"]{background:var(--fault)}
+.strip-cell[data-level=none],.strip-swatch[data-level=none]{background:repeating-linear-gradient(135deg,var(--line-strong) 0 2px,transparent 2px 5px)}
+.strip-cell[data-partial=true],.strip-swatch[data-partial=true]{outline:1px dashed var(--muted);outline-offset:-1px}
+.strip-cell[aria-current=date]{box-shadow:inset 0 -3px 0 var(--ink)}
+a.strip-cell:hover,button.strip-cell:hover{box-shadow:inset 0 0 0 2px var(--ink)}
+.strip.is-stale .strip-cell{opacity:.55}
+.strip.is-neutral .strip-cell:not([data-level=none]){background:var(--field)}
+.strip-empty{margin:0;line-height:1.5rem}
+.strip-legend{display:flex;flex-wrap:wrap;gap:var(--space-1) var(--space-3);margin:var(--space-2) 0 0;padding:0;list-style:none;font-size:var(--fs-xs);color:var(--muted)}
+.strip-legend li{display:inline-flex;align-items:center;gap:var(--space-1)}
+.strip-swatch{width:.75rem;height:.75rem}
+
+/* TimeTrack (redesign §4.6, §6.2): rows of spans over one local time scale; night washed, the now rule in ink, markers dashed. Positions are CSSOM custom properties (--tt-start, --tt-width, --tt-at). */
+.tt{--tt-label:9rem;--tt-end:0rem;--tt-row:28px;display:grid;gap:var(--space-1);min-width:0}
+.tt.tt-with-end{--tt-end:9rem}
+.tt.viz-skeleton{min-height:6rem}
+.tt-axis{position:relative;height:1.1rem;margin:0 var(--tt-end) 0 calc(var(--tt-label) + var(--space-2))}
+.tt-tick{position:absolute;top:0;left:calc(var(--tt-at) * 1%);transform:translateX(-50%);font:400 var(--fs-xs)/1.2 var(--mono);color:var(--muted);white-space:nowrap}
+.tt-tick:first-child{transform:none}
+.tt-tick:last-child{transform:translateX(-100%)}
+.tt-rows{list-style:none;margin:0;padding:0}
+.tt-row{display:grid;grid-template-columns:var(--tt-label) minmax(0,1fr) var(--tt-end);align-items:center;gap:0 var(--space-2);min-height:var(--tt-row)}
+.tt-row+.tt-row{border-top:1px solid var(--line)}
+.tt-label{min-width:0;overflow:hidden;font-size:var(--fs-sm);text-overflow:ellipsis;white-space:nowrap}
+.tt-row-muted .tt-label{color:var(--muted)}
+.tt-track{position:relative;height:var(--tt-row)}
+.tt-night{position:absolute;top:0;bottom:0;left:calc(var(--tt-start) * 1%);width:calc(var(--tt-width) * 1%);background:var(--field)}
+.tt-span{position:absolute;top:6px;bottom:6px;left:calc(var(--tt-start) * 1%);width:calc(var(--tt-width) * 1%);min-width:6px;min-height:0;margin:0;padding:0;border:0;border-radius:2px;background:var(--muted);color:var(--ink);font-size:var(--fs-xs);line-height:1;text-decoration:none}
+button.tt-span{cursor:pointer}
+.tt-span:hover{box-shadow:0 0 0 2px var(--ink)}
+.tt-eq-water{background:var(--eq-water)}.tt-eq-fert{background:var(--eq-fert)}.tt-eq-fog{background:var(--eq-fog)}.tt-eq-mister{background:var(--eq-mister)}
+.tt-eq-heat1{background:var(--eq-heat1)}.tt-eq-heat2{background:var(--eq-heat2)}.tt-eq-fan1{background:var(--eq-fan1)}.tt-eq-fan2{background:var(--eq-fan2)}
+.tt-eq-vent{background:var(--eq-vent)}.tt-eq-master{background:var(--eq-master)}.tt-eq-light-main{background:var(--eq-light-main)}.tt-eq-light-grow{background:var(--eq-light-grow)}
+.tt-planned{background:#fff;border:1.5px dashed var(--muted)}
+.tt-planned.tt-eq-water{border-color:var(--eq-water)}.tt-planned.tt-eq-fert{border-color:var(--eq-fert)}.tt-planned.tt-eq-fog{border-color:var(--eq-fog)}.tt-planned.tt-eq-mister{border-color:var(--eq-mister)}.tt-planned.tt-eq-heat1{border-color:var(--eq-heat1)}
+.tt-skipped,.tt-blocked{background:repeating-linear-gradient(135deg,var(--line-strong) 0 2px,#fff 2px 5px);border:1px solid var(--muted)}
+.tt-missed{background:#fff;border:1.5px solid var(--fault)}
+.tt-unknown{background:repeating-linear-gradient(135deg,var(--muted) 0 1px,#fff 1px 4px);border:1px solid var(--line-strong)}
+.tt-span-label{position:absolute;top:50%;left:calc(100% + 4px);transform:translateY(-50%);white-space:nowrap;pointer-events:none}
+.tt-planned:not(.tt-narrow) .tt-span-label,.tt-missed:not(.tt-narrow) .tt-span-label{left:4px}
+.tt-marker{position:absolute;top:0;bottom:0;left:calc(var(--tt-at) * 1%);border-left:2px dashed var(--ink)}
+.tt-marker-label{position:absolute;top:1px;left:4px;padding:0 2px;background:#fff;color:var(--ink);font-size:var(--fs-xs);line-height:1.2;white-space:nowrap}
+.tt-now{position:absolute;top:0;bottom:0;left:calc(var(--tt-at) * 1%);border-left:1.5px solid var(--ink)}
+.tt-note{position:absolute;top:50%;left:4px;transform:translateY(-50%);color:var(--muted);font-size:var(--fs-xs);white-space:nowrap}
+.tt-end{min-width:0;font-size:var(--fs-sm)}
+.tt.is-stale .tt-span:not(.tt-planned):not(.tt-missed){opacity:.55}
+.tt.is-neutral .tt-span:not(.tt-planned):not(.tt-missed):not(.tt-skipped):not(.tt-blocked):not(.tt-unknown){background:var(--muted)}
+.tt.is-neutral .tt-planned,.tt.is-neutral .tt-missed{border-color:var(--muted)}
+.tt-empty{margin:0}
+
+/* Popover (redesign §5.14): under its opener from 861 px (a non-modal dialog placed through CSSOM), a bottom sheet in a modal dialog at 860 px and below. */
+.popover{padding:0;border:1px solid var(--line);border-radius:var(--radius);background:#fff;color:var(--ink);box-shadow:var(--shadow-sm)}
+.popover-anchored{position:absolute;inset:auto;z-index:var(--z-popover);top:var(--pop-top,0);left:var(--pop-left,0);width:min(24rem,calc(100vw - 2 * var(--space-2)));max-width:none;margin:0}
+.popover-sheet{position:fixed;inset:auto 0 0 0;width:100%;max-width:100%;max-height:85vh;margin:0;border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding-bottom:env(safe-area-inset-bottom)}
+.popover-sheet::backdrop{background:color-mix(in srgb,var(--ink) 35%,transparent)}
+.popover-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);padding:var(--space-1) var(--space-1) var(--space-1) var(--space-4);border-bottom:1px solid var(--line)}
+.popover-head h2{margin:0;font-size:var(--fs-md)}
+.popover-close{min-width:var(--tap);padding:0;border-color:transparent;font-size:1.3rem}
+.popover-body{padding:var(--space-3) var(--space-4) var(--space-4);overflow:auto}
+
+@media(max-width:860px){
+  .page{gap:var(--space-5)}
+  .chips a,.chip,.chips-sm a,.chips-sm .chip{min-height:var(--tap)}
+  .object-row-actions{flex-basis:100%;justify-content:flex-start}
+  .object-row-actions>.btn:first-child{flex:1 1 auto}
+  .tt{--tt-label:6rem;--tt-row:24px}
+  .tt.tt-with-end{--tt-end:6rem}
+  .tt-tick-wide{display:none}
+}
+
 @media(max-width:860px){
   .page-header{grid-template-columns:minmax(0,1fr);grid-template-areas:"crumbs" "title" "status" "actions";margin-bottom:var(--space-3)}
   .page-actions{justify-content:stretch;margin-top:var(--space-3)}

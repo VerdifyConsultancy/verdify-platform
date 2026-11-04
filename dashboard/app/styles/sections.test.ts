@@ -47,9 +47,17 @@ test("tokens.css defines §3.3's layout tokens once, in the one :root of the sec
   const block = /:root\{([^}]*)\}/.exec(uncommented(tokens))?.[1] ?? "";
   expect([...block.matchAll(/(--[a-z0-9-]+):/g)].map((match) => match[1])).toEqual(LAYOUT_TOKENS);
   expect(uncommented(tokens).match(/:root\{/g)).toHaveLength(1);
-  for (const { name, text } of sections.slice(1)) expect(uncommented(text), name).not.toMatch(/:root\s*\{|--[a-z0-9-]+\s*:/);
   const styles = read("../styles.css");
   for (const token of LAYOUT_TOKENS) expect(styles, token).not.toContain(`${token}:`);
+  // The other files hold no :root and never set a global token, theirs or styles.css's (a component's own custom
+  // properties, such as the time track's --tt-label, are its own).
+  const globals = [...LAYOUT_TOKENS, ...[...uncommented(styles).matchAll(/:root\{([^}]*)\}/g)].flatMap((block) => [...block[1].matchAll(/(--[a-z0-9-]+):/g)].map((match) => match[1]))];
+  expect(globals.length).toBeGreaterThan(LAYOUT_TOKENS.length + 40);
+  for (const { name, text } of sections.slice(1)) {
+    expect(uncommented(text), name).not.toMatch(/:root\s*\{/);
+    const set = [...uncommented(text).matchAll(/(--[a-z0-9-]+)\s*:/g)].map((match) => match[1]);
+    expect(set.filter((property) => globals.includes(property)), name).toEqual([]);
+  }
   // Only lengths, sizes and stacking orders: no colour hides among them.
   expect(block).not.toMatch(/#[0-9a-f]{3,8}\b|rgb|hsl|color/i);
 });
