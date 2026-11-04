@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
-// MisterAssociation (#1135, #1182, design system §4.6, irrigation §4.4) over #1122's fixture misters, at 10:42 on 2026-11-02.
-import type { ReactNode } from "react";
+// MisterControls (#1135, #1182, redesign §5.2, irrigation §4.4): a mister zone's head on Water → Today, VPD control and
+// Schedule with their source, over #1122's fixture misters at 10:42 on 2026-11-02.
 import { cleanup, fireEvent, within } from "@testing-library/react";
 import { useLocation } from "react-router";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -9,12 +9,10 @@ import { fixture } from "../../e2e/fixtures/index.mjs";
 import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
 import type { Session } from "../lib/session";
 import { OPERATOR, advance, renderWithApi, startFixtureApi, stopFixtureApi, writes } from "../lib/test-fixture-api";
-import { Button } from "./button";
-import { MisterAssociation, WILL_NOT_MIST_TEXT, flagShowsBadge } from "./mister-association";
+import { MisterControls, WILL_NOT_MIST_TEXT, flagShowsBadge } from "./mister-association";
 import { denver, text } from "./test-render";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
-const TODAY = "2026-11-02";
 const status = (names: string | string[] = "in-band") => fixture(names, { now: NOW })["API-IRR-01"] as IrrigationStatus;
 const lineOf = (from: IrrigationStatus, id: string) => from.lines.find((line) => line.line_id === id)!;
 
@@ -22,64 +20,47 @@ beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); });
 afterEach(() => { cleanup(); stopFixtureApi(); vi.useRealTimers(); });
 
 const VIEWER: Partial<Session> = { role: "viewer" };
-/** The zone as a viewer reads it (`.mister-flags dd`), unless `session` says otherwise. */
-function zone(line: IrrigationLine, from: IrrigationStatus = status(), actions?: ReactNode, session = VIEWER) {
-  renderWithApi(<MisterAssociation line={line} status={from} today={TODAY} actions={actions} />, session);
+/** The zone's head controls as a viewer reads them (`.mister-flags dd`), unless `session` says otherwise. */
+function zone(line: IrrigationLine, from: IrrigationStatus = status(), session = VIEWER) {
+  renderWithApi(<MisterControls line={line} status={from} />, session);
   const section = document.querySelector<HTMLElement>(`.mister-zone[data-line="${line.line_id}"]`)!;
   const flags = [...section.querySelectorAll(".mister-flags dd")].map((node) => text(node));
   return { section, flags, lines: [...section.querySelectorAll(":scope > p")].map((node) => text(node)) };
 }
 
-test("center: VPD control ON and Schedule OFF as words, the house average, the state, when it last misted", () => {
+test("center: VPD control ON and Schedule OFF as words with no pill when nothing changed, and the house average", () => {
   const { section, flags, lines } = zone(lineOf(status(), "L04"));
-  expect(text(section.querySelector("h3"))).toBe("Center · L04");
-  expect(text(section.querySelector(".mister-flags"))).toBe("VPD controlOn ConfirmedScheduleOff");
-  // Confirmed by the program hash; a flag that is off and untouched has nothing to confirm.
-  expect(flags).toEqual(["On Confirmed", "Off"]);
-  expect(lines).toEqual(["VPD from the house average", "Not misting now", "Last misted 3 h ago"]);
+  expect(text(section.querySelector(".mister-flags"))).toBe("VPD controlOnScheduleOff");
+  // D-UX-07: an untouched flag the controller confirmed long ago carries no CONFIRMED pill.
+  expect(flags).toEqual(["On", "Off"]);
+  expect(lines).toEqual(["VPD from the house average"]);
+  // The zone's state, fault and last water are its mister's row and the card head, not repeated here.
+  expect(text(section)).not.toMatch(/Last misted|Not misting/);
 });
 
 test("both flags off reads \"This zone will not mist automatically\"; a zone whose probe is out reads its peers", () => {
-  expect(zone(lineOf(status(), "L09")).lines).toEqual(["VPD from its own probe", "Not misting now", expect.stringMatching(/^Last misted \d days ago$/), WILL_NOT_MIST_TEXT]);
+  expect(zone(lineOf(status(), "L09")).lines).toEqual(["VPD from its own probe", WILL_NOT_MIST_TEXT]);
   expect(WILL_NOT_MIST_TEXT).toBe("This zone will not mist automatically");
   cleanup();
   const south = zone(lineOf(status("south-peer"), "L07"), status("south-peer"));
   expect(south.lines[0]).toBe("VPD from peer probes");
-  expect(south.flags).toEqual(["On Confirmed", "Off"]);
+  expect(south.flags).toEqual(["On", "Off"]);
 });
 
-test("a latched zone reads \"Faulted: no misting until midnight (watchdog)\" with Clear fault's slot; a back-off its end time", () => {
-  const latched = zone(lineOf(status("mister-fault"), "L04"), status("mister-fault"), <Button write>Clear fault</Button>, OPERATOR);
-  expect(latched.lines).toEqual(["VPD from the house average", "Faulted: no misting until midnight (watchdog)", "Last misted 3 h ago"]);
-  expect(text(latched.section.querySelector(".actions"))).toBe("Clear fault");
-  cleanup();
-  const backing = zone({ ...lineOf(status(), "L07"), fault: "backing_off", fault_until: denver("13:20"), state: { ...lineOf(status(), "L07").state, code: "blocked", reason: "backing off" } });
-  expect(backing.lines).toContain("Backing off until 13:20");
-});
-
-test("a change waiting for the controller shows the line's sync badge on each flag, and why it waits", () => {
-  const before = status("before-engine");
-  const { flags, lines } = zone(lineOf(before, "L04"), before);
-  expect(flags).toEqual(["On Requested", "Off Requested"]);
-  expect(lines[0]).toBe("Applies with the irrigation firmware");
-  cleanup();
+test("a change waiting for the controller shows the line's sync pill on each flag and why it waits; before the engine the status line says it once", () => {
   const rev = status();
   const sending = { ...rev, program: { ...rev.program, state: "requested", revision: 43 } };
-  expect(zone({ ...lineOf(rev, "L07"), sync: "requested" }, sending).lines[0]).toBe("rev 43 sending");
+  const waiting = zone({ ...lineOf(rev, "L07"), sync: "requested" }, sending);
+  expect(waiting.flags).toEqual(["Off Requested", "Off Requested"]);
+  expect(waiting.lines).toContain("rev 43 sending");
+  cleanup();
+  const before = status("before-engine");
+  const engineless = zone(lineOf(before, "L04"), before);
+  expect(engineless.flags).toEqual(["On", "Off"]);
+  expect(engineless.lines).not.toContain("Applies with the irrigation firmware");
   cleanup();
   // No source reported yet: "—", and before the engine, why.
-  expect(zone({ ...lineOf(before, "L09"), vpd_source: null }, before).lines).toContain("VPD source — arrives with the irrigation firmware");
-});
-
-test("the state in words: misting now with its cause; waiting for someone Frigate saw, with when", () => {
-  const base = lineOf(status(), "L04");
-  expect(zone({ ...base, state: { ...base.state, code: "running", cause: "vpd" } }).lines).toContain("Misting now (VPD)");
-  cleanup();
-  const occupied = { ...status(), occupancy: { occupied: true, seen_at: denver("10:39"), hold_enabled: true } };
-  expect(zone({ ...base, state: { ...base.state, code: "waiting", reason: "someone inside (Frigate)" } }, occupied).lines)
-    .toContain("Waiting: someone inside (Frigate, seen 3 min ago)");
-  cleanup();
-  expect(zone({ ...base, state: { ...base.state, code: "disabled" } }).lines).toContain("Line disabled: no misting");
+  expect(zone({ ...lineOf(before, "L09"), vpd_source: null }, before).lines).toContain("VPD source — · arrives with the irrigation firmware");
 });
 
 // ---------------------------------------------------------------------------------------------------- the switches (#1182)
@@ -89,7 +70,7 @@ function Where() {
 function switches(id = "L04", names: string | string[] = "lines-unchecked", session: Partial<Session> = OPERATOR) {
   const api = startFixtureApi({ fixture: names });
   const from = status(names);
-  renderWithApi(<><MisterAssociation line={lineOf(from, id)} status={from} today={TODAY} /><Where /></>, session);
+  renderWithApi(<><MisterControls line={lineOf(from, id)} status={from} /><Where /></>, session);
   const section = within(document.querySelector<HTMLElement>(`.mister-zone[data-line="${id}"]`)!);
   return { api, section, vpd: () => section.queryByRole("switch", { name: `VPD control ${id}` }), schedule: () => section.queryByRole("switch", { name: `Schedule ${id}` }) };
 }
@@ -121,7 +102,7 @@ test("VPD control needs no check; Schedule on for a line with no check sends not
   const checked = status("lines-unchecked");
   const line = { ...lineOf(checked, "L04"), check: { checked_by: "jason", checked_at: denver("08:00"), note: null } };
   const second = startFixtureApi({ fixture: "schedules-paused" });
-  renderWithApi(<MisterAssociation line={line} status={checked} today={TODAY} />);
+  renderWithApi(<MisterControls line={line} status={checked} />);
   fireEvent.click(within(document.querySelector<HTMLElement>(".mister-zone")!).getByRole("switch", { name: "Schedule L04" }));
   await advance(0);
   expect(writes(second).map((row) => row.body)).toEqual([{ schedule_member: true, manual: true }]);
@@ -140,35 +121,38 @@ test("a refusal shows beside its switch; a viewer sees no switch; with changes o
   const off = switches("L04", "lines-unchecked", { role: "operator", writesEnabled: false });
   expect([off.vpd()?.hasAttribute("disabled"), off.schedule()?.hasAttribute("disabled")]).toEqual([true, true]);
   cleanup(); stopFixtureApi();
-  const empty = zone({ ...lineOf(status(), "L04"), schedule_member: null }, status(), undefined, OPERATOR);
+  const empty = zone({ ...lineOf(status(), "L04"), schedule_member: null }, status(), OPERATOR);
   expect(within(empty.section).queryByRole("switch", { name: "Schedule L04" })).toBeNull();
   expect(text(empty.section.querySelector('[data-flag="schedule_member"]'))).toBe("Schedule —");
 });
 
-test("each flag has its own badge from the line's one sync: the one pressed here, or both when nothing was; then CONFIRMED on the pressed one and any that is on", () => {
-  const none = new Map<"vpd_member" | "schedule_member", boolean>();
-  const pressedVpd = new Map([["vpd_member", false]] as const);
+const pressed = (entries: readonly ["vpd_member" | "schedule_member", boolean][], at = NOW) => new Map(entries.map(([flag, on]) => [flag, { on, at }]));
+test("each flag has its own pill from the line's one sync: the one pressed here, or both when nothing was; CONFIRMED only on the pressed one, for 10 minutes", () => {
+  const none = pressed([]);
+  const pressedVpd = pressed([["vpd_member", false]]);
   const requested = { sync: "requested", vpd_member: false, schedule_member: false };
-  expect([flagShowsBadge(requested, "vpd_member", none), flagShowsBadge(requested, "schedule_member", none)]).toEqual([true, true]);
-  expect([flagShowsBadge(requested, "vpd_member", pressedVpd), flagShowsBadge(requested, "schedule_member", pressedVpd)]).toEqual([true, false]);
+  expect([flagShowsBadge(requested, "vpd_member", none, NOW), flagShowsBadge(requested, "schedule_member", none, NOW)]).toEqual([true, true]);
+  expect([flagShowsBadge(requested, "vpd_member", pressedVpd, NOW), flagShowsBadge(requested, "schedule_member", pressedVpd, NOW)]).toEqual([true, false]);
   const confirmed = { sync: "confirmed", vpd_member: false, schedule_member: true };
-  expect([flagShowsBadge(confirmed, "vpd_member", none), flagShowsBadge(confirmed, "schedule_member", none)]).toEqual([false, true]);
-  expect([flagShowsBadge(confirmed, "vpd_member", pressedVpd), flagShowsBadge({ ...confirmed, schedule_member: false }, "schedule_member", pressedVpd)]).toEqual([true, false]);
+  expect([flagShowsBadge(confirmed, "vpd_member", none, NOW), flagShowsBadge(confirmed, "schedule_member", none, NOW)]).toEqual([false, false]);
+  expect(flagShowsBadge(confirmed, "vpd_member", pressedVpd, NOW)).toBe(true);
+  expect(flagShowsBadge(confirmed, "vpd_member", pressedVpd, NOW + 10 * 60_000)).toBe(false);
+  // Before the engine only a press made here carries a pill.
+  expect([flagShowsBadge(requested, "vpd_member", none, NOW, false), flagShowsBadge(requested, "vpd_member", pressedVpd, NOW, false)]).toEqual([false, true]);
 });
 
-test("a press the line does not read, a cancelled sheet or a refused write, carries no badge: settled it shows none, settling the switches read as if nothing was pressed", () => {
-  const asked = new Map([["schedule_member", true]] as const);
+test("a press the line does not read, a cancelled sheet or a refused write, carries no pill: settling, the switches read as if nothing was pressed", () => {
+  const asked = pressed([["schedule_member", true]]);
   const unchanged = { vpd_member: true, schedule_member: false };
-  expect(flagShowsBadge({ ...unchanged, sync: "confirmed" }, "schedule_member", asked)).toBe(false);
-  expect(flagShowsBadge({ ...unchanged, sync: "confirmed" }, "vpd_member", asked)).toBe(true);
-  expect([flagShowsBadge({ ...unchanged, sync: "requested" }, "vpd_member", asked), flagShowsBadge({ ...unchanged, sync: "requested" }, "schedule_member", asked)]).toEqual([true, true]);
+  expect(flagShowsBadge({ ...unchanged, sync: "confirmed" }, "schedule_member", asked, NOW)).toBe(false);
+  expect([flagShowsBadge({ ...unchanged, sync: "requested" }, "vpd_member", asked, NOW), flagShowsBadge({ ...unchanged, sync: "requested" }, "schedule_member", asked, NOW)]).toEqual([true, true]);
   // The sheet saved: the line now reads what the press asked for.
   const saved = { vpd_member: true, schedule_member: true, sync: "requested" };
-  expect([flagShowsBadge(saved, "vpd_member", asked), flagShowsBadge(saved, "schedule_member", asked)]).toEqual([false, true]);
+  expect([flagShowsBadge(saved, "vpd_member", asked, NOW), flagShowsBadge(saved, "schedule_member", asked, NOW)]).toEqual([false, true]);
 });
 
 test("not confirmed reads the reject in words and the retries", () => {
   const from = status();
   const refused = { ...from, program: { ...from.program, state: "not_confirmed", reject_code: "bad_line" } };
-  expect(zone({ ...lineOf(from, "L04"), sync: "not_confirmed" }, refused).section.querySelector(".state-note")?.textContent).toBe("Not confirmed: the controller refused a line's settings · retrying at 1, 5 and 15 min");
+  expect(zone({ ...lineOf(from, "L04"), sync: "not_confirmed" }, refused).section.querySelector(".mister-sync")?.textContent).toBe("Not confirmed: the controller refused a line's settings · retrying at 1, 5 and 15 min");
 });

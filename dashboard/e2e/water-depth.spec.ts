@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
-// Water depth (#1140) at 1440 and 390 px: daily water use with the no-valve water apart and missing days as gaps, its
-// 90 d and cause chips, a failed API-21 read in its own panel, and a failed status read that leaves the Run dialog open.
+// Water depth (#1140, redesign §5.4) at 1440 and 390 px: daily water use with the no-valve water apart and missing days as
+// gaps, the window it serves for the page's period, its cause chips, a failed API-21 read in its own panel, and a failed
+// status read that leaves the Run dialog open.
 // What the bars paint on their canvas is daily-water-use.test.tsx; here are the key, the table and the summary. Split
 // from equipment-water-depth.spec.ts (redesign §10.2, WP0.1); the Equipment half is equipment-depth.spec.ts.
 import { DESKTOP, PHONE, axe, expect, expectNoHorizontalScroll, fixtureRequests, load, test, untilPolled, useScreensClock } from "./support";
@@ -15,7 +16,8 @@ for (const viewport of VIEWPORTS) {
     const panel = page.getByRole("region", { name: "Daily water use", exact: true });
     await expect(panel.locator("figcaption")).toHaveText("Gallons per day by line · last 30 days");
     await expect(panel.locator(".plot-water-use canvas").first()).toBeVisible();
-    await expect(panel.getByRole("list", { name: "Water use days" }).getByRole("link", { name: "30 d" })).toHaveAttribute("aria-current", "true");
+    // The page's 7 days are shorter than the 30 the chart serves, and its head says so.
+    await expect(panel.locator(".section-header .meta")).toHaveText("· last 30 days, the shortest this chart serves");
     // The key says what the canvas draws: the no-valve bar in --fault, hatched no-data days and the partial day's dashed edge.
     const key = panel.locator(".chart-key li");
     const noValve = key.filter({ hasText: "No Verdify valve open: hose, sink, hydro or a leak" }).locator(".chart-key-swatch");
@@ -51,16 +53,17 @@ for (const viewport of VIEWPORTS) {
   });
 }
 
-test("the 90 d and cause chips ask API-21 for 90 days and cut the same days by cause, in the URL; a reload keeps them", async ({ page, request }) => {
+test("a 90 d period asks API-21 for 90 days and the cause chip cuts the same days by cause, in the URL; a reload keeps them", async ({ page, request }) => {
   await useScreensClock(page, request, "water-use-90d");
   await load(page, "/water/history");
   const panel = page.getByRole("region", { name: "Daily water use", exact: true });
-  await panel.getByRole("list", { name: "Water use days" }).getByRole("link", { name: "90 d" }).click();
-  await expect(page).toHaveURL(/\/water\/history\?water_use=90d$/);
+  await page.getByRole("list", { name: "Period" }).getByRole("link", { name: "90 d" }).click();
+  await expect(page).toHaveURL(/\/water\/history\?range=90d$/);
   await expect(panel.locator("figcaption")).toHaveText("Gallons per day by line · last 90 days");
+  await expect(panel.locator(".section-header .meta")).toHaveText("· last 90 days");
   await expect(panel.locator("details.chart-table summary")).toHaveText("Data table · 90 rows");
   await panel.getByRole("list", { name: "Split water use by" }).getByRole("link", { name: "cause" }).click();
-  await expect(page).toHaveURL(/\/water\/history\?water_use=90d&water_use_by=cause$/);
+  await expect(page).toHaveURL(/\/water\/history\?range=90d&water_use_by=cause$/);
   await expect(panel.locator("figcaption")).toHaveText("Gallons per day by cause · last 90 days");
   await panel.locator("details.chart-table summary").click();
   await expect(panel.locator("details.chart-table thead th").filter({ hasText: /^VPD$/ })).toHaveCount(1);
@@ -69,6 +72,9 @@ test("the 90 d and cause chips ask API-21 for 90 days and cut the same days by c
   await expect(panel.locator("figcaption")).toHaveText("Gallons per day by cause · last 90 days");
   const days = (await fixtureRequests(request, "API-21")).map((read) => new URL(read.path, "http://fixture.invalid").searchParams.get("days"));
   expect(new Set(days)).toEqual(new Set(["30", "90"]));
+  // 365 days: still the 90 it serves, and it says so.
+  await page.getByRole("list", { name: "Period" }).getByRole("link", { name: "365 d" }).click();
+  await expect(panel.locator(".section-header .meta")).toHaveText("· last 90 days, the longest this chart serves");
 });
 
 test("a failed API-21 read says so in its own panel with Retry; the minutes and the ledger keep working", async ({ page, request }) => {
@@ -84,11 +90,11 @@ test("a failed API-21 read says so in its own panel with Retry; the minutes and 
 test("a failed status read leaves the Run dialog open with what was typed in it", async ({ page, request }) => {
   await useScreensClock(page, request, "run-dialogs");
   await load(page, "/water");
-  await page.locator('.line-card[data-line="L01"]').getByRole("button", { name: /^Run…/ }).click();
+  await page.locator('article[data-line="L01"]').getByRole("button", { name: /^Run…/ }).click();
   const dialog = page.locator("dialog[open]");
   await dialog.getByLabel("Reason (optional)").fill("Dry bench");
   await expect(page).toHaveURL(/\/water\?run=L01$/);
   await useScreensClock(page, request, "run-dialogs", { fail: { "API-IRR-01": 503 } });
-  await untilPolled(page, () => expect(page.locator(".line-card")).toHaveCount(0, { timeout: 500 }));
+  await untilPolled(page, () => expect(page.locator("article[data-line]")).toHaveCount(0, { timeout: 500 }));
   await expect(dialog.getByLabel("Reason (optional)")).toHaveValue("Dry bench");
 });

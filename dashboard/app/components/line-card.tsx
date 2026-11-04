@@ -1,27 +1,36 @@
 // SPDX-License-Identifier: MIT
-import { useId, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { Link } from "react-router";
 import { causeWords } from "../charts/causes";
 import { localTime } from "../lib/format";
+import { runGraphUrl } from "../lib/graph-link";
 import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
-import { agoWords, faultWords, lastWaterWords, lineSyncWords, nextRunWords, pauseWords, timeLeftWords, todayWords } from "../lib/water";
-import { Badge, ChemistryBadge, EquipmentStateBadge, LineStateBadge, ReadbackBadge, lineChemistry } from "./badge";
+import { OperatorOnly, useApiDown } from "../lib/session";
+import { agoWords, faultWords, lastWaterParts, lineSyncWords, pauseWords, pausedNow, timeLeftWords, useWaterDrawer } from "../lib/water";
+import { words } from "../lib/words";
+import { ChemistryBadge, EquipmentStateBadge, ReadbackBadge, lineChemistry } from "./badge";
+import { Button } from "./button";
+import { ClearFaultButton } from "./clear-fault-button";
 import { LocalTime, cls } from "./common";
-import { useClockValue, useNow } from "./freshness";
+import { Ago, useClockValue, useNow } from "./freshness";
+import { ObjectRow, type RowTone } from "./layout/object-row";
+import { LineEnable } from "./line-enable";
+import { OptionsButton } from "./line-options";
+import { Menu } from "./menu";
+import { ResumeLine } from "./pause-lines";
+import { RUN_ARRIVES_TEXT, RunControl, runOffer } from "./run-dialog";
+import { useFreshConfirmed } from "./schedule/rules-list";
+import { lineTitle } from "./schedule/model";
+import { StopButton } from "./stop-button";
 
-/** Before the irrigation firmware a card shows the relay and says so (irrigation §9). */
+/** Before the irrigation firmware a line shows its relay; the header's status line says why (irrigation §9). */
 export const BEFORE_ENGINE_TEXT = "Live job state arrives with the irrigation firmware";
-/** L03's sub-row on L02's card (Round 2 #7). */
+/** L03's sub-row under L02 (Round 2 #7). */
 export const MASTER_TEXT = "opens the injector line from the tank with each feed";
 
 const validTime = (value: string | null | undefined): value is string => typeof value === "string" && Number.isFinite(Date.parse(value));
 
-/** "3 min ago" on the server's clock, with the local time in `title`; "—" for an unreadable time. */
-export function Ago({ at }: { at: string }) {
-  const now = useNow();
-  if (!validTime(at)) return <>—</>;
-  return <time dateTime={at} title={localTime(at)}>{agoWords((now - Date.parse(at)) / 1000)}</time>;
-}
+export { Ago };
 
 /** "0:40 left", counting down on the server's clock. */
 export function TimeLeft({ until }: { until: string }) {
@@ -33,53 +42,47 @@ export function TimeLeft({ until }: { until: string }) {
 /** The relay as the API reports it before the engine: running is ON, unknown stays unknown, every other state OFF. */
 export const relayState = (code: string): "on" | "off" | "unknown" => (code === "running" ? "on" : code === "unknown" ? "unknown" : "off");
 
+/** The running dot in its cause's colour (redesign §4.4: a dot beside the word, no tint); neutral while the API is down. */
+function RunningDot({ cause }: { cause: string | null | undefined }) {
+  return <span className="wat-dot" data-cause={cause ?? "unknown"} aria-hidden="true" />;
+}
+
 /**
- * A line's state in words (`LineState`, the API's call): RUNNING with cause, schedule and time left; paused until a time
- * (VPD misting continues on a VPD zone); DISABLED; waiting or blocked with the reason; "unknown · 3 min ago" only when
- * the API says unknown. Before the irrigation firmware, the relay ("Relay ON since 07:31").
+ * A line's state in one sentence (`irr_state`, the API's call, redesign §5.2): "Running · VPD · since 06:58" or with the
+ * time left; "Paused until Sat 09:00 · VPD misting continues"; "Faulted: no misting until midnight (watchdog)"; "Idle ·
+ * last 07:31, 12 min · ok"; "Off · no check recorded"; "Reserved · disabled"; "Unknown · 3 min ago" only when the API
+ * says unknown. Before the irrigation firmware, the relay ("Relay ON since 07:31").
  */
 export function LineStateText({ line, engine, today, scheduleLabels }: { line: IrrigationLine; engine: boolean; today: string; scheduleLabels?: ReadonlyMap<number, string> }) {
   const { state } = line;
   if (!engine) {
     return <>Relay <EquipmentStateBadge state={relayState(state.code)} />{validTime(state.observed_at) && <> since <LocalTime at={state.observed_at} /></>}</>;
   }
+  const fault = faultWords(line, today);
   switch (state.code) {
     case "running": {
       const label = state.slot_id === null || state.slot_id === undefined ? null : scheduleLabels?.get(state.slot_id) ?? `slot ${state.slot_id}`;
-      return <><LineStateBadge code="running" />{state.cause && <> · {causeWords(state.cause)}</>}{label && <> · {label}</>}{validTime(state.ends_at) && <> · <TimeLeft until={state.ends_at} /></>}</>;
+      return <><RunningDot cause={state.cause} />Running{state.cause && <> · {causeWords(state.cause)}</>}{label && <> · {label}</>}
+        {validTime(state.ends_at) ? <> · <TimeLeft until={state.ends_at} /></> : validTime(state.observed_at) && <> · since <LocalTime at={state.observed_at} /></>}</>;
     }
     case "paused":
       return <>{pauseWords(line, today) ?? "Paused"}</>;
     case "unknown":
-      return <><LineStateBadge code="unknown" /> · {validTime(state.observed_at) ? <Ago at={state.observed_at} /> : "no state received"}</>;
+      return <>Unknown · {validTime(state.observed_at) ? <Ago at={state.observed_at} words={agoWords} /> : "no state received"}</>;
     case "waiting":
+      return <>Waiting{state.reason && <> · {state.reason}</>}</>;
     case "blocked":
-      // A watchdog fault has its own line, with its end time.
-      return <><LineStateBadge code={state.code} />{state.reason && !line.fault && <> · {state.reason}</>}</>;
+      // A watchdog fault says it with its end time.
+      return fault ? <span className={cls("line-fault", line.fault === "mister_fault" ? "fault" : "line-fault-warn")} data-fault={line.fault}>{fault}</span> : <>Can't run now{state.reason && <> · {state.reason}</>}</>;
+    case "disabled":
+      // L03 is checked with L02 and fog is climate only: neither has a check of its own.
+      return line.reserved ? <>Reserved · disabled</> : <>Off{!line.check && line.kind !== "fog" && line.kind !== "master" ? " · no check recorded" : ""}</>;
+    case "idle":
+      return <>Idle · {lastWaterParts(line, today).state}</>;
     default:
-      return <LineStateBadge code={state.code} />;
+      return <>{words("line_state", state.code)}</>;
   }
 }
-
-/** A pause the state line does not already show: VPD misting can run on a paused zone. */
-function PauseNote({ line, engine, today }: { line: IrrigationLine; engine: boolean; today: string }) {
-  const until = line.paused_until;
-  const ahead = useClockValue((now) => validTime(until) && Date.parse(until) > now);
-  // Before the engine the state line shows the relay, so a stored pause says itself here whatever the code.
-  if ((engine && line.state.code === "paused") || !ahead) return null;
-  return <p className="line-note">{pauseWords(line, today)}</p>;
-}
-
-/**
- * Whether the controller has the program that carries this line (screens §1.4 P), for every role: REQUESTED with "rev 43
- * sending", or "Applies with the irrigation firmware" before the engine; CONFIRMED by the program hash; "Not confirmed:
- * <reject in words> · retrying at 1, 5 and 15 min" after 5 min.
- */
-function LineSync({ line, engine, program }: { line: IrrigationLine; engine: boolean; program?: IrrigationStatus["program"] }) {
-  const words = lineSyncWords(line.sync, { engine, program });
-  return <div className="line-sync" data-sync={line.sync}><ReadbackBadge state={line.sync} />{words && <span className="state-note">{words}</span>}</div>;
-}
-
 /** The fault line: "Backing off until 13:20" (warn) or "Faulted: no misting until midnight (watchdog)" (fault). */
 export function FaultLine({ line, today }: { line: Pick<IrrigationLine, "fault" | "fault_until">; today: string }) {
   const text = faultWords(line, today);
@@ -87,65 +90,89 @@ export function FaultLine({ line, today }: { line: Pick<IrrigationLine, "fault" 
   return <p className={cls("line-fault", line.fault === "mister_fault" ? "fault" : "line-fault-warn")} data-fault={line.fault}>{text}</p>;
 }
 
+/** "Pause until…" in a line's ⋯ menu, for operators: the pause drawer with this line chosen (`?pause=<line_id>`). */
+function PauseThisLine({ line }: { line: Pick<IrrigationLine, "line_id"> }) {
+  const { open } = useWaterDrawer("pause");
+  return <Button write aria-haspopup="dialog" onClick={() => open(line.line_id)}>Pause until… <span className="screen-reader">{line.line_id}</span></Button>;
+}
+
 export type LineCardProps = {
   line: IrrigationLine;
   /** L03, the fertilizer master, as L02's sub-row. */
   master?: IrrigationLine | null;
-  /** API-IRR-01 `engine`: false before the irrigation firmware, when the card shows the relay state. */
+  /** API-IRR-01 `engine`: false before the irrigation firmware, when the row shows the relay state. */
   engine: boolean;
   /** API-IRR-01 `program`, for "rev 43 sending" and the reject in words. */
   program?: IrrigationStatus["program"];
   /** Today's America/Denver date, for "today 07:31". */
   today: string;
-  /** Schedule labels by slot id (API-IRR-02), for "RUNNING · schedule · Wall MWF". */
+  /** Schedule labels by slot id (API-IRR-02), for "Running · schedule · Wall MWF". */
   scheduleLabels?: ReadonlyMap<number, string>;
-  /** Run…, Stop and Clear fault (#1136); Resume, Options and the enable switch (#1182). */
-  actions?: ReactNode;
+  /** The today strip and "next 16:00 · 10 min" (redesign §5.2). */
+  strip?: ReactNode;
+  /** Only the first row of a zone card carries the hour ticks. */
+  className?: string;
 };
 
 /**
- * LineCard (design system §4.6): one line's card on the Water board. The head names the line with CLEAN or FERT and
- * whether it is enabled; a reserved line still disabled (L05, L06) reads Reserved with DISABLED, and fog (L11) reads
- * "Climate only" with no controls. Then its state in words, whether the controller has its program, any watchdog fault
- * or pause, when it last watered and how that ended, today's minutes against its cap, the next run, whether its one-time
- * check is recorded, and History.
+ * A line's row on Water → Today (redesign §5.2, `ObjectRow`): "L01 Wall drip" with CLEAN or FERT and its one sync pill,
+ * the state sentence, the today strip with the next run, one primary action by state (Run… while idle, Stop while
+ * running, Clear fault on a latched mister, Resume while paused), the line's own Stop whenever it can matter (D-UX-06:
+ * filled only while the relay is on or unknown, a quiet outline otherwise, never disabled by the writes flag), and ⋯ with
+ * the enable switch and its check sheet, Options…, Pause until…, "Activity for L01 ›", "Runs of L01 ›" and Graphs. Fog
+ * (L11) is climate only: no Stop and no write control. Viewers get the same row with the menu's links alone.
  */
-export function LineCard({ line, master = null, engine, program, today, scheduleLabels, actions }: LineCardProps) {
-  const headingId = useId();
+export function LineCard({ line, master = null, engine, program, today, scheduleLabels, strip, className }: LineCardProps) {
+  const apiDown = useApiDown();
+  const now = useNow();
   const fog = line.kind === "fog";
-  // L05 and L06 (Round 2b E): reserved, and DISABLED until a person enables them, before the engine too.
-  const reserved = line.reserved && !line.enabled;
-  const next = engine ? nextRunWords(line.next_run, today) : null;
-  return <article className="card line-card" data-line={line.line_id} data-state={line.state.code} aria-labelledby={headingId}>
-    <div className="card-head line-card-head">
-      <h3 id={headingId}>{line.line_id} {line.name}</h3>
-      <span className="line-card-tags">
-        {fog ? <span className="tag">Climate only</span> : <>
-          <ChemistryBadge chemistry={lineChemistry(line.kind)} />{" "}
-          {reserved
-            ? <LineStateBadge code="disabled" reserved />
-            : <Badge kind={line.enabled ? "on" : "off"}><span className="screen-reader">Enabled: </span>{line.enabled ? "On" : "Off"}</Badge>}
-        </>}
-      </span>
-    </div>
-    {!(engine && reserved && line.state.code === "disabled") && <p className="line-state"><LineStateText line={line} engine={engine} today={today} scheduleLabels={scheduleLabels} /></p>}
-    {!engine && !fog && <p className="line-note">{BEFORE_ENGINE_TEXT}</p>}
-    {!fog && <LineSync line={line} engine={engine} program={program} />}
-    {engine && <FaultLine line={line} today={today} />}
-    {!fog && <PauseNote line={line} engine={engine} today={today} />}
-    <p>{lastWaterWords(line, today)}</p>
-    <p>{todayWords(line)}</p>
-    {next && <p>{next}</p>}
-    {!fog && (line.check
-      ? <p className="line-note">Checked by {line.check.checked_by} <LocalTime at={line.check.checked_at} date />{line.check.note && <>: {line.check.note}</>}</p>
-      : <p className="line-note">No check recorded</p>)}
+  const title = lineTitle(line);
+  const code = line.state.code;
+  const running = code === "running";
+  const latched = engine && line.fault === "mister_fault";
+  const paused = useClockValue((at) => pausedNow(line, at));
+  const fresh = useFreshConfirmed(line.sync, null, now);
+  // Before the engine every line waits for the firmware: the status line says so once, not a pill on every row.
+  const pill = fog || !engine ? null : line.sync === "requested" || line.sync === "not_confirmed" ? <ReadbackBadge state={line.sync} /> : fresh ? <ReadbackBadge state="confirmed" /> : null;
+  const syncWords = fog || !engine ? null : line.sync !== "confirmed" ? lineSyncWords(line.sync, { engine, program }) : null;
+  const last = lastWaterParts(line, today);
+  // A pause is the state while the line rests; while it runs (VPD misting carries on) or reads unknown, it is a note.
+  const pausedWords = !fog && paused ? pauseWords(line, today) : null;
+  const pauseIsState = Boolean(pausedWords) && engine && code !== "running" && code !== "unknown";
+  const pauseNote = pausedWords && !pauseIsState ? pausedWords : null;
+  const meta = [syncWords, pauseNote, code === "idle" && engine ? last.meta : null].filter(Boolean);
+  const offer = runOffer(line, engine);
+  const filled = running || code === "unknown";
+  const primary = fog ? null : running ? null : latched ? <ClearFaultButton line={line} engine={engine} /> : paused ? <ResumeLine line={line} /> : offer === "run" || offer === "mist" ? <RunControl line={line} engine={engine} /> : null;
+  const tone: RowTone | undefined = running ? "running" : latched ? "fault" : engine && line.fault === "backing_off" ? "warn" : undefined;
+  const token = running ? (line.state.cause === "vpd" ? "eq-mister" : line.state.cause === "feed" ? "eq-fert" : line.state.cause === "run_now" ? "eq-master" : "eq-water") : undefined;
+  const graphs = line.last_water && validTime(line.last_water.at) ? runGraphUrl({ started_at: line.last_water.at, ended_at: null, open_s: line.last_water.open_s }) : "/graphs";
+  const id = line.line_id;
+  const menu = <Menu name={`More for ${title}`}>
+    {!fog && <OperatorOnly>
+      <div className="wat-menu-switch" data-menu-keep=""><LineEnable line={line} /></div>
+      <OptionsButton line={line} />
+      <PauseThisLine line={line} />
+      {offer === "arrives" && <p className="state-note" data-arrives="run">{RUN_ARRIVES_TEXT}</p>}
+      {!engine && line.kind === "mister" && <ClearFaultButton line={line} engine={engine} />}
+    </OperatorOnly>}
+    <Link to={`/activity/log?target=${encodeURIComponent(id)}`}>Activity for {id}<span aria-hidden="true"> ›</span></Link>
+    <Link to={`/water/history?line=${encodeURIComponent(id)}`}>Runs of {id}<span aria-hidden="true"> ›</span></Link>
+    <Link to={graphs}>Graphs <span className="screen-reader">around {id}'s last run</span><span aria-hidden="true"> ›</span></Link>
+    {!fog && <p className="meta wat-menu-check">{line.check
+      ? <>Checked by {line.check.checked_by} <LocalTime at={line.check.checked_at} date />{line.check.note && <>: {line.check.note}</>}</>
+      : "No check recorded"}</p>}
+  </Menu>;
+  return <ObjectRow className={cls("line-card", "wat-line", className)} data={{ "data-line": id, "data-state": code }} id={`line-${id}`}
+    title={title} tag={fog ? <span className="tag">Climate only</span> : <ChemistryBadge chemistry={lineChemistry(line.kind)} />} pill={pill}
+    state={<span className={cls("line-state", apiDown && "is-neutral")}>{pauseIsState ? pausedWords : <LineStateText line={line} engine={engine} today={today} scheduleLabels={scheduleLabels} />}</span>}
+    meta={meta.length ? meta.join(" · ") : undefined}
+    primary={primary}
+    stop={fog ? undefined : <StopButton lineId={id} filled={filled} />}
+    menu={menu} tone={tone} token={token}>
+    {strip}
     {master && <div className="line-subrow" data-line={master.line_id}>
-      <p><strong>Fert master {master.line_id}</strong> · {MASTER_TEXT}</p>
-      <p><LineStateText line={master} engine={engine} today={today} /> · {todayWords(master)}</p>
+      <p><span aria-hidden="true">└ </span><strong>{master.line_id} Fert master</strong>: {MASTER_TEXT} · <LineStateText line={master} engine={engine} today={today} /></p>
     </div>}
-    <div className="actions line-card-actions">
-      {!fog && actions}
-      <Link to={`/activity?target=${encodeURIComponent(line.line_id)}`}>History<span className="screen-reader"> of {line.line_id}</span><span aria-hidden="true"> ›</span></Link>
-    </div>
-  </article>;
+  </ObjectRow>;
 }
