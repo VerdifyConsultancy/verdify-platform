@@ -1,19 +1,19 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
 /**
- * SCR-06 Activity and alerts (#1133) inside the app shell, against #1122's fixture API in process (fetch is stubbed onto
- * it; GET /__requests gives each request with its body and Idempotency-Key). The clock is the screens' 10:42 America/Denver
- * on 2026-11-02, and the signed-in operator is jason (Jason) unless a fixture says otherwise.
+ * Activity (redesign §5.8 Alerts, §5.9 Log; SCR-06) inside the app shell, against #1122's fixture API in process (fetch is
+ * stubbed onto it; GET /__requests gives each request with its body and Idempotency-Key). The clock is the screens' 10:42
+ * America/Denver on 2026-11-02, and the signed-in operator is jason (Jason) unless a fixture says otherwise.
  */
 import { StrictMode } from "react";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { createRoutesStub, useLocation } from "react-router";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { AppShell } from "../components/app-shell";
 import { text } from "../components/test-render";
 import { UUID, advance, requests, startFixtureApi, stopFixtureApi, writes, type FixtureOptions } from "../lib/test-fixture-api";
 import Activity, { clientLoader } from "./activity";
-import ActivityLog from "./activity-log";
+import ActivityLog, { LOG_STATUS } from "./activity-log";
 
 const BUILD = "fedcba9876543210fedcba9876543210fedcba98";
 function Where() {
@@ -40,26 +40,29 @@ async function open(path: string, options: FixtureOptions = {}, redirect = false
   if (redirect) await advance(0);
   return api;
 }
-afterEach(() => { cleanup(); stopFixtureApi(); });
+afterEach(() => { cleanup(); stopFixtureApi(); vi.unstubAllGlobals(); });
 
-const alertsPanel = () => screen.getByRole("region", { name: /^Open alerts/ });
+const plain = (value: string) => value.replaceAll(String.fromCharCode(0xa0), " ");
+const needsAction = () => screen.getByRole("region", { name: "Needs action" });
+const status = () => plain(text(document.querySelector(".page-status")));
 const logPanel = () => screen.getByRole("region", { name: "Activity log" });
 const alertRow = (id: number) => {
   const node = document.getElementById(`alert-${id}`);
   if (!node) throw new Error(`no alert ${id} on the page`);
   return node;
 };
-const openList = () => [...alertsPanel().querySelectorAll(":scope > ol.alert-list > li")].map((node) => node.id);
+const openList = () => [...needsAction().querySelectorAll("ol.alert-list > li")].map((node) => node.id);
+const group = (name: RegExp) => [...document.querySelectorAll<HTMLDetailsElement>("details.alert-group")].find((node) => name.test(text(node.querySelector("summary"))));
 const navCount = () => text(within(screen.getByRole("navigation", { name: "Sections" })).getByRole("link", { name: /^Activity/ }));
 const logRows = () => [...logPanel().querySelectorAll("li.event")];
-const logTitles = () => logRows().map((node) => text(node.querySelector("h3")));
-const logRow = (title: string) => {
-  const node = logRows().find((item) => text(item.querySelector("h3")).startsWith(title));
-  if (!node) throw new Error(`no log row "${title}" in ${JSON.stringify(logTitles())}`);
+const what = (node: Element) => plain(text(node.querySelector(".act-entry-what > .act-entry-text, .act-entry-what > details > summary")));
+const logLines = () => logRows().map(what);
+const logRow = (start: string) => {
+  const node = logRows().find((item) => what(item).startsWith(start));
+  if (!node) throw new Error(`no log entry "${start}" in ${JSON.stringify(logLines())}`);
   return node;
 };
-/** Who wrote, then the change: the muted line under a row's title. */
-const writtenBy = (node: Element) => text(node.querySelector(".event-body > p"));
+const writtenBy = (node: Element) => text(node.querySelector(".event-by"));
 /** The Log tab, as a person reaches the log from Alerts. */
 async function toLog() {
   fireEvent.click(within(screen.getByRole("navigation", { name: "Activity views" })).getByRole("link", { name: "Log" }));
@@ -70,37 +73,40 @@ const politeToasts = () => [...screen.getByRole("status").querySelectorAll(".toa
 const stopped = () => { cleanup(); stopFixtureApi(); };
 
 // ---------------------------------------------------------------------------------------------------- alerts
-test("with API-14 failing the alert panel reads Alerts unavailable. Retry, never No open alerts, and the log still loads", async () => {
+test("with API-14 failing Needs action reads Alerts unavailable. Retry, never No open alerts, the status line claims nothing, and the log still loads", async () => {
   await open("/activity", { fixture: "activity-mixed", fail: { "API-14": 503 } });
-  const panel = alertsPanel();
+  const panel = needsAction();
   expect(text(panel.querySelector(".panel-error"))).toBe("Alerts unavailable.Retry");
   expect(within(panel).getByRole("button", { name: "Retry" })).toBeTruthy();
-  expect(text(panel)).not.toContain("No open alerts");
+  expect(text(document.body)).not.toContain("No open alerts");
+  expect(status()).toBe("");
   await toLog();
   expect(logRows()).toHaveLength(6);
 });
 
-test("alerts-merged: the unacknowledged rows in API order under Open alerts · N with N from API-02, the acknowledged one collapsed with who and when", async () => {
-  await open("/activity", { fixture: "alerts-merged" });
-  const panel = alertsPanel();
-  expect(within(panel).getByRole("heading", { level: 2 }).textContent).toBe("Open alerts · 2");
+test("alerts-merged: the status line states the count once; Needs action in API order with repeat counts; the acknowledged one collapsed with who and when", async () => {
+  const api = await open("/activity", { fixture: "alerts-merged" });
+  expect(status()).toBe("2 open · 1 acknowledged");
   expect(navCount()).toBe("Activity 2 open alerts");
-  // API order (severity, then age); the merged repeats read as AlertRow draws them.
+  // The head does not count again: the status line says it.
+  expect(within(needsAction()).getByRole("heading", { level: 2 }).textContent).toBe("Needs action");
   expect(openList()).toEqual(["alert-101", "alert-102"]);
   expect(text(alertRow(101).querySelector("h3"))).toBe("Relay stuck");
-  expect(text(alertRow(101).querySelector(".alert-facts"))).toBe("fan2 · since 06:02 (4 h) · seen 3 times, last 06:40");
-  expect(text(alertRow(102).querySelector(".alert-facts"))).toMatch(/^south · since Oct 30, 03:10 \(3 d\) · seen 12 times, last 10:22$/);
-  const group = panel.querySelector("details.alert-group");
-  expect(text(group?.querySelector("summary"))).toBe("Acknowledged, still open (1)");
-  expect(group?.hasAttribute("open")).toBe(false);
-  expect(alertRow(103).closest("details")).toBe(group);
+  expect(text(alertRow(101).querySelector(".alert-facts"))).toBe("Fan 2 · ×3 since 06:02 · last 06:40");
+  expect(text(alertRow(102).querySelector(".alert-facts"))).toBe("South · ×12 since Oct 30, 03:10 · last 10:22");
+  const acknowledged = group(/^Acknowledged, still open/)!;
+  expect(text(acknowledged.querySelector("summary"))).toBe("Acknowledged, still open (1)");
+  expect(acknowledged.open).toBe(false);
+  expect(alertRow(103).closest("details")).toBe(acknowledged);
   // The API names people by username; the signed-in person reads by name.
   expect(text(alertRow(103))).toContain("Acknowledged by Jason · 06:47");
-  expect(within(alertRow(103)).queryByRole("button", { name: /^Acknowledge/ })).toBeNull();
-  expect(screen.queryByRole("region", { name: "Resolved in the last 24 h" })).toBeNull();
+  expect(within(alertRow(103)).queryByRole("button", { name: /^Acknowledge/, hidden: true })).toBeNull();
+  expect(group(/^Resolved/)).toBeUndefined();
+  // One API-14 read serves the three groups.
+  expect(requests(api, "API-14").map((row) => row.path)).toEqual(["/api/v1/alerts?status=recent&limit=200"]);
 });
 
-test("an empty list says No open alerts only while the ingestor and climate are fresh; otherwise in-app alerts may be missing", async () => {
+test("with nothing open the status line says so honestly and Needs action is not drawn; the resolved group holds the last 24 h", async () => {
   const cases = [
     ["in-band", "No open alerts"],
     ["ingestor-not-running", "In-app alerts may be missing: ingestor not running since 10:38"],
@@ -108,18 +114,28 @@ test("an empty list says No open alerts only while the ingestor and climate are 
   ] as const;
   for (const [fixture, words] of cases) {
     await open("/activity", { fixture });
-    expect(text(alertsPanel().querySelector(".alert-empty")), fixture).toBe(words);
+    expect(status(), fixture).toBe(words);
+    expect(screen.queryByRole("region", { name: "Needs action" })).toBeNull();
     stopped();
   }
+  await open("/activity", { fixture: "alert-resolved" });
+  expect(status()).toBe("No open alerts · 1 resolved in 24 h");
+  const resolved = group(/^Resolved/)!;
+  expect(text(resolved.querySelector("summary"))).toBe("Resolved in the last 24 h (1)");
+  expect(resolved.open).toBe(false);
+  expect(text(alertRow(104))).toContain("Resolved by Jason · 08:42 · “Probe reseated”");
+  stopped();
+  // resolved=24h, as an old link has it, opens that group.
+  await open("/activity?resolved=24h", { fixture: "alert-resolved" });
+  expect(group(/^Resolved/)!.open).toBe(true);
 });
 
-test("Acknowledge with a note: one API-15 with the note, Acknowledged by Jason, under Acknowledged, still open, the nav count down by one and an alert.ack entry", async () => {
-  const api = await open("/activity?alert=101", { fixture: "alerts-merged" });
+test("Acknowledge in one tap with an optional note: one API-15 with the note, who and when, the row under Acknowledged, the nav count down by one", async () => {
+  const api = await open("/activity", { fixture: "alerts-merged" });
   const item = alertRow(101);
-  const note = within(item).getByLabelText("Note (optional)");
-  fireEvent.change(note, { target: { value: "On it" } });
-  expect(text(item.querySelector(".field-hint"))).toBe("5/500 characters, sent with Acknowledge or Resolve");
-  const acknowledge = within(item).getByRole("button", { name: "Acknowledge" });
+  fireEvent.click(within(item).getByText("Add a note"));
+  fireEvent.change(within(item).getByLabelText("Note (optional)"), { target: { value: "On it" } });
+  const acknowledge = within(item).getByRole("button", { name: "Acknowledge Relay stuck" });
   fireEvent.click(acknowledge);
   fireEvent.click(acknowledge);
   await advance(0);
@@ -129,54 +145,47 @@ test("Acknowledge with a note: one API-15 with the note, Acknowledged by Jason, 
   expect(sent[0].idempotency_key).toMatch(UUID);
   await advance(0);
   expect(politeToasts()).toEqual(["“Relay stuck” acknowledged by Jason · 10:42"]);
-  // R: the row reads who and when at once, under the acknowledged group, which opens to show it.
-  const moved = alertRow(101);
-  expect(text(moved)).toContain("Acknowledged by Jason · 10:42");
-  expect(moved.closest("details")?.hasAttribute("open")).toBe(true);
-  expect(text(alertsPanel().querySelector("details.alert-group > summary"))).toBe("Acknowledged, still open (2)");
+  // The row reads who and when at once, under the acknowledged group, which opens to show it.
+  expect(text(alertRow(101))).toContain("Acknowledged by Jason · 10:42");
+  expect(text(group(/^Acknowledged/)!.querySelector("summary"))).toBe("Acknowledged, still open (2)");
+  expect(group(/^Acknowledged/)!.open).toBe(true);
   expect(openList()).toEqual(["alert-102"]);
-  // The one count: the nav and the head both read API-02's, refreshed at once.
+  // The one count: the nav and the status line both read API-02's, refreshed at once.
   expect(navCount()).toBe("Activity 1 open alerts");
-  expect(within(alertsPanel()).getByRole("heading", { level: 2 }).textContent).toBe("Open alerts · 1");
-  // The note was sent: the field is empty again.
-  expect((within(alertRow(101)).getByLabelText("Note (optional)") as HTMLInputElement).value).toBe("");
-  // The log, on its own tab, has the alert.ack entry.
+  expect(status()).toBe("1 open · 2 acknowledged");
+  // The log, on its own tab, has the alert.ack entry with the note as its reason.
   await toLog();
   const entry = logRow("Acknowledged “Relay stuck”");
   expect(writtenBy(entry)).toBe("Jason · dashboard");
   expect(text(entry.querySelector(".event-reason"))).toBe("“On it”");
 });
 
-test("Resolve with a note sends one API-16 and the alert leaves the open list; resolved=24h then lists it as resolved", async () => {
+test("an expanded alert: Acknowledge and Resolve send the note typed there; Resolve moves it to the resolved group", async () => {
   const api = await open("/activity?alert=102", { fixture: "alerts-merged" });
-  fireEvent.change(within(alertRow(102)).getByLabelText("Note (optional)"), { target: { value: "Probe reseated" } });
-  fireEvent.click(within(alertRow(102)).getByRole("button", { name: "Resolve" }));
+  const item = alertRow(102);
+  // Expanded, the row offers the note with both; the collapsed Acknowledge is gone.
+  expect(within(item).queryByText("Add a note")).toBeNull();
+  const note = within(item).getByLabelText("Note (optional)");
+  fireEvent.change(note, { target: { value: "Probe reseated" } });
+  expect(text(item.querySelector(".field-hint"))).toBe("14/500 characters, sent with Acknowledge or Resolve");
+  fireEvent.click(within(item).getByRole("button", { name: "Resolve" }));
   await advance(0);
   await advance(0);
   expect(requests(api, "API-16")).toEqual([expect.objectContaining({ method: "POST", path: "/api/v1/alerts/102/resolve", body: { resolution: "Probe reseated" } })]);
   expect(requests(api, "API-16")[0].idempotency_key).toMatch(UUID);
-  // Resolve is never refused and asks nothing: no dialog.
   expect(document.querySelector("dialog[open]")).toBeNull();
   expect(openList()).toEqual(["alert-101"]);
-  expect(navCount()).toBe("Activity 1 open alerts");
-  // The link still names it, so it shows as resolved under its own head, read from status=recent.
-  const linked = screen.getByRole("region", { name: "Linked alert" });
-  expect(alertRow(102).closest("section")).toBe(linked);
-  expect(text(alertRow(102))).toContain("Resolved by Jason · 10:42");
-  expect(text(alertRow(102))).toContain("“Probe reseated”");
+  // The link still names it, so its group opens to show it as resolved.
+  const resolved = group(/^Resolved/)!;
+  expect(resolved.open).toBe(true);
+  expect(alertRow(102).closest("details")).toBe(resolved);
+  expect(text(alertRow(102))).toContain("Resolved by Jason · 10:42 · “Probe reseated”");
   expect(within(alertRow(102)).queryByRole("button", { name: /Acknowledge|Resolve/ })).toBeNull();
-  expect(requests(api, "API-14").map((row) => row.path)).toContain("/api/v1/alerts?status=recent&limit=200");
-  fireEvent.click(screen.getByRole("link", { name: /Show resolved in the last 24 h/ }));
-  await advance(0);
-  expect(text(screen.getByTestId("where"))).toBe("/activity?alert=102&resolved=24h");
-  expect(alertRow(102).closest("section")).toBe(screen.getByRole("region", { name: "Resolved in the last 24 h" }));
-  expect(screen.queryByRole("region", { name: "Linked alert" })).toBeNull();
-  fireEvent.click(within(screen.getByRole("navigation", { name: "Activity views" })).getByRole("link", { name: "Log" }));
-  await advance(0);
+  await toLog();
   expect(text(logRow("Resolved “Soil probe offline”").querySelector(".event-reason"))).toBe("“Probe reseated”");
 });
 
-test("Acknowledge on a collapsed row sends no note, even one typed while the row was open", async () => {
+test("Acknowledge on a collapsed row sends only its own note, never one typed while the row was open", async () => {
   const api = await open("/activity?alert=102", { fixture: "alerts-merged" });
   fireEvent.change(within(alertRow(102)).getByLabelText("Note (optional)"), { target: { value: "draft" } });
   fireEvent.click(within(alertRow(102)).getByRole("link", { name: "Hide details" }));
@@ -205,26 +214,21 @@ test("the flow alert reads its plain title, expands in place with its runbook an
   await open("/activity?alert=201", { fixture: "flow-valves-closed" });
   const item = alertRow(201);
   expect(text(item.querySelector("h3"))).toBe("Water flowing with every Verdify valve closed");
-  const lines = [...item.querySelectorAll(".event-body > p")].map(text);
-  expect(lines).toEqual(expect.arrayContaining([
-    "A leak, or the hose, sink or hydro in use.", "3 gal in the last 10 min · Updated 20 s ago", "If no one is using water, close the spigot.",
-  ]));
+  const lines = [...item.querySelectorAll(".act-leak > p")].map((node) => plain(text(node)));
+  expect(lines).toEqual(["A leak, or the hose, sink or hydro in use.", "3 gal in the last 10 min · Updated 20 s ago", "If no one is using water, close the spigot."]);
   // The title says it once: the alert's message is the same words, shown in the expanded fields.
-  expect(lines).not.toContain("Water flowing with every Verdify valve closed");
+  expect(item.querySelector(".alert-message")).toBeNull();
   expect(within(item).queryByRole("button", { name: /Stop/ })).toBeNull();
   expect(text(item.querySelector(".runbook"))).toBe("1. Check the hose, sink and hydro. 2. Walk the wall line and the manifold for a break. 3. If no one is using water, close the spigot.");
   // First seen 10:38 (17:38Z): the window 15:38Z to 19:38Z.
-  expect(within(item).getByRole("link", { name: "Open in Graphs" }).getAttribute("href")).toBe("/graphs?from=2026-11-02T15:38:00Z&to=2026-11-02T19:38:00Z");
-  // Every field, each code through the words table: the type reads as the title does, never raw.
+  expect(within(item).getByRole("link", { name: /^Open in Graphs/ }).getAttribute("href")).toBe("/graphs?from=2026-11-02T15:38:00Z&to=2026-11-02T19:38:00Z");
   expect(text(item.querySelector(".alert-detail .kv"))).toContain("TypeWater flowing with every Verdify valve closedCategorywaterSeverityCritical");
   expect(text(item)).not.toContain("leak_detected");
   stopped();
   // Once the meter has read under 0.1 gal/min twice: Flow stopped at HH:MM, never an all clear.
   await open("/activity", { fixture: "flow-stopped" });
-  const stoppedLines = [...alertRow(201).querySelectorAll(".event-body > p")].map(text);
-  expect(stoppedLines).toEqual(expect.arrayContaining(["Flow stopped at 10:40", "If no one is using water, close the spigot."]));
-  // The ingestor's message says the same ("Flow stopped at 10:40"): the row says it once.
-  expect(stoppedLines.filter((line) => line === "Flow stopped at 10:40")).toHaveLength(1);
+  const stoppedLines = [...alertRow(201).querySelectorAll(".act-leak > p")].map(text);
+  expect(stoppedLines).toEqual(["A leak, or the hose, sink or hydro in use.", "Flow stopped at 10:40", "If no one is using water, close the spigot."]);
   expect(text(alertRow(201))).not.toMatch(/all clear|0 gal/i);
 });
 
@@ -236,21 +240,17 @@ test("a runbook renders as text with its line breaks, never as HTML", async () =
   expect(text(alertRow(501))).not.toContain("irrigation_fence_breach");
 });
 
-test("a copied /activity?alert=<id> link still opens the alert after a new repeat merges; an id no longer open is looked up in the last 24 h", async () => {
+test("a copied /activity?alert=<id> link still opens the alert after a new repeat merges; an id in no group says so", async () => {
   await open("/activity?alert=201", { fixture: ["flow-valves-closed", "alert-repeat"] });
   expect(alertRow(201).querySelector(".alert-detail")).not.toBeNull();
-  expect(text(alertRow(201).querySelector(".alert-facts"))).toContain("seen 2 times, last 10:41");
+  expect(text(alertRow(201).querySelector(".alert-facts"))).toContain("×2 since 10:38 · last 10:41");
   expect(screen.queryByRole("region", { name: "Linked alert" })).toBeNull();
   stopped();
-  const api = await open("/activity?alert=999", { fixture: "alerts-merged" });
-  // The open rows answer first; only then is status=recent read, and TanStack renders its answer a moment later.
-  expect(text(screen.getByRole("region", { name: "Linked alert" }))).toBe("Linked alertLoading alert 999");
-  await advance(20);
+  await open("/activity?alert=999", { fixture: "alerts-merged" });
   expect(text(screen.getByRole("region", { name: "Linked alert" }))).toBe("Linked alertAlert 999 is not open or resolved in the last 24 h");
-  expect(requests(api, "API-14").map((row) => row.path)).toEqual(["/api/v1/alerts?status=open&limit=200", "/api/v1/alerts?status=recent&limit=200"]);
 });
 
-test("the run-missed alert reads its plain title with L02, never the raw code, expanded too", async () => {
+test("the run-missed alert reads its plain title with L02, never the raw code, and Details expands it in place", async () => {
   await open("/activity", { fixture: "run-missed" });
   const item = alertRow(502);
   expect(text(item.querySelector("h3"))).toBe("A scheduled watering was missed");
@@ -260,17 +260,17 @@ test("the run-missed alert reads its plain title with L02, never the raw code, e
   await advance(0);
   expect(text(screen.getByTestId("where"))).toBe("/activity?alert=502");
   expect(text(alertRow(502).querySelector(".alert-detail .kv"))).toContain("TypeA scheduled watering was missed");
-  expect(text(alertRow(502))).not.toContain("irrigation_run_missed");
+  expect(within(alertRow(502)).getByRole("link", { name: "Hide details" }).getAttribute("aria-expanded")).toBe("true");
 });
 
 test("the acknowledged group opens for the alert it holds, then stays as left, and its rows keep what was typed", async () => {
   const api = await open("/activity", { fixture: "alerts-merged" });
-  const group = () => alertsPanel().querySelector("details.alert-group") as HTMLDetailsElement;
-  expect(group().open).toBe(false);
+  const acknowledged = () => group(/^Acknowledged/)!;
+  expect(acknowledged().open).toBe(false);
   // Its own row expands from a link: the group opens, and the note goes out with Resolve alone (it is acknowledged).
   fireEvent.click(within(alertRow(103)).getByRole("link", { name: /^Details/, hidden: true }));
   await advance(0);
-  expect(group().open).toBe(true);
+  expect(acknowledged().open).toBe(true);
   const item = alertRow(103);
   expect(text(item.querySelector(".field-hint"))).toBe("0/500 characters, sent with Resolve");
   expect(within(item).queryByRole("button", { name: "Acknowledge" })).toBeNull();
@@ -279,10 +279,10 @@ test("the acknowledged group opens for the alert it holds, then stays as left, a
   fireEvent.click(within(alertRow(101)).getByRole("link", { name: /^Details/ }));
   await advance(0);
   expect(text(screen.getByTestId("where"))).toBe("/activity?alert=101");
-  expect(group().open).toBe(true);
+  expect(acknowledged().open).toBe(true);
   fireEvent.click(within(alertRow(101)).getByRole("link", { name: "Hide details" }));
   await advance(0);
-  expect(group().open).toBe(true);
+  expect(acknowledged().open).toBe(true);
   fireEvent.click(within(alertRow(103)).getByRole("link", { name: /^Details/ }));
   await advance(0);
   expect((within(alertRow(103)).getByLabelText("Note (optional)") as HTMLInputElement).value).toBe("Waiting on the part");
@@ -303,7 +303,7 @@ test("fence-breach: Stop all water shows with and without the engine and sends o
     const api = await open("/activity", { fixture: [...fixture] });
     const item = alertRow(501);
     expect(text(item.querySelector("h3")), fixture.join()).toBe("A watering valve opened outside its program");
-    expect([...item.querySelectorAll(".event-body > p")].map(text), fixture.join()).toContain("Valve that opened: L08 Mister • South Wall (Fert.)");
+    expect(text(item.querySelector(".act-valve")), fixture.join()).toBe("Valve that opened: L08 Mister • South Wall (Fert.)");
     const stop = within(item).getByRole("button", { name: "Stop all water" });
     expect(stop.className, fixture.join()).toContain("btn-stop");
     expect(stop.hasAttribute("disabled"), fixture.join()).toBe(false);
@@ -314,7 +314,6 @@ test("fence-breach: Stop all water shows with and without the engine and sends o
     await advance(0);
     expect(writes(api), fixture.join()).toEqual([expect.objectContaining({ operationId: "API-IRR-07", path: "/api/v1/irrigation/stop", body: {} })]);
     expect(writes(api)[0].idempotency_key).toMatch(UUID);
-    // The relays read OFF at the first readback, 5 s on: the Stop result.
     await advance(5000);
     expect(politeToasts(), fixture.join()).toEqual([result]);
     stopped();
@@ -323,8 +322,7 @@ test("fence-breach: Stop all water shows with and without the engine and sends o
 
 test("mister-fault: Clear fault shows only with the irrigation firmware, sends API-IRR-13 with the line and reads the latch back; changes off disable it", async () => {
   const api = await open("/activity", { fixture: "mister-fault" });
-  const clear = within(alertRow(301)).getByRole("button", { name: "Clear fault on L04" });
-  fireEvent.click(clear);
+  fireEvent.click(within(alertRow(301)).getByRole("button", { name: "Clear fault on L04" }));
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-13", path: "/api/v1/irrigation/clear-fault", body: { line_id: "L04" } })]);
   expect(text(alertRow(301))).toContain("Waiting for the controller");
@@ -334,13 +332,21 @@ test("mister-fault: Clear fault shows only with the irrigation firmware, sends A
   for (const options of [{ fixture: ["mister-fault", "before-engine"] }, { fixture: "mister-fault", fail: { "API-IRR-01": 503 } }]) {
     await open("/activity", options);
     expect(within(alertRow(301)).queryByRole("button", { name: /Clear fault/ }), JSON.stringify(options)).toBeNull();
-    // The rest of the row is there: its title and Acknowledge.
     expect(text(alertRow(301).querySelector("h3"))).toBe("A mister zone faulted");
     expect(within(alertRow(301)).getByRole("button", { name: /^Acknowledge/ })).toBeTruthy();
     stopped();
   }
   await open("/activity", { fixture: ["mister-fault", "writes-off"] });
   expect(within(alertRow(301)).getByRole("button", { name: "Clear fault on L04" }).hasAttribute("disabled")).toBe(true);
+});
+
+test("Recent activity: the five newest log entries, one line each, and Open the log", async () => {
+  const api = await open("/activity", { fixture: "activity-mixed" });
+  const recent = screen.getByRole("region", { name: "Recent activity" });
+  expect(recent.querySelectorAll("li.event")).toHaveLength(5);
+  expect(plain(text(recent.querySelector("li.event .act-entry-text")))).toBe("VPD Mister Engage 1.60 → 1.55 kPa · requested 1.53 · manual");
+  expect(within(recent).getByRole("link", { name: /^Open the log/ }).getAttribute("href")).toBe("/activity/log");
+  expect(requests(api, "API-17").map((row) => row.path)).toEqual(["/api/v1/activity?limit=5"]);
 });
 
 test("a viewer reads every alert and the log, expanded too, with no Acknowledge, Resolve, Stop all water, Clear fault or note", async () => {
@@ -356,69 +362,73 @@ test("a viewer reads every alert and the log, expanded too, with no Acknowledge,
 });
 
 // ---------------------------------------------------------------------------------------------------- the log
-test("activity-mixed: who wrote in text, AI for Iris and the agent only, each change and its reason, and both plan.write rows from detail.changes", async () => {
+test("activity-mixed: one line an entry, who wrote in R4's words, AI for Iris and the agent only, an Iris plan collapsed to its changes, causes first", async () => {
   await open("/activity/log", { fixture: "activity-mixed" });
-  expect(logTitles()).toEqual([
-    "Set VPD Mister Engage Confirmed 07:42", "Plan iris-20261102-0702", "Changed line L01 Confirmed 06:49", "Acknowledged “Relay stuck”",
-    "Plan preemptive-20261102-0630", "Ran L01",
+  expect(status()).toBe(LOG_STATUS);
+  expect(logLines()).toEqual([
+    "VPD Mister Engage 1.60 → 1.55 kPa · requested 1.53 · manual", "Plan · 3 changes", "Changed line L01 · Daily cap 60 → 45 min · manual cleared · during experiment 7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "Acknowledged “Relay stuck”", "Forecast rule “hot afternoon” · Mister Pulse Gap 45 → 60 s", "Ran L01 · 12 min",
   ]);
   const ai = (node: Element) => node.querySelector(".event-by [data-badge=ai]") !== null;
-  const dashboard = logRow("Set VPD Mister Engage");
-  expect(writtenBy(dashboard)).toBe("Jason · dashboard · 1.60 → 1.55 kPa · requested 1.53 · manual");
-  expect(ai(dashboard)).toBe(false);
-  expect(text(dashboard.querySelector(".event-reason"))).toBe("“Vandas drying”");
-  const iris = logRow("Plan iris-20261102-0702");
-  expect(writtenBy(iris)).toBe("iris AI · trigger 5f0c6a1e-2b7d-4c9a-8e3f-1d2c3b4a5e6f");
-  expect(ai(iris)).toBe(true);
-  expect(text(iris.querySelector(".event-reason"))).toBe("“Hot, dry afternoon: engage misting earlier from 13:00 and widen the pulse gap at dusk.”");
-  expect(text(iris.querySelector("summary"))).toBe("3 changes");
-  expect([...iris.querySelectorAll(".plan-changes li")].map(text)).toEqual([
-    "VPD Mister Engage 1.70 kPa from 13:00", "Mister Pulse Gap 55 s from 16:30", "Mister Engage Delay 90 s from 19:00",
-  ]);
+  const dashboard = logRow("VPD Mister Engage");
+  expect([writtenBy(dashboard), ai(dashboard), text(dashboard.querySelector(".event-reason")), text(dashboard.querySelector(".act-entry-outcome"))]).toEqual(["Jason · dashboard", false, "“Vandas drying”", "Confirmed 07:42"]);
+  const iris = logRow("Plan · 3 changes");
+  expect([writtenBy(iris), ai(iris)]).toEqual(["iris AI", true]);
+  fireEvent.click(iris.querySelector("summary")!);
+  expect([...iris.querySelectorAll(".plan-changes li")].map((node) => plain(text(node)))).toEqual(["VPD Mister Engage 1.70 kPa from 13:00", "Mister Pulse Gap 55 s from 16:30", "Mister Engage Delay 90 s from 19:00"]);
   const agent = logRow("Changed line L01");
-  expect(writtenBy(agent)).toBe("steward · agent AI · Daily cap 60 → 45 min · manual cleared · during experiment 7c9e6679-7425-40de-944b-e07fc1f90ae7");
-  expect(ai(agent)).toBe(true);
-  expect(text(agent.querySelector(".event-reason"))).toBe("“forecast 92 °F”");
-  // The forecast rule is the system, never AI: its one change inline, before → after, with its rule.
-  const forecast = logRow("Plan preemptive-20261102-0630");
-  expect(writtenBy(forecast)).toBe("forecast-engine · system · Mister Pulse Gap 45 → 60 s · rule “hot afternoon”");
-  expect(ai(forecast)).toBe(false);
-  expect(text(forecast.querySelector(".event-reason"))).toBe("“Forecast: hot afternoon — temp_f > 88 (actual 92 at 14:00)”");
+  expect([writtenBy(agent), ai(agent)]).toEqual(["steward · agent AI", true]);
+  const forecast = logRow("Forecast rule");
+  expect([writtenBy(forecast), ai(forecast)]).toEqual(["forecast-engine · system", false]);
   expect(forecast.querySelector("details")).toBeNull();
-  expect(text(logRow("Acknowledged “Relay stuck”").querySelector(".event-reason"))).toBe("“breaker reset”");
-  // A row from another day carries its date.
-  expect(text(logRow("Ran L01").querySelector(".event-when"))).toBe("Oct 30, 08:31");
-  expect(writtenBy(logRow("Ran L01"))).toBe("Jason · dashboard · 12 min");
 });
 
-test("activity-mixed: an old /activity?target=L01 link lands on the log with only L01 entries, and the filters live in the URL, so a reload keeps them", async () => {
+test("day headers: Today, Yesterday and the weekday and date, each over its own entries, sticky in their day", async () => {
+  await open("/activity/log", { fixture: "activity-days" });
+  const days = [...logPanel().querySelectorAll("section.act-day")];
+  expect(days.map((day) => text(day.querySelector("h3.act-day-head")))).toEqual(["Today", "Yesterday", "Fri 30 Oct"]);
+  expect(days.map((day) => day.querySelectorAll("li.event").length)).toEqual([2, 2, 2]);
+  expect(screen.getByRole("region", { name: "Yesterday" })).toBeTruthy();
+});
+
+test("the facets apply on change and live in the URL: Who and What on API-17's source and action, the Target on Enter or leaving it, the dates", async () => {
   let api = await open("/activity?target=L01", { fixture: "activity-mixed" }, true);
   expect(text(screen.getByTestId("where"))).toBe("/activity/log?target=L01");
   expect(requests(api, "API-17").map((row) => row.path)).toEqual(["/api/v1/activity?target=L01"]);
-  expect(logTitles()).toEqual(["Changed line L01 Confirmed 06:49", "Ran L01"]);
+  expect(logLines()).toEqual(["Changed line L01 · Daily cap 60 → 45 min · manual cleared · during experiment 7c9e6679-7425-40de-944b-e07fc1f90ae7", "Ran L01 · 12 min"]);
   const form = () => screen.getByRole("search", { name: "Activity log filters" });
   const control = (name: string) => form().querySelector(`[name=${name}]`) as HTMLInputElement | HTMLSelectElement;
   expect(control("target").value).toBe("L01");
-  // Source lists dashboard, iris, agent, system and each agent seen.
-  expect([...control("source").querySelectorAll("option")].map((option) => option.value)).toEqual(["", "dashboard", "iris", "agent", "system", "agent:steward"]);
-  fireEvent.change(control("source"), { target: { value: "agent:steward" } });
+  // Who as chips (a link each, the current aria-current=true) and as a select for phones, on the same parameter.
+  const who = within(form()).getByRole("list", { name: "Who" });
+  expect(within(who).getAllByRole("link").map((link) => [text(link), link.getAttribute("aria-current")])).toEqual([["All", "true"], ["People", null], ["Iris", null], ["Agents", null], ["System", null]]);
+  expect([...control("source").querySelectorAll("option")].map((option) => option.value)).toEqual(["", "dashboard", "iris", "agent", "system"]);
+  fireEvent.click(within(who).getByRole("link", { name: "Agents" }));
   await advance(0);
   const url = text(screen.getByTestId("where"));
-  expect(url).toBe("/activity/log?target=L01&source=agent%3Asteward");
-  expect(logTitles()).toEqual(["Changed line L01 Confirmed 06:49"]);
+  expect(url).toBe("/activity/log?target=L01&source=agent");
+  expect(logLines()).toHaveLength(1);
   stopped();
   // A reload of that URL: the same filters, sent the same way.
   api = await open(url, { fixture: "activity-mixed" });
-  expect(requests(api, "API-17").map((row) => row.path)).toEqual(["/api/v1/activity?source=agent%3Asteward&target=L01"]);
-  expect([control("source").value, control("target").value]).toEqual(["agent:steward", "L01"]);
-  expect(logTitles()).toEqual(["Changed line L01 Confirmed 06:49"]);
-  // The target applies on Enter; Clear filters drops every filter and nothing else.
-  fireEvent.change(control("target"), { target: { value: "L09" } });
-  fireEvent.submit(form());
+  expect(requests(api, "API-17").map((row) => row.path)).toEqual(["/api/v1/activity?source=agent&target=L01"]);
+  expect([control("source").value, control("target").value]).toEqual(["agent", "L01"]);
+  // What on the action prefix, from the select as a phone has it.
+  fireEvent.change(control("action"), { target: { value: "irrigation." } });
   await advance(0);
-  expect(text(screen.getByTestId("where"))).toBe("/activity/log?target=L09&source=agent%3Asteward");
+  expect(text(screen.getByTestId("where"))).toBe("/activity/log?target=L01&source=agent&action=irrigation.");
+  // The target applies on Enter, with no Apply button; the dates as soon as a whole day is picked.
+  expect(within(form()).queryByRole("button", { name: "Apply" })).toBeNull();
+  fireEvent.change(control("target"), { target: { value: "L09" } });
+  fireEvent.keyDown(control("target"), { key: "Enter" });
+  await advance(0);
+  expect(text(screen.getByTestId("where"))).toBe("/activity/log?target=L09&source=agent&action=irrigation.");
   expect(text(logPanel().querySelector(".panel-empty"))).toBe("No activity matches these filtersClear filters");
-  fireEvent.click(within(logPanel()).getAllByRole("link", { name: "Clear filters" })[0]);
+  fireEvent.change(control("from"), { target: { value: "2026-11-01" } });
+  await advance(0);
+  expect(text(screen.getByTestId("where"))).toBe("/activity/log?target=L09&source=agent&action=irrigation.&from=2026-11-01");
+  expect(requests(api, "API-17").at(-1)?.path).toBe("/api/v1/activity?source=agent&action=irrigation.&target=L09&from=2026-11-01T06%3A00%3A00.000Z");
+  fireEvent.click(within(form()).getByRole("link", { name: "Clear filters" }));
   await advance(0);
   expect(text(screen.getByTestId("where"))).toBe("/activity/log");
   expect(logRows()).toHaveLength(6);
@@ -434,17 +444,32 @@ test("an old link with any log filter lands on the log with its query; ?alert= a
     expect(screen.getByRole("heading", { level: 1 }).textContent, path).toBe(lands.startsWith("/activity/log") ? "Activity log" : "Alerts");
     stopped();
   }
+  // An old actor filter shows as a chip that clears it.
+  await open("/activity/log?actor=jason", { fixture: "activity-mixed" });
+  fireEvent.click(screen.getByRole("link", { name: /^Only Jason/ }));
+  await advance(0);
+  expect(text(screen.getByTestId("where"))).toBe("/activity/log");
 });
 
-test("Load older passes next_cursor as cursor and adds the older page under the newer one", async () => {
+test("CSV of these entries builds the loaded entries in the browser; Load older adds the older page under the newer one", async () => {
+  const blobs: Blob[] = [];
+  vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: (blob: Blob) => { blobs.push(blob); return `blob:csv-${blobs.length}`; }, revokeObjectURL: vi.fn() }));
   const api = await open("/activity/log", { fixture: "activity-paged" });
   expect(logRows()).toHaveLength(50);
+  const csv = screen.getByRole("link", { name: "CSV of these entries" });
+  expect(csv.getAttribute("download")).toBe("verdify-activity-2026-11-02.csv");
+  expect(csv.getAttribute("href")).toMatch(/^blob:csv-/);
+  const lines = (await blobs.at(-1)!.text()).replace(/^\uFEFF/, "").trim().split("\r\n");
+  expect(lines).toHaveLength(51);
+  expect(lines[0]).toBe("time (America/Denver),who,source,action,target,what,reason,outcome,confirmed (America/Denver),request id");
   fireEvent.click(screen.getByRole("button", { name: "Load older" }));
   await advance(0);
   expect(requests(api, "API-17").map((row) => row.path)).toEqual(["/api/v1/activity", "/api/v1/activity", "/api/v1/activity?cursor=50"]);
   expect(logRows()).toHaveLength(60);
   expect(logRows().map((node) => node.id).slice(48, 52)).toEqual(["activity-148", "activity-149", "activity-150", "activity-151"]);
   expect(screen.queryByRole("button", { name: "Load older" })).toBeNull();
+  // The CSV follows what is loaded.
+  expect((await blobs.at(-1)!.text()).trim().split("\r\n")).toHaveLength(61);
   // The 60 s poll reads both pages again from the newest, so a refresh leaves no gap.
   await advance(60_000);
   expect(requests(api, "API-17").map((row) => row.path).slice(3)).toEqual(["/api/v1/activity", "/api/v1/activity?cursor=50"]);

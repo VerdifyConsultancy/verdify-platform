@@ -3,7 +3,8 @@
 // words. The screen itself is tested in routes/activity.test.tsx against the fixture API.
 import { expect, test } from "vitest";
 import {
-  activityHref, alertIdOf, catalogOf, entryFacts, entryTitle, groupAlerts, manualText, personName, planChanges, readView, shownActor,
+  LOG_CSV_HEADERS, WHAT_FACETS, WHO_FACETS, activityHref, actorWords, alertIdOf, alertsStatus, catalogOf, causeOf, csvCell, dayHeading, entriesByDay, entryFacts, entryLine,
+  entryTitle, facetsWith, groupAlerts, isDay, logCsv, logCsvName, logQuery, logRedirect, manualText, personName, planChanges, readView, shownActor,
 } from "./activity";
 import type { ActivityEntry, Alert, Setting } from "./operator-api";
 
@@ -20,8 +21,11 @@ const entry = (row: Partial<ActivityEntry>): ActivityEntry => ({
 
 test("the view comes from the URL, and a link changes only what it names", () => {
   const params = new URLSearchParams("alert=101&resolved=24h&source=agent%3Asteward&target=+L01+&actor=");
-  expect(readView(params)).toEqual({ alert: "101", resolved: true, filters: { source: "agent:steward", target: "L01" } });
-  expect(readView(new URLSearchParams("resolved=1&alert=%20"))).toEqual({ alert: null, resolved: false, filters: {} });
+  expect(readView(params)).toEqual({ alert: "101", resolved: true, filters: { source: "agent:steward", target: "L01" }, dates: {} });
+  expect(readView(new URLSearchParams("resolved=1&alert=%20"))).toEqual({ alert: null, resolved: false, filters: {}, dates: {} });
+  // The log's dates: only a real day counts.
+  expect(readView(new URLSearchParams("from=2026-11-01&to=2026-02-30")).dates).toEqual({ from: "2026-11-01" });
+  expect([isDay("2026-11-02"), isDay("2026-13-01"), isDay("2026-11-2"), isDay(null)]).toEqual([true, false, false, false]);
   expect(activityHref(params, { alert: null })).toBe("/activity?resolved=24h&source=agent%3Asteward&target=+L01+&actor=");
   expect(activityHref(new URLSearchParams("alert=101"), { alert: null })).toBe("/activity");
   expect(activityHref(new URLSearchParams("target=L01"), { action: "irrigation." })).toBe("/activity?target=L01&action=irrigation.");
@@ -98,4 +102,75 @@ test("irrigation rows: the action in words with its line, a run's length, the fi
   expect(entryFacts(entry({ action: "light.on", target: "grow_light_main", detail: { light: "main", state: "on", result: "not_confirmed" } }), CATALOG)).toEqual(["Lutron did not reach the state"]);
   expect(entryTitle(entry({ action: "alert.ack", target: "88", detail: { alert_type: "relay_stuck" } }), CATALOG)).toBe("Acknowledged “Relay stuck”");
   expect(entryTitle(entry({ action: "alert.resolve", target: "88" }), CATALOG)).toBe("Resolved alert 88");
+});
+
+test("the log asks API-17 for its filters as they are and its dates as instants, the day after `to` excluded", () => {
+  const view = readView(new URLSearchParams("source=iris&action=setting.&target=L01&from=2026-11-01&to=2026-11-02"));
+  // 2026-11-01 is the fall-back day: its midnight is MDT, the next ones MST.
+  expect(logQuery(view)).toEqual({ source: "iris", action: "setting.", target: "L01", from: "2026-11-01T06:00:00.000Z", to: "2026-11-03T07:00:00.000Z" });
+  expect(logQuery(readView(new URLSearchParams("")))).toEqual({});
+  // Only the log filters move an old Alerts link to the log; the dates never were on Alerts.
+  expect(logRedirect(new URL("https://d.example/activity?target=L01&alert=2"))).toBe("/activity/log?target=L01&alert=2");
+  expect(logRedirect(new URL("https://d.example/activity?from=2026-11-01"))).toBeNull();
+});
+
+test("the facets: Who and What on API-17's source and action prefix, and an unknown value from the URL kept so it shows", () => {
+  expect(WHO_FACETS.map(([, label]) => label)).toEqual(["People", "Iris", "Agents", "System"]);
+  expect(WHAT_FACETS).toEqual([["setting.", "Settings"], ["irrigation.", "Water"], ["alert.", "Alerts"], ["plan.", "Plan"], ["irrigation.override", "Equipment"]]);
+  expect(facetsWith(WHO_FACETS, "agent:steward").at(-1)).toEqual(["agent:steward", "steward · agent"]);
+  expect(facetsWith(WHO_FACETS, "iris")).toHaveLength(4);
+  expect(facetsWith(WHAT_FACETS, undefined)).toHaveLength(5);
+});
+
+test("day headers: Today, Yesterday, else the weekday and date; entries group by America/Denver day in API order", () => {
+  expect(["2026-11-02", "2026-11-01", "2026-10-30", "2025-12-31"].map((day) => dayHeading(day, "2026-11-02"))).toEqual(["Today", "Yesterday", "Fri 30 Oct", "Wed 31 Dec 2025"]);
+  const rows = [entry({ id: 3, ts: "2026-11-02T14:41:00Z" }), entry({ id: 2, ts: "2026-11-02T07:30:00Z" }), entry({ id: 1, ts: "2026-11-02T06:30:00Z" })];
+  // 07:30Z is 00:30 MST on Nov 2; 06:30Z is 23:30 on Nov 1.
+  expect(entriesByDay(rows).map((day) => [day.date, day.entries.map((row) => row.id)])).toEqual([["2026-11-02", [3, 2]], ["2026-11-01", [1]]]);
+});
+
+test("who wrote, in text (R4): a person by name with dashboard, iris and an agent with AI, the system by its writer, a stranger raw", () => {
+  const me = { username: "jason", display_name: "Jason" };
+  expect(actorWords({ source: "dashboard", name: "jason" }, me)).toEqual({ text: "Jason · dashboard", ai: false });
+  expect(actorWords({ source: "iris", name: "iris" }, me)).toEqual({ text: "iris", ai: true });
+  expect(actorWords({ source: "agent:steward", name: "steward" }, me)).toEqual({ text: "steward · agent", ai: true });
+  expect(actorWords({ source: "system", name: "forecast-engine" }, me)).toEqual({ text: "forecast-engine · system", ai: false });
+  expect(actorWords({ source: "agent:Bad Name", name: "x" }, me)).toEqual({ text: "x · agent:Bad Name", ai: false });
+  expect(actorWords({ source: "slack", name: "U123" }, me)).toEqual({ text: "U123 · slack", ai: false });
+});
+
+test("one line an entry: a setting's change with its facts, an Iris plan collapsed to its count, an automatic entry led by its cause", () => {
+  const line = (row: Partial<ActivityEntry>) => { const { text, changes } = entryLine(entry(row), CATALOG); return { text: text.replaceAll(NBSP, " "), changes: changes.length }; };
+  expect(line({ detail: { before: 1.6, value: 1.55, requested: 1.53, manual: { before: false, after: true } } })).toEqual({ text: "VPD Mister Engage 1.60 → 1.55 kPa · requested 1.53 · manual", changes: 0 });
+  const plan = { action: "plan.write", target: "iris-20261102-0702", actor: { source: "iris", name: "iris" } } as const;
+  const changes = [{ ts: "2026-11-02T20:00:00Z", param: "mister_engage_kpa", value: 1.7 }, { ts: "2026-11-02T23:30:00Z", param: "x", value: 55 }];
+  expect(line({ ...plan, detail: { trigger: "SUNRISE", changes } })).toEqual({ text: "SUNRISE plan · 2 changes", changes: 2 });
+  expect(line({ ...plan, detail: { changes: changes.slice(0, 1) } })).toEqual({ text: "Plan · VPD Mister Engage 1.70 kPa from 13:00", changes: 0 });
+  const forecast = { action: "plan.write", target: "preemptive-1", actor: { source: "system", name: "forecast-engine" } } as const;
+  expect(line({ ...forecast, detail: { changes: [{ param: "mister_engage_kpa", before: 1.6, value: 1.5 }], rule: "hot afternoon" } })).toEqual({ text: "Forecast rule “hot afternoon” · VPD Mister Engage 1.60 → 1.50 kPa", changes: 0 });
+  expect(line({ actor: { source: "system", name: "forecast-engine" }, detail: { before: 1.6, value: 1.65 } })).toEqual({ text: "Forecast rule · VPD Mister Engage 1.60 → 1.65 kPa", changes: 0 });
+  expect(line({ action: "irrigation.run", target: "L01", actor: { source: "system", name: "scheduler" }, detail: { minutes: 12, schedule_label: "Wall MWF" } })).toEqual({ text: "Schedule “Wall MWF” · Ran L01 · 12 min", changes: 0 });
+  expect(line({ action: "irrigation.run", target: "L01", detail: { minutes: 12 } })).toEqual({ text: "Ran L01 · 12 min", changes: 0 });
+  expect([causeOf(entry({ actor: { source: "system", name: "seed" } })), causeOf(entry({}))]).toEqual(["seed", null]);
+});
+
+test("CSV of these entries: one row each with the header, quoted where it must be, an Iris plan's changes in its cell, and the BOM", () => {
+  expect([csvCell("plain"), csvCell("a, b"), csvCell('say "hi"'), csvCell("two\nlines")]).toEqual(["plain", '"a, b"', '"say ""hi"""', '"two\nlines"']);
+  const rows = [
+    entry({ id: 2, reason: "Vandas, drying", state: "confirmed", confirmed_at: "2026-11-02T14:42:00Z", detail: { before: 1.6, value: 1.55 } }),
+    entry({ id: 1, ts: "2026-11-02T14:02:00Z", action: "plan.write", target: "iris-1", actor: { source: "iris", name: "iris" }, detail: { trigger: "SUNRISE", changes: [{ param: "mister_engage_kpa", value: 1.7 }, { param: "x", value: 2 }] } }),
+  ];
+  const csv = logCsv(rows, CATALOG, { username: "jason", display_name: "Jason" });
+  expect(csv.startsWith("\uFEFF")).toBe(true);
+  const lines = csv.slice(1).split("\r\n");
+  expect(lines[0]).toBe(LOG_CSV_HEADERS.join(","));
+  expect(lines[1].replaceAll(NBSP, " ")).toBe('2026-11-02 07:41,Jason · dashboard,dashboard,setting.write,mister_engage_kpa,VPD Mister Engage 1.60 → 1.55 kPa,"Vandas, drying",confirmed,2026-11-02 07:42,');
+  expect(lines[2].replaceAll(NBSP, " ")).toBe('2026-11-02 07:02,iris,iris,plan.write,iris-1,"SUNRISE plan · 2 changes\nVPD Mister Engage 1.70 kPa\nx 2",,,,');
+  expect(logCsvName(rows)).toBe("verdify-activity-2026-11-02.csv");
+});
+
+test("the Alerts status line states the one count once: open, acknowledged and resolved; with none open, what the empty list may say", () => {
+  expect(alertsStatus({ open: 2, acknowledged: 1, resolved: 3, coverage: "No open alerts" })).toBe("2 open · 1 acknowledged · 3 resolved in 24 h");
+  expect(alertsStatus({ open: 0, acknowledged: 0, resolved: 3, coverage: "No open alerts" })).toBe("No open alerts · 3 resolved in 24 h");
+  expect(alertsStatus({ open: 0, acknowledged: 0, resolved: 0, coverage: "In-app alerts may be missing: no data since 10:36" })).toBe("In-app alerts may be missing: no data since 10:36");
 });

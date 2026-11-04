@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 /**
  * The bursts and Restart controller on Equipment (SCR-07, US-EQP-06), which replace the Home Assistant buttons; nothing
- * here calls Home Assistant. Each is one API-IRR-12 through the C hook, with no dialog: "Sending…" until the 202, then
+ * here calls Home Assistant. Now's quick actions (redesign §5.1, D-UX-05) send the same three bursts through
+ * `useBurstCommand`, so a burst reads the same wherever it starts. Each is one API-IRR-12 through the C hook, with no dialog: "Sending…" until the 202, then
  * API-02 every 5 s. What runs is only ever the controller's readback, API-02 `overrides`, never the command. Operators
  * press; viewers read what runs. With changes switched off the buttons are disabled (`Button write`), and before the
  * irrigation firmware API-IRR-12 answers 503, so the panel says when they arrive instead. The engine flag is API-IRR-01's
@@ -59,13 +60,13 @@ export function burstWords(burst: Now["overrides"][number], clock: number): stri
 }
 
 /** A burst's readback is its flag on in API-02 `overrides`; Clear's is none left on. A restart passes its own. */
-function overrideReadback(_params: ParamsOf<"API-IRR-12">, body: BodyOf<"API-IRR-12">): Readback | null {
+export function overrideReadback(_params: ParamsOf<"API-IRR-12">, body: BodyOf<"API-IRR-12">): Readback | null {
   if (body.kind === "clear") return readback({ operationId: "API-02", done: (now) => now.overrides.length === 0, reason: () => "The controller still reports a burst" });
   return readback({ operationId: "API-02", done: (now) => now.overrides.some((burst) => burst.kind === body.kind) });
 }
 
 /** What a command says after its 202: waiting on the readback, or within its window why nothing changed. */
-function CommandNote({ phase, message, error }: { phase: CommandPhase; message: string | null; error: { readonly message: string } | null }) {
+export function CommandNote({ phase, message, error }: { phase: CommandPhase; message: string | null; error: { readonly message: string } | null }) {
   return <>
     {phase === "waiting" && <span className="state-note">Waiting for the controller</span>}
     {phase === "late" && <span className="state-note">{message}</span>}
@@ -73,8 +74,14 @@ function CommandNote({ phase, message, error }: { phase: CommandPhase; message: 
   </>;
 }
 
-function BurstButton({ kind, minutes, children }: { kind: (typeof BURSTS)[number]["kind"]; minutes: number; children: ReactNode }) {
-  const command = useCommand({ operation: "API-IRR-12", readback: overrideReadback });
+export type BurstKind = (typeof BURSTS)[number]["kind"];
+/** One burst's command: API-IRR-12 `{kind, minutes}` with its readback, one request per press. */
+export function useBurstCommand() {
+  return useCommand({ operation: "API-IRR-12", readback: overrideReadback });
+}
+
+function BurstButton({ kind, minutes, children }: { kind: BurstKind; minutes: number; children: ReactNode }) {
+  const command = useBurstCommand();
   return <>
     <Button write wide busy={command.sending} onClick={() => void command.send({}, { kind, minutes })}>{children}</Button>
     <CommandNote phase={command.phase} message={command.message} error={command.error} />

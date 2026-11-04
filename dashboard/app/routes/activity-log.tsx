@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useState, type FocusEvent, type KeyboardEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { ReadbackBadge } from "../components/badge";
+import { CsvLink } from "../components/activity/csv-link";
 import { Button } from "../components/button";
-import { LocalTime } from "../components/common";
-import { Details } from "../components/details";
+import { Chips, type ChipLink } from "../components/chips";
 import { EventRow } from "../components/event-row";
+import { useClockValue } from "../components/freshness";
 import { PageHeader } from "../components/layout/page-header";
-import { EmptyState, Panel, type PanelState } from "../components/panel";
+import { EmptyState, PanelError } from "../components/panel";
 import {
-  ACTION_FILTERS, LOG_FILTERS, SOURCE_FILTERS, catalogOf, entryFacts, entryTitle, logHref, personName, planChangeText, planChanges, readView, seenActors,
-  seenAgents, shownActor, type ActivityView, type Catalog, type LogFilter, type LogFilters, type SignedIn,
+  DATE_FILTERS, LOG_FILTERS, WHAT_FACETS, WHO_FACETS, catalogOf, dayHeading, entriesByDay, facetsWith, isDay, logCsv, logCsvName, logHref, logQuery, personName,
+  readView, type ActivityView, type Catalog, type Facet, type SignedIn,
 } from "../lib/activity";
 import { localDate } from "../lib/format";
 import { apiGet, type ActivityEntry, type Parsed } from "../lib/operator-api";
@@ -24,27 +24,40 @@ export const meta = () => viewMeta("activity-log");
 /** The log and the settings catalog every 60 s (screens §7). */
 const LOG_POLL_MS = 60_000;
 const CATALOG_POLL_MS = 60_000;
+export const LOG_STATUS = "Every write by people, Iris, agents and the system";
 
 /**
  * Activity → Log (`/activity/log`, redesign §5.9, D-UX-03): every write by a person, Iris, an agent or the system,
- * newest first, from API-17 with its filters in the URL (`source`, `actor`, `action`, `target`). Moved from the lower
- * half of `/activity` unchanged; an old `/activity?target=L01` link redirects here with its query. The log writes
- * nothing. No greenhouse data renders in SSR: it loads in the browser.
+ * newest first, from API-17, one line an entry under sticky day headers. Who and What facets, a Target and From and To
+ * dates narrow it, each applied on change and kept in the URL (`source`, `action`, `target`, `from`, `to`; an old
+ * `actor` filter shows as a chip that clears it); an old `/activity?target=L01` link redirects here with its query. An
+ * Iris plan collapses to one entry that expands to its changes, and "CSV of these entries" saves the loaded entries. The
+ * log writes nothing. No greenhouse data renders in SSR: it loads in the browser.
  */
 export default function ActivityLog() {
   const [params] = useSearchParams();
   const view = readView(params);
+  const me = useMe();
+  const { query, loadingOlder, loadOlder } = useActivityLog(logQuery(view));
+  const settings = useApiRead("API-09", {}, { intervalMs: CATALOG_POLL_MS });
+  const catalog = useMemo(() => catalogOf(settings.data?.items), [settings.data]);
+  const entries = query.data?.items ?? [];
   return <>
-    <PageHeader view="activity-log" />
-    <LogPanel view={view} params={params} />
+    <PageHeader view="activity-log" status={LOG_STATUS} />
+    <div className="act-log-page">
+      <LogFilters view={view} params={params} me={me} />
+      <LogList view={view} params={params} entries={entries} catalog={catalog} me={me} failed={query.isError && !query.data} pending={query.isPending}
+        retry={() => void query.refetch()} more={query.data?.next_cursor ? { loading: loadingOlder, load: loadOlder } : null} />
+    </div>
   </>;
 }
 
 // ---------------------------------------------------------------------------------------------------- the log
 type LogPages = { readonly items: readonly ActivityEntry[]; readonly next_cursor: string | null; readonly pages: number };
+type LogParams = ReturnType<typeof logQuery>;
 
 /** Up to `pages` API-17 pages in order, each from the previous one's `next_cursor`, as one list. */
-async function fetchLog(filters: LogFilters, pages: number, signal: AbortSignal): Promise<LogPages> {
+async function fetchLog(filters: LogParams, pages: number, signal: AbortSignal): Promise<LogPages> {
   const items: ActivityEntry[] = [];
   const seen = new Set<number>();
   let cursor: string | null = null;
@@ -63,7 +76,7 @@ async function fetchLog(filters: LogFilters, pages: number, signal: AbortSignal)
  * shown again from the newest, so a refresh never leaves a gap between them. The key sits under API-17's, so a write
  * hook's refresh of API-17 reaches it.
  */
-function useActivityLog(filters: LogFilters) {
+function useActivityLog(filters: LogParams) {
   const filterKey = JSON.stringify(filters);
   const [paging, setPaging] = useState({ key: filterKey, pages: 1 });
   const pages = paging.key === filterKey ? paging.pages : 1;
@@ -77,80 +90,93 @@ function useActivityLog(filters: LogFilters) {
   };
 }
 
-/** The activity log: every write by a person, Iris, an agent or the system, newest first. */
-function LogPanel({ view, params }: { view: ActivityView; params: URLSearchParams }) {
-  const me = useMe();
-  const { query, loadingOlder, loadOlder } = useActivityLog(view.filters);
-  const settings = useApiRead("API-09", {}, { intervalMs: CATALOG_POLL_MS });
-  const catalog = useMemo(() => catalogOf(settings.data?.items), [settings.data]);
-  const entries = query.data?.items ?? [];
-  const filtered = LOG_FILTERS.some((name) => view.filters[name] !== undefined);
-  const clearHref = logHref(params, Object.fromEntries(LOG_FILTERS.map((name) => [name, null])));
-  const state: PanelState = query.isError ? "error" : query.isPending ? "loading" : entries.length ? "ready" : "empty";
-  const today = localDate(new Date().toISOString());
-  const empty = filtered
-    ? <EmptyState message="No activity matches these filters" widen={{ to: clearHref, label: "Clear filters" }} />
-    : <EmptyState message="No activity yet." detail="Every change by a person, Iris, an agent or the system shows here." />;
-  return <Panel id="log" title="Activity log" thing="activity" state={state} reserve="lg" onRetry={() => void query.refetch()} empty={empty}
-    actions={<LogFilterForm view={view} params={params} entries={entries} me={me} clearHref={filtered ? clearHref : null} />}>
-    <ol className="events activity-log">{entries.map((entry) => <LogEntry key={entry.id} entry={entry} catalog={catalog} me={me} today={today} />)}</ol>
-    {query.data?.next_cursor && <div className="actions"><Button wide disabled={loadingOlder} onClick={loadOlder}>{loadingOlder ? "Loading older…" : "Load older"}</Button></div>}
-  </Panel>;
+type LogListProps = {
+  view: ActivityView; params: URLSearchParams; entries: readonly ActivityEntry[]; catalog: Catalog; me: SignedIn;
+  failed: boolean; pending: boolean; retry: () => void; more: { loading: boolean; load: () => void } | null;
+};
+
+/** The entries under their day headers (Today, Yesterday, Mon 3 Nov), each header sticking while its day scrolls. */
+function LogList({ view, params, entries, catalog, me, failed, pending, retry, more }: LogListProps) {
+  const today = useClockValue((clock) => localDate(new Date(clock).toISOString()));
+  const headId = useId();
+  const filtered = LOG_FILTERS.some((name) => view.filters[name] !== undefined) || DATE_FILTERS.some((name) => view.dates[name] !== undefined);
+  const clearHref = logHref(params, Object.fromEntries([...LOG_FILTERS, ...DATE_FILTERS].map((name) => [name, null])));
+  let body;
+  if (pending) body = <><div className="skeleton skeleton-lg" aria-hidden="true" /><p className="screen-reader">Loading activity</p></>;
+  else if (failed) body = <PanelError thing="activity" onRetry={retry} />;
+  else if (!entries.length) {
+    body = filtered
+      ? <EmptyState message="No activity matches these filters" widen={{ to: clearHref, label: "Clear filters" }} />
+      : <EmptyState message="No activity yet." detail="Every change by a person, Iris, an agent or the system shows here." />;
+  } else {
+    body = <>
+      {entriesByDay(entries).map((day) => <section key={day.date} className="act-day" aria-labelledby={`${headId}-${day.date}`}>
+        <h3 id={`${headId}-${day.date}`} className="act-day-head">{dayHeading(day.date, today)}</h3>
+        <ol className="act-entries">{day.entries.map((entry) => <EventRow key={entry.id} entry={entry} catalog={catalog} me={me} id={`activity-${entry.id}`} />)}</ol>
+      </section>)}
+      {more && <div className="act-more"><Button wide disabled={more.loading} onClick={more.load}>{more.loading ? "Loading older…" : "Load older"}</Button></div>}
+    </>;
+  }
+  return <section className="card act-log" aria-label="Activity log" aria-busy={pending || undefined}>
+    <div className="act-log-head">
+      <p className="meta act-log-count">{pending || failed ? "" : `${entries.length} ${entries.length === 1 ? "entry" : "entries"}${more ? " loaded" : ""}`}</p>
+      {entries.length > 0 && <CsvLink filename={logCsvName(entries)} label="CSV of these entries" version={entries} build={() => logCsv(entries, catalog, me)} />}
+    </div>
+    {body}
+  </section>;
+}
+
+// ---------------------------------------------------------------------------------------------------- the filters
+/** The facet's chips (from 861 px): All, then each value, the one in force current. */
+function facetChips(params: URLSearchParams, name: "source" | "action", facets: readonly Facet[], current: string | undefined): ChipLink[] {
+  return [
+    { key: "all", label: "All", to: logHref(params, { [name]: null }), current: !current, keepScroll: true },
+    ...facets.map(([value, label]) => ({ key: value, label, to: logHref(params, { [name]: value }), current: current === value, keepScroll: true })),
+  ];
 }
 
 /**
- * One write as an `EventRow`: the time, the writer in words (AI for Iris and the agents only), the action and its
- * target, what changed, the reason in quotes and the readback outcome. An Iris plan of several changes lists them in a
- * disclosure.
+ * Who and What as chips from 861 px and as selects at 860 px and below (both render; the stylesheet shows one), a Target
+ * applied when it is left or Enter is pressed, and From and To dates applied as soon as a whole day is picked. Every
+ * filter lands in the URL and on to API-17. "Clear filters" keeps the rest of the view.
  */
-function LogEntry({ entry, catalog, me, today }: { entry: ActivityEntry; catalog: Catalog; me: SignedIn; today: string }) {
-  const day = localDate(entry.ts);
-  const changes = entry.action === "plan.write" ? planChanges(entry.detail) : [];
-  const facts = entryFacts(entry, catalog);
-  return <EventRow at={entry.ts} showDate={day !== today} title={entryTitle(entry, catalog)} id={`activity-${entry.id}`}
-    badges={entry.state ? <><ReadbackBadge state={entry.state} />{entry.confirmed_at && <> <LocalTime at={entry.confirmed_at} /></>}</> : undefined}
-    actor={shownActor(entry.actor, me)} detail={facts.length ? facts.join(" · ") : undefined} reason={entry.reason ? `“${entry.reason}”` : undefined}>
-    {changes.length > 1 && <Details summary={`${changes.length} changes`}>
-      <ul className="plan-changes">{changes.map((change, index) => <li key={index}>{planChangeText(change, catalog, day)}</li>)}</ul>
-    </Details>}
-  </EventRow>;
-}
-
-/** An option for every value the URL may hold, so the select always shows the filter in force. */
-const withCurrent = (values: readonly string[], current: string) => (current && !values.includes(current) ? [...values, current] : values);
-
-/**
- * Source, actor, action and target, straight into the URL and on to API-17: a select applies at once, the target on
- * Apply or Enter. Clear filters keeps the rest of the view (the expanded alert, resolved).
- */
-function LogFilterForm({ view, params, entries, me, clearHref }: { view: ActivityView; params: URLSearchParams; entries: readonly ActivityEntry[]; me: SignedIn; clearHref: string | null }) {
+function LogFilters({ view, params, me }: { view: ActivityView; params: URLSearchParams; me: SignedIn }) {
   const navigate = useNavigate();
-  const go = (name: LogFilter, value: string) => navigate(logHref(params, { [name]: value.trim() || null }), { preventScrollReset: true });
-  const { source = "", actor = "", action = "", target = "" } = view.filters;
-  const sources = withCurrent([...SOURCE_FILTERS, ...seenAgents(entries)], source);
-  const actors = withCurrent(seenActors(entries), actor);
-  const actions = withCurrent(ACTION_FILTERS.map(([value]) => value), action);
-  const actionLabel = (value: string) => ACTION_FILTERS.find(([prefix]) => prefix === value)?.[1] ?? value;
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const go = (changes: Readonly<Record<string, string | null>>) => navigate(logHref(params, changes), { preventScrollReset: true });
+  const { source, action, target = "", actor } = view.filters;
+  const who = facetsWith(WHO_FACETS, source), what = facetsWith(WHAT_FACETS, action);
+  const filtered = LOG_FILTERS.some((name) => view.filters[name] !== undefined) || DATE_FILTERS.some((name) => view.dates[name] !== undefined);
+  const clearHref = logHref(params, Object.fromEntries([...LOG_FILTERS, ...DATE_FILTERS].map((name) => [name, null])));
+  const applyTarget = (value: string) => { if (value.trim() !== target) go({ target: value.trim() || null }); };
+  const onTargetKey = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") return;
     event.preventDefault();
-    const value = new FormData(event.currentTarget).get("target");
-    go("target", typeof value === "string" ? value : "");
+    applyTarget(event.currentTarget.value);
   };
-  return <form className="filters log-filters" role="search" aria-label="Activity log filters" onSubmit={submit}>
-    <label>Source<select name="source" value={source} onChange={(event) => go("source", event.target.value)}>
-      <option value="">All</option>
-      {sources.map((value) => <option key={value} value={value}>{value}</option>)}
-    </select></label>
-    <label>Actor<select name="actor" value={actor} onChange={(event) => go("actor", event.target.value)}>
-      <option value="">All</option>
-      {actors.map((name) => <option key={name} value={name}>{personName(name, me)}</option>)}
-    </select></label>
-    <label>Action<select name="action" value={action} onChange={(event) => go("action", event.target.value)}>
-      <option value="">All</option>
-      {actions.map((value) => <option key={value} value={value}>{actionLabel(value)}</option>)}
-    </select></label>
-    <label>Target<input key={target} name="target" type="search" defaultValue={target} autoComplete="off" placeholder="L01 or mister_engage_kpa" /></label>
-    <button type="submit" className="btn">Apply</button>
-    {clearHref && <Link to={clearHref} preventScrollReset>Clear filters</Link>}
+  const onDate = (name: "from" | "to") => ({
+    onChange: (event: { currentTarget: HTMLInputElement }) => { if (isDay(event.currentTarget.value) && event.currentTarget.value !== view.dates[name]) go({ [name]: event.currentTarget.value }); },
+    onBlur: (event: FocusEvent<HTMLInputElement>) => { if (!event.currentTarget.value && view.dates[name]) go({ [name]: null }); },
+  });
+  return <form className="act-filters" role="search" aria-label="Activity log filters" onSubmit={(event) => event.preventDefault()}>
+    <div className="act-facets">
+      <div className="act-facet"><span className="act-facet-label" aria-hidden="true">Who</span><Chips kind="filter" small label="Who" items={facetChips(params, "source", who, source)} /></div>
+      <div className="act-facet"><span className="act-facet-label" aria-hidden="true">What</span><Chips kind="filter" small label="What" items={facetChips(params, "action", what, action)} /></div>
+    </div>
+    <div className="act-fields">
+      <label className="act-select">Who<select name="source" value={source ?? ""} onChange={(event) => go({ source: event.target.value || null })}>
+        <option value="">All</option>
+        {who.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+      </select></label>
+      <label className="act-select">What<select name="action" value={action ?? ""} onChange={(event) => go({ action: event.target.value || null })}>
+        <option value="">All</option>
+        {what.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+      </select></label>
+      <label className="act-target">Target<input key={target} name="target" type="search" defaultValue={target} autoComplete="off" placeholder="L01 or mister_engage_kpa"
+        onBlur={(event) => applyTarget(event.currentTarget.value)} onKeyDown={onTargetKey} /></label>
+      <label className="act-date">From<input key={`from-${view.dates.from ?? ""}`} name="from" type="date" defaultValue={view.dates.from ?? ""} max={view.dates.to} {...onDate("from")} /></label>
+      <label className="act-date">To<input key={`to-${view.dates.to ?? ""}`} name="to" type="date" defaultValue={view.dates.to ?? ""} min={view.dates.from} {...onDate("to")} /></label>
+      {actor && <Link className="act-clear-chip" to={logHref(params, { actor: null })} preventScrollReset>Only {personName(actor, me)}<span aria-hidden="true"> ×</span><span className="screen-reader">, show everyone</span></Link>}
+      {filtered && <Link className="act-clear" to={clearHref} preventScrollReset>Clear filters</Link>}
+    </div>
   </form>;
 }

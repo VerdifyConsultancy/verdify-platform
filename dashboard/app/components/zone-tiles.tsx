@@ -1,59 +1,91 @@
 // SPDX-License-Identifier: MIT
 /**
- * The zone tiles on Now (screens SCR-01, US-GRF-06): temperature, RH and VPD per zone against the zone's band in force, each
- * tagged with where the number comes from (`lib/zone-source.ts`, D-IRP-13), each opening `/graphs/zones?zone=<zone>`. API-04
- * over the last 15 minutes, API-06 per tile and API-03's cadences; each polls every 60 s and pauses while the tab is hidden.
- * The VPD verdict is against the zone's own band, temperature against the house temperature band every zone's rows carry,
- * and RH has no band. North has no zone band, so it reads against the house band and says so. A stale or missing value
- * reads STALE or "—" with its reason, never 0, and a failed read says so.
+ * The zone strip on Now (redesign §5.1; screens SCR-01, US-GRF-06): a tile per zone with its temperature and VPD, a band
+ * bar of its VPD against the zone's band in force (today's low and high above it), a 24 h VPD sparkline over that band,
+ * and where its numbers come from as a text mark (`lib/zone-source.ts`, D-IRP-13): amber only when a zone with a probe
+ * has fallen back to its peers or the house. Each tile opens `/graphs/zones?zone=<zone>` through its title, whose link
+ * covers the tile. API-04 over the last 15 minutes and API-06 per tile give the values and the band; the day read
+ * (API-04 over 25 h, passed in) the sparkline and today's range. North has no zone band, so it reads against the house
+ * band and says so. A stale or missing value reads STALE or "—" with its reason, never 0, and a failed read says so.
  */
-import { targetText } from "../lib/now-answer";
-import type { IrrigationStatus } from "../lib/operator-api";
+import { Link } from "react-router";
+import { formatValue } from "../lib/format";
+import type { IrrigationStatus, Series } from "../lib/operator-api";
 import { READ_INTERVAL_MS, panelRead, useApiRead, useBandWindowRead, useSeriesWindowRead, type PanelRead } from "../lib/queries";
+import { useApiDown } from "../lib/session";
+import { words } from "../lib/words";
 import {
-  ZONES, ZONE_READS, ZONE_WINDOW_S, ZONE_WORDS, bandVerdict, bandZone, newestBand, targetWords, zoneTag, zoneValue, type BandPoint, type Zone, type ZoneData, type ZoneTag,
+  ZONES, ZONE_READS, ZONE_WINDOW_S, ZONE_WORDS, bandZone, newestBand, zoneTag, zoneValue, type Zone, type ZoneData, type ZoneTag,
 } from "../lib/zone-source";
+import { Badge } from "./badge";
 import { cls } from "./common";
-import { TileLink } from "./now/tiles";
+import { BandBar, bandPosition, rangeWords } from "./data/band-bar";
+import { Sparkline } from "./data/sparkline";
+import { SPARK_S, ZONE_VPD_KEYS, rangeSince, valuesSince } from "./now/climate";
 import { Panel, type PanelState } from "./panel";
-import { StatList, StatTile } from "./stat-tile";
 
-/** "band 62.0–70.0 °F"; north says "house band". */
-function bandLine(zone: Zone, temp: BandPoint | null, vpd: BandPoint | null): string {
-  const name = zone === "north" ? "house band" : "band";
-  const parts = [temp ? targetText(temp.low, temp.high, "°F") : null, vpd ? targetText(vpd.low, vpd.high, "kPa") : null].filter(Boolean);
-  return parts.length ? `${name} ${parts.join(" · ")}` : `${name} unavailable`;
-}
-
-/** The tag: a fallback on a zone that has a probe stands out; center always reads HOUSE. */
+/** The tag as a pill (Graphs → Zones): a fallback on a zone that has a probe stands out; center always reads HOUSE. */
 export function ZoneTagBadge({ zone, tag }: { zone: Zone; tag: ZoneTag }) {
   return <span className={cls("tag", tag !== "MEASURED" && zone !== "center" && "tag-warn")} data-zone-tag={tag}>{tag}</span>;
 }
+/** Where a tile's numbers come from, as a text mark (D-UX-07): mono and muted, amber only when the provenance is the news. */
+export function ZoneTagMark({ zone, tag }: { zone: Zone; tag: ZoneTag }) {
+  const news = tag !== "MEASURED" && zone !== "center";
+  return <span className={cls("now-zone-tag", news && "now-zone-tag-news")} data-zone-tag={tag}>{tag}</span>;
+}
 
-function ZoneTile({ zone, data }: { zone: Zone; data: ZoneData }) {
+/** The band words under a tile: "band 0.45–0.80 kPa", north's "house band …", with "above band" first when out of band. */
+function bandText(zone: Zone, band: { low: number; high: number } | null): string {
+  const name = zone === "north" ? "house band" : "band";
+  return band ? `${name} ${rangeWords(band.low, band.high, "kPa")}` : `${name} unavailable`;
+}
+
+type DayInput = { readonly series: Series | null; readonly since: number; readonly sparkFrom: number; readonly failed: boolean };
+
+function ZoneTile({ zone, data, day }: { zone: Zone; data: ZoneData; day: DayInput }) {
+  const apiDown = useApiDown();
   const read = panelRead(useBandWindowRead(bandZone(zone), ZONE_WINDOW_S));
-  const band = read.failed ? null : read.data;
-  const tempBand = newestBand(band, "temp"), vpdBand = newestBand(band, "vpd");
+  const band = read.failed ? null : newestBand(read.data, "vpd");
   const tag = zoneTag(zone, data);
-  const temp = zoneValue(zone, "temp", tag, data), rh = zoneValue(zone, "rh", tag, data), vpd = zoneValue(zone, "vpd", tag, data);
+  const temp = zoneValue(zone, "temp", tag, data), vpd = zoneValue(zone, "vpd", tag, data);
+  const key = ZONE_VPD_KEYS[zone];
+  // The sparkline and today's range read the zone's own probe; a zone fallen back to its peers draws its gap as a gap.
+  const values = valuesSince(day.series, key, day.sparkFrom);
+  const today = rangeSince(day.series, key, day.since);
   // Until API-06 first answers the tile claims no verdict.
-  const verdict = (value: number | null, point: BandPoint | null) => (read.pending ? null : bandVerdict(value, point));
-  return <li className="zone-tile" data-zone={zone}>
-    <div className="zone-tile-head">
-      <h3><TileLink to={`/graphs/zones?zone=${zone}`} page="its charts">{ZONE_WORDS[zone]}<span aria-hidden="true"> ›</span></TileLink></h3>
-      <ZoneTagBadge zone={zone} tag={tag} />
+  const position = read.pending || vpd.stale || apiDown ? null : bandPosition(vpd.value, band);
+  const off = position === "above" || position === "below" ? position : null;
+  const name = ZONE_WORDS[zone];
+  return <li className={cls("now-zone", off && "now-zone-off")} data-zone={zone}>
+    <div className="now-zone-head">
+      <h3 className="now-zone-name"><Link className="now-zone-link" to={`/graphs/zones?zone=${zone}`}>{name}<span className="screen-reader">: open its charts</span></Link></h3>
+      <ZoneTagMark zone={zone} tag={tag} />
     </div>
-    <StatList className="zone-values">
-      <StatTile name="temp" label="Temperature" value={temp.value} unit="°F" reason={temp.reason} stale={temp.stale} sub={temp.stale ? temp.reason : undefined} verdict={verdict(temp.value, tempBand)} />
-      <StatTile name="rh" label="RH" value={rh.value} unit="%" reason={rh.reason} stale={rh.stale} sub={rh.stale ? rh.reason : rh.value === null ? undefined : "no RH band"} />
-      <StatTile name="vpd" label="VPD" value={vpd.value} unit="kPa" reason={vpd.reason} stale={vpd.stale} sub={vpd.stale ? vpd.reason : undefined} verdict={verdict(vpd.value, vpdBand)} />
-    </StatList>
-    <p className="zone-band">{read.pending ? null : bandLine(zone, tempBand, vpdBand)}</p>
-    <p className="zone-band">{targetWords(zone, data)}</p>
+    <p className="now-zone-values">
+      <span className={cls("now-zone-value", temp.stale && "value-muted")} data-tile="temp">{formatValue(temp.value, "°F")}</span>
+      <span className={cls("now-zone-value", vpd.stale && "value-muted")} data-tile="vpd">{formatValue(vpd.value, "kPa")}</span>
+      {(temp.stale || vpd.stale) && <Badge kind="stale" />}
+    </p>
+    <BandBar label={`${name} VPD`} unit="kPa" value={vpd.value} band={band} today={today} decorative={false} state={read.pending ? "loading" : vpd.stale ? "stale" : "ready"} />
+    <Sparkline values={values} token="vpd" band={band} size="tile" label={`${name} VPD over the last 24 h`} state={day.failed && !day.series ? "error" : day.series ? (vpd.stale ? "stale" : "ready") : "loading"} />
+    <p className="now-zone-meta meta">
+      {off && <><span className="now-off">{words("band_verdict", off)}</span> · </>}
+      {read.pending ? "band loading" : bandText(zone, band)}
+      {vpd.value === null && vpd.reason && <> · {vpd.reason}</>}
+      {vpd.stale && vpd.reason && <> · {vpd.reason}</>}
+    </p>
   </li>;
 }
 
-export function ZoneTiles({ irrigation }: { irrigation: PanelRead<IrrigationStatus> }) {
+export type ZoneTilesProps = {
+  readonly irrigation: PanelRead<IrrigationStatus>;
+  /** The day read (API-04 over the last 25 h), for the sparklines and today's range. */
+  readonly day: PanelRead<Series>;
+  /** Local midnight today, epoch seconds: today's range starts there. */
+  readonly since: number;
+};
+
+export function ZoneTiles({ irrigation, day, since }: ZoneTilesProps) {
   // The cadences hardly change, so an older answer serves; polled, so a tile left open recovers from a failed read by itself.
   const registry = panelRead(useApiRead("API-03", {}, { intervalMs: READ_INTERVAL_MS.zones }));
   const first = panelRead(useSeriesWindowRead(ZONE_READS[0], ZONE_WINDOW_S));
@@ -63,9 +95,13 @@ export function ZoneTiles({ irrigation }: { irrigation: PanelRead<IrrigationStat
   const failed = (registry.failed && !registry.data) || reads.some((read) => read.failed);
   const waiting = registry.pending || reads.some((read) => read.pending) || irrigation.pending;
   const state: PanelState = failed ? "error" : waiting ? "loading" : "ready";
-  const retry = () => { registry.retry(); for (const read of reads) read.retry(); };
+  const retry = () => { registry.retry(); for (const read of reads) read.retry(); day.retry(); };
   const data: ZoneData = { series: reads.map((read) => read.data), metrics: registry.data?.items ?? [], lines: irrigation.failed ? null : irrigation.data?.lines ?? null };
-  return <Panel id="zones" title="Zones" thing="the zones" state={state} reserve="md" onRetry={retry} errorText="Couldn't load the zones.">
-    <ul className="zone-tiles">{ZONES.map((zone) => <ZoneTile key={zone} zone={zone} data={data} />)}</ul>
+  // The sparklines draw the day read's last 24 h, so they end where its window ends.
+  const series = day.failed ? null : day.data;
+  const end = series ? Date.parse(series.to) / 1000 : Number.NaN;
+  const dayInput: DayInput = { series, since, sparkFrom: Number.isFinite(end) ? end - SPARK_S : Number.POSITIVE_INFINITY, failed: day.failed };
+  return <Panel id="zones" title="Zones" thing="the zones" state={state} reserve="md" onRetry={retry} errorText="Couldn't load the zones." link={{ to: "/graphs/zones", label: "All zones" }}>
+    <ul className="now-zones">{ZONES.map((zone) => <ZoneTile key={zone} zone={zone} data={data} day={dayInput} />)}</ul>
   </Panel>;
 }
