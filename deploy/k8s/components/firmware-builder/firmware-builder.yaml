@@ -15,21 +15,6 @@ spec:
     requests:
       storage: 5Gi
 ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: verdify-firmware-toolchain-cache
-  labels:
-    app.kubernetes.io/part-of: verdify
-    app.kubernetes.io/component: firmware-builder
-spec:
-  accessModes:
-  - ReadWriteOnce
-  storageClassName: longhorn-v1-rebuildable-rwo
-  resources:
-    requests:
-      storage: 10Gi
----
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

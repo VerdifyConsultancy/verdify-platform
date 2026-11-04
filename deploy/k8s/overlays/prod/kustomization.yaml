@@ -103,7 +103,9 @@ configMapGenerator:
 components:
   # In-cluster firmware OTA capability (handoff §5.1 closed 2026-07-13):
   # suspended-CronJob build/flash template + durable artifacts PVC (the
-  # rollback floor lives HERE now, not on the laptop) + toolchain cache.
+  # rollback floor lives HERE now, not on the laptop). The builder keeps its
+  # toolchain in a per-Job emptyDir; the unused toolchain-cache PVC was
+  # retired on 2026-11-04 (Jason R10).
   - ../../components/firmware-builder
   # #782 read-only observational winter packet. Suspended until a prospective
   # registration and exact source snapshot are staged on its archive PVC.
