@@ -62,6 +62,22 @@ test("the timeline is one tab stop: its blocks are out of the tab order and the 
   expect(screen.getByRole("link", { name: "New schedule on L09 West mister" }).getAttribute("href")).toBe("/new?line=L09");
 });
 
+test("a strip without API-05's answer says its valve time is unknown and hatches it up to now; with the answer and nothing in it, none", () => {
+  const day = model();
+  renderUi(<>
+    <DayStrip name="L04 Center mister" from={day.from} to={day.to} night={[]} blocks={[]} episodes={[]} valveKnown={false} now={NOW} token="mister" />
+    <DayStrip name="L09 West mister" from={day.from} to={day.to} night={[]} blocks={[]} episodes={[]} now={NOW} token="mister" />
+  </>);
+  expect(screen.getByRole("img", { name: "L04 Center mister today: valve time unknown" }).querySelectorAll(".sch-tick-unknown")).toHaveLength(1);
+  expect(screen.getByRole("img", { name: "L09 West mister today: no runs and no valve time" }).querySelector(".sch-tick")).toBeNull();
+  // The timeline's rows say the same in words when the day's API-05 has not answered.
+  cleanup();
+  const unread = dayModel({ day: TODAY, today: TODAY, now: NOW, agenda, lines: status.lines, lanes: null, entries });
+  renderUi(<DayTimeline model={unread} now={NOW} head={<h2>Monday</h2>} label="Runs" />);
+  expect(document.querySelector('.sch-row[data-line="L04"] .sch-track')?.textContent).toContain("valve time unknown");
+  expect(document.querySelectorAll(".sch-tick-unknown")).toHaveLength(9);
+});
+
 test("a viewer's timeline offers no new schedule: no [+], and the track takes no click", () => {
   renderUi(<DayTimeline model={model()} now={NOW} head={<h2>Monday</h2>} label="Runs on Monday by line" />);
   expect(document.querySelector(".sch-add, .sch-track-new")).toBeNull();

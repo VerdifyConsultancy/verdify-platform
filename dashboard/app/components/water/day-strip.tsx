@@ -14,6 +14,8 @@ export type DayStripProps = {
   night: readonly { from: number; to: number }[];
   blocks: readonly DayBlock[];
   episodes: readonly Episode[];
+  /** False while API-05 has not answered: no tick is then unknown, never none. */
+  valveKnown?: boolean;
   /** Epoch ms: the now rule. */
   now: number;
   /** The valve's colour: water, mister, fert or fog. */
@@ -25,10 +27,11 @@ export type DayStripProps = {
 };
 
 /** The strip's picture in words: each block's time and status, then the valve's episodes. */
-export function stripWords(name: string, blocks: readonly DayBlock[], episodes: readonly Episode[]): string {
+export function stripWords(name: string, blocks: readonly DayBlock[], episodes: readonly Episode[], valveKnown = true): string {
   // Each block's own name without the line's: "Wall MWF, Mon 07:35, 12 min, done, ok".
   const runs = blocks.filter((block) => block.part === "run").map((block) => (block.name.startsWith(name) ? block.name.slice(name.length).replace(/^( · |, )/, "") : block.name));
-  const parts = [...runs, ...episodes.map(episodeWords)];
+  // Valve time the API has not given is unknown, never none.
+  const parts = [...runs, ...(valveKnown ? episodes.map(episodeWords) : ["valve time unknown"])];
   return `${name} today: ${parts.length ? parts.join("; ") : "no runs and no valve time"}`;
 }
 
@@ -38,15 +41,15 @@ export function stripWords(name: string, blocks: readonly DayBlock[], episodes: 
  * valve's open time as ticks along the lower third, the now rule, and the next run beside it. It is a picture with its
  * numbers in its name, not a tab stop: the row's state sentence, "Runs of L01 ›" and Schedules carry the detail.
  */
-export function DayStrip({ name, from, to, night, blocks, episodes, now, token, axis = false, next }: DayStripProps) {
+export function DayStrip({ name, from, to, night, blocks, episodes, valveKnown = true, now, token, axis = false, next }: DayStripProps) {
   const apiDown = useApiDown();
   const scale = timeScale(from, to);
   return <div className={cls("wat-day", apiDown && "is-neutral")}>
     {axis && <DayAxis scale={scale} className="wat-day-axis" />}
     <div className="wat-day-row">
-      <div className="sch-track wat-track" role="img" aria-label={stripWords(name, blocks, episodes)}>
+      <div className="sch-track wat-track" role="img" aria-label={stripWords(name, blocks, episodes, valveKnown)}>
         <DayBackdrop night={night} scale={scale} now={now / 1000} />
-        <Ticks episodes={episodes} scale={scale} token={token} />
+        <Ticks episodes={episodes} scale={scale} token={token} unknownUntil={valveKnown ? null : now / 1000} />
         {blocks.map((block) => <Block key={block.key} block={block} scale={scale} now={now / 1000} />)}
       </div>
       {next !== undefined && <p className="wat-next">{next ?? <span className="meta">nothing planned</span>}</p>}

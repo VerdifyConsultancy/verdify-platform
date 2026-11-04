@@ -97,6 +97,8 @@ a.wat-site-term{display:inline-flex;align-items:center;min-height:24px;text-unde
 .sch-pause-words{position:absolute;top:50%;left:var(--space-1);max-width:calc(100% - var(--space-2));overflow:hidden;padding:0 var(--space-1);border-radius:2px;background:#fff;color:var(--ink);font-size:var(--fs-xs);line-height:1.4;white-space:nowrap;text-overflow:ellipsis;transform:translateY(-50%)}
 .sch-tick{position:absolute;bottom:3px;height:30%;left:calc(var(--sch-start) * 1%);width:calc(var(--sch-width) * 1%);min-width:2px;border-radius:1px;background:var(--eq-mister)}
 .sch-tick-water{background:var(--eq-water)}.sch-tick-fert{background:var(--eq-fert)}.sch-tick-fog{background:var(--eq-fog)}
+/* Valve time not known (API-05 has not answered): the ticks' third is a muted hatch up to now, never empty. */
+.sch-tick-unknown{border-radius:0;background:repeating-linear-gradient(135deg,var(--muted) 0 1px,transparent 1px 4px)}
 .sch-block,.sch-mark,.sch-swatch{--sch-fill:var(--muted)}
 .sch-eq-water{--sch-fill:var(--eq-water)}.sch-eq-fert{--sch-fill:var(--eq-fert)}.sch-eq-fog{--sch-fill:var(--eq-fog)}.sch-eq-mister{--sch-fill:var(--eq-mister)}.sch-eq-heat1{--sch-fill:var(--eq-heat1)}
 .sch-block{position:absolute;top:5px;bottom:5px;left:calc(var(--sch-start) * 1%);width:calc(var(--sch-width) * 1%);min-width:6px;min-height:0;margin:0;padding:0;border:0;border-radius:3px;background:var(--sch-fill);color:var(--ink);font:500 var(--fs-xs)/1 "IBM Plex Sans",system-ui,sans-serif;text-align:left}
@@ -115,7 +117,7 @@ button.sch-block:hover,.sch-block.is-selected{box-shadow:0 0 0 2px var(--ink)}
 .sch-block-label{position:absolute;top:50%;left:3px;padding:1px 3px;border-radius:2px;background:#fff;white-space:nowrap;pointer-events:none;transform:translateY(-50%)}
 .sch-narrow .sch-block-label{left:calc(100% + 3px);background:transparent}
 .sch-narrow-end .sch-block-label{left:auto;right:calc(100% + 3px);background:transparent}
-.is-neutral .sch-done,.is-neutral .sch-tick{background:var(--muted)}
+.is-neutral .sch-done,.is-neutral .sch-tick:not(.sch-tick-unknown){background:var(--muted)}
 .is-neutral .sch-running{background:linear-gradient(to right,var(--muted) calc(var(--sch-done,100) * 1%),#fff calc(var(--sch-done,100) * 1%))}
 .is-neutral .sch-planned,.is-neutral .sch-missed,.is-neutral .sch-running{border-color:var(--muted)}
 
@@ -127,6 +129,9 @@ button.sch-block:hover,.sch-block.is-selected{box-shadow:0 0 0 2px var(--ink)}
 
 /* ---------------------------------------------------------------------------------------------------- Schedules */
 .sch-page{display:grid;gap:var(--space-5);min-width:0}
+/* While API-IRR-02 first answers: the strip's and the timeline's reserved heights, so nothing shifts when they fill. */
+.sch-loading{display:grid;gap:var(--space-5)}
+.sch-skeleton-strip{min-height:4.75rem}
 .sch-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-3) var(--space-4)}
 .sch-views{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)}
 .sch-views-phone,.sch-only-phone{display:none}

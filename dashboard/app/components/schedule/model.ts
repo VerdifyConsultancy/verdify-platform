@@ -238,6 +238,8 @@ export type DayRow = {
   readonly blocks: readonly DayBlock[];
   /** Valve-open episodes (past and today), drawn as thin ticks along the row's lower third. */
   readonly episodes: readonly Episode[];
+  /** False while API-05 has not answered for a day that has had valve time: no tick is then a gap, never "none". */
+  readonly valveKnown: boolean;
   /** A pause across the day: its span and "paused until Sat 09:00 · jason". */
   readonly pause: { readonly start: number; readonly end: number; readonly words: string } | null;
   readonly muted: boolean;
@@ -314,7 +316,7 @@ export function dayModel({ day, today, now, agenda, lines, lanes, entries }: Day
       const done = when === "future" ? 0 : when === "today" ? (typeof line?.today?.minutes === "number" ? line.today.minutes : null) : valveMinutes(lanes, lineId, from, to);
       return {
         lineId, name: info.nameOf(lineId), kind, blocks: blocks.filter((block) => block.lineId === lineId),
-        episodes: when === "future" ? [] : valveEpisodes(lanes, lineId, from, Math.min(to, nowS)),
+        episodes: when === "future" ? [] : valveEpisodes(lanes, lineId, from, Math.min(to, nowS)), valveKnown: when === "future" || lanes !== null,
         pause, muted: !enabled, note: disabled ?? scheduleOff, done, planned: (plannedSeconds.get(lineId) ?? 0) / 60,
         cap: line && line.daily_cap_min > 0 ? line.daily_cap_min : null,
       };

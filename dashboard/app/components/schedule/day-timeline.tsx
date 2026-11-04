@@ -43,8 +43,16 @@ export function Block({ block, scale, onSelect, selected = false, now = null }: 
     onClick={(event) => onSelect(block, event.currentTarget)}>{words}</button>;
 }
 
-/** The valve's episodes as thin ticks along the lower third (past VPD misting on a mister row, redesign §6.2), and their words. */
-export function Ticks({ episodes, scale, token }: { episodes: readonly Episode[]; scale: TimeScale; token: string }) {
+/**
+ * The valve's episodes as thin ticks along the lower third (past VPD misting on a mister row, redesign §6.2), and their
+ * words. With `unknownUntil` (epoch s: API-05 has not answered) the lower third is a muted hatch up to then instead: a
+ * gap in what is known, never an empty "the valve did not open".
+ */
+export function Ticks({ episodes, scale, token, unknownUntil = null }: { episodes: readonly Episode[]; scale: TimeScale; token: string; unknownUntil?: number | null }) {
+  if (unknownUntil !== null) {
+    const place = scale.span(scale.from, Math.min(scale.to, unknownUntil));
+    return place ? <span ref={cssVars({ "--sch-start": place.start, "--sch-width": place.width })} className="sch-tick sch-tick-unknown" title="Valve time unknown" aria-hidden="true" /> : null;
+  }
   return <>
     {episodes.map((episode) => {
       const place = scale.span(episode.start, episode.end);
@@ -159,9 +167,9 @@ export function DayTimeline({ model, now, head, label, selected, onBlock, newTo,
                 const place = scale.span(row.pause.start, row.pause.end);
                 return place && <span ref={cssVars({ "--sch-start": place.start, "--sch-width": place.width })} className="sch-pause"><span className="sch-pause-words">{row.pause.words}</span></span>;
               })()}
-              <Ticks episodes={row.episodes} scale={scale} token={row.kind === "mister" || row.kind === "fert_mister" ? "mister" : row.kind === "fert_drip" ? "fert" : "water"} />
+              <Ticks episodes={row.episodes} scale={scale} token={row.kind === "mister" || row.kind === "fert_mister" ? "mister" : row.kind === "fert_drip" ? "fert" : "water"} unknownUntil={row.valveKnown ? null : nowS} />
               {row.blocks.map((block) => <Block key={block.key} block={block} scale={scale} onSelect={onBlock} selected={selected === block.blockKey && block.blockKey !== ""} now={nowS} />)}
-              {row.episodes.length > 0 && <span className="screen-reader">{row.episodes.map(episodeWords).join("; ")}</span>}
+              {row.valveKnown ? row.episodes.length > 0 && <span className="screen-reader">{row.episodes.map(episodeWords).join("; ")}</span> : <span className="screen-reader">valve time unknown</span>}
             </div>
             <div className="sch-row-end">
               <CapMeter row={row} when={model.when} />

@@ -28,9 +28,9 @@ export default function WaterBoard() {
   const strips = useMemo((): TodayStrips | null => {
     if (!status || !agenda.data) return null;
     const model = dayModel({ day: today, today, now, agenda: agenda.data, lines: status.lines, lanes: lanes.data ?? null, entries: entriesOf(agenda.data, null, now) });
-    const byLine = new Map(model.groups.flatMap((group) => group.rows).map((row) => [row.lineId, { blocks: row.blocks, episodes: row.episodes }] as const));
+    const byLine = new Map(model.groups.flatMap((group) => group.rows).map((row) => [row.lineId, { blocks: row.blocks, episodes: row.episodes, valveKnown: row.valveKnown }] as const));
     // Fog is not schedulable, so the timeline has no row for it: its valve alone.
-    byLine.set("L11", { blocks: [], episodes: valveEpisodes(lanes.data ?? null, "L11", model.from, Math.min(model.to, now / 1000)) });
+    byLine.set("L11", { blocks: [], episodes: valveEpisodes(lanes.data ?? null, "L11", model.from, Math.min(model.to, now / 1000)), valveKnown: lanes.data !== undefined });
     return { from: model.from, to: model.to, night: model.night, byLine };
   }, [status, agenda.data, lanes.data, today, now]);
   if (irrigation.isError) return <PanelError thing="the water status" text={UNAVAILABLE_TEXT} onRetry={() => void irrigation.refetch()} />;

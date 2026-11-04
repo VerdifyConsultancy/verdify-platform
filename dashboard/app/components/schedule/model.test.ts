@@ -92,9 +92,13 @@ test("the day: rows by manifold, notes for a disabled line, a reserved one and a
   // Ahead: nothing done yet and the planned minutes; behind: the valve's minutes from API-05, or unknown without it.
   const wednesday = dayModel({ day: "2026-11-04", today: TODAY, now: NOW, agenda, lines: status.lines, lanes: null, entries: entriesOf(agenda, null, NOW) });
   const l01 = wednesday.groups[0].rows[0];
-  expect([wednesday.when, l01.done, l01.planned, l01.episodes]).toEqual(["future", 0, 12, []]);
+  expect([wednesday.when, l01.done, l01.planned, l01.episodes, l01.valveKnown]).toEqual(["future", 0, 12, [], true]);
   const sunday = dayModel({ day: "2026-11-01", today: TODAY, now: NOW, agenda, lines: status.lines, lanes: null, entries: entriesOf(agenda, null, NOW) });
-  expect([sunday.when, sunday.groups[0].rows[0].done]).toEqual(["past", null]);
+  expect([sunday.when, sunday.groups[0].rows[0].done, sunday.groups[0].rows[0].valveKnown]).toEqual(["past", null, false]);
+  // Today before API-05 answers: no ticks is unknown valve time, not none; with the read it is known.
+  const unread = dayModel({ day: TODAY, today: TODAY, now: NOW, agenda, lines: status.lines, lanes: null, entries: entriesOf(agenda, null, NOW) });
+  expect(unread.groups.flatMap((group) => group.rows).map((row) => row.valveKnown)).toEqual(Array(9).fill(false));
+  expect(rows.get("L04")?.valveKnown).toBe(true);
 });
 
 test("a paused line draws its pause across the day with who paused it; a disabled one counts the runs it will miss this week", () => {

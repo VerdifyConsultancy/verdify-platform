@@ -17,7 +17,7 @@ export type TodayStrips = {
   readonly from: number;
   readonly to: number;
   readonly night: readonly { from: number; to: number }[];
-  readonly byLine: ReadonlyMap<string, { readonly blocks: readonly DayBlock[]; readonly episodes: readonly Episode[] }>;
+  readonly byLine: ReadonlyMap<string, { readonly blocks: readonly DayBlock[]; readonly episodes: readonly Episode[]; readonly valveKnown: boolean }>;
 };
 
 const tokenOf = (kind: string) => (kind === "mister" ? "mister" : kind === "fert_drip" || kind === "fert_mister" ? "fert" : kind === "fog" ? "fog" : "water");
@@ -53,7 +53,7 @@ export function ZoneCard({ summary, status, today, now, strips, schedules }: Zon
     const own = strips?.byLine.get(line.line_id);
     const show = own && (line.enabled || own.blocks.length > 0 || own.episodes.length > 0);
     if (!strips || !own || !show) return null;
-    return <DayStrip name={lineTitle(line)} from={strips.from} to={strips.to} night={strips.night} blocks={own.blocks} episodes={own.episodes} now={now}
+    return <DayStrip name={lineTitle(line)} from={strips.from} to={strips.to} night={strips.night} blocks={own.blocks} episodes={own.episodes} valveKnown={own.valveKnown} now={now}
       token={tokenOf(line.kind)} axis={index === 0} next={status.engine && line.kind !== "fog" ? nextRunShort(line.next_run, today, amountOf(line)) : undefined} />;
   };
   return <section className={cls("card", "wat-zone", apiDown && "is-neutral")} data-zone={zone} aria-labelledby={headingId}>

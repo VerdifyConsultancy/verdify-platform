@@ -103,7 +103,7 @@ function Kpis({ days, current, previous, runs, runsBefore, counted, retry }: {
       <MetricTile label="Runs" data={{ "data-kpi": "runs" }} state={runsState} onRetry={retry.runs}
         value={counted && runs.tally ? <>{runs.tally.runs}{runs.tally.complete ? "" : "+"}</> : null} reason={counted ? "No data" : notCounted}
         delta={counted && runs.tally ? <Delta value={difference(runs.tally.runs, runsBefore?.runs)} vs={vs} /> : undefined}
-        meta={counted ? "Valve-open runs, VPD episodes included" : <Link to="#runs">Runs, {RUNS_MAX_DAYS} days at a time<span aria-hidden="true"> ›</span></Link>} />
+        meta={counted ? "Valve-open runs, VPD episodes included" : <a href="#runs">Runs, {RUNS_MAX_DAYS} days at a time<span aria-hidden="true"> ›</span></a>} />
       <MetricTile label="Missed, short or cap" data={{ "data-kpi": "shortfall" }} state={runsState} onRetry={retry.runs} tone={shortfall ? "warn" : undefined}
         value={counted && runs.tally ? shortfallWords(runs.tally) : null} reason={counted ? "No data" : notCounted}
         delta={counted && runs.tally ? <Delta value={difference(shortfall, shortfallBefore)} vs={vs} /> : undefined}
