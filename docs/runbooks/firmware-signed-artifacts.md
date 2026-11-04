@@ -73,7 +73,7 @@ RB_BIN=PRIVATE_DIR/rollback.ota.bin    # on the operator host
 
 Choose the window first. A boot loop or a dead link can leave the house without
 software heat, decaying toward outdoor air with a time constant of about 3 hours
-(an estimate), and the hardware thermostat is the only backstop. Flash when the
+(an estimate), and there is no hardware thermostat as a backstop (#1296). Flash when the
 house can ride that out, or with someone able to reach it. If the release has a
 no-water rule, disable the lines and slots it covers first, and read them back:
 the first program push carries every enabled line and slot within about a minute
@@ -236,7 +236,7 @@ use `diagnostics.ts - uptime_s`, because rows lag by 33-37 s on OTA boots.
 Re-run a failing sweep once, after `max(diagnostics.ts)` has moved. Report water as
 "no evidence of a valve opening, from telemetry": the ingestor can drop an ON edge
 in the reconnect burst, the meter is coarse, and nothing here sees a stuck valve.
-Relay-to-line mapping, the door and the hardware thermostat stay unobserved until
+Relay-to-line mapping and the door stay unobserved until
 someone is on site, so a green soak is "flashed, software canaries only", not
 acceptance. The bake and the last-good promotion stay separate decisions.
 

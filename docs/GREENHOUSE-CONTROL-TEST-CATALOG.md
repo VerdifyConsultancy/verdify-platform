@@ -126,7 +126,7 @@ Format: `id | inputs (short) | expected mode/relays | interaction | outcome | co
 |---|---|---|---|---|---|---|
 | SF-01 | temp/rh/vpd NaN | SENSOR_FAULT; all OFF | controls.yaml A6 NaN-fallback substitutes finite Tin → in practice fault is via non-finite VPD/RH/hour or implausible value, rarely Tin=NaN | relays held off; hardware thermostat backstop | safety tier 1 | unit (YAML fallback = GAP) |
 | SF-02 | temp 999°F | SENSOR_FAULT (NOT SAFETY_COOL); all OFF | plausibility guard (<140) runs BEFORE safety_cool | no spurious cooling | implausible (tier 0) beats safety rail | unit |
-| SF-03 | temp −50°F | SENSOR_FAULT (NOT SAFETY_HEAT); all OFF | guard (>−20) before safety_heat | hardware thermostat is freeze protector | implausible beats SAFETY_HEAT | unit |
+| SF-03 | temp −50°F | SENSOR_FAULT (NOT SAFETY_HEAT); all OFF | guard (>−20) before safety_heat | no hardware thermostat is installed (accepted, #1296): nothing heats | implausible beats SAFETY_HEAT | unit |
 | SF-04 | hour=24, temp/VPD in-band | SENSOR_FAULT; all OFF | plausibility spans time axis [0,23] | all off until clock recovers | plausibility preempts IDLE | **GAP** (no test sets hour=24) |
 | SF-05 | sensor_degraded, 74°F, VPD 1.9 | IDLE (NOT SEALED_MIST) | vpd_control_trusted FALSE → VPD path shut; temp LIVE | humidity floats; timed center bursts allowed | VPD suppressed, temp wins | unit |
 | SF-06 | sensor_degraded, 72°F, VPD 0.15 | IDLE (NOT DEHUM_VENT) | dehum_wanted needs vpd_trusted | vent held closed; no blind dehum | VPD-dehum suppressed | unit |

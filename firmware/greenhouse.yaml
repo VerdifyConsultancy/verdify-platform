@@ -664,7 +664,7 @@ binary_sensor:
 #   • 15-min startup grace so the post-boot allocation transient (min-free dips
 #     to ~3.8 KB within ~4 min of every boot) can NEVER boot-loop this guard;
 #   • never reboots while a heater relay is actively driving (the one gap the
-#     parallel hardware thermostat can't fully cover on a cold night);
+#     house has no hardware thermostat to cover on a cold night, #1296);
 #   • App.safe_reboot() is a clean "Software reset" (distinct from Task WDT in
 #     diagnostics.reset_reason); the dehum-vent-hold flag PERSISTS across it
 #     (switch sw_dehum_vent_hold RESTORE_DEFAULT_OFF re-asserts the global), the
