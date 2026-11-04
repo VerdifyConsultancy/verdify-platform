@@ -1,37 +1,43 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
-// Needs someone (#1129, US-ACT-02) against #1122's fixture API in process: the top three unacknowledged alerts by
-// severity then age with the one count in the head; Acknowledge sends one API-15 request with one Idempotency-Key and
-// the row then reads "Acknowledged by jason · 10:42"; the empty and degraded text; viewers get no Acknowledge.
+// Needs someone (redesign §5.1, US-ACT-02) against #1122's fixture API in process: the top three unacknowledged alerts by
+// severity then age with the one count in the head (unless the answer counts them); Acknowledge sends one API-15 request
+// with one Idempotency-Key and the row then reads "Acknowledged by jason · 10:42"; a mister's latch with Clear fault, read
+// once; the settings not confirmed; a fence breach pointing to the quick action; the empty and degraded text; viewers
+// get no Acknowledge.
 import { cleanup, fireEvent, within } from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
 import type { Alert } from "../../lib/operator-api";
+import { nowAnswer } from "../../lib/now-answer";
 import { panelRead, useApiRead, useNowRead } from "../../lib/queries";
 import { UUID, advance, renderWithApi, startFixtureApi, stopFixtureApi, writes } from "../../lib/test-fixture-api";
 import { text } from "../test-render";
-import { NeedsSomeone, topAlerts } from "./needs-someone";
+import { NeedsSomeone, faultText, topAlerts } from "./needs-someone";
 
 afterEach(() => { cleanup(); stopFixtureApi(); });
 
 /** Now's two reads for the panel: API-14 open alerts, and API-02 for the count and the freshness. */
 function Harness({ apiFailed = false }: { apiFailed?: boolean }) {
   const alerts = panelRead(useApiRead("API-14", { status: "open" }, { intervalMs: 15_000 }));
+  const irrigation = panelRead(useApiRead("API-IRR-01", {}, { intervalMs: 15_000 }));
   const now = useNowRead();
-  return <NeedsSomeone alerts={alerts} now={now.data ?? null} apiFailed={apiFailed} openCount={now.data?.alerts.open ?? null} />;
+  const answer = nowAnswer({ now: now.data ?? null, failed: apiFailed });
+  return <NeedsSomeone alerts={alerts} now={now.data ?? null} answer={answer} apiFailed={apiFailed} openCount={now.data?.alerts.open ?? null} irrigation={irrigation} />;
 }
 const panel = () => document.querySelector<HTMLElement>("section.panel")!;
 const rows = () => [...panel().querySelectorAll<HTMLElement>("li.alert-row")];
 const title = () => text(within(panel()).getByRole("heading", { level: 2 }));
 
-test("alerts-merged: the unacknowledged rows, warning before info, with the one count, Open links and Acknowledge", async () => {
+test("alerts-merged: the unacknowledged rows, warning before info, Details links and Acknowledge; the count in the head only when the answer has not given it", async () => {
   startFixtureApi({ fixture: "alerts-merged" });
   renderWithApi(<Harness />);
   await advance(0);
-  expect(title()).toBe("Needs someone · 2");
+  // The answer reads "2 things need someone", so the head does not count again (redesign §2.5).
+  expect(title()).toBe("Needs someone");
   expect(rows().map((row) => row.getAttribute("data-severity"))).toEqual(["warning", "info"]);
   expect(rows().map((row) => text(row.querySelector("h3")))).toEqual(["Relay stuck", "Soil probe offline"]);
-  expect(text(rows()[0])).toContain("fan2 · since 06:02 (4 h) · seen 3 times, last 06:40");
-  expect(within(rows()[0]).getByRole("link", { name: /^Open/ }).getAttribute("href")).toBe("/activity?alert=101");
+  expect(text(rows()[0].querySelector(".alert-facts"))).toBe("Fan 2 · ×3 since 06:02 · last 06:40");
+  expect(within(rows()[0]).getByRole("link", { name: /^Details/ }).getAttribute("href")).toBe("/activity?alert=101");
   expect(within(panel()).getByRole("link", { name: /All alerts/ }).getAttribute("href")).toBe("/activity");
   expect(within(panel()).getAllByRole("button", { name: /^Acknowledge/ })).toHaveLength(2);
   // The acknowledged repeat (103) is not one that needs someone.
@@ -50,7 +56,50 @@ test("Acknowledge sends one API-15 request with one key, then the row reads Ackn
   expect(text(rows()[0])).toContain("Acknowledged by jason · 10:42");
   expect(within(rows()[0]).queryByRole("button", { name: /^Acknowledge/ })).toBeNull();
   await advance(0);
-  expect(title()).toBe("Needs someone · 1");
+  // One open now, and the answer still counts it ("1 thing needs someone").
+  expect(title()).toBe("Needs someone");
+});
+
+test("the head counts the open alerts when the answer says something else first: an out-of-band reading", async () => {
+  startFixtureApi({ fixture: ["alerts-merged", "too-hot"] });
+  renderWithApi(<Harness />);
+  await advance(0);
+  expect(title()).toBe("Needs someone · 2");
+});
+
+test("a latched mister reads once, on its alert's row with Clear fault; the settings not confirmed link to Settings, unless the stuck banner says so", async () => {
+  const api = startFixtureApi({ fixture: ["mister-fault", "settings-unconfirmed"] });
+  renderWithApi(<Harness />);
+  await advance(0);
+  const faulted = rows().find((row) => text(row.querySelector("h3")) === "A mister zone faulted")!;
+  expect(document.querySelectorAll("[data-water=fault]")).toHaveLength(0);
+  fireEvent.click(within(faulted).getByRole("button", { name: "Clear fault on L04" }));
+  await advance(0);
+  expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-13", body: { line_id: "L04" } })]);
+  const unconfirmed = within(panel()).getByRole("link", { name: /^2 settings not confirmed/ });
+  expect(unconfirmed.getAttribute("href")).toBe("/settings?filter=not_confirmed");
+  cleanup();
+  stopFixtureApi();
+  // With no alert naming it, a latch has its own row; while delivery is stuck the banner says so and the link does not repeat it.
+  startFixtureApi({ fixture: ["mister-fault", "stuck-delivery"] });
+  renderWithApi(<Harness />);
+  await advance(0);
+  expect(within(panel()).queryByRole("link", { name: /not confirmed/ })).toBeNull();
+});
+
+test("a mister's fault in words: a back-off until its time, a latch until midnight, a code this build lacks raw", () => {
+  const line = { line_id: "L07", name: "Mister • South Wall", fault_until: "2026-11-02T20:20:00Z" };
+  expect(faultText({ ...line, fault: "backing_off" })).toBe("South mister: backing off until 13:20");
+  expect(faultText({ ...line, fault: "mister_fault" })).toBe("South mister: faulted, no misting until midnight (watchdog)");
+  expect(faultText({ ...line, fault: "brand_new" })).toBe("South mister: brand_new");
+});
+
+test("a fence breach in Needs someone points to Stop all water in the quick actions instead of repeating it", async () => {
+  startFixtureApi({ fixture: "fence-breach" });
+  renderWithApi(<Harness />);
+  await advance(0);
+  expect(text(panel())).toContain("Stop all water is in the quick actions above.");
+  expect(within(panel()).queryByRole("button", { name: /Stop all water/ })).toBeNull();
 });
 
 test("an optional note goes with the acknowledgement, at most 500 characters", async () => {
@@ -90,7 +139,9 @@ test.each([
   startFixtureApi({ fixture: name });
   renderWithApi(<Harness />);
   await advance(0);
-  expect(text(panel().querySelector(".panel-empty"))).toBe(expected);
+  expect(text(panel().querySelector(".panel-empty p"))).toBe(expected);
+  // Only an honest "No open alerts" offers the alerts resolved in the last 24 h.
+  expect(panel().querySelector(".panel-empty a")?.getAttribute("href") ?? null).toBe(expected === "No open alerts" ? "/activity?resolved=24h" : null);
 });
 
 test("while the ingestor is not running the rows show with a note that more may be missing; a failed read reads Alerts unavailable", async () => {
@@ -105,6 +156,7 @@ test("while the ingestor is not running the rows show with a note that more may 
   renderWithApi(<Harness />);
   await advance(0);
   expect(text(panel().querySelector(".panel-error"))).toBe("Alerts unavailableRetry");
+  expect(within(panel()).getByRole("button", { name: "Retry" })).toBeTruthy();
   expect(text(panel())).not.toContain("No open alerts");
 });
 
@@ -112,7 +164,7 @@ test("with API-02 failing an empty list cannot vouch for itself", async () => {
   startFixtureApi({ fixture: "in-band" });
   renderWithApi(<Harness apiFailed />);
   await advance(0);
-  expect(text(panel().querySelector(".panel-empty"))).toBe("In-app alerts may be missing: can't reach the greenhouse data");
+  expect(text(panel().querySelector(".panel-empty p"))).toBe("In-app alerts may be missing: can't reach the greenhouse data");
 });
 
 test("the top three: critical, warning, info, each in API-14's order; acknowledged rows only when kept from this page", () => {

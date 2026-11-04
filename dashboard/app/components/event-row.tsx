@@ -1,54 +1,45 @@
 // SPDX-License-Identifier: MIT
-import type { ReactNode } from "react";
-import { ACTOR_SOURCE_PATTERN, isAiSource, type Actor } from "../lib/vocab";
-import { Badge } from "./badge";
+import { actorWords, entryLine, planChangeText, type Catalog, type SignedIn } from "../lib/activity";
+import { localDate } from "../lib/format";
+import type { ActivityEntry } from "../lib/operator-api";
+import { Badge, ReadbackBadge } from "./badge";
 import { LocalTime } from "./common";
 
-/**
- * Who wrote, in text (R4): `dashboard` "Jason · dashboard"; `iris` "iris" with AI; `agent:<name>` "<name> · agent"
- * with AI ("steward · agent", `agent:admin` "admin · agent"); `system` "<name> · system" ("forecast-engine · system"),
- * never AI. A source this build does not know shows raw, without AI.
- */
-export function attribution(actor: Actor): { text: string; ai: boolean } {
-  const { source, name } = actor;
-  if (source === "iris") return { text: "iris", ai: true };
-  if (source === "dashboard" || source === "system") return { text: `${name} · ${source}`, ai: false };
-  if (source.startsWith("agent:") && ACTOR_SOURCE_PATTERN.test(source)) return { text: `${source.slice("agent:".length)} · agent`, ai: isAiSource(source) };
-  return { text: `${name} · ${source}`, ai: false };
-}
-
-/** The writer in words, with AI for Iris and the agents. */
-export function Attribution({ actor }: { actor: Actor }) {
-  const { text, ai } = attribution(actor);
-  return <span className="event-by">{text}{ai && <> <Badge kind="ai" /></>}</span>;
-}
-
 export type EventRowProps = {
-  /** When it happened: a mono 24-hour time, America/Denver. */
-  at: string;
-  /** Adds the date, for a row from another day. */
+  entry: ActivityEntry;
+  /** API-09's settings by param, to name a setting and print its values. */
+  catalog: Catalog;
+  /** The signed-in person, who reads by name. */
+  me: SignedIn;
+  /** Adds the date to the time, for an entry outside a day header (Recent activity on Alerts). */
   showDate?: boolean;
-  title: ReactNode;
-  badges?: ReactNode;
-  actor?: Actor | null;
-  /** The muted detail: before → after, manual, target. */
-  detail?: ReactNode;
-  /** Then the reason: the writer's own words or a `StateReasonLine`. */
-  reason?: ReactNode;
   id?: string;
-  /** More, such as an Iris plan's changes in a `Details`. */
-  children?: ReactNode;
 };
 
-/** One row of an activity list (weather's `.event`): mono time, bold title, badges, muted detail, then the reason. */
-export function EventRow({ at, showDate = false, title, badges, actor, detail, reason, id, children }: EventRowProps) {
-  return <li className="event event-row" id={id}>
-    <span className="event-when"><LocalTime at={at} date={showDate} /></span>
-    <div className="event-body">
-      <h3>{title}{badges ? <> {badges}</> : null}</h3>
-      {(actor || detail) && <p>{actor && <Attribution actor={actor} />}{actor && detail && " · "}{detail}</p>}
-      {reason && <p className="event-reason">{reason}</p>}
-      {children}
-    </div>
+/**
+ * One log entry in one line (redesign §5.9): the time (mono, America/Denver), who wrote it (AI for Iris and the agents
+ * only), what changed ("VPD Mister Engage 1.60 → 1.55 kPa · manual"), the writer's reason in quotes, and the readback
+ * outcome as a pill with its time. An Iris plan of several changes reads "SUNRISE plan · 9 changes" and expands to them.
+ * An automatic entry leads with its cause ("Forecast rule “hot afternoon” · …").
+ */
+export function EventRow({ entry, catalog, me, showDate = false, id }: EventRowProps) {
+  const line = entryLine(entry, catalog);
+  const actor = actorWords(entry.actor, me);
+  const day = localDate(entry.ts);
+  return <li className="event act-entry" id={id}>
+    <span className="event-when"><LocalTime at={entry.ts} date={showDate} /></span>
+    <span className="event-by">{actor.text}{actor.ai && <> <Badge kind="ai" /></>}</span>
+    <span className="act-entry-what">
+      {line.changes.length > 1
+        ? <details className="act-plan"><summary>{line.text}</summary>
+          <ul className="plan-changes">{line.changes.map((change, index) => <li key={index}>{planChangeText(change, catalog, day)}</li>)}</ul>
+        </details>
+        : <span className="act-entry-text">{line.text}</span>}
+      {entry.reason && <span className="event-reason">“{entry.reason}”</span>}
+    </span>
+    <span className="act-entry-outcome">
+      {entry.state && <ReadbackBadge state={entry.state} />}
+      {entry.state && entry.confirmed_at && <> <span className="meta"><LocalTime at={entry.confirmed_at} date={localDate(entry.confirmed_at) !== day} /></span></>}
+    </span>
   </li>;
 }

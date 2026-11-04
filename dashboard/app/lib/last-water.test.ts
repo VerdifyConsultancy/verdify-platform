@@ -32,12 +32,12 @@ test("each zone: today with the minutes, a weekday within six days, else N days 
   expect(words(edit(lines, "L01", { last_water: { at: at(7, 31, 7), open_s: 600, pulses: null, cause: "schedule" } }))[0]).toBe("wall: 7 days ago");
 });
 
-test("a running line reads now with its cause, whatever ran before", () => {
-  expect(words(status("l01-running").lines)[0]).toBe("wall: now (run now)");
+test("a running line reads watering or misting now with its cause, whatever ran before", () => {
+  expect(words(status("l01-running").lines)[0]).toBe("wall: watering now (run now)");
   const center = edit(status("in-band").lines, "L04", { state: { code: "running", cause: "vpd", slot_id: null, reason: null, ends_at: null, observed_at: at(10, 40) } });
-  expect(words(center)[1]).toBe("center: now (VPD)");
+  expect(words(center)[1]).toBe("center: misting now (VPD)");
   const unknownCause = edit(status("in-band").lines, "L04", { state: { code: "running", cause: null, slot_id: null, reason: null, ends_at: null, observed_at: at(10, 40) } });
-  expect(words(unknownCause)[1]).toBe("center: now (cause unknown)");
+  expect(words(unknownCause)[1]).toBe("center: misting now (cause unknown)");
 });
 
 test("a zone with no enabled line reads not set up, never 0; a set-up zone with no run on record reads — with why", () => {
