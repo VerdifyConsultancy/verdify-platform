@@ -1196,7 +1196,10 @@ export interface components {
             readonly manual: boolean;
             /** @description The flag before this write (write responses) */
             readonly manual_before?: boolean | null;
-            /** @example Drip • Wall */
+            /**
+             * @description The line's display name, the words a person reads (#1341); line_id stays the machine key
+             * @example Wall drip
+             */
             readonly name: string;
             readonly next_run?: components["schemas"]["NextRun"] | null;
             /** @description That row's reason; null when the line is not paused or none was given */

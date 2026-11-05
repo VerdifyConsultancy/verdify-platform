@@ -13,7 +13,7 @@ import { causeWords } from "../../charts/causes";
 import { FORECAST_RULE } from "../../charts/marks";
 import { duration, formatValue, localDate, shortTime } from "../../lib/format";
 import { dayClock } from "../../lib/last-water";
-import { lineByEquipment, lineById } from "../../lib/lines";
+import { lineByEquipment, lineById, lineDisplayName } from "../../lib/lines";
 import type { IrrigationLine, IrrigationStatus, Now, Occurrence, Plan, PlanLane, PlanWaypoint, Schedule, ScheduleAgenda, StateLanes } from "../../lib/operator-api";
 import { keptNumber, withUnit } from "../../lib/setting-values";
 import { isAiSource } from "../../lib/vocab";
@@ -123,15 +123,15 @@ export function futureSpans(input: { agenda: Pick<ScheduleAgenda, "occurrences" 
     const { seconds, words: amount } = runLength(schedule, occurrence.line_id);
     const status = STATUS_OF[occurrence.status];
     const note = occurrenceNote(occurrence, schedule);
-    const name = [`${occurrence.line_id} ${equipmentWords(lineById(occurrence.line_id)?.equipment ?? occurrence.line_id)}`, clockOf(at), amount, status === "planned" ? "planned" : status, note].filter(Boolean).join(", ");
-    add(place[0], { key: `run-${occurrence.slot_id}-${occurrence.planned_start}`, start: at, end: at + seconds, status, token: place[1], label: `${occurrence.line_id}${amount ? ` ${amount}` : ""}`, name });
+    const name = [lineDisplayName(occurrence.line_id), clockOf(at), amount, status === "planned" ? "planned" : status, note].filter(Boolean).join(", ");
+    add(place[0], { key: `run-${occurrence.slot_id}-${occurrence.planned_start}`, start: at, end: at + seconds, status, token: place[1], label: `${lineDisplayName(occurrence.line_id)}${amount ? ` ${amount}` : ""}`, name });
   }
   if (input.irrigation?.engine) {
     for (const run of input.irrigation.active_runs) {
       const end = epoch(run.ends_at);
       const place = lineRow(run.line_id);
       if (!place || !(end > window.now)) continue;
-      add(place[0], { key: `active-${run.line_id}`, start: window.now, end: Math.min(end, window.to), status: "planned", token: place[1], name: `${run.line_id} runs until ${clockOf(end)}` });
+      add(place[0], { key: `active-${run.line_id}`, start: window.now, end: Math.min(end, window.to), status: "planned", token: place[1], name: `${lineDisplayName(run.line_id)} runs until ${clockOf(end)}` });
     }
   }
   for (const burst of input.overrides) {
@@ -258,10 +258,9 @@ export type NextItem = {
 export function nextItems(input: Pick<TrackInput, "plan" | "agenda">, window: NextWindow): NextItem[] {
   const items: NextItem[] = [];
   for (const { occurrence, schedule, at } of upcoming(input.agenda, window)) {
-    const name = lineById(occurrence.line_id)?.equipment;
     const { words: amount } = runLength(schedule, occurrence.line_id);
     const status = STATUS_OF[occurrence.status];
-    const head = `${occurrence.line_id} ${name ? equipmentWords(name) : ""}`.trim();
+    const head = lineDisplayName(occurrence.line_id);
     items.push({
       key: `run-${occurrence.slot_id}-${occurrence.planned_start}`, at, kind: "run", status,
       text: [status === "planned" ? head : `${head} skipped`, amount, schedule?.label].filter(Boolean).join(" · "), note: occurrenceNote(occurrence, schedule),
@@ -297,9 +296,9 @@ export function pausedWords(line: PausableLine, clock: number, me: SignedIn): st
 const laterLine = (line: Pick<IrrigationLine, "enabled" | "reserved" | "kind">) => line.enabled && !line.reserved && line.kind !== "fog" && line.kind !== "master";
 
 /**
- * "Later" (redesign §5.1): each line with no run in the next 12 h: its next run from the week's agenda ("L02 Wall feed
- * Sun 07:35"), its pause ("L01 paused until Thu 09:00 by Jason: rain · next Fri 07:35"), or, together, the lines with no
- * schedule at all ("No schedule: L01, L07, L09"). Null when every line runs within 12 h or none is set up.
+ * "Later" (redesign §5.1): each line with no run in the next 12 h: its next run from the week's agenda ("Wall drip
+ * (fertilized) Sun 07:35"), its pause ("Wall drip paused until Thu 09:00 by Jason: rain · next Fri 07:35"), or, together,
+ * the lines with no schedule at all ("No schedule: Wall drip, South mister, West mister"). Null when every line runs within 12 h or none is set up.
  */
 export function laterText(input: { agenda: Pick<ScheduleAgenda, "occurrences" | "schedules"> | null | undefined; lines: readonly IrrigationLine[] }, window: NextWindow, clock: number, me: SignedIn): string | null {
   const soon = new Set(upcoming(input.agenda, window).map(({ occurrence }) => occurrence.line_id));
@@ -310,12 +309,12 @@ export function laterText(input: { agenda: Pick<ScheduleAgenda, "occurrences" | 
     const scheduled = (input.agenda?.schedules ?? []).some((schedule) => schedule.line_id === line.line_id && schedule.enabled);
     const next = (input.agenda?.occurrences ?? []).filter((item) => item.line_id === line.line_id && item.status === "planned" && epoch(item.planned_start) > window.to)
       .sort((a, b) => epoch(a.planned_start) - epoch(b.planned_start))[0];
-    const name = `${line.line_id} ${lineName(line)}`;
+    const name = lineName(line);
     const paused = line.paused_until && epoch(line.paused_until) > window.now;
     if (paused) parts.push(`${name} ${pausedWords(line, clock, me)}${next ? ` · next ${dayClock(next.planned_start, clock)}` : ""}`);
     else if (next) parts.push(`${name} ${dayClock(next.planned_start, clock)}`);
     else if (scheduled) parts.push(`${name}: nothing planned this week`);
-    else bare.push(line.line_id);
+    else bare.push(lineName(line));
   }
   if (bare.length) parts.push(`No schedule: ${bare.join(", ")}`);
   return parts.length ? parts.join(" · ") : null;

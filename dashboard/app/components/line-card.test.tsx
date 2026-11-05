@@ -40,11 +40,11 @@ test("an idle line: its title from zone and kind, CLEAN, its state with its last
   const { article, title, head, state, buttons } = row(lineOf(status(), "L01"));
   expect(article.className).toContain("line-card");
   expect([article.getAttribute("data-state"), article.getAttribute("aria-labelledby") !== null]).toEqual(["idle", true]);
-  expect(title).toBe("L01 Wall drip");
-  expect(head).toBe("L01 Wall dripClean");
+  expect(title).toBe("Wall drip");
+  expect(head).toBe("Wall dripClean");
   // The fixture's "07:31" three days back.
   expect(state).toMatch(/^Idle · last Fri \d\d:\d\d, 12 min · ok$/);
-  expect(buttons).toEqual(["Run… L01", "Stop L01"]);
+  expect(buttons).toEqual(["Run… Wall drip", "Stop Wall drip"]);
   expect(article.querySelector(".btn-stop")).toBeNull();
   expect(article.querySelector(".btn-stop-quiet")).not.toBeNull();
 });
@@ -55,7 +55,7 @@ test("a running line: the cause's dot, Running with its cause, schedule and time
   expect(running.article.querySelector(".wat-dot")?.getAttribute("data-cause")).toBe("run_now");
   act(() => { vi.advanceTimersByTime(1000); });
   expect(text(running.article.querySelector(".line-state"))).toBe("Running · run now · 2:59 left");
-  expect(running.buttons).toEqual(["Stop L01"]);
+  expect(running.buttons).toEqual(["Stop Wall drip"]);
   expect(running.article.querySelector(".btn-stop")).not.toBeNull();
   expect(running.article.className).toMatch(/tone-running tone-eq-master/);
   cleanup();
@@ -74,32 +74,32 @@ test("unknown fills the Stop too (the relay may be on); a disabled line keeps Ru
   cleanup();
   const disabled = row(lineOf(status(), "L02"));
   expect(disabled.state).toBe("Off · no check recorded");
-  expect(disabled.buttons).toEqual(["Run… L02", "Stop L02"]);
+  expect(disabled.buttons).toEqual(["Run… Wall drip (fertilized)", "Stop Wall drip (fertilized)"]);
   cleanup();
   const reserved = row(lineOf(status("reserved-lines"), "L05"));
   expect(reserved.state).toBe("Reserved · disabled");
-  expect(reserved.head).toBe("L05 Center dripClean");
+  expect(reserved.head).toBe("Center dripClean");
 });
 
 test("L11 fog is climate only: no Stop and no write control, and its menu keeps its links", () => {
   const fog = row(lineOf(status(), "L11"));
-  expect(fog.head).toBe("L11 FogClimate only");
+  expect(fog.head).toBe("FogClimate only");
   expect(fog.buttons).toEqual([]);
   expect(fog.article.querySelectorAll("[data-write-control]")).toHaveLength(0);
   expect([...fog.menu!.querySelectorAll("a")].map((link) => [text(link), link.getAttribute("href")])).toEqual([
-    ["Activity for L11 ›", "/activity/log?target=L11"], ["Runs of L11 ›", "/water/history?line=L11"], [expect.stringMatching(/^Graphs around L11's last run ›$/), expect.stringMatching(/^\/graphs\?from=/)],
+    ["Activity for Fog ›", "/activity/log?target=L11"], ["Runs of Fog ›", "/water/history?line=L11"], [expect.stringMatching(/^Graphs around Fog's last run ›$/), expect.stringMatching(/^\/graphs\?from=/)],
   ]);
 });
 
 test("⋯ holds the enable switch with its hint, Options…, Pause until…, the links and the check on record; a viewer's keeps the links alone", () => {
   const { menu } = row(lineOf(status("schedules-paused"), "L02"));
   const panel = within(menu!);
-  expect(panel.getByRole("switch", { name: "Enabled L02" }).getAttribute("aria-checked")).toBe("true");
+  expect(panel.getByRole("switch", { name: "Enabled Wall drip (fertilized)" }).getAttribute("aria-checked")).toBe("true");
   expect(menu!.querySelector("[data-menu-keep]")?.textContent).toContain("Off stops all water on this line, VPD misting included");
-  expect(panel.getByRole("button", { name: "Options… of L02" })).toBeTruthy();
-  expect(panel.getByRole("button", { name: "Pause until… L02" })).toBeTruthy();
-  expect(panel.getByRole("link", { name: "Activity for L02" }).getAttribute("href")).toBe("/activity/log?target=L02");
-  expect(panel.getByRole("link", { name: "Runs of L02" }).getAttribute("href")).toBe("/water/history?line=L02");
+  expect(panel.getByRole("button", { name: "Options… of Wall drip (fertilized)" })).toBeTruthy();
+  expect(panel.getByRole("button", { name: "Pause until… Wall drip (fertilized)" })).toBeTruthy();
+  expect(panel.getByRole("link", { name: "Activity for Wall drip (fertilized)" }).getAttribute("href")).toBe("/activity/log?target=L02");
+  expect(panel.getByRole("link", { name: "Runs of Wall drip (fertilized)" }).getAttribute("href")).toBe("/water/history?line=L02");
   expect(text(menu!.querySelector(".wat-menu-check"))).toMatch(/^Checked by jason Oct 31, \d\d:\d\d$/);
   cleanup();
   const viewer = row(lineOf(status("schedules-paused"), "L02"), {}, { role: "viewer" });
@@ -113,7 +113,7 @@ test("L02's row carries L03, the fertilizer master, as its sub-row", () => {
   const sub = article.querySelector(".line-subrow")!;
   expect(sub.getAttribute("data-line")).toBe("L03");
   // The elbow is drawn (IBM Plex has no └), beside the words.
-  expect(text(sub)).toBe(`L03 Fert master: ${MASTER_TEXT} · Off`);
+  expect(text(sub)).toBe(`Fertilizer valve: ${MASTER_TEXT} · Off`);
   expect(sub.querySelector(".glyph-branch[aria-hidden=true]")).not.toBeNull();
   expect(MASTER_TEXT).toBe("opens the injector line from the tank with each feed");
 });
@@ -122,7 +122,7 @@ test("a latched mister reads its fault as its state, in fault, with Clear fault 
   const latched = row(lineOf(status("mister-fault"), "L04"));
   const fault = latched.article.querySelector(".line-fault")!;
   expect([text(fault), fault.className]).toEqual(["Faulted: no misting until midnight (watchdog)", "line-fault fault"]);
-  expect(latched.buttons).toEqual(["Clear fault on L04", "Stop L04"]);
+  expect(latched.buttons).toEqual(["Clear fault on Center mister", "Stop Center mister"]);
   expect(latched.article.className).toContain("tone-fault");
   cleanup();
   const backing = row({ ...lineOf(status(), "L07"), fault: "backing_off", fault_until: denver("13:20"), state: { ...lineOf(status(), "L07").state, code: "blocked", reason: "backing off" } });
@@ -135,7 +135,7 @@ test("paused, waiting and unknown read in words; a paused line's primary is Resu
   const base = lineOf(status(), "L04");
   const held = row({ ...base, ...paused, state: { ...base.state, code: "paused" } });
   expect(held.state).toBe("Paused until 14:00 · VPD misting continues · by jason: rain");
-  expect(held.buttons).toEqual(["Resume L04", "Stop L04"]);
+  expect(held.buttons).toEqual(["Resume Center mister", "Stop Center mister"]);
   cleanup();
   const misting = row({ ...base, ...paused, state: { ...base.state, code: "running", cause: "vpd", ends_at: null } });
   expect(misting.state).toMatch(/^Running · VPD/);
@@ -165,10 +165,10 @@ test("before the irrigation firmware a row shows its relay; only L01 runs, throu
   const before = status("before-engine");
   const idle = row(lineOf(before, "L01"), { engine: false });
   expect(idle.state).toMatch(/^Relay Off since \d\d:\d\d$/);
-  expect(idle.buttons).toEqual(["Run… L01", "Stop L01"]);
+  expect(idle.buttons).toEqual(["Run… Wall drip", "Stop Wall drip"]);
   cleanup();
   const other = row(lineOf(before, "L04"), { engine: false });
-  expect(other.buttons).toEqual(["Stop L04"]);
+  expect(other.buttons).toEqual(["Stop Center mister"]);
   expect(text(other.menu!.querySelector("[data-arrives=clear-fault]"))).toBe("Clear fault arrives with the irrigation firmware");
   cleanup();
   const feed = row(lineOf(before, "L02"), { engine: false });

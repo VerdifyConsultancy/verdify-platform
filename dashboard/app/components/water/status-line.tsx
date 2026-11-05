@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { Fragment } from "react";
 import { causeWords } from "../../charts/causes";
+import { lineDisplayName } from "../../lib/lines";
 import type { IrrigationStatus } from "../../lib/operator-api";
 import { useShellNow, useShellStatus } from "../../lib/shell";
 import type { PolledQueryResult } from "../../lib/use-current";
@@ -9,7 +10,6 @@ import { Badge } from "../badge";
 import { Button } from "../button";
 import { cls } from "../common";
 import { Ago } from "../freshness";
-import { lineTitle } from "../schedule/model";
 
 /**
  * What the controller runs, the first part of Water's status line (#1135, redesign §5.2) with `[data-program]`:
@@ -43,23 +43,23 @@ export function ProgramState({ irrigation, short = null }: { irrigation: PolledQ
 }
 
 /**
- * "L04 Center mister running (VPD)", each linked to its row on Today; "nothing running" when none is. `short`, a phone's
- * words: "L01 running ›", the line's name for a screen reader.
+ * "Center mister running (VPD)", each linked to its row on Today; "nothing running" when none is. `short`, a phone's
+ * words: "Wall drip running ›".
  */
 function Running({ status, linked, short = false }: { status: IrrigationStatus; linked: boolean; short?: boolean }) {
   const running = runningLines(status.lines);
   if (!running.length) return <>nothing running</>;
   return <>{running.map((line, index) => {
     const words = short
-      ? <>{line.line_id}<span className="screen-reader">{lineTitle(line).slice(line.line_id.length)}</span> running<span aria-hidden="true"> ›</span></>
-      : <>{lineTitle(line)} running{line.state.cause ? ` (${causeWords(line.state.cause)})` : ""}</>;
+      ? <>{lineDisplayName(line)} running<span aria-hidden="true"> ›</span></>
+      : <>{lineDisplayName(line)} running{line.state.cause ? ` (${causeWords(line.state.cause)})` : ""}</>;
     return <Fragment key={line.line_id}>{index > 0 && (index === running.length - 1 ? " and " : ", ")}{linked ? <a href={`#line-${line.line_id}`}>{words}</a> : words}</Fragment>;
   })}</>;
 }
 
 /**
  * Water's status line by view (redesign §5.2, §6.1): the program state, then on Today whatever is running (with links to
- * its rows) and on Schedules the next run ("next: L01 Wall drip 16:00"), or with none the fallback windows ahead that the
+ * its rows) and on Schedules the next run ("next: Wall drip 16:00"), or with none the fallback windows ahead that the
  * Schedules view counts (`summary`: "no run planned this week, 20 fallback windows"). History's period summary comes
  * from its view.
  */
@@ -68,12 +68,12 @@ export function WaterStatus({ irrigation, view, today, summary, short = false }:
   const status = irrigation.data;
   const program = <ProgramState irrigation={irrigation} short={short ? (view === "today" ? "age" : "word") : null} />;
   if (!status || irrigation.isError || !status.engine) return program;
-  // A phone's Today line names a running line too ("L01 running ›", linked to its row): on a phone the row can sit
+  // A phone's Today line names a running line too ("Wall drip running ›", linked to its row): on a phone the row can sit
   // below the fold, under Site today. Idle, it is the program alone.
   if (view === "today") {
     if (!short) return <>{program} · <Running status={status} linked /></>;
     return runningLines(status.lines).length ? <>{program} · <Running status={status} linked short /></> : program;
   }
   const next = nextRunOf(status.lines);
-  return <>{program} · {next ? <>next{short ? "" : ":"} {lineTitle(next.line)} {pauseUntilWords(next.next.start_at, today)}</> : `no run planned this week${summary ? `, ${summary}` : ""}`}</>;
+  return <>{program} · {next ? <>next{short ? "" : ":"} {lineDisplayName(next.line)} {pauseUntilWords(next.next.start_at, today)}</> : `no run planned this week${summary ? `, ${summary}` : ""}`}</>;
 }

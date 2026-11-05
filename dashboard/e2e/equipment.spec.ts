@@ -173,7 +173,7 @@ test("Daily runtime · 14 days shows one bar row per heat 1, heat 2, fan 1, fan 
   await load(page, "/equipment");
   const runtime = page.getByRole("region", { name: "Daily runtime · 14 days" });
   await expect(runtime.locator(".ctl-runtime-row")).toHaveCount(6);
-  await expect(runtime.locator(".ctl-runtime-name")).toHaveText(["Heat 1 electric", "Heat 2 gas", "Fan 1", "Fan 2", "Vent", "Fog L11"]);
+  await expect(runtime.locator(".ctl-runtime-name")).toHaveText(["Heat 1 electric", "Heat 2 gas", "Fan 1", "Fan 2", "Vent", "Fog"]);
   // A mark a day: a day of 0 is a stub and a day with no data a hatch, never nothing, and today's bar is outlined, not over.
   await expect(runtime.locator(".ctl-runtime-row").first().locator(".spark-bar, .spark-zero, .spark-none")).toHaveCount(14);
   await expect(runtime.locator(".ctl-runtime-row").first().locator(".spark-bar-partial")).toHaveCount(1);

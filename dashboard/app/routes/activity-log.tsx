@@ -13,6 +13,7 @@ import {
   readView, type ActivityView, type Catalog, type Facet, type SignedIn,
 } from "../lib/activity";
 import { localDate } from "../lib/format";
+import { lineById, lineByName, lineDisplayName } from "../lib/lines";
 import { apiGet, type ActivityEntry, type Parsed } from "../lib/operator-api";
 import { readKey, useApiRead } from "../lib/queries";
 import { viewMeta } from "../lib/sections";
@@ -168,10 +169,14 @@ function LogFilters({ view, params, me }: { view: ActivityView; params: URLSearc
   const who = facetsWith(WHO_FACETS, source), what = facetsWith(WHAT_FACETS, action);
   const filtered = LOG_FILTERS.some((name) => view.filters[name] !== undefined) || DATE_FILTERS.some((name) => view.dates[name] !== undefined);
   const clearHref = logHref(params, Object.fromEntries([...LOG_FILTERS, ...DATE_FILTERS].map((name) => [name, null])));
-  const [targetField, setTargetField] = useUrlField(target);
+  // A line target reads by its name in the field and goes to the API by its id (#1341).
+  const [targetField, setTargetField] = useUrlField(lineById(target) ? lineDisplayName(target) : target);
   const [fromField, setFromField] = useUrlField(view.dates.from ?? "");
   const [toField, setToField] = useUrlField(view.dates.to ?? "");
-  const applyTarget = (value: string) => { if (value.trim() !== target) go({ target: value.trim() || null }); };
+  const applyTarget = (value: string) => {
+    const key = lineByName(value)?.id ?? value.trim();
+    if (key !== target) go({ target: key || null });
+  };
   const onTargetKey = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== "Enter") return;
     event.preventDefault();
@@ -210,7 +215,7 @@ function LogFilters({ view, params, me }: { view: ActivityView; params: URLSearc
         <option value="">All</option>
         {what.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
       </select></label>
-      <label className="act-target">Target<input name="target" type="search" value={targetField} onChange={(event) => setTargetField(event.currentTarget.value)} autoComplete="off" placeholder="L01 or mister_engage_kpa"
+      <label className="act-target">Target<input name="target" type="search" value={targetField} onChange={(event) => setTargetField(event.currentTarget.value)} autoComplete="off" placeholder="Wall drip or mister_engage_kpa"
         onBlur={(event) => applyTarget(event.currentTarget.value)} onKeyDown={onTargetKey} /></label>
       <label className="act-date">From<input name="from" type="date" max={view.dates.to} {...onDate("from", fromField, setFromField)} /></label>
       <label className="act-date">To<input name="to" type="date" min={view.dates.from} {...onDate("to", toField, setToField)} /></label>

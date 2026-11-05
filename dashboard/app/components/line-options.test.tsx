@@ -34,7 +34,7 @@ test("L04: cap 130 and reserve 60 send {daily_cap_min: 130, vpd_reserve_min: 60,
   expect(writes(api).map((row) => [row.method, row.path, row.body])).toEqual([["PUT", "/api/v1/irrigation/lines/L04", { daily_cap_min: 130, vpd_reserve_min: 60, manual: true }]]);
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(screen.getByTestId("where").textContent).toBe("");
-  expect(text(screen.getByRole("status"))).toContain("Requested: L04 daily cap 130 min, 60 min kept for VPD");
+  expect(text(screen.getByRole("status"))).toContain("Requested: Center mister daily cap 130 min, 60 min kept for VPD");
 });
 
 test("today's minutes and the headroom sit beside the cap and follow what is typed; 0 means none", () => {
@@ -105,7 +105,7 @@ test("no drawer for a viewer, L03, L11 or a stray id; Options opens ?options=<li
   cleanup(); stopFixtureApi();
   startFixtureApi();
   renderWithApi(<><OptionsButton line={{ line_id: "L04" }} /><LineOptions lines={lines()} /></>);
-  fireEvent.click(screen.getByRole("button", { name: "Options… of L04" }));
+  fireEvent.click(screen.getByRole("button", { name: "Options… of Center mister" }));
   await advance(0);
   expect(screen.getByRole("dialog")).toBeTruthy();
   cleanup(); stopFixtureApi();
@@ -113,5 +113,5 @@ test("no drawer for a viewer, L03, L11 or a stray id; Options opens ?options=<li
   expect(screen.queryByRole("button")).toBeNull();
   cleanup();
   renderWithApi(<OptionsButton line={{ line_id: "L04" }} />, { role: "operator", writesEnabled: false });
-  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Options… of L04" }).disabled).toBe(true);
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Options… of Center mister" }).disabled).toBe(true);
 });

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { lineDisplayName } from "../lib/lines";
 import type { IrrigationLine } from "../lib/operator-api";
 import { OperatorOnly } from "../lib/session";
 import { useWaterDrawer } from "../lib/water";
@@ -23,7 +24,7 @@ export function LineEnable({ line }: { line: IrrigationLine }) {
   };
   return <OperatorOnly>
     <div className="line-enable">
-      <Switch write label={<>Enabled <span className="screen-reader">{line.line_id}</span></>} checked={line.enabled} busy={write.sending} onChange={change}
+      <Switch write label={<>Enabled <span className="screen-reader">{lineDisplayName(line)}</span></>} checked={line.enabled} busy={write.sending} onChange={change}
         describedBy={describedBy(ids.hintId, write.error && ids.errorId)} />
       <FieldHint id={ids.hintId}>{DISABLE_HINT}</FieldHint>
       {write.error && <FieldError id={ids.errorId}>{write.error.message}</FieldError>}

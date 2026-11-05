@@ -2,7 +2,7 @@
 import { useMemo, useRef, type MutableRefObject } from "react";
 import type uPlot from "uplot";
 import { dayTitle, formatValue, localDayStart } from "../lib/format";
-import { LINES, MINUTES_ZONES, ZONE_WORDS, lineById, minutesZone, type MinutesZone } from "../lib/lines";
+import { LINES, MINUTES_ZONES, ZONE_WORDS, lineById, lineDisplayName, minutesZone, type MinutesZone } from "../lib/lines";
 import { causeRank, causeToken, causeWords } from "./causes";
 import { dayCsvFilename, tableCsv } from "./csv";
 import { CsvLink, DataTable, type DataTableBlock } from "./data-table";
@@ -68,7 +68,7 @@ export type MinutesInput = {
   caps?: Partial<Record<string, number | null>>;
   /** Today's minutes still planned per row, keyed as the rows are (API-IRR-02). */
   planned?: Partial<Record<string, number | null>>;
-  /** Line names from API-IRR-01 (`name`), for line rows' labels; the line id alone without them. */
+  /** Line names from API-IRR-01 (`name`), for line rows' labels; the register's names without them. */
   names?: Readonly<Record<string, string>>;
   /** Epoch seconds: which local day is today. */
   now: number;
@@ -178,13 +178,13 @@ export function buildMinutes(input: MinutesInput): MinutesModel {
   return { days, zones, xRange: { from: first - DAY / 2, to: last + DAY / 2 }, byLine, group, measure, unit };
 }
 
-/** "L04 Center mister" with the API's name for the line, else the line id. */
+/** A line's name in a chart, never its relay code (#1341): "Center mister"; `names` only for an id the register lacks. */
 export function lineWords(line: string | null, names?: Readonly<Record<string, string>>): string {
   if (!line) return "";
-  return names?.[line] ? `${line} ${names[line]}` : line;
+  return lineById(line) ? lineDisplayName(line) : names?.[line] || line;
 }
 
-/** One part in words: "L04 Center mister · VPD · 46 min · 3 gal"; whole gallons only where the API gives them. */
+/** One part in words: "Center mister · VPD · 46 min · 3 gal"; whole gallons only where the API gives them. */
 export function partWords(part: ZonePart, names?: Readonly<Record<string, string>>): string {
   const who = part.line ? lineWords(part.line, names) : part.chemistry === "fert" ? "fertilizer" : "clean";
   return [who, causeWords(part.cause), formatValue(part.minutes, "min"), ...(valued(part.gal) ? [`${Math.round(part.gal)} gal`] : [])].join(" · ");
@@ -361,7 +361,7 @@ export function minutesKey(model: MinutesModel): KeyItem[] {
 export type MinutesByZoneProps = Omit<MinutesInput, "names"> & {
   /** Offer "CSV of this chart" (default true). */
   csv?: boolean;
-  /** Line names from API-IRR-01 (`name`), for the tooltip and the data table; the line id alone without them. */
+  /** Line names from API-IRR-01 (`name`), for the tooltip and the data table; the register's names without them. */
   lineNames?: Readonly<Record<string, string>>;
   /** The rows share it, so the cursor sits on one day in every row. */
   syncKey?: string;
