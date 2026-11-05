@@ -259,6 +259,8 @@ test("Running and next from 861 px: the track over the last 6 h and the next 12 
   await expect(track.locator(".tt-label")).toHaveText(["Heat", "Vent, fans", "Fog, mist", "Drips", "Iris", "Plan", "Sun"]);
   await expect(track.locator(".tt-row").nth(0).locator(".tt-span").first()).toBeVisible();
   await expect(track.locator(".tt-now").first()).toBeVisible();
+  // Iris's triggers read as plan events with their times, so "SUNSET plan 16:50" never reads as a second sunset.
+  await expect(track.locator(".tt-row").nth(4).locator(".tt-marker-label")).toHaveText(["SUNRISE plan 07:00 ✓", "SOLAR_MAX plan 12:41", "SUNSET plan 16:50"]);
   await expect(track.locator(".tt-row").nth(6).locator(".tt-marker-label")).toHaveText(["Sunrise 06:35", "Sunset 16:58"]);
   // The phone's lists are there for a narrow screen, hidden here.
   await expect(coming.locator(".now-next")).toBeHidden();

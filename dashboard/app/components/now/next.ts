@@ -177,6 +177,19 @@ export function planTransitions(plan: Pick<Plan, "lanes"> | null | undefined, wi
 /** Who planned a change, in words: AI for Iris and the agents, "Forecast rule · system" for the forecast engine. */
 export const sourceWords = (source: string): string => (isAiSource(source) ? "AI" : source === "preemptive" ? FORECAST_RULE : source);
 
+/** The outcomes of a trigger that did its job: Iris wrote its plan, or changed the setting the trigger called for. */
+const TRIGGER_DONE: ReadonlySet<string> = new Set(["plan_written", "action_completed"]);
+/**
+ * An Iris trigger on the track (redesign §5.1): a plan event with its time, so it never reads as the sun on the row below
+ * ("SUNSET plan 16:50" over "Sunset 16:58"), as the hero's "SUNRISE plan to 17:30" does. Ahead: "SOLAR_MAX plan 12:41";
+ * before now, with its outcome: "SUNRISE plan 07:02 ✓" when it did its job, else in words ("SUNSET plan 16:50 · missed").
+ */
+export function irisMarkerLabel(trigger: string, outcome: string, at: number, now: number): string {
+  const head = `${trigger} plan ${clockOf(at)}`;
+  if (at > now) return head;
+  return TRIGGER_DONE.has(outcome) ? `${head} ✓` : `${head} · ${words("trigger_outcome", outcome)}`;
+}
+
 /** The Iris triggers in the window: those that ran before now and those expected after it. */
 export function irisTriggers(plan: Pick<Plan, "health"> | null | undefined, window: NextWindow): { at: number; trigger: string; outcome: string }[] {
   return (plan?.health ?? []).map((row) => ({ at: epoch(row.expected_at), trigger: row.trigger, outcome: row.outcome }))
@@ -215,7 +228,7 @@ export function trackRows(input: TrackInput, window: NextWindow): TrackRow[] {
   const future = futureSpans({ agenda: input.agenda, irrigation: input.irrigation, overrides: input.overrides }, window);
   const spans = (row: RowKey) => [...(past.get(row) ?? []), ...(future.get(row) ?? [])];
   const iris: TrackMarker[] = irisTriggers(input.plan, window).map(({ at, trigger, outcome }) => ({
-    key: `iris-${trigger}-${at}`, at, label: at <= window.now ? (outcome === "missed" || outcome === "failed" ? `${trigger} ${words("trigger_outcome", outcome)}` : trigger) : `${trigger} ${clockOf(at)}`,
+    key: `iris-${trigger}-${at}`, at, label: irisMarkerLabel(trigger, outcome, at, window.now),
   }));
   const plan: TrackMarker[] = planTransitions(input.plan, window).map(({ at, changes }) => ({
     key: `plan-${at}`, at, label: `${clockOf(at)} ${changes[0].text}${changes.length > 1 ? ` +${changes.length - 1}` : ""}${isAiSource(changes[0].source) ? " · AI" : ""}`,
