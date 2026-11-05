@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { lineDisplayName } from "../lib/lines";
 import { fetchRead } from "../lib/queries";
 import { OperatorOnly } from "../lib/session";
 import { READBACK_POLL_MS, useStop } from "../lib/writes";
@@ -22,7 +23,7 @@ export function StopButton({ lineId, filled = true }: { lineId: string; filled?:
     const timer = setInterval(() => { void fetchRead(client, "API-IRR-01", {}).catch(() => {}); }, READBACK_POLL_MS);
     return () => clearInterval(timer);
   }, [client, confirming]);
-  const label = <>Stop <span className="screen-reader">{lineId}</span></>;
+  const label = <>Stop <span className="screen-reader">{lineDisplayName(lineId)}</span></>;
   return <>
     {filled
       ? <Button variant="stop" write busy={sending} onClick={() => void stop(lineId)}>{label}</Button>

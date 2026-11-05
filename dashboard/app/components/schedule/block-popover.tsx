@@ -74,7 +74,7 @@ export function BlockPopover({ entry, anchor, onClose, agenda, info, program, no
       </div>
     </OperatorOnly>}
     <p className="sch-pop-links">
-      <Link to={`/water/history?line=${encodeURIComponent(lineId)}`}>Runs of {lineId}<span aria-hidden="true"> ›</span></Link>
+      <Link to={`/water/history?line=${encodeURIComponent(lineId)}`}>Runs of {info.nameOf(lineId)}<span aria-hidden="true"> ›</span></Link>
       {graphs && <Link to={graphs}>Graphs around this run<span aria-hidden="true"> ›</span></Link>}
     </p>
   </Popover>;

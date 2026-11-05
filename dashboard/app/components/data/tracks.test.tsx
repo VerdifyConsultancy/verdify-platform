@@ -86,14 +86,14 @@ const DAY = localDayWindow("2026-11-02");
 const at = (hhmm: string) => DAY.from + (Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3))) * 60;
 const ROWS: TrackRow[] = [
   {
-    key: "L01", label: "L01 Wall drip", data: { "data-line": "L01" }, end: <span>22 / 60 min</span>,
+    key: "L01", label: "Wall drip", data: { "data-line": "L01" }, end: <span>22 / 60 min</span>,
     spans: [
-      { key: "a", start: at("07:31"), end: at("07:43"), status: "done", token: "eq-water", label: "07:31 ok", name: "L01 Wall drip, Mon 07:31, 12 min, done, ok", onSelect: vi.fn() },
+      { key: "a", start: at("07:31"), end: at("07:43"), status: "done", token: "eq-water", label: "07:31 ok", name: "Wall drip, Mon 07:31, 12 min, done, ok", onSelect: vi.fn() },
       { key: "b", start: at("16:00"), end: at("16:10"), status: "planned", token: "eq-water", label: "16:00 10 min", href: "/water/schedules?run=b" },
     ],
     markers: [{ key: "plan", at: at("13:00"), label: "13:00 engage 1.60 → 1.70 (AI)" }],
   },
-  { key: "L07", label: "L07 South mister", muted: true, note: "paused until Sat 09:00 · jason", spans: [{ key: "c", start: at("15:00"), end: at("15:03"), status: "skipped", label: "skipped · RH 92%" }] },
+  { key: "L07", label: "South mister", muted: true, note: "paused until Sat 09:00 · jason", spans: [{ key: "c", start: at("15:00"), end: at("15:03"), status: "skipped", label: "skipped · RH 92%" }] },
 ];
 
 test("late in the window a marker's words and a narrow span's sit before them, so the track never cuts them off", () => {
@@ -116,7 +116,7 @@ test("a label stops where its room on the row ends (the next span, marker or the
       { key: "c", at: at("10:30"), label: "SUNRISE" },
     ],
   }, {
-    key: "L04", label: "L04 Center mister",
+    key: "L04", label: "Center mister",
     spans: [
       { key: "skip", start: at("09:47"), end: at("09:48"), status: "skipped", label: "09:47 skipped" },
       { key: "next", start: at("11:47"), end: at("11:52"), status: "planned", label: "11:47" },
@@ -166,11 +166,11 @@ test("rows are a list with their labels and ends; a span with detail is a button
   const track = screen.getByRole("group", { name: "Today's runs" });
   expect(track.getAttribute("tabindex")).toBe("0");
   const rows = within(track).getAllByRole("listitem");
-  expect(rows.map((row) => text(row.querySelector(".tt-label")))).toEqual(["L01 Wall drip", "L07 South mister"]);
+  expect(rows.map((row) => text(row.querySelector(".tt-label")))).toEqual(["Wall drip", "South mister"]);
   expect(rows[0].getAttribute("data-line")).toBe("L01");
   expect(rows[1].className).toBe("tt-row tt-row-muted");
   expect(text(rows[0].querySelector(".tt-end"))).toBe("22 / 60 min");
-  const run = screen.getByRole("button", { name: "L01 Wall drip, Mon 07:31, 12 min, done, ok" });
+  const run = screen.getByRole("button", { name: "Wall drip, Mon 07:31, 12 min, done, ok" });
   expect(run.className).toBe("tt-span tt-done tt-eq-water tt-narrow");
   expect(run.getAttribute("tabindex")).toBe("-1");
   fireEvent.click(run);

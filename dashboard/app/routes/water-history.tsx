@@ -195,11 +195,11 @@ function runColumns(names: Readonly<Record<string, string>>, today: string): Tab
   ];
 }
 
-/** The loaded runs as CSV: every column of the table, times in UTC and America/Denver words. */
+/** The loaded runs as CSV: every column of the table, times in UTC and America/Denver words; `line_id` is the machine key, `line` its name. */
 function runsCsv(runs: readonly Run[], names: Readonly<Record<string, string>>, today: string): string {
   return tableCsv(
-    ["started (UTC)", "ended (UTC)", "when (America/Denver)", "line", "zone", "water", "purpose", "cause", "schedule", "actor", "valve-open minutes", "pulses", "gallons", "outcome", "reason"],
-    runs.map((run) => [run.started_at, run.ended_at ?? null, runSpanWords(run, today), lineWords(run.line_id, names), zoneWord(run.zone), run.chemistry, runPurpose(run), run.cause, run.schedule_label ?? null,
+    ["started (UTC)", "ended (UTC)", "when (America/Denver)", "line_id", "line", "zone", "water", "purpose", "cause", "schedule", "actor", "valve-open minutes", "pulses", "gallons", "outcome", "reason"],
+    runs.map((run) => [run.started_at, run.ended_at ?? null, runSpanWords(run, today), run.line_id, lineWords(run.line_id, names), zoneWord(run.zone), run.chemistry, runPurpose(run), run.cause, run.schedule_label ?? null,
       run.actor?.name ?? "controller", Math.round((run.open_s / 60) * 10) / 10, run.pulses ?? null, run.gal ?? null, run.outcome, run.reason ?? null]),
   );
 }
@@ -324,7 +324,7 @@ export default function WaterHistory() {
   const purpose = historyPurpose(search.get("purpose"));
   const windows = historyWindows(today, days);
   const lines = irrigation.data?.lines ?? NO_LINES;
-  // Water names lines as its rows do: "L01 Wall drip".
+  // Water names lines as its rows do: "Wall drip", never the relay code (#1341).
   const names = useMemo(() => Object.fromEntries(lines.map((line) => [line.line_id, lineLabel(line)])), [lines]);
   const current = useApiRead("API-IRR-10", { from: windows.current.from, to: windows.current.to, group_by: "line", purpose }, { intervalMs: HISTORY_POLL_MS });
   const previous = useApiRead("API-IRR-10", { from: windows.previous.from, to: windows.previous.to, group_by: "line", purpose }, { intervalMs: PREVIOUS_POLL_MS });

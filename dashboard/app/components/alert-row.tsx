@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { duration, localDate, shortTime } from "../lib/format";
+import { lineById, lineDisplayName, nameLineCodes } from "../lib/lines";
 import { OperatorOnly } from "../lib/session";
 import type { Alert, Freshness } from "../lib/vocab";
 import { hasWords, words } from "../lib/words";
@@ -47,10 +48,11 @@ function detailText(details: unknown, key: string): string | null {
 export function alertPlace(alert: Pick<Alert, "zone" | "details">): string | null {
   return alert.zone || detailText(alert.details, "line_id") || detailText(alert.details, "equipment");
 }
-/** The place in words: equipment by its plain name ("Fan 2"), a zone capitalised ("South"), a line as its id. */
+/** The place in words: equipment by its plain name ("Fan 2"), a zone capitalised ("South"), a line by its name ("Wall drip (fertilized)"), never its relay code. */
 export function alertPlaceWords(alert: Pick<Alert, "zone" | "details">): string | null {
   const place = alertPlace(alert);
   if (!place) return null;
+  if (alert.zone !== place && lineById(place)) return lineDisplayName(place);
   if (!alert.zone && !detailText(alert.details, "line_id") && hasWords("equipment", place)) return words("equipment", place);
   return alert.zone === place ? place.charAt(0).toUpperCase() + place.slice(1) : place;
 }
@@ -110,7 +112,7 @@ export function AlertRow({ alert, title, acknowledge, openTo, details, action, m
     tag={<span className="alert-severity">{words("alert_severity", severity)}</span>} data={{ "data-severity": severity }}
     state={<span className="alert-facts">{facts}</span>}
     meta={acknowledged || (message && alert.message) ? <>
-      {message && alert.message && <span className="alert-message">{alert.message}</span>}
+      {message && alert.message && <span className="alert-message">{nameLineCodes(alert.message)}</span>}
       {acknowledged && <span className="alert-acked">Acknowledged{alert.acknowledged_by && ` by ${alert.acknowledged_by}`}{alert.acknowledged_at && <> · <LocalTime at={alert.acknowledged_at} date={localDate(alert.acknowledged_at) !== today} /></>}</span>}
     </> : undefined}
     stop={action} menu={link ?? undefined}>

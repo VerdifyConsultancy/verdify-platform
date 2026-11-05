@@ -103,7 +103,9 @@ from verdify_services import activity
 from verdify_services.actor import Actor, ActorRef
 from verdify_services.irrigation import reads
 from verdify_services.irrigation.reads import IrrigationLine, Schedule
-from verdify_services.problems import Problem, ServiceError, problem
+from verdify_services.labels import name_line_codes
+from verdify_services.problems import Problem, ServiceError
+from verdify_services.problems import problem as _problem
 
 GREENHOUSE_ID = activity.GREENHOUSE_ID
 NOTIFY_CHANNEL = "irrigation_changed"
@@ -403,8 +405,16 @@ def _unknown_line(line_id: object) -> ServiceError:
     return ServiceError(problem("unknown_target", f"{line_id!r} is not a line; lines are L01-L11", field="line_id"))
 
 
+def problem(code: Any, detail: str, **fields: Any) -> Problem:
+    """``verdify_services.problems.problem`` with the detail in the operator's words: every relay code a person would
+    read ("L01 is disabled") reads as the line's name ("Wall drip is disabled", #1341). Structured fields keep the
+    ``line_id`` for agents."""
+    return _problem(code, name_line_codes(detail), **fields)
+
+
 def _refused(refusal: Refusal) -> ServiceError:
-    return ServiceError(Problem.model_validate(refusal.problem()))
+    body = refusal.problem()
+    return ServiceError(Problem.model_validate({**body, "detail": name_line_codes(body["detail"])}))
 
 
 def _no_engine(what: str) -> ServiceError:
@@ -572,7 +582,7 @@ async def _check_bridge_run(conn: asyncpg.Connection, body: RunRequest) -> int:
             )
         )
     if not state.enabled:
-        raise ServiceError(problem("line_disabled", "L01 is disabled; enable the line to run it", field="line_id"))
+        raise ServiceError(problem("line_disabled", "L01 is disabled; enable it to run it", field="line_id"))
     for switch in BRIDGE_SWITCHES:
         if switch == STOP_TOGGLED_SWITCH and state.stop_toggled:
             continue
@@ -675,9 +685,7 @@ def _check_run_rails(line: LineSpec, reading: IrrState | None, now: datetime, *,
     mister's run-now (``any_mister`` false), ``not_schedule_member``, from the stored line."""
     target = line.line_id
     if not line.enabled:
-        raise ServiceError(
-            problem("line_disabled", f"{target} is disabled; enable the line to run it", field="line_id")
-        )
+        raise ServiceError(problem("line_disabled", f"{target} is disabled; enable it to run it", field="line_id"))
     if line.paused_until is not None and line.paused_until > now:
         raise ServiceError(
             problem(

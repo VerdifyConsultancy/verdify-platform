@@ -492,11 +492,12 @@ test("two presses before a render send one request with one key: Save, Run and S
 test("C: manifold_busy reads the API's sentence naming the holder; a detail with no end time gains one from retry_after_s", () => {
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
+  // #1341: the holder reads by its name, whichever API build wrote the detail with its relay code.
   const busy = { type: "about:blank", title: "Manifold busy", status: 422, code: "manifold_busy", retryable: true, min: null, max: null, current: null };
-  expect(problemMessage({ ...busy, detail: "L01 holds the drip manifold until 07:42; stop it or try then", retry_after_s: 60 })).toBe("L01 holds the drip manifold until 07:42; stop it or try then");
-  expect(problemMessage({ ...busy, detail: "L01 holds the drip manifold", retry_after_s: 420 })).toBe("L01 holds the drip manifold until 10:49; stop it or try then");
-  expect(problemMessage({ ...busy, detail: "L01 holds the drip manifold; stop it or try again", retry_after_s: 420 })).toBe("L01 holds the drip manifold until 10:49; stop it or try then");
-  expect(problemMessage({ ...busy, detail: "L01 holds the drip manifold", retry_after_s: null })).toBe("L01 holds the drip manifold");
+  expect(problemMessage({ ...busy, detail: "L01 holds the drip manifold until 07:42; stop it or try then", retry_after_s: 60 })).toBe("Wall drip holds the drip manifold until 07:42; stop it or try then");
+  expect(problemMessage({ ...busy, detail: "L01 holds the drip manifold", retry_after_s: 420 })).toBe("Wall drip holds the drip manifold until 10:49; stop it or try then");
+  expect(problemMessage({ ...busy, detail: "L01 holds the drip manifold; stop it or try again", retry_after_s: 420 })).toBe("Wall drip holds the drip manifold until 10:49; stop it or try then");
+  expect(problemMessage({ ...busy, detail: "L01 holds the drip manifold", retry_after_s: null })).toBe("Wall drip holds the drip manifold");
   expect(problemMessage({ ...busy, retry_after_s: null })).toBe(words("problem_code", "manifold_busy"));
   vi.useRealTimers();
 });
@@ -552,10 +553,10 @@ test("Stop: one tap sends one API-IRR-07 request with {} and no manual; the resu
   expect(toasts("status")).toEqual([stopped]);
   await advance(120_000);
   expect(toasts("status")).toEqual([stopped]);
-  fireEvent.click(screen.getByRole("button", { name: "Disable L01" }));
+  fireEvent.click(screen.getByRole("button", { name: "Disable Wall drip" }));
   await advance(0);
   expect(writes(api)[1]).toMatchObject({ method: "PUT", operationId: "API-IRR-08", path: "/api/v1/irrigation/lines/L01", body: { enabled: false, manual: true } });
-  expect(text(screen.getByRole("status"))).toContain("L01: disable requested");
+  expect(text(screen.getByRole("status"))).toContain("Wall drip: disable requested");
   fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
   expect(toasts("status")).toEqual([]);
 });
@@ -621,7 +622,7 @@ test("Stop is never disabled by the writes flag, carries {line_id} for one line,
   await advance(5000);
   expect(toasts("status")[0]).toMatch(/^Stopped every running valve\. /);
   // The Disable control is a write control: disabled while changes are switched off.
-  expect(screen.getByRole("button", { name: "Disable L01" }).hasAttribute("disabled")).toBe(true);
+  expect(screen.getByRole("button", { name: "Disable Wall drip" }).hasAttribute("disabled")).toBe(true);
   view.unmount();
   renderWithApi(<Stop />, { role: "viewer", writesEnabled: true });
   expect(screen.queryByRole("button")).toBeNull();
@@ -642,7 +643,7 @@ test("Stop notes what was running from the shell's own API-02 poll, so a screen 
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-07", body: {} })]);
   await advance(5000);
   expect(toasts("status")).toEqual(["Stopped every running valve. VPD misting, fog and the next scheduled run can still start on their own; to keep a line off, disable it."]);
-  expect(screen.getByRole("button", { name: "Disable L01" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Disable Wall drip" })).toBeTruthy();
 });
 
 test("newestNow takes the newest API-02 answer the page holds, the shell's or a screen's", () => {
