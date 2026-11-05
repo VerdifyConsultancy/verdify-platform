@@ -26,13 +26,15 @@ export function ShellProvider({ build, children }: { build: string; children?: R
   </ShellContext.Provider>;
 }
 
-/** The banner row under the header, only while one is true: the one fault banner, then each warn (screens §1.2). */
-export function ShellBanners() {
-  const { fault, warns } = useShellStatus();
-  const banners = fault ? [fault, ...warns] : warns;
-  if (!banners.length) return null;
+/**
+ * The warn banners, one line each, in flow at the top of `<main>` above the page header, only while true (redesign
+ * §2.5). The one fault banner is not here: it is a row inside the sticky header (`SiteHeader`), so it never scrolls away.
+ */
+export function ShellNotices() {
+  const { warns } = useShellStatus();
+  if (!warns.length) return null;
   return <div className="banners">
-    {banners.map((banner) => <Banner key={banner.kind} tone={banner.tone} link={banner.link}>{banner.text}</Banner>)}
+    {warns.map((banner) => <Banner key={banner.kind} tone={banner.tone} link={banner.link}>{banner.text}</Banner>)}
   </div>;
 }
 
@@ -41,10 +43,14 @@ export function BuildLine({ build, api }: { build: string; api: string | null })
   return <span className="build-line">Verdify dashboard · build <span className="mono">{revisionLabel(build)}</span> · API <span className="mono">{revisionLabel(api)}</span></span>;
 }
 
-/** Weather's `.site-footer`: the build line, the two sibling sites and the IBM Plex licences. */
+/**
+ * Weather's `.site-footer`: the build line, the time zone every time on the site is in (stated once here, on the chart
+ * axes and in every `<time title>`, D-UX-08), the two sibling sites and the IBM Plex licences.
+ */
 export function SiteFooter({ build, api }: { build: string; api: string | null }) {
   return <footer className="site-footer"><div className="shell">
     <BuildLine build={build} api={api} />
+    <span className="footer-zone">Times are America/Denver</span>
     <a href="https://graphs.verdify.ai/">graphs.verdify.ai<span aria-hidden="true"> ↗</span></a>
     <a href="https://lab.verdify.ai/">lab.verdify.ai<span aria-hidden="true"> ↗</span></a>
     <p className="small"><a href="/fonts/OFL-sans.txt">IBM Plex Sans license</a> · <a href="/fonts/OFL-mono.txt">IBM Plex Mono license</a></p>
@@ -103,7 +109,8 @@ export function SignInRefusalPage({ build, refusal }: { build: string; refusal: 
 }
 
 /**
- * The page around every screen: header and nav, the banner row, the screen, the footer, the phone bar and the toasts.
+ * The page around every screen: the header with its nav, account menu and fault row, the warn notices, the screen,
+ * the footer, the phone bar and the toasts.
  * It owns the page's query client; a `SessionEnded` from any query or mutation raises the session-ended card. A sign-in
  * refusal (`authError`) renders SCR-09's card in place of the screen, with no polls (there is no session to poll with).
  */
@@ -115,7 +122,7 @@ export function AppShell({ build, authError }: { build: string; authError: AuthE
     <div className="app-page" inert={ended}>
       <a href="#main-content" className="skip-link">Skip to content</a>
       <SiteHeader />
-      <main id="main-content" className="shell" tabIndex={-1}><ShellBanners /><Outlet /></main>
+      <main id="main-content" className="shell" tabIndex={-1}><ShellNotices /><Outlet /></main>
       <ShellFooter />
       <BottomNav />
     </div>

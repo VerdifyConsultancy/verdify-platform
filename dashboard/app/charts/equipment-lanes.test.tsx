@@ -8,6 +8,7 @@ import metricsFixture from "./fixtures/metrics.json";
 import holeFixture from "./fixtures/series-hole.json";
 import statesFixture from "./fixtures/states.json";
 import { FakeResizeObserver, MockPlot, TOKENS, created, load, media, setTokens, type Stroke } from "./fixtures/uplot-mock";
+import { InStack } from "./stack-context";
 import { TimeSeries } from "./time-series";
 import type { MetricDef, Series, StateLanes } from "./types";
 import { resetZoom } from "./uplot-chart";
@@ -181,6 +182,10 @@ test("a wet line's schedule interval names \"schedule\"; a null cause draws in t
   const centerOn = rows.filter((cells) => cells[0] === "L04 Center mister" && cells[1] === "on").map((cells) => cells[5]);
   expect(centerOn).toEqual(["VPD", "VPD", "VPD", "schedule", ""]);
   expect([...container.querySelectorAll(".chart-key li")].map((item) => item.textContent)).toEqual(["VPD", "schedule", "unknown", "sensed"]);
+  // The key sits right under the rows it names, above the CSV and the table, which is named by its subject.
+  const figure = container.querySelector(".chart-lanes")!;
+  expect([...figure.children].map((child) => child.className).filter((name) => /chart-key|chart-tools|chart-table/.test(name))).toEqual(["chart-key", "chart-tools", "chart-table"]);
+  expect(figure.querySelector(".chart-table summary")?.textContent).toMatch(/^Lanes table · \d+ rows$/);
 });
 
 test("each row ends with its state, on time and starts; at 860 px and below the rows are 24 px", async () => {
@@ -200,6 +205,35 @@ test("each row ends with its state, on time and starts; at 860 px and below the 
   const { plot } = await mount();
   expect(plot.ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--muted"] && inBand(stroke, 1, 24))).toHaveLength(1);
   expect(plot.ctx.rects.find((rect) => rect.color === TOKENS["--eq-water"])!.height).toBe(18);
+});
+
+test("inside a chart stack: the panels' plot area and no time axis of their own; each row's name and facts head its track; the fold is a button under the rows", async () => {
+  const { container } = render(<InStack.Provider value={true}><EquipmentLanes {...props()} /></InStack.Provider>);
+  await settle();
+  const plot = created[created.length - 1];
+  plot.fire("ready");
+  plot.draw();
+  // No padding (the stylesheet puts the canvas over the panels' plot area) and a time axis that keeps its grid alone.
+  expect(plot.opts.padding).toEqual([0, 0, 0, 0]);
+  expect(plot.opts.axes![0].size).toBe(0);
+  expect((plot.opts.axes![0].values as (u: unknown, splits: number[]) => string[])(null, [RANGE.from])).toEqual([""]);
+  expect(container.querySelector(".lanes")!.className).toBe("lanes lanes-equipment lanes-stacked");
+  expect(container.querySelector(".lanes-axis")).toBeNull();
+  // The disclosure's summary names the lanes; each row says its facts in words.
+  expect(container.querySelector("figcaption")).toBeNull();
+  expect(container.querySelector("[data-equipment=fan1]")!.textContent).toBe(`Fan 1 off · 80${NBSP}min on · 1 start`);
+  expect(container.querySelector("[data-equipment=heat1]")!.textContent).toBe(`Heat 1 (electric) off · 70${NBSP}min on · 0 starts`);
+  // Rows are 36 px: a 16 px line for the name, then the band. Vent (row 1)'s unknown span is hatched in its band.
+  const stackedBand = (index: number) => ({ top: index * 36 + 16 + 3, bottom: index * 36 + 36 - 3 });
+  const inStackedBand = (stroke: Stroke, index: number) => stroke.path.every(([, y]) => y >= stackedBand(index).top && y <= stackedBand(index).bottom);
+  expect(plot.ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--muted"] && inStackedBand(stroke, 1))).toHaveLength(1);
+  // The fold is under the rows, outside the canvas's box, and the idle rows follow the active ones with no fold row between.
+  const fold = screen.getByRole("button", { name: "12 idle rows" });
+  expect([fold.className, fold.closest(".lanes")]).toEqual(["lanes-fold-toggle", null]);
+  fireEvent.click(fold);
+  plot.draw();
+  expect(plot.ctx.strokes.some((stroke) => inStackedBand(stroke, 9))).toBe(false);
+  expect(fold.getAttribute("aria-expanded")).toBe("true");
 });
 
 test("a cursor moved by another chart on the sync key shows no lane tooltip; one past now shows none either", async () => {

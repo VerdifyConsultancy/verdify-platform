@@ -74,7 +74,7 @@ export const LINES = [
   { line_id: "L10", name: "Mister • West Wall (Fert.)", equipment: "mister_west_fert", label: "West fert mister L10", zone: "west", kind: "fert_mister", clean_partner: "L09", cap: 0 },
   { line_id: "L11", name: "Fog", equipment: "fog", label: "Fog L11", zone: "house", kind: "fog", clean_partner: null, cap: 0 },
 ];
-/** Fan 1 has been off since this absolute time, so the board reads "10/27 04:26" on any later day (VD-14). */
+/** Fan 1 has been off since this absolute time, so the board reads "Oct 27, 04:26" on any later day (VD-14). */
 const FAN1_OFF_SINCE = Date.parse("2026-10-27T04:26:00-06:00");
 /** Home Assistant re-reads the Lutron switches every 300 s, so their newest row is at most that old; past 600 s it reads unknown. */
 const LUTRON_POLL_AGE = 3 * MINUTE;
@@ -926,6 +926,21 @@ export const FIXTURES = {
   "occupancy-unknown": (world) => { world.occupancy = { occupied: null, seen_at: null, hold_enabled: true }; },
   "occupancy-hold-off": (world) => { world.occupancy = { ...world.occupancy, hold_enabled: false }; },
 };
+
+/**
+ * Adds a screen package's named fixtures (`e2e/fixtures/<package>.mjs`, redesign §10.1) to `FIXTURES`; index.mjs calls
+ * it once per package before anything reads the names. A name that is already registered throws, so a package never
+ * shadows a base fixture or another package's.
+ * @param {string} owner the package file, for the error
+ * @param {Readonly<Record<string, (world: any) => void>>} fixtures
+ */
+export function registerFixtures(owner, fixtures) {
+  for (const [name, patch] of Object.entries(fixtures)) {
+    if (Object.hasOwn(FIXTURES, name)) throw new Error(`Fixture ${name} from ${owner} is already registered`);
+    if (typeof patch !== "function") throw new Error(`Fixture ${name} from ${owner} is not a function of the world`);
+    FIXTURES[name] = patch;
+  }
+}
 
 /**
  * The world for `names` (one name or a list, applied in order over `in-band`) at `now`. Options: `now` (epoch ms or

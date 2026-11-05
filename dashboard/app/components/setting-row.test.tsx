@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
-// SettingRow (#1132, SCR-05; design system §4.2 and §4.6) on rows of the settings fixture rendered at test time from
-// the tunable registry, patched per rule. Times are America/Denver with the clock at 10:42 on 2026-11-02.
+// SettingRow (#1132, SCR-05, redesign §5.10) on rows of the settings fixture rendered at test time from the tunable
+// registry, patched per rule: the device value large, the bounds bar, the one pill and the one meta line. Times are
+// America/Denver with the clock at 10:42 on 2026-11-02.
 import { act, cleanup, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { fixture } from "../../e2e/fixtures/index.mjs";
 import { parseSettings, type DesiredSetting, type Setting } from "../lib/operator-api";
-import { keptNumber, keptValueText } from "../lib/setting-values";
+import { displayNumber, keptNumber, keptValueText, keyUnit, readableDuration, settingDisplay, settingUnit } from "../lib/setting-values";
 import type { Session } from "../lib/session";
-import { SettingRow, boundsText, changedByAgent, pendingRequest, valueInForce, type SettingRowProps } from "./setting-row";
+import { SettingRow, boundsText, changedByAgent, pendingRequest, recentlyChanged, valueInForce, type SettingRowProps } from "./setting-row";
 import { NBSP, denver, renderUi, text } from "./test-render";
 
 const NOW = Date.parse(denver("10:42"));
@@ -38,64 +39,86 @@ function draw(setting: Setting, props: Partial<SettingRowProps> = {}, session: P
 const cell = (name: "name" | "device" | "next" | "bounds" | "actions") => text(document.querySelector(`.setting-${name}`));
 const lines = (selector: string) => [...document.querySelectorAll(`.setting-device ${selector}`)].map((node) => text(node));
 const badges = () => [...document.querySelectorAll(".setting-device [data-badge]")].map((node) => node.getAttribute("data-badge"));
+/** The row's one pill (redesign §4.4), and none in a steady state. */
+const pill = () => [...document.querySelectorAll(".ctl-row-pill [data-badge]")].map((node) => node.getAttribute("data-badge"));
 const edit = () => screen.queryByRole("link", { name: /^Edit / });
+const details = () => screen.queryByRole("link", { name: /^Details of / });
 
-test("label and key, the device value with its unit, CONFIRMED and its age, Next (plan), and bounds with step", () => {
+test("label and key, the device value large, the bounds bar with the next plan's ring, no pill when steady, and one meta line", () => {
   draw(row("mister_engage_kpa"));
   expect(cell("name")).toBe("VPD Mister Engage mister_engage_kpa");
   expect(document.querySelector(".setting-param")!.classList.contains("mono")).toBe(true);
-  expect(lines(".setting-value")).toEqual(["1.60 kPa Confirmed · 2 min ago"]);
-  expect(lines(".setting-writer")).toEqual(["AI Iris changed this at 07:02"]);
-  expect(cell("next")).toBe("Next (plan) 1.70 kPa at 13:00 AI");
-  expect(cell("bounds")).toBe("Allowed · step 0.50–2.50 · 0.05");
+  // The key may wrap only after an underscore: a <wbr> after each, and no text added.
+  expect(document.querySelector(".setting-param")!.querySelectorAll("wbr")).toHaveLength(2);
+  expect(text(document.querySelector(".setting-param"))).toBe("mister_engage_kpa");
+  expect(lines(".setting-value")).toEqual(["1.60 kPa"]);
+  expect(document.querySelector(".setting-device-value")!.getAttribute("title")).toBe("Reported 11/02/2026, 10:40:00 GMT-07:00");
+  expect(pill()).toEqual([]);
+  expect(text(document.querySelector(".ctl-row-meta"))).toBe("Iris changed this at 07:02 · AI · next 1.70 kPa at 13:00 · AI");
+  expect(lines(".setting-writer")).toEqual(["Iris changed this at 07:02 · AI"]);
+  expect(cell("next")).toBe("next 1.70 kPa at 13:00 · AI");
+  // The bounds bar: the ends in words, the value at 55% of 0.50–2.50 and the next plan's 1.70 at 60%; the bounds and step for a screen reader.
+  expect([...document.querySelectorAll(".ctl-bounds-end")].map((end) => text(end))).toEqual(["0.50", "2.50"]);
+  expect(document.querySelector(".ctl-bounds-dot")!.getAttribute("cx")).toBe("55%");
+  expect(document.querySelector(".ctl-bounds-planned")!.getAttribute("cx")).toBe("60%");
+  expect(cell("bounds")).toBe("Allowed 0.50–2.50 kPa · step 0.05");
+  expect(document.querySelector(".ctl-bounds")!.getAttribute("title")!.replaceAll(NBSP, " ")).toBe("Allowed 0.50–2.50 kPa · step 0.05");
   expect(edit()!.getAttribute("href")).toBe("/settings?edit=mister_engage_kpa");
-  expect(screen.getByRole("link", { name: "History of VPD Mister Engage" }).getAttribute("href")).toBe("/activity?target=mister_engage_kpa");
-  // The age ticks silently.
-  act(() => { vi.advanceTimersByTime(60_000); });
-  expect(lines(".setting-value")).toEqual(["1.60 kPa Confirmed · 3 min ago"]);
+  expect(screen.queryByRole("link", { name: /^History of / })).toBeNull();
+  expect(document.querySelector("[style]")).toBeNull();
 });
 
-test("STALE while readbacks are stale: the value muted, with \"Last data … ago (HH:MM)\"", () => {
+test("STALE while readbacks are stale: the value muted, STALE the one pill, the dot muted; never CONFIRMED", () => {
   draw(row("mister_engage_kpa"), { readbackStale: true });
-  expect(lines(".setting-value")).toEqual(["1.60 kPa Stale Last data 2 min ago (10:40)"]);
+  expect(lines(".setting-value")).toEqual(["1.60 kPa"]);
   expect(document.querySelector(".setting-device-value")!.classList.contains("value-muted")).toBe(true);
-  expect(badges()).toContain("stale");
+  expect(pill()).toEqual(["stale"]);
+  expect(document.querySelector(".ctl-bounds")!.classList.contains("is-stale")).toBe(true);
   expect(badges()).not.toContain("confirmed");
 });
 
-test("a missing device value reads \"—\" with readback.reason, never 0", () => {
+test("a missing device value reads \"—\" with readback.reason, never 0, and draws no dot", () => {
   draw(row("mister_pulse_on_s", { readback: { value: null, observed_at: null, reason: "cfg sensor not reporting" } }));
   expect(lines(".setting-value")).toEqual(["— cfg sensor not reporting"]);
   expect(cell("device")).not.toMatch(/\b0\b/);
+  expect(document.querySelector(".ctl-bounds-dot")).toBeNull();
+  expect(document.querySelector(".ctl-bounds")!.classList.contains("is-unknown")).toBe(true);
 });
 
-test("Band in force: the house and each zone read DERIVED with their age, never NO READBACK, and have no Edit", () => {
+test("Band in force: the house and each zone read DERIVED as a text mark with their age, never NO READBACK, with Details and no Edit", () => {
   const band = rows().filter((item) => item.group === "band_in_force");
   expect(new Set(band.map((item) => item.param.split("_")[1]))).toEqual(new Set(["house", "center", "south", "west", "east"]));
   for (const setting of band) {
     // Served with readback_via none and state no_readback: the row keys on the group.
     expect([setting.readback_via, setting.state]).toEqual(["none", "no_readback"]);
-    draw(setting);
-    expect(lines(".setting-value")[0], setting.param).toMatch(/^\d+\.\d+ (°F|kPa) · DERIVED · 4 min ago$/);
-    expect(badges(), setting.param).not.toContain("no_readback");
+    draw(setting, {}, OPERATOR);
+    expect(lines(".setting-value")[0], setting.param).toMatch(/^\d+\.\d+ (°F|kPa) Derived · 4 min ago$/);
+    expect(badges(), setting.param).toEqual(["derived"]);
+    expect(pill(), setting.param).toEqual([]);
     expect(edit(), setting.param).toBeNull();
+    expect(details(), setting.param).not.toBeNull();
     expect(cell("device"), setting.param).toContain("derived by the dispatcher from the crop band anchors");
     cleanup();
   }
   draw(row("band_house_temp_low"));
-  expect(lines(".setting-value")).toEqual(["62.0 °F · DERIVED · 4 min ago"]);
+  expect(lines(".setting-value")).toEqual(["62.0 °F Derived · 4 min ago"]);
+  cleanup();
+  // In the catalog the group head says the reason once, so the row leaves it out.
+  draw(row("band_house_temp_low"), { hideReadOnlyReason: true });
+  expect(document.querySelector(".ctl-row-meta")).toBeNull();
 });
 
-test("NO READBACK only for another row with no readback path; a write to it reads that it can never show CONFIRMED", () => {
+test("NO READBACK only for another row with no readback path, as a text mark; a write to it reads that it can never show CONFIRMED", () => {
   draw(row("mister_pulse_on_s", { readback_via: "none", state: "no_readback" }));
   expect(badges()).toEqual(["no_readback"]);
+  expect(document.querySelector("[data-badge=no_readback]")!.className).toBe("ctl-mark");
   expect(lines(".setting-value")).toEqual(["60 s No readback"]);
   cleanup();
   draw(row("mister_pulse_on_s", {
     readback_via: "none", state: "no_readback", applied_from: "manual",
     desired: desired({ param: "mister_pulse_on_s", value: 70, state: "no_readback", created_at: denver("10:41") }),
   }));
-  expect(lines(".setting-request")).toEqual(["→ 70 s · 1 min · Manual · jason"]);
+  expect(lines(".setting-request")).toEqual(["→ 70 s · 1 min · manual · jason"]);
   expect(text(document.querySelector(".setting-device .state-reason"))).toBe("Sent. This setting has no readback, so it can never show CONFIRMED");
   cleanup();
   // Once a newer Iris plan won over that write, the row says so and no longer shows the old write as sent.
@@ -106,28 +129,30 @@ test("NO READBACK only for another row with no readback path; a write to it read
   }));
   expect(lines(".setting-request")).toEqual([]);
   expect(document.querySelector(".setting-device .state-reason")).toBeNull();
-  expect(lines(".setting-writer")).toEqual(["AI Iris changed this at 09:30"]);
+  expect(lines(".setting-writer")).toEqual(["Iris changed this at 09:30 · AI"]);
   expect(lines(".setting-value")).toEqual(["— No readback"]);
 });
 
-test("the request line: the value being applied, REQUESTED, its age, MANUAL, the actor and the quoted reason; the reason once 60 s old", () => {
+test("the request line: the value being applied, its age, manual, the actor and the quoted reason, REQUESTED as the pill; the reason once 60 s old", () => {
   const requested = row("mister_engage_kpa", {
     state: "requested", applied_from: "manual",
     desired: desired({ reason: "Vandas drying", state_reason: { code: "no_match", since: denver("10:41", 45), detail: null, applied_value: null } }),
   });
   draw(requested);
-  // The request never replaces the device value.
-  expect(lines(".setting-value")).toEqual(["1.60 kPa Confirmed · 2 min ago"]);
-  expect(lines(".setting-request")).toEqual(["→ 1.55 kPa Requested · 20 s · Manual · jason · “Vandas drying”"]);
-  expect(document.querySelector(".setting-request [data-badge=requested]")).not.toBeNull();
+  // The request never replaces the device value; the bounds bar rings where it is going.
+  expect(lines(".setting-value")).toEqual(["1.60 kPa"]);
+  expect(document.querySelector(".ctl-bounds-requested")!.getAttribute("cx")).toBe("52.5%");
+  expect(lines(".setting-request")).toEqual(["→ 1.55 kPa · 20 s · manual · jason · “Vandas drying”"]);
+  expect(pill()).toEqual(["requested"]);
+  expect(document.querySelector(".setting-request [data-badge]")).toBeNull();
   expect(document.querySelector(".setting-device .state-reason")).toBeNull();
-  expect(cell("next")).toBe("Next (plan) Manual · Iris skips");
+  expect(cell("next")).toBe("Iris skips it");
   act(() => { vi.advanceTimersByTime(40_000); });
-  expect(lines(".setting-request")).toEqual(["→ 1.55 kPa Requested · 1 min · Manual · jason · “Vandas drying”"]);
+  expect(lines(".setting-request")).toEqual(["→ 1.55 kPa · 1 min · manual · jason · “Vandas drying”"]);
   expect(text(document.querySelector(".setting-device .state-reason"))).toBe("Sent 10:41; no matching readback yet");
 });
 
-test("NOT CONFIRMED, HELD and no_engine show their reason at once, every time from state_reason.since", () => {
+test("NOT CONFIRMED, HELD and no_engine show their reason at once, every time from state_reason.since, with their state as the pill", () => {
   const cases: [Partial<Setting>, string, string][] = [
     [{ state: "not_confirmed" }, "push_failed", "Sent 10:40; push failed: timeout"],
     [{ state: "not_confirmed" }, "no_match", "Sent 10:40; no matching readback yet"],
@@ -145,7 +170,7 @@ test("NOT CONFIRMED, HELD and no_engine show their reason at once, every time fr
       desired: desired({ state, state_reason: { code, since: denver("10:40"), detail: detail[code] ?? null, applied_value: code === "clamped" ? 1.5 : null }, created_at: denver("10:41", 50) }),
     }));
     expect(text(document.querySelector(".setting-device .state-reason")), code).toBe(words);
-    expect(document.querySelector(`.setting-request [data-badge=${state}]`), code).not.toBeNull();
+    expect(pill(), code).toEqual([state]);
     cleanup();
   }
   // A heap deferral under REQUESTED waits for the 60 s like any other reason.
@@ -157,24 +182,25 @@ test("NOT CONFIRMED, HELD and no_engine show their reason at once, every time fr
 
 test("a plan value being applied reads plan.value with Iris and AI, or the forecast rule with no AI", () => {
   draw(row("mister_pulse_gap_s", { state: "requested", plan: { ...row("mister_pulse_gap_s").plan!, value: 50, written_at: denver("10:41") } }));
-  expect(lines(".setting-request")).toEqual(["→ 50 s Requested · 1 min · AI Iris"]);
+  expect(lines(".setting-request")).toEqual(["→ 50 s · 1 min · Iris · AI"]);
   cleanup();
   // The plan's request never borrows an older desired row's reason: the API serves no reason for a plan value.
   draw(row("mister_pulse_gap_s", {
     state: "not_confirmed", plan: { ...row("mister_pulse_gap_s").plan!, value: 50, written_at: denver("10:36") },
     desired: desired({ param: "mister_pulse_gap_s", value: 40, manual: false, state: "overridden", created_at: denver("08:00"), state_reason: { code: "push_failed", since: denver("08:01"), detail: "timeout", applied_value: null } }),
   }));
-  expect(lines(".setting-request")).toEqual(["→ 50 s Not confirmed · 6 min · AI Iris"]);
+  expect(lines(".setting-request")).toEqual(["→ 50 s · 6 min · Iris · AI"]);
+  expect(pill()).toEqual(["not_confirmed"]);
   expect(text(document.querySelector(".setting-device .state-reason"))).toBe("No matching readback yet");
   cleanup();
   draw(row("sw_economiser_enabled", { state: "requested", plan: { ...row("sw_economiser_enabled").plan!, value: 1, written_at: denver("10:41") } }));
-  expect(lines(".setting-request")).toEqual(["→ ON Requested · 1 min · Forecast rule · system"]);
+  expect(lines(".setting-request")).toEqual(["→ ON · 1 min · Forecast rule · system"]);
   expect(document.querySelector(".setting-request [data-badge=ai]")).toBeNull();
 });
 
 test("who wrote the value in force: Iris and agents by name with AI, a person's non-manual value Iris may adjust, a forecast rule never AI", () => {
   draw(row("fog_rh_ceiling_pct"));
-  expect(lines(".setting-writer")).toEqual(["AI steward changed this at 06:47"]);
+  expect(lines(".setting-writer")).toEqual(["steward changed this at 06:47 · “Dry afternoon ahead” · AI"]);
   expect(changedByAgent(row("fog_rh_ceiling_pct"))).toBe(true);
   cleanup();
   draw(row("sw_economiser_enabled"));
@@ -184,34 +210,38 @@ test("who wrote the value in force: Iris and agents by name with AI, a person's 
   cleanup();
   const superseded = row("mister_engage_kpa", {}, "superseded-lane");
   draw(superseded);
-  expect(lines(".setting-writer")).toEqual(["jason changed this at 08:00 · Iris may adjust"]);
-  expect(cell("next")).toBe("Next (plan) superseded until Iris's next plan");
+  expect(lines(".setting-writer")).toEqual(["jason changed this at 08:00 · “Vandas drying” · Iris may adjust"]);
+  expect(cell("next")).toBe("superseded until Iris's next plan");
   expect(changedByAgent(superseded)).toBe(false);
   cleanup();
   // overridden: a newer Iris plan won over the person's non-manual value.
   draw(row("mister_engage_kpa", { ...superseded, state: "overridden", applied_from: "plan", plan: { ...superseded.plan!, written_at: denver("09:30") } }));
-  expect(lines(".setting-writer")).toEqual(["AI Iris changed this at 09:30"]);
+  expect(lines(".setting-writer")).toEqual(["Iris changed this at 09:30 · AI"]);
   expect(lines(".setting-request")).toEqual([]);
   cleanup();
   draw(row("mister_engage_kpa", { state: "released", applied_from: "plan", desired: desired({ value: null, manual: false, state: "released" }) }));
   expect(lines(".setting-writer")).toEqual(["Released: plan, band or default applies"]);
-  expect(cell("next")).toBe("Next (plan) 1.70 kPa at 13:00 AI");
+  expect(cell("next")).toBe("next 1.70 kPa at 13:00 · AI");
+  cleanup();
+  // A write from another day carries its date.
+  draw(row("mister_engage_kpa", { applied_from: "desired", desired: desired({ manual: false, state: "confirmed", created_at: "2026-10-30T15:00:00Z" }) }), { today: "2026-11-02" });
+  expect(lines(".setting-writer")).toEqual(["jason changed this at Oct 30, 09:00 · Iris may adjust"]);
 });
 
-test("Next (plan): MANUAL, superseded, Iris's next value with AI, a forecast rule's with no AI, else not planned", () => {
+test("Next: Iris skips a MANUAL setting, superseded, Iris's next value with AI, a forecast rule's with no AI, else nothing", () => {
   const base = row("mister_engage_kpa");
   const next = base.plan!.next!;
-  const cases: [Partial<Setting>, string, boolean][] = [
-    [{ desired: desired({ manual: true, state: "confirmed" }), applied_from: "manual" }, "Manual · Iris skips", false],
+  const cases: [Partial<Setting>, string | null, boolean][] = [
+    [{ desired: desired({ manual: true, state: "confirmed" }), applied_from: "manual" }, "Iris skips it", false],
     [{ plan: { ...base.plan!, next: { ...next, effective: false } } }, "superseded until Iris's next plan", false],
-    [{}, "1.70 kPa at 13:00 AI", true],
-    [{ plan: { ...base.plan!, next: { ...next, source: "preemptive" } } }, "1.70 kPa at 13:00 · Forecast rule · system", false],
-    [{ plan: null }, "not planned", false],
+    [{}, "next 1.70 kPa at 13:00 · AI", true],
+    [{ plan: { ...base.plan!, next: { ...next, source: "preemptive" } } }, "next 1.70 kPa at 13:00 · Forecast rule · system", false],
+    [{ plan: null }, null, false],
   ];
   for (const [patch, words, ai] of cases) {
     draw({ ...base, ...patch });
-    expect(cell("next"), words).toBe(`Next (plan) ${words}`);
-    expect(document.querySelector(".setting-next [data-badge=ai]") !== null, words).toBe(ai);
+    expect(document.querySelector(".setting-next") ? cell("next") : null, String(words)).toBe(words);
+    expect(document.querySelector(".setting-next [data-badge=ai]") !== null, String(words)).toBe(ai);
     cleanup();
   }
 });
@@ -220,7 +250,7 @@ test("values keep the decimals they carry: Iris's 48.75 on a 30 s grid reads 48.
   const unsnapped = row("mister_engage_delay_s", {}, "iris-unsnapped");
   expect(unsnapped.step).toBe(30);
   draw(unsnapped);
-  expect(lines(".setting-value")).toEqual(["48.75 s Confirmed · 3 min ago"]);
+  expect(lines(".setting-value")).toEqual(["48.75 s"]);
   expect(valueInForce(unsnapped)).toBe(48.75);
   expect(keptNumber(48.75, 30)).toBe("48.75");
   expect(keptNumber(1.6, 0.05)).toBe("1.60");
@@ -232,15 +262,34 @@ test("values keep the decimals they carry: Iris's 48.75 on a 30 s grid reads 48.
   expect(keptValueText(1, { kind: "switch", step: 1 })).toBe("ON");
 });
 
-test("read-only rows show their reason and no Edit; temp_low reads \"legacy limit, read-only\"", () => {
+test("one display for Settings' rows and Plan's lanes: the step's decimals or those it carries, the key's unit, a long duration readable (#1308 visual QA 38)", () => {
+  // With a step, its decimals or more; with none (Plan's lanes), the decimals it carries, at least °F's 1 and kPa's 2.
+  expect([displayNumber(60, 5, "s"), displayNumber(60, null, "s"), displayNumber(45, null, "s"), displayNumber(88, null, "%"), displayNumber(1.6, null, "kPa"), displayNumber(72, null, "°F"), displayNumber(48.75, 30, "s")])
+    .toEqual(["60", "60", "45", "88", "1.60", "72.0", "48.75"]);
+  // The unit a key names where the registry has none; a time of day (_hour, _minute) takes none.
+  expect(["gl_main_min_on_s", "dwell_gate_ms", "gl_main_target_light_minutes", "gl_main_sunrise_offset_min", "rh_pct", "outdoor_temp_f", "gl_main_sunrise_hour", "activity_start_minute", "mister_vpd_weight"].map(keyUnit))
+    .toEqual(["s", "ms", "min", "min", "%", "°F", null, null, null]);
+  expect([settingUnit({ unit: "kPa", param: "x_s" }), settingUnit({ unit: null, param: "x_s" }), settingUnit({ param: "x" })]).toEqual(["kPa", "s", null]);
+  // Long durations in a unit people read; anything else reads as it is.
+  expect([readableDuration(300_000, "ms"), readableDuration(60_000, "ms"), readableDuration(1_800_000, "ms"), readableDuration(3_600_000, "ms"), readableDuration(1500, "ms"), readableDuration(7200, "s"), readableDuration(600, "s"), readableDuration(960, "min")]
+    .map((words) => words?.replaceAll(NBSP, " ") ?? null)).toEqual(["5 min", "60 s", "30 min", "1 h", null, "2 h", null, null]);
+  const plain = (words: string) => words.replaceAll(NBSP, " ");
+  expect([
+    settingDisplay(300_000, { kind: "numeric", unit: "ms", step: 30_000, param: "dwell_gate_ms" }), settingDisplay(120, { kind: "numeric", unit: null, step: 30, param: "gl_main_min_on_s" }),
+    settingDisplay(7, { kind: "numeric", unit: null, step: 1, param: "gl_main_sunrise_hour" }), settingDisplay(1.6, { kind: "numeric", unit: "kPa", step: 0.05 }),
+    settingDisplay(1, { kind: "switch", step: 1 }),
+  ].map(plain)).toEqual(["5 min", "120 s", "7", "1.60 kPa", "ON"]);
+});
+
+test("read-only rows show their reason and Details, no Edit; temp_low reads \"legacy limit, read-only\"", () => {
   const legacy = row("temp_low");
   expect(legacy.writable).toBe(false);
   draw(legacy);
   expect(cell("device")).toContain("legacy limit, read-only: not the band while the on-chip band runs");
   expect(text(document.querySelector(".setting-note"))).toBe("legacy limit, read-only: not the band while the on-chip band runs");
   expect(edit()).toBeNull();
-  expect(cell("next")).toBe("");
-  expect(screen.getByRole("link", { name: "History of Set Temp Low" })).toBeTruthy();
+  expect(details()!.getAttribute("href")).toBe("/settings?edit=temp_low");
+  expect(document.querySelector(".setting-next")).toBeNull();
   cleanup();
   for (const setting of rows().filter((item) => !item.writable && item.group === "read_only")) {
     draw(setting);
@@ -252,15 +301,16 @@ test("read-only rows show their reason and no Edit; temp_low reads \"legacy limi
 
 test("a site cap reads the program on the controller, without the revision while it is unknown; before the engine \"—\" with its reason", () => {
   draw(row("mister_daily_volume_max_gal", {}, "program-rev-42"), { programRevision: 42 });
-  expect(lines(".setting-value")).toEqual(["On controller · rev 42: 360 gal Confirmed · 2 min ago"]);
+  expect(lines(".setting-value")).toEqual(["On controller · rev 42: 360 gal"]);
+  expect(pill()).toEqual([]);
   cleanup();
   draw(row("mister_daily_volume_max_gal", {}, "program-rev-42"), { programRevision: null });
-  expect(lines(".setting-value")).toEqual(["On controller: 360 gal Confirmed · 2 min ago"]);
+  expect(lines(".setting-value")).toEqual(["On controller: 360 gal"]);
   cleanup();
   // Like any device value, it reads STALE while readbacks are stale or the controller is not reporting.
   draw(row("mister_daily_volume_max_gal", {}, "program-rev-42"), { programRevision: 42, readbackStale: true });
-  expect(lines(".setting-value")).toEqual(["On controller · rev 42: 360 gal Stale Last data 2 min ago (10:40)"]);
-  expect(badges()).not.toContain("confirmed");
+  expect(lines(".setting-value")).toEqual(["On controller · rev 42: 360 gal"]);
+  expect(pill()).toEqual(["stale"]);
   cleanup();
   draw(row("sched_mist_rh_max_pct", {}, "before-engine"));
   expect(lines(".setting-value")).toEqual(["— no irrigation program on the controller yet"]);
@@ -268,42 +318,48 @@ test("a site cap reads the program on the controller, without the revision while
   cleanup();
   // A value saved before the engine reads REQUESTED with its reason at once, with no 60 s wait.
   draw(row("mister_daily_volume_max_gal", {}, "before-engine"));
-  expect(lines(".setting-request")).toEqual(["→ 300 gal Requested · 1 h · Manual · jason · “Hold the ceiling at 300 gal”"]);
+  expect(lines(".setting-request")).toEqual(["→ 300 gal · 1 h · manual · jason · “Hold the ceiling at 300 gal”"]);
+  expect(pill()).toEqual(["requested"]);
   expect(text(document.querySelector(".setting-device .state-reason"))).toBe("Applies with the irrigation firmware");
 });
 
-test("Edit only for an operator on a writable row, to the page's URL with ?edit=; a viewer sees the row and History, no Edit", () => {
+test("Edit only for an operator on a writable row, to the page's URL with ?edit=; a viewer sees the row with Details, no Edit", () => {
   draw(row("mister_engage_kpa"), { editTo: "/settings?filter=agent&edit=mister_engage_kpa" });
   expect(edit()!.getAttribute("href")).toBe("/settings?filter=agent&edit=mister_engage_kpa");
   expect(edit()!.getAttribute("data-write-control")).toBe("true");
+  expect(details()).toBeNull();
   cleanup();
   draw(row("mister_engage_kpa"), {}, { role: "viewer", writesEnabled: true });
   expect(edit()).toBeNull();
-  expect(lines(".setting-value")).toEqual(["1.60 kPa Confirmed · 2 min ago"]);
-  expect(screen.getByRole("link", { name: "History of VPD Mister Engage" })).toBeTruthy();
+  expect(lines(".setting-value")).toEqual(["1.60 kPa"]);
+  expect(details()!.getAttribute("href")).toBe("/settings?edit=mister_engage_kpa");
+  expect(details()!.hasAttribute("data-write-control")).toBe(false);
 });
 
-test("a late readback turns NOT CONFIRMED into CONFIRMED by itself; there is no Send again", () => {
+test("a late readback turns NOT CONFIRMED into the steady row by itself, the confirmation said in words while it is new; there is no Send again", () => {
   const late = row("mister_engage_kpa", {
     state: "not_confirmed", applied_from: "manual",
     desired: desired({ state: "not_confirmed", state_reason: { code: "no_match", since: denver("10:36"), detail: null, applied_value: null }, created_at: denver("10:36") }),
   });
   const view = draw(late);
-  expect(document.querySelector(".setting-request [data-badge=not_confirmed]")).not.toBeNull();
+  expect(pill()).toEqual(["not_confirmed"]);
   expect(text(document.querySelector(".setting-device .state-reason"))).toBe("Sent 10:36; no matching readback yet");
   expect(screen.queryByRole("button", { name: /send again/i })).toBeNull();
   view.rerender(<table><tbody><SettingRow setting={{
     ...late, state: "confirmed", readback: { value: 1.55, observed_at: denver("10:41", 30), reason: null },
     desired: { ...late.desired!, state: "confirmed", state_reason: null, confirmed_at: denver("10:41", 30) },
   }} editTo="/settings?edit=mister_engage_kpa" /></tbody></table>);
-  expect(lines(".setting-value")).toEqual(["1.55 kPa Confirmed · 30 s ago"]);
+  expect(lines(".setting-value")).toEqual(["1.55 kPa"]);
   expect(lines(".setting-request")).toEqual([]);
-  // Confirmed: who wrote the value in force, when they asked for it.
+  // Manual outranks CONFIRMED for the pill, so who wrote it says it was confirmed, for 10 minutes from the write.
+  expect(pill()).toEqual(["manual"]);
+  expect(lines(".setting-writer")).toEqual(["jason changed this at 10:36 · confirmed 10:41"]);
+  act(() => { vi.advanceTimersByTime(5 * 60_000); });
   expect(lines(".setting-writer")).toEqual(["jason changed this at 10:36"]);
   expect(screen.queryByRole("button", { name: /send again/i })).toBeNull();
 });
 
-test("bounds and step, the value in force and the pending request, without rendering", () => {
+test("bounds and step, the value in force, the pending request and a recent change, without rendering", () => {
   expect(boundsText({ kind: "numeric", min: 0.5, max: 2.5, step: 0.05 })).toBe("0.50–2.50 · 0.05");
   expect(boundsText({ kind: "numeric", min: 100, max: 600, step: 10 })).toBe("100–600 · 10");
   expect(boundsText({ kind: "switch", min: null, max: null, step: 1 })).toBe("ON or OFF");
@@ -315,4 +371,7 @@ test("bounds and step, the value in force and the pending request, without rende
   expect(valueInForce({ ...base, applied_from: "default", plan: null })).toBe(1.6);
   expect(pendingRequest({ ...base, applied_from: "default", plan: null, desired: null })).toBeNull();
   expect(pendingRequest({ ...base, applied_from: "manual", desired: desired({ value: 1.55, reason: "Vandas drying" }) })).toMatchObject({ value: 1.55, manual: true, reason: "Vandas drying" });
+  expect(recentlyChanged({ desired: desired({ created_at: new Date(NOW - 6 * 86_400_000).toISOString() }) }, NOW)).toBe(true);
+  expect(recentlyChanged({ desired: desired({ created_at: new Date(NOW - 8 * 86_400_000).toISOString() }) }, NOW)).toBe(false);
+  expect(recentlyChanged({ desired: null }, NOW)).toBe(false);
 });

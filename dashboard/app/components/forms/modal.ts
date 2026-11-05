@@ -29,6 +29,19 @@ function hide(dialog: HTMLDialogElement) {
 }
 
 /**
+ * Puts focus back on what opened a dialog. An opener that can no longer take it (an item of a menu that closed as it was
+ * chosen) hands it to its menu's button, the `<summary>` of the closed `<details>` around it, so focus never falls to the
+ * page (redesign §8).
+ */
+export function returnFocus(opener: HTMLElement | null) {
+  if (!opener?.isConnected) return;
+  opener.focus();
+  if (opener.ownerDocument.activeElement === opener) return;
+  const menu = opener.parentElement?.closest("details");
+  menu?.querySelector<HTMLElement>(":scope > summary")?.focus();
+}
+
+/**
  * A native modal `<dialog>` driven by `open` (design system §7): `showModal()` when it opens, focus on `initialFocus`
  * (else the first control), and back to the opener when it closes or unmounts. Escape and the dialog's own cancel close
  * it at once, without asking; Tab and Shift+Tab wrap inside it, so focus never leaves while it is open.
@@ -45,7 +58,7 @@ export function useModalDialog(ref: RefObject<HTMLDialogElement | null>, open: b
     (focusRef.current?.(dialog) ?? focusables(dialog)[0] ?? dialog).focus();
     return () => {
       hide(dialog);
-      if (opener?.isConnected) opener.focus();
+      returnFocus(opener);
     };
   }, [open, ref]);
   const onKeyDown = useCallback((event: KeyboardEvent<HTMLDialogElement>) => {

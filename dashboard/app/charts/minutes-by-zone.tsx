@@ -4,11 +4,12 @@ import type uPlot from "uplot";
 import { dayTitle, formatValue, localDayStart } from "../lib/format";
 import { LINES, MINUTES_ZONES, ZONE_WORDS, lineById, minutesZone, type MinutesZone } from "../lib/lines";
 import { causeRank, causeToken, causeWords } from "./causes";
-import { DataTable, type DataTableBlock } from "./data-table";
+import { dayCsvFilename, tableCsv } from "./csv";
+import { CsvLink, DataTable, type DataTableBlock } from "./data-table";
 import type { ChartColors, PaintTarget } from "./draw";
 import { paintHatch } from "./lanes-draw";
 import { ChartKey, type KeyItem } from "./legend";
-import { AXIS_FONT, axisLabel, localDay } from "./time-axis";
+import { AXIS_FONT, axisLabel, fitEdges, localDay } from "./time-axis";
 import { tickIncrements } from "./time-series";
 import { tooltipPlugin } from "./tooltip";
 import type { MinutesPeriod, MinutesReport, XRange } from "./types";
@@ -29,6 +30,13 @@ export type ZoneDay = { day: string; at: number; coverage: Coverage; total: numb
 export type StackSegment = { key: string; cause: string; chemistry: "clean" | "fert"; token: string; label: string };
 /** How the rows are cut: by zone (the default), one per line in the report, or one per cause. */
 export type MinutesGroup = "zone" | "line" | "cause";
+/**
+ * What the bars count (redesign §7.1): watering minutes (the default), or whole gallons from the site meter where the
+ * API gives them. A day whose runs lack gallons is unknown (hatched), never 0; caps and plans are minutes, so the
+ * gallons bars draw neither.
+ */
+export type MinutesMeasure = "minutes" | "gal";
+const MEASURE_UNITS: Readonly<Record<MinutesMeasure, "min" | "gal">> = { minutes: "min", gal: "gal" };
 export type ZoneBars = {
   /** The row: a zone, a line id or a cause; fog's row is "fog" by zone and by cause, and "L11" by line. */
   key: string;
@@ -47,8 +55,10 @@ export type ZoneBars = {
   /** Index of today in `days`, or -1. */
   today: number;
   yMax: number;
+  /** "min" or "gal": what its totals count. */
+  unit: "min" | "gal";
 };
-export type MinutesModel = { days: { day: string; at: number; coverage: Coverage }[]; zones: ZoneBars[]; xRange: XRange; byLine: boolean; group: MinutesGroup };
+export type MinutesModel = { days: { day: string; at: number; coverage: Coverage }[]; zones: ZoneBars[]; xRange: XRange; byLine: boolean; group: MinutesGroup; measure: MinutesMeasure; unit: "min" | "gal" };
 
 export type MinutesInput = {
   report: MinutesReport;
@@ -62,6 +72,8 @@ export type MinutesInput = {
   names?: Readonly<Record<string, string>>;
   /** Epoch seconds: which local day is today. */
   now: number;
+  /** Minutes (the default) or gallons. */
+  measure?: MinutesMeasure;
 };
 
 const DAY = 86_400;
@@ -105,6 +117,10 @@ function rowsFor(group: MinutesGroup, keys: ReadonlySet<string>, names?: Readonl
 export function buildMinutes(input: MinutesInput): MinutesModel {
   const { report } = input;
   const group = input.group ?? "zone";
+  const measure = input.measure ?? "minutes";
+  const unit = MEASURE_UNITS[measure];
+  /** A part's amount in the measure; null when the API gave no gallons for it. */
+  const amount = (part: ZonePart): number | null => (measure === "gal" ? (valued(part.gal) ? part.gal : null) : part.minutes);
   const byLine = report.group_by === "line";
   const days = [...report.periods]
     .map((period) => ({ day: period.start, at: Date.parse(localDayStart(period.start)) / 1000, coverage: period.coverage }))
@@ -126,7 +142,8 @@ export function buildMinutes(input: MinutesInput): MinutesModel {
     const dayParts = parts.get(key) ?? days.map(() => []);
     const zoneDays = days.map((day, position): ZoneDay => {
       const list = dayParts[position].sort((a, b) => (a.line ?? "").localeCompare(b.line ?? "") || causeRank(a.cause) - causeRank(b.cause));
-      return { ...day, total: day.coverage === "no_data" ? null : list.reduce((sum, part) => sum + part.minutes, 0), parts: list };
+      const unknown = list.some((part) => amount(part) === null);
+      return { ...day, total: day.coverage === "no_data" || unknown ? null : list.reduce((sum, part) => sum + (amount(part) ?? 0), 0), parts: list };
     });
     const seen = new Map<string, StackSegment>();
     for (const part of dayParts.flat()) {
@@ -138,14 +155,15 @@ export function buildMinutes(input: MinutesInput): MinutesModel {
     const stacks = segments.map((_, level) => zoneDays.map((day) => {
       if (day.total === null) return null;
       const below = new Set(segments.slice(0, level + 1).map((segment) => segment.key));
-      return day.parts.filter((part) => below.has(`${part.chemistry}:${part.cause}`)).reduce((sum, part) => sum + part.minutes, 0);
+      return day.parts.filter((part) => below.has(`${part.chemistry}:${part.cause}`)).reduce((sum, part) => sum + (amount(part) ?? 0), 0);
     }));
-    const cap = input.caps?.[key];
-    const planned = input.planned?.[key];
+    // Caps and plans are minutes: the gallons bars draw neither.
+    const cap = measure === "minutes" ? input.caps?.[key] : null;
+    const planned = measure === "minutes" ? input.planned?.[key] : null;
     return {
       key, zone, fog, label, days: zoneDays, segments, stacks,
       cap: valued(cap) && cap > 0 ? cap : null, planned: valued(planned) && planned > 0 ? planned : null,
-      today: zoneDays.findIndex((day) => day.day === today), yMax: 0,
+      today: zoneDays.findIndex((day) => day.day === today), yMax: 0, unit,
     };
   });
   // The watering rows share a scale; fog, humidification, has its own.
@@ -157,7 +175,7 @@ export function buildMinutes(input: MinutesInput): MinutesModel {
   const shared = scale(Math.max(0, ...zones.filter((zone) => !zone.fog).map(top)));
   for (const zone of zones) zone.yMax = zone.fog ? scale(top(zone)) : shared;
   const first = days[0]?.at ?? input.now, last = days[days.length - 1]?.at ?? input.now;
-  return { days, zones, xRange: { from: first - DAY / 2, to: last + DAY / 2 }, byLine, group };
+  return { days, zones, xRange: { from: first - DAY / 2, to: last + DAY / 2 }, byLine, group, measure, unit };
 }
 
 /** "L04 Center mister" with the API's name for the line, else the line id. */
@@ -179,7 +197,7 @@ export const coverageWords = (coverage: Coverage) => COVERAGE_WORDS[coverage] ??
 export function todayText(zone: ZoneBars): string {
   const day = zone.today >= 0 ? zone.days[zone.today] : null;
   const parts: string[] = [];
-  if (day) parts.push(day.total === null ? "today —" : `today ${formatValue(day.total, "min")}${day.coverage === "partial" ? " (partial)" : ""}`);
+  if (day) parts.push(day.total === null ? "today —" : `today ${formatValue(day.total, zone.unit)}${day.coverage === "partial" ? " (partial)" : ""}`);
   if (zone.cap !== null) parts.push(`cap ${zone.cap}`);
   return parts.join(" · ");
 }
@@ -191,8 +209,8 @@ export function minutesTooltip(zone: ZoneBars, plot: Pick<uPlot, "cursor">, name
   if (position === null || position === undefined || position < 0 || position >= zone.days.length) return null;
   const day = zone.days[position];
   const lines = [`${dayTitle(day.day, "short")} · ${zone.label}`];
-  if (day.total === null) return [...lines, "no data"];
-  lines.push(formatValue(day.total, "min"));
+  if (day.total === null) return [...lines, zone.unit === "gal" && day.parts.length ? "gallons unknown" : "no data"];
+  lines.push(formatValue(day.total, zone.unit));
   if (day.coverage === "partial") lines.push("partial");
   lines.push(...day.parts.map((part) => partWords(part, names)));
   if (position === zone.today && zone.planned !== null) lines.push(`still planned today ${formatValue(zone.planned, "min")}`);
@@ -259,20 +277,22 @@ export function paintMinutes(plot: PaintTarget, zone: ZoneBars, colors: ChartCol
   }
 }
 
-/** Day labels ("10/28") under the last row only; ticks a day or more apart. */
+/** Day labels ("Oct 28") under the last row only; ticks a day or more apart, up to a quarter apart for 400 days. */
 export function dayAxis(colors: ChartColors, show: boolean): uPlot.Axis {
   return {
-    show, stroke: colors["--muted"], font: AXIS_FONT, size: 28, space: 44, grid: { show: false },
+    show, stroke: colors["--muted"], font: AXIS_FONT, size: 28, space: 52, grid: { show: false },
     ticks: { stroke: colors["--c-grid"], width: 1, size: 4 },
-    incrs: [DAY, 2 * DAY, 7 * DAY, 14 * DAY, 28 * DAY],
-    values: (_plot, splits) => splits.map((split) => axisLabel(split, false, DAY)),
+    incrs: [DAY, 2 * DAY, 7 * DAY, 14 * DAY, 28 * DAY, 56 * DAY, 91 * DAY],
+    values: (plot, splits) => fitEdges(plot, splits, splits.map((split) => axisLabel(split, false, DAY))),
   };
 }
 
-/** Whole minutes or gallons up the left, one width on every row, so the rows' bars line up. */
-export function wholeAxis(colors: ChartColors): uPlot.Axis {
+/** Fog's own scale prints in mono, so its ticks never read as the watering rows' shared scale. */
+export const OWN_SCALE_FONT = '11px "IBM Plex Mono", ui-monospace, monospace';
+/** Whole minutes or gallons up the left, one width on every row, so the rows' bars line up; fog's own scale in mono. */
+export function wholeAxis(colors: ChartColors, own = false): uPlot.Axis {
   return {
-    stroke: colors["--muted"], font: AXIS_FONT, size: 44, space: 24,
+    stroke: colors["--muted"], font: own ? OWN_SCALE_FONT : AXIS_FONT, size: 44, space: 24,
     grid: { stroke: colors["--c-grid"], width: 1 }, ticks: { stroke: colors["--c-grid"], width: 1, size: 4 },
     incrs: tickIncrements(0), values: (_plot, splits) => splits.map((split) => String(Math.round(split))),
   };
@@ -283,15 +303,16 @@ export function minutesOptions(env: ChartEnv, zoneRef: MutableRefObject<ZoneBars
   const zone = zoneRef.current;
   const bars = UPlot.paths.bars!({ size: [BAR_SIZE, BAR_MAX], align: 0 });
   return {
-    padding: [8, 12, 0, 0],
+    // A row with no day labels under it keeps 8 px below its baseline, so its "0" is never cut in half.
+    padding: [8, 12, last ? 0 : 8, 0],
     series: [{}, ...zone.segments.map((segment): uPlot.Series => ({
       label: segment.label, scale: "y", paths: bars, fill: colors[segment.token], stroke: colors[segment.token], width: 0,
-      points: { show: false }, value: (_plot, value) => formatValue(value, "min"),
+      points: { show: false }, value: (_plot, value) => formatValue(value, zone.unit),
     }))],
     // Each segment's bar runs from the running total below it (uPlot's stacked bars).
     bands: zone.segments.slice(1).map((_, level) => ({ series: [level + 2, level + 1] as [number, number] })),
     scales: { y: { range: () => [0, zoneRef.current.yMax] } },
-    axes: [dayAxis(colors, last), wholeAxis(colors)],
+    axes: [dayAxis(colors, last), wholeAxis(colors, zone.fog)],
     cursor: { points: { show: false } },
     hooks: { draw: [(plot) => paintMinutes(plot, zoneRef.current, colors, px())] },
     plugins: [tooltipPlugin((plot) => minutesTooltip(zoneRef.current, plot, namesRef.current))],
@@ -300,16 +321,28 @@ export function minutesOptions(env: ChartEnv, zoneRef: MutableRefObject<ZoneBars
 
 /** The data table: per row, one row per day with its minutes, the split by line and cause in words, and coverage. */
 export function minutesTables(model: MinutesModel, names?: Readonly<Record<string, string>>): DataTableBlock[] {
+  const gallons = model.measure === "gal";
   return model.zones.map((zone) => ({
-    caption: `${zone.label}${zone.fog ? " (humidification)" : ""} · minutes by day · America/Denver`,
-    headers: ["Day", "Minutes", "By line and cause", "Coverage"], count: zone.days.length,
+    caption: `${zone.label}${zone.fog ? " (humidification)" : ""} · ${gallons ? "gallons" : "minutes"} by day · America/Denver`,
+    headers: ["Day", gallons ? "Gallons" : "Minutes", "By line and cause", "Coverage"], count: zone.days.length,
     rows: () => zone.days.map((day, position) => [
       <time key="day" dateTime={day.day}>{dayTitle(day.day, "short")}</time>,
-      day.total === null ? "—" : formatValue(day.total, "min"),
+      day.total === null ? "—" : formatValue(day.total, zone.unit),
       [...day.parts.map((part) => partWords(part, names)), ...(position === zone.today && zone.planned !== null ? [`still planned today ${formatValue(zone.planned, "min")}`] : [])].join("; "),
       coverageWords(day.coverage),
     ]),
   }));
+}
+
+/**
+ * "CSV of this chart" (redesign §7.1): one row per local day, one column per row of bars in the chart's measure, and the
+ * day's coverage; a day with no data, or unknown gallons, is an empty cell, never 0.
+ */
+export function minutesCsv(model: MinutesModel): string {
+  return tableCsv(
+    ["day (America/Denver)", ...model.zones.map((zone) => `${zone.label} (${model.unit})`), "coverage"],
+    model.days.map((day, position) => [day.day, ...model.zones.map((zone) => zone.days[position].total), day.coverage]),
+  );
 }
 
 /** The key: each cause drawn, then the marks that are not causes. */
@@ -326,11 +359,15 @@ export function minutesKey(model: MinutesModel): KeyItem[] {
 }
 
 export type MinutesByZoneProps = Omit<MinutesInput, "names"> & {
+  /** Offer "CSV of this chart" (default true). */
+  csv?: boolean;
   /** Line names from API-IRR-01 (`name`), for the tooltip and the data table; the line id alone without them. */
   lineNames?: Readonly<Record<string, string>>;
   /** The rows share it, so the cursor sits on one day in every row. */
   syncKey?: string;
   title?: string;
+  /** The host's card already titles the chart: its caption then names the figure for a screen reader only. */
+  captionHidden?: boolean;
   /** Shown in place of the bars (an error). */
   message?: string;
 };
@@ -342,7 +379,7 @@ function ZoneChart({ zone, last, xRange, syncKey, names }: { zone: ZoneBars; las
   namesRef.current = names;
   const data = useMemo<uPlot.AlignedData>(() => [zone.days.map((day) => day.at), ...zone.stacks], [zone]);
   const structure = `minutes|${zone.key}|${last}|${syncKey}|${zone.segments.map((segment) => segment.key).join(",")}`;
-  const label = `${zone.label} watering minutes per day${zone.fog ? " (humidification)" : ""}, stacked by cause with clean below fertilizer. No-data days are hatched, never zero. The data table follows.`;
+  const label = `${zone.label} ${zone.unit === "gal" ? "gallons" : "watering minutes"} per day${zone.fog ? " (humidification)" : ""}, stacked by cause with clean below fertilizer. No-data days are hatched, never zero. The data table follows.`;
   return <UPlotChart options={(env) => minutesOptions(env, zoneRef, last, namesRef)} data={data} xRange={xRange} structure={structure}
     className={last ? "plot-bars plot-bars-axis" : "plot-bars"} label={label} syncKey={syncKey} marks={zone} zoom={false} />;
 }
@@ -350,19 +387,22 @@ function ZoneChart({ zone, last, xRange, syncKey, names }: { zone: ZoneBars; las
 export function MinutesByZone(props: MinutesByZoneProps) {
   const { report, caps, planned, now } = props;
   const group = props.group ?? "zone";
+  const measure = props.measure ?? "minutes";
   // Caps, plans and names arrive as literals on every render: they rebuild the bars only when their values change.
   const limits = JSON.stringify([caps ?? null, planned ?? null, props.lineNames ?? null]);
-  const model = useMemo(() => buildMinutes({ report, group, caps, planned, now, names: props.lineNames }), [report, group, limits, now]);
+  const model = useMemo(() => buildMinutes({ report, group, caps, planned, now, names: props.lineNames, measure }), [report, group, limits, now, measure]);
   const syncKey = props.syncKey ?? `verdify:minutes:${report.from}:${report.to}`;
-  const title = props.title ?? `Watering minutes by ${group} · last ${model.days.length} days`;
+  const title = props.title ?? `${measure === "gal" ? "Gallons" : "Watering minutes"} by ${group} · last ${model.days.length} days`;
   const fits = drawableAs(report, group);
   const drawable = !props.message && fits && model.days.length > 0 && model.zones.length > 0;
   const refusal = group === "line" ? "Minutes by line needs the report by line" : "Minutes by zone needs the report by line or by zone";
   return <figure className="chart chart-minutes">
-    <figcaption className="eyebrow">{title}</figcaption>
+    <figcaption className={props.captionHidden ? "screen-reader" : "eyebrow"}>{title}</figcaption>
     {drawable
       ? <ul className="minutes-rows">
-        {model.zones.map((zone, position) => <li key={zone.key} className="minutes-row" data-row={zone.key} data-zone={zone.zone ?? undefined}>
+        {model.zones.map((zone, position) => <li key={zone.key} className={zone.fog ? "minutes-row minutes-row-apart" : "minutes-row"} data-row={zone.key} data-zone={zone.zone ?? undefined}>
+          {/* Fog is set apart: its bars count humidification on their own scale, so they never compare with the watering rows'. */}
+          {zone.fog && <p className="minutes-apart">Humidification (fog) · own scale, 0–{formatValue(zone.yMax, zone.unit)}</p>}
           <span className="minutes-label">{zone.label}{zone.fog && <span className="minutes-note"> humidification</span>}</span>
           <ZoneChart zone={zone} last={position === model.zones.length - 1} xRange={model.xRange} syncKey={syncKey} names={props.lineNames} />
           <span className="minutes-today">{todayText(zone)}</span>
@@ -370,6 +410,9 @@ export function MinutesByZone(props: MinutesByZoneProps) {
       </ul>
       : <div className="plot plot-small chart-message"><p>{props.message ?? (fits ? "No watering data in this window" : refusal)}</p></div>}
     {drawable && <ChartKey items={minutesKey(model)} />}
+    {drawable && (props.csv ?? true) && <div className="chart-tools">
+      <CsvLink filename={dayCsvFilename(`${measure === "gal" ? "gallons" : "minutes"}-by-${group}`, model.days[0].day, model.days[model.days.length - 1].day)} build={() => minutesCsv(model)} version={model} label="CSV of this chart" />
+    </div>}
     {drawable && <DataTable tables={minutesTables(model, props.lineNames)} />}
   </figure>;
 }

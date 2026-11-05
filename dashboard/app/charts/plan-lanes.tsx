@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 import { useMemo, useRef, type MutableRefObject, type ReactNode } from "react";
 import type uPlot from "uplot";
-import { formatValue, unitDecimals } from "../lib/format";
+import { displayNumber, settingDisplay } from "../lib/setting-values";
 import type { Plan, PlanLane, PlanWaypoint } from "../lib/operator-api";
 import { isAiSource } from "../lib/vocab";
 import { DataTable, TimeCell, type DataTableBlock } from "./data-table";
 import { labelColor, type ChartColors, type PaintTarget } from "./draw";
 import { RowLabels, clipColumns, laneFont, rowBand, spanPixels, type RowLayout } from "./lanes-draw";
 import { FORECAST_RULE, PLANNED_AI, SUPERSEDED } from "./marks";
-import { clockTime, epochOf, fullTime, localDateMDY, localDay, timeAxis } from "./time-axis";
+import { clockTime, dayWords, epochOf, fullTime, localDay, timeAxis } from "./time-axis";
 import { cursorX, tooltipPlugin } from "./tooltip";
 import type { XRange } from "./types";
 import { UPlotChart, useNarrow, useZoomReset, type ChartEnv, type ChartOptions } from "./uplot-chart";
@@ -64,10 +64,9 @@ export function waypointWho(source: string): string {
   return source === "preemptive" ? FORECAST_RULE : "PLANNED";
 }
 
-/** A value at its unit's decimals without the unit ("1.55"), as the row header prints it; a true minus. */
+/** A value without its unit ("1.55", "50"), as the row header prints it and as Settings writes the number; a true minus. */
 export function plainValue(value: number, unit: string | null): string {
-  const digits = unitDecimals(unit);
-  return new Intl.NumberFormat("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value).replace("-", "−");
+  return displayNumber(value, null, unit);
 }
 const at = (instant: string | null | undefined) => epochOf(instant);
 
@@ -77,12 +76,13 @@ const at = (instant: string | null | undefined) => epochOf(instant);
  */
 export function planRow(lane: PlanLane, now: number, horizon: number, planEnd: number | null, stale = false): PlanRow {
   const unit = lane.unit ?? null;
-  const value = (number: number) => formatValue(number, unit);
+  // Values read as Settings reads them (`settingDisplay`): "60 s" on both pages, the key's unit where the lane has none.
+  const value = (number: number) => settingDisplay(number, { unit, param: lane.param });
   const device = lane.device.value;
   const desired = lane.desired;
   const row: PlanRow = {
     key: lane.param, label: lane.label, unit, head: "", muted: false,
-    device: formatValue(device, unit), deviceNote: device === null ? (lane.device.reason ?? "no readback") : null,
+    device: typeof device === "number" && Number.isFinite(device) ? value(device) : "—", deviceNote: device === null ? (lane.device.reason ?? "no readback") : null,
     deviceAt: at(lane.device.observed_at), stale: stale && device !== null, segments: [],
   };
   // Waypoints stop at the plan's end; the device value runs to it too, or to the horizon with no plan in force.
@@ -92,7 +92,7 @@ export function planRow(lane: PlanLane, now: number, horizon: number, planEnd: n
   if (lane.applied_from === "manual") {
     row.muted = true;
     const when = desired ? at(desired.created_at) : null;
-    row.head = desired ? `${MANUAL_SKIPS} · ${desired.actor.name}${when !== null ? ` since ${localDateMDY(when).slice(0, 5)}` : ""}` : MANUAL_SKIPS;
+    row.head = desired ? `${MANUAL_SKIPS} · ${desired.actor.name}${when !== null ? ` since ${dayWords(when)}` : ""}` : MANUAL_SKIPS;
     const held = desired?.value ?? device;
     if (held !== null && held !== undefined) {
       row.segments.push({ kind: "manual", start: now, end: horizon, value: held, label: "", short: "", detail: `${row.head} · ${value(held)}`, what: "MANUAL" });
@@ -299,7 +299,7 @@ export function planTable(rows: readonly PlanRow[]): DataTableBlock {
       if (!row.segments.length) return [[row.label, "—", "—", row.device, "Device", note]];
       return row.segments.map((segment, index) => [
         row.label, <TimeCell key="from" at={segment.start} />, <TimeCell key="until" at={segment.end} />,
-        formatValue(segment.value, row.unit), segment.what, index === 0 ? note : "",
+        settingDisplay(segment.value, { unit: row.unit, param: row.key }), segment.what, index === 0 ? note : "",
       ]);
     }),
   };
@@ -344,7 +344,8 @@ export function PlanLanes(props: PlanLanesProps) {
   const drawable = !props.message && plan !== null && rows.length > 0;
   const note = drawable ? staleNote(rows, now) : null;
   return <figure className="chart chart-lanes">
-    <figcaption className="eyebrow">{props.title ?? `Next ${hours} h · one lane per planned setting`}</figcaption>
+    {/* A meta line under the card's title, never an eyebrow below its heading (redesign §3.5). */}
+    <figcaption className="meta chart-lanes-caption">{props.title ?? `Next ${hours} h · one lane per planned setting`}</figcaption>
     {note && <ul className="chart-notes"><li className="chart-note-stale">{note}</li></ul>}
     {drawable
       ? <div className={rowEnd ? "lanes lanes-plan lanes-plan-end" : "lanes lanes-plan"}>

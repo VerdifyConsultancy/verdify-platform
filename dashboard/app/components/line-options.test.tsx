@@ -105,7 +105,7 @@ test("no drawer for a viewer, L03, L11 or a stray id; Options opens ?options=<li
   cleanup(); stopFixtureApi();
   startFixtureApi();
   renderWithApi(<><OptionsButton line={{ line_id: "L04" }} /><LineOptions lines={lines()} /></>);
-  fireEvent.click(screen.getByRole("button", { name: "Options of L04" }));
+  fireEvent.click(screen.getByRole("button", { name: "Options… of L04" }));
   await advance(0);
   expect(screen.getByRole("dialog")).toBeTruthy();
   cleanup(); stopFixtureApi();
@@ -113,5 +113,5 @@ test("no drawer for a viewer, L03, L11 or a stray id; Options opens ?options=<li
   expect(screen.queryByRole("button")).toBeNull();
   cleanup();
   renderWithApi(<OptionsButton line={{ line_id: "L04" }} />, { role: "operator", writesEnabled: false });
-  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Options of L04" }).disabled).toBe(true);
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Options… of L04" }).disabled).toBe(true);
 });

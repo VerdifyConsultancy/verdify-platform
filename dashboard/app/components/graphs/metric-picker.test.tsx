@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
-// "+ Metric" and "+ Setting" (#1130): the dialogs list only what Graphs can draw, every choice is a link that changes
-// the URL, the picker stops at 8 metrics per window, and nothing is hard-coded: the keys are API-03's.
+// "+ Metric" and "+ Setting" (#1130): the dialogs list only what Graphs can draw (the daily keys too, last, D-UX-04),
+// every choice is a link that changes the URL, the picker stops at 8 metrics per window, and nothing is hard-coded: the
+// keys are API-03's.
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
 import { fixture } from "../../../e2e/fixtures/index.mjs";
@@ -23,16 +24,16 @@ function picker(search = "") {
   fireEvent.click(screen.getByRole("button", { name: "+ Metric" }));
 }
 
-test("groups every metric but the daily and forecast keys in the picker's order, and the filter matches label, key, unit and note", () => {
+test("groups every metric but the forecast keys in the picker's order, the daily keys last, and the filter matches label, key, unit and note", () => {
   const groups = pickerGroups(METRICS);
-  expect(groups.map((group) => group.group)).toEqual(["house climate", "zones", "water and soil", "outdoor", "targets", "controller"]);
-  expect(groups.flatMap((group) => group.items).some((metric) => metric.key.startsWith("daily."))).toBe(false);
+  expect(groups.map((group) => group.group)).toEqual(["house climate", "zones", "water and soil", "outdoor", "targets", "controller", "daily"]);
+  expect(groups.at(-1)!.items.map((metric) => metric.key)).toEqual(METRICS.filter((metric) => metric.group === "daily").map((metric) => metric.key));
   expect(groups.flatMap((group) => group.items).some((metric) => metric.key.startsWith("forecast."))).toBe(false);
   expect(pickerGroups(METRICS, "gal/min").flatMap((group) => group.items.map((metric) => metric.key))).toEqual(["climate.flow_gpm"]);
   expect(pickerGroups(METRICS, "SOUTH").flatMap((group) => group.items.map((metric) => metric.key))).toEqual(["climate.temp_south", "climate.rh_south", "climate.vpd_south", "climate.soil_moisture_south_1", "climate.vpd_target_south"]);
-  // A group the picker does not name follows the named ones.
+  // A group the picker does not name follows the named ones, before the daily keys.
   const extra = { ...METRICS[0], key: "climate.hydro_ph", label: "Hydro pH", group: "hydro", unit: "pH" };
-  expect(pickerGroups([...METRICS, extra]).map((group) => group.group).at(-1)).toBe("hydro");
+  expect(pickerGroups([...METRICS, extra]).map((group) => group.group).slice(-2)).toEqual(["hydro", "daily"]);
   expect([60, 300, 3600, 86_400, 45].map(cadenceWords)).toEqual(["every 60 s", "every 5 min", "every hour", "every day", "every 45 s"]);
   expect(metricFacts(METRICS.find((metric) => metric.key === "climate.flow_gpm")!)).toBe("climate.flow_gpm · gal/min · every 60 s · MEASURED");
 });
@@ -45,7 +46,8 @@ test("a choice links to the view plus m=<key>; the climate traces and picked met
   expect(list.queryByRole("link", { name: /Site water flow/ })).toBeNull();
   expect(list.queryByRole("link", { name: /Indoor temperature/ })).toBeNull();
   expect(text(dialog())).toContain("Indoor temperatureclimate.temp_avg · °F · every 60 s · MEASUREDOn the charts");
-  expect(text(dialog())).not.toContain("daily.");
+  // A daily key is a choice like any other: one point per day, in a panel of its own.
+  expect(list.getByRole("link", { name: /Water used/ }).getAttribute("href")).toBe("/graphs?range=7d&set=mister_engage_kpa&m=climate.flow_gpm&m=daily.water_gal");
   fireEvent.change(list.getByLabelText("Filter metrics"), { target: { value: "heap" } });
   expect(list.getAllByRole("link").map((link) => link.textContent)).toEqual(["Controller free heapdiagnostics.heap_free_kb · kB · every 60 s · MEASURED"]);
   fireEvent.change(list.getByLabelText("Filter metrics"), { target: { value: "lux" } });
@@ -74,7 +76,7 @@ test("+ Setting lists numeric settings in an open panel's unit, never the Band i
   expect(SETTINGS.some((row) => row.group === "band_in_force")).toBe(true);
   expect(groups.flatMap((group) => group.items).filter((row) => row.group === "band_in_force" || row.group === "read_only" || row.kind !== "numeric")).toEqual([]);
   expect(chooserGroups(SETTINGS, ["kPa"], "engage").flatMap((group) => group.items.map((row) => row.param))).toEqual(["mister_engage_kpa"]);
-  expect(settingChipText(SETTINGS.find((row) => row.param === "mister_engage_kpa")!)).toBe("VPD · mister_engage_kpa");
+  expect(settingChipText(SETTINGS.find((row) => row.param === "mister_engage_kpa")!)).toBe("VPD Mister Engage · VPD");
   const resolved = resolveView(parseGraphUrl("range=72h&set=mister_engage_kpa").view, METRICS, SETTINGS);
   renderUi(<SettingChooser view={resolved.view} settings={SETTINGS} chosen={resolved.settings} units={resolved.units} />);
   fireEvent.click(screen.getByRole("button", { name: "+ Setting" }));

@@ -1,18 +1,22 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
-// The zone tiles on Now (#1138) against #1122's fixture API at 10:42 America/Denver: a tile per zone with its tag, its band
-// and its cross-check, south while its probe is out, and the reads behind them.
+// The zone strip on Now (redesign §5.1) against the fixture API at 10:42 America/Denver: a tile per zone with its
+// temperature and VPD, a band bar of its VPD against the zone's band (today's range above it) and a 24 h VPD sparkline
+// under one "VPD" label, its tag as a text mark only off its own probe (amber when a probe zone has fallen back), south
+// while its probe is out, and the reads behind them.
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import { panelRead, useIrrigationRead } from "../lib/queries";
 import { advance, renderWithApi, requests, startFixtureApi, stopFixtureApi, type FixtureApi, type FixtureOptions } from "../lib/test-fixture-api";
+import { todayStartS } from "./now/climate";
+import { useDayRead } from "./now/reads";
 import { text } from "./test-render";
 import { ZoneTiles } from "./zone-tiles";
 
 afterEach(() => { cleanup(); stopFixtureApi(); vi.unstubAllGlobals(); });
 
 function Panel() {
-  return <ZoneTiles irrigation={panelRead(useIrrigationRead())} />;
+  return <ZoneTiles irrigation={panelRead(useIrrigationRead())} day={panelRead(useDayRead())} since={todayStartS(Date.now())} />;
 }
 /** Lets the panel's reads answer, then the tiles it then draws read their band: each read starts in the render the last one's answer caused. */
 async function settle() {
@@ -24,75 +28,77 @@ async function open(options: FixtureOptions = {}) {
   await settle();
   return api;
 }
+const plain = (value: string) => value.replaceAll(String.fromCharCode(0xa0), " ");
+/** The one zone order (lib/zone-source.ts `ZONES`), the same as Graphs → Zones' columns. */
+const ZONE_ORDER = ["north", "center", "south", "east", "west"];
 const tile = (zone: string) => document.querySelector<HTMLElement>(`[data-zone=${zone}]`)!;
-const tag = (zone: string) => tile(zone).querySelector("[data-zone-tag]")!.textContent;
-const value = (zone: string, name: string) => text(tile(zone).querySelector(`[data-tile=${name}] dd`));
-const lines = (zone: string) => [...tile(zone).querySelectorAll(".zone-band")].map(text);
+/** The tile's tag mark; null for a zone read from its own probe (MEASURED), the normal case, which shows none. */
+const tag = (zone: string) => tile(zone).querySelector("[data-zone-tag]")?.textContent ?? null;
+const value = (zone: string, name: string) => plain(text(tile(zone).querySelector(`[data-tile=${name}]`)));
+const meta = (zone: string) => plain(text(tile(zone).querySelector(".now-zone-meta")));
 const number = (reading: string) => Number.parseFloat(reading);
 const query = (path: string) => new URL(path, "http://dashboard.invalid").searchParams;
 
-test("one tile each for north, east, south, west and center, each opening its zone's charts", async () => {
+test("one tile each for north, center, south, east and west, Graphs → Zones' order, each opening its zone's charts through its title", async () => {
   await open();
-  expect(within(screen.getByRole("region", { name: "Zones" })).getAllByRole("heading", { level: 3 }).map(text)).toEqual(["North ›: open its charts", "East ›: open its charts", "South ›: open its charts", "West ›: open its charts", "Center ›: open its charts"]);
-  for (const zone of ["north", "east", "south", "west", "center"]) {
-    expect(within(tile(zone)).getByRole("link").getAttribute("href")).toBe(`/graphs/zones?zone=${zone}`);
+  const region = screen.getByRole("region", { name: "Zones" });
+  expect(within(region).getAllByRole("heading", { level: 3 }).map((heading) => heading.querySelector("a")?.firstChild?.textContent)).toEqual(["North", "Center", "South", "East", "West"]);
+  expect([...region.querySelectorAll("[data-zone]")].map((tile) => tile.getAttribute("data-zone"))).toEqual(ZONE_ORDER);
+  for (const zone of ZONE_ORDER) {
+    expect(within(tile(zone)).getByRole("link", { name: /: open its charts$/ }).getAttribute("href")).toBe(`/graphs/zones?zone=${zone}`);
   }
+  expect(within(region).getByRole("link", { name: /^All zones/ }).getAttribute("href")).toBe("/graphs/zones");
 });
 
-test("in band: temperature, RH and VPD with their tags and verdicts; RH has no band; never a stale word", async () => {
+test("in band: temperature and VPD, a band bar and a 24 h sparkline named VPD, a tag only off a zone's own probe; in band adds no verdict, and no stale word", async () => {
   await open();
-  // L07 and L09 report their own probe; north and east compute it from a fresh probe; center has none.
-  expect(["north", "east", "south", "west", "center"].map(tag)).toEqual(["MEASURED", "MEASURED", "MEASURED", "MEASURED", "HOUSE"]);
-  expect(value("south", "temp")).toMatch(/^\d\d\.\d °F(in band|above band|below band)$/);
-  expect(value("south", "rh")).toMatch(/^\d\d\.\d%no RH band$/);
-  expect(value("south", "vpd")).toMatch(/^\d\.\d\d kPa(in band|above band|below band)$/);
+  // L07 and L09 report their own probe and north and east compute it from a fresh probe (MEASURED, the quiet normal);
+  // center has none, so it reads HOUSE, muted, as it always does.
+  expect(ZONE_ORDER.map(tag)).toEqual([null, "HOUSE", null, null, null]);
+  expect(tile("center").querySelector(".now-zone-tag-news")).toBeNull();
+  expect(document.querySelectorAll("[data-zone-tag=MEASURED]")).toHaveLength(0);
+  // Both visuals sit under one VPD label, hidden from a screen reader, which hears each image name itself.
+  for (const zone of ZONE_ORDER) {
+    const viz = tile(zone).querySelector(".now-zone-viz")!;
+    expect([text(viz.querySelector(".now-zone-viz-label")), viz.querySelector(".now-zone-viz-label")?.getAttribute("aria-hidden")]).toEqual(["VPD", "true"]);
+    expect(viz.querySelectorAll(":scope > svg.bb, :scope > svg.spark")).toHaveLength(2);
+  }
+  expect(tile("south").querySelector(".now-zone-tag-news")).toBeNull();
+  expect(value("south", "temp")).toMatch(/^\d\d\.\d °F$/);
+  expect(value("south", "vpd")).toMatch(/^\d\.\d\d kPa$/);
+  expect(plain(tile("south").querySelector("svg.bb")?.getAttribute("aria-label") ?? "")).toMatch(/^South VPD \d\.\d\d kPa, band 0\.45–0\.80 kPa, today \d\.\d\d–\d\.\d\d kPa$/);
+  expect(tile("south").querySelector("svg.spark")?.getAttribute("aria-label")).toBe("South VPD over the last 24 h");
+  expect(tile("south").querySelectorAll(".spark-line").length).toBeGreaterThan(0);
   expect(tile("south").querySelector("[data-badge=stale]")).toBeNull();
+  expect(meta("south")).toBe("band 0.45–0.80 kPa");
 });
 
-test("the band is the zone's own in force: VPD against its low and high, temperature against the house band every zone's rows carry", async () => {
-  await open();
-  // settings.json's Band in force rows: south 0.45–0.80, east 0.50–0.90, center 0.50–0.85, all 62–70 °F.
-  expect(lines("south")[0]).toBe("band 62–70 °F · 0.45–0.80 kPa");
-  expect(lines("east")[0]).toBe("band 62–70 °F · 0.50–0.90 kPa");
-  expect(lines("center")[0]).toBe("band 62–70 °F · 0.50–0.85 kPa");
-  // The controller's target beside it, as the cross-check.
-  expect(lines("south")[1]).toMatch(/^target \d\.\d\d kPa$/);
-  expect(lines("center")[1]).toMatch(/^target \d\.\d\d kPa$/);
-});
-
-test("north reads against the house band and says so, with the house target as its cross-check; center reads HOUSE from the house average", async () => {
+test("the band is the zone's own in force; north reads against the house band and says so; center reads HOUSE from the house average", async () => {
   const api = await open();
-  expect(lines("north")[0]).toBe("house band 62–70 °F · 0.45–0.80 kPa");
-  expect(lines("north")[1]).toMatch(/^house target \d\.\d\d kPa$/);
-  expect(value("north", "vpd")).toMatch(/in band|above band|below band/);
+  // settings.json's Band in force rows: south 0.45–0.80, east 0.50–0.90, center 0.50–0.85.
+  expect([meta("south"), meta("east"), meta("center"), meta("north")]).toEqual(["band 0.45–0.80 kPa", "band 0.50–0.90 kPa", "band 0.50–0.85 kPa", "house band 0.45–0.80 kPa"]);
   // API-06 never asks for north, and each other zone asks for its own.
   expect(requests(api, "API-06").map((row) => query(row.path).get("zone")).sort()).toEqual(["center", "east", "house", "south", "west"]);
   expect(tag("center")).toBe("HOUSE");
-  const series = requests(api, "API-04").map((row) => query(row.path).getAll("metric"));
-  expect(series.flat()).toEqual(expect.arrayContaining(["climate.temp_avg", "climate.rh_avg", "climate.vpd_avg", "climate.vpd_target_center", "climate.house_vpd_target"]));
-  expect(series.flat().some((key) => /north/.test(key) && /target/.test(key))).toBe(false);
 });
 
-test("API-04 reads the last 15 minutes with at most 8 keys per request; each read polls every 60 s and pauses while the tab is hidden", async () => {
+test("the reads: three 15-minute reads of at most 8 keys and the day read over 25 h; each polls every 60 s and pauses while the tab is hidden", async () => {
   const api = await open();
   const reads = (id: string) => requests(api, id);
-  expect(reads("API-04")).toHaveLength(3);
-  for (const row of reads("API-04")) {
-    const params = query(row.path);
-    expect(params.getAll("metric").length).toBeLessThanOrEqual(8);
-    expect(Date.parse(params.get("to")!) - Date.parse(params.get("from")!)).toBe(15 * 60_000);
-  }
+  const windows = reads("API-04").map((row) => (Date.parse(query(row.path).get("to")!) - Date.parse(query(row.path).get("from")!)) / 60_000);
+  expect(windows.sort((a, b) => a - b)).toEqual([15, 15, 15, 25 * 60]);
+  for (const row of reads("API-04")) expect(query(row.path).getAll("metric").length).toBeLessThanOrEqual(8);
   await advance(60_000);
-  expect(reads("API-04")).toHaveLength(6);
+  expect(reads("API-04")).toHaveLength(8);
   expect(reads("API-06")).toHaveLength(10);
   Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
   act(() => { document.dispatchEvent(new Event("visibilitychange")); });
   await advance(180_000);
-  expect(reads("API-04")).toHaveLength(6);
+  expect(reads("API-04")).toHaveLength(8);
   Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
   act(() => { document.dispatchEvent(new Event("visibilitychange")); });
   await settle();
-  expect(reads("API-04")).toHaveLength(9);
+  expect(reads("API-04")).toHaveLength(12);
 });
 
 /** The fixture's answer to one metric, as of its own request, for comparing a tile's value. */
@@ -102,56 +108,45 @@ function newest(api: FixtureApi, key: string): number {
   return (body.series[key].avg as (number | null)[]).filter((item) => item !== null).at(-1)!;
 }
 
-test("south reads PEER while its probe is out: the fresh peers' mean, never its own, with its verdict against south's band", async () => {
+test("south reads PEER while its probe is out, amber: the fresh peers' mean, never its own; its sparkline keeps the gap", async () => {
   const api = await open({ fixture: "south-probe-out" });
   expect(tag("south")).toBe("PEER");
-  expect(tile("south").querySelector(".tag-warn")).not.toBeNull();
+  expect(tile("south").querySelector(".now-zone-tag-news")).not.toBeNull();
   const mean = (a: number, b: number) => (a + b) / 2;
   expect(number(value("south", "temp"))).toBeCloseTo(mean(newest(api, "climate.temp_west"), newest(api, "climate.temp_east")), 1);
-  expect(number(value("south", "rh"))).toBeCloseTo(mean(newest(api, "climate.rh_west"), newest(api, "climate.rh_east")), 1);
   expect(number(value("south", "vpd"))).toBeCloseTo(mean(newest(api, "climate.vpd_west"), newest(api, "climate.vpd_east")), 2);
-  expect(value("south", "vpd")).toMatch(/in band|above band|below band/);
-  // West and east keep their own probes.
-  expect(tag("west")).toBe("MEASURED");
-  expect(tag("east")).toBe("MEASURED");
-});
-
-test("before the engine there is no vpd_source: south computes PEER from its own probe", async () => {
-  await open({ fixture: ["south-probe-out", "before-engine"] });
-  expect(tag("south")).toBe("PEER");
-  expect(tag("west")).toBe("MEASURED");
+  // West and east keep their own probes, so they carry no mark at all.
+  expect([tag("west"), tag("east")]).toEqual([null, null]);
+  expect(tile("west").querySelector(".now-zone-tag-news")).toBeNull();
 });
 
 test("while the controller is not reporting no probe is fresh: every tile reads HOUSE, muted, STALE with its last data, and no verdict", async () => {
   await open({ fixture: "controller-not-reporting" });
-  for (const zone of ["north", "east", "south", "west", "center"]) {
+  for (const zone of ZONE_ORDER) {
     expect(tag(zone)).toBe("HOUSE");
-    expect(tile(zone).querySelectorAll("[data-badge=stale]")).toHaveLength(3);
-    expect(text(tile(zone))).toContain("last data 10:36");
+    expect(tile(zone).querySelectorAll("[data-badge=stale]")).toHaveLength(1);
+    expect(meta(zone)).toContain("last data 10:36");
     expect(text(tile(zone))).not.toMatch(/in band|above band|below band/);
+    expect(tile(zone).querySelector("svg.bb.is-stale")).not.toBeNull();
   }
 });
 
-test("a window with no sample reads — with its reason, never 0", async () => {
-  startFixtureApi({ fixture: "south-probe-out" });
+test("an out-of-band zone says so first and takes the amber rule; a failed read says so with Retry; a failed band never gives a verdict", async () => {
+  startFixtureApi({});
   const answered = globalThis.fetch;
-  // West and east fresh on temperature only, so south's PEER RH and VPD have no probe to read.
+  // South's VPD well above its 0.45–0.80 band.
   vi.stubGlobal("fetch", vi.fn(async (input: string, init?: RequestInit) => {
     const response = await answered(input, init);
     if (!input.includes("/v1/series")) return response;
     const body = await response.json() as { series: Record<string, { avg: (number | null)[] }> };
-    for (const [key, columns] of Object.entries(body.series)) if (/_(west|east)$/.test(key) && !key.includes("temp")) columns.avg = columns.avg.map(() => null);
+    if (body.series["climate.vpd_south"]) body.series["climate.vpd_south"].avg = body.series["climate.vpd_south"].avg.map((item) => (item === null ? null : 1.31));
     return { ...response, json: async () => body } as Response;
   }));
   renderWithApi(<Panel />);
   await settle();
-  expect(tag("south")).toBe("PEER");
-  expect(value("south", "rh")).toBe("—No fresh peer probe");
-  expect(value("south", "vpd")).toBe("—No fresh peer probe");
-  expect(number(value("south", "temp"))).toBeGreaterThan(0);
-});
-
-test("a failed read says so with Retry, and a failed band says band unavailable, never a verdict from old data", async () => {
+  expect(meta("south")).toBe("above band · band 0.45–0.80 kPa");
+  expect(tile("south").className).toBe("now-zone now-zone-off");
+  cleanup(); stopFixtureApi(); vi.unstubAllGlobals();
   const api = await open({ fail: { "API-04": 503 } });
   expect(text(screen.getByRole("region", { name: "Zones" }))).toContain("Couldn't load the zones.");
   expect(document.querySelector("[data-zone]")).toBeNull();
@@ -161,11 +156,7 @@ test("a failed read says so with Retry, and a failed band says band unavailable,
   expect(document.querySelectorAll("[data-zone]")).toHaveLength(5);
   cleanup(); stopFixtureApi();
   await open({ fail: { "API-06": 503 } });
-  expect(lines("south")[0]).toBe("band unavailable");
-  expect(lines("north")[0]).toBe("house band unavailable");
-  expect(value("south", "vpd")).toMatch(/band unavailable$/);
-  expect(value("south", "vpd")).not.toMatch(/in band/);
-  cleanup(); stopFixtureApi();
-  await open({ fail: { "API-03": 503 } });
-  expect(text(screen.getByRole("region", { name: "Zones" }))).toContain("Couldn't load the zones.");
+  expect(meta("south")).toBe("band unavailable");
+  expect(meta("north")).toBe("house band unavailable");
+  expect(tile("south").className).toBe("now-zone");
 });

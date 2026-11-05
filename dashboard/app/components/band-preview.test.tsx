@@ -128,7 +128,7 @@ test("it draws API-19's columns as served, over the local day: the ribbon, the s
   // The same words beside the chart: what it shows, the solar times and a table.
   expect([...document.querySelectorAll(".band-preview .chart-key li")].map(text)).toEqual(["Band as stored", "Target as stored", PREVIEW_WORD]);
   expect([...document.querySelectorAll(".band-preview .chart-notes li")].map(text)).toEqual(["Sunrise 06:35", "Solar noon 11:47", "Sunset 16:58"]);
-  expect(text(document.querySelector(".band-preview figcaption"))).toBe("Center zone VPD · kPa · America/Denver");
+  expect(text(document.querySelector(".band-preview figcaption"))).toBe("Center zone VPD · kPa");
   expect(text(document.querySelector(".band-preview details summary"))).toBe("Data table · 144 rows");
   expect(screen.getByRole("link", { name: "CSV of this window" })).toBeTruthy();
   expect(screen.getByRole("img").getAttribute("aria-label")).toContain("and dashed, the preview of this value");
@@ -151,7 +151,7 @@ test("a draft that changes nothing draws the band alone, with no PREVIEW", async
   stopFixtureApi();
   MockPlot.reset();
   await mount("band_temp_low_sm", settingOf("band_temp_low_sm").readback!.value);
-  expect(text(document.querySelector(".band-preview figcaption"))).toBe("House temperature · °F · America/Denver");
+  expect(text(document.querySelector(".band-preview figcaption"))).toBe("House temperature · °F");
   expect(plot().opts.series[1].stroke).toBe(TOKENS["--c-temp"]);
 });
 
@@ -168,7 +168,7 @@ test("a width moves only its own edge, from the server's answer", async () => {
   const label = chart.ctx.texts.find((item) => item.text === PREVIEW_WORD)!;
   const onLine = (column: (number | null)[]) => column.some((value) => Math.abs(chart.valToPos(value as number, "y") - (label.y + 16)) < 1);
   expect([onLine(draftLow), onLine(draftTarget)]).toEqual([true, false]);
-  expect(text(document.querySelector(".band-preview figcaption"))).toBe("Center zone VPD · kPa · America/Denver");
+  expect(text(document.querySelector(".band-preview figcaption"))).toBe("Center zone VPD · kPa");
 });
 
 test("a draft outside the bounds reads Must be … in the panel, from the Problem; a good one brings the curve back", async () => {

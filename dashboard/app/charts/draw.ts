@@ -15,6 +15,11 @@ export type PaintTarget = Pick<uPlot, "ctx" | "bbox" | "valToPos" | "scales">;
 
 export const LABEL_FONT = '"IBM Plex Sans", system-ui, sans-serif';
 const font = (px: number) => `${Math.round(11 * px)}px ${LABEL_FONT}`;
+/**
+ * The key of the chart's background colour among the colours UPlotChart reads (the page's, never a literal): every
+ * label is drawn over a 3 px halo of it, so a line under a label never strikes its words.
+ */
+export const CHART_BACKGROUND = "background";
 
 /** Paints inside the plot area; the context's state (which uPlot caches between draws) is restored afterwards. */
 function clipToPlot(plot: PaintTarget, paint: () => void) {
@@ -34,18 +39,22 @@ const y = (plot: PaintTarget, value: number) => plot.valToPos(value, "y", true);
 
 /** Where a label may sit: x, the line it labels, and which side of x the text runs. */
 export type Anchor = { at: number; line: number; align: "left" | "right" };
+/** A label's box in canvas pixels. */
+export type LabelBox = { left: number; right: number; top: number; bottom: number };
 
 /**
  * Labels placed in order. Each tries its anchors in turn, above its line and then below; one that would overlap a
- * placed label or leave the plot at every anchor is dropped.
+ * placed label or leave the plot at every anchor is dropped. Among the places left it takes the first that no drawn
+ * line crosses (`crosses`), else the first; each is drawn over a 3 px halo in `halo`, the chart's background.
  */
 export class Labels {
-  private placed: { left: number; right: number; top: number; bottom: number }[] = [];
-  constructor(private plot: PaintTarget, private px: number) {}
+  private placed: LabelBox[] = [];
+  constructor(private plot: PaintTarget, private px: number, private halo = "", private crosses: (box: LabelBox) => boolean = () => false) {}
   place(text: string, anchors: readonly Anchor[], color: string): boolean {
     const { ctx, bbox } = this.plot;
     ctx.font = font(this.px);
     const width = ctx.measureText(text).width, height = 13 * this.px, gap = 3 * this.px;
+    let fallback: LabelBox | null = null;
     for (const anchor of anchors) {
       for (const where of ["above", "below"] as const) {
         const left = Math.min(Math.max(anchor.align === "left" ? anchor.at : anchor.at - width, bbox.left + gap), bbox.left + bbox.width - width - gap);
@@ -53,16 +62,76 @@ export class Labels {
         if (top < bbox.top || top + height > bbox.top + bbox.height || left < bbox.left) continue;
         const box = { left, right: left + width, top, bottom: top + height };
         if (this.placed.some((other) => box.left < other.right && other.left < box.right && box.top < other.bottom && other.top < box.bottom)) continue;
-        this.placed.push(box);
-        ctx.fillStyle = color;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "top";
-        ctx.fillText(text, left, top);
-        return true;
+        if (!this.crosses(box)) return this.draw(text, box, color);
+        fallback ??= box;
       }
     }
-    return false;
+    return fallback ? this.draw(text, fallback, color) : false;
   }
+  private draw(text: string, box: LabelBox, color: string): boolean {
+    const { ctx } = this.plot;
+    this.placed.push(box);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    if (this.halo) {
+      ctx.strokeStyle = this.halo;
+      ctx.lineWidth = 3 * this.px;
+      ctx.lineJoin = "round";
+      ctx.setLineDash([]);
+      ctx.strokeText(text, box.left, box.top);
+    }
+    ctx.fillStyle = color;
+    ctx.fillText(text, box.left, box.top);
+    return true;
+  }
+}
+
+/** A line to keep labels off: its times and values (null breaks it), as the plot draws it. */
+type DrawnLine = { readonly t: ArrayLike<number>; readonly values: ArrayLike<number | null | undefined> };
+/** The line's value at x, between its two neighbouring points; null in a gap or outside it. */
+function lineValue(line: DrawnLine, x: number): number | null {
+  let low = 0, high = line.t.length - 1;
+  if (high < 0 || x < line.t[0] || x > line.t[high]) return null;
+  while (low < high) {
+    const middle = (low + high + 1) >> 1;
+    if (line.t[middle] <= x) low = middle; else high = middle - 1;
+  }
+  const before = line.values[low], after = line.values[Math.min(low + 1, line.t.length - 1)];
+  if (before === null || before === undefined || !Number.isFinite(before)) return null;
+  if (after === null || after === undefined || !Number.isFinite(after) || line.t[low + 1] === undefined || line.t[low + 1] === line.t[low]) return before;
+  return before + ((after - before) * (x - line.t[low])) / (line.t[low + 1] - line.t[low]);
+}
+
+/**
+ * Whether a drawn line crosses a label's box: the series uPlot draws (those shown), the forecast, the band's edges and
+ * the steps, each read at the box's left, middle and right, and counted when one of those falls inside the box or the
+ * line passes from above it to below it between two of them.
+ */
+export function linesCross(plot: PaintTarget, input: LabelInput): (box: LabelBox) => boolean {
+  const { bbox } = plot;
+  const xMin = plot.scales.x.min ?? 0, xMax = plot.scales.x.max ?? 0;
+  const valueAt = (pixel: number) => xMin + ((pixel - bbox.left) / (bbox.width || 1)) * (xMax - xMin);
+  const drawn = plot as Partial<Pick<uPlot, "data" | "series">>;
+  const lines: DrawnLine[] = [];
+  if (drawn.data && drawn.series) {
+    for (let index = 1; index < drawn.data.length; index++) {
+      if (drawn.series[index]?.show !== false) lines.push({ t: drawn.data[0], values: drawn.data[index] as ArrayLike<number | null | undefined> });
+    }
+  }
+  for (const line of input.forecast ?? []) lines.push(line);
+  for (const run of input.runs) lines.push({ t: run.t, values: run.low }, { t: run.t, values: run.high });
+  return (box) => {
+    const xs = [box.left, (box.left + box.right) / 2, box.right].map(valueAt);
+    const levels = (value: (at: number) => number | null) => xs.map((at) => { const level = value(at); return level === null ? null : y(plot, level); });
+    const through = (ys: (number | null)[]) => ys.some((level, index) => {
+      if (level === null) return false;
+      if (level >= box.top && level <= box.bottom) return true;
+      const next = ys[index + 1];
+      return next !== null && next !== undefined && ((level < box.top && next > box.bottom) || (level > box.bottom && next < box.top));
+    });
+    if (lines.some((line) => through(levels((at) => lineValue(line, at))))) return true;
+    return input.steps.some((step) => through(levels((at) => (at >= step.start && at <= step.end ? step.value : null))));
+  };
 }
 
 /** WCAG relative luminance of a `#rgb` or `#rrggbb` token value; null for anything else. */
@@ -250,7 +319,7 @@ export function paintLabels(plot: PaintTarget, input: LabelInput, colors: ChartC
 }
 
 function placeLabels(plot: PaintTarget, input: LabelInput, colors: ChartColors, seriesColor: string, px: number) {
-  const labels = new Labels(plot, px);
+  const labels = new Labels(plot, px, colors[CHART_BACKGROUND] ?? "", linesCross(plot, input));
   const { bbox } = plot;
   const top = bbox.top + 16 * px, bottom = bbox.top + bbox.height - 2 * px;
   const right = bbox.left + bbox.width - 4 * px;
@@ -283,6 +352,11 @@ function placeLabels(plot: PaintTarget, input: LabelInput, colors: ChartColors, 
     if (run.t.length < 2) continue;
     const left = Math.max(x(plot, run.t[0]), bbox.left), end = Math.min(x(plot, run.t[run.t.length - 1]), bbox.left + bbox.width);
     if (end - left < 160 * px) continue;
-    labels.place(run.label, [{ at: left + 4 * px, line: y(plot, run.high[Math.min(run.t.length - 1, 1)]), align: "left" }], colors["--muted"]);
+    // Either edge at either end of the run, so the words find a place no trace runs through.
+    const first = Math.min(run.t.length - 1, 1), last = Math.max(0, run.t.length - 2);
+    labels.place(run.label, [
+      { at: left + 4 * px, line: y(plot, run.high[first]), align: "left" }, { at: left + 4 * px, line: y(plot, run.low[first]), align: "left" },
+      { at: end - 4 * px, line: y(plot, run.high[last]), align: "right" }, { at: end - 4 * px, line: y(plot, run.low[last]), align: "right" },
+    ], colors["--muted"]);
   }
 }

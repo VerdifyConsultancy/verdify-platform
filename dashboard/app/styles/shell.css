@@ -1,0 +1,68 @@
+/* SPDX-License-Identifier: MIT */
+/* Section: Shell (WP0) */
+/* The header, the phone bar, the account menu, the banners and SCR-09's one-card pages. Loaded by root.tsx after styles.css and tokens.css, in the fixed order of redesign §10.1. Colours are tokens only (white the one literal); this file never redefines :focus-visible or the input borders that the §2.2 block in styles.css sets. */
+
+/* The lockup: the glyph is the V, so "erdify" follows it with no gap. */
+.brand-word{display:inline-flex;align-items:baseline}
+.brand .brand-glyph{width:auto;height:1.2em;margin-right:-.2em}
+
+/* The header row (redesign §2.2): the lockup, the five sections and the account button. Five links fit from 861 px, so the nav never scrolls sideways; the current section keeps weather's 2 px forest underline. */
+.site-header .primary-nav{overflow:visible}
+.site-header .primary-nav a{gap:.4rem}
+/* The one open-alert count, filled by the worst open severity: critical white on --fault (6.54:1), warning --warn-text on --tint-warn (7.81:1), info ink on --field. */
+.nav-count{display:inline-flex;align-items:center;justify-content:center;min-width:1.35rem;height:1.35rem;padding:0 .35rem;border:1px solid var(--line-strong);border-radius:999px;background:var(--field);color:var(--ink);font:600 var(--fs-label)/1 var(--mono);letter-spacing:0;font-variant-numeric:tabular-nums}
+.nav-count[data-severity=critical]{background:var(--fault);border-color:var(--fault);color:#fff}
+.nav-count[data-severity=warning]{background:var(--tint-warn);border-color:var(--warn-border);color:var(--warn-text)}
+
+/* The account button: the role pill at every width, the name from 1100 px, then weather's chevron. Its panel is the generic menu panel (primitives.css). */
+.role-pill{flex:none}
+.account-menu{margin-left:auto;flex:none}
+.account-menu>summary{gap:.5rem;padding:0 .35rem 0 .5rem;border-radius:var(--radius-sm);color:var(--ink);font-weight:500}
+.account-menu>summary:hover{background:var(--field)}
+.account-menu>summary::before{order:2}
+.account-name{font-size:var(--fs-sm);color:var(--muted);white-space:nowrap}
+.account-unknown{color:var(--forest);font-weight:700}
+.account-menu .menu-panel{min-width:16rem}
+.account-who{font-weight:600}
+.account-signout{margin:var(--space-1) 0 0;padding-top:var(--space-1);border-top:1px solid var(--line)}
+@media(max-width:1099px){.account-menu .account-name:not(.account-unknown){display:none}}
+.signout-form{margin:0}
+.signout-form button{background:#fff;border-color:var(--line-strong);color:var(--forest)}
+.signout-form button:hover{background:#fff;border-color:var(--leaf);color:var(--leaf)}
+
+/* The fault row inside the sticky header (redesign §2.5): the one fault banner while it is true, so it never scrolls away. Its words wrap, never cut: it is the one safety message, and it must reflow at 400% zoom (SC 1.4.10); its link stays in view at the row's end. */
+.header-fault{border-top:1px solid var(--line)}
+.site-header .header-fault .shell{display:block;min-height:0;padding-block:var(--space-2)}
+.header-fault .banner{flex-wrap:nowrap;margin:0}
+.header-fault .banner>span{flex:1;min-width:0}
+.header-fault .banner>a{flex:none}
+
+/* Warn notices: in flow at the top of <main>, above the page header, one line each. */
+.banners{display:grid;gap:.5rem;margin:0 0 1rem}
+.banners .banner{margin:0}
+
+/* One centred container on every route (decisions log, 2026-11-04): header, main and footer share .shell, and the page stretches to the window's height, so a short page's footer reaches the bottom. */
+.app-page{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+.app-page>main{flex:1 0 auto}
+
+.bottom-nav{display:none}
+.page-card-main{padding-block:2.5rem 3rem}
+.page-card{max-width:32rem}
+.page-card h1,.page-card h2{font-size:clamp(1.35rem,3vw,1.75rem);margin-bottom:.5rem}
+.page-card .actions{margin-bottom:0}
+.session-ended{position:fixed;inset:0;z-index:var(--z-toast);display:grid;place-items:center;padding:1rem}
+.session-ended::before{content:"";position:absolute;inset:0;background:var(--ink);opacity:.5}
+.session-ended .page-card{position:relative;width:min(28rem,100%);box-shadow:var(--shadow-sm)}
+
+/* Phones (860 px and below, redesign §2.3): a 52 px header with the lockup and the account button, and the fixed bar of the five sections, an icon over a one-word label, each a fifth of the width and at least 44 px. */
+@media(max-width:860px){
+  .site-header>.shell{min-height:var(--header-h-phone);padding-block:var(--space-1)}
+  .site-header .primary-nav{display:none}
+  .bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:var(--z-nav);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));min-height:calc(var(--bar-h) + env(safe-area-inset-bottom));padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);background:#fff;border-top:1px solid var(--line)}
+  .bottom-nav .tab{position:relative;display:grid;justify-items:center;align-content:center;gap:.2rem;min-width:0;min-height:var(--bar-h);padding:0 .125rem;color:var(--muted);font-size:var(--fs-xs);font-weight:600;line-height:1.15;text-align:center;text-decoration:none;overflow-wrap:normal}
+  .bottom-nav .tab-icon{display:block;width:1.25rem;height:1.25rem}
+  .bottom-nav .tab-label{display:block;max-width:100%}
+  .bottom-nav .tab[aria-current=page]{color:var(--ink);box-shadow:inset 0 2px 0 var(--forest)}
+  .bottom-nav .nav-count{position:absolute;top:.3rem;left:calc(50% + .4rem);min-width:1.1rem;height:1.1rem;padding:0 .3rem;font-size:var(--fs-label)}
+  .app-page .site-footer{padding-bottom:calc(var(--bar-h) + env(safe-area-inset-bottom))}
+}

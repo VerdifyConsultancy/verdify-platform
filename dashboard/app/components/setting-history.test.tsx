@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
-// The setting drawer's History and Revert (#1139) against #1122's fixture API in process, with uPlot mocked. The clock is
-// 10:42 America/Denver on 2026-11-02 (MST).
+// The setting drawer's change history and Revert (#1139, redesign §5.10) against #1122's fixture API in process, with
+// uPlot mocked. The clock is 10:42 America/Denver on 2026-11-02 (MST).
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { useLocation } from "react-router";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -335,4 +335,27 @@ test("a new desired row while the drawer is open reads the history again from th
   view.rerender(<><SettingHistoryPanel setting={{ ...row, desired: { ...row.desired!, id: row.desired!.id + 1 } }} manual onReverted={() => {}} /><Here /></>);
   await settle();
   expect(windows(api)[1]).toEqual([iso(S + 90 - 7 * DAY_S), iso(S + 90 + PLAN_AHEAD_S)]);
+});
+
+test("the changes in this window read in words, newest first: from, to, who, manual, the reason and the readback state with its time", async () => {
+  await mount({ fixture: "setting-history" });
+  expect(text(document.querySelector(".drawer-history h3"))).toBe("Change history");
+  expect([...document.querySelectorAll(".ctl-change")].map((entry) => words(entry))).toEqual([
+    // With no shell here API-01 is not read, so the signed-in person reads by username.
+    "1.60 kPa →to 1.55 kPa · jason · manual · “Vandas drying” · Confirmed 08:01",
+    "1.60 kPa · iris · AI · Confirmed 07:03",
+  ]);
+  expect(document.querySelector(".ctl-change [data-badge=ai]")!.className).toBe("ctl-mark");
+  cleanup();
+  stopFixtureApi();
+  // A release reads as one, with no value; a setting with no desired row in the window says so.
+  await mount({ fixture: "setting-history-release" });
+  expect([...document.querySelectorAll(".ctl-change")].map((entry) => words(entry))).toEqual([
+    "1.55 kPa · jason · manual · “Vandas drying” · Confirmed 08:01",
+    "Released to auto · jason · “Back to the plan” · Released 07:02",
+  ]);
+  cleanup();
+  stopFixtureApi();
+  await mount({ fixture: "in-band" });
+  expect(text(document.querySelector(".ctl-changes .meta"))).toBe("No change was asked for in this window.");
 });

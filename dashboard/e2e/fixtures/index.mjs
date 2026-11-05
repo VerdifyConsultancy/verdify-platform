@@ -6,8 +6,20 @@
  * base API-09 response is `settings.json`, rendered at test time from the tunable registry by `pnpm fixtures:settings`
  * (VD-12), which `pnpm test` runs first.
  */
+import { FIXTURES as CONTROL } from "./control.mjs";
+import { FIXTURES as GRAPHS } from "./graphs.mjs";
+import { FIXTURES as NOW_ACTIVITY } from "./now-activity.mjs";
 import { EXAMPLES, OPERATION_IDS, answer } from "./operations.mjs";
-import { FIXTURES, buildWorld } from "./world.mjs";
+import { FIXTURES as WATER } from "./water.mjs";
+import { FIXTURES, buildWorld, registerFixtures } from "./world.mjs";
+
+/**
+ * The screen packages' own fixtures (redesign §10.1), registered once here, in package order, after the base ones in
+ * world.mjs: every user of the registry imports it through this file, so `fixture()`, the fixture API and the contract
+ * checks see them all.
+ */
+export const PACKAGE_FIXTURES = { "now-activity.mjs": NOW_ACTIVITY, "graphs.mjs": GRAPHS, "water.mjs": WATER, "control.mjs": CONTROL };
+for (const [owner, fixtures] of Object.entries(PACKAGE_FIXTURES)) registerFixtures(owner, fixtures);
 
 /** Every fixture name, `in-band` first. */
 export const FIXTURE_NAMES = Object.keys(FIXTURES);
@@ -44,4 +56,4 @@ export function fixture(names = "in-band", options = {}) {
 }
 
 export { EXAMPLES, OPERATION_IDS, ROUTES, answer, routeOf } from "./operations.mjs";
-export { buildWorld } from "./world.mjs";
+export { buildWorld, registerFixtures } from "./world.mjs";

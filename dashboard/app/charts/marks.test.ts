@@ -213,7 +213,7 @@ test("the forecast draws right of now only, labelled with its issue; with issued
   // Every hour left of now: nothing to draw.
   expect(forecastLines({ metrics: [TEMP], series: forecastSeries([NOW - HOUR], [40]) }, "°F", NOW)).toEqual([]);
   // An issue on an earlier day carries its date.
-  expect(forecastLines({ metrics: [TEMP], series: forecastSeries([NOW + HOUR], [42], HOUR, "2026-10-31T13:00:00Z") }, "°F", NOW)[0].text).toBe("Forecast · issued 10/31 07:00");
+  expect(forecastLines({ metrics: [TEMP], series: forecastSeries([NOW + HOUR], [42], HOUR, "2026-10-31T13:00:00Z") }, "°F", NOW)[0].text).toBe("Forecast · issued Oct 31, 07:00");
 });
 
 test("the forecast is joined hour to hour, below a 1 h bucket too, and a missing hour stays a gap", () => {

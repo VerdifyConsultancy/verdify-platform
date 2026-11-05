@@ -10,8 +10,9 @@ import { PickerDialog } from "./metric-picker";
 /**
  * "+ Setting" (SCR-02, US-GRF-01): the API-09 settings a person would chart as steps, in the picker's dialog: numeric
  * rows whose unit has an open panel, never the "Band in force" rows the ribbon already draws or the rows in the
- * read-only group. A choice is a link that adds `set=<param>` to the URL; on the charts it reads "VPD ·
- * mister_engage_kpa ×". The chooser only leaves those rows out: a `set=` link to a read-only row still draws.
+ * read-only group. A choice is a link that adds `set=<param>` to the URL; on the charts its chip reads "VPD Mister
+ * Engage · VPD ×", the setting's label through the words layer (redesign §9.10) and the panel it draws on, its key in
+ * the chip's title. The chooser only leaves those rows out: a `set=` link to a read-only row still draws.
  */
 export type SettingGroup = { readonly unit: string; readonly items: readonly Setting[] };
 
@@ -25,8 +26,8 @@ export function chooserGroups(settings: readonly Setting[], units: readonly stri
   })).filter((group) => group.items.length > 0);
 }
 
-/** "VPD · mister_engage_kpa": the panel the steps draw on, then the setting. */
-export const settingChipText = (row: Pick<Setting, "param" | "unit">): string => `${panelName(unitLabel(row.unit))} · ${row.param}`;
+/** "VPD Mister Engage · VPD": the setting by its label (its key when it has none), then the panel its steps draw on. */
+export const settingChipText = (row: Pick<Setting, "param" | "label" | "unit">): string => `${row.label || row.param} · ${panelName(unitLabel(row.unit))}`;
 
 export type SettingChooserProps = {
   view: GraphView;
@@ -37,9 +38,11 @@ export type SettingChooserProps = {
   chosen: readonly Setting[];
   /** The open panels' units. */
   units: readonly string[];
+  /** The button's own class: Graphs keeps one in the toolbar from 861 px and one in a phone's Layers sheet. */
+  className?: string;
 };
 
-export function SettingChooser({ view, settings, failed = false, chosen, units }: SettingChooserProps) {
+export function SettingChooser({ view, settings, failed = false, chosen, units, className }: SettingChooserProps) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
   const close = () => setOpen(false);
@@ -55,7 +58,7 @@ export function SettingChooser({ view, settings, failed = false, chosen, units }
     return <Link className="picker-item" to={graphHref(withSettings(view, [...chosen.map((setting) => setting.param), row.param]))} preventScrollReset onClick={close}>{body}</Link>;
   };
   return <>
-    <button type="button" className="btn" aria-haspopup="dialog" onClick={() => setOpen(true)}>+ Setting</button>
+    <button type="button" className={className ? `btn ${className}` : "btn"} aria-haspopup="dialog" onClick={() => setOpen(true)}>+ Setting</button>
     <PickerDialog open={open} onClose={close} title="Add a setting" filterLabel="Filter settings" filter={filter} onFilter={setFilter}>
       {!settings
         ? <p className="muted">{failed ? "Couldn't load the settings." : "Loading the settings…"}</p>

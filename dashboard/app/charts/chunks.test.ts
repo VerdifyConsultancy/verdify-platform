@@ -47,3 +47,16 @@ test("chart code: colours only from tokens, no style attribute or HTML strings, 
     expect(text, path).not.toMatch(/\bdli\b|par_today/i);
   }
 });
+
+test("components/data draws without chart code: SVG and HTML only, so Now never loads uPlot (redesign §4.6, §9.7)", () => {
+  const data = sources.filter((source) => source.path.startsWith("components/data/"));
+  // BandBar, Meter, Sparkline, Delta, StatusStrip, TimeTrack, MetricTile, DataList and their shared viz helpers.
+  expect(data.map((source) => source.path).sort()).toEqual([
+    "components/data/band-bar.tsx", "components/data/data-list.tsx", "components/data/delta.tsx", "components/data/meter.tsx", "components/data/metric-tile.tsx",
+    "components/data/sparkline.tsx", "components/data/status-strip.tsx", "components/data/time-track.tsx", "components/data/viz.tsx",
+  ]);
+  for (const { path, text } of data) {
+    expect(text, path).not.toMatch(/from\s+["'][./]*charts\//);
+    expect(text, path).not.toMatch(/["']uplot["']|import\(["']uplot/);
+  }
+});

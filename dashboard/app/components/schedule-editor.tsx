@@ -100,14 +100,19 @@ function readNumbers(form: Form, specs: readonly NumberSpec[]) {
   return { numbers, errors };
 }
 
-/** A new schedule (L01, today's weekday, sunrise + 0, the run dialog's amounts), or the stored one. Manual always starts ticked. */
-function startForm(schedule: Schedule | null, kindOf: (id: string) => string, today: string): Form {
-  const defaults: Form = {
-    lineId: SCHEDULE_LINES[0], label: "", enabled: true, days: WEEKDAYS.filter((day) => day === weekdayOf(today)), start: startDraft(),
-    minutes: String(RUN_DEFAULTS.minutes), storedRun: null, pulse: String(RUN_DEFAULTS.on_s), pulses: String(RUN_DEFAULTS.count), gap: String(RUN_DEFAULTS.gap_s),
-    prewet: String(RUN_DEFAULTS.prewet_s), flush: String(RUN_DEFAULTS.flush_s), degradedOnly: false, manual: MANUAL_DEFAULT, reason: "", checked: false, note: "",
-  };
-  if (!schedule) return defaults;
+/** What a new schedule starts from (redesign §6.5): a line, a day's weekday and a clock time from a slot, or a copy. */
+export type EditorPrefill = {
+  readonly lineId?: string | null;
+  /** `mon` to `sun`. */
+  readonly weekday?: string | null;
+  /** "13:15", from an empty slot of the day timeline. */
+  readonly clock?: string | null;
+  /** Duplicate: the schedule copied as a new one. */
+  readonly copy?: Schedule | null;
+};
+
+/** The stored schedule's fields, or a copy's for a new one. */
+function fromSchedule(schedule: Schedule, kindOf: (id: string) => string, defaults: Form): Form {
   // The parser requires these; the contract's allOf leaves them optional.
   const lineId = schedule.line_id ?? defaults.lineId;
   const onS = schedule.on_s ?? 0;
@@ -119,6 +124,27 @@ function startForm(schedule: Schedule | null, kindOf: (id: string) => string, to
     ...(isDrip(kind) ? { minutes, storedRun: onS % 60 === 0 ? null : { text: minutes, on_s: onS } } : { pulse: String(onS), pulses: String(schedule.count ?? 1), gap: String(schedule.gap_s ?? 0) }),
     ...(isFert(kind) ? { prewet: String(schedule.prewet_s ?? 0), flush: String(schedule.flush_s ?? 0) } : {}),
   };
+}
+
+/**
+ * A new schedule (L01, today's weekday, sunrise + 0, the run dialog's amounts; or what its prefill says), a copy of one,
+ * or the stored one. Manual always starts ticked.
+ */
+function startForm(schedule: Schedule | null, kindOf: (id: string) => string, today: string, prefill: EditorPrefill = {}): Form {
+  const line = prefill.lineId && (SCHEDULE_LINES as readonly string[]).includes(prefill.lineId) ? prefill.lineId : SCHEDULE_LINES[0];
+  const weekday = WEEKDAYS.find((day) => day === prefill.weekday) ?? weekdayOf(today);
+  const defaults: Form = {
+    lineId: line, label: "", enabled: true, days: WEEKDAYS.filter((day) => day === weekday),
+    start: prefill.clock && /^([01]\d|2[0-3]):[0-5]\d$/.test(prefill.clock) ? { kind: "clock", clock: prefill.clock, offset: "0" } : startDraft(),
+    minutes: String(RUN_DEFAULTS.minutes), storedRun: null, pulse: String(RUN_DEFAULTS.on_s), pulses: String(RUN_DEFAULTS.count), gap: String(RUN_DEFAULTS.gap_s),
+    prewet: String(RUN_DEFAULTS.prewet_s), flush: String(RUN_DEFAULTS.flush_s), degradedOnly: false, manual: MANUAL_DEFAULT, reason: "", checked: false, note: "",
+  };
+  if (schedule) return fromSchedule(schedule, kindOf, defaults);
+  if (prefill.copy) {
+    const copy = fromSchedule(prefill.copy, kindOf, defaults);
+    return { ...copy, label: copy.label ? `${copy.label} (copy)`.slice(0, LABEL_MAX) : "", storedRun: null, manual: MANUAL_DEFAULT };
+  }
+  return defaults;
 }
 
 /** A refusal, beside the field it names or (`field` null, or one this form does not show) above Save. */
@@ -158,8 +184,10 @@ export type ScheduleEditorProps = {
   onClose: () => void;
   /** The schedule was saved: its `slot_id`. */
   onSaved: (slotId: number) => void;
-  /** The draft as it is typed, for the week's PLANNED outlines; null while a field holds no number or the drawer closes. */
+  /** The draft as it is typed, for the timeline's PLANNED outlines; null while a field holds no number or the drawer closes. */
   onDraft?: (draft: ScheduleDraft | null) => void;
+  /** A new schedule's starting fields: from an empty slot, a line's "+ Schedule", or Duplicate (redesign §6.5). */
+  prefill?: EditorPrefill;
 };
 
 /**
@@ -171,13 +199,13 @@ export type ScheduleEditorProps = {
  * beside its field, or above Save, and sends nothing else. Then the P feedback: the week and the banner read REQUESTED,
  * and CONFIRMED only from the program hash.
  */
-export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, onClose, onSaved, onDraft }: ScheduleEditorProps) {
+export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, onClose, onSaved, onDraft, prefill }: ScheduleEditorProps) {
   const toast = useToast();
   const lines = status?.lines ?? EMPTY_LINES;
   const kindOf = (id: string) => lines.find((line) => line.line_id === id)?.kind ?? lineById(id)?.kind ?? "drip";
   // What opened: a schedule deleted elsewhere while the form is open is refused on Save, not swept away with the typing.
   const [stored] = useState(schedule);
-  const [form, setForm] = useState(() => startForm(schedule, kindOf, today));
+  const [form, setForm] = useState(() => startForm(schedule, kindOf, today, prefill));
   const [typed, setTyped] = useState<Readonly<Record<string, string>>>({});
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const [saving, setSaving] = useState(false);
@@ -273,6 +301,9 @@ export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, o
     const known = lines.find((item) => item.line_id === id);
     return known ? known.reserved && !known.enabled : id === "L05" || id === "L06";
   };
+  const refusals = preview?.checks.filter((check) => check.kind === "refusal") ?? [];
+  const notes = preview?.checks.filter((check) => check.kind === "note") ?? [];
+  const setDays = (days: readonly Weekday[]) => update({ days: [...days] });
   return <EditDrawer open onClose={onClose} className="drawer-schedule" title={<>{slotId === null ? "New schedule" : "Edit schedule"}{fert && <> <Badge kind="fert" /></>}</>}
     status={<p className="schedule-count">{agenda.counts.schedules} of {agenda.counts.max_schedules} schedules</p>}
     onSave={() => void save()} saving={saving} error={formLevel}
@@ -290,8 +321,13 @@ export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, o
       }} />
     {fert && <p className="schedule-fert field-hint">Prewets on {partner ?? "the clean line"}, feeds through L03 from the tank, then flushes on {partner ?? "the clean line"}</p>}
     <Reason label="Label (optional)" maxLength={LABEL_MAX} value={form.label} onChange={(label) => update({ label })} error={fieldError("label")} />
-    <Switch label="Enabled" checked={form.enabled} onChange={(enabled) => update({ enabled })} />
-    <WeekdayChips value={form.days} onChange={(days) => update({ days })} />
+    <div className="sch-days-field">
+      <WeekdayChips value={form.days} onChange={setDays} />
+      <div className="sch-days-quick" role="group" aria-label="Day shortcuts">
+        <button type="button" className="chip" aria-pressed={form.days.length === 7} onClick={() => setDays(WEEKDAYS)}>Daily</button>
+        <button type="button" className="chip" aria-pressed={form.days.length === 5 && WEEKDAYS.slice(0, 5).every((day) => form.days.includes(day))} onClick={() => setDays(WEEKDAYS.slice(0, 5))}>Weekdays</button>
+      </div>
+    </div>
     <TimeField value={form.start} onChange={(start) => update({ start })} solar={agenda.solar.find((day) => day.date === today)} error={fieldError("start")} />
     {specs.map((spec) => <NumberField key={spec.field} label={spec.label} value={form[spec.text]} unit={spec.unit} min={spec.min} max={spec.max} step={1} hint={spec.hint}
       error={fieldError(spec.field)} onChange={(text) => update({ [spec.text]: text })} />)}
@@ -299,8 +335,6 @@ export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, o
       <input type="checkbox" checked={form.degradedOnly} onChange={(event) => update({ degradedOnly: event.target.checked })} />
       <span>Only if VPD sensing is degraded</span>
     </label>}
-    <ManualToggle checked={form.manual} onChange={(manual) => update({ manual })} />
-    <Reason value={form.reason} onChange={(reason) => update({ reason })} error={fieldError("reason")} />
     {askCheck && <>
       <label className="check field-check" htmlFor={checkId}>
         <input id={checkId} type="checkbox" name="checked" checked={form.checked} onChange={(event) => update({ checked: event.target.checked })} />
@@ -309,16 +343,22 @@ export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, o
       {form.checked && <Reason label="Note (optional)" value={form.note} onChange={(note) => update({ note })} error={fieldError("check_note")} />}
       {fieldError("checked") && <FieldError id={`${checkId}-error`}>{fieldError("checked")}</FieldError>}
     </>}
-    <section className="schedule-preview" aria-label="Preview">
-      <h3 className="eyebrow">Previewed in the week</h3>
+    <Switch label="Enabled" checked={form.enabled} onChange={(enabled) => update({ enabled })} />
+    <ManualToggle checked={form.manual} onChange={(manual) => update({ manual })} />
+    <Reason value={form.reason} onChange={(reason) => update({ reason })} error={fieldError("reason")} />
+    <section className="schedule-preview">
+      <h3 className="sch-preview-title">Before you save</h3>
       {!preview && <p className="field-hint">Enter a valid start and a whole number in each field to preview it.</p>}
+      {refusals.length > 0 && <ul className="sch-checks sch-checks-refusal">{refusals.map((check) => <li key={check.code} data-check={check.code}>{check.text}</li>)}</ul>}
       {preview?.totals.map((row) => <div key={row.line_id} className="schedule-preview-line" data-line={row.line_id}>
         <p><strong>{row.line_id}</strong> {row.totals ?? "no minutes planned"}</p>
         {row.cap && <p className="field-hint">{row.cap}</p>}
         {row.past && <p className="schedule-past-cap">{PAST_CAP_TEXT} ({row.past})</p>}
       </div>)}
+      {notes.length > 0 && <ul className="sch-checks">{notes.map((check) => <li key={`${check.code}-${check.text}`} data-check={check.code}>{check.text}</li>)}</ul>}
       {preview?.notes.map((note) => <p key={note} className="schedule-preview-note">{note}</p>)}
       {preview && !form.enabled && <p className="schedule-preview-note">{DISABLED_TEXT}</p>}
+      {preview && <p className="field-hint sch-preview-where">The draft shows dashed on the timeline of the next day it runs. Save stays open: the controller's program decides.</p>}
     </section>
   </EditDrawer>;
 }

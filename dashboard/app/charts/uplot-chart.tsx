@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type uPlot from "uplot";
 import uplotStyles from "uplot/dist/uPlot.min.css?url";
 import { TIME_ZONE } from "../lib/format";
+import { narrowViewport, usePhone } from "../lib/narrow";
 import chartStyles from "./charts.css?url";
-import type { ChartColors } from "./draw";
-import { NARROW_QUERY, narrowViewport } from "./time-axis";
+import { CHART_BACKGROUND, type ChartColors } from "./draw";
 import type { XRange } from "./types";
 
 /**
@@ -20,16 +20,16 @@ export const chartLinks = () => [{ rel: "stylesheet", href: uplotStyles }, { rel
 
 /** Every token a chart reads (design system §2.1 and §2.2). Charts never carry a hex literal. */
 export const CHART_TOKENS = [
-  "--ink", "--muted", "--line", "--field", "--fault", "--warn-text",
+  "--ink", "--muted", "--line", "--field", "--fault", "--warn-text", "--tint-warn", "--ink-muted", "--forest", "--amber",
   "--c-temp", "--c-vpd", "--c-rh", "--c-outdoor", "--c-band-wash", "--c-band-edge", "--c-setpoint", "--c-requested", "--c-bound", "--c-grid",
   "--eq-mister", "--eq-fog", "--eq-fan1", "--eq-fan2", "--eq-vent", "--eq-heat1", "--eq-heat2", "--eq-light-main", "--eq-light-grow",
   "--eq-water", "--eq-fert", "--eq-master",
 ] as const;
 
-/** The token values on `:root`, read when a chart is built. */
+/** The token values on `:root`, read when a chart is built, and the page's background behind every label's halo. */
 export function readColors(): ChartColors {
   const style = getComputedStyle(document.documentElement);
-  return Object.fromEntries(CHART_TOKENS.map((token) => [token, style.getPropertyValue(token).trim()]));
+  return { ...Object.fromEntries(CHART_TOKENS.map((token) => [token, style.getPropertyValue(token).trim()])), [CHART_BACKGROUND]: style.backgroundColor };
 }
 
 let loaded: typeof uPlot | null = null;
@@ -55,19 +55,12 @@ export function resetZoom(key: string, range: XRange) {
 export const FINE_POINTER = "(pointer: fine)";
 const finePointer = () => typeof globalThis.matchMedia === "function" && globalThis.matchMedia(FINE_POINTER).matches;
 
-function subscribeNarrow(change: () => void): () => void {
-  if (typeof globalThis.matchMedia !== "function") return () => {};
-  const query = globalThis.matchMedia(NARROW_QUERY);
-  query.addEventListener("change", change);
-  return () => query.removeEventListener("change", change);
-}
 /**
- * True at 860 px and below; follows the viewport. The server and the hydrating render read the wide value, as the server
- * has no viewport, so the hydrated markup matches; React then re-renders with the phone value.
+ * True at 860 px and below; follows the viewport. It is `usePhone` from lib/narrow.ts, the one breakpoint hook: the
+ * server and the hydrating render read the wide value, so the hydrated markup matches; React then re-renders with the
+ * phone value.
  */
-export function useNarrow(): boolean {
-  return useSyncExternalStore(subscribeNarrow, narrowViewport, () => false);
-}
+export const useNarrow = usePhone;
 
 const ids = new WeakMap<object, number>();
 let lastId = 0;
@@ -112,6 +105,8 @@ export type ChartEnv = {
   fine: boolean;
   /** The x window uPlot is ranging or last ranged, zoom included, for a y range that follows it. */
   xWindow: () => [number, number];
+  /** The chart's sync key, for a tooltip that shows only on the chart under the pointer. */
+  syncKey?: string;
 };
 export type ChartOptions = Omit<uPlot.Options, "width" | "height">;
 
@@ -163,7 +158,7 @@ export function UPlotChart(props: UPlotChartProps) {
       shown.current = xRange;
       let xWindow: [number, number] = [xRange.from, xRange.to];
       const fine = finePointer() && latest.current.zoom !== false;
-      const env: ChartEnv = { UPlot, colors: readColors(), px: () => UPlot.pxRatio || 1, fine, xWindow: () => xWindow };
+      const env: ChartEnv = { UPlot, colors: readColors(), px: () => UPlot.pxRatio || 1, fine, xWindow: () => xWindow, syncKey };
       const built = options(env);
       const setScale = (self: uPlot, key: string) => {
         if (key !== "x") return;

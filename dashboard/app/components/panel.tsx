@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { Component, createContext, useContext, useId, type ReactNode } from "react";
+import { Component, useId, type ReactNode } from "react";
 import { Link } from "react-router";
 import { duration } from "../lib/format";
 import { useApiDown } from "../lib/session";
@@ -16,11 +16,6 @@ import { reasonParts } from "./state-reason-line";
  */
 export type PanelState = "ready" | "loading" | "empty" | "stale" | "ingestor_down" | "controller_not_reporting" | "error" | "busy";
 const DEVICE_STALE: readonly PanelState[] = ["stale", "ingestor_down", "controller_not_reporting"];
-
-/** The enclosing panel's freshness, so a tile shows its own only when it differs, and whether a verdict may show. */
-export type PanelInfo = { readonly stale: boolean; readonly observedAt?: string | null; readonly verdict: boolean };
-export const PanelInfoContext = createContext<PanelInfo>({ stale: false, observedAt: undefined, verdict: true });
-export const usePanelInfo = (): PanelInfo => useContext(PanelInfoContext);
 
 /** "Couldn't load runs." with Retry, in the failing panel only. */
 export function PanelError({ thing, text, onRetry }: { thing: string; text?: ReactNode; onRetry?: () => void }) {
@@ -46,6 +41,14 @@ function ReasonSince({ code, since }: { code: "writer_down" | "controller_not_re
   return <span>{reasonParts({ code, since }).map((part, index) => (typeof part === "string" ? part : <LocalTime key={index} at={part.time} />))}</span>;
 }
 
+/** The "All … ›" link at a card head's right (redesign §3.5, §4.1). */
+export type HeadLink = { readonly to: string; readonly label: ReactNode };
+/** The head's right side: the actions, then the "All … ›" link, then the ⋯ menu. */
+export function HeadEnd({ actions, link, menu }: { actions?: ReactNode; link?: HeadLink; menu?: ReactNode }) {
+  if (!actions && !link && !menu) return null;
+  return <div className="card-head-end">{actions}{link && <Link className="card-link-all" to={link.to}>{link.label}<span aria-hidden="true"> ›</span></Link>}{menu}</div>;
+}
+
 export type PanelProps = {
   title: ReactNode;
   eyebrow?: ReactNode;
@@ -53,14 +56,24 @@ export type PanelProps = {
   id?: string;
   /** The panel's own controls, beside the heading. */
   actions?: ReactNode;
+  /** The one state pill of the head (redesign §4.4, D-UX-07), after the title. */
+  pill?: ReactNode;
+  /** "All alerts ›" at the head's right. */
+  link?: HeadLink;
+  /** The ⋯ `Menu`, last in the head. */
+  menu?: ReactNode;
+  /** Abnormal: a 3 px `--amber` or `--fault` rule on the left; the background stays white. Dropped while the API is down. */
+  tone?: "warn" | "fault";
+  /** The foot: a `.meta` line (source, age, resolution) or a "Details ›" link, shown with the data. */
+  foot?: ReactNode;
   /** What the panel loads, for "Couldn't load <thing>." and the empty default ("No <thing>."). */
   thing: string;
   state: PanelState;
   /** The skeleton's reserved height while loading. */
   reserve?: "sm" | "md" | "lg";
   /**
-   * When the panel's newest data was observed. Given, a ready or busy panel shows "Updated N s ago" (its tiles show an
-   * age only when theirs differs), and a stale one "Last data N min ago (HH:MM)".
+   * When the panel's newest data was observed. Given, a ready or busy panel shows "Updated N s ago", and a stale one
+   * "Last data N min ago (HH:MM)".
    */
   observedAt?: string | null;
   /** ingestor_down: the newest heartbeat; controller_not_reporting: the newest climate row. */
@@ -80,14 +93,14 @@ export type PanelProps = {
  * A card that loads one thing and says honestly how it is: a skeleton at its reserved height while loading; its age
  * when ready; the empty words; STALE with "Last data N min ago (HH:MM)" and no verdict; the ingestor or controller
  * line with device values STALE; its own error and Retry; "Busy, retrying in N s" over the old render. A render
- * failure inside stays here.
+ * failure inside stays here. Its head (redesign §4.1) holds the eyebrow, the title with at most one pill, then the
+ * actions, an "All … ›" link and the ⋯ menu; an abnormal panel has a 3 px rule on its left, and its foot a meta line.
  */
-export function Panel({ title, eyebrow, headingLevel = 2, id, actions, thing, state, reserve = "md", observedAt, since, retryInS, onRetry, errorText, empty, children }: PanelProps) {
+export function Panel({ title, eyebrow, headingLevel = 2, id, actions, pill, link, menu, tone, foot, thing, state, reserve = "md", observedAt, since, retryInS, onRetry, errorText, empty, children }: PanelProps) {
   const headingId = useId();
   const apiDown = useApiDown();
   const Heading = headingLevel === 2 ? "h2" : "h3";
   const stale = DEVICE_STALE.includes(state);
-  const info: PanelInfo = { stale, observedAt, verdict: !stale && !apiDown };
   // The words are separate elements in a flex row; the spaces keep them apart for a screen reader too.
   const age = observedAt === undefined ? null : <><FreshnessDot stale={false} /><AgeLabel observedAt={observedAt} stale={false} /></>;
   const line = state === "stale" ? <><FreshnessDot stale /><Badge kind="stale" /> <AgeLabel observedAt={observedAt} stale /></>
@@ -99,11 +112,13 @@ export function Panel({ title, eyebrow, headingLevel = 2, id, actions, thing, st
     : state === "error" ? <PanelError thing={thing} text={errorText} onRetry={onRetry} />
     : state === "empty" ? empty ?? <EmptyState message={`No ${thing}.`} />
     : <PanelErrorBoundary thing={thing} text={errorText} onRetry={onRetry}>{stale ? <div className="panel-muted">{children}</div> : children}</PanelErrorBoundary>;
-  return <PanelInfoContext.Provider value={info}>
-    <section id={id} className={cls("card", "panel")} aria-labelledby={headingId} aria-busy={state === "loading" || undefined} data-state={state}>
-      <div className="card-head"><div>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<Heading id={headingId}>{title}</Heading></div>{actions}</div>
-      {line && <p className="panel-state">{line}</p>}
-      {body}
-    </section>
-  </PanelInfoContext.Provider>;
+  return <section id={id} className={cls("card", "panel", tone && !apiDown && `tone-${tone}`)} aria-labelledby={headingId} aria-busy={state === "loading" || undefined} data-state={state}>
+    <div className="card-head">
+      <div className="card-title">{eyebrow && <span className="eyebrow">{eyebrow}</span>}<div className="card-title-row"><Heading id={headingId}>{title}</Heading>{pill}</div></div>
+      <HeadEnd actions={actions} link={link} menu={menu} />
+    </div>
+    {line && <p className="panel-state">{line}</p>}
+    {body}
+    {foot && (state === "ready" || state === "busy" || DEVICE_STALE.includes(state)) && <div className="card-foot meta">{foot}</div>}
+  </section>;
 }

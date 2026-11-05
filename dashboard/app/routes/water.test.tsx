@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
-// SCR-04 Water (#1135) in the app shell against #1122's fixture API in process: the three views, the program banner,
-// the limits and mister zones, the week, minutes by zone and the run ledger, and Stop all water. The clock is 10:42
+// SCR-04 Water (#1135, redesign §5.2–§5.4, §6) in the app shell against #1122's fixture API in process: the layout's status
+// line and actions, Today's zone cards, line rows and Site today, Schedules' week strip, day timeline, matrix, agenda,
+// rules and popover, History's period, KPIs and ledger, the line controls and Stop all water. The clock is 10:42
 // America/Denver on Monday 2026-11-02; times are fake, and uPlot and ResizeObserver are stand-ins.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { renderToString } from "react-dom/server";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { createRoutesStub } from "react-router";
+import { createRoutesStub, useLocation } from "react-router";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { fixture } from "../../e2e/fixtures/index.mjs";
 import { FakeResizeObserver, MockPlot, created } from "../charts/fixtures/uplot-mock";
@@ -29,6 +30,10 @@ const VIEWS = ["/water", "/water/schedules", "/water/history"] as const;
 const STOPPED = "Stopped every running valve. VPD misting, fog and the next scheduled run can still start on their own; to keep a line off, disable it.";
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
+function Where() {
+  const { pathname, search } = useLocation();
+  return <span data-testid="where">{`${pathname}${search}`}</span>;
+}
 /** Mounts `path` in the shell over the fixture API; `wrap` can alter the fixture's answers before the first read. */
 function open(path: string, options: FixtureOptions = {}, wrap?: (fetch: Fetch) => Fetch) {
   const api = startFixtureApi(options);
@@ -41,7 +46,7 @@ function open(path: string, options: FixtureOptions = {}, wrap?: (fetch: Fetch) 
 /** The shell with Water's layout and its three views, as app/routes.ts nests them. */
 function waterStub() {
   return createRoutesStub([{
-    path: "/", Component: () => <AppShell build={BUILD} authError={null} />,
+    path: "/", Component: () => <><AppShell build={BUILD} authError={null} /><Where /></>,
     children: [{ path: "water", Component: Water, children: [{ index: true, Component: WaterBoard }, { path: "schedules", Component: WaterSchedules }, { path: "history", Component: WaterHistory }] }],
   }]);
 }
@@ -50,10 +55,19 @@ async function load() {
   await advance(0);
   await act(async () => { await vi.dynamicImportSettled(); });
 }
-const banner = () => text(document.querySelector("[data-program]"));
-const card = (id: string) => document.querySelector<HTMLElement>(`.line-card[data-line="${id}"]`)!;
-const cardText = (id: string, selector: string) => text(card(id).querySelector(selector));
-const stopAll = () => screen.queryByRole("button", { name: "Stop all water" });
+const status = () => text(document.querySelector(".page-status"));
+const program = () => text(document.querySelector("[data-program]"));
+const row = (id: string) => document.querySelector<HTMLElement>(`article[data-line="${id}"]`)!;
+const zone = (name: string) => document.querySelector<HTMLElement>(`.wat-zone[data-zone="${name}"]`)!;
+const where = () => screen.getByTestId("where").textContent;
+/**
+ * Stop all water as Water renders it (redesign §2.5, §9.6): the header's, the last action, and the sticky tabs row's
+ * compact copy, which the stylesheet shows at 860 px and below instead; both share one `useStop`. jsdom has no
+ * stylesheet, so both are in the tree here.
+ */
+const stopAlls = () => screen.queryAllByRole("button", { name: "Stop all water" });
+const headerStop = () => document.querySelector<HTMLButtonElement>(".page-actions .stop-all-water");
+const tabsStop = () => document.querySelector<HTMLButtonElement>(".page-tabs-sticky .stop-all-water");
 const toasts = (role: "status" | "alert") => [...screen.getByRole(role).querySelectorAll(".toast-body")].map((body) => [...body.querySelectorAll("p")].map((line) => text(line)).join(" "));
 const tab = (name: string) => within(screen.getByRole("navigation", { name: "Water views" })).getByRole("link", { name });
 
@@ -65,102 +79,181 @@ test("a server render of a Water view carries its head and no greenhouse data, a
   const Stub = waterStub();
   for (const path of VIEWS) {
     const html = renderToString(<Stub initialEntries={[path]} />);
-    expect(html, path).toContain("Water · America/Denver");
-    expect(html, path).not.toMatch(/line-card|week-table|minutes-row|Stop all|Relay|Running|SAF-4|rev 42/);
+    expect(html, path).toContain('<p class="eyebrow page-crumbs">');
+    expect(html, path).toContain('aria-label="Water views"');
+    // The status line keeps its height while it loads, its phone wording beside it.
+    expect(html, path).toContain('<p class="page-status meta page-status-long"></p><p class="page-status-short meta"></p>');
+    expect(html, path).not.toMatch(/data-line=|week-table|minutes-row|Stop all|Relay|Running|SAF-4|rev 42|\sstyle=/);
   }
   expect(requests(api)).toEqual([]);
 });
 
-// ---------------------------------------------------------------------------------------------------- Board
-test("the board shows every line L01–L11: enabled, state in words, last water, today, next and last run; L05, L06 reserved; L11 climate only", async () => {
+// ---------------------------------------------------------------------------------------------------- Today
+test("Today: zone cards in their fixed order, each line a row in its zone (L01–L11), L03 under L02, Site today, and the program in the status line", async () => {
   open("/water", { fixture: "schedules-paused" });
   await load();
-  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Water");
-  expect(text(document.querySelector(".page-head .eyebrow"))).toBe("Water · America/Denver");
-  expect(tab("Board").getAttribute("aria-current")).toBe("page");
-  expect([...document.querySelectorAll(".line-card")].map((node) => node.getAttribute("data-line"))).toEqual(["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11"]);
-  // L01: enabled, idle, this morning's scheduled run and Wednesday's next.
-  expect(cardText("L01", ".line-card-head")).toBe("L01 Drip • WallClean Enabled: On");
-  expect([...card("L01").querySelectorAll(":scope > p")].map((node) => text(node))).toEqual([
-    "Idle", expect.stringMatching(/^Last water Fri \d\d:\d\d, 12 min · ok$/), "Today 0 of 60 min", "next Wed 07:35 · 12 min", "No check recorded",
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Water today");
+  expect(tab("Today").getAttribute("aria-current")).toBe("page");
+  expect([...document.querySelectorAll(".wat-zone")].map((node) => node.getAttribute("data-zone"))).toEqual(["wall", "center", "south", "west", "fog"]);
+  expect([...document.querySelectorAll("article[data-line]")].map((node) => node.getAttribute("data-line"))).toEqual(["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11"]);
+  expect([...document.querySelectorAll("article[data-line] h3")].map((node) => text(node))).toEqual([
+    "L01 Wall drip", "L02 Wall feed", "L04 Center mister", "L05 Center drip", "L06 Center feed", "L07 South mister", "L08 South feed", "L09 West mister", "L10 West feed", "L11 Fog",
   ]);
-  expect([...card("L02").querySelectorAll(":scope > p")].map((node) => text(node))).toContain("next Sun 07:35 · 5 min");
-  // The sub-row's two paragraphs, joined without a space by text(): what L03 does, then its state and today's minutes.
-  expect([...card("L02").querySelectorAll(".line-subrow p")].map((node) => text(node))).toEqual([
-    "Fert master L03 · opens the injector line from the tank with each feed", "Disabled · Today 0 min",
+  // Each row is named by its h3, carries its state, and the old hook class stays for the visit specs.
+  expect(screen.getByRole("article", { name: "L01 Wall drip" }).getAttribute("data-state")).toBe("idle");
+  expect(row("L01").classList.contains("line-card")).toBe(true);
+  expect(row("L02").querySelector(".line-subrow")?.getAttribute("data-line")).toBe("L03");
+  // Zone heads: minutes against the cap line's cap, the reserve and when it last watered; misters' switches and source.
+  expect(text(zone("wall").querySelector('[data-limit="L01"]'))).toMatch(/^0 \/ 60 min.*last Fri \d\d:\d\d$/);
+  expect(text(zone("center").querySelector('[data-limit="L04"]'))).toMatch(/^14 \/ 120 min.*60 min kept for VPD · last 06:58$/);
+  expect(text(zone("center").querySelector(".mister-source"))).toBe("VPD from the house average");
+  expect(text(zone("fog").querySelector(".wat-zone-today"))).toMatch(/^6 min today/);
+  // Site today, in words with its hooks.
+  expect([...document.querySelectorAll(".wat-site [data-limit]")].map((node) => [node.getAttribute("data-limit"), text(node)])).toEqual([
+    ["saf4", "SAF-4, the daily mist and fog ceiling, in Settings21 / 360 galdaily mist and fog ceiling"], ["budget", "Soft budget21 / 300 gal"], ["flow", "Unexplained flow: none"],
+    ["occupancy", "Nobody seen: misters may run (last person 05:10)"], ["fallback", "Fallback misting: off"],
   ]);
-  expect(cardText("L04", ".line-state")).toBe("Idle");
-  expect([...card("L04").querySelectorAll(":scope > p")].map((node) => text(node))).toEqual(expect.arrayContaining(["Last water today 06:58, 14 min · ok", "Today 14 of 120 min", "next Tue 06:50 · 8 min"]));
-  for (const id of ["L05", "L06"]) expect(cardText(id, ".line-card-head")).toMatch(/Disabled Reserved$/);
-  expect(cardText("L11", ".line-card-head")).toBe("L11 FogClimate only");
-  expect(card("L11").querySelector("button")).toBeNull();
-  // The mister zones, the limits strip and the program banner.
-  expect([...document.querySelectorAll(".mister-zone")].map((node) => text(node.querySelector("h3")))).toEqual(["Center · L04", "South · L07", "West · L09"]);
-  expect([...document.querySelectorAll(".limits-strip li")].map((node) => text(node))).toEqual([
-    "SAF-4 21 of 360 gal", "Soft budget 21 of 300 gal", "Center 14 of 120 min (60 kept for VPD)", "South 0 of 45 min (15 kept for VPD)", "West 0 of 45 min (15 kept for VPD)",
-    "Wall drip 0 of 60 min", "Unexplained flow: none", "Nobody seen: misters may run (last person 05:10)",
-  ]);
-  expect(banner()).toBe("On controller: rev 42 · Confirmed 2 min ago");
+  expect(program()).toBe("Program rev 42 on controller · confirmed 2 min ago");
+  expect(status()).toBe("Program rev 42 on controller · confirmed 2 min ago · nothing running");
+  // SAF-4 caps gallons, so both meters fill --eq-water, as Now's SAF-4 meter does (#1308 visual QA 25).
+  expect([...document.querySelectorAll(".wat-site .meter")].map((meter) => meter.className.split(" ")[1])).toEqual(["meter-water", "meter-water"]);
+  // Each zone head: the meter or the minutes first, and the same second line last (#1308 visual QA 27); the stylesheet
+  // gives the meter 12rem and its minutes 7rem on every zone, so the meters stacked down the page line up.
+  for (const node of document.querySelectorAll(".wat-zone-today")) {
+    expect(node.firstElementChild!.className, node.getAttribute("data-limit") ?? "fog").toMatch(/^(sch-minutes-meter|wat-zone-minutes)$/);
+    expect(node.lastElementChild!.className).toBe("meta wat-zone-last");
+  }
+  const css = readFileSync(join(process.cwd(), "app/styles/water.css"), "utf8");
+  expect(css).toContain(".wat-zone-today .sch-minutes-meter{display:grid;grid-template-columns:12rem 7rem;");
 });
 
-test("before the engine: relay states and the bridge banner; rev 42 confirmed; the built-in program", async () => {
-  open("/water", { fixture: "before-engine" });
+test("Today's strips: each line's runs today with the now rule and its next run; misting episodes from API-05 as ticks", async () => {
+  const api = open("/water", { fixture: "schedules-paused" });
   await load();
-  expect(banner()).toBe(NO_ENGINE_TEXT);
-  expect(NO_ENGINE_TEXT).toBe("No irrigation engine on the controller yet: relay states only; L01 runs, and every line stops, through the bridge");
-  for (const node of document.querySelectorAll(".line-card")) expect(text(node.querySelector(".line-state")), node.getAttribute("data-line") ?? "").toMatch(/^Relay (On|Off) since /);
-  expect(text(card("L01"))).toContain("Live job state arrives with the irrigation firmware");
-  expect(text(document.querySelector('.mister-zone[data-line="L04"]'))).toContain("Applies with the irrigation firmware");
-  cleanup(); stopFixtureApi();
-  open("/water", { fixture: ["before-engine", "program-rev-42"] });
+  expect(requests(api, "API-05").map((row) => row.path)).toEqual([expect.stringMatching(/^\/api\/v1\/states\?from=2026-11-02T07%3A00%3A00\.000Z&to=2026-11-03T07%3A00%3A00\.000Z&equipment=drip_wall&equipment=drip_wall_fert/)]);
+  const strip = (id: string) => row(id).querySelector<HTMLElement>(".wat-track")!;
+  expect(strip("L01").getAttribute("role")).toBe("img");
+  expect(text(row("L01").querySelector(".wat-next"))).toBe("next Wed 07:35 · 12 min");
+  expect(strip("L04").getAttribute("aria-label")?.replaceAll("\u00a0", " ")).toBe("L04 Center mister today: Dawn drench, Mon 06:50, 8 × 60 s, done, ok; valve open 06:58–07:12");
+  expect(strip("L04").querySelectorAll(".sch-tick")).toHaveLength(1);
+  expect(strip("L04").querySelectorAll(".sch-now")).toHaveLength(1);
+  expect(text(row("L04").querySelector(".wat-next"))).toBe("next Tue 06:50 · 8 × 60 s");
+  // The hour ticks ride on the first row of each zone only; a reserved line that is off has no strip.
+  expect(zone("wall").querySelectorAll(".wat-day-axis")).toHaveLength(1);
+  expect(row("L05").querySelector(".wat-day")).toBeNull();
+  // Fog: its valve's time, no next run (it is not scheduled).
+  expect(row("L11").querySelector(".wat-next")).toBeNull();
+});
+
+test("the status line names what runs, linked to its row; a fault or rom program colours its words", async () => {
+  open("/water", { fixture: "l01-running" });
   await load();
-  expect(banner()).toBe("On controller: rev 42 · Confirmed 2 min ago");
+  expect(status()).toBe("Program rev 42 on controller · confirmed 2 min ago · L01 Wall drip running (run now)");
+  expect(document.querySelector(".page-status a")?.getAttribute("href")).toBe("#line-L01");
   cleanup(); stopFixtureApi();
   open("/water", { fixture: "program-rom" });
   await load();
-  expect(banner()).toBe(ROM_TEXT);
-  expect(ROM_TEXT).toBe("Running the built-in program: L04 VPD only, L01 run-now, no schedules");
+  expect(program()).toBe(ROM_TEXT);
+  expect(document.querySelector("[data-program]")?.className).toBe("wat-program wat-program-warn");
+});
+
+test("a phone's status line names a running line too, linked to its row; the zone head reads running now; idle, the phone line is the program alone", async () => {
+  open("/water", { fixture: "l01-running" });
+  await load();
+  const short = document.querySelector(".page-status-short")!;
+  // Visible "L01 running ›"; the line's name for a screen reader, the › hidden from it.
+  expect(text(short)).toBe("Rev 42 on controller · 2 min ago · L01 Wall drip running ›");
+  expect(short.querySelector("a")?.getAttribute("href")).toBe("#line-L01");
+  expect(text(short.querySelector("a .screen-reader"))).toBe(" Wall drip");
+  expect(short.querySelector("a [aria-hidden=true]")?.textContent).toBe(" ›");
+  // The wall's head: today's 12 min against the cap, and "running now", never Friday's last water.
+  expect(text(zone("wall").querySelector('[data-limit="L01"]'))).toMatch(/^12 \/ 60 min.*running now$/);
+  expect(text(zone("wall").querySelector(".wat-zone-last"))).not.toContain("last");
+  expect(text(zone("center").querySelector(".wat-zone-last"))).toBe("60 min kept for VPD · last 06:58");
+  cleanup(); stopFixtureApi();
+  open("/water", { fixture: "in-band" });
+  await load();
+  expect(text(document.querySelector(".page-status-short"))).toBe("Rev 42 on controller · 2 min ago");
+  expect(document.querySelector(".page-status-short a")).toBeNull();
+});
+
+test("on a phone Site today holds SAF-4, the flow and occupancy: the soft budget and fallback misting only once they are the news", async () => {
+  const quiet = () => [...document.querySelectorAll(".wat-site [data-limit]")].filter((node) => node.classList.contains("wat-site-quiet")).map((node) => node.getAttribute("data-limit"));
+  open("/water", { fixture: "in-band" });
+  await load();
+  expect(quiet()).toEqual(["budget", "fallback"]);
+  cleanup(); stopFixtureApi();
+  // The budget reached and fallback misting on are the news: they stay.
+  open("/water", { fixture: "in-band" }, (base) => async (input, init) => {
+    const response = await base(input, init);
+    if (input !== "/api/v1/irrigation") return response;
+    const body = await response.json() as Record<string, unknown> & { limits: Record<string, unknown> };
+    const changed = { ...body, fallback_active: true, limits: { ...body.limits, soft_budget_gal: { used: 300, max: 300 } } };
+    return { ...response, headers: response.headers, json: async () => changed } as Response;
+  });
+  await load();
+  expect(quiet()).toEqual([]);
+  expect(text(document.querySelector('.wat-site [data-limit="budget"]'))).toContain("cap reached");
+  // The stylesheet hides the quiet rows at 860 px and below only.
+  const css = readFileSync(join(process.cwd(), "app/styles/water.css"), "utf8");
+  const phone = css.slice(css.lastIndexOf("@media(max-width:860px){"));
+  expect(phone).toContain(".wat-site-quiet{display:none}");
+  expect(css.slice(0, css.lastIndexOf("@media(max-width:860px){"))).not.toContain(".wat-site-quiet");
+});
+
+test("before the engine: relay states, the bridge in the status line once, and no per-line REQUESTED pill", async () => {
+  open("/water", { fixture: "before-engine" });
+  await load();
+  expect(program()).toBe(NO_ENGINE_TEXT);
+  expect(NO_ENGINE_TEXT).toBe("No irrigation engine on the controller yet: relay states only; L01 runs, and every line stops, through the bridge");
+  for (const node of document.querySelectorAll("article[data-line]")) expect(text(node.querySelector(".line-state")), node.getAttribute("data-line") ?? "").toMatch(/^Relay (On|Off) since /);
+  expect(document.querySelectorAll("article[data-line] .object-row-pill")).toHaveLength(0);
+  expect(text(document.querySelector("main"))).not.toContain("Applies with the irrigation firmware");
+  cleanup(); stopFixtureApi();
+  open("/water", { fixture: ["before-engine", "program-rev-42"] });
+  await load();
+  expect(program()).toBe("Program rev 42 on controller · confirmed 2 min ago");
 });
 
 test("with API-IRR-01 failing the page says \"Water status unavailable\", never idle, and Stop all water stays", async () => {
   open("/water", { fail: { "API-IRR-01": 503 } });
   await load();
-  expect(banner()).toBe("Water status unavailable. Retry");
+  expect(program()).toBe("Water status unavailable. Retry");
   const main = screen.getByRole("main");
-  expect(main.querySelectorAll(".line-card")).toHaveLength(0);
+  expect(main.querySelectorAll("article[data-line]")).toHaveLength(0);
   expect(text(main.querySelector(".panel-error"))).toBe("Water status unavailable.Retry");
   expect(text(main)).not.toMatch(/\bIdle\b/i);
-  expect(stopAll()?.hasAttribute("disabled")).toBe(false);
+  expect(stopAlls()).toHaveLength(2);
+  for (const button of stopAlls()) expect(button.hasAttribute("disabled")).toBe(false);
 });
 
-test("not reporting: the banner names what the controller keeps running; with the ingestor down the shell's banner says so instead", async () => {
+test("not reporting: the status line names what the controller keeps running; with the ingestor down the shell's banner says so instead", async () => {
   open("/water", { fixture: "controller-not-reporting" });
   await load();
-  expect(banner()).toBe("Controller not reporting since 10:36. If it has power, it keeps running rev 42, VPD misting and caps");
-  expect(cardText("L01", ".line-state")).toBe("Unknown · 3 days ago");
+  expect(program()).toBe("Controller not reporting since 10:36. If it has power, it keeps running rev 42, VPD misting and caps");
+  expect(text(row("L01").querySelector(".line-state"))).toBe("Unknown · 3 days ago");
   cleanup(); stopFixtureApi();
   open("/water", { fixture: "ingestor-not-running" });
   await load();
-  expect(banner()).toBe("On controller: rev 42 · Confirmed 2 min ago");
+  expect(program()).toBe("Program rev 42 on controller · confirmed 2 min ago");
   expect(text(document.querySelector("[data-banner]"))).toMatch(/^Ingestor not running since 10:38/);
 });
 
-test("flow, a latched mister and a zone on its peers read as the screen says", async () => {
-  const flow = (names: string) => async () => {
+test("flow, a latched mister and a zone on its peers read as Today says", async () => {
+  const flow = async (names: string) => {
     open("/water", { fixture: names });
     await load();
-    const item = document.querySelector('.limits-strip [data-limit="flow"]')!;
+    const item = document.querySelector('.wat-site [data-limit="flow"]')!;
     return [text(item), item.className];
   };
-  expect(await flow("flow-valves-closed")()).toEqual(["Water flowing with every Verdify valve closed since 10:38 · 3 gal in 10 min", "limit-fault"]);
+  expect(await flow("flow-valves-closed")).toEqual(["Water flowing with every Verdify valve closed since 10:38 · 3 gal in 10 min", "limit-fault"]);
   cleanup(); stopFixtureApi();
-  expect(await flow("flow-stopped")()).toEqual(["Flow stopped at 10:40", "limit-warn"]);
+  expect(await flow("flow-stopped")).toEqual(["Flow stopped at 10:40", "limit-warn"]);
   cleanup(); stopFixtureApi();
   open("/water", { fixture: ["mister-fault", "south-peer"] });
   await load();
-  expect(text(document.querySelector('.mister-zone[data-line="L04"] .line-fault'))).toBe("Faulted: no misting until midnight (watchdog)");
-  expect(cardText("L04", ".line-fault")).toBe("Faulted: no misting until midnight (watchdog)");
-  expect(text(document.querySelector('.mister-zone[data-line="L07"] .mister-source'))).toBe("VPD from peer probes");
+  expect(text(row("L04").querySelector(".line-fault"))).toBe("Faulted: no misting until midnight (watchdog)");
+  expect(text(zone("south").querySelector(".mister-source"))).toBe("VPD from peer probes");
 });
 
 test("API-IRR-01 is read once for the page every 15 s, and every 5 s while the program is requested with the engine on", async () => {
@@ -174,7 +267,6 @@ test("API-IRR-01 is read once for the page every 15 s, and every 5 s while the p
   await advance(15_000);
   expect(sentAt("API-IRR-01")).toEqual([0, 5000, 10_000, 15_000]);
   cleanup(); stopFixtureApi();
-  // Before the engine a stored change stays requested, so it never settles: the slow cadence.
   open("/water", { fixture: "before-engine" });
   await load();
   await advance(15_000);
@@ -182,125 +274,289 @@ test("API-IRR-01 is read once for the page every 15 s, and every 5 s while the p
 });
 
 // ---------------------------------------------------------------------------------------------------- Schedules
-test("the week: each occurrence in its line × day cell; Last 7 days sends past_days=7 and a past L02 block reads \"skipped · line paused\"", async () => {
+const timeline = () => document.querySelector<HTMLElement>(".sch-day")!;
+const timelineRow = (id: string) => timeline().querySelector<HTMLElement>(`.sch-row[data-line="${id}"]`)!;
+const agendaView = () => document.querySelector<HTMLElement>(".sch-agenda")!;
+
+test("Schedules reads API-IRR-02 once with past_days=7: the week strip with past and future, today's timeline by manifold and the agenda beside it for phones", async () => {
   const api = open("/water/schedules", { fixture: "schedules-paused" });
   await load();
   expect(tab("Schedules").getAttribute("aria-current")).toBe("page");
-  expect(requests(api, "API-IRR-02").map((row) => row.path)).toContain("/api/v1/irrigation/schedules");
-  const week = screen.getByRole("table");
-  expect(text(week.querySelector('tr[data-line="L01"] td[data-day="2026-11-04"] .week-block-head'))).toBe("07:35 12m Manual");
-  expect(text(screen.getByText(/of 24 schedules$/))).toBe("3 of 24 schedules");
-  fireEvent.click(screen.getByRole("link", { name: "Last 7 days" }));
+  expect(new Set(requests(api, "API-IRR-02").map((row) => row.path))).toEqual(new Set(["/api/v1/irrigation/schedules?past_days=7"]));
+  expect(status()).toBe("Program rev 42 on controller · confirmed 2 min ago · next: L04 Center mister Tue 06:50");
+  // The week strip (Monday to Sunday), today selected, its names with the minutes against the caps.
+  const week = within(document.querySelector<HTMLElement>(".week-days")!);
+  const days = week.getAllByRole("link");
+  expect(days.map((link) => link.getAttribute("aria-label")?.replaceAll("\u00a0", " "))).toEqual([
+    "Monday, Nov 2 (today): 2 ok · 20 of 180 min", "Tuesday, Nov 3: 1 next · 8 of 120 min", "Wednesday, Nov 4: 2 next · 20 of 180 min", "Thursday, Nov 5: 1 next · 8 of 120 min",
+    // Sunday's feed is on L02, which has no cap of its own: only L04's counts.
+    "Friday, Nov 6: 2 next · 20 of 180 min", "Saturday, Nov 7: 1 next · 8 of 120 min", "Sunday, Nov 8: 2 next · 13 of 120 min",
+  ]);
+  expect(days[0].getAttribute("aria-current")).toBe("date");
+  expect(screen.getByRole("link", { name: "Previous week" }).getAttribute("href")).toBe("/water/schedules?day=2026-10-26");
+  // The day timeline: the manifolds, blocks named in words, the now rule, night, and each row's cap.
+  expect(text(timeline().querySelector("h2"))).toBe("Monday, Nov 2 · today");
+  expect(text(timeline().querySelector(".sch-day-title .meta"))).toBe("sunrise 06:35 · solar noon 11:47 · sunset 16:58");
+  expect([...timeline().querySelectorAll(".sch-group-label")].map((node) => text(node))).toEqual(["Drip manifold", "Mister manifold"]);
+  expect([...timeline().querySelectorAll(".sch-row")].map((node) => node.getAttribute("data-line"))).toEqual(["L01", "L02", "L05", "L06", "L04", "L07", "L08", "L09", "L10"]);
+  expect(within(timelineRow("L01")).getByRole("button", { name: /^L01 Wall drip · Wall MWF, Mon 07:35, 12\smin, done, ok$/ }).getAttribute("tabindex")).toBe("-1");
+  expect(timeline().querySelectorAll(".sch-now")).toHaveLength(9);
+  expect(text(timelineRow("L04").querySelector(".sch-cap"))).toMatch(/^14 \/ 120 min/);
+  expect(text(timelineRow("L07").querySelector(".sch-row-note"))).toBe("Schedule off for this zone");
+  expect(timelineRow("L04").querySelectorAll(".sch-tick")).toHaveLength(1);
+  // The agenda renders too (the stylesheet shows it below 861 px): today, tomorrow with NEXT, Wednesday.
+  expect([...agendaView().querySelectorAll("h3")].map((node) => text(node))).toEqual(["Today · Mon 2 Nov", "Tomorrow · Tue 3 Nov", "Wed 4 Nov"]);
+  expect(text(agendaView().querySelector(".sch-next"))).toBe("Next");
+});
+
+test("fallback windows are conditional, never planned runs: dotted on the strips, counted apart on Today, the week strip and the status line (#1308 visual QA 6)", async () => {
+  open("/water", { fixture: "in-band" });
   await load();
-  expect(requests(api, "API-IRR-02").map((row) => row.path)).toContain("/api/v1/irrigation/schedules?past_days=7");
-  const past = screen.getByRole("table").querySelector('tr[data-line="L02"] td[data-day="2026-11-01"] .week-block')!;
-  expect(past.classList.contains("week-block-hatched")).toBe(true);
-  expect(text(past)).toContain("skipped · line paused");
+  const strip = row("L04").querySelector<HTMLElement>(".wat-track")!;
+  expect(strip.querySelectorAll(".sch-block.sch-conditional")).toHaveLength(3);
+  expect(strip.querySelectorAll(".sch-planned, .sch-skipped")).toHaveLength(0);
+  expect(strip.getAttribute("aria-label")?.replaceAll("\u00a0", " ")).toContain("vanda-degraded, Mon 09:47, 4 × 45 s, fallback, not needed; vanda-degraded, Mon 11:47, 4 × 45 s, fallback, only if VPD sensing is degraded");
+  expect(text(row("L04").querySelector(".wat-next"))).toBe("nothing planned · 2 fallback windows");
+  cleanup(); stopFixtureApi();
+  open("/water/schedules", { fixture: "in-band" });
+  await load();
+  expect(status()).toBe("Program rev 42 on controller · confirmed 2 min ago · no run planned this week, 20 fallback windows");
+  expect(text(document.querySelector(".page-status-short"))).toBe("Rev 42 confirmed · no run planned this week, 20 fallback windows");
+  const today = document.querySelector<HTMLElement>('.week-days a[aria-current="date"]')!;
+  expect([text(today.querySelector(".sch-day-summary")), text(today.querySelector(".sch-day-fallback"))]).toEqual(["nothing planned", "2 fallback windows"]);
+  expect(today.getAttribute("aria-label")).toBe("Monday, Nov 2 (today): nothing planned · 2 fallback windows");
+  const blocks = [...timelineRow("L04").querySelectorAll(".sch-block")];
+  expect(blocks.map((block) => block.className.includes("sch-conditional"))).toEqual([true, true, true]);
+  expect(blocks[0].getAttribute("aria-label")?.replaceAll("\u00a0", " ")).toBe("L04 Center mister · vanda-degraded, Mon 09:47, 4 × 45 s, fallback, not needed");
+  // The popover of the window that passed: not needed, never skipped.
+  fireEvent.click(blocks[0]);
+  await load();
+  expect([...document.querySelectorAll("dialog.popover .data-pair")].map((pair) => text(pair)).slice(0, 2)).toEqual([
+    "WhenMon 2 Nov · 09:47 (solar noon − 2 h) · 4 × 45 s, 60 s gap", "OutcomeNot needed",
+  ]);
+  // Leaving Schedules clears its words from the status line.
+  fireEvent.click(tab("Today"));
+  await load();
+  expect(status()).toBe("Program rev 42 on controller · confirmed 2 min ago · nothing running");
+});
+
+test("‹ › step the day, the week strip selects one, and view=week shows the matrix with each cell's runs against the cap; a cell opens its day", async () => {
+  open("/water/schedules", { fixture: "schedules-paused" });
+  await load();
+  fireEvent.click(within(timeline()).getByRole("link", { name: "Next day" }));
+  await load();
+  expect(where()).toBe("/water/schedules?day=2026-11-03");
+  expect(text(timeline().querySelector("h2"))).toBe("Tuesday, Nov 3");
+  fireEvent.click(within(document.querySelector<HTMLElement>(".week-days")!).getByRole("link", { name: /^Sunday, Nov 8/ }));
+  await load();
+  expect(where()).toBe("/water/schedules?day=2026-11-08");
+  // The last day served: › stops there.
+  expect(within(timeline()).queryByRole("link", { name: "Next day" })).toBeNull();
+  fireEvent.click(within(screen.getByRole("list", { name: "View" })).getByRole("link", { name: "Week" }));
+  await load();
+  expect(where()).toBe("/water/schedules?day=2026-11-08&view=week");
+  const matrix = screen.getByRole("table");
+  expect(matrix.className).toContain("week-table");
+  expect([...matrix.querySelectorAll("tbody tr[data-line]")].map((node) => node.getAttribute("data-line"))).toEqual(["L01", "L02", "L05", "L06", "L04", "L07", "L08", "L09", "L10"]);
+  const cell = matrix.querySelector<HTMLElement>('tr[data-line="L01"] td[data-day="2026-11-04"]')!;
+  expect(cell.querySelectorAll(".sch-mark.sch-planned")).toHaveLength(1);
+  expect(text(cell.querySelector(".sch-cell-total"))).toBe("12 / 60");
+  fireEvent.click(within(cell).getByRole("link"));
+  await load();
+  expect(where()).toBe("/water/schedules?day=2026-11-04&view=day");
+});
+
+test("a block opens its popover in the URL: the run, its rule, its next starts, Edit and \"Pause L01 until after this run\"; Back-style close replaces", async () => {
+  const api = open("/water/schedules?day=2026-11-04", { fixture: "schedules-paused" });
+  await load();
+  fireEvent.click(within(timelineRow("L01")).getByRole("button", { name: /^L01 Wall drip · Wall MWF, Wed 07:35/ }));
+  await load();
+  expect(where()).toBe("/water/schedules?day=2026-11-04&block=11-1793802900");
+  const pop = within(document.querySelector<HTMLElement>("dialog.popover")!);
+  expect(text(document.querySelector("dialog.popover h2"))).toBe("L01 Wall drip · Wall MWF");
+  expect([...document.querySelectorAll("dialog.popover dd")].map((node) => text(node))).toEqual([
+    "Wed 4 Nov · 07:35 (sunrise + 1 h) · 12 min", "Planned", "Mon Wed Fri · sunrise + 1 h · Manual", "Wed 07:35 · Fri 07:35",
+  ]);
+  // Edit opens the editor over the popover, so closing it comes back here.
+  expect(pop.getByRole("link", { name: "Edit schedule" }).getAttribute("href")).toBe("/water/schedules?day=2026-11-04&block=11-1793802900&schedule=11");
+  expect(pop.getByRole("link", { name: "Runs of L01" }).getAttribute("href")).toBe("/water/history?line=L01");
+  fireEvent.click(pop.getByRole("button", { name: "Pause L01 until after this run" }));
+  await advance(0);
+  // 12 minutes of drip, plus one.
+  expect(writes(api).map((row) => [row.path, row.body])).toEqual([["/api/v1/irrigation/lines/L01", { paused_until: "2026-11-04T14:48:00.000Z" }]]);
+  fireEvent.keyDown(document.querySelector("dialog.popover")!, { key: "Escape" });
+  await load();
+  expect(where()).toBe("/water/schedules?day=2026-11-04");
+});
+
+test("an operator's click on an empty part of a row opens the editor prefilled with that line, the day and the time to 15 min; [+] is the keyboard path", async () => {
+  open("/water/schedules?day=2026-11-04", { fixture: "schedules-paused" });
+  await load();
+  const track = timelineRow("L07").querySelector<HTMLElement>(".sch-track")!;
+  track.getBoundingClientRect = () => ({ left: 100, width: 960, top: 0, height: 28, right: 1060, bottom: 28, x: 100, y: 0, toJSON: () => ({}) });
+  fireEvent.click(track, { clientX: 100 + 960 * (13.3 / 24) });
+  await load();
+  expect(where()).toBe("/water/schedules?day=2026-11-04&line=L07&at=13%3A15&schedule=new");
+  const drawer = within(document.querySelector<HTMLElement>("dialog.drawer")!);
+  expect((drawer.getByLabelText("Line") as HTMLSelectElement).selectedOptions[0].textContent).toMatch(/^L07/);
+  expect((drawer.getByLabelText("Clock time (HH:MM)") as HTMLInputElement).value).toBe("13:15");
+  expect(drawer.getByRole("button", { name: "Wednesday" }).getAttribute("aria-pressed")).toBe("true");
+  fireEvent.click(drawer.getByRole("button", { name: "Cancel" }));
+  await load();
+  expect(where()).toBe("/water/schedules?day=2026-11-04");
+  expect(within(timelineRow("L02")).getByRole("link", { name: "New schedule on L02 Wall feed" }).getAttribute("href")).toBe("/water/schedules?day=2026-11-04&line=L02&schedule=new");
+});
+
+test("the rules list: every schedule under its line with its words, who changed it, its one pill and its switch; Duplicate and Delete in ⋯", async () => {
+  const api = open("/water/schedules", { fixture: "schedules-paused" });
+  await load();
+  const rules = document.querySelector<HTMLElement>(".sch-rules")!;
+  expect(text(rules.querySelector(".sch-count-words"))).toBe("3 of 24 schedules");
+  expect([...rules.querySelectorAll(".sch-rule-group")].map((group) => group.getAttribute("data-line"))).toEqual(["L01", "L02", "L04"]);
+  const rule = (slot: number) => rules.querySelector<HTMLElement>(`[data-slot="${slot}"]`)!;
+  expect(text(rule(11).querySelector(".object-row-state"))).toBe("Mon Wed Fri · sunrise + 1 h (07:35 today) · 12 min");
+  expect(text(rule(11).querySelector(".object-row-pill"))).toBe("Manual");
+  expect(text(rule(11).querySelector(".object-row-meta"))).toBe("changed by jason 2 days ago");
+  expect(text(rule(13).querySelector(".object-row-meta"))).toBe("Iris may adjust · changed by steward (AI) 2 days ago");
+  expect(text(rule(12).querySelector(".object-row-state"))).toBe("Sun · sunrise + 1 h (07:35 today) · feed 5 min · prewet 2 min · flush 4 min on L01");
+  fireEvent.click(within(rule(11)).getByRole("switch"));
+  await advance(0);
+  expect(writes(api).map((row) => [row.method, row.path, row.body])).toEqual([["PUT", "/api/v1/irrigation/schedules/11", { enabled: false, manual: true }]]);
+  expect(within(rule(11)).getByRole("link", { name: "Duplicate Wall MWF" }).getAttribute("href")).toBe("/water/schedules?copy=11&schedule=new");
+  fireEvent.click(within(rule(12)).getByRole("button", { name: "Delete Weekly feed" }));
+  await advance(0);
+  expect(writes(api).at(-1)).toMatchObject({ method: "DELETE", path: "/api/v1/irrigation/schedules/12" });
+  // The menu closed as Delete was chosen: the outcome is a toast, as the editor's Delete says it.
+  expect(text(document.querySelector(".toast-stack[role=status]"))).toContain("Requested deleting Weekly feed on L02");
+});
+
+test("a line's fallback schedules are one row, Fallback (3), with their starts in units, opening to each schedule's own row; the switches read ON with no visible Enabled (#1308 visual QA 42)", async () => {
+  open("/water/schedules", { fixture: "in-band" });
+  await load();
+  const group = document.querySelector<HTMLElement>('.sch-rules .sch-rule-group[data-line="L04"]')!;
+  const fallback = group.querySelector<HTMLElement>('.sch-rule-fallback[data-fallback="L04"]')!;
+  expect(text(fallback.querySelector(".object-row-title"))).toBe("Fallback (3)");
+  expect(text(fallback.querySelector(".object-row-state"))).toBe("Daily · solar noon −2 h, 0, +2 h (09:47, 11:47, 13:47 today) · 4 × 45 s, 60 s gap");
+  expect(text(fallback.querySelector(".object-row-meta"))).toBe("only if VPD sensing is degraded · Iris may adjust · changed by seed 12 days ago");
+  // One row at the line's level; each schedule's own row, with its switch, Edit and ⋯, inside its disclosure.
+  expect([...group.querySelectorAll(":scope > .sch-rule-rows > li")]).toEqual([fallback]);
+  const each = fallback.querySelector<HTMLDetailsElement>("details.sch-fallback-each")!;
+  expect(text(each.querySelector("summary"))).toBe("Each schedule · 3");
+  expect([...each.querySelectorAll("[data-slot]")].map((node) => node.getAttribute("data-slot"))).toEqual(["1", "2", "3"]);
+  expect(text(each.querySelector('[data-slot="1"] .object-row-state'))).toBe("Daily · solar noon − 2 h (09:47 today) · 4 × 45 s, 60 s gap");
+  const first = within(each.querySelector<HTMLElement>('[data-slot="1"]')!);
+  expect(first.getByRole("link", { name: "Edit vanda-degraded" })).toBeTruthy();
+  // "Enabled" is the switch's name alone; it says ON or OFF itself.
+  const toggle = first.getByRole("switch", { name: "vanda-degraded Enabled" });
+  expect(text(toggle)).toBe("ON");
+  expect(toggle.closest(".field-switch")!.querySelector(".field-label")!.firstElementChild?.className).toBe("screen-reader");
+  // Lines with no fallback schedules have no fallback row.
+  cleanup(); stopFixtureApi();
+  open("/water/schedules", { fixture: "schedules-paused" });
+  await load();
+  expect(document.querySelector(".sch-rule-fallback")).toBeNull();
+});
+
+test("a viewer reads the same views with no editor, [+], switch, Edit, Duplicate or pause, whatever the URL says", async () => {
+  open("/water/schedules?schedule=new&day=2026-11-04&block=11-1793802900", { fixture: ["schedules-paused", "viewer-session"] });
+  await load();
+  expect(document.querySelector("dialog.drawer")).toBeNull();
+  expect(document.querySelectorAll("[data-write-control], [role=switch]")).toHaveLength(0);
+  expect(timeline().querySelector(".sch-track-new")).toBeNull();
+  expect(document.querySelector("dialog.popover")).not.toBeNull();
+  expect(text(document.querySelector("dialog.popover"))).not.toMatch(/Edit|Pause/);
 });
 
 // ---------------------------------------------------------------------------------------------------- History
-test("minutes by zone draws a no-data day as a hatched gap, never 0, and marks today partial; caps from the lines", async () => {
+test("History: one period drives the page; four KPIs against the previous period; minutes by zone with today partial and the caps", async () => {
   const api = open("/water/history", { fixture: "minutes-gap" });
   await load();
   expect(tab("History").getAttribute("aria-current")).toBe("page");
-  expect(requests(api, "API-IRR-10").map((row) => row.path)).toEqual(["/api/v1/irrigation/minutes?from=2026-10-27&to=2026-11-02&group_by=line"]);
+  expect(requests(api, "API-IRR-10").map((row) => row.path)).toEqual([
+    "/api/v1/irrigation/minutes?from=2026-10-27&to=2026-11-02&group_by=line", "/api/v1/irrigation/minutes?from=2026-10-20&to=2026-10-26&group_by=line",
+  ]);
+  expect([...document.querySelectorAll(".wat-kpis .metric-label")].map((node) => text(node))).toEqual(["Watering", "Gallons", "Runs", "Missed, short or cap"]);
+  expect(text(document.querySelector('[data-kpi="runs"] .metric-value'))).toBe("8");
+  expect(text(document.querySelector('[data-kpi="shortfall"] .metric-value'))).toBe("none");
+  expect(text(document.querySelector('[data-kpi="watering"] .delta'))).toMatch(/vs previous 7 d$/);
+  expect(status()).toMatch(/^Last 7 days: \d+ min watering · \d+ gal · 8 runs$/);
   expect([...document.querySelectorAll(".minutes-row")].map((row) => row.getAttribute("data-row"))).toEqual(["wall", "center", "south", "west", "fog"]);
-  const rows = created.filter((plot) => plot.target.className.includes("plot-bars"));
-  expect(rows).toHaveLength(5);
   // 10/30 (index 3) has no data: every stacked series is null there, in every row.
-  for (const plot of rows) for (const values of plot.data.slice(1)) expect((values as (number | null)[])[3]).toBeNull();
+  for (const plot of created.filter((item) => item.target.className.includes("plot-bars"))) for (const values of plot.data.slice(1)) expect((values as (number | null)[])[3]).toBeNull();
   expect([...document.querySelectorAll(".minutes-today")].map((cell) => text(cell))).toEqual([
     "today 0 min (partial) · cap 60", "today 14 min (partial) · cap 120", "today 0 min (partial) · cap 45", "today 0 min (partial) · cap 45", "today 6 min (partial)",
   ]);
   expect(text(document.querySelector(".chart-key"))).toContain("no data");
 });
 
-test("Group by line and cause cut the same line report into rows; the choice and the range live in the URL", async () => {
-  const api = open("/water/history?group=line&days=30", {});
+test("90 d and 365 d read up to 400 days of minutes and say the ledger is counted over 31 days at most; daily water use states the window it serves", async () => {
+  const api = open("/water/history?range=365d&measure=gal&group=line");
   await load();
-  expect(requests(api, "API-IRR-10").map((row) => row.path)).toEqual(["/api/v1/irrigation/minutes?from=2026-10-04&to=2026-11-02&group_by=line"]);
-  expect([...document.querySelectorAll(".minutes-label")].map((label) => text(label))).toEqual(["L01 Drip • Wall", "L04 Mister • Center", "L11 Fog humidification"]);
-  const days = within(screen.getByRole("list", { name: "Days" }));
-  expect(days.getByRole("link", { name: "30 d" }).getAttribute("aria-current")).toBe("true");
-  expect(days.getByRole("link", { name: "7 d" }).getAttribute("href")).toBe("/water/history?group=line");
-  fireEvent.click(within(screen.getByRole("list", { name: "Group by" })).getByRole("link", { name: "cause" }));
+  expect(requests(api, "API-IRR-10").map((row) => row.path)).toEqual([
+    "/api/v1/irrigation/minutes?from=2025-11-03&to=2026-11-02&group_by=line", "/api/v1/irrigation/minutes?from=2024-11-03&to=2025-11-02&group_by=line",
+  ]);
+  expect(requests(api, "API-21").map((row) => row.path)).toEqual(["/api/v1/water/daily?days=90"]);
+  expect(text(document.querySelector('[data-kpi="runs"]'))).toContain("Counted over 31 days at most");
+  expect(text(screen.getByRole("region", { name: "Daily water use" }).querySelector(".section-header .meta"))).toBe("gallons · last 90 days, the longest this chart serves");
+  expect(text(document.querySelector(".chart-minutes figcaption"))).toBe("Gallons per day by line");
+  expect(within(screen.getByRole("list", { name: "Period" })).getByRole("link", { name: "365 d" }).getAttribute("aria-current")).toBe("page");
+  fireEvent.change(screen.getByLabelText("Measure"), { target: { value: "min" } });
   await load();
-  expect([...document.querySelectorAll(".minutes-label")].map((label) => text(label))).toEqual(["VPD", "Schedule", "Fog humidification"]);
-  // One read serves every grouping: the report stays by line.
-  expect(new Set(requests(api, "API-IRR-10").map((row) => new URL(row.path, "http://x").searchParams.get("group_by")))).toEqual(new Set(["line"]));
+  expect(where()).toBe("/water/history?range=365d&group=line");
+  cleanup(); stopFixtureApi();
+  open("/water/history");
+  await load();
+  expect(text(screen.getByRole("region", { name: "Daily water use" }).querySelector(".section-header .meta"))).toBe("gallons · last 30 days, the shortest this chart serves");
 });
 
-test("daily water use: 30 days by line by default, the chips in the URL, and the no-valve bar apart from each day's stack", async () => {
+test("daily water use: 30 days by line, the no-valve bar apart, split by cause in the URL; a failed read says so in its own panel", async () => {
   const api = open("/water/history", { fixture: "water-use-90d" });
   await load();
   expect(requests(api, "API-21").map((row) => row.path)).toEqual(["/api/v1/water/daily?days=30"]);
   const section = screen.getByRole("region", { name: "Daily water use" });
-  const days = within(section).getByRole("list", { name: "Water use days" });
-  const split = within(section).getByRole("list", { name: "Split water use by" });
-  expect(within(days).getByRole("link", { name: "30 d" }).getAttribute("aria-current")).toBe("true");
-  expect(within(split).getByRole("link", { name: "line" }).getAttribute("aria-current")).toBe("true");
   expect(text(section.querySelector("figcaption"))).toBe("Gallons per day by line · last 30 days");
   const plot = created.find((item) => item.target.className.includes("plot-water-use"))!;
-  // The base's no-data day nine days back is null in every series, 0 gal four days back stays 0, and the no-valve series is last.
   const at = (ago: number) => plot.data.slice(1).map((values) => (values as (number | null)[])[29 - ago]);
   expect(at(9).every((value) => value === null)).toBe(true);
   expect(at(4).every((value) => value === 0)).toBe(true);
   expect(at(6).at(-1)).toBe(14);
-  expect(plot.opts.series.at(-1)?.label).toBe("No Verdify valve open: hose, sink, hydro or a leak");
-  fireEvent.click(within(days).getByRole("link", { name: "90 d" }));
+  fireEvent.click(within(within(section).getByRole("list", { name: "Split water use by" })).getByRole("link", { name: "cause" }));
   await load();
-  expect(requests(api, "API-21").at(-1)?.path).toBe("/api/v1/water/daily?days=90");
-  fireEvent.click(within(split).getByRole("link", { name: "cause" }));
+  expect(text(section.querySelector("figcaption"))).toBe("Gallons per day by cause · last 30 days");
+  expect(requests(api, "API-21")).toHaveLength(1);
+  cleanup(); stopFixtureApi();
+  open("/water/history", { fail: { "API-21": 503 } });
   await load();
-  expect(text(section.querySelector("figcaption"))).toBe("Gallons per day by cause · last 90 days");
-  expect(within(screen.getByRole("list", { name: "Water use days" })).getByRole("link", { name: "30 d" }).getAttribute("href")).toBe("/water/history?water_use_by=cause");
-  expect(within(screen.getByRole("list", { name: "Split water use by" })).getByRole("link", { name: "line" }).getAttribute("href")).toBe("/water/history?water_use=90d");
-  // The split needs no new read, and the minutes' own controls stay where they were.
-  expect(requests(api, "API-21")).toHaveLength(2);
-  expect(within(screen.getByRole("list", { name: "Days" })).getByRole("link", { name: "7 d" }).getAttribute("aria-current")).toBe("true");
-});
-
-test("daily water use reads the URL it is linked with, and a failed read says so in its own panel with Retry", async () => {
-  const api = open("/water/history?water_use=90d&water_use_by=cause", { fail: { "API-21": 503 } });
-  await load();
-  expect(requests(api, "API-21").map((row) => row.path)).toEqual(["/api/v1/water/daily?days=90"]);
-  const section = screen.getByRole("region", { name: "Daily water use" });
-  expect(text(section.querySelector(".panel-error .fault"))).toBe("Couldn't load daily water use.");
-  expect(section.querySelector("figure")).toBeNull();
-  // The other panels keep working.
+  expect(text(screen.getByRole("region", { name: "Daily water use" }).querySelector(".panel-error .fault"))).toBe("Couldn't load daily water use.");
   expect(document.querySelectorAll(".minutes-row")).toHaveLength(5);
-  api.respond({ method: "POST", url: "/__control", body: { fixture: "water-use-90d" } });
-  fireEvent.click(within(section).getByRole("button", { name: "Retry" }));
-  await load();
-  await advance(1);
-  expect(section.querySelector(".panel-error")).toBeNull();
-  expect(text(section.querySelector("figcaption"))).toBe("Gallons per day by cause · last 90 days");
 });
 
-test("the run ledger: whole gallons (0 gal for no water, — with no meter data), no rate or flow flag, each run linked to its Graphs window", async () => {
+test("the run ledger: whole gallons (0 gal for no water, — with no meter data), no rate or flow flag, each run linked to its Graphs window, and CSV", async () => {
   const api = open("/water/history", { fixture: "runs-zero-and-unknown" });
   await load();
-  expect(requests(api, "API-IRR-11").map((row) => row.path)).toEqual(["/api/v1/irrigation/runs?from=2026-10-27T06%3A00%3A00.000Z&to=2026-11-03T07%3A00%3A00.000Z"]);
+  expect(requests(api, "API-IRR-11").map((row) => row.path)).toContain("/api/v1/irrigation/runs?from=2026-10-27T06%3A00%3A00.000Z&to=2026-11-03T07%3A00%3A00.000Z");
   const table = screen.getByRole("table", { name: /Runs, newest first/ });
   const rows = [...table.querySelectorAll("tbody tr")];
   const served = fixture("runs-zero-and-unknown", { now: NOW })["API-IRR-11"] as RunPage;
   expect(rows).toHaveLength(served.items.length);
   const cells = (index: number) => [...rows[index].children].map((cell) => text(cell));
   const zero = served.items.findIndex((run) => run.run_id === "run-l01-zero");
-  expect(cells(zero).slice(1)).toEqual(["L01 Drip • Wall · Wall", "Clean", "schedule", "Wall MWF", "controller", "12 min", "0 gal", "ok", "Graphs around this run ›"]);
+  expect(cells(zero).slice(1)).toEqual(["L01 Wall drip · Wall", "Clean", "schedule", "Wall MWF", "controller", "12 min", "0 gal", "ok", "Graphs around this run ›"]);
   const unknown = served.items.findIndex((run) => run.run_id === "run-l04-unknown");
   expect(cells(unknown).slice(5, 9)).toEqual(["controller", "0 min", "— no meter data", "no outcome received · no outcome reached the platform"]);
   const byJason = served.items.findIndex((run) => run.run_id === "run-l01-3");
-  expect(cells(byJason)[5]).toBe("jason");
   expect(rows[byJason].querySelector("a")!.getAttribute("href")).toBe(runGraphUrl(served.items[byJason]));
   expect(text(table)).not.toMatch(/gal\/min|flow/i);
+  // The same runs stack on phones; CSV of what is loaded.
+  expect(document.querySelectorAll(".wat-runs-list > li")).toHaveLength(served.items.length);
+  // jsdom has no Blob URLs, so the link has no target here; its file name is set.
+  expect(screen.getByText("CSV of these runs").getAttribute("download")).toBe("verdify-runs-2026-10-27-2026-11-02.csv");
 });
 
-test("ledger filters live in the URL and narrow the read; Load older passes the cursor and adds the older page", async () => {
-  // The fixture's week fits one page: a next_cursor on the first page stands in for a longer ledger.
-  const api = open("/water/history", {}, (base) => async (input, init) => {
+test("ledger filters apply on change and live in the URL; Load older passes the cursor, then steps back 31 days inside the period", async () => {
+  const api = open("/water/history?range=90d", {}, (base) => async (input, init) => {
     const response = await base(input, init);
-    if (!input.startsWith("/api/v1/irrigation/runs") || input.includes("cursor=")) return response;
+    if (!input.startsWith("/api/v1/irrigation/runs") || input.includes("cursor=") || input.includes("limit=")) return response;
     const page = await response.json() as RunPage;
     return { ...response, json: async () => ({ ...page, items: page.items.slice(0, 3), next_cursor: "3" }) } as Response;
   });
@@ -311,101 +567,81 @@ test("ledger filters live in the URL and narrow the read; Load older passes the 
   await load();
   expect(requests(api, "API-IRR-11").map((row) => row.path).at(-1)).toContain("cursor=3");
   expect(table().querySelectorAll("tbody tr")).toHaveLength(8);
+  fireEvent.click(screen.getByRole("button", { name: "Load older" }));
+  await load();
+  // The window before: the 31 days before it, inside the 90 days (the first held the fall-back, so it kept 30).
+  expect(requests(api, "API-IRR-11").map((row) => row.path).at(-1)).toBe("/api/v1/irrigation/runs?from=2026-09-03T06%3A00%3A00.000Z&to=2026-10-04T06%3A00%3A00.000Z");
   fireEvent.change(screen.getByLabelText("Line"), { target: { value: "L01" } });
   await load();
   expect(requests(api, "API-IRR-11").map((row) => row.path).at(-1)).toContain("line=L01");
-  expect([...table().querySelectorAll("tbody tr")].map((row) => text(row.children[1]).slice(0, 3))).toEqual(["L01"]);
+  expect(where()).toBe("/water/history?range=90d&line=L01");
 });
 
 // ---------------------------------------------------------------------------------------------------- a line's controls (#1136)
-const CARDS = ["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11"];
-/** A card's controls in order. ON or OFF is its enable switch and Options comes after Stop (#1182), as SCR-04 draws them. */
-const controls = (id: string) => [...card(id).querySelectorAll("[data-write-control]")].map((node) => text(node));
-const everyCard = () => Object.fromEntries(CARDS.map((id) => [id, controls(id)]));
-const zoneCard = (id: string) => document.querySelector<HTMLElement>(`.mister-zone[data-line="${id}"]`)!;
+const LINE_IDS = ["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11"];
+/** A row's buttons outside its ⋯ menu: the primary action and its Stop. */
+const buttons = (id: string) => [...row(id).querySelectorAll(":scope > .object-row-actions > button")].map((node) => text(node));
+const everyRow = () => Object.fromEntries(LINE_IDS.map((id) => [id, buttons(id)]));
 
-test("each card's controls with the irrigation firmware: Run… on an enabled line, Mist now… with Schedule on, Stop on every card but fog", async () => {
+test("each row's actions with the irrigation firmware: Run… on an enabled line, Mist now… with Schedule on, a quiet Stop on every row but fog", async () => {
   open("/water", { fixture: "run-dialogs" });
   await load();
-  expect(everyCard()).toEqual({
-    L01: ["ON", "Run… L01", "Stop L01", "Options of L01"], L02: ["ON", "Run… L02", "Stop L02", "Options of L02"], L04: ["ON", "Mist now… L04", "Stop L04", "Options of L04"],
-    L05: ["OFF", "Stop L05", "Options of L05"], L06: ["OFF", "Stop L06", "Options of L06"], L07: ["ON", "Stop L07", "Options of L07"],
-    L08: ["ON", "Run… L08", "Stop L08", "Options of L08"], L09: ["ON", "Stop L09", "Options of L09"], L10: ["OFF", "Stop L10", "Options of L10"], L11: [],
+  expect(everyRow()).toEqual({
+    L01: ["Run… L01", "Stop L01"], L02: ["Run… L02", "Stop L02"], L04: ["Mist now… L04", "Stop L04"], L05: ["Stop L05"], L06: ["Stop L06"], L07: ["Stop L07"],
+    L08: ["Run… L08", "Stop L08"], L09: ["Stop L09"], L10: ["Stop L10"], L11: [],
   });
-  expect(card("L01").querySelector(".btn-stop")).not.toBeNull();
+  expect(document.querySelectorAll("article[data-line] .btn-stop")).toHaveLength(0);
   expect(screen.getByRole("button", { name: "Run… L01" }).className).toContain("btn-wide");
-  expect(document.querySelector("[data-arrives]")).toBeNull();
 });
 
-test("before the irrigation firmware every card but fog has Stop, only L01 has Run…, and the rest say when they arrive", async () => {
+test("before the irrigation firmware every row but fog has Stop, only L01 has Run…, and ⋯ says when the rest arrive", async () => {
   const api = open("/water", { fixture: "before-engine" });
   await load();
-  expect(everyCard()).toEqual({
-    L01: ["ON", "Run… L01", "Stop L01", "Options of L01"], L02: ["OFF", "Stop L02", "Options of L02"], L04: ["ON", "Stop L04", "Options of L04"],
-    L05: ["OFF", "Stop L05", "Options of L05"], L06: ["OFF", "Stop L06", "Options of L06"], L07: ["ON", "Stop L07", "Options of L07"],
-    L08: ["OFF", "Stop L08", "Options of L08"], L09: ["ON", "Stop L09", "Options of L09"], L10: ["OFF", "Stop L10", "Options of L10"], L11: [],
+  expect(everyRow()).toEqual({
+    L01: ["Run… L01", "Stop L01"], L02: ["Stop L02"], L04: ["Stop L04"], L05: ["Stop L05"], L06: ["Stop L06"], L07: ["Stop L07"], L08: ["Stop L08"], L09: ["Stop L09"], L10: ["Stop L10"], L11: [],
   });
-  for (const id of ["L02", "L05", "L06", "L08", "L10"]) expect(text(card(id).querySelector("[data-arrives=run]")), id).toBe("Run arrives with the irrigation firmware");
-  expect(card("L01").querySelector("[data-arrives=run]")).toBeNull();
-  expect(card("L11").querySelector("[data-arrives]")).toBeNull();
-  for (const id of ["L04", "L07", "L09"]) {
-    expect(text(card(id).querySelector("[data-arrives=clear-fault]")), id).toBe("Clear fault arrives with the irrigation firmware");
-    expect(text(zoneCard(id).querySelector("[data-arrives=clear-fault]")), id).toBe("Clear fault arrives with the irrigation firmware");
-  }
-  // L01's dialog names its setting, and a Stop on any line gives the toast with no Disable.
+  for (const id of ["L02", "L05", "L06", "L08", "L10"]) expect(text(row(id).querySelector(".menu [data-arrives=run]")), id).toBe("Run arrives with the irrigation firmware");
+  for (const id of ["L04", "L07", "L09"]) expect(text(row(id).querySelector(".menu [data-arrives=clear-fault]")), id).toBe("Clear fault arrives with the irrigation firmware");
   fireEvent.click(screen.getByRole("button", { name: "Run… L01" }));
   await advance(1);
   expect(text(document.querySelector("dialog .dialog-note"))).toBe("Runs for the Wall drip duration (irrig_wall_duration_min): 12 min");
   fireEvent.click(within(document.querySelector("dialog")!).getByRole("button", { name: "Cancel" }));
   fireEvent.click(screen.getByRole("button", { name: "Stop L07" }));
   await advance(0);
-  expect(writes(api).map((row) => [row.operationId, row.body])).toEqual([["API-IRR-07", { line_id: "L07" }]]);
+  expect(writes(api).map((item) => [item.operationId, item.body])).toEqual([["API-IRR-07", { line_id: "L07" }]]);
   await advance(5000);
   await advance(1);
   expect(toasts("status")).toEqual(["Stopped every running valve. VPD misting and fog can still start on their own."]);
-  expect(screen.queryByRole("button", { name: /^Disable/ })).toBeNull();
 });
 
-test("Stop on a running card: one API-IRR-07 {line_id: L01} with no dialog, the relay edge turns the card off, and the toast offers Disable for it", async () => {
+test("Stop on a running row is filled and is its primary: one API-IRR-07 {line_id: L01} with no dialog, the relay edge turns the row off, and the toast offers Disable", async () => {
   const api = open("/water", { fixture: "l01-running" });
   await load();
-  expect(card("L01").getAttribute("data-state")).toBe("running");
+  expect(row("L01").getAttribute("data-state")).toBe("running");
+  expect(buttons("L01")).toEqual(["Stop L01"]);
+  expect(row("L01").querySelector(".btn-stop")).not.toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Stop L01" }));
   expect(document.querySelector("dialog")).toBeNull();
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ method: "POST", operationId: "API-IRR-07", body: { line_id: "L01" } })]);
   await advance(5000);
   await advance(1);
-  expect(card("L01").getAttribute("data-state")).toBe("idle");
+  expect(row("L01").getAttribute("data-state")).toBe("idle");
+  expect(row("L01").querySelector(".btn-stop")).toBeNull();
   expect(toasts("status")).toEqual([STOPPED]);
   expect(screen.getByRole("button", { name: "Disable L01" })).toBeTruthy();
-  expect(writes(api)).toHaveLength(1);
 });
 
-test("before the irrigation firmware the relay edge turns a running card's relay off too", async () => {
-  open("/water", { fixture: ["l01-running", "before-engine"] });
-  await load();
-  expect(cardText("L01", ".line-state")).toMatch(/^Relay On since /);
-  fireEvent.click(screen.getByRole("button", { name: "Stop L01" }));
-  await advance(0);
-  await advance(5000);
-  await advance(1);
-  expect(cardText("L01", ".line-state")).toMatch(/^Relay Off since /);
-});
-
-test("a latched mister has Clear fault on its card and its zone: one API-IRR-13, and the latch reads gone", async () => {
+test("a latched mister's row has Clear fault as its primary: one API-IRR-13, and the latch reads gone", async () => {
   const api = open("/water", { fixture: "mister-fault" });
   await load();
-  expect(controls("L04")).toEqual(["ON", "Stop L04", "Options of L04", "Clear fault on L04"]);
-  // The zone's VPD control and Schedule switches (#1182), then its Clear fault.
-  expect([...zoneCard("L04").querySelectorAll("[data-write-control]")].map((node) => text(node))).toEqual(["ON", "OFF", "Clear fault on L04"]);
-  expect(zoneCard("L07").querySelector(".actions button")).toBeNull();
-  fireEvent.click(within(zoneCard("L04")).getByRole("button", { name: "Clear fault on L04" }));
+  expect(buttons("L04")).toEqual(["Clear fault on L04", "Stop L04"]);
+  fireEvent.click(within(row("L04")).getByRole("button", { name: "Clear fault on L04" }));
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-13", body: { line_id: "L04" } })]);
   await advance(5000);
   await advance(1);
-  expect(card("L04").querySelector(".line-fault")).toBeNull();
+  expect(row("L04").querySelector(".line-fault")).toBeNull();
   expect(screen.queryByRole("button", { name: /^Clear fault/ })).toBeNull();
 });
 
@@ -421,42 +657,19 @@ test("a failed status read says so behind the open Run dialog and leaves what wa
   api.respond({ method: "POST", url: "/__control", body: { fixture: "run-dialogs", fail: { "API-IRR-01": 503 } } });
   await advance(15_000);
   await advance(5);
-  expect(document.querySelector(".line-card")).toBeNull();
+  expect(document.querySelector("article[data-line]")).toBeNull();
   expect(text(document.body)).toContain("Water status unavailable");
   expect(duration().value).toBe("7");
-  expect((within(dialog()).getByLabelText(/^Reason/) as HTMLInputElement).value).toBe("Dry bench");
   fireEvent.click(within(dialog()).getByRole("button", { name: "Run 7 min" }));
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-06", path: "/api/v1/irrigation/lines/L01/run", body: { minutes: 7, reason: "Dry bench" } })]);
-  expect(document.querySelector("dialog")).toBeNull();
-});
-
-test("?run= opens the dialog from a link; a line that offers no Run…, and a viewer, get none; closing leaves the rest of the URL", async () => {
-  open("/water?run=L01", { fixture: "run-dialogs" });
-  await load();
-  expect(text(document.querySelector("dialog h2"))).toBe("Run L01 Wall drip (clean) for 10 min?");
-  fireEvent.click(within(document.querySelector("dialog")!).getByRole("button", { name: "Cancel" }));
-  await advance(1);
-  expect(document.querySelector("dialog")).toBeNull();
-  cleanup();
-  stopFixtureApi();
-  open("/water?run=L05", { fixture: "run-dialogs" });
-  await load();
-  expect(document.querySelector("dialog")).toBeNull();
-  expect(document.querySelector(".line-card")).not.toBeNull();
-  cleanup();
-  stopFixtureApi();
-  open("/water?run=L01", { fixture: ["run-dialogs", "viewer-session"] });
-  await load();
-  expect(document.querySelector("dialog")).toBeNull();
 });
 
 test("with changes switched off Run… and Clear fault are disabled and Stop stays live; a viewer sees none of them, and no words about them", async () => {
   open("/water", { fixture: ["run-dialogs", "mister-fault", "writes-off"] });
   await load();
-  const disabled = (name: string) => screen.getAllByRole("button", { name }).every((button) => button.hasAttribute("disabled"));
-  for (const name of ["Run… L01", "Run… L02", "Mist now… L04", "Clear fault on L04"]) expect(disabled(name), name).toBe(true);
-  for (const id of CARDS.slice(0, -1)) expect(screen.getByRole("button", { name: `Stop ${id}` }).hasAttribute("disabled"), id).toBe(false);
+  for (const name of ["Run… L01", "Run… L02", "Clear fault on L04"]) expect(screen.getByRole("button", { name }).hasAttribute("disabled"), name).toBe(true);
+  for (const id of LINE_IDS.slice(0, -1)) expect(screen.getByRole("button", { name: `Stop ${id}` }).hasAttribute("disabled"), id).toBe(false);
   cleanup(); stopFixtureApi();
   open("/water", { fixture: ["run-dialogs", "mister-fault", "l01-running", "viewer-session"] });
   await load();
@@ -471,11 +684,15 @@ test("with changes switched off Run… and Clear fault are disabled and Stop sta
 test.each(VIEWS)("an operator's Stop all water on %s sends one API-IRR-07 with no dialog, then the Stop result with Disable for L01", async (path) => {
   const api = open(path, { fixture: "l01-running" });
   await load();
-  const button = stopAll()!;
-  expect(button.closest(".water-bar")).not.toBeNull();
+  // The header's, last of its actions (from 861 px), and the sticky tabs row's (860 px and below), the only two.
+  expect(stopAlls()).toEqual([headerStop(), tabsStop()]);
+  expect(headerStop()!.closest(".page-actions")!.lastElementChild).toBe(headerStop());
+  const button = headerStop()!;
   fireEvent.click(button);
-  expect(text(button)).toBe("Sending…");
+  // They share one Stop: both read Sending…, and a tap on either is no second request.
+  expect([text(button), text(tabsStop())]).toEqual(["Sending…", "Sending…"]);
   fireEvent.click(button);
+  fireEvent.click(tabsStop()!);
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ method: "POST", operationId: "API-IRR-07", body: {} })]);
   expect(writes(api)[0].idempotency_key).toMatch(UUID);
@@ -491,29 +708,53 @@ test.each([
 ])("Stop all water stays enabled and sends one API-IRR-07 under %s", async (name, result) => {
   const api = open("/water", { fixture: name });
   await load();
-  expect(stopAll()!.hasAttribute("disabled")).toBe(false);
-  fireEvent.click(stopAll()!);
+  expect(stopAlls()).toHaveLength(2);
+  for (const button of stopAlls()) expect(button.hasAttribute("disabled")).toBe(false);
+  fireEvent.click(tabsStop()!);
   await advance(5000);
   expect(requests(api, "API-IRR-07")).toHaveLength(1);
   expect(toasts("status")).toEqual([result]);
 });
 
-test("a viewer sees no Stop on any Water view; at phone width Stop reads \"■ Stop all\" in the sticky row with the tabs", async () => {
+test("a viewer sees no Stop or header action on any Water view; at phone width Stop reads \"■ Stop all\" in the sticky row with the tabs", async () => {
   for (const path of VIEWS) {
     open(path, { fixture: "viewer-session" });
     await load();
-    expect(stopAll(), path).toBeNull();
+    expect(stopAlls(), path).toEqual([]);
     expect(document.querySelectorAll("[data-write-control]"), path).toHaveLength(0);
+    expect(document.querySelector(".page-actions"), path).toBeNull();
     cleanup(); stopFixtureApi();
   }
   open("/water");
   await load();
-  const button = stopAll()!;
-  expect(button.className).toBe("btn btn-stop stop-all");
-  expect(text(button)).toBe("■ Stop all water");
-  expect(text(button.querySelector(".stop-all-rest"))).toBe("water");
-  const css = readFileSync(join(process.cwd(), "app/styles.css"), "utf8");
-  const phone = css.slice(css.indexOf("@media(max-width:860px){\n  .water-bar"));
-  expect(phone).toMatch(/^@media\(max-width:860px\)\{\n {2}\.water-bar\{position:sticky;/);
-  expect(phone).toContain(".stop-all-rest{display:none}");
+  const button = tabsStop()!;
+  expect(button.className).toBe("btn btn-stop stop-all-water stop-all-water-compact");
+  expect(text(button)).toBe("Stop all water");
+  expect(button.querySelector(".glyph-stop[aria-hidden=true]")).not.toBeNull();
+  expect(headerStop()!.className).toBe("btn btn-stop stop-all-water");
+  const css = readFileSync(join(process.cwd(), "app/styles/primitives.css"), "utf8");
+  const phone = css.slice(css.lastIndexOf("@media(max-width:860px){"));
+  expect(phone).toMatch(/\.page-tabs-sticky\{position:sticky;/);
+  expect(phone).toContain(".stop-all-water-compact .stop-all-water-word{display:none}");
+  // Water's stylesheet shows one of the two: the header's from 861 px, the tabs row's at 860 px and below.
+  const water = readFileSync(join(process.cwd(), "app/styles/water.css"), "utf8");
+  expect(water).toContain("@media(min-width:861px){.water-page .page-tabs-end .stop-all-water{display:none}}");
+  expect(water).toContain(".water-page .page-actions .stop-all-water,.water-page .page-actions:has(>.stop-all-water:only-child){display:none}");
+});
+
+test("the header's actions: Pause lines… on Today, + New schedule on Schedules (keeping the day), then Stop all water last on every view", async () => {
+  for (const [path, names] of [["/water", ["Pause lines…", "Stop all water"]], ["/water/schedules?day=2026-11-04", ["+ New schedule", "Stop all water"]], ["/water/history", ["Stop all water"]]] as const) {
+    open(path);
+    await load();
+    expect([...(document.querySelector(".page-actions")?.querySelectorAll("a, button") ?? [])].map((node) => text(node)), path).toEqual(names);
+    cleanup(); stopFixtureApi();
+  }
+  // + New schedule is an outline: Stop all water is the one filled button in the header.
+  open("/water/schedules");
+  await load();
+  expect(screen.getByRole("link", { name: "+ New schedule" }).className).toBe("button-link");
+  cleanup(); stopFixtureApi();
+  open("/water/schedules?day=2026-11-04&view=week");
+  await load();
+  expect(screen.getByRole("link", { name: "+ New schedule" }).getAttribute("href")).toBe("/water/schedules?day=2026-11-04&view=week&schedule=new");
 });

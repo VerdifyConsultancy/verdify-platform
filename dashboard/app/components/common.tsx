@@ -1,11 +1,5 @@
 // SPDX-License-Identifier: MIT
-import type { ReactNode } from "react";
 import { localTime, shortDateTime, shortTime } from "../lib/format";
-
-/** The page heading block: eyebrow, title, a short lede and the page's own actions. */
-export function PageHead({ eyebrow, title, lede, children }: { eyebrow: string; title: ReactNode; lede?: ReactNode; children?: ReactNode }) {
-  return <div className="page-head"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1>{lede && <p className="lede">{lede}</p>}</div>{children}</div>;
-}
 
 /**
  * An instant as a 24-hour America/Denver clock time ("06:02", or "Oct 27, 06:02" with `date`), with the full local

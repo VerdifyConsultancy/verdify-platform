@@ -27,3 +27,14 @@ test("toggle chips are buttons with aria-pressed", () => {
   fireEvent.click(rh);
   expect(onToggle).toHaveBeenCalledTimes(1);
 });
+
+test("nav chips (tabs, ranges) mark the current one aria-current=page; filter chips keep true (redesign §8)", () => {
+  const items = [{ key: "today", label: "Today", to: "/water", current: true }, { key: "history", label: "History", to: "/water/history" }];
+  renderUi(<nav aria-label="Water views"><Chips kind="nav" items={items} /></nav>);
+  expect(screen.getByRole("link", { name: "Today" }).getAttribute("aria-current")).toBe("page");
+  expect(screen.getByRole("link", { name: "History" }).hasAttribute("aria-current")).toBe(false);
+  expect(screen.getByRole("list").hasAttribute("aria-label")).toBe(false);
+  cleanup();
+  renderUi(<Chips kind="filter" label="Show" items={items} />);
+  expect(screen.getByRole("link", { name: "Today" }).getAttribute("aria-current")).toBe("true");
+});

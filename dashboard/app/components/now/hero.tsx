@@ -1,36 +1,47 @@
 // SPDX-License-Identifier: MIT
 /**
- * Now's ink hero (screens SCR-01), on #1123's `Hero`: the one-sentence answer as the page's heading (`now-answer.ts`),
- * indoor temperature as the hero value with VPD and RH beside it, each with its verdict against the band in force, the
- * band sub-line ("band in force 62.0–70.0 °F · DERIVED · 4 min"), "Updated N s ago", the eight tiles and the "All
- * readings" disclosure with the raw mode code, stage and reason and every source's time. Rows 1 to 3 and 7 of the
- * answer hide every verdict and mute the values with STALE; a null reading is "—" with its reason.
+ * Now's ink hero (redesign §5.1, §4.2 "Status hero"): the one-sentence answer as the page's heading (`now-answer.ts`), the
+ * indoor temperature as the hero value with "Updated N s ago" (`#data`, which opens "All readings" in place), three band
+ * bars (temperature, VPD and RH against the band in force, each with today's low and high, a verdict word only when out
+ * of band), time in band today against yesterday, the status line (mode, Iris and the plan in force, outdoor, occupancy),
+ * and the "All readings" disclosure with every source's time and the raw mode code.
+ *
+ * Honesty: rows 1 to 3 and 7 of the answer mute the values with STALE and show no verdict, and rows 1 to 3 read the mode
+ * as unknown (row 7 as it was last said, with no verdict: "Last mode: holding (10:28)"). Muted, the band group says when
+ * its numbers were read ("As of 10:28") and its bands read neutral, so a grey dot inside a green band never reads as live.
+ * While the dashboard API is down the band bars and "In band today" do not render at all. A null reading is "—" with its
+ * reason, never 0, and a bar with no value is hatched (hatching is for unknown alone).
  */
-import { useId, type ReactNode } from "react";
-import { Link } from "react-router";
-import { duration, formatValue } from "../../lib/format";
+import { useEffect, useId, useRef, type MouseEvent, type ReactNode } from "react";
+import { Link, useLocation } from "react-router";
+import { duration, formatValue, localDate } from "../../lib/format";
 import { LOADING_TEXT, type NowAnswer } from "../../lib/now-answer";
-import type { Freshness, IrrigationStatus, Now, Reading } from "../../lib/operator-api";
+import type { Freshness, IrrigationStatus, Now, Reading, Series } from "../../lib/operator-api";
 import type { PanelRead } from "../../lib/queries";
 import { useApiDown } from "../../lib/session";
 import { words } from "../../lib/words";
+import { Badge } from "../badge";
 import { Button } from "../button";
-import { LocalTime } from "../common";
-import { useNow } from "../freshness";
-import { Hero } from "../hero";
+import { LocalTime, cls } from "../common";
+import { BandBar } from "../data/band-bar";
+import { AgeLabel, FreshnessDot, useNow } from "../freshness";
 import { Kv, type KvItem } from "../kv";
-import { bandText, nowTiles } from "./tiles";
+import { bandRows, bandWords, hasTimeInBand, outOfBand, percentText, readingText, readingsAsOf, timeInBand, todayStartS, type BandRow, type TimeInBand } from "./climate";
+import { deviceUnknown, irisText, irisWarns, modeText, occupancyText, planLine } from "./status";
 
-/** The time zone is stated once, here (design system §5.4). */
-export const NOW_EYEBROW = "Greenhouse · Longmont · America/Denver";
+/** The eyebrow: the time zone is stated once, in the footer and on axes (D-UX-08). */
+export const NOW_EYEBROW = "Greenhouse · Longmont";
 const NO_ANSWER = "No answer from the greenhouse data";
 const ONE_DP = new Intl.NumberFormat("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const finite = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value);
 const validTime = (value: string | null | undefined): value is string => typeof value === "string" && Number.isFinite(Date.parse(value));
+/** The hashes that open "All readings": `#data` (the ingestor banner, the answer's row 2) and `#readings`. */
+const READINGS_HASHES = new Set(["#data", "#readings"]);
+export const READINGS_ID = "readings";
 
 /**
- * The answer, linked to the page that explains it. Row 2's `#data` is the Data tile on this page: a router link, so the
- * router sees the hash (it scrolls there, and Now opens "All readings" for it on a phone).
+ * The answer, linked to the page that explains it. Row 2's `#data` is the freshness link on this page: a router link, so
+ * the router sees the hash and Now opens "All readings" for it.
  */
 export function AnswerTitle({ answer }: { answer: NowAnswer }) {
   if (!answer.link) return <>{answer.text}</>;
@@ -49,20 +60,6 @@ export function bandLine(band: Now["band"], clock: number): string {
   return `band in force ${ONE_DP.format(low)}–${formatValue(high, "°F")} · DERIVED${age}`;
 }
 
-/** A reading and its verdict, for the line beside the hero value: "VPD 0.62 kPa · in band". */
-function besideText(label: string, reading: Reading, unit: string, verdict: string | null): string {
-  if (!finite(reading.value)) return `${label} — (${reading.reason || "No reading"})`;
-  return `${label} ${formatValue(reading.value, unit)}${verdict ? ` · ${verdict}` : ""}`;
-}
-function Beside({ now, verdicts }: { now: Now; verdicts: boolean }) {
-  const rhBand = now.band.rh_pct;
-  const rhNote = rhBand ? (verdicts ? words("band_verdict", rhBand.verdict) : null) : "no RH band";
-  return <>
-    <span>{besideText("VPD", now.indoor.vpd_kpa, "kPa", verdicts ? words("band_verdict", now.band.vpd_kpa.verdict) : null)}</span>
-    <span>{besideText("RH", now.indoor.rh_pct, "%", rhNote)}</span>
-  </>;
-}
-
 function at(value: string | null | undefined): ReactNode {
   return validTime(value) ? <> at <LocalTime at={value} /></> : null;
 }
@@ -76,8 +73,8 @@ function sourceItem(term: string, source: Freshness): KvItem {
   return { key: term, term, value, reason: "never seen" };
 }
 
-/** Every reading with its source and time, and the mode as the controller reports it (code, stage and reason, raw). */
-function AllReadings({ now }: { now: Now }) {
+/** Every reading with its source and time, the band in force, and the mode as the controller reports it (raw). */
+function AllReadings({ now, clock }: { now: Now; clock: number }) {
   const { band, mode, freshness, writer } = now;
   const items: KvItem[] = [
     readingItem("Indoor temperature", now.indoor.temp_f, "°F"),
@@ -85,10 +82,7 @@ function AllReadings({ now }: { now: Now }) {
     readingItem("Indoor RH", now.indoor.rh_pct, "%"),
     readingItem("Outdoor temperature (Tempest, through the controller)", now.outdoor.temp_f, "°F"),
     readingItem("Outdoor RH (Tempest, through the controller)", now.outdoor.rh_pct, "%"),
-    {
-      key: "band", term: "Band in force (DERIVED from the crop band anchors)",
-      value: <>{bandText(band.temp_f, "°F")} · VPD {bandText(band.vpd_kpa, "kPa")} · {band.rh_pct ? `RH ${bandText(band.rh_pct, "%")}` : "no RH band"}{at(band.observed_at)}</>,
-    },
+    { key: "band", term: "Band in force (DERIVED from the crop band anchors)", value: <>{bandLine(band, clock)}{band.rh_pct ? "" : " · no RH band"}</> },
     {
       key: "mode", term: "Mode code",
       value: <><span className="mono">{mode.code}</span>{mode.stage && <> · stage <span className="mono">{mode.stage}</span></>}{validTime(mode.since) && <> · since <LocalTime at={mode.since} /></>}</>,
@@ -99,24 +93,94 @@ function AllReadings({ now }: { now: Now }) {
     sourceItem("Newest diagnostics row", freshness.diagnostics),
     sourceItem("Newest setpoint readback", freshness.readback),
     {
-      key: "writer", term: "Setpoints pipeline (writer)",
+      key: "writer", term: "Settings pushed (writer)",
       value: validTime(writer.last_at) && finite(writer.age_s) ? <><LocalTime at={writer.last_at} /> ({duration(Math.max(0, writer.age_s))} old)</> : null, reason: "no push on record",
     },
   ];
-  return <Kv items={items} className="now-readings" />;
+  return <Kv items={items} className="now-readings-list" />;
 }
 
-/** The hero before API-02 first answers: the answer claims nothing, and the value and tiles keep their height. */
+/** The three band bars: each row links to its Graphs panel; a verdict word shows only out of band. */
+function BandRows({ rows, muted }: { rows: readonly BandRow[]; muted: boolean }) {
+  return <ul className="now-bands" aria-label="Indoor climate against the band in force">
+    {rows.map((row) => {
+      const off = muted ? null : outOfBand(row.verdict);
+      const missing = !finite(row.reading.value);
+      return <li key={row.key} className={cls("now-band", off && "now-band-off")} data-tile={row.key}>
+        <Link className="now-band-label" to={row.href}>{row.label}<span className="screen-reader">: {row.name} in Graphs</span></Link>
+        <span className="now-band-bar"><BandBar label={row.name} unit={row.unit} value={missing ? null : row.reading.value} band={row.band} today={row.today} hero decorative={false} state={muted ? "stale" : "ready"} /></span>
+        <span className={cls("now-band-value", muted && "value-muted")}>{readingText(row.reading, row.unit)}</span>
+        <span className="now-band-meta">
+          {missing ? <span className="now-band-why">{row.reading.reason || "No reading"}</span>
+            : <>{off && <span className="now-off">{words("band_verdict", off)}</span>}<span className="now-band-range">{off && " · "}{bandWords(row)}</span></>}
+        </span>
+      </li>;
+    })}
+  </ul>;
+}
+
+/**
+ * Over muted band bars (rows 1 to 3 and 7): when their numbers were read, "As of 10:28" (with the date when not today),
+ * in amber words as the STALE pill and the dot say it, so the group never reads as live from its colour alone.
+ */
+function BandsAsOf({ rows, clock }: { rows: readonly BandRow[]; clock: number }) {
+  const at = readingsAsOf(rows);
+  if (!at) return null;
+  return <p className="now-bands-asof">As of <LocalTime at={at} date={localDate(at) !== localDate(new Date(clock).toISOString())} /></p>;
+}
+
+/** "In band today: temperature 96% · VPD 88% (yesterday 94% · 91%)", only with data. */
+function InBandToday({ tib, muted }: { tib: TimeInBand | null; muted: boolean }) {
+  if (!tib || !hasTimeInBand(tib)) return <p className="now-tib" aria-hidden="true" />;
+  const yesterday = tib.temp.yesterday !== null || tib.vpd.yesterday !== null;
+  return <p className={cls("now-tib", muted && "value-muted")} data-tib="">
+    <span className="now-tib-label">In band today</span>{" "}
+    <span className="now-tib-values">temperature <strong>{percentText(tib.temp.today)}</strong> · VPD <strong>{percentText(tib.vpd.today)}</strong></span>
+    {yesterday && <> <span className="now-tib-before">(yesterday {percentText(tib.temp.yesterday)} · {percentText(tib.vpd.yesterday)})</span></>}
+  </p>;
+}
+
+/** The status line: the mode, Iris and its plan, outdoor and occupancy, each a quiet phrase; the links go where each is explained. */
+function StatusLine({ now, answer, irrigation, clock }: { now: Now | null; answer: NowAnswer; irrigation: PanelRead<IrrigationStatus>; clock: number }) {
+  const unreachable = answer.row === 1;
+  return <ul className="now-status" aria-label="Status">
+    {now && !unreachable && <>
+      <li><Link className={cls("now-status-item", answer.muted && "value-muted")} to="/equipment#why" data-tile="mode">{modeText(now, answer)}</Link></li>
+      <li><Link className="now-status-item" to="/plan" data-tile="iris" data-tone={irisWarns(now.iris) ? "warn" : undefined}>
+        {irisText(now.iris)}<span className="now-sr-phone">, {planLine(now.iris)}</span>
+      </Link></li>
+      <li><Link className={cls("now-status-item", answer.muted && "value-muted")} to="/graphs?range=24h#temperature" data-tile="outdoor">
+        {/* A no-break space: a plain one at the end of a flex item is dropped ("Outdoor41.2 °F"). */}
+        <span className="now-sr-phone">Outdoor{"\u00a0"}</span>{deviceUnknown(answer) ? "—" : readingText(now.outdoor.temp_f, "°F")}
+      </Link></li>
+    </>}
+    <li><span className="now-status-item now-status-static" data-chip="occupancy">{occupancyText(irrigation, clock)}</span></li>
+  </ul>;
+}
+
+/** The hero before API-02 first answers: the answer claims nothing, and every part keeps its height. */
 function HeroLoading() {
   const headingId = useId();
-  return <section className="hero hero-loading" aria-labelledby={headingId} aria-busy="true">
-    <div>
+  return <section className="hero now-hero hero-loading" aria-labelledby={headingId} aria-busy="true">
+    <div className="now-hero-main">
       <span className="eyebrow">{NOW_EYEBROW}</span>
       <h1 id={headingId} className="hero-answer">{LOADING_TEXT}</h1>
-      <div className="skeleton skeleton-hero-value" aria-hidden="true" />
+      <div className="skeleton now-skeleton-value" aria-hidden="true" />
     </div>
-    <div className="skeleton skeleton-hero-tiles" aria-hidden="true" />
+    <div className="now-hero-climate"><div className="skeleton now-skeleton-bands" aria-hidden="true" /></div>
+    <div className="skeleton now-skeleton-status" aria-hidden="true" />
   </section>;
+}
+
+/** Opens "All readings" and brings it into view when the page's hash asks for it (`#data`, `#readings`). */
+function useReadingsHash(ref: { readonly current: HTMLDetailsElement | null }, drawn: boolean) {
+  const { hash } = useLocation();
+  useEffect(() => {
+    const details = ref.current;
+    if (!drawn || !details || !READINGS_HASHES.has(hash)) return;
+    details.open = true;
+    details.scrollIntoView?.({ block: "nearest" });
+  }, [hash, drawn, ref]);
 }
 
 export type NowHeroProps = {
@@ -124,33 +188,61 @@ export type NowHeroProps = {
   readonly now: Now | null;
   readonly answer: NowAnswer;
   readonly irrigation: PanelRead<IrrigationStatus>;
+  /** The day read (API-04, the last 25 h): today's low and high. */
+  readonly day: PanelRead<Series>;
+  /** The daily read (API-04's time-in-band keys over yesterday and today). */
+  readonly daily: PanelRead<Series>;
   /** Reads API-02 again (row 1's Retry). */
   readonly onRetry: () => void;
 };
 
-export function NowHero({ now, answer, irrigation, onRetry }: NowHeroProps) {
+export function NowHero({ now, answer, irrigation, day, daily, onRetry }: NowHeroProps) {
+  const headingId = useId();
   const clock = useNow();
   const apiDown = useApiDown();
+  const readings = useRef<HTMLDetailsElement>(null);
+  useReadingsHash(readings, answer.kind !== "loading" && now !== null);
   if (answer.kind === "loading") return <HeroLoading />;
   const temp = now?.indoor.temp_f ?? null;
-  const verdicts = !answer.muted && !apiDown;
-  const band = now ? bandLine(now.band, clock) : null;
-  const sub = answer.row === 1
-    ? <>{band && <span>{band}</span>}<Button onClick={onRetry}>Retry</Button></>
-    : band;
-  return <Hero
-    eyebrow={NOW_EYEBROW}
-    title={<AnswerTitle answer={answer} />}
-    value={temp?.value ?? null}
-    unit="°F"
-    reason={temp ? temp.reason || "No indoor temperature" : NO_ANSWER}
-    verdict={now ? words("band_verdict", now.band.temp_f.verdict) : undefined}
-    beside={now ? <Beside now={now} verdicts={verdicts} /> : undefined}
-    sub={sub}
-    observedAt={temp?.observed_at ?? null}
-    stale={answer.muted}
-    notReporting={answer.notReporting}
-    tiles={nowTiles({ now, answer, irrigation, clock })}
-    readings={now ? <AllReadings now={now} /> : undefined}
-  />;
+  const missing = !temp || !finite(temp.value);
+  const muted = answer.muted;
+  const inBand = !muted && !apiDown && !missing && now?.band.temp_f.verdict === "in";
+  const since = todayStartS(clock);
+  const rows = now && !apiDown ? bandRows(now, day.failed ? null : day.data, since) : null;
+  const tib = now && !apiDown && daily.data && !daily.failed ? timeInBand(daily.data, localDate(new Date(clock).toISOString())) : null;
+  const openReadings = (event: MouseEvent<HTMLAnchorElement>) => {
+    const details = readings.current;
+    if (!details) return;
+    details.open = true;
+    if (window.location.hash === "#readings") { event.preventDefault(); details.scrollIntoView?.({ block: "nearest" }); }
+  };
+  return <section className={cls("hero now-hero", !rows && "now-hero-plain")} aria-labelledby={headingId} data-answer={answer.kind}>
+    <div className="now-hero-main">
+      <span className="eyebrow">{NOW_EYEBROW}</span>
+      <h1 id={headingId} className="hero-answer"><AnswerTitle answer={answer} /></h1>
+      <p className="now-hero-value">
+        <span className={cls("hero-temp", muted && "value-muted")} data-hero-value="">{formatValue(missing ? null : temp.value, "°F")}</span>
+        {inBand && <span className="now-hero-verdict">{words("band_verdict", "in")}</span>}
+        {muted && now && <Badge kind="stale" />}
+      </p>
+      {missing && <p className="hero-meta">{temp ? temp.reason || "No indoor temperature" : NO_ANSWER}</p>}
+      <p className="hero-meta now-fresh">
+        <FreshnessDot stale={muted} notReporting={answer.notReporting} />
+        <Link id="data" className="now-fresh-link" to={`#${READINGS_ID}`} data-tile="data" onClick={openReadings}>
+          <AgeLabel observedAt={temp?.observed_at ?? null} stale={muted || answer.notReporting} />
+        </Link>
+        {answer.row === 1 && <Button onClick={onRetry}>Retry</Button>}
+      </p>
+    </div>
+    {rows && <div className="now-hero-climate" data-stale={muted ? "" : undefined}>
+      {muted && <BandsAsOf rows={rows} clock={clock} />}
+      <BandRows rows={rows} muted={muted} />
+      <InBandToday tib={tib} muted={muted} />
+    </div>}
+    <StatusLine now={now} answer={answer} irrigation={irrigation} clock={clock} />
+    {now && <details ref={readings} className="now-readings" id={READINGS_ID}>
+      <summary>All readings<span className="now-readings-hint"> · sources, times and the mode code{finite(now.writer.age_s) && `, settings pushed ${duration(Math.max(0, now.writer.age_s))} ago`}</span></summary>
+      <AllReadings now={now} clock={clock} />
+    </details>}
+  </section>;
 }

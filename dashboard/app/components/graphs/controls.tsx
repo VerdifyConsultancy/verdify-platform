@@ -1,42 +1,54 @@
 // SPDX-License-Identifier: MIT
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router";
+import { EVENT_SOURCES, EVENT_SOURCE_WORDS, type EventSource } from "../../charts/events";
+import { localDay } from "../../charts/time-axis";
 import {
-  DEFAULT_SETTINGS, daysProblem, graphHref, settingEditHref, withMetrics, withOutdoor, withSettings, withWindow, type GraphView, type GraphWindow, type WindowSpec,
+  COMPARES, DEFAULT_SETTINGS, PRESETS, daysProblem, graphHref, presetKeys, settingEditHref, withCompare, withEnvelope, withEvents, withMetrics, withOutdoor,
+  withPreset, withSettings, type CompareId, type GraphView, type GraphWindow, type WindowSpec,
 } from "../../lib/graph-url";
 import type { MetricDef, Setting } from "../../lib/operator-api";
-import { localDay } from "../../charts/time-axis";
 import { Chips } from "../chips";
 import { FieldError, describedBy, useFieldIds } from "../forms/field";
-import { MetricPicker } from "./metric-picker";
-import { SettingChooser, settingChipText } from "./setting-chooser";
+import { Menu } from "../menu";
+import { settingChipText } from "./setting-chooser";
 
 /**
- * Graphs' controls (SCR-02): the custom range beside the range chips, and the row of what is on the charts: the Outdoor
- * chip, each setting drawn as steps (its chip links to its drawer on Settings, × takes it off), each picked metric (×
- * takes it off), "+ Setting", "+ Metric" and "Scorecard ›". Every control is a link or a form that changes the URL;
- * Graphs writes nothing.
+ * Graphs' controls (redesign §5.5): the Custom… days form of the range toolbar, the Preset and Layers menus, and the
+ * chips of what the charts draw beyond the climate traces (each setting's chip opens its drawer on Settings, × takes it
+ * off; each picked metric's × takes it off). Every control is a link or a form that changes the URL; Graphs writes
+ * nothing.
  */
 
 /** The days the custom range opens with: the window's own, else the local days the window covers. */
 export function rangeDays(spec: WindowSpec, window: GraphWindow | null): { from: string; to: string } {
   if (spec.kind === "days") return { from: spec.from, to: spec.to };
   if (!window) return { from: "", to: "" };
-  const last = spec.kind === "range" ? window.measured?.to ?? window.x.to : window.x.to - 1;
+  const last = window.live ? window.measured?.to ?? window.x.to : window.x.to - 1;
   return { from: localDay(window.x.from), to: localDay(last) };
 }
 
+export type RangeFormProps = {
+  /** The days the fields open with. */
+  initial: { from: string; to: string };
+  /** The page the form shows without script: `/graphs`, `/graphs/zones`, `/graphs/statistics`. */
+  action: string;
+  /** The rest of the view, kept as hidden fields so the form submits the same query without script. */
+  hidden: readonly (readonly [string, string])[];
+  /** The page for two local days, To included. */
+  href: (from: string, to: string) => string;
+};
+
 /**
- * From and To as local days, To included, up to 400 days ("Up to 400 days" beside the fields otherwise). Show writes
- * `from` and `to` to the URL, keeping the settings and metrics; without script the form submits the same query.
+ * From and To as local days, To included, up to 400 days ("Up to 400 days" beside the fields otherwise). Show goes to
+ * the page for those days, keeping the rest of the view; without script the form submits the same query.
  */
-export function RangeForm({ view, window }: { view: GraphView; window: GraphWindow | null }) {
-  const initial = rangeDays(view.window, window);
+export function RangeForm(props: RangeFormProps) {
   // A new window (a chip, a link) starts the fields over from it.
-  return <RangeFields key={`${initial.from}_${initial.to}`} view={view} initial={initial} />;
+  return <RangeFields key={`${props.initial.from}_${props.initial.to}`} {...props} />;
 }
 
-function RangeFields({ view, initial }: { view: GraphView; initial: { from: string; to: string } }) {
+function RangeFields({ initial, action, hidden, href }: RangeFormProps) {
   const navigate = useNavigate();
   const fromIds = useFieldIds();
   const toIds = useFieldIds();
@@ -47,60 +59,170 @@ function RangeFields({ view, initial }: { view: GraphView; initial: { from: stri
     event.preventDefault();
     const problem = daysProblem(from, to);
     setError(problem);
-    if (!problem) navigate(graphHref(withWindow(view, { kind: "days", from, to })), { preventScrollReset: true });
+    if (!problem) navigate(href(from, to), { preventScrollReset: true });
   };
   const invalid = error !== null || undefined;
-  return <form className="range-form" method="get" action="/graphs" onSubmit={submit} noValidate aria-label="Custom range">
+  return <form className="range-form" method="get" action={action} onSubmit={submit} noValidate aria-label="Custom range">
     <label htmlFor={fromIds.id}>From</label>
     <input id={fromIds.id} type="date" name="from" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} aria-invalid={invalid} aria-describedby={describedBy(error && fromIds.errorId)} />
     <label htmlFor={toIds.id}>To</label>
     <input id={toIds.id} type="date" name="to" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} aria-invalid={invalid} aria-describedby={describedBy(error && fromIds.errorId)} />
-    {view.settings !== null && (view.settings.length ? view.settings.map((param) => <input key={param} type="hidden" name="set" value={param} />) : <input type="hidden" name="set" value="" />)}
-    {view.metrics.map((key) => <input key={key} type="hidden" name="m" value={key} />)}
-    {!view.outdoor && <input type="hidden" name="outdoor" value="0" />}
+    {hidden.map(([name, value], index) => <input key={`${name}-${index}`} type="hidden" name={name} value={value} />)}
     <button type="submit" className="btn">Show</button>
     {error && <FieldError id={fromIds.errorId}>{error}</FieldError>}
   </form>;
 }
 
-export type OnChartsProps = {
-  view: GraphView;
-  /** The settings drawn as steps and the picked metrics, as the page resolved them. */
-  settings: readonly Setting[];
-  picked: readonly MetricDef[];
-  /** The open panels' units. */
-  units: readonly string[];
-  /** API-03 and API-09, null until each answers. */
-  metricsCatalog: readonly MetricDef[] | null;
-  settingsCatalog: readonly Setting[] | null;
-  metricsFailed?: boolean;
-  settingsFailed?: boolean;
-};
+/** The view's query fields but the window, for a form that submits without script. */
+export function viewFields(view: GraphView): [string, string][] {
+  const fields: [string, string][] = [];
+  if (view.preset) fields.push(["preset", view.preset]);
+  if (view.settings !== null) {
+    if (!view.settings.length) fields.push(["set", ""]);
+    for (const param of view.settings) fields.push(["set", param]);
+  }
+  for (const key of view.metrics) fields.push(["m", key]);
+  if (!view.outdoor) fields.push(["outdoor", "0"]);
+  if (view.events !== null) fields.push(["events", view.events.join(",")]);
+  if (!view.envelope) fields.push(["env", "0"]);
+  if (view.compare) fields.push(["cmp", view.compare]);
+  return fields;
+}
 
 /** The settings in force: the URL's list, or the defaults that draw. */
 const settingParams = (view: GraphView, settings: readonly Setting[]) => (view.settings ?? DEFAULT_SETTINGS).filter((param) => settings.some((row) => row.param === param));
 
-export function OnCharts({ view, settings, picked, units, metricsCatalog, settingsCatalog, metricsFailed, settingsFailed }: OnChartsProps) {
+export type ChartChipsProps = {
+  view: GraphView;
+  /** The settings drawn as steps and the picked metrics, as the page resolved them. */
+  settings: readonly Setting[];
+  picked: readonly MetricDef[];
+  /** API-03, for the preset's own keys; null until it answers. */
+  catalog: readonly MetricDef[] | null;
+  /** The copy inside the Layers sheet on a phone: its lists' names end ", phone", as the phone bar's does. */
+  phone?: boolean;
+};
+
+/**
+ * What the charts draw beyond the climate traces, one chip each: a setting's chip opens its drawer on Settings and its
+ * × takes it off; a picked metric's × takes it off (a preset's metric turns the preset into the metrics left).
+ */
+export function ChartChips({ view, settings, picked, catalog, phone = false }: ChartChipsProps) {
+  if (!settings.length && !picked.length) return null;
   const params = settingParams(view, settings);
-  return <div className="graph-on-charts">
-    <span className="graph-on-label">On charts:</span>
-    <Chips small label="Overlays" items={[{ key: "outdoor", label: "Outdoor", to: graphHref(withOutdoor(view, !view.outdoor)), current: view.outdoor, keepScroll: true }]} />
-    {settings.length > 0 && <ul className="graph-chips" aria-label="Settings drawn as steps">
+  const fromPreset = catalog ? presetKeys(view.preset, catalog) : [];
+  const without = (key: string): GraphView => (fromPreset.includes(key)
+    ? withMetrics({ ...view, preset: null }, picked.map((metric) => metric.key).filter((other) => other !== key))
+    : withMetrics(view, view.metrics.filter((other) => other !== key)));
+  const suffix = phone ? ", phone" : "";
+  return <div className={phone ? "gr-on-sheet" : "gr-on"}>
+    {settings.length > 0 && <ul className="graph-chips" aria-label={`Settings drawn as steps${suffix}`}>
       {settings.map((row) => <li key={row.param} className="graph-chip">
-        <Link to={settingEditHref(row.param)} title={`${row.label}: edit it on Settings`}>{settingChipText(row)}</Link>
-        <Link to={graphHref(withSettings(view, params.filter((param) => param !== row.param)))} preventScrollReset aria-label={`Take ${row.param} off the charts`}><span aria-hidden="true">×</span></Link>
+        <Link to={settingEditHref(row.param)} title={`${row.param}: edit it on Settings`}>{settingChipText(row)}</Link>
+        <Link to={graphHref(withSettings(view, params.filter((param) => param !== row.param)))} preventScrollReset aria-label={`Take ${row.label} off the charts`}><span aria-hidden="true">×</span></Link>
       </li>)}
     </ul>}
-    {picked.length > 0 && <ul className="graph-chips" aria-label="Metrics on the charts">
+    {picked.length > 0 && <ul className="graph-chips" aria-label={`Metrics on the charts${suffix}`}>
       {picked.map((metric) => <li key={metric.key} className="graph-chip">
         <span title={metric.key}>{metric.label} · {metric.unit}</span>
-        <Link to={graphHref(withMetrics(view, view.metrics.filter((key) => key !== metric.key)))} preventScrollReset aria-label={`Take ${metric.label} off the charts`}><span aria-hidden="true">×</span></Link>
+        <Link to={graphHref(without(metric.key))} preventScrollReset aria-label={`Take ${metric.label} off the charts`}><span aria-hidden="true">×</span></Link>
       </li>)}
     </ul>}
-    <SettingChooser view={view} settings={settingsCatalog} failed={settingsFailed} chosen={settings} units={units} />
-    <MetricPicker view={view} metrics={metricsCatalog} failed={metricsFailed} picked={picked} />
-    <Link className="graph-scorecard" to="/graphs/scorecard">Scorecard<span aria-hidden="true"> ›</span></Link>
   </div>;
+}
+
+/** A labelled group inside a menu: a mono label over its chips. */
+function MenuGroup({ label, children }: { label: string; children: ReactNode }) {
+  return <div className="gr-menu-group"><p className="eyebrow">{label}</p>{children}</div>;
+}
+
+/**
+ * Preset (redesign §5.5): Climate, Water and soil, Light or Controller, each a link that sets `preset` and takes the
+ * picked metrics off; a group API-03 lists nothing in reads "none yet". The current one is `aria-current`.
+ */
+export function PresetMenu({ view, catalog }: { view: GraphView; catalog: readonly MetricDef[] | null }) {
+  const current = PRESETS.find((preset) => preset.id === (view.preset ?? "climate"))!;
+  return <Menu kind="button" className="gr-menu gr-preset" label={<>Preset <span className="gr-menu-value">{current.label}</span></>}>
+    <ul className="gr-menu-list" aria-label="Presets">
+      {PRESETS.map((preset) => {
+        const empty = catalog !== null && preset.group !== null && presetKeys(preset.id, catalog).length === 0;
+        return <li key={preset.id}>
+          <Link to={graphHref(withPreset(view, preset.id))} preventScrollReset aria-current={preset.id === current.id ? "true" : undefined}>
+            {preset.label}{empty && <span className="meta"> · none yet</span>}
+          </Link>
+        </li>;
+      })}
+    </ul>
+  </Menu>;
+}
+
+/**
+ * Preset as a row of chips, for the Layers sheet on a phone (redesign §5.5), where the toolbar has no room for its own
+ * menu: the same links, the current one `aria-current`.
+ */
+export function PresetChips({ view, catalog }: { view: GraphView; catalog: readonly MetricDef[] | null }) {
+  const current = view.preset ?? "climate";
+  return <MenuGroup label="Preset">
+    <Chips small label="Presets, phone" items={PRESETS.map((preset) => {
+      const empty = catalog !== null && preset.group !== null && presetKeys(preset.id, catalog).length === 0;
+      return { key: preset.id, label: <>{preset.label}{empty && <span className="meta"> · none yet</span>}</>, to: graphHref(withPreset(view, preset.id)), current: preset.id === current, keepScroll: true };
+    })} />
+  </MenuGroup>;
+}
+
+/**
+ * What the charts draw beyond the climate traces, for the Layers sheet on a phone (redesign §5.5): the settings drawn as
+ * steps and the picked metrics, each with its ×, then + Setting (`chooser`).
+ */
+export function DrawnChips({ chooser, ...props }: Omit<ChartChipsProps, "phone"> & { chooser: ReactNode }) {
+  return <MenuGroup label="Settings and metrics">
+    <ChartChips {...props} phone />
+    {chooser}
+  </MenuGroup>;
+}
+
+const toggled = (sources: readonly EventSource[], source: EventSource) => (sources.includes(source) ? sources.filter((item) => item !== source) : [...sources, source]);
+
+export type LayersMenuProps = {
+  view: GraphView;
+  /** The window is longer than 31 days: runs are not marked. */
+  long: boolean;
+  /**
+   * What the toolbar holds from 861 px but a phone's has no room for (redesign §5.5): Preset, the settings drawn as steps
+   * with + Setting, and the picked metrics; shown at the top of the sheet at 860 px and below only.
+   */
+  phone?: ReactNode;
+};
+
+/**
+ * Layers (redesign §5.5, §7.1): the outdoor and forecast overlay, the event rail by source, the min–max envelope and
+ * the comparison, each a chip that changes the URL. Choosing one keeps the menu open, so several can change in a row.
+ */
+export function LayersMenu({ view, long, phone }: LayersMenuProps) {
+  const sources = view.events ?? EVENT_SOURCES;
+  const compare = (id: CompareId | null) => ({ key: id ?? "none", label: id ? COMPARES[id].label.replace(/^./, (letter) => letter.toUpperCase()) : "None", to: graphHref(withCompare(view, id)), current: view.compare === id, keepScroll: true });
+  const changed = (view.outdoor ? 0 : 1) + (view.events === null ? 0 : 1) + (view.envelope ? 0 : 1) + (view.compare ? 1 : 0);
+  return <Menu kind="button" className="gr-menu gr-layers" label={<>Layers{changed > 0 && <span className="gr-menu-value"> · {changed} changed</span>}</>}>
+    <div className="gr-menu-groups" data-menu-keep="">
+      {phone && <div className="gr-menu-phone">{phone}</div>}
+      <MenuGroup label="On the charts">
+        <Chips small label="Overlays" items={[
+          { key: "outdoor", label: "Outdoor", to: graphHref(withOutdoor(view, !view.outdoor)), current: view.outdoor, keepScroll: true },
+          { key: "envelope", label: "Min–max", to: graphHref(withEnvelope(view, !view.envelope)), current: view.envelope, keepScroll: true },
+        ]} />
+        <p className="meta gr-menu-note">Outdoor adds the forecast past now. Min–max draws from 30 min points, 7 d and longer.</p>
+      </MenuGroup>
+      <MenuGroup label="Events">
+        <Chips small label="Event sources" items={EVENT_SOURCES.map((source) => ({
+          key: source, label: EVENT_SOURCE_WORDS[source], to: graphHref(withEvents(view, toggled(sources, source))), current: sources.includes(source), keepScroll: true,
+        }))} />
+        {long && sources.includes("runs") && <p className="meta gr-menu-note">Runs are marked for windows up to 31 days.</p>}
+      </MenuGroup>
+      <MenuGroup label="Compare">
+        <Chips small label="Compare with" items={[compare(null), compare("day"), compare("week")]} />
+      </MenuGroup>
+    </div>
+  </Menu>;
 }
 
 /** What this page dropped from the URL, in words: one line each. */

@@ -134,6 +134,15 @@ const OCCURRENCE_REASON = {
 } as const;
 
 /**
+ * A `degraded_only` fallback window on the schedule views (redesign §6.2): one ahead is a "fallback" that runs only if VPD
+ * sensing fails; one that passed without running was "not needed", never a hatched "skipped".
+ */
+const FALLBACK_WINDOW = {
+  conditional: "fallback",
+  not_needed: "not needed",
+} as const;
+
+/**
  * `MODE_NAMES` in firmware/lib/greenhouse_types.h, in screens SCR-01's words, plus `UNKNOWN`, which API-02 serves when
  * no `greenhouse_state` row is in reach (`verdify_services.reads.mode_code_and_stage`).
  */
@@ -469,6 +478,7 @@ export const WORDS: { readonly [family: string]: { readonly [code: string]: stri
   activity_action: ACTIVITY_ACTION,
   irrigation_field: IRRIGATION_FIELD,
   run_outcome: RUN_OUTCOME,
+  fallback_window: FALLBACK_WINDOW,
   vpd_source: VPD_SOURCE,
   line_fault: LINE_FAULT,
   program_reject: PROGRAM_REJECT,
@@ -493,4 +503,17 @@ export function words(family: WordFamily | (string & {}), code: string): string 
 export function modeWords(code: string, stage?: string | null): string {
   if (code === "SEALED_MIST" && stage && hasWords("mist_stage", stage)) return words("mist_stage", stage);
   return words("mode", code);
+}
+
+/** `IDLE` reads "In band, holding", a verdict on the band; without it, what the controller was doing. */
+const MODE_NO_VERDICT: Readonly<Record<string, string>> = { IDLE: "holding", UNKNOWN: "unknown" };
+/**
+ * The mode with no verdict in it, in lower case to follow a label ("Last mode: holding"), for a mode that may be old
+ * (Now's status line while the data is stale, redesign §4.3); every other mode reads as `modeWords` has it, and an
+ * unmapped code shows raw.
+ */
+export function modeWordsNoVerdict(code: string, stage?: string | null): string {
+  if (Object.hasOwn(MODE_NO_VERDICT, code)) return MODE_NO_VERDICT[code];
+  const text = modeWords(code, stage);
+  return text === code ? text : `${text.charAt(0).toLowerCase()}${text.slice(1)}`;
 }

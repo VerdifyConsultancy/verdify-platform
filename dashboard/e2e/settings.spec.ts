@@ -1,38 +1,55 @@
 // SPDX-License-Identifier: MIT
-// SCR-05 Settings (#1132): the catalog from the rendered registry fixture, the chips in the URL, a setting going
-// REQUESTED → CONFIRMED or NOT CONFIRMED, the refusal beside the field, Release, the site caps, and read-only drawers.
+// SCR-05 Settings (#1132, redesign §5.10): the catalog from the rendered registry fixture, the rail's filters in the URL
+// with their counts, each row's device value, bounds bar, one pill and meta line, a setting going REQUESTED → CONFIRMED
+// or NOT CONFIRMED, the refusal beside the field, Release, the site caps, read-only drawers, and the phone's selects.
 // #1139: the drawer's history with Revert, and a crop-band anchor's curve preview.
 import type { Page } from "@playwright/test";
-import { NOW, expect, fixtureRequests, fixtureWrites, load, test, toastLines, untilPolled, useScreensClock } from "./support";
+import { FIXTURE_API, NOW, SMALL_PHONE, WEBKIT, expect, expectNoHorizontalScroll, fixtureRequests, fixtureWrites, load, test, toastLines, untilPolled, useScreensClock } from "./support";
 
 const row = (page: Page, param: string) => page.locator(`tr.setting-row[data-param="${param}"]`);
+const pill = (page: Page, param: string) => row(page, param).locator(".ctl-row-pill [data-badge]");
 const drawer = (page: Page) => page.locator("dialog[open]");
 const ENGAGE = "/settings?q=mister_engage_kpa&edit=mister_engage_kpa";
 
 test("one row per registry row; read-only rows show why and have no Edit; the band in force is DERIVED with its age", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/settings");
-  const served = await request.get("http://localhost:4174/v1/settings");
+  const served = await request.get(`${FIXTURE_API}/v1/settings`);
   const { items } = await served.json() as { items: { param: string; writable: boolean; group: string }[] };
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Settings");
+  await expect(page.locator(".page-status")).toHaveText(`${items.length} settings · 0 requested · 0 not confirmed · 0 manual`);
   await expect(page.locator("tr.setting-row")).toHaveCount(items.length);
   await expect(page.locator(".setting-edit")).toHaveCount(items.filter((item) => item.writable).length);
   await expect(row(page, "mister_engage_kpa").locator(".setting-label")).toHaveText("VPD Mister Engage");
+  // The device value large, its bounds bar with the next plan's ring, and one meta line; no pill in the steady state.
+  await expect(row(page, "mister_engage_kpa").locator(".setting-value")).toHaveText("1.60 kPa");
+  await expect(row(page, "mister_engage_kpa").locator(".ctl-bounds-end")).toHaveText(["0.50", "2.50"]);
+  await expect(row(page, "mister_engage_kpa").locator(".ctl-bounds-planned")).toHaveCount(1);
+  await expect(row(page, "mister_engage_kpa").locator(".setting-next")).toHaveText("next 1.70 kPa at 13:00 · AI");
+  await expect(page.locator(".setting-row [data-badge=confirmed], .ctl-row-pill [data-badge]")).toHaveCount(0);
   await expect(row(page, "temp_low").locator(".setting-device")).toContainText("legacy limit, read-only");
   await expect(row(page, "temp_low").locator(".setting-edit")).toHaveCount(0);
   const band = page.locator('tbody[data-group="band_in_force"] tr.setting-row');
   await expect(band).toHaveCount(items.filter((item) => item.group === "band_in_force").length);
-  await expect(band.first()).toContainText("DERIVED · 4 min ago");
+  await expect(band.first()).toContainText("Derived · 4 min ago");
   await expect(band.locator("[data-badge=no_readback], .setting-edit")).toHaveCount(0);
-  // Who wrote the value in force: Iris and an agent with AI; a forecast rule as the system, never AI.
-  await expect(row(page, "mister_pulse_gap_s").locator(".setting-writer")).toHaveText("AI Iris changed this at 07:02");
-  await expect(row(page, "fog_rh_ceiling_pct").locator(".setting-writer")).toHaveText("AI steward changed this at 06:47");
+  // Who wrote the value in force: Iris and an agent with AI as a text mark; a forecast rule as the system, never AI.
+  await expect(row(page, "mister_pulse_gap_s").locator(".setting-writer")).toHaveText("Iris changed this at 07:02 · AI");
+  await expect(row(page, "fog_rh_ceiling_pct").locator(".setting-writer")).toHaveText("steward changed this at 06:47 · “Dry afternoon ahead” · AI");
   await expect(row(page, "sw_economiser_enabled").locator(".setting-writer")).toHaveText("Forecast rule · system");
   await expect(row(page, "sw_economiser_enabled").locator("[data-badge=ai]")).toHaveCount(0);
 });
 
-test("a chip filters the rows and survives a reload of the URL", async ({ page, request }) => {
+test("the rail's Show filters carry counts, filter the rows and survive a reload of the URL; Groups jump to their group", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/settings");
+  const rail = page.getByRole("navigation", { name: "Settings filters and groups" });
+  await expect(rail.locator(".ctl-rail-list").first().getByRole("link")).toHaveText([
+    /^All \d+$/, "Recently changed 1", "Requested 0", "Not confirmed 0", "Manual 0", "Changed by an agent 4", /^Read-only \d+$/,
+  ]);
+  await rail.getByRole("link", { name: "Controller safety 43" }).click();
+  await expect(page.locator("#group-controller_safety")).toBeInViewport();
+  await expect(page).toHaveURL(/\/settings$/);
   await page.getByRole("link", { name: "Changed by an agent 4" }).click();
   await expect(page).toHaveURL(/\/settings\?filter=agent$/);
   const params = async () => page.locator("tr.setting-row").evaluateAll((rows) => rows.map((node) => node.getAttribute("data-param")));
@@ -55,11 +72,15 @@ test("?edit= opens with Manual ticked; 1.53 saves as 1.55 and reads REQUESTED, t
   await expect(drawer(page)).toHaveCount(0);
   await expect(toastLines(page)).toHaveText(["Requested 1.55 kPa for VPD Mister Engage (snapped from 1.53)"]);
   const engage = row(page, "mister_engage_kpa");
-  await expect(engage.locator(".setting-request [data-badge=requested]")).toBeVisible();
+  await expect(pill(page, "mister_engage_kpa")).toHaveAttribute("data-badge", "requested");
+  await expect(engage.locator(".setting-request")).toContainText("→ 1.55 kPa");
+  await expect(engage.locator(".setting-request")).toContainText("· manual · jason · “Vandas drying”");
   // REQUESTED reads API-09 every 5 s; the fixture's readback matches on the third read after the write.
   await untilPolled(page, () => expect(engage.locator(".setting-request")).toHaveCount(0, { timeout: 500 }));
   await expect(engage.locator(".setting-value").first()).toContainText("1.55 kPa");
-  await expect(engage.locator(".setting-value [data-badge=confirmed]").first()).toBeVisible();
+  // A manual value's one pill is MANUAL, so the new confirmation reads in words beside who wrote it.
+  await expect(pill(page, "mister_engage_kpa")).toHaveAttribute("data-badge", "manual");
+  await expect(engage.locator(".setting-writer")).toContainText("confirmed 10:42");
   const writes = await fixtureWrites(request);
   expect(writes.map((write) => [write.operationId, write.body])).toEqual([["API-10", { value: 1.53, manual: true, reason: "Vandas drying" }]]);
 });
@@ -70,7 +91,7 @@ test("with no matching readback it reads NOT CONFIRMED with its reason, and no S
   await drawer(page).getByLabel("New value").fill("1.53");
   await drawer(page).getByRole("button", { name: "Save" }).click();
   const engage = row(page, "mister_engage_kpa");
-  await untilPolled(page, () => expect(engage.locator(".setting-request [data-badge=not_confirmed]")).toBeVisible({ timeout: 500 }));
+  await untilPolled(page, () => expect(pill(page, "mister_engage_kpa")).toHaveAttribute("data-badge", "not_confirmed", { timeout: 500 }));
   await expect(engage.locator(".state-reason")).toHaveText("Sent 10:42; no matching readback yet");
   await expect(page.getByRole("button", { name: /send again/i })).toHaveCount(0);
   expect(await fixtureWrites(request)).toHaveLength(1);
@@ -92,11 +113,11 @@ test("Release to auto sends one API-11 and removes MANUAL; a newer non-manual va
   await useScreensClock(page, request, "superseded-lane");
   await load(page, "/settings?q=mister_engage_kpa");
   const engage = row(page, "mister_engage_kpa");
-  await expect(engage.locator(".setting-next")).toHaveText("Next (plan) superseded until Iris's next plan");
+  await expect(engage.locator(".setting-next")).toHaveText("superseded until Iris's next plan");
   // Take it manual at the value in force, then release it.
   await page.getByRole("link", { name: "Edit VPD Mister Engage" }).click();
   await drawer(page).getByRole("button", { name: "Save" }).click();
-  await expect(engage.locator("[data-badge=manual]")).not.toHaveCount(0);
+  await expect(engage.locator(".setting-request")).toContainText("manual");
   await page.getByRole("link", { name: "Edit VPD Mister Engage" }).click();
   await drawer(page).getByRole("button", { name: "Release to auto" }).click();
   await expect(drawer(page)).toHaveCount(0);
@@ -114,7 +135,7 @@ test("Iris's unsnapped value shows as written", async ({ page, request }) => {
 test("with program rev 42 a site cap reads On controller · rev 42", async ({ page, request }) => {
   await useScreensClock(page, request, "program-rev-42");
   await load(page, "/settings?q=mister_daily_volume");
-  await expect(row(page, "mister_daily_volume_max_gal").locator(".setting-value")).toHaveText("On controller · rev 42: 360 gal Confirmed · 2 min ago");
+  await expect(row(page, "mister_daily_volume_max_gal").locator(".setting-value")).toHaveText("On controller · rev 42: 360 gal");
 });
 
 test("before the engine, saving a site cap reads REQUESTED with its reason at once", async ({ page, request }) => {
@@ -123,7 +144,7 @@ test("before the engine, saving a site cap reads REQUESTED with its reason at on
   await drawer(page).getByLabel("New value").fill("88");
   await drawer(page).getByRole("button", { name: "Save" }).click();
   const cap = row(page, "sched_mist_rh_max_pct");
-  await expect(cap.locator(".setting-request [data-badge=requested]")).toBeVisible();
+  await expect(pill(page, "sched_mist_rh_max_pct")).toHaveAttribute("data-badge", "requested");
   await expect(cap.locator(".state-reason")).toHaveText(/^applies with the irrigation firmware$/i);
 });
 
@@ -132,6 +153,8 @@ test("a viewer sees every row with no Edit, and ?edit= opens the drawer read-onl
   await load(page, "/settings");
   await expect(page.locator("tr.setting-row").first()).toBeVisible();
   await expect(page.locator(".setting-edit")).toHaveCount(0);
+  // Every row opens its drawer read-only, from Details.
+  await expect(row(page, "mister_engage_kpa").getByRole("link", { name: "Details of VPD Mister Engage" })).toHaveAttribute("href", "/settings?edit=mister_engage_kpa");
   await load(page, ENGAGE);
   await expect(drawer(page).getByRole("heading", { level: 2 })).toHaveText("Setting");
   await expect(drawer(page).getByLabel("New value")).toBeDisabled();
@@ -186,10 +209,10 @@ test("with setting-history Revert reads Revert to 1.60 kPa and sends one API-10;
   await expect(drawer(page)).toHaveCount(0);
   await expect(toastLines(page)).toHaveText(["Requested 1.60 kPa for VPD Mister Engage"]);
   const engage = row(page, "mister_engage_kpa");
-  await expect(engage.locator(".setting-request [data-badge=requested]")).toBeVisible();
+  await expect(pill(page, "mister_engage_kpa")).toHaveAttribute("data-badge", "requested");
   await untilPolled(page, () => expect(engage.locator(".setting-request")).toHaveCount(0, { timeout: 500 }));
   await expect(engage.locator(".setting-value").first()).toContainText("1.60 kPa");
-  await expect(engage.locator(".setting-value [data-badge=confirmed]").first()).toBeVisible();
+  await expect(engage.locator(".setting-writer")).toContainText("confirmed");
   const writes = await fixtureWrites(request);
   expect(writes.map((write) => [write.operationId, write.body])).toEqual([["API-10", { value: 1.6, manual: true, reason: "Revert to 1.60 kPa (iris, 11/02 07:02)" }]]);
   expect(writes[0].idempotency_key).toBeTruthy();
@@ -231,7 +254,7 @@ test("a setting with no desired row has no Revert; a viewer sees the history and
 test("a band edit redraws the API-19 preview before Save; a draft outside the bounds reads Must be … and Save still works", async ({ page, request }) => {
   await useScreensClock(page, request, "band-preview-center");
   await load(page, CENTER);
-  await expect(preview(page).locator("figcaption")).toHaveText("Center zone VPD · kPa · America/Denver");
+  await expect(preview(page).locator("figcaption")).toHaveText("Center zone VPD · kPa");
   await expect(preview(page).locator(".plot canvas").first()).toBeVisible();
   await expect(preview(page).locator(".chart-notes li")).toHaveText(["Sunrise 06:35", "Solar noon 11:47", "Sunset 16:58"]);
   const field = drawer(page).getByLabel("New value");
@@ -269,4 +292,31 @@ test("after saving an anchor, Revert restores the previous one through API-10, a
   await edit.click();
   await expect(await noonTarget()).toHaveText("1.10 kPa");
   expect((await fixtureWrites(request)).map((write) => [write.operationId, (write.body as { value: number }).value])).toEqual([["API-10", 1.25], ["API-10", 1.1]]);
+});
+
+test("at 360 px Settings uses two selects, the rows stack as cards that open their drawer, and nothing scrolls sideways, the drawer included", WEBKIT, async ({ page, request }) => {
+  await page.setViewportSize(SMALL_PHONE);
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/settings");
+  const rail = page.getByRole("navigation", { name: "Settings filters and groups" });
+  await expect(rail.locator(".ctl-rail-lists")).toBeHidden();
+  const show = page.getByRole("combobox", { name: "Show" });
+  await expect(show).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Group" })).toBeVisible();
+  await show.selectOption("agent");
+  await expect(page).toHaveURL(/\/settings\?filter=agent$/);
+  await expect(page.locator("tr.setting-row")).toHaveCount(4);
+  // A row is a stacked card: no bounds bar, its value, pill and meta under its label, and its link at least 44 px.
+  const engage = row(page, "mister_engage_kpa");
+  await expect(engage.locator(".ctl-bounds")).toBeHidden();
+  const [card, catalog] = await Promise.all([engage.boundingBox(), page.locator(".ctl-catalog").boundingBox()]);
+  expect(Math.abs(card!.width - catalog!.width)).toBeLessThanOrEqual(2);
+  expect((await engage.getByRole("link", { name: "Edit VPD Mister Engage" }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await expectNoHorizontalScroll(page);
+  // The link covers the card: a tap anywhere on it (here its middle) opens the drawer.
+  await engage.click();
+  await expect(page).toHaveURL(/edit=mister_engage_kpa/);
+  await expect(drawer(page)).toBeVisible();
+  await expectNoHorizontalScroll(page);
+  expect(await drawer(page).locator(".drawer-body").evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(0);
 });

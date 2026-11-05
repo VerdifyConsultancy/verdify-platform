@@ -6,11 +6,12 @@ import type { MetricDef } from "../../lib/operator-api";
 import { useModalDialog } from "../forms/modal";
 
 /**
- * "+ Metric" (SCR-02, US-GRF-07): a native `<dialog>` listing every API-03 metric but the daily scorecard keys and the
- * forecast keys, which the Outdoor chip draws, by group, each with its label, key, unit, cadence, provenance and note,
- * and a filter box. A choice is a link that adds `m=<key>` to the URL; the metric then joins its unit's panel or opens a new one. Keys come only from API-03: nothing
- * is hard-coded here, so DLI appears only once the PAR meter's keys do (#1184). At 8 metrics per window the picker says
- * so and offers no more.
+ * "+ Metric" (SCR-02, US-GRF-07): a native `<dialog>` listing every API-03 metric but the forecast keys, which the
+ * outdoor layer draws, by group, each with its label, key, unit, cadence, provenance and note, and a filter box. The
+ * daily keys are listed last (D-UX-04): each draws one point per day, in a panel of its own. A choice is a link that
+ * adds `m=<key>` to the URL; the metric then joins its unit's panel or opens a new one. Keys come only from API-03:
+ * nothing is hard-coded here, so DLI appears only once the PAR meter's keys do (#1184). At 8 metrics per window the
+ * picker says so and offers no more.
  */
 export const PICKER_GROUPS: readonly string[] = ["house climate", "zones", "water and soil", "light", "outdoor", "targets", "controller"];
 
@@ -25,16 +26,17 @@ export function cadenceWords(seconds: number): string {
 export type MetricGroup = { readonly group: string; readonly items: readonly MetricDef[] };
 const matches = (needle: string, fields: readonly (string | null | undefined)[]) => !needle || fields.join(" ").toLowerCase().includes(needle);
 
-/** Every metric but group `daily` and the forecast keys, in the picker's group order (a group it does not name follows), matching `filter`. */
+/** Every metric but the forecast keys, in the picker's group order (a group it does not name follows), matching `filter`. */
 export function pickerGroups(metrics: readonly MetricDef[], filter = ""): MetricGroup[] {
   const needle = filter.trim().toLowerCase();
   const groups = new Map<string, MetricDef[]>(PICKER_GROUPS.map((group) => [group, []]));
   for (const metric of metrics) {
-    if (metric.group === DAILY_GROUP || isForecastKey(metric.key) || !matches(needle, [metric.label, metric.key, metric.unit, metric.group, metric.provenance, metric.zone, metric.note])) continue;
+    if (isForecastKey(metric.key) || !matches(needle, [metric.label, metric.key, metric.unit, metric.group, metric.provenance, metric.zone, metric.note])) continue;
     const list = groups.get(metric.group);
     if (list) list.push(metric); else groups.set(metric.group, [metric]);
   }
-  return [...groups].filter(([, items]) => items.length > 0).map(([group, items]) => ({ group, items }));
+  // The daily keys last, after any group the order does not name.
+  return [...groups].filter(([, items]) => items.length > 0).sort(([a], [b]) => Number(a === DAILY_GROUP) - Number(b === DAILY_GROUP)).map(([group, items]) => ({ group, items }));
 }
 
 export type PickerDialogProps = {

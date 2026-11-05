@@ -5,7 +5,7 @@ import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import minutesFixture from "./fixtures/minutes.json";
 import { FakeResizeObserver, MockPlot, TOKENS, created, load, media, setTokens } from "./fixtures/uplot-mock";
-import { MinutesByZone, buildMinutes, minutesKey, type MinutesByZoneProps } from "./minutes-by-zone";
+import { MinutesByZone, OWN_SCALE_FONT, buildMinutes, minutesKey, type MinutesByZoneProps } from "./minutes-by-zone";
 import type { MinutesReport } from "./types";
 
 vi.mock("uplot", async () => ({ default: (await import("./fixtures/uplot-mock")).MockPlot }));
@@ -130,12 +130,18 @@ test("rows share one cursor, have no drag zoom, and only the last shows the day 
   const { container } = await mount();
   expect(container.querySelector("figcaption")!.textContent).toBe("Watering minutes by zone · last 7 days");
   expect([...container.querySelectorAll(".minutes-label")].map((label) => label.firstChild!.textContent)).toEqual(["Wall", "Center", "South", "West", "Fog"]);
+  // Fog stands apart: its row alone is set off, headed by what its own scale is, its ticks in mono.
+  expect([...container.querySelectorAll(".minutes-row-apart")].map((row) => row.getAttribute("data-row"))).toEqual(["fog"]);
+  expect(container.querySelector(".minutes-row-apart .minutes-apart")?.textContent?.replaceAll("\u00a0", " ")).toMatch(/^Humidification \(fog\) · own scale, 0–\d+ min$/);
+  expect(created.map((plot) => plot.opts.axes![1].font)).toEqual([...Array(4).fill(created[0].opts.axes![1].font), OWN_SCALE_FONT]);
+  // Rows without day labels keep 8 px under their baseline; the last row's day axis sits there instead.
+  expect(created.map((plot) => plot.opts.padding![2])).toEqual([8, 8, 8, 8, 0]);
   const keys = new Set(created.map((plot) => plot.opts.cursor!.sync!.key));
   expect(keys).toEqual(new Set(["verdify:minutes:2026-10-27:2026-11-02"]));
   expect(created.every((plot) => plot.opts.cursor!.drag!.x === false && plot.opts.cursor!.drag!.setScale === false)).toBe(true);
   expect(created.map((plot) => plot.opts.axes![0].show)).toEqual([false, false, false, false, true]);
   const values = created[4].opts.axes![0].values as (self: unknown, splits: number[]) => string[];
-  expect(values(null, [epoch("2026-10-27T06:00:00Z"), epoch("2026-11-02T07:00:00Z")])).toEqual(["10/27", "11/02"]);
+  expect(values(null, [epoch("2026-10-27T06:00:00Z"), epoch("2026-11-02T07:00:00Z")])).toEqual(["Oct 27", "Nov 2"]);
   expect([...container.querySelectorAll(".chart-key li")].map((item) => item.textContent)).toEqual(["VPD", "schedule", "run now", "feed", "prewet", "flush", "cause unknown", "no data", "partial day", "still planned today", "daily cap"]);
   // 30 days, oldest first: one bar slot per day and the window half a day past each end.
   const month: MinutesReport = {

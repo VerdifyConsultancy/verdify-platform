@@ -8,13 +8,26 @@ import { PlainHeader } from "./components/site-header";
 import { ApiError } from "./lib/operator-api";
 import { SIGN_IN_REFUSALS, displayableRequestId, pageContext, signInRefusal } from "./lib/page-context";
 import styles from "./styles.css?url";
+import controlStyles from "./styles/control.css?url";
+import graphsStyles from "./styles/graphs.css?url";
+import nowActivityStyles from "./styles/now-activity.css?url";
+import primitivesStyles from "./styles/primitives.css?url";
+import shellStyles from "./styles/shell.css?url";
+import tokensStyles from "./styles/tokens.css?url";
+import waterStyles from "./styles/water.css?url";
 
 // viewport-fit=cover lets env(safe-area-inset-*) clear the phone bar from the home indicator.
 const VIEWPORT = "width=device-width, initial-scale=1, viewport-fit=cover";
 /** The busy page retries on its own after this long (the limiter's `Retry-After: 5`). */
 export const BUSY_RETRY_MS = 5000;
 
-export const links = () => [{ rel: "stylesheet", href: styles }, { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }];
+/**
+ * Every stylesheet, in the fixed order of redesign §10.1: weather's copy with the §2.2 block last, the layout tokens,
+ * WP0's primitives and shell, then one section per screen package. Each section loads after styles.css, so none may
+ * redefine what the §2.2 block overrides by order (`styles/sections.test.ts`). Chart routes add `chartLinks()` after these.
+ */
+export const STYLESHEETS = [styles, tokensStyles, primitivesStyles, shellStyles, nowActivityStyles, graphsStyles, waterStyles, controlStyles] as const;
+export const links = () => [...STYLESHEETS.map((href) => ({ rel: "stylesheet", href })), { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }];
 export const headers: HeadersFunction = ({ errorHeaders }) => {
   const headers = new Headers();
   const retry = errorHeaders?.get("Retry-After");

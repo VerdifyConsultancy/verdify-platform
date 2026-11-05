@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import request from "supertest";
 import { expect, test } from "vitest";
 import { createFixtureHandler, startFixtureServer } from "../../e2e/fixture-api.mjs";
-import { fixture } from "../../e2e/fixtures/index.mjs";
+import { FIXTURE_NAMES, PACKAGE_FIXTURES, fixture, registerFixtures } from "../../e2e/fixtures/index.mjs";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
 const KEY = "5f0c6a52-8e1d-4c3b-9a7f-2d4e6b8c0a1e";
@@ -796,4 +796,13 @@ test("plan-next: a manual lane with a waypoint, Iris's 13:00 and a forecast rule
   expect(line(paused, "L01")).toMatchObject({ paused_until: "2026-11-02T21:00:00.000Z", paused_by: { source: "dashboard", name: "jason" }, pause_reason: "rain" });
   const occurrences = get(paused, "/v1/irrigation/schedules?days=7").occurrences as Body[];
   expect(occurrences.find((row) => row.line_id === "L01" && row.status === "planned")).toMatchObject({ planned_start: "2026-11-04T14:35:00.000Z" });
+});
+
+test("each screen package registers its own fixtures once, after the base ones, and can never shadow a name", () => {
+  // The four package files of redesign §10.1, in package order.
+  expect(Object.keys(PACKAGE_FIXTURES)).toEqual(["now-activity.mjs", "graphs.mjs", "water.mjs", "control.mjs"]);
+  for (const fixtures of Object.values(PACKAGE_FIXTURES)) for (const name of Object.keys(fixtures)) expect(FIXTURE_NAMES).toContain(name);
+  expect(FIXTURE_NAMES[0]).toBe("in-band");
+  expect(() => registerFixtures("graphs.mjs", { "in-band": () => {} })).toThrow("Fixture in-band from graphs.mjs is already registered");
+  expect(() => registerFixtures("water.mjs", { "not-a-patch": 42 as never })).toThrow("Fixture not-a-patch from water.mjs is not a function of the world");
 });

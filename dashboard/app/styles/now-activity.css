@@ -1,0 +1,298 @@
+/* SPDX-License-Identifier: MIT */
+/* Section: Now and Activity (WP1) */
+/* Now (redesign §5.1) and Activity (§5.8 Alerts, §5.9 Log), on the primitives of §3 and §4. Loaded by root.tsx after styles.css, tokens.css, primitives.css and shell.css, in the fixed order of redesign §10.1. Colours are tokens only (white the one literal); this file never redefines :focus-visible or the input borders that the §2.2 block in styles.css sets. Phones are 860 px and below, where every link, button, chip and summary is at least 44 px. */
+
+/* ---------------------------------------------------------------- Now: the page */
+/* The page is a .page stack (primitives.css); its head is the hero with the quick actions under it, at the card gap. */
+.now-head{display:grid;gap:var(--space-4);min-width:0}
+/* The pair side by side, each card at its own height: a short Needs someone ("No open alerts") is never a tall empty card beside Water today. */
+.now-pair{display:grid;gap:var(--space-4);align-items:start;min-width:0}
+@media(min-width:861px){.now-pair{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* The ink hero (redesign §4.2 "Status hero"): the answer and the hero value on the left, the three band bars and time in band on the right, then the status line and "All readings" across. */
+.now-hero{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);grid-template-areas:"main climate" "status status" "readings readings";align-items:center;gap:var(--space-4) var(--space-6)}
+/* With nothing to draw on the right (the API down: no band bars and no time in band), the hero is one column, never an empty block beside the answer. */
+.now-hero.now-hero-plain{grid-template-columns:minmax(0,1fr);grid-template-areas:"main" "status" "readings"}
+.now-hero-main{grid-area:main;min-width:0}
+.now-hero-climate{grid-area:climate;display:grid;gap:var(--space-2);min-width:0}
+.hero-answer-link{color:inherit;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.2em}
+.hero-answer-link:hover{color:var(--mint)}
+.now-hero-value{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-1) var(--space-3);margin:var(--space-2) 0 var(--space-1)}
+.now-hero-value .hero-temp{margin:0}
+.now-hero-verdict{font:500 var(--fs-xs)/1.2 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--mint)}
+.now-fresh{flex-wrap:wrap;min-height:1.75rem}
+.now-fresh-link{display:inline-flex;align-items:center;min-height:24px;color:inherit;text-decoration:underline dotted;text-decoration-color:var(--ink-muted);text-underline-offset:.25em}
+.now-fresh-link:hover{color:#fff}
+.now-fresh .btn{min-height:2.25rem;padding:.25rem .75rem}
+
+/* The band bars: a mono label that links to the metric's Graphs panel (its link covers the row), the bar, the value, then the band; a verdict word only out of band. */
+.now-bands{display:grid;gap:var(--space-1);margin:0;padding:0;list-style:none}
+.now-band{position:relative;display:grid;grid-template-columns:2.75rem minmax(5rem,1fr) 5.5rem minmax(0,10.5rem);align-items:center;gap:0 var(--space-3);min-height:2.25rem;margin:0 calc(-1 * var(--space-2));padding:0 var(--space-2);border-radius:var(--radius-sm)}
+.now-band:hover{background:var(--ink-2)}
+.now-band-label{display:inline-flex;align-items:center;min-height:24px;font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--mint);text-decoration:none}
+.now-band-label::after{content:"";position:absolute;inset:0;border-radius:inherit}
+.now-band:hover .now-band-label{text-decoration:underline}
+.now-band-bar{min-width:0}
+.now-band-value{font-size:var(--fs-md);font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;color:#fff}
+.now-band-meta{min-width:0;font-size:var(--fs-sm);color:var(--ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.now-off{font-weight:600;color:var(--warn-text)}
+.hero .now-off{color:var(--amber)}
+/* Muted (stale or not reporting), the group says when its numbers were read, in amber words as the STALE pill and the dot do. */
+.now-bands-asof{margin:0;font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--amber)}
+
+/* Time in band today against yesterday: a mono label and two shares, only with data. */
+.now-tib{min-height:1.5em;margin:var(--space-1) 0 0;font-size:var(--fs-sm);color:var(--ink-muted);font-variant-numeric:tabular-nums}
+.now-tib-label{margin-right:var(--space-2);font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--mint)}
+.now-tib strong{font-weight:600;color:#fff}
+.now-tib.value-muted strong{color:var(--ink-muted)}
+
+/* The status line: quiet phrases separated by middle dots; Iris turns amber when its newest required trigger was late, missed or failed. */
+.now-status{grid-area:status;display:flex;flex-wrap:wrap;align-items:center;min-height:calc(1.75rem + var(--space-3));margin:0;padding:var(--space-3) 0 0;list-style:none;border-top:1px solid color-mix(in srgb,var(--ink-muted) 22%,transparent);font-size:var(--fs-sm);color:var(--ink-muted)}
+.now-status>li{display:flex;align-items:center;min-width:0}
+.now-status>li+li::before{content:"·";margin:0 var(--space-2);color:var(--ink-muted)}
+.now-status-item{display:inline-flex;align-items:center;min-height:24px;color:#fff;text-decoration:none}
+a.now-status-item:hover{color:var(--mint);text-decoration:underline}
+.now-status-static{color:var(--ink-muted)}
+.now-status-item[data-tone=warn]{font-weight:600;color:var(--amber)}
+.now-readings{grid-area:readings}
+.now-readings-hint{font-weight:400;color:var(--ink-muted)}
+.now-readings-list{margin:var(--space-2) 0 var(--space-3)}
+.hero .kv dt{color:var(--ink-muted)}
+.hero .kv dd{color:#fff}
+.hero .skeleton{background:color-mix(in srgb,var(--ink-muted) 16%,transparent)}
+.now-skeleton-value{min-height:6.25rem;margin-top:var(--space-2)}
+.now-skeleton-bands{min-height:8.5rem}
+.now-skeleton-status{grid-column:1/-1;min-height:2.5rem}
+
+/* Quick actions (operators): Stop all water first, then the three bursts, each a name over its length on a phone. */
+.now-actions{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--space-2) var(--space-5)}
+.now-stop{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3)}
+.now-bursts{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.now-burst{display:grid;gap:var(--space-1);justify-items:start;min-width:0}
+.now-burst .state-note,.now-burst .field-error{font-size:var(--fs-xs)}
+.now-bursts-skeleton{width:min(100%,24rem);min-height:var(--tap)}
+.now-actions-note{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);min-height:var(--tap);margin:0}
+
+/* The alert row (redesign §5.8), on Now and Activity: an ObjectRow with its severity rule and word first, the place and when, the message, then Acknowledge with its note. */
+.alert-list{margin:0;padding:0;list-style:none}
+.alert-row .object-row-tag{order:-1}
+.alert-row .alert-severity{min-width:4.5rem}
+.alert-facts{font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
+.alert-message,.alert-acked{display:block}
+.alert-acked{color:var(--ink)}
+.alert-open{display:inline-flex;align-items:center;min-height:24px;font-size:var(--fs-sm);font-weight:700;text-decoration:none;white-space:nowrap}
+.alert-ack{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3);margin-top:var(--space-2)}
+.alert-ack .ack-note{margin:0}
+.alert-ack .ack-note[open]{flex-basis:100%}
+.alert-ack .ack-note .field{max-width:28rem;margin:var(--space-1) 0 0}
+.alert-ack .field-error{flex-basis:100%;margin:0}
+
+/* Needs someone: the alerts, a mister's fault and the settings not confirmed, in one list card. */
+.now-needs-note{margin:0 0 var(--space-2)}
+.alert-list+.alert-list>li:first-child{border-top:1px solid var(--line)}
+.now-fault .object-row-state{font-size:var(--fs-sm);color:var(--muted)}
+.now-breach-note{margin:var(--space-1) 0 0}
+.now-unconfirmed{margin:var(--space-2) 0 0;padding-top:var(--space-3);border-top:1px solid var(--line)}
+.now-unconfirmed a{display:inline-flex;align-items:center;min-height:24px;font-weight:700;text-decoration:none}
+
+/* Water today: a row per zone, its minutes against the cap and when it last got water, then SAF-4 and the flow. */
+.now-water-zones{display:grid;gap:var(--space-2);margin:0;padding:0;list-style:none;container-type:inline-size}
+.now-water-row{display:grid;grid-template-columns:3.75rem minmax(0,1fr) minmax(0,9.5rem);align-items:center;gap:var(--space-1) var(--space-3);min-height:1.75rem}
+.now-water-name{font-size:var(--fs-sm);font-weight:600}
+.now-water-meter{display:flex;align-items:center;gap:var(--space-3);min-width:0}
+.now-water-meter .meter{flex:1 1 auto}
+.now-water-amount{flex:none;min-width:6.5rem;font-size:var(--fs-sm);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.now-water-over{font-weight:600;color:var(--fault)}
+.now-water-last{min-width:0;font-size:var(--fs-sm);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now-water-running{font-weight:600;color:var(--ink)}
+.now-water-saf4{margin-top:var(--space-1);padding-top:var(--space-2);border-top:1px solid var(--line)}
+.now-water p{margin:var(--space-3) 0 0}
+.now-water-flow{font-size:var(--fs-sm)}
+.now-water-flow.fault{font-weight:600}
+/* In a narrow card (a phone, or the pair below 1100 px) when it last got water goes under the meter. */
+@container (max-width:28rem){
+  .now-water-row{grid-template-columns:3.5rem minmax(0,1fr)}
+  .now-water-last{grid-column:2;white-space:normal}
+  /* "132 / 120 min" over "+12 min over", so a zone over its cap stays inside the card at 360 px. */
+  .now-water-amount{flex:0 1 auto;min-width:0;white-space:normal}
+  .now-water-over{display:block}
+  .now-water-sep{display:none}
+}
+
+/* Running and next: what runs now as chips with a dot in the equipment's token, then the track from 861 px or the two lists below it. */
+.now-sub{margin:0 0 var(--space-2);font-size:var(--fs-sm);font-weight:620;color:var(--ink)}
+.now-next-now{margin-bottom:var(--space-4)}
+.now-running{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:0;padding:0;list-style:none}
+.now-chip{display:inline-flex;align-items:center;gap:var(--space-2);min-height:2.25rem;padding:.3rem .8rem;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:var(--fs-sm);line-height:1.3}
+.now-chip-action{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-2)}
+.now-running-note{margin:0}
+.now-dot{flex:none;width:.55rem;height:.55rem;border-radius:50%;background:var(--muted)}
+.now-dot[data-token=eq-heat1]{background:var(--eq-heat1)}.now-dot[data-token=eq-heat2]{background:var(--eq-heat2)}.now-dot[data-token=eq-vent]{background:var(--eq-vent)}
+.now-dot[data-token=eq-fan1]{background:var(--eq-fan1)}.now-dot[data-token=eq-fan2]{background:var(--eq-fan2)}.now-dot[data-token=eq-fog]{background:var(--eq-fog)}
+.now-dot[data-token=eq-mister]{background:var(--eq-mister)}.now-dot[data-token=eq-water]{background:var(--eq-water)}.now-dot[data-token=eq-fert]{background:var(--eq-fert)}
+.now-dot.is-neutral{background:var(--muted)}
+.now-track{min-height:15.5rem}
+.now-track-caption{font-weight:400;color:var(--muted)}
+.now-track .tt-track{overflow:hidden}
+/* A marker's words stop where the next marker, span or the now rule starts (TimeTrack's --tt-room), so the plan's row keeps the height of the others. */
+.now-next{display:none}
+.now-next-list{margin:0;padding:0;list-style:none}
+.now-next-item{display:grid;grid-template-columns:3.5rem minmax(0,1fr);gap:var(--space-3);padding:var(--space-2) 0;border-top:1px solid var(--line);font-size:var(--fs-sm)}
+.now-next-item:first-child{border-top:0}
+.now-next-time{font:400 var(--fs-sm)/1.45 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.now-next-skipped .now-next-what{color:var(--muted)}
+.now-next-failed{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin:0 0 var(--space-2)}
+.now-skeleton-list{min-height:8rem}
+.now-skeleton-chips{min-height:2.25rem}
+.now-later{margin:var(--space-3) 0 0;padding-top:var(--space-3);border-top:1px solid var(--line)}
+.now-later-label{margin-right:var(--space-2);font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
+
+/* The zone strip: five tiles, each its values, a band bar of its VPD and a 24 h sparkline; the title's link covers the tile. */
+/* One card (redesign §5.1): the tiles have no frame of their own; 1 px dividers part the columns (rows on a phone), a --field wash marks the one under the pointer, and a zone out of band keeps its 3 px amber rule. The strip reaches into the card's padding by its tiles' own, so their words line up with the card's head. */
+.now-zones{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin:0 calc(-1 * var(--space-3));padding:0;list-style:none}
+.now-zone{position:relative;display:grid;align-content:start;gap:var(--space-2);min-width:0;padding:var(--space-3);background:#fff}
+.now-zone:hover{background:var(--field)}
+.now-zone-off{box-shadow:inset 3px 0 0 var(--amber)}
+.now-zone:nth-child(even){border-left:1px solid var(--line)}
+.now-zone:nth-child(n+3){border-top:1px solid var(--line)}
+.now-zone-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:0 var(--space-2)}
+.now-zone-name{margin:0;font-size:var(--fs-md)}
+.now-zone-link{display:inline-flex;align-items:center;min-height:24px;color:var(--ink);text-decoration:none}
+.now-zone-link::after{content:"";position:absolute;inset:0}
+.now-zone-link:hover{color:var(--forest);text-decoration:underline}
+.now-zone-tag{font:400 var(--fs-label)/1.3 var(--mono);letter-spacing:.08em;color:var(--muted)}
+.now-zone-tag-news{font-weight:600;color:var(--warn-text)}
+/* The band bar and the sparkline are both the zone's VPD: one mono label beside them names the two, as the hero's labels name its bars. */
+.now-zone-viz{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:var(--space-2)}
+.now-zone-viz-label{grid-row:span 2;align-self:start;font:400 var(--fs-label)/16px var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
+.now-zone-values{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--space-3);margin:0}
+.now-zone-value{font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.now-zone-meta{margin:0;font-size:var(--fs-xs)}
+@media(max-width:359px){
+  .now-zones{grid-template-columns:minmax(0,1fr)}
+  .now-zone:nth-child(even){border-left:0}
+  .now-zone+.now-zone{border-top:1px solid var(--line)}
+}
+@media(min-width:861px){
+  .now-zones{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .now-zone:nth-child(n){border-top:0}
+  .now-zone+.now-zone{border-left:1px solid var(--line)}
+}
+
+/* The burst panel, shared with Equipment (SCR-07): the buttons, Clear, More actions and what runs. A burst's button reads the same on Now and Equipment: its name bold, its length muted. */
+.burst-length{font-weight:500;color:var(--muted)}
+.burst-button:hover .burst-length{color:inherit}
+.chip-static{cursor:default;white-space:normal;min-height:2rem}
+.skeleton-chips{min-height:2.75rem}
+.burst-body{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem}
+.burst-body>*{margin:0}
+.burst-body>.skeleton,.burst-body>.panel-error{flex:1 1 100%}
+.burst-actions .state-note,.burst-actions .field-error{flex-basis:100%}
+.burst-more{margin-left:auto}
+.burst-more[open]{flex:1 1 100%;margin-left:0}
+.burst-more[open] .burst-actions{margin-top:.5rem}
+.burst-running{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem}
+
+/* ---------------------------------------------------------------- Activity → Alerts */
+/* The page is a .page stack: the alert groups at the card gap, then Recent activity. */
+.act-groups{display:grid;gap:var(--space-4);min-width:0}
+.act-groups:empty{display:none}
+.act-linked{margin:0}
+/* A read that failed after an answer: its words and Retry above the rows it keeps. */
+.act-unavailable{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin:0}
+.act-unavailable .btn{min-height:2.25rem;padding-block:0}
+.act-linked>h2{margin:0 0 var(--space-2);font-size:var(--fs-md)}
+.alert-group.card{margin:0;padding:var(--space-1) var(--space-4)}
+.alert-group[open]{padding-bottom:var(--space-3)}
+.alert-group>summary{font-size:var(--fs-md);font-weight:620;color:var(--ink)}
+.alert-group>summary:hover{color:var(--forest)}
+/* A link to the resolved group with none to open: one line and the log (redesign §3.6 rule 6), framed as the groups are. */
+.act-resolved-none.card{margin:0;padding:var(--space-3) var(--space-4)}
+.act-resolved-none a{display:inline-flex;align-items:center;min-height:24px;font-weight:700}
+.act-leak p,.act-valve,.act-closed{margin:var(--space-1) 0 0;font-size:var(--fs-sm)}
+.alert-guidance{font-weight:600;color:var(--ink)}
+.alert-detail{display:grid;gap:var(--space-2);min-width:0;margin:var(--space-2) 0 0;padding:var(--space-3) var(--space-4);border-radius:var(--radius-sm);background:var(--field)}
+.alert-detail h4{margin:var(--space-1) 0 0}
+.alert-detail p{margin:0}
+.alert-detail .runbook{white-space:pre-line;color:var(--ink)}
+.kv-nested{font-size:var(--fs-sm)}
+.alert-graph a{display:inline-flex;align-items:center;min-height:24px;font-weight:700}
+.alert-respond{max-width:36rem}
+.alert-respond .field{margin:0}
+.alert-respond .actions{margin:var(--space-2) 0 0}
+
+/* ---------------------------------------------------------------- Activity → Log */
+/* The page is a .page stack: the filters are its toolbar, then the log. */
+.act-filters{display:grid;gap:var(--space-3)}
+.act-facets{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-6)}
+.act-facet{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)}
+.act-facet-label{font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
+.act-fields{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--space-2) var(--space-3)}
+.act-fields>label{display:flex;flex-direction:column;gap:var(--space-1);min-width:0;font-size:var(--fs-sm);font-weight:600;color:var(--muted)}
+.act-fields>.act-select{display:none}
+.act-target input{width:15rem}
+.act-clear,.act-clear-chip{display:inline-flex;align-items:center;min-height:var(--tap);font-size:var(--fs-sm);font-weight:700}
+.act-log{padding:0}
+.act-log>.panel-error,.act-log>.panel-empty,.act-log>.skeleton{margin:var(--space-4)}
+.act-log-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2);min-height:3.25rem;padding:var(--space-2) var(--space-4);border-bottom:1px solid var(--line)}
+.act-log-count{margin:0}
+.act-csv{min-height:2.25rem}
+.act-day-head{position:sticky;top:var(--shell-header-h,4.3rem);z-index:var(--z-raised);margin:0;padding:var(--space-2) var(--space-4);border-bottom:1px solid var(--line);background:var(--field);font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
+.act-entries{margin:0;padding:0;list-style:none}
+.act-entry.event{grid-template-columns:3.25rem minmax(6rem,11rem) minmax(0,1fr) auto;align-items:baseline;gap:var(--space-1) var(--space-3);padding:var(--space-2) var(--space-4);font-size:var(--fs-sm)}
+.act-entry .event-when{grid-row:auto;white-space:nowrap}
+.act-entry .event-by{min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.act-entry-what{min-width:0;color:var(--ink)}
+.act-entry .event-reason{margin-left:var(--space-2);color:var(--muted)}
+/* A plan's quote starts a line of its own under its disclosure, flush with the other entries' words, not indented by the gap. */
+.act-plan+.event-reason{display:block;margin-left:0}
+.act-entry-outcome{display:inline-flex;align-items:center;gap:var(--space-1);justify-self:end;white-space:nowrap}
+.act-plan{display:inline;margin:0}
+.act-plan>summary{display:inline-flex;min-height:24px;font-weight:600}
+.plan-changes{margin:var(--space-1) 0 0;padding-left:1.1rem;font-size:var(--fs-sm);color:var(--muted)}
+.act-more{padding:var(--space-3) var(--space-4)}
+.act-more .actions{margin:0}
+/* Recent activity (Alerts): the log's day headers, quiet inside the card (no band, not sticky), so each time is HH:MM. */
+.act-recent .act-day-head{position:static;padding:var(--space-3) 0 var(--space-1);background:none}
+.act-recent .act-day:first-child .act-day-head{padding-top:0}
+.act-recent .act-entry.event{padding-inline:0}
+.act-recent .act-day:last-child .act-entry:last-child{border-bottom:0}
+
+/* ---------------------------------------------------------------- Phones (860 px and below) */
+@media(max-width:860px){
+  .now-head,.now-pair,.act-groups{gap:var(--space-3)}
+  .now-fresh .btn,.act-csv,.act-unavailable .btn{min-height:var(--tap)}
+  .act-resolved-none a{min-height:var(--tap)}
+  .now-hero{grid-template-columns:minmax(0,1fr);grid-template-areas:"main" "climate" "status" "readings";gap:var(--space-3);padding:var(--space-4)}
+  .now-hero .hero-temp{font-size:2.75rem}
+  .now-hero .hero-meta{font-size:var(--fs-sm)}
+  .now-fresh-link,.now-band-label,.now-status-item,.now-zone-link,.now-unconfirmed a,.alert-open,.alert-graph a,.act-plan>summary{min-height:var(--tap)}
+  .now-band{grid-template-columns:2.5rem minmax(0,1fr) auto;gap:0 var(--space-2);min-height:var(--tap)}
+  .now-band-meta{grid-column:2/-1}
+  .now-band-range{display:none}
+  .now-band-meta:not(:has(.now-off,.now-band-why)){display:none}
+  .now-status{padding-top:var(--space-1)}
+  .now-sr-phone{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .now-readings-hint{display:none}
+  .now-actions{display:grid;grid-template-columns:minmax(0,1fr)}
+  .now-stop .btn{width:100%;min-height:3rem}
+  .now-bursts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .now-burst{justify-items:stretch}
+  .now-burst-button{flex-direction:column;gap:0;width:100%;min-height:3rem;padding:var(--space-1) var(--space-2);line-height:1.2}
+  .now-burst-button .burst-length{font-size:var(--fs-xs)}
+  .now-chip{min-height:var(--tap)}
+  .now-running{display:grid;justify-items:start}
+  .now-track{display:none}
+  .now-next{display:block}
+  .act-facets{display:none}
+  .act-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .act-fields>.act-select{display:flex}
+  .act-fields>.act-target{grid-column:1/-1}
+  .act-target input,.act-fields select,.act-fields input{width:100%}
+  .act-log-head{padding-inline:var(--space-3)}
+  .act-day-head{padding-inline:var(--space-3)}
+  .act-entry.event{grid-template-columns:3rem minmax(0,1fr) auto;padding-inline:var(--space-3)}
+  .act-entry-what{grid-column:1/-1}
+  .act-entry-outcome{grid-column:3;grid-row:1}
+  .act-entry .event-reason{display:block;margin-left:0}
+}

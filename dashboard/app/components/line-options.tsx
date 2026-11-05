@@ -54,17 +54,17 @@ function OptionsForm({ line, onClose }: { line: IrrigationLine; onClose: () => v
   </EditDrawer>;
 }
 
-/** "Options" on a line card, for operators: opens `?options=<line_id>`. */
+/** "Options…" in a line row's ⋯ menu, for operators: opens `?options=<line_id>`. */
 export function OptionsButton({ line }: { line: Pick<IrrigationLine, "line_id"> }) {
   const { open } = useWaterDrawer("options");
-  return <Button write aria-haspopup="dialog" onClick={() => open(line.line_id)}>Options <span className="screen-reader">of {line.line_id}</span></Button>;
+  return <Button write aria-haspopup="dialog" onClick={() => open(line.line_id)}>Options… <span className="screen-reader">of {line.line_id}</span></Button>;
 }
 
 /**
  * Line options (`?options=<line_id>`, the one edit drawer): the daily cap 0–480 with today's minutes and headroom beside
  * it; the VPD reserve on L04, L07 and L09, whose hint flags one above the cap, which the API refuses; Manual (ticked)
  * and Reason. Save sends `{daily_cap_min, manual, reason}` and the reserve on those three; a 422 shows beside its field.
- * The site caps are not here: the limits strip's SAF-4 links to their Settings drawer. A viewer gets no drawer.
+ * The site caps are not here: Site today's SAF-4 links to their Settings drawer. A viewer gets no drawer.
  */
 export function LineOptions({ lines }: { lines: readonly IrrigationLine[] }) {
   const operator = useRole() === "operator";

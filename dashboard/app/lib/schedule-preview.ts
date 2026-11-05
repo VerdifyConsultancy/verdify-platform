@@ -8,6 +8,7 @@
  * `solar[]`. Validation stays on submit; a draft past a cap still saves, and the controller ends the run at the cap.
  */
 import { TIME_ZONE, localDate, shortTime } from "./format";
+import { lineById } from "./lines";
 import type { IrrigationLine, Occurrence, Schedule, ScheduleAgenda } from "./operator-api";
 import { CAPPED_KIND, occurrenceWords, whenWords, zoneWord } from "./water";
 
@@ -38,7 +39,8 @@ export type ScheduleDraft = {
   readonly manual: boolean;
 };
 export type PreviewContext = {
-  readonly agenda: Pick<ScheduleAgenda, "schedules" | "occurrences" | "solar">;
+  /** `counts` tells a new schedule past the controller's 24 (redesign §6.5); without it that check is left out. */
+  readonly agenda: Pick<ScheduleAgenda, "schedules" | "occurrences" | "solar"> & Partial<Pick<ScheduleAgenda, "counts">>;
   /** API-IRR-01's lines; empty while that read has not answered, when no cap, clean partner or skip is known. */
   readonly lines: readonly IrrigationLine[];
   /** API-IRR-01's `engine`; null while unknown. */
@@ -48,8 +50,24 @@ export type PreviewContext = {
   /** Now (epoch ms). */
   readonly now: number;
 };
-/** One outline in the week: an occurrence as a saved block is one, joined to the draft. */
-export type DraftBlock = { readonly occurrence: Occurrence; readonly schedule: ScheduleDraft; readonly pastCap: boolean };
+/**
+ * One outline in the week: an occurrence as a saved block is one, joined to the draft. `conflict`: it starts within
+ * 30 minutes of another schedule on its line, which the API refuses (`too_close`), so the timeline outlines it in fault.
+ */
+export type DraftBlock = { readonly occurrence: Occurrence; readonly schedule: ScheduleDraft; readonly pastCap: boolean; readonly conflict?: boolean };
+/**
+ * A problem the editor reads out before Save (redesign §6.5), in words, from the same reads: the API's refusals it can
+ * foresee (`too_close` beside Start, `too_many_schedules` above Save) and what the controller will do anyway (a day past
+ * the cap ends at the cap; a shared manifold makes a run wait). Save stays enabled: the server decides.
+ */
+export type PreviewCheck = {
+  readonly code: "too_close" | "cap" | "too_many_schedules" | "manifold";
+  readonly text: string;
+  /** The field the words sit beside; null above Save. */
+  readonly field: "start" | null;
+  /** A refusal the API would give, or a note on what the controller will do. */
+  readonly kind: "refusal" | "note";
+};
 /** A line's minutes against its cap, as the drawer reads them. */
 export type LineTotal = {
   readonly line_id: string;
@@ -67,6 +85,8 @@ export type SchedulePreview = {
   readonly totals: readonly LineTotal[];
   /** What the blocks say beyond their time and amount, each once ("Skipped until Schedule is on"). */
   readonly notes: readonly string[];
+  /** The refusals and waits read out as it is typed, each once, refusals first. */
+  readonly checks: readonly PreviewCheck[];
 };
 
 // ---------------------------------------------------------------------------------------------------- times
@@ -238,5 +258,106 @@ export function previewSchedule(draft: ScheduleDraft, context: PreviewContext): 
     };
   });
   const notes = [...new Set(blocks.flatMap((block) => occurrenceWords(block.occurrence, now) ?? []))];
-  return { slotId: draft.slot_id, blocks, totals, notes };
+  const close = tooClose(draft, placed, kept, schedules);
+  const flagged = blocks.map((block, index) => (close.at.has(index) ? { ...block, conflict: true } : block));
+  const checks: PreviewCheck[] = [
+    ...(close.text ? [{ code: "too_close" as const, text: close.text, field: "start" as const, kind: "refusal" as const }] : []),
+    ...tooMany(draft, agenda),
+    ...capChecks(draft, line, partner ?? null, byLine, seconds, isPast),
+    ...manifoldWait(draft, line, placed, kept, schedules, byLine, engine),
+  ];
+  return { slotId: draft.slot_id, blocks: flagged, totals, notes, checks };
+}
+
+// ---------------------------------------------------------------------------------------------------- the checks
+/** The API's spacing on one line (irrigation §4.3, `too_close`). */
+export const SPACING_MIN = 30;
+const ORDINAL = new Intl.PluralRules("en-US", { type: "ordinal" });
+const SUFFIX: Readonly<Record<string, string>> = { one: "st", two: "nd", few: "rd", other: "th" };
+/** "25th". */
+export const ordinal = (value: number): string => `${value}${SUFFIX[ORDINAL.select(value)] ?? "th"}`;
+/** A saved schedule as the checks name it: its label, else "slot 12". */
+const scheduleName = (schedule: Pick<Schedule, "label" | "slot_id"> | undefined, slotId: number) => schedule?.label || `slot ${slotId}`;
+type Placed = { readonly at: number; readonly date: string; readonly status: Occurrence["status"] };
+
+/**
+ * `too_close`: the first draft start within 30 minutes of another schedule's occurrence on the same line and local day,
+ * as "Starts 20 min after Wall MWF on L01: schedules on one line need 30 min", and which draft blocks it marks.
+ */
+function tooClose(draft: ScheduleDraft, placed: readonly Placed[], kept: readonly Occurrence[], schedules: ReadonlyMap<number, Schedule>): { text: string | null; at: Set<number> } {
+  const at = new Set<number>();
+  let text: string | null = null;
+  placed.forEach((item, index) => {
+    for (const other of kept) {
+      if (other.line_id !== draft.line_id || other.slot_id === draft.slot_id || localDate(other.planned_start) !== item.date) continue;
+      const apart = Math.round((item.at - Date.parse(other.planned_start)) / MINUTE);
+      if (!Number.isFinite(apart) || Math.abs(apart) >= SPACING_MIN) continue;
+      at.add(index);
+      if (text) continue;
+      const name = scheduleName(schedules.get(other.slot_id), other.slot_id);
+      const when = apart === 0 ? `at the same time as ${name}` : `${Math.abs(apart)}${NBSP}min ${apart > 0 ? "after" : "before"} ${name}`;
+      text = `Starts ${when} on ${draft.line_id}: schedules on one line need ${SPACING_MIN}${NBSP}min`;
+    }
+  });
+  return { text, at };
+}
+
+/** `too_many_schedules`: a new schedule past the controller's slots ("This would be the 25th schedule; the controller holds 24"). */
+function tooMany(draft: ScheduleDraft, agenda: PreviewContext["agenda"]): PreviewCheck[] {
+  const counts = agenda.counts;
+  if (draft.slot_id !== null || !counts || counts.schedules < counts.max_schedules) return [];
+  return [{ code: "too_many_schedules", text: `This would be the ${ordinal(counts.schedules + 1)} schedule; the controller holds ${counts.max_schedules}`, field: null, kind: "refusal" }];
+}
+
+/** The first day past each charged line's budget: "Wed would reach 72 of 60 min: runs past the cap end at the cap". */
+function capChecks(
+  draft: ScheduleDraft, line: IrrigationLine | undefined, partner: string | null, byLine: ReadonlyMap<string, IrrigationLine>,
+  seconds: ReadonlyMap<string, ReadonlyMap<string, number>>, isPast: (lineId: string, date: string) => boolean,
+): PreviewCheck[] {
+  if (!line) return [];
+  return [draft.line_id, ...(partner ? [partner] : [])].flatMap((id): PreviewCheck[] => {
+    const known = byLine.get(id);
+    const budget = scheduleBudget(known);
+    const day = [...(seconds.get(id) ?? [])].sort(([a], [b]) => (a < b ? -1 : 1)).find(([date]) => isPast(id, date));
+    if (!known || budget === null || !day) return [];
+    const forSchedules = known.kind === "mister" ? " for schedules" : "";
+    const whose = id === draft.line_id ? "" : ` on ${id}`;
+    return [{ code: "cap", text: `${dayName(day[0])} would reach ${minutesText(day[1])} of ${budget}${NBSP}min${forSchedules}${whose}: runs past the cap end at the cap`, field: null, kind: "note" }];
+  });
+}
+
+/** The manifold a line's valve shares (irrigation §4.6): one drip manifold, one mister manifold; L03 and fog hold none. */
+export function manifoldOf(kind: string | undefined): "drip" | "mister" | null {
+  return kind === "drip" || kind === "fert_drip" ? "drip" : kind === "mister" || kind === "fert_mister" ? "mister" : null;
+}
+/** How long an occurrence holds its manifold, in ms: prewet, the pulses and gaps, then flush. */
+function holdMs(schedule: Pick<Schedule, "on_s" | "count" | "gap_s" | "prewet_s" | "flush_s">): number {
+  const count = schedule.count ?? 1;
+  return ((schedule.prewet_s ?? 0) + (schedule.on_s ?? 0) * count + (schedule.gap_s ?? 0) * Math.max(0, count - 1) + (schedule.flush_s ?? 0)) * 1000;
+}
+const KIND_RUN: Readonly<Record<string, string>> = { drip: "run", fert_drip: "feed", mister: "mist", fert_mister: "feed" };
+/**
+ * A manifold wait (informational): the first draft start that falls inside another line's run on the same manifold,
+ * "Shares the drip manifold with L02's 07:30 feed: it waits until 07:43".
+ */
+function manifoldWait(
+  draft: ScheduleDraft, line: IrrigationLine | undefined, placed: readonly Placed[], kept: readonly Occurrence[],
+  schedules: ReadonlyMap<number, Schedule>, byLine: ReadonlyMap<string, IrrigationLine>, engine: boolean | null,
+): PreviewCheck[] {
+  const manifold = manifoldOf(line?.kind ?? lineById(draft.line_id)?.kind);
+  if (!manifold) return [];
+  for (const item of placed) {
+    if (!counts(item.status, engine)) continue;
+    for (const other of kept) {
+      const otherKind = byLine.get(other.line_id)?.kind ?? lineById(other.line_id)?.kind;
+      const schedule = schedules.get(other.slot_id);
+      if (other.line_id === draft.line_id || manifoldOf(otherKind) !== manifold || !schedule || !["planned", "running", "done"].includes(other.status)) continue;
+      const start = Date.parse(other.planned_start);
+      const end = start + holdMs(schedule);
+      if (!(item.at >= start && item.at < end)) continue;
+      const what = schedule.label || KIND_RUN[otherKind ?? ""] || "run";
+      return [{ code: "manifold", text: `Shares the ${manifold} manifold with ${other.line_id}'s ${shortTime(other.planned_start)} ${what}: it waits until ${shortTime(new Date(end).toISOString())}`, field: null, kind: "note" }];
+    }
+  }
+  return [];
 }

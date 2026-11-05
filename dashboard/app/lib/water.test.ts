@@ -7,6 +7,9 @@ import { fixture } from "../../e2e/fixtures/index.mjs";
 import { NBSP, denver } from "../components/test-render";
 import type { IrrigationStatus, MinutesReport, Occupancy, ScheduleAgenda } from "./operator-api";
 import {
+  HISTORY_DAYS, WET_EQUIPMENT, ZONE_KIND_WORDS, amountShort, amountWords, dayClockWords, dayStatesParams, daysWords, historyDays, historyMeasure, historySummary,
+  historyWindows, lastWaterParts, lineZone, newScheduleUrl, nextRunOf, nextRunShort, runSeconds, runningLines, shortfallNote, shortfallWords, startWords, startsWords, tallyMinutes,
+  tallyRuns, waterUrl, zoneLastAt, zoneSummaries,
   NO_ENGINE_TEXT, RETRYING_TEXT, ROM_TEXT, agoWords, barsReport, blockAmount, boardLines, faultWords, feedStages, flowWords, headroomWords, lastWaterWords, limitItems,
   minutesCaps, misterLines, nextRunWords, occupancyWords, occurrenceReasonWords, occurrenceWords, pauseAfterRun, pauseWords, pausedNow, plannedToday, programBanner, runAmountWords,
   runGallons, runSpanWords, runsFilters, runsWindow, timeLeftWords, todayWords, weekDays, wetLines, whenWords, waterUseDays, waterUseSplit, type ProgramBannerInput,
@@ -282,4 +285,139 @@ test("a pause until after a block ends one minute past its planned end, for a dr
 test("daily water use's URL: 30 days split by line unless it says 90d or cause", () => {
   expect([waterUseDays(null), waterUseDays("30d"), waterUseDays("90d"), waterUseDays("7d")]).toEqual([30, 30, 90, 30]);
   expect([waterUseSplit(null), waterUseSplit("line"), waterUseSplit("cause"), waterUseSplit("zone")]).toEqual(["line", "line", "cause", "line"]);
+});
+
+// ==================================================================================================== redesign §5.2–§5.4, §6
+test("Today's zones in their fixed order: their lines (L03 apart, on the wall), minutes against the cap line's cap, the reserve and the last water", () => {
+  const from = status("schedules-paused");
+  const zones = zoneSummaries(from, plannedToday(agenda("schedules-paused"), from.lines, TODAY, NOW));
+  expect(zones.map((zone) => [zone.zone, zone.lines.map((item) => item.line_id), zone.master?.line_id ?? null, zone.mister?.line_id ?? null])).toEqual([
+    ["wall", ["L01", "L02"], "L03", null], ["center", ["L04", "L05", "L06"], null, "L04"], ["south", ["L07", "L08"], null, "L07"],
+    ["west", ["L09", "L10"], null, "L09"], ["fog", ["L11"], null, null],
+  ]);
+  const [wall, center, , , fog] = zones;
+  expect([wall.minutes, wall.cap, wall.capLine, wall.reserve, wall.planned]).toEqual([0, 60, "L01", null, 0]);
+  expect([center.minutes, center.cap, center.capLine, center.reserve]).toEqual([14, 120, "L04", 60]);
+  expect(center.lastAt).toBe(line(from, "L04").last_water?.at);
+  expect([fog.cap, fog.minutes]).toEqual([null, 6]);
+  expect(ZONE_KIND_WORDS.center).toBe("mister and drips");
+  expect([lineZone({ line_id: "L03", zone: "supply" }), lineZone({ line_id: "L11", zone: "house" }), lineZone({ line_id: "L07", zone: "south" })]).toEqual(["wall", "fog", "south"]);
+  // A zone the API has no minutes for is unknown, never 0.
+  expect(zoneSummaries({ ...from, today: { date: TODAY, zones: { wall: null } }, lines: from.lines.map((item) => ({ ...item, today: { minutes: null } })) }, null)[0].minutes).toBeNull();
+});
+
+test("a zone with a running line says so, and today's minutes never sit beside an older last water (#1308 visual QA 5)", () => {
+  // L01 has run for 12 min (run now) while its last filed water is Friday's.
+  const running = status("l01-running");
+  const [wall, center] = zoneSummaries(running, null);
+  expect([wall.running, wall.minutes, center.running]).toEqual([true, 12, false]);
+  expect(wall.lastAt).toBe(line(running, "L01").last_water?.at);
+  expect(zoneSummaries(status(), null).map((zone) => zone.running)).toEqual([false, false, false, false, false]);
+  // A running master valve counts for the wall, since it opens only with a feed.
+  const master = { ...running, lines: running.lines.map((item) => (item.line_id === "L01" ? { ...item, state: { ...item.state, code: "idle" } } : item.line_id === "L03" ? { ...item, state: { ...item.state, code: "running" } } : item)) };
+  expect(zoneSummaries(master as IrrigationStatus, null)[0].running).toBe(true);
+  // Once today's minutes are above 0, today's newest valve start (API-05, epoch s) stands in for an older last water.
+  const friday = "2026-10-30T14:31:00Z";
+  const starts = [Date.parse(denver("06:58")) / 1000, Date.parse(denver("10:30")) / 1000];
+  expect(zoneLastAt({ lastAt: friday, minutes: 12 }, starts, TODAY)).toBe(denver("10:30"));
+  // No minutes today, a last water already today, or no valve time known: the last water as filed.
+  expect(zoneLastAt({ lastAt: friday, minutes: 0 }, starts, TODAY)).toBe(friday);
+  expect(zoneLastAt({ lastAt: friday, minutes: null }, starts, TODAY)).toBe(friday);
+  expect(zoneLastAt({ lastAt: denver("07:31"), minutes: 12 }, starts, TODAY)).toBe(denver("07:31"));
+  expect(zoneLastAt({ lastAt: friday, minutes: 12 }, [], TODAY)).toBe(friday);
+  expect(zoneLastAt({ lastAt: null, minutes: 12 }, starts, TODAY)).toBe(denver("10:30"));
+  // A start from another day (the strip's window is today's) never stands in.
+  expect(zoneLastAt({ lastAt: friday, minutes: 12 }, [Date.parse("2026-11-01T20:00:00Z") / 1000], TODAY)).toBe(friday);
+});
+
+test("the status line's facts: what runs now and the earliest next run", () => {
+  const running = status("l01-running");
+  expect(runningLines(running.lines).map((item) => item.line_id)).toEqual(["L01"]);
+  expect(runningLines(status().lines)).toEqual([]);
+  const next = nextRunOf(status("schedules-paused").lines);
+  expect([next?.line.line_id, next?.next.start_at]).toEqual(["L04", expect.any(String)]);
+  expect(nextRunOf(status().lines)).toBeNull();
+});
+
+test("a row's last water: its own outcome after it, another run's in the meta, or none", () => {
+  const caretaker = line(status("caretaker-visit"), "L01");
+  expect(plain(lastWaterParts(caretaker, TODAY).state)).toBe("last 07:31, 12 min · ok");
+  expect(lastWaterParts(caretaker, TODAY).meta).toBeNull();
+  const skipped = { ...caretaker, last_outcome: { outcome: "skipped" as const, at: "2026-11-01T14:35:00Z", reason: "line paused" } };
+  expect(plain(lastWaterParts(skipped, TODAY).state)).toBe("last 07:31, 12 min");
+  expect(lastWaterParts(skipped, TODAY).meta).toMatch(/^last run Sun 07:35 · skipped · line paused$/);
+  expect(lastWaterParts({ last_water: null, last_outcome: null }, TODAY)).toEqual({ state: "no water recorded", meta: null });
+  expect(dayClockWords(denver("07:31"), TODAY)).toBe("07:31");
+});
+
+test("the next run reads the same everywhere: the time alone today, the weekday later, with the schedule's amount when known", () => {
+  const next = { line_id: "L01", slot_id: 11, start_at: denver("16:00"), minutes: 10, label: null };
+  expect(plain(nextRunShort(next, TODAY) ?? "")).toBe("next 16:00 · 10 min");
+  expect(plain(nextRunShort({ ...next, start_at: "2026-11-04T14:35:00Z", minutes: 3 }, TODAY, "4 × 45 s") ?? "")).toBe("next Wed 07:35 · 4 × 45 s");
+  expect(nextRunShort(null, TODAY)).toBeNull();
+});
+
+test("a schedule in words: its days, its start with today's resolved time, and its amount by line kind", () => {
+  expect([daysWords(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]), daysWords(["fri", "mon", "wed"]), daysWords(["mon", "tue", "wed", "thu", "fri"]), daysWords(["sat", "sun"]), daysWords([])])
+    .toEqual(["Daily", "Mon Wed Fri", "Weekdays", "Weekends", "No days"]);
+  const solar = { sunrise: denver("06:35"), solar_noon: denver("11:47"), sunset: denver("16:58") };
+  // Offsets carry their unit (#1308 visual QA 42): whole hours in h, the rest in min.
+  expect(plain(startWords({ kind: "sunrise", offset_min: 60 }, solar))).toBe("sunrise + 1 h (07:35 today)");
+  expect(plain(startWords({ kind: "solar_noon", offset_min: -120 }))).toBe("solar noon − 2 h");
+  expect(plain(startWords({ kind: "sunrise", offset_min: 45 }))).toBe("sunrise + 45 min");
+  expect(plain(startWords({ kind: "sunset", offset_min: -90 }))).toBe("sunset − 1 h 30 min");
+  expect(startWords({ kind: "sunset", offset_min: 0 }, solar)).toBe("sunset (16:58 today)");
+  expect(startWords({ kind: "clock", clock: "16:00" })).toBe("16:00");
+  // Several starts as one list: one solar kind once, each offset with its sign and unit, then today's times.
+  expect(plain(startsWords([{ kind: "solar_noon", offset_min: -120 }, { kind: "solar_noon", offset_min: 0 }, { kind: "solar_noon", offset_min: 120 }], solar)))
+    .toBe("solar noon −2 h, 0, +2 h (09:47, 11:47, 13:47 today)");
+  expect(plain(startsWords([{ kind: "solar_noon", offset_min: -120 }, { kind: "solar_noon", offset_min: 30 }]))).toBe("solar noon −2 h, +30 min");
+  expect(plain(startsWords([{ kind: "sunrise", offset_min: 60 }, { kind: "clock", clock: "16:00" }], solar))).toBe("sunrise + 1 h, 16:00");
+  expect(plain(amountWords({ on_s: 720 }, "drip"))).toBe("12 min");
+  expect(plain(amountWords({ on_s: 45, count: 4, gap_s: 60 }, "mister"))).toBe("4 × 45 s, 60 s gap");
+  expect(plain(amountWords({ on_s: 300, prewet_s: 120, flush_s: 240 }, "fert_drip", "L01"))).toBe("feed 5 min · prewet 2 min · flush 4 min on L01");
+  expect(plain(amountShort({ on_s: 45, count: 4 }, "mister"))).toBe("4 × 45 s");
+  expect([runSeconds({ on_s: 45, count: 4, gap_s: 60 }), runSeconds({ on_s: 720 })]).toEqual([360, 720]);
+});
+
+test("History's period and measure from the URL, with the previous equal period beside it", () => {
+  expect(HISTORY_DAYS).toEqual([7, 30, 90, 365]);
+  expect([historyDays(null), historyDays("30d"), historyDays("90d"), historyDays("365d"), historyDays("14d"), historyDays(null, "30")]).toEqual([7, 30, 90, 365, 7, 30]);
+  expect([historyMeasure(null), historyMeasure("gal"), historyMeasure("min")]).toEqual(["min", "gal", "min"]);
+  expect(historyWindows(TODAY, 7)).toEqual({ current: { from: "2026-10-27", to: TODAY }, previous: { from: "2026-10-20", to: "2026-10-26" } });
+});
+
+test("the KPIs' tallies: watering minutes without L03 or fog, gallons where metered, no-data days left out; runs and their shortfalls", () => {
+  const report: MinutesReport = {
+    from: "2026-10-31", to: TODAY, group_by: "line",
+    periods: [{ start: "2026-10-31", coverage: "complete" }, { start: "2026-11-01", coverage: "no_data" }, { start: TODAY, coverage: "partial" }],
+    rows: [
+      { period: "2026-10-31", group: "L01", cause: "schedule", chemistry: "clean", minutes: 12, gal: 9 },
+      { period: "2026-10-31", group: "L03", cause: "feed", chemistry: "fert", minutes: 5, gal: null },
+      { period: "2026-10-31", group: "L11", cause: "vpd", chemistry: "clean", minutes: 6, gal: 2 },
+      { period: "2026-11-01", group: "L04", cause: "vpd", chemistry: "clean", minutes: 99, gal: 9 },
+      { period: TODAY, group: "L04", cause: "vpd", chemistry: "clean", minutes: 14, gal: 3 },
+    ],
+  };
+  const tally = tallyMinutes(report);
+  expect([tally.minutes, tally.gal, tally.galMissing, tally.noDataDays, tally.fog]).toEqual([26, 12, 0, 1, 6]);
+  expect(tally.days.map((day) => day.minutes)).toEqual([12, null, 14]);
+  expect(tallyMinutes({ ...report, periods: report.periods.map((period) => ({ ...period, coverage: "no_data" as const })) }).minutes).toBeNull();
+  const run = (outcome: string, at: string, id = "L09", reason: string | null = null) => ({ run_id: `${id}-${at}`, line_id: id, zone: "west", chemistry: "clean", cause: "schedule", started_at: at, open_s: 60, outcome, reason } as never);
+  const runs = tallyRuns([run("ok", denver("07:00")), run("missed", "2026-10-31T14:00:00Z", "L09", "no valid clock"), run("short", "2026-11-01T16:00:00Z"), run("ok", denver("05:00"), "L11")]);
+  expect([runs.runs, runs.missed, runs.short, runs.cap, runs.complete]).toEqual([3, 1, 1, 0, true]);
+  expect(shortfallWords(runs)).toBe("1 missed, 1 short");
+  expect(shortfallNote(runs.newest)).toBe("Nov 1 L09: short");
+  expect(shortfallNote(tallyRuns([run("missed", "2026-10-31T14:00:00Z", "L09", "no valid clock")]).newest)).toBe("Oct 31 L09: no valid clock");
+  expect(plain(historySummary(7, tally, runs) ?? "")).toBe("Last 7 days: 26 min watering · 12 gal · 3 runs, 1 missed, 1 short");
+  expect(plain(historySummary(90, tally, null) ?? "")).toBe("Last 90 days: 26 min watering · 12 gal");
+  expect(historySummary(7, null, runs)).toBeNull();
+});
+
+test("the day's API-05 read and the Schedules URLs", () => {
+  expect(dayStatesParams(TODAY)).toEqual({ from: "2026-11-02T07:00:00.000Z", to: "2026-11-03T07:00:00.000Z", equipment: WET_EQUIPMENT });
+  expect(WET_EQUIPMENT).not.toContain("fert_master_valve");
+  const search = new URLSearchParams("view=day&day=2026-11-04&block=11-1");
+  expect(waterUrl("/water/schedules", search, { day: null, view: "week" })).toBe("/water/schedules?view=week&block=11-1");
+  expect(newScheduleUrl(search, { line: "L01", at: "13:15" })).toBe("/water/schedules?view=day&day=2026-11-04&line=L01&at=13%3A15&schedule=new");
 });

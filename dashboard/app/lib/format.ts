@@ -44,6 +44,11 @@ export function repeatedLocalTime(date: Date): boolean {
   const wall = WALL_CLOCK.format(date);
   return WALL_CLOCK.format(new Date(date.getTime() - 3_600_000)) === wall || WALL_CLOCK.format(new Date(date.getTime() + 3_600_000)) === wall;
 }
+const ZONE_NAME = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, timeZoneName: "short" });
+/** "MDT" or "MST": the short zone name at an instant, which tells the two passes of the repeated hour apart on an axis. */
+export function zoneName(date: Date): string {
+  return ZONE_NAME.formatToParts(date).find((part) => part.type === "timeZoneName")?.value ?? "";
+}
 function withRepeatedOffset(date: Date, text: string): string {
   if (!repeatedLocalTime(date)) return text;
   return `${text} ${OFFSET.formatToParts(date).find((part) => part.type === "timeZoneName")?.value || ""}`;
@@ -67,19 +72,36 @@ export function monthDayClock(instant: string): string {
 }
 /**
  * When a run began, as the Equipment board reads it (screens SCR-07): "06:42" on the America/Denver day of `now`
- * (epoch ms), "10/27 06:42" on any other day; 24-hour, and a time in the repeated hour adds its offset.
+ * (epoch ms), "Oct 27, 06:42" on any other day (the timestamp style, `shortDateTime`); 24-hour, and a time in the
+ * repeated hour adds its offset.
  */
 export function sinceClock(instant: string, now: number): string {
   const date = instantDate(instant);
   if (!date) return TIME_UNAVAILABLE;
   const today = Number.isFinite(now) && DAY_KEY.format(new Date(now)) === DAY_KEY.format(date);
-  return today ? withRepeatedOffset(date, CLOCK.format(date)) : monthDayClock(instant);
+  return today ? withRepeatedOffset(date, CLOCK.format(date)) : shortDateTime(instant);
 }
 /** A calendar date (YYYY-MM-DD) as words: "Tuesday, Oct 27, 2026"; `short` drops the weekday and year. */
 export function dayTitle(value: string, style: "long" | "short" = "long"): string {
   const date = new Date(`${value}T12:00:00Z`);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("en-US", style === "long" ? { timeZone: "UTC", weekday: "long", month: "short", day: "numeric", year: "numeric" } : { timeZone: "UTC", month: "short", day: "numeric" }).format(date);
+}
+/**
+ * The dates the screens print, one style each (polish of 2026-11-04): a short day "Oct 27" (`dayTitle(value, "short")`),
+ * a timestamp "Oct 27, 06:45" (`shortDateTime`), a span of days "Oct 27 – Nov 2" (`daySpan`) and the log's day header
+ * "Mon 3 Nov" (`dayHeader`, redesign §5.9). Native date inputs keep the browser's own.
+ */
+export function daySpan(from: string, to: string): string {
+  return from === to ? dayTitle(from, "short") : `${dayTitle(from, "short")} – ${dayTitle(to, "short")}`;
+}
+const DAY_HEAD = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" });
+/** A calendar date (YYYY-MM-DD) as a day header, "Mon 3 Nov", with its year when `year` is not that date's. */
+export function dayHeader(value: string, year?: string): string {
+  const date = new Date(`${value}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return value;
+  const words = DAY_HEAD.format(date).replace(",", "");
+  return year === undefined || value.slice(0, 4) === year ? words : `${words} ${value.slice(0, 4)}`;
 }
 /** "October 2026" for YYYY-MM. */
 export function monthTitle(month: string): string {
@@ -182,11 +204,14 @@ export function formatValue(value: number | null | undefined, unit: string | nul
   return label === "%" ? `${text}%` : `${text}${NBSP}${label}`;
 }
 const PLAIN = new Intl.NumberFormat("en-US", { maximumFractionDigits: 3, signDisplay: "negative" });
+const DIGITS = [0, 1, 2, 3].map((digits) => new Intl.NumberFormat("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits, signDisplay: "negative" }));
 /**
  * A number with no unit at up to 3 decimals, with a true minus and "—" when missing: the value a reason names, such
  * as a clamp's applied value, where `formatValue`'s 1 dp would print a value that was never applied (0.25 as 0.3).
+ * With `decimals` (0 to 3) it prints exactly that many: a chart tick at its step's ("65", "0.50").
  */
-export function formatNumber(value: number | null | undefined): string {
+export function formatNumber(value: number | null | undefined, decimals?: number): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return "—";
-  return PLAIN.format(value).replace("-", MINUS);
+  const format = decimals === undefined ? PLAIN : DIGITS[Math.min(3, Math.max(0, Math.round(decimals)))];
+  return format.format(value).replace("-", MINUS);
 }

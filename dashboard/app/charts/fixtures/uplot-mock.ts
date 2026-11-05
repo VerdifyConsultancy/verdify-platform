@@ -19,9 +19,12 @@ export class RecordingContext {
   strokes: Stroke[] = [];
   fills: { color: string; path: [number, number][] }[] = [];
   rects: { color: string; x: number; y: number; width: number; height: number }[] = [];
+  /** clearRect calls: gaps cleared to the background (daily water use's stacked parts). */
+  clears: { x: number; y: number; width: number; height: number }[] = [];
   /** strokeRect calls: outlines (sensed lanes, the planned minutes). */
   outlines: { color: string; width: number; dash: number[]; x: number; y: number; w: number; h: number }[] = [];
   texts: Text[] = [];
+  halos: { text: string; x: number; y: number; color: string; width: number }[] = [];
   private dash: number[] = [];
   private path: [number, number][] = [];
   setLineDash(dash: number[]) { this.dash = [...dash]; }
@@ -39,8 +42,11 @@ export class RecordingContext {
   stroke() { this.strokes.push({ stroke: this.strokeStyle, width: this.lineWidth, dash: this.dash, path: this.path }); }
   fill() { this.fills.push({ color: this.fillStyle, path: this.path }); }
   fillRect(x: number, y: number, width: number, height: number) { this.rects.push({ color: this.fillStyle, x, y, width, height }); }
+  clearRect(x: number, y: number, width: number, height: number) { this.clears.push({ x, y, width, height }); }
   strokeRect(x: number, y: number, w: number, h: number) { this.outlines.push({ color: this.strokeStyle, width: this.lineWidth, dash: this.dash, x, y, w, h }); }
   fillText(text: string, x: number, y: number) { this.texts.push({ text, x, y, color: this.fillStyle }); }
+  /** A label's halo, stroked under its words in the chart's background. */
+  strokeText(text: string, x: number, y: number) { this.halos.push({ text, x, y, color: this.strokeStyle, width: this.lineWidth }); }
   measureText(text: string) { return { width: text.length * 6 }; }
 }
 
@@ -171,6 +177,7 @@ export function media({ narrow = false, fine = true }: { narrow?: boolean; fine?
 /** The design-system token values (styles.css §2.1 and §2.2) on :root, as the stylesheet would set them. */
 export const TOKENS: Readonly<Record<string, string>> = {
   "--ink": "#112231", "--muted": "#626b76", "--line": "#dcede7", "--field": "#f4f7f4", "--fault": "#b3261e", "--warn-text": "#5c4407",
+  "--tint-warn": "#f8eccb", "--ink-muted": "#b9c4cc", "--forest": "#0e5a43", "--amber": "#d6a93b",
   "--c-temp": "#112231", "--c-vpd": "#7d3ab7", "--c-rh": "#0d98a4", "--c-outdoor": "#6c7278", "--c-band-wash": "#e2ede8",
   "--c-band-edge": "#6e9c8e", "--c-setpoint": "#0e5a43", "--c-requested": "#a77601", "--c-bound": "#626b76", "--c-grid": "#dcede7",
   "--eq-fan2": "#484fa7", "--eq-heat1": "#d47a00", "--eq-vent": "#056190", "--eq-mister": "#9d2398",

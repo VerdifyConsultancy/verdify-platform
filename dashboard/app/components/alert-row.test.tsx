@@ -3,7 +3,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { Alert, Freshness } from "../lib/vocab";
-import { ALERTS_UNAVAILABLE, AlertRow, NO_OPEN_ALERTS, alertListEmptyText, alertPlace, type AlertRowProps } from "./alert-row";
+import { ALERTS_UNAVAILABLE, AlertRow, NO_OPEN_ALERTS, alertListEmptyText, alertPlace, alertPlaceWords, type AlertRowProps } from "./alert-row";
 import { Button } from "./button";
 import { Panel } from "./panel";
 import { denver, renderUi, text } from "./test-render";
@@ -15,23 +15,31 @@ const ALERT: Alert = {
   id: 41, alert_type: "relay_stuck", category: "equipment", severity: "warning", message: "Fan 2 relay on with no command",
   zone: null, details: { equipment: "fan2" }, status: "open", first_seen_at: denver("06:02"), last_seen_at: denver("06:02"), count: 1,
 };
-const row = (props: Omit<Partial<AlertRowProps>, "alert"> & { alert?: Partial<Alert> } = {}, role: "operator" | "viewer" = "operator") =>
-  renderUi(<ol className="events"><AlertRow {...props} alert={{ ...ALERT, ...props.alert }} /></ol>, { role, writesEnabled: true });
+const row = (props: Omit<Partial<AlertRowProps>, "alert"> & { alert?: Partial<Alert> } = {}, role: "operator" | "viewer" = "operator", apiDown = false) =>
+  renderUi(<ol className="alert-list"><AlertRow {...props} alert={{ ...ALERT, ...props.alert }} /></ol>, { role, writesEnabled: true, apiDown });
 
-test("critical, warning and info rows carry a severity-coloured rule and the severity word in text", () => {
-  for (const [severity, word] of [["critical", "Critical"], ["warning", "Warning"], ["info", "Info"]] as const) {
+test("an ObjectRow with the severity's rule (fault for critical, amber for a warning, muted for info) and the severity word in text", () => {
+  for (const [severity, word, tone] of [["critical", "Critical", " tone-fault"], ["warning", "Warning", " tone-warn"], ["info", "Info", ""]] as const) {
     const item = row({ alert: { severity } }).container.querySelector("li")!;
-    expect(item.className).toBe(`event event-row alert-row alert-${severity}`);
+    expect(item.className).toBe(`object-row${tone} alert-row alert-${severity}`);
+    expect(item.getAttribute("data-severity")).toBe(severity);
     expect(text(item.querySelector(".alert-severity"))).toBe(word);
     cleanup();
   }
+  // While the API is down the row drops its verdict colour; the severity word stays.
+  const down = row({ alert: { severity: "critical" } }, "operator", true).container.querySelector("li")!;
+  expect(down.className).toBe("object-row alert-row alert-critical");
+  expect(down.querySelector("[style]")).toBeNull();
 });
 
-test("plain title from the words table (raw for a type it lacks), place, first seen with its age, and the message", () => {
+test("plain title from the words table (raw for a type it lacks), the place in words, first seen with its age, and the message", () => {
   const { container } = row();
   expect(screen.getByRole("heading", { level: 3 }).textContent).toBe("Relay stuck");
-  expect(text(container.querySelector(".alert-facts"))).toBe("fan2 · since 06:02 (40 min)");
-  expect(text(container)).toContain("Fan 2 relay on with no command");
+  expect(text(container.querySelector(".alert-facts"))).toBe("Fan 2 · since 06:02 (40 min)");
+  expect(text(container.querySelector(".alert-message"))).toBe("Fan 2 relay on with no command");
+  // A screen that says the message live itself leaves it out.
+  cleanup();
+  expect(row({ message: false }).container.querySelector(".alert-message")).toBeNull();
   cleanup();
   expect(screen.queryByRole("heading")).toBeNull();
   row({ title: "Fan 2 relay stuck" });
@@ -41,36 +49,39 @@ test("plain title from the words table (raw for a type it lacks), place, first s
   expect(alertPlace({ zone: null, details: { line_id: "L07", equipment: "mister_south" } })).toBe("L07");
   expect(alertPlace({ zone: null, details: {} })).toBeNull();
   expect(alertPlace({ zone: null })).toBeNull();
+  expect([alertPlaceWords({ zone: "south" }), alertPlaceWords({ zone: null, details: { line_id: "L02" } }), alertPlaceWords({ zone: null, details: { equipment: "fan2" } }), alertPlaceWords({ zone: null, details: { equipment: "pump9" } })])
+    .toEqual(["South", "L02", "Fan 2", "pump9"]);
 });
 
-test("a merged row with count 3 reads \"seen 3 times\" with first and last seen, never \"× 3\"", () => {
+test("merged repeats read \"×3 since 06:02 · last 06:40\" (redesign §5.8); a single one its age; another day carries its date", () => {
   const { container } = row({ alert: { count: 3, first_seen_at: denver("06:02"), last_seen_at: denver("06:40") } });
-  const facts = text(container.querySelector(".alert-facts"));
-  expect(facts).toBe("fan2 · since 06:02 (40 min) · seen 3 times, last 06:40");
-  expect(text(container)).not.toMatch(/[×x]\s?3/);
+  expect(text(container.querySelector(".alert-facts"))).toBe("Fan 2 · ×3 since 06:02 · last 06:40");
   cleanup();
-  expect(text(row({ alert: { count: 1 } }).container)).not.toContain("seen");
+  expect(text(row({ alert: { count: 12, first_seen_at: "2026-10-30T09:10:00Z", last_seen_at: denver("06:22") } }).container.querySelector(".alert-facts"))).toBe("Fan 2 · ×12 since Oct 30, 03:10 · last 06:22");
+  cleanup();
+  expect(text(row({ alert: { count: 1 } }).container.querySelector(".alert-facts"))).not.toContain("×");
+  cleanup();
+  // The value is in the expanded fields, not the row.
+  expect(text(row({ alert: { first_seen_at: "2026-10-31T12:02:00Z", metric_value: 84.1 } }).container.querySelector(".alert-facts"))).toBe("Fan 2 · since Oct 31, 06:02 (2 d)");
 });
 
-test("the current value shows when the alert has one, and an older first seen carries its date", () => {
-  expect(text(row({ alert: { metric_value: 84.1 }, unit: "°F" }).container.querySelector(".alert-facts"))).toBe("fan2 · since 06:02 (40 min) · value 84.1 °F");
-  cleanup();
-  expect(text(row({ alert: { first_seen_at: "2026-10-31T12:02:00Z", metric_value: null } }).container.querySelector(".alert-facts"))).toBe("fan2 · since Oct 31, 06:02 (2 d)");
-});
-
-test("the Acknowledge slot shows for an operator and never for a viewer; Open is for everyone", () => {
+test("the Acknowledge slot shows for an operator and never for a viewer; Details › and what the alert calls for are for everyone", () => {
   const acknowledge = <Button write wide>Acknowledge</Button>;
-  row({ acknowledge, openTo: "/activity?alert=41" });
-  expect(screen.getByRole("button", { name: "Acknowledge" })).toBeTruthy();
-  expect(screen.getByRole("link", { name: "Open Relay stuck" }).getAttribute("href")).toBe("/activity?alert=41");
+  row({ acknowledge, openTo: "/activity?alert=41", action: <span data-action="">Stop</span> });
+  expect(screen.getByRole("button", { name: "Acknowledge" }).closest(".alert-ack")).not.toBeNull();
+  expect(screen.getByRole("link", { name: "Details of Relay stuck" }).getAttribute("href")).toBe("/activity?alert=41");
+  // The actions sit at the row's end: what it calls for, then Details.
+  expect([...document.querySelector(".object-row-actions")!.children].map((node) => node.getAttribute("data-action") ?? node.className)).toEqual(["", "alert-open"]);
   cleanup();
   const { container } = row({ acknowledge, openTo: "/activity?alert=41" }, "viewer");
   expect(screen.queryByRole("button")).toBeNull();
   expect(container.querySelector("[data-write-control]")).toBeNull();
-  expect(screen.getByRole("link", { name: "Open Relay stuck" })).toBeTruthy();
+  expect(container.querySelector(".alert-ack")).toBeNull();
+  expect(screen.getByRole("link", { name: /^Details/ })).toBeTruthy();
   cleanup();
-  // A viewer with nothing else to act on gets no empty action row.
-  expect(row({ acknowledge }, "viewer").container.querySelector(".actions")).toBeNull();
+  // Activity passes its own toggle in place of the link.
+  row({ details: <a href="/activity?alert=41">Hide details</a> });
+  expect(screen.getByRole("link").textContent).toBe("Hide details");
 });
 
 test("an acknowledged row says who acknowledged it and when", () => {

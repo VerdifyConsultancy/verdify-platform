@@ -52,10 +52,14 @@ export function createIngress({ apiPort = 4174, webPort = 4175 } = {}) {
   });
 }
 
-/** Serves on 4173, only on Linux in approved in-cluster CI. */
+/**
+ * Serves on INGRESS_PORT (4173) in front of FIXTURE_API_PORT (4174) and WEB_PORT (4175), each shard of the suite on its
+ * own (playwright.config.ts), only on Linux in approved in-cluster CI.
+ */
 export function startIngress(env = process.env, platform = process.platform) {
   if (platform !== "linux" || env.DASHBOARD_CI_IN_CLUSTER !== "1") throw new Error("Fixture ingress requires approved in-cluster CI");
-  return createIngress().listen(4173);
+  const port = (name, fallback) => Number(env[name] || fallback);
+  return createIngress({ apiPort: port("FIXTURE_API_PORT", 4174), webPort: port("WEB_PORT", 4175) }).listen(port("INGRESS_PORT", 4173));
 }
 
 if (import.meta.main) startIngress();

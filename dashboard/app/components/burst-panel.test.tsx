@@ -96,6 +96,24 @@ test("Clear sends one {kind: clear} and its readback reads none", async () => {
   expect(running()).toBe("Running: none");
 });
 
+test("each burst reads as on Now, its name bold and its length muted; Clear bursts shows only while a burst runs, or while what runs is unknown (#1308 visual QA 39)", async () => {
+  await open();
+  const buttons = [...document.querySelectorAll<HTMLElement>(".burst-actions .burst-button")];
+  expect(buttons.map((node) => [text(node.querySelector(".burst-name")), text(node.querySelector(".burst-length"))])).toEqual([["Fans", "15 min"], ["Humidify", "5 min"], ["Vent bypass", "10 min"]]);
+  expect(buttons.every((node) => node.className.includes("btn-wide"))).toBe(true);
+  // Nothing runs: nothing to clear.
+  expect(running()).toBe("Running: none");
+  expect(button("Clear bursts")).toBeNull();
+  cleanup(); stopFixtureApi();
+  await open({ fixture: "push-button-burst" });
+  expect(button("Clear bursts")?.textContent).toBe("Clear bursts");
+  cleanup(); stopFixtureApi();
+  // The controller not reporting: what runs is unknown, so Clear stays.
+  await open({ fixture: "controller-not-reporting" });
+  expect(running()).toBe("Running: unknown");
+  expect(button("Clear bursts")).not.toBeNull();
+});
+
 test("during emergency cooling the panel says bursts are ignored", async () => {
   await open({ fixture: "safety-cool" });
   expect(text(document.querySelector("[data-bursts=ignored]"))).toBe("Bursts are ignored during emergency cooling");
@@ -225,7 +243,8 @@ test("a viewer reads what runs, with no control and no words about controls", as
 });
 
 test("with changes switched off every burst and Restart is disabled, and nothing is sent", async () => {
-  const api = await open({ fixture: "writes-off" });
+  // A push-button burst runs, so Clear bursts shows too.
+  const api = await open({ fixture: ["writes-off", "push-button-burst"] });
   const controls = [...document.querySelectorAll<HTMLButtonElement>(".burst-panel [data-write-control]")];
   expect(controls.map((control) => control.textContent)).toEqual(["Fans 15 min", "Humidify 5 min", "Vent bypass 10 min", "Clear bursts", "Restart controller"]);
   expect(controls.every((control) => control.disabled)).toBe(true);

@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
-import { useId, useMemo, useRef, useState, type MutableRefObject } from "react";
+import { useContext, useId, useMemo, useRef, useState, type MutableRefObject } from "react";
 import type uPlot from "uplot";
 import { LINES, lineByEquipment, lineById } from "../lib/lines";
 import type { LineKind } from "../lib/vocab";
 import { causeRank, causeToken, causeWords } from "./causes";
-import { DataTable, TimeCell, type DataTableBlock } from "./data-table";
+import { csvFilename, tableCsv } from "./csv";
+import { CsvLink, DataTable, TimeCell, type DataTableBlock } from "./data-table";
 import { labelColor, paintNow, type ChartColors, type PaintTarget } from "./draw";
-import { LANE_PITCH, RowLabels, clipColumns, intervalText, paintHatch, rowBand, spanDuration, spanPixels, type RowLayout } from "./lanes-draw";
+import { LANE_HEAD, LANE_PITCH, RowLabels, clipColumns, intervalText, paintHatch, rowBand, spanDuration, spanPixels, type RowLayout } from "./lanes-draw";
 import { ChartKey, type KeyItem } from "./legend";
 import { lastAtOrBefore } from "./marks";
-import { epochOf, spanText, timeAxis } from "./time-axis";
+import { InStack } from "./stack-context";
+import { epochOf, isoLocal, silentTimeAxis, spanText, timeAxis } from "./time-axis";
 import { cursorX, tooltipPlugin } from "./tooltip";
 import type { IrrigationCause, StateLane, StateLanes, XRange } from "./types";
 import { UPlotChart, useNarrow, useZoomReset, type ChartEnv, type ChartOptions } from "./uplot-chart";
@@ -126,12 +128,16 @@ export function spanAt(row: LaneRow, x: number): LaneSpan | null {
   return index >= 0 && x < row.spans[index].end ? row.spans[index] : null;
 }
 
-/** What the canvas paints: the shown rows (null is the fold line), their pitch and now. */
-export type LanesView = { rows: (LaneRow | null)[]; pitch: number; now: number | null };
+/** What the canvas paints: the shown rows (null is the fold line), their pitch, each row's head line and now. */
+export type LanesView = { rows: (LaneRow | null)[]; pitch: number; head?: number; now: number | null };
 
-export function visibleRows(model: LanesModel, expanded: boolean): (LaneRow | null)[] {
+/**
+ * The rows the canvas paints, in order: the active rows, then the fold line (null) and the idle rows once expanded. In a
+ * chart stack the fold is a button under the rows, so no row stands for it.
+ */
+export function visibleRows(model: LanesModel, expanded: boolean, foldRow = true): (LaneRow | null)[] {
   if (!model.idle.length) return model.active;
-  return [...model.active, null, ...(expanded ? model.idle : [])];
+  return [...model.active, ...(foldRow ? [null] : []), ...(expanded ? model.idle : [])];
 }
 
 /** The tooltip for the row under the pointer: name, state, start–end with offsets, duration and a wet line's cause. */
@@ -154,7 +160,7 @@ export function laneTooltip(view: LanesView, plot: Pick<uPlot, "cursor" | "posTo
  * run; an unknown span is named after it; a label that would overlap a span or another label is dropped.
  */
 export function paintLanes(plot: PaintTarget, view: LanesView, colors: ChartColors, px: number) {
-  const layout: RowLayout = { pitch: view.pitch };
+  const layout: RowLayout = { pitch: view.pitch, head: view.head };
   clipColumns(plot, () => {
     const { ctx, bbox } = plot;
     const labels = new RowLabels(ctx, px);
@@ -201,13 +207,19 @@ export function paintLanes(plot: PaintTarget, view: LanesView, colors: ChartColo
   });
 }
 
-export function lanesOptions(env: ChartEnv, viewRef: MutableRefObject<LanesView>): ChartOptions {
+/**
+ * The lanes' uPlot options. Alone they draw their own time axis under the rows; inside a chart stack (`stacked`) they
+ * draw on exactly the panels' plot area (no padding: the stylesheet places the canvas 56 px from the left and 10 px from
+ * the right, as the panels' y axis and right padding) and keep only the axis's grid, so the stack has one time axis.
+ */
+export function lanesOptions(env: ChartEnv, viewRef: MutableRefObject<LanesView>, stacked = false): ChartOptions {
   const { colors, px } = env;
+  const tokens = { muted: colors["--muted"], grid: colors["--c-grid"] };
   return {
-    padding: [0, null, 0, null],
+    padding: stacked ? [0, 0, 0, 0] : [0, null, 0, null],
     series: [{}],
     // uPlot always makes a second (y) axis: the lanes have no y, so it is hidden.
-    axes: [timeAxis({ muted: colors["--muted"], grid: colors["--c-grid"] }), { show: false }],
+    axes: [stacked ? silentTimeAxis(tokens) : timeAxis(tokens), { show: false }],
     hooks: { draw: [(plot) => paintLanes(plot, viewRef.current, colors, px())] },
     plugins: [tooltipPlugin((plot) => laneTooltip(viewRef.current, plot))],
   };
@@ -223,6 +235,20 @@ export function lanesTable(model: LanesModel): DataTableBlock {
       spanDuration(span.end - span.start), row.wet && span.state === "on" && span.cause ? causeWords(span.cause) : "",
     ])),
   };
+}
+
+/**
+ * "CSV of these lanes" (redesign §7.1): every interval of every row, in row order, with its local start and end, its
+ * length and a wet line's cause; unknown is its own state, never off.
+ */
+export function lanesCsv(model: LanesModel): string {
+  return tableCsv(
+    ["equipment", "label", "state", "start (America/Denver)", "end (America/Denver)", "seconds", "cause"],
+    model.rows.flatMap((row) => row.spans.map((span) => [
+      row.equipment, row.label, row.sensed ? `${span.state} sensed` : span.state, isoLocal(span.start), isoLocal(span.end), Math.round(span.end - span.start),
+      row.wet && span.state === "on" ? span.cause ?? "" : "",
+    ])),
+  );
 }
 
 /** The key: each cause on a wet line, unknown's hatch and the sensed outline, in words; only marks that are drawn. */
@@ -246,7 +272,19 @@ export function lanesKey(model: LanesModel): KeyItem[] {
 
 const runtimeText = (row: LaneRow) => spanDuration(row.runtime);
 
-function LaneItem({ row }: { row: LaneRow }) {
+/** A row's state at the window's end, on time and starts in words, for its line inside a chart stack: "off · 80 min on · 1 start". */
+export function rowFacts(row: LaneRow): string {
+  return `${stateWords(row, row.current)} · ${runtimeText(row)} on · ${row.starts} ${row.starts === 1 ? "start" : "starts"}`;
+}
+
+function LaneItem({ row, stacked }: { row: LaneRow; stacked: boolean }) {
+  // In a stack the row's name and its facts head its track, in words; alone they are columns beside it.
+  if (stacked) {
+    const facts = rowFacts(row);
+    return <li className="lanes-row" data-equipment={row.equipment} title={`${row.label} · ${facts}`}>
+      <span className="lanes-label">{row.label}</span>{" "}<span className="lanes-stat">{facts}</span>
+    </li>;
+  }
   return <li className="lanes-row" data-equipment={row.equipment}>
     <span className="lanes-label" title={row.label}>{row.label}</span>
     <span className="lanes-stat">
@@ -274,11 +312,14 @@ export type EquipmentLanesProps = {
 export function EquipmentLanes(props: EquipmentLanesProps) {
   const { states, xRange, syncKey } = props;
   const narrow = useNarrow();
+  // Inside a chart stack the lanes share the panels' plot area and the stack's one time axis (redesign §7.1).
+  const stacked = useContext(InStack);
   const idleId = useId();
   const [expanded, setExpanded] = useState(false);
   const zoom = useZoomReset(xRange, syncKey);
   const model = useMemo(() => (states ? buildLanes(states) : null), [states]);
-  const view: LanesView = { rows: model ? visibleRows(model, expanded) : [], pitch: narrow ? LANE_PITCH.narrow : LANE_PITCH.wide, now: props.now ?? null };
+  const head = stacked ? LANE_HEAD : 0;
+  const view: LanesView = { rows: model ? visibleRows(model, expanded, !stacked) : [], pitch: (narrow ? LANE_PITCH.narrow : LANE_PITCH.wide) + head, head, now: props.now ?? null };
   const viewRef = useRef(view);
   viewRef.current = view;
   const data = useMemo<uPlot.AlignedData>(() => [[xRange.from, xRange.to]], [xRange.from, xRange.to]);
@@ -286,30 +327,37 @@ export function EquipmentLanes(props: EquipmentLanesProps) {
   const marks = useMemo(() => ({ model, expanded, pitch: view.pitch, now: view.now }), [model, expanded, view.pitch, view.now]);
   const drawable = !props.message && model !== null && model.rows.length > 0;
   const words = (count: number) => `${count} idle ${count === 1 ? "row" : "rows"}`;
+  const fold = (className?: string) => model && <button type="button" className={className} aria-expanded={expanded} aria-controls={idleId} onClick={() => setExpanded((open) => !open)}>{words(model.idle.length)}</button>;
   return <figure className="chart chart-lanes">
-    <figcaption className="lanes-caption">
+    {/* In a stack its disclosure's summary names the lanes, and each row says its facts in words. */}
+    {!stacked && <figcaption className="lanes-caption">
       <span className="eyebrow">EQUIPMENT · COMMANDED</span>
       <span className="lanes-columns" aria-hidden="true"><span className="lanes-wide">state · </span>on time<span className="lanes-wide"> · starts</span></span>
-    </figcaption>
+    </figcaption>}
     {drawable
-      ? <div className="lanes lanes-equipment">
-        <ul className="lanes-rows" aria-label="Equipment, state at the window's end, on time and starts">
-          {model.active.map((row) => <LaneItem key={row.equipment} row={row} />)}
-          {model.idle.length > 0 && <li className="lanes-row lanes-fold">
-            <button type="button" aria-expanded={expanded} aria-controls={idleId} onClick={() => setExpanded((open) => !open)}>{words(model.idle.length)}</button>
-          </li>}
-        </ul>
-        {model.idle.length > 0 && <ul id={idleId} className="lanes-rows" hidden={!expanded} aria-label="Idle equipment">
-          {model.idle.map((row) => <LaneItem key={row.equipment} row={row} />)}
-        </ul>}
-        <div className="lanes-axis" aria-hidden="true" />
-        <UPlotChart options={(env) => lanesOptions(env, viewRef)} data={data} xRange={xRange} structure={`lanes|${syncKey ?? ""}`} className="lanes-canvas"
-          label="Equipment lanes: what each actuator was commanded to do over time, America/Denver. Unknown spans are hatched, never drawn as off. The data table follows."
-          syncKey={syncKey} marks={marks} onZoom={zoom.onZoom} onPlot={zoom.onPlot} />
-      </div>
+      ? <>
+        <div className={stacked ? "lanes lanes-equipment lanes-stacked" : "lanes lanes-equipment"}>
+          <ul className="lanes-rows" aria-label="Equipment, state at the window's end, on time and starts">
+            {model.active.map((row) => <LaneItem key={row.equipment} row={row} stacked={stacked} />)}
+            {!stacked && model.idle.length > 0 && <li className="lanes-row lanes-fold">{fold()}</li>}
+          </ul>
+          {model.idle.length > 0 && <ul id={idleId} className="lanes-rows" hidden={!expanded} aria-label="Idle equipment">
+            {model.idle.map((row) => <LaneItem key={row.equipment} row={row} stacked={stacked} />)}
+          </ul>}
+          {!stacked && <div className="lanes-axis" aria-hidden="true" />}
+          <UPlotChart options={(env) => lanesOptions(env, viewRef, stacked)} data={data} xRange={xRange} structure={`lanes|${syncKey ?? ""}|${stacked ? "stacked" : "alone"}`} className="lanes-canvas"
+            label="Equipment lanes: what each actuator was commanded to do over time, America/Denver. Unknown spans are hatched, never drawn as off. The data table follows."
+            syncKey={syncKey} marks={marks} onZoom={zoom.onZoom} onPlot={zoom.onPlot} />
+        </div>
+        {stacked && model.idle.length > 0 && fold("lanes-fold-toggle")}
+      </>
       : <div className="plot plot-small chart-message"><p>{props.message ?? "No equipment data in this window"}</p></div>}
-    {drawable && (props.zoomControl ?? true) && zoom.zoomed && <div className="chart-tools"><button type="button" onClick={zoom.reset}>Reset zoom</button></div>}
+    {/* The key sits right under the rows it names, above the CSV and the table. */}
     {drawable && <ChartKey items={lanesKey(model)} />}
-    {drawable && <DataTable tables={[lanesTable(model)]} />}
+    {drawable && <div className="chart-tools">
+      {(props.zoomControl ?? true) && zoom.zoomed && <button type="button" onClick={zoom.reset}>Reset zoom</button>}
+      <CsvLink filename={csvFilename("equipment-lanes", xRange)} build={() => lanesCsv(model)} version={model} label="CSV of these lanes" />
+    </div>}
+    {drawable && <DataTable name="Lanes table" tables={[lanesTable(model)]} />}
   </figure>;
 }

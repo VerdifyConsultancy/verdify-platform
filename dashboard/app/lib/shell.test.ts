@@ -4,7 +4,7 @@
 import { expect, test } from "vitest";
 import { FIXTURE_NAMES, fixture } from "../../e2e/fixtures/index.mjs";
 import { parseAlertPage, parseMe, parseNow, type Me, type Now } from "./operator-api";
-import { API_DOWN_TEXT, WRITES_OFF_TEXT, buildLine, revisionLabel, shellStatus, signInHref, type ShellBanner } from "./shell";
+import { API_DOWN_TEXT, WRITES_OFF_TEXT, buildLine, revisionLabel, shellStatus, signInHref, worstSeverity, type ShellBanner } from "./shell";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
 type Answers = { me: Me | null; now: Now | null; set: Record<string, unknown> };
@@ -20,7 +20,7 @@ function status(names: string | string[], failures = 0) {
 const shown = (banner: ShellBanner | null) => banner && { kind: banner.kind, tone: banner.tone, text: banner.text, to: banner.link?.to ?? null };
 
 test("in band: no banner, the count is 0 and the controller reports", () => {
-  expect(status("in-band")).toEqual({ fault: null, warns: [], apiDown: false, openAlerts: 0, ingestorRunning: true, controllerReporting: true });
+  expect(status("in-band")).toEqual({ fault: null, warns: [], apiDown: false, openAlerts: 0, alertSeverity: "info", ingestorRunning: true, controllerReporting: true });
 });
 
 test("API-02 failing twice in a row reads Dashboard API unavailable, and once is not enough", () => {
@@ -114,6 +114,18 @@ test("the nav count is API-02 alerts.open: the open, unacknowledged rows API-14 
   expect(status("alerts-merged").openAlerts).toBe(open.length);
   expect(status("in-band").openAlerts).toBe(0);
   expect(shellStatus(null, null, 0).openAlerts).toBeNull();
+});
+
+test("the count pill's fill is the worst open severity, and unknown whenever the count is (redesign §2.2)", () => {
+  expect(worstSeverity({ critical: 1, warning: 3 })).toBe("critical");
+  expect(worstSeverity({ critical: 0, warning: 2 })).toBe("warning");
+  expect(worstSeverity({ critical: 0, warning: 0 })).toBe("info");
+  const { me, now } = answers("alerts-merged");
+  expect(now!.alerts.critical + now!.alerts.warning).toBeGreaterThan(0);
+  expect(shellStatus(me, now, 0).alertSeverity).toBe(worstSeverity(now!.alerts));
+  // While the API is down the last answer is old news: no count and no colour.
+  expect(shellStatus(me, now, 2)).toMatchObject({ openAlerts: null, alertSeverity: null });
+  expect(shellStatus(null, null, 0).alertSeverity).toBeNull();
 });
 
 test("the footer's build line, and the sign-in link that returns to the same path and query", () => {

@@ -1,22 +1,25 @@
 // SPDX-License-Identifier: MIT
-// SCR-07 Equipment (#1134, #1136): the board's states and the unknown rule, both grow lights, the lanes' window in the URL
-// and their unknown span in words, then the bursts and Restart controller. That a viewer has no write control is
-// roles.spec.ts.
+// SCR-07 Equipment (#1134, #1136, redesign §5.12): the board in two columns with its states and the unknown rule, both
+// grow lights, the flags and the Controller card, the lanes' window in the URL and their unknown span in words, the daily
+// runtime, then the bursts and Restart controller. That a viewer has no write control is roles.spec.ts.
 import type { Page } from "@playwright/test";
-import { PHONE, expect, expectNoHorizontalScroll, fixtureRequests, fixtureWrites, load, test, untilPolled, useScreensClock } from "./support";
+import { DESKTOP, PHONE, expect, expectNoHorizontalScroll, fixtureRequests, fixtureWrites, load, test, untilPolled, useScreensClock } from "./support";
 
 const board = (page: Page) => page.locator(".equipment-row");
 const row = (page: Page, key: string) => page.locator(`.equipment-row[data-equipment="${key}"]`);
 const state = (page: Page, key: string) => row(page, key).locator(".equipment-state");
 const facts = (page: Page, key: string) => row(page, key).locator(".equipment-facts");
+/** The lanes' API-05 reads, not the daily runtime's, which names its six actuators. */
+const laneReads = async (request: Parameters<typeof fixtureRequests>[0]) => (await fixtureRequests(request, "API-05")).filter((read) => !read.path.includes("equipment="));
 
-test("with the controller reporting every actuator shows its state, since, runtime and cycles; fan1 reads OFF since 10/27 04:26, never unknown", async ({ page, request }) => {
+test("with the controller reporting every actuator shows its state, since, runtime and cycles; fan1 reads OFF since Oct 27, 04:26, never unknown", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/equipment");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Equipment");
   await expect(board(page)).toHaveCount(18);
   await expect(state(page, "fan1")).toHaveText("Off");
-  await expect(facts(page, "fan1")).toHaveText("since 10/27 04:26 · on today 0 min · cycles 0 · reported 6 d ago");
-  await expect(facts(page, "fan2")).toHaveText("since 08:31 · on today 2 h 10 min · cycles 6 · reported 2 h ago");
+  await expect(facts(page, "fan1")).toHaveText("since Oct 27, 04:26 · on today 0 min · cycles 0");
+  await expect(facts(page, "fan2")).toHaveText("since 08:31 · on today 2 h 10 min · cycles 6");
   await expect(state(page, "vent")).toHaveText("Closed");
   await expect(page.locator('.equipment-board [data-badge="unknown"]')).toHaveCount(0);
 });
@@ -50,7 +53,7 @@ test("each grow light shows the controller's intent beside the Lutron readback",
 test("grow-lights-differ reads differ, as an amber marker with the word", async ({ page, request }) => {
   await useScreensClock(page, request, "grow-lights-differ");
   await load(page, "/equipment");
-  await expect(state(page, "grow_light_grow")).toHaveText("On (controller) · Lutron Off ▲ Differ");
+  await expect(state(page, "grow_light_grow")).toHaveText("On (controller) · Lutron Off Differ");
   await expect(page.locator("[data-differ]")).toHaveCount(1);
   await expect(row(page, "grow_light_grow").locator("[data-differ]")).toHaveClass(/tag-warn/);
 });
@@ -72,7 +75,7 @@ test("the 72 h chip sets ?range=72h and redraws the lanes from API-05, and a rel
   await expect(page).toHaveURL(/\/equipment\?range=72h$/);
   await expect(page.getByRole("heading", { level: 2, name: "Last 72 h" })).toBeVisible();
   await expect(page.locator(".lanes-canvas canvas")).toHaveCount(1);
-  await expect.poll(async () => (await fixtureRequests(request, "API-05")).map((read) => {
+  await expect.poll(async () => (await laneReads(request)).map((read) => {
     const query = new URL(read.path, "http://fixture.invalid").searchParams;
     return (Date.parse(query.get("to") ?? "") - Date.parse(query.get("from") ?? "")) / 3_600_000;
   })).toEqual([24, 72]);
@@ -122,7 +125,8 @@ test("before the irrigation firmware the bursts and Restart say when they arrive
 
 test("at 390 px the burst buttons are full width and at least 44 px", async ({ page, request }) => {
   await page.setViewportSize(PHONE);
-  await useScreensClock(page, request, "in-band");
+  // A push-button burst runs, so Clear bursts shows beside the three bursts.
+  await useScreensClock(page, request, "push-button-burst");
   await load(page, "/equipment");
   const row = await page.locator(".burst-panel .burst-actions").first().boundingBox();
   for (const name of ["Fans 15 min", "Humidify 5 min", "Vent bypass 10 min", "Clear bursts"]) {
@@ -131,4 +135,75 @@ test("at 390 px the burst buttons are full width and at least 44 px", async ({ p
     expect(box?.height, name).toBeGreaterThanOrEqual(44);
   }
   await expectNoHorizontalScroll(page);
+});
+
+test("at 1440 px the board is two columns side by side, Climate, Lights and Flags beside the water relays and the Controller; at 390 px they stack", async ({ page, request }) => {
+  await page.setViewportSize(DESKTOP);
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/equipment");
+  const columns = page.locator(".equipment-board > .ctl-board-col");
+  await expect(columns.nth(0).locator(":scope > section h2")).toHaveText(["Climate", "Lights", "Flags"]);
+  await expect(columns.nth(1).locator(":scope > section h2")).toHaveText(["Water relays", "Controller"]);
+  const [left, right] = await Promise.all([columns.nth(0).boundingBox(), columns.nth(1).boundingBox()]);
+  expect(right!.x).toBeGreaterThan(left!.x + left!.width - 1);
+  expect(Math.abs(right!.y - left!.y)).toBeLessThanOrEqual(1);
+  // Balanced: neither column runs more than half again as tall as the other.
+  expect(Math.max(left!.height, right!.height) / Math.min(left!.height, right!.height)).toBeLessThan(1.5);
+  await page.setViewportSize(PHONE);
+  const [top, bottom] = await Promise.all([columns.nth(0).boundingBox(), columns.nth(1).boundingBox()]);
+  expect(bottom!.y).toBeGreaterThanOrEqual(top!.y + top!.height);
+  await expectNoHorizontalScroll(page);
+});
+
+test("the Controller card and the status line show firmware, uptime, reset reason, heap against the 32 kB floor, largest block and Wi-Fi, with their age", async ({ page, request }) => {
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/equipment");
+  await expect(page.locator(".page-status")).toHaveText("Controller up 3 d 3 h · firmware 2026.10.30.1412.3240714 · Wi-Fi −61 dBm · Updated 45 s ago");
+  const controller = page.getByRole("region", { name: "Controller", exact: true });
+  await expect(controller.locator(".panel-state")).toHaveText("Updated 45 s ago");
+  await expect(controller.locator(".ctl-heap-words")).toContainText("6 kB above the 32 kB floor");
+  await expect(controller.locator(".data-pair dt")).toHaveText(["Firmware", "Uptime", "Last reset", "Largest block", "Wi-Fi"]);
+  await expect(controller.locator(".data-pair dd")).toHaveText(["2026.10.30.1412.3240714", "3 d 3 h", "Software reset", "22 kB", "−61 dBm"]);
+  const flags = page.getByRole("region", { name: "Flags", exact: true });
+  await expect(flags.locator(".ctl-flag-state")).toHaveText(["Nobody seen · last person 05:10", "None", "No flow"]);
+});
+
+test("Daily runtime · 14 days shows one bar row per heat 1, heat 2, fan 1, fan 2, vent and fog, with the daily average and a table", async ({ page, request }) => {
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/equipment");
+  const runtime = page.getByRole("region", { name: "Daily runtime · 14 days" });
+  await expect(runtime.locator(".ctl-runtime-row")).toHaveCount(6);
+  await expect(runtime.locator(".ctl-runtime-name")).toHaveText(["Heat 1 electric", "Heat 2 gas", "Fan 1", "Fan 2", "Vent", "Fog L11"]);
+  // A mark a day: a day of 0 is a stub and a day with no data a hatch, never nothing, and today's bar is outlined, not over.
+  await expect(runtime.locator(".ctl-runtime-row").first().locator(".spark-bar, .spark-zero, .spark-none")).toHaveCount(14);
+  await expect(runtime.locator(".ctl-runtime-row").first().locator(".spark-bar-partial")).toHaveCount(1);
+  await expect(runtime.locator(".ctl-runtime-row").first().locator(".ctl-runtime-today")).toHaveText(/^today \d/);
+  await runtime.locator("summary").click();
+  await expect(runtime.locator("tbody tr")).toHaveCount(14);
+  await expect(runtime.locator("tbody tr").last()).toContainText("Nov 2 (today)");
+  const reads = (await fixtureRequests(request, "API-05")).filter((read) => read.path.includes("equipment="));
+  expect(reads).toHaveLength(1);
+});
+
+test("a light's automatic switch opens its setting drawer here, and closing it returns focus to the link", async ({ page, request }) => {
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/equipment");
+  const link = row(page, "grow_light_main").getByRole("link", { name: "Automation setting of Main" });
+  await link.click();
+  await expect(page).toHaveURL(/\/equipment\?edit=sw_gl_main_auto_mode$/);
+  await expect(page.locator("dialog[open] .drawer-heading")).toHaveText("GL Main Auto Mode");
+  await page.locator("dialog[open]").getByRole("button", { name: "Cancel" }).click();
+  await expect(page).toHaveURL(/\/equipment$/);
+  await expect(link).toBeFocused();
+});
+
+test("controller-heap-low: free heap under the 32 kB floor turns the Controller card's rule and meter fault, in words", async ({ page, request }) => {
+  await useScreensClock(page, request, "controller-heap-low");
+  await load(page, "/equipment");
+  const controller = page.getByRole("region", { name: "Controller", exact: true });
+  await expect(controller).toHaveClass(/tone-fault/);
+  await expect(controller.locator(".ctl-heap-low")).toHaveText("4 kB below the 32 kB floor");
+  await expect(controller.locator(".ctl-heap-low .glyph-down")).toBeVisible();
+  await expect(controller.locator("svg.ctl-heap")).toHaveClass(/is-below/);
+  await expect(controller.locator(".data-pair dd").nth(3)).toHaveText("10 kB");
 });

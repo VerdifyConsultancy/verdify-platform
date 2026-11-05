@@ -1,211 +1,212 @@
 // SPDX-License-Identifier: MIT
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { useId, useMemo, useState, type ReactNode } from "react";
+import { Link, replace, useSearchParams } from "react-router";
+import { Acknowledge } from "../components/activity/acknowledge";
 import { ALERTS_UNAVAILABLE, AlertRow, alertListEmptyText } from "../components/alert-row";
-import { ReadbackBadge } from "../components/badge";
 import { Button } from "../components/button";
-import { LocalTime, PageHead } from "../components/common";
+import { LocalTime } from "../components/common";
 import { Details } from "../components/details";
 import { EventRow } from "../components/event-row";
 import { FieldHint, useFieldIds } from "../components/forms";
-import { AgeLabel } from "../components/freshness";
+import { AgeLabel, useClockValue } from "../components/freshness";
 import { Kv, type KvItem } from "../components/kv";
-import { EmptyState, Panel, PanelError, type PanelState } from "../components/panel";
+import { ListCard } from "../components/layout/list-card";
+import { PageHeader } from "../components/layout/page-header";
+import type { PanelState } from "../components/panel";
+import { StopAllWater } from "../components/stop-all-water";
 import { useToast } from "../components/toast";
 import {
-  ACTION_FILTERS, LOG_FILTERS, SOURCE_FILTERS, activityHref, alertIdOf, catalogOf, detailText, entryFacts, entryTitle, groupAlerts, isClosed,
-  personName, planChangeText, planChanges, readView, seenActors, seenAgents, shownActor, RESOLVED_24H, type ActivityView, type Catalog, type LogFilter,
-  type LogFilters, type SignedIn,
+  ALERT_LIMIT, RECENT_ALERTS, activityHref, alertIdOf, alertsStatus, catalogOf, dayHeading, detailText, entriesByDay, groupAlerts, isClosed, logRedirect, personName,
+  readView, type ActivityView, type SignedIn,
 } from "../lib/activity";
 import { formatNumber, formatValue, localDate, shortTime } from "../lib/format";
 import { graphWindowUrl } from "../lib/graph-link";
 import { lineByEquipment } from "../lib/lines";
-import { apiGet, type ActivityEntry, type Alert, type IrrigationStatus, type Now, type Parsed } from "../lib/operator-api";
-import { readKey, useApiRead } from "../lib/queries";
+import type { Alert, AlertPage, IrrigationStatus, Now } from "../lib/operator-api";
+import { panelRead, useApiRead, type PanelRead } from "../lib/queries";
+import { viewMeta } from "../lib/sections";
 import { OperatorOnly, useWritesEnabled } from "../lib/session";
 import { useMe, useShellNow, useShellStatus } from "../lib/shell";
-import { usePolledQuery } from "../lib/use-current";
 import { words } from "../lib/words";
-import { REASON_MAX, useCommand, useRecordWrite, useStop } from "../lib/writes";
+import { REASON_MAX, useCommand, useRecordWrite } from "../lib/writes";
 
-export const meta = () => [{ title: "Activity · Verdify dashboard" }];
+export const meta = () => viewMeta("activity-alerts");
 
-/** Open alerts every 15 s; the log, the water status and the settings catalog every 60 s (screens §7). */
+/**
+ * An old log link (`/activity?target=L01`, D-UX-03) lands on Activity → Log with the same query, replacing the history
+ * entry: from the server for a page load, in the browser for an in-app link. `?alert=7` and `?resolved=24h` stay here.
+ */
+export function loader({ request }: { request: Request }) {
+  const to = logRedirect(new URL(request.url));
+  return to ? replace(to) : null;
+}
+// Its own function, never `= loader`, using only imported names: the client build strips `loader` and splits
+// `clientLoader` into a chunk of its own, so naming `loader` here threw as the page's module loaded and the page never
+// hydrated (`routes.test.ts`).
+export function clientLoader({ request }: { request: Request }) {
+  const to = logRedirect(new URL(request.url));
+  return to ? replace(to) : null;
+}
+
+/** Alerts every 15 s; the water status and the recent activity every 60 s (screens §7). */
 const ALERTS_POLL_MS = 15_000;
-const LOG_POLL_MS = 60_000;
-const ENGINE_POLL_MS = 60_000;
-const CATALOG_POLL_MS = 60_000;
-/** API-14's largest page: the merged open alerts fit in one. */
-const ALERT_LIMIT = 200;
+const SLOW_POLL_MS = 60_000;
+/** Recent activity: the five newest log entries. */
+const RECENT_ACTIVITY = { limit: 5 } as const;
 /** "Open in Graphs" shows 2 h either side of an alert's first seen. */
 const GRAPH_MARGIN_MS = 2 * 3_600_000;
 
 /**
- * SCR-06 Activity and alerts (screens §7): the open alerts (API-14), each expanding in place at `?alert=<id>`, then the
- * activity log (API-17) with its filters, every view state in the URL. Operators acknowledge and resolve with an
- * optional note, stop all water from a fence breach and clear a mister latch; viewers read the same page with none of
- * those controls. No greenhouse data renders in SSR: it loads in the browser.
+ * Activity → Alerts (`/activity`, redesign §5.8; SCR-06): what needs someone now. One API-14 read (`status=recent`, every
+ * 15 s) gives three groups: "Needs action" (nobody has acknowledged it, by severity then age), "Acknowledged, still open"
+ * and "Resolved in the last 24 h", the last two collapsed. Each alert expands in place at `?alert=<id>`, and the status
+ * line states the one count. Then "Recent activity": the five newest log entries and "Open the log ›". Operators
+ * acknowledge with an optional note and resolve, stop all water from a fence breach and clear a mister latch; viewers
+ * read the same page with none of those controls. No greenhouse data renders in SSR: it loads in the browser.
  */
 export default function Activity() {
   const [params] = useSearchParams();
   const view = readView(params);
-  // The water status says whether the irrigation firmware is on the controller (Clear fault) and names the lines.
-  const water = useApiRead("API-IRR-01", {}, { intervalMs: ENGINE_POLL_MS });
-  const irrigation = water.status === "success" ? water.data ?? null : null;
-  return <>
-    <PageHead eyebrow="Activity · people, Iris, agents and system · America/Denver" title="Activity and alerts" />
-    <AlertsPanel view={view} params={params} irrigation={irrigation} />
-    <LogPanel view={view} params={params} />
-  </>;
-}
-
-// ---------------------------------------------------------------------------------------------------- open alerts
-type AlertItemProps = {
-  alert: Alert;
-  expanded: boolean;
-  /** The row's link that expands it, or collapses it when it is expanded. */
-  toggleHref: string;
-  me: SignedIn;
-  now: Now | null;
-  irrigation: IrrigationStatus | null;
-};
-
-/**
- * The open alerts, polled every 15 s: the unacknowledged rows in API order under "Open alerts · N" (N is API-02's one
- * count, the nav's), "Acknowledged, still open (N)" collapsed, and the alerts resolved in the last 24 h while
- * `resolved=24h`. The list says "No open alerts" only after a good read while the ingestor and climate are fresh, and a
- * failed read says "Alerts unavailable" here alone. A linked alert that is no longer open loads from `status=recent`.
- */
-function AlertsPanel({ view, params, irrigation }: { view: ActivityView; params: URLSearchParams; irrigation: IrrigationStatus | null }) {
   const me = useMe();
   const shellNow = useShellNow();
   const { openAlerts, apiDown } = useShellStatus();
-  const alerts = useApiRead("API-14", { status: view.resolved ? "recent" : "open", limit: ALERT_LIMIT }, { intervalMs: ALERTS_POLL_MS });
-  const rows = alerts.data?.items ?? [];
-  const groups = groupAlerts(rows);
-  const expandedId = alertIdOf(view.alert);
-  const shown = [...groups.open, ...groups.acknowledged, ...(view.resolved ? groups.closed : [])];
+  // The water status says whether the irrigation firmware is on the controller (Clear fault) and names the lines.
+  const water = panelRead(useApiRead("API-IRR-01", {}, { intervalMs: SLOW_POLL_MS }));
+  const alerts = panelRead(useApiRead("API-14", RECENT_ALERTS, { intervalMs: ALERTS_POLL_MS }));
+  const groups = groupAlerts(alerts.data?.items ?? []);
   const now = shellNow.data;
   const freshness = apiDown || !now ? null : now.freshness;
-  const collapseHref = activityHref(params, { alert: null });
-  const item = (alert: Alert) => <AlertItem key={alert.id} alert={alert} expanded={alert.id === expandedId} me={me} now={now} irrigation={irrigation}
-    toggleHref={alert.id === expandedId ? collapseHref : activityHref(params, { alert: String(alert.id) })} />;
-  const state: PanelState = alerts.isError ? "error" : alerts.isPending || shellNow.pending ? "loading" : "ready";
-  const resolvedToggle = <Link className="panel-link" preventScrollReset to={activityHref(params, { resolved: view.resolved ? null : RESOLVED_24H })}>
-    {view.resolved ? "Hide resolved" : "Show resolved in the last 24 h"} <span aria-hidden="true">›</span>
-  </Link>;
-  // The linked alert's row as the list last held it, shown while status=recent answers for a just-resolved alert.
-  const held = rows.find((row) => row.id === expandedId);
-  const lastHeld = useRef<Alert | null>(null);
-  if (held) lastHeld.current = held;
-  let linked: ReactNode = null;
-  if (view.alert !== null && !shown.some((row) => row.id === expandedId)) {
-    // A resolved alert the open list still holds (just resolved here), else one only status=recent may have.
-    linked = <section className="alert-linked" aria-labelledby="alert-linked-head">
-      <h3 id="alert-linked-head">Linked alert</h3>
-      {held ? <ol className="events alert-list">{item(held)}</ol>
-        : expandedId === null || view.resolved ? <p>{notOpenText(view.alert)}</p>
-        : <RecentAlert id={expandedId} known={lastHeld.current?.id === expandedId ? lastHeld.current : null} item={item} />}
-    </section>;
-  }
-  return <Panel id="alerts" title={<>Open alerts{openAlerts !== null && ` · ${openAlerts}`}</>} thing="alerts" state={state} reserve="md"
-    errorText={`${ALERTS_UNAVAILABLE}.`} onRetry={() => void alerts.refetch()} actions={resolvedToggle}>
-    {linked}
-    {groups.open.length ? <ol className="events alert-list">{groups.open.map(item)}</ol>
-      : <p className="alert-empty">{alertListEmptyText({ readOk: true, ingestor: freshness?.ingestor, climate: freshness?.climate })}</p>}
-    {groups.acknowledged.length > 0 && <AcknowledgedGroup rows={groups.acknowledged} holdsExpanded={groups.acknowledged.some((row) => row.id === expandedId)} item={item} />}
-    {view.resolved && <section className="alert-group" aria-labelledby="alert-resolved-head">
-      <h3 id="alert-resolved-head">Resolved in the last 24 h</h3>
-      {groups.closed.length ? <ol className="events alert-list">{groups.closed.map(item)}</ol> : <p className="alert-empty">Nothing resolved in the last 24 h.</p>}
+  const coverage = alertListEmptyText({ readOk: true, ingestor: freshness?.ingestor, climate: freshness?.climate });
+  const loading = alerts.pending || (shellNow.pending && !now);
+  // A failed read states no counts, even with an earlier answer kept: its rows may be gone (the groups say why).
+  const counts = { open: openAlerts ?? groups.open.length, acknowledged: groups.acknowledged.length, resolved: groups.closed.length, coverage };
+  const status = loading || alerts.failed ? null : alertsStatus(counts);
+  return <>
+    <PageHeader view="activity-alerts" status={status} statusShort={status === null ? null : alertsStatus({ ...counts, short: true })} />
+    <div className="page act-alerts">
+      <AlertGroups view={view} params={params} alerts={alerts} me={me} now={now} irrigation={water.failed ? null : water.data} loading={loading} />
+      <RecentActivity me={me} />
+    </div>
+  </>;
+}
+
+// ---------------------------------------------------------------------------------------------------- the groups
+type ItemContext = {
+  readonly me: SignedIn; readonly now: Now | null; readonly irrigation: IrrigationStatus | null; readonly params: URLSearchParams; readonly expandedId: number | null;
+  /** An Acknowledge on this page names its alert, so the acknowledged group opens to show who and when. */
+  readonly onAcknowledged: (id: number) => void;
+};
+
+/**
+ * "Needs action" while anything is unacknowledged (a failed read says "Alerts unavailable." with Retry, never that
+ * nothing is open), then the acknowledged and resolved groups, collapsed, each opening when it holds the expanded alert
+ * (`?resolved=24h` opens the resolved one, and with none reads "Nothing resolved in the last 24 h · Open the log ›"
+ * once a read that succeeded says so). A linked alert in none of them says it is not open or resolved in 24 h.
+ */
+function AlertGroups({ view, params, alerts, me, now, irrigation, loading }: { view: ActivityView; params: URLSearchParams; alerts: PanelRead<AlertPage>; me: SignedIn; now: Now | null; irrigation: IrrigationStatus | null; loading: boolean }) {
+  const groups = groupAlerts(alerts.data?.items ?? []);
+  const expandedId = alertIdOf(view.alert);
+  const [acknowledgedHere, setAcknowledgedHere] = useState<number | null>(null);
+  const context: ItemContext = { me, now, irrigation, params, expandedId, onAcknowledged: setAcknowledgedHere };
+  const item = (alert: Alert) => <AlertItem key={alert.id} alert={alert} context={context} />;
+  const all = [...groups.open, ...groups.acknowledged, ...groups.closed];
+  const state: PanelState = alerts.failed && !alerts.data ? "error" : loading ? "loading" : "ready";
+  const linked = view.alert !== null && !loading && alerts.data && !all.some((row) => row.id === expandedId);
+  // One block of the page: the groups at the card gap (an empty block takes no room). A read that failed after an
+  // earlier answer says so above the rows it keeps, with Retry, as Now's Needs someone does: they may be gone.
+  return <div className="act-groups">
+    {alerts.failed && alerts.data && <p className="fault act-unavailable" data-alerts="unavailable">{ALERTS_UNAVAILABLE}: these may have changed. <Button onClick={alerts.retry}>Retry</Button></p>}
+    {linked && <section className="act-linked" aria-labelledby="alert-linked-head">
+      <h2 id="alert-linked-head">Linked alert</h2>
+      <p>{notOpenText(view.alert ?? "")}</p>
     </section>}
-    {alerts.data?.next_cursor && <p className="state-note">Showing the first {ALERT_LIMIT} alerts.</p>}
-  </Panel>;
+    {(state !== "ready" || groups.open.length > 0) && <ListCard id="alerts" title="Needs action" thing="alerts" state={state} reserve="md" errorText={`${ALERTS_UNAVAILABLE}.`} onRetry={alerts.retry}>
+      <ol className="alert-list act-alert-list">{groups.open.map(item)}</ol>
+    </ListCard>}
+    {groups.acknowledged.length > 0 && <AlertGroup summary={`Acknowledged, still open (${groups.acknowledged.length})`} holdsExpanded={groups.acknowledged.some((row) => row.id === expandedId || row.id === acknowledgedHere)}>
+      {groups.acknowledged.map(item)}
+    </AlertGroup>}
+    {groups.closed.length > 0 && <AlertGroup summary={`Resolved in the last 24 h (${groups.closed.length})`} start={view.resolved} holdsExpanded={groups.closed.some((row) => row.id === expandedId)}>
+      {groups.closed.map(item)}
+    </AlertGroup>}
+    {/* A link to the resolved group with none to open says so in one line, rather than a page silent about it (§3.6 rule 6). */}
+    {view.resolved && state === "ready" && !alerts.failed && !alerts.data?.next_cursor && groups.closed.length === 0 && <p className="card act-resolved-none" data-alerts="resolved-none">
+      {NOTHING_RESOLVED} · <Link to="/activity/log">Open the log<span aria-hidden="true"> ›</span></Link>
+    </p>}
+    {alerts.data?.next_cursor && <p className="meta">Showing the first {ALERT_LIMIT} alerts.</p>}
+  </div>;
 }
 
 const notOpenText = (id: string) => `Alert ${id} is not open or resolved in the last 24 h`;
+const NOTHING_RESOLVED = "Nothing resolved in the last 24 h";
 
 /**
- * "Acknowledged, still open (N)", collapsed until it holds the expanded alert (a link to one, or an Acknowledge that
- * moved it here), then as the person leaves it. Its rows stay mounted, so a Clear fault readback or a note in progress
- * survives another alert being expanded or hidden.
+ * A collapsed group ("Acknowledged, still open (2)"), open while it holds the expanded alert (a link to one, or an
+ * Acknowledge that moved it here), then as the person leaves it. Its rows stay mounted, so a Clear fault readback or a
+ * note in progress survives another alert being expanded or hidden.
  */
-function AcknowledgedGroup({ rows, holdsExpanded, item }: { rows: readonly Alert[]; holdsExpanded: boolean; item: (alert: Alert) => ReactNode }) {
-  const [open, setOpen] = useState(holdsExpanded);
+function AlertGroup({ summary, holdsExpanded, start = false, children }: { summary: string; holdsExpanded: boolean; start?: boolean; children: ReactNode }) {
+  const [open, setOpen] = useState(holdsExpanded || start);
   const [wasHolding, setWasHolding] = useState(holdsExpanded);
   if (wasHolding !== holdsExpanded) {
     setWasHolding(holdsExpanded);
     if (holdsExpanded) setOpen(true);
   }
-  return <Details className="alert-group" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}
-    summary={`Acknowledged, still open (${rows.length})`}>
-    <ol className="events alert-list">{rows.map(item)}</ol>
+  return <Details className="alert-group card" open={open} onToggle={(event) => setOpen(event.currentTarget.open)} summary={summary}>
+    <ol className="alert-list act-alert-list">{children}</ol>
   </Details>;
-}
-
-/**
- * A linked alert missing from the open rows: API-14 `status=recent` has it while it was resolved in the last 24 h.
- * Until that read answers, the row the open list last held (`known`) stands in, so a Resolve never flickers.
- */
-function RecentAlert({ id, known, item }: { id: number; known: Alert | null; item: (alert: Alert) => ReactNode }) {
-  const recent = useApiRead("API-14", { status: "recent", limit: ALERT_LIMIT }, { intervalMs: ALERTS_POLL_MS });
-  const found = recent.data?.items.find((row) => row.id === id) ?? (recent.isPending ? known ?? undefined : undefined);
-  if (found) return <ol className="events alert-list">{item(found)}</ol>;
-  if (recent.isError) return <PanelError thing={`alert ${id}`} onRetry={() => void recent.refetch()} />;
-  if (recent.isPending) return <p className="state-note">Loading alert {id}</p>;
-  return <p>{notOpenText(String(id))}</p>;
 }
 
 /**
  * One alert as `AlertRow` draws it, plus what its type needs: the flow alert's words and spigot guidance (it has no
  * Stop: no Verdify valve is open), the valve a fence breach opened with Stop all water, and Clear fault on a latched
- * mister while the irrigation firmware runs. Expanded, it shows every field, the runbook as plain text, "Open in
- * Graphs" and the note that Acknowledge and Resolve send; a collapsed row's Acknowledge sends no note.
+ * mister while the irrigation firmware runs. Collapsed, it offers Acknowledge with an optional note; expanded (its
+ * "Details ›", `?alert=<id>`), every field, the runbook as plain text, "Open in Graphs ±2 h" and the note that
+ * Acknowledge and Resolve send.
  */
-function AlertItem({ alert, expanded, toggleHref, me, now, irrigation }: AlertItemProps) {
+function AlertItem({ alert, context }: { alert: Alert; context: ItemContext }) {
+  const { me, now, irrigation, params, expandedId, onAcknowledged } = context;
   const record = useRecordWrite();
   const toast = useToast();
   const [note, setNote] = useState("");
   const [sending, setSending] = useState<"ack" | "resolve" | null>(null);
+  const expanded = alert.id === expandedId;
   const title = words("alert_type", alert.alert_type);
   const closed = isClosed(alert);
   const unacknowledged = !closed && alert.status !== "acknowledged";
   const lineId = detailText(alert.details, "line_id");
   const breach = alert.alert_type === "irrigation_fence_breach" && !closed;
   const faulted = alert.alert_type === "irrigation_line_faulted" && !closed && lineId !== null && irrigation?.engine === true;
+  const said = (kind: "ack" | "resolve", updated: Alert) => {
+    const by = kind === "ack" ? updated.acknowledged_by : updated.resolved_by;
+    const at = kind === "ack" ? updated.acknowledged_at : updated.resolved_at;
+    toast.show({ message: `“${title}” ${kind === "ack" ? "acknowledged" : "resolved"}${by ? ` by ${personName(by, me)}` : ""}${at ? ` · ${shortTime(at)}` : ""}` });
+  };
   const respond = async (kind: "ack" | "resolve", text: string | null) => {
     setSending(kind);
     const outcome = kind === "ack" ? await record.acknowledge(alert.id, text) : await record.resolve(alert.id, text);
     setSending(null);
     if (!outcome.ok) return;
-    const by = kind === "ack" ? outcome.data.acknowledged_by : outcome.data.resolved_by;
-    const at = kind === "ack" ? outcome.data.acknowledged_at : outcome.data.resolved_at;
-    toast.show({ message: `“${title}” ${kind === "ack" ? "acknowledged" : "resolved"}${by ? ` by ${personName(by, me)}` : ""}${at ? ` · ${shortTime(at)}` : ""}` });
+    said(kind, outcome.data);
+    if (kind === "ack") onAcknowledged(outcome.data.id);
     setNote("");
   };
-  const quick = (!expanded && unacknowledged) || breach || faulted ? <>
-    {!expanded && unacknowledged && <Button write wide busy={sending === "ack"} disabled={record.sending} onClick={() => void respond("ack", null)}>
-      Acknowledge <span className="screen-reader">{title}</span>
-    </Button>}
-    {!expanded && record.error && <span className="field-error" role="alert">{record.error.message}</span>}
-    {breach && <StopAllWater />}
-    {faulted && <ClearFault lineId={lineId} />}
-  </> : undefined;
   const detailId = `alert-${alert.id}-detail`;
+  // Opening pushes, so Back closes it; closing replaces, so Back never reopens it (redesign §2.4).
+  const toggle = <Link className="alert-open" to={expanded ? activityHref(params, { alert: null }) : activityHref(params, { alert: String(alert.id) })} preventScrollReset replace={expanded}
+    aria-expanded={expanded} aria-controls={expanded ? detailId : undefined}>
+    {expanded ? "Hide details" : <>Details <span className="screen-reader">of {title} </span><span aria-hidden="true">›</span></>}
+  </Link>;
   // The API names people by username; the signed-in person reads by name ("Acknowledged by Jason · 06:47"). An open
-  // flow alert's message is the ingestor's words for what LeakLines shows live ("… since 03:02", "Flow stopped at
-  // 03:20"), so the row says it once; the expanded fields keep the message.
+  // flow alert's message is the ingestor's words for what LeakLines shows live, so the row says it once.
   const leakOpen = alert.alert_type === "leak_detected" && !closed;
-  const named: Alert = {
-    ...alert, message: leakOpen ? "" : alert.message,
-    acknowledged_by: alert.acknowledged_by ? personName(alert.acknowledged_by, me) : alert.acknowledged_by,
-  };
-  return <AlertRow alert={named} title={title} id={`alert-${alert.id}`} acknowledge={quick}>
+  const named: Alert = { ...alert, acknowledged_by: alert.acknowledged_by ? personName(alert.acknowledged_by, me) : alert.acknowledged_by };
+  const action = breach || faulted ? <>{breach && <StopAllWater />}{faulted && <ClearFault lineId={lineId} />}</> : undefined;
+  return <AlertRow alert={named} title={title} id={`alert-${alert.id}`} details={toggle} action={action} message={!leakOpen}
+    acknowledge={!expanded && unacknowledged ? <Acknowledge alert={alert} onAcknowledged={(updated) => { said("ack", updated); onAcknowledged(updated.id); }} /> : undefined}>
     {leakOpen && <LeakLines alert={alert} now={now} />}
     {alert.alert_type === "irrigation_fence_breach" && <ValveLine alert={alert} irrigation={irrigation} />}
     {closed && <ClosedLine alert={alert} me={me} />}
-    <p className="alert-toggle"><Link to={toggleHref} preventScrollReset aria-expanded={expanded} aria-controls={expanded ? detailId : undefined}>
-      {expanded ? "Hide details" : <>Details <span className="screen-reader">of {title}</span> <span aria-hidden="true">›</span></>}
-    </Link></p>
     {expanded && <div className="alert-detail" id={detailId}>
       <Kv items={alertFields(alert, me)} />
       <h4>Runbook</h4>
@@ -231,12 +232,12 @@ function LeakLines({ alert, now }: { alert: Alert; now: Now | null }) {
   const leak = now && now.leak.alert_id === alert.id ? now.leak : null;
   const stoppedAt = leak?.stopped_at ?? detailText(alert.details, "stopped_at");
   const gallons = leak?.gal_last_10min;
-  return <>
+  return <div className="act-leak">
     <p>A leak, or the hose, sink or hydro in use.</p>
     {stoppedAt ? <p>Flow stopped at <LocalTime at={stoppedAt} /></p>
       : gallons !== null && gallons !== undefined && <p>{formatValue(gallons, "gal")} in the last 10 min · <AgeLabel observedAt={now?.freshness.climate.observed_at} stale={now?.freshness.climate.stale ?? false} /></p>}
     <p className="alert-guidance">If no one is using water, close the spigot.</p>
-  </>;
+  </div>;
 }
 
 /** The valve a fence breach opened (`details.equipment`): its line and, from API-IRR-01, the line's name. */
@@ -245,16 +246,13 @@ function ValveLine({ alert, irrigation }: { alert: Alert; irrigation: Irrigation
   if (!equipment) return null;
   const line = lineByEquipment(equipment);
   const name = line ? irrigation?.lines.find((row) => row.line_id === line.id)?.name : undefined;
-  return <p>Valve that opened: {line ? `${line.id} ${name ?? equipment}` : equipment}</p>;
+  return <p className="act-valve">Valve that opened: {line ? `${line.id} ${name ?? equipment}` : equipment}</p>;
 }
 
 /** Who closed an alert and when ("Resolved by Jason · 10:42"), with the resolution. */
 function ClosedLine({ alert, me }: { alert: Alert; me: SignedIn }) {
   const by = alert.resolved_by ? ` by ${personName(alert.resolved_by, me)}` : "";
-  return <>
-    <p>{words("alert_status", alert.status)}{by}{alert.resolved_at && <> · <LocalTime at={alert.resolved_at} /></>}</p>
-    {alert.resolution && <p>“{alert.resolution}”</p>}
-  </>;
+  return <p className="act-closed">{words("alert_status", alert.status)}{by}{alert.resolved_at && <> · <LocalTime at={alert.resolved_at} /></>}{alert.resolution && <> · “{alert.resolution}”</>}</p>;
 }
 
 /** "Open in Graphs ›": the window from 2 h before to 2 h after the alert was first seen. */
@@ -262,7 +260,7 @@ function GraphLink({ firstSeen }: { firstSeen: string }) {
   const first = Date.parse(firstSeen);
   const href = Number.isFinite(first) ? graphWindowUrl(first - GRAPH_MARGIN_MS, first + GRAPH_MARGIN_MS) : null;
   if (!href) return null;
-  return <p className="alert-graph"><Link to={href}>Open in Graphs <span aria-hidden="true">›</span></Link> <span className="state-note">±2 h around <LocalTime at={firstSeen} /></span></p>;
+  return <p className="alert-graph"><Link to={href}>Open in Graphs <span aria-hidden="true">›</span></Link> <span className="meta">±2 h around <LocalTime at={firstSeen} /></span></p>;
 }
 
 const ISO_TIME = /^\d{4}-\d\d-\d\dT\d\d:\d\d/;
@@ -288,6 +286,7 @@ function alertFields(alert: Alert, me: SignedIn): KvItem[] {
     { term: "Zone", value: alert.zone || null },
     { term: "Value", value: alert.metric_value === null || alert.metric_value === undefined ? null : formatNumber(alert.metric_value) },
     { term: "Threshold", value: alert.threshold_value === null || alert.threshold_value === undefined ? null : formatNumber(alert.threshold_value) },
+    { term: "Seen", value: <>{alert.count ?? 1} {alert.count === 1 || alert.count === undefined ? "time" : "times"}, first <LocalTime at={alert.first_seen_at} date />{alert.last_seen_at && <>, last <LocalTime at={alert.last_seen_at} date /></>}</> },
     { term: "Details", value: details.length ? <Kv className="kv-nested" items={details.map(([key, value]) => ({ key, term: key, value: detailValue(value) }))} /> : null },
     { term: "Acknowledged", value: by(alert.acknowledged_by, alert.acknowledged_at), reason: "not yet" },
     { term: "Notes", value: alert.notes || null },
@@ -311,140 +310,36 @@ function NoteField({ value, onChange, sentWith }: { value: string; onChange: (te
   </div>;
 }
 
-/**
- * Stop all water on a fence breach: API-IRR-07 `{}` through `useStop`, one tap with no dialog, never disabled by the
- * writes flag (the BFF passes it), then the Stop result toast once the relays read OFF or 30 s pass.
- */
-function StopAllWater() {
-  const stopper = useStop();
-  return <>
-    <Button variant="stop" write wide busy={stopper.sending} onClick={() => void stopper.stop()}>Stop all water</Button>
-    {stopper.confirming && <span className="state-note">Waiting for the relays to read OFF</span>}
-  </>;
-}
-
 /** Clear fault on a latched mister: API-IRR-13 `{line_id}`, then the readback (C): the latch gone from API-IRR-01. */
 function ClearFault({ lineId }: { lineId: string }) {
   const command = useCommand({ operation: "API-IRR-13" });
   const note = command.phase === "waiting" ? "Waiting for the controller" : command.phase === "done" ? "Latch cleared" : command.phase === "late" ? command.message : null;
   return <>
-    <Button write wide busy={command.sending} onClick={() => void command.send({}, { line_id: lineId })}>Clear fault <span className="screen-reader">on {lineId}</span></Button>
-    {note && <span className="state-note">{note}</span>}
+    <Button write busy={command.sending} onClick={() => void command.send({}, { line_id: lineId })}>Clear fault <span className="screen-reader">on {lineId}</span></Button>
+    {note && <span className="meta">{note}</span>}
     {command.error && <span className="field-error" role="alert">{command.error.message}</span>}
   </>;
 }
 
-// ---------------------------------------------------------------------------------------------------- the log
-type LogPages = { readonly items: readonly ActivityEntry[]; readonly next_cursor: string | null; readonly pages: number };
-
-/** Up to `pages` API-17 pages in order, each from the previous one's `next_cursor`, as one list. */
-async function fetchLog(filters: LogFilters, pages: number, signal: AbortSignal): Promise<LogPages> {
-  const items: ActivityEntry[] = [];
-  const seen = new Set<number>();
-  let cursor: string | null = null;
-  let fetched = 0;
-  do {
-    const page: Parsed<"API-17"> = await apiGet("API-17", cursor === null ? { ...filters } : { ...filters, cursor }, { signal });
-    fetched += 1;
-    for (const entry of page.items) if (!seen.has(entry.id)) { seen.add(entry.id); items.push(entry); }
-    cursor = page.next_cursor;
-  } while (cursor !== null && fetched < pages);
-  return { items, next_cursor: cursor, pages: fetched };
-}
-
+// ---------------------------------------------------------------------------------------------------- recent activity
 /**
- * The log with its filters, polled every 60 s. "Load older" asks for one more page, and every poll reads all the pages
- * shown again from the newest, so a refresh never leaves a gap between them. The key sits under API-17's, so a write
- * hook's refresh of API-17 reaches it.
+ * The five newest log entries (API-17, every 60 s), one line each under the log's day headers (Today, Yesterday, Fri 30
+ * Oct; redesign §5.9), so the time column only ever holds HH:MM, and "Open the log ›".
  */
-function useActivityLog(filters: LogFilters) {
-  const filterKey = JSON.stringify(filters);
-  const [paging, setPaging] = useState({ key: filterKey, pages: 1 });
-  const pages = paging.key === filterKey ? paging.pages : 1;
-  const query = usePolledQuery<LogPages>([...readKey("API-17", filters), "log"], (signal) => fetchLog(filters, pages, signal), LOG_POLL_MS);
-  const { refetch } = query;
-  useEffect(() => { if (pages > 1) void refetch(); }, [pages, refetch]);
-  return {
-    query,
-    loadingOlder: query.isFetching && pages > (query.data?.pages ?? 0),
-    loadOlder: () => setPaging({ key: filterKey, pages: pages + 1 }),
-  };
-}
-
-/** The activity log: every write by a person, Iris, an agent or the system, newest first. */
-function LogPanel({ view, params }: { view: ActivityView; params: URLSearchParams }) {
-  const me = useMe();
-  const { query, loadingOlder, loadOlder } = useActivityLog(view.filters);
-  const settings = useApiRead("API-09", {}, { intervalMs: CATALOG_POLL_MS });
+function RecentActivity({ me }: { me: SignedIn }) {
+  const log = panelRead(useApiRead("API-17", RECENT_ACTIVITY, { intervalMs: SLOW_POLL_MS }));
+  const settings = useApiRead("API-09", {}, { intervalMs: SLOW_POLL_MS });
   const catalog = useMemo(() => catalogOf(settings.data?.items), [settings.data]);
-  const entries = query.data?.items ?? [];
-  const filtered = LOG_FILTERS.some((name) => view.filters[name] !== undefined);
-  const clearHref = activityHref(params, Object.fromEntries(LOG_FILTERS.map((name) => [name, null])));
-  const state: PanelState = query.isError ? "error" : query.isPending ? "loading" : entries.length ? "ready" : "empty";
-  const today = localDate(new Date().toISOString());
-  const empty = filtered
-    ? <EmptyState message="No activity matches these filters" widen={{ to: clearHref, label: "Clear filters" }} />
-    : <EmptyState message="No activity yet." detail="Every change by a person, Iris, an agent or the system shows here." />;
-  return <Panel id="log" title="Activity log" thing="activity" state={state} reserve="lg" onRetry={() => void query.refetch()} empty={empty}
-    actions={<LogFilterForm view={view} params={params} entries={entries} me={me} clearHref={filtered ? clearHref : null} />}>
-    <ol className="events activity-log">{entries.map((entry) => <LogEntry key={entry.id} entry={entry} catalog={catalog} me={me} today={today} />)}</ol>
-    {query.data?.next_cursor && <div className="actions"><Button wide disabled={loadingOlder} onClick={loadOlder}>{loadingOlder ? "Loading older…" : "Load older"}</Button></div>}
-  </Panel>;
-}
-
-/**
- * One write as an `EventRow`: the time, the writer in words (AI for Iris and the agents only), the action and its
- * target, what changed, the reason in quotes and the readback outcome. An Iris plan of several changes lists them in a
- * disclosure.
- */
-function LogEntry({ entry, catalog, me, today }: { entry: ActivityEntry; catalog: Catalog; me: SignedIn; today: string }) {
-  const day = localDate(entry.ts);
-  const changes = entry.action === "plan.write" ? planChanges(entry.detail) : [];
-  const facts = entryFacts(entry, catalog);
-  return <EventRow at={entry.ts} showDate={day !== today} title={entryTitle(entry, catalog)} id={`activity-${entry.id}`}
-    badges={entry.state ? <><ReadbackBadge state={entry.state} />{entry.confirmed_at && <> <LocalTime at={entry.confirmed_at} /></>}</> : undefined}
-    actor={shownActor(entry.actor, me)} detail={facts.length ? facts.join(" · ") : undefined} reason={entry.reason ? `“${entry.reason}”` : undefined}>
-    {changes.length > 1 && <Details summary={`${changes.length} changes`}>
-      <ul className="plan-changes">{changes.map((change, index) => <li key={index}>{planChangeText(change, catalog, day)}</li>)}</ul>
-    </Details>}
-  </EventRow>;
-}
-
-/** An option for every value the URL may hold, so the select always shows the filter in force. */
-const withCurrent = (values: readonly string[], current: string) => (current && !values.includes(current) ? [...values, current] : values);
-
-/**
- * Source, actor, action and target, straight into the URL and on to API-17: a select applies at once, the target on
- * Apply or Enter. Clear filters keeps the rest of the view (the expanded alert, resolved).
- */
-function LogFilterForm({ view, params, entries, me, clearHref }: { view: ActivityView; params: URLSearchParams; entries: readonly ActivityEntry[]; me: SignedIn; clearHref: string | null }) {
-  const navigate = useNavigate();
-  const go = (name: LogFilter, value: string) => navigate(activityHref(params, { [name]: value.trim() || null }), { preventScrollReset: true });
-  const { source = "", actor = "", action = "", target = "" } = view.filters;
-  const sources = withCurrent([...SOURCE_FILTERS, ...seenAgents(entries)], source);
-  const actors = withCurrent(seenActors(entries), actor);
-  const actions = withCurrent(ACTION_FILTERS.map(([value]) => value), action);
-  const actionLabel = (value: string) => ACTION_FILTERS.find(([prefix]) => prefix === value)?.[1] ?? value;
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const value = new FormData(event.currentTarget).get("target");
-    go("target", typeof value === "string" ? value : "");
-  };
-  return <form className="filters log-filters" role="search" aria-label="Activity log filters" onSubmit={submit}>
-    <label>Source<select name="source" value={source} onChange={(event) => go("source", event.target.value)}>
-      <option value="">All</option>
-      {sources.map((value) => <option key={value} value={value}>{value}</option>)}
-    </select></label>
-    <label>Actor<select name="actor" value={actor} onChange={(event) => go("actor", event.target.value)}>
-      <option value="">All</option>
-      {actors.map((name) => <option key={name} value={name}>{personName(name, me)}</option>)}
-    </select></label>
-    <label>Action<select name="action" value={action} onChange={(event) => go("action", event.target.value)}>
-      <option value="">All</option>
-      {actions.map((value) => <option key={value} value={value}>{actionLabel(value)}</option>)}
-    </select></label>
-    <label>Target<input key={target} name="target" type="search" defaultValue={target} autoComplete="off" placeholder="L01 or mister_engage_kpa" /></label>
-    <button type="submit" className="btn">Apply</button>
-    {clearHref && <Link to={clearHref} preventScrollReset>Clear filters</Link>}
-  </form>;
+  const entries = log.data?.items ?? [];
+  const today = useClockValue((clock) => localDate(new Date(clock).toISOString()));
+  const headId = useId();
+  const state: PanelState = log.failed && !log.data ? "error" : log.pending ? "loading" : entries.length ? "ready" : "empty";
+  return <ListCard id="recent-activity" title="Recent activity" thing="recent activity" state={state} reserve="sm" onRetry={log.retry}
+    link={{ to: "/activity/log", label: "Open the log" }} empty={{ message: "No activity yet." }}>
+    {log.failed && log.data && <p className="fault act-unavailable">Couldn't load the newest activity: these entries may be old. <Button onClick={log.retry}>Retry</Button></p>}
+    <div className="act-recent">{entriesByDay(entries).map((day) => <section key={day.date} className="act-day" aria-labelledby={`${headId}-${day.date}`}>
+      <h3 id={`${headId}-${day.date}`} className="act-day-head">{dayHeading(day.date, today)}</h3>
+      <ol className="act-entries">{day.entries.map((entry) => <EventRow key={entry.id} entry={entry} catalog={catalog} me={me} />)}</ol>
+    </section>)}</div>
+  </ListCard>;
 }

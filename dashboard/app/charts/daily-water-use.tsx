@@ -5,7 +5,8 @@ import { dayTitle, formatValue, localDayStart } from "../lib/format";
 import { LINES, lineById } from "../lib/lines";
 import type { WaterUse } from "../lib/operator-api";
 import { causeRank, causeToken, causeWords } from "./causes";
-import { DataTable, type DataTableBlock } from "./data-table";
+import { dayCsvFilename, tableCsv } from "./csv";
+import { CsvLink, DataTable, type DataTableBlock } from "./data-table";
 import type { ChartColors, PaintTarget } from "./draw";
 import { paintHatch } from "./lanes-draw";
 import { ChartKey, type KeyItem } from "./legend";
@@ -16,10 +17,13 @@ import { UPlotChart, type ChartEnv, type ChartOptions } from "./uplot-chart";
 
 /**
  * Daily water use (screens SCR-04, US-WAT-20): API-21's whole gallons per America/Denver day, 30 or 90 days. Each day a
- * stacked bar of `by_line` or `by_cause`, clean below fertilizer, and beside it, not stacked, a bar of `no_valve_gal`, in
- * `--fault`: water that ran while no Verdify valve was open. A no-data day is a hatched gap and never 0, a partial day has
- * a dashed top edge, and a complete day with no water is a real 0. What the API returns is drawn as it is, never rescaled:
- * the parts are attributed per run, so they can sit a gallon or two off the meter's total. No rate and no flow flag (Q-10).
+ * stacked bar of `by_line` or `by_cause`, clean below fertilizer, a 1 px gap in the background between its parts, and
+ * beside it, not stacked, a bar of `no_valve_gal` in neutral `--muted`: water that ran while no Verdify valve was open,
+ * the hose, the sink or the hydro on an ordinary day. Red is for stop and fault (redesign principle 7, §4.4), and a leak
+ * is the unexplained-flow alert's to say: API-21 serves no per-day alert, so no day is drawn as one. A no-data day is a
+ * faint `--line` hatch behind the grid across the day, a gap and never 0; a partial day has a dashed top edge; a complete
+ * day with no water is a real 0. What the API returns is drawn as it is, never rescaled: the parts are attributed per
+ * run, so they can sit a gallon or two off the meter's total. No rate and no flow flag (Q-10).
  */
 export type WaterSplit = "line" | "cause";
 const COVERAGES: readonly Coverage[] = ["complete", "partial", "no_data"];
@@ -142,9 +146,22 @@ export function waterTooltip(model: WaterModel, plot: Pick<uPlot, "cursor">): st
 export const WATER_BAR_SIZE = 0.4;
 export const WATER_BAR_MAX = 18;
 
-/** draw, over the bars: the hatched no-data days across both bars' width, then the dashed top edge of each partial day's bars. */
-export function paintWaterUse(plot: PaintTarget, model: WaterModel, colors: ChartColors, px: number) {
+/** drawClear, under the grid and the bars: each no-data day as a faint full-height `--line` hatch across both bars' width. */
+export function paintNoData(plot: PaintTarget, model: WaterModel, colors: ChartColors, px: number) {
   const { ctx, bbox } = plot;
+  const width = dayBarWidth(plot, model.days, px, WATER_BAR_SIZE, WATER_BAR_MAX);
+  for (const day of model.days) {
+    if (day.coverage !== "no_data") continue;
+    paintHatch(ctx, plot.valToPos(day.at, "x", true) - width, bbox.top, 2 * width, bbox.height, colors["--line"], px);
+  }
+}
+
+/**
+ * draw, over the bars: a 1 px gap between a day's stacked parts, cleared to the background so two parts of one colour
+ * family never touch (L01's blue under L11's), then the dashed top edge of each partial day's bars.
+ */
+export function paintWaterUse(plot: PaintTarget, model: WaterModel, colors: ChartColors, px: number) {
+  const { ctx } = plot;
   const width = dayBarWidth(plot, model.days, px, WATER_BAR_SIZE, WATER_BAR_MAX);
   const edge = (left: number, value: number) => {
     const top = plot.valToPos(value, "y", true);
@@ -157,9 +174,14 @@ export function paintWaterUse(plot: PaintTarget, model: WaterModel, colors: Char
   try {
     for (const day of model.days) {
       const center = plot.valToPos(day.at, "x", true);
-      if (day.coverage === "no_data") {
-        paintHatch(ctx, center - width, bbox.top, 2 * width, bbox.height, colors["--muted"], px);
-      } else if (day.coverage === "partial") {
+      // The boundary under each part that shows, but the top one.
+      const shown = model.segments.map((segment) => day.parts?.[segment.key] ?? 0).filter((part) => part > 0);
+      let total = 0;
+      for (const part of shown.slice(0, -1)) {
+        total += part;
+        ctx.clearRect(center - width, Math.round(plot.valToPos(total, "y", true) - px / 2), width, px);
+      }
+      if (day.coverage === "partial") {
         ctx.strokeStyle = colors["--ink"];
         ctx.lineWidth = 1.5 * px;
         ctx.setLineDash([3 * px, 2 * px]);
@@ -185,14 +207,14 @@ export function waterOptions(env: ChartEnv, modelRef: MutableRefObject<WaterMode
     series: [
       {},
       ...model.segments.map((segment): uPlot.Series => ({ label: segment.label, scale: "y", paths: stack, fill: colors[segment.token], stroke: colors[segment.token], width: 0, points: { show: false }, value })),
-      { label: NO_VALVE_WORDS, scale: "y", paths: apart, fill: colors["--fault"], stroke: colors["--fault"], width: 0, points: { show: false }, value },
+      { label: NO_VALVE_WORDS, scale: "y", paths: apart, fill: colors["--muted"], stroke: colors["--muted"], width: 0, points: { show: false }, value },
     ],
     // Each part's bar runs from the running total below it (uPlot's stacked bars); the no-valve bar has no band.
     bands: model.segments.slice(1).map((_, level) => ({ series: [level + 2, level + 1] as [number, number] })),
     scales: { y: { range: () => [0, modelRef.current.yMax] } },
     axes: [dayAxis(colors, true), wholeAxis(colors)],
     cursor: { points: { show: false } },
-    hooks: { draw: [(plot) => paintWaterUse(plot, modelRef.current, colors, px())] },
+    hooks: { drawClear: [(plot) => paintNoData(plot, modelRef.current, colors, px())], draw: [(plot) => paintWaterUse(plot, modelRef.current, colors, px())] },
     plugins: [tooltipPlugin((plot) => waterTooltip(modelRef.current, plot))],
   };
 }
@@ -212,14 +234,25 @@ export function waterTable(model: WaterModel): DataTableBlock {
   };
 }
 
-/** The key: one entry per colour drawn (the lines of one kind share theirs), the no-valve bar, then the marks that are not water. */
+/**
+ * "CSV of this chart" (redesign §7.1): one row per local day with the meter's total, each line or cause, the no-valve
+ * water and coverage, in whole gallons; a no-data day is empty cells, never 0.
+ */
+export function waterUseCsv(model: WaterModel): string {
+  return tableCsv(
+    ["day (America/Denver)", "total (gal)", ...model.segments.map((segment) => `${segment.label} (gal)`), "no valve (gal)", "coverage"],
+    model.days.map((day) => [day.date, day.meter, ...model.segments.map((segment) => (day.parts === null ? null : day.parts[segment.key] ?? 0)), day.noValve, day.coverage]),
+  );
+}
+
+/** The key: one entry per colour drawn (the lines of one kind share theirs), the no-valve bar (neutral), then the marks that are not water. */
 export function waterKey(model: WaterModel): KeyItem[] {
   const fills = new Map<string, KeyItem>();
   for (const segment of model.segments) {
     const known = fills.get(segment.token);
     fills.set(segment.token, { key: segment.token, label: known ? `${known.label}, ${segment.label}` : segment.label, token: segment.token, kind: "fill" });
   }
-  const items = [...fills.values(), { key: "no-valve", label: NO_VALVE_WORDS, token: "--fault", kind: "fill" } as KeyItem];
+  const items = [...fills.values(), { key: "no-valve", label: NO_VALVE_WORDS, token: "--muted", kind: "fill" } as KeyItem];
   if (model.noData > 0) items.push({ key: "no-data", label: "no data", token: "--muted", kind: "hatch" });
   if (model.days.some((day) => day.coverage === "partial")) items.push({ key: "partial", label: "partial day", token: "--ink", kind: "dashed" });
   return items;
@@ -230,9 +263,11 @@ export type DailyWaterUseProps = {
   split: WaterSplit;
   /** Line names from API-IRR-01 (`name`), for the rows; the line id alone without them. */
   lineNames?: Readonly<Record<string, string>>;
+  /** The host's card already titles the chart: its caption then names the figure for a screen reader only. */
+  captionHidden?: boolean;
 };
 
-export function DailyWaterUse({ data, split, lineNames }: DailyWaterUseProps) {
+export function DailyWaterUse({ data, split, lineNames, captionHidden = false }: DailyWaterUseProps) {
   // Names arrive as a new object on every status poll: the bars rebuild only when their values change.
   const names = JSON.stringify(lineNames ?? null);
   const model = useMemo(() => buildWaterUse(data, split, lineNames), [data, split, names]);
@@ -240,14 +275,17 @@ export function DailyWaterUse({ data, split, lineNames }: DailyWaterUseProps) {
   modelRef.current = model;
   const columns = useMemo<uPlot.AlignedData>(() => [model.days.map((day) => day.at), ...model.stacks, model.noValve], [model]);
   const structure = `water|${split}|${model.segments.map((segment) => segment.key).join(",")}`;
-  const label = `Whole gallons per day for ${model.days.length} days, stacked by ${split} with clean below fertilizer, beside a bar of water that ran with no Verdify valve open. No-data days are hatched, never zero. The data table follows.`;
+  const label = `Whole gallons per day for ${model.days.length} days, stacked by ${split} with clean below fertilizer, beside a bar of water that ran with no Verdify valve open: the hose, the sink, the hydro or a leak, which the unexplained-flow alert reports. No-data days are hatched, never zero. The data table follows.`;
   return <figure className="chart chart-water-use">
-    <figcaption className="eyebrow">Gallons per day by {split} · last {model.days.length} days</figcaption>
+    <figcaption className={captionHidden ? "screen-reader" : "eyebrow"}>Gallons per day by {split} · last {model.days.length} days</figcaption>
     {model.days.length > 0
       ? <>
         <UPlotChart options={(env) => waterOptions(env, modelRef)} data={columns} xRange={model.xRange} structure={structure} className="plot-water-use" label={label} marks={model} zoom={false} />
         <ChartKey items={waterKey(model)} />
         <p className="plot-summary water-summary">{waterSummary(model)}</p>
+        <div className="chart-tools">
+          <CsvLink filename={dayCsvFilename(`water-use-by-${split}`, model.days[0].date, model.days[model.days.length - 1].date)} build={() => waterUseCsv(model)} version={model} label="CSV of this chart" />
+        </div>
         <DataTable tables={[waterTable(model)]} />
       </>
       : <div className="plot plot-small chart-message"><p>No water data in this window</p></div>}
