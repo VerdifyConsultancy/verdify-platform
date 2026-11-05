@@ -21,7 +21,7 @@ for (const viewport of [DESKTOP, PHONE]) {
     expect(zones).toEqual(["wall", "center", "south", "west", "fog"]);
     const ids = await page.locator("article[data-line]").evaluateAll((rows) => rows.map((node) => node.getAttribute("data-line")));
     expect(ids).toEqual(["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11"]);
-    await expect(page.getByRole("article", { name: "Wall drip" })).toHaveAttribute("data-state", "idle");
+    await expect(page.getByRole("article", { name: "Wall drip", exact: true })).toHaveAttribute("data-state", "idle");
     await expect(page.locator('[data-limit="L01"]')).toContainText("0 / 60 min");
     await expect(row(page, "L01").locator(".wat-next")).toHaveText(/^next Wed 07:35 · 12\smin$/);
     await expect(row(page, "L02").locator(".line-subrow")).toContainText("Fertilizer valve");
@@ -171,7 +171,7 @@ for (const path of VIEWS) {
     await stopAll(page).click();
     await expect(page.locator("dialog[open]")).toHaveCount(0);
     await untilPolled(page, () => expect(toastLines(page)).toHaveText([STOPPED, CAN_STILL_START], { timeout: 500 }));
-    await expect(page.getByRole("button", { name: "Disable Wall drip" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Disable Wall drip", exact: true })).toBeVisible();
     expect((await fixtureWrites(request)).map((write) => [write.operationId, write.body])).toEqual([["API-IRR-07", {}]]);
   });
 }
@@ -221,7 +221,7 @@ test("at 360 px a row's ⋯ opens its panel across the row, inside the screen, f
     const menu = row(page, "L01").locator("details.menu");
     await menu.locator("summary").click();
     const panel = menu.locator(".menu-panel");
-    await expect(panel.getByRole("link", { name: "Runs of Wall drip" })).toBeVisible();
+    await expect(panel.getByRole("link", { name: "Runs of Wall drip", exact: true })).toBeVisible();
     const box = await panel.boundingBox();
     expect(box!.x, fixture.join("+")).toBeGreaterThanOrEqual(0);
     expect(box!.x + box!.width, fixture.join("+")).toBeLessThanOrEqual(SMALL_PHONE.width);

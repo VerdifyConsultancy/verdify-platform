@@ -78,7 +78,7 @@ test("an operator's visit at 360 × 740: a burst from Now, a run and its stop on
     await expect(wall).toHaveAttribute("data-state", "idle", { timeout: 500 });
     await expect(toastLines(page)).toHaveText([STOPPED, CAN_STILL_START], { timeout: 500 });
   });
-  await expect(page.getByRole("button", { name: "Disable Wall drip" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Disable Wall drip", exact: true })).toBeVisible();
 
   // Hand-watering with the hose: the banner names it and has no Stop, because no Verdify valve is open.
   await useScreensClock(page, request, [VISIT, "flow-valves-closed"]);

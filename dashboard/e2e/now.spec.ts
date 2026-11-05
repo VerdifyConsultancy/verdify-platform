@@ -158,7 +158,7 @@ test("Stop all water with the irrigation firmware: one API-IRR-07 and no dialog,
   await untilPolled(page, () => expect(runningRows(page)).toHaveCount(0, { timeout: 500 }));
   await expect(page.locator("[data-running=none]")).toHaveText("Nothing running");
   await expect(toastLines(page)).toHaveText([STOPPED, CAN_STILL_START]);
-  await expect(page.getByRole("button", { name: "Disable Wall drip" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Disable Wall drip", exact: true })).toBeVisible();
   expect((await fixtureWrites(request)).map((row) => row.operationId)).toEqual(["API-IRR-07"]);
 });
 
@@ -268,7 +268,7 @@ test("Running and next from 861 px: the track over the last 6 h and the next 12 
   expect(Math.round(plan!.height)).toBe(Math.round(iris!.height));
   // The phone's lists are there for a narrow screen, hidden here.
   await expect(coming.locator(".now-next")).toBeHidden();
-  await expect(coming.locator("[data-coming=later]")).toHaveText("Later No schedule: L01, L07, L09");
+  await expect(coming.locator("[data-coming=later]")).toHaveText("Later No schedule: Wall drip, South mister, West mister");
   expect((await fixtureRequests(request, "API-05")).length).toBeGreaterThan(0);
 });
 
