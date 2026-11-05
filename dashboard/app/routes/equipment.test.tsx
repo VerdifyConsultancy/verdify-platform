@@ -329,7 +329,7 @@ test("viewers see the board and the lanes with no controls; an operator gets the
   await load({}, { role: "operator" });
   // Each light is off in automatic, matching its controller: its one button turns it on (#1308 visual QA 26). With no
   // shell here what runs is unknown, so Clear bursts stays (burst-panel.test.tsx has it go while nothing runs).
-  const lights = ["Turn on Main", "Turn on Grow"];
+  const lights = ["Turn on 15 min Main", "Turn on 15 min Grow"];
   expect(controls()).toEqual({ buttons: ["Find", ...lights, "Fans 15 min", "Humidify 5 min", "Vent bypass 10 min", "Clear bursts", "Restart controller", fold], writes: 7 });
 });
 
