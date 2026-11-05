@@ -273,7 +273,8 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .why-words{min-width:0;padding:.35rem 0;font-size:var(--fs-sm)}
 .why-since{color:var(--muted);font-variant-numeric:tabular-nums}
 .why-raw{font:500 var(--fs-sm)/1.4 var(--mono);overflow-wrap:anywhere}
-.why-link,.light-actions a,.light-auto-link{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
+.why-link,.light-auto-link{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
+.light-links{display:flex;flex-wrap:wrap;gap:0 var(--space-4)}
 @media(max-width:860px){.why-row{grid-template-columns:minmax(0,1fr) auto;padding-top:.35rem}.why-label{grid-column:1/-1}}
 .light-controls{margin-top:.35rem}
 .light-auto-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 var(--space-3)}

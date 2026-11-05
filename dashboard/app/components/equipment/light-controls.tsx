@@ -123,6 +123,19 @@ export function useLightControl({ light, equipment, autoParam }: (typeof LIGHTS)
 }
 export type LightControl = ReturnType<typeof useLightControl>;
 
+/**
+ * A light's buttons by state (redesign §4.5: one primary, chosen by state). In automatic and matching the controller's
+ * intent, only the switch to the other state: "Turn on" while off, "Turn off" while on. Overridden by hand (automation
+ * off, or Lutron differing from the intent), "Back to automatic" first, as the primary, then that switch. While the
+ * Lutron state is unknown both switches show, and Back to automatic unless automation is known on and matching. A
+ * command on its way keeps both switches, so the other one can still override it.
+ */
+export function lightButtons(item: Pick<LightItem, "intent" | "state">, automation: number | null | undefined, pending: boolean): { readonly automatic: boolean; readonly turns: readonly LightState[] } {
+  const matching = automation === 1 && known(item.intent) && known(item.state) && item.intent === item.state;
+  const turns: readonly LightState[] = pending || !known(item.state) ? ["on", "off"] : [item.state === "on" ? "off" : "on"];
+  return { automatic: !matching, turns };
+}
+
 /** "Automatic" or "Automation off" from the switch's device value; a value not reported reads "—" with the API's reason, never off. */
 export function automationWords(row: Pick<Setting, "readback"> | undefined): string {
   const value = row?.readback?.value;
@@ -149,27 +162,35 @@ function AutomationLine({ control }: { control: LightControl }) {
 
 /**
  * What a light row gains (SCR-07, US-EQP-05): its automatic line with the link to that switch's setting drawer, opened
- * in place (`settingTo`, for every role: a viewer's is read-only); then, for operators only, Turn on, Turn off and Back
- * to automatic at 44 px, full width on phones, and "Activity ›", disabled with changes switched off. One tap and no
- * dialog. The board's state only ever comes from the Lutron readback; here are what was said and what is awaited: a
- * 503's `Problem.result` in words, and after 30 s without a match "Lutron hasn't confirmed: still OFF".
+ * in place (`settingTo`, for every role: a viewer's is read-only), and for operators "Activity ›" beside it; then, for
+ * operators only, the buttons its state calls for (`lightButtons`): Back to automatic first while the light is
+ * overridden, and the switch to its other state, at 44 px, full width on phones, disabled with changes switched off. One
+ * tap and no dialog. The board's state only ever comes from the Lutron readback; here are what was said and what is
+ * awaited: a 503's `Problem.result` in words, and after 30 s without a match "Lutron hasn't confirmed: still OFF".
  */
-export function LightControls({ control, item, settingTo }: { control: LightControl; item: Pick<LightItem, "label" | "state">; settingTo?: string }) {
+export function LightControls({ control, item, settingTo }: { control: LightControl; item: Pick<LightItem, "label" | "state" | "intent">; settingTo?: string }) {
   const { command, write, pressed } = control;
   const busy = command.sending || write.sending;
   // Reading back: a second tap on the same button has nothing to add, though after a refusal it may retry.
   const answering = (state: LightState) => command.phase === "waiting" && pressed === state && !command.error;
+  const shown = lightButtons(item, control.setting?.readback?.value, command.sending || (command.phase === "waiting" && !command.error));
+  const turn = (state: LightState) => <Button key={state} write wide busy={command.sending && pressed === state} disabled={busy || answering(state)} onClick={() => control.turn(state)}>
+    {state === "on" ? "Turn on" : "Turn off"} <span className="screen-reader">{item.label}</span>
+  </Button>;
   return <div className="light-controls">
     <div className="light-auto-row">
       <AutomationLine control={control} />
-      {settingTo && <Link className="light-auto-link" to={settingTo} preventScrollReset>Automation setting <span className="screen-reader">of {item.label}</span><span aria-hidden="true">›</span></Link>}
+      <span className="light-links">
+        {settingTo && <Link className="light-auto-link" to={settingTo} preventScrollReset>Automation setting <span className="screen-reader">of {item.label}</span><span aria-hidden="true">›</span></Link>}
+        <OperatorOnly>
+          <Link className="light-auto-link" to={`/activity/log?target=${encodeURIComponent(control.equipment)}`}>Activity <span className="screen-reader">of {item.label}</span><span aria-hidden="true">›</span></Link>
+        </OperatorOnly>
+      </span>
     </div>
     <OperatorOnly>
       <div className="actions light-actions">
-        <Button write wide busy={command.sending && pressed === "on"} disabled={busy || answering("on")} onClick={() => control.turn("on")}>Turn on <span className="screen-reader">{item.label}</span></Button>
-        <Button write wide busy={command.sending && pressed === "off"} disabled={busy || answering("off")} onClick={() => control.turn("off")}>Turn off <span className="screen-reader">{item.label}</span></Button>
-        <Button write wide busy={write.sending || (command.sending && pressed === "automatic")} disabled={busy || control.awaitingConfirm} onClick={() => void control.backToAutomatic()}>Back to automatic <span className="screen-reader">{item.label}</span></Button>
-        <Link to={`/activity/log?target=${encodeURIComponent(control.equipment)}`}>Activity <span className="screen-reader">of {item.label}</span><span aria-hidden="true">›</span></Link>
+        {shown.automatic && <Button write wide busy={write.sending || (command.sending && pressed === "automatic")} disabled={busy || control.awaitingConfirm} onClick={() => void control.backToAutomatic()}>Back to automatic <span className="screen-reader">{item.label}</span></Button>}
+        {shown.turns.map(turn)}
       </div>
       {command.phase === "waiting" && !command.error && <p className="state-note" data-light-note="waiting">Waiting for Lutron</p>}
       {command.phase === "late" && <p className="state-note" data-light-note="late">{unconfirmedWords(item.state)}</p>}
