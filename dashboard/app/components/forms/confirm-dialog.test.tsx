@@ -91,16 +91,17 @@ test("FERT in the title on a fertilizer line; drips add prewet and flush, mister
   expect(["Duration", "Prewet on the clean line", "Flush on the clean line"].map((label) => (screen.getByLabelText(label) as HTMLInputElement).value)).toEqual(["10", "120", "240"]);
   cleanup();
   stopFixtureApi();
-  const api = await openRun({ lineId: "L07" }, "schedules-paused");
+  const api = await openRun({ lineId: "L07" }, ["schedules-paused", "firmware-before-1343"]);
   expect(title()).toBe("Run L07 South mister (clean) for 4 × 45 s?");
   expect(screen.queryByLabelText("Duration")).toBeNull();
   fireEvent.change(screen.getByLabelText("Pulses"), { target: { value: "3" } });
   expect(screen.getByRole("button", { name: "Run 3 × 45 s" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Run 3 × 45 s" }));
   await advance(0);
-  // L07's Schedule is off: refused in words with the form, and the dialog stays open.
+  // L07's Schedule is off and the controller still runs the firmware before #1343: refused in words with the form, and
+  // the dialog stays open.
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-06", body: { on_s: 45, count: 3, gap_s: 60 } })]);
-  expect(refusal().textContent).toBe(refusalWords("not_schedule_member", "L07 takes run-now only with Schedule on"));
+  expect(refusal().textContent).toBe(refusalWords("not_schedule_member", "L07 takes run-now only with Schedule on until the next firmware flash"));
   expect(dialog().hasAttribute("open")).toBe(true);
 });
 

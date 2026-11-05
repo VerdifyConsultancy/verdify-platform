@@ -134,7 +134,7 @@ export function LineCard({ line, master = null, engine, program, today, schedule
   const meta = [syncWords, pauseNote, code === "idle" && engine ? last.meta : null].filter(Boolean);
   const offer = runOffer(line, engine);
   const filled = running || code === "unknown";
-  const primary = fog ? null : running ? null : latched ? <ClearFaultButton line={line} engine={engine} /> : paused ? <ResumeLine line={line} /> : offer === "run" || offer === "mist" ? <RunControl line={line} engine={engine} /> : null;
+  const primary = fog ? null : running ? null : latched ? <ClearFaultButton line={line} engine={engine} /> : paused ? <ResumeLine line={line} /> : offer === "run" || offer === "mist" || offer === "enable" ? <RunControl line={line} engine={engine} /> : null;
   const tone: RowTone | undefined = running ? "running" : latched ? "fault" : engine && line.fault === "backing_off" ? "warn" : undefined;
   const token = running ? (line.state.cause === "vpd" ? "eq-mister" : line.state.cause === "feed" ? "eq-fert" : line.state.cause === "run_now" ? "eq-master" : "eq-water") : undefined;
   const graphs = line.last_water && validTime(line.last_water.at) ? runGraphUrl({ started_at: line.last_water.at, ended_at: null, open_s: line.last_water.open_s }) : "/graphs";

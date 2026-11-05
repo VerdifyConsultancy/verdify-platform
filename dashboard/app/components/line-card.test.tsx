@@ -67,14 +67,14 @@ test("a running line: the cause's dot, Running with its cause, schedule and time
   expect(row(misting).state).toBe("Running · VPD · since 10:30");
 });
 
-test("unknown fills the Stop too (the relay may be on); a disabled line has only Stop and ⋯; L05 reads Reserved · disabled", () => {
+test("unknown fills the Stop too (the relay may be on); a disabled line keeps Run… (#1343) beside Stop and ⋯; L05 reads Reserved · disabled", () => {
   const unknown = row(lineOf(status("controller-not-reporting"), "L01"));
   expect(unknown.state).toBe("Unknown · 3 days ago");
   expect(unknown.article.querySelector(".btn-stop")).not.toBeNull();
   cleanup();
   const disabled = row(lineOf(status(), "L02"));
   expect(disabled.state).toBe("Off · no check recorded");
-  expect(disabled.buttons).toEqual(["Stop L02"]);
+  expect(disabled.buttons).toEqual(["Run… L02", "Stop L02"]);
   cleanup();
   const reserved = row(lineOf(status("reserved-lines"), "L05"));
   expect(reserved.state).toBe("Reserved · disabled");

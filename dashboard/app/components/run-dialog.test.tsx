@@ -9,7 +9,7 @@ import type { IrrigationLine } from "../lib/operator-api";
 import { useIrrigationRead } from "../lib/queries";
 import { OPERATOR, UUID, advance, renderWithApi, requests, startFixtureApi, stopFixtureApi, writes, type FixtureOptions } from "../lib/test-fixture-api";
 import { words } from "../lib/words";
-import { RUN_ARRIVES_TEXT, RunControl, WaterRuns, runOffer } from "./run-dialog";
+import { LINE_OFF_TEXT, RUN_ARRIVES_TEXT, RunControl, WaterRuns, runOffer } from "./run-dialog";
 import { text } from "./test-render";
 
 afterEach(() => { cleanup(); stopFixtureApi(); });
@@ -37,18 +37,19 @@ const notes = () => [...dialog()!.querySelectorAll(".dialog-note")].map((node) =
 const refusal = () => text(within(dialog()!).getByRole("alert"));
 const press = (name: string | RegExp) => fireEvent.click(screen.getByRole("button", { name }));
 const fieldNames = () => [...dialog()!.querySelectorAll(".dialog-fields label")].map((node) => text(node));
-type Offered = Pick<IrrigationLine, "line_id" | "kind" | "enabled" | "schedule_member">;
-const line = (line_id: string, kind: string, enabled: boolean, schedule_member: boolean | null = null): Offered => ({ line_id, kind, enabled, schedule_member });
+type Offered = Pick<IrrigationLine, "line_id" | "kind" | "enabled" | "reserved">;
+const line = (line_id: string, kind: string, enabled: boolean, reserved = false): Offered => ({ line_id, kind, enabled, reserved });
 
-test("what a line offers: Run… when enabled, Mist now… only with Schedule on, and before the firmware only L01", () => {
+test("what a line offers (#1343): every enabled wet line runs once, Mist now… with Schedule on or off; a disabled line enables first; before the firmware only L01", () => {
   expect(runOffer(line("L01", "drip", true), true)).toBe("run");
   expect(runOffer(line("L02", "fert_drip", true), true)).toBe("run");
   expect(runOffer(line("L08", "fert_mister", true), true)).toBe("run");
-  // A disabled line offers no Run…: L02 until someone enables it, L05 and L06 while reserved.
-  for (const off of [line("L02", "fert_drip", false), line("L05", "drip", false), line("L06", "fert_drip", false)]) expect(runOffer(off, true)).toBeNull();
-  expect(runOffer(line("L04", "mister", true, true), true)).toBe("mist");
-  expect(runOffer(line("L04", "mister", true, false), true)).toBeNull();
-  expect(runOffer(line("L04", "mister", false, true), true)).toBeNull();
+  expect(runOffer(line("L04", "mister", true), true)).toBe("mist");
+  expect(runOffer(line("L07", "mister", true), true)).toBe("mist");
+  // A disabled line keeps its button, which enables it first; a reserved line (no valve wired) offers nothing while off.
+  for (const off of [line("L02", "fert_drip", false), line("L07", "mister", false), line("L10", "fert_mister", false)]) expect(runOffer(off, true)).toBe("enable");
+  for (const reserved of [line("L05", "drip", false, true), line("L06", "fert_drip", false, true)]) expect(runOffer(reserved, true)).toBeNull();
+  expect(runOffer(line("L05", "drip", true, true), true)).toBe("run");
   // L11 and L03 have no card controls.
   expect(runOffer(line("L11", "fog", true), true)).toBeNull();
   expect(runOffer(line("L03", "master", true), true)).toBeNull();
@@ -111,9 +112,12 @@ test("L08, FERT: the mister fields plus prewet and flush, and no minutes", async
   expect(sent.body).toEqual({ on_s: 45, count: 4, gap_s: 60, prewet_s: 120, flush_s: 240 });
 });
 
-test("L04: Mist now… shows only while Schedule is on and sends {on_s, count, gap_s}; the cap shows, and a clean line has no feed words", async () => {
-  await open("L04");
-  expect(screen.queryByRole("button", { name: /^(Mist now|Run)/ })).toBeNull();
+test("L04: Mist now… shows with Schedule off too (#1343) and sends {on_s, count, gap_s}; the cap shows, and a clean line has no feed words", async () => {
+  const off = await open("L04");
+  press("Mist now… L04");
+  press(/^Run \d/);
+  await advance(0);
+  expect(writes(off)).toEqual([expect.objectContaining({ operationId: "API-IRR-06", path: "/api/v1/irrigation/lines/L04/run" })]);
   cleanup(); stopFixtureApi();
   const api = await open("L04", { fixture: "run-dialogs" });
   press("Mist now… L04");
@@ -126,11 +130,21 @@ test("L04: Mist now… shows only while Schedule is on and sends {on_s, count, g
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-06", path: "/api/v1/irrigation/lines/L04/run", body: { on_s: 45, count: 2, gap_s: 60 } })]);
 });
 
-test("a disabled line offers no Run…; L05 and L06 while reserved", async () => {
-  for (const id of ["L02", "L05", "L06"]) {
+test("a disabled line keeps Run… (#1343), saying it is off, and opens the check sheet for the run; L05 and L06 offer nothing while reserved", async () => {
+  for (const id of ["L05", "L06"]) {
     await open(id);
     expect(screen.getByTestId("state").textContent).toBe("disabled");
     expect(screen.queryByRole("button")).toBeNull();
+    cleanup(); stopFixtureApi();
+  }
+  for (const [id, label] of [["L02", "Run…"], ["L07", "Mist now…"]]) {
+    const api = await open(id, { fixture: "lines-unchecked" });
+    expect(document.querySelector(`[data-run-note="${id}"]`)?.textContent).toBe(LINE_OFF_TEXT);
+    press(`${label} ${id}`);
+    await advance(0);
+    // Nothing is sent and no run dialog opens: the check sheet (?check=<line>&for=run) takes it from here.
+    expect(dialog()).toBeNull();
+    expect(writes(api)).toEqual([]);
     cleanup(); stopFixtureApi();
   }
 });
@@ -178,7 +192,7 @@ test("each refusal reads its code in words from the words table, and the dialog 
   await refused("L01", "line_disabled", "in-band", update("L01", { enabled: false }));
   await refused("L01", "line_paused", "in-band", update("L01", { paused_until: "2026-11-02T21:00:00Z" }));
   await refused("L04", "line_faulted", ["run-dialogs", "mister-fault"]);
-  await refused("L04", "not_schedule_member", "run-dialogs", update("L04", { schedule_member: false }));
+  await refused("L04", "not_schedule_member", ["run-dialogs", "firmware-before-1343"], update("L04", { schedule_member: false }));
 });
 
 test("before the irrigation firmware L01 has no Duration: API-09 has no irrig_wall_duration_min row, so the dialog names the setting and sends {} plus the reason", async () => {
