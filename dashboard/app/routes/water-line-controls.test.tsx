@@ -266,7 +266,10 @@ test("with changes switched off every line control is disabled beside the banner
   for (const control of screen.getAllByRole("switch")) expect(control.hasAttribute("disabled")).toBe(true);
   expect(screen.getByRole<HTMLButtonElement>("button", { name: "Pause lines…" }).disabled).toBe(true);
   expect(screen.getByRole<HTMLButtonElement>("button", { name: "Options… of L04" }).disabled).toBe(true);
-  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Stop all water" }).disabled).toBe(false);
+  // Both copies (the header's from 861 px, the tabs row's at 860 px and below) stay live.
+  const stops = screen.getAllByRole<HTMLButtonElement>("button", { name: "Stop all water" });
+  expect(stops).toHaveLength(2);
+  for (const stop of stops) expect(stop.disabled).toBe(false);
 });
 
 test("L04 options with cap 130 and reserve 60 send {daily_cap_min: 130, vpd_reserve_min: 60, manual: true}; before the engine the change reads REQUESTED with its words and never NOT CONFIRMED", async () => {
@@ -303,7 +306,7 @@ test("Site today's SAF-4 meter links to its Settings drawer", async () => {
   await load();
   const link = within(document.querySelector<HTMLElement>('[data-limit="saf4"]')!).getByRole("link");
   expect(link.getAttribute("href")).toBe("/settings?edit=mister_daily_volume_max_gal");
-  expect(link.textContent).toBe("SAF-4, the daily mist volume cap, in Settings");
+  expect(link.textContent).toBe("SAF-4, the daily mist and fog ceiling, in Settings");
 });
 
 test("a planned block's popover offers \"Pause <line> until after this run\": one minute past its planned end; it then reads skipped, and a past block's offers no pause, only Edit", async () => {
