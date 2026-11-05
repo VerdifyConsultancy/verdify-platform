@@ -123,7 +123,7 @@ test("with the API down, after the second failed poll: no band bars, no In band 
   await load(page, "/");
   await untilPolled(page, () => expect(page.locator("[data-banner=fault]")).toHaveText("Dashboard API unavailable", { timeout: 1_000 }), 31_000);
   await expect(page.locator(".now-bands")).toHaveCount(0);
-  await expect(page.locator(".now-tib")).toHaveText("");
+  await expect(page.locator(".now-hero-climate, .now-tib")).toHaveCount(0);
   await expect(page.locator(".tag-ok, .status-complete, .fresh-ok")).toHaveCount(0);
 });
 
