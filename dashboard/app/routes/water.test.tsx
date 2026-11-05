@@ -60,7 +60,14 @@ const program = () => text(document.querySelector("[data-program]"));
 const row = (id: string) => document.querySelector<HTMLElement>(`article[data-line="${id}"]`)!;
 const zone = (name: string) => document.querySelector<HTMLElement>(`.wat-zone[data-zone="${name}"]`)!;
 const where = () => screen.getByTestId("where").textContent;
-const stopAll = () => screen.queryByRole("button", { name: "Stop all water" });
+/**
+ * Stop all water as Water renders it (redesign §2.5, §9.6): the header's, the last action, and the sticky tabs row's
+ * compact copy, which the stylesheet shows at 860 px and below instead; both share one `useStop`. jsdom has no
+ * stylesheet, so both are in the tree here.
+ */
+const stopAlls = () => screen.queryAllByRole("button", { name: "Stop all water" });
+const headerStop = () => document.querySelector<HTMLButtonElement>(".page-actions .stop-all-water");
+const tabsStop = () => document.querySelector<HTMLButtonElement>(".page-tabs-sticky .stop-all-water");
 const toasts = (role: "status" | "alert") => [...screen.getByRole(role).querySelectorAll(".toast-body")].map((body) => [...body.querySelectorAll("p")].map((line) => text(line)).join(" "));
 const tab = (name: string) => within(screen.getByRole("navigation", { name: "Water views" })).getByRole("link", { name });
 
@@ -206,7 +213,8 @@ test("with API-IRR-01 failing the page says \"Water status unavailable\", never 
   expect(main.querySelectorAll("article[data-line]")).toHaveLength(0);
   expect(text(main.querySelector(".panel-error"))).toBe("Water status unavailable.Retry");
   expect(text(main)).not.toMatch(/\bIdle\b/i);
-  expect(stopAll()?.hasAttribute("disabled")).toBe(false);
+  expect(stopAlls()).toHaveLength(2);
+  for (const button of stopAlls()) expect(button.hasAttribute("disabled")).toBe(false);
 });
 
 test("not reporting: the status line names what the controller keeps running; with the ingestor down the shell's banner says so instead", async () => {
@@ -639,11 +647,15 @@ test("with changes switched off Run… and Clear fault are disabled and Stop sta
 test.each(VIEWS)("an operator's Stop all water on %s sends one API-IRR-07 with no dialog, then the Stop result with Disable for L01", async (path) => {
   const api = open(path, { fixture: "l01-running" });
   await load();
-  const button = stopAll()!;
-  expect(button.closest(".page-tabs.page-tabs-sticky")).not.toBeNull();
+  // The header's, last of its actions (from 861 px), and the sticky tabs row's (860 px and below), the only two.
+  expect(stopAlls()).toEqual([headerStop(), tabsStop()]);
+  expect(headerStop()!.closest(".page-actions")!.lastElementChild).toBe(headerStop());
+  const button = headerStop()!;
   fireEvent.click(button);
-  expect(text(button)).toBe("Sending…");
+  // They share one Stop: both read Sending…, and a tap on either is no second request.
+  expect([text(button), text(tabsStop())]).toEqual(["Sending…", "Sending…"]);
   fireEvent.click(button);
+  fireEvent.click(tabsStop()!);
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ method: "POST", operationId: "API-IRR-07", body: {} })]);
   expect(writes(api)[0].idempotency_key).toMatch(UUID);
@@ -659,8 +671,9 @@ test.each([
 ])("Stop all water stays enabled and sends one API-IRR-07 under %s", async (name, result) => {
   const api = open("/water", { fixture: name });
   await load();
-  expect(stopAll()!.hasAttribute("disabled")).toBe(false);
-  fireEvent.click(stopAll()!);
+  expect(stopAlls()).toHaveLength(2);
+  for (const button of stopAlls()) expect(button.hasAttribute("disabled")).toBe(false);
+  fireEvent.click(tabsStop()!);
   await advance(5000);
   expect(requests(api, "API-IRR-07")).toHaveLength(1);
   expect(toasts("status")).toEqual([result]);
@@ -670,30 +683,40 @@ test("a viewer sees no Stop or header action on any Water view; at phone width S
   for (const path of VIEWS) {
     open(path, { fixture: "viewer-session" });
     await load();
-    expect(stopAll(), path).toBeNull();
+    expect(stopAlls(), path).toEqual([]);
     expect(document.querySelectorAll("[data-write-control]"), path).toHaveLength(0);
     expect(document.querySelector(".page-actions"), path).toBeNull();
     cleanup(); stopFixtureApi();
   }
   open("/water");
   await load();
-  const button = stopAll()!;
+  const button = tabsStop()!;
   expect(button.className).toBe("btn btn-stop stop-all-water stop-all-water-compact");
   expect(text(button)).toBe("Stop all water");
   expect(button.querySelector(".glyph-stop[aria-hidden=true]")).not.toBeNull();
+  expect(headerStop()!.className).toBe("btn btn-stop stop-all-water");
   const css = readFileSync(join(process.cwd(), "app/styles/primitives.css"), "utf8");
   const phone = css.slice(css.lastIndexOf("@media(max-width:860px){"));
   expect(phone).toMatch(/\.page-tabs-sticky\{position:sticky;/);
   expect(phone).toContain(".stop-all-water-compact .stop-all-water-word{display:none}");
+  // Water's stylesheet shows one of the two: the header's from 861 px, the tabs row's at 860 px and below.
+  const water = readFileSync(join(process.cwd(), "app/styles/water.css"), "utf8");
+  expect(water).toContain("@media(min-width:861px){.water-page .page-tabs-end .stop-all-water{display:none}}");
+  expect(water).toContain(".water-page .page-actions .stop-all-water,.water-page .page-actions:has(>.stop-all-water:only-child){display:none}");
 });
 
-test("the header's actions: Pause lines… on Today, + New schedule on Schedules (keeping the day), none on History", async () => {
-  for (const [path, names] of [["/water", ["Pause lines…"]], ["/water/schedules?day=2026-11-04", ["+ New schedule"]], ["/water/history", []]] as const) {
+test("the header's actions: Pause lines… on Today, + New schedule on Schedules (keeping the day), then Stop all water last on every view", async () => {
+  for (const [path, names] of [["/water", ["Pause lines…", "Stop all water"]], ["/water/schedules?day=2026-11-04", ["+ New schedule", "Stop all water"]], ["/water/history", ["Stop all water"]]] as const) {
     open(path);
     await load();
     expect([...(document.querySelector(".page-actions")?.querySelectorAll("a, button") ?? [])].map((node) => text(node)), path).toEqual(names);
     cleanup(); stopFixtureApi();
   }
+  // + New schedule is an outline: Stop all water is the one filled button in the header.
+  open("/water/schedules");
+  await load();
+  expect(screen.getByRole("link", { name: "+ New schedule" }).className).toBe("button-link");
+  cleanup(); stopFixtureApi();
   open("/water/schedules?day=2026-11-04&view=week");
   await load();
   expect(screen.getByRole("link", { name: "+ New schedule" }).getAttribute("href")).toBe("/water/schedules?day=2026-11-04&view=week&schedule=new");

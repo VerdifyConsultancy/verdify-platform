@@ -363,9 +363,10 @@ zone, and every schedule, line and mister association.
 Three views share one page header (redesign §5.2 to §5.4 and §6 draw them): Today (the default), Schedules (the wide
 page) and History. The header's status line is the program state ("Program rev 42 on controller · confirmed 2 min ago",
 `[data-program]`), then what runs (Today, each linked to its row; on a phone "L01 running ›", since the row can sit below the fold), the next run (Schedules) or the period's summary
-(History). Its actions are Pause lines… on Today and "+ New schedule" on Schedules (operators). **Stop all water** sits
-at the end of the tabs row on every view for operators; at 860 px and below the tabs and "■ Stop all" share one sticky
-row under the header.
+(History). Its actions are Pause lines… on Today and "+ New schedule" on Schedules (operators; an outline, so the
+emergency action is the one filled button), then **Stop all water**, the last action on every view for operators, as
+redesign §2.5 places it; at 860 px and below it moves to the end of the tabs row, which sticks under the header, and
+reads "■ Stop all" (both render and the stylesheet shows one, sharing one Stop).
 
 | Panel | View | Shows | Data | Refresh |
 |---|---|---|---|---|

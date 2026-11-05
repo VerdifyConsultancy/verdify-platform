@@ -2,6 +2,13 @@
 /* Section: Water (WP3) */
 /* Water (SCR-04, redesign §5.2–§5.4 and §6): the status line, Today's zone cards, line rows, today strips and Site today; Schedules' week strip, day timeline, week matrix, agenda, rules list, popovers and editor; History's period bar, KPIs and run ledger. New classes use the prefixes wat- and sch-; the hooks the specs keep (line-card, mister-zone, week-table, week-days, line-subrow, line-fault, schedule-preview) keep their names. Loaded by root.tsx after styles.css and tokens.css, in the fixed order of redesign §10.1. Colours are tokens only (white the one literal); this file never redefines :focus-visible or the input borders that the §2.2 block in styles.css sets. */
 
+/* ---------------------------------------------------------------------------------------------------- the header */
+/* Stop all water (redesign §2.5): the last header action from 861 px; at 860 px and below the sticky tabs row's "■ Stop all". Both render and the stylesheet shows one (§9.6); History's actions hold Stop alone, so on a phone they go. */
+@media(min-width:861px){.water-page .page-tabs-end .stop-all-water{display:none}}
+@media(max-width:860px){
+  .water-page .page-actions .stop-all-water,.water-page .page-actions:has(>.stop-all-water:only-child){display:none}
+}
+
 /* ---------------------------------------------------------------------------------------------------- the status line */
 .wat-program-fault{color:var(--fault);font-weight:600}
 .wat-program-warn{color:var(--warn-text);font-weight:600}
