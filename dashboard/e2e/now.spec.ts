@@ -158,7 +158,7 @@ test("Stop all water with the irrigation firmware: one API-IRR-07 and no dialog,
   await untilPolled(page, () => expect(runningRows(page)).toHaveCount(0, { timeout: 500 }));
   await expect(page.locator("[data-running=none]")).toHaveText("Nothing running");
   await expect(toastLines(page)).toHaveText([STOPPED, CAN_STILL_START]);
-  await expect(page.getByRole("button", { name: "Disable L01" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Disable Wall drip" })).toBeVisible();
   expect((await fixtureWrites(request)).map((row) => row.operationId)).toEqual(["API-IRR-07"]);
 });
 
@@ -281,7 +281,7 @@ test("Running and next on a phone: Running now and the Next 12 h list, with each
   await expect(coming.locator("[data-coming=plan]")).toHaveText(["13:00VPD Mister Engage 1.60 → 1.70 kPa AI", "13:00Mister Engage Delay 60.0 → 90.0 s · Forecast rule · system", "16:30Mister Pulse Gap 45.0 → 55.0 s AI"]);
   await expect(coming.locator("[data-coming=iris]")).toHaveText(["16:50Iris SUNSET trigger"]);
   await expect(coming.locator("[data-coming=sun]")).toHaveText(["16:58Sunset"]);
-  await expect(coming.locator("[data-coming=later]")).toContainText("L01 Wall drip paused until 14:00 by Jason: rain · next Wed 07:35");
+  await expect(coming.locator("[data-coming=later]")).toContainText("Wall drip paused until 14:00 by Jason: rain · next Wed 07:35");
   expect((await fixtureRequests(request, "API-07")).map((row) => row.path)).toEqual(["/v1/plan?hours=24"]);
   expect((await fixtureRequests(request, "API-IRR-02")).map((row) => row.path)).toEqual(["/v1/irrigation/schedules?days=7"]);
   // A phone never reads the track's six hours of equipment.

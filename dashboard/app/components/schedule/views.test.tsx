@@ -35,7 +35,7 @@ test("the server sends the timeline's rows and words with no style attribute: po
   const html = renderToString(<MemoryRouter><DayTimeline model={model()} now={NOW} head={<h2>Monday</h2>} label="Runs on Monday by line" /></MemoryRouter>);
   expect(html).toContain('data-line="L01"');
   expect(html).not.toMatch(/\sstyle=/);
-  const strip = renderToString(<DayStrip name="L04 Center mister" from={model().from} to={model().to} night={model().night} blocks={[]} episodes={[]} now={NOW} token="mister" />);
+  const strip = renderToString(<DayStrip name="Center mister" from={model().from} to={model().to} night={model().night} blocks={[]} episodes={[]} now={NOW} token="mister" />);
   expect(strip).not.toMatch(/\sstyle=/);
   expect(strip).toContain('role="img"');
 });
@@ -48,7 +48,7 @@ test("the timeline is one tab stop: its blocks are out of the tab order and the 
   expect(group.getAttribute("tabindex")).toBe("0");
   const blocks = [...group.querySelectorAll<HTMLElement>("button.sch-block")];
   expect(blocks.map((block) => block.getAttribute("tabindex"))).toEqual(blocks.map(() => "-1"));
-  expect(blocks.map((block) => block.getAttribute("aria-label")?.slice(0, 13))).toEqual(["L01 Wall drip", "L04 Center mi"]);
+  expect(blocks.map((block) => block.getAttribute("aria-label")?.split(" · ")[0])).toEqual(["Wall drip", "Center mister"]);
   group.focus();
   fireEvent.keyDown(group, { key: "ArrowRight" });
   expect(document.activeElement).toBe(blocks[0]);
@@ -62,7 +62,7 @@ test("the timeline is one tab stop: its blocks are out of the tab order and the 
   track.getBoundingClientRect = () => ({ left: 0, width: 960, top: 0, height: 28, right: 960, bottom: 28, x: 0, y: 0, toJSON: () => ({}) });
   fireEvent.click(track, { clientX: 960 * (15.1 / 24) });
   expect(onSlot).toHaveBeenCalledWith("L09", "15:00");
-  expect(screen.getByRole("link", { name: "New schedule on L09 West mister" }).getAttribute("href")).toBe("/new?line=L09");
+  expect(screen.getByRole("link", { name: "New schedule on West mister" }).getAttribute("href")).toBe("/new?line=L09");
 });
 
 test("a block's words take the room beside it: all of them, else its time and outcome (a planned one its time), else its time, else none; the end column's head names the day", () => {
@@ -105,11 +105,11 @@ test("a block's words take the room beside it: all of them, else its time and ou
 test("a strip without API-05's answer says its valve time is unknown and hatches it up to now; with the answer and nothing in it, none", () => {
   const day = model();
   renderUi(<>
-    <DayStrip name="L04 Center mister" from={day.from} to={day.to} night={[]} blocks={[]} episodes={[]} valveKnown={false} now={NOW} token="mister" />
-    <DayStrip name="L09 West mister" from={day.from} to={day.to} night={[]} blocks={[]} episodes={[]} now={NOW} token="mister" />
+    <DayStrip name="Center mister" from={day.from} to={day.to} night={[]} blocks={[]} episodes={[]} valveKnown={false} now={NOW} token="mister" />
+    <DayStrip name="West mister" from={day.from} to={day.to} night={[]} blocks={[]} episodes={[]} now={NOW} token="mister" />
   </>);
-  expect(screen.getByRole("img", { name: "L04 Center mister today: valve time unknown" }).querySelectorAll(".sch-tick-unknown")).toHaveLength(1);
-  expect(screen.getByRole("img", { name: "L09 West mister today: no runs and no valve time" }).querySelector(".sch-tick")).toBeNull();
+  expect(screen.getByRole("img", { name: "Center mister today: valve time unknown" }).querySelectorAll(".sch-tick-unknown")).toHaveLength(1);
+  expect(screen.getByRole("img", { name: "West mister today: no runs and no valve time" }).querySelector(".sch-tick")).toBeNull();
   // The timeline's rows say the same in words when the day's API-05 has not answered.
   cleanup();
   const unread = dayModel({ day: TODAY, today: TODAY, now: NOW, agenda, lines: status.lines, lanes: null, entries });
@@ -155,11 +155,11 @@ test("the week strip: seven days with their summaries and levels, the selected o
 
 test("the agenda: a row is a button that opens its popover, NEXT on the next planned run, and the pauses above the days", () => {
   const onOpen = vi.fn();
-  renderUi(<Agenda days={agendaDays(entries, { first: TODAY, days: 2, last: "2026-11-08", today: TODAY, now: NOW, lines: status.lines })} pauses={["L01 Wall drip: paused until 14:00 by jason"]} onOpen={onOpen} />);
-  expect(text(document.querySelector(".sch-agenda-pauses"))).toBe("L01 Wall drip: paused until 14:00 by jason");
+  renderUi(<Agenda days={agendaDays(entries, { first: TODAY, days: 2, last: "2026-11-08", today: TODAY, now: NOW, lines: status.lines })} pauses={["Wall drip: paused until 14:00 by jason"]} onOpen={onOpen} />);
+  expect(text(document.querySelector(".sch-agenda-pauses"))).toBe("Wall drip: paused until 14:00 by jason");
   const rows = screen.getAllByRole("button");
   expect(rows.map((row) => row.getAttribute("aria-label")?.replaceAll(" ", " "))).toEqual([
-    "06:50 L04 Center mister · 8 × 60 s, Dawn drench · ok, done", "07:35 L01 Wall drip · 12 min, Wall MWF · ok, done", "06:50 L04 Center mister · 8 × 60 s, Dawn drench · Iris may adjust, next",
+    "06:50 Center mister · 8 × 60 s, Dawn drench · ok, done", "07:35 Wall drip · 12 min, Wall MWF · ok, done", "06:50 Center mister · 8 × 60 s, Dawn drench · Iris may adjust, next",
   ]);
   fireEvent.click(rows[2]);
   expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ next: true, lineId: "L04" }), rows[2]);

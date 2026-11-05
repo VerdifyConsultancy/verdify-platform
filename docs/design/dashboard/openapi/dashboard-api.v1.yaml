@@ -1529,7 +1529,7 @@ components:
       required: [line_id, name, zone, kind, reserved, enabled, check, daily_cap_min, paused_until, manual, state, sync]
       properties:
         line_id: {$ref: '#/components/schemas/LineId'}
-        name: {type: string, examples: [Drip • Wall]}
+        name: {type: string, description: 'The line''s display name, the words a person reads (#1341); line_id stays the machine key', examples: [Wall drip]}
         zone: {type: string, enum: [wall, center, south, west, supply, house], description: 'The line''s place: supply for L03, house for L11. Minutes by zone use fog for L11 and leave L03 out'}
         kind: {type: string, enum: [drip, mister, fert_drip, fert_mister, master, fog]}
         clean_partner: {type: [string, 'null'], pattern: '^L(0[1-9]|1[01])$'}

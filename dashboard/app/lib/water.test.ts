@@ -44,9 +44,9 @@ test("the program banner is the first rule that holds: failing, not reporting, n
   expect(banner({ ingestorRunning: false, controllerReporting: false })).toMatchObject({ kind: "confirmed" });
   expect(banner({ status: null })).toMatchObject({ kind: "loading" });
   expect(banner({ status: status("before-engine") })).toMatchObject({ kind: "no_engine", text: NO_ENGINE_TEXT });
-  expect(NO_ENGINE_TEXT).toBe("No irrigation engine on the controller yet: relay states only; L01 runs, and every line stops, through the bridge");
+  expect(NO_ENGINE_TEXT).toBe("No irrigation engine on the controller yet: relay states only; the wall drip runs, and every line stops, through the bridge");
   expect(banner({ status: status("program-rom") })).toMatchObject({ kind: "rom", tone: "warn", text: ROM_TEXT });
-  expect(ROM_TEXT).toBe("Running the built-in program: L04 VPD only, L01 run-now, no schedules");
+  expect(ROM_TEXT).toBe("Running the built-in program: Center mister VPD only, Wall drip run-now, no schedules");
   expect(banner({})).toEqual({ kind: "confirmed", tone: "info", text: "On controller: rev 42 ·", badge: "confirmed", confirmedAt: new Date(NOW - 120_000).toISOString() });
 });
 
@@ -375,7 +375,7 @@ test("a schedule in words: its days, its start with today's resolved time, and i
   expect(plain(startsWords([{ kind: "sunrise", offset_min: 60 }, { kind: "clock", clock: "16:00" }], solar))).toBe("sunrise + 1 h, 16:00");
   expect(plain(amountWords({ on_s: 720 }, "drip"))).toBe("12 min");
   expect(plain(amountWords({ on_s: 45, count: 4, gap_s: 60 }, "mister"))).toBe("4 × 45 s, 60 s gap");
-  expect(plain(amountWords({ on_s: 300, prewet_s: 120, flush_s: 240 }, "fert_drip", "L01"))).toBe("feed 5 min · prewet 2 min · flush 4 min on L01");
+  expect(plain(amountWords({ on_s: 300, prewet_s: 120, flush_s: 240 }, "fert_drip", "L01"))).toBe("feed 5 min · prewet 2 min · flush 4 min on Wall drip");
   expect(plain(amountShort({ on_s: 45, count: 4 }, "mister"))).toBe("4 × 45 s");
   expect([runSeconds({ on_s: 45, count: 4, gap_s: 60 }), runSeconds({ on_s: 720 })]).toEqual([360, 720]);
 });
@@ -407,8 +407,8 @@ test("the KPIs' tallies: watering minutes without L03 or fog, gallons where mete
   const runs = tallyRuns([run("ok", denver("07:00")), run("missed", "2026-10-31T14:00:00Z", "L09", "no valid clock"), run("short", "2026-11-01T16:00:00Z"), run("ok", denver("05:00"), "L11")]);
   expect([runs.runs, runs.missed, runs.short, runs.cap, runs.complete]).toEqual([3, 1, 1, 0, true]);
   expect(shortfallWords(runs)).toBe("1 missed, 1 short");
-  expect(shortfallNote(runs.newest)).toBe("Nov 1 L09: short");
-  expect(shortfallNote(tallyRuns([run("missed", "2026-10-31T14:00:00Z", "L09", "no valid clock")]).newest)).toBe("Oct 31 L09: no valid clock");
+  expect(shortfallNote(runs.newest)).toBe("Nov 1 West mister: short");
+  expect(shortfallNote(tallyRuns([run("missed", "2026-10-31T14:00:00Z", "L09", "no valid clock")]).newest)).toBe("Oct 31 West mister: no valid clock");
   expect(plain(historySummary(7, tally, runs) ?? "")).toBe("Last 7 days: 26 min watering · 12 gal · 3 runs, 1 missed, 1 short");
   expect(plain(historySummary(90, tally, null) ?? "")).toBe("Last 90 days: 26 min watering · 12 gal");
   expect(historySummary(7, null, runs)).toBeNull();

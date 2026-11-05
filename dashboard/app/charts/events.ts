@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { lineDisplayName } from "../lib/lines";
 import type { ActivityEntry, Alert, Run } from "../lib/operator-api";
 import { causeToken, causeWords } from "./causes";
 import { clockTime, epochOf, localDay } from "./time-axis";
@@ -76,7 +77,7 @@ export function runEvent(run: Run, now: number): ChartEvent | null {
   const minutes = Math.round(run.open_s / 60);
   return {
     id: `run-${run.run_id}`, at, source: "runs", mark: "bar", token: token(causeToken(run.cause)),
-    label: `${when(at, now)} · ${run.line_id} · ${causeWords(run.cause)}${minutes > 0 ? ` · ${minutes} min` : ""} · ${run.outcome}`,
+    label: `${when(at, now)} · ${lineDisplayName(run.line_id)} · ${causeWords(run.cause)}${minutes > 0 ? ` · ${minutes} min` : ""} · ${run.outcome}`,
     href: `/water/history?line=${encodeURIComponent(run.line_id)}`,
   };
 }

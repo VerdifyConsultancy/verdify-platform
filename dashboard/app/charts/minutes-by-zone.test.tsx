@@ -15,7 +15,7 @@ const min = (value: number) => `${value}${NBSP}min`;
 const epoch = (instant: string) => Date.parse(instant) / 1000;
 // 10:00 on Monday 11/02/2026, America/Denver: today is 11/02, a partial day.
 const NOW = epoch("2026-11-02T17:00:00Z");
-const NAMES = { L01: "Wall drip", L02: "Wall feed", L04: "Center mister", L07: "South mister", L11: "Fog" };
+const NAMES = { L01: "Wall drip", L02: "Wall drip (fertilized)", L04: "Center mister", L07: "South mister", L11: "Fog" };
 const CAPS = { wall: 60, center: 120, south: 45, west: 45 };
 const settle = () => act(async () => { await vi.dynamicImportSettled(); });
 const same = (a: number[], b: number[]) => JSON.stringify(a) === JSON.stringify(b);
@@ -62,7 +62,7 @@ test("a no-data day is a hatched full-height gap, never a zero bar, and today is
     [Math.round(centre(center, 6) - 24), Math.round(centre(center, 6) + 24), center.valToPos(46, "y")],
   ]);
   center.hover((center.data[0] as number[])[6], 6, 30);
-  expect(tooltip(center)).toEqual(["Nov 2 · Center", min(46), "partial", `L04 Center mister · VPD · ${min(46)} · 3 gal`, `still planned today ${min(20)}`, `cap 120 ${"min"}`]);
+  expect(tooltip(center)).toEqual(["Nov 2 · Center", min(46), "partial", `Center mister · VPD · ${min(46)} · 3 gal`, `still planned today ${min(20)}`, `cap 120 ${"min"}`]);
   center.hover((center.data[0] as number[])[3], 3, 30);
   expect(tooltip(center)).toEqual(["Oct 30 · Center", "no data"]);
   expect([...container.querySelectorAll(".minutes-today")].map((cell) => cell.textContent)).toEqual([
@@ -74,7 +74,7 @@ test("a no-data day is a hatched full-height gap, never a zero bar, and today is
   expect(details.querySelector("summary")!.textContent).toBe("Data table · 35 rows");
   const centerRows = [...details.querySelectorAll(".table-wrap")[1].querySelectorAll("tbody tr")].map((row) => [...row.children].map((cell) => cell.textContent));
   expect(centerRows[3]).toEqual(["Oct 30", "—", "", "no data"]);
-  expect(centerRows[6]).toEqual(["Nov 2", min(46), `L04 Center mister · VPD · ${min(46)} · 3 gal; still planned today ${min(20)}`, "partial"]);
+  expect(centerRows[6]).toEqual(["Nov 2", min(46), `Center mister · VPD · ${min(46)} · 3 gal; still planned today ${min(20)}`, "partial"]);
 });
 
 test("bars are uPlot.paths.bars stacked by cause, clean below fertilizer, each coloured as the cause table says", async () => {
@@ -111,15 +111,15 @@ test("the cap is a dotted line, today's still-planned minutes a dashed outline o
 test("the tooltip and the data table split each day by line and cause in words, with whole gallons and no rate", async () => {
   const { container, wall, fog } = await mount();
   wall.hover((wall.data[0] as number[])[1], 1, 30);
-  expect(tooltip(wall)).toEqual(["Oct 28 · Wall", min(13), `L01 Wall drip · prewet · ${min(2)} · 1 gal`, `L01 Wall drip · flush · ${min(3)} · 2 gal`, `L02 Wall feed · feed · ${min(8)} · 4 gal`, "cap 60 min"]);
+  expect(tooltip(wall)).toEqual(["Oct 28 · Wall", min(13), `Wall drip · prewet · ${min(2)} · 1 gal`, `Wall drip · flush · ${min(3)} · 2 gal`, `Wall drip (fertilized) · feed · ${min(8)} · 4 gal`, "cap 60 min"]);
   fog.hover((fog.data[0] as number[])[0], 0, 30);
-  expect(tooltip(fog)).toEqual(["Oct 27 · Fog", min(30), `L11 Fog · VPD · ${min(30)}`]);
+  expect(tooltip(fog)).toEqual(["Oct 27 · Fog", min(30), `Fog · VPD · ${min(30)}`]);
   // Without the screen's line names the line id stands alone.
   cleanup();
   MockPlot.reset();
   const next = await mount({ lineNames: undefined });
   next.wall.hover((next.wall.data[0] as number[])[0], 0, 30);
-  expect(tooltip(next.wall)).toEqual(["Oct 27 · Wall", min(12), `L01 · schedule · ${min(12)} · 9 gal`, "cap 60 min"]);
+  expect(tooltip(next.wall)).toEqual(["Oct 27 · Wall", min(12), `Wall drip · schedule · ${min(12)} · 9 gal`, "cap 60 min"]);
   expect(container.textContent).not.toMatch(/gal\/min|flow/);
   // A cursor moved from another row shows no tooltip here.
   next.center.hover((next.center.data[0] as number[])[0], 0, 30, true);
@@ -182,7 +182,7 @@ test("Group by line (#1135): one row per line in the report, in line order, each
   const { container } = await mount({ group: "line", caps: { L01: 60, L04: 120, L07: 45 }, planned: { L01: 12 } });
   expect(container.querySelector("figcaption")!.textContent).toBe("Watering minutes by line · last 7 days");
   expect([...container.querySelectorAll(".minutes-row")].map((row) => row.getAttribute("data-row"))).toEqual(["L01", "L02", "L03", "L04", "L07", "L11"]);
-  expect([...container.querySelectorAll(".minutes-label")].map((label) => label.textContent)).toEqual(["L01 Wall drip", "L02 Wall feed", "L03", "L04 Center mister", "L07 South mister", "L11 Fog humidification"]);
+  expect([...container.querySelectorAll(".minutes-label")].map((label) => label.textContent)).toEqual(["Wall drip", "Wall drip (fertilized)", "Fertilizer valve", "Center mister", "South mister", "Fog humidification"]);
   const model = buildMinutes({ report: load<MinutesReport>(minutesFixture), group: "line", now: NOW });
   expect(model.zones.map((row) => [row.key, row.zone, row.fog, row.days.map((day) => day.total)])).toEqual([
     ["L01", null, false, [12, 5, 10, null, 5, 12, 0]], ["L02", null, false, [0, 8, 0, null, 0, 0, 0]], ["L03", null, false, [0, 8, 0, null, 0, 0, 0]],
@@ -208,7 +208,7 @@ test("Group by cause (#1135): one row per cause in cause order, fog apart, the f
   // A cause row splits by line in the tooltip and the table: L04 and L07 both mist on VPD.
   const vpd = created[0];
   vpd.hover((vpd.data[0] as number[])[2], 2, 30);
-  expect(tooltip(vpd)).toEqual(["Oct 29 · VPD", min(73), `L04 Center mister · VPD · ${min(61)} · 4 gal`, `L07 South mister · VPD · ${min(12)} · 1 gal`]);
+  expect(tooltip(vpd)).toEqual(["Oct 29 · VPD", min(73), `Center mister · VPD · ${min(61)} · 4 gal`, `South mister · VPD · ${min(12)} · 1 gal`]);
   expect(container.querySelector("[data-row=schedule] .minutes-today")!.textContent).toBe(`today ${min(0)} (partial)`);
   expect(created.map((plot) => plot.scales.y.max)).toEqual([84, 84, 84, 84, 84, 84, 84, 35]);
 });

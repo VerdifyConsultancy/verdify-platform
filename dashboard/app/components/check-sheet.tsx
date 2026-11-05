@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
 import { checkedLabel } from "../lib/line-checks";
+import { lineDisplayName } from "../lib/lines";
 import type { IrrigationLine } from "../lib/operator-api";
 import { useRole } from "../lib/session";
 import { useWaterDrawer, wetLines } from "../lib/water";
@@ -39,7 +40,7 @@ function CheckForm({ line, action, onClose }: { line: IrrigationLine; action: Ch
   const words = WORDS[action];
   const write = useProgramWrite("API-IRR-08", {
     onSaved: () => {
-      toast.show({ message: `Requested: ${line.line_id} ${words.done}, check recorded` });
+      toast.show({ message: `Requested: ${lineDisplayName(line)} ${words.done}, check recorded` });
       onClose();
     },
   });
@@ -51,7 +52,7 @@ function CheckForm({ line, action, onClose }: { line: IrrigationLine; action: Ch
     ...(reason.trim() ? { reason: reason.trim() } : {}),
   });
   const boxError = errorFor(write.error, "checked");
-  return <EditDrawer open onClose={onClose} title={`${words.title} ${line.line_id}`} heading={line.name} onSave={save} saving={write.sending} saveLabel={words.save} saveDisabled={!checked}
+  return <EditDrawer open onClose={onClose} title={`${words.title} ${lineDisplayName(line)}`} onSave={save} saving={write.sending} saveLabel={words.save} saveDisabled={!checked}
     status={<p className="state-note">Asked once for this line: your name and the time are recorded with it.</p>} error={formError(write.error, ["checked", "check_note", "reason"])}>
     <label className="check field-check">
       <input type="checkbox" name="checked" checked={checked} onChange={(event) => setChecked(event.target.checked)} />

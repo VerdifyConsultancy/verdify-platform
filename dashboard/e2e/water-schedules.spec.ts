@@ -23,28 +23,28 @@ test("1440 px: today's timeline groups rows by manifold with night, the now rule
   expect(lines).toEqual(["L01", "L02", "L05", "L06", "L04", "L07", "L08", "L09", "L10"]);
   await expect(timelineRow(page, "L01").locator(".sch-pause")).toContainText("paused until 14:00 · jason");
   await expect(timelineRow(page, "L04").locator(".sch-tick")).not.toHaveCount(0);
-  await expect(timelineRow(page, "L04").getByRole("button", { name: /^L04 Center mister · Dawn drench, Mon 06:50/ })).toBeAttached();
+  await expect(timelineRow(page, "L04").getByRole("button", { name: /^Center mister · Dawn drench, Mon 06:50/ })).toBeAttached();
   await expect(timelineRow(page, "L04").locator(".sch-cap")).toContainText("14 / 120 min");
   await expect(timelineRow(page, "L07").locator(".sch-row-note")).toHaveText("Schedule off for this zone");
   await expect(timelineRow(page, "L07").locator(".sch-block.sch-skipped")).toHaveCount(1);
   await expect(timelineRow(page, "L01").locator(".sch-now")).toBeVisible();
   // The status line names the next run, read the same way everywhere.
-  await expect(page.locator(".page-status")).toContainText("next: L04 Center mister Tue 06:50");
+  await expect(page.locator(".page-status")).toContainText("next: Center mister Tue 06:50");
   await expectNoHorizontalScroll(page);
   await axe(page);
 });
 
-test("a block opens its popover with its run, rule and next starts, Edit and \"Pause L01 until after this run\"; Escape and Back close it", async ({ page, request }) => {
+test("a block opens its popover with its run, rule and next starts, Edit and \"Pause Wall drip until after this run\"; Escape and Back close it", async ({ page, request }) => {
   await page.setViewportSize(DESKTOP);
   await useScreensClock(page, request, "schedules-paused");
   await load(page, "/water/schedules?day=2026-11-04");
   await timelineRow(page, "L01").locator(".sch-block").first().click();
   await expect(page).toHaveURL(/\/water\/schedules\?day=2026-11-04&block=11-\d+$/);
-  await expect(popover(page).locator("h2")).toHaveText("L01 Wall drip · Wall MWF");
+  await expect(popover(page).locator("h2")).toHaveText("Wall drip · Wall MWF");
   await expect(popover(page)).toContainText("Wed 4 Nov · 07:35 (sunrise + 1 h) · 12 min");
   await expect(popover(page)).toContainText("Mon Wed Fri · sunrise + 1 h");
   await expect(popover(page).getByRole("link", { name: "Edit schedule" })).toBeVisible();
-  await expect(popover(page).getByRole("button", { name: "Pause L01 until after this run" })).toBeVisible();
+  await expect(popover(page).getByRole("button", { name: "Pause Wall drip until after this run" })).toBeVisible();
   await axe(page);
   await page.keyboard.press("Escape");
   await expect(popover(page)).toHaveCount(0);
@@ -67,7 +67,7 @@ test("an empty slot opens a new schedule prefilled with its line, the day and th
   await expect(page).toHaveURL(/\/water\/schedules\?day=2026-11-04&line=L01&at=08%3A00&schedule=new$/);
   await expect(drawer(page).getByLabel("Clock time (HH:MM)")).toHaveValue("08:00");
   await expect(drawer(page).getByRole("button", { name: "Wednesday" })).toHaveAttribute("aria-pressed", "true");
-  await expect(drawer(page).locator(".sch-checks")).toContainText(/Starts 25\smin after Wall MWF on L01: schedules on one line need 30\smin/);
+  await expect(drawer(page).locator(".sch-checks")).toContainText(/Starts 25\smin after Wall MWF on Wall drip: schedules on one line need 30\smin/);
   await expect(timelineRow(page, "L01").locator(".sch-draft.sch-conflict")).toHaveCount(1);
   await axe(page);
   await drawer(page).getByRole("button", { name: "Cancel" }).click();
@@ -131,7 +131,7 @@ test("390 px: the agenda is the default, by day, with NEXT and a skipped row hat
   await expect(agenda.locator("h3").first()).toHaveText("Today · Mon 2 Nov");
   await expect(agenda.locator(".sch-next")).toHaveCount(1);
   await expect(agenda.locator('[data-line="L07"] .sch-agenda-row.sch-skipped').first()).toContainText("Skipped until Schedule is on");
-  await expect(agenda.locator(".sch-agenda-pauses")).toHaveText("L01 Wall drip: paused until 14:00 by jason");
+  await expect(agenda.locator(".sch-agenda-pauses")).toHaveText("Wall drip: paused until 14:00 by jason");
   await expect(page.locator(".week-days").getByRole("link", { name: /^Wednesday/ })).toBeVisible();
   // The rules fold into a disclosure per line under the agenda.
   await expect(page.locator('.sch-rule-group[data-line="L01"]')).not.toHaveAttribute("open", "");

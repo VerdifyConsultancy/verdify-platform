@@ -63,7 +63,7 @@ test("an operator's visit at 360 × 740: a burst from Now, a run and its stop on
   const wall = lineRow(page, "L01");
   await wall.getByRole("button", { name: /^Run…/ }).click();
   const dialog = page.locator("dialog[open]");
-  await expect(dialog).toContainText("Run L01 Wall drip (clean) for 10 min?");
+  await expect(dialog).toContainText("Run Wall drip (clean) for 10 min?");
   await dialog.getByRole("button", { name: "Run 10 min" }).click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   await expect.poll(() => writes.length).toBe(2);
@@ -78,7 +78,7 @@ test("an operator's visit at 360 × 740: a burst from Now, a run and its stop on
     await expect(wall).toHaveAttribute("data-state", "idle", { timeout: 500 });
     await expect(toastLines(page)).toHaveText([STOPPED, CAN_STILL_START], { timeout: 500 });
   });
-  await expect(page.getByRole("button", { name: "Disable L01" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Disable Wall drip" })).toBeVisible();
 
   // Hand-watering with the hose: the banner names it and has no Stop, because no Verdify valve is open.
   await useScreensClock(page, request, [VISIT, "flow-valves-closed"]);

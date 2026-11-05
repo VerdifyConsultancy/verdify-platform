@@ -29,7 +29,7 @@ from verdify_schemas.policy_vector import wire_fields
 from verdify_schemas.tunable_registry import REGISTRY
 from verdify_services import activity, alerts, reads, settings
 from verdify_services.actor import ActorRef
-from verdify_services.labels import EQUIPMENT_LABELS, EQUIPMENT_LINE_IDS
+from verdify_services.labels import EQUIPMENT_LABELS, EQUIPMENT_LINE_IDS, LINE_NAMES, name_line_codes
 
 ROOT = Path(__file__).resolve().parents[1]
 OPENAPI = ROOT / "docs/design/dashboard/openapi/dashboard-api.v1.yaml"
@@ -506,7 +506,10 @@ def test_labels_name_every_actuator_and_flag_once():
     assert set(EQUIPMENT_LABELS) == {*names, "occupancy", "leak_detected", "water_flowing"}
     assert list(EQUIPMENT_LINE_IDS.values()) == list(LINE_IDS)
     for name, line_id in EQUIPMENT_LINE_IDS.items():
-        assert EQUIPMENT_LABELS[name].endswith(f" {line_id}")
+        # The operator's name, never the relay code (#1341), and the line reads the same everywhere.
+        assert line_id not in EQUIPMENT_LABELS[name]
+        assert LINE_NAMES[line_id] == EQUIPMENT_LABELS[name]
+    assert EQUIPMENT_LABELS["drip_wall"] == "Wall drip" and LINE_NAMES["L02"] == "Wall drip (fertilized)"
     assert EQUIPMENT_LABELS["heat1"] == "Heat 1 electric" and EQUIPMENT_LABELS["heat2"] == "Heat 2 gas"
     assert len(set(EQUIPMENT_LABELS.values())) == len(EQUIPMENT_LABELS)
 
@@ -1348,3 +1351,15 @@ def _compare_model(model, spec_and_schema):
     problems: list[str] = []
     _compare(model_root, model_root, schema, spec_root, model.__name__, problems)
     return problems
+
+
+def test_words_for_a_person_name_lines_never_relay_codes():
+    """#1341: a refusal's detail reads the line's name; ``line_id`` stays in the structured fields."""
+    assert name_line_codes("L01 is disabled; enable it to run it") == "Wall drip is disabled; enable it to run it"
+    assert name_line_codes("vpd_member is on L04, L07 and L09 only") == (
+        "vpd_member is on Center mister, South mister and West mister only"
+    )
+    assert name_line_codes("only L01, L02 and L04-L10 do") == (
+        "only Wall drip, Wall drip (fertilized) and Center mister through West mister (fertilized) do"
+    )
+    assert name_line_codes("L12 and XL01 stay") == "L12 and XL01 stay"

@@ -11,7 +11,7 @@ import { useOutletContext, useSearchParams } from "react-router";
 import type { MinutesGroup } from "../charts/minutes-by-zone";
 import type { MinutesReport as BarsReport } from "../charts/types";
 import { TIME_UNAVAILABLE, TIME_ZONE, dateShift, duration, formatValue, localDate, localDayStart, shortDateTime, shortTime } from "./format";
-import { LINES, ZONE_WORDS, lineById, minutesZone, type MinutesZone } from "./lines";
+import { LINES, ZONE_WORDS, lineById, lineDisplayName, minutesZone, nameLineCodes, type MinutesZone } from "./lines";
 import {
   CAUSES, OUTCOMES, type IrrigationLine, type IrrigationStatus, type Leak, type MinutesReport, type Occupancy, type Occurrence, type Run, type Schedule,
   type ScheduleAgenda,
@@ -205,8 +205,8 @@ export function limitItems(status: IrrigationStatus, now: number, today: string)
 
 // ---------------------------------------------------------------------------------------------------- the program banner
 export const UNAVAILABLE_TEXT = "Water status unavailable.";
-export const NO_ENGINE_TEXT = "No irrigation engine on the controller yet: relay states only; L01 runs, and every line stops, through the bridge";
-export const ROM_TEXT = "Running the built-in program: L04 VPD only, L01 run-now, no schedules";
+export const NO_ENGINE_TEXT = "No irrigation engine on the controller yet: relay states only; the wall drip runs, and every line stops, through the bridge";
+export const ROM_TEXT = "Running the built-in program: Center mister VPD only, Wall drip run-now, no schedules";
 export const RETRYING_TEXT = "retrying at 1, 5 and 15 min";
 /** A program item's words beside its badge (screens SCR-04 "Not confirmed"): `programSyncText`, then the retries while the controller refuses it. */
 export function lineSyncWords(sync: string, status: Parameters<typeof programSyncText>[1]): string | null {
@@ -726,7 +726,7 @@ function pulsesWords(on: number, count: number, gap: number): string {
 }
 /**
  * A schedule's amount in words: "12 min" for a drip, "4 × 45 s, 60 s gap" for a mister, "feed 5 min · prewet 2 min ·
- * flush 4 min on L01" for a fertilizer line, whose prewet and flush run on its clean partner.
+ * flush 4 min on Wall drip" for a fertilizer line, whose prewet and flush run on its clean partner.
  */
 export function amountWords(schedule: Pick<Schedule, "on_s" | "count" | "gap_s" | "prewet_s" | "flush_s">, kind: string | undefined, partner?: string | null): string {
   const { on, count, prewet, flush } = seconds(schedule);
@@ -734,7 +734,7 @@ export function amountWords(schedule: Pick<Schedule, "on_s" | "count" | "gap_s" 
   const main = misterKind(kind) ? pulsesWords(on, count, gap) : secondsWords(on);
   if (!fertKind(kind)) return main;
   const sides = [prewet > 0 ? `prewet ${secondsWords(prewet)}` : null, flush > 0 ? `flush ${secondsWords(flush)}` : null].filter(Boolean);
-  return [`feed ${main}`, ...sides].join(" · ") + (sides.length && partner ? ` on ${partner}` : "");
+  return [`feed ${main}`, ...sides].join(" · ") + (sides.length && partner ? ` on ${lineDisplayName(partner)}` : "");
 }
 /** The short amount on a block or an agenda row: "12 min", "4 × 45 s". */
 export function amountShort(schedule: Pick<Schedule, "on_s" | "count">, kind: string | undefined): string {
@@ -831,12 +831,12 @@ export function shortfallWords(tally: Pick<RunsTally, "missed" | "short" | "cap"
   const parts = [tally.missed ? `${tally.missed} missed` : null, tally.short ? `${tally.short} short` : null, tally.cap ? `${tally.cap} at the cap` : null].filter(Boolean);
   return parts.join(", ") || "none";
 }
-/** The newest shortfall in words: "Oct 31 L09: no valid clock", its reason or else its outcome. */
+/** The newest shortfall in words: "Oct 31 West mister: no valid clock", its reason or else its outcome. */
 export function shortfallNote(run: Pick<Run, "started_at" | "line_id" | "outcome" | "reason"> | null): string | null {
   if (!run || !validTime(run.started_at)) return null;
   const day = localDate(run.started_at);
   const month = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" }).format(new Date(`${day}T12:00:00Z`));
-  return `${month} ${run.line_id}: ${run.reason || words("run_outcome", run.outcome)}`;
+  return `${month} ${lineDisplayName(run.line_id)}: ${nameLineCodes(run.reason) || words("run_outcome", run.outcome)}`;
 }
 /** A period in words: "Last 7 days", "Last 365 days". */
 export const periodWords = (days: number): string => `Last ${days} days`;

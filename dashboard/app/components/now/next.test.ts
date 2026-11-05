@@ -48,9 +48,9 @@ test("the past from API-05: what was on is solid in its token, named in words; o
 test("the runs ahead: planned dashed, at their length, labelled and named; what a running line or a burst still has to go", () => {
   const future = futureSpans({ agenda: agendaOf("in-band"), irrigation: statusOf("in-band"), overrides: [] }, WINDOW);
   expect(future.get("mist")?.map((span) => [span.status, span.start, span.end - span.start, plain(span.label)])).toEqual([
-    ["planned", at("11:47"), 360, "L04 4 × 45 s"], ["planned", at("13:47"), 360, "L04 4 × 45 s"],
+    ["planned", at("11:47"), 360, "Center mister 4 × 45 s"], ["planned", at("13:47"), 360, "Center mister 4 × 45 s"],
   ]);
-  expect(plain(future.get("mist")?.[0].name)).toBe("L04 Center mister, 11:47, 4 × 45 s, planned, only if VPD sensing is degraded");
+  expect(plain(future.get("mist")?.[0].name)).toBe("Center mister, 11:47, 4 × 45 s, planned, only if VPD sensing is degraded");
   const running = futureSpans({ agenda: null, irrigation: statusOf("l01-running"), overrides: parseNow(fixture("fans-burst", { now: NOW })["API-02"])!.overrides }, WINDOW);
   expect(running.get("drip")).toEqual([expect.objectContaining({ status: "planned", start: WINDOW.now, end: at("10:45"), token: "eq-water" })]);
   expect(running.get("air")).toEqual([expect.objectContaining({ status: "planned", end: at("10:54"), label: "Fans burst", token: "eq-fan1" })]);
@@ -104,24 +104,24 @@ test("an Iris trigger's label: ahead, the plan and its time; past, with a check 
 test("the phone's next 12 h: runs, plan changes with who planned them, the expected triggers and the sun, in time order", () => {
   const items = nextItems({ plan: planOf("plan-next"), agenda: agendaOf("in-band") }, WINDOW);
   expect(items.map((item) => [item.kind, plain(item.text), item.ai ?? false, plain(item.note)])).toEqual([
-    ["run", "L04 Center mister · 4 × 45 s · vanda-degraded", false, "only if VPD sensing is degraded"],
+    ["run", "Center mister · 4 × 45 s · vanda-degraded", false, "only if VPD sensing is degraded"],
     ["plan", "VPD Mister Engage 1.60 → 1.70 kPa", true, ""],
     ["plan", "Mister Engage Delay 60.0 → 90.0 s", false, "Forecast rule · system"],
-    ["run", "L04 Center mister · 4 × 45 s · vanda-degraded", false, "only if VPD sensing is degraded"],
+    ["run", "Center mister · 4 × 45 s · vanda-degraded", false, "only if VPD sensing is degraded"],
     ["plan", "Mister Pulse Gap 45.0 → 55.0 s", true, ""],
     ["iris", "Iris SUNSET trigger", false, ""],
     ["sun", "Sunset", false, ""],
   ]);
   // A skipped run says why, without "Skipped:".
   const skipped = nextItems({ plan: null, agenda: agendaOf(["schedules-paused", "l07-schedule-off"]) }, { ...WINDOW, to: WINDOW.now + 24 * 3600 });
-  expect(skipped.filter((item) => item.kind === "run").map((item) => [plain(item.text), item.status, item.note])).toContainEqual(["L04 Center mister · 8 × 1 min · Dawn drench", "planned", null]);
+  expect(skipped.filter((item) => item.kind === "run").map((item) => [plain(item.text), item.status, item.note])).toContainEqual(["Center mister · 8 × 1 min · Dawn drench", "planned", null]);
 });
 
 test("Later: each line with no run in the next 12 h, its next one, its pause with who and why, or together with no schedule", () => {
-  expect(laterText({ agenda: agendaOf("in-band"), lines: statusOf("in-band").lines }, WINDOW, NOW, ME)).toBe("No schedule: L01, L07, L09");
+  expect(laterText({ agenda: agendaOf("in-band"), lines: statusOf("in-band").lines }, WINDOW, NOW, ME)).toBe("No schedule: Wall drip, South mister, West mister");
   expect(plain(laterText({ agenda: agendaOf("schedules-paused"), lines: statusOf("schedules-paused").lines }, WINDOW, NOW, ME)))
-    .toBe("L01 Wall drip Wed 07:35 · L02 Wall feed Sun 07:35 · L04 Center mister Tue 06:50 · No schedule: L07, L09");
-  expect(plain(laterText({ agenda: agendaOf("l01-paused"), lines: statusOf("l01-paused").lines }, WINDOW, NOW, ME))).toMatch(/^L01 Wall drip paused until 14:00 by Jason: rain · next Wed 07:35 · /);
+    .toBe("Wall drip Wed 07:35 · Wall drip (fertilized) Sun 07:35 · Center mister Tue 06:50 · No schedule: South mister, West mister");
+  expect(plain(laterText({ agenda: agendaOf("l01-paused"), lines: statusOf("l01-paused").lines }, WINDOW, NOW, ME))).toMatch(/^Wall drip paused until 14:00 by Jason: rain · next Wed 07:35 · /);
   // Another person's pause reads by username.
   expect(plain(laterText({ agenda: agendaOf("l01-paused"), lines: statusOf("l01-paused").lines }, WINDOW, NOW, { username: "caretaker", display_name: "Caretaker" }))).toContain("by jason: rain");
 });

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { lineDisplayName } from "../lib/lines";
 import type { IrrigationLine } from "../lib/operator-api";
 import { OperatorOnly } from "../lib/session";
 import { useCommand } from "../lib/writes";
@@ -11,7 +12,7 @@ function ClearFault({ lineId }: { lineId: string }) {
   const command = useCommand({ operation: "API-IRR-13" });
   const note = command.phase === "waiting" ? "Waiting for the controller" : command.phase === "late" ? command.message : null;
   return <>
-    <Button write busy={command.sending} onClick={() => void command.send({}, { line_id: lineId })}>Clear fault <span className="screen-reader">on {lineId}</span></Button>
+    <Button write busy={command.sending} onClick={() => void command.send({}, { line_id: lineId })}>Clear fault <span className="screen-reader">on {lineDisplayName(lineId)}</span></Button>
     {note && <span className="state-note" data-clear-note={lineId}>{note}</span>}
     {command.error && <span className="field-error" role="alert">{command.error.message}</span>}
   </>;

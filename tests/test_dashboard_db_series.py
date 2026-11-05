@@ -376,7 +376,7 @@ def test_states_cover_a_day_with_unknown_spans_only_where_the_controller_was_sil
     for light in ("grow_light_main", "grow_light_grow"):
         assert all(i.state != "unknown" for i in by_name[light].intervals)
     drip = by_name["drip_wall"]
-    assert drip.line_id == "L01" and drip.label == "Wall drip L01"
+    assert drip.line_id == "L01" and drip.label == "Wall drip"
     assert {i.state for i in drip.intervals} >= {"on", "off"} and all(i.cause is None for i in drip.intervals)
     for lane in lanes:
         assert all(a.end == b.start for a, b in zip(lane.intervals, lane.intervals[1:], strict=False))

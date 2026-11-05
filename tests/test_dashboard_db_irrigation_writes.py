@@ -591,7 +591,7 @@ def test_iris_is_refused_on_a_manual_line_and_on_all_while_any_is_manual_but_its
     problem = refused(MCP, writes.line_update, IRIS, "L01", {"paused_until": until})
     assert (problem.code, problem.status, problem.retryable) == ("manual", 422, False)
     problem = refused(MCP, writes.line_update, IRIS, "all", {"paused_until": until})
-    assert problem.code == "manual" and "L01" in problem.detail and "L09" in problem.detail
+    assert problem.code == "manual" and "Wall drip" in problem.detail and "West mister" in problem.detail
     [row] = sql("SELECT count(*) AS n FROM public.irrigation_line WHERE paused_until IS NOT NULL")
     assert row["n"] == 0 and counts() == (0, 0, 0)
 
@@ -945,7 +945,10 @@ def test_a_run_refused_on_a_disabled_paused_faulted_or_non_member_line_in_that_o
     assert (problem.code, problem.retryable) == ("line_paused", False) and problem.current
     sql("UPDATE public.irrigation_line SET paused_until = NULL WHERE line_id = 'L07'")
     problem = refused(MCP, writes.run, AGENT, "L07", **body)
-    assert (problem.code, problem.retryable) == ("line_faulted", False) and "L08" in problem.detail
+    assert (problem.code, problem.retryable) == (
+        "line_faulted",
+        False,
+    ) and "South mister (fertilized)" in problem.detail
     set_engine(format_irr_state(IrrState(runs=(busy,))))
     problem = refused(MCP, writes.run, AGENT, "L07", **body)
     assert (problem.code, problem.retryable) == ("not_schedule_member", False)
@@ -1029,7 +1032,7 @@ def test_another_lines_run_holds_the_manifold_naming_it_and_until_when(login):
     set_engine(format_irr_state(IrrState(runs=(run_token("L01", end),))))
     problem = refused(login, writes.run, actor, "L02", minutes=5, prewet_s=120, flush_s=240)
     assert (problem.code, problem.status, problem.retryable) == ("manifold_busy", 422, True)
-    assert "L01" in problem.detail and "07:42" in problem.detail
+    assert "Wall drip holds" in problem.detail and "07:42" in problem.detail
     expected = (end - dt.datetime.now(dt.UTC)).total_seconds()
     assert abs(problem.retry_after_s - expected) < 15
     assert counts() == (0, 0, 0)
