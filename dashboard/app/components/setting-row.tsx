@@ -24,7 +24,11 @@ import { StateReasonLine } from "./state-reason-line";
  */
 
 // ---------------------------------------------------------------------------------------------------- groups
-/** The groups in their fixed order, with their headings (no column sort). */
+/**
+ * The groups in their fixed order, with their headings (no column sort). The API's `read_only` group is named by what it
+ * holds, the rows kept for reference (retired, legacy limits, readback-only and derived), so it never shares a name with
+ * the rail's "Read-only" filter, which counts every row that cannot be written, Band in force's included.
+ */
 export const SETTING_GROUPS: readonly (readonly [string, string])[] = [
   ["planner_policy", "Planner policy"],
   ["scheduled_policy", "Scheduled policy"],
@@ -32,7 +36,7 @@ export const SETTING_GROUPS: readonly (readonly [string, string])[] = [
   ["crop_band", "Crop band"],
   ["site_water_caps", "Site water caps"],
   ["band_in_force", "Band in force"],
-  ["read_only", "Read-only"],
+  ["read_only", "Reference only"],
 ];
 const GROUP_WORDS: Readonly<Record<string, string>> = Object.fromEntries(SETTING_GROUPS);
 /** A group's heading; a group this build does not know reads raw. */

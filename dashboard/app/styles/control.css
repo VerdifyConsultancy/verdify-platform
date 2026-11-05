@@ -24,6 +24,9 @@
 a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .ctl-rail-item[aria-current=true]{border-left-color:var(--forest);background:var(--field);font-weight:620}
 .ctl-rail-count{font:500 var(--fs-xs)/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+/* Show's counts are pills, Groups' plain muted numbers: a filter and a jump never read as the same kind of thing. */
+.ctl-rail-filters .ctl-rail-count{min-width:1.75rem;padding:.2rem .45rem;border:1px solid var(--line);border-radius:999px;background:#fff;text-align:center}
+.ctl-rail-filters .ctl-rail-item[aria-current=true] .ctl-rail-count{border-color:var(--forest);color:var(--forest)}
 .ctl-rail-item.is-empty{color:var(--muted)}
 .ctl-rail-selects{display:none;gap:var(--space-3);grid-template-columns:repeat(2,minmax(0,1fr))}
 .ctl-rail-selects .field{margin:0}

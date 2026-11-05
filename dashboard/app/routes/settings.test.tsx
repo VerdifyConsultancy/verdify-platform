@@ -157,6 +157,11 @@ test("the rail's filters count and filter the rows and survive a reload of the U
     [`Read-only ${readOnly}`, null],
   ]);
   expect(railGroups()).toEqual(SETTING_GROUPS.map(([group, label]) => [`${label} ${items.filter((row) => row.group === group).length}`, "a"]));
+  // The filter keeps §5.10's "Read-only"; the API's read_only group is named by what it holds, so no two entries share a
+  // name with different counts; Show's counts are pills and Groups' plain numbers (#1308 visual QA 29).
+  expect(railGroups().at(-1)?.[0]).toBe(`Reference only ${items.filter((row) => row.group === "read_only").length}`);
+  expect(railGroups().map(([label]) => label.replace(/ \d+$/, ""))).not.toContain("Read-only");
+  expect([rail().querySelector(".ctl-rail-filters"), rail().querySelector(".ctl-rail-groups")]).toEqual([...rail().querySelectorAll(".ctl-rail-list")]);
   fireEvent.click(screen.getByRole("link", { name: "Changed by an agent 4" }));
   await settle();
   expect(here()).toBe("/settings?filter=agent");
