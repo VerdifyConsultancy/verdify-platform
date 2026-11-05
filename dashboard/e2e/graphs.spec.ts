@@ -291,8 +291,8 @@ test("/graphs/zones: every zone side by side, temperature and VPD on one scale e
     expect(Math.abs(width - boxes[1][0])).toBeLessThanOrEqual(1);
     expect(Math.abs(height - boxes[1][1])).toBeLessThanOrEqual(1);
   }
-  // Each readout heads its plot with its unit.
-  await expect(page.locator(".grid-readout").first()).toHaveText(/^\d+\.\d °F (now|at .+)$/);
+  // Each readout heads its plot with its unit, joined to the number by a no-break space (a pattern is matched unnormalised).
+  await expect(page.locator(".grid-readout").first()).toHaveText(/^\d+\.\d\u00a0°F (now|at .+)$/);
   // The grid keeps its data table (redesign §8): one block per metric row, a column per zone.
   const table = page.locator(".chart-grid > details.chart-table");
   await expect(table.locator("summary")).toHaveText(/^Data table · [\d,]+ rows$/);
