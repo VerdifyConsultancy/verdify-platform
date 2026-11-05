@@ -56,6 +56,9 @@ spec:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: mqtt-broker
     spec:
+      # #1363: the zot origin denies anonymous reads.
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
       securityContext:
         runAsNonRoot: true
         runAsUser: 1883

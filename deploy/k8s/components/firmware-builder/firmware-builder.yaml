@@ -87,6 +87,9 @@ spec:
             app.kubernetes.io/part-of: verdify
             app.kubernetes.io/component: firmware-builder
         spec:
+          # #1363: the zot origin denies anonymous reads.
+          imagePullSecrets:
+            - name: zot-origin-cluster-pull
           restartPolicy: Never
           securityContext:
             runAsNonRoot: true

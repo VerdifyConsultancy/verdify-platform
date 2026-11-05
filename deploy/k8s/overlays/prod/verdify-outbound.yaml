@@ -68,6 +68,9 @@ spec:
       annotations:
         verdify.ai/outbound-config-sha256: a7fe660d538322afa89bf4006c400a8655df2bb8b546a27706d5494f7bc5704a
     spec:
+      # #1363: the zot origin denies anonymous reads.
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
       serviceAccountName: verdify-outbound
       automountServiceAccountToken: false
       securityContext:

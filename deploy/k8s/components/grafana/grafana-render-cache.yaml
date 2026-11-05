@@ -24,6 +24,9 @@ spec:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: grafana-render-cache
     spec:
+      # #1363: the zot origin denies anonymous reads.
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
       automountServiceAccountToken: false
       nodeSelector:
         agentfleet.vallery.net/control-plane: "false"
