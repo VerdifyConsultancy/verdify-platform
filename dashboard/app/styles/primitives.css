@@ -132,14 +132,14 @@ span.viz-skeleton.spark-tile{height:28px}span.viz-skeleton.spark-row{height:20px
 .bb-track{fill:var(--line-strong)}
 .bb-band{fill:var(--c-band-wash)}
 .bb-edge{stroke:var(--c-band-edge);stroke-width:1}
-.bb-today{fill:var(--muted)}
 .bb-dot{fill:var(--ink);stroke:#fff;stroke-width:2}
 .bb-clamp{fill:var(--ink)}
 .bb.is-stale .bb-dot{fill:var(--muted)}
 .bb.is-neutral .bb-band{fill:var(--field)}.bb.is-neutral .bb-edge{stroke:var(--line-strong)}
-.bb-hero .bb-track,.bb-hero .bb-today{fill:var(--ink-muted)}
+/* On ink the track is dimmed and the band a box, a 12 px `--c-band-edge` fill (5.3:1 on ink) with mint ends, so it never reads as a second line. */
+.bb-hero .bb-track{fill:var(--ink-muted);fill-opacity:.45}
 .bb-hero .bb-band{fill:var(--c-band-edge)}
-.bb-hero .bb-edge{stroke:var(--c-band-edge)}
+.bb-hero .bb-edge{stroke:var(--mint);stroke-width:1.5}
 .bb-hero .bb-dot{fill:var(--mint);stroke:var(--ink)}
 .bb-hero .bb-clamp{fill:var(--mint)}
 .bb-hero .viz-hatch{stroke:var(--ink-muted)}

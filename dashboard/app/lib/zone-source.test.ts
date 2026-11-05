@@ -5,7 +5,7 @@ import { fixture } from "../../e2e/fixtures/index.mjs";
 import { GRID_ZONES } from "./graph-url";
 import type { BandTimeline, MetricDef, Series } from "./operator-api";
 import {
-  PROBE_VPD_KEYS, ZONES, ZONE_READS, bandVerdict, bandZone, newestBand, newestSample, targetKey, targetWords, zoneKey, zoneTag, zoneValue, type Zone, type ZoneData,
+  PROBE_VPD_KEYS, ZONES, ZONE_READS, bandVerdict, bandZone, newestBand, newestSample, targetKey, targetWords, zoneKey, zoneSourceWords, zoneTag, zoneValue, type Zone, type ZoneData,
 } from "./zone-source";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z") / 1000;
@@ -127,4 +127,15 @@ test("Now's reads cover every zone's keys within API-04's 8 per request, each ke
 test("the south-probe-out fixture reports L07 on its peers; fixture-api.test.ts checks its series", () => {
   const set = fixture("south-probe-out", { now: NOW * 1000 });
   expect((set["API-IRR-01"].lines as { line_id: string; vpd_source: string }[]).find((line) => line.line_id === "L07")?.vpd_source).toBe("peer");
+});
+
+test("the provenance mark in words, never a code: quiet for MEASURED, muted for center, amber when a probe zone is not on its probe", () => {
+  const south = data(probes(["west", "east"]));
+  expect(zoneSourceWords("south", "MEASURED", south)).toBeNull();
+  expect(zoneSourceWords("center", "HOUSE", south)).toEqual({ text: "no probe · house average", news: false });
+  expect(zoneSourceWords("south", "PEER", south)).toEqual({ text: "probe offline · West + East average", news: true });
+  // It names the fresh peers the value averages, and every peer when none is fresh (the controller's own peer source).
+  expect(zoneSourceWords("south", "PEER", data(probes(["west"])))?.text).toBe("probe offline · West average");
+  expect(zoneSourceWords("south", "PEER", data({}))?.text).toBe("probe offline · West + East average");
+  expect(zoneSourceWords("west", "HOUSE", south)).toEqual({ text: "probe offline · house average", news: true });
 });

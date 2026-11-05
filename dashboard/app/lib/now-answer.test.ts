@@ -5,7 +5,9 @@
 // 10:42.
 import { expect, test } from "vitest";
 import { fixture } from "../../e2e/fixtures/index.mjs";
-import { ALL_OK, LOADING, UNREACHABLE_TEXT, nowAnswer, readingFresh, targetText, type NowAnswer } from "./now-answer";
+import {
+  ALL_OK, BAND_DWELL_S, LOADING, OUT_OF_BAND_TEXT, UNREACHABLE_TEXT, nowAnswer, readingFresh, stepBandHold, targetText, type BandHold, type NowAnswer,
+} from "./now-answer";
 import { parseNow, type Freshness, type Now, type Reading } from "./operator-api";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
@@ -18,10 +20,12 @@ function served(names: string | string[]): Now {
   return now;
 }
 const plain = (value: string) => value.replaceAll("\u00a0", " ");
-const ask = (now: Now | null, failed = false): NowAnswer => {
-  const answer = nowAnswer({ now, failed });
-  return { ...answer, text: plain(answer.text) };
+const ask = (now: Now | null, failed = false, hold: BandHold | null = null): NowAnswer => {
+  const answer = nowAnswer({ now, failed, hold });
+  return { ...answer, text: plain(answer.text), conditions: answer.conditions.map((condition) => ({ ...condition, text: plain(condition.text) })) };
 };
+/** Row 5's condition line, the phrases joined as the hero shows them. */
+const line = (answer: NowAnswer) => answer.conditions.map((condition) => condition.text).join(" · ");
 
 test("each row of the table, set alone in a fixture, produces its sentence", () => {
   expect(ask(served("in-band"), true).text).toBe("Can't reach the greenhouse data");
@@ -29,21 +33,25 @@ test("each row of the table, set alone in a fixture, produces its sentence", () 
   expect(ask(served("ingestor-not-running")).text).toBe("Ingestor not running since 10:38");
   expect(ask(served("controller-not-reporting")).text).toBe("Controller not reporting since 10:36");
   expect(ask(served("flow-valves-closed")).text).toBe("Water flowing with every Verdify valve closed");
-  expect(ask(served("too-hot")).text).toBe("Too hot: 84.1 °F (target 62–70 °F)");
+  expect(ask(served("too-hot")).text).toBe(OUT_OF_BAND_TEXT);
+  expect(line(ask(served("too-hot")))).toBe("Too hot: 84.1 °F (band 62–70 °F)");
   expect(ask(served("alerts-merged")).text).toBe("2 things need someone");
   // The age is the hero's own line ("Last data 14 min ago (10:28)"), so the sentence never repeats it.
   expect(ask(served("stale-data")).text).toBe("Waiting for fresh data");
   expect(ask(served("in-band")).text).toBe(ALL_OK);
 });
 
-test("the sentence links to the page that explains it, and rows 1 to 3 and 7 hide every verdict", () => {
+test("each row says where it is explained (never as the headline's link), and rows 1 to 3 and 7 hide every verdict", () => {
   const rows = {
     failed: ask(served("in-band"), true), ingestor: ask(served("ingestor-not-running")), controller: ask(served("controller-not-reporting")),
     flow: ask(served("flow-valves-closed")), band: ask(served("too-hot")), alerts: ask(served("alerts-merged")), stale: ask(served("stale-data")),
     ok: ask(served("in-band")),
   };
   expect(Object.values(rows).map((answer) => answer.row)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-  expect(Object.values(rows).map((answer) => answer.link?.to ?? null)).toEqual([null, "#data", "/equipment", "/activity?alert=201", "/graphs", "/activity", null, null]);
+  expect(Object.values(rows).map((answer) => answer.link?.to ?? null)).toEqual([null, "#data", "/equipment", "/activity?alert=201", null, "/activity", null, null]);
+  // Row 5 links each out-of-band reading to its own Graphs panel instead; no other row has conditions.
+  expect(rows.band.conditions.map((condition) => condition.link.to)).toEqual(["/graphs?range=24h#temperature"]);
+  expect(Object.values(rows).filter((answer) => answer.conditions.length)).toEqual([rows.band]);
   expect(Object.values(rows).map((answer) => answer.muted)).toEqual([true, true, true, false, false, false, true, false]);
   expect(Object.values(rows).map((answer) => answer.notReporting)).toEqual([true, true, true, false, false, false, false, false]);
   // Equipment is unknown since the time in the sentence, or the last good answer for row 1.
@@ -109,26 +117,99 @@ test("every combination of rows reads its lowest row, and All OK needs every row
 const band = (patch: (now: Now) => Now) => ask(patch(served("in-band")));
 const fresh = (value: number | null): Reading => ({ value, observed_at: secondsAgo(20), reason: value === null ? "No reading" : null });
 
-test("row 5 checks temperature, then VPD, then RH, in plain words with the band in force as the target", () => {
-  expect(band((now) => ({ ...now, indoor: { ...now.indoor, temp_f: fresh(58.2) }, band: { ...now.band, temp_f: { low: 62, high: 70, verdict: "below" } } })).text)
-    .toBe("Too cold: 58.2 °F (target 62–70 °F)");
-  expect(band((now) => ({ ...now, indoor: { ...now.indoor, vpd_kpa: fresh(1.12) }, band: { ...now.band, vpd_kpa: { low: 0.45, high: 0.8, verdict: "above" } } })).text)
-    .toBe("Air too dry: 1.12 kPa (target 0.45–0.80 kPa)");
-  expect(band((now) => ({ ...now, indoor: { ...now.indoor, vpd_kpa: fresh(0.32) }, band: { ...now.band, vpd_kpa: { low: 0.45, high: 0.8, verdict: "below" } } })).text)
-    .toBe("Air too damp: 0.32 kPa (target 0.45–0.80 kPa)");
-  expect(band((now) => ({ ...now, indoor: { ...now.indoor, rh_pct: fresh(40) }, band: { ...now.band, rh_pct: { low: 50, high: 80, verdict: "below" } } })).text)
-    .toBe("Air too dry: 40.0% (target 50–80%)");
-  expect(band((now) => ({ ...now, indoor: { ...now.indoor, rh_pct: fresh(90) }, band: { ...now.band, rh_pct: { low: 50, high: 80, verdict: "above" } } })).text)
-    .toBe("Air too damp: 90.0% (target 50–80%)");
-  // Temperature first, then VPD.
-  expect(band((now) => ({
-    ...now, indoor: { ...now.indoor, temp_f: fresh(84.1), vpd_kpa: fresh(1.12) },
-    band: { ...now.band, temp_f: { low: 62, high: 70, verdict: "above" }, vpd_kpa: { low: 0.45, high: 0.8, verdict: "above" } },
-  })).text).toBe("Too hot: 84.1 °F (target 62–70 °F)");
+test("row 5: a steady headline, and a condition line naming every reading out of band, temperature, then VPD, then RH", () => {
+  const out = (patch: (now: Now) => Now) => { const answer = band(patch); expect(answer.text).toBe(OUT_OF_BAND_TEXT); return line(answer); };
+  expect(out((now) => ({ ...now, indoor: { ...now.indoor, temp_f: fresh(58.2) }, band: { ...now.band, temp_f: { low: 62, high: 70, verdict: "below" } } })))
+    .toBe("Too cold: 58.2 °F (band 62–70 °F)");
+  expect(out((now) => ({ ...now, indoor: { ...now.indoor, vpd_kpa: fresh(1.12) }, band: { ...now.band, vpd_kpa: { low: 0.45, high: 0.8, verdict: "above" } } })))
+    .toBe("Air too dry: 1.12 kPa (band 0.45–0.80 kPa)");
+  expect(out((now) => ({ ...now, indoor: { ...now.indoor, vpd_kpa: fresh(0.32) }, band: { ...now.band, vpd_kpa: { low: 0.45, high: 0.8, verdict: "below" } } })))
+    .toBe("Air too damp: 0.32 kPa (band 0.45–0.80 kPa)");
+  expect(out((now) => ({ ...now, indoor: { ...now.indoor, rh_pct: fresh(40) }, band: { ...now.band, rh_pct: { low: 50, high: 80, verdict: "below" } } })))
+    .toBe("Air too dry: 40.0% (band 50–80%)");
+  expect(out((now) => ({ ...now, indoor: { ...now.indoor, rh_pct: fresh(90) }, band: { ...now.band, rh_pct: { low: 50, high: 80, verdict: "above" } } })))
+    .toBe("Air too damp: 90.0% (band 50–80%)");
+  // Both out: both named, temperature first, each linked to its own panel.
+  const both = band((now) => ({
+    ...now, indoor: { ...now.indoor, temp_f: fresh(73), vpd_kpa: fresh(1.67) },
+    band: { ...now.band, temp_f: { low: 73.9, high: 83.9, verdict: "below" }, vpd_kpa: { low: 0.86, high: 1.29, verdict: "above" } },
+  }));
+  expect(both.text).toBe(OUT_OF_BAND_TEXT);
+  expect(line(both)).toBe("Too cold: 73.0 °F (band 73.9–83.9 °F) · Air too dry: 1.67 kPa (band 0.86–1.29 kPa)");
+  expect(both.conditions.map((condition) => condition.link.to)).toEqual(["/graphs?range=24h#temperature", "/graphs?range=24h#vpd"]);
   // A band with no bounds still words the reading; a band the API cannot judge is no row-5 answer.
-  expect(band((now) => ({ ...now, indoor: { ...now.indoor, temp_f: fresh(84.1) }, band: { ...now.band, temp_f: { low: null, high: null, verdict: "above" } } })).text).toBe("Too hot: 84.1 °F");
+  expect(out((now) => ({ ...now, indoor: { ...now.indoor, temp_f: fresh(84.1) }, band: { ...now.band, temp_f: { low: null, high: null, verdict: "above" } } }))).toBe("Too hot: 84.1 °F");
   expect(band((now) => ({ ...now, band: { ...now.band, temp_f: { low: 62, high: 70, verdict: "unavailable" } } })).text).toBe(ALL_OK);
   expect(targetText(62.5, 70, "°F")).toBe("62.5–70\u00a0°F");
+});
+
+// ---------------------------------------------------------------------------------------------------- dwell
+/** An API-02 answer at `at` (epoch s) with temperature and VPD as given, against 2026-11-05's band in force at 18:51Z. */
+function poll(base: Now, at: number, temp: number, vpd: number): Now {
+  const when = new Date(at * 1000).toISOString();
+  const verdict = (value: number, low: number, high: number) => (value < low ? "below" : value > high ? "above" : "in");
+  return {
+    ...base, server_time: when,
+    indoor: { ...base.indoor, temp_f: { value: temp, observed_at: when, reason: null }, vpd_kpa: { value: vpd, observed_at: when, reason: null }, rh_pct: { ...base.indoor.rh_pct, observed_at: when } },
+    band: { ...base.band, temp_f: { low: 73.91, high: 83.91, verdict: verdict(temp, 73.91, 83.91) }, vpd_kpa: { low: 0.863, high: 1.293, verdict: verdict(vpd, 0.863, 1.293) } },
+  };
+}
+
+test("dwell: out only after 2 min out, back in only after 2 min in; idempotent on the same answer", () => {
+  const base = served("in-band");
+  const t0 = Date.parse("2026-11-05T18:00:00Z") / 1000;
+  let hold = stepBandHold(null, poll(base, t0, 77, 1.1));
+  expect(hold?.metrics.vpd.held).toBe("in");
+  // VPD goes above: still in for under 2 min, out from 2 min on.
+  hold = stepBandHold(hold, poll(base, t0 + 15, 77, 1.6));
+  expect(stepBandHold(hold, poll(base, t0 + 15, 77, 1.6))).toBe(hold);
+  hold = stepBandHold(hold, poll(base, t0 + 120, 77, 1.6));
+  expect(ask(poll(base, t0 + 120, 77, 1.6), false, hold).text).toBe(ALL_OK);
+  hold = stepBandHold(hold, poll(base, t0 + 135, 77, 1.6));
+  expect(ask(poll(base, t0 + 135, 77, 1.6), false, hold).text).toBe(OUT_OF_BAND_TEXT);
+  // One poll back in band is not enough to clear it, and a blip resets the wait.
+  hold = stepBandHold(hold, poll(base, t0 + 150, 77, 1.2));
+  expect(ask(poll(base, t0 + 150, 77, 1.2), false, hold).text).toBe(OUT_OF_BAND_TEXT);
+  hold = stepBandHold(hold, poll(base, t0 + 165, 77, 1.4));
+  for (let at = t0 + 180; at <= t0 + 285; at += 15) hold = stepBandHold(hold, poll(base, at, 77, 1.2));
+  expect(hold?.metrics.vpd.held).toBe("above");
+  hold = stepBandHold(hold, poll(base, t0 + 300, 77, 1.2));
+  expect(hold?.metrics.vpd.held).toBe("in");
+  expect(BAND_DWELL_S).toBe(120);
+  // A reading that is not fresh is never listed, whatever the hold says: row 7 says so.
+  const old = poll(base, t0 + 135, 77, 1.6);
+  const held = stepBandHold(stepBandHold(stepBandHold(null, poll(base, t0, 77, 1.6)), poll(base, t0 + 15, 77, 1.6)), old);
+  expect(ask({ ...old, indoor: { ...old.indoor, vpd_kpa: { ...old.indoor.vpd_kpa, observed_at: new Date((t0 - 300) * 1000).toISOString() } } }, false, held).row).toBe(7);
+});
+
+test("replaying 2026-11-05 18:15–18:45Z (the midday vent cycle) changes the headline at most twice", () => {
+  const base = served("in-band");
+  // Each minute polled four times, as the page does every 15 s.
+  // `climate` per minute (temp_avg, vpd_avg), read-only from production; 18:36 has no row.
+  const minutes: [string, number, number][] = [
+    ["18:15", 77.42, 1.209], ["18:16", 77.42, 1.231], ["18:17", 77.36, 1.24], ["18:18", 77.24, 1.252], ["18:19", 76.7, 1.603], ["18:20", 75.68, 1.719],
+    ["18:21", 74.78, 1.744], ["18:22", 73.88, 1.67], ["18:23", 73.04, 1.554], ["18:24", 72.26, 1.415], ["18:25", 71.48, 1.481], ["18:26", 70.88, 1.483],
+    ["18:27", 70.52, 1.466], ["18:28", 70.16, 1.486], ["18:29", 69.86, 1.461], ["18:30", 69.38, 1.454], ["18:31", 69.14, 1.438], ["18:32", 68.84, 1.431],
+    ["18:33", 68.72, 1.398], ["18:34", 68.72, 1.316], ["18:35", 69.2, 1.249], ["18:37", 69.74, 1.269], ["18:38", 70.34, 1.291], ["18:39", 71.0, 1.282],
+    ["18:40", 71.66, 1.298], ["18:41", 72.26, 1.292], ["18:42", 73.04, 1.303], ["18:43", 73.64, 1.321], ["18:44", 74.48, 1.096], ["18:45", 75.8, 0.905],
+  ];
+  let hold: BandHold | null = null;
+  const headlines: string[] = [], raw: string[] = [];
+  for (const [clock, temp, vpd] of minutes) {
+    const start = Date.parse(`2026-11-05T${clock}:00Z`) / 1000;
+    for (let tick = 0; tick < 4; tick += 1) {
+      const now = poll(base, start + tick * 15, temp, vpd);
+      hold = stepBandHold(hold, now);
+      headlines.push(ask(now, false, hold).text);
+      raw.push(ask(now).text);
+    }
+  }
+  const changes = (texts: string[]) => texts.filter((text, index) => index > 0 && text !== texts[index - 1]).length;
+  expect(changes(headlines)).toBeLessThanOrEqual(2);
+  expect(headlines[0]).toBe(ALL_OK);
+  expect(headlines).toContain(OUT_OF_BAND_TEXT);
+  // Without the dwell the steady words still change at each edge crossing, more often than with it.
+  expect(changes(raw)).toBeGreaterThanOrEqual(changes(headlines));
 });
 
 test("a stale reading outside its band is no verdict: it reads Waiting for fresh data", () => {
