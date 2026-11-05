@@ -973,6 +973,7 @@ export interface components {
                 readonly cause: components["schemas"]["IrrigationCause"];
                 readonly open_s: number;
                 readonly pulses?: number | null;
+                readonly purpose?: components["schemas"]["RunPurpose"];
             };
             readonly line_id: components["schemas"]["LineId"];
             /** @description Iris skips this line while true */
@@ -995,7 +996,10 @@ export interface components {
             readonly state: components["schemas"]["LineState"];
             /** @description This line's fields against the program hash */
             readonly sync: components["schemas"]["ReadbackState"];
+            /** @description Every purpose (the cap counts all of it); climate_minutes and climate_pulses are the VPD and fallback misting inside it */
             readonly today?: {
+                readonly climate_minutes?: number | null;
+                readonly climate_pulses?: number | null;
                 /** @description Whole gallons */
                 readonly gal?: number | null;
                 readonly minutes?: number | null;
@@ -1050,6 +1054,17 @@ export interface components {
             readonly server_time: string;
             /** @description Valve-open minutes today by zone: wall, center, south and west, and fog for L11's humidification. L03's supply minutes are never in zone totals. Partial day */
             readonly today: {
+                /** @description The site's mist and fog today (#1348): VPD and fallback misting plus fog; null on a day with no data */
+                readonly climate?: {
+                    /** @description Whole gallons */
+                    readonly gal?: number | null;
+                    readonly minutes?: number | null;
+                    readonly pulses?: number | null;
+                };
+                /** @description The VPD and fallback misting inside each zone's minutes (#1348), with the same nulls; fog is all climate */
+                readonly climate_zones?: {
+                    readonly [key: string]: number | null;
+                };
                 /** Format: date */
                 readonly date: string;
                 readonly zones: {
@@ -1188,7 +1203,9 @@ export interface components {
                 /** Format: date */
                 readonly start: string;
             }[];
-            /** @description Always split by cause and chemistry so charts can stack */
+            /** @description The purpose filter applied; null for both */
+            readonly purpose?: components["schemas"]["RunPurpose"] | null;
+            /** @description Always split by cause, purpose and chemistry so charts can stack */
             readonly rows: readonly {
                 readonly cause: components["schemas"]["IrrigationCause"];
                 /** @enum {string} */
@@ -1201,6 +1218,7 @@ export interface components {
                 /** Format: date */
                 readonly period: string;
                 readonly pulses?: number | null;
+                readonly purpose?: components["schemas"]["RunPurpose"];
             }[];
             /** Format: date */
             readonly to: string;
@@ -1575,6 +1593,7 @@ export interface components {
             /** @description From the ledger; unknown when its outcome never reached the platform. A run with no ledger row (a VPD episode, or a run before the engine firmware) reads ok */
             readonly outcome: components["schemas"]["RunOutcome"];
             readonly pulses?: number | null;
+            readonly purpose?: components["schemas"]["RunPurpose"];
             readonly reason?: string | null;
             readonly run_id: string;
             readonly schedule_label?: string | null;
@@ -1591,6 +1610,11 @@ export interface components {
         readonly RunPage: components["schemas"]["Page"] & {
             readonly items: readonly components["schemas"]["Run"][];
         };
+        /**
+         * @description What water was for (#1348). irrigation: schedule, run_now, feed, prewet, flush (and unknown) on drips or misters. climate: VPD and fallback misting, and every fog (L11) run. SAF-4 and the zone caps count both. The server always sends it; the fields stay optional in the contract so a client reads a server from before #1348 by the same rule
+         * @enum {string}
+         */
+        readonly RunPurpose: "irrigation" | "climate";
         /** @description Drips: minutes. Fertilizer drips (L02, L06): minutes, prewet_s, flush_s. Misters (schedule_member on): on_s, count, gap_s. Fertilizer misters (L08, L10): on_s, count and gap_s within the mister bounds, plus prewet_s and flush_s. Before the engine firmware only L01 runs, for its configured irrig_wall_duration_min */
         readonly RunRequest: {
             readonly count?: number;
@@ -1921,6 +1945,10 @@ export interface components {
                 } | null;
                 /** @description Verdify-valve gallons by line id */
                 readonly by_line: {
+                    readonly [key: string]: number;
+                } | null;
+                /** @description Verdify-valve gallons by RunPurpose (#1348): irrigation and climate */
+                readonly by_purpose?: {
                     readonly [key: string]: number;
                 } | null;
                 /**
@@ -2569,6 +2597,8 @@ export interface operations {
             readonly query: {
                 readonly from: string;
                 readonly group_by?: "zone" | "line" | "cause";
+                /** @description Keep irrigation or climate rows only (#1348); omitted, both */
+                readonly purpose?: components["schemas"]["RunPurpose"];
                 /** @description Inclusive local day */
                 readonly to: string;
             };
@@ -2601,6 +2631,8 @@ export interface operations {
                 readonly limit?: components["parameters"]["Limit"];
                 readonly line?: components["schemas"]["LineId"];
                 readonly outcome?: components["schemas"]["RunOutcome"];
+                /** @description Keep irrigation or climate runs only (#1348); omitted, both */
+                readonly purpose?: components["schemas"]["RunPurpose"];
                 /** @description Window end (exclusive) */
                 readonly to: components["parameters"]["To"];
             };

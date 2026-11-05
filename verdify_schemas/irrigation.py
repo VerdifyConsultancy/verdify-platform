@@ -145,6 +145,7 @@ __all__ = [
     "BRIDGE_RUN_WINDOW_S",
     "CAP_NOTE",
     "CLEAN_PARTNER",
+    "CLIMATE_CAUSES",
     "COMMAND_KINDS",
     "COMMAND_SEND_WINDOW_S",
     "COMMAND_STATUSES",
@@ -153,6 +154,7 @@ __all__ = [
     "DEVICE_IDX",
     "DRIP_MANIFOLD_IDX",
     "EVENT_DAY_EPOCH",
+    "FOG_LINE",
     "FAULT_CODES",
     "IRR_EVENTS_MAX",
     "IRR_TEXT_MAX_LEN",
@@ -231,6 +233,7 @@ __all__ = [
     "RunArgs",
     "RunClose",
     "RunOutcome",
+    "RunPurpose",
     "ScheduleSpec",
     "SiteValues",
     "SolarDay",
@@ -259,6 +262,7 @@ __all__ = [
     "program_chunks",
     "program_hash16",
     "program_sha256",
+    "purpose_of",
     "relay_cause",
     "run_args",
     "seq_newer",
@@ -320,6 +324,27 @@ class IrrigationCause(StrEnum):
     FLUSH = "flush"
     FALLBACK = "fallback"
     UNKNOWN = "unknown"
+
+
+class RunPurpose(StrEnum):
+    """What a run was for (#1348): ``irrigation`` waters plants (schedule, run-now, feed, prewet, flush and unknown on
+    drips or misters); ``climate`` is VPD misting and fog (VPD pulses, sensor-fault fallback windows, and every fog
+    run). The site's daily water limit (SAF-4) and the zone duty caps count both."""
+
+    IRRIGATION = "irrigation"
+    CLIMATE = "climate"
+
+
+# The fog line is climate only: every L11 run is humidification, whatever cause it carries.
+FOG_LINE = "L11"
+CLIMATE_CAUSES: frozenset[str] = frozenset({"vpd", "fallback"})
+
+
+def purpose_of(line_id: str, cause: str) -> RunPurpose:
+    """A run's purpose from its line and cause (pure): fog, or a ``vpd`` or ``fallback`` cause, is climate."""
+    if line_id == FOG_LINE or str(cause) in CLIMATE_CAUSES:
+        return RunPurpose.CLIMATE
+    return RunPurpose.IRRIGATION
 
 
 class RunOutcome(StrEnum):

@@ -473,27 +473,52 @@ test("History: one period drives the page; four KPIs against the previous period
   await load();
   expect(tab("History").getAttribute("aria-current")).toBe("page");
   expect(requests(api, "API-IRR-10").map((row) => row.path)).toEqual([
-    "/api/v1/irrigation/minutes?from=2026-10-27&to=2026-11-02&group_by=line", "/api/v1/irrigation/minutes?from=2026-10-20&to=2026-10-26&group_by=line",
+    "/api/v1/irrigation/minutes?from=2026-10-27&to=2026-11-02&group_by=line&purpose=irrigation",
+    "/api/v1/irrigation/minutes?from=2026-10-20&to=2026-10-26&group_by=line&purpose=irrigation",
   ]);
   expect([...document.querySelectorAll(".wat-kpis .metric-label")].map((node) => text(node))).toEqual(["Watering", "Gallons", "Runs", "Missed, short or cap"]);
-  expect(text(document.querySelector('[data-kpi="runs"] .metric-value'))).toBe("8");
+  // #1348: irrigation by default, so the week's seven VPD episodes on L04 are not runs here; L01's run-now is.
+  expect(text(document.querySelector('[data-kpi="runs"] .metric-value'))).toBe("1");
+  expect(text(document.querySelector('[data-kpi="runs"] .metric-meta'))).toContain("VPD pulses and fog apart");
   expect(text(document.querySelector('[data-kpi="shortfall"] .metric-value'))).toBe("none");
   expect(text(document.querySelector('[data-kpi="watering"] .delta'))).toMatch(/vs previous 7 d$/);
-  expect(status()).toMatch(/^Last 7 days: \d+ min watering · \d+ gal · 8 runs$/);
+  expect(status()).toMatch(/^Last 7 days: \d+ min watering · \d+ gal · 1 run$/);
   expect([...document.querySelectorAll(".minutes-row")].map((row) => row.getAttribute("data-row"))).toEqual(["wall", "center", "south", "west", "fog"]);
   // 10/30 (index 3) has no data: every stacked series is null there, in every row.
   for (const plot of created.filter((item) => item.target.className.includes("plot-bars"))) for (const values of plot.data.slice(1)) expect((values as (number | null)[])[3]).toBeNull();
   expect([...document.querySelectorAll(".minutes-today")].map((cell) => text(cell))).toEqual([
-    "today 0 min (partial) · cap 60", "today 14 min (partial) · cap 120", "today 0 min (partial) · cap 45", "today 0 min (partial) · cap 45", "today 6 min (partial)",
+    // Irrigation only (#1348): today's VPD misting on the center mister and the fog are the climate history's.
+    "today 0 min (partial) · cap 60", "today 0 min (partial) · cap 120", "today 0 min (partial) · cap 45", "today 0 min (partial) · cap 45", "today 0 min (partial)",
   ]);
   expect(text(document.querySelector(".chart-key"))).toContain("no data");
+});
+
+test("History's climate view (#1348): mist and fog apart from irrigation, its own KPIs, minutes and runs, in the URL", async () => {
+  const api = open("/water/history", { fixture: "minutes-gap" });
+  await load();
+  const purposes = within(screen.getByRole("list", { name: "History of" }));
+  expect(purposes.getByRole("link", { name: "Irrigation" }).getAttribute("aria-current")).toBe("page");
+  fireEvent.click(purposes.getByRole("link", { name: "Mist & fog (climate)" }));
+  await load();
+  expect(where()).toBe("/water/history?purpose=climate");
+  expect(requests(api, "API-IRR-10").map((row) => row.path)).toContain("/api/v1/irrigation/minutes?from=2026-10-27&to=2026-11-02&group_by=line&purpose=climate");
+  expect(text(document.querySelector('[data-kpi="watering"] .metric-label'))).toBe("Mist & fog");
+  expect(text(document.querySelector('[data-kpi="runs"] .metric-value'))).toBe("7");
+  expect(text(document.querySelector('[data-kpi="runs"] .metric-meta'))).toBe("VPD mist pulses and fog runs");
+  expect([...document.querySelectorAll(".minutes-today")].map((cell) => text(cell))).toEqual([
+    "today 0 min (partial) · cap 60", "today 14 min (partial) · cap 120", "today 0 min (partial) · cap 45", "today 0 min (partial) · cap 45", "today 6 min (partial)",
+  ]);
+  const table = screen.getByRole("table", { name: /^Mist & fog \(climate\) runs, newest first/ });
+  expect([...table.querySelectorAll("tbody tr")].every((row) => text(row).includes("VPD"))).toBe(true);
+  expect([...screen.getByLabelText("Cause").querySelectorAll("option")].map((option) => option.getAttribute("value"))).toEqual(["", "vpd", "fallback"]);
 });
 
 test("90 d and 365 d read up to 400 days of minutes and say the ledger is counted over 31 days at most; daily water use states the window it serves", async () => {
   const api = open("/water/history?range=365d&measure=gal&group=line");
   await load();
   expect(requests(api, "API-IRR-10").map((row) => row.path)).toEqual([
-    "/api/v1/irrigation/minutes?from=2025-11-03&to=2026-11-02&group_by=line", "/api/v1/irrigation/minutes?from=2024-11-03&to=2025-11-02&group_by=line",
+    "/api/v1/irrigation/minutes?from=2025-11-03&to=2026-11-02&group_by=line&purpose=irrigation",
+    "/api/v1/irrigation/minutes?from=2024-11-03&to=2025-11-02&group_by=line&purpose=irrigation",
   ]);
   expect(requests(api, "API-21").map((row) => row.path)).toEqual(["/api/v1/water/daily?days=90"]);
   expect(text(document.querySelector('[data-kpi="runs"]'))).toContain("Counted over 31 days at most");
@@ -534,10 +559,14 @@ test("daily water use: 30 days by line, the no-valve bar apart, split by cause i
 test("the run ledger: whole gallons (0 gal for no water, — with no meter data), no rate or flow flag, each run linked to its Graphs window, and CSV", async () => {
   const api = open("/water/history", { fixture: "runs-zero-and-unknown" });
   await load();
-  expect(requests(api, "API-IRR-11").map((row) => row.path)).toContain("/api/v1/irrigation/runs?from=2026-10-27T06%3A00%3A00.000Z&to=2026-11-03T07%3A00%3A00.000Z");
-  const table = screen.getByRole("table", { name: /Runs, newest first/ });
+  expect(requests(api, "API-IRR-11").map((row) => row.path)).toContain("/api/v1/irrigation/runs?from=2026-10-27T06%3A00%3A00.000Z&to=2026-11-03T07%3A00%3A00.000Z&purpose=irrigation");
+  const table = screen.getByRole("table", { name: /^Irrigation runs, newest first/ });
   const rows = [...table.querySelectorAll("tbody tr")];
-  const served = fixture("runs-zero-and-unknown", { now: NOW })["API-IRR-11"] as RunPage;
+  const all = fixture("runs-zero-and-unknown", { now: NOW })["API-IRR-11"] as RunPage;
+  // The irrigation runs only: the VPD episodes are in the climate history (#1348).
+  const served = { ...all, items: all.items.filter((run) => run.line_id !== "L11" && run.cause !== "vpd" && run.cause !== "fallback") };
+  expect(served.items.length).toBeGreaterThan(0);
+  expect(served.items.length).toBeLessThan(all.items.length);
   expect(rows).toHaveLength(served.items.length);
   const cells = (index: number) => [...rows[index].children].map((cell) => text(cell));
   const zero = served.items.findIndex((run) => run.run_id === "run-l01-zero");
@@ -554,27 +583,29 @@ test("the run ledger: whole gallons (0 gal for no water, — with no meter data)
 });
 
 test("ledger filters apply on change and live in the URL; Load older passes the cursor, then steps back 31 days inside the period", async () => {
-  const api = open("/water/history?range=90d", {}, (base) => async (input, init) => {
+  // The climate history: the week's seven VPD episodes on L04 (#1348).
+  const api = open("/water/history?range=90d&purpose=climate", {}, (base) => async (input, init) => {
     const response = await base(input, init);
     if (!input.startsWith("/api/v1/irrigation/runs") || input.includes("cursor=") || input.includes("limit=")) return response;
     const page = await response.json() as RunPage;
     return { ...response, json: async () => ({ ...page, items: page.items.slice(0, 3), next_cursor: "3" }) } as Response;
   });
   await load();
-  const table = () => screen.getByRole("table", { name: /Runs, newest first/ });
+  const table = () => screen.getByRole("table", { name: /^Mist & fog \(climate\) runs, newest first/ });
   expect(table().querySelectorAll("tbody tr")).toHaveLength(3);
+  expect(text(document.querySelector('[data-kpi="watering"] .metric-label'))).toBe("Mist & fog");
   fireEvent.click(screen.getByRole("button", { name: "Load older" }));
   await load();
   expect(requests(api, "API-IRR-11").map((row) => row.path).at(-1)).toContain("cursor=3");
-  expect(table().querySelectorAll("tbody tr")).toHaveLength(8);
+  expect(table().querySelectorAll("tbody tr")).toHaveLength(7);
   fireEvent.click(screen.getByRole("button", { name: "Load older" }));
   await load();
   // The window before: the 31 days before it, inside the 90 days (the first held the fall-back, so it kept 30).
-  expect(requests(api, "API-IRR-11").map((row) => row.path).at(-1)).toBe("/api/v1/irrigation/runs?from=2026-09-03T06%3A00%3A00.000Z&to=2026-10-04T06%3A00%3A00.000Z");
+  expect(requests(api, "API-IRR-11").map((row) => row.path).at(-1)).toBe("/api/v1/irrigation/runs?purpose=climate&from=2026-09-03T06%3A00%3A00.000Z&to=2026-10-04T06%3A00%3A00.000Z");
   fireEvent.change(screen.getByLabelText("Line"), { target: { value: "L01" } });
   await load();
   expect(requests(api, "API-IRR-11").map((row) => row.path).at(-1)).toContain("line=L01");
-  expect(where()).toBe("/water/history?range=90d&line=L01");
+  expect(where()).toBe("/water/history?range=90d&purpose=climate&line=L01");
 });
 
 // ---------------------------------------------------------------------------------------------------- a line's controls (#1136)

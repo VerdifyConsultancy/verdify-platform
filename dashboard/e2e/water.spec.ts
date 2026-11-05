@@ -149,7 +149,7 @@ test("History: one period drives the page, four KPIs against the previous period
 test("the run ledger reads 0 gal for a run that moved no water, and shows no rate or flow flag", async ({ page, request }) => {
   await useScreensClock(page, request, "runs-zero-and-unknown");
   await load(page, "/water/history");
-  const ledger = page.getByRole("table", { name: /Runs, newest first/ });
+  const ledger = page.getByRole("table", { name: /runs, newest first/i });
   await expect(ledger.locator("tbody tr").filter({ hasText: "0 gal" }).first()).toBeVisible();
   await expect(ledger.locator("tbody tr").filter({ hasText: "— no meter data" }).first()).toBeVisible();
   await expect(ledger).not.toContainText(/gal\/min|flow/i);
@@ -159,7 +159,7 @@ test("at 390 px the ledger's runs stack as rows and nothing scrolls sideways", a
   await page.setViewportSize(PHONE);
   await useScreensClock(page, request, "runs-zero-and-unknown");
   await load(page, "/water/history");
-  await expect(page.getByRole("table", { name: /Runs, newest first/ })).toBeHidden();
+  await expect(page.getByRole("table", { name: /runs, newest first/i })).toBeHidden();
   await expect(page.getByRole("list", { name: "Runs, newest first" }).locator("li").first()).toBeVisible();
   await expectNoHorizontalScroll(page);
 });

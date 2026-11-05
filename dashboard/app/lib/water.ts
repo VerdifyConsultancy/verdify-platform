@@ -13,8 +13,8 @@ import type { MinutesReport as BarsReport } from "../charts/types";
 import { TIME_UNAVAILABLE, TIME_ZONE, dateShift, duration, formatValue, localDate, localDayStart, shortDateTime, shortTime } from "./format";
 import { LINES, ZONE_WORDS, lineById, minutesZone, type MinutesZone } from "./lines";
 import {
-  CAUSES, OUTCOMES, type IrrigationLine, type IrrigationStatus, type Leak, type MinutesReport, type Occupancy, type Occurrence, type Run, type Schedule,
-  type ScheduleAgenda,
+  CAUSES, OUTCOMES, groupPurpose, purposeOf, type IrrigationLine, type IrrigationStatus, type Leak, type MinutesReport, type Occupancy, type Occurrence,
+  type Purpose, type Run, type Schedule, type ScheduleAgenda,
 } from "./operator-api";
 import type { PolledQueryResult } from "./use-current";
 import { words } from "./words";
@@ -504,8 +504,33 @@ export function barsReport(report: MinutesReport): BarsReport {
 // ---------------------------------------------------------------------------------------------------- daily water use
 /** `?water_use=`: API-21's `days`, 90 for `90d`, else the default 30. */
 export const waterUseDays = (value: string | null): 30 | 90 => (value === "90d" ? 90 : 30);
-/** `?water_use_by=`: `cause`, else the default `line`. */
-export const waterUseSplit = (value: string | null): "line" | "cause" => (value === "cause" ? "cause" : "line");
+/** `?water_use_by=`: `cause` or `purpose` (#1348), else the default `line`. */
+export const waterUseSplit = (value: string | null): "line" | "cause" | "purpose" => (value === "cause" || value === "purpose" ? value : "line");
+
+// ---------------------------------------------------------------------------------------------------- purpose (#1348)
+/** `?purpose=` on History: `climate`, else the default `irrigation`, so fog and VPD pulses never bury the watering. */
+export const historyPurpose = (value: string | null): Purpose => (value === "climate" ? "climate" : "irrigation");
+/** The two histories by name: irrigation waters plants; climate is VPD and fallback misting, and fog. */
+export const PURPOSE_WORDS: Readonly<Record<Purpose, string>> = { irrigation: "Irrigation", climate: "Mist & fog (climate)" };
+/** A run's purpose: the server's, or for a server before #1348 the same rule from its line and cause. */
+export const runPurpose = (run: Pick<Run, "line_id" | "cause" | "purpose">): Purpose => (run.purpose === "climate" ? "climate" : run.purpose === "irrigation" ? "irrigation" : purposeOf(run.line_id, run.cause));
+/**
+ * Now's and Water's climate words for today (#1348): "Mist & fog today: 34 min · 26 gal · 33 pulses"; null when the API
+ * has no number for the day.
+ */
+export function climateTodayWords(climate: Pick<IrrigationStatus["today"], "climate">["climate"] | undefined): string | null {
+  if (!climate || !finite(climate.minutes)) return null;
+  const parts = [`${Math.round(climate.minutes)}${NBSP}min`];
+  if (finite(climate.gal)) parts.push(`${climate.gal}${NBSP}gal`);
+  if (finite(climate.pulses) && climate.pulses > 0) parts.push(`${climate.pulses} ${climate.pulses === 1 ? "pulse" : "pulses"}`);
+  return `Mist & fog today: ${parts.join(" · ")}`;
+}
+/** "VPD mist today: 4 pulses, 1 min" on a mister that ran for climate today; null when it did not or is not known. */
+export function vpdTodayWords(today: { readonly climate_minutes?: number | null; readonly climate_pulses?: number | null } | undefined): string | null {
+  if (!today || !finite(today.climate_minutes) || today.climate_minutes <= 0) return null;
+  const pulses = finite(today.climate_pulses) ? `${today.climate_pulses} ${today.climate_pulses === 1 ? "pulse" : "pulses"}, ` : "";
+  return `VPD mist today: ${pulses}${Math.max(1, Math.round(today.climate_minutes))}${NBSP}min`;
+}
 
 // ---------------------------------------------------------------------------------------------------- the run ledger
 const DATE = /^\d{4}-\d\d-\d\d$/;
@@ -781,16 +806,22 @@ export type MinutesTally = {
   /** Per day, oldest first: minutes and gallons, null on a no-data day. */
   readonly days: readonly { readonly day: string; readonly minutes: number | null; readonly gal: number | null }[];
 };
-/** API-IRR-10 by line, summed for the KPIs: no-data days stay out (never 0), L03 and fog are not watering. */
-export function tallyMinutes(report: Pick<MinutesReport, "periods" | "rows" | "group_by">): MinutesTally {
+/**
+ * API-IRR-10 by line, summed for the KPIs: no-data days stay out (never 0), L03 and fog are not watering. With a purpose
+ * (#1348) only its rows count, and the climate tally counts fog in with the VPD misting (`fog` still says how much).
+ */
+export function tallyMinutes(report: Pick<MinutesReport, "periods" | "rows" | "group_by">, purpose?: Purpose): MinutesTally {
   const days = [...report.periods].sort((a, b) => (a.start < b.start ? -1 : 1));
   const counted = new Set(days.filter((period) => period.coverage !== "no_data").map((period) => period.start));
   const perDay = new Map(days.map((period) => [period.start, { minutes: 0, gal: 0, missing: false }]));
   let fog = 0, galMissing = 0;
   for (const row of report.rows) {
     if (!counted.has(row.period) || !finite(row.minutes)) continue;
-    if (report.group_by === "line" ? row.group === "L11" : row.group === "fog") { fog += row.minutes; continue; }
-    if (report.group_by === "line" ? !isWatering(row.group) : row.group === "L03") continue;
+    if (purpose && (row.purpose ?? groupPurpose(report.group_by, row.group, row.cause)) !== purpose) continue;
+    if (report.group_by === "line" ? row.group === "L11" : row.group === "fog") {
+      fog += row.minutes;
+      if (purpose !== "climate") continue;
+    } else if (report.group_by === "line" ? !isWatering(row.group) : row.group === "L03") continue;
     const day = perDay.get(row.period)!;
     day.minutes += row.minutes;
     if (finite(row.gal)) day.gal += row.gal; else if (row.minutes > 0) { day.missing = true; galMissing += 1; }
@@ -818,9 +849,12 @@ export type RunsTally = {
   /** False when the ledger had more pages than were read: the counts are then a floor. */
   readonly complete: boolean;
 };
-/** The ledger's runs counted: watering lines only (not L03 or fog), and how many ended missed, short or at the cap. */
-export function tallyRuns(runs: readonly Run[], complete = true): RunsTally {
-  const watering = runs.filter((run) => isWatering(run.line_id));
+/**
+ * The ledger's runs counted: watering lines only (not L03 or fog), and how many ended missed, short or at the cap. With a
+ * purpose (#1348), that purpose's runs: irrigation leaves out VPD pulses too; climate counts fog with the VPD misting.
+ */
+export function tallyRuns(runs: readonly Run[], complete = true, purpose?: Purpose): RunsTally {
+  const watering = runs.filter((run) => (purpose ? run.line_id !== "L03" && runPurpose(run) === purpose : isWatering(run.line_id)));
   const count = (outcome: string) => watering.filter((run) => run.outcome === outcome).length;
   const newest = watering.filter((run) => (SHORTFALLS as readonly string[]).includes(run.outcome))
     .sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at))[0] ?? null;
@@ -844,9 +878,9 @@ export const periodWords = (days: number): string => `Last ${days} days`;
  * History's status line: "Last 7 days: 6 h 12 min watering · 412 gal · 21 runs, 1 missed". A part the API has not
  * answered is left out, never 0; the runs part only where the ledger is counted (31 days at most).
  */
-export function historySummary(days: number, minutes: MinutesTally | null, runs: RunsTally | null): string | null {
+export function historySummary(days: number, minutes: MinutesTally | null, runs: RunsTally | null, purpose: Purpose = "irrigation"): string | null {
   if (!minutes) return null;
-  const parts = [`${formatValue(minutes.minutes, "min")} watering`];
+  const parts = [`${formatValue(minutes.minutes, "min")} ${purpose === "climate" ? "mist and fog" : "watering"}`];
   if (finite(minutes.gal)) parts.push(`${minutes.galMissing ? "at least " : ""}${formatValue(minutes.gal, "gal")}`);
   if (runs) {
     const shortfall = runs.missed + runs.short + runs.cap;

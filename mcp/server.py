@@ -6486,6 +6486,7 @@ async def irrigation_clear_fault(
 
 IrrigationCauseArgument = Literal["vpd", "schedule", "run_now", "feed", "prewet", "flush", "fallback", "unknown"]
 RunOutcomeArgument = Literal["ok", "short", "stopped", "preempted", "skipped", "missed", "cap", "unknown"]
+RunPurposeArgument = Literal["irrigation", "climate"]
 # The REST names of the window arguments: `from` is a Python keyword, so the tool says since and until.
 _HISTORY_WINDOW_FIELDS = {"from": "since", "to": "until"}
 
@@ -6610,6 +6611,13 @@ async def irrigation_history(
     cause: Annotated[IrrigationCauseArgument | None, Field(description="runs only: why water ran.")] = None,
     outcome: Annotated[RunOutcomeArgument | None, Field(description="runs only: how a run ended.")] = None,
     cursor: Annotated[str | None, Field(description="runs only: next_cursor of the page before.")] = None,
+    purpose: Annotated[
+        RunPurposeArgument | None,
+        Field(
+            description="irrigation (watering: schedule, run_now, feed, prewet, flush) or climate (VPD and fallback "
+            "misting, and fog); omit for both."
+        ),
+    ] = None,
 ):
     """Read watering history. REST twins: view minutes is API-IRR-10 (GET /v1/irrigation/minutes) and view runs is
     API-IRR-11 (GET /v1/irrigation/runs); the same JSON.
@@ -6617,10 +6625,14 @@ async def irrigation_history(
     It only reads and does not count as your plan for a trigger. since and until are the REST from and to.
 
     View minutes: minutes, pulses and whole gallons per local day (America/Denver), up to 400 days, by group_by and
-    always split by cause and chemistry. A day with coverage no_data has no rows: a gap, never 0.
+    always split by cause, purpose and chemistry. A day with coverage no_data has no rows: a gap, never 0.
 
-    View runs: the ended runs, newest first, up to 31 days, 50 to a page, filtered by line, cause and outcome; pass
-    next_cursor as cursor for the next page. The run in progress is in irrigation_status.
+    View runs: the ended runs, newest first, up to 31 days, 50 to a page, filtered by line, cause, outcome and
+    purpose; pass next_cursor as cursor for the next page. The run in progress is in irrigation_status.
+
+    Every row carries its purpose: irrigation (watering plants) or climate (VPD and fallback misting, and every fog
+    run), which outnumbers irrigation many times over. purpose keeps one of them in either view; omitted, both are
+    returned. "Did the plants get watered?" is purpose irrigation.
 
     Unknown values are null, never 0. Refusals return the Problem JSON with isError: window_too_large (a wider window;
     max gives the limit), invalid_request (a bad since, until or cursor, or an argument that does not belong to the
@@ -6638,7 +6650,7 @@ async def irrigation_history(
             first, last = _history_local_day("since", since), _history_local_day("until", until)
 
             async def read(conn, actor):
-                return await reads.minutes(conn, actor, first, last, group_by)
+                return await reads.minutes(conn, actor, first, last, group_by, purpose=purpose)
 
         else:
             if group_by != "zone":
@@ -6646,7 +6658,9 @@ async def irrigation_history(
             start, end = _history_moment("since", since), _history_moment("until", until)
 
             async def read(conn, actor):
-                return await reads.runs(conn, actor, start, end, line=line, cause=cause, outcome=outcome, cursor=cursor)
+                return await reads.runs(
+                    conn, actor, start, end, line=line, cause=cause, outcome=outcome, cursor=cursor, purpose=purpose
+                )
 
     except ServiceError as refused:
         return _tool_problem(refused.problem)
