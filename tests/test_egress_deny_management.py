@@ -84,12 +84,14 @@ def test_deny_never_selects_a_pod_with_its_own_egress_allowlist(rendered):
         if name not in {DENY, HA_ALLOW} and "Egress" in p["spec"].get("policyTypes", [])
     ]
     assert own, "expected the existing egress allowlists in the render"
-    covered = 0
+    covered = set()
     for workload, labels in pod_labels(rendered):
         bounded = any(selected(p["spec"]["podSelector"], labels) for p in own)
         assert selected(deny["spec"]["podSelector"], labels) is not bounded, workload
-        covered += not bounded
-    assert covered >= 10
+        if not bounded:
+            covered.add(workload)
+    # #1351/#1363: egress-local-only bounds everything else; only these two keep public egress.
+    assert covered == {"verdify-api", "verdify-hermes-iris"}
 
 
 def test_deny_keeps_public_egress_and_refuses_the_management_set(rendered):
