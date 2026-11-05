@@ -162,8 +162,9 @@ enables them (Round 2b E).
 
 ## 5. Journeys
 
-Values are illustrative. Screens follow [screens](screens.md): Now, Graphs, Plan, Water, Settings, Activity (holds
-alerts), Equipment, Plants and Sign-in; phones use the five-tab bottom bar (Now, Water, Graphs, Activity, More).
+Values are illustrative. Screens follow [screens](screens.md) as the [redesign](redesign.md) built them: five sections at
+every width, Now, Water (Today, Schedules, History), Graphs (Climate, Zones, Statistics), Activity (Alerts, Log) and
+Control (Settings, Plan, Equipment), plus Plants (Later) and Sign-in; phones use the five-tab bottom bar.
 
 ### J1 · Morning check
 
@@ -171,14 +172,14 @@ alerts), Equipment, Plants and Sign-in; phones use the five-tab bottom bar (Now,
 US-ACT-02 to 04, US-AUTH-01.
 
 1. Open dashboard.verdify.ai; the 12-hour session is still valid, or a passkey sign-in returns to Now.
-2. The hero answers first: "1 thing needs someone", then 64.8 °F, 0.62 kPa, 71 % RH, "in band", "Heating (heat1)",
-   "Updated 20 s ago".
-3. No banner, so the ingestor, controller, writer and dashboard writes are fine; tiles show Iris's MIDNIGHT plan
-   OK, the writer's last push 4 min ago and 1 warning.
-4. Water card: center misted 03:58 (VPD), 14 min overnight; nothing running; no flow with the valves closed; wall drip
-   next 07:30 (sunrise + 60 min, 12 min); SAF-4 21 of 360 gal.
-5. Tap the warning (`relay_stuck` on fan2): it expands in place with the fan2 state and its runbook, and "Open in
-   Graphs" shows the fan2 lane; acknowledge with a note.
+2. The hero answers first: "1 thing needs someone", then 64.8 °F and "Updated 20 s ago", and the temperature, VPD and
+   RH band bars with today's low and high (71 % RH reads "no band"); the status line reads "Heating (heat1)".
+3. No banner, so the ingestor, controller, writer and dashboard writes are fine; the status line shows Iris's MIDNIGHT
+   plan OK, and Needs someone holds the 1 warning.
+4. Water today: center misted 03:58 (VPD), 14 of 120 min; no flow with the valves closed; SAF-4 21 of 360 gal.
+   "Running and next" shows nothing running and the wall drip next at 07:30 (sunrise + 60 min, 12 min).
+5. Tap the warning's "Details ›" (`relay_stuck` on fan2): Activity → Alerts opens it in place with the fan2 state and
+   its runbook, and "Open in Graphs" shows the fan2 lane; acknowledge with a note.
 6. Done in under a minute; nothing needed a laptop.
 
 ### J2 · See what Iris plans, take a setting manual and see it confirmed
@@ -187,26 +188,29 @@ US-ACT-02 to 04, US-AUTH-01.
 
 1. Plan shows the SUNRISE plan (written 07:02, valid to 17:30) with its AI summary.
 2. The lanes show `mister_engage_kpa` stepping 1.60 → 1.70 kPa at 13:00 (PLANNED, AI).
-3. Open the lane: the setting drawer shows device 1.60 (CONFIRMED 2 min ago), bounds 0.50–2.50, step 0.05.
+3. Tap the lane's label: the setting drawer opens on Plan, in place, with device 1.60 (CONFIRMED 2 min ago), its
+   bounds bar 0.50–2.50 and step 0.05.
 4. Enter 1.53; "Manual: Iris skips this" is already ticked; reason "Vandas drying". Save: "saved as 1.55, snapped from
    1.53".
-5. The row reads REQUESTED, then CONFIRMED when `cfg_mister_engage__kpa_` reports 1.55 (typically 30–90 s); with no
+5. The lane reads REQUESTED, then CONFIRMED when `cfg_mister_engage__kpa_` reports 1.55 (typically 30–90 s); with no
    match in 5 minutes it would read NOT CONFIRMED with the platform's reason.
 6. The lane reads MANUAL; at 13:00 nothing changes, because the dispatcher keeps Jason's value, and Iris's next
    context lists the setting under MANUAL SETTINGS.
-7. Activity: "Jason · dashboard · mister_engage_kpa 1.60 → 1.55 · manual · Vandas drying". Two days later Jason
-   releases it to auto, and Iris's plan value applies on the next dispatcher pass.
+7. Activity → Log: "Jason · dashboard · mister_engage_kpa 1.60 → 1.55 · manual · Vandas drying". Two days later Jason
+   releases it to auto from the same drawer (on Plan or Control → Settings), and Iris's plan value applies on the next
+   dispatcher pass.
 
 ### J3 · Set and change drip and fertilizer schedules
 
 **Who:** P1. **Stories:** US-WAT-06 to 09, US-WAT-04, US-WAT-14, US-WAT-15, US-WAT-23.
 
 1. Before the engine, Run now on L01 waters the wall through the bridge (US-WAT-23). Once the engine ships, L01 is the
-   first line scheduled: tick its one-time check (stagnant line flushed, emitters checked), then New schedule
-   "Wall MWF", Mon/Wed/Fri at sunrise + 60 min, 12 min.
-2. On submit the bounds pass; the week view shows each run against the wall's 60 min/day cap.
-3. The program reads REQUESTED, then CONFIRMED when `irr_program_id` reports the new hash; the L01 card shows
-   "next Wed 07:31 · 12 min".
+   first line scheduled: tick its one-time check (stagnant line flushed, emitters checked), then on Water → Schedules
+   "+ New schedule" (or a click on L01's row at 07:30) "Wall MWF", Mon/Wed/Fri at sunrise + 60 min, 12 min.
+2. Before Save the editor's preview reads the day totals against the wall's 60 min/day cap and any run too close to
+   another; the draft draws dashed on the day timeline.
+3. The program reads REQUESTED, then CONFIRMED when `irr_program_id` reports the new hash; L01's row on Water → Today
+   shows "next Wed 07:31 · 12 min".
 4. Enable L02 (wall feed) with its check: tank, injector and a leak check; L03 opens the injector line.
 5. New schedule on L02: Sundays 09:00, feed 300 s, flush 240 s on L01; L03 opens with it. It runs even with soil probes
    offline. An attended Run now on L02 first is optional.
@@ -217,31 +221,34 @@ US-ACT-02 to 04, US-AUTH-01.
 
 **Who:** P1. **Stories:** US-WAT-09 to 11, US-WAT-17, US-WAT-03.
 
-1. Water: center has VPD on, Schedule off; south and west are off (the seed).
+1. Water → Today: the center zone's head has VPD control on and Schedule off; south and west are off (the seed).
 2. Enable L07 (south mister): tick Checked, note "line drained, nozzles ok, no walkway spray".
 3. South: VPD on. Its probe (address 4) is out (#751), so the zone reads "VPD from peer probes"; the program hash
    confirms it.
 4. Center: Schedule on asks once for the Checked box (nozzles over the Vandas, walkway). Add a mist schedule at
    sunrise + 15 min, 8 pulses of 60 s with 60 s gaps; the editor shows today's minutes against center's 120 min cap.
-5. Next morning, minutes by zone split center into `vpd` and `schedule`.
+5. Next morning, Water → History's minutes by zone split center into `vpd` and `schedule`.
 6. To make center schedule-only, switch its VPD off; the program hash confirms it and Activity records it.
 
 ### J5 · Check watering minutes by zone
 
 **Who:** P1 at the desk; P2 on a phone. **Stories:** US-WAT-03 to 05, US-NOW-04.
 
-1. Water: minutes for wall, center, south and west over the last 7 days, stacked by cause, with fog separate and each
-   zone's cap as a tick.
+1. Water → History (`/water/history`): the key figures for the last 7 days against the 7 before, then minutes for
+   wall, center, south and west, stacked by cause, with fog separate and each zone's cap as a tick (Group by zone,
+   Measure minutes or gallons).
 2. Tuesday had an ingestor outage: its bar is marked partial and shows the gap; nothing is filled in.
-3. Tap Tuesday's wall bar: the run ledger lists start, minutes, cause, actor, whole gallons and outcome.
+3. Under Runs, filter to the wall's line and Tuesday: the run ledger lists start, minutes, cause, actor, whole gallons
+   and outcome.
 4. A `missed` occurrence shows the controller's reason (for example, no valid clock after a power cut).
-5. Switch to 30 days; open the chart window for one run.
+5. Switch the period to 30 days (`range=30d`); a run's "Graphs ›" opens the chart window around it.
 
 ### J6 · Respond to an alert
 
 **Who:** P1 on the phone at 03:00; P2 if on site. **Stories:** US-ACT-02 to 04, US-WAT-13, US-WAT-18, US-NOW-06.
 
-1. The Slack post arrives (Slack is unchanged); open dashboard.verdify.ai, Activity.
+1. The Slack post arrives (Slack is unchanged); open dashboard.verdify.ai, Activity (its Alerts view; the nav's count
+   pill is red).
 2. The alert reads "Water flowing with every Verdify valve closed · critical · 03:02 (4 min)", with "a leak, or the
    hose, sink or hydro in use", the gallons in the last 10 min, no open valve and the last runs.
 3. No Verdify valve is open, so there is nothing to stop: the page says "Close the spigot". Jason decides whether to go
@@ -262,7 +269,8 @@ US-ACT-01.
    changes watering only and does not count as its plan for the trigger.
 3. The shared service layer checks the bounds and accepts; the write is attributed `iris` with its trigger id.
 4. `irrigation_sync` pushes the program; Iris's next `irrigation_status` read shows the schedule confirmed.
-5. Jason sees "15 min · iris (AI) · forecast 92 °F" on the L01 card and in Activity.
+5. Jason sees "changed by iris (AI) · forecast 92 °F" on the schedule's rule in Water → Schedules and in Activity →
+   Log.
 6. He disagrees and sets it back to 12 with Manual ticked (the default), so Iris's next attempt is refused with
    `manual`. A non-Iris agent could still change it: last write wins.
 
@@ -289,9 +297,9 @@ US-NOW-03, US-NOW-04, US-NOW-08, US-WAT-12, US-WAT-13, US-WAT-16, US-WAT-18, US-
 
 1. A passkey sign-in on the phone lands on Now.
 2. Now reads "All OK" and "Updated 20 s ago".
-3. The water card reads "Wall today 07:31, 12 min · Center misted 09:58 (VPD)".
+3. Water today reads "Wall today 07:31, 12 min · Center misted 09:58 (VPD)".
 4. "Someone inside: misters wait (Frigate, 1 min ago)".
-5. More → Equipment → Fans 15 min; Now then shows "Fans burst · 14 min left" from the readback.
+5. Fans 15 min in Now's quick actions; "Running now" then shows "Fans burst · 14 min left" from the readback.
 6. Water → L01 Run… → Run, then Stop.
 7. Hand-watering with the hose shows "Water flowing with every Verdify valve closed"; afterwards the caretaker
    acknowledges the alert with the note "me, hose".
@@ -345,7 +353,7 @@ API-IRR-NN) are the `operationId`s in the [OpenAPI](openapi/dashboard-api.v1.yam
 
 #### US-NOW-07 · Phone first
 *P2, P1 · MVP · every page.* As a caretaker, I want every MVP page to work one-handed on a phone in the greenhouse, so that I can check and act without a laptop.
-- Every MVP page works at 360–390 px with no horizontal scroll and 44 px targets, under the five-tab bottom bar (Now, Water, Graphs, Activity, More); Now answers above the fold, at 360 × 740 too.
+- Every MVP page works at 360–390 px with no horizontal scroll and 44 px targets, under the five-tab bottom bar (Now, Water, Graphs, Activity, Control); Now answers above the fold, at 360 × 740 too.
 - For operators, Stop all water is one tap from Now and from Water; on phones Stop all water, Run and Acknowledge are full width.
 - The one words table covers the OpenAPI enums, the modes and mist stages in `firmware/lib/greenhouse_types.h`, the fog block reasons in `verdify_schemas/climate_intent.py` and `ALERT_TYPES` in `verdify_schemas/alerts.py`, written for someone who knows plants rather than the controller (a unit test fails on a missing entry; an unknown code at run time still shows raw); pages pass axe (WCAG 2.2 AA) at 320, 768 and 1440 px.
 
@@ -405,7 +413,7 @@ API-IRR-NN) are the `operationId`s in the [OpenAPI](openapi/dashboard-api.v1.yam
 
 #### US-GRF-09 · Simple daily scorecard
 *P1 · MVP · Graphs.* As the owner-operator, I want one row per day with time in band, water and planner reliability, so that I can tell whether the experiment improves week to week.
-- `/graphs/scorecard` shows one row per America/Denver day for 30 days: time in band day and night (`mv_zone_band_grade`), gallons used (`daily_summary.water_used_gal`), watering minutes by zone, Iris required plans written and missed, and alerts raised by severity; a 23- or 25-hour day counts as it ran.
+- Graphs → Statistics (`/graphs/statistics`, which `/graphs/scorecard` redirects to) shows, in its Data table, one row per America/Denver day for 30 days: time in band day and night (`mv_zone_band_grade`), gallons used (`daily_summary.water_used_gal`), watering minutes by zone, Iris required plans written and missed, and alerts raised by severity; a 23- or 25-hour day counts as it ran.
 - It reads API-04 `daily.*` keys bound to a new view `v_daily_scorecard`, plus API-IRR-10 for minutes, with no new operation; a missing value is "—" with its reason (for water, `v_water_meter_daily.quality`), never 0.
 - "CSV of this table" downloads exactly the 30 rows shown.
 

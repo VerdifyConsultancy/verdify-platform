@@ -8,9 +8,10 @@ cards, charts, statistics and schedule interface. It keeps weather.vallery.net's
 [design system](design-system.md) §2 copies it: the tokens, colours, IBM Plex type, sticky white header, ink hero,
 white cards, chips, pills and mono eyebrows. It adds no colour.
 
-Status: Ready to build (2026-11-04). Related: [decisions](decisions.md) · [product](product.md) ·
-[screens](screens.md) · [design system](design-system.md) · [architecture](architecture.md) ·
-[irrigation](irrigation.md)
+Status: Built (2026-11-04): WP0 to WP5 landed together; where the build settles a detail this spec leaves open, or
+differs from it, [screens](screens.md)' "As built" tables and [design system](design-system.md) §4 to §7 say so.
+Related: [decisions](decisions.md) · [product](product.md) · [screens](screens.md) · [design system](design-system.md)
+· [architecture](architecture.md) · [irrigation](irrigation.md)
 
 **Precedence.** [Decisions](decisions.md) overrides this file. This file overrides [screens](screens.md) and
 [design system](design-system.md) where they differ on information architecture, page layout, component

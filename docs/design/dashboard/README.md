@@ -21,7 +21,7 @@ irrigation program that moves watering off a Home Assistant button onto schedule
 
 | Jason's ask (2026-11-01) | What v2 delivers | Where |
 |---|---|---|
-| Graphing, in the weather.vallery.net style | Graphs: linked climate panels with the band ribbon and setting steps, equipment lanes, any range, CSV; uPlot 1.6.32 on weather's tokens | SCR-02, [design system](design-system.md) |
+| Graphing, in the weather.vallery.net style | Graphs: one chart stack with the band ribbon, excursions and setting steps, events and equipment lanes, any range, CSV; zones side by side; statistics; uPlot 1.6.32 on weather's tokens | SCR-02, [design system](design-system.md) |
 | Control all settings | Settings: every registry row with min, max, step, device readback and age; edit, Manual, Release | SCR-05, [architecture](architecture.md) §5 |
 | Know what is planned | Plan: the plan in force, 24/72 h waypoints, the MANUAL rows Iris skips, planner health | SCR-03 |
 | Set, change and monitor irrigation | Water: schedules in a 7-day week view, run now, stop, pause, line enables, mister VPD and Schedule switches, minutes by zone; the same through MCP | SCR-04, [irrigation](irrigation.md) |
@@ -80,10 +80,11 @@ the OpenAPI file wins on operation ids and paths.
 | Doc | What it holds | Read it to |
 |---|---|---|
 | [product](product.md) | 4 personas, 35 needs, 9 journeys, 93 stories with 2–3 acceptance criteria each, coverage matrix | Build or accept a feature |
-| [screens](screens.md) | IA and navigation, shell, roles, write feedback, panel states; SCR-01 to SCR-09 with wireframes and acceptance; the issues that build each screen | Build a screen |
+| [screens](screens.md) | IA and navigation (five sections), shell, roles, write feedback, panel states; SCR-01 to SCR-09 as built, with acceptance; the issues that build each screen | Build a screen |
+| [redesign](redesign.md) | The UI/UX redesign (built 2026-11-04): five sections, the layout system, cards and micro-visualizations, the chart stack, statistics and the schedule interface, with the wireframes; D-UX-01 to D-UX-13 | See why the screens look as they do |
 | [architecture](architecture.md) | Topology, web tier, sign-in, control model (`desired_state`, `manual`, readback), `verdify_services`, read model, API surface, migrations, delivery, tests | Build or ship the backend |
 | [irrigation](irrigation.md) | D-IRP rules, current state, lines L01–L11, schedule model, firmware and platform changes, the L01 bridge, HA decommission, API-IRR and MCP tools, delivery | Touch water |
-| [design system](design-system.md) | weather.vallery.net tokens, the Verdify lockup, badges, controls, edit drawer, four uPlot primitives, responsive and accessibility rules; built by VD-01 and VD-03 to VD-08 (§9) | Build components or charts |
+| [design system](design-system.md) | weather.vallery.net tokens, the Verdify lockup, the page and card grammar, badges, controls, edit drawer, micro-visualizations, the uPlot charts, responsive and accessibility rules; built by VD-01 and VD-03 to VD-08 and the redesign (§9) | Build components or charts |
 | [execution plan](execution-plan.md) | 7 lanes, 4 seams, 4 waves, 5 releases, critical paths, start-today list, dependency graph, the 71-issue table (VD-01 to VD-73) | Plan or pick up work |
 | [OpenAPI](openapi/dashboard-api.v1.yaml) | The contract: 38 operationIds (API-08, API-18, API-IRR-09 and OPS-03 reserved), schemas and problem codes | Call or serve the API |
 | [decisions](decisions.md) | Direction, all 27 D-IRP answers, the Round 2 and 2b answers, Q-01 to Q-14 with their applied defaults | Get or record a ruling |

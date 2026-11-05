@@ -2,17 +2,19 @@
 
 dashboard.verdify.ai is a sibling of weather.vallery.net: it copies weather's stylesheet with the tokens unchanged (IBM
 Plex, sticky white header, ink hero, cards, chips, pills, uPlot charts) and swaps the vallery.net V for the Verdify
-mark-as-V lockup with a `· DASHBOARD` eyebrow. It adds only what an operator app needs: a five-tab bottom bar on
-phones; the badges REQUESTED, CONFIRMED, NOT CONFIRMED, HELD, MANUAL, AI and PLANNED; number fields that show min, max
-and grid step; one edit drawer; one confirm dialog, for water runs only; toasts; honest empty, stale and not-reporting
-states; and four uPlot primitives (time series with band ribbon and setting steps, equipment lanes, plan lanes, minutes
-by zone).
+mark-as-V lockup with a `· DASHBOARD` eyebrow. It adds only what an operator app needs: five sections at every width,
+with a five-tab bottom bar on phones; one page header, section header and card frame; the badges REQUESTED, CONFIRMED,
+NOT CONFIRMED, HELD, MANUAL, AI and PLANNED, one pill a head; number fields that show min, max and grid step; one edit
+drawer; one confirm dialog, for water runs only; toasts; honest empty, stale, unknown, not-reporting and API-down
+states; SVG micro-visualizations (band bars, meters, sparklines, deltas, status strips, time tracks); and uPlot charts
+(one chart stack on one time axis, small multiples, equipment lanes, plan lanes, minutes by zone, statistics).
 
-Status: Draft v2 (2026-11-01)
+Status: v3, built (2026-11-04). The [redesign](redesign.md) applied D-UX-01 to D-UX-13 to §1, §3 and §4 to §7; §2's
+tokens are unchanged and no colour token was added.
 
-[README](README.md) · [product](product.md) · [screens](screens.md) · [architecture](architecture.md) ·
-[irrigation](irrigation.md) · [design system](design-system.md) · [execution plan](execution-plan.md) ·
-[OpenAPI](openapi/dashboard-api.v1.yaml)
+[README](README.md) · [product](product.md) · [screens](screens.md) · [redesign](redesign.md) ·
+[architecture](architecture.md) · [irrigation](irrigation.md) · [design system](design-system.md) ·
+[execution plan](execution-plan.md) · [OpenAPI](openapi/dashboard-api.v1.yaml)
 
 ## 1. The answer
 
@@ -21,17 +23,19 @@ Status: Draft v2 (2026-11-01)
 | Look | weather.vallery.net, copied from jvallery/weather@249fba3 `web/app/styles.css`; tokens byte for byte |
 | Deltas | Two accessibility fixes (focus ring, input border) as rules, not token edits; new tokens only for badges and charts |
 | Brand | Verdify leaf mark as the V, "erdify" in Plex Sans 620, `· DASHBOARD` eyebrow |
-| Nav | Weather's top nav above 860 px; a fixed five-tab bottom bar at 860 px and below ([screens](screens.md) §1.1) |
+| Nav | Five sections at every width (D-UX-01): weather's top nav above 860 px; a fixed five-tab bottom bar with icons at 860 px and below ([screens](screens.md) §1.1) |
 | Type | IBM Plex Sans (variable 100-700) and Plex Mono 400, self-hosted, copied from weather |
 | Units | Fixed: °F, % RH, kPa, gal, min. No °C toggle in v2 |
 | Theme | Light only. New colours are CSS custom properties and charts read tokens, so dark can be added later |
 | Charts | uPlot 1.6.32 (weather's pin), lazy-loaded, colours read from tokens |
 | Code | Copy weather files into `dashboard/` now with provenance; a shared package only when a third app needs it (§8) |
-| Later | Dark theme (the Lab's dark tokens on these names), command palette, keyboard map, °C toggle, sparklines, keyboard chart cursor, compare periods, annotation rail, calendar heatmaps, Day Arc, icon set, palette checks in CI |
+| Built with the redesign | Sparklines and the other micro-visualizations, compare periods, the event (annotation) rail, day-by-day status strips, five navigation icons (D-UX-10, and no other icon set) |
+| Later | Dark theme (the Lab's dark tokens on these names), command palette, keyboard map, °C toggle, keyboard chart cursor, Day Arc, a general icon set, palette checks in CI |
 
 Every screen follows five rules:
 1. **Lead with the answer**; detail goes in `<details>`.
-2. **State once**: time zone, units and cadence in the panel eyebrow ("MEASURED · EVERY 60 S · AMERICA/DENVER").
+2. **State once**: units and cadence in the panel eyebrow or header row ("MEASURED · EVERY 60 S"); the time zone once
+   per page, in the footer ("Times are America/Denver"), on chart axes and in every `<time title>` (D-UX-08).
 3. **Humanize codes**: `SEALED_MIST` stage `S1` → "Sealed, misting one zone", from the one words table that a unit
    test keeps complete; a code unknown at run time shows raw.
 4. **Requested is not confirmed**: a sent value shows REQUESTED until the API confirms it from the controller.
@@ -151,55 +155,80 @@ breadcrumb and its document title read it.
 | Count | API-02 `alerts.open`, the one open-alert count every surface uses (unacknowledged `v_open_alerts` rows, repeats of one `alert_type` and `sensor_id` counted once), as a pill after "Activity" (`.nav-count`) and on the phone's Activity icon. Its fill is the worst open severity (`data-severity`): critical `--fault` with white, warning `--tint-warn` with `--warn-text`, info `--field` with ink. Zero draws no pill; the link still reads "Activity 0 open alerts" to a screen reader. Unknown (no answer yet, or the API down) draws nothing. |
 | Account | The account button at the header's right (`components/account-menu.tsx`, a `Menu` disclosure): the role pill (OPERATOR or VIEWER) at every width and the display name from 1100 px. It opens to "Signed in as Jason (jason)", "Operator: can change anything" or "Viewer: read-only", and Sign out (the POST form). Before API-01 answers it reads "Account" and still holds Sign out. No units or theme toggle, no Stop, no freshness, no search in the header. |
 | Banners | The one fault banner, worst first (API down, ingestor not running, controller not reporting, leak), is a row inside the sticky header while it is true, so it never scrolls away (two lines at most on a phone, its link in view). Warn banners sit in flow at the top of `<main>`, above the page header, one line each. Each links to the page that explains it. [Screens](screens.md) §1.2 lists the banners, when they show and their words; §4.5 has the states |
-| Footer | Weather `.site-footer`: "Verdify dashboard · build `<sha>` · API `<sha>`", graphs.verdify.ai ↗, lab.verdify.ai ↗, IBM Plex licences |
+| Footer | Weather `.site-footer`: "Verdify dashboard · build `<sha>` · API `<sha>`", "Times are America/Denver" (D-UX-08), graphs.verdify.ai ↗, lab.verdify.ai ↗, IBM Plex licences |
 | Page grammar | `PageHeader` (`components/layout/page-header.tsx`): the eyebrow is the breadcrumb (the section, a link to its default view except on that view; a focused state reads section › view, both links), one h1 named by the view, the status line (one `.meta` sentence of state, its height reserved), at most two actions, then the section's tabs (`SectionTabs`, nav chips with `aria-current="page"`; sticky under the header on Water's phones, beside Stop all water). Then sections and cards ([redesign](redesign.md) §3, §4). The ink hero appears on Now only, which has no page header. A route's `handle = { wide: true }` gives its page `--shell-wide` (Graphs, Water → Schedules). |
 | Sign-in pages | The same header without nav or tools; one card with the message and a forest "Sign in" button |
 
 ## 4. Components
 
-Weather classes are reused as they are; "new" means added in the dashboard section of `styles.css`. React components
-live in `dashboard/app/components/`.
+Weather classes are reused as they are; the dashboard's own rules live in `styles.css`'s dashboard section and in the
+section files of §2.4. React components live in `dashboard/app/components/`: the layout primitives in `layout/`, the
+micro-visualizations in `data/` (§4.7), and each screen's composites in its own folder (`now/`, `activity/`,
+`graphs/`, `water/`, `schedule/`, `control/`, `equipment/`). The [redesign](redesign.md) §3 and §4 set the grammar
+they share: one page header, one section header, one card frame, one `Chips`, one `Table`, one `.meta` line, a 6-step
+type scale and a 4 px spacing scale.
 
 | Component | Base | Spec | Used on |
 |---|---|---|---|
-| `Card` | `.card`, `.card-head` | 1px line, radius .625rem, xs shadow, 1rem padding; an interactive card is one link with a visible focus ring | All |
-| `Hero` | `.hero`, `.stats` | Ink band, radius 1rem. Left: eyebrow, the one-sentence answer as the title (worst first; wording in [screens](screens.md) SCR-01), indoor temperature as the hero value, a sub-line against the band, freshness. Right: 8 stat tiles (4 × 2; on phones 4, 2-up, the rest in the "All readings" disclosure) | Now |
-| `StatTile` | `.stat` (ink), `.summary-stats div` (white) | Eyebrow label, value and unit, sub-line; freshness and badge only when they differ from the panel; null is "—" plus the reason | Now, Water, Graphs |
-| `Chips` | `.chips`, `.chips-sm` | Ranges, metrics, filters; links with `aria-current` or buttons with `aria-pressed`; current is filled ink | Graphs, Settings, Activity |
-| `Table` | `.table-wrap`, `caption` | Focusable scroll region (`role="region"`, `tabindex="0"`, labelled); fixed group order and a text filter; no column sort | Settings, Activity, Water |
-| `EventRow` | `.events`, `.event` | Mono time column, bold title, badges, muted detail; writes name actor and source in text ("Jason · dashboard"; "iris" or "steward · agent" with AI; "forecast-engine · system", never AI) and show the reason. `AlertRow`, shared by Now and Activity, adds a 3px left rule in severity colour (critical `--fault`, warning `--amber` as weather's `.notice-warn`, info `--muted`), the severity word and Acknowledge | Activity and alerts, Now |
+| `Page`, page rhythm | `.page`, `.page-toolbar` (primitives.css) | Every view's body stacks its blocks at the section gap (`--space-6`, `--space-5` on phones); cards within a block sit at the card gap (`--space-4`, `--space-3`). A view's toolbar (its range, period, filters or view switch) heads what it controls, `--space-4` above it, in a `.page` stack as in plain flow | All |
+| `PageHeader`, `SectionTabs` | `.page-header`, `.page-tabs`, `.section-tabs` | The eyebrow as breadcrumb, one h1, the status line (`.page-status.meta`, its height reserved), at most two actions (under the status line on phones, a primary one full width), then the section's tabs (a labelled `nav` of nav chips, `aria-current="page"`); `stickyTabs` and `tabsEnd` give Water its sticky row with "■ Stop all" (§3) | Every view but Now |
+| `SectionHeader`, `Section` | `.section-header`, `.page-section` | The only section heading: an h2 at weather's size, an optional meta (`.meta`, no leading separator), optional chips and one "All … ›" link. The eyebrow is never a heading | Statistics, Water → History, the rules list |
+| `Card` | `.card`, `.card-head` | Weather's frame: 1px `--line`, radius .625rem, xs shadow, 1rem padding. The head: an optional eyebrow, the title (h2, or h3 inside a section) with at most one pill (§4.1), then actions, one "All … ›" link and a ⋯ `Menu`; then the body and a `.meta` foot. Abnormal is a 3 px `--amber` or `--fault` rule on the left, never a tinted background, and drops while the API is down. A card that is one link holds no other control | All |
+| `Panel` | `Card` | The data card: the same head, plus its state machine (§4.5): a skeleton at its reserved height, its age when ready, the empty words, STALE with its age, the not-reporting line, its own error and Retry, "Busy, retrying in 5 s" over the old render; a render failure stays inside it | All |
+| `ListCard` | `Panel` | A head with the title and its count ("Needs someone · 2", shown once per page) and one "All … ›" link, then rows, or one empty line with one widening action | Now (Needs someone), Activity (Needs action, Recent activity) |
+| `ObjectRow` | `.object-row` | A thing as one row: title (h3, its link the only way in; the row is never itself a link), kind tag (CLEAN, FERT, a severity word), one state sentence, one pill, one visual (a strip, meter or sparkline), the meta line, then one primary action chosen by state, Stop when it can matter (D-UX-06) and ⋯. Rows divide with a 1px `--line`; on phones the actions take the full width | Water lines, alerts, schedule rules |
+| `MetricTile` | `.card.metric-tile` | A label, the value at `--fs-xl` in tabular figures with its unit small (`.metric-unit`), a `Delta` line, one visual and the meta line, at one reserved height in every state | Statistics, Water → History |
+| `DataList` | `.data-list` | Short mono terms over their values, in pairs that wrap: what a " · " chain longer than three items becomes | Popovers, Equipment |
+| `Chips` | `.chips`, `.chips-sm` | One chip row with three kinds: `nav` (tabs and ranges, links with `aria-current="page"`), `filter` (links that narrow a list, `aria-current="true"`) and `toggle` (buttons with `aria-pressed`). The current or pressed chip is filled ink. Toolbar chips are the small ones (36 px; 44 px on phones) | All |
+| `Menu` | `<details>` `.menu`, `.menu-panel` | The ⋯ menu and the account menu: a disclosure, not an ARIA menu, holding links and buttons, each a 44 px item; Escape closes it | Water rows, schedule rules, Graphs' Preset and Layers, the header |
+| `Popover` | native `<dialog>` `.popover` | Anchored under its opener from 861 px (placed through CSSOM), a bottom sheet in a modal dialog at 860 px and below; focus moves in and returns to the opener; Escape closes it | Schedules (block, Key) |
+| `StopAllWater` | `.btn-stop` | One shared component in exactly three places: Now's quick actions, the Water tabs row ("■ Stop all" on phones) and an `irrigation_fence_breach` alert. One tap, no dialog, never disabled by the writes flag | Now, Water, Activity |
+| `Table` | `.table-wrap`, `caption` | Focusable scroll region (`role="region"`, `tabindex="0"`, labelled); fixed group order; numbers right-aligned in tabular figures, a shared unit in the column head; stacked rows on phones where the screen says so; no column sort | Settings, Water → History, Statistics |
+| `ScrollRegion` | `.l-scroll-x` | A labelled, focusable horizontal scroll region for a wide table, the week matrix or a long strip, so the page itself never scrolls sideways | Schedules, Statistics |
+| `EventRow`, `AlertRow` | `.event`, `.object-row` | `EventRow` is one log entry on one line: the mono time, who wrote it in text ("Jason · dashboard"; "iris" or "steward · agent" with AI; "forecast-engine · system", never AI), the action and its target with before → after, the reason and the outcome. `AlertRow` is an `ObjectRow` with a 3px left rule in severity colour (critical `--fault`, warning `--amber`, info `--muted`), the severity word first, the facts with a repeat count, "Details ›" and Acknowledge with an optional note | Activity, Now |
 | `Kv`, `Details` | `.kv`, `details`/`summary` | Facts; progressive detail with a 44 px summary | All |
-| `Button` | `.btn`, `.btn-primary` | 44 px; verb and object ("Run wall drip", "Save"); busy reads "Sending…" and is disabled; no spinners. New `.btn-stop`: fault fill, white text (6.54:1), never confirmed | All |
+| `Button` | `.btn`, `.btn-primary` | 44 px; verb and object ("Run wall drip", "Save"); busy reads "Sending…" and is disabled; no spinners. `.btn-stop`: fault fill, white text (6.54:1), never confirmed; a line's Stop is filled only while its relay is on or unknown and a quiet outline otherwise (`.btn-stop-quiet`, D-UX-06) | All |
 
 ### 4.1 Badges
 
 Text always; colour is the second channel. AI is ink and mint, not weather's warn-tinted AI badge: warn means REQUESTED.
+A row or card head carries **at most one pill** (D-UX-07), by this priority: NOT CONFIRMED, REQUESTED, HELD, STALE,
+FAULT, MANUAL, then CONFIRMED. CONFIRMED shows only while the newest write is under 10 minutes old; afterwards the
+value and its age stand alone. AI and provenance (MEASURED, PEER, HOUSE, DERIVED, NO READBACK) are text marks in the
+meta line, mono and muted, amber only when the provenance is the news (a zone fallen back to its peers); log rows keep
+the AI badge beside the actor.
 
 | Badge | Meaning | Class (fill / border / text) |
 |---|---|---|
 | REQUESTED | Saved; waiting for the controller to report it (`cfg_*` readback, or the program hash) | `.status-pending`: tint-warn / warn-border / warn-text (7.81:1) |
-| CONFIRMED | The API reports a matching readback, or the program that carries the value | `.status-complete`: tint-ok / ok-border / forest (7.14:1) |
+| CONFIRMED | The API reports a matching readback, or the program that carries the value; shown for 10 minutes after the write | `.status-complete`: tint-ok / ok-border / forest (7.14:1) |
 | NOT CONFIRMED | No match 5 min after the request: the ingestor's `setpoint_unconfirmed` window (`ingestor/tasks/_common.py`, section 16). Display only; it blocks nothing; its reason shows beside it (§4.2) | `.status-failed`: tint-fault / fault-border / fault (5.61:1) |
 | HELD | The platform applies another value on purpose (a dispatcher clamp or an armed experiment); the reason shows beside it (§4.2) | New `.badge-held`: white / ink / ink (16.19:1) |
-| NO READBACK | The API reports no readback for the setting: it is sent, never confirmed | `.tag` base |
+| NO READBACK | The API reports no readback for the setting: it is sent, never confirmed. A text mark on a setting row | `.tag` base |
 | MANUAL | The item's manual flag is on (a setting, schedule or line): Iris skips it; people and other agents can still change it | `.badge-manual`: manual-bg / manual-border / manual-text (8.54:1) |
-| AI | Last written by Iris or another agent (source `iris` or `agent:<name>`); the name follows in text. System writes, such as forecast rules, never carry it | New `.badge-ai`: ink fill, mint text (10.36:1) |
+| AI | Last written by Iris or another agent (source `iris` or `agent:<name>`); the name follows in text. System writes, such as forecast rules, never carry it. A badge in log rows and the plan lanes' header words; a text mark elsewhere | New `.badge-ai`: ink fill, mint text (10.36:1) |
 | PLANNED | Future intent: an Iris plan waypoint or a schedule occurrence | New `.badge-planned`: no fill, dashed muted border |
 | SUPERSEDED | A plan waypoint that will not apply, because a newer value holds until Iris's next plan (the API marks it) | New `.badge-superseded`: `.tag` base, muted text (5.01:1); its chart segment is muted too |
 | STALE | Older than its limit, or from a controller that is not reporting (§4.5) | `.status-stale` |
 | CLEAN / FERT | Water type of a line or run | `.tag` with a leading dot in `--eq-water` / `--eq-fert` |
-| RUNNING / IDLE / DISABLED | Line state; L05 and L06 read "Reserved" with DISABLED until a person enables them. Equipment reads ON / OFF / UNKNOWN in the same families, exactly as the API sends it ([screens](screens.md) SCR-07) | Ok family / base / base with muted text |
+| ON / OFF | A schedule rule's enabled state for a viewer, and a relay's state before the irrigation firmware | Ok family / base |
+
+States that are not pills read as words: a line's state is its row's state sentence, with a 0.55rem dot in its cause
+token while it runs; an actuator's ON, OFF or UNKNOWN on Equipment is a mono word with a dot in its equipment token,
+only UNKNOWN muted and hatched ([screens](screens.md) SCR-07).
 
 ### 4.2 Requested → confirmed
 
 ```text
-VPD Mister Engage    1.10 kPa  CONFIRMED · 12 s ago                                  [Edit]
-                     → 1.20 kPa  REQUESTED · 40 s
-                     → 1.20 kPa  NOT CONFIRMED · Sent 06:02; no matching readback yet
-                     → 1.20 kPa  HELD · Clamped to 1.15 kPa: VPD-high moisture guardrail
+VPD Mister Engage   mister_engage_kpa
+  1.60 kPa    [0.50 ──●────○─────── 2.50]   REQUESTED                                   [Edit]
+  jason · manual · "Vandas drying" · 06:47 · → 1.55 · 40 s · next 1.70 at 13:00 AI
 ```
-The device value (readback and age) is the large number; the request sits under it until confirmed. For a value the
-irrigation program carries, it is the program's value on the controller ("On controller · rev 42: 360 gal"). The API
+
+The device value (readback and age) is the large number, with a bounds bar (the allowed range, the value as a dot,
+the next plan as a hollow ring, the request as a dashed amber ring) and the row's one pill; the meta line under it
+says who wrote the value in force, what Iris plans next and, while pending, the request. For a value the irrigation
+program carries, the device value is the program's on the controller ("On controller · rev 42: 360 gal"). The API
 returns the state (the UI never compares binary32 readbacks) and its reason in words, under HELD and NOT CONFIRMED
 always and under REQUESTED once the request is 60 s old ("Applies with the irrigation firmware" at once): clamped
 (with the applied value), controller heap low, push failed, ingestor not running, controller not reporting or held by
@@ -211,25 +240,28 @@ dispatcher re-sends.
 ```text
 ┌ Edit setting ──────────────────────── [×] ┐   1440: 28rem drawer on the right
 │ PLANNER POLICY · mister_engage_kpa         │   390: full-screen sheet, actions pinned
-│ VPD Mister Engage     Graph this setting › │
-│ Device 1.10 kPa · CONFIRMED 12 s ago · AI  │
+│ VPD Mister Engage                          │
+│ 1.10 kPa  [0.50 ──●──○──── 2.50]  REQUESTED│   the device value, bounds bar and one pill
+│ → 1.20 · 40 s · jason · next 1.30 at 13:00 │   the request, writer and plan lines
 │ New value  [−][ 1.20       ] kPa [+]       │
 │ Allowed 0.50–2.50 kPa · step 0.05          │
 │ [x] Manual: Iris skips this                │
 │ Reason (optional) [                      ] │
-│                          [Cancel] [Save]   │
+│ [Release to auto]       [Cancel] [Save]    │
+│ Change history ▸ · Activity for this setting › · Graph this setting › │
 └────────────────────────────────────────────┘
 ```
 
 | Control | Spec |
 |---|---|
 | `NumberField` | `<input inputmode="decimal">` with a unit suffix; the hint shows the registry `min`–`max` and the entity step; − and + move one step. The client checks only min and max. On submit the server snaps to the grid; Save closes the drawer, so the snapped value shows in the Save toast ("Requested 1.20 kPa for VPD Mister Engage (snapped from 1.22)"). Errors sit beside the field ("Must be 0.50–2.50 kPa") with `aria-invalid` and `aria-describedby` |
-| `Switch` | `role="switch"`, `aria-checked`, visible ON/OFF word; `sw_*` settings, line enables, mister associations |
+| `Switch` | `role="switch"`, `aria-checked`, visible ON/OFF word; `sw_*` settings, line enables, mister associations, schedule rules |
 | `Select` | Native `<select>` for enum settings (`enum_values`) |
-| `TimeField` | "At [time]" or "[Sunrise ▾] + [30] min", with today's resolved clock time beside it; weekday chips |
-| `ManualToggle` | Checkbox "Manual: Iris skips this", ticked by default on every dashboard edit form, for settings and irrigation items alike; unticking it saves manual off. An inline switch (line enable, VPD control, Schedule) also saves manual on; the item's drawer can untick it. Quick actions (Run, Stop, Pause, Resume, Clear fault) send no manual value and never change it |
+| `TimeField` | "At [time]" or "[Sunrise ▾] + [30] min", with today's resolved clock time beside it; weekday chips with "Daily" and "Weekdays" |
+| `ManualToggle` | Checkbox "Manual: Iris skips this", ticked by default on every dashboard edit form, for settings and irrigation items alike; unticking it saves manual off. An inline switch (line enable, VPD control, Schedule) also saves manual on; the item's drawer can untick it. Quick actions (Run, Stop, Pause, Resume, Clear fault, bursts) send no manual value and never change it |
 | `Reason` | Optional one-line text, stored with the write |
-| `EditDrawer` | One drawer for settings, schedules and line options: native `<dialog>` with `showModal()`; focus goes to the first field and back to the opener; Escape and × close without asking. Save sends once with one `Idempotency-Key`, closes, toasts; the row then shows REQUESTED → CONFIRMED. A 422 keeps it open with the server's message beside the field. "Graph this setting ›" (`/graphs?set=<param>`) shows only when the setting's unit has a Graphs panel |
+| `EditDrawer` | One drawer for settings, schedules and line options: native `<dialog>` with `showModal()`; focus goes to the first field and back to the opener; Escape and × close without asking; it lives in the URL (`?edit=`, `?schedule=`, `?options=`…), pushing when it opens and replacing when it closes, so Back closes it. Save sends once with one `Idempotency-Key`, closes, toasts; the row then shows REQUESTED → CONFIRMED. A 422 keeps it open with the server's message beside the field |
+| `SettingDrawer` | `components/control/setting-drawer.tsx`: the setting's `EditDrawer`, opened in place on Settings, Plan and Equipment. Top: the device value, its pill, the bounds bar and the request, writer and plan lines. Then the field, the band preview (a crop-band anchor or width), Manual, Reason, Release to auto, Cancel and Save. Then "Change history" (the chart and its entries in words, with Revert) and "Activity for this setting ›"; "Graph this setting ›" (`/graphs?set=<param>`) shows only when the setting's unit has a Graphs panel |
 
 ### 4.4 Confirm dialog: water runs only
 
@@ -246,65 +278,86 @@ are one tap with no dialog; settings and schedule saves never confirm. Values ar
 
 ### 4.5 Toasts, banners and states
 
+Every card, primitive and visual renders every state at its reserved height ([redesign](redesign.md) §4.3).
+
 | State | When | What shows |
 |---|---|---|
 | Toast | After a write | Bottom right, 24rem (on phones full width, above the bottom bar). Success is polite, 5 s ("Requested 1.20 kPa for VPD Mister Engage"); failure is `role="alert"`; both failures and results that carry guidance or buttons (Stop's) stay until dismissed. Activity keeps the record |
-| Loading | First fetch | Skeleton at the panel's reserved height; a refetch keeps the old render; no spinner or shimmer |
-| Empty | Query ok, no rows | "No runs today." plus what would appear here and a link that widens the range. An alert list says "No open alerts" only while the ingestor heartbeat and `climate` are fresh; otherwise "In-app alerts may be missing: ingestor not running since 06:10" (heartbeat stale) or "… no data since 06:10" (controller not reporting); "Alerts unavailable" when the read failed; and "… can't reach the greenhouse data" once API-02 has answered and then gives no freshness |
-| Stale | Sensor values: age > 2 × `expected_interval_s` (the `v_sensor_staleness` rule, migration 198). Equipment and `irr_state` report only on change, so they read unknown only while the controller is not reporting (the API decides) | Value in muted, STALE badge, "Last data 14 min ago (06:02)"; the dot turns amber |
-| Not reporting | The ingestor heartbeat (`system_state`, every 60 s) older than 180 s; or, with it fresh, the newest `climate` row older than 300 s (the `GET /health` threshold in `api/main.py`) | Fault banner on every page ([screens](screens.md) §1.2): "Ingestor not running since 06:10. The controller keeps running on its own.", else "Controller not reporting since 06:10"; device values STALE and no verdict; never "Controller offline". Writes still save and apply once both are back |
-| Panel error | One query fails | "Couldn't load runs. Retry" in that panel only (per-panel error boundary) |
-| Busy, signed out | 429 or 503 with `Retry-After`; 401 | "Busy, retrying in 5 s"; the sign-in page, which returns to the same URL |
-| Viewer, changes off | Role viewer; or `writes_enabled: false` (`DASHBOARD_WRITES_ENABLED`, off until the setting-writes release, VD-28) | Viewers get no write controls. With changes off, operators see controls disabled beside the warn banner "Changes are switched off; reading still works"; Stop and Stop all water stay live |
+| Loading | First fetch | Skeleton at the card's reserved height; a refetch keeps the old render; no spinner or shimmer. A page's status line keeps its height |
+| Empty | Query ok, no rows | One line of what would appear here, plus one action that widens it ("No runs in 7 days · Show 30 days"). An alert list says "No open alerts" only while the ingestor heartbeat and `climate` are fresh; otherwise "In-app alerts may be missing: ingestor not running since 06:10" (heartbeat stale) or "… no data since 06:10" (controller not reporting); "Alerts unavailable" when the read failed; and "… can't reach the greenhouse data" once API-02 has answered and then gives no freshness |
+| Stale | Sensor values: age > 2 × `expected_interval_s` (the `v_sensor_staleness` rule, migration 198). Equipment and `irr_state` report only on change, so they read unknown only while the controller is not reporting (the API decides) | Value in muted, STALE badge, "Last data 14 min ago (06:02)"; the dot turns amber; visuals muted |
+| Unknown | No value, or a state the API cannot vouch for | "—" with its reason; visuals hatched, never drawn as off or 0 |
+| Not reporting | The ingestor heartbeat (`system_state`, every 60 s) older than 180 s; or, with it fresh, the newest `climate` row older than 300 s (the `GET /health` threshold in `api/main.py`) | The fault row in the header on every page ([screens](screens.md) §1.2): "Ingestor not running since 06:10. The controller keeps running on its own.", else "Controller not reporting since 06:10"; device values STALE and no verdict; never "Controller offline". Writes still save and apply once both are back |
+| API down | Two failed API-02 polls in a row | Neutral everywhere (`useApiDown()`): no green fill, no verdict, no "in band", "All OK" or "CONFIRMED"; band bars, meters, strips and tracks go neutral; abnormal rules drop |
+| Panel error | One query fails | "Couldn't load runs." with Retry in that card only (per-card error boundary) |
+| Busy, signed out | 429 or 503 with `Retry-After`; 401 | "Busy, retrying in 5 s" over the old render; the session-ended card, whose Sign in returns to the same URL |
+| Viewer, changes off | Role viewer; or `writes_enabled: false` (`DASHBOARD_WRITES_ENABLED`, off until the setting-writes release, VD-28) | Viewers get the same cards with no write controls; menus keep their links. With changes off, operators see controls disabled beside the warn banner "Changes are switched off; reading still works"; Stop and Stop all water stay live |
 
-### 4.6 Domain composites (built in the screen issues)
+### 4.6 Domain composites (built in the screen packages)
 
 | Composite | Made of | Notes |
 |---|---|---|
-| `SettingRow` | Label and key, the §4.2 value with its reason, MANUAL / AI / NO READBACK, the next PLANNED value or "superseded until Iris's next plan", Edit | Table row at 1440; stacked card at 390 |
-| `LineCard` | `.card` with L-id and name, CLEAN or FERT, state in words, when it last watered, its last outcome and next run, today's minutes, "Run…" (§4.4), Stop, enable switch | L01–L11 per [irrigation](irrigation.md); a line that cannot run says why in one line ("Paused until 14:00", "Backing off until 13:20", "Faulted: no misting until midnight" with Clear fault); L05 and L06 read "Reserved" with DISABLED. Before the irrigation firmware Stop works on every line and Run on L01 only (§4.4); the other lines' Run and Clear fault read "arrives with the irrigation firmware" |
-| `ScheduleWeek` | Week grid: rows L01, L02 and L04–L10 (L05 and L06 marked reserved), columns today and the next 6 days. Each occurrence is a block with its time, minutes or pulses and MANUAL when set; one that will not run is hatched with why (line paused or disabled, Schedule off); "Last 7 days" shows past blocks with their outcome word; the editor's draft previews as PLANNED outlines; selecting a block offers Edit, or Pause the line until after it ([screens](screens.md) SCR-04) | At 390 a day switcher shows one day for every line, with no horizontal scroll |
-| `MisterAssociation` | Two `Switch`es per mister zone, "VPD control" and "Schedule", a one-line summary and the zone's VPD source; a change reads REQUESTED until the controller reports the program that carries it, then CONFIRMED | Any combination; both off reads "This zone will not mist automatically"; a watchdog back-off or fault shows on the `LineCard` |
+| Now's hero (`now/hero.tsx`) | The ink hero (weather's `.hero`, radius 1rem): the answer as the h1 (worst first; wording in [screens](screens.md) SCR-01), the hero value with "Updated N s ago", three `BandBar`s on ink (temperature, VPD, RH), "In band today" against yesterday, the status line (mode, Iris, outdoor, occupancy, each a link where it is explained) and "All readings" | Now only; it replaces weather's eight stat tiles |
+| Quick actions (`now/quick-actions.tsx`) | `StopAllWater`, then the three burst buttons (a name over its length on a phone) | Operators only; before the irrigation firmware Stop all water and the arrives line |
+| `SettingRow` (`setting-row.tsx`) | Two lines: label and key, the device value at `--fs-lg`, the bounds bar, one pill and Edit; then the meta line (§4.2) | Table row from 861 px; a stacked card below, its Edit or Details link covering the row |
+| `LineCard` (`line-card.tsx`) | An `ObjectRow` per line: "L01 Wall drip", CLEAN or FERT, one state sentence, one sync pill, the today strip with its next run, Run… by state, the state-aware Stop and ⋯ (enable switch with its check sheet, Options…, Pause until…, Activity, Runs, Graphs) | Inside its zone card on Water → Today (`water/zone-card.tsx`, whose head carries the zone's minutes meter and `MisterAssociation`). Before the irrigation firmware Stop works on every line and Run on L01 only (§4.4) |
+| Schedule views (`schedule/`) | `DayTimeline` (rows by manifold, blocks as long as their schedules, night, the now rule, valve ticks, pause bands, cap meters and [+]), `WeekStrip` (seven days, past outcomes and future counts), `WeekMatrix` (lines × days in a scroll region), `Agenda` (by day, NEXT, skips hatched), `RulesList` (by line, "N of 24" with a meter) and `BlockPopover` | One day model (`schedule/model.ts`) feeds all of them; the editor's draft draws dashed on the timeline. They replace `ScheduleWeek` |
+| `MisterAssociation` | Two `Switch`es per mister zone, "VPD control" and "Schedule", and the zone's VPD source; a change reads REQUESTED until the controller reports the program that carries it, then CONFIRMED | In the zone card's head; both off reads "This zone will not mist automatically" |
+| Bursts (`burst-panel.tsx`) | The burst buttons, Clear, "More actions" with Restart controller, and what runs from the readback | Equipment's Bursts card; Now's quick actions reuse its commands |
+| Equipment board (`equipment/`) | The board's group cards, Flags, the Controller card (heap meter against the 32 kB floor), Why, the light controls and the daily runtime | Equipment |
+| Plan health (`planner-health.tsx`, `control/`) | Trigger marks for 36 h, the next trigger, the 14-day `StatusStrip` and the ledger in a disclosure; the plan card's validity bar | Plan |
 
-As built (VD-12): `SettingRow` (`dashboard/app/components/setting-row.tsx`) shows each row as API-09 serves it and
-decides nothing. The device line is the readback with its unit, CONFIRMED and "· 2 min ago"; STALE with "Last data …
-ago (HH:MM)" while readbacks are stale or the controller is not reporting; "—" with `readback.reason` when there is no
-value; keyed on `group`, a Band in force row reads "62.0 °F · DERIVED · 4 min ago" and NO READBACK shows only for
-another row with `readback_via` none; a site cap reads "On controller · rev 42: 360 gal", without the rev while
-API-IRR-01 fails, and STALE like any device value. Under it sits the request line while REQUESTED, NOT CONFIRMED or
-HELD ("→ 1.55 kPa REQUESTED · 20 s · MANUAL · jason · “Vandas drying”", then `StateReasonLine` with the desired row's
-`state_reason`; a plan value carries none, so it reads the default), a write to a row with no readback path while it
-is in force ("Sent. This setting has no readback, so it can never show CONFIRMED"), else who wrote the value in force
-("Iris changed this at 07:02" or "steward changed this at 06:47" with AI, "jason changed this at 08:00 · Iris may
-adjust", "Forecast rule · system", "Released: plan, band or default applies"), and a read-only row's
-`read_only_reason` verbatim. Values keep the decimals they carry (`keptValueText`: Iris's 48.75 on a 30 s grid reads
-48.75), and so does the Save toast. `EditDrawer` gained `readOnly` for a row served with `writable: false`: read-only
-for operators too, with Done and no Save or actions.
-### 4.7 As built (VD-15)
+### 4.7 Micro-visualizations
 
-The Water screen is `dashboard/app/routes/water.tsx` (the layout) with `water-board.tsx`, `water-schedules.tsx` and
-`water-history.tsx`, the composites `line-card.tsx`, `mister-association.tsx` and `schedule-week.tsx`, and the rules in
-`dashboard/app/lib/water.ts` (#1135). Where it settles a detail §4.6 and screens SCR-04 leave open, or differs:
+SVG or HTML in `components/data/` ([redesign](redesign.md) §4.6), never uPlot, so Now loads no chart code
+(`components/data/*` imports nothing from `app/charts/`). SVG uses attributes and token classes, and HTML positions are
+CSSOM custom properties; neither uses a style attribute. Each is `aria-hidden` beside the same numbers as text, or
+`role="img"` with an `aria-label` that states them. Each takes ready, loading, empty, stale, unknown and error at its
+final height, and goes neutral while the API is down.
+
+| Primitive | Anatomy |
+|---|---|
+| `BandBar` | On white: a 2 px `--line-strong` track, the band as an 8 px `--c-band-wash` bar with `--c-band-edge` ends, today's low–high as a 2 px `--muted` rule, the value as a 10 px ink dot with a white ring. On the hero: the band in `--c-band-edge` (5.3:1 on ink) and a 12 px mint dot ringed in ink. The scale is the band plus half its width each side, widened to the value and today's range; a value off scale clamps with an arrowhead; unknown hatches the track; RH has no band segment |
+| `Meter` | A 6 px `--field` track with a `--line` edge, filled in the domain token (`--eq-water` drip minutes and gallons, `--eq-mister` mist minutes, `--eq-fert` feeds, `--muted` otherwise), planned minutes as a dashed outline, the cap as a 2 px ink tick that turns `--fault` at or over it. Its words ("14 / 120 min", "cap reached", "+12 min over") count minutes in whole minutes on both sides, as the caps are set |
+| `Sparkline` | A 1.5 px line in the metric token over the band, gaps broken, the last point a dot; or bars in the domain token. 28 px in tiles, 20 px in rows |
+| `Delta` | "▲ 1.3 pts vs previous 30 d" in ink; the arrow and the words carry direction, never green or red |
+| `StatusStrip` | Day cells at least 8 px wide with 2 px gaps; `data-level` 0–3 is `--tint-ok`, `--tint-warn`, `--amber`, `--fault` (quiet when good, loud when bad); no data a `--line` hatch, a partial day a dashed outline. Each cell is a link or button named in words, with a legend and an equivalent table |
+| `TimeTrack` | HTML rows (28 px, 24 px on phones) over one local time scale (`lib/time-scale.ts`, DST-correct): done spans solid in their token, planned dashed, skipped hatched, unknown a muted hatch; night washed; the now rule; Iris and plan markers dashed with labels; an optional end column. The track is one tab stop whose arrow keys move along its spans |
+
+### 4.8 As built
+
+`SettingRow` (VD-12, `dashboard/app/components/setting-row.tsx`) shows each row as API-09 serves it and decides
+nothing. The device value is the readback with its unit; STALE with "Last data … ago (HH:MM)" while readbacks are stale
+or the controller is not reporting; "—" with `readback.reason` when there is no value; keyed on `group`, a Band in
+force row reads "62.0 °F" with DERIVED and its age as text marks, and NO READBACK shows only for another row with
+`readback_via` none; a site cap reads "On controller · rev 42: 360 gal", without the rev while API-IRR-01 fails, and
+STALE like any device value. The meta line carries the request while REQUESTED, NOT CONFIRMED or HELD, then
+`StateReasonLine` with the desired row's `state_reason` (a plan value carries none, so it reads the default); a write
+to a row with no readback path while it is in force ("Sent. This setting has no readback, so it can never show
+CONFIRMED"); else who wrote the value in force ("Iris changed this at 07:02" or "steward changed this at 06:47" with
+AI, "jason changed this at 08:00 · Iris may adjust", "Forecast rule · system", "Released: plan, band or default
+applies"); and a read-only row's `read_only_reason` verbatim. Values keep the decimals they carry (`keptValueText`:
+Iris's 48.75 on a 30 s grid reads 48.75), and so does the Save toast. `EditDrawer` has `readOnly` for a row served
+with `writable: false`: read-only for operators too, with Done and no Save or actions.
+
+The Water rules (VD-15, `dashboard/app/lib/water.ts`, #1135) that still hold after the redesign:
 
 | Topic | As built |
 |---|---|
-| Phone layout | "At 390" is the shell's phone breakpoint, 860 px and below: the tabs and Stop all water ("■ Stop all") are one sticky row under the header (on a phone too narrow for both, under about 360 px, Stop wraps below the tabs inside that row rather than widening the page), running lines sort first, and the limits strip and mister zones fold into two disclosures below the cards |
-| Program banner | Not a shell banner: one `.notice` line per the first rule that holds. REQUESTED names what the controller holds too ("On controller: rev 42 · rev 43 sending"); not reporting with the built-in program says it keeps running "the built-in program" |
-| Status read failing | The board shows "Water status unavailable." with Retry in place of the cards whenever API-IRR-01's newest read failed, even with an older answer cached, so no line ever reads idle from old data |
-| Line head | ON or OFF is the line's enable ("Enabled:" for screen readers); a reserved line still disabled reads DISABLED Reserved there, before the engine too, and has no second DISABLED state line |
-| Last water and last run | `last_water` (the newest run that opened a valve, VPD episodes included) and `last_outcome` (the newest ended ledger row) are separate facts. The outcome follows the last water ("Last water Fri 07:31, 12 min · ok") only when it is that run's own: a run that watered, stamped no earlier than the water began. A skip, miss or cap after it, or an older run's outcome beside a newer VPD episode, reads with its own time ("Last water Fri 07:31, 12 min · last run Mon 07:35 · skipped · line paused") |
-| Running schedule | "RUNNING · schedule · Wall MWF" takes the label from API-IRR-02, which the Board also reads (60 s); without it the slot reads "slot 11" |
-| Mister fault | The watchdog line shows on both the zone and its `LineCard` (L08 and L10 latch too and have no zone); a blocked zone with a fault shows the fault line alone |
-| Limits strip | Mister zones first, then capped drips named by zone and kind ("Wall drip", "Center feed"); a reserved line still disabled is left out |
-| Week | "Last 7 days" (`past_days=7`) shows the seven days before today; today stays in "Next 7 days", where its past blocks already read their outcome. A past skipped block reads "skipped · <reason>", one ahead the reason alone. L05 and L06 are marked Reserved while they are disabled, as their cards are. The API's fixed occurrence notes pass through the words table (`occurrence_reason`): "only while VPD sensing is degraded" reads "only if VPD sensing is degraded" |
-| Run ledger | The window is `from` and `to` local days in the URL (To inclusive, the last 7 days by default, cut to 31 days, or 30 when 31 local days hold the fall-back day and so run 31 days and an hour); older pages load once and stay, and only the newest page polls |
+| Status read failing | Today shows "Water status unavailable." with Retry in place of the zone cards whenever API-IRR-01's newest read failed, even with an older answer cached, so no line ever reads idle from old data |
+| Program state | The header's status line, by the first rule that holds. REQUESTED names what the controller holds too ("Program rev 42 on controller · rev 43 sending"); not reporting with the built-in program says it keeps running "the built-in program" |
+| Last water and last run | `last_water` (the newest run that opened a valve, VPD episodes included) and `last_outcome` (the newest ended ledger row) are separate facts. The outcome follows the last water ("last 07:31, 12 min · ok") only when it is that run's own: a run that watered, stamped no earlier than the water began; otherwise each reads with its own time |
+| Running schedule | "Running · schedule · Wall MWF" takes the label from API-IRR-02, which Today also reads (60 s); without it the slot reads "slot 11" |
+| Mister fault | The watchdog line shows on its zone and on its line row (L08 and L10 latch too); a blocked zone with a fault shows the fault line alone |
 | Graphs link | `graphWindowUrl` writes whole seconds in UTC (`2026-11-01T08:00:00Z`), and `runGraphUrl` links an unreadable time to Graphs' default view |
 | Stop | `useStop` notes the running lines from the newest API-02 answer the page holds, the shell's own poll included, so Water offers Disable for L01 without a second API-02 poll |
 
 ## 5. Charts on uPlot
 
-Four primitives share one `UPlotChart` wrapper (`dashboard/app/charts/`) on uPlot 1.6.32, loaded with
-`import("uplot")` in an effect; `uPlot.min.css` loads only on charting routes. The wrapper owns creation,
+Every chart shares one `UPlotChart` wrapper (`dashboard/app/charts/`) on uPlot 1.6.32, loaded with `import("uplot")`
+in an effect; `uPlot.min.css` loads only on charting routes. The [redesign](redesign.md) §7 composes them: a chart
+stack is one instrument on one time axis, small multiples share a cursor and a scale per row, and statistics chart the
+daily summaries. The wrapper owns creation,
 `ResizeObserver` → `setSize`, `destroy()` on unmount and a CSS-reserved height (no layout shift), and reads colours with
 `getComputedStyle`, replacing the hex weather hard-codes in `history-plot.tsx` and `linked-plots.tsx`. Series arrive as
 columns (`[t[], ...series[]]`, epoch seconds, nulls for gaps, at most 1,500 points per series, bucketed by the server);
@@ -327,6 +380,10 @@ v1 validated these for contrast and colour-vision separation; labels, line style
 | Now | `--ink` | #112231 | 16.19 | 1.5px solid with a "Now" label |
 | Equipment lanes | `--eq-*` | mister #9d2398, fog #1b9bc7, fan1 #22a096, fan2 #484fa7, vent #056190, heat1 #d47a00, heat2 #b61f02, lights #4d9f45 / #2855ad | ≥ 3.19 | Filled segments |
 | Water | `--eq-water`, `--eq-fert`, `--eq-master` | #2389e2, #6331a0, #0e9580 | 3.65, 8.48, 3.73 | Filled; the `leak_detected` flag uses `--fault` |
+| Excursion | `--tint-warn` | #f8eccb | — | Fills between the measured line and the nearest band edge wherever it leaves the band; the line keeps its colour and stays on top |
+| Min–max envelope | `--ink-muted` | #b9c4cc | — | A 2 px vertical bar per bucket under the mean line, for buckets of 30 min and more (7 d and longer) |
+| Compare | `--c-bound` | #626b76 | 5.41 | 1.25 px dashed, labelled "yesterday" or "last week" |
+| Events | `--forest` (a person's write), `--ink` (Iris, "AI" in its label), `--eq-fan2` (another agent), `--muted` hollow (system), severity colours (alerts, hollow when resolved), the cause token (runs) | — | ≥ 3:1 | Diamonds, triangles and 3 px bars on a 20 px rail across the top of the stack |
 
 Causes (VD-07). A wet line's interval in the lanes and its bar in minutes by zone take the colour of their
 `IrrigationCause`. There are no cause tokens, so the causes reuse existing ones, and every surface prints the words
@@ -349,17 +406,23 @@ with no cause word; a cause the table does not know reads raw, in `--c-bound`.
 
 | Primitive | Shows | Data | Rules |
 |---|---|---|---|
-| `TimeSeries` | One metric over time with band ribbon, setting steps (device, requested, planned) and outdoor | API-04 series, API-06 band, API-12 setting steps, API-07 plan | One unit per plot, no second axis: temperature, VPD and RH are linked panels on one cursor (weather `LinkedPlots`), and a metric added from the picker joins its unit's panel or opens a new one. The ribbon carries the API's label for its source. 320 px at 1440, 220 px at 390, 150 px per linked panel |
-| `EquipmentLanes` | What ran, when, how long | API-05: intervals seeded with the state before the window, equal repeated rows collapsed | Groups: Climate (fan1, fan2, vent, heat1, heat2); Water in L01–L11 order (drip_wall, drip_wall_fert, fert_master_valve, mister_center, drip_center, drip_center_fert, mister_south, mister_south_fert, mister_west, mister_west_fert, fog); Light (the Lutron readback `grow_light_main`, `grow_light_grow`; the intent is on the Equipment board); Flags (occupancy, leak_detected, water_flowing). Each row: current state, runtime and starts at right. Commanded state, so the eyebrow says COMMANDED; sensed rows (the Lutron readback, `water_flowing`) are outlined. Unknown spans come from the API (controller not reporting, or no row) and are hatched, never drawn as off; rows idle all range fold into one line |
-| `PlanLanes` | What is planned, the next 24 h by default | API-07 lanes only; schedule occurrences render in Water's `ScheduleWeek` (§4.6) | One row per planned setting; device value at the left edge; dashed segments labelled with the planned value; PLANNED and AI in the row header (a forecast rule's value reads "Forecast rule · system", never AI); MANUAL rows muted with "Iris skips"; waypoints the API marks not effective are muted and labelled SUPERSEDED under "YOUR VALUE 1.55 · Jason 08:00 · holds until Iris's next plan" |
-| `MinutesByZone` | Watering minutes per zone per day | API-IRR-10 | Rows Wall, Center, South, West (fog apart, as humidification); daily bars (`uPlot.paths.bars`), clean below fertilizer; days with no data hatched; today's remaining scheduled minutes as a dashed outline; the daily cap as a dotted tick (D-IRP-06: center mist 120, south 45, west 45, wall drip 60 min); "today 46 min · cap 120" at right; 7 d and 30 d; tooltip and table split by line and cause, in words |
+| `ChartStack` | One card of panels on one x scale: temperature, VPD and RH (220, 200 and 160 px; 160, 150 and 120 at 860 px and below) and a panel per added unit (160, 120), each with an `id` for anchors (`#temperature`, `#vpd`, `#rh`) | API-04 series, API-06 band, API-12 setting steps, API-05 lanes, the event reads | Only the bottom panel draws the time axis; a 1px `--line` divider separates panels and the header row is the only chrome between them. Each header row carries the name and unit, the window's statistics (in band % when a band is drawn, low with its time, mean, high with its time, gaps) and series swatches that toggle (`aria-pressed`), replacing the legend; while the cursor is on any panel every header row reads the cursor's values instead ("14:22 71.9 °F · band 62.0–70.0 · above") and one time chip rides the cursor line; no floating tooltip. Layers: the band ribbon with excursion shading, the min–max envelope, a comparison dashed with its delta, setting steps, the forecast, the event rail and the equipment lanes in a disclosure (open from 861 px). The foot holds the resolution line, the data table and "CSV of this window" |
+| `ChartGrid` | Small multiples: rows are metrics, columns are zones | API-04, API-06 | One sync key and a uniform y scale per row; only the first column draws a y axis and only the bottom row an x axis; plot height from props (120 px on Zones, 110 px on phones) |
+| `RangeToolbar` | The page's range presets as nav chips, ‹ › to step by the window's length, Zoom out (×2) and Custom… (From and To days), then the page's own tools | — | Every control is a link, so each pushes history. Drag-to-zoom on fine pointers and "Reset zoom" stay. The future pad is 25% of the window, at most 12 h; Today ends at the next local midnight (D-UX-13) |
+| `TimeSeries` | One metric over time with band ribbon and setting steps | API-04, API-06, API-12 | The setting drawer's Change history; the chart stack builds its panels from the same model (`buildTimeSeriesModel`) |
+| `EquipmentLanes` | What ran, when, how long | API-05: intervals seeded with the state before the window, equal repeated rows collapsed | Groups: Climate (fan1, fan2, vent, heat1, heat2); Water in L01–L11 order (drip_wall, drip_wall_fert, fert_master_valve, mister_center, drip_center, drip_center_fert, mister_south, mister_south_fert, mister_west, mister_west_fert, fog); Light (the Lutron readback `grow_light_main`, `grow_light_grow`; the intent is on the Equipment board); Flags (occupancy, leak_detected, water_flowing). Each row: current state, runtime and starts at right. Commanded state; sensed rows (the Lutron readback, `water_flowing`) are outlined. Unknown spans come from the API (controller not reporting, or no row) and are hatched, never drawn as off; rows idle all range fold into one line; "CSV of these lanes" |
+| `PlanLanes` | What is planned, the next 24 h by default | API-07 lanes only; schedule occurrences render in Water's schedule views (§4.6) | One row per planned setting; device value at the left edge; dashed segments labelled with the planned value; PLANNED and AI in the row header (a forecast rule's value reads "Forecast rule · system", never AI); MANUAL rows muted with "Iris skips"; waypoints the API marks not effective are muted and labelled SUPERSEDED under "YOUR VALUE 1.55 · Jason 08:00 · holds until Iris's next plan"; `rowEnd` takes the screen's lane link and pill |
+| `MinutesByZone` | Watering minutes or gallons per zone, line or cause per day | API-IRR-10 | `measure: "minutes" \| "gal"`, any window up to 400 days. Rows Wall, Center, South, West (fog apart, as humidification); daily bars (`uPlot.paths.bars`), clean below fertilizer; days with no data hatched; today's remaining scheduled minutes as a dashed outline; the daily cap as a dotted tick (D-IRP-06: center mist 120, south 45, west 45, wall drip 60 min); "today 46 min · cap 120" at right; tooltip and table split by line and cause, in words; "CSV of this chart" |
+| `DailyWaterUse` | Meter gallons per day split by line or cause, the water that ran while no valve was open apart | API-21 | 30 or 90 days; its CSV |
+| Statistics (`stats-*`) | The typical day (the median by hour with the middle half dashed and the band behind, 240 px), each day's range (low to high in `--ink-muted` with a mean tick, 200 px) and time in band per day (bars against a dotted 90% target) | API-04 hourly and daily buckets, API-06 | Each with its data table |
 
 ```text
-TEMPERATURE · BAND · AMERICA/DENVER                           [24 h] [72 h] [7 d] [30 d]
- 75 °F ┤▒▒▒▒/‾‾‾‾‾‾‾\▒▒▒▒   ━━ setting ━━━  │▒▒▒▒ - - plan - - ▒▒▒▒
- 70 °F ┤▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒   (gap)   ▒▒▒▒▒▒│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒   ▒ band ribbon
+TEMPERATURE °F   in band 98% · low 61.2 (05:10) · mean 66.0 · high 71.9 (14:22)          ● Indoor ─ Outdoor
+ 72 ┤▒▒▒▒▒▒▒▒/‾‾‾‾‾‾\▒▒▒▒▒▒▒▒▒▒▒▒▒▒   ━━ setting ━━━  │▒▒▒▒ - - plan - - ▒▒▒▒       band ribbon, excursions shaded
+ 62 ┤▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒   (gap)   ▒▒▒▒▒▒│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+VPD kPa          in band 91% · low 0.41 · mean 0.66 · high 1.31 (13:22)
  Fan 1 ┤ ██████     ██████████              │                         lanes share the cursor
-        10/31 12:00 GMT-06:00   11/01 00:00 GMT-06:00   11/01 06:00 GMT-07:00  Now
+        00:00          03:00          06:00          09:00          12:00     Now           one axis, at the bottom
 WATERING MINUTES BY ZONE · LAST 7 DAYS              today    cap
  Wall    ▁ ▃ ▃ ▅ ▃ ▃ ▆┆                             10 min   60
  Center  ▆ ▇ ▅ ▆ ▇ ▆ ▃┆                             46 min   120
@@ -369,15 +432,15 @@ WATERING MINUTES BY ZONE · LAST 7 DAYS              today    cap
 
 | Behaviour | Rule |
 |---|---|
-| Cursor | `cursor.sync.key` = `verdify:<route>:<range>`; every time chart on a page with the same x range syncs, lanes included |
-| Tooltip, legend | One tooltip per chart: time with offset, then every series value (lanes: name, state, start–end, duration), set with `textContent`. Legend below the plot at 1440, in a disclosure at 390; click toggles a series; none on single-series charts |
-| Range, download | Chips 24 h · 72 h · 7 d · 30 d; Graphs adds weather's custom date range; drag-x zoom with "Reset zoom" on desktop, none on touch; "CSV of this window", built in the browser |
+| Cursor | `cursor.sync.key` = `verdify:<route>:<range>`; every time chart on a page with the same x range syncs, lanes included. One readout per synced group: a chart stack's header rows and its one time chip, never a tooltip per chart |
+| Tooltip, legend | Lanes and bars keep their own tooltip, for the hovered row only, set with `textContent`. A stack's series swatches in its header rows toggle a series; a chart key (`ChartKey`) under the lanes and bars names each colour once |
+| Range, download | `RangeToolbar` on Graphs (Today, 24 h, 72 h, 7 d, 30 d, 90 d, ‹ ›, Zoom out, Custom…); Zones 24 h · 72 h · 7 d; Equipment and Plan 24 h · 72 h; drag-x zoom with "Reset zoom" on desktop, none on touch; "CSV of this window" (and of the lanes, the minutes and water use), built in the browser |
 | Live | Now every 15 s, other pages 60 s, rows with REQUESTED 5 s; paused while the tab is hidden (weather `polling.ts`); points append with no animation |
 
 ### 5.4 Honesty, units and time
 
-- **Gaps:** `spanGaps: false` everywhere; nulls come from the server. A summary line under each chart gives low, mean and
-  high with times, coverage % and gap count (weather `seriesSummary`). A stale series stops at its last sample and the
+- **Gaps:** `spanGaps: false` everywhere; nulls come from the server. Each panel's header row gives low, mean and high
+  with times, in band % and the gaps (weather `seriesSummary`). A stale series stops at its last sample and the
   chart's freshness line shows STALE; nothing is extended to now. Beyond raw retention (`climate` 365 days,
   `diagnostics` 180, `setpoint_snapshot` 90) the chart shows daily summaries and says so; a gap the API explains (an
   ingestor outage) carries that reason.
@@ -385,7 +448,8 @@ WATERING MINUTES BY ZONE · LAST 7 DAYS              today    cap
   whole-gallon meter: a run that moved no water reads "0 gal", and no run shows a rate or flow flag); run time min
   ("h min" from 120); the meter's flow gal/min 0 dp; lux, W/m², ppm, dBm, angles and heap kB 0 dp; other units 1 dp.
   DLI is out of the first build and returns with the PAR meter.
-- **Time:** America/Denver, stated once in the eyebrow; clock times are 24-hour ("06:02", `hourCycle: "h23"` as in
+- **Time:** America/Denver, stated once per page in the footer, on the axes (with the offset) and in every
+  `<time title>` (D-UX-08); clock times are 24-hour ("06:02", `hourCycle: "h23"` as in
   weather's plots). X values are UTC epoch seconds; labels use `Intl.DateTimeFormat` with `timeZone:
   "America/Denver"`: two lines with the offset at 1440 (weather `plotTime`: "11/01/2026 / 01:00 GMT-06:00"), time
   only at 390 (the date once ticks are a day or more apart, §5.5). Today, 2026-11-01, falls back: 01:00–01:59 occurs
@@ -397,19 +461,19 @@ The chart layer is `dashboard/app/charts/` (#1126). Where it settles a detail §
 
 | Topic | As built |
 |---|---|
-| Stylesheets | A charting route spreads `chartLinks()` into its `links`: `uPlot.min.css` and `app/charts/charts.css` (reserved heights on weather's `.plot` and `.plot-small`, tooltip, legend, notes). Chart rules stay out of `styles.css`, whose weather sections are byte for byte and whose §2.2 block stays last. A source test (`charts/chunks.test.ts`) keeps `import("uplot")` in `uplot-chart.tsx` only and makes any route that imports chart code link `chartLinks()` |
+| Stylesheets | A charting route spreads `chartLinks()` into its `links`: `uPlot.min.css` and `app/charts/charts.css` (reserved heights, the stack's panels and header rows, the grid, the rail, lanes, keys and notes). Chart rules stay out of `styles.css`, whose weather sections are byte for byte and whose §2.2 block stays last. A source test (`charts/chunks.test.ts`) keeps `import("uplot")` in `uplot-chart.tsx` only and makes any route that imports chart code link `chartLinks()` |
 | Layers | Retention shading and the band wash paint in `drawClear` (under the grid), the band's 1px edges in `drawAxes`, and the steps, bounds, now line and all labels in `draw`. Labels never overlap: they are placed in the order Now, retention, bounds, the plan (soonest first), the request and the device line (newest first), then the band's source, and one with no free place at its start or end is dropped, so a crowded chart loses the band labels first. A dropped label's words stay in the chart notes, the tooltip or the data table |
 | Band | A ribbon that changes source (in force to crop, at now or at the 90-day boundary) joins at a shared point, so the change never reads as a gap; a null in force inside 90 days stays a gap |
 | Steps | Device: each readback change point held until the next, the last until now. Planned: the waypoint in force at now draws from now to the next waypoint, and the last one to the window's end. Requested, not confirmed and held rows draw with their state word; the tooltip adds who asked and the API's reason when it gives one (with the applied value when clamped). A SUPERSEDED step's tooltip names what holds it off, from the desired row in force now (architecture §5.2): "manual 1.55 kPa (jason) holds until the setting is written again", or "1.55 kPa (jason) holds until a newer plan" when that row is not manual |
 | Phone axis | At 860 px and below ticks a day or more apart read the date ("10/28"), not "00:00" on every tick |
-| Zoom | Double-click does not zoom out (uPlot's would zoom to the data's extent, not the window): "Reset zoom" puts every chart on the sync key back, lanes included, and LinkedPanels shows it while any panel is zoomed (a panel rebuilt with new metrics starts on the window). A poll keeps the zoom; an unzoomed chart follows its sliding window |
+| Zoom | Double-click does not zoom out (uPlot's would zoom to the data's extent, not the window): "Reset zoom" puts every chart on the sync key back, lanes included, and the chart stack shows it while any panel is zoomed (a panel rebuilt with new metrics starts on the window). A poll keeps the zoom; an unzoomed chart follows its sliding window |
 | Legend | A hidden series also leaves the data table, the summary line and the CSV, so each holds exactly what is plotted |
 | Colours | The climate keys take `--c-temp`, `--c-vpd` and `--c-rh`, outdoor and forecast keys `--c-outdoor`, a key drawn dotted as a cross-check `--c-setpoint` (the controller's target on `/graphs/zones`, VD-18); a further line in one unit takes the unit's colour if free, else the next unused of `--eq-fan2`, `--eq-heat1`, `--eq-vent`, `--eq-mister`, `--eq-light-grow`, `--eq-fert`, `--eq-heat2`, `--eq-fog` (each at least 3:1). Planned steps take the panel's first line colour. A label drawn on the plot takes its mark's colour only where that reads at 4.5:1 on white (§7); otherwise a darker token of the same meaning: `--warn-text` for REQUESTED (`--c-requested` is 4.01:1), `--ink` for the rest (the RH plan: `--c-rh` is 3.47:1). Lines keep their §5.1 colours |
 | Points | A lone sample between gaps draws as a point; a daily-summary series draws every day as a point |
 | Stale | "STALE · last data 06:02" names the start of the last bucket with data, and its date ("Oct 30, 06:02") when that was on an earlier local day; on daily buckets the day alone ("Oct 30") |
 | Gap words | A null run reads its own start and end ("No data 02:10–02:40"), with both dates when it ends on another local day ("Oct 5, 00:00–Oct 6, 00:00"); on daily buckets its days ("No data Oct 5–Oct 7") |
 | Data table | One row per bucket: the time with its offset, each series, the band and its source, and a note (the null run's "No data …" on its first row, the retention words on the first row, STALE on the first row after the last value, a `daily.*` bucket's reason). A second table lists the setting steps, with the bounds in its caption. Rows build only once the disclosure opens |
-| CSV | `time (America/Denver)` as ISO 8601 local time with the offset ("2026-11-01T01:30:00-06:00"), then one `<key> (<unit>)` column per plotted series with the raw `avg`; a UTF-8 byte-order mark and CRLF rows. LinkedPanels offers one file for the window, rows on the union of the panels' bucket starts |
+| CSV | `time (America/Denver)` as ISO 8601 local time with the offset ("2026-11-01T01:30:00-06:00"), then one `<key> (<unit>)` column per plotted series with the raw `avg`; a UTF-8 byte-order mark and CRLF rows. The chart stack offers one file for the window, rows on the union of the panels' bucket starts |
 
 ### 5.6 As built (VD-07)
 
@@ -434,35 +498,52 @@ detail §5.2 leaves open, or differ from it:
 
 ## 6. Responsive rules
 
-| Pattern | 390 px | 1440 px |
+Three breakpoints, each with one job ([redesign](redesign.md) §3.2), declared once in `app/lib/narrow.ts` and mirrored
+by the media queries: 600 px (card grids go from one column to two), 860 px (navigation, chart axes and tables to
+rows) and 1200 px (the main and aside split). Where phone and desktop differ in structure (Now's track or lists,
+Schedules' agenda or day, Settings' rail or selects), both render and CSS shows one; `usePhone()` is for behaviour only.
+
+| Pattern | 860 px and below | 861 px and up |
 |---|---|---|
-| Shell | 16 px gutter; no horizontal page scroll (weather's 390 px capture overflowed; the dashboard must not) | 80rem shell, 40 px gutter |
-| Nav | Fixed five-tab bottom bar, 56 px plus the safe-area inset; the page pads its bottom to clear it | Inline top nav |
-| Hero | One column; 4 stats 2-up | Value left (1fr), stats right (1.6fr), 4-up |
-| Cards, tables | One column; tables in a `.table-wrap` scroll region | `.grid-3` or `.grid-auto`; full tables |
-| Setting rows, line cards | Stacked cards; Edit, Run, Stop all water and Acknowledge full width | Table rows; three-column cards |
-| Schedule week | Day switcher: one day, every line | Line × day grid |
-| Time charts | 220 px; time-only labels; legend in a disclosure | 320 px; two-line labels; legend below |
+| Shell | 16 px gutter; no horizontal page scroll at 360 and 390 px, on WebKit too; wide content scrolls inside its own labelled region | 80rem shell, 40 px gutter; Graphs and Water → Schedules use `--shell-wide` (96rem) |
+| Nav | A 52 px header and the fixed five-tab bottom bar (icon over label), 56 px plus the safe-area inset; the page pads its bottom to clear it | The five sections inline in the sticky header |
+| Page header | Actions under the status line, a primary one full width; tabs at 44 px; Water's tabs and "■ Stop all" sticky under the header | Actions at the h1 row's right |
+| Page rhythm | Blocks `--space-5` apart, cards `--space-3` | Blocks `--space-6` apart, cards `--space-4` |
+| Card grids | One column below 600 px, two from 600 px (`.l-cols-2`, `.l-cols-3`); KPI tiles 2-up (`.l-cols-4`, one column under 360 px) | Up to three or four columns; Now's pair side by side; Equipment's two balanced columns |
+| Rows and tables | `ObjectRow` actions take the full width, the primary first; Settings' rows and History's runs become stacked rows whose link covers the row | Table rows; the actions at the row's end |
+| Rail and aside | Settings' rail becomes two selects above the catalog; Water's Site today comes first | Settings' rail sticky beside the catalog; from 1200 px Water's Site today sticky in the aside |
+| Schedules | The agenda by default, Day on a toggle, 24 h across with 6-hour ticks and no sideways scroll; the week strip's steps above seven 44 px days; no week matrix | The day timeline by default, Week and Agenda on the toggle |
+| Time charts | Panels 160, 150 and 120 px (temperature, VPD, RH; added panels 120); time-only labels; the lanes closed in a disclosure; a tap or drag moves the cursor and the header rows show its values; no zoom on touch | Panels 220, 200 and 160 px (added panels 160); two-line labels with the offset; the lanes open |
+| Zones grid | One metric at a time, the five zones stacked at 110 px | The 5 × N grid at 120 px |
 | Lanes | 24 px rows, 6rem labels, runtime only | 20 px rows, 10rem labels, state, runtime and starts |
-| Drawer / dialog / toast | Full-screen sheet / full width minus 32 px / full width above the bar | 28rem right / 32rem centred / 24rem bottom right |
+| Drawer / popover / dialog / toast | Full-screen sheet with pinned actions / bottom sheet / full width minus 32 px / full width above the bar | 28rem right (the page narrows beside the schedule editor from 1200 px) / anchored under its opener / 32rem centred / 24rem bottom right |
+| Targets | Every button, link, chip, tab, menu item, switch and summary at least 44 px | At least 24 px (SC 2.5.8), 44 px wherever weather already sets it; toolbar controls 36 px |
 
 ## 7. Accessibility basics
 
-Target: WCAG 2.2 AA, checked in VD-08 by Playwright and axe (`wcag2a`, `wcag2aa`, `wcag21aa`, `wcag22aa`) against the
-fixture API at 320, 768 and 1440 px, with no-horizontal-scroll assertions at 360 and 390 px (also on WebKit) and a
-reduced-motion check.
-- **Contrast:** text at least 4.5:1; focus ring, input borders, chart lines and lanes at least 3:1 (§2, §5.1).
-- **Keyboard:** every action reachable; the focus ring is never removed; drawer and dialog use native `<dialog>` (focus
-  trapped and returned to the opener); targets 44 px (24 px minimum, SC 2.5.8).
-- **Colour never alone:** badges carry words, lanes carry labels, requested and planned differ by line style.
+Target: WCAG 2.2 AA, checked in the in-cluster CI by Playwright and axe (`wcag2a`, `wcag2aa`, `wcag21aa`, `wcag22aa`)
+against the fixture API at 320, 768 and 1440 px on every route, both setting drawers, the schedule editor and an open
+popover, with no-horizontal-scroll assertions at 360 and 390 px (also on WebKit) and a reduced-motion check
+([redesign](redesign.md) §8).
+- **Contrast:** text at least 4.5:1; focus ring, input borders, chart lines, lanes, band edges, meters and series at
+  least 3:1 (§2, §5.1). Tints (`--tint-ok`, `--tint-warn`, `--c-band-wash`) never carry meaning alone.
+- **Keyboard:** every action reachable in a logical order (header, banners, page header, tabs, content); the focus ring
+  is never removed; drawers, dialogs and sheets use native `<dialog>` (focus trapped and returned to the opener);
+  popovers and menus close on Escape; timeline blocks, strip cells and event marks are buttons or links, and a row of
+  marks too small to be targets of their own is one tab stop with arrow keys (`rovingKeys`).
+- **Colour never alone:** badges carry words, outcomes have words and fills (solid, dashed, hatched), unknown is
+  hatched, lanes carry labels, requested and planned differ by line style.
 - **Forms:** `<label for>`; hints and errors linked with `aria-describedby`; `aria-invalid`; errors beside the field.
-- **Live regions:** success toasts polite, failures assertive, each once; ticking ages and pending seconds are silent.
-- **Charts:** `role="img"` with an `aria-label` naming what is plotted and that a table follows. Every chart has a "Data
-  table · N rows" disclosure (local time with offset and each series; lanes list device, on, off, duration; minutes
-  list day × zone) and the §5.4 summary. The table is the keyboard and screen-reader equivalent; a keyboard chart
+- **Screen readers:** visuals are `aria-hidden` beside equivalent text, or `role="img"` with their numbers. Tabs are a
+  labelled `nav` with `aria-current="page"` (ranges too); filter chips use `aria-current="true"`; toggles use
+  `aria-pressed`. Live regions are toasts only: success polite, failures assertive, each once; ticking ages and pending
+  seconds are silent.
+- **Charts:** `role="img"` with an `aria-label` naming what is plotted and that a table follows. Every chart has its
+  data table (local time with offset and each series; lanes list device, on, off, duration; minutes list day × zone),
+  which is the keyboard and screen-reader equivalent; Climate's events also list under the stack. A keyboard chart
   cursor is Later.
-- **Times** are `<time dateTime>` with the full local form in `title`. **Motion:** `prefers-reduced-motion: reduce`
-  turns off every transition (weather's rule).
+- **Times** are `<time dateTime>` with the full local form in `title`. **Motion:** there is no animation; hover colour
+  transitions of 120 ms or less, and none under `prefers-reduced-motion: reduce` (weather's rule).
 
 ## 8. Copy weather now, share later
 
@@ -483,4 +564,6 @@ components, chart tokens). When a third app wants this look, extract the tokens 
 
 VD-01 copies weather (§8, §2), VD-03 builds §4 to §4.2 (`AlertRow` included) and §4.5, VD-04 §3, VD-05 §4.3 and
 §4.4, VD-06 and VD-07 §5, and VD-08 the §7 checks ([execution plan](execution-plan.md)); the screen issues build the
-§4.6 composites.
+§4.6 composites. The [redesign](redesign.md) (§10, epic #1120) rebuilt them: WP0 the shell, the page and section
+headers, the card system, the micro-visualizations (§4.7) and the chart stack (§5.2); WP1 to WP4 the screens' composites
+(§4.6); WP5 one page rhythm across them, the removal of what nothing used and these docs.
