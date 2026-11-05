@@ -214,6 +214,20 @@ test("each fact once: the count in the answer or in Needs someone's head, never 
   await expect(page.locator("#needs-someone h2")).toHaveText("Needs someone · 2");
 });
 
+test("Needs someone with nothing open: what was resolved in 24 h, linked into Activity's resolved group only when there is some", async ({ page, request }) => {
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/");
+  const empty = page.locator("#needs-someone .panel-empty");
+  await expect(empty.locator("p").first()).toHaveText("No open alerts · nothing resolved in 24 h");
+  await expect(empty.getByRole("link")).toHaveCount(0);
+  await useScreensClock(page, request, "alert-resolved");
+  await load(page, "/");
+  await expect(empty.locator("p").first()).toHaveText("No open alerts");
+  await empty.getByRole("link", { name: "1 resolved in 24 h" }).click();
+  await expect(page).toHaveURL(/\/activity\?resolved=24h$/);
+  await expect(page.locator("details.alert-group", { hasText: "Resolved in the last 24 h (1)" })).toHaveAttribute("open", "");
+});
+
 test("Acknowledge sends one API-15 and the answer follows the one count", async ({ page, request }) => {
   await useScreensClock(page, request, "alerts-merged");
   await load(page, "/");

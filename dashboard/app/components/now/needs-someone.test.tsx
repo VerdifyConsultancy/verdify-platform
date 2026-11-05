@@ -3,22 +3,23 @@
 // Needs someone (redesign §5.1, US-ACT-02) against #1122's fixture API in process: the top three unacknowledged alerts by
 // severity then age with the one count in the head (unless the answer counts them); Acknowledge sends one API-15 request
 // with one Idempotency-Key and the row then reads "Acknowledged by jason · 10:42"; a mister's latch with Clear fault, read
-// once; the settings not confirmed; a fence breach pointing to the quick action; the empty and degraded text; viewers
-// get no Acknowledge.
+// once; the settings not confirmed; a fence breach pointing to the quick action; the empty and degraded text, with what
+// was resolved in the last 24 h (linked only when there is some); viewers get no Acknowledge.
 import { cleanup, fireEvent, within } from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
+import { RECENT_ALERTS } from "../../lib/activity";
 import type { Alert } from "../../lib/operator-api";
 import { nowAnswer } from "../../lib/now-answer";
 import { panelRead, useApiRead, useNowRead } from "../../lib/queries";
 import { UUID, advance, renderWithApi, startFixtureApi, stopFixtureApi, writes } from "../../lib/test-fixture-api";
 import { text } from "../test-render";
-import { NeedsSomeone, faultText, topAlerts } from "./needs-someone";
+import { NeedsSomeone, RESOLVED_HREF, emptyLine, faultText, resolvedCount, topAlerts } from "./needs-someone";
 
 afterEach(() => { cleanup(); stopFixtureApi(); });
 
-/** Now's two reads for the panel: API-14 open alerts, and API-02 for the count and the freshness. */
+/** Now's two reads for the panel: API-14 (Activity's, open alerts and those resolved in 24 h), and API-02 for the count and the freshness. */
 function Harness({ apiFailed = false }: { apiFailed?: boolean }) {
-  const alerts = panelRead(useApiRead("API-14", { status: "open" }, { intervalMs: 15_000 }));
+  const alerts = panelRead(useApiRead("API-14", RECENT_ALERTS, { intervalMs: 15_000 }));
   const irrigation = panelRead(useApiRead("API-IRR-01", {}, { intervalMs: 15_000 }));
   const now = useNowRead();
   const answer = nowAnswer({ now: now.data ?? null, failed: apiFailed });
@@ -140,16 +141,34 @@ test("Acknowledge is disabled while changes are switched off, and a viewer sees 
 });
 
 test.each([
-  ["in-band", "No open alerts"],
-  ["ingestor-not-running", "In-app alerts may be missing: ingestor not running since 10:38"],
-  ["controller-not-reporting", "In-app alerts may be missing: no data since 10:36"],
-])("%s with nothing open reads \"%s\"", async (name, expected) => {
+  ["in-band", "No open alerts · nothing resolved in 24 h", null],
+  ["alert-resolved", "No open alerts", "1 resolved in 24 h ›"],
+  ["ingestor-not-running", "In-app alerts may be missing: ingestor not running since 10:38", null],
+  ["controller-not-reporting", "In-app alerts may be missing: no data since 10:36", null],
+])("%s with nothing open reads \"%s\", linking %s", async (name, expected, link) => {
   startFixtureApi({ fixture: name });
   renderWithApi(<Harness />);
   await advance(0);
   expect(text(panel().querySelector(".panel-empty p"))).toBe(expected);
-  // Only an honest "No open alerts" offers the alerts resolved in the last 24 h.
-  expect(panel().querySelector(".panel-empty a")?.getAttribute("href") ?? null).toBe(expected === "No open alerts" ? "/activity?resolved=24h" : null);
+  // Only an honest "No open alerts" offers the alerts resolved in the last 24 h, and only when there are some to open.
+  const widen = panel().querySelector(".panel-empty a");
+  expect(widen ? [text(widen), widen.getAttribute("href")] : null).toEqual(link ? [link, RESOLVED_HREF] : null);
+  expect(RESOLVED_HREF).toBe("/activity?resolved=24h");
+});
+
+test("the resolved count: closed rows on a whole page, unknown on a cut one; the empty line links only to something there", () => {
+  const row = (id: number, status: Alert["status"]) => ({ id, status }) as Alert;
+  const page = { items: [row(1, "open"), row(2, "resolved"), row(3, "acknowledged"), row(4, "false_positive")], next_cursor: null };
+  expect(resolvedCount(page)).toBe(2);
+  expect(resolvedCount({ ...page, next_cursor: "c2" })).toBeNull();
+  expect(resolvedCount(null)).toBeNull();
+  const words = (line: ReturnType<typeof emptyLine>) => [line.message, line.widen ? text(renderWithApi(<>{line.widen.label}</>).container) : null];
+  expect(words(emptyLine("No open alerts", 3))).toEqual(["No open alerts", "3 resolved in 24 h ›"]);
+  cleanup();
+  expect(words(emptyLine("No open alerts", null))).toEqual(["No open alerts", "Resolved in the last 24 h ›"]);
+  cleanup();
+  expect(emptyLine("No open alerts", 0)).toEqual({ message: "No open alerts · nothing resolved in 24 h" });
+  expect(emptyLine("In-app alerts may be missing: no data since 10:36", 3)).toEqual({ message: "In-app alerts may be missing: no data since 10:36" });
 });
 
 test("while the ingestor is not running the rows show with a note that more may be missing; a failed read reads Alerts unavailable", async () => {
@@ -175,7 +194,7 @@ test("with API-02 failing an empty list cannot vouch for itself", async () => {
   expect(text(panel().querySelector(".panel-empty p"))).toBe("In-app alerts may be missing: can't reach the greenhouse data");
 });
 
-test("the top three: critical, warning, info, each in API-14's order; acknowledged rows only when kept from this page", () => {
+test("the top three: critical, warning, info, each in API-14's order; acknowledged rows only when kept from this page; resolved ones never", () => {
   const alert = (id: number, severity: string, firstSeen: string, status = "open"): Alert => ({
     id, alert_type: "relay_stuck", category: "system", severity, message: "", zone: null, metric_value: null, threshold_value: null, status,
     first_seen_at: firstSeen, last_seen_at: null, count: 1, acknowledged_at: null, acknowledged_by: null, notes: null, resolved_at: null, resolved_by: null,
@@ -188,4 +207,8 @@ test("the top three: critical, warning, info, each in API-14's order; acknowledg
   // Within a severity the API's order stands (it sorts by last seen, newest first), never Now's own idea of age.
   expect(topAlerts(items).map((item) => item.id)).toEqual([3, 2, 4]);
   expect(topAlerts(items, new Set([5])).map((item) => item.id)).toEqual([3, 5, 2]);
+  // The read holds what was resolved in the last 24 h: none shows, not even one acknowledged here and resolved since.
+  const resolved = [...items, alert(6, "critical", "2026-11-02T08:00:00Z", "resolved")];
+  expect(topAlerts(resolved, new Set([6])).map((item) => item.id)).toEqual([3, 2, 4]);
+  expect(topAlerts(items.map((item) => (item.id === 5 ? { ...item, status: "resolved" } : item)), new Set([5])).map((item) => item.id)).toEqual([3, 2, 4]);
 });

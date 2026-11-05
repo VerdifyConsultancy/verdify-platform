@@ -17,6 +17,13 @@ export type LogFilter = (typeof LOG_FILTERS)[number];
 export type LogFilters = { readonly [K in LogFilter]?: string };
 /** `resolved=24h`: the alerts resolved in the last 24 h show too (API-14 `status=recent`). */
 export const RESOLVED_24H = "24h";
+/** API-14's largest page: the open alerts and those resolved in the last 24 h fit in one. */
+export const ALERT_LIMIT = 200;
+/**
+ * The one API-14 read of Activity → Alerts and Now's Needs someone, under one shared key: the open alerts and those
+ * resolved in the last 24 h, so Now can count what was resolved (redesign §5.1) from the read Alerts lists.
+ */
+export const RECENT_ALERTS = { status: "recent", limit: ALERT_LIMIT } as const;
 /** The log's date range (redesign §2.1, §5.9): `from` and `to`, America/Denver days, both included. */
 export const DATE_FILTERS = ["from", "to"] as const;
 export type DateFilter = (typeof DATE_FILTERS)[number];

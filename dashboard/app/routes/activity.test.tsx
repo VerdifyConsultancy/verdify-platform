@@ -142,6 +142,21 @@ test("with nothing open the status line says so honestly and Needs action is not
   // resolved=24h, as an old link has it, opens that group.
   await open("/activity?resolved=24h", { fixture: "alert-resolved" });
   expect(group(/^Resolved/)!.open).toBe(true);
+  expect(document.querySelector("[data-alerts=resolved-none]")).toBeNull();
+  stopped();
+  // With nothing resolved it says so in one line with the log, never a page silent about what the link promised.
+  await open("/activity?resolved=24h", { fixture: "in-band" });
+  expect(group(/^Resolved/)).toBeUndefined();
+  const none = document.querySelector("[data-alerts=resolved-none]")!;
+  expect(plain(text(none))).toBe("Nothing resolved in the last 24 h · Open the log ›");
+  expect(within(none as HTMLElement).getByRole("link", { name: "Open the log" }).getAttribute("href")).toBe("/activity/log");
+  stopped();
+  // Not without the link, and never from a read that failed.
+  await open("/activity", { fixture: "in-band" });
+  expect(document.querySelector("[data-alerts=resolved-none]")).toBeNull();
+  stopped();
+  await open("/activity?resolved=24h", { fixture: "in-band", fail: { "API-14": 503 } });
+  expect(document.querySelector("[data-alerts=resolved-none]")).toBeNull();
 });
 
 test("Acknowledge in one tap with an optional note: one API-15 with the note, who and when, the row under Acknowledged, the nav count down by one", async () => {

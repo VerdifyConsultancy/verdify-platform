@@ -10,7 +10,8 @@
  * - API-02 `GET /v1/now`, the shell's own poll (`useShellNow`): one request serves the banners and Now. Every 15 s,
  *   and every 5 s while a Stop confirms (`useStop` reads the same entry).
  * - API-IRR-01: Water today, occupancy, the engine flag, the mister faults. Every 15 s, every 5 s while a Stop is pending.
- * - API-14 `status=open`: Needs someone. Every 15 s.
+ * - API-14 `status=recent`, Activity's read under its key: Needs someone's open alerts and what was resolved in the
+ *   last 24 h. Every 15 s.
  * - Every 60 s: API-04 over the last 25 h (today's range, the sparklines) and its time-in-band keys over yesterday and
  *   today; API-07 and API-IRR-02 for "Running and next"; API-03, API-04 and API-06 for the zones. API-05 for the track's
  *   last 6 h only once the track nears the screen (never on a phone, which shows lists instead).
@@ -30,6 +31,7 @@ import { useDayRead, useTimeInBandRead } from "../components/now/reads";
 import { WaterCard } from "../components/now/water-card";
 import { PanelErrorBoundary } from "../components/panel";
 import { ZoneTiles } from "../components/zone-tiles";
+import { RECENT_ALERTS } from "../lib/activity";
 import { localDate } from "../lib/format";
 import { nowAnswer } from "../lib/now-answer";
 import { SessionEnded } from "../lib/operator-api";
@@ -40,7 +42,6 @@ import { useStop } from "../lib/writes";
 export const meta = () => [{ title: "Now · Verdify dashboard" }];
 /** Needs someone reads API-14 every 15 s. */
 export const ALERTS_POLL_MS = 15_000;
-const OPEN_ALERTS = { status: "open" } as const;
 
 export default function Now() {
   const shell = useShellNow();
@@ -49,7 +50,7 @@ export default function Now() {
   const { stop, sending, confirming } = useStop();
   const pending = sending || confirming;
   const irrigation = panelRead(useApiRead("API-IRR-01", {}, { intervalMs: pending ? SETTLING_INTERVAL_MS : READ_INTERVAL_MS.irrigation, settling: irrigationSettling }));
-  const alerts = panelRead(useApiRead("API-14", OPEN_ALERTS, { intervalMs: ALERTS_POLL_MS }));
+  const alerts = panelRead(useApiRead("API-14", RECENT_ALERTS, { intervalMs: ALERTS_POLL_MS }));
   const day = panelRead(useDayRead());
   const today = useClockValue((clock) => localDate(new Date(clock).toISOString()));
   const since = useClockValue(todayStartS);

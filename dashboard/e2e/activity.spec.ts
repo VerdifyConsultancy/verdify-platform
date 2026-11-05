@@ -86,6 +86,16 @@ test("nothing open: the status line says No open alerts with what was resolved, 
   await expect(alertRow(page, 104)).toContainText("Resolved by Jason · 08:42 · “Probe reseated”");
 });
 
+test("a link to the resolved group with nothing resolved says so in one line, with the log", async ({ page, request }) => {
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/activity?resolved=24h");
+  const none = page.locator("[data-alerts=resolved-none]");
+  await expect(none).toHaveText("Nothing resolved in the last 24 h · Open the log ›");
+  await expect(group(page, /^Resolved/)).toHaveCount(0);
+  await none.getByRole("link", { name: "Open the log" }).click();
+  await expect(page).toHaveURL(/\/activity\/log$/);
+});
+
 test("Recent activity: the five newest log entries, each one line, and Open the log", async ({ page, request }) => {
   await useScreensClock(page, request, "activity-mixed");
   await load(page, "/activity");

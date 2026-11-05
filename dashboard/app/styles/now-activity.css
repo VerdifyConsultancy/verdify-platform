@@ -207,6 +207,9 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .alert-group[open]{padding-bottom:var(--space-3)}
 .alert-group>summary{font-size:var(--fs-md);font-weight:620;color:var(--ink)}
 .alert-group>summary:hover{color:var(--forest)}
+/* A link to the resolved group with none to open: one line and the log (redesign §3.6 rule 6), framed as the groups are. */
+.act-resolved-none.card{margin:0;padding:var(--space-3) var(--space-4)}
+.act-resolved-none a{display:inline-flex;align-items:center;min-height:24px;font-weight:700}
 .act-leak p,.act-valve,.act-closed{margin:var(--space-1) 0 0;font-size:var(--fs-sm)}
 .alert-guidance{font-weight:600;color:var(--ink)}
 .alert-detail{display:grid;gap:var(--space-2);min-width:0;margin:var(--space-2) 0 0;padding:var(--space-3) var(--space-4);border-radius:var(--radius-sm);background:var(--field)}
@@ -255,6 +258,7 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 @media(max-width:860px){
   .now-head,.now-pair,.act-groups{gap:var(--space-3)}
   .now-fresh .btn,.act-csv,.act-unavailable .btn{min-height:var(--tap)}
+  .act-resolved-none a{min-height:var(--tap)}
   .now-hero{grid-template-columns:minmax(0,1fr);grid-template-areas:"main" "climate" "status" "readings";gap:var(--space-3);padding:var(--space-4)}
   .now-hero .hero-temp{font-size:2.75rem}
   .now-hero .hero-meta{font-size:var(--fs-sm)}

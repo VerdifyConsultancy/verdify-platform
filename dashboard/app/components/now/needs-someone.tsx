@@ -14,14 +14,16 @@
  *
  * The open-alert count shows in the head unless the page's answer already counts the alerts (redesign §2.5: the count
  * appears once in the page body). "No open alerts" only after a successful read while the heartbeat and climate are
- * fresh; otherwise "In-app alerts may be missing: …"; a failed read reads "Alerts unavailable".
+ * fresh, with what was resolved in the last 24 h: "3 resolved in 24 h ›" into Activity's resolved group, or "No open
+ * alerts · nothing resolved in 24 h" with no link to an empty page (§3.6 rule 6). Otherwise "In-app alerts may be
+ * missing: …"; a failed read reads "Alerts unavailable". The read is Activity's (API-14 `status=recent`), one shared key.
  */
 import { useCallback, useState } from "react";
 import { Link } from "react-router";
 import { shortTime } from "../../lib/format";
 import type { NowAnswer } from "../../lib/now-answer";
 import type { Alert, AlertPage, IrrigationLine, IrrigationStatus, Now } from "../../lib/operator-api";
-import { personName } from "../../lib/activity";
+import { RESOLVED_24H, isClosed, personName } from "../../lib/activity";
 import type { PanelRead } from "../../lib/queries";
 import { OperatorOnly } from "../../lib/session";
 import { useMe } from "../../lib/shell";
@@ -31,7 +33,7 @@ import { ALERTS_UNAVAILABLE, AlertRow, NO_OPEN_ALERTS, alertListEmptyText } from
 import { Button } from "../button";
 import { ClearFaultButton } from "../clear-fault-button";
 import { ObjectRow } from "../layout/object-row";
-import { ListCard } from "../layout/list-card";
+import { ListCard, type ListCardProps } from "../layout/list-card";
 import type { PanelState } from "../panel";
 import { lineName } from "./status";
 
@@ -43,16 +45,38 @@ const rank = (severity: string) => SEVERITY_RANK[severity] ?? 3;
 const validTime = (value: string | null | undefined): value is string => typeof value === "string" && Number.isFinite(Date.parse(value));
 
 /**
- * The rows Now shows: the unacknowledged ones (`status` open), plus any acknowledged on this page (`keep`), at most
- * three. API-14 lists them by severity, then age (`verdify_services.alerts`: last seen, newest first); Now keeps that
- * order, so its top three are the first unacknowledged rows Activity lists, and only guards the severity order.
+ * The rows Now shows: the unacknowledged ones (`status` open), plus any acknowledged on this page (`keep`) while still
+ * open, at most three. API-14 lists them by severity, then age (`verdify_services.alerts`: last seen, newest first); Now
+ * keeps that order, so its top three are the first unacknowledged rows Activity lists, and only guards the severity
+ * order. The read also holds the alerts resolved in the last 24 h, which never show here.
  */
 export function topAlerts(items: readonly Alert[], keep: ReadonlySet<number> = new Set()): Alert[] {
-  return items.filter((alert) => alert.status === "open" || keep.has(alert.id))
+  return items.filter((alert) => alert.status === "open" || (keep.has(alert.id) && !isClosed(alert)))
     .map((alert, index) => ({ alert, index }))
     .sort((a, b) => rank(a.alert.severity) - rank(b.alert.severity) || a.index - b.index)
     .slice(0, TOP_ALERTS)
     .map(({ alert }) => alert);
+}
+
+export const RESOLVED_HREF = `/activity?resolved=${RESOLVED_24H}`;
+/**
+ * The alerts resolved in the last 24 h on API-14's page (resolved, a false positive or suppressed, as Activity's group
+ * counts them); null when the page was cut short, where a count would only be a floor.
+ */
+export function resolvedCount(page: Pick<AlertPage, "items" | "next_cursor"> | null | undefined): number | null {
+  if (!page || page.next_cursor) return null;
+  return page.items.filter(isClosed).length;
+}
+
+/**
+ * The empty line: what an empty list may honestly say (`coverage`). "No open alerts" adds what was resolved in the last
+ * 24 h, linked into Activity's resolved group only when something is there, and uncounted when the count is unknown.
+ */
+export function emptyLine(coverage: string, resolved: number | null): NonNullable<ListCardProps["empty"]> {
+  if (coverage !== NO_OPEN_ALERTS) return { message: coverage };
+  if (resolved === 0) return { message: `${NO_OPEN_ALERTS} · nothing resolved in 24 h` };
+  const label = resolved === null ? "Resolved in the last 24 h" : `${resolved} resolved in 24 h`;
+  return { message: NO_OPEN_ALERTS, widen: { to: RESOLVED_HREF, label: <>{label}<span aria-hidden="true"> ›</span></> } };
 }
 
 /** The line an `irrigation_line_faulted` alert names, when it does. */
@@ -70,6 +94,7 @@ export function faultText(line: Pick<IrrigationLine, "line_id" | "name" | "fault
 }
 
 export type NeedsSomeoneProps = {
+  /** API-14 `status=recent` (`RECENT_ALERTS`): the open alerts and those resolved in the last 24 h. */
   readonly alerts: PanelRead<AlertPage>;
   /** The newest API-02 answer, for the freshness that vouches for an empty list; null before the first. */
   readonly now: Now | null;
@@ -100,8 +125,7 @@ export function NeedsSomeone({ alerts, now, answer, apiFailed, openCount, irriga
   // The count shows once in the page body: here, unless the answer already reads it; and never "· 0" beside the empty line.
   const count = answer.kind === "alerts" || openCount === null || openCount < 1 ? null : openCount;
   return <ListCard id="needs-someone" title="Needs someone" count={count} thing="alerts" state={state} reserve="sm" onRetry={alerts.retry}
-    errorText={ALERTS_UNAVAILABLE} link={{ to: "/activity", label: "All alerts" }}
-    empty={{ message: coverage, widen: coverage === NO_OPEN_ALERTS ? { to: "/activity?resolved=24h", label: <>Resolved in the last 24 h<span aria-hidden="true"> ›</span></> } : undefined }}>
+    errorText={ALERTS_UNAVAILABLE} link={{ to: "/activity", label: "All alerts" }} empty={emptyLine(coverage, resolvedCount(alerts.data))}>
     {alerts.failed && <p className="fault now-needs-note">{ALERTS_UNAVAILABLE}. <Button onClick={alerts.retry}>Retry</Button></p>}
     {!alerts.failed && coverage !== NO_OPEN_ALERTS && <p className="meta now-needs-note" data-alerts="coverage">{coverage}</p>}
     {items.length > 0 && <ol className="alert-list now-alerts">
