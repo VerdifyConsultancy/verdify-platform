@@ -60,7 +60,7 @@ for _path in (str(_HERE.parent), str(_HERE)):
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
-from operator_routes import irrigation_reads, irrigation_writes, light_resync, reads, writes  # noqa: E402
+from operator_routes import irrigation_reads, irrigation_writes, light_resync, light_timer, reads, writes  # noqa: E402
 
 from verdify_public.build_provenance import SOURCE_REVISION_PATH, image_git_sha  # noqa: E402
 from verdify_schemas.activity import ACTOR_NAME_MAX_LENGTH  # noqa: E402
@@ -524,13 +524,14 @@ class LogLines(logging.Handler):
 
 
 def log_resyncs() -> None:
-    """light_resync logs one INFO line per resync, but uvicorn configures only its own loggers and Python's last-resort
+    """light_resync logs one INFO line per resync (light_timer one per timer), but uvicorn configures only its own loggers and Python's last-resort
     handler drops anything below WARNING, so that logger writes JSON log lines here. Once per process, however many
     apps a test makes."""
-    resync_log = logging.getLogger(light_resync.__name__)
-    if not any(isinstance(handler, LogLines) for handler in resync_log.handlers):
-        resync_log.addHandler(LogLines())
-    resync_log.setLevel(logging.INFO)
+    for name in (light_resync.__name__, light_timer.__name__):
+        resync_log = logging.getLogger(name)
+        if not any(isinstance(handler, LogLines) for handler in resync_log.handlers):
+            resync_log.addHandler(LogLines())
+        resync_log.setLevel(logging.INFO)
 
 
 def request_id_of(request: Request) -> str:
@@ -677,13 +678,18 @@ def _lifespan(settings: Settings | None, pool: Any | None) -> Callable[[FastAPI]
         # Back to automatic (operator_routes.light_resync): the per-light lock API-20 shares and the resyncs API-10
         # starts. Stopping drops a resync still waiting, so one waiting when the operator API restarts is lost.
         app.state.resyncs = light_resync.Resyncs()
+        # Timed manual lights (operator_routes.light_timer, #1335): a sweep that sends the controller's intent once a
+        # manual switch's minutes are up. The timer is the API-20 row, so a restart loses none.
+        app.state.light_timers = light_timer.Timers(app.state.resyncs)
         purge = asyncio.create_task(purge_expired_sessions(database))
+        timers = asyncio.create_task(app.state.light_timers.run(database, config.setpoint_server_url))
         try:
             yield
         finally:
-            purge.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await purge
+            for task in (purge, timers):
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
             # Before the pool closes: a command already on its way gets light_resync.SHUTDOWN_S to write its row.
             await app.state.resyncs.stop()
             if pool is None:

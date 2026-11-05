@@ -296,7 +296,7 @@ export interface paths {
         readonly put?: never;
         /**
          * Turn a grow light on or off through verdify-setpoint-server (Lutron)
-         * @description Calls verdify-setpoint-server POST /lights/{light}/{state} (12 s cap) and records one activity_log row: light.on or light.off, target grow_light_main or grow_light_grow, detail {light, state, result}. 200 when setpoint-server saw Lutron reach the state. When Home Assistant or Lutron does not confirm: 503 unavailable, retryable, with result ha_failed, not_confirmed or timeout; the light may still switch late. The board's state comes only from API-13's Lutron readback. Back to automatic is API-10 on sw_gl_main_auto_mode or sw_gl_grow_auto_mode, which can send one command of its own (API-10). The call and its row hold the light's lock: a press waits up to 2.5 s for a Back to automatic resync that holds it, then goes ahead, so it reaches setpoint-server after that resync's command and wins. The writes flag gates it like every write, and it never touches the ESP32.
+         * @description Calls verdify-setpoint-server POST /lights/{light}/{state} (12 s cap) and records one activity_log row: light.on or light.off, target grow_light_main or grow_light_grow, detail {light, state, result, minutes}. A manual switch is timed like the Fans burst (#1335): minutes, 15 by default, from the row's ts; then the operator API sends the controller's intent through verdify-setpoint-server, recording one more light.on or light.off row (actor system light_timer, reason "Timer ended", detail.via timer), so the light is back on automatic within about 15 s of the end. During the minutes the controller can still switch the light when its own decision changes, which only brings automatic back early. 200 when setpoint-server saw Lutron reach the state. When Home Assistant or Lutron does not confirm: 503 unavailable, retryable, with result ha_failed, not_confirmed or timeout; the light may still switch late. The board's state comes only from API-13's Lutron readback. Back to automatic is API-10 on sw_gl_main_auto_mode or sw_gl_grow_auto_mode, which can send one command of its own (API-10). The call and its row hold the light's lock: a press waits up to 2.5 s for a Back to automatic resync that holds it, then goes ahead, so it reaches setpoint-server after that resync's command and wins. The writes flag gates it like every write, and it never touches the ESP32.
          */
         readonly post: operations["API-20"];
         readonly delete?: never;
@@ -2501,6 +2501,11 @@ export interface operations {
         readonly requestBody?: {
             readonly content: {
                 readonly "application/json": {
+                    /**
+                     * @description How long the manual switch lasts before the light goes back to automatic
+                     * @default 15
+                     */
+                    readonly minutes?: number;
                     readonly reason?: string;
                 };
             };

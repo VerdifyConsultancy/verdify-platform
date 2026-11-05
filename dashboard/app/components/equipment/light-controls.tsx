@@ -22,6 +22,11 @@ export const LIGHTS: readonly { readonly light: LightId; readonly equipment: str
 
 /** The reason a Back to automatic write and its resync carry into Activity. */
 export const BACK_TO_AUTOMATIC = "Back to automatic";
+/**
+ * How long a Turn on or Turn off lasts (#1335): API-20's default `minutes`, like the Fans burst. Then the operator API
+ * sends the controller's intent, so the light is back on automatic; the page sends no minutes of its own.
+ */
+export const MANUAL_MINUTES = 15;
 
 const known = (state: string | null | undefined): state is LightState => state === "on" || state === "off";
 /** The controller's intent and the Lutron readback are both known and say different things. */
@@ -176,7 +181,7 @@ export function LightControls({ control, item, settingTo }: { control: LightCont
   const answering = (state: LightState) => command.phase === "waiting" && pressed === state && !command.error;
   const shown = lightButtons(item, control.setting?.readback?.value, command.sending || (command.phase === "waiting" && !command.error));
   const turn = (state: LightState) => <Button key={state} write wide busy={command.sending && pressed === state} disabled={busy || answering(state)} onClick={() => control.turn(state)}>
-    {state === "on" ? "Turn on" : "Turn off"} <span className="screen-reader">{item.label}</span>
+    {state === "on" ? "Turn on" : "Turn off"} <span className="burst-length">{MANUAL_MINUTES} min</span> <span className="screen-reader">{item.label}</span>
   </Button>;
   return <div className="light-controls">
     <div className="light-auto-row">
@@ -193,6 +198,7 @@ export function LightControls({ control, item, settingTo }: { control: LightCont
         {shown.automatic && <Button write wide busy={write.sending || (command.sending && pressed === "automatic")} disabled={busy || control.awaitingConfirm} onClick={() => void control.backToAutomatic()}>Back to automatic <span className="screen-reader">{item.label}</span></Button>}
         {shown.turns.map(turn)}
       </div>
+      {shown.automatic && <p className="state-note" data-light-timed="">A Turn on or Turn off lasts {MANUAL_MINUTES} min, then the light goes back to automatic</p>}
       {command.phase === "waiting" && !command.error && <p className="state-note" data-light-note="waiting">Waiting for Lutron</p>}
       {command.phase === "late" && <p className="state-note" data-light-note="late">{unconfirmedWords(item.state)}</p>}
       {control.unread && <p className="state-note" data-light-note="unread">Couldn't read the light, so Lutron was not matched to the controller</p>}
