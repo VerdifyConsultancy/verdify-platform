@@ -107,8 +107,13 @@ test("four key figures: time in band over the full days, water a day and in all,
   const written = Array.from({ length: 30 }, (_, ago) => ago).filter((ago) => ago !== SCORECARD_NO_ROW_AGO).reduce((sum, ago) => sum + (ago === 0 || ago === 9 ? 2 : 3), 0);
   expect(text(tile("iris").querySelector(".metric-value"))).toBe(`${written} of ${written + 1} required plans`);
   expect(text(tile("iris").querySelector(".metric-delta"))).toBe("1 missed (Oct 24) · — no comparison with previous 30 d");
-  // Each figure has its sparkline.
-  for (const kpi of ["temp", "vpd", "water", "iris"]) expect(tile(kpi).querySelector("svg.spark")).not.toBeNull();
+  // Each figure has its visual: a sparkline, and for Iris the strip of §5.7, a cell a day, quiet where no plan was
+  // missed, so a month with no miss never draws a blank.
+  for (const kpi of ["temp", "vpd", "water"]) expect(tile(kpi).querySelector("svg.spark")).not.toBeNull();
+  const strip = tile("iris").querySelector(".strip")!;
+  expect(strip.querySelectorAll(".strip-cell")).toHaveLength(30);
+  expect([...strip.querySelectorAll(".strip-cell[data-level='2']")].map((cell) => cell.getAttribute("aria-label"))).toEqual(["Oct 24: Iris missed 1 required plan"]);
+  expect(strip.querySelector(".strip-cell[data-partial=true]")?.getAttribute("aria-label")).toMatch(/^Nov 2: /);
 });
 
 test("the changes against the window before read as arrows and words in ink, never green or red", async () => {

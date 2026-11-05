@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 import { useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import type uPlot from "uplot";
-import { formatValue, unitDecimals } from "../lib/format";
+import { bandRange } from "../lib/band-range";
+import { formatNumber, formatValue, unitDecimals } from "../lib/format";
 import { csvFilename, windowCsv, type CsvBlock } from "./csv";
 import { CsvLink, DataTable, TimeCell, type DataTableBlock } from "./data-table";
 import { paintBandEdges, paintBandFill, paintBounds, paintForecast, paintLabels, paintNow, paintRetention, paintSteps, type ChartColors } from "./draw";
 import { ENVELOPE_MIN_BUCKET_S, compareExtent, envelopeBars, envelopeExtent, excursions, paintCompare, paintEnvelope, paintExcursions, type CompareLine, type EnvelopeBar, type Excursion } from "./layers";
 import { ChartKey, Legend, type KeyItem } from "./legend";
 import {
-  FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandKindFor, bandRuns, extentUnion, forecastAt, forecastExtent, forecastLines, groupSteps, marksExtent, paddedRange, settingBounds, settingSteps, stepFinder, stepsAt,
+  FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandExtent, bandKindFor, bandRuns, extentUnion, forecastAt, forecastExtent, forecastLines, groupSteps, marksExtent, settingBounds, settingSteps, stepFinder, stepsAt,
   type BandRun, type Bound, type ForecastInput, type ForecastLine, type StepKind, type StepSegment,
 } from "./marks";
 import { DAILY_SUMMARY_NOTE, retentionNote, runAt, staleness, traceGaps, type RetentionNote, type Staleness, type TraceGaps } from "./retention";
@@ -239,14 +240,26 @@ export function tickIncrements(decimals: number): number[] {
   return increments;
 }
 
-/** The one y axis: the unit's own format on every tick; `size` fixes its width, so stacked panels' plots line up. */
+/** The decimals a tick needs at its step, never more than its unit prints: 5 needs none, 2.5 one, 0.25 two. */
+export function tickDecimals(increment: number | null | undefined, unit: string): number {
+  const most = unitDecimals(unit);
+  if (typeof increment !== "number" || !Number.isFinite(increment) || increment <= 0) return most;
+  const text = String(Number(increment.toPrecision(12)));
+  const decimals = text.includes("e-") ? most : text.includes(".") ? text.length - text.indexOf(".") - 1 : 0;
+  return Math.min(most, decimals);
+}
+
+/**
+ * The one y axis: numbers only, at the decimals their step needs ("65", "0.50"), since the unit sits in the panel
+ * header (redesign §7.1); `size` fixes its width, so the plots of charts stacked in one card line up.
+ */
 export function valueAxis(unit: string, colors: ChartColors, size?: number): uPlot.Axis {
   return {
     stroke: colors["--muted"], font: AXIS_FONT,
     grid: { stroke: colors["--c-grid"], width: 1 }, ticks: { stroke: colors["--c-grid"], width: 1, size: 4 },
     incrs: tickIncrements(unitDecimals(unit)),
     size: size ?? ((_plot, values) => Math.max(48, Math.ceil(Math.max(0, ...(values || []).map((value) => String(value).length)) * 7.2) + 16)),
-    values: (_plot, splits) => splits.map((value) => formatValue(value, unit)),
+    values: (_plot, splits, _axis, _space, increment) => splits.map((value) => formatNumber(value, tickDecimals(increment, unit))),
   };
 }
 
@@ -259,8 +272,10 @@ export function valueAxis(unit: string, colors: ChartColors, size?: number): uPl
  * - `yAxisSize`: one y-axis width for every panel;
  * - `yLabels: false`: the y axis keeps its grid but draws no labels and takes no width (a small multiple past the first
  *   column); `yRange`: one y range for a row of small multiples, so they compare;
+ * - `cell: true`: a small multiple, 6 px above its plot and without the "Now" and band-source words on it (its column
+ *   head and the grid's foot say them once);
  * - `onCursor` and `onScale`: the stack follows the cursor and the zoom.
- * `tooltip`, `xLabels`, `yLabels` and `yAxisSize` are read when the chart is built: the caller puts them in its
+ * `tooltip`, `xLabels`, `yLabels`, `yAxisSize` and `cell` are read when the chart is built: the caller puts them in its
  * structure key.
  */
 export type SeriesLayers = {
@@ -272,6 +287,7 @@ export type SeriesLayers = {
   readonly yAxisSize?: number;
   readonly yLabels?: boolean;
   readonly yRange?: readonly [number, number] | null;
+  readonly cell?: boolean;
   readonly onCursor?: (plot: uPlot) => void;
   readonly onScale?: (min: number, max: number) => void;
 };
@@ -306,7 +322,7 @@ export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<Time
   const unit = model.unit;
   const color = (token: string) => colors[token] ?? "";
   return {
-    padding: [18, 10, 0, 0],
+    padding: [built.cell ? 6 : 18, 10, 0, 0],
     series: [{}, ...model.traces.map((trace): uPlot.Series => ({
       label: trace.label, scale: "y", show: !hiddenRef.current.has(trace.key),
       stroke: color(trace.token), width: 2, spanGaps: false,
@@ -325,7 +341,10 @@ export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<Time
             envelope && current.bucketSeconds >= ENVELOPE_MIN_BUCKET_S && primaryShown(current, hiddenRef.current) ? envelopeExtent(current.envelope, x0, x1) : null,
             compare ? compareExtent(compare, x0, x1) : null,
           );
-          return paddedRange([min, max], extentUnion(extentUnion(marksExtent(current.runs, current.steps, x0, x1), forecastExtent(shownForecast(current, hiddenRef.current), x0, x1)), extra));
+          const traces: [number, number] | null = Number.isFinite(min) && Number.isFinite(max) ? [min, max] : null;
+          const data = extentUnion(extentUnion(extentUnion(traces, marksExtent([], current.steps, x0, x1)), forecastExtent(shownForecast(current, hiddenRef.current), x0, x1)), extra);
+          // The band plus half its width each side, widened to the data (redesign §4.6), so the band keeps its edges.
+          return bandRange(bandExtent(current.runs, x0, x1), data);
         },
       },
     },
@@ -356,7 +375,8 @@ export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<Time
         paintForecast(plot, forecast, colors, ratio);
         paintBounds(plot, current.bounds, colors, ratio);
         const nowShown = paintNow(plot, current.now, colors, ratio);
-        paintLabels(plot, { now: nowShown ? current.now : null, retention: visibleRetention(current, hiddenRef.current), bounds: current.bounds, steps: current.steps, runs: current.runs, forecast }, colors, seriesColor, ratio);
+        const cell = layers().cell === true;
+        paintLabels(plot, { now: nowShown && !cell ? current.now : null, retention: visibleRetention(current, hiddenRef.current), bounds: current.bounds, steps: current.steps, runs: cell ? [] : current.runs, forecast }, colors, seriesColor, ratio);
       }],
       setCursor: [(plot) => layers().onCursor?.(plot)],
       setScale: [(plot, key) => { if (key === "x") layers().onScale?.(plot.scales.x.min ?? 0, plot.scales.x.max ?? 0); }],

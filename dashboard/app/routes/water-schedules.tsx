@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import type { PageHandle } from "../components/app-shell";
 import { Chips } from "../components/chips";
 import { useClockValue } from "../components/freshness";
 import { PanelError } from "../components/panel";
@@ -25,8 +24,6 @@ import { useRole } from "../lib/session";
 import { EDITOR_PARAMS, dayStatesParams, localDay, newScheduleUrl, toMinute, useWaterOutlet, waterUrl } from "../lib/water";
 
 export const meta = () => viewMeta("water-schedules");
-/** Timelines gain from width: Schedules takes the wide page (redesign §3.2). */
-export const handle: PageHandle = { wide: true };
 
 const PATH = "/water/schedules";
 const NO_LINES: readonly IrrigationLine[] = [];

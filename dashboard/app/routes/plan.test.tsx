@@ -216,7 +216,7 @@ test("the superseded lane reads YOUR VALUE 1.55 · jason 08:00 · holds until Ir
 
 test("a manual lane reads MANUAL · Iris skips, draws no waypoints, the head counts it, and its label opens its setting drawer here", async () => {
   const { plot, api } = await open("/plan", "manual-lane");
-  expect(status("mister_pulse_on_s")).toBe("MANUAL · Iris skips · jason since 10/30");
+  expect(status("mister_pulse_on_s")).toBe("MANUAL · Iris skips · jason since Oct 30");
   const row = document.querySelector("[data-param=mister_pulse_on_s]")!;
   expect(row.classList.contains("plan-row-muted")).toBe(true);
   // Its held value is solid grey across the window; no dashed waypoint.
@@ -263,7 +263,7 @@ test("a lane's newest write shows its one pill at the lane's head: REQUESTED whi
   expect(screen.getByTestId("here").textContent).toBe("/plan");
   const pill = () => [...document.querySelectorAll("[data-param=mister_engage_kpa] .ctl-lane-pill [data-badge]")].map((node) => node.getAttribute("data-badge"));
   expect(pill()).toEqual(["requested"]);
-  expect(status("mister_engage_kpa")).toBe("MANUAL · Iris skips · jason since 11/02");
+  expect(status("mister_engage_kpa")).toBe("MANUAL · Iris skips · jason since Nov 2");
   // While a lane's write is on its way API-07 is read every 5 s, not every 60 s.
   const reads = sentAt("API-07").length;
   await advance(5_000);
@@ -528,7 +528,7 @@ test("a viewer sees the same page with no write control: a lane's label is a lin
   expect(document.querySelector("[data-role]")?.getAttribute("data-role")).toBe("viewer");
   expect(document.querySelectorAll("[data-write-control]")).toHaveLength(0);
   expect(region("Planned settings").querySelectorAll("a.ctl-lane-link")).toHaveLength(4);
-  expect(status("mister_pulse_on_s")).toBe("MANUAL · Iris skips · jason since 10/30");
+  expect(status("mister_pulse_on_s")).toBe("MANUAL · Iris skips · jason since Oct 30");
   // The one button is "Find a setting"'s search: the lanes, the chips and the disclosures are links and summaries.
   expect([...document.querySelector("main")!.querySelectorAll("button")].map((button) => text(button))).toEqual(["Find"]);
   fireEvent.click(within(region("Planned settings")).getByRole("link", { name: "Mister Pulse ON" }));

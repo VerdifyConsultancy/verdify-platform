@@ -96,9 +96,9 @@ test("a forecast-rule waypoint reads \"Forecast rule · system\" with no AI; Iri
   expect(tooltip(plot).slice(1)).toEqual(["Fog RH ceiling", `${FORECAST_RULE} 85.0% from 12:00`]);
 });
 
-test("a manual lane is muted, reads MANUAL · Iris skips · Jason since 10/30 and draws no waypoints", async () => {
+test("a manual lane is muted, reads MANUAL · Iris skips · Jason since Oct 30 and draws no waypoints", async () => {
   const { container, plot } = await mount();
-  expect(status(container, "mister_pulse_on_s")).toBe("MANUAL · Iris skips · Jason since 10/30");
+  expect(status(container, "mister_pulse_on_s")).toBe("MANUAL · Iris skips · Jason since Oct 30");
   expect(container.querySelector("[data-param=mister_pulse_on_s]")!.classList.contains("plan-row-muted")).toBe(true);
   const strokes = plot.ctx.strokes.filter((stroke) => onRow(stroke, 3));
   // The held value, solid grey across the window; Iris's 45 s waypoint at 13:00 is not drawn.
@@ -149,7 +149,7 @@ test("with no plan in force the lanes hold the device values to the horizon; 72 
   const device = plot.ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--c-setpoint"]);
   expect(device.map((stroke) => stroke.path.map(([px]) => Math.round(px)))).toEqual([[0, 1000], [0, 1000], [0, 1000]]);
   expect(plot.ctx.texts.some((text) => text.text.startsWith("Plan ends"))).toBe(false);
-  expect([...container.querySelectorAll(".plan-status")].map((item) => item.textContent)).toEqual(["MANUAL · Iris skips · Jason since 10/30"]);
+  expect([...container.querySelectorAll(".plan-status")].map((item) => item.textContent)).toEqual(["MANUAL · Iris skips · Jason since Oct 30"]);
 });
 
 test("stale marks each device value STALE and muted, with when it was read, while the waypoints still draw", async () => {

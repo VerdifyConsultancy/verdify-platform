@@ -19,7 +19,7 @@ import { useClockValue, useHydrated } from "../components/freshness";
 import { SectionHeader } from "../components/layout/section-header";
 import { PanelError } from "../components/panel";
 import { Table, type TableColumn } from "../components/table";
-import { dateShift, localDayStart } from "../lib/format";
+import { dateShift, daySpan, localDayStart } from "../lib/format";
 import { runGraphUrl } from "../lib/graph-link";
 import { LINES } from "../lib/lines";
 import { CAUSES, OUTCOMES, apiGet, type IrrigationLine, type Run, type RunPage } from "../lib/operator-api";
@@ -248,7 +248,7 @@ function RunsSection({ names, today, days, search, setSearch }: { names: Readonl
     }
     return nextSearch;
   }, { replace: true, preventScrollReset: true });
-  const span = range.from === range.to ? range.from : `${range.from} to ${range.to}`;
+  const span = daySpan(range.from, range.to);
   // The window's dates come from today's: the server's render and its hydration leave them out (`useHydrated`).
   const hydrated = useHydrated();
   return <section className="wat-section wat-runs" id="runs" aria-labelledby={headingId}>

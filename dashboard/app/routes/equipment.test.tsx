@@ -124,16 +124,16 @@ test("the order is fixed whatever order the API sends; an omitted actuator reads
   expect(rowOf("grow_light_main_intent")).toBeNull();
 });
 
-test("with the controller reporting, fan1 reads OFF since 10/27 04:26, never unknown; since, time on today and cycles read as the API sends them", async () => {
+test("with the controller reporting, fan1 reads OFF since Oct 27, 04:26, never unknown; since, time on today and cycles read as the API sends them", async () => {
   await load();
   // A relay reports on change, so its since is its newest report: the row states it once.
-  expect(read("fan1")).toEqual({ name: "Fan 1", state: "Off", facts: "since 10/27 04:26 · on today 0 min · cycles 0" });
+  expect(read("fan1")).toEqual({ name: "Fan 1", state: "Off", facts: "since Oct 27, 04:26 · on today 0 min · cycles 0" });
   const since = rowOf("fan1")!.querySelector("time")!;
   expect([since.getAttribute("datetime"), since.getAttribute("title")]).toEqual(["2026-10-27T10:26:00.000Z", "10/27/2026, 04:26:00 GMT-06:00"]);
   // HH:MM today, MM/DD HH:MM before today; minutes, as h min from 120.
   expect(read("fan2").facts).toBe("since 08:31 · on today 2 h 10 min · cycles 6");
   expect(read("heat1").facts).toBe("since 07:10 · on today 3 h 5 min · cycles 4");
-  expect(read("heat2").facts).toBe("since 11/01 06:40 · on today 0 min · cycles 0");
+  expect(read("heat2").facts).toBe("since Nov 1, 06:40 · on today 0 min · cycles 0");
   expect(read("mister_center").facts).toBe("since 07:12 · on today 14 min · cycles 14");
   expect(read("fog")).toEqual({ name: "Fog L11", state: "Off", facts: "since 05:10 · on today 6 min · cycles 9" });
   // The vent's off reads CLOSED and its time on is time open.
@@ -203,7 +203,7 @@ test("with the controller not reporting, every state reads unknown with the age 
 
 test("each grow light shows the controller's intent beside the Lutron readback, which is labelled sensed", async () => {
   await load();
-  expect(read("grow_light_main")).toEqual({ name: "Main", state: "Off (controller) · Lutron Off", facts: "since 11/01 19:00 · on today 0 min · cycles 0 · reported 3 min ago" });
+  expect(read("grow_light_main")).toEqual({ name: "Main", state: "Off (controller) · Lutron Off", facts: "since Nov 1, 19:00 · on today 0 min · cycles 0 · reported 3 min ago" });
   expect(read("grow_light_grow").state).toBe("Off (controller) · Lutron Off");
   expect(text(document.querySelector(".equipment-note"))).toContain("Lutron is the state the switch reports (sensed)");
   expect(document.querySelector("[data-differ]")).toBeNull();
@@ -406,6 +406,8 @@ test("the Controller card and the status line: firmware, uptime, last reset, fre
   expect(facts(controller)).toEqual([
     ["Firmware", "2026.10.30.1412.3240714"], ["Uptime", "3 d 3 h"], ["Last reset", "Software reset"], ["Largest block", "22 kB"], ["Wi-Fi", "−61 dBm"],
   ]);
+  // The version may wrap only after a dot, never mid-number.
+  expect(controller.querySelector(".ctl-firmware")!.querySelectorAll("wbr")).toHaveLength(4);
   expect(controller.classList.contains("tone-fault")).toBe(false);
 });
 
@@ -453,15 +455,19 @@ test("daily runtime: 14 local days of API-05, one bar row per heat 1, heat 2, fa
   expect([query.get("from"), query.get("to"), query.getAll("equipment")]).toEqual(["2026-10-20T06:00:00.000Z", new Date(NOW).toISOString(), ["heat1", "heat2", "fan1", "fan2", "vent", "fog"]]);
   const panel = screen.getByRole("region", { name: "Daily runtime · 14 days" });
   const rows = [...panel.querySelectorAll(".ctl-runtime-row")];
+  // The average counts the complete days; today, not over, says its time so far beside it.
   expect(rows.map((row) => [row.getAttribute("data-equipment"), text(row.querySelector(".ctl-runtime-name")), text(row.querySelector(".ctl-runtime-average"))])).toEqual([
-    ["heat1", "Heat 1 electric", "0 min a day"], ["heat2", "Heat 2 gas", "0 min a day"], ["fan1", "Fan 1", "0 min a day"], ["fan2", "Fan 2", "0 min a day"],
-    ["vent", "Vent", "0 min a day"], ["fog", "Fog L11", "0 min a day"],
+    ["heat1", "Heat 1 electric", "0 min a day today 3 h 5 min so far"], ["heat2", "Heat 2 gas", "0 min a day today 0 min so far"], ["fan1", "Fan 1", "0 min a day today 0 min so far"],
+    ["fan2", "Fan 2", "0 min a day today 2 h 10 min so far"], ["vent", "Vent", "0 min a day today 55 min so far"], ["fog", "Fog L11", "0 min a day today 6 min so far"],
   ]);
-  // Each row is an image named by its numbers; the bars share one scale, today's heat 1 the tallest.
+  // Each row is an image named by its numbers; the bars share one scale, today's heat 1 the tallest. A day of 0 is a
+  // stub, never nothing, and today's bar is outlined: the day is not over.
   const heat1 = rows[0].querySelector("svg.spark")!;
   expect(heat1.getAttribute("role")).toBe("img");
-  expect(text({ textContent: heat1.getAttribute("aria-label") } as Element)).toBe("Heat 1 electric, time on per day for 14 days: average 0 min a day, most 3 h 5 min on Nov 2");
-  expect(heat1.querySelectorAll(".spark-bar")).toHaveLength(14);
+  expect(text({ textContent: heat1.getAttribute("aria-label") } as Element)).toBe("Heat 1 electric, time on per day for 14 days: average 0 min a day, today 3 h 5 min so far, most 3 h 5 min on Nov 2");
+  expect(heat1.querySelectorAll(".spark-bar, .spark-zero, .spark-none")).toHaveLength(14);
+  expect([...heat1.querySelectorAll(".spark-bar")].map((bar) => bar.getAttribute("class"))).toEqual(["spark-bar spark-bar-partial"]);
+  expect(heat1.querySelectorAll(".spark-zero")).toHaveLength(13);
   // The table: one row a day, oldest first, today marked.
   const table = panel.querySelector(".ctl-runtime-table table")!;
   expect([...table.querySelectorAll("thead th")].map((cell) => text(cell))).toEqual(["Day", "Heat 1 electric", "Heat 2 gas", "Fan 1", "Fan 2", "Vent", "Fog L11"]);

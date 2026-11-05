@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { expect, test } from "vitest";
-import { TIME_UNAVAILABLE, ageSeconds, duration, formatNumber, formatValue, localDate, localDayStart, localTime, localWallClock, monthDayClock, plotTime, repeatedLocalTime, shortDateTime, shortTime, sinceClock, unitDecimals, wallClockInstant } from "./format";
+import { TIME_UNAVAILABLE, ageSeconds, dayHeader, daySpan, duration, formatNumber, formatValue, localDate, localDayStart, localTime, localWallClock, monthDayClock, plotTime, repeatedLocalTime, shortDateTime, shortTime, sinceClock, unitDecimals, wallClockInstant } from "./format";
 
 const NBSP = " ";
 const MINUS = "−";
@@ -48,15 +48,15 @@ test("a since time reads HH:MM on today's America/Denver day and MM/DD HH:MM on 
   const now = Date.parse("2026-11-02T17:42:00Z"); // 10:42 MST
   expect(sinceClock("2026-11-02T15:31:00Z", now)).toBe("08:31");
   expect(sinceClock("2026-11-02T07:00:00Z", now)).toBe("00:00");
-  expect(sinceClock("2026-11-02T06:59:00Z", now)).toBe("11/01 23:59");
-  expect(sinceClock("2026-10-27T10:26:00Z", now)).toBe("10/27 04:26");
-  expect(sinceClock("2026-10-27T10:26:00-06:00", now)).toBe("10/27 10:26");
-  expect(sinceClock("2025-12-31T20:05:00Z", now)).toBe("12/31 13:05");
+  expect(sinceClock("2026-11-02T06:59:00Z", now)).toBe("Nov 1, 23:59");
+  expect(sinceClock("2026-10-27T10:26:00Z", now)).toBe("Oct 27, 04:26");
+  expect(sinceClock("2026-10-27T10:26:00-06:00", now)).toBe("Oct 27, 10:26");
+  expect(sinceClock("2025-12-31T20:05:00Z", now)).toBe("Dec 31, 13:05");
   // The repeated fall-back hour carries its offset, today or not.
   expect(sinceClock("2026-11-01T08:30:00Z", Date.parse("2026-11-01T18:00:00Z"))).toBe("01:30 GMT-07:00");
-  expect(sinceClock("2026-11-01T07:30:00Z", now)).toBe("11/01 01:30 GMT-06:00");
+  expect(sinceClock("2026-11-01T07:30:00Z", now)).toBe("Nov 1, 01:30 GMT-06:00");
   expect(sinceClock("not a time", now)).toBe(TIME_UNAVAILABLE);
-  expect(sinceClock("2026-11-02T15:31:00Z", Number.NaN)).toBe("11/02 08:31");
+  expect(sinceClock("2026-11-02T15:31:00Z", Number.NaN)).toBe("Nov 2, 08:31");
 });
 
 test("a missing value is a dash, never 0", () => {
@@ -133,4 +133,13 @@ test("monthDayClock always carries its date, and in the repeated hour its offset
   expect(monthDayClock("2026-11-02T14:02:00Z")).toBe("11/02 07:02");
   expect(monthDayClock("2026-11-01T07:30:00Z")).toBe("11/01 01:30 GMT-06:00");
   expect(monthDayClock("not a time")).toBe(TIME_UNAVAILABLE);
+});
+
+test("the date styles: a short day, a span of days, and the log's day header with its year only when it is not this one", () => {
+  expect(daySpan("2026-10-27", "2026-11-02")).toBe("Oct 27 – Nov 2");
+  expect(daySpan("2026-11-02", "2026-11-02")).toBe("Nov 2");
+  expect(dayHeader("2026-11-03")).toBe("Tue 3 Nov");
+  expect(dayHeader("2026-10-30", "2026")).toBe("Fri 30 Oct");
+  expect(dayHeader("2025-12-31", "2026")).toBe("Wed 31 Dec 2025");
+  expect(dayHeader("not a day")).toBe("not a day");
 });

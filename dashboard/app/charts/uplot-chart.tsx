@@ -5,7 +5,7 @@ import uplotStyles from "uplot/dist/uPlot.min.css?url";
 import { TIME_ZONE } from "../lib/format";
 import { narrowViewport, usePhone } from "../lib/narrow";
 import chartStyles from "./charts.css?url";
-import type { ChartColors } from "./draw";
+import { CHART_BACKGROUND, type ChartColors } from "./draw";
 import type { XRange } from "./types";
 
 /**
@@ -26,10 +26,10 @@ export const CHART_TOKENS = [
   "--eq-water", "--eq-fert", "--eq-master",
 ] as const;
 
-/** The token values on `:root`, read when a chart is built. */
+/** The token values on `:root`, read when a chart is built, and the page's background behind every label's halo. */
 export function readColors(): ChartColors {
   const style = getComputedStyle(document.documentElement);
-  return Object.fromEntries(CHART_TOKENS.map((token) => [token, style.getPropertyValue(token).trim()]));
+  return { ...Object.fromEntries(CHART_TOKENS.map((token) => [token, style.getPropertyValue(token).trim()])), [CHART_BACKGROUND]: style.backgroundColor };
 }
 
 let loaded: typeof uPlot | null = null;

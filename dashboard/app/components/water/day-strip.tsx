@@ -46,7 +46,7 @@ export function DayStrip({ name, from, to, night, blocks, episodes, valveKnown =
   const scale = timeScale(from, to);
   // A block's words take the room to its neighbour on this strip, measured once it is drawn.
   const [trackRef, trackPx] = useWidthOf<HTMLDivElement>();
-  const rooms = blockRooms(blocks, scale);
+  const rooms = blockRooms(blocks, scale, now / 1000);
   return <div className={cls("wat-day", apiDown && "is-neutral")}>
     {axis && <DayAxis scale={scale} className="wat-day-axis" />}
     <div className="wat-day-row">

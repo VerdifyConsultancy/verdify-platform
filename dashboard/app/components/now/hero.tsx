@@ -138,7 +138,8 @@ function StatusLine({ now, answer, irrigation, clock }: { now: Now | null; answe
         {irisText(now.iris)}<span className="now-sr-phone">, {planLine(now.iris)}</span>
       </Link></li>
       <li><Link className={cls("now-status-item", answer.muted && "value-muted")} to="/graphs?range=24h#temperature" data-tile="outdoor">
-        <span className="now-sr-phone">Outdoor </span>{deviceUnknown(answer) ? "—" : readingText(now.outdoor.temp_f, "°F")}
+        {/* A no-break space: a plain one at the end of a flex item is dropped ("Outdoor41.2 °F"). */}
+        <span className="now-sr-phone">Outdoor{"\u00a0"}</span>{deviceUnknown(answer) ? "—" : readingText(now.outdoor.temp_f, "°F")}
       </Link></li>
     </>}
     <li><span className="now-status-item now-status-static" data-chip="occupancy">{occupancyText(irrigation, clock)}</span></li>

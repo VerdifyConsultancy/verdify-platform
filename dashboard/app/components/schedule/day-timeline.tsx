@@ -33,32 +33,41 @@ export function useWidthOf<T extends HTMLElement>(): [(element: T | null) => voi
   return [ref, width];
 }
 
+/** The room on each side of a block, in percent of the track: after it to its next neighbour, and before it back to the last. */
+export type BlockRoom = { readonly after: number; readonly before: number };
 /**
  * The room beside each block on its row, in percent of the track (redesign §6.2): from its end to the next block's
- * start, or the row's end; for a block late in the day, whose words sit on its left, back to the end of the one before.
+ * start or the row's end, and from its start back to the end of the one before or the row's start. The now rule is a
+ * neighbour too, so words never run across it.
  */
-export function blockRooms(blocks: readonly DayBlock[], scale: TimeScale): ReadonlyMap<string, number> {
+export function blockRooms(blocks: readonly DayBlock[], scale: TimeScale, now: number | null = null): ReadonlyMap<string, BlockRoom> {
   const placed = blocks.flatMap((block) => {
     const place = scale.span(block.start, block.end);
     return place ? [{ key: block.key, start: place.start, end: place.start + place.width }] : [];
   }).sort((a, b) => a.start - b.start);
+  const nowAt = now !== null && now >= scale.from && now <= scale.to ? scale.pos(now) : null;
   return new Map(placed.map((item, index) => {
-    const room = item.start > LATE_PERCENT ? item.start - (index > 0 ? placed[index - 1].end : 0) : (index + 1 < placed.length ? placed[index + 1].start : 100) - item.end;
-    return [item.key, Math.max(0, room)];
+    let after = (index + 1 < placed.length ? placed[index + 1].start : 100) - item.end;
+    let before = item.start - (index > 0 ? placed[index - 1].end : 0);
+    if (nowAt !== null && nowAt > item.end) after = Math.min(after, nowAt - item.end);
+    if (nowAt !== null && nowAt < item.start) before = Math.min(before, item.start - nowAt);
+    return [item.key, { after: Math.max(0, after), before: Math.max(0, before) }];
   }));
 }
 
 /**
  * A block's words for the room it has (redesign §6.2, §6.6): all of them when they fit ("15:00 skipped · RH 92%",
  * "16:00 · 10 min"); else a block that is not planned keeps its time and its outcome or reason word ("15:00 skipped",
- * "07:31 missed", "07:31 ok"), and a planned one its time. `fits` says whether a text fits.
+ * "07:31 missed", "07:31 ok"), and a planned one its time; else its time alone; else none, its words staying in its name,
+ * the popover and the agenda. `fits` says whether a text fits.
  */
 export function blockWords(label: string, status: SpanStatus, fits: (text: string) => boolean): string {
   if (fits(label)) return label;
   const time = label.slice(0, 5);
-  if (status === "planned") return time;
-  const word = label.slice(5).replace(/^\s*·?\s*/, "").split(" · ")[0];
-  return word ? `${time} ${word}` : time;
+  const word = status === "planned" ? "" : label.slice(5).replace(/^\s*·?\s*/, "").split(" · ")[0];
+  const short = word ? `${time} ${word}` : time;
+  if (fits(short)) return short;
+  return fits(time) ? time : "";
 }
 
 /** The meter's domain by line kind (redesign §4.6): drip minutes `--eq-water`, mist `--eq-mister`, feeds `--eq-fert`. */
@@ -69,23 +78,29 @@ export function meterDomain(kind: string): MeterDomain {
 /**
  * A block on its track: a button with its name in words, or a draft's outline (not saved, nothing to open). A running
  * one is solid up to now and dashed after it (redesign §6.2), through `--sch-done`. Its words sit on it when they fit,
- * else beside it, as many as the room to its neighbour takes (`room`, percent of the track `trackPx` wide).
+ * else beside it, as many as the room to its neighbour takes (`room`, percent of the track `trackPx` wide): after it,
+ * or before it late in the day, or on the other side when only that side has room for them.
  */
-export function Block({ block, scale, onSelect, selected = false, now = null, room = 0, trackPx = TRACK_PX }: {
-  block: DayBlock; scale: TimeScale; onSelect?: (block: DayBlock, opener: HTMLElement) => void; selected?: boolean; now?: number | null; room?: number; trackPx?: number;
+export function Block({ block, scale, onSelect, selected = false, now = null, room = { after: 0, before: 0 }, trackPx = TRACK_PX }: {
+  block: DayBlock; scale: TimeScale; onSelect?: (block: DayBlock, opener: HTMLElement) => void; selected?: boolean; now?: number | null; room?: BlockRoom; trackPx?: number;
 }) {
   const place = scale.span(block.start, block.end);
   if (!place) return null;
   const done = block.status === "running" && now !== null ? Math.min(100, Math.max(0, ((now - block.start) / Math.max(1, block.end - block.start)) * 100)) : 100;
   const percent = (text: string) => (labelPx(text) / Math.max(1, trackPx)) * 100;
   const narrow = percent(block.label) > place.width;
+  const late = place.start > LATE_PERCENT;
+  const beside = (before: boolean) => blockWords(block.label, block.status, (text) => percent(text) <= (before ? room.before : room.after));
+  const usual = beside(late);
+  const swapped = narrow && usual !== block.label ? beside(!late) : "";
+  const before = narrow && swapped.length > usual.length ? !late : late;
+  const shown = narrow ? (before === late ? usual : swapped) : block.label;
   const className = cls(
-    "sch-block", `sch-${block.status}`, `sch-${block.token}`, block.part !== "run" && "sch-part", narrow && (place.start > LATE_PERCENT ? "sch-narrow-end" : "sch-narrow"),
+    "sch-block", `sch-${block.status}`, `sch-${block.token}`, block.part !== "run" && "sch-part", narrow && (before ? "sch-narrow-end" : "sch-narrow"),
     block.capped && "sch-capped", block.draft && "sch-draft", block.conflict && "sch-conflict", selected && "is-selected",
   );
   const vars = cssVars({ "--sch-start": place.start, "--sch-width": place.width, "--sch-done": done });
-  const shown = narrow ? blockWords(block.label, block.status, (text) => percent(text) <= room) : block.label;
-  const words = block.part === "run" && block.label ? <span className="sch-block-label" aria-hidden="true">{shown}</span> : null;
+  const words = block.part === "run" && shown ? <span className="sch-block-label" aria-hidden="true">{shown}</span> : null;
   if (block.part !== "run") return <span ref={vars} className={className} title={block.name} aria-hidden="true" />;
   if (block.draft || !onSelect) {
     return <span ref={vars} className={className} title={block.name}>{words}<span className="screen-reader">{block.name}</span></span>;
@@ -223,7 +238,7 @@ export function DayTimeline({ model, now, head, label, selected, onBlock, newTo,
               })()}
               <Ticks episodes={row.episodes} scale={scale} token={row.kind === "mister" || row.kind === "fert_mister" ? "mister" : row.kind === "fert_drip" ? "fert" : "water"} unknownUntil={row.valveKnown ? null : nowS} />
               {(() => {
-                const rooms = blockRooms(row.blocks, scale);
+                const rooms = blockRooms(row.blocks, scale, nowS);
                 return row.blocks.map((block) => <Block key={block.key} block={block} scale={scale} onSelect={onBlock} selected={selected === block.blockKey && block.blockKey !== ""} now={nowS}
                   room={rooms.get(block.key)} trackPx={trackPx ?? TRACK_PX} />);
               })()}

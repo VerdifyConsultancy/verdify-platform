@@ -6,6 +6,7 @@ import { DataTable, type DataTableBlock } from "./data-table";
 import type { ChartColors, PaintTarget } from "./draw";
 import { paddedRange } from "./marks";
 import { dayAxis, dayBarWidth } from "./minutes-by-zone";
+import { STATS_AXIS_PX } from "./stats-typical-day";
 import { localDay } from "./time-axis";
 import { valueAxis } from "./time-series";
 import { tooltipPlugin } from "./tooltip";
@@ -103,7 +104,7 @@ export function rangeOptions(env: ChartEnv, modelRef: MutableRefObject<RangeMode
         },
       },
     },
-    axes: [dayAxis(colors, true), valueAxis(model.unit, colors)],
+    axes: [dayAxis(colors, true), valueAxis(model.unit, colors, STATS_AXIS_PX)],
     cursor: { points: { show: false } },
     hooks: { draw: [(plot) => paintRanges(plot, modelRef.current, colors, px())] },
     plugins: [tooltipPlugin((plot) => (plot.cursor.event ? rangeTooltip(modelRef.current, plot.cursor.idx) : null))],

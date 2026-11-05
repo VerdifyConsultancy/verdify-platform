@@ -23,7 +23,7 @@ const rules = (css: string) => [...uncommented(css).matchAll(/([^{};]+)\{([^{}]*
 const LAYOUT_TOKENS = [
   "--space-1", "--space-2", "--space-3", "--space-4", "--space-5", "--space-6", "--space-7",
   "--fs-label", "--fs-xs", "--fs-sm", "--fs-md", "--fs-lg", "--fs-xl",
-  "--shell-wide", "--aside", "--rail", "--tap", "--bar-h", "--header-h-phone",
+  "--aside", "--rail", "--tap", "--bar-h", "--header-h-phone",
   "--z-raised", "--z-sticky", "--z-nav", "--z-popover", "--z-toast",
 ];
 

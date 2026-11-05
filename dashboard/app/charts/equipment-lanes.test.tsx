@@ -182,6 +182,10 @@ test("a wet line's schedule interval names \"schedule\"; a null cause draws in t
   const centerOn = rows.filter((cells) => cells[0] === "L04 Center mister" && cells[1] === "on").map((cells) => cells[5]);
   expect(centerOn).toEqual(["VPD", "VPD", "VPD", "schedule", ""]);
   expect([...container.querySelectorAll(".chart-key li")].map((item) => item.textContent)).toEqual(["VPD", "schedule", "unknown", "sensed"]);
+  // The key sits right under the rows it names, above the CSV and the table, which is named by its subject.
+  const figure = container.querySelector(".chart-lanes")!;
+  expect([...figure.children].map((child) => child.className).filter((name) => /chart-key|chart-tools|chart-table/.test(name))).toEqual(["chart-key", "chart-tools", "chart-table"]);
+  expect(figure.querySelector(".chart-table summary")?.textContent).toMatch(/^Lanes table · \d+ rows$/);
 });
 
 test("each row ends with its state, on time and starts; at 860 px and below the rows are 24 px", async () => {

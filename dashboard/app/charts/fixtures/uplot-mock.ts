@@ -22,6 +22,7 @@ export class RecordingContext {
   /** strokeRect calls: outlines (sensed lanes, the planned minutes). */
   outlines: { color: string; width: number; dash: number[]; x: number; y: number; w: number; h: number }[] = [];
   texts: Text[] = [];
+  halos: { text: string; x: number; y: number; color: string; width: number }[] = [];
   private dash: number[] = [];
   private path: [number, number][] = [];
   setLineDash(dash: number[]) { this.dash = [...dash]; }
@@ -41,6 +42,8 @@ export class RecordingContext {
   fillRect(x: number, y: number, width: number, height: number) { this.rects.push({ color: this.fillStyle, x, y, width, height }); }
   strokeRect(x: number, y: number, w: number, h: number) { this.outlines.push({ color: this.strokeStyle, width: this.lineWidth, dash: this.dash, x, y, w, h }); }
   fillText(text: string, x: number, y: number) { this.texts.push({ text, x, y, color: this.fillStyle }); }
+  /** A label's halo, stroked under its words in the chart's background. */
+  strokeText(text: string, x: number, y: number) { this.halos.push({ text, x, y, color: this.strokeStyle, width: this.lineWidth }); }
   measureText(text: string) { return { width: text.length * 6 }; }
 }
 

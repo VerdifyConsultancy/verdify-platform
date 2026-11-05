@@ -8,7 +8,6 @@ import { localDay } from "../charts/time-axis";
 import { buildTimeSeriesModel, chartNotes } from "../charts/time-series";
 import type { Series, SettingHistory, SettingSteps } from "../charts/types";
 import { chartLinks } from "../charts/uplot-chart";
-import type { PageHandle } from "../components/app-shell";
 import { useClockValue } from "../components/freshness";
 import { ChartChips, DrawnChips, GraphNotices, LayersMenu, PresetChips, PresetMenu, RangeForm, rangeDays, viewFields } from "../components/graphs/controls";
 import { EVENTS_PAGE, WRITE_SOURCES, chartEvents, shownSources } from "../components/graphs/event-marks";
@@ -32,7 +31,6 @@ import { unitLabel } from "../lib/setting-values";
 import { useShellNow } from "../lib/shell";
 
 export const meta = () => viewMeta("graphs-climate");
-export const handle: PageHandle = { wide: true };
 export const links = () => chartLinks();
 
 /** A setting history in its panel's unit: the registry's ASCII °F alias reads as the panel's °F. One copy per answer. */
@@ -246,7 +244,7 @@ export default function Graphs() {
     </ul>}
     <ChartStack label={`Climate, ${lead.charAt(0).toLowerCase()}${lead.slice(1)}`} panels={panels} band={shownBand} settings={steps} forecast={forecast}
       now={now ?? 0} xRange={window?.x ?? { from: 0, to: 1 }} syncKey={`verdify:graphs:${key}`} excursions={!apiDown} envelope={view.envelope}
-      compare={compared} events={eventsRead && sources.length > 0 ? events : null} csvName="graphs"
+      compare={compared} events={eventsRead && sources.length > 0 ? events : null} csvName="graphs" tableName="Climate table"
       lanes={<EquipmentLanes states={lanes.data} xRange={window?.x ?? { from: 0, to: 1 }} syncKey={`verdify:graphs:${key}`} now={now ?? undefined} message={lanesMessage} zoomControl={false} />}
       foot={<ResolutionLine window={window} bucketSeconds={climateBucket} daily={daily} now={now} />} />
   </>;

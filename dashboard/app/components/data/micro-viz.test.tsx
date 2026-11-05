@@ -10,7 +10,7 @@ import { afterEach, expect, test } from "vitest";
 import { SessionProvider } from "../../lib/session";
 import { NBSP, renderUi, text } from "../test-render";
 import { BandBar, bandBarWords, bandPosition, bandScale } from "./band-bar";
-import { Delta, deltaAmount } from "./delta";
+import { Delta, deltaAmount, keepUnits } from "./delta";
 import { Meter, meterWords } from "./meter";
 import { Sparkline } from "./sparkline";
 import type { VizState } from "./viz";
@@ -143,9 +143,28 @@ test("Sparkline: gaps break the line, the last point is a dot, the band sits beh
   expect(screen.getByRole("img").getAttribute("aria-label")).toBe("VPD over 24 h");
   cleanup();
   const bars = renderUi(<Sparkline values={[3, null, 5, 0]} kind="bars" token="water" size="row" />);
-  expect(bars.container.querySelectorAll(".spark-bar")).toHaveLength(3);
+  // A count of 0 is a 1 px stub and a day with no data a hatch: neither is a blank, and they never look alike.
+  expect(bars.container.querySelectorAll(".spark-bar")).toHaveLength(2);
+  expect(bars.container.querySelectorAll(".spark-zero")).toHaveLength(1);
+  expect(bars.container.querySelectorAll(".spark-none")).toHaveLength(1);
+  expect(Number(bars.container.querySelector(".spark-zero")?.getAttribute("height"))).toBeCloseTo(100 / 20, 6);
   expect(bars.container.querySelector("svg")?.getAttribute("height")).toBe("20");
   expect(bars.container.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+});
+
+test("Sparkline: the band and half its width each side make the scale, so the band keeps its edges; a partial day is outlined or hollow", () => {
+  // Values inside a 0.45–0.80 band: the scale is 0.275–0.975, the band the middle half of the height.
+  const { container } = renderUi(<Sparkline values={[0.5, 0.6, 0.7]} token="vpd" band={{ low: 0.45, high: 0.8 }} partial={[false, false, true]} />);
+  const band = container.querySelector(".spark-band")!;
+  expect(Number(band.getAttribute("height"))).toBeCloseTo(50, 6);
+  expect(Number(band.getAttribute("y"))).toBeCloseTo(25, 6);
+  // Today, not over: a dashed segment into a hollow last point.
+  expect(container.querySelectorAll(".spark-line-partial")).toHaveLength(1);
+  expect(container.querySelector(".spark-dot")?.getAttribute("class")).toBe("spark-dot spark-dot-partial");
+  expect(container.querySelectorAll(".spark-dot-hole")).toHaveLength(1);
+  cleanup();
+  const bars = renderUi(<Sparkline values={[2, 4]} kind="bars" token="water" partial={[false, true]} />);
+  expect([...bars.container.querySelectorAll(".spark-bar")].map((bar) => bar.getAttribute("class"))).toEqual(["spark-bar", "spark-bar spark-bar-partial"]);
 });
 
 test("Sparkline in every state, and neutral with the API down", () => {
@@ -183,6 +202,9 @@ test("Delta: an arrow and words in ink, never a colour; no change; no comparison
   cleanup();
   expect(text(renderUi(<Delta value={null} unit="pts" vs="yesterday" />).container)).toBe("— no comparison with yesterday");
   expect(plain(deltaAmount(-12, "gal"))).toBe("12 gal");
-  expect(deltaAmount(1, "pts")).toBe("1 pt");
+  // A number and its unit never split across lines: "1 pt", "30 d" and "12 gal" are joined by no-break spaces.
+  expect(deltaAmount(1, "pts")).toBe("1\u00a0pt");
+  expect(renderUi(<Delta value={1.34} unit="pts" vs="previous 30 d" />).container.querySelector(".delta-vs")?.textContent).toBe("vs previous 30\u00a0d");
+  expect(keepUnits("previous 30 d · 2 days")).toBe("previous 30\u00a0d · 2\u00a0days");
   expect(markup(<Delta value={1} vs="x" />)).not.toMatch(/\sstyle=|tag-ok|fault/);
 });

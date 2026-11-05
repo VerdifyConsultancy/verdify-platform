@@ -41,7 +41,7 @@ function stubContext(canvas: HTMLCanvasElement) {
   });
 }
 // jsdom lays nothing out: each chart box gets the size the stylesheet gives it at 1440 px.
-const SIZES: Record<string, [number, number]> = { plot: [1200, 150], "lanes-canvas": [1000, 9 * 20 + 20 + 54], "plot-bars": [900, 84] };
+const SIZES: Record<string, [number, number]> = { plot: [1200, 150], "lanes-canvas": [1000, 9 * 20 + 20 + 36], "plot-bars": [900, 92] };
 const clientWidth = Object.getOwnPropertyDescriptor(Element.prototype, "clientWidth")!;
 const clientHeight = Object.getOwnPropertyDescriptor(Element.prototype, "clientHeight")!;
 const sized = (axis: 0 | 1, fallback: PropertyDescriptor) => ({
@@ -85,7 +85,7 @@ test("hovering a lane moves the panel's cursor to the same instant: one sync key
   expect(lanes.series).toHaveLength(1);
   expect(lanes.axes.map((axis) => axis.show)).toEqual([true, false]);
   expect([lanes.scales.x.min, lanes.scales.x.max]).toEqual([RANGE.from, RANGE.to]);
-  expect([lanes.width, lanes.height]).toEqual([1000, 254]);
+  expect([lanes.width, lanes.height]).toEqual([1000, 236]);
   // The pointer over the L01 lane at 07:35 (01:35 GMT-06:00): the panel's cursor follows to 07:35.
   const at = epoch("2026-11-01T07:35:00Z");
   const setCursor = lanes.setCursor as (opts: { left: number; top: number }, fire?: boolean, publish?: boolean) => void;

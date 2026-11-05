@@ -77,10 +77,27 @@ export type ChartStackProps = {
   foot?: ReactNode;
   /** Names the CSV file. */
   csvName?: string;
+  /** Names the stack's data table by its subject ("Climate table"), apart from the lanes' table in the same card. */
+  tableName?: string;
 };
 
 /** One y-axis width for every panel of a stack, so the plots and the rail line up (charts.css mirrors it). */
 export const STACK_AXIS_PX = 56;
+
+/** The words a panel's name stands for, so a series named by them reads by what sets it apart ("RH" is relative humidity). */
+const PANEL_WORDS: Readonly<Record<string, readonly string[]>> = { rh: ["relative humidity", "rh"] };
+/**
+ * A series named inside its panel: its label without the panel's own name, "Indoor" for "Indoor temperature" under
+ * Temperature and "Outdoor · DERIVED" for "Outdoor VPD · DERIVED" under VPD; the label whole when nothing is left.
+ */
+export function seriesWords(label: string, panel: string): string {
+  const words = PANEL_WORDS[panel.toLowerCase()] ?? [panel.toLowerCase()];
+  let short = label;
+  for (const word of words) short = short.replace(new RegExp(`(^|\\s)${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\s|$)`, "i"), "$1");
+  short = short.replace(/\s+/g, " ").trim();
+  if (!short || short === "·" || short.startsWith("· ")) return label;
+  return short.charAt(0).toUpperCase() + short.slice(1);
+}
 
 /** A number in its unit's decimals without the unit, for a header row whose unit sits beside the name. */
 export function bare(value: number | null | undefined, unit: string): string {
@@ -168,7 +185,7 @@ export const SeriesPlot = memo(function SeriesPlot({ model, hidden, layers, axes
   const plotRef = useRef<uPlot | null>(null);
   const data = useMemo<uPlot.AlignedData>(() => [model.t, ...model.traces.map((trace) => trace.values)], [model]);
   const marks = useMemo(() => ({ model, hidden, layers }), [model, hidden, layers]);
-  const structure = ["series", model.unit, axes, syncKey, ...model.traces.map((trace) => `${trace.key}:${trace.token}:${trace.daily}:${trace.dash}`)].join("|");
+  const structure = ["series", model.unit, axes, layers.cell ? "cell" : "panel", syncKey, ...model.traces.map((trace) => `${trace.key}:${trace.token}:${trace.daily}:${trace.dash}`)].join("|");
   useEffect(() => {
     const plot = plotRef.current;
     if (!plot) return;
@@ -322,9 +339,13 @@ export function ChartStack(props: ChartStackProps) {
               {text !== stats && <p className="stack-stats-held" aria-hidden="true">{stats}</p>}
             </div>
             {swatches.length > 1 && <ul className="chart-legend-items stack-swatches" aria-label={`${panel.name} series`}>
-              {swatches.map((item) => <li key={item.key}>
-                <button type="button" aria-pressed={item.shown} onClick={() => toggle(item.key)}><span className="chart-swatch" data-token={item.token.replace(/^--/, "")} aria-hidden="true" />{item.label}</button>
-              </li>)}
+              {swatches.map((item) => {
+                // Inside a named panel a toggle reads its series alone ("Indoor"), so three fit one row on a phone; the full name stays its accessible name.
+                const short = seriesWords(item.label, panel.name);
+                return <li key={item.key}>
+                  <button type="button" aria-pressed={item.shown} aria-label={short === item.label ? undefined : item.label} onClick={() => toggle(item.key)}><span className="chart-swatch" data-token={item.token.replace(/^--/, "")} aria-hidden="true" />{short}</button>
+                </li>;
+              })}
             </ul>}
           </div>
           {drawable
@@ -346,6 +367,6 @@ export function ChartStack(props: ChartStackProps) {
       {zoomed && <button type="button" onClick={() => resetZoom(syncKey, xRange)}>Reset zoom</button>}
       {models.some((model) => model.traces.length > 0) && <CsvLink filename={csvFilename(props.csvName ?? "stack", xRange)} build={() => windowCsv(blocks())} version={csvVersion} />}
     </div>
-    {tables.length > 0 && <DataTable tables={tables} />}
+    {tables.length > 0 && <DataTable name={props.tableName} tables={tables} />}
   </section>;
 }

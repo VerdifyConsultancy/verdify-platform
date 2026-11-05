@@ -74,7 +74,7 @@ export const LINES = [
   { line_id: "L10", name: "Mister • West Wall (Fert.)", equipment: "mister_west_fert", label: "West fert mister L10", zone: "west", kind: "fert_mister", clean_partner: "L09", cap: 0 },
   { line_id: "L11", name: "Fog", equipment: "fog", label: "Fog L11", zone: "house", kind: "fog", clean_partner: null, cap: 0 },
 ];
-/** Fan 1 has been off since this absolute time, so the board reads "10/27 04:26" on any later day (VD-14). */
+/** Fan 1 has been off since this absolute time, so the board reads "Oct 27, 04:26" on any later day (VD-14). */
 const FAN1_OFF_SINCE = Date.parse("2026-10-27T04:26:00-06:00");
 /** Home Assistant re-reads the Lutron switches every 300 s, so their newest row is at most that old; past 600 s it reads unknown. */
 const LUTRON_POLL_AGE = 3 * MINUTE;

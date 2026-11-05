@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import type { BandExtent } from "../lib/band-range";
 import { formatValue, sinceClock } from "../lib/format";
 import { isAiSource } from "../lib/vocab";
 import type { Actor, BandTimeline, MetricDef, PlanWaypoint, ReadbackState, Series, SettingSteps } from "./types";
@@ -334,6 +335,22 @@ export function marksExtent(runs: readonly BandRun[], steps: readonly StepSegmen
     low = Math.min(low, step.value); high = Math.max(high, step.value);
   }
   return Number.isFinite(low) && Number.isFinite(high) ? [low, high] : null;
+}
+
+/**
+ * The band's lowest low, highest high and widest width over the runs that reach into [x0, x1] (the points just outside
+ * shape the ribbon at its edges), for `bandRange`; null with no band there.
+ */
+export function bandExtent(runs: readonly BandRun[], x0: number, x1: number): BandExtent | null {
+  let low = Infinity, high = -Infinity, width = 0;
+  for (const run of runs) {
+    if (!run.t.length || run.t[run.t.length - 1] < x0 || run.t[0] > x1) continue;
+    const first = Math.max(0, lastAtOrBefore(run.t, x0)), last = Math.min(run.t.length - 1, lastAtOrBefore(run.t, x1) + 1);
+    for (let index = first; index <= last; index++) {
+      low = Math.min(low, run.low[index]); high = Math.max(high, run.high[index]); width = Math.max(width, run.high[index] - run.low[index]);
+    }
+  }
+  return Number.isFinite(low) && Number.isFinite(high) ? { low, high, width } : null;
 }
 
 /** The union of the traces and the marks, padded 5% each side; a flat line pads by 5% of its value. */

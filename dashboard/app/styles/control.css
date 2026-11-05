@@ -49,8 +49,9 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .setting-row>th,.setting-row>td{padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
 .ctl-catalog-table tbody:last-child .setting-row:last-child>th,.ctl-catalog-table tbody:last-child .setting-row:last-child>td{border-bottom:0}
 .setting-name{width:30%;min-width:11rem;font-weight:400}
-.setting-label{display:block;font-weight:600;overflow-wrap:anywhere}
-.setting-param{display:block;margin-top:.1rem;font-size:var(--fs-xs);color:var(--muted);overflow-wrap:anywhere}
+.setting-label{display:block;font-weight:600;overflow-wrap:break-word}
+/* A label wraps between words and a key only after an underscore (breakableKey's <wbr>), never mid-word. */
+.setting-param{display:block;margin-top:.1rem;font-size:var(--fs-xs);color:var(--muted);overflow-wrap:normal}
 .setting-read-only .setting-label{color:var(--muted)}
 .ctl-row-line{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-4);min-width:0}
 .setting-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:.15rem .4rem;margin:0}
@@ -235,7 +236,9 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .ctl-heap-fill{fill:var(--muted)}
 .ctl-heap.is-below .ctl-heap-fill{fill:var(--fault)}
 .ctl-heap-floor{stroke:var(--ink);stroke-width:2}
-.ctl-firmware{overflow-wrap:anywhere}
+/* The firmware version breaks only after a dot (its <wbr>), and from 600 px takes two of the facts' columns. */
+.ctl-firmware{overflow-wrap:normal}
+@media(min-width:600px){.ctl-controller-facts .data-pair:has(.ctl-firmware){grid-column:span 2}}
 
 /* Flags: occupancy, the leak flag and the site flow, each a name and its state in words; fault and warn in their text colours. */
 .ctl-flags{list-style:none;margin:0;padding:0}
@@ -249,18 +252,19 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 
 /* Daily runtime: one bar row per actuator on a shared scale, each in its equipment's colour, with its daily average; the table is under it. */
 .ctl-runtime{list-style:none;margin:0;padding:0}
-.ctl-runtime-row{display:grid;grid-template-columns:minmax(6rem,10rem) minmax(0,1fr) 8rem;align-items:center;gap:0 var(--space-4);padding:var(--space-2) 0;border-top:1px solid var(--line)}
+.ctl-runtime-row{display:grid;grid-template-columns:minmax(6rem,10rem) minmax(0,1fr) 10rem;align-items:center;gap:0 var(--space-4);padding:var(--space-2) 0;border-top:1px solid var(--line)}
 .ctl-runtime-row:first-child{border-top:0}
 .ctl-runtime-name{font-size:var(--fs-sm);font-weight:600;overflow-wrap:anywhere}
 .ctl-runtime-bars{min-width:0}
 .ctl-runtime-average{text-align:right;font-variant-numeric:tabular-nums}
 .ctl-runtime-figure{font-weight:600}
-.ctl-runtime-row[data-equipment=heat1] .spark:not(.is-neutral):not(.is-stale) .spark-bar{fill:var(--eq-heat1)}
-.ctl-runtime-row[data-equipment=heat2] .spark:not(.is-neutral):not(.is-stale) .spark-bar{fill:var(--eq-heat2)}
-.ctl-runtime-row[data-equipment=fan1] .spark:not(.is-neutral):not(.is-stale) .spark-bar{fill:var(--eq-fan1)}
-.ctl-runtime-row[data-equipment=fan2] .spark:not(.is-neutral):not(.is-stale) .spark-bar{fill:var(--eq-fan2)}
-.ctl-runtime-row[data-equipment=vent] .spark:not(.is-neutral):not(.is-stale) .spark-bar{fill:var(--eq-vent)}
-.ctl-runtime-row[data-equipment=fog] .spark:not(.is-neutral):not(.is-stale) .spark-bar{fill:var(--eq-fog)}
+.ctl-runtime-today{display:block;font-size:var(--fs-xs)}
+.ctl-runtime-row[data-equipment=heat1] .spark:not(.is-neutral):not(.is-stale) .spark-bar:not(.spark-bar-partial){fill:var(--eq-heat1)}
+.ctl-runtime-row[data-equipment=heat2] .spark:not(.is-neutral):not(.is-stale) .spark-bar:not(.spark-bar-partial){fill:var(--eq-heat2)}
+.ctl-runtime-row[data-equipment=fan1] .spark:not(.is-neutral):not(.is-stale) .spark-bar:not(.spark-bar-partial){fill:var(--eq-fan1)}
+.ctl-runtime-row[data-equipment=fan2] .spark:not(.is-neutral):not(.is-stale) .spark-bar:not(.spark-bar-partial){fill:var(--eq-fan2)}
+.ctl-runtime-row[data-equipment=vent] .spark:not(.is-neutral):not(.is-stale) .spark-bar:not(.spark-bar-partial){fill:var(--eq-vent)}
+.ctl-runtime-row[data-equipment=fog] .spark:not(.is-neutral):not(.is-stale) .spark-bar:not(.spark-bar-partial){fill:var(--eq-fog)}
 .ctl-runtime-table .table-wrap{max-height:24rem;overflow:auto}
 .ctl-num{text-align:right;font-variant-numeric:tabular-nums}
 @media(max-width:600px){.ctl-runtime-row{grid-template-columns:minmax(0,1fr) auto}.ctl-runtime-bars{grid-column:1/-1;grid-row:2}}

@@ -91,7 +91,7 @@ test("the route links the chart styles; the server renders the head, the toolbar
   expect(links().map((link) => link.rel)).toEqual(["stylesheet", "stylesheet"]);
   const html = renderToString(<QueryClientProvider client={new QueryClient()}><SessionProvider><Stub initialEntries={["/graphs?range=72h"]} /></SessionProvider></QueryClientProvider>);
   expect(html).toContain("Climate");
-  expect(html).toContain("America/Denver · gaps stay empty, never zero");
+  expect(html).toContain("America/Denver");
   for (const id of ["temperature", "vpd", "rh"]) expect(html).toContain(`data-panel="${id}"`);
   expect(html).toContain("Loading Temperature…");
   expect(html).not.toMatch(/in band \d/);
@@ -105,7 +105,7 @@ test("/graphs?range=72h&set=mister_engage_kpa: one stack of three panels on one 
   expect(ids()).toEqual(["temperature", "vpd", "rh"]);
   expect([name("temperature"), name("vpd"), name("rh")]).toEqual(["Temperature °F", "VPD kPa", "RH %"]);
   // The resolution line sits in the stack's foot.
-  expect(text(document.querySelector(".stack-foot .resolution-line"))).toBe("Oct 30, 11:42 GMT-06:00 → Nov 2, 22:42 GMT-07:00 (84 h across the fall-back) · one point per 5 minutes · gaps stay empty, never zero");
+  expect(text(document.querySelector(".stack-foot .resolution-line"))).toBe("Oct 30, 11:42 → Nov 2, 22:42 (84 h across the fall-back) · one point per 5 minutes");
   // The window is the past 72 h plus 12 h ahead (a quarter of it, at most 12 h); every chart, the lanes included, shares one cursor.
   const [temp, vpd, rh] = panels();
   expect(panels()).toHaveLength(3);
@@ -243,7 +243,7 @@ test("an exact ISO window draws exactly that window, with nothing ahead, and as 
   expect(panels()).toHaveLength(3);
   for (const plot of [...panels(), lanesPlot()!]) expect(plot.scales.x).toEqual({ min: from, max: to });
   expect(seriesAsked(api).map((row) => [row.from, row.to])).toEqual(Array(3).fill(["2026-11-01T08:00:00.000Z", "2026-11-01T12:00:00.000Z"]));
-  expect(text(document.querySelector(".resolution-line"))).toBe("Nov 1, 01:00 GMT-07:00 → Nov 1, 05:00 GMT-07:00 (4 h) · one point per minute · gaps stay empty, never zero");
+  expect(text(document.querySelector(".resolution-line"))).toBe("Nov 1, 01:00 MST → Nov 1, 05:00 (4 h) · one point per minute");
   expect(screen.getByRole("list", { name: "Range" }).querySelector("[aria-current]")).toBeNull();
   // The settings catalog polls on its own; the window's reads never ask again: the panels, outdoor, the lanes, the band,
   // two settings and the marks (writes, alerts, runs), and no forecast, as the window ended before now.
@@ -279,14 +279,14 @@ test("from 7 d the panels read hourly buckets and draw each one's min–max; env
   chartStubs();
   const hourly = await open("/graphs?range=7d&outdoor=0");
   expect(asked(hourly).filter((row) => row.metric[0].startsWith("climate.")).map((row) => row.points)).toEqual(["336", "336", "336"]);
-  expect(text(document.querySelector(".resolution-line"))).toContain("· one point per hour ·");
+  expect(text(document.querySelector(".resolution-line"))).toContain("· one point per hour");
   const envelope = (plot: MockPlot) => { plot.draw(); return plot.ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--ink-muted"]).length; };
   expect(envelope(panels()[0])).toBeGreaterThan(100);
   cleanup(); stopFixtureApi(); MockPlot.reset(); chartStubs();
   const fine = await open("/graphs?range=7d&outdoor=0&env=0");
   expect(envelope(panels()[0])).toBe(0);
   expect(asked(fine).every((row) => row.points === null)).toBe(true);
-  expect(text(document.querySelector(".resolution-line"))).toContain("· one point per 15 minutes ·");
+  expect(text(document.querySelector(".resolution-line"))).toContain("· one point per 15 minutes");
   cleanup(); stopFixtureApi(); MockPlot.reset(); chartStubs();
   // At 24 h the buckets are 1 min: no envelope even when on.
   await open("/graphs?range=24h&outdoor=0");
@@ -391,7 +391,7 @@ test("a 400-day window draws climate's daily summaries and labels the span befor
   const api = await open("/graphs?from=2025-09-29&to=2026-11-02");
   expect(seriesAsked(api)).toHaveLength(3);
   for (const row of asked(api)) expect(Date.parse(row.to!) - Date.parse(row.from!)).toBeLessThanOrEqual(400 * 86_400_000);
-  expect(text(document.querySelector(".resolution-line"))).toContain("· one point per day · daily summaries · gaps stay empty, never zero");
+  expect(text(document.querySelector(".resolution-line"))).toContain("· one point per day · daily summaries");
   const notes = [...document.querySelectorAll(".gr-notes li")].map(text);
   expect(notes).toEqual(expect.arrayContaining(["one point per day · daily summaries", "Indoor temperature: Daily summaries before 11/02/2025: raw data kept 365 days"]));
   expect(requests(api, "API-05")).toEqual([]);
@@ -502,9 +502,9 @@ test("the outdoor overlay by default: Tempest traces on each panel, solid, with 
   ]);
   // Fixture API-02: the Tempest's reading is 2 minutes old; the forecast was issued at 07:00.
   expect(notes()).toEqual(["Outdoor · Tempest via the controller · 2 min ago", "Forecast · issued 07:00"]);
-  // The swatches in the header rows toggle each series.
-  expect(within(document.querySelector<HTMLElement>("[data-panel=temperature]")!).getAllByRole("button").map((button) => [button.textContent, button.getAttribute("aria-pressed")])).toEqual([
-    ["Indoor temperature", "true"], ["Outdoor temperature", "true"], ["Forecast temperature", "true"],
+  // The swatches in the header rows toggle each series, each reading its series alone and named in full.
+  expect(within(document.querySelector<HTMLElement>("[data-panel=temperature]")!).getAllByRole("button").map((button) => [button.textContent, button.getAttribute("aria-label"), button.getAttribute("aria-pressed")])).toEqual([
+    ["Indoor", "Indoor temperature", "true"], ["Outdoor", "Outdoor temperature", "true"], ["Forecast", "Forecast temperature", "true"],
   ]);
   const temps = seriesOf(temp, "Outdoor temperature"), rhs = seriesOf(rh, "Outdoor relative humidity"), vpds = seriesOf(vpd, "Outdoor VPD · DERIVED");
   expect(vpds).toHaveLength((vpd.data[0] as number[]).length);

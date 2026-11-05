@@ -9,7 +9,7 @@ import { CsvLink, DataTable, type DataTableBlock } from "./data-table";
 import type { ChartColors, PaintTarget } from "./draw";
 import { paintHatch } from "./lanes-draw";
 import { ChartKey, type KeyItem } from "./legend";
-import { AXIS_FONT, axisLabel, localDay } from "./time-axis";
+import { AXIS_FONT, axisLabel, fitEdges, localDay } from "./time-axis";
 import { tickIncrements } from "./time-series";
 import { tooltipPlugin } from "./tooltip";
 import type { MinutesPeriod, MinutesReport, XRange } from "./types";
@@ -277,20 +277,22 @@ export function paintMinutes(plot: PaintTarget, zone: ZoneBars, colors: ChartCol
   }
 }
 
-/** Day labels ("10/28") under the last row only; ticks a day or more apart, up to a quarter apart for 400 days. */
+/** Day labels ("Oct 28") under the last row only; ticks a day or more apart, up to a quarter apart for 400 days. */
 export function dayAxis(colors: ChartColors, show: boolean): uPlot.Axis {
   return {
-    show, stroke: colors["--muted"], font: AXIS_FONT, size: 28, space: 44, grid: { show: false },
+    show, stroke: colors["--muted"], font: AXIS_FONT, size: 28, space: 52, grid: { show: false },
     ticks: { stroke: colors["--c-grid"], width: 1, size: 4 },
     incrs: [DAY, 2 * DAY, 7 * DAY, 14 * DAY, 28 * DAY, 56 * DAY, 91 * DAY],
-    values: (_plot, splits) => splits.map((split) => axisLabel(split, false, DAY)),
+    values: (plot, splits) => fitEdges(plot, splits, splits.map((split) => axisLabel(split, false, DAY))),
   };
 }
 
-/** Whole minutes or gallons up the left, one width on every row, so the rows' bars line up. */
-export function wholeAxis(colors: ChartColors): uPlot.Axis {
+/** Fog's own scale prints in mono, so its ticks never read as the watering rows' shared scale. */
+export const OWN_SCALE_FONT = '11px "IBM Plex Mono", ui-monospace, monospace';
+/** Whole minutes or gallons up the left, one width on every row, so the rows' bars line up; fog's own scale in mono. */
+export function wholeAxis(colors: ChartColors, own = false): uPlot.Axis {
   return {
-    stroke: colors["--muted"], font: AXIS_FONT, size: 44, space: 24,
+    stroke: colors["--muted"], font: own ? OWN_SCALE_FONT : AXIS_FONT, size: 44, space: 24,
     grid: { stroke: colors["--c-grid"], width: 1 }, ticks: { stroke: colors["--c-grid"], width: 1, size: 4 },
     incrs: tickIncrements(0), values: (_plot, splits) => splits.map((split) => String(Math.round(split))),
   };
@@ -301,7 +303,8 @@ export function minutesOptions(env: ChartEnv, zoneRef: MutableRefObject<ZoneBars
   const zone = zoneRef.current;
   const bars = UPlot.paths.bars!({ size: [BAR_SIZE, BAR_MAX], align: 0 });
   return {
-    padding: [8, 12, 0, 0],
+    // A row with no day labels under it keeps 8 px below its baseline, so its "0" is never cut in half.
+    padding: [8, 12, last ? 0 : 8, 0],
     series: [{}, ...zone.segments.map((segment): uPlot.Series => ({
       label: segment.label, scale: "y", paths: bars, fill: colors[segment.token], stroke: colors[segment.token], width: 0,
       points: { show: false }, value: (_plot, value) => formatValue(value, zone.unit),
@@ -309,7 +312,7 @@ export function minutesOptions(env: ChartEnv, zoneRef: MutableRefObject<ZoneBars
     // Each segment's bar runs from the running total below it (uPlot's stacked bars).
     bands: zone.segments.slice(1).map((_, level) => ({ series: [level + 2, level + 1] as [number, number] })),
     scales: { y: { range: () => [0, zoneRef.current.yMax] } },
-    axes: [dayAxis(colors, last), wholeAxis(colors)],
+    axes: [dayAxis(colors, last), wholeAxis(colors, zone.fog)],
     cursor: { points: { show: false } },
     hooks: { draw: [(plot) => paintMinutes(plot, zoneRef.current, colors, px())] },
     plugins: [tooltipPlugin((plot) => minutesTooltip(zoneRef.current, plot, namesRef.current))],
@@ -397,7 +400,9 @@ export function MinutesByZone(props: MinutesByZoneProps) {
     <figcaption className={props.captionHidden ? "screen-reader" : "eyebrow"}>{title}</figcaption>
     {drawable
       ? <ul className="minutes-rows">
-        {model.zones.map((zone, position) => <li key={zone.key} className="minutes-row" data-row={zone.key} data-zone={zone.zone ?? undefined}>
+        {model.zones.map((zone, position) => <li key={zone.key} className={zone.fog ? "minutes-row minutes-row-apart" : "minutes-row"} data-row={zone.key} data-zone={zone.zone ?? undefined}>
+          {/* Fog is set apart: its bars count humidification on their own scale, so they never compare with the watering rows'. */}
+          {zone.fog && <p className="minutes-apart">Humidification (fog) · own scale, 0–{formatValue(zone.yMax, zone.unit)}</p>}
           <span className="minutes-label">{zone.label}{zone.fog && <span className="minutes-note"> humidification</span>}</span>
           <ZoneChart zone={zone} last={position === model.zones.length - 1} xRange={model.xRange} syncKey={syncKey} names={props.lineNames} />
           <span className="minutes-today">{todayText(zone)}</span>

@@ -74,7 +74,7 @@ test("each reason reads in words with when it began and its Graphs window; the p
   await load({ fixture: "why-reasons" });
   expect([...document.querySelectorAll(".why-row")].map((node) => text(node.querySelector(".why-label")))).toEqual(["Climate mode", "Fog (L11)", "Misters (L04, L07, L09)"]);
   // Yesterday's reads with its date, and today's with its time alone, on the America/Denver clock.
-  expect(words("mode_reason")).toBe("Venting: too warm · since 11/01 13:40");
+  expect(words("mode_reason")).toBe("Venting: too warm · since Nov 1, 13:40");
   expect(words("fog_block_reason")).toBe("Humidity at the fog ceiling · since 09:12");
   expect(words("moisture_block_reason")).toBe("VPD in band: no misting needed · since 07:12");
   expect(reason("fog_block_reason").querySelector("time")?.getAttribute("dateTime")).toBe("2026-11-02T16:12:00.000Z");

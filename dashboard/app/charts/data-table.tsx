@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { formatNumber } from "../lib/format";
 import { fullTime } from "./time-axis";
 
 /**
- * The keyboard and screen-reader equivalent of a chart (design system §7): a `<details>` "Data table · N rows" whose
- * tables render only once opened, in weather's focusable `.table-wrap` scroll region. Times carry their offset.
+ * The keyboard and screen-reader equivalent of a chart (design system §7): a `<details>` "Data table · N rows" (or the
+ * table named by its subject, "Climate table · 4,341 rows", where a card holds more than one) whose tables render only
+ * once opened, in weather's focusable `.table-wrap` scroll region. Times carry their offset.
  */
 export type DataTableBlock = {
   caption: string;
@@ -14,11 +16,11 @@ export type DataTableBlock = {
   count: number;
 };
 
-export function DataTable({ tables }: { tables: readonly DataTableBlock[] }) {
+export function DataTable({ tables, name = "Data table" }: { tables: readonly DataTableBlock[]; name?: string }) {
   const [open, setOpen] = useState(false);
   const count = tables.reduce((sum, table) => sum + table.count, 0);
   return <details className="chart-table" onToggle={(event) => setOpen(event.currentTarget.open)}>
-    <summary>Data table · {count} {count === 1 ? "row" : "rows"}</summary>
+    <summary>{name} · {formatNumber(count)} {count === 1 ? "row" : "rows"}</summary>
     {open && tables.map((table) => <div key={table.caption} className="table-wrap" role="region" tabIndex={0} aria-label={table.caption}>
       <table>
         <caption>{table.caption}</caption>

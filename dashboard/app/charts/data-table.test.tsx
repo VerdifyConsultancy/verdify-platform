@@ -27,6 +27,11 @@ test("the data table states its rows, builds them only once opened, and heads ea
   expect(time.getAttribute("datetime")).toBe("2026-11-01T07:30:00.000Z");
 });
 
+test("a table in a card with another is named by its subject, and its count has thousands separators", () => {
+  const { container } = render(<DataTable name="Climate table" tables={[{ caption: "Climate · America/Denver", headers: ["Time"], rows: () => [], count: 4341 }]} />);
+  expect(container.querySelector("summary")!.textContent).toBe("Climate table · 4,341 rows");
+});
+
 test("CSV of this window is a Blob URL behind <a download>, replaced when the data changes and revoked on unmount", () => {
   const build = vi.fn(() => "time (America/Denver)\r\n");
   const version = {};

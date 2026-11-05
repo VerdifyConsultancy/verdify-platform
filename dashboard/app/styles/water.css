@@ -271,7 +271,7 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
 /* The schedule editor: the day shortcuts beside the weekday chips, and the words read out before Save. The page dims less and, on a wide screen, the timeline fits beside the drawer, so the draft can be read as it is typed. */
 .drawer-schedule::backdrop{background:color-mix(in srgb,var(--ink) 12%,transparent)}
 @media(min-width:1200px){
-  body:has(.drawer-schedule[open]) .water-page{margin-right:calc(28rem - max(0px,(100vw - var(--shell-wide))/2) - var(--gutter))}
+  body:has(.drawer-schedule[open]) .water-page{margin-right:max(0px,calc(28rem - max(0px,(100vw - var(--shell))/2) - var(--gutter)))}
 }
 .sch-days-field .weekday-field{margin-bottom:var(--space-1)}
 .sch-days-quick{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:0 0 .9rem}

@@ -8,7 +8,7 @@ import { DataTable, TimeCell, type DataTableBlock } from "./data-table";
 import { labelColor, type ChartColors, type PaintTarget } from "./draw";
 import { RowLabels, clipColumns, laneFont, rowBand, spanPixels, type RowLayout } from "./lanes-draw";
 import { FORECAST_RULE, PLANNED_AI, SUPERSEDED } from "./marks";
-import { clockTime, epochOf, fullTime, localDateMDY, localDay, timeAxis } from "./time-axis";
+import { clockTime, dayWords, epochOf, fullTime, localDay, timeAxis } from "./time-axis";
 import { cursorX, tooltipPlugin } from "./tooltip";
 import type { XRange } from "./types";
 import { UPlotChart, useNarrow, useZoomReset, type ChartEnv, type ChartOptions } from "./uplot-chart";
@@ -92,7 +92,7 @@ export function planRow(lane: PlanLane, now: number, horizon: number, planEnd: n
   if (lane.applied_from === "manual") {
     row.muted = true;
     const when = desired ? at(desired.created_at) : null;
-    row.head = desired ? `${MANUAL_SKIPS} · ${desired.actor.name}${when !== null ? ` since ${localDateMDY(when).slice(0, 5)}` : ""}` : MANUAL_SKIPS;
+    row.head = desired ? `${MANUAL_SKIPS} · ${desired.actor.name}${when !== null ? ` since ${dayWords(when)}` : ""}` : MANUAL_SKIPS;
     const held = desired?.value ?? device;
     if (held !== null && held !== undefined) {
       row.segments.push({ kind: "manual", start: now, end: horizon, value: held, label: "", short: "", detail: `${row.head} · ${value(held)}`, what: "MANUAL" });

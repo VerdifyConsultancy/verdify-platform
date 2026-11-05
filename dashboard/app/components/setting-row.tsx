@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { memo, type ReactNode } from "react";
+import { Fragment, memo, type ReactNode } from "react";
 import { Link } from "react-router";
 import { TIME_UNAVAILABLE, duration, localDate, localTime } from "../lib/format";
 import type { Actor, Setting } from "../lib/operator-api";
@@ -11,6 +11,15 @@ import { BoundsBar } from "./control/bounds-bar";
 import { Mark, PillBadge, isManual, settingPill, useRecentWrite, writtenAt, type SettingPill } from "./control/marks";
 import { AgeLabel, useClockValue, useNow } from "./freshness";
 import { StateReasonLine } from "./state-reason-line";
+
+/**
+ * A setting key that wraps only after its underscores ("sw_direct_wet_stress_<wbr>override_<wbr>enabled"), never in
+ * the middle of a word: identifiers keep `overflow-wrap: normal` (control.css), and each `<wbr>` adds no text.
+ */
+export function breakableKey(key: string): ReactNode {
+  const parts = key.split("_");
+  return parts.map((part, index) => <Fragment key={index}>{part}{index < parts.length - 1 && <>_<wbr /></>}</Fragment>);
+}
 
 /**
  * Settings' rows (SCR-05, redesign §5.10). Everything a row says comes from API-09 as served: `state`, `state_reason`,
@@ -370,7 +379,7 @@ export const SettingRow = memo(function SettingRow({ setting, readbackStale = fa
   const pending = isPending(setting.state) ? pendingRequest(setting) : null;
   const numeric = setting.kind === "numeric" && setting.group !== "band_in_force";
   return <tr className={cls("setting-row", !setting.writable && "setting-read-only")} data-param={setting.param} data-state={setting.state}>
-    <th scope="row" className="setting-name"><span className="setting-label">{setting.label}</span> <span className="setting-param mono">{setting.param}</span></th>
+    <th scope="row" className="setting-name"><span className="setting-label">{setting.label}</span> <span className="setting-param mono">{breakableKey(setting.param)}</span></th>
     <td className="setting-device">
       <div className="ctl-row-line">
         <DeviceLine setting={setting} readbackStale={readbackStale} programRevision={programRevision} />
