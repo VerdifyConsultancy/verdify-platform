@@ -208,6 +208,15 @@ spec:
               value: "false"
             - name: GF_ANALYTICS_CHECK_FOR_UPDATES
               value: "false"
+            # #1351 (Jason 2026-11-05): no incidental public calls at runtime. The
+            # plugin-update check and news feed call grafana.com; gravatar avatars
+            # are proxied from secure.gravatar.com. egress-local-only blocks all three.
+            - name: GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES
+              value: "false"
+            - name: GF_NEWS_NEWS_FEED_ENABLED
+              value: "false"
+            - name: GF_SECURITY_DISABLE_GRAVATAR
+              value: "true"
             # Grafana 11.6 ships preinstalled apps (grafana-lokiexplore-app,
             # pyroscope, …) whose module.js 404s on `react/jsx-runtime` and throws
             # an uncaught exception that CRASHES the headless-render page (frame

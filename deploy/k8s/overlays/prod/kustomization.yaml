@@ -38,6 +38,9 @@ resources:
   # component without its own egress allowlist, plus the declared Home Assistant consumers.
   - egress-deny-management.yaml
   - egress-allow-management.yaml
+  # #1351/#1363: Verdify-owned private-ranges-only egress for every component without its own
+  # allowlist; the vendored deny above is narrowed to the two components that still need public egress.
+  - egress-local-only.yaml
   - verdify-outbound.yaml
   # #382 durable source spool: claim and sole consumer land together.
   - ingestor-state-pvc.yaml
@@ -298,10 +301,13 @@ patches:
       version: v1
       kind: Deployment
       name: verdify-hermes-iris
-  # network-infra#839: the vendored egress-deny-management selects every pod (`{}`). Keep
-  # out every component that already has its own Egress allowlist: NetworkPolicies are
-  # additive, and selecting those pods would widen their allowlists.
-  # tests/test_egress_deny_management.py keeps this list equal to the rendered set.
+  # network-infra#839: the vendored egress-deny-management selects every pod (`{}`) and keeps
+  # public egress. #1351/#1363 (local-only): it now selects only the components that still need
+  # the public internet: hermes-iris (api.openai.com, retired by #1350) and api (Cloudflare
+  # Turnstile siteverify for the contact form, accepted for now on #1351 row 7).
+  # egress-local-only.yaml selects every other component without its own Egress allowlist.
+  # NetworkPolicies are additive, so the two selectors must never overlap.
+  # tests/test_egress_deny_management.py and tests/test_egress_local_only.py check the pairing.
   - target:
       kind: NetworkPolicy
       name: egress-deny-management
@@ -311,20 +317,10 @@ patches:
         value:
           matchExpressions:
             - key: app.kubernetes.io/component
-              operator: NotIn
+              operator: In
               values:
-                - experiment-v2-freezer
-                - experiment-v2-lifecycle
-                - experiment-v2-selector
-                - firmware-artifact-verifier
-                - firmware-builder
-                - firmware-flasher
-                - ingestor
-                - lab-cache-origin
-                - lab-site
-                - mcp
-                - outbound
-                - winter-feasibility
+                - api
+                - hermes-iris
 
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api

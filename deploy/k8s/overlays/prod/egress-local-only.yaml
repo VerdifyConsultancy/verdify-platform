@@ -1,0 +1,82 @@
+# #1351 / #1363 (Jason 2026-11-05: Verdify runs local-only). Verdify-owned egress boundary for
+# every verdify-prod component without its own Egress allowlist: private ranges only, never the
+# public internet, and never the estate management set.
+#
+# NetworkPolicies are allow-only and additive, so this cannot narrow a pod that another policy
+# already opens. kustomization.yaml therefore narrows the vendored egress-deny-management
+# (0.0.0.0/0 minus management) to the two components that still need the public internet, and this
+# policy selects everything else, unlabeled pods included (NotIn matches a missing label). tests/test_egress_local_only.py keeps both selectors and the
+# management `except` list (copied from the vendored deny) in step.
+#
+# Accepted public egress stays only in the components' own policies: verdify-outbound
+# (Open-Meteo, verdify-outbound-boundary) and the firmware builder (GitHub, PlatformIO, PyPI;
+# build-time only, allow-firmware-builder-egress). experiment-v2-selector keeps its own 443 rule
+# until #1350 removes it. Two components stay on the vendored deny: hermes-iris (api.openai.com,
+# direct) until #1350 retires it, and api, whose contact form calls Cloudflare Turnstile siteverify
+# (challenges.cloudflare.com; Cloudflare is accepted for now on #1351 row 7).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-local-only
+  labels:
+    app.kubernetes.io/part-of: verdify
+    network.vallery.net/policy: egress-local-only
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: NotIn
+        values:
+          # Components with their own Egress allowlist (the list the vendored deny excluded before).
+          - experiment-v2-freezer
+          - experiment-v2-lifecycle
+          - experiment-v2-selector
+          - firmware-artifact-verifier
+          - firmware-builder
+          - firmware-flasher
+          - ingestor
+          - lab-cache-origin
+          - lab-site
+          - mcp
+          - outbound
+          - winter-feasibility
+          # Still on the vendored deny (public egress): see the header.
+          - api
+          - hermes-iris
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+        - ipBlock:
+            cidr: 172.16.0.0/12
+        - ipBlock:
+            cidr: 192.168.0.0/16
+            # Same management set as egress-deny-management.yaml (network-infra ipam/management-cidrs.yaml).
+            except:
+              - 192.168.1.0/24
+              - 192.168.7.1/32
+              - 192.168.10.1/32
+              - 192.168.20.1/32
+              - 192.168.30.1/32
+              - 192.168.30.31/32
+              - 192.168.30.32/32
+              - 192.168.30.33/32
+              - 192.168.30.50/32
+              - 192.168.30.100/32
+              - 192.168.30.107/32
+              - 192.168.30.126/32
+              - 192.168.30.127/32
+              - 192.168.30.211/32
+              - 192.168.30.212/32
+              - 192.168.30.213/32
+              - 192.168.30.214/32
+              - 192.168.30.215/32
+              - 192.168.30.216/32
+              - 192.168.30.217/32
+              - 192.168.30.240/32
+              - 192.168.40.1/32
+              - 192.168.50.1/32
+              - 192.168.60.1/32
+              - 192.168.64.1/32
