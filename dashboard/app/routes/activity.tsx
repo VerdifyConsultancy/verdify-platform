@@ -21,7 +21,7 @@ import {
 } from "../lib/activity";
 import { formatNumber, formatValue, localDate, shortTime } from "../lib/format";
 import { graphWindowUrl } from "../lib/graph-link";
-import { lineByEquipment } from "../lib/lines";
+import { lineByEquipment, lineDisplayName } from "../lib/lines";
 import type { Alert, AlertPage, IrrigationStatus, Now } from "../lib/operator-api";
 import { panelRead, useApiRead, type PanelRead } from "../lib/queries";
 import { viewMeta } from "../lib/sections";
@@ -205,7 +205,7 @@ function AlertItem({ alert, context }: { alert: Alert; context: ItemContext }) {
   return <AlertRow alert={named} title={title} id={`alert-${alert.id}`} details={toggle} action={action} message={!leakOpen}
     acknowledge={!expanded && unacknowledged ? <Acknowledge alert={alert} onAcknowledged={(updated) => { said("ack", updated); onAcknowledged(updated.id); }} /> : undefined}>
     {leakOpen && <LeakLines alert={alert} now={now} />}
-    {alert.alert_type === "irrigation_fence_breach" && <ValveLine alert={alert} irrigation={irrigation} />}
+    {alert.alert_type === "irrigation_fence_breach" && <ValveLine alert={alert} />}
     {closed && <ClosedLine alert={alert} me={me} />}
     {expanded && <div className="alert-detail" id={detailId}>
       <Kv items={alertFields(alert, me)} />
@@ -240,13 +240,12 @@ function LeakLines({ alert, now }: { alert: Alert; now: Now | null }) {
   </div>;
 }
 
-/** The valve a fence breach opened (`details.equipment`): its line and, from API-IRR-01, the line's name. */
-function ValveLine({ alert, irrigation }: { alert: Alert; irrigation: IrrigationStatus | null }) {
+/** The valve a fence breach opened (`details.equipment`): its line's name, never its relay code (#1341). */
+function ValveLine({ alert }: { alert: Alert }) {
   const equipment = detailText(alert.details, "equipment");
   if (!equipment) return null;
   const line = lineByEquipment(equipment);
-  const name = line ? irrigation?.lines.find((row) => row.line_id === line.id)?.name : undefined;
-  return <p className="act-valve">Valve that opened: {line ? `${line.id} ${name ?? equipment}` : equipment}</p>;
+  return <p className="act-valve">Valve that opened: {line ? lineDisplayName(line.id) : equipment}</p>;
 }
 
 /** Who closed an alert and when ("Resolved by Jason · 10:42"), with the resolution. */
@@ -315,7 +314,7 @@ function ClearFault({ lineId }: { lineId: string }) {
   const command = useCommand({ operation: "API-IRR-13" });
   const note = command.phase === "waiting" ? "Waiting for the controller" : command.phase === "done" ? "Latch cleared" : command.phase === "late" ? command.message : null;
   return <>
-    <Button write busy={command.sending} onClick={() => void command.send({}, { line_id: lineId })}>Clear fault <span className="screen-reader">on {lineId}</span></Button>
+    <Button write busy={command.sending} onClick={() => void command.send({}, { line_id: lineId })}>Clear fault <span className="screen-reader">on {lineDisplayName(lineId)}</span></Button>
     {note && <span className="meta">{note}</span>}
     {command.error && <span className="field-error" role="alert">{command.error.message}</span>}
   </>;

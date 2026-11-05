@@ -50,7 +50,7 @@ test("plain title from the words table (raw for a type it lacks), the place in w
   expect(alertPlace({ zone: null, details: {} })).toBeNull();
   expect(alertPlace({ zone: null })).toBeNull();
   expect([alertPlaceWords({ zone: "south" }), alertPlaceWords({ zone: null, details: { line_id: "L02" } }), alertPlaceWords({ zone: null, details: { equipment: "fan2" } }), alertPlaceWords({ zone: null, details: { equipment: "pump9" } })])
-    .toEqual(["South", "L02", "Fan 2", "pump9"]);
+    .toEqual(["South", "Wall drip (fertilized)", "Fan 2", "pump9"]);
 });
 
 test("merged repeats read \"×3 since 06:02 · last 06:40\" (redesign §5.8); a single one its age; another day carries its date", () => {

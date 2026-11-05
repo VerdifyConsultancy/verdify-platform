@@ -58,7 +58,7 @@ test("events: a write's source, mark and colour by who wrote it; AI for Iris and
   ]);
   const run = { run_id: "r1", line_id: "L01", cause: "schedule", started_at: "2026-11-02T14:31:00Z", open_s: 720, outcome: "ok" } as Run;
   expect(runEvent(run, NOW)).toMatchObject({ mark: "bar", token: "eq-water", source: "runs", href: "/water/history?line=L01" });
-  expect(runEvent(run, NOW)?.label).toMatch(/^07:31 · L01 · .+ · 12 min · ok$/);
+  expect(runEvent(run, NOW)?.label).toMatch(/^07:31 · Wall drip · .+ · 12 min · ok$/);
 });
 
 test("events: only the window's and the sources shown, in time order; marks closer than 8 px join into one with a count", () => {
@@ -127,7 +127,7 @@ const FROM = Date.parse("2026-11-02T13:00:00Z") / 1000;
 const lanes: StateLanes = {
   from: iso(FROM), to: iso(FROM + 3600), lanes: [
     { equipment: "fan1", label: "Fan 1", group: "climate", line_id: null, intervals: [{ start: iso(FROM), end: iso(FROM + 600), state: "on", cause: null }, { start: iso(FROM + 600), end: iso(FROM + 3600), state: "unknown", cause: null }] },
-    { equipment: "mister_center", label: "Center mister L04", group: "water", line_id: "L04", intervals: [{ start: iso(FROM + 60), end: iso(FROM + 105), state: "on", cause: "vpd" }] },
+    { equipment: "mister_center", label: "Center mister", group: "water", line_id: "L04", intervals: [{ start: iso(FROM + 60), end: iso(FROM + 105), state: "on", cause: "vpd" }] },
   ],
 } as unknown as StateLanes;
 
@@ -137,7 +137,7 @@ test("CSV of these lanes: every interval with its local start and end, its lengt
     "﻿equipment,label,state,start (America/Denver),end (America/Denver),seconds,cause",
     "fan1,Fan 1,on,2026-11-02T06:00:00-07:00,2026-11-02T06:10:00-07:00,600,",
     "fan1,Fan 1,unknown,2026-11-02T06:10:00-07:00,2026-11-02T07:00:00-07:00,3000,",
-    "mister_center,Center mister L04,on,2026-11-02T06:01:00-07:00,2026-11-02T06:01:45-07:00,45,vpd",
+    "mister_center,Center mister,on,2026-11-02T06:01:00-07:00,2026-11-02T06:01:45-07:00,45,vpd",
   ]);
   render(<EquipmentLanes states={lanes} xRange={{ from: FROM, to: FROM + 3600 }} />);
   await settle();
@@ -169,7 +169,7 @@ test("CSV of this chart for daily water use: the meter, each part, no valve and 
   const data = { days: [day("2026-10-31", "complete", 4), day("2026-11-01", "no_data", null)] };
   const text = waterUseCsv(buildWaterUse(data as never, "line"));
   expect(text.split("\r\n").slice(0, 3)).toEqual([
-    "﻿day (America/Denver),total (gal),L01 (gal),L02 (gal),no valve (gal),coverage", "2026-10-31,4,3,1,2,complete", "2026-11-01,,,,,no_data",
+    "﻿day (America/Denver),total (gal),Wall drip (gal),Wall drip (fertilized) (gal),no valve (gal),coverage", "2026-10-31,4,3,1,2,complete", "2026-11-01,,,,,no_data",
   ]);
   render(<DailyWaterUse data={data as never} split="line" />);
   await settle();

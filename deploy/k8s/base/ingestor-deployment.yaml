@@ -181,9 +181,9 @@ spec:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: ESP32_API_KEY
-            # HAOS broker login, unused since VD-48 removed the ingestor's HAOS
-            # MQTT client. It stays mounted until decisions Q-14 retires the
-            # login on the broker.
+            # HAOS broker login (verdify-mqtt) of the Frigate occupancy
+            # subscriber (ingestor/occupancy_mqtt.py, #1370): read-only
+            # subscription to frigate/greenhouse_zone/person on MQTT_HOST.
             - name: MQTT_USER
               valueFrom:
                 secretKeyRef:

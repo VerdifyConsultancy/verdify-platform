@@ -162,7 +162,7 @@ test("Stop all water with the irrigation firmware: one API-IRR-07 request, the r
   expect(chips()).toEqual([]);
   expect(running()).toContain("Nothing running");
   expect(toasts("status")).toEqual(["Stopped every running valve. VPD misting, fog and the next scheduled run can still start on their own; to keep a line off, disable it."]);
-  expect(screen.getByRole("button", { name: "Disable L01" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Disable Wall drip" })).toBeTruthy();
   // Back to 15 s once the Stop has its answer.
   const before = sentAt("API-IRR-01").length;
   await advance(10_000);
@@ -221,7 +221,7 @@ test("a latched mister in Needs someone: Clear fault on its alert's row sends on
   const api = await open("mister-fault");
   const row = document.querySelector<HTMLElement>("#needs-someone li[data-severity]")!;
   expect(text(row.querySelector("h3"))).toBe("A mister zone faulted");
-  fireEvent.click(within(row).getByRole("button", { name: "Clear fault on L04" }));
+  fireEvent.click(within(row).getByRole("button", { name: "Clear fault on Center mister" }));
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ method: "POST", operationId: "API-IRR-13", body: { line_id: "L04" } })]);
   await advance(5000);
@@ -308,7 +308,7 @@ test("the order: hero, quick actions, Needs someone beside Water today, then Run
   for (let index = 1; index < ids.length; index++) expect(ids[index - 1].compareDocumentPosition(ids[index]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(document.querySelectorAll("#zones [data-zone]")).toHaveLength(5);
   // Now is in the shell, so the signed-in person reads by display name.
-  expect(plain(text(document.querySelector("[data-coming=later]")))).toContain("L01 Wall drip paused until 14:00 by Jason: rain · next Wed 07:35");
+  expect(plain(text(document.querySelector("[data-coming=later]")))).toContain("Wall drip paused until 14:00 by Jason: rain · next Wed 07:35");
 });
 
 test("south's tile says in words that its probe is offline and it shows the West + East average, and opens its charts", async () => {

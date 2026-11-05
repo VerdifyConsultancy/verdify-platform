@@ -6,11 +6,12 @@ HA-11, HA-12) without live services:
 - ``ha_sensor_sync`` requests only the Lutron lights, the YINMIK hydro probe and
   the Frigate occupancy sensor;
 - the occupancy latch on a fake clock: every ON poll re-extends it, the visit is
-  capped 60 min after the ON edge, OFF releases at once, and an unavailable HA
-  ends the hold 15 min after the last ON poll;
+  capped 60 min after the ON edge, OFF and an unavailable HA both end the hold
+  15 min after the last ON poll (#1370);
 - the controller's grow-light switches record ``grow_light_*_intent`` beside the
   Lutron readback, outside the durable receipt function's stream list;
-- source guards: no HAOS MQTT client, no HA/MQTT discovery flags in the Makefile,
+- source guards: the only HAOS MQTT client is the #1370 Frigate occupancy
+  subscriber (no feedback topics), no HA/MQTT discovery flags in the Makefile,
   the completion audit calls ``build_report`` with arguments it still takes, and
   nothing reads the deleted legacy scripts.
 """
@@ -211,15 +212,18 @@ def test_hydro_read_is_kept_and_merged_into_the_latest_climate_row(env):
 # ── Occupancy on a fake clock ───────────────────────────────────────────────
 
 
-def test_forty_minute_visit_stays_occupied_and_off_releases_on_the_next_poll(env):
+def test_forty_minute_visit_stays_occupied_until_fifteen_minutes_after_the_last_on_poll(env):
     for minute in range(0, 41, 5):
         _poll(env, minute, _occupancy_payload("on", T0))
-    _poll(env, 45, _occupancy_payload("off", T0 + timedelta(minutes=44)))
+    # #1370: OFF no longer cuts the latch short; it runs 15 min past the last
+    # sighting (the ON poll at minute 40), so the lights go back at minute 55.
+    for minute in (45, 50, 55):
+        _poll(env, minute, _occupancy_payload("off", T0 + timedelta(minutes=44)))
 
-    assert _occupied_minutes(env, 60) == list(range(45))
-    assert env.pushes[-1] == (T0 + timedelta(minutes=45), False)
+    assert _occupied_minutes(env, 60) == list(range(55))
+    assert env.pushes[-1] == (T0 + timedelta(minutes=55), False)
     # Every ON poll is an observation (re-extends the latch), not only the edge.
-    assert [occupied for _ts, occupied in env.pushes] == [True] * 9 + [False]
+    assert [occupied for _ts, occupied in env.pushes] == [True] * 11 + [False]
     sources = {value for _ts, entity, value in env.store.system_state if entity == "occupancy_source"}
     assert sources == {"ha_sensor_sync"}
 
@@ -365,7 +369,9 @@ def test_every_mapped_equipment_stream_is_admitted_by_its_write_path():
 # ── Source guards ───────────────────────────────────────────────────────────
 
 
-def test_ingestor_never_connects_to_the_home_assistant_mqtt_broker():
+def test_the_only_home_assistant_mqtt_client_is_the_frigate_occupancy_subscriber():
+    # #1370 (Jason, 2026-11-05) brings back one HAOS broker client: the Frigate
+    # occupancy subscriber in occupancy_mqtt.py. VD-48's feedback path stays gone.
     src = (INGESTOR / "ingestor.py").read_text()
     functions = {
         node.name for node in ast.walk(ast.parse(src)) if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
@@ -373,6 +379,14 @@ def test_ingestor_never_connects_to_the_home_assistant_mqtt_broker():
     assert "mqtt_loop" not in functions
     assert "_record_mqtt_feedback" not in functions
     assert "verdify-ingestor-occupancy" not in src
+    readers = sorted(
+        path.relative_to(INGESTOR).as_posix()
+        for path in INGESTOR.rglob("*.py")
+        if re.search(r"\bos\.environ\.get\(\"MQTT_(HOST|USER|PASS)\"", path.read_text())
+    )
+    assert readers == ["occupancy_mqtt.py"]
+    subscriber = (INGESTOR / "occupancy_mqtt.py").read_text()
+    assert ".publish(" not in subscriber
     for path in sorted(INGESTOR.rglob("*.py")):
         assert "sentinel/occupancy" not in path.read_text(), path
     assert not re.search(r"^MQTT_(HOST|PORT|USER|PASS)\s*=", (INGESTOR / "config.py").read_text(), re.M)

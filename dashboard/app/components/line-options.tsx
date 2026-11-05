@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
+import { lineDisplayName } from "../lib/lines";
 import type { IrrigationLine } from "../lib/operator-api";
 import { useRole } from "../lib/session";
 import { outOfRange, parseWhole } from "../lib/setting-values";
@@ -38,11 +39,11 @@ function OptionsForm({ line, onClose }: { line: IrrigationLine; onClose: () => v
       ...(reason.trim() ? { reason: reason.trim() } : {}),
     });
     if (!outcome.ok) return;
-    toast.show({ message: `Requested: ${line.line_id} daily cap ${capValue > 0 ? `${capValue} min` : "none"}${mister ? `, ${reserveValue} min kept for VPD` : ""}` });
+    toast.show({ message: `Requested: ${lineDisplayName(line)} daily cap ${capValue > 0 ? `${capValue} min` : "none"}${mister ? `, ${reserveValue} min kept for VPD` : ""}` });
     onClose();
   };
   const aboveCap = capValue !== null && reserveValue !== null && reserveValue > capValue;
-  return <EditDrawer open onClose={onClose} title="Options" eyebrow={`${line.line_id} · ${zoneWord(line.zone)}`} heading={line.name} onSave={() => void save()} saving={write.sending}
+  return <EditDrawer open onClose={onClose} title="Options" eyebrow={zoneWord(line.zone)} heading={lineDisplayName(line)} onSave={() => void save()} saving={write.sending}
     error={formError(write.error, ["daily_cap_min", "vpd_reserve_min", "reason"])}>
     <NumberField label="Daily cap" value={cap} onChange={setCap} {...MINUTES} error={typed.cap ?? errorFor(write.error, "daily_cap_min")}
       hint={<>0 means none · <span data-headroom>{headroomWords(line.today?.minutes, capValue)}</span></>} />
@@ -55,9 +56,9 @@ function OptionsForm({ line, onClose }: { line: IrrigationLine; onClose: () => v
 }
 
 /** "Options…" in a line row's ⋯ menu, for operators: opens `?options=<line_id>`. */
-export function OptionsButton({ line }: { line: Pick<IrrigationLine, "line_id"> }) {
+export function OptionsButton({ line }: { line: Pick<IrrigationLine, "line_id"> & Partial<Pick<IrrigationLine, "name">> }) {
   const { open } = useWaterDrawer("options");
-  return <Button write aria-haspopup="dialog" onClick={() => open(line.line_id)}>Options… <span className="screen-reader">of {line.line_id}</span></Button>;
+  return <Button write aria-haspopup="dialog" onClick={() => open(line.line_id)}>Options… <span className="screen-reader">of {lineDisplayName(line)}</span></Button>;
 }
 
 /**

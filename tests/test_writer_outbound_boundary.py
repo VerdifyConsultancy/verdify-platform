@@ -38,6 +38,8 @@ def test_writer_has_one_policy_and_exact_greenhouse_exceptions(rendered):
     assert allowed(p, "10.43.0.1", 443)
     assert allowed(p, "192.168.30.31", 6443)
     assert allowed(p, "192.168.30.107", 8123)
+    # #1370: the Frigate occupancy subscriber reads the HAOS broker again.
+    assert allowed(p, "192.168.30.107", 1883)
     assert allowed(p, "10.42.1.2", 1883, pod_labels={"app.kubernetes.io/component": "mqtt-broker"})
     assert allowed(p, HYDRO_METER, 6668)
 
@@ -91,8 +93,8 @@ def test_hydro_meter_admits_nothing_beyond_tuya_tcp(rendered, address, port, pro
         ("1.1.1.1", 443),
         ("10.43.0.1", 6443),
         ("192.168.30.31", 443),
-        # VD-48: the writer no longer reaches the Home Assistant (HAOS) MQTT broker.
-        ("192.168.30.107", 1883),
+        ("192.168.30.107", 22),
+        ("192.168.30.107", 8883),
     ],
 )
 def test_writer_other_vlan_hosts_ports_nas_and_direct_internet_denied(rendered, address, port):

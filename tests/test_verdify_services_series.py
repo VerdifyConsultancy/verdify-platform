@@ -619,7 +619,7 @@ def test_states_reads_seeds_rows_and_climate_edges_and_labels_every_lane():
     assert [lane.equipment for lane in result.lanes] == ["fan1", "drip_wall", "grow_light_main"]
     fan, drip, light = result.lanes
     assert (fan.label, fan.group, fan.line_id) == ("Fan 1", "climate", None)
-    assert (drip.label, drip.group, drip.line_id) == ("Wall drip L01", "water", "L01")
+    assert (drip.label, drip.group, drip.line_id) == ("Wall drip", "water", "L01")
     assert [(i.state, i.start, i.end) for i in fan.intervals] == [
         ("off", start, start + 30 * MIN),
         ("on", start + 30 * MIN, start + 45 * MIN),

@@ -23,6 +23,7 @@ import { CLIMATE_REPORTING_S, HEARTBEAT_FRESH_S } from "../components/alert-row"
 import { Button } from "../components/button";
 import { useToast, type ToastOptions } from "../components/toast";
 import { formatNumber, shortTime } from "./format";
+import { lineDisplayName, nameLineCodes } from "./lines";
 import {
   ApiError, SessionEnded, apiWrite, newIdempotencyKey, type Alert, type AlertPage, type BodyOf, type DesiredSetting, type Freshness,
   type IrrigationLine, type IrrigationStatus, type Now, type ParamsOf, type Parsed, type Problem, type ReadOperationId, type Setting,
@@ -58,7 +59,7 @@ export type WriteOutcome<T> = { readonly ok: true; readonly data: T; readonly re
 export type FieldUnits = { readonly unit?: string | null; readonly step?: number | null };
 
 /**
- * `manifold_busy` in the API's own sentence, which names the holder ("L01 holds the drip manifold until 07:42; stop it or
+ * `manifold_busy` in the API's own sentence, which names the holder ("Wall drip holds the drip manifold until 07:42; stop it or
  * try then"). A detail with no end time gains one from `retry_after_s`, and with no detail the words table's line stands.
  */
 function manifoldBusyText(problem: Problem): string {
@@ -76,6 +77,10 @@ function manifoldBusyText(problem: Problem): string {
  * Problem's own detail (plain words), else raw.
  */
 export function problemMessage(problem: Problem, units: FieldUnits = {}): string {
+  // A person reads the line's name, never its relay code (#1341), whichever API build wrote the detail.
+  return nameLineCodes(problemWords(problem, units));
+}
+function problemWords(problem: Problem, units: FieldUnits): string {
   if (problem.code === "out_of_range" && problem.min !== null && problem.min !== undefined && problem.max !== null && problem.max !== undefined) {
     return `Must be ${rangeText(problem.min, problem.max, units.unit, units.step)}`;
   }
@@ -558,11 +563,11 @@ export function stopResult({ running, engine, confirmed, freshness }: StopReport
 function DisableLine({ lineId }: { lineId: string }) {
   const write = useProgramWrite("API-IRR-08");
   const [sent, setSent] = useState(false);
-  if (sent) return createElement("span", { className: "state-note", "data-disabled-line": lineId }, `${lineId}: disable requested`);
+  if (sent) return createElement("span", { className: "state-note", "data-disabled-line": lineId }, `${lineDisplayName(lineId)}: disable requested`);
   const press = async () => { if ((await write.send({ line_id: lineId }, { enabled: false, manual: true })).ok) setSent(true); };
   return createElement(Fragment, null,
-    createElement(Button, { write: true, busy: write.sending, onClick: () => void press(), children: `Disable ${lineId}` }),
-    write.error && createElement("span", { className: "field-error" }, `${lineId}: ${write.error.message}`));
+    createElement(Button, { write: true, busy: write.sending, onClick: () => void press(), children: `Disable ${lineDisplayName(lineId)}` }),
+    write.error && createElement("span", { className: "field-error" }, `${lineDisplayName(lineId)}: ${write.error.message}`));
 }
 function DisableLines({ lines }: { lines: readonly string[] }) {
   return createElement(Fragment, null, ...lines.map((lineId) => createElement(DisableLine, { key: lineId, lineId })));

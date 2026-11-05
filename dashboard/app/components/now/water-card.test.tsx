@@ -108,3 +108,17 @@ test("API-IRR-01 failed or not served: Water status unavailable. with Retry, nev
   expect(rowWords("center").amount).toBe("14 / 120 min");
   expect(document.querySelector("[data-write-control]")).toBeNull();
 });
+
+test("#1348: a zone's minutes stay whole against its cap, with the VPD misting in them said apart, and the day's mist and fog on its own line", () => {
+  const base = statusOf("in-band");
+  const status: IrrigationStatus = { ...base, today: { ...base.today, climate_zones: { wall: 0, center: 14, south: 0, west: 0, fog: 6 }, climate: { minutes: 20, pulses: 23, gal: 7 } } };
+  renderCard(read(status));
+  expect(rowWords("center").amount).toBe("14 / 120 min · of which VPD 14 min");
+  expect(rowWords("wall").amount).toBe("0 / 60 min");
+  expect(plain(text(row("climate")))).toBe("Mist & fog today: 20 min · 7 gal · 23 pulses");
+  cleanup();
+  // A server before #1348 sends neither: no part and no climate line, never a 0 it does not know.
+  renderCard(read({ ...base, today: { date: base.today.date, zones: base.today.zones } as IrrigationStatus["today"] }));
+  expect(rowWords("center").amount).toBe("14 / 120 min");
+  expect(row("climate")).toBeNull();
+});
