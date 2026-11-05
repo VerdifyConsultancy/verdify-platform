@@ -673,19 +673,51 @@ export function daysWords(days: readonly string[] | null | undefined): string {
 
 const SOLAR_WORDS: Readonly<Record<string, string>> = { sunrise: "sunrise", solar_noon: "solar noon", sunset: "sunset" };
 const MINUS_SIGN = "−";
+type StartShape = { readonly kind: string; readonly clock?: string; readonly offset_min?: number };
+type SolarToday = Pick<ScheduleAgenda["solar"][number], "sunrise" | "solar_noon" | "sunset">;
+/** A solar offset's size with its unit: "2 h", "45 min", "1 h 30 min"; 0 reads "0". */
+function offsetSize(minutes: number): string {
+  const whole = Math.abs(Math.round(minutes));
+  if (whole === 0) return "0";
+  const hours = Math.floor(whole / 60), rest = whole % 60;
+  return [hours ? `${hours}${NBSP}h` : null, rest ? `${rest}${NBSP}min` : null].filter(Boolean).join(" ");
+}
+/** Today's time of a solar start, from `solar[]` (the browser never computes the sun); null without it. */
+function solarTime(start: StartShape, solarToday: SolarToday | null | undefined): string | null {
+  const at = solarToday && Object.hasOwn(SOLAR_WORDS, start.kind) ? Date.parse(solarToday[start.kind as "sunrise" | "solar_noon" | "sunset"]) : Number.NaN;
+  return Number.isFinite(at) ? shortTime(new Date(at + (start.offset_min ?? 0) * 60_000).toISOString()) : null;
+}
 /**
- * A start in words with today's resolved time: "16:00", "sunrise + 60 (07:31 today)", "solar noon − 120"; the resolved
- * time only from `solar[]` (the browser never computes the sun). A kind this build does not know reads raw.
+ * A start in words with today's resolved time: "16:00", "sunrise + 1 h (07:31 today)", "solar noon − 2 h", the offset
+ * with its unit; the resolved time only from `solar[]`. A kind this build does not know reads raw.
  */
-export function startWords(start: { readonly kind: string; readonly clock?: string; readonly offset_min?: number } | null | undefined, solarToday?: Pick<ScheduleAgenda["solar"][number], "sunrise" | "solar_noon" | "sunset"> | null): string {
+export function startWords(start: StartShape | null | undefined, solarToday?: SolarToday | null): string {
   if (!start) return "—";
   if (start.kind === "clock") return start.clock ?? "—";
   const word = SOLAR_WORDS[start.kind];
   if (!word) return start.kind;
   const offset = start.offset_min ?? 0;
-  const base = `${word}${offset === 0 ? "" : ` ${offset > 0 ? "+" : MINUS_SIGN} ${Math.abs(offset)}`}`;
-  const at = solarToday ? Date.parse(solarToday[start.kind as "sunrise" | "solar_noon" | "sunset"]) : Number.NaN;
-  return Number.isFinite(at) ? `${base} (${shortTime(new Date(at + offset * 60_000).toISOString())} today)` : base;
+  const base = `${word}${offset === 0 ? "" : ` ${offset > 0 ? "+" : MINUS_SIGN} ${offsetSize(offset)}`}`;
+  const time = solarTime(start, solarToday);
+  return time ? `${base} (${time} today)` : base;
+}
+/**
+ * Several starts as one list (a line's fallback schedules, redesign §6.2's "Fallback (3)"): one solar kind reads once
+ * with each offset, "solar noon −2 h, 0, +2 h (09:47, 11:47, 13:47 today)"; mixed kinds each in full.
+ */
+export function startsWords(starts: readonly (StartShape | null | undefined)[], solarToday?: SolarToday | null): string {
+  const known = starts.filter((start): start is StartShape => Boolean(start));
+  const kind = known[0]?.kind;
+  if (!known.length || known.length !== starts.length || !Object.hasOwn(SOLAR_WORDS, kind ?? "") || known.some((start) => start.kind !== kind)) {
+    return starts.map((start) => startWords(start)).join(", ");
+  }
+  const offsets = known.map((start) => {
+    const offset = start.offset_min ?? 0;
+    return offset === 0 ? "0" : `${offset > 0 ? "+" : MINUS_SIGN}${offsetSize(offset)}`;
+  });
+  const times = known.map((start) => solarTime(start, solarToday));
+  const today = times.every((time): time is string => time !== null) ? ` (${times.join(", ")} today)` : "";
+  return `${SOLAR_WORDS[kind!]} ${offsets.join(", ")}${today}`;
 }
 
 /** A mist window: "4 × 45 s, 60 s gap"; one pulse reads "45 s". */

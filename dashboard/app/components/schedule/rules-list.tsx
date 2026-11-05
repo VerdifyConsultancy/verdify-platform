@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { usePhone } from "../../lib/narrow";
 import type { IrrigationStatus, Schedule, ScheduleAgenda } from "../../lib/operator-api";
 import { OperatorOnly, useRole } from "../../lib/session";
-import { agoWords, amountWords, daysWords, lineSyncWords, startWords } from "../../lib/water";
+import { agoWords, amountWords, daysWords, lineSyncWords, startWords, startsWords } from "../../lib/water";
 import { useProgramWrite } from "../../lib/writes";
 import { isAiSource } from "../../lib/vocab";
 import { Badge, ReadbackBadge } from "../badge";
@@ -39,13 +39,16 @@ export function useFreshConfirmed(sync: string, updatedAt: string | null | undef
   return (turned !== null && now - turned < CONFIRMED_FRESH_MS) || (Number.isFinite(written) && now - written < CONFIRMED_FRESH_MS);
 }
 
-/** The enable switch of a rule, for operators: `{enabled, manual: true}` through API-IRR-04 at once (an inline switch saves manual on). */
+/**
+ * The enable switch of a rule, for operators: `{enabled, manual: true}` through API-IRR-04 at once (an inline switch saves
+ * manual on). The switch reads ON or OFF itself, so "Enabled" is its accessible name alone, never words beside it.
+ */
 function RuleSwitch({ schedule }: { schedule: Schedule }) {
   const write = useProgramWrite("API-IRR-04");
   const ids = useFieldIds();
   const enabled = schedule.enabled ?? true;
   return <div className="sch-rule-switch">
-    <Switch write label={<><span className="screen-reader">{schedule.label || `slot ${schedule.slot_id}`} </span>Enabled</>} checked={enabled} busy={write.sending}
+    <Switch write label={<span className="screen-reader">{schedule.label || `slot ${schedule.slot_id}`} Enabled</span>} checked={enabled} busy={write.sending}
       describedBy={describedBy(write.error && ids.errorId)} onChange={(on) => void write.send({ slot_id: schedule.slot_id }, { enabled: on, manual: true })} />
     {write.error && <FieldError id={ids.errorId}>{write.error.message}</FieldError>}
   </div>;
@@ -92,8 +95,9 @@ export type RulesListProps = {
  * The rules list (redesign §6.4), always below the view: every schedule under its line in L01–L10 order, disabled ones
  * muted under theirs. A rule reads its days, its start in words with today's time, its amount, MANUAL or "Iris may
  * adjust", FERT, the degraded-only note, its one sync pill and who changed it last. Operators get the enabled switch, Edit
- * and ⋯ (Duplicate, Delete), and "+ Schedule" per line; viewers read the same rows. On phones each line folds into a
- * disclosure under the agenda.
+ * and ⋯ (Duplicate, Delete), and "+ Schedule" per line; viewers read the same rows. A line's fallback schedules
+ * (`degraded_only`, two or more) are one "Fallback (3)" row (redesign §6.2) that lists their starts and opens to each
+ * schedule's own row. On phones each line folds into a disclosure under the agenda.
  */
 export function RulesList({ groups, agenda, program, today, now, editTo, newTo, copyTo }: RulesListProps) {
   const operator = useRole() === "operator";
@@ -109,14 +113,48 @@ export function RulesList({ groups, agenda, program, today, now, editTo, newTo, 
     {groups.map((group) => <details key={`${group.lineId}-${phone ? "fold" : "open"}`} className="sch-rule-group" data-line={group.lineId} open={!phone}>
       <summary><h3 className="sch-rule-line">{group.name}</h3><span className="meta"> · {group.schedules.length} {group.schedules.length === 1 ? "schedule" : "schedules"}</span></summary>
       <ul className="sch-rule-rows">
-        {group.schedules.map((schedule) => <RuleRow key={schedule.slot_id} schedule={schedule} group={group} solar={solar} program={program} now={now}
-          operator={operator} editTo={editTo} copyTo={copyTo} />)}
+        {(() => {
+          const fallback = group.schedules.filter((schedule) => schedule.degraded_only);
+          const row = (schedule: Schedule) => <RuleRow key={schedule.slot_id} schedule={schedule} group={group} solar={solar} program={program} now={now}
+            operator={operator} editTo={editTo} copyTo={copyTo} />;
+          // The fallback row stands where its first schedule would.
+          return group.schedules.map((schedule) => (fallback.length < 2 || !schedule.degraded_only ? row(schedule)
+            : schedule === fallback[0] ? <FallbackRow key="fallback" schedules={fallback} group={group} solar={solar} program={program} rows={fallback.map(row)} /> : null));
+        })()}
       </ul>
       <OperatorOnly>
         <p className="sch-rule-add"><Link className="button-link" to={newTo(group.lineId)} preventScrollReset data-write-control="true">+ Schedule <span className="screen-reader">on {group.name}</span></Link></p>
       </OperatorOnly>
     </details>)}
   </section>;
+}
+
+/**
+ * A line's fallback schedules as one row (redesign §6.2, #1308 visual QA 42): "Fallback (3)", their days and amount when
+ * they share them, their starts as one list with units ("solar noon −2 h, 0, +2 h"), the degraded-only note, how many are
+ * on when not all, and who changed one last; the one pill a member's NOT CONFIRMED or REQUESTED, else MANUAL when every
+ * one is. It opens to each schedule's own row, with its switch, Edit and ⋯.
+ */
+function FallbackRow({ schedules, group, solar, program, rows }: {
+  schedules: readonly Schedule[]; group: RuleGroup; solar: ScheduleAgenda["solar"][number] | null; program: RulesListProps["program"]; rows: readonly ReactNode[];
+}) {
+  const first = schedules[0];
+  const shared = (words: (schedule: Schedule) => string) => (new Set(schedules.map(words)).size === 1 ? words(first) : null);
+  const facts = [shared((schedule) => daysWords(schedule.days)), startsWords(schedules.map((schedule) => schedule.start), solar), shared((schedule) => amountWords(schedule, group.kind, group.partner))];
+  const on = schedules.filter((schedule) => schedule.enabled ?? true).length;
+  const syncs = schedules.map((schedule) => schedule.sync);
+  const sync = syncs.includes("not_confirmed") ? "not_confirmed" : syncs.includes("requested") ? "requested" : null;
+  const pill = sync ? <ReadbackBadge state={sync} /> : schedules.every((schedule) => schedule.manual) ? <Badge kind="manual" /> : undefined;
+  const newest = [...schedules].sort((a, b) => (Date.parse(b.updated_at ?? "") || 0) - (Date.parse(a.updated_at ?? "") || 0))[0];
+  const meta = [DEGRADED_WORDS, schedules.some((schedule) => schedule.manual) ? null : "Iris may adjust", on < schedules.length ? `${on} of ${schedules.length} on` : null].filter(Boolean);
+  return <ObjectRow as="li" headingLevel={4} className={cls("sch-rule", "sch-rule-fallback", on === 0 && "is-muted")} data={{ "data-fallback": group.lineId }}
+    title={`Fallback (${schedules.length})`} pill={pill} state={facts.filter(Boolean).join(" · ")}
+    meta={<>{meta.join(" · ")} · <ChangedBy schedule={newest} />{sync && <> · <span className={cls(sync === "not_confirmed" && "fault")}>{lineSyncWords(sync, program)}</span></>}</>}>
+    <details className="sch-fallback-each">
+      <summary>Each schedule <span className="meta">· {schedules.length}</span></summary>
+      <ul className="sch-rule-rows sch-fallback-rows">{rows}</ul>
+    </details>
+  </ObjectRow>;
 }
 
 function RuleRow({ schedule, group, solar, program, now, operator, editTo, copyTo }: {

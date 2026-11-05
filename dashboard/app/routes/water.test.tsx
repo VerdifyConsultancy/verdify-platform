@@ -332,7 +332,7 @@ test("fallback windows are conditional, never planned runs: dotted on the strips
   fireEvent.click(blocks[0]);
   await load();
   expect([...document.querySelectorAll("dialog.popover .data-pair")].map((pair) => text(pair)).slice(0, 2)).toEqual([
-    "WhenMon 2 Nov · 09:47 (solar noon − 120) · 4 × 45 s, 60 s gap", "OutcomeNot needed",
+    "WhenMon 2 Nov · 09:47 (solar noon − 2 h) · 4 × 45 s, 60 s gap", "OutcomeNot needed",
   ]);
   // Leaving Schedules clears its words from the status line.
   fireEvent.click(tab("Today"));
@@ -375,7 +375,7 @@ test("a block opens its popover in the URL: the run, its rule, its next starts, 
   const pop = within(document.querySelector<HTMLElement>("dialog.popover")!);
   expect(text(document.querySelector("dialog.popover h2"))).toBe("L01 Wall drip · Wall MWF");
   expect([...document.querySelectorAll("dialog.popover dd")].map((node) => text(node))).toEqual([
-    "Wed 4 Nov · 07:35 (sunrise + 60) · 12 min", "Planned", "Mon Wed Fri · sunrise + 60 · Manual", "Wed 07:35 · Fri 07:35",
+    "Wed 4 Nov · 07:35 (sunrise + 1 h) · 12 min", "Planned", "Mon Wed Fri · sunrise + 1 h · Manual", "Wed 07:35 · Fri 07:35",
   ]);
   // Edit opens the editor over the popover, so closing it comes back here.
   expect(pop.getByRole("link", { name: "Edit schedule" }).getAttribute("href")).toBe("/water/schedules?day=2026-11-04&block=11-1793802900&schedule=11");
@@ -414,11 +414,11 @@ test("the rules list: every schedule under its line with its words, who changed 
   expect(text(rules.querySelector(".sch-count-words"))).toBe("3 of 24 schedules");
   expect([...rules.querySelectorAll(".sch-rule-group")].map((group) => group.getAttribute("data-line"))).toEqual(["L01", "L02", "L04"]);
   const rule = (slot: number) => rules.querySelector<HTMLElement>(`[data-slot="${slot}"]`)!;
-  expect(text(rule(11).querySelector(".object-row-state"))).toBe("Mon Wed Fri · sunrise + 60 (07:35 today) · 12 min");
+  expect(text(rule(11).querySelector(".object-row-state"))).toBe("Mon Wed Fri · sunrise + 1 h (07:35 today) · 12 min");
   expect(text(rule(11).querySelector(".object-row-pill"))).toBe("Manual");
   expect(text(rule(11).querySelector(".object-row-meta"))).toBe("changed by jason 2 days ago");
   expect(text(rule(13).querySelector(".object-row-meta"))).toBe("Iris may adjust · changed by steward (AI) 2 days ago");
-  expect(text(rule(12).querySelector(".object-row-state"))).toBe("Sun · sunrise + 60 (07:35 today) · feed 5 min · prewet 2 min · flush 4 min on L01");
+  expect(text(rule(12).querySelector(".object-row-state"))).toBe("Sun · sunrise + 1 h (07:35 today) · feed 5 min · prewet 2 min · flush 4 min on L01");
   fireEvent.click(within(rule(11)).getByRole("switch"));
   await advance(0);
   expect(writes(api).map((row) => [row.method, row.path, row.body])).toEqual([["PUT", "/api/v1/irrigation/schedules/11", { enabled: false, manual: true }]]);
@@ -428,6 +428,33 @@ test("the rules list: every schedule under its line with its words, who changed 
   expect(writes(api).at(-1)).toMatchObject({ method: "DELETE", path: "/api/v1/irrigation/schedules/12" });
   // The menu closed as Delete was chosen: the outcome is a toast, as the editor's Delete says it.
   expect(text(document.querySelector(".toast-stack[role=status]"))).toContain("Requested deleting Weekly feed on L02");
+});
+
+test("a line's fallback schedules are one row, Fallback (3), with their starts in units, opening to each schedule's own row; the switches read ON with no visible Enabled (#1308 visual QA 42)", async () => {
+  open("/water/schedules", { fixture: "in-band" });
+  await load();
+  const group = document.querySelector<HTMLElement>('.sch-rules .sch-rule-group[data-line="L04"]')!;
+  const fallback = group.querySelector<HTMLElement>('.sch-rule-fallback[data-fallback="L04"]')!;
+  expect(text(fallback.querySelector(".object-row-title"))).toBe("Fallback (3)");
+  expect(text(fallback.querySelector(".object-row-state"))).toBe("Daily · solar noon −2 h, 0, +2 h (09:47, 11:47, 13:47 today) · 4 × 45 s, 60 s gap");
+  expect(text(fallback.querySelector(".object-row-meta"))).toBe("only if VPD sensing is degraded · Iris may adjust · changed by seed 12 days ago");
+  // One row at the line's level; each schedule's own row, with its switch, Edit and ⋯, inside its disclosure.
+  expect([...group.querySelectorAll(":scope > .sch-rule-rows > li")]).toEqual([fallback]);
+  const each = fallback.querySelector<HTMLDetailsElement>("details.sch-fallback-each")!;
+  expect(text(each.querySelector("summary"))).toBe("Each schedule · 3");
+  expect([...each.querySelectorAll("[data-slot]")].map((node) => node.getAttribute("data-slot"))).toEqual(["1", "2", "3"]);
+  expect(text(each.querySelector('[data-slot="1"] .object-row-state'))).toBe("Daily · solar noon − 2 h (09:47 today) · 4 × 45 s, 60 s gap");
+  const first = within(each.querySelector<HTMLElement>('[data-slot="1"]')!);
+  expect(first.getByRole("link", { name: "Edit vanda-degraded" })).toBeTruthy();
+  // "Enabled" is the switch's name alone; it says ON or OFF itself.
+  const toggle = first.getByRole("switch", { name: "vanda-degraded Enabled" });
+  expect(text(toggle)).toBe("ON");
+  expect(toggle.closest(".field-switch")!.querySelector(".field-label")!.firstElementChild?.className).toBe("screen-reader");
+  // Lines with no fallback schedules have no fallback row.
+  cleanup(); stopFixtureApi();
+  open("/water/schedules", { fixture: "schedules-paused" });
+  await load();
+  expect(document.querySelector(".sch-rule-fallback")).toBeNull();
 });
 
 test("a viewer reads the same views with no editor, [+], switch, Edit, Duplicate or pause, whatever the URL says", async () => {
