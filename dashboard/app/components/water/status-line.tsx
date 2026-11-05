@@ -42,12 +42,17 @@ export function ProgramState({ irrigation, short = null }: { irrigation: PolledQ
   </span>;
 }
 
-/** "L04 Center mister running (VPD)", each linked to its row on Today; "nothing running" when none is. */
-function Running({ status, linked }: { status: IrrigationStatus; linked: boolean }) {
+/**
+ * "L04 Center mister running (VPD)", each linked to its row on Today; "nothing running" when none is. `short`, a phone's
+ * words: "L01 running ›", the line's name for a screen reader.
+ */
+function Running({ status, linked, short = false }: { status: IrrigationStatus; linked: boolean; short?: boolean }) {
   const running = runningLines(status.lines);
   if (!running.length) return <>nothing running</>;
   return <>{running.map((line, index) => {
-    const words = <>{lineTitle(line)} running{line.state.cause ? ` (${causeWords(line.state.cause)})` : ""}</>;
+    const words = short
+      ? <>{line.line_id}<span className="screen-reader">{lineTitle(line).slice(line.line_id.length)}</span> running<span aria-hidden="true"> ›</span></>
+      : <>{lineTitle(line)} running{line.state.cause ? ` (${causeWords(line.state.cause)})` : ""}</>;
     return <Fragment key={line.line_id}>{index > 0 && (index === running.length - 1 ? " and " : ", ")}{linked ? <a href={`#line-${line.line_id}`}>{words}</a> : words}</Fragment>;
   })}</>;
 }
@@ -61,8 +66,12 @@ export function WaterStatus({ irrigation, view, today, summary, short = false }:
   const status = irrigation.data;
   const program = <ProgramState irrigation={irrigation} short={short ? (view === "today" ? "age" : "word") : null} />;
   if (!status || irrigation.isError || !status.engine) return program;
-  // A phone's Today line is the program alone: each running line's row says so, toned, right under it.
-  if (view === "today") return short ? program : <>{program} · <Running status={status} linked /></>;
+  // A phone's Today line names a running line too ("L01 running ›", linked to its row): on a phone the row can sit
+  // below the fold, under Site today. Idle, it is the program alone.
+  if (view === "today") {
+    if (!short) return <>{program} · <Running status={status} linked /></>;
+    return runningLines(status.lines).length ? <>{program} · <Running status={status} linked short /></> : program;
+  }
   const next = nextRunOf(status.lines);
   return <>{program} · {next ? <>next{short ? "" : ":"} {lineTitle(next.line)} {pauseUntilWords(next.next.start_at, today)}</> : "no run planned this week"}</>;
 }

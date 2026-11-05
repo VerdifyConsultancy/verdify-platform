@@ -598,12 +598,15 @@ export type ZoneSummary = {
   readonly reserve: number | null;
   /** The newest `last_water.at` among the zone's lines. */
   readonly lastAt: string | null;
+  /** A line of the zone, L03 included, reads `running` now: the head then says "running now" (redesign §5.2). */
+  readonly running: boolean;
 };
 
 /** The five zone cards' facts from API-IRR-01, with today's still-planned minutes from `plannedToday` when known. */
 export function zoneSummaries(status: Pick<IrrigationStatus, "lines" | "today">, planned: PlannedToday | null): ZoneSummary[] {
   return WATER_ZONES.map((zone) => {
     const inZone = [...status.lines].filter((line) => lineZone(line) === zone).sort(byLineId);
+    const running = inZone.some((line) => line.state.code === "running");
     const lines = inZone.filter((line) => !isMaster(line));
     const capLine = ZONE_CAP_LINE[zone];
     const capped = capLine ? lines.find((line) => line.line_id === capLine) ?? null : null;
@@ -615,9 +618,23 @@ export function zoneSummaries(status: Pick<IrrigationStatus, "lines" | "today">,
     return {
       zone, lines, master: inZone.find(isMaster) ?? null, mister, minutes, planned: planned ? planned.zone[zone] ?? 0 : null,
       cap: capped && capped.daily_cap_min > 0 ? capped.daily_cap_min : null, capLine: capped?.line_id ?? null,
-      reserve: mister && finite(mister.vpd_reserve_min) && mister.vpd_reserve_min > 0 ? mister.vpd_reserve_min : null, lastAt: newest,
+      reserve: mister && finite(mister.vpd_reserve_min) && mister.vpd_reserve_min > 0 ? mister.vpd_reserve_min : null, lastAt: newest, running,
     };
   });
+}
+
+/**
+ * When a zone's head says it last watered (redesign §5.2): its newest `last_water`, unless today's minutes are above 0
+ * and that is from an earlier day (a run the API has not filed yet), when today's newest valve start (`starts`, epoch
+ * seconds from API-05) stands in. Null when neither is known; a running zone reads "running now" instead.
+ */
+export function zoneLastAt(summary: Pick<ZoneSummary, "lastAt" | "minutes">, starts: readonly number[], today: string): string | null {
+  const { lastAt, minutes } = summary;
+  if (!finite(minutes) || minutes <= 0 || (validTime(lastAt) && localDate(lastAt) === today)) return lastAt;
+  const newest = starts.filter((start) => Number.isFinite(start)).reduce((best, start) => Math.max(best, start), Number.NEGATIVE_INFINITY);
+  if (!Number.isFinite(newest)) return lastAt;
+  const at = new Date(newest * 1000).toISOString();
+  return localDate(at) === today ? at : lastAt;
 }
 
 /** The lines running now (`state.code` running), in register order; L03 and fog included, since a running valve is news. */

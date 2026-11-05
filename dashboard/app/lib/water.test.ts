@@ -9,7 +9,7 @@ import type { IrrigationStatus, MinutesReport, Occupancy, ScheduleAgenda } from 
 import {
   HISTORY_DAYS, WET_EQUIPMENT, ZONE_KIND_WORDS, amountShort, amountWords, dayClockWords, dayStatesParams, daysWords, historyDays, historyMeasure, historySummary,
   historyWindows, lastWaterParts, lineZone, newScheduleUrl, nextRunOf, nextRunShort, runSeconds, runningLines, shortfallNote, shortfallWords, startWords, tallyMinutes,
-  tallyRuns, waterUrl, zoneSummaries,
+  tallyRuns, waterUrl, zoneLastAt, zoneSummaries,
   NO_ENGINE_TEXT, RETRYING_TEXT, ROM_TEXT, agoWords, barsReport, blockAmount, boardLines, faultWords, feedStages, flowWords, headroomWords, lastWaterWords, limitItems,
   minutesCaps, misterLines, nextRunWords, occupancyWords, occurrenceReasonWords, occurrenceWords, pauseAfterRun, pauseWords, pausedNow, plannedToday, programBanner, runAmountWords,
   runGallons, runSpanWords, runsFilters, runsWindow, timeLeftWords, todayWords, weekDays, wetLines, whenWords, waterUseDays, waterUseSplit, type ProgramBannerInput,
@@ -304,6 +304,30 @@ test("Today's zones in their fixed order: their lines (L03 apart, on the wall), 
   expect([lineZone({ line_id: "L03", zone: "supply" }), lineZone({ line_id: "L11", zone: "house" }), lineZone({ line_id: "L07", zone: "south" })]).toEqual(["wall", "fog", "south"]);
   // A zone the API has no minutes for is unknown, never 0.
   expect(zoneSummaries({ ...from, today: { date: TODAY, zones: { wall: null } }, lines: from.lines.map((item) => ({ ...item, today: { minutes: null } })) }, null)[0].minutes).toBeNull();
+});
+
+test("a zone with a running line says so, and today's minutes never sit beside an older last water (#1308 visual QA 5)", () => {
+  // L01 has run for 12 min (run now) while its last filed water is Friday's.
+  const running = status("l01-running");
+  const [wall, center] = zoneSummaries(running, null);
+  expect([wall.running, wall.minutes, center.running]).toEqual([true, 12, false]);
+  expect(wall.lastAt).toBe(line(running, "L01").last_water?.at);
+  expect(zoneSummaries(status(), null).map((zone) => zone.running)).toEqual([false, false, false, false, false]);
+  // A running master valve counts for the wall, since it opens only with a feed.
+  const master = { ...running, lines: running.lines.map((item) => (item.line_id === "L01" ? { ...item, state: { ...item.state, code: "idle" } } : item.line_id === "L03" ? { ...item, state: { ...item.state, code: "running" } } : item)) };
+  expect(zoneSummaries(master as IrrigationStatus, null)[0].running).toBe(true);
+  // Once today's minutes are above 0, today's newest valve start (API-05, epoch s) stands in for an older last water.
+  const friday = "2026-10-30T14:31:00Z";
+  const starts = [Date.parse(denver("06:58")) / 1000, Date.parse(denver("10:30")) / 1000];
+  expect(zoneLastAt({ lastAt: friday, minutes: 12 }, starts, TODAY)).toBe(denver("10:30"));
+  // No minutes today, a last water already today, or no valve time known: the last water as filed.
+  expect(zoneLastAt({ lastAt: friday, minutes: 0 }, starts, TODAY)).toBe(friday);
+  expect(zoneLastAt({ lastAt: friday, minutes: null }, starts, TODAY)).toBe(friday);
+  expect(zoneLastAt({ lastAt: denver("07:31"), minutes: 12 }, starts, TODAY)).toBe(denver("07:31"));
+  expect(zoneLastAt({ lastAt: friday, minutes: 12 }, [], TODAY)).toBe(friday);
+  expect(zoneLastAt({ lastAt: null, minutes: 12 }, starts, TODAY)).toBe(denver("10:30"));
+  // A start from another day (the strip's window is today's) never stands in.
+  expect(zoneLastAt({ lastAt: friday, minutes: 12 }, [Date.parse("2026-11-01T20:00:00Z") / 1000], TODAY)).toBe(friday);
 });
 
 test("the status line's facts: what runs now and the earliest next run", () => {

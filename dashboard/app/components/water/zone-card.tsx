@@ -3,7 +3,7 @@ import { useId } from "react";
 import { ZONE_WORDS } from "../../lib/lines";
 import type { IrrigationLine, IrrigationStatus, Schedule } from "../../lib/operator-api";
 import { useApiDown } from "../../lib/session";
-import { ZONE_KIND_WORDS, amountShort, dayClockWords, nextRunShort, type ZoneSummary } from "../../lib/water";
+import { ZONE_KIND_WORDS, amountShort, dayClockWords, nextRunShort, zoneLastAt, type ZoneSummary } from "../../lib/water";
 import { cls } from "../common";
 import { LineCard } from "../line-card";
 import { MisterControls } from "../mister-association";
@@ -35,14 +35,17 @@ export type ZoneCardProps = {
 
 /**
  * A zone's card on Water → Today (redesign §5.2): the zone's name and kind, its minutes today against the cap line's
- * daily cap (planned minutes dashed) and when it last watered; a mister zone adds VPD control and Schedule with their VPD
- * source; then a row per line in register order, L03 under L02. The order never changes with state.
+ * daily cap (planned minutes dashed) and when it last watered, "running now" while one of its lines runs; a mister zone
+ * adds VPD control and Schedule with their VPD source; then a row per line in register order, L03 under L02. The order
+ * never changes with state.
  */
 export function ZoneCard({ summary, status, today, now, strips, schedules }: ZoneCardProps) {
   const headingId = useId();
   const apiDown = useApiDown();
-  const { zone, lines, master, mister, minutes, planned, cap, capLine, reserve, lastAt } = summary;
+  const { zone, lines, master, mister, minutes, planned, cap, capLine, reserve, running } = summary;
   const name = ZONE_WORDS[zone];
+  // Today's valve starts (API-05) stand in for a `last_water` the API has not filed yet once today's minutes are above 0.
+  const lastAt = zoneLastAt(summary, lines.flatMap((line) => strips?.byLine.get(line.line_id)?.episodes.map((episode) => episode.start) ?? []), today);
   const labels = new Map(schedules.flatMap((schedule) => (schedule.label ? [[schedule.slot_id, schedule.label] as const] : [])));
   const bySlot = new Map(schedules.map((schedule) => [schedule.slot_id, schedule]));
   const amountOf = (line: IrrigationLine) => {
@@ -63,7 +66,8 @@ export function ZoneCard({ summary, status, today, now, strips, schedules }: Zon
         {cap !== null
           ? <MinutesMeter label={`${name} minutes today`} done={minutes} planned={planned ?? 0} cap={cap} kind={mister?.kind ?? lines[0]?.kind ?? "drip"} />
           : <span className="wat-zone-minutes">{minutes === null ? "—" : `${Math.round(minutes)}\u00a0min`} today</span>}
-        <span className="meta wat-zone-last">{reserve !== null && <>{reserve}{"\u00a0"}min kept for VPD · </>}{lastAt ? <>last <time dateTime={lastAt}>{dayClockWords(lastAt, today)}</time></> : "no water recorded"}</span>
+        <span className="meta wat-zone-last">{reserve !== null && <>{reserve}{"\u00a0"}min kept for VPD · </>}{running ? <span className="wat-zone-running">running now</span>
+          : lastAt ? <>last <time dateTime={lastAt}>{dayClockWords(lastAt, today)}</time></> : "no water recorded"}</span>
       </div>
     </div>
     {mister && <MisterControls line={mister} status={status} />}

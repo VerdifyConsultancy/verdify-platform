@@ -140,6 +140,50 @@ test("the status line names what runs, linked to its row; a fault or rom program
   expect(document.querySelector("[data-program]")?.className).toBe("wat-program wat-program-warn");
 });
 
+test("a phone's status line names a running line too, linked to its row; the zone head reads running now; idle, the phone line is the program alone", async () => {
+  open("/water", { fixture: "l01-running" });
+  await load();
+  const short = document.querySelector(".page-status-short")!;
+  // Visible "L01 running ›"; the line's name for a screen reader, the › hidden from it.
+  expect(text(short)).toBe("Rev 42 on controller · 2 min ago · L01 Wall drip running ›");
+  expect(short.querySelector("a")?.getAttribute("href")).toBe("#line-L01");
+  expect(text(short.querySelector("a .screen-reader"))).toBe(" Wall drip");
+  expect(short.querySelector("a [aria-hidden=true]")?.textContent).toBe(" ›");
+  // The wall's head: today's 12 min against the cap, and "running now", never Friday's last water.
+  expect(text(zone("wall").querySelector('[data-limit="L01"]'))).toMatch(/^12 \/ 60 min.*running now$/);
+  expect(text(zone("wall").querySelector(".wat-zone-last"))).not.toContain("last");
+  expect(text(zone("center").querySelector(".wat-zone-last"))).toBe("60 min kept for VPD · last 06:58");
+  cleanup(); stopFixtureApi();
+  open("/water", { fixture: "in-band" });
+  await load();
+  expect(text(document.querySelector(".page-status-short"))).toBe("Rev 42 on controller · 2 min ago");
+  expect(document.querySelector(".page-status-short a")).toBeNull();
+});
+
+test("on a phone Site today holds SAF-4, the flow and occupancy: the soft budget and fallback misting only once they are the news", async () => {
+  const quiet = () => [...document.querySelectorAll(".wat-site [data-limit]")].filter((node) => node.classList.contains("wat-site-quiet")).map((node) => node.getAttribute("data-limit"));
+  open("/water", { fixture: "in-band" });
+  await load();
+  expect(quiet()).toEqual(["budget", "fallback"]);
+  cleanup(); stopFixtureApi();
+  // The budget reached and fallback misting on are the news: they stay.
+  open("/water", { fixture: "in-band" }, (base) => async (input, init) => {
+    const response = await base(input, init);
+    if (input !== "/api/v1/irrigation") return response;
+    const body = await response.json() as Record<string, unknown> & { limits: Record<string, unknown> };
+    const changed = { ...body, fallback_active: true, limits: { ...body.limits, soft_budget_gal: { used: 300, max: 300 } } };
+    return { ...response, headers: response.headers, json: async () => changed } as Response;
+  });
+  await load();
+  expect(quiet()).toEqual([]);
+  expect(text(document.querySelector('.wat-site [data-limit="budget"]'))).toContain("cap reached");
+  // The stylesheet hides the quiet rows at 860 px and below only.
+  const css = readFileSync(join(process.cwd(), "app/styles/water.css"), "utf8");
+  const phone = css.slice(css.lastIndexOf("@media(max-width:860px){"));
+  expect(phone).toContain(".wat-site-quiet{display:none}");
+  expect(css.slice(0, css.lastIndexOf("@media(max-width:860px){"))).not.toContain(".wat-site-quiet");
+});
+
 test("before the engine: relay states, the bridge in the status line once, and no per-line REQUESTED pill", async () => {
   open("/water", { fixture: "before-engine" });
   await load();
