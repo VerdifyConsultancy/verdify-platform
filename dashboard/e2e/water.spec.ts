@@ -62,6 +62,28 @@ test("at 390 × 844 with L01 running the status line names it, linked to its row
   await expectNoHorizontalScroll(page);
 });
 
+test("1440 px: the zone heads' cap meters are one width, their minutes and right edges in line, and each zone's last-watered words on its own second line", async ({ page, request }) => {
+  await page.setViewportSize(DESKTOP);
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/water");
+  const boxes = (selector: string) => page.locator(selector).evaluateAll((nodes) => nodes.map((node) => {
+    const box = node.getBoundingClientRect();
+    return { width: Math.round(box.width), right: Math.round(box.right), top: Math.round(box.top), bottom: Math.round(box.bottom) };
+  }));
+  // Wall, Center, South and West have a cap; Fog has minutes alone.
+  const meters = await boxes(".wat-zone-head .meter");
+  expect(meters).toHaveLength(4);
+  expect(new Set(meters.map((box) => box.width)).size, JSON.stringify(meters)).toBe(1);
+  expect(new Set(meters.map((box) => box.right)).size, JSON.stringify(meters)).toBe(1);
+  const minutes = await boxes(".wat-zone-head .meter-amount, .wat-zone-head .wat-zone-minutes");
+  expect(new Set(minutes.map((box) => box.right)).size, JSON.stringify(minutes)).toBe(1);
+  // The second line sits under the minutes on every zone, on one line.
+  const [heads, lasts] = await Promise.all([boxes(".wat-zone-head .wat-zone-today > :first-child"), boxes(".wat-zone-head .wat-zone-last")]);
+  expect(lasts).toHaveLength(5);
+  lasts.forEach((last, index) => expect(last.top, `zone ${index}`).toBeGreaterThanOrEqual(heads[index].bottom));
+  expect(new Set(lasts.map((box) => box.bottom - box.top)).size, JSON.stringify(lasts)).toBe(1);
+});
+
 test("only a running line's Stop is filled red; every other non-fog line has a quiet one that still stops it", async ({ page, request }) => {
   await useScreensClock(page, request, "l01-running");
   await load(page, "/water");

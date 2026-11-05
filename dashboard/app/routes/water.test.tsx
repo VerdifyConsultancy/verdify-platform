@@ -117,6 +117,14 @@ test("Today: zone cards in their fixed order, each line a row in its zone (L01�
   expect(status()).toBe("Program rev 42 on controller · confirmed 2 min ago · nothing running");
   // SAF-4 caps gallons, so both meters fill --eq-water, as Now's SAF-4 meter does (#1308 visual QA 25).
   expect([...document.querySelectorAll(".wat-site .meter")].map((meter) => meter.className.split(" ")[1])).toEqual(["meter-water", "meter-water"]);
+  // Each zone head: the meter or the minutes first, and the same second line last (#1308 visual QA 27); the stylesheet
+  // gives the meter 12rem and its minutes 7rem on every zone, so the meters stacked down the page line up.
+  for (const node of document.querySelectorAll(".wat-zone-today")) {
+    expect(node.firstElementChild!.className, node.getAttribute("data-limit") ?? "fog").toMatch(/^(sch-minutes-meter|wat-zone-minutes)$/);
+    expect(node.lastElementChild!.className).toBe("meta wat-zone-last");
+  }
+  const css = readFileSync(join(process.cwd(), "app/styles/water.css"), "utf8");
+  expect(css).toContain(".wat-zone-today .sch-minutes-meter{display:grid;grid-template-columns:12rem 7rem;");
 });
 
 test("Today's strips: each line's runs today with the now rule and its next run; misting episodes from API-05 as ticks", async () => {

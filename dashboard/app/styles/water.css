@@ -40,10 +40,14 @@ a.wat-site-term{display:inline-flex;align-items:center;min-height:24px;text-unde
 
 /* A zone card: its name and kind, its minutes against the cap and when it last watered; a mister zone's switches; its line rows. */
 .wat-zone{padding-bottom:var(--space-2)}
-.wat-zone-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2) var(--space-5);padding-bottom:var(--space-3);border-bottom:1px solid var(--line)}
+/* The head is a fixed grid, so the zones' meters stacked down the page are one width with their right edges in line: the name, then the meter (12rem) and its minutes (7rem, right-aligned in tabular figures), and under them, the same second line on every zone, the VPD reserve and when it last watered. */
+.wat-zone-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--space-2) var(--space-5);padding-bottom:var(--space-3);border-bottom:1px solid var(--line)}
 .wat-zone-kind{margin-left:var(--space-2);font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest);white-space:nowrap}
-.wat-zone-today{display:flex;flex:1 1 18rem;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:var(--space-1) var(--space-3);max-width:30rem;min-width:0}
-.wat-zone-today .sch-minutes-meter{flex:1 1 14rem}
+.wat-zone-today{display:grid;justify-items:end;gap:var(--space-1);min-width:0}
+.wat-zone-today .sch-minutes-meter{display:grid;grid-template-columns:12rem 7rem;align-items:center;gap:var(--space-3)}
+.wat-zone-today .meter-words{text-align:right}
+.wat-zone-today .meter-over{display:block}
+.wat-zone-today .meter-sep{display:none}
 .wat-zone-minutes{font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
 .wat-zone-last{white-space:nowrap}
 .wat-zone-running{font-weight:600;color:var(--ink)}
@@ -367,7 +371,11 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
   .wat-day-axis{margin-right:0}
   .wat-next-fallback{display:inline;font-size:inherit}
   .wat-next-sep{display:inline}
-  .wat-zone-today{justify-content:flex-start;max-width:none}
+  /* Phones: the name, then the meter across the card with its minutes, then the second line, each starting at the left. */
+  .wat-zone-head{grid-template-columns:minmax(0,1fr)}
+  .wat-zone-today{justify-items:stretch}
+  .wat-zone-today .sch-minutes-meter{grid-template-columns:minmax(0,1fr) auto}
+  .wat-zone-last{white-space:normal}
   .wat-runs-table{display:none}
   .sch-key-button,.wat-select select{min-height:var(--tap)}
   a.wat-site-term{min-height:var(--tap)}
