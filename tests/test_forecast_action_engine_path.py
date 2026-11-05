@@ -101,14 +101,11 @@ def test_mcp_watchdog_probes_service_and_never_respawns():
 def test_engine_repo_root_resolves_beside_its_repo_imports():
     """The engine resolves REPO_ROOT = Path(__file__).resolve().parents[1].
 
-    With `COPY scripts/ /app/scripts/`, that is /app — where slack_config.py and
-    verdify_schemas/ (the engine's only repo imports) are COPYed. Mirror that
-    here: parents[1] of the engine path must be the repo root that contains both.
+    With `COPY scripts/ /app/scripts/`, that is /app — where verdify_schemas/ (the
+    engine's only repo import; it posts nowhere since #1352) is COPYed. Mirror that
+    here: parents[1] of the engine path must be the repo root that contains it.
     """
     engine_repo_root = ENGINE.resolve().parents[1]
-    assert (engine_repo_root / "slack_config.py").is_file(), (
-        "engine's slack_config import won't resolve at its REPO_ROOT"
-    )
     assert (engine_repo_root / "verdify_schemas").is_dir(), (
         "engine's verdify_schemas import won't resolve at its REPO_ROOT"
     )

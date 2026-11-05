@@ -21,17 +21,12 @@ data:
     \ X-Forwarded-Host \"\";\n    proxy_set_header X-Forwarded-For \"\";\n    proxy_set_header\
     \ Forwarded \"\";\n    proxy_ssl_name api.openai.com;\n    set $fixed_host api.openai.com;\n\
     \    proxy_pass https://$fixed_host$request_uri;\n  }\n  location / { return 404;\
-    \ }\n}\nserver {\n  listen 8082;\n  server_name _;\n  location = /api/chat.postMessage\
-    \ {\n    limit_except POST { deny all; }\n    proxy_set_header Host slack.com;\n\
+    \ }\n}\nserver {\n  listen 8083;\n  server_name _;\n  location = /v1/forecast\
+    \ {\n    limit_except GET { deny all; }\n    proxy_set_header Host api.open-meteo.com;\n\
     \    proxy_set_header X-Forwarded-Host \"\";\n    proxy_set_header X-Forwarded-For\
-    \ \"\";\n    proxy_set_header Forwarded \"\";\n    proxy_ssl_name slack.com;\n\
-    \    set $fixed_host slack.com;\n    proxy_pass https://$fixed_host$request_uri;\n\
-    \  }\n  location / { return 404; }\n}\nserver {\n  listen 8083;\n  server_name\
-    \ _;\n  location = /v1/forecast {\n    limit_except GET { deny all; }\n    proxy_set_header\
-    \ Host api.open-meteo.com;\n    proxy_set_header X-Forwarded-Host \"\";\n    proxy_set_header\
-    \ X-Forwarded-For \"\";\n    proxy_set_header Forwarded \"\";\n    proxy_ssl_name\
-    \ api.open-meteo.com;\n    set $fixed_host api.open-meteo.com;\n    proxy_pass\
-    \ https://$fixed_host$request_uri;\n  }\n  location / { return 404; }\n}\n"
+    \ \"\";\n    proxy_set_header Forwarded \"\";\n    proxy_ssl_name api.open-meteo.com;\n\
+    \    set $fixed_host api.open-meteo.com;\n    proxy_pass https://$fixed_host$request_uri;\n\
+    \  }\n  location / { return 404; }\n}\n"
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -66,7 +61,7 @@ spec:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: outbound
       annotations:
-        verdify.ai/outbound-config-sha256: a7fe660d538322afa89bf4006c400a8655df2bb8b546a27706d5494f7bc5704a
+        verdify.ai/outbound-config-sha256: 2c193fdd12841ae26095eaa6a96bb2c7c51b020de0e07798117268b7a3d90797
     spec:
       # #1363: the zot origin denies anonymous reads.
       imagePullSecrets:
@@ -107,8 +102,6 @@ spec:
           containerPort: 8080
         - name: openai
           containerPort: 8081
-        - name: slack
-          containerPort: 8082
         - name: forecast
           containerPort: 8083
         resources:
@@ -164,9 +157,6 @@ spec:
   - name: openai
     port: 8081
     targetPort: 8081
-  - name: slack
-    port: 8082
-    targetPort: 8082
   - name: forecast
     port: 8083
     targetPort: 8083
@@ -198,8 +188,6 @@ spec:
     ports:
     - protocol: TCP
       port: 8081
-    - protocol: TCP
-      port: 8082
     - protocol: TCP
       port: 8083
   egress:

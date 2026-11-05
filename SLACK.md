@@ -1,5 +1,11 @@
 # Verdify Slack Operations
 
+> **Retired (#1352, 2026-11-05).** No Verdify workload posts to Slack: alerts are `alert_log` rows on the dashboard,
+> and critical ones page through the operator API's `verdify_alert_open` gauge, Alertmanager and Home Assistant local
+> push. The operator briefs, the midnight watch, the heartbeat pages, the forecast-alert posts and the legacy scripts
+> are gone, and no pod mounts `verdify-slack`. The MCP `slack_ops` command surface, `slack_ops/`, `slack.yaml` and this
+> file are removed in #1352's follow-up. The text below is history.
+
 `slack.yaml` is the versioned source of truth for Verdify Slack behavior.
 The production ingestor sender reads `/etc/verdify/slack/iris_slack_bot_token.txt`
 from the read-only `verdify-prod/verdify-slack` Secret mount. The Secret has the

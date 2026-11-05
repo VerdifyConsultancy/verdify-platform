@@ -115,6 +115,28 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/metrics": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Open-alert gauge for Alertmanager paging (#1352)
+         * @description Prometheus text. `verdify_alert_open{severity, alert_type}` counts the merged alerts with status `open`, the
+         *     rows the Now count shows; Alertmanager pages the critical ones. `verdify_alert_metrics_up` is 0 when the read
+         *     failed. No alert text, session or token.
+         */
+        readonly get: operations["OPS-04"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/readyz": {
         readonly parameters: {
             readonly query?: never;
@@ -2209,6 +2231,26 @@ export interface operations {
                 content?: never;
             };
             readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "OPS-04": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "text/plain": string;
+                };
+            };
         };
     };
     readonly "OPS-02": {
