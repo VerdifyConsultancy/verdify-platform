@@ -8,7 +8,7 @@
  * irrigation firmware API-IRR-12 answers 503, so the panel says when they arrive instead. The engine flag is API-IRR-01's
  * alone: until it answers nothing is offered.
  */
-import { useId, useRef, type ReactNode } from "react";
+import { useId, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { leftWords } from "../lib/format";
 import type { BodyOf, Now, ParamsOf } from "../lib/operator-api";
@@ -18,6 +18,7 @@ import { useShellNow, useShellStatus } from "../lib/shell";
 import { hasWords, words } from "../lib/words";
 import { newestNow, readback, useCommand, type CommandPhase, type Readback } from "../lib/writes";
 import { Button } from "./button";
+import { cls } from "./common";
 import { Details } from "./details";
 import { useNow } from "./freshness";
 import { PanelError } from "./panel";
@@ -80,24 +81,46 @@ export function useBurstCommand() {
   return useCommand({ operation: "API-IRR-12", readback: overrideReadback });
 }
 
-function BurstButton({ kind, minutes, children }: { kind: BurstKind; minutes: number; children: ReactNode }) {
+/** "Fans" from "Fans 15 min": a burst's name without its length. */
+const burstName = (label: string) => label.replace(/\s+\d+\s*min$/, "");
+
+/**
+ * One burst's button, the same on Now's quick actions and Equipment's panel (redesign §5.12, D-UX-05): its name in bold
+ * and its length muted ("Fans 15 min"), one API-IRR-12 `{kind, minutes}` per press with no dialog, then what the command
+ * says. `wide` is Equipment's full width on phones; Now sets its own layout through `className`.
+ */
+export function BurstButton({ burst, wide = false, className }: { burst: (typeof BURSTS)[number]; wide?: boolean; className?: string }) {
   const command = useBurstCommand();
   return <>
-    <Button write wide busy={command.sending} onClick={() => void command.send({}, { kind, minutes })}>{children}</Button>
+    <Button write wide={wide} className={cls("burst-button", className)} busy={command.sending} onClick={() => void command.send({}, { kind: burst.kind, minutes: burst.minutes })}>
+      <span className="burst-name">{burstName(burst.label)}</span> <span className="burst-length">{burst.minutes} min</span>
+    </Button>
     <CommandNote phase={command.phase} message={command.message} error={command.error} />
   </>;
 }
 
 /**
- * Clear: API-IRR-12 `{kind: "clear"}`, which ends every burst, so it stands once however many run. Equipment's panel and
- * Now's burst chip both use it.
+ * Clear bursts: API-IRR-12 `{kind: "clear"}`, which ends every burst, so it stands once however many run. Equipment's
+ * panel and Now's burst chip both use it, each only while a burst may be running.
  */
 export function ClearBursts() {
   const command = useCommand({ operation: "API-IRR-12", readback: overrideReadback });
   return <>
-    <Button write wide busy={command.sending} onClick={() => void command.send({}, { kind: "clear" })}>Clear <span className="screen-reader">bursts</span></Button>
+    <Button write wide busy={command.sending} onClick={() => void command.send({}, { kind: "clear" })}>Clear bursts</Button>
     <CommandNote phase={command.phase} message={command.message} error={command.error} />
   </>;
+}
+
+/**
+ * Whether a burst runs, from the controller's readback alone (API-02 `overrides`): null while the page cannot vouch for
+ * it (no answer yet, a failed read, the ingestor or the controller not reporting), never "none".
+ */
+function useBurstsRunning(): boolean | null {
+  const shell = useShellNow();
+  const status = useShellStatus();
+  const now = shell.data;
+  if (!now || shell.error || status.ingestorRunning === false || status.controllerReporting === false) return null;
+  return now.overrides.length > 0;
 }
 
 /**
@@ -132,6 +155,7 @@ function RestartController() {
 }
 
 function BurstControls({ engine, failed, retry }: { engine: boolean | null; failed: boolean; retry: () => void }) {
+  const running = useBurstsRunning();
   if (failed) return <PanelError thing="bursts" text="Can't tell whether the controller has the irrigation firmware yet." onRetry={retry} />;
   if (engine === null) return <><div className="skeleton skeleton-sm" aria-hidden="true" /><p className="screen-reader">Loading the bursts</p></>;
   if (!engine) {
@@ -142,8 +166,9 @@ function BurstControls({ engine, failed, retry }: { engine: boolean | null; fail
   }
   return <>
     <div className="actions burst-actions">
-      {BURSTS.map((burst) => <BurstButton key={burst.kind} kind={burst.kind} minutes={burst.minutes}>{burst.label}</BurstButton>)}
-      <ClearBursts />
+      {BURSTS.map((burst) => <BurstButton key={burst.kind} burst={burst} wide />)}
+      {/* Clear has something to clear only while a burst runs; while what runs is unknown it stays. */}
+      {running !== false && <ClearBursts />}
     </div>
     <Details summary="More actions" className="burst-more"><RestartController /></Details>
   </>;

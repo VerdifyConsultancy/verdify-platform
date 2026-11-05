@@ -125,7 +125,8 @@ test("before the irrigation firmware the bursts and Restart say when they arrive
 
 test("at 390 px the burst buttons are full width and at least 44 px", async ({ page, request }) => {
   await page.setViewportSize(PHONE);
-  await useScreensClock(page, request, "in-band");
+  // A push-button burst runs, so Clear bursts shows beside the three bursts.
+  await useScreensClock(page, request, "push-button-burst");
   await load(page, "/equipment");
   const row = await page.locator(".burst-panel .burst-actions").first().boundingBox();
   for (const name of ["Fans 15 min", "Humidify 5 min", "Vent bypass 10 min", "Clear bursts"]) {
