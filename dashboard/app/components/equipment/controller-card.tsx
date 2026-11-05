@@ -68,12 +68,16 @@ export function useController(): { readonly controller: Controller | null; reado
   return { controller, stale, state, observedAt };
 }
 
-/** The Equipment status line (redesign §5.12): "Controller up 3 d 3 h · firmware … · Wi-Fi −61 dBm · Updated 45 s ago". */
-export function ControllerStatus(): ReactNode {
+/**
+ * The Equipment status line (redesign §5.12): "Controller up 3 d 3 h · firmware … · Wi-Fi −61 dBm · Updated 45 s ago";
+ * on a phone (`short`) "Up 3 d 3 h · −61 dBm · Updated 45 s ago".
+ */
+export function ControllerStatus({ short = false }: { short?: boolean } = {}): ReactNode {
   const { controller, stale, state, observedAt } = useController();
   if (state === "loading" || state === "error") return null;
-  if (!controller) return "The controller has not reported its vitals";
+  if (!controller) return short ? "No vitals reported" : "The controller has not reported its vitals";
   if (stale) return <>Controller · <AgeLabel observedAt={observedAt} stale /></>;
+  if (short) return <>Up {uptimeWords(controller.uptime_s)} · {formatValue(controller.rssi_dbm, "dBm")} · <AgeLabel observedAt={observedAt} stale={false} /></>;
   return <>
     Controller up {uptimeWords(controller.uptime_s)} · firmware <span className="mono">{controller.firmware_version ?? "—"}</span> · Wi-Fi{" "}
     {formatValue(controller.rssi_dbm, "dBm")} · <AgeLabel observedAt={observedAt} stale={false} />
@@ -90,7 +94,7 @@ export function ControllerCard() {
         <div className="ctl-heap-row">
           <p className="ctl-heap-words"><span className="eyebrow">Free heap</span>
             <span className="ctl-heap-value">{formatValue(controller.heap_free_kb, "kB")}</span>{" "}
-            {heap && <span className={cls("meta", below && "ctl-heap-low")}>{below && <span aria-hidden="true">▲ </span>}{heap.text}</span>}
+            {heap && <span className={cls("meta", below && "ctl-heap-low")}>{below && <><span className="glyph glyph-down" aria-hidden="true" /> </>}{heap.text}</span>}
           </p>
           <HeapBar free={controller.heap_free_kb} stale={stale} />
         </div>

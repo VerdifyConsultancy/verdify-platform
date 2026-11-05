@@ -363,6 +363,8 @@ export type MinutesByZoneProps = Omit<MinutesInput, "names"> & {
   /** The rows share it, so the cursor sits on one day in every row. */
   syncKey?: string;
   title?: string;
+  /** The host's card already titles the chart: its caption then names the figure for a screen reader only. */
+  captionHidden?: boolean;
   /** Shown in place of the bars (an error). */
   message?: string;
 };
@@ -392,7 +394,7 @@ export function MinutesByZone(props: MinutesByZoneProps) {
   const drawable = !props.message && fits && model.days.length > 0 && model.zones.length > 0;
   const refusal = group === "line" ? "Minutes by line needs the report by line" : "Minutes by zone needs the report by line or by zone";
   return <figure className="chart chart-minutes">
-    <figcaption className="eyebrow">{title}</figcaption>
+    <figcaption className={props.captionHidden ? "screen-reader" : "eyebrow"}>{title}</figcaption>
     {drawable
       ? <ul className="minutes-rows">
         {model.zones.map((zone, position) => <li key={zone.key} className="minutes-row" data-row={zone.key} data-zone={zone.zone ?? undefined}>

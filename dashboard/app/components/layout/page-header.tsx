@@ -32,6 +32,11 @@ export type PageHeaderProps = {
    * the line keeps its height, so nothing shifts when it fills. Leave it out for a page with none.
    */
   status?: ReactNode;
+  /**
+   * The status line's phone wording (redesign §5, the 360 px sketches: "Rev 42 on controller · 2 min ago"), shown in its
+   * place at 860 px and below; both render and the stylesheet shows one. Null while it loads, as `status`.
+   */
+  statusShort?: ReactNode;
   /** At most two buttons, the primary last: at the h1 row's right on desktop, under the status line on phones. */
   actions?: ReactNode;
   /** At the end of the tabs row: Water's Stop all water, which shares the sticky row on phones. */
@@ -45,7 +50,7 @@ export type PageHeaderProps = {
  * default view except on that view), the one h1, the status line and the actions, then the section's tabs. The eyebrow
  * labels; it is never a heading. Now has no page header: its hero is its head.
  */
-export function PageHeader({ view, title, status, actions, tabsEnd, stickyTabs = false }: PageHeaderProps) {
+export function PageHeader({ view, title, status, statusShort, actions, tabsEnd, stickyTabs = false }: PageHeaderProps) {
   const current = viewOf(view);
   const section = sectionOf(current.section);
   const focused = title !== undefined && title !== current.title;
@@ -57,7 +62,8 @@ export function PageHeader({ view, title, status, actions, tabsEnd, stickyTabs =
         {focused && <><span className="page-crumb-sep" aria-hidden="true"> › </span><Link to={current.path}>{current.tab}</Link></>}
       </p>
       <h1>{title ?? current.title}</h1>
-      {status !== undefined && <p className="page-status meta">{status}</p>}
+      {status !== undefined && <p className={cls("page-status meta", statusShort !== undefined && "page-status-long")}>{status}</p>}
+      {status !== undefined && statusShort !== undefined && <p className="page-status-short meta">{statusShort}</p>}
       {actions && <div className="page-actions">{actions}</div>}
     </div>
     {section.views.length > 1 && <div className={cls("page-tabs", stickyTabs && "page-tabs-sticky")}>

@@ -140,8 +140,8 @@ test("/graphs?range=72h&set=mister_engage_kpa: one stack of three panels on one 
     ["72 h", "/graphs?range=72h&set=mister_engage_kpa", "page"], ["7 d", "/graphs?range=7d&set=mister_engage_kpa", null],
     ["30 d", "/graphs?range=30d&set=mister_engage_kpa", null], ["90 d", "/graphs?range=90d&set=mister_engage_kpa", null],
   ]);
-  expect(within(screen.getByRole("list", { name: "Settings drawn as steps" })).getAllByRole("listitem").map(text)).toEqual(["VPD · mister_engage_kpa×"]);
-  expect(within(screen.getByRole("list", { name: "Settings drawn as steps" })).getByRole("link", { name: "VPD · mister_engage_kpa" }).getAttribute("href")).toBe("/settings?edit=mister_engage_kpa");
+  expect(within(screen.getByRole("list", { name: "Settings drawn as steps" })).getAllByRole("listitem").map(text)).toEqual(["VPD Mister Engage · VPD×"]);
+  expect(within(screen.getByRole("list", { name: "Settings drawn as steps" })).getByRole("link", { name: "VPD Mister Engage · VPD" }).getAttribute("href")).toBe("/settings?edit=mister_engage_kpa");
 
   // Reloading the copied URL renders the same view from the same requests.
   const first = requests(api).map((row) => row.path).sort();

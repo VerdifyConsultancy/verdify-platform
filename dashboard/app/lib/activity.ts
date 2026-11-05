@@ -416,10 +416,14 @@ export const logCsvName = (entries: readonly ActivityEntry[]): string => `verdif
 
 // ---------------------------------------------------------------------------------------------------- the Alerts status line
 /**
- * Alerts' status line (redesign §5.8): "2 open · 1 acknowledged · 3 resolved in 24 h". With none open it starts with what
- * an empty list may honestly say (`coverage`: "No open alerts", or why in-app alerts may be missing), so the page states
- * the count once.
+ * Alerts' status line (redesign §5.8): "2 open · 1 acknowledged · 3 resolved in 24 h"; on a phone (`short`) "2 open · 1
+ * ack · 3 resolved". With none open it starts with what an empty list may honestly say (`coverage`: "No open alerts", or
+ * why in-app alerts may be missing), so the page states the count once.
  */
-export function alertsStatus({ open, acknowledged, resolved, coverage }: { open: number; acknowledged: number; resolved: number; coverage: string }): string {
-  return [open > 0 ? `${open} open` : coverage, acknowledged > 0 ? `${acknowledged} acknowledged` : null, resolved > 0 ? `${resolved} resolved in 24 h` : null].filter(Boolean).join(" · ");
+export function alertsStatus({ open, acknowledged, resolved, coverage, short = false }: { open: number; acknowledged: number; resolved: number; coverage: string; short?: boolean }): string {
+  return [
+    open > 0 ? `${open} open` : coverage,
+    acknowledged > 0 ? `${acknowledged} ${short ? "ack" : "acknowledged"}` : null,
+    resolved > 0 ? `${resolved} resolved${short ? "" : " in 24 h"}` : null,
+  ].filter(Boolean).join(" · ");
 }

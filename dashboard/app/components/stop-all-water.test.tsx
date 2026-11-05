@@ -25,8 +25,9 @@ test("an operator's is filled red with its words, and stays live with changes sw
   mount(<StopAllWater />, { role: "operator", writesEnabled: false });
   const stop = button()!;
   expect(stop.className).toBe("btn btn-stop stop-all-water");
-  expect(text(stop)).toBe("■ Stop all water");
-  expect(stop.querySelector("[aria-hidden=true]")?.textContent).toBe("■ ");
+  // The ■ is drawn, IBM Plex having none: a square in the button's colour beside the words.
+  expect(text(stop)).toBe("Stop all water");
+  expect(stop.querySelector("[aria-hidden=true]")?.className).toBe("glyph glyph-stop");
   expect(stop.hasAttribute("disabled")).toBe(false);
   expect(stop.getAttribute("data-write-control")).toBe("true");
 });

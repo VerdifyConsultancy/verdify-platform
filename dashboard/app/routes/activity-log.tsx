@@ -136,9 +136,30 @@ function facetChips(params: URLSearchParams, name: "source" | "action", facets: 
 }
 
 /**
+ * A field that edits a URL value: it holds what is typed, and takes the URL's value again whenever that changes (a
+ * filter applied, Clear filters, Back), so applying a filter never remounts the field that has focus.
+ */
+function useUrlField(value: string): [string, (next: string) => void] {
+  const [field, setField] = useState(value);
+  const [seen, setSeen] = useState(value);
+  if (seen !== value) {
+    setSeen(value);
+    setField(value);
+  }
+  return [field, setField];
+}
+
+/**
+ * A whole day a person means: typing a year fills it one digit at a time, and "0002-11-02" is already a valid date, so
+ * only a year from 2000 counts before the field is left.
+ */
+const meantDay = (value: string) => isDay(value) && Number(value.slice(0, 4)) >= 2000;
+
+/**
  * Who and What as chips from 861 px and as selects at 860 px and below (both render; the stylesheet shows one), a Target
- * applied when it is left or Enter is pressed, and From and To dates applied as soon as a whole day is picked. Every
- * filter lands in the URL and on to API-17. "Clear filters" keeps the rest of the view.
+ * applied when it is left or Enter is pressed, and From and To dates applied as soon as a whole day is picked or typed
+ * (a year from 2000), else when the field is left or Enter is pressed. Every filter lands in the URL and on to API-17,
+ * and the fields keep focus while it does. "Clear filters" keeps the rest of the view.
  */
 function LogFilters({ view, params, me }: { view: ActivityView; params: URLSearchParams; me: SignedIn }) {
   const navigate = useNavigate();
@@ -147,16 +168,34 @@ function LogFilters({ view, params, me }: { view: ActivityView; params: URLSearc
   const who = facetsWith(WHO_FACETS, source), what = facetsWith(WHAT_FACETS, action);
   const filtered = LOG_FILTERS.some((name) => view.filters[name] !== undefined) || DATE_FILTERS.some((name) => view.dates[name] !== undefined);
   const clearHref = logHref(params, Object.fromEntries([...LOG_FILTERS, ...DATE_FILTERS].map((name) => [name, null])));
+  const [targetField, setTargetField] = useUrlField(target);
+  const [fromField, setFromField] = useUrlField(view.dates.from ?? "");
+  const [toField, setToField] = useUrlField(view.dates.to ?? "");
   const applyTarget = (value: string) => { if (value.trim() !== target) go({ target: value.trim() || null }); };
   const onTargetKey = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== "Enter") return;
     event.preventDefault();
     applyTarget(event.currentTarget.value);
   };
-  const onDate = (name: "from" | "to") => ({
-    onChange: (event: { currentTarget: HTMLInputElement }) => { if (isDay(event.currentTarget.value) && event.currentTarget.value !== view.dates[name]) go({ [name]: event.currentTarget.value }); },
-    onBlur: (event: FocusEvent<HTMLInputElement>) => { if (!event.currentTarget.value && view.dates[name]) go({ [name]: null }); },
-  });
+  const onDate = (name: "from" | "to", field: string, setField: (next: string) => void) => {
+    const current = view.dates[name];
+    // A whole day applies; an empty field clears the filter; anything else goes back to the URL's day.
+    const settle = (value: string) => {
+      if (!value) { if (current) go({ [name]: null }); return; }
+      if (meantDay(value)) { if (value !== current) go({ [name]: value }); return; }
+      setField(current ?? "");
+    };
+    return {
+      value: field,
+      onChange: (event: { currentTarget: HTMLInputElement }) => {
+        const value = event.currentTarget.value;
+        setField(value);
+        if (meantDay(value) && value !== current) go({ [name]: value });
+      },
+      onBlur: (event: FocusEvent<HTMLInputElement>) => settle(event.currentTarget.value),
+      onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => { if (event.key === "Enter") { event.preventDefault(); settle(event.currentTarget.value); } },
+    };
+  };
   return <form className="page-toolbar act-filters" role="search" aria-label="Activity log filters" onSubmit={(event) => event.preventDefault()}>
     <div className="act-facets">
       <div className="act-facet"><span className="act-facet-label" aria-hidden="true">Who</span><Chips kind="filter" small label="Who" items={facetChips(params, "source", who, source)} /></div>
@@ -171,10 +210,10 @@ function LogFilters({ view, params, me }: { view: ActivityView; params: URLSearc
         <option value="">All</option>
         {what.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
       </select></label>
-      <label className="act-target">Target<input key={target} name="target" type="search" defaultValue={target} autoComplete="off" placeholder="L01 or mister_engage_kpa"
+      <label className="act-target">Target<input name="target" type="search" value={targetField} onChange={(event) => setTargetField(event.currentTarget.value)} autoComplete="off" placeholder="L01 or mister_engage_kpa"
         onBlur={(event) => applyTarget(event.currentTarget.value)} onKeyDown={onTargetKey} /></label>
-      <label className="act-date">From<input key={`from-${view.dates.from ?? ""}`} name="from" type="date" defaultValue={view.dates.from ?? ""} max={view.dates.to} {...onDate("from")} /></label>
-      <label className="act-date">To<input key={`to-${view.dates.to ?? ""}`} name="to" type="date" defaultValue={view.dates.to ?? ""} min={view.dates.from} {...onDate("to")} /></label>
+      <label className="act-date">From<input name="from" type="date" max={view.dates.to} {...onDate("from", fromField, setFromField)} /></label>
+      <label className="act-date">To<input name="to" type="date" min={view.dates.from} {...onDate("to", toField, setToField)} /></label>
       {actor && <Link className="act-clear-chip" to={logHref(params, { actor: null })} preventScrollReset>Only {personName(actor, me)}<span aria-hidden="true"> ×</span><span className="screen-reader">, show everyone</span></Link>}
       {filtered && <Link className="act-clear" to={clearHref} preventScrollReset>Clear filters</Link>}
     </div>

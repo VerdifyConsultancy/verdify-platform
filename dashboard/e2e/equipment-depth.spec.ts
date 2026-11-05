@@ -83,7 +83,7 @@ for (const viewport of VIEWPORTS) {
     await expect(light(page, MAIN).getByRole("button", { name: "Turn off Main" })).toBeDisabled();
     await expect(lutron(page, MAIN)).toHaveText("Off (controller) · Lutron Off");
     release();
-    await untilPolled(page, () => expect(lutron(page, MAIN)).toHaveText("Off (controller) · Lutron On ▲ Differ", { timeout: 500 }));
+    await untilPolled(page, () => expect(lutron(page, MAIN)).toHaveText("Off (controller) · Lutron On Differ", { timeout: 500 }));
     const sent = await fixtureWrites(request);
     expect(sent.map((write) => [write.method, write.path, write.operationId])).toEqual([["POST", "/v1/equipment/lights/main/on", "API-20"]]);
     expect(sent[0].idempotency_key).toMatch(UUID);
@@ -99,7 +99,7 @@ test("Back to automatic: one API-10 write reads REQUESTED then CONFIRMED, and on
   await useScreensClock(page, request, ["lights-confirmed", "requested-to-confirmed"]);
   await load(page, "/equipment");
   await light(page, MAIN).getByRole("button", { name: "Turn on Main" }).click();
-  await untilPolled(page, () => expect(lutron(page, MAIN)).toHaveText("Off (controller) · Lutron On ▲ Differ", { timeout: 500 }));
+  await untilPolled(page, () => expect(lutron(page, MAIN)).toHaveText("Off (controller) · Lutron On Differ", { timeout: 500 }));
   await expect(automatic(page, MAIN)).toHaveText("Automatic");
   await light(page, MAIN).getByRole("button", { name: "Back to automatic Main" }).click();
   await expect(automatic(page, MAIN).locator("[data-badge=requested]")).toBeVisible();

@@ -16,6 +16,7 @@ import { FieldError, Switch, describedBy, useFieldIds } from "../forms";
 import { ObjectRow } from "../layout/object-row";
 import { SectionHeader } from "../layout/section-header";
 import { Menu } from "../menu";
+import { useToast } from "../toast";
 import type { RuleGroup } from "./model";
 
 /** CONFIRMED shows only while the newest write is under 10 minutes old (D-UX-07). */
@@ -50,13 +51,22 @@ function RuleSwitch({ schedule }: { schedule: Schedule }) {
   </div>;
 }
 
-/** Delete in a rule's ⋯ menu: one tap, as the editor's Delete (API-IRR-05), no dialog. */
-function RuleDelete({ schedule }: { schedule: Schedule }) {
+/**
+ * Delete in a rule's ⋯ menu: one tap, as the editor's Delete (API-IRR-05), no dialog. The menu closes as it is chosen,
+ * so the outcome is a toast, as the editor's Delete says it: "Requested deleting …", or why it was refused (a failure
+ * toast, announced and kept until dismissed).
+ */
+function RuleDelete({ schedule, lineName }: { schedule: Schedule; lineName: string }) {
   const write = useProgramWrite("API-IRR-05");
-  return <>
-    <Button write busy={write.sending} onClick={() => void write.send({ slot_id: schedule.slot_id }, undefined)}>Delete <span className="screen-reader">{schedule.label || `slot ${schedule.slot_id}`}</span></Button>
-    {write.error && <p className="field-error" role="alert">{write.error.message}</p>}
-  </>;
+  const toast = useToast();
+  const name = schedule.label || `slot ${schedule.slot_id}`;
+  const remove = async () => {
+    const outcome = await write.send({ slot_id: schedule.slot_id }, undefined);
+    if (outcome.ok) toast.show({ message: `Requested deleting ${schedule.label || "the schedule"} on ${schedule.line_id}` });
+    // A tap while one is out is no request at all (no error): nothing to say.
+    else if (outcome.error) toast.show({ kind: "failure", message: `Couldn't delete ${name} on ${lineName}`, detail: outcome.error.message });
+  };
+  return <Button write busy={write.sending} onClick={() => void remove()}>Delete <span className="screen-reader">{name}</span></Button>;
 }
 
 /** Who changed it last: "changed by iris (AI) 2 days ago"; the AI mark only for Iris or an agent. */
@@ -138,6 +148,6 @@ function RuleRow({ schedule, group, solar, program, now, operator, editTo, copyT
     </> : <span className="sch-rule-on">{enabled ? <Badge kind="on" /> : <Badge kind="off" />}</span>}
     menu={operator ? <Menu name={`More for ${name}`}>
       <Link to={copyTo(schedule.slot_id)} preventScrollReset data-write-control="true">Duplicate <span className="screen-reader">{name}</span></Link>
-      <RuleDelete schedule={schedule} />
+      <RuleDelete schedule={schedule} lineName={group.name} />
     </Menu> : undefined} />;
 }

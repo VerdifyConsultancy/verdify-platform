@@ -96,6 +96,17 @@ const ROWS: TrackRow[] = [
   { key: "L07", label: "L07 South mister", muted: true, note: "paused until Sat 09:00 · jason", spans: [{ key: "c", start: at("15:00"), end: at("15:03"), status: "skipped", label: "skipped · RH 92%" }] },
 ];
 
+test("late in the window a marker's words and a narrow span's sit before them, so the track never cuts them off", () => {
+  const { container } = renderUi(<TimeTrack label="Running and next" from={DAY.from} to={DAY.to} rows={[{
+    key: "plan", label: "Iris, plan",
+    spans: [{ key: "late", start: at("22:30"), end: at("22:40"), status: "planned", token: "eq-water", label: "22:30 10 min" }],
+    markers: [{ key: "sunset", at: at("22:00"), label: "Sunset 22:00" }, { key: "noon", at: at("12:00"), label: "Noon" }],
+  }]} />);
+  const markers = [...container.querySelectorAll(".tt-marker")];
+  expect(markers.map((marker) => [text(marker), marker.classList.contains("tt-marker-end")])).toEqual([["Sunset 22:00", true], ["Noon", false]]);
+  expect(container.querySelector(".tt-span")?.className).toBe("tt-span tt-planned tt-eq-water tt-narrow tt-narrow-end");
+});
+
 test("rows are a list with their labels and ends; a span with detail is a button or link named in words, reached by arrow keys", () => {
   const select = ROWS[0].spans[0].onSelect as ReturnType<typeof vi.fn>;
   const { container } = renderUi(<TimeTrack label="Today's runs" from={DAY.from} to={DAY.to} rows={ROWS} now={at("10:42")} night={[{ from: DAY.from, to: at("06:31") }, { from: at("16:52"), to: DAY.to }]} />);
@@ -119,6 +130,7 @@ test("rows are a list with their labels and ends; a span with detail is a button
   expect(container.querySelectorAll(".tt-night")).toHaveLength(4);
   expect(container.querySelectorAll(".tt-now")).toHaveLength(2);
   expect(text(container.querySelector(".tt-marker-label"))).toBe("13:00 engage 1.60 → 1.70 (AI)");
+  expect(container.querySelector(".tt-marker")?.classList.contains("tt-marker-end")).toBe(false);
   expect([...container.querySelectorAll(".tt-tick")].map((tick) => [text(tick), tick.classList.contains("tt-tick-wide")])).toEqual([
     ["00:00", false], ["03:00", true], ["06:00", false], ["09:00", true], ["12:00", false], ["15:00", true], ["18:00", false], ["21:00", true], ["00:00", false],
   ]);

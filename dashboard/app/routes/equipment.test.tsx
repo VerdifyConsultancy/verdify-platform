@@ -211,12 +211,13 @@ test("each grow light shows the controller's intent beside the Lutron readback, 
 
 test("grow-lights-differ (intent ON, Lutron OFF) reads differ, as an amber marker with the word", async () => {
   await load({ fixture: "grow-lights-differ" });
-  expect(read("grow_light_grow").state).toBe("On (controller) · Lutron Off ▲ Differ");
+  expect(read("grow_light_grow").state).toBe("On (controller) · Lutron Off Differ");
   expect(read("grow_light_main").state).toBe("Off (controller) · Lutron Off");
   const markers = document.querySelectorAll("[data-differ]");
   expect(markers).toHaveLength(1);
   expect(markers[0].className).toBe("tag tag-warn");
-  expect(markers[0].querySelector('[aria-hidden="true"]')!.textContent).toBe("▲ ");
+  // The amber tag and its word carry it: no ▲, which reads as "up" beside the deltas.
+  expect(markers[0].textContent).toBe("Differ");
   expect(rowOf("grow_light_grow")!.contains(markers[0])).toBe(true);
 });
 
@@ -412,7 +413,9 @@ test("free heap under the floor turns the card's rule and the meter fault, in wo
   await inShell({ fixture: "controller-heap-low" });
   const controller = card("Controller");
   expect(facts(controller)[3]).toEqual(["Largest block", "10 kB"]);
-  expect(text(controller.querySelector(".ctl-heap-words"))).toBe("Free heap28 kB ▲ 4 kB below the 32 kB floor");
+  expect(text(controller.querySelector(".ctl-heap-words"))).toBe("Free heap28 kB  4 kB below the 32 kB floor");
+  // Below the floor reads down, as the deltas do.
+  expect(controller.querySelector(".ctl-heap-low .glyph-down[aria-hidden=true]")).not.toBeNull();
   expect(controller.querySelector(".ctl-heap-low")).not.toBeNull();
   expect(controller.querySelector("svg.ctl-heap")!.classList.contains("is-below")).toBe(true);
   expect(controller.classList.contains("tone-fault")).toBe(true);
@@ -433,11 +436,14 @@ test("the flags: occupancy from API-IRR-01, the leak flag and the site flow from
   const at = (offset: number) => new Date(NOW - offset).toISOString();
   cleanup();
   const { container } = renderUi(<ul>{[occupancyFlag({ occupied: true, seen_at: at(240_000), hold_enabled: true }, "2026-11-02"), occupancyFlag({ occupied: null, seen_at: null, hold_enabled: false }, "2026-11-02"),
-    leakFlag({ active: true, alert_id: 7, since: at(600_000), stopped_at: null, flow_gpm: 1 }), leakFlag(null), flowFlag({ active: false, alert_id: null, stopped_at: null, flow_gpm: 1 }), flowFlag({ active: null, alert_id: null, stopped_at: null })]
+    leakFlag({ active: true, alert_id: 7, since: at(600_000), stopped_at: null, flow_gpm: 1 }), leakFlag(null), flowFlag({ active: false, alert_id: null, stopped_at: null, flow_gpm: 1 }), flowFlag({ active: null, alert_id: null, stopped_at: null }),
+    // An open alert with no stop time still flows, even once the newest reading says inactive: never "None" beside the banner.
+    leakFlag({ active: false, alert_id: 7, stopped_at: null }), leakFlag({ active: false, alert_id: null, stopped_at: null })]
     .map((flag, index) => <li key={index} data-state={flag.state} data-tone={flag.tone}>{flag.text}</li>)}</ul>);
   expect([...container.querySelectorAll("li[data-state]")].map((item) => [item.getAttribute("data-state"), item.getAttribute("data-tone"), text(item)])).toEqual([
-    ["on", null, "Someone inside · seen 4 min ago"], ["unknown", null, "Unknown · mist hold off"], ["on", "fault", "▲ Water flowing with every valve closed · since 10:32"],
+    ["on", null, "Someone inside · seen 4 min ago"], ["unknown", null, "Unknown · mist hold off"], ["on", "fault", "Water flowing with every valve closed · since 10:32"],
     ["unknown", null, "Unknown"], ["on", null, "Flowing · 1 gal/min"], ["unknown", null, "Unknown"],
+    ["on", "fault", "Water flowing with every valve closed"], ["off", null, "None"],
   ]);
 });
 

@@ -5,7 +5,7 @@
 /* ---------------------------------------------------------------------------------------------------- the status line */
 .wat-program-fault{color:var(--fault);font-weight:600}
 .wat-program-warn{color:var(--warn-text);font-weight:600}
-.page-status .wat-retry{min-height:2rem;padding-block:0;margin-left:var(--space-1)}
+.page-status .wat-retry,.page-status-short .wat-retry{min-height:2rem;padding-block:0;margin-left:var(--space-1)}
 
 /* ---------------------------------------------------------------------------------------------------- Today: the layout */
 /* Site today first in reading order; from 1200 px it moves to the aside, sticky under the header, and the zones take the main column. */
@@ -180,7 +180,8 @@ span.sch-week-step.is-off{display:inline-flex;align-items:center;justify-content
 .sch-row:first-child{border-top:0}
 .sch-row-head{display:grid;min-width:0}
 .sch-row-name{overflow:hidden;font-size:var(--fs-sm);font-weight:600;white-space:nowrap;text-overflow:ellipsis}
-.sch-row-note{overflow:hidden;font-size:var(--fs-xs);color:var(--muted);white-space:nowrap;text-overflow:ellipsis}
+/* A row's note wraps rather than lose its end ("Disabled: its 3 runs this week will not run"). */
+.sch-row-note{font-size:var(--fs-xs);color:var(--muted)}
 .sch-row.is-muted .sch-row-name{color:var(--muted)}
 .sch-row.is-muted .sch-track{background:var(--field)}
 .sch-row-end{display:flex;align-items:center;gap:var(--space-2);min-width:0}
@@ -188,7 +189,10 @@ span.sch-week-step.is-off{display:inline-flex;align-items:center;justify-content
 .sch-minutes-meter{display:flex;align-items:center;gap:var(--space-2);min-width:0}
 .sch-minutes-meter .meter{flex:1 1 4rem;min-width:3rem}
 .sch-minutes-meter .meter-words{flex:none;font-size:var(--fs-sm);font-variant-numeric:tabular-nums;white-space:nowrap}
-.sch-cap .meter-words{font-size:var(--fs-xs)}
+/* In a row's end column the cap's verdict goes under its minutes ("120 / 120 min" over "cap reached"), so it stays inside the column beside [+]. */
+.sch-cap .meter-words{flex:0 1 auto;min-width:0;font-size:var(--fs-xs);white-space:normal}
+.sch-cap .meter-over{display:block}
+.sch-cap .meter-sep{display:none}
 .sch-cap-none{color:var(--muted);white-space:nowrap}
 .sch-add{flex:none;min-width:2rem;min-height:2rem;padding:0;font-size:1.1rem;line-height:1}
 
@@ -290,7 +294,12 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
 .wat-select{display:inline-flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm);font-weight:600;color:var(--muted)}
 .wat-select select{min-width:7.5rem;min-height:2.25rem;padding-block:.2rem;color:var(--ink);font-size:var(--fs-sm);font-weight:500}
 .wat-kpis .metric-value{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 .15em}
+/* The KPI tiles side by side share one height, a tile with a sparkline or without. */
+.wat-kpis .l-cols-4{align-items:stretch}
 .wat-section{min-width:0}
+/* A chart in its card: the section header is the card's head; the chart under it starts at the head's gap. */
+.wat-chart-card>.section-header{margin-bottom:var(--space-2)}
+.wat-chart-card .chart{margin:0}
 .wat-runs .filters{margin-top:0}
 .wat-runs-actions{justify-content:space-between}
 .wat-runs-list{margin:0;padding:0;border:1px solid var(--line);border-radius:var(--radius);background:#fff;list-style:none}
@@ -310,6 +319,8 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
 
 /* ---------------------------------------------------------------------------------------------------- phones */
 @media(max-width:860px){
+  /* Every action is a 44 px target on a phone (redesign §8), the status line's Retry included. */
+  .page-status-short .wat-retry{min-height:var(--tap)}
   .sch-views-desktop,.sch-only-desktop{display:none}
   .sch-views-phone,.sch-only-phone{display:block}
   /* Phones: the week's span and ‹ › over a row of seven 44 px days, so every target keeps its size. */
@@ -324,11 +335,15 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
   .sch-day-body{--sch-row:24px;padding:var(--space-2) var(--space-3) var(--space-3)}
   .sch-axis-row{grid-template-columns:minmax(0,1fr)}
   .sch-axis-gap,.sch-axis-end{display:none}
-  .sch-row{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head end" "track track";gap:var(--space-1) var(--space-2);padding:var(--space-2) 0}
+  /* Phones (redesign §6.7): the row's name on a full-width line, its cap meter and [+] under it, then its 24 px track. */
+  .sch-row{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "end" "track";gap:var(--space-1);padding:var(--space-2) 0}
   .sch-row-head{grid-area:head}
   .sch-row-end{grid-area:end}
   .sch-row .sch-track{grid-area:track}
-  .sch-cap{width:8.5rem;flex:none}
+  .sch-cap{flex:1 1 auto}
+  .sch-cap .meter-words{white-space:nowrap}
+  .sch-cap .meter-over{display:inline}
+  .sch-cap .meter-sep{display:inline}
   .sch-add{min-width:var(--tap);min-height:var(--tap)}
   .sch-block-label,.sch-axis-wide{display:none}
   .wat-day-row{grid-template-columns:minmax(0,1fr);gap:var(--space-1)}

@@ -117,8 +117,12 @@ test("a cursor on any panel turns every header row into its values there, with o
   expect(head("temperature")).toMatch(/^Indoor temperature 74\.\d · Outdoor temperature 41\.0 · band 62\.0–70\.0 · above$/);
   expect(head("vpd")).toBe("0.80 · band 0.60–1.20 · in");
   expect(head("rh")).toBe("71.0");
+  // While the readout shows, the window's statistics hold the row's height unseen, so nothing below it moves.
+  const held = document.querySelector("[data-panel=vpd] .stack-stats-held")!;
+  expect([held.getAttribute("aria-hidden"), held.textContent]).toEqual(["true", expect.stringMatching(/^in band 100% · low 0\.80 /)]);
   act(() => created[1].hover(FROM - HOUR, null));
   expect(head("vpd")).toMatch(/^in band 100%/);
+  expect(document.querySelector(".stack-stats-held")).toBeNull();
 });
 
 test("excursions, the envelope and compare paint only when asked", async () => {
@@ -169,6 +173,17 @@ test("the event rail draws only when given events: marks in words, a list per ma
   expect(within(list).getByRole("link", { name: "17:00 · critical · Relay stuck" }).getAttribute("href")).toBe("/activity?alert=7");
   const disclosure = screen.getByText("Events in this window (2)").closest("details")!;
   expect(within(disclosure).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/activity/log?target=mister_engage_kpa#activity-1", "/activity?alert=7"]);
+  // Escape in the list closes it and puts focus back on the mark that opened it; Escape on the mark does the same.
+  const link = within(list).getByRole("link");
+  link.focus();
+  fireEvent.keyDown(link, { key: "Escape" });
+  expect(screen.queryByRole("list", { name: "Events at this mark" })).toBeNull();
+  expect(document.activeElement).toBe(marks[1]);
+  fireEvent.click(marks[1]);
+  expect(screen.getByRole("list", { name: "Events at this mark" })).toBeTruthy();
+  fireEvent.keyDown(marks[1], { key: "Escape" });
+  expect(screen.queryByRole("list", { name: "Events at this mark" })).toBeNull();
+  expect(document.activeElement).toBe(marks[1]);
 });
 
 test("lanes sit in a disclosure open from 861 px; the foot offers CSV of this window and one data table", async () => {
@@ -189,10 +204,13 @@ test("lanes sit in a disclosure open from 861 px; the foot offers CSV of this wi
   expect(screen.getByText("lanes here").closest("details")!.open).toBe(false);
 });
 
-test("a panel whose read failed shows its message in its frame; the others still draw", async () => {
-  await mount(<ChartStack label="Climate" panels={panels(300, { vpd: { series: null, message: "Couldn't load the VPD chart." } })} now={NOW} xRange={RANGE} syncKey="k" />);
+test("a panel whose read failed or is loading shows its message in its frame and states nothing about the window; the others still draw", async () => {
+  await mount(<ChartStack label="Climate" panels={panels(300, { vpd: { series: null, message: "Couldn't load the VPD chart." }, rh: { series: null, message: "Loading RH…" } })} now={NOW} xRange={RANGE} syncKey="k" />);
   expect(document.querySelector("[data-panel=vpd] .chart-message")?.textContent).toBe("Couldn't load the VPD chart.");
-  expect(created).toHaveLength(2);
+  expect(created).toHaveLength(1);
+  // Never "no data in this window" for a read that has not answered: the header row stays empty at its height.
+  expect([head("vpd"), head("rh")]).toEqual(["", ""]);
+  expect(head("temperature")).toMatch(/^low 59\.0 \(00:00\) · mean 67\.5 /);
 });
 
 test("the header words: bare numbers in the unit's decimals, gaps counted, the readout and compare line from the model", () => {
@@ -204,8 +222,8 @@ test("the header words: bare numbers in the unit's decimals, gaps counted, the r
   expect(panelReadout(model, new Set(), compare, FROM + HOUR).replaceAll("\u00a0", " ")).toBe("65.0 · band 62.0–70.0 · in · yesterday 64.0");
 });
 
-test("ChartGrid: one y range per row, the y axis on the first column and the time axis on the last row; readouts per cell", async () => {
-  const columns = ["north", "south"].map((key) => ({ key, head: <span>{key}</span> }));
+test("ChartGrid: one y range per row, the y axis on the first column and the time axis on the last row; readouts per cell; a data table per row", async () => {
+  const columns = ["north", "south"].map((key) => ({ key, head: <span>{key}</span>, name: key === "north" ? "North" : "South" }));
   const cell = (column: string, offset: number) => ({ column, metrics: [TEMP], series: series(300, { "climate.temp_avg": () => 64 + offset }), band: band() });
   const rows = [
     { key: "temp", name: "Temperature", unit: "°F", cells: [cell("north", 0), cell("south", 3)] },
@@ -221,9 +239,26 @@ test("ChartGrid: one y range per row, the y axis on the first column and the tim
   expect(range(2)).toEqual(range(3));
   expect(created.map((plot) => plot.opts.axes![1].size)).toEqual([STACK_AXIS_PX, 0, STACK_AXIS_PX, 0]);
   expect(created.map((plot) => plot.opts.axes![0].size === 0)).toEqual([true, true, false, false]);
-  expect([...document.querySelectorAll(".grid-readout")].map((node) => node.textContent)).toEqual(["64.0 now", "67.0 now", "0.70 now", "0.90 now"]);
+  // The first column's plot reaches back over the row name's column for its axis, so every plot is one width.
+  expect([...document.querySelectorAll(".grid-cell")].map((cell) => cell.classList.contains("grid-cell-first"))).toEqual([true, false, true, false]);
+  // The window ended an hour before now, on the day before: the newest values read with their date and time, never "now".
+  expect([...document.querySelectorAll(".grid-readout")].map((node) => node.textContent)).toEqual(["64.0 at Nov 2, 23:55", "67.0 at Nov 2, 23:55", "0.70 at Nov 2, 23:55", "0.90 at Nov 2, 23:55"]);
   act(() => created[3].hover(FROM + HOUR, 12));
   expect(document.querySelector(".grid-readout")?.textContent).toMatch(/^64\.0 at \d\d:\d\d$/);
   expect(rowRange([], RANGE)).toEqual([0, 1]);
   expect(cellReadout(buildTimeSeriesModel({ series: null, metrics: [TEMP], now: NOW, xRange: RANGE }), null, false)).toBe("—");
+  // A live window whose newest bucket is the latest reads "now"; one whose probe went quiet hours ago reads its time.
+  const live = { from: FROM, to: TO + 6 * HOUR };
+  const fresh = buildTimeSeriesModel({ series: series(300, { "climate.temp_avg": () => 65 }), metrics: [TEMP], now: TO + 60, xRange: live });
+  expect(cellReadout(fresh, null, false, TO + 60)).toBe("65.0 now");
+  const quiet = buildTimeSeriesModel({ series: series(300, { "climate.temp_avg": (index) => (index < 100 ? 65 : null) }), metrics: [TEMP], now: TO + 60, xRange: live });
+  expect(cellReadout(quiet, null, false, TO + 60)).toBe("65.0 at Nov 2, 08:15");
+  // The grid's data table: one block per row, a column per zone, in the row's unit (redesign §8).
+  const table = screen.getByText(/^Data table · /).closest("details")!;
+  expect(table.closest(".chart-grid")).not.toBeNull();
+  act(() => { table.open = true; table.dispatchEvent(new Event("toggle")); });
+  const captions = [...table.querySelectorAll("caption")].map((caption) => caption.textContent);
+  expect(captions).toEqual(["Temperature · °F · America/Denver", "VPD · kPa · America/Denver"]);
+  expect([...table.querySelectorAll("table")[0].querySelectorAll("thead th")].map((cell) => cell.textContent)).toEqual(["Time", "North (°F)", "South (°F)"]);
+  expect([...table.querySelectorAll("table")[0].querySelectorAll("tbody tr")[0].querySelectorAll("td")].map((cell) => cell.textContent?.replaceAll("\u00a0", " "))).toEqual(["64.0 °F", "67.0 °F"]);
 });

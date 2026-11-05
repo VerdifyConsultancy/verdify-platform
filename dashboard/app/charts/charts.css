@@ -46,12 +46,18 @@
 .lanes-row{display:grid;grid-template-columns:var(--lanes-label) minmax(0,1fr) var(--lanes-stat);align-items:center;height:var(--lanes-pitch);font-size:.8rem;line-height:1}
 .lanes-label{grid-column:1;padding-right:.5rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .lanes-stat{grid-column:3;padding-left:.5rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--muted);font-variant-numeric:tabular-nums}
-.lanes-fold button{grid-column:1;justify-self:start;min-height:0;height:100%;padding:0 .3rem;border:0;background:none;font-size:.75rem;font-weight:700;color:var(--forest)}
-.lanes-fold button::after{content:" ›"}
-.lanes-fold button[aria-expanded=true]::after{content:" ‹"}
+.lanes-fold button{position:relative;grid-column:1;justify-self:start;min-height:0;height:100%;padding:0 .3rem;border:0;background:none;font-size:var(--fs-xs);font-weight:700;color:var(--forest)}
+.lanes-fold button::after,.lanes-fold-toggle::after{content:" ›"}
+.lanes-fold button[aria-expanded=true]::after,.lanes-fold-toggle[aria-expanded=true]::after{content:" ‹"}
 .lanes-axis{height:var(--lanes-axis)}
 .lanes-top{height:var(--lanes-top)}
 .lanes-canvas{position:absolute;top:0;bottom:0;left:var(--lanes-label);right:var(--lanes-stat);overflow:hidden}
+/* Inside a chart stack (redesign §7.1) the lanes draw on the panels' plot area, 56 px (STACK_AXIS_PX) from the left to 10 px from the right, so the cursor and the plots line up, and keep only the grid of the stack's one time axis. Each row's name and facts sit on a 16 px line (LANE_HEAD) over its track; the fold is a button under the rows. */
+.lanes.lanes-stacked{--lanes-label:56px;--lanes-stat:10px;--lanes-axis:0px;--lanes-head:16px;--lanes-pitch:36px}
+.lanes-stacked .lanes-row{display:flex;align-items:flex-start;gap:var(--space-2);font-size:var(--fs-xs);line-height:var(--lanes-head);white-space:nowrap;overflow:hidden}
+.lanes-stacked .lanes-label{flex:0 1 auto;min-width:0;padding:0;font-weight:600}
+.lanes-stacked .lanes-stat{flex:1 1 0;min-width:0;padding:0}
+.lanes-fold-toggle{display:inline-flex;align-items:center;min-height:24px;margin:var(--space-1) 0 0;padding:0 var(--space-1);border:0;background:none;font-size:var(--fs-xs);font-weight:700;color:var(--forest)}
 .plan-row{height:var(--lanes-pitch)}
 .plan-head{display:flex;align-items:center;gap:0;height:var(--plan-head);margin:0;font-size:.8rem;line-height:1.2;overflow:hidden;white-space:nowrap}
 .plan-label{font-weight:600;flex:none}
@@ -63,6 +69,10 @@
 .lanes-plan{--lanes-stat:0px;--lanes-top:18px;--plan-head:20px;--lanes-pitch:44px;--lanes-label:6rem}
 @media(max-width:860px){
   .lanes{--lanes-label:6rem;--lanes-stat:4.5rem;--lanes-pitch:24px;--lanes-axis:32px}
+  .lanes.lanes-stacked{--lanes-pitch:40px}
+  /* The fold line is one 24 px row; its target reaches 44 px over the labels beside it, which take no input. */
+  .lanes-fold button::before{content:"";position:absolute;inset:-10px 0}
+  .lanes-fold-toggle{min-height:var(--tap)}
   .lanes .lanes-wide,.lanes-columns .lanes-wide{display:none}
   .lanes-plan{--lanes-stat:0px;--plan-head:36px;--lanes-pitch:60px;--lanes-label:6rem}
   .plan-head{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;white-space:normal}
@@ -122,7 +132,10 @@
 .stack-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-1) var(--space-3);min-height:1.75rem}
 .stack-name{margin:0;font:600 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
 .stack-unit{text-transform:none;letter-spacing:0;color:var(--muted)}
-.stack-stats{flex:1 1 20rem;min-width:0;margin:0;font-size:var(--fs-sm);color:var(--ink);font-variant-numeric:tabular-nums}
+/* The statistics and the cursor's readout share one cell: while the readout shows, the statistics hold the cell's height unseen, so a header row never shrinks under a finger (redesign §3.6 rule 8). */
+.stack-text{display:grid;flex:1 1 20rem;min-width:0}
+.stack-stats,.stack-stats-held{grid-area:1/1;min-width:0;margin:0;font-size:var(--fs-sm);color:var(--ink);font-variant-numeric:tabular-nums}
+.stack-stats-held{visibility:hidden}
 .stack-swatches{margin:0}
 .stack-chip{position:absolute;top:0;left:0;z-index:var(--z-raised);transform:translateX(calc(var(--chip-x,0px) - 50%));padding:.1rem .4rem;border-radius:var(--radius-sm);background:var(--ink);color:#fff;font:500 var(--fs-xs)/1.4 var(--mono);white-space:nowrap;pointer-events:none}
 .stack-chip[hidden]{display:none}
@@ -136,7 +149,7 @@
 /* The event rail: a 20 px strip over the plots, one mark per event or cluster; a write is a diamond (hollow for the system), an alert a triangle (hollow once resolved), a run a 3 px bar, a cluster a count. Colour is the token in data-token, never alone: each mark is named in words. */
 .stack-rail-wrap{position:relative;margin:0 10px var(--space-1) 56px}
 .stack-rail{position:relative;height:20px;border-bottom:1px solid var(--line)}
-.rail-mark{position:absolute;top:3px;left:calc(var(--at) * 1%);width:12px;height:12px;min-height:0;margin:0 0 0 -6px;padding:0;border:0;background:none;color:var(--muted);font:600 .62rem/12px var(--mono);text-align:center}
+.rail-mark{position:absolute;top:3px;left:calc(var(--at) * 1%);width:12px;height:12px;min-height:0;margin:0 0 0 -6px;padding:0;border:0;background:none;color:var(--muted);font:600 var(--fs-label)/12px var(--mono);text-align:center}
 .rail-mark::before,.rail-mark::after{content:"";position:absolute}
 .rail-mark[data-mark=diamond]::before{inset:2px;background:currentColor;transform:rotate(45deg)}
 .rail-mark[data-mark=diamond-hollow]::before{inset:2px;border:1.5px solid currentColor;background:#fff;transform:rotate(45deg)}
@@ -155,9 +168,11 @@
 
 /* ChartGrid (redesign §7.1, §5.6): small multiples, one column per zone, one row per metric; the y axis on the first column, the time axis on the last row. On a phone the cells stack, each headed by its column. */
 .chart-grid{display:grid;gap:var(--space-2);margin:.75rem 0;min-width:0}
-.grid-heads,.grid-row{display:grid;grid-template-columns:6rem repeat(var(--grid-columns,5),minmax(0,1fr));gap:0 var(--space-2);align-items:start}
+/* The row name's column also holds the first column's 56 px y axis (STACK_AXIS_PX): that plot reaches back into it, so every cell's plot is its column's width, the heads sit over the plots and the cursor sits at one place in each. */
+.grid-heads,.grid-row{display:grid;grid-template-columns:calc(6rem + 56px) repeat(var(--grid-columns,5),minmax(0,1fr));gap:0 var(--space-2);align-items:start}
 .grid-head{min-width:0;font-size:var(--fs-sm)}
-.grid-row-name{align-self:center;margin:0;font:600 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
+.grid-row-name{align-self:center;margin:0;padding-right:calc(56px - var(--space-2));font:600 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
+@media(min-width:861px){.chart-grid .grid-cell-first .stack-plot{margin-left:-56px}}
 .grid-cell{min-width:0}
 .grid-cell-head{display:none}
 .chart-grid .stack-plot,.chart-grid .grid-plot{position:relative;height:var(--grid-cell-h,120px);min-height:0;overflow:hidden}
@@ -176,14 +191,31 @@
 
 @media(max-width:860px){
   .chart-stack{padding:var(--space-2) var(--space-2) var(--space-3)}
+  /* Every action is a 44 px target on a phone (redesign §8): the series toggles, CSV of this window, the events' links. */
+  .chart-legend-items button,.stack-foot .button-link,.stack-foot>button,.rail-list a,.stack-event-list a{min-height:var(--tap)}
+  .stack-event-list a{display:inline-flex;align-items:center}
   .stack-panel[data-panel=temperature]{--plot-h:160px}
   .stack-panel[data-panel=vpd]{--plot-h:150px}
   .stack-panel:not([data-panel=temperature]):not([data-panel=vpd]){--plot-h:120px}
   .chart-stack .stack-panel-last .stack-plot{height:calc(var(--plot-h) + 32px)}
   .grid-heads{display:none}
   .grid-row{grid-template-columns:minmax(0,1fr);gap:var(--space-2)}
+  .grid-row-name{padding-right:0}
   .grid-cell-head{display:block;font-size:var(--fs-sm)}
   .chart-grid .grid-cell-axis .stack-plot{height:calc(var(--grid-cell-h,120px) + 32px)}
   .range-step,.range-zoom,.range-custom>summary{min-height:var(--tap)}
+  .range-step{min-width:var(--tap)}
   .range-tools{margin-left:0}
+  /* Two rows on a phone (redesign §5.5): the presets with Custom… as a chip of its own at the end, tightened so they fit one row at 360 px; then ‹ › and the page's tools. A wide-only preset (90 d) and Zoom out are left out; an open Custom… takes its own row. */
+  .range-toolbar{column-gap:var(--space-2)}
+  .range-presets{order:0;gap:var(--space-1)}
+  .range-presets a{padding:0 .5rem}
+  .range-wide-only,.range-zoom{display:none}
+  .range-custom{order:1}
+  .range-custom[open]{flex-basis:100%}
+  .range-custom>summary{padding:0 .5rem;border:1px solid var(--line-strong);border-radius:999px;background:#fff;color:var(--ink);font-size:.8rem;font-weight:500}
+  .range-custom>summary::before{content:none}
+  .range-custom[open]>summary{border-color:var(--ink);background:var(--ink);color:#fff}
+  .range-steps{order:2}
+  .range-tools{order:3}
 }

@@ -112,7 +112,9 @@ test("L02's row carries L03, the fertilizer master, as its sub-row", () => {
   const { article } = row(lineOf(from, "L02"), { master: lineOf(from, "L03") });
   const sub = article.querySelector(".line-subrow")!;
   expect(sub.getAttribute("data-line")).toBe("L03");
-  expect(text(sub)).toBe(`└ L03 Fert master: ${MASTER_TEXT} · Off`);
+  // The elbow is drawn (IBM Plex has no └), beside the words.
+  expect(text(sub)).toBe(`L03 Fert master: ${MASTER_TEXT} · Off`);
+  expect(sub.querySelector(".glyph-branch[aria-hidden=true]")).not.toBeNull();
   expect(MASTER_TEXT).toBe("opens the injector line from the tank with each feed");
 });
 

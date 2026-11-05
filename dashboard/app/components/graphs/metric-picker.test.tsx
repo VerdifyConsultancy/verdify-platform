@@ -76,7 +76,7 @@ test("+ Setting lists numeric settings in an open panel's unit, never the Band i
   expect(SETTINGS.some((row) => row.group === "band_in_force")).toBe(true);
   expect(groups.flatMap((group) => group.items).filter((row) => row.group === "band_in_force" || row.group === "read_only" || row.kind !== "numeric")).toEqual([]);
   expect(chooserGroups(SETTINGS, ["kPa"], "engage").flatMap((group) => group.items.map((row) => row.param))).toEqual(["mister_engage_kpa"]);
-  expect(settingChipText(SETTINGS.find((row) => row.param === "mister_engage_kpa")!)).toBe("VPD · mister_engage_kpa");
+  expect(settingChipText(SETTINGS.find((row) => row.param === "mister_engage_kpa")!)).toBe("VPD Mister Engage · VPD");
   const resolved = resolveView(parseGraphUrl("range=72h&set=mister_engage_kpa").view, METRICS, SETTINGS);
   renderUi(<SettingChooser view={resolved.view} settings={SETTINGS} chosen={resolved.settings} units={resolved.units} />);
   fireEvent.click(screen.getByRole("button", { name: "+ Setting" }));

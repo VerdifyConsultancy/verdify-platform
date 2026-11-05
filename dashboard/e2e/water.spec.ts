@@ -4,7 +4,7 @@
 // row's targets and the run dialog. Schedules is water-schedules.spec.ts; that a viewer sees no Stop is roles.spec.ts, and
 // a row's Run… and Stop in a visit are caretaker-visit.spec.ts.
 import type { Page } from "@playwright/test";
-import { CAN_STILL_START, CAN_STILL_START_NO_ENGINE, DESKTOP, PHONE, STOPPED, axe, expect, expectNoHorizontalScroll, fixtureWrites, load, test, toastLines, untilPolled, useScreensClock } from "./support";
+import { CAN_STILL_START, CAN_STILL_START_NO_ENGINE, DESKTOP, PHONE, SMALL_PHONE, STOPPED, axe, expect, expectNoHorizontalScroll, fixtureWrites, load, test, toastLines, untilPolled, useScreensClock } from "./support";
 
 const VIEWS = ["/water", "/water/schedules", "/water/history"];
 const row = (page: Page, id: string) => page.locator(`article[data-line="${id}"]`);
@@ -176,6 +176,22 @@ test("a row's ⋯ holds its enable switch, Options…, Pause until… and its li
   await expect(menu.getByRole("switch", { name: "Enabled L02" })).toBeHidden();
 });
 
+test("at 360 px a row's ⋯ opens its panel across the row, inside the screen, for an operator's idle line and for a viewer", async ({ page, request }) => {
+  await page.setViewportSize(SMALL_PHONE);
+  for (const fixture of [["in-band"], ["in-band", "viewer-session"]]) {
+    await useScreensClock(page, request, fixture);
+    await load(page, "/water");
+    const menu = row(page, "L01").locator("details.menu");
+    await menu.locator("summary").click();
+    const panel = menu.locator(".menu-panel");
+    await expect(panel.getByRole("link", { name: "Runs of L01" })).toBeVisible();
+    const box = await panel.boundingBox();
+    expect(box!.x, fixture.join("+")).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width, fixture.join("+")).toBeLessThanOrEqual(SMALL_PHONE.width);
+    await expectNoHorizontalScroll(page);
+  }
+});
+
 test("the run dialog with its most fields passes WCAG 2.2 AA at 390 px", async ({ page, request }) => {
   test.slow();
   await page.setViewportSize(PHONE);
@@ -186,13 +202,14 @@ test("the run dialog with its most fields passes WCAG 2.2 AA at 390 px", async (
   await axe(page);
 });
 
-test("at 390 px Stop reads ■ Stop all and stays reachable while the page scrolls", async ({ page, request }) => {
+test("at 390 px Stop reads ■ Stop all (the square drawn) and stays reachable while the page scrolls", async ({ page, request }) => {
   await page.setViewportSize(PHONE);
   await useScreensClock(page, request, "in-band");
   await load(page, "/water");
   const stop = page.getByRole("button", { name: "Stop all", exact: true });
   await expect(stop).toBeVisible();
-  await expect(stop).toHaveText("■ Stop all", { useInnerText: true });
+  await expect(stop).toHaveText("Stop all", { useInnerText: true });
+  await expect(stop.locator(".glyph-stop")).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expect(stop).toBeInViewport();
 });

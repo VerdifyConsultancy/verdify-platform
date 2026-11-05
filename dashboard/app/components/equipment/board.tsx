@@ -119,7 +119,7 @@ function LightRow({ item, control, settingTo }: { item: EquipmentItem; control?:
     <span className="equipment-state">
       {intent} (controller) · Lutron <StateWord equipment={item.equipment} state={item.state} />
       {unknown && <> · {item.observed_at ? <Ago at={item.observed_at} /> : "no data"}</>}
-      {lightsDiffer(item.intent, item.state) && <> <span className="tag tag-warn" data-differ="true" title="The controller's intent and the Lutron readback differ"><span aria-hidden="true">▲ </span>Differ</span></>}
+      {lightsDiffer(item.intent, item.state) && <> <span className="tag tag-warn" data-differ="true" title="The controller's intent and the Lutron readback differ">Differ</span></>}
     </span>
     <Facts item={item} age={!unknown} />
     {control && <LightControls control={control} item={item} settingTo={settingTo} />}

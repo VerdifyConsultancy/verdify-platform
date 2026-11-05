@@ -193,7 +193,7 @@ function ZoneGrid({ rows, spec, shared }: { rows: readonly ZoneMetric[]; spec: W
     };
   }), [shownRows.join(), rowList.map((read) => identity(read?.data)).join(), bandList.map((read) => identity(read?.data)).join(), identity(catalog), registry.error, apiDown]);
   const columns: GridColumn[] = GRID_ZONES.map((zone) => ({
-    key: zone,
+    key: zone, name: ZONE_WORDS[zone],
     head: <span className="gr-zone-head">
       <Link to={zonesHref(zone, spec)} className="gr-zone-link">{ZONE_WORDS[zone]}<span aria-hidden="true"> ›</span></Link>
       {tags[zone] && <TagMark tag={tags[zone]!} />}

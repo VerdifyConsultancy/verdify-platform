@@ -104,7 +104,7 @@ export default function Equipment() {
   const items = equipment.data?.items ?? [];
   const board = (group: "climate" | "water" | "light") => <GroupPanel group={boardGroup(group)} items={items} state={state} onRetry={retry} lights={lights} settingTo={editTo} />;
   return <>
-    <PageHeader view="control-equipment" status={<ControllerStatus />} actions={<FindSetting />} />
+    <PageHeader view="control-equipment" status={<ControllerStatus />} statusShort={<ControllerStatus short />} actions={<FindSetting />} />
     <div className="page ctl-equipment">
       <div className="ctl-board equipment-board">
         <div className="ctl-board-col">

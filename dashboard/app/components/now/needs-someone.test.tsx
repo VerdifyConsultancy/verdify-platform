@@ -100,6 +100,14 @@ test("a fence breach in Needs someone points to Stop all water in the quick acti
   await advance(0);
   expect(text(panel())).toContain("Stop all water is in the quick actions above.");
   expect(within(panel()).queryByRole("button", { name: /Stop all water/ })).toBeNull();
+  // A viewer has no quick actions, so the row points at none.
+  cleanup();
+  stopFixtureApi();
+  startFixtureApi({ fixture: ["fence-breach", "viewer-session"] });
+  renderWithApi(<Harness />, { role: "viewer", writesEnabled: true });
+  await advance(0);
+  expect(rows().length).toBeGreaterThan(0);
+  expect(text(panel())).not.toContain("quick actions");
 });
 
 test("an optional note goes with the acknowledgement, at most 500 characters", async () => {

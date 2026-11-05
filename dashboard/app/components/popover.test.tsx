@@ -56,6 +56,16 @@ test("Close and a press outside close it; a press inside does not", () => {
   expect(dialog()).toBeNull();
 });
 
+test("a press inside another open dialog (the editor its Edit opened over it) leaves it open, so closing that dialog comes back to it", () => {
+  renderUi(<><Harness /><dialog open aria-label="Edit schedule"><label>Label<input defaultValue="Wall MWF" /></label></dialog></>);
+  fireEvent.click(screen.getByRole("button", { name: "07:31 L01 Wall drip" }));
+  fireEvent.pointerDown(screen.getByLabelText("Label"));
+  expect(dialog()).not.toBeNull();
+  // A press on the page itself still closes it.
+  fireEvent.pointerDown(screen.getByText("Outside"));
+  expect(dialog()).toBeNull();
+});
+
 test("at 860 px and below it is a bottom sheet in a modal dialog", () => {
   narrow(true);
   renderUi(<Harness />);

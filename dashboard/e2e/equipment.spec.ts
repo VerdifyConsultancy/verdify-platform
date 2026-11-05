@@ -53,7 +53,7 @@ test("each grow light shows the controller's intent beside the Lutron readback",
 test("grow-lights-differ reads differ, as an amber marker with the word", async ({ page, request }) => {
   await useScreensClock(page, request, "grow-lights-differ");
   await load(page, "/equipment");
-  await expect(state(page, "grow_light_grow")).toHaveText("On (controller) · Lutron Off ▲ Differ");
+  await expect(state(page, "grow_light_grow")).toHaveText("On (controller) · Lutron Off Differ");
   await expect(page.locator("[data-differ]")).toHaveCount(1);
   await expect(row(page, "grow_light_grow").locator("[data-differ]")).toHaveClass(/tag-warn/);
 });
@@ -198,7 +198,8 @@ test("controller-heap-low: free heap under the 32 kB floor turns the Controller 
   await load(page, "/equipment");
   const controller = page.getByRole("region", { name: "Controller", exact: true });
   await expect(controller).toHaveClass(/tone-fault/);
-  await expect(controller.locator(".ctl-heap-low")).toHaveText("▲ 4 kB below the 32 kB floor");
+  await expect(controller.locator(".ctl-heap-low")).toHaveText("4 kB below the 32 kB floor");
+  await expect(controller.locator(".ctl-heap-low .glyph-down")).toBeVisible();
   await expect(controller.locator("svg.ctl-heap")).toHaveClass(/is-below/);
   await expect(controller.locator(".data-pair dd").nth(3)).toHaveText("10 kB");
 });

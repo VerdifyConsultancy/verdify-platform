@@ -13,7 +13,7 @@ import {
 } from "./marks";
 import { DAILY_SUMMARY_NOTE, retentionNote, runAt, staleness, traceGaps, type RetentionNote, type Staleness, type TraceGaps } from "./retention";
 import { seriesSummary, summaryText, whenText, type SeriesSummary } from "./summary";
-import { AXIS_FONT, clockTime, epochOf, fullTime, localDay, timeAxis } from "./time-axis";
+import { AXIS_FONT, clockTime, epochOf, fullTime, localDay, silentTimeAxis, timeAxis } from "./time-axis";
 import { cursorX, tooltipPlugin } from "./tooltip";
 import type { BandTimeline, MetricDef, Series, SeriesColumns, SettingSteps, XRange } from "./types";
 import { UPlotChart, resetZoom, useStableArray, type ChartEnv, type ChartOptions } from "./uplot-chart";
@@ -278,10 +278,6 @@ export type SeriesLayers = {
 const NO_LAYERS: SeriesLayers = {};
 /** The primary trace is shown: its layers draw only while it does. */
 const primaryShown = (model: TimeSeriesModel, hidden: ReadonlySet<string>) => model.primary >= 0 && !hidden.has(model.traces[model.primary].key);
-/** The time axis of a stacked panel above the last: the same splits (so its grid lines up), no labels, no height. */
-function silentTimeAxis(colors: ChartColors): uPlot.Axis {
-  return { ...timeAxis({ muted: colors["--muted"], grid: colors["--c-grid"] }), size: 0, ticks: { show: false }, values: (_plot, splits) => splits.map(() => "") };
-}
 /** The y axis of a small multiple past the first column: the same grid, no labels, no width. */
 function silentValueAxis(unit: string, colors: ChartColors): uPlot.Axis {
   return { ...valueAxis(unit, colors, 0), ticks: { show: false }, values: (_plot, splits) => splits.map(() => "") };
@@ -334,7 +330,7 @@ export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<Time
       },
     },
     axes: [
-      built.xLabels === false ? silentTimeAxis(colors) : timeAxis({ muted: colors["--muted"], grid: colors["--c-grid"] }),
+      built.xLabels === false ? silentTimeAxis({ muted: colors["--muted"], grid: colors["--c-grid"] }) : timeAxis({ muted: colors["--muted"], grid: colors["--c-grid"] }),
       built.yLabels === false ? silentValueAxis(unit, colors) : valueAxis(unit, colors, built.yAxisSize),
     ],
     hooks: {

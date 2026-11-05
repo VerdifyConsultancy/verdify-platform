@@ -10,7 +10,7 @@ import type { Series, SettingHistory, SettingSteps } from "../charts/types";
 import { chartLinks } from "../charts/uplot-chart";
 import type { PageHandle } from "../components/app-shell";
 import { useClockValue } from "../components/freshness";
-import { ChartChips, GraphNotices, LayersMenu, PresetMenu, RangeForm, rangeDays, viewFields } from "../components/graphs/controls";
+import { ChartChips, DrawnChips, GraphNotices, LayersMenu, PresetChips, PresetMenu, RangeForm, rangeDays, viewFields } from "../components/graphs/controls";
 import { EVENTS_PAGE, WRITE_SOURCES, chartEvents, shownSources } from "../components/graphs/event-marks";
 import { MetricPicker } from "../components/graphs/metric-picker";
 import { ResolutionLine, elapsedText } from "../components/graphs/resolution-line";
@@ -215,18 +215,25 @@ export default function Graphs() {
   const long = window !== null ? !lanesAllowed(window) : spec.kind === "range" && (rangeSeconds(spec.range) ?? 0) > 31 * 86_400;
 
   return <>
-    <PageHeader view="graphs-climate" status={story ? <StoryLine lead={lead} story={story} view={view} withDates={withDates} /> : null} />
+    <PageHeader view="graphs-climate" status={story ? <StoryLine lead={lead} story={story} view={view} withDates={withDates} /> : null}
+      statusShort={story ? <StoryLine lead={lead} story={story} view={view} withDates={withDates} short /> : null} />
     <GraphNotices notices={notices} />
     <div className="page-toolbar gr-toolbar">
+      {/* On a phone (redesign §5.5) the toolbar is two rows: the presets but 90 d with Custom…, then ‹ ›, Layers and + Metric;
+          Preset, the settings drawn as steps with + Setting, and the picked metrics move into the Layers sheet. */}
       <RangeToolbar
-        presets={RANGES.map((range) => ({ id: range.id, label: range.label, href: graphHref(withWindow(view, { kind: "range", range: range.id })), current: spec.kind === "range" && spec.range === range.id }))}
+        presets={RANGES.map((range) => ({ id: range.id, label: range.label, href: graphHref(withWindow(view, { kind: "range", range: range.id })), current: spec.kind === "range" && spec.range === range.id, wide: range.id === "90d" }))}
         previous={previous && graphHref(withWindow(view, previous))} next={next && graphHref(withWindow(view, next))} span={spanOf(spec, window)}
         zoomOut={zoomOut && graphHref(withWindow(view, zoomOut))} customOpen={spec.kind === "days"}
         custom={<RangeForm initial={rangeDays(spec, window)} action="/graphs" hidden={viewFields(view)} href={(from, to) => graphHref(withWindow(view, { kind: "days", from, to }))} />}>
         <PresetMenu view={view} catalog={metricsCatalog} />
-        <LayersMenu view={view} long={long} />
+        <LayersMenu view={view} long={long} phone={<>
+          <PresetChips view={view} catalog={metricsCatalog} />
+          <DrawnChips view={view} settings={resolved.settings} picked={resolved.picked} catalog={metricsCatalog}
+            chooser={<SettingChooser view={view} settings={settingsCatalog} failed={catalog.data === undefined && catalog.error !== null} chosen={resolved.settings} units={resolved.units} />} />
+        </>} />
         <MetricPicker view={view} metrics={metricsCatalog} failed={registry.error !== null} picked={resolved.picked} />
-        <SettingChooser view={view} settings={settingsCatalog} failed={catalog.data === undefined && catalog.error !== null} chosen={resolved.settings} units={resolved.units} />
+        <SettingChooser view={view} settings={settingsCatalog} failed={catalog.data === undefined && catalog.error !== null} chosen={resolved.settings} units={resolved.units} className="gr-setting-add" />
       </RangeToolbar>
     </div>
     <ChartChips view={view} settings={resolved.settings} picked={resolved.picked} catalog={metricsCatalog} />

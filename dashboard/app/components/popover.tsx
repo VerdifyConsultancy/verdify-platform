@@ -69,7 +69,11 @@ export function Popover({ open, onClose, anchor, title, children, className }: P
     };
     const onPress = (event: Event) => {
       const target = event.target as Node;
-      if (!dialog.contains(target) && !anchor?.contains(target)) closeRef.current();
+      if (dialog.contains(target) || anchor?.contains(target)) return;
+      // A press inside another open dialog (the schedule editor its Edit opened over it) is not a press outside: the
+      // popover stays, so closing that dialog comes back to it and its Edit.
+      if (target instanceof Element && target.closest("dialog[open]")) return;
+      closeRef.current();
     };
     dialog.addEventListener("keydown", onKey);
     if (!phone) doc.addEventListener("pointerdown", onPress);

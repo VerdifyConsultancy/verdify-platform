@@ -5,11 +5,15 @@
 /* ---------------------------------------------------------------- Now: the page */
 /* The page is a .page stack (primitives.css); its head is the hero with the quick actions under it, at the card gap. */
 .now-head{display:grid;gap:var(--space-4);min-width:0}
-.now-pair{display:grid;gap:var(--space-4);align-items:start;min-width:0}
+/* The pair side by side shares one height (as Statistics' and Plan's rows do), so a short Needs someone leaves no hole beside Water today. */
+.now-pair{display:grid;gap:var(--space-4);align-items:stretch;min-width:0}
+.now-pair>.card,.now-pair>.now-water>.card{height:100%}
 @media(min-width:861px){.now-pair{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 /* The ink hero (redesign §4.2 "Status hero"): the answer and the hero value on the left, the three band bars and time in band on the right, then the status line and "All readings" across. */
 .now-hero{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);grid-template-areas:"main climate" "status status" "readings readings";align-items:center;gap:var(--space-4) var(--space-6)}
+/* With nothing to draw on the right (the API down: no band bars and no time in band), the hero is one column, never an empty block beside the answer. */
+.now-hero.now-hero-plain{grid-template-columns:minmax(0,1fr);grid-template-areas:"main" "status" "readings"}
 .now-hero-main{grid-area:main;min-width:0}
 .now-hero-climate{grid-area:climate;display:grid;gap:var(--space-2);min-width:0}
 .hero-answer-link{color:inherit;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.2em}
@@ -31,7 +35,7 @@
 .now-band:hover .now-band-label{text-decoration:underline}
 .now-band-bar{min-width:0}
 .now-band-value{font-size:var(--fs-md);font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;color:#fff}
-.now-band-meta{min-width:0;font-size:.8125rem;color:var(--ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.now-band-meta{min-width:0;font-size:var(--fs-sm);color:var(--ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 .now-off{font-weight:600;color:var(--warn-text)}
 .hero .now-off{color:var(--amber)}
 
@@ -72,7 +76,6 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 
 /* The alert row (redesign §5.8), on Now and Activity: an ObjectRow with its severity rule and word first, the place and when, the message, then Acknowledge with its note. */
 .alert-list{margin:0;padding:0;list-style:none}
-.alert-row.object-row{padding-left:var(--space-3)}
 .alert-row .object-row-tag{order:-1}
 .alert-row .alert-severity{min-width:4.5rem}
 .alert-facts{font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
@@ -108,7 +111,14 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .now-water-flow{font-size:var(--fs-sm)}
 .now-water-flow.fault{font-weight:600}
 /* In a narrow card (a phone, or the pair below 1100 px) when it last got water goes under the meter. */
-@container (max-width:28rem){.now-water-row{grid-template-columns:3.5rem minmax(0,1fr)}.now-water-last{grid-column:2;white-space:normal}}
+@container (max-width:28rem){
+  .now-water-row{grid-template-columns:3.5rem minmax(0,1fr)}
+  .now-water-last{grid-column:2;white-space:normal}
+  /* "132 / 120 min" over "+12 min over", so a zone over its cap stays inside the card at 360 px. */
+  .now-water-amount{flex:0 1 auto;min-width:0;white-space:normal}
+  .now-water-over{display:block}
+  .now-water-sep{display:none}
+}
 
 /* Running and next: what runs now as chips with a dot in the equipment's token, then the track from 861 px or the two lists below it. */
 .now-sub{margin:0 0 var(--space-2);font-size:var(--fs-sm);font-weight:620;color:var(--ink)}
@@ -142,22 +152,33 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .now-later-label{margin-right:var(--space-2);font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
 
 /* The zone strip: five tiles, each its values, a band bar of its VPD and a 24 h sparkline; the title's link covers the tile. */
-.now-zones{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3);margin:0;padding:0;list-style:none}
-.now-zone{position:relative;display:grid;align-content:start;gap:var(--space-2);min-width:0;padding:var(--space-3);border:1px solid var(--line);border-radius:var(--radius);background:#fff}
-.now-zone:hover{border-color:var(--leaf)}
-.now-zone-off,.now-zone-off:hover{border-left:3px solid var(--amber)}
+/* One card (redesign §5.1): the tiles have no frame of their own; 1 px dividers part the columns (rows on a phone), a --field wash marks the one under the pointer, and a zone out of band keeps its 3 px amber rule. The strip reaches into the card's padding by its tiles' own, so their words line up with the card's head. */
+.now-zones{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin:0 calc(-1 * var(--space-3));padding:0;list-style:none}
+.now-zone{position:relative;display:grid;align-content:start;gap:var(--space-2);min-width:0;padding:var(--space-3);background:#fff}
+.now-zone:hover{background:var(--field)}
+.now-zone-off{box-shadow:inset 3px 0 0 var(--amber)}
+.now-zone:nth-child(even){border-left:1px solid var(--line)}
+.now-zone:nth-child(n+3){border-top:1px solid var(--line)}
 .now-zone-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:0 var(--space-2)}
 .now-zone-name{margin:0;font-size:var(--fs-md)}
 .now-zone-link{display:inline-flex;align-items:center;min-height:24px;color:var(--ink);text-decoration:none}
-.now-zone-link::after{content:"";position:absolute;inset:0;border-radius:var(--radius)}
+.now-zone-link::after{content:"";position:absolute;inset:0}
 .now-zone-link:hover{color:var(--forest);text-decoration:underline}
 .now-zone-tag{font:400 var(--fs-label)/1.3 var(--mono);letter-spacing:.08em;color:var(--muted)}
 .now-zone-tag-news{font-weight:600;color:var(--warn-text)}
 .now-zone-values{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--space-3);margin:0}
 .now-zone-value{font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
 .now-zone-meta{margin:0;font-size:var(--fs-xs)}
-@media(max-width:359px){.now-zones{grid-template-columns:minmax(0,1fr)}}
-@media(min-width:861px){.now-zones{grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--space-4)}}
+@media(max-width:359px){
+  .now-zones{grid-template-columns:minmax(0,1fr)}
+  .now-zone:nth-child(even){border-left:0}
+  .now-zone+.now-zone{border-top:1px solid var(--line)}
+}
+@media(min-width:861px){
+  .now-zones{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .now-zone:nth-child(n){border-top:0}
+  .now-zone+.now-zone{border-left:1px solid var(--line)}
+}
 
 /* The burst panel, shared with Equipment (SCR-07): the buttons, Clear, More actions and what runs. */
 .chip-static{cursor:default;white-space:normal;min-height:2rem}
@@ -176,6 +197,9 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .act-groups{display:grid;gap:var(--space-4);min-width:0}
 .act-groups:empty{display:none}
 .act-linked{margin:0}
+/* A read that failed after an answer: its words and Retry above the rows it keeps. */
+.act-unavailable{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin:0}
+.act-unavailable .btn{min-height:2.25rem;padding-block:0}
 .act-linked>h2{margin:0 0 var(--space-2);font-size:var(--fs-md)}
 .alert-group.card{margin:0;padding:var(--space-1) var(--space-4)}
 .alert-group[open]{padding-bottom:var(--space-3)}
@@ -187,7 +211,7 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .alert-detail h4{margin:var(--space-1) 0 0}
 .alert-detail p{margin:0}
 .alert-detail .runbook{white-space:pre-line;color:var(--ink)}
-.kv-nested{font-size:.82rem}
+.kv-nested{font-size:var(--fs-sm)}
 .alert-graph a{display:inline-flex;align-items:center;min-height:24px;font-weight:700}
 .alert-respond{max-width:36rem}
 .alert-respond .field{margin:0}
@@ -200,7 +224,7 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .act-facet{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)}
 .act-facet-label{font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
 .act-fields{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--space-2) var(--space-3)}
-.act-fields>label{display:flex;flex-direction:column;gap:var(--space-1);min-width:0;font-size:.78rem;font-weight:600;color:var(--muted)}
+.act-fields>label{display:flex;flex-direction:column;gap:var(--space-1);min-width:0;font-size:var(--fs-sm);font-weight:600;color:var(--muted)}
 .act-fields>.act-select{display:none}
 .act-target input{width:15rem}
 .act-clear,.act-clear-chip{display:inline-flex;align-items:center;min-height:var(--tap);font-size:var(--fs-sm);font-weight:700}
@@ -219,7 +243,7 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .act-entry-outcome{display:inline-flex;align-items:center;gap:var(--space-1);justify-self:end;white-space:nowrap}
 .act-plan{display:inline;margin:0}
 .act-plan>summary{display:inline-flex;min-height:24px;font-weight:600}
-.plan-changes{margin:var(--space-1) 0 0;padding-left:1.1rem;font-size:.85rem;color:var(--muted)}
+.plan-changes{margin:var(--space-1) 0 0;padding-left:1.1rem;font-size:var(--fs-sm);color:var(--muted)}
 .act-more{padding:var(--space-3) var(--space-4)}
 .act-more .actions{margin:0}
 .act-recent .act-entry.event{padding-inline:0}
@@ -228,9 +252,10 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 /* ---------------------------------------------------------------- Phones (860 px and below) */
 @media(max-width:860px){
   .now-head,.now-pair,.act-groups{gap:var(--space-3)}
+  .now-fresh .btn,.act-csv,.act-unavailable .btn{min-height:var(--tap)}
   .now-hero{grid-template-columns:minmax(0,1fr);grid-template-areas:"main" "climate" "status" "readings";gap:var(--space-3);padding:var(--space-4)}
   .now-hero .hero-temp{font-size:2.75rem}
-  .now-hero .hero-meta{font-size:.8125rem}
+  .now-hero .hero-meta{font-size:var(--fs-sm)}
   .now-fresh-link,.now-band-label,.now-status-item,.now-zone-link,.now-unconfirmed a,.alert-open,.alert-graph a,.act-plan>summary{min-height:var(--tap)}
   .now-band{grid-template-columns:2.5rem minmax(0,1fr) auto;gap:0 var(--space-2);min-height:var(--tap)}
   .now-band-meta{grid-column:2/-1}

@@ -242,9 +242,11 @@ export type DailyWaterUseProps = {
   split: WaterSplit;
   /** Line names from API-IRR-01 (`name`), for the rows; the line id alone without them. */
   lineNames?: Readonly<Record<string, string>>;
+  /** The host's card already titles the chart: its caption then names the figure for a screen reader only. */
+  captionHidden?: boolean;
 };
 
-export function DailyWaterUse({ data, split, lineNames }: DailyWaterUseProps) {
+export function DailyWaterUse({ data, split, lineNames, captionHidden = false }: DailyWaterUseProps) {
   // Names arrive as a new object on every status poll: the bars rebuild only when their values change.
   const names = JSON.stringify(lineNames ?? null);
   const model = useMemo(() => buildWaterUse(data, split, lineNames), [data, split, names]);
@@ -254,7 +256,7 @@ export function DailyWaterUse({ data, split, lineNames }: DailyWaterUseProps) {
   const structure = `water|${split}|${model.segments.map((segment) => segment.key).join(",")}`;
   const label = `Whole gallons per day for ${model.days.length} days, stacked by ${split} with clean below fertilizer, beside a bar of water that ran with no Verdify valve open. No-data days are hatched, never zero. The data table follows.`;
   return <figure className="chart chart-water-use">
-    <figcaption className="eyebrow">Gallons per day by {split} · last {model.days.length} days</figcaption>
+    <figcaption className={captionHidden ? "screen-reader" : "eyebrow"}>Gallons per day by {split} · last {model.days.length} days</figcaption>
     {model.days.length > 0
       ? <>
         <UPlotChart options={(env) => waterOptions(env, modelRef)} data={columns} xRange={model.xRange} structure={structure} className="plot-water-use" label={label} marks={model} zoom={false} />

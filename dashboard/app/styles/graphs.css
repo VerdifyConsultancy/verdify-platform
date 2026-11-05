@@ -5,14 +5,14 @@
 /* The resolution line (in the stack's foot), the custom range, the chips of settings and metrics, the pickers and the daily table. */
 .resolution-line{font-variant-numeric:tabular-nums}
 .range-form{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .5rem;margin:0}
-.range-form label{font-size:.8rem;font-weight:600;color:var(--muted)}
-.range-form input[type=date]{min-height:2.25rem;padding:.2rem .45rem;border:1px solid var(--control-border);border-radius:var(--radius-sm);font:inherit;font-size:.85rem}
+.range-form label{font-size:var(--fs-sm);font-weight:600;color:var(--muted)}
+.range-form input[type=date]{min-height:2.25rem;padding:.2rem .45rem;border:1px solid var(--control-border);border-radius:var(--radius-sm);font:inherit;font-size:var(--fs-sm)}
 .range-form .field-error{flex-basis:100%}
 .graph-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:0;padding:0;list-style:none}
 .graph-chip{display:inline-flex;align-items:stretch;min-height:2.25rem;border:1px solid var(--line-strong);border-radius:999px;background:#fff;font-size:.8rem;overflow:hidden}
 .graph-chip>a,.graph-chip>span{display:inline-flex;align-items:center;padding:0 .7rem;color:var(--ink);text-decoration:none;white-space:nowrap}
 .graph-chip>a:hover{color:var(--forest)}
-.graph-chip>a:last-child{justify-content:center;min-width:2.25rem;padding:0 .55rem;border-left:1px solid var(--line);font-size:1rem}
+.graph-chip>a:last-child{justify-content:center;min-width:2.25rem;padding:0 .55rem;border-left:1px solid var(--line);font-size:var(--fs-md)}
 .graph-notices{list-style:none;display:grid;gap:.4rem;margin:0 0 1rem;padding:0}
 .graph-notices .notice{margin:0}
 .picker-dialog .field{margin-bottom:.75rem}
@@ -26,7 +26,7 @@ a.picker-item:hover{background:var(--field)}
 .picker-item-on,.picker-item-off{color:var(--muted)}
 .picker-item .tag{justify-self:start;margin-top:.2rem}
 .picker-label{font-weight:600}
-.picker-facts,.picker-text{font-size:.8rem;color:var(--muted)}
+.picker-facts,.picker-text{font-size:var(--fs-sm);color:var(--muted)}
 .picker-facts .mono{color:var(--ink)}
 .scorecard-tools{display:flex;justify-content:flex-end;margin:0 0 .5rem}
 .scorecard-wrap{max-height:none}
@@ -35,9 +35,9 @@ a.picker-item:hover{background:var(--field)}
 .scorecard th[scope=row] a:hover{color:var(--forest)}
 .scorecard thead th{white-space:nowrap}
 .scorecard td{white-space:nowrap;font-variant-numeric:tabular-nums}
-.scorecard-note{font-size:.75rem;font-weight:400;color:var(--muted)}
+.scorecard-note{font-size:var(--fs-xs);font-weight:400;color:var(--muted)}
 .scorecard-missing{color:var(--muted)}
-.scorecard-reason{font-size:.75rem;white-space:normal}
+.scorecard-reason{font-size:var(--fs-xs);white-space:normal}
 .zone-tag-note{max-width:46rem;margin:0 0 var(--space-3);font-size:var(--fs-sm);color:var(--muted)}
 
 /* The toolbar (redesign §5.5): range chips, ‹ › and Zoom out, Custom…, then Preset, Layers, + Metric and + Setting at the right. Every control is one height, 36 px (44 px on phones). */
@@ -59,8 +59,10 @@ a.picker-item:hover{background:var(--field)}
 .gr-menu-groups{display:grid;gap:var(--space-3);padding:var(--space-1)}
 .gr-menu-group .eyebrow{margin:0 0 var(--space-2)}
 .gr-menu-note{max-width:20rem;margin:var(--space-2) 0 0;font-size:var(--fs-xs)}
-/* What the charts draw beyond the climate traces, and the notes about the window, between the toolbar and the stack. */
+/* What the charts draw beyond the climate traces, and the notes about the window, between the toolbar and the stack. On a phone the chips sit in the Layers sheet instead (.gr-on-sheet), with Preset and + Setting (.gr-menu-phone). */
 .gr-on{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3);margin:var(--space-3) 0 0}
+.gr-on-sheet{display:grid;gap:var(--space-2);margin:0 0 var(--space-2)}
+.gr-menu-phone{display:none}
 .gr-notes{margin:var(--space-3) 0 0}
 /* The story line: one line of state, its excursions links to their windows. */
 .gr-story a{font-weight:600;text-decoration-thickness:1px;text-underline-offset:.2em}
@@ -129,6 +131,13 @@ a.picker-item:hover{background:var(--field)}
 
 @media(max-width:860px){
   .gr-toolbar .range-tools>.btn,.gr-menu>summary,.gr-stats-toolbar .range-custom>summary{min-height:var(--tap)}
+  /* Two toolbar rows on a phone (redesign §5.5): Preset, + Setting and the chips of what is drawn live in the Layers sheet. */
+  .gr-preset,.gr-setting-add,.gr-on{display:none}
+  .gr-menu-phone{display:grid;gap:var(--space-3);padding-bottom:var(--space-3);border-bottom:1px solid var(--line)}
+  .gr-menu-phone .btn{justify-self:start}
+  .graph-chip{min-height:var(--tap)}
+  .graph-chip>a:last-child{min-width:var(--tap)}
+  .range-form input[type=date]{min-height:var(--tap)}
   /* On a phone a menu opens under the whole toolbar, full width, so it never runs off the screen. */
   .gr-toolbar .menu{position:static}
   .gr-menu>.menu-panel{left:0;right:0;width:auto;max-width:none}

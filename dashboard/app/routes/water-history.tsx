@@ -135,12 +135,14 @@ function MinutesSection({ read, days, lines, names, today, group, measure }: {
   // Noon today: which local day is today, steady all day so the bars do not rebuild every second.
   const noon = Date.parse(localDayStart(today)) / 1000 + 12 * 3600;
   const what = measure === "gal" ? "Gallons" : "Watering minutes";
-  return <section className="wat-section" aria-labelledby={headingId}>
+  // One card frame titled once (redesign §4.2 chart card, §5.4): the card's head is the section header, so the chart's own
+  // caption names the figure for a screen reader only.
+  return <section className="wat-section card wat-chart-card" aria-labelledby={headingId}>
     <SectionHeader id={headingId} title={`${what} by ${group}`} meta={periodWords(days).toLowerCase()} />
     {read.isError && <PanelError thing={`the ${what.toLowerCase()}`} onRetry={() => void read.refetch()} />}
     {report
       ? <MinutesByZone report={report} group={group} caps={minutesCaps(lines, group)} planned={planned[group]} now={noon} lineNames={names} measure={measure === "gal" ? "gal" : "minutes"}
-        title={`${what} per day by ${group}`} />
+        title={`${what} per day by ${group}`} captionHidden />
       : !read.isError && <div className="skeleton skeleton-lg" aria-hidden="true" />}
   </section>;
 }
@@ -156,12 +158,12 @@ function WaterUseSection({ days, names, search }: { days: number; names: Readonl
   const split = waterUseSplit(search.get("water_use_by"));
   const use = useApiRead("API-21", { days: served }, { intervalMs: HISTORY_POLL_MS });
   const note = days < served ? `last ${served} days, the shortest this chart serves` : days > served ? `last ${served} days, the longest this chart serves` : `last ${served} days`;
-  return <section className="wat-section" aria-labelledby={headingId}>
+  return <section className="wat-section card wat-chart-card" aria-labelledby={headingId}>
     <SectionHeader id={headingId} title="Daily water use" meta={note}
       chips={<Chips label="Split water use by" small items={(["line", "cause"] as const).map((value) => ({ key: value, label: value, to: waterUrl(PATH, search, { water_use_by: value === "line" ? null : "cause" }), current: split === value, keepScroll: true }))} />} />
     {use.isError && <PanelError thing="daily water use" onRetry={() => void use.refetch()} />}
     {use.data
-      ? <DailyWaterUse data={use.data} split={split} lineNames={names} />
+      ? <DailyWaterUse data={use.data} split={split} lineNames={names} captionHidden />
       : !use.isError && <div className="skeleton skeleton-lg" aria-hidden="true" />}
   </section>;
 }

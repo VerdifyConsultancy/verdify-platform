@@ -39,7 +39,7 @@ test("/graphs?range=72h&set=mister_engage_kpa: one stack of three panels on one 
   await expect(head(page, "temperature")).toHaveText(/^in band 100% · low \d\d\.\d \(.+\) · mean \d\d\.\d · high \d\d\.\d \(.+\)$/);
   await expect(page.locator(".lanes-canvas canvas")).toHaveCount(1);
   await expect(page.locator("[data-equipment=fan1]")).toHaveCount(1);
-  await expect(page.getByRole("list", { name: "Settings drawn as steps" }).getByRole("listitem")).toContainText(["VPD · mister_engage_kpa"]);
+  await expect(page.getByRole("list", { name: "Settings drawn as steps" }).getByRole("listitem")).toContainText(["VPD Mister Engage · VPD"]);
   await expect(page.getByRole("list", { name: "Range" }).getByRole("link", { name: "72 h" })).toHaveAttribute("aria-current", "page");
   await expect(page.locator(".chart-lanes .chart-key li").filter({ hasText: /^VPD$/ })).toHaveCount(1);
   const first = await windowReads(request);
@@ -62,6 +62,27 @@ test("plot space: at 1440 the temperature plot is at least 180 px tall and only 
   await page.setViewportSize(PHONE);
   await expect.poll(() => height("temperature")).toBeGreaterThanOrEqual(130);
   expect(await height("rh")).toBe(120 + 32);
+});
+
+test("on a phone the toolbar is two rows and the temperature plot starts above the bottom bar; Preset, the drawn settings and + Setting live in Layers", async ({ page, request }) => {
+  await useScreensClock(page, request, "in-band");
+  await page.setViewportSize(PHONE);
+  await load(page, "/graphs");
+  const presets = page.getByRole("list", { name: "Range" });
+  // The presets but 90 d, with Custom… as a chip at the row's end; Zoom out is left out.
+  await expect(presets.getByRole("link", { name: "90 d" })).toBeHidden();
+  await expect(page.getByRole("link", { name: "Zoom out" })).toBeHidden();
+  const [today, custom] = await Promise.all([presets.getByRole("link", { name: "Today" }).boundingBox(), page.locator(".gr-toolbar .range-custom > summary").boundingBox()]);
+  expect(Math.abs(today!.y - custom!.y)).toBeLessThan(2);
+  await expect(page.locator(".gr-on")).toBeHidden();
+  // The story line's short wording, and the temperature plot in view above the bottom bar.
+  await expect(page.locator(".page-status-short")).toHaveText(/^24 h · in band 100% · no excursions$/);
+  const plot = await page.locator("[data-panel=temperature] .stack-plot").boundingBox();
+  expect(plot!.y + 80).toBeLessThan(PHONE.height - 56);
+  await page.locator(".gr-layers > summary").click();
+  await expect(page.getByRole("list", { name: "Presets, phone" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Settings drawn as steps, phone" }).getByRole("listitem")).toHaveCount(2);
+  await expect(page.locator(".gr-menu-phone").getByRole("button", { name: "+ Setting" })).toBeVisible();
 });
 
 test("the cursor: hovering one panel turns every header row into its values there, with one time chip and no floating tooltip", async ({ page, request }) => {
@@ -259,6 +280,12 @@ test("/graphs/zones: every zone side by side, temperature and VPD on one scale e
   await expect(page.locator(".chart-grid .stack-plot canvas")).toHaveCount(10);
   await expect(page.locator(".grid-heads .grid-head")).toHaveText([/^North ›\s*MEASURED$/, /^Center ›\s*HOUSE$/, /^South ›\s*MEASURED$/, /^East ›\s*MEASURED$/, /^West ›\s*MEASURED$/]);
   await expect(page.locator(".grid-readout")).toHaveCount(10);
+  // The grid keeps its data table (redesign §8): one block per metric row, a column per zone.
+  const table = page.locator(".chart-grid > details.chart-table");
+  await expect(table.locator("summary")).toHaveText(/^Data table · \d+ rows$/);
+  await table.locator("summary").click();
+  await expect(table.locator("caption")).toHaveText(["Temperature · °F · America/Denver", "VPD · kPa · America/Denver"]);
+  await expect(table.locator("table").first().locator("thead th")).toHaveText(["Time", "North (°F)", "Center (°F)", "South (°F)", "East (°F)", "West (°F)"]);
   const band = (await fixtureRequests(request, "API-06")).map((row) => new URL(row.path, "http://fixture.invalid").searchParams.get("zone"));
   expect(band).toEqual(["house", "center", "south", "east", "west"]);
   await page.getByRole("list", { name: "Metrics" }).getByRole("link", { name: "RH" }).click();

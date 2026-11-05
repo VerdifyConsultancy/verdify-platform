@@ -177,7 +177,7 @@ test("two fast taps on Turn on send one API-20 with one key, reading Sending…;
   expect(state("grow_light_main")).toBe("Off (controller) · Lutron Off");
   expect(note("grow_light_main")).toBe("Waiting for Lutron");
   await tick(5000);
-  expect(state("grow_light_main")).toBe("Off (controller) · Lutron On ▲ Differ");
+  expect(state("grow_light_main")).toBe("Off (controller) · Lutron On Differ");
   expect(note("grow_light_main")).toBeNull();
   expect(writes(api)).toHaveLength(1);
 });
@@ -226,7 +226,7 @@ test("a light that switches late, after a 503, takes back the words: the readbac
   api.respond({ method: "POST", url: "/__control", body: { fixture: "lights-confirmed" } });
   api.respond({ method: "POST", url: "/v1/equipment/lights/main/on" });
   await tick(5000);
-  expect(state("grow_light_main")).toBe("Off (controller) · Lutron On ▲ Differ");
+  expect(state("grow_light_main")).toBe("Off (controller) · Lutron On Differ");
   expect(row("grow_light_main").querySelector(".light-controls .field-error")).toBeNull();
   expect(note("grow_light_main")).toBeNull();
 });
@@ -245,7 +245,7 @@ test("no match after 30 s, and a switch on a later poll clears the note", async 
   api.respond({ method: "POST", url: "/__control", body: { fixture: "lights-confirmed" } });
   api.respond({ method: "POST", url: "/v1/equipment/lights/main/on" });
   await tick(15_000);
-  expect(state("grow_light_main")).toBe("Off (controller) · Lutron On ▲ Differ");
+  expect(state("grow_light_main")).toBe("Off (controller) · Lutron On Differ");
   expect(note("grow_light_main")).toBeNull();
 });
 
@@ -314,7 +314,7 @@ test("Back to automatic: one API-10 write with manual on, REQUESTED then CONFIRM
   press("grow_light_main", /^Turn on/);
   await advance(0);
   await tick(5000);
-  expect(state("grow_light_main")).toBe("Off (controller) · Lutron On ▲ Differ");
+  expect(state("grow_light_main")).toBe("Off (controller) · Lutron On Differ");
   expect(auto("grow_light_main")).toBe("Automatic");
 
   const back = button("grow_light_main", /^Back to automatic/)!;
@@ -350,7 +350,7 @@ test("Back to automatic: one API-10 write with manual on, REQUESTED then CONFIRM
 
 test("Back to automatic on grow-lights-differ sends one on request once CONFIRMED", async () => {
   const api = await load({ fixture: ["grow-lights-differ", "requested-to-confirmed"] });
-  expect(state("grow_light_grow")).toBe("On (controller) · Lutron Off ▲ Differ");
+  expect(state("grow_light_grow")).toBe("On (controller) · Lutron Off Differ");
   press("grow_light_grow", /^Back to automatic/);
   await advance(0);
   expect(requests(api, "API-10")[0].path).toBe("/api/v1/settings/sw_gl_grow_auto_mode");

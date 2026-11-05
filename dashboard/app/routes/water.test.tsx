@@ -74,8 +74,8 @@ test("a server render of a Water view carries its head and no greenhouse data, a
     const html = renderToString(<Stub initialEntries={[path]} />);
     expect(html, path).toContain('<p class="eyebrow page-crumbs">');
     expect(html, path).toContain('aria-label="Water views"');
-    // The status line keeps its height while it loads.
-    expect(html, path).toContain('<p class="page-status meta">');
+    // The status line keeps its height while it loads, its phone wording beside it.
+    expect(html, path).toContain('<p class="page-status meta page-status-long"></p><p class="page-status-short meta"></p>');
     expect(html, path).not.toMatch(/data-line=|week-table|minutes-row|Stop all|Relay|Running|SAF-4|rev 42|\sstyle=/);
   }
   expect(requests(api)).toEqual([]);
@@ -333,6 +333,8 @@ test("the rules list: every schedule under its line with its words, who changed 
   fireEvent.click(within(rule(12)).getByRole("button", { name: "Delete Weekly feed" }));
   await advance(0);
   expect(writes(api).at(-1)).toMatchObject({ method: "DELETE", path: "/api/v1/irrigation/schedules/12" });
+  // The menu closed as Delete was chosen: the outcome is a toast, as the editor's Delete says it.
+  expect(text(document.querySelector(".toast-stack[role=status]"))).toContain("Requested deleting Weekly feed on L02");
 });
 
 test("a viewer reads the same views with no editor, [+], switch, Edit, Duplicate or pause, whatever the URL says", async () => {
@@ -602,7 +604,8 @@ test("a viewer sees no Stop or header action on any Water view; at phone width S
   await load();
   const button = stopAll()!;
   expect(button.className).toBe("btn btn-stop stop-all-water stop-all-water-compact");
-  expect(text(button)).toBe("■ Stop all water");
+  expect(text(button)).toBe("Stop all water");
+  expect(button.querySelector(".glyph-stop[aria-hidden=true]")).not.toBeNull();
   const css = readFileSync(join(process.cwd(), "app/styles/primitives.css"), "utf8");
   const phone = css.slice(css.lastIndexOf("@media(max-width:860px){"));
   expect(phone).toMatch(/\.page-tabs-sticky\{position:sticky;/);

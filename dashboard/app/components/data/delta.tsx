@@ -22,7 +22,7 @@ export function deltaAmount(value: number, unit: string | undefined): string {
 /**
  * Delta (redesign §4.6, §7.2): "▲ 1.3 pts vs previous 30 d" in ink. The arrow and the words carry the direction, never
  * green or red, because up is not always better (water, alerts). "No change" when it is zero; "—" with "no comparison"
- * when either period is unknown.
+ * when either period is unknown. The arrows are drawn (`.glyph-up`, `.glyph-down`): IBM Plex has no ▲ or ▼.
  */
 export function Delta({ value, unit, vs }: DeltaProps) {
   if (!finite(value)) return <span className="delta delta-unknown">— <span className="delta-vs">no comparison with {vs}</span></span>;
@@ -31,6 +31,6 @@ export function Delta({ value, unit, vs }: DeltaProps) {
   if (zero) return <span className="delta" data-direction="none">No change <span className="delta-vs">vs {vs}</span></span>;
   const up = value > 0;
   return <span className="delta" data-direction={up ? "up" : "down"}>
-    <span aria-hidden="true">{up ? "▲" : "▼"} </span><span className="screen-reader">{up ? "up " : "down "}</span>{amount} <span className="delta-vs">vs {vs}</span>
+    <span className={up ? "glyph glyph-up" : "glyph glyph-down"} aria-hidden="true" /> <span className="screen-reader">{up ? "up " : "down "}</span>{amount} <span className="delta-vs">vs {vs}</span>
   </span>;
 }

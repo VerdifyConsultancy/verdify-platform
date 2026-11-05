@@ -105,3 +105,11 @@ export function timeAxis(colors: { muted: string; grid: string }): uPlot.Axis {
     values: (_plot, splits, _axis, _space, increment) => splits.map((split) => axisLabel(split, !narrowViewport(), increment)),
   };
 }
+
+/**
+ * A time axis that keeps the grid and draws no labels, no ticks and no height: a chart stack's panels above the last,
+ * and its lanes, so the stack shows one time axis whose grid runs through all of them.
+ */
+export function silentTimeAxis(colors: { muted: string; grid: string }): uPlot.Axis {
+  return { ...timeAxis(colors), size: 0, ticks: { show: false }, values: (_plot, splits) => splits.map(() => "") };
+}

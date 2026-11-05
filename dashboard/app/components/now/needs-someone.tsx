@@ -23,6 +23,7 @@ import type { NowAnswer } from "../../lib/now-answer";
 import type { Alert, AlertPage, IrrigationLine, IrrigationStatus, Now } from "../../lib/operator-api";
 import { personName } from "../../lib/activity";
 import type { PanelRead } from "../../lib/queries";
+import { OperatorOnly } from "../../lib/session";
 import { useMe } from "../../lib/shell";
 import { words } from "../../lib/words";
 import { Acknowledge } from "../activity/acknowledge";
@@ -113,7 +114,8 @@ export function NeedsSomeone({ alerts, now, answer, apiFailed, openCount, irriga
         return <AlertRow key={alert.id} alert={named} openTo={`/activity?alert=${alert.id}`}
           action={latch && status ? <ClearFaultButton line={latch} engine={status.engine} /> : undefined}
           acknowledge={alert.status === "open" ? <Acknowledge alert={alert} onAcknowledged={keep} /> : undefined}>
-          {breach && <p className="meta now-breach-note">Stop all water is in the quick actions above.</p>}
+          {/* Quick actions are an operator's: a viewer is never pointed at a control that is not there. */}
+          {breach && <OperatorOnly><p className="meta now-breach-note">Stop all water is in the quick actions above.</p></OperatorOnly>}
         </AlertRow>;
       })}
     </ol>}

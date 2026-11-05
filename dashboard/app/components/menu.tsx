@@ -5,7 +5,9 @@ import { cls } from "./common";
 /**
  * Closes an open `<details>` the way a menu closes (redesign §4.5): Escape (focus returns to its summary), a press
  * outside it, and choosing a link or button inside its panel (an item marked `data-menu-keep` keeps it open, for a
- * switch that toggles in place). Native `<details>` does the opening, so the menu works before hydration too.
+ * switch that toggles in place). Choosing an item puts focus on the summary before the item acts, so a drawer or dialog
+ * it opens finds the menu's button as its opener and returns focus there when it closes (redesign §8): the item itself is
+ * hidden by then. Native `<details>` does the opening, so the menu works before hydration too.
  */
 export function useDismissable(ref: { readonly current: HTMLDetailsElement | null }) {
   useEffect(() => {
@@ -29,7 +31,7 @@ export function useDismissable(ref: { readonly current: HTMLDetailsElement | nul
     const onChoose = (event: Event) => {
       const item = (event.target as Element | null)?.closest?.("a[href], button");
       if (!item || item.closest("summary") || item.closest("[data-menu-keep]") || !details.contains(item)) return;
-      close(false);
+      close(true);
     };
     details.addEventListener("keydown", onKey);
     details.addEventListener("click", onChoose);
@@ -65,7 +67,7 @@ export function Menu({ label, name, children, align = "end", kind = "dots", clas
   const ref = useRef<HTMLDetailsElement>(null);
   useDismissable(ref);
   return <details ref={ref} className={cls("menu", kind === "dots" && "menu-dots", align === "start" && "menu-start", className)}>
-    <summary className="menu-button">{kind === "dots" ? <><span aria-hidden="true">⋯</span>{name && <span className="screen-reader">{name}</span>}</> : label}</summary>
+    <summary className="menu-button">{kind === "dots" ? <><span className="glyph glyph-more" aria-hidden="true" />{name && <span className="screen-reader">{name}</span>}</> : label}</summary>
     <div className="menu-panel">{children}</div>
   </details>;
 }

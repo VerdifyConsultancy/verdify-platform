@@ -23,7 +23,7 @@ test("an operator: Stop all water first, then the three bursts, each a name over
   renderWithApi(<Harness />);
   await advance(0);
   expect(screen.getByRole("region", { name: "Quick actions" })).toBeTruthy();
-  expect(names()).toEqual(["■ Stop all water", "Fans 15 min", "Humidify 5 min", "Vent bypass 10 min"]);
+  expect(names()).toEqual(["Stop all water", "Fans 15 min", "Humidify 5 min", "Vent bypass 10 min"]);
   expect(screen.getByRole("button", { name: "Stop all water" }).className).toContain("btn-stop");
   expect(document.querySelector(".now-burst-button .now-burst-name")?.textContent).toBe("Fans");
 });
@@ -46,7 +46,7 @@ test("before the irrigation firmware: Stop all water and the words that the burs
   startFixtureApi({ fixture: "before-engine" });
   renderWithApi(<Harness />);
   await advance(0);
-  expect(names()).toEqual(["■ Stop all water"]);
+  expect(names()).toEqual(["Stop all water"]);
   expect(text(document.querySelector("[data-arrives=bursts]"))).toBe("Bursts arrive with the irrigation firmware");
   cleanup();
   stopFixtureApi();
@@ -76,5 +76,5 @@ test("with changes switched off the bursts are disabled and Stop all water stays
   expect(document.querySelector(".now-bursts-skeleton")).not.toBeNull();
   await advance(0);
   expect(text(document.querySelector(".now-actions-note"))).toBe("Can't tell whether the controller has the irrigation firmware yet. Retry");
-  expect(names()).toEqual(["■ Stop all water", "Retry"]);
+  expect(names()).toEqual(["Stop all water", "Retry"]);
 });

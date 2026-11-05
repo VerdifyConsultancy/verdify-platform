@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MutableRefObject, type ReactNode } from "react";
 import type uPlot from "uplot";
 import { cssVars, rovingKeys } from "../components/data/viz";
 import { formatValue } from "../lib/format";
@@ -9,6 +9,7 @@ import { CsvLink, DataTable } from "./data-table";
 import { clusterEvents, eventsIn, type ChartEvent, type EventCluster } from "./events";
 import { bandWord, compareLine, inBandShare, type CompareLine } from "./layers";
 import { bandAt, lastAtOrBefore, type ForecastInput } from "./marks";
+import { InStack } from "./stack-context";
 import { gapCount } from "./summary";
 import { clockTime, localDay } from "./time-axis";
 import { cursorX } from "./tooltip";
@@ -209,11 +210,21 @@ function EventRail({ events, view, onHover }: { events: readonly ChartEvent[]; v
   const clusters = clusterEvents(events, view.from, view.to, width);
   const [open, setOpen] = useState<string | null>(null);
   const opened = clusters.find((cluster) => cluster.key === open) ?? null;
+  const roving = rovingKeys();
+  // Escape closes the list, from the list or from its mark, and puts focus back on the mark that opened it.
+  const close = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Escape" || open === null) return false;
+    event.preventDefault();
+    const mark = [...(ref.current?.querySelectorAll<HTMLElement>("[data-cluster]") ?? [])].find((element) => element.dataset.cluster === open);
+    setOpen(null);
+    mark?.focus();
+    return true;
+  };
   return <div className="stack-rail-wrap">
-    <div ref={ref} className="stack-rail" role="group" aria-label={`Events on the charts, ${eventsIn(events, view.from, view.to).length}`} tabIndex={0} onKeyDown={rovingKeys()}>
+    <div ref={ref} className="stack-rail" role="group" aria-label={`Events on the charts, ${eventsIn(events, view.from, view.to).length}`} tabIndex={0} onKeyDown={(event) => { if (!close(event)) roving(event); }}>
       {clusters.map((cluster) => {
         const first = cluster.events[0];
-        return <button key={cluster.key} ref={cssVars({ "--at": cluster.pos })} type="button" tabIndex={-1} data-roving="" className="rail-mark"
+        return <button key={cluster.key} ref={cssVars({ "--at": cluster.pos })} type="button" tabIndex={-1} data-roving="" data-cluster={cluster.key} className="rail-mark"
           data-mark={cluster.events.length > 1 ? "cluster" : first.mark} data-token={first.token} aria-label={clusterWords(cluster)} aria-expanded={open === cluster.key}
           onClick={() => setOpen((current) => (current === cluster.key ? null : cluster.key))}
           onMouseEnter={() => onHover(cluster.at)} onMouseLeave={() => onHover(null)} onFocus={() => onHover(cluster.at)} onBlur={() => onHover(null)}>
@@ -221,7 +232,7 @@ function EventRail({ events, view, onHover }: { events: readonly ChartEvent[]; v
         </button>;
       })}
     </div>
-    {opened && <ul ref={cssVars({ "--at": opened.pos })} className="rail-list" aria-label="Events at this mark" onKeyDown={(event) => { if (event.key === "Escape") setOpen(null); }}>
+    {opened && <ul ref={cssVars({ "--at": opened.pos })} className="rail-list" aria-label="Events at this mark" onKeyDown={close}>
       {opened.events.map((event) => <li key={event.id}>{event.href ? <a href={event.href}>{event.label}</a> : event.label}</li>)}
     </ul>}
   </div>;
@@ -299,10 +310,17 @@ export function ChartStack(props: ChartStackProps) {
           ...model.forecast.map((line) => ({ key: line.key, label: line.label, token: "--c-outdoor", shown: !hidden.has(line.key) })),
         ];
         const drawable = !(panel.series === null && panel.message) && (model.t.length > 0 || model.steps.length > 0 || model.runs.length > 0 || model.forecast.length > 0);
+        // A panel whose read has not answered, or failed, states nothing about the window: its frame says why.
+        const stats = panel.series === null ? "" : panelStats(model, compares[index]);
+        const text = cursor === null || !drawable ? stats : panelReadout(model, hidden, compares[index], cursor);
         return <div key={panel.id} id={panel.id} className={last ? "stack-panel stack-panel-last" : "stack-panel"} data-panel={panel.id}>
           <div className="stack-head">
             <h3 className="stack-name">{panel.name} <span className="stack-unit">{panel.unit}</span></h3>
-            <p className="stack-stats">{cursor === null || !drawable ? panelStats(model, compares[index]) : panelReadout(model, hidden, compares[index], cursor)}</p>
+            {/* The statistics stay in the row's cell, unseen, while it reads the cursor, so the row keeps its height and the plots never move under a finger. */}
+            <div className="stack-text">
+              <p className="stack-stats">{text}</p>
+              {text !== stats && <p className="stack-stats-held" aria-hidden="true">{stats}</p>}
+            </div>
             {swatches.length > 1 && <ul className="chart-legend-items stack-swatches" aria-label={`${panel.name} series`}>
               {swatches.map((item) => <li key={item.key}>
                 <button type="button" aria-pressed={item.shown} onClick={() => toggle(item.key)}><span className="chart-swatch" data-token={item.token.replace(/^--/, "")} aria-hidden="true" />{item.label}</button>
@@ -317,7 +335,7 @@ export function ChartStack(props: ChartStackProps) {
     </div>
     {props.lanes && <details className="stack-lanes" open={lanesOpen} onToggle={(event) => setLanesOpen(event.currentTarget.open)}>
       <summary>Equipment</summary>
-      {props.lanes}
+      <InStack.Provider value={true}>{props.lanes}</InStack.Provider>
     </details>}
     {props.events && <details className="stack-events">
       <summary>Events in this window ({shownEvents.length})</summary>

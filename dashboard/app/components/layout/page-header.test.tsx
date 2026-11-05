@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Every screen's head (redesign §3.1, §3.5, §2.4): the eyebrow as breadcrumb, one h1, the reserved status line, the
 // actions, and the section's tabs from lib/sections.ts.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
 import { renderUi, text } from "../test-render";
@@ -44,6 +46,16 @@ test("the status line is a .meta line, kept while it loads (null) and absent whe
   cleanup();
   renderUi(<PageHeader view="graphs-climate" />);
   expect(document.querySelector(".page-status")).toBeNull();
+});
+
+test("a status line with a phone wording renders both, for the stylesheet to show one at 860 px and below", () => {
+  renderUi(<PageHeader view="water-today" status="Program rev 42 on controller · confirmed 2 min ago" statusShort="Rev 42 on controller · 2 min ago" />);
+  expect([document.querySelector(".page-status")?.className, text(document.querySelector(".page-status"))]).toEqual(["page-status meta page-status-long", "Program rev 42 on controller · confirmed 2 min ago"]);
+  expect([document.querySelector(".page-status-short")?.className, text(document.querySelector(".page-status-short"))]).toEqual(["page-status-short meta", "Rev 42 on controller · 2 min ago"]);
+  // The stylesheet: one line reserved from 861 px, two on a phone, where the short wording takes the long one's place.
+  const css = readFileSync(join(process.cwd(), "app/styles/primitives.css"), "utf8");
+  expect(css).toContain(".page-status-short{display:none}");
+  expect(css).toMatch(/@media\(max-width:860px\)\{[^@]*\.page-status,\.page-status-short\{min-height:3em\}\s*\.page-status-long\{display:none\}\s*\.page-status-short\{display:block\}/);
 });
 
 test("the tabs are a labelled nav of links, the current one aria-current=page; a one-view section has none", () => {

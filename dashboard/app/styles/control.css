@@ -84,6 +84,8 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 
 /* Phones (860 px and below): the rail becomes two selects, each row a stacked card (label, value and pill, meta line) whose Edit or Details covers the row; no bounds bar and no key. */
 @media(max-width:860px){
+  /* Every action is a 44 px target on a phone (redesign §8): the inline Retry too. */
+  .ctl-inline-retry{min-height:var(--tap)}
   .ctl-rail-lists{display:none}
   .ctl-rail-selects{display:grid}
   .ctl-catalog-table,.ctl-catalog-table tbody,.ctl-catalog-table tr,.ctl-catalog-table th,.ctl-catalog-table td{display:block;width:auto}
@@ -142,10 +144,10 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .plan-none{margin:0}
 .plan-after{margin:var(--space-2) 0 0}
 .plan-detail{overflow-wrap:anywhere}
-.plan-detail h3{margin:.75rem 0 .3rem;font-size:.9rem}
-.plan-detail ul{margin:0;padding-left:1.1rem;font-size:.875rem}
+.plan-detail h3{margin:.75rem 0 .3rem;font-size:var(--fs-sm)}
+.plan-detail ul{margin:0;padding-left:1.1rem;font-size:var(--fs-sm)}
 .plan-detail li+li{margin-top:.25rem}
-.plan-detail .setting-key{font:400 .78rem/1.3 var(--mono);color:var(--muted)}
+.plan-detail .setting-key{font:400 var(--fs-xs)/1.3 var(--mono);color:var(--muted)}
 
 /* Planner health: the last 36 h as marks (quiet when done, amber when late, fault when failed; an optional trigger shorter), the next trigger, the triggers that need someone, the 14-day strip and the ledger in a disclosure. */
 .ctl-health-label{margin:0 0 var(--space-1)}
@@ -164,19 +166,19 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .ctl-reliability-count{font-weight:600;font-variant-numeric:tabular-nums}
 .ctl-inline-retry{min-height:2.25rem;padding:0 .6rem}
 .trigger-list{list-style:none;margin:var(--space-3) 0 0;padding:0}
-.trigger-row{display:grid;grid-template-columns:1rem minmax(0,1fr) auto minmax(0,1fr);align-items:baseline;gap:.15rem .6rem;padding:.4rem .25rem .4rem .5rem;border-top:1px solid var(--line);border-left:3px solid transparent;font-size:.875rem}
+.trigger-row{display:grid;grid-template-columns:1rem minmax(0,1fr) auto minmax(0,1fr);align-items:baseline;gap:.15rem .6rem;padding:.4rem .25rem .4rem .5rem;border-top:1px solid var(--line);border-left:3px solid transparent;font-size:var(--fs-sm)}
 .trigger-row:first-child{border-top:0}
 .trigger-marked{border-left-color:var(--amber)}
-.trigger-mark{color:var(--warn-text);font-size:.8rem}
-.trigger-name{font:500 .78rem/1.3 var(--mono);overflow-wrap:anywhere}
+.trigger-mark{color:var(--warn-text);font-size:var(--fs-xs)}
+.trigger-name{font:500 var(--fs-xs)/1.3 var(--mono);overflow-wrap:anywhere}
 .trigger-due{font-variant-numeric:tabular-nums;white-space:nowrap}
-.trigger-class{grid-column:2/-1;font:400 .72rem/1.3 var(--mono);color:var(--muted);overflow-wrap:anywhere}
+.trigger-class{grid-column:2/-1;font:400 var(--fs-label)/1.3 var(--mono);color:var(--muted);overflow-wrap:anywhere}
 .trigger-more{font-weight:400;color:var(--muted)}
 .trigger-all{margin:var(--space-3) 0 0}
 
 /* The lanes' head: the manual count and the window chips. */
 .plan-lane-tools{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem}
-.plan-manual{margin:0;font:500 .72rem/1.3 var(--mono);letter-spacing:.04em;color:var(--manual-text)}
+.plan-manual{margin:0;font:500 var(--fs-label)/1.3 var(--mono);letter-spacing:.04em;color:var(--manual-text)}
 /* A lane's label opens its setting drawer in place: the link lies over the lane's head row, where the label is printed (now underlined, as a link), and a lane's newest write shows its one pill at the head's end. The plot keeps its full width. */
 .ctl-plan-lanes .lanes-plan.lanes-plan-end{--lanes-stat:0px}
 .ctl-plan-lanes .lanes-plan-end .plan-row{position:relative}
@@ -201,7 +203,7 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .equipment-row:first-child{padding-top:0;border-top:0}
 .equipment-row:last-child{padding-bottom:0}
 .equipment-name{font-weight:600;min-width:0;overflow-wrap:anywhere}
-.equipment-key{font:500 .85rem/1.4 var(--mono);color:var(--muted)}
+.equipment-key{font:500 var(--fs-sm)/1.4 var(--mono);color:var(--muted)}
 .equipment-state{font-size:var(--fs-sm);text-align:right;font-variant-numeric:tabular-nums}
 .equipment-facts{grid-column:1/-1;margin:0;font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums}
 .equipment-row-light .light-controls{grid-column:1/-1}
@@ -268,14 +270,14 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .why-row{display:grid;grid-template-columns:14rem minmax(0,1fr) auto;align-items:center;gap:0 .75rem;border-top:1px solid var(--line);min-width:0}
 .why-row:first-child{border-top:0}
 .why-label{font-weight:600}
-.why-words{min-width:0;padding:.35rem 0;font-size:.9rem}
+.why-words{min-width:0;padding:.35rem 0;font-size:var(--fs-sm)}
 .why-since{color:var(--muted);font-variant-numeric:tabular-nums}
-.why-raw{font:500 .85rem/1.4 var(--mono);overflow-wrap:anywhere}
+.why-raw{font:500 var(--fs-sm)/1.4 var(--mono);overflow-wrap:anywhere}
 .why-link,.light-actions a,.light-auto-link{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
 @media(max-width:860px){.why-row{grid-template-columns:minmax(0,1fr) auto;padding-top:.35rem}.why-label{grid-column:1/-1}}
 .light-controls{margin-top:.35rem}
 .light-auto-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 var(--space-3)}
-.light-auto{margin:0;font-size:.85rem}
+.light-auto{margin:0;font-size:var(--fs-sm)}
 .light-auto-link{font-size:var(--fs-sm)}
 .light-actions{margin:.5rem 0 0}
 .light-controls .state-note,.light-controls .field-error{margin:.35rem 0 0}

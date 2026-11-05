@@ -10,8 +10,9 @@
 .page-crumbs a,.object-row-title a,.metric-label a{display:inline-flex;align-items:center;min-height:24px;margin-block:calc((24px - 1.3em) / -2)}
 .page-crumbs a:hover{color:var(--leaf)}
 .page-header>h1{grid-area:title;min-width:0}
-.page-status{grid-area:status;max-width:46rem;min-height:1.5em;margin:var(--space-2) 0 0}
-.page-status a{font-weight:600}
+.page-status,.page-status-short{grid-area:status;max-width:46rem;min-height:1.5em;margin:var(--space-2) 0 0}
+.page-status a,.page-status-short a{font-weight:600}
+.page-status-short{display:none}
 .page-actions{grid-area:actions;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--space-2)}
 .page-tabs{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2) var(--space-4);margin:0 0 var(--space-5)}
 .page-tabs .chips{flex-wrap:nowrap}
@@ -19,6 +20,15 @@
 
 /* The meta line (redesign §3.4): the one muted small style, at --fs-sm. */
 .meta{font-size:var(--fs-sm);color:var(--muted)}
+
+/* Marks the self-hosted IBM Plex has no glyph for (■ ▲ ▼ ⋯ └), drawn in currentColor at the text's size, so they never fall back to another font's weight, width and baseline. Each is aria-hidden beside its words. */
+.glyph{display:inline-block;flex:none;vertical-align:baseline}
+.glyph-stop{width:.62em;height:.62em;border-radius:1px;background:currentColor}
+.glyph-up,.glyph-down{width:.7em;height:.6em;background:currentColor}
+.glyph-up{clip-path:polygon(50% 0,100% 100%,0 100%)}
+.glyph-down{clip-path:polygon(0 0,100% 0,50% 100%)}
+.glyph-more{width:4px;height:4px;border-radius:50%;background:currentColor;box-shadow:-7px 0 0 currentColor,7px 0 0 currentColor;vertical-align:middle}
+.glyph-branch{width:.55em;height:.6em;margin:0 .4em 0 .15em;border-left:1.5px solid currentColor;border-bottom:1.5px solid currentColor;vertical-align:.2em}
 
 /* The ⋯ menu and the account menu (redesign §4.5): a disclosure whose panel floats under its button; every item is a 44 px target. */
 .menu{position:relative;margin:0}
@@ -68,17 +78,18 @@
 .card-head-end{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin-left:auto}
 .card-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-1) var(--space-3);margin-top:var(--space-3)}
 .list-count{font-weight:400;color:var(--muted)}
-.tone-warn{border-left:3px solid var(--amber)}
-.tone-fault{border-left:3px solid var(--fault)}
-.tone-running{border-left:3px solid var(--forest)}
-.tone-eq-water{border-left-color:var(--eq-water)}.tone-eq-mister{border-left-color:var(--eq-mister)}.tone-eq-fert{border-left-color:var(--eq-fert)}.tone-eq-fog{border-left-color:var(--eq-fog)}
-.tone-eq-heat1{border-left-color:var(--eq-heat1)}.tone-eq-heat2{border-left-color:var(--eq-heat2)}.tone-eq-fan1{border-left-color:var(--eq-fan1)}.tone-eq-fan2{border-left-color:var(--eq-fan2)}
-.tone-eq-vent{border-left-color:var(--eq-vent)}.tone-eq-master{border-left-color:var(--eq-master)}
+.tone-warn{--tone:var(--amber)}.tone-fault{--tone:var(--fault)}.tone-running{--tone:var(--forest)}
+.tone-eq-water{--tone:var(--eq-water)}.tone-eq-mister{--tone:var(--eq-mister)}.tone-eq-fert{--tone:var(--eq-fert)}.tone-eq-fog{--tone:var(--eq-fog)}
+.tone-eq-heat1{--tone:var(--eq-heat1)}.tone-eq-heat2{--tone:var(--eq-heat2)}.tone-eq-fan1{--tone:var(--eq-fan1)}.tone-eq-fan2{--tone:var(--eq-fan2)}
+.tone-eq-vent{--tone:var(--eq-vent)}.tone-eq-master{--tone:var(--eq-master)}
+.tone-warn,.tone-fault,.tone-running{border-left:3px solid var(--tone)}
 
 /* ObjectRow (redesign §4.2, §4.5): title and kind, one state sentence and one pill, a visual and the meta line, then one primary action, Stop and ⋯ at the end. Rows inside a card are divided by a 1 px line. */
 .object-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--space-2) var(--space-4);padding:var(--space-3) 0;border-top:1px solid var(--line);min-width:0}
 .object-row:first-child{border-top:0}
-.object-row[class*=tone-]{padding-left:var(--space-3)}
+/* A row's rule sits in its card's padding (--space-4, at every width), so a row that turns running or faulted keeps its text where its neighbours' is and its divider their length (redesign §5.2 sketch). */
+.object-row[class*=tone-]{position:relative;border-left:0}
+.object-row[class*=tone-]::before{content:"";position:absolute;top:0;bottom:0;left:calc(-1 * var(--space-4));width:3px;background:var(--tone)}
 .object-row-main{flex:1 1 16rem;min-width:0}
 .object-row-head{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-2)}
 .object-row-title{font-size:var(--fs-md)}
@@ -177,7 +188,9 @@ button.strip-cell{width:100%;min-height:0;padding:0;border:0}
 .strip-cell[data-level="2"],.strip-swatch[data-level="2"]{background:var(--amber)}
 .strip-cell[data-level="3"],.strip-swatch[data-level="3"]{background:var(--fault)}
 .strip-cell[data-level=none],.strip-swatch[data-level=none]{background:repeating-linear-gradient(135deg,var(--line-strong) 0 2px,transparent 2px 5px)}
-.strip-cell[data-partial=true],.strip-swatch[data-partial=true]{outline:1px dashed var(--muted);outline-offset:-1px}
+/* A partial day's dashed outline is drawn inside the cell, never as its outline, so the focus ring still shows on it. */
+.strip-cell[data-partial=true],.strip-swatch[data-partial=true]{position:relative}
+.strip-cell[data-partial=true]::after,.strip-swatch[data-partial=true]::after{content:"";position:absolute;inset:0;border:1px dashed var(--muted);border-radius:inherit;pointer-events:none}
 .strip-cell[aria-current=date]{box-shadow:inset 0 -3px 0 var(--ink)}
 a.strip-cell:hover,button.strip-cell:hover{box-shadow:inset 0 0 0 2px var(--ink)}
 .strip.is-stale .strip-cell{opacity:.55}
@@ -217,6 +230,8 @@ button.tt-span{cursor:pointer}
 .tt-planned:not(.tt-narrow) .tt-span-label,.tt-missed:not(.tt-narrow) .tt-span-label{left:4px}
 .tt-marker{position:absolute;top:0;bottom:0;left:calc(var(--tt-at) * 1%);border-left:2px dashed var(--ink)}
 .tt-marker-label{position:absolute;top:1px;left:4px;padding:0 2px;background:#fff;color:var(--ink);font-size:var(--fs-xs);line-height:1.2;white-space:nowrap}
+.tt-marker-end .tt-marker-label{left:auto;right:4px}
+.tt-narrow-end .tt-span-label{left:auto;right:calc(100% + 4px)}
 .tt-now{position:absolute;top:0;bottom:0;left:calc(var(--tt-at) * 1%);border-left:1.5px solid var(--ink)}
 .tt-note{position:absolute;top:50%;left:4px;transform:translateY(-50%);color:var(--muted);font-size:var(--fs-xs);white-space:nowrap}
 .tt-end{min-width:0;font-size:var(--fs-sm)}
@@ -241,6 +256,10 @@ button.tt-span{cursor:pointer}
   .chips a,.chip,.chips-sm a,.chips-sm .chip{min-height:var(--tap)}
   .object-row-actions{flex-basis:100%;justify-content:flex-start}
   .object-row-actions>.btn:first-child{flex:1 1 auto}
+  /* A row's ⋯ may sit anywhere in its actions on a phone (first, for a viewer): its panel opens across the actions row, never off the screen. */
+  .object-row-actions{position:relative}
+  .object-row-actions>.menu{position:static}
+  .object-row-actions .menu-panel{left:0;right:0;min-width:0;max-width:none}
   .tt{--tt-label:6rem;--tt-row:24px}
   .tt.tt-with-end{--tt-end:6rem}
   .tt-tick-wide{display:none}
@@ -248,6 +267,10 @@ button.tt-span{cursor:pointer}
 
 @media(max-width:860px){
   .page-header{grid-template-columns:minmax(0,1fr);grid-template-areas:"crumbs" "title" "status" "actions";margin-bottom:var(--space-3)}
+  /* On a phone the status line takes its short wording where a page has one, and reserves two lines, so a line that wraps when its data arrives never moves the tabs under it (redesign §3.1). */
+  .page-status,.page-status-short{min-height:3em}
+  .page-status-long{display:none}
+  .page-status-short{display:block}
   .page-actions{justify-content:stretch;margin-top:var(--space-3)}
   .page-actions>*{flex:1 1 auto}
   .page-tabs{margin-bottom:var(--space-4)}

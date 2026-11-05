@@ -54,12 +54,17 @@ export function matchesSearch(row: Pick<Setting, "label" | "param">, query: stri
   return !needle || row.label.toLowerCase().includes(needle) || row.param.toLowerCase().includes(needle);
 }
 
-/** The status line: "261 settings · 2 requested · 0 not confirmed · 5 manual"; null until API-09 first answers. */
-export function settingsStatus(items: readonly Setting[] | null): string | null {
+/**
+ * The status line: "261 settings · 2 requested · 0 not confirmed · 5 manual"; on a phone (`short`, redesign §5.10)
+ * "261 settings · 2 requested", with "1 not confirmed" after it while any is. Null until API-09 first answers.
+ */
+export function settingsStatus(items: readonly Setting[] | null, short = false): string | null {
   if (!items) return null;
   const count = (test: (row: Setting) => boolean) => items.filter(test).length;
-  return `${items.length} ${items.length === 1 ? "setting" : "settings"} · ${count((row) => row.state === "requested")} requested · `
-    + `${count((row) => row.state === "not_confirmed")} not confirmed · ${count(isManual)} manual`;
+  const total = `${items.length} ${items.length === 1 ? "setting" : "settings"} · ${count((row) => row.state === "requested")} requested`;
+  const notConfirmed = count((row) => row.state === "not_confirmed");
+  if (short) return notConfirmed > 0 ? `${total} · ${notConfirmed} not confirmed` : total;
+  return `${total} · ${notConfirmed} not confirmed · ${count(isManual)} manual`;
 }
 
 /** The rail's groups, in the catalog's order, with the rows each holds under the current filter and search ("—" while loading). */
@@ -101,7 +106,7 @@ export default function Settings() {
     ? <p><span>No setting matches “{searched}”</span> <Link className="ctl-empty-action" to={withParams(pathname, params, { q: null })}>Clear search</Link></p>
     : <p><span>{filter.empty}</span>{filter.key !== "all" && <> <Link className="ctl-empty-action" to={withParams(pathname, params, { filter: null })}>Show all</Link></>}</p>;
   return <>
-    <PageHeader view="control-settings" status={settingsStatus(items)} actions={<SettingsSearch value={query} onChange={search} />} />
+    <PageHeader view="control-settings" status={settingsStatus(items)} statusShort={settingsStatus(items, true)} actions={<SettingsSearch value={query} onChange={search} />} />
     <div className="l-rail ctl-settings">
       <SettingsRail filters={rail} groups={railGroups(items, shown ?? [])} />
       <div className="ctl-settings-main">

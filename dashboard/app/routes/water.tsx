@@ -48,6 +48,7 @@ export default function Water() {
     : null;
   return <div className="water-page">
     <PageHeader view={view} status={<WaterStatus irrigation={irrigation} view={STATUS_VIEW[view as keyof typeof STATUS_VIEW]} today={today} summary={summary} />}
+      statusShort={<WaterStatus irrigation={irrigation} view={STATUS_VIEW[view as keyof typeof STATUS_VIEW]} today={today} summary={summary} short />}
       actions={actions} tabsEnd={<StopAllWater compact />} stickyTabs />
     <WaterRuns status={irrigation.data}><Outlet context={context} /></WaterRuns>
     {irrigation.data && <CheckSheet lines={irrigation.data.lines} />}

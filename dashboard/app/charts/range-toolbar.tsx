@@ -8,8 +8,14 @@ import type { XRange } from "./types";
  * by its own length, Zoom out (×2, centred) and Custom… (the From and To days). Every one is a link the caller builds
  * (Graphs keeps the window in its URL), so each pushes history and Back restores the previous view. Drag-to-zoom on fine
  * pointers and Reset zoom stay on the charts. The caller's own tools (Preset, Layers, + Metric, Export) follow at the end.
+ * At 860 px and below (redesign §5.5) it is two rows: the presets with Custom… as a chip, then ‹ › and the tools; a
+ * `wide` preset and Zoom out are left out there.
  */
-export type RangePreset = { readonly id: string; readonly label: string; readonly href: string; readonly current: boolean };
+export type RangePreset = {
+  readonly id: string; readonly label: string; readonly href: string; readonly current: boolean;
+  /** Left out at 860 px and below, so a phone's presets and Custom… fit one row (redesign §5.5: 90 d). */
+  readonly wide?: boolean;
+};
 
 /** The window moved by its own length: back (-1) or forward (+1). */
 export function stepWindow(window: XRange, direction: -1 | 1): XRange {
@@ -55,7 +61,7 @@ function Step({ to, label, children }: { to: string | null | undefined; label: s
 export function RangeToolbar({ presets, previous, next, span, zoomOut, custom, customOpen = false, children }: RangeToolbarProps) {
   return <div className="range-toolbar">
     <ul className="chips chips-sm range-presets" aria-label="Range">
-      {presets.map((preset) => <li key={preset.id}>
+      {presets.map((preset) => <li key={preset.id} className={preset.wide ? "range-wide-only" : undefined}>
         <Link to={preset.href} aria-current={preset.current ? "page" : undefined} preventScrollReset>{preset.label}</Link>
       </li>)}
     </ul>

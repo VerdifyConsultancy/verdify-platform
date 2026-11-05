@@ -163,7 +163,7 @@ export function LineCard({ line, master = null, engine, program, today, schedule
     menu={menu} tone={tone} token={token}>
     {strip}
     {master && <div className="line-subrow" data-line={master.line_id}>
-      <p><span aria-hidden="true">└ </span><strong>{master.line_id} Fert master</strong>: {MASTER_TEXT} · <LineStateText line={master} engine={engine} today={today} /></p>
+      <p><span className="glyph glyph-branch" aria-hidden="true" /><strong>{master.line_id} Fert master</strong>: {MASTER_TEXT} · <LineStateText line={master} engine={engine} today={today} /></p>
     </div>}
   </ObjectRow>;
 }

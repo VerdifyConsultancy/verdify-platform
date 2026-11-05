@@ -72,11 +72,14 @@ const STATUS_WORDS: Readonly<Record<SpanStatus, string>> = {
 };
 /** Under this share of the window a span's words sit after it rather than on it. */
 const ROOM_PERCENT = 9;
+/** Past this point of the window a marker's or a narrow span's words sit before it, so the track never cuts them off. */
+const LATE_PERCENT = 85;
 
 function Span({ span, scale }: { span: TrackSpan; scale: TimeScale }) {
   const place = scale.span(span.start, span.end);
   if (!place) return null;
-  const className = cls("tt-span", `tt-${span.status}`, span.token && `tt-${span.token}`, place.width < ROOM_PERCENT && "tt-narrow");
+  const narrow = place.width < ROOM_PERCENT;
+  const className = cls("tt-span", `tt-${span.status}`, span.token && `tt-${span.token}`, narrow && "tt-narrow", narrow && place.start + place.width > LATE_PERCENT && "tt-narrow-end");
   const vars = cssVars({ "--tt-start": place.start, "--tt-width": place.width });
   const words = span.label ? <span className="tt-span-label">{span.label}</span> : null;
   const name = span.name ?? (span.label ? `${span.label}, ${STATUS_WORDS[span.status]}` : STATUS_WORDS[span.status]);
@@ -90,7 +93,8 @@ function Span({ span, scale }: { span: TrackSpan; scale: TimeScale }) {
 
 function Marker({ marker, scale }: { marker: TrackMarker; scale: TimeScale }) {
   if (marker.at < scale.from || marker.at > scale.to) return null;
-  return <span ref={cssVars({ "--tt-at": scale.pos(marker.at) })} className="tt-marker"><span className="tt-marker-label">{marker.label}</span></span>;
+  const at = scale.pos(marker.at);
+  return <span ref={cssVars({ "--tt-at": at })} className={cls("tt-marker", at > LATE_PERCENT && "tt-marker-end")}><span className="tt-marker-label">{marker.label}</span></span>;
 }
 
 function Ticks({ scale }: { scale: TimeScale }) {

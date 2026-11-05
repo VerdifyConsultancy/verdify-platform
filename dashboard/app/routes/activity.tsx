@@ -74,10 +74,11 @@ export default function Activity() {
   const freshness = apiDown || !now ? null : now.freshness;
   const coverage = alertListEmptyText({ readOk: true, ingestor: freshness?.ingestor, climate: freshness?.climate });
   const loading = alerts.pending || (shellNow.pending && !now);
-  const status = loading || (alerts.failed && !alerts.data) ? null
-    : alertsStatus({ open: openAlerts ?? groups.open.length, acknowledged: groups.acknowledged.length, resolved: groups.closed.length, coverage });
+  // A failed read states no counts, even with an earlier answer kept: its rows may be gone (the groups say why).
+  const counts = { open: openAlerts ?? groups.open.length, acknowledged: groups.acknowledged.length, resolved: groups.closed.length, coverage };
+  const status = loading || alerts.failed ? null : alertsStatus(counts);
   return <>
-    <PageHeader view="activity-alerts" status={status} />
+    <PageHeader view="activity-alerts" status={status} statusShort={status === null ? null : alertsStatus({ ...counts, short: true })} />
     <div className="page act-alerts">
       <AlertGroups view={view} params={params} alerts={alerts} me={me} now={now} irrigation={water.failed ? null : water.data} loading={loading} />
       <RecentActivity me={me} />
@@ -106,8 +107,10 @@ function AlertGroups({ view, params, alerts, me, now, irrigation, loading }: { v
   const all = [...groups.open, ...groups.acknowledged, ...groups.closed];
   const state: PanelState = alerts.failed && !alerts.data ? "error" : loading ? "loading" : "ready";
   const linked = view.alert !== null && !loading && alerts.data && !all.some((row) => row.id === expandedId);
-  // One block of the page: the groups at the card gap (an empty block takes no room).
+  // One block of the page: the groups at the card gap (an empty block takes no room). A read that failed after an
+  // earlier answer says so above the rows it keeps, with Retry, as Now's Needs someone does: they may be gone.
   return <div className="act-groups">
+    {alerts.failed && alerts.data && <p className="fault act-unavailable" data-alerts="unavailable">{ALERTS_UNAVAILABLE}: these may have changed. <Button onClick={alerts.retry}>Retry</Button></p>}
     {linked && <section className="act-linked" aria-labelledby="alert-linked-head">
       <h2 id="alert-linked-head">Linked alert</h2>
       <p>{notOpenText(view.alert ?? "")}</p>
@@ -319,6 +322,7 @@ function RecentActivity({ me }: { me: SignedIn }) {
   const state: PanelState = log.failed && !log.data ? "error" : log.pending ? "loading" : entries.length ? "ready" : "empty";
   return <ListCard id="recent-activity" title="Recent activity" thing="recent activity" state={state} reserve="sm" onRetry={log.retry}
     link={{ to: "/activity/log", label: "Open the log" }} empty={{ message: "No activity yet." }}>
+    {log.failed && log.data && <p className="fault act-unavailable">Couldn't load the newest activity: these entries may be old. <Button onClick={log.retry}>Retry</Button></p>}
     <ol className="act-entries act-recent">{entries.map((entry) => <EventRow key={entry.id} entry={entry} catalog={catalog} me={me} showDate={localDate(entry.ts) !== today} />)}</ol>
   </ListCard>;
 }

@@ -114,6 +114,8 @@ export default function Statistics() {
   ];
   // The status line names time in band, so it shows only with the window's data and the API up (redesign §8).
   const status = ready && !apiDown ? `${spanWords(span)} · whole-day time in band; the day and night split covers the last 3 days only` : null;
+  // A phone's wording (redesign §5.7): the period and what the figures are, the split's limit left to the table.
+  const statusShort = status === null ? null : `${spanWords(span).replace(/^Last (\d+) days$/, "$1 days")} · whole-day time in band`;
 
   let body;
   if (apiDown) body = <p className="meta gr-stats-none">No statistics while the dashboard API is unavailable.</p>;
@@ -130,9 +132,10 @@ export default function Statistics() {
     body = <div className="page gr-stats">
       {failed.length > 0 && <PanelError thing="part of the statistics" text="Couldn't load part of the statistics." onRetry={() => { for (const read of failed) read.refetch(); }} />}
       <StatsKpis kpis={figures} days={days} vs={vs} waterHref={waterHref} />
-      <Section header={<SectionHeader title="Day by day" meta={`${dayTitle(window.from, "short")}–${dayTitle(window.to, "short")} · each day opens in Climate`} />}>
-        <div className="card gr-days-card"><DayByDay days={days} /></div>
-      </Section>
+      {/* Every chart of the page is one titled card, its title and its meta inside the frame (redesign §5.7). */}
+      <Card title="Day by day" className="gr-chart-card gr-days-card" eyebrow={`${dayTitle(window.from, "short")}–${dayTitle(window.to, "short")} · each day opens in Climate`}>
+        <DayByDay days={days} />
+      </Card>
       <div className="l-cols-2 gr-pair">
         <Card title="Typical day" className="gr-chart-card"
           eyebrow={`Last ${typical} days, by hour`}
@@ -154,9 +157,9 @@ export default function Statistics() {
             </>}
         </Card>
       </div>
-      <Section header={<SectionHeader title="Time in band per day" meta="whole day, temperature and VPD, against a 90% target" />}>
-        <div className="card"><InBandBars rows={inBandRows} syncKey={`verdify:graphs-statistics:${window.from}`} /></div>
-      </Section>
+      <Card title="Time in band per day" className="gr-chart-card" eyebrow="Whole day, temperature and VPD, against a 90% target">
+        <InBandBars rows={inBandRows} syncKey={`verdify:graphs-statistics:${window.from}`} />
+      </Card>
       <Section header={<SectionHeader title="Data" meta={`${days.length} ${days.length === 1 ? "row" : "rows"}, newest first`} />}>
         <details className="gr-data">
           <summary>Show the daily table</summary>
@@ -167,7 +170,7 @@ export default function Statistics() {
   }
 
   return <>
-    <PageHeader view="graphs-statistics" status={status} />
+    <PageHeader view="graphs-statistics" status={status} statusShort={statusShort} />
     <GraphNotices notices={notices} />
     <div className="page-toolbar gr-toolbar gr-stats-toolbar">
       <Chips kind="nav" small label="Period" items={STATS_DAYS.map((count) => ({ key: String(count), label: `${count} d`, to: statsHref({ kind: "days", days: count }, typical), current: span.kind === "days" && span.days === count, keepScroll: true }))} />

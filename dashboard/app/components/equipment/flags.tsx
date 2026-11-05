@@ -26,12 +26,16 @@ export function occupancyFlag(occupancy: Occupancy | null | undefined, today: st
   return { state: "unknown", text: <>Unknown{hold}</> };
 }
 
-/** Water flowing with every Verdify valve closed (the leak alert), flow stopped, none, or unknown. */
+/**
+ * Water flowing with every Verdify valve closed (the leak alert), flow stopped, none, or unknown. An open alert
+ * (`alert_id`) reads flowing until the API says when the flow stopped, whatever `active` says: the flow message is never
+ * an all clear while that alert is open (API-02 `Leak`), as Now's water card reads it.
+ */
 export function leakFlag(leak: Leak | null | undefined): FlagWords {
   if (leak?.stopped_at && Number.isFinite(Date.parse(leak.stopped_at))) return { state: "off", text: <>Flow stopped at <LocalTime at={leak.stopped_at} /></>, tone: "warn" };
-  if (leak?.active === true) {
+  if (finite(leak?.alert_id) || leak?.active === true) {
     const since = leak.since && Number.isFinite(Date.parse(leak.since)) ? leak.since : null;
-    return { state: "on", text: <><span aria-hidden="true">▲ </span>Water flowing with every valve closed{since && <> · since <LocalTime at={since} /></>}</>, tone: "fault" };
+    return { state: "on", text: <>Water flowing with every valve closed{since && <> · since <LocalTime at={since} /></>}</>, tone: "fault" };
   }
   if (leak?.active === false) return { state: "off", text: "None" };
   return { state: "unknown", text: "Unknown" };

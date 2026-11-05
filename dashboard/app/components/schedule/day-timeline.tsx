@@ -1,18 +1,65 @@
 // SPDX-License-Identifier: MIT
-import { useId, type MouseEvent, type ReactNode } from "react";
+import { useCallback, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { Link } from "react-router";
 import { formatValue, shortTime } from "../../lib/format";
 import { useApiDown } from "../../lib/session";
 import { timeScale, type TimeScale } from "../../lib/time-scale";
 import { cls } from "../common";
 import { Meter, meterWords, type MeterDomain } from "../data/meter";
+import type { SpanStatus } from "../data/time-track";
 import { cssVars, rovingKeys } from "../data/viz";
 import { episodeWords, slotClock, type DayBlock, type DayModel, type DayRow, type Episode } from "./model";
 
-/** Under this share of the day a block's words sit beside it, and only its time (redesign §4.6: labels outside when there is no room). */
-const ROOM_PERCENT = 7;
-/** Past this point of the track a narrow block's words sit on its left, so they stay inside the row. */
+/** Past this point of the track a block whose words sit beside it has them on its left, so they stay inside the row. */
 const LATE_PERCENT = 82;
+/** A block label's width in CSS px: 12 px IBM Plex at about 6.2 px a character, plus its padding and offset. */
+const labelPx = (text: string) => text.length * 6.2 + 9;
+/** The track's width before it is measured (the server's render): a desktop day timeline's. */
+const TRACK_PX = 900;
+
+/** An element's width in CSS px, followed while it resizes; null until it is measured, as on the server. */
+export function useWidthOf<T extends HTMLElement>(): [(element: T | null) => void, number | null] {
+  const [width, setWidth] = useState<number | null>(null);
+  const observer = useRef<ResizeObserver | null>(null);
+  const ref = useCallback((element: T | null) => {
+    observer.current?.disconnect();
+    observer.current = null;
+    if (!element) return;
+    setWidth(element.clientWidth || null);
+    if (typeof ResizeObserver !== "function") return;
+    observer.current = new ResizeObserver(() => setWidth(element.clientWidth || null));
+    observer.current.observe(element);
+  }, []);
+  return [ref, width];
+}
+
+/**
+ * The room beside each block on its row, in percent of the track (redesign §6.2): from its end to the next block's
+ * start, or the row's end; for a block late in the day, whose words sit on its left, back to the end of the one before.
+ */
+export function blockRooms(blocks: readonly DayBlock[], scale: TimeScale): ReadonlyMap<string, number> {
+  const placed = blocks.flatMap((block) => {
+    const place = scale.span(block.start, block.end);
+    return place ? [{ key: block.key, start: place.start, end: place.start + place.width }] : [];
+  }).sort((a, b) => a.start - b.start);
+  return new Map(placed.map((item, index) => {
+    const room = item.start > LATE_PERCENT ? item.start - (index > 0 ? placed[index - 1].end : 0) : (index + 1 < placed.length ? placed[index + 1].start : 100) - item.end;
+    return [item.key, Math.max(0, room)];
+  }));
+}
+
+/**
+ * A block's words for the room it has (redesign §6.2, §6.6): all of them when they fit ("15:00 skipped · RH 92%",
+ * "16:00 · 10 min"); else a block that is not planned keeps its time and its outcome or reason word ("15:00 skipped",
+ * "07:31 missed", "07:31 ok"), and a planned one its time. `fits` says whether a text fits.
+ */
+export function blockWords(label: string, status: SpanStatus, fits: (text: string) => boolean): string {
+  if (fits(label)) return label;
+  const time = label.slice(0, 5);
+  if (status === "planned") return time;
+  const word = label.slice(5).replace(/^\s*·?\s*/, "").split(" · ")[0];
+  return word ? `${time} ${word}` : time;
+}
 
 /** The meter's domain by line kind (redesign §4.6): drip minutes `--eq-water`, mist `--eq-mister`, feeds `--eq-fert`. */
 export function meterDomain(kind: string): MeterDomain {
@@ -21,20 +68,24 @@ export function meterDomain(kind: string): MeterDomain {
 
 /**
  * A block on its track: a button with its name in words, or a draft's outline (not saved, nothing to open). A running
- * one is solid up to now and dashed after it (redesign §6.2), through `--sch-done`.
+ * one is solid up to now and dashed after it (redesign §6.2), through `--sch-done`. Its words sit on it when they fit,
+ * else beside it, as many as the room to its neighbour takes (`room`, percent of the track `trackPx` wide).
  */
-export function Block({ block, scale, onSelect, selected = false, now = null }: { block: DayBlock; scale: TimeScale; onSelect?: (block: DayBlock, opener: HTMLElement) => void; selected?: boolean; now?: number | null }) {
+export function Block({ block, scale, onSelect, selected = false, now = null, room = 0, trackPx = TRACK_PX }: {
+  block: DayBlock; scale: TimeScale; onSelect?: (block: DayBlock, opener: HTMLElement) => void; selected?: boolean; now?: number | null; room?: number; trackPx?: number;
+}) {
   const place = scale.span(block.start, block.end);
   if (!place) return null;
   const done = block.status === "running" && now !== null ? Math.min(100, Math.max(0, ((now - block.start) / Math.max(1, block.end - block.start)) * 100)) : 100;
-  const narrow = place.width < ROOM_PERCENT;
+  const percent = (text: string) => (labelPx(text) / Math.max(1, trackPx)) * 100;
+  const narrow = percent(block.label) > place.width;
   const className = cls(
     "sch-block", `sch-${block.status}`, `sch-${block.token}`, block.part !== "run" && "sch-part", narrow && (place.start > LATE_PERCENT ? "sch-narrow-end" : "sch-narrow"),
     block.capped && "sch-capped", block.draft && "sch-draft", block.conflict && "sch-conflict", selected && "is-selected",
   );
   const vars = cssVars({ "--sch-start": place.start, "--sch-width": place.width, "--sch-done": done });
-  const time = block.label.slice(0, 5);
-  const words = block.part === "run" && block.label ? <span className="sch-block-label" aria-hidden="true">{narrow ? time : block.label}</span> : null;
+  const shown = narrow ? blockWords(block.label, block.status, (text) => percent(text) <= room) : block.label;
+  const words = block.part === "run" && block.label ? <span className="sch-block-label" aria-hidden="true">{shown}</span> : null;
   if (block.part !== "run") return <span ref={vars} className={className} title={block.name} aria-hidden="true" />;
   if (block.draft || !onSelect) {
     return <span ref={vars} className={className} title={block.name}>{words}<span className="screen-reader">{block.name}</span></span>;
@@ -97,7 +148,7 @@ export function MinutesMeter({ label, done, planned = 0, cap, kind }: { label: s
   const words = minutesAgainstCap(done, cap, planned);
   return <span className="sch-minutes-meter">
     <Meter label={label} unit="min" value={done} planned={planned} cap={cap} domain={meterDomain(kind)} decorative />
-    <span className="meter-words"><span className="meter-amount">{words.amount}</span>{words.over && <span className="meter-over"> · {words.over}</span>}</span>
+    <span className="meter-words"><span className="meter-amount">{words.amount}</span>{words.over && <span className="meter-over"><span className="meter-sep"> · </span>{words.over}</span>}</span>
     <span className="screen-reader">{label}: {words.name}</span>
   </span>;
 }
@@ -128,6 +179,9 @@ export type DayTimelineProps = {
   onSlot?: (lineId: string, clock: string) => void;
 };
 
+/** The end column's head: what its minutes are against the cap, by the day shown. */
+const END_HEAD: Readonly<Record<DayModel["when"], string>> = { today: "today / cap", past: "that day / cap", future: "planned / cap" };
+
 /**
  * The day timeline (redesign §6.2): one local day across the width (25 h on the fall-back day), rows grouped by manifold
  * with night shaded, the now rule, each run as a block as long as its schedule (solid done, dashed planned, hatched when
@@ -140,6 +194,8 @@ export function DayTimeline({ model, now, head, label, selected, onBlock, newTo,
   const headingId = useId();
   const apiDown = useApiDown();
   const scale = timeScale(model.from, model.to);
+  // Every row's track is one width: the first one's, measured, sizes the blocks' words.
+  const [trackRef, trackPx] = useWidthOf<HTMLDivElement>();
   const nowS = model.when === "today" ? now / 1000 : null;
   const slot = (row: DayRow) => (event: MouseEvent<HTMLDivElement>) => {
     if (!onSlot || (event.target as Element).closest("button, a")) return;
@@ -150,23 +206,27 @@ export function DayTimeline({ model, now, head, label, selected, onBlock, newTo,
   return <section className={cls("sch-day", apiDown && "is-neutral")}>
     <div className="sch-day-head">{head}</div>
     <div className="sch-day-body" role="group" aria-label={label} tabIndex={0} onKeyDown={rovingKeys()}>
-      <div className="sch-axis-row"><span className="sch-axis-gap" /><DayAxis scale={scale} /><span className="sch-axis-end meta">today / cap</span></div>
-      {model.groups.map((group) => <div key={group.key} className="sch-group">
+      <div className="sch-axis-row"><span className="sch-axis-gap" /><DayAxis scale={scale} /><span className="sch-axis-end meta">{END_HEAD[model.when]}</span></div>
+      {model.groups.map((group, groupIndex) => <div key={group.key} className="sch-group">
         <p className="eyebrow sch-group-label" id={`${headingId}-${group.key}`}>{group.label}</p>
         <ul className="sch-rows" aria-labelledby={`${headingId}-${group.key}`}>
-          {group.rows.map((row) => <li key={row.lineId} className={cls("sch-row", row.muted && "is-muted")} data-line={row.lineId}>
+          {group.rows.map((row, rowIndex) => <li key={row.lineId} className={cls("sch-row", row.muted && "is-muted")} data-line={row.lineId}>
             <div className="sch-row-head">
-              <span className="sch-row-name">{row.name}</span>
+              <span className="sch-row-name" title={row.name}>{row.name}</span>
               {row.note && <span className="sch-row-note">{row.note}</span>}
             </div>
-            <div className={cls("sch-track", onSlot && "sch-track-new")} onClick={onSlot ? slot(row) : undefined}>
+            <div ref={groupIndex === 0 && rowIndex === 0 ? trackRef : undefined} className={cls("sch-track", onSlot && "sch-track-new")} onClick={onSlot ? slot(row) : undefined}>
               <DayBackdrop night={model.night} scale={scale} now={nowS} />
               {row.pause && (() => {
                 const place = scale.span(row.pause.start, row.pause.end);
                 return place && <span ref={cssVars({ "--sch-start": place.start, "--sch-width": place.width })} className="sch-pause"><span className="sch-pause-words">{row.pause.words}</span></span>;
               })()}
               <Ticks episodes={row.episodes} scale={scale} token={row.kind === "mister" || row.kind === "fert_mister" ? "mister" : row.kind === "fert_drip" ? "fert" : "water"} unknownUntil={row.valveKnown ? null : nowS} />
-              {row.blocks.map((block) => <Block key={block.key} block={block} scale={scale} onSelect={onBlock} selected={selected === block.blockKey && block.blockKey !== ""} now={nowS} />)}
+              {(() => {
+                const rooms = blockRooms(row.blocks, scale);
+                return row.blocks.map((block) => <Block key={block.key} block={block} scale={scale} onSelect={onBlock} selected={selected === block.blockKey && block.blockKey !== ""} now={nowS}
+                  room={rooms.get(block.key)} trackPx={trackPx ?? TRACK_PX} />);
+              })()}
               {row.valveKnown ? row.episodes.length > 0 && <span className="screen-reader">{row.episodes.map(episodeWords).join("; ")}</span> : <span className="screen-reader">valve time unknown</span>}
             </div>
             <div className="sch-row-end">

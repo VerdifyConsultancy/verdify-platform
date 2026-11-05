@@ -171,11 +171,13 @@ test("Sparkline in every state, and neutral with the API down", () => {
 // ---------------------------------------------------------------------------------------------------- Delta
 test("Delta: an arrow and words in ink, never a colour; no change; no comparison when unknown", () => {
   const { container } = renderUi(<Delta value={1.34} unit="pts" vs="previous 30 d" />);
-  expect(text(container)).toBe("▲ up 1.3 pts vs previous 30 d");
+  // The arrow is drawn (IBM Plex has no ▲ or ▼), beside the words a screen reader reads.
+  expect(text(container)).toBe(" up 1.3 pts vs previous 30 d");
   expect(container.querySelector(".delta")?.getAttribute("data-direction")).toBe("up");
-  expect(container.querySelector("[aria-hidden=true]")?.textContent).toBe("▲ ");
+  expect(container.querySelector("[aria-hidden=true]")?.className).toBe("glyph glyph-up");
   cleanup();
-  expect(text(renderUi(<Delta value={-2} unit="%" vs="prior 7 d" />).container)).toBe("▼ down 2% vs prior 7 d");
+  const down = renderUi(<Delta value={-2} unit="%" vs="prior 7 d" />).container;
+  expect([text(down), down.querySelector("[aria-hidden=true]")?.className]).toEqual([" down 2% vs prior 7 d", "glyph glyph-down"]);
   cleanup();
   expect(text(renderUi(<Delta value={0.02} unit="pts" vs="yesterday" />).container)).toBe("No change vs yesterday");
   cleanup();

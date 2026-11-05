@@ -203,7 +203,7 @@ export function NowHero({ now, answer, irrigation, day, daily, onRetry }: NowHer
     details.open = true;
     if (window.location.hash === "#readings") { event.preventDefault(); details.scrollIntoView?.({ block: "nearest" }); }
   };
-  return <section className="hero now-hero" aria-labelledby={headingId} data-answer={answer.kind}>
+  return <section className={cls("hero now-hero", !rows && "now-hero-plain")} aria-labelledby={headingId} data-answer={answer.kind}>
     <div className="now-hero-main">
       <span className="eyebrow">{NOW_EYEBROW}</span>
       <h1 id={headingId} className="hero-answer"><AnswerTitle answer={answer} /></h1>
@@ -221,10 +221,10 @@ export function NowHero({ now, answer, irrigation, day, daily, onRetry }: NowHer
         {answer.row === 1 && <Button onClick={onRetry}>Retry</Button>}
       </p>
     </div>
-    <div className="now-hero-climate">
-      {rows && <BandRows rows={rows} muted={muted} />}
+    {rows && <div className="now-hero-climate">
+      <BandRows rows={rows} muted={muted} />
       <InBandToday tib={tib} muted={muted} />
-    </div>
+    </div>}
     <StatusLine now={now} answer={answer} irrigation={irrigation} clock={clock} />
     {now && <details ref={readings} className="now-readings" id={READINGS_ID}>
       <summary>All readings<span className="now-readings-hint"> · sources, times and the mode code{finite(now.writer.age_s) && `, settings pushed ${duration(Math.max(0, now.writer.age_s))} ago`}</span></summary>

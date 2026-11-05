@@ -2,7 +2,7 @@
 import { useApiDown } from "../../lib/session";
 import { timeScale } from "../../lib/time-scale";
 import { cls } from "../common";
-import { Block, DayAxis, DayBackdrop, Ticks } from "../schedule/day-timeline";
+import { Block, DayAxis, DayBackdrop, Ticks, blockRooms, useWidthOf } from "../schedule/day-timeline";
 import { episodeWords, type DayBlock, type Episode } from "../schedule/model";
 
 export type DayStripProps = {
@@ -44,13 +44,16 @@ export function stripWords(name: string, blocks: readonly DayBlock[], episodes: 
 export function DayStrip({ name, from, to, night, blocks, episodes, valveKnown = true, now, token, axis = false, next }: DayStripProps) {
   const apiDown = useApiDown();
   const scale = timeScale(from, to);
+  // A block's words take the room to its neighbour on this strip, measured once it is drawn.
+  const [trackRef, trackPx] = useWidthOf<HTMLDivElement>();
+  const rooms = blockRooms(blocks, scale);
   return <div className={cls("wat-day", apiDown && "is-neutral")}>
     {axis && <DayAxis scale={scale} className="wat-day-axis" />}
     <div className="wat-day-row">
-      <div className="sch-track wat-track" role="img" aria-label={stripWords(name, blocks, episodes, valveKnown)}>
+      <div ref={trackRef} className="sch-track wat-track" role="img" aria-label={stripWords(name, blocks, episodes, valveKnown)}>
         <DayBackdrop night={night} scale={scale} now={now / 1000} />
         <Ticks episodes={episodes} scale={scale} token={token} unknownUntil={valveKnown ? null : now / 1000} />
-        {blocks.map((block) => <Block key={block.key} block={block} scale={scale} now={now / 1000} />)}
+        {blocks.map((block) => <Block key={block.key} block={block} scale={scale} now={now / 1000} room={rooms.get(block.key)} trackPx={trackPx ?? 600} />)}
       </div>
       {next !== undefined && <p className="wat-next">{next ?? <span className="meta">nothing planned</span>}</p>}
     </div>

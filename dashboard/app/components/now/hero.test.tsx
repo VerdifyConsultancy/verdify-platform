@@ -145,7 +145,9 @@ test("API-02 failing: row 1 with Retry, the status line holds occupancy alone; w
   cleanup();
   renderHero(["in-band", "time-in-band"], { failed: true, apiDown: true });
   expect(document.querySelector(".now-bands")).toBeNull();
-  expect(text(document.querySelector(".now-tib"))).toBe("");
+  // Nothing to draw on the right: the hero is one column, never an empty block beside the answer.
+  expect(document.querySelector(".now-hero-climate, .now-tib")).toBeNull();
+  expect(document.querySelector(".now-hero")?.classList.contains("now-hero-plain")).toBe(true);
   expect(text(document.body)).not.toMatch(/in band|All OK/i);
   expect(document.querySelector(".tag-ok, .status-complete, .fresh-ok")).toBeNull();
   cleanup();

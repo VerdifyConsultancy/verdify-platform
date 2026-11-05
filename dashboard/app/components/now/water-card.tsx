@@ -87,7 +87,7 @@ function ZoneRow({ row, stale }: { row: ZoneWater; stale: boolean }) {
     {setUp
       ? <span className="now-water-meter">
         <Meter label={`${name} minutes today`} unit="min" value={row.minutes} cap={row.cap} domain={row.domain} decorative state={stale ? "stale" : "ready"} />
-        <span className="now-water-amount">{words.amount}{words.over && <span className="now-water-over"> · {words.over}</span>}</span>
+        <span className="now-water-amount">{words.amount}{words.over && <span className="now-water-over"><span className="now-water-sep"> · </span>{words.over}</span>}</span>
       </span>
       : <span className="now-water-none meta">Not set up</span>}
     <span className={cls("now-water-last", row.last.state === "running" && "now-water-running")}>

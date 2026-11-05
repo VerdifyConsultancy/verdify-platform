@@ -99,27 +99,30 @@ export type ChartChipsProps = {
   picked: readonly MetricDef[];
   /** API-03, for the preset's own keys; null until it answers. */
   catalog: readonly MetricDef[] | null;
+  /** The copy inside the Layers sheet on a phone: its lists' names end ", phone", as the phone bar's does. */
+  phone?: boolean;
 };
 
 /**
  * What the charts draw beyond the climate traces, one chip each: a setting's chip opens its drawer on Settings and its
  * × takes it off; a picked metric's × takes it off (a preset's metric turns the preset into the metrics left).
  */
-export function ChartChips({ view, settings, picked, catalog }: ChartChipsProps) {
+export function ChartChips({ view, settings, picked, catalog, phone = false }: ChartChipsProps) {
   if (!settings.length && !picked.length) return null;
   const params = settingParams(view, settings);
   const fromPreset = catalog ? presetKeys(view.preset, catalog) : [];
   const without = (key: string): GraphView => (fromPreset.includes(key)
     ? withMetrics({ ...view, preset: null }, picked.map((metric) => metric.key).filter((other) => other !== key))
     : withMetrics(view, view.metrics.filter((other) => other !== key)));
-  return <div className="gr-on">
-    {settings.length > 0 && <ul className="graph-chips" aria-label="Settings drawn as steps">
+  const suffix = phone ? ", phone" : "";
+  return <div className={phone ? "gr-on-sheet" : "gr-on"}>
+    {settings.length > 0 && <ul className="graph-chips" aria-label={`Settings drawn as steps${suffix}`}>
       {settings.map((row) => <li key={row.param} className="graph-chip">
-        <Link to={settingEditHref(row.param)} title={`${row.label}: edit it on Settings`}>{settingChipText(row)}</Link>
-        <Link to={graphHref(withSettings(view, params.filter((param) => param !== row.param)))} preventScrollReset aria-label={`Take ${row.param} off the charts`}><span aria-hidden="true">×</span></Link>
+        <Link to={settingEditHref(row.param)} title={`${row.param}: edit it on Settings`}>{settingChipText(row)}</Link>
+        <Link to={graphHref(withSettings(view, params.filter((param) => param !== row.param)))} preventScrollReset aria-label={`Take ${row.label} off the charts`}><span aria-hidden="true">×</span></Link>
       </li>)}
     </ul>}
-    {picked.length > 0 && <ul className="graph-chips" aria-label="Metrics on the charts">
+    {picked.length > 0 && <ul className="graph-chips" aria-label={`Metrics on the charts${suffix}`}>
       {picked.map((metric) => <li key={metric.key} className="graph-chip">
         <span title={metric.key}>{metric.label} · {metric.unit}</span>
         <Link to={graphHref(without(metric.key))} preventScrollReset aria-label={`Take ${metric.label} off the charts`}><span aria-hidden="true">×</span></Link>
@@ -139,7 +142,7 @@ function MenuGroup({ label, children }: { label: string; children: ReactNode }) 
  */
 export function PresetMenu({ view, catalog }: { view: GraphView; catalog: readonly MetricDef[] | null }) {
   const current = PRESETS.find((preset) => preset.id === (view.preset ?? "climate"))!;
-  return <Menu kind="button" className="gr-menu" label={<>Preset <span className="gr-menu-value">{current.label}</span></>}>
+  return <Menu kind="button" className="gr-menu gr-preset" label={<>Preset <span className="gr-menu-value">{current.label}</span></>}>
     <ul className="gr-menu-list" aria-label="Presets">
       {PRESETS.map((preset) => {
         const empty = catalog !== null && preset.group !== null && presetKeys(preset.id, catalog).length === 0;
@@ -153,24 +156,55 @@ export function PresetMenu({ view, catalog }: { view: GraphView; catalog: readon
   </Menu>;
 }
 
+/**
+ * Preset as a row of chips, for the Layers sheet on a phone (redesign §5.5), where the toolbar has no room for its own
+ * menu: the same links, the current one `aria-current`.
+ */
+export function PresetChips({ view, catalog }: { view: GraphView; catalog: readonly MetricDef[] | null }) {
+  const current = view.preset ?? "climate";
+  return <MenuGroup label="Preset">
+    <Chips small label="Presets, phone" items={PRESETS.map((preset) => {
+      const empty = catalog !== null && preset.group !== null && presetKeys(preset.id, catalog).length === 0;
+      return { key: preset.id, label: <>{preset.label}{empty && <span className="meta"> · none yet</span>}</>, to: graphHref(withPreset(view, preset.id)), current: preset.id === current, keepScroll: true };
+    })} />
+  </MenuGroup>;
+}
+
+/**
+ * What the charts draw beyond the climate traces, for the Layers sheet on a phone (redesign §5.5): the settings drawn as
+ * steps and the picked metrics, each with its ×, then + Setting (`chooser`).
+ */
+export function DrawnChips({ chooser, ...props }: Omit<ChartChipsProps, "phone"> & { chooser: ReactNode }) {
+  return <MenuGroup label="Settings and metrics">
+    <ChartChips {...props} phone />
+    {chooser}
+  </MenuGroup>;
+}
+
 const toggled = (sources: readonly EventSource[], source: EventSource) => (sources.includes(source) ? sources.filter((item) => item !== source) : [...sources, source]);
 
 export type LayersMenuProps = {
   view: GraphView;
   /** The window is longer than 31 days: runs are not marked. */
   long: boolean;
+  /**
+   * What the toolbar holds from 861 px but a phone's has no room for (redesign §5.5): Preset, the settings drawn as steps
+   * with + Setting, and the picked metrics; shown at the top of the sheet at 860 px and below only.
+   */
+  phone?: ReactNode;
 };
 
 /**
  * Layers (redesign §5.5, §7.1): the outdoor and forecast overlay, the event rail by source, the min–max envelope and
  * the comparison, each a chip that changes the URL. Choosing one keeps the menu open, so several can change in a row.
  */
-export function LayersMenu({ view, long }: LayersMenuProps) {
+export function LayersMenu({ view, long, phone }: LayersMenuProps) {
   const sources = view.events ?? EVENT_SOURCES;
   const compare = (id: CompareId | null) => ({ key: id ?? "none", label: id ? COMPARES[id].label.replace(/^./, (letter) => letter.toUpperCase()) : "None", to: graphHref(withCompare(view, id)), current: view.compare === id, keepScroll: true });
   const changed = (view.outdoor ? 0 : 1) + (view.events === null ? 0 : 1) + (view.envelope ? 0 : 1) + (view.compare ? 1 : 0);
   return <Menu kind="button" className="gr-menu gr-layers" label={<>Layers{changed > 0 && <span className="gr-menu-value"> · {changed} changed</span>}</>}>
     <div className="gr-menu-groups" data-menu-keep="">
+      {phone && <div className="gr-menu-phone">{phone}</div>}
       <MenuGroup label="On the charts">
         <Chips small label="Overlays" items={[
           { key: "outdoor", label: "Outdoor", to: graphHref(withOutdoor(view, !view.outdoor)), current: view.outdoor, keepScroll: true },

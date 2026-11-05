@@ -46,12 +46,18 @@ export function planSettling(plan: PlanAnswer): boolean {
  * The status line (redesign §5.11): "SUNRISE plan · written 07:02 · valid to 17:30 (6 h 48 min left) · AI", or what
  * applies with no plan in force; null until API-07 answers, so the line keeps its height.
  */
-export function PlanStatus({ data, now }: { data: PlanAnswer | null; now: number }): ReactNode {
+export function PlanStatus({ data, now, short = false }: { data: PlanAnswer | null; now: number; short?: boolean }): ReactNode {
   if (!data) return null;
   const plan = data.plan;
   if (!plan) {
     const since = data.no_plan_since ?? null;
+    if (short) return <>No plan · band and defaults apply</>;
     return <>No plan in force · band and defaults apply{since && <> since <LocalTime at={since} date={otherDay(since, now)} /></>}</>;
+  }
+  // On a phone (redesign §5.11): "SUNRISE · to 17:30 · AI".
+  if (short) {
+    const until = plan.valid_until ?? null;
+    return <><span className="mono">{plan.trigger}</span>{until && <> · to <LocalTime at={until} date={otherDay(until, now)} /></>} · <Mark kind="ai" /></>;
   }
   const until = plan.valid_until ?? null;
   const left = until ? timeLeft(until, now) : null;
@@ -120,7 +126,7 @@ export default function Plan() {
     { key: "72", label: "72 h", to: hoursTo(72), current: hours === 72, keepScroll: true },
   ];
   return <>
-    <PageHeader view="control-plan" status={<PlanStatus data={data} now={now} />} actions={<FindSetting />} />
+    <PageHeader view="control-plan" status={<PlanStatus data={data} now={now} />} statusShort={<PlanStatus data={data} now={now} short />} actions={<FindSetting />} />
     <div className="page ctl-plan">
       <div className="l-cols-2 ctl-plan-top">
         <PlanCard data={data} state={state} now={now} onRetry={retry} />

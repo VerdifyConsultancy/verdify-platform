@@ -84,6 +84,20 @@ test("with API-14 failing Needs action reads Alerts unavailable. Retry, never No
   expect(logRows()).toHaveLength(6);
 });
 
+test("an API-14 read that fails after an answer keeps its rows but says so, with Retry, and the status line claims no counts", async () => {
+  const api = await open("/activity", { fixture: "alerts-merged" });
+  expect(status()).toBe("2 open · 1 acknowledged");
+  expect(document.querySelector("[data-alerts=unavailable]")).toBeNull();
+  api.respond({ method: "POST", url: "/__control", body: { fixture: "alerts-merged", fail: { "API-14": 503 } } });
+  await advance(16_000);
+  const notice = document.querySelector("[data-alerts=unavailable]");
+  expect(text(notice)).toBe("Alerts unavailable: these may have changed. Retry");
+  expect(within(notice as HTMLElement).getByRole("button", { name: "Retry" })).toBeTruthy();
+  // The rows stay, flagged; the counts built from them do not.
+  expect(openList()).toEqual(["alert-101", "alert-102"]);
+  expect(status()).toBe("");
+});
+
 test("alerts-merged: the status line states the count once; Needs action in API order with repeat counts; the acknowledged one collapsed with who and when", async () => {
   const api = await open("/activity", { fixture: "alerts-merged" });
   expect(status()).toBe("2 open · 1 acknowledged");
@@ -432,6 +446,35 @@ test("the facets apply on change and live in the URL: Who and What on API-17's s
   await advance(0);
   expect(text(screen.getByTestId("where"))).toBe("/activity/log");
   expect(logRows()).toHaveLength(6);
+});
+
+test("a date typed a digit at a time applies once its year is whole, and the field keeps focus; the Target keeps it on Enter", async () => {
+  await open("/activity/log", { fixture: "activity-mixed" });
+  const field = (name: string) => screen.getByRole("search", { name: "Activity log filters" }).querySelector(`[name=${name}]`) as HTMLInputElement;
+  const from = field("from");
+  from.focus();
+  // A browser fills the year one digit at a time, and "0002-11-01" is already a valid date: none of these applies.
+  for (const value of ["0002-11-01", "0020-11-01", "0202-11-01"]) {
+    fireEvent.change(from, { target: { value } });
+    await advance(0);
+  }
+  expect(text(screen.getByTestId("where"))).toBe("/activity/log");
+  fireEvent.change(from, { target: { value: "2026-11-01" } });
+  await advance(0);
+  expect(text(screen.getByTestId("where"))).toBe("/activity/log?from=2026-11-01");
+  expect([field("from") === from, document.activeElement === from, from.value]).toEqual([true, true, "2026-11-01"]);
+  // A year left unfinished goes back to the day in force when the field is left.
+  fireEvent.change(from, { target: { value: "0202-11-01" } });
+  fireEvent.blur(from);
+  await advance(0);
+  expect([text(screen.getByTestId("where")), from.value]).toEqual(["/activity/log?from=2026-11-01", "2026-11-01"]);
+  const target = field("target");
+  target.focus();
+  fireEvent.change(target, { target: { value: "L01" } });
+  fireEvent.keyDown(target, { key: "Enter" });
+  await advance(0);
+  expect(text(screen.getByTestId("where"))).toBe("/activity/log?from=2026-11-01&target=L01");
+  expect([field("target") === target, document.activeElement === target]).toEqual([true, true]);
 });
 
 test("an old link with any log filter lands on the log with its query; ?alert= and resolved=24h stay on Alerts (D-UX-03)", async () => {
