@@ -67,8 +67,8 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 |---|---|---|---|---|---|
 | `verdify-app-secrets` | `POSTGRES_PASSWORD` | db / migrate / planner / setpoint-server and the bounded runtime-role bootstraps; absent from the production API, ingestor, and MCP pods (`secretKeyRef`) | ✓ | ✓ | ✓ |
 | `verdify-app-secrets` | `VERDIFY_WRITE_API_KEY` | api (`secretKeyRef`; write guard `api/main.py`) | ✓ | ✓ | ✓ |
-| `verdify-app-secrets` | `MQTT_USER` | ingestor (`secretKeyRef`); unused since VD-48 removed the HAOS MQTT client, kept until decisions Q-14 retires the broker login | ✓ | ✓ | ✓ |
-| `verdify-app-secrets` | `MQTT_PASS` | ingestor (`secretKeyRef`); unused since VD-48 removed the HAOS MQTT client, kept until decisions Q-14 retires the broker login | ✓ | ✓ | ✓ |
+| `verdify-app-secrets` | `MQTT_USER` | ingestor (`secretKeyRef`); the `verdify-mqtt` HAOS broker login of the Frigate occupancy subscriber (`ingestor/occupancy_mqtt.py`, #1370, read-only) | ✓ | ✓ | ✓ |
+| `verdify-app-secrets` | `MQTT_PASS` | ingestor (`secretKeyRef`); the `verdify-mqtt` HAOS broker login of the Frigate occupancy subscriber (`ingestor/occupancy_mqtt.py`, #1370, read-only) | ✓ | ✓ | ✓ |
 | `verdify-app-secrets` | `ESP32_API_KEY` | ingestor (`secretKeyRef`); **device-affecting** | ref-only¹ | ref-only¹ | ✓ |
 | `verdify-app-secrets` | `VERDIFY_API_RUNTIME_DB_USER`, `VERDIFY_API_RUNTIME_DB_PASSWORD` | production ordinary API database identity (migration 217 exact login; required before the Gate-1 sync) | opt | opt | ✓ |
 | `verdify-app-secrets` | `VERDIFY_INGESTOR_RUNTIME_DB_USER`, `VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD` | production ordinary ingestor and gather-subprocess database identity (migration 217 exact login; required before the Gate-1 sync) | opt | opt | ✓ |
@@ -88,7 +88,6 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-ha-token` | `ha_token.txt` | setpoint-server (volume mount); **device-affecting** | — | — | ✓ |
 | `verdify-hermes` | `OPENAI_API_KEY` | MCP semantic retrieval (`secretKeyRef`, required) | — | — | ✓ |
 | `verdify-hermes` | `OPENAI_API_KEY`, `HERMES_MCP_URL`² | hermes-iris (`envFrom.secretRef`) | — | — | ✓ |
-| `verdify-hermes-slack` | slack channel config | hermes-iris (optional volume mount; **non-secret** channel cfg) | — | — | opt |
 | `verdify-lab-publisher-s3` | `LAB_S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, optional `LAB_S3_ENDPOINT_URL` | lab-publisher (`envFrom.secretRef`) | ✓ | — | ✓ |
 | `verdify-grafana-secrets` | `GRAFANA_RENDERER_TOKEN` | API saved-public-panel PNG adapter (`secretKeyRef`, optional; fails closed when absent) | — | — | ✓ |
 | `verdify-grafana-secrets` | `GRAFANA_ADMIN_PASSWORD` | grafana (`secretKeyRef`, required; pod fails closed when absent) | — | — | ✓ |
@@ -208,7 +207,6 @@ reconciliation.
 | `overlays/prod/ha-token.placeholder.yaml` | `verdify-ha-token` | prod |
 | `overlays/prod/hermes-secret.placeholder.yaml` | `verdify-hermes` | prod |
 
-`verdify-hermes-slack` (optional, non-secret channel config),
 `verdify-mcp-agents` (optional volume) and
 `ghcr-jvallery-readonly` (image-pull, delivered out-of-band by Root) have no
 placeholder — the workloads reference them as `optional` / `imagePullSecrets`, so
@@ -268,12 +266,11 @@ these credentials are delivered by their canonical owner. URL-composed DSNs
 require the owner's established URL-safe password generation. Existing admin,
 renderer, OAuth, experiment and owner Secret keys remain unchanged.
 
-### Ingestor Slack delivery (#950)
+### Slack (retired, #1352)
 
-`verdify-slack` is owned by the agents KSOPS lane. It carries only
-`iris_slack_bot_token.txt`, preserving the existing Iris bot identity. The
-single ingestor mounts it read-only at `/etc/verdify/slack`, matching
-`slack.yaml`; no app/signing token is required by this sender.
+No workload references a Slack Secret: alerts go to `alert_log` (the dashboard)
+and page through Alertmanager. The `verdify-slack` Secret is still delivered by
+the agents KSOPS lane until its removal there (#1352 follow-up); nothing mounts it.
 
 ### Hydroponic probe (VD-70, #1183)
 

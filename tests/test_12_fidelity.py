@@ -871,10 +871,6 @@ def test_alert_monitor_avoids_greenhouse_state_hot_path_scans():
     assert "fn_setpoint_at('temp_high', c.ts)" in body
     assert "fn_equip_at('mister_center', c.ts)" in body
 
-    standalone = (REPO_ROOT / "scripts" / "alert-monitor.py").read_text()
-    assert "FROM v_greenhouse_state" not in standalone
-    assert "latest_climate AS" in standalone
-
 
 def test_mcp_set_tunable_treats_vpd_low_as_band_owned():
     """MCP should expose crop-band params as read-only context, not Tier 1
@@ -1107,10 +1103,11 @@ def test_firmware_omits_mqtt_and_uses_ingestor_occupancy_push():
     assert "id: sw_greenhouse_occupied" in hardware
     assert 'name: "Greenhouse Occupied"' in hardware
     assert '"greenhouse_occupied": "occupancy"' in entity_map_src
-    # VD-48: the HAOS MQTT occupancy subscription is gone; ha_sensor_sync is the
-    # only occupancy input and the reconnect replay is the only other push.
+    # #1370: two occupancy inputs feed the one latch, ha_sensor_sync (fallback)
+    # and the Frigate MQTT subscriber; the reconnect replay is the only other push.
     assert "sync_occupancy_state(" not in ingestor_src
-    assert "mqtt_loop" not in ingestor_src
+    assert "occupancy_mqtt_loop(pool)" in ingestor_src
+    assert "sync_occupancy_state(" in Path("ingestor/occupancy_mqtt.py").read_text()
     assert "refresh_latest_occupancy_state(pool" in ingestor_src
     assert "sync_occupancy_state(" in tasks_src
     assert "expire_occupancy_latch(pool" in tasks_src

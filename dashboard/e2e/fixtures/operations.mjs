@@ -30,6 +30,7 @@ export const ROUTES = [
   ["API-IRR-12", "POST", "/v1/equipment/override"], ["API-IRR-13", "POST", "/v1/irrigation/clear-fault"], ["BFF-01", "GET", "/auth/login"],
   ["BFF-02", "GET", "/auth/callback"], ["BFF-03", "POST", "/auth/logout"], ["INT-01", "POST", "/internal/sessions"],
   ["INT-02", "DELETE", "/internal/sessions/current"], ["OPS-01", "GET", "/healthz"], ["OPS-02", "GET", "/readyz"],
+  ["OPS-04", "GET", "/metrics"],
 ].map(([operationId, method, path]) => ({ operationId, method, path, pattern: new RegExp(`^${path.replace(/\{([a-z_]+)\}/g, "(?<$1>[^/]+)")}$`) }));
 export const OPERATION_IDS = ROUTES.map((route) => route.operationId);
 /** The browser reaches /v1 as /api/v1 through the BFF; the fixture accepts both, so a page can call it directly. */
@@ -517,6 +518,14 @@ export function irrigationBody(world) {
   };
 }
 
+/** #1348: fog, or a vpd or fallback cause, is climate; the rest waters plants (`verdify_schemas.irrigation.purpose_of`). */
+const purposeOf = (lineId, cause) => (lineId === "L11" || cause === "vpd" || cause === "fallback" ? "climate" : "irrigation");
+function purposeQuery(query) {
+  const purpose = query.get("purpose");
+  if (purpose !== null && !["irrigation", "climate"].includes(purpose)) throw invalid("purpose must be irrigation or climate", "purpose");
+  return purpose;
+}
+
 /** API-IRR-10: minutes by zone, line or cause per day; today from the lines, a no-data day nine days back (and `minutes-gap`'s). */
 function minutesBody(world, { query }) {
   const from = day(query, "from", null);
@@ -524,6 +533,7 @@ function minutesBody(world, { query }) {
   if (to < from) throw invalid("to must not be before from", "to");
   const groupBy = query.get("group_by") ?? "zone";
   if (!["zone", "line", "cause"].includes(groupBy)) throw invalid("group_by must be zone, line or cause", "group_by");
+  const wanted = purposeQuery(query);
   if (Math.round((localInstant(to) - localInstant(from)) / DAY) + 1 > 400) throw refuse(422, "window_too_large", "Window too large", "Minutes cover at most 400 days", { field: "from" });
   const periods = [];
   const sums = new Map();
@@ -536,19 +546,21 @@ function minutesBody(world, { query }) {
       ? world.lines.filter((line) => (line.today?.minutes ?? 0) > 0).map((line) => [line.line_id, line.state.code === "running" ? line.state.cause : line.last_water?.cause ?? "vpd", line.today.minutes, line.today.pulses, line.today.gal])
       : [["L04", "vpd", 12 + (ago % 4) * 2, 12 + (ago % 4) * 2, 3 + (ago % 3)], ["L11", "vpd", 5 + (ago % 3), 9, 2], ...(["mon", "wed", "fri"].includes(weekday(date)) ? [["L01", "schedule", 12, null, 9]] : [])];
     for (const [lineId, cause, minutes, pulses, gal] of runs) {
+      const purpose = purposeOf(lineId, cause);
+      if (wanted !== null && purpose !== wanted) continue;
       const info = lineInfo(lineId);
       const group = groupBy === "line" ? lineId : groupBy === "cause" ? cause : minutesZone(info);
       if (group === null) continue;
       const chemistry = info.kind.startsWith("fert") ? "fert" : "clean";
-      const key = `${date}|${group}|${cause}|${chemistry}`;
-      const row = sums.get(key) ?? { period: date, group, cause, chemistry, minutes: 0, pulses: null, gal: null };
+      const key = `${date}|${group}|${cause}|${purpose}|${chemistry}`;
+      const row = sums.get(key) ?? { period: date, group, cause, purpose, chemistry, minutes: 0, pulses: null, gal: null };
       row.minutes = round(row.minutes + minutes, 1);
       if (pulses !== null) row.pulses = (row.pulses ?? 0) + pulses;
       if (gal !== null) row.gal = (row.gal ?? 0) + gal;
       sums.set(key, row);
     }
   }
-  return { from, to, group_by: groupBy, periods, rows: [...sums.values()] };
+  return { from, to, group_by: groupBy, purpose: wanted, periods, rows: [...sums.values()] };
 }
 
 const LINE_ID = /^L(0[1-9]|1[01])$/;
@@ -557,8 +569,10 @@ function runsBody(world, { query }) {
   if (to - from > 31 * DAY) throw refuse(422, "window_too_large", "Window too large", "Runs cover at most 31 days per page", { field: "from" });
   const [line, cause, outcome] = ["line", "cause", "outcome"].map((name) => query.get(name));
   if (line !== null && !LINE_ID.test(line)) throw invalid("line must be L01-L11", "line");
-  const rows = world.runs.filter((run) => Date.parse(run.started_at) >= from && Date.parse(run.started_at) < to
-    && (line === null || run.line_id === line) && (cause === null || run.cause === cause) && (outcome === null || run.outcome === outcome));
+  const purpose = purposeQuery(query);
+  const rows = world.runs.map((run) => ({ ...run, purpose: purposeOf(run.line_id, run.cause) }))
+    .filter((run) => Date.parse(run.started_at) >= from && Date.parse(run.started_at) < to && (line === null || run.line_id === line)
+      && (cause === null || run.cause === cause) && (outcome === null || run.outcome === outcome) && (purpose === null || run.purpose === purpose));
   return paged(rows, query);
 }
 
@@ -818,7 +832,9 @@ function runNow(world, { params, body, key }) {
     const until = holder.state.ends_at ? Date.parse(holder.state.ends_at) : null;
     throw refuse(422, "manifold_busy", "Manifold busy", `${holder.line_id} holds the ${manifold(info.kind)} manifold${until ? ` until ${hhmm(until)}` : ""}; stop it or try then`, { retry_after_s: until ? Math.max(0, Math.round((until - world.now) / 1000)) : null });
   }
-  if (info.kind === "mister" && !line.schedule_member) throw refuse(422, "not_schedule_member", "Schedule is off", `${id} takes run-now only with Schedule on`);
+  // #1343: any enabled mister runs once, Schedule on or off; the API refuses it only while the controller still runs the
+  // firmware before that change (the `firmware-before-1343` fixture).
+  if (info.kind === "mister" && !line.schedule_member && world.flags.mistNeedsSchedule) throw refuse(422, "not_schedule_member", "Schedule is off", `${id} takes run-now only with Schedule on until the next firmware flash`);
   const minutes = durationMs(info.kind, args) / MINUTE;
   if (line.daily_cap_min > 0 && (line.today?.minutes ?? 0) + minutes > line.daily_cap_min) throw refuse(422, "cap_reached", "Daily cap reached", `${id} has ${line.daily_cap_min - (line.today?.minutes ?? 0)} of its ${line.daily_cap_min} min left today`);
   const sent = command(world, "run", id, args, key);
@@ -1004,6 +1020,8 @@ const SPECIAL = {
     if (!headers["x-dashboard-session"]) throw refuse(401, "unauthenticated", "Sign in again", "X-Dashboard-Session is required");
     return { status: 204, body: null };
   },
+  // Prometheus's scrape of the operator API (#1352); the dashboard never calls it.
+  "OPS-04": () => ({ status: 200, headers: { "Content-Type": "text/plain; version=0.0.4; charset=utf-8" }, body: "verdify_alert_metrics_up 1\n" }),
 };
 
 /**
@@ -1104,4 +1122,5 @@ export const EXAMPLES = {
   "INT-02": () => ({ method: "DELETE", url: "/internal/sessions/current", headers: { "x-dashboard-session": "fixture-session" } }),
   "OPS-01": () => get("/healthz"),
   "OPS-02": () => get("/readyz"),
+  "OPS-04": () => get("/metrics"),
 };

@@ -23,10 +23,10 @@ DO $predecessor$
 BEGIN
     IF current_user <> 'verdify'
         OR NOT EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations'
-            AND seq=289 AND filename='db/migrations/289-alert-silences.sql'
-            AND sha256='e9173348a9476a69b6ca7285cdfd1e14820ac00af373fa37f6b0e32104314475'
+            AND seq=290 AND filename='db/migrations/290-band-compliance.sql'
+            AND sha256='557d8d03a61a284e05e1b9bc26db7e3748898531ea7b80f0a6b4e458c922e6be'
             AND stamp_method='runner')
-        OR EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq>289)
+        OR EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq>290)
         OR (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts)<>2
         OR (SELECT count(*) FROM public.mcp_runtime_boundary_receipt)<>1
         OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e'
@@ -180,7 +180,7 @@ BEGIN
 END $backfill$;
 
 -- Successor seals: the view's new text and columns move the api and ingestor digests and re-seal both receipts;
--- the MCP digest and receipt must still equal 289's.
+-- the MCP digest and receipt must still equal 290's (which are 289's).
 DO $successor$
 BEGIN
     IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76'

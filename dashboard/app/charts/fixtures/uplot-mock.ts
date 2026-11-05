@@ -183,6 +183,7 @@ export const TOKENS: Readonly<Record<string, string>> = {
   "--eq-fan2": "#484fa7", "--eq-heat1": "#d47a00", "--eq-vent": "#056190", "--eq-mister": "#9d2398",
   "--eq-fog": "#1b9bc7", "--eq-fan1": "#22a096", "--eq-heat2": "#b61f02", "--eq-light-main": "#4d9f45", "--eq-light-grow": "#2855ad",
   "--eq-water": "#2389e2", "--eq-fert": "#6331a0", "--eq-master": "#0e9580",
+  "--cause-vpd": "#c2410c", "--cause-schedule": "#8a5a00", "--cause-prep": "#65731f",
 };
 export function setTokens(root: HTMLElement = document.documentElement) {
   for (const [token, value] of Object.entries(TOKENS)) root.style.setProperty(token, value);

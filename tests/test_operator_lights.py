@@ -41,7 +41,7 @@ if str(API) not in sys.path:
     sys.path.insert(0, str(API))
 
 import operator_api  # noqa: E402
-from operator_routes import light_resync, setpoint_server, writes  # noqa: E402
+from operator_routes import light_resync, light_timer, setpoint_server, writes  # noqa: E402
 from operator_routes import reads as read_routes  # noqa: E402
 
 from verdify_services import activity, lights, reads, settings  # noqa: E402
@@ -138,6 +138,7 @@ class Db:
             "gl_main_reason": ("lux_sufficient", 30.0),
             "gl_grow_reason": ("plant_lux_low", 30.0),
         }
+        self.timer_now = NOW  # the database's now() for the timer read; the in-memory log's rows are at NOW
 
 
 class Session:
@@ -161,6 +162,19 @@ class Session:
         return await self.db.log.fetchval(sql, *args)
 
     async def fetchrow(self, sql, *args):
+        if sql == lights._TIMER_SQL:
+            greenhouse, target, window = args
+            assert (greenhouse, window) == (activity.GREENHOUSE_ID, lights.TIMER_WINDOW)
+            rows = [
+                row for row in self.db.log.activity if row["target"] == target and row["action"].startswith("light.")
+            ]
+            newest = max(rows, key=lambda row: (row["ts"], row["id"]), default=None)
+            minutes = None if newest is None else newest["detail"].get("minutes")
+            return {
+                "at": self.db.timer_now,
+                "id": None if newest is None else newest["id"],
+                "ends_at": None if minutes is None else newest["ts"] + timedelta(minutes=minutes),
+            }
         if sql == lights._DECISION_SQL:
             entity, window = args
             assert window == lights.DECISION_WINDOW
@@ -269,7 +283,8 @@ def test_200_is_a_confirmed_light_command_with_its_activity_row(client, operator
         "light.on",
         "grow_light_main",
     )
-    assert row["detail"] == {"light": "main", "state": "on", "result": "confirmed"}
+    # A manual switch is timed: 15 minutes by default, like the Fans burst (#1335).
+    assert row["detail"] == {"light": "main", "state": "on", "result": "confirmed", "minutes": 15}
     assert row["reason"] == "Inspecting the Vandas" and str(row["request_id"]) == KEY
     (call,) = fake.calls
     assert call["path"] == "/lights/main/on"
@@ -293,7 +308,7 @@ def test_a_failed_switch_is_a_retryable_503_with_its_result_and_its_row(
     assert openapi_errors("Problem", body) == []
     (row,) = log.activity
     assert (row["action"], row["target"]) == ("light.off", "grow_light_grow")
-    assert row["detail"] == {"light": "grow", "state": "off", "result": result}
+    assert row["detail"] == {"light": "grow", "state": "off", "result": result, "minutes": 15}
 
 
 def test_no_answer_within_the_cap_is_timeout(client, operator, fake, log, monkeypatch):
@@ -497,8 +512,12 @@ def test_only_the_two_lights_and_two_states_exist(client, operator, fake, log, p
         ({"reason": "x" * 501}, "reason"),
         ({"reason": "bad\x00text"}, "reason"),
         ({"actor": "someone"}, "actor"),
+        ({"minutes": 0}, "minutes"),
+        ({"minutes": 121}, "minutes"),
+        ({"minutes": "15"}, "minutes"),
+        ({"minutes": 1.5}, "minutes"),
     ],
-    ids=["too long", "nul", "an actor"],
+    ids=["too long", "nul", "an actor", "no minutes", "over two hours", "minutes as text", "part minutes"],
 )
 def test_a_bad_body_is_refused_before_the_light_is_touched(client, operator, fake, log, body, field):
     refused = assert_problem(client.post(MAIN_ON, headers=operator, json=body), 400, "invalid_request")
@@ -1284,3 +1303,122 @@ def test_a_viewers_put_is_refused_and_starts_nothing(started, sessions):
     with TestClient(started.app) as client:
         assert_problem(client.put(f"/v1/settings/{AUTO}", headers=viewer, json=BACK), 403, "forbidden")
         assert started.stored == [] and started.calls == [] and started.app.state.resyncs.runs == {}
+
+
+# ── Timed manual lights (#1335) ─────────────────────────────────────────────
+
+
+def sweep(fake: FakeSetpointServer, db: Db, light: str = "main", timers: light_timer.Timers | None = None) -> str:
+    """One sweep of one light, as the operator API's timer task runs it."""
+    timers = timers or light_timer.Timers(light_resync.Resyncs())
+    return asyncio.run(timers.sweep(light, Pool(db), fake.url))
+
+
+def manual(fake: FakeSetpointServer, db: Db, state: str = "on", light: str = "main") -> None:
+    """A Turn on or Turn off from the page, through API-20: a timed row at NOW."""
+    assert asyncio.run(press(light_resync.Resyncs(), Pool(db), fake.url, light, state)) == 200
+
+
+def timer_rows(db: Db) -> list[tuple]:
+    """Each committed light row as (actor, action, reason, via, minutes)."""
+    return [
+        (row["actor"], row["action"], row["reason"], row["detail"].get("via"), row["detail"].get("minutes"))
+        for row in db.log.activity
+    ]
+
+
+def test_a_manual_switch_goes_back_to_the_controllers_intent_when_its_minutes_are_up(monkeypatch, fake, db):
+    manual(fake, db, "on")
+    Greenhouse(monkeypatch, states=[status("confirmed")], boards=[board("off", "on")])
+    db.timer_now = NOW + timedelta(minutes=14, seconds=59)
+    assert sweep(fake, db) == "idle"  # not yet
+    db.timer_now = NOW + timedelta(minutes=15)
+    timers = light_timer.Timers(light_resync.Resyncs())
+    assert sweep(fake, db, timers=timers) == "sent"
+    assert [call["path"] for call in fake.calls] == ["/lights/main/on", "/lights/main/off"]
+    assert timer_rows(db) == [
+        ("jason", "light.on", None, None, 15),
+        ("light_timer", "light.off", light_timer.TIMER_ENDED, "timer", None),
+    ]
+    first, ended = db.log.activity
+    assert ended["source"] == "system" and ended["detail"]["timed_activity_id"] == first["id"]
+    # The timer's own row holds no minutes, so it is over for this pod and the other.
+    assert sweep(fake, db, timers=timers) == "idle"
+    assert sweep(fake, db) == "idle"
+    assert len(fake.calls) == 2
+
+
+def test_a_light_already_at_its_intent_is_left_alone_and_the_timer_ends(monkeypatch, fake, db):
+    manual(fake, db, "on")
+    Greenhouse(monkeypatch, states=[status("confirmed")], boards=[board("on", "on")])
+    db.timer_now = NOW + timedelta(minutes=20)
+    timers = light_timer.Timers(light_resync.Resyncs())
+    assert sweep(fake, db, timers=timers) == "matched"
+    assert sweep(fake, db, timers=timers) == "idle"
+    assert len(fake.calls) == 1 and len(db.log.activity) == 1
+
+
+def test_a_custom_length_and_a_newer_press_restart_the_timer(monkeypatch, client, operator, fake, db):
+    answer = client.post(MAIN_ON, headers=keyed(operator), json={"minutes": 60})
+    assert answer.status_code == 200, answer.text
+    assert db.log.activity[-1]["detail"]["minutes"] == 60
+    Greenhouse(monkeypatch, states=[status("confirmed")], boards=[board("off", "on")])
+    db.timer_now = NOW + timedelta(minutes=30)
+    assert sweep(fake, db) == "idle"
+    db.timer_now = NOW + timedelta(minutes=60)
+    assert sweep(fake, db) == "sent"
+
+
+@pytest.mark.parametrize(
+    ("decision", "outcome", "sent"),
+    [
+        (("time_invalid", 30.0), "retry", False),  # no valid time: the intent says nothing
+        (("lux_sufficient", 600.0), "retry", False),  # a stale decision is not the intent now
+        ((None, None), "retry", False),
+        (("auto_disabled", 30.0), "sent", True),  # automation off holds the light off, so off is sent
+    ],
+)
+def test_the_timer_sends_only_a_current_decision(monkeypatch, fake, db, decision, outcome, sent):
+    manual(fake, db, "on")
+    Greenhouse(monkeypatch, states=[status("confirmed")], boards=[board("off", "on")])
+    db.decisions["gl_main_reason"] = decision
+    db.timer_now = NOW + timedelta(minutes=16)
+    assert sweep(fake, db) == outcome
+    assert [call["path"] for call in fake.calls][1:] == (["/lights/main/off"] if sent else [])
+
+
+def test_an_unknown_state_waits_for_the_next_sweep_and_logs_once(monkeypatch, fake, db, caplog):
+    manual(fake, db, "off", light="grow")
+    Greenhouse(monkeypatch, states=[status("confirmed")], boards=[board("on", "unknown", light="grow")])
+    db.timer_now = NOW + timedelta(minutes=16)
+    timers = light_timer.Timers(light_resync.Resyncs())
+    with caplog.at_level(logging.INFO, logger=light_timer.__name__):
+        assert sweep(fake, db, "grow", timers) == "retry"
+        assert sweep(fake, db, "grow", timers) == "retry"
+    assert len([record for record in caplog.records if "stays as it is" in record.getMessage()]) == 1
+    assert len(fake.calls) == 1
+
+
+def test_rows_without_minutes_hold_no_timer(monkeypatch, fake, db):
+    Greenhouse(monkeypatch, states=[status("confirmed")], boards=[board("off", "on")])
+    assert resync(fake, db) == "sent"  # Back to automatic's own row has no minutes
+    db.timer_now = NOW + timedelta(days=1)
+    assert sweep(fake, db) == "idle"
+
+
+def test_the_timer_waits_while_a_command_holds_the_light():
+    async def run():
+        resyncs = light_resync.Resyncs()
+        db = Db(FakeConnection())
+        db.log.activity.append(
+            {"id": 1, "ts": NOW, "target": "grow_light_main", "action": "light.on", "detail": {"minutes": 15}}
+        )
+        db.timer_now = NOW + timedelta(minutes=16)
+        await resyncs.locks["main"].acquire()
+        return await light_timer.Timers(resyncs).sweep("main", Pool(db), "http://unused")
+
+    assert asyncio.run(run()) == "busy"
+
+
+def test_without_a_setpoint_server_the_timer_never_sweeps():
+    assert asyncio.run(light_timer.Timers(light_resync.Resyncs()).run(Pool(Db(FakeConnection())), "")) is None

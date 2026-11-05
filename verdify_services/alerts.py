@@ -5,7 +5,8 @@
   the MCP login can read ``alert_log`` (migration 259) but not the view; ``recent`` adds the rows resolved in
   the last 24 h.
 - ``open_count(conn)``: the one open-alert count every surface shows (Round 2b C); it always equals the rows
-  with status ``open`` that ``list`` returns, because it merges the same rows the same way.
+  with status ``open`` that ``list`` returns, because it merges the same rows the same way. ``open_by_type(conn)``
+  splits that count by severity and type for the operator API's ``verdify_alert_open`` gauge (#1352).
 - ``ack(...)`` and ``resolve(...)``: act on every repeat of a merged row in one ``activity.recorded_write``
   transaction with one ``activity_log`` row. Resolve never refuses; the MCP adapter keeps its
   ``planner_tool_dependency_failed`` retrieval check.
@@ -462,6 +463,17 @@ async def open_count(conn: asyncpg.Connection) -> AlertCounts:
     """``{open, critical, warning, info}`` over the merged open rows with status ``open``: always the rows with
     status ``open`` that ``list`` returns (Round 2b C)."""
     return counts(merge(await conn.fetch(_OPEN_SQL)))
+
+
+async def open_by_type(conn: asyncpg.Connection) -> dict[tuple[str, str], int]:
+    """``{(severity, alert_type): n}`` over the same merged rows with status ``open`` that ``open_count`` counts, so
+    the ``verdify_alert_open`` gauge Alertmanager pages on and the dashboard's count share one definition (#1352)."""
+    tally: dict[tuple[str, str], int] = {}
+    for item in merge(await conn.fetch(_OPEN_SQL)):
+        if item.alert.status == "open":
+            key = (item.alert.severity, item.alert.alert_type)
+            tally[key] = tally.get(key, 0) + 1
+    return tally
 
 
 async def list(  # alerts.list, as the operator API and MCP call it

@@ -5,7 +5,7 @@ VERDIFY_ISOLATED_TEST_DSN; without it this file skips, and a skip fails campaign
 prepared as test_dashboard_db_280 prepares it: db/schema.sql, then 280's statements. db/schema.sql predates
 migration 217, so this file adds the plan-write facade and the engine's ingestor grants from 217's text. Then the
 engine's main() connects with that login, as its subprocess does in production. db/schema.sql seeds no rule: each
-test inserts the one setpoint rule it fires, so nothing posts to Slack.
+test inserts the rule it fires. An alert rule writes alert_log only (#1352), under 217's ingestor alert_log grants.
 """
 
 import asyncio
@@ -53,7 +53,17 @@ SELECT count(*) FROM public.forecast_action_log f
 ENGINE_READS = """
 GRANT SELECT ON public.climate, public.setpoint_changes, public.weather_forecast TO verdify_ingestor_runtime;
 GRANT USAGE ON SEQUENCE public.forecast_action_log_id_seq TO verdify_ingestor_runtime;
+GRANT SELECT ON public.alert_log TO verdify_ingestor_runtime;
+GRANT USAGE ON SEQUENCE public.alert_log_id_seq TO verdify_ingestor_runtime;
 """
+FROST = """
+INSERT INTO public.forecast_action_rules (name, condition, metric, operator, threshold, action_type)
+VALUES ('frost_warning', 'Overnight low < 35F', 'temp_f', '<', 35, 'alert')
+RETURNING id
+"""
+COLD_HOUR = (
+    "INSERT INTO public.weather_forecast (ts, fetched_at, temp_f) VALUES (now() + interval '5 hours', now(), 31)"
+)
 
 
 def plan_facade_and_engine_grants() -> str:
@@ -69,11 +79,16 @@ def plan_facade_and_engine_grants() -> str:
         sql,
     )
     assert len(grants) == 5, grants
+    # The ingestor's column grants on alert_log: what an alert rule writes and resolves.
+    alert_grants = re.findall(
+        r"GRANT (?:INSERT|UPDATE) \([^)]*\)\s+ON public\.alert_log TO verdify_ingestor_runtime;", sql
+    )
+    assert len(alert_grants) == 2, alert_grants
     view = (
         "CREATE VIEW public.v_runtime_setpoint_plan_write WITH (security_barrier=true, security_invoker=false) "
         f"AS SELECT {columns} FROM public.setpoint_plan;"
     )
-    return "\n".join([view, *grants, ENGINE_READS])
+    return "\n".join([view, *grants, *alert_grants, ENGINE_READS])
 
 
 def login_url(dsn: str, user: str) -> str:
@@ -112,6 +127,7 @@ async def clear(dsn: str) -> None:
     owner = await connect(dsn, OWNER)
     try:
         for table in (
+            "alert_log",
             "activity_log",
             "setpoint_plan",
             "setpoint_changes",
@@ -126,16 +142,11 @@ async def clear(dsn: str) -> None:
 
 @pytest.fixture
 def db(dsn, engine, monkeypatch):
-    """Empty engine tables, the engine as the ingestor login, no demotion and no Slack."""
+    """Empty engine tables, the engine as the ingestor login and no demotion."""
     run(clear(dsn))
     monkeypatch.setenv("DATABASE_URL", login_url(dsn, INGESTOR))
     monkeypatch.delenv(LEGACY_DIRECT_POLICY_WRITES_ENV, raising=False)
     monkeypatch.delenv(ACTIVE_EXPERIMENT_ID_ENV, raising=False)
-
-    def no_slack(text):
-        pytest.fail(f"a fixture rule posted to Slack: {text}")
-
-    monkeypatch.setattr(engine, "post_slack", no_slack)
     return dsn
 
 
@@ -312,6 +323,52 @@ def test_a_demoted_or_dry_run_engine_writes_no_plan_or_activity_row(db, engine, 
             assert await rows(owner, "activity_log", "id") == []
             assert await rows(owner, "setpoint_changes", "parameter") == []
             assert await rows(owner, "forecast_action_log", "action_taken") == [{"action_taken": action_taken}]
+        finally:
+            await owner.close()
+
+    run(check())
+
+
+def test_an_alert_rule_writes_one_dashboard_alert_that_refreshes_and_resolves(db, engine):
+    """#1352: a fired alert rule is one forecast_action_alert row (warning), never a Slack post."""
+
+    async def check():
+        owner = await connect(db, OWNER)
+        try:
+            rule_id = await owner.fetchval(FROST)
+            await owner.execute(COLD_HOUR)
+            await engine.main()
+
+            alerts = await rows(
+                owner, "alert_log", "id, alert_type, severity, category, sensor_id, source, details, resolved_at"
+            )
+            assert len(alerts) == 1
+            alert = alerts[0]
+            details = json.loads(alert.pop("details"))
+            assert alert["resolved_at"] is None
+            assert (alert["alert_type"], alert["severity"], alert["category"]) == (
+                "forecast_action_alert",
+                "warning",
+                "climate",
+            )
+            assert (alert["sensor_id"], alert["source"]) == ("forecast.rule.frost_warning", "forecast_engine")
+            assert details["rule_id"] == rule_id and details["forecast_value"] == 31.0
+            assert await rows(owner, "forecast_action_log", "action_taken") == [{"action_taken": "alert_recorded"}]
+
+            # Past its cooldown the rule fires again: the open row refreshes, no second row.
+            await owner.execute("UPDATE public.forecast_action_log SET triggered_at = now() - interval '30 days'")
+            await engine.main()
+            assert [row["id"] for row in await rows(owner, "alert_log", "id")] == [alert["id"]]
+
+            # Its forecast hour has passed: the next run resolves it.
+            await owner.execute(
+                "UPDATE public.alert_log SET details = jsonb_set(details, '{forecast_at}', to_jsonb(now() - interval '1 hour'))"
+            )
+            await owner.execute("DELETE FROM public.weather_forecast")
+            await engine.main()
+            [closed] = await rows(owner, "alert_log", "resolved_at, resolved_by, resolution")
+            assert closed["resolved_at"] is not None and closed["resolved_by"] == "system"
+            assert closed["resolution"] == "auto-resolved: forecast hour passed"
         finally:
             await owner.close()
 

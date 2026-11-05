@@ -8,7 +8,7 @@
  * `solar[]`. Validation stays on submit; a draft past a cap still saves, and the controller ends the run at the cap.
  */
 import { TIME_ZONE, localDate, shortTime } from "./format";
-import { lineById } from "./lines";
+import { lineById, lineDisplayName } from "./lines";
 import type { IrrigationLine, Occurrence, Schedule, ScheduleAgenda } from "./operator-api";
 import { CAPPED_KIND, occurrenceWords, whenWords, zoneWord } from "./water";
 
@@ -282,7 +282,7 @@ type Placed = { readonly at: number; readonly date: string; readonly status: Occ
 
 /**
  * `too_close`: the first draft start within 30 minutes of another schedule's occurrence on the same line and local day,
- * as "Starts 20 min after Wall MWF on L01: schedules on one line need 30 min", and which draft blocks it marks.
+ * as "Starts 20 min after Wall MWF on Wall drip: schedules on one line need 30 min", and which draft blocks it marks.
  */
 function tooClose(draft: ScheduleDraft, placed: readonly Placed[], kept: readonly Occurrence[], schedules: ReadonlyMap<number, Schedule>): { text: string | null; at: Set<number> } {
   const at = new Set<number>();
@@ -296,7 +296,7 @@ function tooClose(draft: ScheduleDraft, placed: readonly Placed[], kept: readonl
       if (text) continue;
       const name = scheduleName(schedules.get(other.slot_id), other.slot_id);
       const when = apart === 0 ? `at the same time as ${name}` : `${Math.abs(apart)}${NBSP}min ${apart > 0 ? "after" : "before"} ${name}`;
-      text = `Starts ${when} on ${draft.line_id}: schedules on one line need ${SPACING_MIN}${NBSP}min`;
+      text = `Starts ${when} on ${lineDisplayName(draft.line_id)}: schedules on one line need ${SPACING_MIN}${NBSP}min`;
     }
   });
   return { text, at };
@@ -321,7 +321,7 @@ function capChecks(
     const day = [...(seconds.get(id) ?? [])].sort(([a], [b]) => (a < b ? -1 : 1)).find(([date]) => isPast(id, date));
     if (!known || budget === null || !day) return [];
     const forSchedules = known.kind === "mister" ? " for schedules" : "";
-    const whose = id === draft.line_id ? "" : ` on ${id}`;
+    const whose = id === draft.line_id ? "" : ` on ${lineDisplayName(id)}`;
     return [{ code: "cap", text: `${dayName(day[0])} would reach ${minutesText(day[1])} of ${budget}${NBSP}min${forSchedules}${whose}: runs past the cap end at the cap`, field: null, kind: "note" }];
   });
 }
@@ -356,7 +356,7 @@ function manifoldWait(
       const end = start + holdMs(schedule);
       if (!(item.at >= start && item.at < end)) continue;
       const what = schedule.label || KIND_RUN[otherKind ?? ""] || "run";
-      return [{ code: "manifold", text: `Shares the ${manifold} manifold with ${other.line_id}'s ${shortTime(other.planned_start)} ${what}: it waits until ${shortTime(new Date(end).toISOString())}`, field: null, kind: "note" }];
+      return [{ code: "manifold", text: `Shares the ${manifold} manifold with ${lineDisplayName(other.line_id)}'s ${shortTime(other.planned_start)} ${what}: it waits until ${shortTime(new Date(end).toISOString())}`, field: null, kind: "note" }];
     }
   }
   return [];

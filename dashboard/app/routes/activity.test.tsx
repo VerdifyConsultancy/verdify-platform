@@ -279,11 +279,11 @@ test("a copied /activity?alert=<id> link still opens the alert after a new repea
   expect(text(screen.getByRole("region", { name: "Linked alert" }))).toBe("Linked alertAlert 999 is not open or resolved in the last 24 h");
 });
 
-test("the run-missed alert reads its plain title with L02, never the raw code, and Details expands it in place", async () => {
+test("the run-missed alert reads its plain title with the line's name, never the raw code or the relay code, and Details expands it in place", async () => {
   await open("/activity", { fixture: "run-missed" });
   const item = alertRow(502);
   expect(text(item.querySelector("h3"))).toBe("A scheduled watering was missed");
-  expect(text(item.querySelector(".alert-facts"))).toBe("L02 · since 09:35 (1 h)");
+  expect(text(item.querySelector(".alert-facts"))).toBe("Wall drip (fertilized) · since 09:35 (1 h)");
   expect(text(item)).not.toContain("irrigation_run_missed");
   fireEvent.click(within(item).getByRole("link", { name: /^Details/ }));
   await advance(0);
@@ -332,7 +332,7 @@ test("fence-breach: Stop all water shows with and without the engine and sends o
     const api = await open("/activity", { fixture: [...fixture] });
     const item = alertRow(501);
     expect(text(item.querySelector("h3")), fixture.join()).toBe("A watering valve opened outside its program");
-    expect(text(item.querySelector(".act-valve")), fixture.join()).toBe("Valve that opened: L08 Mister • South Wall (Fert.)");
+    expect(text(item.querySelector(".act-valve")), fixture.join()).toBe("Valve that opened: South mister (fertilized)");
     const stop = within(item).getByRole("button", { name: "Stop all water" });
     expect(stop.className, fixture.join()).toContain("btn-stop");
     expect(stop.hasAttribute("disabled"), fixture.join()).toBe(false);
@@ -351,7 +351,7 @@ test("fence-breach: Stop all water shows with and without the engine and sends o
 
 test("mister-fault: Clear fault shows only with the irrigation firmware, sends API-IRR-13 with the line and reads the latch back; changes off disable it", async () => {
   const api = await open("/activity", { fixture: "mister-fault" });
-  fireEvent.click(within(alertRow(301)).getByRole("button", { name: "Clear fault on L04" }));
+  fireEvent.click(within(alertRow(301)).getByRole("button", { name: "Clear fault on Center mister" }));
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-13", path: "/api/v1/irrigation/clear-fault", body: { line_id: "L04" } })]);
   expect(text(alertRow(301))).toContain("Waiting for the controller");
@@ -366,7 +366,7 @@ test("mister-fault: Clear fault shows only with the irrigation firmware, sends A
     stopped();
   }
   await open("/activity", { fixture: ["mister-fault", "writes-off"] });
-  expect(within(alertRow(301)).getByRole("button", { name: "Clear fault on L04" }).hasAttribute("disabled")).toBe(true);
+  expect(within(alertRow(301)).getByRole("button", { name: "Clear fault on Center mister" }).hasAttribute("disabled")).toBe(true);
 });
 
 test("Recent activity: the five newest log entries, one line each, and Open the log", async () => {
@@ -402,8 +402,8 @@ test("activity-mixed: one line an entry, who wrote in R4's words, AI for Iris an
   await open("/activity/log", { fixture: "activity-mixed" });
   expect(status()).toBe(LOG_STATUS);
   expect(logLines()).toEqual([
-    "VPD Mister Engage 1.60 → 1.55 kPa · requested 1.53 · manual", "Plan · 3 changes", "Changed line L01 · Daily cap 60 → 45 min · manual cleared · during experiment 7c9e6679-7425-40de-944b-e07fc1f90ae7",
-    "Acknowledged “Relay stuck”", "Forecast rule “hot afternoon” · Mister Pulse Gap 45 → 60 s", "Ran L01 · 12 min",
+    "VPD Mister Engage 1.60 → 1.55 kPa · requested 1.53 · manual", "Plan · 3 changes", "Changed line Wall drip · Daily cap 60 → 45 min · manual cleared · during experiment 7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "Acknowledged “Relay stuck”", "Forecast rule “hot afternoon” · Mister Pulse Gap 45 → 60 s", "Ran Wall drip · 12 min",
   ]);
   const ai = (node: Element) => node.querySelector(".event-by [data-badge=ai]") !== null;
   const dashboard = logRow("VPD Mister Engage");
@@ -412,7 +412,7 @@ test("activity-mixed: one line an entry, who wrote in R4's words, AI for Iris an
   expect([writtenBy(iris), ai(iris)]).toEqual(["iris AI", true]);
   fireEvent.click(iris.querySelector("summary")!);
   expect([...iris.querySelectorAll(".plan-changes li")].map((node) => plain(text(node)))).toEqual(["VPD Mister Engage 1.70 kPa from 13:00", "Mister Pulse Gap 55 s from 16:30", "Mister Engage Delay 90 s from 19:00"]);
-  const agent = logRow("Changed line L01");
+  const agent = logRow("Changed line Wall drip");
   expect([writtenBy(agent), ai(agent)]).toEqual(["steward · agent AI", true]);
   const forecast = logRow("Forecast rule");
   expect([writtenBy(forecast), ai(forecast)]).toEqual(["forecast-engine · system", false]);
@@ -431,10 +431,10 @@ test("the facets apply on change and live in the URL: Who and What on API-17's s
   let api = await open("/activity?target=L01", { fixture: "activity-mixed" }, true);
   expect(text(screen.getByTestId("where"))).toBe("/activity/log?target=L01");
   expect(requests(api, "API-17").map((row) => row.path)).toEqual(["/api/v1/activity?target=L01"]);
-  expect(logLines()).toEqual(["Changed line L01 · Daily cap 60 → 45 min · manual cleared · during experiment 7c9e6679-7425-40de-944b-e07fc1f90ae7", "Ran L01 · 12 min"]);
+  expect(logLines()).toEqual(["Changed line Wall drip · Daily cap 60 → 45 min · manual cleared · during experiment 7c9e6679-7425-40de-944b-e07fc1f90ae7", "Ran Wall drip · 12 min"]);
   const form = () => screen.getByRole("search", { name: "Activity log filters" });
   const control = (name: string) => form().querySelector(`[name=${name}]`) as HTMLInputElement | HTMLSelectElement;
-  expect(control("target").value).toBe("L01");
+  expect(control("target").value).toBe("Wall drip");
   // Who as chips (a link each, the current aria-current=true) and as a select for phones, on the same parameter.
   const who = within(form()).getByRole("list", { name: "Who" });
   expect(within(who).getAllByRole("link").map((link) => [text(link), link.getAttribute("aria-current")])).toEqual([["All", "true"], ["People", null], ["Iris", null], ["Agents", null], ["System", null]]);
@@ -448,14 +448,15 @@ test("the facets apply on change and live in the URL: Who and What on API-17's s
   // A reload of that URL: the same filters, sent the same way.
   api = await open(url, { fixture: "activity-mixed" });
   expect(requests(api, "API-17").map((row) => row.path)).toEqual(["/api/v1/activity?source=agent&target=L01"]);
-  expect([control("source").value, control("target").value]).toEqual(["agent", "L01"]);
+  expect([control("source").value, control("target").value]).toEqual(["agent", "Wall drip"]);
   // What on the action prefix, from the select as a phone has it.
   fireEvent.change(control("action"), { target: { value: "irrigation." } });
   await advance(0);
   expect(text(screen.getByTestId("where"))).toBe("/activity/log?target=L01&source=agent&action=irrigation.");
   // The target applies on Enter, with no Apply button; the dates as soon as a whole day is picked.
   expect(within(form()).queryByRole("button", { name: "Apply" })).toBeNull();
-  fireEvent.change(control("target"), { target: { value: "L09" } });
+  // A line typed by its name goes to the API by its id (#1341).
+  fireEvent.change(control("target"), { target: { value: "west mister" } });
   fireEvent.keyDown(control("target"), { key: "Enter" });
   await advance(0);
   expect(text(screen.getByTestId("where"))).toBe("/activity/log?target=L09&source=agent&action=irrigation.");

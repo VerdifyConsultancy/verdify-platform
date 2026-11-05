@@ -87,7 +87,8 @@ const freshSample = (key: string, data: ZoneData): Sample | null => {
   const sample = newestSample(data.series, key);
   return sample && isFresh(sample, key, data.metrics) ? sample : null;
 };
-const peersOf = (zone: Zone) => PEER_PROBES.filter((peer) => peer !== zone);
+/** The firmware's peer probes for a zone: south, west and east, the zone itself excluded. */
+export const peersOf = (zone: Zone): Zone[] => PEER_PROBES.filter((peer) => peer !== zone);
 
 /** The tag this zone reads now; see the file's head. */
 export function zoneTag(zone: Zone, data: ZoneData): ZoneTag {
@@ -118,6 +119,23 @@ export function zoneValue(zone: Zone, metric: ZoneMetric, tag: ZoneTag, data: Zo
   const fresh = peersOf(zone).flatMap((peer) => freshSample(zoneKey(peer, metric), data) ?? []);
   if (!fresh.length) return { value: null, stale: false, reason: NO_FRESH_PEER };
   return { value: fresh.reduce((sum, sample) => sum + sample.value, 0) / fresh.length, stale: false, reason: null };
+}
+
+/**
+ * Where a tile's numbers come from, in words (D-UX-07, Jason 2026-11-05: no bare code): null for MEASURED, the normal
+ * case. `news` is true when a zone with a probe is not reading it, which the tile marks amber.
+ * - Center: "no probe · house average".
+ * - PEER: "probe offline · West + East average", naming the fresh peers the value averages (every peer when none is fresh).
+ * - A probe zone on HOUSE: "probe offline · house average".
+ */
+export type ZoneSource = { readonly text: string; readonly news: boolean };
+export function zoneSourceWords(zone: Zone, tag: ZoneTag, data: ZoneData): ZoneSource | null {
+  if (tag === "MEASURED") return null;
+  if (zone === "center") return { text: "no probe · house average", news: false };
+  if (tag === "HOUSE") return { text: "probe offline · house average", news: true };
+  const fresh = peersOf(zone).filter((peer) => freshSample(zoneKey(peer, "vpd"), data));
+  const names = (fresh.length ? fresh : peersOf(zone)).map((peer) => ZONE_WORDS[peer]);
+  return { text: `probe offline · ${names.join(" + ")} average`, news: true };
 }
 
 /** "target 0.60 kPa" (north: "house target"), with STALE on an old one; "—" with why when there is none. */

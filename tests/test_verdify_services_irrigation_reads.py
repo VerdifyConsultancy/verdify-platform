@@ -685,6 +685,51 @@ def test_minutes_group_by_zone_line_or_cause_and_stay_split_by_cause_and_chemist
     assert water.minutes_rows([], "zone") == []
 
 
+def test_minutes_rows_carry_their_purpose_and_filter_by_it():
+    """#1348: fog and VPD or fallback misting are climate; the rest waters plants."""
+    rows = [
+        minutes_row(minutes=1.5, pulses=4, gal=4),  # L04 vpd
+        minutes_row(zone="fog", line_id="L11", cause="vpd", minutes=33.3, pulses=29, gal=22),
+        minutes_row(zone="wall", line_id="L01", cause="run_now", minutes=2.8, pulses=3, gal=6),
+        minutes_row(line_id="L04", cause="schedule", minutes=1.0, pulses=2, gal=1),
+    ]
+    by_line = water.minutes_rows(rows, "line")
+    assert {(row.group, row.cause, row.purpose) for row in by_line} == {
+        ("L04", "vpd", "climate"),
+        ("L11", "vpd", "climate"),
+        ("L01", "run_now", "irrigation"),
+        ("L04", "schedule", "irrigation"),
+    }
+    irrigation = water.minutes_rows(rows, "line", "irrigation")
+    assert [(row.group, row.minutes) for row in irrigation] == [("L01", 2.8), ("L04", 1.0)]
+    climate = water.minutes_rows(rows, "zone", "climate")
+    assert [(row.group, row.minutes, row.gal) for row in climate] == [("center", 1.5, 4), ("fog", 33.3, 22)]
+    # By cause, a vpd row stays one row: fog and VPD misting are both climate.
+    assert [(row.group, row.purpose) for row in water.minutes_rows(rows, "cause", "climate")] == [("vpd", "climate")]
+
+
+def test_today_splits_climate_misting_and_fog_from_irrigation():
+    """#1348: a line's minutes stay whole (its cap counts them all); the VPD part rides beside them."""
+    groups = [
+        runs.DayGroup(line_id="L04", cause="vpd", slot_id=None, minutes=Decimal("1.5"), pulses=4, gal=4),
+        runs.DayGroup(line_id="L04", cause="schedule", slot_id=3, minutes=Decimal("1.0"), pulses=2, gal=1),
+        runs.DayGroup(line_id="L11", cause="vpd", slot_id=None, minutes=Decimal("33.3"), pulses=29, gal=22),
+        runs.DayGroup(line_id="L01", cause="run_now", slot_id=None, minutes=Decimal("2.8"), pulses=3, gal=6),
+    ]
+    assert water._line_today(groups, "L04", no_data=False) == water.LineToday(
+        minutes=2.5, pulses=6, gal=5, climate_minutes=1.5, climate_pulses=4
+    )
+    assert water._line_today(groups, "L01", no_data=False).climate_minutes == 0.0
+    assert water._line_today(groups, "L04", no_data=True) == water.LineToday()
+    enabled = {line_id: True for line_id in irr.LINE_IDS}
+    climate = water._zones(groups, enabled, no_data=False, purpose=irr.RunPurpose.CLIMATE)
+    assert (climate["center"], climate["fog"], climate["wall"]) == (1.5, 33.3, 0.0)
+    assert water._zones(groups, enabled, no_data=False)["center"] == 2.5
+    assert water._climate_today(groups, no_data=False) == water.ClimateToday(minutes=34.8, pulses=33, gal=26)
+    assert water._climate_today([], no_data=False) == water.ClimateToday(minutes=0.0, pulses=0, gal=0)
+    assert water._climate_today(groups, no_data=True) == water.ClimateToday()
+
+
 # ── Listing runs, the cursor ────────────────────────────────────────────────
 
 
@@ -724,7 +769,13 @@ def test_lone_ledger_rows_list_in_the_window_and_filters_apply():
     ]
     assert water._gallons_of(listed[0], Deltas(()), False) == 0
     assert water._list_runs([], [(row, AT - 3 * H)], from_=AT - 2 * H, to=AT, cause=None, outcome=None, at=AT) == []
-    for filters, count in (({"cause": "vpd"}, 0), ({"outcome": "ok"}, 0), ({"cause": "fallback"}, 1)):
+    for filters, count in (
+        ({"cause": "vpd"}, 0),
+        ({"outcome": "ok"}, 0),
+        ({"cause": "fallback"}, 1),
+        ({"purpose": "climate"}, 1),  # a fallback window replaces VPD control (#1348)
+        ({"purpose": "irrigation"}, 0),
+    ):
         arguments = {"cause": None, "outcome": None} | filters
         assert len(water._list_runs([], [(row, AT - H)], from_=AT - 2 * H, to=AT, at=AT, **arguments)) == count
 
@@ -744,6 +795,7 @@ def test_the_cursor_round_trips_and_a_bad_one_is_invalid_request():
         zone="center",
         chemistry="clean",
         cause="vpd",
+        purpose="climate",
         started_at=AT,
         open_s=1,
         outcome="ok",
@@ -883,6 +935,7 @@ def test_a_run_and_a_minutes_report_validate():
         zone="wall",
         chemistry="fert",
         cause="feed",
+        purpose="irrigation",
         slot_id=4,
         schedule_label="feed",
         command_id=str(uuid4()),
@@ -982,10 +1035,11 @@ def client(monkeypatch):
     async def fake_connection():
         yield "conn"
 
-    async def fake_minutes(conn, actor, from_, to, group_by):
+    async def fake_minutes(conn, actor, from_, to, group_by, purpose=None):
         calls["minutes"] = (conn, actor, from_, to, group_by)
+        calls["minutes_purpose"] = purpose
         return water.MinutesReport.model_validate(
-            {"from": from_, "to": to, "group_by": group_by, "periods": [], "rows": []}
+            {"from": from_, "to": to, "group_by": group_by, "purpose": purpose, "periods": [], "rows": []}
         )
 
     async def fake_runs(conn, actor, from_, to, **filters):
@@ -1026,6 +1080,11 @@ def test_the_minutes_route_takes_from_to_and_group_by_and_serves_from(client):
     assert calls["minutes"] == ("conn", "the-actor", date(2026, 11, 1), date(2026, 11, 2), "line")
     assert http.get("/v1/irrigation/minutes", params={"from": "2026-11-01", "to": "2026-11-02"}).status_code == 200
     assert calls["minutes"][-1] == "zone"
+    assert calls["minutes_purpose"] is None
+    purposed = {"from": "2026-11-01", "to": "2026-11-02", "purpose": "irrigation"}
+    assert http.get("/v1/irrigation/minutes", params=purposed).json()["purpose"] == "irrigation"
+    assert calls["minutes_purpose"] == "irrigation"
+    assert http.get("/v1/irrigation/minutes", params=purposed | {"purpose": "fog"}).status_code == 422
     assert http.get("/v1/irrigation/minutes", params={"from": "2026-11-01"}).status_code == 422
     bad_group = {"from": "2026-11-01", "to": "2026-11-02", "group_by": "plant"}
     assert http.get("/v1/irrigation/minutes", params=bad_group).status_code == 422
@@ -1044,9 +1103,19 @@ def test_the_runs_route_takes_every_committed_parameter(client):
     assert (conn, actor) == ("conn", "the-actor")
     assert from_ == datetime(2026, 11, 1, 7, tzinfo=UTC)
     assert to - from_ == timedelta(hours=24)
-    assert filters == {"line": "L04", "cause": "vpd", "outcome": "ok", "limit": 10, "cursor": "abc"}
+    assert filters == {"line": "L04", "cause": "vpd", "outcome": "ok", "limit": 10, "cursor": "abc", "purpose": None}
     http.get("/v1/irrigation/runs", params=window)
-    assert calls["runs"][4] == {"line": None, "cause": None, "outcome": None, "limit": 50, "cursor": None}
+    assert calls["runs"][4] == {
+        "line": None,
+        "cause": None,
+        "outcome": None,
+        "limit": 50,
+        "cursor": None,
+        "purpose": None,
+    }
+    http.get("/v1/irrigation/runs", params=window | {"purpose": "climate"})
+    assert calls["runs"][4]["purpose"] == "climate"
+    assert http.get("/v1/irrigation/runs", params=window | {"purpose": "fog"}).status_code == 422
     assert http.get("/v1/irrigation/runs", params=window | {"line": "L12"}).status_code == 422
     assert http.get("/v1/irrigation/runs", params=window | {"limit": 201}).status_code == 422
     assert http.get("/v1/irrigation/runs", params=window | {"cause": "rain"}).status_code == 422

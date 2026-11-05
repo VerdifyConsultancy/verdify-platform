@@ -181,9 +181,9 @@ spec:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: ESP32_API_KEY
-            # HAOS broker login, unused since VD-48 removed the ingestor's HAOS
-            # MQTT client. It stays mounted until decisions Q-14 retires the
-            # login on the broker.
+            # HAOS broker login (verdify-mqtt) of the Frigate occupancy
+            # subscriber (ingestor/occupancy_mqtt.py, #1370): read-only
+            # subscription to frigate/greenhouse_zone/person on MQTT_HOST.
             - name: MQTT_USER
               valueFrom:
                 secretKeyRef:
@@ -223,9 +223,6 @@ spec:
             - name: ha-token
               mountPath: /var/run/secrets/verdify
               readOnly: true
-            - name: slack-token
-              mountPath: /etc/verdify/slack
-              readOnly: true
           # No httpGet probe — connect-out worker. A heartbeat/freshness exec or
           # in-process flag probe is the §3.3 design (queries max(ts) FROM climate)
           # with a generous initialDelay so transient DB latency does not restart
@@ -244,13 +241,3 @@ spec:
             items:
               - key: ha_token.txt
                 path: ha_token.txt
-
-        - name: slack-token
-          secret:
-            secretName: verdify-slack
-            # Missing sender custody must not stop the sole device writer.
-            # Delivery logs fail explicitly until the existing token is restored.
-            optional: true
-            items:
-              - key: iris_slack_bot_token.txt
-                path: iris_slack_bot_token.txt

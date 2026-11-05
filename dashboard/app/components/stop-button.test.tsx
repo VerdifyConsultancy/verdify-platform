@@ -38,7 +38,7 @@ test("one tap on a running line: one API-IRR-07 {line_id} with no dialog, the re
   expect(screen.getByTestId("state").textContent).toBe("running");
   const stop = stopButton()!;
   expect(stop.className).toContain("btn-stop");
-  expect(text(stop)).toBe("Stop L01");
+  expect(text(stop)).toBe("Stop Wall drip");
   fireEvent.click(stop);
   expect(text(stopButton())).toBe("Sending…");
   expect(document.querySelector("dialog")).toBeNull();
@@ -53,7 +53,7 @@ test("one tap on a running line: one API-IRR-07 {line_id} with no dialog, the re
   expect(sentAt("API-IRR-01")).toContain(READBACK_POLL_MS);
   expect(screen.getByTestId("state").textContent).toBe("idle");
   expect(toasts()).toEqual([STILL_START]);
-  expect(screen.getByRole("button", { name: "Disable L01" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Disable Wall drip" })).toBeTruthy();
   expect(document.querySelector("[data-stop-note]")).toBeNull();
   expect(writes(api)).toHaveLength(1);
 });
@@ -72,7 +72,7 @@ test("a Stop right after a Run: the card's read shows the line running before AP
   await advance(READBACK_POLL_MS);
   await advance(1);
   expect(toasts()).toEqual([STILL_START]);
-  expect(screen.getByRole("button", { name: "Disable L01" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Disable Wall drip" })).toBeTruthy();
 });
 
 test("stays enabled and sends with changes switched off", async () => {
@@ -109,7 +109,7 @@ test("the quiet Stop of a line that is not running (D-UX-06): an outline, no .bt
   expect(stop.className).toBe("btn btn-stop-quiet");
   expect(stop.getAttribute("data-write-control")).toBe("true");
   expect(stop.hasAttribute("disabled")).toBe(false);
-  expect(text(stop)).toBe("Stop L02");
+  expect(text(stop)).toBe("Stop Wall drip (fertilized)");
   fireEvent.click(stop);
   expect(text(stopButton())).toBe("Sending…");
   await advance(0);

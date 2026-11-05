@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { causeWords } from "../charts/causes";
 import { localTime } from "../lib/format";
 import { runGraphUrl } from "../lib/graph-link";
+import { lineDisplayName } from "../lib/lines";
 import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
 import { OperatorOnly, useApiDown } from "../lib/session";
 import { agoWords, faultWords, lastWaterParts, lineSyncWords, pauseWords, pausedNow, timeLeftWords, useWaterDrawer } from "../lib/water";
@@ -20,7 +21,6 @@ import { Menu } from "./menu";
 import { ResumeLine } from "./pause-lines";
 import { RUN_ARRIVES_TEXT, RunControl, runOffer } from "./run-dialog";
 import { useFreshConfirmed } from "./schedule/rules-list";
-import { lineTitle } from "./schedule/model";
 import { StopButton } from "./stop-button";
 
 /** L03's sub-row under L02 (Round 2 #7). */
@@ -82,9 +82,9 @@ export function LineStateText({ line, engine, today, scheduleLabels }: { line: I
   }
 }
 /** "Pause until…" in a line's ⋯ menu, for operators: the pause drawer with this line chosen (`?pause=<line_id>`). */
-function PauseThisLine({ line }: { line: Pick<IrrigationLine, "line_id"> }) {
+function PauseThisLine({ line }: { line: Pick<IrrigationLine, "line_id"> & Partial<Pick<IrrigationLine, "name">> }) {
   const { open } = useWaterDrawer("pause");
-  return <Button write aria-haspopup="dialog" onClick={() => open(line.line_id)}>Pause until… <span className="screen-reader">{line.line_id}</span></Button>;
+  return <Button write aria-haspopup="dialog" onClick={() => open(line.line_id)}>Pause until… <span className="screen-reader">{lineDisplayName(line)}</span></Button>;
 }
 
 export type LineCardProps = {
@@ -106,18 +106,18 @@ export type LineCardProps = {
 };
 
 /**
- * A line's row on Water → Today (redesign §5.2, `ObjectRow`): "L01 Wall drip" with CLEAN or FERT and its one sync pill,
+ * A line's row on Water → Today (redesign §5.2, `ObjectRow`): "Wall drip" with CLEAN or FERT and its one sync pill,
  * the state sentence, the today strip with the next run, one primary action by state (Run… while idle, Stop while
  * running, Clear fault on a latched mister, Resume while paused), the line's own Stop whenever it can matter (D-UX-06:
  * filled only while the relay is on or unknown, a quiet outline otherwise, never disabled by the writes flag), and ⋯ with
- * the enable switch and its check sheet, Options…, Pause until…, "Activity for L01 ›", "Runs of L01 ›" and Graphs. Fog
+ * the enable switch and its check sheet, Options…, Pause until…, "Activity for Wall drip ›", "Runs of Wall drip ›" and Graphs. Fog
  * (L11) is climate only: no Stop and no write control. Viewers get the same row with the menu's links alone.
  */
 export function LineCard({ line, master = null, engine, program, today, scheduleLabels, strip, className }: LineCardProps) {
   const apiDown = useApiDown();
   const now = useNow();
   const fog = line.kind === "fog";
-  const title = lineTitle(line);
+  const title = lineDisplayName(line);
   const code = line.state.code;
   const running = code === "running";
   const latched = engine && line.fault === "mister_fault";
@@ -134,7 +134,7 @@ export function LineCard({ line, master = null, engine, program, today, schedule
   const meta = [syncWords, pauseNote, code === "idle" && engine ? last.meta : null].filter(Boolean);
   const offer = runOffer(line, engine);
   const filled = running || code === "unknown";
-  const primary = fog ? null : running ? null : latched ? <ClearFaultButton line={line} engine={engine} /> : paused ? <ResumeLine line={line} /> : offer === "run" || offer === "mist" ? <RunControl line={line} engine={engine} /> : null;
+  const primary = fog ? null : running ? null : latched ? <ClearFaultButton line={line} engine={engine} /> : paused ? <ResumeLine line={line} /> : offer === "run" || offer === "mist" || offer === "enable" ? <RunControl line={line} engine={engine} /> : null;
   const tone: RowTone | undefined = running ? "running" : latched ? "fault" : engine && line.fault === "backing_off" ? "warn" : undefined;
   const token = running ? (line.state.cause === "vpd" ? "eq-mister" : line.state.cause === "feed" ? "eq-fert" : line.state.cause === "run_now" ? "eq-master" : "eq-water") : undefined;
   const graphs = line.last_water && validTime(line.last_water.at) ? runGraphUrl({ started_at: line.last_water.at, ended_at: null, open_s: line.last_water.open_s }) : "/graphs";
@@ -147,9 +147,9 @@ export function LineCard({ line, master = null, engine, program, today, schedule
       {offer === "arrives" && <p className="state-note" data-arrives="run">{RUN_ARRIVES_TEXT}</p>}
       {!engine && line.kind === "mister" && <ClearFaultButton line={line} engine={engine} />}
     </OperatorOnly>}
-    <Link to={`/activity/log?target=${encodeURIComponent(id)}`}>Activity for {id}<span aria-hidden="true"> ›</span></Link>
-    <Link to={`/water/history?line=${encodeURIComponent(id)}`}>Runs of {id}<span aria-hidden="true"> ›</span></Link>
-    <Link to={graphs}>Graphs <span className="screen-reader">around {id}'s last run</span><span aria-hidden="true"> ›</span></Link>
+    <Link to={`/activity/log?target=${encodeURIComponent(id)}`}>Activity for {title}<span aria-hidden="true"> ›</span></Link>
+    <Link to={`/water/history?line=${encodeURIComponent(id)}`}>Runs of {title}<span aria-hidden="true"> ›</span></Link>
+    <Link to={graphs}>Graphs <span className="screen-reader">around {title}'s last run</span><span aria-hidden="true"> ›</span></Link>
     {!fog && <p className="meta wat-menu-check">{line.check
       ? <>Checked by {line.check.checked_by} <LocalTime at={line.check.checked_at} date />{line.check.note && <>: {line.check.note}</>}</>
       : "No check recorded"}</p>}
@@ -163,7 +163,7 @@ export function LineCard({ line, master = null, engine, program, today, schedule
     menu={menu} tone={tone} token={token}>
     {strip}
     {master && <div className="line-subrow" data-line={master.line_id}>
-      <p><span className="glyph glyph-branch" aria-hidden="true" /><strong>{master.line_id} Fert master</strong>: {MASTER_TEXT} · <LineStateText line={master} engine={engine} today={today} /></p>
+      <p><span className="glyph glyph-branch" aria-hidden="true" /><strong>{lineDisplayName(master)}</strong>: {MASTER_TEXT} · <LineStateText line={master} engine={engine} today={today} /></p>
     </div>}
   </ObjectRow>;
 }

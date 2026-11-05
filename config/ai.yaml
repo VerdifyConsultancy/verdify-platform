@@ -5,17 +5,14 @@
 # ── API Keys ─────────────────────────────────────────────────────
 # Keys are stored in external files (never in this config).
 # Paths can be overridden via environment variables. Keys without a default
-# (openai, gemini, anthropic) have no mounted file and need their env var set.
+# (anthropic) have no mounted file and need their env var set.
+# #1351 (Jason 2026-11-05): every image or vision request goes to Cortex
+# llm.primary.longctx.mm; the Gemini and OpenAI keys are gone
+# (scripts/check-ai-routes.py).
 keys:
   cortex:
     file: ${CORTEX_API_KEY_FILE:-/vcortex/api_key.txt}
     provider: cortex
-  openai:
-    file: ${OPENAI_API_KEY_FILE}
-    provider: openai
-  gemini:
-    file: ${GEMINI_API_KEY_FILE}
-    provider: google-ai-studio
   anthropic:
     file: ${ANTHROPIC_API_KEY_FILE}
     provider: anthropic
@@ -37,6 +34,9 @@ models:
     max_output_tokens: 4096
     purpose: "Camera snapshot crop health analysis"
 
+  # Follow-up (#1351 row 2): moves to Cortex embed.main with a vector migration and a
+  # re-embed. The OpenAI key entry is removed, so the manual embedding script fails
+  # closed until then.
   embedding:
     provider: openai
     model: text-embedding-3-large
@@ -64,7 +64,7 @@ schedules:
   vision:
     cron: "0 12,16,20,0 * * *"
     script: scripts/frigate-snapshot.py
-    description: "Camera snapshots + Gemini 3.1 Pro Preview analysis"
+    description: "Camera snapshots + Cortex llm.primary.longctx.mm analysis"
     depends_on: frigate  # Requires Frigate NVR accessible
 
   embedding:

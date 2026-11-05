@@ -47,16 +47,16 @@ async function openRun(props: Parameters<typeof Run>[0], fixture: string | strin
 }
 const title = () => text(screen.getByRole("heading", { level: 2 }));
 
-test("\"Run L01 Wall drip (clean) for 10 min?\", \"Starts now · wall drip today 10 of 60 min\", Duration, Cancel and \"Run 10 min\"", async () => {
+test("\"Run Wall drip (clean) for 10 min?\", \"Starts now · wall drip today 10 of 60 min\", Duration, Cancel and \"Run 10 min\"", async () => {
   await openRun({ lineId: "L01", today: 10 });
   expect(dialog().hasAttribute("open")).toBe(true);
-  expect(title()).toBe("Run L01 Wall drip (clean) for 10 min?");
+  expect(title()).toBe("Run Wall drip (clean) for 10 min?");
   expect(text(document.getElementById(dialog().getAttribute("aria-describedby")!))).toBe("Starts now · wall drip today 10 of 60 min");
   expect(screen.getByLabelText("Duration")).toBe(document.activeElement);
   expect(text(dialog().querySelector(".field-hint"))).toBe("Allowed 1–120 min · step 1");
   expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
   fireEvent.change(screen.getByLabelText("Duration"), { target: { value: "12" } });
-  expect(title()).toBe("Run L01 Wall drip (clean) for 12 min?");
+  expect(title()).toBe("Run Wall drip (clean) for 12 min?");
   expect(screen.getByRole("button", { name: "Run 12 min" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   expect(dialog().hasAttribute("open")).toBe(false);
@@ -77,36 +77,37 @@ test("a double tap on Run sends one request with one Idempotency-Key and no manu
   expect(screen.getByTestId("phase").textContent).toBe("done");
 });
 
-test("FERT in the title on a fertilizer line; drips add prewet and flush, misters take pulses; each kind sends its own fields", async () => {
+test("the line's name in the title, (fertilized) on a fertilizer line and never a relay code; drips add prewet and flush, misters take pulses; each kind sends its own fields", async () => {
   expect(runFields("drip")).toEqual(["minutes"]);
   expect(runFields("fert_drip")).toEqual(["minutes", "prewet_s", "flush_s"]);
   expect(runFields("mister")).toEqual(["on_s", "count", "gap_s"]);
   expect(runFields("fert_mister")).toEqual(["on_s", "count", "gap_s", "prewet_s", "flush_s"]);
-  expect(lineLabel({ zone: "west", kind: "fert_mister", name: "Mister • West Wall (Fert.)" })).toBe("West feed");
-  expect(lineLabel({ zone: "supply", kind: "master", name: "Valve • Fert. Master" })).toBe("Fert master");
+  expect(lineLabel({ line_id: "L10", zone: "west", kind: "fert_mister", name: "Mister • West Wall (Fert.)" })).toBe("West mister (fertilized)");
+  expect(lineLabel({ line_id: "L03", zone: "supply", kind: "master", name: "Valve • Fert. Master" })).toBe("Fertilizer valve");
   await openRun({ lineId: "L02" });
-  expect(title()).toBe("Run L02 Wall feed (FERT) for 10 min?");
-  expect(text(document.getElementById(dialog().getAttribute("aria-describedby")!))).toBe("Starts now · wall feed today 0 min, no cap");
-  expect(text(dialog().querySelector(".dialog-note"))).toBe("Prewets on L01, feeds through L03 from the tank, then flushes");
+  expect(title()).toBe("Run Wall drip (fertilized) for 10 min?");
+  expect(text(document.getElementById(dialog().getAttribute("aria-describedby")!))).toBe("Starts now · wall drip (fertilized) today 0 min, no cap");
+  expect(text(dialog().querySelector(".dialog-note"))).toBe("Prewets on Wall drip, feeds through the fertilizer valve from the tank, then flushes");
   expect(["Duration", "Prewet on the clean line", "Flush on the clean line"].map((label) => (screen.getByLabelText(label) as HTMLInputElement).value)).toEqual(["10", "120", "240"]);
   cleanup();
   stopFixtureApi();
-  const api = await openRun({ lineId: "L07" }, "schedules-paused");
-  expect(title()).toBe("Run L07 South mister (clean) for 4 × 45 s?");
+  const api = await openRun({ lineId: "L07" }, ["schedules-paused", "firmware-before-1343"]);
+  expect(title()).toBe("Run South mister (clean) for 4 × 45 s?");
   expect(screen.queryByLabelText("Duration")).toBeNull();
   fireEvent.change(screen.getByLabelText("Pulses"), { target: { value: "3" } });
   expect(screen.getByRole("button", { name: "Run 3 × 45 s" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Run 3 × 45 s" }));
   await advance(0);
-  // L07's Schedule is off: refused in words with the form, and the dialog stays open.
+  // L07's Schedule is off and the controller still runs the firmware before #1343: refused in words with the form, and
+  // the dialog stays open.
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-06", body: { on_s: 45, count: 3, gap_s: 60 } })]);
-  expect(refusal().textContent).toBe(refusalWords("not_schedule_member", "L07 takes run-now only with Schedule on"));
+  expect(refusal().textContent).toBe(refusalWords("not_schedule_member", "L07 takes run-now only with Schedule on until the next firmware flash"));
   expect(dialog().hasAttribute("open")).toBe(true);
 });
 
 test("before the irrigation firmware L01 runs in fixed mode: no Duration, its irrig_wall_duration_min named, and no minutes sent", async () => {
   const api = await openRun({ lineId: "L01", fixed: 12 }, "before-engine");
-  expect(title()).toBe("Run L01 Wall drip (clean) for 12 min?");
+  expect(title()).toBe("Run Wall drip (clean) for 12 min?");
   expect(screen.queryByLabelText("Duration")).toBeNull();
   expect(text(dialog().querySelector(".dialog-note"))).toBe("Runs for the Wall drip duration (irrig_wall_duration_min): 12 min");
   expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" }));

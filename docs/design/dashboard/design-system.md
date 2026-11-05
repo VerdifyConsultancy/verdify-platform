@@ -77,6 +77,7 @@ leaf for hover; fault for errors (6.54:1). Mint (1.56:1) and amber (2.19:1) carr
   --eq-mister:#9d2398;--eq-fog:#1b9bc7;--eq-fan1:#22a096;--eq-fan2:#484fa7;--eq-vent:#056190;
   --eq-heat1:#d47a00;--eq-heat2:#b61f02;--eq-light-main:#4d9f45;--eq-light-grow:#2855ad;
   --eq-water:#2389e2;--eq-fert:#6331a0;--eq-master:#0e9580;
+  --cause-vpd:#c2410c;--cause-schedule:#8a5a00;--cause-prep:#65731f;
 }
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px} .hero :focus-visible{outline-color:var(--mint)}
 input,select,textarea{border-color:var(--control-border)} .brand-leaf{fill:var(--leaf)}
@@ -317,7 +318,7 @@ final height, and goes neutral while the API is down.
 
 | Primitive | Anatomy |
 |---|---|
-| `BandBar` | On white: a 2 px `--line-strong` track, the band as an 8 px `--c-band-wash` bar with `--c-band-edge` ends, today's low–high as a 2 px `--muted` rule, the value as a 10 px ink dot with a white ring. On the hero: the band in `--c-band-edge` (5.3:1 on ink) and a 12 px mint dot ringed in ink. The scale is the band plus half its width each side, widened to the value and today's range; a value off scale clamps with an arrowhead; unknown hatches the track; RH has no band segment |
+| `BandBar` | One track, the band box and the value dot; nothing else is drawn (today's low–high is in the name only, Jason 2026-11-05). On white: a 2 px `--line-strong` track, the band as a 10 px `--c-band-wash` box with `--c-band-edge` ends, the value as a 10 px ink dot with a white ring. On the hero: a dimmed `--ink-muted` track, the band as a 12 px `--c-band-edge` box (5.3:1 on ink) with mint ends, and a 12 px mint dot ringed in ink. The scale is the band plus one band width each side, fixed, so only the dot moves; a value off scale clamps with an arrowhead; unknown hatches the track; RH has no band box and reads on 0–100% |
 | `Meter` | A 6 px `--field` track with a `--line` edge, filled in the domain token (`--eq-water` drip minutes and gallons, `--eq-mister` mist minutes, `--eq-fert` feeds, `--muted` otherwise), planned minutes as a dashed outline, the cap as a 2 px ink tick that turns `--fault` at or over it. Its words ("14 / 120 min", "cap reached", "+12 min over") count minutes in whole minutes on both sides, as the caps are set |
 | `Sparkline` | A 1.5 px line in the metric token over the band, gaps broken, the last point a dot; or bars in the domain token. 28 px in tiles, 20 px in rows |
 | `Delta` | "▲ 1.3 pts vs previous 30 d" in ink; the arrow and the words carry direction, never green or red |
@@ -375,9 +376,9 @@ v1 validated these for contrast and colour-vision separation; labels, line style
 | Band ribbon | `--c-band-wash`, `--c-band-edge` | #e2ede8, #6e9c8e | ink over fill 13.50; edge 3.08 | Fill between low and high, 1px edges |
 | Device setting (readback) | `--c-setpoint` | #0e5a43 | 8.20 | 2px step |
 | Requested, not confirmed | `--c-requested` | #a77601 | 4.01 | 2px dashed [6,4] step from the request time |
-| Planned (Iris, schedule) | Series colour | — | — | 2px dashed [8,4], right of now only; a superseded waypoint in `--c-bound`, labelled SUPERSEDED |
-| Bounds (min, max, clamps) | `--c-bound` | #626b76 | 5.41 | 1px dotted [1,3], labelled at the right edge |
-| Now | `--ink` | #112231 | 16.19 | 1.5px solid with a "Now" label |
+| Planned (Iris, schedule) | Series colour | — | — | 2px dashed [8,4], right of now only; a superseded waypoint in `--c-bound`, named SUPERSEDED in the panel key |
+| Bounds (min, max, clamps) | `--c-bound` | #626b76 | 5.41 | 1px dotted [1,3], on a setting's own history chart only (never on Graphs: they are the setting's allowed range, #1354) |
+| Now | `--ink` | #112231 | 16.19 | 1.5px solid with a "Now" label, the only words inside a plot (besides a retention note at its shaded span); the plot past now is shaded `--field` at half strength (#1353) |
 | Equipment lanes | `--eq-*` | mister #9d2398, fog #1b9bc7, fan1 #22a096, fan2 #484fa7, vent #056190, heat1 #d47a00, heat2 #b61f02, lights #4d9f45 / #2855ad | ≥ 3.19 | Filled segments |
 | Water | `--eq-water`, `--eq-fert`, `--eq-master` | #2389e2, #6331a0, #0e9580 | 3.65, 8.48, 3.73 | Filled; the `leak_detected` flag uses `--fault` |
 | Excursion | `--tint-warn` | #f8eccb | — | Fills between the measured line and the nearest band edge wherever it leaves the band; the line keeps its colour and stays on top |
@@ -385,30 +386,46 @@ v1 validated these for contrast and colour-vision separation; labels, line style
 | Compare | `--c-bound` | #626b76 | 5.41 | 1.25 px dashed, labelled "yesterday" or "last week" |
 | Events | `--forest` (a person's write), `--ink` (Iris, "AI" in its label), `--eq-fan2` (another agent), `--muted` hollow (system), severity colours (alerts, hollow when resolved), the cause token (runs) | — | ≥ 3:1 | Diamonds, triangles and 3 px bars on a 20 px rail across the top of the stack |
 
-Causes (VD-07). A wet line's interval in the lanes and its bar in minutes by zone take the colour of their
-`IrrigationCause`. There are no cause tokens, so the causes reuse existing ones, and every surface prints the words
-(`dashboard/app/charts/causes.ts`; Now's running chips and Water read them from there):
+One chart vocabulary (#1354, decisions 2026-11-05). A colour names what ran; words say why.
+
+- **No words inside a plot** but "Now" (and a retention note at its shaded span). Every line is named in the panel's
+  swatches and key (`ChartStack`) or legend (`TimeSeries`), and in the tooltip or the header readout at the cursor. The
+  band's and the forecast's provenance ("Band in force · DERIVED", "Band ahead of now · reconstructed from today's crop
+  anchors", "Forecast · issued 07:00", STALE past 3 h) is said once in the notes above the chart and in the key's hover
+  words, never painted on the band edge.
+- **Settings are opt-in on Graphs** (+ Setting); none is drawn by default. A drawn setting gets a key item at its value
+  in force; its min and max are not drawn. The y axis fits the traces, the forecast and the band; a setting outside
+  that range reads "above the chart ↑" or "below the chart ↓" in its key item instead of stretching the axis.
+- **One colour per line.** Each irrigation line takes its kind's colour (`charts/palette.ts`: drip `--eq-water`,
+  fertilized lines `--eq-fert`, misters `--eq-mister`, fog `--eq-fog`, the master valve `--eq-master`) on the Graphs
+  equipment lanes, Water → History's daily water use by line, the Equipment board and Now's running dots. A lane's run
+  is filled in its line's colour and its cause is written after the run.
+- **One colour per cause**, never a line's colour (`charts/causes.ts`): the minutes by zone, the daily water use by
+  cause, a line's state dot on Water and the run marks on the Graphs event rail. Every surface prints the words, so
+  colour is never alone.
 
 | Cause | Words | Token |
 |---|---|---|
-| `vpd` | VPD | `--eq-mister` |
-| `schedule` | schedule | `--eq-water` |
-| `run_now` | run now | `--eq-master` |
+| `vpd` | VPD | `--cause-vpd` |
+| `schedule` | schedule | `--cause-schedule` |
+| `run_now` | run now | `--forest` |
 | `feed` | feed | `--eq-fert` |
-| `prewet`, `flush` | prewet, flush | `--eq-fog` |
+| `prewet`, `flush` | prewet, flush | `--cause-prep` |
 | `fallback` | fallback | `--eq-heat1` |
 | `unknown` | cause unknown | `--c-bound` |
 
-A wet interval whose `cause` is null (API-05 returns null until the run ledger fills it) draws in the line's own colour
-with no cause word; a cause the table does not know reads raw, in `--c-bound`.
+`--cause-vpd` #c2410c (5.18:1), `--cause-schedule` #8a5a00 (5.93:1) and `--cause-prep` #65731f (5.22:1) are new and
+share no hue with a water line. Run now is a person's action, in `--forest` as a person's write is on the event rail;
+feed is fertilizer, in the fertilized lines' colour; fallback keeps the orange of the schedules' fallback-only runs.
+A cause the table does not know reads raw, in `--c-bound`.
 
 ### 5.2 Primitives
 
 | Primitive | Shows | Data | Rules |
 |---|---|---|---|
-| `ChartStack` | One card of panels on one x scale: temperature, VPD and RH (220, 200 and 160 px; 160, 150 and 120 at 860 px and below) and a panel per added unit (160, 120), each with an `id` for anchors (`#temperature`, `#vpd`, `#rh`) | API-04 series, API-06 band, API-12 setting steps, API-05 lanes, the event reads | Only the bottom panel draws the time axis; a 1px `--line` divider separates panels and the header row is the only chrome between them. Each header row carries the name and unit, the window's statistics (in band % when a band is drawn, low with its time, mean, high with its time, gaps) and series swatches that toggle (`aria-pressed`), replacing the legend; while the cursor is on any panel every header row reads the cursor's values instead ("14:22 71.9 °F · band 62.0–70.0 · above") and one time chip rides the cursor line; no floating tooltip. Layers: the band ribbon with excursion shading, the min–max envelope, a comparison dashed with its delta, setting steps, the forecast, the event rail and the equipment lanes in a disclosure (open from 861 px). The foot holds the resolution line, the data table and "CSV of this window" |
+| `ChartStack` | One card of panels on one x scale: temperature, VPD and RH (220, 200 and 160 px; 160, 150 and 120 at 860 px and below) and a panel per added unit (160, 120), each with an `id` for anchors (`#temperature`, `#vpd`, `#rh`) | API-04 series, API-06 band, API-12 setting steps, API-05 lanes, the event reads | Only the bottom panel draws the time axis; a 1px `--line` divider separates panels and the header row is the only chrome between them. Each header row carries the name and unit, the window's statistics (in band % when a band is drawn, low with its time, mean, high with its time, gaps) series swatches that toggle (`aria-pressed`), replacing the legend, and a key for the band and each setting drawn (#1354); while the cursor is on any panel every header row reads the cursor's values instead ("14:22 71.9 °F · band 62.0–70.0 · above", then the forecast hour and each step) and one time chip rides the cursor line; no floating tooltip. Layers: the band ribbon with excursion shading, the min–max envelope, a comparison dashed with its delta, setting steps, the forecast, the event rail and the equipment lanes in a disclosure (open from 861 px). The foot holds the resolution line, the data table and "CSV of this window" |
 | `ChartGrid` | Small multiples: rows are metrics, columns are zones | API-04, API-06 | One sync key and a uniform y scale per row; only the first column draws a y axis and only the bottom row an x axis; plot height from props (120 px on Zones, 110 px on phones) |
-| `RangeToolbar` | The page's range presets as nav chips, ‹ › to step by the window's length, Zoom out (×2) and Custom… (From and To days), then the page's own tools | — | Every control is a link, so each pushes history. Drag-to-zoom on fine pointers and "Reset zoom" stay. The future pad is 25% of the window, at most 12 h; Today ends at the next local midnight (D-UX-13) |
+| `RangeToolbar` | The page's range presets as nav chips, ‹ › to step by the window's length, Zoom out (×2) and Custom… (From and To days), then the page's own tools | — | Every control is a link, so each pushes history. Drag-to-zoom on fine pointers and "Reset zoom" stay. The future pad matches the window's length, at most 72 h, so Graphs opens on 72 h back and 72 h of forecast ahead; Today ends at the next local midnight (decisions 2026-11-05, replacing D-UX-13) |
 | `TimeSeries` | One metric over time with band ribbon and setting steps | API-04, API-06, API-12 | The setting drawer's Change history; the chart stack builds its panels from the same model (`buildTimeSeriesModel`) |
 | `EquipmentLanes` | What ran, when, how long | API-05: intervals seeded with the state before the window, equal repeated rows collapsed | Groups: Climate (fan1, fan2, vent, heat1, heat2); Water in L01–L11 order (drip_wall, drip_wall_fert, fert_master_valve, mister_center, drip_center, drip_center_fert, mister_south, mister_south_fert, mister_west, mister_west_fert, fog); Light (the Lutron readback `grow_light_main`, `grow_light_grow`; the intent is on the Equipment board); Flags (occupancy, leak_detected, water_flowing). Each row: current state, runtime and starts at right. Commanded state; sensed rows (the Lutron readback, `water_flowing`) are outlined. Unknown spans come from the API (controller not reporting, or no row) and are hatched, never drawn as off; rows idle all range fold into one line; "CSV of these lanes" |
 | `PlanLanes` | What is planned, the next 24 h by default | API-07 lanes only; schedule occurrences render in Water's schedule views (§4.6) | One row per planned setting; device value at the left edge; dashed segments labelled with the planned value; PLANNED and AI in the row header (a forecast rule's value reads "Forecast rule · system", never AI); MANUAL rows muted with "Iris skips"; waypoints the API marks not effective are muted and labelled SUPERSEDED under "YOUR VALUE 1.55 · Jason 08:00 · holds until Iris's next plan"; `rowEnd` takes the screen's lane link and pill |
@@ -486,7 +503,7 @@ detail §5.2 leaves open, or differ from it:
 | Lane layout | Rows are HTML at a fixed pitch: the label (the API's words, cut with an ellipsis and whole in `title`) and the right-hand text are text, and an x-only uPlot sits over the plot column and paints each row's band at the same pitch in a `draw` hook, so canvas and HTML rows line up and the reserved height is the rows' own. A spacer under the rows holds the time axis (36 px above 860 px, 28 px at and below) |
 | Equipment rows | Design order whatever order API-05 sends; a key the order does not list follows its group's own. A lane with no `label` reads its key, never a made-up name. `_intent` keys are dropped from the rows, the key and the table. The now line draws when the page passes now |
 | Equipment marks | ON fills the row's band; a sensed row's ON is a 1.5 px outline; unknown is 1 px `--muted` diagonals every 6 px, only where the API says unknown; off paints nothing. A wet line's run of pulses with one cause is named once, after the run, and an unknown span after it ("unknown 02:10–02:40", or "unknown" where only that fits); a label that would overlap a span or another label, or pass the next span, is dropped |
-| Equipment text | Each row ends with the state at the window's end, on time and starts ("off · 80 min · 1"; runtime alone at 860 px and below); a span already on when the window opens is no start. Idle rows fold into one "N idle rows" button (`aria-expanded`, `aria-controls`) at the end of the rows, and open below it. Inside a chart stack the lanes take the panels' plot area and draw no time axis; each row's name and facts ("off · 80 min on · 1 start") head its track on a 16 px line, and the fold is a button under the rows. The data table lists every span of every row: equipment, state, from, until, duration and a wet line's cause in words. A key under the lanes names each cause drawn, the hatch (unknown) and the outline (sensed) |
+| Equipment text | Each row ends with the state at the window's end, on time and starts ("off · 80 min · 1"; runtime alone at 860 px and below); a span already on when the window opens is no start. Idle rows fold into one "N idle rows" button (`aria-expanded`, `aria-controls`) at the end of the rows, and open below it. Inside a chart stack the lanes take the panels' plot area and draw no time axis; each row's name and facts ("off · 80 min on · 1 start") head its track on a 16 px line, and the fold is a button under the rows. The data table lists every span of every row: equipment, state, from, until, duration and a wet line's cause in words. A run fills in its line's own colour and its cause is written after it (#1354); a key under the lanes names the hatch (unknown) and the outline (sensed) |
 | Tooltips | A lane or bar tooltip shows only for the row under the pointer. A cursor moved by another chart on the sync key has no row there: that chart shows its own tooltip, and the lanes only move their cursor line |
 | Zoom | A drag on the lanes zooms them with every chart on the sync key. The lanes show their own "Reset zoom" while zoomed (`zoomControl`, default on), so a page with no panels (Equipment, Plan) is never left zoomed; a page whose panels offer one passes false |
 | Plan rows | Each row is a header line (label, then the header words: PLANNED · AI, Forecast rule · system, MANUAL · Iris skips · Jason since 10/30, or YOUR VALUE 1.55 · Jason 08:00 · holds until Iris's next plan; two lines at 860 px and below) over a 24 px strip, with the device value in words at the strip's left ("—" with the API's reason in its title, the tooltip and the table). YOUR VALUE prints the value at its unit's decimals without the unit, which the device value carries. A row with no waypoint drawn and no desired or manual value has no header words |

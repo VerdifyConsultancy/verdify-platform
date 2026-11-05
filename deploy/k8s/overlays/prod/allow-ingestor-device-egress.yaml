@@ -1,6 +1,7 @@
 # #1022: sole ESP32 writer; exact Shelly TCP/502 exception approved by Jason.
 # #1183 (VD-70): the YINMIK hydro meter's reserved address on Tuya local TCP/6668,
 # read-only status() polls. No UDP 6666/6667: the reader never listens for discovery.
+# #1370: HAOS 192.168.30.107 TCP 1883 again, for the Frigate occupancy subscriber (VD-48 had removed it).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -52,6 +53,10 @@ spec:
     ports:
     - protocol: TCP
       port: 8123
+    # #1370: the HAOS MQTT broker, read-only subscription to Frigate's greenhouse
+    # person count (verdify-mqtt login) so occupancy reaches the controller in seconds.
+    - protocol: TCP
+      port: 1883
   - to:
     - podSelector:
         matchLabels:
@@ -139,8 +144,6 @@ spec:
         matchLabels:
           app.kubernetes.io/component: outbound
     ports:
-    - protocol: TCP
-      port: 8082
     - protocol: TCP
       port: 8083
   - to:

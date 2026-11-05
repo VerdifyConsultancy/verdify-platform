@@ -23,7 +23,7 @@ export const CHART_TOKENS = [
   "--ink", "--muted", "--line", "--field", "--fault", "--warn-text", "--tint-warn", "--ink-muted", "--forest", "--amber",
   "--c-temp", "--c-vpd", "--c-rh", "--c-outdoor", "--c-band-wash", "--c-band-edge", "--c-setpoint", "--c-requested", "--c-bound", "--c-grid",
   "--eq-mister", "--eq-fog", "--eq-fan1", "--eq-fan2", "--eq-vent", "--eq-heat1", "--eq-heat2", "--eq-light-main", "--eq-light-grow",
-  "--eq-water", "--eq-fert", "--eq-master",
+  "--eq-water", "--eq-fert", "--eq-master", "--cause-vpd", "--cause-schedule", "--cause-prep",
 ] as const;
 
 /** The token values on `:root`, read when a chart is built, and the page's background behind every label's halo. */

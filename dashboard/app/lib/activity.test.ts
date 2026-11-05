@@ -88,12 +88,12 @@ test("irrigation rows: the action in words with its line, a run's length, the fi
   // A command's fields may sit in its `args`, as the run command stores them.
   expect(run({ command_id: "x", args: { minutes: 12 } })).toEqual(["12 min"]);
   expect(entryTitle(entry({ action: "irrigation.stop", target: "all" }), CATALOG)).toBe("Stopped every line");
-  expect(entryTitle(entry({ action: "irrigation.clear_fault", target: "L04" }), CATALOG)).toBe("Cleared the fault on L04");
+  expect(entryTitle(entry({ action: "irrigation.clear_fault", target: "L04" }), CATALOG)).toBe("Cleared the fault on Center mister");
   const update = entry({ action: "irrigation.line.update", target: "L02", detail: { before: { enabled: false, daily_cap_min: 0, paused_until: "2026-11-02T21:00:00Z" }, value: { enabled: true, daily_cap_min: 30, paused_until: null }, manual: { before: false, after: true } } });
   expect(plain(entryFacts(update, CATALOG))).toEqual(["Enabled off → on", "Daily cap 0 → 30 min", "resumed", "manual"]);
   // A row that carries only the request lists the fields it set; a schedule names its line.
-  expect(plain(entryFacts(entry({ action: "irrigation.schedule.update", target: "11", detail: { line_id: "L01", on_s: 900, days: ["mon"] } }), CATALOG))).toEqual(["L01", "On 900 s"]);
-  expect(entryFacts(entry({ action: "irrigation.schedule.delete", target: "11", detail: { line_id: "L01", before: { on_s: 720 } } }), CATALOG)).toEqual(["L01"]);
+  expect(plain(entryFacts(entry({ action: "irrigation.schedule.update", target: "11", detail: { line_id: "L01", on_s: 900, days: ["mon"] } }), CATALOG))).toEqual(["Wall drip", "On 900 s"]);
+  expect(entryFacts(entry({ action: "irrigation.schedule.delete", target: "11", detail: { line_id: "L01", before: { on_s: 720 } } }), CATALOG)).toEqual(["Wall drip"]);
   expect(entryTitle(entry({ action: "light.on", target: "grow_light_main" }), CATALOG)).toBe("Lights on Main lights");
   expect(entryTitle(entry({ action: "light.off", target: "grow_light_grow" }), CATALOG)).toBe("Lights off Grow lights");
   expect(entryTitle(entry({ action: "light.on", target: "grow_light_side" }), CATALOG)).toBe("Lights on grow_light_side");
@@ -149,8 +149,8 @@ test("one line an entry: a setting's change with its facts, an Iris plan collaps
   const forecast = { action: "plan.write", target: "preemptive-1", actor: { source: "system", name: "forecast-engine" } } as const;
   expect(line({ ...forecast, detail: { changes: [{ param: "mister_engage_kpa", before: 1.6, value: 1.5 }], rule: "hot afternoon" } })).toEqual({ text: "Forecast rule “hot afternoon” · VPD Mister Engage 1.60 → 1.50 kPa", changes: 0 });
   expect(line({ actor: { source: "system", name: "forecast-engine" }, detail: { before: 1.6, value: 1.65 } })).toEqual({ text: "Forecast rule · VPD Mister Engage 1.60 → 1.65 kPa", changes: 0 });
-  expect(line({ action: "irrigation.run", target: "L01", actor: { source: "system", name: "scheduler" }, detail: { minutes: 12, schedule_label: "Wall MWF" } })).toEqual({ text: "Schedule “Wall MWF” · Ran L01 · 12 min", changes: 0 });
-  expect(line({ action: "irrigation.run", target: "L01", detail: { minutes: 12 } })).toEqual({ text: "Ran L01 · 12 min", changes: 0 });
+  expect(line({ action: "irrigation.run", target: "L01", actor: { source: "system", name: "scheduler" }, detail: { minutes: 12, schedule_label: "Wall MWF" } })).toEqual({ text: "Schedule “Wall MWF” · Ran Wall drip · 12 min", changes: 0 });
+  expect(line({ action: "irrigation.run", target: "L01", detail: { minutes: 12 } })).toEqual({ text: "Ran Wall drip · 12 min", changes: 0 });
   expect([causeOf(entry({ actor: { source: "system", name: "seed" } })), causeOf(entry({}))]).toEqual(["seed", null]);
 });
 

@@ -248,9 +248,9 @@ about pre-change behavior.
 ### KPI: Planner Score (0-100)
 
 **Measurement contract 2:** inspect `scorecard_contract_version` and
-`metric_semantics`. Binary fields are legacy house-average scored reading
-fractions against historical desired setpoints, not duration-weighted fixed-panel
-crop outcomes or confirmed firmware consumption. Coverage is unverified and no
+`metric_semantics`. Binary fields are shares of 5-minute house-average buckets
+graded against the band the controller served (migration 290, #1358), not
+fixed-panel crop outcomes. Coverage is unverified and no
 center probe is measured. Earlier unversioned scorecards mislabeled graded credit
 as binary compliance. Keep physical exposure separate from controller credit.
 
@@ -309,13 +309,13 @@ Use the breakdown to understand resource shifts:
 - `compliance_v2_unachievable_frac` — modeled share of unachievable misses. When it is
   high, inspect the feasibility assumptions and physical exposure. Never widen the
   served envelope to improve credit, and do not automatically push actuators harder.
-- `compliance_pct` — contract-2 legacy binary house metric: % of scored readings where
-  **both** temp AND VPD are in historical desired bands. Kept as context and as the per-day fallback
+- `compliance_pct` — contract-2 legacy binary house metric: % of graded 5-minute buckets where
+  **both** temp AND VPD are in the served band. Kept as context and as the per-day fallback
   the reward uses only before the graded column was populated. Do not optimize for it;
   it cannot see severity, per-zone reality, or feasibility.
-- `temp_compliance_pct` — % of scored readings where temp alone is in the historical desired band (legacy,
+- `temp_compliance_pct` — % of graded 5-minute buckets where temp alone is in the served band (legacy,
   binary, diagnostic only).
-- `vpd_compliance_pct` — % of scored readings where VPD alone is in the historical desired band (legacy,
+- `vpd_compliance_pct` — % of graded 5-minute buckets where VPD alone is in the served band (legacy,
   binary, diagnostic only).
 
 **Graded compliance (decision #2).** Use graded severity to tell small edge misses

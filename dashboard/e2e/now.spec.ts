@@ -52,14 +52,15 @@ test("1440 × 900: the hero and the quick actions sit whole in the first screen,
   }
 });
 
-test("each band bar draws the band, the value and today's low–high; RH has no band; in band adds no verdict, out of band does", async ({ page, request }) => {
+test("each band bar draws one track, the band box and the value, with today's low–high in its name only; RH has no band; in band adds no verdict, out of band does", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/");
   for (const tile of ["temp", "vpd"]) {
     const bar = band(page, tile).locator("svg.bb");
     await expect(bar.locator(".bb-band")).toHaveCount(1);
     await expect(bar.locator(".bb-dot")).toHaveCount(1);
-    await expect(bar.locator(".bb-today")).toHaveCount(1);
+    await expect(bar.locator(".bb-track")).toHaveCount(1);
+    await expect(bar.locator(".bb-today")).toHaveCount(0);
     await expect(bar).toHaveAttribute("aria-label", /, today /);
   }
   await expect(band(page, "rh").locator(".bb-band")).toHaveCount(0);
@@ -68,7 +69,8 @@ test("each band bar draws the band, the value and today's low–high; RH has no 
   await expect(band(page, "temp").getByRole("link")).toHaveAttribute("href", "/graphs?range=24h#temperature");
   await useScreensClock(page, request, "too-hot");
   await load(page, "/");
-  await expect(answer(page)).toHaveText("Too hot: 84.1 °F (target 62–70 °F)");
+  await expect(answer(page)).toHaveText("Out of band");
+  await expect(page.locator(".now-condition [data-condition=temp]")).toHaveText("Too hot: 84.1 °F (band 62–70 °F)");
   await expect(band(page, "temp").locator(".now-off")).toHaveText("above band");
   await expect(band(page, "vpd").locator(".now-off")).toHaveCount(0);
 });
@@ -158,7 +160,7 @@ test("Stop all water with the irrigation firmware: one API-IRR-07 and no dialog,
   await untilPolled(page, () => expect(runningRows(page)).toHaveCount(0, { timeout: 500 }));
   await expect(page.locator("[data-running=none]")).toHaveText("Nothing running");
   await expect(toastLines(page)).toHaveText([STOPPED, CAN_STILL_START]);
-  await expect(page.getByRole("button", { name: "Disable L01" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Disable Wall drip", exact: true })).toBeVisible();
   expect((await fixtureWrites(request)).map((row) => row.operationId)).toEqual(["API-IRR-07"]);
 });
 
@@ -268,7 +270,7 @@ test("Running and next from 861 px: the track over the last 6 h and the next 12 
   expect(Math.round(plan!.height)).toBe(Math.round(iris!.height));
   // The phone's lists are there for a narrow screen, hidden here.
   await expect(coming.locator(".now-next")).toBeHidden();
-  await expect(coming.locator("[data-coming=later]")).toHaveText("Later No schedule: L01, L07, L09");
+  await expect(coming.locator("[data-coming=later]")).toHaveText("Later No schedule: Wall drip, South mister, West mister");
   expect((await fixtureRequests(request, "API-05")).length).toBeGreaterThan(0);
 });
 
@@ -281,7 +283,7 @@ test("Running and next on a phone: Running now and the Next 12 h list, with each
   await expect(coming.locator("[data-coming=plan]")).toHaveText(["13:00VPD Mister Engage 1.60 → 1.70 kPa AI", "13:00Mister Engage Delay 60.0 → 90.0 s · Forecast rule · system", "16:30Mister Pulse Gap 45.0 → 55.0 s AI"]);
   await expect(coming.locator("[data-coming=iris]")).toHaveText(["16:50Iris SUNSET trigger"]);
   await expect(coming.locator("[data-coming=sun]")).toHaveText(["16:58Sunset"]);
-  await expect(coming.locator("[data-coming=later]")).toContainText("L01 Wall drip paused until 14:00 by Jason: rain · next Wed 07:35");
+  await expect(coming.locator("[data-coming=later]")).toContainText("Wall drip paused until 14:00 by Jason: rain · next Wed 07:35");
   expect((await fixtureRequests(request, "API-07")).map((row) => row.path)).toEqual(["/v1/plan?hours=24"]);
   expect((await fixtureRequests(request, "API-IRR-02")).map((row) => row.path)).toEqual(["/v1/irrigation/schedules?days=7"]);
   // A phone never reads the track's six hours of equipment.
@@ -309,8 +311,8 @@ test("the zone strip: five tiles with a band bar and a 24 h sparkline named VPD,
   // Graphs → Zones' order, so a zone keeps its place from page to page.
   expect(await page.locator("#zones [data-zone]").evaluateAll((tiles) => tiles.map((tile) => tile.getAttribute("data-zone")))).toEqual(["north", "center", "south", "east", "west"]);
   // A zone on its own probe (MEASURED) is the quiet normal and shows no mark; center always reads the house.
-  await expect(page.locator("#zones [data-zone-tag]")).toHaveText(["HOUSE"]);
-  await expect(zoneTile(page, "center").locator("[data-zone-tag]")).toHaveText("HOUSE");
+  await expect(page.locator("#zones [data-zone-tag]")).toHaveText(["no probe · house average"]);
+  await expect(zoneTile(page, "center").locator("[data-zone-tag]")).toHaveAttribute("data-zone-tag", "HOUSE");
   for (const zone of ["north", "center", "south", "east", "west"]) {
     await expect(zoneTile(page, zone).locator(".now-zone-viz-label")).toHaveText("VPD");
     await expect(zoneTile(page, zone).locator(".now-zone-viz svg.bb")).toHaveCount(1);
@@ -323,10 +325,11 @@ test("the zone strip: five tiles with a band bar and a 24 h sparkline named VPD,
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("South zone");
 });
 
-test("south's tile reads PEER while its probe is out, amber, with the peers' value and no STALE", async ({ page, request }) => {
+test("south's tile says its probe is offline and shows the West + East average, amber, with the peers' value and no STALE", async ({ page, request }) => {
   await useScreensClock(page, request, "south-probe-out");
   await load(page, "/");
-  await expect(zoneTile(page, "south").locator("[data-zone-tag]")).toHaveText("PEER");
+  await expect(zoneTile(page, "south").locator("[data-zone-tag]")).toHaveText("probe offline · West + East average");
+  await expect(zoneTile(page, "south").locator("[data-zone-tag]")).toHaveAttribute("data-zone-tag", "PEER");
   await expect(zoneTile(page, "south").locator(".now-zone-tag-news")).toHaveCount(1);
   await expect(zoneTile(page, "south").locator("[data-tile=vpd]")).toHaveText(/^\d\.\d\d\skPa$/);
   await expect(zoneTile(page, "south").locator("[data-badge=stale]")).toHaveCount(0);

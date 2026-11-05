@@ -1,0 +1,106 @@
+{
+  "migration": "290-band-compliance.sql",
+  "exact_final_migration_sha256": "557d8d03a61a284e05e1b9bc26db7e3748898531ea7b80f0a6b4e458c922e6be",
+  "final_migration_qualification_pending": false,
+  "before": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projected_successor": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projection": "2026-11-05, read only, production at exact289 (max seq 289 with 289's sha; live seals equal 289's registration). All three seals are expected to stay 289's. fn_runtime_ordinary_boundary_digest (217) takes in a relation only if the api or ingestor login can reach it, one of their roles owns it, 217 protects it by name, or PUBLIC or one of their roles holds an ACL entry on it; a function only if it is SECURITY DEFINER or in 217's invoker helper closure and one of those logins can use its schema and execute it (or PUBLIC or one of their roles holds an ACL entry). fn_mcp_runtime_boundary_digest (263) does the same for PUBLIC and the MCP roles. daily_band_compliance has no ACL entry; fn_band_compliance_5m, _day and _store are SECURITY INVOKER, outside the closure and keep only verdify's EXECUTE (PUBLIC's is revoked); verdify_matview_refresh_runtime.fn_refresh_band_compliance is SECURITY DEFINER but only the matview-refresh duty holds EXECUTE and USAGE on its schema (no ordinary or MCP login does, read 2026-11-05); v_daily_scorecard keeps its only grant, the dashboard duty's SELECT. daily_summary, which the ingestor and MCP roles read, keeps its columns: 290 writes rows, not schema. If the probe shows any digest moved, stop: that is a finding, not a literal to update, because the file re-seals no receipt. Otherwise run scripts/qualify-migration-successor.py db/migrations/290-band-compliance.sql --native-fixture db/qualification/290-band-compliance-fixture.sql --fixture tests/fixtures/290-band-compliance-native-qualification.json on production (every session rolls back); no literal changes and the file's sha stays.",
+  "qualified_successor": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "after_rollback": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "measured_at": "2026-11-05T21:45:45Z",
+  "inside_transaction_receipts_match": true,
+  "final_migration_rollback_verified": true,
+  "native_probe_source_sha256": "e805682eb10900a2d1f647acc91877517ee462b229e5af31db92d65b9e5f8572",
+  "qualification_source_sha256": "d46439e0f9239fd337b364bd315f47111107c34eedbabe04b06f0dc90cd46ee6",
+  "native_fixture": {
+    "checks": [
+      "refresh_login_attests",
+      "refresh_runs",
+      "yesterday_graded",
+      "summary_copied",
+      "acceptance_week_in_range",
+      "day_night_split_complete",
+      "reasons_known",
+      "read_within_5_s",
+      "dashboard_login_attests",
+      "dashboard_login_reads_every_column"
+    ],
+    "refreshed_days": 33,
+    "refresh_ms": 9780,
+    "acceptance_week": [
+      [
+        "2026-10-29",
+        92.4,
+        37.8,
+        79.5,
+        5
+      ],
+      [
+        "2026-10-30",
+        97.9,
+        33.3,
+        74,
+        1.2
+      ],
+      [
+        "2026-10-31",
+        99.3,
+        28.1,
+        64.3,
+        0
+      ],
+      [
+        "2026-11-01",
+        98,
+        35.7,
+        74.6,
+        7.5
+      ],
+      [
+        "2026-11-02",
+        97.9,
+        61.8,
+        76.2,
+        50.6
+      ],
+      [
+        "2026-11-03",
+        98.6,
+        56.3,
+        88,
+        31.9
+      ],
+      [
+        "2026-11-04",
+        96.9,
+        47.2,
+        90.3,
+        14.6
+      ]
+    ],
+    "split_days": 30,
+    "read_ms": 56,
+    "all_passed": true,
+    "attested": {
+      "matview_refresh": true,
+      "dashboard": true
+    }
+  },
+  "native_fixture_sha256": "f15e3705d64dbbafac4b0e8b6ebe5e14fc6758717b6c7b7ecc0d07da33ca8069"
+}

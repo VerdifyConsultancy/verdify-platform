@@ -1716,12 +1716,14 @@ async def scorecard(target_date: str = "", include_realized_dryout: bool = False
 
     Inspect scorecard_contract_version and metric_semantics first. Only contract
     2 verifies that compliance_pct / temp_compliance_pct / vpd_compliance_pct are
-    BINARY fractions of scored house-average readings against historical desired
-    setpoints. Earlier versions mislabeled graded credit under those keys.
-    These fractions are not duration-weighted, fixed-panel crop outcomes or proof
-    of firmware-consumed targets. Coverage is unverified; no center probe is
-    measured. Binary stress hours assume one minute per scored reading and axes
-    can overlap; graded_*_stress_h are separate deficit-integral diagnostics.
+    BINARY time-in-band shares. Earlier versions mislabeled graded credit under
+    those keys. Since migration 290 (#1358) they grade each 5-minute house-average
+    bucket against the band the controller served (band_house_* audit rows; the
+    crop band where a row is missing); daily_band_compliance holds the minutes and
+    the day/night split. They are not fixed-panel crop outcomes. Coverage is
+    unverified; no center probe is measured. Binary stress hours are the minutes
+    below or above that band / 60 and axes can overlap; graded_*_stress_h are
+    separate deficit-integral diagnostics.
 
     compliance_v2_raw_pct, compliance_v2_attributable_pct, graded axis fields and
     compliance_v2_unachievable_frac describe the historical grading/feasibility
@@ -6382,7 +6384,7 @@ async def irrigation_run(
     already running). Whether water started shows on the line's relay in equipment_state within about 30 s, not here.
 
     Send exactly the fields of the line's kind. Drips L01, L05: minutes. Fertilizer drips L02, L06: minutes, prewet_s,
-    flush_s. Misters L04, L07, L09, with schedule_member on: on_s, count, gap_s. Fertilizer misters L08, L10: on_s,
+    flush_s. Misters L04, L07, L09, Schedule on or off: on_s, count, gap_s. Fertilizer misters L08, L10: on_s,
     count, gap_s, prewet_s, flush_s, never minutes; a rinse needs the clean partner enabled, or the controller ends the
     run skipped.
 
@@ -6394,7 +6396,8 @@ async def irrigation_run(
     replayed: true.
 
     Refusals are the Problem JSON with isError: line_busy and manifold_busy (retryable, retry_after_s when known),
-    cap_reached, line_disabled, line_paused, line_faulted, not_schedule_member, out_of_range (before the firmware, minutes
+    cap_reached, line_disabled, line_paused, line_faulted, not_schedule_member (a mister with Schedule off, only until
+    the controller runs the firmware that drops that rule), out_of_range (before the firmware, minutes
     is not irrig_wall_duration_min; min and max give it), invalid_request (a missing field or another kind's, such as
     minutes on L08), unknown_target (L03, L11), request_id_reused, forbidden, and unavailable (a line other than L01
     before the irrigation firmware, not retryable; the database, retryable with the same request_id)."""
@@ -6486,6 +6489,7 @@ async def irrigation_clear_fault(
 
 IrrigationCauseArgument = Literal["vpd", "schedule", "run_now", "feed", "prewet", "flush", "fallback", "unknown"]
 RunOutcomeArgument = Literal["ok", "short", "stopped", "preempted", "skipped", "missed", "cap", "unknown"]
+RunPurposeArgument = Literal["irrigation", "climate"]
 # The REST names of the window arguments: `from` is a Python keyword, so the tool says since and until.
 _HISTORY_WINDOW_FIELDS = {"from": "since", "to": "until"}
 
@@ -6610,6 +6614,13 @@ async def irrigation_history(
     cause: Annotated[IrrigationCauseArgument | None, Field(description="runs only: why water ran.")] = None,
     outcome: Annotated[RunOutcomeArgument | None, Field(description="runs only: how a run ended.")] = None,
     cursor: Annotated[str | None, Field(description="runs only: next_cursor of the page before.")] = None,
+    purpose: Annotated[
+        RunPurposeArgument | None,
+        Field(
+            description="irrigation (watering: schedule, run_now, feed, prewet, flush) or climate (VPD and fallback "
+            "misting, and fog); omit for both."
+        ),
+    ] = None,
 ):
     """Read watering history. REST twins: view minutes is API-IRR-10 (GET /v1/irrigation/minutes) and view runs is
     API-IRR-11 (GET /v1/irrigation/runs); the same JSON.
@@ -6617,10 +6628,14 @@ async def irrigation_history(
     It only reads and does not count as your plan for a trigger. since and until are the REST from and to.
 
     View minutes: minutes, pulses and whole gallons per local day (America/Denver), up to 400 days, by group_by and
-    always split by cause and chemistry. A day with coverage no_data has no rows: a gap, never 0.
+    always split by cause, purpose and chemistry. A day with coverage no_data has no rows: a gap, never 0.
 
-    View runs: the ended runs, newest first, up to 31 days, 50 to a page, filtered by line, cause and outcome; pass
-    next_cursor as cursor for the next page. The run in progress is in irrigation_status.
+    View runs: the ended runs, newest first, up to 31 days, 50 to a page, filtered by line, cause, outcome and
+    purpose; pass next_cursor as cursor for the next page. The run in progress is in irrigation_status.
+
+    Every row carries its purpose: irrigation (watering plants) or climate (VPD and fallback misting, and every fog
+    run), which outnumbers irrigation many times over. purpose keeps one of them in either view; omitted, both are
+    returned. "Did the plants get watered?" is purpose irrigation.
 
     Unknown values are null, never 0. Refusals return the Problem JSON with isError: window_too_large (a wider window;
     max gives the limit), invalid_request (a bad since, until or cursor, or an argument that does not belong to the
@@ -6638,7 +6653,7 @@ async def irrigation_history(
             first, last = _history_local_day("since", since), _history_local_day("until", until)
 
             async def read(conn, actor):
-                return await reads.minutes(conn, actor, first, last, group_by)
+                return await reads.minutes(conn, actor, first, last, group_by, purpose=purpose)
 
         else:
             if group_by != "zone":
@@ -6646,7 +6661,9 @@ async def irrigation_history(
             start, end = _history_moment("since", since), _history_moment("until", until)
 
             async def read(conn, actor):
-                return await reads.runs(conn, actor, start, end, line=line, cause=cause, outcome=outcome, cursor=cursor)
+                return await reads.runs(
+                    conn, actor, start, end, line=line, cause=cause, outcome=outcome, cursor=cursor, purpose=purpose
+                )
 
     except ServiceError as refused:
         return _tool_problem(refused.problem)

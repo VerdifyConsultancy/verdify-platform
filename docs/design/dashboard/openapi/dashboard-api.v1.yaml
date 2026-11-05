@@ -27,7 +27,7 @@ info:
 
     | Topic | Rule |
     |---|---|
-    | Ids | `operationId` is the design id: API-01 to API-21, API-IRR-01 to API-IRR-13, BFF-01 to BFF-03, INT-01, INT-02, OPS-01 and OPS-02. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
+    | Ids | `operationId` is the design id: API-01 to API-21, API-IRR-01 to API-IRR-13, BFF-01 to BFF-03, INT-01, INT-02, OPS-01, OPS-02 and OPS-04. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
     | Data | JSON. Times are ISO 8601 with an offset; days are America/Denver. Units are in field names or `unit` (°F, %, kPa, gal, min, s). `null` means unavailable, never 0; gaps stay gaps |
     | Roles | GET: `viewer` and `operator`. Every other method: `operator` (403 `forbidden`) |
     | Writes | Validated on submit (registry min/max, enums, step snap). The newest write wins. On a `manual: true` item the dispatcher ignores Iris's plan values (`set_plan` and `set_tunable` are unchanged) and Iris's `set_setting` and irrigation writes are refused with `manual`; people and other agents may overwrite it, attributed, and each write stores the `manual` it carries. Every write appends one `activity_log` row: source (`dashboard`, `iris`, `agent:<name>` or `system`), actor, time, reason, and the experiment id while one is armed. Nothing is refused because an experiment is armed |
@@ -47,7 +47,7 @@ tags:
   - {name: plan, description: 'Iris plan in force, lanes and planner health'}
   - {name: settings, description: 'Every registry setting, writes and history'}
   - {name: equipment, description: Equipment board}
-  - {name: alerts, description: 'In-app alerts (alert_log); Slack is unchanged'}
+  - {name: alerts, description: 'In-app alerts (alert_log); critical ones page through Alertmanager (OPS-04), never Slack (#1352)'}
   - {name: activity, description: 'activity_log: every write by people, Iris, agents and the system'}
   - {name: irrigation, description: 'Lines L01-L11, schedules, runs, minutes by zone and commands'}
   - {name: ops, description: Health and readiness}
@@ -380,7 +380,12 @@ paths:
       summary: Turn a grow light on or off through verdify-setpoint-server (Lutron)
       description: >-
         Calls verdify-setpoint-server POST /lights/{light}/{state} (12 s cap) and records one activity_log row:
-        light.on or light.off, target grow_light_main or grow_light_grow, detail {light, state, result}. 200 when
+        light.on or light.off, target grow_light_main or grow_light_grow, detail {light, state, result, minutes}. A
+        manual switch is timed like the Fans burst (#1335): minutes, 15 by default, from the row's ts; then the
+        operator API sends the controller's intent through verdify-setpoint-server, recording one more light.on or
+        light.off row (actor system light_timer, reason "Timer ended", detail.via timer), so the light is back on
+        automatic within about 15 s of the end. During the minutes the controller can still switch the light when its
+        own decision changes, which only brings automatic back early. 200 when
         setpoint-server saw Lutron reach the state. When Home Assistant or Lutron does not confirm: 503 unavailable,
         retryable, with result ha_failed, not_confirmed or timeout; the light may still switch late. The board's state
         comes only from API-13's Lutron readback. Back to automatic is API-10 on sw_gl_main_auto_mode or
@@ -397,7 +402,9 @@ paths:
           application/json:
             schema:
               type: object
-              properties: {reason: {type: string, maxLength: 500}}
+              properties:
+                reason: {type: string, maxLength: 500}
+                minutes: {type: integer, minimum: 1, maximum: 120, default: 15, description: 'How long the manual switch lasts before the light goes back to automatic'}
       responses:
         '200': {description: Lutron reached the state, content: {application/json: {schema: {$ref: '#/components/schemas/LightCommand'}}}}
         '422': {$ref: '#/components/responses/Invalid'}
@@ -574,6 +581,7 @@ paths:
         - {name: from, in: query, required: true, schema: {type: string, format: date}}
         - {name: to, in: query, required: true, description: Inclusive local day, schema: {type: string, format: date}}
         - {name: group_by, in: query, schema: {type: string, enum: [zone, line, cause], default: zone}}
+        - {name: purpose, in: query, description: 'Keep irrigation or climate rows only (#1348); omitted, both', schema: {$ref: '#/components/schemas/RunPurpose'}}
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/MinutesReport'}}}}
         default: {$ref: '#/components/responses/Problem'}
@@ -590,6 +598,7 @@ paths:
         - {name: outcome, in: query, schema: {$ref: '#/components/schemas/RunOutcome'}}
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
+        - {name: purpose, in: query, description: 'Keep irrigation or climate runs only (#1348); omitted, both', schema: {$ref: '#/components/schemas/RunPurpose'}}
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/RunPage'}}}}
         default: {$ref: '#/components/responses/Problem'}
@@ -757,6 +766,21 @@ paths:
       responses:
         '200': {description: Ready, content: {application/json: {schema: {$ref: '#/components/schemas/Readiness'}}}}
         '503': {description: Not ready, content: {application/json: {schema: {$ref: '#/components/schemas/Readiness'}}}}
+  /metrics:
+    x-served-by: operator-api
+    servers:
+      - {url: 'http://verdify-operator-api.verdify-prod.svc:8090', description: 'Operator API: Prometheus scrapes it (NetworkPolicy allow-operator-api-metrics-scrape)'}
+    get:
+      operationId: OPS-04
+      tags: [ops]
+      summary: Open-alert gauge for Alertmanager paging (#1352)
+      description: |
+        Prometheus text. `verdify_alert_open{severity, alert_type}` counts the merged alerts with status `open`, the
+        rows the Now count shows; Alertmanager pages the critical ones. `verdify_alert_metrics_up` is 0 when the read
+        failed. No alert text, session or token.
+      security: []
+      responses:
+        '200': {description: OK, content: {text/plain: {schema: {type: string}}}}
 
 components:
   securitySchemes:
@@ -1483,6 +1507,14 @@ components:
         unknown: no outcome reached the platform (it aged out of irr_events while the ingestor was disconnected); a
         gap, never missed, and it raises no alert. The controller never sends it
       enum: [ok, short, stopped, preempted, skipped, missed, cap, unknown]
+    RunPurpose:
+      type: string
+      description: >-
+        What water was for (#1348). irrigation: schedule, run_now, feed, prewet, flush (and unknown) on drips or
+        misters. climate: VPD and fallback misting, and every fog (L11) run. SAF-4 and the zone caps count both. The
+        server always sends it; the fields stay optional in the contract so a client reads a server from before #1348
+        by the same rule
+      enum: [irrigation, climate]
     UsedOfMax:
       type: object
       required: [used, max]
@@ -1529,7 +1561,7 @@ components:
       required: [line_id, name, zone, kind, reserved, enabled, check, daily_cap_min, paused_until, manual, state, sync]
       properties:
         line_id: {$ref: '#/components/schemas/LineId'}
-        name: {type: string, examples: [Drip • Wall]}
+        name: {type: string, description: 'The line''s display name, the words a person reads (#1341); line_id stays the machine key', examples: [Wall drip]}
         zone: {type: string, enum: [wall, center, south, west, supply, house], description: 'The line''s place: supply for L03, house for L11. Minutes by zone use fog for L11 and leave L03 out'}
         kind: {type: string, enum: [drip, mister, fert_drip, fert_mister, master, fog]}
         clean_partner: {type: [string, 'null'], pattern: '^L(0[1-9]|1[01])$'}
@@ -1564,10 +1596,13 @@ components:
         state: {$ref: '#/components/schemas/LineState'}
         today:
           type: object
+          description: Every purpose (the cap counts all of it); climate_minutes and climate_pulses are the VPD and fallback misting inside it
           properties:
             minutes: {type: [number, 'null']}
             pulses: {type: [integer, 'null']}
             gal: {type: [integer, 'null'], description: Whole gallons}
+            climate_minutes: {type: [number, 'null']}
+            climate_pulses: {type: [integer, 'null']}
         next_run: {anyOf: [{$ref: '#/components/schemas/NextRun'}, {type: 'null'}]}
         last_water:
           description: >-
@@ -1582,6 +1617,7 @@ components:
                 open_s: {type: integer}
                 pulses: {type: [integer, 'null']}
                 cause: {$ref: '#/components/schemas/IrrigationCause'}
+                purpose: {$ref: '#/components/schemas/RunPurpose'}
         last_outcome:
           anyOf:
             - type: 'null'
@@ -1640,6 +1676,14 @@ components:
           properties:
             date: {type: string, format: date}
             zones: {type: object, additionalProperties: {type: [number, 'null']}}
+            climate_zones: {type: object, additionalProperties: {type: [number, 'null']}, description: 'The VPD and fallback misting inside each zone''s minutes (#1348), with the same nulls; fog is all climate'}
+            climate:
+              type: object
+              description: 'The site''s mist and fog today (#1348): VPD and fallback misting plus fog; null on a day with no data'
+              properties:
+                minutes: {type: [number, 'null']}
+                pulses: {type: [integer, 'null']}
+                gal: {type: [integer, 'null'], description: Whole gallons}
         limits:
           type: object
           description: Per-line duty and drip caps are on each line (today.minutes against daily_cap_min)
@@ -1794,6 +1838,7 @@ components:
         from: {type: string, format: date}
         to: {type: string, format: date}
         group_by: {type: string, enum: [zone, line, cause]}
+        purpose: {anyOf: [{$ref: '#/components/schemas/RunPurpose'}, {type: 'null'}], description: The purpose filter applied; null for both}
         periods:
           type: array
           items:
@@ -1804,7 +1849,7 @@ components:
               coverage: {type: string, enum: [complete, partial, no_data], description: Today and outage days are partial}
         rows:
           type: array
-          description: Always split by cause and chemistry so charts can stack
+          description: Always split by cause, purpose and chemistry so charts can stack
           items:
             type: object
             required: [period, group, cause, chemistry, minutes]
@@ -1812,6 +1857,7 @@ components:
               period: {type: string, format: date}
               group: {type: string, description: 'Zone (wall, center, south, west, and fog for L11''s humidification), line id or cause. L03''s supply minutes appear only by line or cause, never in zone totals'}
               cause: {$ref: '#/components/schemas/IrrigationCause'}
+              purpose: {$ref: '#/components/schemas/RunPurpose'}
               chemistry: {type: string, enum: [clean, fert]}
               minutes: {type: number}
               pulses: {type: [integer, 'null']}
@@ -1835,6 +1881,7 @@ components:
               meter_gal: {type: [integer, 'null'], description: 'The site meter''s day total (main_pulse)'}
               by_line: {type: [object, 'null'], additionalProperties: {type: integer}, description: 'Verdify-valve gallons by line id'}
               by_cause: {type: [object, 'null'], additionalProperties: {type: integer}, description: Verdify-valve gallons by IrrigationCause}
+              by_purpose: {type: [object, 'null'], additionalProperties: {type: integer}, description: 'Verdify-valve gallons by RunPurpose (#1348): irrigation and climate'}
               no_valve_gal: {type: [integer, 'null'], description: 'Meter water while no Verdify valve was open: the hose, sink, hydro or a leak'}
     Run:
       type: object
@@ -1848,6 +1895,7 @@ components:
         zone: {type: string}
         chemistry: {type: string, enum: [clean, fert]}
         cause: {$ref: '#/components/schemas/IrrigationCause'}
+        purpose: {$ref: '#/components/schemas/RunPurpose'}
         slot_id: {type: [integer, 'null']}
         schedule_label: {type: [string, 'null']}
         command_id: {type: [string, 'null'], format: uuid, description: The run-now command that started it}

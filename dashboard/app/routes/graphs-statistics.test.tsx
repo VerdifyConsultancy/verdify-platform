@@ -70,7 +70,7 @@ test("chunks: at most 8 keys per request; the route links the chart styles and t
 test("the last 30 days: the daily keys 8 at a time for the window and the one before, each day's climate range, the typical day's hourly buckets and the last day's band", async () => {
   const api = await open();
   expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Statistics");
-  expect(text(document.querySelector(".page-status"))).toBe("Last 30 days · whole-day time in band; the day and night split covers the last 3 days only");
+  expect(text(document.querySelector(".page-status"))).toBe("Last 30 days · time in band graded against the band the controller served");
   expect(asked(api)).toEqual([
     { metric: DAILY_KEYS.slice(0, 8), from: "2026-10-04T06:00:00.000Z", to: "2026-11-03T07:00:00.000Z", points: "31" },
     { metric: DAILY_KEYS.slice(8), from: "2026-10-04T06:00:00.000Z", to: "2026-11-03T07:00:00.000Z", points: "31" },

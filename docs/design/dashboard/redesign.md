@@ -47,7 +47,7 @@ its row; [decisions](decisions.md) wins if it says otherwise.
 | D-UX-10 | Five navigation icons (inline SVG) on the phone bar, and no other icon set. | design system §1 "icon set: Later" |
 | D-UX-11 | No header "Water running · Stop" pill. VPD misting and fog cycle every few minutes, so it would flicker, and Stop all water is one tap away on Now and Water. | The research suggestion, rejected |
 | D-UX-12 | No drag editing on the schedule timeline. A click on an empty slot prefills the editor. | — |
-| D-UX-13 | The future pad on Graphs is 25% of the window, at most 12 h. Today runs to the next local midnight. | `lib/graph-url.ts:27,267` |
+| D-UX-13 | Superseded 2026-11-05 ([decisions](decisions.md)): the future pad matches the window's length, at most 72 h, and Graphs opens on 72 h back and 72 h ahead. Was: 25% of the window, at most 12 h. Today runs to the next local midnight. | `lib/graph-url.ts:27,267` |
 
 ## 1. Design principles
 
@@ -459,7 +459,7 @@ attribute. Each is `aria-hidden` when the same numbers sit beside it as text; ot
 
 | Primitive | Anatomy and tokens |
 |---|---|
-| `BandBar` | **On white:** a 2 px `--line-strong` track; the band as an 8 px `--c-band-wash` bar with 1 px `--c-band-edge` ends; today's low–high as a 2 px `--muted` rule above the track; the value as a 10 px `--ink` dot with a white ring. **On the hero:** a 2 px `--ink-muted` track; the band as an 8 px `--c-band-edge` bar (5.3:1 on ink); low–high in `--ink-muted`; the value as a 12 px `--mint` dot with a 2 px `--ink` ring. **Scale:** the band plus half its width each side, widened to include today's low and high and the value. A value off scale clamps to the edge with an arrowhead. Unknown means no dot and a hatched track. RH has no band: its bar shows the scale, today's low–high and the value, with no band segment |
+| `BandBar` | One track, the band as a box on it, and the value as a dot; nothing else is drawn (Jason 2026-11-05, #1337: today's low–high is in the bar's accessible name and in "All readings", not drawn). **On white:** a 2 px `--line-strong` track; the band as a 10 px `--c-band-wash` box with 1 px `--c-band-edge` ends; the value as a 10 px `--ink` dot with a white ring. **On the hero:** a 2 px `--ink-muted` track at 45% opacity; the band as a 12 px `--c-band-edge` box (5.3:1 on ink) with 1.5 px `--mint` ends; the value as a 12 px `--mint` dot with a 2 px `--ink` ring. **Scale:** the band plus one band width each side, fixed, so the box keeps its place and width and only the dot moves. A value off scale clamps to the edge with an arrowhead. Unknown means no dot and a hatched track. RH has no band: its bar reads on 0–100% with the value and no band box |
 | `Meter` | A 6 px `--field` track with a 1 px `--line` edge. The fill uses the domain token: `--eq-water` for drip minutes and gallons, `--eq-mister` for mist minutes, `--eq-fert` for feeds, `--muted` for anything else. Planned-remaining minutes are a dashed outline in the same token; the cap is a 2 px `--ink` tick. At or over cap, the tick turns `--fault`, the fill stops at 100% and the words read "cap reached" or "+12 min over" |
 | `Sparkline` | Line: 1.5 px in the metric token (`--c-temp`, `--c-vpd`, `--c-rh`) over a `--c-band-wash` band when known; gaps break; the last point is a 3 px dot. Bars: 2–4 px bars in the domain token or `--muted`. 28 px tall in tiles, 20 px in rows |
 | `Delta` | "▲ 1.3 pts vs previous 30 d" in ink. The arrow and the words carry direction; never green or red |
@@ -480,7 +480,7 @@ changes. The data hooks named under "Hooks kept" survive the rebuild. Specs move
 | Above the fold | **360 × 740:** the answer, the hero temperature, "Updated N s ago", the three band bars, the status line and (operators) Stop all water. **1440 × 900:** the hero, quick actions, Needs someone and Water today |
 | Moves in | Bursts (from Equipment, D-UX-05); occupancy (into the status line); plan transitions and next runs (into "Running and next") |
 | Removed | The eight hero tiles: VPD and RH become band bars; Mode, Iris, Outdoor and Data become the status line; Water and Alerts were duplicates. The separate Running and Coming up panels are merged. The repeated counts and "next run" lines go |
-| New | Today's low–high on each band bar; time in band today against yesterday (from API-04 `daily.temp_in_band_pct` and `daily.vpd_in_band_pct`, read with the three climate keys' min and max over today in one 60 s read, or two if the API keeps daily keys apart); quick actions; the "Running and next" track (API-05 for the last 6 h, API-IRR-02 and API-07 for the next 12 h, solar from API-IRR-02); a band bar and 24 h VPD sparkline per zone; mister faults and the "N settings not confirmed" link in Needs someone |
+| New | Time in band today against yesterday (from API-04 `daily.temp_in_band_pct` and `daily.vpd_in_band_pct`, read with the three climate keys' min and max over today in one 60 s read, or two if the API keeps daily keys apart); quick actions; the "Running and next" track (API-05 for the last 6 h, API-IRR-02 and API-07 for the next 12 h, solar from API-IRR-02); a band bar and 24 h VPD sparkline per zone; mister faults and the "N settings not confirmed" link in Needs someone |
 | Hooks kept | `.hero-temp`, `#data`, `[data-tile=vpd\|rh\|mode\|iris\|outdoor\|data]` (on the band bars and status chips), `[data-chip]` (running, burst, occupancy), `.now-water`, `[data-water]`, `#needs-someone`, `.panel-empty`, `#coming-up` with `[data-coming]` (on "Running and next"), `#zones [data-zone]`, `[data-zone-tag]` |
 
 ```text
@@ -1237,8 +1237,9 @@ tooltips (`charts/tooltip.ts:22-33`). Lanes keep their own tooltip, for the hove
 - Zoom out (×2, centred);
 - Custom… (From and To days).
 
-Drag-to-zoom on fine pointers and "Reset zoom" stay. The future pad is 25% of the window, at most 12 h; Today ends at
-the next midnight (D-UX-13, in `lib/graph-url.ts`).
+Drag-to-zoom on fine pointers and "Reset zoom" stay. The future pad matches the window's length, at most 72 h, so the
+default 72 h opens with 72 h of forecast ahead; Today ends at the next midnight (decisions 2026-11-05, replacing D-UX-13;
+in `charts/range-toolbar.tsx` and `lib/graph-url.ts`).
 
 **Band.** The ribbon (`--c-band-wash` with `--c-band-edge` edges) stays. New: **excursion shading**. Wherever the
 measured series leaves the band, the area between the line and the nearest band edge fills with `--tint-warn`, and
@@ -1603,8 +1604,8 @@ mechanical update.
    - At 360 × 740 under `in-band`: the h1 "All OK", `.hero-temp`, "Updated 20 s ago" and the three band bars sit
      above the bottom bar.
    - At 390 × 844, Stop all water does too.
-2. **Band bars.** Each draws the band, the value and today's low–high. Out of band shows a verdict word; in band shows
-   none. RH reads "no band". With the API down, the bars and "In band today" do not render.
+2. **Band bars.** Each draws one track, the band box and the value; today's low–high is in its name only. Out of band
+   shows a verdict word; in band shows none. RH reads "no band". With the API down, the bars and "In band today" do not render.
 3. **Quick actions.**
    - Operators get Stop all water and the three burst buttons, which send one API-IRR-12 each.
    - Viewers get no quick actions row.
@@ -1874,8 +1875,8 @@ pin PR is live.
 **Now**
 
 - [ ] On the phone, without scrolling: the answer, the temperature, "Updated … ago", three band bars and Stop all water.
-- [ ] Each band bar shows the band, today's low and high, and the current value. Out of band adds a word; in band
-  adds nothing.
+- [ ] Each band bar shows one track, the band box and the current value (today's low and high in its name only). Out
+  of band adds a word; in band adds nothing.
 - [ ] "In band today" shows temperature and VPD with yesterday's beside them.
 - [ ] As an operator I can start Fans 15 min from Now. As a viewer I see no quick actions.
 - [ ] The alert count appears once in the page body. The next run appears only in "Running and next".

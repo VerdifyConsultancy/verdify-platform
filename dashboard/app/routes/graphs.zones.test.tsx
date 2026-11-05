@@ -84,7 +84,7 @@ test("/graphs/zones?range=72h: a grid of every zone, temperature and VPD rows on
   expect([...document.querySelectorAll(".grid-row[data-row=temp] [data-zone]")].map((cell) => cell.getAttribute("data-zone"))).toEqual(["north", "center", "south", "east", "west"]);
   for (const plot of plots()) {
     expect(plot.opts.cursor!.sync!.key).toBe("verdify:graphs-zones:72h");
-    expect(plot.scales.x).toEqual({ min: S - 72 * HOUR, max: S + 12 * HOUR });
+    expect(plot.scales.x).toEqual({ min: S - 72 * HOUR, max: S + 72 * HOUR });
     expect(plot.opts.plugins ?? []).toEqual([]);
   }
   // One y range per row, the same in every cell; the y axis on the first column, the time axis on the bottom row.
@@ -144,12 +144,12 @@ test("?zone=south&range=72h: south's own stack, its band and its target dotted a
     [["climate.temp_south"], iso(S - 72 * HOUR), iso(S)], [["climate.vpd_south", "climate.vpd_target_south"], iso(S - 72 * HOUR), iso(S)], [["climate.rh_south"], iso(S - 72 * HOUR), iso(S)],
   ]);
   const band = requests(api, "API-06").map((row) => query(row.path));
-  expect(band.map((params) => [params.get("zone"), params.get("from"), params.get("to")])).toEqual([["south", iso(S - 72 * HOUR), iso(S + 12 * HOUR)]]);
+  expect(band.map((params) => [params.get("zone"), params.get("from"), params.get("to")])).toEqual([["south", iso(S - 72 * HOUR), iso(S + 72 * HOUR)]]);
   expect([...document.querySelectorAll(".chart-stack [data-panel]")].map((panel) => panel.getAttribute("data-panel"))).toEqual(["temperature", "vpd", "rh"]);
   const [temp, vpd, rh] = plots();
   for (const plot of plots()) {
     expect(plot.opts.cursor!.sync!.key).toBe("verdify:graphs-zones:72h");
-    expect(plot.scales.x).toEqual({ min: S - 72 * HOUR, max: S + 12 * HOUR });
+    expect(plot.scales.x).toEqual({ min: S - 72 * HOUR, max: S + 72 * HOUR });
     expect(plot.opts.series.slice(1).every((series) => series.spanGaps === false)).toBe(true);
   }
   expect(vpd.opts.series.slice(1).map((series) => [series.label, series.stroke, series.dash ?? null])).toEqual([["South VPD", TOKENS["--c-vpd"], null], ["South VPD target", TOKENS["--c-setpoint"], [2, 4]]]);
@@ -177,7 +177,7 @@ test("north has no zone band: the house band and the house target; center has no
   const north = await open("/graphs/zones?zone=north");
   expect(requests(north, "API-06").map((row) => query(row.path).get("zone"))).toEqual(["house"]);
   expect(chartReads(north).map((params) => params.getAll("metric"))).toEqual([["climate.temp_north"], ["climate.vpd_north", "climate.house_vpd_target"], ["climate.rh_north"]]);
-  expect(status()).toBe("Last 24 h · against the house band (north has none of its own), the controller's target dotted");
+  expect(status()).toBe("Last 72 h · against the house band (north has none of its own), the controller's target dotted");
   expect(plots()[1].opts.series.slice(1).map((series) => [series.label, series.dash ?? null])).toEqual([["North VPD", null], ["House VPD target", [2, 4]]]);
   cleanup(); stopFixtureApi(); MockPlot.reset(); chartStubs();
   const center = await open("/graphs/zones?zone=center&range=24h");

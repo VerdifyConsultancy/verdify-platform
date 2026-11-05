@@ -80,7 +80,8 @@ test("each fact once: the open-alert count in the answer or Needs someone's head
   cleanup();
   stopFixtureApi();
   await open(["alerts-merged", "too-hot"]);
-  expect(answer()).toBe("Too hot: 84.1 °F (target 62–70 °F)");
+  expect(answer()).toBe("Out of band");
+  expect(plain(text(document.querySelector(".now-condition [data-condition=temp]")))).toBe("Too hot: 84.1 °F (band 62–70 °F)");
   expect(text(within(document.querySelector<HTMLElement>("#needs-someone")!).getByRole("heading", { level: 2 }))).toBe("Needs someone · 2");
   cleanup();
   stopFixtureApi();
@@ -161,7 +162,7 @@ test("Stop all water with the irrigation firmware: one API-IRR-07 request, the r
   expect(chips()).toEqual([]);
   expect(running()).toContain("Nothing running");
   expect(toasts("status")).toEqual(["Stopped every running valve. VPD misting, fog and the next scheduled run can still start on their own; to keep a line off, disable it."]);
-  expect(screen.getByRole("button", { name: "Disable L01" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Disable Wall drip" })).toBeTruthy();
   // Back to 15 s once the Stop has its answer.
   const before = sentAt("API-IRR-01").length;
   await advance(10_000);
@@ -220,7 +221,7 @@ test("a latched mister in Needs someone: Clear fault on its alert's row sends on
   const api = await open("mister-fault");
   const row = document.querySelector<HTMLElement>("#needs-someone li[data-severity]")!;
   expect(text(row.querySelector("h3"))).toBe("A mister zone faulted");
-  fireEvent.click(within(row).getByRole("button", { name: "Clear fault on L04" }));
+  fireEvent.click(within(row).getByRole("button", { name: "Clear fault on Center mister" }));
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ method: "POST", operationId: "API-IRR-13", body: { line_id: "L04" } })]);
   await advance(5000);
@@ -270,10 +271,11 @@ test("a missed SUNSET turns the Iris phrase amber; Acknowledge sends one API-15 
   expect(text(document.querySelector("#needs-someone"))).toContain("Acknowledged by Jason · 10:42");
 });
 
-test("the answer links to what explains it; the ingestor banner's #data opens All readings in place", async () => {
+test("the answer is never a link: a quiet link under it goes to what explains it; the ingestor banner's #data opens All readings in place", async () => {
   await open("flow-valves-closed");
   expect(answer()).toBe("Water flowing with every Verdify valve closed");
-  expect(screen.getByRole("link", { name: "Water flowing with every Verdify valve closed" }).getAttribute("href")).toBe("/activity?alert=201");
+  expect(screen.getByRole("heading", { level: 1 }).querySelector("a")).toBeNull();
+  expect(document.querySelector(".now-condition a")?.getAttribute("href")).toBe("/activity?alert=201");
   expect(plain(text(document.querySelector("[data-water=flow]")))).toBe("Water flowing with every Verdify valve closed since 10:38 · 3 gal in 10 min");
   cleanup();
   stopFixtureApi();
@@ -306,13 +308,16 @@ test("the order: hero, quick actions, Needs someone beside Water today, then Run
   for (let index = 1; index < ids.length; index++) expect(ids[index - 1].compareDocumentPosition(ids[index]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(document.querySelectorAll("#zones [data-zone]")).toHaveLength(5);
   // Now is in the shell, so the signed-in person reads by display name.
-  expect(plain(text(document.querySelector("[data-coming=later]")))).toContain("L01 Wall drip paused until 14:00 by Jason: rain · next Wed 07:35");
+  expect(plain(text(document.querySelector("[data-coming=later]")))).toContain("Wall drip paused until 14:00 by Jason: rain · next Wed 07:35");
 });
 
-test("south's tile reads PEER while its probe is out, and opens its charts", async () => {
+test("south's tile says in words that its probe is offline and it shows the West + East average, and opens its charts", async () => {
   await open("south-probe-out");
   await settled();
   const south = document.querySelector<HTMLElement>("#zones [data-zone=south]")!;
-  expect(south.querySelector("[data-zone-tag]")?.textContent).toBe("PEER");
+  expect(south.querySelector("[data-zone-tag]")?.getAttribute("data-zone-tag")).toBe("PEER");
+  expect(south.querySelector("[data-zone-tag]")?.textContent).toBe("probe offline · West + East average");
+  // No bare provenance code anywhere on Now.
+  expect(main()).not.toMatch(/\bPEER\b/);
   expect(within(south).getByRole("link").getAttribute("href")).toBe("/graphs/zones?zone=south");
 });

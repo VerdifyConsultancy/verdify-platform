@@ -38,6 +38,8 @@ def test_writer_has_one_policy_and_exact_greenhouse_exceptions(rendered):
     assert allowed(p, "10.43.0.1", 443)
     assert allowed(p, "192.168.30.31", 6443)
     assert allowed(p, "192.168.30.107", 8123)
+    # #1370: the Frigate occupancy subscriber reads the HAOS broker again.
+    assert allowed(p, "192.168.30.107", 1883)
     assert allowed(p, "10.42.1.2", 1883, pod_labels={"app.kubernetes.io/component": "mqtt-broker"})
     assert allowed(p, HYDRO_METER, 6668)
 
@@ -91,8 +93,8 @@ def test_hydro_meter_admits_nothing_beyond_tuya_tcp(rendered, address, port, pro
         ("1.1.1.1", 443),
         ("10.43.0.1", 6443),
         ("192.168.30.31", 443),
-        # VD-48: the writer no longer reaches the Home Assistant (HAOS) MQTT broker.
-        ("192.168.30.107", 1883),
+        ("192.168.30.107", 22),
+        ("192.168.30.107", 8883),
     ],
 )
 def test_writer_other_vlan_hosts_ports_nas_and_direct_internet_denied(rendered, address, port):
@@ -110,14 +112,14 @@ def test_relay_has_fixed_tls_destinations_and_never_logs_credentials(rendered):
     assert "access_log off;" in conf and "error_log /dev/stderr crit;" in conf
     for host, path in [
         ("api.openai.com", "/v1/embeddings"),
-        ("slack.com", "/api/chat.postMessage"),
         ("api.open-meteo.com", "/v1/forecast"),
     ]:
         assert f"proxy_ssl_name {host};" in conf
         assert f"set $fixed_host {host};" in conf
         assert f"location = {path}" in conf
     assert "$http_host" not in conf and "$arg_" not in conf
-    assert conf.count("location / { return 404; }") == 4
+    assert conf.count("location / { return 404; }") == 3
+    assert "slack.com" not in conf and "listen 8082" not in conf  # #1352: no Slack destination
     relay = policy(rendered, "verdify-outbound-boundary")
     assert not allowed(relay, "192.168.30.126", 443)
     assert not allowed(relay, "169.254.169.254", 443)

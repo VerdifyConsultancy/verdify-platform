@@ -680,27 +680,51 @@ def sealed_sql_289():
     )
 
 
+BAND_COMPLIANCE_MIGRATION = (
+    290,
+    "290-band-compliance.sql",
+    "557d8d03a61a284e05e1b9bc26db7e3748898531ea7b80f0a6b4e458c922e6be",
+)
+# daily_band_compliance, its functions and the scorecard view are verdify's; the one EXECUTE goes to the
+# matview-refresh duty in its own schema, which neither ordinary login nor an MCP role can use. All three
+# seals stay 289's. The rolled-back native qualification measures them.
+SUCCESSOR_290 = SUCCESSOR_289
+
+
+def sealed_sql_290():
+    # Keep every 289 predicate and bind the exact 290 runner stamp.
+    predecessor = sealed_sql_289()
+    current = seal_profile_sql(289, SUCCESSOR_289)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(290, SUCCESSOR_290), 1)
+        + " AND "
+        + ledger_row_sql(*BAND_COMPLIANCE_MIGRATION)
+        + ")"
+    )
+
+
 ENERGY_DAILY_MIGRATION = (
     291,
     "291-energy-daily-load-magnitude.sql",
-    "73fcdd3ee93e060286a8b2cc9e31feb8025db599711b0bdba5a3a391fd452594",
+    "afd21ce741451d2530f78e94fb82bf1f7a3159476350cd6eb527a1543ae664ae",
 )
 # v_energy_daily's new text and two appended columns are in its relation entry, which both ordinary
 # digests take in, so the api and ingestor seals move; no MCP role or PUBLIC holds an entry on the view,
-# so the MCP seal stays 289's. These are a read-only projection on production at exact289 until the
-# rolled-back native qualification measures them (after 290 merges and 291 re-chains from it).
+# so the MCP seal stays 290's. The rolled-back native qualification measures them.
 SUCCESSOR_291 = {
     "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
     "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
-    "mcp": SUCCESSOR_289["mcp"],
+    "mcp": SUCCESSOR_290["mcp"],
 }
 
 
 def sealed_sql_291():
-    # Keep every 289 predicate and bind the exact 291 runner stamp with the two
+    # Keep every 290 predicate and bind the exact 291 runner stamp with the two
     # ordinary seals the view replacement moves.
-    predecessor = sealed_sql_289()
-    current = seal_profile_sql(289, SUCCESSOR_289)
+    predecessor = sealed_sql_290()
+    current = seal_profile_sql(290, SUCCESSOR_290)
     assert predecessor.count(current) == 1
     return (
         "("
@@ -745,6 +769,8 @@ def sealed_sql():
         + sealed_sql_288()
         + " OR "
         + sealed_sql_289()
+        + " OR "
+        + sealed_sql_290()
         + " OR "
         + sealed_sql_291()
         + ")"

@@ -22,9 +22,9 @@ def scorecard_context(scorecard: dict[str, Any]) -> dict[str, str | float | int 
     result: dict[str, str | float | int | bool] = {
         "binary_fields_verified": verified,
         "measurement_basis": (
-            "Legacy house-average scored reading fractions against historical desired "
-            "setpoints; not duration-weighted, fixed-panel crop outcomes or confirmed "
-            "firmware consumption. Coverage unverified; no measured center probe."
+            "Shares of 5-minute house-average buckets graded against the band the "
+            "controller served (migration 290); not fixed-panel crop outcomes. "
+            "Coverage unverified; no measured center probe."
         ),
         "score_basis": (
             "planner_score and compliance_v2_* are historical graded controller credit, "

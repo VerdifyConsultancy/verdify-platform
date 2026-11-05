@@ -14,8 +14,8 @@ afterEach(cleanup);
 function mount() {
   return renderUi(<div>
     <p>Outside</p>
-    <Menu name="More for L01 Wall drip">
-      <a href="/activity/log?target=L01">Activity for L01</a>
+    <Menu name="More for Wall drip">
+      <a href="/activity/log?target=L01">Activity for Wall drip</a>
       <button type="button">Options…</button>
       <button type="button" data-menu-keep="">Enabled</button>
     </Menu>
@@ -29,7 +29,7 @@ test("a ⋯ button named in words over a panel of links and buttons; a disclosur
   const { container } = mount();
   expect(details().className).toBe("menu menu-dots");
   // Named in words inside the button; the ⋯ is decoration.
-  expect(summary().querySelector(".screen-reader")?.textContent).toBe("More for L01 Wall drip");
+  expect(summary().querySelector(".screen-reader")?.textContent).toBe("More for Wall drip");
   expect(summary().querySelector("[aria-hidden=true]")?.className).toBe("glyph glyph-more");
   expect(summary().hasAttribute("aria-label")).toBe(false);
   expect(container.querySelector("[role=menu], [role=menuitem]")).toBeNull();
@@ -64,7 +64,7 @@ test("choosing an item closes it, unless the item keeps it open (a switch that t
   fireEvent.click(screen.getByRole("button", { name: "Options…" }));
   expect(details().open).toBe(false);
   openIt();
-  fireEvent.click(screen.getByRole("link", { name: "Activity for L01" }));
+  fireEvent.click(screen.getByRole("link", { name: "Activity for Wall drip" }));
   expect(details().open).toBe(false);
 });
 
@@ -81,7 +81,7 @@ function WithDrawer() {
   const ref = useRef<HTMLDialogElement>(null);
   const { onKeyDown, onCancel } = useModalDialog(ref, open, () => setOpen(false));
   return <>
-    <Menu name="More for L01 Wall drip"><button type="button" onClick={() => setOpen(true)}>Options…</button></Menu>
+    <Menu name="More for Wall drip"><button type="button" onClick={() => setOpen(true)}>Options…</button></Menu>
     <dialog ref={ref} aria-label="Options" onKeyDown={onKeyDown} onCancel={onCancel}><button type="button" onClick={() => setOpen(false)}>Close</button></dialog>
   </>;
 }

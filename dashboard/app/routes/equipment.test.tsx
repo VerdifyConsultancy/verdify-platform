@@ -73,7 +73,7 @@ const groupCards = () => [...document.querySelectorAll(".equipment-board section
 const groups = () => groupCards().map((section) => ({
   title: text(section.querySelector("h2")), names: [...section.querySelectorAll(".equipment-row .equipment-name")].map((name) => text(name)),
 }));
-const WATER = ["Wall drip L01", "Wall fert drip L02", "Fert master L03", "Center mister L04", "Center drip L05", "Center fert drip L06", "South mister L07", "South fert mister L08", "West mister L09", "West fert mister L10", "Fog L11"];
+const WATER = ["Wall drip", "Wall drip (fertilized)", "Fertilizer valve", "Center mister", "Center drip", "Center drip (fertilized)", "South mister", "South mister (fertilized)", "West mister", "West mister (fertilized)", "Fog"];
 /** The hours an API-05 request asked for, and its end. */
 function windowOf(row: Recorded) {
   const query = new URL(row.path, "http://dashboard.invalid").searchParams;
@@ -135,7 +135,7 @@ test("with the controller reporting, fan1 reads OFF since Oct 27, 04:26, never u
   expect(read("heat1").facts).toBe("since 07:10 · on today 3 h 5 min · cycles 4");
   expect(read("heat2").facts).toBe("since Nov 1, 06:40 · on today 0 min · cycles 0");
   expect(read("mister_center").facts).toBe("since 07:12 · on today 14 min · cycles 14");
-  expect(read("fog")).toEqual({ name: "Fog L11", state: "Off", facts: "since 05:10 · on today 6 min · cycles 9" });
+  expect(read("fog")).toEqual({ name: "Fog", state: "Off", facts: "since 05:10 · on today 6 min · cycles 9" });
   // The vent's off reads CLOSED and its time on is time open.
   expect(read("vent")).toEqual({ name: "Vent", state: "Closed", facts: "since 08:29 · open today 55 min · cycles 3" });
   // OFF is a word with a quiet ring, never a pill.
@@ -172,8 +172,8 @@ test("a known state with no since says why: it has not changed in API-13's 31-da
     const idle = { ...inBand("fert_master_valve"), since: null };
     const fog = { ...inBand("fog"), state: "on", since: null, runtime_today_s: 38_520, cycles_today: 0 };
     renderUi(<EquipmentGroups items={[idle, fog]} state="ready" />);
-    expect(read("fert_master_valve")).toEqual({ name: "Fert master L03", state: "Off", facts: "since — (no change in 31 days) · on today 0 min · cycles 0" });
-    expect(read("fog")).toEqual({ name: "Fog L11", state: "On", facts: "since — (no change in 31 days) · on today 10 h 42 min · cycles 0" });
+    expect(read("fert_master_valve")).toEqual({ name: "Fertilizer valve", state: "Off", facts: "since — (no change in 31 days) · on today 0 min · cycles 0" });
+    expect(read("fog")).toEqual({ name: "Fog", state: "On", facts: "since — (no change in 31 days) · on today 10 h 42 min · cycles 0" });
     // No since time is made up.
     expect(rowOf("fert_master_valve")!.querySelectorAll("time")).toHaveLength(0);
   } finally {
@@ -329,7 +329,7 @@ test("viewers see the board and the lanes with no controls; an operator gets the
   await load({}, { role: "operator" });
   // Each light is off in automatic, matching its controller: its one button turns it on (#1308 visual QA 26). With no
   // shell here what runs is unknown, so Clear bursts stays (burst-panel.test.tsx has it go while nothing runs).
-  const lights = ["Turn on Main", "Turn on Grow"];
+  const lights = ["Turn on 15 min Main", "Turn on 15 min Grow"];
   expect(controls()).toEqual({ buttons: ["Find", ...lights, "Fans 15 min", "Humidify 5 min", "Vent bypass 10 min", "Clear bursts", "Restart controller", fold], writes: 7 });
 });
 
@@ -460,7 +460,7 @@ test("daily runtime: 14 local days of API-05, one bar row per heat 1, heat 2, fa
   // The average counts the complete days; today, not over, says its time so far beside it.
   expect(rows.map((row) => [row.getAttribute("data-equipment"), text(row.querySelector(".ctl-runtime-name")), text(row.querySelector(".ctl-runtime-average"))])).toEqual([
     ["heat1", "Heat 1 electric", "0 min a day today 3 h 5 min so far"], ["heat2", "Heat 2 gas", "0 min a day today 0 min so far"], ["fan1", "Fan 1", "0 min a day today 0 min so far"],
-    ["fan2", "Fan 2", "0 min a day today 2 h 10 min so far"], ["vent", "Vent", "0 min a day today 55 min so far"], ["fog", "Fog L11", "0 min a day today 6 min so far"],
+    ["fan2", "Fan 2", "0 min a day today 2 h 10 min so far"], ["vent", "Vent", "0 min a day today 55 min so far"], ["fog", "Fog", "0 min a day today 6 min so far"],
   ]);
   // Each row is an image named by its numbers; the bars share one scale, today's heat 1 the tallest. A day of 0 is a
   // stub, never nothing, and today's bar is outlined: the day is not over.
@@ -472,7 +472,7 @@ test("daily runtime: 14 local days of API-05, one bar row per heat 1, heat 2, fa
   expect(heat1.querySelectorAll(".spark-zero")).toHaveLength(13);
   // The table: one row a day, oldest first, today marked.
   const table = panel.querySelector(".ctl-runtime-table table")!;
-  expect([...table.querySelectorAll("thead th")].map((cell) => text(cell))).toEqual(["Day", "Heat 1 electric", "Heat 2 gas", "Fan 1", "Fan 2", "Vent", "Fog L11"]);
+  expect([...table.querySelectorAll("thead th")].map((cell) => text(cell))).toEqual(["Day", "Heat 1 electric", "Heat 2 gas", "Fan 1", "Fan 2", "Vent", "Fog"]);
   const last = [...table.querySelectorAll("tbody tr")].at(-1)!;
   expect([...last.children].map((cell) => text(cell))).toEqual(["Nov 2 (today)", "3 h 5 min", "0 min", "0 min", "2 h 10 min", "55 min", "6 min"]);
   expect(table.querySelectorAll("tbody tr")).toHaveLength(14);

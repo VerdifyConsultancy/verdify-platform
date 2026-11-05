@@ -4,9 +4,9 @@
 ch1, so daily_summary.kwh_total went negative from 2026-09-27. 291 integrates |ch0| + |ch1| per sample, appends
 signed_kwh and sign_corrected_samples, and refreshes daily_summary.kwh_total/peak_kw from 2026-09-27. The view's
 relation entry is in both ordinary digests, so the api and ingestor seals move and both receipts are re-sealed;
-the MCP seal stays 289's. The successor literals are a read-only projection on production at exact289 (the
-fixture's projection says how); test_native_qualification_is_recorded is the merge gate for the rolled-back
-production run that measures them, after 290 (#1358) merges and 291 re-chains from it.
+the MCP seal stays 290's (which are 289's). 291 chains from 290 (#1358); production applies both in one sync.
+test_native_qualification_is_recorded is the merge gate for the rolled-back production run that measures them
+with 290 applied first while production is at 289.
 """
 
 import hashlib
@@ -21,7 +21,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 HEX = "([0-9a-f]{64})"
-PREDECESSOR = 289
+PREDECESSOR = 290
+PREDECESSOR_FILE = ROOT / "db/migrations/290-band-compliance.sql"
 SEALS = ("api", "ingestor", "mcp")
 API, INGESTOR = "verdify_api_runtime_login", "verdify_ingestor_runtime_login"
 PREDECESSOR_VIEW = ROOT / "tests/fixtures/291-v-energy-daily-predecessor.sql"
@@ -56,7 +57,7 @@ VIEW = BODY[BODY.index("CREATE OR REPLACE VIEW") : BODY.index("$ddl$;")]
 
 
 def later(last=291):
-    names = [c0.SUCCESSOR_254] + [getattr(c0, f"SUCCESSOR_{n}") for n in range(255, min(last, 289) + 1)]
+    names = [c0.SUCCESSOR_254] + [getattr(c0, f"SUCCESSOR_{n}") for n in range(255, min(last, PREDECESSOR) + 1)]
     return names + ([c0.SUCCESSOR_291] if last == 291 else [])
 
 
@@ -77,7 +78,7 @@ def test_exact_ordered_source_admission_denies_unknown_changed_and_skipped():
     assert hashlib.sha256(raw).hexdigest() == c0.SUCCESSOR_291_SHA256 == six.ENERGY_DAILY_MIGRATION[2]
     assert six.ENERGY_DAILY_MIGRATION[:2] == (291, c0.SUCCESSOR_291) == (291, "291-energy-daily-load-magnitude.sql")
     c0.reviewed_post_254(later(), files())
-    c0.reviewed_post_254(later(289), files(289))
+    c0.reviewed_post_254(later(PREDECESSOR), files(PREDECESSOR))
     with pytest.raises(c0.DeliveryError, match="reviewed 291 successor source drift"):
         c0.reviewed_post_254(later(), {**files(), c0.SUCCESSOR_291: "0" * 64})
     rows = later()
@@ -104,14 +105,14 @@ def test_file_is_wrap_safe_and_every_session_ends_in_rollback():
         assert sql.count("ROLLBACK;") == 1 and "COMMIT" not in sql.upper(), name
 
 
-def test_predecessor_binds_exact289_its_seals_and_the_exact_view_text():
+def test_predecessor_binds_exact290_its_seals_and_the_exact_view_text():
     row = re.search(r"seq=(\d+) AND filename='db/migrations/([^']+)'\s+AND sha256='" + HEX + "'", PREDECESSOR_BLOCK)
-    assert (int(row[1]), row[2], row[3]) == (PREDECESSOR, c0.SUCCESSOR_289, c0.SUCCESSOR_289_SHA256)
+    assert (int(row[1]), row[2], row[3]) == (PREDECESSOR, c0.SUCCESSOR_290, c0.SUCCESSOR_290_SHA256)
     assert "stamp_method='runner'" in PREDECESSOR_BLOCK and "current_user <> 'verdify'" in PREDECESSOR_BLOCK
     assert f"seq>{PREDECESSOR})" in PREDECESSOR_BLOCK
     assert "'291 refuses an unqualified predecessor'" in PREDECESSOR_BLOCK
     for seal, digest in registered(PREDECESSOR).items():
-        assert digest == six.SUCCESSOR_289[seal]
+        assert digest == six.SUCCESSOR_290[seal]
         assert PREDECESSOR_BLOCK.count(f"'hex') IS DISTINCT FROM '{digest}'") == 1, seal  # the live digest
         assert PREDECESSOR_BLOCK.count(f"boundary_sha256=decode('{digest}','hex')") == 1, seal  # and its receipt
     # The predecessor text is 279's view as production holds it; the fixture is that text.
@@ -210,14 +211,14 @@ def test_body_replaces_the_view_in_place_and_backfills_a_bounded_window():
 # ── The bootstrap and the C0 readback ───────────────────────────────────────
 
 
-def test_sealed_sql_291_chains_from_289_and_binds_the_exact_ledger_row():
-    old = six.seal_profile_sql(PREDECESSOR, six.SUCCESSOR_289)
-    expected = "(" + six.sealed_sql_289().replace(old, six.seal_profile_sql(291, six.SUCCESSOR_291), 1)
+def test_sealed_sql_291_chains_from_290_and_binds_the_exact_ledger_row():
+    old = six.seal_profile_sql(PREDECESSOR, six.SUCCESSOR_290)
+    expected = "(" + six.sealed_sql_290().replace(old, six.seal_profile_sql(291, six.SUCCESSOR_291), 1)
     expected += " AND " + six.ledger_row_sql(*six.ENERGY_DAILY_MIGRATION) + ")"
     assert six.sealed_sql_291() == expected
     assert "(SELECT max(seq) FROM public.schema_migrations WHERE source='db/migrations')=291" in expected
     assert "stamp_method='runner'" in six.ledger_row_sql(*six.ENERGY_DAILY_MIGRATION)
-    assert six.sealed_sql().count(" OR " + six.sealed_sql_289() + " OR " + expected) == 1
+    assert six.sealed_sql().count(" OR " + six.sealed_sql_290() + " OR " + expected) == 1
     assert maintenance.contract_sql().count(" OR " + six.sealed_sql_291()) == 1
     assert '"291-energy-daily-load-magnitude.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
     assert "tests/test_291_energy_daily_delivery.py" in (ROOT / "scripts/ci-local.sh").read_text()
@@ -280,10 +281,10 @@ def test_post_249_readback_expects_291s_seals_once_291_is_stamped(monkeypatch):
 def assert_recorded(evidence):
     """What the recorded native qualification must show before 291 merges."""
     assert evidence["final_migration_qualification_pending"] is False, (
-        "291 native qualification pending: 290 (#1358) must merge first. Then re-chain 291 from 290 (the predecessor "
-        "block, sealed_sql_291 and the c0 registration), re-project, and run scripts/qualify-migration-successor.py "
-        "db/migrations/291-energy-daily-load-magnitude.sql --fixture tests/fixtures/291-energy-daily-native-"
-        "qualification.json on production (every session rolls back) and commit the fixture it writes. If its probe "
+        "291 native qualification pending: run scripts/qualify-migration-successor.py "
+        "db/migrations/291-energy-daily-load-magnitude.sql --apply-first db/migrations/290-band-compliance.sql "
+        "--fixture tests/fixtures/291-energy-daily-native-qualification.json on production while it is at 289 "
+        "(every session rolls back) and commit the fixture it writes. If its probe "
         "differs from the file's projected literals, set the measured api and ingestor digests in the file's "
         "successor block and in the c0-migration-delivery.py and bootstrap-six-runtime-roles.py registrations, update "
         "the file's sha at both and in the fixture, and run it again"
@@ -293,19 +294,28 @@ def assert_recorded(evidence):
     assert evidence["qualified_successor"] == six.SUCCESSOR_291 == registered(291)
     assert evidence["final_migration_rollback_verified"] is True
     assert evidence["inside_transaction_receipts_match"] is True
+    if "applied_first" in evidence:
+        assert evidence["applied_first"] == [
+            {"migration": c0.SUCCESSOR_290, "seq": 290, "sha256": c0.SUCCESSOR_290_SHA256}
+        ]
+        measured_against = evidence["applied_first_seals"]
+    else:
+        measured_against = evidence["before"]
+    assert measured_against == registered(PREDECESSOR)
 
 
 def fake_qualification(monkeypatch, *, inside=None):
-    """Replay the qualifier's three sessions for 291, without a database, on production at 289."""
+    """Replay the qualifier's three sessions for 291 with 290 applied first, without a database, at 289."""
 
     def state(seals, max_seq):
         return {**seals, **{seal + "_receipt": seals[seal] for seal in SEALS}, "max_seq": max_seq}
 
-    before, after = state(registered(PREDECESSOR), PREDECESSOR), state(registered(291), 291)
+    live, applied = state(registered(289), 289), state(registered(PREDECESSOR), PREDECESSOR)
+    after = state(registered(291), PREDECESSOR)
     replies = {
-        "probe": {"before": before, "successor": {**after, "max_seq": PREDECESSOR}},
-        "final": {"inside": after if inside is None else inside},
-        "after": {"after": before},
+        "probe": {"before": live, "applied": applied, "successor": after},
+        "final": {"applied": applied, "inside": after if inside is None else inside},
+        "after": {"after": live},
     }
     seen = []
 
@@ -322,18 +332,18 @@ def test_qualifier_records_291_and_the_gate_accepts_it(monkeypatch, tmp_path):
     fixture = tmp_path / "fixture.json"
     fixture.write_text(FIXTURE.read_text())  # the committed projection is kept, the measurement added
     seen = fake_qualification(monkeypatch)
-    report = qualifier.qualify(MIGRATION, fixture, ["psql"])
+    report = qualifier.qualify(MIGRATION, fixture, ["psql"], apply_first=[PREDECESSOR_FILE])
     assert seen == ["probe", "final", "after"]
     written = json.loads(fixture.read_text())
     assert {key: written[key] for key in report} == report
     assert written["projection"] == json.loads(FIXTURE.read_text())["projection"]
     assert_recorded(written)
     new = registered(291)
-    stale = {**new, **{seal + "_receipt": new[seal] for seal in SEALS}, "api_receipt": "f" * 64, "max_seq": 291}
+    stale = {**new, **{seal + "_receipt": new[seal] for seal in SEALS}, "api_receipt": "f" * 64, "max_seq": PREDECESSOR}
     seen = fake_qualification(monkeypatch, inside=stale)
     fixture.unlink()
     with pytest.raises(qualifier.QualificationError, match="native qualification failed"):
-        qualifier.qualify(MIGRATION, fixture, ["psql"])
+        qualifier.qualify(MIGRATION, fixture, ["psql"], apply_first=[PREDECESSOR_FILE])
     assert seen == ["probe", "final", "after"] and not fixture.exists()
 
 

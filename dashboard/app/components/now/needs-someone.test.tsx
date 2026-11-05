@@ -74,7 +74,7 @@ test("a latched mister reads once, on its alert's row with Clear fault; the sett
   await advance(0);
   const faulted = rows().find((row) => text(row.querySelector("h3")) === "A mister zone faulted")!;
   expect(document.querySelectorAll("[data-water=fault]")).toHaveLength(0);
-  fireEvent.click(within(faulted).getByRole("button", { name: "Clear fault on L04" }));
+  fireEvent.click(within(faulted).getByRole("button", { name: "Clear fault on Center mister" }));
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-13", body: { line_id: "L04" } })]);
   const unconfirmed = within(panel()).getByRole("link", { name: /^2 settings not confirmed/ });
