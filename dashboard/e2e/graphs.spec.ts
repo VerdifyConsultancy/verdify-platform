@@ -137,7 +137,7 @@ test("the range toolbar: 24 h has 6 h ahead, ‹ steps back by its length, Zoom 
 test("an exact ISO window draws exactly that window", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/graphs?from=2026-11-01T08:00:00Z&to=2026-11-01T12:00:00Z");
-  await expect(resolution(page)).toHaveText("Nov 1, 01:00 MST → Nov 1, 05:00 (4 h) · one point per minute · gaps stay empty, never zero");
+  await expect(resolution(page)).toHaveText("Nov 1, 01:00 MST → Nov 1, 05:00 (4 h) · one point per minute");
   const series = (await fixtureRequests(request, "API-04")).map((row) => new URL(row.path, "http://fixture.invalid").searchParams);
   // The three panels and the outdoor read; the window ended before now, so no forecast.
   expect(series.map((params) => [params.get("from"), params.get("to")])).toEqual(Array(4).fill(["2026-11-01T08:00:00.000Z", "2026-11-01T12:00:00.000Z"]));
@@ -177,7 +177,7 @@ test("soil moisture and flow from the URL: flow opens a panel, and from 7 d each
   await useScreensClock(page, request, "in-band");
   await load(page, "/graphs?range=7d&m=climate.soil_moisture_south_1&m=climate.flow_gpm");
   await expect(names(page)).toHaveText(["Temperature °F", "VPD kPa", "RH %", "Site water flow gal/min"]);
-  await expect(resolution(page)).toContainText("· one point per hour · gaps stay empty, never zero");
+  await expect(resolution(page)).toContainText("· one point per hour");
   await expect(page.locator("[data-equipment=drip_wall]")).toContainText("Wall drip");
   await expect(page.getByRole("list", { name: "Metrics on the charts" }).getByRole("listitem")).toContainText(["South soil moisture 1 · %", "Site water flow · gal/min"]);
 });
@@ -207,7 +207,7 @@ test("a 90-day window says the lanes cover at most 31 days and still draws the c
 test("a 400-day window labels the span before climate's 365 days", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/graphs?from=2025-09-29&to=2026-11-02");
-  await expect(resolution(page)).toContainText("· one point per day · daily summaries · gaps stay empty, never zero");
+  await expect(resolution(page)).toContainText("· one point per day · daily summaries");
   await expect(notes(page).filter({ hasText: "Daily summaries before 11/02/2025: raw data kept 365 days" }).first()).toBeVisible();
 });
 
@@ -233,8 +233,11 @@ test("/graphs?range=24h: the outdoor traces state their source and age once, and
   await load(page, "/graphs?range=24h");
   await expect(plots(page).locator("canvas")).toHaveCount(3);
   await expect(notes(page)).toHaveText(["Outdoor · Tempest via the controller · 2 min ago", "Forecast · issued 07:00"]);
-  // One list of swatches, one item a series: an array matches item by item.
-  await expect(page.locator("[data-panel=temperature] .stack-swatches li")).toContainText(["Indoor temperature", "Outdoor temperature", "Forecast temperature"]);
+  // One list of swatches, one item a series: an array matches item by item. Inside the named panel each reads its series
+  // alone, so the three fit one row on a phone; the full name is the button's accessible name.
+  const swatches = page.locator("[data-panel=temperature] .stack-swatches");
+  await expect(swatches.locator("li")).toHaveText(["Indoor", "Outdoor", "Forecast"]);
+  for (const name of ["Indoor temperature", "Outdoor temperature", "Forecast temperature"]) await expect(swatches.getByRole("button", { name, exact: true })).toHaveCount(1);
   await layers(page);
   await expect(outdoorChip(page)).toHaveAttribute("aria-current", "true");
   const keys = await seriesKeys(request);
@@ -283,7 +286,7 @@ test("/graphs/zones: every zone side by side, temperature and VPD on one scale e
   await expect(page.locator(".grid-readout")).toHaveCount(10);
   // The grid keeps its data table (redesign §8): one block per metric row, a column per zone.
   const table = page.locator(".chart-grid > details.chart-table");
-  await expect(table.locator("summary")).toHaveText(/^Data table · \d+ rows$/);
+  await expect(table.locator("summary")).toHaveText(/^Data table · [\d,]+ rows$/);
   await table.locator("summary").click();
   await expect(table.locator("caption")).toHaveText(["Temperature · °F · America/Denver", "VPD · kPa · America/Denver"]);
   await expect(table.locator("table").first().locator("thead th")).toHaveText(["Time", "North (°F)", "Center (°F)", "South (°F)", "East (°F)", "West (°F)"]);
@@ -319,7 +322,7 @@ test("/graphs/zones?zone=south&range=72h: south's own stack, band and target; th
   await expect(page.locator(".page-crumbs").getByRole("link")).toHaveCount(2);
   await expect(names(page)).toHaveText(["Temperature °F", "VPD kPa", "RH %"]);
   await expect(plots(page).locator("canvas")).toHaveCount(3);
-  await expect(page.locator("[data-panel=vpd] .stack-swatches")).toContainText("South VPD target");
+  await expect(page.locator("[data-panel=vpd] .stack-swatches").getByRole("button", { name: "South VPD target", exact: true })).toHaveText("South target");
   await expect(notes(page)).toContainText(["Dotted: the controller's own target, a cross-check"]);
   const band = (await fixtureRequests(request, "API-06")).map((row) => new URL(row.path, "http://fixture.invalid").searchParams.get("zone"));
   expect(band).toEqual(["south"]);

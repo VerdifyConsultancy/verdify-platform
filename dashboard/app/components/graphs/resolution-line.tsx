@@ -4,9 +4,10 @@ import { isoOf, type GraphWindow } from "../../lib/graph-url";
 
 /**
  * Graphs' resolution line (SCR-02): the window in local time and its elapsed time ("36 h across the fall-back" when a
- * clock change falls inside it); the footer states the zone, so only a time in the repeated hour names it (MDT or MST), the climate panels' bucket in words from API-04's `bucket_s`,
- * "daily summaries" when a series reads `daily_summary`, and "gaps stay empty, never zero". It sits in the foot of
- * the chart stack (redesign §5.5).
+ * clock change falls inside it), the climate panels' bucket in words from API-04's `bucket_s`, and "daily summaries"
+ * when a series reads `daily_summary`: at most three facts (redesign §3.6 rule 3), beside "CSV of this window" in the
+ * chart stack's foot (§5.5). The footer states the zone, so only a time in the repeated hour names it (MDT or MST), and
+ * each time's title carries its offset; the charts' names say that gaps stay empty.
  */
 const BUCKET_WORDS: Readonly<Record<number, string>> = {
   60: "one point per minute", 300: "one point per 5 minutes", 900: "one point per 15 minutes", 3600: "one point per hour",
@@ -75,14 +76,14 @@ export type ResolutionLineProps = {
   now: number | null;
 };
 
-/** "Oct 31, 07:00 → Nov 1, 18:00 (36 h across the fall-back) · one point per 5 minutes · gaps stay empty, never zero". */
+/** "Oct 31, 07:00 → Nov 1, 18:00 (36 h across the fall-back) · one point per 5 minutes". */
 export function ResolutionLine({ window, bucketSeconds, daily, now }: ResolutionLineProps) {
-  if (!window || now === null) return <span className="resolution-line">America/Denver · gaps stay empty, never zero</span>;
+  if (!window || now === null) return <span className="resolution-line">America/Denver</span>;
   const { from, to } = window.x;
   const thisYear = YEAR.format(new Date(now * 1000));
   const withYear = YEAR.format(new Date(from * 1000)) !== thisYear || YEAR.format(new Date((to - 1) * 1000)) !== thisYear;
   return <span className="resolution-line">
     <time dateTime={isoOf(from)} title={localTime(isoOf(from))}>{windowTime(from, withYear)}</time> → <time dateTime={isoOf(to)} title={localTime(isoOf(to))}>{windowTime(to, withYear)}</time> ({spanWords(from, to)})
-    {bucketSeconds !== null && ` · ${bucketWords(bucketSeconds)}`}{daily && " · daily summaries"} · gaps stay empty, never zero
+    {bucketSeconds !== null && ` · ${bucketWords(bucketSeconds)}`}{daily && " · daily summaries"}
   </span>;
 }

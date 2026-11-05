@@ -244,7 +244,7 @@ export default function Graphs() {
     </ul>}
     <ChartStack label={`Climate, ${lead.charAt(0).toLowerCase()}${lead.slice(1)}`} panels={panels} band={shownBand} settings={steps} forecast={forecast}
       now={now ?? 0} xRange={window?.x ?? { from: 0, to: 1 }} syncKey={`verdify:graphs:${key}`} excursions={!apiDown} envelope={view.envelope}
-      compare={compared} events={eventsRead && sources.length > 0 ? events : null} csvName="graphs"
+      compare={compared} events={eventsRead && sources.length > 0 ? events : null} csvName="graphs" tableName="Climate table"
       lanes={<EquipmentLanes states={lanes.data} xRange={window?.x ?? { from: 0, to: 1 }} syncKey={`verdify:graphs:${key}`} now={now ?? undefined} message={lanesMessage} zoomControl={false} />}
       foot={<ResolutionLine window={window} bucketSeconds={climateBucket} daily={daily} now={now} />} />
   </>;

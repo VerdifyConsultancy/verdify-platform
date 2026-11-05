@@ -31,16 +31,16 @@ test("elapsed time names the clock change inside the window", () => {
   expect(windowTime(epoch("2026-11-01T16:42:00Z"), false)).toBe("Nov 1, 09:42");
 });
 
-test("the line: window without offsets, elapsed, bucket, daily summaries and the gaps promise", () => {
+test("the line: window without offsets, elapsed, bucket and daily summaries, three facts at most", () => {
   const now = epoch("2026-11-01T13:00:00Z");
   const window = graphWindow(parseGraphUrl("range=24h").view.window, now);
   const { container, rerender } = render(<ResolutionLine window={window} bucketSeconds={300} daily={false} now={now} />);
   // The past 24 h and the 6 h ahead (a quarter of the window, D-UX-13).
-  expect(text(container)).toBe("Oct 31, 07:00 → Nov 1, 12:00 (30 h across the fall-back) · one point per 5 minutes · gaps stay empty, never zero");
+  expect(text(container)).toBe("Oct 31, 07:00 → Nov 1, 12:00 (30 h across the fall-back) · one point per 5 minutes");
   expect([...container.querySelectorAll("time")].map((node) => node.getAttribute("dateTime"))).toEqual(["2026-10-31T13:00:00.000Z", "2026-11-01T19:00:00.000Z"]);
   const long = graphWindow(parseGraphUrl("from=2025-09-29&to=2026-11-01").view.window, now);
   rerender(<ResolutionLine window={long} bucketSeconds={86_400} daily now={now} />);
-  expect(text(container)).toBe("Sep 29, 2025, 00:00 → Nov 2, 2026, 00:00 (399 d 1 h across 3 clock changes) · one point per day · daily summaries · gaps stay empty, never zero");
+  expect(text(container)).toBe("Sep 29, 2025, 00:00 → Nov 2, 2026, 00:00 (399 d 1 h across 3 clock changes) · one point per day · daily summaries");
   rerender(<ResolutionLine window={null} bucketSeconds={null} daily={false} now={null} />);
-  expect(text(container)).toBe("America/Denver · gaps stay empty, never zero");
+  expect(text(container)).toBe("America/Denver");
 });

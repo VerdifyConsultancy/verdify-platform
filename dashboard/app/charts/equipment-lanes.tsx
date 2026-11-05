@@ -352,11 +352,12 @@ export function EquipmentLanes(props: EquipmentLanesProps) {
         {stacked && model.idle.length > 0 && fold("lanes-fold-toggle")}
       </>
       : <div className="plot plot-small chart-message"><p>{props.message ?? "No equipment data in this window"}</p></div>}
+    {/* The key sits right under the rows it names, above the CSV and the table. */}
+    {drawable && <ChartKey items={lanesKey(model)} />}
     {drawable && <div className="chart-tools">
       {(props.zoomControl ?? true) && zoom.zoomed && <button type="button" onClick={zoom.reset}>Reset zoom</button>}
       <CsvLink filename={csvFilename("equipment-lanes", xRange)} build={() => lanesCsv(model)} version={model} label="CSV of these lanes" />
     </div>}
-    {drawable && <ChartKey items={lanesKey(model)} />}
-    {drawable && <DataTable tables={[lanesTable(model)]} />}
+    {drawable && <DataTable name="Lanes table" tables={[lanesTable(model)]} />}
   </figure>;
 }

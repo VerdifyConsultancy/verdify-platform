@@ -8,7 +8,7 @@ import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { ChartGrid, cellReadout, rowRange } from "./chart-grid";
-import { ChartStack, STACK_AXIS_PX, bare, panelReadout, panelStats, type StackPanel } from "./chart-stack";
+import { ChartStack, STACK_AXIS_PX, bare, panelReadout, panelStats, seriesWords, type StackPanel } from "./chart-stack";
 import type { ChartEvent } from "./events";
 import { FakeResizeObserver, MockPlot, TOKENS, created, media, setTokens } from "./fixtures/uplot-mock";
 import { compareLine } from "./layers";
@@ -102,9 +102,21 @@ test("one card of panels, each with its anchor; one time axis at the bottom, one
   expect(head("temperature")).toMatch(/^in band 53% · low 59\.0 \(00:00\) · mean 67\.5 · high 76\.0 \(23:55\)$/);
   expect(head("vpd")).toMatch(/^in band 100% · low 0\.80 /);
   expect(head("rh")).toMatch(/^low 71\.0 /);
-  expect(within(stack.querySelector("[data-panel=temperature]") as HTMLElement).getAllByRole("button").map((button) => [button.textContent, button.getAttribute("aria-pressed")])).toEqual([
-    ["Indoor temperature", "true"], ["Outdoor temperature", "true"],
+  // Inside the named panel each toggle reads its series alone, its full name kept as the accessible name.
+  expect(within(stack.querySelector("[data-panel=temperature]") as HTMLElement).getAllByRole("button").map((button) => [button.textContent, button.getAttribute("aria-label"), button.getAttribute("aria-pressed")])).toEqual([
+    ["Indoor", "Indoor temperature", "true"], ["Outdoor", "Outdoor temperature", "true"],
   ]);
+});
+
+test("a series reads by what sets it apart inside its panel, whole when nothing is left", () => {
+  expect(seriesWords("Indoor temperature", "Temperature")).toBe("Indoor");
+  expect(seriesWords("Forecast temperature", "Temperature")).toBe("Forecast");
+  expect(seriesWords("Outdoor VPD · DERIVED", "VPD")).toBe("Outdoor · DERIVED");
+  expect(seriesWords("Outdoor relative humidity", "RH")).toBe("Outdoor");
+  expect(seriesWords("Controller VPD target", "VPD")).toBe("Controller target");
+  expect(seriesWords("Temperature", "Temperature")).toBe("Temperature");
+  expect(seriesWords("VPD · DERIVED", "VPD")).toBe("VPD · DERIVED");
+  expect(seriesWords("Soil moisture south 1", "Soil moisture south 1")).toBe("Soil moisture south 1");
 });
 
 test("a cursor on any panel turns every header row into its values there, with one time chip; leaving restores the window's", async () => {
