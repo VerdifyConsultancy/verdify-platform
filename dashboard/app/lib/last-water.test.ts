@@ -18,17 +18,18 @@ const words = (lines: readonly IrrigationLine[]) => lastWater(lines, NOW).map((z
 const at = (hours: number, minutes: number, daysAgo = 0) => new Date(localInstant(addDays("2026-11-02", -daysAgo), `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`)).toISOString();
 const edit = (lines: readonly IrrigationLine[], id: string, patch: Partial<IrrigationLine>) => lines.map((line) => (line.line_id === id ? { ...line, ...patch } : line));
 
-test("each zone: today with the minutes, a weekday within six days, else N days ago; misters say misted with the cause", () => {
+test("each zone: a drip's last time with its minutes (today, a weekday within six days), else N days ago; misters say misted with the cause", () => {
   // The fixture keeps its times 72 h apart, so Friday's runs read an hour later on the MDT clock of that day.
   expect(words(status("in-band").lines)).toEqual([
-    "wall: Fri 08:31, 12 min",
+    "wall: last Fri 08:31, 12 min",
     "center: misted 06:58 (VPD)",
     "south: misted Fri 14:20 (VPD)",
     "west: misted 9 days ago (VPD)",
   ]);
   const lines = edit(status("in-band").lines, "L01", { last_water: { at: at(7, 31), open_s: 720, pulses: null, cause: "run_now" } });
-  expect(words(lines)[0]).toBe("wall: today 07:31, 12 min");
-  expect(words(edit(lines, "L01", { last_water: { at: at(7, 31, 6), open_s: 600, pulses: null, cause: "schedule" } }))[0]).toBe("wall: Tue 07:31, 10 min");
+  // "last" says it already ran, so the time never reads as a next run.
+  expect(words(lines)[0]).toBe("wall: last 07:31, 12 min");
+  expect(words(edit(lines, "L01", { last_water: { at: at(7, 31, 6), open_s: 600, pulses: null, cause: "schedule" } }))[0]).toBe("wall: last Tue 07:31, 10 min");
   expect(words(edit(lines, "L01", { last_water: { at: at(7, 31, 7), open_s: 600, pulses: null, cause: "schedule" } }))[0]).toBe("wall: 7 days ago");
 });
 
@@ -51,7 +52,7 @@ test("a zone with no enabled line reads not set up, never 0; a set-up zone with 
 
 test("the newest last water among the zone's lines wins, a fertilizer line included", () => {
   const fed = edit(edit(status("in-band").lines, "L02", { enabled: true, last_water: { at: at(9, 0, 1), open_s: 300, pulses: null, cause: "feed" } }), "L01", {});
-  expect(words(fed)[0]).toBe("wall: Sun 09:00, 5 min");
+  expect(words(fed)[0]).toBe("wall: last Sun 09:00, 5 min");
 });
 
 test("days and clock times count America/Denver calendar days", () => {

@@ -6,7 +6,7 @@ import { expect, test } from "vitest";
 import { answer, buildWorld, fixture } from "../../../e2e/fixtures/index.mjs";
 import { parseIrrigationStatus, parseNow, parsePlan, parseScheduleAgenda, parseStateLanes, type ScheduleAgenda, type StateLanes } from "../../lib/operator-api";
 import {
-  equipmentRow, futureSpans, irisTriggers, laterText, lineRow, nextItems, nextWindow, nights, pastSpans, planTransitions, runLength, sunTimes, trackRows,
+  equipmentRow, futureSpans, irisMarkerLabel, irisTriggers, laterText, lineRow, nextItems, nextWindow, nights, pastSpans, planTransitions, runLength, sunTimes, trackRows,
 } from "./next";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
@@ -83,10 +83,22 @@ test("Iris's triggers, the sun and night in the window", () => {
 test("the track's seven rows in their fixed order, markers on Iris, the plan and the sun; an empty row still shows", () => {
   const rows = trackRows({ lanes: lanesOf("in-band"), plan: planOf("in-band"), agenda: agendaOf("in-band"), irrigation: statusOf("in-band"), overrides: [] }, WINDOW);
   expect(rows.map((row) => row.label)).toEqual(["Heat", "Vent, fans", "Fog, mist", "Drips", "Iris", "Plan", "Sun"]);
-  expect(rows[4].markers?.map((marker) => marker.label)).toEqual(["SUNRISE", "SOLAR_MAX 12:41", "SUNSET 16:50"]);
+  // Iris's triggers are plan events with their times, never the sun's words on the row below; a past one with its outcome.
+  expect(rows[4].markers?.map((marker) => marker.label)).toEqual(["SUNRISE plan 07:00 ✓", "SOLAR_MAX plan 12:41", "SUNSET plan 16:50"]);
   expect(rows[5].markers?.map((marker) => plain(marker.label))).toEqual(["13:00 VPD Mister Engage 1.60 → 1.70 kPa · AI", "16:30 Mister Pulse Gap 45.0 → 55.0 s · AI"]);
   expect(rows[6].markers?.map((marker) => marker.label)).toEqual(["Sunrise 06:35", "Sunset 16:58"]);
   expect(rows[3].spans).toEqual([]);
+});
+
+test("an Iris trigger's label: ahead, the plan and its time; past, with a check when it did its job, else its outcome in words", () => {
+  expect(irisMarkerLabel("SOLAR_MAX", "expected", at("12:41"), WINDOW.now)).toBe("SOLAR_MAX plan 12:41");
+  expect(irisMarkerLabel("SUNRISE", "plan_written", at("07:02"), WINDOW.now)).toBe("SUNRISE plan 07:02 ✓");
+  expect(irisMarkerLabel("SUNRISE", "action_completed", at("07:02"), WINDOW.now)).toBe("SUNRISE plan 07:02 ✓");
+  expect(irisMarkerLabel("SUNRISE", "missed", at("07:02"), WINDOW.now)).toBe("SUNRISE plan 07:02 · missed");
+  expect(irisMarkerLabel("SUNRISE", "timed_out", at("07:02"), WINDOW.now)).toBe("SUNRISE plan 07:02 · timed out");
+  expect(irisMarkerLabel("SUNRISE", "expected", at("10:30"), WINDOW.now)).toBe("SUNRISE plan 10:30 · due");
+  // An outcome the words table lacks reads raw, never a check.
+  expect(irisMarkerLabel("SUNRISE", "new_outcome", at("07:02"), WINDOW.now)).toBe("SUNRISE plan 07:02 · new_outcome");
 });
 
 test("the phone's next 12 h: runs, plan changes with who planned them, the expected triggers and the sun, in time order", () => {

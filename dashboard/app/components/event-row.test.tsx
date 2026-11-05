@@ -20,7 +20,7 @@ const entry = (row: Partial<ActivityEntry>): ActivityEntry => ({
   detail: { before: 1.6, value: 1.55, manual: { before: false, after: true } }, reason: "Vandas drying", state: "confirmed", confirmed_at: denver("07:42"),
   experiment_id: null, request_id: null, ...row,
 });
-const row = (props: Partial<ActivityEntry> = {}, showDate = false) => renderUi(<ol><EventRow entry={entry(props)} catalog={CATALOG} me={ME} showDate={showDate} id="activity-25" /></ol>);
+const row = (props: Partial<ActivityEntry> = {}) => renderUi(<ol><EventRow entry={entry(props)} catalog={CATALOG} me={ME} id="activity-25" /></ol>);
 
 test("one line: the mono time, the writer in R4's words, the change, the reason in quotes, and the outcome pill with its time", () => {
   const { container } = row();
@@ -59,9 +59,10 @@ test("an Iris plan of several changes reads as one entry, \"SUNRISE plan · 3 ch
   expect(container.querySelector(".act-entry-outcome")?.textContent).toBe("");
 });
 
-test("an entry outside a day header shows its date; nothing is served with a style attribute", () => {
-  const { container } = row({ ts: "2026-10-31T13:41:00Z" }, true);
-  expect(container.querySelector(".event-when time")?.textContent).toBe("Oct 31, 07:41");
+test("the time is HH:MM on any day, its day the header's (the full time in its title); nothing is served with a style attribute", () => {
+  const { container } = row({ ts: "2026-10-31T13:41:00Z" });
+  expect(container.querySelector(".event-when time")?.textContent).toBe("07:41");
+  expect(container.querySelector(".event-when time")?.getAttribute("title")).toContain("10/31/2026");
   const html = renderToStaticMarkup(<MemoryRouter><SessionProvider><ol><EventRow entry={entry({})} catalog={CATALOG} me={null} /></ol></SessionProvider></MemoryRouter>);
   expect(html).not.toMatch(/\sstyle=/);
   // Before API-01 answers, the person reads by username.

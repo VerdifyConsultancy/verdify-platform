@@ -11,23 +11,22 @@ export type EventRowProps = {
   catalog: Catalog;
   /** The signed-in person, who reads by name. */
   me: SignedIn;
-  /** Adds the date to the time, for an entry outside a day header (Recent activity on Alerts). */
-  showDate?: boolean;
   id?: string;
 };
 
 /**
- * One log entry in one line (redesign §5.9): the time (mono, America/Denver), who wrote it (AI for Iris and the agents
- * only), what changed ("VPD Mister Engage 1.60 → 1.55 kPa · manual"), the writer's reason in quotes, and the readback
- * outcome as a pill with its time. An Iris plan of several changes reads "SUNRISE plan · 9 changes" and expands to them.
- * An automatic entry leads with its cause ("Forecast rule “hot afternoon” · …").
+ * One log entry in one line (redesign §5.9): the time (mono, America/Denver, HH:MM: the entry sits under its day's
+ * header, on the log and in Recent activity alike), who wrote it (AI for Iris and the agents only), what changed ("VPD
+ * Mister Engage 1.60 → 1.55 kPa · manual"), the writer's reason in quotes, and the readback outcome as a pill with its
+ * time. An Iris plan of several changes reads "SUNRISE plan · 9 changes" and expands to them. An automatic entry leads
+ * with its cause ("Forecast rule “hot afternoon” · …").
  */
-export function EventRow({ entry, catalog, me, showDate = false, id }: EventRowProps) {
+export function EventRow({ entry, catalog, me, id }: EventRowProps) {
   const line = entryLine(entry, catalog);
   const actor = actorWords(entry.actor, me);
   const day = localDate(entry.ts);
   return <li className="event act-entry" id={id}>
-    <span className="event-when"><LocalTime at={entry.ts} date={showDate} /></span>
+    <span className="event-when"><LocalTime at={entry.ts} /></span>
     <span className="event-by">{actor.text}{actor.ai && <> <Badge kind="ai" /></>}</span>
     <span className="act-entry-what">
       {line.changes.length > 1

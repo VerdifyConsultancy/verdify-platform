@@ -5,9 +5,8 @@
 /* ---------------------------------------------------------------- Now: the page */
 /* The page is a .page stack (primitives.css); its head is the hero with the quick actions under it, at the card gap. */
 .now-head{display:grid;gap:var(--space-4);min-width:0}
-/* The pair side by side shares one height (as Statistics' and Plan's rows do), so a short Needs someone leaves no hole beside Water today. */
-.now-pair{display:grid;gap:var(--space-4);align-items:stretch;min-width:0}
-.now-pair>.card,.now-pair>.now-water>.card{height:100%}
+/* The pair side by side, each card at its own height: a short Needs someone ("No open alerts") is never a tall empty card beside Water today. */
+.now-pair{display:grid;gap:var(--space-4);align-items:start;min-width:0}
 @media(min-width:861px){.now-pair{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 /* The ink hero (redesign §4.2 "Status hero"): the answer and the hero value on the left, the three band bars and time in band on the right, then the status line and "All readings" across. */
@@ -38,6 +37,8 @@
 .now-band-meta{min-width:0;font-size:var(--fs-sm);color:var(--ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 .now-off{font-weight:600;color:var(--warn-text)}
 .hero .now-off{color:var(--amber)}
+/* Muted (stale or not reporting), the group says when its numbers were read, in amber words as the STALE pill and the dot do. */
+.now-bands-asof{margin:0;font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--amber)}
 
 /* Time in band today against yesterday: a mono label and two shares, only with data. */
 .now-tib{min-height:1.5em;margin:var(--space-1) 0 0;font-size:var(--fs-sm);color:var(--ink-muted);font-variant-numeric:tabular-nums}
@@ -163,6 +164,9 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .now-zone-link:hover{color:var(--forest);text-decoration:underline}
 .now-zone-tag{font:400 var(--fs-label)/1.3 var(--mono);letter-spacing:.08em;color:var(--muted)}
 .now-zone-tag-news{font-weight:600;color:var(--warn-text)}
+/* The band bar and the sparkline are both the zone's VPD: one mono label beside them names the two, as the hero's labels name its bars. */
+.now-zone-viz{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:var(--space-2)}
+.now-zone-viz-label{grid-row:span 2;align-self:start;font:400 var(--fs-label)/16px var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
 .now-zone-values{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--space-3);margin:0}
 .now-zone-value{font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
 .now-zone-meta{margin:0;font-size:var(--fs-xs)}
@@ -202,6 +206,9 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .alert-group[open]{padding-bottom:var(--space-3)}
 .alert-group>summary{font-size:var(--fs-md);font-weight:620;color:var(--ink)}
 .alert-group>summary:hover{color:var(--forest)}
+/* A link to the resolved group with none to open: one line and the log (redesign §3.6 rule 6), framed as the groups are. */
+.act-resolved-none.card{margin:0;padding:var(--space-3) var(--space-4)}
+.act-resolved-none a{display:inline-flex;align-items:center;min-height:24px;font-weight:700}
 .act-leak p,.act-valve,.act-closed{margin:var(--space-1) 0 0;font-size:var(--fs-sm)}
 .alert-guidance{font-weight:600;color:var(--ink)}
 .alert-detail{display:grid;gap:var(--space-2);min-width:0;margin:var(--space-2) 0 0;padding:var(--space-3) var(--space-4);border-radius:var(--radius-sm);background:var(--field)}
@@ -233,23 +240,29 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .act-day-head{position:sticky;top:var(--shell-header-h,4.3rem);z-index:var(--z-raised);margin:0;padding:var(--space-2) var(--space-4);border-bottom:1px solid var(--line);background:var(--field);font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
 .act-entries{margin:0;padding:0;list-style:none}
 .act-entry.event{grid-template-columns:3.25rem minmax(6rem,11rem) minmax(0,1fr) auto;align-items:baseline;gap:var(--space-1) var(--space-3);padding:var(--space-2) var(--space-4);font-size:var(--fs-sm)}
-.act-entry .event-when{grid-row:auto}
+.act-entry .event-when{grid-row:auto;white-space:nowrap}
 .act-entry .event-by{min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .act-entry-what{min-width:0;color:var(--ink)}
 .act-entry .event-reason{margin-left:var(--space-2);color:var(--muted)}
+/* A plan's quote starts a line of its own under its disclosure, flush with the other entries' words, not indented by the gap. */
+.act-plan+.event-reason{display:block;margin-left:0}
 .act-entry-outcome{display:inline-flex;align-items:center;gap:var(--space-1);justify-self:end;white-space:nowrap}
 .act-plan{display:inline;margin:0}
 .act-plan>summary{display:inline-flex;min-height:24px;font-weight:600}
 .plan-changes{margin:var(--space-1) 0 0;padding-left:1.1rem;font-size:var(--fs-sm);color:var(--muted)}
 .act-more{padding:var(--space-3) var(--space-4)}
 .act-more .actions{margin:0}
+/* Recent activity (Alerts): the log's day headers, quiet inside the card (no band, not sticky), so each time is HH:MM. */
+.act-recent .act-day-head{position:static;padding:var(--space-3) 0 var(--space-1);background:none}
+.act-recent .act-day:first-child .act-day-head{padding-top:0}
 .act-recent .act-entry.event{padding-inline:0}
-.act-recent .act-entry:last-child{border-bottom:0}
+.act-recent .act-day:last-child .act-entry:last-child{border-bottom:0}
 
 /* ---------------------------------------------------------------- Phones (860 px and below) */
 @media(max-width:860px){
   .now-head,.now-pair,.act-groups{gap:var(--space-3)}
   .now-fresh .btn,.act-csv,.act-unavailable .btn{min-height:var(--tap)}
+  .act-resolved-none a{min-height:var(--tap)}
   .now-hero{grid-template-columns:minmax(0,1fr);grid-template-areas:"main" "climate" "status" "readings";gap:var(--space-3);padding:var(--space-4)}
   .now-hero .hero-temp{font-size:2.75rem}
   .now-hero .hero-meta{font-size:var(--fs-sm)}

@@ -3,8 +3,10 @@
 // Now's hero (redesign §5.1) over the fixtures at 10:42: the answer as the page's one heading, linked to what explains it;
 // 64.8 °F with "in band" and "Updated 20 s ago" (#data, which opens All readings); three band bars with today's low and
 // high, a verdict word only out of band and RH's "no band"; time in band today against yesterday; the status line; and
-// the honest states: no verdict and STALE values while rows 1 to 3 or 7 hold, no bars or "In band today" with the API
-// down, a null reading as "—" with its reason.
+// the honest states: no verdict and STALE values while rows 1 to 3 or 7 hold (row 7's mode with no verdict, the bars
+// dated and never live-looking), no bars or "In band today" with the API down, a null reading as "—" with its reason.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
@@ -86,8 +88,8 @@ test("out of band: the answer names it, the bar says above band, and the hero va
   expect(document.querySelector(".now-band[data-tile=temp] .bb-clamp")).not.toBeNull();
 });
 
-test("rows 2, 3 and 7: no verdict anywhere, values STALE and muted, the mode unknown while the controller cannot vouch for it", () => {
-  for (const [names, says] of [["ingestor-not-running", "Ingestor not running since 10:38"], ["controller-not-reporting", "Controller not reporting since 10:36"]] as const) {
+test("rows 2 and 3: no verdict anywhere, values STALE and muted, the mode unknown while the controller cannot vouch for it", () => {
+  for (const [names, says, asOf] of [["ingestor-not-running", "Ingestor not running since 10:38", "As of 10:38"], ["controller-not-reporting", "Controller not reporting since 10:36", "As of 10:36"]] as const) {
     renderHero(names);
     expect(heading()).toBe(says);
     expect(text(document.body)).not.toMatch(VERDICTS);
@@ -96,12 +98,41 @@ test("rows 2, 3 and 7: no verdict anywhere, values STALE and muted, the mode unk
     expect(document.querySelector("[data-fresh]")?.getAttribute("data-fresh")).toBe("off");
     expect(status()[0]).toBe("Mode unknown");
     expect(document.querySelectorAll(".now-band svg.bb.is-stale")).toHaveLength(3);
+    expect(text(document.querySelector(".now-hero-climate[data-stale] .now-bands-asof"))).toBe(asOf);
     cleanup();
   }
-  renderHero("stale-data");
-  expect(heading()).toMatch(/^Waiting for fresh data/);
-  expect(text(document.querySelector(".now-hero-main"))).not.toMatch(VERDICTS);
-  expect(document.querySelector(".now-off")).toBeNull();
+});
+
+test("row 7, stale data: no verdict word anywhere, the mode as last said and dated, and band bars that say their age and never read as live", () => {
+  renderHero(["stale-data", "time-in-band"]);
+  // The heading does not repeat the age line under the value.
+  expect(heading()).toBe("Waiting for fresh data");
+  expect(plain(text(document.querySelector("#data")))).toBe("Last data 14 min ago (10:28)");
+  expect(document.querySelector(".hero-temp")?.className).toContain("value-muted");
+  expect(document.querySelector(".now-hero-value [data-badge=stale]")).not.toBeNull();
+  expect(document.querySelector("[data-fresh]")?.getAttribute("data-fresh")).toBe("stale");
+  // No verdict: not beside the value, not on a bar, and not in the mode, whose IDLE words assert the band.
+  expect(document.querySelector(".now-hero-verdict, .now-off")).toBeNull();
+  expect(status()[0]).toBe("Last mode: holding (10:28)");
+  expect(text(document.querySelector(".now-status"))).not.toMatch(/\bin band\b|above band|below band/i);
+  expect(text(document.querySelector(".now-bands"))).not.toMatch(/\bin band\b|above band|below band/i);
+  // The bars: each stale (muted), none hatched (hatching is for unknown), and the group dated in words.
+  expect(document.querySelectorAll(".now-band svg.bb.is-stale")).toHaveLength(3);
+  expect(document.querySelectorAll(".now-band svg.bb.is-unknown")).toHaveLength(0);
+  expect(bands().map(({ value }) => value)).toEqual(["64.8 °F", "0.62 kPa", "71.0%"]);
+  expect(document.querySelector(".now-hero-climate")?.hasAttribute("data-stale")).toBe(true);
+  expect(text(document.querySelector(".now-bands-asof"))).toBe("As of 10:28");
+  // A stale band is drawn neutral, as with the API down, so a muted dot inside it is no in-band verdict.
+  const css = readFileSync(join(process.cwd(), "app/styles/primitives.css"), "utf8");
+  expect(css).toContain(".bb-hero.is-stale .bb-band{fill:var(--ink-2)}.bb-hero.is-stale .bb-edge{stroke:var(--ink-muted)}");
+  expect(css).toContain(".bb.is-stale .bb-band{fill:var(--field)}.bb.is-stale .bb-edge{stroke:var(--line-strong)}");
+  expect(css.indexOf(".bb-hero.is-stale .bb-band")).toBeGreaterThan(css.indexOf(".bb.is-stale .bb-band"));
+  cleanup();
+  // Fresh, the group carries no age and no stale mark.
+  renderHero("in-band");
+  expect(document.querySelector(".now-hero-climate")?.hasAttribute("data-stale")).toBe(false);
+  expect(document.querySelector(".now-bands-asof")).toBeNull();
+  expect(document.querySelectorAll(".now-band svg.bb.is-stale")).toHaveLength(0);
 });
 
 test("the ingestor's answer links to #data, and #data opens All readings in place", () => {

@@ -26,7 +26,7 @@ test("in band: a meter per zone, its minutes against the cap and when it last go
   renderCard(read(statusOf("in-band")));
   expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Water today");
   expect(["wall", "center", "south", "west"].map(rowWords)).toEqual([
-    { amount: "0 / 60 min", last: "Fri 08:31, 12 min" }, { amount: "14 / 120 min", last: "misted 06:58 (VPD)" },
+    { amount: "0 / 60 min", last: "last Fri 08:31, 12 min" }, { amount: "14 / 120 min", last: "misted 06:58 (VPD)" },
     { amount: "0 / 45 min", last: "misted Fri 14:20 (VPD)" }, { amount: "0 / 45 min", last: "misted 9 days ago (VPD)" },
   ]);
   // The drip zone fills in --eq-water, the mister zones in --eq-mister.

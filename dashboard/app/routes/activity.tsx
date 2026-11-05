@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { useMemo, useState, type ReactNode } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import { Link, replace, useSearchParams } from "react-router";
 import { Acknowledge } from "../components/activity/acknowledge";
 import { ALERTS_UNAVAILABLE, AlertRow, alertListEmptyText } from "../components/alert-row";
@@ -16,7 +16,8 @@ import type { PanelState } from "../components/panel";
 import { StopAllWater } from "../components/stop-all-water";
 import { useToast } from "../components/toast";
 import {
-  activityHref, alertIdOf, alertsStatus, catalogOf, detailText, groupAlerts, isClosed, logRedirect, personName, readView, type ActivityView, type SignedIn,
+  ALERT_LIMIT, RECENT_ALERTS, activityHref, alertIdOf, alertsStatus, catalogOf, dayHeading, detailText, entriesByDay, groupAlerts, isClosed, logRedirect, personName,
+  readView, type ActivityView, type SignedIn,
 } from "../lib/activity";
 import { formatNumber, formatValue, localDate, shortTime } from "../lib/format";
 import { graphWindowUrl } from "../lib/graph-link";
@@ -50,9 +51,6 @@ export function clientLoader({ request }: { request: Request }) {
 /** Alerts every 15 s; the water status and the recent activity every 60 s (screens §7). */
 const ALERTS_POLL_MS = 15_000;
 const SLOW_POLL_MS = 60_000;
-/** API-14's largest page: the open alerts and those resolved in the last 24 h fit in one. */
-const ALERT_LIMIT = 200;
-const RECENT_ALERTS = { status: "recent", limit: ALERT_LIMIT } as const;
 /** Recent activity: the five newest log entries. */
 const RECENT_ACTIVITY = { limit: 5 } as const;
 /** "Open in Graphs" shows 2 h either side of an alert's first seen. */
@@ -102,7 +100,8 @@ type ItemContext = {
 /**
  * "Needs action" while anything is unacknowledged (a failed read says "Alerts unavailable." with Retry, never that
  * nothing is open), then the acknowledged and resolved groups, collapsed, each opening when it holds the expanded alert
- * (`?resolved=24h` opens the resolved one). A linked alert in none of them says it is not open or resolved in 24 h.
+ * (`?resolved=24h` opens the resolved one, and with none reads "Nothing resolved in the last 24 h · Open the log ›"
+ * once a read that succeeded says so). A linked alert in none of them says it is not open or resolved in 24 h.
  */
 function AlertGroups({ view, params, alerts, me, now, irrigation, loading }: { view: ActivityView; params: URLSearchParams; alerts: PanelRead<AlertPage>; me: SignedIn; now: Now | null; irrigation: IrrigationStatus | null; loading: boolean }) {
   const groups = groupAlerts(alerts.data?.items ?? []);
@@ -130,11 +129,16 @@ function AlertGroups({ view, params, alerts, me, now, irrigation, loading }: { v
     {groups.closed.length > 0 && <AlertGroup summary={`Resolved in the last 24 h (${groups.closed.length})`} start={view.resolved} holdsExpanded={groups.closed.some((row) => row.id === expandedId)}>
       {groups.closed.map(item)}
     </AlertGroup>}
+    {/* A link to the resolved group with none to open says so in one line, rather than a page silent about it (§3.6 rule 6). */}
+    {view.resolved && state === "ready" && !alerts.failed && !alerts.data?.next_cursor && groups.closed.length === 0 && <p className="card act-resolved-none" data-alerts="resolved-none">
+      {NOTHING_RESOLVED} · <Link to="/activity/log">Open the log<span aria-hidden="true"> ›</span></Link>
+    </p>}
     {alerts.data?.next_cursor && <p className="meta">Showing the first {ALERT_LIMIT} alerts.</p>}
   </div>;
 }
 
 const notOpenText = (id: string) => `Alert ${id} is not open or resolved in the last 24 h`;
+const NOTHING_RESOLVED = "Nothing resolved in the last 24 h";
 
 /**
  * A collapsed group ("Acknowledged, still open (2)"), open while it holds the expanded alert (a link to one, or an
@@ -318,17 +322,24 @@ function ClearFault({ lineId }: { lineId: string }) {
 }
 
 // ---------------------------------------------------------------------------------------------------- recent activity
-/** The five newest log entries (API-17, every 60 s), each one line with its date when not today, and "Open the log ›". */
+/**
+ * The five newest log entries (API-17, every 60 s), one line each under the log's day headers (Today, Yesterday, Fri 30
+ * Oct; redesign §5.9), so the time column only ever holds HH:MM, and "Open the log ›".
+ */
 function RecentActivity({ me }: { me: SignedIn }) {
   const log = panelRead(useApiRead("API-17", RECENT_ACTIVITY, { intervalMs: SLOW_POLL_MS }));
   const settings = useApiRead("API-09", {}, { intervalMs: SLOW_POLL_MS });
   const catalog = useMemo(() => catalogOf(settings.data?.items), [settings.data]);
   const entries = log.data?.items ?? [];
   const today = useClockValue((clock) => localDate(new Date(clock).toISOString()));
+  const headId = useId();
   const state: PanelState = log.failed && !log.data ? "error" : log.pending ? "loading" : entries.length ? "ready" : "empty";
   return <ListCard id="recent-activity" title="Recent activity" thing="recent activity" state={state} reserve="sm" onRetry={log.retry}
     link={{ to: "/activity/log", label: "Open the log" }} empty={{ message: "No activity yet." }}>
     {log.failed && log.data && <p className="fault act-unavailable">Couldn't load the newest activity: these entries may be old. <Button onClick={log.retry}>Retry</Button></p>}
-    <ol className="act-entries act-recent">{entries.map((entry) => <EventRow key={entry.id} entry={entry} catalog={catalog} me={me} showDate={localDate(entry.ts) !== today} />)}</ol>
+    <div className="act-recent">{entriesByDay(entries).map((day) => <section key={day.date} className="act-day" aria-labelledby={`${headId}-${day.date}`}>
+      <h3 id={`${headId}-${day.date}`} className="act-day-head">{dayHeading(day.date, today)}</h3>
+      <ol className="act-entries">{day.entries.map((entry) => <EventRow key={entry.id} entry={entry} catalog={catalog} me={me} />)}</ol>
+    </section>)}</div>
   </ListCard>;
 }

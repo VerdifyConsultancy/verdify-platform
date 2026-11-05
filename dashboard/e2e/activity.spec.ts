@@ -86,6 +86,16 @@ test("nothing open: the status line says No open alerts with what was resolved, 
   await expect(alertRow(page, 104)).toContainText("Resolved by Jason · 08:42 · “Probe reseated”");
 });
 
+test("a link to the resolved group with nothing resolved says so in one line, with the log", async ({ page, request }) => {
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/activity?resolved=24h");
+  const none = page.locator("[data-alerts=resolved-none]");
+  await expect(none).toHaveText("Nothing resolved in the last 24 h · Open the log ›");
+  await expect(group(page, /^Resolved/)).toHaveCount(0);
+  await none.getByRole("link", { name: "Open the log" }).click();
+  await expect(page).toHaveURL(/\/activity\/log$/);
+});
+
 test("Recent activity: the five newest log entries, each one line, and Open the log", async ({ page, request }) => {
   await useScreensClock(page, request, "activity-mixed");
   await load(page, "/activity");
@@ -93,6 +103,18 @@ test("Recent activity: the five newest log entries, each one line, and Open the 
   await expect(recent.locator("li.event")).toHaveCount(5);
   await recent.getByRole("link", { name: /^Open the log/ }).click();
   await expect(page).toHaveURL(/\/activity\/log$/);
+});
+
+test("Recent activity sits under the log's day headers: each time HH:MM on one line, and a plan's quote flush with the other entries' words", async ({ page, request }) => {
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/activity");
+  const recent = page.getByRole("region", { name: "Recent activity" });
+  await expect(recent.locator("h3.act-day-head")).toHaveText(["Today", "Yesterday", "Fri 30 Oct"]);
+  await expect(recent.locator(".event-when")).toHaveText(["07:02", "06:30", "06:45", "08:31"]);
+  for (const when of await recent.locator(".event-when").all()) expect((await when.boundingBox())?.height ?? 0).toBeLessThan(24);
+  const quote = await recent.locator(".act-plan + .event-reason").boundingBox();
+  const words = await recent.locator(".act-entry-text").first().boundingBox();
+  expect(Math.abs((quote?.x ?? 0) - (words?.x ?? -10))).toBeLessThan(1);
 });
 
 test("activity-mixed: one line an entry, who wrote in text, AI for Iris and the agent only, an Iris plan collapsed to its changes, causes first", async ({ page, request }) => {

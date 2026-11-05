@@ -55,7 +55,9 @@ test("in band: All OK with 64.8 °F, the band bars, Updated 20 s ago, Stop all w
   expect(plain(text(document.querySelector("[data-water=center] .now-water-amount")))).toBe("14 / 120 min");
   expect(stopButton()?.hasAttribute("disabled")).toBe(false);
   expect(stopButton()?.closest(".now-actions")).not.toBeNull();
-  expect(text(document.querySelector("#needs-someone .panel-empty p"))).toBe("No open alerts");
+  // Nothing was resolved in the last 24 h either, so there is no link to an empty page.
+  expect(text(document.querySelector("#needs-someone .panel-empty p"))).toBe("No open alerts · nothing resolved in 24 h");
+  expect(document.querySelector("#needs-someone .panel-empty a")).toBeNull();
 });
 
 test("one API-02 request serves the shell and Now; API-02, API-IRR-01 and API-14 poll every 15 s; the track's API-05 waits for the screen", async () => {

@@ -4,7 +4,8 @@
  * API-IRR-01, in words. Pure; times are America/Denver.
  *
  * - A line of the zone running: "misting now (VPD)" or "watering now (run now)", with its cause in words.
- * - Today: "today 07:31, 12 min"; within the last six days, the weekday: "Fri 07:31, 12 min"; older: "9 days ago".
+ * - A drip says "last" before its time, so the time never reads as a next run (redesign §5.1, §5.2): today "last 07:31,
+ *   12 min"; within the last six days, the weekday: "last Fri 07:31, 12 min"; older: "9 days ago".
  * - A mister says "misted" with the cause instead of the minutes: "misted 06:58 (VPD)" today, "misted Fri 13:20 (VPD)".
  * - A zone with no enabled line reads "not set up", never 0; a set-up zone with no run on record reads "—" with why.
  */
@@ -22,7 +23,7 @@ export const NO_RUN_REASON = "no run on record";
 export type ZoneLastWater = {
   readonly zone: WaterZone;
   readonly state: "running" | "watered" | "none" | "not_set_up";
-  /** "misting now (VPD)", "today 07:31, 12 min", "misted Fri 13:20 (VPD)", "9 days ago", "not set up" or "—". */
+  /** "misting now (VPD)", "last 07:31, 12 min", "misted Fri 13:20 (VPD)", "9 days ago", "not set up" or "—". */
   readonly text: string;
   /** Why the text is "—"; null otherwise. */
   readonly reason: string | null;
@@ -72,8 +73,9 @@ export function zoneLastWater(zone: WaterZone, lines: readonly IrrigationLine[],
   const days = ago === null ? 0 : Math.max(0, ago);
   const when = days === 0 ? `today ${shortTime(water.at)}` : days <= 6 ? `${WEEKDAY.format(new Date(water.at))} ${shortTime(water.at)}` : `${days} days ago`;
   if (isMister(newest.line)) return { zone, state: "watered", text: `misted ${when.replace(/^today /, "")} (${cause(water.cause)})`, reason: null };
-  const minutes = days <= 6 && Number.isFinite(water.open_s) ? `, ${formatValue(water.open_s / 60, "min")}` : "";
-  return { zone, state: "watered", text: `${when}${minutes}`, reason: null };
+  if (days > 6) return { zone, state: "watered", text: when, reason: null };
+  const minutes = Number.isFinite(water.open_s) ? `, ${formatValue(water.open_s / 60, "min")}` : "";
+  return { zone, state: "watered", text: `last ${when.replace(/^today /, "")}${minutes}`, reason: null };
 }
 
 /** Every watering zone's last water, in `WATER_ZONES` order. */

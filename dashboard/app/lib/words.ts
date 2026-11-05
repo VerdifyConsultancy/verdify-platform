@@ -494,3 +494,16 @@ export function modeWords(code: string, stage?: string | null): string {
   if (code === "SEALED_MIST" && stage && hasWords("mist_stage", stage)) return words("mist_stage", stage);
   return words("mode", code);
 }
+
+/** `IDLE` reads "In band, holding", a verdict on the band; without it, what the controller was doing. */
+const MODE_NO_VERDICT: Readonly<Record<string, string>> = { IDLE: "holding", UNKNOWN: "unknown" };
+/**
+ * The mode with no verdict in it, in lower case to follow a label ("Last mode: holding"), for a mode that may be old
+ * (Now's status line while the data is stale, redesign §4.3); every other mode reads as `modeWords` has it, and an
+ * unmapped code shows raw.
+ */
+export function modeWordsNoVerdict(code: string, stage?: string | null): string {
+  if (Object.hasOwn(MODE_NO_VERDICT, code)) return MODE_NO_VERDICT[code];
+  const text = modeWords(code, stage);
+  return text === code ? text : `${text.charAt(0).toLowerCase()}${text.slice(1)}`;
+}

@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 /**
- * The zone strip on Now (redesign §5.1; screens SCR-01, US-GRF-06): a tile per zone with its temperature and VPD, a band
- * bar of its VPD against the zone's band in force (today's low and high above it), a 24 h VPD sparkline over that band,
- * and where its numbers come from as a text mark (`lib/zone-source.ts`, D-IRP-13): amber only when a zone with a probe
- * has fallen back to its peers or the house. Each tile opens `/graphs/zones?zone=<zone>` through its title, whose link
- * covers the tile. API-04 over the last 15 minutes and API-06 per tile give the values and the band; the day read
- * (API-04 over 25 h, passed in) the sparkline and today's range. North has no zone band, so it reads against the house
- * band and says so. A stale or missing value reads STALE or "—" with its reason, never 0, and a failed read says so.
+ * The zone strip on Now (redesign §5.1; screens SCR-01, US-GRF-06): a tile per zone, in the one zone order Graphs → Zones
+ * shares, with its temperature and VPD, a band bar of its VPD against the zone's band in force (today's low and high above
+ * it) and a 24 h VPD sparkline over that band, the two named by one mono "VPD" label as the hero's bars are, and where its
+ * numbers come from as a text mark (`lib/zone-source.ts`, D-IRP-13) only when it is not the zone's own probe (PEER or
+ * HOUSE; the normal MEASURED stays quiet): amber only when a zone with a probe has fallen back to its peers or the
+ * house. Each tile opens `/graphs/zones?zone=<zone>` through its title, whose link covers the tile. API-04 over the last
+ * 15 minutes and API-06 per tile give the values and the band; the day read (API-04 over 25 h, passed in) the sparkline
+ * and today's range. North has no zone band, so it reads against the house band and says so. A stale or missing value
+ * reads STALE or "—" with its reason, never 0, and a failed read says so.
  */
 import { Link } from "react-router";
 import { formatValue } from "../lib/format";
@@ -24,9 +26,13 @@ import { Sparkline } from "./data/sparkline";
 import { SPARK_S, ZONE_VPD_KEYS, rangeSince, valuesSince } from "./now/climate";
 import { Panel, type PanelState } from "./panel";
 
-/** Where a tile's numbers come from, as a text mark (D-UX-07): mono and muted, amber only when the provenance is the news. */
+/**
+ * Where a tile's numbers come from, as a text mark (D-UX-07): mono and muted, amber only when the provenance is the news.
+ * A zone read from its own probe (MEASURED) is the normal case, which stays quiet (principle 1): no mark.
+ */
 export function ZoneTagMark({ zone, tag }: { zone: Zone; tag: ZoneTag }) {
-  const news = tag !== "MEASURED" && zone !== "center";
+  if (tag === "MEASURED") return null;
+  const news = zone !== "center";
   return <span className={cls("now-zone-tag", news && "now-zone-tag-news")} data-zone-tag={tag}>{tag}</span>;
 }
 
@@ -62,8 +68,12 @@ function ZoneTile({ zone, data, day }: { zone: Zone; data: ZoneData; day: DayInp
       <span className={cls("now-zone-value", vpd.stale && "value-muted")} data-tile="vpd">{formatValue(vpd.value, "kPa")}</span>
       {(temp.stale || vpd.stale) && <Badge kind="stale" />}
     </p>
-    <BandBar label={`${name} VPD`} unit="kPa" value={vpd.value} band={band} today={today} decorative={false} state={read.pending ? "loading" : vpd.stale ? "stale" : "ready"} />
-    <Sparkline values={values} token="vpd" band={band} size="tile" label={`${name} VPD over the last 24 h`} state={day.failed && !day.series ? "error" : day.series ? (vpd.stale ? "stale" : "ready") : "loading"} />
+    {/* Both visuals are the VPD: one label names them, as on the hero's bars; each image names itself for a screen reader. */}
+    <div className="now-zone-viz">
+      <span className="now-zone-viz-label" aria-hidden="true">VPD</span>
+      <BandBar label={`${name} VPD`} unit="kPa" value={vpd.value} band={band} today={today} decorative={false} state={read.pending ? "loading" : vpd.stale ? "stale" : "ready"} />
+      <Sparkline values={values} token="vpd" band={band} size="tile" label={`${name} VPD over the last 24 h`} state={day.failed && !day.series ? "error" : day.series ? (vpd.stale ? "stale" : "ready") : "loading"} />
+    </div>
     <p className="now-zone-meta meta">
       {off && <><span className="now-off">{words("band_verdict", off)}</span> · </>}
       {read.pending ? "band loading" : bandText(zone, band)}

@@ -2,6 +2,7 @@
 // Where each zone's numbers come from (#1138, D-IRP-13): the tag rule, the value each tag names and the band in force.
 import { expect, test } from "vitest";
 import { fixture } from "../../e2e/fixtures/index.mjs";
+import { GRID_ZONES } from "./graph-url";
 import type { BandTimeline, MetricDef, Series } from "./operator-api";
 import {
   PROBE_VPD_KEYS, ZONES, ZONE_READS, bandVerdict, bandZone, newestBand, newestSample, targetKey, targetWords, zoneKey, zoneTag, zoneValue, type Zone, type ZoneData,
@@ -90,8 +91,11 @@ test("a key API-03 does not list has no cadence to be fresh against", () => {
 });
 
 test("north reads the house band and the house target; the others their own", () => {
-  expect(ZONES.map(bandZone)).toEqual(["house", "east", "south", "west", "center"]);
-  expect(ZONES.map(targetKey)).toEqual(["climate.house_vpd_target", "climate.vpd_target_east", "climate.vpd_target_south", "climate.vpd_target_west", "climate.vpd_target_center"]);
+  // One zone order everywhere (redesign §5.1, §5.6): Now's tiles and Graphs → Zones' columns read the same list.
+  expect([...ZONES]).toEqual(["north", "center", "south", "east", "west"]);
+  expect(GRID_ZONES).toBe(ZONES);
+  expect(ZONES.map(bandZone)).toEqual(["house", "center", "south", "east", "west"]);
+  expect(ZONES.map(targetKey)).toEqual(["climate.house_vpd_target", "climate.vpd_target_center", "climate.vpd_target_south", "climate.vpd_target_east", "climate.vpd_target_west"]);
   const set = data({ "climate.house_vpd_target": { value: 0.62, age: 0 }, "climate.vpd_target_south": { value: 0.6, age: 9 } });
   expect(targetWords("north", set).replaceAll(" ", " ")).toBe("house target 0.62 kPa");
   expect(targetWords("south", set).replaceAll(" ", " ")).toBe("target 0.60 kPa · STALE");
@@ -117,7 +121,7 @@ test("Now's reads cover every zone's keys within API-04's 8 per request, each ke
   for (const zone of ZONES) for (const key of [zoneKey(zone, "temp"), zoneKey(zone, "rh"), zoneKey(zone, "vpd"), targetKey(zone)]) expect(all).toContain(key);
   // Every key is one API-03 serves, or API-04 would refuse the whole read.
   for (const key of all) expect(METRICS.some((metric) => metric.key === key), key).toBe(true);
-  expect(PROBE_VPD_KEYS).toEqual(["climate.vpd_north", "climate.vpd_east", "climate.vpd_south", "climate.vpd_west"]);
+  expect(PROBE_VPD_KEYS).toEqual(["climate.vpd_north", "climate.vpd_south", "climate.vpd_east", "climate.vpd_west"]);
 });
 
 test("the south-probe-out fixture reports L07 on its peers; fixture-api.test.ts checks its series", () => {

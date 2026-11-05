@@ -117,6 +117,20 @@ for (const [fixture, says, missing] of [
   });
 }
 
+test("stale data: Waiting for fresh data, no verdict word anywhere, the mode as last said and dated, the band bars dated and drawn neutral", async ({ page, request }) => {
+  await useScreensClock(page, request, "stale-data");
+  await load(page, "/");
+  await expect(answer(page)).toHaveText("Waiting for fresh data");
+  await expect(updated(page)).toHaveText("Last data 14 min ago (10:28)");
+  await expect(page.locator(".now-status [data-tile=mode]")).toHaveText("Last mode: holding (10:28)");
+  for (const part of [".now-status", ".now-bands"]) await expect(page.locator(part)).not.toContainText(/in band|above band|below band/i);
+  await expect(page.locator(".now-hero .now-hero-verdict, .now-hero .now-off")).toHaveCount(0);
+  await expect(page.locator(".now-hero-climate[data-stale] .now-bands-asof")).toHaveText("As of 10:28");
+  await expect(page.locator(".now-band svg.bb.is-stale")).toHaveCount(3);
+  // The band reads neutral (--ink-2), as with the API down: a muted dot inside a green band would still say in band.
+  await expect(band(page, "temp").locator(".bb-band")).toHaveCSS("fill", "rgb(27, 45, 61)");
+});
+
 test("with the API down, after the second failed poll: no band bars, no In band today, nothing green", async ({ page, request }) => {
   await useFixture(request, "api-down");
   await page.clock.install();
@@ -200,6 +214,20 @@ test("each fact once: the count in the answer or in Needs someone's head, never 
   await expect(page.locator("#needs-someone h2")).toHaveText("Needs someone · 2");
 });
 
+test("Needs someone with nothing open: what was resolved in 24 h, linked into Activity's resolved group only when there is some", async ({ page, request }) => {
+  await useScreensClock(page, request, "in-band");
+  await load(page, "/");
+  const empty = page.locator("#needs-someone .panel-empty");
+  await expect(empty.locator("p").first()).toHaveText("No open alerts · nothing resolved in 24 h");
+  await expect(empty.getByRole("link")).toHaveCount(0);
+  await useScreensClock(page, request, "alert-resolved");
+  await load(page, "/");
+  await expect(empty.locator("p").first()).toHaveText("No open alerts");
+  await empty.getByRole("link", { name: "1 resolved in 24 h" }).click();
+  await expect(page).toHaveURL(/\/activity\?resolved=24h$/);
+  await expect(page.locator("details.alert-group", { hasText: "Resolved in the last 24 h (1)" })).toHaveAttribute("open", "");
+});
+
 test("Acknowledge sends one API-15 and the answer follows the one count", async ({ page, request }) => {
   await useScreensClock(page, request, "alerts-merged");
   await load(page, "/");
@@ -231,6 +259,8 @@ test("Running and next from 861 px: the track over the last 6 h and the next 12 
   await expect(track.locator(".tt-label")).toHaveText(["Heat", "Vent, fans", "Fog, mist", "Drips", "Iris", "Plan", "Sun"]);
   await expect(track.locator(".tt-row").nth(0).locator(".tt-span").first()).toBeVisible();
   await expect(track.locator(".tt-now").first()).toBeVisible();
+  // Iris's triggers read as plan events with their times, so "SUNSET plan 16:50" never reads as a second sunset.
+  await expect(track.locator(".tt-row").nth(4).locator(".tt-marker-label")).toHaveText(["SUNRISE plan 07:00 ✓", "SOLAR_MAX plan 12:41", "SUNSET plan 16:50"]);
   await expect(track.locator(".tt-row").nth(6).locator(".tt-marker-label")).toHaveText(["Sunrise 06:35", "Sunset 16:58"]);
   // The now rule is named at the top of the track, and the plan's labels stop at the next marker, so its row keeps the others' height.
   await expect(track.locator(".tt-now-label")).toHaveText("now 10:42");
@@ -272,14 +302,19 @@ test("the order: Needs someone and Water today, then Running and next, then the 
 
 const zoneTile = (page: Page, zone: string) => page.locator(`#zones [data-zone=${zone}]`);
 
-test("the zone strip: five tiles with a band bar, a 24 h VPD sparkline and the tag as text; north says house band; a tile opens its zone's charts", async ({ page, request }) => {
+test("the zone strip: five tiles with a band bar and a 24 h sparkline named VPD, the tag as text only off a zone's own probe; north says house band; a tile opens its zone's charts", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/");
   await expect(page.locator("#zones [data-zone]")).toHaveCount(5);
-  await expect(page.locator("#zones [data-zone-tag]")).toHaveText(["MEASURED", "MEASURED", "MEASURED", "MEASURED", "HOUSE"]);
-  for (const zone of ["north", "east", "south", "west", "center"]) {
-    await expect(zoneTile(page, zone).locator("svg.bb")).toHaveCount(1);
-    await expect(zoneTile(page, zone).locator("svg.spark")).toHaveAttribute("aria-label", /VPD over the last 24 h$/);
+  // Graphs → Zones' order, so a zone keeps its place from page to page.
+  expect(await page.locator("#zones [data-zone]").evaluateAll((tiles) => tiles.map((tile) => tile.getAttribute("data-zone")))).toEqual(["north", "center", "south", "east", "west"]);
+  // A zone on its own probe (MEASURED) is the quiet normal and shows no mark; center always reads the house.
+  await expect(page.locator("#zones [data-zone-tag]")).toHaveText(["HOUSE"]);
+  await expect(zoneTile(page, "center").locator("[data-zone-tag]")).toHaveText("HOUSE");
+  for (const zone of ["north", "center", "south", "east", "west"]) {
+    await expect(zoneTile(page, zone).locator(".now-zone-viz-label")).toHaveText("VPD");
+    await expect(zoneTile(page, zone).locator(".now-zone-viz svg.bb")).toHaveCount(1);
+    await expect(zoneTile(page, zone).locator(".now-zone-viz svg.spark")).toHaveAttribute("aria-label", /VPD over the last 24 h$/);
   }
   await expect(zoneTile(page, "north").locator(".now-zone-meta")).toHaveText("house band 0.45–0.80 kPa");
   await expect(zoneTile(page, "south").locator(".now-zone-meta")).toHaveText("band 0.45–0.80 kPa");

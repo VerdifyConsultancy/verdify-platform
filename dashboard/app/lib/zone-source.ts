@@ -18,7 +18,12 @@ import { formatValue } from "./format";
 import type { BandTimeline, IrrigationLine, MetricDef, Series } from "./operator-api";
 import { words } from "./words";
 
-export const ZONES = ["north", "east", "south", "west", "center"] as const;
+/**
+ * Every zone, in the one order every zone list reads (redesign §5.1 and §5.6, screens SCR-01): Now's tiles and Graphs →
+ * Zones' columns and chips, north, center, south, east, west, so a zone keeps its place from page to page. Reads batch
+ * in their own order (`ZONE_READS`).
+ */
+export const ZONES = ["north", "center", "south", "east", "west"] as const;
 export type Zone = (typeof ZONES)[number];
 export const ZONE_WORDS: Readonly<Record<Zone, string>> = { north: "North", east: "East", south: "South", west: "West", center: "Center" };
 export const isZone = (value: string | null | undefined): value is Zone => (ZONES as readonly (string | null | undefined)[]).includes(value);

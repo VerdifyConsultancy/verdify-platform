@@ -142,6 +142,21 @@ test("with nothing open the status line says so honestly and Needs action is not
   // resolved=24h, as an old link has it, opens that group.
   await open("/activity?resolved=24h", { fixture: "alert-resolved" });
   expect(group(/^Resolved/)!.open).toBe(true);
+  expect(document.querySelector("[data-alerts=resolved-none]")).toBeNull();
+  stopped();
+  // With nothing resolved it says so in one line with the log, never a page silent about what the link promised.
+  await open("/activity?resolved=24h", { fixture: "in-band" });
+  expect(group(/^Resolved/)).toBeUndefined();
+  const none = document.querySelector("[data-alerts=resolved-none]")!;
+  expect(plain(text(none))).toBe("Nothing resolved in the last 24 h · Open the log ›");
+  expect(within(none as HTMLElement).getByRole("link", { name: "Open the log" }).getAttribute("href")).toBe("/activity/log");
+  stopped();
+  // Not without the link, and never from a read that failed.
+  await open("/activity", { fixture: "in-band" });
+  expect(document.querySelector("[data-alerts=resolved-none]")).toBeNull();
+  stopped();
+  await open("/activity?resolved=24h", { fixture: "in-band", fail: { "API-14": 503 } });
+  expect(document.querySelector("[data-alerts=resolved-none]")).toBeNull();
 });
 
 test("Acknowledge in one tap with an optional note: one API-15 with the note, who and when, the row under Acknowledged, the nav count down by one", async () => {
@@ -361,6 +376,13 @@ test("Recent activity: the five newest log entries, one line each, and Open the 
   expect(plain(text(recent.querySelector("li.event .act-entry-text")))).toBe("VPD Mister Engage 1.60 → 1.55 kPa · requested 1.53 · manual");
   expect(within(recent).getByRole("link", { name: /^Open the log/ }).getAttribute("href")).toBe("/activity/log");
   expect(requests(api, "API-17").map((row) => row.path)).toEqual(["/api/v1/activity?limit=5"]);
+  stopped();
+  // Under the log's day headers, so the time column only ever holds HH:MM, never a date that wraps.
+  await open("/activity", { fixture: "in-band" });
+  const days = screen.getByRole("region", { name: "Recent activity" });
+  expect([...days.querySelectorAll("h3.act-day-head")].map(text)).toEqual(["Today", "Yesterday", "Fri 30 Oct"]);
+  expect([...days.querySelectorAll("section.act-day")].map((day) => day.querySelectorAll("li.event").length)).toEqual([2, 1, 1]);
+  expect([...days.querySelectorAll(".event-when")].map(text)).toEqual(["07:02", "06:30", "06:45", "08:31"]);
 });
 
 test("a viewer reads every alert and the log, expanded too, with no Acknowledge, Resolve, Stop all water, Clear fault or note", async () => {
