@@ -1,0 +1,20 @@
+{
+  "migration": "293-crop-plantings.sql",
+  "exact_final_migration_sha256": "8359c00683afc8f14f7c1034e01925d189d752825f243f7a5cb67c0608eac5ab",
+  "final_migration_qualification_pending": true,
+  "before": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projected_successor": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projection": "2026-11-05, before any measurement. These are not a projection: they are exact289's seals as stand-ins (the 283 precedent). 293 adds layout columns to shelves and positions, the end_reason, source and actor columns to crops, request_id and detail to crop_events, the shelf_water_lines and crop_occupancy tables, the v_crop_planting_current view, and grants to the dashboard duty (zones, shelves, positions, crops, crop_events, crop_occupancy, crop_catalog, harvests, shelf_water_lines and two views), the MCP duty (positions, shelves, crop_occupancy, shelf_water_lines, v_crop_planting_current) and the ingestor duty (crop_occupancy, zones). fn_runtime_ordinary_boundary_digest (217) hashes the columns, constraints, view definitions and every ACL entry of each relation the api or ingestor login can read, and fn_mcp_runtime_boundary_digest (263) every MCP entry, so all three seals move and this file's successor block refuses the stand-ins. 290, 291 and 292 must land first; then re-chain this file's predecessor block, sealed_sql_293 and the c0-migration-delivery.py registration from the newest of them, run scripts/qualify-migration-successor.py db/migrations/293-crop-plantings.sql --fixture tests/fixtures/293-crop-plantings-native-qualification.json --probe-only on production (every session rolls back) to measure the three seals, set them in the file's successor block and both registrations, update the file's sha at both and here, and run the full qualification.",
+  "qualified_successor": null,
+  "after_rollback": null,
+  "inside_transaction_receipts_match": false,
+  "final_migration_rollback_verified": false
+}

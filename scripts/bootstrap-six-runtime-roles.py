@@ -680,6 +680,31 @@ def sealed_sql_289():
     )
 
 
+CROP_PLANTINGS_MIGRATION = (
+    293,
+    "293-crop-plantings.sql",
+    "8359c00683afc8f14f7c1034e01925d189d752825f243f7a5cb67c0608eac5ab",
+)
+# 293's layout columns, crop_occupancy and grants move all three seals. 290, 291 and 292 land first and this
+# re-chains from the newest of them. Until the rolled-back native qualification measures 293, these are 289's
+# seals as stand-ins (tests/fixtures/293-crop-plantings-native-qualification.json).
+SUCCESSOR_293 = dict(SUCCESSOR_289)
+
+
+def sealed_sql_293():
+    # Keep every 289 predicate and bind the exact 293 runner stamp with its seals.
+    predecessor = sealed_sql_289()
+    current = seal_profile_sql(289, SUCCESSOR_289)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(293, SUCCESSOR_293), 1)
+        + " AND "
+        + ledger_row_sql(*CROP_PLANTINGS_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -714,6 +739,8 @@ def sealed_sql():
         + sealed_sql_288()
         + " OR "
         + sealed_sql_289()
+        + " OR "
+        + sealed_sql_293()
         + ")"
     )
 
