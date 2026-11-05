@@ -56,10 +56,14 @@ export function BuildLine({ build, api }: { build: string; api: string | null })
   return <span className="build-line">Verdify dashboard · build <span className="mono">{revisionLabel(build)}</span> · API <span className="mono">{revisionLabel(api)}</span></span>;
 }
 
-/** Weather's `.site-footer`: the build line, the two sibling sites and the IBM Plex licences. */
+/**
+ * Weather's `.site-footer`: the build line, the time zone every time on the site is in (stated once here, on the chart
+ * axes and in every `<time title>`, D-UX-08), the two sibling sites and the IBM Plex licences.
+ */
 export function SiteFooter({ build, api }: { build: string; api: string | null }) {
   return <footer className="site-footer"><div className="shell">
     <BuildLine build={build} api={api} />
+    <span className="footer-zone">Times are America/Denver</span>
     <a href="https://graphs.verdify.ai/">graphs.verdify.ai<span aria-hidden="true"> ↗</span></a>
     <a href="https://lab.verdify.ai/">lab.verdify.ai<span aria-hidden="true"> ↗</span></a>
     <p className="small"><a href="/fonts/OFL-sans.txt">IBM Plex Sans license</a> · <a href="/fonts/OFL-mono.txt">IBM Plex Mono license</a></p>

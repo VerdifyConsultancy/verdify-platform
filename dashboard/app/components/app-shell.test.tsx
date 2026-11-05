@@ -181,6 +181,8 @@ test("the header: lockup, the five sections with the count, the account button; 
   expect(document.querySelectorAll(".role-pill")).toHaveLength(1);
   const footer = document.querySelector("footer")!;
   expect(text(footer.querySelector(".build-line"))).toBe(`Verdify dashboard · build fedcba987654 · API ${REVISION.slice(0, 12)}`);
+  // The time zone is stated once, here (D-UX-08): the eyebrows no longer carry it.
+  expect(text(footer.querySelector(".footer-zone"))).toBe("Times are America/Denver");
   expect(within(footer).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["https://graphs.verdify.ai/", "https://lab.verdify.ai/", "/fonts/OFL-sans.txt", "/fonts/OFL-mono.txt"]);
 });
 

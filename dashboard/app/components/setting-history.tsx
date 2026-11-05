@@ -132,7 +132,7 @@ export function SettingHistoryPanel({ setting, manual, onReverted, band = false,
   };
   const entries = answer ? changeEntries(answer.desired) : [];
   return <div className="drawer-history">
-    <Panel title="Change history" eyebrow="Requests, readback and plan · America/Denver" headingLevel={3} thing="history" reserve="lg"
+    <Panel title="Change history" eyebrow="Requests, readback and plan" headingLevel={3} thing="history" reserve="lg"
       state={answer ? "ready" : read.isError ? "error" : "loading"} onRetry={() => { void read.refetch(); }}
       actions={<ul className="chips chips-sm" aria-label="History window">
         {HISTORY_WINDOWS.map((item) => <li key={item.id}>

@@ -254,7 +254,7 @@ test("a setting with no desired row has no Revert; a viewer sees the history and
 test("a band edit redraws the API-19 preview before Save; a draft outside the bounds reads Must be … and Save still works", async ({ page, request }) => {
   await useScreensClock(page, request, "band-preview-center");
   await load(page, CENTER);
-  await expect(preview(page).locator("figcaption")).toHaveText("Center zone VPD · kPa · America/Denver");
+  await expect(preview(page).locator("figcaption")).toHaveText("Center zone VPD · kPa");
   await expect(preview(page).locator(".plot canvas").first()).toBeVisible();
   await expect(preview(page).locator(".chart-notes li")).toHaveText(["Sunrise 06:35", "Solar noon 11:47", "Sunset 16:58"]);
   const field = drawer(page).getByLabel("New value");

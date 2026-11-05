@@ -274,7 +274,7 @@ export function BandPreviewPanel({ setting, draft }: BandPreviewProps) {
   return <div className="band-preview">
     <Panel title="Band preview" headingLevel={3} thing="the band preview" state={message !== null || preview ? "ready" : "loading"} reserve="lg">
       <figure className="chart">
-        <figcaption className="eyebrow">{name} · {unit} · America/Denver</figcaption>
+        <figcaption className="eyebrow">{name} · {unit}</figcaption>
         {message !== null || !preview || !view
           ? <div className="plot chart-message"><p role="status">{message}</p></div>
           : <PreviewChart day={preview.day} view={view} name={name} />}
