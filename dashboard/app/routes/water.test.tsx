@@ -110,11 +110,13 @@ test("Today: zone cards in their fixed order, each line a row in its zone (L01�
   expect(text(zone("fog").querySelector(".wat-zone-today"))).toMatch(/^6 min today/);
   // Site today, in words with its hooks.
   expect([...document.querySelectorAll(".wat-site [data-limit]")].map((node) => [node.getAttribute("data-limit"), text(node)])).toEqual([
-    ["saf4", "SAF-4, the daily mist volume cap, in Settings21 / 360 gal"], ["budget", "Soft budget21 / 300 gal"], ["flow", "Unexplained flow: none"],
+    ["saf4", "SAF-4, the daily mist and fog ceiling, in Settings21 / 360 galdaily mist and fog ceiling"], ["budget", "Soft budget21 / 300 gal"], ["flow", "Unexplained flow: none"],
     ["occupancy", "Nobody seen: misters may run (last person 05:10)"], ["fallback", "Fallback misting: off"],
   ]);
   expect(program()).toBe("Program rev 42 on controller · confirmed 2 min ago");
   expect(status()).toBe("Program rev 42 on controller · confirmed 2 min ago · nothing running");
+  // SAF-4 caps gallons, so both meters fill --eq-water, as Now's SAF-4 meter does (#1308 visual QA 25).
+  expect([...document.querySelectorAll(".wat-site .meter")].map((meter) => meter.className.split(" ")[1])).toEqual(["meter-water", "meter-water"]);
 });
 
 test("Today's strips: each line's runs today with the now rule and its next run; misting episodes from API-05 as ticks", async () => {

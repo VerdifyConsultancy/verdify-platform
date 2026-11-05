@@ -150,6 +150,12 @@ export function flowWords(leak: Leak): { readonly text: string; readonly tone?: 
   return { text: leak.active === false ? "Unexplained flow: none" : "Unexplained flow: unknown" };
 }
 
+/**
+ * What SAF-4 caps (irrigation §4.5: every mister relay's water plus climate fog), in the words Now's water card and Water's
+ * Site today both show beside its meter, which fills `--eq-water` on both as redesign §4.6 fills gallons.
+ */
+export const SAF4_WORDS = "daily mist and fog ceiling";
+
 /** "21 of 360 gal"; the count alone with no maximum; "—" for a count the API does not have. */
 export function ofWords(used: number | null | undefined, max: number | null | undefined, unit: string): string {
   return `${whole(used)}${finite(max) && max > 0 ? ` of ${Math.round(max)}` : ""}${NBSP}${unit}`;

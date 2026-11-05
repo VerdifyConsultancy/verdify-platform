@@ -10,6 +10,7 @@ import { formatValue, shortTime } from "../../lib/format";
 import { WATER_ZONES, WATER_ZONE_WORDS, lastWater, type WaterZone, type ZoneLastWater } from "../../lib/last-water";
 import type { IrrigationLine, IrrigationStatus, Leak } from "../../lib/operator-api";
 import type { PanelRead } from "../../lib/queries";
+import { SAF4_WORDS } from "../../lib/water";
 import { cls } from "../common";
 import { Meter, meterWords, type MeterDomain } from "../data/meter";
 import { useNow } from "../freshness";
@@ -117,7 +118,7 @@ export function WaterCard({ irrigation }: WaterCardProps) {
               <Meter label="SAF-4 gallons today" unit="gal" value={saf4.used} cap={saf4.max} domain="water" decorative state={stale ? "stale" : "ready"} />
               <span className="now-water-amount">{saf4Text(saf4).replace(/^SAF-4 /, "").replace(" of ", " / ")}</span>
             </span>
-            <span className="now-water-last meta">site ceiling today</span>
+            <span className="now-water-last meta">{SAF4_WORDS}</span>
           </li>}
         </ul>
         {flow && <p data-water="flow" className={cls("now-water-flow", flow.flowing ? "fault" : "meta")}>{flow.text}</p>}
