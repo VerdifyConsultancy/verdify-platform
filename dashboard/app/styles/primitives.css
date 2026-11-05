@@ -206,14 +206,21 @@ a.strip-cell:hover,button.strip-cell:hover{box-shadow:inset 0 0 0 2px var(--ink)
 .tt.viz-skeleton{min-height:6rem}
 .tt-axis{position:relative;height:1.1rem;margin:0 var(--tt-end) 0 calc(var(--tt-label) + var(--space-2))}
 .tt-tick{position:absolute;top:0;left:calc(var(--tt-at) * 1%);transform:translateX(-50%);font:400 var(--fs-xs)/1.2 var(--mono);color:var(--muted);white-space:nowrap}
-.tt-tick:first-child{transform:none}
-.tt-tick:last-child{transform:translateX(-100%)}
+/* Each hour's 4 px mark sits at its true position; its words centre on it, or keep inside the window within 4% of an end. */
+.tt-tick::after{content:"";position:absolute;top:100%;left:50%;height:4px;border-left:1px solid var(--line)}
+.tt-tick-quiet{visibility:hidden}
+.tt-now-label{position:absolute;top:0;left:calc(var(--tt-at) * 1%);transform:translateX(-50%);padding:0 2px;background:#fff;font:400 var(--fs-xs)/1.2 var(--mono);color:var(--ink);white-space:nowrap}
+.tt-tick-start{transform:none}
+.tt-tick-start::after{left:0}
+.tt-tick-end{transform:translateX(-100%)}
+.tt-tick-end::after{left:auto;right:0}
 .tt-rows{list-style:none;margin:0;padding:0}
 .tt-row{display:grid;grid-template-columns:var(--tt-label) minmax(0,1fr) var(--tt-end);align-items:center;gap:0 var(--space-2);min-height:var(--tt-row)}
 .tt-row+.tt-row{border-top:1px solid var(--line)}
 .tt-label{min-width:0;overflow:hidden;font-size:var(--fs-sm);text-overflow:ellipsis;white-space:nowrap}
 .tt-row-muted .tt-label{color:var(--muted)}
-.tt-track{position:relative;height:var(--tt-row)}
+/* The track is the container its labels measure against: each label stops where its room on the row ends (--tt-room, percent of the track), cut with an ellipsis. */
+.tt-track{position:relative;height:var(--tt-row);container-type:inline-size}
 .tt-night{position:absolute;top:0;bottom:0;left:calc(var(--tt-start) * 1%);width:calc(var(--tt-width) * 1%);background:var(--field)}
 .tt-span{position:absolute;top:6px;bottom:6px;left:calc(var(--tt-start) * 1%);width:calc(var(--tt-width) * 1%);min-width:6px;min-height:0;margin:0;padding:0;border:0;border-radius:2px;background:var(--muted);color:var(--ink);font-size:var(--fs-xs);line-height:1;text-decoration:none}
 button.tt-span{cursor:pointer}
@@ -226,10 +233,10 @@ button.tt-span{cursor:pointer}
 .tt-skipped,.tt-blocked{background:repeating-linear-gradient(135deg,var(--line-strong) 0 2px,#fff 2px 5px);border:1px solid var(--muted)}
 .tt-missed{background:#fff;border:1.5px solid var(--fault)}
 .tt-unknown{background:repeating-linear-gradient(135deg,var(--muted) 0 1px,#fff 1px 4px);border:1px solid var(--line-strong)}
-.tt-span-label{position:absolute;top:50%;left:calc(100% + 4px);transform:translateY(-50%);white-space:nowrap;pointer-events:none}
+.tt-span-label{position:absolute;top:50%;left:calc(100% + 4px);transform:translateY(-50%);max-width:calc(var(--tt-room, 100) * 1cqw - 8px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
 .tt-planned:not(.tt-narrow) .tt-span-label,.tt-missed:not(.tt-narrow) .tt-span-label{left:4px}
 .tt-marker{position:absolute;top:0;bottom:0;left:calc(var(--tt-at) * 1%);border-left:2px dashed var(--ink)}
-.tt-marker-label{position:absolute;top:1px;left:4px;padding:0 2px;background:#fff;color:var(--ink);font-size:var(--fs-xs);line-height:1.2;white-space:nowrap}
+.tt-marker-label{position:absolute;top:1px;left:4px;max-width:calc(var(--tt-room, 100) * 1cqw - 8px);padding:0 2px;overflow:hidden;background:#fff;color:var(--ink);font-size:var(--fs-xs);line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
 .tt-marker-end .tt-marker-label{left:auto;right:4px}
 .tt-narrow-end .tt-span-label{left:auto;right:calc(100% + 4px)}
 .tt-now{position:absolute;top:0;bottom:0;left:calc(var(--tt-at) * 1%);border-left:1.5px solid var(--ink)}

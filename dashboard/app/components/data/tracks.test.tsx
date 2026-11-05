@@ -107,6 +107,59 @@ test("late in the window a marker's words and a narrow span's sit before them, s
   expect(container.querySelector(".tt-span")?.className).toBe("tt-span tt-planned tt-eq-water tt-narrow tt-narrow-end");
 });
 
+test("a label stops where its room on the row ends (the next span, marker or the now rule), and below a stub it is read, not drawn", () => {
+  const { container } = renderUi(<TimeTrack label="Running and next" from={DAY.from} to={DAY.to} now={at("10:42")} rows={[{
+    key: "plan", label: "Plan", spans: [],
+    markers: [
+      { key: "a", at: at("13:00"), label: "13:00 VPD Mister Engage 1.60 → 1.70 kPa · AI" },
+      { key: "b", at: at("16:30"), label: "16:30 Mister Pulse Gap 45.0 → 55.0 s · AI" },
+      { key: "c", at: at("10:30"), label: "SUNRISE" },
+    ],
+  }, {
+    key: "L04", label: "L04 Center mister",
+    spans: [
+      { key: "skip", start: at("09:47"), end: at("09:48"), status: "skipped", label: "09:47 skipped" },
+      { key: "next", start: at("11:47"), end: at("11:52"), status: "planned", label: "11:47" },
+    ],
+  }]} />);
+  const room = (element: Element) => Number((element as HTMLElement).style.getPropertyValue("--tt-room"));
+  const [first, second, sunrise] = [...container.querySelectorAll(".tt-marker")];
+  // 13:00's words run to 16:30's marker; 16:30's to the window's end; SUNRISE has 12 minutes before the now rule.
+  expect(room(first)).toBeCloseTo((3.5 / 24) * 100, 3);
+  expect(room(second)).toBeCloseTo((7.5 / 24) * 100, 3);
+  expect(room(sunrise)).toBeCloseTo((0.2 / 24) * 100, 3);
+  expect(first.querySelector(".tt-marker-label")?.getAttribute("title")).toBe("13:00 VPD Mister Engage 1.60 → 1.70 kPa · AI");
+  expect(first.querySelector(".tt-marker-label")?.classList.contains("screen-reader")).toBe(false);
+  // Too little room for a stub: the words stay in the row for a screen reader only.
+  expect(sunrise.querySelector(".tt-marker-label")?.className).toBe("tt-marker-label screen-reader");
+  expect(text(sunrise)).toBe("SUNRISE");
+  // The skipped run's words would cross the now rule 54 minutes on: they are left out, its name keeps them.
+  const skipped = container.querySelector(".tt-skipped")!;
+  expect(room(skipped)).toBeCloseTo((54 / 60 / 24) * 100, 3);
+  expect(skipped.querySelector(".tt-span-label")).toBeNull();
+  expect(skipped.getAttribute("title")).toBe("09:47 skipped, skipped");
+  const planned = container.querySelector(".tt-planned")!;
+  expect(text(planned.querySelector(".tt-span-label"))).toBe("11:47");
+  expect(room(planned)).toBeCloseTo(((24 - (11 * 60 + 52) / 60) / 24) * 100, 3);
+});
+
+test("ticks centre on their hour with a mark there, keep inside the window only at its ends, and give way to the now rule's name", () => {
+  const { container } = renderUi(<TimeTrack label="Today" from={DAY.from} to={DAY.to} now={at("10:42")} rows={ROWS} />);
+  const ticks = [...container.querySelectorAll(".tt-tick")];
+  expect(ticks.map((tick) => [text(tick), tick.classList.contains("tt-tick-start"), tick.classList.contains("tt-tick-end")])).toEqual([
+    ["00:00", true, false], ["03:00", false, false], ["06:00", false, false], ["09:00", false, false], ["12:00", false, false],
+    ["15:00", false, false], ["18:00", false, false], ["21:00", false, false], ["00:00", false, true],
+  ]);
+  // 12:00 sits under "now 10:42": its words give way, its mark stays.
+  expect(ticks.map((tick) => tick.querySelector(".tt-tick-quiet") !== null)).toEqual([false, false, false, false, true, false, false, false, false]);
+  expect(text(container.querySelector(".tt-now-label"))).toBe("now 10:42");
+  expect(Number((container.querySelector(".tt-now-label") as HTMLElement).style.getPropertyValue("--tt-at"))).toBeCloseTo(((10 * 60 + 42) / 1440) * 100, 3);
+  // No now inside the window, no name.
+  cleanup();
+  const later = renderUi(<TimeTrack label="Tomorrow" from={DAY.from} to={DAY.to} now={DAY.to + 3600} rows={ROWS} />);
+  expect(later.container.querySelector(".tt-now-label")).toBeNull();
+});
+
 test("rows are a list with their labels and ends; a span with detail is a button or link named in words, reached by arrow keys", () => {
   const select = ROWS[0].spans[0].onSelect as ReturnType<typeof vi.fn>;
   const { container } = renderUi(<TimeTrack label="Today's runs" from={DAY.from} to={DAY.to} rows={ROWS} now={at("10:42")} night={[{ from: DAY.from, to: at("06:31") }, { from: at("16:52"), to: DAY.to }]} />);

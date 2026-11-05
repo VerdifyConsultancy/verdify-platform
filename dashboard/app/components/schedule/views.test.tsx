@@ -63,21 +63,30 @@ test("the timeline is one tab stop: its blocks are out of the tab order and the 
   expect(screen.getByRole("link", { name: "New schedule on L09 West mister" }).getAttribute("href")).toBe("/new?line=L09");
 });
 
-test("a block's words take the room beside it: all of them, else its time and outcome (a planned one its time); the end column's head names the day", () => {
+test("a block's words take the room beside it: all of them, else its time and outcome (a planned one its time), else its time, else none; the end column's head names the day", () => {
+  const upTo = (length: number) => (text: string) => text.length <= length;
   expect(blockWords("15:00 skipped · RH 92%", "skipped", () => true)).toBe("15:00 skipped · RH 92%");
-  expect(blockWords("15:00 skipped · RH 92%", "skipped", () => false)).toBe("15:00 skipped");
-  expect(blockWords("07:31 missed · no valid clock", "missed", () => false)).toBe("07:31 missed");
-  expect(blockWords("07:31 · running", "running", () => false)).toBe("07:31 running");
-  expect(blockWords("16:00 · 10 min", "planned", () => false)).toBe("16:00");
-  // The room is to the next block on the row, or to the row's end; a block late in the day looks back to the one before.
+  expect(blockWords("15:00 skipped · RH 92%", "skipped", upTo(13))).toBe("15:00 skipped");
+  expect(blockWords("07:31 missed · no valid clock", "missed", upTo(12))).toBe("07:31 missed");
+  expect(blockWords("07:31 · running", "running", upTo(13))).toBe("07:31 running");
+  expect(blockWords("16:00 · 10 min", "planned", upTo(5))).toBe("16:00");
+  // Too little room for the time and its word keeps the time; too little for the time leaves the words out.
+  expect(blockWords("09:47 skipped", "skipped", upTo(6))).toBe("09:47");
+  expect(blockWords("09:47 skipped", "skipped", () => false)).toBe("");
+  // The room runs to the next block on the row, or the row's end, and back to the one before, or the row's start.
   const day = model();
   const scale = timeScale(day.from, day.to);
   const hour = (h: number) => day.from + h * 3600;
   const block = (key: string, start: number, end: number) => ({ key, start, end } as DayBlock);
-  const rooms = blockRooms([block("b", hour(12), hour(13)), block("a", hour(6), hour(7)), block("c", hour(22), hour(23))], scale);
-  expect(rooms.get("a")).toBeCloseTo(50 - 7 * 100 / 24, 6);
-  expect(rooms.get("b")).toBeCloseTo((22 - 13) * 100 / 24, 6);
-  expect(rooms.get("c")).toBeCloseTo((22 - 13) * 100 / 24, 6);
+  const blocks = [block("b", hour(12), hour(13)), block("a", hour(6), hour(7)), block("c", hour(22), hour(23))];
+  const rooms = blockRooms(blocks, scale);
+  expect(rooms.get("a")?.after).toBeCloseTo(50 - 7 * 100 / 24, 6);
+  expect(rooms.get("a")?.before).toBeCloseTo(6 * 100 / 24, 6);
+  expect(rooms.get("b")?.after).toBeCloseTo((22 - 13) * 100 / 24, 6);
+  expect(rooms.get("c")?.before).toBeCloseTo((22 - 13) * 100 / 24, 6);
+  // The now rule is a neighbour: at 10:00, block a's words stop there.
+  expect(blockRooms(blocks, scale, hour(10)).get("a")?.after).toBeCloseTo(3 * 100 / 24, 6);
+  expect(blockRooms(blocks, scale, hour(10)).get("b")?.before).toBeCloseTo(2 * 100 / 24, 6);
   // Drawn: L01's 12-minute run is too short for its words, which sit beside it whole, "07:35 ok", not its time alone.
   renderUi(<DayTimeline model={day} now={NOW} head={<h2>Monday</h2>} label="Runs on Monday by line" />);
   expect(text(document.querySelector('.sch-row[data-line="L01"] .sch-block-label'))).toBe("07:35 ok");
