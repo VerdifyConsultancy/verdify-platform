@@ -353,6 +353,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "287-retire-high-wind-rule.sql",
         # The retired equipment.irrigation_* registry rows stay inactive on a rebuild; the rows are data.
         "288-retire-irrigation-registry-rows.sql",
+        # Alert silences, their seeds and the ingestor grant's receipt re-seals run forward only.
+        "289-alert-silences.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

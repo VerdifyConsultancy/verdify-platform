@@ -2898,6 +2898,10 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         if stuck_alert is not None:
             alerts.append(stuck_alert)
 
+        # 16. Time-bounded silences (migration 289), read each cycle: an operator's
+        # insert, extension or early end applies on the next one.
+        silences = await _active_alert_silences(conn)
+
         await _sync_monitor_alerts(
             conn,
             alerts,
@@ -2906,6 +2910,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             keep_open_keys=soil_keep_open_keys,
             unpotted_keys=soil_unpotted_keys,
             refresh_only_keys=leak_refresh_only_keys,
+            silences=silences,
             # An open stuck alert resolves only when no setting differs (and
             # stays open while this process's delivery state is unknown).
             preserve_open_types=_setpoint_delivery_stuck_preserved(
@@ -2963,6 +2968,64 @@ def _probe_row_details(row, **changes) -> str | None:
     return json.dumps(env.details)
 
 
+# Time-bounded silences (migration 289). Only a person or agent resolve closes the leak
+# alert (US-WAT-18, J6), so no silence ever holds it back.
+UNSILENCEABLE_ALERT_TYPES = frozenset({"leak_detected"})
+
+
+def _like(pattern: str, value: str) -> bool:
+    """SQL LIKE as PostgreSQL applies it: case-sensitive, ``%`` any run, ``_`` one character, ``\\`` escapes."""
+    tokens, chars = [], iter(pattern)
+    for char in chars:
+        tokens.append(("=", next(chars, char)) if char == "\\" else (char, None) if char in "%_" else ("=", char))
+    reach = [True] + [False] * len(value)  # reach[j]: the tokens so far match value[:j]
+    for kind, char in tokens:
+        if kind == "%":
+            for j in range(1, len(reach)):
+                reach[j] = reach[j] or reach[j - 1]
+        else:
+            reach = [False] + [reach[j] and (kind == "_" or value[j] == char) for j in range(len(value))]
+    return reach[-1]
+
+
+def _alert_silence(silences, key, now):
+    """The first alert_silence row holding ``key`` back at ``now``, else None; never for leak_detected.
+
+    A row holds a key while ``now`` is before its ``until``, its alert_type is the key's, and its
+    sensor_pattern is NULL (every sensor) or LIKE-matches the key's sensor_id.
+    """
+    alert_type, sensor_id = key
+    if alert_type in UNSILENCEABLE_ALERT_TYPES:
+        return None
+    for silence in silences:
+        pattern = silence["sensor_pattern"]
+        if (
+            silence["alert_type"] == alert_type
+            and now < silence["until"]
+            and (pattern is None or (isinstance(sensor_id, str) and _like(pattern, sensor_id)))
+        ):
+            return silence
+    return None
+
+
+def _silence_resolution(silence) -> str:
+    """The resolution of a row a silence closes: the silence, its expiry and why."""
+    until = silence["until"].astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC")
+    return f"suppressed: alert_silence {silence['id']} until {until} ({silence['reason']})"
+
+
+async def _active_alert_silences(conn):
+    """The unexpired alert_silence rows, longest first; none when the table is unreadable (every rule applies)."""
+    try:
+        return await conn.fetch(
+            "SELECT id, alert_type, sensor_pattern, until, reason FROM alert_silence "
+            "WHERE until > now() AND alert_type <> 'leak_detected' ORDER BY until DESC, id"
+        )
+    except Exception as e:
+        log.warning("alert silences unavailable, none applied: %s", type(e).__name__)
+        return []
+
+
 async def _sync_monitor_alerts(
     conn,
     alerts,
@@ -2977,6 +3040,7 @@ async def _sync_monitor_alerts(
     unpotted_keys=frozenset(),
     refresh_only_keys=frozenset(),
     preserve_open_types=frozenset(),
+    silences=(),
     now=None,
 ):
     """Persist, deduplicate, deliver and resolve the same producer envelopes.
@@ -2996,6 +3060,11 @@ async def _sync_monitor_alerts(
     auto-resolves: only a person or agent resolve closes it (US-WAT-18, J6).
     A ``refresh_only_keys`` envelope (the leak alert after its flag cleared)
     only refreshes its open row and is never inserted.
+
+    ``silences`` (the unscoped monitor's alert_silence rows, migration 289): a key
+    one holds at ``now`` is not raised, its open row closes as suppressed with a
+    resolution naming the silence and its expiry, and a long-offline mark stays.
+    After the silence's ``until`` the rules apply again. leak_detected is never held.
     """
     # Validate the complete scope before the first database or transport mutation.
     if scope is not None:
@@ -3003,10 +3072,14 @@ async def _sync_monitor_alerts(
             raise ValueError("explicit_synthetic_greenhouse_required")
         if len(alerts) > 1 or any((a["alert_type"], a["sensor_id"]) != scope for a in alerts):
             raise ValueError("component_alert_scope_mismatch")
-        if keep_open_keys or unpotted_keys or refresh_only_keys:
+        if keep_open_keys or unpotted_keys or refresh_only_keys or silences:
             raise ValueError("lifecycle_keys_require_unscoped_monitor")
     elif message_prefix or post_message is not None or scope_greenhouse_id is not None:
         raise ValueError("qualified_transport_requires_exact_alert_scope")
+    if silences:
+        # A silenced key is not raised this cycle (migration 289).
+        now = now or datetime.now(UTC)
+        alerts = [a for a in alerts if _alert_silence(silences, (a["alert_type"], a["sensor_id"]), now) is None]
     # ── Deduplicate + insert + resolve ──
     active_keys = {(a["alert_type"], a["sensor_id"]) for a in alerts}
     kept_keys = set(keep_open_keys) - set(unpotted_keys)
@@ -3101,6 +3174,14 @@ async def _sync_monitor_alerts(
             suppressed += 1
         else:
             resolved += 1
+
+    if silences:
+        # An open row a silence holds closes as suppressed, before any lifecycle step reads it.
+        for key, row in list(open_keys.items()):
+            silence = _alert_silence(silences, key, now)
+            if silence is not None:
+                await close(row, "suppressed", _silence_resolution(silence))
+                del open_keys[key]
 
     # VD-72 probe-offline lifecycle, unscoped monitor only: a scoped component
     # cycle keeps its exact path and issues no extra alert_log read.
@@ -3331,6 +3412,9 @@ async def _sync_monitor_alerts(
         ):
             key = (row["alert_type"], row["sensor_id"])
             if not _probe_offline_key(key) or key in active_keys or key in kept_keys:
+                continue
+            if silences and _alert_silence(silences, key, now) is not None:
+                # Held back, not reporting again: the mark stays until the silence ends.
                 continue
             details = _probe_row_details(row, long_offline=False)
             if details is not None:
