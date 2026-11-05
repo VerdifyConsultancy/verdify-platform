@@ -62,7 +62,7 @@ const PROBLEM_CODE = {
   line_disabled: "The line is disabled",
   line_paused: "The line is paused",
   line_faulted: "The line is faulted",
-  not_schedule_member: "This mister zone is not on a schedule",
+  not_schedule_member: "The controller runs this mister only with Schedule on until its next firmware flash",
   line_busy: "The line is already running",
   manifold_busy: "Another line on the same supply is running",
   cap_reached: "Over the line's daily limit",

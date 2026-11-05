@@ -584,12 +584,12 @@ const LINE_IDS = ["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10",
 const buttons = (id: string) => [...row(id).querySelectorAll(":scope > .object-row-actions > button")].map((node) => text(node));
 const everyRow = () => Object.fromEntries(LINE_IDS.map((id) => [id, buttons(id)]));
 
-test("each row's actions with the irrigation firmware: Run… on an enabled line, Mist now… with Schedule on, a quiet Stop on every row but fog", async () => {
+test("each row's actions with the irrigation firmware (#1343): Run… or Mist now… on every wet line but a reserved one that is off, a quiet Stop on every row but fog", async () => {
   open("/water", { fixture: "run-dialogs" });
   await load();
   expect(everyRow()).toEqual({
-    L01: ["Run… Wall drip", "Stop Wall drip"], L02: ["Run… Wall drip (fertilized)", "Stop Wall drip (fertilized)"], L04: ["Mist now… Center mister", "Stop Center mister"], L05: ["Stop Center drip"], L06: ["Stop Center drip (fertilized)"], L07: ["Stop South mister"],
-    L08: ["Run… South mister (fertilized)", "Stop South mister (fertilized)"], L09: ["Stop West mister"], L10: ["Stop West mister (fertilized)"], L11: [],
+    L01: ["Run… Wall drip", "Stop Wall drip"], L02: ["Run… Wall drip (fertilized)", "Stop Wall drip (fertilized)"], L04: ["Mist now… Center mister", "Stop Center mister"], L05: ["Stop Center drip"], L06: ["Stop Center drip (fertilized)"], L07: ["Mist now… South mister", "Stop South mister"],
+    L08: ["Run… South mister (fertilized)", "Stop South mister (fertilized)"], L09: ["Mist now… West mister", "Stop West mister"], L10: ["Run… West mister (fertilized)", "Stop West mister (fertilized)"], L11: [],
   });
   expect(document.querySelectorAll("article[data-line] .btn-stop")).toHaveLength(0);
   expect(screen.getByRole("button", { name: "Run… Wall drip" }).className).toContain("btn-wide");

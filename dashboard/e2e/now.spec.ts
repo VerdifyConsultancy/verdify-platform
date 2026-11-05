@@ -52,14 +52,15 @@ test("1440 × 900: the hero and the quick actions sit whole in the first screen,
   }
 });
 
-test("each band bar draws the band, the value and today's low–high; RH has no band; in band adds no verdict, out of band does", async ({ page, request }) => {
+test("each band bar draws one track, the band box and the value, with today's low–high in its name only; RH has no band; in band adds no verdict, out of band does", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/");
   for (const tile of ["temp", "vpd"]) {
     const bar = band(page, tile).locator("svg.bb");
     await expect(bar.locator(".bb-band")).toHaveCount(1);
     await expect(bar.locator(".bb-dot")).toHaveCount(1);
-    await expect(bar.locator(".bb-today")).toHaveCount(1);
+    await expect(bar.locator(".bb-track")).toHaveCount(1);
+    await expect(bar.locator(".bb-today")).toHaveCount(0);
     await expect(bar).toHaveAttribute("aria-label", /, today /);
   }
   await expect(band(page, "rh").locator(".bb-band")).toHaveCount(0);
@@ -68,7 +69,8 @@ test("each band bar draws the band, the value and today's low–high; RH has no 
   await expect(band(page, "temp").getByRole("link")).toHaveAttribute("href", "/graphs?range=24h#temperature");
   await useScreensClock(page, request, "too-hot");
   await load(page, "/");
-  await expect(answer(page)).toHaveText("Too hot: 84.1 °F (target 62–70 °F)");
+  await expect(answer(page)).toHaveText("Out of band");
+  await expect(page.locator(".now-condition [data-condition=temp]")).toHaveText("Too hot: 84.1 °F (band 62–70 °F)");
   await expect(band(page, "temp").locator(".now-off")).toHaveText("above band");
   await expect(band(page, "vpd").locator(".now-off")).toHaveCount(0);
 });
@@ -309,8 +311,8 @@ test("the zone strip: five tiles with a band bar and a 24 h sparkline named VPD,
   // Graphs → Zones' order, so a zone keeps its place from page to page.
   expect(await page.locator("#zones [data-zone]").evaluateAll((tiles) => tiles.map((tile) => tile.getAttribute("data-zone")))).toEqual(["north", "center", "south", "east", "west"]);
   // A zone on its own probe (MEASURED) is the quiet normal and shows no mark; center always reads the house.
-  await expect(page.locator("#zones [data-zone-tag]")).toHaveText(["HOUSE"]);
-  await expect(zoneTile(page, "center").locator("[data-zone-tag]")).toHaveText("HOUSE");
+  await expect(page.locator("#zones [data-zone-tag]")).toHaveText(["no probe · house average"]);
+  await expect(zoneTile(page, "center").locator("[data-zone-tag]")).toHaveAttribute("data-zone-tag", "HOUSE");
   for (const zone of ["north", "center", "south", "east", "west"]) {
     await expect(zoneTile(page, zone).locator(".now-zone-viz-label")).toHaveText("VPD");
     await expect(zoneTile(page, zone).locator(".now-zone-viz svg.bb")).toHaveCount(1);
@@ -323,10 +325,11 @@ test("the zone strip: five tiles with a band bar and a 24 h sparkline named VPD,
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("South zone");
 });
 
-test("south's tile reads PEER while its probe is out, amber, with the peers' value and no STALE", async ({ page, request }) => {
+test("south's tile says its probe is offline and shows the West + East average, amber, with the peers' value and no STALE", async ({ page, request }) => {
   await useScreensClock(page, request, "south-probe-out");
   await load(page, "/");
-  await expect(zoneTile(page, "south").locator("[data-zone-tag]")).toHaveText("PEER");
+  await expect(zoneTile(page, "south").locator("[data-zone-tag]")).toHaveText("probe offline · West + East average");
+  await expect(zoneTile(page, "south").locator("[data-zone-tag]")).toHaveAttribute("data-zone-tag", "PEER");
   await expect(zoneTile(page, "south").locator(".now-zone-tag-news")).toHaveCount(1);
   await expect(zoneTile(page, "south").locator("[data-tile=vpd]")).toHaveText(/^\d\.\d\d\skPa$/);
   await expect(zoneTile(page, "south").locator("[data-badge=stale]")).toHaveCount(0);

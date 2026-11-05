@@ -36,8 +36,13 @@ export type WaterOutlet = { readonly irrigation: PolledQueryResult<IrrigationSta
 export const useWaterOutlet = (): WaterOutlet => useOutletContext<WaterOutlet>();
 
 // ---------------------------------------------------------------------------------------------------- the drawers
-/** Why `?check=` is open when the line alone does not say: `for=schedule`, on a disabled line whose Schedule was pressed. */
+/**
+ * Why `?check=` is open when the line alone does not say: `for=schedule`, on a disabled line whose Schedule was pressed,
+ * or `for=run`, on a disabled line whose Run… or Mist now… was pressed (#1343: enable it, then its run dialog opens).
+ */
 const CHECK_FOR = "for";
+/** Why a check drawer opened, beyond what the line itself says. */
+export type CheckWanted = "schedule" | "run";
 /**
  * One of Water's drawers in the URL (#1182): `?check=<line_id>`, `?options=<line_id>` or `?pause=<line_id|all>`, and the
  * Run dialog's `?run=<line_id>`. Opening pushes, so Back closes it; closing replaces, and neither moves the page. `wanted`
@@ -45,7 +50,7 @@ const CHECK_FOR = "for";
  */
 export function useWaterDrawer(name: "check" | "options" | "pause" | "run") {
   const [params, setParams] = useSearchParams();
-  const open = useCallback((value: string, wanted?: "schedule") => setParams((current) => {
+  const open = useCallback((value: string, wanted?: CheckWanted) => setParams((current) => {
     const next = new URLSearchParams(current);
     next.set(name, value);
     if (wanted) next.set(CHECK_FOR, wanted); else next.delete(CHECK_FOR);
@@ -58,6 +63,18 @@ export function useWaterDrawer(name: "check" | "options" | "pause" | "run") {
     return next;
   }, { replace: true, preventScrollReset: true }), [name, setParams]);
   return { value: params.get(name), wanted: params.get(CHECK_FOR), open, close };
+}
+
+/** Close `?check=` and open the run dialog for the same line in one step (#1343: enable, then run). */
+export function useCheckThenRun() {
+  const [, setParams] = useSearchParams();
+  return useCallback((lineId: string) => setParams((current) => {
+    const next = new URLSearchParams(current);
+    next.delete("check");
+    next.delete(CHECK_FOR);
+    next.set("run", lineId);
+    return next;
+  }, { replace: true, preventScrollReset: true }), [setParams]);
 }
 
 // ---------------------------------------------------------------------------------------------------- times

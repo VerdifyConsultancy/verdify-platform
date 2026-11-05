@@ -6382,7 +6382,7 @@ async def irrigation_run(
     already running). Whether water started shows on the line's relay in equipment_state within about 30 s, not here.
 
     Send exactly the fields of the line's kind. Drips L01, L05: minutes. Fertilizer drips L02, L06: minutes, prewet_s,
-    flush_s. Misters L04, L07, L09, with schedule_member on: on_s, count, gap_s. Fertilizer misters L08, L10: on_s,
+    flush_s. Misters L04, L07, L09, Schedule on or off: on_s, count, gap_s. Fertilizer misters L08, L10: on_s,
     count, gap_s, prewet_s, flush_s, never minutes; a rinse needs the clean partner enabled, or the controller ends the
     run skipped.
 
@@ -6394,7 +6394,8 @@ async def irrigation_run(
     replayed: true.
 
     Refusals are the Problem JSON with isError: line_busy and manifold_busy (retryable, retry_after_s when known),
-    cap_reached, line_disabled, line_paused, line_faulted, not_schedule_member, out_of_range (before the firmware, minutes
+    cap_reached, line_disabled, line_paused, line_faulted, not_schedule_member (a mister with Schedule off, only until
+    the controller runs the firmware that drops that rule), out_of_range (before the firmware, minutes
     is not irrig_wall_duration_min; min and max give it), invalid_request (a missing field or another kind's, such as
     minutes on L08), unknown_target (L03, L11), request_id_reused, forbidden, and unavailable (a line other than L01
     before the irrigation firmware, not retryable; the database, retryable with the same request_id)."""

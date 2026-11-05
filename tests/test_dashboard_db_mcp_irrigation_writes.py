@@ -407,13 +407,13 @@ def test_iris_is_refused_on_a_manual_line_a_pause_included_and_on_all_while_any_
     before, stored = counts(), line_row("L09")
     until = hours_from_now(2)
     for write, detail in (
-        (tools.irrigation_line_set("L09", daily_cap_min=30), "L09"),
-        (tools.irrigation_line_set("L09", paused_until=until), "L09"),
-        (tools.irrigation_line_set("all", paused_until=until), "L09"),
+        (tools.irrigation_line_set("L09", daily_cap_min=30), "West mister"),
+        (tools.irrigation_line_set("L09", paused_until=until), "West mister"),
+        (tools.irrigation_line_set("all", paused_until=until), "West mister"),
     ):
         problem = refusal(as_caller(tools, IRIS, write))
         assert (problem["code"], problem["status"], problem["retryable"]) == ("manual", 422, False)
-        assert detail in problem["detail"]
+        assert detail in problem["detail"]  # the line's name, never its relay code (#1341)
     assert (counts(), line_row("L09")) == (before, stored)
     assert not [row for row in sql("SELECT paused_until FROM public.irrigation_line") if row["paused_until"]]
 

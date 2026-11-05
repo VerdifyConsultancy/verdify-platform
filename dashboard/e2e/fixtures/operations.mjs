@@ -818,7 +818,9 @@ function runNow(world, { params, body, key }) {
     const until = holder.state.ends_at ? Date.parse(holder.state.ends_at) : null;
     throw refuse(422, "manifold_busy", "Manifold busy", `${holder.line_id} holds the ${manifold(info.kind)} manifold${until ? ` until ${hhmm(until)}` : ""}; stop it or try then`, { retry_after_s: until ? Math.max(0, Math.round((until - world.now) / 1000)) : null });
   }
-  if (info.kind === "mister" && !line.schedule_member) throw refuse(422, "not_schedule_member", "Schedule is off", `${id} takes run-now only with Schedule on`);
+  // #1343: any enabled mister runs once, Schedule on or off; the API refuses it only while the controller still runs the
+  // firmware before that change (the `firmware-before-1343` fixture).
+  if (info.kind === "mister" && !line.schedule_member && world.flags.mistNeedsSchedule) throw refuse(422, "not_schedule_member", "Schedule is off", `${id} takes run-now only with Schedule on until the next firmware flash`);
   const minutes = durationMs(info.kind, args) / MINUTE;
   if (line.daily_cap_min > 0 && (line.today?.minutes ?? 0) + minutes > line.daily_cap_min) throw refuse(422, "cap_reached", "Daily cap reached", `${id} has ${line.daily_cap_min - (line.today?.minutes ?? 0)} of its ${line.daily_cap_min} min left today`);
   const sent = command(world, "run", id, args, key);

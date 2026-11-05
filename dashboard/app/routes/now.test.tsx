@@ -80,7 +80,8 @@ test("each fact once: the open-alert count in the answer or Needs someone's head
   cleanup();
   stopFixtureApi();
   await open(["alerts-merged", "too-hot"]);
-  expect(answer()).toBe("Too hot: 84.1 °F (target 62–70 °F)");
+  expect(answer()).toBe("Out of band");
+  expect(plain(text(document.querySelector(".now-condition [data-condition=temp]")))).toBe("Too hot: 84.1 °F (band 62–70 °F)");
   expect(text(within(document.querySelector<HTMLElement>("#needs-someone")!).getByRole("heading", { level: 2 }))).toBe("Needs someone · 2");
   cleanup();
   stopFixtureApi();
@@ -270,10 +271,11 @@ test("a missed SUNSET turns the Iris phrase amber; Acknowledge sends one API-15 
   expect(text(document.querySelector("#needs-someone"))).toContain("Acknowledged by Jason · 10:42");
 });
 
-test("the answer links to what explains it; the ingestor banner's #data opens All readings in place", async () => {
+test("the answer is never a link: a quiet link under it goes to what explains it; the ingestor banner's #data opens All readings in place", async () => {
   await open("flow-valves-closed");
   expect(answer()).toBe("Water flowing with every Verdify valve closed");
-  expect(screen.getByRole("link", { name: "Water flowing with every Verdify valve closed" }).getAttribute("href")).toBe("/activity?alert=201");
+  expect(screen.getByRole("heading", { level: 1 }).querySelector("a")).toBeNull();
+  expect(document.querySelector(".now-condition a")?.getAttribute("href")).toBe("/activity?alert=201");
   expect(plain(text(document.querySelector("[data-water=flow]")))).toBe("Water flowing with every Verdify valve closed since 10:38 · 3 gal in 10 min");
   cleanup();
   stopFixtureApi();
@@ -309,10 +311,13 @@ test("the order: hero, quick actions, Needs someone beside Water today, then Run
   expect(plain(text(document.querySelector("[data-coming=later]")))).toContain("Wall drip paused until 14:00 by Jason: rain · next Wed 07:35");
 });
 
-test("south's tile reads PEER while its probe is out, and opens its charts", async () => {
+test("south's tile says in words that its probe is offline and it shows the West + East average, and opens its charts", async () => {
   await open("south-probe-out");
   await settled();
   const south = document.querySelector<HTMLElement>("#zones [data-zone=south]")!;
-  expect(south.querySelector("[data-zone-tag]")?.textContent).toBe("PEER");
+  expect(south.querySelector("[data-zone-tag]")?.getAttribute("data-zone-tag")).toBe("PEER");
+  expect(south.querySelector("[data-zone-tag]")?.textContent).toBe("probe offline · West + East average");
+  // No bare provenance code anywhere on Now.
+  expect(main()).not.toMatch(/\bPEER\b/);
   expect(within(south).getByRole("link").getAttribute("href")).toBe("/graphs/zones?zone=south");
 });
