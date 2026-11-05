@@ -1,7 +1,7 @@
 {
   "migration": "289-alert-silences.sql",
   "exact_final_migration_sha256": "e9173348a9476a69b6ca7285cdfd1e14820ac00af373fa37f6b0e32104314475",
-  "final_migration_qualification_pending": true,
+  "final_migration_qualification_pending": false,
   "before": {
     "api": "6b43af2ab8da8871469a379b1c322ade82481a92a7d32300381ea5e60fd2dd8c",
     "ingestor": "6b0c82221c3d826a83b8c7a5cd674c23d4bc39ee9c9912a9aaa5bae0d90dbdcc",
@@ -13,8 +13,19 @@
     "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
   },
   "projection": "2026-11-05, read only, production at exact288: max seq 288 with 288's sha, and all three live digests and receipts equal to 288's registration. The VD-39 method: fn_runtime_ordinary_boundary_digest's live body (pg_get_functiondef), rebuilt as a DO block under its own search_path (pg_catalog, pg_temp) in a default_transaction_read_only session on production, reproduced both live ordinary digests; with one injected relation entry per login for public.alert_silence it gives the projected api and ingestor seals. Each entry was formatted by the function's own relation expression on PostgreSQL 16 (production runs 16.11), on a loopback cluster whose bootstrap superuser is verdify (OID 10, as on production), from this file's CREATE TABLE and GRANT, with the ingestor duty's production OID 1091442 in the ACL. The same pipeline reproduced production's public.activity_log entry byte for byte for both logins. Nothing else enters either digest: the bigserial's sequence has no ACL and no runtime grant, production has no table default ACL (only verdify's function default {verdify=X/verdify}) and no event trigger but TimescaleDB's, and the seeds are rows. The MCP seal stays 288's: fn_mcp_runtime_boundary_digest (263) takes in a relation only if an MCP role owns it or PUBLIC or an MCP role holds an ACL entry on it. Run scripts/qualify-migration-successor.py db/migrations/289-alert-silences.sql --fixture tests/fixtures/289-alert-silences-native-qualification.json on production (every session rolls back; no --apply-first while production is at 288). If the probe differs from these literals, set the measured api and ingestor digests in the file's successor block and both registrations, update the file's sha at both and here, and run it again.",
-  "qualified_successor": null,
-  "after_rollback": null,
-  "inside_transaction_receipts_match": false,
-  "final_migration_rollback_verified": false
+  "qualified_successor": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "after_rollback": {
+    "api": "6b43af2ab8da8871469a379b1c322ade82481a92a7d32300381ea5e60fd2dd8c",
+    "ingestor": "6b0c82221c3d826a83b8c7a5cd674c23d4bc39ee9c9912a9aaa5bae0d90dbdcc",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "inside_transaction_receipts_match": true,
+  "final_migration_rollback_verified": true,
+  "measured_at": "2026-11-05T02:39:14Z",
+  "native_probe_source_sha256": "d418d4d7a29f9277fa25ed5ad02c69d4a79f1b905d8c467d1e76c701787c2fa6",
+  "qualification_source_sha256": "d46439e0f9239fd337b364bd315f47111107c34eedbabe04b06f0dc90cd46ee6"
 }
