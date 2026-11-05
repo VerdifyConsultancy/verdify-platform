@@ -1,6 +1,7 @@
 # VP-01 (#802): the manual verdify-descheduler Argo Application owns exactly
 # these six existing objects, including namespace adoption under #995, plus the two
-# network-infra#839 egress NetworkPolicies (vendored management-set deny + kube-API allow).
+# network-infra#839 egress NetworkPolicies (vendored management-set deny + kube-API allow),
+# and the namespace-wide ingress default-deny (STD-K8S-04).
 # The cluster-scoped ClusterRole/ClusterRoleBinding verdify-descheduler moved to
 # the fleet control plane (fleet control-plane #5794): a tenant repo may not
 # grant cluster RBAC.
@@ -17,6 +18,7 @@ resources:
   - cronjob.yaml
   - egress-deny-management.yaml
   - egress-allow-management.yaml
+  - ingress-default-deny.yaml
 
 patches:
   - path: source-owned-fields-ssa.patch.yaml

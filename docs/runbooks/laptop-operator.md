@@ -137,7 +137,7 @@ software-recovery release; pinch machinery wired, live
 `band_track_fraction=0.0` — the ADR-0004/#377 float). **Verify the running
 version from `diagnostics.firmware_version`, NOT
 `firmware/artifacts/last-good.version`** (last-good is the rollback floor — it
-lags through the 48 h bake); the authoritative read from any kubectl host:
+lags until a release is promoted); the authoritative read from any kubectl host:
 
 ```bash
 scripts/verdify-db.sh prod -c "SELECT firmware_version, max(ts) FROM diagnostics
@@ -162,7 +162,7 @@ and the registry pins its bounds to `[0.0, 0.0]`, so no current push path can
 restore a nonzero pinch without a registry-bounds change first. Post-flash, execute the
 g-377 pinch decision (re-pin vs accept float) and record `band_track_fraction` +
 `dehum_vent_hold_enabled` (#410) + the envelope config (door screen-window
-open/closed, #412) in the bake report — step-by-step in
+open/closed, #412) in the release record — step-by-step in
 `docs/RELEASE-CHECKLIST.md` §B "Deploy + post".
 
 ```bash
@@ -171,7 +171,7 @@ SECRETS_SRC=$HOME/.verdify/esphome-secrets.yaml \
 ESPHOME_BIN=$PWD/.venv/bin/esphome \
   scripts/firmware-esphome-worktree.sh config    # or: compile
 
-# Preflight gates only (8 gates, DB-backed via kube backend):
+# Preflight gates only (DB-backed via kube backend):
 VERDIFY_DB_BACKEND=kube bash scripts/firmware-deploy-preflight.sh
 
 # The real deploy (compile + OTA + sensor-health + auto-rollback):
@@ -183,8 +183,9 @@ ESPHOME_BIN=$PWD/.venv/bin/esphome \
 ```
 
 The gates are real: no OTA while `alert_log` has unresolved critical/high
-rows, 48h bake on `last-good.ota.bin` mtime, ≤1 OTA/calendar week, telemetry
-freshness <300s, action-log proof. Overrides need the documented
+rows, telemetry freshness <300s, action-log proof, and a last-good or verified
+provisional rollback binary. There is no bake, minimum-age or weekly gate
+(Jason, 2026-11-05): ship new builds as often as needed. Overrides need the documented
 reason-bearing override envs (see `scripts/firmware-deploy-preflight.sh`). Firmware policy:
 hot-staged direct-to-prod (there is no dev device; dev never connects to any
 device).

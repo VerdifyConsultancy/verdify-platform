@@ -216,7 +216,7 @@ important control lever and is the intended (but see §9a) arbitration axis.
 | **The band / a setpoint curve** | `UPDATE crop_band_anchors …` (+ `REFRESH MATERIALIZED VIEW mv_band_curve` for the graph) | **No** | anchors-mode: dispatcher `set_band_anchor` service sync (allow ~1–2 cycles + the cfg sensor's publish interval to reflect) |
 | **A planner-pushable tunable** | `set_tunable` (MCP) or insert `setpoint_plan` (source/plan_id/reason) | **No** | dispatcher `number_command` (param must be `planner_pushable`) |
 | **A non-pushable tunable's default** | edit the registry `planner_pushable`/default, or firmware globals | sometimes | registry change → ingestor roll; or OTA initial_value |
-| **Firmware logic / curve math / a new entity** | edit `firmware/**`, run replay-diff + invariants + `firmware-check` | **Yes** | `make firmware-deploy` (gated: alerts, 48h bake, ≤1/wk, sensor-health auto-rollback) |
+| **Firmware logic / curve math / a new entity** | edit `firmware/**`, run replay-diff + invariants + `firmware-check` | **Yes** | `make firmware-deploy` (gated: alerts, fresh telemetry, rollback binary, sensor-health auto-rollback; no timing gate) |
 | **Make the device obey the DB band** | `VERDIFY_BAND_SOURCE=anchors` on the prod ingestor + roll | No (firmware must already expose the anchor entities/service) | — |
 
 Pipeline: push to `main` → CI builds/validates → `bump-dev-digests` → dev
@@ -226,8 +226,7 @@ ingestor's state PVC is being migrated to Synology — coordinate before touchin
 **Gotchas worth knowing** (learned the hard way): incremental DB migrations are
 applied **by hand** (`kubectl exec -i … psql < file`) — the migrate job is
 fresh-DB-only. The `firmware-deploy` post-flash health sweep needs
-`VERDIFY_DB_BACKEND=kube`. A 2nd OTA/week needs `FIRMWARE_OTA_FREEZE_OVERRIDE_LOG`
-set to a writable path on macOS.
+`VERDIFY_DB_BACKEND=kube`.
 
 **The band has ONE source of truth: the DB table `crop_band_anchors`** (unified
 2026-06-15, item 2). `restore_value:yes` band globals survive an OTA, but you do

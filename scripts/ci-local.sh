@@ -96,6 +96,7 @@ $PY -m pytest -q -rs \
   tests/test_286_lighting_policy_delivery.py \
   tests/test_287_retire_high_wind_delivery.py \
   tests/test_288_retire_irrigation_registry_delivery.py \
+  tests/test_289_alert_silences_delivery.py \
   tests/test_metric_registry_completeness.py \
   tests/test_verdify_services_series.py \
   tests/test_verdify_services_band_preview.py \
@@ -190,6 +191,7 @@ $PY -m pytest -q -rs \
   tests/test_component_alert_scope.py \
   tests/test_alert_probe_offline_lifecycle.py \
   tests/test_alert_leak_lifecycle.py \
+  tests/test_alert_silences.py \
   tests/test_264_facility_safe_closure_delivery.py \
   tests/test_component_experiment_source.py \
   tests/test_native_transport_liveness.py \

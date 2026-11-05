@@ -4,6 +4,8 @@
 
 > **2026-11-01 (network-infra#839):** the source also renders `NetworkPolicy/egress-deny-management` (vendored management-set deny) and `NetworkPolicy/egress-allow-management-descheduler-kube-api` (control plane :6443 only), eight objects in total. The AppProject must permit NetworkPolicy first (fleet control-plane #5942); the coordinator delivers them with an exact NP-only sync, never a full sync.
 
+> **2026-11-01 (STD-K8S-04):** plus `NetworkPolicy/default-deny-ingress` (`ingress-default-deny.yaml`: namespace-wide, Ingress only, no allow because nothing in the namespace listens), nine objects in total. Same delivery: AppProject first, then one exact NP-only sync. Rollback: delete `default-deny-ingress`.
+
 The source runs in enforce mode, matching the live CronJob since #234 GATE 6
 (2026-06-08). It runs hourly at `15 * * * *`, with exactly these arguments:
 

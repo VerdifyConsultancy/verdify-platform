@@ -582,5 +582,6 @@ Any change under `firmware/lib/**`, `firmware/greenhouse/**`, `verdify_schemas/*
 `AGENTS.md`: `make test-firmware`, `make firmware-invariants`, the replay diff
 (`make firmware-replay`, plus `make firmware-replay-band` for any band-curve change),
 and `make firmware-check`. The **OTA itself is safety-checked** (no OTA on an open
-critical alert; ≤1 OTA/week; 48-hour bake). This spec's invariants + native tests +
+critical alert or stale telemetry, or without a rollback binary; there is no bake or
+weekly limit). This spec's invariants + native tests +
 replay are the offline proving ground that gates the OTA.

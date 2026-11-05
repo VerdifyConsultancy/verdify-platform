@@ -41,6 +41,24 @@ cache. A leftover lock *file* with no holder does not block publication. S3
 errors do not fall back to cached source as though the refresh succeeded; the
 validated served site remains available while the failure is reported.
 
+Upload staging must use independent files, not hardlinks to the validated public
+tree. A killed uploader cannot run its cleanup; a surviving hardlink makes the
+next warm-cache scan correctly reject that shared inode. The delta uploader
+therefore copies only changed files. Budget an extra copy of the changed bytes
+(at worst one public tree), in addition to the served and build trees; a full
+tree is currently about 450 MiB within the existing 5 GiB cache claim.
+
+If an older upload already left hardlink findings, retain the failed upload
+directory and scanner report. A qualified recovery holds the existing shared
+cache lock, proves each exact public path and its staging alias have the expected
+inode, size and SHA-256, and replaces only that public pathname with an
+independent byte-identical file. Keep the staging alias as recovery custody;
+do not delete payloads, weaken the hardlink guard or change publication
+receipts. Rescan the complete public tree, then require a genuine scheduled
+publication and fresh hash-matching receipts on both serving caches. This
+bounded incident repair needs an exact reviewed target list; it is not a general
+permission to edit a running cache.
+
 ## Force a content refresh
 
 Do not edit the PVC or running pod. Create a one-off Job from the committed

@@ -453,6 +453,35 @@ def test_delta_manifest_cache_advances_only_after_remote_commit(tmp_path: Path, 
     assert json.loads(local_manifest.read_text(encoding="utf-8"))["files"] == new_files
 
 
+def test_interrupted_delta_staging_does_not_poison_validated_public_tree(tmp_path: Path):
+    source = REPO_ROOT / "scripts" / "s3-delta-sync.py"
+    spec = importlib.util.spec_from_file_location("lab_s3_delta_isolation", source)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    public = tmp_path / "public"
+    public.mkdir()
+    homepage = public / "index.html"
+    homepage.write_text("<html>Validated public fixture</html>\n", encoding="utf-8")
+
+    staging = Path(module.stage_changed(str(public), ["index.html"], str(tmp_path)))
+    staged = staging / "index.html"
+    assert staged.read_bytes() == homepage.read_bytes()
+    assert (homepage.stat().st_dev, homepage.stat().st_ino) != (staged.stat().st_dev, staged.stat().st_ino)
+    assert homepage.stat().st_nlink == staged.stat().st_nlink == 1
+    # Leave the staging directory behind, as SIGKILL/timeout can. The genuine
+    # privacy guard must still accept the unchanged public tree next run.
+    checked = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "scripts" / "check-public-output.py"), "--root", str(public)],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert checked.returncode == 0, checked.stdout + checked.stderr
+    staged.write_text("Interrupted upload staging is independently mutable\n", encoding="utf-8")
+    assert homepage.read_text(encoding="utf-8") == "<html>Validated public fixture</html>\n"
+
+
 def test_wrapper_logs_allowlisted_reason_class_without_raw_text_or_digest(harness):
     encoded_identifier = "%70%72%69%76%61%74%65%2D%67%72%65%65%6E%68%6F%75%73%65"
     raw_reason = f"private-greenhouse-identifier\nforged-log-entry {encoded_identifier}"

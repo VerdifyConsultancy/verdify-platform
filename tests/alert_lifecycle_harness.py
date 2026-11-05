@@ -50,6 +50,11 @@ ALERT_NAMES = (
     "_probe_last_seen",
     "_with_probe_lifecycle",
     "_probe_row_details",
+    "UNSILENCEABLE_ALERT_TYPES",
+    "_like",
+    "_alert_silence",
+    "_silence_resolution",
+    "_active_alert_silences",
     "_sync_monitor_alerts",
 )
 COMMON_NAMES = (

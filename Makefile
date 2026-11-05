@@ -254,7 +254,7 @@ firmware-archive-artifacts: ## Archive ESPHome build outputs for FW_VERSION=<ver
 	if [ "$(PROMOTE_LAST_GOOD)" = "1" ]; then EXTRA="--promote-last-good"; fi; \
 	bash scripts/archive-firmware-artifacts.sh "$(FW_VERSION)" $$EXTRA
 
-firmware-promote-last-good: ## Promote a baked archived firmware FW_VERSION=<version> to rollback target
+firmware-promote-last-good: ## Promote an accepted archived firmware FW_VERSION=<version> to rollback target (no minimum wait)
 	@if [ -z "$(FW_VERSION)" ]; then \
 	    echo "Usage: make firmware-promote-last-good FW_VERSION=<archived-version>"; \
 	    exit 2; \
@@ -267,8 +267,6 @@ firmware-promote-last-good: ## Promote a baked archived firmware FW_VERSION=<ver
 	cp "$$SRC/firmware.ota.bin" firmware/artifacts/last-good.ota.bin; \
 	printf '%s\n' "$(FW_VERSION)" > firmware/artifacts/last-good.version; \
 	cp "$$SRC/metadata.env" firmware/artifacts/last-good.metadata.env; \
-	DEPLOYED_AT="$$(sed -n 's/^deployed_at=//p' "$$SRC/metadata.env" | tail -1)"; \
-	if [ -n "$$DEPLOYED_AT" ]; then touch -d "$$DEPLOYED_AT" firmware/artifacts/last-good.ota.bin; fi; \
 	echo "✓ Promoted rollback target: $(FW_VERSION)"
 
 site-rebuild: ## Manually rebuild lab.verdify.ai site (watcher does this automatically on vault changes)
@@ -454,7 +452,7 @@ firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sw
 	# FW-15 (Sprint 17): sensor-health decides whether this deploy is accepted.
 	# Pass → archive the new binary and update the expected-firmware pin.
 	# Rollback target stays on the prior last-good until an explicit
-	# firmware-promote-last-good after the 48-hour bake.
+	# firmware-promote-last-good, which has no minimum wait.
 	# Fail → flash the preflight-verified rollback binary via firmware-rollback.sh.
 	# The copy below is a record on this host. alert_monitor reads the pod's
 	# /srv/verdify/state/expected-firmware-version, which only
@@ -464,7 +462,7 @@ firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sw
 		FIRMWARE_DEPLOYED_AT="$$(date '+%Y-%m-%dT%H:%M:%S%z')" bash scripts/archive-firmware-artifacts.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" || exit 1 ; \
 		mkdir -p "$(FIRMWARE_STATE_DIR)" || exit 1 ; \
 		cp firmware/artifacts/pending-fw-version.txt "$(FIRMWARE_STATE_DIR)/expected-firmware-version" || exit 1 ; \
-		echo "✓ Deploy accepted. Archived build outputs + promoted expected firmware pin. Rollback target unchanged while this build bakes." ; \
+		echo "✓ Deploy accepted. Archived build outputs + promoted expected firmware pin. Rollback target unchanged until make firmware-promote-last-good." ; \
 	else \
 		echo "" ; \
 		echo "▓▓▓  SENSOR-HEALTH FAILED POST-OTA  —  initiating auto-rollback  ▓▓▓" ; \

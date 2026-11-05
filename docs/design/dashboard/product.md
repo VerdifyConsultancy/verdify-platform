@@ -851,7 +851,7 @@ the audiences by [architecture](architecture.md) §5.6.
 
 #### US-PLAT-12 · Irrigation firmware ships when it is ready
 *P4 · MVP · platform.* As the platform maintainer, I want to flash the irrigation firmware as soon as it is ready, so that calendar rules do not hold up the water program.
-- The one release (irrigation F1–F14) ships through `make firmware-deploy`; if the preflight's weekly or 48-hour rule blocks a fix-forward, `FIRMWARE_OTA_FREEZE_OVERRIDE_REASON` is set to "irrigation v2 fix-forward (D-IRP-23)".
+- The one release (irrigation F1–F14) ships through `make firmware-deploy`; the preflight has no weekly or 48-hour rule ([decisions](decisions.md), 2026-11-05), so a fix-forward ships as soon as it is ready.
 - Verified by the `diagnostics.firmware_version` query, then `irr_program_id` showing `src=rom` before the first push and `src=nvs` after it; once the first push confirms and the first scheduled run lands, `make firmware-promote-last-good` makes the engine firmware last-good.
 - Until then a rollback (the flasher Job on the previous release's exact revision and manifest, `docs/runbooks/firmware-signed-artifacts.md`) means pre-engine firmware: the platform sees the engine services missing, reports "engine not on controller" (`program.src` null), runs L01 and stops every line through the bridge (US-WAT-23) and answers other runs and clear with `unavailable`, never a 202 that silently expires.
 
