@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { checkedLabel } from "../lib/line-checks";
-import { lineById } from "../lib/lines";
+import { lineById, lineDisplayName } from "../lib/lines";
 import { newIdempotencyKey, type IrrigationLine, type IrrigationStatus, type Schedule, type ScheduleAgenda } from "../lib/operator-api";
 import { PAST_CAP_TEXT, previewSchedule, weekdayOf, type ScheduleDraft } from "../lib/schedule-preview";
 import { outOfRange, parseWhole, rangeText } from "../lib/setting-values";
@@ -159,7 +159,7 @@ const START_PARTS: readonly (string | null)[] = ["start.clock", "start.offset_mi
  */
 export function refusalWords(error: WriteError, { lineId, kind, editing }: { lineId: string; kind: string; editing: boolean }): Refusal {
   const field = START_PARTS.includes(error.field) ? "start" : error.field;
-  if (error.code === "too_close") return { field: "start", message: `Another ${lineId} schedule starts within 30 min of this one` };
+  if (error.code === "too_close") return { field: "start", message: `Another ${lineDisplayName(lineId)} schedule starts within 30 min of this one` };
   if (error.code === "unknown_target" && editing && field !== "line_id") return { field: null, message: GONE_TEXT };
   if (error.code === "out_of_range" && error.min !== null && error.max !== null) {
     if (error.field === "on_s" && isDrip(kind)) return { field, message: `Must be ${rangeText(Math.ceil(error.min / 60), Math.floor(error.max / 60), "min")}` };
@@ -221,7 +221,7 @@ export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, o
 
   const line = lines.find((item) => item.line_id === form.lineId);
   const kind = kindOf(form.lineId);
-  const partner = line?.clean_partner ?? null;
+  const partner = line?.clean_partner ? lineDisplayName(line.clean_partner) : null;
   const fert = isFert(kind);
   const specs = numberFields(kind, partner, agenda.bounds[kind]);
   const askCheck = Boolean(line && line.enabled && line.check === null && isDrip(kind)) && checkedLine !== form.lineId;
@@ -272,7 +272,7 @@ export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, o
       };
       const outcome = slotId === null ? await createWrite.send({}, body, keys.write) : await updateWrite.send({ slot_id: slotId }, body, keys.write);
       if (!outcome.ok) { said(outcome.error); return; }
-      toast.show({ message: `Requested ${label || "the schedule"} on ${form.lineId}` });
+      toast.show({ message: `Requested ${label || "the schedule"} on ${lineDisplayName(form.lineId)}` });
       onSaved(outcome.data.slot_id);
     } finally {
       busy.current = false;
@@ -287,7 +287,7 @@ export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, o
     try {
       const outcome = await deleteWrite.send(reason ? { slot_id: slotId, reason } : { slot_id: slotId }, undefined);
       if (!outcome.ok) { said(outcome.error); return; }
-      toast.show({ message: `Requested deleting ${stored?.label || "the schedule"} on ${stored?.line_id ?? form.lineId}` });
+      toast.show({ message: `Requested deleting ${stored?.label || "the schedule"} on ${lineDisplayName(stored?.line_id ?? form.lineId)}` });
       onClose();
     } finally {
       busy.current = false;
@@ -310,8 +310,7 @@ export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, o
     actions={slotId !== null ? <Button write busy={deleteWrite.sending} disabled={saving} onClick={() => void remove()}>Delete</Button> : undefined}>
     <Select label="Line" value={SCHEDULE_LINES.indexOf(form.lineId as (typeof SCHEDULE_LINES)[number])} error={fieldError("line_id")}
       options={SCHEDULE_LINES.map((id, index) => {
-        const name = lines.find((item) => item.line_id === id)?.name;
-        return { value: index, label: `${id}${name ? ` ${name}` : ""}${reservedLine(id) ? " (reserved)" : ""}` };
+        return { value: index, label: `${lineDisplayName(id)}${reservedLine(id) ? " (reserved)" : ""}` };
       })}
       onChange={(index) => {
         // A check is one line's, and an error beside a field another kind may not show is old news.
@@ -319,7 +318,7 @@ export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, o
         setTyped({});
         setRefusal(null);
       }} />
-    {fert && <p className="schedule-fert field-hint">Prewets on {partner ?? "the clean line"}, feeds through L03 from the tank, then flushes on {partner ?? "the clean line"}</p>}
+    {fert && <p className="schedule-fert field-hint">Prewets on {partner ?? "the clean line"}, feeds through the {lineDisplayName("L03").toLowerCase()} from the tank, then flushes on {partner ?? "the clean line"}</p>}
     <Reason label="Label (optional)" maxLength={LABEL_MAX} value={form.label} onChange={(label) => update({ label })} error={fieldError("label")} />
     <div className="sch-days-field">
       <WeekdayChips value={form.days} onChange={setDays} />
@@ -351,7 +350,7 @@ export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, o
       {!preview && <p className="field-hint">Enter a valid start and a whole number in each field to preview it.</p>}
       {refusals.length > 0 && <ul className="sch-checks sch-checks-refusal">{refusals.map((check) => <li key={check.code} data-check={check.code}>{check.text}</li>)}</ul>}
       {preview?.totals.map((row) => <div key={row.line_id} className="schedule-preview-line" data-line={row.line_id}>
-        <p><strong>{row.line_id}</strong> {row.totals ?? "no minutes planned"}</p>
+        <p><strong>{lineDisplayName(row.line_id)}</strong> {row.totals ?? "no minutes planned"}</p>
         {row.cap && <p className="field-hint">{row.cap}</p>}
         {row.past && <p className="schedule-past-cap">{PAST_CAP_TEXT} ({row.past})</p>}
       </div>)}

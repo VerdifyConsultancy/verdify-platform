@@ -2,6 +2,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import type { components } from "../../generated/operator-api";
 import type { IrrigationLine } from "../../lib/operator-api";
+import { lineDisplayName } from "../../lib/lines";
 import { outOfRange, parseWhole, rangeText } from "../../lib/setting-values";
 import type { WriteError } from "../../lib/writes";
 import { lineChemistry } from "../badge";
@@ -33,15 +34,9 @@ export function runFields(kind: string): RunField[] {
   return kind.startsWith("fert_") ? [...base, "prewet_s", "flush_s"] : base;
 }
 
-const ZONE_WORDS: Readonly<Record<string, string>> = { wall: "Wall", center: "Center", south: "South", west: "West" };
-const KIND_WORDS: Readonly<Record<string, string>> = { drip: "drip", fert_drip: "feed", mister: "mister", fert_mister: "feed" };
-/** The board's name for a line, from its zone and kind: "Wall drip", "Wall feed", "Center mister"; L03 and fog by name. */
-export function lineLabel(line: Pick<IrrigationLine, "zone" | "kind" | "name">): string {
-  if (line.kind === "master") return "Fert master";
-  if (line.kind === "fog") return "Fog";
-  const zone = ZONE_WORDS[line.zone];
-  const kind = KIND_WORDS[line.kind];
-  return zone && kind ? `${zone} ${kind}` : line.name;
+/** The board's name for a line (#1341): "Wall drip", "Wall drip (fertilized)", "Center mister", "Fog"; never its relay code. */
+export function lineLabel(line: Pick<IrrigationLine, "line_id"> & Partial<Pick<IrrigationLine, "name" | "zone" | "kind">>): string {
+  return lineDisplayName(line);
 }
 
 type Draft = Record<RunField, string>;
@@ -61,7 +56,7 @@ export type ConfirmDialogProps = {
   onClose: () => void;
   /** The line from API-IRR-01: its kind picks the fields, `today.minutes` and `daily_cap_min` fill the line under the title, and a feed names its `clean_partner`. */
   line: Pick<IrrigationLine, "line_id" | "name" | "zone" | "kind" | "daily_cap_min" | "today"> & Partial<Pick<IrrigationLine, "clean_partner">>;
-  /** The line's name on the board; by default from its zone and kind ("Wall drip"). */
+  /** The line's name on the board; by default its display name ("Wall drip"). */
   label?: string;
   /**
    * L01 before the irrigation firmware: no Duration field. The run lasts the controller's `irrig_wall_duration_min`,
@@ -143,9 +138,9 @@ export function ConfirmDialog({ open, onClose, line, label, fixed = null, bounds
   };
   return <dialog ref={ref} className="confirm-dialog" aria-labelledby={titleId} aria-describedby={factsId} aria-modal="true" onKeyDown={onKeyDown} onCancel={onCancel}>
     <form className="dialog-form" onSubmit={(event) => void submit(event)} noValidate>
-      <h2 id={titleId}>Run {line.line_id} {name} ({chemistry}){length ? ` for ${length}` : ""}?</h2>
+      <h2 id={titleId}>Run {name}{chemistry === "FERT" ? "" : " (clean)"}{length ? ` for ${length}` : ""}?</h2>
       <p id={factsId} className="dialog-facts">{facts}</p>
-      {chemistry === "FERT" && <p className="dialog-note">Prewets on {line.clean_partner ?? "the clean line"}, feeds through L03 from the tank, then flushes</p>}
+      {chemistry === "FERT" && <p className="dialog-note">Prewets on {line.clean_partner ? lineDisplayName(line.clean_partner) : "the clean line"}, feeds through the {lineDisplayName("L03").toLowerCase()} from the tank, then flushes</p>}
       {fixed && <p className="dialog-note">Runs for the {name} duration (<code>irrig_wall_duration_min</code>){fixed.minutes !== null ? `: ${fixed.minutes} min` : ""}</p>}
       {fields.length > 0 && <div className="dialog-fields">
         {fields.map((field) => {

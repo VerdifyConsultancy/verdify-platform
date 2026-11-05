@@ -160,7 +160,7 @@ test("Stop all water with the irrigation firmware: one API-IRR-07 and no dialog,
   await untilPolled(page, () => expect(runningRows(page)).toHaveCount(0, { timeout: 500 }));
   await expect(page.locator("[data-running=none]")).toHaveText("Nothing running");
   await expect(toastLines(page)).toHaveText([STOPPED, CAN_STILL_START]);
-  await expect(page.getByRole("button", { name: "Disable L01" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Disable Wall drip", exact: true })).toBeVisible();
   expect((await fixtureWrites(request)).map((row) => row.operationId)).toEqual(["API-IRR-07"]);
 });
 
@@ -270,7 +270,7 @@ test("Running and next from 861 px: the track over the last 6 h and the next 12 
   expect(Math.round(plan!.height)).toBe(Math.round(iris!.height));
   // The phone's lists are there for a narrow screen, hidden here.
   await expect(coming.locator(".now-next")).toBeHidden();
-  await expect(coming.locator("[data-coming=later]")).toHaveText("Later No schedule: L01, L07, L09");
+  await expect(coming.locator("[data-coming=later]")).toHaveText("Later No schedule: Wall drip, South mister, West mister");
   expect((await fixtureRequests(request, "API-05")).length).toBeGreaterThan(0);
 });
 
@@ -283,7 +283,7 @@ test("Running and next on a phone: Running now and the Next 12 h list, with each
   await expect(coming.locator("[data-coming=plan]")).toHaveText(["13:00VPD Mister Engage 1.60 → 1.70 kPa AI", "13:00Mister Engage Delay 60.0 → 90.0 s · Forecast rule · system", "16:30Mister Pulse Gap 45.0 → 55.0 s AI"]);
   await expect(coming.locator("[data-coming=iris]")).toHaveText(["16:50Iris SUNSET trigger"]);
   await expect(coming.locator("[data-coming=sun]")).toHaveText(["16:58Sunset"]);
-  await expect(coming.locator("[data-coming=later]")).toContainText("L01 Wall drip paused until 14:00 by Jason: rain · next Wed 07:35");
+  await expect(coming.locator("[data-coming=later]")).toContainText("Wall drip paused until 14:00 by Jason: rain · next Wed 07:35");
   expect((await fixtureRequests(request, "API-07")).map((row) => row.path)).toEqual(["/v1/plan?hours=24"]);
   expect((await fixtureRequests(request, "API-IRR-02")).map((row) => row.path)).toEqual(["/v1/irrigation/schedules?days=7"]);
   // A phone never reads the track's six hours of equipment.

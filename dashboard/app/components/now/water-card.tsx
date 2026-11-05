@@ -3,7 +3,7 @@
  * Water today on Now (redesign §5.1; screens SCR-01, US-NOW-04, US-WAT-13, US-WAT-18) from API-IRR-01: each watering
  * zone's minutes today against its cap as a `Meter` (the drip zone in `--eq-water`, the mister zones in `--eq-mister`),
  * when it last got water (`last-water.ts`), SAF-4's gallons against its ceiling, and the flow in words. Before the
- * irrigation firmware it says where L01 runs from. A failed or not yet served API-IRR-01 reads "Water status
+ * irrigation firmware it says where the wall drip runs from. A failed or not yet served API-IRR-01 reads "Water status
  * unavailable." with Retry, never idle. Stop all water is not here: it is the first quick action, one per page.
  */
 import { formatValue, shortTime } from "../../lib/format";
@@ -18,7 +18,7 @@ import { Panel, type PanelState } from "../panel";
 import { lineStatesUnknown } from "./status";
 
 export const WATER_UNAVAILABLE = "Water status unavailable.";
-export const BEFORE_ENGINE_LINE = "L01 runs from Water; run-now on the other lines arrives with the irrigation firmware";
+export const BEFORE_ENGINE_LINE = "The wall drip runs from Water; run-now on the other lines arrives with the irrigation firmware";
 
 const validTime = (value: string | null | undefined): value is string => typeof value === "string" && Number.isFinite(Date.parse(value));
 const finite = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value);

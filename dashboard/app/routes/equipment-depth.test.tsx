@@ -85,7 +85,7 @@ async function poll(done: () => boolean, reads = 6) {
 // ---------------------------------------------------------------------------------------------------- the Why panel
 test("each reason reads in words with when it began and its Graphs window; the panel sits between the board and the lanes", async () => {
   await load({ fixture: "why-reasons" });
-  expect([...document.querySelectorAll(".why-row")].map((node) => text(node.querySelector(".why-label")))).toEqual(["Climate mode", "Fog (L11)", "Misters (L04, L07, L09)"]);
+  expect([...document.querySelectorAll(".why-row")].map((node) => text(node.querySelector(".why-label")))).toEqual(["Climate mode", "Fog", "Misters (center, south, west)"]);
   // Yesterday's reads with its date, and today's with its time alone, on the America/Denver clock.
   expect(words("mode_reason")).toBe("Venting: too warm · since Nov 1, 13:40");
   expect(words("fog_block_reason")).toBe("Humidity at the fog ceiling · since 09:12");

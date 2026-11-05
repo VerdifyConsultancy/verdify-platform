@@ -130,7 +130,7 @@ test("activity-mixed: one line an entry, who wrote in text, AI for Iris and the 
   await expect(iris.locator(".event-by [data-badge=ai]")).toHaveCount(1);
   await iris.locator("summary").click();
   await expect(iris.locator(".plan-changes li")).toHaveText(["VPD Mister Engage 1.70 kPa from 13:00", "Mister Pulse Gap 55 s from 16:30", "Mister Engage Delay 90 s from 19:00"]);
-  const agent = logRow(page, "Changed line L01");
+  const agent = logRow(page, "Changed line Wall drip");
   await expect(writtenBy(agent)).toHaveText("steward · agent AI");
   const forecast = logRow(page, "Forecast rule “hot afternoon”");
   await expect(forecast.locator(".act-entry-text")).toHaveText("Forecast rule “hot afternoon” · Mister Pulse Gap 45 → 60 s");
@@ -171,7 +171,7 @@ test("the run-missed alert reads its plain title with L02, never the raw code, a
   await load(page, "/activity");
   const missed = alertRow(page, 502);
   await expect(missed.locator("h3")).toHaveText("A scheduled watering was missed");
-  await expect(missed.locator(".alert-facts")).toHaveText("L02 · since 09:35 (1 h)");
+  await expect(missed.locator(".alert-facts")).toHaveText("Wall drip (fertilized) · since 09:35 (1 h)");
   await missed.getByRole("link", { name: /^Details/ }).click();
   await expect(page).toHaveURL(/\/activity\?alert=502$/);
   await expect(alertRow(page, 502).locator(".alert-detail")).toBeVisible();
@@ -201,7 +201,7 @@ for (const [fixtures, result] of [
 test("mister-fault: Clear fault sends API-IRR-13 with the line and reads the latch back", async ({ page, request }) => {
   await useScreensClock(page, request, "mister-fault");
   await load(page, "/activity");
-  await alertRow(page, 301).getByRole("button", { name: "Clear fault on L04" }).click();
+  await alertRow(page, 301).getByRole("button", { name: "Clear fault on Center mister" }).click();
   await untilPolled(page, () => expect(alertRow(page, 301)).toContainText("Latch cleared", { timeout: 500 }));
   expect((await fixtureWrites(request)).map((write) => [write.operationId, write.body])).toEqual([["API-IRR-13", { line_id: "L04" }]]);
 });
@@ -225,7 +225,7 @@ test("activity-mixed: an old /activity?target=L01 link lands on the log; the Who
   await expect(filters(page).getByRole("list", { name: "Who" }).getByRole("link", { name: "Agents" })).toHaveAttribute("aria-current", "true");
   await page.reload();
   await expect(logRows(page)).toHaveCount(1);
-  await expect(filters(page).locator("[name=target]")).toHaveValue("L01");
+  await expect(filters(page).locator("[name=target]")).toHaveValue("Wall drip");
   // The target applies when it is left, with no Apply button.
   await expect(filters(page).getByRole("button", { name: "Apply" })).toHaveCount(0);
   await filters(page).locator("[name=target]").fill("L09");
