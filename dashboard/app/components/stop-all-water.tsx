@@ -19,6 +19,7 @@ export function StopAllWater({ compact = false, wide = false, control }: { compa
   const sending = control ? control.sending : own.sending;
   const stop = control ? control.stop : () => { void own.stop(); };
   return <Button variant="stop" write wide={wide} busy={sending} className={cls("stop-all-water", compact && "stop-all-water-compact")} onClick={stop}>
-    <span className="glyph glyph-stop" aria-hidden="true" />Stop all <span className="stop-all-water-word">water</span>
+    {/* One flex item for the words, so the button's gap never doubles the space before "water", which compact hides. */}
+    <span className="glyph glyph-stop" aria-hidden="true" /><span>Stop all <span className="stop-all-water-word">water</span></span>
   </Button>;
 }

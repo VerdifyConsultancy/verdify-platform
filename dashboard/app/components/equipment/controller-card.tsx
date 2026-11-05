@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { formatValue } from "../../lib/format";
 import type { Now } from "../../lib/operator-api";
 import { useApiDown } from "../../lib/session";
@@ -9,6 +9,12 @@ import { DataList } from "../data/data-list";
 import { finite } from "../data/viz";
 import { AgeLabel } from "../freshness";
 import { Panel, type PanelState } from "../panel";
+
+/** A version that may wrap only after its dots ("2026.10.30.<wbr>1412.<wbr>3240714"), never mid-number. */
+function dotted(version: string): ReactNode {
+  const parts = version.split(".");
+  return parts.map((part, index) => <Fragment key={index}>{part}{index < parts.length - 1 && <>.<wbr /></>}</Fragment>);
+}
 
 /**
  * The controller (SCR-07, redesign §5.12): API-02 `controller`, served since R1 and shown here for the first time. Its
@@ -99,7 +105,7 @@ export function ControllerCard() {
           <HeapBar free={controller.heap_free_kb} stale={stale} />
         </div>
         <DataList className="ctl-controller-facts" items={[
-          { key: "firmware", term: "Firmware", value: controller.firmware_version ? <span className="mono ctl-firmware">{controller.firmware_version}</span> : null, reason: "not reported" },
+          { key: "firmware", term: "Firmware", value: controller.firmware_version ? <span className="mono ctl-firmware">{dotted(controller.firmware_version)}</span> : null, reason: "not reported" },
           { key: "uptime", term: "Uptime", value: finite(controller.uptime_s) ? uptimeWords(controller.uptime_s) : null, reason: "not reported" },
           { key: "reset", term: "Last reset", value: controller.reset_reason || null, reason: "not reported" },
           { key: "block", term: "Largest block", value: finite(controller.heap_largest_block_kb) ? formatValue(controller.heap_largest_block_kb, "kB") : null, reason: "not reported" },

@@ -406,6 +406,8 @@ test("the Controller card and the status line: firmware, uptime, last reset, fre
   expect(facts(controller)).toEqual([
     ["Firmware", "2026.10.30.1412.3240714"], ["Uptime", "3 d 3 h"], ["Last reset", "Software reset"], ["Largest block", "22 kB"], ["Wi-Fi", "−61 dBm"],
   ]);
+  // The version may wrap only after a dot, never mid-number.
+  expect(controller.querySelector(".ctl-firmware")!.querySelectorAll("wbr")).toHaveLength(4);
   expect(controller.classList.contains("tone-fault")).toBe(false);
 });
 

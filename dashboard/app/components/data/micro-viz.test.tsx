@@ -10,7 +10,7 @@ import { afterEach, expect, test } from "vitest";
 import { SessionProvider } from "../../lib/session";
 import { NBSP, renderUi, text } from "../test-render";
 import { BandBar, bandBarWords, bandPosition, bandScale } from "./band-bar";
-import { Delta, deltaAmount } from "./delta";
+import { Delta, deltaAmount, keepUnits } from "./delta";
 import { Meter, meterWords } from "./meter";
 import { Sparkline } from "./sparkline";
 import type { VizState } from "./viz";
@@ -202,6 +202,9 @@ test("Delta: an arrow and words in ink, never a colour; no change; no comparison
   cleanup();
   expect(text(renderUi(<Delta value={null} unit="pts" vs="yesterday" />).container)).toBe("— no comparison with yesterday");
   expect(plain(deltaAmount(-12, "gal"))).toBe("12 gal");
-  expect(deltaAmount(1, "pts")).toBe("1 pt");
+  // A number and its unit never split across lines: "1 pt", "30 d" and "12 gal" are joined by no-break spaces.
+  expect(deltaAmount(1, "pts")).toBe("1\u00a0pt");
+  expect(renderUi(<Delta value={1.34} unit="pts" vs="previous 30 d" />).container.querySelector(".delta-vs")?.textContent).toBe("vs previous 30\u00a0d");
+  expect(keepUnits("previous 30 d · 2 days")).toBe("previous 30\u00a0d · 2\u00a0days");
   expect(markup(<Delta value={1} vs="x" />)).not.toMatch(/\sstyle=|tag-ok|fault/);
 });

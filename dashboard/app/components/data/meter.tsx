@@ -17,8 +17,9 @@ export function meterWords(value: number | null | undefined, cap: number | null 
   const done = finite(value) && minutes ? Math.round(value) : value;
   const show = (amount: number) => (minutes ? `${Math.round(amount)}\u00a0min` : formatValue(amount, unit));
   if (!finite(cap) || cap <= 0) return { amount: finite(done) ? show(done) : "—", over: null };
-  if (!finite(done)) return { amount: `— / ${show(cap)}`, over: null };
-  const amount = `${minutes ? String(done) : bare(done, unit)} / ${show(cap)}`;
+  // No-break spaces round the slash: "21 / 360 gal" never splits across lines.
+  if (!finite(done)) return { amount: `—\u00a0/\u00a0${show(cap)}`, over: null };
+  const amount = `${minutes ? String(done) : bare(done, unit)}\u00a0/\u00a0${show(cap)}`;
   if (done > cap) return { amount, over: `+${show(done - cap)} over` };
   if (done === cap) return { amount, over: "cap reached" };
   return { amount, over: null };

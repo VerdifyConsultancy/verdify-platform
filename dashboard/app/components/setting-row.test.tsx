@@ -48,6 +48,9 @@ test("label and key, the device value large, the bounds bar with the next plan's
   draw(row("mister_engage_kpa"));
   expect(cell("name")).toBe("VPD Mister Engage mister_engage_kpa");
   expect(document.querySelector(".setting-param")!.classList.contains("mono")).toBe(true);
+  // The key may wrap only after an underscore: a <wbr> after each, and no text added.
+  expect(document.querySelector(".setting-param")!.querySelectorAll("wbr")).toHaveLength(2);
+  expect(text(document.querySelector(".setting-param"))).toBe("mister_engage_kpa");
   expect(lines(".setting-value")).toEqual(["1.60 kPa"]);
   expect(document.querySelector(".setting-device-value")!.getAttribute("title")).toBe("Reported 11/02/2026, 10:40:00 GMT-07:00");
   expect(pill()).toEqual([]);

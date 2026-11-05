@@ -38,6 +38,9 @@ test("compact hides the last word on phones (the stylesheet), wide is full width
   const shown = button()!;
   expect(shown.className).toBe("btn btn-stop btn-wide stop-all-water stop-all-water-compact");
   expect(text(shown.querySelector(".stop-all-water-word"))).toBe("water");
+  // "Stop all" and "water" are one flex item, so the button's gap never doubles the space between them.
+  expect(shown.querySelector(".stop-all-water-word")?.parentElement?.parentElement).toBe(shown);
+  expect(shown.querySelector(".stop-all-water-word")?.parentElement?.textContent).toBe("Stop all water");
   fireEvent.click(shown);
   expect(stop).toHaveBeenCalledTimes(1);
   cleanup();
