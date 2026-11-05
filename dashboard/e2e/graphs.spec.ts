@@ -372,7 +372,7 @@ test("/graphs/statistics: four figures with their changes, the day-by-day strip 
   await load(page, "/graphs/statistics");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Statistics");
   await expect(page.getByRole("navigation", { name: "Graphs views" }).getByRole("link", { name: "Statistics" })).toHaveAttribute("aria-current", "page");
-  await expect(page.locator(".page-status")).toHaveText("Last 30 days · whole-day time in band; the day and night split covers the last 3 days only");
+  await expect(page.locator(".page-status")).toHaveText("Last 30 days · time in band graded against the band the controller served");
   await expect(page.locator("[data-kpi] .metric-label")).toHaveText(["Temperature in band", "VPD in band", "Water", "Iris"]);
   await expect(page.locator("[data-kpi=temp] .metric-delta")).toHaveText("— no comparison with previous 30 d");
   await expect(page.locator(".gr-plot-typical canvas")).toHaveCount(2);

@@ -1716,12 +1716,14 @@ async def scorecard(target_date: str = "", include_realized_dryout: bool = False
 
     Inspect scorecard_contract_version and metric_semantics first. Only contract
     2 verifies that compliance_pct / temp_compliance_pct / vpd_compliance_pct are
-    BINARY fractions of scored house-average readings against historical desired
-    setpoints. Earlier versions mislabeled graded credit under those keys.
-    These fractions are not duration-weighted, fixed-panel crop outcomes or proof
-    of firmware-consumed targets. Coverage is unverified; no center probe is
-    measured. Binary stress hours assume one minute per scored reading and axes
-    can overlap; graded_*_stress_h are separate deficit-integral diagnostics.
+    BINARY time-in-band shares. Earlier versions mislabeled graded credit under
+    those keys. Since migration 290 (#1358) they grade each 5-minute house-average
+    bucket against the band the controller served (band_house_* audit rows; the
+    crop band where a row is missing); daily_band_compliance holds the minutes and
+    the day/night split. They are not fixed-panel crop outcomes. Coverage is
+    unverified; no center probe is measured. Binary stress hours are the minutes
+    below or above that band / 60 and axes can overlap; graded_*_stress_h are
+    separate deficit-integral diagnostics.
 
     compliance_v2_raw_pct, compliance_v2_attributable_pct, graded axis fields and
     compliance_v2_unachievable_frac describe the historical grading/feasibility

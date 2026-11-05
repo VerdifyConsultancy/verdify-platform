@@ -1,0 +1,19 @@
+{
+  "migration": "290-band-compliance.sql",
+  "exact_final_migration_sha256": "557d8d03a61a284e05e1b9bc26db7e3748898531ea7b80f0a6b4e458c922e6be",
+  "final_migration_qualification_pending": true,
+  "before": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projected_successor": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projection": "2026-11-05, read only, production at exact289 (max seq 289 with 289's sha; live seals equal 289's registration). All three seals are expected to stay 289's. fn_runtime_ordinary_boundary_digest (217) takes in a relation only if the api or ingestor login can reach it, one of their roles owns it, 217 protects it by name, or PUBLIC or one of their roles holds an ACL entry on it; a function only if it is SECURITY DEFINER or in 217's invoker helper closure and one of those logins can use its schema and execute it (or PUBLIC or one of their roles holds an ACL entry). fn_mcp_runtime_boundary_digest (263) does the same for PUBLIC and the MCP roles. daily_band_compliance has no ACL entry; fn_band_compliance_5m, _day and _store are SECURITY INVOKER, outside the closure and keep only verdify's EXECUTE (PUBLIC's is revoked); verdify_matview_refresh_runtime.fn_refresh_band_compliance is SECURITY DEFINER but only the matview-refresh duty holds EXECUTE and USAGE on its schema (no ordinary or MCP login does, read 2026-11-05); v_daily_scorecard keeps its only grant, the dashboard duty's SELECT. daily_summary, which the ingestor and MCP roles read, keeps its columns: 290 writes rows, not schema. If the probe shows any digest moved, stop: that is a finding, not a literal to update, because the file re-seals no receipt. Otherwise run scripts/qualify-migration-successor.py db/migrations/290-band-compliance.sql --native-fixture db/qualification/290-band-compliance-fixture.sql --fixture tests/fixtures/290-band-compliance-native-qualification.json on production (every session rolls back); no literal changes and the file's sha stays.",
+  "qualified_successor": null,
+  "after_rollback": null,
+  "native_fixture": null
+}
