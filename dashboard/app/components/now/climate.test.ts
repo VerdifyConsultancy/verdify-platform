@@ -19,7 +19,7 @@ const series = (names: string | string[], metric: readonly string[], from: strin
 const day = (names: string | string[] = "in-band") => series(names, DAY_KEYS, new Date(NOW - DAY_WINDOW_S * 1000).toISOString(), new Date(NOW).toISOString(), DAY_POINTS);
 
 test("the day read: seven keys within API-04's eight, 15 min buckets over 25 h, so local midnight is always inside it", () => {
-  expect(DAY_KEYS).toEqual(["climate.temp_avg", "climate.vpd_avg", "climate.rh_avg", "climate.vpd_north", "climate.vpd_east", "climate.vpd_south", "climate.vpd_west"]);
+  expect(DAY_KEYS).toEqual(["climate.temp_avg", "climate.vpd_avg", "climate.rh_avg", "climate.vpd_north", "climate.vpd_south", "climate.vpd_east", "climate.vpd_west"]);
   expect(ZONE_VPD_KEYS.center).toBe(HOUSE_KEYS.vpd);
   expect(day().bucket_s).toBe(900);
   // 00:00 MST on Nov 2 is 07:00Z.

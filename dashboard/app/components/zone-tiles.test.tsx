@@ -28,7 +28,8 @@ async function open(options: FixtureOptions = {}) {
   return api;
 }
 const plain = (value: string) => value.replaceAll(String.fromCharCode(0xa0), " ");
-const ZONE_ORDER = ["north", "east", "south", "west", "center"];
+/** The one zone order (lib/zone-source.ts `ZONES`), the same as Graphs → Zones' columns. */
+const ZONE_ORDER = ["north", "center", "south", "east", "west"];
 const tile = (zone: string) => document.querySelector<HTMLElement>(`[data-zone=${zone}]`)!;
 const tag = (zone: string) => tile(zone).querySelector("[data-zone-tag]")!.textContent;
 const value = (zone: string, name: string) => plain(text(tile(zone).querySelector(`[data-tile=${name}]`)));
@@ -36,10 +37,11 @@ const meta = (zone: string) => plain(text(tile(zone).querySelector(".now-zone-me
 const number = (reading: string) => Number.parseFloat(reading);
 const query = (path: string) => new URL(path, "http://dashboard.invalid").searchParams;
 
-test("one tile each for north, east, south, west and center, each opening its zone's charts through its title", async () => {
+test("one tile each for north, center, south, east and west, Graphs → Zones' order, each opening its zone's charts through its title", async () => {
   await open();
   const region = screen.getByRole("region", { name: "Zones" });
-  expect(within(region).getAllByRole("heading", { level: 3 }).map((heading) => heading.querySelector("a")?.firstChild?.textContent)).toEqual(["North", "East", "South", "West", "Center"]);
+  expect(within(region).getAllByRole("heading", { level: 3 }).map((heading) => heading.querySelector("a")?.firstChild?.textContent)).toEqual(["North", "Center", "South", "East", "West"]);
+  expect([...region.querySelectorAll("[data-zone]")].map((tile) => tile.getAttribute("data-zone"))).toEqual(ZONE_ORDER);
   for (const zone of ZONE_ORDER) {
     expect(within(tile(zone)).getByRole("link", { name: /: open its charts$/ }).getAttribute("href")).toBe(`/graphs/zones?zone=${zone}`);
   }
@@ -49,7 +51,7 @@ test("one tile each for north, east, south, west and center, each opening its zo
 test("in band: temperature and VPD, each zone's tag as text, a band bar and a 24 h sparkline; in band adds no verdict, and no stale word", async () => {
   await open();
   // L07 and L09 report their own probe; north and east compute it from a fresh probe; center has none.
-  expect(ZONE_ORDER.map(tag)).toEqual(["MEASURED", "MEASURED", "MEASURED", "MEASURED", "HOUSE"]);
+  expect(ZONE_ORDER.map(tag)).toEqual(["MEASURED", "HOUSE", "MEASURED", "MEASURED", "MEASURED"]);
   expect(tile("south").querySelector(".now-zone-tag-news")).toBeNull();
   expect(value("south", "temp")).toMatch(/^\d\d\.\d °F$/);
   expect(value("south", "vpd")).toMatch(/^\d\.\d\d kPa$/);

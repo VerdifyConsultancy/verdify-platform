@@ -300,8 +300,10 @@ test("the zone strip: five tiles with a band bar, a 24 h VPD sparkline and the t
   await useScreensClock(page, request, "in-band");
   await load(page, "/");
   await expect(page.locator("#zones [data-zone]")).toHaveCount(5);
-  await expect(page.locator("#zones [data-zone-tag]")).toHaveText(["MEASURED", "MEASURED", "MEASURED", "MEASURED", "HOUSE"]);
-  for (const zone of ["north", "east", "south", "west", "center"]) {
+  // Graphs → Zones' order, so a zone keeps its place from page to page.
+  expect(await page.locator("#zones [data-zone]").evaluateAll((tiles) => tiles.map((tile) => tile.getAttribute("data-zone")))).toEqual(["north", "center", "south", "east", "west"]);
+  await expect(page.locator("#zones [data-zone-tag]")).toHaveText(["MEASURED", "HOUSE", "MEASURED", "MEASURED", "MEASURED"]);
+  for (const zone of ["north", "center", "south", "east", "west"]) {
     await expect(zoneTile(page, zone).locator("svg.bb")).toHaveCount(1);
     await expect(zoneTile(page, zone).locator("svg.spark")).toHaveAttribute("aria-label", /VPD over the last 24 h$/);
   }

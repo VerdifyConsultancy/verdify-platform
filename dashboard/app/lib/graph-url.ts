@@ -30,7 +30,7 @@ import type { XRange } from "../charts/types";
 import { dateShift, localDayStart } from "./format";
 import type { MetricDef, Setting } from "./operator-api";
 import { unitLabel } from "./setting-values";
-import { isZone, type Zone, type ZoneMetric } from "./zone-source";
+import { ZONES, isZone, type Zone, type ZoneMetric } from "./zone-source";
 
 /** The range chips, in order (redesign §5.5). A chip's id is its `range` value. */
 export const RANGES = [
@@ -504,8 +504,8 @@ export function within400(range: XRange): XRange {
 export const isoOf = (epochSeconds: number): string => new Date(epochSeconds * 1000).toISOString();
 
 // ---------------------------------------------------------------------------------------------------- /graphs/zones
-/** The grid's columns (redesign §5.6), in the order of the greenhouse plan. */
-export const GRID_ZONES: readonly Zone[] = ["north", "center", "south", "east", "west"];
+/** The grid's columns (redesign §5.6): the one zone order, as Now's tiles read it (`ZONES`). */
+export const GRID_ZONES: readonly Zone[] = ZONES;
 export const ZONE_METRICS: readonly ZoneMetric[] = ["temp", "vpd", "rh"];
 export const ZONE_METRIC_WORDS: Readonly<Record<ZoneMetric, string>> = { temp: "Temperature", vpd: "VPD", rh: "RH" };
 const DEFAULT_ZONE_METRICS: readonly ZoneMetric[] = ["temp", "vpd"];
