@@ -10,9 +10,10 @@ import { STATE_WORDS, cssVars, rovingKeys, type VizState } from "./viz";
 /**
  * What a span is (redesign §4.6, §6.2): done is a solid fill in its token; planned a 1.5 px dashed outline on white;
  * running solid to now and dashed after; skipped and blocked a `--line` hatch with a `--muted` outline; missed a
- * `--fault` outline; unknown a `--muted` hatch (a gap, never missed and never off).
+ * `--fault` outline; unknown a `--muted` hatch (a gap, never missed and never off); conditional, a fallback window that runs
+ * only if VPD sensing fails, a dotted `--eq-heat1` outline with no fill.
  */
-export type SpanStatus = "done" | "planned" | "running" | "skipped" | "blocked" | "missed" | "unknown";
+export type SpanStatus = "done" | "planned" | "running" | "skipped" | "blocked" | "missed" | "unknown" | "conditional";
 /** The equipment or cause tokens a span may take (`charts/causes.ts` maps a cause to one). */
 export type SpanToken = "eq-water" | "eq-fert" | "eq-fog" | "eq-mister" | "eq-heat1" | "eq-heat2" | "eq-fan1" | "eq-fan2" | "eq-vent" | "eq-master" | "eq-light-main" | "eq-light-grow" | "muted";
 
@@ -69,7 +70,7 @@ export type TimeTrackProps = {
 };
 
 const STATUS_WORDS: Readonly<Record<SpanStatus, string>> = {
-  done: "done", planned: "planned", running: "running", skipped: "skipped", blocked: "blocked", missed: "missed", unknown: "outcome unknown",
+  done: "done", planned: "planned", running: "running", skipped: "skipped", blocked: "blocked", missed: "missed", unknown: "outcome unknown", conditional: "fallback",
 };
 /** Under this share of the window a span's words sit after it rather than on it. */
 const ROOM_PERCENT = 9;

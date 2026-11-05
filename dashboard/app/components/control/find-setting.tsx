@@ -4,7 +4,8 @@ import { useNavigate } from "react-router";
 
 /**
  * "Find a setting" in the Plan and Equipment headers (redesign §5.11, §5.12): a search that lands on Settings filtered
- * by name or key (`/settings?q=`). It is a plain GET form, so it works before the page hydrates too; once it has, the
+ * by name or key (`/settings?q=`), the same field as Settings' own search, which submits on Enter or with Find, an
+ * outline button (control.css). It is a plain GET form, so it works before the page hydrates too; once it has, the
  * router navigates without reloading the page.
  */
 export function FindSetting() {

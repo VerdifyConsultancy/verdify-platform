@@ -9,7 +9,7 @@ import { Agenda } from "../components/schedule/agenda";
 import { BlockPopover } from "../components/schedule/block-popover";
 import { DayTimeline, sunWords } from "../components/schedule/day-timeline";
 import {
-  agendaDays, dayModel, entriesOf, lineInfo, mondayOf, occurrenceKey, pauseNotes, ruleGroups, weekCells, weekdayCode, type DayBlock,
+  agendaDays, dayModel, entriesOf, fallbackCount, fallbackWindow, lineInfo, mondayOf, occurrenceKey, pauseNotes, ruleGroups, weekCells, weekdayCode, type DayBlock,
 } from "../components/schedule/model";
 import { RulesList } from "../components/schedule/rules-list";
 import { WeekMatrix } from "../components/schedule/week-matrix";
@@ -49,10 +49,11 @@ function ScheduleKey() {
         <li><span className="sch-swatch sch-skipped" aria-hidden="true" />will not run, or skipped (hatched)</li>
         <li><span className="sch-swatch sch-missed" aria-hidden="true" />missed (fault outline)</li>
         <li><span className="sch-swatch sch-unknown" aria-hidden="true" />outcome unknown</li>
+        <li><span className="sch-swatch sch-conditional" aria-hidden="true" />fallback window: runs only if VPD sensing fails (dotted); "not needed" once it passed without running</li>
         <li><span className="sch-swatch sch-planned sch-capped" aria-hidden="true" />ends at the daily cap (amber outline)</li>
         <li><span className="sch-swatch sch-tick-swatch" aria-hidden="true" />valve open, VPD misting included (ticks)</li>
         <li><span className="sch-swatch sch-night-swatch" aria-hidden="true" />night</li>
-        <li><span className="sch-swatch sch-done sch-eq-fert" aria-hidden="true" />feed · <span className="sch-swatch sch-done sch-eq-fog" aria-hidden="true" />prewet and flush on the clean line · <span className="sch-swatch sch-done sch-eq-heat1" aria-hidden="true" />fallback</li>
+        <li><span className="sch-swatch sch-done sch-eq-fert" aria-hidden="true" />feed · <span className="sch-swatch sch-done sch-eq-fog" aria-hidden="true" />prewet and flush on the clean line · <span className="sch-swatch sch-done sch-eq-heat1" aria-hidden="true" />a fallback that ran</li>
       </ul>
       <p className="meta">MANUAL: Iris skips it. Iris may adjust: Iris can change it.</p>
     </Popover>
@@ -68,7 +69,7 @@ function ScheduleKey() {
  * closing replaces, so Back closes them. Viewers get no editor, [+], switch, Edit or pause, whatever the URL says.
  */
 export default function WaterSchedules() {
-  const { irrigation } = useWaterOutlet();
+  const { irrigation, setSummary } = useWaterOutlet();
   const [search, setSearch] = useSearchParams();
   const navigate = useNavigate();
   const operator = useRole() === "operator";
@@ -128,6 +129,15 @@ export default function WaterSchedules() {
   const cells = agenda.data ? weekCells(monday, { agenda: agenda.data, lines, today, first, last }) : [];
   const days = useMemo(() => agendaDays(entries, { first: day, days: AGENDA_DAYS, last, today, now, lines }), [entries, day, last, today, now, lines]);
   const groups = agenda.data ? ruleGroups(agenda.data.schedules, lines, agenda.data.solar.find((item) => item.date === today)) : [];
+  // The fallback windows ahead in the days served (they run only if VPD sensing fails): the header's status line counts
+  // them beside "no run planned this week", as the week strip and the today strips do.
+  const fallbacks = agenda.data ? agenda.data.occurrences.filter((occurrence) => Date.parse(occurrence.planned_start) > now
+    && fallbackWindow(occurrence, agenda.data?.schedules.find((schedule) => schedule.slot_id === occurrence.slot_id)) === "ahead").length : 0;
+  const fallbackWords = fallbacks > 0 ? fallbackCount(fallbacks) : null;
+  useEffect(() => {
+    setSummary?.(fallbackWords);
+    return () => setSummary?.(null);
+  }, [setSummary, fallbackWords]);
   const blockKey = search.get("block");
   // The popover reads the saved occurrence, which an open edit's draft may hide from the views.
   const blockEntry = useMemo(() => (blockKey && agenda.data ? entriesOf(agenda.data, null, now).find((entry) => occurrenceKey(entry.occurrence) === blockKey) ?? null : null), [blockKey, agenda.data, now]);

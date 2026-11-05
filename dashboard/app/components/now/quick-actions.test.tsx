@@ -25,7 +25,9 @@ test("an operator: Stop all water first, then the three bursts, each a name over
   expect(screen.getByRole("region", { name: "Quick actions" })).toBeTruthy();
   expect(names()).toEqual(["Stop all water", "Fans 15 min", "Humidify 5 min", "Vent bypass 10 min"]);
   expect(screen.getByRole("button", { name: "Stop all water" }).className).toContain("btn-stop");
-  expect(document.querySelector(".now-burst-button .now-burst-name")?.textContent).toBe("Fans");
+  // The shared BurstButton, as Equipment's: the name bold, the length muted (#1308 visual QA 39).
+  expect(document.querySelector(".now-burst-button.burst-button .burst-name")?.textContent).toBe("Fans");
+  expect(document.querySelector(".now-burst-button .burst-length")?.textContent).toBe("15 min");
 });
 
 test("a burst is one API-IRR-12 with its kind and minutes and no dialog; Stop all water calls the route's Stop", async () => {

@@ -7,7 +7,7 @@ import { act, cleanup, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { fixture } from "../../e2e/fixtures/index.mjs";
 import { parseSettings, type DesiredSetting, type Setting } from "../lib/operator-api";
-import { keptNumber, keptValueText } from "../lib/setting-values";
+import { displayNumber, keptNumber, keptValueText, keyUnit, readableDuration, settingDisplay, settingUnit } from "../lib/setting-values";
 import type { Session } from "../lib/session";
 import { SettingRow, boundsText, changedByAgent, pendingRequest, recentlyChanged, valueInForce, type SettingRowProps } from "./setting-row";
 import { NBSP, denver, renderUi, text } from "./test-render";
@@ -260,6 +260,25 @@ test("values keep the decimals they carry: Iris's 48.75 on a 30 s grid reads 48.
   expect(keptNumber(0.8, null, "kPa")).toBe("0.80");
   expect(keptValueText(48.75, { kind: "numeric", unit: "s", step: 30 })).toBe(`48.75${NBSP}s`);
   expect(keptValueText(1, { kind: "switch", step: 1 })).toBe("ON");
+});
+
+test("one display for Settings' rows and Plan's lanes: the step's decimals or those it carries, the key's unit, a long duration readable (#1308 visual QA 38)", () => {
+  // With a step, its decimals or more; with none (Plan's lanes), the decimals it carries, at least °F's 1 and kPa's 2.
+  expect([displayNumber(60, 5, "s"), displayNumber(60, null, "s"), displayNumber(45, null, "s"), displayNumber(88, null, "%"), displayNumber(1.6, null, "kPa"), displayNumber(72, null, "°F"), displayNumber(48.75, 30, "s")])
+    .toEqual(["60", "60", "45", "88", "1.60", "72.0", "48.75"]);
+  // The unit a key names where the registry has none; a time of day (_hour, _minute) takes none.
+  expect(["gl_main_min_on_s", "dwell_gate_ms", "gl_main_target_light_minutes", "gl_main_sunrise_offset_min", "rh_pct", "outdoor_temp_f", "gl_main_sunrise_hour", "activity_start_minute", "mister_vpd_weight"].map(keyUnit))
+    .toEqual(["s", "ms", "min", "min", "%", "°F", null, null, null]);
+  expect([settingUnit({ unit: "kPa", param: "x_s" }), settingUnit({ unit: null, param: "x_s" }), settingUnit({ param: "x" })]).toEqual(["kPa", "s", null]);
+  // Long durations in a unit people read; anything else reads as it is.
+  expect([readableDuration(300_000, "ms"), readableDuration(60_000, "ms"), readableDuration(1_800_000, "ms"), readableDuration(3_600_000, "ms"), readableDuration(1500, "ms"), readableDuration(7200, "s"), readableDuration(600, "s"), readableDuration(960, "min")]
+    .map((words) => words?.replaceAll(NBSP, " ") ?? null)).toEqual(["5 min", "60 s", "30 min", "1 h", null, "2 h", null, null]);
+  const plain = (words: string) => words.replaceAll(NBSP, " ");
+  expect([
+    settingDisplay(300_000, { kind: "numeric", unit: "ms", step: 30_000, param: "dwell_gate_ms" }), settingDisplay(120, { kind: "numeric", unit: null, step: 30, param: "gl_main_min_on_s" }),
+    settingDisplay(7, { kind: "numeric", unit: null, step: 1, param: "gl_main_sunrise_hour" }), settingDisplay(1.6, { kind: "numeric", unit: "kPa", step: 0.05 }),
+    settingDisplay(1, { kind: "switch", step: 1 }),
+  ].map(plain)).toEqual(["5 min", "120 s", "7", "1.60 kPa", "ON"]);
 });
 
 test("read-only rows show their reason and Details, no Edit; temp_low reads \"legacy limit, read-only\"", () => {

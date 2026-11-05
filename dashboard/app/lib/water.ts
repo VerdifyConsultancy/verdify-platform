@@ -150,6 +150,12 @@ export function flowWords(leak: Leak): { readonly text: string; readonly tone?: 
   return { text: leak.active === false ? "Unexplained flow: none" : "Unexplained flow: unknown" };
 }
 
+/**
+ * What SAF-4 caps (irrigation §4.5: every mister relay's water plus climate fog), in the words Now's water card and Water's
+ * Site today both show beside its meter, which fills `--eq-water` on both as redesign §4.6 fills gallons.
+ */
+export const SAF4_WORDS = "daily mist and fog ceiling";
+
 /** "21 of 360 gal"; the count alone with no maximum; "—" for a count the API does not have. */
 export function ofWords(used: number | null | undefined, max: number | null | undefined, unit: string): string {
   return `${whole(used)}${finite(max) && max > 0 ? ` of ${Math.round(max)}` : ""}${NBSP}${unit}`;
@@ -598,12 +604,15 @@ export type ZoneSummary = {
   readonly reserve: number | null;
   /** The newest `last_water.at` among the zone's lines. */
   readonly lastAt: string | null;
+  /** A line of the zone, L03 included, reads `running` now: the head then says "running now" (redesign §5.2). */
+  readonly running: boolean;
 };
 
 /** The five zone cards' facts from API-IRR-01, with today's still-planned minutes from `plannedToday` when known. */
 export function zoneSummaries(status: Pick<IrrigationStatus, "lines" | "today">, planned: PlannedToday | null): ZoneSummary[] {
   return WATER_ZONES.map((zone) => {
     const inZone = [...status.lines].filter((line) => lineZone(line) === zone).sort(byLineId);
+    const running = inZone.some((line) => line.state.code === "running");
     const lines = inZone.filter((line) => !isMaster(line));
     const capLine = ZONE_CAP_LINE[zone];
     const capped = capLine ? lines.find((line) => line.line_id === capLine) ?? null : null;
@@ -615,9 +624,23 @@ export function zoneSummaries(status: Pick<IrrigationStatus, "lines" | "today">,
     return {
       zone, lines, master: inZone.find(isMaster) ?? null, mister, minutes, planned: planned ? planned.zone[zone] ?? 0 : null,
       cap: capped && capped.daily_cap_min > 0 ? capped.daily_cap_min : null, capLine: capped?.line_id ?? null,
-      reserve: mister && finite(mister.vpd_reserve_min) && mister.vpd_reserve_min > 0 ? mister.vpd_reserve_min : null, lastAt: newest,
+      reserve: mister && finite(mister.vpd_reserve_min) && mister.vpd_reserve_min > 0 ? mister.vpd_reserve_min : null, lastAt: newest, running,
     };
   });
+}
+
+/**
+ * When a zone's head says it last watered (redesign §5.2): its newest `last_water`, unless today's minutes are above 0
+ * and that is from an earlier day (a run the API has not filed yet), when today's newest valve start (`starts`, epoch
+ * seconds from API-05) stands in. Null when neither is known; a running zone reads "running now" instead.
+ */
+export function zoneLastAt(summary: Pick<ZoneSummary, "lastAt" | "minutes">, starts: readonly number[], today: string): string | null {
+  const { lastAt, minutes } = summary;
+  if (!finite(minutes) || minutes <= 0 || (validTime(lastAt) && localDate(lastAt) === today)) return lastAt;
+  const newest = starts.filter((start) => Number.isFinite(start)).reduce((best, start) => Math.max(best, start), Number.NEGATIVE_INFINITY);
+  if (!Number.isFinite(newest)) return lastAt;
+  const at = new Date(newest * 1000).toISOString();
+  return localDate(at) === today ? at : lastAt;
 }
 
 /** The lines running now (`state.code` running), in register order; L03 and fog included, since a running valve is news. */
@@ -650,19 +673,51 @@ export function daysWords(days: readonly string[] | null | undefined): string {
 
 const SOLAR_WORDS: Readonly<Record<string, string>> = { sunrise: "sunrise", solar_noon: "solar noon", sunset: "sunset" };
 const MINUS_SIGN = "−";
+type StartShape = { readonly kind: string; readonly clock?: string; readonly offset_min?: number };
+type SolarToday = Pick<ScheduleAgenda["solar"][number], "sunrise" | "solar_noon" | "sunset">;
+/** A solar offset's size with its unit: "2 h", "45 min", "1 h 30 min"; 0 reads "0". */
+function offsetSize(minutes: number): string {
+  const whole = Math.abs(Math.round(minutes));
+  if (whole === 0) return "0";
+  const hours = Math.floor(whole / 60), rest = whole % 60;
+  return [hours ? `${hours}${NBSP}h` : null, rest ? `${rest}${NBSP}min` : null].filter(Boolean).join(" ");
+}
+/** Today's time of a solar start, from `solar[]` (the browser never computes the sun); null without it. */
+function solarTime(start: StartShape, solarToday: SolarToday | null | undefined): string | null {
+  const at = solarToday && Object.hasOwn(SOLAR_WORDS, start.kind) ? Date.parse(solarToday[start.kind as "sunrise" | "solar_noon" | "sunset"]) : Number.NaN;
+  return Number.isFinite(at) ? shortTime(new Date(at + (start.offset_min ?? 0) * 60_000).toISOString()) : null;
+}
 /**
- * A start in words with today's resolved time: "16:00", "sunrise + 60 (07:31 today)", "solar noon − 120"; the resolved
- * time only from `solar[]` (the browser never computes the sun). A kind this build does not know reads raw.
+ * A start in words with today's resolved time: "16:00", "sunrise + 1 h (07:31 today)", "solar noon − 2 h", the offset
+ * with its unit; the resolved time only from `solar[]`. A kind this build does not know reads raw.
  */
-export function startWords(start: { readonly kind: string; readonly clock?: string; readonly offset_min?: number } | null | undefined, solarToday?: Pick<ScheduleAgenda["solar"][number], "sunrise" | "solar_noon" | "sunset"> | null): string {
+export function startWords(start: StartShape | null | undefined, solarToday?: SolarToday | null): string {
   if (!start) return "—";
   if (start.kind === "clock") return start.clock ?? "—";
   const word = SOLAR_WORDS[start.kind];
   if (!word) return start.kind;
   const offset = start.offset_min ?? 0;
-  const base = `${word}${offset === 0 ? "" : ` ${offset > 0 ? "+" : MINUS_SIGN} ${Math.abs(offset)}`}`;
-  const at = solarToday ? Date.parse(solarToday[start.kind as "sunrise" | "solar_noon" | "sunset"]) : Number.NaN;
-  return Number.isFinite(at) ? `${base} (${shortTime(new Date(at + offset * 60_000).toISOString())} today)` : base;
+  const base = `${word}${offset === 0 ? "" : ` ${offset > 0 ? "+" : MINUS_SIGN} ${offsetSize(offset)}`}`;
+  const time = solarTime(start, solarToday);
+  return time ? `${base} (${time} today)` : base;
+}
+/**
+ * Several starts as one list (a line's fallback schedules, redesign §6.2's "Fallback (3)"): one solar kind reads once
+ * with each offset, "solar noon −2 h, 0, +2 h (09:47, 11:47, 13:47 today)"; mixed kinds each in full.
+ */
+export function startsWords(starts: readonly (StartShape | null | undefined)[], solarToday?: SolarToday | null): string {
+  const known = starts.filter((start): start is StartShape => Boolean(start));
+  const kind = known[0]?.kind;
+  if (!known.length || known.length !== starts.length || !Object.hasOwn(SOLAR_WORDS, kind ?? "") || known.some((start) => start.kind !== kind)) {
+    return starts.map((start) => startWords(start)).join(", ");
+  }
+  const offsets = known.map((start) => {
+    const offset = start.offset_min ?? 0;
+    return offset === 0 ? "0" : `${offset > 0 ? "+" : MINUS_SIGN}${offsetSize(offset)}`;
+  });
+  const times = known.map((start) => solarTime(start, solarToday));
+  const today = times.every((time): time is string => time !== null) ? ` (${times.join(", ")} today)` : "";
+  return `${SOLAR_WORDS[kind!]} ${offsets.join(", ")}${today}`;
 }
 
 /** A mist window: "4 × 45 s, 60 s gap"; one pulse reads "45 s". */

@@ -4,10 +4,11 @@ import { Link, useNavigate } from "react-router";
 import { cls } from "../common";
 
 /**
- * Settings' rail (redesign §5.10): Show (the filters, each with its count, kept in the URL as `filter=`) and Groups
- * (anchors to each group of the catalog, with the rows each holds now). From 861 px it is a sticky column beside the
- * catalog; at 860 px and below the same choices are two selects above it, Show and "Jump to group". Both render and the
- * stylesheet shows one, so the server's HTML is the same at every width.
+ * Settings' rail (redesign §5.10): Show (the filters, each with its count as a pill, kept in the URL as `filter=`) and
+ * Groups (anchors to each group of the catalog, with the rows each holds now as a plain muted number), so the two read as
+ * the different things they are. From 861 px it is a sticky column beside the catalog; at 860 px and below the same
+ * choices are two selects above it, Show and "Jump to group". Both render and the stylesheet shows one, so the server's
+ * HTML is the same at every width.
  */
 export type RailFilter = { readonly key: string; readonly label: string; readonly count: number | null; readonly to: string; readonly current: boolean };
 /** A group and the rows it holds under the current filter and search; null before API-09 first answers. */
@@ -36,7 +37,7 @@ export function SettingsRail({ filters, groups }: { filters: readonly RailFilter
   return <nav className="ctl-rail" aria-label="Settings filters and groups">
     <div className="ctl-rail-lists">
       <p id={showId} className="eyebrow ctl-rail-label">Show</p>
-      <ul className="ctl-rail-list" aria-labelledby={showId}>
+      <ul className="ctl-rail-list ctl-rail-filters" aria-labelledby={showId}>
         {filters.map((item) => <li key={item.key}>
           <Link className="ctl-rail-item" to={item.to} aria-current={item.current ? "true" : undefined}>
             <span className="ctl-rail-name">{item.label}</span> <span className="ctl-rail-count">{countText(item.count)}</span>
@@ -44,7 +45,7 @@ export function SettingsRail({ filters, groups }: { filters: readonly RailFilter
         </li>)}
       </ul>
       <p id={groupsId} className="eyebrow ctl-rail-label">Groups</p>
-      <ul className="ctl-rail-list" aria-labelledby={groupsId}>
+      <ul className="ctl-rail-list ctl-rail-groups" aria-labelledby={groupsId}>
         {groups.map((item) => <li key={item.group}>
           {item.count !== null && item.count > 0
             ? <a className="ctl-rail-item" href={`#${groupAnchor(item.group)}`} onClick={jump(item.group)}>

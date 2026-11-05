@@ -11,7 +11,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { FakeResizeObserver, MockPlot, media, setTokens } from "../charts/fixtures/uplot-mock";
-import { automationWords, resyncState, unconfirmedWords } from "../components/equipment/light-controls";
+import { automationWords, lightButtons, resyncState, unconfirmedWords } from "../components/equipment/light-controls";
 import { WHY_WINDOW_MS, whyGraphUrl } from "../components/equipment/why-panel";
 import { text } from "../components/test-render";
 import { ToastProvider } from "../components/toast";
@@ -31,9 +31,14 @@ function chartStubs() {
 beforeEach(chartStubs);
 afterEach(() => { cleanup(); stopFixtureApi(); document.documentElement.removeAttribute("style"); });
 
-/** The route as an operator with writes on sees it, over the fixture API, once its reads and lanes have settled. */
-async function load(options: FixtureOptions = {}, { role = "operator", writesEnabled = true }: { role?: Role; writesEnabled?: boolean } = {}) {
+type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
+/**
+ * The route as an operator with writes on sees it, over the fixture API, once its reads and lanes have settled. `wrap`
+ * can alter the fixture's answers before the first read.
+ */
+async function load(options: FixtureOptions = {}, { role = "operator", writesEnabled = true, wrap }: { role?: Role; writesEnabled?: boolean; wrap?: (fetch: Fetch) => Fetch } = {}) {
   const api = startFixtureApi(options);
+  if (wrap) vi.stubGlobal("fetch", vi.fn(wrap(globalThis.fetch as Fetch)));
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false, refetchOnReconnect: false } } });
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/equipment"]}><SessionProvider role={role} writesEnabled={writesEnabled}><ToastProvider><Equipment /></ToastProvider></SessionProvider></MemoryRouter></QueryClientProvider>);
   await advance(1);
@@ -58,6 +63,14 @@ const refusal = (key: string) => text(row(key).querySelector(".light-controls .f
 const lightWrites = (api: Awaited<ReturnType<typeof load>>) => requests(api, "API-20").map((sent) => [sent.path, sent.body]);
 /** The parts of a 503 the client reads, resolving in microtasks as the fixture API's answers do. */
 const refusal503 = (problem: object) => ({ status: 503, ok: false, type: "basic", headers: new Headers(), json: async () => problem, text: async () => "" }) as unknown as Response;
+/** API-09 reads the main light's automatic switch off (0), as after someone switched its automation off: Back to automatic shows. */
+const automationOff = (base: Fetch): Fetch => async (input, init) => {
+  const response = await base(input, init);
+  if (new URL(input, "http://dashboard.invalid").pathname !== "/api/v1/settings") return response;
+  const body = await response.json() as { items: { param: string; readback: object | null }[] };
+  const items = body.items.map((item) => (item.param === "sw_gl_main_auto_mode" && item.readback ? { ...item, readback: { ...item.readback, value: 0 } } : item));
+  return { ...response, headers: response.headers, json: async () => ({ ...body, items }) } as unknown as Response;
+};
 /** Every POST answers 503 with `problem`, and never reaches the fixture API; the reads still do. */
 function refuseWrites(problem: object) {
   const real = globalThis.fetch;
@@ -140,24 +153,58 @@ test("a viewer gets the board's words and no light control; with changes switche
   cleanup();
   stopFixtureApi();
   chartStubs();
-  await load({ fixture: "writes-off" }, { writesEnabled: false });
-  for (const key of ["grow_light_main", "grow_light_grow"]) {
-    const names = within(row(key)).getAllByRole("button");
-    expect(names.map((node) => text(node)), key).toEqual([`Turn on ${key === "grow_light_main" ? "Main" : "Grow"}`, `Turn off ${key === "grow_light_main" ? "Main" : "Grow"}`, `Back to automatic ${key === "grow_light_main" ? "Main" : "Grow"}`]);
-    for (const node of names) expect((node as HTMLButtonElement).disabled, key).toBe(true);
+  // Main is off in automatic; Grow differs from its controller, so it is overridden: each its own buttons, all disabled.
+  await load({ fixture: ["writes-off", "grow-lights-differ"] }, { writesEnabled: false });
+  for (const [key, names] of [["grow_light_main", ["Turn on Main"]], ["grow_light_grow", ["Back to automatic Grow", "Turn on Grow"]]] as const) {
+    const buttons = within(row(key)).getAllByRole("button");
+    expect(buttons.map((node) => text(node)), key).toEqual(names);
+    for (const node of buttons) expect((node as HTMLButtonElement).disabled, key).toBe(true);
   }
 });
 
-test("each light links to its Activity log and its automatic switch's setting, and each button is a wide 44 px write control", async () => {
-  await load({ fixture: "in-band" });
+test("each light links to its Activity log beside its automatic switch's setting, and each button is a wide 44 px write control", async () => {
+  await load({ fixture: "grow-lights-differ" });
   expect(within(row("grow_light_main")).getByRole("link", { name: "Activity of Main" }).getAttribute("href")).toBe("/activity/log?target=grow_light_main");
   expect(within(row("grow_light_grow")).getByRole("link", { name: "Activity of Grow" }).getAttribute("href")).toBe("/activity/log?target=grow_light_grow");
   expect(within(row("grow_light_main")).getByRole("link", { name: "Automation setting of Main" }).getAttribute("href")).toBe("/equipment?edit=sw_gl_main_auto_mode");
-  for (const name of [/^Turn on/, /^Turn off/, /^Back to automatic/]) {
-    const node = button("grow_light_main", name)!;
+  // The links sit together right of the automatic line, never among the buttons.
+  expect([...row("grow_light_main").querySelectorAll(".light-auto-row .light-links a")].map((node) => text(node))).toEqual(["Automation setting of Main›", "Activity of Main›"]);
+  expect(document.querySelectorAll(".light-actions a")).toHaveLength(0);
+  const buttons = [...document.querySelectorAll<HTMLElement>(".light-actions button")];
+  expect(buttons.map((node) => text(node))).toEqual(["Turn on Main", "Back to automatic Grow", "Turn on Grow"]);
+  for (const node of buttons) {
     expect(node.className).toContain("btn-wide");
     expect(node.getAttribute("data-write-control")).toBe("true");
   }
+});
+
+test("a light offers the buttons its state calls for: the switch to its other state in automatic, Back to automatic first when overridden (#1308 visual QA 26)", async () => {
+  const names = (shown: ReturnType<typeof lightButtons>) => [...(shown.automatic ? ["automatic"] : []), ...shown.turns];
+  // In automatic and matching the controller: the one switch to the other state.
+  expect(names(lightButtons({ intent: "off", state: "off" }, 1, false))).toEqual(["on"]);
+  expect(names(lightButtons({ intent: "on", state: "on" }, 1, false))).toEqual(["off"]);
+  // Overridden: Lutron differs from the controller, or automation is off: Back to automatic first, then the switch.
+  expect(names(lightButtons({ intent: "off", state: "on" }, 1, false))).toEqual(["automatic", "off"]);
+  expect(names(lightButtons({ intent: "off", state: "off" }, 0, false))).toEqual(["automatic", "on"]);
+  // Not known: automation not reported, the intent or Lutron unknown, never a guess that hides a control.
+  expect(names(lightButtons({ intent: "off", state: "off" }, null, false))).toEqual(["automatic", "on"]);
+  expect(names(lightButtons({ intent: null, state: "off" }, 1, false))).toEqual(["automatic", "on"]);
+  expect(names(lightButtons({ intent: "on", state: "unknown" }, 1, false))).toEqual(["automatic", "on", "off"]);
+  // A command on its way keeps both switches, so the other may override it.
+  expect(names(lightButtons({ intent: "off", state: "off" }, 1, true))).toEqual(["on", "off"]);
+
+  const api = await load({ fixture: "lights-confirmed" });
+  const shown = () => within(row("grow_light_main")).queryAllByRole("button").map((node) => text(node));
+  expect(shown()).toEqual(["Turn on Main"]);
+  press("grow_light_main", /^Turn on/);
+  await advance(0);
+  // Reading back: both switches, the pressed one waiting.
+  expect(shown()).toEqual(["Turn on Main", "Turn off Main"]);
+  await tick(5000);
+  // Lutron on, the controller off: overridden by hand.
+  expect(state("grow_light_main")).toBe("Off (controller) · Lutron On Differ");
+  expect(shown()).toEqual(["Back to automatic Main", "Turn off Main"]);
+  expect(lightWrites(api)).toEqual([["/api/v1/equipment/lights/main/on", null]]);
 });
 
 // ---------------------------------------------------------------------------------------------------- Turn on, Turn off
@@ -233,11 +280,6 @@ test("a light that switches late, after a 503, takes back the words: the readbac
 
 test("no match after 30 s, and a switch on a later poll clears the note", async () => {
   const api = await load({ fixture: "lights-not-confirmed" });
-  press("grow_light_main", /^Turn off/);
-  await advance(0);
-  // Lutron already read OFF, so the readback answers at once: nothing to wait for.
-  await tick(5000);
-  expect(note("grow_light_main")).toBeNull();
   press("grow_light_main", /^Turn on/);
   await advance(0);
   await tick(30_000);
@@ -371,7 +413,8 @@ for (const fixture of ["lights-intent-unknown", "ha-down"]) {
 }
 
 test("Back to automatic with the two agreeing sends none, and a write that never confirms sends none either", async () => {
-  const api = await load({ fixture: ["lights-confirmed", "requested-to-confirmed"] });
+  // Automation off with Lutron and the controller agreeing: Back to automatic shows, and once CONFIRMED there is nothing to match.
+  const api = await load({ fixture: ["lights-confirmed", "requested-to-confirmed"] }, { wrap: automationOff });
   press("grow_light_main", /^Back to automatic/);
   await advance(0);
   await poll(() => auto("grow_light_main").startsWith("Confirmed"));
@@ -394,15 +437,16 @@ test("a Turn on while the write waits supersedes the resync: nothing but that Tu
   press("grow_light_grow", /^Back to automatic/);
   await advance(0);
   await tick(1);
-  press("grow_light_grow", /^Turn off/);
+  press("grow_light_grow", /^Turn on/);
   await advance(0);
   await poll(() => auto("grow_light_grow").startsWith("Confirmed") || auto("grow_light_grow") === "Automatic");
   await tick(30_000);
-  expect(lightWrites(api)).toEqual([["/api/v1/equipment/lights/grow/off", null]]);
+  expect(lightWrites(api)).toEqual([["/api/v1/equipment/lights/grow/on", null]]);
 });
 
 test("Back to automatic takes the place of the last command's words, and a Turn on of a refused write's", async () => {
-  const api = await load({ fixture: ["lights-not-confirmed", "requested-to-confirmed"] });
+  // Automation off, so Back to automatic shows beside Turn on.
+  const api = await load({ fixture: ["lights-not-confirmed", "requested-to-confirmed"] }, { wrap: automationOff });
   const says = () => row("grow_light_main").querySelector(".light-controls .field-error");
   press("grow_light_main", /^Turn on/);
   await advance(0);
@@ -422,7 +466,7 @@ test("Back to automatic takes the place of the last command's words, and a Turn 
   cleanup();
   stopFixtureApi();
   chartStubs();
-  await load({ fixture: "lights-confirmed", fail: { "API-10": 503 } });
+  await load({ fixture: "lights-confirmed", fail: { "API-10": 503 } }, { wrap: automationOff });
   press("grow_light_main", /^Back to automatic/);
   await advance(0);
   expect(says()).not.toBeNull();
@@ -478,7 +522,7 @@ test("the read after CONFIRMED failing sends nothing and says the light was not 
   expect(auto("grow_light_grow")).toBe("Confirmed Automatic");
   expect(lightWrites(api)).toEqual([]);
   // The next press clears the note.
-  press("grow_light_grow", /^Turn off/);
+  press("grow_light_grow", /^Turn on/);
   await advance(0);
   expect(note("grow_light_grow")).toBe("Waiting for Lutron");
 });

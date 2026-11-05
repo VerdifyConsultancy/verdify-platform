@@ -10,20 +10,13 @@
 import type { IrrigationStatus } from "../../lib/operator-api";
 import type { PanelRead } from "../../lib/queries";
 import { OperatorOnly } from "../../lib/session";
-import { BURSTS, BURSTS_ARRIVE_TEXT, CommandNote, burstsIgnoredText, useBurstCommand, type BurstKind } from "../burst-panel";
+import { BURSTS, BURSTS_ARRIVE_TEXT, BurstButton, burstsIgnoredText } from "../burst-panel";
 import { Button } from "../button";
 import { StopAllWater, type StopAllControl } from "../stop-all-water";
 
-/** "Fans" and "15 min": the burst's name over its length, so three fit side by side on a phone. */
-function QuickBurst({ kind, minutes, label }: { kind: BurstKind; minutes: number; label: string }) {
-  const command = useBurstCommand();
-  const name = label.replace(/\s+\d+\s*min$/, "");
-  return <div className="now-burst">
-    <Button write className="now-burst-button" busy={command.sending} onClick={() => void command.send({}, { kind, minutes })}>
-      <span className="now-burst-name">{name}</span> <span className="now-burst-length">{minutes} min</span>
-    </Button>
-    <CommandNote phase={command.phase} message={command.message} error={command.error} />
-  </div>;
+/** The shared burst button (Equipment's too): its name over its length on a phone, so three fit side by side. */
+function QuickBurst({ burst }: { burst: (typeof BURSTS)[number] }) {
+  return <div className="now-burst"><BurstButton burst={burst} className="now-burst-button" /></div>;
 }
 
 /** The bursts, or why they are not here yet: while the engine flag is unknown the row keeps its height. */
@@ -36,7 +29,7 @@ function Bursts({ irrigation, mode }: { irrigation: PanelRead<IrrigationStatus>;
   if (!engine) return <p className="meta now-actions-note" data-arrives="bursts">{BURSTS_ARRIVE_TEXT}</p>;
   const ignored = burstsIgnoredText(mode);
   return <>
-    <div className="now-bursts">{BURSTS.map((burst) => <QuickBurst key={burst.kind} kind={burst.kind} minutes={burst.minutes} label={burst.label} />)}</div>
+    <div className="now-bursts">{BURSTS.map((burst) => <QuickBurst key={burst.kind} burst={burst} />)}</div>
     {ignored && <p className="fault now-actions-note" data-bursts="ignored">{ignored}</p>}
   </>;
 }

@@ -196,7 +196,8 @@ test("a degraded_only draft follows VPD control: on L04 \"only if VPD sensing is
   // Without the box, a mist schedule on L04 (VPD on, Schedule off, as seeded) is skipped.
   expect(blocks("L04").find((block) => block.draft)?.name).toMatch(/Skipped until Schedule is on$/);
   fireEvent.click(inDrawer().getByLabelText("Only if VPD sensing is degraded"));
-  expect(blocks("L04").find((block) => block.draft)).toMatchObject({ name: "L04 Center mister, Tue 06:50, 4 × 45 s, draft, not saved, planned, only if VPD sensing is degraded", hatched: false });
+  // A fallback window, not a planned run: it runs only if VPD sensing fails (#1308 visual QA 6).
+  expect(blocks("L04").find((block) => block.draft)).toMatchObject({ name: "L04 Center mister, Tue 06:50, 4 × 45 s, draft, not saved, fallback, only if VPD sensing is degraded", hatched: false });
   expect(day().querySelector('.sch-row[data-line="L04"] .sch-draft')?.className).toContain("sch-eq-heat1");
   expect(preview()).toContain("only if VPD sensing is degraded");
   expect(previewLine("L04")).toBe("L04 no minutes plannedCenter: 0 of 60 min for schedules; 60 kept for VPD");

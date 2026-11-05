@@ -248,6 +248,8 @@ button.tt-span{cursor:pointer}
 .tt-planned.tt-eq-water{border-color:var(--eq-water)}.tt-planned.tt-eq-fert{border-color:var(--eq-fert)}.tt-planned.tt-eq-fog{border-color:var(--eq-fog)}.tt-planned.tt-eq-mister{border-color:var(--eq-mister)}.tt-planned.tt-eq-heat1{border-color:var(--eq-heat1)}
 .tt-skipped,.tt-blocked{background:repeating-linear-gradient(135deg,var(--line-strong) 0 2px,#fff 2px 5px);border:1px solid var(--muted)}
 .tt-missed{background:#fff;border:1.5px solid var(--fault)}
+/* A fallback window (redesign §6.2): runs only if VPD sensing fails, so a dotted outline in the fallback colour and no fill. */
+.tt-conditional{background:#fff;border:1.5px dotted var(--eq-heat1)}
 .tt-unknown{background:repeating-linear-gradient(135deg,var(--muted) 0 1px,#fff 1px 4px);border:1px solid var(--line-strong)}
 .tt-span-label{position:absolute;top:50%;left:calc(100% + 4px);transform:translateY(-50%);max-width:calc(var(--tt-room, 100) * 1cqw - 8px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
 .tt-planned:not(.tt-narrow) .tt-span-label,.tt-missed:not(.tt-narrow) .tt-span-label{left:4px}
@@ -259,8 +261,8 @@ button.tt-span{cursor:pointer}
 .tt-note{position:absolute;top:50%;left:4px;transform:translateY(-50%);color:var(--muted);font-size:var(--fs-xs);white-space:nowrap}
 .tt-end{min-width:0;font-size:var(--fs-sm)}
 .tt.is-stale .tt-span:not(.tt-planned):not(.tt-missed){opacity:.55}
-.tt.is-neutral .tt-span:not(.tt-planned):not(.tt-missed):not(.tt-skipped):not(.tt-blocked):not(.tt-unknown){background:var(--muted)}
-.tt.is-neutral .tt-planned,.tt.is-neutral .tt-missed{border-color:var(--muted)}
+.tt.is-neutral .tt-span:not(.tt-planned):not(.tt-missed):not(.tt-skipped):not(.tt-blocked):not(.tt-unknown):not(.tt-conditional){background:var(--muted)}
+.tt.is-neutral .tt-planned,.tt.is-neutral .tt-missed,.tt.is-neutral .tt-conditional{border-color:var(--muted)}
 .tt-empty{margin:0}
 
 /* Popover (redesign §5.14): under its opener from 861 px (a non-modal dialog placed through CSSOM), a bottom sheet in a modal dialog at 860 px and below. */

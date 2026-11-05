@@ -39,7 +39,7 @@ export type PageHeaderProps = {
   statusShort?: ReactNode;
   /** At most two buttons, the primary last: at the h1 row's right on desktop, under the status line on phones. */
   actions?: ReactNode;
-  /** At the end of the tabs row: Water's Stop all water, which shares the sticky row on phones. */
+  /** At the end of the tabs row: Water's "■ Stop all", which shares the sticky row at 860 px and below. */
   tabsEnd?: ReactNode;
   /** The tabs row sticks under the header at 860 px and below (Water, redesign §2.5). */
   stickyTabs?: boolean;

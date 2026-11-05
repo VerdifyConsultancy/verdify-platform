@@ -31,7 +31,7 @@ test("in band: a meter per zone, its minutes against the cap and when it last go
   ]);
   // The drip zone fills in --eq-water, the mister zones in --eq-mister.
   expect([...document.querySelectorAll(".now-water-zones .meter")].map((meter) => meter.className.split(" ")[1])).toEqual(["meter-water", "meter-mister", "meter-mister", "meter-mister", "meter-water"]);
-  expect(rowWords("saf4").amount).toBe("21 / 360 gal");
+  expect(rowWords("saf4")).toEqual({ amount: "21 / 360 gal", last: "daily mist and fog ceiling" });
   expect(text(row("flow"))).toBe("No flow with every valve closed");
   expect(screen.getByRole("link", { name: /^Water today, by line/ }).getAttribute("href")).toBe("/water");
   // Stop all water is the first quick action, never here.

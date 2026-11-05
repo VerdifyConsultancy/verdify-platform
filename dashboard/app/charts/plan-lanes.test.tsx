@@ -78,7 +78,7 @@ test("a forecast-rule waypoint reads \"Forecast rule · system\" with no AI; Iri
   expect(status(container, "mister_pulse_gap_s")).toBe(PLANNED_AI);
   const ctx = plot.ctx;
   const texts = (row: number) => ctx.texts.filter((text) => text.y === labelY(row)).map((text) => text.text);
-  expect(texts(2)).toEqual(["85.0% Forecast rule · system"]);
+  expect(texts(2)).toEqual(["85% Forecast rule · system"]);
   expect(texts(2).some((text) => /\bAI\b/.test(text))).toBe(false);
   // The device value holds solid until the waypoint; the rule's value is dashed to the plan's end.
   const strokes = ctx.strokes.filter((stroke) => onRow(stroke, 2)).map((stroke) => [stroke.stroke, stroke.dash, ...stroke.path.map(([px]) => Math.round(px))]);
@@ -87,13 +87,13 @@ test("a forecast-rule waypoint reads \"Forecast rule · system\" with no AI; Iri
     [TOKENS["--ink"], [8, 4], Math.round(x("2026-11-02T19:00:00Z")), Math.round(x("2026-11-03T00:30:00Z"))],
   ]);
   // Iris's lane: each waypoint to the next, the last to the plan's end; a label that does not fit drops to its value.
-  expect(texts(1)).toEqual([`50.0${NBSP}s PLANNED · AI`, `60.0${NBSP}s`]);
+  expect(texts(1)).toEqual([`50${NBSP}s PLANNED · AI`, `60${NBSP}s`]);
   expect(waypointWho("iris")).toBe(PLANNED_AI);
   expect(waypointWho("agent:steward")).toBe(PLANNED_AI);
   expect(waypointWho("preemptive")).toBe(FORECAST_RULE);
   expect(waypointWho("system")).toBe("PLANNED");
   plot.hover(epoch("2026-11-02T20:00:00Z"), null, 2 * 44 + 30);
-  expect(tooltip(plot).slice(1)).toEqual(["Fog RH ceiling", `${FORECAST_RULE} 85.0% from 12:00`]);
+  expect(tooltip(plot).slice(1)).toEqual(["Fog RH ceiling", `${FORECAST_RULE} 85% from 12:00`]);
 });
 
 test("a manual lane is muted, reads MANUAL · Iris skips · Jason since Oct 30 and draws no waypoints", async () => {
@@ -110,7 +110,7 @@ test("a manual lane is muted, reads MANUAL · Iris skips · Jason since Oct 30 a
 
 test("the device value sits at the left, a missing one reads — with its reason, and the plan's end is marked", async () => {
   const { container, plot } = await mount();
-  expect([...container.querySelectorAll(".plan-device")].map((cell) => cell.textContent)).toEqual([`1.60${NBSP}kPa`, `60.0${NBSP}s`, "88.0%", `60.0${NBSP}s`, "—"]);
+  expect([...container.querySelectorAll(".plan-device")].map((cell) => cell.textContent)).toEqual([`1.60${NBSP}kPa`, `60${NBSP}s`, "88%", `60${NBSP}s`, "—"]);
   expect(container.querySelector("[data-param=fan_stage_temp_f] .plan-device")!.getAttribute("title")).toBe("no readback yet");
   expect(status(container, "fan_stage_temp_f")).toBeNull();
   const ctx = plot.ctx;
@@ -127,9 +127,9 @@ test("the device value sits at the left, a missing one reads — with its reason
   expect(details.querySelector("summary")!.textContent).toBe("Data table · 9 rows");
   expect(rows.map((cells) => [cells[0], cells[3], cells[4]])).toEqual([
     ["VPD Mister Engage", `1.60${NBSP}kPa`, "SUPERSEDED"], ["VPD Mister Engage", `1.70${NBSP}kPa`, "SUPERSEDED"],
-    ["Mister pulse gap", `60.0${NBSP}s`, "Device"], ["Mister pulse gap", `50.0${NBSP}s`, PLANNED_AI], ["Mister pulse gap", `60.0${NBSP}s`, PLANNED_AI],
-    ["Fog RH ceiling", "88.0%", "Device"], ["Fog RH ceiling", "85.0%", FORECAST_RULE],
-    ["Mister pulse on", `60.0${NBSP}s`, "MANUAL"],
+    ["Mister pulse gap", `60${NBSP}s`, "Device"], ["Mister pulse gap", `50${NBSP}s`, PLANNED_AI], ["Mister pulse gap", `60${NBSP}s`, PLANNED_AI],
+    ["Fog RH ceiling", "88%", "Device"], ["Fog RH ceiling", "85%", FORECAST_RULE],
+    ["Mister pulse on", `60${NBSP}s`, "MANUAL"],
     ["Fan stage temperature", "—", "Device"],
   ]);
   expect(rows[0][5]).toBe("YOUR VALUE 1.55 · Jason 08:00 · holds until Iris's next plan");
@@ -158,8 +158,8 @@ test("stale marks each device value STALE and muted, with when it was read, whil
   expect([...container.querySelectorAll(".chart-note-stale")].map((note) => note.textContent)).toEqual(["STALE · device values last read 09:58"]);
   const devices = [...container.querySelectorAll(".plan-device")];
   expect(devices.map((cell) => [cell.textContent, cell.classList.contains("plan-device-stale"), cell.getAttribute("title")])).toEqual([
-    [`1.60${NBSP}kPa`, true, "STALE · read 09:58"], [`60.0${NBSP}s`, true, "STALE · read 09:58"], ["88.0%", true, "STALE · read 09:58"],
-    [`60.0${NBSP}s`, true, "STALE · read 09:58"],
+    [`1.60${NBSP}kPa`, true, "STALE · read 09:58"], [`60${NBSP}s`, true, "STALE · read 09:58"], ["88%", true, "STALE · read 09:58"],
+    [`60${NBSP}s`, true, "STALE · read 09:58"],
     // No value: "—" with the API's reason, never STALE.
     ["—", false, "no readback yet"],
   ]);
@@ -171,13 +171,13 @@ test("stale marks each device value STALE and muted, with when it was read, whil
     [TOKENS["--ink"], [8, 4], Math.round(x("2026-11-02T22:00:00Z")), Math.round(x("2026-11-03T00:30:00Z"))],
   ]);
   expect(ctx.texts.filter((text) => text.y === labelY(1)).map((text) => [text.text, text.color])).toEqual([
-    ["STALE", TOKENS["--c-bound"]], [`50.0${NBSP}s PLANNED · AI`, TOKENS["--ink"]], [`60.0${NBSP}s`, TOKENS["--ink"]],
+    ["STALE", TOKENS["--c-bound"]], [`50${NBSP}s PLANNED · AI`, TOKENS["--ink"]], [`60${NBSP}s`, TOKENS["--ink"]],
   ]);
   // The forecast rule's waypoint still draws after the stale device value.
   expect(ctx.strokes.filter((stroke) => onRow(stroke, 2)).map((stroke) => [stroke.stroke, stroke.dash])).toEqual([[TOKENS["--c-bound"], []], [TOKENS["--ink"], [8, 4]]]);
   expect(ctx.strokes.some((stroke) => stroke.stroke === TOKENS["--c-setpoint"])).toBe(false);
   plot.hover(NOW + 1800, null, 1 * 44 + 30);
-  expect(tooltip(plot).slice(1)).toEqual(["Mister pulse gap", `Device 60.0${NBSP}s · STALE`, PLANNED_AI]);
+  expect(tooltip(plot).slice(1)).toEqual(["Mister pulse gap", `Device 60${NBSP}s · STALE`, PLANNED_AI]);
   const details = container.querySelector<HTMLDetailsElement>("details.chart-table")!;
   act(() => { details.open = true; details.dispatchEvent(new Event("toggle")); });
   await waitFor(() => expect(details.querySelector("table")).toBeTruthy());
@@ -211,10 +211,14 @@ test("rowEnd ends every row with the screen's control in a column beside the plo
   expect(plain.container.querySelector(".lanes")!.classList.contains("lanes-plan-end")).toBe(false);
 });
 
-test("values in the header use the unit's decimals without the unit, and the server markup has no style attribute", () => {
+test("values in the header read as Settings writes the number, without the unit, and the server markup has no style attribute", () => {
+  // A measured unit keeps its own decimals at least, any value the decimals it carries (#1308 visual QA 38).
   expect(plainValue(1.55, "kPa")).toBe("1.55");
-  expect(plainValue(72.04, "°F")).toBe("72.0");
+  expect(plainValue(1.6, "kPa")).toBe("1.60");
+  expect(plainValue(72, "°F")).toBe("72.0");
+  expect(plainValue(72.04, "°F")).toBe("72.04");
   expect(plainValue(125, "min")).toBe("125");
+  expect(plainValue(45, "s")).toBe("45");
   expect(plainValue(-0.4, "°F")).toBe("−0.4");
   expect(renderToString(<PlanLanes {...props()} />)).not.toMatch(/style=/);
 });

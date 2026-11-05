@@ -149,15 +149,16 @@ function MinutesSection({ read, days, lines, names, today, group, measure }: {
 
 /**
  * Daily water use (#1140's bars) from API-21, which serves 30 or 90 days: 30 for a period up to 30 days and 90 above,
- * which its meta says; split by line or cause (`?water_use_by=`), with the water that ran while no Verdify valve was open
- * apart. Whole gallons only (Q-10).
+ * which its meta says after the unit ("gallons · last 30 days"); split by line or cause (`?water_use_by=`), with the
+ * water that ran while no Verdify valve was open apart. Whole gallons only (Q-10).
  */
 function WaterUseSection({ days, names, search }: { days: number; names: Readonly<Record<string, string>>; search: URLSearchParams }) {
   const headingId = useId();
   const served = days <= 30 ? 30 : 90;
   const split = waterUseSplit(search.get("water_use_by"));
   const use = useApiRead("API-21", { days: served }, { intervalMs: HISTORY_POLL_MS });
-  const note = days < served ? `last ${served} days, the shortest this chart serves` : days > served ? `last ${served} days, the longest this chart serves` : `last ${served} days`;
+  const window = days < served ? `last ${served} days, the shortest this chart serves` : days > served ? `last ${served} days, the longest this chart serves` : `last ${served} days`;
+  const note = `gallons · ${window}`;
   return <section className="wat-section card wat-chart-card" aria-labelledby={headingId}>
     <SectionHeader id={headingId} title="Daily water use" meta={note}
       chips={<Chips label="Split water use by" small items={(["line", "cause"] as const).map((value) => ({ key: value, label: value, to: waterUrl(PATH, search, { water_use_by: value === "line" ? null : "cause" }), current: split === value, keepScroll: true }))} />} />

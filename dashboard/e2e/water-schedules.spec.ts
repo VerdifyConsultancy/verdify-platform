@@ -41,8 +41,8 @@ test("a block opens its popover with its run, rule and next starts, Edit and \"P
   await timelineRow(page, "L01").locator(".sch-block").first().click();
   await expect(page).toHaveURL(/\/water\/schedules\?day=2026-11-04&block=11-\d+$/);
   await expect(popover(page).locator("h2")).toHaveText("L01 Wall drip · Wall MWF");
-  await expect(popover(page)).toContainText("Wed 4 Nov · 07:35 (sunrise + 60) · 12 min");
-  await expect(popover(page)).toContainText("Mon Wed Fri · sunrise + 60");
+  await expect(popover(page)).toContainText("Wed 4 Nov · 07:35 (sunrise + 1 h) · 12 min");
+  await expect(popover(page)).toContainText("Mon Wed Fri · sunrise + 1 h");
   await expect(popover(page).getByRole("link", { name: "Edit schedule" })).toBeVisible();
   await expect(popover(page).getByRole("button", { name: "Pause L01 until after this run" })).toBeVisible();
   await axe(page);
@@ -119,7 +119,7 @@ test("the rules list: every schedule under its line, a disabled one muted, with 
   await expect(topUp).toHaveClass(/is-muted/);
   await expect(topUp.getByRole("switch")).toHaveAttribute("aria-checked", "false");
   await expect(rules.locator('[data-slot="14"] .object-row-meta')).toContainText("Iris may adjust · changed by iris (AI)");
-  await expect(rules.locator('[data-slot="11"] .object-row-state')).toHaveText(/^Mon Wed Fri · sunrise \+ 60 \(07:35 today\) · 12\smin$/);
+  await expect(rules.locator('[data-slot="11"] .object-row-state')).toHaveText(/^Mon Wed Fri · sunrise \+ 1\sh \(07:35 today\) · 12\smin$/);
 });
 
 test("390 px: the agenda is the default, by day, with NEXT and a skipped row hatched with its reason; the week strip's days are links", async ({ page, request }) => {

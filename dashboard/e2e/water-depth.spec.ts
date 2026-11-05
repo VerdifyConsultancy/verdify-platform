@@ -17,11 +17,11 @@ for (const viewport of VIEWPORTS) {
     await expect(panel.locator("figcaption")).toHaveText("Gallons per day by line · last 30 days");
     await expect(panel.locator(".plot-water-use canvas").first()).toBeVisible();
     // The page's 7 days are shorter than the 30 the chart serves, and its head says so.
-    await expect(panel.locator(".section-header .meta")).toHaveText("last 30 days, the shortest this chart serves");
-    // The key says what the canvas draws: the no-valve bar in --fault, hatched no-data days and the partial day's dashed edge.
+    await expect(panel.locator(".section-header .meta")).toHaveText("gallons · last 30 days, the shortest this chart serves");
+    // The key says what the canvas draws: the no-valve bar in neutral --muted (hose and sink use is no fault), hatched no-data days and the partial day's dashed edge.
     const key = panel.locator(".chart-key li");
     const noValve = key.filter({ hasText: "No Verdify valve open: hose, sink, hydro or a leak" }).locator(".chart-key-swatch");
-    await expect(noValve).toHaveAttribute("data-token", "fault");
+    await expect(noValve).toHaveAttribute("data-token", "muted");
     await expect(noValve).toHaveAttribute("data-kind", "fill");
     await expect(key.filter({ hasText: /^no data$/ }).locator(".chart-key-swatch")).toHaveAttribute("data-kind", "hatch");
     await expect(key.filter({ hasText: /^partial day$/ }).locator(".chart-key-swatch")).toHaveAttribute("data-kind", "dashed");
@@ -60,7 +60,7 @@ test("a 90 d period asks API-21 for 90 days and the cause chip cuts the same day
   await page.getByRole("list", { name: "Period" }).getByRole("link", { name: "90 d" }).click();
   await expect(page).toHaveURL(/\/water\/history\?range=90d$/);
   await expect(panel.locator("figcaption")).toHaveText("Gallons per day by line · last 90 days");
-  await expect(panel.locator(".section-header .meta")).toHaveText("last 90 days");
+  await expect(panel.locator(".section-header .meta")).toHaveText("gallons · last 90 days");
   await expect(panel.locator("details.chart-table summary")).toHaveText("Data table · 90 rows");
   await panel.getByRole("list", { name: "Split water use by" }).getByRole("link", { name: "cause" }).click();
   await expect(page).toHaveURL(/\/water\/history\?range=90d&water_use_by=cause$/);
@@ -74,7 +74,7 @@ test("a 90 d period asks API-21 for 90 days and the cause chip cuts the same day
   expect(new Set(days)).toEqual(new Set(["30", "90"]));
   // 365 days: still the 90 it serves, and it says so.
   await page.getByRole("list", { name: "Period" }).getByRole("link", { name: "365 d" }).click();
-  await expect(panel.locator(".section-header .meta")).toHaveText("last 90 days, the longest this chart serves");
+  await expect(panel.locator(".section-header .meta")).toHaveText("gallons · last 90 days, the longest this chart serves");
 });
 
 test("a failed API-21 read says so in its own panel with Retry; the minutes and the ledger keep working", async ({ page, request }) => {

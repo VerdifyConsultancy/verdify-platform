@@ -18,7 +18,7 @@ import { loadUPlot } from "../charts/uplot-chart";
 import { AppShell } from "../components/app-shell";
 import { ServerClockProvider } from "../components/freshness";
 import { PlanCard, planDetail, timeLeft } from "../components/plan-card";
-import { NEWEST_SHOWN, PlannerHealth, healthRows, isLate, needsAttention } from "../components/planner-health";
+import { NEWEST_SHOWN, PlannerHealth, healthRows, isLate, markPosition, needsAttention } from "../components/planner-health";
 import { NBSP, denver, renderUi, text } from "../components/test-render";
 import type { Plan as PlanBody, PlannerTrigger } from "../lib/operator-api";
 import { NOW, advance, requests, sentAt, startFixtureApi, stopFixtureApi, writes, type FixtureOptions } from "../lib/test-fixture-api";
@@ -120,7 +120,7 @@ test("no plan in force reads what applies and since when, and the lanes show dev
   expect([0, 1, 2].map((row) => strokes(plot, row))).toEqual([[[DEVICE, "", 0, 1000]], [[DEVICE, "", 0, 1000]], [[DEVICE, "", 0, 1000]]]);
   expect(document.querySelectorAll(".plan-status")).toHaveLength(0);
   expect(plot.ctx.texts.some((label) => label.text.startsWith("Plan ends"))).toBe(false);
-  expect([...document.querySelectorAll(".plan-device")].map((cell) => text(cell))).toEqual(["1.60 kPa", "45.0 s", "60.0 s"]);
+  expect([...document.querySelectorAll(".plan-device")].map((cell) => text(cell))).toEqual(["1.60 kPa", "45 s", "60 s"]);
   // Planner health still renders: the ledger is not the plan.
   expect(region("Planner health").querySelectorAll(".trigger-row").length).toBeGreaterThan(0);
 });
@@ -281,11 +281,17 @@ test("a forecast-rule waypoint reads \"Forecast rule · system\" and never carri
   expect(strokes(plot, 2)).toEqual([[DEVICE, "", 0, x("14:00")], [INK, "8,4", x("14:00"), x("17:30")]]);
   expect(labels(plot, 2).every(([words]) => !/\bAI\b/.test(words))).toBe(true);
   plot.hover(epoch(denver("15:00")), null, 2 * 44 + 30);
-  expect(tooltip(plot).slice(1)).toEqual(["Mister Engage Delay", `${FORECAST_RULE} 90.0 s from 14:00`]);
+  expect(tooltip(plot).slice(1)).toEqual(["Mister Engage Delay", `${FORECAST_RULE} 90 s from 14:00`]);
   expect(status("mister_engage_kpa")).toBe(PLANNED_AI);
 });
 
 // ---------------------------------------------------------------------------------------------------- planner health
+test("a trigger mark's place on the 36 h scale: −36 h at the start, now at the end, an older or unreadable time at the start", () => {
+  const now = Date.parse("2026-11-02T17:42:00Z");
+  const ago = (hours: number) => new Date(now - hours * 3_600_000).toISOString();
+  expect([markPosition(ago(36), now), markPosition(ago(18), now), markPosition(ago(0), now), markPosition(ago(40), now), markPosition("soon", now)]).toEqual([0, 50, 100, 0, 0]);
+});
+
 test("planner health: the last 36 h as marks, the next trigger, the missed SUNSET in view with ▲, the 14-day strip, and the ledger in a disclosure", async () => {
   await open("/plan", "missed-sunset");
   const health = region("Planner health");
@@ -296,7 +302,12 @@ test("planner health: the last 36 h as marks, the next trigger, the missed SUNSE
     ["SUNSET missed", "failed", "true"], ["MIDNIGHT plan written", "ok", "true"], ["SUNRISE plan written", "ok", "true"],
   ]);
   expect(text(health.querySelector(".ctl-trigger-marks > li:nth-child(4) .screen-reader"))).toBe("SUNSET missed at ");
-  expect([...health.querySelectorAll(".ctl-trigger-legend li")].map((item) => text(item))).toEqual(["done", "late or fallback", "failed or missed"]);
+  // Each at its time on the 36 h scale, −36 h to now; the key says what a short mark is (#1308 visual QA 37).
+  const at = [...health.querySelectorAll<HTMLElement>(".ctl-trigger-marks > li")].map((mark) => Number(mark.style.getPropertyValue("--at")));
+  expect(at.every((value) => value >= 0 && value <= 100)).toBe(true);
+  expect(at).toEqual([...at].sort((a, b) => a - b));
+  expect(text(health.querySelector(".ctl-trigger-ends"))).toBe("−36 hnow");
+  expect([...health.querySelectorAll(".ctl-trigger-legend li")].map((item) => text(item))).toEqual(["done", "late or fallback", "failed or missed", "short = optional"]);
   expect(text(health.querySelector(".ctl-next-trigger"))).toBe("Next SOLAR_MAX at 12:41");
   const rows = (list: Element) => [...list.querySelectorAll(":scope > li")].map((item) => [
     item.getAttribute("data-trigger"), text(item.querySelector(".trigger-due time")), text(item.querySelector(".trigger-outcome")),
@@ -469,7 +480,7 @@ test("while the controller is not reporting the banner shows, the plan still ren
   expect(text(region("Plan in force").querySelector(".plan-facts"))).toContain("iris-20261102-0702");
   expect(text(document.querySelector(".chart-note-stale"))).toBe("STALE · device values last read 10:41");
   expect([...document.querySelectorAll(".plan-device")].map((cell) => [text(cell), cell.classList.contains("plan-device-stale")])).toEqual([
-    ["1.60 kPa", true], ["45.0 s", true], ["60.0 s", true],
+    ["1.60 kPa", true], ["45 s", true], ["60 s", true],
   ]);
   // The device value is muted and labelled STALE; Iris's 13:00 waypoint still draws dashed as PLANNED.
   expect(strokes(plot, 0)).toEqual([[MUTED, "", 0, x("13:00")], [INK, "8,4", x("13:00"), x("17:30")]]);

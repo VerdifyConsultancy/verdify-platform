@@ -3,7 +3,7 @@ import { Fragment, memo, type ReactNode } from "react";
 import { Link } from "react-router";
 import { TIME_UNAVAILABLE, duration, localDate, localTime } from "../lib/format";
 import type { Actor, Setting } from "../lib/operator-api";
-import { keptValueText, rangeText, steppedNumber } from "../lib/setting-values";
+import { keptValueText, rangeText, settingDisplay, settingUnit, steppedNumber } from "../lib/setting-values";
 import { useRole } from "../lib/session";
 import { isAiSource, type StateReason } from "../lib/vocab";
 import { LocalTime, cls } from "./common";
@@ -33,7 +33,11 @@ export function breakableKey(key: string): ReactNode {
  */
 
 // ---------------------------------------------------------------------------------------------------- groups
-/** The groups in their fixed order, with their headings (no column sort). */
+/**
+ * The groups in their fixed order, with their headings (no column sort). The API's `read_only` group is named by what it
+ * holds, the rows kept for reference (retired, legacy limits, readback-only and derived), so it never shares a name with
+ * the rail's "Read-only" filter, which counts every row that cannot be written, Band in force's included.
+ */
 export const SETTING_GROUPS: readonly (readonly [string, string])[] = [
   ["planner_policy", "Planner policy"],
   ["scheduled_policy", "Scheduled policy"],
@@ -41,7 +45,7 @@ export const SETTING_GROUPS: readonly (readonly [string, string])[] = [
   ["crop_band", "Crop band"],
   ["site_water_caps", "Site water caps"],
   ["band_in_force", "Band in force"],
-  ["read_only", "Read-only"],
+  ["read_only", "Reference only"],
 ];
 const GROUP_WORDS: Readonly<Record<string, string>> = Object.fromEntries(SETTING_GROUPS);
 /** A group's heading; a group this build does not know reads raw. */
@@ -175,7 +179,9 @@ export type DeviceProps = {
  * The device's own report with its unit (design system §4.2), large. "—" with `readback.reason` when there is no value;
  * a Band in force row is DERIVED with its age and never NO READBACK; NO READBACK shows only for another row with no
  * readback path. A site cap reads the value in the program on the controller ("On controller · rev 42: 360 gal"). While
- * readbacks are stale the value is muted (the row's pill says STALE). `age` adds when it was reported (the drawer).
+ * readbacks are stale the value is muted (the row's pill says STALE). `age` adds when it was reported (the drawer). A
+ * row reads the value as Plan's lanes do (`settingDisplay`: the key's unit where the registry has none, "5 min" for
+ * 300000 ms); the drawer keeps it as stored, with that unit.
  */
 export function DeviceLine({ setting, readbackStale = false, programRevision = null, age = false }: DeviceProps & { age?: boolean }) {
   const reading = setting.readback;
@@ -189,7 +195,7 @@ export function DeviceLine({ setting, readbackStale = false, programRevision = n
       {noReadback && <> <Mark kind="no_readback" /></>}
     </p>;
   }
-  const text = keptValueText(value, setting);
+  const text = age ? keptValueText(value, { ...setting, unit: settingUnit(setting) }) : settingDisplay(value, setting);
   if (band) {
     return <p className="setting-line setting-value" data-device="derived">
       <span className="setting-device-value">{text}</span> <Mark kind="derived" />{sep}<Ago at={reading?.observed_at} />

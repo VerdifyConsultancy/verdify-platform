@@ -2,6 +2,13 @@
 /* Section: Water (WP3) */
 /* Water (SCR-04, redesign §5.2–§5.4 and §6): the status line, Today's zone cards, line rows, today strips and Site today; Schedules' week strip, day timeline, week matrix, agenda, rules list, popovers and editor; History's period bar, KPIs and run ledger. New classes use the prefixes wat- and sch-; the hooks the specs keep (line-card, mister-zone, week-table, week-days, line-subrow, line-fault, schedule-preview) keep their names. Loaded by root.tsx after styles.css and tokens.css, in the fixed order of redesign §10.1. Colours are tokens only (white the one literal); this file never redefines :focus-visible or the input borders that the §2.2 block in styles.css sets. */
 
+/* ---------------------------------------------------------------------------------------------------- the header */
+/* Stop all water (redesign §2.5): the last header action from 861 px; at 860 px and below the sticky tabs row's "■ Stop all". Both render and the stylesheet shows one (§9.6); History's actions hold Stop alone, so on a phone they go. */
+@media(min-width:861px){.water-page .page-tabs-end .stop-all-water{display:none}}
+@media(max-width:860px){
+  .water-page .page-actions .stop-all-water,.water-page .page-actions:has(>.stop-all-water:only-child){display:none}
+}
+
 /* ---------------------------------------------------------------------------------------------------- the status line */
 .wat-program-fault{color:var(--fault);font-weight:600}
 .wat-program-warn{color:var(--warn-text);font-weight:600}
@@ -26,17 +33,24 @@
 .wat-site-meter{display:grid;grid-template-columns:6.5rem minmax(0,1fr);align-items:center;gap:var(--space-2) var(--space-3)}
 .wat-site-term{font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--forest)}
 a.wat-site-term{display:inline-flex;align-items:center;min-height:24px;text-underline-offset:.25em}
+/* What SAF-4 caps, under its meter, in the words Now's water card shows. */
+.wat-site-note{grid-column:2;margin-top:calc(-1 * var(--space-1));font-size:var(--fs-xs)}
 .limit-fault{color:var(--fault);font-weight:600}
 .limit-warn{color:var(--warn-text);font-weight:600}
 
 /* A zone card: its name and kind, its minutes against the cap and when it last watered; a mister zone's switches; its line rows. */
 .wat-zone{padding-bottom:var(--space-2)}
-.wat-zone-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2) var(--space-5);padding-bottom:var(--space-3);border-bottom:1px solid var(--line)}
+/* The head is a fixed grid, so the zones' meters stacked down the page are one width with their right edges in line: the name, then the meter (12rem) and its minutes (7rem, right-aligned in tabular figures), and under them, the same second line on every zone, the VPD reserve and when it last watered. */
+.wat-zone-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--space-2) var(--space-5);padding-bottom:var(--space-3);border-bottom:1px solid var(--line)}
 .wat-zone-kind{margin-left:var(--space-2);font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest);white-space:nowrap}
-.wat-zone-today{display:flex;flex:1 1 18rem;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:var(--space-1) var(--space-3);max-width:30rem;min-width:0}
-.wat-zone-today .sch-minutes-meter{flex:1 1 14rem}
+.wat-zone-today{display:grid;justify-items:end;gap:var(--space-1);min-width:0}
+.wat-zone-today .sch-minutes-meter{display:grid;grid-template-columns:12rem 7rem;align-items:center;gap:var(--space-3)}
+.wat-zone-today .meter-words{text-align:right}
+.wat-zone-today .meter-over{display:block}
+.wat-zone-today .meter-sep{display:none}
 .wat-zone-minutes{font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
 .wat-zone-last{white-space:nowrap}
+.wat-zone-running{font-weight:600;color:var(--ink)}
 .wat-zone .mister-zone{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-5);padding:var(--space-2) 0;border-bottom:1px solid var(--line)}
 .mister-switches{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-4)}
 .mister-flag{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-2)}
@@ -81,6 +95,9 @@ a.wat-site-term{display:inline-flex;align-items:center;min-height:24px;text-unde
 .wat-day-axis{margin-right:calc(11rem + var(--space-3))}
 .wat-track{--sch-row:22px}
 .wat-next{margin:0;font-size:var(--fs-sm);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* "nothing planned" over "2 fallback windows" beside the strip; one line under it on a phone. */
+.wat-next-fallback{display:block;overflow:hidden;font-size:var(--fs-xs);color:var(--muted);text-overflow:ellipsis}
+.wat-next-sep{display:none}
 
 /* ---------------------------------------------------------------------------------------------------- the day's marks */
 /* Shared by the day timeline, the today strips, the week matrix and the key: positions are CSSOM custom properties (--sch-start, --sch-width, --sch-at), never style attributes. Done is solid in the cause's colour, planned a dashed outline, will-not-run hatched, missed a fault outline, an unknown outcome a muted hatch. */
@@ -107,6 +124,8 @@ button.sch-block:hover,.sch-block.is-selected{box-shadow:0 0 0 2px var(--ink)}
 .sch-skipped,.sch-blocked{background:repeating-linear-gradient(135deg,var(--line-strong) 0 2px,#fff 2px 5px);border:1px solid var(--muted)}
 .sch-missed{background:#fff;border:1.5px solid var(--fault)}
 .sch-unknown{background:repeating-linear-gradient(135deg,var(--muted) 0 1px,#fff 1px 4px);border:1px solid var(--line-strong)}
+/* A fallback window (degraded_only): it runs only if VPD sensing fails, so a dotted outline in the fallback colour, never a run's fill or dash. */
+.sch-conditional{background:#fff;border:1.5px dotted var(--eq-heat1)}
 .sch-planned.sch-capped{border:2px dashed var(--amber)}
 .sch-draft{background:#fff;border:1.5px dashed var(--ink)}
 .sch-draft.sch-conflict{border:2px solid var(--fault)}
@@ -115,7 +134,7 @@ button.sch-block:hover,.sch-block.is-selected{box-shadow:0 0 0 2px var(--ink)}
 .sch-narrow-end .sch-block-label{left:auto;right:calc(100% + 3px);background:transparent}
 .is-neutral .sch-done,.is-neutral .sch-tick:not(.sch-tick-unknown){background:var(--muted)}
 .is-neutral .sch-running{background:linear-gradient(to right,var(--muted) calc(var(--sch-done,100) * 1%),#fff calc(var(--sch-done,100) * 1%))}
-.is-neutral .sch-planned,.is-neutral .sch-missed,.is-neutral .sch-running{border-color:var(--muted)}
+.is-neutral .sch-planned,.is-neutral .sch-missed,.is-neutral .sch-running,.is-neutral .sch-conditional{border-color:var(--muted)}
 
 /* The hour ticks over a day's tracks: every 3 h from 861 px, every 6 h below. */
 .sch-axis{position:relative;height:1.1rem;min-width:0}
@@ -141,7 +160,8 @@ button.sch-block:hover,.sch-block.is-selected{box-shadow:0 0 0 2px var(--ink)}
 .sch-week-next{grid-area:next}
 .sch-week-days{grid-area:days}
 .sch-week-step{flex:none;min-width:var(--tap);padding:0;font-size:1.2rem}
-span.sch-week-step.is-off{display:inline-flex;align-items:center;justify-content:center;color:var(--line-strong)}
+/* A step past what API-IRR-02 serves keeps its frame at the same height, quieter, so the strip stays balanced and never reads as a slip. */
+span.sch-week-step.is-off{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:var(--radius-sm);color:var(--line-strong)}
 .sch-week-days{display:grid;flex:1;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--space-1);min-width:0;margin:0;padding:0;list-style:none}
 .sch-week-day{min-width:0}
 .sch-week-day>a,.sch-week-none{display:grid;align-content:start;gap:3px;height:100%;min-height:var(--tap);padding:var(--space-2);border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff;color:var(--ink);text-decoration:none}
@@ -152,6 +172,7 @@ span.sch-week-step.is-off{display:inline-flex;align-items:center;justify-content
 .sch-day-weekday{font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--forest)}
 .sch-day-today{font-size:var(--fs-xs);font-weight:600;color:var(--forest)}
 .sch-day-summary{overflow:hidden;font-size:var(--fs-xs);color:var(--muted);white-space:nowrap;text-overflow:ellipsis}
+.sch-day-fallback{overflow:hidden;font-size:var(--fs-xs);color:var(--muted);white-space:nowrap;text-overflow:ellipsis}
 .sch-day-level{display:block;height:6px;margin-top:2px;border-radius:2px;background:var(--tint-ok)}
 .sch-day-level[data-level="1"]{background:var(--tint-warn)}
 .sch-day-level[data-level="2"]{background:var(--amber)}
@@ -229,6 +250,7 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
 .sch-agenda-detail{color:var(--muted)}
 .sch-agenda-row.sch-skipped,.sch-agenda-row.sch-blocked{background:repeating-linear-gradient(135deg,var(--field) 0 5px,#fff 5px 10px)}
 .sch-agenda-row.sch-missed{border-color:var(--fault)}
+.sch-agenda-row.sch-conditional{border:1px dotted var(--eq-heat1)}
 .sch-agenda-row.sch-missed .sch-agenda-detail{font-weight:600;color:var(--fault)}
 .sch-agenda-row.sch-done{box-shadow:inset 3px 0 0 var(--eq-water)}
 .sch-agenda.is-neutral .sch-agenda-row.sch-done{box-shadow:inset 3px 0 0 var(--muted)}
@@ -249,11 +271,15 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
 .sch-rule-rows{margin:0;padding:0;list-style:none;border-top:1px solid var(--line)}
 .sch-rule .object-row-state{font-size:var(--fs-sm)}
 .sch-rule.is-muted .object-row-title,.sch-rule.is-muted .object-row-state{color:var(--muted)}
-.sch-rule-switch .field-switch{display:flex;align-items:center;gap:var(--space-2);margin:0}
+.sch-rule-switch .field-switch{display:flex;align-items:center;gap:0;margin:0}
 .sch-rule-switch .field-label{font-size:var(--fs-sm)}
 .sch-rule-on{display:inline-flex;align-items:center}
 .sch-ai{font:400 var(--fs-label)/1 var(--mono)}
 .sch-rule-add{margin:0;padding:var(--space-2) 0 var(--space-3)}
+/* A line's fallback schedules as one row, opening to each schedule's own row, indented under it. */
+.sch-fallback-each{margin:var(--space-1) 0 0}
+.sch-fallback-each>summary{min-height:var(--tap);font-size:var(--fs-sm);font-weight:600}
+.sch-fallback-rows{padding-left:var(--space-4)}
 
 /* A block's popover and the key. */
 .sch-pop-facts{grid-template-columns:minmax(0,1fr);gap:var(--space-2);font-size:var(--fs-sm)}
@@ -328,7 +354,7 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
   .sch-week-span{display:block;grid-area:span;align-self:center;margin:0;font-weight:620}
   .sch-week-day>a,.sch-week-none{justify-items:center;padding:var(--space-1) 2px;text-align:center}
   .sch-day-date{display:grid;justify-items:center;line-height:1.2}
-  .sch-day-summary{display:none}
+  .sch-day-summary,.sch-day-fallback{display:none}
   .sch-day-weekday{letter-spacing:.02em}
   .sch-day-today{display:none}
   .sch-day-head{padding:var(--space-3)}
@@ -348,13 +374,23 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
   .sch-block-label,.sch-axis-wide{display:none}
   .wat-day-row{grid-template-columns:minmax(0,1fr);gap:var(--space-1)}
   .wat-day-axis{margin-right:0}
-  .wat-zone-today{justify-content:flex-start;max-width:none}
+  .wat-next-fallback{display:inline;font-size:inherit}
+  .wat-next-sep{display:inline}
+  /* Phones: the name, then the meter across the card with its minutes, then the second line, each starting at the left. */
+  .wat-zone-head{grid-template-columns:minmax(0,1fr)}
+  .wat-zone-today{justify-items:stretch}
+  .wat-zone-today .sch-minutes-meter{grid-template-columns:minmax(0,1fr) auto}
+  .wat-zone-last{white-space:normal}
   .wat-runs-table{display:none}
   .sch-key-button,.wat-select select{min-height:var(--tap)}
   a.wat-site-term{min-height:var(--tap)}
+  /* Site today on a phone (redesign §5.2's 360 px sketch): SAF-4, the flow and occupancy, so Wall and L01 stay above the fold; the soft budget and fallback misting only once they are the news. */
+  .wat-site-quiet{display:none}
   .wat-line .object-row-actions .state-note,.wat-line .object-row-actions .field-error{text-align:left}
 }
 @media(max-width:600px){
-  .wat-site-meter{grid-template-columns:minmax(0,1fr)}
+  /* A meter keeps its term on its line; its words drop under the bar only when they do not fit beside it. */
+  .wat-site-meter{grid-template-columns:4.5rem minmax(0,1fr)}
+  .wat-site-meter .meter{flex-wrap:wrap}
   .sch-agenda-row{grid-template-columns:3rem minmax(0,1fr) auto;gap:var(--space-2);padding-inline:var(--space-2)}
 }

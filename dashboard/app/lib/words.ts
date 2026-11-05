@@ -134,6 +134,15 @@ const OCCURRENCE_REASON = {
 } as const;
 
 /**
+ * A `degraded_only` fallback window on the schedule views (redesign §6.2): one ahead is a "fallback" that runs only if VPD
+ * sensing fails; one that passed without running was "not needed", never a hatched "skipped".
+ */
+const FALLBACK_WINDOW = {
+  conditional: "fallback",
+  not_needed: "not needed",
+} as const;
+
+/**
  * `MODE_NAMES` in firmware/lib/greenhouse_types.h, in screens SCR-01's words, plus `UNKNOWN`, which API-02 serves when
  * no `greenhouse_state` row is in reach (`verdify_services.reads.mode_code_and_stage`).
  */
@@ -469,6 +478,7 @@ export const WORDS: { readonly [family: string]: { readonly [code: string]: stri
   activity_action: ACTIVITY_ACTION,
   irrigation_field: IRRIGATION_FIELD,
   run_outcome: RUN_OUTCOME,
+  fallback_window: FALLBACK_WINDOW,
   vpd_source: VPD_SOURCE,
   line_fault: LINE_FAULT,
   program_reject: PROGRAM_REJECT,

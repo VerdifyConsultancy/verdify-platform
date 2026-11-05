@@ -44,7 +44,7 @@ for (const viewport of [DESKTOP, PHONE]) {
     await expect(card.locator(".plan-none")).toHaveText("No plan in force: band and defaults apply since 09:30");
     await expect(card.locator("[data-badge=ai], details, .plan-facts")).toHaveCount(0);
     await expect(page.locator(".plan-status")).toHaveCount(0);
-    await expect(page.locator(".plan-device")).toHaveText(["1.60 kPa", "45.0 s", "60.0 s"]);
+    await expect(page.locator(".plan-device")).toHaveText(["1.60 kPa", "45 s", "60 s"]);
     await expectNoHorizontalScroll(page);
   });
 
@@ -99,7 +99,7 @@ for (const viewport of [DESKTOP, PHONE]) {
     await expect(status(page, "mister_engage_kpa")).toHaveText("PLANNED · AI");
     const lanes = region(page, "Planned settings");
     await lanes.locator("details.chart-table summary").click();
-    await expect(lanes.locator("details.chart-table tbody tr").filter({ hasText: "Mister Engage Delay" }).filter({ hasText: "90.0 s" })).toContainText("Forecast rule · system");
+    await expect(lanes.locator("details.chart-table tbody tr").filter({ hasText: "Mister Engage Delay" }).filter({ hasText: "90 s" })).toContainText("Forecast rule · system");
   });
 }
 

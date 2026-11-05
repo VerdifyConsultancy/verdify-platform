@@ -24,7 +24,8 @@ export type WeekMatrixProps = {
 
 /**
  * The week matrix (`view=week`, redesign §6.3), from 861 px: lines by manifold down, the seven days across. Each cell has
- * one mark per occurrence (solid done, outline planned, hatched when it will not run, a fault outline when missed) and
+ * one mark per occurrence (solid done, outline planned, hatched when it will not run, a fault outline when missed, a
+ * fallback window dotted) and
  * the minutes against the line's cap, "22 / 60", amber with "cap" past it. A cell opens its day. Below 1100 px it scrolls
  * inside its own labelled region; the page never scrolls sideways.
  */
@@ -46,7 +47,7 @@ export function WeekMatrix({ days, today, entries, info, dayTo }: WeekMatrixProp
             {days.map((day) => {
               const cell = matrixCell(entries, lineId, day);
               const over = cap !== null && cell.minutes > cap;
-              const marks = cell.entries.map((entry) => ({ entry, status: spanStatus(entry.occurrence) }));
+              const marks = cell.entries.map((entry) => ({ entry, status: spanStatus(entry.occurrence, entry.schedule) }));
               const words = marks.map(({ entry, status }) => `${shortTime(entry.occurrence.planned_start)} ${entry.draft ? "draft" : STATUS_WORDS[status]}`).join(", ");
               const total = cell.minutes > 0 || cap ? `${Math.round(cell.minutes)}${cap ? ` / ${cap}` : ""}` : null;
               return <td key={day} data-day={day} className={cls(day === today && "week-today", over && "is-over")}>

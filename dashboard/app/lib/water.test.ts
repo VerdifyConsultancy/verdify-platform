@@ -8,8 +8,8 @@ import { NBSP, denver } from "../components/test-render";
 import type { IrrigationStatus, MinutesReport, Occupancy, ScheduleAgenda } from "./operator-api";
 import {
   HISTORY_DAYS, WET_EQUIPMENT, ZONE_KIND_WORDS, amountShort, amountWords, dayClockWords, dayStatesParams, daysWords, historyDays, historyMeasure, historySummary,
-  historyWindows, lastWaterParts, lineZone, newScheduleUrl, nextRunOf, nextRunShort, runSeconds, runningLines, shortfallNote, shortfallWords, startWords, tallyMinutes,
-  tallyRuns, waterUrl, zoneSummaries,
+  historyWindows, lastWaterParts, lineZone, newScheduleUrl, nextRunOf, nextRunShort, runSeconds, runningLines, shortfallNote, shortfallWords, startWords, startsWords, tallyMinutes,
+  tallyRuns, waterUrl, zoneLastAt, zoneSummaries,
   NO_ENGINE_TEXT, RETRYING_TEXT, ROM_TEXT, agoWords, barsReport, blockAmount, boardLines, faultWords, feedStages, flowWords, headroomWords, lastWaterWords, limitItems,
   minutesCaps, misterLines, nextRunWords, occupancyWords, occurrenceReasonWords, occurrenceWords, pauseAfterRun, pauseWords, pausedNow, plannedToday, programBanner, runAmountWords,
   runGallons, runSpanWords, runsFilters, runsWindow, timeLeftWords, todayWords, weekDays, wetLines, whenWords, waterUseDays, waterUseSplit, type ProgramBannerInput,
@@ -306,6 +306,30 @@ test("Today's zones in their fixed order: their lines (L03 apart, on the wall), 
   expect(zoneSummaries({ ...from, today: { date: TODAY, zones: { wall: null } }, lines: from.lines.map((item) => ({ ...item, today: { minutes: null } })) }, null)[0].minutes).toBeNull();
 });
 
+test("a zone with a running line says so, and today's minutes never sit beside an older last water (#1308 visual QA 5)", () => {
+  // L01 has run for 12 min (run now) while its last filed water is Friday's.
+  const running = status("l01-running");
+  const [wall, center] = zoneSummaries(running, null);
+  expect([wall.running, wall.minutes, center.running]).toEqual([true, 12, false]);
+  expect(wall.lastAt).toBe(line(running, "L01").last_water?.at);
+  expect(zoneSummaries(status(), null).map((zone) => zone.running)).toEqual([false, false, false, false, false]);
+  // A running master valve counts for the wall, since it opens only with a feed.
+  const master = { ...running, lines: running.lines.map((item) => (item.line_id === "L01" ? { ...item, state: { ...item.state, code: "idle" } } : item.line_id === "L03" ? { ...item, state: { ...item.state, code: "running" } } : item)) };
+  expect(zoneSummaries(master as IrrigationStatus, null)[0].running).toBe(true);
+  // Once today's minutes are above 0, today's newest valve start (API-05, epoch s) stands in for an older last water.
+  const friday = "2026-10-30T14:31:00Z";
+  const starts = [Date.parse(denver("06:58")) / 1000, Date.parse(denver("10:30")) / 1000];
+  expect(zoneLastAt({ lastAt: friday, minutes: 12 }, starts, TODAY)).toBe(denver("10:30"));
+  // No minutes today, a last water already today, or no valve time known: the last water as filed.
+  expect(zoneLastAt({ lastAt: friday, minutes: 0 }, starts, TODAY)).toBe(friday);
+  expect(zoneLastAt({ lastAt: friday, minutes: null }, starts, TODAY)).toBe(friday);
+  expect(zoneLastAt({ lastAt: denver("07:31"), minutes: 12 }, starts, TODAY)).toBe(denver("07:31"));
+  expect(zoneLastAt({ lastAt: friday, minutes: 12 }, [], TODAY)).toBe(friday);
+  expect(zoneLastAt({ lastAt: null, minutes: 12 }, starts, TODAY)).toBe(denver("10:30"));
+  // A start from another day (the strip's window is today's) never stands in.
+  expect(zoneLastAt({ lastAt: friday, minutes: 12 }, [Date.parse("2026-11-01T20:00:00Z") / 1000], TODAY)).toBe(friday);
+});
+
 test("the status line's facts: what runs now and the earliest next run", () => {
   const running = status("l01-running");
   expect(runningLines(running.lines).map((item) => item.line_id)).toEqual(["L01"]);
@@ -337,10 +361,18 @@ test("a schedule in words: its days, its start with today's resolved time, and i
   expect([daysWords(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]), daysWords(["fri", "mon", "wed"]), daysWords(["mon", "tue", "wed", "thu", "fri"]), daysWords(["sat", "sun"]), daysWords([])])
     .toEqual(["Daily", "Mon Wed Fri", "Weekdays", "Weekends", "No days"]);
   const solar = { sunrise: denver("06:35"), solar_noon: denver("11:47"), sunset: denver("16:58") };
-  expect(startWords({ kind: "sunrise", offset_min: 60 }, solar)).toBe("sunrise + 60 (07:35 today)");
-  expect(startWords({ kind: "solar_noon", offset_min: -120 })).toBe("solar noon − 120");
+  // Offsets carry their unit (#1308 visual QA 42): whole hours in h, the rest in min.
+  expect(plain(startWords({ kind: "sunrise", offset_min: 60 }, solar))).toBe("sunrise + 1 h (07:35 today)");
+  expect(plain(startWords({ kind: "solar_noon", offset_min: -120 }))).toBe("solar noon − 2 h");
+  expect(plain(startWords({ kind: "sunrise", offset_min: 45 }))).toBe("sunrise + 45 min");
+  expect(plain(startWords({ kind: "sunset", offset_min: -90 }))).toBe("sunset − 1 h 30 min");
   expect(startWords({ kind: "sunset", offset_min: 0 }, solar)).toBe("sunset (16:58 today)");
   expect(startWords({ kind: "clock", clock: "16:00" })).toBe("16:00");
+  // Several starts as one list: one solar kind once, each offset with its sign and unit, then today's times.
+  expect(plain(startsWords([{ kind: "solar_noon", offset_min: -120 }, { kind: "solar_noon", offset_min: 0 }, { kind: "solar_noon", offset_min: 120 }], solar)))
+    .toBe("solar noon −2 h, 0, +2 h (09:47, 11:47, 13:47 today)");
+  expect(plain(startsWords([{ kind: "solar_noon", offset_min: -120 }, { kind: "solar_noon", offset_min: 30 }]))).toBe("solar noon −2 h, +30 min");
+  expect(plain(startsWords([{ kind: "sunrise", offset_min: 60 }, { kind: "clock", clock: "16:00" }], solar))).toBe("sunrise + 1 h, 16:00");
   expect(plain(amountWords({ on_s: 720 }, "drip"))).toBe("12 min");
   expect(plain(amountWords({ on_s: 45, count: 4, gap_s: 60 }, "mister"))).toBe("4 × 45 s, 60 s gap");
   expect(plain(amountWords({ on_s: 300, prewet_s: 120, flush_s: 240 }, "fert_drip", "L01"))).toBe("feed 5 min · prewet 2 min · flush 4 min on L01");

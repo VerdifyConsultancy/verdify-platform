@@ -2,11 +2,12 @@
 /* Section: Control (WP4) */
 /* Settings (SCR-05), Plan (SCR-03) and Equipment (SCR-07) as redesign §5.10 to §5.12 lay them out, and the setting drawer they share. New classes use the prefix ctl-; the hooks the specs keep (setting-*, plan-*, trigger-*, equipment-*, why-*, light-*) keep their names. Loaded by root.tsx after styles.css and tokens.css, in the fixed order of redesign §10.1. Colours are tokens only (white the one literal); this file never redefines :focus-visible or the input borders that the §2.2 block in styles.css sets. */
 
-/* The header's search (Settings) and "Find a setting" (Plan, Equipment): an input and its button, full width under the status line on phones. */
+/* The header's search, one treatment on all three tabs: a field 22rem wide from 861 px, so "Search settings: name or key" fits, under the status line on phones. Settings filters as it is typed; "Find a setting" (Plan, Equipment) submits on Enter or with Find, an outline, since it leads to a page and is never the page's primary action. */
 .ctl-find{display:flex;align-items:center;gap:var(--space-2);margin:0;min-width:0}
 .ctl-find input{width:min(20rem,100%);min-height:var(--tap)}
-.ctl-find .btn{flex:none}
-.ctl-search input{width:min(24rem,100%)}
+.ctl-find .btn{flex:none;background:#fff;border-color:var(--line-strong);color:var(--forest)}
+.ctl-find .btn:hover{background:#fff;border-color:var(--leaf);color:var(--leaf)}
+@media(min-width:861px){.ctl-find input{width:22rem}}
 
 /* Text marks (D-UX-07): AI, DERIVED and NO READBACK sit after a value in muted mono, never as pills. */
 .ctl-mark{font:500 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
@@ -23,6 +24,9 @@
 a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .ctl-rail-item[aria-current=true]{border-left-color:var(--forest);background:var(--field);font-weight:620}
 .ctl-rail-count{font:500 var(--fs-xs)/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+/* Show's counts are pills, Groups' plain muted numbers: a filter and a jump never read as the same kind of thing. */
+.ctl-rail-filters .ctl-rail-count{min-width:1.75rem;padding:.2rem .45rem;border:1px solid var(--line);border-radius:999px;background:#fff;text-align:center}
+.ctl-rail-filters .ctl-rail-item[aria-current=true] .ctl-rail-count{border-color:var(--forest);color:var(--forest)}
 .ctl-rail-item.is-empty{color:var(--muted)}
 .ctl-rail-selects{display:none;gap:var(--space-3);grid-template-columns:repeat(2,minmax(0,1fr))}
 .ctl-rail-selects .field{margin:0}
@@ -152,13 +156,19 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 
 /* Planner health: the last 36 h as marks (quiet when done, amber when late, fault when failed; an optional trigger shorter), the next trigger, the triggers that need someone, the 14-day strip and the ledger in a disclosure. */
 .ctl-health-label{margin:0 0 var(--space-1)}
-.ctl-trigger-marks{display:flex;flex-wrap:wrap;align-items:flex-end;gap:3px;margin:0;padding:0;list-style:none;min-height:1.25rem}
-.ctl-trigger-mark{width:.75rem;height:1.25rem;border:1px solid var(--line-strong);border-radius:2px;background:var(--tint-ok)}
+/* The marks sit on a 36 h scale at their time (--at, percent from −36 h), inside the card at either end, over a baseline with "−36 h" and "now" under its ends. */
+.ctl-trigger-marks{position:relative;height:1.25rem;margin:0;padding:0;list-style:none;border-bottom:1px solid var(--line)}
+.ctl-trigger-marks>.ctl-trigger-mark{position:absolute;bottom:0;left:clamp(0rem,calc(var(--at) * 1% - .375rem),calc(100% - .75rem))}
+.ctl-trigger-ends{display:flex;justify-content:space-between;margin:2px 0 0;font:400 var(--fs-xs)/1.2 var(--mono);color:var(--muted)}
+.ctl-trigger-mark{width:.75rem;height:1.25rem;border:1px solid var(--muted);border-radius:2px;background:var(--tint-ok)}
 .ctl-trigger-mark:not([data-required]){height:.75rem}
 .ctl-trigger-mark[data-kind=late]{background:var(--amber);border-color:var(--amber)}
 .ctl-trigger-mark[data-kind=failed]{background:var(--fault);border-color:var(--fault)}
 .ctl-trigger-mark[data-kind=other]{background:var(--field)}
 .ctl-trigger-swatch{display:inline-block;width:.75rem;height:.75rem}
+.ctl-trigger-heights{display:inline-flex;align-items:flex-end;gap:2px}
+.ctl-trigger-heights>.ctl-trigger-mark{width:.5rem;height:1rem}
+.ctl-trigger-heights>.ctl-trigger-mark:not([data-required]){height:.6rem}
 .ctl-trigger-legend{margin-top:var(--space-1)}
 .ctl-next-trigger{margin:var(--space-3) 0 0;font-size:var(--fs-sm)}
 .ctl-reliability{margin-top:var(--space-4)}
@@ -181,6 +191,7 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .plan-lane-tools{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem}
 .plan-manual{margin:0;font:500 var(--fs-label)/1.3 var(--mono);letter-spacing:.04em;color:var(--manual-text)}
 /* A lane's label opens its setting drawer in place: the link lies over the lane's head row, where the label is printed (now underlined, as a link), and a lane's newest write shows its one pill at the head's end. The plot keeps its full width. */
+.ctl-plan-lanes .chart-lanes-caption{margin:0 0 var(--space-2)}
 .ctl-plan-lanes .lanes-plan.lanes-plan-end{--lanes-stat:0px}
 .ctl-plan-lanes .lanes-plan-end .plan-row{position:relative}
 .ctl-plan-lanes .plan-end{position:absolute;grid-area:auto;top:0;left:0;right:0;display:block;height:max(var(--plan-head),24px);z-index:var(--z-raised)}
@@ -277,7 +288,8 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .why-words{min-width:0;padding:.35rem 0;font-size:var(--fs-sm)}
 .why-since{color:var(--muted);font-variant-numeric:tabular-nums}
 .why-raw{font:500 var(--fs-sm)/1.4 var(--mono);overflow-wrap:anywhere}
-.why-link,.light-actions a,.light-auto-link{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
+.why-link,.light-auto-link{display:inline-flex;align-items:center;min-height:2.75rem;font-weight:700}
+.light-links{display:flex;flex-wrap:wrap;gap:0 var(--space-4)}
 @media(max-width:860px){.why-row{grid-template-columns:minmax(0,1fr) auto;padding-top:.35rem}.why-label{grid-column:1/-1}}
 .light-controls{margin-top:.35rem}
 .light-auto-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 var(--space-3)}

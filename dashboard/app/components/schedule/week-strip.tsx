@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { dateShift } from "../../lib/format";
 import { useApiDown } from "../../lib/session";
 import { cls } from "../common";
-import { weekCellName, type WeekCell } from "./model";
+import { fallbackCount, weekCellName, type WeekCell } from "./model";
 
 const DAY_NUMBER = (date: string) => Number(date.slice(8, 10));
 const WEEKDAY = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short" });
@@ -22,8 +22,9 @@ export type WeekStripProps = {
 
 /**
  * The week strip on top of every Schedules view (redesign §6.3): Monday to Sunday of the selected week, past and future
- * side by side. Each day says what happened or what comes ("5 ran ok", "2 ok, 3 next", "6 next") over a level bar: quiet
- * when every outcome was ok, amber when one was short or capped, fault when one was missed, hatched with no data, today
+ * side by side. Each day says what happened or what comes ("5 ran ok", "2 ok, 3 next", "6 next"), and apart from the runs
+ * its fallback windows ahead ("3 fallback windows", which run only if VPD sensing fails), over a level bar: quiet when
+ * every outcome was ok, amber when one was short or capped, fault when one was missed, hatched with no data, today
  * outlined as partial. The total against the caps is in each day's name and title. Selecting a day sets `day=`; ‹ ›
  * move a week and stop at the ends of the days API-IRR-02 serves. While the API is down nothing reads green.
  */
@@ -42,6 +43,7 @@ export function WeekStrip({ cells, selected, dayTo, previousTo, nextTo }: WeekSt
         const body = <>
           <span className="sch-day-date"><span className="sch-day-weekday">{WEEKDAY.format(noon(cell.date))}</span> <span className="sch-day-number">{DAY_NUMBER(cell.date)}</span>{cell.when === "today" && <span className="sch-day-today"> today</span>}</span>
           <span className="sch-day-summary">{cell.summary}</span>
+          {cell.fallback > 0 && <span className="sch-day-fallback">{fallbackCount(cell.fallback)}</span>}
           <span className="sch-day-level" data-level={cell.level === null ? "none" : cell.level === undefined ? "ahead" : String(cell.level)} data-partial={cell.when === "today" ? "true" : undefined} aria-hidden="true" />
         </>;
         return <li key={cell.date} className={cls("sch-week-day", `is-${cell.when}`, cell.date === selected && "is-selected")}>
