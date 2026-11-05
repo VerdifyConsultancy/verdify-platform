@@ -41,8 +41,9 @@
 .banners{display:grid;gap:.5rem;margin:0 0 1rem}
 .banners .banner{margin:0}
 
-/* The wide page (redesign §3.2): Graphs and Water → Schedules use --shell-wide, through their route's handle. */
-.shell.page-wide{width:min(100%,var(--shell-wide))}
+/* One centred container on every route (decisions log, 2026-11-04): header, main and footer share .shell, and the page stretches to the window's height, so a short page's footer reaches the bottom. */
+.app-page{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+.app-page>main{flex:1 0 auto}
 
 .bottom-nav{display:none}
 .page-card-main{padding-block:2.5rem 3rem}

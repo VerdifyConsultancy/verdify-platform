@@ -8,7 +8,6 @@ import { localDay } from "../charts/time-axis";
 import { buildTimeSeriesModel, chartNotes } from "../charts/time-series";
 import type { Series, SettingHistory, SettingSteps } from "../charts/types";
 import { chartLinks } from "../charts/uplot-chart";
-import type { PageHandle } from "../components/app-shell";
 import { useClockValue } from "../components/freshness";
 import { ChartChips, DrawnChips, GraphNotices, LayersMenu, PresetChips, PresetMenu, RangeForm, rangeDays, viewFields } from "../components/graphs/controls";
 import { EVENTS_PAGE, WRITE_SOURCES, chartEvents, shownSources } from "../components/graphs/event-marks";
@@ -32,7 +31,6 @@ import { unitLabel } from "../lib/setting-values";
 import { useShellNow } from "../lib/shell";
 
 export const meta = () => viewMeta("graphs-climate");
-export const handle: PageHandle = { wide: true };
 export const links = () => chartLinks();
 
 /** A setting history in its panel's unit: the registry's ASCII °F alias reads as the panel's °F. One copy per answer. */

@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Outlet, useLocation, useMatches } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import { SIGN_IN_REFUSALS, type AuthError } from "../lib/page-context";
 import { SessionProvider } from "../lib/session";
 import { ShellContext, createQueryClient, revisionLabel, signInHref, useShell, useShellPolls, useShellStatus } from "../lib/shell";
 import { PollingPaused } from "../lib/use-current";
 import { Banner } from "./banner";
-import { cls } from "./common";
 import { ServerClockProvider } from "./freshness";
 import { BottomNav, PlainHeader, SignOutForm, SiteHeader } from "./site-header";
 import { ToastProvider } from "./toast";
@@ -37,18 +36,6 @@ export function ShellNotices() {
   return <div className="banners">
     {warns.map((banner) => <Banner key={banner.kind} tone={banner.tone} link={banner.link}>{banner.text}</Banner>)}
   </div>;
-}
-
-/**
- * What a route module may say about its page through `export const handle`: `wide` gives it `--shell-wide` (96rem)
- * instead of the 80rem shell, for charts and timelines (Graphs and Water → Schedules, redesign §3.2).
- */
-export type PageHandle = { readonly wide?: boolean };
-const isWide = (handle: unknown) => typeof handle === "object" && handle !== null && (handle as PageHandle).wide === true;
-/** True when the deepest route that says asks for the wide page. */
-export function useWidePage(): boolean {
-  const matches = useMatches();
-  return matches.some((match) => isWide(match.handle));
 }
 
 /** "Verdify dashboard · build <12 hex> · API <12 hex>"; the API's build reads "—" until API-01 answers. */
@@ -130,13 +117,12 @@ export function SignInRefusalPage({ build, refusal }: { build: string; refusal: 
 export function AppShell({ build, authError }: { build: string; authError: AuthError | null }) {
   const [ended, setEnded] = useState(false);
   const [client] = useState(() => createQueryClient(() => setEnded(true)));
-  const wide = useWidePage();
   if (authError) return <SignInRefusalPage build={build} refusal={authError} />;
   return <QueryClientProvider client={client}><PollingPaused.Provider value={ended}><ShellProvider build={build}><ToastProvider>
     <div className="app-page" inert={ended}>
       <a href="#main-content" className="skip-link">Skip to content</a>
       <SiteHeader />
-      <main id="main-content" className={cls("shell", wide && "page-wide")} tabIndex={-1}><ShellNotices /><Outlet /></main>
+      <main id="main-content" className="shell" tabIndex={-1}><ShellNotices /><Outlet /></main>
       <ShellFooter />
       <BottomNav />
     </div>

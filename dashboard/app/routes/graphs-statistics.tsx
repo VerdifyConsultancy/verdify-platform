@@ -6,7 +6,6 @@ import { InBandBars, type InBandRow } from "../charts/stats-in-band-bars";
 import { TypicalDay } from "../charts/stats-typical-day";
 import { localDay } from "../charts/time-axis";
 import { chartLinks } from "../charts/uplot-chart";
-import type { PageHandle } from "../components/app-shell";
 import { Card } from "../components/card";
 import { Chips } from "../components/chips";
 import { DayByDay } from "../components/graphs/day-by-day";
@@ -25,7 +24,6 @@ import { viewMeta } from "../lib/sections";
 import { useApiDown } from "../lib/session";
 
 export const meta = () => viewMeta("graphs-statistics");
-export const handle: PageHandle = { wide: true };
 export const links = () => chartLinks();
 
 const REGISTRY = [{ id: "registry", params: {} }] as const;

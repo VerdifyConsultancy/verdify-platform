@@ -7,7 +7,6 @@ import { RangeToolbar } from "../charts/range-toolbar";
 import { buildTimeSeriesModel, chartNotes } from "../charts/time-series";
 import { chartLinks } from "../charts/uplot-chart";
 import { Chips } from "../components/chips";
-import type { PageHandle } from "../components/app-shell";
 import { GraphNotices, RangeForm, rangeDays } from "../components/graphs/controls";
 import { ResolutionLine, elapsedText } from "../components/graphs/resolution-line";
 import { PageHeader } from "../components/layout/page-header";
@@ -34,7 +33,6 @@ export function focusedTitle(search: string): string | null {
   return zone ? `${ZONE_WORDS[zone]} zone` : null;
 }
 export const meta = ({ location }: MetaArgs) => viewMeta("graphs-zones", focusedTitle(location.search) ?? undefined);
-export const handle: PageHandle = { wide: true };
 export const links = () => chartLinks();
 
 const REGISTRY = [{ id: "registry", params: {} }] as const;
