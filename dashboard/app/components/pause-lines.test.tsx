@@ -55,8 +55,8 @@ test("Pause lines… opens ?pause=all; All lines until 14:00 with a reason sends
 
 test("one line, from the list or ?pause=<line_id>, with no reason; the list has All lines and the wet lines, never L03 or L11", async () => {
   const api = controls("/water?pause=L04");
-  expect(drawer().getByLabelText<HTMLSelectElement>("Line").selectedOptions[0].textContent).toBe("L04 Mister • Center");
-  expect([...drawer().getByLabelText<HTMLSelectElement>("Line").options].map((option) => option.textContent?.slice(0, 3))).toEqual(["All", "L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10"]);
+  expect(drawer().getByLabelText<HTMLSelectElement>("Line").selectedOptions[0].textContent).toBe("Center mister");
+  expect([...drawer().getByLabelText<HTMLSelectElement>("Line").options].map((option) => option.textContent)).toEqual(["All lines", "Wall drip", "Wall drip (fertilized)", "Center mister", "Center drip", "Center drip (fertilized)", "South mister", "South mister (fertilized)", "West mister", "West mister (fertilized)"]);
   fireEvent.change(drawer().getByLabelText("Until"), { target: { value: "2026-11-03T06:30" } });
   fireEvent.click(drawer().getByRole("button", { name: "Pause" }));
   await advance(0);
@@ -102,7 +102,7 @@ test("Resume all shows only while a line is paused and sends {paused_until: <now
 test("Resume on a paused line sends {paused_until: <now>} with no manual; nothing while it is not paused", async () => {
   const api = startFixtureApi();
   renderWithApi(<ResumeLine line={{ line_id: "L04", paused_until: AT_14 }} />);
-  fireEvent.click(screen.getByRole("button", { name: "Resume L04" }));
+  fireEvent.click(screen.getByRole("button", { name: "Resume Center mister" }));
   await advance(0);
   expect(writes(api).map((row) => [row.path, row.body])).toEqual([["/api/v1/irrigation/lines/L04", { paused_until: new Date(NOW).toISOString() }]]);
   cleanup();
@@ -116,7 +116,7 @@ test("Resume on a paused line sends {paused_until: <now>} with no manual; nothin
 test("the block menu's pause sends that line's paused_until and no manual", async () => {
   const api = startFixtureApi();
   renderWithApi(<PauseAfterRun lineId="L01" until={AT_14} />);
-  fireEvent.click(screen.getByRole("button", { name: "Pause L01 until after this run" }));
+  fireEvent.click(screen.getByRole("button", { name: "Pause Wall drip until after this run" }));
   await advance(0);
   expect(writes(api).map((row) => [row.path, row.body])).toEqual([["/api/v1/irrigation/lines/L01", { paused_until: AT_14 }]]);
 });

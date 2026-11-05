@@ -45,11 +45,13 @@ from verdify_schemas.irrigation import (
     LineSpec,
     LineState,
     RunOutcome,
+    RunPurpose,
     ScheduleSpec,
     SolarDay,
     bounds_by_kind,
     compile_program,
     line_state,
+    purpose_of,
     site_values,
     unpack_program,
 )
@@ -84,6 +86,7 @@ from verdify_services.irrigation.runs import (
     run_causes,
     run_gallons,
 )
+from verdify_services.labels import line_name
 from verdify_services.problems import ServiceError, problem
 from verdify_services.reads import Leak, ReadbackState
 
@@ -181,6 +184,19 @@ class LineCheck(_Model):
 
 
 class LineToday(_Model):
+    """A line's minutes, pulses and gallons today, all purposes (the zone caps count every second); the
+    ``climate_*`` fields are the VPD and fallback misting inside them (#1348), so irrigation is the rest."""
+
+    minutes: float | None = None
+    pulses: int | None = None
+    gal: int | None = None
+    climate_minutes: float | None = None
+    climate_pulses: int | None = None
+
+
+class ClimateToday(_Model):
+    """Today's climate water across the site (#1348): VPD and fallback misting plus fog; null on a day with no data."""
+
     minutes: float | None = None
     pulses: int | None = None
     gal: int | None = None
@@ -191,6 +207,7 @@ class LastWater(_Model):
     open_s: int
     pulses: int | None = None
     cause: IrrigationCause
+    purpose: RunPurpose
 
 
 class LastOutcome(_Model):
@@ -242,8 +259,13 @@ class ActiveRun(_Model):
 
 
 class TodayMinutes(_Model):
+    """``zones`` counts every minute (the caps do); ``climate_zones`` is the VPD and fallback misting inside each, with
+    the same nulls, and ``climate`` the site's mist and fog today (#1348)."""
+
     date: date
     zones: dict[str, float | None]
+    climate_zones: dict[str, float | None] = Field(default_factory=dict)
+    climate: ClimateToday = Field(default_factory=ClimateToday)
 
 
 class Limits(_Model):
@@ -356,6 +378,7 @@ class MinutesRow(_Model):
     period: date
     group: str
     cause: IrrigationCause
+    purpose: RunPurpose
     chemistry: Chemistry
     minutes: float
     pulses: int | None = None
@@ -370,6 +393,7 @@ class MinutesReport(BaseModel):
     from_: date = Field(alias="from")
     to: date
     group_by: GroupBy
+    purpose: RunPurpose | None = None
     periods: list[MinutesPeriod]
     rows: list[MinutesRow]
 
@@ -380,6 +404,7 @@ class Run(_Model):
     zone: str
     chemistry: Chemistry
     cause: IrrigationCause
+    purpose: RunPurpose
     slot_id: int | None = None
     schedule_label: str | None = None
     command_id: str | None = None
@@ -757,23 +782,46 @@ def _line_today(groups: Iterable[DayGroup], line_id: str, *, no_data: bool) -> L
         gal = sum(gallons) if gallons else None
     else:
         gal = None if line_id == "L03" else 0
+    climate = [group for group in own if purpose_of(group.line_id, group.cause) == RunPurpose.CLIMATE]
     return LineToday(
         minutes=float(sum((group.minutes for group in own), Decimal(0))),
         pulses=sum(group.pulses for group in own),
         gal=gal,
+        climate_minutes=float(sum((group.minutes for group in climate), Decimal(0))),
+        climate_pulses=sum(group.pulses for group in climate),
     )
 
 
-def _zones(groups: Iterable[DayGroup], enabled: Mapping[str, bool], *, no_data: bool) -> dict[str, float | None]:
-    """Today's minutes by zone: null for a day with no data, and for a watering zone with no enabled line."""
+def _zones(
+    groups: Iterable[DayGroup], enabled: Mapping[str, bool], *, no_data: bool, purpose: RunPurpose | None = None
+) -> dict[str, float | None]:
+    """Today's minutes by zone, of one purpose or all: null for a day with no data, and for a watering zone with no
+    enabled line."""
     zones: dict[str, float | None] = {}
-    groups = list(groups)
+    groups = [group for group in groups if purpose is None or purpose_of(group.line_id, group.cause) == purpose]
     for zone, line_ids in ZONE_LINES.items():
         if no_data or (zone != "fog" and not any(enabled.get(line_id) for line_id in line_ids)):
             zones[zone] = None
         else:
             zones[zone] = float(sum((group.minutes for group in groups if group.line_id in line_ids), Decimal(0)))
     return zones
+
+
+def _climate_today(groups: Iterable[DayGroup], *, no_data: bool) -> ClimateToday:
+    """The site's mist and fog today: VPD and fallback misting plus fog, as ``_line_today`` counts them (L03 aside)."""
+    if no_data:
+        return ClimateToday()
+    climate = [
+        group
+        for group in groups
+        if group.line_id != "L03" and purpose_of(group.line_id, group.cause) == RunPurpose.CLIMATE
+    ]
+    gallons = [group.gal for group in climate if group.gal is not None]
+    return ClimateToday(
+        minutes=float(sum((group.minutes for group in climate), Decimal(0))),
+        pulses=sum(group.pulses for group in climate),
+        gal=sum(gallons) if gallons or not climate else None,
+    )
 
 
 async def _last_water(conn: asyncpg.Connection, line_ids: Sequence[str], at: datetime) -> dict[str, LastWater]:
@@ -791,7 +839,13 @@ async def _last_water(conn: asyncpg.Connection, line_ids: Sequence[str], at: dat
         if group.line_id not in newest_runs or group.end > newest_runs[group.line_id].end:
             newest_runs[group.line_id] = group
     return {
-        line_id: LastWater(at=group.start, open_s=group.open_s, pulses=group.pulses, cause=IrrigationCause(group.cause))
+        line_id: LastWater(
+            at=group.start,
+            open_s=group.open_s,
+            pulses=group.pulses,
+            cause=IrrigationCause(group.cause),
+            purpose=purpose_of(group.line_id, group.cause),
+        )
         for line_id, group in newest_runs.items()
     }
 
@@ -868,7 +922,8 @@ async def _read_lines(conn: asyncpg.Connection, base: _Base, line_ids: Sequence[
         lines_out.append(
             IrrigationLine(
                 line_id=line_id,
-                name=row["name"],
+                # The operator's name for the line (#1341), not the relay register's "Drip • Wall".
+                name=line_name(line_id),
                 zone=row["zone"],
                 kind=row["kind"],
                 clean_partner=row["clean_partner"],
@@ -1045,6 +1100,8 @@ async def status(conn: asyncpg.Connection, actor: Actor | None) -> IrrigationSta
         today=TodayMinutes(
             date=read.today,
             zones=_zones(read.groups, enabled, no_data=read.no_data_today),
+            climate_zones=_zones(read.groups, enabled, no_data=read.no_data_today, purpose=RunPurpose.CLIMATE),
+            climate=_climate_today(read.groups, no_data=read.no_data_today),
         ),
         limits=Limits(
             saf4_gal=UsedOfMax(used=used, max=_saf4_max(base.controller)),
@@ -1224,14 +1281,25 @@ async def agenda(conn: asyncpg.Connection, actor: Actor | None, days: int = 7, p
 # ── API-IRR-10 ──────────────────────────────────────────────────────────────
 
 
-def minutes_rows(rows: Iterable[Mapping[str, Any]], group_by: GroupBy) -> list[MinutesRow]:
-    """The reader's rows per period, group, cause and chemistry; grouping by zone leaves out L03's supply rows."""
-    totals: dict[tuple[date, str, str, str], dict[str, Any]] = {}
+def _check_purpose(purpose: str | None) -> None:
+    if purpose is not None and purpose not in tuple(RunPurpose):
+        raise ServiceError(problem("invalid_request", f"{purpose!r} is not a purpose", field="purpose"))
+
+
+def minutes_rows(
+    rows: Iterable[Mapping[str, Any]], group_by: GroupBy, purpose: RunPurpose | str | None = None
+) -> list[MinutesRow]:
+    """The reader's rows per period, group, cause, purpose (#1348) and chemistry, of one purpose or all; grouping by zone
+    leaves out L03's supply rows."""
+    totals: dict[tuple[date, str, str, str, str], dict[str, Any]] = {}
     for row in rows:
         if group_by == "zone" and row["zone"] == "supply":
             continue
+        kind = purpose_of(row["line_id"], row["cause"])
+        if purpose is not None and kind != purpose:
+            continue
         group = {"zone": row["zone"], "line": row["line_id"], "cause": row["cause"]}[group_by]
-        key = (row["local_day"], group, row["cause"], row["chemistry"])
+        key = (row["local_day"], group, row["cause"], kind.value, row["chemistry"])
         total = totals.setdefault(key, {"minutes": Decimal(0), "pulses": None, "gal": None})
         total["minutes"] += Decimal(str(row["minutes"]))
         if row["pulses"] is not None:
@@ -1243,23 +1311,31 @@ def minutes_rows(rows: Iterable[Mapping[str, Any]], group_by: GroupBy) -> list[M
             period=period,
             group=group,
             cause=cause,
+            purpose=kind,
             chemistry=chem,
             minutes=float(total["minutes"]),
             pulses=total["pulses"],
             gal=total["gal"],
         )
-        for (period, group, cause, chem), total in sorted(totals.items())
+        for (period, group, cause, kind, chem), total in sorted(totals.items())
     ]
 
 
 async def minutes(
-    conn: asyncpg.Connection, actor: Actor | None, from_: date, to: date, group_by: GroupBy = "zone"
+    conn: asyncpg.Connection,
+    actor: Actor | None,
+    from_: date,
+    to: date,
+    group_by: GroupBy = "zone",
+    purpose: str | None = None,
 ) -> MinutesReport:
     """API-IRR-10 ``GET /v1/irrigation/minutes``: minutes, pulses and whole gallons per local day ``from_``..``to``
-    (inclusive, at most 400 days) by zone, line or cause, always split by cause and chemistry. A day with coverage
-    ``no_data`` has no rows, so it draws as a gap, never 0."""
+    (inclusive, at most 400 days) by zone, line or cause, always split by cause, purpose and chemistry; ``purpose``
+    keeps irrigation or climate (VPD and fallback misting, and fog) only, and no purpose keeps both. A day with
+    coverage ``no_data`` has no rows, so it draws as a gap, never 0."""
     if group_by not in ("zone", "line", "cause"):
         raise ServiceError(problem("invalid_request", "group_by is zone, line or cause", field="group_by"))
+    _check_purpose(purpose)
     if to < from_:
         raise ServiceError(problem("invalid_request", "to must not be before from", field="from"))
     span = (to - from_).days + 1
@@ -1283,6 +1359,7 @@ async def minutes(
             "from": from_,
             "to": to,
             "group_by": group_by,
+            "purpose": purpose,
             "periods": [
                 MinutesPeriod(
                     start=from_ + timedelta(days=offset),
@@ -1290,7 +1367,7 @@ async def minutes(
                 )
                 for offset in range(span)
             ],
-            "rows": minutes_rows(rows, group_by),
+            "rows": minutes_rows(rows, group_by, purpose),
         }
     )
 
@@ -1375,6 +1452,7 @@ def _list_runs(
     cause: str | None,
     outcome: str | None,
     at: datetime,
+    purpose: str | None = None,
 ) -> list[_Listed]:
     """The ended runs that started in [``from_``, ``to``), newest first by (``started_at``, ``run_id``), filtered."""
     items: list[_Listed] = []
@@ -1391,7 +1469,9 @@ def _list_runs(
         (
             item
             for item in items
-            if (cause is None or item.cause == cause) and (outcome is None or item.outcome == outcome)
+            if (cause is None or item.cause == cause)
+            and (outcome is None or item.outcome == outcome)
+            and (purpose is None or purpose_of(item.line_id, item.cause) == purpose)
         ),
         key=lambda item: (item.started_at, item.run_id),
         reverse=True,
@@ -1455,10 +1535,12 @@ async def runs(
     outcome: str | None = None,
     limit: int = LIMIT_DEFAULT,
     cursor: str | None = None,
+    purpose: str | None = None,
 ) -> RunPage:
     """API-IRR-11 ``GET /v1/irrigation/runs``: ended runs that started in [``from_``, ``to``), at most 31 days, newest
-    first in keyset pages on (``started_at``, ``run_id``), with filters on line, cause and outcome. The run in progress
-    is in API-IRR-01, and L03 is never a run of its own. Ledger rows that opened no valve list with ``open_s`` 0."""
+    first in keyset pages on (``started_at``, ``run_id``), with filters on line, cause, outcome and purpose (#1348:
+    irrigation, or climate = VPD and fallback misting and fog; none keeps both). The run in progress is in API-IRR-01,
+    and L03 is never a run of its own. Ledger rows that opened no valve list with ``open_s`` 0."""
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= LIMIT_MAX:
         raise ServiceError(
             problem(
@@ -1490,6 +1572,7 @@ async def runs(
     for name, value, known in (("cause", cause, IrrigationCause), ("outcome", outcome, RunOutcome)):
         if value is not None and value not in tuple(known):
             raise ServiceError(problem("invalid_request", f"{value!r} is not a {name}", field=name))
+    _check_purpose(purpose)
     after = decode_run_cursor(cursor) if cursor else None
     wanted = [line_id for line_id in LINE_RELAY if line_id != "L03" and (line is None or line_id == line)]
 
@@ -1509,7 +1592,7 @@ async def runs(
         ]
         lone += [(row, _no_start_time(row, slot_rules)) for row in no_start_rows]
         lone = [(row, when) for row, when in lone if row["line_id"] in wanted]
-        listed = _list_runs(groups, lone, from_=from_, to=to, cause=cause, outcome=outcome, at=at)
+        listed = _list_runs(groups, lone, from_=from_, to=to, cause=cause, outcome=outcome, at=at, purpose=purpose)
         if after is not None:
             listed = [item for item in listed if (item.started_at, item.run_id) < after]
         page, more = listed[:limit], len(listed) > limit
@@ -1541,6 +1624,7 @@ async def runs(
                 zone=MINUTES_ZONE[item.line_id],
                 chemistry=chemistry(item.line_id),
                 cause=item.cause,
+                purpose=purpose_of(item.line_id, item.cause),
                 slot_id=slot_id,
                 schedule_label=labels.get(slot_id),
                 command_id=command_id,

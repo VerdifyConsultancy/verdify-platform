@@ -327,7 +327,15 @@ def test_water_use_returns_the_no_valve_gallons_apart_and_missing_days_as_gaps(w
     complete = days[world.complete]
     assert (complete.coverage, complete.meter_gal, complete.no_valve_gal) == ("complete", 17, 5)
     assert (complete.by_line, complete.by_cause) == ({"L01": 12}, {"unknown": 12})
-    nothing = {"coverage": "no_data", "meter_gal": None, "by_line": None, "by_cause": None, "no_valve_gal": None}
+    assert complete.by_purpose == {"irrigation": 12}  # #1348: L01's unknown-cause run waters plants
+    nothing = {
+        "coverage": "no_data",
+        "meter_gal": None,
+        "by_line": None,
+        "by_cause": None,
+        "by_purpose": None,
+        "no_valve_gal": None,
+    }
     assert days[world.unavailable].model_dump(exclude={"date"}) == nothing  # the view reads 3 gal, unavailable
     assert days[world.absent].model_dump(exclude={"date"}) == nothing  # no row
     partial = days[world.partial]

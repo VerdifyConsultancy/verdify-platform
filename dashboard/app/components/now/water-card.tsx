@@ -3,14 +3,14 @@
  * Water today on Now (redesign §5.1; screens SCR-01, US-NOW-04, US-WAT-13, US-WAT-18) from API-IRR-01: each watering
  * zone's minutes today against its cap as a `Meter` (the drip zone in `--eq-water`, the mister zones in `--eq-mister`),
  * when it last got water (`last-water.ts`), SAF-4's gallons against its ceiling, and the flow in words. Before the
- * irrigation firmware it says where L01 runs from. A failed or not yet served API-IRR-01 reads "Water status
+ * irrigation firmware it says where the wall drip runs from. A failed or not yet served API-IRR-01 reads "Water status
  * unavailable." with Retry, never idle. Stop all water is not here: it is the first quick action, one per page.
  */
 import { formatValue, shortTime } from "../../lib/format";
 import { WATER_ZONES, WATER_ZONE_WORDS, lastWater, type WaterZone, type ZoneLastWater } from "../../lib/last-water";
 import type { IrrigationLine, IrrigationStatus, Leak } from "../../lib/operator-api";
 import type { PanelRead } from "../../lib/queries";
-import { SAF4_WORDS } from "../../lib/water";
+import { SAF4_WORDS, climateTodayWords } from "../../lib/water";
 import { cls } from "../common";
 import { Meter, meterWords, type MeterDomain } from "../data/meter";
 import { useNow } from "../freshness";
@@ -18,7 +18,7 @@ import { Panel, type PanelState } from "../panel";
 import { lineStatesUnknown } from "./status";
 
 export const WATER_UNAVAILABLE = "Water status unavailable.";
-export const BEFORE_ENGINE_LINE = "L01 runs from Water; run-now on the other lines arrives with the irrigation firmware";
+export const BEFORE_ENGINE_LINE = "The wall drip runs from Water; run-now on the other lines arrives with the irrigation firmware";
 
 const validTime = (value: string | null | undefined): value is string => typeof value === "string" && Number.isFinite(Date.parse(value));
 const finite = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value);
@@ -26,8 +26,10 @@ const isMister = (line: Pick<IrrigationLine, "kind">) => line.kind === "mister" 
 
 export type ZoneWater = {
   readonly zone: WaterZone;
-  /** Minutes today (API-IRR-01 `today.zones`); null when the API has no number. */
+  /** Minutes today (API-IRR-01 `today.zones`), every purpose, as the cap counts them; null when the API has no number. */
   readonly minutes: number | null;
+  /** The VPD and fallback misting inside them (`today.climate_zones`, #1348); null when the API has no number. */
+  readonly climate: number | null;
   /** The zone's cap: the daily caps of its enabled lines that have one; null when none does. */
   readonly cap: number | null;
   readonly domain: MeterDomain;
@@ -41,8 +43,10 @@ export function zoneWater(status: Pick<IrrigationStatus, "lines" | "today">, clo
     const lines = status.lines.filter((line) => line.zone === zone && line.enabled);
     const caps = lines.map((line) => line.daily_cap_min).filter((cap) => finite(cap) && cap > 0);
     const minutes = Object.hasOwn(status.today.zones, zone) ? status.today.zones[zone] : null;
+    const climateZones = status.today.climate_zones ?? {};
+    const climate = Object.hasOwn(climateZones, zone) ? climateZones[zone] : null;
     const misters = lines.length > 0 && lines.every(isMister);
-    return { zone, minutes: finite(minutes) ? minutes : null, cap: caps.length ? caps.reduce((sum, cap) => sum + cap, 0) : null, domain: misters ? "mister" : "water", last: last[index] };
+    return { zone, minutes: finite(minutes) ? minutes : null, climate: finite(climate) ? climate : null, cap: caps.length ? caps.reduce((sum, cap) => sum + cap, 0) : null, domain: misters ? "mister" : "water", last: last[index] };
   });
 }
 
@@ -78,17 +82,24 @@ export function minutesWords(minutes: number | null, cap: number | null): { amou
   return meterWords(minutes, cap, "min");
 }
 
-/** One zone's row: its name, its minutes against its cap, and when it last got water. */
+/** "of which VPD 2 min" when VPD or fallback misting is in a zone's minutes today (#1348); null when none is. */
+export function vpdPartWords(climate: number | null): string | null {
+  return finite(climate) && climate > 0 ? `of which VPD ${Math.max(1, Math.round(climate))}\u00a0min` : null;
+}
+
+/** One zone's row: its name, its minutes against its cap (every purpose, as the cap counts), and when it last got water. */
 function ZoneRow({ row, stale }: { row: ZoneWater; stale: boolean }) {
   const name = WATER_ZONE_WORDS[row.zone];
   const setUp = row.last.state !== "not_set_up";
   const words = minutesWords(row.minutes, row.cap);
+  const vpd = vpdPartWords(row.climate);
   return <li className="now-water-row" data-water={row.zone}>
     <span className="now-water-name">{name}</span>
     {setUp
       ? <span className="now-water-meter">
         <Meter label={`${name} minutes today`} unit="min" value={row.minutes} cap={row.cap} domain={row.domain} decorative state={stale ? "stale" : "ready"} />
-        <span className="now-water-amount">{words.amount}{words.over && <span className="now-water-over"><span className="now-water-sep"> · </span>{words.over}</span>}</span>
+        <span className="now-water-amount">{words.amount}{words.over && <span className="now-water-over"><span className="now-water-sep"> · </span>{words.over}</span>}
+          {vpd && <span className="meta" data-water="vpd"><span className="now-water-sep"> · </span>{vpd}</span>}</span>
       </span>
       : <span className="now-water-none meta">Not set up</span>}
     <span className={cls("now-water-last", row.last.state === "running" && "now-water-running")}>
@@ -106,6 +117,7 @@ export function WaterCard({ irrigation }: WaterCardProps) {
   const flow = status ? flowText(status.leak) : null;
   const stale = status ? lineStatesUnknown(status) : false;
   const saf4 = status?.limits.saf4_gal;
+  const climate = status ? climateTodayWords(status.today.climate) : null;
   return <div className="now-water">
     <Panel title="Water today" thing="water status" state={state} reserve="sm" onRetry={irrigation.retry} errorText={WATER_UNAVAILABLE}
       link={{ to: "/water", label: <>Water <span className="screen-reader">today, by line</span></> }}>
@@ -121,6 +133,7 @@ export function WaterCard({ irrigation }: WaterCardProps) {
             <span className="now-water-last meta">{SAF4_WORDS}</span>
           </li>}
         </ul>
+        {climate && <p className="meta" data-water="climate">{climate}</p>}
         {flow && <p data-water="flow" className={cls("now-water-flow", flow.flowing ? "fault" : "meta")}>{flow.text}</p>}
         {stale && <p className="meta" data-water="unknown">Line states not reported: the minutes are the last the controller sent.</p>}
         {!status.engine && <p className="meta" data-water="before-engine">{BEFORE_ENGINE_LINE}</p>}

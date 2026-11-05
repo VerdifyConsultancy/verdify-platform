@@ -12,8 +12,8 @@ type ReasonState = NonNullable<Equipment[ReasonKey]>;
 /** The three rows in their fixed order. Each reason's key is its family in the words table. */
 export const WHY_ROWS: readonly { readonly key: ReasonKey; readonly label: string }[] = [
   { key: "mode_reason", label: "Climate mode" },
-  { key: "fog_block_reason", label: "Fog (L11)" },
-  { key: "moisture_block_reason", label: "Misters (L04, L07, L09)" },
+  { key: "fog_block_reason", label: "Fog" },
+  { key: "moisture_block_reason", label: "Misters (center, south, west)" },
 ];
 
 /** A reason's Graphs link opens this long either side of when its value began. */

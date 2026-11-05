@@ -5,7 +5,7 @@
  * running list read. Pure, so the tests check them without a page.
  */
 import { duration, localDate, shortDateTime, shortTime } from "../../lib/format";
-import { lineById } from "../../lib/lines";
+import { lineDisplayName } from "../../lib/lines";
 import type { NowAnswer } from "../../lib/now-answer";
 import type { IrrigationLine, IrrigationStatus, Now } from "../../lib/operator-api";
 import type { PanelRead } from "../../lib/queries";
@@ -73,8 +73,7 @@ export function lineStatesUnknown(status: Pick<IrrigationStatus, "engine" | "lin
   return status.lines.some((line) => line.enabled && line.state.code === "unknown") || (status.engine === true && status.freshness.stale);
 }
 
-/** A line's plain name: the words table's for its relay ("Center mister"), else the API's. */
+/** A line's plain name ("Center mister"), never its relay code (#1341). */
 export function lineName(line: Pick<IrrigationLine, "line_id" | "name">): string {
-  const equipment = lineById(line.line_id)?.equipment;
-  return equipment ? words("equipment", equipment) : line.name;
+  return lineDisplayName(line);
 }

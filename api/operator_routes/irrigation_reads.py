@@ -14,7 +14,7 @@ from fastapi import APIRouter, Query, Request
 from pydantic import AwareDatetime
 
 from operator_routes.reads import Connection
-from verdify_schemas.irrigation import IrrigationCause, RunOutcome
+from verdify_schemas.irrigation import IrrigationCause, RunOutcome, RunPurpose
 from verdify_services.irrigation import reads as irrigation
 
 router = APIRouter()
@@ -50,9 +50,13 @@ async def get_minutes(
     from_: Annotated[date, Query(alias="from")],
     to: date,
     group_by: irrigation.GroupBy = "zone",
+    purpose: RunPurpose | None = None,
 ) -> irrigation.MinutesReport:
-    """Minutes, pulses and gallons per day by zone, line or cause, up to 400 days."""
-    return await irrigation.minutes(conn, request.state.actor, from_, to, group_by)
+    """Minutes, pulses and gallons per day by zone, line or cause, up to 400 days; purpose keeps irrigation or climate
+    (VPD and fallback misting, and fog) only."""
+    return await irrigation.minutes(
+        conn, request.state.actor, from_, to, group_by, purpose=None if purpose is None else purpose.value
+    )
 
 
 @router.get("/irrigation/runs", operation_id="API-IRR-11", tags=["irrigation"], response_model=irrigation.RunPage)
@@ -66,8 +70,10 @@ async def get_runs(
     outcome: RunOutcome | None = None,
     limit: Annotated[int, Query(ge=1, le=irrigation.LIMIT_MAX)] = irrigation.LIMIT_DEFAULT,
     cursor: str | None = None,
+    purpose: RunPurpose | None = None,
 ) -> irrigation.RunPage:
-    """The run ledger, newest first; windows up to 31 days."""
+    """The run ledger, newest first; windows up to 31 days. purpose keeps irrigation runs or climate runs (VPD and
+    fallback misting, and fog) only; none keeps both."""
     return await irrigation.runs(
         conn,
         request.state.actor,
@@ -78,4 +84,5 @@ async def get_runs(
         outcome=None if outcome is None else outcome.value,
         limit=limit,
         cursor=cursor,
+        purpose=None if purpose is None else purpose.value,
     )

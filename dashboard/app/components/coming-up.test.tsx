@@ -43,11 +43,11 @@ test("in band: Running now, the next 12 h in time order with who planned each ch
   await open("in-band");
   expect(within(card()).getByRole("heading", { level: 2 }).textContent).toBe("Running and next");
   expect(text(card().querySelector(".now-next-now"))).toBe("Running nowNothing running");
-  expect(coming("run")).toEqual(["11:47L04 Center mister · 4 × 45 s · vanda-degraded · only if VPD sensing is degraded", "13:47L04 Center mister · 4 × 45 s · vanda-degraded · only if VPD sensing is degraded"]);
+  expect(coming("run")).toEqual(["11:47Center mister · 4 × 45 s · vanda-degraded · only if VPD sensing is degraded", "13:47Center mister · 4 × 45 s · vanda-degraded · only if VPD sensing is degraded"]);
   expect(coming("plan")).toEqual(["13:00VPD Mister Engage 1.60 → 1.70 kPa AI", "16:30Mister Pulse Gap 45.0 → 55.0 s AI"]);
   expect(coming("iris")).toEqual(["12:41Iris SOLAR_MAX trigger", "16:50Iris SUNSET trigger"]);
   expect(coming("sun")).toEqual(["16:58Sunset"]);
-  expect(coming("later")).toEqual(["Later No schedule: L01, L07, L09"]);
+  expect(coming("later")).toEqual(["Later No schedule: Wall drip, South mister, West mister"]);
   // The next run shows here alone: nowhere else on Now (redesign §5.1).
   expect(card().querySelectorAll("[data-coming=plan] [data-badge=ai]")).toHaveLength(2);
 });
@@ -58,7 +58,7 @@ test("a forecast rule reads Forecast rule · system, never AI; a paused line und
   expect(card().querySelectorAll("[data-coming=plan]")[1].querySelector("[data-badge=ai]")).toBeNull();
   expect(coming("iris")).toEqual(["16:50Iris SUNSET trigger"]);
   // Now is not in the shell here: the pause reads by username.
-  expect(coming("later")[0]).toMatch(/^Later L01 Wall drip paused until 14:00 by jason: rain · next Wed 07:35 · /);
+  expect(coming("later")[0]).toMatch(/^Later Wall drip paused until 14:00 by jason: rain · next Wed 07:35 · /);
 });
 
 test("the track reads API-05's last 6 h only once it nears the screen; until then it holds its place", async () => {

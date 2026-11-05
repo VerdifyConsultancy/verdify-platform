@@ -48,12 +48,12 @@ test("enabling an unchecked line shows the Checked box once and sends checked wi
   const api = open("/water", { fixture: "lines-unchecked" });
   await load();
   expect(text(card("L02").querySelector(".line-state"))).toBe("Off · no check recorded");
-  const enable = () => within(card("L02")).getByRole("switch", { name: "Enabled L02" });
+  const enable = () => within(card("L02")).getByRole("switch", { name: "Enabled Wall drip (fertilized)" });
   expect(enable().getAttribute("aria-checked")).toBe("false");
   expect(text(card("L02"))).toContain(DISABLE_HINT);
   await press(enable());
   expect(writes(api)).toEqual([]);
-  expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Enable L02");
+  expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Enable Wall drip (fertilized)");
   const save = dialog().getByRole<HTMLButtonElement>("button", { name: "Enable" });
   expect(save.disabled).toBe(true);
   fireEvent.click(dialog().getByRole("checkbox", { name: "Checked: line, tank and injector checked, no leaks" }));
@@ -88,7 +88,7 @@ test("enabling an unchecked line shows the Checked box once and sends checked wi
 test("a change the controller refuses reads \"Not confirmed: <reject in words>\" on the card", async () => {
   const api = open("/water", { fixture: "lines-unchecked", confirm: false });
   await load();
-  await press(within(card("L04")).getByRole("switch", { name: "Enabled L04" }));
+  await press(within(card("L04")).getByRole("switch", { name: "Enabled Center mister" }));
   expect(lastWrite(api)?.body).toEqual({ enabled: false, manual: true });
   await settle();
   expect(sync("L04")).toBe("Not confirmed · Not confirmed: the controller refused a line's settings · retrying at 1, 5 and 15 min");
@@ -100,9 +100,9 @@ test("turning Schedule on for L04 with no check asks for the check; each switch 
   const mister = () => within(zone("L04"));
   // Nothing pressed and long confirmed: no pill (D-UX-07).
   expect(flag("L04", "vpd_member")).not.toContain("Confirmed");
-  await press(mister().getByRole("switch", { name: "Schedule L04" }));
+  await press(mister().getByRole("switch", { name: "Schedule Center mister" }));
   expect(writes(api)).toEqual([]);
-  expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Turn on Schedule for L04");
+  expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Turn on Schedule for Center mister");
   fireEvent.click(dialog().getByRole("checkbox", { name: "Checked: nozzles over the Vandas, coverage and walkway checked" }));
   await press(dialog().getByRole("button", { name: "Turn on Schedule" }));
   expect(writes(api).map((row) => [row.path, row.body])).toEqual([["/api/v1/irrigation/lines/L04", { schedule_member: true, checked: true, manual: true }]]);
@@ -113,9 +113,9 @@ test("turning Schedule on for L04 with no check asks for the check; each switch 
   await settle();
   expect(flag("L04", "schedule_member")).toContain("Confirmed");
   // Now the zone has its check: Schedule off and VPD off send at once.
-  await press(mister().getByRole("switch", { name: "Schedule L04" }));
+  await press(mister().getByRole("switch", { name: "Schedule Center mister" }));
   expect(lastWrite(api)?.body).toEqual({ schedule_member: false, manual: true });
-  await press(mister().getByRole("switch", { name: "VPD control L04" }));
+  await press(mister().getByRole("switch", { name: "VPD control Center mister" }));
   expect(lastWrite(api)?.body).toEqual({ vpd_member: false, manual: true });
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(text(zone("L04"))).toContain(WILL_NOT_MIST_TEXT);
@@ -126,15 +126,15 @@ test("a badge follows what changed: a cancelled Schedule press carries none, and
   open("/water", { fixture: "lines-unchecked" });
   await load();
   const mister = () => within(zone("L04"));
-  await press(mister().getByRole("switch", { name: "Schedule L04" }));
+  await press(mister().getByRole("switch", { name: "Schedule Center mister" }));
   await press(dialog().getByRole("button", { name: "Cancel" }));
   expect(flag("L04", "schedule_member")).not.toMatch(/Confirmed|Requested/);
-  await press(mister().getByRole("switch", { name: "VPD control L04" }));
+  await press(mister().getByRole("switch", { name: "VPD control Center mister" }));
   expect(flag("L04", "vpd_member")).toContain("Requested");
   expect(flag("L04", "schedule_member")).not.toContain("Requested");
   await settle();
   expect(flag("L04", "vpd_member")).toContain("Confirmed");
-  await press(mister().getByRole("switch", { name: "Schedule L04" }));
+  await press(mister().getByRole("switch", { name: "Schedule Center mister" }));
   fireEvent.click(dialog().getByRole("checkbox", { name: /^Checked:/ }));
   await press(dialog().getByRole("button", { name: "Turn on Schedule" }));
   expect(flag("L04", "schedule_member")).toContain("Requested");
@@ -161,17 +161,17 @@ test("a failed status read says so behind an open drawer and leaves what was typ
 test("product J4: L07 disabled and unchecked is enabled with its check, then VPD control and Schedule go on at once; Schedule pressed first asks for that", async () => {
   const api = open("/water", { fixture: "lines-unchecked" });
   await load();
-  await press(within(zone("L07")).getByRole("switch", { name: "Schedule L07" }));
-  expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Turn on Schedule for L07");
+  await press(within(zone("L07")).getByRole("switch", { name: "Schedule South mister" }));
+  expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Turn on Schedule for South mister");
   await press(dialog().getByRole("button", { name: "Cancel" }));
   expect(writes(api)).toEqual([]);
-  await press(within(card("L07")).getByRole("switch", { name: "Enabled L07" }));
+  await press(within(card("L07")).getByRole("switch", { name: "Enabled South mister" }));
   fireEvent.click(dialog().getByRole("checkbox", { name: "Checked: line drained, nozzles checked, no walkway spray" }));
   await press(dialog().getByRole("button", { name: "Enable" }));
   expect(lastWrite(api)?.body).toEqual({ enabled: true, checked: true, manual: true });
-  await press(within(zone("L07")).getByRole("switch", { name: "VPD control L07" }));
+  await press(within(zone("L07")).getByRole("switch", { name: "VPD control South mister" }));
   expect(lastWrite(api)?.body).toEqual({ vpd_member: true, manual: true });
-  await press(within(zone("L07")).getByRole("switch", { name: "Schedule L07" }));
+  await press(within(zone("L07")).getByRole("switch", { name: "Schedule South mister" }));
   expect(lastWrite(api)?.body).toEqual({ schedule_member: true, manual: true });
   expect(screen.queryByRole("dialog")).toBeNull();
   await settle();
@@ -200,11 +200,11 @@ test("pause all until 14:00 sends line_id all with paused_until; the cards read 
   expect(words("L11")).toBeUndefined();
   expect(manual()).toEqual(before);
   // Resume on one card, with no manual, then Resume all for the rest.
-  await press(within(card("L04")).getByRole("button", { name: "Resume L04" }));
+  await press(within(card("L04")).getByRole("button", { name: "Resume Center mister" }));
   expect(lastWrite(api)).toMatchObject({ path: "/api/v1/irrigation/lines/L04", body: { paused_until: expect.any(String) } });
   expect(Object.keys(lastWrite(api)?.body as object)).toEqual(["paused_until"]);
   expect(words("L04")).toBeUndefined();
-  expect(within(card("L04")).queryByRole("button", { name: "Resume L04" })).toBeNull();
+  expect(within(card("L04")).queryByRole("button", { name: "Resume Center mister" })).toBeNull();
   await press(screen.getByRole("button", { name: "Resume all" }));
   expect(lastWrite(api)).toMatchObject({ path: "/api/v1/irrigation/lines/all" });
   expect(Object.keys(lastWrite(api)?.body as object)).toEqual(["paused_until"]);
@@ -217,26 +217,26 @@ test("the pause drawer opens from the URL on any Water view, and a row's \"Pause
   open("/water/schedules?pause=L01");
   await load();
   expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Pause lines");
-  expect(dialog().getByLabelText<HTMLSelectElement>("Line").selectedOptions[0].textContent).toMatch(/^L01/);
+  expect(dialog().getByLabelText<HTMLSelectElement>("Line").selectedOptions[0].textContent).toBe("Wall drip");
   cleanup(); stopFixtureApi();
   open("/water");
   await load();
-  await press(within(card("L04")).getByRole("button", { name: "Pause until… L04" }));
-  expect(dialog().getByLabelText<HTMLSelectElement>("Line").selectedOptions[0].textContent).toMatch(/^L04/);
+  await press(within(card("L04")).getByRole("button", { name: "Pause until… Center mister" }));
+  expect(dialog().getByLabelText<HTMLSelectElement>("Line").selectedOptions[0].textContent).toBe("Center mister");
 });
 
 test("enabling L05 asks for the Checked box once, and its row no longer reads Reserved once enabled", async () => {
   const api = open("/water", { fixture: "reserved-lines" });
   await load();
   expect(text(card("L05").querySelector(".line-state"))).toBe("Reserved · disabled");
-  await press(within(card("L05")).getByRole("switch", { name: "Enabled L05" }));
+  await press(within(card("L05")).getByRole("switch", { name: "Enabled Center drip" }));
   fireEvent.click(dialog().getByRole("checkbox", { name: "Checked: line connected and checked" }));
   await press(dialog().getByRole("button", { name: "Enable" }));
   expect(lastWrite(api)).toMatchObject({ path: "/api/v1/irrigation/lines/L05", body: { enabled: true, checked: true, manual: true } });
   expect(text(card("L05").querySelector(".line-state"))).not.toContain("Reserved");
   expect(text(card("L06").querySelector(".line-state"))).toBe("Reserved · disabled");
-  await press(within(card("L05")).getByRole("switch", { name: "Enabled L05" }));
-  await press(within(card("L05")).getByRole("switch", { name: "Enabled L05" }));
+  await press(within(card("L05")).getByRole("switch", { name: "Enabled Center drip" }));
+  await press(within(card("L05")).getByRole("switch", { name: "Enabled Center drip" }));
   expect(lastWrite(api)?.body).toEqual({ enabled: true, manual: true });
   expect(screen.queryByRole("dialog")).toBeNull();
 });
@@ -265,7 +265,7 @@ test("with changes switched off every line control is disabled beside the banner
   expect(text(document.body)).toContain("Changes are switched off");
   for (const control of screen.getAllByRole("switch")) expect(control.hasAttribute("disabled")).toBe(true);
   expect(screen.getByRole<HTMLButtonElement>("button", { name: "Pause lines…" }).disabled).toBe(true);
-  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Options… of L04" }).disabled).toBe(true);
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Options… of Center mister" }).disabled).toBe(true);
   // Both copies (the header's from 861 px, the tabs row's at 860 px and below) stay live.
   const stops = screen.getAllByRole<HTMLButtonElement>("button", { name: "Stop all water" });
   expect(stops).toHaveLength(2);
@@ -275,13 +275,13 @@ test("with changes switched off every line control is disabled beside the banner
 test("L04 options with cap 130 and reserve 60 send {daily_cap_min: 130, vpd_reserve_min: 60, manual: true}; before the engine the change reads REQUESTED with its words and never NOT CONFIRMED", async () => {
   const api = open("/water", { fixture: "before-engine" });
   await load();
-  await press(within(card("L04")).getByRole("button", { name: "Options… of L04" }));
+  await press(within(card("L04")).getByRole("button", { name: "Options… of Center mister" }));
   fireEvent.change(dialog().getByLabelText("Daily cap"), { target: { value: "130" } });
   fireEvent.change(dialog().getByLabelText("VPD reserve"), { target: { value: "60" } });
   await press(dialog().getByRole("button", { name: "Save" }));
   expect(writes(api).map((row) => [row.path, row.body])).toEqual([["/api/v1/irrigation/lines/L04", { daily_cap_min: 130, vpd_reserve_min: 60, manual: true }]]);
   // Before the engine every change waits for the firmware: the status line says so once, and the zone's cap follows.
-  expect(text(document.querySelector("[data-program]"))).toBe("No irrigation engine on the controller yet: relay states only; L01 runs, and every line stops, through the bridge");
+  expect(text(document.querySelector("[data-program]"))).toBe("No irrigation engine on the controller yet: relay states only; the wall drip runs, and every line stops, through the bridge");
   expect(text(document.querySelector('[data-limit="L04"]'))).toMatch(/^14 \/ 130 min/);
   await advance(6 * 60_000);
   expect(sync("L04")).toBe("");
@@ -315,7 +315,7 @@ test("a planned block's popover offers \"Pause <line> until after this run\": on
   const block = () => document.querySelector<HTMLElement>('.sch-day .sch-row[data-line="L01"] .sch-block')!;
   await press(block());
   const pop = () => within(document.querySelector<HTMLElement>("dialog.popover")!);
-  await press(pop().getByRole("button", { name: "Pause L01 until after this run" }));
+  await press(pop().getByRole("button", { name: "Pause Wall drip until after this run" }));
   // 12 minutes of drip, plus one, from 07:35.
   expect(writes(api).map((row) => [row.path, row.body])).toEqual([["/api/v1/irrigation/lines/L01", { paused_until: "2026-11-04T14:48:00.000Z" }]]);
   expect(block().className).toContain("sch-skipped");

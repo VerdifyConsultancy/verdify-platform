@@ -99,7 +99,25 @@ export const LINE_STATES = members<Schemas["LineState"]["code"]>()(["idle", "run
 export const RELAY_STATES = members<Schemas["Equipment"]["items"][number]["state"]>()(["on", "off", "unknown"]);
 export const ROLES = members<Schemas["Me"]["role"]>()(["operator", "viewer"]);
 export const VERDICTS = members<Schemas["BandPosition"]["verdict"]>()(["in", "above", "below", "unavailable"]);
+/** What water was for (#1348): irrigation waters plants; climate is VPD and fallback misting, and every fog run. */
+export const PURPOSES = members<Schemas["RunPurpose"]>()(["irrigation", "climate"]);
+export type Purpose = (typeof PURPOSES)[number];
+/** The fog line: every run on it is climate. */
+export const FOG_LINE = "L11";
+const CLIMATE_CAUSES: ReadonlySet<string> = new Set(["vpd", "fallback"]);
+/** A run's purpose from its line and cause, as `verdify_schemas.irrigation.purpose_of` gives it. */
+export function purposeOf(lineId: string, cause: string): Purpose {
+  return lineId === FOG_LINE || CLIMATE_CAUSES.has(cause) ? "climate" : "irrigation";
+}
+/** A minutes row's purpose from its group: a line id, a zone (fog is all climate) or a cause. */
+export function groupPurpose(groupBy: string, group: string, cause: string): Purpose {
+  if (groupBy === "line") return purposeOf(group, cause);
+  if (groupBy === "zone" && group === "fog") return "climate";
+  return purposeOf("", cause);
+}
 const cause = choice(CAUSES, "unknown");
+/** A server older than #1348 sends no purpose: it is then read from the line and cause, the server's own rule. */
+const purpose = choice(PURPOSES, "irrigation").optional();
 const outcome = choice(OUTCOMES, "unknown");
 const relay = choice(RELAY_STATES, "unknown");
 const nullableNumbers = z.array(num.nullable());
@@ -227,7 +245,7 @@ const lightCommand = z.object({ light: code, state: code, result: code, activity
 const gallons = z.record(z.string(), int).nullable();
 const waterUse = z.object({
   from: text, to: text,
-  days: z.array(z.object({ date: text, coverage: code, meter_gal: int.nullable(), by_line: gallons, by_cause: gallons, no_valve_gal: int.nullable() })),
+  days: z.array(z.object({ date: text, coverage: code, meter_gal: int.nullable(), by_line: gallons, by_cause: gallons, by_purpose: gallons.default(null), no_valve_gal: int.nullable() })),
 });
 
 const lineState = z.object({
@@ -239,10 +257,12 @@ const irrigationLine = z.object({
   check: z.object({ checked_by: text, checked_at: text, note: maybe(text) }).nullable(), vpd_member: maybe(flag), schedule_member: maybe(flag),
   vpd_source: maybe(code), daily_cap_min: int, vpd_reserve_min: maybe(int), paused_until: text.nullable(), paused_by: maybe(actor),
   pause_reason: maybe(text), fault: maybe(code), fault_until: maybe(text), manual: flag, manual_before: maybe(flag), state: lineState,
-  today: z.object({ minutes: maybe(num), pulses: maybe(int), gal: maybe(int) }).optional(), next_run: maybe(nextRun),
-  last_water: maybe(z.object({ at: text, open_s: int, pulses: maybe(int), cause })),
+  today: z.object({ minutes: maybe(num), pulses: maybe(int), gal: maybe(int), climate_minutes: maybe(num), climate_pulses: maybe(int) }).optional(), next_run: maybe(nextRun),
+  last_water: maybe(z.object({ at: text, open_s: int, pulses: maybe(int), cause, purpose })),
   last_outcome: maybe(z.object({ outcome, at: text, reason: maybe(text) })), sync: code,
-});
+}).transform((line) => ({
+  ...line, last_water: line.last_water && { ...line.last_water, purpose: line.last_water.purpose ?? purposeOf(line.line_id, line.last_water.cause) },
+}));
 const programSync = z.object({
   state: code, revision: maybe(int), desired_sha256: text, applied_revision: maybe(int), applied_hash: maybe(text), src: code.nullable(),
   reason: maybe(text), pushed_at: maybe(text), confirmed_at: maybe(text), reject_code: maybe(text), next_retry_at: maybe(text),
@@ -253,7 +273,10 @@ const irrigationStatus = z.object({
   active_runs: z.array(z.object({
     manifold: code, line_id: text, cause, slot_id: maybe(int), started_at: text, ends_at: maybe(text), pulses_done: maybe(int), pulses_total: maybe(int),
   })),
-  today: z.object({ date: text, zones: z.record(z.string(), num.nullable()) }),
+  today: z.object({
+    date: text, zones: z.record(z.string(), num.nullable()), climate_zones: z.record(z.string(), num.nullable()).default({}),
+    climate: z.object({ minutes: maybe(num), pulses: maybe(int), gal: maybe(int) }).default({ minutes: null, pulses: null, gal: null }),
+  }),
   limits: z.object({ saf4_gal: usedOfMax, soft_budget_gal: usedOfMax }), leak, occupancy, fallback_active: flag, freshness,
 });
 const schedule = z.object({
@@ -275,13 +298,15 @@ const command = z.object({
 });
 const linesUpdated = z.object({ lines: z.array(irrigationLine) });
 const minutesReport = z.object({
-  from: text, to: text, group_by: code, periods: z.array(z.object({ start: text, coverage: code })),
-  rows: z.array(z.object({ period: text, group: text, cause, chemistry: code, minutes: num, pulses: maybe(int), gal: maybe(int) })),
-});
+  from: text, to: text, group_by: code, purpose: maybe(choice(PURPOSES, "irrigation")), periods: z.array(z.object({ start: text, coverage: code })),
+  rows: z.array(z.object({ period: text, group: text, cause, purpose, chemistry: code, minutes: num, pulses: maybe(int), gal: maybe(int) })),
+}).transform((report) => ({
+  ...report, rows: report.rows.map((row) => ({ ...row, purpose: row.purpose ?? groupPurpose(report.group_by, row.group, row.cause) })),
+}));
 const run = z.object({
-  run_id: text, line_id: text, zone: text, chemistry: code, cause, slot_id: maybe(int), schedule_label: maybe(text), command_id: maybe(text),
+  run_id: text, line_id: text, zone: text, chemistry: code, cause, purpose, slot_id: maybe(int), schedule_label: maybe(text), command_id: maybe(text),
   actor: maybe(actor), started_at: text, ended_at: maybe(text), open_s: int, pulses: maybe(int), gal: maybe(int), outcome, reason: maybe(text),
-});
+}).transform((value) => ({ ...value, purpose: value.purpose ?? purposeOf(value.line_id, value.cause) }));
 const runPage = z.object({ ...page, items: z.array(run) });
 
 // ---------------------------------------------------------------------------------------------------- parsers

@@ -23,8 +23,8 @@ const KEY = "verdify:graphs:24h";
 const settle = () => act(async () => { await vi.dynamicImportSettled(); });
 // The mock's plot is 1000 px wide over the 4 h window, from x = 0.
 const x = (clock: string) => ((at(clock) - RANGE.from) / (RANGE.to - RANGE.from)) * 1000;
-const ACTIVE = ["Fan 1", "Vent", "Heat 1 (electric)", "Heat 2 (gas)", "L01 Wall drip", "L04 Center mister", "Main grow light (Lutron)", "Grow light (Lutron)", "Water flowing"];
-const IDLE = ["Fan 2", "L02 Wall feed", "L03 Fert master", "L05 Center drip", "L06 Center feed", "L07 South mister", "L08 South feed mister", "L09 West mister", "L10 West feed mister", "L11 Fog", "Occupancy", "Unexplained flow"];
+const ACTIVE = ["Fan 1", "Vent", "Heat 1 (electric)", "Heat 2 (gas)", "Wall drip", "Center mister", "Main grow light (Lutron)", "Grow light (Lutron)", "Water flowing"];
+const IDLE = ["Fan 2", "Wall drip (fertilized)", "Fertilizer valve", "Center drip", "Center drip (fertilized)", "South mister", "South mister (fertilized)", "West mister", "West mister (fertilized)", "Fog", "Occupancy", "Unexplained flow"];
 
 function props(overrides: Partial<EquipmentLanesProps> = {}): EquipmentLanesProps {
   return { states: load<StateLanes>(statesFixture), xRange: RANGE, syncKey: KEY, now: RANGE.to, ...overrides };
@@ -165,7 +165,7 @@ test("a wet line's schedule interval names \"schedule\"; a null cause draws in t
   expect(wall.map((rect) => [rect.color, Math.round(rect.x), Math.round(rect.x + rect.width)])).toEqual([[TOKENS["--eq-water"], Math.round(x("07:31")), Math.round(x("07:43"))]]);
   expect(ctx.texts.filter((text) => text.text === "schedule" && text.y === band(4).top + 7).map((text) => Math.round(text.x))).toEqual([Math.round(x("07:43") + 4)]);
   plot.hover(at("07:35"), null, 4 * 20 + 10);
-  expect(tooltip(plot)).toEqual(["L01 Wall drip", "on", "11/01/2026 01:31 GMT-06:00–01:43 GMT-06:00", `12${NBSP}min`, "schedule"]);
+  expect(tooltip(plot)).toEqual(["Wall drip", "on", "11/01/2026 01:31 GMT-06:00–01:43 GMT-06:00", `12${NBSP}min`, "schedule"]);
   // L04 (row 5): three VPD pulses named once, a scheduled pulse, and a pulse whose cause is still null.
   const center = ctx.rects.filter((rect) => rect.y === band(5).top);
   expect(center.map((rect) => rect.color)).toEqual([TOKENS["--eq-mister"], TOKENS["--eq-mister"], TOKENS["--eq-mister"], TOKENS["--eq-water"], TOKENS["--eq-mister"]]);
@@ -175,11 +175,11 @@ test("a wet line's schedule interval names \"schedule\"; a null cause draws in t
   expect(Math.round(center[4].x)).toBe(Math.round(x("08:30")));
   expect(ctx.texts.some((text) => text.y === band(5).top + 7 && text.x > x("08:31") && text.x < x("09:10"))).toBe(false);
   plot.hover(at("08:30") + 30, null, 5 * 20 + 10);
-  expect(tooltip(plot)).toEqual(["L04 Center mister", "on", "11/01/2026 01:30 GMT-07:00–01:31 GMT-07:00", `1${NBSP}min`]);
+  expect(tooltip(plot)).toEqual(["Center mister", "on", "11/01/2026 01:30 GMT-07:00–01:31 GMT-07:00", `1${NBSP}min`]);
   const rows = await openTable(container);
-  const wallRows = rows.filter((cells) => cells[0] === "L01 Wall drip");
+  const wallRows = rows.filter((cells) => cells[0] === "Wall drip");
   expect(wallRows.map((cells) => [cells[1], cells[4], cells[5]])).toEqual([["off", `91${NBSP}min`, ""], ["on", `12${NBSP}min`, "schedule"], ["off", `2${NBSP}h${NBSP}17${NBSP}min`, ""]]);
-  const centerOn = rows.filter((cells) => cells[0] === "L04 Center mister" && cells[1] === "on").map((cells) => cells[5]);
+  const centerOn = rows.filter((cells) => cells[0] === "Center mister" && cells[1] === "on").map((cells) => cells[5]);
   expect(centerOn).toEqual(["VPD", "VPD", "VPD", "schedule", ""]);
   expect([...container.querySelectorAll(".chart-key li")].map((item) => item.textContent)).toEqual(["VPD", "schedule", "unknown", "sensed"]);
   // The key sits right under the rows it names, above the CSV and the table, which is named by its subject.

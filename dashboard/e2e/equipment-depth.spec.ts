@@ -27,9 +27,9 @@ for (const viewport of VIEWPORTS) {
     await load(page, "/equipment");
     await expect(reason(page, "mode_reason")).toContainText("Climate mode");
     await expect(reason(page, "mode_reason").locator(".why-words")).toHaveText("Venting: too warm · since Nov 1, 13:40");
-    await expect(reason(page, "fog_block_reason")).toContainText("Fog (L11)");
+    await expect(reason(page, "fog_block_reason")).toContainText("Fog");
     await expect(reason(page, "fog_block_reason").locator(".why-words")).toHaveText("Humidity at the fog ceiling · since 09:12");
-    await expect(reason(page, "moisture_block_reason")).toContainText("Misters (L04, L07, L09)");
+    await expect(reason(page, "moisture_block_reason")).toContainText("Misters (center, south, west)");
     await expect(reason(page, "moisture_block_reason").locator(".why-words")).toHaveText("VPD in band: no misting needed · since 07:12");
     await expect(reason(page, "fog_block_reason").locator("time")).toHaveAttribute("datetime", "2026-11-02T16:12:00.000Z");
     await expect(reason(page, "mode_reason").getByRole("link", { name: /^Graphs/ })).toHaveAttribute("href", "/graphs?from=2026-11-01T18:40:00Z&to=2026-11-01T22:40:00Z");
