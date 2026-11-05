@@ -768,7 +768,7 @@ class TestContractDriftGuardrails:
         assert "FW_VERSION=" in makefile
         assert ".dirty" in makefile
         assert "firmware-promote-last-good" in makefile
-        assert "Rollback target unchanged while this build bakes" in makefile
+        assert "Rollback target unchanged until make firmware-promote-last-good" in makefile
         assert makefile.index("bash scripts/firmware-deploy-preflight.sh") < makefile.index("upload --device")
         assert "ALLOW_FIRMWARE_DEPLOY_GUARD_OVERRIDE" in preflight
         assert "FIRMWARE_DEPLOY_OVERRIDE_REASON" in preflight
@@ -785,9 +785,11 @@ class TestContractDriftGuardrails:
         assert "relay_truth" in preflight
         assert "graphable target deltas and relay truth" in preflight
         assert "FIRMWARE_OTA_FREEZE_OVERRIDE_REASON" in preflight
-        assert 'record_override "48-hour bake"' in preflight
-        assert 'record_override "Weekly OTA limit"' in preflight
-        assert "48-hour bake check passed for $last_good" in preflight
+        assert 'require_override_reason "provisional rollback candidate"' in preflight
+        assert "Last-good rollback artifact present" in preflight
+        # Jason, 2026-11-05: no release timing gate, so no bake age and no weekly limit.
+        for timing_gate in ("48-hour bake", "Weekly OTA limit", "mtime", "date_trunc('week'"):
+            assert timing_gate not in preflight, timing_gate
 
 
 class TestFirmwareCheckTargets:

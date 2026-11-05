@@ -1,6 +1,6 @@
 # Verdify Release Checklist
 
-Updated 2026-10-25. Production is the single `verdify-prod` environment, delivered
+Updated 2026-11-05. Production is the single `verdify-prod` environment, delivered
 by the manual-sync Argo application `verdify-prod-dark` from `main`. Use this
 checklist with [the operating contract](../AGENTS.md),
 [service delivery](runbooks/laptop-operator.md#2-cicd-merge-publishes-promotion-pins-the-gated-sync-deploys-single-env)
@@ -94,32 +94,29 @@ the current sprint's survey and release status.
 - [ ] Use the independent verification-only Job to check the archived bytes,
       pinned public key, signature and exact reviewed manifest hash without
       device contact. Build, signature and verification success establish
-      artifact custody, not physical compatibility, bake or recovery acceptance.
+      artifact custody, not physical compatibility or recovery acceptance.
 
 **Recovery, preflight and runtime contract**
 
 - [ ] Identify the independently available recovery binary and its full hash,
       provenance, configuration compatibility and actual recovery evidence.
       A filename, matching version, copied metadata or successful compile does
-      not qualify last-good. A provisional recovery artifact stays explicitly
-      unbaked and follows the existing reason-logged provisional path; it does
-      not become accepted last-good by being selected.
+      not qualify last-good. A provisional recovery artifact follows the
+      existing reason-logged provisional path; it does not become accepted
+      last-good by being selected.
 - [ ] Before a release, declare its heap/free-block and fragmentation bounds,
       loop timing, software-reset and watchdog-reset reporting, representative
-      load, canary/soak duration, relay/cfg checks and rollback triggers. Carry
+      load, canaries, relay/cfg checks and rollback triggers. Carry
       the applicable #390/#428 requirements and affected control contracts into
       that exact candidate's packet. Missing physical topology or recovery
       evidence remains missing; it is not replaced with a green software test.
 - [ ] Run the unchanged `scripts/firmware-deploy-preflight.sh` with the kube DB
       backend in the attended release window: no unresolved critical/legacy-high
-      alerts, fresh climate/action telemetry and complete action proof, existing
-      weekly OTA limit, and verified available rollback bytes. Forecast heat is
-      context, not a new blocker. Follow the existing reason-logged override
+      alerts, fresh climate/action telemetry and complete action proof, and
+      verified available rollback bytes. There is no bake, minimum-age or weekly
+      gate (Jason, 2026-11-05): new builds ship as often as needed. Forecast heat
+      is context, not a new blocker. Follow the existing reason-logged override
       semantics only when the requested scope covers the relevant exception.
-- [ ] Distinguish the preflight's last-good file-age check from actual bake
-      evidence. Passing its 48-hour mtime check proves neither 48 hours of clean
-      device runtime nor recovery. Preserve the real observed bake interval and
-      its reset, heap, timing, fault and configuration records separately.
 
 **Attended flash and acceptance**
 
@@ -138,14 +135,14 @@ the current sprint's survey and release status.
       `dehum_vent_hold_enabled` and related config through current readbacks.
       Record actual door/screen state and other envelope conditions. Do not
       infer them from July firmware defaults, widen tunable bounds, or inject a
-      setpoint merely to match an old checklist. Preserve stable bake conditions;
-      record any intervention and its effect on the observation window.
+      setpoint merely to match an old checklist. Record any intervention and its
+      effect on the observation window.
 - [ ] Retain exact pre/post firmware, configuration and raw-transition evidence,
       including starts/dwell, separate software/watchdog reset counts and the
       declared runtime canaries. Incomplete coverage is not a pass. Promote
-      last-good only after the actual required bake (at least 48 hours), runtime
-      criteria and recovery qualification are met; no ordinary CI or signature
-      result promotes it automatically.
+      last-good once the runtime criteria and recovery qualification are met,
+      with no minimum wait; no ordinary CI or signature result promotes it
+      automatically.
 
 ## C. Dashboards (Grafana)
 

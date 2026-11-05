@@ -42,7 +42,7 @@ is uploaded to a public transparency log or timestamp service. The trusted key
 comes independently from Git, never from the bundle.
 
 Only a separately authorized attended firmware release may select action
-`flash`. Complete the existing firmware preflight and retain rollback/bake
+`flash`. Complete the existing firmware preflight and retain rollback
 evidence first. The flasher uploads the verified private binary without
 recompiling; the operator then performs the existing database-backed version
 and sensor-health checks. A software signature is not device-side enforcement:
@@ -121,7 +121,7 @@ It prints only setter names and counts, for `set_ssid`, `set_password` and
 The preflight wants the rollback binary as a local file, the exact bytes of the
 release that is running. `firmware.ota.bin` contains the Wi-Fi password, the OTA
 password and the API key: never send it through a pod log, keep the copy at mode
-0600 in a private directory, and delete it after the soak. Do not use
+0600 in a private directory, and delete it after the close-out. Do not use
 `/artifacts/last-good.ota.bin`, which need not be the running release.
 
 ```sh
@@ -143,9 +143,9 @@ bash scripts/firmware-deploy-preflight.sh
 ```
 
 Required: exit 0, `Verified provisional rollback candidate (not accepted
-last-good)`, `Weekly OTA limit clear`, and one new `deploy_override` row in
-`alert_log`. If the weekly line reads "override accepted", stop and decide
-explicitly: the reason variable also clears that gate. Do not set
+last-good)`, and one new `deploy_override` row in `alert_log`. The reason
+variable only records why this rollback release is used; there is no bake or
+weekly gate for it to clear. Do not set
 `ALLOW_FIRMWARE_DEPLOY_GUARD_OVERRIDE` or `FIRMWARE_DEPLOY_OVERRIDE_REASON`, which
 weaken the alert and telemetry guards.
 
@@ -231,20 +231,22 @@ use `diagnostics.ts - uptime_s`, because rows lag by 33-37 s on OTA boots.
 | Uptime 360 s or more | `bash scripts/sensor-health-sweep.sh --since '10 minutes' --expected-fw "$V"`, with `--no-water` under a no-water rule | Zero FAIL. This is the decisive sweep: before 360 s a value from before the boot can still read fresh |
 | B+10 min | Newest `setpoint_snapshot` against the desired values | Pushed values confirmed, none mismatched |
 | B+20 min | `setpoint_delivery_stuck` | Not open |
-| B+60 min | Close-out, below | |
+| When the rows above pass | Close-out, below | |
 
 Re-run a failing sweep once, after `max(diagnostics.ts)` has moved. Report water as
 "no evidence of a valve opening, from telemetry": the ingestor can drop an ON edge
 in the reconnect burst, the meter is coarse, and nothing here sees a stuck valve.
 Relay-to-line mapping and the door stay unobserved until
 someone is on site, so a green soak is "flashed, software canaries only", not
-acceptance. The bake and the last-good promotion stay separate decisions.
+acceptance. Promoting the release to last-good stays a separate decision, with no
+minimum wait.
 
 ### 8. Close-out and the pin
 
-Hold 60 minutes with no operator device-affecting change and no sync that restarts
-the ingestor. Then re-run the sweep with `--since '65 minutes'` and pin the accepted
-version:
+There is no hold before the pin and no wait before the next release (Jason,
+2026-11-05): a newer build can be flashed as soon as it is ready, through these
+same steps. When the checks above pass, re-run the sweep with a `--since` that
+covers the time since B, and pin the accepted version:
 
 ```sh
 python3 scripts/firmware-release-job.py pin --firmware-version "$V"            # refuses unless the controller reports it
