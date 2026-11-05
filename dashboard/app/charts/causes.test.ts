@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import { CAUSE_TOKENS, CAUSE_WORDS, IRRIGATION_CAUSES, causeRank, causeToken, causeWords } from "./causes";
+import { LINE_KIND_TOKENS } from "./palette";
 import { CHART_TOKENS } from "./uplot-chart";
 
 const docs = new URL("../../../docs/design/dashboard/", import.meta.url);
@@ -16,9 +17,12 @@ test("the causes are the OpenAPI IrrigationCause enum, in its order", () => {
 
 test("each cause has its words and a chart token, and design system §5.1 lists the same table", () => {
   expect(IRRIGATION_CAUSES.map(causeWords)).toEqual(["VPD", "schedule", "run now", "feed", "prewet", "flush", "fallback", "cause unknown"]);
-  expect(IRRIGATION_CAUSES.map(causeToken)).toEqual(["--eq-mister", "--eq-water", "--eq-master", "--eq-fert", "--eq-fog", "--eq-fog", "--eq-heat1", "--c-bound"]);
+  expect(IRRIGATION_CAUSES.map(causeToken)).toEqual(["--cause-vpd", "--cause-schedule", "--forest", "--eq-fert", "--cause-prep", "--cause-prep", "--eq-heat1", "--c-bound"]);
+  // One chart vocabulary (#1354): no cause borrows a water line's colour except feed, which is fertilizer either way.
+  const lineColours = new Set(Object.values(LINE_KIND_TOKENS));
+  expect(IRRIGATION_CAUSES.filter((cause) => lineColours.has(causeToken(cause)))).toEqual(["feed"]);
   for (const token of Object.values(CAUSE_TOKENS)) expect(CHART_TOKENS as readonly string[]).toContain(token);
-  // The §5.1 rows: | `prewet`, `flush` | prewet, flush | `--eq-fog` |
+  // The §5.1 rows: | `prewet`, `flush` | prewet, flush | `--cause-prep` |
   const rows = [...design.matchAll(/^\| ((?:`[a-z_]+`(?:, )?)+) \| ([^|]+) \| `(--[a-z0-9-]+)` \|$/gm)];
   const documented = new Map<string, { words: string; token: string }>();
   for (const [, causes, words, token] of rows) {

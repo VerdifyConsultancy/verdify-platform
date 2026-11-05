@@ -116,20 +116,16 @@ test("on 2026-11-01 axis times from 01:00 to 01:59 carry their short zone, and t
   expect(details.querySelector("tbody time")!.getAttribute("datetime")).toBe("2026-11-01T06:00:00.000Z");
 });
 
-test("steps: SUPERSEDED muted, the forecast rule never AI, a request dashed amber and never the device line", async () => {
+test("steps: SUPERSEDED muted, the plan in the series colour, a request dashed amber and never the device line; no words in the plot but Now", async () => {
   const history = load<SettingHistory>(historyFixture);
   const { plot } = await mount({ metrics: [metric("climate.vpd_avg")], band: load<BandTimeline>(bandFixture), settings: [{ history }] });
   plot.draw();
   const ctx = plot.ctx;
   // Every hook restores the context it changed: uPlot caches its styles between draws.
   expect(ctx.depth).toBe(0);
-  const label = (text: string) => ctx.texts.find((item) => item.text === text);
   const kpa = (value: string) => `${value}${NBSP}kPa`;
-  expect(label(`${kpa("1.80")} SUPERSEDED`)).toMatchObject({ color: TOKENS["--c-bound"] });
-  expect(label(`${kpa("1.70")} PLANNED · AI`)).toMatchObject({ color: TOKENS["--c-vpd"] });
-  expect(label(`${kpa("1.65")} Forecast rule · system`)).toMatchObject({ color: TOKENS["--c-vpd"] });
-  expect(ctx.texts.filter((item) => item.text.includes("Forecast rule")).every((item) => !item.text.includes("AI"))).toBe(true);
-  expect(label("Now")).toMatchObject({ color: TOKENS["--ink"] });
+  // The only words in the plot (#1354): the steps, the bounds and the band are named in the key, tooltip and notes.
+  expect(ctx.texts.map((item) => [item.text, item.color])).toEqual([["Now", TOKENS["--ink"]]]);
   const strokes = (color: string, dash: number[]) => ctx.strokes.filter((stroke) => stroke.stroke === color && JSON.stringify(stroke.dash) === JSON.stringify(dash));
   // Superseded: muted --c-bound, dashed [8,4]; planned: the series colour, dashed [8,4].
   expect(strokes(TOKENS["--c-bound"], [8, 4])).toHaveLength(2);
@@ -143,13 +139,8 @@ test("steps: SUPERSEDED muted, the forecast rule never AI, a request dashed ambe
   expect(device.every((stroke) => stroke.path.every(([, y]) => y !== requested[0].path[1][1]))).toBe(true);
   // The now line: 1.5px ink.
   expect(ctx.strokes.some((stroke) => stroke.stroke === TOKENS["--ink"] && stroke.width === 1.5)).toBe(true);
-  // max 2.50 is above the y range: an edge label and no line. min 0.50 is inside it (the crop band dips to 0.51):
-  // a dotted line, labelled at the right edge.
-  expect(plot.scales.y.max).toBeLessThan(2.5);
-  expect(label(`max ${kpa("2.50")} ↑`)).toMatchObject({ color: TOKENS["--c-bound"] });
-  expect(plot.scales.y.min).toBeLessThan(0.5);
-  expect(label(`min ${kpa("0.50")}`)).toMatchObject({ color: TOKENS["--c-bound"] });
-  expect(strokes(TOKENS["--c-bound"], [1, 3])).toHaveLength(1);
+  // The setting's min 0.50 and max 2.50 are its allowed range, not climate: no dotted bound on a climate panel (#1354).
+  expect(strokes(TOKENS["--c-bound"], [1, 3])).toHaveLength(0);
   // The band wash under the grid, its 1px edges above it.
   expect(ctx.fills.some((fill) => fill.color === TOKENS["--c-band-wash"])).toBe(true);
   expect(ctx.strokes.some((stroke) => stroke.stroke === TOKENS["--c-band-edge"] && stroke.width === 1)).toBe(true);
@@ -160,7 +151,7 @@ test("steps: SUPERSEDED muted, the forecast rule never AI, a request dashed ambe
   expect(tooltip(plot)).toContain(`mister_engage_kpa SUPERSEDED ${kpa("1.80")} · Iris plan · ${kpa("1.55")} (jason) holds until a newer plan`);
 });
 
-test("step labels read at 4.5:1: the RH panel's plan in ink, a request in the amber text token", async () => {
+test("the RH panel's plan keeps --c-rh and a request the amber dash; neither is labelled in the plot", async () => {
   const history = load<SettingHistory>(historyFixture);
   const percent = (value: number | null) => (value === null ? null : value * 50);
   const rh: SettingHistory = {
@@ -174,32 +165,35 @@ test("step labels read at 4.5:1: the RH panel's plan in ink, a request in the am
   const label = (text: string) => plot.ctx.texts.find((item) => item.text === text);
   // The line keeps --c-rh (3:1 for lines); its label does not.
   expect(plot.ctx.strokes.some((stroke) => stroke.stroke === TOKENS["--c-rh"] && JSON.stringify(stroke.dash) === "[8,4]")).toBe(true);
-  expect(label("85.0% PLANNED · AI")).toMatchObject({ color: TOKENS["--ink"] });
-  expect(label("77.5% REQUESTED")).toMatchObject({ color: TOKENS["--warn-text"] });
+  expect(label("85.0% PLANNED · AI")).toBeUndefined();
+  expect(label("77.5% REQUESTED")).toBeUndefined();
   expect(plot.ctx.strokes.some((stroke) => stroke.stroke === TOKENS["--c-requested"] && JSON.stringify(stroke.dash) === "[6,4]")).toBe(true);
 });
 
-test("a bound inside the y range is a dotted line labelled at the right edge", async () => {
+test("a climate panel draws no bound even inside its y range; the setting's own history does, unlabelled", async () => {
   const history = load<SettingHistory>(historyFixture);
   history.max = 1.75;
   const { plot } = await mount({ metrics: [metric("climate.vpd_avg")], settings: [{ history }] });
   plot.draw();
-  expect(plot.ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--c-bound"] && JSON.stringify(stroke.dash) === "[1,3]")).toHaveLength(1);
-  expect(plot.ctx.texts.some((item) => item.text === `max 1.75${NBSP}kPa`)).toBe(true);
+  expect(plot.ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--c-bound"] && JSON.stringify(stroke.dash) === "[1,3]")).toHaveLength(0);
+  expect(plot.ctx.texts.some((item) => item.text.includes("1.75"))).toBe(false);
+  expect(buildTimeSeriesModel(props({ metrics: [metric("climate.vpd_avg")], settings: [{ history }] })).bounds).toEqual([]);
+  expect(buildTimeSeriesModel(props({ series: null, metrics: [], unit: "kPa", settings: [{ history }] })).bounds.map((bound) => bound.kind)).toEqual(["min", "max"]);
 });
 
-test("the y range is the band plus half its width each side, widened to the shown traces and steps with 5% past them", async () => {
+test("the y range is the band plus half its width each side, widened to the shown traces; a setting step never stretches it (#1354)", async () => {
   const history = load<SettingHistory>(historyFixture);
   const band = load<BandTimeline>(bandFixture);
   const { plot } = await mount({ metrics: [metric("climate.vpd_avg")], band, settings: [{ history }] });
   plot.draw();
   const model = buildTimeSeriesModel({ ...props({ metrics: [metric("climate.vpd_avg")], band, settings: [{ history }] }) });
   const width = Math.max(...model.runs.flatMap((run) => run.high.map((value, index) => value - run.low[index])));
-  const low = Math.min(...model.runs.flatMap((run) => run.low)) - width / 2, high = 1.8;
-  // Under the band, half its width of room, which no trace reaches: the band keeps its lower edge in view.
+  const low = Math.min(...model.runs.flatMap((run) => run.low)) - width / 2, high = Math.max(...model.runs.flatMap((run) => run.high)) + width / 2;
+  // Under and over the band, half its width of room, which no trace reaches: the band keeps both edges in view.
   expect(plot.scales.y.min).toBeCloseTo(low, 9);
-  // The device step at 1.80 kPa is past the band's half width: the range takes it, with 5% to spare.
-  expect(plot.scales.y.max).toBeCloseTo(high + (high - low) * 0.05, 9);
+  // The device step at 1.80 kPa is past the band's half width, yet the range stays on the band: the key says it is above.
+  expect(plot.scales.y.max).toBeCloseTo(high, 9);
+  expect(high).toBeLessThan(1.8);
 });
 
 test("400 daily summaries draw one point per day and say so; heap reads kB and is beyond retention before its retained_from", async () => {
@@ -331,6 +325,7 @@ test("a settings-only chart: the plot holds only steps; the legend, the data tab
   expect(plot.opts.series).toHaveLength(1);
   plot.draw();
   const label = (text: string) => plot.ctx.texts.find((item) => item.text === text);
+  // A setting's own history labels its steps (they are its data); a climate chart does not (#1354).
   expect(label("jason · dashboard")).toMatchObject({ color: TOKENS["--warn-text"] });
   // The key names what is drawn: no toggles, as a step is no series.
   expect(container.querySelector(".chart-legend")).toBeNull();
@@ -387,7 +382,7 @@ function forecastInput(avg: (number | null)[] = [50, 52, 54]) {
 }
 const dashedStrokes = (plot: MockPlot) => plot.ctx.strokes.filter((stroke) => stroke.dash.join() === "8,4");
 
-test("the forecast: dashed in the outdoor token, its label, its note, in the y range and the tooltip; a data table and CSV rows of its own", async () => {
+test("the forecast: dashed in the outdoor token, its issue said once in the notes (never in the plot), in the y range and the tooltip; a data table and CSV rows of its own", async () => {
   const urls: Blob[] = [];
   URL.createObjectURL = vi.fn((blob: Blob) => { urls.push(blob); return `blob:csv-${urls.length}`; });
   const { plot, container } = await mount({ forecast: forecastInput() });
@@ -398,7 +393,7 @@ test("the forecast: dashed in the outdoor token, its label, its note, in the y r
   expect(line.width).toBe(2);
   expect(line.path).toHaveLength(3);
   expect(plot.data).toHaveLength(2);
-  expect(plot.ctx.texts.map((item) => item.text)).toContain("Forecast · issued 03:00");
+  expect(plot.ctx.texts.map((item) => item.text)).not.toContain("Forecast · issued 03:00");
   expect([...container.querySelectorAll(".chart-notes li")].map((node) => node.textContent)).toEqual(["Forecast · issued 03:00"]);
   // The y range reaches it even though no trace does.
   expect(plot.scales.y.max).toBeGreaterThan(54);

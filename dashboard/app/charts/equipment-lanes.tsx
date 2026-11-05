@@ -2,14 +2,14 @@
 import { useContext, useId, useMemo, useRef, useState, type MutableRefObject } from "react";
 import type uPlot from "uplot";
 import { LINES, lineByEquipment, lineById } from "../lib/lines";
-import type { LineKind } from "../lib/vocab";
-import { causeRank, causeToken, causeWords } from "./causes";
+import { causeWords } from "./causes";
 import { csvFilename, tableCsv } from "./csv";
 import { CsvLink, DataTable, TimeCell, type DataTableBlock } from "./data-table";
 import { labelColor, paintNow, type ChartColors, type PaintTarget } from "./draw";
 import { LANE_HEAD, LANE_PITCH, RowLabels, clipColumns, intervalText, paintHatch, rowBand, spanDuration, spanPixels, type RowLayout } from "./lanes-draw";
 import { ChartKey, type KeyItem } from "./legend";
 import { lastAtOrBefore } from "./marks";
+import { lineKindToken } from "./palette";
 import { InStack } from "./stack-context";
 import { epochOf, isoLocal, silentTimeAxis, spanText, timeAxis } from "./time-axis";
 import { cursorX, tooltipPlugin } from "./tooltip";
@@ -19,7 +19,7 @@ import { UPlotChart, useNarrow, useZoomReset, type ChartEnv, type ChartOptions }
 /**
  * EquipmentLanes (design system §5.2, US-GRF-02): what each actuator was commanded to do, one row per API-05 lane,
  * painted in a `draw` hook on an x-only uPlot that shares the page's cursor. ON fills with the row's token (a wet line
- * with the colour of its cause), sensed rows are outlined, unknown spans are hatched exactly where the API returns them
+ * with its own line's colour, as on Water and Now; its cause is said in words after the run, #1354), sensed rows are outlined, unknown spans are hatched exactly where the API returns them
  * and off draws nothing. Row labels are the API's; the client never makes one up.
  */
 export type LaneState = "on" | "off" | "unknown";
@@ -34,7 +34,7 @@ export type LaneRow = {
   token: string;
   /** The Lutron readback and `water_flowing` are sensed, not commanded: outlined. */
   sensed: boolean;
-  /** A wet line: its ON spans take their cause's colour. */
+  /** A wet line: its runs are named by cause in words after each run. */
   wet: boolean;
   spans: LaneSpan[];
   /** Off for the whole window: folds into the "N idle rows" line. */
@@ -61,7 +61,6 @@ const ROW_TOKENS: Readonly<Record<string, string>> = {
   grow_light_main: "--eq-light-main", grow_light_grow: "--eq-light-grow",
   occupancy: "--muted", leak_detected: "--fault", water_flowing: "--eq-water",
 };
-const KIND_TOKENS: Readonly<Record<LineKind, string>> = { drip: "--eq-water", fert_drip: "--eq-fert", fert_mister: "--eq-fert", master: "--eq-master", mister: "--eq-mister", fog: "--eq-fog" };
 const SENSED = new Set(["grow_light_main", "grow_light_grow", "water_flowing"]);
 /** The controller's grow-light intent shows only on the Equipment board (Q-09), never as a lane. */
 export const isIntentKey = (equipment: string) => equipment.endsWith("_intent");
@@ -89,7 +88,7 @@ function laneRow(lane: StateLane, from: number, to: number): LaneRow {
   });
   return {
     equipment: lane.equipment, label: lane.label || lane.equipment, group: lane.group, lineId: line?.id ?? lane.line_id ?? null,
-    token: ROW_TOKENS[lane.equipment] ?? (line ? KIND_TOKENS[line.kind] : "--muted"),
+    token: ROW_TOKENS[lane.equipment] ?? (line ? lineKindToken(line.kind) ?? "--muted" : "--muted"),
     sensed: SENSED.has(lane.equipment), wet: line !== undefined,
     spans, idle: spans.length > 0 && spans.every((span) => span.state === "off"),
     current: spans.length ? spans[spans.length - 1].state : null, runtime, starts,
@@ -111,10 +110,6 @@ export function buildLanes(states: StateLanes): LanesModel {
   return { from, to, rows, active: rows.filter((row) => !row.idle), idle: rows.filter((row) => row.idle) };
 }
 
-/** The colour of an ON span: a wet line's cause when it has one, else the row's own. */
-export function spanToken(row: LaneRow, span: LaneSpan): string {
-  return row.wet && span.cause ? causeToken(span.cause) : row.token;
-}
 
 /** The state in words, "· sensed" on the readback rows. */
 export function stateWords(row: LaneRow, state: LaneState | null): string {
@@ -174,12 +169,12 @@ export function paintLanes(plot: PaintTarget, view: LanesView, colors: ChartColo
         const width = Math.max(pixels.right - pixels.left, px);
         if (span.state === "unknown") paintHatch(ctx, pixels.left, band.top, width, band.height, colors["--muted"], px);
         else if (row.sensed) {
-          ctx.strokeStyle = colors[spanToken(row, span)];
+          ctx.strokeStyle = colors[row.token];
           ctx.lineWidth = 1.5 * px;
           ctx.setLineDash([]);
           ctx.strokeRect(pixels.left + 0.75 * px, band.top + 0.75 * px, Math.max(width - 1.5 * px, px), band.height - 1.5 * px);
         } else {
-          ctx.fillStyle = colors[spanToken(row, span)];
+          ctx.fillStyle = colors[row.token];
           ctx.fillRect(pixels.left, band.top, width, band.height);
         }
         labels.reserve(index, pixels.left, pixels.left + width);
@@ -199,8 +194,7 @@ export function paintLanes(plot: PaintTarget, view: LanesView, colors: ChartColo
         if (!row.wet || !span.cause) continue;
         // One label per run: skip while the next span continues the run.
         if (next && next.span.state === "on" && next.span.cause === span.cause && next.pixels.left - pixels.right < gap) continue;
-        const token = causeToken(span.cause);
-        labels.place(index, band, causeWords(span.cause), pixels.right + 4 * px, limit, labelColor(colors[token] ?? "", colors["--ink"]));
+        labels.place(index, band, causeWords(span.cause), pixels.right + 4 * px, limit, labelColor(colors[row.token] ?? "", colors["--ink"]));
       }
     });
     if (view.now !== null) paintNow(plot, view.now, colors, px);
@@ -251,20 +245,20 @@ export function lanesCsv(model: LanesModel): string {
   );
 }
 
-/** The key: each cause on a wet line, unknown's hatch and the sensed outline, in words; only marks that are drawn. */
+/**
+ * The key: unknown's hatch and the sensed outline, in words; only marks that are drawn. Each row is named, so its colour
+ * needs no key, and a run's cause is written after it.
+ */
 export function lanesKey(model: LanesModel): KeyItem[] {
-  const causes = new Set<string>();
   let unknown = false, sensed = false;
   for (const row of model.rows) {
     for (const span of row.spans) {
       if (span.state === "unknown") unknown = true;
-      if (row.wet && span.state === "on" && span.cause) causes.add(span.cause);
       // A sensed row draws its outline only around an ON span; unknown alone is hatched.
       if (row.sensed && span.state === "on") sensed = true;
     }
   }
   return [
-    ...[...causes].sort((a, b) => causeRank(a) - causeRank(b)).map((cause): KeyItem => ({ key: cause, label: causeWords(cause), token: causeToken(cause), kind: "fill" })),
     ...(unknown ? [{ key: "unknown-span", label: "unknown", token: "--muted", kind: "hatch" } as const] : []),
     ...(sensed ? [{ key: "sensed", label: "sensed", token: "--ink", kind: "outline" } as const] : []),
   ];

@@ -157,18 +157,18 @@ test("the key names only marks that are drawn: no sensed outline for a Lutron ro
   expect(lanesKey(buildLanes(load<StateLanes>(statesFixture))).map((item) => item.key)).toContain("sensed");
 });
 
-test("a wet line's schedule interval names \"schedule\"; a null cause draws in the line's colour with no cause word", async () => {
+test("a wet line's runs fill in the line's own colour (#1354) and are named by cause after the run; a null cause has no cause word", async () => {
   const { container, plot } = await mount();
   const ctx = plot.ctx;
-  // L01 (row 4): 07:31–07:43, cause schedule, in the schedule colour, named after the run.
+  // L01 (row 4): 07:31–07:43, cause schedule, in the drip line's colour, named after the run.
   const wall = ctx.rects.filter((rect) => rect.y === band(4).top);
   expect(wall.map((rect) => [rect.color, Math.round(rect.x), Math.round(rect.x + rect.width)])).toEqual([[TOKENS["--eq-water"], Math.round(x("07:31")), Math.round(x("07:43"))]]);
   expect(ctx.texts.filter((text) => text.text === "schedule" && text.y === band(4).top + 7).map((text) => Math.round(text.x))).toEqual([Math.round(x("07:43") + 4)]);
   plot.hover(at("07:35"), null, 4 * 20 + 10);
   expect(tooltip(plot)).toEqual(["L01 Wall drip", "on", "11/01/2026 01:31 GMT-06:00–01:43 GMT-06:00", `12${NBSP}min`, "schedule"]);
-  // L04 (row 5): three VPD pulses named once, a scheduled pulse, and a pulse whose cause is still null.
+  // L04 (row 5): three VPD pulses named once, a scheduled pulse, and a pulse whose cause is still null, all in the mister's colour.
   const center = ctx.rects.filter((rect) => rect.y === band(5).top);
-  expect(center.map((rect) => rect.color)).toEqual([TOKENS["--eq-mister"], TOKENS["--eq-mister"], TOKENS["--eq-mister"], TOKENS["--eq-water"], TOKENS["--eq-mister"]]);
+  expect(center.map((rect) => rect.color)).toEqual(Array(5).fill(TOKENS["--eq-mister"]));
   const words = ctx.texts.filter((text) => text.y === band(5).top + 7).map((text) => text.text);
   expect(words).toEqual(["VPD", "schedule", "unknown"]);
   // The null-cause pulse at 08:30: plain mister colour, nothing after it, and no cause in the tooltip.
@@ -181,7 +181,8 @@ test("a wet line's schedule interval names \"schedule\"; a null cause draws in t
   expect(wallRows.map((cells) => [cells[1], cells[4], cells[5]])).toEqual([["off", `91${NBSP}min`, ""], ["on", `12${NBSP}min`, "schedule"], ["off", `2${NBSP}h${NBSP}17${NBSP}min`, ""]]);
   const centerOn = rows.filter((cells) => cells[0] === "L04 Center mister" && cells[1] === "on").map((cells) => cells[5]);
   expect(centerOn).toEqual(["VPD", "VPD", "VPD", "schedule", ""]);
-  expect([...container.querySelectorAll(".chart-key li")].map((item) => item.textContent)).toEqual(["VPD", "schedule", "unknown", "sensed"]);
+  // Each row is named, so its colour needs no key; the key names only the hatch and the outline.
+  expect([...container.querySelectorAll(".chart-key li")].map((item) => item.textContent)).toEqual(["unknown", "sensed"]);
   // The key sits right under the rows it names, above the CSV and the table, which is named by its subject.
   const figure = container.querySelector(".chart-lanes")!;
   expect([...figure.children].map((child) => child.className).filter((name) => /chart-key|chart-tools|chart-table/.test(name))).toEqual(["chart-key", "chart-tools", "chart-table"]);

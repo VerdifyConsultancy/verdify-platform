@@ -65,6 +65,7 @@ const OVERLAY_KEY = /^climate\.outdoor_|^forecast\./;
 const seriesAsked = (api: FixtureApi) => asked(api).filter((row) => !row.metric.some((key) => OVERLAY_KEY.test(key))).map(({ metric, from, to }) => ({ metric, from, to }));
 /** The overlay's own API-04 requests. */
 const overlayAsked = (api: FixtureApi) => asked(api).filter((row) => row.metric.some((key) => OVERLAY_KEY.test(key)));
+const keyItems = (id: string) => [...document.querySelectorAll(`[data-panel="${id}"] .stack-key li`)].map((item) => text(item).replaceAll("\u00a0", " "));
 const texts = (plot: MockPlot) => { plot.draw(); return plot.ctx.texts.map((item) => item.text.replaceAll("\u00a0", " ")); };
 const links_ = (list: string) => within(screen.getByRole("list", { name: list })).getAllByRole("link");
 
@@ -105,13 +106,13 @@ test("/graphs?range=72h&set=mister_engage_kpa: one stack of three panels on one 
   expect(ids()).toEqual(["temperature", "vpd", "rh"]);
   expect([name("temperature"), name("vpd"), name("rh")]).toEqual(["Temperature °F", "VPD kPa", "RH %"]);
   // The resolution line sits in the stack's foot.
-  expect(text(document.querySelector(".stack-foot .resolution-line"))).toBe("Oct 30, 11:42 → Nov 2, 22:42 (84 h across the fall-back) · one point per 5 minutes");
-  // The window is the past 72 h plus 12 h ahead (a quarter of it, at most 12 h); every chart, the lanes included, shares one cursor.
+  expect(text(document.querySelector(".stack-foot .resolution-line"))).toBe("Oct 30, 11:42 → Nov 5, 10:42 (6 d across the fall-back) · one point per 5 minutes");
+  // The window is the past 72 h plus 72 h ahead (decisions 2026-11-05, replacing D-UX-13); every chart, the lanes included, shares one cursor.
   const [temp, vpd, rh] = panels();
   expect(panels()).toHaveLength(3);
   for (const plot of [...panels(), lanesPlot()!]) {
     expect(plot.opts.cursor!.sync!.key).toBe("verdify:graphs:72h");
-    expect(plot.scales.x).toEqual({ min: S - 72 * HOUR, max: S + 12 * HOUR });
+    expect(plot.scales.x).toEqual({ min: S - 72 * HOUR, max: S + 72 * HOUR });
   }
   // Only the bottom panel draws the time axis, and no panel has a floating tooltip.
   expect(panels().map((plot) => plot.opts.axes![0].size === 0)).toEqual([true, true, false]);
@@ -119,13 +120,18 @@ test("/graphs?range=72h&set=mister_engage_kpa: one stack of three panels on one 
   // One API-04 request per panel over [now − 72 h, now); band and setting history read the whole x range.
   expect(seriesAsked(api)).toEqual(["climate.temp_avg", "climate.vpd_avg", "climate.rh_avg"].map((key) => ({ metric: [key], from: iso(S - 72 * HOUR), to: iso(S) })));
   const window = (row: { path: string }) => [query(row.path).get("from"), query(row.path).get("to")];
-  expect(requests(api, "API-06").map(window)).toEqual([[iso(S - 72 * HOUR), iso(S + 12 * HOUR)]]);
-  expect(requests(api, "API-12").map((row) => [new URL(row.path, "http://x").pathname, ...window(row)])).toEqual([["/api/v1/settings/mister_engage_kpa/history", iso(S - 72 * HOUR), iso(S + 12 * HOUR)]]);
+  expect(requests(api, "API-06").map(window)).toEqual([[iso(S - 72 * HOUR), iso(S + 72 * HOUR)]]);
+  expect(requests(api, "API-12").map((row) => [new URL(row.path, "http://x").pathname, ...window(row)])).toEqual([["/api/v1/settings/mister_engage_kpa/history", iso(S - 72 * HOUR), iso(S + 72 * HOUR)]]);
   expect(requests(api, "API-05").map(window)).toEqual([[iso(S - 72 * HOUR), iso(S)]]);
   // The band on temperature and VPD only; the steps on VPD only: the device line and Iris's plan ahead.
   expect([temp, vpd, rh].map((plot) => { plot.draw(); return plot.ctx.fills.some((fill) => fill.color === TOKENS["--c-band-wash"]); })).toEqual([true, true, false]);
-  expect(texts(vpd)).toEqual(expect.arrayContaining(["1.60 kPa device", "1.70 kPa PLANNED · AI"]));
-  expect(texts(temp).some((item) => /device|PLANNED/.test(item))).toBe(false);
+  // No words in the plots but "Now" (#1354): the steps and the band are named in the VPD panel's key instead.
+  for (const plot of [temp, vpd, rh]) expect(texts(plot).filter((item) => /kPa|°F|%|PLANNED|device|Band|Forecast/.test(item))).toEqual([]);
+  // The band is 0.45–0.80 kPa and the setting 1.60: the axis stays on the band and the key says the step is above it.
+  expect(keyItems("vpd")).toEqual(["Band", "VPD Mister Engage 1.60 kPa · above the chart ↑", "VPD Mister Engage · PLANNED · AI 1.70 kPa · above the chart ↑"]);
+  expect(vpd.scales.y.max!).toBeLessThan(1.6);
+  expect(keyItems("temperature")).toEqual(["Band"]);
+  expect(keyItems("rh")).toEqual([]);
   for (const plot of panels()) expect(plot.opts.series.slice(1).every((series) => series.spanGaps === false)).toBe(true);
   // The header rows carry the window's statistics, in band where a band is drawn.
   expect(head("temperature")).toMatch(/^in band 100% · low \d\d\.\d \(.+\) · mean \d\d\.\d · high \d\d\.\d \(.+\)$/);
@@ -162,7 +168,8 @@ test("a cursor on one panel turns every header row into the values there, with o
   expect(document.querySelectorAll(".stack-chip:not([hidden])")).toHaveLength(1);
   // The window spans days, so the chip carries the date.
   expect(text(document.querySelector(".stack-chip"))).toBe("Nov 2, 08:40");
-  expect(head("vpd")).toMatch(/^\d\.\d\d · band 0\.45–0\.80 · in$/);
+  // The readout names the step drawn there too, as the plot no longer labels it (#1354).
+  expect(head("vpd")).toMatch(/^\d\.\d\d · band 0\.45–0\.80 · in · VPD Mister Engage 1\.60$/);
   expect(head("temperature")).toMatch(/^\d\d\.\d · band 62\.0–70\.0 · in$/);
   expect(head("rh")).toMatch(/^\d\d\.\d$/);
   expect(document.querySelector(".chart-tooltip")).toBeNull();
@@ -192,7 +199,7 @@ test("the story line states time in band and up to three excursions, worst first
   expect(temp.ctx.fills.filter((fill) => fill.color === TOKENS["--tint-warn"]).length).toBeGreaterThanOrEqual(2);
 });
 
-test("Today runs from local midnight to the next; 24 h has 6 h ahead; ‹ › step by the window's length and Zoom out doubles it, all in the URL", async () => {
+test("Today runs from local midnight to the next; 24 h has 24 h ahead; ‹ › step by the window's length and Zoom out doubles it, all in the URL", async () => {
   chartStubs();
   await open("/graphs?range=today");
   const midnight = Date.parse("2026-11-02T07:00:00Z") / 1000;
@@ -203,9 +210,9 @@ test("Today runs from local midnight to the next; 24 h has 6 h ahead; ‹ › st
   expect(screen.getByRole("link", { name: "Zoom out" }).getAttribute("href")).toBe("/graphs?range=48h");
   cleanup(); stopFixtureApi(); MockPlot.reset(); chartStubs();
   const api = await open("/graphs?range=24h");
-  expect(panels()[0].scales.x).toEqual({ min: S - 24 * HOUR, max: S + 6 * HOUR });
-  // The forecast reads only the 6 h ahead.
-  expect(overlayAsked(api).find((row) => row.metric[0].startsWith("forecast."))).toMatchObject({ from: iso(S), to: iso(S + 6 * HOUR), points: "10" });
+  expect(panels()[0].scales.x).toEqual({ min: S - 24 * HOUR, max: S + 24 * HOUR });
+  // The forecast reads the 24 h ahead, an hour a point.
+  expect(overlayAsked(api).find((row) => row.metric[0].startsWith("forecast."))).toMatchObject({ from: iso(S), to: iso(S + 24 * HOUR), points: "25" });
   expect(screen.getByRole("link", { name: "Previous 24 h" }).getAttribute("href")).toBe("/graphs?from=2026-10-31T17:42:00Z&to=2026-11-01T17:42:00Z");
   expect(screen.getByRole("link", { name: "Zoom out" }).getAttribute("href")).toBe("/graphs?range=48h");
   cleanup(); stopFixtureApi(); MockPlot.reset(); chartStubs();
@@ -245,11 +252,11 @@ test("an exact ISO window draws exactly that window, with nothing ahead, and as 
   expect(seriesAsked(api).map((row) => [row.from, row.to])).toEqual(Array(3).fill(["2026-11-01T08:00:00.000Z", "2026-11-01T12:00:00.000Z"]));
   expect(text(document.querySelector(".resolution-line"))).toBe("Nov 1, 01:00 MST → Nov 1, 05:00 (4 h) · one point per minute");
   expect(screen.getByRole("list", { name: "Range" }).querySelector("[aria-current]")).toBeNull();
-  // The settings catalog polls on its own; the window's reads never ask again: the panels, outdoor, the lanes, the band,
-  // two settings and the marks (writes, alerts, runs), and no forecast, as the window ended before now.
+  // The settings catalog polls on its own; the window's reads never ask again: the panels, outdoor, the lanes, the band
+  // and the marks (writes, alerts, runs); no setting (none draws by default, #1354) and no forecast, as the window ended before now.
   const windowReads = () => requests(api).filter((row) => ["API-04", "API-05", "API-06", "API-12", "API-17", "API-14", "API-IRR-11"].includes(row.operationId ?? "")).length;
   const count = windowReads();
-  expect(count).toBe(11);
+  expect(count).toBe(9);
   expect(overlayAsked(api).map((row) => row.metric)).toEqual([["climate.outdoor_temp_f", "climate.outdoor_rh_pct"]]);
   await advance(5 * 60_000);
   expect(windowReads()).toBe(count);
@@ -313,7 +320,7 @@ test("the event rail marks writes, alerts and runs by source, each linking to Ac
   const marks = within(rail).getAllByRole("button").map((mark) => [mark.getAttribute("data-mark"), mark.getAttribute("data-token"), mark.getAttribute("aria-label")]);
   expect(marks).toEqual([
     ["diamond-hollow", "muted", "06:30 · forecast-engine · Set Mister Pulse Gap"],
-    ["bar", "eq-mister", "06:58 · L04 · VPD · 14 min · ok"],
+    ["bar", "cause-vpd", "06:58 · L04 · VPD · 14 min · ok"],
     ["diamond", "ink", "07:02 · iris AI · Plan iris-20261102-0702 (SUNRISE)"],
     ["triangle", "warn-text", "08:00 · warning · The greenhouse is outside its band"],
     ["diamond", "forest", "08:42 · jason · Set VPD Mister Engage"],
@@ -436,9 +443,9 @@ test("an empty window says so with a Last 24 h link", async () => {
 
 test("while the controller is not reporting each trace stops at its last sample and the notes say STALE once; the band and the plan still draw", async () => {
   chartStubs();
-  await open("/graphs?range=24h&outdoor=0", { fixture: "controller-not-reporting" });
+  await open("/graphs?range=24h&outdoor=0&set=mister_engage_kpa", { fixture: "controller-not-reporting" });
   const [temp, vpd, rh] = panels();
-  expect([...document.querySelectorAll(".gr-notes li")].map(text)).toEqual(["STALE · last data 10:36"]);
+  expect([...document.querySelectorAll(".gr-notes li")].map(text)).toEqual(["STALE · last data 10:36", "Temperature and VPD: Band in force · DERIVED", "Temperature and VPD: Band ahead of now · reconstructed from today's crop anchors"]);
   for (const plot of [temp, vpd, rh]) {
     const [t, values] = plot.data as [number[], (number | null)[]];
     const last = values.findLastIndex((value) => value !== null);
@@ -446,7 +453,7 @@ test("while the controller is not reporting each trace stops at its last sample 
     expect(values.slice(last + 1).every((value) => value === null)).toBe(true);
   }
   expect([temp, vpd, rh].map((plot) => { plot.draw(); return plot.ctx.fills.some((fill) => fill.color === TOKENS["--c-band-wash"]); })).toEqual([true, true, false]);
-  expect(texts(vpd)).toEqual(expect.arrayContaining(["1.60 kPa device", "1.70 kPa PLANNED · AI"]));
+  expect(keyItems("vpd").map((item) => item.replace(/ · (above|below) the chart [↑↓]$/, ""))).toEqual(["Band", "VPD Mister Engage 1.60 kPa", "VPD Mister Engage · PLANNED · AI 1.70 kPa"]);
   expect(document.querySelector(".panel-empty")).toBeNull();
 });
 
@@ -465,7 +472,7 @@ test("CSV of this window holds exactly the plotted columns, with local times and
   await open("/graphs?range=24h&m=climate.flow_gpm&outdoor=0");
   const link = screen.getByRole("link", { name: "CSV of this window" });
   expect(link.getAttribute("href")).toMatch(/^blob:/);
-  expect(link.getAttribute("download")).toBe("verdify-graphs-2026-11-01T1042-2026-11-02T1642.csv");
+  expect(link.getAttribute("download")).toBe("verdify-graphs-2026-11-01T1042-2026-11-03T1042.csv");
   const csv = await blobs[blobs.length - 1].text();
   const lines = csv.trimEnd().split("\r\n");
   expect(lines[0]).toBe("time (America/Denver),climate.temp_avg (°F),climate.vpd_avg (kPa),climate.rh_avg (%),climate.flow_gpm (gal/min)");
@@ -489,10 +496,10 @@ const seriesOf = (plot: MockPlot, label: string) => plot.data[plot.opts.series.f
 test("the outdoor overlay by default: Tempest traces on each panel, solid, with their source and age said once; outdoor VPD is derived per bucket and labelled DERIVED", async () => {
   chartStubs();
   const api = await openInShell("/graphs?range=24h");
-  // One read for outdoor over the measured window, one for the forecast over the next 6 h in hourly buckets.
+  // One read for outdoor over the measured window, one for the forecast over the next 24 h in hourly buckets.
   expect(overlayAsked(api)).toEqual([
     { metric: ["climate.outdoor_temp_f", "climate.outdoor_rh_pct"], from: iso(S - 24 * HOUR), to: iso(S), points: null },
-    { metric: ["forecast.temp_f", "forecast.rh_pct", "forecast.vpd_kpa"], from: iso(S), to: iso(S + 6 * HOUR), points: "10" },
+    { metric: ["forecast.temp_f", "forecast.rh_pct", "forecast.vpd_kpa"], from: iso(S), to: iso(S + 24 * HOUR), points: "25" },
   ]);
   const [temp, vpd, rh] = panels();
   expect([temp, vpd, rh].map((plot) => plot.opts.series.slice(1).map((series) => [series.label, series.stroke, series.dash ?? null]))).toEqual([
@@ -500,8 +507,9 @@ test("the outdoor overlay by default: Tempest traces on each panel, solid, with 
     [["Indoor VPD", TOKENS["--c-vpd"], null], ["Outdoor VPD · DERIVED", TOKENS["--c-outdoor"], null]],
     [["Indoor relative humidity", TOKENS["--c-rh"], null], ["Outdoor relative humidity", TOKENS["--c-outdoor"], null]],
   ]);
-  // Fixture API-02: the Tempest's reading is 2 minutes old; the forecast was issued at 07:00.
-  expect(notes()).toEqual(["Outdoor · Tempest via the controller · 2 min ago", "Forecast · issued 07:00"]);
+  // Fixture API-02: the Tempest's reading is 2 minutes old; the forecast was fetched at 07:00, 3 h 42 min ago, so it reads
+  // STALE (#1353: it is fetched hourly). The band's source is said here once, never on the band (#1354).
+  expect(notes()).toEqual(["Outdoor · Tempest via the controller · 2 min ago", "Forecast · STALE · issued 07:00", "Temperature and VPD: Band in force · DERIVED", "Temperature and VPD: Band ahead of now · reconstructed from today's crop anchors"]);
   // The swatches in the header rows toggle each series, each reading its series alone and named in full.
   expect(within(document.querySelector<HTMLElement>("[data-panel=temperature]")!).getAllByRole("button").map((button) => [button.textContent, button.getAttribute("aria-label"), button.getAttribute("aria-pressed")])).toEqual([
     ["Indoor", "Indoor temperature", "true"], ["Outdoor", "Outdoor temperature", "true"], ["Forecast", "Forecast temperature", "true"],
@@ -520,8 +528,8 @@ test("the forecast draws dashed [8,4] right of now only, in --c-outdoor; its swa
   temp.draw();
   const dashed = temp.ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--c-outdoor"] && stroke.dash.join() === "8,4");
   expect(dashed).toHaveLength(1);
-  // 11:00 to 16:00 joined: 6 hourly points, every one right of the now line.
-  expect(dashed[0].path).toHaveLength(6);
+  // 11:00 to 10:00 the next day joined: 24 hourly points, every one right of the now line.
+  expect(dashed[0].path).toHaveLength(24);
   const nowAt = temp.valToPos(S, "x");
   expect(dashed[0].path.every(([x]) => x > nowAt)).toBe(true);
   expect(Math.max(...(temp.data[0] as number[]))).toBeLessThan(S);
@@ -543,7 +551,7 @@ test("the Outdoor layer shows the overlay by default and outdoor=0 hides it: no 
   expect(chip().getAttribute("href")).toBe("/graphs?range=24h");
   expect(overlayAsked(off)).toEqual([]);
   expect(panels().map((plot) => plot.opts.series.length)).toEqual([2, 2, 2]);
-  expect(notes()).toEqual([]);
+  expect(notes()).toEqual(["Temperature and VPD: Band in force · DERIVED", "Temperature and VPD: Band ahead of now · reconstructed from today's crop anchors"]);
   expect(text(document.querySelector(".gr-layers .gr-menu-value"))).toBe(" · 1 changed");
   // Every other link keeps it off.
   expect(within(screen.getByRole("list", { name: "Range" })).getByRole("link", { name: "7 d" }).getAttribute("href")).toBe("/graphs?range=7d&outdoor=0");
@@ -573,10 +581,10 @@ test("CSV of this window with the overlay: outdoor beside each panel's trace, de
   await open("/graphs?range=24h&events=");
   const lines = (await blobs[blobs.length - 1].text()).trimEnd().split("\r\n");
   expect(lines[0]).toBe("time (America/Denver),climate.temp_avg (°F),climate.outdoor_temp_f (°F),forecast.temp_f (°F),climate.vpd_avg (kPa),derived.outdoor_vpd_kpa (kPa),forecast.vpd_kpa (kPa),climate.rh_avg (%),climate.outdoor_rh_pct (%),forecast.rh_pct (%)");
-  // 1,440 measured minutes, then 6 forecast hours.
-  expect(lines).toHaveLength(1447);
+  // 1,440 measured minutes, then 24 forecast hours.
+  expect(lines).toHaveLength(1465);
   expect(lines[1439]).toMatch(/^2026-11-02T10:40:00-07:00,[\d.]+,[\d.]+,,[\d.]+,[\d.]+,,[\d.]+,[\d.]+,$/);
   expect(lines[1440]).toMatch(/^2026-11-02T10:41:00-07:00,[\d.]+,,,[\d.]+,,,[\d.]+,,$/);
   expect(lines[1441]).toMatch(/^2026-11-02T11:00:00-07:00,,,[\d.]+,,,[\d.]+,,,[\d.]+$/);
-  expect(lines.at(-1)).toMatch(/^2026-11-02T16:00:00-07:00,,,[\d.]+,,,[\d.]+,,,[\d.]+$/);
+  expect(lines.at(-1)).toMatch(/^2026-11-03T10:00:00-07:00,,,[\d.]+,,,[\d.]+,,,[\d.]+$/);
 });

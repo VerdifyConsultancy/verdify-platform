@@ -76,6 +76,19 @@ export function bandRuns(timeline: BandTimeline | null | undefined, kind: BandKi
   return runs;
 }
 
+/** The band's provenance, said once in the notes above a chart (never painted on the band, #1354). */
+export const BAND_AHEAD = "Band ahead of now · reconstructed from today's crop anchors";
+export const BAND_BEFORE = "Band before the 90 days kept · reconstructed from today's crop anchors";
+/** The provenance of each kind of run drawn: the band in force, the crop band ahead of now, the crop band before retention. */
+export function bandNotes(runs: readonly BandRun[], now: number): string[] {
+  const notes = new Set<string>();
+  for (const run of runs) {
+    if (!run.t.length) continue;
+    notes.add(run.source === "band" ? BAND_IN_FORCE : run.t[run.t.length - 1] > now ? BAND_AHEAD : BAND_BEFORE);
+  }
+  return [...notes];
+}
+
 /** The band at `x`: the run covering it and its point at or before `x`. */
 export function bandAt(runs: readonly BandRun[], x: number): { label: string; low: number; high: number } | null {
   for (const run of runs) {
@@ -259,6 +272,11 @@ export function settingBounds(input: SettingSteps, unit: string, prefix = false)
   return bounds;
 }
 
+/** Where a value sits against the plotted y range: above it, below it, or on the chart (null). */
+export function edgeOf(value: number, yMin: number, yMax: number): "above" | "below" | null {
+  return value > yMax ? "above" : value < yMin ? "below" : null;
+}
+
 /** A bound outside the y range becomes an edge label: "max 2.50 kPa ↑". */
 export function boundLabel(bound: Bound, yMin: number, yMax: number): { text: string; edge: "top" | "bottom" | null } {
   if (bound.value > yMax) return { text: `${bound.text} ↑`, edge: "top" };
@@ -274,10 +292,13 @@ export type ForecastInput = { metrics: readonly MetricDef[]; series: Series | nu
 export type ForecastLine = { key: string; label: string; text: string; t: number[]; values: number[]; joinS: number };
 /** A forecast's cadence: the newest issue per hour. Below a 1 h bucket only the bucket holding each hour has a value. */
 const FORECAST_HOUR_S = 3600;
+/** A forecast issued longer ago than this reads STALE (#1353): it is fetched every hour. */
+export const FORECAST_STALE_S = 3 * 3600;
 
 /**
- * The forecast lines of one unit (US-GRF-05): only right of now, labelled "Forecast · issued HH:MM" from `issued_at`; with
- * `issued_at` null there is no forecast in the window and none is drawn. A missing hour stays a gap in the line.
+ * The forecast lines of one unit (US-GRF-05): only right of now, described "Forecast · issued HH:MM" from `issued_at`
+ * ("Forecast · STALE · issued HH:MM" past 3 h); with `issued_at` null there is no forecast in the window and none is
+ * drawn. A missing hour stays a gap in the line.
  */
 export function forecastLines(input: ForecastInput | null | undefined, unit: string, now: number): ForecastLine[] {
   const series = input?.series;
@@ -291,7 +312,9 @@ export function forecastLines(input: ForecastInput | null | undefined, unit: str
       if (at >= now && value !== null && value !== undefined && Number.isFinite(value)) { t.push(at); values.push(value); }
     });
     if (!t.length) return [];
-    return [{ key: metric.key, label: metric.label, text: `Forecast · issued ${sinceClock(columns.issued_at, now * 1000)}`, t, values, joinS: Math.max(FORECAST_HOUR_S, series.bucket_s) }];
+    const issued = Date.parse(columns.issued_at) / 1000;
+    const stale = Number.isFinite(issued) && now - issued > FORECAST_STALE_S;
+    return [{ key: metric.key, label: metric.label, text: `Forecast · ${stale ? "STALE · " : ""}issued ${sinceClock(columns.issued_at, now * 1000)}`, t, values, joinS: Math.max(FORECAST_HOUR_S, series.bucket_s) }];
   });
 }
 

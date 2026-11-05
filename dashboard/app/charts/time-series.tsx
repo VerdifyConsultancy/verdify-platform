@@ -5,11 +5,11 @@ import { bandRange } from "../lib/band-range";
 import { formatNumber, formatValue, unitDecimals } from "../lib/format";
 import { csvFilename, windowCsv, type CsvBlock } from "./csv";
 import { CsvLink, DataTable, TimeCell, type DataTableBlock } from "./data-table";
-import { paintBandEdges, paintBandFill, paintBounds, paintForecast, paintLabels, paintNow, paintRetention, paintSteps, type ChartColors } from "./draw";
+import { paintBandEdges, paintBandFill, paintBounds, paintForecast, paintFuture, paintLabels, paintNow, paintRetention, paintSteps, type ChartColors } from "./draw";
 import { ENVELOPE_MIN_BUCKET_S, compareExtent, envelopeBars, envelopeExtent, excursions, paintCompare, paintEnvelope, paintExcursions, type CompareLine, type EnvelopeBar, type Excursion } from "./layers";
 import { ChartKey, Legend, type KeyItem } from "./legend";
 import {
-  FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandExtent, bandKindFor, bandRuns, extentUnion, forecastAt, forecastExtent, forecastLines, groupSteps, marksExtent, settingBounds, settingSteps, stepFinder, stepsAt,
+  FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandExtent, bandKindFor, bandNotes, bandRuns, extentUnion, forecastAt, forecastExtent, forecastLines, groupSteps, marksExtent, settingBounds, settingSteps, stepFinder, stepsAt,
   type BandRun, type Bound, type ForecastInput, type ForecastLine, type StepKind, type StepSegment,
 } from "./marks";
 import { DAILY_SUMMARY_NOTE, retentionNote, runAt, staleness, traceGaps, type RetentionNote, type Staleness, type TraceGaps } from "./retention";
@@ -21,9 +21,10 @@ import { UPlotChart, resetZoom, useStableArray, type ChartEnv, type ChartOptions
 
 /**
  * TimeSeries (design system §5.2): one unit per plot. Each metric's `avg` is a uPlot series, 2px, `spanGaps: false`,
- * nulls kept as nulls. The band ribbon, the device, requested and planned setting steps, the bounds, the forecast and the
- * now line are drawn in hooks from their own time arrays (marks.ts, draw.ts), never as series. The chart draws only what
- * its caller passes and never fetches.
+ * nulls kept as nulls. The band ribbon, the device, requested and planned setting steps, the forecast and the now line
+ * are drawn in hooks from their own time arrays (marks.ts, draw.ts), never as series; a settings-only chart (a setting's
+ * history) adds the setting's min and max and labels its steps. A climate chart paints no words but "Now" (#1354):
+ * the legend, the tooltip and the notes name every line. The chart draws only what its caller passes and never fetches.
  */
 export type TimeSeriesInput = {
   /** API-04; null while there is no measured trace to draw (a settings-only chart, or nothing loaded). */
@@ -154,7 +155,8 @@ export function buildTimeSeriesModel(input: TimeSeriesInput): TimeSeriesModel {
   return {
     unit, t, bucketSeconds, traces, runs,
     steps, stepGroups: groupSteps(steps),
-    bounds: settings.flatMap((setting) => settingBounds(setting, unit, prefix)),
+    // A setting's min and max are its allowed range, not something the climate does: drawn on its own history only (#1354).
+    bounds: metrics.length ? [] : settings.flatMap((setting) => settingBounds(setting, unit, prefix)),
     forecast: forecastLines(input.forecast, unit, now),
     now, xRange, windowFrom, windowTo, dataEnd,
     seriesToken: tokens[0] ?? UNIT_TOKENS[unit] ?? "--c-temp",
@@ -167,7 +169,7 @@ export function buildTimeSeriesModel(input: TimeSeriesInput): TimeSeriesModel {
 const shownTraces = (model: TimeSeriesModel, hidden: ReadonlySet<string>) => model.traces.filter((trace) => !hidden.has(trace.key));
 const shownForecast = (model: TimeSeriesModel, hidden: ReadonlySet<string>) => model.forecast.filter((line) => !hidden.has(line.key));
 
-/** The statements over the plot: daily summaries, retention, STALE, named when the panel has several lines, and the forecast's issue. */
+/** The statements over the plot: daily summaries, retention, STALE, named when the panel has several lines, the forecast's issue and the band's source. */
 export function chartNotes(model: TimeSeriesModel, hidden: ReadonlySet<string> = new Set()): string[] {
   const traces = shownTraces(model, hidden);
   const named = (trace: Trace, text: string) => (model.traces.length > 1 ? `${trace.label}: ${text}` : text);
@@ -178,6 +180,7 @@ export function chartNotes(model: TimeSeriesModel, hidden: ReadonlySet<string> =
     if (trace.staleness.text) notes.push(named(trace, trace.staleness.text));
   }
   for (const line of shownForecast(model, hidden)) notes.push(line.text);
+  notes.push(...bandNotes(model.runs, model.now));
   return [...new Set(notes)];
 }
 
@@ -294,6 +297,35 @@ export type SeriesLayers = {
 const NO_LAYERS: SeriesLayers = {};
 /** The primary trace is shown: its layers draw only while it does. */
 const primaryShown = (model: TimeSeriesModel, hidden: ReadonlySet<string>) => model.primary >= 0 && !hidden.has(model.traces[model.primary].key);
+
+/** The shown traces' lowest and highest values in [x0, x1]; null with none there. */
+export function traceExtent(model: TimeSeriesModel, hidden: ReadonlySet<string>, x0: number, x1: number): [number, number] | null {
+  let low = Infinity, high = -Infinity;
+  for (const trace of shownTraces(model, hidden)) {
+    trace.values.forEach((value, index) => {
+      const at = model.t[index];
+      if (value === null || at < x0 || at > x1) return;
+      low = Math.min(low, value); high = Math.max(high, value);
+    });
+  }
+  return Number.isFinite(low) && Number.isFinite(high) ? [low, high] : null;
+}
+
+/**
+ * The y range a panel draws (redesign §4.6): the band plus half its width each side, widened to the shown traces, the
+ * forecast and the layers asked for. Setting steps widen it only on a settings-only chart: on a climate panel a step
+ * outside the range is named at the edge in the legend instead of squeezing the band (#1354).
+ */
+export function valueRange(model: TimeSeriesModel, hidden: ReadonlySet<string>, layers: SeriesLayers, x0: number, x1: number, traces: [number, number] | null): [number, number] {
+  if (layers.yRange) return [layers.yRange[0], layers.yRange[1]];
+  const extra = extentUnion(
+    layers.envelope && model.bucketSeconds >= ENVELOPE_MIN_BUCKET_S && primaryShown(model, hidden) ? envelopeExtent(model.envelope, x0, x1) : null,
+    layers.compare ? compareExtent(layers.compare, x0, x1) : null,
+  );
+  const steps = model.traces.length ? null : marksExtent([], model.steps, x0, x1);
+  const data = extentUnion(extentUnion(extentUnion(traces, steps), forecastExtent(shownForecast(model, hidden), x0, x1)), extra);
+  return bandRange(bandExtent(model.runs, x0, x1), data);
+}
 /** The y axis of a small multiple past the first column: the same grid, no labels, no width. */
 function silentValueAxis(unit: string, colors: ChartColors): uPlot.Axis {
   return { ...valueAxis(unit, colors, 0), ticks: { show: false }, values: (_plot, splits) => splits.map(() => "") };
@@ -333,18 +365,9 @@ export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<Time
     scales: {
       y: {
         range: (_plot, min, max) => {
-          const current = modelRef.current;
           const [x0, x1] = env.xWindow();
-          const { envelope, compare, yRange } = layers();
-          if (yRange) return [yRange[0], yRange[1]];
-          const extra = extentUnion(
-            envelope && current.bucketSeconds >= ENVELOPE_MIN_BUCKET_S && primaryShown(current, hiddenRef.current) ? envelopeExtent(current.envelope, x0, x1) : null,
-            compare ? compareExtent(compare, x0, x1) : null,
-          );
           const traces: [number, number] | null = Number.isFinite(min) && Number.isFinite(max) ? [min, max] : null;
-          const data = extentUnion(extentUnion(extentUnion(traces, marksExtent([], current.steps, x0, x1)), forecastExtent(shownForecast(current, hiddenRef.current), x0, x1)), extra);
-          // The band plus half its width each side, widened to the data (redesign §4.6), so the band keeps its edges.
-          return bandRange(bandExtent(current.runs, x0, x1), data);
+          return valueRange(modelRef.current, hiddenRef.current, layers(), x0, x1, traces);
         },
       },
     },
@@ -356,6 +379,7 @@ export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<Time
       drawClear: [(plot) => {
         const current = modelRef.current;
         paintRetention(plot, visibleRetention(current, hiddenRef.current), colors);
+        paintFuture(plot, current.now, colors);
         paintBandFill(plot, current.runs, colors);
         if (layers().excursions && primaryShown(current, hiddenRef.current)) paintExcursions(plot, current.excursions, colors);
       }],
@@ -376,7 +400,7 @@ export function timeSeriesOptions(env: ChartEnv, modelRef: MutableRefObject<Time
         paintBounds(plot, current.bounds, colors, ratio);
         const nowShown = paintNow(plot, current.now, colors, ratio);
         const cell = layers().cell === true;
-        paintLabels(plot, { now: nowShown && !cell ? current.now : null, retention: visibleRetention(current, hiddenRef.current), bounds: current.bounds, steps: current.steps, runs: cell ? [] : current.runs, forecast }, colors, seriesColor, ratio);
+        paintLabels(plot, { now: nowShown && !cell ? current.now : null, retention: visibleRetention(current, hiddenRef.current), bounds: current.bounds, steps: current.steps, runs: cell ? [] : current.runs, forecast, labelSteps: current.traces.length === 0 }, colors, seriesColor, ratio);
       }],
       setCursor: [(plot) => layers().onCursor?.(plot)],
       setScale: [(plot, key) => { if (key === "x") layers().onScale?.(plot.scales.x.min ?? 0, plot.scales.x.max ?? 0); }],

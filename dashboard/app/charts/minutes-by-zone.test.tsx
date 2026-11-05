@@ -80,7 +80,7 @@ test("a no-data day is a hatched full-height gap, never a zero bar, and today is
 test("bars are uPlot.paths.bars stacked by cause, clean below fertilizer, each coloured as the cause table says", async () => {
   const { wall, center, west } = await mount();
   expect(wall.opts.series.slice(1).map((series) => series.label)).toEqual(["schedule", "run now", "prewet", "flush", "cause unknown", "feed · fertilizer"]);
-  expect(wall.opts.series.slice(1).map((series) => series.fill)).toEqual(["--eq-water", "--eq-master", "--eq-fog", "--eq-fog", "--c-bound", "--eq-fert"].map((token) => TOKENS[token]));
+  expect(wall.opts.series.slice(1).map((series) => series.fill)).toEqual(["--cause-schedule", "--forest", "--cause-prep", "--cause-prep", "--c-bound", "--eq-fert"].map((token) => TOKENS[token]));
   for (const series of wall.opts.series.slice(1)) expect((series.paths as unknown as { bars: unknown }).bars).toEqual({ size: [0.6, 48], align: 0 });
   // Each segment's bar runs from the running total below it.
   expect(wall.opts.bands).toEqual([{ series: [2, 1] }, { series: [3, 2] }, { series: [4, 3] }, { series: [5, 4] }, { series: [6, 5] }]);
