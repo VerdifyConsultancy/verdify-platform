@@ -24,6 +24,8 @@ const TO = FROM + 24 * HOUR;
 const NOW = TO + HOUR;
 const RANGE = { from: FROM, to: TO };
 const iso = (at: number) => new Date(at * 1000).toISOString();
+/** An element's words with no-break spaces read as spaces. */
+const text = (node: Element) => (node.textContent ?? "").replaceAll("\u00a0", " ");
 const metric = (key: string, label: string, unit: string): MetricDef => ({ key, label, group: "house climate", unit, cadence_s: 60, retention_days: 365, provenance: "MEASURED", zone: null, daily: false, note: null });
 const TEMP = metric("climate.temp_avg", "Indoor temperature", "°F");
 const OUTDOOR = metric("climate.outdoor_temp_f", "Outdoor temperature", "°F");
@@ -241,18 +243,25 @@ test("ChartGrid: one y range per row, the y axis on the first column and the tim
   expect(created.map((plot) => plot.opts.axes![0].size === 0)).toEqual([true, true, false, false]);
   // The first column's plot reaches back over the row name's column for its axis, so every plot is one width.
   expect([...document.querySelectorAll(".grid-cell")].map((cell) => cell.classList.contains("grid-cell-first"))).toEqual([true, false, true, false]);
-  // The window ended an hour before now, on the day before: the newest values read with their date and time, never "now".
-  expect([...document.querySelectorAll(".grid-readout")].map((node) => node.textContent)).toEqual(["64.0 at Nov 2, 23:55", "67.0 at Nov 2, 23:55", "0.70 at Nov 2, 23:55", "0.90 at Nov 2, 23:55"]);
+  // Each cell is a small multiple: a 6 px top pad and no "Now" or band words on it (the head and foot say them once).
+  expect(created.map((plot) => plot.opts.padding![0])).toEqual([6, 6, 6, 6]);
+  created[0].draw();
+  expect(created[0].ctx.texts.map((item) => item.text)).toEqual([]);
+  // The readout heads its plot, with its unit. The window ended an hour before now, on the day before: the newest
+  // values read with their date and time, never "now".
+  expect([...document.querySelectorAll(".grid-cell")].map((cell) => cell.querySelector(".grid-readout + .plot") !== null)).toEqual([true, true, true, true]);
+  const readouts = () => [...document.querySelectorAll(".grid-readout")].map((node) => text(node));
+  expect(readouts()).toEqual(["64.0 °F at Nov 2, 23:55", "67.0 °F at Nov 2, 23:55", "0.70 kPa at Nov 2, 23:55", "0.90 kPa at Nov 2, 23:55"]);
   act(() => created[3].hover(FROM + HOUR, 12));
-  expect(document.querySelector(".grid-readout")?.textContent).toMatch(/^64\.0 at \d\d:\d\d$/);
+  expect(readouts()[0]).toMatch(/^64\.0 °F at \d\d:\d\d$/);
   expect(rowRange([], RANGE)).toEqual([0, 1]);
   expect(cellReadout(buildTimeSeriesModel({ series: null, metrics: [TEMP], now: NOW, xRange: RANGE }), null, false)).toBe("—");
   // A live window whose newest bucket is the latest reads "now"; one whose probe went quiet hours ago reads its time.
   const live = { from: FROM, to: TO + 6 * HOUR };
   const fresh = buildTimeSeriesModel({ series: series(300, { "climate.temp_avg": () => 65 }), metrics: [TEMP], now: TO + 60, xRange: live });
-  expect(cellReadout(fresh, null, false, TO + 60)).toBe("65.0 now");
+  expect(cellReadout(fresh, null, false, TO + 60)).toBe("65.0\u00a0°F now");
   const quiet = buildTimeSeriesModel({ series: series(300, { "climate.temp_avg": (index) => (index < 100 ? 65 : null) }), metrics: [TEMP], now: TO + 60, xRange: live });
-  expect(cellReadout(quiet, null, false, TO + 60)).toBe("65.0 at Nov 2, 08:15");
+  expect(cellReadout(quiet, null, false, TO + 60)).toBe("65.0\u00a0°F at Nov 2, 08:15");
   // The grid's data table: one block per row, a column per zone, in the row's unit (redesign §8).
   const table = screen.getByText(/^Data table · /).closest("details")!;
   expect(table.closest(".chart-grid")).not.toBeNull();

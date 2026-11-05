@@ -78,7 +78,8 @@ export function inBandOptions(env: ChartEnv, rowRef: MutableRefObject<InBandRow>
   const row = rowRef.current;
   const bars = UPlot.paths.bars!({ size: [BAR_SIZE, BAR_MAX], align: 0 });
   return {
-    padding: [8, 12, 0, 0],
+    // A row with no day labels under it keeps 8 px below its baseline, so its "0%" is never cut in half.
+    padding: [8, 12, last ? 0 : 8, 0],
     series: [{}, { label: row.name, scale: "y", paths: bars, fill: colors[row.token], stroke: colors[row.token], width: 0, points: { show: false }, value: (_plot, value) => (value === null ? "—" : `${value.toFixed(1)}%`) }],
     scales: { y: { range: () => [0, 100] } },
     axes: [dayAxis(colors, last), percentAxis(colors)],

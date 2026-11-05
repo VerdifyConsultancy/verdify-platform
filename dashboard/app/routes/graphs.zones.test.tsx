@@ -101,7 +101,7 @@ test("/graphs/zones?range=72h: a grid of every zone, temperature and VPD rows on
   expect(heads.map((head) => text(head))).toEqual(["North ›MEASURED", "Center ›HOUSE", "South ›MEASURED", "East ›MEASURED", "West ›MEASURED"]);
   expect(heads.map((head) => head.querySelector("a")!.getAttribute("href"))).toEqual(["north", "center", "south", "east", "west"].map((zone) => `/graphs/zones?zone=${zone}&range=72h`));
   // The readouts: each cell's newest value.
-  expect([...document.querySelectorAll(".grid-readout")].map(text).every((words) => /^\d+\.\d+ now$/.test(words))).toBe(true);
+  expect([...document.querySelectorAll(".grid-readout")].map(text).every((words) => /^\d+\.\d+ (°F|kPa) now$/.test(words))).toBe(true);
   // The rows are chips in the URL: RH adds a row, and a row can be taken off while another stays.
   const chips = within(screen.getByRole("list", { name: "Metrics" })).getAllByRole("link");
   expect(chips.map((chip) => [chip.textContent, chip.getAttribute("aria-current"), chip.getAttribute("href")])).toEqual([
@@ -118,7 +118,7 @@ test("metric=rh adds the RH row with no band; a hover on one cell moves every ce
   expect(rh.map((plot) => { plot.draw(); return plot.ctx.fills.some((fill) => fill.color === TOKENS["--c-band-wash"]); })).toEqual(Array(5).fill(false));
   act(() => plots()[3].hover(S - HOUR, 60 * 23));
   // The window spans two local days, so the time carries its date.
-  expect([...document.querySelectorAll(".grid-readout")].map(text).every((words) => /^(\d+\.\d+|—) at Nov 2, 09:42$/.test(words))).toBe(true);
+  expect([...document.querySelectorAll(".grid-readout")].map(text).every((words) => /^(\d+\.\d+(%| °F| kPa)|—) at Nov 2, 09:42$/.test(words))).toBe(true);
 });
 
 test("on a phone one metric at a time: the first row only, five plots stacked under their heads, and single-choice metric chips", async () => {

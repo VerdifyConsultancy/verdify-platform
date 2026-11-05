@@ -93,7 +93,8 @@
 .minutes-label{font-size:.85rem;font-weight:600}
 .minutes-note{display:block;font:400 .66rem/1.3 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .minutes-today{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
-.chart .plot-bars{position:relative;height:84px;overflow:hidden;min-width:0}
+/* Every row's plot is 76 px: 8 px above it, and below it 8 px (a row without day labels) or the 28 px day axis. */
+.chart .plot-bars{position:relative;height:92px;overflow:hidden;min-width:0}
 .chart .plot-bars.plot-bars-axis{height:112px}
 /* Daily water use (VD-20): its height reserved here; the summary is one line, where .plot-summary is a list. */
 .chart .plot-water-use{position:relative;height:220px;overflow:hidden;min-width:0}
@@ -168,16 +169,17 @@
 
 /* ChartGrid (redesign §7.1, §5.6): small multiples, one column per zone, one row per metric; the y axis on the first column, the time axis on the last row. On a phone the cells stack, each headed by its column. */
 .chart-grid{display:grid;gap:var(--space-2);margin:.75rem 0;min-width:0}
-/* The row name's column also holds the first column's 56 px y axis (STACK_AXIS_PX): that plot reaches back into it, so every cell's plot is its column's width, the heads sit over the plots and the cursor sits at one place in each. */
+/* The row name's column also holds the first column's 56 px y axis (STACK_AXIS_PX): that plot reaches back into it and is that much wider, so every cell's plot box is its column's width, the heads sit over the plots and the cursor sits at one place in each. */
 .grid-heads,.grid-row{display:grid;grid-template-columns:calc(6rem + 56px) repeat(var(--grid-columns,5),minmax(0,1fr));gap:0 var(--space-2);align-items:start}
 .grid-head{min-width:0;font-size:var(--fs-sm)}
 .grid-row-name{align-self:center;margin:0;padding-right:calc(56px - var(--space-2));font:600 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
-@media(min-width:861px){.chart-grid .grid-cell-first .stack-plot{margin-left:-56px}}
+@media(min-width:861px){.chart-grid .grid-cell-first .stack-plot{width:calc(100% + 56px);margin-left:-56px}}
 .grid-cell{min-width:0}
 .grid-cell-head{display:none}
-.chart-grid .stack-plot,.chart-grid .grid-plot{position:relative;height:var(--grid-cell-h,120px);min-height:0;overflow:hidden}
-.chart-grid .grid-cell-axis .stack-plot{height:calc(var(--grid-cell-h,120px) + 36px)}
-.grid-readout{margin:var(--space-1) 0 0;font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums}
+/* Every cell's plot is --grid-cell-h tall under a 6 px top pad; the bottom row adds its one-line time axis under it (TIME_AXIS_PX), so the rows' plots match. */
+.chart-grid .stack-plot,.chart-grid .grid-plot{position:relative;height:calc(var(--grid-cell-h,120px) + 6px);min-height:0;overflow:hidden}
+.chart-grid .grid-cell-axis .stack-plot{height:calc(var(--grid-cell-h,120px) + 6px + 36px)}
+.grid-readout{margin:0 0 var(--space-1);font-size:var(--fs-xs);color:var(--ink);font-variant-numeric:tabular-nums}
 
 /* RangeToolbar (redesign §7.1): presets as nav chips, the window steps, Zoom out and Custom…, then the page's own tools. */
 .range-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3);margin:var(--space-2) 0 var(--space-3)}
@@ -201,8 +203,11 @@
   .grid-heads{display:none}
   .grid-row{grid-template-columns:minmax(0,1fr);gap:var(--space-2)}
   .grid-row-name{padding-right:0}
+  /* A cell's head and its readout share one line over its plot: "North › MEASURED 67.5 °F now". */
+  .grid-cell{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--space-2)}
+  .grid-cell>.plot{flex:1 0 100%}
   .grid-cell-head{display:block;font-size:var(--fs-sm)}
-  .chart-grid .grid-cell-axis .stack-plot{height:calc(var(--grid-cell-h,120px) + 28px)}
+  .chart-grid .grid-cell-axis .stack-plot{height:calc(var(--grid-cell-h,120px) + 6px + 28px)}
   .range-step,.range-zoom,.range-custom>summary{min-height:var(--tap)}
   .range-step{min-width:var(--tap)}
   .range-tools{margin-left:0}

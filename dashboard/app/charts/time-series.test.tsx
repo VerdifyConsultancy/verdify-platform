@@ -9,7 +9,7 @@ import reasonsFixture from "./fixtures/series-gap-reasons.json";
 import holeFixture from "./fixtures/series-hole.json";
 import historyFixture from "./fixtures/setting-history.json";
 import { FakeResizeObserver, MockPlot, TOKENS, created, load, media, setTokens } from "./fixtures/uplot-mock";
-import { TimeSeries, buildTimeSeriesModel, tickIncrements, traceTokens, type TimeSeriesProps } from "./time-series";
+import { TimeSeries, buildTimeSeriesModel, tickDecimals, tickIncrements, traceTokens, valueAxis, type TimeSeriesProps } from "./time-series";
 import type { BandTimeline, MetricDef, Series, SettingHistory } from "./types";
 
 vi.mock("uplot", async () => ({ default: (await import("./fixtures/uplot-mock")).MockPlot }));
@@ -188,14 +188,17 @@ test("a bound inside the y range is a dotted line labelled at the right edge", a
   expect(plot.ctx.texts.some((item) => item.text === `max 1.75${NBSP}kPa`)).toBe(true);
 });
 
-test("the y range is the union of the shown traces, band and steps, padded 5%", async () => {
+test("the y range is the band plus half its width each side, widened to the shown traces and steps with 5% past them", async () => {
   const history = load<SettingHistory>(historyFixture);
   const band = load<BandTimeline>(bandFixture);
   const { plot } = await mount({ metrics: [metric("climate.vpd_avg")], band, settings: [{ history }] });
   plot.draw();
   const model = buildTimeSeriesModel({ ...props({ metrics: [metric("climate.vpd_avg")], band, settings: [{ history }] }) });
-  const low = Math.min(...model.runs.flatMap((run) => run.low)), high = 1.8;
-  expect(plot.scales.y.min).toBeCloseTo(low - (high - low) * 0.05, 9);
+  const width = Math.max(...model.runs.flatMap((run) => run.high.map((value, index) => value - run.low[index])));
+  const low = Math.min(...model.runs.flatMap((run) => run.low)) - width / 2, high = 1.8;
+  // Under the band, half its width of room, which no trace reaches: the band keeps its lower edge in view.
+  expect(plot.scales.y.min).toBeCloseTo(low, 9);
+  // The device step at 1.80 kPa is past the band's half width: the range takes it, with 5% to spare.
   expect(plot.scales.y.max).toBeCloseTo(high + (high - low) * 0.05, 9);
 });
 
@@ -219,7 +222,8 @@ test("400 daily summaries draw one point per day and say so; heap reads kB and i
   expect((heap.plot.data[1] as (number | null)[]).slice(0, 200).every((value) => value === null)).toBe(true);
   expect(heap.container.querySelector(".plot-summary")!.textContent).toMatch(/coverage 4\d\.\d%, 0 gaps$/);
   const ticks = heap.plot.opts.axes![1].values as (self: unknown, splits: number[]) => string[];
-  expect(ticks(heap.plot, [30, 36])).toEqual([`30${NBSP}kB`, `36${NBSP}kB`]);
+  // Ticks are numbers only, at their step's decimals: the unit sits in the chart's head (redesign §7.1).
+  expect(ticks(heap.plot, [30, 36])).toEqual(["30", "36"]);
   expect(heap.plot.opts.axes![1].incrs).toEqual(tickIncrements(0));
   heap.plot.hover(range.from + 10 * 86_400, 10);
   expect(tooltip(heap.plot).slice(1)).toEqual(["Free heap —", "beyond retention (180 days kept)"]);
@@ -287,6 +291,17 @@ test("one unit per plot: a metric in another unit is left out; colours never rep
   expect(traceTokens([metric("climate.vpd_avg"), target], "kPa")).toEqual(["--c-vpd", "--eq-fan2"]);
   expect(traceTokens([metric("climate.vpd_avg"), target], "kPa", [target.key])).toEqual(["--c-vpd", "--c-setpoint"]);
   expect(tickIncrements(2).slice(0, 6)).toEqual([0.01, 0.02, 0.05, 0.1, 0.2, 0.25]);
+});
+
+test("y ticks are numbers only, at the decimals their step needs and never more than the unit prints", () => {
+  expect([tickDecimals(5, "°F"), tickDecimals(2.5, "°F"), tickDecimals(0.25, "kPa"), tickDecimals(0.1, "kPa"), tickDecimals(20, "%")]).toEqual([0, 1, 2, 1, 0]);
+  expect([tickDecimals(undefined, "kPa"), tickDecimals(0.001, "kPa"), tickDecimals(0.5, "min")]).toEqual([2, 2, 0]);
+  const values = valueAxis("°F", TOKENS).values as (self: unknown, splits: number[], axis: number, space: number, increment: number) => string[];
+  expect(values(null, [60, 65, 70], 1, 30, 5)).toEqual(["60", "65", "70"]);
+  expect(values(null, [62.5, 65], 1, 30, 2.5)).toEqual(["62.5", "65.0"]);
+  const kpa = valueAxis("kPa", TOKENS).values as typeof values;
+  expect(kpa(null, [0.5, 1, 1.5], 1, 30, 0.5)).toEqual(["0.5", "1.0", "1.5"]);
+  expect(kpa(null, [-0.25, 0, 0.25], 1, 30, 0.25)).toEqual(["−0.25", "0.00", "0.25"]);
 });
 
 test("a parent re-render with fresh arrays of the same data repaints nothing; a newer Series updates the chart in place", async () => {

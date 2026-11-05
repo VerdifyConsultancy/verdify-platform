@@ -41,7 +41,7 @@ function stubContext(canvas: HTMLCanvasElement) {
   });
 }
 // jsdom lays nothing out: each chart box gets the size the stylesheet gives it at 1440 px.
-const SIZES: Record<string, [number, number]> = { plot: [1200, 150], "lanes-canvas": [1000, 9 * 20 + 20 + 36], "plot-bars": [900, 84] };
+const SIZES: Record<string, [number, number]> = { plot: [1200, 150], "lanes-canvas": [1000, 9 * 20 + 20 + 36], "plot-bars": [900, 92] };
 const clientWidth = Object.getOwnPropertyDescriptor(Element.prototype, "clientWidth")!;
 const clientHeight = Object.getOwnPropertyDescriptor(Element.prototype, "clientHeight")!;
 const sized = (axis: 0 | 1, fallback: PropertyDescriptor) => ({

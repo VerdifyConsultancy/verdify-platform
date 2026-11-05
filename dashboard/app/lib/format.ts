@@ -187,11 +187,14 @@ export function formatValue(value: number | null | undefined, unit: string | nul
   return label === "%" ? `${text}%` : `${text}${NBSP}${label}`;
 }
 const PLAIN = new Intl.NumberFormat("en-US", { maximumFractionDigits: 3, signDisplay: "negative" });
+const DIGITS = [0, 1, 2, 3].map((digits) => new Intl.NumberFormat("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits, signDisplay: "negative" }));
 /**
  * A number with no unit at up to 3 decimals, with a true minus and "—" when missing: the value a reason names, such
  * as a clamp's applied value, where `formatValue`'s 1 dp would print a value that was never applied (0.25 as 0.3).
+ * With `decimals` (0 to 3) it prints exactly that many: a chart tick at its step's ("65", "0.50").
  */
-export function formatNumber(value: number | null | undefined): string {
+export function formatNumber(value: number | null | undefined, decimals?: number): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return "—";
-  return PLAIN.format(value).replace("-", MINUS);
+  const format = decimals === undefined ? PLAIN : DIGITS[Math.min(3, Math.max(0, Math.round(decimals)))];
+  return format.format(value).replace("-", MINUS);
 }

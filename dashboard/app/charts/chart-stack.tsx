@@ -168,7 +168,7 @@ export const SeriesPlot = memo(function SeriesPlot({ model, hidden, layers, axes
   const plotRef = useRef<uPlot | null>(null);
   const data = useMemo<uPlot.AlignedData>(() => [model.t, ...model.traces.map((trace) => trace.values)], [model]);
   const marks = useMemo(() => ({ model, hidden, layers }), [model, hidden, layers]);
-  const structure = ["series", model.unit, axes, syncKey, ...model.traces.map((trace) => `${trace.key}:${trace.token}:${trace.daily}:${trace.dash}`)].join("|");
+  const structure = ["series", model.unit, axes, layers.cell ? "cell" : "panel", syncKey, ...model.traces.map((trace) => `${trace.key}:${trace.token}:${trace.daily}:${trace.dash}`)].join("|");
   useEffect(() => {
     const plot = plotRef.current;
     if (!plot) return;

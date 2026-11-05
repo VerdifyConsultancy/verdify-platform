@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 import { useMemo, useRef, type MutableRefObject } from "react";
 import type uPlot from "uplot";
+import { bandRange } from "../lib/band-range";
 import { formatValue } from "../lib/format";
 import { DataTable, type DataTableBlock } from "./data-table";
 import { paintBandEdges, paintBandFill } from "./draw";
-import { bandAt, bandRuns, extentUnion, paddedRange, type BandKind, type BandRun } from "./marks";
+import { bandAt, bandExtent, bandRuns, type BandKind, type BandRun } from "./marks";
 import { AXIS_FONT, clockTime, fitEdges } from "./time-axis";
 import { valueAxis } from "./time-series";
 import { tooltipPlugin } from "./tooltip";
@@ -19,6 +20,8 @@ import { UPlotChart, type ChartEnv, type ChartOptions } from "./uplot-chart";
  * local ticks fall on whole hours); each point is the middle of its hour. A missing bucket is left out, never 0.
  */
 export const TYPICAL_BASE = Date.parse("2026-01-05T07:00:00Z") / 1000;
+/** The y axis of the Statistics charts stacked in one card (temperature over VPD): one width, so their plots line up. */
+export const STATS_AXIS_PX = 48;
 const HOUR = 3600;
 const DAY = 86_400;
 
@@ -119,15 +122,12 @@ export function typicalOptions(env: ChartEnv, modelRef: MutableRefObject<Typical
     ],
     scales: {
       y: {
-        range: (_plot, min, max) => {
-          const current = modelRef.current;
-          let low = Infinity, high = -Infinity;
-          for (const run of current.band) for (let index = 0; index < run.t.length; index++) { low = Math.min(low, run.low[index]); high = Math.max(high, run.high[index]); }
-          return paddedRange([min, max], extentUnion(null, Number.isFinite(low) ? [low, high] : null));
-        },
+        // The band plus half its width each side, widened to the hours (redesign §4.6): the band keeps its edges.
+        range: (_plot, min, max) => bandRange(bandExtent(modelRef.current.band, TYPICAL_BASE, TYPICAL_BASE + DAY), [min, max]),
       },
     },
-    axes: [hourAxis(colors), valueAxis(model.unit, colors)],
+    // One y-axis width for both charts in the card, so their plots line up.
+    axes: [hourAxis(colors), valueAxis(model.unit, colors, STATS_AXIS_PX)],
     cursor: { points: { show: false } },
     hooks: {
       drawClear: [(plot) => paintBandFill(plot, modelRef.current.band, colors)],

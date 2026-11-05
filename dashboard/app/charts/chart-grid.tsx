@@ -2,11 +2,12 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import type uPlot from "uplot";
 import { cssVars } from "../components/data/viz";
+import { bandRange, type BandExtent } from "../lib/band-range";
 import { formatValue } from "../lib/format";
 import { usePhone } from "../lib/narrow";
-import { SeriesPlot, STACK_AXIS_PX, bare } from "./chart-stack";
+import { SeriesPlot, STACK_AXIS_PX } from "./chart-stack";
 import { DataTable, TimeCell, type DataTableBlock } from "./data-table";
-import { lastAtOrBefore, paddedRange } from "./marks";
+import { bandExtent, lastAtOrBefore } from "./marks";
 import { buildTimeSeriesModel, type SeriesLayers, type TimeSeriesModel } from "./time-series";
 import { cursorX } from "./tooltip";
 import { clockTime, localDay } from "./time-axis";
@@ -51,23 +52,25 @@ export type ChartGridProps = {
   height?: number;
 };
 
-/** One y range for every cell of a row: their values and bands inside the window, padded as a single chart's would be. */
+/**
+ * One y range for every cell of a row: their values inside the window and their bands, each band plus half its width
+ * each side (redesign §4.6), so every cell's band keeps its edges and the cells compare.
+ */
 export function rowRange(models: readonly TimeSeriesModel[], xRange: XRange): [number, number] {
   let low = Infinity, high = -Infinity;
+  let band: BandExtent | null = null;
   for (const model of models) {
     for (const trace of model.traces) for (const value of trace.values) if (value !== null) { low = Math.min(low, value); high = Math.max(high, value); }
-    for (const run of model.runs) run.t.forEach((at, index) => {
-      if (at < xRange.from || at > xRange.to) return;
-      low = Math.min(low, run.low[index]); high = Math.max(high, run.high[index]);
-    });
+    const own = bandExtent(model.runs, xRange.from, xRange.to);
+    if (own) band = band ? { low: Math.min(band.low, own.low), high: Math.max(band.high, own.high), width: Math.max(band.width ?? 0, own.width ?? 0) } : own;
   }
-  return paddedRange([Number.isFinite(low) ? low : null, Number.isFinite(high) ? high : null], null);
+  return bandRange(band, [Number.isFinite(low) ? low : null, Number.isFinite(high) ? high : null]);
 }
 
 /**
- * A cell's readout: its primary value at the cursor ("65.1 at 14:22"); else its newest value, "65.1 now" only while the
- * window reaches now and that value is the newest bucket's, else when it was ("65.1 at 08:10"), so a past window or a
- * probe gone quiet never reads as current.
+ * A cell's readout, with its unit (redesign §5.6): its primary value at the cursor ("65.1 °F at 14:22"); else its newest
+ * value, "65.1 °F now" only while the window reaches now and that value is the newest bucket's, else when it was
+ * ("65.1 °F at 08:10"), so a past window or a probe gone quiet never reads as current.
  */
 export function cellReadout(model: TimeSeriesModel, x: number | null, withDate: boolean, now: number = model.now): string {
   if (model.primary < 0) return "—";
@@ -75,7 +78,7 @@ export function cellReadout(model: TimeSeriesModel, x: number | null, withDate: 
   if (x !== null) {
     const index = lastAtOrBefore(model.t, x);
     const value = index >= 0 && Math.abs(x - model.t[index]) <= model.bucketSeconds ? values[index] : null;
-    return `${bare(value, model.unit)} at ${clockTime(x, withDate)}`;
+    return `${formatValue(value, model.unit)} at ${clockTime(x, withDate)}`;
   }
   for (let index = values.length - 1; index >= 0; index--) {
     if (values[index] === null) continue;
@@ -83,7 +86,7 @@ export function cellReadout(model: TimeSeriesModel, x: number | null, withDate: 
     const live = model.xRange.from <= now && now <= model.xRange.to;
     // A bucket covers `bucketSeconds` from its time: the newest one ends within a bucket of now.
     const current = live && now - (at + model.bucketSeconds) <= model.bucketSeconds;
-    return `${bare(values[index], model.unit)} ${current ? "now" : `at ${clockTime(at, withDate || localDay(at) !== localDay(now))}`}`;
+    return `${formatValue(values[index], model.unit)} ${current ? "now" : `at ${clockTime(at, withDate || localDay(at) !== localDay(now))}`}`;
   }
   return "—";
 }
@@ -120,7 +123,7 @@ export function ChartGrid({ label, columns, rows, now, xRange, syncKey, height =
   }))), [rows, now, xRange.from, xRange.to]);
   const ranges = useMemo(() => models.map((row) => rowRange(row, xRange)), [models, xRange]);
   const layers = useMemo(() => models.map((row, rowIndex) => row.map((_, column): SeriesLayers => ({
-    tooltip: false, onCursor, yRange: ranges[rowIndex],
+    tooltip: false, onCursor, yRange: ranges[rowIndex], cell: true,
     xLabels: phone ? rowIndex === models.length - 1 && column === row.length - 1 : rowIndex === models.length - 1,
     yLabels: phone || column === 0, yAxisSize: STACK_AXIS_PX,
   }))), [models, ranges, phone, onCursor]);
@@ -138,12 +141,13 @@ export function ChartGrid({ label, columns, rows, now, xRange, syncKey, height =
         const model = models[rowIndex][column];
         const drawable = !(cell.series === null && cell.message) && model.t.length > 0;
         const axes = `${layers[rowIndex][column].xLabels ? "x" : ""}${layers[rowIndex][column].yLabels ? "y" : ""}`;
+        // The readout heads its plot with its unit, so it sits on the plot it reads, never under the bottom row's time axis.
         return <div key={cell.column} className={["grid-cell", layers[rowIndex][column].xLabels && "grid-cell-axis", column === 0 && "grid-cell-first"].filter(Boolean).join(" ")} data-zone={cell.column}>
           <div className="grid-cell-head">{columns.find((item) => item.key === cell.column)?.head}</div>
+          <p className="grid-readout">{cellReadout(model, cursor, withDate, now)}</p>
           {drawable
             ? <SeriesPlot model={model} hidden={hidden} layers={layers[rowIndex][column]} axes={axes} syncKey={syncKey} xRange={xRange} />
             : <div className="plot grid-plot chart-message"><p>{cell.message ?? "No data in this window"}</p></div>}
-          <p className="grid-readout">{cellReadout(model, cursor, withDate, now)}</p>
         </div>;
       })}
     </div>)}
