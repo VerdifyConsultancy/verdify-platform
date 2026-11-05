@@ -160,7 +160,8 @@ button.sch-block:hover,.sch-block.is-selected{box-shadow:0 0 0 2px var(--ink)}
 .sch-week-next{grid-area:next}
 .sch-week-days{grid-area:days}
 .sch-week-step{flex:none;min-width:var(--tap);padding:0;font-size:1.2rem}
-span.sch-week-step.is-off{display:inline-flex;align-items:center;justify-content:center;color:var(--line-strong)}
+/* A step past what API-IRR-02 serves keeps its frame at the same height, quieter, so the strip stays balanced and never reads as a slip. */
+span.sch-week-step.is-off{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:var(--radius-sm);color:var(--line-strong)}
 .sch-week-days{display:grid;flex:1;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--space-1);min-width:0;margin:0;padding:0;list-style:none}
 .sch-week-day{min-width:0}
 .sch-week-day>a,.sch-week-none{display:grid;align-content:start;gap:3px;height:100%;min-height:var(--tap);padding:var(--space-2);border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff;color:var(--ink);text-decoration:none}
