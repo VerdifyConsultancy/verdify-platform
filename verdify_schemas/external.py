@@ -1,6 +1,8 @@
 """External-API wire schemas — upstream payloads, validated at our boundary.
 
-Three integrations today:
+Four integrations today:
+- Cortex /v1/embeddings (embed.main, #1351): the knowledge corpus and MCP
+  semantic search (verdify_schemas/embeddings.py).
 - Open-Meteo 16-day hourly forecast (forecast-sync.py; 27 parallel arrays)
 - Home Assistant /api/states/{entity_id} (Shelly, Tempest, hydro YINMIK,
   switches, occupancy).
@@ -156,3 +158,28 @@ class TuyaDeviceStatus(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     dps: dict[TuyaDpId, TuyaDpValue]
+
+
+# ── Cortex embeddings (embed.main, #1351) ──
+
+
+class CortexEmbeddingDatum(BaseModel):
+    """One ``data`` row of an OpenAI-compatible ``/v1/embeddings`` response."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    index: StrictInt = Field(ge=0)
+    embedding: list[StrictFloat | StrictInt] = Field(min_length=1)
+
+
+class CortexEmbeddingResponse(BaseModel):
+    """Cortex (GPUStack) ``/v1/embeddings`` response.
+
+    Only the vectors and their input positions cross this boundary. The
+    dimension and finiteness checks live with the contract in
+    verdify_schemas/embeddings.py, which knows the expected size.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    data: list[CortexEmbeddingDatum] = Field(min_length=1)

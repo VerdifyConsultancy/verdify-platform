@@ -1,4 +1,6 @@
 # #1011: no direct Internet, LAN, NAS, device or API egress; fixed-host relay only.
+# #1351: plus local Cortex (traefik-apps 192.168.7.10:443) for embed.main; the OpenAI
+# embeddings relay port 8081 is no longer reachable from MCP.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -40,6 +42,12 @@ spec:
           app.kubernetes.io/component: outbound
     ports:
     - protocol: TCP
-      port: 8081
-    - protocol: TCP
       port: 8082
+  # #1351: Cortex embed.main for lessons_search/knowledge_search. cortex.vallery.net
+  # resolves to traefik-apps in cluster DNS; no other LAN host or port.
+  - to:
+    - ipBlock:
+        cidr: 192.168.7.10/32
+    ports:
+    - protocol: TCP
+      port: 443

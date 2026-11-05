@@ -9,8 +9,6 @@ spec:
       containers:
       - name: mcp
         env:
-        - name: OPENAI_BASE_URL
-          value: http://verdify-outbound:8081/v1
         - name: SLACK_API_BASE_URL
           value: http://verdify-outbound:8082/api
 ---

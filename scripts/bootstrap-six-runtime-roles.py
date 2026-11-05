@@ -680,6 +680,38 @@ def sealed_sql_289():
     )
 
 
+KNOWLEDGE_EMBEDDINGS_MIGRATION = (
+    296,
+    "296-knowledge-embeddings-cortex.sql",
+    "28555e58ed20cc4d264dba288fdd3dd97d8e1b554fc6d561acfaa910d535e246",
+)
+# #1351: knowledge_embeddings (halfvec 2560, Cortex embed.main) and its search function, SELECT and
+# EXECUTE for the MCP duty only. The MCP digest takes in both entries, so the MCP seal moves; neither
+# object carries an api, ingestor or PUBLIC entry, so both ordinary seals stay 289's. 290-295 are
+# reviewed in open PRs ahead of this one; whichever merges first re-chains the other. The MCP literal is
+# a read-only projection on production at exact289 until the rolled-back native qualification
+# measures it.
+SUCCESSOR_296 = {
+    "api": SUCCESSOR_289["api"],
+    "ingestor": SUCCESSOR_289["ingestor"],
+    "mcp": "9ede0ab24e66d55117768d87f7b09d8681471f53e6785638c4137792768e0b67",
+}
+
+
+def sealed_sql_296():
+    # Keep every 289 predicate and bind the exact 296 runner stamp with the MCP seal its grants move.
+    predecessor = sealed_sql_289()
+    current = seal_profile_sql(289, SUCCESSOR_289)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(296, SUCCESSOR_296), 1)
+        + " AND "
+        + ledger_row_sql(*KNOWLEDGE_EMBEDDINGS_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -714,6 +746,8 @@ def sealed_sql():
         + sealed_sql_288()
         + " OR "
         + sealed_sql_289()
+        + " OR "
+        + sealed_sql_296()
         + ")"
     )
 

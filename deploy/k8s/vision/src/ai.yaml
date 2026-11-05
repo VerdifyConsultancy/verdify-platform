@@ -19,6 +19,10 @@ keys:
   anthropic:
     file: ${ANTHROPIC_API_KEY_FILE}
     provider: anthropic
+  # #1351: Cortex identity limited to embed.main (Secret verdify-embedding-cortex, key api_key.txt).
+  cortex_embedding:
+    file: ${VERDIFY_EMBEDDING_KEY_FILE:-/vembed/api_key.txt}
+    provider: cortex
 
 # ── Models ───────────────────────────────────────────────────────
 models:
@@ -37,11 +41,20 @@ models:
     max_output_tokens: 4096
     purpose: "Camera snapshot crop health analysis"
 
+  # #1351 (Jason 2026-11-05: local-only): the knowledge corpus (knowledge_embeddings, migration 296)
+  # and MCP lessons_search/knowledge_search. verdify_schemas/embeddings.py reads this block and refuses
+  # any provider or host but Cortex. No `dimensions` request is sent: GPUStack refuses it and 2560 is
+  # embed.main's natural size.
   embedding:
-    provider: openai
-    model: text-embedding-3-large
-    dimensions: 3072
-    purpose: "Observation semantic similarity search"
+    provider: cortex
+    base_url: ${CORTEX_BASE_URL:-https://cortex.vallery.net/v1}
+    model: embed.main
+    dimensions: 2560
+    key: cortex_embedding
+    batch_size: 16
+    timeout_s: 60
+    query_instruction: "Given a question about running the greenhouse, retrieve the plans, lessons, playbook sections, docs and observations that answer it"
+    purpose: "Knowledge corpus and MCP semantic search (Qwen3-Embedding-4B, halfvec 2560)"
 
 # ── Prompts & Templates ─────────────────────────────────────────
 # All templates live in /srv/verdify/templates/.
@@ -52,8 +65,6 @@ templates:
   vision:
     prompt: vision-analysis.j2
 
-  embedding:
-    text_template: embedding-text.j2
 
 # ── Schedules ────────────────────────────────────────────────────
 # Cron expressions (MDT). Managed via crontab, documented here.
@@ -68,9 +79,9 @@ schedules:
     depends_on: frigate  # Requires Frigate NVR accessible
 
   embedding:
-    cron: null  # Manual — run after vision analysis accumulates new observations
-    script: scripts/generate-observation-embeddings.py
-    description: "Generate pgvector embeddings for similarity search"
+    cron: null  # The verdify-knowledge-embed CronJob is suspended; run its one-shot Job after a release.
+    script: scripts/embed-corpora.py
+    description: "Embed the knowledge corpus with Cortex embed.main (resumable, bounded)"
 
 # ── Context Gathering ────────────────────────────────────────────
 context:

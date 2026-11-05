@@ -229,7 +229,7 @@ WITH checks AS (
     AND l.superseded_by IS NULL
     AND NOT EXISTS (
       SELECT 1
-      FROM verdify_embeddings e
+      FROM knowledge_embeddings e
       WHERE e.source_type = 'lesson'
         AND e.source_id = l.id::text
     )
@@ -240,7 +240,7 @@ WITH checks AS (
   FROM site_content s
   WHERE NOT EXISTS (
     SELECT 1
-    FROM verdify_embeddings e
+    FROM knowledge_embeddings e
     WHERE e.source_type = 'site_doc'
       AND e.source_id = s.page_path
   )
@@ -251,7 +251,7 @@ WITH checks AS (
   FROM playbook_content p
   WHERE NOT EXISTS (
     SELECT 1
-    FROM verdify_embeddings e
+    FROM knowledge_embeddings e
     WHERE e.source_type = 'playbook'
       AND e.source_id = p.source_path
       AND e.chunk_idx = p.chunk_idx

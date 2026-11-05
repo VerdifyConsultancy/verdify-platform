@@ -127,8 +127,8 @@ CASES = {
         {
             "tool": "lessons_search",
             "reason": "embedding_credential_missing",
-            "embedding_model": "text-embedding-3-large",
-            "embedding_dimensions": 3072,
+            "embedding_model": "embed.main",
+            "embedding_dimensions": 2560,
         },
     ),
     "alert_validation_failed": (

@@ -81,6 +81,8 @@ COPY verdify_schemas/ /app/verdify_schemas/
 # slack_config.py and verdify_schemas/ (its only repo imports) already live, so
 # its imports resolve at this in-container location.
 COPY scripts/ /app/scripts/
+# scripts/embed-corpora.py (the verdify-knowledge-embed Job) reads models.embedding (#1351).
+COPY config/ai.yaml /app/config/ai.yaml
 
 # k3s cleanup (#339/#210 + #43/#400): docs/ is runtime for TWO consumers now.
 # (1) iris_planner.PLANNER_PLAYBOOK_PATH reads /app/docs/planner/greenhouse-playbook.md

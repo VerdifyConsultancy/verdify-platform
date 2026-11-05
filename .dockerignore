@@ -81,6 +81,13 @@ config
 db
 hermes
 
+# config/ is excluded above except config/ai.yaml: the mcp and ingestor images read its
+# models.embedding block (verdify_schemas/embeddings.py, #1351). Same kaniko-safe
+# re-include dance as db/ below.
+!config
+config/*
+!config/ai.yaml
+
 # db/ is excluded above (the api/mcp/ingestor images never touch it), but the
 # verdify-migrate image (db/Dockerfile.migrate) COPYs the schema, both runners,
 # every top-level numbered migration, and the two ledger SQL files. Re-include

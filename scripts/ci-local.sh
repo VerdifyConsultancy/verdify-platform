@@ -97,6 +97,7 @@ $PY -m pytest -q -rs \
   tests/test_287_retire_high_wind_delivery.py \
   tests/test_288_retire_irrigation_registry_delivery.py \
   tests/test_289_alert_silences_delivery.py \
+  tests/test_296_knowledge_embeddings_delivery.py \
   tests/test_metric_registry_completeness.py \
   tests/test_verdify_services_series.py \
   tests/test_verdify_services_band_preview.py \
@@ -289,6 +290,7 @@ $PY -m pytest -q -rs \
   tests/test_scorecard_realized_dryout.py \
   tests/test_solar_night_packet.py \
   tests/test_mcp_semantic_dependency_lifecycle.py \
+  tests/test_knowledge_embeddings_contract.py \
   tests/test_mqtt_fanout.py \
   tests/test_no_hosted_runner_workflows.py \
   tests/test_planner_graph_contract.py \

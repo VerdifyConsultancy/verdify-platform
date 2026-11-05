@@ -1,0 +1,20 @@
+{
+  "migration": "296-knowledge-embeddings-cortex.sql",
+  "exact_final_migration_sha256": "28555e58ed20cc4d264dba288fdd3dd97d8e1b554fc6d561acfaa910d535e246",
+  "final_migration_qualification_pending": true,
+  "before": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projected_successor": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "9ede0ab24e66d55117768d87f7b09d8681471f53e6785638c4137792768e0b67"
+  },
+  "projection": "2026-11-05, read only, production at exact289: max seq 289 with 289's sha, and all three live digests and receipts equal to 289's registration. fn_mcp_runtime_boundary_digest's live body (pg_get_functiondef), run as a plain query under its own search_path (pg_catalog, pg_temp) in a default_transaction_read_only session on production, reproduced the live MCP digest 6cab4f0f... byte for byte. With four injected entries it gives the projected MCP seal: relation|public|knowledge_embeddings|r|10|f|f|| (shaped exactly like production's public.verdify_embeddings entry), relation-acl SELECT and function-acl EXECUTE for verdify_mcp_runtime (production OID 1527920, grantor verdify OID 10), and the function entry with pg_get_functiondef's layout for this file's CREATE FUNCTION (argument type public.halfvec, LANGUAGE sql, STABLE, SET search_path TO 'pg_catalog', 'public', 'pg_temp', SET \"hnsw.iterative_scan\" TO 'strict_order', and the body verbatim). The function entry's text is the part most likely to differ from the measured value, because no CREATE could run in a read-only session. The ordinary seals stay 289's: fn_runtime_ordinary_boundary_digest (217) takes in a relation or function only if an api or ingestor role can use it or holds an entry, or PUBLIC does; this file grants neither, revokes PUBLIC on both objects, production has no table default ACL and verdify's function default is {verdify=X/verdify}, and the two indexes carry no ACL. Run scripts/qualify-migration-successor.py db/migrations/296-knowledge-embeddings-cortex.sql --fixture tests/fixtures/296-knowledge-embeddings-native-qualification.json on production (every session rolls back; no --apply-first while production is at 289). If the probe differs from these literals, set the measured MCP digest in the file's successor block (both places) and in the c0-migration-delivery.py and bootstrap-six-runtime-roles.py registrations, update the file's sha at both and here, and run it again.",
+  "qualified_successor": null,
+  "after_rollback": null,
+  "inside_transaction_receipts_match": false,
+  "final_migration_rollback_verified": false
+}

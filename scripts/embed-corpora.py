@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 """
-embed-corpora.py — Generate OpenAI text-embedding-3-large embeddings for the
-Iris knowledge corpora (lesson / plan / site_doc / playbook / observation) and
-store in verdify_embeddings (migration 112). The site_doc corpus is populated
-from public website Markdown plus operator-facing docs by populate-site-content.py.
+embed-corpora.py — Embed the knowledge corpora (lesson / plan / site_doc / playbook /
+observation) with local Cortex embed.main (2560-dim) into public.knowledge_embeddings
+(migration 296, #1351). The site_doc corpus is populated from public website Markdown
+plus operator-facing docs by populate-site-content.py.
 
-Phase 3 of the Iris loop overhaul. Idempotent: each row carries a content_hash
-so unchanged rows skip the embedding call. Designed to run as a daily systemd
-timer post-SUNRISE; also safe to run ad-hoc.
+Runs in the cluster as the verdify-knowledge-embed Job (ingestor image, owner DB login,
+the embed.main-only key at /vembed/api_key.txt); never on a laptop. Settings come from
+config/ai.yaml models.embedding through verdify_schemas.embeddings, which accepts only
+Cortex on cortex.vallery.net.
+
+Resumable: a row whose content_hash and embedding_model already match is skipped, and
+every batch is written as soon as it returns, so a rerun continues where an interrupted
+run stopped. Bounded: --concurrency batches in flight (default 4), --deadline-seconds
+stops launching new batches (the Job's activeDeadlineSeconds is the hard stop), and a
+progress line is logged after every batch. Exit 0 only when every queued row is embedded.
 
 Usage:
     embed-corpora.py                       # incremental (default)
     embed-corpora.py --all                 # re-embed everything (force)
     embed-corpora.py --source lesson       # restrict to one source_type
-    embed-corpora.py --dry-run             # walk + count, no API calls
-
-Requires OPENAI_API_KEY env var.
+    embed-corpora.py --dry-run             # walk + count, no API calls or writes
 """
 
 from __future__ import annotations
@@ -25,24 +30,26 @@ import asyncio
 import hashlib
 import json
 import logging
-import os
 import sys
+import time
 from pathlib import Path
 
 import asyncpg
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "ingestor"))
 from config import DB_DSN  # noqa: E402
+from verdify_schemas import embeddings  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [embed-corpora] %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
-EMBED_MODEL = "text-embedding-3-large"  # 3072-dim
-EMBED_DIM = 3072
-BATCH_SIZE = 64  # OpenAI accepts up to 2048; smaller keeps latency low
-
-VALID_SOURCES = ("lesson", "plan", "site_doc", "playbook", "observation")
+VALID_SOURCES = embeddings.SOURCE_TYPES
+# embed.main is served with an 8,192-token window; site_doc chunks are 2 KiB, and no other
+# source row is near this. Anything longer is cut, and the stored content is the cut text.
+MAX_INPUT_CHARS = 16000
+ATTEMPTS = 3
 
 
 def _hash(text: str) -> str:
@@ -249,79 +256,103 @@ def _chunk_text(text: str, max_bytes: int = 2048) -> list[str]:
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# OpenAI batching
+# Cortex embed.main batching
 # ──────────────────────────────────────────────────────────────────────────
 
+UPSERT_SQL = """
+    INSERT INTO public.knowledge_embeddings
+      (source_type, source_id, chunk_idx, content, content_hash, embedding_model, embedding, metadata)
+    VALUES ($1, $2, $3, $4, $5, $6, $7::halfvec, $8::jsonb)
+    ON CONFLICT (source_type, source_id, chunk_idx) DO UPDATE
+      SET content         = EXCLUDED.content,
+          content_hash    = EXCLUDED.content_hash,
+          embedding_model = EXCLUDED.embedding_model,
+          embedding       = EXCLUDED.embedding,
+          metadata        = EXCLUDED.metadata,
+          embedded_at     = now()
+"""
 
-async def _embed_batch(client, texts: list[str]) -> list[list[float]]:
-    """Call OpenAI embeddings.create on a batch and return vectors."""
-    resp = await asyncio.to_thread(client.embeddings.create, model=EMBED_MODEL, input=texts, dimensions=EMBED_DIM)
-    return [d.embedding for d in resp.data]
 
-
-def _vector_literal(vec: list[float]) -> str:
-    """asyncpg-friendly pgvector literal: '[v1,v2,...]' as text."""
-    return "[" + ",".join(f"{v:.6f}" for v in vec) + "]"
-
-
-async def _upsert_embedding(
-    conn: asyncpg.Connection,
-    source_type: str,
-    source_id: str,
-    chunk_idx: int,
-    content: str,
-    content_hash: str,
-    embedding: list[float],
-    metadata: dict,
-) -> None:
-    await conn.execute(
-        """
-        INSERT INTO verdify_embeddings
-          (source_type, source_id, chunk_idx, content, content_hash, embedding, metadata)
-        VALUES ($1, $2, $3, $4, $5, $6::vector, $7::jsonb)
-        ON CONFLICT (source_type, source_id, chunk_idx) DO UPDATE
-          SET content       = EXCLUDED.content,
-              content_hash  = EXCLUDED.content_hash,
-              embedding     = EXCLUDED.embedding,
-              metadata      = EXCLUDED.metadata,
-              embedded_at   = now()
-        """,
-        source_type,
-        source_id,
-        chunk_idx,
-        content,
-        content_hash,
-        _vector_literal(embedding),
-        json.dumps(metadata),
+async def _existing(conn: asyncpg.Connection, sources: tuple[str, ...]) -> dict[tuple[str, str, int], tuple[str, str]]:
+    rows = await conn.fetch(
+        """SELECT source_type, source_id, chunk_idx, content_hash, embedding_model
+             FROM public.knowledge_embeddings WHERE source_type = ANY($1::text[])""",
+        list(sources),
     )
+    return {(r["source_type"], r["source_id"], r["chunk_idx"]): (r["content_hash"], r["embedding_model"]) for r in rows}
 
 
-async def _existing_hash(conn: asyncpg.Connection, source_type: str, source_id: str, chunk_idx: int) -> str | None:
-    return await conn.fetchval(
-        """SELECT content_hash FROM verdify_embeddings
-             WHERE source_type = $1 AND source_id = $2 AND chunk_idx = $3""",
-        source_type,
-        source_id,
-        chunk_idx,
-    )
+def plan_rows(collected, existing, force: bool, model: str = embeddings.EMBEDDING_MODEL):
+    """The rows still to embed: new, changed, or embedded by another model (all of them with --all)."""
+    queued = []
+    for st, sid, idx, content, meta in collected:
+        content = content[:MAX_INPUT_CHARS]
+        h = _hash(content)
+        if not force and existing.get((st, sid, idx)) == (h, model):
+            continue
+        queued.append((st, sid, idx, content, h, meta))
+    return queued
 
 
-# ──────────────────────────────────────────────────────────────────────────
-# Driver
-# ──────────────────────────────────────────────────────────────────────────
+async def _embed_with_retry(settings, texts, api_key, client) -> list[list[float]]:
+    for attempt in range(1, ATTEMPTS + 1):
+        try:
+            return await embeddings.embed_texts(settings, texts, api_key=api_key, client=client)
+        except embeddings.EmbeddingError as exc:
+            if attempt == ATTEMPTS or exc.reason == "embedding_batch_invalid":
+                raise
+            log.warning("batch failed (%s), retry %d/%d", exc.reason, attempt, ATTEMPTS - 1)
+            await asyncio.sleep(2**attempt)
+    raise AssertionError("unreachable")
 
 
-async def run(sources: tuple[str, ...], force: bool, dry_run: bool) -> None:
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key and not dry_run:
-        log.error("OPENAI_API_KEY not set; cannot call embeddings API")
-        sys.exit(1)
+async def embed_queue(conn, settings, api_key, queued, *, concurrency: int, deadline: float, client) -> tuple[int, int]:
+    """Embed and upsert in batches, at most `concurrency` in flight; return (embedded, failed batches)."""
+    batches = [queued[i : i + settings.batch_size] for i in range(0, len(queued), settings.batch_size)]
+    gate = asyncio.Semaphore(concurrency)
+    write = asyncio.Lock()
+    done = 0
+    failed = 0
+    started = time.monotonic()
 
-    client = None
-    if not dry_run:
-        from openai import OpenAI
+    async def one(batch) -> None:
+        nonlocal done, failed
+        async with gate:
+            if time.monotonic() >= deadline:
+                return
+            try:
+                vectors = await _embed_with_retry(settings, [row[3] for row in batch], api_key, client)
+            except embeddings.EmbeddingError as exc:
+                failed += 1
+                log.error("batch of %d failed: %s", len(batch), exc.reason)
+                return
+            async with write, conn.transaction():
+                for (st, sid, idx, content, h, meta), vec in zip(batch, vectors, strict=True):
+                    await conn.execute(
+                        UPSERT_SQL,
+                        st,
+                        sid,
+                        idx,
+                        content,
+                        h,
+                        settings.model,
+                        embeddings.halfvec_literal(vec),
+                        json.dumps(meta),
+                    )
+            done += len(batch)
+            elapsed = time.monotonic() - started
+            rate = done / elapsed if elapsed > 0 else 0.0
+            eta = (len(queued) - done) / rate if rate > 0 else float("nan")
+            log.info("progress %d/%d rows (%.1f rows/s, eta %.0fs)", done, len(queued), rate, eta)
 
-        client = OpenAI(api_key=api_key)
+    await asyncio.gather(*(one(batch) for batch in batches))
+    return done, failed
+
+
+async def run(sources: tuple[str, ...], force: bool, dry_run: bool, concurrency: int, deadline_s: float) -> int:
+    deadline = time.monotonic() + deadline_s
+    settings = embeddings.load_embedding_settings()
+    api_key = None if dry_run else embeddings.read_api_key(settings)
 
     conn = await asyncpg.connect(DB_DSN)
     try:
@@ -332,33 +363,37 @@ async def run(sources: tuple[str, ...], force: bool, dry_run: bool) -> None:
             "playbook": _collect_playbook,
             "observation": _collect_observations,
         }
-
-        # Gather all rows that need (re)embedding
-        to_embed: list[tuple[str, str, int, str, str, dict]] = []
+        collected = []
         for source_type in sources:
-            collector = collectors[source_type]
-            async for st, sid, idx, content, meta in collector(conn):
-                h = _hash(content)
-                if not force:
-                    existing = await _existing_hash(conn, st, sid, idx)
-                    if existing == h:
-                        continue
-                to_embed.append((st, sid, idx, content, h, meta))
+            async for row in collectors[source_type](conn):
+                collected.append(row)
+        existing = await _existing(conn, sources)
+        queued = plan_rows(collected, existing, force)
+        log.info(
+            "corpus %d rows, %d already current, %d queued (model=%s dims=%d dry_run=%s)",
+            len(collected),
+            len(collected) - len(queued),
+            len(queued),
+            settings.model,
+            settings.dimensions,
+            dry_run,
+        )
+        if dry_run or not queued:
+            return 0
 
-        log.info("queued %d rows for embedding (dry_run=%s)", len(to_embed), dry_run)
-        if dry_run or not to_embed:
-            return
+        import httpx
 
-        # Batch through the OpenAI API
-        for i in range(0, len(to_embed), BATCH_SIZE):
-            batch = to_embed[i : i + BATCH_SIZE]
-            texts = [row[3] for row in batch]
-            vectors = await _embed_batch(client, texts)
-            for (st, sid, idx, content, h, meta), vec in zip(batch, vectors, strict=True):
-                await _upsert_embedding(conn, st, sid, idx, content, h, vec, meta)
-            log.info("embedded %d/%d", min(i + BATCH_SIZE, len(to_embed)), len(to_embed))
+        async with httpx.AsyncClient(timeout=settings.timeout_s) as client:
+            done, failed = await embed_queue(
+                conn, settings, api_key, queued, concurrency=concurrency, deadline=deadline, client=client
+            )
     finally:
         await conn.close()
+    log.info("finished: %d/%d rows embedded, %d failed batches", done, len(queued), failed)
+    if done < len(queued):
+        log.error("incomplete: %d rows remain; rerun to resume", len(queued) - done)
+        return 1
+    return 0
 
 
 def main() -> int:
@@ -371,10 +406,19 @@ def main() -> int:
         help="restrict to one source_type (repeatable)",
     )
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--concurrency", type=int, default=4, choices=range(1, 9), metavar="1-8")
+    ap.add_argument("--deadline-seconds", type=float, default=3000.0)
     args = ap.parse_args()
     sources = tuple(args.source) if args.source else VALID_SOURCES
-    asyncio.run(run(sources=sources, force=args.all, dry_run=args.dry_run))
-    return 0
+    return asyncio.run(
+        run(
+            sources=sources,
+            force=args.all,
+            dry_run=args.dry_run,
+            concurrency=args.concurrency,
+            deadline_s=args.deadline_seconds,
+        )
+    )
 
 
 if __name__ == "__main__":

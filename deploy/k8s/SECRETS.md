@@ -319,6 +319,10 @@ migration and other bootstrap owner credentials are unchanged.
 
 `verdify-vision-cortex` must contain `api_key.txt`, a dedicated inference-only Cortex identity limited to `llm.primary.longctx.mm`, owned and sealed in agents KSOPS. The vision CronJob mounts it at `/vcortex/api_key.txt`. The old `verdify-vision-key` Gemini Secret is retained without workload references; deleting or revoking it is outside this change.
 
+## Verdify knowledge embeddings (#1351)
+
+`verdify-embedding-cortex` must contain `api_key.txt`, a dedicated Cortex identity (73) limited to `embed.main`, with no expiry. It is live in `verdify-prod`; its KSOPS adoption into the agents lane is jvallery/agents#6079. `verdify-mcp` mounts it at `/vembed/api_key.txt` (optional: if it is absent, `lessons_search` and `knowledge_search` fail closed with `embedding_credential_missing`), and so does the suspended `verdify-knowledge-embed` CronJob. `overlays/prod/embedding-cortex.placeholder.yaml` is local-config only, so the render emits no Secret. MCP no longer reads `OPENAI_API_KEY` from `verdify-hermes`.
+
 ## Firmware artifact signing (#1009)
 
 `verdify-firmware-signing` contains `cosign.key` and `password`. Agents owns the

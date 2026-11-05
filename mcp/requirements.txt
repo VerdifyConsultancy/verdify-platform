@@ -17,5 +17,5 @@ python-dotenv>=1.0,<2
 # GHSA-6q48-6c7w-9gw2: certifi before 2026.10.18 (transitive via httpx).
 certifi>=2026.10.18
 
-# Semantic retrieval uses the same declared OpenAI embedding provider.
-openai>=1.50,<3
+# Semantic retrieval calls local Cortex embed.main over HTTP (verdify_schemas/embeddings.py, #1351).
+httpx>=0.27,<1

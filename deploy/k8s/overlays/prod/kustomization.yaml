@@ -25,6 +25,9 @@ resources:
   # the local-config ANNOTATION so it is EXCLUDED from build output (a
   # device-affecting HA token is never emitted). Real verdify-ha-token via SOPS.
   - ha-token.placeholder.yaml
+  # #1351: verdify-embedding-cortex (embed.main-only Cortex key) is live; this local-config
+  # placeholder only completes the render and never applies (KSOPS adoption jvallery/agents#6079).
+  - embedding-cortex.placeholder.yaml
   # PLACEHOLDER hermes gateway Secret for local build ONLY (#119 hermes-iris).
   # hermes-iris references verdify-hermes via envFrom.secretRef; this completes
   # the #30 contract surface so the prod build is lint-able. local-config
@@ -178,6 +181,9 @@ components:
   # ConfigMap does NOT touch the running ingestor; the mount + psql initContainer
   # ship in the gated ingestor patch (see PR / ingestor-gather-mount.patch.yaml).
   - ../../components/ingestor-gather-script
+  # #1351 row 2: suspended re-embed of the knowledge corpus into knowledge_embeddings
+  # (Cortex embed.main, migration 296). Argo never starts a run; see the component.
+  - ../../components/knowledge-embed
 
 patches:
   - path: source-owned-fields-ssa.patch.yaml
@@ -323,6 +329,7 @@ patches:
                 - lab-cache-origin
                 - lab-site
                 - mcp
+                - knowledge-embed
                 - outbound
                 - winter-feasibility
 
