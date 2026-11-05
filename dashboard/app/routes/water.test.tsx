@@ -94,10 +94,13 @@ test("Today: zone cards in their fixed order, each line a row in its zone (L01�
   await load();
   expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Water today");
   expect(tab("Today").getAttribute("aria-current")).toBe("page");
-  expect([...document.querySelectorAll(".wat-zone")].map((node) => node.getAttribute("data-zone"))).toEqual(["wall", "center", "south", "west", "fog"]);
-  expect([...document.querySelectorAll("article[data-line]")].map((node) => node.getAttribute("data-line"))).toEqual(["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11"]);
+  expect([...document.querySelectorAll(".wat-zone")].map((node) => node.getAttribute("data-zone"))).toEqual(["wall", "center", "center_mister", "south", "west", "fog"]);
+  // #1336: one card per physical line, the center mister apart from the center drips, its fertilized side not wired.
+  expect([...document.querySelectorAll("article[data-line]")].map((node) => node.getAttribute("data-line"))).toEqual(["L01", "L02", "L05", "L06", "L04", "L07", "L08", "L09", "L10", "L11"]);
+  expect([...document.querySelectorAll(".wat-zone-name")].map((node) => text(node).split(" ").slice(0, 2).join(" "))).toEqual(["Wall drip", "Center drip", "Center mister", "South mister", "West mister", "Fog humidification"]);
+  expect(text(zone("center_mister").querySelector(".wat-unwired"))).toBe("Fertilized · not wired");
   expect([...document.querySelectorAll("article[data-line] h3")].map((node) => text(node))).toEqual([
-    "L01 Wall drip", "L02 Wall feed", "L04 Center mister", "L05 Center drip", "L06 Center feed", "L07 South mister", "L08 South feed", "L09 West mister", "L10 West feed", "L11 Fog",
+    "L01 Wall drip", "L02 Wall feed", "L05 Center drip", "L06 Center feed", "L04 Center mister", "L07 South mister", "L08 South feed", "L09 West mister", "L10 West feed", "L11 Fog",
   ]);
   // Each row is named by its h3, carries its state, and the old hook class stays for the visit specs.
   expect(screen.getByRole("article", { name: "L01 Wall drip" }).getAttribute("data-state")).toBe("idle");
@@ -105,8 +108,8 @@ test("Today: zone cards in their fixed order, each line a row in its zone (L01�
   expect(row("L02").querySelector(".line-subrow")?.getAttribute("data-line")).toBe("L03");
   // Zone heads: minutes against the cap line's cap, the reserve and when it last watered; misters' switches and source.
   expect(text(zone("wall").querySelector('[data-limit="L01"]'))).toMatch(/^0 \/ 60 min.*last Fri \d\d:\d\d$/);
-  expect(text(zone("center").querySelector('[data-limit="L04"]'))).toMatch(/^14 \/ 120 min.*60 min kept for VPD · last 06:58$/);
-  expect(text(zone("center").querySelector(".mister-source"))).toBe("VPD from the house average");
+  expect(text(zone("center_mister").querySelector('[data-limit="L04"]'))).toMatch(/^14 \/ 120 min.*60 min kept for VPD · last 06:58$/);
+  expect(text(zone("center_mister").querySelector(".mister-source"))).toBe("VPD from the house average");
   expect(text(zone("fog").querySelector(".wat-zone-today"))).toMatch(/^6 min today/);
   // Site today, in words with its hooks.
   expect([...document.querySelectorAll(".wat-site [data-limit]")].map((node) => [node.getAttribute("data-limit"), text(node)])).toEqual([
@@ -169,7 +172,7 @@ test("a phone's status line names a running line too, linked to its row; the zon
   // The wall's head: today's 12 min against the cap, and "running now", never Friday's last water.
   expect(text(zone("wall").querySelector('[data-limit="L01"]'))).toMatch(/^12 \/ 60 min.*running now$/);
   expect(text(zone("wall").querySelector(".wat-zone-last"))).not.toContain("last");
-  expect(text(zone("center").querySelector(".wat-zone-last"))).toBe("60 min kept for VPD · last 06:58");
+  expect(text(zone("center_mister").querySelector(".wat-zone-last"))).toBe("60 min kept for VPD · last 06:58");
   cleanup(); stopFixtureApi();
   open("/water", { fixture: "in-band" });
   await load();
@@ -398,7 +401,8 @@ test("an operator's click on an empty part of a row opens the editor prefilled w
   await load();
   expect(where()).toBe("/water/schedules?day=2026-11-04&line=L07&at=13%3A15&schedule=new");
   const drawer = within(document.querySelector<HTMLElement>("dialog.drawer")!);
-  expect((drawer.getByLabelText("Line") as HTMLSelectElement).selectedOptions[0].textContent).toMatch(/^L07/);
+  expect((drawer.getByLabelText("Line") as HTMLSelectElement).selectedOptions[0].textContent).toBe("South mister");
+  expect((drawer.getByLabelText("Variant") as HTMLSelectElement).selectedOptions[0].textContent).toBe("Clean · L07");
   expect((drawer.getByLabelText("Clock time (HH:MM)") as HTMLInputElement).value).toBe("13:15");
   expect(drawer.getByRole("button", { name: "Wednesday" }).getAttribute("aria-pressed")).toBe("true");
   fireEvent.click(drawer.getByRole("button", { name: "Cancel" }));
@@ -614,12 +618,12 @@ const LINE_IDS = ["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10",
 const buttons = (id: string) => [...row(id).querySelectorAll(":scope > .object-row-actions > button")].map((node) => text(node));
 const everyRow = () => Object.fromEntries(LINE_IDS.map((id) => [id, buttons(id)]));
 
-test("each row's actions with the irrigation firmware (#1343): Run… or Mist now… on every wet line but a reserved one that is off, a quiet Stop on every row but fog", async () => {
+test("each row's actions with the irrigation firmware (#1343): Run… or Mist now… on every wet line but a reserved one that is off, a quiet Stop on every row, and Fog once… on L11", async () => {
   open("/water", { fixture: "run-dialogs" });
   await load();
   expect(everyRow()).toEqual({
     L01: ["Run… L01", "Stop L01"], L02: ["Run… L02", "Stop L02"], L04: ["Mist now… L04", "Stop L04"], L05: ["Stop L05"], L06: ["Stop L06"], L07: ["Mist now… L07", "Stop L07"],
-    L08: ["Run… L08", "Stop L08"], L09: ["Mist now… L09", "Stop L09"], L10: ["Run… L10", "Stop L10"], L11: [],
+    L08: ["Run… L08", "Stop L08"], L09: ["Mist now… L09", "Stop L09"], L10: ["Run… L10", "Stop L10"], L11: ["Fog once… L11", "Stop L11"],
   });
   expect(document.querySelectorAll("article[data-line] .btn-stop")).toHaveLength(0);
   expect(screen.getByRole("button", { name: "Run… L01" }).className).toContain("btn-wide");

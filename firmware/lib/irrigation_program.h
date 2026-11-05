@@ -110,6 +110,23 @@ constexpr uint16_t kMistManifoldMask = irr_bit(kL04) | irr_bit(kL07) | irr_bit(k
 constexpr uint16_t kDegradedOnlyMask = irr_bit(kL04) | irr_bit(kL07) | irr_bit(kL09);
 constexpr uint16_t kFogMask = irr_bit(kL11);
 constexpr uint16_t kWetMask = 0x07FF;
+// #1336 (Jason, 2026-11-05): the fertilizer master valve L03 connects the fertilizer tank and
+// forces the flow through the feeder, so it opens only with a fertilized variant (L02, L06, L08,
+// L10) and never with clean water (L01, L04, L05, L07, L09, fog).
+constexpr uint16_t kFertRelayMask = irr_bit(kL02) | irr_bit(kL06) | irr_bit(kL08) | irr_bit(kL10);
+constexpr uint16_t kCleanWetMask = irr_bit(kL01) | irr_bit(kL04) | irr_bit(kL05) | irr_bit(kL07) |
+                                   irr_bit(kL09) | irr_bit(kL11);
+static_assert((kFertRelayMask | kCleanWetMask | irr_bit(kL03)) == kWetMask, "every wet relay is clean, fert or L03");
+static_assert((kFertRelayMask & kCleanWetMask) == 0, "no relay is both clean and fertilized");
+
+// The master-valve rule on a set of relays the engine wants ON: L03 is ON exactly when a
+// fertilized relay is and no clean one is. A clean relay never opens with L03 (a mixed set
+// keeps L03 shut), and a fertilized relay always brings L03.
+constexpr uint16_t irr_master_rule(uint16_t relays) {
+  return ((relays & kFertRelayMask) != 0 && (relays & kCleanWetMask) == 0)
+             ? uint16_t(relays | irr_bit(kL03))
+             : uint16_t(relays & ~irr_bit(kL03));
+}
 
 // Line kinds (irrigation §3) and clean partners (prewet and flush).
 enum class IrrLineKind : uint8_t { kDrip, kFertDrip, kMaster, kMister, kFertMister, kFog };
@@ -231,6 +248,17 @@ inline bool irr_run_args_in_bounds(uint8_t line, uint16_t on_s, uint8_t count, u
   const IrrKindBounds b = irr_kind_bounds(kLineKind[line]);
   return on_s >= b.on_lo && on_s <= b.on_hi && count >= b.count_lo && count <= b.count_hi && gap_s >= b.gap_lo &&
          gap_s <= b.gap_hi && prewet_s <= b.prewet_hi && flush_s <= b.flush_hi;
+}
+
+// #1343 follow-up (Jason, 2026-11-05): fog (L11) may be run once. Fog is not schedulable (no
+// slot ever names L11); its run-now is one continuous fog of 1-30 min (on_s 60-1800, count 1,
+// no gap, prewet or flush). The climate path drives the fog relay, so the engine asks for fog
+// (IrrOutputs::fog_run) and its rails still hold it.
+constexpr uint16_t kFogRunOnLo = 60;
+constexpr uint16_t kFogRunOnHi = 1800;
+inline bool irr_fog_run_args_in_bounds(uint16_t on_s, uint8_t count, uint16_t gap_s, uint16_t prewet_s,
+                                       uint16_t flush_s) {
+  return on_s >= kFogRunOnLo && on_s <= kFogRunOnHi && count == 1 && gap_s == 0 && prewet_s == 0 && flush_s == 0;
 }
 
 // Decode and validate a 584 B record. Little-endian by byte arithmetic, never by
@@ -869,6 +897,7 @@ struct IrrOutputs {
   bool drip_active;      // a drip run holds the water: climate mist and fog wait (irrigation_water_conflict)
   bool saf4_tripped;     // SAF-4 reached: all mist and non-survival fog off
   bool soft_budget_reached;
+  bool fog_run;          // a fog run-once wants fog now (#1343 follow-up): the climate path fogs, under its rails
   IrrStateFields state;
   bool state_changed;    // publish irr_state (before applying relay_mask)
   uint16_t next_seq;     // the ring's next sequence number
@@ -884,7 +913,8 @@ struct IrrPersist {
   void* ctx = nullptr;
 };
 
-enum class IrrRunKind : uint8_t { kNone = 0, kDrip = 1, kWindow = 2, kFert = 3 };
+// kFog: a fog run-once (#1343 follow-up). Not mirrored in the RTC block: a reset ends it unpublished.
+enum class IrrRunKind : uint8_t { kNone = 0, kDrip = 1, kWindow = 2, kFert = 3, kFog = 4 };
 
 struct IrrRun {
   IrrRunKind kind;
@@ -1519,7 +1549,8 @@ inline uint32_t holder_end_epoch(const IrrEngine& e) {
 inline void build_outputs(IrrEngine& e, uint32_t now_ms, IrrOutputs& out) {
   out = IrrOutputs{};
   const IrrRun& r = e.run;
-  const uint16_t relays = run_relays(r);
+  // #1336: L03 opens only with a fertilized relay and never with a clean one.
+  const uint16_t relays = irr_master_rule(run_relays(r));
   e.engine_mask = relays;
   out.relay_mask = relays;
   out.drip_on = kNoLine;
@@ -1541,6 +1572,7 @@ inline void build_outputs(IrrEngine& e, uint32_t now_ms, IrrOutputs& out) {
   out.drip_active = irr_drip_active(e);
   out.saf4_tripped = saf4_reached(e);
   out.soft_budget_reached = budget_reached(e);
+  out.fog_run = r.kind == IrrRunKind::kFog && r.remaining_ms > 0;
 
   IrrStateFields& s = out.state;
   s.reject = e.reject;
@@ -1849,6 +1881,31 @@ inline void advance_run(IrrEngine& e, uint32_t now_ms, uint32_t dt_ms) {
       return;
     }
 
+    case IrrRunKind::kFog: {
+      // A fog run-once: the climate path fogs while it asks (fog_run) and its rails allow, and
+      // the run counts the seconds the fog relay reads ON. SAF-4 and the soft budget end it
+      // `cap`, SENSOR_FAULT ends it `short`; occupancy and the other climate holds keep it
+      // waiting until its deadline (`short`, with the last hold).
+      const bool fog_on = (e.in.relay_on_mask & kFogMask) != 0;
+      if (fog_on) r.remaining_ms = dt_ms >= r.remaining_ms ? 0u : r.remaining_ms - dt_ms;
+      if (r.remaining_ms == 0) {
+        end_clean_run(e, now_ms, IrrOutcome::kOk, IrrReason::kNone);
+        return;
+      }
+      const IrrReason cap = saf4_reached(e) ? IrrReason::kSaf : budget_reached(e) ? IrrReason::kBud : IrrReason::kNone;
+      if (cap != IrrReason::kNone) {
+        end_clean_run(e, now_ms, IrrOutcome::kCap, cap);
+        return;
+      }
+      if (e.in.sensor_fault) {
+        end_clean_run(e, now_ms, IrrOutcome::kShort, IrrReason::kSf);
+        return;
+      }
+      if (!fog_on && dt_ms > 0) r.last_block = e.in.occupied ? IrrReason::kOcc : IrrReason::kMan;
+      if (irr_reached(now_ms, r.deadline_ms)) end_clean_run(e, now_ms, IrrOutcome::kShort, r.last_block);
+      return;
+    }
+
     case IrrRunKind::kFert: {
       if (r.to_settle) {
         settle_fert(e, now_ms);
@@ -2095,7 +2152,17 @@ inline bool start_run(IrrEngine& e, IrrRun r, uint32_t now_ms) {
     e.run = r;
   } else {
     if (r.slot_id != 0 && !commit_claim(e, r.slot_id, r.occ_day)) return false;
-    if (kind == IrrLineKind::kDrip) {
+    if (kind == IrrLineKind::kFog) {
+      // A fog run-once: it holds the water from now (one engine run at a time), so it starts
+      // with its start and planned end published.
+      r.kind = IrrRunKind::kFog;
+      r.remaining_ms = uint32_t(r.on_s) * 1000u;
+      r.deadline_ms = now_ms + r.remaining_ms + kWindowGraceMs;
+      r.last_block = IrrReason::kMan;
+      const uint32_t ep = epoch_now(e, now_ms);
+      r.start_epoch = ep;
+      r.end_epoch = ep == 0 ? 0u : ep + r.on_s;
+    } else if (kind == IrrLineKind::kDrip) {
       r.kind = IrrRunKind::kDrip;
       r.remaining_ms = uint32_t(r.on_s) * 1000u;
     } else {
@@ -2280,6 +2347,9 @@ constexpr const char* kRunResultTokens[] = {"started",         "line_busy",     
 // rule). On a clean mister it is a one-off window whether or not Schedule is on, under the
 // same rails as a scheduled one: the zone's duty cap less its VPD reserve
 // (zone_sched_left_s), SAF-4, the watchdog latch and sensor fault.
+// Fog (L11) runs once too (#1343 follow-up), under the mister rails that apply to it: enabled,
+// not paused, no SENSOR_FAULT, SAF-4 and the soft budget not reached, and no other run holding
+// the water; its bounds are irr_fog_run_args_in_bounds().
 // Starts at once or is refused; nothing queues. A drip in SAFETY_COOL or a VPD
 // emergency starts paused and resumes after it; a fertilizer run in SAFETY_COOL is
 // refused manifold_busy (it would end at once). A refusal other than line_busy,
@@ -2291,7 +2361,9 @@ inline IrrRunResult irr_run_now(IrrEngine& e, const IrrRunArgs& a, uint32_t now_
   IrrReason why = IrrReason::kNone;
   const uint8_t line = a.line;
   const uint32_t ep = epoch_now(e, now_ms);
-  if (!irr_run_args_in_bounds(line, a.on_s, a.count, a.gap_s, a.prewet_s, a.flush_s)) {
+  const bool fog = line == kL11;
+  if (fog ? !irr_fog_run_args_in_bounds(a.on_s, a.count, a.gap_s, a.prewet_s, a.flush_s)
+          : !irr_run_args_in_bounds(line, a.on_s, a.count, a.gap_s, a.prewet_s, a.flush_s)) {
     res = IrrRunResult::kBadArgs;
   } else if (e.run.kind != IrrRunKind::kNone && (e.run.line == line || run_stage_line(e.run) == line)) {
     res = IrrRunResult::kLineBusy;
@@ -2307,7 +2379,7 @@ inline IrrRunResult irr_run_now(IrrEngine& e, const IrrRunArgs& a, uint32_t now_
   } else if (is_mister(line) && (e.in.latch_mask & zone_lines(line))) {
     res = IrrRunResult::kLineFaulted;
     why = IrrReason::kFlt;
-  } else if (is_mister(line) && e.in.sensor_fault) {
+  } else if ((is_mister(line) || fog) && e.in.sensor_fault) {
     res = IrrRunResult::kSensorFault;
     why = IrrReason::kSf;
   } else if (is_fert(line) && e.in.safety_cool) {
@@ -2316,7 +2388,11 @@ inline IrrRunResult irr_run_now(IrrEngine& e, const IrrRunArgs& a, uint32_t now_
     why = IrrReason::kMan;
   } else {
     const IrrLineKind kind = kLineKind[line];
-    if (kind == IrrLineKind::kDrip || kind == IrrLineKind::kFertDrip) {
+    if (fog) {
+      // Fog water counts in SAF-4 and the soft budget, as climate fog does.
+      if (saf4_reached(e)) why = IrrReason::kSaf;
+      else if (budget_reached(e)) why = IrrReason::kBud;
+    } else if (kind == IrrLineKind::kDrip || kind == IrrLineKind::kFertDrip) {
       if (uint32_t(a.on_s) > cap_left_s(e, line)) why = IrrReason::kCap;
     } else {
       const uint32_t want = uint32_t(a.count) * a.on_s;
@@ -2429,6 +2505,8 @@ inline IrrVpdResult irr_vpd_request(IrrEngine& e, uint8_t idx, uint16_t on_s, ui
     wait(IrrReason::kMan);
   } else if (run_relays(r) & irr_bit(kL03)) {
     wait(IrrReason::kL03);
+  } else if (r.kind == IrrRunKind::kFog) {
+    wait(IrrReason::kMan);  // a fog run-once holds the water: one engine run at a time
   } else if (run_on_drip_manifold(r) && irr_drip_active(e)) {
     wait(IrrReason::kMan);
   } else if (r.kind != IrrRunKind::kNone && (run_relays(r) & kMistManifoldMask)) {
@@ -2637,7 +2715,7 @@ inline size_t irr_format_state(const IrrStateFields& s, const IrrStateExtras& x,
                                        static_cast<unsigned long>(r.start_epoch), static_cast<unsigned long>(end)));
   };
   run('d', s.drip, kDripManifoldMask);
-  run('m', s.mist, kMistManifoldMask);
+  run('m', s.mist, uint16_t(kMistManifoldMask | kFogMask));  // a fog run-once rides m= (#1343 follow-up)
   // The w= tokens while the tail still fits after them: the first that does not, and every later
   // one, drop (format_irr_state() pops them from the end).
   const size_t after = tail_n ? tail_n + 1 : 0;
@@ -2762,14 +2840,16 @@ inline bool irr_run_args_from(int32_t line, int32_t on_s, int32_t count, int32_t
 }
 
 // The wet relays a stop closes inside the service call: one line's relay (L01-L10), or every
-// wet relay (255). Fog (L11) is climate only, so a stop never touches it; false for any other
-// line, and the stop does nothing.
+// wet relay (255). Fog's relay (L11) is the climate path's, so a stop never switches it: a stop
+// on L11 ends a fog run-once (scope 0) and the climate path's own fog goes on. False for any
+// other line, and the stop does nothing.
 inline bool irr_stop_scope(int32_t line, uint16_t& scope) {
   scope = 0;
   if (line == kAllLines) {
     scope = kGrantableMask;
     return true;
   }
+  if (line == kL11) return true;
   if (line >= 0 && line < kLineCount && (kGrantableMask & irr_bit(uint8_t(line)))) {
     scope = irr_bit(uint8_t(line));
     return true;

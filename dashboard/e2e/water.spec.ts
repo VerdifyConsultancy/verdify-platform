@@ -12,22 +12,23 @@ const program = (page: Page) => page.locator("[data-program]");
 const stopAll = (page: Page) => page.getByRole("button", { name: "Stop all water" });
 
 for (const viewport of [DESKTOP, PHONE]) {
-  test(`${viewport.width} px: Today puts every line in its zone, in order; L05 and L06 are reserved and L11 is climate only with no controls`, async ({ page, request }) => {
+  test(`${viewport.width} px: Today puts every line on its physical line's card (#1336), in order; L05 and L06 are reserved and L11 is climate only, run once`, async ({ page, request }) => {
     await page.setViewportSize(viewport);
     await useScreensClock(page, request, "schedules-paused");
     await load(page, "/water");
-    await expect(page.locator(".wat-zone")).toHaveCount(5);
+    await expect(page.locator(".wat-zone")).toHaveCount(6);
     const zones = await page.locator(".wat-zone").evaluateAll((cards) => cards.map((node) => node.getAttribute("data-zone")));
-    expect(zones).toEqual(["wall", "center", "south", "west", "fog"]);
+    expect(zones).toEqual(["wall", "center", "center_mister", "south", "west", "fog"]);
     const ids = await page.locator("article[data-line]").evaluateAll((rows) => rows.map((node) => node.getAttribute("data-line")));
-    expect(ids).toEqual(["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11"]);
+    expect(ids).toEqual(["L01", "L02", "L05", "L06", "L04", "L07", "L08", "L09", "L10", "L11"]);
+    await expect(page.locator('.wat-zone[data-zone="center_mister"] .wat-unwired')).toHaveText("Fertilized · not wired");
     await expect(page.getByRole("article", { name: "L01 Wall drip" })).toHaveAttribute("data-state", "idle");
     await expect(page.locator('[data-limit="L01"]')).toContainText("0 / 60 min");
     await expect(row(page, "L01").locator(".wat-next")).toHaveText(/^next Wed 07:35 · 12\smin$/);
     await expect(row(page, "L02").locator(".line-subrow")).toContainText("L03 Fert master");
     for (const id of ["L05", "L06"]) await expect(row(page, id).locator(".line-state")).toHaveText("Reserved · disabled");
     await expect(row(page, "L11")).toContainText("Climate only");
-    await expect(row(page, "L11").locator(":scope > .object-row-actions > button")).toHaveCount(0);
+    await expect(row(page, "L11").getByRole("button", { name: "Fog once… L11" })).toBeVisible();
     await expectNoHorizontalScroll(page);
   });
 }

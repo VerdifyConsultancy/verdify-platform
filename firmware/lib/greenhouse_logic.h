@@ -1403,8 +1403,11 @@ inline LightingDecision evaluate_lighting(
     // test. The window [start_hour, cutoff_hour) is the dispatcher-pushed
     // photoperiod (Vanda-driven, not the highest-DLI crop); keeping the
     // occupancy convenience light inside it guarantees the >=6h dark block.
+    // #1370: a circuit with occupancy_any_hour (the MAIN light) takes the same
+    // lux-gated occupancy demand at any hour; the grow circuit stays windowed.
+    const bool occupancy_window = in_window || sp.occupancy_any_hour;
     const bool occupancy_task_light_demand = sp.auto_enabled
-        && in_window
+        && occupancy_window
         && in.occupied
         && exterior_lux_available
         && ((!current_on && exterior_lux_below_on) || (current_on && exterior_lux_below_off));

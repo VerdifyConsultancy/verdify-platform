@@ -150,7 +150,7 @@ esp32:
     version: 5.5.4
     platform_version: 55.3.39
     sdkconfig_options:
-      # lwIP otherwise defaults to one slot and silently ignores pool.ntp.org.
+      # lwIP otherwise defaults to one slot and silently ignores the second server.
       CONFIG_LWIP_SNTP_MAX_SERVERS: "2"
 
 
@@ -313,9 +313,11 @@ ota:
 time:
   - platform: sntp
     id: sntp_time
+    # #1364 (Jason, 2026-11-05): local NTP only, no internet hostname. The estate chrony
+    # (VM305) first, the Starlink dish second; 192.168.10.1 (the VLAN 10 gateway) serves no NTP.
     servers:
-      - 192.168.10.1
-      - pool.ntp.org
+      - 192.168.7.54
+      - 192.168.100.1
     timezone: America/Denver
     on_time_sync:
       then:

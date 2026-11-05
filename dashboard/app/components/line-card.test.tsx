@@ -81,11 +81,11 @@ test("unknown fills the Stop too (the relay may be on); a disabled line keeps Ru
   expect(reserved.head).toBe("L05 Center dripClean");
 });
 
-test("L11 fog is climate only: no Stop and no write control, and its menu keeps its links", () => {
+test("L11 fog is climate only: Fog once… and its Stop with the engine (#1343 follow-up), no enable or pause, and its menu keeps its links", () => {
   const fog = row(lineOf(status(), "L11"));
   expect(fog.head).toBe("L11 FogClimate only");
-  expect(fog.buttons).toEqual([]);
-  expect(fog.article.querySelectorAll("[data-write-control]")).toHaveLength(0);
+  expect(fog.buttons).toEqual(["Fog once… L11", "Stop L11"]);
+  expect(fog.menu!.querySelectorAll("[role=switch]")).toHaveLength(0);
   expect([...fog.menu!.querySelectorAll("a")].map((link) => [text(link), link.getAttribute("href")])).toEqual([
     ["Activity for L11 ›", "/activity/log?target=L11"], ["Runs of L11 ›", "/water/history?line=L11"], [expect.stringMatching(/^Graphs around L11's last run ›$/), expect.stringMatching(/^\/graphs\?from=/)],
   ]);

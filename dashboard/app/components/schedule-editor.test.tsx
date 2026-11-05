@@ -8,7 +8,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { createRoutesStub, useLocation } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
 import { UUID, advance, requests, startFixtureApi, stopFixtureApi, writes, type FixtureOptions } from "../lib/test-fixture-api";
-import { SCHEDULE_LINES } from "../lib/water";
+import { PHYSICAL_LINES, SCHEDULE_LINES, physicalOf } from "../lib/water";
 import type { WriteError } from "../lib/writes";
 import Activity from "../routes/activity";
 import ActivityLog from "../routes/activity-log";
@@ -45,7 +45,12 @@ const drawer = () => document.querySelector<HTMLDialogElement>("dialog.drawer");
 const inDrawer = () => within(drawer()!);
 const where = () => screen.getByTestId("where").textContent;
 const change = (label: string, value: string) => fireEvent.change(inDrawer().getByLabelText(label), { target: { value } });
-const setLine = (id: (typeof SCHEDULE_LINES)[number]) => change("Line", String(SCHEDULE_LINES.indexOf(id)));
+/** #1336: the physical line, then its variant when the line has two. */
+const setLine = (id: (typeof SCHEDULE_LINES)[number]) => {
+  const { index, variant } = physicalOf(id)!;
+  change("Line", String(index));
+  if (PHYSICAL_LINES[index].fertilized) change("Variant", variant === "fertilized" ? "1" : "0");
+};
 const NAMES = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" } as const;
 /** Moves the day chips to `days`; a new schedule starts on today's weekday, Monday. */
 function setDays(...days: (keyof typeof NAMES)[]) {
@@ -360,19 +365,24 @@ test("with no matching hash the schedule reads \"Not confirmed\" with the reject
   expect(banner()).toBe("Not confirmed: the controller refused a schedule · retrying at 1, 5 and 15 min");
 });
 
-test("the line's kind picks the fields, their min and max from API-IRR-02 bounds, and only L01, L02 and L04–L10 are offered", async () => {
+test("the line's kind picks the fields, their min and max from API-IRR-02 bounds, and only the five physical lines, each with its wired variants (#1336), are offered", async () => {
   open(NEW);
   await advance(0);
-  const options = [...(inDrawer().getByLabelText("Line") as HTMLSelectElement).options].map((option) => text(option));
-  expect(options).toEqual([
-    "L01 Drip • Wall", "L02 Drip • Wall (Fert.)", "L04 Mister • Center", "L05 Drip • Center (reserved)", "L06 Drip • Center (Fert.) (reserved)", "L07 Mister • South Wall",
-    "L08 Mister • South Wall (Fert.)", "L09 Mister • West Wall", "L10 Mister • West Wall (Fert.)",
-  ]);
+  const options = (label: string) => [...(inDrawer().getByLabelText(label) as HTMLSelectElement).options].map((option) => text(option));
+  // #1336: the five physical lines, then the chosen line's variants; the center mister's fertilized side is not wired.
+  expect(options("Line")).toEqual(["Wall drip", "Center drip (reserved)", "Center mister", "South mister", "West mister"]);
+  expect(options("Variant")).toEqual(["Clean · L01", "Fertilized · L02"]);
   expect((inDrawer().getByLabelText("Label (optional)") as HTMLInputElement).maxLength).toBe(60);
   expect((inDrawer().getByLabelText("Reason (optional)") as HTMLInputElement).maxLength).toBe(500);
   const labels = () => [...drawer()!.querySelectorAll(".number-field label")].map((node) => text(node));
   const hint = (label: string) => text(document.getElementById(`${inDrawer().getByLabelText(label).id}-hint`));
   const fertTitle = () => inDrawer().getByRole("heading", { level: 2 }).querySelector("[data-badge='fert']") !== null;
+  setLine("L04");
+  expect(options("Variant")).toEqual(["Clean · L04"]);
+  expect(hint("Variant")).toBe("Fertilized · not wired");
+  setLine("L05");
+  expect(options("Variant")).toEqual(["Clean · L05 (reserved)", "Fertilized · L06 (reserved)"]);
+  setLine("L01");
   // drip: whole minutes inside on_s 10–7200.
   expect(labels()).toEqual(["Run"]);
   expect(hint("Run")).toBe("Allowed 1–120 min · step 1");
@@ -456,7 +466,8 @@ test("the day shortcuts set every day or the weekdays, and an empty slot, a line
   cleanup(); stopFixtureApi();
   open("/water/schedules?schedule=new&line=L04&at=13%3A15&day=2026-11-05", { fixture: "schedules-paused" });
   await advance(0);
-  expect((inDrawer().getByLabelText("Line") as HTMLSelectElement).selectedOptions[0].textContent).toMatch(/^L04/);
+  expect((inDrawer().getByLabelText("Line") as HTMLSelectElement).selectedOptions[0].textContent).toBe("Center mister");
+  expect((inDrawer().getByLabelText("Variant") as HTMLSelectElement).selectedOptions[0].textContent).toBe("Clean · L04");
   expect((inDrawer().getByLabelText("Clock time (HH:MM)") as HTMLInputElement).value).toBe("13:15");
   expect(inDrawer().getByRole("button", { name: "Thursday" }).getAttribute("aria-pressed")).toBe("true");
   expect(shownDay()).toBe("Thursday, Nov 5");

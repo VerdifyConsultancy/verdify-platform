@@ -63,10 +63,13 @@ from pydantic import (
     model_validator,
 )
 from pydantic.json_schema import SkipJsonSchema
+from pydantic_core import InitErrorDetails
 
 from verdify_schemas.activity import REASON_MAX_LENGTH, ActivityLogRow
 from verdify_schemas.irrigation import (
     BRIDGE_RUN_LINE,
+    CIRCUIT_BY_ID,
+    CIRCUIT_OF_LINE,
     CLEAN_PARTNER,
     COMMAND_SEND_WINDOW_S,
     LINE_BOUNDS,
@@ -89,9 +92,11 @@ from verdify_schemas.irrigation import (
     RunArgs,
     ScheduleSpec,
     StartKind,
+    Variant,
     Weekday,
     _Whole,
     _whole,
+    circuit_line,
     irr_state_reading,
     local_tz,
     run_args,
@@ -303,9 +308,13 @@ class ScheduleStartBody(_Body):
 
 
 class ScheduleInput(_Body):
-    """API-IRR-04's body, the OpenAPI ``ScheduleInput``: only the fields an edit changes."""
+    """API-IRR-04's body, the OpenAPI ``ScheduleInput``: only the fields an edit changes. A schedule names its relay
+    (``line_id``) or a physical line and variant (``circuit_id`` and ``variant``, #1336), which the services map to
+    the relay; an edit may give ``variant`` alone to switch clean and fertilized on the same physical line."""
 
     line_id: str = None
+    circuit_id: str = None
+    variant: Variant = None
     label: Annotated[str, Field(max_length=60), AfterValidator(_no_nul)] = None
     enabled: StrictBool = None
     days: Annotated[list[Weekday], Field(min_length=1)] = None
@@ -321,12 +330,22 @@ class ScheduleInput(_Body):
 
 
 class ScheduleCreate(ScheduleInput):
-    """API-IRR-03's body, the OpenAPI ``ScheduleCreate``: a line, days, a start and ``on_s``; the rest default."""
+    """API-IRR-03's body, the OpenAPI ``ScheduleCreate``: a line (``line_id``, or ``circuit_id`` and ``variant``),
+    days, a start and ``on_s``; the rest default."""
 
-    line_id: str
     days: Annotated[list[Weekday], Field(min_length=1)]
     start: ScheduleStartBody
     on_s: _Whole
+
+    @model_validator(mode="before")
+    @classmethod
+    def _names_a_line(cls, data: object) -> object:
+        """A create names its line: ``line_id``, or ``circuit_id`` and ``variant``; with neither, ``line_id`` is
+        missing (400 on that field)."""
+        if isinstance(data, Mapping) and all(data.get(key) is None for key in ("line_id", "circuit_id", "variant")):
+            details = [InitErrorDetails(type="missing", loc=("line_id",), input=dict(data))]
+            raise ValidationError.from_exception_data(cls.__name__, details)
+        return data
 
 
 class ScheduleDeleted(BaseModel):
@@ -405,6 +424,39 @@ def _unknown_line(line_id: object) -> ServiceError:
 
 def _refused(refusal: Refusal) -> ServiceError:
     return ServiceError(Problem.model_validate(refusal.problem()))
+
+
+def _resolve_target(
+    line_id: str | None, circuit_id: str | None, variant: str | None, *, current_line: str | None = None
+) -> str | None:
+    """#1336: the relay a request names, from ``line_id`` or a physical line's ``circuit_id`` and ``variant``.
+
+    ``variant`` alone keeps the physical line of ``line_id`` or of ``current_line`` (an edit). A line or variant that
+    is not one, and a variant whose valve is not wired, are ``unknown_target`` (``circuit_line``); a ``line_id`` that
+    is not that variant's relay, or a ``circuit_id`` with no ``variant``, is ``invalid_request``. ``None`` when the
+    request names nothing. The master valve follows the variant: L03 opens with a fertilized relay only."""
+    if circuit_id is None and variant is None:
+        return line_id
+    if circuit_id is None:
+        found = CIRCUIT_OF_LINE.get(line_id or current_line or "")
+        if found is None:
+            raise ServiceError(
+                problem("invalid_request", "A variant needs its physical line (circuit_id)", field="circuit_id")
+            )
+        circuit_id = found[0]
+    if variant is None:
+        raise ServiceError(
+            problem("invalid_request", "A physical line needs its variant: clean or fertilized", field="variant")
+        )
+    resolved = circuit_line(circuit_id, variant)
+    if isinstance(resolved, Refusal):
+        raise _refused(resolved)
+    if line_id is not None and line_id != resolved:
+        name = CIRCUIT_BY_ID[circuit_id].name
+        raise ServiceError(
+            problem("invalid_request", f"{line_id} is not {name}'s {variant} relay ({resolved})", field="line_id")
+        )
+    return resolved
 
 
 def _no_engine(what: str) -> ServiceError:
@@ -612,7 +664,7 @@ async def _check_bridge_run(conn: asyncpg.Connection, body: RunRequest) -> int:
 
 
 def _engine_run_args(target: str, body: RunRequest) -> RunArgs | None:
-    """The body as the line kind's ``RunArgs``; L03 and L11 take no runs (``unknown_target``)."""
+    """The body as the line kind's ``RunArgs``; L03 takes no runs (``unknown_target``), fog runs ``minutes``."""
     kind = LINE_KIND[target]
     args = None
     if kind in RUN_ARGS_BY_KIND:
@@ -658,16 +710,34 @@ _FIRMWARE_VERSION_SQL = (
 )
 
 
-def firmware_runs_any_mister(version: str | None) -> bool:
-    """Whether the controller's ``fw_version`` is a build that takes a run-now on a mister with Schedule off."""
+# #1336 and the #1343 follow-up: the firmware that runs fog once, keeps the master valve to fertilized runs (it already
+# opened only with them) and lights the main lights for occupancy at any hour (#1370). It ships in the same signed
+# flash as #1343's, after this cutoff; until the controller reports a build stamped on or after it, a fog run-once is
+# refused ``unavailable`` here, before anything is sent. Same stamp rules as RUN_ANY_MISTER_FIRMWARE_FROM.
+FOG_RUN_FIRMWARE_FROM = date(2026, 11, 7)
+
+
+def _firmware_built(version: str | None) -> date | None:
+    """The build day in a ``fw_version`` stamp (``YYYY.M.D.HHMM.<sha>``); ``None`` when unknown or unreadable."""
     match = _FW_STAMP.match(version or "")
     if match is None:
-        return False
+        return None
     try:
-        built = date(int(match[1]), int(match[2]), int(match[3]))
+        return date(int(match[1]), int(match[2]), int(match[3]))
     except ValueError:
-        return False
-    return built >= RUN_ANY_MISTER_FIRMWARE_FROM
+        return None
+
+
+def firmware_runs_any_mister(version: str | None) -> bool:
+    """Whether the controller's ``fw_version`` is a build that takes a run-now on a mister with Schedule off."""
+    built = _firmware_built(version)
+    return built is not None and built >= RUN_ANY_MISTER_FIRMWARE_FROM
+
+
+def firmware_runs_fog(version: str | None) -> bool:
+    """Whether the controller's ``fw_version`` is a build that takes a fog run-once (#1343 follow-up)."""
+    built = _firmware_built(version)
+    return built is not None and built >= FOG_RUN_FIRMWARE_FROM
 
 
 def _check_run_rails(line: LineSpec, reading: IrrState | None, now: datetime, *, any_mister: bool = False) -> None:
@@ -780,6 +850,15 @@ async def _check_engine_run(conn: asyncpg.Connection, target: str, args: RunArgs
         raise _unknown_line(target)
     line = LineSpec.from_row(row)
     now = row["now"]
+    if line.kind == "fog" and not firmware_runs_fog(await conn.fetchval(_FIRMWARE_VERSION_SQL, GREENHOUSE_ID)):
+        raise ServiceError(
+            problem(
+                "unavailable",
+                "Fog runs once from the controller's next firmware flash; until then the controller would refuse it",
+                field="line_id",
+                retryable=False,
+            )
+        )
     reading = irr_state_reading(await conn.fetchval(_ENGINE_SQL, GREENHOUSE_ID, IRR_STATE_ENTITY))
     any_mister = False
     if target in MISTER_MASK_BIT and line.enabled and not line.schedule_member:
@@ -804,8 +883,13 @@ async def run(
     on_s: int | None = None,
     count: int | None = None,
     gap_s: int | None = None,
+    circuit_id: str | None = None,
+    variant: str | None = None,
 ) -> activity.WriteResult:
     """Run a line now (API-IRR-06; MCP ``irrigation_run``): one ``pending`` run command, or a refusal.
+
+    The line is the relay ``line_id``, or a physical line's ``circuit_id`` and ``variant`` (#1336, ``_resolve_target``:
+    a fertilized variant runs its fertilizer relay, which opens L03; a clean one never does).
 
     Before the engine firmware only L01 runs (the bridge): the command is ``{"minutes": <configured>,
     "bridge": true}`` and its activity row (``irrigation.run``, target L01) carries the command id, minutes,
@@ -814,8 +898,9 @@ async def run(
 
     With the engine, the body per line kind (drips ``minutes``; L02 and L06 add ``prewet_s`` and ``flush_s``;
     misters ``on_s``, ``count`` and ``gap_s``; L08 and L10 those three plus ``prewet_s`` and ``flush_s``): a missing
-    field or another kind's is ``invalid_request`` with ``field``, and L03 and L11 are ``unknown_target``. Then, in
-    this order, ``line_disabled``, ``line_paused``, ``line_faulted``, ``not_schedule_member`` (a clean mister with
+    field or another kind's is ``invalid_request`` with ``field``, and L03 is ``unknown_target``. Fog (L11) runs once
+    for ``minutes`` (1-30, #1343 follow-up), ``unavailable`` until the controller runs the firmware that takes it
+    (``firmware_runs_fog``). Then, in this order, ``line_disabled``, ``line_paused``, ``line_faulted``, ``not_schedule_member`` (a clean mister with
     Schedule off, only until the controller runs #1343's firmware: ``firmware_runs_any_mister``), ``line_busy``,
     ``manifold_busy`` and ``cap_reached``. An accepted run is one ``pending`` command with the body as its ``args``.
 
@@ -828,7 +913,12 @@ async def run(
     except ValidationError as exc:
         raise _invalid(exc) from exc
     _check_audit(trigger_id, planner_instance)
-    target = str(line_id)
+    resolved = _resolve_target(line_id, circuit_id, variant)
+    if resolved is None:
+        raise ServiceError(
+            problem("invalid_request", "Name the line: line_id, or circuit_id and variant", field="line_id")
+        )
+    target = str(resolved)
 
     async def perform(conn: asyncpg.Connection) -> tuple[Command, dict[str, Any]]:
         if target not in LINE_IDS:
@@ -1170,6 +1260,14 @@ async def schedule_create(
         raise ServiceError(problem("invalid_request", "A create must say whether it is manual", field="manual"))
     reason = reason if reason is not None else body.reason
     changes = _carried(body)
+    target = _resolve_target(
+        changes.pop("line_id", None), changes.pop("circuit_id", None), changes.pop("variant", None)
+    )
+    if target is None:
+        raise ServiceError(
+            problem("invalid_request", "Name the line: line_id, or circuit_id and variant", field="line_id")
+        )
+    changes["line_id"] = target
 
     async def perform(conn: asyncpg.Connection) -> tuple[Schedule, dict[str, Any]]:
         spec = _schedule_spec(changes["line_id"], ScheduleSpec.model_validate, {**changes, "manual": manual})
@@ -1230,7 +1328,16 @@ async def schedule_update(
         if before is None:
             raise ServiceError(problem("unknown_target", f"schedule {key} does not exist", field="slot_id"))
         _refuse_iris_on_manual(actor, before.manual, f"Schedule {key}", "slot_id")
-        spec = _schedule_spec(changes.get("line_id", before.line_id), before.with_changes, changes)
+        edit = dict(changes)
+        target = _resolve_target(
+            edit.pop("line_id", None),
+            edit.pop("circuit_id", None),
+            edit.pop("variant", None),
+            current_line=before.line_id,
+        )
+        if target is not None:
+            edit["line_id"] = target
+        spec = _schedule_spec(edit.get("line_id", before.line_id), before.with_changes, edit)
         refusal = validate_schedule(spec, slots, await _stored_lines(conn))
         if refusal is not None:
             raise _refused(refusal)

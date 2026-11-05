@@ -111,7 +111,8 @@ export type LineCardProps = {
  * running, Clear fault on a latched mister, Resume while paused), the line's own Stop whenever it can matter (D-UX-06:
  * filled only while the relay is on or unknown, a quiet outline otherwise, never disabled by the writes flag), and ⋯ with
  * the enable switch and its check sheet, Options…, Pause until…, "Activity for L01 ›", "Runs of L01 ›" and Graphs. Fog
- * (L11) is climate only: no Stop and no write control. Viewers get the same row with the menu's links alone.
+ * (L11) is a climate device: no sync pill and no Options, but it runs once ("Fog once…", #1343 follow-up), with its own
+ * Stop; the climate path's own rails gate it, so it has no enable switch or pause. Viewers get the same row with the menu's links alone.
  */
 export function LineCard({ line, master = null, engine, program, today, scheduleLabels, strip, className }: LineCardProps) {
   const apiDown = useApiDown();
@@ -134,7 +135,7 @@ export function LineCard({ line, master = null, engine, program, today, schedule
   const meta = [syncWords, pauseNote, code === "idle" && engine ? last.meta : null].filter(Boolean);
   const offer = runOffer(line, engine);
   const filled = running || code === "unknown";
-  const primary = fog ? null : running ? null : latched ? <ClearFaultButton line={line} engine={engine} /> : paused ? <ResumeLine line={line} /> : offer === "run" || offer === "mist" || offer === "enable" ? <RunControl line={line} engine={engine} /> : null;
+  const primary = running ? null : latched ? <ClearFaultButton line={line} engine={engine} /> : paused && !fog ? <ResumeLine line={line} /> : offer === "run" || offer === "mist" || offer === "enable" ? <RunControl line={line} engine={engine} /> : null;
   const tone: RowTone | undefined = running ? "running" : latched ? "fault" : engine && line.fault === "backing_off" ? "warn" : undefined;
   const token = running ? (line.state.cause === "vpd" ? "eq-mister" : line.state.cause === "feed" ? "eq-fert" : line.state.cause === "run_now" ? "eq-master" : "eq-water") : undefined;
   const graphs = line.last_water && validTime(line.last_water.at) ? runGraphUrl({ started_at: line.last_water.at, ended_at: null, open_s: line.last_water.open_s }) : "/graphs";
@@ -159,7 +160,7 @@ export function LineCard({ line, master = null, engine, program, today, schedule
     state={<span className={cls("line-state", apiDown && "is-neutral")}>{pauseIsState ? pausedWords : <LineStateText line={line} engine={engine} today={today} scheduleLabels={scheduleLabels} />}</span>}
     meta={meta.length ? meta.join(" · ") : undefined}
     primary={primary}
-    stop={fog ? undefined : <StopButton lineId={id} filled={filled} />}
+    stop={fog && !engine ? undefined : <StopButton lineId={id} filled={filled} />}
     menu={menu} tone={tone} token={token}>
     {strip}
     {master && <div className="line-subrow" data-line={master.line_id}>

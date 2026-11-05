@@ -62,9 +62,10 @@ included, and callers treat that as no reading. Nothing parses to ``unknown``:
 
 The parsers also reject the following, so the controller's formatters (#1159, #1160) never write
 it: anything but exactly one space between tokens or entries (none leading or trailing); a ``d=``
-naming a line other than L01, L02, L05 or L06, or an ``m=`` naming one other than L04 or L07-L10;
+naming a line other than L01, L02, L05 or L06, or an ``m=`` naming one other than L04, L07-L10 or a fog run-once on
+L11 (cause ``run_now`` only, #1343 follow-up);
 more than one ``d=``, ``m=``, ``v=`` or ``j=``; an ``<end_epoch>`` before its ``<start_epoch>``; a
-``w=`` token or ``irr_events`` entry naming L03 or L11; an ``f=`` naming a line other than the
+``w=`` token naming L03 or L11, or an ``irr_events`` entry naming L03; an ``f=`` naming a line other than the
 misters L04 and L07-L10, or naming one line twice; and an ``irr_events`` entry that is not newer than
 the one before it by ``seq_newer``.
 
@@ -144,6 +145,9 @@ __all__ = [
     "BRIDGE_RUN_LINE",
     "BRIDGE_RUN_WINDOW_S",
     "CAP_NOTE",
+    "CIRCUITS",
+    "CIRCUIT_BY_ID",
+    "CIRCUIT_OF_LINE",
     "CLEAN_PARTNER",
     "CLIMATE_CAUSES",
     "COMMAND_KINDS",
@@ -274,6 +278,17 @@ __all__ = [
     "validate_run",
     "validate_schedule",
     "weekday_mask",
+    "CircuitSpec",
+    "CircuitId",
+    "FogRunArgs",
+    "MASTER_LINE",
+    "RUN_IDX",
+    "FOG_IDX",
+    "VARIANTS",
+    "Variant",
+    "circuit_line",
+    "master_valve_opens",
+    "variant_of",
 ]
 
 # ── Record layout ────────────────────────────────────────────────────────────
@@ -311,6 +326,10 @@ DRIP_MANIFOLD_IDX: frozenset[int] = frozenset({0, 1, 4, 5})  # L01, L02, L05, L0
 MIST_MANIFOLD_IDX: frozenset[int] = frozenset({3, 6, 7, 8, 9})  # L04, L07, L08, L09, L10
 # degraded_only is allowed on the clean misters only: L04, L07 and L09.
 DEGRADED_ONLY_IDX: frozenset[int] = frozenset(DEVICE_IDX[line_id] for line_id in MISTER_MASK_BIT)
+# Lines that take a run (#1343 follow-up): every schedulable line, and fog (L11), which may be run once. A fog run-once
+# rides the m= token and names L11 in irr_events; fog still takes no schedules and no w= token names it.
+FOG_IDX = 10
+RUN_IDX: frozenset[int] = SCHEDULABLE_IDX | {FOG_IDX}
 
 
 class IrrigationCause(StrEnum):
@@ -746,7 +765,9 @@ class IrrRun(BaseModel):
 
     @model_validator(mode="after")
     def _device_rules(self) -> IrrRun:
-        _require_idx(self.line_id, SCHEDULABLE_IDX, "is on neither manifold")
+        _require_idx(self.line_id, RUN_IDX, "is on neither manifold")
+        if DEVICE_IDX[self.line_id] == FOG_IDX and self.cause != IrrigationCause.RUN_NOW:
+            raise ValueError("a run on L11 is a fog run-once: its cause is run_now")
         if self.cause == IrrigationCause.UNKNOWN:
             raise ValueError("cause unknown is the platform's, never the controller's")
         if self.end_epoch < self.start_epoch:
@@ -755,7 +776,7 @@ class IrrRun(BaseModel):
 
     @property
     def manifold(self) -> Literal["drip", "mist"]:
-        # Every schedulable line sits on exactly one of the two manifolds.
+        # Every schedulable line sits on exactly one of the two manifolds; a fog run-once rides the mist token.
         return "drip" if DEVICE_IDX[self.line_id] in DRIP_MANIFOLD_IDX else "mist"
 
 
@@ -842,7 +863,7 @@ class IrrEvent(BaseModel):
 
     @model_validator(mode="after")
     def _device_rules(self) -> IrrEvent:
-        _require_idx(self.line_id, SCHEDULABLE_IDX, "takes no runs")
+        _require_idx(self.line_id, RUN_IDX, "takes no runs")
         if self.outcome == RunOutcome.UNKNOWN:
             raise ValueError("outcome unknown is the platform's, never the controller's")
         if not 0 <= (self.local_day - EVENT_DAY_EPOCH).days <= 0xFFFF:
@@ -1094,6 +1115,97 @@ LINE_KIND: Mapping[str, str] = MappingProxyType(
 )
 CLEAN_PARTNER: Mapping[str, str] = MappingProxyType({"L02": "L01", "L06": "L05", "L08": "L07", "L10": "L09"})
 
+# ── Physical lines and their variants (#1336) ────────────────────────────────
+# Jason (2026-11-05): five physical lines, each with a clean and a fertilized valve: Wall drip (all of the east, south
+# and west walls and every shelf), Center drip, and the Center, South and West misters. The configured relays are the
+# source of truth: a valve with no relay is "not wired" (``None``): shown, never scheduled or run. The fertilizer master
+# valve (L03) connects the fertilizer tank and forces the flow through the feeder: it opens only with a fertilized
+# variant, never with clean water (the firmware's irr_master_rule). Fog (L11) is a climate device, not a physical line.
+# The relay ids stay the device and engine contract; a physical line maps a variant to its relay.
+Variant = Literal["clean", "fertilized"]
+VARIANTS: tuple[str, ...] = get_args(Variant)
+MASTER_LINE = "L03"
+CircuitId = Literal["wall_drip", "center_drip", "center_mister", "south_mister", "west_mister"]
+
+
+class CircuitSpec(BaseModel):
+    """One physical line: its name, zone and kind, and the relay of each variant (``None``: that valve is not wired)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    circuit_id: CircuitId
+    name: str
+    zone: Literal["wall", "center", "south", "west"]
+    kind: Literal["drip", "mister"]
+    clean_line: LineId | None
+    fert_line: LineId | None
+
+    def line_of(self, variant: str) -> str | None:
+        """The relay of ``variant`` on this line; ``None`` when that valve is not wired."""
+        return self.clean_line if variant == "clean" else self.fert_line if variant == "fertilized" else None
+
+
+CIRCUITS: tuple[CircuitSpec, ...] = (
+    CircuitSpec(circuit_id="wall_drip", name="Wall drip", zone="wall", kind="drip", clean_line="L01", fert_line="L02"),
+    CircuitSpec(
+        circuit_id="center_drip", name="Center drip", zone="center", kind="drip", clean_line="L05", fert_line="L06"
+    ),
+    CircuitSpec(
+        circuit_id="center_mister", name="Center mister", zone="center", kind="mister", clean_line="L04", fert_line=None
+    ),
+    CircuitSpec(
+        circuit_id="south_mister", name="South mister", zone="south", kind="mister", clean_line="L07", fert_line="L08"
+    ),
+    CircuitSpec(
+        circuit_id="west_mister", name="West mister", zone="west", kind="mister", clean_line="L09", fert_line="L10"
+    ),
+)
+CIRCUIT_BY_ID: Mapping[str, CircuitSpec] = MappingProxyType({c.circuit_id: c for c in CIRCUITS})
+# The physical line and variant of each wired relay (L03 and L11 have none).
+CIRCUIT_OF_LINE: Mapping[str, tuple[str, str]] = MappingProxyType(
+    {
+        line_id: (c.circuit_id, variant)
+        for c in CIRCUITS
+        for variant in VARIANTS
+        if (line_id := c.line_of(variant)) is not None
+    }
+)
+
+
+def variant_of(line_id: str) -> str | None:
+    """``clean`` or ``fertilized`` for a relay on a physical line; ``None`` for L03, L11 and anything else."""
+    found = CIRCUIT_OF_LINE.get(line_id)
+    return None if found is None else found[1]
+
+
+def master_valve_opens(line_id: str) -> bool:
+    """Whether L03 opens with a run on ``line_id``: only a fertilized variant opens it, never clean water (#1336)."""
+    return variant_of(line_id) == "fertilized"
+
+
+def circuit_line(circuit_id: str, variant: str) -> Refusal | str:
+    """The relay a physical line's variant runs on, or the refusal: ``unknown_target`` for a line or variant that is
+    not one (``field`` circuit_id or variant) and for a valve that is not wired to a relay (``field`` variant)."""
+    circuit = CIRCUIT_BY_ID.get(circuit_id)
+    if circuit is None:
+        names = ", ".join(CIRCUIT_BY_ID)
+        return Refusal(
+            code="unknown_target", field="circuit_id", detail=f"{circuit_id!r} is not a line; lines are {names}"
+        )
+    if variant not in VARIANTS:
+        return Refusal(
+            code="unknown_target", field="variant", detail=f"{variant!r} is not a variant; clean or fertilized"
+        )
+    line_id = circuit.line_of(variant)
+    if line_id is None:
+        return Refusal(
+            code="unknown_target",
+            field="variant",
+            detail=f"{circuit.name}'s {variant} valve is not wired to a relay, so it cannot be scheduled or run",
+        )
+    return line_id
+
+
 StartKind = Literal["clock", "sunrise", "solar_noon", "sunset"]
 # The OpenAPI ScheduleDays names; position = weekday_mask bit = date.weekday() (Monday 0).
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
@@ -1124,7 +1236,7 @@ BOUNDS_BY_KIND: Mapping[str, Mapping[str, _Range]] = MappingProxyType(
 )
 # Run-now (the OpenAPI RunRequest) per line kind: drips run minutes; misters, fertilizer misters
 # included, pulse with their kind's on_s, count and gap_s; both fertilizer kinds take a prewet and a
-# flush on the clean partner.
+# flush on the clean partner; fog runs minutes of continuous fog. L03 takes no run of its own.
 _RINSE: Mapping[str, _Range] = MappingProxyType({"prewet_s": (0, 1800), "flush_s": (0, 1800)})
 RUN_BOUNDS_BY_KIND: Mapping[str, Mapping[str, _Range]] = MappingProxyType(
     {
@@ -1134,6 +1246,8 @@ RUN_BOUNDS_BY_KIND: Mapping[str, Mapping[str, _Range]] = MappingProxyType(
         "fert_mister": MappingProxyType(
             {**{key: BOUNDS_BY_KIND["fert_mister"][key] for key in ("on_s", "count", "gap_s")}, **_RINSE}
         ),
+        # #1343 follow-up: fog runs once, 1-30 min of continuous fog (the firmware's irr_fog_run_args_in_bounds).
+        "fog": MappingProxyType({"minutes": (1, 30)}),
     }
 )
 # Line caps (irrigation §4.2): 0 = no cap; vpd_reserve_min is also at most daily_cap_min.
@@ -1647,9 +1761,23 @@ class FertMisterRunArgs(BaseModel):
     flush_s: _Whole
 
 
-RunArgs = DripRunArgs | FertDripRunArgs | MisterRunArgs | FertMisterRunArgs
+class FogRunArgs(BaseModel):
+    """Run-now on fog (L11; #1343 follow-up): one continuous fog of ``minutes``, held by the climate rails."""
+
+    model_config = _FROZEN
+
+    minutes: _Whole
+
+
+RunArgs = DripRunArgs | FertDripRunArgs | MisterRunArgs | FertMisterRunArgs | FogRunArgs
 RUN_ARGS_BY_KIND: Mapping[str, type[RunArgs]] = MappingProxyType(
-    {"drip": DripRunArgs, "fert_drip": FertDripRunArgs, "mister": MisterRunArgs, "fert_mister": FertMisterRunArgs}
+    {
+        "drip": DripRunArgs,
+        "fert_drip": FertDripRunArgs,
+        "mister": MisterRunArgs,
+        "fert_mister": FertMisterRunArgs,
+        "fog": FogRunArgs,
+    }
 )
 
 
@@ -1669,7 +1797,7 @@ def run_args(kind: str, body: Mapping[str, Any]) -> RunArgs:
 
 
 def validate_run(line: LineSpec, args: RunArgs) -> Refusal | None:
-    """Run-now bounds on submit (API-IRR-06): ``unknown_target`` on a line that takes no runs (L03, L11),
+    """Run-now bounds on submit (API-IRR-06): ``unknown_target`` on a line that takes no runs (L03),
     then ``out_of_range`` with ``field``, ``min`` and ``max`` per ``RUN_BOUNDS_BY_KIND``.
 
     The run refusals that depend on live state (``line_disabled``, ``line_busy``, ``cap_reached``
@@ -1680,7 +1808,7 @@ def validate_run(line: LineSpec, args: RunArgs) -> Refusal | None:
         return Refusal(
             code="unknown_target",
             field="line_id",
-            detail=f"{line.line_id} ({_KIND_WORDS[line.kind]}) takes no runs: L03 opens only with fertilizer runs, L11 is climate only",
+            detail=f"{line.line_id} ({_KIND_WORDS[line.kind]}) takes no runs: L03 opens only with fertilized runs",
         )
     expected = RUN_ARGS_BY_KIND[line.kind]
     if not isinstance(args, expected):

@@ -5,7 +5,7 @@ import { lineById } from "../lib/lines";
 import { newIdempotencyKey, type IrrigationLine, type IrrigationStatus, type Schedule, type ScheduleAgenda } from "../lib/operator-api";
 import { PAST_CAP_TEXT, previewSchedule, weekdayOf, type ScheduleDraft } from "../lib/schedule-preview";
 import { outOfRange, parseWhole, rangeText } from "../lib/setting-values";
-import { SCHEDULE_LINES } from "../lib/water";
+import { PHYSICAL_LINES, SCHEDULE_LINES, physicalOf } from "../lib/water";
 import { MANUAL_DEFAULT, useProgramWrite, type WriteError } from "../lib/writes";
 import { Badge } from "./badge";
 import { Button } from "./button";
@@ -304,21 +304,35 @@ export function ScheduleEditor({ slotId, schedule, agenda, status, today, now, o
   const refusals = preview?.checks.filter((check) => check.kind === "refusal") ?? [];
   const notes = preview?.checks.filter((check) => check.kind === "note") ?? [];
   const setDays = (days: readonly Weekday[]) => update({ days: [...days] });
+  const physical = physicalOf(form.lineId);
+  const physicalLine = physical ? PHYSICAL_LINES[physical.index] : null;
+  const pickLine = (lineId: string) => {
+    // A check is one line's, and an error beside a field another kind may not show is old news.
+    update({ lineId, checked: false, note: "" });
+    setTyped({});
+    setRefusal(null);
+  };
   return <EditDrawer open onClose={onClose} className="drawer-schedule" title={<>{slotId === null ? "New schedule" : "Edit schedule"}{fert && <> <Badge kind="fert" /></>}</>}
     status={<p className="schedule-count">{agenda.counts.schedules} of {agenda.counts.max_schedules} schedules</p>}
     onSave={() => void save()} saving={saving} error={formLevel}
     actions={slotId !== null ? <Button write busy={deleteWrite.sending} disabled={saving} onClick={() => void remove()}>Delete</Button> : undefined}>
-    <Select label="Line" value={SCHEDULE_LINES.indexOf(form.lineId as (typeof SCHEDULE_LINES)[number])} error={fieldError("line_id")}
-      options={SCHEDULE_LINES.map((id, index) => {
-        const name = lines.find((item) => item.line_id === id)?.name;
-        return { value: index, label: `${id}${name ? ` ${name}` : ""}${reservedLine(id) ? " (reserved)" : ""}` };
+    {/* #1336: a schedule picks a physical line, then its clean or fertilized variant; the variant's relay is what is sent. */}
+    <Select label="Line" value={physical?.index ?? null} error={fieldError("line_id")}
+      options={PHYSICAL_LINES.map((item, index) => {
+        const relays = [item.clean, ...(item.fertilized ? [item.fertilized] : [])];
+        return { value: index, label: `${item.name}${relays.every(reservedLine) ? " (reserved)" : ""}` };
       })}
       onChange={(index) => {
-        // A check is one line's, and an error beside a field another kind may not show is old news.
-        update({ lineId: SCHEDULE_LINES[index], checked: false, note: "" });
-        setTyped({});
-        setRefusal(null);
+        const next = PHYSICAL_LINES[index];
+        pickLine((physical?.variant === "fertilized" && next.fertilized) || next.clean);
       }} />
+    {physicalLine && <Select label="Variant" value={physical?.variant === "fertilized" ? 1 : 0}
+      hint={physicalLine.fertilized ? undefined : "Fertilized · not wired"}
+      options={[
+        { value: 0, label: `Clean · ${physicalLine.clean}${reservedLine(physicalLine.clean) ? " (reserved)" : ""}` },
+        ...(physicalLine.fertilized ? [{ value: 1, label: `Fertilized · ${physicalLine.fertilized}${reservedLine(physicalLine.fertilized) ? " (reserved)" : ""}` }] : []),
+      ]}
+      onChange={(value) => pickLine(value === 1 && physicalLine.fertilized ? physicalLine.fertilized : physicalLine.clean)} />}
     {fert && <p className="schedule-fert field-hint">Prewets on {partner ?? "the clean line"}, feeds through L03 from the tank, then flushes on {partner ?? "the clean line"}</p>}
     <Reason label="Label (optional)" maxLength={LABEL_MAX} value={form.label} onChange={(label) => update({ label })} error={fieldError("label")} />
     <div className="sch-days-field">

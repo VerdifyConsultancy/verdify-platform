@@ -4388,6 +4388,52 @@ TEST(lighting_solar_cutoff_holds_only_until_exact_min_on_boundary) {
     PASS();
 }
 
+// #1370: the MAIN light (occupancy_any_hour) turns on for occupancy at any hour,
+// outside the photoperiod window too; the lux gate still applies.
+TEST(lighting_main_occupancy_lights_outside_the_window) {
+    auto sp = lighting_setpoints();
+    sp.occupancy_any_hour = true;
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(lighting_inputs(0.0f, 23, true, 0.0f), sp, s, false, 120000);
+    ASSERT_FALSE(d.in_window);
+    ASSERT_TRUE(d.occupancy_task_light_demand);
+    ASSERT_FALSE(d.plant_supplement_demand);
+    ASSERT_TRUE(d.want_on);
+    ASSERT_TRUE(std::string(d.reason) == "occupancy_lux_low");
+    // 03:00 too: no hour is excluded.
+    auto s2 = initial_lighting_state();
+    auto early = evaluate_lighting(lighting_inputs(0.0f, 3, true, 0.0f), sp, s2, false, 120000);
+    ASSERT_TRUE(early.want_on);
+    PASS();
+}
+
+TEST(lighting_main_without_occupancy_stays_dark_outside_the_window) {
+    auto sp = lighting_setpoints();
+    sp.occupancy_any_hour = true;
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(lighting_inputs(0.0f, 23, false, 0.0f), sp, s, false, 120000);
+    ASSERT_FALSE(d.want_on);
+    ASSERT_TRUE(std::string(d.reason) == "outside_window");
+    // Occupied but no fresh exterior lux: nothing lights, as inside the window.
+    auto s2 = initial_lighting_state();
+    auto stale = evaluate_lighting(lighting_inputs(0.0f, 23, true, 0.0f, false), sp, s2, false, 120000);
+    ASSERT_FALSE(stale.want_on);
+    PASS();
+}
+
+// #1370: the GROW circuit (occupancy_any_hour false) keeps the photoperiod: an
+// occupied night leaves it dark, so the Vandas keep their dark period.
+TEST(lighting_grow_occupancy_stays_inside_the_window) {
+    auto sp = lighting_setpoints();
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(lighting_inputs(0.0f, 23, true, 0.0f), sp, s, false, 120000);
+    ASSERT_FALSE(d.occupancy_task_light_demand);
+    ASSERT_FALSE(d.want_on);
+    ASSERT_TRUE(std::string(d.reason) == "outside_window");
+    ASSERT_TRUE(invariants::check_23_min_dark(sp, silent_report));
+    PASS();
+}
+
 TEST(lighting_solar_cutoff_does_not_reverse_external_manual_off) {
     auto sp = lighting_setpoints();
     sp.solar_phasing = true;

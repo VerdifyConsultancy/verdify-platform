@@ -1383,6 +1383,12 @@ def test_the_text_sensor_routes_are_the_firmware_entities_object_ids():
     assert {sensor["id"] for sensor in sensors} == set(shared.IRRIGATION_TEXT_SENSORS)
 
 
+def test_a_fog_run_once_is_one_continuous_run_of_its_minutes():
+    """#1343 follow-up: fog runs once, its minutes sent as one on_s like a drip's."""
+    call = esp32_push.irrigation_command_call(command_row("run", "L11", minutes=5))
+    assert call.payload == {"cmd": "run", "line": 10, "on_s": 300, "count": 1, "gap_s": 0, "prewet_s": 0, "flush_s": 0}
+
+
 def test_the_stop_call_names_each_line_by_its_device_idx():
     assert esp32_push.irrigation_command_call(command_row("stop", "L10")).payload["line"] == 9
     assert esp32_push.irrigation_command_call(command_row("stop", None)).payload["line"] == 255
