@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { useMemo, useState, type ReactNode } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import { Link, replace, useSearchParams } from "react-router";
 import { Acknowledge } from "../components/activity/acknowledge";
 import { ALERTS_UNAVAILABLE, AlertRow, alertListEmptyText } from "../components/alert-row";
@@ -16,8 +16,8 @@ import type { PanelState } from "../components/panel";
 import { StopAllWater } from "../components/stop-all-water";
 import { useToast } from "../components/toast";
 import {
-  ALERT_LIMIT, RECENT_ALERTS, activityHref, alertIdOf, alertsStatus, catalogOf, detailText, groupAlerts, isClosed, logRedirect, personName, readView, type ActivityView,
-  type SignedIn,
+  ALERT_LIMIT, RECENT_ALERTS, activityHref, alertIdOf, alertsStatus, catalogOf, dayHeading, detailText, entriesByDay, groupAlerts, isClosed, logRedirect, personName,
+  readView, type ActivityView, type SignedIn,
 } from "../lib/activity";
 import { formatNumber, formatValue, localDate, shortTime } from "../lib/format";
 import { graphWindowUrl } from "../lib/graph-link";
@@ -322,17 +322,24 @@ function ClearFault({ lineId }: { lineId: string }) {
 }
 
 // ---------------------------------------------------------------------------------------------------- recent activity
-/** The five newest log entries (API-17, every 60 s), each one line with its date when not today, and "Open the log ›". */
+/**
+ * The five newest log entries (API-17, every 60 s), one line each under the log's day headers (Today, Yesterday, Fri 30
+ * Oct; redesign §5.9), so the time column only ever holds HH:MM, and "Open the log ›".
+ */
 function RecentActivity({ me }: { me: SignedIn }) {
   const log = panelRead(useApiRead("API-17", RECENT_ACTIVITY, { intervalMs: SLOW_POLL_MS }));
   const settings = useApiRead("API-09", {}, { intervalMs: SLOW_POLL_MS });
   const catalog = useMemo(() => catalogOf(settings.data?.items), [settings.data]);
   const entries = log.data?.items ?? [];
   const today = useClockValue((clock) => localDate(new Date(clock).toISOString()));
+  const headId = useId();
   const state: PanelState = log.failed && !log.data ? "error" : log.pending ? "loading" : entries.length ? "ready" : "empty";
   return <ListCard id="recent-activity" title="Recent activity" thing="recent activity" state={state} reserve="sm" onRetry={log.retry}
     link={{ to: "/activity/log", label: "Open the log" }} empty={{ message: "No activity yet." }}>
     {log.failed && log.data && <p className="fault act-unavailable">Couldn't load the newest activity: these entries may be old. <Button onClick={log.retry}>Retry</Button></p>}
-    <ol className="act-entries act-recent">{entries.map((entry) => <EventRow key={entry.id} entry={entry} catalog={catalog} me={me} showDate={localDate(entry.ts) !== today} />)}</ol>
+    <div className="act-recent">{entriesByDay(entries).map((day) => <section key={day.date} className="act-day" aria-labelledby={`${headId}-${day.date}`}>
+      <h3 id={`${headId}-${day.date}`} className="act-day-head">{dayHeading(day.date, today)}</h3>
+      <ol className="act-entries">{day.entries.map((entry) => <EventRow key={entry.id} entry={entry} catalog={catalog} me={me} />)}</ol>
+    </section>)}</div>
   </ListCard>;
 }

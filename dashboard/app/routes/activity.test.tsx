@@ -376,6 +376,13 @@ test("Recent activity: the five newest log entries, one line each, and Open the 
   expect(plain(text(recent.querySelector("li.event .act-entry-text")))).toBe("VPD Mister Engage 1.60 → 1.55 kPa · requested 1.53 · manual");
   expect(within(recent).getByRole("link", { name: /^Open the log/ }).getAttribute("href")).toBe("/activity/log");
   expect(requests(api, "API-17").map((row) => row.path)).toEqual(["/api/v1/activity?limit=5"]);
+  stopped();
+  // Under the log's day headers, so the time column only ever holds HH:MM, never a date that wraps.
+  await open("/activity", { fixture: "in-band" });
+  const days = screen.getByRole("region", { name: "Recent activity" });
+  expect([...days.querySelectorAll("h3.act-day-head")].map(text)).toEqual(["Today", "Yesterday", "Fri 30 Oct"]);
+  expect([...days.querySelectorAll("section.act-day")].map((day) => day.querySelectorAll("li.event").length)).toEqual([2, 1, 1]);
+  expect([...days.querySelectorAll(".event-when")].map(text)).toEqual(["07:02", "06:30", "06:45", "08:31"]);
 });
 
 test("a viewer reads every alert and the log, expanded too, with no Acknowledge, Resolve, Stop all water, Clear fault or note", async () => {
