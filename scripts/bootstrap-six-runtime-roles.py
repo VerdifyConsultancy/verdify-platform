@@ -680,6 +680,37 @@ def sealed_sql_289():
     )
 
 
+ENERGY_DAILY_MIGRATION = (
+    291,
+    "291-energy-daily-load-magnitude.sql",
+    "73fcdd3ee93e060286a8b2cc9e31feb8025db599711b0bdba5a3a391fd452594",
+)
+# v_energy_daily's new text and two appended columns are in its relation entry, which both ordinary
+# digests take in, so the api and ingestor seals move; no MCP role or PUBLIC holds an entry on the view,
+# so the MCP seal stays 289's. These are a read-only projection on production at exact289 until the
+# rolled-back native qualification measures them (after 290 merges and 291 re-chains from it).
+SUCCESSOR_291 = {
+    "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
+    "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
+    "mcp": SUCCESSOR_289["mcp"],
+}
+
+
+def sealed_sql_291():
+    # Keep every 289 predicate and bind the exact 291 runner stamp with the two
+    # ordinary seals the view replacement moves.
+    predecessor = sealed_sql_289()
+    current = seal_profile_sql(289, SUCCESSOR_289)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(291, SUCCESSOR_291), 1)
+        + " AND "
+        + ledger_row_sql(*ENERGY_DAILY_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -714,6 +745,8 @@ def sealed_sql():
         + sealed_sql_288()
         + " OR "
         + sealed_sql_289()
+        + " OR "
+        + sealed_sql_291()
         + ")"
     )
 

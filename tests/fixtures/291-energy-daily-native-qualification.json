@@ -1,0 +1,17 @@
+{
+  "migration": "291-energy-daily-load-magnitude.sql",
+  "exact_final_migration_sha256": "73fcdd3ee93e060286a8b2cc9e31feb8025db599711b0bdba5a3a391fd452594",
+  "final_migration_qualification_pending": true,
+  "before": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projected_successor": {
+    "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
+    "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projection": "2026-11-05, read only, production at exact289 (max seq 289, live digests and receipts equal to 289's registration). fn_runtime_ordinary_boundary_digest's live body (pg_get_functiondef), run as a DO block under its own search_path (pg_catalog, pg_temp) in a default_transaction_read_only session, reproduced both live ordinary digests. In its catalog string, the one public.v_energy_daily relation entry's columns= and view= fields were then replaced by the successor's: the attribute list and pg_get_viewdef(oid, true) under that search_path, both produced by PostgreSQL 16 on a loopback cluster from the production energy table's column types and this file's view. The same loopback reproduced production's predecessor text byte for byte (sha b2fe9fcd..., and the schema-qualified form the digest uses) and its 11-column attribute list. Owner, ACL, options, rules, triggers and every other entry are unchanged; COMMENT and the daily_summary rows enter no digest. The MCP seal stays 289's: fn_mcp_runtime_boundary_digest takes in a relation only if an MCP role owns it or PUBLIC or an MCP role holds an ACL entry on it, and the view's ACL is verdify and verdify_ingestor_runtime only. 290 (#1358) must merge first: then re-chain 291's predecessor block, sealed_sql_291 and the c0 registration from 290, re-measure, and run scripts/qualify-migration-successor.py db/migrations/291-energy-daily-load-magnitude.sql --fixture tests/fixtures/291-energy-daily-native-qualification.json on production (every session rolls back; --apply-first db/migrations/290-<name>.sql while production is still at 289).",
+  "qualified_successor": null
+}

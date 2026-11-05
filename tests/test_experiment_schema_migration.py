@@ -355,6 +355,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "288-retire-irrigation-registry-rows.sql",
         # Alert silences, their seeds and the ingestor grant's receipt re-seals run forward only.
         "289-alert-silences.sql",
+        # The energy view replacement, its daily_summary backfill and the receipt re-seals run forward only.
+        "291-energy-daily-load-magnitude.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
