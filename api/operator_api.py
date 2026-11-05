@@ -3,7 +3,9 @@
 The verdify-api image runs it as ``uvicorn operator_api:app --port 8090`` in its own Deployment, behind a ClusterIP
 Service with no route: api.verdify.ai forwards every path to the public app on :8080, so no operator path may live
 there. Only the dashboard BFF's pods reach it (NetworkPolicy allow-operator-api-from-dashboard-web), and every call
-except ``/healthz`` and ``/readyz`` carries the shared bearer token.
+except ``/healthz``, ``/readyz`` and ``/metrics`` carries the shared bearer token. Prometheus scrapes ``/metrics``
+(NetworkPolicy allow-operator-api-metrics-scrape): the ``verdify_alert_open`` gauge that pages critical alerts
+through Alertmanager (#1352), with no session, token or alert text in it.
 
 - Sessions. The BFF verifies the Authentik ID token and creates a session with INT-01; ``dashboard_session`` keeps
   only the token's SHA-256, for 12 hours. Every ``/v1`` call resolves ``X-Dashboard-Session`` (cached 30 s) and
@@ -45,7 +47,7 @@ from typing import Annotated, Any, Literal
 import asyncpg
 from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from fastapi.routing import APIRoute
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -62,6 +64,7 @@ from operator_routes import irrigation_reads, irrigation_writes, light_resync, r
 
 from verdify_public.build_provenance import SOURCE_REVISION_PATH, image_git_sha  # noqa: E402
 from verdify_schemas.activity import ACTOR_NAME_MAX_LENGTH  # noqa: E402
+from verdify_services import alerts  # noqa: E402
 from verdify_services.actor import Actor, Role  # noqa: E402
 from verdify_services.problems import Problem, ServiceError, problem  # noqa: E402
 
@@ -80,7 +83,9 @@ INT01_PATH = "/internal/sessions"
 INT02_PATH = "/internal/sessions/current"
 SESSION_HEADER = "x-dashboard-session"
 READ_METHODS = frozenset({"GET", "HEAD"})
-PROBE_PATHS = frozenset({"/healthz", "/readyz"})
+METRICS_PATH = "/metrics"
+PROBE_PATHS = frozenset({"/healthz", "/readyz", METRICS_PATH})
+METRICS_MEDIA_TYPE = "text/plain; version=0.0.4; charset=utf-8"
 PROBLEM_JSON = "application/problem+json"
 
 ATTEST_SQL = "SELECT current_user = session_user AND verdify_dashboard_runtime.fn_attest_login()"
@@ -419,6 +424,39 @@ async def readyz(request: Request) -> JSONResponse:
         status="ready" if ready else "not_ready", source_revision=request.app.state.settings.source_revision
     )
     return JSONResponse(body.model_dump(), status_code=200 if ready else 503)
+
+
+def _label(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
+
+
+def render_alert_metrics(open_by_type: Mapping[tuple[str, str], int] | None) -> str:
+    """The Prometheus text for OPS-04. ``None`` is a failed read: ``verdify_alert_metrics_up`` 0 and no gauge rows, so
+    a blind exporter is visible and never reads as "no alerts"."""
+    lines = [
+        "# HELP verdify_alert_open Open (unacknowledged) Verdify alerts, merged as the dashboard shows them.",
+        "# TYPE verdify_alert_open gauge",
+    ]
+    for (severity, alert_type), count in sorted((open_by_type or {}).items()):
+        lines.append(f'verdify_alert_open{{severity="{_label(severity)}",alert_type="{_label(alert_type)}"}} {count}')
+    lines += [
+        "# HELP verdify_alert_metrics_up 1 when the open-alert read succeeded.",
+        "# TYPE verdify_alert_metrics_up gauge",
+        f"verdify_alert_metrics_up {0 if open_by_type is None else 1}",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+@ops.get(METRICS_PATH, operation_id="OPS-04", response_class=PlainTextResponse)
+async def metrics(request: Request) -> PlainTextResponse:
+    """The open-alert gauge for Prometheus (#1352); a failed read answers 200 with ``verdify_alert_metrics_up 0``."""
+    try:
+        async with request.app.state.pool.acquire() as conn:
+            tally: dict[tuple[str, str], int] | None = await alerts.open_by_type(conn)
+    except Exception as failure:
+        emit({"service": SERVICE, "event": "metrics_read_failed", "error": type(failure).__name__})
+        tally = None
+    return PlainTextResponse(render_alert_metrics(tally), media_type=METRICS_MEDIA_TYPE)
 
 
 @internal.post(

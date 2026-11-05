@@ -336,6 +336,8 @@ $PY -m pytest -q -rs \
   tests/test_setpoint_server_ingress.py \
   tests/test_public_api_operator_paths.py \
   tests/test_operator_api_manifests.py \
+  tests/test_operator_api_alert_metrics.py \
+  tests/test_alert_delivery_local.py \
   tests/test_verdify_traefik_placement.py \
   tests/test_verdify_tier1_owner_exclusions.py \
   tests/test_dashboard_manifests.py \

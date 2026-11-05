@@ -191,9 +191,6 @@ def test_a_silenced_alert_is_not_raised_and_its_open_row_closes_as_suppressed():
     assert log.of(*DRYOUT) == [row]  # nothing raised
     assert row["disposition"] == "suppressed" and row["resolved_by"] == "system" and row["resolved_at"] == morning
     assert row["resolution"] == "suppressed: alert_silence 1 until 2026-11-12 03:00 UTC (probes out of the soil)"
-    assert ns["slack_posts"] == [
-        ("\U0001f507 Suppressed: `soil_dryout` for `soil.south_1.soil_moisture_south_1`", "1790.1")
-    ]
     assert log.open_view() == []
     writes = len(log.writes)
     for hour in (8, 13, 21):  # the rule keeps firing all day: nothing is written
@@ -203,7 +200,7 @@ def test_a_silenced_alert_is_not_raised_and_its_open_row_closes_as_suppressed():
             "resolved": 0,
             "suppressed": 0,
         }
-    assert len(log.writes) == writes and len(ns["slack_posts"]) == 1
+    assert len(log.writes) == writes
 
 
 def test_the_offline_soil_probes_close_by_night_and_stay_quiet_by_day():

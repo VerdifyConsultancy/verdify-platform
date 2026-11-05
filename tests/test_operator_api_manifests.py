@@ -1,7 +1,8 @@
 """deploy/k8s/components/operator-api renders the operator API's verdify-prod manifests (#1148; architecture §10).
 
-Rendered alone it holds one Deployment, a ClusterIP Service on 8090, the ConfigMap and one ingress NetworkPolicy that
-admits only the dashboard web pods: no Secret, no IngressRoute and no egress policy. In the prod overlay (R1's wiring
+Rendered alone it holds one Deployment, a ClusterIP Service on 8090, the ConfigMap, one ingress NetworkPolicy that
+admits only the dashboard web pods and one that admits Prometheus's scrape of /metrics (OPS-04, #1352): no Secret,
+no IngressRoute and no egress policy. In the prod overlay (R1's wiring
 PR, #1143), the operator API runs the verdify-api release digest, allow-db-from-app admits it and
 egress-deny-management covers it, and the overlay still renders no Secret.
 Renders with kustomize, as tests/test_egress_deny_management.py renders the prod overlay.
@@ -22,6 +23,7 @@ DASHBOARD = ROOT / "deploy/k8s/dashboard"
 API_DEPLOYMENT = ROOT / "deploy/k8s/base/api-deployment.yaml"
 NAME = "verdify-operator-api"
 POLICY = "allow-operator-api-from-dashboard-web"
+SCRAPE_POLICY = "allow-operator-api-metrics-scrape"
 LABELS = {"app.kubernetes.io/part-of": "verdify", "app.kubernetes.io/component": "operator-api"}
 API_IMAGE = "ghcr.io/verdifyconsultancy/verdify-api"
 WEB_POD = {"app.kubernetes.io/name": "verdify-dashboard-web"}
@@ -53,11 +55,12 @@ def prod() -> list[dict]:
     return render(PROD)
 
 
-def test_the_component_renders_its_four_objects_and_no_secret_route_or_egress_policy(rendered):
+def test_the_component_renders_its_five_objects_and_no_secret_route_or_egress_policy(rendered):
     assert sorted((doc["kind"], doc["metadata"]["name"]) for doc in rendered) == [
         ("ConfigMap", NAME),
         ("Deployment", NAME),
         ("NetworkPolicy", POLICY),
+        ("NetworkPolicy", SCRAPE_POLICY),
         ("Service", NAME),
     ]
     for document in rendered:
@@ -155,6 +158,24 @@ def test_only_dashboard_web_pods_reach_8090(rendered):
     ]
     egress = [doc for doc in rendered if doc["kind"] == "NetworkPolicy" and "Egress" in doc["spec"]["policyTypes"]]
     assert egress == []
+
+
+def test_only_the_observability_namespace_scrapes_metrics_on_8090(rendered):
+    policy = one(rendered, "NetworkPolicy", SCRAPE_POLICY)["spec"]
+    assert policy["policyTypes"] == ["Ingress"] and "egress" not in policy
+    template = one(rendered, "Deployment", NAME)["spec"]["template"]["metadata"]
+    assert selects(policy["podSelector"], template["labels"])
+    assert policy["ingress"] == [
+        {
+            "from": [{"namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "observability"}}}],
+            "ports": [{"protocol": "TCP", "port": 8090}],
+        }
+    ]
+    assert template["annotations"] == {
+        "prometheus.io/scrape": "true",
+        "prometheus.io/port": "8090",
+        "prometheus.io/path": "/metrics",
+    }
 
 
 def test_the_dashboard_web_pods_carry_the_labels_the_policy_admits():
