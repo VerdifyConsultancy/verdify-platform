@@ -409,6 +409,9 @@ $PY scripts/check-image-sources.py
 step "no new public hostnames in runtime source (#1351)"
 $PY scripts/check-external-hosts.py
 
+step "vision and AI calls only via Cortex llm.primary.longctx.mm (#1351)"
+$PY scripts/check-ai-routes.py
+
 # ── Diff-scoped gates (merge-base semantics from the retired PR workflows) ──
 if [ -n "${CI_BASE_REF:-}" ]; then
   BASE=$(git merge-base "${CI_BASE_REF}" HEAD)

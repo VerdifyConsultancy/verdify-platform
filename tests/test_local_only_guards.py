@@ -104,3 +104,46 @@ def test_host_guard_requires_removing_retired_rows():
 
 def test_repository_hosts_pass():
     assert hosts.main() == 0
+
+
+ai_routes = load("check-ai-routes")
+
+
+def test_ai_config_guard_requires_cortex_vision_and_no_cloud_keys():
+    good = {
+        "keys": {"cortex": {"provider": "cortex"}},
+        "models": {
+            "vision": {
+                "provider": "cortex",
+                "model": "llm.primary.longctx.mm",
+                "base_url": "${CORTEX_BASE_URL:-https://cortex.vallery.net/v1}",
+            }
+        },
+    }
+    assert ai_routes.config_errors(good, "x") == []
+    bad_model = {"models": {"vision": {"provider": "gemini", "model": "gemini-3.1-pro"}}}
+    assert ai_routes.config_errors(bad_model, "x")
+    bad_key = dict(good, keys={"gemini": {"provider": "google-ai-studio"}})
+    assert ai_routes.config_errors(bad_key, "x")
+    cloud = dict(
+        good, models=dict(good["models"], summary={"provider": "openai", "base_url": "https://api.openai.com/v1"})
+    )
+    assert ai_routes.config_errors(cloud, "x")
+
+
+def test_ai_source_guard_flags_unrouted_image_calls():
+    routed = 'client = ai.get_client("vision")\ncontent = [{"type": "image_url", "image_url": {}}]\n'
+    direct = 'client = OpenAI(base_url="https://api.openai.com/v1")\ncontent = [{"type": "image_url"}]\n'
+    gemini = 'from google import genai\nx = {"inline_data": b""}\n'
+    assert ai_routes.source_errors({"a.py": routed}) == []
+    assert ai_routes.source_errors({"b.py": direct})
+    assert ai_routes.source_errors({"c.py": gemini})
+
+
+def test_ai_host_guard():
+    assert ai_routes.host_errors({"api.openai.com": {}}) == []  # pending removal
+    assert ai_routes.host_errors({"generativelanguage.googleapis.com": {}})
+
+
+def test_repository_ai_routes_pass():
+    assert ai_routes.main() == 0
