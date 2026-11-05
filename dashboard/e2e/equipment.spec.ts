@@ -12,13 +12,13 @@ const facts = (page: Page, key: string) => row(page, key).locator(".equipment-fa
 /** The lanes' API-05 reads, not the daily runtime's, which names its six actuators. */
 const laneReads = async (request: Parameters<typeof fixtureRequests>[0]) => (await fixtureRequests(request, "API-05")).filter((read) => !read.path.includes("equipment="));
 
-test("with the controller reporting every actuator shows its state, since, runtime and cycles; fan1 reads OFF since 10/27 04:26, never unknown", async ({ page, request }) => {
+test("with the controller reporting every actuator shows its state, since, runtime and cycles; fan1 reads OFF since Oct 27, 04:26, never unknown", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/equipment");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Equipment");
   await expect(board(page)).toHaveCount(18);
   await expect(state(page, "fan1")).toHaveText("Off");
-  await expect(facts(page, "fan1")).toHaveText("since 10/27 04:26 · on today 0 min · cycles 0");
+  await expect(facts(page, "fan1")).toHaveText("since Oct 27, 04:26 · on today 0 min · cycles 0");
   await expect(facts(page, "fan2")).toHaveText("since 08:31 · on today 2 h 10 min · cycles 6");
   await expect(state(page, "vent")).toHaveText("Closed");
   await expect(page.locator('.equipment-board [data-badge="unknown"]')).toHaveCount(0);

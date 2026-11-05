@@ -52,7 +52,7 @@ for (const viewport of [DESKTOP, PHONE]) {
     await page.setViewportSize(viewport);
     await useScreensClock(page, request, "manual-lane");
     await load(page, "/plan");
-    await expect(status(page, "mister_pulse_on_s")).toHaveText("MANUAL · Iris skips · jason since 10/30");
+    await expect(status(page, "mister_pulse_on_s")).toHaveText("MANUAL · Iris skips · jason since Oct 30");
     await expect(region(page, "Planned settings").locator(".plan-manual")).toHaveText("1 setting MANUAL · Iris skips it");
     await expect(page.getByRole("link", { name: /^Open/ })).toHaveCount(0);
     const label = page.locator("[data-param=mister_pulse_on_s]").getByRole("link", { name: "Mister Pulse ON" });

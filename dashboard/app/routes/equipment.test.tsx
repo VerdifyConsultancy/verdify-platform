@@ -124,16 +124,16 @@ test("the order is fixed whatever order the API sends; an omitted actuator reads
   expect(rowOf("grow_light_main_intent")).toBeNull();
 });
 
-test("with the controller reporting, fan1 reads OFF since 10/27 04:26, never unknown; since, time on today and cycles read as the API sends them", async () => {
+test("with the controller reporting, fan1 reads OFF since Oct 27, 04:26, never unknown; since, time on today and cycles read as the API sends them", async () => {
   await load();
   // A relay reports on change, so its since is its newest report: the row states it once.
-  expect(read("fan1")).toEqual({ name: "Fan 1", state: "Off", facts: "since 10/27 04:26 · on today 0 min · cycles 0" });
+  expect(read("fan1")).toEqual({ name: "Fan 1", state: "Off", facts: "since Oct 27, 04:26 · on today 0 min · cycles 0" });
   const since = rowOf("fan1")!.querySelector("time")!;
   expect([since.getAttribute("datetime"), since.getAttribute("title")]).toEqual(["2026-10-27T10:26:00.000Z", "10/27/2026, 04:26:00 GMT-06:00"]);
   // HH:MM today, MM/DD HH:MM before today; minutes, as h min from 120.
   expect(read("fan2").facts).toBe("since 08:31 · on today 2 h 10 min · cycles 6");
   expect(read("heat1").facts).toBe("since 07:10 · on today 3 h 5 min · cycles 4");
-  expect(read("heat2").facts).toBe("since 11/01 06:40 · on today 0 min · cycles 0");
+  expect(read("heat2").facts).toBe("since Nov 1, 06:40 · on today 0 min · cycles 0");
   expect(read("mister_center").facts).toBe("since 07:12 · on today 14 min · cycles 14");
   expect(read("fog")).toEqual({ name: "Fog L11", state: "Off", facts: "since 05:10 · on today 6 min · cycles 9" });
   // The vent's off reads CLOSED and its time on is time open.
@@ -203,7 +203,7 @@ test("with the controller not reporting, every state reads unknown with the age 
 
 test("each grow light shows the controller's intent beside the Lutron readback, which is labelled sensed", async () => {
   await load();
-  expect(read("grow_light_main")).toEqual({ name: "Main", state: "Off (controller) · Lutron Off", facts: "since 11/01 19:00 · on today 0 min · cycles 0 · reported 3 min ago" });
+  expect(read("grow_light_main")).toEqual({ name: "Main", state: "Off (controller) · Lutron Off", facts: "since Nov 1, 19:00 · on today 0 min · cycles 0 · reported 3 min ago" });
   expect(read("grow_light_grow").state).toBe("Off (controller) · Lutron Off");
   expect(text(document.querySelector(".equipment-note"))).toContain("Lutron is the state the switch reports (sensed)");
   expect(document.querySelector("[data-differ]")).toBeNull();

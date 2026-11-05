@@ -4,7 +4,7 @@
  * and the Alerts status line, people's names, each log entry in one line, the log's facets, day headers and its CSV.
  * `routes/activity.tsx` and `routes/activity-log.tsx` render them.
  */
-import { dateShift, formatNumber, formatValue, localDate, localDayStart, localWallClock, shortDateTime, shortTime } from "./format";
+import { dateShift, dayHeader, formatNumber, formatValue, localDate, localDayStart, localWallClock, shortDateTime, shortTime } from "./format";
 import type { ActivityEntry, Actor, Alert, Me, Setting } from "./operator-api";
 import { settingValueText, steppedNumber, withUnit } from "./setting-values";
 import { ACTOR_SOURCE_PATTERN, isAiSource } from "./vocab";
@@ -314,13 +314,11 @@ export function facetsWith(facets: readonly Facet[], current: string | undefined
 }
 
 // ---------------------------------------------------------------------------------------------------- the log, one line an entry
-const DAY_HEAD = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" });
-/** A day header: "Today", "Yesterday", else "Mon 3 Nov" (and the year when it is not this one). */
+/** A day header: "Today", "Yesterday", else "Mon 3 Nov" (and the year when it is not this one; lib/format's `dayHeader`). */
 export function dayHeading(date: string, today: string): string {
   if (date === today) return "Today";
   if (date === dateShift(today, -1)) return "Yesterday";
-  const words = DAY_HEAD.format(new Date(`${date}T12:00:00Z`)).replace(",", "");
-  return date.slice(0, 4) === today.slice(0, 4) ? words : `${words} ${date.slice(0, 4)}`;
+  return dayHeader(date, today.slice(0, 4));
 }
 /** The entries by America/Denver day, newest first as API-17 gives them. */
 export function entriesByDay(entries: readonly ActivityEntry[]): { readonly date: string; readonly entries: readonly ActivityEntry[] }[] {

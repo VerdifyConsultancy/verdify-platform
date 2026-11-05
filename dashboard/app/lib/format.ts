@@ -72,19 +72,36 @@ export function monthDayClock(instant: string): string {
 }
 /**
  * When a run began, as the Equipment board reads it (screens SCR-07): "06:42" on the America/Denver day of `now`
- * (epoch ms), "10/27 06:42" on any other day; 24-hour, and a time in the repeated hour adds its offset.
+ * (epoch ms), "Oct 27, 06:42" on any other day (the timestamp style, `shortDateTime`); 24-hour, and a time in the
+ * repeated hour adds its offset.
  */
 export function sinceClock(instant: string, now: number): string {
   const date = instantDate(instant);
   if (!date) return TIME_UNAVAILABLE;
   const today = Number.isFinite(now) && DAY_KEY.format(new Date(now)) === DAY_KEY.format(date);
-  return today ? withRepeatedOffset(date, CLOCK.format(date)) : monthDayClock(instant);
+  return today ? withRepeatedOffset(date, CLOCK.format(date)) : shortDateTime(instant);
 }
 /** A calendar date (YYYY-MM-DD) as words: "Tuesday, Oct 27, 2026"; `short` drops the weekday and year. */
 export function dayTitle(value: string, style: "long" | "short" = "long"): string {
   const date = new Date(`${value}T12:00:00Z`);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("en-US", style === "long" ? { timeZone: "UTC", weekday: "long", month: "short", day: "numeric", year: "numeric" } : { timeZone: "UTC", month: "short", day: "numeric" }).format(date);
+}
+/**
+ * The dates the screens print, one style each (polish of 2026-11-04): a short day "Oct 27" (`dayTitle(value, "short")`),
+ * a timestamp "Oct 27, 06:45" (`shortDateTime`), a span of days "Oct 27 – Nov 2" (`daySpan`) and the log's day header
+ * "Mon 3 Nov" (`dayHeader`, redesign §5.9). Native date inputs keep the browser's own.
+ */
+export function daySpan(from: string, to: string): string {
+  return from === to ? dayTitle(from, "short") : `${dayTitle(from, "short")} – ${dayTitle(to, "short")}`;
+}
+const DAY_HEAD = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" });
+/** A calendar date (YYYY-MM-DD) as a day header, "Mon 3 Nov", with its year when `year` is not that date's. */
+export function dayHeader(value: string, year?: string): string {
+  const date = new Date(`${value}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return value;
+  const words = DAY_HEAD.format(date).replace(",", "");
+  return year === undefined || value.slice(0, 4) === year ? words : `${words} ${value.slice(0, 4)}`;
 }
 /** "October 2026" for YYYY-MM. */
 export function monthTitle(month: string): string {

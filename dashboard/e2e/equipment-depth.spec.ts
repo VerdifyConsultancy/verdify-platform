@@ -26,7 +26,7 @@ for (const viewport of VIEWPORTS) {
     await useScreensClock(page, request, "why-reasons");
     await load(page, "/equipment");
     await expect(reason(page, "mode_reason")).toContainText("Climate mode");
-    await expect(reason(page, "mode_reason").locator(".why-words")).toHaveText("Venting: too warm · since 11/01 13:40");
+    await expect(reason(page, "mode_reason").locator(".why-words")).toHaveText("Venting: too warm · since Nov 1, 13:40");
     await expect(reason(page, "fog_block_reason")).toContainText("Fog (L11)");
     await expect(reason(page, "fog_block_reason").locator(".why-words")).toHaveText("Humidity at the fog ceiling · since 09:12");
     await expect(reason(page, "moisture_block_reason")).toContainText("Misters (L04, L07, L09)");
