@@ -10,7 +10,11 @@
  * 2. The ingestor heartbeat is stale (older than 180 s): "Ingestor not running since HH:MM".
  * 3. The heartbeat is fresh and the newest climate row is older than 300 s: "Controller not reporting since HH:MM".
  * 4. The leak alert is open and flow has not stopped: "Water flowing with every Verdify valve closed".
- * 5. A fresh reading is outside its band, temperature, then VPD, then RH: "Too hot: 84.1 °F (target 62–70 °F)".
+ * 5. A fresh reading is outside its band: the steady headline "Out of band", and `conditions` lists every reading that is
+ *    out, temperature, then VPD, then RH, each as a plain phrase ("Too hot: 84.1 °F (band 62–70 °F)") the hero shows on
+ *    its own line under the headline (Jason 2026-11-05). With a dwell state (`stepBandHold`), a reading counts as out
+ *    only after it has been out for `BAND_DWELL_S`, and as back in only after the same, so the headline and the line do
+ *    not flicker at a band edge. The band bars keep the raw verdict.
  * 6. Alerts nobody has acknowledged, the one count: "1 thing needs someone".
  * 7. The climate data is stale: "Waiting for fresh data" (the age line under the hero value says how old it is).
  * 8. "All OK".
@@ -19,6 +23,8 @@
  * disagree. Row 7 holds while API-02 marks the climate source stale, and also while an indoor reading is older than
  * twice the climate cadence at `server_time` or a reading with a band in force has no value: a reading the hero shows
  * can never be older than "fresh" allows under an "All OK".
+ *
+ * The headline is never a link: `link` says where a row is explained, and the hero shows it as a quiet affordance.
  */
 import { formatValue, shortTime } from "./format";
 import type { Now, Reading } from "./operator-api";
@@ -27,12 +33,18 @@ import { climateFresh, heartbeatFresh } from "./shell";
 export type AnswerKind = "unreachable" | "ingestor" | "controller" | "flow" | "band" | "alerts" | "stale" | "ok";
 /** Where the sentence links: the page that explains it. `to` starting with "#" is an anchor on Now itself. */
 export type AnswerLink = { readonly to: string; readonly label: string };
+export type BandMetric = "temp" | "vpd" | "rh";
+export type BandVerdict = "in" | "above" | "below";
+/** Row 5: one reading out of its band, as a plain phrase with its Graphs panel. */
+export type BandCondition = { readonly metric: BandMetric; readonly verdict: "above" | "below"; readonly text: string; readonly link: AnswerLink };
 export type NowAnswer = {
   /** The row of the table that holds, 1 to 8; 0 while API-02 has not answered and nothing is known. */
   readonly row: number;
   readonly kind: AnswerKind | "loading";
   readonly text: string;
   readonly link: AnswerLink | null;
+  /** Row 5: every reading out of its band, in the order temperature, VPD, RH; empty on every other row. */
+  readonly conditions: readonly BandCondition[];
   /** Rows 1 to 3 and 7 (and loading): no verdict anywhere, and the values muted with STALE. */
   readonly muted: boolean;
   /** Rows 1 to 3: the source is not reporting or out of reach; the freshness dot reads off. */
@@ -53,6 +65,8 @@ export type AnswerInput = {
   readonly now: Now | null;
   /** The newest API-02 read failed. */
   readonly failed: boolean;
+  /** The dwell state over the polls so far (`stepBandHold`); without it row 5 reads the API's verdicts as they are. */
+  readonly hold?: BandHold | null;
 };
 
 export const ALL_OK = "All OK";
@@ -60,6 +74,13 @@ export const UNREACHABLE_TEXT = "Can't reach the greenhouse data";
 export const LOADING_TEXT = "Checking the greenhouse…";
 /** Row 7. The age is the hero's own line ("Last data 14 min ago (10:28)"), so the heading never repeats it. */
 export const STALE_TEXT = "Waiting for fresh data";
+/** Row 5's steady headline; what is out, and by how much, is the condition line under it. */
+export const OUT_OF_BAND_TEXT = "Out of band";
+/**
+ * A reading counts as out of band after 2 min out, and as back in after 2 min in (Jason 2026-11-05, #1338). Readings
+ * arrive once a minute, so a value hovering at a band edge does not flip the headline on every 15 s poll.
+ */
+export const BAND_DWELL_S = 120;
 /** A climate source is stale past twice its cadence (the `v_sensor_staleness` rule); the climate cadence is 60 s. */
 const DEFAULT_CADENCE_S = 60;
 
@@ -68,10 +89,10 @@ const since = (value: string | null) => (value ? ` since ${shortTime(value)}` : 
 const finite = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value);
 const hasValue = (reading: Reading) => finite(reading.value);
 
-const answer = (row: number, kind: AnswerKind, text: string, fields: Partial<Pick<NowAnswer, "link" | "muted" | "notReporting" | "unknownSince" | "lastDataAt">> = {}): NowAnswer => ({
-  row, kind, text, link: null, muted: false, notReporting: false, unknownSince: null, lastDataAt: null, ...fields,
+const answer = (row: number, kind: AnswerKind, text: string, fields: Partial<Pick<NowAnswer, "link" | "conditions" | "muted" | "notReporting" | "unknownSince" | "lastDataAt">> = {}): NowAnswer => ({
+  row, kind, text, link: null, conditions: [], muted: false, notReporting: false, unknownSince: null, lastDataAt: null, ...fields,
 });
-export const LOADING: NowAnswer = { row: 0, kind: "loading", text: LOADING_TEXT, link: null, muted: true, notReporting: false, unknownSince: null, lastDataAt: null };
+export const LOADING: NowAnswer = { row: 0, kind: "loading", text: LOADING_TEXT, link: null, conditions: [], muted: true, notReporting: false, unknownSince: null, lastDataAt: null };
 
 /** Seconds from a reading's time to the answer's `server_time`; null when either is missing. */
 function ageAtServer(observedAt: string | null | undefined, now: Pick<Now, "server_time">): number | null {
@@ -100,23 +121,69 @@ export function targetText(low: number | null | undefined, high: number | null |
   return unit === "%" ? `${range}%` : `${range}${NBSP}${unit}`;
 }
 
-type Metric = { readonly reading: Reading; readonly position: Now["band"]["temp_f"] | null; readonly unit: string; readonly above: string; readonly below: string };
+type Metric = { readonly metric: BandMetric; readonly reading: Reading; readonly position: Now["band"]["temp_f"] | null; readonly unit: string; readonly above: string; readonly below: string; readonly anchor: string };
 const metrics = (now: Now): Metric[] => [
-  { reading: now.indoor.temp_f, position: now.band.temp_f, unit: "°F", above: "Too hot", below: "Too cold" },
-  { reading: now.indoor.vpd_kpa, position: now.band.vpd_kpa, unit: "kPa", above: "Air too dry", below: "Air too damp" },
-  { reading: now.indoor.rh_pct, position: now.band.rh_pct, unit: "%", above: "Air too damp", below: "Air too dry" },
+  { metric: "temp", reading: now.indoor.temp_f, position: now.band.temp_f, unit: "°F", above: "Too hot", below: "Too cold", anchor: "temperature" },
+  { metric: "vpd", reading: now.indoor.vpd_kpa, position: now.band.vpd_kpa, unit: "kPa", above: "Air too dry", below: "Air too damp", anchor: "vpd" },
+  { metric: "rh", reading: now.indoor.rh_pct, position: now.band.rh_pct, unit: "%", above: "Air too damp", below: "Air too dry", anchor: "rh" },
 ];
+const BAND_METRICS: readonly BandMetric[] = ["temp", "vpd", "rh"];
 
-/** Row 5: the first fresh reading the API judges above or below its band, in the order temperature, VPD, RH. */
-function outOfBand(now: Now): string | null {
-  for (const { reading, position, unit, above, below } of metrics(now)) {
-    if (!position || !readingFresh(reading, now) || !finite(reading.value)) continue;
-    const head = position.verdict === "above" ? above : position.verdict === "below" ? below : null;
-    if (!head) continue;
-    const target = targetText(position.low, position.high, unit);
-    return `${head}: ${formatValue(reading.value, unit)}${target ? ` (target ${target})` : ""}`;
+/** The API's verdict for each reading: "above" or "below" only for a fresh reading with a band; else "in". */
+export function rawVerdicts(now: Now): Readonly<Record<BandMetric, BandVerdict>> {
+  const out: Record<BandMetric, BandVerdict> = { temp: "in", vpd: "in", rh: "in" };
+  for (const { metric, reading, position } of metrics(now)) {
+    const verdict = position?.verdict;
+    if (readingFresh(reading, now) && (verdict === "above" || verdict === "below")) out[metric] = verdict === "above" ? "above" : "below";
   }
-  return null;
+  return out;
+}
+
+/**
+ * The dwell state behind row 5: per reading, the verdict that holds and a different one waiting since `since` (epoch
+ * seconds at the answer's `server_time`) to replace it once it has lasted `BAND_DWELL_S`.
+ */
+export type BandHold = {
+  readonly at: number;
+  readonly metrics: Readonly<Record<BandMetric, { readonly held: BandVerdict; readonly next: BandVerdict | null; readonly since: number }>>;
+};
+
+/**
+ * One poll's step of the dwell state. Pure and idempotent: the same answer (or an older one) leaves it as it is. The
+ * first answer seen holds as it reads, with no history to wait on.
+ */
+export function stepBandHold(prev: BandHold | null | undefined, now: Now | null | undefined, dwellS = BAND_DWELL_S): BandHold | null {
+  if (!now || !validTime(now.server_time)) return prev ?? null;
+  const at = Date.parse(now.server_time) / 1000;
+  if (prev && at <= prev.at) return prev;
+  const raw = rawVerdicts(now);
+  const next = {} as Record<BandMetric, BandHold["metrics"][BandMetric]>;
+  for (const metric of BAND_METRICS) {
+    const was = prev?.metrics[metric];
+    const verdict = raw[metric];
+    if (!was || verdict === was.held) next[metric] = { held: verdict, next: null, since: at };
+    else if (was.next === verdict) next[metric] = at - was.since >= dwellS ? { held: verdict, next: null, since: at } : was;
+    else next[metric] = { held: was.held, next: verdict, since: at };
+  }
+  return { at, metrics: next };
+}
+
+/**
+ * Row 5: every fresh reading out of its band, in the order temperature, VPD, RH: the API's verdict, or with a dwell state
+ * the held one. A reading that is not fresh is never listed: row 7 says so instead.
+ */
+export function bandConditions(now: Now, hold?: BandHold | null): BandCondition[] {
+  const raw = rawVerdicts(now);
+  const out: BandCondition[] = [];
+  for (const { metric, reading, position, unit, above, below, anchor } of metrics(now)) {
+    if (!position || !readingFresh(reading, now) || !finite(reading.value)) continue;
+    const verdict = hold ? hold.metrics[metric].held : raw[metric];
+    if (verdict === "in") continue;
+    const target = targetText(position.low, position.high, unit);
+    const text = `${verdict === "above" ? above : below}: ${formatValue(reading.value, unit)}${target ? ` (band ${target})` : ""}`;
+    out.push({ metric, verdict, text, link: { to: `/graphs?range=24h#${anchor}`, label: "Graphs" } });
+  }
+  return out;
 }
 
 /**
@@ -134,7 +201,7 @@ function staleness(now: Now): { at: string | null } | null {
 }
 
 /** The first row of the worst-first table that holds. */
-export function nowAnswer({ now, failed }: AnswerInput): NowAnswer {
+export function nowAnswer({ now, failed, hold }: AnswerInput): NowAnswer {
   if (failed) {
     return answer(1, "unreachable", UNREACHABLE_TEXT, { muted: true, notReporting: true, unknownSince: validTime(now?.server_time) ? now.server_time : null });
   }
@@ -153,8 +220,8 @@ export function nowAnswer({ now, failed }: AnswerInput): NowAnswer {
   if (finite(leak.alert_id) && !validTime(leak.stopped_at)) {
     return answer(4, "flow", "Water flowing with every Verdify valve closed", { link: { to: `/activity?alert=${leak.alert_id}`, label: "Open the alert" } });
   }
-  const band = outOfBand(now);
-  if (band) return answer(5, "band", band, { link: { to: "/graphs", label: "Graphs" } });
+  const conditions = bandConditions(now, hold);
+  if (conditions.length) return answer(5, "band", OUT_OF_BAND_TEXT, { conditions });
   const open = now.alerts.open;
   if (finite(open) && open > 0) {
     return answer(6, "alerts", open === 1 ? "1 thing needs someone" : `${open} things need someone`, { link: { to: "/activity", label: "Activity" } });

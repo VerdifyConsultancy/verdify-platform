@@ -32,8 +32,10 @@ const plain = (value: string) => value.replaceAll(String.fromCharCode(0xa0), " "
 /** The one zone order (lib/zone-source.ts `ZONES`), the same as Graphs → Zones' columns. */
 const ZONE_ORDER = ["north", "center", "south", "east", "west"];
 const tile = (zone: string) => document.querySelector<HTMLElement>(`[data-zone=${zone}]`)!;
-/** The tile's tag mark; null for a zone read from its own probe (MEASURED), the normal case, which shows none. */
-const tag = (zone: string) => tile(zone).querySelector("[data-zone-tag]")?.textContent ?? null;
+/** The tile's tag (its `data-zone-tag` code); null for a zone read from its own probe (MEASURED), which shows no mark. */
+const tag = (zone: string) => tile(zone).querySelector("[data-zone-tag]")?.getAttribute("data-zone-tag") ?? null;
+/** What the mark says on the page: words, never the code (Jason 2026-11-05). */
+const tagWords = (zone: string) => tile(zone).querySelector("[data-zone-tag]")?.textContent ?? null;
 const value = (zone: string, name: string) => plain(text(tile(zone).querySelector(`[data-tile=${name}]`)));
 const meta = (zone: string) => plain(text(tile(zone).querySelector(".now-zone-meta")));
 const number = (reading: string) => Number.parseFloat(reading);
@@ -80,6 +82,7 @@ test("the band is the zone's own in force; north reads against the house band an
   // API-06 never asks for north, and each other zone asks for its own.
   expect(requests(api, "API-06").map((row) => query(row.path).get("zone")).sort()).toEqual(["center", "east", "house", "south", "west"]);
   expect(tag("center")).toBe("HOUSE");
+  expect(tagWords("center")).toBe("no probe · house average");
 });
 
 test("the reads: three 15-minute reads of at most 8 keys and the day read over 25 h; each polls every 60 s and pauses while the tab is hidden", async () => {
@@ -108,10 +111,14 @@ function newest(api: FixtureApi, key: string): number {
   return (body.series[key].avg as (number | null)[]).filter((item) => item !== null).at(-1)!;
 }
 
-test("south reads PEER while its probe is out, amber: the fresh peers' mean, never its own; its sparkline keeps the gap", async () => {
+test("south reads PEER while its probe is out, amber and in words: the fresh peers' mean, never its own, and its sparkline draws that mean", async () => {
   const api = await open({ fixture: "south-probe-out" });
   expect(tag("south")).toBe("PEER");
+  expect(tagWords("south")).toBe("probe offline · West + East average");
+  expect(text(document.querySelector("#zones"))).not.toMatch(/\bPEER\b|\bHOUSE\b/);
   expect(tile("south").querySelector(".now-zone-tag-news")).not.toBeNull();
+  expect(tile("south").querySelector("svg.spark")?.getAttribute("aria-label")).toBe("South VPD over the last 24 h, probe offline · West + East average");
+  expect(tile("south").querySelectorAll(".spark-line").length).toBeGreaterThan(0);
   const mean = (a: number, b: number) => (a + b) / 2;
   expect(number(value("south", "temp"))).toBeCloseTo(mean(newest(api, "climate.temp_west"), newest(api, "climate.temp_east")), 1);
   expect(number(value("south", "vpd"))).toBeCloseTo(mean(newest(api, "climate.vpd_west"), newest(api, "climate.vpd_east")), 2);
@@ -124,6 +131,7 @@ test("while the controller is not reporting no probe is fresh: every tile reads 
   await open({ fixture: "controller-not-reporting" });
   for (const zone of ZONE_ORDER) {
     expect(tag(zone)).toBe("HOUSE");
+    expect(tagWords(zone)).toBe(zone === "center" ? "no probe · house average" : "probe offline · house average");
     expect(tile(zone).querySelectorAll("[data-badge=stale]")).toHaveLength(1);
     expect(meta(zone)).toContain("last data 10:36");
     expect(text(tile(zone))).not.toMatch(/in band|above band|below band/);
