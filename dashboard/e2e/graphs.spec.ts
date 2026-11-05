@@ -165,7 +165,8 @@ test("the event rail marks writes, alerts and runs, each opening its Activity en
   const rail = page.getByRole("group", { name: /^Events on the charts, 7$/ });
   await expect(rail).toHaveCount(1);
   await rail.getByRole("button", { name: "08:42 · jason · Set VPD Mister Engage" }).click();
-  await expect(page.getByRole("list", { name: "Events at this mark" }).getByRole("link")).toHaveAttribute("href", "/activity/log?target=mister_engage_kpa#activity-15");
+  // 24 h now has 24 h ahead, so 08:42 and 09:00 sit within 8 px and share one mark.
+  await expect(page.getByRole("list", { name: "Events at this mark" }).getByRole("link", { name: "08:42 · jason · Set VPD Mister Engage" })).toHaveAttribute("href", "/activity/log?target=mister_engage_kpa#activity-15");
   const list = page.locator("details.stack-events");
   await expect(list.locator("summary")).toHaveText("Events in this window (7)");
   await list.locator("summary").click();
