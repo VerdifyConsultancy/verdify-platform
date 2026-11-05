@@ -78,7 +78,8 @@ async def _record_occupancy_observation(
 ) -> tuple[bool, datetime]:
     """Persist a raw occupancy observation and return the effective latched state.
 
-    An occupied observation latches until ``observed_at + OCCUPANCY_LATCH_MIN``.
+    An occupied observation latches until ``observed_at + OCCUPANCY_LATCH_MIN``;
+    an empty one releases only a latch that has already run out (#1370).
     With ``visit_started_at`` (the sensor's ON edge) the latch is also capped at
     ``visit_started_at + OCCUPANCY_VISIT_MAX_MIN``, so a sensor that stays ON
     cannot hold the mist indefinitely.
@@ -87,6 +88,15 @@ async def _record_occupancy_observation(
     await _insert_system_state(conn, OCCUPANCY_SOURCE_ENTITY, source)
 
     if not occupied:
+        # #1370: an empty reading does not cut a live latch short. The latch runs
+        # OCCUPANCY_LATCH_MIN past the last detection, so the controller's
+        # occupancy lights (and the mist hold) return to automatic 15 min after
+        # the last sighting, and a camera that loses someone behind the plants
+        # for a moment does not switch the lights off.
+        state = await _fetch_system_state(conn, (OCCUPANCY_ENTITY, OCCUPANCY_UNTIL_ENTITY))
+        held_until = parse_iso_utc(state.get(OCCUPANCY_UNTIL_ENTITY))
+        if state.get(OCCUPANCY_ENTITY) == "occupied" and held_until is not None and held_until > now:
+            return True, held_until
         await _insert_system_state(conn, OCCUPANCY_UNTIL_ENTITY, iso_utc(now))
         await _insert_system_state(conn, OCCUPANCY_ENTITY, "empty")
         await _insert_system_state(conn, OCCUPANCY_TIMEOUT_REASON_ENTITY, f"released:{source}")
@@ -119,7 +129,9 @@ async def sync_occupancy_state(
     async with pool.acquire() as conn:
         effective, until = await _record_occupancy_observation(conn, occupied, source, observed_at, visit_started_at)
 
-    if occupied and not effective:
+    if not occupied and effective:
+        log.info("Occupancy: empty reading via %s; latch holds until %s", source, iso_utc(until))
+    elif occupied and not effective:
         log.warning("Occupancy: stale occupied observation via %s expired at %s; pushing empty", source, iso_utc(until))
     elif effective:
         log.info("Occupancy: occupied via %s; latched until %s", source, iso_utc(until))

@@ -77,6 +77,9 @@ from mqtt_fanout import (
 )
 from observation_spool import ObservationSpool
 from occupancy import refresh_latest_occupancy_state
+from occupancy_lights import activity_loop as occupancy_light_activity_loop
+from occupancy_lights import observe_state as observe_occupancy_light_state
+from occupancy_mqtt import occupancy_mqtt_loop
 from pydantic import ValidationError
 from soil_saturation import saturation_evaluation_status
 from source_spool import SourceSpool
@@ -3745,6 +3748,8 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
                 state.system[entity] = val
                 if old != val:
                     log.info(f"state: {entity} → {val}")
+                    # #1370: activity rows for the controller's occupancy lights.
+                    observe_occupancy_light_state(entity, state.system)
                 # OBS-1e (Sprint 16): active_overrides is a comma-separated
                 # list of firmware flags. Diff against last-seen set and
                 # enqueue one override_events row per newly-started flag.
@@ -5437,6 +5442,11 @@ async def main() -> None:
         task_loop(pool, component_pool, equipment_source_pool),
         setpoint_listener(pool),
         _writer_failure_monitor(),
+        # #1370: Frigate person sightings over MQTT feed the occupancy latch in
+        # real time (the 300 s Home Assistant poll stays the fallback), and the
+        # controller's occupancy light changes get their activity rows.
+        occupancy_mqtt_loop(pool),
+        occupancy_light_activity_loop(pool),
     )
 
     # Race the worker gather against the shutdown signal so SIGTERM unwinds

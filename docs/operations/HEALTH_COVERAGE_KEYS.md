@@ -34,7 +34,7 @@ Home Assistant keeps three reads, all in the ingestor's `ha_sensor_sync` task (e
 
 Outdoor weather comes only from the ESP32 Tempest UDP listener over the native API (`climate.outdoor_temp_f` and the other `tempest_*` routes in `ingestor/entity_map.py`), so its freshness follows the 60 s climate flush. These HA-only columns stop updating and stay empty: `wind_speed_avg_mph`, `wind_direction_avg_deg`, `feels_like_f`, `wet_bulb_temp_f`, `vapor_pressure_inhg`, `air_density_kg_m3` and `precip_intensity_in_h`. The `sensor_registry` rows `climate.feels_like_f` and `climate.wet_bulb_temp_f` were still active at the change, so they read stale in `v_sensor_staleness` until they are deactivated.
 
-The writer no longer reaches the HAOS MQTT broker: `allow-ingestor-device-egress` admits 192.168.30.107 on TCP 8123 only.
+`allow-ingestor-device-egress` admits 192.168.30.107 on TCP 8123 (Home Assistant REST) and TCP 1883 (the HAOS MQTT broker, for the #1370 Frigate occupancy subscriber).
 
 ## Declared probe addresses 04 / 08 / 09
 

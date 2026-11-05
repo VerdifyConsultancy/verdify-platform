@@ -1107,10 +1107,11 @@ def test_firmware_omits_mqtt_and_uses_ingestor_occupancy_push():
     assert "id: sw_greenhouse_occupied" in hardware
     assert 'name: "Greenhouse Occupied"' in hardware
     assert '"greenhouse_occupied": "occupancy"' in entity_map_src
-    # VD-48: the HAOS MQTT occupancy subscription is gone; ha_sensor_sync is the
-    # only occupancy input and the reconnect replay is the only other push.
+    # #1370: two occupancy inputs feed the one latch, ha_sensor_sync (fallback)
+    # and the Frigate MQTT subscriber; the reconnect replay is the only other push.
     assert "sync_occupancy_state(" not in ingestor_src
-    assert "mqtt_loop" not in ingestor_src
+    assert "occupancy_mqtt_loop(pool)" in ingestor_src
+    assert "sync_occupancy_state(" in Path("ingestor/occupancy_mqtt.py").read_text()
     assert "refresh_latest_occupancy_state(pool" in ingestor_src
     assert "sync_occupancy_state(" in tasks_src
     assert "expire_occupancy_latch(pool" in tasks_src
