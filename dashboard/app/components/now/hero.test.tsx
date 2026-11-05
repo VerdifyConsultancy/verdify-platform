@@ -77,10 +77,17 @@ test("each bar links to its Graphs panel; the status line links the mode to Equi
   expect(document.querySelector("[data-chip=occupancy]")?.tagName).toBe("SPAN");
 });
 
-test("out of band: the answer names it, the bar says above band, and the hero value drops its in band", () => {
+test("out of band: a steady headline that is no link, the reading in a plain line under it, the bar says above band, and the hero value drops its in band", () => {
   renderHero("too-hot");
-  expect(heading()).toBe("Too hot: 84.1 °F (target 62–70 °F)");
-  expect(document.querySelector(".hero-answer-link")?.getAttribute("href")).toBe("/graphs");
+  expect(heading()).toBe("Out of band");
+  const h1 = screen.getByRole("heading", { level: 1 });
+  expect(h1.querySelector("a")).toBeNull();
+  expect(document.querySelector(".hero-answer-link")).toBeNull();
+  // The condition line: the phrase in plain text, with a quiet "Graphs ›" to the reading's own panel.
+  const condition = document.querySelector(".now-condition")!;
+  expect(condition.previousElementSibling).toBe(h1);
+  expect(plain(text(condition.querySelector("[data-condition=temp]")))).toBe("Too hot: 84.1 °F (band 62–70 °F)");
+  expect(screen.getByRole("link", { name: /^Graphs: temperature/ }).getAttribute("href")).toBe("/graphs?range=24h#temperature");
   expect(bands()[0].meta).toBe("above band · band 62.0–70.0 °F");
   expect(text(document.querySelector(".now-band[data-tile=temp] .now-off"))).toBe("above band");
   expect(document.querySelector(".now-hero-verdict")).toBeNull();
@@ -135,9 +142,10 @@ test("row 7, stale data: no verdict word anywhere, the mode as last said and dat
   expect(document.querySelectorAll(".now-band svg.bb.is-stale")).toHaveLength(0);
 });
 
-test("the ingestor's answer links to #data, and #data opens All readings in place", () => {
+test("the ingestor's answer is no link (the freshness link below opens #data), and #data opens All readings in place", () => {
   renderHero("ingestor-not-running", { path: "/#data" });
-  expect(screen.getByRole("link", { name: "Ingestor not running since 10:38" }).getAttribute("href")).toBe("/#data");
+  expect(screen.getByRole("heading", { level: 1 }).querySelector("a")).toBeNull();
+  expect(document.querySelector(".now-condition")).toBeNull();
   expect(document.querySelector<HTMLDetailsElement>("#readings")?.open).toBe(true);
   cleanup();
   renderHero("in-band");
