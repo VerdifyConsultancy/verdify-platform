@@ -88,6 +88,20 @@ test("1440 px: the header lists the five sections; Control opens Settings and is
   await expect(page.locator("a[href='/more']")).toHaveCount(0);
 });
 
+test("1440 px: every page shares the header's one centred container, so switching views never moves the page's edges; a short page's footer reaches the bottom", async ({ page, request }) => {
+  await useFixture(request, "in-band");
+  await page.setViewportSize(DESKTOP);
+  for (const path of ["/", "/water", "/water/schedules", "/graphs", "/graphs/zones", "/graphs/statistics", "/activity", "/settings"]) {
+    await load(page, path);
+    const [header, main, footer] = await Promise.all([".site-header > .shell", "main#main-content", ".site-footer > .shell"].map((selector) => page.locator(selector).boundingBox()));
+    expect([main!.x, main!.width], path).toEqual([header!.x, header!.width]);
+    expect([footer!.x, footer!.width], path).toEqual([header!.x, header!.width]);
+  }
+  await load(page, "/activity");
+  const footer = await page.locator(".site-footer").boundingBox();
+  expect(Math.round(footer!.y + footer!.height)).toBeGreaterThanOrEqual(DESKTOP.height);
+});
+
 for (const viewport of [SMALL_PHONE, PHONE]) {
   test(`${viewport.width} px: each of the five phone tabs is an icon over its label, at least 44 px, and the header keeps the role pill`, WEBKIT, async ({ page, request }) => {
     await useFixture(request, "in-band");

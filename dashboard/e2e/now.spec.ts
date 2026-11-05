@@ -232,6 +232,10 @@ test("Running and next from 861 px: the track over the last 6 h and the next 12 
   await expect(track.locator(".tt-row").nth(0).locator(".tt-span").first()).toBeVisible();
   await expect(track.locator(".tt-now").first()).toBeVisible();
   await expect(track.locator(".tt-row").nth(6).locator(".tt-marker-label")).toHaveText(["Sunrise 06:35", "Sunset 16:58"]);
+  // The now rule is named at the top of the track, and the plan's labels stop at the next marker, so its row keeps the others' height.
+  await expect(track.locator(".tt-now-label")).toHaveText("now 10:42");
+  const [iris, plan] = await Promise.all([track.locator(".tt-row").nth(4).boundingBox(), track.locator(".tt-row").nth(5).boundingBox()]);
+  expect(Math.round(plan!.height)).toBe(Math.round(iris!.height));
   // The phone's lists are there for a narrow screen, hidden here.
   await expect(coming.locator(".now-next")).toBeHidden();
   await expect(coming.locator("[data-coming=later]")).toHaveText("Later No schedule: L01, L07, L09");

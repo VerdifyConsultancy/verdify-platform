@@ -284,6 +284,15 @@ test("/graphs/zones: every zone side by side, temperature and VPD on one scale e
   await expect(page.locator(".chart-grid .stack-plot canvas")).toHaveCount(10);
   await expect(page.locator(".grid-heads .grid-head")).toHaveText([/^North ›\s*MEASURED$/, /^Center ›\s*HOUSE$/, /^South ›\s*MEASURED$/, /^East ›\s*MEASURED$/, /^West ›\s*MEASURED$/]);
   await expect(page.locator(".grid-readout")).toHaveCount(10);
+  // Every cell's plot box is one size: North's reaches back over its y axis, and the bottom row's time axis sits under its plots.
+  const boxes = await page.locator(".chart-grid .stack-plot .u-over").evaluateAll((overs) => overs.map((over) => [Math.round(over.getBoundingClientRect().width), Math.round(over.getBoundingClientRect().height)]));
+  expect(boxes).toHaveLength(10);
+  for (const [width, height] of boxes) {
+    expect(Math.abs(width - boxes[1][0])).toBeLessThanOrEqual(1);
+    expect(Math.abs(height - boxes[1][1])).toBeLessThanOrEqual(1);
+  }
+  // Each readout heads its plot with its unit.
+  await expect(page.locator(".grid-readout").first()).toHaveText(/^\d+\.\d °F (now|at .+)$/);
   // The grid keeps its data table (redesign §8): one block per metric row, a column per zone.
   const table = page.locator(".chart-grid > details.chart-table");
   await expect(table.locator("summary")).toHaveText(/^Data table · [\d,]+ rows$/);
