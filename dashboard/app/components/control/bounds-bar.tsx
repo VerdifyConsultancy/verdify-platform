@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { useApiDown } from "../../lib/session";
-import { rangeText, steppedNumber } from "../../lib/setting-values";
+import { rangeText, readableDuration, steppedNumber } from "../../lib/setting-values";
 import { cls } from "../common";
 import { finite } from "../data/viz";
 
@@ -44,8 +44,10 @@ export function BoundsBar({ min, max, step = null, unit = null, value, planned =
   const clamp = finite(value) ? (value < min ? "low" : value > max ? "high" : null) : null;
   const ring = (amount: number | null | undefined) => (finite(amount) ? at(min, max, amount) : null);
   const next = ring(planned), asked = ring(requested);
+  // An end reads as the row's value does: a long duration in a unit people read ("30 min" for 1800000 ms).
+  const end = (amount: number) => readableDuration(amount, unit) ?? steppedNumber(amount, step);
   return <span className={cls("ctl-bounds", stale && "is-stale", apiDown && "is-neutral", dot === null && "is-unknown")} title={words ?? undefined}>
-    <span className="ctl-bounds-end" aria-hidden="true">{steppedNumber(min, step)}</span>
+    <span className="ctl-bounds-end" aria-hidden="true">{end(min)}</span>
     <svg className="ctl-bounds-bar" width="100%" height="14" aria-hidden="true" focusable="false">
       <rect className="ctl-bounds-track" x="0" y="6" width="100%" height="2" rx="1" />
       {next !== null && <circle className="ctl-bounds-planned" cx={pct(next)} cy="7" r="4.5" />}
@@ -55,7 +57,7 @@ export function BoundsBar({ min, max, step = null, unit = null, value, planned =
         <path className="ctl-bounds-clamp" d={clamp === "low" ? "M-1 7 L6 2 L6 12 Z" : "M1 7 L-6 2 L-6 12 Z"} />
       </svg>}
     </svg>
-    <span className="ctl-bounds-end" aria-hidden="true">{steppedNumber(max, step)}</span>
+    <span className="ctl-bounds-end" aria-hidden="true">{end(max)}</span>
     {words && <span className="screen-reader setting-bounds">{words}</span>}
   </span>;
 }

@@ -113,3 +113,46 @@ export function keptValueText(value: number, setting: SettingShape): string {
   if (setting.kind === "switch" || setting.kind === "enum") return settingValueText(value, setting);
   return withUnit(keptNumber(value, setting.step, setting.unit), setting.unit);
 }
+
+// ---------------------------------------------------------------------------------------------------- one display
+/** Units whose readings keep a fixed precision where no step says otherwise (design system §5.4: °F 1 dp, kPa 2 dp). */
+const MEASURED_DECIMALS: Readonly<Record<string, number>> = { "°F": 1, kPa: 2 };
+/**
+ * The unit a key's suffix names where the registry gives none: `_s`, `_ms`, `_min` or `_minutes`, `_pct` and `_f`. An
+ * `_hour` or `_minute` key is a time of day (0–23, 0–59), not an amount, and takes none.
+ */
+const KEY_UNITS: readonly (readonly [RegExp, string])[] = [[/_ms$/, "ms"], [/_s$/, "s"], [/_min(?:utes)?$/, "min"], [/_pct$/, "%"], [/_f$/, "°F"]];
+export function keyUnit(param: string | null | undefined): string | null {
+  return param ? KEY_UNITS.find(([suffix]) => suffix.test(param))?.[1] ?? null : null;
+}
+/** A setting's unit: the registry's, else the one its key names (`keyUnit`); null with neither. */
+export function settingUnit(setting: { readonly unit?: string | null; readonly param?: string | null }): string | null {
+  return setting.unit || keyUnit(setting.param);
+}
+/**
+ * A number as a setting's value reads: at its step's decimals, or more when it carries more; with no step known (Plan's
+ * lanes) the decimals it carries, at least a measured unit's own, so "60 s" and "1.60 kPa" read alike on both pages.
+ */
+export function displayNumber(value: number, step?: number | null, unit?: string | null): string {
+  const own = Number.isFinite(value) ? decimals(Number(value.toFixed(KEPT_DECIMALS))) : 0;
+  const least = step !== null && step !== undefined && Number.isFinite(step) && step > 0 ? decimals(step) : MEASURED_DECIMALS[unitLabel(unit)] ?? 0;
+  return fixed(value, Math.max(own, least));
+}
+/** A long duration in a unit people read: 300000 ms is "5 min", 7200 s "2 h", 1500 ms stays; null when it reads as it is. */
+export function readableDuration(value: number, unit: string | null | undefined): string | null {
+  const seconds = unit === "ms" && Math.abs(value) >= 1000 && value % 1000 === 0 ? value / 1000 : unit === "s" && Math.abs(value) >= 3600 ? value : null;
+  if (seconds === null) return null;
+  if (seconds % 3600 === 0) return `${fixed(seconds / 3600, 0)}${NBSP}h`;
+  if (seconds % 60 === 0 && Math.abs(seconds) >= 120) return `${fixed(seconds / 60, 0)}${NBSP}min`;
+  return unit === "ms" ? `${fixed(seconds, 0)}${NBSP}s` : null;
+}
+/**
+ * A setting's value as Settings' rows and Plan's lanes both read it: a switch ON or OFF, an enum its option's label, a
+ * number (`displayNumber`) with its unit, the key's where the registry has none, and a long duration in a readable unit
+ * ("300000 ms" reads "5 min"). The setting drawer keeps the value as stored (`keptValueText`).
+ */
+export function settingDisplay(value: number, setting: SettingShape & { readonly param?: string | null }): string {
+  if (setting.kind === "switch" || setting.kind === "enum") return settingValueText(value, setting);
+  const unit = settingUnit(setting);
+  return readableDuration(value, unit) ?? withUnit(displayNumber(value, setting.step, unit), unit);
+}

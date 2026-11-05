@@ -120,7 +120,7 @@ test("no plan in force reads what applies and since when, and the lanes show dev
   expect([0, 1, 2].map((row) => strokes(plot, row))).toEqual([[[DEVICE, "", 0, 1000]], [[DEVICE, "", 0, 1000]], [[DEVICE, "", 0, 1000]]]);
   expect(document.querySelectorAll(".plan-status")).toHaveLength(0);
   expect(plot.ctx.texts.some((label) => label.text.startsWith("Plan ends"))).toBe(false);
-  expect([...document.querySelectorAll(".plan-device")].map((cell) => text(cell))).toEqual(["1.60 kPa", "45.0 s", "60.0 s"]);
+  expect([...document.querySelectorAll(".plan-device")].map((cell) => text(cell))).toEqual(["1.60 kPa", "45 s", "60 s"]);
   // Planner health still renders: the ledger is not the plan.
   expect(region("Planner health").querySelectorAll(".trigger-row").length).toBeGreaterThan(0);
 });
@@ -281,7 +281,7 @@ test("a forecast-rule waypoint reads \"Forecast rule · system\" and never carri
   expect(strokes(plot, 2)).toEqual([[DEVICE, "", 0, x("14:00")], [INK, "8,4", x("14:00"), x("17:30")]]);
   expect(labels(plot, 2).every(([words]) => !/\bAI\b/.test(words))).toBe(true);
   plot.hover(epoch(denver("15:00")), null, 2 * 44 + 30);
-  expect(tooltip(plot).slice(1)).toEqual(["Mister Engage Delay", `${FORECAST_RULE} 90.0 s from 14:00`]);
+  expect(tooltip(plot).slice(1)).toEqual(["Mister Engage Delay", `${FORECAST_RULE} 90 s from 14:00`]);
   expect(status("mister_engage_kpa")).toBe(PLANNED_AI);
 });
 
@@ -480,7 +480,7 @@ test("while the controller is not reporting the banner shows, the plan still ren
   expect(text(region("Plan in force").querySelector(".plan-facts"))).toContain("iris-20261102-0702");
   expect(text(document.querySelector(".chart-note-stale"))).toBe("STALE · device values last read 10:41");
   expect([...document.querySelectorAll(".plan-device")].map((cell) => [text(cell), cell.classList.contains("plan-device-stale")])).toEqual([
-    ["1.60 kPa", true], ["45.0 s", true], ["60.0 s", true],
+    ["1.60 kPa", true], ["45 s", true], ["60 s", true],
   ]);
   // The device value is muted and labelled STALE; Iris's 13:00 waypoint still draws dashed as PLANNED.
   expect(strokes(plot, 0)).toEqual([[MUTED, "", 0, x("13:00")], [INK, "8,4", x("13:00"), x("17:30")]]);

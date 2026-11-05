@@ -12,7 +12,7 @@ import { FakeResizeObserver, MockPlot, created, media, setTokens } from "../char
 import { AppShell } from "../components/app-shell";
 import { SETTING_GROUPS } from "../components/setting-row";
 import { text } from "../components/test-render";
-import { unitLabel } from "../lib/setting-values";
+import { settingDisplay } from "../lib/setting-values";
 import { NOW, UUID, advance, requests, sentAt, startFixtureApi, stopFixtureApi, writes, type FixtureOptions } from "../lib/test-fixture-api";
 import Settings, { links } from "./settings";
 
@@ -107,12 +107,20 @@ test("the catalog: one row per fixture row rendered from the registry, by group 
     const tr = rowOf(row.param);
     expect(text(tr.querySelector(".setting-label")), row.param).toBe(row.label);
     expect(text(tr.querySelector(".setting-param")), row.param).toBe(row.param);
-    if (row.unit && row.readback?.value !== null && row.readback?.value !== undefined) expect(text(tr.querySelector(".setting-device-value")).endsWith(unitLabel(row.unit)), row.param).toBe(true);
+    // The value as Plan's lanes read it too (`settingDisplay`): with its unit, the key's where the registry has none.
+    if (row.kind === "numeric" && row.readback?.value !== null && row.readback?.value !== undefined) {
+      expect(text(tr.querySelector(".setting-device-value")).endsWith(settingDisplay(row.readback.value, row).replaceAll(String.fromCharCode(0xa0), " ")), row.param).toBe(true);
+    }
     // Every writable row has Edit for an operator; a read-only row opens the same drawer from Details, and says why.
     expect(tr.querySelector(".setting-edit") !== null, row.param).toBe(row.writable);
     expect(tr.querySelector(".ctl-details") !== null, row.param).toBe(!row.writable);
     if (!row.writable && row.group !== "band_in_force") expect(text(tr.querySelector(".setting-device .setting-note")), row.param).toBe(row.read_only_reason as string);
   }
+  // A bare number gains the unit its key names, a long duration reads in a unit people read, and a time of day stays a
+  // number (#1308 visual QA 38); the bounds' ends follow the value's unit.
+  const value = (param: string) => text(rowOf(param).querySelector(".setting-device-value"));
+  expect(["gl_main_min_on_s", "gl_main_target_light_minutes", "dwell_gate_ms", "vent_latch_timeout_ms", "gl_main_sunrise_hour"].map(value)).toEqual(["120 s", "960 min", "5 min", "30 min", "7"]);
+  expect([...rowOf("dwell_gate_ms").querySelectorAll(".ctl-bounds-end")].map((end) => text(end))).toEqual(["60 s", "30 min"]);
   expect(text(rowOf("mister_engage_kpa").querySelector(".setting-label"))).toBe("VPD Mister Engage");
   expect(text(rowOf("temp_low").querySelector(".setting-device"))).toContain("legacy limit, read-only");
   // In the steady state no row carries a pill: CONFIRMED shows only for a write under 10 minutes old (D-UX-07).
@@ -205,6 +213,15 @@ test("the rail's filters count and filter the rows and survive a reload of the U
   await open("/settings?q=pulse+gap");
   expect(shown()).toEqual(["mister_pulse_gap_s"]);
   expect((screen.getByRole("searchbox", { name: "Search settings" }) as HTMLInputElement).value).toBe("pulse gap");
+});
+
+test("the drawer keeps a value as stored, with the unit its key names: the row's 5 min is 300000 ms there (#1308 visual QA 38)", async () => {
+  await open("/settings?edit=dwell_gate_ms");
+  expect(text(rowOf("dwell_gate_ms").querySelector(".setting-device-value"))).toBe("5 min");
+  expect(text(document.querySelector("dialog.drawer .setting-device-value"))).toBe("300000 ms");
+  cleanup(); stopFixtureApi();
+  await open("/settings?edit=gl_main_min_on_s");
+  expect(text(document.querySelector("dialog.drawer .setting-device-value"))).toBe("120 s");
 });
 
 test("Recently changed keeps a write of the last 7 days, and is left out when API-09 serves no write time", async () => {
