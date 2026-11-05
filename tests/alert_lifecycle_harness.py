@@ -62,6 +62,7 @@ ALERT_NAMES = (
     "_alert_silence",
     "_silence_resolution",
     "_active_alert_silences",
+    "_QUALIFICATION_OUTBOX",
     "_sync_monitor_alerts",
 )
 COMMON_NAMES = (
@@ -90,16 +91,7 @@ def _top_level(path: Path, names) -> list[ast.stmt]:
 
 
 def load_alert_lifecycle(*, resolve_days: int = 7) -> dict:
-    """Owning alert lifecycle functions in a namespace with recorded Slack posts."""
-    posts: list[tuple[str, str | None]] = []
-
-    async def runbook(conn, alert_type, severity):
-        return None
-
-    def post_slack(token, channel, text, thread_ts=None):
-        posts.append((text, thread_ts))
-        return f"1790000000.{len(posts):06d}"
-
+    """Owning alert lifecycle functions in a namespace; alert_log is the only delivery (#1352)."""
     ns = {
         "Mapping": Mapping,
         "json": json,
@@ -113,16 +105,6 @@ def load_alert_lifecycle(*, resolve_days: int = 7) -> dict:
         "ValidationError": ValidationError,
         "build_validation_failed_envelope": build_validation_failed_envelope,
         "flow_stopped_at": flow_stopped_at,
-        # slack.yaml: leak_detected posts immediately; the probe types are delayed.
-        "should_post_alert": lambda alert_type, severity, **_: alert_type == "leak_detected",
-        "fetch_alert_runbook": runbook,
-        "format_runbook": lambda *a, **k: "Runbook: test",
-        "SLACK_CHANNEL": "C-test",
-        "SLACK_SETTINGS": None,
-        "SLACK_TOKEN_FILE": "unused",
-        "_load_token": lambda path: "test-token",
-        "_post_slack": post_slack,
-        "slack_posts": posts,
     }
     body = [
         *_top_level(ROOT / "ingestor/tasks/_common.py", COMMON_NAMES),

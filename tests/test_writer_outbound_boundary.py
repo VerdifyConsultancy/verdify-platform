@@ -112,14 +112,14 @@ def test_relay_has_fixed_tls_destinations_and_never_logs_credentials(rendered):
     assert "access_log off;" in conf and "error_log /dev/stderr crit;" in conf
     for host, path in [
         ("api.openai.com", "/v1/embeddings"),
-        ("slack.com", "/api/chat.postMessage"),
         ("api.open-meteo.com", "/v1/forecast"),
     ]:
         assert f"proxy_ssl_name {host};" in conf
         assert f"set $fixed_host {host};" in conf
         assert f"location = {path}" in conf
     assert "$http_host" not in conf and "$arg_" not in conf
-    assert conf.count("location / { return 404; }") == 4
+    assert conf.count("location / { return 404; }") == 3
+    assert "slack.com" not in conf and "listen 8082" not in conf  # #1352: no Slack destination
     relay = policy(rendered, "verdify-outbound-boundary")
     assert not allowed(relay, "192.168.30.126", 443)
     assert not allowed(relay, "169.254.169.254", 443)

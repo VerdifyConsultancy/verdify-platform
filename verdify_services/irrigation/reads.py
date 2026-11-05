@@ -86,6 +86,7 @@ from verdify_services.irrigation.runs import (
     run_causes,
     run_gallons,
 )
+from verdify_services.labels import line_name
 from verdify_services.problems import ServiceError, problem
 from verdify_services.reads import Leak, ReadbackState
 
@@ -921,7 +922,8 @@ async def _read_lines(conn: asyncpg.Connection, base: _Base, line_ids: Sequence[
         lines_out.append(
             IrrigationLine(
                 line_id=line_id,
-                name=row["name"],
+                # The operator's name for the line (#1341), not the relay register's "Drip • Wall".
+                name=line_name(line_id),
                 zone=row["zone"],
                 kind=row["kind"],
                 clean_partner=row["clean_partner"],

@@ -57,7 +57,6 @@ def test_flag_on_off_then_two_quiet_readings_read_flow_stopped_and_stay_open():
     assert row["severity"] == "critical" and row["category"] == "water"
     assert row["message"] == "Water flowing with every Verdify valve closed since 03:02"  # America/Denver
     assert datetime.fromisoformat(row["details"]["since"]) == local(0, 3, 2) and stopped(row) is None
-    assert len(ns["slack_posts"]) == 1  # a new episode posts as before
 
     flag(log, local(0, 3, 18), False)
     meter(log, local(0, 3, 18), 0.05)  # one quiet reading is not yet "stopped"
@@ -70,7 +69,7 @@ def test_flag_on_off_then_two_quiet_readings_read_flow_stopped_and_stay_open():
     assert log.of(*KEY) == [row] and row["resolved_at"] is None
     assert stopped(row) == local(0, 3, 19) and row["message"] == "Flow stopped at 03:19"
     assert datetime.fromisoformat(row["details"]["since"]) == local(0, 3, 2)  # carried over
-    assert row["severity"] == "critical" and len(ns["slack_posts"]) == 1  # refreshes post nothing
+    assert row["severity"] == "critical"
     [read] = [args for sql, args in log.reads if "FROM climate WHERE ts >= $1" in sql][-1:]
     assert read == (row["ts"], 0.1, 2)  # bounded: since the open row, at most the quiet run's first two
 
@@ -124,7 +123,6 @@ def test_acknowledgement_keeps_it_open_and_only_a_resolve_closes_it():
     leak_cycle(ns, log, local(0, 9, 5))
     leak_cycle(ns, log, local(0, 10))
     assert log.of(*KEY) == [row] and row["resolved_by"] == "jason" and log.open_view() == []
-    assert len(ns["slack_posts"]) == 1
 
 
 def test_auto_resolve_never_closes_the_leak_row():
@@ -157,7 +155,7 @@ def test_a_resolve_while_water_still_flows_opens_a_new_episode():
     log.resolve(first["id"])
     leak_cycle(ns, log, local(0, 3, 10))
     old, new = log.of(*KEY)
-    assert old is first and new["resolved_at"] is None and len(ns["slack_posts"]) == 2
+    assert old is first and new["resolved_at"] is None
 
 
 def test_no_flag_and_no_open_row_raise_nothing():
@@ -181,11 +179,11 @@ def test_a_resolve_between_the_leak_read_and_the_sync_inserts_nothing():
     # The flag is off: the section reads the open row, then a person resolves it before the sync.
     leak_cycle(ns, log, local(0, 3, 10), before_sync=lambda: log.resolve(row["id"], by="jason"))
     assert log.of(*KEY) == [row] and row["resolved_by"] == "jason"
-    assert len(ns["slack_posts"]) == 1  # no second critical page for water that stopped
+    assert len(log.of(*KEY)) == 1  # no second critical row for water that stopped
 
     flag(log, local(0, 4), True)  # with the flag on, a resolved leak is a new episode, as before
     leak_cycle(ns, log, local(0, 4, 1))
-    assert len(log.of(*KEY)) == 2 and len(ns["slack_posts"]) == 2
+    assert len(log.of(*KEY)) == 2
 
 
 def test_a_long_open_row_reads_only_the_start_of_the_quiet_run():

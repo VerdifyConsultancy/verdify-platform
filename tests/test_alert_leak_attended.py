@@ -150,7 +150,6 @@ def test_the_three_live_hose_days_raise_no_leak_alert():
     ):
         ns, log = replay(LIVE, at(start), at(end))
         assert log.of(*KEY) == [], start
-        assert ns["slack_posts"] == []
 
 
 def test_the_same_flow_with_nobody_seen_still_raises():
@@ -160,7 +159,6 @@ def test_the_same_flow_with_nobody_seen_still_raises():
     [row] = log.of(*KEY)
     assert row["severity"] == "critical" and row["resolved_at"] is None
     assert datetime.fromisoformat(row["details"]["since"]) == at("10-29 16:21:34")
-    assert len(ns["slack_posts"]) == 1
 
 
 def test_an_attended_flow_past_three_hours_raises():

@@ -4,7 +4,10 @@ forecast-action-engine.py — Evaluate forecast data against rules, trigger pree
 
 Runs every 15 minutes. Reads weather_forecast for next 24-48h, evaluates rules from
 forecast_action_rules table, writes preemptive setpoint_plan rows or alerts. A plan
-row is attributed in activity_log and applied by the next normal dispatcher pass.
+row is attributed in activity_log and applied by the next normal dispatcher pass. An
+alert rule writes one ``forecast_action_alert`` alert_log row (warning, so it shows on
+the dashboard and does not page), refreshed while it fires and resolved once its
+forecast hour has passed (#1352).
 
 Usage:
     forecast-action-engine.py           # evaluate and act
@@ -17,7 +20,6 @@ import json
 import logging
 import os
 import sys
-import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -26,8 +28,8 @@ import asyncpg
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
-from slack_config import build_slack_payload, load_slack_settings, read_slack_token  # noqa: E402
 from verdify_schemas.activity import ActivityLogRow  # noqa: E402
+from verdify_schemas.alerts import AlertEnvelope  # noqa: E402
 from verdify_schemas.experiment_config import (  # noqa: E402
     demoted_policy_write_gate,
     submit_policy_proposal,
@@ -43,9 +45,9 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 DRY_RUN = "--dry-run" in sys.argv
-SLACK_SETTINGS = load_slack_settings()
-SLACK_TOKEN_FILE = SLACK_SETTINGS.bot_token_file
-SLACK_CHANNEL = SLACK_SETTINGS.channel_id
+GREENHOUSE_ID = os.environ.get("GREENHOUSE_ID", "vallery")
+FORECAST_ALERT_TYPE = "forecast_action_alert"
+FORECAST_ALERT_SOURCE = "forecast_engine"
 
 INTERVAL_MAP = {"24h": "24 hours", "48h": "48 hours", "12h": "12 hours", "6h": "6 hours"}
 BAND_OWNED_PARAMS = BAND_OWNED_REG
@@ -110,18 +112,93 @@ def get_db_url():
     return f"postgresql://verdify:{pw}@localhost:5432/verdify"
 
 
-def post_slack(text):
-    try:
-        token = read_slack_token(SLACK_TOKEN_FILE)
-        data = json.dumps(build_slack_payload(SLACK_SETTINGS, text, channel=SLACK_CHANNEL)).encode()
-        req = urllib.request.Request(
-            f"{SLACK_SETTINGS.api_base_url.rstrip('/')}/chat.postMessage",
-            data=data,
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+def forecast_alert_payload(*, rule_id, name, metric, op, threshold, value, forecast_at, window) -> dict:
+    """The alert_log payload of a fired ``alert`` rule: one row per rule (sensor ``forecast.rule.<name>``)."""
+    return {
+        "alert_type": FORECAST_ALERT_TYPE,
+        "severity": "warning",
+        "category": "climate",
+        "sensor_id": f"forecast.rule.{name}",
+        "zone": None,
+        "message": (
+            f"Forecast: {name} — {metric} {op} {threshold:g} (forecast {value:g} at {forecast_at:%Y-%m-%d %H:%M} UTC)"
+        ),
+        "details": {
+            "rule_id": int(rule_id),
+            "rule_name": name,
+            "metric": metric,
+            "operator": op,
+            "threshold": float(threshold),
+            "forecast_value": float(value),
+            "forecast_at": forecast_at.isoformat(),
+            "window": window,
+        },
+        "metric_value": float(value),
+        "threshold_value": float(threshold),
+    }
+
+
+async def record_forecast_alert(conn, payload: dict) -> int:
+    """Refresh the rule's open row, else insert one; returns its id. Validated before any write."""
+    env = AlertEnvelope.model_validate(payload)
+    details = json.dumps(env.details)
+    alert_id = await conn.fetchval(
+        """
+        UPDATE alert_log
+           SET severity = $3, message = $4, details = $5::jsonb, metric_value = $6, threshold_value = $7
+         WHERE id = (SELECT id FROM alert_log
+                      WHERE alert_type = $1 AND sensor_id = $2 AND resolved_at IS NULL
+                        AND disposition IN ('open', 'acknowledged')
+                      ORDER BY ts DESC LIMIT 1)
+        RETURNING id
+        """,
+        env.alert_type,
+        env.sensor_id,
+        env.severity,
+        env.message,
+        details,
+        env.metric_value,
+        env.threshold_value,
+    )
+    if alert_id is not None:
+        return int(alert_id)
+    return int(
+        await conn.fetchval(
+            """
+            INSERT INTO alert_log
+              (alert_type, severity, category, sensor_id, zone, message, details,
+               source, metric_value, threshold_value, greenhouse_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11)
+            RETURNING id
+            """,
+            env.alert_type,
+            env.severity,
+            env.category,
+            env.sensor_id,
+            env.zone,
+            env.message,
+            details,
+            FORECAST_ALERT_SOURCE,
+            env.metric_value,
+            env.threshold_value,
+            GREENHOUSE_ID,
         )
-        urllib.request.urlopen(req, timeout=10)
-    except Exception as e:
-        log.warning("Slack post failed: %s", e)
+    )
+
+
+async def resolve_passed_forecast_alerts(conn) -> str:
+    """Close every open forecast alert whose forecast hour has passed."""
+    return await conn.execute(
+        """
+        UPDATE alert_log
+           SET disposition = 'resolved', resolved_at = now(), resolved_by = 'system',
+               resolution = 'auto-resolved: forecast hour passed'
+         WHERE alert_type = $1 AND resolved_at IS NULL
+           AND disposition IN ('open', 'acknowledged')
+           AND (details->>'forecast_at')::timestamptz < now()
+        """,
+        FORECAST_ALERT_TYPE,
+    )
 
 
 async def evaluate_due_outcomes(conn):
@@ -264,6 +341,8 @@ async def main():
 
     try:
         await evaluate_due_outcomes(conn)
+        if not DRY_RUN:
+            await resolve_passed_forecast_alerts(conn)
 
         # Lane C (#584): while an experiment assignment is armed (or legacy
         # direct writes are disabled) the engine becomes a proposal producer —
@@ -518,9 +597,21 @@ async def main():
                 actions_taken += 1
 
             elif action_type == "alert":
-                msg = f"\u26a0\ufe0f *Forecast Alert:* {name} — {metric} {op} {threshold} (forecast: {trigger_val} at {trigger_ts.strftime('%H:%M UTC')})"
                 if not DRY_RUN:
-                    post_slack(msg)
+                    alert_id = await record_forecast_alert(
+                        conn,
+                        forecast_alert_payload(
+                            rule_id=rule_id,
+                            name=name,
+                            metric=metric,
+                            op=op,
+                            threshold=threshold,
+                            value=trigger_val,
+                            forecast_at=trigger_ts,
+                            window=window,
+                        ),
+                    )
+                    log.info("  → alert_log %d (%s)", alert_id, FORECAST_ALERT_TYPE)
 
                 await conn.execute(
                     "INSERT INTO forecast_action_log "
@@ -530,7 +621,7 @@ async def main():
                     name,
                     now,
                     json.dumps(forecast_snapshot),
-                    "alert_posted" if not DRY_RUN else "dry_run",
+                    "alert_recorded" if not DRY_RUN else "dry_run",
                 )
                 actions_taken += 1
 

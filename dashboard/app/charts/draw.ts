@@ -6,8 +6,9 @@ import { boundLabel, forecastRuns, type BandRun, type Bound, type ForecastLine, 
 /**
  * Canvas painting for the hook-drawn marks (design system §5.1). Positions are canvas pixels (`valToPos(…, true)`),
  * line widths and dashes scale by the device pixel ratio, and every colour is a design-system token value read by
- * UPlotChart. Layers: drawClear paints the retention shading and the band wash under the grid; drawAxes the band
- * edges; draw the steps, the forecast, bounds, the now line and every label, which a collision check keeps apart.
+ * UPlotChart. Layers: drawClear paints the retention shading, the future shading and the band wash under the grid;
+ * drawAxes the band edges; draw the steps, the forecast, bounds, the now line and the labels: "Now" (and a retention
+ * note) on every chart, the steps' and bounds' words on a setting's own history only.
  */
 export type ChartColors = Readonly<Record<string, string>>;
 /** The parts of a uPlot instance the painters use; tests pass a recording stand-in. */
@@ -276,6 +277,24 @@ export function paintBounds(plot: PaintTarget, bounds: readonly Bound[], colors:
   });
 }
 
+/**
+ * drawClear: the part of the plot past now, lightly shaded (`--field` at half strength), so the forecast and the band
+ * ahead never read as measured (#1353).
+ */
+export function paintFuture(plot: PaintTarget, now: number, colors: ChartColors) {
+  const xMax = plot.scales.x.max ?? 0;
+  if (now >= xMax) return;
+  clipToPlot(plot, () => {
+    const { ctx, bbox } = plot;
+    const left = Math.max(bbox.left, x(plot, now));
+    const right = bbox.left + bbox.width;
+    if (right <= left) return;
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = colors["--field"];
+    ctx.fillRect(left, bbox.top, right - left, bbox.height);
+  });
+}
+
 /** draw: the now line, 1.5px ink. */
 export function paintNow(plot: PaintTarget, now: number, colors: ChartColors, px: number): boolean {
   const xMin = plot.scales.x.min ?? 0, xMax = plot.scales.x.max ?? 0;
@@ -301,12 +320,20 @@ export type LabelInput = {
   steps: readonly StepSegment[];
   runs: readonly BandRun[];
   forecast?: readonly ForecastLine[];
+  /**
+   * Label the steps and bounds in the plot: only a setting's own history (a settings-only chart, whose steps are its
+   * data). A climate chart names them in its key, tooltip and notes instead and paints no words but "Now" (#1354).
+   */
+  labelSteps?: boolean;
 };
 
 /**
- * draw, last: every label, most important first (Now, retention, bounds, the plan ahead from the soonest step, the
- * request and the device from the newest, the forecast's issue, then the band's source), so a crowded chart drops band
- * labels before it drops a bound or the plan. A step's label sits at its start, else ends at its end.
+ * draw, last: the words inside a plot. A climate chart paints only "Now" and, where a trace reaches past its raw
+ * retention, the retention note at the shaded span (decisions 2026-11-05, #1354): its lines, the band's and the
+ * forecast's provenance and any setting steps are named in the legend or key, the tooltip or header readout, and the
+ * notes above it, so no word sits on the band edge or a trace. A setting's own history (`labelSteps`) also labels its steps
+ * and bounds, most important first (bounds, the plan ahead from the soonest step, the request and the device from the
+ * newest). A step's label sits at its start, else ends at its end.
  */
 export function paintLabels(plot: PaintTarget, input: LabelInput, colors: ChartColors, seriesColor: string, px: number) {
   // uPlot caches the context's font and colours between draws: every change here is undone on the way out.
@@ -325,6 +352,7 @@ function placeLabels(plot: PaintTarget, input: LabelInput, colors: ChartColors, 
   const right = bbox.left + bbox.width - 4 * px;
   if (input.now !== null) labels.place("Now", [{ at: x(plot, input.now) + 4 * px, line: top, align: "left" }, { at: x(plot, input.now) - 4 * px, line: top, align: "right" }], colors["--ink"]);
   for (const note of input.retention) labels.place(note.text, [{ at: Math.max(x(plot, note.from), bbox.left) + 4 * px, line: top, align: "left" }], colors["--muted"]);
+  if (!input.labelSteps) return;
   const yMin = plot.scales.y.min ?? 0, yMax = plot.scales.y.max ?? 0;
   for (const bound of input.bounds) {
     const label = boundLabel(bound, yMin, yMax);
@@ -344,19 +372,5 @@ function placeLabels(plot: PaintTarget, input: LabelInput, colors: ChartColors, 
       { at: Math.max(x(plot, step.start), bbox.left) + 4 * px, line, align: "left" },
       { at: Math.min(x(plot, step.end), bbox.left + bbox.width) - 4 * px, line, align: "right" },
     ], color);
-  }
-  for (const line of input.forecast ?? []) {
-    labels.place(line.text, [{ at: x(plot, line.t[0]) + 4 * px, line: y(plot, line.values[0]), align: "left" }], labelColor(colors["--c-outdoor"], colors["--ink"]));
-  }
-  for (const run of input.runs) {
-    if (run.t.length < 2) continue;
-    const left = Math.max(x(plot, run.t[0]), bbox.left), end = Math.min(x(plot, run.t[run.t.length - 1]), bbox.left + bbox.width);
-    if (end - left < 160 * px) continue;
-    // Either edge at either end of the run, so the words find a place no trace runs through.
-    const first = Math.min(run.t.length - 1, 1), last = Math.max(0, run.t.length - 2);
-    labels.place(run.label, [
-      { at: left + 4 * px, line: y(plot, run.high[first]), align: "left" }, { at: left + 4 * px, line: y(plot, run.low[first]), align: "left" },
-      { at: end - 4 * px, line: y(plot, run.high[last]), align: "right" }, { at: end - 4 * px, line: y(plot, run.low[last]), align: "right" },
-    ], colors["--muted"]);
   }
 }

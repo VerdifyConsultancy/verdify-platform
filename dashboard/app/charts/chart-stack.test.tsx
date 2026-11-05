@@ -111,7 +111,8 @@ test("one card of panels, each with its anchor; one time axis at the bottom, one
 test("a series reads by what sets it apart inside its panel, whole when nothing is left", () => {
   expect(seriesWords("Indoor temperature", "Temperature")).toBe("Indoor");
   expect(seriesWords("Forecast temperature", "Temperature")).toBe("Forecast");
-  expect(seriesWords("Outdoor VPD · DERIVED", "VPD")).toBe("Outdoor · DERIVED");
+  // The provenance word stays in the toggle's accessible name and hover words, not in its short text (#1354).
+  expect(seriesWords("Outdoor VPD · DERIVED", "VPD")).toBe("Outdoor");
   expect(seriesWords("Outdoor relative humidity", "RH")).toBe("Outdoor");
   expect(seriesWords("Controller VPD target", "VPD")).toBe("Controller target");
   expect(seriesWords("Temperature", "Temperature")).toBe("Temperature");

@@ -683,7 +683,10 @@ Roles: V = viewer, O = operator. Screens follow [screens](screens.md).
 
 [irrigation](irrigation.md) §8 owns the irrigation payloads and behaviour. BFF-only internal routes, never
 proxied: `POST /internal/sessions` (INT-01) and `DELETE /internal/sessions/current` (INT-02). Unauthenticated:
-`/healthz` and `/readyz` (OPS-01, OPS-02). The operator API serves nothing else: FastAPI's docs and schema routes
+`/healthz` and `/readyz` (OPS-01, OPS-02), and `/metrics` (OPS-04, #1352): the `verdify_alert_open{severity,
+alert_type}` gauge over the rows the Now count shows, which Prometheus scrapes (NetworkPolicy
+allow-operator-api-metrics-scrape) and Alertmanager pages on at `severity="critical"`. The operator API serves nothing
+else: FastAPI's docs and schema routes
 are off and a trailing slash is not redirected, so any other path is 404 `not_found`. `api/operator_api.py` includes
 `/v1/me` and each `api/operator_routes/` module with `include_v1()`, which adds the bearer, session and role checks;
 `series` joins as soon as VD-56 adds its module.

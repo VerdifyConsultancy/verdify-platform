@@ -115,6 +115,28 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/metrics": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Open-alert gauge for Alertmanager paging (#1352)
+         * @description Prometheus text. `verdify_alert_open{severity, alert_type}` counts the merged alerts with status `open`, the
+         *     rows the Now count shows; Alertmanager pages the critical ones. `verdify_alert_metrics_up` is 0 when the read
+         *     failed. No alert text, session or token.
+         */
+        readonly get: operations["OPS-04"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/readyz": {
         readonly parameters: {
             readonly query?: never;
@@ -274,7 +296,7 @@ export interface paths {
         readonly put?: never;
         /**
          * Turn a grow light on or off through verdify-setpoint-server (Lutron)
-         * @description Calls verdify-setpoint-server POST /lights/{light}/{state} (12 s cap) and records one activity_log row: light.on or light.off, target grow_light_main or grow_light_grow, detail {light, state, result}. 200 when setpoint-server saw Lutron reach the state. When Home Assistant or Lutron does not confirm: 503 unavailable, retryable, with result ha_failed, not_confirmed or timeout; the light may still switch late. The board's state comes only from API-13's Lutron readback. Back to automatic is API-10 on sw_gl_main_auto_mode or sw_gl_grow_auto_mode, which can send one command of its own (API-10). The call and its row hold the light's lock: a press waits up to 2.5 s for a Back to automatic resync that holds it, then goes ahead, so it reaches setpoint-server after that resync's command and wins. The writes flag gates it like every write, and it never touches the ESP32.
+         * @description Calls verdify-setpoint-server POST /lights/{light}/{state} (12 s cap) and records one activity_log row: light.on or light.off, target grow_light_main or grow_light_grow, detail {light, state, result, minutes}. A manual switch is timed like the Fans burst (#1335): minutes, 15 by default, from the row's ts; then the operator API sends the controller's intent through verdify-setpoint-server, recording one more light.on or light.off row (actor system light_timer, reason "Timer ended", detail.via timer), so the light is back on automatic within about 15 s of the end. During the minutes the controller can still switch the light when its own decision changes, which only brings automatic back early. 200 when setpoint-server saw Lutron reach the state. When Home Assistant or Lutron does not confirm: 503 unavailable, retryable, with result ha_failed, not_confirmed or timeout; the light may still switch late. The board's state comes only from API-13's Lutron readback. Back to automatic is API-10 on sw_gl_main_auto_mode or sw_gl_grow_auto_mode, which can send one command of its own (API-10). The call and its row hold the light's lock: a press waits up to 2.5 s for a Back to automatic resync that holds it, then goes ahead, so it reaches setpoint-server after that resync's command and wins. The writes flag gates it like every write, and it never touches the ESP32.
          */
         readonly post: operations["API-20"];
         readonly delete?: never;
@@ -980,7 +1002,10 @@ export interface components {
             readonly manual: boolean;
             /** @description The flag before this write (write responses) */
             readonly manual_before?: boolean | null;
-            /** @example Drip • Wall */
+            /**
+             * @description The line's display name, the words a person reads (#1341); line_id stays the machine key
+             * @example Wall drip
+             */
             readonly name: string;
             readonly next_run?: components["schemas"]["NextRun"] | null;
             /** @description That row's reason; null when the line is not paused or none was given */
@@ -2208,6 +2233,26 @@ export interface operations {
             readonly default: components["responses"]["Problem"];
         };
     };
+    readonly "OPS-04": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "text/plain": string;
+                };
+            };
+        };
+    };
     readonly "OPS-02": {
         readonly parameters: {
             readonly query?: never;
@@ -2456,6 +2501,11 @@ export interface operations {
         readonly requestBody?: {
             readonly content: {
                 readonly "application/json": {
+                    /**
+                     * @description How long the manual switch lasts before the light goes back to automatic
+                     * @default 15
+                     */
+                    readonly minutes?: number;
                     readonly reason?: string;
                 };
             };

@@ -79,17 +79,16 @@ test("uPlot takes the options: x is the window, y the padded union, the nulls st
   expect(plot).toBeTruthy();
   expect([plot.width, plot.height]).toEqual([1200, 320]);
   expect([plot.scales.x.min, plot.scales.x.max]).toEqual([RANGE.from, RANGE.to]);
-  // The crop band dips to 0.51 kPa and the plan reaches 1.80: the y range holds both, padded 5%.
+  // The crop band dips to 0.51 kPa: the y range holds it; the plan's 1.80 does not stretch it (#1354).
   expect(plot.scales.y.min!).toBeLessThan(0.51);
-  expect(plot.scales.y.max!).toBeGreaterThan(1.8);
-  expect(plot.scales.y.max!).toBeLessThan(1.9);
+  expect(plot.scales.y.max!).toBeLessThan(1.8);
   expect(plot.series[1].spanGaps).toBe(false);
   expect((plot.data[1] as (number | null)[]).slice(38, 44)).toEqual([null, null, null, null, null, null]);
   expect(plot.axes).toHaveLength(2);
   const painted = contexts.flatMap((context) => context.texts.map((text) => text.text));
+  // "Now" is the only word inside the plot besides the axes' ticks: the steps and the band are named in the key and the tooltip.
   expect(painted).toContain("Now");
-  expect(painted.some((text) => text.endsWith("PLANNED · AI"))).toBe(true);
-  expect(painted.some((text) => text.endsWith("Forecast rule · system"))).toBe(true);
+  expect(painted.filter((text) => /[A-Za-z]{3}/.test(text) && !/^[A-Z][a-z]{2} \d+$/.test(text))).toEqual(["Now"]);
 });
 
 test("a settings-only chart: uPlot takes no data at all, ranges y from the steps and paints them", async () => {

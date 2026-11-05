@@ -11,8 +11,6 @@ spec:
         env:
         - name: OPENAI_BASE_URL
           value: http://verdify-outbound:8081/v1
-        - name: SLACK_API_BASE_URL
-          value: http://verdify-outbound:8082/api
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -24,7 +22,5 @@ spec:
       containers:
       - name: ingestor
         env:
-        - name: SLACK_API_BASE_URL
-          value: http://verdify-outbound:8082/api
         - name: VERDIFY_FORECAST_BASE_URL
           value: http://verdify-outbound:8083

@@ -18,6 +18,12 @@ the same steps 2 and 3, its row's detail adding ``via`` and ``write_id``. It and
 by ``unlock``) around steps 2 and 3: a session advisory lock per light, so the two operator API pods of a rollout never
 switch one light at once. ``decision`` is the controller's newest decision for a light, which says whether its intent
 is current.
+
+A switch from API-20 is timed (#1335, Jason 2026-11-05): like a fan burst it lasts ``minutes`` (``MANUAL_MINUTES`` by
+default, at most ``MAX_MANUAL_MINUTES``), stored in the row's detail, and then the light goes back to automatic.
+``timer`` reads the light's newest switch row and when its time is up (``ts + minutes``, both by the database's clock);
+the operator API's ``light_timer`` sends the controller's intent once it is. A row without ``minutes`` (Back to
+automatic, the timer's own row, rows from before #1335) holds no timer.
 """
 
 from __future__ import annotations
@@ -33,7 +39,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict
 
 from verdify_schemas.activity import ActivityLogRow
 from verdify_services import activity
-from verdify_services.activity import WriteResult
+from verdify_services.activity import GREENHOUSE_ID, WriteResult
 from verdify_services.actor import Actor
 from verdify_services.problems import Problem, problem
 
@@ -45,6 +51,10 @@ LightState = Literal["on", "off"]
 # force_refresh), so the newest row's age says how long ago the controller last decided the light.
 DECISION_ENTITIES: Mapping[str, str] = MappingProxyType({"main": "gl_main_reason", "grow": "gl_grow_reason"})
 DECISION_WINDOW = timedelta(days=1)  # older rows are no decision now; the bound keeps the read on the newest chunk
+# A manual switch lasts this long by default, like the Fans burst, then the light goes back to automatic (#1335). The
+# bounds are the bursts' (API-IRR-12's minutes).
+MANUAL_MINUTES = 15
+MAX_MANUAL_MINUTES = 120
 # What the setpoint server's answer means: confirmed is 200, ha_failed 502, not_confirmed 504 and timeout no usable
 # answer in 12 s. The failures are problems.LightResult.
 LightResult = Literal["confirmed", "ha_failed", "not_confirmed", "timeout"]
@@ -117,6 +127,18 @@ SELECT now() AS at, s.value, s.ts
                       WHERE entity = $1 AND ts > now() - $2::interval
                       ORDER BY ts DESC LIMIT 1) AS s ON true
 """
+# The light's newest switch row (API-20's, a Back to automatic resync's or the timer's) in the last day, and when its
+# manual time is up: null when that row has no minutes. The bound keeps the read on the newest chunk of the
+# (greenhouse_id, ts DESC) index; a timer is at most MAX_MANUAL_MINUTES long.
+_TIMER_SQL = """
+SELECT now() AS at, a.id, a.ts + make_interval(mins => (a.detail->>'minutes')::int) AS ends_at
+  FROM (SELECT 1) AS one
+  LEFT JOIN LATERAL (SELECT id, ts, detail FROM public.activity_log
+                      WHERE greenhouse_id = $1 AND target = $2 AND action IN ('light.on', 'light.off')
+                        AND ts > now() - $3::interval
+                      ORDER BY ts DESC, id DESC LIMIT 1) AS a ON true
+"""
+TIMER_WINDOW = timedelta(days=1)
 # One advisory key per light, in the session lock space. A transaction-level lock could not cover the call, which runs
 # outside any transaction; returning the connection to the pool also releases it (asyncpg's reset runs
 # pg_advisory_unlock_all), so a holder that fails before unlock still lets go.
@@ -128,9 +150,12 @@ def _target(light: Light) -> str:
     return f"grow_light_{light}"
 
 
-def _request(state: LightState, reason: str | None) -> dict[str, Any]:
-    """Every input the target does not carry: the state from the path and the body."""
-    return {"state": state, "reason": reason}
+def _request(state: LightState, reason: str | None, minutes: int | None = None) -> dict[str, Any]:
+    """Every input the target does not carry: the state from the path and the body (``minutes`` only when timed)."""
+    request: dict[str, Any] = {"state": state, "reason": reason}
+    if minutes is not None:
+        request["minutes"] = minutes
+    return request
 
 
 async def _load(_conn: asyncpg.Connection, row: ActivityLogRow) -> LightRecord:
@@ -146,6 +171,7 @@ async def stored(
     state: LightState,
     reason: str | None = None,
     request_id: UUID | str | None = None,
+    minutes: int | None = None,
 ) -> WriteResult[LightRecord] | None:
     """Step 1: the stored result of a replayed key, or None to go ahead. Refuses a viewer, a bad reason and a key
     already used for another request, before anything is called."""
@@ -154,7 +180,7 @@ async def stored(
         actor,
         op=OP,
         target=_target(light),
-        request=_request(state, reason),
+        request=_request(state, reason, minutes),
         request_id=request_id,
         reason=reason,
         load=_load,
@@ -170,17 +196,20 @@ async def record(
     reason: str | None = None,
     request_id: UUID | str | None = None,
     extra_detail: Mapping[str, Any] | None = None,
+    minutes: int | None = None,
 ) -> WriteResult[LightRecord]:
     """Step 3: the switch's one ``activity_log`` row. A concurrent request with the same key that got here first wins,
-    and this one answers its stored result. ``extra_detail`` adds keys to the detail, never ``light``, ``state`` or
-    ``result`` (the resync's ``via`` and ``write_id``)."""
+    and this one answers its stored result. ``minutes`` makes it a timed manual switch (detail ``minutes``, read by
+    ``timer``). ``extra_detail`` adds keys to the detail, never ``light``, ``state``, ``result`` or ``minutes`` (the
+    resync's ``via`` and ``write_id``)."""
     extra = dict(extra_detail or {})
-    clash = sorted({"light", "state", "result"} & set(extra))
+    timed = {} if minutes is None else {"minutes": minutes}
+    clash = sorted({"light", "state", "result", "minutes"} & set(extra))
     if clash:
         raise ValueError(f"extra_detail may not set {', '.join(clash)}")
 
     async def perform(_conn: asyncpg.Connection) -> tuple[None, dict[str, Any]]:
-        return None, {**extra, "light": light, "state": state, "result": result}
+        return None, {**extra, **timed, "light": light, "state": state, "result": result}
 
     written = await activity.recorded_write(
         conn,
@@ -188,7 +217,7 @@ async def record(
         op=OP,
         action=f"light.{state}",
         target=_target(light),
-        request=_request(state, reason),
+        request=_request(state, reason, minutes),
         request_id=request_id,
         reason=reason,
         perform=perform,
@@ -215,3 +244,26 @@ async def decision(conn: asyncpg.Connection, light: Light) -> LightDecision:
     """The controller's newest decision for the light (``DECISION_ENTITIES``), for the caller to judge its age."""
     row = await conn.fetchrow(_DECISION_SQL, DECISION_ENTITIES[light], DECISION_WINDOW)
     return LightDecision(light=light, reason=row["value"], observed_at=row["ts"], at=row["at"])
+
+
+class LightTimer(BaseModel):
+    """``timer``'s answer: the light's newest switch row in the last day (``activity_id``, None for none), when its manual
+    time is up (``ends_at``, None when that row holds no timer) and the database's now."""
+
+    model_config = ConfigDict(frozen=True)
+
+    light: Light
+    activity_id: int | None
+    ends_at: AwareDatetime | None
+    at: AwareDatetime
+
+    @property
+    def due(self) -> bool:
+        """The newest row is a timed manual switch whose time is up."""
+        return self.ends_at is not None and self.ends_at <= self.at
+
+
+async def timer(conn: asyncpg.Connection, light: Light) -> LightTimer:
+    """The light's manual timer, from its newest switch row (``_TIMER_SQL``)."""
+    row = await conn.fetchrow(_TIMER_SQL, GREENHOUSE_ID, _target(light), TIMER_WINDOW)
+    return LightTimer(light=light, activity_id=row["id"], ends_at=row["ends_at"], at=row["at"])

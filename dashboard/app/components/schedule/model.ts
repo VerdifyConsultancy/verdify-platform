@@ -6,11 +6,10 @@
  * line's state and every reason are the API's; nothing here infers one from an age, and an unknown outcome stays a gap
  * (hatched), never missed and never off.
  */
-import { lineLabel } from "../forms/confirm-dialog";
 import type { StripLevel } from "../data/status-strip";
 import type { SpanStatus, SpanToken } from "../data/time-track";
 import { TIME_ZONE, dateShift, dayTitle, localDate, shortTime } from "../../lib/format";
-import { lineById } from "../../lib/lines";
+import { lineById, lineDisplayName } from "../../lib/lines";
 import type { IrrigationLine, Occurrence, Schedule, ScheduleAgenda, StateLanes } from "../../lib/operator-api";
 import { replacedByDraft, type ScheduleDraft, type SchedulePreview } from "../../lib/schedule-preview";
 import { localDayWindow } from "../../lib/time-scale";
@@ -24,10 +23,6 @@ const validTime = (value: string | null | undefined): value is string => typeof 
 const seconds = (at: string) => Date.parse(at) / 1000;
 
 // ---------------------------------------------------------------------------------------------------- names
-/** A line as Water names it everywhere: "L01 Wall drip", "L04 Center mister", "L11 Fog" (the run dialog's own words). */
-export function lineTitle(line: Pick<IrrigationLine, "line_id" | "zone" | "kind" | "name">): string {
-  return `${line.line_id} ${lineLabel(line)}`;
-}
 /** The register's view of a line for its name and kind, while API-IRR-01 has not answered. */
 function registerLine(id: string): Pick<IrrigationLine, "line_id" | "zone" | "kind" | "name"> {
   const known = lineById(id);
@@ -45,7 +40,7 @@ export function lineInfo(lines: readonly IrrigationLine[] | null | undefined): L
   const known = (id: string) => byId.get(id) ?? registerLine(id);
   const partners: Readonly<Record<string, string>> = { L02: "L01", L06: "L05", L08: "L07", L10: "L09" };
   return {
-    nameOf: (id) => lineTitle(known(id)),
+    nameOf: (id) => lineDisplayName(known(id)),
     kindOf: (id) => known(id).kind,
     partnerOf: (id) => byId.get(id)?.clean_partner ?? partners[id] ?? null,
     lineOf: (id) => byId.get(id),
@@ -511,7 +506,7 @@ export function agendaDays(entries: readonly Entry[], { first, days, last, today
 /** "L07 South mister: paused until Sat 09:00 by jason", for each line paused now (the agenda's head). */
 export function pauseNotes(lines: readonly IrrigationLine[], today: string, now: number): string[] {
   return lines.filter((line) => validTime(line.paused_until) && Date.parse(line.paused_until!) > now && line.kind !== "fog")
-    .map((line) => `${lineTitle(line)}: paused until ${pauseUntilWords(line.paused_until!, today)}${line.paused_by ? ` by ${line.paused_by.name}` : ""}`);
+    .map((line) => `${lineDisplayName(line)}: paused until ${pauseUntilWords(line.paused_until!, today)}${line.paused_by ? ` by ${line.paused_by.name}` : ""}`);
 }
 
 // ---------------------------------------------------------------------------------------------------- rules

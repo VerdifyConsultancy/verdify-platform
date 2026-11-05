@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
 import { localWallClock, wallClockInstant } from "../lib/format";
+import { lineDisplayName } from "../lib/lines";
 import type { IrrigationLine } from "../lib/operator-api";
 import { useRole } from "../lib/session";
 import { localDay, pauseUntilWords, pausedNow, useWaterDrawer, wetLines } from "../lib/water";
@@ -40,13 +41,13 @@ function PauseForm({ lines, target, onClose }: { lines: readonly IrrigationLine[
     if (at === null || problem) return;
     const outcome = await write.send({ line_id: chosen }, { paused_until: at, ...(reason.trim() ? { reason: reason.trim() } : {}) });
     if (!outcome.ok) return;
-    toast.show({ message: `Requested: ${chosen === ALL ? "all lines" : chosen} paused until ${pauseUntilWords(at, today)}` });
+    toast.show({ message: `Requested: ${chosen === ALL ? "all lines" : lineDisplayName(chosen)} paused until ${pauseUntilWords(at, today)}` });
     onClose();
   };
   const untilError = typed ?? errorFor(write.error, "paused_until");
   const label = (id: string) => {
     const line = lines.find((item) => item.line_id === id);
-    return id === ALL ? "All lines" : line ? `${id} ${line.name}` : id;
+    return id === ALL ? "All lines" : lineDisplayName(line ?? id);
   };
   return <EditDrawer open onClose={onClose} title="Pause lines" status={<p className="state-note">{PAUSE_TEXT}</p>} onSave={() => void save()} saving={write.sending} saveLabel="Pause"
     error={formError(write.error, ["paused_until", "reason"])}>
@@ -102,7 +103,7 @@ export function ResumeLine({ line }: { line: Pick<IrrigationLine, "line_id" | "p
   const paused = useClockValue((now) => pausedNow(line, now));
   if (!paused) return null;
   return <>
-    <Button write busy={write.sending} onClick={() => void write.send({ line_id: line.line_id }, resumeBody(skew))}>Resume <span className="screen-reader">{line.line_id}</span></Button>
+    <Button write busy={write.sending} onClick={() => void write.send({ line_id: line.line_id }, resumeBody(skew))}>Resume <span className="screen-reader">{lineDisplayName(line)}</span></Button>
     {write.error && <span className="field-error" role="alert">{write.error.message}</span>}
   </>;
 }
@@ -111,7 +112,7 @@ export function ResumeLine({ line }: { line: Pick<IrrigationLine, "line_id" | "p
 export function PauseAfterRun({ lineId, until }: { lineId: string; until: string }) {
   const write = useProgramWrite("API-IRR-08");
   return <>
-    <Button write busy={write.sending} onClick={() => void write.send({ line_id: lineId }, { paused_until: until })}>Pause {lineId} until after this run</Button>
+    <Button write busy={write.sending} onClick={() => void write.send({ line_id: lineId }, { paused_until: until })}>Pause {lineDisplayName(lineId)} until after this run</Button>
     {write.error && <span className="field-error" role="alert">{write.error.message}</span>}
   </>;
 }

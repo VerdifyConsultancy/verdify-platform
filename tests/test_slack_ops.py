@@ -170,10 +170,7 @@ def test_no_legacy_slack_token_path_in_runtime_files():
     paths = [
         Path("slack.yaml"),
         Path("ingestor/config.py"),
-        Path("scripts/alert-monitor.py"),
         Path("scripts/forecast-action-engine.py"),
-        Path("scripts/slack-channel-archive.py"),
-        Path("scripts/checklist-to-slack.sh"),
     ]
 
     for path in paths:

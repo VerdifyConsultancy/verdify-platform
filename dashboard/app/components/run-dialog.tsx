@@ -17,6 +17,7 @@
  */
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { lineDisplayName } from "../lib/lines";
 import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
 import { fetchRead } from "../lib/queries";
 import { OperatorOnly, useRole } from "../lib/session";
@@ -105,11 +106,11 @@ function RunButton({ line, label, off = false }: { line: IrrigationLine; label: 
   const { open: openCheck } = useWaterDrawer("check");
   const { note, refusal } = useContext(RunNotes)[line.line_id] ?? {};
   if (off) return <>
-    <Button write wide aria-haspopup="dialog" onClick={() => openCheck(line.line_id, "run")}>{label} <span className="screen-reader">{line.line_id}</span></Button>
+    <Button write wide aria-haspopup="dialog" onClick={() => openCheck(line.line_id, "run")}>{label} <span className="screen-reader">{lineDisplayName(line)}</span></Button>
     <span className="state-note" data-run-note={line.line_id}>{LINE_OFF_TEXT}</span>
   </>;
   return <>
-    <Button write wide aria-haspopup="dialog" onClick={() => open(line.line_id)}>{label} <span className="screen-reader">{line.line_id}</span></Button>
+    <Button write wide aria-haspopup="dialog" onClick={() => open(line.line_id)}>{label} <span className="screen-reader">{lineDisplayName(line)}</span></Button>
     {note && <span className="state-note" data-run-note={line.line_id}>{note}</span>}
     {refusal && <span className="field-error" role="alert">{refusal}</span>}
   </>;

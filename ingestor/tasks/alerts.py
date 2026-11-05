@@ -38,9 +38,6 @@ from ._common import (
     PROBE_OFFLINE_RESOLVE_DAYS,
     REGISTRY,
     SAFETY_RAIL_PARAMS,
-    SLACK_CHANNEL,
-    SLACK_SETTINGS,
-    SLACK_TOKEN_FILE,
     SOIL_DRYOUT_MIN_DURATION_H,
     SOIL_DRYOUT_PROBES,
     UTC,
@@ -48,20 +45,15 @@ from ._common import (
     ValidationError,
     ZoneInfo,
     _expected_firmware_version,
-    _load_token,
-    _post_slack,
     _td,
     asyncpg,
     build_validation_failed_envelope,
     datetime,
-    fetch_alert_runbook,
     flow_stopped_at,
-    format_runbook,
     json,
     log,
     registry_value_error,
     shared,
-    should_post_alert,
 )
 from .daily import (
     SoilDryoutWindow,
@@ -3104,6 +3096,11 @@ async def _active_alert_silences(conn):
         return []
 
 
+# The contained component qualification's outbox label (tests/component_alert_delivery_bridge.py).
+# No production path posts: the monitor's only delivery is alert_log (#1352).
+_QUALIFICATION_OUTBOX = "C0ANVVAPLD6"
+
+
 async def _sync_monitor_alerts(
     conn,
     alerts,
@@ -3121,11 +3118,13 @@ async def _sync_monitor_alerts(
     silences=(),
     now=None,
 ):
-    """Persist, deduplicate, deliver and resolve the same producer envelopes.
+    """Persist, deduplicate and resolve the same producer envelopes.
 
-    A supplied scope restricts both input envelopes and existing open rows.
-    Transport injection is allowed only with that exact scope. Normal monitor
-    calls retain the existing token custody, policy, runbook and thread route.
+    ``alert_log`` is the only delivery: the dashboard lists every open row and the
+    operator API's ``verdify_alert_open`` gauge pages the critical ones through
+    Alertmanager (#1352). The monitor posts nowhere. A supplied scope restricts both
+    input envelopes and existing open rows, and only that exact scope may inject a
+    contained qualification outbox (``post_message``); the normal monitor has none.
     Open alerts whose type is in ``preserve_open_types`` stay open when their
     producer's state is unknown this cycle; they are neither refreshed nor resolved.
 
@@ -3194,27 +3193,15 @@ async def _sync_monitor_alerts(
         active_keys.update(key for key in open_keys if key[0] == "component_experiment_integrity")
     active_keys.update(key for key in open_keys if key[0] in preserve_open_types)
 
-    slack_token = None
-
     def transport_ready():
-        nonlocal slack_token
-        if post_message is not None:
-            return True
-        if slack_token is None:
-            try:
-                slack_token = _load_token(SLACK_TOKEN_FILE)
-            except Exception:
-                slack_token = ""
-        return bool(slack_token)
+        return post_message is not None
 
     def send(text, *, thread_ts=None):
-        text = message_prefix + text
-        if post_message is not None:
-            receipt = post_message(SLACK_CHANNEL, text, thread_ts=thread_ts)
-            if not isinstance(receipt, str) or not receipt:
-                raise ValueError("component_alert_delivery_unconfirmed")
-            return receipt
-        return _post_slack(slack_token, SLACK_CHANNEL, text, thread_ts=thread_ts)
+        # Only a scoped qualification outbox reaches here (validated above).
+        receipt = post_message(_QUALIFICATION_OUTBOX, message_prefix + text, thread_ts=thread_ts)
+        if not isinstance(receipt, str) or not receipt:
+            raise ValueError("component_alert_delivery_unconfirmed")
+        return receipt
 
     new_count = 0
     escalated_count = 0
@@ -3353,14 +3340,11 @@ async def _sync_monitor_alerts(
                 env.threshold_value,
                 existing["id"],
             )
-            # F14 (Sprint 24.6): escalate severity in place and re-notify.
-            # Same-severity updates intentionally stay quiet but keep DB
-            # context fresh for dashboards and deploy preflights.
+            # F14 (Sprint 24.6): escalate severity in place. The new severity
+            # reaches the dashboard and the verdify_alert_open gauge directly.
             if is_escalation and transport_ready():
-                runbook = await fetch_alert_runbook(conn, env.alert_type, env.severity)
                 send(
-                    f"\U0001f534 *[ESCALATED->CRITICAL]* `{env.alert_type}` - {env.message}\n"
-                    f"{format_runbook(runbook, compact=True)}",
+                    f"\U0001f534 *[ESCALATED->CRITICAL]* `{env.alert_type}` - {env.message}",
                     thread_ts=existing["slack_ts"],
                 )
             if is_escalation:
@@ -3420,20 +3404,10 @@ async def _sync_monitor_alerts(
             )
             reopened += 1
             continue
-        should_slack = should_post_alert(env.alert_type, env.severity, settings=SLACK_SETTINGS)
         slack_ts = None
-        if should_slack and transport_ready():
-            emoji = {
-                "critical": "\U0001f534",
-                "warning": "\U0001f7e1",
-                "warn": "\U0001f7e1",
-                "info": "\u2139\ufe0f",
-            }.get(env.severity, "")
-            runbook = await fetch_alert_runbook(conn, env.alert_type, env.severity)
-            slack_ts = send(
-                f"{emoji} *[{env.severity.upper()}]* `{env.alert_type}` - {env.message}\n"
-                f"{format_runbook(runbook, compact=True)}",
-            )
+        if transport_ready():
+            emoji = {"critical": "\U0001f534", "warning": "\U0001f7e1", "info": "\u2139\ufe0f"}.get(env.severity, "")
+            slack_ts = send(f"{emoji} *[{env.severity.upper()}]* `{env.alert_type}` - {env.message}")
 
         insert_sql = "INSERT INTO alert_log (alert_type, severity, category, sensor_id, zone, message, details, source, slack_ts, metric_value, threshold_value) VALUES ($1,$2,$3,$4,$5,$6,$7,'system',$8,$9,$10)"
         extra_values = ()

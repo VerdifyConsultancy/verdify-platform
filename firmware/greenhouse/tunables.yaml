@@ -1736,7 +1736,7 @@ switch:
   # 'true', default_setpoints() in greenhouse_types.h). Readback:
   # cfg_night_dryout_enabled (sensors.yaml, rule 6).
   - platform: template
-    id: sw_night_dryout
+    id: sw_night_dryout_enabled
     name: "Night Dryout Enabled"
     optimistic: false
     restore_mode: RESTORE_DEFAULT_ON
@@ -1745,12 +1745,12 @@ switch:
       - lambda: |
           id(cfg_first_pull_ok) = true;
           id(night_dryout_enabled) = true;
-          id(sw_night_dryout).publish_state(true);
+          id(sw_night_dryout_enabled).publish_state(true);
     turn_off_action:
       - lambda: |
           id(cfg_first_pull_ok) = true;
           id(night_dryout_enabled) = false;
-          id(sw_night_dryout).publish_state(false);
+          id(sw_night_dryout_enabled).publish_state(false);
 
   - platform: template
     id: sw_direct_wet_gate_enabled

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
 import { checkedLabel } from "../lib/line-checks";
+import { lineDisplayName } from "../lib/lines";
 import type { IrrigationLine } from "../lib/operator-api";
 import { useRole } from "../lib/session";
 import { useCheckThenRun, useWaterDrawer, wetLines } from "../lib/water";
@@ -47,7 +48,7 @@ function CheckForm({ line, action, forRun, onClose }: { line: IrrigationLine; ac
   const words = WORDS[action];
   const write = useProgramWrite("API-IRR-08", {
     onSaved: () => {
-      toast.show({ message: `Requested: ${line.line_id} ${words.done}${asks ? ", check recorded" : ""}` });
+      toast.show({ message: `Requested: ${lineDisplayName(line)} ${words.done}${asks ? ", check recorded" : ""}` });
       if (forRun) checkThenRun(line.line_id); else onClose();
     },
   });
@@ -59,7 +60,7 @@ function CheckForm({ line, action, forRun, onClose }: { line: IrrigationLine; ac
     ...(reason.trim() ? { reason: reason.trim() } : {}),
   });
   const boxError = errorFor(write.error, "checked");
-  return <EditDrawer open onClose={onClose} title={`${words.title} ${line.line_id}`} heading={line.name} onSave={save} saving={write.sending} saveLabel={words.save} saveDisabled={asks && !checked}
+  return <EditDrawer open onClose={onClose} title={`${words.title} ${lineDisplayName(line)}`} onSave={save} saving={write.sending} saveLabel={words.save} saveDisabled={asks && !checked}
     status={<>
       {forRun && <p className="state-note" data-run-then="">{RUN_THEN_TEXT}</p>}
       {asks && <p className="state-note">Asked once for this line: your name and the time are recorded with it.</p>}

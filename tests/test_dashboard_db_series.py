@@ -1,10 +1,10 @@
 """Graph reads on a production-sized fixture (VD-56): API-04 to API-06 and v_daily_scorecard.
 
 Runs in the in-cluster campaign step on a private TimescaleDB (``VERDIFY_ISOLATED_TEST_DSN``,
-jvallery/agents#5994), never on the Mac. It loads ``db/schema.sql``, replaces the unpopulated
-``mv_zone_band_grade`` with a table it can fill, creates M6's view from the migration's own
-text, then writes 31 days of climate and diagnostics at 60 s, equipment rows, band rows, a
-recorded outage, 30 scorecard days and a week of daily summaries 380 days back.
+jvallery/agents#5994), never on the Mac. It loads ``db/schema.sql``, runs migration 290's body
+(daily_band_compliance and the scorecard view that reads it) from the migration's own text,
+then writes 31 days of climate and diagnostics at 60 s, equipment rows, band rows, a recorded
+outage, 30 scorecard days with their time in band and a week of daily summaries 380 days back.
 """
 
 from __future__ import annotations
@@ -77,10 +77,22 @@ def dump_statements(sql: str):
             index += 1
 
 
-def scorecard_view_sql() -> str:
-    migration = (ROOT / "db/migrations/285-daily-scorecard-view.sql").read_text()
-    body = migration.split("CREATE VIEW public.v_daily_scorecard AS", 1)[1].split(";\n", 1)[0]
-    return "CREATE VIEW public.v_daily_scorecard AS" + body
+# 290's body grants the matview-refresh duty EXECUTE in its own schema; the estate's roles do not exist here.
+BAND_PREREQUISITES = """
+DO $roles$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'verdify_matview_refresh_runtime') THEN
+        CREATE ROLE verdify_matview_refresh_runtime NOLOGIN;
+    END IF;
+END $roles$;
+CREATE SCHEMA IF NOT EXISTS verdify_matview_refresh_runtime;
+CREATE MATERIALIZED VIEW IF NOT EXISTS public.mv_zone_band_grade AS SELECT now() AS bucket WITH NO DATA;
+"""
+
+
+def band_compliance_sql() -> str:
+    """Migration 290 between its predecessor and successor blocks, which compare production digests."""
+    migration = (ROOT / "db/migrations/290-band-compliance.sql").read_text()
+    return BAND_PREREQUISITES + migration.split("END $predecessor$;", 1)[1].split("DO $successor$", 1)[0]
 
 
 @dataclass(frozen=True)
@@ -132,12 +144,7 @@ async def _fill(conn: asyncpg.Connection) -> Fixture:
     await conn.execute(
         "INSERT INTO public.greenhouses (id, name) VALUES ('vallery', 'Vallery') ON CONFLICT (id) DO NOTHING"
     )
-    await conn.execute("DROP MATERIALIZED VIEW IF EXISTS public.mv_zone_band_grade CASCADE")
-    await conn.execute(
-        "CREATE TABLE public.mv_zone_band_grade (bucket timestamptz NOT NULL, zone text NOT NULL, "
-        "n bigint, sum_zone_score numeric, PRIMARY KEY (bucket, zone))"
-    )
-    await conn.execute(scorecard_view_sql())
+    await conn.execute(band_compliance_sql())
     # 31 days at 60 s with a 30-minute outage; solar_altitude_deg set so the solar trigger stays idle.
     await conn.execute(
         """INSERT INTO public.climate (ts, greenhouse_id, temp_avg, temp_north, rh_avg, vpd_avg, co2_ppm,
@@ -215,20 +222,45 @@ async def _fill(conn: asyncpg.Connection) -> Fixture:
         hole_end,
     )
     # 30 scorecard days, one of them missing; gallons null today, on a no-meter day and on a partial meter day.
+    # Time in band per day in daily_band_compliance, over 1,000 graded minutes: temperature 30 + back %, VPD
+    # 60 + back %; both axes split by day (80 %) and night (50 %) only on the two split days; today not graded.
     for back in range(30):
         day = today - timedelta(days=back)
         if day == fixture.missing_day:
             continue
         gallons = None if day in (today, fixture.no_meter_day, fixture.incomplete_day) else 10.0
         await conn.execute(
-            """INSERT INTO public.daily_summary (date, greenhouse_id, temp_compliance_pct, vpd_compliance_pct,
-                                                 water_used_gal, temp_avg, captured_at)
-            VALUES ($1, 'vallery', $2, $3, $4, 70, $5)""",
+            """INSERT INTO public.daily_summary (date, greenhouse_id, water_used_gal, temp_avg, captured_at)
+            VALUES ($1, 'vallery', $2, 70, $3)""",
             day,
-            30.0 + back,
-            60.0 + back,
             gallons,
             now,
+        )
+        if day == today:
+            continue
+        temp_in, vpd_in = 10 * (30 + back), 10 * (60 + back)
+        split = day in fixture.split_days
+        await conn.execute(
+            """INSERT INTO public.daily_band_compliance (
+                   date, definition, graded_min, reconstructed_min,
+                   temp_graded_min, temp_in_min, temp_below_min, temp_above_min,
+                   vpd_graded_min, vpd_in_min, vpd_below_min, vpd_above_min,
+                   both_graded_min, both_in_min,
+                   day_temp_graded_min, day_temp_in_min, night_temp_graded_min, night_temp_in_min,
+                   day_vpd_graded_min, day_vpd_in_min, night_vpd_graded_min, night_vpd_in_min,
+                   day_both_graded_min, day_both_in_min, night_both_graded_min, night_both_in_min)
+               VALUES ($1, 'served-band-5m-v1', 1000, 0, 1000, $2, 1000 - $2, 0, 1000, $3, 1000 - $3, 0,
+                       $4, $5, 500, least($2, 500), 500, $2 - least($2, 500),
+                       500, least($3, 500), 500, $3 - least($3, 500),
+                       $6, $7, $6, $8)""",
+            day,
+            temp_in,
+            vpd_in,
+            1000 if split else 0,
+            650 if split else 0,
+            500 if split else 0,
+            400 if split else 0,
+            250 if split else 0,
         )
     for back in range(381, 388):
         await conn.execute(
@@ -238,16 +270,6 @@ async def _fill(conn: asyncpg.Connection) -> Fixture:
             60.0 + (387 - back),
             now - timedelta(days=back),
         )
-    # The band grade covers the two whole days before today: 80 % by day, 50 % by night.
-    await conn.execute(
-        """INSERT INTO public.mv_zone_band_grade (bucket, zone, n, sum_zone_score)
-        SELECT bucket, zone.name, 60,
-               CASE WHEN public.fn_solar_phase(bucket + interval '30 minutes') < 2 THEN 48 ELSE 30 END
-          FROM generate_series($1::timestamptz, $2::timestamptz, interval '1 hour') AS bucket
-         CROSS JOIN (VALUES ('center'), ('north')) AS zone(name)""",
-        s.denver_midnight(fixture.split_days[0]),
-        now.replace(minute=0) - timedelta(hours=1),
-    )
     for back in range(21):
         day = today - timedelta(days=back)
         midnight = s.denver_midnight(day)
@@ -376,7 +398,7 @@ def test_states_cover_a_day_with_unknown_spans_only_where_the_controller_was_sil
     for light in ("grow_light_main", "grow_light_grow"):
         assert all(i.state != "unknown" for i in by_name[light].intervals)
     drip = by_name["drip_wall"]
-    assert drip.line_id == "L01" and drip.label == "Wall drip L01"
+    assert drip.line_id == "L01" and drip.label == "Wall drip"
     assert {i.state for i in drip.intervals} >= {"on", "off"} and all(i.cause is None for i in drip.intervals)
     for lane in lanes:
         assert all(a.end == b.start for a, b in zip(lane.intervals, lane.intervals[1:], strict=False))
@@ -422,8 +444,9 @@ def test_the_scorecard_returns_every_day_with_its_reasons_inside_the_timeout(db)
     for day in db.split_days:
         assert cell("daily.time_in_band_day_pct", day) == (80.0, 1, None)
         assert cell("daily.time_in_band_night_pct", day) == (50.0, 1, None)
-    for day in (db.today - timedelta(days=5), db.today):
-        assert cell("daily.time_in_band_day_pct", day) == (None, 0, "band grade kept 3 days")
+    assert cell("daily.time_in_band_day_pct", db.today - timedelta(days=5)) == (None, 0, "no graded readings")
+    assert cell("daily.time_in_band_night_pct", db.today) == (None, 0, "not graded against the served band")
+    assert cell("daily.temp_in_band_pct", db.today) == (None, 0, None)
     assert cell("daily.water_gal", db.no_meter_day) == (None, 0, "unavailable")
     assert cell("daily.water_gal", db.incomplete_day) == (None, 0, "incomplete")
     assert cell("daily.water_gal", db.today) == (None, 0, "partial_day")
@@ -432,6 +455,10 @@ def test_the_scorecard_returns_every_day_with_its_reasons_inside_the_timeout(db)
         assert cell(key, db.missing_day) == (None, 0, None)
     assert cell("daily.temp_in_band_pct", db.today - timedelta(days=3)) == (33.0, 1, None)
     assert cell("daily.vpd_in_band_pct", db.today - timedelta(days=3)) == (63.0, 1, None)
+    assert cell("daily.vpd_below_band_pct", db.today - timedelta(days=3)) == (37.0, 1, None)
+    assert cell("daily.temp_below_band_pct", db.today - timedelta(days=3)) == (67.0, 1, None)
+    assert cell("daily.vpd_in_band_day_pct", db.today - timedelta(days=3)) == (100.0, 1, None)
+    assert cell("daily.vpd_in_band_night_pct", db.today - timedelta(days=3)) == (26.0, 1, None)
     assert cell("daily.iris_required_written", db.missed_day)[0] == 1.0
     assert cell("daily.iris_required_missed", db.missed_day)[0] == 2.0
     assert cell("daily.iris_required_written", db.today - timedelta(days=4))[0] == 3.0
