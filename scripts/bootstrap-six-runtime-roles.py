@@ -649,6 +649,37 @@ def sealed_sql_288():
     )
 
 
+ALERT_SILENCE_MIGRATION = (
+    289,
+    "289-alert-silences.sql",
+    "e9173348a9476a69b6ca7285cdfd1e14820ac00af373fa37f6b0e32104314475",
+)
+# alert_silence's SELECT for the ingestor duty puts the table in both ordinary digests, so the api
+# and ingestor seals move; the MCP digest takes in no ingestor entry, so its seal stays 288's. These
+# are a read-only projection on production at exact288 until the rolled-back native qualification
+# measures them.
+SUCCESSOR_289 = {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": SUCCESSOR_288["mcp"],
+}
+
+
+def sealed_sql_289():
+    # Keep every 288 predicate and bind the exact 289 runner stamp with the two
+    # ordinary seals its grant moves.
+    predecessor = sealed_sql_288()
+    current = seal_profile_sql(288, SUCCESSOR_288)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(289, SUCCESSOR_289), 1)
+        + " AND "
+        + ledger_row_sql(*ALERT_SILENCE_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -681,6 +712,8 @@ def sealed_sql():
         + sealed_sql_287()
         + " OR "
         + sealed_sql_288()
+        + " OR "
+        + sealed_sql_289()
         + ")"
     )
 
