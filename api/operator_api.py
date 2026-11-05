@@ -58,7 +58,7 @@ for _path in (str(_HERE.parent), str(_HERE)):
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
-from operator_routes import irrigation_reads, irrigation_writes, reads, writes  # noqa: E402
+from operator_routes import irrigation_reads, irrigation_writes, light_resync, reads, writes  # noqa: E402
 
 from verdify_public.build_provenance import SOURCE_REVISION_PATH, image_git_sha  # noqa: E402
 from verdify_schemas.activity import ACTOR_NAME_MAX_LENGTH  # noqa: E402
@@ -469,6 +469,32 @@ def emit(record: Mapping[str, Any]) -> None:
     sys.stdout.flush()
 
 
+class LogLines(logging.Handler):
+    """A module logger's records as JSON log lines (``emit``): service, level, logger and message."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            line = {
+                "service": SERVICE,
+                "level": record.levelname,
+                "logger": record.name,
+                "message": record.getMessage(),
+            }
+            emit(line)  # the module's emit above, not this method
+        except Exception:
+            self.handleError(record)
+
+
+def log_resyncs() -> None:
+    """light_resync logs one INFO line per resync, but uvicorn configures only its own loggers and Python's last-resort
+    handler drops anything below WARNING, so that logger writes JSON log lines here. Once per process, however many
+    apps a test makes."""
+    resync_log = logging.getLogger(light_resync.__name__)
+    if not any(isinstance(handler, LogLines) for handler in resync_log.handlers):
+        resync_log.addHandler(LogLines())
+    resync_log.setLevel(logging.INFO)
+
+
 def request_id_of(request: Request) -> str:
     return request.scope.get("state", {}).get("request_id") or str(uuid.uuid4())
 
@@ -603,15 +629,16 @@ def _lifespan(settings: Settings | None, pool: Any | None) -> Callable[[FastAPI]
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         # uvicorn's access log prints the request line with its query string, which the logs never carry.
         logging.getLogger("uvicorn.access").disabled = True
+        log_resyncs()
         config = settings if settings is not None else Settings.from_env()  # refuses to start on a bad setting
         database = pool if pool is not None else await create_pool(config)
         app.state.settings = config
         app.state.pool = database
         app.state.sessions = SessionCache()
         app.state.readiness = "unchecked"
-        # Tasks a request starts and leaves running: API-10's Back to automatic resyncs (operator_routes.light_resync).
-        # Stopping cancels them, so one still waiting when the operator API restarts is lost.
-        app.state.background = set()
+        # Back to automatic (operator_routes.light_resync): the per-light lock API-20 shares and the resyncs API-10
+        # starts. Stopping drops a resync still waiting, so one waiting when the operator API restarts is lost.
+        app.state.resyncs = light_resync.Resyncs()
         purge = asyncio.create_task(purge_expired_sessions(database))
         try:
             yield
@@ -619,10 +646,8 @@ def _lifespan(settings: Settings | None, pool: Any | None) -> Callable[[FastAPI]
             purge.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await purge
-            running = list(app.state.background)
-            for task in running:
-                task.cancel()
-            await asyncio.gather(*running, return_exceptions=True)
+            # Before the pool closes: a command already on its way gets light_resync.SHUTDOWN_S to write its row.
+            await app.state.resyncs.stop()
             if pool is None:
                 await database.close()
 

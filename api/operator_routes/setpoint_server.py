@@ -7,23 +7,19 @@ did not reach the state.
 
 The 12 s cap keeps the answer inside the BFF proxy's 15 s. The server can take longer (up to 5 s in ``ha_call``, then up
 to 8 s polling in ``ha_confirm_state``), so a light can change after this call has given up; the Lutron readback in
-API-13 then shows what happened. ``command`` runs the call outside any database transaction, between the two service
-steps around it; API-20 and the Back to automatic resync (``light_resync``, #1300) both switch a light through it.
+API-13 then shows what happened. API-20 and the Back to automatic resync (``light_resync``, #1300) call this outside any
+database transaction, each holding the light's lock. The server handles one request at a time, in the order they
+arrive.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-from uuid import UUID
 
-import asyncpg
 import httpx
 
-from verdify_services import lights
-from verdify_services.activity import WriteResult
-from verdify_services.actor import Actor
-from verdify_services.lights import Light, LightRecord, LightResult, LightState
+from verdify_services.lights import Light, LightResult, LightState
 
 log = logging.getLogger(__name__)
 TIMEOUT_S = 12.0
@@ -44,22 +40,3 @@ async def switch(base_url: str, light: Light, state: LightState) -> LightResult:
         log.warning("setpoint server answered %d, which API-20 does not know", response.status_code)
         return "timeout"
     return result
-
-
-async def command(
-    conn: asyncpg.Connection,
-    actor: Actor,
-    base_url: str,
-    light: Light,
-    state: LightState,
-    reason: str | None,
-    key: UUID | None,
-) -> WriteResult[LightRecord]:
-    """One switch in ``verdify_services/lights.py``'s three steps: ``lights.stored`` (the refusals, and a replayed key's
-    stored result, a failure included, which calls nothing), else ``switch`` and ``lights.record``, the one
-    ``activity_log`` row with its result."""
-    written = await lights.stored(conn, actor, light, state, reason, key)
-    if written is None:
-        result = await switch(base_url, light, state)
-        written = await lights.record(conn, actor, light, state, result, reason, key)
-    return written
