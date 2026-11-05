@@ -124,7 +124,7 @@ one file per owner under `app/styles/`, which `root.tsx` loads after `styles.css
 :root{
   --space-1:.25rem;--space-2:.5rem;--space-3:.75rem;--space-4:1rem;--space-5:1.5rem;--space-6:2rem;--space-7:3rem;
   --fs-label:.72rem;--fs-xs:.75rem;--fs-sm:.875rem;--fs-md:1rem;--fs-lg:1.25rem;--fs-xl:1.75rem;
-  --shell-wide:96rem;--aside:22rem;--rail:15rem;--tap:2.75rem;--bar-h:3.5rem;--header-h-phone:3.25rem;
+  --aside:22rem;--rail:15rem;--tap:2.75rem;--bar-h:3.5rem;--header-h-phone:3.25rem;
   --z-raised:3;--z-sticky:10;--z-nav:20;--z-popover:30;--z-toast:40;
 }
 ```
@@ -156,7 +156,7 @@ breadcrumb and its document title read it.
 | Account | The account button at the header's right (`components/account-menu.tsx`, a `Menu` disclosure): the role pill (OPERATOR or VIEWER) at every width and the display name from 1100 px. It opens to "Signed in as Jason (jason)", "Operator: can change anything" or "Viewer: read-only", and Sign out (the POST form). Before API-01 answers it reads "Account" and still holds Sign out. No units or theme toggle, no Stop, no freshness, no search in the header. |
 | Banners | The one fault banner, worst first (API down, ingestor not running, controller not reporting, leak), is a row inside the sticky header while it is true, so it never scrolls away (two lines at most on a phone, its link in view). Warn banners sit in flow at the top of `<main>`, above the page header, one line each. Each links to the page that explains it. [Screens](screens.md) §1.2 lists the banners, when they show and their words; §4.5 has the states |
 | Footer | Weather `.site-footer`: "Verdify dashboard · build `<sha>` · API `<sha>`", "Times are America/Denver" (D-UX-08), graphs.verdify.ai ↗, lab.verdify.ai ↗, IBM Plex licences |
-| Page grammar | `PageHeader` (`components/layout/page-header.tsx`): the eyebrow is the breadcrumb (the section, a link to its default view except on that view; a focused state reads section › view, both links), one h1 named by the view, the status line (one `.meta` sentence of state, its height reserved), at most two actions, then the section's tabs (`SectionTabs`, nav chips with `aria-current="page"`; sticky under the header on Water's phones, beside Stop all water). Then sections and cards ([redesign](redesign.md) §3, §4). The ink hero appears on Now only, which has no page header. A route's `handle = { wide: true }` gives its page `--shell-wide` (Graphs, Water → Schedules). |
+| Page grammar | `PageHeader` (`components/layout/page-header.tsx`): the eyebrow is the breadcrumb (the section, a link to its default view except on that view; a focused state reads section › view, both links), one h1 named by the view, the status line (one `.meta` sentence of state, its height reserved), at most two actions, then the section's tabs (`SectionTabs`, nav chips with `aria-current="page"`; sticky under the header on Water's phones, beside Stop all water). Then sections and cards ([redesign](redesign.md) §3, §4). The ink hero appears on Now only, which has no page header. Every route shares the header's one centred container, `.shell`, with the footer (decisions log, 2026-11-04). |
 | Sign-in pages | The same header without nav or tools; one card with the message and a forest "Sign in" button |
 
 ## 4. Components
@@ -505,7 +505,7 @@ Schedules' agenda or day, Settings' rail or selects), both render and CSS shows 
 
 | Pattern | 860 px and below | 861 px and up |
 |---|---|---|
-| Shell | 16 px gutter; no horizontal page scroll at 360 and 390 px, on WebKit too; wide content scrolls inside its own labelled region | 80rem shell, 40 px gutter; Graphs and Water → Schedules use `--shell-wide` (96rem) |
+| Shell | 16 px gutter; no horizontal page scroll at 360 and 390 px, on WebKit too; wide content scrolls inside its own labelled region | 80rem shell, 40 px gutter: one centred container for header, main and footer on every page (decisions log, 2026-11-04) |
 | Nav | A 52 px header and the fixed five-tab bottom bar (icon over label), 56 px plus the safe-area inset; the page pads its bottom to clear it | The five sections inline in the sticky header |
 | Page header | Actions under the status line, a primary one full width; tabs at 44 px; Water's tabs and "■ Stop all" sticky under the header | Actions at the h1 row's right |
 | Page rhythm | Blocks `--space-5` apart, cards `--space-3` | Blocks `--space-6` apart, cards `--space-4` |

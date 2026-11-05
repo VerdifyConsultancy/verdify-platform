@@ -226,7 +226,7 @@ behind it; and whether the greenhouse is getting better, day by day.
 **Stories:** US-GRF-01, US-GRF-02, US-GRF-03, US-GRF-04, US-GRF-05, US-GRF-06, US-GRF-07, US-GRF-08, US-GRF-09,
 US-PLAT-06. Next: US-GRF-10.
 
-Three views share the section's page header and take the wide page (`--shell-wide`): Climate, Zones and Statistics.
+Three views share the section's page header and the shell's one container: Climate, Zones and Statistics.
 The redesign draws them (§5.5 to §5.7) and specifies the chart framework (§7).
 
 | Panel | View | Shows | Data | Refresh |
@@ -360,8 +360,8 @@ Where it settles a detail this section leaves open, or differs from it:
 zone, and every schedule, line and mister association.
 **Stories:** US-WAT-01 to US-WAT-23, US-NOW-04, US-AGT-01, US-AGT-02 (agent writes show here), US-AGT-05.
 
-Three views share one page header (redesign §5.2 to §5.4 and §6 draw them): Today (the default), Schedules (the wide
-page) and History. The header's status line is the program state ("Program rev 42 on controller · confirmed 2 min ago",
+Three views share one page header (redesign §5.2 to §5.4 and §6 draw them): Today (the default), Schedules and
+History. The header's status line is the program state ("Program rev 42 on controller · confirmed 2 min ago",
 `[data-program]`), then what runs (Today, each linked to its row; on a phone "L01 running ›", since the row can sit below the fold), the next run (Schedules) or the period's summary
 (History). Its actions are Pause lines… on Today and "+ New schedule" on Schedules (operators; an outline, so the
 emergency action is the one filled button), then **Stop all water**, the last action on every view for operators, as
