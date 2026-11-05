@@ -729,6 +729,73 @@ number:
           id(dehum_aggressive_kpa) = x;
           id(num_dehum_aggressive_kpa).publish_state(x);
 
+  # #1365 night dry-out tunables (rule 6: each has a cfg_* readback in
+  # sensors.yaml). Clamps match validate_setpoints() in greenhouse_types.h,
+  # which also raises the rest so one pulse + rest is at least 15 min.
+  - platform: template
+    id: num_night_dryout_pulse_s
+    name: "Night Dryout Pulse (s)"
+    min_value: 60
+    max_value: 600
+    step: 30
+    lambda: "return id(night_dryout_pulse_s);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          uint32_t v = (uint32_t)roundf(x);
+          if(v < 60) v = 60;
+          if(v > 600) v = 600;
+          id(night_dryout_pulse_s) = v;
+          id(num_night_dryout_pulse_s).publish_state(v);
+
+  - platform: template
+    id: num_night_dryout_rest_s
+    name: "Night Dryout Rest (s)"
+    min_value: 300
+    max_value: 3600
+    step: 30
+    lambda: "return id(night_dryout_rest_s);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          uint32_t v = (uint32_t)roundf(x);
+          if(v < 300) v = 300;
+          if(v > 3600) v = 3600;
+          id(night_dryout_rest_s) = v;
+          id(num_night_dryout_rest_s).publish_state(v);
+
+  - platform: template
+    id: num_night_dryout_dp_margin_f
+    name: "Night Dryout DP Margin (°F)"
+    min_value: 1.0
+    max_value: 15.0
+    step: 0.5
+    lambda: "return id(night_dryout_dp_margin_f);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          float v = x;
+          if(v < 1.0f) v = 1.0f;
+          if(v > 15.0f) v = 15.0f;
+          id(night_dryout_dp_margin_f) = v;
+          id(num_night_dryout_dp_margin_f).publish_state(v);
+
+  - platform: template
+    id: num_night_dryout_kwh_cap
+    name: "Night Dryout Cap (kWh)"
+    min_value: 0.0
+    max_value: 30.0
+    step: 0.5
+    lambda: "return id(night_dryout_kwh_cap);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          float v = x;
+          if(v < 0.0f) v = 0.0f;
+          if(v > 30.0f) v = 30.0f;
+          id(night_dryout_kwh_cap) = v;
+          id(num_night_dryout_kwh_cap).publish_state(v);
+
   - platform: template
     id: num_vent_latch_timeout_ms
     name: "Vent Latch Timeout (ms)"
@@ -1664,6 +1731,26 @@ switch:
           id(cfg_first_pull_ok) = true;
           id(dehum_vent_hold_enabled) = false;
           id(sw_dehum_vent_hold).publish_state(false);
+
+  # #1365 night dry-out master enable. Ships ON (globals.yaml initial_value
+  # 'true', default_setpoints() in greenhouse_types.h). Readback:
+  # cfg_night_dryout_enabled (sensors.yaml, rule 6).
+  - platform: template
+    id: sw_night_dryout
+    name: "Night Dryout Enabled"
+    optimistic: false
+    restore_mode: RESTORE_DEFAULT_ON
+    lambda: "return id(night_dryout_enabled);"
+    turn_on_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(night_dryout_enabled) = true;
+          id(sw_night_dryout).publish_state(true);
+    turn_off_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(night_dryout_enabled) = false;
+          id(sw_night_dryout).publish_state(false);
 
   - platform: template
     id: sw_direct_wet_gate_enabled

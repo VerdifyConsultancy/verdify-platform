@@ -570,10 +570,13 @@ binary_sensor:
       static uint32_t last_valve_on_ms = 0;
       static uint32_t flow_above_thresh_since_ms = 0;
       uint32_t now_ms = millis();
+      // #1381: center_drips_fertilized (L06) and the fertilizer master (L03)
+      // were missing, so a feed's own flow and bleed-down read as a leak.
       bool any_valve = id(wall_drips).state || id(center_drips).state
                     || id(south_wall_mister).state || id(west_wall_mister).state
                     || id(center_mister).state || id(wall_drips_fertilized).state
                     || id(south_wall_mister_fertilized).state || id(west_wall_mister_fertilized).state
+                    || id(center_drips_fertilized).state || id(fertilizer_master_valve).state
                     || id(fog_rly).state;
       if(any_valve) last_valve_on_ms = now_ms;
       float flow = id(water_flow_rate).state;

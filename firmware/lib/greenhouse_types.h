@@ -259,6 +259,20 @@ struct Setpoints {
     // even though the cooled-mix candidate cannot. Enabled later by a logged
     // tunable push (decouples the OTA from the #411 night-temp decision).
     bool     dehum_vent_hold_enabled;
+    // #1365 night dry-out (Jason 2026-11-05: the house must dry out overnight,
+    // for the roots and the algae on the floor; energy for heating the colder
+    // outdoor air is accepted). At night, when VPD is below the dry-out floor
+    // (max(vpd_low, NIGHT_DRYOUT_MIN_FLOOR_KPA): never below today's 0.74 kPa)
+    // AND the outdoor dewpoint is at least night_dryout_dp_margin_f below the
+    // indoor dewpoint (outdoor air confirmed drier in absolute terms, fresh
+    // Tempest data), run a short vent + lead-fan pulse, then rest, with ELECTRIC
+    // heat1 holding the temperature. heat2 (gas) never runs for humidity. The
+    // nightly reheat estimate stops new pulses at night_dryout_kwh_cap.
+    bool     night_dryout_enabled;
+    uint32_t night_dryout_pulse_s;          // vent + lead-fan pulse length (s)
+    uint32_t night_dryout_rest_s;           // closed rest after each pulse (s); pulse+rest >= 900 s
+    float    night_dryout_dp_margin_f;      // outdoor DP must be this far below indoor DP (°F)
+    float    night_dryout_kwh_cap;          // nightly heat1 reheat estimate cap (kWh)
 };
 
 static constexpr uint32_t STATE_SENTINEL = 0xBEEF0042;
@@ -333,6 +347,15 @@ struct ControlState {
     // reads it to swap the center pulse ON/GAP for the denser dawn/midday
     // cadence. CENTER_BURST_NONE on safety/fault/blocked cycles.
     CenterBurst center_burst;
+    // #1365 night dry-out pulse machine. Managed by determine_mode; read by
+    // resolve_equipment (const). RAM only: a reboot starts a fresh night budget.
+    uint8_t  dryout_phase;            // NightDryoutPhase (greenhouse_logic.h)
+    uint32_t dryout_timer_ms;         // time in the current PULSE or REST phase
+    float    dryout_hold_temp_f;      // the temperature heat1 holds through PULSE + REST
+    bool     dryout_reheat_active;    // heat1 reheat wanted this cycle (the pulse's own reheat)
+    float    dryout_reheat_wh;        // tonight's heat1 reheat estimate (Wh)
+    uint32_t dryout_pulse_count;      // pulses started tonight
+    const char* dryout_reason;        // why the dry-out is (not) pulsing; telemetry/log only
 };
 
 struct RelayOutputs {
@@ -781,7 +804,16 @@ inline Setpoints default_setpoints() {
         .vent_exchange_fraction = 0.30f,
         // #410: vent+reheat held-temp dehum ships OFF (matches globals.yaml
         // initial_value 'false'); flag-OFF behavior is bit-identical to pre-#410.
-        .dehum_vent_hold_enabled = false
+        .dehum_vent_hold_enabled = false,
+        // #1365 night dry-out: ships ON (Jason 2026-11-05). 120 s pulse (the fan
+        // min-on), 780 s rest (one pulse per 15 min, at most 4 an hour), outdoor
+        // DP 3 °F below indoor, 10 kWh a night (above the research's 5 kWh,
+        // because the target is a full dry-out, not the 0.50 kPa plant floor).
+        .night_dryout_enabled = true,
+        .night_dryout_pulse_s = 120u,
+        .night_dryout_rest_s = 780u,
+        .night_dryout_dp_margin_f = 3.0f,
+        .night_dryout_kwh_cap = 10.0f
     };
 }
 
@@ -906,6 +938,15 @@ inline void validate_setpoints(Setpoints& sp) {
     sp.dehum_heat_assist_min_dwell_ms = std::max<uint32_t>(
         60000u, std::min<uint32_t>(1800000u, sp.dehum_heat_assist_min_dwell_ms));
     sp.vent_exchange_fraction = std::max(0.1f, std::min(0.6f, sp.vent_exchange_fraction));
+    // #1365 night dry-out clamps (match the tunables.yaml entities). The rest is
+    // raised so one pulse + rest is at least 15 min: at most 4 pulses an hour.
+    sp.night_dryout_pulse_s = std::max<uint32_t>(60u, std::min<uint32_t>(600u, sp.night_dryout_pulse_s));
+    sp.night_dryout_rest_s  = std::max<uint32_t>(300u, std::min<uint32_t>(3600u, sp.night_dryout_rest_s));
+    if (sp.night_dryout_pulse_s + sp.night_dryout_rest_s < 900u) {
+        sp.night_dryout_rest_s = 900u - sp.night_dryout_pulse_s;
+    }
+    sp.night_dryout_dp_margin_f = std::max(1.0f, std::min(15.0f, sp.night_dryout_dp_margin_f));
+    sp.night_dryout_kwh_cap = std::max(0.0f, std::min(30.0f, sp.night_dryout_kwh_cap));
 }
 
 inline ControlState initial_state() {
@@ -926,6 +967,13 @@ inline ControlState initial_state() {
         .last_transition_tick_ms = 0,
         .mist_backoff_timer_ms = 0,
         .vent_mist_assist_active = false,
-        .center_burst = CENTER_BURST_NONE
+        .center_burst = CENTER_BURST_NONE,
+        .dryout_phase = 0,
+        .dryout_timer_ms = 0,
+        .dryout_hold_temp_f = 0.0f,
+        .dryout_reheat_active = false,
+        .dryout_reheat_wh = 0.0f,
+        .dryout_pulse_count = 0,
+        .dryout_reason = "init"
     };
 }

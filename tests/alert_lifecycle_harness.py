@@ -42,6 +42,13 @@ ALERT_NAMES = (
     "_soil_probe_offline_cycle",
     "_LEAK_STOPPED_BELOW_GPM",
     "_LEAK_STOPPED_READINGS",
+    "_LEAK_EPISODE_GAP",
+    "_LEAK_ATTENDED_BEFORE",
+    "_LEAK_ATTENDED_MAX",
+    "_LEAK_HISTORY",
+    "_LEAK_OCCUPANCY_LATCH",
+    "_leak_episode_start",
+    "_leak_attended",
     "_leak_alert",
     "_leak_cycle_alert",
     "_probe_offline_key",
@@ -283,6 +290,13 @@ class AlertLog:
         if "FROM alert_log" in sql and "disposition IN ('open', 'acknowledged')" in sql:
             assert " AND alert_type=$1" not in sql, "the monitor never scopes its open read"
             return [self._out(row) for row in self._system_open()]
+        if sql.startswith("SELECT ts, state FROM equipment_state WHERE equipment = '"):
+            # The leak episode reads (#1381): one equipment's rows from $1, oldest first.
+            assert sql.endswith("AND ts >= $1 ORDER BY ts"), sql
+            equipment = sql.split("equipment = '", 1)[1].split("'", 1)[0]
+            (since,) = args
+            rows = [row for row in self.equipment if row["equipment"] == equipment and row["ts"] >= since]
+            return sorted(rows, key=lambda row: row["ts"])
         if "FROM climate WHERE ts >= $1" in sql:
             # The leak read: from the open row's ts, the first ``limit`` readings
             # after the last one at or above ``below`` (the trailing quiet run).

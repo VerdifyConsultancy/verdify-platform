@@ -645,7 +645,14 @@ interval:
               .vent_exchange_fraction = pol(verdify_policy::kPF_vent_exchange_fraction, id(vent_exchange_fraction)),
               // #410: vent+reheat held-temp dehum enable (ships OFF; armed by a
               // logged tunable push, readback cfg_dehum_vent_hold_enabled).
-              .dehum_vent_hold_enabled = id(dehum_vent_hold_enabled)
+              .dehum_vent_hold_enabled = id(dehum_vent_hold_enabled),
+              // #1365 night dry-out: vent + reheat pulses with confirmed-drier
+              // outdoor air, heat1 only (readbacks cfg_night_dryout_*).
+              .night_dryout_enabled = id(night_dryout_enabled),
+              .night_dryout_pulse_s = id(night_dryout_pulse_s),
+              .night_dryout_rest_s = id(night_dryout_rest_s),
+              .night_dryout_dp_margin_f = id(night_dryout_dp_margin_f),
+              .night_dryout_kwh_cap = id(night_dryout_kwh_cap)
           };
 
           validate_setpoints(setpts);
