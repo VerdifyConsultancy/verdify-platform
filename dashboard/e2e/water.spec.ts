@@ -22,13 +22,13 @@ for (const viewport of [DESKTOP, PHONE]) {
     const ids = await page.locator("article[data-line]").evaluateAll((rows) => rows.map((node) => node.getAttribute("data-line")));
     expect(ids).toEqual(["L01", "L02", "L05", "L06", "L04", "L07", "L08", "L09", "L10", "L11"]);
     await expect(page.locator('.wat-zone[data-zone="center_mister"] .wat-unwired')).toHaveText("Fertilized · not wired");
-    await expect(page.getByRole("article", { name: "L01 Wall drip" })).toHaveAttribute("data-state", "idle");
+    await expect(page.getByRole("article", { name: "Wall drip", exact: true })).toHaveAttribute("data-state", "idle");
     await expect(page.locator('[data-limit="L01"]')).toContainText("0 / 60 min");
     await expect(row(page, "L01").locator(".wat-next")).toHaveText(/^next Wed 07:35 · 12\smin$/);
-    await expect(row(page, "L02").locator(".line-subrow")).toContainText("L03 Fert master");
+    await expect(row(page, "L02").locator(".line-subrow")).toContainText("Fertilizer valve");
     for (const id of ["L05", "L06"]) await expect(row(page, id).locator(".line-state")).toHaveText("Reserved · disabled");
     await expect(row(page, "L11")).toContainText("Climate only");
-    await expect(row(page, "L11").getByRole("button", { name: "Fog once… L11" })).toBeVisible();
+    await expect(row(page, "L11").getByRole("button", { name: "Fog once… Fog" })).toBeVisible();
     await expectNoHorizontalScroll(page);
   });
 }
@@ -53,7 +53,7 @@ test("at 390 × 844 with L01 running the status line names it, linked to its row
   await useScreensClock(page, request, "l01-running");
   await load(page, "/water");
   const short = page.locator(".page-status-short");
-  await expect(short.getByRole("link", { name: "L01 Wall drip running" })).toHaveAttribute("href", "#line-L01");
+  await expect(short.getByRole("link", { name: "Wall drip running" })).toHaveAttribute("href", "#line-L01");
   await expect(page.locator('.wat-zone[data-zone="wall"] .wat-zone-last')).toHaveText("running now");
   // Site today holds SAF-4, the flow and occupancy on a phone; the soft budget and fallback misting are not the news.
   await expect(page.locator('.wat-site [data-limit="budget"]')).toBeHidden();
@@ -91,7 +91,7 @@ test("only a running line's Stop is filled red; every other non-fog line has a q
   await expect(page.locator("article[data-line] .btn-stop")).toHaveCount(1);
   await expect(row(page, "L01").locator(".btn-stop")).toHaveText(/^Stop/);
   await expect(page.locator("article[data-line] .btn-stop-quiet")).toHaveCount(8);
-  await expect(page.locator(".page-status")).toContainText("L01 Wall drip running (run now)");
+  await expect(page.locator(".page-status")).toContainText("Wall drip running (run now)");
   await row(page, "L04").getByRole("button", { name: /^Stop/ }).click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   await untilPolled(page, async () => expect((await fixtureWrites(request)).map((write) => [write.operationId, write.body])).toEqual([["API-IRR-07", { line_id: "L04" }]]));
@@ -114,9 +114,9 @@ test("a latched mister reads its fault as its row's state, with Clear fault; a z
 });
 
 for (const [fixture, says] of [
-  ["before-engine", "No irrigation engine on the controller yet: relay states only; L01 runs, and every line stops, through the bridge"],
+  ["before-engine", "No irrigation engine on the controller yet: relay states only; the wall drip runs, and every line stops, through the bridge"],
   ["program-rev-42", "Program rev 42 on controller · confirmed 2 min ago"],
-  ["program-rom", "Running the built-in program: L04 VPD only, L01 run-now, no schedules"],
+  ["program-rom", "Running the built-in program: Center mister VPD only, Wall drip run-now, no schedules"],
 ]) {
   test(`${fixture}: the status line reads what the controller runs`, async ({ page, request }) => {
     await useScreensClock(page, request, fixture);
@@ -172,7 +172,7 @@ for (const path of VIEWS) {
     await stopAll(page).click();
     await expect(page.locator("dialog[open]")).toHaveCount(0);
     await untilPolled(page, () => expect(toastLines(page)).toHaveText([STOPPED, CAN_STILL_START], { timeout: 500 }));
-    await expect(page.getByRole("button", { name: "Disable L01" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Disable Wall drip", exact: true })).toBeVisible();
     expect((await fixtureWrites(request)).map((write) => [write.operationId, write.body])).toEqual([["API-IRR-07", {}]]);
   });
 }
@@ -206,12 +206,12 @@ test("a row's ⋯ holds its enable switch, Options…, Pause until… and its li
   await load(page, "/water");
   const menu = row(page, "L02").locator("details.menu");
   await menu.locator("summary").click();
-  await expect(menu.getByRole("switch", { name: "Enabled L02" })).toBeVisible();
+  await expect(menu.getByRole("switch", { name: "Enabled Wall drip (fertilized)" })).toBeVisible();
   await expect(menu.getByRole("button", { name: /^Options…/ })).toBeVisible();
-  await expect(menu.getByRole("link", { name: "Runs of L02" })).toHaveAttribute("href", "/water/history?line=L02");
+  await expect(menu.getByRole("link", { name: "Runs of Wall drip (fertilized)" })).toHaveAttribute("href", "/water/history?line=L02");
   await axe(page);
   await page.keyboard.press("Escape");
-  await expect(menu.getByRole("switch", { name: "Enabled L02" })).toBeHidden();
+  await expect(menu.getByRole("switch", { name: "Enabled Wall drip (fertilized)" })).toBeHidden();
 });
 
 test("at 360 px a row's ⋯ opens its panel across the row, inside the screen, for an operator's idle line and for a viewer", async ({ page, request }) => {
@@ -222,7 +222,7 @@ test("at 360 px a row's ⋯ opens its panel across the row, inside the screen, f
     const menu = row(page, "L01").locator("details.menu");
     await menu.locator("summary").click();
     const panel = menu.locator(".menu-panel");
-    await expect(panel.getByRole("link", { name: "Runs of L01" })).toBeVisible();
+    await expect(panel.getByRole("link", { name: "Runs of Wall drip", exact: true })).toBeVisible();
     const box = await panel.boundingBox();
     expect(box!.x, fixture.join("+")).toBeGreaterThanOrEqual(0);
     expect(box!.x + box!.width, fixture.join("+")).toBeLessThanOrEqual(SMALL_PHONE.width);
@@ -236,7 +236,7 @@ test("the run dialog with its most fields passes WCAG 2.2 AA at 390 px", async (
   await useScreensClock(page, request, "run-dialogs");
   await load(page, "/water");
   await row(page, "L08").getByRole("button", { name: /^Run…/ }).click();
-  await expect(page.locator("dialog[open]")).toContainText("Run L08 South feed (FERT)");
+  await expect(page.locator("dialog[open]")).toContainText("Run South mister (fertilized)");
   await axe(page);
 });
 

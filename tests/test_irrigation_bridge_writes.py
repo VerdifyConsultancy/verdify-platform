@@ -327,7 +327,7 @@ def test_with_the_engine_on_a_run_leaves_the_bridge_and_a_stop_is_still_stored()
 @pytest.mark.parametrize(
     ("change", "names"),
     [
-        ({"enabled": False}, "L01 is disabled"),
+        ({"enabled": False}, "Wall drip is disabled; enable it to run it"),
         ({"sw_irrig_enabled": 0.0}, "sw_irrig_enabled"),
         ({"sw_irrig_wall_enabled": 0.0}, "sw_irrig_wall_enabled"),
     ],

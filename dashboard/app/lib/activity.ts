@@ -5,6 +5,7 @@
  * `routes/activity.tsx` and `routes/activity-log.tsx` render them.
  */
 import { dateShift, dayHeader, formatNumber, formatValue, localDate, localDayStart, localWallClock, shortDateTime, shortTime } from "./format";
+import { lineById, lineDisplayName } from "./lines";
 import type { ActivityEntry, Actor, Alert, Me, Setting } from "./operator-api";
 import { settingValueText, steppedNumber, withUnit } from "./setting-values";
 import { ACTOR_SOURCE_PATTERN, isAiSource } from "./vocab";
@@ -199,7 +200,7 @@ export function planChangeText(change: PlanChange, catalog: Catalog, day?: strin
   return `${setting?.label ?? change.param} ${changeText(change.before, change.value, setting)}${when}`;
 }
 
-/** The target as a row names it: a setting's label, an alert's title, "every line" for `all`, a light's name; else as the API gives it. */
+/** The target as a row names it: a setting's label, an alert's title, "every line" for `all`, a line's name (never its relay code), a light's name; else as the API gives it. */
 function targetLabel(entry: ActivityEntry, catalog: Catalog): string {
   const { action, target } = entry;
   const detail: Detail = entry.detail ?? {};
@@ -207,6 +208,7 @@ function targetLabel(entry: ActivityEntry, catalog: Catalog): string {
   if (action === "plan.write") return typeof detail.trigger === "string" && detail.trigger ? `${target} (${detail.trigger})` : target;
   if (action.startsWith("alert.")) return typeof detail.alert_type === "string" ? `“${words("alert_type", detail.alert_type)}”` : `alert ${target}`;
   if (action.startsWith("irrigation.") && target === "all") return "every line";
+  if (lineById(target)) return lineDisplayName(target);
   if (action.startsWith("light.")) return words("light_target", target);
   return target;
 }
@@ -290,7 +292,7 @@ export function entryFacts(entry: ActivityEntry, catalog: Catalog): string[] {
     const run = runText(detail);
     if (run) facts.push(run);
   } else if (action.startsWith("irrigation.")) {
-    if (typeof detail.line_id === "string" && detail.line_id !== entry.target) facts.push(detail.line_id);
+    if (typeof detail.line_id === "string" && detail.line_id !== entry.target) facts.push(lineDisplayName(detail.line_id));
     if (action.endsWith(".update")) facts.push(...fieldChanges(detail));
   } else if (action.startsWith("light.")) {
     if (typeof detail.result === "string" && detail.result !== "confirmed") facts.push(words("light_result", detail.result));

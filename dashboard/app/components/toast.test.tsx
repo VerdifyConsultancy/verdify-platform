@@ -38,13 +38,13 @@ test("a failure is role=\"alert\" and stays until dismissed", () => {
 
 test("a toast with guidance or buttons stays until dismissed", () => {
   mount();
-  show({ message: "Stopped every running valve.", detail: "VPD misting and fog can still start on their own.", actions: <button type="button">Disable L01</button> });
+  show({ message: "Stopped every running valve.", detail: "VPD misting and fog can still start on their own.", actions: <button type="button">Disable Wall drip</button> });
   show({ message: "Saved", detail: "Close the spigot to stop water now." });
   advance(60_000);
   const region = screen.getByRole("status");
   expect(region.textContent).toContain("Stopped every running valve.");
   expect(region.textContent).toContain("Close the spigot");
-  expect(screen.getByRole("button", { name: "Disable L01" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Disable Wall drip" })).toBeTruthy();
   fireEvent.click(screen.getAllByRole("button", { name: "Dismiss" })[0]);
   expect(region.textContent).not.toContain("Stopped every running valve.");
   expect(region.textContent).toContain("Close the spigot");

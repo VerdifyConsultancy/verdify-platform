@@ -22,6 +22,7 @@ import Water from "./water";
 import WaterBoard from "./water-board";
 import WaterHistory from "./water-history";
 import WaterSchedules from "./water-schedules";
+import { lineDisplayName } from "../lib/lines";
 
 vi.mock("uplot", async () => ({ default: (await import("../charts/fixtures/uplot-mock")).MockPlot }));
 
@@ -100,10 +101,10 @@ test("Today: zone cards in their fixed order, each line a row in its zone (L01�
   expect([...document.querySelectorAll(".wat-zone-name")].map((node) => text(node).split(" ").slice(0, 2).join(" "))).toEqual(["Wall drip", "Center drip", "Center mister", "South mister", "West mister", "Fog humidification"]);
   expect(text(zone("center_mister").querySelector(".wat-unwired"))).toBe("Fertilized · not wired");
   expect([...document.querySelectorAll("article[data-line] h3")].map((node) => text(node))).toEqual([
-    "L01 Wall drip", "L02 Wall feed", "L05 Center drip", "L06 Center feed", "L04 Center mister", "L07 South mister", "L08 South feed", "L09 West mister", "L10 West feed", "L11 Fog",
+    "Wall drip", "Wall drip (fertilized)", "Center drip", "Center drip (fertilized)", "Center mister", "South mister", "South mister (fertilized)", "West mister", "West mister (fertilized)", "Fog",
   ]);
   // Each row is named by its h3, carries its state, and the old hook class stays for the visit specs.
-  expect(screen.getByRole("article", { name: "L01 Wall drip" }).getAttribute("data-state")).toBe("idle");
+  expect(screen.getByRole("article", { name: "Wall drip" }).getAttribute("data-state")).toBe("idle");
   expect(row("L01").classList.contains("line-card")).toBe(true);
   expect(row("L02").querySelector(".line-subrow")?.getAttribute("data-line")).toBe("L03");
   // Zone heads: minutes against the cap line's cap, the reserve and when it last watered; misters' switches and source.
@@ -137,7 +138,7 @@ test("Today's strips: each line's runs today with the now rule and its next run;
   const strip = (id: string) => row(id).querySelector<HTMLElement>(".wat-track")!;
   expect(strip("L01").getAttribute("role")).toBe("img");
   expect(text(row("L01").querySelector(".wat-next"))).toBe("next Wed 07:35 · 12 min");
-  expect(strip("L04").getAttribute("aria-label")?.replaceAll("\u00a0", " ")).toBe("L04 Center mister today: Dawn drench, Mon 06:50, 8 × 60 s, done, ok; valve open 06:58–07:12");
+  expect(strip("L04").getAttribute("aria-label")?.replaceAll("\u00a0", " ")).toBe("Center mister today: Dawn drench, Mon 06:50, 8 × 60 s, done, ok; valve open 06:58–07:12");
   expect(strip("L04").querySelectorAll(".sch-tick")).toHaveLength(1);
   expect(strip("L04").querySelectorAll(".sch-now")).toHaveLength(1);
   expect(text(row("L04").querySelector(".wat-next"))).toBe("next Tue 06:50 · 8 × 60 s");
@@ -151,7 +152,7 @@ test("Today's strips: each line's runs today with the now rule and its next run;
 test("the status line names what runs, linked to its row; a fault or rom program colours its words", async () => {
   open("/water", { fixture: "l01-running" });
   await load();
-  expect(status()).toBe("Program rev 42 on controller · confirmed 2 min ago · L01 Wall drip running (run now)");
+  expect(status()).toBe("Program rev 42 on controller · confirmed 2 min ago · Wall drip running (run now)");
   expect(document.querySelector(".page-status a")?.getAttribute("href")).toBe("#line-L01");
   cleanup(); stopFixtureApi();
   open("/water", { fixture: "program-rom" });
@@ -164,10 +165,10 @@ test("a phone's status line names a running line too, linked to its row; the zon
   open("/water", { fixture: "l01-running" });
   await load();
   const short = document.querySelector(".page-status-short")!;
-  // Visible "L01 running ›"; the line's name for a screen reader, the › hidden from it.
-  expect(text(short)).toBe("Rev 42 on controller · 2 min ago · L01 Wall drip running ›");
+  // Visible "Wall drip running ›" (#1341: no relay code), the › hidden from a screen reader.
+  expect(text(short)).toBe("Rev 42 on controller · 2 min ago · Wall drip running ›");
   expect(short.querySelector("a")?.getAttribute("href")).toBe("#line-L01");
-  expect(text(short.querySelector("a .screen-reader"))).toBe(" Wall drip");
+  expect(short.querySelector("a .screen-reader")).toBeNull();
   expect(short.querySelector("a [aria-hidden=true]")?.textContent).toBe(" ›");
   // The wall's head: today's 12 min against the cap, and "running now", never Friday's last water.
   expect(text(zone("wall").querySelector('[data-limit="L01"]'))).toMatch(/^12 \/ 60 min.*running now$/);
@@ -208,7 +209,7 @@ test("before the engine: relay states, the bridge in the status line once, and n
   open("/water", { fixture: "before-engine" });
   await load();
   expect(program()).toBe(NO_ENGINE_TEXT);
-  expect(NO_ENGINE_TEXT).toBe("No irrigation engine on the controller yet: relay states only; L01 runs, and every line stops, through the bridge");
+  expect(NO_ENGINE_TEXT).toBe("No irrigation engine on the controller yet: relay states only; the wall drip runs, and every line stops, through the bridge");
   for (const node of document.querySelectorAll("article[data-line]")) expect(text(node.querySelector(".line-state")), node.getAttribute("data-line") ?? "").toMatch(/^Relay (On|Off) since /);
   expect(document.querySelectorAll("article[data-line] .object-row-pill")).toHaveLength(0);
   expect(text(document.querySelector("main"))).not.toContain("Applies with the irrigation firmware");
@@ -286,7 +287,7 @@ test("Schedules reads API-IRR-02 once with past_days=7: the week strip with past
   await load();
   expect(tab("Schedules").getAttribute("aria-current")).toBe("page");
   expect(new Set(requests(api, "API-IRR-02").map((row) => row.path))).toEqual(new Set(["/api/v1/irrigation/schedules?past_days=7"]));
-  expect(status()).toBe("Program rev 42 on controller · confirmed 2 min ago · next: L04 Center mister Tue 06:50");
+  expect(status()).toBe("Program rev 42 on controller · confirmed 2 min ago · next: Center mister Tue 06:50");
   // The week strip (Monday to Sunday), today selected, its names with the minutes against the caps.
   const week = within(document.querySelector<HTMLElement>(".week-days")!);
   const days = week.getAllByRole("link");
@@ -302,7 +303,7 @@ test("Schedules reads API-IRR-02 once with past_days=7: the week strip with past
   expect(text(timeline().querySelector(".sch-day-title .meta"))).toBe("sunrise 06:35 · solar noon 11:47 · sunset 16:58");
   expect([...timeline().querySelectorAll(".sch-group-label")].map((node) => text(node))).toEqual(["Drip manifold", "Mister manifold"]);
   expect([...timeline().querySelectorAll(".sch-row")].map((node) => node.getAttribute("data-line"))).toEqual(["L01", "L02", "L05", "L06", "L04", "L07", "L08", "L09", "L10"]);
-  expect(within(timelineRow("L01")).getByRole("button", { name: /^L01 Wall drip · Wall MWF, Mon 07:35, 12\smin, done, ok$/ }).getAttribute("tabindex")).toBe("-1");
+  expect(within(timelineRow("L01")).getByRole("button", { name: /^Wall drip · Wall MWF, Mon 07:35, 12\smin, done, ok$/ }).getAttribute("tabindex")).toBe("-1");
   expect(timeline().querySelectorAll(".sch-now")).toHaveLength(9);
   expect(text(timelineRow("L04").querySelector(".sch-cap"))).toMatch(/^14 \/ 120 min/);
   expect(text(timelineRow("L07").querySelector(".sch-row-note"))).toBe("Schedule off for this zone");
@@ -330,7 +331,7 @@ test("fallback windows are conditional, never planned runs: dotted on the strips
   expect(today.getAttribute("aria-label")).toBe("Monday, Nov 2 (today): nothing planned · 2 fallback windows");
   const blocks = [...timelineRow("L04").querySelectorAll(".sch-block")];
   expect(blocks.map((block) => block.className.includes("sch-conditional"))).toEqual([true, true, true]);
-  expect(blocks[0].getAttribute("aria-label")?.replaceAll("\u00a0", " ")).toBe("L04 Center mister · vanda-degraded, Mon 09:47, 4 × 45 s, fallback, not needed");
+  expect(blocks[0].getAttribute("aria-label")?.replaceAll("\u00a0", " ")).toBe("Center mister · vanda-degraded, Mon 09:47, 4 × 45 s, fallback, not needed");
   // The popover of the window that passed: not needed, never skipped.
   fireEvent.click(blocks[0]);
   await load();
@@ -369,21 +370,21 @@ test("‹ › step the day, the week strip selects one, and view=week shows the 
   expect(where()).toBe("/water/schedules?day=2026-11-04&view=day");
 });
 
-test("a block opens its popover in the URL: the run, its rule, its next starts, Edit and \"Pause L01 until after this run\"; Back-style close replaces", async () => {
+test("a block opens its popover in the URL: the run, its rule, its next starts, Edit and \"Pause Wall drip until after this run\"; Back-style close replaces", async () => {
   const api = open("/water/schedules?day=2026-11-04", { fixture: "schedules-paused" });
   await load();
-  fireEvent.click(within(timelineRow("L01")).getByRole("button", { name: /^L01 Wall drip · Wall MWF, Wed 07:35/ }));
+  fireEvent.click(within(timelineRow("L01")).getByRole("button", { name: /^Wall drip · Wall MWF, Wed 07:35/ }));
   await load();
   expect(where()).toBe("/water/schedules?day=2026-11-04&block=11-1793802900");
   const pop = within(document.querySelector<HTMLElement>("dialog.popover")!);
-  expect(text(document.querySelector("dialog.popover h2"))).toBe("L01 Wall drip · Wall MWF");
+  expect(text(document.querySelector("dialog.popover h2"))).toBe("Wall drip · Wall MWF");
   expect([...document.querySelectorAll("dialog.popover dd")].map((node) => text(node))).toEqual([
     "Wed 4 Nov · 07:35 (sunrise + 1 h) · 12 min", "Planned", "Mon Wed Fri · sunrise + 1 h · Manual", "Wed 07:35 · Fri 07:35",
   ]);
   // Edit opens the editor over the popover, so closing it comes back here.
   expect(pop.getByRole("link", { name: "Edit schedule" }).getAttribute("href")).toBe("/water/schedules?day=2026-11-04&block=11-1793802900&schedule=11");
-  expect(pop.getByRole("link", { name: "Runs of L01" }).getAttribute("href")).toBe("/water/history?line=L01");
-  fireEvent.click(pop.getByRole("button", { name: "Pause L01 until after this run" }));
+  expect(pop.getByRole("link", { name: "Runs of Wall drip" }).getAttribute("href")).toBe("/water/history?line=L01");
+  fireEvent.click(pop.getByRole("button", { name: "Pause Wall drip until after this run" }));
   await advance(0);
   // 12 minutes of drip, plus one.
   expect(writes(api).map((row) => [row.path, row.body])).toEqual([["/api/v1/irrigation/lines/L01", { paused_until: "2026-11-04T14:48:00.000Z" }]]);
@@ -402,13 +403,13 @@ test("an operator's click on an empty part of a row opens the editor prefilled w
   expect(where()).toBe("/water/schedules?day=2026-11-04&line=L07&at=13%3A15&schedule=new");
   const drawer = within(document.querySelector<HTMLElement>("dialog.drawer")!);
   expect((drawer.getByLabelText("Line") as HTMLSelectElement).selectedOptions[0].textContent).toBe("South mister");
-  expect((drawer.getByLabelText("Variant") as HTMLSelectElement).selectedOptions[0].textContent).toBe("Clean · L07");
+  expect((drawer.getByLabelText("Variant") as HTMLSelectElement).selectedOptions[0].textContent).toBe("Clean");
   expect((drawer.getByLabelText("Clock time (HH:MM)") as HTMLInputElement).value).toBe("13:15");
   expect(drawer.getByRole("button", { name: "Wednesday" }).getAttribute("aria-pressed")).toBe("true");
   fireEvent.click(drawer.getByRole("button", { name: "Cancel" }));
   await load();
   expect(where()).toBe("/water/schedules?day=2026-11-04");
-  expect(within(timelineRow("L02")).getByRole("link", { name: "New schedule on L02 Wall feed" }).getAttribute("href")).toBe("/water/schedules?day=2026-11-04&line=L02&schedule=new");
+  expect(within(timelineRow("L02")).getByRole("link", { name: "New schedule on Wall drip (fertilized)" }).getAttribute("href")).toBe("/water/schedules?day=2026-11-04&line=L02&schedule=new");
 });
 
 test("the rules list: every schedule under its line with its words, who changed it, its one pill and its switch; Duplicate and Delete in ⋯", async () => {
@@ -422,7 +423,7 @@ test("the rules list: every schedule under its line with its words, who changed 
   expect(text(rule(11).querySelector(".object-row-pill"))).toBe("Manual");
   expect(text(rule(11).querySelector(".object-row-meta"))).toBe("changed by jason 2 days ago");
   expect(text(rule(13).querySelector(".object-row-meta"))).toBe("Iris may adjust · changed by steward (AI) 2 days ago");
-  expect(text(rule(12).querySelector(".object-row-state"))).toBe("Sun · sunrise + 1 h (07:35 today) · feed 5 min · prewet 2 min · flush 4 min on L01");
+  expect(text(rule(12).querySelector(".object-row-state"))).toBe("Sun · sunrise + 1 h (07:35 today) · feed 5 min · prewet 2 min · flush 4 min on Wall drip");
   fireEvent.click(within(rule(11)).getByRole("switch"));
   await advance(0);
   expect(writes(api).map((row) => [row.method, row.path, row.body])).toEqual([["PUT", "/api/v1/irrigation/schedules/11", { enabled: false, manual: true }]]);
@@ -431,7 +432,7 @@ test("the rules list: every schedule under its line with its words, who changed 
   await advance(0);
   expect(writes(api).at(-1)).toMatchObject({ method: "DELETE", path: "/api/v1/irrigation/schedules/12" });
   // The menu closed as Delete was chosen: the outcome is a toast, as the editor's Delete says it.
-  expect(text(document.querySelector(".toast-stack[role=status]"))).toContain("Requested deleting Weekly feed on L02");
+  expect(text(document.querySelector(".toast-stack[role=status]"))).toContain("Requested deleting Weekly feed on Wall drip (fertilized)");
 });
 
 test("a line's fallback schedules are one row, Fallback (3), with their starts in units, opening to each schedule's own row; the switches read ON with no visible Enabled (#1308 visual QA 42)", async () => {
@@ -574,7 +575,7 @@ test("the run ledger: whole gallons (0 gal for no water, — with no meter data)
   expect(rows).toHaveLength(served.items.length);
   const cells = (index: number) => [...rows[index].children].map((cell) => text(cell));
   const zero = served.items.findIndex((run) => run.run_id === "run-l01-zero");
-  expect(cells(zero).slice(1)).toEqual(["L01 Wall drip · Wall", "Clean", "schedule", "Wall MWF", "controller", "12 min", "0 gal", "ok", "Graphs around this run ›"]);
+  expect(cells(zero).slice(1)).toEqual(["Wall drip · Wall", "Clean", "schedule", "Wall MWF", "controller", "12 min", "0 gal", "ok", "Graphs around this run ›"]);
   const unknown = served.items.findIndex((run) => run.run_id === "run-l04-unknown");
   expect(cells(unknown).slice(5, 9)).toEqual(["controller", "0 min", "— no meter data", "no outcome received · no outcome reached the platform"]);
   const byJason = served.items.findIndex((run) => run.run_id === "run-l01-3");
@@ -622,27 +623,27 @@ test("each row's actions with the irrigation firmware (#1343): Run… or Mist no
   open("/water", { fixture: "run-dialogs" });
   await load();
   expect(everyRow()).toEqual({
-    L01: ["Run… L01", "Stop L01"], L02: ["Run… L02", "Stop L02"], L04: ["Mist now… L04", "Stop L04"], L05: ["Stop L05"], L06: ["Stop L06"], L07: ["Mist now… L07", "Stop L07"],
-    L08: ["Run… L08", "Stop L08"], L09: ["Mist now… L09", "Stop L09"], L10: ["Run… L10", "Stop L10"], L11: ["Fog once… L11", "Stop L11"],
+    L01: ["Run… Wall drip", "Stop Wall drip"], L02: ["Run… Wall drip (fertilized)", "Stop Wall drip (fertilized)"], L04: ["Mist now… Center mister", "Stop Center mister"], L05: ["Stop Center drip"], L06: ["Stop Center drip (fertilized)"], L07: ["Mist now… South mister", "Stop South mister"],
+    L08: ["Run… South mister (fertilized)", "Stop South mister (fertilized)"], L09: ["Mist now… West mister", "Stop West mister"], L10: ["Run… West mister (fertilized)", "Stop West mister (fertilized)"], L11: ["Fog once… Fog", "Stop Fog"],
   });
   expect(document.querySelectorAll("article[data-line] .btn-stop")).toHaveLength(0);
-  expect(screen.getByRole("button", { name: "Run… L01" }).className).toContain("btn-wide");
+  expect(screen.getByRole("button", { name: "Run… Wall drip" }).className).toContain("btn-wide");
 });
 
 test("before the irrigation firmware every row but fog has Stop, only L01 has Run…, and ⋯ says when the rest arrive", async () => {
   const api = open("/water", { fixture: "before-engine" });
   await load();
   expect(everyRow()).toEqual({
-    L01: ["Run… L01", "Stop L01"], L02: ["Stop L02"], L04: ["Stop L04"], L05: ["Stop L05"], L06: ["Stop L06"], L07: ["Stop L07"], L08: ["Stop L08"], L09: ["Stop L09"], L10: ["Stop L10"], L11: [],
+    L01: ["Run… Wall drip", "Stop Wall drip"], L02: ["Stop Wall drip (fertilized)"], L04: ["Stop Center mister"], L05: ["Stop Center drip"], L06: ["Stop Center drip (fertilized)"], L07: ["Stop South mister"], L08: ["Stop South mister (fertilized)"], L09: ["Stop West mister"], L10: ["Stop West mister (fertilized)"], L11: [],
   });
   for (const id of ["L02", "L05", "L06", "L08", "L10"]) expect(text(row(id).querySelector(".menu [data-arrives=run]")), id).toBe("Run arrives with the irrigation firmware");
   for (const id of ["L04", "L07", "L09"]) expect(text(row(id).querySelector(".menu [data-arrives=clear-fault]")), id).toBe("Clear fault arrives with the irrigation firmware");
   // L01's dialog names its setting (API-09 has no row for it since the bridge's rows retired, #1165).
-  fireEvent.click(screen.getByRole("button", { name: "Run… L01" }));
+  fireEvent.click(screen.getByRole("button", { name: "Run… Wall drip" }));
   await advance(1);
   expect(text(document.querySelector("dialog .dialog-note"))).toBe("Runs for the Wall drip duration (irrig_wall_duration_min)");
   fireEvent.click(within(document.querySelector("dialog")!).getByRole("button", { name: "Cancel" }));
-  fireEvent.click(screen.getByRole("button", { name: "Stop L07" }));
+  fireEvent.click(screen.getByRole("button", { name: "Stop South mister" }));
   await advance(0);
   expect(writes(api).map((item) => [item.operationId, item.body])).toEqual([["API-IRR-07", { line_id: "L07" }]]);
   await advance(5000);
@@ -654,9 +655,9 @@ test("Stop on a running row is filled and is its primary: one API-IRR-07 {line_i
   const api = open("/water", { fixture: "l01-running" });
   await load();
   expect(row("L01").getAttribute("data-state")).toBe("running");
-  expect(buttons("L01")).toEqual(["Stop L01"]);
+  expect(buttons("L01")).toEqual(["Stop Wall drip"]);
   expect(row("L01").querySelector(".btn-stop")).not.toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Stop L01" }));
+  fireEvent.click(screen.getByRole("button", { name: "Stop Wall drip" }));
   expect(document.querySelector("dialog")).toBeNull();
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ method: "POST", operationId: "API-IRR-07", body: { line_id: "L01" } })]);
@@ -665,14 +666,14 @@ test("Stop on a running row is filled and is its primary: one API-IRR-07 {line_i
   expect(row("L01").getAttribute("data-state")).toBe("idle");
   expect(row("L01").querySelector(".btn-stop")).toBeNull();
   expect(toasts("status")).toEqual([STOPPED]);
-  expect(screen.getByRole("button", { name: "Disable L01" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Disable Wall drip" })).toBeTruthy();
 });
 
 test("a latched mister's row has Clear fault as its primary: one API-IRR-13, and the latch reads gone", async () => {
   const api = open("/water", { fixture: "mister-fault" });
   await load();
-  expect(buttons("L04")).toEqual(["Clear fault on L04", "Stop L04"]);
-  fireEvent.click(within(row("L04")).getByRole("button", { name: "Clear fault on L04" }));
+  expect(buttons("L04")).toEqual(["Clear fault on Center mister", "Stop Center mister"]);
+  fireEvent.click(within(row("L04")).getByRole("button", { name: "Clear fault on Center mister" }));
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-13", body: { line_id: "L04" } })]);
   await advance(5000);
@@ -684,7 +685,7 @@ test("a latched mister's row has Clear fault as its primary: one API-IRR-13, and
 test("a failed status read says so behind the open Run dialog and leaves what was typed in it, which then runs", async () => {
   const api = open("/water", { fixture: "run-dialogs" });
   await load();
-  fireEvent.click(screen.getByRole("button", { name: "Run… L01" }));
+  fireEvent.click(screen.getByRole("button", { name: "Run… Wall drip" }));
   await advance(1);
   const dialog = () => document.querySelector("dialog")!;
   const duration = () => within(dialog()).getByLabelText(/^Duration/) as HTMLInputElement;
@@ -704,8 +705,8 @@ test("a failed status read says so behind the open Run dialog and leaves what wa
 test("with changes switched off Run… and Clear fault are disabled and Stop stays live; a viewer sees none of them, and no words about them", async () => {
   open("/water", { fixture: ["run-dialogs", "mister-fault", "writes-off"] });
   await load();
-  for (const name of ["Run… L01", "Run… L02", "Clear fault on L04"]) expect(screen.getByRole("button", { name }).hasAttribute("disabled"), name).toBe(true);
-  for (const id of LINE_IDS.slice(0, -1)) expect(screen.getByRole("button", { name: `Stop ${id}` }).hasAttribute("disabled"), id).toBe(false);
+  for (const name of ["Run… Wall drip", "Run… Wall drip (fertilized)", "Clear fault on Center mister"]) expect(screen.getByRole("button", { name }).hasAttribute("disabled"), name).toBe(true);
+  for (const id of LINE_IDS.slice(0, -1)) expect(screen.getByRole("button", { name: `Stop ${lineDisplayName(id)}` }).hasAttribute("disabled"), id).toBe(false);
   cleanup(); stopFixtureApi();
   open("/water", { fixture: ["run-dialogs", "mister-fault", "l01-running", "viewer-session"] });
   await load();
@@ -735,7 +736,7 @@ test.each(VIEWS)("an operator's Stop all water on %s sends one API-IRR-07 with n
   expect(document.querySelector("dialog")).toBeNull();
   await advance(5000);
   expect(toasts("status")).toEqual([STOPPED]);
-  expect(screen.getByRole("button", { name: "Disable L01" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Disable Wall drip" })).toBeTruthy();
 });
 
 test.each([
