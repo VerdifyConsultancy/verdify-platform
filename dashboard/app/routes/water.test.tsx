@@ -460,7 +460,7 @@ test("90 d and 365 d read up to 400 days of minutes and say the ledger is counte
   ]);
   expect(requests(api, "API-21").map((row) => row.path)).toEqual(["/api/v1/water/daily?days=90"]);
   expect(text(document.querySelector('[data-kpi="runs"]'))).toContain("Counted over 31 days at most");
-  expect(text(screen.getByRole("region", { name: "Daily water use" }).querySelector(".section-header .meta"))).toBe("last 90 days, the longest this chart serves");
+  expect(text(screen.getByRole("region", { name: "Daily water use" }).querySelector(".section-header .meta"))).toBe("gallons · last 90 days, the longest this chart serves");
   expect(text(document.querySelector(".chart-minutes figcaption"))).toBe("Gallons per day by line");
   expect(within(screen.getByRole("list", { name: "Period" })).getByRole("link", { name: "365 d" }).getAttribute("aria-current")).toBe("page");
   fireEvent.change(screen.getByLabelText("Measure"), { target: { value: "min" } });
@@ -469,7 +469,7 @@ test("90 d and 365 d read up to 400 days of minutes and say the ledger is counte
   cleanup(); stopFixtureApi();
   open("/water/history");
   await load();
-  expect(text(screen.getByRole("region", { name: "Daily water use" }).querySelector(".section-header .meta"))).toBe("last 30 days, the shortest this chart serves");
+  expect(text(screen.getByRole("region", { name: "Daily water use" }).querySelector(".section-header .meta"))).toBe("gallons · last 30 days, the shortest this chart serves");
 });
 
 test("daily water use: 30 days by line, the no-valve bar apart, split by cause in the URL; a failed read says so in its own panel", async () => {

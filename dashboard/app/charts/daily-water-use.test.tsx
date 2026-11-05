@@ -97,13 +97,15 @@ test("each line takes its own token by kind: drips, fertilizer lines, the master
   ]);
 });
 
-test("the chart: the stack left of each day and the no-valve bar right of it, in --fault, with no band tying them", async () => {
+test("the chart: the stack left of each day and the no-valve bar right of it, neutral (hose and sink use is no fault), with no band tying them", async () => {
   const { plot } = await mount();
   const { series, bands } = plot.opts;
   expect(series.slice(1).map((item) => item.label)).toEqual(["L01 Drip • Wall", "L04 Mister • Center", "L11 Fog", "L02 Drip • Wall (Fert.)", NO_VALVE_WORDS]);
   const bars = series.slice(1).map((item) => (item.paths as unknown as { bars: { align: number; size: number[] } }).bars);
   expect(bars.map((item) => item.align)).toEqual([-1, -1, -1, -1, 1]);
-  expect(series[5].fill).toBe(TOKENS["--fault"]);
+  // Red is for stop and fault (redesign principle 7, §4.4): no series is drawn in it.
+  expect(series[5].fill).toBe(TOKENS["--muted"]);
+  expect(series.slice(1).map((item) => item.fill)).not.toContain(TOKENS["--fault"]);
   expect(series[1].fill).toBe(TOKENS["--eq-water"]);
   expect(series[4].fill).toBe(TOKENS["--eq-fert"]);
   // Each part runs from the one below it; the no-valve series (index 5) is in no band.
@@ -115,11 +117,13 @@ test("the chart: the stack left of each day and the no-valve bar right of it, in
   expect(plot.scales.y).toEqual({ min: 0, max: 21 });
 });
 
-test("a no-data day is a hatched gap across both bars and today has a dashed top edge on each", async () => {
+test("a no-data day is a faint hatched gap across both bars, under the grid; today has a dashed top edge on each; a day's parts never touch", async () => {
   const { plot } = await mount();
   const ctx = plot.ctx;
   expect(ctx.depth).toBe(0);
-  const hatch = ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--muted"] && same(stroke.dash, []));
+  // The hatch is drawClear's, so the grid and the bars paint over it, in --line, never --muted.
+  expect(ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--muted"])).toEqual([]);
+  const hatch = ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--line"] && same(stroke.dash, []));
   expect(hatch).toHaveLength(1);
   expect(new Set(hatch[0].path.map(([, y]) => y))).toEqual(new Set([0, 300]));
   // Each bar is 18 px at most here (40% of a 200 px day), so the hatch starts one height left of the 18 px stack.
@@ -128,6 +132,12 @@ test("a no-data day is a hatched gap across both bars and today has a dashed top
   expect(edges.map((stroke) => [Math.round(stroke.path[0][0]), Math.round(stroke.path[1][0]), stroke.path[0][1]])).toEqual([
     [Math.round(centre(plot, 4) - 18), Math.round(centre(plot, 4)), plot.valToPos(5, "y")],
     [Math.round(centre(plot, 4)), Math.round(centre(plot, 4) + 18), plot.valToPos(3, "y")],
+  ]);
+  // A 1 px gap cleared to the background under each part that shows but the top one: 10/29 (L01 9, L04 4, L02 5) has
+  // two, at 9 and 13 gal; 11/02 (L04 3, L11 2) one at 3; a day of one part, of no water or of no data none.
+  expect(ctx.clears.map((gap) => [Math.round(gap.x), gap.y, gap.width, gap.height])).toEqual([
+    [Math.round(centre(plot, 0) - 18), Math.round(plot.valToPos(9, "y") - 0.5), 18, 1], [Math.round(centre(plot, 0) - 18), Math.round(plot.valToPos(13, "y") - 0.5), 18, 1],
+    [Math.round(centre(plot, 4) - 18), Math.round(plot.valToPos(3, "y") - 0.5), 18, 1],
   ]);
 });
 
@@ -140,11 +150,11 @@ test("the tooltip says the day's meter total, each part, the no-valve water, par
   expect(at(4)).toEqual(["Nov 2", `${gal(8)} on the meter`, "partial", `L04 Mister • Center · ${gal(3)}`, `L11 Fog · ${gal(2)}`, `No Verdify valve open · ${gal(3)}`]);
 });
 
-test("the key names the no-valve bar in --fault, hatched no data and the dashed partial day, and lines of one kind share an entry", () => {
+test("the key names the no-valve bar in neutral --muted, hatched no data and the dashed partial day, and lines of one kind share an entry", () => {
   const items = waterKey(buildWaterUse({ days: [...WEEK.days, day("2026-11-03", { by_line: { L07: 1 } })] }, "line", NAMES));
   expect(items.map((item) => [item.token, item.kind, item.label])).toEqual([
     ["--eq-water", "fill", "L01 Drip • Wall"], ["--eq-mister", "fill", "L04 Mister • Center, L07"], ["--eq-fog", "fill", "L11 Fog"], ["--eq-fert", "fill", "L02 Drip • Wall (Fert.)"],
-    ["--fault", "fill", "No Verdify valve open: hose, sink, hydro or a leak"], ["--muted", "hatch", "no data"], ["--ink", "dashed", "partial day"],
+    ["--muted", "fill", "No Verdify valve open: hose, sink, hydro or a leak"], ["--muted", "hatch", "no data"], ["--ink", "dashed", "partial day"],
   ]);
 });
 
