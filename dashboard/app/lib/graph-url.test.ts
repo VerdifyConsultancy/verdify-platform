@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Graphs' views in the URL (#1130, redesign §2.1, §5.5–§5.7): every choice round-trips through the URL, a value a page
-// cannot use is dropped with a notice, and the window rules (a range plus a quarter of it ahead, at most 12 h; Today to
+// cannot use is dropped with a notice, and the window rules (a range plus as much ahead, at most 72 h; Today to
 // the next midnight; local days; exact ISO times; 400 days; the 31-day lanes; the steps and Zoom out) hold across the
 // 2026-11-01 fall-back.
 import { expect, test } from "vitest";
@@ -19,10 +19,10 @@ const METRICS = SET["API-03"].items as MetricDef[];
 const SETTINGS = SET["API-09"].items as Setting[];
 const view = (search: string): GraphView => parseGraphUrl(search).view;
 
-test("the default view is 24 h with the default settings, no preset or picked metric, every event source, the envelope on and no comparison", () => {
+test("the default view is 72 h back and 72 h ahead with no setting drawn, no preset or picked metric, every event source, the envelope on and no comparison", () => {
   expect(parseGraphUrl("")).toEqual({ view: DEFAULT_VIEW, notices: [] });
-  expect(DEFAULT_VIEW).toEqual({ window: { kind: "range", range: "24h" }, preset: null, settings: null, metrics: [], outdoor: true, events: null, envelope: true, compare: null });
-  expect(graphSearch(view(""))).toBe("range=24h");
+  expect(DEFAULT_VIEW).toEqual({ window: { kind: "range", range: "72h" }, preset: null, settings: null, metrics: [], outdoor: true, events: null, envelope: true, compare: null });
+  expect(graphSearch(view(""))).toBe("range=72h");
 });
 
 test("range, set and m round-trip; set= alone is none; duplicates collapse", () => {
@@ -31,10 +31,10 @@ test("range, set and m round-trip; set= alone is none; duplicates collapse", () 
   expect(graphHref(parsed)).toBe("/graphs?range=72h&set=mister_engage_kpa&m=climate.flow_gpm&m=climate.soil_moisture_south_1");
   expect(view(graphSearch(parsed))).toEqual(parsed);
   expect(view("set=").settings).toEqual([]);
-  expect(graphSearch(view("set="))).toBe("range=24h&set=");
+  expect(graphSearch(view("set="))).toBe("range=72h&set=");
   expect(view("set=&set=fog_rh_ceiling_pct").settings).toEqual(["fog_rh_ceiling_pct"]);
-  expect(graphSearch(withSettings(view(""), []))).toBe("range=24h&set=");
-  expect(graphSearch(withMetrics(view("m=a"), ["a", "b", "a"]))).toBe("range=24h&m=a&m=b");
+  expect(graphSearch(withSettings(view(""), []))).toBe("range=72h&set=");
+  expect(graphSearch(withMetrics(view("m=a"), ["a", "b", "a"]))).toBe("range=72h&m=a&m=b");
   expect(settingEditHref("mister_engage_kpa")).toBe("/settings?edit=mister_engage_kpa");
 });
 
@@ -65,13 +65,13 @@ test("the layers round-trip: events as a comma list (none, some, or every source
   expect(graphSearch(layered)).toBe("range=7d&events=people,alerts&env=0&cmp=week");
   expect(view(graphSearch(layered))).toEqual(layered);
   expect(view("events=").events).toEqual([]);
-  expect(graphSearch(view("events="))).toBe("range=24h&events=");
+  expect(graphSearch(view("events="))).toBe("range=72h&events=");
   expect(view("events=people,iris,agents,system,alerts,runs").events).toBeNull();
   expect(parseGraphUrl("events=people,meteors&cmp=month&preset=garden").notices).toEqual(["Removed unknown preset garden", "Removed unknown comparison month", "Removed unknown event source meteors"]);
-  expect(graphSearch(withEvents(view(""), ["runs", "people"]))).toBe("range=24h&events=people,runs");
-  expect(graphSearch(withEvents(view("events=people"), ["people", "iris", "agents", "system", "alerts", "runs"]))).toBe("range=24h");
-  expect(graphSearch(withEnvelope(view("env=0"), true))).toBe("range=24h");
-  expect(graphSearch(withCompare(view(""), "day"))).toBe("range=24h&cmp=day");
+  expect(graphSearch(withEvents(view(""), ["runs", "people"]))).toBe("range=72h&events=people,runs");
+  expect(graphSearch(withEvents(view("events=people"), ["people", "iris", "agents", "system", "alerts", "runs"]))).toBe("range=72h");
+  expect(graphSearch(withEnvelope(view("env=0"), true))).toBe("range=72h");
+  expect(graphSearch(withCompare(view(""), "day"))).toBe("range=72h&cmp=day");
 });
 
 test("a preset picks its group's metrics from API-03, at most 5, and replaces the picked metrics; Climate picks none", () => {
@@ -82,9 +82,9 @@ test("a preset picks its group's metrics from API-03, at most 5, and replaces th
   const resolved = resolveView(water, METRICS, SETTINGS);
   expect(resolved.picked.map((metric) => metric.key)).toEqual(["climate.soil_moisture_south_1", "climate.flow_gpm"]);
   // The preset's own keys stay the preset's: the URL keeps only what it adds.
-  expect(graphSearch(resolved.view)).toBe("range=24h&preset=water-soil");
-  expect(graphSearch(withPreset(view("m=climate.flow_gpm"), "controller"))).toBe("range=24h&preset=controller");
-  expect(graphSearch(withPreset(water, "climate"))).toBe("range=24h");
+  expect(graphSearch(resolved.view)).toBe("range=72h&preset=water-soil");
+  expect(graphSearch(withPreset(view("m=climate.flow_gpm"), "controller"))).toBe("range=72h&preset=controller");
+  expect(graphSearch(withPreset(water, "climate"))).toBe("range=72h");
   expect(view("preset=climate").preset).toBeNull();
   // A group API-03 lists nothing in says so.
   expect(resolveView(view("preset=light"), METRICS, SETTINGS).notices).toEqual(["Light has no metric yet"]);
@@ -92,9 +92,9 @@ test("a preset picks its group's metrics from API-03, at most 5, and replaces th
 
 test("/graphs/zones: no zone is the grid; zone, the window and the rows live in the URL; unknown values drop with a notice", () => {
   expect(parseZonesUrl("zone=south&range=72h")).toEqual({ zone: "south", window: { kind: "range", range: "72h" }, metrics: ["temp", "vpd"], notices: [] });
-  expect(parseZonesUrl("")).toEqual({ zone: null, window: { kind: "range", range: "24h" }, metrics: ["temp", "vpd"], notices: [] });
+  expect(parseZonesUrl("")).toEqual({ zone: null, window: { kind: "range", range: "72h" }, metrics: ["temp", "vpd"], notices: [] });
   expect(parseZonesUrl("zone=attic&range=fortnight&metric=co2")).toEqual({
-    zone: null, window: { kind: "range", range: "24h" }, metrics: ["temp", "vpd"], notices: ["Removed unknown zone attic", "Removed unknown range fortnight", "Removed unknown metric co2"],
+    zone: null, window: { kind: "range", range: "72h" }, metrics: ["temp", "vpd"], notices: ["Removed unknown zone attic", "Removed unknown range fortnight", "Removed unknown metric co2"],
   });
   expect(parseZonesUrl("metric=rh&metric=temp").metrics).toEqual(["temp", "rh"]);
   expect(zonesHref("south", { kind: "range", range: "72h" })).toBe("/graphs/zones?zone=south&range=72h");
@@ -167,13 +167,14 @@ test("ISO times are an exact window with nothing ahead; Z and offsets both read,
   expect(open).toMatchObject({ live: true, measured: { from: epoch("2026-11-02T16:00:00Z"), to: NOW } });
 });
 
-test("a range is the past window plus a quarter of it ahead, at most 12 h (D-UX-13); series and lanes read up to now, band and steps the whole x range", () => {
+test("a range is the past window plus as much ahead, at most 72 h (replacing D-UX-13); series and lanes read up to now, band and steps the whole x range", () => {
   const window = graphWindow(view("range=72h").window, NOW);
-  expect(window.x).toEqual({ from: NOW - 3 * 86_400, to: NOW + 12 * 3600 });
+  expect(window.x).toEqual({ from: NOW - 3 * 86_400, to: NOW + 3 * 86_400 });
   expect(window.measured).toEqual({ from: NOW - 3 * 86_400, to: NOW });
   expect(window).toMatchObject({ live: true, length: 3 * 86_400, key: "72h" });
-  // The 24 h view has 6 h of future; 90 d is daily and past the lanes' 31 days.
-  expect(graphWindow(view("range=24h").window, NOW).x).toEqual({ from: NOW - 86_400, to: NOW + 6 * 3600 });
+  // The 24 h view has 24 h ahead, 7 d and longer 72 h; 90 d is daily and past the lanes' 31 days.
+  expect(graphWindow(view("range=24h").window, NOW).x).toEqual({ from: NOW - 86_400, to: NOW + 86_400 });
+  expect(graphWindow(view("range=7d").window, NOW).x).toEqual({ from: NOW - 7 * 86_400, to: NOW + 3 * 86_400 });
   expect(lanesAllowed(graphWindow(view("range=30d").window, NOW))).toBe(true);
   expect(lanesAllowed(graphWindow(view("range=90d").window, NOW))).toBe(false);
 });
@@ -190,7 +191,7 @@ test("the last-N ranges Zoom out writes: hours, then whole days from 4 d, at mos
   expect([rangeSeconds("48h"), rangeSeconds("14d"), rangeSeconds("400d"), rangeSeconds("401d"), rangeSeconds("today"), rangeSeconds("0h"), rangeSeconds("2w")]).toEqual([172_800, 1_209_600, MAX_WINDOW_S, null, null, null, null]);
   expect([rangeText(48 * 3600), rangeText(96 * 3600), rangeText(144 * 3600), rangeText(30 * 3600)]).toEqual(["48h", "4d", "6d", "30h"]);
   expect(view("range=48h").window).toEqual({ kind: "range", range: "48h" });
-  expect(graphWindow(view("range=48h").window, NOW).x).toEqual({ from: NOW - 172_800, to: NOW + 12 * 3600 });
+  expect(graphWindow(view("range=48h").window, NOW).x).toEqual({ from: NOW - 172_800, to: NOW + 172_800 });
   expect(parseGraphUrl("range=999d").notices).toEqual(["Removed unknown range 999d"]);
 });
 
@@ -269,7 +270,7 @@ test("resolveView: unknown keys drop with a notice, climate keys silently, daily
   expect(resolved.picked.map((metric) => metric.key)).toEqual(["daily.water_gal", "climate.flow_gpm"]);
   // A daily panel takes no setting: its unit is not among the units a setting can draw on.
   expect(resolved.units).toEqual(["°F", "kPa", "%", "gal/min"]);
-  expect(graphSearch(resolved.view)).toBe("range=24h&m=daily.water_gal&m=climate.flow_gpm");
+  expect(graphSearch(resolved.view)).toBe("range=72h&m=daily.water_gal&m=climate.flow_gpm");
   const six = ["climate.temp_south", "climate.soil_moisture_south_1", "climate.flow_gpm", "climate.outdoor_temp_f", "climate.outdoor_rh_pct", "diagnostics.heap_free_kb"];
   const capped = resolveView(view(six.map((key) => `m=${key}`).join("&")), METRICS, SETTINGS);
   expect(capped.picked).toHaveLength(5);
@@ -278,8 +279,8 @@ test("resolveView: unknown keys drop with a notice, climate keys silently, daily
   expect(resolveView(view("m=climate.flow_gpm"), null, SETTINGS)).toMatchObject({ ready: false, climate: [], picked: [], settings: [], notices: [], view: { metrics: ["climate.flow_gpm"] } });
 });
 
-test("resolveView: the default settings draw on VPD and RH; a named one must be numeric, not a band row, and in an open panel's unit", () => {
-  expect(resolveView(view(""), METRICS, SETTINGS).settings.map((row) => row.param)).toEqual(["mister_engage_kpa", "fog_rh_ceiling_pct"]);
+test("resolveView: no setting draws by default (#1354); a named one must be numeric, not a band row, and in an open panel's unit", () => {
+  expect(resolveView(view(""), METRICS, SETTINGS).settings).toEqual([]);
   expect(resolveView(view("set="), METRICS, SETTINGS).settings).toEqual([]);
   const named = resolveView(view("set=mister_engage_kpa&set=nope&set=band_house_vpd_low&set=sw_gl_main_auto_mode&set=mister_pulse_gap_s"), METRICS, SETTINGS);
   expect(named.settings.map((row) => row.param)).toEqual(["mister_engage_kpa"]);
@@ -287,9 +288,9 @@ test("resolveView: the default settings draw on VPD and RH; a named one must be 
     "Removed unknown setting nope", "Removed setting band_house_vpd_low: the band ribbon draws it",
     "Removed setting sw_gl_main_auto_mode: only numeric settings draw as steps", "Removed setting mister_pulse_gap_s: no chart in s",
   ]);
-  expect(graphSearch(named.view)).toBe("range=24h&set=mister_engage_kpa");
-  // The defaults stay the defaults in links even when one of them cannot draw.
-  expect(resolveView(view(""), METRICS, SETTINGS.filter((row) => row.param !== "fog_rh_ceiling_pct")).view.settings).toBeNull();
+  expect(graphSearch(named.view)).toBe("range=72h&set=mister_engage_kpa");
+  // No `set` stays no `set` in links.
+  expect(resolveView(view(""), METRICS, SETTINGS).view.settings).toBeNull();
   const row = SETTINGS.find((item) => item.param === "mister_engage_kpa")!;
   expect(settingProblem(row, ["°F", "%"])).toBe("no chart in kPa");
   expect(graphSearch(withWindow(named.view, { kind: "days", from: "2026-10-31", to: "2026-11-01" }))).toBe("from=2026-10-31&to=2026-11-01&set=mister_engage_kpa");

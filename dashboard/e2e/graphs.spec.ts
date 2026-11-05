@@ -41,7 +41,10 @@ test("/graphs?range=72h&set=mister_engage_kpa: one stack of three panels on one 
   await expect(page.locator("[data-equipment=fan1]")).toHaveCount(1);
   await expect(page.getByRole("list", { name: "Settings drawn as steps" }).getByRole("listitem")).toContainText(["VPD Mister Engage · VPD"]);
   await expect(page.getByRole("list", { name: "Range" }).getByRole("link", { name: "72 h" })).toHaveAttribute("aria-current", "page");
-  await expect(page.locator(".chart-lanes .chart-key li").filter({ hasText: /^VPD$/ })).toHaveCount(1);
+  // The VPD panel's key names the setting and says it sits above the band-fitted axis; no word is painted in a plot (#1354).
+  await expect(page.locator("[data-panel=vpd] .stack-key li").filter({ hasText: /^VPD Mister Engage \d\.\d\d\s?kPa · above the chart ↑$/ })).toHaveCount(1);
+  // A lane's run fills in its line's colour; its cause is written after it, so the lanes' key names no cause.
+  await expect(page.locator(".chart-lanes .chart-key li").filter({ hasText: /^VPD$/ })).toHaveCount(0);
   const first = await windowReads(request);
   const line = await resolution(page).textContent();
   await reload(page);
@@ -76,12 +79,13 @@ test("on a phone the toolbar is two rows and the temperature plot starts above t
   expect(Math.abs(today!.y - custom!.y)).toBeLessThan(2);
   await expect(page.locator(".gr-on")).toBeHidden();
   // The story line's short wording, and the temperature plot in view above the bottom bar.
-  await expect(page.locator(".page-status-short")).toHaveText(/^24 h · in band 100% · no excursions$/);
+  await expect(page.locator(".page-status-short")).toHaveText(/^72 h · in band 100% · no excursions$/);
   const plot = await page.locator("[data-panel=temperature] .stack-plot").boundingBox();
   expect(plot!.y + 80).toBeLessThan(PHONE.height - 56);
   await page.locator(".gr-layers > summary").click();
   await expect(page.getByRole("list", { name: "Presets, phone" })).toBeVisible();
-  await expect(page.getByRole("list", { name: "Settings drawn as steps, phone" }).getByRole("listitem")).toHaveCount(2);
+  // No setting is drawn by default (#1354): + Setting adds one.
+  await expect(page.getByRole("list", { name: "Settings drawn as steps, phone" })).toHaveCount(0);
   await expect(page.locator(".gr-menu-phone").getByRole("button", { name: "+ Setting" })).toBeVisible();
 });
 
@@ -90,10 +94,10 @@ test("the cursor: hovering one panel turns every header row into its values ther
   await load(page, "/graphs?range=72h&outdoor=0");
   const vpd = page.locator("[data-panel=vpd] .stack-plot");
   await expect(vpd.locator("canvas")).toHaveCount(1);
-  // A few hours before now in the 84 h window, inside the data and the band. A second move gives uPlot its mousemove.
+  // A few hours before now, the middle of the 72 h + 72 h window, inside the data and the band. A second move gives uPlot its mousemove.
   const box = await vpd.boundingBox();
   if (!box) throw new Error("The VPD panel is not rendered");
-  for (const fraction of [0.79, 0.8]) await vpd.hover({ position: { x: box.width * fraction, y: box.height / 2 } });
+  for (const fraction of [0.46, 0.47]) await vpd.hover({ position: { x: box.width * fraction, y: box.height / 2 } });
   await expect(head(page, "vpd")).toHaveText(/^\d\.\d\d · band 0\.45–0\.80 · in$/);
   await expect(head(page, "temperature")).toHaveText(/^\d\d\.\d · band 62\.0–70\.0 · in$/);
   await expect(head(page, "rh")).toHaveText(/^\d\d\.\d$/);
@@ -117,10 +121,10 @@ test("the story line states time in band and the excursions, worst first; an exc
   await expect(plots(page).locator("canvas")).toHaveCount(3);
 });
 
-test("the range toolbar: 24 h has 6 h ahead, ‹ steps back by its length, Zoom out doubles it and stays live, Today ends at midnight; all in the URL", async ({ page, request }) => {
+test("the range toolbar: 24 h has 24 h ahead, ‹ steps back by its length, Zoom out doubles it and stays live, Today ends at midnight; all in the URL", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/graphs?range=24h");
-  await expect(resolution(page)).toHaveText(/^Nov 1, 10:42 → Nov 2, 16:42 \(30 h\)/);
+  await expect(resolution(page)).toHaveText(/^Nov 1, 10:42 → Nov 3, 10:42 \(48 h\)/);
   await expect(page.getByRole("link", { name: "Previous 24 h" })).toHaveAttribute("href", "/graphs?from=2026-10-31T17:42:00Z&to=2026-11-01T17:42:00Z");
   await expect(page.getByText("Next 24 h: not available")).toHaveCount(1);
   await page.getByRole("link", { name: "Zoom out" }).click();
@@ -161,7 +165,8 @@ test("the event rail marks writes, alerts and runs, each opening its Activity en
   const rail = page.getByRole("group", { name: /^Events on the charts, 7$/ });
   await expect(rail).toHaveCount(1);
   await rail.getByRole("button", { name: "08:42 · jason · Set VPD Mister Engage" }).click();
-  await expect(page.getByRole("list", { name: "Events at this mark" }).getByRole("link")).toHaveAttribute("href", "/activity/log?target=mister_engage_kpa#activity-15");
+  // 24 h now has 24 h ahead, so 08:42 and 09:00 sit within 8 px and share one mark.
+  await expect(page.getByRole("list", { name: "Events at this mark" }).getByRole("link", { name: "08:42 · jason · Set VPD Mister Engage" })).toHaveAttribute("href", "/activity/log?target=mister_engage_kpa#activity-15");
   const list = page.locator("details.stack-events");
   await expect(list.locator("summary")).toHaveText("Events in this window (7)");
   await list.locator("summary").click();
@@ -215,7 +220,7 @@ test("CSV of this window holds exactly the plotted columns, with local times and
   await useScreensClock(page, request, "in-band");
   await load(page, "/graphs?range=24h&m=climate.flow_gpm&outdoor=0");
   const { filename, lines } = await download(page, "CSV of this window");
-  expect(filename).toBe("verdify-graphs-2026-11-01T1042-2026-11-02T1642.csv");
+  expect(filename).toBe("verdify-graphs-2026-11-01T1042-2026-11-03T1042.csv");
   expect(lines[0]).toBe("time (America/Denver),climate.temp_avg (°F),climate.vpd_avg (kPa),climate.rh_avg (%),climate.flow_gpm (gal/min)");
   expect(lines).toHaveLength(1441);
   expect(lines[1]).toMatch(/^2026-11-01T10:42:00-07:00,[\d.]+,[\d.]+,[\d.]+,0$/);
@@ -228,11 +233,11 @@ async function seriesKeys(request: Parameters<typeof fixtureRequests>[0]) {
   return (await fixtureRequests(request, "API-04")).map((row) => new URL(row.path, "http://fixture.invalid").searchParams.getAll("metric"));
 }
 
-test("/graphs?range=24h: the outdoor traces state their source and age once, and the forecast is labelled with its issue time", async ({ page, request }) => {
+test("/graphs?range=24h: the outdoor traces, the forecast's issue time (STALE past 3 h) and the band's source are said once", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/graphs?range=24h");
   await expect(plots(page).locator("canvas")).toHaveCount(3);
-  await expect(notes(page)).toHaveText(["Outdoor · Tempest via the controller · 2 min ago", "Forecast · issued 07:00"]);
+  await expect(notes(page)).toHaveText(["Outdoor · Tempest via the controller · 2 min ago", "Forecast · STALE · issued 07:00", "Temperature and VPD: Band in force · DERIVED", "Temperature and VPD: Band ahead of now · reconstructed from today's crop anchors"]);
   // One list of swatches, one item a series: an array matches item by item. Inside the named panel each reads its series
   // alone, so the three fit one row on a phone; the full name is the button's accessible name.
   const swatches = page.locator("[data-panel=temperature] .stack-swatches");
@@ -252,16 +257,16 @@ test("the Outdoor layer hides the overlay with outdoor=0 in the URL, and shows i
   await outdoorChip(page).click();
   await expect(page).toHaveURL(/\/graphs\?range=24h&outdoor=0$/);
   await expect(outdoorChip(page)).not.toHaveAttribute("aria-current", "true");
-  await expect(page.locator(".gr-notes")).toHaveCount(0);
+  await expect(notes(page)).toHaveText(["Temperature and VPD: Band in force · DERIVED", "Temperature and VPD: Band ahead of now · reconstructed from today's crop anchors"]);
   await outdoorChip(page).click();
   await expect(page).toHaveURL(/\/graphs\?range=24h$/);
-  await expect(notes(page)).toHaveText(["Outdoor · Tempest via the controller · 2 min ago", "Forecast · issued 07:00"]);
+  await expect(notes(page)).toHaveText(["Outdoor · Tempest via the controller · 2 min ago", "Forecast · STALE · issued 07:00", "Temperature and VPD: Band in force · DERIVED", "Temperature and VPD: Band ahead of now · reconstructed from today's crop anchors"]);
 });
 
 test("with no forecast in the window none is drawn or labelled; outdoor still states its source", async ({ page, request }) => {
   await useScreensClock(page, request, "no-forecast");
   await load(page, "/graphs?range=24h");
-  await expect(notes(page)).toHaveText(["Outdoor · Tempest via the controller · 2 min ago"]);
+  await expect(notes(page)).toHaveText(["Outdoor · Tempest via the controller · 2 min ago", "Temperature and VPD: Band in force · DERIVED", "Temperature and VPD: Band ahead of now · reconstructed from today's crop anchors"]);
 });
 
 test("CSV of this window with the overlay holds the outdoor and forecast columns it plots", async ({ page, request }) => {
@@ -269,9 +274,9 @@ test("CSV of this window with the overlay holds the outdoor and forecast columns
   await load(page, "/graphs?range=24h");
   const { lines } = await download(page, "CSV of this window");
   expect(lines[0]).toBe("time (America/Denver),climate.temp_avg (°F),climate.outdoor_temp_f (°F),forecast.temp_f (°F),climate.vpd_avg (kPa),derived.outdoor_vpd_kpa (kPa),forecast.vpd_kpa (kPa),climate.rh_avg (%),climate.outdoor_rh_pct (%),forecast.rh_pct (%)");
-  // The past 24 h by the minute, then the next 6 h's forecast hours.
-  expect(lines).toHaveLength(1447);
-  expect(lines.at(-1)).toMatch(/^2026-11-02T16:00:00-07:00,,,[\d.]+,,,[\d.]+,,,[\d.]+$/);
+  // The past 24 h by the minute, then the next 24 h's forecast hours.
+  expect(lines).toHaveLength(1465);
+  expect(lines.at(-1)).toMatch(/^2026-11-03T10:00:00-07:00,,,[\d.]+,,,[\d.]+,,,[\d.]+$/);
 });
 
 test("/graphs/zones: every zone side by side, temperature and VPD on one scale each, one cursor; a head opens its zone; RH is a row away", async ({ page, request }) => {
@@ -318,7 +323,7 @@ test("/graphs/zones on a phone: one metric at a time, five plots stacked under t
   const metric = page.getByRole("list", { name: "Metric", exact: true });
   await expect(metric.getByRole("link", { name: "Temperature" })).toHaveAttribute("aria-current", "true");
   await metric.getByRole("link", { name: "VPD" }).click();
-  await expect(page).toHaveURL(/\/graphs\/zones\?range=24h&metric=vpd$/);
+  await expect(page).toHaveURL(/\/graphs\/zones\?range=72h&metric=vpd$/);
   await expect(page.locator(".chart-grid .grid-row")).toHaveAttribute("data-row", "vpd");
 });
 
@@ -357,7 +362,7 @@ test("/graphs/zones: center reads the house average, labelled HOUSE; south's PEE
   await expect(page.locator(".zone-tag-note")).toContainText("Center has no probe");
   await useScreensClock(page, request, "south-probe-out");
   await load(page, "/graphs/zones");
-  await expect(page.locator(".page-status")).toHaveText("Last 24 h · each zone against its band · south from peer probes");
+  await expect(page.locator(".page-status")).toHaveText("Last 72 h · each zone against its band · south from peer probes");
   await expect(page.locator(".grid-heads .gr-zone-tag-peer")).toHaveText("PEER");
   await useScreensClock(page, request, "south-probe-out");
   await load(page, "/graphs/zones?zone=south");

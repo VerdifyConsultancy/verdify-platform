@@ -4,7 +4,7 @@ import bandFixture from "./fixtures/band.json";
 import historyFixture from "./fixtures/setting-history.json";
 import { load } from "./fixtures/uplot-mock";
 import {
-  BAND_IN_FORCE, BAND_RETENTION_S, CROP_BAND, bandAt, bandKindFor, bandRuns, boundLabel, extentUnion, forecastAt, forecastExtent, forecastLines, forecastRuns, groupSteps, lastAtOrBefore,
+  BAND_AHEAD, BAND_BEFORE, BAND_IN_FORCE, BAND_RETENTION_S, CROP_BAND, bandNotes, bandAt, bandKindFor, bandRuns, boundLabel, extentUnion, forecastAt, forecastExtent, forecastLines, forecastRuns, groupSteps, lastAtOrBefore,
   marksExtent, paddedRange, requesterWords, settingBounds, settingSteps, stepsAt,
 } from "./marks";
 import type { BandTimeline, MetricDef, Series, SettingHistory } from "./types";
@@ -31,6 +31,10 @@ test("the ribbon is the band in force up to now, the crop band after it, and a n
   ]);
   expect(BAND_IN_FORCE).toBe("Band in force · DERIVED");
   expect(CROP_BAND).toBe("Crop band reconstructed from today's anchors");
+  // Their provenance is said once in the notes, never painted on the band (#1354): in force to now, the crop band ahead.
+  expect(bandNotes(runs, NOW)).toEqual([BAND_IN_FORCE, BAND_AHEAD]);
+  expect(bandNotes(runs.slice(0, 1), NOW + 200 * 86_400)).toEqual([BAND_IN_FORCE]);
+  expect(bandNotes([{ ...runs[2], t: [NOW - 100 * 86_400] }], NOW)).toEqual([BAND_BEFORE]);
   expect(bandAt(runs, epoch("2026-11-01T08:00:00Z"))).toBeNull();
   expect(bandAt(runs, epoch("2026-11-01T09:07:00Z"))).toEqual({ label: BAND_IN_FORCE, low: band.band.temp_low[12], high: band.band.temp_high[12] });
   expect(bandAt(runs, epoch("2026-11-01T15:00:00Z"))!.label).toBe(CROP_BAND);
@@ -212,8 +216,10 @@ test("the forecast draws right of now only, labelled with its issue; with issued
   expect(forecastLines(null, "°F", NOW)).toEqual([]);
   // Every hour left of now: nothing to draw.
   expect(forecastLines({ metrics: [TEMP], series: forecastSeries([NOW - HOUR], [40]) }, "°F", NOW)).toEqual([]);
-  // An issue on an earlier day carries its date.
-  expect(forecastLines({ metrics: [TEMP], series: forecastSeries([NOW + HOUR], [42], HOUR, "2026-10-31T13:00:00Z") }, "°F", NOW)[0].text).toBe("Forecast · issued Oct 31, 07:00");
+  // An issue on an earlier day carries its date, and one older than 3 h reads STALE (#1353); 3 h exactly does not.
+  expect(forecastLines({ metrics: [TEMP], series: forecastSeries([NOW + HOUR], [42], HOUR, "2026-10-31T13:00:00Z") }, "°F", NOW)[0].text).toBe("Forecast · STALE · issued Oct 31, 07:00");
+  expect(forecastLines({ metrics: [TEMP], series: forecastSeries([NOW + HOUR], [42], HOUR, "2026-11-01T07:00:00Z") }, "°F", NOW)[0].text).not.toContain("STALE");
+  expect(forecastLines({ metrics: [TEMP], series: forecastSeries([NOW + HOUR], [42], HOUR, "2026-11-01T06:59:00Z") }, "°F", NOW)[0].text).toContain("STALE");
 });
 
 test("the forecast is joined hour to hour, below a 1 h bucket too, and a missing hour stays a gap", () => {
