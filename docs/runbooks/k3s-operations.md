@@ -132,8 +132,8 @@ secrets. The procedure and its traps:
   (any kubectl host):
   `scripts/verdify-db.sh prod -c "SELECT firmware_version, max(ts) FROM diagnostics WHERE firmware_version IS NOT NULL GROUP BY 1 ORDER BY 2 DESC LIMIT 1;"`
   (live `band_track_fraction`: latest `setpoint_snapshot` row). `last-good` is the
-  **rollback floor**, which deliberately lags the running binary through the 48 h
-  bake. (Misreading it caused a wrong "device is on the old firmware" conclusion
+  **rollback floor**, which lags the running binary until a release is promoted.
+  (Misreading it caused a wrong "device is on the old firmware" conclusion
   mid-2026-06-18; don't repeat it.)
 - **Secrets (reconstruct a `0600 secrets.yaml` OUTSIDE the repo):**
   - `ota_password` ← k3s secret `verdify-prod/verdify-firmware-ota`.
@@ -159,22 +159,23 @@ secrets. The procedure and its traps:
   `scripts/firmware-release-job.py pin` writes (step 5). Until then a healthy flash
   opens `firmware_version_mismatch`, which the sweep reports as a warning while
   live equals `EXPECTED_FW_VERSION`:
-  1. `VERDIFY_DB_BACKEND=kube FIRMWARE_OTA_FREEZE_OVERRIDE_REASON="…" bash scripts/firmware-deploy-preflight.sh`
+  1. `VERDIFY_DB_BACKEND=kube bash scripts/firmware-deploy-preflight.sh`
   2. `FW_VERSION="$(date +%Y.%-m.%-d.%H%M).$(git rev-parse --short HEAD)"; echo "$FW_VERSION" > firmware/artifacts/pending-fw-version.txt`
   3. `ESPHOME_BIN=<esphome> SECRETS_SRC=<secrets.yaml> scripts/firmware-esphome-worktree.sh -s fw_version "$FW_VERSION" compile && … upload --device 192.168.10.111`
   4. `VERDIFY_DB_BACKEND=kube bash scripts/wait-for-firmware-version.sh "$FW_VERSION" --timeout 180` then `VERDIFY_DB_BACKEND=kube EXPECTED_FW_VERSION="$FW_VERSION" make sensor-health SINCE='5 minutes'`
-  5. `bash scripts/archive-firmware-artifacts.sh "$FW_VERSION"` — **NOT** `--promote-last-good` (last-good stays on the prior baked binary through the 48 h bake; promote only after). Then pin the pod: `python3 scripts/firmware-release-job.py pin --firmware-version "$FW_VERSION" --submit`.
-  6. **Pinch decision + bake record (#413):** the flash just cold-started
+  5. `bash scripts/archive-firmware-artifacts.sh "$FW_VERSION"`, then pin the pod: `python3 scripts/firmware-release-job.py pin --firmware-version "$FW_VERSION" --submit`. Promoting the release to last-good (`--promote-last-good` here, or `make firmware-promote-last-good` later) is a separate decision with no minimum wait.
+  6. **Pinch decision + release record (#413):** the flash just cold-started
      `band_track_fraction` to `0.0` (see the pinch-reset bullet above). Execute the
-     g-377 decision, then record in the bake report: `band_track_fraction`
+     g-377 decision, then record in the release record: `band_track_fraction`
      (readback proof from `setpoint_snapshot`), `dehum_vent_hold_enabled`
      (`cfg_*` readback; OFF-default flag from #410), and the **envelope config**
-     (door screen-window open/closed — open ~2026-06-19 → fall per #412; never
-     change it mid-bake). Full step: `docs/RELEASE-CHECKLIST.md` §B "Deploy + post".
+     (door screen-window open/closed — open ~2026-06-19 → fall per #412). Full
+     step: `docs/RELEASE-CHECKLIST.md` §B "Deploy + post".
 - **The preflight checks are mandatory** (`scripts/firmware-deploy-preflight.sh`): no OTA while
-  `alert_log` has unresolved critical/legacy-high rows; 48 h bake on
-  `last-good.ota.bin` mtime; ≤1 OTA/calendar week; telemetry <300 s; action-log
-  proof. Freeze overrides need the documented reason-bearing environment values;
+  `alert_log` has unresolved critical/legacy-high rows; telemetry <300 s; action-log
+  proof; a last-good or verified provisional rollback binary. There is no bake,
+  minimum-age or weekly gate (Jason, 2026-11-05): ship new builds as often as
+  needed. Overrides need the documented reason-bearing environment values;
   the **critical-alert check protects plant safety—investigate the alert rather
   than blind-overriding it.**
 - The post-OTA sensor sweep checks each climate field. The historically absent
@@ -249,7 +250,7 @@ and #322/#339 (retired-VM doc/test cleanup).
   count and Synced/Healthy alone do not prove delivery.
 
 - **Verify device firmware from `diagnostics.firmware_version`,** not
-  `firmware/artifacts/last-good.version` (rollback floor, lags during the bake).
+  `firmware/artifacts/last-good.version` (rollback floor, lags until a release is promoted).
 - **The pinched band IS the device's control band** (pinch machinery wired since
   band-compliance `dcc6078`; since the 2026-07-10 recovery OTA `09ee886` the live
   `band_track_fraction` is `0.0` — the ADR-0004/#377 float — so the pinched band

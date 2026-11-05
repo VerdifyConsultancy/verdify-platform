@@ -2,7 +2,9 @@
 # Firmware OTA preflight guard.
 #
 # Enforces the phase-0 deploy rules that can be checked locally before compile
-# or upload. Forecast heat is reported as context, not a deploy blocker.
+# or upload. Forecast heat is reported as context, not a deploy blocker. There
+# is no release timing gate: no bake, minimum artifact age or weekly limit, so a
+# new build can ship as often as needed (Jason, 2026-11-05).
 
 set -euo pipefail
 
@@ -28,8 +30,8 @@ guard_or_fail() {
     local message="$1"
     if override_authorized; then
         # 2026-07-11 audit: this override previously left NO durable record
-        # (only the bake/weekly gates called record_override). Every accepted
-        # override is now audited to the override log AND alert_log.
+        # (only the since-removed bake/weekly gates called record_override).
+        # Every accepted override is now audited to the override log AND alert_log.
         record_deploy_override "severe-alert-or-telemetry" "$message" "${FIRMWARE_DEPLOY_OVERRIDE_REASON:-no reason supplied}"
         warn "$message — explicit override active (${FIRMWARE_DEPLOY_OVERRIDE_REASON:-no reason supplied})"
     else
@@ -39,9 +41,6 @@ guard_or_fail() {
         fail "$message"
     fi
 }
-
-# Portable file mtime (epoch seconds): BSD/macOS `stat -f %m`, GNU/Linux `stat -c %Y`.
-mtime_of() { stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null; }
 
 override_reason="${FIRMWARE_OTA_FREEZE_OVERRIDE_REASON:-}"
 override_log="${FIRMWARE_OTA_FREEZE_OVERRIDE_LOG:-/var/local/verdify/state/firmware-ota-freeze-overrides.log}"
@@ -93,7 +92,7 @@ db_audit_override() {
 }
 
 # guard_or_fail overrides route through the same durable audit as the
-# freeze-gate overrides, without requiring FIRMWARE_OTA_FREEZE_OVERRIDE_REASON.
+# provisional-rollback override, without requiring FIRMWARE_OTA_FREEZE_OVERRIDE_REASON.
 record_deploy_override() {
     local gate="$1" detail="$2" reason="$3"
     local saved_reason="$override_reason"
@@ -185,34 +184,10 @@ if [[ "$rollback_bin" != "$last_good" ]]; then
         fail "Provisional rollback candidate SHA-256 mismatch"
     require_override_reason "provisional rollback candidate"
     record_override "provisional rollback candidate" \
-        "unbaked recovery binary $rollback_bin sha256=$actual_sha; not accepted last-good"
+        "provisional recovery binary $rollback_bin sha256=$actual_sha; not accepted last-good"
     pass "Verified provisional rollback candidate (not accepted last-good)"
 elif [[ -f "$last_good" ]]; then
-    age_s=$(( $(date +%s) - $(mtime_of "$last_good") ))
-    if (( age_s < 172800 )); then
-        require_override_reason "48-hour bake"
-        record_override "48-hour bake" "last-good artifact age is ${age_s}s"
-    else
-        pass "48-hour bake check passed for $last_good"
-    fi
+    pass "Last-good rollback artifact present at $last_good"
 else
     fail "No last-good rollback artifact at $last_good; supply a verified provisional rollback candidate"
-fi
-
-week_versions="$("${DB[@]}" \
-    "WITH first_seen AS (
-       SELECT firmware_version, min(ts) AS first_ts
-         FROM diagnostics
-        WHERE firmware_version IS NOT NULL AND firmware_version <> ''
-        GROUP BY firmware_version
-     )
-     SELECT count(*)
-       FROM first_seen
-     WHERE first_ts >= date_trunc('week', now() AT TIME ZONE 'America/Denver') AT TIME ZONE 'America/Denver'" \
-    | tr -d '[:space:]')"
-if [[ "${week_versions:-0}" -gt 0 ]]; then
-    require_override_reason "Weekly OTA limit"
-    record_override "Weekly OTA limit" "$week_versions firmware version(s) first appeared this calendar week"
-else
-    pass "Weekly OTA limit clear"
 fi

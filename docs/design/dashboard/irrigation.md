@@ -552,8 +552,8 @@ after the one that installs it.
 
 **Ship.** Use `make firmware-deploy`. It compiles the image on the host that runs it, so where it runs
 follows Q-11 in [decisions](decisions.md): no exception is assumed, R3 asks Jason before it runs, and
-nothing is compiled on the Mac until he answers. If the preflight's weekly or 48-hour rule blocks a
-fix-forward, set `FIRMWARE_OTA_FREEZE_OVERRIDE_REASON='irrigation v2 fix-forward (D-IRP-23)'`. Verify
+nothing is compiled on the Mac until he answers. The preflight has no weekly or 48-hour rule
+([decisions](decisions.md), 2026-11-05), so a fix-forward ships as soon as it is ready. Verify
 with the `diagnostics.firmware_version` query in `docs/runbooks/laptop-operator.md` §3, then check that
 `irr_program_id` shows `src=rom` before the first push and `src=nvs` after it. Once the first push is
 confirmed and the first scheduled L01 run lands, run

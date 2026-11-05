@@ -51,16 +51,6 @@ iso8601_now() {
     date '+%Y-%m-%dT%H:%M:%S%z'
 }
 
-touch_at() {
-    local timestamp="$1"
-    local path="$2"
-
-    if touch -d "$timestamp" "$path" 2>/dev/null; then
-        return
-    fi
-    touch -t "$(date -j -f '%Y-%m-%dT%H:%M:%S%z' "$timestamp" '+%Y%m%d%H%M.%S')" "$path"
-}
-
 required=(
     firmware.ota.bin
     firmware.bin
@@ -167,9 +157,6 @@ if [[ "$PROMOTE" -eq 1 ]]; then
     cp "$DEST/firmware.ota.bin" "$ARTIFACT_ROOT/last-good.ota.bin"
     printf '%s\n' "$FW_VERSION" > "$ARTIFACT_ROOT/last-good.version"
     cp "$DEST/metadata.env" "$ARTIFACT_ROOT/last-good.metadata.env"
-    if [[ -n "${FIRMWARE_DEPLOYED_AT:-}" ]]; then
-        touch_at "$FIRMWARE_DEPLOYED_AT" "$ARTIFACT_ROOT/last-good.ota.bin"
-    fi
 fi
 
 echo "Archived firmware artifacts: $DEST"

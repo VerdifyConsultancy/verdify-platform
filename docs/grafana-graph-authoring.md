@@ -136,8 +136,8 @@ actuation (`apply_band_track_pinch` feeds `determine_mode_band_first` +
 `resolve_equipment`: `firmware/lib/greenhouse_logic.h` ~1326/1338/1350/1672/2255)
 with `band_track_fraction = 0.25` live — so the controller actively tracks the
 pinched band toward the target. (Don't be fooled by `firmware/artifacts/last-good.version`
-= `cc1bb19`: that's the rollback floor, which lags the running binary through the
-48 h bake.)
+= `cc1bb19`: that's the rollback floor, which lags the running binary until a
+release is promoted.)
 
 When climate sits *outside* the pinched band with actuators idle, it's the
 **cooling-priority arbitration** (can't seal-and-mist while venting for heat),

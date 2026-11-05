@@ -1187,13 +1187,9 @@ def live_checks(audit: Audit, require_ota: bool) -> None:
     else:
         preflight_text = (deploy_preflight.stdout + deploy_preflight.stderr).strip()
         last_line = preflight_text.splitlines()[-1:]
-        bake_only_block = (
-            "48-hour bake not satisfied" in preflight_text
-            and "No unresolved critical/legacy-high alerts" in preflight_text
-        )
         audit.add(
             "firmware OTA preflight",
-            "WARN" if bake_only_block else ("FAIL" if require_ota else "BLOCKED"),
+            "FAIL" if require_ota else "BLOCKED",
             last_line[0] if last_line else "preflight failed",
         )
 
