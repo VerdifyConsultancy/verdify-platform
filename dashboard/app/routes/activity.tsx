@@ -39,7 +39,13 @@ export function loader({ request }: { request: Request }) {
   const to = logRedirect(new URL(request.url));
   return to ? replace(to) : null;
 }
-export const clientLoader = loader;
+// Its own function, never `= loader`, using only imported names: the client build strips `loader` and splits
+// `clientLoader` into a chunk of its own, so naming `loader` here threw as the page's module loaded and the page never
+// hydrated (`routes.test.ts`).
+export function clientLoader({ request }: { request: Request }) {
+  const to = logRedirect(new URL(request.url));
+  return to ? replace(to) : null;
+}
 
 /** Alerts every 15 s; the water status and the recent activity every 60 s (screens §7). */
 const ALERTS_POLL_MS = 15_000;

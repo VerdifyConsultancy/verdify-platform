@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { replace } from "react-router";
-
-/** `/graphs/scorecard?…` → `/graphs/statistics?…`, the query kept. */
-export function statisticsHref(url: string): string {
-  return `/graphs/statistics${new URL(url).search}`;
-}
+import { statisticsHref } from "../lib/graph-url";
 
 /**
  * The daily scorecard's old path (redesign §2.1, D-UX-04): it answers a redirect to Graphs → Statistics with the same
@@ -14,7 +10,11 @@ export function statisticsHref(url: string): string {
 export function loader({ request }: { request: Request }) {
   return replace(statisticsHref(request.url));
 }
-export const clientLoader = loader;
+// Its own function, never `= loader`, and the href from a module rather than this one: the client build strips `loader`
+// and splits `clientLoader` into a chunk of its own, where a name from this file would be undefined (`routes.test.ts`).
+export function clientLoader({ request }: { request: Request }) {
+  return replace(statisticsHref(request.url));
+}
 
 /** Never shown: both loaders redirect. */
 export default function ScorecardRedirect() {

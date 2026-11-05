@@ -51,6 +51,15 @@ export function useNow(): number {
   const skew = useContext(SkewContext);
   return useSyncExternalStore(subscribe, currentSecond, currentSecond) - skew;
 }
+const subscribeNever = () => () => {};
+/**
+ * False in the server's render and in the render that hydrates it, true from then on. A time worked out from now that
+ * renders before the page's data (a window's dates) waits for it, so the server's markup never depends on its clock and
+ * a browser whose clock reads otherwise (a skewed phone, the browser suite's pinned clock) hydrates it unchanged.
+ */
+export function useHydrated(): boolean {
+  return useSyncExternalStore(subscribeNever, () => true, () => false);
+}
 /** The device clock's lead over the server's (ms, 0 within 2 s), for a time read once rather than ticking. */
 export function useServerClockSkew(): number {
   return useContext(SkewContext);

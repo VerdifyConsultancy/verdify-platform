@@ -148,6 +148,9 @@ test("TimeTrack in every state keeps its frame; served markup has no style attri
     expect(container.querySelectorAll(".tt-row"), state).toHaveLength(drawn ? 2 : 0);
     expect(container.querySelector(".tt")?.className.includes("viz-skeleton"), state).toBe(state === "loading");
     expect(container.querySelector(".tt")?.className.includes("is-stale"), state).toBe(state === "stale");
+    // A track with no rows keeps its axis row's height and names no time, so its server render is the same at any clock.
+    expect(container.querySelectorAll(".tt-axis"), state).toHaveLength(1);
+    expect(container.querySelectorAll(".tt-tick"), state).toHaveLength(drawn ? 9 : 0);
     expect(markup(<TimeTrack label="Runs" from={DAY.from} to={DAY.to} rows={ROWS} state={state} />), state).not.toMatch(/\sstyle=/);
     cleanup();
   }

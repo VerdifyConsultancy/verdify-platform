@@ -233,7 +233,8 @@ test("/graphs?range=24h: the outdoor traces state their source and age once, and
   await load(page, "/graphs?range=24h");
   await expect(plots(page).locator("canvas")).toHaveCount(3);
   await expect(notes(page)).toHaveText(["Outdoor · Tempest via the controller · 2 min ago", "Forecast · issued 07:00"]);
-  await expect(page.locator("[data-panel=temperature] .stack-swatches")).toContainText(["Indoor temperature", "Outdoor temperature", "Forecast temperature"]);
+  // One list of swatches, one item a series: an array matches item by item.
+  await expect(page.locator("[data-panel=temperature] .stack-swatches li")).toContainText(["Indoor temperature", "Outdoor temperature", "Forecast temperature"]);
   await layers(page);
   await expect(outdoorChip(page)).toHaveAttribute("aria-current", "true");
   const keys = await seriesKeys(request);

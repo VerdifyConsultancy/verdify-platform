@@ -110,7 +110,9 @@ function Ticks({ scale }: { scale: TimeScale }) {
  * are a `<ul>`, so the track reads as a list; a span with detail is a button named in words. Spans are `tabIndex={-1}`
  * and the track is one tab stop whose arrow keys move along them (`rovingKeys`), so a 12-minute run never becomes an
  * undersized tab stop. Positions are CSSOM custom properties, never a style attribute. While the API is down every span
- * is neutral.
+ * is neutral. A track that draws no rows (loading, empty, unknown, an error) names no time either: its axis row keeps
+ * its height with no ticks, so Now's server render, the loading track, never depends on the clock, and a browser whose
+ * clock reads otherwise (a skewed phone, the browser suite's pinned clock) hydrates it unchanged.
  */
 export function TimeTrack({ label, from, to, rows, now = null, night = [], axis = true, state = "ready" }: TimeTrackProps) {
   const apiDown = useApiDown();
@@ -121,7 +123,7 @@ export function TimeTrack({ label, from, to, rows, now = null, night = [], axis 
   const withEnd = rows.some((row) => row.end !== undefined);
   return <div className={cls("tt", withEnd && "tt-with-end", state === "stale" && "is-stale", apiDown && "is-neutral", state === "loading" && "viz-skeleton")} role="group" aria-label={label}
     tabIndex={drawn ? 0 : undefined} onKeyDown={drawn ? rovingKeys() : undefined}>
-    {axis && <Ticks scale={scale} />}
+    {axis && (drawn ? <Ticks scale={scale} /> : <div className="tt-axis" aria-hidden="true" />)}
     {drawn
       ? <ul className="tt-rows">
         {rows.map((row) => <li key={row.key} className={cls("tt-row", row.muted && "tt-row-muted")} {...row.data}>

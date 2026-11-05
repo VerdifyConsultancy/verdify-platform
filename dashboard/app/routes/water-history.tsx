@@ -15,7 +15,7 @@ import { Delta } from "../components/data/delta";
 import { MetricTile, type TileState } from "../components/data/metric-tile";
 import { Sparkline } from "../components/data/sparkline";
 import { lineLabel } from "../components/forms";
-import { useClockValue } from "../components/freshness";
+import { useClockValue, useHydrated } from "../components/freshness";
 import { SectionHeader } from "../components/layout/section-header";
 import { PanelError } from "../components/panel";
 import { Table, type TableColumn } from "../components/table";
@@ -249,8 +249,10 @@ function RunsSection({ names, today, days, search, setSearch }: { names: Readonl
     return nextSearch;
   }, { replace: true, preventScrollReset: true });
   const span = range.from === range.to ? range.from : `${range.from} to ${range.to}`;
+  // The window's dates come from today's: the server's render and its hydration leave them out (`useHydrated`).
+  const hydrated = useHydrated();
   return <section className="wat-section wat-runs" id="runs" aria-labelledby={headingId}>
-    <SectionHeader id={headingId} title="Runs" meta={`newest first · ${explicit ? span : runs.length && pages.length ? `${periodWords(days).toLowerCase()} as loaded` : span}`} />
+    <SectionHeader id={headingId} title="Runs" meta={`newest first${hydrated ? ` · ${explicit ? span : runs.length && pages.length ? `${periodWords(days).toLowerCase()} as loaded` : span}` : ""}`} />
     <div className="filters runs-filters">
       <label>Line<select value={filters.line ?? ""} onChange={(event) => update({ line: event.target.value })}>
         <option value="">All lines</option>

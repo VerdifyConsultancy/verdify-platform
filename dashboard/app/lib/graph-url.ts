@@ -572,6 +572,10 @@ export function statsHref(span: StatsSpan, typical: TypicalDays): string {
   if (typical !== 30) parts.push(`typical=${typical}`);
   return `/graphs/statistics${parts.length ? `?${parts.join("&")}` : ""}`;
 }
+/** The scorecard's old path (D-UX-04): `/graphs/scorecard?…` → `/graphs/statistics?…`, the query kept. */
+export function statisticsHref(url: string): string {
+  return `/graphs/statistics${new URL(url).search}`;
+}
 /** The local days a span covers, From and To included, at `today`. */
 export function statsDays(span: StatsSpan, today: string): { readonly from: string; readonly to: string; readonly count: number } {
   if (span.kind === "custom") return { from: span.from, to: span.to, count: dayCount(span.from, span.to) };

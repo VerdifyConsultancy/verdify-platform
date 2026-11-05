@@ -13,7 +13,8 @@ import { FakeResizeObserver, MockPlot, created, media, setTokens } from "../char
 import { text } from "../components/test-render";
 import { SessionProvider } from "../lib/session";
 import { advance, requests, startFixtureApi, stopFixtureApi, type FixtureApi, type FixtureOptions } from "../lib/test-fixture-api";
-import { clientLoader, loader, statisticsHref } from "./graphs-scorecard";
+import { statisticsHref } from "../lib/graph-url";
+import { clientLoader, loader } from "./graphs-scorecard";
 import Statistics, { chunks, links, meta } from "./graphs-statistics";
 
 vi.mock("uplot", async () => ({ default: (await import("../charts/fixtures/uplot-mock")).MockPlot }));
