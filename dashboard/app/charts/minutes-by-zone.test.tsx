@@ -135,7 +135,7 @@ test("rows share one cursor, have no drag zoom, and only the last shows the day 
   expect(created.every((plot) => plot.opts.cursor!.drag!.x === false && plot.opts.cursor!.drag!.setScale === false)).toBe(true);
   expect(created.map((plot) => plot.opts.axes![0].show)).toEqual([false, false, false, false, true]);
   const values = created[4].opts.axes![0].values as (self: unknown, splits: number[]) => string[];
-  expect(values(null, [epoch("2026-10-27T06:00:00Z"), epoch("2026-11-02T07:00:00Z")])).toEqual(["10/27", "11/02"]);
+  expect(values(null, [epoch("2026-10-27T06:00:00Z"), epoch("2026-11-02T07:00:00Z")])).toEqual(["Oct 27", "Nov 2"]);
   expect([...container.querySelectorAll(".chart-key li")].map((item) => item.textContent)).toEqual(["VPD", "schedule", "run now", "feed", "prewet", "flush", "cause unknown", "no data", "partial day", "still planned today", "daily cap"]);
   // 30 days, oldest first: one bar slot per day and the window half a day past each end.
   const month: MinutesReport = {

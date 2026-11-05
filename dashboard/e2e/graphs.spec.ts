@@ -57,11 +57,11 @@ test("plot space: at 1440 the temperature plot is at least 180 px tall and only 
   const height = async (id: string) => (await page.locator(`[data-panel=${id}] .stack-plot`).boundingBox())?.height ?? 0;
   await expect(plots(page).locator("canvas")).toHaveCount(3);
   expect(await height("temperature")).toBeGreaterThanOrEqual(180);
-  // Every panel is its reserved height; the bottom one alone adds the time axis under it.
-  expect([await height("temperature"), await height("vpd"), await height("rh")]).toEqual([220, 200, 160 + 54]);
+  // Every panel is its reserved height; the bottom one alone adds the one-line time axis under it.
+  expect([await height("temperature"), await height("vpd"), await height("rh")]).toEqual([220, 200, 160 + 36]);
   await page.setViewportSize(PHONE);
   await expect.poll(() => height("temperature")).toBeGreaterThanOrEqual(130);
-  expect(await height("rh")).toBe(120 + 32);
+  expect(await height("rh")).toBe(120 + 28);
 });
 
 test("on a phone the toolbar is two rows and the temperature plot starts above the bottom bar; Preset, the drawn settings and + Setting live in Layers", async ({ page, request }) => {
@@ -120,14 +120,14 @@ test("the story line states time in band and the excursions, worst first; an exc
 test("the range toolbar: 24 h has 6 h ahead, ‹ steps back by its length, Zoom out doubles it and stays live, Today ends at midnight; all in the URL", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/graphs?range=24h");
-  await expect(resolution(page)).toHaveText(/^Nov 1, 10:42 GMT-07:00 → Nov 2, 16:42 GMT-07:00 \(30 h\)/);
+  await expect(resolution(page)).toHaveText(/^Nov 1, 10:42 → Nov 2, 16:42 \(30 h\)/);
   await expect(page.getByRole("link", { name: "Previous 24 h" })).toHaveAttribute("href", "/graphs?from=2026-10-31T17:42:00Z&to=2026-11-01T17:42:00Z");
   await expect(page.getByText("Next 24 h: not available")).toHaveCount(1);
   await page.getByRole("link", { name: "Zoom out" }).click();
   await expect(page).toHaveURL(/\/graphs\?range=48h$/);
   await page.getByRole("list", { name: "Range" }).getByRole("link", { name: "Today" }).click();
   await expect(page).toHaveURL(/\/graphs\?range=today$/);
-  await expect(resolution(page)).toHaveText(/^Nov 2, 00:00 GMT-07:00 → Nov 3, 00:00 GMT-07:00 \(24 h\)/);
+  await expect(resolution(page)).toHaveText(/^Nov 2, 00:00 → Nov 3, 00:00 \(24 h\)/);
   await page.getByRole("link", { name: "Previous day" }).click();
   await expect(page).toHaveURL(/\/graphs\?from=2026-11-01&to=2026-11-01$/);
   await expect(resolution(page)).toHaveText(/\(25 h across the fall-back\)/);
@@ -137,7 +137,7 @@ test("the range toolbar: 24 h has 6 h ahead, ‹ steps back by its length, Zoom 
 test("an exact ISO window draws exactly that window", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/graphs?from=2026-11-01T08:00:00Z&to=2026-11-01T12:00:00Z");
-  await expect(resolution(page)).toHaveText("Nov 1, 01:00 GMT-07:00 → Nov 1, 05:00 GMT-07:00 (4 h) · one point per minute · gaps stay empty, never zero");
+  await expect(resolution(page)).toHaveText("Nov 1, 01:00 MST → Nov 1, 05:00 (4 h) · one point per minute · gaps stay empty, never zero");
   const series = (await fixtureRequests(request, "API-04")).map((row) => new URL(row.path, "http://fixture.invalid").searchParams);
   // The three panels and the outdoor read; the window ended before now, so no forecast.
   expect(series.map((params) => [params.get("from"), params.get("to")])).toEqual(Array(4).fill(["2026-11-01T08:00:00.000Z", "2026-11-01T12:00:00.000Z"]));

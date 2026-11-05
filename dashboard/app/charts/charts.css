@@ -36,11 +36,11 @@
 .chart-table .table-wrap{max-height:24rem;overflow:auto;margin:.35rem 0}
 
 /* Lanes (#1127, design system §5.2 and §6): rows are HTML at a fixed pitch, the canvas sits over the plot column and
-   paints each row's band at the same pitch, and a spacer under the rows holds the time axis. */
+   paints each row's band at the same pitch, and a spacer under the rows holds the time axis (one line: 36 px, 28 px at 860 px and below, TIME_AXIS_PX). */
 .chart-lanes .lanes-caption{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:0 1rem;margin:0 0 .35rem}
 .chart-lanes .lanes-caption .eyebrow{margin:0}
 .lanes-columns{font:400 .72rem/1.3 var(--mono);color:var(--muted)}
-.lanes{position:relative;--lanes-label:10rem;--lanes-stat:12rem;--lanes-pitch:20px;--lanes-axis:54px;--lanes-top:0px}
+.lanes{position:relative;--lanes-label:10rem;--lanes-stat:12rem;--lanes-pitch:20px;--lanes-axis:36px;--lanes-top:0px}
 .lanes-rows{list-style:none;margin:0;padding:0}
 .lanes-rows[hidden]{display:none}
 .lanes-row{display:grid;grid-template-columns:var(--lanes-label) minmax(0,1fr) var(--lanes-stat);align-items:center;height:var(--lanes-pitch);font-size:.8rem;line-height:1}
@@ -68,7 +68,7 @@
 .plan-row-muted,.plan-row-muted .plan-status{color:var(--muted)}
 .lanes-plan{--lanes-stat:0px;--lanes-top:18px;--plan-head:20px;--lanes-pitch:44px;--lanes-label:6rem}
 @media(max-width:860px){
-  .lanes{--lanes-label:6rem;--lanes-stat:4.5rem;--lanes-pitch:24px;--lanes-axis:32px}
+  .lanes{--lanes-label:6rem;--lanes-stat:4.5rem;--lanes-pitch:24px;--lanes-axis:28px}
   .lanes.lanes-stacked{--lanes-pitch:40px}
   /* The fold line is one 24 px row; its target reaches 44 px over the labels beside it, which take no input. */
   .lanes-fold button::before{content:"";position:absolute;inset:-10px 0}
@@ -128,7 +128,7 @@
 .stack-panel[data-panel=temperature]{--plot-h:220px}
 .stack-panel[data-panel=vpd]{--plot-h:200px}
 .chart-stack .stack-plot{position:relative;height:var(--plot-h);min-height:0;overflow:hidden}
-.chart-stack .stack-panel-last .stack-plot{height:calc(var(--plot-h) + 54px)}
+.chart-stack .stack-panel-last .stack-plot{height:calc(var(--plot-h) + 36px)}
 .stack-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-1) var(--space-3);min-height:1.75rem}
 .stack-name{margin:0;font:600 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
 .stack-unit{text-transform:none;letter-spacing:0;color:var(--muted)}
@@ -176,7 +176,7 @@
 .grid-cell{min-width:0}
 .grid-cell-head{display:none}
 .chart-grid .stack-plot,.chart-grid .grid-plot{position:relative;height:var(--grid-cell-h,120px);min-height:0;overflow:hidden}
-.chart-grid .grid-cell-axis .stack-plot{height:calc(var(--grid-cell-h,120px) + 54px)}
+.chart-grid .grid-cell-axis .stack-plot{height:calc(var(--grid-cell-h,120px) + 36px)}
 .grid-readout{margin:var(--space-1) 0 0;font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums}
 
 /* RangeToolbar (redesign §7.1): presets as nav chips, the window steps, Zoom out and Custom…, then the page's own tools. */
@@ -197,12 +197,12 @@
   .stack-panel[data-panel=temperature]{--plot-h:160px}
   .stack-panel[data-panel=vpd]{--plot-h:150px}
   .stack-panel:not([data-panel=temperature]):not([data-panel=vpd]){--plot-h:120px}
-  .chart-stack .stack-panel-last .stack-plot{height:calc(var(--plot-h) + 32px)}
+  .chart-stack .stack-panel-last .stack-plot{height:calc(var(--plot-h) + 28px)}
   .grid-heads{display:none}
   .grid-row{grid-template-columns:minmax(0,1fr);gap:var(--space-2)}
   .grid-row-name{padding-right:0}
   .grid-cell-head{display:block;font-size:var(--fs-sm)}
-  .chart-grid .grid-cell-axis .stack-plot{height:calc(var(--grid-cell-h,120px) + 32px)}
+  .chart-grid .grid-cell-axis .stack-plot{height:calc(var(--grid-cell-h,120px) + 28px)}
   .range-step,.range-zoom,.range-custom>summary{min-height:var(--tap)}
   .range-step{min-width:var(--tap)}
   .range-tools{margin-left:0}

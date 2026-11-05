@@ -97,14 +97,14 @@ test("a gaps row's reason reads in words, an unknown one raw, and a run with no 
   expect(tooltip(next.plot)[2]).toBe("No data 02:10–02:40: watchdog_reset");
 });
 
-test("on 2026-11-01 axis, tooltip and data-table times from 01:00 to 01:59 carry their offset, at 1440 and 390 px", async () => {
+test("on 2026-11-01 axis times from 01:00 to 01:59 carry their short zone, and tooltip and data-table times their offset, at 1440 and 390 px", async () => {
   const { plot, container } = await mount();
   const values = plot.opts.axes![0].values as (self: unknown, splits: number[], axis: number, space: number, increment: number) => string[];
   const passes = [epoch("2026-11-01T07:00:00Z"), epoch("2026-11-01T07:59:00Z"), epoch("2026-11-01T08:00:00Z"), epoch("2026-11-01T08:59:00Z")];
-  expect(values(plot, passes, 0, 140, 3600)).toEqual(["11/01/2026\n01:00 GMT-06:00", "11/01/2026\n01:59 GMT-06:00", "11/01/2026\n01:00 GMT-07:00", "11/01/2026\n01:59 GMT-07:00"]);
+  expect(values(plot, passes, 0, 110, 3600)).toEqual(["Nov 1 01:00 MDT", "01:59 MDT", "01:00 MST", "01:59 MST"]);
   vi.stubGlobal("matchMedia", media({ narrow: true }));
-  expect(values(plot, passes, 0, 64, 3600)).toEqual(["01:00 GMT-06:00", "01:59 GMT-06:00", "01:00 GMT-07:00", "01:59 GMT-07:00"]);
-  expect(values(plot, [epoch("2026-11-01T06:00:00Z"), epoch("2026-11-01T09:00:00Z")], 0, 64, 3600)).toEqual(["00:00", "02:00"]);
+  expect(values(plot, passes, 0, 64, 3600)).toEqual(["01:00 MDT", "01:59 MDT", "01:00 MST", "01:59 MST"]);
+  expect(values(plot, [epoch("2026-11-01T06:00:00Z"), epoch("2026-11-01T09:00:00Z")], 0, 64, 3600)).toEqual(["Nov 1", "02:00"]);
   plot.hover(epoch("2026-11-01T07:30:00Z"), 18);
   expect(tooltip(plot)[0]).toBe("11/01/2026 01:30 GMT-06:00");
   plot.hover(epoch("2026-11-01T08:30:00Z"), 30);

@@ -9,7 +9,7 @@ import { CsvLink, DataTable, type DataTableBlock } from "./data-table";
 import type { ChartColors, PaintTarget } from "./draw";
 import { paintHatch } from "./lanes-draw";
 import { ChartKey, type KeyItem } from "./legend";
-import { AXIS_FONT, axisLabel, localDay } from "./time-axis";
+import { AXIS_FONT, axisLabel, fitEdges, localDay } from "./time-axis";
 import { tickIncrements } from "./time-series";
 import { tooltipPlugin } from "./tooltip";
 import type { MinutesPeriod, MinutesReport, XRange } from "./types";
@@ -277,13 +277,13 @@ export function paintMinutes(plot: PaintTarget, zone: ZoneBars, colors: ChartCol
   }
 }
 
-/** Day labels ("10/28") under the last row only; ticks a day or more apart, up to a quarter apart for 400 days. */
+/** Day labels ("Oct 28") under the last row only; ticks a day or more apart, up to a quarter apart for 400 days. */
 export function dayAxis(colors: ChartColors, show: boolean): uPlot.Axis {
   return {
-    show, stroke: colors["--muted"], font: AXIS_FONT, size: 28, space: 44, grid: { show: false },
+    show, stroke: colors["--muted"], font: AXIS_FONT, size: 28, space: 52, grid: { show: false },
     ticks: { stroke: colors["--c-grid"], width: 1, size: 4 },
     incrs: [DAY, 2 * DAY, 7 * DAY, 14 * DAY, 28 * DAY, 56 * DAY, 91 * DAY],
-    values: (_plot, splits) => splits.map((split) => axisLabel(split, false, DAY)),
+    values: (plot, splits) => fitEdges(plot, splits, splits.map((split) => axisLabel(split, false, DAY))),
   };
 }
 

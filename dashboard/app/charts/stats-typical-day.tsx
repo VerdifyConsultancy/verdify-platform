@@ -5,7 +5,7 @@ import { formatValue } from "../lib/format";
 import { DataTable, type DataTableBlock } from "./data-table";
 import { paintBandEdges, paintBandFill } from "./draw";
 import { bandAt, bandRuns, extentUnion, paddedRange, type BandKind, type BandRun } from "./marks";
-import { AXIS_FONT, clockTime } from "./time-axis";
+import { AXIS_FONT, clockTime, fitEdges } from "./time-axis";
 import { valueAxis } from "./time-series";
 import { tooltipPlugin } from "./tooltip";
 import type { BandTimeline, MetricDef, Series } from "./types";
@@ -100,7 +100,7 @@ function hourAxis(colors: Readonly<Record<string, string>>): uPlot.Axis {
     stroke: colors["--muted"], font: AXIS_FONT, size: 28, space: 48,
     grid: { stroke: colors["--c-grid"], width: 1 }, ticks: { stroke: colors["--c-grid"], width: 1, size: 4 },
     incrs: [3 * HOUR, 6 * HOUR, 12 * HOUR],
-    values: (_plot, splits) => splits.map((split) => hourText(Math.round((((split - TYPICAL_BASE) / HOUR) % 24) + 24) % 24)),
+    values: (plot, splits) => fitEdges(plot, splits, splits.map((split) => hourText(Math.round((((split - TYPICAL_BASE) / HOUR) % 24) + 24) % 24))),
   };
 }
 

@@ -105,7 +105,7 @@ test("/graphs?range=72h&set=mister_engage_kpa: one stack of three panels on one 
   expect(ids()).toEqual(["temperature", "vpd", "rh"]);
   expect([name("temperature"), name("vpd"), name("rh")]).toEqual(["Temperature °F", "VPD kPa", "RH %"]);
   // The resolution line sits in the stack's foot.
-  expect(text(document.querySelector(".stack-foot .resolution-line"))).toBe("Oct 30, 11:42 GMT-06:00 → Nov 2, 22:42 GMT-07:00 (84 h across the fall-back) · one point per 5 minutes · gaps stay empty, never zero");
+  expect(text(document.querySelector(".stack-foot .resolution-line"))).toBe("Oct 30, 11:42 → Nov 2, 22:42 (84 h across the fall-back) · one point per 5 minutes · gaps stay empty, never zero");
   // The window is the past 72 h plus 12 h ahead (a quarter of it, at most 12 h); every chart, the lanes included, shares one cursor.
   const [temp, vpd, rh] = panels();
   expect(panels()).toHaveLength(3);
@@ -243,7 +243,7 @@ test("an exact ISO window draws exactly that window, with nothing ahead, and as 
   expect(panels()).toHaveLength(3);
   for (const plot of [...panels(), lanesPlot()!]) expect(plot.scales.x).toEqual({ min: from, max: to });
   expect(seriesAsked(api).map((row) => [row.from, row.to])).toEqual(Array(3).fill(["2026-11-01T08:00:00.000Z", "2026-11-01T12:00:00.000Z"]));
-  expect(text(document.querySelector(".resolution-line"))).toBe("Nov 1, 01:00 GMT-07:00 → Nov 1, 05:00 GMT-07:00 (4 h) · one point per minute · gaps stay empty, never zero");
+  expect(text(document.querySelector(".resolution-line"))).toBe("Nov 1, 01:00 MST → Nov 1, 05:00 (4 h) · one point per minute · gaps stay empty, never zero");
   expect(screen.getByRole("list", { name: "Range" }).querySelector("[aria-current]")).toBeNull();
   // The settings catalog polls on its own; the window's reads never ask again: the panels, outdoor, the lanes, the band,
   // two settings and the marks (writes, alerts, runs), and no forecast, as the window ended before now.

@@ -44,6 +44,11 @@ export function repeatedLocalTime(date: Date): boolean {
   const wall = WALL_CLOCK.format(date);
   return WALL_CLOCK.format(new Date(date.getTime() - 3_600_000)) === wall || WALL_CLOCK.format(new Date(date.getTime() + 3_600_000)) === wall;
 }
+const ZONE_NAME = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, timeZoneName: "short" });
+/** "MDT" or "MST": the short zone name at an instant, which tells the two passes of the repeated hour apart on an axis. */
+export function zoneName(date: Date): string {
+  return ZONE_NAME.formatToParts(date).find((part) => part.type === "timeZoneName")?.value ?? "";
+}
 function withRepeatedOffset(date: Date, text: string): string {
   if (!repeatedLocalTime(date)) return text;
   return `${text} ${OFFSET.formatToParts(date).find((part) => part.type === "timeZoneName")?.value || ""}`;
