@@ -74,14 +74,18 @@ function useRuntimeWindow(today: string) {
   }, RUNTIME_POLL_MS);
 }
 
-function RuntimeRowView({ row, max }: { row: RuntimeRow; max: number }) {
+function RuntimeRowView({ row, max, today }: { row: RuntimeRow; max: number; today: string }) {
   const values = row.days.map((day) => (day.seconds === null ? null : day.seconds / 3600));
   const most = row.days.reduce<RuntimeDay | null>((best, day) => (day.seconds !== null && (best === null || day.seconds > (best.seconds ?? -1)) ? day : best), null);
-  const label = `${row.label}, time on per day for ${RUNTIME_DAYS} days: average ${minutesWords(row.average)} a day${most ? `, most ${minutesWords(most.seconds)} on ${shortDay(most.date)}` : ""}`;
+  // Today is not over: its bar is outlined, and its time so far sits beside the average of the complete days.
+  const now = row.days.find((day) => day.date === today);
+  const soFar = now && now.seconds !== null ? `today ${minutesWords(now.seconds)} so far` : null;
+  const label = `${row.label}, time on per day for ${RUNTIME_DAYS} days: average ${minutesWords(row.average)} a day${soFar ? `, ${soFar}` : ""}${most ? `, most ${minutesWords(most.seconds)} on ${shortDay(most.date)}` : ""}`;
   return <li className="ctl-runtime-row" data-equipment={row.equipment}>
     <span className="ctl-runtime-name">{row.label}</span>
-    <span className="ctl-runtime-bars"><Sparkline values={values} kind="bars" size="tile" domain={{ low: 0, high: max }} label={label} /></span>
-    <span className="ctl-runtime-average"><span className="ctl-runtime-figure">{minutesWords(row.average)}</span> <span className="meta">a day</span></span>
+    <span className="ctl-runtime-bars"><Sparkline values={values} kind="bars" size="tile" domain={{ low: 0, high: max }} partial={row.days.map((day) => day.partial)} label={label} /></span>
+    <span className="ctl-runtime-average"><span className="ctl-runtime-figure">{minutesWords(row.average)}</span> <span className="meta">a day</span>
+      {soFar && <> <span className="meta ctl-runtime-today">{soFar}</span></>}</span>
   </li>;
 }
 
@@ -94,7 +98,7 @@ export function DailyRuntime({ today }: { today: string }) {
   const state: PanelState = data ? (rows.length ? "ready" : "empty") : read.isError ? "error" : "loading";
   return <Panel title={`Daily runtime · ${RUNTIME_DAYS} days`} thing="the daily runtime" state={state} reserve="md" onRetry={() => void read.refetch()}
     foot={data ? <span>Time on per America/Denver day; today so far. The average counts the complete days.</span> : undefined}>
-    <ul className="ctl-runtime">{rows.map((row) => <RuntimeRowView key={row.equipment} row={row} max={max} />)}</ul>
+    <ul className="ctl-runtime">{rows.map((row) => <RuntimeRowView key={row.equipment} row={row} max={max} today={today} />)}</ul>
     <Details summary="Daily runtime table" className="ctl-runtime-table">
       <div className="table-wrap" role="region" tabIndex={0} aria-label="Daily runtime table">
         <table>

@@ -88,6 +88,10 @@ a.picker-item:hover{background:var(--field)}
 .gr-skeleton-strip{height:12rem}
 .gr-kpis{align-items:stretch}
 .gr-kpis .metric-tile{min-height:10rem}
+/* The Iris tile's strip: a cell a day in the tile's width, as tall as the other tiles' sparklines, never a scroll. */
+.gr-kpi-strip .strip{gap:1px}
+.gr-kpi-strip .strip>li{flex:1 1 0;min-width:1px;max-width:none}
+.gr-kpi-strip .strip-cell{height:24px}
 .gr-days-wrap{display:grid;gap:var(--space-3);min-width:0}
 .gr-days{padding-bottom:var(--space-1)}
 .gr-days-grid{display:grid;gap:var(--space-2);min-width:calc(var(--gr-days, 30) * .625rem + 9.75rem)}

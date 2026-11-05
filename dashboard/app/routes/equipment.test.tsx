@@ -453,15 +453,19 @@ test("daily runtime: 14 local days of API-05, one bar row per heat 1, heat 2, fa
   expect([query.get("from"), query.get("to"), query.getAll("equipment")]).toEqual(["2026-10-20T06:00:00.000Z", new Date(NOW).toISOString(), ["heat1", "heat2", "fan1", "fan2", "vent", "fog"]]);
   const panel = screen.getByRole("region", { name: "Daily runtime · 14 days" });
   const rows = [...panel.querySelectorAll(".ctl-runtime-row")];
+  // The average counts the complete days; today, not over, says its time so far beside it.
   expect(rows.map((row) => [row.getAttribute("data-equipment"), text(row.querySelector(".ctl-runtime-name")), text(row.querySelector(".ctl-runtime-average"))])).toEqual([
-    ["heat1", "Heat 1 electric", "0 min a day"], ["heat2", "Heat 2 gas", "0 min a day"], ["fan1", "Fan 1", "0 min a day"], ["fan2", "Fan 2", "0 min a day"],
-    ["vent", "Vent", "0 min a day"], ["fog", "Fog L11", "0 min a day"],
+    ["heat1", "Heat 1 electric", "0 min a day today 3 h 5 min so far"], ["heat2", "Heat 2 gas", "0 min a day today 0 min so far"], ["fan1", "Fan 1", "0 min a day today 0 min so far"],
+    ["fan2", "Fan 2", "0 min a day today 2 h 10 min so far"], ["vent", "Vent", "0 min a day today 55 min so far"], ["fog", "Fog L11", "0 min a day today 6 min so far"],
   ]);
-  // Each row is an image named by its numbers; the bars share one scale, today's heat 1 the tallest.
+  // Each row is an image named by its numbers; the bars share one scale, today's heat 1 the tallest. A day of 0 is a
+  // stub, never nothing, and today's bar is outlined: the day is not over.
   const heat1 = rows[0].querySelector("svg.spark")!;
   expect(heat1.getAttribute("role")).toBe("img");
-  expect(text({ textContent: heat1.getAttribute("aria-label") } as Element)).toBe("Heat 1 electric, time on per day for 14 days: average 0 min a day, most 3 h 5 min on Nov 2");
-  expect(heat1.querySelectorAll(".spark-bar")).toHaveLength(14);
+  expect(text({ textContent: heat1.getAttribute("aria-label") } as Element)).toBe("Heat 1 electric, time on per day for 14 days: average 0 min a day, today 3 h 5 min so far, most 3 h 5 min on Nov 2");
+  expect(heat1.querySelectorAll(".spark-bar, .spark-zero, .spark-none")).toHaveLength(14);
+  expect([...heat1.querySelectorAll(".spark-bar")].map((bar) => bar.getAttribute("class"))).toEqual(["spark-bar spark-bar-partial"]);
+  expect(heat1.querySelectorAll(".spark-zero")).toHaveLength(13);
   // The table: one row a day, oldest first, today marked.
   const table = panel.querySelector(".ctl-runtime-table table")!;
   expect([...table.querySelectorAll("thead th")].map((cell) => text(cell))).toEqual(["Day", "Heat 1 electric", "Heat 2 gas", "Fan 1", "Fan 2", "Vent", "Fog L11"]);

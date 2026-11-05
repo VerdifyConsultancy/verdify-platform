@@ -172,6 +172,13 @@ span.viz-skeleton.spark-tile{height:28px}span.viz-skeleton.spark-row{height:20px
 .spark.is-stale .spark-line,.spark.is-stale .spark-point,.spark.is-stale .spark-dot{stroke:var(--muted)}
 .spark.is-stale .spark-bar{fill:var(--muted)}
 .spark.is-neutral .spark-band{fill:var(--field)}
+/* Zero is a 1 px stub and no data a hatch, so neither reads as nothing drawn; a partial day is a dashed --muted outline, or a hollow last point after a dashed segment. */
+.spark-zero{fill:var(--line-strong)}
+.spark-none{fill:none;stroke:var(--line-strong);stroke-width:1}
+.spark .spark-bar.spark-bar-partial{fill:#fff;stroke:var(--muted);stroke-width:1;stroke-dasharray:2 1.5}
+.spark .spark-line.spark-line-partial{stroke-dasharray:2 2}
+.spark .spark-dot.spark-dot-partial{stroke-width:5}
+.spark-dot-hole{fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round}
 
 .delta{color:var(--ink);font-variant-numeric:tabular-nums}
 .delta-vs,.delta-unknown{color:var(--muted)}
