@@ -19,7 +19,7 @@
  * Each panel fails alone, and Stop all water renders whatever the water status can or cannot show. Nothing here renders
  * greenhouse data on the server: the server render is the loading state, and the data loads in the browser.
  */
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { RunningAndNext } from "../components/coming-up";
 import { useClockValue } from "../components/freshness";
@@ -33,8 +33,8 @@ import { PanelErrorBoundary } from "../components/panel";
 import { ZoneTiles } from "../components/zone-tiles";
 import { RECENT_ALERTS } from "../lib/activity";
 import { localDate } from "../lib/format";
-import { nowAnswer } from "../lib/now-answer";
-import { SessionEnded } from "../lib/operator-api";
+import { nowAnswer, stepBandHold, type BandHold } from "../lib/now-answer";
+import { SessionEnded, type Now as NowData } from "../lib/operator-api";
 import { READ_INTERVAL_MS, SETTLING_INTERVAL_MS, irrigationSettling, panelRead, readKey, useApiRead } from "../lib/queries";
 import { useShellNow, useShellStatus } from "../lib/shell";
 import { useStop } from "../lib/writes";
@@ -42,6 +42,17 @@ import { useStop } from "../lib/writes";
 export const meta = () => [{ title: "Now · Verdify dashboard" }];
 /** Needs someone reads API-14 every 15 s. */
 export const ALERTS_POLL_MS = 15_000;
+
+/**
+ * The answer's dwell state over the API-02 answers this page has seen (`stepBandHold`), so row 5's headline and condition
+ * line do not flicker at a band edge. Derived state, stepped once per new `server_time`.
+ */
+export function useBandHold(now: NowData | null | undefined): BandHold | null {
+  const [hold, setHold] = useState<BandHold | null>(() => stepBandHold(null, now));
+  const next = stepBandHold(hold, now);
+  if (next !== hold) setHold(next);
+  return next;
+}
 
 export default function Now() {
   const shell = useShellNow();
@@ -59,7 +70,8 @@ export default function Now() {
   // entry's error is the newest read's, the shell's poll or a Stop's readback (a success clears it); the poll's own
   // failure count lags a readback that answered. A 401 is the session ending, which the shell's card says.
   const failed = shell.error !== null && shell.error !== undefined && !(shell.error instanceof SessionEnded);
-  const answer = nowAnswer({ now: shell.data, failed });
+  const hold = useBandHold(shell.data);
+  const answer = nowAnswer({ now: shell.data, failed, hold });
   const retryNow = useCallback(() => { void client.refetchQueries({ queryKey: readKey("API-02"), exact: true }); }, [client]);
   const stopControl = { stop: () => { void stop(); }, sending, confirming };
   // The page rhythm (redesign §3.4): the hero with the quick actions under it, then the sections at the section gap.
