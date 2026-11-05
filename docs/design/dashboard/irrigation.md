@@ -44,7 +44,7 @@ a decision as written, v2 keeps what the decision does and drops any procedure i
 | D-IRP-08 | Turning Schedule on for a mister with no check needs the same check (for L04: the nozzles over the Vandas and the walkway). Center VPD membership never expires | Accepted, simplified |
 | D-IRP-09 | A scheduled pulse is skipped on a measured RH ≥ 90 % or a measured dew-margin breach. No vent gate. Schedules never bypass the soft budget. Solar-night windows are allowed | Accepted (owner acknowledgement and #410 evidence dropped) |
 | D-IRP-10 | Mist and fog hold only while Frigate confirms occupancy, through the Home Assistant occupancy sensor, the only input (Round 2b A; §7). Unknown or stale occupancy means mist runs | Changed |
-| D-IRP-11 | "Mist now" is a one-off scheduled window on a mister with `schedule_member` on, under the same rails. There is no manual mister origin | Accepted |
+| D-IRP-11 | "Mist now" is a one-off scheduled window on a mister with `schedule_member` on, under the same rails. There is no manual mister origin | Superseded 2026-11-05 (#1343): any wired, enabled line runs once, a mister with Schedule on or off, under the same rails |
 | D-IRP-12 | Seed a `vanda-degraded` set: three center slots marked `degraded_only`. They run only while VPD sensing is degraded, in daylight, while the dew margin can still be computed, and never in SENSOR_FAULT | Accepted (observe mode dropped) |
 | D-IRP-13 | A zone whose own probe is out uses its peer probes, then the house average | Changed |
 | D-IRP-14 | Every physically connected line is schedulable, fertilizer included. Fertilizer schedules run even with sensors offline. The firmware hard-block on L06, L08 and L10 becomes a per-line enable | Changed |
@@ -288,8 +288,10 @@ and centi-gallons), so they are never NaN, and SAF-4 still trips after a power c
 - **Run-now** starts at once or is refused, and nothing is queued: `line_busy` if that line is already
   running; `manifold_busy` if another valve holds the manifold (the detail names the line and until
   when); `cap_reached` beyond the line's remaining daily minutes; `line_disabled`; `line_paused`;
-  `line_faulted` while a mister zone is latched (§5 F10). On a mister, run-now is a one-off window and
-  needs `schedule_member` (`not_schedule_member`; D-IRP-11). The API refuses what it can see in the
+  `line_faulted` while a mister zone is latched (§5 F10). On a mister, run-now is a one-off window under
+  the scheduled rails (the zone's duty cap less its VPD reserve, SAF-4, sensor fault), Schedule on or off
+  (#1343, superseding D-IRP-11); until the controller runs the firmware with #1343 the API still refuses
+  a mister with Schedule off (`not_schedule_member`), read from its `fw_version` stamp. The API refuses what it can see in the
   stored lines and the newest `irr_state` (422). The device may still refuse, for example mist in
   SENSOR_FAULT; every refusal but `line_busy` (and the device-only `bad_args` and `storage`) then ends
   the request `skipped` in `irr_events` (slot 0) with its reason, which the line shows in words (§4.8).

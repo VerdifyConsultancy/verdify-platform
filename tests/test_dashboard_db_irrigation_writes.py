@@ -66,12 +66,13 @@ READS_OBJECTS = (
     ("plan_journal plan_journal_pkey", "CONSTRAINT"),
     ("v_active_plan", "VIEW"),
     ("crop_band_anchors", "TABLE"),
+    ("diagnostics", "TABLE"),
 )
 # 259 grants these to the MCP duty; VD-74 grants them, and the rest below, to the dashboard duty.
 STAND_IN_GRANTS = """
 GRANT SELECT ON public.alert_log, public.climate, public.equipment_state, public.setpoint_changes,
     public.setpoint_clamps, public.setpoint_snapshot, public.slack_alert_runbooks, public.system_state,
-    public.v_active_plan TO verdify_mcp_runtime, verdify_dashboard_runtime;
+    public.v_active_plan, public.diagnostics TO verdify_mcp_runtime, verdify_dashboard_runtime;
 GRANT SELECT ON public.v_desired_state_current, public.v_irrigation_day_coverage TO verdify_dashboard_runtime;
 GRANT SELECT, INSERT ON public.activity_log TO verdify_dashboard_runtime;
 GRANT USAGE ON SEQUENCE public.activity_log_id_seq TO verdify_dashboard_runtime;
@@ -153,7 +154,7 @@ def seeded(seeds):
         conn = await connect()
         try:
             await conn.execute(
-                "TRUNCATE public.equipment_state, public.climate, public.system_state, public.data_gaps, "
+                "TRUNCATE public.equipment_state, public.climate, public.system_state, public.data_gaps, public.diagnostics, "
                 "public.setpoint_snapshot, public.activity_log, public.desired_state, public.irrigation_ledger, "
                 "public.irrigation_command, public.irrigation_push"
             )
@@ -953,6 +954,31 @@ def test_a_run_refused_on_a_disabled_paused_faulted_or_non_member_line_in_that_o
     problem = refused(MCP, writes.run, AGENT, "L07", **body)
     assert (problem.code, problem.retryable) == ("line_busy", True) and problem.retry_after_s > 0
     assert counts() == (0, 0, 0)
+
+
+@pytest.mark.parametrize(
+    ("version", "accepted"),
+    [
+        (None, False),  # no diagnostics row in the last day: keep the refusal
+        ("2026.11.5.0131.57fe2a2e", False),  # the firmware before #1343
+        ("garbage", False),
+        ("2026.11.6.0900.abcdef12", True),
+        ("2026.12.1.1200.abcdef12", True),
+    ],
+)
+def test_a_mister_runs_with_schedule_off_once_the_controller_runs_the_1343_firmware(version, accepted):
+    set_engine()
+    enable_line("L07")
+    if version is not None:
+        sql("INSERT INTO public.diagnostics (ts, firmware_version) VALUES (now() - interval '1 minute', $1)", version)
+    body = {"on_s": 30, "count": 2, "gap_s": 60}
+    if accepted:
+        command = call(MCP, writes.run, AGENT, "L07", **body).value
+        assert (command.kind, command.line_id, command.status, command.args) == ("run", "L07", "pending", body)
+    else:
+        problem = refused(MCP, writes.run, AGENT, "L07", **body)
+        assert (problem.code, problem.retryable) == ("not_schedule_member", False)
+        assert counts() == (0, 0, 0)
 
 
 def test_a_back_off_does_not_refuse_a_run_and_a_fertilizer_mister_needs_no_schedule_flag():

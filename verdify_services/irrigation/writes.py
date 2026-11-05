@@ -43,9 +43,10 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
@@ -643,8 +644,35 @@ def _mister_zone(line_id: str) -> frozenset[str]:
     return frozenset({clean, *(fert for fert, partner in CLEAN_PARTNER.items() if partner == clean)})
 
 
-def _check_run_rails(line: LineSpec, reading: IrrState | None, now: datetime) -> None:
-    """``line_disabled``, ``line_paused``, ``line_faulted`` and ``not_schedule_member``, from the stored line."""
+# #1343 (supersedes D-IRP-11): a one-time run of any enabled line, a clean mister with Schedule off included. The
+# controller refused that run (``not_schedule_member``) before the firmware that drops the rule, so the API keeps the
+# refusal until the controller reports a build stamped on or after this day (``fw_version`` is
+# ``YYYY.M.D.HHMM.<sha>``; the Mac stamps local time and the builder UTC, so the cutoff is the day after #1343's
+# firmware change). An unknown or unreadable version keeps the refusal, so the worst a stale stamp can do is the
+# controller's own ``not_schedule_member`` in the ledger, never a run the firmware would not take.
+RUN_ANY_MISTER_FIRMWARE_FROM = date(2026, 11, 6)
+_FW_STAMP = re.compile(r"^(\d{4})\.(\d{1,2})\.(\d{1,2})\.\d{3,4}\.")
+_FIRMWARE_VERSION_SQL = (
+    "SELECT firmware_version FROM public.diagnostics WHERE ts > now() - interval '1 day' "
+    "AND firmware_version IS NOT NULL AND COALESCE(greenhouse_id, 'vallery') = $1 ORDER BY ts DESC LIMIT 1"
+)
+
+
+def firmware_runs_any_mister(version: str | None) -> bool:
+    """Whether the controller's ``fw_version`` is a build that takes a run-now on a mister with Schedule off."""
+    match = _FW_STAMP.match(version or "")
+    if match is None:
+        return False
+    try:
+        built = date(int(match[1]), int(match[2]), int(match[3]))
+    except ValueError:
+        return False
+    return built >= RUN_ANY_MISTER_FIRMWARE_FROM
+
+
+def _check_run_rails(line: LineSpec, reading: IrrState | None, now: datetime, *, any_mister: bool = False) -> None:
+    """``line_disabled``, ``line_paused``, ``line_faulted`` and, on a controller that still needs Schedule for a
+    mister's run-now (``any_mister`` false), ``not_schedule_member``, from the stored line."""
     target = line.line_id
     if not line.enabled:
         raise ServiceError(
@@ -671,11 +699,12 @@ def _check_run_rails(line: LineSpec, reading: IrrState | None, now: datetime) ->
                     field="line_id",
                 )
             )
-    if target in MISTER_MASK_BIT and not line.schedule_member:
+    if target in MISTER_MASK_BIT and not line.schedule_member and not any_mister:
         raise ServiceError(
             problem(
                 "not_schedule_member",
-                f"{target} has Schedule off, and a run on a mister is a one-off scheduled window; turn it on to run",
+                f"{target} has Schedule off, and the controller's firmware runs a mister only with Schedule on until "
+                "its next flash; turn Schedule on to run it now",
                 field="line_id",
             )
         )
@@ -752,7 +781,10 @@ async def _check_engine_run(conn: asyncpg.Connection, target: str, args: RunArgs
     line = LineSpec.from_row(row)
     now = row["now"]
     reading = irr_state_reading(await conn.fetchval(_ENGINE_SQL, GREENHOUSE_ID, IRR_STATE_ENTITY))
-    _check_run_rails(line, reading, now)
+    any_mister = False
+    if target in MISTER_MASK_BIT and line.enabled and not line.schedule_member:
+        any_mister = firmware_runs_any_mister(await conn.fetchval(_FIRMWARE_VERSION_SQL, GREENHOUSE_ID))
+    _check_run_rails(line, reading, now, any_mister=any_mister)
     await _check_run_busy(conn, target, reading, now)
     await _check_run_cap(conn, line, args)
 
@@ -783,7 +815,8 @@ async def run(
     With the engine, the body per line kind (drips ``minutes``; L02 and L06 add ``prewet_s`` and ``flush_s``;
     misters ``on_s``, ``count`` and ``gap_s``; L08 and L10 those three plus ``prewet_s`` and ``flush_s``): a missing
     field or another kind's is ``invalid_request`` with ``field``, and L03 and L11 are ``unknown_target``. Then, in
-    this order, ``line_disabled``, ``line_paused``, ``line_faulted``, ``not_schedule_member``, ``line_busy``,
+    this order, ``line_disabled``, ``line_paused``, ``line_faulted``, ``not_schedule_member`` (a clean mister with
+    Schedule off, only until the controller runs #1343's firmware: ``firmware_runs_any_mister``), ``line_busy``,
     ``manifold_busy`` and ``cap_reached``. An accepted run is one ``pending`` command with the body as its ``args``.
 
     A refusal stores nothing. Returns ``WriteResult[Command]``; the REST answer is 202.

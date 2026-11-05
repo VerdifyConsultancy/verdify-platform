@@ -8,7 +8,7 @@ import { fixture } from "../../e2e/fixtures/index.mjs";
 import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
 import type { Session } from "../lib/session";
 import { NOW, OPERATOR, UUID, advance, renderWithApi, startFixtureApi, stopFixtureApi, writes } from "../lib/test-fixture-api";
-import { CheckSheet, checkAction } from "./check-sheet";
+import { CheckSheet, RUN_THEN_TEXT, checkAction } from "./check-sheet";
 import { text } from "./test-render";
 
 afterEach(() => { cleanup(); stopFixtureApi(); });
@@ -37,6 +37,39 @@ test("what ?check= asks: enabling a disabled line, Schedule on an enabled mister
   expect(checkAction({ ...lineOf(from, "L02"), check: checked }, null)).toBeNull();
   // L01 is enabled with no check: its check comes with its first schedule in the editor.
   expect(checkAction(lineOf(from, "L01"), null)).toBeNull();
+  // #1343: a disabled line's Run… asks to enable it, with or without a check; never an enabled or a reserved line.
+  expect(checkAction(lineOf(from, "L07"), "run")).toBe("enable");
+  expect(checkAction({ ...lineOf(from, "L02"), check: checked }, "run")).toBe("enable");
+  expect(checkAction(lineOf(from, "L01"), "run")).toBeNull();
+  expect(checkAction({ ...lineOf(from, "L02"), reserved: true }, "run")).toBeNull();
+});
+
+test("#1343 Run… on a disabled line: the sheet says the line is off, asks the check once, enables it and opens the run dialog", async () => {
+  const api = open("/water?check=L07&for=run");
+  expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Enable L07");
+  expect(screen.getByRole("dialog").querySelector("[data-run-then]")?.textContent).toBe(RUN_THEN_TEXT);
+  fireEvent.click(sheet().getByRole("checkbox", { name: /^Checked:/ }));
+  fireEvent.click(sheet().getByRole("button", { name: "Enable" }));
+  await advance(0);
+  expect(writes(api).map((row) => [row.path, row.body])).toEqual([["/api/v1/irrigation/lines/L07", { enabled: true, checked: true, manual: true }]]);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(where()).toBe("?run=L07");
+});
+
+test("#1343 Run… on a disabled line with its check: no check asked again, Enable sends {enabled, manual} and the run dialog follows", async () => {
+  const from = lines().map((line) => (line.line_id === "L02" ? { ...line, check: checked } : line));
+  const api = open("/water?check=L02&for=run", OPERATOR, "lines-unchecked", from);
+  // The server holds the same check the card reads.
+  api.respond({ method: "PUT", url: "/api/v1/irrigation/lines/L02", headers: {}, body: { enabled: false, checked: true } });
+  expect(sheet().queryByRole("checkbox", { name: /^Checked:/ })).toBeNull();
+  const save = sheet().getByRole<HTMLButtonElement>("button", { name: "Enable" });
+  expect(save.disabled).toBe(false);
+  fireEvent.click(save);
+  await advance(0);
+  expect(writes(api).map((row) => row.body).at(-1)).toEqual({ enabled: true, manual: true });
+  expect(where()).toBe("?run=L02");
+  expect(screen.getByRole("status").textContent).toContain("Requested: L02 enabled");
+  expect(screen.getByRole("status").textContent).not.toContain("check recorded");
 });
 
 test("enable: the line's check, a note up to 500, Manual ticked and Reason; Enable stays disabled until Checked is ticked, then sends once and closes", async () => {

@@ -2266,7 +2266,7 @@ enum class IrrRunResult : uint8_t {
   kLineDisabled,
   kLinePaused,
   kLineFaulted,        // a latched mister zone
-  kNotScheduleMember,  // a clean mister with schedule_member off
+  kNotScheduleMember,  // retired (#1343): never returned; kept so the token indices stay stable
   kSensorFault,        // device only: no engine mist in SENSOR_FAULT
   kBadArgs,            // device only: outside the line kind's bounds, or not a schedulable line
   kStorage,            // device only: a fertilizer journal that did not save and sync
@@ -2276,7 +2276,10 @@ constexpr const char* kRunResultTokens[] = {"started",         "line_busy",     
                                             "line_faulted",    "not_schedule_member", "sensor_fault",
                                             "bad_args",        "storage"};
 
-// Run a line now (D-IRP-11: on a mister, a one-off window under the same rails).
+// Run a line now: any enabled wet line once (#1343, superseding D-IRP-11's schedule-member
+// rule). On a clean mister it is a one-off window whether or not Schedule is on, under the
+// same rails as a scheduled one: the zone's duty cap less its VPD reserve
+// (zone_sched_left_s), SAF-4, the watchdog latch and sensor fault.
 // Starts at once or is refused; nothing queues. A drip in SAFETY_COOL or a VPD
 // emergency starts paused and resumes after it; a fertilizer run in SAFETY_COOL is
 // refused manifold_busy (it would end at once). A refusal other than line_busy,
@@ -2304,9 +2307,6 @@ inline IrrRunResult irr_run_now(IrrEngine& e, const IrrRunArgs& a, uint32_t now_
   } else if (is_mister(line) && (e.in.latch_mask & zone_lines(line))) {
     res = IrrRunResult::kLineFaulted;
     why = IrrReason::kFlt;
-  } else if (is_clean_mister(line) && !schedule_member(e, line)) {
-    res = IrrRunResult::kNotScheduleMember;
-    why = IrrReason::kNsm;
   } else if (is_mister(line) && e.in.sensor_fault) {
     res = IrrRunResult::kSensorFault;
     why = IrrReason::kSf;
