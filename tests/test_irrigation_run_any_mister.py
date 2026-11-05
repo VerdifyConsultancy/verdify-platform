@@ -7,7 +7,6 @@ from __future__ import annotations
 import pytest
 
 from verdify_services.irrigation.writes import (
-    FOG_RUN_FIRMWARE_FROM,
     RUN_ANY_MISTER_FIRMWARE_FROM,
     _resolve_target,
     firmware_runs_any_mister,
@@ -38,22 +37,29 @@ def test_the_cutoff_is_after_the_last_firmware_without_the_change():
     assert RUN_ANY_MISTER_FIRMWARE_FROM.isoformat() == "2026-11-06"
 
 
-# #1343 follow-up and #1336: fog runs once only on the firmware that takes it (a new cutoff, after #1343's).
+# #1343 follow-up: fog runs once only while irr_caps names fog_run for the version the controller runs. No date gate.
+V = "2026.11.5.2200.abcdef1"
+
+
 @pytest.mark.parametrize(
-    ("version", "expected"),
+    ("version", "caps", "expected"),
     [
-        (None, False),
-        ("2026.11.6.0000.abcdef1", False),  # #1343's firmware day: not yet
-        ("2026.11.7.0000.abcdef1", True),
-        ("2027.1.2.1200.abcdef1", True),
+        (V, f"fw={V} caps=fog_run,run_any_mister", True),
+        (V, f"fw={V} caps=run_any_mister", False),  # a build without the capability
+        ("2026.11.5.2300.0123456", f"fw={V} caps=fog_run", False),  # a rollback or another build since
+        (V, None, False),  # never published: fails closed
+        (None, f"fw={V} caps=fog_run", False),
+        (V, "fog_run", False),  # outside the grammar
     ],
 )
-def test_the_fog_run_once_firmware_stamp_decides(version, expected):
-    assert firmware_runs_fog(version) is expected
+def test_the_fog_run_once_capability_decides(version, caps, expected):
+    assert firmware_runs_fog(version, caps) is expected
 
 
-def test_the_fog_cutoff_follows_the_mister_cutoff():
-    assert FOG_RUN_FIRMWARE_FROM > RUN_ANY_MISTER_FIRMWARE_FROM
+def test_a_same_day_build_with_the_capability_runs_any_mister():
+    assert firmware_runs_any_mister(V) is False  # its stamp is before the cutoff
+    assert firmware_runs_any_mister(V, f"fw={V} caps=fog_run,run_any_mister") is True
+    assert firmware_runs_any_mister(V, f"fw={V}.dirty caps=run_any_mister") is False
 
 
 def test_a_physical_line_and_variant_name_their_relay():

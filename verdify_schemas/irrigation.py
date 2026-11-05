@@ -141,6 +141,12 @@ from verdify_schemas.solar import SolarTimes, compute_solar_times
 from verdify_schemas.tunable_registry import IRRIGATION_SITE_PARAMS, REGISTRY
 
 __all__ = [
+    "FOG_RUN_CAP",
+    "RUN_ANY_MISTER_CAP",
+    "IRR_CAPS_ENTITY",
+    "IrrCaps",
+    "firmware_takes",
+    "parse_irr_caps",
     "BOUNDS_BY_KIND",
     "BRIDGE_RUN_LINE",
     "BRIDGE_RUN_WINDOW_S",
@@ -464,6 +470,7 @@ _FAULT_CODE_OF: Mapping[str, str] = MappingProxyType({word: code for code, word 
 
 ROM_HASH16 = "0" * 16
 IRR_TEXT_MAX_LEN = 255
+
 IRR_EVENTS_MAX = 8
 EVENT_DAY_EPOCH = date(1970, 1, 1)
 
@@ -471,6 +478,46 @@ _U16 = Annotated[int, Field(strict=True, ge=0, le=0xFFFF)]
 _U32 = Annotated[int, Field(strict=True, ge=0, le=0xFFFF_FFFF)]
 _SlotId = Annotated[int, Field(strict=True, ge=1, le=0xFFFF)]
 _FROZEN = ConfigDict(frozen=True, extra="forbid")
+
+
+# ``irr_caps`` (#1343 follow-up): ``fw=<fw_version> caps=<cap>[,<cap>...]``, what the running build takes beside the
+# version it runs (firmware ``verdify_irr::kIrrCaps``). A capability counts only for the version the controller reports,
+# so a build that never published it, or a rollback, fails closed.
+IRR_CAPS_ENTITY = "irr_caps"
+FOG_RUN_CAP = "fog_run"
+# #1343: a clean mister runs once with Schedule off.
+RUN_ANY_MISTER_CAP = "run_any_mister"
+_IRR_CAPS = re.compile(r"fw=(\S+) caps=([a-z0-9_]+(?:,[a-z0-9_]+)*)")
+
+
+class IrrCaps(BaseModel):
+    """A parsed ``irr_caps``: the build's version and the capabilities it takes."""
+
+    model_config = _FROZEN
+
+    firmware_version: str
+    caps: frozenset[str]
+
+
+def parse_irr_caps(text: str) -> IrrCaps:
+    """Parse ``fw=<version> caps=<cap>[,<cap>...]``."""
+    _check_text(text, "irr_caps")
+    match = _IRR_CAPS.fullmatch(text)
+    if match is None:
+        raise ValueError(f"irr_caps {text!r} is not 'fw=<version> caps=<cap>[,<cap>...]'")
+    return IrrCaps(firmware_version=match[1], caps=frozenset(match[2].split(",")))
+
+
+def firmware_takes(caps_text: str | None, firmware_version: str | None, cap: str) -> bool:
+    """Whether the controller running ``firmware_version`` reports ``cap`` in ``irr_caps``; false when either is
+    unknown, unreadable or names another version."""
+    if not caps_text or not firmware_version:
+        return False
+    try:
+        caps = parse_irr_caps(caps_text)
+    except ValueError:
+        return False
+    return caps.firmware_version == firmware_version and cap in caps.caps
 
 
 # ── Record models ────────────────────────────────────────────────────────────

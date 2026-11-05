@@ -57,3 +57,22 @@ def test_circuit_line_maps_a_variant_or_refuses() -> None:
     assert irr.circuit_line("fog", "clean").field == "circuit_id"
     assert irr.circuit_line("wall_drip", "feed").field == "variant"
     assert irr.variant_of("L10") == "fertilized" and irr.variant_of("L09") == "clean" and irr.variant_of("L03") is None
+
+
+def test_irr_caps_names_what_the_firmware_build_publishes() -> None:
+    """#1343 follow-up: kIrrCaps in the engine header is what the API looks for, and the engine yaml publishes it
+    beside ${fw_version} as irr_caps."""
+    import re
+    from pathlib import Path
+
+    from verdify_schemas.irrigation import FOG_RUN_CAP, RUN_ANY_MISTER_CAP, firmware_takes, parse_irr_caps
+
+    root = Path(__file__).resolve().parents[2]
+    header = (root / "firmware/lib/irrigation_program.h").read_text()
+    caps = re.search(r'constexpr const char\* kIrrCaps = "([^"]+)";', header)
+    assert caps is not None
+    text = f"fw=2026.11.5.2200.abcdef1 caps={caps[1]}"
+    assert {FOG_RUN_CAP, RUN_ANY_MISTER_CAP} <= parse_irr_caps(text).caps
+    assert firmware_takes(text, "2026.11.5.2200.abcdef1", FOG_RUN_CAP)
+    engine = (root / "firmware/greenhouse/irrigation_engine.yaml").read_text()
+    assert "id: irr_caps" in engine and 'std::string("fw=${fw_version} caps=") + verdify_irr::kIrrCaps' in engine

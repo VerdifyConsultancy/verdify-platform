@@ -72,11 +72,14 @@ from verdify_schemas.irrigation import (
     CIRCUIT_OF_LINE,
     CLEAN_PARTNER,
     COMMAND_SEND_WINDOW_S,
+    FOG_RUN_CAP,
+    IRR_CAPS_ENTITY,
     LINE_BOUNDS,
     LINE_IDS,
     LINE_KIND,
     LOCAL_TZ_NAME,
     MISTER_MASK_BIT,
+    RUN_ANY_MISTER_CAP,
     RUN_ARGS_BY_KIND,
     RUN_BOUNDS_BY_KIND,
     Command,
@@ -97,6 +100,7 @@ from verdify_schemas.irrigation import (
     _Whole,
     _whole,
     circuit_line,
+    firmware_takes,
     irr_state_reading,
     local_tz,
     run_args,
@@ -720,13 +724,6 @@ _FIRMWARE_VERSION_SQL = (
 )
 
 
-# #1336 and the #1343 follow-up: the firmware that runs fog once, keeps the master valve to fertilized runs (it already
-# opened only with them) and lights the main lights for occupancy at any hour (#1370). It ships in the same signed
-# flash as #1343's, after this cutoff; until the controller reports a build stamped on or after it, a fog run-once is
-# refused ``unavailable`` here, before anything is sent. Same stamp rules as RUN_ANY_MISTER_FIRMWARE_FROM.
-FOG_RUN_FIRMWARE_FROM = date(2026, 11, 7)
-
-
 def _firmware_built(version: str | None) -> date | None:
     """The build day in a ``fw_version`` stamp (``YYYY.M.D.HHMM.<sha>``); ``None`` when unknown or unreadable."""
     match = _FW_STAMP.match(version or "")
@@ -738,16 +735,20 @@ def _firmware_built(version: str | None) -> date | None:
         return None
 
 
-def firmware_runs_any_mister(version: str | None) -> bool:
-    """Whether the controller's ``fw_version`` is a build that takes a run-now on a mister with Schedule off."""
+def firmware_runs_any_mister(version: str | None, caps_text: str | None = None) -> bool:
+    """Whether the controller takes a run-now on a mister with Schedule off: its ``irr_caps`` says so for the version
+    it runs, or (a #1343 build from before ``irr_caps``) its ``fw_version`` is stamped on or after the cutoff. A build
+    flashed the same day as its code change carries the capability, so it never waits for a date."""
+    if firmware_takes(caps_text, version, RUN_ANY_MISTER_CAP):
+        return True
     built = _firmware_built(version)
     return built is not None and built >= RUN_ANY_MISTER_FIRMWARE_FROM
 
 
-def firmware_runs_fog(version: str | None) -> bool:
-    """Whether the controller's ``fw_version`` is a build that takes a fog run-once (#1343 follow-up)."""
-    built = _firmware_built(version)
-    return built is not None and built >= FOG_RUN_FIRMWARE_FROM
+def firmware_runs_fog(version: str | None, caps_text: str | None) -> bool:
+    """Whether the controller takes a fog run-once (#1343 follow-up): its ``irr_caps`` names ``fog_run`` for the
+    ``fw_version`` it reports now. No date gate: a build without the capability, or a rollback, fails closed."""
+    return firmware_takes(caps_text, version, FOG_RUN_CAP)
 
 
 def _check_run_rails(line: LineSpec, reading: IrrState | None, now: datetime, *, any_mister: bool = False) -> None:
@@ -858,11 +859,14 @@ async def _check_engine_run(conn: asyncpg.Connection, target: str, args: RunArgs
         raise _unknown_line(target)
     line = LineSpec.from_row(row)
     now = row["now"]
-    if line.kind == "fog" and not firmware_runs_fog(await conn.fetchval(_FIRMWARE_VERSION_SQL, GREENHOUSE_ID)):
+    if line.kind == "fog" and not firmware_runs_fog(
+        await conn.fetchval(_FIRMWARE_VERSION_SQL, GREENHOUSE_ID),
+        await conn.fetchval(_ENGINE_SQL, GREENHOUSE_ID, IRR_CAPS_ENTITY),
+    ):
         raise ServiceError(
             problem(
                 "unavailable",
-                "Fog runs once from the controller's next firmware flash; until then the controller would refuse it",
+                "Fog runs once only on firmware that reports it takes a fog run (irr_caps fog_run); this controller does not",
                 field="line_id",
                 retryable=False,
             )
@@ -870,7 +874,10 @@ async def _check_engine_run(conn: asyncpg.Connection, target: str, args: RunArgs
     reading = irr_state_reading(await conn.fetchval(_ENGINE_SQL, GREENHOUSE_ID, IRR_STATE_ENTITY))
     any_mister = False
     if target in MISTER_MASK_BIT and line.enabled and not line.schedule_member:
-        any_mister = firmware_runs_any_mister(await conn.fetchval(_FIRMWARE_VERSION_SQL, GREENHOUSE_ID))
+        any_mister = firmware_runs_any_mister(
+            await conn.fetchval(_FIRMWARE_VERSION_SQL, GREENHOUSE_ID),
+            await conn.fetchval(_ENGINE_SQL, GREENHOUSE_ID, IRR_CAPS_ENTITY),
+        )
     _check_run_rails(line, reading, now, any_mister=any_mister)
     await _check_run_busy(conn, target, reading, now)
     await _check_run_cap(conn, line, args)

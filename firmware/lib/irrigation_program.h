@@ -256,6 +256,11 @@ inline bool irr_run_args_in_bounds(uint8_t line, uint16_t on_s, uint8_t count, u
 // (IrrOutputs::fog_run) and its rails still hold it.
 constexpr uint16_t kFogRunOnLo = 60;
 constexpr uint16_t kFogRunOnHi = 1800;
+// What this build takes that an older one refuses, published as irr_caps
+// ("fw=<fw_version> caps=<these>", verdify_schemas.irrigation.IRR_CAPS). The API
+// offers a capability only while the controller reports it for the version it runs,
+// so a build without it (or a rollback) fails closed (#1343 follow-up).
+constexpr const char* kIrrCaps = "fog_run,run_any_mister";
 inline bool irr_fog_run_args_in_bounds(uint16_t on_s, uint8_t count, uint16_t gap_s, uint16_t prewet_s,
                                        uint16_t flush_s) {
   return on_s >= kFogRunOnLo && on_s <= kFogRunOnHi && count == 1 && gap_s == 0 && prewet_s == 0 && flush_s == 0;

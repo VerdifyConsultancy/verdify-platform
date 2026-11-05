@@ -1379,8 +1379,11 @@ def test_the_command_calls_carry_exactly_the_firmware_services_arguments(row):
 
 def test_the_text_sensor_routes_are_the_firmware_entities_object_ids():
     sensors = yaml.safe_load((ROOT / "firmware/greenhouse/irrigation_engine.yaml").read_text())["text_sensor"]
-    assert {_esphome_wire_slug(sensor["name"]) for sensor in sensors} == set(shared.IRRIGATION_TEXT_SENSORS)
-    assert {sensor["id"] for sensor in sensors} == set(shared.IRRIGATION_TEXT_SENSORS)
+    # irr_caps (#1343 follow-up) lands in system_state for the API's capability check; irrigation_sync never reads it.
+    expected = {*shared.IRRIGATION_TEXT_SENSORS, "irr_caps"}
+    assert {_esphome_wire_slug(sensor["name"]) for sensor in sensors} == expected
+    assert {sensor["id"] for sensor in sensors} == expected
+    assert STATE_MAP["irr_caps"] == "irr_caps"
 
 
 def test_a_fog_run_once_is_one_continuous_run_of_its_minutes():
