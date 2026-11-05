@@ -84,7 +84,7 @@ test("a failed API-21 read says so in its own panel with Retry; the minutes and 
   await expect(panel.locator(".panel-error")).toContainText("Couldn't load daily water use.");
   await expect(panel.getByRole("button", { name: "Retry" })).toBeVisible();
   await expect(page.locator(".minutes-row")).toHaveCount(5);
-  await expect(page.getByRole("table", { name: /Runs, newest first/ })).toBeVisible();
+  await expect(page.getByRole("table", { name: /runs, newest first/i })).toBeVisible();
 });
 
 test("a failed status read leaves the Run dialog open with what was typed in it", async ({ page, request }) => {

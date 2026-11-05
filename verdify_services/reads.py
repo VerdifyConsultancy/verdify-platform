@@ -45,6 +45,7 @@ from pydantic import AwareDatetime, BaseModel, BeforeValidator, ConfigDict, Fiel
 
 from verdify_schemas.alerts import flow_stopped_at
 from verdify_schemas.band_rows import HOUSE_SERIES, ZONES
+from verdify_schemas.irrigation import purpose_of
 from verdify_schemas.policy_vector import wire_fields
 from verdify_schemas.setting_values import readback_matches, readback_tolerance, resolve_effective
 from verdify_schemas.tunable_registry import BAND_OWNED_REG, LIGHTING_CIRCUIT_DEFAULT_REG, desired_write_rule
@@ -389,6 +390,8 @@ class WaterDay(_Model):
     meter_gal: int | None
     by_line: dict[str, int] | None
     by_cause: dict[str, int] | None
+    # #1348: irrigation (drips, feeds, scheduled and run-now misting) against climate (VPD and fallback misting, fog).
+    by_purpose: dict[str, int] | None = None
     no_valve_gal: int | None
 
 
@@ -1336,6 +1339,7 @@ def water_days(
     can sit a gallon off the total."""
     by_line: dict[date, dict[str, int]] = {}
     by_cause: dict[date, dict[str, int]] = {}
+    by_purpose: dict[date, dict[str, int]] = {}
     for run in runs:
         if run["gal"] is None:
             continue
@@ -1343,6 +1347,9 @@ def water_days(
         lines[run["line_id"]] = lines.get(run["line_id"], 0) + run["gal"]
         causes = by_cause.setdefault(run["local_day"], {})
         causes[run["cause"]] = causes.get(run["cause"], 0) + run["gal"]
+        purposes = by_purpose.setdefault(run["local_day"], {})
+        purpose = purpose_of(run["line_id"], run["cause"]).value
+        purposes[purpose] = purposes.get(purpose, 0) + run["gal"]
     days: list[WaterDay] = []
     for offset in range((last - first).days + 1):
         day = first + timedelta(days=offset)
@@ -1350,7 +1357,15 @@ def water_days(
         coverage = water_coverage(row["quality"] if row is not None else None)
         if coverage == "no_data":
             days.append(
-                WaterDay(date=day, coverage=coverage, meter_gal=None, by_line=None, by_cause=None, no_valve_gal=None)
+                WaterDay(
+                    date=day,
+                    coverage=coverage,
+                    meter_gal=None,
+                    by_line=None,
+                    by_cause=None,
+                    by_purpose=None,
+                    no_valve_gal=None,
+                )
             )
             continue
         days.append(
@@ -1360,6 +1375,7 @@ def water_days(
                 meter_gal=row["gal"],
                 by_line=by_line.get(day, {}),
                 by_cause=by_cause.get(day, {}),
+                by_purpose=by_purpose.get(day, {}),
                 no_valve_gal=no_valve.get(day),
             )
         )

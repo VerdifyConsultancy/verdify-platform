@@ -889,7 +889,7 @@ export const FIXTURES = {
     const at = clock(world.now);
     world.runs.push(
       { run_id: "run-l01-zero", line_id: "L01", zone: "wall", chemistry: "clean", cause: "schedule", slot_id: 11, schedule_label: "Wall MWF", command_id: null, actor: null, started_at: iso(at("07:34", -1)), ended_at: iso(at("07:46", -1)), open_s: 720, pulses: null, gal: 0, outcome: "ok", reason: null },
-      { run_id: "run-l04-unknown", line_id: "L04", zone: "center", chemistry: "clean", cause: "vpd", slot_id: null, schedule_label: null, command_id: null, actor: null, started_at: iso(at("13:05", -2)), ended_at: null, open_s: 0, pulses: null, gal: null, outcome: "unknown", reason: "no outcome reached the platform" },
+      { run_id: "run-l04-unknown", line_id: "L04", zone: "center", chemistry: "clean", cause: "schedule", slot_id: null, schedule_label: null, command_id: null, actor: null, started_at: iso(at("13:05", -2)), ended_at: null, open_s: 0, pulses: null, gal: null, outcome: "unknown", reason: "no outcome reached the platform" },
     );
     world.runs.sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at));
   },

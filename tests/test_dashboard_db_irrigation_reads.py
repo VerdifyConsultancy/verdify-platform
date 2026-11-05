@@ -948,6 +948,22 @@ def test_todays_minutes_equal_api_irr_10s_rows(database):
             assert line_of(status, "L03").today.gal is None
             causes = {(row.group, row.cause) for row in by_line.rows}
             assert ("L04", "schedule") in causes and ("L04", "vpd") in causes
+            # #1348: each line's climate part and the site's are API-IRR-10's climate rows, the same split.
+            climate: dict = {}
+            for row in by_line.rows:
+                if row.purpose == "climate":
+                    climate[row.group] = climate.get(row.group, 0.0) + row.minutes
+            for line in status.lines:
+                assert line.today.climate_minutes == pytest.approx(climate.get(line.line_id, 0.0), abs=1e-9), (
+                    line.line_id
+                )
+            assert status.today.climate.minutes == pytest.approx(
+                sum(value for group, value in climate.items() if group != "L03"), abs=1e-9
+            )
+            assert {(row.group, row.purpose) for row in by_line.rows if row.group == "L04"} >= {
+                ("L04", "climate"),
+                ("L04", "irrigation"),
+            }
             assert ("L01", "run_now") in causes
 
     scenario(database, body)

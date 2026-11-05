@@ -23,7 +23,7 @@ import pytest
 import yaml
 from test_mcp_audience_auth import AGENT_TOOLS, clean_auth_env, mcp_server, mcp_types  # noqa: F401
 
-from verdify_schemas.irrigation import LINE_IDS, IrrigationCause, RunOutcome, bounds_by_kind
+from verdify_schemas.irrigation import LINE_IDS, IrrigationCause, RunOutcome, RunPurpose, bounds_by_kind
 from verdify_services.irrigation import reads
 from verdify_services.problems import PROBLEM_CODES, RETRYABLE_CODES, ServiceError, problem
 
@@ -226,14 +226,16 @@ def test_history_minutes_takes_local_dates_and_group_by(mcp_server, mcp_types, c
     seen = []
     report = minutes_model(date(2026, 10, 1), date(2026, 10, 31))
 
-    async def minutes(connection, actor, from_, to, group_by):
-        seen.append((from_, to, group_by))
+    async def minutes(connection, actor, from_, to, group_by, purpose=None):
+        seen.append((from_, to, group_by, purpose))
         return report
 
     monkeypatch.setattr(reads, "minutes", minutes)
     result = run(mcp_server.irrigation_history("minutes", "2026-10-01", "2026-10-31", group_by="line"))
     assert result.isError is False
-    assert seen == [(date(2026, 10, 1), date(2026, 10, 31), "line")]
+    assert seen == [(date(2026, 10, 1), date(2026, 10, 31), "line", None)]
+    run(mcp_server.irrigation_history("minutes", "2026-10-01", "2026-10-31", purpose="irrigation"))
+    assert seen[-1] == (date(2026, 10, 1), date(2026, 10, 31), "zone", "irrigation")
     body = payload(result)
     assert body == report.model_dump(mode="json", by_alias=True) and body["from"] == "2026-10-01"
 
@@ -260,7 +262,9 @@ def test_history_runs_takes_date_times_and_its_filters(mcp_server, mcp_types, co
     assert payload(result) == {"items": [], "next_cursor": "next"}
     [(from_, to, filters)] = seen
     assert from_ == datetime(2026, 10, 1, 6, tzinfo=UTC) and to == datetime(2026, 10, 2, tzinfo=UTC)
-    assert filters == {"line": "L01", "cause": "run_now", "outcome": "ok", "cursor": "abc"}
+    assert filters == {"line": "L01", "cause": "run_now", "outcome": "ok", "cursor": "abc", "purpose": None}
+    run(mcp_server.irrigation_history("runs", "2026-10-01T00:00:00-06:00", "2026-10-02T00:00:00Z", purpose="climate"))
+    assert seen[-1][2]["purpose"] == "climate"
 
 
 @pytest.mark.parametrize(
@@ -383,11 +387,11 @@ def test_the_arguments_are_the_signature_the_design_gives(mcp_server):  # noqa: 
     assert list(inspect.signature(mcp_server.irrigation_status).parameters) == []
     assert list(inspect.signature(mcp_server.irrigation_schedule).parameters) == ["days", "past_days"]
     history = inspect.signature(mcp_server.irrigation_history).parameters
-    assert list(history) == ["view", "since", "until", "group_by", "line", "cause", "outcome", "cursor"]
+    assert list(history) == ["view", "since", "until", "group_by", "line", "cause", "outcome", "cursor", "purpose"]
     assert history["view"].default is inspect.Parameter.empty
     assert history["since"].default is inspect.Parameter.empty and history["until"].default is inspect.Parameter.empty
     assert history["group_by"].default == "zone"
-    assert all(history[name].default is None for name in ("line", "cause", "outcome", "cursor"))
+    assert all(history[name].default is None for name in ("line", "cause", "outcome", "cursor", "purpose"))
     schedule = inspect.signature(mcp_server.irrigation_schedule).parameters
     assert (schedule["days"].default, schedule["past_days"].default) == (7, 0)
 
@@ -411,6 +415,8 @@ def test_the_enums_equal_the_openapi(mcp_server):  # noqa: F811
     assert list(literal_values(history, "cause")) == [cause.value for cause in IrrigationCause]
     assert list(literal_values(history, "outcome")) == SCHEMAS["RunOutcome"]["enum"]
     assert list(literal_values(history, "outcome")) == [outcome.value for outcome in RunOutcome]
+    assert list(literal_values(history, "purpose")) == SCHEMAS["RunPurpose"]["enum"]
+    assert list(literal_values(history, "purpose")) == [purpose.value for purpose in RunPurpose]
 
 
 def test_each_description_names_its_twin_says_it_reads_lists_its_codes_and_says_null_never_0(mcp_server):  # noqa: F811
