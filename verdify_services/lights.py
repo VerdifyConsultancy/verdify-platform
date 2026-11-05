@@ -12,17 +12,24 @@ no HTTP client (README, Rules). So a switch is three steps, and the route runs t
 
 The answer is a ``LightRecord``: ``command()`` is the 200 body when Lutron reached the state, and ``refusal()`` the 503
 ``unavailable`` Problem otherwise. A light's state is never read from here: the board shows the Lutron readback (API-13).
+
+The operator API's Back to automatic resync (``api/operator_routes/light_resync.py``, #1300) switches a light through
+the same steps 2 and 3, its row's detail adding ``via`` and ``write_id``. It and API-20 both take ``try_lock`` (released
+by ``unlock``) around steps 2 and 3: a session advisory lock per light, so the two operator API pods of a rollout never
+switch one light at once. ``decision`` is the controller's newest decision for a light, which says whether its intent
+is current.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import timedelta
 from types import MappingProxyType
 from typing import Any, Literal
 from uuid import UUID
 
 import asyncpg
-from pydantic import BaseModel, ConfigDict
+from pydantic import AwareDatetime, BaseModel, ConfigDict
 
 from verdify_schemas.activity import ActivityLogRow
 from verdify_services import activity
@@ -33,6 +40,11 @@ from verdify_services.problems import Problem, problem
 OP = "API-20"
 Light = Literal["main", "grow"]
 LightState = Literal["on", "off"]
+# The controller's decision for each light (firmware controls.yaml): the firmware publishes it on every change and at
+# least every 60 s, and the ingestor writes a system_state row for each publish, unchanged values included (its
+# force_refresh), so the newest row's age says how long ago the controller last decided the light.
+DECISION_ENTITIES: Mapping[str, str] = MappingProxyType({"main": "gl_main_reason", "grow": "gl_grow_reason"})
+DECISION_WINDOW = timedelta(days=1)  # older rows are no decision now; the bound keeps the read on the newest chunk
 # What the setpoint server's answer means: confirmed is 200, ha_failed 502, not_confirmed 504 and timeout no usable
 # answer in 12 s. The failures are problems.LightResult.
 LightResult = Literal["confirmed", "ha_failed", "not_confirmed", "timeout"]
@@ -77,6 +89,39 @@ class LightRecord(BaseModel):
         if self.result == "confirmed":
             return None
         return problem("unavailable", FAILURE_WORDS[self.result], result=self.result)
+
+
+class LightDecision(BaseModel):
+    """``decision``'s answer: the reason in the light's newest ``gl_<light>_reason`` row (``plant_lux_low``,
+    ``outside_window``, ``auto_disabled``, ``time_invalid``, ...), when the ingestor received it, and the database's now,
+    so its age needs no other clock. ``reason`` and ``observed_at`` are None when no row is a day old or newer."""
+
+    model_config = ConfigDict(frozen=True)
+
+    light: Light
+    reason: str | None
+    observed_at: AwareDatetime | None
+    at: AwareDatetime
+
+    @property
+    def age_s(self) -> float | None:
+        """How long ago the controller last decided the light; None for no decision."""
+        return None if self.observed_at is None else (self.at - self.observed_at).total_seconds()
+
+
+# The newest decision row, read against the database's own now().
+_DECISION_SQL = """
+SELECT now() AS at, s.value, s.ts
+  FROM (SELECT 1) AS one
+  LEFT JOIN LATERAL (SELECT value, ts FROM system_state
+                      WHERE entity = $1 AND ts > now() - $2::interval
+                      ORDER BY ts DESC LIMIT 1) AS s ON true
+"""
+# One advisory key per light, in the session lock space. A transaction-level lock could not cover the call, which runs
+# outside any transaction; returning the connection to the pool also releases it (asyncpg's reset runs
+# pg_advisory_unlock_all), so a holder that fails before unlock still lets go.
+_TRY_LOCK_SQL = "SELECT pg_catalog.pg_try_advisory_lock(pg_catalog.hashtext('light:' || $1))"
+_UNLOCK_SQL = "SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtext('light:' || $1))"
 
 
 def _target(light: Light) -> str:
@@ -124,12 +169,18 @@ async def record(
     result: LightResult,
     reason: str | None = None,
     request_id: UUID | str | None = None,
+    extra_detail: Mapping[str, Any] | None = None,
 ) -> WriteResult[LightRecord]:
     """Step 3: the switch's one ``activity_log`` row. A concurrent request with the same key that got here first wins,
-    and this one answers its stored result."""
+    and this one answers its stored result. ``extra_detail`` adds keys to the detail, never ``light``, ``state`` or
+    ``result`` (the resync's ``via`` and ``write_id``)."""
+    extra = dict(extra_detail or {})
+    clash = sorted({"light", "state", "result"} & set(extra))
+    if clash:
+        raise ValueError(f"extra_detail may not set {', '.join(clash)}")
 
-    async def perform(_conn: asyncpg.Connection) -> tuple[None, dict[str, str]]:
-        return None, {"light": light, "state": state, "result": result}
+    async def perform(_conn: asyncpg.Connection) -> tuple[None, dict[str, Any]]:
+        return None, {**extra, "light": light, "state": state, "result": result}
 
     written = await activity.recorded_write(
         conn,
@@ -147,3 +198,20 @@ async def record(
         return written
     value = LightRecord(light=light, state=state, result=result, activity_id=written.activity_id)
     return written.model_copy(update={"value": value})
+
+
+async def try_lock(conn: asyncpg.Connection, light: Light) -> bool:
+    """Take the light's advisory lock for this session without waiting: True when it now holds it, False when another
+    session does. The holder keeps the connection until ``unlock``; returning it to the pool releases the lock too."""
+    return bool(await conn.fetchval(_TRY_LOCK_SQL, _target(light)))
+
+
+async def unlock(conn: asyncpg.Connection, light: Light) -> bool:
+    """Release the light's advisory lock this session holds; False when it held none."""
+    return bool(await conn.fetchval(_UNLOCK_SQL, _target(light)))
+
+
+async def decision(conn: asyncpg.Connection, light: Light) -> LightDecision:
+    """The controller's newest decision for the light (``DECISION_ENTITIES``), for the caller to judge its age."""
+    row = await conn.fetchrow(_DECISION_SQL, DECISION_ENTITIES[light], DECISION_WINDOW)
+    return LightDecision(light=light, reason=row["value"], observed_at=row["ts"], at=row["at"])

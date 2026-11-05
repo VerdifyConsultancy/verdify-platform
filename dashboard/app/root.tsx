@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-// The document shell and the error boundary for every route, signed in or not.
+// The document shell and the error boundary for every route, signed in or not,
+// with writes on or off.
 import { useEffect, useRef, type ReactNode } from "react";
 import { Links, Meta, Scripts, ScrollRestoration, data, isRouteErrorResponse, useLoaderData, useLocation, useRevalidator, useRouteError, useRouteLoaderData, type HeadersFunction, type LoaderFunctionArgs } from "react-router";
 import { AppShell, PageCard } from "./components/app-shell";

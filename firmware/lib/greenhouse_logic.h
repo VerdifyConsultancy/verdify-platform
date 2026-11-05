@@ -15,8 +15,9 @@
  *     heat1 is the ELECTRIC coil, heat2 is the gas stage)
  *   - Vent actuator travel time (ESPHome min_vent_on_s/min_vent_off_s)
  *
- * SENSOR_FAULT: ALL relays off. Freeze protection must be handled by a
- * hardware thermostat wired in parallel, not blind software logic.
+ * SENSOR_FAULT: ALL relays off, heat included. No hardware thermostat is
+ * installed (Jason accepted that on 2026-11-04, #1296), so nothing heats the
+ * house in a sensor fault or with a dead controller.
  * SENSOR_FAULT does NOT overwrite mode_prev — preserves hysteresis
  * context for graceful recovery from transient I2C glitches.
  *
@@ -2498,7 +2499,7 @@ inline RelayOutputs resolve_equipment(
     switch (mode) {
         case SENSOR_FAULT:
             // R2-1: ALL relays off. No actuator should run without sensor feedback.
-            // Freeze protection: hardware thermostat wired in parallel.
+            // No hardware thermostat is installed (accepted, #1296): nothing heats here.
             break;
 
         case SAFETY_COOL:

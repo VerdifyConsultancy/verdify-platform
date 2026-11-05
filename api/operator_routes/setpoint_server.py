@@ -7,7 +7,9 @@ did not reach the state.
 
 The 12 s cap keeps the answer inside the BFF proxy's 15 s. The server can take longer (up to 5 s in ``ha_call``, then up
 to 8 s polling in ``ha_confirm_state``), so a light can change after this call has given up; the Lutron readback in
-API-13 then shows what happened. The route calls this outside any database transaction.
+API-13 then shows what happened. API-20 and the Back to automatic resync (``light_resync``, #1300) call this outside any
+database transaction, each holding the light's lock. The server handles one request at a time, in the order they
+arrive.
 """
 
 from __future__ import annotations

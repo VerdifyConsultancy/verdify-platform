@@ -6,7 +6,10 @@ row in one transaction: a ``desired_state`` row, plus the ``crop_band_anchors`` 
 ``alert_log`` updates on every repeat merged into the row. The ``desired_state`` insert trigger wakes the dispatcher, so
 no route sends a NOTIFY. Bounds, snapping and every refusal live in the services; a ``ServiceError`` propagates and the
 operator API renders it as ``application/problem+json``. API-20 calls ``verdify-setpoint-server`` between two service
-calls, outside any database transaction (``verdify_services/lights.py``).
+calls, outside any database transaction, holding the light's lock (``light_resync.commanding``). The Equipment page's
+Back to automatic write (API-10 of ``sw_gl_main_auto_mode`` or ``sw_gl_grow_auto_mode`` = 1, manual, with the reason
+"Back to automatic") also starts a task that matches the light to the controller once the write confirms
+(``light_resync``, #1300), so Back to automatic finishes when the page that pressed it has closed.
 
 No auth and no SQL (``operator_routes/__init__.py`` has the rules). ``api/operator_api.py`` (#1148) includes ``router``
 under ``/v1`` with the bearer, session and role checks, so a viewer's write is 403 before a route runs, and the session
@@ -24,7 +27,7 @@ from fastapi import APIRouter, Depends, Header, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat
 
-from operator_routes import setpoint_server
+from operator_routes import light_resync, setpoint_server
 from operator_routes.reads import Connection
 from verdify_schemas.activity import REASON_MAX_LENGTH
 from verdify_services import alerts, lights, settings
@@ -109,9 +112,12 @@ def _answer(result: WriteResult) -> JSONResponse:
 async def write_setting(
     key: IdempotencyKey, conn: Connection, request: Request, param: str, body: SettingWrite
 ) -> JSONResponse:
-    """Validate and snap ``value``, then store its ``desired_state`` row with the ``manual`` flag it carries."""
+    """Validate and snap ``value``, then store its ``desired_state`` row with the ``manual`` flag it carries. The
+    Equipment page's Back to automatic write also starts its resync (``light_resync.start``)."""
     actor = request.state.actor
-    return _answer(await settings.write(conn, actor, param, body.value, body.manual, body.reason, key))
+    written = await settings.write(conn, actor, param, body.value, body.manual, body.reason, key)
+    light_resync.start(request.app, actor, written)
+    return _answer(written)
 
 
 @router.delete("/settings/{param}", operation_id="API-11", tags=["settings"], response_model=settings.DesiredSetting)
@@ -170,10 +176,13 @@ async def switch_light(
     body: LightSwitch = NO_REASON,
 ) -> JSONResponse:
     """Turn a grow light on or off through verdify-setpoint-server, with one ``activity_log`` row for the attempt. A
-    replayed key returns the stored result, a 503 included, and calls nothing, so a retry after a 503 sends a new key."""
+    replayed key returns the stored result, a 503 included, and calls nothing, so a retry after a 503 sends a new key.
+    The call and its row hold the light's lock, so a Back to automatic resync never switches the light at the same
+    time; the press waits at most ``light_resync.LOCK_WAIT_S`` for it and then goes ahead."""
     actor = request.state.actor
     written = await lights.stored(conn, actor, light, state, body.reason, key)
     if written is None:
-        result = await setpoint_server.switch(request.app.state.settings.setpoint_server_url, light, state)
-        written = await lights.record(conn, actor, light, state, result, body.reason, key)
+        async with light_resync.commanding(request.app, conn, light):
+            result = await setpoint_server.switch(request.app.state.settings.setpoint_server_url, light, state)
+            written = await lights.record(conn, actor, light, state, result, body.reason, key)
     return _light_answer(request, written)

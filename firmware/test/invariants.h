@@ -476,9 +476,9 @@ inline bool check_25_safety_heat_engaged(const TraceRow& r, ReportFn report = de
 }
 
 // #26: SENSOR_FAULT means ALL relays OFF. With no trustworthy sensor feedback
-// the controller drives nothing (greenhouse_logic.h:2007-2010); freeze
-// protection is an out-of-band hardware thermostat wired in parallel, never
-// blind software. Any relay ON while the recorded mode is SENSOR_FAULT is a
+// the controller drives nothing (greenhouse_logic.h:2007-2010), heat included;
+// no hardware thermostat is installed (accepted 2026-11-04, #1296), and no
+// blind software heat runs either. Any relay ON while the recorded mode is SENSOR_FAULT is a
 // fault. (Vacuous on corpora with no SENSOR_FAULT rows — a standing guard like
 // #18/#19; it pins the all-off contract so a future executor change cannot let
 // an actuator run during a sensor blackout.) #1161: every climate relay and

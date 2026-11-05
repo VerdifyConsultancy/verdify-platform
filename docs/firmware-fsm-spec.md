@@ -133,9 +133,10 @@ the irrigation engine's own runs. Exact outputs:
 | `IDLE` | off | off / off | off | s1 iff cold; s1+s2 iff `heat2_latched`; econ-rescue s1 (§8.1) |
 
 **Safety/override overlays (applied after the per-mode map):**
-- **`SENSOR_FAULT` → all relays off.** No actuator runs without sensor feedback;
-  freeze protection is an **out-of-band hardware thermostat wired in parallel**,
-  never blind software (`greenhouse_logic.h:17-18, 2007-2010`).
+- **`SENSOR_FAULT` → all relays off, heat included.** No actuator runs without
+  sensor feedback. **No hardware thermostat is installed** (Jason accepted this on
+  2026-11-04, #1296), so nothing heats the house in a sensor fault or with a dead
+  controller (`greenhouse_logic.h:17-20, 2007-2010`).
 - **`SAFETY_HEAT` runs the lead fan with the vent CLOSED** for canopy circulation
   without dumping heat — a deliberate "fan without vent" the invariant whitelists
   (`:2019-2028`).

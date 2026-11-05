@@ -103,7 +103,9 @@ configMapGenerator:
 components:
   # In-cluster firmware OTA capability (handoff §5.1 closed 2026-07-13):
   # suspended-CronJob build/flash template + durable artifacts PVC (the
-  # rollback floor lives HERE now, not on the laptop) + toolchain cache.
+  # rollback floor lives HERE now, not on the laptop). The builder keeps its
+  # toolchain in a per-Job emptyDir; the unused toolchain-cache PVC was
+  # retired on 2026-11-04 (Jason R10).
   - ../../components/firmware-builder
   # #782 read-only observational winter packet. Suspended until a prospective
   # registration and exact source snapshot are staged on its archive PVC.
@@ -327,16 +329,16 @@ patches:
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
     newName: registry.vallery.net/verdifyconsultancy/verdify-api
-    digest: sha256:d24f38810075eab5d0c16dd2f36f7c8fe7954a03aa515c81eeac70717aa03c6b
+    digest: sha256:8a296f683d87f58bae3905439490b2c188cc53c24d35f81702baced4600eec85
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
     newName: registry.vallery.net/verdifyconsultancy/verdify-mcp
-    digest: sha256:c0305046e2a89d152229387476fc28cebbfb807ea58fae925c020e678ed56ade
+    digest: sha256:0edde9b29bf7913ffb9e6dfcfce1ccab100e3da79bb42a629e9ddf23320719d4
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
     newName: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-    digest: sha256:b5177732f5da7106fdc5510ed9137ddf824322b394f479249b05e30b5a91b095
+    digest: sha256:ca42b5f2e78dfedc8e436c38c8299fdae557c7794e1f1cf565e5f9f2d0e7616c
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     newName: registry.vallery.net/verdifyconsultancy/verdify-migrate
-    digest: sha256:6b4ea284fe551aa96ddaf251f78650c72479fb19fd9450a412fa5deae629c491
+    digest: sha256:981ed0632094c66557d9ca2fb5d9619fbb08d7822961594de0e78f6ed2958616
   # Build candidate for the feature-off experiment-v2 orchestrator (its release
   # digest is in release-pins.yaml). The component remains inert until its
   # explicit GitOps feature gate.

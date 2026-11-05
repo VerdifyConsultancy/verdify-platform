@@ -8,6 +8,7 @@ partial-writing.
 
 Migration 282 (M2) creates verdify_dashboard_runtime, the duty of the operator API's login.
 Migration 287 retires the high_wind forecast rule; no schema here names it.
+Migration 288 retires six sensor registry rows; no schema here names them.
 """
 
 from .activity import ACTOR_SOURCE_PATTERN, ActivityLogRow, DesiredStateRow
