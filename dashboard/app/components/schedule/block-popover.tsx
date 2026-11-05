@@ -39,7 +39,7 @@ export function BlockPopover({ entry, anchor, onClose, agenda, info, program, no
   const lineId = occurrence.line_id;
   const kind = info.kindOf(lineId);
   const status = spanStatus(occurrence, schedule);
-  const window = fallbackWindow(occurrence, schedule);
+  const fallback = fallbackWindow(occurrence, schedule);
   const day = localDate(occurrence.planned_start);
   const start = Date.parse(occurrence.planned_start);
   const length = schedule ? ((schedule.prewet_s ?? 0) + runSeconds(schedule) + (schedule.flush_s ?? 0)) * 1000 : 0;
@@ -54,12 +54,12 @@ export function BlockPopover({ entry, anchor, onClose, agenda, info, program, no
   // A fallback window ahead runs only if VPD sensing fails; one that passed without running was not needed.
   const outcome = status === "done"
     ? ["Done", occurrence.outcome ? words("run_outcome", occurrence.outcome) : null, reason].filter(Boolean).join(" · ")
-    : window === "not_needed" ? capital(words("fallback_window", "not_needed"))
+    : fallback === "not_needed" ? capital(words("fallback_window", "not_needed"))
     : reason && reason.toLowerCase().startsWith(STATUS_WORDS[status]) ? capital(reason) : [capital(STATUS_WORDS[status]), reason].filter(Boolean).join(" · ");
   return <Popover open anchor={anchor} onClose={onClose} title={title} className="sch-popover">
     <dl className="data-list sch-pop-facts">
       <div className="data-pair"><dt>When</dt><dd>{when}</dd></div>
-      <div className="data-pair" data-status={status}><dt>{status === "planned" || window === "ahead" ? "Status" : "Outcome"}</dt><dd>{outcome}{sync && sync !== "confirmed" && <> <ReadbackBadge state={sync} /></>}</dd></div>
+      <div className="data-pair" data-status={status}><dt>{status === "planned" || fallback === "ahead" ? "Status" : "Outcome"}</dt><dd>{outcome}{sync && sync !== "confirmed" && <> <ReadbackBadge state={sync} /></>}</dd></div>
       {schedule && <div className="data-pair"><dt>Rule</dt><dd>
         {daysWords(schedule.days)} · {startWords(schedule.start)} · {schedule.degraded_only ? "only if VPD sensing is degraded · " : ""}{schedule.manual ? <Badge kind="manual" /> : "Iris may adjust"}
       </dd></div>}

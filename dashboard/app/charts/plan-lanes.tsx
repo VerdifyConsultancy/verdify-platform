@@ -82,7 +82,7 @@ export function planRow(lane: PlanLane, now: number, horizon: number, planEnd: n
   const desired = lane.desired;
   const row: PlanRow = {
     key: lane.param, label: lane.label, unit, head: "", muted: false,
-    device: device === null ? "—" : value(device), deviceNote: device === null ? (lane.device.reason ?? "no readback") : null,
+    device: typeof device === "number" && Number.isFinite(device) ? value(device) : "—", deviceNote: device === null ? (lane.device.reason ?? "no readback") : null,
     deviceAt: at(lane.device.observed_at), stale: stale && device !== null, segments: [],
   };
   // Waypoints stop at the plan's end; the device value runs to it too, or to the horizon with no plan in force.

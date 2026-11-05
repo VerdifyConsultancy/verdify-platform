@@ -127,8 +127,9 @@ export type LightControl = ReturnType<typeof useLightControl>;
  * A light's buttons by state (redesign §4.5: one primary, chosen by state). In automatic and matching the controller's
  * intent, only the switch to the other state: "Turn on" while off, "Turn off" while on. Overridden by hand (automation
  * off, or Lutron differing from the intent), "Back to automatic" first, as the primary, then that switch. While the
- * Lutron state is unknown both switches show, and Back to automatic unless automation is known on and matching. A
- * command on its way keeps both switches, so the other one can still override it.
+ * Lutron state, the intent or automation is unknown nothing says the light matches, so Back to automatic shows too, with
+ * both switches when the Lutron state is the unknown one. A command on its way keeps both switches, so the other one
+ * can still override it.
  */
 export function lightButtons(item: Pick<LightItem, "intent" | "state">, automation: number | null | undefined, pending: boolean): { readonly automatic: boolean; readonly turns: readonly LightState[] } {
   const matching = automation === 1 && known(item.intent) && known(item.state) && item.intent === item.state;
