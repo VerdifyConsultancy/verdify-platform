@@ -7,7 +7,7 @@ import { createFixtureHandler } from "../../e2e/fixture-api.mjs";
 import { fixture } from "../../e2e/fixtures/index.mjs";
 import {
   ApiError, type BodyOf, type Fetcher, SessionEnded, apiGet, apiWrite, newIdempotencyKey, operationPath, parseIrrigationStatus, parseMe, parseNow, parseProblem,
-  parseRunPage, parseSettings,
+  groupPurpose, parseMinutesReport, parseRunPage, parseSettings, purposeOf,
 } from "./operator-api";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
@@ -201,4 +201,25 @@ test("without an injected fetch, the client uses the page's fetch", async () => 
     vi.unstubAllGlobals();
   }
   expect(newIdempotencyKey()).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+});
+
+test("a run, a minutes row and a last water carry their purpose (#1348); from a server before it, the same rule fills it", () => {
+  const base = fixture("in-band", { now: Date.parse("2026-11-02T17:42:00Z") });
+  const items = (base["API-IRR-11"] as { items: Record<string, unknown>[] }).items;
+  const old = items.map((run) => Object.fromEntries(Object.entries(run).filter(([key]) => key !== "purpose")));
+  const runs = parseRunPage({ next_cursor: null, items: old })!;
+  expect(runs.items.map((run) => [run.line_id, run.cause, run.purpose])).toEqual(items.map((run) => [run.line_id, run.cause, run.line_id === "L11" || run.cause === "vpd" || run.cause === "fallback" ? "climate" : "irrigation"]));
+  expect(parseRunPage({ next_cursor: null, items: [{ ...items[0], line_id: "L01", cause: "vpd", purpose: "irrigation" }] })!.items[0].purpose).toBe("irrigation");
+  const report = parseMinutesReport({
+    from: "2026-11-02", to: "2026-11-02", group_by: "zone", periods: [{ start: "2026-11-02", coverage: "partial" }],
+    rows: [
+      { period: "2026-11-02", group: "fog", cause: "unknown", chemistry: "clean", minutes: 6 },
+      { period: "2026-11-02", group: "center", cause: "vpd", chemistry: "clean", minutes: 2 },
+      { period: "2026-11-02", group: "wall", cause: "run_now", chemistry: "clean", minutes: 3 },
+    ],
+  })!;
+  expect(report.rows.map((row) => row.purpose)).toEqual(["climate", "climate", "irrigation"]);
+  expect(report.purpose).toBeNull();
+  expect([purposeOf("L11", "schedule"), purposeOf("L04", "fallback"), purposeOf("L02", "feed"), groupPurpose("cause", "vpd", "vpd"), groupPurpose("line", "L11", "unknown")])
+    .toEqual(["climate", "climate", "irrigation", "climate", "climate"]);
 });

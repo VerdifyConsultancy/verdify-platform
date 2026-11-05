@@ -775,9 +775,10 @@ def test_water_days_are_oldest_first_with_the_no_valve_gallons_apart_and_gaps_nu
         "meter_gal": 78,
         "by_line": {"L11": 37, "L01": 5, "L04": 0},
         "by_cause": {"vpd": 37, "schedule": 4, "run_now": 1},
+        "by_purpose": {"climate": 37, "irrigation": 5},  # #1348: fog and VPD misting apart from watering
         "no_valve_gal": 41,
     }
-    nothing = {"meter_gal": None, "by_line": None, "by_cause": None, "no_valve_gal": None}
+    nothing = {"meter_gal": None, "by_line": None, "by_cause": None, "by_purpose": None, "no_valve_gal": None}
     assert days[1].model_dump(exclude={"date"}) == {"coverage": "no_data", **nothing}  # unavailable: never 0
     assert days[2].model_dump(exclude={"date"}) == {"coverage": "no_data", **nothing}  # no row
     assert days[3].model_dump(exclude={"date"}) == {
@@ -785,6 +786,7 @@ def test_water_days_are_oldest_first_with_the_no_valve_gallons_apart_and_gaps_nu
         "meter_gal": 2,
         "by_line": {},  # a day with data and no run
         "by_cause": {},
+        "by_purpose": {},
         "no_valve_gal": 1,
     }
     assert days[4].coverage == "partial" and days[4].meter_gal == 8

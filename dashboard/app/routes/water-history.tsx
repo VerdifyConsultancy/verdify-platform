@@ -22,14 +22,14 @@ import { Table, type TableColumn } from "../components/table";
 import { dateShift, daySpan, localDayStart } from "../lib/format";
 import { runGraphUrl } from "../lib/graph-link";
 import { LINES } from "../lib/lines";
-import { CAUSES, OUTCOMES, apiGet, type IrrigationLine, type Run, type RunPage } from "../lib/operator-api";
+import { CAUSES, OUTCOMES, PURPOSES, apiGet, purposeOf, type IrrigationLine, type Purpose, type Run, type RunPage } from "../lib/operator-api";
 import { readKey, useApiRead, useSchedulesRead } from "../lib/queries";
 import { viewMeta } from "../lib/sections";
 import { usePolledQuery } from "../lib/use-current";
 import {
-  HISTORY_DAYS, RUNS_MAX_DAYS, RUNS_TALLY_MAX_DAYS, barsReport, historyDays, historyMeasure, historySummary, historyWindows, localDay, minutesCaps, minutesGroup,
-  periodWords, plannedToday, runAmountWords, runGallons, runSpanWords, runsFilters, runsWindow, shortfallNote, shortfallWords, tallyMinutes, tallyRuns, toMinute,
-  useWaterOutlet, waterUrl, waterUseSplit, zoneWord, type MinutesTally, type RunsTally,
+  HISTORY_DAYS, PURPOSE_WORDS, RUNS_MAX_DAYS, RUNS_TALLY_MAX_DAYS, barsReport, historyDays, historyMeasure, historyPurpose, historySummary, historyWindows, localDay,
+  minutesCaps, minutesGroup, periodWords, plannedToday, runAmountWords, runGallons, runPurpose, runSpanWords, runsFilters, runsWindow, shortfallNote, shortfallWords,
+  tallyMinutes, tallyRuns, toMinute, useWaterOutlet, waterUrl, waterUseSplit, zoneWord, type MinutesTally, type RunsTally,
 } from "../lib/water";
 import { words } from "../lib/words";
 
@@ -47,22 +47,22 @@ const NO_LINES: readonly IrrigationLine[] = [];
 const LINE_IDS = LINES.map((line) => line.id);
 const GROUPS = ["zone", "line", "cause"] as const;
 
-/** The ledger counted over one window of local days (31 at most): every page of it, as a tally; null when not counted. */
-function useRunsTally(window: { readonly from: string; readonly to: string }, counted: boolean, intervalMs: number) {
+/** The ledger counted over one window of local days (31 at most), of one purpose: every page of it, as a tally; null when not counted. */
+function useRunsTally(window: { readonly from: string; readonly to: string }, counted: boolean, intervalMs: number, purpose: Purpose) {
   const fromAt = localDayStart(window.from);
   const toAt = localDayStart(dateShift(window.to, 1));
-  return usePolledQuery<RunsTally | null>(["water", "runs-tally", { from: fromAt, to: toAt, counted }], async (signal) => {
+  return usePolledQuery<RunsTally | null>(["water", "runs-tally", { from: fromAt, to: toAt, counted, purpose }], async (signal) => {
     if (!counted) return null;
     const runs: Run[] = [];
     let cursor: string | null = null;
     let pages = 0;
     do {
-      const page: RunPage = await apiGet("API-IRR-11", { from: fromAt, to: toAt, limit: TALLY_PAGE, ...(cursor ? { cursor } : {}) }, { signal });
+      const page: RunPage = await apiGet("API-IRR-11", { from: fromAt, to: toAt, purpose, limit: TALLY_PAGE, ...(cursor ? { cursor } : {}) }, { signal });
       runs.push(...page.items);
       cursor = page.next_cursor;
       pages += 1;
     } while (cursor && pages < TALLY_PAGES);
-    return tallyRuns(runs, cursor === null);
+    return tallyRuns(runs, cursor === null, purpose);
   }, intervalMs);
 }
 
@@ -78,8 +78,8 @@ const stateOf = (pending: boolean, failed: boolean): TileState => (failed ? "err
  * equal period. Minutes and gallons come from API-IRR-10 by line (up to 400 days); runs from the ledger, which is counted
  * over 31 days at most (API-IRR-11), so a longer period says so rather than guess.
  */
-function Kpis({ days, current, previous, runs, runsBefore, counted, retry }: {
-  days: number; current: { tally: MinutesTally | null; pending: boolean; failed: boolean }; previous: MinutesTally | null;
+function Kpis({ days, purpose, current, previous, runs, runsBefore, counted, retry }: {
+  days: number; purpose: Purpose; current: { tally: MinutesTally | null; pending: boolean; failed: boolean }; previous: MinutesTally | null;
   runs: { tally: RunsTally | null; pending: boolean; failed: boolean }; runsBefore: RunsTally | null; counted: boolean; retry: { minutes: () => void; runs: () => void };
 }) {
   const vs = `previous ${days} d`;
@@ -88,13 +88,18 @@ function Kpis({ days, current, previous, runs, runsBefore, counted, retry }: {
   const shortfallBefore = runsBefore ? runsBefore.missed + runsBefore.short + runsBefore.cap : null;
   const notCounted = `Counted over ${RUNS_TALLY_MAX_DAYS} days at most`;
   const runsState = counted ? stateOf(runs.pending, runs.failed) : "ready";
+  const climate = purpose === "climate";
+  const fog = minutes && minutes.fog !== null && minutes.fog > 0 ? Math.round(minutes.fog) : null;
+  const minutesMeta = climate
+    ? (fog !== null ? `Fog ${fog}\u00a0min of it; the rest VPD misting` : "VPD and fallback misting, and fog")
+    : "Drips, feeds and scheduled misting; mist and fog apart";
   return <section className="wat-kpis" aria-label={`${periodWords(days)} at a glance`}>
     <div className="l-cols-4">
-      <MetricTile label="Watering" data={{ "data-kpi": "watering" }} state={stateOf(current.pending, current.failed)} onRetry={retry.minutes}
+      <MetricTile label={climate ? "Mist & fog" : "Watering"} data={{ "data-kpi": "watering" }} state={stateOf(current.pending, current.failed)} onRetry={retry.minutes}
         value={minutes && minutes.minutes !== null ? <MinutesValue minutes={minutes.minutes} /> : null} reason="No data in this period"
         delta={minutes && <Delta value={relative(minutes.minutes, previous?.minutes)} unit="%" vs={vs} />}
-        visual={minutes && <Sparkline kind="bars" token="water" values={minutes.days.map((day) => day.minutes)} label={`Watering minutes per day, ${periodWords(days).toLowerCase()}`} />}
-        meta={minutes && minutes.fog !== null && minutes.fog > 0 ? `Fog apart: ${Math.round(minutes.fog)}\u00a0min of humidification` : "Drips and misters; fog apart"} />
+        visual={minutes && <Sparkline kind="bars" token="water" values={minutes.days.map((day) => day.minutes)} label={`${climate ? "Mist and fog" : "Watering"} minutes per day, ${periodWords(days).toLowerCase()}`} />}
+        meta={minutesMeta} />
       <MetricTile label="Gallons" data={{ "data-kpi": "gallons" }} state={stateOf(current.pending, current.failed)} onRetry={retry.minutes}
         value={minutes && minutes.gal !== null ? <>{minutes.galMissing ? "≥ " : ""}{Math.round(minutes.gal)}<span className="metric-unit">{"\u00a0"}gal</span></> : null} reason="No meter data"
         delta={minutes && <Delta value={relative(minutes.gal, previous?.gal)} unit="%" vs={vs} />}
@@ -103,7 +108,7 @@ function Kpis({ days, current, previous, runs, runsBefore, counted, retry }: {
       <MetricTile label="Runs" data={{ "data-kpi": "runs" }} state={runsState} onRetry={retry.runs}
         value={counted && runs.tally ? <>{runs.tally.runs}{runs.tally.complete ? "" : "+"}</> : null} reason={counted ? "No data" : notCounted}
         delta={counted && runs.tally ? <Delta value={difference(runs.tally.runs, runsBefore?.runs)} vs={vs} /> : undefined}
-        meta={counted ? "Valve-open runs, VPD episodes included" : <a href="#runs">Runs, {RUNS_MAX_DAYS} days at a time<span aria-hidden="true"> ›</span></a>} />
+        meta={counted ? (climate ? "VPD mist pulses and fog runs" : "Irrigation runs; VPD pulses and fog apart") : <a href="#runs">Runs, {RUNS_MAX_DAYS} days at a time<span aria-hidden="true"> ›</span></a>} />
       <MetricTile label="Missed, short or cap" data={{ "data-kpi": "shortfall" }} state={runsState} onRetry={retry.runs} tone={shortfall ? "warn" : undefined}
         value={counted && runs.tally ? shortfallWords(runs.tally) : null} reason={counted ? "No data" : notCounted}
         delta={counted && runs.tally ? <Delta value={difference(shortfall, shortfallBefore)} vs={vs} /> : undefined}
@@ -123,9 +128,9 @@ function MinutesValue({ minutes }: { minutes: number }) {
  * line: no-data days hatched, today partial, cap ticks from the lines' caps and a dashed outline for the minutes still
  * planned today (API-IRR-02); fog apart, as humidification; "CSV of this chart".
  */
-function MinutesSection({ read, days, lines, names, today, group, measure }: {
+function MinutesSection({ read, days, lines, names, today, group, measure, purpose }: {
   read: ReturnType<typeof useApiRead<"API-IRR-10">>; days: number; lines: readonly IrrigationLine[]; names: Readonly<Record<string, string>>; today: string;
-  group: (typeof GROUPS)[number]; measure: "min" | "gal";
+  group: (typeof GROUPS)[number]; measure: "min" | "gal"; purpose: Purpose;
 }) {
   const headingId = useId();
   const agenda = useSchedulesRead();
@@ -134,7 +139,7 @@ function MinutesSection({ read, days, lines, names, today, group, measure }: {
   const report = useMemo(() => (read.data ? barsReport(read.data) : null), [read.data]);
   // Noon today: which local day is today, steady all day so the bars do not rebuild every second.
   const noon = Date.parse(localDayStart(today)) / 1000 + 12 * 3600;
-  const what = measure === "gal" ? "Gallons" : "Watering minutes";
+  const what = purpose === "climate" ? (measure === "gal" ? "Mist and fog gallons" : "Mist and fog minutes") : measure === "gal" ? "Gallons" : "Watering minutes";
   // One card frame titled once (redesign §4.2 chart card, §5.4): the card's head is the section header, so the chart's own
   // caption names the figure for a screen reader only.
   return <section className="wat-section card wat-chart-card" aria-labelledby={headingId}>
@@ -161,7 +166,7 @@ function WaterUseSection({ days, names, search }: { days: number; names: Readonl
   const note = `gallons · ${window}`;
   return <section className="wat-section card wat-chart-card" aria-labelledby={headingId}>
     <SectionHeader id={headingId} title="Daily water use" meta={note}
-      chips={<Chips label="Split water use by" small items={(["line", "cause"] as const).map((value) => ({ key: value, label: value, to: waterUrl(PATH, search, { water_use_by: value === "line" ? null : "cause" }), current: split === value, keepScroll: true }))} />} />
+      chips={<Chips label="Split water use by" small items={(["line", "cause", "purpose"] as const).map((value) => ({ key: value, label: value, to: waterUrl(PATH, search, { water_use_by: value === "line" ? null : value }), current: split === value, keepScroll: true }))} />} />
     {use.isError && <PanelError thing="daily water use" onRetry={() => void use.refetch()} />}
     {use.data
       ? <DailyWaterUse data={use.data} split={split} lineNames={names} captionHidden />
@@ -193,8 +198,8 @@ function runColumns(names: Readonly<Record<string, string>>, today: string): Tab
 /** The loaded runs as CSV: every column of the table, times in UTC and America/Denver words; `line_id` is the machine key, `line` its name. */
 function runsCsv(runs: readonly Run[], names: Readonly<Record<string, string>>, today: string): string {
   return tableCsv(
-    ["started (UTC)", "ended (UTC)", "when (America/Denver)", "line_id", "line", "zone", "water", "cause", "schedule", "actor", "valve-open minutes", "pulses", "gallons", "outcome", "reason"],
-    runs.map((run) => [run.started_at, run.ended_at ?? null, runSpanWords(run, today), run.line_id, lineWords(run.line_id, names), zoneWord(run.zone), run.chemistry, run.cause, run.schedule_label ?? null,
+    ["started (UTC)", "ended (UTC)", "when (America/Denver)", "line_id", "line", "zone", "water", "purpose", "cause", "schedule", "actor", "valve-open minutes", "pulses", "gallons", "outcome", "reason"],
+    runs.map((run) => [run.started_at, run.ended_at ?? null, runSpanWords(run, today), run.line_id, lineWords(run.line_id, names), zoneWord(run.zone), run.chemistry, runPurpose(run), run.cause, run.schedule_label ?? null,
       run.actor?.name ?? "controller", Math.round((run.open_s / 60) * 10) / 10, run.pulses ?? null, run.gal ?? null, run.outcome, run.reason ?? null]),
   );
 }
@@ -208,12 +213,14 @@ type Page = { readonly fromAt: string; readonly toAt: string; readonly cursor?: 
  * steps back 31 days inside the period; "CSV of these runs" downloads what is loaded; each run links to its Graphs window.
  * At phone width the rows stack.
  */
-function RunsSection({ names, today, days, search, setSearch }: { names: Readonly<Record<string, string>>; today: string; days: number; search: URLSearchParams; setSearch: SetURLSearchParams }) {
+function RunsSection({ names, today, days, purpose, search, setSearch }: {
+  names: Readonly<Record<string, string>>; today: string; days: number; purpose: Purpose; search: URLSearchParams; setSearch: SetURLSearchParams;
+}) {
   const headingId = useId();
   const explicit = search.get("from") !== null || search.get("to") !== null;
   const periodStart = dateShift(today, -(days - 1));
   const range = runsWindow(explicit ? search.get("from") : dateShift(today, -(Math.min(days, RUNS_MAX_DAYS) - 1)), search.get("to"), today);
-  const filters = runsFilters(search);
+  const filters = { ...runsFilters(search), purpose };
   const base = { from: range.fromAt, to: range.toAt, ...filters };
   const pageKey = JSON.stringify([base, days]);
   const first = useApiRead("API-IRR-11", base, { intervalMs: HISTORY_POLL_MS });
@@ -240,7 +247,10 @@ function RunsSection({ names, today, days, search, setSearch }: { names: Readonl
       return { fromAt: window.fromAt, toAt: window.toAt };
     })() : null;
   const seen = new Set<string>();
-  const runs = loaded.flatMap((page) => page?.items ?? []).filter((run) => !seen.has(run.run_id) && seen.add(run.run_id));
+  // A server before #1348 ignores `purpose`, so the page keeps only this history's runs itself too.
+  const runs = loaded.flatMap((page) => page?.items ?? []).filter((run) => runPurpose(run) === purpose && !seen.has(run.run_id) && seen.add(run.run_id));
+  // Only the causes this history holds: fog runs carry vpd, so the climate causes are vpd and fallback.
+  const causes = CAUSES.filter((cause) => purposeOf("", cause) === purpose);
   const update = (changes: Readonly<Record<string, string | null>>) => setSearch((current) => {
     const nextSearch = new URLSearchParams(current);
     for (const [name, value] of Object.entries(changes)) {
@@ -253,7 +263,7 @@ function RunsSection({ names, today, days, search, setSearch }: { names: Readonl
   // The window's dates come from today's: the server's render and its hydration leave them out (`useHydrated`).
   const hydrated = useHydrated();
   return <section className="wat-section wat-runs" id="runs" aria-labelledby={headingId}>
-    <SectionHeader id={headingId} title="Runs" meta={`newest first${hydrated ? ` · ${explicit ? span : runs.length && pages.length ? `${periodWords(days).toLowerCase()} as loaded` : span}` : ""}`} />
+    <SectionHeader id={headingId} title={purpose === "climate" ? "Mist & fog runs" : "Irrigation runs"} meta={`newest first${hydrated ? ` · ${explicit ? span : runs.length && pages.length ? `${periodWords(days).toLowerCase()} as loaded` : span}` : ""}`} />
     <div className="filters runs-filters">
       <label>Line<select value={filters.line ?? ""} onChange={(event) => update({ line: event.target.value })}>
         <option value="">All lines</option>
@@ -261,7 +271,7 @@ function RunsSection({ names, today, days, search, setSearch }: { names: Readonl
       </select></label>
       <label>Cause<select value={filters.cause ?? ""} onChange={(event) => update({ cause: event.target.value })}>
         <option value="">All causes</option>
-        {CAUSES.map((cause) => <option key={cause} value={cause}>{causeWords(cause)}</option>)}
+        {causes.map((cause) => <option key={cause} value={cause}>{causeWords(cause)}</option>)}
       </select></label>
       <label>Outcome<select value={filters.outcome ?? ""} onChange={(event) => update({ outcome: event.target.value })}>
         <option value="">All outcomes</option>
@@ -276,10 +286,10 @@ function RunsSection({ names, today, days, search, setSearch }: { names: Readonl
     {first.data
       ? <>
         <div className="wat-runs-table">
-          <Table label="Runs" caption="Runs, newest first · America/Denver" captionHidden columns={runColumns(names, today)} rows={runs} rowKey={(run) => run.run_id}
+          <Table label={purpose === "climate" ? "Mist & fog runs" : "Irrigation runs"} caption={`${PURPOSE_WORDS[purpose]} runs, newest first · America/Denver`} captionHidden columns={runColumns(names, today)} rows={runs} rowKey={(run) => run.run_id}
             empty={<p className="meta">No runs in this window.{!explicit && days < 30 && <> <Link to={waterUrl(PATH, search, { range: "30d" })}>Show 30 days</Link></>}</p>} />
         </div>
-        <ul className="wat-runs-list" aria-label="Runs, newest first">
+        <ul className="wat-runs-list" aria-label={`${PURPOSE_WORDS[purpose]} runs, newest first`}>
           {runs.map((run) => <li key={run.run_id} className="wat-run" data-outcome={run.outcome}>
             <p className="wat-run-head"><strong>{runSpanWords(run, today)}</strong> · {lineWords(run.line_id, names)}</p>
             <p className="meta">{[causeWords(run.cause), run.schedule_label, runAmountWords(run), runGallons(run.gal).text].filter(Boolean).join(" · ")}</p>
@@ -299,8 +309,9 @@ function RunsSection({ names, today, days, search, setSearch }: { names: Readonl
 }
 
 /**
- * SCR-04 History (`/water/history`, redesign §5.4): one period for the page (`range=7d|30d|90d|365d`), Group by (zone, line,
- * cause) and Measure (minutes, gallons), all in the URL; then the KPIs against the previous equal period, minutes or
+ * SCR-04 History (`/water/history`, redesign §5.4): which history (`purpose`, #1348: irrigation by default, or the climate
+ * mist and fog, so fog and VPD pulses never bury the watering), one period for the page (`range=7d|30d|90d|365d`), Group by
+ * (zone, line, cause) and Measure (minutes, gallons), all in the URL; then the KPIs against the previous equal period, minutes or
  * gallons by group, daily water use and the run ledger. The period's summary is the page's status line.
  */
 export default function WaterHistory() {
@@ -310,18 +321,19 @@ export default function WaterHistory() {
   const days = historyDays(search.get("range"), search.get("days"));
   const measure = historyMeasure(search.get("measure"));
   const group = minutesGroup(search.get("group"));
+  const purpose = historyPurpose(search.get("purpose"));
   const windows = historyWindows(today, days);
   const lines = irrigation.data?.lines ?? NO_LINES;
   // Water names lines as its rows do: "Wall drip", never the relay code (#1341).
   const names = useMemo(() => Object.fromEntries(lines.map((line) => [line.line_id, lineLabel(line)])), [lines]);
-  const current = useApiRead("API-IRR-10", { from: windows.current.from, to: windows.current.to, group_by: "line" }, { intervalMs: HISTORY_POLL_MS });
-  const previous = useApiRead("API-IRR-10", { from: windows.previous.from, to: windows.previous.to, group_by: "line" }, { intervalMs: PREVIOUS_POLL_MS });
+  const current = useApiRead("API-IRR-10", { from: windows.current.from, to: windows.current.to, group_by: "line", purpose }, { intervalMs: HISTORY_POLL_MS });
+  const previous = useApiRead("API-IRR-10", { from: windows.previous.from, to: windows.previous.to, group_by: "line", purpose }, { intervalMs: PREVIOUS_POLL_MS });
   const counted = days <= RUNS_TALLY_MAX_DAYS;
-  const runs = useRunsTally(windows.current, counted, HISTORY_POLL_MS);
-  const runsBefore = useRunsTally(windows.previous, counted, PREVIOUS_POLL_MS);
-  const tally = useMemo(() => (current.data ? tallyMinutes(current.data) : null), [current.data]);
-  const before = useMemo(() => (previous.data ? tallyMinutes(previous.data) : null), [previous.data]);
-  const summary = historySummary(days, tally, counted ? runs.data ?? null : null);
+  const runs = useRunsTally(windows.current, counted, HISTORY_POLL_MS, purpose);
+  const runsBefore = useRunsTally(windows.previous, counted, PREVIOUS_POLL_MS, purpose);
+  const tally = useMemo(() => (current.data ? tallyMinutes(current.data, purpose) : null), [current.data, purpose]);
+  const before = useMemo(() => (previous.data ? tallyMinutes(previous.data, purpose) : null), [previous.data, purpose]);
+  const summary = historySummary(days, tally, counted ? runs.data ?? null : null, purpose);
   useEffect(() => {
     setSummary?.(summary);
     return () => setSummary?.(null);
@@ -329,6 +341,7 @@ export default function WaterHistory() {
   const pick = (name: string, value: string | null) => waterUrl(PATH, search, { [name]: value });
   return <div className="page wat-history">
     <div className="page-toolbar wat-history-bar">
+      <Chips kind="nav" small label="History of" items={PURPOSES.map((value) => ({ key: value, label: PURPOSE_WORDS[value], to: pick("purpose", value === "irrigation" ? null : value), current: purpose === value }))} />
       <Chips kind="nav" small label="Period" items={HISTORY_DAYS.map((value) => ({ key: String(value), label: `${value} d`, to: pick("range", value === 7 ? null : `${value}d`), current: days === value }))} />
       <label className="wat-select">Group by<select value={group} onChange={(event) => setSearch((currentSearch) => {
         const nextSearch = new URLSearchParams(currentSearch);
@@ -346,11 +359,11 @@ export default function WaterHistory() {
         <option value="gal">gallons</option>
       </select></label>
     </div>
-    <Kpis days={days} current={{ tally, pending: current.data === undefined && !current.isError, failed: current.isError && !current.data }} previous={before}
+    <Kpis days={days} purpose={purpose} current={{ tally, pending: current.data === undefined && !current.isError, failed: current.isError && !current.data }} previous={before}
       runs={{ tally: runs.data ?? null, pending: runs.data === undefined && !runs.isError, failed: runs.isError && runs.data === undefined }} runsBefore={runsBefore.data ?? null} counted={counted}
       retry={{ minutes: () => void current.refetch(), runs: () => void runs.refetch() }} />
-    <MinutesSection read={current} days={days} lines={lines} names={names} today={today} group={group} measure={measure} />
+    <MinutesSection read={current} days={days} lines={lines} names={names} today={today} group={group} measure={measure} purpose={purpose} />
     <WaterUseSection days={days} names={names} search={search} />
-    <RunsSection names={names} today={today} days={days} search={search} setSearch={setSearch} />
+    <RunsSection names={names} today={today} days={days} purpose={purpose} search={search} setSearch={setSearch} />
   </div>;
 }

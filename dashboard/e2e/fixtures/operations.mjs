@@ -517,6 +517,14 @@ export function irrigationBody(world) {
   };
 }
 
+/** #1348: fog, or a vpd or fallback cause, is climate; the rest waters plants (`verdify_schemas.irrigation.purpose_of`). */
+const purposeOf = (lineId, cause) => (lineId === "L11" || cause === "vpd" || cause === "fallback" ? "climate" : "irrigation");
+function purposeQuery(query) {
+  const purpose = query.get("purpose");
+  if (purpose !== null && !["irrigation", "climate"].includes(purpose)) throw invalid("purpose must be irrigation or climate", "purpose");
+  return purpose;
+}
+
 /** API-IRR-10: minutes by zone, line or cause per day; today from the lines, a no-data day nine days back (and `minutes-gap`'s). */
 function minutesBody(world, { query }) {
   const from = day(query, "from", null);
@@ -524,6 +532,7 @@ function minutesBody(world, { query }) {
   if (to < from) throw invalid("to must not be before from", "to");
   const groupBy = query.get("group_by") ?? "zone";
   if (!["zone", "line", "cause"].includes(groupBy)) throw invalid("group_by must be zone, line or cause", "group_by");
+  const wanted = purposeQuery(query);
   if (Math.round((localInstant(to) - localInstant(from)) / DAY) + 1 > 400) throw refuse(422, "window_too_large", "Window too large", "Minutes cover at most 400 days", { field: "from" });
   const periods = [];
   const sums = new Map();
@@ -536,19 +545,21 @@ function minutesBody(world, { query }) {
       ? world.lines.filter((line) => (line.today?.minutes ?? 0) > 0).map((line) => [line.line_id, line.state.code === "running" ? line.state.cause : line.last_water?.cause ?? "vpd", line.today.minutes, line.today.pulses, line.today.gal])
       : [["L04", "vpd", 12 + (ago % 4) * 2, 12 + (ago % 4) * 2, 3 + (ago % 3)], ["L11", "vpd", 5 + (ago % 3), 9, 2], ...(["mon", "wed", "fri"].includes(weekday(date)) ? [["L01", "schedule", 12, null, 9]] : [])];
     for (const [lineId, cause, minutes, pulses, gal] of runs) {
+      const purpose = purposeOf(lineId, cause);
+      if (wanted !== null && purpose !== wanted) continue;
       const info = lineInfo(lineId);
       const group = groupBy === "line" ? lineId : groupBy === "cause" ? cause : minutesZone(info);
       if (group === null) continue;
       const chemistry = info.kind.startsWith("fert") ? "fert" : "clean";
-      const key = `${date}|${group}|${cause}|${chemistry}`;
-      const row = sums.get(key) ?? { period: date, group, cause, chemistry, minutes: 0, pulses: null, gal: null };
+      const key = `${date}|${group}|${cause}|${purpose}|${chemistry}`;
+      const row = sums.get(key) ?? { period: date, group, cause, purpose, chemistry, minutes: 0, pulses: null, gal: null };
       row.minutes = round(row.minutes + minutes, 1);
       if (pulses !== null) row.pulses = (row.pulses ?? 0) + pulses;
       if (gal !== null) row.gal = (row.gal ?? 0) + gal;
       sums.set(key, row);
     }
   }
-  return { from, to, group_by: groupBy, periods, rows: [...sums.values()] };
+  return { from, to, group_by: groupBy, purpose: wanted, periods, rows: [...sums.values()] };
 }
 
 const LINE_ID = /^L(0[1-9]|1[01])$/;
@@ -557,8 +568,10 @@ function runsBody(world, { query }) {
   if (to - from > 31 * DAY) throw refuse(422, "window_too_large", "Window too large", "Runs cover at most 31 days per page", { field: "from" });
   const [line, cause, outcome] = ["line", "cause", "outcome"].map((name) => query.get(name));
   if (line !== null && !LINE_ID.test(line)) throw invalid("line must be L01-L11", "line");
-  const rows = world.runs.filter((run) => Date.parse(run.started_at) >= from && Date.parse(run.started_at) < to
-    && (line === null || run.line_id === line) && (cause === null || run.cause === cause) && (outcome === null || run.outcome === outcome));
+  const purpose = purposeQuery(query);
+  const rows = world.runs.map((run) => ({ ...run, purpose: purposeOf(run.line_id, run.cause) }))
+    .filter((run) => Date.parse(run.started_at) >= from && Date.parse(run.started_at) < to && (line === null || run.line_id === line)
+      && (cause === null || run.cause === cause) && (outcome === null || run.outcome === outcome) && (purpose === null || run.purpose === purpose));
   return paged(rows, query);
 }
 

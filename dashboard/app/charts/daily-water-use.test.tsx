@@ -204,3 +204,14 @@ test("water-use-90d: 90 days with one no-data day, one complete day of 0 gal, 14
   expect(model.days.at(-1)?.coverage).toBe("partial");
   expect(waterSummary(model)).toContain("1 day with no data");
 });
+
+test("the transform by purpose (#1348): irrigation below the climate mist and fog, from by_purpose or else from the causes", () => {
+  const served = buildWaterUse({ days: [day("2026-11-02", { by_purpose: { climate: 26, irrigation: 6 } })] }, "purpose");
+  expect(served.segments.map((segment) => [segment.key, segment.label, segment.token])).toEqual([
+    ["irrigation", "Irrigation", "--eq-water"], ["climate", "Mist & fog (climate)", "--eq-fog"],
+  ]);
+  expect(served.stacks).toEqual([[6], [32]]);
+  // A server before #1348: vpd and fallback are the climate water (fog runs carry vpd), the rest irrigation.
+  const derived = buildWaterUse(WEEK, "purpose");
+  expect(derived.days.map((item) => item.parts)).toEqual([{ irrigation: 14, climate: 4 }, null, {}, { climate: 6 }, { climate: 5 }]);
+});

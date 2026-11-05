@@ -3,7 +3,7 @@ import { useId } from "react";
 import { ZONE_WORDS, lineDisplayName } from "../../lib/lines";
 import type { IrrigationLine, IrrigationStatus, Schedule } from "../../lib/operator-api";
 import { useApiDown } from "../../lib/session";
-import { ZONE_KIND_WORDS, amountShort, dayClockWords, nextRunShort, zoneLastAt, type ZoneSummary } from "../../lib/water";
+import { ZONE_KIND_WORDS, amountShort, dayClockWords, nextRunShort, vpdTodayWords, zoneLastAt, type ZoneSummary } from "../../lib/water";
 import { cls } from "../common";
 import { LineCard } from "../line-card";
 import { MisterControls } from "../mister-association";
@@ -43,6 +43,8 @@ export function ZoneCard({ summary, status, today, now, strips, schedules }: Zon
   const apiDown = useApiDown();
   const { zone, lines, master, mister, minutes, planned, cap, capLine, reserve, running } = summary;
   const name = ZONE_WORDS[zone];
+  // The zone's minutes count every purpose (the cap does); its mister's VPD misting is said apart (#1348).
+  const vpd = vpdTodayWords(mister?.today);
   // Today's valve starts (API-05) stand in for a `last_water` the API has not filed yet once today's minutes are above 0.
   const lastAt = zoneLastAt(summary, lines.flatMap((line) => strips?.byLine.get(line.line_id)?.episodes.map((episode) => episode.start) ?? []), today);
   const labels = new Map(schedules.flatMap((schedule) => (schedule.label ? [[schedule.slot_id, schedule.label] as const] : [])));
@@ -65,6 +67,7 @@ export function ZoneCard({ summary, status, today, now, strips, schedules }: Zon
         {cap !== null
           ? <MinutesMeter label={`${name} minutes today`} done={minutes} planned={planned ?? 0} cap={cap} kind={mister?.kind ?? lines[0]?.kind ?? "drip"} />
           : <span className="wat-zone-minutes">{minutes === null ? "—" : `${Math.round(minutes)}\u00a0min`} today</span>}
+        {vpd && <span className="meta wat-zone-vpd" data-water="vpd">{vpd}</span>}
         <span className="meta wat-zone-last">{reserve !== null && <>{reserve}{"\u00a0"}min kept for VPD · </>}{running ? <span className="wat-zone-running">running now</span>
           : lastAt ? <>last <time dateTime={lastAt}>{dayClockWords(lastAt, today)}</time></> : "no water recorded"}</span>
       </div>

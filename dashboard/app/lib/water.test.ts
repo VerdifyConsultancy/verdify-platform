@@ -13,6 +13,7 @@ import {
   NO_ENGINE_TEXT, RETRYING_TEXT, ROM_TEXT, agoWords, barsReport, blockAmount, boardLines, faultWords, feedStages, flowWords, headroomWords, lastWaterWords, limitItems,
   minutesCaps, misterLines, nextRunWords, occupancyWords, occurrenceReasonWords, occurrenceWords, pauseAfterRun, pauseWords, pausedNow, plannedToday, programBanner, runAmountWords,
   runGallons, runSpanWords, runsFilters, runsWindow, timeLeftWords, todayWords, weekDays, wetLines, whenWords, waterUseDays, waterUseSplit, type ProgramBannerInput,
+  climateTodayWords, historyPurpose, runPurpose, vpdTodayWords,
 } from "./water";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
@@ -412,6 +413,35 @@ test("the KPIs' tallies: watering minutes without L03 or fog, gallons where mete
   expect(plain(historySummary(7, tally, runs) ?? "")).toBe("Last 7 days: 26 min watering · 12 gal · 3 runs, 1 missed, 1 short");
   expect(plain(historySummary(90, tally, null) ?? "")).toBe("Last 90 days: 26 min watering · 12 gal");
   expect(historySummary(7, null, runs)).toBeNull();
+
+  // #1348: by purpose, irrigation leaves the VPD misting out too, and climate counts fog in with it.
+  const irrigation = tallyMinutes(report, "irrigation");
+  expect([irrigation.minutes, irrigation.gal, irrigation.fog]).toEqual([12, 9, 0]);
+  const climate = tallyMinutes(report, "climate");
+  expect([climate.minutes, climate.gal, climate.fog]).toEqual([20, 5, 6]);
+  expect(climate.days.map((day) => day.minutes)).toEqual([6, null, 14]);
+  const vpd = { ...(run("ok", denver("06:00"), "L04") as object), cause: "vpd" } as never;
+  const fogRun = { ...(run("ok", denver("05:30"), "L11") as object), cause: "vpd" } as never;
+  const mixed = [run("ok", denver("07:00"), "L01"), vpd, fogRun, run("ok", denver("04:00"), "L03")];
+  expect(tallyRuns(mixed, true, "irrigation").runs).toBe(1);
+  expect(tallyRuns(mixed, true, "climate").runs).toBe(2);
+  expect(tallyRuns(mixed).runs).toBe(2);  // no purpose: the watering lines, VPD episodes included, as before
+  expect(plain(historySummary(7, climate, null, "climate") ?? "")).toBe("Last 7 days: 20 min mist and fog · 5 gal");
+});
+
+test("a run's purpose (#1348): the server's, or the same rule from its line and cause; History's purpose and the climate words", () => {
+  expect(runPurpose({ line_id: "L04", cause: "schedule", purpose: "climate" })).toBe("climate");
+  expect([runPurpose({ line_id: "L11", cause: "vpd" }), runPurpose({ line_id: "L07", cause: "fallback" }), runPurpose({ line_id: "L04", cause: "run_now" })]).toEqual(["climate", "climate", "irrigation"]);
+  expect([historyPurpose(null), historyPurpose("climate"), historyPurpose("fog")]).toEqual(["irrigation", "climate", "irrigation"]);
+  expect(waterUseSplit("purpose")).toBe("purpose");
+  expect(plain(climateTodayWords({ minutes: 34.8, pulses: 33, gal: 26 }) ?? "")).toBe("Mist & fog today: 35 min · 26 gal · 33 pulses");
+  expect(plain(climateTodayWords({ minutes: 0, pulses: 0, gal: 0 }) ?? "")).toBe("Mist & fog today: 0 min · 0 gal");
+  expect(climateTodayWords({ minutes: null, pulses: null, gal: null })).toBeNull();
+  expect(climateTodayWords(undefined)).toBeNull();
+  expect(plain(vpdTodayWords({ climate_minutes: 1.5, climate_pulses: 4 }) ?? "")).toBe("VPD mist today: 4 pulses, 2 min");
+  expect(plain(vpdTodayWords({ climate_minutes: 0.2, climate_pulses: 1 }) ?? "")).toBe("VPD mist today: 1 pulse, 1 min");
+  expect(vpdTodayWords({ climate_minutes: 0, climate_pulses: 0 })).toBeNull();
+  expect(vpdTodayWords({ minutes: 3 } as never)).toBeNull();
 });
 
 test("the day's API-05 read and the Schedules URLs", () => {
