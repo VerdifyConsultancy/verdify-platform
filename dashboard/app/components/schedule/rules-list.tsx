@@ -65,7 +65,7 @@ function RuleDelete({ schedule, lineName }: { schedule: Schedule; lineName: stri
   const name = schedule.label || `slot ${schedule.slot_id}`;
   const remove = async () => {
     const outcome = await write.send({ slot_id: schedule.slot_id }, undefined);
-    if (outcome.ok) toast.show({ message: `Requested deleting ${schedule.label || "the schedule"} on ${schedule.line_id}` });
+    if (outcome.ok) toast.show({ message: `Requested deleting ${schedule.label || "the schedule"} on ${lineName}` });
     // A tap while one is out is no request at all (no error): nothing to say.
     else if (outcome.error) toast.show({ kind: "failure", message: `Couldn't delete ${name} on ${lineName}`, detail: outcome.error.message });
   };

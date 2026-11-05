@@ -71,7 +71,6 @@ SLACK_CHANNEL = os.environ.get("SLACK_CHANNEL", SLACK_SETTINGS.channel_id)
 # ── External services ────────────────────────────────────────────
 FRIGATE_URL = os.environ.get("FRIGATE_URL", "http://192.168.30.142:5000")
 LOKI_URL = os.environ.get("LOKI_URL", "")  # Empty = disabled
-GEMINI_API_KEY_FILE = os.environ.get("GEMINI_API_KEY_FILE", "/mnt/agents/shared/credentials/gemini_api_key.txt")
 
 # ── Hermes Iris (sole planner gateway) ───────────────────────────
 HERMES_URL = os.environ.get("HERMES_URL", "http://127.0.0.1:8642")

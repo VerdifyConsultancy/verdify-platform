@@ -342,6 +342,8 @@ $PY -m pytest -q -rs \
   tests/test_verdify_tier1_owner_exclusions.py \
   tests/test_dashboard_manifests.py \
   tests/test_egress_deny_management.py \
+  tests/test_egress_local_only.py \
+  tests/test_local_only_guards.py \
   tests/test_mcp_egress_boundary.py \
   tests/test_writer_outbound_boundary.py \
   tests/test_verify_component_proof_packet.py \
@@ -402,6 +404,15 @@ fi
 
 step "Prometheus rule-file delivery guard (#563)"
 $PY scripts/check-prometheus-rule-source.py
+
+step "images only from the estate registry (#1363)"
+$PY scripts/check-image-sources.py
+
+step "no new public hostnames in runtime source (#1351)"
+$PY scripts/check-external-hosts.py
+
+step "vision and AI calls only via Cortex llm.primary.longctx.mm (#1351)"
+$PY scripts/check-ai-routes.py
 
 # ── Diff-scoped gates (merge-base semantics from the retired PR workflows) ──
 if [ -n "${CI_BASE_REF:-}" ]; then

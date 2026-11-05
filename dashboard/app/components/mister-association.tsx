@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { Fragment, useEffect, useRef, useState } from "react";
+import { lineDisplayName } from "../lib/lines";
 import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
 import { useRole } from "../lib/session";
 import { lineSyncWords, useWaterDrawer, vpdSourceWords } from "../lib/water";
@@ -53,7 +54,7 @@ function FlagSwitch({ line, flag, label, badge, onPress }: { line: IrrigationLin
     {/* A flag the API has no value for is never shown as OFF (screens §1.5). */}
     {value === null || value === undefined
       ? <><span className="field-label">{label}</span> <Flag on={value} /></>
-      : <Switch write label={<>{label} <span className="screen-reader">{line.line_id}</span></>} checked={value} busy={write.sending} onChange={change} describedBy={describedBy(write.error && ids.errorId)} />}
+      : <Switch write label={<>{label} <span className="screen-reader">{lineDisplayName(line)}</span></>} checked={value} busy={write.sending} onChange={change} describedBy={describedBy(write.error && ids.errorId)} />}
     {badge && <ReadbackBadge state={line.sync} />}
     {write.error && <FieldError id={ids.errorId}>{write.error.message}</FieldError>}
   </div>;

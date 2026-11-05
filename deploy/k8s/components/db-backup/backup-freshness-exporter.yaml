@@ -43,6 +43,9 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: /metrics
     spec:
+      # #1363: the zot origin denies anonymous reads.
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
       securityContext:
         runAsNonRoot: true
         runAsUser: 999
@@ -56,7 +59,7 @@ spec:
           # micro-exporters use (e.g. verdify-writer-exporter). The timescaledb image
           # ships no python3, so it cannot host this. The exporter is pure stdlib; it
           # opens nothing but local files (the dumps PVC) and a listen socket.
-          image: python:3.12-alpine@sha256:2d07747661646f3d904e995a232fb19e461afde69e67e6f7f3b52c7b968a88b3
+          image: registry.vallery.net/jvallery/mirror-docker-io-library-python:3.12-alpine-236173eb7400@sha256:2d07747661646f3d904e995a232fb19e461afde69e67e6f7f3b52c7b968a88b3
           command:
             - python3
             - -c

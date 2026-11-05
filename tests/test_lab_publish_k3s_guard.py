@@ -1436,7 +1436,7 @@ def test_rendered_prod_uses_only_the_cache_backed_quartz_runtime():
     assert deployment_pod["topologySpreadConstraints"][0]["whenUnsatisfiable"] == "DoNotSchedule"
     assert [item["name"] for item in deployment_pod["initContainers"]] == ["prepare-private-public-root"]
     assert site_container["image"] == (
-        "nginxinc/nginx-unprivileged:stable-alpine-slim"
+        "registry.vallery.net/jvallery/mirror-docker-io-nginxinc-nginx-unprivileged:stable-alpine-slim-5d8bb9437d74"
         "@sha256:5d8bb9437d74a600ec5dbf90c035451c724dc33eac8d3a71078f6f8612c345f6"
     )
     assert "verdify-lab-astro" not in site_container["image"]

@@ -11,7 +11,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "deploy/k8s/components/firmware-builder/firmware-builder.yaml"
 ESPHOME_IMAGE = (
-    "ghcr.io/esphome/esphome:2026.6.5@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c"
+    "registry.vallery.net/jvallery/mirror-ghcr-io-esphome-esphome:2026.6.5-ffe23402d169"
+    "@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c"
 )
 
 

@@ -54,7 +54,7 @@ test("the transform: a no_data day stays null, 0 stays 0, and the no-valve serie
   const model = buildWaterUse(WEEK, "line", NAMES);
   // Clean below fertilizer, whatever order the API lists them.
   expect(model.segments.map((segment) => [segment.key, segment.token, segment.label])).toEqual([
-    ["L01", "--eq-water", "L01 Drip • Wall"], ["L04", "--eq-mister", "L04 Mister • Center"], ["L11", "--eq-fog", "L11 Fog"], ["L02", "--eq-fert", "L02 Drip • Wall (Fert.)"],
+    ["L01", "--eq-water", "Wall drip"], ["L04", "--eq-mister", "Center mister"], ["L11", "--eq-fog", "Fog"], ["L02", "--eq-fert", "Wall drip (fertilized)"],
   ]);
   // Each column is the running total up to it; the no-data day is null in all, and the day of no water 0 in all.
   expect(model.stacks).toEqual([
@@ -100,7 +100,7 @@ test("each line takes its own token by kind: drips, fertilizer lines, the master
 test("the chart: the stack left of each day and the no-valve bar right of it, neutral (hose and sink use is no fault), with no band tying them", async () => {
   const { plot } = await mount();
   const { series, bands } = plot.opts;
-  expect(series.slice(1).map((item) => item.label)).toEqual(["L01 Drip • Wall", "L04 Mister • Center", "L11 Fog", "L02 Drip • Wall (Fert.)", NO_VALVE_WORDS]);
+  expect(series.slice(1).map((item) => item.label)).toEqual(["Wall drip", "Center mister", "Fog", "Wall drip (fertilized)", NO_VALVE_WORDS]);
   const bars = series.slice(1).map((item) => (item.paths as unknown as { bars: { align: number; size: number[] } }).bars);
   expect(bars.map((item) => item.align)).toEqual([-1, -1, -1, -1, 1]);
   // Red is for stop and fault (redesign principle 7, §4.4): no series is drawn in it.
@@ -144,16 +144,16 @@ test("a no-data day is a faint hatched gap across both bars, under the grid; tod
 test("the tooltip says the day's meter total, each part, the no-valve water, partial and no data", async () => {
   const { plot } = await mount();
   const at = (index: number) => { plot.hover((plot.data[0] as number[])[index], index, 30); return tooltip(plot); };
-  expect(at(0)).toEqual(["Oct 29", `${gal(21)} on the meter`, `L01 Drip • Wall · ${gal(9)}`, `L04 Mister • Center · ${gal(4)}`, `L02 Drip • Wall (Fert.) · ${gal(5)}`, `No Verdify valve open · ${gal(3)}`]);
+  expect(at(0)).toEqual(["Oct 29", `${gal(21)} on the meter`, `Wall drip · ${gal(9)}`, `Center mister · ${gal(4)}`, `Wall drip (fertilized) · ${gal(5)}`, `No Verdify valve open · ${gal(3)}`]);
   expect(at(1)).toEqual(["Oct 30", "no data"]);
   expect(at(2)).toEqual(["Oct 31", `${gal(0)} on the meter`, `No Verdify valve open · ${gal(0)}`]);
-  expect(at(4)).toEqual(["Nov 2", `${gal(8)} on the meter`, "partial", `L04 Mister • Center · ${gal(3)}`, `L11 Fog · ${gal(2)}`, `No Verdify valve open · ${gal(3)}`]);
+  expect(at(4)).toEqual(["Nov 2", `${gal(8)} on the meter`, "partial", `Center mister · ${gal(3)}`, `Fog · ${gal(2)}`, `No Verdify valve open · ${gal(3)}`]);
 });
 
 test("the key names the no-valve bar in neutral --muted, hatched no data and the dashed partial day, and lines of one kind share an entry", () => {
   const items = waterKey(buildWaterUse({ days: [...WEEK.days, day("2026-11-03", { by_line: { L07: 1 } })] }, "line", NAMES));
   expect(items.map((item) => [item.token, item.kind, item.label])).toEqual([
-    ["--eq-water", "fill", "L01 Drip • Wall"], ["--eq-mister", "fill", "L04 Mister • Center, L07"], ["--eq-fog", "fill", "L11 Fog"], ["--eq-fert", "fill", "L02 Drip • Wall (Fert.)"],
+    ["--eq-water", "fill", "Wall drip"], ["--eq-mister", "fill", "Center mister, South mister"], ["--eq-fog", "fill", "Fog"], ["--eq-fert", "fill", "Wall drip (fertilized)"],
     ["--muted", "fill", "No Verdify valve open: hose, sink, hydro or a leak"], ["--muted", "hatch", "no data"], ["--ink", "dashed", "partial day"],
   ]);
 });
@@ -166,7 +166,7 @@ test("the summary gives the window's total and its no-valve gallons, and the dat
   expect(table.querySelector("tbody")).toBeNull();
   (table as HTMLDetailsElement).open = true;
   fireEvent(table, new Event("toggle"));
-  expect([...container.querySelectorAll("thead th")].map((cell) => cell.textContent)).toEqual(["Day", "Total", "L01 Drip • Wall", "L04 Mister • Center", "L11 Fog", "L02 Drip • Wall (Fert.)", "No valve", "Coverage"]);
+  expect([...container.querySelectorAll("thead th")].map((cell) => cell.textContent)).toEqual(["Day", "Total", "Wall drip", "Center mister", "Fog", "Wall drip (fertilized)", "No valve", "Coverage"]);
   expect(row(container, 0)).toEqual(["Oct 29", gal(21), gal(9), gal(4), gal(0), gal(5), gal(3), "complete"]);
   expect(row(container, 1)).toEqual(["Oct 30", "—", "—", "—", "—", "—", "—", "no data"]);
   expect(row(container, 2)).toEqual(["Oct 31", gal(0), gal(0), gal(0), gal(0), gal(0), gal(0), "complete"]);

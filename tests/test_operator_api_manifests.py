@@ -229,18 +229,23 @@ def test_in_prod_allow_db_from_app_admits_the_operator_api(prod):
     assert rule["ports"] == [{"protocol": "TCP", "port": 5432}]
 
 
-def test_in_prod_egress_deny_management_covers_the_operator_api(prod):
+def test_in_prod_egress_local_only_covers_the_operator_api(prod):
+    """#1351/#1363: the operator API gets private-range egress only (egress-local-only), not the
+    vendored deny's public egress, and no allowlist of its own."""
+    local = one(prod, "NetworkPolicy", "egress-local-only")["spec"]["podSelector"]
     deny = one(prod, "NetworkPolicy", "egress-deny-management")["spec"]["podSelector"]
     labels = one(prod, "Deployment", NAME)["spec"]["template"]["metadata"]["labels"]
-    (expression,) = deny["matchExpressions"]
-    assert expression["key"] == "app.kubernetes.io/component" and expression["operator"] == "NotIn"
-    assert labels["app.kubernetes.io/component"] not in expression["values"]
+    component = labels["app.kubernetes.io/component"]
+    ((local_expression,), (deny_expression,)) = local["matchExpressions"], deny["matchExpressions"]
+    assert local_expression["key"] == deny_expression["key"] == "app.kubernetes.io/component"
+    assert local_expression["operator"] == "NotIn" and component not in local_expression["values"]
+    assert deny_expression["operator"] == "In" and component not in deny_expression["values"]
     own_egress = [
         doc["metadata"]["name"]
         for doc in prod
         if doc["kind"] == "NetworkPolicy"
         and "Egress" in doc["spec"]["policyTypes"]
-        and doc["metadata"]["name"] != "egress-deny-management"
+        and doc["metadata"]["name"] not in {"egress-deny-management", "egress-local-only"}
         and all(labels.get(key) == value for key, value in doc["spec"]["podSelector"].get("matchLabels", {}).items())
         and not doc["spec"]["podSelector"].get("matchExpressions")
     ]

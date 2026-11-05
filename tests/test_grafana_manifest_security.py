@@ -10,9 +10,13 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "deploy/k8s/components/grafana/grafana.yaml"
 SECRET_CONTRACT = ROOT / "deploy/k8s/SECRETS.md"
-GRAFANA_IMAGE = "grafana/grafana:12.4.14@sha256:ae509d9ae8c1021ca32ec370a9ca975d40165eda9fccd1e1102d317ff8787cd7"
+GRAFANA_IMAGE = (
+    "registry.vallery.net/jvallery/mirror-docker-io-grafana-grafana:12.4.14-ae509d9ae8c1"
+    "@sha256:ae509d9ae8c1021ca32ec370a9ca975d40165eda9fccd1e1102d317ff8787cd7"
+)
 RENDERER_IMAGE = (
-    "grafana/grafana-image-renderer:v5.12.9@sha256:24df1663f600abc6daa8ef006a0749c1d8f532e43a4542baf55ba15c5a3eaeac"
+    "registry.vallery.net/jvallery/mirror-docker-io-grafana-grafana-image-renderer:v5.12.9-24df1663f600"
+    "@sha256:24df1663f600abc6daa8ef006a0749c1d8f532e43a4542baf55ba15c5a3eaeac"
 )
 IMMUTABLE_IMAGE_RE = re.compile(r"^[^@\s]+@sha256:[0-9a-f]{64}$")
 

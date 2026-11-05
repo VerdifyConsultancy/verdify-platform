@@ -46,7 +46,7 @@ test("what ?check= asks: enabling a disabled line, Schedule on an enabled mister
 
 test("#1343 Run… on a disabled line: the sheet says the line is off, asks the check once, enables it and opens the run dialog", async () => {
   const api = open("/water?check=L07&for=run");
-  expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Enable L07");
+  expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Enable South mister");
   expect(screen.getByRole("dialog").querySelector("[data-run-then]")?.textContent).toBe(RUN_THEN_TEXT);
   fireEvent.click(sheet().getByRole("checkbox", { name: /^Checked:/ }));
   fireEvent.click(sheet().getByRole("button", { name: "Enable" }));
@@ -68,13 +68,13 @@ test("#1343 Run… on a disabled line with its check: no check asked again, Enab
   await advance(0);
   expect(writes(api).map((row) => row.body).at(-1)).toEqual({ enabled: true, manual: true });
   expect(where()).toBe("?run=L02");
-  expect(screen.getByRole("status").textContent).toContain("Requested: L02 enabled");
+  expect(screen.getByRole("status").textContent).toContain("Requested: Wall drip (fertilized) enabled");
   expect(screen.getByRole("status").textContent).not.toContain("check recorded");
 });
 
 test("enable: the line's check, a note up to 500, Manual ticked and Reason; Enable stays disabled until Checked is ticked, then sends once and closes", async () => {
   const api = open("/water?check=L02");
-  expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Enable L02");
+  expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Enable Wall drip (fertilized)");
   const save = sheet().getByRole<HTMLButtonElement>("button", { name: "Enable" });
   expect(save.disabled).toBe(true);
   // Enter in a field cannot send it either.
@@ -97,7 +97,7 @@ test("enable: the line's check, a note up to 500, Manual ticked and Reason; Enab
   expect(sent[0].idempotency_key).toMatch(UUID);
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(where()).toBe("");
-  expect(screen.getByRole("status").textContent).toContain("Requested: L02 enabled, check recorded");
+  expect(screen.getByRole("status").textContent).toContain("Requested: Wall drip (fertilized) enabled, check recorded");
 });
 
 test("no note or reason sends neither; unticking Manual sends manual false", async () => {
@@ -111,7 +111,7 @@ test("no note or reason sends neither; unticking Manual sends manual false", asy
 
 test("Schedule on: the sheet asks for the same check and sends schedule_member, not enabled", async () => {
   const api = open("/water?check=L04&for=schedule");
-  expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Turn on Schedule for L04");
+  expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Turn on Schedule for Center mister");
   sheet().getByRole("checkbox", { name: "Checked: nozzles over the Vandas, coverage and walkway checked" });
   const save = sheet().getByRole<HTMLButtonElement>("button", { name: "Turn on Schedule" });
   expect(save.disabled).toBe(true);

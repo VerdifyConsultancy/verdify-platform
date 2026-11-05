@@ -11,6 +11,7 @@ import type { Session } from "../lib/session";
 import { OPERATOR, advance, renderWithApi, startFixtureApi, stopFixtureApi, writes } from "../lib/test-fixture-api";
 import { MisterControls, WILL_NOT_MIST_TEXT, flagShowsBadge } from "./mister-association";
 import { denver, text } from "./test-render";
+import { lineDisplayName } from "../lib/lines";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
 const status = (names: string | string[] = "in-band") => fixture(names, { now: NOW })["API-IRR-01"] as IrrigationStatus;
@@ -72,7 +73,7 @@ function switches(id = "L04", names: string | string[] = "lines-unchecked", sess
   const from = status(names);
   renderWithApi(<><MisterControls line={lineOf(from, id)} status={from} /><Where /></>, session);
   const section = within(document.querySelector<HTMLElement>(`.mister-zone[data-line="${id}"]`)!);
-  return { api, section, vpd: () => section.queryByRole("switch", { name: `VPD control ${id}` }), schedule: () => section.queryByRole("switch", { name: `Schedule ${id}` }) };
+  return { api, section, vpd: () => section.queryByRole("switch", { name: `VPD control ${lineDisplayName(id)}` }), schedule: () => section.queryByRole("switch", { name: `Schedule ${lineDisplayName(id)}` }) };
 }
 const where = () => document.querySelector('[data-testid="where"]')?.textContent;
 
@@ -103,7 +104,7 @@ test("VPD control needs no check; Schedule on for a line with no check sends not
   const line = { ...lineOf(checked, "L04"), check: { checked_by: "jason", checked_at: denver("08:00"), note: null } };
   const second = startFixtureApi({ fixture: "schedules-paused" });
   renderWithApi(<MisterControls line={line} status={checked} />);
-  fireEvent.click(within(document.querySelector<HTMLElement>(".mister-zone")!).getByRole("switch", { name: "Schedule L04" }));
+  fireEvent.click(within(document.querySelector<HTMLElement>(".mister-zone")!).getByRole("switch", { name: "Schedule Center mister" }));
   await advance(0);
   expect(writes(second).map((row) => row.body)).toEqual([{ schedule_member: true, manual: true }]);
 });
@@ -122,7 +123,7 @@ test("a refusal shows beside its switch; a viewer sees no switch; with changes o
   expect([off.vpd()?.hasAttribute("disabled"), off.schedule()?.hasAttribute("disabled")]).toEqual([true, true]);
   cleanup(); stopFixtureApi();
   const empty = zone({ ...lineOf(status(), "L04"), schedule_member: null }, status(), OPERATOR);
-  expect(within(empty.section).queryByRole("switch", { name: "Schedule L04" })).toBeNull();
+  expect(within(empty.section).queryByRole("switch", { name: "Schedule Center mister" })).toBeNull();
   expect(text(empty.section.querySelector('[data-flag="schedule_member"]'))).toBe("Schedule —");
 });
 

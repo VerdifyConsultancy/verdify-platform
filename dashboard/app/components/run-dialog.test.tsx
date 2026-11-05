@@ -11,6 +11,7 @@ import { OPERATOR, UUID, advance, renderWithApi, requests, startFixtureApi, stop
 import { words } from "../lib/words";
 import { LINE_OFF_TEXT, RUN_ARRIVES_TEXT, RunControl, WaterRuns, runOffer } from "./run-dialog";
 import { text } from "./test-render";
+import { lineDisplayName } from "../lib/lines";
 
 afterEach(() => { cleanup(); stopFixtureApi(); });
 
@@ -62,9 +63,9 @@ test("what a line offers (#1343): every enabled wet line runs once, Mist now… 
 test("L01: the head, Duration 1–120 min, {minutes}; a double tap sends one Idempotency-Key, and the relay edge reads RUNNING", async () => {
   const api = await open("L01");
   expect(dialog()).toBeNull();
-  press("Run… L01");
+  press("Run… Wall drip");
   expect(opened()).toBe(true);
-  expect(title()).toBe("Run L01 Wall drip (clean) for 10 min?");
+  expect(title()).toBe("Run Wall drip (clean) for 10 min?");
   expect(facts()).toBe("Starts now · wall drip today 0 of 60 min");
   expect(fieldNames()).toEqual(["Duration"]);
   expect(text(dialog()!.querySelector(".field-hint"))).toBe("Allowed 1–120 min · step 1");
@@ -87,10 +88,10 @@ test("L01: the head, Duration 1–120 min, {minutes}; a double tap sends one Ide
 
 test("L02, FERT: the title, what a feed does, no cap, and {minutes, prewet_s, flush_s}", async () => {
   const api = await open("L02", { fixture: "run-dialogs" });
-  press("Run… L02");
-  expect(title()).toBe("Run L02 Wall feed (FERT) for 10 min?");
-  expect(facts()).toBe("Starts now · wall feed today 0 min, no cap");
-  expect(notes()).toEqual(["Prewets on L01, feeds through L03 from the tank, then flushes"]);
+  press("Run… Wall drip (fertilized)");
+  expect(title()).toBe("Run Wall drip (fertilized) for 10 min?");
+  expect(facts()).toBe("Starts now · wall drip (fertilized) today 0 min, no cap");
+  expect(notes()).toEqual(["Prewets on Wall drip, feeds through the fertilizer valve from the tank, then flushes"]);
   expect(fieldNames()).toEqual(["Duration", "Prewet on the clean line", "Flush on the clean line"]);
   fireEvent.change(screen.getByLabelText("Duration"), { target: { value: "5" } });
   press("Run 5 min");
@@ -100,9 +101,9 @@ test("L02, FERT: the title, what a feed does, no cap, and {minutes, prewet_s, fl
 
 test("L08, FERT: the mister fields plus prewet and flush, and no minutes", async () => {
   const api = await open("L08", { fixture: "run-dialogs" });
-  press("Run… L08");
-  expect(title()).toBe("Run L08 South feed (FERT) for 4 × 45 s?");
-  expect(notes()).toEqual(["Prewets on L07, feeds through L03 from the tank, then flushes"]);
+  press("Run… South mister (fertilized)");
+  expect(title()).toBe("Run South mister (fertilized) for 4 × 45 s?");
+  expect(notes()).toEqual(["Prewets on South mister, feeds through the fertilizer valve from the tank, then flushes"]);
   expect(fieldNames()).toEqual(["Pulse", "Pulses", "Gap between pulses", "Prewet on the clean line", "Flush on the clean line"]);
   expect(screen.queryByLabelText("Duration")).toBeNull();
   press("Run 4 × 45 s");
@@ -114,14 +115,14 @@ test("L08, FERT: the mister fields plus prewet and flush, and no minutes", async
 
 test("L04: Mist now… shows with Schedule off too (#1343) and sends {on_s, count, gap_s}; the cap shows, and a clean line has no feed words", async () => {
   const off = await open("L04");
-  press("Mist now… L04");
+  press("Mist now… Center mister");
   press(/^Run \d/);
   await advance(0);
   expect(writes(off)).toEqual([expect.objectContaining({ operationId: "API-IRR-06", path: "/api/v1/irrigation/lines/L04/run" })]);
   cleanup(); stopFixtureApi();
   const api = await open("L04", { fixture: "run-dialogs" });
-  press("Mist now… L04");
-  expect(title()).toBe("Run L04 Center mister (clean) for 4 × 45 s?");
+  press("Mist now… Center mister");
+  expect(title()).toBe("Run Center mister (clean) for 4 × 45 s?");
   expect(facts()).toBe("Starts now · center mister today 14 of 120 min");
   expect(notes()).toEqual([]);
   fireEvent.change(screen.getByLabelText("Pulses"), { target: { value: "2" } });
@@ -140,7 +141,7 @@ test("a disabled line keeps Run… (#1343), saying it is off, and opens the chec
   for (const [id, label] of [["L02", "Run…"], ["L07", "Mist now…"]]) {
     const api = await open(id, { fixture: "lines-unchecked" });
     expect(document.querySelector(`[data-run-note="${id}"]`)?.textContent).toBe(LINE_OFF_TEXT);
-    press(`${label} ${id}`);
+    press(`${label} ${lineDisplayName(id)}`);
     await advance(0);
     // Nothing is sent and no run dialog opens: the check sheet (?check=<line>&for=run) takes it from here.
     expect(dialog()).toBeNull();
@@ -151,11 +152,11 @@ test("a disabled line keeps Run… (#1343), saying it is off, and opens the chec
 
 test("manifold_busy keeps the dialog open with the holder and until when, changes nothing and sends nothing else", async () => {
   const api = await open("L02", { fixture: "manifold-busy" });
-  press("Run… L02");
+  press("Run… Wall drip (fertilized)");
   press("Run 10 min");
   await advance(0);
   expect(opened()).toBe(true);
-  expect(refusal()).toBe("L01 holds the drip manifold until 10:49; stop it or try then");
+  expect(refusal()).toBe("Wall drip holds the drip manifold until 10:49; stop it or try then");
   expect(writes(api)).toHaveLength(1);
   expect(screen.getByTestId("state").textContent).toBe("idle");
   // Nothing queues: no readback runs, and the line stays as it was.
@@ -166,14 +167,14 @@ test("manifold_busy keeps the dialog open with the holder and until when, change
   // A new opening starts with no refusal.
   press("Cancel");
   expect(dialog()).toBeNull();
-  press("Run… L02");
+  press("Run… Wall drip (fertilized)");
   expect(within(dialog()!).queryByRole("alert")).toBeNull();
 });
 
 test("each refusal reads its code in words from the words table, and the dialog stays open", async () => {
   const refused = async (lineId: string, code: string, fixture: string | string[], before: (api: ReturnType<typeof startFixtureApi>) => void = () => {}, duration?: string) => {
     const api = await open(lineId, { fixture });
-    press(new RegExp(`^(Run…|Mist now…) ${lineId}$`));
+    press(new RegExp(`^(Run…|Mist now…) ${lineDisplayName(lineId).replace(/[()]/g, "\\$&")}$`));
     // The race the API's refusal covers: the line changed after the card last read it.
     before(api);
     if (duration) fireEvent.change(screen.getByLabelText("Duration"), { target: { value: duration } });
@@ -200,12 +201,12 @@ test("before the irrigation firmware L01 has no Duration: API-09 has no irrig_wa
   // API-09 is read when the dialog opens, not with the card. The bridge's rows retired once the engine was last-good
   // (#1165), so its answer carries no device value for the run.
   expect(requests(api, "API-09")).toEqual([]);
-  press("Run… L01");
+  press("Run… Wall drip");
   await advance(0);
   expect(requests(api, "API-09")).toHaveLength(1);
   expect(screen.queryByLabelText("Duration")).toBeNull();
   expect(notes()).toEqual(["Runs for the Wall drip duration (irrig_wall_duration_min)"]);
-  expect(title()).toBe("Run L01 Wall drip (clean)?");
+  expect(title()).toBe("Run Wall drip (clean)?");
   fireEvent.change(screen.getByLabelText("Reason (optional)"), { target: { value: "Wall plants are dry" } });
   press("Run");
   await advance(0);
@@ -217,10 +218,10 @@ test("before the irrigation firmware L01 has no Duration: API-09 has no irrig_wa
 
 test("before the irrigation firmware, without API-09 the dialog names the setting only, and still sends {}", async () => {
   const api = await open("L01", { fixture: "before-engine", fail: { "API-09": 503 } });
-  press("Run… L01");
+  press("Run… Wall drip");
   await advance(0);
   expect(notes()).toEqual(["Runs for the Wall drip duration (irrig_wall_duration_min)"]);
-  expect(title()).toBe("Run L01 Wall drip (clean)?");
+  expect(title()).toBe("Run Wall drip (clean)?");
   press("Run");
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-06", body: {} })]);
@@ -241,7 +242,7 @@ test("a viewer sees no Run…; with changes switched off Run… is disabled", as
   expect(dialog()).toBeNull();
   cleanup(); stopFixtureApi();
   await open("L01", { fixture: "writes-off" }, { role: "operator", writesEnabled: false });
-  expect(screen.getByRole("button", { name: "Run… L01" }).hasAttribute("disabled")).toBe(true);
+  expect(screen.getByRole("button", { name: "Run… Wall drip" }).hasAttribute("disabled")).toBe(true);
 });
 
 type Row = { line_id: string; state: Record<string, unknown> };
@@ -262,7 +263,7 @@ async function startRun(lineId: string, fixture: string | undefined, change: (ro
   pin(change);
   renderWithApi(<Card lineId={lineId} />);
   await advance(0);
-  press(`Run… ${lineId}`);
+  press(`Run… ${lineDisplayName(lineId)}`);
   press(/^Run \d/);
   await advance(0);
 }
@@ -306,12 +307,12 @@ test("a run that starts after its 30 s drops Not started on the card's own poll,
 
 test("Cancel while the run is out: its refusal still reads, on the card, and the next opening starts with none", async () => {
   await open("L02", { fixture: "manifold-busy" });
-  press("Run… L02");
+  press("Run… Wall drip (fertilized)");
   press("Run 10 min");
   press("Cancel");
   expect(dialog()).toBeNull();
   await advance(0);
-  expect(text(document.querySelector(".field-error[role=alert]"))).toBe("L01 holds the drip manifold until 10:49; stop it or try then");
-  press("Run… L02");
+  expect(text(document.querySelector(".field-error[role=alert]"))).toBe("Wall drip holds the drip manifold until 10:49; stop it or try then");
+  press("Run… Wall drip (fertilized)");
   expect(document.querySelector(".field-error")).toBeNull();
 });
