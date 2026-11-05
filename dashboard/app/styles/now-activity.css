@@ -5,9 +5,8 @@
 /* ---------------------------------------------------------------- Now: the page */
 /* The page is a .page stack (primitives.css); its head is the hero with the quick actions under it, at the card gap. */
 .now-head{display:grid;gap:var(--space-4);min-width:0}
-/* The pair side by side shares one height (as Statistics' and Plan's rows do), so a short Needs someone leaves no hole beside Water today. */
-.now-pair{display:grid;gap:var(--space-4);align-items:stretch;min-width:0}
-.now-pair>.card,.now-pair>.now-water>.card{height:100%}
+/* The pair side by side, each card at its own height: a short Needs someone ("No open alerts") is never a tall empty card beside Water today. */
+.now-pair{display:grid;gap:var(--space-4);align-items:start;min-width:0}
 @media(min-width:861px){.now-pair{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 /* The ink hero (redesign §4.2 "Status hero"): the answer and the hero value on the left, the three band bars and time in band on the right, then the status line and "All readings" across. */

@@ -35,7 +35,7 @@ async function expectNoControl(page: Page) {
 async function expectMorning(page: Page) {
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("All OK");
   await expect(page.locator("#data")).toHaveText("Updated 20 s ago");
-  await expect(page.locator("[data-water=wall] .now-water-last")).toHaveText("today 07:31, 12 min");
+  await expect(page.locator("[data-water=wall] .now-water-last")).toHaveText("last 07:31, 12 min");
   await expect(page.locator("[data-water=center] .now-water-last")).toHaveText("misted 09:58 (VPD)");
   await expect(page.locator("[data-chip=occupancy]")).toHaveText(OCCUPIED);
   await expectNoHorizontalScroll(page);
