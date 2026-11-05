@@ -72,6 +72,9 @@ COPY slack_config.py /app/slack_config.py
 COPY slack.yaml /app/slack.yaml
 COPY slack_ops/ /app/slack_ops/
 COPY verdify_schemas/ /app/verdify_schemas/
+# The Cortex planner (#1350) runs on this image as its own Deployment
+# (components/cortex-planner, `python -m cortex_planner.run`); the ingestor never imports it.
+COPY cortex_planner/ /app/cortex_planner/
 
 # B4: the forecast-action engine is launched as a subprocess by
 # ingestor/tasks/forecast.py:forecast_action_engine() every 900s. It must exist

@@ -680,6 +680,29 @@ def sealed_sql_289():
     )
 
 
+CORTEX_PLANNER_MIGRATION = (
+    294,
+    "294-cortex-planner-shadow-storage.sql",
+    "36e384395f71333fe8edd3fecfdb1f73961413cf86d8d080c7f89f8d97b552fc",
+)
+# Seal-preserving: no object 294 adds carries an api, ingestor, MCP or PUBLIC privilege.
+SUCCESSOR_294 = SUCCESSOR_289
+
+
+def sealed_sql_294():
+    # Keep every 289 predicate and bind the exact 294 runner stamp.
+    predecessor = sealed_sql_289()
+    current = seal_profile_sql(289, SUCCESSOR_289)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(294, SUCCESSOR_294), 1)
+        + " AND "
+        + ledger_row_sql(*CORTEX_PLANNER_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -714,6 +737,8 @@ def sealed_sql():
         + sealed_sql_288()
         + " OR "
         + sealed_sql_289()
+        + " OR "
+        + sealed_sql_294()
         + ")"
     )
 

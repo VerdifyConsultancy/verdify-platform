@@ -31,6 +31,9 @@ resources:
   # ANNOTATION -> EXCLUDED from build output (OpenAI key never emitted). Real
   # verdify-hermes via SOPS out-of-band. See hermes-secret.placeholder.yaml.
   - hermes-secret.placeholder.yaml
+  # PLACEHOLDER Cortex planner Secret (#1350), local-config ANNOTATION -> excluded from build
+  # output. Real verdify-planner-cortex/api_key.txt is live in verdify-prod (agents#6079 adopts it).
+  - planner-cortex-secret.placeholder.yaml
   # DEVICE WRITE PATH: the SINGLE egress allow letting the prod ingestor reach the
   # live device VLAN. See allow-ingestor-device-egress.yaml.
   - allow-ingestor-device-egress.yaml
@@ -111,6 +114,8 @@ components:
   # registration and exact source snapshot are staged on its archive PVC.
   - ../../components/winter-feasibility
   - ../../components/planner
+  # #1350 Cortex planner, SHADOW only: stores packs/attempts/proposals, dispatches nothing.
+  - ../../components/cortex-planner
   - ../../components/mqtt-broker
   # #118 verdify-setpoint-server — the grow-light writer + setpoint diagnostics.
   # PROD-ONLY: it is a DEVICE-AFFECTING writer (toggles the live grow lights via

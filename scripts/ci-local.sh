@@ -34,14 +34,14 @@ export PATH="$("$PY" -c 'import pathlib, sys; print(pathlib.Path(sys.executable)
 step() { printf '\n== %s ==\n' "$1"; }
 
 step "ruff lint"
-$RUFF check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ verdify_services/ \
+$RUFF check cortex_planner/ ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ verdify_services/ \
   research/planner-efficacy/generate_v2_artifacts.py \
   research/planner-efficacy/switchback/v2_*.py \
   research/planner-efficacy/tests/test_protocol_template_contract.py \
   research/planner-efficacy/tests/test_switchback_v2_*.py
 
 step "ruff format"
-$RUFF format --check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ verdify_services/ \
+$RUFF format --check cortex_planner/ ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ verdify_services/ \
   research/planner-efficacy/generate_v2_artifacts.py \
   research/planner-efficacy/switchback/v2_*.py \
   research/planner-efficacy/tests/test_protocol_template_contract.py \
@@ -97,6 +97,7 @@ $PY -m pytest -q -rs \
   tests/test_287_retire_high_wind_delivery.py \
   tests/test_288_retire_irrigation_registry_delivery.py \
   tests/test_289_alert_silences_delivery.py \
+  tests/test_294_cortex_planner_delivery.py \
   tests/test_metric_registry_completeness.py \
   tests/test_verdify_services_series.py \
   tests/test_verdify_services_band_preview.py \
@@ -294,6 +295,9 @@ $PY -m pytest -q -rs \
   tests/test_planner_graph_contract.py \
   tests/test_planner_memory_ingest.py \
   tests/test_planner_runtime_db_boundary.py \
+  tests/test_cortex_planner_pack.py \
+  tests/test_cortex_planner_run.py \
+  tests/test_planner_proposal_schema.py \
   tests/test_six_runtime_role_bootstrap.py \
   tests/test_maintenance_runtime_boundaries.py \
   tests/test_policy_arbiter_migration.py \

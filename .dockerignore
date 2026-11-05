@@ -150,6 +150,8 @@ db/ledger/*
 !docs
 !docs/**
 !verdify_schemas/README.md
+# The Cortex planner's static pack sections (#1350) are Markdown read at runtime.
+!cortex_planner/static/*.md
 README.md
 GOAL.md
 CONTEXT.md
@@ -162,5 +164,5 @@ AGENTS.md
 venv
 
 # NOTE: deliberately NOT ignored (the images COPY these):
-#   api/  mcp/  ingestor/  verdify_schemas/  slack_config.py  slack_ops/  slack.yaml
+#   api/  mcp/  ingestor/  cortex_planner/  verdify_schemas/  slack_config.py  slack_ops/  slack.yaml
 # (slack.yaml is non-secret config — channel IDs + credential file paths, not tokens.)

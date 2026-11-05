@@ -41,7 +41,7 @@ spec:
             matchExpressions:
               - key: app.kubernetes.io/component
                 operator: In
-                values: ["api", "mcp", "ingestor", "migrate", "planner", "lab-publisher", "operator-api"]
+                values: ["api", "mcp", "ingestor", "migrate", "planner", "cortex-planner", "lab-publisher", "operator-api"]
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: verdify-prod

@@ -1,0 +1,16 @@
+{
+  "migration": "294-cortex-planner-shadow-storage.sql",
+  "exact_final_migration_sha256": "36e384395f71333fe8edd3fecfdb1f73961413cf86d8d080c7f89f8d97b552fc",
+  "final_migration_qualification_pending": true,
+  "before": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projected_successor": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projection": "2026-11-05, read only, production at exact289: max seq 289 with 289's sha, all three live digests and receipts equal to 289's registration, planner_inference_runs empty, no planner_pack or weather_forecast_archive. Seal-preserving like 288: every object 294 creates is owned by verdify and carries only verdify and verdify_planner_runtime entries (functions REVOKE PUBLIC; production's function default ACL is {verdify=X/verdify}, and it has no table default ACL), so neither fn_runtime_ordinary_boundary_digest nor fn_mcp_runtime_boundary_digest takes any of them in; planner_inference_runs (verdify-only ACL) gains columns but no runtime-role entry; equipment_assets changes only in rows. Applied on a loopback PostgreSQL 16 stub with the three seal functions stubbed out, the file runs clean and the planner duty reaches only its own objects. 294 is chained after 289; 290-293 land first, then this file is re-chained onto 293 (predecessor block, seals and sha) and qualified natively: run scripts/qualify-migration-successor.py db/migrations/294-cortex-planner-shadow-storage.sql --fixture tests/fixtures/294-cortex-planner-shadow-storage-native-qualification.json on production (every session rolls back) and commit the fixture it writes."
+}
