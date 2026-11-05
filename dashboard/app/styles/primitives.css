@@ -34,6 +34,9 @@
 .menu{position:relative;margin:0}
 .menu-dots>summary{justify-content:center;min-width:var(--tap);padding:0;border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:#fff;color:var(--forest);font-size:1.2rem;line-height:1}
 .menu-dots>summary::before{content:none}
+/* A menu (the account, Preset and Layers) opens downward: its summary ends with a down caret, an up caret while open; a disclosure or a link keeps the right chevron. */
+.menu:not(.menu-dots)>summary::before{order:2;transform:translateY(-.15rem) rotate(45deg)}
+.menu:not(.menu-dots)[open]>summary::before{transform:translateY(.1rem) rotate(-135deg)}
 .menu-dots>summary:hover{border-color:var(--leaf)}
 .menu-panel{position:absolute;top:calc(100% + var(--space-1));right:0;z-index:var(--z-popover);display:grid;gap:var(--space-1);min-width:13rem;max-width:min(22rem,calc(100vw - 2 * var(--gutter)));padding:var(--space-2);border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-sm)}
 .menu-start>.menu-panel{right:auto;left:0}
@@ -182,6 +185,9 @@ span.viz-skeleton.spark-tile{height:28px}span.viz-skeleton.spark-row{height:20px
 
 .delta{color:var(--ink);font-variant-numeric:tabular-nums}
 .delta-vs,.delta-unknown{color:var(--muted)}
+
+/* Filter fields (weather's .filters): the control inside a label reads in the page's regular weight at --fs-sm, as the log's fields do, never the label's small bold. */
+.filters label select,.filters label input{font:inherit;font-size:var(--fs-sm);font-weight:400;color:var(--ink)}
 
 /* StatusStrip (redesign §4.6): day cells at least 8 px wide with 2 px gaps, quiet when good and loud when bad; no data hatched, a partial day outlined. Class prefix strip-, never weather's calendar classes. */
 .strip-wrap{min-width:0}
