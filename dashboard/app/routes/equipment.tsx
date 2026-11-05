@@ -105,21 +105,23 @@ export default function Equipment() {
   const board = (group: "climate" | "water" | "light") => <GroupPanel group={boardGroup(group)} items={items} state={state} onRetry={retry} lights={lights} settingTo={editTo} />;
   return <>
     <PageHeader view="control-equipment" status={<ControllerStatus />} actions={<FindSetting />} />
-    <div className="ctl-board equipment-board">
-      <div className="ctl-board-col">
-        {state === "error" ? <BoardError onRetry={retry} /> : <>{board("climate")}{board("light")}</>}
-        <FlagsCard today={today} />
+    <div className="page ctl-equipment">
+      <div className="ctl-board equipment-board">
+        <div className="ctl-board-col">
+          {state === "error" ? <BoardError onRetry={retry} /> : <>{board("climate")}{board("light")}</>}
+          <FlagsCard today={today} />
+        </div>
+        <div className="ctl-board-col">
+          {state !== "error" && board("water")}
+          <ControllerCard />
+        </div>
       </div>
-      <div className="ctl-board-col">
-        {state !== "error" && board("water")}
-        <ControllerCard />
+      <div className="ctl-equipment-more">
+        <BurstPanel />
+        <WhyPanel equipment={equipment.data} state={state} onRetry={retry} />
+        <LanesPanel />
+        <DailyRuntime today={today} />
       </div>
-    </div>
-    <div className="ctl-equipment-more">
-      <BurstPanel />
-      <WhyPanel equipment={equipment.data} state={state} onRetry={retry} />
-      <LanesPanel />
-      <DailyRuntime today={today} />
     </div>
     <SettingDrawerHost />
   </>;

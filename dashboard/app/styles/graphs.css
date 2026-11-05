@@ -41,7 +41,8 @@ a.picker-item:hover{background:var(--field)}
 .zone-tag-note{max-width:46rem;margin:0 0 var(--space-3);font-size:var(--fs-sm);color:var(--muted)}
 
 /* The toolbar (redesign §5.5): range chips, ‹ › and Zoom out, Custom…, then Preset, Layers, + Metric and + Setting at the right. Every control is one height, 36 px (44 px on phones). */
-.gr-toolbar{position:relative;margin:0 0 var(--space-2)}
+/* The toolbar is the page's (.page-toolbar, primitives.css): --space-4 above the charts it controls, on every view. */
+.gr-toolbar{position:relative}
 .gr-toolbar .range-toolbar{margin:0}
 .gr-toolbar .range-tools>.btn{min-height:2.25rem;padding:0 .8rem;font-size:var(--fs-sm)}
 .gr-toolbar .menu{position:relative}
@@ -79,14 +80,12 @@ a.picker-item:hover{background:var(--field)}
 .gr-chips-label{font-size:var(--fs-sm);font-weight:600;color:var(--muted)}
 
 /* Statistics (redesign §5.7): the period, the key figures, the day-by-day strip, the typical day beside the daily range, time in band per day and the data. */
-.gr-stats-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3);margin-bottom:var(--space-5)}
+.gr-stats-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3)}
 .gr-stats-toolbar .range-custom>summary{min-height:2.25rem}
 .gr-stats-none{margin:var(--space-4) 0}
-.gr-stats-loading{display:grid;gap:var(--space-6)}
 .gr-skeleton-strip{height:12rem}
 .gr-kpis{align-items:stretch}
 .gr-kpis .metric-tile{min-height:10rem}
-.gr-unit{font-size:var(--fs-sm);font-weight:500;letter-spacing:0;color:var(--muted)}
 .gr-days-wrap{display:grid;gap:var(--space-3);min-width:0}
 .gr-days{padding-bottom:var(--space-1)}
 .gr-days-grid{display:grid;gap:var(--space-2);min-width:calc(var(--gr-days, 30) * .625rem + 9.75rem)}

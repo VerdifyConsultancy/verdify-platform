@@ -40,11 +40,11 @@ export function StatsKpis({ kpis, days, vs, waterHref }: StatsKpisProps) {
       delta={<Delta value={kpis.vpd.change} unit="pts" vs={vs} />} meta={fullDays(kpis.vpd.days)}
       visual={<Sparkline values={series((day) => day.values.vpd)} token="vpd" />} />
     <MetricTile label="Water" href={waterHref} data={{ "data-kpi": "water" }}
-      value={kpis.water.perDay === null ? null : <>{formatNumber(Math.round(kpis.water.perDay * 10) / 10)} <span className="gr-unit">gal a day</span></>} reason="no meter readings"
+      value={kpis.water.perDay === null ? null : <>{formatNumber(Math.round(kpis.water.perDay * 10) / 10)} <span className="metric-unit">gal a day</span></>} reason="no meter readings"
       delta={<Delta value={kpis.water.change} unit="%" vs={vs} />} meta={kpis.water.total === null ? "No gallons read in this period" : `${formatValue(kpis.water.total, "gal")} in all`}
       visual={<Sparkline values={series((day) => day.values.water)} kind="bars" token="water" />} />
     <MetricTile label="Iris" data={{ "data-kpi": "iris" }}
-      value={kpis.iris.written === null || due === null ? null : <>{formatNumber(kpis.iris.written)} of {formatNumber(due)} <span className="gr-unit">required plans</span></>} reason="no plans counted"
+      value={kpis.iris.written === null || due === null ? null : <>{formatNumber(kpis.iris.written)} of {formatNumber(due)} <span className="metric-unit">required plans</span></>} reason="no plans counted"
       delta={kpis.iris.missed === null ? undefined : <>{kpis.iris.missed === 0 ? "None missed" : `${formatNumber(kpis.iris.missed)} missed ${missedWhen(kpis.iris.missedDays)}`} · <Delta value={kpis.iris.change} vs={vs} /></>}
       meta="Missed required plans by day"
       visual={<Sparkline values={series((day) => day.values.missed)} kind="bars" token="muted" />} />

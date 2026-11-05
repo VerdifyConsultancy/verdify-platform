@@ -120,14 +120,14 @@ export default function Statistics() {
   else if (!ready && (registry.error !== null || currentList.some((read) => read.error !== null && read.data === null))) {
     body = <PanelError thing="the statistics" onRetry={() => { for (const read of failed) read.refetch(); }} />;
   } else if (!ready || !window || !today) {
-    body = <div className="gr-stats-loading" aria-busy="true">
+    body = <div className="page gr-stats-loading" aria-busy="true">
       <div className="l-cols-4">{[0, 1, 2, 3].map((index) => <div key={index} className="card metric-tile"><span className="metric-skeleton viz-skeleton" aria-hidden="true" /></div>)}</div>
       <div className="viz-skeleton gr-skeleton-strip" aria-hidden="true" />
       <p className="screen-reader">Loading the statistics</p>
     </div>;
   } else {
     const dayList = daysOf(window.from, window.to);
-    body = <div className="l-stack-lg gr-stats">
+    body = <div className="page gr-stats">
       {failed.length > 0 && <PanelError thing="part of the statistics" text="Couldn't load part of the statistics." onRetry={() => { for (const read of failed) read.refetch(); }} />}
       <StatsKpis kpis={figures} days={days} vs={vs} waterHref={waterHref} />
       <Section header={<SectionHeader title="Day by day" meta={`${dayTitle(window.from, "short")}–${dayTitle(window.to, "short")} · each day opens in Climate`} />}>
@@ -169,7 +169,7 @@ export default function Statistics() {
   return <>
     <PageHeader view="graphs-statistics" status={status} />
     <GraphNotices notices={notices} />
-    <div className="gr-toolbar gr-stats-toolbar">
+    <div className="page-toolbar gr-toolbar gr-stats-toolbar">
       <Chips kind="nav" small label="Period" items={STATS_DAYS.map((count) => ({ key: String(count), label: `${count} d`, to: statsHref({ kind: "days", days: count }, typical), current: span.kind === "days" && span.days === count, keepScroll: true }))} />
       <details className="range-custom" open={span.kind === "custom" || undefined}>
         <summary>Custom…</summary>

@@ -5,7 +5,7 @@ import { formatValue, shortTime } from "../../lib/format";
 import { useApiDown } from "../../lib/session";
 import { timeScale, type TimeScale } from "../../lib/time-scale";
 import { cls } from "../common";
-import { Meter, type MeterDomain } from "../data/meter";
+import { Meter, meterWords, type MeterDomain } from "../data/meter";
 import { cssVars, rovingKeys } from "../data/viz";
 import { episodeWords, slotClock, type DayBlock, type DayModel, type DayRow, type Episode } from "./model";
 
@@ -83,15 +83,13 @@ export function DayAxis({ scale, className }: { scale: TimeScale; className?: st
   </div>;
 }
 
-const whole = (minutes: number) => String(Math.round(minutes));
 /**
- * Minutes against a daily cap in words, "14 / 120 min", "cap reached", "+12 min over", with the planned minutes after:
- * the cap stays in minutes (the Meter's own words would write 120 min as "2 h").
+ * Minutes against a daily cap in words, "14 / 120 min", "cap reached", "+12 min over" (the Meter's own words, whole
+ * minutes on both sides), with the planned minutes after for its name.
  */
 export function minutesAgainstCap(done: number | null, cap: number, planned = 0): { amount: string; over: string | null; name: string } {
-  const amount = `${done === null ? "—" : whole(done)} / ${cap}\u00a0min`;
-  const over = done === null ? null : done > cap ? `+${whole(done - cap)}\u00a0min over` : done === cap ? "cap reached" : null;
-  return { amount, over, name: `${amount}${over ? `, ${over}` : ""}${planned > 0 ? `, ${whole(planned)}\u00a0min more planned` : ""}` };
+  const { amount, over } = meterWords(done, cap, "min");
+  return { amount, over, name: `${amount}${over ? `, ${over}` : ""}${planned > 0 ? `, ${Math.round(planned)}\u00a0min more planned` : ""}` };
 }
 
 /** A minutes meter against a cap (redesign §4.6): the Meter's bar (planned dashed, the cap's tick) and its words in minutes. */

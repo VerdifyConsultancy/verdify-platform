@@ -172,16 +172,16 @@ export default function WaterSchedules() {
   </section>;
   const weekDaysList = Array.from({ length: 7 }, (_, index) => dateShift(monday, index));
 
-  return <div className="sch-page">
+  return <div className="page sch-page">
     {agenda.isError && <PanelError thing="schedules" onRetry={() => void agenda.refetch()} />}
     {agenda.data
       ? <>
-        <div className="sch-bar">
+        <div className="page-toolbar sch-bar">
           <WeekStrip cells={cells} selected={day} dayTo={dayTo} previousTo={(() => { const step = weekStep(day, monday, -1, first, last); return step ? dayTo(step) : null; })()}
             nextTo={(() => { const step = weekStep(day, monday, 1, first, last); return step ? dayTo(step) : null; })()} />
           <div className="sch-views">
-            <div className="sch-views-desktop"><Chips label="View" items={VIEWS.map((item) => ({ key: item, label: VIEW_WORDS[item], to: viewTo(item), current: desktopView === item, keepScroll: true }))} /></div>
-            <div className="sch-views-phone"><Chips label="View, phone" items={(["agenda", "day"] as const).map((item) => ({ key: item, label: VIEW_WORDS[item], to: viewTo(item), current: phoneView === item, keepScroll: true }))} /></div>
+            <div className="sch-views-desktop"><Chips small label="View" items={VIEWS.map((item) => ({ key: item, label: VIEW_WORDS[item], to: viewTo(item), current: desktopView === item, keepScroll: true }))} /></div>
+            <div className="sch-views-phone"><Chips small label="View, phone" items={(["agenda", "day"] as const).map((item) => ({ key: item, label: VIEW_WORDS[item], to: viewTo(item), current: phoneView === item, keepScroll: true }))} /></div>
             <ScheduleKey />
           </div>
         </div>

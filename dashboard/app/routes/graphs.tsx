@@ -217,7 +217,7 @@ export default function Graphs() {
   return <>
     <PageHeader view="graphs-climate" status={story ? <StoryLine lead={lead} story={story} view={view} withDates={withDates} /> : null} />
     <GraphNotices notices={notices} />
-    <div className="gr-toolbar">
+    <div className="page-toolbar gr-toolbar">
       <RangeToolbar
         presets={RANGES.map((range) => ({ id: range.id, label: range.label, href: graphHref(withWindow(view, { kind: "range", range: range.id })), current: spec.kind === "range" && spec.range === range.id }))}
         previous={previous && graphHref(withWindow(view, previous))} next={next && graphHref(withWindow(view, next))} span={spanOf(spec, window)}

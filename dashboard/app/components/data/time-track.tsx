@@ -113,7 +113,9 @@ export function TimeTrack({ label, from, to, rows, now = null, night = [], axis 
   const scale = timeScale(from, to);
   const drawn = state === "ready" || state === "stale";
   const showNow = now !== null && now >= from && now <= to;
-  return <div className={cls("tt", state === "stale" && "is-stale", apiDown && "is-neutral", state === "loading" && "viz-skeleton")} role="group" aria-label={label}
+  // A row's end column (`row.end`) needs its grid column on every row, so the track keeps one width.
+  const withEnd = rows.some((row) => row.end !== undefined);
+  return <div className={cls("tt", withEnd && "tt-with-end", state === "stale" && "is-stale", apiDown && "is-neutral", state === "loading" && "viz-skeleton")} role="group" aria-label={label}
     tabIndex={drawn ? 0 : undefined} onKeyDown={drawn ? rovingKeys() : undefined}>
     {axis && <Ticks scale={scale} />}
     {drawn

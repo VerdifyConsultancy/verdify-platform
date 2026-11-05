@@ -61,11 +61,14 @@ export default function Now() {
   const answer = nowAnswer({ now: shell.data, failed });
   const retryNow = useCallback(() => { void client.refetchQueries({ queryKey: readKey("API-02"), exact: true }); }, [client]);
   const stopControl = { stop: () => { void stop(); }, sending, confirming };
-  return <div className="now-page">
-    <PanelErrorBoundary thing="the greenhouse data" onRetry={retryNow}>
-      <NowHero now={shell.data} answer={answer} irrigation={irrigation} day={day} daily={daily} onRetry={retryNow} />
-    </PanelErrorBoundary>
-    <QuickActions stop={stopControl} irrigation={irrigation} mode={shell.data?.mode.code ?? null} />
+  // The page rhythm (redesign §3.4): the hero with the quick actions under it, then the sections at the section gap.
+  return <div className="page now-page">
+    <div className="now-head">
+      <PanelErrorBoundary thing="the greenhouse data" onRetry={retryNow}>
+        <NowHero now={shell.data} answer={answer} irrigation={irrigation} day={day} daily={daily} onRetry={retryNow} />
+      </PanelErrorBoundary>
+      <QuickActions stop={stopControl} irrigation={irrigation} mode={shell.data?.mode.code ?? null} />
+    </div>
     <div className="now-pair">
       <PanelErrorBoundary thing="alerts" text="Alerts unavailable" onRetry={alerts.retry}>
         <NeedsSomeone alerts={alerts} now={shell.data} answer={answer} apiFailed={failed} openCount={failed ? null : status.openAlerts} irrigation={irrigation} />

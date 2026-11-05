@@ -7,20 +7,27 @@ import { HatchPattern, STATE_WORDS, VizSkeleton, finite, usePatternId, vizRole, 
 /** The domain token of the fill (redesign §4.6): drip minutes and gallons, mist minutes, feeds, or anything else. */
 export type MeterDomain = "water" | "mister" | "fert" | "neutral";
 
-/** "12 / 60 min", "cap reached", "+12 min over": what a meter says in words, for beside it or for its name. */
+/**
+ * "12 / 60 min", "cap reached", "+12 min over": what a meter says in words, for beside it or for its name. Minutes count
+ * in whole minutes on both sides, as the caps are set ("132 / 120 min", never "2 h 12 min / 2 h"), and reach or pass the
+ * cap as their whole minutes do. No cap (none, or 0) reads the amount alone; an unknown amount is "—", never 0.
+ */
 export function meterWords(value: number | null | undefined, cap: number | null | undefined, unit: string): { amount: string; over: string | null } {
-  if (!finite(value)) return { amount: `— / ${finite(cap) ? formatValue(cap, unit) : "—"}`, over: null };
-  if (!finite(cap) || cap <= 0) return { amount: formatValue(value, unit), over: null };
-  const amount = `${formatNumberish(value, unit)} / ${formatValue(cap, unit)}`;
-  if (value > cap) return { amount, over: `+${formatValue(value - cap, unit)} over` };
-  if (value === cap) return { amount, over: "cap reached" };
+  const minutes = unit === "min";
+  const done = finite(value) && minutes ? Math.round(value) : value;
+  const show = (amount: number) => (minutes ? `${Math.round(amount)}\u00a0min` : formatValue(amount, unit));
+  if (!finite(cap) || cap <= 0) return { amount: finite(done) ? show(done) : "—", over: null };
+  if (!finite(done)) return { amount: `— / ${show(cap)}`, over: null };
+  const amount = `${minutes ? String(done) : bare(done, unit)} / ${show(cap)}`;
+  if (done > cap) return { amount, over: `+${show(done - cap)} over` };
+  if (done === cap) return { amount, over: "cap reached" };
   return { amount, over: null };
 }
-/** The done part without its unit when the cap carries it ("12 / 60 min"); minutes keep their own words past 2 h. */
-function formatNumberish(value: number, unit: string): string {
+/** The done part without its unit when the cap carries it ("21 / 360 gal"). */
+function bare(value: number, unit: string): string {
   const text = formatValue(value, unit);
   const label = formatValue(0, unit).replace(/^0(?:\.0+)?/, "");
-  return label && text.endsWith(label) && !/\bh\b/.test(text) ? text.slice(0, -label.length) : text;
+  return label && text.endsWith(label) ? text.slice(0, -label.length) : text;
 }
 
 export type MeterProps = {
@@ -58,8 +65,9 @@ export function Meter({ label, unit, value, planned = null, cap = null, max = nu
   const scale = capped ? cap : Math.max(finite(max) ? max : 0, known ? value : 0, (known ? value : 0) + (finite(planned) ? planned : 0)) || 1;
   const done = known ? Math.min(100, Math.max(0, (value / scale) * 100)) : 0;
   const ahead = known && finite(planned) && planned > 0 ? Math.max(0, Math.min(100 - done, (planned / scale) * 100)) : 0;
-  const reached = known && capped && value >= cap;
   const words = known ? meterWords(value, cap, unit) : null;
+  // The tick turns fault as the words say "cap reached" or "over".
+  const reached = known && capped && Boolean(words?.over);
   const name = words ? `${label}: ${words.amount}${words.over ? `, ${words.over}` : ""}${ahead > 0 ? `, ${formatValue(planned, unit)} planned` : ""}` : `${label}: ${STATE_WORDS[state === "ready" || state === "stale" ? "unknown" : state]}`;
   return <span className={cls("meter", `meter-${domain}`, state === "stale" && "is-stale", apiDown && "is-neutral", !known && "is-unknown", reached && "is-capped")}>
     <svg className="meter-bar" width="100%" height="8" {...vizRole(name, decorative || showWords)} focusable="false">

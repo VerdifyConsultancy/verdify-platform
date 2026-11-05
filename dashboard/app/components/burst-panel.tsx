@@ -172,9 +172,12 @@ export function BurstPanel() {
   const headingId = useId();
   // The engine flag changes only with an OTA, so this reads the shared API-IRR-01 entry at the slow cadence.
   const irrigation = panelRead(useApiRead("API-IRR-01", {}, { intervalMs: READ_INTERVAL_MS.settings }));
+  // The card frame and head every Equipment card has (redesign §4.1): the title is the card's h2, never an eyebrow.
   return <section className="card burst-panel" aria-labelledby={headingId}>
-    <h2 id={headingId} className="eyebrow">Bursts</h2>
-    <OperatorOnly><BurstControls engine={irrigation.failed ? null : irrigation.data?.engine ?? null} failed={irrigation.failed} retry={irrigation.retry} /></OperatorOnly>
-    <RunningBursts />
+    <div className="card-head"><div className="card-title"><div className="card-title-row"><h2 id={headingId}>Bursts</h2></div></div></div>
+    <div className="burst-body">
+      <OperatorOnly><BurstControls engine={irrigation.failed ? null : irrigation.data?.engine ?? null} failed={irrigation.failed} retry={irrigation.retry} /></OperatorOnly>
+      <RunningBursts />
+    </div>
   </section>;
 }

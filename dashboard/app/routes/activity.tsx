@@ -78,7 +78,7 @@ export default function Activity() {
     : alertsStatus({ open: openAlerts ?? groups.open.length, acknowledged: groups.acknowledged.length, resolved: groups.closed.length, coverage });
   return <>
     <PageHeader view="activity-alerts" status={status} />
-    <div className="act-alerts">
+    <div className="page act-alerts">
       <AlertGroups view={view} params={params} alerts={alerts} me={me} now={now} irrigation={water.failed ? null : water.data} loading={loading} />
       <RecentActivity me={me} />
     </div>
@@ -106,7 +106,8 @@ function AlertGroups({ view, params, alerts, me, now, irrigation, loading }: { v
   const all = [...groups.open, ...groups.acknowledged, ...groups.closed];
   const state: PanelState = alerts.failed && !alerts.data ? "error" : loading ? "loading" : "ready";
   const linked = view.alert !== null && !loading && alerts.data && !all.some((row) => row.id === expandedId);
-  return <>
+  // One block of the page: the groups at the card gap (an empty block takes no room).
+  return <div className="act-groups">
     {linked && <section className="act-linked" aria-labelledby="alert-linked-head">
       <h2 id="alert-linked-head">Linked alert</h2>
       <p>{notOpenText(view.alert ?? "")}</p>
@@ -121,7 +122,7 @@ function AlertGroups({ view, params, alerts, me, now, irrigation, loading }: { v
       {groups.closed.map(item)}
     </AlertGroup>}
     {alerts.data?.next_cursor && <p className="meta">Showing the first {ALERT_LIMIT} alerts.</p>}
-  </>;
+  </div>;
 }
 
 const notOpenText = (id: string) => `Alert ${id} is not open or resolved in the last 24 h`;

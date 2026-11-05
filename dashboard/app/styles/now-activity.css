@@ -3,7 +3,8 @@
 /* Now (redesign §5.1) and Activity (§5.8 Alerts, §5.9 Log), on the primitives of §3 and §4. Loaded by root.tsx after styles.css, tokens.css, primitives.css and shell.css, in the fixed order of redesign §10.1. Colours are tokens only (white the one literal); this file never redefines :focus-visible or the input borders that the §2.2 block in styles.css sets. Phones are 860 px and below, where every link, button, chip and summary is at least 44 px. */
 
 /* ---------------------------------------------------------------- Now: the page */
-.now-page{display:grid;gap:var(--space-5);min-width:0}
+/* The page is a .page stack (primitives.css); its head is the hero with the quick actions under it, at the card gap. */
+.now-head{display:grid;gap:var(--space-4);min-width:0}
 .now-pair{display:grid;gap:var(--space-4);align-items:start;min-width:0}
 @media(min-width:861px){.now-pair{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
@@ -161,9 +162,9 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 /* The burst panel, shared with Equipment (SCR-07): the buttons, Clear, More actions and what runs. */
 .chip-static{cursor:default;white-space:normal;min-height:2rem}
 .skeleton-chips{min-height:2.75rem}
-.burst-panel{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem;margin:0 0 1rem}
-.burst-panel>*{margin:0}
-.burst-panel>.skeleton,.burst-panel>.panel-error{flex:1 1 100%}
+.burst-body{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem}
+.burst-body>*{margin:0}
+.burst-body>.skeleton,.burst-body>.panel-error{flex:1 1 100%}
 .burst-actions .state-note,.burst-actions .field-error{flex-basis:100%}
 .burst-more{margin-left:auto}
 .burst-more[open]{flex:1 1 100%;margin-left:0}
@@ -171,7 +172,9 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .burst-running{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem}
 
 /* ---------------------------------------------------------------- Activity → Alerts */
-.act-alerts{display:grid;gap:var(--space-5);min-width:0}
+/* The page is a .page stack: the alert groups at the card gap, then Recent activity. */
+.act-groups{display:grid;gap:var(--space-4);min-width:0}
+.act-groups:empty{display:none}
 .act-linked{margin:0}
 .act-linked>h2{margin:0 0 var(--space-2);font-size:var(--fs-md)}
 .alert-group.card{margin:0;padding:var(--space-1) var(--space-4)}
@@ -191,8 +194,8 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .alert-respond .actions{margin:var(--space-2) 0 0}
 
 /* ---------------------------------------------------------------- Activity → Log */
-.act-log-page{display:grid;gap:var(--space-4);min-width:0}
-.act-filters{display:grid;gap:var(--space-3);margin:0}
+/* The page is a .page stack: the filters are its toolbar, then the log. */
+.act-filters{display:grid;gap:var(--space-3)}
 .act-facets{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-6)}
 .act-facet{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)}
 .act-facet-label{font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
@@ -224,7 +227,7 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 
 /* ---------------------------------------------------------------- Phones (860 px and below) */
 @media(max-width:860px){
-  .now-page{gap:var(--space-4)}
+  .now-head,.now-pair,.act-groups{gap:var(--space-3)}
   .now-hero{grid-template-columns:minmax(0,1fr);grid-template-areas:"main" "climate" "status" "readings";gap:var(--space-3);padding:var(--space-4)}
   .now-hero .hero-temp{font-size:2.75rem}
   .now-hero .hero-meta{font-size:.8125rem}

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { cleanup } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
-import { AiBadge, BADGES, Badge, ChemistryBadge, EquipmentStateBadge, LineStateBadge, ManualBadge, ReadbackBadge, StaleBadge, WaypointBadge, lineChemistry, type BadgeKind } from "./badge";
+import { BADGES, Badge, ChemistryBadge, EquipmentStateBadge, ReadbackBadge, lineChemistry, type BadgeKind } from "./badge";
 import { denver, renderUi, text } from "./test-render";
 
 afterEach(() => { cleanup(); vi.useRealTimers(); });
@@ -53,58 +53,11 @@ test("overridden is AI with \"Iris changed this at HH:MM\"", () => {
   expect(text(renderUi(<ReadbackBadge state="overridden" />).container)).toBe("AI Iris changed this");
 });
 
-test("MANUAL renders on settings, schedules and lines while their manual flag is on", () => {
-  const setting = { param: "mister_engage_kpa", desired: { manual: true } };
-  const schedule = { slot_id: 3, line_id: "L01", manual: true };
-  const line = { line_id: "L01", manual: true };
-  for (const manual of [setting.desired.manual, schedule.manual, line.manual]) {
-    expect(text(renderUi(<ManualBadge manual={manual} />).container)).toBe("Manual");
-    cleanup();
-  }
-  for (const manual of [false, null, undefined]) {
-    expect(renderUi(<ManualBadge manual={manual} />).container.textContent).toBe("");
-    cleanup();
-  }
-});
-
-test("AI labels sources iris and agent:<name> only, never system or dashboard", () => {
-  for (const source of ["iris", "agent:steward", "agent:admin"]) {
-    expect(text(renderUi(<AiBadge source={source} />).container), source).toBe("AI");
-    cleanup();
-  }
-  for (const source of ["system", "dashboard", "agent:", "agent:Steward", "Iris", "", null]) {
-    expect(renderUi(<AiBadge source={source} />).container.textContent, String(source)).toBe("");
-    cleanup();
-  }
-});
-
-test("PLANNED, SUPERSEDED, STALE, CLEAN and FERT", () => {
-  expect(badgeIn(renderUi(<WaypointBadge effective />).container)?.getAttribute("data-badge")).toBe("planned");
-  cleanup();
-  expect(badgeIn(renderUi(<WaypointBadge effective={false} />).container)?.getAttribute("data-badge")).toBe("superseded");
-  cleanup();
-  expect(text(renderUi(<StaleBadge stale />).container)).toBe("Stale");
-  cleanup();
-  expect(renderUi(<StaleBadge stale={false} />).container.textContent).toBe("");
-  cleanup();
+test("CLEAN and FERT", () => {
   expect(["drip", "mister", "fog", "fert_drip", "fert_mister", "master", "pump"].map(lineChemistry)).toEqual(["clean", "clean", "clean", "fert", "fert", "fert", null]);
   expect(badgeIn(renderUi(<ChemistryBadge chemistry="fert" />).container)?.className).toBe("tag tag-fert");
   cleanup();
   expect(renderUi(<ChemistryBadge chemistry={null} />).container.textContent).toBe("");
-});
-
-test("line states: RUNNING, IDLE, DISABLED with Reserved for L05 and L06; other codes from the words table, raw when it lacks one", () => {
-  expect(badgeIn(renderUi(<LineStateBadge code="running" />).container)?.className).toBe("tag tag-ok");
-  cleanup();
-  expect(text(renderUi(<LineStateBadge code="idle" />).container)).toBe("Idle");
-  cleanup();
-  expect(text(renderUi(<LineStateBadge code="disabled" reserved />).container)).toBe("Disabled Reserved");
-  cleanup();
-  expect(text(renderUi(<LineStateBadge code="disabled" />).container)).toBe("Disabled");
-  cleanup();
-  expect(text(renderUi(<LineStateBadge code="paused" />).container)).toBe("Paused");
-  cleanup();
-  expect(text(renderUi(<LineStateBadge code="draining" />).container)).toBe("draining");
 });
 
 test("equipment reads the state the API sends: unknown only when it says unknown, never from an age", () => {

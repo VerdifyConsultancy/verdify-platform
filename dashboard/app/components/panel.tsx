@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { Component, createContext, useContext, useId, type ReactNode } from "react";
+import { Component, useId, type ReactNode } from "react";
 import { Link } from "react-router";
 import { duration } from "../lib/format";
 import { useApiDown } from "../lib/session";
@@ -16,11 +16,6 @@ import { reasonParts } from "./state-reason-line";
  */
 export type PanelState = "ready" | "loading" | "empty" | "stale" | "ingestor_down" | "controller_not_reporting" | "error" | "busy";
 const DEVICE_STALE: readonly PanelState[] = ["stale", "ingestor_down", "controller_not_reporting"];
-
-/** The enclosing panel's freshness, so a tile shows its own only when it differs, and whether a verdict may show. */
-export type PanelInfo = { readonly stale: boolean; readonly observedAt?: string | null; readonly verdict: boolean };
-export const PanelInfoContext = createContext<PanelInfo>({ stale: false, observedAt: undefined, verdict: true });
-export const usePanelInfo = (): PanelInfo => useContext(PanelInfoContext);
 
 /** "Couldn't load runs." with Retry, in the failing panel only. */
 export function PanelError({ thing, text, onRetry }: { thing: string; text?: ReactNode; onRetry?: () => void }) {
@@ -77,8 +72,8 @@ export type PanelProps = {
   /** The skeleton's reserved height while loading. */
   reserve?: "sm" | "md" | "lg";
   /**
-   * When the panel's newest data was observed. Given, a ready or busy panel shows "Updated N s ago" (its tiles show an
-   * age only when theirs differs), and a stale one "Last data N min ago (HH:MM)".
+   * When the panel's newest data was observed. Given, a ready or busy panel shows "Updated N s ago", and a stale one
+   * "Last data N min ago (HH:MM)".
    */
   observedAt?: string | null;
   /** ingestor_down: the newest heartbeat; controller_not_reporting: the newest climate row. */
@@ -106,7 +101,6 @@ export function Panel({ title, eyebrow, headingLevel = 2, id, actions, pill, lin
   const apiDown = useApiDown();
   const Heading = headingLevel === 2 ? "h2" : "h3";
   const stale = DEVICE_STALE.includes(state);
-  const info: PanelInfo = { stale, observedAt, verdict: !stale && !apiDown };
   // The words are separate elements in a flex row; the spaces keep them apart for a screen reader too.
   const age = observedAt === undefined ? null : <><FreshnessDot stale={false} /><AgeLabel observedAt={observedAt} stale={false} /></>;
   const line = state === "stale" ? <><FreshnessDot stale /><Badge kind="stale" /> <AgeLabel observedAt={observedAt} stale /></>
@@ -118,15 +112,13 @@ export function Panel({ title, eyebrow, headingLevel = 2, id, actions, pill, lin
     : state === "error" ? <PanelError thing={thing} text={errorText} onRetry={onRetry} />
     : state === "empty" ? empty ?? <EmptyState message={`No ${thing}.`} />
     : <PanelErrorBoundary thing={thing} text={errorText} onRetry={onRetry}>{stale ? <div className="panel-muted">{children}</div> : children}</PanelErrorBoundary>;
-  return <PanelInfoContext.Provider value={info}>
-    <section id={id} className={cls("card", "panel", tone && !apiDown && `tone-${tone}`)} aria-labelledby={headingId} aria-busy={state === "loading" || undefined} data-state={state}>
-      <div className="card-head">
-        <div className="card-title">{eyebrow && <span className="eyebrow">{eyebrow}</span>}<div className="card-title-row"><Heading id={headingId}>{title}</Heading>{pill}</div></div>
-        <HeadEnd actions={actions} link={link} menu={menu} />
-      </div>
-      {line && <p className="panel-state">{line}</p>}
-      {body}
-      {foot && (state === "ready" || state === "busy" || DEVICE_STALE.includes(state)) && <div className="card-foot meta">{foot}</div>}
-    </section>
-  </PanelInfoContext.Provider>;
+  return <section id={id} className={cls("card", "panel", tone && !apiDown && `tone-${tone}`)} aria-labelledby={headingId} aria-busy={state === "loading" || undefined} data-state={state}>
+    <div className="card-head">
+      <div className="card-title">{eyebrow && <span className="eyebrow">{eyebrow}</span>}<div className="card-title-row"><Heading id={headingId}>{title}</Heading>{pill}</div></div>
+      <HeadEnd actions={actions} link={link} menu={menu} />
+    </div>
+    {line && <p className="panel-state">{line}</p>}
+    {body}
+    {foot && (state === "ready" || state === "busy" || DEVICE_STALE.includes(state)) && <div className="card-foot meta">{foot}</div>}
+  </section>;
 }

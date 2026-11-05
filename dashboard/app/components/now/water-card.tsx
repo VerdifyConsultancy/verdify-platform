@@ -11,7 +11,7 @@ import { WATER_ZONES, WATER_ZONE_WORDS, lastWater, type WaterZone, type ZoneLast
 import type { IrrigationLine, IrrigationStatus, Leak } from "../../lib/operator-api";
 import type { PanelRead } from "../../lib/queries";
 import { cls } from "../common";
-import { Meter, type MeterDomain } from "../data/meter";
+import { Meter, meterWords, type MeterDomain } from "../data/meter";
 import { useNow } from "../freshness";
 import { Panel, type PanelState } from "../panel";
 import { lineStatesUnknown } from "./status";
@@ -70,15 +70,11 @@ export function saf4Text(saf4: IrrigationStatus["limits"]["saf4_gal"]): string {
 
 /**
  * "14 / 120 min", "60 / 60 min · cap reached", "132 / 120 min · +12 min over": whole minutes against the cap, as the
- * caps are set (never "2 h"); "— / 60 min" when the API has no number; the minutes alone with no cap.
+ * caps are set (never "2 h"); "— / 60 min" when the API has no number; the minutes alone with no cap. The Meter's own
+ * words (`meterWords`), so Now and Water say a zone's minutes the same way.
  */
 export function minutesWords(minutes: number | null, cap: number | null): { amount: string; over: string | null } {
-  const whole = (value: number) => String(Math.round(value));
-  if (!finite(cap) || cap <= 0) return { amount: finite(minutes) ? `${whole(minutes)} min` : "—", over: null };
-  if (!finite(minutes)) return { amount: `— / ${whole(cap)} min`, over: null };
-  const amount = `${whole(minutes)} / ${whole(cap)} min`;
-  if (Math.round(minutes) > cap) return { amount, over: `+${whole(minutes - cap)} min over` };
-  return { amount, over: Math.round(minutes) === cap ? "cap reached" : null };
+  return meterWords(minutes, cap, "min");
 }
 
 /** One zone's row: its name, its minutes against its cap, and when it last got water. */

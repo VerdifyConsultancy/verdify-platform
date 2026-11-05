@@ -392,14 +392,14 @@ test("the 72 h chip sets ?hours=72 and reads 72 h, and loading /plan?hours=72 ke
   const { api } = await open("/plan");
   const lanes = region("Planned settings");
   expect(requests(api, "API-07").map((row) => row.path)).toEqual(["/api/v1/plan?hours=24"]);
-  expect(within(lanes).getByRole("link", { name: "24 h" }).getAttribute("aria-current")).toBe("true");
+  expect(within(lanes).getByRole("link", { name: "24 h" }).getAttribute("aria-current")).toBe("page");
   expect(within(lanes).getByRole("link", { name: "72 h" }).getAttribute("href")).toBe("/plan?hours=72");
   expect(text(lanes.querySelector("figcaption"))).toBe("Next 24 h · one lane per planned setting");
   fireEvent.click(within(lanes).getByRole("link", { name: "72 h" }));
   await settle();
   paint();
   expect(requests(api, "API-07").map((row) => row.path)).toEqual(["/api/v1/plan?hours=24", "/api/v1/plan?hours=72"]);
-  expect(within(region("Planned settings")).getByRole("link", { name: "72 h" }).getAttribute("aria-current")).toBe("true");
+  expect(within(region("Planned settings")).getByRole("link", { name: "72 h" }).getAttribute("aria-current")).toBe("page");
   expect(text(region("Planned settings").querySelector("figcaption"))).toBe("Next 72 h · one lane per planned setting");
   expect(created[created.length - 1].opts.scales!.x).toMatchObject({ min: START, max: START + 72 * 3600 });
   cleanup();
@@ -407,7 +407,7 @@ test("the 72 h chip sets ?hours=72 and reads 72 h, and loading /plan?hours=72 ke
   // Reloading the URL keeps the window.
   const reloaded = await open("/plan?hours=72");
   expect(requests(reloaded.api, "API-07").map((row) => row.path)).toEqual(["/api/v1/plan?hours=72"]);
-  expect(within(region("Planned settings")).getByRole("link", { name: "72 h" }).getAttribute("aria-current")).toBe("true");
+  expect(within(region("Planned settings")).getByRole("link", { name: "72 h" }).getAttribute("aria-current")).toBe("page");
   expect(within(region("Planned settings")).getByRole("link", { name: "24 h" }).getAttribute("href")).toBe("/plan");
   expect([planHours(new URLSearchParams("hours=72")), planHours(new URLSearchParams("hours=48")), planHours(new URLSearchParams())]).toEqual([72, 24, 24]);
 });

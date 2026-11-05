@@ -6,8 +6,6 @@
 .wat-program-fault{color:var(--fault);font-weight:600}
 .wat-program-warn{color:var(--warn-text);font-weight:600}
 .page-status .wat-retry{min-height:2rem;padding-block:0;margin-left:var(--space-1)}
-.page-status a{font-weight:600}
-.wat-unit{font-size:var(--fs-sm);font-weight:500;letter-spacing:0;color:var(--muted)}
 
 /* ---------------------------------------------------------------------------------------------------- Today: the layout */
 /* Site today first in reading order; from 1200 px it moves to the aside, sticky under the header, and the zones take the main column. */
@@ -21,7 +19,6 @@
 }
 
 /* Site today: two meters, then one fact a line. */
-.wat-site .card-title-row h2{font-size:var(--fs-lg)}
 .wat-site-list{display:grid;margin:0;padding:0;list-style:none;font-size:var(--fs-sm)}
 .wat-site-list>li{padding:var(--space-3) 0;border-top:1px solid var(--line)}
 .wat-site-list>li:first-child{padding-top:0;border-top:0}
@@ -35,7 +32,6 @@ a.wat-site-term{display:inline-flex;align-items:center;min-height:24px;text-unde
 /* A zone card: its name and kind, its minutes against the cap and when it last watered; a mister zone's switches; its line rows. */
 .wat-zone{padding-bottom:var(--space-2)}
 .wat-zone-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2) var(--space-5);padding-bottom:var(--space-3);border-bottom:1px solid var(--line)}
-.wat-zone-name{font-size:var(--fs-lg)}
 .wat-zone-kind{margin-left:var(--space-2);font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest);white-space:nowrap}
 .wat-zone-today{display:flex;flex:1 1 18rem;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:var(--space-1) var(--space-3);max-width:30rem;min-width:0}
 .wat-zone-today .sch-minutes-meter{flex:1 1 14rem}
@@ -128,14 +124,15 @@ button.sch-block:hover,.sch-block.is-selected{box-shadow:0 0 0 2px var(--ink)}
 .sch-axis-tick:last-child{transform:translateX(-100%)}
 
 /* ---------------------------------------------------------------------------------------------------- Schedules */
-.sch-page{display:grid;gap:var(--space-5);min-width:0}
+/* The page is a .page stack: the week strip and the view switch are its toolbar, then the view, then the rules. */
 /* While API-IRR-02 first answers: the strip's and the timeline's reserved heights, so nothing shifts when they fill. */
 .sch-loading{display:grid;gap:var(--space-5)}
 .sch-skeleton-strip{min-height:4.75rem}
 .sch-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-3) var(--space-4)}
 .sch-views{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)}
 .sch-views-phone,.sch-only-phone{display:none}
-.sch-key-button{min-height:2.5rem}
+/* A toolbar's controls are one height, the small chips' 36 px (44 px on phones), as on Graphs. */
+.sch-key-button{min-height:2.25rem;padding-block:0}
 
 /* The week strip: Monday to Sunday, past outcomes and future counts side by side; the selected day ringed in ink. */
 .sch-week{display:grid;flex:1 1 44rem;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"prev days next";align-items:stretch;gap:var(--space-2);min-width:0}
@@ -167,7 +164,6 @@ span.sch-week-step.is-off{display:inline-flex;align-items:center;justify-content
 /* The day timeline: a card with its head (the day, the sun's times, ‹ Today ›), the hour ticks, and rows by manifold, each ending with its minutes against the cap and [+]. */
 .sch-day{min-width:0;border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-xs)}
 .sch-day-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2) var(--space-4);padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--line)}
-.sch-day-title h2{font-size:var(--fs-lg)}
 .sch-day-title p{margin:var(--space-1) 0 0}
 .sch-day-word{font-weight:500;color:var(--forest)}
 .sch-day-nav{display:flex;gap:var(--space-1)}
@@ -197,7 +193,7 @@ span.sch-week-step.is-off{display:inline-flex;align-items:center;justify-content
 .sch-add{flex:none;min-width:2rem;min-height:2rem;padding:0;font-size:1.1rem;line-height:1}
 
 /* The week matrix (view=week): lines down, days across, one mark per run and the minutes against the cap; it scrolls inside its own region below 1100 px. */
-.sch-week-title{margin:0 0 var(--space-3);font-size:var(--fs-lg)}
+.sch-week-title{margin:0 0 var(--space-3)}
 .sch-matrix-wrap{border:1px solid var(--line);border-radius:var(--radius);background:#fff}
 .sch-matrix{min-width:56rem;table-layout:fixed}
 .sch-matrix th[scope=row]{width:11.5rem;font-size:var(--fs-sm)}
@@ -242,7 +238,7 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
 .sch-count{display:inline-flex;align-items:center;gap:var(--space-2)}
 .sch-count .meter{width:7rem}
 .sch-rules-empty{margin:0}
-.sch-rule-group{margin:0;padding:0 var(--space-4);border:1px solid var(--line);border-radius:var(--radius);background:#fff}
+.sch-rule-group{margin:0;padding:0 var(--space-4);border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-xs)}
 .sch-rule-group+.sch-rule-group{margin-top:var(--space-3)}
 .sch-rule-group>summary{min-height:3rem}
 .sch-rule-line{display:inline;font-size:var(--fs-md)}
@@ -289,10 +285,10 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
 .sch-preview-where{margin-top:var(--space-2)}
 
 /* ---------------------------------------------------------------------------------------------------- History */
-.wat-history{display:grid;gap:var(--space-6);min-width:0}
+/* The page is a .page stack: the period, Group by and Measure are its toolbar, then the KPIs and the sections. */
 .wat-history-bar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-5)}
 .wat-select{display:inline-flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm);font-weight:600;color:var(--muted)}
-.wat-select select{min-width:7.5rem;color:var(--ink);font-weight:500}
+.wat-select select{min-width:7.5rem;min-height:2.25rem;padding-block:.2rem;color:var(--ink);font-size:var(--fs-sm);font-weight:500}
 .wat-kpis .metric-value{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 .15em}
 .wat-section{min-width:0}
 .wat-runs .filters{margin-top:0}
@@ -339,6 +335,7 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
   .wat-day-axis{margin-right:0}
   .wat-zone-today{justify-content:flex-start;max-width:none}
   .wat-runs-table{display:none}
+  .sch-key-button,.wat-select select{min-height:var(--tap)}
   a.wat-site-term{min-height:var(--tap)}
   .wat-line .object-row-actions .state-note,.wat-line .object-row-actions .field-error{text-align:left}
 }

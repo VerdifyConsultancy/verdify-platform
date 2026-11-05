@@ -24,10 +24,6 @@ import { Sparkline } from "./data/sparkline";
 import { SPARK_S, ZONE_VPD_KEYS, rangeSince, valuesSince } from "./now/climate";
 import { Panel, type PanelState } from "./panel";
 
-/** The tag as a pill (Graphs → Zones): a fallback on a zone that has a probe stands out; center always reads HOUSE. */
-export function ZoneTagBadge({ zone, tag }: { zone: Zone; tag: ZoneTag }) {
-  return <span className={cls("tag", tag !== "MEASURED" && zone !== "center" && "tag-warn")} data-zone-tag={tag}>{tag}</span>;
-}
 /** Where a tile's numbers come from, as a text mark (D-UX-07): mono and muted, amber only when the provenance is the news. */
 export function ZoneTagMark({ zone, tag }: { zone: Zone; tag: ZoneTag }) {
   const news = tag !== "MEASURED" && zone !== "center";

@@ -11,6 +11,7 @@
 .page-crumbs a:hover{color:var(--leaf)}
 .page-header>h1{grid-area:title;min-width:0}
 .page-status{grid-area:status;max-width:46rem;min-height:1.5em;margin:var(--space-2) 0 0}
+.page-status a{font-weight:600}
 .page-actions{grid-area:actions;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--space-2)}
 .page-tabs{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2) var(--space-4);margin:0 0 var(--space-5)}
 .page-tabs .chips{flex-wrap:nowrap}
@@ -31,8 +32,11 @@
 .menu-panel>a:hover,.menu-panel>button:hover,.menu-panel>form>button:hover{background:var(--field);color:var(--leaf)}
 
 /* Layout primitives (redesign §3.2): one job per breakpoint, 600 px (card grids go to two columns), 861 px (navigation, axes, tables to rows) and 1200 px (the main and aside split). Weather's .grid-* stay for weather's sections; new code uses these. */
+/* The page rhythm (redesign §3.4), the same on every view: under the tabs, the view's blocks (titled sections, cards, a board of cards) stack at the section gap, --space-6 (--space-5 on phones); cards within a block sit at the card gap, --space-4 (--space-3). A view's toolbar (its range, period, filters or view switch) heads what it controls, --space-4 above it, in a .page stack as in plain flow. */
 .page{display:grid;gap:var(--space-6);min-width:0}
 .page-section{min-width:0}
+.page-toolbar{min-width:0;margin:0 0 var(--space-4)}
+.page>.page-toolbar{margin-bottom:calc(var(--space-4) - var(--space-6))}
 .l-stack{display:grid;gap:var(--space-4);min-width:0}
 .l-stack-sm{display:grid;gap:var(--space-2);min-width:0}
 .l-stack-lg{display:grid;gap:var(--space-6);min-width:0}
@@ -90,6 +94,7 @@
 .metric-label a{color:inherit}
 .metric-value{margin:0;font-size:var(--fs-xl);font-weight:620;letter-spacing:-.02em;line-height:1.15;font-variant-numeric:tabular-nums}
 .metric-reason{font-weight:400;letter-spacing:0}
+.metric-unit{font-size:var(--fs-sm);font-weight:500;letter-spacing:0;color:var(--muted)}
 .metric-delta,.metric-meta{margin:0}
 .metric-visual{margin-top:var(--space-1);min-width:0}
 .metric-skeleton{height:4.5rem}
@@ -232,6 +237,7 @@ button.tt-span{cursor:pointer}
 
 @media(max-width:860px){
   .page{gap:var(--space-5)}
+  .page>.page-toolbar{margin-bottom:calc(var(--space-4) - var(--space-5))}
   .chips a,.chip,.chips-sm a,.chips-sm .chip{min-height:var(--tap)}
   .object-row-actions{flex-basis:100%;justify-content:flex-start}
   .object-row-actions>.btn:first-child{flex:1 1 auto}

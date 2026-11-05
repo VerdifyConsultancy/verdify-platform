@@ -125,7 +125,7 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 
 /* ---------------------------------------------------------------- Plan (redesign §5.11) */
 /* Plan in force and Planner health side by side from 600 px (l-cols-2), then the lanes full width. Long ids, codes and stored times wrap, so nothing scrolls the page sideways at 390 px. */
-.ctl-plan-top{margin-bottom:var(--space-4)}
+/* The page is a .page stack: the plan and its health side by side, then the lanes. */
 .ctl-plan-top>.card{height:100%}
 .plan-facts{margin:0 0 var(--space-2);font-size:var(--fs-sm);overflow-wrap:anywhere}
 .plan-trigger{font-weight:600}
@@ -189,12 +189,11 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 @media(max-width:860px){.ctl-plan-lanes .plan-end{height:var(--tap)}.ctl-lane-pill{top:.6rem;transform:none}}
 
 /* ---------------------------------------------------------------- Equipment (redesign §5.12) */
-/* Two balanced columns from 861 px (Climate, Lights and Flags; Water relays and the Controller), then the bursts, Why, the lanes and the daily runtime full width. */
-.ctl-board{display:grid;gap:var(--space-4);grid-template-columns:minmax(0,1fr);align-items:start}
-.ctl-board-col{display:grid;gap:var(--space-4);align-content:start;min-width:0}
-.ctl-equipment-more{display:grid;gap:var(--space-4);margin-top:var(--space-4);min-width:0}
+/* The page is a .page stack: two balanced columns from 861 px (Climate, Lights and Flags; Water relays and the Controller), then the bursts, Why, the lanes and the daily runtime full width, each block's cards at the card gap. */
+.ctl-board{display:grid;gap:var(--space-3);grid-template-columns:minmax(0,1fr);align-items:start}
+.ctl-board-col,.ctl-equipment-more{display:grid;gap:var(--space-3);align-content:start;min-width:0}
 .ctl-equipment-more>*{margin:0}
-@media(min-width:861px){.ctl-board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:861px){.ctl-board{grid-template-columns:repeat(2,minmax(0,1fr))}.ctl-board,.ctl-board-col,.ctl-equipment-more{gap:var(--space-4)}}
 
 /* A board row: the name, the state as a word with a dot, then since, time on today and cycles; one line from 1200 px, two below. Unknown is muted with a hatched dot. */
 .equipment-rows{list-style:none;margin:0;padding:0}

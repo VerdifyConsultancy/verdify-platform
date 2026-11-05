@@ -121,20 +121,22 @@ export default function Plan() {
   ];
   return <>
     <PageHeader view="control-plan" status={<PlanStatus data={data} now={now} />} actions={<FindSetting />} />
-    <div className="l-cols-2 ctl-plan-top">
-      <PlanCard data={data} state={state} now={now} onRetry={retry} />
-      <PlannerHealth health={data?.health ?? []} state={state} now={now} onRetry={retry} reliability={reliability} />
+    <div className="page ctl-plan">
+      <div className="l-cols-2 ctl-plan-top">
+        <PlanCard data={data} state={state} now={now} onRetry={retry} />
+        <PlannerHealth health={data?.health ?? []} state={state} now={now} onRetry={retry} reliability={reliability} />
+      </div>
+      <Panel title="Planned settings" thing="the planned settings" state={state} reserve="lg" onRetry={retry}
+        actions={<div className="plan-lane-tools">
+          {manual && <p className="plan-manual">{manual}</p>}
+          <Chips kind="nav" small label="Lane window" items={chips} />
+        </div>}>
+        {data && <div className="ctl-plan-lanes">
+          <PlanLanes plan={data} now={Math.floor(now / 1000)} hours={hours} takeover={TAKEOVER} stale={stale} syncKey={`verdify:plan:${hours}h`}
+            rowEnd={(row) => <LaneEnd row={row} to={editTo(row.key)} desired={desired.get(row.key) ?? null} />} />
+        </div>}
+      </Panel>
     </div>
-    <Panel title="Planned settings" thing="the planned settings" state={state} reserve="lg" onRetry={retry}
-      actions={<div className="plan-lane-tools">
-        {manual && <p className="plan-manual">{manual}</p>}
-        <Chips label="Lane window" items={chips} />
-      </div>}>
-      {data && <div className="ctl-plan-lanes">
-        <PlanLanes plan={data} now={Math.floor(now / 1000)} hours={hours} takeover={TAKEOVER} stale={stale} syncKey={`verdify:plan:${hours}h`}
-          rowEnd={(row) => <LaneEnd row={row} to={editTo(row.key)} desired={desired.get(row.key) ?? null} />} />
-      </div>}
-    </Panel>
     <SettingDrawerHost />
   </>;
 }

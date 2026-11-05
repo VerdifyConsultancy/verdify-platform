@@ -96,7 +96,7 @@ function Kpis({ days, current, previous, runs, runsBefore, counted, retry }: {
         visual={minutes && <Sparkline kind="bars" token="water" values={minutes.days.map((day) => day.minutes)} label={`Watering minutes per day, ${periodWords(days).toLowerCase()}`} />}
         meta={minutes && minutes.fog !== null && minutes.fog > 0 ? `Fog apart: ${Math.round(minutes.fog)}\u00a0min of humidification` : "Drips and misters; fog apart"} />
       <MetricTile label="Gallons" data={{ "data-kpi": "gallons" }} state={stateOf(current.pending, current.failed)} onRetry={retry.minutes}
-        value={minutes && minutes.gal !== null ? <>{minutes.galMissing ? "≥ " : ""}{Math.round(minutes.gal)}<span className="wat-unit">{"\u00a0"}gal</span></> : null} reason="No meter data"
+        value={minutes && minutes.gal !== null ? <>{minutes.galMissing ? "≥ " : ""}{Math.round(minutes.gal)}<span className="metric-unit">{"\u00a0"}gal</span></> : null} reason="No meter data"
         delta={minutes && <Delta value={relative(minutes.gal, previous?.gal)} unit="%" vs={vs} />}
         visual={minutes && <Sparkline kind="bars" token="water" values={minutes.days.map((day) => day.gal)} label={`Gallons per day, ${periodWords(days).toLowerCase()}`} />}
         meta={minutes && minutes.galMissing ? "Some runs have no meter data" : "Verdify valves, from the site meter"} />
@@ -114,8 +114,8 @@ function Kpis({ days, current, previous, runs, runsBefore, counted, retry }: {
 /** "6 h 12 min" with its units small. */
 function MinutesValue({ minutes }: { minutes: number }) {
   const whole = Math.round(minutes);
-  if (whole < 120) return <>{whole}<span className="wat-unit">{"\u00a0"}min</span></>;
-  return <>{Math.floor(whole / 60)}<span className="wat-unit">{"\u00a0"}h</span>{whole % 60 ? <> {whole % 60}<span className="wat-unit">{"\u00a0"}min</span></> : null}</>;
+  if (whole < 120) return <>{whole}<span className="metric-unit">{"\u00a0"}min</span></>;
+  return <>{Math.floor(whole / 60)}<span className="metric-unit">{"\u00a0"}h</span>{whole % 60 ? <> {whole % 60}<span className="metric-unit">{"\u00a0"}min</span></> : null}</>;
 }
 
 /**
@@ -136,7 +136,7 @@ function MinutesSection({ read, days, lines, names, today, group, measure }: {
   const noon = Date.parse(localDayStart(today)) / 1000 + 12 * 3600;
   const what = measure === "gal" ? "Gallons" : "Watering minutes";
   return <section className="wat-section" aria-labelledby={headingId}>
-    <SectionHeader id={headingId} title={`${what} by ${group}`} meta={`· ${periodWords(days).toLowerCase()}`} />
+    <SectionHeader id={headingId} title={`${what} by ${group}`} meta={periodWords(days).toLowerCase()} />
     {read.isError && <PanelError thing={`the ${what.toLowerCase()}`} onRetry={() => void read.refetch()} />}
     {report
       ? <MinutesByZone report={report} group={group} caps={minutesCaps(lines, group)} planned={planned[group]} now={noon} lineNames={names} measure={measure === "gal" ? "gal" : "minutes"}
@@ -157,7 +157,7 @@ function WaterUseSection({ days, names, search }: { days: number; names: Readonl
   const use = useApiRead("API-21", { days: served }, { intervalMs: HISTORY_POLL_MS });
   const note = days < served ? `last ${served} days, the shortest this chart serves` : days > served ? `last ${served} days, the longest this chart serves` : `last ${served} days`;
   return <section className="wat-section" aria-labelledby={headingId}>
-    <SectionHeader id={headingId} title="Daily water use" meta={`· ${note}`}
+    <SectionHeader id={headingId} title="Daily water use" meta={note}
       chips={<Chips label="Split water use by" small items={(["line", "cause"] as const).map((value) => ({ key: value, label: value, to: waterUrl(PATH, search, { water_use_by: value === "line" ? null : "cause" }), current: split === value, keepScroll: true }))} />} />
     {use.isError && <PanelError thing="daily water use" onRetry={() => void use.refetch()} />}
     {use.data
@@ -248,7 +248,7 @@ function RunsSection({ names, today, days, search, setSearch }: { names: Readonl
   }, { replace: true, preventScrollReset: true });
   const span = range.from === range.to ? range.from : `${range.from} to ${range.to}`;
   return <section className="wat-section wat-runs" id="runs" aria-labelledby={headingId}>
-    <SectionHeader id={headingId} title="Runs" meta={`· newest first · ${explicit ? span : runs.length && pages.length ? `${periodWords(days).toLowerCase()} as loaded` : span}`} />
+    <SectionHeader id={headingId} title="Runs" meta={`newest first · ${explicit ? span : runs.length && pages.length ? `${periodWords(days).toLowerCase()} as loaded` : span}`} />
     <div className="filters runs-filters">
       <label>Line<select value={filters.line ?? ""} onChange={(event) => update({ line: event.target.value })}>
         <option value="">All lines</option>
@@ -322,9 +322,9 @@ export default function WaterHistory() {
     return () => setSummary?.(null);
   }, [setSummary, summary]);
   const pick = (name: string, value: string | null) => waterUrl(PATH, search, { [name]: value });
-  return <div className="wat-history">
-    <div className="wat-history-bar">
-      <Chips label="Period" items={HISTORY_DAYS.map((value) => ({ key: String(value), label: `${value} d`, to: pick("range", value === 7 ? null : `${value}d`), current: days === value }))} />
+  return <div className="page wat-history">
+    <div className="page-toolbar wat-history-bar">
+      <Chips kind="nav" small label="Period" items={HISTORY_DAYS.map((value) => ({ key: String(value), label: `${value} d`, to: pick("range", value === 7 ? null : `${value}d`), current: days === value }))} />
       <label className="wat-select">Group by<select value={group} onChange={(event) => setSearch((currentSearch) => {
         const nextSearch = new URLSearchParams(currentSearch);
         if (event.target.value === "zone") nextSearch.delete("group"); else nextSearch.set("group", event.target.value);

@@ -421,8 +421,6 @@ export function pauseAfterRun(occurrence: Pick<Occurrence, "status" | "planned_s
 export type { MinutesGroup };
 /** `?group=`: zone (the default), line or cause. */
 export const minutesGroup = (value: string | null): MinutesGroup => (value === "line" || value === "cause" ? value : "zone");
-/** `?days=`: 7 (the default) or 30. */
-export const minutesDays = (value: string | null): 7 | 30 => (value === "30" ? 30 : 7);
 
 /**
  * The cap ticks (#1135): by zone, wall from L01, center from L04, south from L07 and west from L09; by line, each line's

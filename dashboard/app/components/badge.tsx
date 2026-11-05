@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 import type { ReactNode } from "react";
 import { useApiDown } from "../lib/session";
-import { isAiSource, type EquipmentState, type LineKind, type ReadbackVia } from "../lib/vocab";
-import { words } from "../lib/words";
+import type { EquipmentState, LineKind, ReadbackVia } from "../lib/vocab";
 import { LocalTime } from "./common";
 
 /**
@@ -55,26 +54,6 @@ export function ReadbackBadge({ state, readbackVia, overriddenAt }: { state: str
   return kind ? <Badge kind={kind} /> : <span className="tag" data-badge="raw">{state}</span>;
 }
 
-/** MANUAL while the item's `manual` flag is on: a setting's desired row, a schedule or a line. Iris skips it. */
-export function ManualBadge({ manual }: { manual: boolean | null | undefined }) {
-  return manual ? <Badge kind="manual" /> : null;
-}
-
-/** AI for a write by Iris or a named agent (`agent:<name>`) only; never for `dashboard` or `system`. */
-export function AiBadge({ source }: { source: string | null | undefined }) {
-  return source && isAiSource(source) ? <Badge kind="ai" /> : null;
-}
-
-/** PLANNED for a plan waypoint or schedule occurrence; SUPERSEDED for a waypoint the API marks `effective: false`. */
-export function WaypointBadge({ effective }: { effective: boolean }) {
-  return <Badge kind={effective ? "planned" : "superseded"} />;
-}
-
-/** STALE while the API marks the value stale. */
-export function StaleBadge({ stale }: { stale: boolean | null | undefined }) {
-  return stale ? <Badge kind="stale" /> : null;
-}
-
 /** The chemistry of a line kind: the fertilizer lines and the fertilizer master valve (L03) are FERT. */
 export function lineChemistry(kind: LineKind | (string & {})): "clean" | "fert" | null {
   if (kind === "fert_drip" || kind === "fert_mister" || kind === "master") return "fert";
@@ -84,17 +63,6 @@ export function lineChemistry(kind: LineKind | (string & {})): "clean" | "fert" 
 /** CLEAN or FERT: a `.tag` whose leading dot is `--eq-water` or `--eq-fert`. */
 export function ChemistryBadge({ chemistry }: { chemistry: "clean" | "fert" | null | undefined }) {
   return chemistry ? <Badge kind={chemistry} /> : null;
-}
-
-/**
- * A line's state: RUNNING (green family), IDLE (base) or DISABLED (base, muted), with "Reserved" beside DISABLED for
- * L05 and L06 (`reserved`). Other codes read from the words table (raw for a code it lacks). `unknown`
- * shows only because the API sent it: nothing here looks at ages.
- */
-export function LineStateBadge({ code, reserved = false }: { code: string; reserved?: boolean }) {
-  if (code === "running" || code === "idle") return <Badge kind={code} />;
-  if (code === "disabled") return <><Badge kind="disabled" />{reserved && <> <span className="state-note">Reserved</span></>}</>;
-  return <span className="tag" data-badge="line-state">{words("line_state", code)}</span>;
 }
 
 /** An actuator's state as the API sends it: ON, OFF or UNKNOWN. Unknown comes only from the API, never from an age. */

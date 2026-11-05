@@ -136,7 +136,7 @@ export default function GraphZones() {
   return <>
     <PageHeader view="graphs-zones" title={focusedTitle(search) ?? undefined} status={window ? status : null} />
     <GraphNotices notices={notices} />
-    <div className="gr-toolbar">
+    <div className="page-toolbar gr-toolbar">
       <RangeToolbar
         presets={ZONE_RANGES.map((range) => ({ id: range.id, label: range.label, href: href({ kind: "range", range: range.id }), current: spec.kind === "range" && spec.range === range.id }))}
         previous={previous && href(previous)} next={next && href(next)} span={spanOf(spec, window)} zoomOut={zoomOut && href(zoomOut)} customOpen={spec.kind === "days"}

@@ -29,14 +29,11 @@
 .chart-swatch[data-token=eq-fan2]{background:var(--eq-fan2)}.chart-swatch[data-token=eq-heat1]{background:var(--eq-heat1)}.chart-swatch[data-token=eq-vent]{background:var(--eq-vent)}.chart-swatch[data-token=eq-mister]{background:var(--eq-mister)}
 .chart-swatch[data-token=eq-light-grow]{background:var(--eq-light-grow)}.chart-swatch[data-token=eq-fert]{background:var(--eq-fert)}.chart-swatch[data-token=eq-heat2]{background:var(--eq-heat2)}.chart-swatch[data-token=eq-fog]{background:var(--eq-fog)}
 
-/* Tools, data table and linked panels. */
+/* Tools and the data table. */
 .chart-tools{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem;margin:.5rem 0}
 .chart-tools .range-chips{margin-right:auto}
 .chart-table{margin:.25rem 0}
 .chart-table .table-wrap{max-height:24rem;overflow:auto;margin:.35rem 0}
-.linked-panels{margin:.75rem 0}
-.linked-panels .chart-linked{margin:.25rem 0;padding-top:.5rem;border-top:1px solid var(--line)}
-.linked-panels .chart-linked:first-of-type{border-top:0}
 
 /* Lanes (#1127, design system §5.2 and §6): rows are HTML at a fixed pitch, the canvas sits over the plot column and
    paints each row's band at the same pitch, and a spacer under the rows holds the time axis. */

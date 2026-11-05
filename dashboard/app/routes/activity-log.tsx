@@ -44,7 +44,7 @@ export default function ActivityLog() {
   const entries = query.data?.items ?? [];
   return <>
     <PageHeader view="activity-log" status={LOG_STATUS} />
-    <div className="act-log-page">
+    <div className="page act-log-page">
       <LogFilters view={view} params={params} me={me} />
       <LogList view={view} params={params} entries={entries} catalog={catalog} me={me} failed={query.isError && !query.data} pending={query.isPending}
         retry={() => void query.refetch()} more={query.data?.next_cursor ? { loading: loadingOlder, load: loadOlder } : null} />
@@ -157,7 +157,7 @@ function LogFilters({ view, params, me }: { view: ActivityView; params: URLSearc
     onChange: (event: { currentTarget: HTMLInputElement }) => { if (isDay(event.currentTarget.value) && event.currentTarget.value !== view.dates[name]) go({ [name]: event.currentTarget.value }); },
     onBlur: (event: FocusEvent<HTMLInputElement>) => { if (!event.currentTarget.value && view.dates[name]) go({ [name]: null }); },
   });
-  return <form className="act-filters" role="search" aria-label="Activity log filters" onSubmit={(event) => event.preventDefault()}>
+  return <form className="page-toolbar act-filters" role="search" aria-label="Activity log filters" onSubmit={(event) => event.preventDefault()}>
     <div className="act-facets">
       <div className="act-facet"><span className="act-facet-label" aria-hidden="true">Who</span><Chips kind="filter" small label="Who" items={facetChips(params, "source", who, source)} /></div>
       <div className="act-facet"><span className="act-facet-label" aria-hidden="true">What</span><Chips kind="filter" small label="What" items={facetChips(params, "action", what, action)} /></div>

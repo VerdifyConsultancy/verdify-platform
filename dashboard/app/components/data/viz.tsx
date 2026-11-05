@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { useId, type KeyboardEvent, type ReactNode } from "react";
+import { useId, type KeyboardEvent } from "react";
 
 /**
  * What the micro-visualizations share (redesign §4.6, §4.3): SVG or HTML only, never chart code (components/data never
@@ -54,11 +54,6 @@ export function VizSkeleton({ className, label }: { className?: string; label: s
 /** The accessible side of a visual: `aria-hidden` when the same numbers sit beside it as text, else an image named by them. */
 export function vizRole(label: string | undefined, decorative: boolean): { role?: "img"; "aria-label"?: string; "aria-hidden"?: true } {
   return decorative || !label ? { "aria-hidden": true } : { role: "img", "aria-label": label };
-}
-
-/** Words that need no colour: a sentence for screen readers beside a decorative mark. */
-export function ScreenReader({ children }: { children?: ReactNode }) {
-  return <span className="screen-reader">{children}</span>;
 }
 
 /**

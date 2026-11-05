@@ -122,13 +122,13 @@ test("the 72 h chip sets ?hours=72, and reloading the URL keeps it", async ({ pa
   await useScreensClock(page, request, "in-band");
   await load(page, "/plan");
   const lanes = region(page, "Planned settings");
-  await expect(lanes.getByRole("link", { name: "24 h" })).toHaveAttribute("aria-current", "true");
+  await expect(lanes.getByRole("link", { name: "24 h" })).toHaveAttribute("aria-current", "page");
   await lanes.getByRole("link", { name: "72 h" }).click();
   await expect(page).toHaveURL(/\/plan\?hours=72$/);
   await expect(lanes.locator("figcaption")).toHaveText("Next 72 h · one lane per planned setting");
   await page.reload();
   await expect(lanes.locator("figcaption")).toHaveText("Next 72 h · one lane per planned setting");
-  await expect(lanes.getByRole("link", { name: "72 h" })).toHaveAttribute("aria-current", "true");
+  await expect(lanes.getByRole("link", { name: "72 h" })).toHaveAttribute("aria-current", "page");
 });
 
 test("Save in a lane's drawer sends one API-10 and the lane reads REQUESTED in place, with Plan's API-07 read every 5 s while it settles", async ({ page, request }) => {

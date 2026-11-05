@@ -91,8 +91,12 @@ test("Meter words: the done part against the cap, cap reached, minutes over", ()
   expect(words(null, 60, "min")).toEqual(["— / 60 min", null]);
   expect(words(21, 360, "gal")).toEqual(["21 / 360 gal", null]);
   expect(words(21, null, "gal")).toEqual(["21 gal", null]);
-  // Minutes past 2 h keep the dashboard's own words.
-  expect(words(132, 120, "min")).toEqual(["2 h 12 min / 2 h", "+12 min over"]);
+  // Minutes stay whole minutes past 2 h, as the caps are set, and reach or pass the cap as their whole minutes do.
+  expect(words(132, 120, "min")).toEqual(["132 / 120 min", "+12 min over"]);
+  expect(words(131.6, 120, "min")).toEqual(["132 / 120 min", "+12 min over"]);
+  expect(words(59.7, 60, "min")).toEqual(["60 / 60 min", "cap reached"]);
+  expect(words(6, null, "min")).toEqual(["6 min", null]);
+  expect(words(null, 0, "min")).toEqual(["—", null]);
 });
 
 test("Meter in every state: the fill in its domain token, the planned outline and the ink cap; unknown hatched with no fill", () => {
@@ -118,7 +122,7 @@ test("Meter: at or over its cap the fill stops at 100% and the tick turns fault;
   const { container } = renderUi(<Meter label="Center minutes today" unit="min" value={132} cap={120} domain="mister" />);
   expect(container.querySelector(".meter-fill")?.getAttribute("width")).toBe("100%");
   expect(container.querySelector(".meter")?.className).toContain("is-capped");
-  expect(plain(screen.getByRole("img").getAttribute("aria-label"))).toBe("Center minutes today: 2 h 12 min / 2 h, +12 min over");
+  expect(plain(screen.getByRole("img").getAttribute("aria-label"))).toBe("Center minutes today: 132 / 120 min, +12 min over");
   cleanup();
   const down = renderUi(<Meter label="SAF-4" unit="gal" value={21} cap={360} domain="water" showWords />, { apiDown: true });
   expect(down.container.querySelector(".meter")?.className).toContain("is-neutral");

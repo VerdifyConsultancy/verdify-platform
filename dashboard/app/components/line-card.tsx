@@ -23,8 +23,6 @@ import { useFreshConfirmed } from "./schedule/rules-list";
 import { lineTitle } from "./schedule/model";
 import { StopButton } from "./stop-button";
 
-/** Before the irrigation firmware a line shows its relay; the header's status line says why (irrigation §9). */
-export const BEFORE_ENGINE_TEXT = "Live job state arrives with the irrigation firmware";
 /** L03's sub-row under L02 (Round 2 #7). */
 export const MASTER_TEXT = "opens the injector line from the tank with each feed";
 
@@ -83,13 +81,6 @@ export function LineStateText({ line, engine, today, scheduleLabels }: { line: I
       return <>{words("line_state", state.code)}</>;
   }
 }
-/** The fault line: "Backing off until 13:20" (warn) or "Faulted: no misting until midnight (watchdog)" (fault). */
-export function FaultLine({ line, today }: { line: Pick<IrrigationLine, "fault" | "fault_until">; today: string }) {
-  const text = faultWords(line, today);
-  if (!text) return null;
-  return <p className={cls("line-fault", line.fault === "mister_fault" ? "fault" : "line-fault-warn")} data-fault={line.fault}>{text}</p>;
-}
-
 /** "Pause until…" in a line's ⋯ menu, for operators: the pause drawer with this line chosen (`?pause=<line_id>`). */
 function PauseThisLine({ line }: { line: Pick<IrrigationLine, "line_id"> }) {
   const { open } = useWaterDrawer("pause");

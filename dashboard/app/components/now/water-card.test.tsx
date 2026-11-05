@@ -85,7 +85,8 @@ test("the flow in words: flowing with every valve closed, stopped, unknown, and 
 });
 
 test("minutes against a cap read whole minutes as the caps are set, never 2 h; reached and over in words; unknown never 0", () => {
-  expect([minutesWords(14, 120), minutesWords(60, 60), minutesWords(131.6, 120), minutesWords(null, 60), minutesWords(6, null), minutesWords(null, 0)]).toEqual([
+  const said = [minutesWords(14, 120), minutesWords(60, 60), minutesWords(131.6, 120), minutesWords(null, 60), minutesWords(6, null), minutesWords(null, 0)];
+  expect(said.map(({ amount, over }) => ({ amount: plain(amount), over: over && plain(over) }))).toEqual([
     { amount: "14 / 120 min", over: null }, { amount: "60 / 60 min", over: "cap reached" }, { amount: "132 / 120 min", over: "+12 min over" },
     { amount: "— / 60 min", over: null }, { amount: "6 min", over: null }, { amount: "—", over: null },
   ]);
