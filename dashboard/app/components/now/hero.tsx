@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 /**
- * Now's ink hero (redesign §5.1, §4.2 "Status hero"): the one-sentence answer as the page's heading (`now-answer.ts`), the
+ * Now's ink hero (redesign §5.1, §4.2 "Status hero"): the answer's steady headline as the page's heading, never a link,
+ * with the out-of-band readings (or where the answer is explained) as one plain line under it (`now-answer.ts`), the
  * indoor temperature as the hero value with "Updated N s ago" (`#data`, which opens "All readings" in place), three band
- * bars (temperature, VPD and RH against the band in force, each with today's low and high, a verdict word only when out
- * of band), time in band today against yesterday, the status line (mode, Iris and the plan in force, outdoor, occupancy),
+ * bars (temperature, VPD and RH against the band in force: one track, the band box and the dot, today's low and high in
+ * each bar's name; a verdict word only when out of band), time in band today against yesterday, the status line (mode, Iris and the plan in force, outdoor, occupancy),
  * and the "All readings" disclosure with every source's time and the raw mode code.
  *
  * Honesty: rows 1 to 3 and 7 of the answer mute the values with STALE and show no verdict, and rows 1 to 3 read the mode
@@ -12,10 +13,10 @@
  * While the dashboard API is down the band bars and "In band today" do not render at all. A null reading is "—" with its
  * reason, never 0, and a bar with no value is hatched (hatching is for unknown alone).
  */
-import { useEffect, useId, useRef, type MouseEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useId, useRef, type MouseEvent, type ReactNode } from "react";
 import { Link, useLocation } from "react-router";
 import { duration, formatValue, localDate } from "../../lib/format";
-import { LOADING_TEXT, type NowAnswer } from "../../lib/now-answer";
+import { LOADING_TEXT, type BandMetric, type NowAnswer } from "../../lib/now-answer";
 import type { Freshness, IrrigationStatus, Now, Reading, Series } from "../../lib/operator-api";
 import type { PanelRead } from "../../lib/queries";
 import { useApiDown } from "../../lib/session";
@@ -39,13 +40,30 @@ const validTime = (value: string | null | undefined): value is string => typeof 
 const READINGS_HASHES = new Set(["#data", "#readings"]);
 export const READINGS_ID = "readings";
 
-/**
- * The answer, linked to the page that explains it. Row 2's `#data` is the freshness link on this page: a router link, so
- * the router sees the hash and Now opens "All readings" for it.
- */
+/** The headline (Jason 2026-11-05): the answer's steady words, never a link and never underlined. */
 export function AnswerTitle({ answer }: { answer: NowAnswer }) {
-  if (!answer.link) return <>{answer.text}</>;
-  return <Link className="hero-answer-link" to={answer.link.to}>{answer.text}</Link>;
+  return <>{answer.text}</>;
+}
+
+const CONDITION_NAMES: Readonly<Record<BandMetric, string>> = { temp: "temperature", vpd: "VPD", rh: "RH" };
+
+/**
+ * The plain line under the headline. Row 5: every reading out of band ("Too cold: 73.0 °F (band 73.9–83.9 °F) ·
+ * Air too dry: 1.67 kPa (band 0.86–1.29 kPa)"), each with a quiet "Graphs ›" to its panel. Rows 3, 4 and 6: a quiet link
+ * to where the answer is explained. Row 2's `#data` is the freshness link below, so it adds none here.
+ */
+export function AnswerDetail({ answer }: { answer: NowAnswer }) {
+  if (answer.conditions.length) {
+    return <p className="now-condition" data-conditions="">
+      {answer.conditions.map((condition, index) => <Fragment key={condition.metric}>
+        {index > 0 && " · "}
+        <span className="now-condition-item" data-condition={condition.metric}>{condition.text}</span>{" "}
+        <Link className="now-condition-link" to={condition.link.to}>{condition.link.label}<span className="screen-reader">: {CONDITION_NAMES[condition.metric]}</span>{"\u00a0›"}</Link>
+      </Fragment>)}
+    </p>;
+  }
+  if (!answer.link || answer.link.to.startsWith("#")) return null;
+  return <p className="now-condition"><Link className="now-condition-link" to={answer.link.to}>{answer.link.label}{"\u00a0›"}</Link></p>;
 }
 
 /**
@@ -220,6 +238,7 @@ export function NowHero({ now, answer, irrigation, day, daily, onRetry }: NowHer
     <div className="now-hero-main">
       <span className="eyebrow">{NOW_EYEBROW}</span>
       <h1 id={headingId} className="hero-answer"><AnswerTitle answer={answer} /></h1>
+      <AnswerDetail answer={answer} />
       <p className="now-hero-value">
         <span className={cls("hero-temp", muted && "value-muted")} data-hero-value="">{formatValue(missing ? null : temp.value, "°F")}</span>
         {inBand && <span className="now-hero-verdict">{words("band_verdict", "in")}</span>}
