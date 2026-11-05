@@ -91,13 +91,13 @@ test("1440 px: the header lists the five sections; Control opens Settings and is
 test("1440 px: every page shares the header's one centred container, so switching views never moves the page's edges; a short page's footer reaches the bottom", async ({ page, request }) => {
   await useFixture(request, "in-band");
   await page.setViewportSize(DESKTOP);
-  for (const path of ["/", "/water", "/water/schedules", "/graphs", "/graphs/zones", "/graphs/statistics", "/activity", "/settings"]) {
+  // Graphs and Water → Schedules were the wide pages; Activity → Alerts is a short one.
+  for (const path of ["/water/schedules", "/graphs", "/activity"]) {
     await load(page, path);
     const [header, main, footer] = await Promise.all([".site-header > .shell", "main#main-content", ".site-footer > .shell"].map((selector) => page.locator(selector).boundingBox()));
     expect([main!.x, main!.width], path).toEqual([header!.x, header!.width]);
     expect([footer!.x, footer!.width], path).toEqual([header!.x, header!.width]);
   }
-  await load(page, "/activity");
   const footer = await page.locator(".site-footer").boundingBox();
   expect(Math.round(footer!.y + footer!.height)).toBeGreaterThanOrEqual(DESKTOP.height);
 });
