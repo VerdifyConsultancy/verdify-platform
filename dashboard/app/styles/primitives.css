@@ -142,6 +142,9 @@ span.viz-skeleton.spark-tile{height:28px}span.viz-skeleton.spark-row{height:20px
 .bb-hero .viz-hatch{stroke:var(--ink-muted)}
 .bb-hero.is-stale .bb-dot,.bb-hero.is-neutral .bb-dot{fill:var(--ink-muted)}
 .bb-hero.is-neutral .bb-band{fill:var(--ink-2)}.bb-hero.is-neutral .bb-edge{stroke:var(--ink-muted)}
+/* Stale (redesign §4.3, no verdict): a muted dot inside a green band would still read as in band, so a stale band reads neutral too, as with the API down; hatching stays for unknown. */
+.bb.is-stale .bb-band{fill:var(--field)}.bb.is-stale .bb-edge{stroke:var(--line-strong)}
+.bb-hero.is-stale .bb-band{fill:var(--ink-2)}.bb-hero.is-stale .bb-edge{stroke:var(--ink-muted)}
 
 .meter{display:flex;align-items:center;gap:var(--space-2);min-width:0}
 .meter-bar{display:block;flex:1 1 4rem;min-width:3rem;overflow:visible}

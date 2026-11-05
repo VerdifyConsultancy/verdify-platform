@@ -7,8 +7,10 @@
  * and the "All readings" disclosure with every source's time and the raw mode code.
  *
  * Honesty: rows 1 to 3 and 7 of the answer mute the values with STALE and show no verdict, and rows 1 to 3 read the mode
- * as unknown. While the dashboard API is down the band bars and "In band today" do not render at all. A null reading is
- * "—" with its reason, never 0, and a bar with no value is hatched.
+ * as unknown (row 7 as it was last said, with no verdict: "Last mode: holding (10:28)"). Muted, the band group says when
+ * its numbers were read ("As of 10:28") and its bands read neutral, so a grey dot inside a green band never reads as live.
+ * While the dashboard API is down the band bars and "In band today" do not render at all. A null reading is "—" with its
+ * reason, never 0, and a bar with no value is hatched (hatching is for unknown alone).
  */
 import { useEffect, useId, useRef, type MouseEvent, type ReactNode } from "react";
 import { Link, useLocation } from "react-router";
@@ -24,7 +26,7 @@ import { LocalTime, cls } from "../common";
 import { BandBar } from "../data/band-bar";
 import { AgeLabel, FreshnessDot, useNow } from "../freshness";
 import { Kv, type KvItem } from "../kv";
-import { bandRows, bandWords, hasTimeInBand, outOfBand, percentText, readingText, timeInBand, todayStartS, type BandRow, type TimeInBand } from "./climate";
+import { bandRows, bandWords, hasTimeInBand, outOfBand, percentText, readingText, readingsAsOf, timeInBand, todayStartS, type BandRow, type TimeInBand } from "./climate";
 import { deviceUnknown, irisText, irisWarns, modeText, occupancyText, planLine } from "./status";
 
 /** The eyebrow: the time zone is stated once, in the footer and on axes (D-UX-08). */
@@ -115,6 +117,16 @@ function BandRows({ rows, muted }: { rows: readonly BandRow[]; muted: boolean })
       </li>;
     })}
   </ul>;
+}
+
+/**
+ * Over muted band bars (rows 1 to 3 and 7): when their numbers were read, "As of 10:28" (with the date when not today),
+ * in amber words as the STALE pill and the dot say it, so the group never reads as live from its colour alone.
+ */
+function BandsAsOf({ rows, clock }: { rows: readonly BandRow[]; clock: number }) {
+  const at = readingsAsOf(rows);
+  if (!at) return null;
+  return <p className="now-bands-asof">As of <LocalTime at={at} date={localDate(at) !== localDate(new Date(clock).toISOString())} /></p>;
 }
 
 /** "In band today: temperature 96% · VPD 88% (yesterday 94% · 91%)", only with data. */
@@ -221,7 +233,8 @@ export function NowHero({ now, answer, irrigation, day, daily, onRetry }: NowHer
         {answer.row === 1 && <Button onClick={onRetry}>Retry</Button>}
       </p>
     </div>
-    {rows && <div className="now-hero-climate">
+    {rows && <div className="now-hero-climate" data-stale={muted ? "" : undefined}>
+      {muted && <BandsAsOf rows={rows} clock={clock} />}
       <BandRows rows={rows} muted={muted} />
       <InBandToday tib={tib} muted={muted} />
     </div>}

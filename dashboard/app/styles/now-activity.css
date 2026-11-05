@@ -38,6 +38,8 @@
 .now-band-meta{min-width:0;font-size:var(--fs-sm);color:var(--ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 .now-off{font-weight:600;color:var(--warn-text)}
 .hero .now-off{color:var(--amber)}
+/* Muted (stale or not reporting), the group says when its numbers were read, in amber words as the STALE pill and the dot do. */
+.now-bands-asof{margin:0;font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--amber)}
 
 /* Time in band today against yesterday: a mono label and two shares, only with data. */
 .now-tib{min-height:1.5em;margin:var(--space-1) 0 0;font-size:var(--fs-sm);color:var(--ink-muted);font-variant-numeric:tabular-nums}

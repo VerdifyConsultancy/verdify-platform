@@ -121,6 +121,16 @@ export function bandRows(now: Now, day: Series | null | undefined, since: number
   ];
 }
 
+/**
+ * When the numbers the rows draw were read: the oldest time among the readings with a value, so a muted (stale) band
+ * group can say "As of 10:28" rather than only change colour. Null when no reading has both.
+ */
+export function readingsAsOf(rows: readonly Pick<BandRow, "reading">[]): string | null {
+  const times = rows.filter((row) => finite(row.reading.value)).map((row) => row.reading.observed_at)
+    .filter((at): at is string => typeof at === "string" && Number.isFinite(Date.parse(at)));
+  return times.sort((a, b) => Date.parse(a) - Date.parse(b))[0] ?? null;
+}
+
 /** "band 62.0–70.0 °F", "no band" for RH, "band unavailable" without both bounds. */
 export function bandWords(row: Pick<BandRow, "band" | "unit" | "key" | "verdict">): string {
   if (row.band) return `band ${rangeWords(row.band.low, row.band.high, row.unit)}`;

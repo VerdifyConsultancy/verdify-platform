@@ -12,7 +12,7 @@
  * 4. The leak alert is open and flow has not stopped: "Water flowing with every Verdify valve closed".
  * 5. A fresh reading is outside its band, temperature, then VPD, then RH: "Too hot: 84.1 °F (target 62–70 °F)".
  * 6. Alerts nobody has acknowledged, the one count: "1 thing needs someone".
- * 7. The climate data is stale: "Waiting for fresh data (last 14 min ago)".
+ * 7. The climate data is stale: "Waiting for fresh data" (the age line under the hero value says how old it is).
  * 8. "All OK".
  *
  * Rows 2 and 3 use the shell's own tests (`heartbeatFresh`, `climateFresh`), so the sentence and the fault banner never
@@ -20,7 +20,7 @@
  * twice the climate cadence at `server_time` or a reading with a band in force has no value: a reading the hero shows
  * can never be older than "fresh" allows under an "All OK".
  */
-import { duration, formatValue, shortTime } from "./format";
+import { formatValue, shortTime } from "./format";
 import type { Now, Reading } from "./operator-api";
 import { climateFresh, heartbeatFresh } from "./shell";
 
@@ -42,6 +42,11 @@ export type NowAnswer = {
    * newest climate row's), or for row 1 the last good answer's `server_time`. Null when there is none.
    */
   readonly unknownSince: string | null;
+  /**
+   * Row 7: when the data the page still shows was read (the oldest stale reading's time, else the newest climate row's),
+   * so what it says can be dated ("Last mode: holding (10:28)"). Null on every other row, or with no time.
+   */
+  readonly lastDataAt: string | null;
 };
 export type AnswerInput = {
   /** The newest API-02 answer, kept through failures; null before the first. */
@@ -53,6 +58,8 @@ export type AnswerInput = {
 export const ALL_OK = "All OK";
 export const UNREACHABLE_TEXT = "Can't reach the greenhouse data";
 export const LOADING_TEXT = "Checking the greenhouse…";
+/** Row 7. The age is the hero's own line ("Last data 14 min ago (10:28)"), so the heading never repeats it. */
+export const STALE_TEXT = "Waiting for fresh data";
 /** A climate source is stale past twice its cadence (the `v_sensor_staleness` rule); the climate cadence is 60 s. */
 const DEFAULT_CADENCE_S = 60;
 
@@ -61,10 +68,10 @@ const since = (value: string | null) => (value ? ` since ${shortTime(value)}` : 
 const finite = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value);
 const hasValue = (reading: Reading) => finite(reading.value);
 
-const answer = (row: number, kind: AnswerKind, text: string, fields: Partial<Pick<NowAnswer, "link" | "muted" | "notReporting" | "unknownSince">> = {}): NowAnswer => ({
-  row, kind, text, link: null, muted: false, notReporting: false, unknownSince: null, ...fields,
+const answer = (row: number, kind: AnswerKind, text: string, fields: Partial<Pick<NowAnswer, "link" | "muted" | "notReporting" | "unknownSince" | "lastDataAt">> = {}): NowAnswer => ({
+  row, kind, text, link: null, muted: false, notReporting: false, unknownSince: null, lastDataAt: null, ...fields,
 });
-export const LOADING: NowAnswer = { row: 0, kind: "loading", text: LOADING_TEXT, link: null, muted: true, notReporting: false, unknownSince: null };
+export const LOADING: NowAnswer = { row: 0, kind: "loading", text: LOADING_TEXT, link: null, muted: true, notReporting: false, unknownSince: null, lastDataAt: null };
 
 /** Seconds from a reading's time to the answer's `server_time`; null when either is missing. */
 function ageAtServer(observedAt: string | null | undefined, now: Pick<Now, "server_time">): number | null {
@@ -114,7 +121,7 @@ function outOfBand(now: Now): string | null {
 
 /**
  * Row 7: the climate source is stale, an indoor reading is older than twice its cadence, or a reading with a band in
- * force has no value. `at` is the oldest stale reading's time (else the climate row's), for "last N min ago".
+ * force has no value. `at` is the oldest stale reading's time (else the climate row's): when the data still shown was read.
  */
 function staleness(now: Now): { at: string | null } | null {
   const readings = [now.indoor.temp_f, now.indoor.vpd_kpa, now.indoor.rh_pct];
@@ -153,9 +160,6 @@ export function nowAnswer({ now, failed }: AnswerInput): NowAnswer {
     return answer(6, "alerts", open === 1 ? "1 thing needs someone" : `${open} things need someone`, { link: { to: "/activity", label: "Activity" } });
   }
   const stale = staleness(now);
-  if (stale) {
-    const age = ageAtServer(stale.at, now);
-    return answer(7, "stale", `Waiting for fresh data${age !== null ? ` (last ${duration(age)} ago)` : ""}`, { muted: true });
-  }
+  if (stale) return answer(7, "stale", STALE_TEXT, { muted: true, lastDataAt: stale.at });
   return answer(8, "ok", ALL_OK);
 }

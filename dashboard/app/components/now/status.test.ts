@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
-// Now's status line in words (redesign §5.1): the mode (unknown while the controller cannot vouch for it), Iris and its
-// plan, occupancy; and the line helpers the water card and the running list share.
+// Now's status line in words (redesign §5.1): the mode (unknown while the controller cannot vouch for it, and with no
+// verdict while the data is stale), Iris and its plan, occupancy; and the line helpers the water card and the running
+// list share.
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { fixture } from "../../../e2e/fixtures/index.mjs";
 import { nowAnswer } from "../../lib/now-answer";
@@ -20,10 +21,29 @@ const read = <T,>(data: T | null, failed = false): PanelRead<T> => ({ data, fail
 
 test("the mode in words, but unknown while rows 1 to 3 hold: what the controller last said would read as now", () => {
   const now = nowOf("in-band");
+  const live = { row: 8, muted: false, lastDataAt: null };
   expect(modeText(now, nowAnswer({ now, failed: false }))).toBe("In band, holding");
-  expect(modeText({ mode: { code: "VENTILATE", stage: null } }, { row: 8 })).toBe("Venting to cool");
-  expect(modeText({ mode: { code: "SEALED_MIST", stage: "S1" } }, { row: 8 })).toBe("Sealed, misting one zone");
-  for (const row of [1, 2, 3]) expect(modeText(now, { row })).toBe("Mode unknown");
+  expect(modeText({ ...now, mode: { code: "VENTILATE", stage: null } }, live)).toBe("Venting to cool");
+  expect(modeText({ ...now, mode: { code: "SEALED_MIST", stage: "S1" } }, live)).toBe("Sealed, misting one zone");
+  for (const row of [1, 2, 3]) expect(modeText(now, { row, muted: true, lastDataAt: null })).toBe("Mode unknown");
+  for (const name of ["ingestor-not-running", "controller-not-reporting"]) expect(modeText(nowOf(name), nowAnswer({ now: nowOf(name), failed: false }))).toBe("Mode unknown");
+});
+
+test("stale data (row 7): the mode as the controller last said it, dated, with no verdict: In band, holding reads holding", () => {
+  const now = nowOf("stale-data");
+  const answer = nowAnswer({ now, failed: false });
+  expect([answer.row, answer.muted, answer.lastDataAt]).toEqual([7, true, iso(NOW - 14 * 60_000)]);
+  expect(modeText(now, answer)).toBe("Last mode: holding (10:28)");
+  expect(modeText(now, answer)).not.toMatch(/in band|above band|below band/i);
+  // Every other mode keeps its words after the label; a code the table lacks reads raw.
+  expect(modeText({ ...now, mode: { code: "VENTILATE", stage: null } }, answer)).toBe("Last mode: venting to cool (10:28)");
+  expect(modeText({ ...now, mode: { code: "SEALED_MIST", stage: "S2" } }, answer)).toBe("Last mode: sealed, misting all zones (10:28)");
+  expect(modeText({ ...now, mode: { code: "NEW_MODE", stage: null } }, answer)).toBe("Last mode: NEW_MODE (10:28)");
+  // A mode that started after that data is dated by its own start; data from another day carries its date.
+  expect(modeText({ ...now, mode: { code: "VENTILATE", stage: null, since: iso(NOW - 5 * 60_000) } }, answer)).toBe("Last mode: venting to cool (10:37)");
+  expect(modeText({ ...now, mode: { ...now.mode, since: null } }, { ...answer, lastDataAt: iso(NOW - 2 * 86_400_000) })).toBe("Last mode: holding (Oct 31, 11:42)");
+  // With no time to date it by, the label alone.
+  expect(modeText(now, { ...answer, lastDataAt: null })).toBe("Last mode: holding");
 });
 
 test("Iris: the newest required trigger's state, amber unless OK; the plan in force and its end, or none", () => {

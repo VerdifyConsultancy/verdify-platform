@@ -31,7 +31,8 @@ test("each row of the table, set alone in a fixture, produces its sentence", () 
   expect(ask(served("flow-valves-closed")).text).toBe("Water flowing with every Verdify valve closed");
   expect(ask(served("too-hot")).text).toBe("Too hot: 84.1 °F (target 62–70 °F)");
   expect(ask(served("alerts-merged")).text).toBe("2 things need someone");
-  expect(ask(served("stale-data")).text).toBe("Waiting for fresh data (last 14 min ago)");
+  // The age is the hero's own line ("Last data 14 min ago (10:28)"), so the sentence never repeats it.
+  expect(ask(served("stale-data")).text).toBe("Waiting for fresh data");
   expect(ask(served("in-band")).text).toBe(ALL_OK);
 });
 
@@ -50,6 +51,8 @@ test("the sentence links to the page that explains it, and rows 1 to 3 and 7 hid
   expect(rows.ingestor.unknownSince).toBe(secondsAgo(240));
   expect(rows.controller.unknownSince).toBe(secondsAgo(360));
   expect(rows.ok.unknownSince).toBeNull();
+  // Row 7 dates the data still shown (the readings' 10:28), so what it says can be dated; no other row carries it.
+  expect(Object.values(rows).map((answer) => answer.lastDataAt)).toEqual([null, null, null, null, null, null, secondsAgo(14 * 60), null]);
 });
 
 test("before API-02 first answers nothing is claimed; a failed first read is row 1", () => {
@@ -130,16 +133,20 @@ test("row 5 checks temperature, then VPD, then RH, in plain words with the band 
 
 test("a stale reading outside its band is no verdict: it reads Waiting for fresh data", () => {
   const old = (now: Now): Now => ({ ...now, indoor: { ...now.indoor, temp_f: { value: 84.1, observed_at: secondsAgo(200), reason: null } }, band: { ...now.band, temp_f: { low: 62, high: 70, verdict: "above" } } });
-  expect(band(old).text).toBe("Waiting for fresh data (last 3 min ago)");
+  expect(band(old).text).toBe("Waiting for fresh data");
   expect(band(old).muted).toBe(true);
+  expect(band(old).lastDataAt).toBe(secondsAgo(200));
   expect(readingFresh(fresh(64.8), served("in-band"))).toBe(true);
   expect(readingFresh({ value: 64.8, observed_at: secondsAgo(121), reason: null }, served("in-band"))).toBe(false);
   expect(readingFresh(fresh(null), served("in-band"))).toBe(false);
 });
 
 test("row 7: the climate source stale, a reading past twice the cadence, or a banded reading missing; a missing RH with no RH band is not", () => {
-  expect(band((now) => ({ ...now, freshness: { ...now.freshness, climate: source(200) }, indoor: indoorAt(now, 200) })).text).toBe("Waiting for fresh data (last 3 min ago)");
-  expect(band((now) => ({ ...now, indoor: { ...now.indoor, temp_f: fresh(null) } })).text).toBe("Waiting for fresh data");
+  expect(band((now) => ({ ...now, freshness: { ...now.freshness, climate: source(200) }, indoor: indoorAt(now, 200) }))).toMatchObject({ text: "Waiting for fresh data", lastDataAt: secondsAgo(200) });
+  // The climate source stale with fresh readings: dated by the climate row.
+  expect(band((now) => ({ ...now, freshness: { ...now.freshness, climate: source(150) } })).lastDataAt).toBe(secondsAgo(150));
+  // A banded reading missing from a fresh row: nothing to date.
+  expect(band((now) => ({ ...now, indoor: { ...now.indoor, temp_f: fresh(null) } }))).toMatchObject({ text: "Waiting for fresh data", lastDataAt: null });
   expect(band((now) => ({ ...now, indoor: { ...now.indoor, vpd_kpa: fresh(null) } })).text).toBe("Waiting for fresh data");
   expect(ask(served("rh-missing")).text).toBe(ALL_OK);
   expect(band((now) => ({ ...now, indoor: { ...now.indoor, rh_pct: fresh(null) }, band: { ...now.band, rh_pct: { low: 50, high: 80, verdict: "unavailable" } } })).text).toBe("Waiting for fresh data");

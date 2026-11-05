@@ -117,6 +117,20 @@ for (const [fixture, says, missing] of [
   });
 }
 
+test("stale data: Waiting for fresh data, no verdict word anywhere, the mode as last said and dated, the band bars dated and drawn neutral", async ({ page, request }) => {
+  await useScreensClock(page, request, "stale-data");
+  await load(page, "/");
+  await expect(answer(page)).toHaveText("Waiting for fresh data");
+  await expect(updated(page)).toHaveText("Last data 14 min ago (10:28)");
+  await expect(page.locator(".now-status [data-tile=mode]")).toHaveText("Last mode: holding (10:28)");
+  for (const part of [".now-status", ".now-bands"]) await expect(page.locator(part)).not.toContainText(/in band|above band|below band/i);
+  await expect(page.locator(".now-hero .now-hero-verdict, .now-hero .now-off")).toHaveCount(0);
+  await expect(page.locator(".now-hero-climate[data-stale] .now-bands-asof")).toHaveText("As of 10:28");
+  await expect(page.locator(".now-band svg.bb.is-stale")).toHaveCount(3);
+  // The band reads neutral (--ink-2), as with the API down: a muted dot inside a green band would still say in band.
+  await expect(band(page, "temp").locator(".bb-band")).toHaveCSS("fill", "rgb(27, 45, 61)");
+});
+
 test("with the API down, after the second failed poll: no band bars, no In band today, nothing green", async ({ page, request }) => {
   await useFixture(request, "api-down");
   await page.clock.install();

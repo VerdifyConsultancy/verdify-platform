@@ -9,7 +9,7 @@ import { lineById } from "../../lib/lines";
 import type { NowAnswer } from "../../lib/now-answer";
 import type { IrrigationLine, IrrigationStatus, Now } from "../../lib/operator-api";
 import type { PanelRead } from "../../lib/queries";
-import { modeWords, words } from "../../lib/words";
+import { modeWords, modeWordsNoVerdict, words } from "../../lib/words";
 
 const validTime = (value: string | null | undefined): value is string => typeof value === "string" && Number.isFinite(Date.parse(value));
 
@@ -18,10 +18,17 @@ export const deviceUnknown = (answer: Pick<NowAnswer, "row">): boolean => answer
 
 /**
  * The mode in words ("Venting to cool"), or "Mode unknown" while the controller's state cannot be vouched for: what it
- * last said would read as now (and `IDLE` reads "In band, holding", which asserts health).
+ * last said would read as now (and `IDLE` reads "In band, holding", which asserts health). While the data is stale (row
+ * 7, redesign §4.3) it is what the controller last said, dated and with no verdict in it: "Last mode: holding (10:28)",
+ * at the time of the data still shown, or the mode's own start when that is newer.
  */
-export function modeText(now: Pick<Now, "mode">, answer: Pick<NowAnswer, "row">): string {
-  return deviceUnknown(answer) ? "Mode unknown" : modeWords(now.mode.code, now.mode.stage);
+export function modeText(now: Pick<Now, "mode" | "server_time">, answer: Pick<NowAnswer, "row" | "muted" | "lastDataAt">): string {
+  if (deviceUnknown(answer)) return "Mode unknown";
+  if (!answer.muted) return modeWords(now.mode.code, now.mode.stage);
+  const last = `Last mode: ${modeWordsNoVerdict(now.mode.code, now.mode.stage)}`;
+  if (!validTime(answer.lastDataAt)) return last;
+  const at = validTime(now.mode.since) && Date.parse(now.mode.since) > Date.parse(answer.lastDataAt) ? now.mode.since : answer.lastDataAt;
+  return `${last} (${validTime(now.server_time) ? clockOrDate(at, Date.parse(now.server_time)) : shortTime(at)})`;
 }
 
 /** The plan in force and its end ("SUNRISE plan to 17:30"), or "No plan: band and defaults". */

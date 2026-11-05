@@ -359,7 +359,7 @@ API-IRR-NN) are the `operationId`s in the [OpenAPI](openapi/dashboard-api.v1.yam
 
 #### US-NOW-08 · Everything OK? in one sentence
 *P2, P1 · MVP · Now.* As a caretaker, I want Now to answer "is everything OK?" in one plain sentence, so that I know at a glance whether anything needs me.
-- Now's first line is the first true row of a worst-first table, in the banners' order: API down ("Can't reach the greenhouse data"); ingestor not running; controller not reporting (US-NOW-06, for example "Controller not reporting since 03:12"); water flowing with every Verdify valve closed; a metric outside its band ("Too hot: 84.1 °F (target 62–70 °F)", "Too cold", "Air too dry", "Air too damp"); open alerts nobody has acknowledged (the one count, US-ACT-02: "2 things need someone"); stale data ("Waiting for fresh data (last 14 min ago)"); otherwise "All OK".
+- Now's first line is the first true row of a worst-first table, in the banners' order: API down ("Can't reach the greenhouse data"); ingestor not running; controller not reporting (US-NOW-06, for example "Controller not reporting since 03:12"); water flowing with every Verdify valve closed; a metric outside its band ("Too hot: 84.1 °F (target 62–70 °F)", "Too cold", "Air too dry", "Air too damp"); open alerts nobody has acknowledged (the one count, US-ACT-02: "2 things need someone"); stale data ("Waiting for fresh data", with "Last data 14 min ago (10:28)" under the value); otherwise "All OK".
 - The sentence uses no codes, reads the same for operators and viewers, links to the page that explains it and sits above the fold at 360 × 740.
 - It never reads "All OK" while any row above it is true or a read it depends on has failed.
 
