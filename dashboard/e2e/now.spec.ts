@@ -296,16 +296,19 @@ test("the order: Needs someone and Water today, then Running and next, then the 
 
 const zoneTile = (page: Page, zone: string) => page.locator(`#zones [data-zone=${zone}]`);
 
-test("the zone strip: five tiles with a band bar, a 24 h VPD sparkline and the tag as text; north says house band; a tile opens its zone's charts", async ({ page, request }) => {
+test("the zone strip: five tiles with a band bar and a 24 h sparkline named VPD, the tag as text only off a zone's own probe; north says house band; a tile opens its zone's charts", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/");
   await expect(page.locator("#zones [data-zone]")).toHaveCount(5);
   // Graphs → Zones' order, so a zone keeps its place from page to page.
   expect(await page.locator("#zones [data-zone]").evaluateAll((tiles) => tiles.map((tile) => tile.getAttribute("data-zone")))).toEqual(["north", "center", "south", "east", "west"]);
-  await expect(page.locator("#zones [data-zone-tag]")).toHaveText(["MEASURED", "HOUSE", "MEASURED", "MEASURED", "MEASURED"]);
+  // A zone on its own probe (MEASURED) is the quiet normal and shows no mark; center always reads the house.
+  await expect(page.locator("#zones [data-zone-tag]")).toHaveText(["HOUSE"]);
+  await expect(zoneTile(page, "center").locator("[data-zone-tag]")).toHaveText("HOUSE");
   for (const zone of ["north", "center", "south", "east", "west"]) {
-    await expect(zoneTile(page, zone).locator("svg.bb")).toHaveCount(1);
-    await expect(zoneTile(page, zone).locator("svg.spark")).toHaveAttribute("aria-label", /VPD over the last 24 h$/);
+    await expect(zoneTile(page, zone).locator(".now-zone-viz-label")).toHaveText("VPD");
+    await expect(zoneTile(page, zone).locator(".now-zone-viz svg.bb")).toHaveCount(1);
+    await expect(zoneTile(page, zone).locator(".now-zone-viz svg.spark")).toHaveAttribute("aria-label", /VPD over the last 24 h$/);
   }
   await expect(zoneTile(page, "north").locator(".now-zone-meta")).toHaveText("house band 0.45–0.80 kPa");
   await expect(zoneTile(page, "south").locator(".now-zone-meta")).toHaveText("band 0.45–0.80 kPa");

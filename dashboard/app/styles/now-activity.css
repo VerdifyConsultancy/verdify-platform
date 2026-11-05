@@ -168,6 +168,9 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .now-zone-link:hover{color:var(--forest);text-decoration:underline}
 .now-zone-tag{font:400 var(--fs-label)/1.3 var(--mono);letter-spacing:.08em;color:var(--muted)}
 .now-zone-tag-news{font-weight:600;color:var(--warn-text)}
+/* The band bar and the sparkline are both the zone's VPD: one mono label beside them names the two, as the hero's labels name its bars. */
+.now-zone-viz{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:var(--space-2)}
+.now-zone-viz-label{grid-row:span 2;align-self:start;font:400 var(--fs-label)/16px var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest)}
 .now-zone-values{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--space-3);margin:0}
 .now-zone-value{font-size:var(--fs-lg);font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
 .now-zone-meta{margin:0;font-size:var(--fs-xs)}

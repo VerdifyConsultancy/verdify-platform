@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
 // The zone strip on Now (redesign §5.1) against the fixture API at 10:42 America/Denver: a tile per zone with its
-// temperature and VPD, a band bar of its VPD against the zone's band (today's range above it), a 24 h VPD sparkline, its
-// tag as a text mark (amber when a probe zone has fallen back), south while its probe is out, and the reads behind them.
+// temperature and VPD, a band bar of its VPD against the zone's band (today's range above it) and a 24 h VPD sparkline
+// under one "VPD" label, its tag as a text mark only off its own probe (amber when a probe zone has fallen back), south
+// while its probe is out, and the reads behind them.
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import { panelRead, useIrrigationRead } from "../lib/queries";
@@ -31,7 +32,8 @@ const plain = (value: string) => value.replaceAll(String.fromCharCode(0xa0), " "
 /** The one zone order (lib/zone-source.ts `ZONES`), the same as Graphs → Zones' columns. */
 const ZONE_ORDER = ["north", "center", "south", "east", "west"];
 const tile = (zone: string) => document.querySelector<HTMLElement>(`[data-zone=${zone}]`)!;
-const tag = (zone: string) => tile(zone).querySelector("[data-zone-tag]")!.textContent;
+/** The tile's tag mark; null for a zone read from its own probe (MEASURED), the normal case, which shows none. */
+const tag = (zone: string) => tile(zone).querySelector("[data-zone-tag]")?.textContent ?? null;
 const value = (zone: string, name: string) => plain(text(tile(zone).querySelector(`[data-tile=${name}]`)));
 const meta = (zone: string) => plain(text(tile(zone).querySelector(".now-zone-meta")));
 const number = (reading: string) => Number.parseFloat(reading);
@@ -48,10 +50,19 @@ test("one tile each for north, center, south, east and west, Graphs → Zones' o
   expect(within(region).getByRole("link", { name: /^All zones/ }).getAttribute("href")).toBe("/graphs/zones");
 });
 
-test("in band: temperature and VPD, each zone's tag as text, a band bar and a 24 h sparkline; in band adds no verdict, and no stale word", async () => {
+test("in band: temperature and VPD, a band bar and a 24 h sparkline named VPD, a tag only off a zone's own probe; in band adds no verdict, and no stale word", async () => {
   await open();
-  // L07 and L09 report their own probe; north and east compute it from a fresh probe; center has none.
-  expect(ZONE_ORDER.map(tag)).toEqual(["MEASURED", "HOUSE", "MEASURED", "MEASURED", "MEASURED"]);
+  // L07 and L09 report their own probe and north and east compute it from a fresh probe (MEASURED, the quiet normal);
+  // center has none, so it reads HOUSE, muted, as it always does.
+  expect(ZONE_ORDER.map(tag)).toEqual([null, "HOUSE", null, null, null]);
+  expect(tile("center").querySelector(".now-zone-tag-news")).toBeNull();
+  expect(document.querySelectorAll("[data-zone-tag=MEASURED]")).toHaveLength(0);
+  // Both visuals sit under one VPD label, hidden from a screen reader, which hears each image name itself.
+  for (const zone of ZONE_ORDER) {
+    const viz = tile(zone).querySelector(".now-zone-viz")!;
+    expect([text(viz.querySelector(".now-zone-viz-label")), viz.querySelector(".now-zone-viz-label")?.getAttribute("aria-hidden")]).toEqual(["VPD", "true"]);
+    expect(viz.querySelectorAll(":scope > svg.bb, :scope > svg.spark")).toHaveLength(2);
+  }
   expect(tile("south").querySelector(".now-zone-tag-news")).toBeNull();
   expect(value("south", "temp")).toMatch(/^\d\d\.\d °F$/);
   expect(value("south", "vpd")).toMatch(/^\d\.\d\d kPa$/);
@@ -104,8 +115,8 @@ test("south reads PEER while its probe is out, amber: the fresh peers' mean, nev
   const mean = (a: number, b: number) => (a + b) / 2;
   expect(number(value("south", "temp"))).toBeCloseTo(mean(newest(api, "climate.temp_west"), newest(api, "climate.temp_east")), 1);
   expect(number(value("south", "vpd"))).toBeCloseTo(mean(newest(api, "climate.vpd_west"), newest(api, "climate.vpd_east")), 2);
-  // West and east keep their own probes, so their marks stay quiet.
-  expect([tag("west"), tag("east")]).toEqual(["MEASURED", "MEASURED"]);
+  // West and east keep their own probes, so they carry no mark at all.
+  expect([tag("west"), tag("east")]).toEqual([null, null]);
   expect(tile("west").querySelector(".now-zone-tag-news")).toBeNull();
 });
 
