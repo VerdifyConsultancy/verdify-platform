@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 /**
  * Run… on a line card (SCR-04, irrigation §4.7, US-WAT-12, US-WAT-23): #1125's `ConfirmDialog` on the C hook, the app's
- * one confirmation. `lines[].kind` picks the fields. A disabled line offers no Run… (the API's `line_disabled` covers a
- * race), a mister offers "Mist now…" only while `schedule_member` is on (D-IRP-11), and fog and the fertilizer master
- * have no card controls. A refusal keeps the dialog open with the code in words; nothing else is sent and nothing queues.
+ * one confirmation. `lines[].kind` picks the fields. Any wet line runs once (#1343, superseding D-IRP-11): a mister offers
+ * "Mist now…" whether or not Schedule is on, and a disabled line (not a reserved one) keeps its button, which opens the
+ * check sheet to enable it (`?check=<line>&for=run`, asking the one-time check if none is recorded) and then this dialog.
+ * Fog and the fertilizer master have no card controls. A refusal keeps the dialog open with the code in words; nothing
+ * else is sent and nothing queues.
  *
  * Before the irrigation firmware only L01 runs, through the bridge, for the controller's own `irrig_wall_duration_min`:
  * no Duration field, the value read from API-09 when the dialog opens (without it the dialog names the setting only), and
@@ -29,15 +31,21 @@ export const WALL_DURATION_PARAM = "irrig_wall_duration_min";
 /** The one line the bridge runs. */
 const BRIDGE_LINE = "L01";
 
-/** What a line's card offers: Run…, Mist now…, the words that Run arrives with the firmware, or nothing. */
-export type RunOffer = "run" | "mist" | "arrives" | null;
-export function runOffer(line: Pick<IrrigationLine, "line_id" | "kind" | "enabled" | "schedule_member">, engine: boolean): RunOffer {
+/**
+ * What a line's card offers: Run…, Mist now…, the same button on a disabled line that enables it first ("enable"), the
+ * words that Run arrives with the firmware, or nothing. A reserved line has no valve wired, so it offers nothing while off.
+ */
+export type RunOffer = "run" | "mist" | "enable" | "arrives" | null;
+export function runOffer(line: Pick<IrrigationLine, "line_id" | "kind" | "enabled" | "reserved">, engine: boolean): RunOffer {
   if (line.kind === "fog" || line.kind === "master") return null;
   if (!engine && line.line_id !== BRIDGE_LINE) return "arrives";
-  if (!line.enabled) return null;
-  if (line.kind === "mister") return line.schedule_member === true ? "mist" : null;
-  return "run";
+  if (!line.enabled) return engine && !line.reserved ? "enable" : null;
+  return line.kind === "mister" ? "mist" : "run";
 }
+/** The button's words for an offer: a mister mists, every other wet line runs. */
+const runLabel = (line: Pick<IrrigationLine, "kind">): string => (line.kind === "mister" ? "Mist now…" : "Run…");
+/** What a disabled line's button says beside it (#1343). */
+export const LINE_OFF_TEXT = "This line is off: enable it to run it";
 
 /** The row's device value from one API-09 read when `open` turns true; null until it answers, or when it has none. */
 function useWallDuration(open: boolean): number | null {
@@ -92,9 +100,14 @@ export function WaterRuns({ status, children }: { status: Pick<IrrigationStatus,
   </RunNotes.Provider>;
 }
 
-function RunButton({ line, label }: { line: IrrigationLine; label: string }) {
+function RunButton({ line, label, off = false }: { line: IrrigationLine; label: string; off?: boolean }) {
   const { open } = useWaterDrawer("run");
+  const { open: openCheck } = useWaterDrawer("check");
   const { note, refusal } = useContext(RunNotes)[line.line_id] ?? {};
+  if (off) return <>
+    <Button write wide aria-haspopup="dialog" onClick={() => openCheck(line.line_id, "run")}>{label} <span className="screen-reader">{line.line_id}</span></Button>
+    <span className="state-note" data-run-note={line.line_id}>{LINE_OFF_TEXT}</span>
+  </>;
   return <>
     <Button write wide aria-haspopup="dialog" onClick={() => open(line.line_id)}>{label} <span className="screen-reader">{line.line_id}</span></Button>
     {note && <span className="state-note" data-run-note={line.line_id}>{note}</span>}
@@ -102,13 +115,16 @@ function RunButton({ line, label }: { line: IrrigationLine; label: string }) {
   </>;
 }
 
-/** The line card's Run… or Mist now…, for operators only; disabled with changes switched off (`Button write`). */
+/**
+ * The line card's Run… or Mist now…, for operators only; disabled with changes switched off (`Button write`). On a
+ * disabled line the same button opens the check sheet to enable it, and the run dialog follows (#1343).
+ */
 export function RunControl({ line, engine }: { line: IrrigationLine; engine: boolean }) {
   const offer = runOffer(line, engine);
   if (offer === null) return null;
   return <OperatorOnly>
     {offer === "arrives"
       ? <span className="state-note" data-arrives="run">{RUN_ARRIVES_TEXT}</span>
-      : <RunButton line={line} label={offer === "mist" ? "Mist now…" : "Run…"} />}
+      : <RunButton line={line} label={runLabel(line)} off={offer === "enable"} />}
   </OperatorOnly>;
 }

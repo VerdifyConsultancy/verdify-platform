@@ -195,7 +195,7 @@ function inBand(now) {
   const water = (id, since, fields = {}) => item(lineInfo(id).equipment, lineInfo(id).label, "water", since, { line_id: id, ...fields });
   return {
     now,
-    flags: { apiDown: false, progress: false, confirm: true, flowAfterStop: false, stopUnconfirmed: false, lateOverride: false, lightResult: null },
+    flags: { apiDown: false, progress: false, confirm: true, flowAfterStop: false, stopUnconfirmed: false, lateOverride: false, lightResult: null, mistNeedsSchedule: false },
     me: { username: "jason", display_name: "Jason", role: "operator", writes_enabled: true, source_revision: REVISION },
     indoor: { temp_f: reading(64.8, now - 20_000), rh_pct: reading(71.0, now - 20_000), vpd_kpa: reading(0.62, now - 20_000) },
     outdoor: { temp_f: reading(41.2, now - 2 * MINUTE), rh_pct: reading(58.0, now - 2 * MINUTE) },
@@ -587,6 +587,8 @@ export const FIXTURES = {
     Object.assign(lineOf(world, "L04"), { schedule_member: true });
     checked(world, "L04");
   },
+  // #1343: the controller still runs the firmware before #1343, so the API refuses run-now on a mister with Schedule off.
+  "firmware-before-1343": (world) => { world.flags.mistNeedsSchedule = true; },
   // #1136: L01 holds the drip manifold for 7 more minutes, so a run on L02 is refused manifold_busy.
   "manifold-busy": (world) => {
     FIXTURES["run-dialogs"](world);

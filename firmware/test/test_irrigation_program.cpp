@@ -1921,15 +1921,12 @@ static void run_now_refusals() {
   CHECK(s.run_now(kL06, 600, 1, 0, 0, 0) == IrrRunResult::kLineDisabled &&
             event_is(s.last_event(), IrrOutcome::kSkipped, IrrReason::kDis),
         "line_disabled");
-  CHECK(s.run_now(kL04, 30, 2, 60) == IrrRunResult::kNotScheduleMember &&
-            event_is(s.last_event(), IrrOutcome::kSkipped, IrrReason::kNsm),
-        "not_schedule_member");
   CHECK(s.run_now(kL01, 600, 2) == IrrRunResult::kBadArgs && s.run_now(kL03, 60) == IrrRunResult::kBadArgs &&
             s.run_now(kL11, 60) == IrrRunResult::kBadArgs && s.run_now(kL04, 91, 1, 30) == IrrRunResult::kBadArgs,
         "outside the bounds or not a schedulable line: bad_args");
   IrrProgram q = p;
   q.lines[kL01].paused_until = at(1200);
-  members(q, kL04, true, true);
+  members(q, kL04, true, false);  // Schedule off: run-now does not need it (#1343)
   s.push(q);
   s.tick();
   CHECK(s.run_now(kL01, 600) == IrrRunResult::kLinePaused &&
@@ -1942,7 +1939,7 @@ static void run_now_refusals() {
         "line_faulted while the zone is latched");
   s.in.latch_mask = 0;
   s.tick();
-  CHECK(s.run_now(kL04, 30, 2, 60) == IrrRunResult::kStarted, "a mister run-now is a one-off window");
+  CHECK(s.run_now(kL04, 30, 2, 60) == IrrRunResult::kStarted, "a mister run-now is a one-off window, Schedule off");
   s.run_for(200);
   CHECK(event_is(s.find_event(0, kL04), IrrOutcome::kOk, IrrReason::kNone) && s.open_s[kL04] >= 55,
         "the window delivers its pulses");
@@ -1960,6 +1957,39 @@ static void run_now_refusals() {
   s.nvs.fail_save = true;
   CHECK(s.run_now(kL02, 120, 1, 0, 30, 60) == IrrRunResult::kStorage && !(s.out.relay_mask & kWetMask),
         "no journal, no fertilizer");
+}
+
+// #1343: a one-time run on any enabled mister, Schedule on or off (supersedes D-IRP-11).
+// It is a one-off window under the scheduled rails: the zone's duty cap less its VPD
+// reserve, SAF-4 and sensor fault still refuse it.
+static void run_now_mister_without_schedule() {
+  IrrProgram p = irr_rom_default();
+  enable(p, kL07);
+  members(p, kL07, false, false);
+  p.lines[kL07].daily_cap_min = 10;
+  p.lines[kL07].vpd_reserve_min = 8;
+  Sim s;
+  s.epoch = at(600);
+  s.boot(true, &p);
+  s.tick();
+  CHECK(!(s.eng.prog.schedule_member_mask & (1u << kMisterMaskBit[kL07])), "L07 Schedule off");
+  // 10 min cap less the 8 min reserve leaves 120 s for a window: 3 x 45 s does not fit.
+  CHECK(s.run_now(kL07, 45, 3, 30) == IrrRunResult::kCapReached &&
+            event_is(s.last_event(), IrrOutcome::kSkipped, IrrReason::kRes),
+        "L07 run-now beyond the zone cap less the VPD reserve: cap_reached (res)");
+  s.in.sensor_fault = true;
+  s.tick();
+  CHECK(s.run_now(kL07, 45, 2, 30) == IrrRunResult::kSensorFault &&
+            event_is(s.last_event(), IrrOutcome::kSkipped, IrrReason::kSf),
+        "sensor fault still refuses an L07 run-now");
+  s.in.sensor_fault = false;
+  s.tick();
+  CHECK(s.run_now(kL07, 45, 2, 30) == IrrRunResult::kStarted && (s.out.relay_mask & irr_bit(kL07)),
+        "L07 with Schedule off: run-now starts");
+  s.run_for(200);
+  CHECK(event_is(s.find_event(0, kL07), IrrOutcome::kOk, IrrReason::kNone) && s.open_s[kL07] >= 85 &&
+            s.open_s[kL07] <= 95,
+        "the window delivers its two pulses and ends ok");
 }
 
 static void stop_disables_nothing() {
@@ -3988,6 +4018,7 @@ int main() {
   watchdog_grant_rail_and_edges();
   vpd_zone_allowed_follows_membership_and_faults();
   center_window_needs_schedule_membership();
+  run_now_mister_without_schedule();
   wiring_arbiter_picks_the_zone();
   wiring_vpd_and_schedule_alternate_at_the_boundary();
   wiring_schedule_only_window_counts_duty_and_saf4();
