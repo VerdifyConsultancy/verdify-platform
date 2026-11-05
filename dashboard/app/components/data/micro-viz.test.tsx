@@ -26,22 +26,24 @@ const plain = (words: string | null | undefined) => (words ?? "").replaceAll(NBS
 // ---------------------------------------------------------------------------------------------------- BandBar
 const temp = { label: "Temperature", unit: "°F", value: 64.8, band: { low: 62, high: 70 }, today: { low: 61.2, high: 71.9 } };
 
-test("BandBar: the band plus half its width each side, widened for today and the value, never past 1.5 widths", () => {
-  expect(bandScale(64.8, { low: 62, high: 70 }, { low: 61.2, high: 71.9 })).toEqual({ low: 58, high: 74 });
-  expect(bandScale(64.8, { low: 62, high: 70 }, { low: 50, high: 71 })).toEqual({ low: 50, high: 74 });
-  // A wild value cannot squash the band: the scale stops at 1.5 widths and the dot clamps with an arrowhead.
-  expect(bandScale(120, { low: 62, high: 70 }, null)).toEqual({ low: 58, high: 82 });
-  // RH has no band: the scale is today's range and the value, padded.
-  const rh = bandScale(71, null, { low: 48, high: 82 })!;
-  expect(rh.low).toBeLessThan(48);
-  expect(rh.high).toBeGreaterThan(82);
-  expect(bandScale(null, null, null)).toBeNull();
+test("BandBar: the band plus one width each side, fixed: today's low and high never move the box; a wild value clamps", () => {
+  expect(bandScale(64.8, { low: 62, high: 70 })).toEqual({ low: 54, high: 78 });
+  // 2026-11-05: a night low of 59.2 °F against 73.9–83.9 °F leaves the box where it is; only the dot moves.
+  expect(bandScale(78.1, { low: 73.9, high: 83.9 })).toEqual(bandScale(60, { low: 73.9, high: 83.9 }));
+  // A wild value cannot move or squash the band: the dot clamps to the end with an arrowhead.
+  expect(bandScale(120, { low: 62, high: 70 })).toEqual({ low: 54, high: 78 });
+  // RH has no band: a percentage reads on 0–100%; anything else centres on its value.
+  expect(bandScale(71, null, "%")).toEqual({ low: 0, high: 100 });
+  const other = bandScale(10, null)!;
+  expect(other.low).toBeLessThan(10);
+  expect(other.high).toBeGreaterThan(10);
+  expect(bandScale(null, null)).toBeNull();
   expect([bandPosition(61, temp.band), bandPosition(64.8, temp.band), bandPosition(71, temp.band), bandPosition(null, temp.band)]).toEqual(["below", "in", "above", null]);
   expect(plain(bandBarWords(temp))).toBe("Temperature 64.8 °F, band 62.0–70.0 °F, today 61.2–71.9 °F");
   expect(plain(bandBarWords({ label: "RH", unit: "%", value: 71, band: null, today: { low: 48, high: 82 } }))).toBe("RH 71.0%, no band, today 48.0–82.0%");
 });
 
-test("BandBar in every state: ready draws band, today and dot; unknown hatches with no dot; stale is muted; loading reserves its height", () => {
+test("BandBar in every state: ready draws one track, the band box and the dot, never a today rule; unknown hatches with no dot; stale is muted; loading reserves its height", () => {
   for (const state of STATES) {
     const { container } = renderUi(<BandBar {...temp} state={state} />);
     const svg = container.querySelector("svg");
@@ -53,6 +55,9 @@ test("BandBar in every state: ready draws band, today and dot; unknown hatches w
       const drawn = state === "ready" || state === "stale";
       expect(container.querySelectorAll(".bb-dot"), state).toHaveLength(drawn ? 1 : 0);
       expect(container.querySelectorAll(".bb-band"), state).toHaveLength(drawn ? 1 : 0);
+      expect(container.querySelectorAll(".bb-track"), state).toHaveLength(1);
+      // Today's low and high are words in the name, never a second line (Jason 2026-11-05).
+      expect(container.querySelectorAll(".bb-today"), state).toHaveLength(0);
       expect(container.querySelectorAll(".bb-unknown"), state).toHaveLength(drawn ? 0 : 1);
       expect(svg?.getAttribute("class")?.includes("is-stale"), state).toBe(state === "stale");
     }
@@ -73,6 +78,11 @@ test("BandBar: decorative beside its numbers, else an image named by them; the h
   const clamped = renderUi(<BandBar {...temp} value={120} />);
   expect(clamped.container.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
   expect(clamped.container.querySelector(".bb-clamp")).not.toBeNull();
+  // The box keeps its place: the same x and width with the value in band and the value off the scale.
+  const box = (root: HTMLElement) => [root.querySelector(".bb-band")?.getAttribute("x"), root.querySelector(".bb-band")?.getAttribute("width")];
+  expect(box(clamped.container)).toEqual(["33.33%", "33.33%"]);
+  cleanup();
+  expect(box(renderUi(<BandBar {...temp} />).container)).toEqual(["33.33%", "33.33%"]);
   cleanup();
   const down = renderUi(<BandBar {...temp} />, { apiDown: true });
   expect(down.container.querySelector("svg")?.getAttribute("class")).toContain("is-neutral");
