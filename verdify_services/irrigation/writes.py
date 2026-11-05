@@ -29,7 +29,9 @@ the BFF alone enforces it, and never on Stop.
 - ``run`` before the engine: ``minutes`` may only repeat ``irrig_wall_duration_min`` (``out_of_range`` otherwise).
   Refused while L01 is disabled, while the controller's ``sw_irrig_enabled`` or ``sw_irrig_wall_enabled`` reads off
   (the job machine would drop the press), while it is paused, and while it runs or a run of it is pending or sent
-  and not yet over (``line_busy``: a press during a run would queue a second full run).
+  and not yet over (``line_busy``: a press during a run would queue a second full run). Those three are no longer
+  registry rows or routes (#1165 retired them once the engine was last-good, so a rollback flashes the engine): the
+  bridge reads the last readbacks recorded before the engine flash, or the firmware's default duration.
 - ``run`` with the engine: the body per line kind (``RunArgs``), then the refusals of irrigation §4.7 in their order
   from the stored line, the newest ``irr_state`` and today's minutes. Nothing is queued, and the device may still
   refuse what the platform cannot see.
@@ -96,7 +98,6 @@ from verdify_schemas.irrigation import (
     validate_run,
     validate_schedule,
 )
-from verdify_schemas.tunable_registry import REGISTRY
 from verdify_services import activity
 from verdify_services.actor import Actor, ActorRef
 from verdify_services.irrigation import reads
@@ -108,8 +109,14 @@ NOTIFY_CHANNEL = "irrigation_changed"
 ENGINE_ENTITY = "irr_engine"
 IRR_STATE_ENTITY = "irr_state"
 DURATION_PARAM = "irrig_wall_duration_min"
-# The controller switches the legacy job machine needs on to take the press, in the order they are checked.
+# The pre-engine firmware's own default and range for that duration. The bridge's registry rows retired once the
+# engine was last-good (#1165), so the bridge keeps the values those rows held.
+DURATION_DEFAULT_MIN = 10
+DURATION_RANGE_MIN = (1, 120)
+# The controller switches the legacy job machine needs on to take the press, in the order they are checked, with
+# the names the pre-engine firmware gives them.
 BRIDGE_SWITCHES = ("sw_irrig_enabled", "sw_irrig_wall_enabled")
+BRIDGE_SWITCH_LABELS = {"sw_irrig_enabled": "Irrigation Enabled", "sw_irrig_wall_enabled": "Irrigation Wall Enabled"}
 STOP_TOGGLED_SWITCH = "sw_irrig_enabled"  # the one a bridge Stop switches off for one job tick
 NO_ENGINE_DETAIL = "arrives with the irrigation firmware"
 AUDIT_MAX_LENGTH = 64  # trigger_id and planner_instance, kept only in the activity detail
@@ -134,7 +141,8 @@ _ENGINE_SQL = (
     "ORDER BY ts DESC LIMIT 1"
 )
 # L01's line row, its newest relay edge, and the controller readbacks the bridge depends on: the newest
-# setpoint_snapshot value of each (the cfg_* readback of the duration and the two switches). stop_toggled: a bridge
+# setpoint_snapshot value of each (the cfg_* readback of the duration and the two switches). Their routes retired with
+# the bridge's rows (#1165), so these are the last values recorded before the engine flash. stop_toggled: a bridge
 # Stop switched sw_irrig_enabled off for one job tick within the last 2 min. A snapshot taken during that tick reads
 # it off for a minute (the readback publishes every 30 s and the snapshot every 60 s), and that off is not a refusal.
 _L01_SQL = f"""
@@ -494,12 +502,12 @@ async def _insert(
 
 
 def _duration_min(value: object) -> int:
-    """The controller's ``irrig_wall_duration_min`` readback, or the registry default when there is none."""
-    spec = REGISTRY[DURATION_PARAM]
+    """The controller's ``irrig_wall_duration_min`` readback, or the firmware's default when there is none."""
     number = float(value) if isinstance(value, int | float) else math.nan
     if not math.isfinite(number):
-        number = spec.default
-    return int(round(min(max(number, spec.min or 1), spec.max or number)))
+        number = DURATION_DEFAULT_MIN
+    low, high = DURATION_RANGE_MIN
+    return int(round(min(max(number, low), high)))
 
 
 async def _l01(conn: asyncpg.Connection) -> _L01:
@@ -555,7 +563,7 @@ async def _check_bridge_run(conn: asyncpg.Connection, body: RunRequest) -> int:
             problem(
                 "out_of_range",
                 f"Before the irrigation firmware L01 runs for the controller's {DURATION_PARAM} ({configured} min); "
-                f"send minutes {configured}, or leave it out, or change {DURATION_PARAM} in Settings",
+                f"send minutes {configured}, or leave it out",
                 field="minutes",
                 min=configured,
                 max=configured,
@@ -569,12 +577,11 @@ async def _check_bridge_run(conn: asyncpg.Connection, body: RunRequest) -> int:
             continue
         reading = state.switches.get(switch)
         if reading is not None and reading < 0.5:
-            label = REGISTRY[switch].label or switch
             raise ServiceError(
                 problem(
                     "line_disabled",
-                    f"The controller's {switch} ({label}) is off, so the wall drip job would drop the press; "
-                    f"turn {switch} on in Settings to run L01",
+                    f"The controller's {switch} ({BRIDGE_SWITCH_LABELS[switch]}) is off, so the wall drip job "
+                    "would drop the press",
                     field="line_id",
                 )
             )

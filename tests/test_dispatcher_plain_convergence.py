@@ -814,10 +814,28 @@ VD47_RETIRED_PARAMS = frozenset(
 )
 
 
+# The L01 bridge's rows (irrigation §6.5), retired after the engine became last-good (#1165).
+L01_BRIDGE_RETIRED_PARAMS = frozenset(
+    {
+        "sw_irrig_enabled",
+        "sw_irrig_wall_enabled",
+        "sw_irrig_center_enabled",
+        "sw_irrig_south_enabled",
+        "sw_irrig_west_enabled",
+        "sw_irrigation_enabled",
+        "sw_irrigation_wall_enabled",
+        "sw_irrigation_center_enabled",
+        "sw_irrigation_weather_skip",
+        "irrig_wall_duration_min",
+        "irrig_center_duration_min",
+    }
+)
+
+
 def test_retired_parameters_have_no_row_and_no_route():
     """A retired name is skipped by name, so it must be one the registry and the routes no longer know."""
-    assert len(VD47_RETIRED_PARAMS) == 31
-    assert VD47_RETIRED_PARAMS <= _common.RETIRED_UNROUTABLE_PARAMS
+    assert len(VD47_RETIRED_PARAMS) == 31 and len(L01_BRIDGE_RETIRED_PARAMS) == 11
+    assert VD47_RETIRED_PARAMS | L01_BRIDGE_RETIRED_PARAMS <= _common.RETIRED_UNROUTABLE_PARAMS
     for param in _common.RETIRED_UNROUTABLE_PARAMS:
         assert param not in REGISTRY, param
         assert param not in _common.PARAM_TO_ENTITY and param not in _common.SWITCH_TO_ENTITY, param
@@ -829,7 +847,7 @@ async def test_a_plan_row_naming_a_retired_parameter_is_skipped_without_an_error
     caplog.set_level(logging.INFO)
     (param, _device, plan_value), *_ = PARAMS
     _load(plain, PARAMS[:1])
-    plain.db.plan.update(dict.fromkeys(VD47_RETIRED_PARAMS, 1.0))
+    plain.db.plan.update(dict.fromkeys(VD47_RETIRED_PARAMS | L01_BRIDGE_RETIRED_PARAMS, 1.0))
 
     await plain.run_pass()
     assert plain.controller.sent_params() == [param]
@@ -840,7 +858,7 @@ async def test_a_plan_row_naming_a_retired_parameter_is_skipped_without_an_error
         for record in caplog.records
         if record.getMessage().startswith("Dispatcher skipping retired unroutable param from plan row: ")
     }
-    assert skipped == VD47_RETIRED_PARAMS
+    assert skipped == VD47_RETIRED_PARAMS | L01_BRIDGE_RETIRED_PARAMS
     assert not any("reason=unroutable" in record.getMessage() for record in caplog.records)
 
 

@@ -89,8 +89,8 @@ def test_mister_engage_kpa_reads_its_entity_name_unit_bounds_and_step(rows):
 
 
 def present(*names):
-    """The names the registry still has: VD-47 (#1162) and its follow-up retire the weekly-feed rows and the L01
-    bridge's rows, and a registry change in another issue must never turn this test red."""
+    """The names the registry still has: VD-47 (#1162) retired the weekly-feed rows, and a registry change in another
+    issue must never turn this test red."""
     return [name for name in names if name in REGISTRY]
 
 
@@ -118,14 +118,12 @@ def test_read_only_rows_follow_architecture_5_3_step_1(rows, generator):
         assert reason(name).startswith("retired"), name
     for name in context:
         assert reason(name), name
-    # Writable: the anchors and widths, the L01 bridge's irrigation values while they last, and the lighting rows.
+    # Writable: the anchors and widths, and the lighting rows.
     for name in present(
         "band_temp_low_sr",
         "band_vpd_target_mid",
         "zone_vpd_target_east_sm",
         "zone_vpd_width_below_center",
-        "irrig_wall_duration_min",
-        "sw_irrig_wall_enabled",
         "gl_main_lux_threshold",
         "sw_gl_main_auto_mode",
         "fog_rh_ceiling_pct",
@@ -207,14 +205,13 @@ def test_scenario_rows_the_screens_and_named_fixtures_rely_on(rows):
     forecast = rows["sw_economiser_enabled"]
     assert (forecast["applied_from"], forecast["plan"]["source"]) == ("plan", "preemptive")
     assert forecast["plan"]["plan_id"].startswith("preemptive-")
-    for name in present("irrig_wall_duration_min"):
-        assert rows[name]["readback"]["value"] == 12.0
     assert rows["temp_low"]["readback"]["value"] == 40.0
 
 
 def test_a_scenario_row_the_registry_retired_is_skipped_never_fatal(generator, monkeypatch, capsys, tmp_path):
-    # Another issue retiring a row the scenario names (VD-47 retires the L01 bridge's irrig_wall_duration_min) must not
-    # break the render: the row is skipped with a note, and every other row renders as before.
+    # Another issue retiring a row the scenario names (as #1165's follow-up retired the L01 bridge's
+    # irrig_wall_duration_min) must not break the render: the row is skipped with a note, and every other row renders
+    # as before.
     monkeypatch.setitem(
         generator.SCENARIO, "retired_by_another_issue", {"readback": generator.reading(1.0, generator.SERVER_TIME)}
     )

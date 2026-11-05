@@ -47,7 +47,7 @@ test("the rail's Show filters carry counts, filter the rows and survive a reload
   await expect(rail.locator(".ctl-rail-list").first().getByRole("link")).toHaveText([
     /^All \d+$/, "Recently changed 1", "Requested 0", "Not confirmed 0", "Manual 0", "Changed by an agent 4", /^Read-only \d+$/,
   ]);
-  await rail.getByRole("link", { name: "Controller safety 43" }).click();
+  await rail.getByRole("link", { name: "Controller safety 32" }).click();
   await expect(page.locator("#group-controller_safety")).toBeInViewport();
   await expect(page).toHaveURL(/\/settings$/);
   await page.getByRole("link", { name: "Changed by an agent 4" }).click();

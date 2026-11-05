@@ -293,42 +293,6 @@ KNOWN_PRE_EXISTING_DRIFT: dict[str, set[str]] = {
     },
 }
 
-# The L01 bridge's routes (irrigation §6.5, VD-47, #1162): their entities left
-# the engine firmware, but the pre-engine firmware publishes them until the
-# engine is last-good, so the bridge's REGISTRY rows keep the setpoint and
-# readback routes and EQUIPMENT_SWITCH_MAP keeps the hand-written switch routes.
-# The follow-up that #1165 merges after `make firmware-promote-last-good`
-# retires them and removes these entries, and only these, from the allowlist.
-_L01_BRIDGE_ROUTES: dict[str, set[str]] = {
-    "EQUIPMENT_SWITCH_MAP": {
-        "irrigation_enabled",
-        "irrigation_wall_enabled",
-        "irrigation_center_enabled",
-        "irrigation_weather_skip",
-    },
-    "SETPOINT_MAP": {
-        "irrigation_enabled",
-        "irrigation_wall_enabled",
-        "irrigation_center_enabled",
-        "irrigation_south_enabled",
-        "irrigation_west_enabled",
-        "irrigation_weather_skip",
-        "irrig_wall_duration__min_",
-        "irrig_center_duration__min_",
-    },
-    "CFG_READBACK_MAP": {
-        "cfg_irrig_enabled",
-        "cfg_irrig_wall_enabled",
-        "cfg_irrig_center_enabled",
-        "cfg_irrig_south_enabled",
-        "cfg_irrig_west_enabled",
-        "cfg_irrig_wall_duration_min",
-        "cfg_irrig_center_duration_min",
-    },
-}
-for _map_name, _routes in _L01_BRIDGE_ROUTES.items():
-    KNOWN_PRE_EXISTING_DRIFT.setdefault(_map_name, set()).update(_routes)
-
 # Firmware-v2 STAGED contract (docs/design/firmware-v2-contract-2026-06-10.md
 # §B2/§B7): the dispatcher-side band-anchor tunables are registered and routed
 # AHEAD of the firmware-v2 OTA that exposes the matching number entities
@@ -357,14 +321,15 @@ KNOWN_PRE_EXISTING_DRIFT.setdefault("CFG_READBACK_MAP", set()).update(
 
 def test_retired_irrigation_clocks_fert_cadence_and_center_bursts_are_not_writable(entity_map):
     firmware_ids = _firmware_entity_ids()
-    # VD-47 (F13) deleted the 16 legacy schedule rows with their cfg_* readbacks and globals;
-    # only the two run-now durations stay, for the L01 bridge (irrigation §6.5).
+    # VD-47 (F13) deleted the 16 legacy schedule rows with their cfg_* readbacks and globals,
+    # and #1165's follow-up the two run-now durations the L01 bridge kept (irrigation §6.5).
     legacy_schedule = {
         f"irrig_{side}_{field}"
         for side in ("wall", "center")
         for field in (
             "start_hour",
             "start_min",
+            "duration_min",
             "fert_duration_min",
             "fert_every_n",
             "days_mask",
@@ -373,7 +338,7 @@ def test_retired_irrigation_clocks_fert_cadence_and_center_bursts_are_not_writab
             "interval_days",
         )
     }
-    assert len(legacy_schedule) == 16
+    assert len(legacy_schedule) == 18
     for name in legacy_schedule:
         assert name not in REGISTRY, name
         assert name not in entity_map.SETPOINT_MAP.values(), name

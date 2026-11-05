@@ -517,10 +517,10 @@ As built (VD-47): the latch arithmetic is three pure, native-tested helpers in
 `manual_latch_toggle()`), so the push buttons clamp `manual_override_timeout_min` to the same 1-120
 minutes as the service. F13 also deleted the globals #1160 left with no reader (the weekly-feed journal
 `wall_feed_*`, the job machine's cycle and last-day counters, `irrig_vpd_stress_ms` and
-`outdoor_rh_mode`). With no entity in the engine firmware, the L01 bridge's rows carry their own step,
-label and unit, and the two `irrig_*_duration_min` rows drop their firmware clamp (`min` and `max` keep
-1-120); `RETIRING_TUNABLES` keeps the bridge's eight pre-engine entities, which
-`test_retiring_tunables_are_live_or_the_l01_bridge` accepts until the follow-up empties the set.
+`outdoor_rh_mode`). With no entity in the engine firmware, the L01 bridge's rows carried their own step,
+label and unit, and the two `irrig_*_duration_min` rows dropped their firmware clamp (`min` and `max` kept
+1-120); `RETIRING_TUNABLES` kept the bridge's eight pre-engine entities until the follow-up (§6.5)
+retired the bridge's rows and routes and emptied the set.
 
 **Tests and docs pinned to ADR-0007 or the leak interlock** change in the same release (F6 to F10,
 F14): `firmware/test/test_greenhouse_logic.cpp:5263-5298`; invariants #2, #15 and #26 in
@@ -826,6 +826,17 @@ section leaves open:
   expires like any other.
 - On L01 a run body with mister or rinse fields is 400 `invalid_request`; `trigger_id` and
   `planner_instance` are 1-64 characters.
+
+**As built (VD-47's follow-up, merged by VD-51 after the promotion).** The bridge's eleven registry rows, their
+setpoint and readback routes and the four `irrigation_*` switch routes are gone; their names are in
+`RETIRED_UNROUTABLE_PARAMS`, so a stale plan or desired row naming one is skipped, and Settings answers
+`unknown_target` for them. Migration 288 had already made the four `equipment.irrigation_*` sensor rows inactive.
+The bridge's code stays, though nothing selects it while every connection reports `irr_engine` true:
+
+- run-now on L01 keeps the pre-engine firmware's default duration (10 min, 1-120) in the service and reads the last
+  readbacks recorded before the engine flash, because no route records new ones;
+- `sw_irrig_enabled`'s state no longer reaches the ingestor, so a Stop closes its relays without the toggle, as
+  one in the state burst after a reconnect always did; refusal details no longer point to Settings rows.
 
 ## 7. Home Assistant decommission
 

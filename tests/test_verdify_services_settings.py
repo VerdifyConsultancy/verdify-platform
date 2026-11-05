@@ -449,6 +449,19 @@ def test_the_retired_weekly_feed_rows_read_unknown_target(param):
     assert refusal(excinfo).code == "unknown_target"
 
 
+@pytest.mark.parametrize(
+    "param",
+    ["irrig_wall_duration_min", "irrig_center_duration_min", "sw_irrig_enabled", "sw_irrig_wall_enabled",
+     "sw_irrigation_enabled", "sw_irrigation_weather_skip"],
+)  # fmt: skip
+def test_the_retired_l01_bridge_rows_read_unknown_target(param):
+    # #1165's follow-up deleted the L01 bridge's rows once the irrigation engine was last-good.
+    assert param not in REGISTRY
+    with pytest.raises(ServiceError) as excinfo:
+        run(settings.validate(FakeDB(), PERSON, param, 1))
+    assert refusal(excinfo).code == "unknown_target"
+
+
 @pytest.mark.parametrize("control_class", ["readback_context", "retired"])
 def test_readback_context_and_retired_rows_are_read_only(control_class):
     names = [n for n, spec in REGISTRY.items() if spec.control_class == control_class]
@@ -466,12 +479,8 @@ def test_unknown_settings_are_unknown_target_without_touching_the_database():
     assert db.sql == []
 
 
-@pytest.mark.parametrize(
-    "param",
-    ["irrig_wall_duration_min", "irrig_center_duration_min", "sw_irrig_enabled", "sw_irrig_wall_enabled",
-     "gl_lux_threshold", "gl_main_lux_threshold", "gl_sunrise_hour"],
-)  # fmt: skip
-def test_the_l01_bridge_values_and_the_lighting_rows_stay_writable(param):
+@pytest.mark.parametrize("param", ["gl_lux_threshold", "gl_main_lux_threshold", "gl_sunrise_hour"])
+def test_the_lighting_rows_stay_writable(param):
     assert desired_write_rule(param) == (True, None)
 
 

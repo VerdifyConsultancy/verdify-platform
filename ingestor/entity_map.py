@@ -256,12 +256,9 @@ EQUIPMENT_SWITCH_MAP: dict[str, str] = {
     # Config switches (boolean tunables exposed as HA switches)
     "economiser_enabled": "economiser_enabled",
     "fog_closes_vent": "fog_closes_vent",
-    # The L01 bridge's switches (irrigation §6.5): only the pre-engine firmware
-    # publishes them; they go with the bridge's rows in #1165's follow-up.
-    "irrigation_enabled": "irrigation_enabled",
-    "irrigation_wall_enabled": "irrigation_wall_enabled",
-    "irrigation_center_enabled": "irrigation_center_enabled",
-    "irrigation_weather_skip": "irrigation_weather_skip",
+    # The L01 bridge's irrigation_* switch routes retired with its rows once the
+    # irrigation engine was last-good (#1165); equipment_state history keeps the
+    # names (verdify_schemas/telemetry.py).
     "gl_auto_mode": "gl_auto_mode",
     "occupancy_mist_inhibit": "occupancy_inhibit",
 }

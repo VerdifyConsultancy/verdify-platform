@@ -2859,8 +2859,8 @@ def test_visible_gpio_relays_are_internal_or_controller_guarded():
 def test_retired_irrigation_schedule_globals_are_gone_with_their_readbacks():
     """#1160 (F1) made the legacy schedule globals inert; VD-47 (F13) deleted them with their cfg
     readbacks, entities and registry rows. The two run-now durations and the irrigation enables
-    left the firmware too, but their registry rows stay for the pre-engine L01 bridge (irrigation
-    §6.5) until #1165's follow-up."""
+    left the firmware too, and #1165's follow-up retired the rows the pre-engine L01 bridge kept
+    (irrigation §6.5)."""
     firmware = "\n".join(
         Path(path).read_text()
         for path in (
@@ -2903,10 +2903,10 @@ def test_retired_irrigation_schedule_globals_are_gone_with_their_readbacks():
     ):
         assert f"id({global_id})" not in firmware and f"id: {entity_id}\n" not in firmware
         assert f"id: {cfg_id}\n" not in firmware
-        assert REGISTRY[global_id].cfg_readback_object_id == cfg_id  # the bridge's row and route stay
+        assert global_id not in REGISTRY
     for enable in ("irrig_enabled", "irrig_wall_enabled", "irrig_center_enabled", "irrig_south_enabled"):
         assert f"id({enable})" not in firmware and f"id: sw_{enable}\n" not in firmware
-        assert f"sw_{enable}" in REGISTRY
+        assert f"sw_{enable}" not in REGISTRY
 
 
 def test_center_mist_has_no_deliberate_dawn_or_midday_watering_surface():
