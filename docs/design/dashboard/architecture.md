@@ -852,9 +852,10 @@ and axe at 320, 768 and 1440 px. Builds, browser suites and the CI database run 
 
 `pnpm test:browser` is the one command for the two browser rows: it runs the guard (`e2e/verify-browser-tools.mjs`,
 which refuses anything but the CI image's closure), renders the settings fixture, builds the app, because the dashboard
-step does not, and then runs Playwright. Chromium runs the whole suite; WebKit runs the 360 and 390 px checks and the
-viewer check, because phones run Safari. The operator half of the role check expects a write control only on the routes
-that hold one (`WRITE_ROUTES` in `e2e/routes.ts`): Graphs, its scorecard, Plan and More write nothing, and neither does
-Equipment until VD-16.
+step does not, and then runs Playwright as three shards at once (`e2e/run-shards.mjs`), each with its own fixture API,
+BFF and ingress, because one fixture API holds one state. Chromium runs the whole suite; WebKit runs the 360 and 390 px
+checks and the viewer check, because phones run Safari. The operator half of the role check expects a write control only
+on the routes that hold one (`WRITE_ROUTES` in `e2e/routes.ts`): Graphs, its scorecard, Plan and More write nothing, and
+neither does Equipment until VD-16.
 
 `make test` and `make check` touch the live stack and are never part of dashboard validation.

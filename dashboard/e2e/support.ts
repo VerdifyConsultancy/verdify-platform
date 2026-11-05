@@ -2,16 +2,18 @@
 /**
  * What every browser spec shares (#1128), after weather's web/e2e/public.spec.ts. Specs import `test` and `expect` from
  * here: `test` guards each page for the whole test, so no spec can forget. Each test selects its fixture first (one
- * fixture API holds one state, and the suite runs on one worker). No test passes by loosening the app: a CSP violation,
- * a page error or a request off localhost fails it.
+ * fixture API holds one state, so each shard of the suite has its own and runs one worker). No test passes by loosening
+ * the app: a CSP violation, a page error or a request off localhost fails it.
  */
 import { setTimeout as sleep } from "node:timers/promises";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test as base, type APIRequestContext, type Locator, type Page, type Response } from "@playwright/test";
+import { suitePorts } from "./ports.mjs";
 
 export { expect };
 
-const FIXTURE_API = "http://localhost:4174";
+/** This shard's fixture API (`e2e/ports.mjs`): its control endpoint, its request log and its reads. */
+export const FIXTURE_API = `http://localhost:${suitePorts().api}`;
 /** 10:42 America/Denver on Monday 2026-11-02 (MST), the screens' clock and the vitest route tests'. */
 export const NOW = "2026-11-02T17:42:00.000Z";
 /** The WebKit project runs only the tests that carry this: the 360 and 390 px checks and the viewer check. */

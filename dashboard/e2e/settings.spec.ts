@@ -4,7 +4,7 @@
 // or NOT CONFIRMED, the refusal beside the field, Release, the site caps, read-only drawers, and the phone's selects.
 // #1139: the drawer's history with Revert, and a crop-band anchor's curve preview.
 import type { Page } from "@playwright/test";
-import { NOW, SMALL_PHONE, WEBKIT, expect, expectNoHorizontalScroll, fixtureRequests, fixtureWrites, load, test, toastLines, untilPolled, useScreensClock } from "./support";
+import { FIXTURE_API, NOW, SMALL_PHONE, WEBKIT, expect, expectNoHorizontalScroll, fixtureRequests, fixtureWrites, load, test, toastLines, untilPolled, useScreensClock } from "./support";
 
 const row = (page: Page, param: string) => page.locator(`tr.setting-row[data-param="${param}"]`);
 const pill = (page: Page, param: string) => row(page, param).locator(".ctl-row-pill [data-badge]");
@@ -14,7 +14,7 @@ const ENGAGE = "/settings?q=mister_engage_kpa&edit=mister_engage_kpa";
 test("one row per registry row; read-only rows show why and have no Edit; the band in force is DERIVED with its age", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/settings");
-  const served = await request.get("http://localhost:4174/v1/settings");
+  const served = await request.get(`${FIXTURE_API}/v1/settings`);
   const { items } = await served.json() as { items: { param: string; writable: boolean; group: string }[] };
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Settings");
   await expect(page.locator(".page-status")).toHaveText(`${items.length} settings · 0 requested · 0 not confirmed · 0 manual`);
