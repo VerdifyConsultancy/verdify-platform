@@ -924,12 +924,51 @@ def test_a_fractional_run_snaps_to_whole_numbers():
     assert call(MCP, writes.run, AGENT, "L01", minutes=5.4).value.args == {"minutes": 5}
 
 
-@pytest.mark.parametrize("line_id", ["L03", "L11"])
-def test_the_lines_that_take_no_runs_are_unknown_target(line_id):
+def test_the_master_valve_takes_no_run_of_its_own():
     set_engine()
-    problem = refused(MCP, writes.run, AGENT, line_id, minutes=5)
+    problem = refused(MCP, writes.run, AGENT, "L03", minutes=5)
     assert (problem.code, problem.status, problem.field) == ("unknown_target", 422, "line_id")
     assert counts() == (0, 0, 0)
+
+
+FOG_BUILD = "2026.11.5.2200.abcdef12"
+
+
+@pytest.mark.parametrize(
+    ("caps", "accepted"),
+    [
+        (None, False),  # never published: fails closed
+        (f"fw={FOG_BUILD} caps=run_any_mister", False),  # a build without the capability
+        ("fw=2026.11.5.0131.57fe2a2e caps=fog_run", False),  # another build (a rollback since)
+        (f"fw={FOG_BUILD} caps=fog_run,run_any_mister", True),
+    ],
+)
+def test_fog_runs_once_only_while_irr_caps_names_fog_run_for_the_running_build(caps, accepted):
+    """#1343 follow-up, no date gate (2026-11-05): the controller's own irr_caps decides."""
+    set_engine()
+    sql("INSERT INTO public.diagnostics (ts, firmware_version) VALUES (now() - interval '1 minute', $1)", FOG_BUILD)
+    if caps is not None:
+        sql(
+            "INSERT INTO public.system_state (ts, entity, value, greenhouse_id) VALUES (now(), 'irr_caps', $1, 'vallery')",
+            caps,
+        )
+    if accepted:
+        command = call(MCP, writes.run, AGENT, "L11", minutes=5).value
+        assert (command.kind, command.line_id, command.status, command.args) == (
+            "run",
+            "L11",
+            "pending",
+            {"minutes": 5},
+        )
+    else:
+        problem = refused(MCP, writes.run, AGENT, "L11", minutes=5)
+        assert (problem.code, problem.status, problem.field, problem.retryable) == (
+            "unavailable",
+            503,
+            "line_id",
+            False,
+        )
+        assert counts() == (0, 0, 0)
 
 
 def test_a_run_refused_on_a_disabled_paused_faulted_or_non_member_line_in_that_order():
@@ -1291,3 +1330,17 @@ def test_identity_fields_in_a_body_are_dropped_unread():
     assert activity_rows()[-1]["source"] == "dashboard"
     problem = refused(DASHBOARD, writes.schedule_create, PERSON, {**schedule_fields(), "typo": 1}, manual=True)
     assert (problem.code, problem.field) == ("invalid_request", "typo")
+
+
+def test_a_same_day_build_that_reports_run_any_mister_runs_a_mister_with_schedule_off():
+    """No date gate (2026-11-05): a build stamped before #1343's cutoff that reports the capability is taken."""
+    set_engine()
+    enable_line("L07")
+    sql("INSERT INTO public.diagnostics (ts, firmware_version) VALUES (now() - interval '1 minute', $1)", FOG_BUILD)
+    sql(
+        "INSERT INTO public.system_state (ts, entity, value, greenhouse_id) VALUES (now(), 'irr_caps', $1, 'vallery')",
+        f"fw={FOG_BUILD} caps=fog_run,run_any_mister",
+    )
+    body = {"on_s": 30, "count": 2, "gap_s": 60}
+    command = call(MCP, writes.run, AGENT, "L07", **body).value
+    assert (command.kind, command.line_id, command.status, command.args) == ("run", "L07", "pending", body)
