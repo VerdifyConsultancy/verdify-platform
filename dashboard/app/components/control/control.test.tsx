@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Control's own parts (redesign §4.4, §5.10, §5.11): the one pill's priority with CONFIRMED's 10 minutes, the text marks,
 // the bounds bar in each state, and the plan's validity bar. Times are America/Denver with the clock at 10:42 on 2026-11-02.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { act, cleanup } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { Setting } from "../../lib/operator-api";
 import { NBSP, denver, renderUi, text } from "../test-render";
 import { BoundsBar, boundsWords } from "./bounds-bar";
+import { FindSetting, SettingsSearch } from "./find-setting";
 import { CONFIRMED_FOR_MS, Mark, isManual, settingPill, useRecentWrite, writtenAt } from "./marks";
 import { ValidityBar } from "./validity-bar";
 
@@ -97,4 +100,18 @@ test("the validity bar fills from written to now, marks now, and stays bare for 
   expect([svg.querySelector(".ctl-validity-fill")!.getAttribute("width"), svg.querySelector(".ctl-validity-now")]).toEqual(["100%", null]);
   svg = draw("soon", denver("17:30"));
   expect([svg.classList.contains("is-unknown"), svg.querySelector(".ctl-validity-fill")]).toEqual([true, null]);
+});
+
+test("the Control tabs share one search: Settings' field and Find a setting's, 22rem from 861 px, Find an outline that submits the form (#1308 visual QA 28)", () => {
+  const { container } = renderUi(<><SettingsSearch value="" onChange={() => {}} /><FindSetting /></>);
+  const [settings, find] = [...container.querySelectorAll(".ctl-find")];
+  expect(settings.querySelector("input")?.getAttribute("placeholder")).toBe("Search settings: name or key");
+  expect(find.querySelector("input")?.getAttribute("placeholder")).toBe("Find a setting");
+  expect(find.querySelector("button")?.getAttribute("type")).toBe("submit");
+  const css = readFileSync(join(process.cwd(), "app/styles/control.css"), "utf8");
+  // A definite width (the old min(24rem,100%) resolved against a column sized by its content and fell back to the input's own).
+  expect(css).toContain("@media(min-width:861px){.ctl-find input{width:22rem}}");
+  expect(css).not.toMatch(/\.ctl-search input\{width:min\(/);
+  // The global filled submit (styles.css button[type=submit]) is undone for Find: a way to a page, never a primary action.
+  expect(css).toContain(".ctl-find .btn{flex:none;background:#fff;border-color:var(--line-strong);color:var(--forest)}");
 });
