@@ -344,7 +344,8 @@ export function PlanLanes(props: PlanLanesProps) {
   const drawable = !props.message && plan !== null && rows.length > 0;
   const note = drawable ? staleNote(rows, now) : null;
   return <figure className="chart chart-lanes">
-    <figcaption className="eyebrow">{props.title ?? `Next ${hours} h · one lane per planned setting`}</figcaption>
+    {/* A meta line under the card's title, never an eyebrow below its heading (redesign §3.5). */}
+    <figcaption className="meta chart-lanes-caption">{props.title ?? `Next ${hours} h · one lane per planned setting`}</figcaption>
     {note && <ul className="chart-notes"><li className="chart-note-stale">{note}</li></ul>}
     {drawable
       ? <div className={rowEnd ? "lanes lanes-plan lanes-plan-end" : "lanes lanes-plan"}>

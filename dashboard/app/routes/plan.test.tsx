@@ -18,7 +18,7 @@ import { loadUPlot } from "../charts/uplot-chart";
 import { AppShell } from "../components/app-shell";
 import { ServerClockProvider } from "../components/freshness";
 import { PlanCard, planDetail, timeLeft } from "../components/plan-card";
-import { NEWEST_SHOWN, PlannerHealth, healthRows, isLate, needsAttention } from "../components/planner-health";
+import { NEWEST_SHOWN, PlannerHealth, healthRows, isLate, markPosition, needsAttention } from "../components/planner-health";
 import { NBSP, denver, renderUi, text } from "../components/test-render";
 import type { Plan as PlanBody, PlannerTrigger } from "../lib/operator-api";
 import { NOW, advance, requests, sentAt, startFixtureApi, stopFixtureApi, writes, type FixtureOptions } from "../lib/test-fixture-api";
@@ -286,6 +286,12 @@ test("a forecast-rule waypoint reads \"Forecast rule · system\" and never carri
 });
 
 // ---------------------------------------------------------------------------------------------------- planner health
+test("a trigger mark's place on the 36 h scale: −36 h at the start, now at the end, an older or unreadable time at the start", () => {
+  const now = Date.parse("2026-11-02T17:42:00Z");
+  const ago = (hours: number) => new Date(now - hours * 3_600_000).toISOString();
+  expect([markPosition(ago(36), now), markPosition(ago(18), now), markPosition(ago(0), now), markPosition(ago(40), now), markPosition("soon", now)]).toEqual([0, 50, 100, 0, 0]);
+});
+
 test("planner health: the last 36 h as marks, the next trigger, the missed SUNSET in view with ▲, the 14-day strip, and the ledger in a disclosure", async () => {
   await open("/plan", "missed-sunset");
   const health = region("Planner health");
@@ -296,7 +302,12 @@ test("planner health: the last 36 h as marks, the next trigger, the missed SUNSE
     ["SUNSET missed", "failed", "true"], ["MIDNIGHT plan written", "ok", "true"], ["SUNRISE plan written", "ok", "true"],
   ]);
   expect(text(health.querySelector(".ctl-trigger-marks > li:nth-child(4) .screen-reader"))).toBe("SUNSET missed at ");
-  expect([...health.querySelectorAll(".ctl-trigger-legend li")].map((item) => text(item))).toEqual(["done", "late or fallback", "failed or missed"]);
+  // Each at its time on the 36 h scale, −36 h to now; the key says what a short mark is (#1308 visual QA 37).
+  const at = [...health.querySelectorAll<HTMLElement>(".ctl-trigger-marks > li")].map((mark) => Number(mark.style.getPropertyValue("--at")));
+  expect(at.every((value) => value >= 0 && value <= 100)).toBe(true);
+  expect(at).toEqual([...at].sort((a, b) => a - b));
+  expect(text(health.querySelector(".ctl-trigger-ends"))).toBe("−36 hnow");
+  expect([...health.querySelectorAll(".ctl-trigger-legend li")].map((item) => text(item))).toEqual(["done", "late or fallback", "failed or missed", "short = optional"]);
   expect(text(health.querySelector(".ctl-next-trigger"))).toBe("Next SOLAR_MAX at 12:41");
   const rows = (list: Element) => [...list.querySelectorAll(":scope > li")].map((item) => [
     item.getAttribute("data-trigger"), text(item.querySelector(".trigger-due time")), text(item.querySelector(".trigger-outcome")),

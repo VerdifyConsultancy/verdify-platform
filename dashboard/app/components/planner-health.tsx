@@ -6,6 +6,7 @@ import { useApiRead } from "../lib/queries";
 import { words } from "../lib/words";
 import { LocalTime, cls } from "./common";
 import { StatusStrip, missedLevel, type StripCell } from "./data/status-strip";
+import { cssVars } from "./data/viz";
 import { Details } from "./details";
 import { useClockValue } from "./freshness";
 import { EmptyState, Panel, type PanelState } from "./panel";
@@ -85,10 +86,16 @@ function TriggerList({ rows, now }: { rows: readonly PlannerTrigger[]; now: numb
   return <ol className="trigger-list">{rows.map((row, index) => <TriggerRow key={`${row.trigger}|${row.expected_at}|${index}`} row={row} now={now} />)}</ol>;
 }
 
+/** The marks' window: the last 36 h, to the answer's now. */
+export const MARKS_WINDOW_MS = 36 * 3_600_000;
+/** Where a fired trigger sits on the 36 h scale, in percent from −36 h to now; outside it, at the nearer end. */
+export const markPosition = (expectedAt: string, now: number): number => Math.min(100, Math.max(0, ((epoch(expectedAt) - (now - MARKS_WINDOW_MS)) / MARKS_WINDOW_MS) * 100));
+
 /**
- * The last 36 h as a row of marks, oldest first (redesign §5.11): each fired trigger a square, quiet when it was done,
- * amber when late, fault when it failed, a required one full height and an optional one shorter. Each says its trigger,
- * time and outcome in words (its title, and to a screen reader); the ledger below lists the same rows.
+ * The last 36 h as marks on a time scale, "−36 h" to "now" as TimeTrack's ends read (redesign §5.11): each fired trigger
+ * at its time, quiet when it was done (outlined, so it shows on white), amber when late, fault when it failed, a
+ * required one full height and an optional one shorter, which the key says. Each says its trigger, time and outcome in
+ * words (its title, and to a screen reader); the ledger below lists the same rows.
  */
 function TriggerMarks({ rows, now }: { rows: readonly PlannerTrigger[]; now: number }) {
   const labelId = useId();
@@ -96,18 +103,23 @@ function TriggerMarks({ rows, now }: { rows: readonly PlannerTrigger[]; now: num
   return <div className="ctl-trigger-marks-wrap">
     <p id={labelId} className="eyebrow ctl-health-label">Last 36 h</p>
     {fired.length
-      ? <ol className="ctl-trigger-marks" aria-labelledby={labelId}>
-        {fired.map((row, index) => {
-          const kind = markKind(row, now);
-          const said = `${row.trigger} ${words("trigger_outcome", row.outcome)}${isLate(row, now) ? ", late" : ""}`;
-          return <li key={`${row.trigger}|${row.expected_at}|${index}`} className="ctl-trigger-mark" data-kind={kind} data-required={row.required ? "true" : undefined} title={said}>
-            <span className="screen-reader">{said} at </span><span className="screen-reader"><LocalTime at={row.expected_at} date={otherDay(row.expected_at, now)} /></span>
-          </li>;
-        })}
-      </ol>
+      ? <div className="ctl-trigger-scale">
+        <ol className="ctl-trigger-marks" aria-labelledby={labelId}>
+          {fired.map((row, index) => {
+            const kind = markKind(row, now);
+            const said = `${row.trigger} ${words("trigger_outcome", row.outcome)}${isLate(row, now) ? ", late" : ""}`;
+            return <li key={`${row.trigger}|${row.expected_at}|${index}`} ref={cssVars({ "--at": markPosition(row.expected_at, now) })} className="ctl-trigger-mark" data-kind={kind}
+              data-required={row.required ? "true" : undefined} title={said}>
+              <span className="screen-reader">{said} at </span><span className="screen-reader"><LocalTime at={row.expected_at} date={otherDay(row.expected_at, now)} /></span>
+            </li>;
+          })}
+        </ol>
+        <p className="ctl-trigger-ends" aria-hidden="true"><span>−36 h</span><span>now</span></p>
+      </div>
       : <p className="meta">No trigger has fired in the last 36 h.</p>}
     <ul className="strip-legend ctl-trigger-legend" aria-label="Key">
       {(["ok", "late", "failed"] as const).map((kind) => <li key={kind}><span className="ctl-trigger-mark ctl-trigger-swatch" data-kind={kind} aria-hidden="true" />{MARK_WORDS[kind]}</li>)}
+      <li><span className="ctl-trigger-heights" aria-hidden="true"><span className="ctl-trigger-mark" data-kind="other" data-required="true" /><span className="ctl-trigger-mark" data-kind="other" /></span>short = optional</li>
     </ul>
   </div>;
 }

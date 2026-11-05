@@ -49,6 +49,7 @@ test("long ids, trigger names, failure classes and stored text wrap instead of w
   }
   // The health row's flexible columns can shrink to nothing; only the due time keeps its width.
   expect(rule(control, ".trigger-row")).toContain("grid-template-columns:1rem minmax(0,1fr) auto minmax(0,1fr)");
-  // The marks wrap onto a second line rather than run past the card.
-  expect(rule(control, ".ctl-trigger-marks")).toContain("flex-wrap:wrap");
+  // The marks sit at their time on the 36 h scale, held inside the card at both ends rather than run past it.
+  expect(rule(control, ".ctl-trigger-marks")).toContain("position:relative");
+  expect(rule(control, ".ctl-trigger-marks>.ctl-trigger-mark")).toContain("left:clamp(0rem,calc(var(--at) * 1% - .375rem),calc(100% - .75rem))");
 });
