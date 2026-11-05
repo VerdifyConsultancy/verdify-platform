@@ -320,7 +320,7 @@ test("the event rail marks writes, alerts and runs by source, each linking to Ac
   const marks = within(rail).getAllByRole("button").map((mark) => [mark.getAttribute("data-mark"), mark.getAttribute("data-token"), mark.getAttribute("aria-label")]);
   expect(marks).toEqual([
     ["diamond-hollow", "muted", "06:30 · forecast-engine · Set Mister Pulse Gap"],
-    ["bar", "cause-vpd", "06:58 · L04 · VPD · 14 min · ok"],
+    ["bar", "cause-vpd", "06:58 · Center mister · VPD · 14 min · ok"],
     ["diamond", "ink", "07:02 · iris AI · Plan iris-20261102-0702 (SUNRISE)"],
     ["triangle", "warn-text", "08:00 · warning · The greenhouse is outside its band"],
     ["diamond", "forest", "08:42 · jason · Set VPD Mister Engage"],

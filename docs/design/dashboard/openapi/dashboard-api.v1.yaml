@@ -574,6 +574,7 @@ paths:
         - {name: from, in: query, required: true, schema: {type: string, format: date}}
         - {name: to, in: query, required: true, description: Inclusive local day, schema: {type: string, format: date}}
         - {name: group_by, in: query, schema: {type: string, enum: [zone, line, cause], default: zone}}
+        - {name: purpose, in: query, description: 'Keep irrigation or climate rows only (#1348); omitted, both', schema: {$ref: '#/components/schemas/RunPurpose'}}
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/MinutesReport'}}}}
         default: {$ref: '#/components/responses/Problem'}
@@ -590,6 +591,7 @@ paths:
         - {name: outcome, in: query, schema: {$ref: '#/components/schemas/RunOutcome'}}
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
+        - {name: purpose, in: query, description: 'Keep irrigation or climate runs only (#1348); omitted, both', schema: {$ref: '#/components/schemas/RunPurpose'}}
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/RunPage'}}}}
         default: {$ref: '#/components/responses/Problem'}
@@ -1483,6 +1485,14 @@ components:
         unknown: no outcome reached the platform (it aged out of irr_events while the ingestor was disconnected); a
         gap, never missed, and it raises no alert. The controller never sends it
       enum: [ok, short, stopped, preempted, skipped, missed, cap, unknown]
+    RunPurpose:
+      type: string
+      description: >-
+        What water was for (#1348). irrigation: schedule, run_now, feed, prewet, flush (and unknown) on drips or
+        misters. climate: VPD and fallback misting, and every fog (L11) run. SAF-4 and the zone caps count both. The
+        server always sends it; the fields stay optional in the contract so a client reads a server from before #1348
+        by the same rule
+      enum: [irrigation, climate]
     UsedOfMax:
       type: object
       required: [used, max]
@@ -1529,7 +1539,7 @@ components:
       required: [line_id, name, zone, kind, reserved, enabled, check, daily_cap_min, paused_until, manual, state, sync]
       properties:
         line_id: {$ref: '#/components/schemas/LineId'}
-        name: {type: string, examples: [Drip • Wall]}
+        name: {type: string, description: 'The line''s display name, the words a person reads (#1341); line_id stays the machine key', examples: [Wall drip]}
         zone: {type: string, enum: [wall, center, south, west, supply, house], description: 'The line''s place: supply for L03, house for L11. Minutes by zone use fog for L11 and leave L03 out'}
         kind: {type: string, enum: [drip, mister, fert_drip, fert_mister, master, fog]}
         clean_partner: {type: [string, 'null'], pattern: '^L(0[1-9]|1[01])$'}
@@ -1564,10 +1574,13 @@ components:
         state: {$ref: '#/components/schemas/LineState'}
         today:
           type: object
+          description: Every purpose (the cap counts all of it); climate_minutes and climate_pulses are the VPD and fallback misting inside it
           properties:
             minutes: {type: [number, 'null']}
             pulses: {type: [integer, 'null']}
             gal: {type: [integer, 'null'], description: Whole gallons}
+            climate_minutes: {type: [number, 'null']}
+            climate_pulses: {type: [integer, 'null']}
         next_run: {anyOf: [{$ref: '#/components/schemas/NextRun'}, {type: 'null'}]}
         last_water:
           description: >-
@@ -1582,6 +1595,7 @@ components:
                 open_s: {type: integer}
                 pulses: {type: [integer, 'null']}
                 cause: {$ref: '#/components/schemas/IrrigationCause'}
+                purpose: {$ref: '#/components/schemas/RunPurpose'}
         last_outcome:
           anyOf:
             - type: 'null'
@@ -1640,6 +1654,14 @@ components:
           properties:
             date: {type: string, format: date}
             zones: {type: object, additionalProperties: {type: [number, 'null']}}
+            climate_zones: {type: object, additionalProperties: {type: [number, 'null']}, description: 'The VPD and fallback misting inside each zone''s minutes (#1348), with the same nulls; fog is all climate'}
+            climate:
+              type: object
+              description: 'The site''s mist and fog today (#1348): VPD and fallback misting plus fog; null on a day with no data'
+              properties:
+                minutes: {type: [number, 'null']}
+                pulses: {type: [integer, 'null']}
+                gal: {type: [integer, 'null'], description: Whole gallons}
         limits:
           type: object
           description: Per-line duty and drip caps are on each line (today.minutes against daily_cap_min)
@@ -1794,6 +1816,7 @@ components:
         from: {type: string, format: date}
         to: {type: string, format: date}
         group_by: {type: string, enum: [zone, line, cause]}
+        purpose: {anyOf: [{$ref: '#/components/schemas/RunPurpose'}, {type: 'null'}], description: The purpose filter applied; null for both}
         periods:
           type: array
           items:
@@ -1804,7 +1827,7 @@ components:
               coverage: {type: string, enum: [complete, partial, no_data], description: Today and outage days are partial}
         rows:
           type: array
-          description: Always split by cause and chemistry so charts can stack
+          description: Always split by cause, purpose and chemistry so charts can stack
           items:
             type: object
             required: [period, group, cause, chemistry, minutes]
@@ -1812,6 +1835,7 @@ components:
               period: {type: string, format: date}
               group: {type: string, description: 'Zone (wall, center, south, west, and fog for L11''s humidification), line id or cause. L03''s supply minutes appear only by line or cause, never in zone totals'}
               cause: {$ref: '#/components/schemas/IrrigationCause'}
+              purpose: {$ref: '#/components/schemas/RunPurpose'}
               chemistry: {type: string, enum: [clean, fert]}
               minutes: {type: number}
               pulses: {type: [integer, 'null']}
@@ -1835,6 +1859,7 @@ components:
               meter_gal: {type: [integer, 'null'], description: 'The site meter''s day total (main_pulse)'}
               by_line: {type: [object, 'null'], additionalProperties: {type: integer}, description: 'Verdify-valve gallons by line id'}
               by_cause: {type: [object, 'null'], additionalProperties: {type: integer}, description: Verdify-valve gallons by IrrigationCause}
+              by_purpose: {type: [object, 'null'], additionalProperties: {type: integer}, description: 'Verdify-valve gallons by RunPurpose (#1348): irrigation and climate'}
               no_valve_gal: {type: [integer, 'null'], description: 'Meter water while no Verdify valve was open: the hose, sink, hydro or a leak'}
     Run:
       type: object
@@ -1848,6 +1873,7 @@ components:
         zone: {type: string}
         chemistry: {type: string, enum: [clean, fert]}
         cause: {$ref: '#/components/schemas/IrrigationCause'}
+        purpose: {$ref: '#/components/schemas/RunPurpose'}
         slot_id: {type: [integer, 'null']}
         schedule_label: {type: [string, 'null']}
         command_id: {type: [string, 'null'], format: uuid, description: The run-now command that started it}

@@ -21,10 +21,10 @@ afterEach(cleanup);
 const markup = (ui: ReactElement, apiDown = false) => renderToStaticMarkup(<MemoryRouter><SessionProvider apiDown={apiDown}>{ui}</SessionProvider></MemoryRouter>);
 
 test("ObjectRow: title, kind, one pill, the state sentence, a visual and meta, then primary, Stop and ⋯ at the end; never itself a link", () => {
-  renderUi(<ObjectRow title="L01 Wall drip" titleHref="/water#L01" tag={<Badge kind="clean" />} pill={<Badge kind="requested" />} state="Idle · last 07:31, 12 min · ok"
+  renderUi(<ObjectRow title="Wall drip" titleHref="/water#L01" tag={<Badge kind="clean" />} pill={<Badge kind="requested" />} state="Idle · last 07:31, 12 min · ok"
     visual={<span className="strip" />} meta="next 16:00 · 10 min" primary={<button type="button">Run…</button>} stop={<button type="button">Stop</button>}
     menu={<button type="button">⋯</button>} data={{ "data-line": "L01", "data-state": "idle" }} />);
-  const row = screen.getByRole("article", { name: "L01 Wall drip" });
+  const row = screen.getByRole("article", { name: "Wall drip" });
   expect(row.getAttribute("data-line")).toBe("L01");
   expect(row.getAttribute("data-state")).toBe("idle");
   expect(row.tagName).toBe("ARTICLE");
@@ -40,10 +40,10 @@ test("ObjectRow: an abnormal row has its rule; a running one its token; both dro
   renderUi(<ul><ObjectRow as="li" title="Fan 2 relay stuck" tone="warn" /></ul>);
   expect(screen.getByRole("listitem").className).toBe("object-row tone-warn");
   cleanup();
-  renderUi(<ObjectRow title="L04 Center mister" tone="running" token="eq-mister" />);
+  renderUi(<ObjectRow title="Center mister" tone="running" token="eq-mister" />);
   expect(screen.getByRole("article").className).toBe("object-row tone-running tone-eq-mister");
   cleanup();
-  renderUi(<ObjectRow title="L04 Center mister" tone="fault" />, { apiDown: true });
+  renderUi(<ObjectRow title="Center mister" tone="fault" />, { apiDown: true });
   expect(screen.getByRole("article").className).toBe("object-row");
   expect(markup(<ObjectRow title="x" tone="warn" state="s" />)).not.toMatch(/\sstyle=/);
 });

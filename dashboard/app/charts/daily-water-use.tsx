@@ -28,7 +28,7 @@ import { UPlotChart, type ChartEnv, type ChartOptions } from "./uplot-chart";
  * day with no water is a real 0. What the API returns is drawn as it is, never rescaled: the parts are attributed per
  * run, so they can sit a gallon or two off the meter's total. No rate and no flow flag (Q-10).
  */
-export type WaterSplit = "line" | "cause";
+export type WaterSplit = "line" | "cause" | "purpose";
 const COVERAGES: readonly Coverage[] = ["complete", "partial", "no_data"];
 /** A coverage newer than this client reads partial, drawn with the dashed edge, as the minutes do. */
 const coverageOf = (coverage: string): Coverage => ((COVERAGES as readonly string[]).includes(coverage) ? coverage as Coverage : "partial");
@@ -72,6 +72,11 @@ const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** The segments in stacking order: clean below fertilizer, each in the register's or the cause table's order. */
 function segmentsOf(keys: ReadonlySet<string>, split: WaterSplit, names?: Readonly<Record<string, string>>): WaterSegment[] {
+  if (split === "purpose") {
+    // Irrigation below climate (#1348): the watering first, then VPD misting and fog.
+    return [...keys].map((key) => ({ key, label: PURPOSE_LABELS[key] ?? key, token: key === "climate" ? "--eq-fog" : key === "irrigation" ? "--eq-water" : "--c-bound", fert: false }))
+      .sort((a, b) => purposeRank(a.key) - purposeRank(b.key) || a.key.localeCompare(b.key));
+  }
   if (split === "line") {
     return [...keys].map((key) => ({ key, label: lineWords(key, names), token: lineToken(key), fert: lineById(key)?.chemistry === "fert" }))
       .sort((a, b) => Number(a.fert) - Number(b.fert) || lineRank(a.key) - lineRank(b.key) || a.key.localeCompare(b.key));
@@ -81,13 +86,30 @@ function segmentsOf(keys: ReadonlySet<string>, split: WaterSplit, names?: Readon
     .sort((a, b) => Number(a.fert) - Number(b.fert) || causeRank(a.key) - causeRank(b.key) || a.key.localeCompare(b.key));
 }
 
+const PURPOSE_LABELS: Readonly<Record<string, string>> = { irrigation: "Irrigation", climate: "Mist & fog (climate)" };
+const purposeRank = (key: string) => (key === "irrigation" ? 0 : key === "climate" ? 1 : 2);
+/**
+ * A day's gallons by purpose: API-21's `by_purpose`, or for a server before #1348 the same split from `by_cause` (fog
+ * runs carry the vpd cause, so vpd and fallback are the climate water).
+ */
+function purposeParts(day: Pick<WaterUse["days"][number], "by_purpose" | "by_cause">): Readonly<Record<string, number>> | null {
+  if (day.by_purpose) return day.by_purpose;
+  if (!day.by_cause) return null;
+  const parts: Record<string, number> = {};
+  for (const [cause, gallons] of Object.entries(day.by_cause)) {
+    const key = cause === "vpd" || cause === "fallback" ? "climate" : "irrigation";
+    parts[key] = (parts[key] ?? 0) + gallons;
+  }
+  return parts;
+}
+
 /** API-21's days as the bars take them: nulls stay null, 0 stays 0, and the no-valve series stays out of the stack. */
 export function buildWaterUse(data: Pick<WaterUse, "days">, split: WaterSplit, names?: Readonly<Record<string, string>>): WaterModel {
   const days = data.days
     .map((day): WaterDay => {
       const coverage = coverageOf(day.coverage);
       const empty = coverage === "no_data";
-      const parts = empty ? null : (split === "line" ? day.by_line : day.by_cause) ?? null;
+      const parts = empty ? null : (split === "line" ? day.by_line : split === "purpose" ? purposeParts(day) : day.by_cause) ?? null;
       return {
         date: day.date, at: Date.parse(localDayStart(day.date)) / 1000, coverage, meter: empty ? null : day.meter_gal ?? null, parts,
         stacked: parts === null ? null : Object.values(parts).reduce((sum, gallons) => sum + gallons, 0), noValve: empty ? null : day.no_valve_gal ?? null,

@@ -9,7 +9,7 @@ import type { IrrigationStatus, Occurrence, ScheduleAgenda, StateLanes } from ".
 import { previewSchedule } from "../../lib/schedule-preview";
 import { localDayWindow } from "../../lib/time-scale";
 import {
-  MANIFOLDS, STATUS_WORDS, agendaDays, blocksOf, dayModel, entriesOf, fallbackCount, fallbackWindow, lineInfo, lineTitle, mondayOf, nextStarts, nightSpans, occurrenceKey, pauseNotes,
+  MANIFOLDS, STATUS_WORDS, agendaDays, blocksOf, dayModel, entriesOf, fallbackCount, fallbackWindow, lineInfo, mondayOf, nextStarts, nightSpans, occurrenceKey, pauseNotes,
   ruleGroups, slotClock, spanStatus, valveEpisodes, valveMinutes, weekCellName, weekCells, weekdayCode,
 } from "./model";
 
@@ -22,14 +22,15 @@ const set = (names: string | string[]) => {
 };
 const occurrence = (fields: Partial<Occurrence>): Occurrence => ({ slot_id: 11, line_id: "L01", planned_start: "2026-11-04T14:35:00Z", status: "planned", outcome: null, reason: null, run_id: null, ...fields });
 
-test("Water names a line by its zone and kind, from API-IRR-01 or the register", () => {
+test("Water names a line by its name, never its relay code, from API-IRR-01 or the register (#1341)", () => {
   const { status } = set("in-band");
-  expect(status.lines.map(lineTitle)).toEqual([
-    "L01 Wall drip", "L02 Wall feed", "L03 Fert master", "L04 Center mister", "L05 Center drip", "L06 Center feed", "L07 South mister", "L08 South feed", "L09 West mister",
-    "L10 West feed", "L11 Fog",
+  const info = lineInfo(status.lines);
+  expect(status.lines.map((line) => info.nameOf(line.line_id))).toEqual([
+    "Wall drip", "Wall drip (fertilized)", "Fertilizer valve", "Center mister", "Center drip", "Center drip (fertilized)", "South mister", "South mister (fertilized)",
+    "West mister", "West mister (fertilized)", "Fog",
   ]);
   const register = lineInfo(null);
-  expect([register.nameOf("L08"), register.kindOf("L08"), register.partnerOf("L08")]).toEqual(["L08 South feed", "fert_mister", "L07"]);
+  expect([register.nameOf("L08"), register.kindOf("L08"), register.partnerOf("L08")]).toEqual(["South mister (fertilized)", "fert_mister", "L07"]);
 });
 
 test("an occurrence's span: done, planned, running, will not run, missed, and an unknown outcome as a gap, never missed", () => {
@@ -67,8 +68,8 @@ test("a degraded_only fallback window is conditional, never a planned run: ahead
     ["conditional", "eq-heat1", "09:47 not needed"], ["conditional", "eq-heat1", "11:47 fallback · only if VPD sensing is degraded"],
     ["conditional", "eq-heat1", "13:47 fallback · only if VPD sensing is degraded"],
   ]);
-  expect(plain(blocks[0].name)).toBe("L04 Center mister · vanda-degraded, Mon 09:47, 4 × 45 s, fallback, not needed");
-  expect(plain(blocks[1].name)).toBe("L04 Center mister · vanda-degraded, Mon 11:47, 4 × 45 s, fallback, only if VPD sensing is degraded");
+  expect(plain(blocks[0].name)).toBe("Center mister · vanda-degraded, Mon 09:47, 4 × 45 s, fallback, not needed");
+  expect(plain(blocks[1].name)).toBe("Center mister · vanda-degraded, Mon 11:47, 4 × 45 s, fallback, only if VPD sensing is degraded");
   // None counts as planned minutes, so the day's row plans nothing.
   const model = dayModel({ day: TODAY, today: TODAY, now: NOW, agenda, lines: status.lines, lanes: null, entries: entriesOf(agenda, null, NOW) });
   expect(model.groups[1].rows[0].planned).toBe(0);
@@ -94,7 +95,7 @@ test("a block is as long as its schedule, named in words; a feed draws on its li
   const wall = entries.find((entry) => entry.occurrence.slot_id === 11 && localDate(entry.occurrence.planned_start) === "2026-11-04")!;
   const [run] = blocksOf(wall, info, NOW);
   expect([run.lineId, run.part, run.end - run.start, run.status, run.token, plain(run.label)]).toEqual(["L01", "run", 720, "planned", "eq-water", "07:35 · 12 min"]);
-  expect(plain(run.name)).toBe("L01 Wall drip · Wall MWF, Wed 07:35, 12 min, planned");
+  expect(plain(run.name)).toBe("Wall drip · Wall MWF, Wed 07:35, 12 min, planned");
   const feed = entries.find((entry) => entry.occurrence.slot_id === 12 && localDate(entry.occurrence.planned_start) === "2026-11-08")!;
   const parts = blocksOf(feed, info, NOW);
   expect(parts.map((block) => [block.lineId, block.part, block.token, block.end - block.start])).toEqual([["L02", "run", "eq-fert", 300], ["L01", "prewet", "eq-fog", 120], ["L01", "flush", "eq-fog", 240]]);
@@ -195,19 +196,19 @@ test("the agenda: three days from the selected day by day, the next planned run 
   expect(days.map((day) => day.title)).toEqual(["Today · Mon 2 Nov", "Tomorrow · Tue 3 Nov", "Wed 4 Nov"]);
   // 10:42 is before noon: nothing folds yet.
   expect(days[0].earlier).toEqual([]);
-  expect(days[0].rows.map((row) => [shortTime(row.at), plain(row.title), plain(row.detail)])).toEqual([["06:50", "L04 Center mister · 8 × 60 s", "Dawn drench · ok"], ["07:35", "L01 Wall drip · 12 min", "Wall MWF · ok"]]);
+  expect(days[0].rows.map((row) => [shortTime(row.at), plain(row.title), plain(row.detail)])).toEqual([["06:50", "Center mister · 8 × 60 s", "Dawn drench · ok"], ["07:35", "Wall drip · 12 min", "Wall MWF · ok"]]);
   expect(days.flatMap((day) => day.rows).filter((row) => row.next).map((row) => [row.at.slice(0, 10), row.lineId])).toEqual([["2026-11-03", "L04"]]);
   const afternoon = Date.parse("2026-11-02T21:00:00Z");
   const folded = agendaDays(entriesOf(agenda, null, afternoon), { first: TODAY, days: 1, last: "2026-11-08", today: TODAY, now: afternoon, lines: status.lines });
   expect([folded[0].earlier.length, folded[0].rows.length]).toEqual([2, 0]);
   expect(agendaDays([], { first: "2026-11-08", days: 3, last: "2026-11-08", today: TODAY, now: NOW, lines: [] }).map((day) => day.date)).toEqual(["2026-11-08"]);
-  expect(pauseNotes(set("l01-paused").status.lines, TODAY, NOW)).toEqual(["L01 Wall drip: paused until 14:00 by jason"]);
+  expect(pauseNotes(set("l01-paused").status.lines, TODAY, NOW)).toEqual(["Wall drip: paused until 14:00 by jason"]);
 });
 
 test("the rules: by line in L01–L10 order, each line's schedules by today's start; a schedule's next starts", () => {
   const { agenda, status } = set("schedules-paused");
   const groups = ruleGroups(agenda.schedules, status.lines, agenda.solar.find((day) => day.date === TODAY));
-  expect(groups.map((group) => [group.name, group.schedules.map((schedule) => schedule.label)])).toEqual([["L01 Wall drip", ["Wall MWF"]], ["L02 Wall feed", ["Weekly feed"]], ["L04 Center mister", ["Dawn drench"]]]);
+  expect(groups.map((group) => [group.name, group.schedules.map((schedule) => schedule.label)])).toEqual([["Wall drip", ["Wall MWF"]], ["Wall drip (fertilized)", ["Weekly feed"]], ["Center mister", ["Dawn drench"]]]);
   const seeded = set("in-band");
   expect(ruleGroups(seeded.agenda.schedules, seeded.status.lines, seeded.agenda.solar.find((day) => day.date === TODAY))[0].schedules.map((schedule) => schedule.start?.offset_min)).toEqual([-120, 0, 120]);
   expect(nextStarts(agenda, 11, NOW)).toEqual(["Wed 07:35", "Fri 07:35"]);

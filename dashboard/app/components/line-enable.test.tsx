@@ -9,6 +9,7 @@ import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
 import type { Session } from "../lib/session";
 import { NOW, OPERATOR, advance, renderWithApi, startFixtureApi, stopFixtureApi, writes } from "../lib/test-fixture-api";
 import { DISABLE_HINT, LineEnable } from "./line-enable";
+import { lineDisplayName } from "../lib/lines";
 
 afterEach(() => { cleanup(); stopFixtureApi(); });
 
@@ -18,7 +19,7 @@ const where = () => screen.getByTestId("where").textContent;
 function mount(line: IrrigationLine, session: Partial<Session> = OPERATOR, names: string | string[] = "lines-unchecked") {
   const api = startFixtureApi({ fixture: names });
   renderWithApi(<><LineEnable line={line} /><Where /></>, session);
-  return { api, control: () => screen.queryByRole("switch", { name: `Enabled ${line.line_id}` }) };
+  return { api, control: () => screen.queryByRole("switch", { name: `Enabled ${lineDisplayName(line)}` }) };
 }
 const checked = { checked_by: "jason", checked_at: "2026-11-01T15:00:00Z", note: null };
 

@@ -265,3 +265,34 @@ def test_it_takes_a_mapping_or_a_record_and_is_exported():
     assert line_state(Record(row()), engine=False, reporting=True, now=NOW).state.code == "idle"
     for name in ("line_state", "relay_cause", "LineState", "LineStateFields", "TOPOLOGY_CAUSE", "WAITING_REASONS"):
         assert name in irr.__all__
+
+
+# ── Run purpose (#1348) ─────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("line_id", "cause", "purpose"),
+    [
+        ("L11", "vpd", "climate"),  # fog is climate, whatever its cause
+        ("L11", "unknown", "climate"),
+        ("L04", "vpd", "climate"),
+        ("L07", "fallback", "climate"),  # a sensor-fault window replaces VPD control
+        ("L04", "schedule", "irrigation"),
+        ("L04", "run_now", "irrigation"),
+        ("L01", "run_now", "irrigation"),
+        ("L01", "unknown", "irrigation"),
+        ("L02", "feed", "irrigation"),
+        ("L08", "prewet", "irrigation"),
+        ("L06", "flush", "irrigation"),
+    ],
+)
+def test_a_runs_purpose_comes_from_its_line_and_cause(line_id, cause, purpose):
+    assert irr.purpose_of(line_id, cause) == irr.RunPurpose(purpose)
+    assert irr.purpose_of(line_id, IrrigationCause(cause)) == irr.RunPurpose(purpose)
+
+
+def test_every_cause_has_a_purpose_on_every_line():
+    for line_id in irr.LINE_IDS:
+        for cause in IrrigationCause:
+            assert irr.purpose_of(line_id, cause) in tuple(irr.RunPurpose)
+    assert irr.CLIMATE_CAUSES <= {cause.value for cause in IrrigationCause}

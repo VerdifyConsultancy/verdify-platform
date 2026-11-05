@@ -59,20 +59,21 @@ const hhmm = (ms) => { const { hour, minute } = local(ms); return `${String(hour
 // ---------------------------------------------------------------------------------------------------- the greenhouse
 /**
  * L01-L11 (irrigation §3) with the relay each one drives and the label API-13 and API-05 serve for it:
- * `EQUIPMENT_LABELS` in verdify_services/labels.py (VD-54), which the client never makes up.
+ * `EQUIPMENT_LABELS` in verdify_services/labels.py (VD-54), which the client never makes up. API-IRR-01 serves the same
+ * words as each line's `name` (`LINE_NAMES`, #1341), never the relay register's "Drip • Wall".
  */
 export const LINES = [
-  { line_id: "L01", name: "Drip • Wall", equipment: "drip_wall", label: "Wall drip L01", zone: "wall", kind: "drip", clean_partner: null, cap: 60 },
-  { line_id: "L02", name: "Drip • Wall (Fert.)", equipment: "drip_wall_fert", label: "Wall fert drip L02", zone: "wall", kind: "fert_drip", clean_partner: "L01", cap: 0 },
-  { line_id: "L03", name: "Valve • Fert. Master", equipment: "fert_master_valve", label: "Fert master L03", zone: "supply", kind: "master", clean_partner: null, cap: 0 },
-  { line_id: "L04", name: "Mister • Center", equipment: "mister_center", label: "Center mister L04", zone: "center", kind: "mister", clean_partner: null, cap: 120, reserve: 60 },
-  { line_id: "L05", name: "Drip • Center", equipment: "drip_center", label: "Center drip L05", zone: "center", kind: "drip", clean_partner: null, cap: 30 },
-  { line_id: "L06", name: "Drip • Center (Fert.)", equipment: "drip_center_fert", label: "Center fert drip L06", zone: "center", kind: "fert_drip", clean_partner: "L05", cap: 0 },
-  { line_id: "L07", name: "Mister • South Wall", equipment: "mister_south", label: "South mister L07", zone: "south", kind: "mister", clean_partner: null, cap: 45, reserve: 15 },
-  { line_id: "L08", name: "Mister • South Wall (Fert.)", equipment: "mister_south_fert", label: "South fert mister L08", zone: "south", kind: "fert_mister", clean_partner: "L07", cap: 0 },
-  { line_id: "L09", name: "Mister • West Wall", equipment: "mister_west", label: "West mister L09", zone: "west", kind: "mister", clean_partner: null, cap: 45, reserve: 15 },
-  { line_id: "L10", name: "Mister • West Wall (Fert.)", equipment: "mister_west_fert", label: "West fert mister L10", zone: "west", kind: "fert_mister", clean_partner: "L09", cap: 0 },
-  { line_id: "L11", name: "Fog", equipment: "fog", label: "Fog L11", zone: "house", kind: "fog", clean_partner: null, cap: 0 },
+  { line_id: "L01", name: "Wall drip", equipment: "drip_wall", label: "Wall drip", zone: "wall", kind: "drip", clean_partner: null, cap: 60 },
+  { line_id: "L02", name: "Wall drip (fertilized)", equipment: "drip_wall_fert", label: "Wall drip (fertilized)", zone: "wall", kind: "fert_drip", clean_partner: "L01", cap: 0 },
+  { line_id: "L03", name: "Fertilizer valve", equipment: "fert_master_valve", label: "Fertilizer valve", zone: "supply", kind: "master", clean_partner: null, cap: 0 },
+  { line_id: "L04", name: "Center mister", equipment: "mister_center", label: "Center mister", zone: "center", kind: "mister", clean_partner: null, cap: 120, reserve: 60 },
+  { line_id: "L05", name: "Center drip", equipment: "drip_center", label: "Center drip", zone: "center", kind: "drip", clean_partner: null, cap: 30 },
+  { line_id: "L06", name: "Center drip (fertilized)", equipment: "drip_center_fert", label: "Center drip (fertilized)", zone: "center", kind: "fert_drip", clean_partner: "L05", cap: 0 },
+  { line_id: "L07", name: "South mister", equipment: "mister_south", label: "South mister", zone: "south", kind: "mister", clean_partner: null, cap: 45, reserve: 15 },
+  { line_id: "L08", name: "South mister (fertilized)", equipment: "mister_south_fert", label: "South mister (fertilized)", zone: "south", kind: "fert_mister", clean_partner: "L07", cap: 0 },
+  { line_id: "L09", name: "West mister", equipment: "mister_west", label: "West mister", zone: "west", kind: "mister", clean_partner: null, cap: 45, reserve: 15 },
+  { line_id: "L10", name: "West mister (fertilized)", equipment: "mister_west_fert", label: "West mister (fertilized)", zone: "west", kind: "fert_mister", clean_partner: "L09", cap: 0 },
+  { line_id: "L11", name: "Fog", equipment: "fog", label: "Fog", zone: "house", kind: "fog", clean_partner: null, cap: 0 },
 ];
 /** Fan 1 has been off since this absolute time, so the board reads "Oct 27, 04:26" on any later day (VD-14). */
 const FAN1_OFF_SINCE = Date.parse("2026-10-27T04:26:00-06:00");
@@ -889,7 +890,7 @@ export const FIXTURES = {
     const at = clock(world.now);
     world.runs.push(
       { run_id: "run-l01-zero", line_id: "L01", zone: "wall", chemistry: "clean", cause: "schedule", slot_id: 11, schedule_label: "Wall MWF", command_id: null, actor: null, started_at: iso(at("07:34", -1)), ended_at: iso(at("07:46", -1)), open_s: 720, pulses: null, gal: 0, outcome: "ok", reason: null },
-      { run_id: "run-l04-unknown", line_id: "L04", zone: "center", chemistry: "clean", cause: "vpd", slot_id: null, schedule_label: null, command_id: null, actor: null, started_at: iso(at("13:05", -2)), ended_at: null, open_s: 0, pulses: null, gal: null, outcome: "unknown", reason: "no outcome reached the platform" },
+      { run_id: "run-l04-unknown", line_id: "L04", zone: "center", chemistry: "clean", cause: "schedule", slot_id: null, schedule_label: null, command_id: null, actor: null, started_at: iso(at("13:05", -2)), ended_at: null, open_s: 0, pulses: null, gal: null, outcome: "unknown", reason: "no outcome reached the platform" },
     );
     world.runs.sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at));
   },

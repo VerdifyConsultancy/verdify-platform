@@ -37,7 +37,7 @@
       {"start": "2026-11-01T09:10:00Z", "end": "2026-11-01T09:40:00Z", "state": "unknown"},
       {"start": "2026-11-01T09:40:00Z", "end": "2026-11-01T10:00:00Z", "state": "off"}
     ]},
-    {"equipment": "mister_center", "label": "L04 Center mister", "group": "water", "line_id": "L04", "intervals": [
+    {"equipment": "mister_center", "label": "Center mister", "group": "water", "line_id": "L04", "intervals": [
       {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T06:58:00Z", "state": "off", "cause": null},
       {"start": "2026-11-01T06:58:00Z", "end": "2026-11-01T06:59:00Z", "state": "on", "cause": "vpd"},
       {"start": "2026-11-01T06:59:00Z", "end": "2026-11-01T07:00:00Z", "state": "off", "cause": null},
@@ -52,36 +52,36 @@
       {"start": "2026-11-01T09:10:00Z", "end": "2026-11-01T09:40:00Z", "state": "unknown", "cause": null},
       {"start": "2026-11-01T09:40:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
     ]},
-    {"equipment": "drip_wall", "label": "L01 Wall drip", "group": "water", "line_id": "L01", "intervals": [
+    {"equipment": "drip_wall", "label": "Wall drip", "group": "water", "line_id": "L01", "intervals": [
       {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T07:31:00Z", "state": "off", "cause": null},
       {"start": "2026-11-01T07:31:00Z", "end": "2026-11-01T07:43:00Z", "state": "on", "cause": "schedule"},
       {"start": "2026-11-01T07:43:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
     ]},
-    {"equipment": "drip_wall_fert", "label": "L02 Wall feed", "group": "water", "line_id": "L02", "intervals": [
+    {"equipment": "drip_wall_fert", "label": "Wall drip (fertilized)", "group": "water", "line_id": "L02", "intervals": [
       {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
     ]},
-    {"equipment": "fert_master_valve", "label": "L03 Fert master", "group": "water", "line_id": "L03", "intervals": [
+    {"equipment": "fert_master_valve", "label": "Fertilizer valve", "group": "water", "line_id": "L03", "intervals": [
       {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
     ]},
-    {"equipment": "drip_center", "label": "L05 Center drip", "group": "water", "line_id": "L05", "intervals": [
+    {"equipment": "drip_center", "label": "Center drip", "group": "water", "line_id": "L05", "intervals": [
       {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
     ]},
-    {"equipment": "drip_center_fert", "label": "L06 Center feed", "group": "water", "line_id": "L06", "intervals": [
+    {"equipment": "drip_center_fert", "label": "Center drip (fertilized)", "group": "water", "line_id": "L06", "intervals": [
       {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
     ]},
-    {"equipment": "mister_south", "label": "L07 South mister", "group": "water", "line_id": "L07", "intervals": [
+    {"equipment": "mister_south", "label": "South mister", "group": "water", "line_id": "L07", "intervals": [
       {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
     ]},
-    {"equipment": "mister_south_fert", "label": "L08 South feed mister", "group": "water", "line_id": "L08", "intervals": [
+    {"equipment": "mister_south_fert", "label": "South mister (fertilized)", "group": "water", "line_id": "L08", "intervals": [
       {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
     ]},
-    {"equipment": "mister_west", "label": "L09 West mister", "group": "water", "line_id": "L09", "intervals": [
+    {"equipment": "mister_west", "label": "West mister", "group": "water", "line_id": "L09", "intervals": [
       {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
     ]},
-    {"equipment": "mister_west_fert", "label": "L10 West feed mister", "group": "water", "line_id": "L10", "intervals": [
+    {"equipment": "mister_west_fert", "label": "West mister (fertilized)", "group": "water", "line_id": "L10", "intervals": [
       {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
     ]},
-    {"equipment": "fog", "label": "L11 Fog", "group": "water", "line_id": "L11", "intervals": [
+    {"equipment": "fog", "label": "Fog", "group": "water", "line_id": "L11", "intervals": [
       {"start": "2026-11-01T06:00:00Z", "end": "2026-11-01T10:00:00Z", "state": "off", "cause": null}
     ]},
     {"equipment": "grow_light_grow", "label": "Grow light (Lutron)", "group": "light", "line_id": null, "intervals": [

@@ -90,8 +90,8 @@ test("creating L01 Mon, Wed, Fri at sunrise + 60 for 12 min previews against the
   await fillWallMwf();
   // The draft draws dashed on the timeline of the next day it runs (today), and the drawer reads its totals; nothing sent yet.
   expect(shownDay()).toBe("Monday, Nov 2 · today");
-  expect(blocks("L01")).toEqual([{ name: "L01 Wall drip · Wall MWF, Mon 07:35, 12 min, draft, not saved, planned", draft: true, hatched: false, capped: false, conflict: false }]);
-  expect(previewLine("L01")).toBe("L01 Mon 12 · Wed 12 · Fri 12 minWall drip cap 60 min a day");
+  expect(blocks("L01")).toEqual([{ name: "Wall drip · Wall MWF, Mon 07:35, 12 min, draft, not saved, planned", draft: true, hatched: false, capped: false, conflict: false }]);
+  expect(previewLine("L01")).toBe("Wall drip Mon 12 · Wed 12 · Fri 12 minWall drip cap 60 min a day");
   expect(checks()).toEqual([]);
   expect(writes(api)).toEqual([]);
   expect(text(drawer()!.querySelector(".field-resolved"))).toBe("→ 07:35 today");
@@ -151,12 +151,12 @@ test("two L01 schedules 20 min apart read too close as it is typed, the draft ou
   const api = open(NEW, { fixture: "l01-schedule" });
   await fillWallMwf();
   setSunrise(80);
-  expect(checks()).toContain("Starts 20 min after Wall MWF on L01: schedules on one line need 30 min");
+  expect(checks()).toContain("Starts 20 min after Wall MWF on Wall drip: schedules on one line need 30 min");
   expect(blocks("L01").find((block) => block.draft)?.conflict).toBe(true);
   // Save stays open: the server decides.
   await save();
   expect(drawer()).not.toBeNull();
-  expect(text(drawer()!.querySelector(".time-field .field-error"))).toBe("Another L01 schedule starts within 30 min of this one");
+  expect(text(drawer()!.querySelector(".time-field .field-error"))).toBe("Another Wall drip schedule starts within 30 min of this one");
   expect(drawer()!.querySelector(".time-field input")?.getAttribute("aria-invalid")).toBe("true");
   expect(writes(api)).toHaveLength(1);
   // Far enough apart it saves, with one more request under its own key.
@@ -178,9 +178,9 @@ test("a mist schedule on L07 with Schedule off saves, and its blocks read \"Skip
   change("Clock time (HH:MM)", "14:00");
   // The draft reads as its saved blocks will: hatched, with why, on Tuesday's timeline, and counted in no total.
   expect(shownDay()).toBe("Tuesday, Nov 3");
-  expect(blocks("L07")).toEqual([{ name: "L07 South mister, Tue 14:00, 4 × 45 s, draft, not saved, Skipped until Schedule is on", draft: true, hatched: true, capped: false, conflict: false }]);
+  expect(blocks("L07")).toEqual([{ name: "South mister, Tue 14:00, 4 × 45 s, draft, not saved, Skipped until Schedule is on", draft: true, hatched: true, capped: false, conflict: false }]);
   expect(preview()).toContain("Skipped until Schedule is on");
-  expect(previewLine("L07")).toBe("L07 no minutes plannedSouth: 0 of 30 min for schedules; 15 kept for VPD");
+  expect(previewLine("L07")).toBe("South mister no minutes plannedSouth: 0 of 30 min for schedules; 15 kept for VPD");
   await save();
   expect(writes(api)[0].body).toMatchObject({ line_id: "L07", days: ["tue"], start: { kind: "clock", clock: "14:00" }, on_s: 45, count: 4, gap_s: 60, degraded_only: false });
   expect(drawer()).toBeNull();
@@ -197,12 +197,12 @@ test("a degraded_only draft follows VPD control: on L04 \"only if VPD sensing is
   expect(blocks("L04").find((block) => block.draft)?.name).toMatch(/Skipped until Schedule is on$/);
   fireEvent.click(inDrawer().getByLabelText("Only if VPD sensing is degraded"));
   // A fallback window, not a planned run: it runs only if VPD sensing fails (#1308 visual QA 6).
-  expect(blocks("L04").find((block) => block.draft)).toMatchObject({ name: "L04 Center mister, Tue 06:50, 4 × 45 s, draft, not saved, fallback, only if VPD sensing is degraded", hatched: false });
+  expect(blocks("L04").find((block) => block.draft)).toMatchObject({ name: "Center mister, Tue 06:50, 4 × 45 s, draft, not saved, fallback, only if VPD sensing is degraded", hatched: false });
   expect(day().querySelector('.sch-row[data-line="L04"] .sch-draft')?.className).toContain("sch-eq-heat1");
   expect(preview()).toContain("only if VPD sensing is degraded");
-  expect(previewLine("L04")).toBe("L04 no minutes plannedCenter: 0 of 60 min for schedules; 60 kept for VPD");
+  expect(previewLine("L04")).toBe("Center mister no minutes plannedCenter: 0 of 60 min for schedules; 60 kept for VPD");
   setLine("L07");
-  expect(blocks("L07")).toEqual([{ name: "L07 South mister, Tue 06:50, 4 × 45 s, draft, not saved, Skipped: VPD control is off", draft: true, hatched: true, capped: false, conflict: false }]);
+  expect(blocks("L07")).toEqual([{ name: "South mister, Tue 06:50, 4 × 45 s, draft, not saved, Skipped: VPD control is off", draft: true, hatched: true, capped: false, conflict: false }]);
   expect(preview()).toContain("Skipped: VPD control is off");
 });
 
@@ -232,16 +232,16 @@ test("an L02 feed shows FERT and the partner's note, sends prewet_s and flush_s,
   setDays("sun");
   setSunrise(60);
   change("Feed", "5");
-  change("Prewet on L01", "120");
-  change("Flush on L01", "240");
+  change("Prewet on Wall drip", "120");
+  change("Flush on Wall drip", "240");
   expect(text(inDrawer().getByRole("heading", { level: 2 }))).toBe("New schedule Fert");
   expect(preview()).toContain("Sun 5 min");
-  expect(text(drawer()!.querySelector(".schedule-fert"))).toBe("Prewets on L01, feeds through L03 from the tank, then flushes on L01");
-  expect(previewLine("L01")).toBe("L01 Sun 6 minWall drip cap 60 min a day");
+  expect(text(drawer()!.querySelector(".schedule-fert"))).toBe("Prewets on Wall drip, feeds through the fertilizer valve from the tank, then flushes on Wall drip");
+  expect(previewLine("L01")).toBe("Wall drip Sun 6 minWall drip cap 60 min a day");
   expect(shownDay()).toBe("Sunday, Nov 8");
-  expect(blocks("L02")).toEqual([{ name: "L02 Wall feed, Sun 07:35, 5 min, draft, not saved, planned", draft: true, hatched: false, capped: false, conflict: false }]);
+  expect(blocks("L02")).toEqual([{ name: "Wall drip (fertilized), Sun 07:35, 5 min, draft, not saved, planned", draft: true, hatched: false, capped: false, conflict: false }]);
   expect([...day().querySelectorAll('.sch-row[data-line="L01"] .sch-part')].map((node) => node.getAttribute("title")?.replaceAll("\u00a0", " "))).toEqual([
-    "prewet 2 min before L02 Wall feed's 07:35 feed, planned", "flush 4 min after L02 Wall feed's 07:35 feed, planned",
+    "prewet 2 min before Wall drip (fertilized)'s 07:35 feed, planned", "flush 4 min after Wall drip (fertilized)'s 07:35 feed, planned",
   ]);
   await save();
   expect(writes(api)[0].body).toEqual({
@@ -325,7 +325,7 @@ test("a check on record is not sent again when the schedule after it was refused
   setSunrise(80);
   await save();
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-08", "API-IRR-03"]);
-  expect(text(drawer()!.querySelector(".time-field .field-error"))).toBe("Another L01 schedule starts within 30 min of this one");
+  expect(text(drawer()!.querySelector(".time-field .field-error"))).toBe("Another Wall drip schedule starts within 30 min of this one");
   expect(inDrawer().queryByRole("checkbox", { name: /^Checked: / })).toBeNull();
   setSunrise(120);
   await save();
@@ -337,8 +337,8 @@ test("before the engine the schedule stays REQUESTED with \"Applies with the irr
   const api = open(NEW, { fixture: "before-engine" });
   await fillWallMwf();
   // The draft reads as a blocked occurrence does, and still counts against the cap.
-  expect(blocks("L01")).toEqual([{ name: "L01 Wall drip · Wall MWF, Mon 07:35, 12 min, draft, not saved, will not run, arrives with the irrigation firmware", draft: true, hatched: true, capped: false, conflict: false }]);
-  expect(previewLine("L01")).toBe("L01 Mon 12 · Wed 12 · Fri 12 minWall drip cap 60 min a day");
+  expect(blocks("L01")).toEqual([{ name: "Wall drip · Wall MWF, Mon 07:35, 12 min, draft, not saved, will not run, arrives with the irrigation firmware", draft: true, hatched: true, capped: false, conflict: false }]);
+  expect(previewLine("L01")).toBe("Wall drip Mon 12 · Wed 12 · Fri 12 minWall drip cap 60 min a day");
   fireEvent.click(inDrawer().getByLabelText("Checked: line flushed, emitters checked"));
   await save();
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-08", "API-IRR-03"]);
@@ -365,8 +365,8 @@ test("the line's kind picks the fields, their min and max from API-IRR-02 bounds
   await advance(0);
   const options = [...(inDrawer().getByLabelText("Line") as HTMLSelectElement).options].map((option) => text(option));
   expect(options).toEqual([
-    "L01 Drip • Wall", "L02 Drip • Wall (Fert.)", "L04 Mister • Center", "L05 Drip • Center (reserved)", "L06 Drip • Center (Fert.) (reserved)", "L07 Mister • South Wall",
-    "L08 Mister • South Wall (Fert.)", "L09 Mister • West Wall", "L10 Mister • West Wall (Fert.)",
+    "Wall drip", "Wall drip (fertilized)", "Center mister", "Center drip (reserved)", "Center drip (fertilized) (reserved)", "South mister",
+    "South mister (fertilized)", "West mister", "West mister (fertilized)",
   ]);
   expect((inDrawer().getByLabelText("Label (optional)") as HTMLInputElement).maxLength).toBe(60);
   expect((inDrawer().getByLabelText("Reason (optional)") as HTMLInputElement).maxLength).toBe(500);
@@ -386,14 +386,14 @@ test("the line's kind picks the fields, their min and max from API-IRR-02 bounds
   expect(inDrawer().queryByLabelText("Only if VPD sensing is degraded")).not.toBeNull();
   // fert_drip: feed minutes, prewet and flush on its clean partner.
   setLine("L06");
-  expect(labels()).toEqual(["Feed", "Prewet on L05", "Flush on L05"]);
-  expect(hint("Prewet on L05")).toBe("Allowed 0–1800 s · step 1");
+  expect(labels()).toEqual(["Feed", "Prewet on Center drip", "Flush on Center drip"]);
+  expect(hint("Prewet on Center drip")).toBe("Allowed 0–1800 s · step 1");
   expect(fertTitle()).toBe(true);
-  expect(text(drawer()!.querySelector(".schedule-fert"))).toBe("Prewets on L05, feeds through L03 from the tank, then flushes on L05");
+  expect(text(drawer()!.querySelector(".schedule-fert"))).toBe("Prewets on Center drip, feeds through the fertilizer valve from the tank, then flushes on Center drip");
   expect(inDrawer().queryByLabelText("Only if VPD sensing is degraded")).toBeNull();
   // fert_mister: the mister fields plus prewet and flush, and no fallback box.
   setLine("L10");
-  expect(labels()).toEqual(["Pulse", "Pulses", "Gap between pulses", "Prewet on L09", "Flush on L09"]);
+  expect(labels()).toEqual(["Pulse", "Pulses", "Gap between pulses", "Prewet on West mister", "Flush on West mister"]);
   expect(inDrawer().queryByLabelText("Only if VPD sensing is degraded")).toBeNull();
 });
 
@@ -442,7 +442,7 @@ test("a start inside another line's run on the same manifold reads as a wait, wh
   setDays("wed");
   change("Start: at a clock time or from the sun", "clock");
   change("Clock time (HH:MM)", "07:40");
-  expect(checks()).toContain("Shares the drip manifold with L01's 07:35 Wall MWF: it waits until 07:47");
+  expect(checks()).toContain("Shares the drip manifold with Wall drip's 07:35 Wall MWF: it waits until 07:47");
 });
 
 test("the day shortcuts set every day or the weekdays, and an empty slot, a line's + Schedule and Duplicate prefill a new schedule", async () => {
@@ -456,7 +456,7 @@ test("the day shortcuts set every day or the weekdays, and an empty slot, a line
   cleanup(); stopFixtureApi();
   open("/water/schedules?schedule=new&line=L04&at=13%3A15&day=2026-11-05", { fixture: "schedules-paused" });
   await advance(0);
-  expect((inDrawer().getByLabelText("Line") as HTMLSelectElement).selectedOptions[0].textContent).toMatch(/^L04/);
+  expect((inDrawer().getByLabelText("Line") as HTMLSelectElement).selectedOptions[0].textContent).toBe("Center mister");
   expect((inDrawer().getByLabelText("Clock time (HH:MM)") as HTMLInputElement).value).toBe("13:15");
   expect(inDrawer().getByRole("button", { name: "Thursday" }).getAttribute("aria-pressed")).toBe("true");
   expect(shownDay()).toBe("Thursday, Nov 5");
@@ -479,7 +479,7 @@ test("a refusal reads in words beside its field: out_of_range with its unit, on_
   // As verdify_schemas names a start's parts.
   expect(plain(refusalWords(error({ field: "start.offset_min", min: -240, max: 240 }), drip))).toEqual({ field: "start", message: "Must be −240–240 min" });
   expect(refusalWords(error({ field: "start.clock", min: 0, max: 1439 }), drip).field).toBe("start");
-  expect(refusalWords(error({ code: "too_close", field: "start" }), drip)).toEqual({ field: "start", message: "Another L01 schedule starts within 30 min of this one" });
+  expect(refusalWords(error({ code: "too_close", field: "start" }), drip)).toEqual({ field: "start", message: "Another Wall drip schedule starts within 30 min of this one" });
   expect(refusalWords(error({ code: "too_many_schedules", message: "The controller holds 24 schedules; delete one first" }), drip)).toEqual({ field: null, message: "The controller holds 24 schedules; delete one first" });
   expect(refusalWords(error({ code: "unknown_target", field: "line_id", message: "Nothing by that name" }), drip)).toEqual({ field: "line_id", message: "Nothing by that name" });
   expect(refusalWords(error({ code: "unknown_target", field: "slot_id", message: "Nothing by that name" }), { ...drip, editing: true })).toEqual({ field: null, message: GONE_TEXT });
@@ -506,8 +506,8 @@ test("Edit from a block's popover opens the stored schedule over it; Save sends 
   change("Reason (optional)", "Rain this week");
   // Wednesday's saved block gives way to the draft; Monday's has run and stays.
   expect(shownDay()).toBe("Wednesday, Nov 4");
-  expect(blocks("L01")).toEqual([{ name: "L01 Wall drip · Wall MWF, Wed 07:35, 10 min, draft, not saved, planned", draft: true, hatched: false, capped: false, conflict: false }]);
-  expect(previewLine("L01")).toBe("L01 Wed 10 · Fri 10 · Sun 6 minWall drip cap 60 min a day");
+  expect(blocks("L01")).toEqual([{ name: "Wall drip · Wall MWF, Wed 07:35, 10 min, draft, not saved, planned", draft: true, hatched: false, capped: false, conflict: false }]);
+  expect(previewLine("L01")).toBe("Wall drip Wed 10 · Fri 10 · Sun 6 minWall drip cap 60 min a day");
   await save();
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-04"]);
   expect(writes(api)[0].path).toBe("/api/v1/irrigation/schedules/11");
@@ -545,12 +545,12 @@ test("a mister and a feed open with their own fields filled in", async () => {
   await advance(0);
   const value = (label: string) => (inDrawer().getByLabelText(label) as HTMLInputElement).value;
   expect([value("Pulse"), value("Pulses"), value("Gap between pulses")]).toEqual(["60", "8", "60"]);
-  expect(previewLine("L04")).toBe("L04 Tue 8 · Wed 8 · Thu 8 · Fri 8 · Sat 8 · Sun 8 minCenter: 8 of 60 min for schedules; 60 kept for VPD");
+  expect(previewLine("L04")).toBe("Center mister Tue 8 · Wed 8 · Thu 8 · Fri 8 · Sat 8 · Sun 8 minCenter: 8 of 60 min for schedules; 60 kept for VPD");
   cleanup(); stopFixtureApi();
   open("/water/schedules?schedule=12", { fixture: "schedules-paused" });
   await advance(0);
-  expect([value("Feed"), value("Prewet on L01"), value("Flush on L01")]).toEqual(["5", "120", "240"]);
-  expect(previewLine("L01")).toBe("L01 Wed 12 · Fri 12 · Sun 6 minWall drip cap 60 min a day");
+  expect([value("Feed"), value("Prewet on Wall drip"), value("Flush on Wall drip")]).toEqual(["5", "120", "240"]);
+  expect(previewLine("L01")).toBe("Wall drip Wed 12 · Fri 12 · Sun 6 minWall drip cap 60 min a day");
 });
 
 test("disabling a schedule takes its blocks off the timeline; it stays muted under its line in the rules list, which reaches it to enable it again", async () => {
