@@ -94,8 +94,9 @@ test("before the engine: run on L04 is 503 with the firmware words, L01 runs, St
   expect(l04.status).toBe(503);
   expect(l04.body).toMatchObject({ code: "unavailable", retryable: false, detail: "arrives with the irrigation firmware" });
   expect(at(api, "POST", "/v1/irrigation/lines/L02/run", { minutes: 5 }).body).toMatchObject({ status: 503, retryable: false });
-  // L01 runs for the controller's configured duration only.
-  expect(at(api, "POST", "/v1/irrigation/lines/L01/run", { minutes: 30 }).body).toMatchObject({ status: 422, code: "out_of_range", field: "minutes", min: 12, max: 12 });
+  // L01 runs for the controller's configured duration only. API-09 has no irrig_wall_duration_min row since the bridge's
+  // rows retired (#1165), so the fixture runs the firmware's default 10 min, as the service does with no readback.
+  expect(at(api, "POST", "/v1/irrigation/lines/L01/run", { minutes: 30 }).body).toMatchObject({ status: 422, code: "out_of_range", field: "minutes", min: 10, max: 10 });
   expect(at(api, "POST", "/v1/irrigation/lines/L01/run", {}).status).toBe(202);
   expect(line(api, "L01")).toMatchObject({ state: { code: "running", cause: "run_now" } });
   expect(at(api, "POST", "/v1/irrigation/stop", { line_id: "L01" })).toMatchObject({ status: 202, body: { kind: "stop", line_id: "L01", status: "pending" } });
