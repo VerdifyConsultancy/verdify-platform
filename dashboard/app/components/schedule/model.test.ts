@@ -9,8 +9,8 @@ import type { IrrigationStatus, Occurrence, ScheduleAgenda, StateLanes } from ".
 import { previewSchedule } from "../../lib/schedule-preview";
 import { localDayWindow } from "../../lib/time-scale";
 import {
-  MANIFOLDS, agendaDays, blocksOf, dayModel, entriesOf, lineInfo, lineTitle, mondayOf, nextStarts, nightSpans, occurrenceKey, pauseNotes, ruleGroups, slotClock, spanStatus,
-  valveEpisodes, valveMinutes, weekCellName, weekCells, weekdayCode,
+  MANIFOLDS, STATUS_WORDS, agendaDays, blocksOf, dayModel, entriesOf, fallbackCount, fallbackWindow, lineInfo, lineTitle, mondayOf, nextStarts, nightSpans, occurrenceKey, pauseNotes,
+  ruleGroups, slotClock, spanStatus, valveEpisodes, valveMinutes, weekCellName, weekCells, weekdayCode,
 } from "./model";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
@@ -39,6 +39,52 @@ test("an occurrence's span: done, planned, running, will not run, missed, and an
     spanStatus({ status: "done", outcome: "unknown" }), spanStatus({ status: "done", outcome: "skipped" }),
   ]).toEqual(["done", "planned", "running", "skipped", "blocked", "missed", "unknown", "skipped"]);
   expect(occurrenceKey({ slot_id: 11, planned_start: "2026-11-04T14:35:00Z" })).toBe("11-1793802900");
+});
+
+test("a degraded_only fallback window is conditional, never a planned run: ahead it runs only if VPD sensing fails, past and unrun it was not needed (#1308 visual QA 6)", () => {
+  const fallback = { degraded_only: true };
+  const note = "only while VPD sensing is degraded";
+  expect([
+    fallbackWindow(occurrence({ status: "planned", reason: note }), fallback), fallbackWindow(occurrence({ status: "planned", reason: `${note}; ends at the daily cap` }), fallback),
+    fallbackWindow(occurrence({ status: "skipped", reason: "only if VPD sensing is degraded" }), fallback), fallbackWindow(occurrence({ status: "done", outcome: "skipped" }), fallback),
+    // Kept from running by something else, it ran, or its outcome never came: it reads as its status says.
+    fallbackWindow(occurrence({ status: "skipped", reason: "line paused by jason" }), fallback), fallbackWindow(occurrence({ status: "skipped", reason: "not a VPD member" }), fallback),
+    fallbackWindow(occurrence({ status: "done", outcome: "ok" }), fallback), fallbackWindow(occurrence({ status: "running" }), fallback),
+    fallbackWindow(occurrence({ status: "planned", reason: note }), { degraded_only: false }), fallbackWindow(occurrence({ status: "planned" }), undefined),
+  ]).toEqual(["ahead", "ahead", "not_needed", "not_needed", null, null, null, null, null, null]);
+  expect([
+    spanStatus(occurrence({ status: "planned", reason: note }), fallback), spanStatus(occurrence({ status: "skipped", reason: note }), fallback),
+    spanStatus(occurrence({ status: "skipped", reason: "line paused by jason" }), fallback), spanStatus(occurrence({ status: "done", outcome: "ok" }), fallback),
+    spanStatus(occurrence({ status: "done", outcome: "unknown" }), fallback), spanStatus(occurrence({ status: "planned", reason: note })),
+  ]).toEqual(["conditional", "conditional", "skipped", "done", "unknown", "planned"]);
+  expect([STATUS_WORDS.conditional, fallbackCount(1), fallbackCount(3)]).toEqual(["fallback", "1 fallback window", "3 fallback windows"]);
+  // The seeded vanda-degraded windows today at 10:42: 09:47 passed without running, 11:47 and 13:47 ahead.
+  const { agenda, status } = set("in-band");
+  const info = lineInfo(status.lines);
+  const today = entriesOf(agenda, null, NOW).filter((entry) => localDate(entry.occurrence.planned_start) === TODAY);
+  const blocks = today.flatMap((entry) => blocksOf(entry, info, NOW));
+  expect(blocks.map((block) => [block.status, block.token, plain(block.label)])).toEqual([
+    ["conditional", "eq-heat1", "09:47 not needed"], ["conditional", "eq-heat1", "11:47 fallback · only if VPD sensing is degraded"],
+    ["conditional", "eq-heat1", "13:47 fallback · only if VPD sensing is degraded"],
+  ]);
+  expect(plain(blocks[0].name)).toBe("L04 Center mister · vanda-degraded, Mon 09:47, 4 × 45 s, fallback, not needed");
+  expect(plain(blocks[1].name)).toBe("L04 Center mister · vanda-degraded, Mon 11:47, 4 × 45 s, fallback, only if VPD sensing is degraded");
+  // None counts as planned minutes, so the day's row plans nothing.
+  const model = dayModel({ day: TODAY, today: TODAY, now: NOW, agenda, lines: status.lines, lanes: null, entries: entriesOf(agenda, null, NOW) });
+  expect(model.groups[1].rows[0].planned).toBe(0);
+  // The week counts them apart from the runs: nothing planned, with the windows still ahead; a past day of unneeded windows ran nothing and skipped nothing.
+  const first = "2026-10-26", last = "2026-11-08";
+  const week = weekCells(mondayOf(TODAY), { agenda, lines: status.lines, today: TODAY, first, last });
+  expect(week.map((cell) => [cell.summary, cell.fallback])).toEqual([["nothing planned", 2], ...Array(6).fill(["nothing planned", 3])]);
+  expect(plain(weekCellName(week[0]))).toBe("Monday, Nov 2 (today): nothing planned · 2 fallback windows");
+  const lastWeek = weekCells("2026-10-26", { agenda, lines: status.lines, today: TODAY, first, last });
+  expect(lastWeek.map((cell) => [cell.summary, cell.skipped, cell.fallback, cell.level])).toEqual(Array(7).fill(["no runs", 0, 0, 0]));
+  // The agenda: the past window "not needed", the ones ahead with the note; none is NEXT.
+  const [day] = agendaDays(entriesOf(agenda, null, NOW), { first: TODAY, days: 1, last, today: TODAY, now: NOW, lines: status.lines });
+  expect(day.rows.map((row) => [shortTime(row.at), row.status, plain(row.detail), row.next])).toEqual([
+    ["09:47", "conditional", "vanda-degraded · not needed", false], ["11:47", "conditional", "vanda-degraded · only if VPD sensing is degraded · Iris may adjust", false],
+    ["13:47", "conditional", "vanda-degraded · only if VPD sensing is degraded · Iris may adjust", false],
+  ]);
 });
 
 test("a block is as long as its schedule, named in words; a feed draws on its line and its prewet and flush on the clean partner", () => {

@@ -291,6 +291,37 @@ test("Schedules reads API-IRR-02 once with past_days=7: the week strip with past
   expect(text(agendaView().querySelector(".sch-next"))).toBe("Next");
 });
 
+test("fallback windows are conditional, never planned runs: dotted on the strips, counted apart on Today, the week strip and the status line (#1308 visual QA 6)", async () => {
+  open("/water", { fixture: "in-band" });
+  await load();
+  const strip = row("L04").querySelector<HTMLElement>(".wat-track")!;
+  expect(strip.querySelectorAll(".sch-block.sch-conditional")).toHaveLength(3);
+  expect(strip.querySelectorAll(".sch-planned, .sch-skipped")).toHaveLength(0);
+  expect(strip.getAttribute("aria-label")?.replaceAll("\u00a0", " ")).toContain("vanda-degraded, Mon 09:47, 4 × 45 s, fallback, not needed; vanda-degraded, Mon 11:47, 4 × 45 s, fallback, only if VPD sensing is degraded");
+  expect(text(row("L04").querySelector(".wat-next"))).toBe("nothing planned · 2 fallback windows");
+  cleanup(); stopFixtureApi();
+  open("/water/schedules", { fixture: "in-band" });
+  await load();
+  expect(status()).toBe("Program rev 42 on controller · confirmed 2 min ago · no run planned this week, 20 fallback windows");
+  expect(text(document.querySelector(".page-status-short"))).toBe("Rev 42 confirmed · no run planned this week, 20 fallback windows");
+  const today = document.querySelector<HTMLElement>('.week-days a[aria-current="date"]')!;
+  expect([text(today.querySelector(".sch-day-summary")), text(today.querySelector(".sch-day-fallback"))]).toEqual(["nothing planned", "2 fallback windows"]);
+  expect(today.getAttribute("aria-label")).toBe("Monday, Nov 2 (today): nothing planned · 2 fallback windows");
+  const blocks = [...timelineRow("L04").querySelectorAll(".sch-block")];
+  expect(blocks.map((block) => block.className.includes("sch-conditional"))).toEqual([true, true, true]);
+  expect(blocks[0].getAttribute("aria-label")?.replaceAll("\u00a0", " ")).toBe("L04 Center mister · vanda-degraded, Mon 09:47, 4 × 45 s, fallback, not needed");
+  // The popover of the window that passed: not needed, never skipped.
+  fireEvent.click(blocks[0]);
+  await load();
+  expect([...document.querySelectorAll("dialog.popover .data-pair")].map((pair) => text(pair)).slice(0, 2)).toEqual([
+    "WhenMon 2 Nov · 09:47 (solar noon − 120) · 4 × 45 s, 60 s gap", "OutcomeNot needed",
+  ]);
+  // Leaving Schedules clears its words from the status line.
+  fireEvent.click(tab("Today"));
+  await load();
+  expect(status()).toBe("Program rev 42 on controller · confirmed 2 min ago · nothing running");
+});
+
 test("‹ › step the day, the week strip selects one, and view=week shows the matrix with each cell's runs against the cap; a cell opens its day", async () => {
   open("/water/schedules", { fixture: "schedules-paused" });
   await load();

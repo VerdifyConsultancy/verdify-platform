@@ -59,7 +59,9 @@ function Running({ status, linked, short = false }: { status: IrrigationStatus; 
 
 /**
  * Water's status line by view (redesign §5.2, §6.1): the program state, then on Today whatever is running (with links to
- * its rows) and on Schedules the next run ("next: L01 Wall drip 16:00"). History's period summary comes from its view.
+ * its rows) and on Schedules the next run ("next: L01 Wall drip 16:00"), or with none the fallback windows ahead that the
+ * Schedules view counts (`summary`: "no run planned this week, 20 fallback windows"). History's period summary comes
+ * from its view.
  */
 export function WaterStatus({ irrigation, view, today, summary, short = false }: { irrigation: PolledQueryResult<IrrigationStatus>; view: "today" | "schedules" | "history"; today: string; summary?: string | null; short?: boolean }) {
   if (view === "history") return summary ? <span className="wat-summary">{summary}</span> : null;
@@ -73,5 +75,5 @@ export function WaterStatus({ irrigation, view, today, summary, short = false }:
     return runningLines(status.lines).length ? <>{program} · <Running status={status} linked short /></> : program;
   }
   const next = nextRunOf(status.lines);
-  return <>{program} · {next ? <>next{short ? "" : ":"} {lineTitle(next.line)} {pauseUntilWords(next.next.start_at, today)}</> : "no run planned this week"}</>;
+  return <>{program} · {next ? <>next{short ? "" : ":"} {lineTitle(next.line)} {pauseUntilWords(next.next.start_at, today)}</> : `no run planned this week${summary ? `, ${summary}` : ""}`}</>;
 }

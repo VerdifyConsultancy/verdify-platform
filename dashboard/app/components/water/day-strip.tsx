@@ -3,7 +3,7 @@ import { useApiDown } from "../../lib/session";
 import { timeScale } from "../../lib/time-scale";
 import { cls } from "../common";
 import { Block, DayAxis, DayBackdrop, Ticks, blockRooms, useWidthOf } from "../schedule/day-timeline";
-import { episodeWords, type DayBlock, type Episode } from "../schedule/model";
+import { episodeWords, fallbackCount, type DayBlock, type Episode } from "../schedule/model";
 
 export type DayStripProps = {
   /** "L01 Wall drip": names the strip's picture. */
@@ -37,8 +37,9 @@ export function stripWords(name: string, blocks: readonly DayBlock[], episodes: 
 
 /**
  * A line's today strip on Water → Today (redesign §5.2): one row from local midnight to the next, with night washed, the
- * scheduled runs as the day timeline draws them (solid done, dashed planned, hatched when they will not run) and the
- * valve's open time as ticks along the lower third, the now rule, and the next run beside it. It is a picture with its
+ * scheduled runs as the day timeline draws them (solid done, dashed planned, hatched when they will not run, a fallback
+ * window dotted) and the valve's open time as ticks along the lower third, the now rule, and the next run beside it, with
+ * the fallback windows still ahead counted apart ("nothing planned · 2 fallback windows"). It is a picture with its
  * numbers in its name, not a tab stop: the row's state sentence, "Runs of L01 ›" and Schedules carry the detail.
  */
 export function DayStrip({ name, from, to, night, blocks, episodes, valveKnown = true, now, token, axis = false, next }: DayStripProps) {
@@ -47,6 +48,8 @@ export function DayStrip({ name, from, to, night, blocks, episodes, valveKnown =
   // A block's words take the room to its neighbour on this strip, measured once it is drawn.
   const [trackRef, trackPx] = useWidthOf<HTMLDivElement>();
   const rooms = blockRooms(blocks, scale);
+  // Fallback windows ahead run only if VPD sensing fails: never "next", counted apart.
+  const fallbacks = blocks.filter((block) => block.part === "run" && block.status === "conditional" && block.start > now / 1000).length;
   return <div className={cls("wat-day", apiDown && "is-neutral")}>
     {axis && <DayAxis scale={scale} className="wat-day-axis" />}
     <div className="wat-day-row">
@@ -55,7 +58,8 @@ export function DayStrip({ name, from, to, night, blocks, episodes, valveKnown =
         <Ticks episodes={episodes} scale={scale} token={token} unknownUntil={valveKnown ? null : now / 1000} />
         {blocks.map((block) => <Block key={block.key} block={block} scale={scale} now={now / 1000} room={rooms.get(block.key)} trackPx={trackPx ?? 600} />)}
       </div>
-      {next !== undefined && <p className="wat-next">{next ?? <span className="meta">nothing planned</span>}</p>}
+      {next !== undefined && <p className="wat-next">{next ?? <span className="meta">nothing planned</span>}
+        {fallbacks > 0 && <span className="wat-next-fallback"><span className="wat-next-sep"> · </span>{fallbackCount(fallbacks)}</span>}</p>}
     </div>
   </div>;
 }

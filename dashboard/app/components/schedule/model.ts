@@ -82,10 +82,31 @@ export function entriesOf(agenda: Pick<ScheduleAgenda, "occurrences" | "schedule
   return [...saved, ...drafted].sort((a, b) => Date.parse(a.occurrence.planned_start) - Date.parse(b.occurrence.planned_start));
 }
 
-/** The span an occurrence draws as (redesign §6.2): done, planned, running, skipped or blocked, missed, or an unknown outcome. */
-export function spanStatus(occurrence: Pick<Occurrence, "status" | "outcome">): SpanStatus {
+/** The API's note on a `degraded_only` occurrence, as it words it and as the words table does. */
+const DEGRADED_NOTE = /^only (?:while|if) VPD sensing is degraded$/i;
+type OccurrenceFacts = Pick<Occurrence, "status" | "outcome"> & Partial<Pick<Occurrence, "reason">>;
+/**
+ * A `degraded_only` fallback window (redesign §6.2, #1308 visual QA 6): one still planned is "ahead", since it runs only
+ * if VPD sensing fails; one that passed without running, skipped with no reason but that note, was "not_needed". Null for
+ * any other occurrence, and for a fallback that ran, runs, or was kept from running by something else (a pause, the line
+ * off, VPD control off), which reads as its status says.
+ */
+export function fallbackWindow(occurrence: OccurrenceFacts, schedule: Pick<Schedule, "degraded_only"> | undefined): "ahead" | "not_needed" | null {
+  if (!schedule?.degraded_only) return null;
+  if (occurrence.status === "planned" && !occurrence.outcome) return "ahead";
+  const skipped = occurrence.status === "skipped" || (occurrence.status === "done" && occurrence.outcome === "skipped");
+  const notes = (occurrence.reason ?? "").split(";").map((part) => part.trim()).filter(Boolean);
+  return skipped && notes.every((part) => DEGRADED_NOTE.test(part)) ? "not_needed" : null;
+}
+
+/**
+ * The span an occurrence draws as (redesign §6.2): done, planned, running, skipped or blocked, missed, or an unknown
+ * outcome; with its schedule, a fallback window ahead or not needed is "conditional" (a dotted outline, never a run).
+ */
+export function spanStatus(occurrence: OccurrenceFacts, schedule?: Pick<Schedule, "degraded_only">): SpanStatus {
   if (occurrence.outcome === "missed") return "missed";
   if (occurrence.outcome === "unknown") return "unknown";
+  if (fallbackWindow(occurrence, schedule)) return "conditional";
   switch (occurrence.status) {
     case "done": return occurrence.outcome === "skipped" ? "skipped" : "done";
     case "running": return "running";
@@ -96,6 +117,7 @@ export function spanStatus(occurrence: Pick<Occurrence, "status" | "outcome">): 
 }
 export const STATUS_WORDS: Readonly<Record<SpanStatus, string>> = {
   done: "done", planned: "planned", running: "running", skipped: "skipped", blocked: "will not run", missed: "missed", unknown: "outcome unknown",
+  conditional: words("fallback_window", "conditional"),
 };
 
 const fertKind = (kind: string | undefined) => kind === "fert_drip" || kind === "fert_mister";
@@ -107,16 +129,20 @@ export function runToken(kind: string | undefined, schedule: Pick<Schedule, "deg
 
 /**
  * The words after a block's time, as the old week read them (`occurrenceWords`): a past one's outcome with any reason
- * ("skipped · line paused by jason"), why one ahead will not run ("Skipped: line disabled"), a planned one's note.
+ * ("skipped · line paused by jason"), why one ahead will not run ("Skipped: line disabled"), a planned one's note; a
+ * fallback window that passed without running "not needed", never a hatched "skipped".
  */
-export function entryNote(entry: Pick<Entry, "occurrence">, now: number): string | null {
+export function entryNote(entry: Pick<Entry, "occurrence"> & Partial<Pick<Entry, "schedule">>, now: number): string | null {
+  if (fallbackWindow(entry.occurrence, entry.schedule) === "not_needed") return words("fallback_window", "not_needed");
   return occurrenceWords(entry.occurrence, now);
 }
 /**
  * The status and its reason in words for a block's name: "done, ok"; "skipped, line paused by jason"; a reason that
- * already says the status stands for it ("Skipped until Schedule is on"), never "skipped, skipped · …".
+ * already says the status stands for it ("Skipped until Schedule is on"), never "skipped, skipped · …"; a fallback
+ * window "fallback, only if VPD sensing is degraded" ahead and "fallback, not needed" once past.
  */
-function statusWords(status: SpanStatus, occurrence: Pick<Occurrence, "reason" | "outcome">): string[] {
+function statusWords(status: SpanStatus, occurrence: Pick<Occurrence, "reason" | "outcome">, note: string | null): string[] {
+  if (status === "conditional") return [STATUS_WORDS.conditional, ...(note ? [note] : [])];
   const reason = occurrenceReasonWords(occurrence.reason);
   const says = reason !== null && reason.toLowerCase().startsWith(STATUS_WORDS[status]);
   return [says ? reason : STATUS_WORDS[status], status === "done" && occurrence.outcome ? words("run_outcome", occurrence.outcome) : null, !says ? reason : null].filter((part): part is string => Boolean(part));
@@ -157,7 +183,7 @@ export function blocksOf(entry: Entry, info: LineInfo, now: number): DayBlock[] 
   const lineId = occurrence.line_id;
   const kind = info.kindOf(lineId);
   const start = seconds(occurrence.planned_start);
-  const status = spanStatus(occurrence);
+  const status = spanStatus(occurrence, schedule);
   const note = entryNote(entry, now);
   const time = shortTime(occurrence.planned_start);
   const amount = schedule ? amountShort(schedule, kind) : null;
@@ -167,9 +193,12 @@ export function blocksOf(entry: Entry, info: LineInfo, now: number): DayBlock[] 
   const flush = schedule?.flush_s ?? 0;
   const runLength = schedule ? Math.max(runSeconds(schedule), 1) : MINUTE_S;
   const feedStart = start + (fertKind(kind) ? prewet : 0);
-  const label = status === "planned" ? `${time}${amount ? ` · ${amount}` : ""}` : status === "running" ? `${time} · running` : `${time} ${note ?? STATUS_WORDS[status]}`;
+  // A fallback window ahead: "11:47 fallback · only if VPD sensing is degraded", cut to "11:47 fallback" where room is short.
+  const ahead = status === "conditional" && fallbackWindow(occurrence, schedule) === "ahead";
+  const label = status === "planned" ? `${time}${amount ? ` · ${amount}` : ""}` : status === "running" ? `${time} · running`
+    : ahead ? `${time} ${STATUS_WORDS.conditional}${note ? ` · ${note}` : ""}` : `${time} ${note ?? STATUS_WORDS[status]}`;
   const isCapped = capped(entry) && status === "planned";
-  const statusName = [entry.draft ? "draft, not saved" : null, ...statusWords(status, occurrence), isCapped && !/\bcap\b/i.test(occurrence.reason ?? "") ? "ends at the daily cap" : null].filter(Boolean).join(", ");
+  const statusName = [entry.draft ? "draft, not saved" : null, ...statusWords(status, occurrence, note), isCapped && !/\bcap\b/i.test(occurrence.reason ?? "") ? "ends at the daily cap" : null].filter(Boolean).join(", ");
   const name = `${info.nameOf(lineId)}${schedule?.label ? ` · ${schedule.label}` : ""}, ${WEEKDAY.format(new Date(start * 1000))} ${time}${amount ? `, ${amount}` : ""}, ${statusName}`;
   const common = { blockKey, status, draft: entry.draft, conflict: entry.conflict, entry, capped: isCapped };
   const blocks: DayBlock[] = [{ ...common, key: `${base}:run`, lineId, part: "run", start: feedStart, end: feedStart + runLength, token: runToken(kind, schedule), label, name, openS: openSeconds(schedule) }];
@@ -360,7 +389,11 @@ export type WeekCell = {
   readonly level: StripLevel | null | undefined;
   /** "5 ran ok", "2 ok, 3 next", "6 next", "1 missed", "no data". */
   readonly summary: string;
+  /** Fallback windows still ahead (`degraded_only`, run only if VPD sensing fails): counted apart from the runs. */
+  readonly fallback: number;
 };
+/** "2 fallback windows", "1 fallback window". */
+export const fallbackCount = (count: number): string => `${count} ${words("fallback_window", "conditional")} ${count === 1 ? "window" : "windows"}`;
 
 /** One week's cells, Monday to Sunday (redesign §6.3): past outcomes and future counts side by side. */
 export function weekCells(monday: string, { agenda, lines, today, first, last }: {
@@ -375,7 +408,8 @@ export function weekCells(monday: string, { agenda, lines, today, first, last }:
     const inRange = date >= first && date <= last;
     const when = date < today ? "past" : date > today ? "future" : "today";
     const day = agenda.occurrences.filter((occurrence) => validTime(occurrence.planned_start) && localDate(occurrence.planned_start) === date);
-    const status = (occurrence: Occurrence) => spanStatus(occurrence);
+    const status = (occurrence: Occurrence) => spanStatus(occurrence, schedules.get(occurrence.slot_id));
+    const fallback = day.filter((occurrence) => fallbackWindow(occurrence, schedules.get(occurrence.slot_id)) === "ahead").length;
     const done = day.filter((occurrence) => status(occurrence) === "done");
     const shortfall = done.filter((occurrence) => occurrence.outcome === "short" || occurrence.outcome === "cap").length;
     const ok = done.filter((occurrence) => !occurrence.outcome || occurrence.outcome === "ok").length;
@@ -398,19 +432,19 @@ export function weekCells(monday: string, { agenda, lines, today, first, last }:
     else if (shortfall) summary = `${ran} ran, ${shortfall} short`;
     else if (ran) summary = ran === ok ? `${ran} ran ok` : `${ran} ran`;
     else summary = skipped ? `${skipped} skipped` : "no runs";
-    return { date, inRange, when, ok, next, missed, short: shortfall, skipped, unknown, minutes, capSum, level, summary };
+    return { date, inRange, when, ok, next, missed, short: shortfall, skipped, unknown, minutes, capSum, level, summary, fallback: inRange ? fallback : 0 };
   });
 }
-/** A week cell's name: "Wednesday, Nov 4: 3 next · 34 of 60 min". */
+/** A week cell's name: "Wednesday, Nov 4: 3 next · 34 of 60 min", "… nothing planned · 3 fallback windows". */
 export function weekCellName(cell: WeekCell): string {
   const totals = cell.inRange && cell.minutes > 0 ? ` · ${Math.round(cell.minutes)}${cell.capSum ? ` of ${cell.capSum}` : ""}${NBSP}min` : "";
-  return `${dayTitle(cell.date).replace(/, \d{4}$/, "")}${cell.when === "today" ? " (today)" : ""}: ${cell.summary}${totals}`;
+  return `${dayTitle(cell.date).replace(/, \d{4}$/, "")}${cell.when === "today" ? " (today)" : ""}: ${cell.summary}${cell.fallback ? ` · ${fallbackCount(cell.fallback)}` : ""}${totals}`;
 }
 
 /** The week matrix's cell (redesign §6.3): its occurrences by line and day, the minutes against the cap. */
 export function matrixCell(entries: readonly Entry[], lineId: string, date: string): { readonly entries: readonly Entry[]; readonly minutes: number } {
   const list = entries.filter((entry) => entry.occurrence.line_id === lineId && localDate(entry.occurrence.planned_start) === date);
-  const minutes = list.reduce((sum, entry) => (["done", "running", "planned"].includes(spanStatus(entry.occurrence)) && entry.schedule && !entry.schedule.degraded_only
+  const minutes = list.reduce((sum, entry) => (["done", "running", "planned"].includes(spanStatus(entry.occurrence, entry.schedule)) && entry.schedule && !entry.schedule.degraded_only
     ? sum + openSeconds(entry.schedule) / 60 : sum), 0);
   return { entries: list, minutes };
 }
@@ -454,10 +488,11 @@ export function agendaDays(entries: readonly Entry[], { first, days, last, today
     const rows = saved.filter((entry) => localDate(entry.occurrence.planned_start) === date).map((entry): AgendaRow => {
       const { occurrence, schedule } = entry;
       const kind = info.kindOf(occurrence.line_id);
-      const status = spanStatus(occurrence);
+      const status = spanStatus(occurrence, schedule);
       const note = entryNote(entry, now);
       const iris = schedule && "manual" in schedule && schedule.manual === false ? "Iris may adjust" : null;
-      const detail = [schedule?.label || (schedule ? null : `slot ${occurrence.slot_id}`), note ?? (status === "planned" ? null : STATUS_WORDS[status]), status === "planned" ? iris : null].filter(Boolean);
+      const ahead = status === "planned" || fallbackWindow(occurrence, schedule) === "ahead";
+      const detail = [schedule?.label || (schedule ? null : `slot ${occurrence.slot_id}`), note ?? (status === "planned" ? null : STATUS_WORDS[status]), ahead ? iris : null].filter(Boolean);
       return {
         key: occurrenceKey(occurrence), blockKey: occurrenceKey(occurrence), entry, lineId: occurrence.line_id, at: occurrence.planned_start, status,
         title: `${info.nameOf(occurrence.line_id)}${schedule ? ` · ${amountShort(schedule, kind)}` : ""}`, detail: [...new Set(detail)].join(" · "), next: entry === next,

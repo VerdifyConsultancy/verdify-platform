@@ -82,6 +82,9 @@ a.wat-site-term{display:inline-flex;align-items:center;min-height:24px;text-unde
 .wat-day-axis{margin-right:calc(11rem + var(--space-3))}
 .wat-track{--sch-row:22px}
 .wat-next{margin:0;font-size:var(--fs-sm);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* "nothing planned" over "2 fallback windows" beside the strip; one line under it on a phone. */
+.wat-next-fallback{display:block;overflow:hidden;font-size:var(--fs-xs);color:var(--muted);text-overflow:ellipsis}
+.wat-next-sep{display:none}
 
 /* ---------------------------------------------------------------------------------------------------- the day's marks */
 /* Shared by the day timeline, the today strips, the week matrix and the key: positions are CSSOM custom properties (--sch-start, --sch-width, --sch-at), never style attributes. Done is solid in the cause's colour, planned a dashed outline, will-not-run hatched, missed a fault outline, an unknown outcome a muted hatch. */
@@ -108,6 +111,8 @@ button.sch-block:hover,.sch-block.is-selected{box-shadow:0 0 0 2px var(--ink)}
 .sch-skipped,.sch-blocked{background:repeating-linear-gradient(135deg,var(--line-strong) 0 2px,#fff 2px 5px);border:1px solid var(--muted)}
 .sch-missed{background:#fff;border:1.5px solid var(--fault)}
 .sch-unknown{background:repeating-linear-gradient(135deg,var(--muted) 0 1px,#fff 1px 4px);border:1px solid var(--line-strong)}
+/* A fallback window (degraded_only): it runs only if VPD sensing fails, so a dotted outline in the fallback colour, never a run's fill or dash. */
+.sch-conditional{background:#fff;border:1.5px dotted var(--eq-heat1)}
 .sch-planned.sch-capped{border:2px dashed var(--amber)}
 .sch-draft{background:#fff;border:1.5px dashed var(--ink)}
 .sch-draft.sch-conflict{border:2px solid var(--fault)}
@@ -116,7 +121,7 @@ button.sch-block:hover,.sch-block.is-selected{box-shadow:0 0 0 2px var(--ink)}
 .sch-narrow-end .sch-block-label{left:auto;right:calc(100% + 3px);background:transparent}
 .is-neutral .sch-done,.is-neutral .sch-tick:not(.sch-tick-unknown){background:var(--muted)}
 .is-neutral .sch-running{background:linear-gradient(to right,var(--muted) calc(var(--sch-done,100) * 1%),#fff calc(var(--sch-done,100) * 1%))}
-.is-neutral .sch-planned,.is-neutral .sch-missed,.is-neutral .sch-running{border-color:var(--muted)}
+.is-neutral .sch-planned,.is-neutral .sch-missed,.is-neutral .sch-running,.is-neutral .sch-conditional{border-color:var(--muted)}
 
 /* The hour ticks over a day's tracks: every 3 h from 861 px, every 6 h below. */
 .sch-axis{position:relative;height:1.1rem;min-width:0}
@@ -153,6 +158,7 @@ span.sch-week-step.is-off{display:inline-flex;align-items:center;justify-content
 .sch-day-weekday{font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--forest)}
 .sch-day-today{font-size:var(--fs-xs);font-weight:600;color:var(--forest)}
 .sch-day-summary{overflow:hidden;font-size:var(--fs-xs);color:var(--muted);white-space:nowrap;text-overflow:ellipsis}
+.sch-day-fallback{overflow:hidden;font-size:var(--fs-xs);color:var(--muted);white-space:nowrap;text-overflow:ellipsis}
 .sch-day-level{display:block;height:6px;margin-top:2px;border-radius:2px;background:var(--tint-ok)}
 .sch-day-level[data-level="1"]{background:var(--tint-warn)}
 .sch-day-level[data-level="2"]{background:var(--amber)}
@@ -230,6 +236,7 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
 .sch-agenda-detail{color:var(--muted)}
 .sch-agenda-row.sch-skipped,.sch-agenda-row.sch-blocked{background:repeating-linear-gradient(135deg,var(--field) 0 5px,#fff 5px 10px)}
 .sch-agenda-row.sch-missed{border-color:var(--fault)}
+.sch-agenda-row.sch-conditional{border:1px dotted var(--eq-heat1)}
 .sch-agenda-row.sch-missed .sch-agenda-detail{font-weight:600;color:var(--fault)}
 .sch-agenda-row.sch-done{box-shadow:inset 3px 0 0 var(--eq-water)}
 .sch-agenda.is-neutral .sch-agenda-row.sch-done{box-shadow:inset 3px 0 0 var(--muted)}
@@ -329,7 +336,7 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
   .sch-week-span{display:block;grid-area:span;align-self:center;margin:0;font-weight:620}
   .sch-week-day>a,.sch-week-none{justify-items:center;padding:var(--space-1) 2px;text-align:center}
   .sch-day-date{display:grid;justify-items:center;line-height:1.2}
-  .sch-day-summary{display:none}
+  .sch-day-summary,.sch-day-fallback{display:none}
   .sch-day-weekday{letter-spacing:.02em}
   .sch-day-today{display:none}
   .sch-day-head{padding:var(--space-3)}
@@ -349,6 +356,8 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
   .sch-block-label,.sch-axis-wide{display:none}
   .wat-day-row{grid-template-columns:minmax(0,1fr);gap:var(--space-1)}
   .wat-day-axis{margin-right:0}
+  .wat-next-fallback{display:inline;font-size:inherit}
+  .wat-next-sep{display:inline}
   .wat-zone-today{justify-content:flex-start;max-width:none}
   .wat-runs-table{display:none}
   .sch-key-button,.wat-select select{min-height:var(--tap)}
