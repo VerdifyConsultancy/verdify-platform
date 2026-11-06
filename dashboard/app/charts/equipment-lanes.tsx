@@ -572,7 +572,7 @@ export type EquipmentLanesProps = {
   open?: readonly LaneSystem[];
   /**
    * API-17's `light.*` rows from MANUAL_LEAD_S before the window: the light rows then read manual or automatic. Without
-   * them (Equipment) the lights read neither.
+   * them (not yet read, or the read failed) the lights read neither.
    */
   lightWrites?: readonly ActivityEntry[] | null;
 };
