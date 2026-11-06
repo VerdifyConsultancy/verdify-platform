@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
+# Kubernetes runs ``python -m experiment_orchestrator.readiness check`` as an
+# exec probe. Each probe is a fresh interpreter inside the container's CPU
+# budget, so keep this module's import graph to cheap stdlib modules: no
+# dataclasses/inspect, typing, tempfile or package-level contracts import
+# (#1389). The writer-only tempfile import is deferred to ``_publish``.
 import json
 import math
 import os
 import re
 import stat
 import sys
-import tempfile
 import time
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 READINESS_SCHEMA = "verdify-experiment-v2-readiness-v1"
 DEFAULT_READINESS_PATH = Path("/run/verdify/experiment-v2-readiness.json")
@@ -33,17 +35,20 @@ _FIELDS = frozenset(
 )
 
 
-@dataclass
 class ReadinessReporter:
     """Atomically publish only bounded operational state, never exception text."""
 
-    mode: str
-    poll_interval_seconds: float
-    path: Path = DEFAULT_READINESS_PATH
-    consecutive_failures: int = 0
-    has_succeeded: bool = False
-
-    def __post_init__(self) -> None:
+    def __init__(
+        self,
+        mode: str,
+        poll_interval_seconds: float,
+        path: Path = DEFAULT_READINESS_PATH,
+    ) -> None:
+        self.mode = mode
+        self.poll_interval_seconds = poll_interval_seconds
+        self.path = path
+        self.consecutive_failures = 0
+        self.has_succeeded = False
         if self.mode not in _MODES:
             raise ValueError("readiness mode is invalid")
         if not math.isfinite(self.poll_interval_seconds) or self.poll_interval_seconds <= 0:
@@ -102,6 +107,8 @@ class ReadinessReporter:
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode() + b"\n"
         if len(encoded) > MAXIMUM_STATUS_BYTES:
             raise ValueError("readiness payload is unexpectedly large")
+        import tempfile
+
         self.path.parent.mkdir(parents=True, exist_ok=True)
         descriptor, temporary_name = tempfile.mkstemp(
             prefix=f".{self.path.name}.",
@@ -146,7 +153,7 @@ def readiness_passes(
     if len(raw) > MAXIMUM_STATUS_BYTES:
         return False
     try:
-        payload: Any = json.loads(raw)
+        payload = json.loads(raw)
     except (UnicodeDecodeError, json.JSONDecodeError):
         return False
     if not isinstance(payload, dict) or set(payload) != _FIELDS:
