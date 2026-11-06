@@ -10,6 +10,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { fixture } from "../../e2e/fixtures/index.mjs";
 import { FakeResizeObserver, MockPlot, created, media, setTokens } from "../charts/fixtures/uplot-mock";
 import { AppShell } from "../components/app-shell";
+import { readOnlyWords } from "../components/control/setting-help";
 import { SETTING_GROUPS } from "../components/setting-row";
 import { text } from "../components/test-render";
 import { settingDisplay } from "../lib/setting-values";
@@ -87,12 +88,14 @@ const status = () => text(document.querySelector(".page-status"));
 const served = (names: string | string[] = "in-band"): Row[] => fixture(names, { now: NOW })["API-09"].items as Row[];
 /** Params as the page lists them: by group in the fixed order, the API's order within a group. */
 const inGroupOrder = (rows: readonly Row[]) => SETTING_GROUPS.flatMap(([group]) => rows.filter((row) => row.group === group).map((row) => row.param));
+/** The rows the catalog lists by default: retired rows wait behind "Show retired" (#1333). */
+const unretired = (rows: readonly Row[]) => rows.filter((row) => row.control_class !== "retired");
 
 test("the catalog: one row per fixture row rendered from the registry, by group in fixed order, each with its TunableDef label and unit", async () => {
-  await open("/settings");
+  await open("/settings?retired=1");
   const items = served();
   expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Settings");
-  expect(status()).toBe(`${items.length} settings · 0 requested · 0 not confirmed · 0 manual`);
+  expect(status()).toBe(`${items.length} settings · 0 waiting · 0 not applied · 0 manual`);
   const expected = SETTING_GROUPS.map(([group]) => [group, items.filter((row) => row.group === group).map((row) => row.param)] as const).filter(([, list]) => list.length);
   const groups = [...document.querySelectorAll("tbody[data-group]")].map((body) => [body.getAttribute("data-group"), [...body.querySelectorAll("tr.setting-row")].map((row) => row.getAttribute("data-param"))]);
   expect(groups).toEqual(expected);
@@ -101,7 +104,7 @@ test("the catalog: one row per fixture row rendered from the registry, by group 
   const band = items.filter((row) => row.group === "band_in_force");
   expect([...document.querySelectorAll(".table-group th")].map((heading) => text(heading))).toEqual(expected.map(([group, list]) => {
     const head = `${SETTING_GROUPS.find(([name]) => name === group)![1]} · ${list.length}`;
-    return group === "band_in_force" ? `${head} ${band[0].read_only_reason}` : head;
+    return group === "band_in_force" ? `${head} Computed (band in force): calculated from the crop band; edit the anchors under Crop band.` : head;
   }));
   for (const row of items) {
     const tr = rowOf(row.param);
@@ -114,7 +117,9 @@ test("the catalog: one row per fixture row rendered from the registry, by group 
     // Every writable row has Edit for an operator; a read-only row opens the same drawer from Details, and says why.
     expect(tr.querySelector(".setting-edit") !== null, row.param).toBe(row.writable);
     expect(tr.querySelector(".ctl-details") !== null, row.param).toBe(!row.writable);
-    if (!row.writable && row.group !== "band_in_force") expect(text(tr.querySelector(".setting-device .setting-note")), row.param).toBe(row.read_only_reason as string);
+    if (!row.writable && row.group !== "band_in_force") expect(text(tr.querySelector(".setting-device .setting-note")), row.param).toBe(readOnlyWords(row as never)!.label);
+    // Every row says what it is in one line under its label (#1332).
+    expect(text(tr.querySelector(".setting-summary")), row.param).toBe((row.help as { summary: string }).summary);
   }
   // A bare number gains the unit its key names, a long duration reads in a unit people read, and a time of day stays a
   // number (#1308 visual QA 38); the bounds' ends follow the value's unit.
@@ -122,7 +127,7 @@ test("the catalog: one row per fixture row rendered from the registry, by group 
   expect(["gl_main_min_on_s", "gl_main_target_light_minutes", "dwell_gate_ms", "vent_latch_timeout_ms", "gl_main_sunrise_hour"].map(value)).toEqual(["120 s", "960 min", "5 min", "30 min", "7"]);
   expect([...rowOf("dwell_gate_ms").querySelectorAll(".ctl-bounds-end")].map((end) => text(end))).toEqual(["60 s", "30 min"]);
   expect(text(rowOf("mister_engage_kpa").querySelector(".setting-label"))).toBe("VPD Mister Engage");
-  expect(text(rowOf("temp_low").querySelector(".setting-device"))).toContain("legacy limit, read-only");
+  expect(text(rowOf("temp_low").querySelector(".setting-device"))).toContain("Legacy limit, not used while the on-chip band runs");
   // In the steady state no row carries a pill: CONFIRMED shows only for a write under 10 minutes old (D-UX-07).
   expect(document.querySelectorAll(".setting-row [data-badge=confirmed]")).toHaveLength(0);
   expect(document.querySelectorAll(".ctl-row-pill [data-badge]")).toHaveLength(0);
@@ -158,21 +163,30 @@ test("the catalog: one row per fixture row rendered from the registry, by group 
 
 test("the rail's filters count and filter the rows and survive a reload of the URL; its groups count what shows; search matches the label and the key", async () => {
   await open("/settings");
-  const items = served();
+  const items = unretired(served());
   const readOnly = items.filter((row) => !row.writable).length;
   expect(chips()).toEqual([
-    [`All ${items.length}`, "true"], ["Recently changed 1", null], ["Requested 0", null], ["Not confirmed 0", null], ["Manual 0", null], ["Changed by an agent 4", null],
-    [`Read-only ${readOnly}`, null],
+    [`All ${items.length}`, "true"], ["Changed in the last 24 h 5", null], ["Waiting for controller 0", null], ["Not applied 0", null], ["Manual (Iris skips) 0", null],
+    ["Set by Iris or an agent 4", null], [`Read-only ${readOnly}`, null],
   ]);
+  // Each filter says what it keeps (#1333): the item's title, and the legend under the rail on every width.
+  expect(rail().querySelector('.ctl-rail-filters a[href="/settings?filter=not_confirmed"]')!.getAttribute("title")).toBe(
+    "Sent 5+ min ago and the controller still reports a different value. Check the controller or the reason shown.",
+  );
+  const legend = rail().querySelector(".ctl-legend")!;
+  expect([...legend.querySelectorAll("dt")].map((term) => text(term))).toEqual(expect.arrayContaining([
+    "Waiting for controller", "Not applied", "Manual (Iris skips)", "Set by Iris or an agent", "No readback", "Computed (band in force)", "Retired",
+  ]));
   expect(railGroups()).toEqual(SETTING_GROUPS.map(([group, label]) => [`${label} ${items.filter((row) => row.group === group).length}`, "a"]));
   // The filter keeps §5.10's "Read-only"; the API's read_only group is named by what it holds, so no two entries share a
   // name with different counts; Show's counts are pills and Groups' plain numbers (#1308 visual QA 29).
   expect(railGroups().at(-1)?.[0]).toBe(`Reference only ${items.filter((row) => row.group === "read_only").length}`);
   expect(railGroups().map(([label]) => label.replace(/ \d+$/, ""))).not.toContain("Read-only");
   expect([rail().querySelector(".ctl-rail-filters"), rail().querySelector(".ctl-rail-groups")]).toEqual([...rail().querySelectorAll(".ctl-rail-list")]);
-  fireEvent.click(screen.getByRole("link", { name: "Changed by an agent 4" }));
+  fireEvent.click(screen.getByRole("link", { name: "Set by Iris or an agent 4" }));
   await settle();
   expect(here()).toBe("/settings?filter=agent");
+  expect(text(document.querySelector(".ctl-filter-note"))).toBe("Set by Iris or an agent: The value in force came from an Iris plan, or from a write by a named agent.");
   const byAgent = ["mister_engage_kpa", "mister_engage_delay_s", "mister_pulse_gap_s", "fog_rh_ceiling_pct"];
   expect(shown()).toEqual(byAgent);
   // The groups count the rows that show; a group with none is no link.
@@ -182,7 +196,7 @@ test("the rail's filters count and filter the rows and survive a reload of the U
   stopFixtureApi();
   await open("/settings?filter=agent");
   expect(shown()).toEqual(byAgent);
-  expect(chips().find(([, current]) => current === "true")).toEqual(["Changed by an agent 4", "true"]);
+  expect(chips().find(([, current]) => current === "true")).toEqual(["Set by Iris or an agent 4", "true"]);
   fireEvent.click(screen.getByRole("link", { name: `Read-only ${readOnly}` }));
   await settle();
   expect(here()).toBe("/settings?filter=read_only");
@@ -224,24 +238,30 @@ test("the drawer keeps a value as stored, with the unit its key names: the row's
   expect(text(document.querySelector("dialog.drawer .setting-device-value"))).toBe("120 s");
 });
 
-test("Recently changed keeps a write of the last 7 days, and is left out when API-09 serves no write time", async () => {
-  const daysAgo = (days: number) => new Date(NOW - days * 86_400_000).toISOString();
-  const written = (param: string, days: number) => ({
-    id: 80 + days, param, value: 60, snapped_from: null, manual: false, manual_before: false, state: "confirmed", state_reason: null, confirmed_at: daysAgo(days),
-    actor: { source: "dashboard", name: "jason" }, reason: null, created_at: daysAgo(days),
+test("Changed in the last 24 h counts any write in force, Iris plans too; 7 d widens it; it is left out when API-09 serves no write time", async () => {
+  const hoursAgo = (hours: number) => new Date(NOW - hours * 3_600_000).toISOString();
+  const written = (param: string, hours: number) => ({
+    id: 80 + hours, param, value: 60, snapped_from: null, manual: false, manual_before: false, state: "confirmed", state_reason: null, confirmed_at: hoursAgo(hours),
+    actor: { source: "dashboard", name: "jason" }, reason: null, created_at: hoursAgo(hours),
   });
-  const patch = (items: Row[]) => items.map((row) => (row.param === "mister_pulse_on_s" ? { ...row, applied_from: "desired", desired: written(row.param, 6) }
-    : row.param === "mister_pulse_gap_s" ? { ...row, applied_from: "desired", desired: written(row.param, 8) } : row));
+  const patch = (items: Row[]) => items.map((row) => (row.param === "mister_pulse_on_s" ? { ...row, applied_from: "desired", desired: written(row.param, 20) }
+    : row.param === "mister_pulse_gap_s" ? { ...row, applied_from: "desired", desired: written(row.param, 6 * 24) } : row));
   await open("/settings?filter=recent", { patch });
-  expect(chips()[1]).toEqual(["Recently changed 2", "true"]);
-  expect(shown()).toEqual(["mister_pulse_on_s", "fog_rh_ceiling_pct"]);
+  expect(chips()[1]).toEqual(["Changed in the last 24 h 5", "true"]);
+  // Iris's plan values written today, the 20 h old write and the agent's writes; not the write 6 days old.
+  expect(shown()).toEqual(["mister_engage_kpa", "mister_engage_delay_s", "mister_pulse_on_s", "fog_rh_ceiling_pct", "sw_economiser_enabled"]);
+  fireEvent.click(within(rail() as HTMLElement).getByRole("link", { name: "7 d" }));
+  await settle();
+  expect(here()).toBe("/settings?filter=recent&window=7d");
+  expect(chips()[1]).toEqual(["Changed in the last 7 d 6", "true"]);
+  expect(shown()).toEqual(["mister_engage_kpa", "mister_engage_delay_s", "mister_pulse_on_s", "mister_pulse_gap_s", "fog_rh_ceiling_pct", "sw_economiser_enabled"]);
   cleanup();
   stopFixtureApi();
   // Desired rows with no readable write time: the filter is left out, and its URL falls back to All.
   await open("/settings?filter=recent", { patch: (items) => items.map((row) => (row.desired ? { ...row, desired: { ...(row.desired as object), created_at: "" } } : row)) });
-  expect(chips().map(([name]) => name)).not.toContain(expect.stringMatching(/^Recently changed/));
+  expect(chips().map(([name]) => name)).not.toContain(expect.stringMatching(/^Changed in the last/));
   expect(chips()[0][1]).toBe("true");
-  expect(shown()).toHaveLength(served().length);
+  expect(shown()).toHaveLength(unretired(served()).length);
 });
 
 test("at 860 px and below the same choices are two selects: Show navigates to its filter, and Group jumps to the group's head", async () => {
@@ -277,13 +297,13 @@ test("the Manual, Requested and Not confirmed filters keep the rows the API mark
   };
   const patch = (items: Row[]) => items.map((row) => (states[row.param] ? { ...row, ...states[row.param] } : row));
   await open("/settings", { patch });
-  expect(status()).toBe(`${served().length} settings · 1 requested · 1 not confirmed · 1 manual`);
+  expect(status()).toBe(`${served().length} settings · 1 waiting · 1 not applied · 1 manual`);
   expect([pillOf("mister_pulse_on_s"), pillOf("band_vpd_low_sm"), pillOf("gl_main_lux_threshold")]).toEqual([["manual"], ["requested"], ["not_confirmed"]]);
   cleanup();
   stopFixtureApi();
-  for (const [chip, filter, param] of [["Manual 1", "manual", "mister_pulse_on_s"], ["Requested 1", "requested", "band_vpd_low_sm"], ["Not confirmed 1", "not_confirmed", "gl_main_lux_threshold"]]) {
+  for (const [chip, filter, param] of [["Manual (Iris skips) 1", "manual", "mister_pulse_on_s"], ["Waiting for controller 1", "requested", "band_vpd_low_sm"], ["Not applied 1", "not_confirmed", "gl_main_lux_threshold"]]) {
     await open("/settings", { patch });
-    expect(chips().slice(2, 5)).toEqual([["Requested 1", null], ["Not confirmed 1", null], ["Manual 1", null]]);
+    expect(chips().slice(2, 5)).toEqual([["Waiting for controller 1", null], ["Not applied 1", null], ["Manual (Iris skips) 1", null]]);
     fireEvent.click(screen.getByRole("link", { name: chip }));
     await settle();
     expect(here(), chip).toBe(`/settings?filter=${filter}`);
@@ -356,8 +376,8 @@ test("/settings?edit=mister_engage_kpa opens with Manual ticked; 1.53 saves as 1
   expect(linesOf("mister_engage_kpa", ".setting-value")).toEqual(["1.60 kPa"]);
   expect(rowOf("mister_engage_kpa").querySelector(".ctl-bounds-requested")).not.toBeNull();
   expect(text(rowOf("mister_engage_kpa").querySelector(".setting-next"))).toBe("Iris skips it");
-  expect(chips().slice(2, 5)).toEqual([["Requested 1", null], ["Not confirmed 0", null], ["Manual 1", null]]);
-  expect(status()).toBe(`${served().length} settings · 1 requested · 0 not confirmed · 1 manual`);
+  expect(chips().slice(2, 5)).toEqual([["Waiting for controller 1", null], ["Not applied 0", null], ["Manual (Iris skips) 1", null]]);
+  expect(status()).toBe(`${served().length} settings · 1 waiting · 0 not applied · 1 manual`);
   // REQUESTED reads API-09 every 5 s; the fixture's readback matches on the third read after the write.
   const after = sentAt("API-09").length;
   await advance(5_000);
@@ -369,7 +389,7 @@ test("/settings?edit=mister_engage_kpa opens with Manual ticked; 1.53 saves as 1
   // MANUAL outranks CONFIRMED for the one pill, so the new confirmation reads in words.
   expect(pillOf("mister_engage_kpa")).toEqual(["manual"]);
   expect(linesOf("mister_engage_kpa", ".setting-writer")).toEqual(["jason changed this at 10:42 · “Vandas drying” · confirmed 10:42"]);
-  expect(chips().slice(2, 5)).toEqual([["Requested 0", null], ["Not confirmed 0", null], ["Manual 1", null]]);
+  expect(chips().slice(2, 5)).toEqual([["Waiting for controller 0", null], ["Not applied 0", null], ["Manual (Iris skips) 1", null]]);
   expect(writes(api)).toHaveLength(1);
 });
 
@@ -383,7 +403,7 @@ test("with no matching readback it reads NOT CONFIRMED with its reason; a late r
   await settle();
   expect(pillOf("mister_engage_kpa")).toEqual(["not_confirmed"]);
   expect(text(rowOf("mister_engage_kpa").querySelector(".state-reason"))).toBe("Sent 10:42; no matching readback yet");
-  expect(chips().slice(3, 4)).toEqual([["Not confirmed 1", null]]);
+  expect(chips().slice(3, 4)).toEqual([["Not applied 1", null]]);
   expect(screen.queryByRole("button", { name: /send again/i })).toBeNull();
   // The readback arrives late: API-09 now reports it, and the next read turns the row CONFIRMED with no new write.
   const fixtureFetch = globalThis.fetch;
@@ -523,10 +543,10 @@ test("before the engine a site cap reads \"—\" with its reason, and saving one
 
 test("a viewer sees every row with no Edit, and ?edit= opens the drawer read-only: value, badge and bounds, no Save or Release", async () => {
   await open("/settings", { fixture: "viewer-session" });
-  expect(shown()).toEqual(inGroupOrder(served("viewer-session")));
+  expect(shown()).toEqual(inGroupOrder(unretired(served("viewer-session"))));
   expect(document.querySelectorAll(".setting-edit, [data-write-control]")).toHaveLength(0);
   // Every row opens its drawer, read-only, from Details.
-  expect(screen.getAllByRole("link", { name: /^Details of / })).toHaveLength(served("viewer-session").length);
+  expect(screen.getAllByRole("link", { name: /^Details of / })).toHaveLength(unretired(served("viewer-session")).length);
   expect(rowOf("mister_engage_kpa").querySelector(".ctl-details")!.getAttribute("href")).toBe("/settings?edit=mister_engage_kpa");
   cleanup();
   stopFixtureApi();
@@ -546,7 +566,9 @@ test("?edit= on a read-only row opens it read-only with its reason, for an opera
   await open("/settings?q=temp_low&edit=temp_low");
   expect(text(within(dialog()).getByRole("heading", { level: 2 }))).toBe("Setting");
   expect(text(dialog().querySelector(".drawer-body > .eyebrow"))).toBe("Crop band · temp_low");
-  expect(text(dialog().querySelector(".drawer-status"))).toContain("legacy limit, read-only: not the band while the on-chip band runs");
+  // Why, by kind, with what it is and what it changes (#1332, #1333).
+  expect(text(dialog().querySelector(".drawer-status"))).toContain("Read-only: Legacy limit, not used while the on-chip band runs.");
+  expect(text(dialog().querySelector(".ctl-help-summary"))).toBe(served().find((row) => row.param === "temp_low")!.help ? (served().find((row) => row.param === "temp_low")!.help as { summary: string }).summary : "");
   expect((screen.getByLabelText("New value") as HTMLInputElement).matches(":disabled")).toBe(true);
   for (const name of ["Save", "Release to auto"]) expect(within(dialog()).queryByRole("button", { name }), name).toBeNull();
   fireEvent.click(within(dialog()).getByRole("button", { name: "Done" }));
@@ -799,4 +821,58 @@ test("the plot in the drawer is the setting's own: a settings-only chart in the 
   await open(`${ENGAGE}&hist=24h`, { fixture: "setting-history" });
   expect(lastPlot().opts.series).toHaveLength(1);
   expect(text(dialog().querySelector(".drawer-history figcaption"))).toBe("VPD Mister Engage · kPa");
+});
+
+test("retired rows wait behind Show retired, a search still finds them, and the glossary explains every row with its sources (#1332, #1333)", async () => {
+  await open("/settings");
+  const retired = served().filter((row) => row.control_class === "retired");
+  expect(retired.length).toBeGreaterThan(0);
+  expect(shown()).not.toContain(retired[0].param);
+  fireEvent.click(within(rail() as HTMLElement).getByRole("link", { name: `Show retired (${retired.length})` }));
+  await settle();
+  expect(here()).toBe("/settings?retired=1");
+  expect(shown()).toContain(retired[0].param);
+  expect(text(rowOf(retired[0].param).querySelector(".setting-note"))).toBe("Retired");
+  cleanup(); stopFixtureApi();
+  await open(`/settings?q=${retired[0].param}`);
+  expect(shown()).toEqual([retired[0].param]);
+  cleanup(); stopFixtureApi();
+  // The glossary: every setting the search keeps, with what it is, what it changes, raising and lowering it.
+  await open("/settings?view=glossary&q=Safety+Max");
+  const entry = document.querySelector('.ctl-glossary-entry[data-param="safety_max"]')!;
+  const help = served().find((row) => row.param === "safety_max")!.help as { summary: string; raise: string; lower: string; caution: string };
+  expect(text(entry.querySelector(".ctl-glossary-summary"))).toBe(help.summary);
+  expect([...entry.querySelectorAll("dt")].map((term) => text(term))).toEqual(["What it changes", "Raising it", "Lowering it", "Guardrail"]);
+  expect(document.querySelectorAll("tr.setting-row")).toHaveLength(0);
+  cleanup(); stopFixtureApi();
+  await open("/settings?view=glossary&q=band_house_temp_high");
+  const band = document.querySelector('.ctl-glossary-entry[data-param="band_house_temp_high"]')!;
+  expect(text(band)).toContain("Computed (band in force)");
+  expect([...band.querySelectorAll("dd a")].map((link) => link.getAttribute("href"))).toEqual(
+    ["sr", "sm", "ss", "mid"].map((anchor) => `/settings?view=glossary&q=band_house_temp_high&edit=band_temp_high_${anchor}`),
+  );
+});
+
+test("the drawer explains the setting above New value, and a guardrail saves only on a second press that shows its rule (#1332, #1333)", async () => {
+  const api = await open("/settings?q=safety_max&edit=safety_max");
+  const help = served().find((row) => row.param === "safety_max")!.help as { summary: string; caution: string; reference_url: string };
+  expect(text(dialog().querySelector(".ctl-help-summary"))).toBe(help.summary);
+  expect([...dialog().querySelectorAll(".ctl-help-list dt")].map((term) => text(term))).toEqual(["What it changes", "Raising it", "Lowering it"]);
+  expect(text(dialog().querySelector(".ctl-help-caution"))).toBe(`Guardrail. ${help.caution}`);
+  expect(within(dialog()).getByRole("link", { name: "Full reference entry" }).getAttribute("href")).toBe(help.reference_url);
+  fireEvent.change(screen.getByLabelText("New value") as HTMLInputElement, { target: { value: "99" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await advance(0);
+  expect(writes(api)).toEqual([]);
+  expect(text(dialog().querySelector(".ctl-guardrail-confirm"))).toContain(help.caution);
+  fireEvent.click(screen.getByRole("button", { name: "Confirm guardrail change" }));
+  await advance(0);
+  expect(writes(api)).toEqual([expect.objectContaining({ method: "PUT", path: "/api/v1/settings/safety_max", body: expect.objectContaining({ value: 99 }) })]);
+  cleanup(); stopFixtureApi();
+  // A Band in force row is computed: it says so and links each anchor it comes from to its own drawer.
+  await open("/settings?q=band_house_temp_high&edit=band_house_temp_high");
+  expect(text(dialog().querySelector(".ctl-help-readonly"))).toBe("Read-only: Computed (band in force). Calculated from the crop band; edit the anchors under Crop band.");
+  expect([...dialog().querySelectorAll(".ctl-help-sources a")].map((link) => link.getAttribute("href"))).toEqual(
+    ["sr", "sm", "ss", "mid"].map((anchor) => `/settings?q=band_house_temp_high&edit=band_temp_high_${anchor}`),
+  );
 });

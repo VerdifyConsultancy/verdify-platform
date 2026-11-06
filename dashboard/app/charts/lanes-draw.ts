@@ -15,7 +15,7 @@ import { fullTime, localDay } from "./time-axis";
  * A lane layout in CSS pixels: rows start at the plot's top (its padding sits above them), one every `pitch`; with a
  * `head`, each row opens with a line of that height (its name, in a chart stack) and its band sits under it.
  */
-export type RowLayout = { pitch: number; head?: number };
+export type RowLayout = { pitch: number; head?: number; /** Each row's top in CSS px from the plot's top, when rows are not all one pitch apart (group headers). */ tops?: readonly number[] };
 /** One row's band in canvas pixels. */
 export type Band = { top: number; height: number; middle: number };
 
@@ -27,7 +27,7 @@ export const LANE_HEAD = 16;
 /** Row `index`'s band: the row from the plot's top, under its head line, inset by `inset` CSS px above and below. */
 export function rowBand(plot: Pick<PaintTarget, "bbox">, layout: RowLayout, index: number, px: number, inset = 3): Band {
   const head = layout.head ?? 0;
-  const top = plot.bbox.top + (index * layout.pitch + head + inset) * px;
+  const top = plot.bbox.top + ((layout.tops?.[index] ?? index * layout.pitch) + head + inset) * px;
   const height = Math.max(px, (layout.pitch - head - 2 * inset) * px);
   return { top, height, middle: top + height / 2 };
 }

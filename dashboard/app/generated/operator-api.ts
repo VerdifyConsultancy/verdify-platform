@@ -503,6 +503,26 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/v1/lighting": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * The grow lights by day: on time, starts, the policy in force and qualified light minutes against target
+         * @description Graphs → Lighting (#1357). One entry per America/Denver day the window touches, up to now, for main and grow: on time and starts from the Lutron readback over the whole day; the controller's readback of its ON threshold, hysteresis, start hour, cutoff hour and target light minutes in force at the day's end; and the qualified light minutes, v_lighting_minutes_status_now's rule for every day: each minute from the start hour to the cutoff (or now) counts once when its mean Tempest outdoor lux is at or above the ON threshold or the light was on. No DLI until the PAR meter (#1184). Windows up to 31 days.
+         */
+        readonly get: operations["API-22"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/v1/me": {
         readonly parameters: {
             readonly query?: never;
@@ -670,7 +690,7 @@ export interface paths {
         };
         /**
          * Equipment on/off intervals for the lanes
-         * @description From equipment_state, seeded with the state at `from` (fn_equip_at). Wet lines carry their cause from the run ledger. Unknown stays unknown. Windows up to 31 days.
+         * @description From equipment_state, seeded with the state at `from` (fn_equip_at). Wet lines carry their cause from the run ledger. Unknown stays unknown. Windows up to 31 days. The grow lights have two lanes each: the Lutron readback (grow_light_main, grow_light_grow; unknown 600 s after its newest row) and the controller's switch intent (grow_light_main_intent, grow_light_grow_intent; Q-09), which the lanes compare with the readback (#1356).
          */
         readonly get: operations["API-05"];
         readonly put?: never;
@@ -1152,6 +1172,44 @@ export interface components {
             /** @enum {string} */
             readonly state: "on" | "off";
         };
+        /** @description API-22: each grow-light circuit by America/Denver day, oldest first */
+        readonly LightingDays: {
+            readonly circuits: readonly {
+                readonly days: readonly {
+                    /** @description The window's cutoff, local hour */
+                    readonly cutoff_hour: number | null;
+                    /** Format: date */
+                    readonly date: string;
+                    /** @description OFF threshold: ON plus the hysteresis */
+                    readonly lux_off: number | null;
+                    /** @description ON threshold, outdoor lux */
+                    readonly lux_on: number | null;
+                    /** @description Seconds the Lutron readback was on in the day */
+                    readonly on_s: number;
+                    /** @description Today: counted up to now */
+                    readonly partial: boolean;
+                    /** @description Minutes in the window with enough outdoor light or the light on; null without a policy readback */
+                    readonly qualified_min: number | null;
+                    /** @description The photoperiod window's start, local hour; null without a readback */
+                    readonly start_hour: number | null;
+                    /** @description OFF to ON edges in the day */
+                    readonly starts: number;
+                    /** @description Target qualified light minutes */
+                    readonly target_min: number | null;
+                    /** @description Minutes of the window counted so far */
+                    readonly window_min: number | null;
+                }[];
+                /** @example grow_light_main */
+                readonly equipment: string;
+                readonly label: string;
+                /** @enum {string} */
+                readonly light: "main" | "grow";
+            }[];
+            /** Format: date-time */
+            readonly from: string;
+            /** Format: date-time */
+            readonly to: string;
+        };
         /** @description Stop or clear-fault target; omit line_id for every line */
         readonly LineCommand: {
             readonly line_id?: components["schemas"]["LineId"];
@@ -1579,7 +1637,7 @@ export interface components {
             readonly state: components["schemas"]["ReadbackState"];
         };
         /**
-         * @description Computed on every read (architecture §5.5); display only. held means the platform applies something else on purpose (a dispatcher clamp, or an armed experiment manifest serving the field). Irrigation items and the irrigation_site settings use requested, confirmed and not_confirmed against the controller's program hash; before the engine firmware they stay requested.
+         * @description Computed on every read (architecture §5.5); display only. held means the platform applies something else on purpose (a dispatcher clamp, or an armed experiment manifest serving the field). Irrigation items and the irrigation_site settings use requested, confirmed and not_confirmed against the controller's program hash; before the engine firmware they stay requested. not_confirmed is only a request at least 5 min old the readback does not match; a setting nobody requested with no readback reads no_readback (#1333).
          * @enum {string}
          */
         readonly ReadbackState: "requested" | "confirmed" | "not_confirmed" | "held" | "no_readback" | "overridden" | "released";
@@ -1863,6 +1921,8 @@ export interface components {
              * @enum {string}
              */
             readonly group: "planner_policy" | "scheduled_policy" | "controller_safety" | "crop_band" | "site_water_caps" | "read_only" | "band_in_force";
+            /** @description Operator text (verdify_schemas.setting_help, #1332); MCP settings serves the same */
+            readonly help?: components["schemas"]["SettingHelp"] | null;
             /** @enum {string} */
             readonly kind: "numeric" | "switch" | "enum";
             /** @description For a registry row, TunableDef.label (VD-29), filled from the setting's entity name in firmware/greenhouse/tunables.yaml and drift-tested */
@@ -1891,6 +1951,11 @@ export interface components {
                 /** Format: date-time */
                 readonly written_at: string;
             };
+            /**
+             * @description Why a read-only row cannot be written (#1333): the tunable_registry READ_ONLY_REASONS key, no_anchor_row (a crop-band row with no crop_band_anchors row) or band_in_force (derived band rows); null on a writable row
+             * @enum {string|null}
+             */
+            readonly read_only_kind?: "band_in_force" | "legacy_wide_limit" | "activity_mirror" | "band_owner" | "retired" | "readback_context" | "no_entity" | "no_anchor_row" | "unknown" | null;
             /** @example legacy wide limit; not the band while the controller runs its on-chip curve */
             readonly read_only_reason?: string | null;
             /** @description Newest readback; for irrigation_site rows the value in the applied program */
@@ -1900,6 +1965,8 @@ export interface components {
              * @enum {string}
              */
             readonly readback_via: "cfg" | "entity" | "program" | "none";
+            /** @description The writable settings a derived row is computed from (the crop-band anchors behind a Band in force row, the main-light schedule behind the activity mirror); empty otherwise */
+            readonly source_params?: readonly string[];
             /** @description Of the newest write, else of the applied value against the readback */
             readonly state: components["schemas"]["ReadbackState"];
             /** @description The registry step (from tunables.yaml; equal to ENTITY_GRIDS for the 48 policy fields) */
@@ -1908,6 +1975,26 @@ export interface components {
             readonly unit?: string | null;
             /** @description false with read_only_reason; the irrigation_site rows are writable before the engine firmware too (their writes wait, state_reason no_engine) */
             readonly writable: boolean;
+        };
+        /** @description What a setting is and what changing it does to the controller (#1332). One source for the dashboard, MCP and the lab ai-tunables page. raise and lower are null on a read-only row; for a switch they say what turning it on and off does. */
+        readonly SettingHelp: {
+            /** @description An interaction or safety note */
+            readonly caution?: string | null;
+            /** @description What the controller does with it */
+            readonly effect: string;
+            /**
+             * @description A hard safety limit (Safety Min, Safety Max and the VPD pair): the dashboard shows caution and asks to confirm before saving
+             * @default false
+             */
+            readonly guardrail?: boolean;
+            /** @description What happens when the value goes down (a switch turned off) */
+            readonly lower?: string | null;
+            /** @description What happens to the greenhouse when the value goes up (a switch turned on) */
+            readonly raise?: string | null;
+            /** @description The setting's entry on the lab ai-tunables reference page */
+            readonly reference_url?: string | null;
+            /** @description One line */
+            readonly summary: string;
         };
         readonly SettingHistory: {
             /** @description Oldest first, from the row in force at from */
@@ -2864,6 +2951,32 @@ export interface operations {
         };
         readonly responses: {
             readonly 202: components["responses"]["Accepted"];
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-22": {
+        readonly parameters: {
+            readonly query: {
+                /** @description Window start (inclusive) */
+                readonly from: components["parameters"]["From"];
+                /** @description Window end (exclusive) */
+                readonly to: components["parameters"]["To"];
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["LightingDays"];
+                };
+            };
             readonly default: components["responses"]["Problem"];
         };
     };
