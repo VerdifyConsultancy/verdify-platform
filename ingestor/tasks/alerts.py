@@ -52,6 +52,7 @@ from ._common import (
     flow_stopped_at,
     json,
     log,
+    re,
     registry_value_error,
     shared,
 )
@@ -541,6 +542,21 @@ _IRR_WATCH_SQL = """
 SELECT (SELECT array_agg(ts ORDER BY ts) FROM climate WHERE ts >= $1 AND ts <= $2) AS climate,
        (SELECT array_agg(ts) FROM system_state WHERE entity = 'irr_engine' AND ts >= $1 AND ts <= $2) AS reconnects
 """
+
+
+# #1351: the Hermes run-failure classes (tasks.heartbeat._classify_hermes_run_error) that mean planning cannot
+# happen until a person acts, with the cause the dashboard alert names. Any of them makes the alert critical.
+PLANNER_PROVIDER_OUTAGE_CLASSES = {
+    "provider_billing": "the OpenAI account is out of credits or its billing failed (add credits to the project)",
+    "provider_auth": "OpenAI rejected the planner's API key",
+}
+_PLANNER_RUN_ERROR_CLASS = re.compile(r'"error_class":"([a-z_]{1,40})"')
+
+
+def _planner_run_error_class(gateway_body: str | None) -> str | None:
+    """The error_class the heartbeat appended to a failed delivery's gateway_body, if any."""
+    found = _PLANNER_RUN_ERROR_CLASS.search(gateway_body or "")
+    return found.group(1) if found else None
 
 
 @dataclass(frozen=True)
@@ -1822,16 +1838,20 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 }
             )
 
-        # 7a. Planner gateway delivery failures. A failed Hermes POST is a
-        # first-class outage, not a pending planner action. Keep the lookback
-        # short so transient restarts auto-resolve once deliveries recover.
+        # 7a. Planner gateway delivery failures. A failed Hermes POST, or a
+        # Hermes run that failed after its 202 (the model provider refused:
+        # billing, key, rate limit), is a first-class planning outage, not a
+        # pending planner action (#1351). Recovery is the newest delivery that
+        # reached a terminal success, not a 2xx gateway status: Hermes answers
+        # 202 before the run fails. Keep the lookback short so transient
+        # restarts auto-resolve once deliveries recover.
         gateway_failures = await conn.fetch(
             """
             WITH last_success AS (
                 SELECT max(delivered_at) AS ts
                   FROM plan_delivery_log
                  WHERE delivered_at > now() - interval '2 hours'
-                   AND gateway_status BETWEEN 200 AND 299
+                   AND status IN ('plan_written', 'action_completed', 'acked')
             )
             SELECT id, event_type, event_label, instance, gateway_status, delivered_at, gateway_body
               FROM plan_delivery_log, last_success
@@ -1856,6 +1876,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                     "gateway_status": int(r["gateway_status"]) if r["gateway_status"] is not None else None,
                     "delivered_at": r["delivered_at"].isoformat(),
                     "gateway_body": (r["gateway_body"] or "")[:300],
+                    "error_class": _planner_run_error_class(r["gateway_body"]),
                 }
                 for r in gateway_failures
             ]
@@ -1864,8 +1885,14 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 for f in failures
             )
             host_down = any(f["gateway_status"] == 0 for f in failures)
-            severity = "critical" if required_failed or host_down or len(failures) >= 3 else "warning"
+            error_classes = sorted({f["error_class"] for f in failures if f["error_class"]})
+            provider_down = any(c in PLANNER_PROVIDER_OUTAGE_CLASSES for c in error_classes)
+            severity = "critical" if required_failed or host_down or provider_down or len(failures) >= 3 else "warning"
             first = failures[0]
+            cause = next(
+                (PLANNER_PROVIDER_OUTAGE_CLASSES[c] for c in error_classes if c in PLANNER_PROVIDER_OUTAGE_CLASSES),
+                None,
+            )
             alerts.append(
                 {
                     "alert_type": "planner_gateway_delivery_failed",
@@ -1874,11 +1901,12 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                     "sensor_id": "system.hermes",
                     "zone": None,
                     "message": (
-                        f"{len(failures)} planner gateway delivery failure(s) in 2h; "
+                        (f"Planning failed: {cause}. " if cause else "")
+                        + f"{len(failures)} planner gateway delivery failure(s) in 2h; "
                         f"latest {first['event_type']}/{first['event_label']} "
                         f"status={first['gateway_status']}"
                     ),
-                    "details": {"failures": failures},
+                    "details": {"failures": failures, "error_classes": error_classes},
                     "metric_value": float(len(failures)),
                     "threshold_value": 0.0,
                 }

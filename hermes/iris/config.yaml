@@ -30,13 +30,15 @@ agent:
   # Memory: Verdify already has TimescaleDB-backed plan_journal + planner_lessons.
   # Web/browser/terminal/filesystem: Iris must not browse the live site, exec
   # shell commands, read raw files, or hit arbitrary URLs. Every write goes
-  # through the MCP allowlist below.
+  # through the MCP allowlist below. Messaging (send_message): Slack is not a
+  # Verdify channel (#1352), so Iris sends no message anywhere.
   disabled_toolsets:
     - memory
     - web
     - terminal
     - filesystem
     - browser
+    - messaging
 
 mcp_servers:
   verdify_greenhouse:

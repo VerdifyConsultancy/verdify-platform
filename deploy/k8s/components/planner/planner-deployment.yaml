@@ -16,10 +16,9 @@
 # present. Per-env DB hosts (3 separate TimescaleDB StatefulSets) come from each
 # overlay's verdify-config (DB_HOST), not hardcoded here.
 #
-# OPENAI: OPENAI_API_KEY is sourced from the verdify-app-secrets Secret. It is
-# OPTIONAL at the manifest level (key may be absent in a given env's sealed
-# secret); the planner degrades to non-LLM paths if unset. No plaintext secret
-# is ever written here.
+# OPENAI: none (#1351, Jason 2026-11-06). Hermes is the only planner on OpenAI;
+# this idle planner gets no OpenAI key, egress-local-only keeps it off the
+# internet, and it degrades to its non-LLM paths.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -44,7 +43,7 @@ spec:
         # consumed via envFrom, so a ConfigMap edit alone does NOT restart this
         # pod. Maintained by scripts/gen-config-revision.sh — do NOT hand-edit
         # (the CI gate recomputes it).
-        verdify.io/config-revision: "7fb025a57821"
+        verdify.io/config-revision: "cc2ef7895648"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: planner
@@ -117,14 +116,6 @@ spec:
             # against the envFrom + env entries above), same as verdify-mcp.
             - name: DB_DSN
               value: "postgresql://$(DB_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
-            # OPTIONAL: the GPT-5.5 client key. optional: true so a sealed secret
-            # without this key still mounts (planner degrades gracefully).
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: verdify-app-secrets
-                  key: OPENAI_API_KEY
-                  optional: true
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

@@ -18,7 +18,7 @@ spec:
   template:
     metadata:
       annotations:
-        verdify.io/config-revision: "7fb025a57821"
+        verdify.io/config-revision: "cc2ef7895648"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: experiment-v2-lifecycle
@@ -112,7 +112,7 @@ spec:
   template:
     metadata:
       annotations:
-        verdify.io/config-revision: "7fb025a57821"
+        verdify.io/config-revision: "cc2ef7895648"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: experiment-v2-selector
@@ -206,7 +206,7 @@ spec:
   template:
     metadata:
       annotations:
-        verdify.io/config-revision: "7fb025a57821"
+        verdify.io/config-revision: "cc2ef7895648"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: experiment-v2-freezer

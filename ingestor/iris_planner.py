@@ -99,15 +99,16 @@ _STANDING_DIRECTIVES = """
    the unified verdify_embeddings store; use them when the static top-10 lessons
    in the context don't match TODAY's forecast or you need playbook reference.
 
-2. **If a tool is missing,** post to #greenhouse: `<@U0A9KJHFJSU> Platform feature request:
+2. **If a tool is missing,** say so in your final reply as `Platform feature request:
    [what you need and why]`. Do NOT work around it with shell commands.
 
 3. **If you hit a platform limitation** (data gap, tool error, optimization idea),
-   post to #greenhouse: `<@U0A9KJHFJSU> Platform feature request: [description]`.
+   say so in your final reply as `Platform feature request: [description]`.
 
-4. **Every planning event ends with a Slack post** to #greenhouse summarizing
-   your decisions. SUNRISE/SUNSET get full briefs. TRANSITION/DEVIATION get
-   brief updates only if you made changes.
+4. **Every planning event ends with a final reply** summarizing your decisions.
+   There is no Slack or chat channel (#1352): never try to send a message.
+   SUNRISE/SUNSET get full briefs. TRANSITION/DEVIATION get brief updates only
+   if you made changes.
 
 5. **To adjust a tunable,** call
    `set_tunable(parameter=..., value=..., reason=..., trigger_id=..., planner_instance=...)`.
@@ -169,8 +170,8 @@ _STANDING_DIRECTIVES = """
     repeat the assembled context inside tool arguments.
 
 13. **Persist before reporting.** For SUNRISE, SUNSET, MIDNIGHT, FORECAST_DEVIATION, and WEEKLY,
-    call `set_plan` and confirm its success response before posting the Slack
-    brief. If MCP rejects the plan, correct and retry the tool call; never post
+    call `set_plan` and confirm its success response before writing the
+    brief. If MCP rejects the plan, correct and retry the tool call; never write
     a brief that implies the plan was written before persistence succeeds.
 """
 
@@ -207,7 +208,7 @@ start; do not attempt filesystem reads or invent missing reference paths.
 
 **Planning cycle:** READ (scorecard + climate + forecast) → DIAGNOSE (which compliance axis
 is the bottleneck, which stress type dominates) → DECIDE (apply lessons, then forecast) →
-   ACT (set_tunable for immediate, set_plan for 72h waypoints) → REPORT (Slack brief).
+   ACT (set_tunable for immediate, set_plan for 72h waypoints) → REPORT (final brief).
    Full plans are hindsight-informed: evaluate prior outcomes, retrieve similar
    historical plans/observations/site context, then write the next posture.
 
@@ -781,7 +782,7 @@ today's forecast, and set the daytime posture.
    contract in Standing Directive 12, including the bare structured hypothesis.
    Include a hypothesis and experiment.
    Do not substitute `set_tunable` or a normal acknowledgement for this full plan.
-8. **Only after `set_plan` returns success, post the morning brief to #greenhouse** — include:
+8. **Only after `set_plan` returns success, write the morning brief as your final reply** — include:
    - Yesterday's scorecard: score, temp vs VPD compliance, stress breakdown, utility cost + trend
    - Today's forecast summary (high/low temp, peak VPD, cloud cover)
    - Your planned posture and any tunable changes with reasoning
@@ -792,7 +793,7 @@ today's forecast, and set the daytime posture.
 {context}
 
 ---
-When done, post your summary to #greenhouse via Slack."""
+When done, end with your summary as the final reply."""
 
 
 def _sunset_prompt(context: str) -> str:
@@ -834,7 +835,7 @@ and set the overnight posture.
    - Dew point margin <5°F? Reduce sealed-vent time and fog intensity
    - Widen `mister_pulse_gap_s` overnight (humidity holds better when sealed)
    Do not substitute `set_tunable` or a normal acknowledgement for this full plan.
-7. **Only after `set_plan` returns success, post the evening brief to #greenhouse** — include:
+7. **Only after `set_plan` returns success, write the evening brief as your final reply** — include:
    - Today's scorecard: score, temp vs VPD compliance, stress breakdown, cost vs 7-day trend
    - What worked today: which tunable decisions improved compliance
    - What didn't: which stress persisted, root cause analysis
@@ -846,7 +847,7 @@ and set the overnight posture.
 {context}
 
 ---
-When done, post your summary to #greenhouse via Slack."""
+When done, end with your summary as the final reply."""
 
 
 def _midnight_prompt(context: str) -> str:
@@ -875,7 +876,7 @@ required full-plan trigger, separate from SUNRISE and SUNSET.
    `climate_intent` transitions. Do not emit raw Tier 1 `params` or crop-band
    params (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`). Follow the compact
    tool-call contract in Standing Directive 12.
-5. **Only after `set_plan` returns success, post a concise midnight review brief** — include the prior day's score,
+5. **Only after `set_plan` returns success, write a concise midnight review brief as your final reply** — include the prior day's score,
    what matched or missed the hypothesis, new lessons, current risk, and the
    new plan posture.
 
@@ -883,7 +884,7 @@ required full-plan trigger, separate from SUNRISE and SUNSET.
 {context}
 
 ---
-When done, post your summary to #greenhouse via Slack."""
+When done, end with your summary as the final reply."""
 
 
 def _weekly_prompt(context: str) -> str:
@@ -914,14 +915,14 @@ plan.
    Standing Directive 12. The first transition must be current when written, every transition must
    carry a complete bounded `climate_intent`, and the plan must remain inside
    the validated 72-hour envelope. Do not emit raw Tier 1 or crop-band params.
-6. **Only after `set_plan` returns success, post a concise weekly brief** — report what improved, what regressed, the
+6. **Only after `set_plan` returns success, write a concise weekly brief as your final reply** — report what improved, what regressed, the
    evidence-backed strategy adjustment, and the next measurable hypothesis.
 
 ### Assembled Context
 {context}
 
 ---
-When done, post your summary to #greenhouse via Slack."""
+When done, end with your summary as the final reply."""
 
 
 def _transition_prompt(context: str, label: str) -> str:
@@ -960,7 +961,7 @@ the existing plan; only set_tunable if there's a concrete signal to act on.
 {context}
 
 ---
-Post to #greenhouse only if you made tunable changes."""
+Write a brief final reply only if you made tunable changes."""
 
 
 def _solar_max_prompt(context: str) -> str:
@@ -997,7 +998,7 @@ roughly 2 hours; what you do here shapes how the next 2-4 hours unfold.
 {context}
 
 ---
-Post to #greenhouse only if you made tunable changes."""
+Write a brief final reply only if you made tunable changes."""
 
 
 def _forecast_deviation_prompt(context: str, deviations: str) -> str:
@@ -1042,7 +1043,7 @@ threshold tripped):
 {context}
 
 ---
-Post to #greenhouse with what deviated, your diagnosis, and what you changed."""
+End with a final reply: what deviated, your diagnosis, and what you changed."""
 
 
 def _manual_prompt(context: str, label: str) -> str:
@@ -1069,7 +1070,7 @@ label and assembled context as the source of truth for scope.
 {context}
 
 ---
-Post to #greenhouse only if you changed greenhouse behavior or found an
+Write a brief final reply only if you changed greenhouse behavior or found an
 operator-relevant issue."""
 
 

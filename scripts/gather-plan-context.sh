@@ -1120,7 +1120,7 @@ echo ""
 # and its lifecycle. Surfacing the 24h histogram here lets Iris see her own
 # silent-drop pattern without needing the ops-side midnight_watch alert to
 # page Jason first. Counts >1 'pending'/'timed_out' in one event_type row
-# indicate a real silent-drop pattern; she should flag it in her Slack brief.
+# indicate a real silent-drop pattern; she should flag it in her final reply.
 echo "--- YOUR RECENT DELIVERIES (last 24h from plan_delivery_log) ---"
 "${DB[@]}" -c "
 SELECT event_type, status, count(*) AS n,
@@ -1132,7 +1132,7 @@ ORDER BY 1, 2;
 " 2>/dev/null || echo "(plan_delivery_log unreachable)"
 echo "Legend: pending = waiting for plan or acknowledge_trigger; plan_written = plan landed;"
 echo "  acked = you recorded no-action-needed; timed_out = SLA breached; delivery_failed = gateway 4xx/5xx."
-echo "If one event_type shows many pending/timed_out: silent-drops are happening. Flag in Slack brief."
+echo "If one event_type shows many pending/timed_out: silent-drops are happening. Flag it in your final reply."
 echo ""
 
 # ── 30b. RECENT CLAMPS (sprint-4 G-Kn-C) ────────────────────────
@@ -1480,7 +1480,7 @@ echo ""
 # ── 31. CONTEXT COMPLETENESS SUMMARY (G10) ─────────────────────
 # Tests each external dependency this script relies on and reports pass/fail
 # with a one-line explanation of what degrades when that dep is down. If any
-# dep is red, mention it in your Slack brief — otherwise Jason can't tell
+# dep is red, mention it in your final reply — otherwise Jason can't tell
 # the difference between "quiet greenhouse" and "missing telemetry".
 echo "=== CONTEXT COMPLETENESS ==="
 _ok=0
@@ -1652,7 +1652,7 @@ fi
 echo ""
 echo "summary: ${_ok} ok / ${_fail} failing (of $((_ok + _fail)) checks)"
 if [ "${_fail}" -gt 0 ]; then
-  echo "⚠ DEGRADED CONTEXT — mention the failing dependencies in your Slack brief so Jason can restore them."
+  echo "⚠ DEGRADED CONTEXT — mention the failing dependencies in your final reply so Jason can restore them."
 fi
 echo ""
 
