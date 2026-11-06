@@ -86,6 +86,19 @@ def test_repository_renders_pass():
     assert images.main() == 0
 
 
+def test_dockerfile_guard_requires_digest_pinned_external_froms():
+    pinned = f"ARG BASE=python:3.13-slim@{DIGEST}\nFROM ${{BASE}} AS base\nFROM base AS final\nFROM scratch\n"
+    assert images.from_errors("Dockerfile", pinned) == []
+    for bad in (
+        "FROM python:3.12-slim AS builder\n",
+        "FROM --platform=linux/amd64 node:22\n",
+        "ARG B=gcc:13\nFROM $B\n",
+    ):
+        assert images.from_errors("Dockerfile", bad), bad
+    # A later stage cannot launder an unpinned image by reusing an alias that is not yet defined.
+    assert images.from_errors("Dockerfile", f"FROM base\nFROM python@{DIGEST} AS base\n")
+
+
 def test_host_guard_flags_a_new_public_host(tmp_path):
     (tmp_path / "a.py").write_text('URL = "https://api.example-new.io/v1"\n# https://docs.only-in-comment.io\n')
     (tmp_path / "b.yaml").write_text(
@@ -96,6 +109,14 @@ def test_host_guard_flags_a_new_public_host(tmp_path):
     errors = hosts.check(found, {})
     assert len(errors) == 1 and "api.example-new.io" in errors[0]
     assert hosts.check(found, {"api.example-new.io": {"scope": "runtime", "decision": "#1"}}) == []
+
+
+def test_host_guard_scans_the_dashboard_runtime():
+    files = hosts.tracked_files()
+    for name in ("dashboard/server.mjs", "dashboard/security-headers.mjs", "config/ai.yaml"):
+        assert name in files
+    assert any(name.startswith("dashboard/app/") for name in files)
+    assert any(name.startswith("dashboard/bff/") for name in files)
 
 
 def test_host_guard_requires_removing_retired_rows():

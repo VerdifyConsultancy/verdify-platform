@@ -77,7 +77,7 @@ $PY -m pytest -q \
 $PY research/planner-efficacy/generate_v2_artifacts.py --check
 
 step "device write gate"
-$PY -m pytest -q tests/test_device_write_gate.py tests/test_replay_outdoor_device_age.py tests/test_replay_setpoint_export.py
+$PY -m pytest -q tests/test_device_write_gate.py tests/test_replay_outdoor_device_age.py tests/test_replay_setpoint_export.py tests/test_replay_accepted_threshold.py
 
 step "pure-logic / contract tests"
 $PY -m pytest -q -rs \
@@ -440,7 +440,11 @@ if [ -n "${CI_BASE_REF:-}" ]; then
   CHANGED=$(git diff --name-only "$BASE" HEAD -- 'firmware/lib/*.h' 'firmware/lib/*.cpp' \
     firmware/greenhouse/controls.yaml firmware/greenhouse/tunables.yaml firmware/greenhouse/globals.yaml)
   if [ -n "$CHANGED" ]; then
-    THRESHOLD_PCT="${THRESHOLD_PCT:-0}" bash scripts/firmware-replay-diff.sh "$BASE" HEAD
+    # A reviewed, accepted divergence (firmware/test/replay-accepted-divergence.json)
+    # applies only while its logic_sha256 equals these exact firmware-logic files;
+    # any later firmware edit changes the hash and the threshold returns to 0.
+    REPLAY_THRESHOLD="${THRESHOLD_PCT:-$($PY scripts/replay-accepted-threshold.py)}"
+    THRESHOLD_PCT="$REPLAY_THRESHOLD" bash scripts/firmware-replay-diff.sh "$BASE" HEAD
     if git diff --name-only "$BASE" HEAD -- firmware/lib/greenhouse_solar.h | grep -q .; then
       REPLAY_EMIT_BAND_DERIVE=1 THRESHOLD_PCT="${BAND_THRESHOLD_PCT:-0}" \
         bash scripts/firmware-replay-diff.sh "$BASE" HEAD

@@ -268,10 +268,17 @@ test("the lanes draw API-05's last 24 h; the 72 h chip sets ?range=72h and redra
   };
   expect(drawn()).toMatchObject({ hours: 24, sync: "verdify:equipment:24h" });
   expect(drawn().rows).toBeGreaterThan(0);
+  // The light switches for the same window from 2 h before it, so the light rows read manual or automatic (#1407).
+  const switches = () => requests(api, "API-17").map((row) => {
+    const query = new URL(row.path, "http://dashboard.invalid").searchParams;
+    return [query.get("action"), windowOf(row).hours];
+  });
+  expect(switches()).toEqual([["light.", 26]]);
   fireEvent.click(within(chips).getByRole("link", { name: "72 h" }));
   await settle();
   expect(screen.getByTestId("where").textContent).toBe("?range=72h");
   expect(laneReads(api).map((row) => windowOf(row).hours)).toEqual([24, 72]);
+  expect(switches()).toEqual([["light.", 26], ["light.", 74]]);
   expect(screen.getByRole("heading", { level: 2, name: "Last 72 h" })).toBeTruthy();
   expect(within(screen.getByRole("list", { name: "Range" })).getByRole("link", { name: "72 h" }).getAttribute("aria-current")).toBe("page");
   expect(drawn()).toMatchObject({ hours: 72, sync: "verdify:equipment:72h" });

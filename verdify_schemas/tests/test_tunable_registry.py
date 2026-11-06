@@ -1408,7 +1408,7 @@ def test_no_effect_rows_are_retired_in_the_catalog_but_still_delivered() -> None
         desired_write_rule,
     )
 
-    assert len(NO_EFFECT_RETIRED_REG) == 26
+    assert len(NO_EFFECT_RETIRED_REG) == 29
     for name in NO_EFFECT_RETIRED_REG:
         spec = REGISTRY[name]
         assert spec.control_class == "retired", name
@@ -1422,6 +1422,8 @@ def test_no_effect_rows_are_retired_in_the_catalog_but_still_delivered() -> None
         for part in ("start_offset", "drydown_before_off")
     }
     assert offsets <= SCHEDULED_POLICY_REG
+    # The activity mirror only direct_wet_window_open read: the dispatcher still pushes it on its own path.
+    assert {"activity_start_hour", "activity_start_minute", "activity_duration_min"} <= NO_EFFECT_RETIRED_REG
     assert {"wet_taper_before_sunset_min", "zone_priority_east"} <= CROP_BAND_REG
     assert LEGACY_SHARED_LIGHTING_REG == {
         "gl_dli_target",

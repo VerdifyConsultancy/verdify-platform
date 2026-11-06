@@ -75,6 +75,24 @@ export function draftParams(texts: Texts, base: Texts, anchors: Texts, anchorBas
   return params as ParamsOf<"API-23">;
 }
 
+const FORECAST_STALE_S = 3 * 3600;
+const shown = (values: readonly (number | null)[]) => values.some((value) => value !== null);
+/**
+ * The measured last 24 h (solid, in the metric's colour as on Graphs) and the outdoor forecast (dashed, `--c-outdoor`).
+ * API-23 places the measured values by clock time, so to the right of the now line they are yesterday's.
+ */
+export function overlays(preview: Pick<BandProfilePreview, "measured" | "forecast">, axis: "temp" | "vpd", now: number | null): ExtraLine[] {
+  const out: ExtraLine[] = [];
+  const measured = preview.measured[axis];
+  if (shown(measured)) out.push({ key: "measured", label: "Measured, last 24 h (after now: yesterday)", token: axis === "temp" ? "--c-temp" : "--c-vpd", values: measured, kind: "line" });
+  const forecast = preview.forecast[axis];
+  const issued = preview.forecast.issued_at === null ? null : Date.parse(preview.forecast.issued_at) / 1000;
+  // As on Graphs (#1354): a forecast issued more than 3 h ago reads STALE.
+  const stale = issued !== null && now !== null && now - issued > FORECAST_STALE_S;
+  if (shown(forecast)) out.push({ key: "forecast", label: stale ? "Outdoor forecast (STALE)" : "Outdoor forecast", token: "--c-outdoor", values: forecast, kind: "dashed" });
+  return out;
+}
+
 /** The day's two charts as the band preview draws them, the VPD one with the controller's night bias and the expected night VPD. */
 function views(preview: BandProfilePreview, now: number | null, edited: boolean): { temp: PreviewView; vpd: PreviewView } {
   const marks = [["Sunrise", preview.sun.sunrise], ["Noon", preview.sun.solar_noon], ["Sunset", preview.sun.sunset]]
@@ -85,10 +103,11 @@ function views(preview: BandProfilePreview, now: number | null, edited: boolean)
     extras.push({ key: "expected-low", label: "Expected night VPD (p25)", token: "--c-outdoor", values: preview.vpd.expected_low });
     extras.push({ key: "expected-high", label: "Expected night VPD (p75)", token: "--c-outdoor", values: preview.vpd.expected_high });
   }
-  const axis = (curves: BandProfilePreview["temp"], unit: string, token: string, more: readonly ExtraLine[] = []): PreviewView => ({
-    unit, token, t: preview.t, runs: ribbon(preview.t, curves.current.low, curves.current.high), current: curves.current, draft: draftOf(curves, edited), now, marks, extras: more,
+  // The target as stored takes the band's edge colour, so the measured trace keeps the metric's own, as on Graphs.
+  const axis = (curves: BandProfilePreview["temp"], unit: string, more: readonly ExtraLine[]): PreviewView => ({
+    unit, token: "--c-band-edge", t: preview.t, runs: ribbon(preview.t, curves.current.low, curves.current.high), current: curves.current, draft: draftOf(curves, edited), now, marks, extras: more,
   });
-  return { temp: axis(preview.temp, "°F", "--c-temp"), vpd: axis(preview.vpd, "kPa", "--c-vpd", extras) };
+  return { temp: axis(preview.temp, "°F", overlays(preview, "temp", now)), vpd: axis(preview.vpd, "kPa", [...extras, ...overlays(preview, "vpd", now)]) };
 }
 
 export function BandEditor() {

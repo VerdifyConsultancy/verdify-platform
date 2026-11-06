@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { ChartStack, type StackPanel } from "../charts/chart-stack";
-import { EquipmentLanes } from "../charts/equipment-lanes";
+import { EquipmentLanes, MANUAL_LEAD_S } from "../charts/equipment-lanes";
 import { RangeToolbar } from "../charts/range-toolbar";
 import { localDay } from "../charts/time-axis";
 import { buildTimeSeriesModel, chartNotes } from "../charts/time-series";
@@ -122,6 +122,9 @@ export default function Graphs() {
   const lanesOn = window !== null && lanesAllowed(window);
   const lanesWindow = lanesOn ? window.measured : null;
   const lanes = slotRead(useWindowReads("API-05", lanesWindow ? [{ id: key, params: { from: isoOf(lanesWindow.from), to: isoOf(lanesWindow.to) } }] : [], null), key);
+  // The light switches, whatever the rail shows, from a timer's length before the window: the light lanes read manual or automatic.
+  const switchesId = `${key}|light-switches`;
+  const switches = slotRead(useWindowReads("API-17", lanesWindow ? [{ id: switchesId, params: { from: isoOf(lanesWindow.from - MANUAL_LEAD_S), to: isoOf(lanesWindow.to), action: "light.", limit: EVENTS_PAGE } }] : [], null), switchesId);
   // The overlay reads what API-03 lists, so an API that does not serve the forecast keys yet is simply not asked for them.
   const overlay = useMemo(() => (view.outdoor ? outdoorOverlay(metricsCatalog) : NO_OVERLAY), [view.outdoor, metricsCatalog]);
   const outdoorId = `${key}|outdoor|${points ?? ""}`, forecastId = `${key}|forecast`;
@@ -148,7 +151,7 @@ export default function Graphs() {
   const panelReads = seriesSlots.map((slot) => seriesReads.get(slot.id)!);
   const compareList = compareSlots.map((slot) => compareReads.get(slot.id)!);
   const historyList = historySlots.map((slot) => historyReads.get(slot.id)!);
-  const reads: WindowRead<unknown>[] = [registry, band, lanes, outdoor, forecastRead, activity, alerts, runs, ...panelReads, ...compareList, ...historyList];
+  const reads: WindowRead<unknown>[] = [registry, band, lanes, switches, outdoor, forecastRead, activity, alerts, runs, ...panelReads, ...compareList, ...historyList];
   // A failing read slows the clock to every second minute, as the polls back off.
   const anyError = reads.some((read) => read.error !== null);
   useEffect(() => { setFailing(anyError); }, [anyError]);
@@ -245,7 +248,7 @@ export default function Graphs() {
     <ChartStack label={`Climate, ${lead.charAt(0).toLowerCase()}${lead.slice(1)}`} panels={panels} band={shownBand} settings={steps} forecast={forecast}
       now={now ?? 0} xRange={window?.x ?? { from: 0, to: 1 }} syncKey={`verdify:graphs:${key}`} excursions={!apiDown} envelope={view.envelope}
       compare={compared} events={eventsRead && sources.length > 0 ? events : null} csvName="graphs" tableName="Climate table"
-      lanes={<EquipmentLanes states={lanes.data} xRange={window?.x ?? { from: 0, to: 1 }} syncKey={`verdify:graphs:${key}`} now={now ?? undefined} message={lanesMessage} zoomControl={false} />}
+      lanes={<EquipmentLanes states={lanes.data} xRange={window?.x ?? { from: 0, to: 1 }} syncKey={`verdify:graphs:${key}`} now={now ?? undefined} message={lanesMessage} zoomControl={false} lightWrites={switches.data?.items ?? null} />}
       foot={<ResolutionLine window={window} bucketSeconds={climateBucket} daily={daily} now={now} />} />
   </>;
 }

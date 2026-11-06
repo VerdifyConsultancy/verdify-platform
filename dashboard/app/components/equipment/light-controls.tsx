@@ -175,14 +175,6 @@ function AutomationLine({ control }: { control: LightControl }) {
  * awaited: a 503's `Problem.result` in words, and after 30 s without a match "Lutron hasn't confirmed: still OFF".
  */
 export function LightControls({ control, item, settingTo }: { control: LightControl; item: Pick<LightItem, "label" | "state" | "intent">; settingTo?: string }) {
-  const { command, write, pressed } = control;
-  const busy = command.sending || write.sending;
-  // Reading back: a second tap on the same button has nothing to add, though after a refusal it may retry.
-  const answering = (state: LightState) => command.phase === "waiting" && pressed === state && !command.error;
-  const shown = lightButtons(item, control.setting?.readback?.value, command.sending || (command.phase === "waiting" && !command.error));
-  const turn = (state: LightState) => <Button key={state} write wide busy={command.sending && pressed === state} disabled={busy || answering(state)} onClick={() => control.turn(state)}>
-    {state === "on" ? "Turn on" : "Turn off"} <span className="burst-length">{MANUAL_MINUTES} min</span> <span className="screen-reader">{item.label}</span>
-  </Button>;
   return <div className="light-controls">
     <div className="light-auto-row">
       <AutomationLine control={control} />
@@ -193,17 +185,36 @@ export function LightControls({ control, item, settingTo }: { control: LightCont
         </OperatorOnly>
       </span>
     </div>
-    <OperatorOnly>
-      <div className="actions light-actions">
-        {shown.automatic && <Button write wide busy={write.sending || (command.sending && pressed === "automatic")} disabled={busy || control.awaitingConfirm} onClick={() => void control.backToAutomatic()}>Back to automatic <span className="screen-reader">{item.label}</span></Button>}
-        {shown.turns.map(turn)}
-      </div>
-      {shown.automatic && <p className="state-note" data-light-timed="">A Turn on or Turn off lasts {MANUAL_MINUTES} min, then the light goes back to automatic</p>}
-      {command.phase === "waiting" && !command.error && <p className="state-note" data-light-note="waiting">Waiting for Lutron</p>}
-      {command.phase === "late" && <p className="state-note" data-light-note="late">{unconfirmedWords(item.state)}</p>}
-      {control.unread && <p className="state-note" data-light-note="unread">Couldn't read the light, so Lutron was not matched to the controller</p>}
-      {command.error && <p className="field-error" role="alert">{command.error.message}</p>}
-      {write.error && <p className="field-error" role="alert">{write.error.message}</p>}
-    </OperatorOnly>
+    <OperatorOnly><LightButtons control={control} item={item} /></OperatorOnly>
   </div>;
+}
+
+/**
+ * A light's buttons and what they await, shared by Equipment's Lights and Now's quick actions (#1342, as D-UX-05 shares
+ * the bursts), so the two pages cannot disagree: the buttons `lightButtons` picks, each Turn on or Turn off timed
+ * (`MANUAL_MINUTES`, #1335), then "Waiting for Lutron", 30 s later "Lutron hasn't confirmed: still OFF", a 503's words,
+ * or a refused write. `wide` makes them full width on phones (Equipment); `compact` keeps Now's row short. Operators only:
+ * the caller wraps it in `OperatorOnly`.
+ */
+export function LightButtons({ control, item, compact = false }: { control: LightControl; item: Pick<LightItem, "label" | "state" | "intent">; compact?: boolean }) {
+  const { command, write, pressed } = control;
+  const busy = command.sending || write.sending;
+  // Reading back: a second tap on the same button has nothing to add, though after a refusal it may retry.
+  const answering = (state: LightState) => command.phase === "waiting" && pressed === state && !command.error;
+  const shown = lightButtons(item, control.setting?.readback?.value, command.sending || (command.phase === "waiting" && !command.error));
+  const turn = (state: LightState) => <Button key={state} write wide={!compact} busy={command.sending && pressed === state} disabled={busy || answering(state)} onClick={() => control.turn(state)}>
+    {state === "on" ? "Turn on" : "Turn off"} <span className="burst-length">{MANUAL_MINUTES} min</span> <span className="screen-reader">{item.label}</span>
+  </Button>;
+  return <>
+    <div className="actions light-actions">
+      {shown.automatic && <Button write wide={!compact} busy={write.sending || (command.sending && pressed === "automatic")} disabled={busy || control.awaitingConfirm} onClick={() => void control.backToAutomatic()}>Back to automatic <span className="screen-reader">{item.label}</span></Button>}
+      {shown.turns.map(turn)}
+    </div>
+    {shown.automatic && !compact && <p className="state-note" data-light-timed="">A Turn on or Turn off lasts {MANUAL_MINUTES} min, then the light goes back to automatic</p>}
+    {command.phase === "waiting" && !command.error && <p className="state-note" data-light-note="waiting">Waiting for Lutron</p>}
+    {command.phase === "late" && <p className="state-note" data-light-note="late">{unconfirmedWords(item.state)}</p>}
+    {control.unread && <p className="state-note" data-light-note="unread">Couldn't read the light, so Lutron was not matched to the controller</p>}
+    {command.error && <p className="field-error" role="alert">{command.error.message}</p>}
+    {write.error && <p className="field-error" role="alert">{write.error.message}</p>}
+  </>;
 }
