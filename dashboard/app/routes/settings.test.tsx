@@ -13,6 +13,7 @@ import { AppShell } from "../components/app-shell";
 import { readOnlyWords } from "../components/control/setting-help";
 import { SETTING_GROUPS } from "../components/setting-row";
 import { text } from "../components/test-render";
+import { GLOSSARY } from "../lib/glossary";
 import { settingDisplay } from "../lib/setting-values";
 import { NOW, UUID, advance, requests, sentAt, startFixtureApi, stopFixtureApi, writes, type FixtureOptions } from "../lib/test-fixture-api";
 import Settings, { links } from "./settings";
@@ -355,7 +356,7 @@ test("/settings?edit=mister_engage_kpa opens with Manual ticked; 1.53 saves as 1
   expect([...dialog().querySelectorAll(".drawer-status .ctl-status-lines li")].map((line) => text(line))).toEqual(["Iris changed this at 07:02 · AI", "next 1.70 kPa at 13:00 · AI"]);
   expect(within(dialog()).getByRole("link", { name: "Activity for this setting" }).getAttribute("href")).toBe("/activity/log?target=mister_engage_kpa");
   expect(within(dialog()).getByRole("link", { name: "Graph this setting" }).getAttribute("href")).toBe("/graphs?set=mister_engage_kpa");
-  expect((screen.getByRole("checkbox", { name: "Manual: Iris skips this" }) as HTMLInputElement).checked).toBe(true);
+  expect((screen.getByRole("checkbox", { name: "Let Iris change this" }) as HTMLInputElement).checked).toBe(false);
   const field = screen.getByLabelText("New value") as HTMLInputElement;
   expect(field.value).toBe("1.60");
   expect(text(dialog().querySelector(".field-hint"))).toBe("Allowed 0.50–2.50 kPa · step 0.05");
@@ -651,7 +652,7 @@ test("the drawer shows the history under the fields, the signed-in person by dis
 
 test("the drawer's Manual box goes with Revert, and the history window leaves the URL when the drawer closes", async () => {
   const api = await open(`${ENGAGE}&hist=30d`, { fixture: "setting-history" });
-  fireEvent.click(screen.getByRole("checkbox", { name: "Manual: Iris skips this" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Let Iris change this" }));
   fireEvent.click(revert()!);
   await settle();
   expect(writes(api).map((row) => (row.body as { manual: boolean }).manual)).toEqual([false]);
@@ -821,6 +822,18 @@ test("the plot in the drawer is the setting's own: a settings-only chart in the 
   await open(`${ENGAGE}&hist=24h`, { fixture: "setting-history" });
   expect(lastPlot().opts.series).toHaveLength(1);
   expect(text(dialog().querySelector(".drawer-history figcaption"))).toBe("VPD Mister Engage · kPa");
+});
+
+test("the glossary at #glossary lists every term the pages define, from the one table their Terms read (#1339)", async () => {
+  await open("/settings");
+  const glossary = document.getElementById("glossary")!;
+  expect(within(glossary).getByRole("heading", { name: "Words on the pages" })).toBeTruthy();
+  const terms = [...glossary.querySelectorAll(".glossary-item dt")].map((term) => text(term));
+  expect(terms).toEqual(Object.values(GLOSSARY).map((entry) => entry.term));
+  expect(terms).toEqual(expect.arrayContaining(["VPD", "Band", "In band today", "Daily mist & fog limit", "Bursts", "Occupancy hold", "Iris plans"]));
+  expect(glossary.querySelector("#term-mist_fog_limit dd")?.textContent).toBe(GLOSSARY.mist_fog_limit.definition);
+  // Folded unless linked, so "In band today" in a definition never reads as the page's state (states.spec).
+  expect(glossary.querySelector("details")?.open).toBe(false);
 });
 
 test("retired rows wait behind Show retired, a search still finds them, and the glossary explains every row with its sources (#1332, #1333)", async () => {

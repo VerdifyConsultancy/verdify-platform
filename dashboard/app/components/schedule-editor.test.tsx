@@ -66,7 +66,7 @@ const save = async () => {
 /** The day timeline's blocks on `line`, the day it shows (the draft's next day while the editor is open). */
 const day = () => document.querySelector<HTMLElement>(".sch-day")!;
 const shownDay = () => text(day().querySelector("h2"));
-const blocks = (line: string) => [...day().querySelectorAll<HTMLElement>(`.sch-row[data-line="${line}"] .sch-block:not(.sch-part)`)].map((block) => ({
+const blocks = (line: string) => [...day().querySelectorAll<HTMLElement>(`.sch-row[data-lines~="${line}"] .sch-block:not(.sch-part)`)].map((block) => ({
   name: (block.getAttribute("aria-label") ?? block.getAttribute("title") ?? "").replaceAll("\u00a0", " "), draft: block.classList.contains("sch-draft"),
   hatched: block.classList.contains("sch-skipped") || block.classList.contains("sch-blocked"), capped: block.classList.contains("sch-capped"), conflict: block.classList.contains("sch-conflict"),
 }));
@@ -211,11 +211,11 @@ test("a degraded_only draft follows VPD control: on L04 \"only if VPD sensing is
   expect(preview()).toContain("Skipped: VPD control is off");
 });
 
-test("the Manual box starts ticked, unticking it saves manual: false, and it starts ticked again on an edit of a schedule Iris may adjust", async () => {
+test("Let Iris change this starts off (manual), ticking it saves manual: false, and it starts off again on an edit of a schedule Iris may adjust", async () => {
   const api = open(NEW);
   await fillWallMwf();
-  const manual = () => inDrawer().getByLabelText("Manual: Iris skips this") as HTMLInputElement;
-  expect(manual().checked).toBe(true);
+  const manual = () => inDrawer().getByLabelText("Let Iris change this") as HTMLInputElement;
+  expect(manual().checked).toBe(false);
   fireEvent.click(manual());
   await save();
   expect(writes(api)[0].body).toMatchObject({ manual: false });
@@ -224,7 +224,7 @@ test("the Manual box starts ticked, unticking it saves manual: false, and it sta
   cleanup(); stopFixtureApi();
   const again = open("/water/schedules?schedule=13", { fixture: "schedules-paused" });
   await advance(0);
-  expect(manual().checked).toBe(true);
+  expect(manual().checked).toBe(false);
   await save();
   expect(writes(again)[0].body).toMatchObject({ manual: true });
   expect(writes(again)[0].operationId).toBe("API-IRR-04");
@@ -257,7 +257,7 @@ test("an L02 feed shows FERT and the partner's note, sends prewet_s and flush_s,
 test("with L01 unchecked, ticking Checked sends one API-IRR-08 {checked, check_note} with no manual, then one API-IRR-03, each under its own key", async () => {
   const api = open(NEW);
   await fillWallMwf();
-  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed, emitters checked"));
+  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed and emitters checked"));
   expect((inDrawer().getByLabelText("Note (optional)") as HTMLInputElement).maxLength).toBe(500);
   change("Note (optional)", "flushed 10 min");
   await save();
@@ -276,7 +276,7 @@ test("with L01 unchecked, ticking Checked sends one API-IRR-08 {checked, check_n
 test("a double tap on Save sends each request once", async () => {
   const api = open(NEW);
   await fillWallMwf();
-  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed, emitters checked"));
+  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed and emitters checked"));
   const form = drawer()!.querySelector("form")!;
   await act(async () => { fireEvent.submit(form); fireEvent.submit(form); await vi.advanceTimersByTimeAsync(0); });
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-08", "API-IRR-03"]);
@@ -310,13 +310,13 @@ test("the box shows only for an enabled drip line with no check: never a mister,
   open(NEW, { fixture: "l02-enabled-unchecked" });
   await advance(0);
   setLine("L02");
-  expect(box()?.closest("label")?.textContent).toBe("Checked: line, tank and injector checked, no leaks");
+  expect(box()?.closest("label")?.textContent).toBe("Checked: tank, injector and line checked, no leaks");
 });
 
 test("a refusal of the check keeps the drawer open and sends nothing else", async () => {
   const api = open(NEW, { fail: { "API-IRR-08": 422 } });
   await fillWallMwf();
-  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed, emitters checked"));
+  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed and emitters checked"));
   await save();
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-08"]);
   expect(drawer()).not.toBeNull();
@@ -326,7 +326,7 @@ test("a refusal of the check keeps the drawer open and sends nothing else", asyn
 test("a check on record is not sent again when the schedule after it was refused", async () => {
   const api = open(NEW, { fixture: "l01-schedule" });
   await fillWallMwf();
-  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed, emitters checked"));
+  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed and emitters checked"));
   setSunrise(80);
   await save();
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-08", "API-IRR-03"]);
@@ -344,7 +344,7 @@ test("before the engine the schedule stays REQUESTED with \"Applies with the irr
   // The draft reads as a blocked occurrence does, and still counts against the cap.
   expect(blocks("L01")).toEqual([{ name: "Wall drip · Wall MWF, Mon 07:35, 12 min, draft, not saved, will not run, arrives with the irrigation firmware", draft: true, hatched: true, capped: false, conflict: false }]);
   expect(previewLine("L01")).toBe("Wall drip Mon 12 · Wed 12 · Fri 12 minWall drip cap 60 min a day");
-  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed, emitters checked"));
+  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed and emitters checked"));
   await save();
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-08", "API-IRR-03"]);
   expect([pill(4), ruleMeta(4)]).toEqual(["Requested", "manual · changed by jason 0 s ago · Applies with the irrigation firmware"]);

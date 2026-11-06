@@ -16,7 +16,12 @@ _LEGACY_LIGHT = (
     "The per-circuit grow-light settings (GL Main and GL Grow) run the lights now; this shared value is kept for "
     "reference and the controller's light logic does not read it."
 )
-_LEGACY_LIGHT_NO_EFFECT = "No effect on the grow lights; change the matching GL Main or GL Grow setting instead."
+
+# The activity mirror (#1406 follow-up): only direct_wet_window_open reads it, and nothing calls that.
+_NO_ACTIVITY_WINDOW = (
+    "The controller stores and reports this value, but no control path reads it: the only code that did "
+    "(the direct-wet window) is never called, so misting and watering do not depend on it."
+)
 
 ENTRIES: dict[str, HelpEntry] = {
     "safety_min": HelpEntry(
@@ -160,8 +165,6 @@ ENTRIES: dict[str, HelpEntry] = {
             "The controller now decides wetting from VPD against the band curve, so a properly shaped evening "
             "band keeps foliage dry. This switch is still stored and reported, but nothing reads it."
         ),
-        raise_="No effect on the greenhouse.",
-        lower="No effect on the greenhouse.",
         refs=(
             f"{_LOGIC}::inline bool past_wet_taper(const SensorInputs&, const Setpoints&) noexcept {{",
             f"{_CONTROLS}::.sw_wet_taper_enabled = id(sw_wet_taper_enabled),",
@@ -173,8 +176,6 @@ ENTRIES: dict[str, HelpEntry] = {
             "Night wetting now follows VPD against the night band and the night condensation guard (Night Stress "
             "Min Dew Margin). This switch is still stored and reported, but nothing reads it."
         ),
-        raise_="No effect on the greenhouse.",
-        lower="No effect on the greenhouse.",
         refs=(
             f"{_LOGIC}::inline bool stress_wet_override_permitted(const SensorInputs&, const Setpoints&) noexcept {{",
             f"{_CONTROLS}::.sw_night_stress_wet_enabled = id(sw_night_stress_wet_enabled),",
@@ -277,32 +278,21 @@ ENTRIES: dict[str, HelpEntry] = {
         refs=(f"{_LOGIC}::if (state.vent_latch_timer_ms >= sp.vent_latch_timeout_ms) {{",),
     ),
     "activity_start_hour": HelpEntry(
-        summary="Start hour of the daily activity window that bounds routine misting of each zone.",
-        effect=(
-            "Mirrors the main grow-light schedule: set from the main lights' start hour (or the grow lights' start "
-            "hour when Iris plans one). Each zone is wetted only inside this window, after its start offset and "
-            "before its drydown. To move it, change the grow-light schedule."
-        ),
+        summary="Start hour of the old daily activity window; no longer used by the controller.",
+        effect=_NO_ACTIVITY_WINDOW + " It still follows the main lights' start hour.",
         refs=(
             f'{_DISPATCHER}::mirrored["activity_start_hour"]',
             f"{_LOGIC}::inline bool direct_wet_window_open(",
         ),
     ),
     "activity_start_minute": HelpEntry(
-        summary="Start minute of the daily activity window; always 0.",
-        effect=(
-            "Mirrors the main grow-light schedule, which starts on the hour, so this stays 0. The window then runs "
-            "for Activity Duration. To move it, change the grow-light schedule."
-        ),
-        refs=(f'{_DISPATCHER}::"activity_start_minute": 0.0',),
+        summary="Start minute of the old daily activity window; always 0 and no longer used by the controller.",
+        effect=_NO_ACTIVITY_WINDOW + " It stays 0, because the light schedule starts on the hour.",
+        refs=(f'{_DISPATCHER}::"activity_start_minute": 0.0', f"{_LOGIC}::inline bool direct_wet_window_open("),
     ),
     "activity_duration_min": HelpEntry(
-        summary="Length of the daily activity window that bounds routine misting of each zone.",
-        effect=(
-            "Mirrors the main grow-light schedule: the main lights' daily light minutes (or the grow lights' when "
-            "Iris plans them). Zone wetting stops each zone's drydown time before the window ends. To change it, "
-            "change GL Main Target Light Minutes."
-        ),
+        summary="Length of the old daily activity window; no longer used by the controller.",
+        effect=_NO_ACTIVITY_WINDOW + " It still follows the main lights' daily light minutes.",
         refs=(
             f'{_DISPATCHER}::mirrored["activity_duration_min"]',
             f"{_LOGIC}::const int wet_duration = activity_duration_min - wet_start_offset_min - drydown_before_off_min;",
@@ -311,15 +301,11 @@ ENTRIES: dict[str, HelpEntry] = {
     "gl_dli_target": HelpEntry(
         summary="Former shared daily light target for the grow lights; no longer used by the controller.",
         effect=_LEGACY_LIGHT,
-        raise_=_LEGACY_LIGHT_NO_EFFECT,
-        lower=_LEGACY_LIGHT_NO_EFFECT,
         refs=(f"{_TUNABLES}::id(gl_dli_target) = x;",),
     ),
     "gl_lux_threshold": HelpEntry(
         summary="Former shared daylight level below which grow lights turned on; no longer used.",
         effect=_LEGACY_LIGHT,
-        raise_=_LEGACY_LIGHT_NO_EFFECT,
-        lower=_LEGACY_LIGHT_NO_EFFECT,
         refs=(
             f"{_TUNABLES}::id(gl_lux_threshold) = x;",
             f"{_CONTROLS}::.lux_on_threshold = id(gl_main_lux_threshold),",
@@ -328,8 +314,6 @@ ENTRIES: dict[str, HelpEntry] = {
     "gl_lux_hysteresis": HelpEntry(
         summary="Former shared daylight margin for turning grow lights off; no longer used.",
         effect=_LEGACY_LIGHT,
-        raise_=_LEGACY_LIGHT_NO_EFFECT,
-        lower=_LEGACY_LIGHT_NO_EFFECT,
         refs=(
             f"{_TUNABLES}::id(gl_lux_hysteresis) = x;",
             f"{_CONTROLS}::.lux_hysteresis = id(gl_main_lux_hysteresis),",
@@ -338,15 +322,11 @@ ENTRIES: dict[str, HelpEntry] = {
     "gl_sunrise_hour": HelpEntry(
         summary="Former shared earliest hour the grow lights could turn on; no longer used.",
         effect=_LEGACY_LIGHT,
-        raise_=_LEGACY_LIGHT_NO_EFFECT,
-        lower=_LEGACY_LIGHT_NO_EFFECT,
         refs=(f"{_TUNABLES}::id(gl_sunrise_hour) = (int)x;",),
     ),
     "gl_sunset_hour": HelpEntry(
         summary="Former shared latest hour the grow lights could stay on; no longer used.",
         effect=_LEGACY_LIGHT,
-        raise_=_LEGACY_LIGHT_NO_EFFECT,
-        lower=_LEGACY_LIGHT_NO_EFFECT,
         refs=(f"{_TUNABLES}::id(gl_sunset_hour) = (int)x;",),
     ),
     "gl_main_dli_target": HelpEntry(
@@ -355,8 +335,6 @@ ENTRIES: dict[str, HelpEntry] = {
             "The controller reports this value but does not use it. The main lights run to GL Main Target Light "
             "Minutes instead."
         ),
-        raise_="No effect on the lights; change GL Main Target Light Minutes instead.",
-        lower="No effect on the lights; change GL Main Target Light Minutes instead.",
         refs=(f"{_SENSORS}::return id(gl_main_dli_target);", f"{_TUNABLES}::id(gl_main_dli_target) = x;"),
     ),
     "sw_gl_main_out_of_service": HelpEntry(
@@ -378,8 +356,6 @@ ENTRIES: dict[str, HelpEntry] = {
             "The controller reports this value but does not use it. The grow circuit runs to GL Grow Target Light "
             "Minutes instead."
         ),
-        raise_="No effect on the lights; change GL Grow Target Light Minutes instead.",
-        lower="No effect on the lights; change GL Grow Target Light Minutes instead.",
         refs=(f"{_SENSORS}::return id(gl_grow_dli_target);", f"{_TUNABLES}::id(gl_grow_dli_target) = x;"),
     ),
     "sw_gl_grow_out_of_service": HelpEntry(
@@ -436,8 +412,6 @@ ENTRIES: dict[str, HelpEntry] = {
             "The main and grow circuits each have their own automatic switch (GL Main Auto Mode, GL Grow Auto "
             "Mode). This shared switch is stored and reported, but the light logic does not read it."
         ),
-        raise_="No effect on the lights; use GL Main Auto Mode or GL Grow Auto Mode.",
-        lower="No effect on the lights; use GL Main Auto Mode or GL Grow Auto Mode.",
         refs=(f"{_TUNABLES}::id(gl_auto_enabled) = true;", f"{_CONTROLS}::.auto_enabled = id(gl_main_auto_enabled),"),
     ),
     "sw_occupancy_inhibit": HelpEntry(

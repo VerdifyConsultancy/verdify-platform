@@ -1488,6 +1488,16 @@ def _check_line_fields(
     for field in ("vpd_member", "schedule_member"):
         if field in changes and line_id not in MISTER_MASK_BIT:
             raise ServiceError(problem("invalid_request", f"{field} is on L04, L07 and L09 only", field=field))
+    # Effective VPD membership needs the line enabled too (firmware ``irr_vpd_zone_allowed``), so VPD control on a
+    # disabled mister would read ON and change nothing (#1344): enable it in the same write, or first.
+    if changes.get("vpd_member") is True and not changes.get("enabled", row["enabled"]):
+        raise ServiceError(
+            problem(
+                "line_disabled",
+                f"{line_id} is disabled, so VPD control would do nothing; enable the line first or in the same change",
+                field="vpd_member",
+            )
+        )
     for field in ("checked", "check_note"):
         if field in changes and actor.source != "dashboard":
             raise ServiceError(problem("forbidden", "Only a person on the dashboard records a check", field=field))
@@ -1592,7 +1602,8 @@ async def line_update(
       same body: ``check_required``. ``checked`` and ``check_note`` are a dashboard person's only (``forbidden`` from
       anyone else) and set ``checked_by``, ``checked_at`` and ``check_note``; a body with only the check records it.
     - ``vpd_member`` and ``schedule_member`` exist on L04, L07 and L09 only (``invalid_request``); the caps are
-      ``validate_line``'s (``out_of_range``). ``paused_until`` null, or a time at or before now, resumes.
+      ``validate_line``'s (``out_of_range``). ``vpd_member: true`` on a line that is, and stays, disabled is
+      ``line_disabled``: the controller acts on VPD membership only while the line is enabled. ``paused_until`` null, or a time at or before now, resumes.
     - ``all`` takes only ``paused_until`` and ``reason``, for every line.
     - ``manual`` None leaves the stored flag; Iris on a manual line (for ``all``, while any line is manual) is
       ``manual``, a pause included.

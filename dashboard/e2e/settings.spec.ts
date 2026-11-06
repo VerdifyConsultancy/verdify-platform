@@ -48,7 +48,7 @@ test("the rail's Show filters carry counts, filter the rows and survive a reload
   await expect(rail.locator(".ctl-rail-list").first().getByRole("link")).toHaveText([
     /^All \d+$/, "Changed in the last 24 h 5", "Waiting for controller 0", "Not applied 0", "Manual (Iris skips) 0", "Set by Iris or an agent 4", /^Read-only \d+$/,
   ]);
-  await rail.getByRole("link", { name: "Controller safety 37" }).click();
+  await rail.getByRole("link", { name: "Controller safety 27" }).click();
   await expect(page.locator("#group-controller_safety")).toBeInViewport();
   await expect(page).toHaveURL(/\/settings$/);
   await page.getByRole("link", { name: "Set by Iris or an agent 4" }).click();
@@ -66,7 +66,7 @@ test("the rail's Show filters carry counts, filter the rows and survive a reload
 test("?edit= opens with Manual ticked; 1.53 saves as 1.55 and reads REQUESTED, then CONFIRMED on the fixture readback", async ({ page, request }) => {
   await useScreensClock(page, request, "requested-to-confirmed");
   await load(page, ENGAGE);
-  await expect(drawer(page).getByRole("checkbox", { name: "Manual: Iris skips this" })).toBeChecked();
+  await expect(drawer(page).getByRole("checkbox", { name: "Let Iris change this" })).not.toBeChecked();
   await drawer(page).getByLabel("New value").fill("1.53");
   await drawer(page).getByLabel("Reason (optional)").fill("Vandas drying");
   await drawer(page).getByRole("button", { name: "Save" }).click();

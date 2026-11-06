@@ -5,6 +5,7 @@
 // (Stop all water with and without the irrigation firmware and with API-IRR-01 not served, the bursts), Needs someone,
 // Water today, Running and next and the zones in their order, each fact once, the writes flag and roles, and no
 // greenhouse data in the server render.
+import { GLOSSARY } from "../lib/glossary";
 import { renderToString } from "react-dom/server";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { createRoutesStub } from "react-router";
@@ -320,4 +321,39 @@ test("south's tile says in words that its probe is offline and it shows the West
   // No bare provenance code anywhere on Now.
   expect(main()).not.toMatch(/\bPEER\b/);
   expect(within(south).getByRole("link").getAttribute("href")).toBe("/graphs/zones?zone=south");
+});
+
+/** The codes Now never shows outside "All readings" (#1339): firmware interlocks, relay codes, planner triggers, provenance codes. */
+const CODES = /SAF-\d|\bL(?:0[1-9]|1[01])\b|\b(?:SUNRISE|SUNSET|SOLAR_MAX|MIDNIGHT|TRANSITION|FORECAST_DEVIATION|HEARTBEAT|WEEKLY)\b|\b(?:PEER|HOUSE|DERIVED|MEASURED)\b/;
+test("no code reads on Now outside All readings, in band, stale, running, a peer probe and lights that differ, track drawn (#1339)", async () => {
+  for (const fixture of ["in-band", "stale-data", "l01-running", "south-peer", "grow-lights-differ", "forecast-rule"]) {
+    vi.stubGlobal("IntersectionObserver", class {
+      constructor(private readonly callback: (entries: { isIntersecting: boolean }[]) => void) {}
+      observe = () => { queueMicrotask(() => this.callback([{ isIntersecting: true }])); };
+      disconnect = vi.fn();
+      unobserve = vi.fn();
+    });
+    await open(fixture);
+    await act(async () => {});
+    await settled();
+    const page = document.querySelector("main")!.cloneNode(true) as Element;
+    page.querySelector("details.now-readings")?.remove();
+    expect(page.querySelector(".tt-rows"), fixture).not.toBeNull();
+    expect(plain(page.textContent ?? ""), fixture).not.toMatch(CODES);
+    // The words that replace them are there: the trigger names on the track and the list, the limit by name.
+    if (fixture === "in-band") expect(plain(page.textContent ?? "")).toMatch(/Sunrise plan ✓.*Daily mist & fog limit|Daily mist & fog limit.*Sunrise plan ✓/s);
+    // Every term the page defines opens its definition from the one glossary.
+    expect(page.querySelectorAll("button.term").length, fixture).toBeGreaterThan(5);
+    cleanup();
+    stopFixtureApi();
+    vi.unstubAllGlobals();
+  }
+});
+
+test("a Term opens its definition in place and links to the whole glossary", async () => {
+  await open("in-band");
+  fireEvent.click(screen.getByRole("button", { name: "In band today" }));
+  const dialog = screen.getByRole("dialog", { name: "In band today" });
+  expect(text(dialog)).toContain(GLOSSARY.in_band_today.definition);
+  expect(within(dialog).getByRole("link", { name: /All terms/ }).getAttribute("href")).toBe("/settings#glossary");
 });

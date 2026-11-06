@@ -650,11 +650,17 @@ def test_the_same_body_may_carry_the_check_and_the_enable_only_from_a_person():
     assert (problem.code, problem.field) == ("invalid_request", "check_note")
 
 
-def test_schedule_on_a_mister_needs_the_check_and_vpd_does_not():
+def test_schedule_on_a_mister_needs_the_check_and_vpd_needs_the_line_on():
     problem = refused(MCP, writes.line_update, AGENT, "L04", {"schedule_member": True}, manual=False)
     assert (problem.code, problem.field) == ("check_required", "schedule_member")
-    line = call(MCP, writes.line_update, AGENT, "L07", {"vpd_member": True}, manual=False).value.lines[0]
-    assert line.vpd_member is True and line.enabled is False
+    # VPD control needs no check, but a disabled mister ignores it, so it is refused rather than a false ON (#1344).
+    problem = refused(MCP, writes.line_update, AGENT, "L07", {"vpd_member": True}, manual=False)
+    assert (problem.code, problem.status, problem.field) == ("line_disabled", 422, "vpd_member")
+    assert counts() == (0, 0, 0)
+    line = call(MCP, writes.line_update, AGENT, "L07", {"vpd_member": False}, manual=False).value.lines[0]
+    assert line.vpd_member is False and line.enabled is False
+    line = call(MCP, writes.line_update, AGENT, "L04", {"vpd_member": True}, manual=False).value.lines[0]
+    assert line.vpd_member is True and line.enabled is True
     assert call(MCP, writes.line_update, AGENT, "L04", {"schedule_member": False}, manual=False).value
 
 

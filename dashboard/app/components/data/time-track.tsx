@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: MIT
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { shortTime } from "../../lib/format";
 import { useApiDown } from "../../lib/session";
 import { timeScale, type TimeScale } from "../../lib/time-scale";
 import { cls } from "../common";
+import { Popover } from "../popover";
 import { STATE_WORDS, cssVars, rovingKeys, type VizState } from "./viz";
 
 /**
  * What a span is (redesign §4.6, §6.2): done is a solid fill in its token; planned a 1.5 px dashed outline on white;
  * running solid to now and dashed after; skipped and blocked a `--line` hatch with a `--muted` outline; missed a
  * `--fault` outline; unknown a `--muted` hatch (a gap, never missed and never off); conditional, a fallback window that runs
- * only if VPD sensing fails, a dotted `--eq-heat1` outline with no fill.
+ * only if VPD sensing fails, a dotted `--eq-heat1` outline with no fill (a light's window in which it may switch on, a
+ * dotted outline in its own token); intent, what the controller wants where it differs from the readback, a dashed ink
+ * outline with no fill over whatever the readback drew.
  */
-export type SpanStatus = "done" | "planned" | "running" | "skipped" | "blocked" | "missed" | "unknown" | "conditional";
+export type SpanStatus = "done" | "planned" | "running" | "skipped" | "blocked" | "missed" | "unknown" | "conditional" | "intent";
 /** The equipment or cause tokens a span may take (`charts/causes.ts` maps a cause to one). */
 export type SpanToken = "eq-water" | "eq-fert" | "eq-fog" | "eq-mister" | "eq-heat1" | "eq-heat2" | "eq-fan1" | "eq-fan2" | "eq-vent" | "eq-master" | "eq-light-main" | "eq-light-grow" | "muted";
 
@@ -35,8 +38,12 @@ export type TrackSpan = {
 export type TrackMarker = {
   readonly key: string;
   readonly at: number;
-  /** "SUNRISE", "13:00 engage 1.60 → 1.70 (AI)". */
+  /** Short words beside the mark: "Sunrise plan ✓", "Mist pulse gap 45 → 55 s · AI". */
   readonly label: string;
+  /** The popover's heading; the label when absent. */
+  readonly title?: string;
+  /** The popover's lines, in full: each member of a merged mark, a change with its time. The label when absent. */
+  readonly detail?: readonly string[];
 };
 export type TrackRow = {
   readonly key: string;
@@ -70,7 +77,7 @@ export type TimeTrackProps = {
 };
 
 const STATUS_WORDS: Readonly<Record<SpanStatus, string>> = {
-  done: "done", planned: "planned", running: "running", skipped: "skipped", blocked: "blocked", missed: "missed", unknown: "outcome unknown", conditional: "fallback",
+  done: "done", planned: "planned", running: "running", skipped: "skipped", blocked: "blocked", missed: "missed", unknown: "outcome unknown", conditional: "fallback", intent: "the controller's intent",
 };
 /** Under this share of the window a span's words sit after it rather than on it. */
 const ROOM_PERCENT = 9;
@@ -91,6 +98,18 @@ function rowMarks(row: TrackRow, scale: TimeScale, now: number | null): RowMarks
   const places = row.spans.flatMap((span) => scale.span(span.start, span.end) ?? []);
   const points = (row.markers ?? []).filter((marker) => marker.at >= scale.from && marker.at <= scale.to).map((marker) => scale.pos(marker.at));
   return { starts: places.map((place) => place.start), ends: places.map((place) => place.start + place.width), points: now === null ? points : [...points, scale.pos(now)] };
+}
+
+/**
+ * A row of markers alone (Iris, the plan, the sun) has two text lanes (#1340): its markers in time order take turns
+ * above and below, so neighbours never cut each other; a label stops only at the next mark in its own lane. The now rule
+ * draws over a label rather than cutting it.
+ */
+export function markerLanes(markers: readonly TrackMarker[], scale: TimeScale): { readonly lane: Map<string, 0 | 1>; readonly marks: readonly [RowMarks, RowMarks] } {
+  const shown = markers.filter((marker) => marker.at >= scale.from && marker.at <= scale.to).sort((a, b) => a.at - b.at);
+  const lane = new Map<string, 0 | 1>(shown.map((marker, index) => [marker.key, (index % 2) as 0 | 1]));
+  const points = (which: 0 | 1) => shown.filter((marker) => lane.get(marker.key) === which).map((marker) => scale.pos(marker.at));
+  return { lane, marks: [{ starts: [], ends: [], points: points(0) }, { starts: [], ends: [], points: points(1) }] };
 }
 
 /**
@@ -122,13 +141,18 @@ function Span({ span, scale, marks }: { span: TrackSpan; scale: TimeScale; marks
   return <span ref={vars} className={className} title={name}>{words}<span className="screen-reader">{name}</span></span>;
 }
 
-function Marker({ marker, scale, marks }: { marker: TrackMarker; scale: TimeScale; marks: RowMarks }) {
+/**
+ * A marker: its dashed tick and its words, one button that opens the marker's detail in a popover (#1340), so nothing
+ * lives only in a label the track had to cut. A label with no room is not drawn; the tick still opens it.
+ */
+function Marker({ marker, scale, marks, lane, onOpen }: { marker: TrackMarker; scale: TimeScale; marks: RowMarks; lane: 0 | 1 | null; onOpen: (marker: TrackMarker, anchor: HTMLElement) => void }) {
   if (marker.at < scale.from || marker.at > scale.to) return null;
   const at = scale.pos(marker.at);
   const room = labelRoom(at, at > LATE_PERCENT ? "before" : "after", marks);
-  // A label with no room is read, not drawn: its words stay in the row for a screen reader and in the agenda.
-  return <span ref={cssVars({ "--tt-at": at, "--tt-room": room })} className={cls("tt-marker", at > LATE_PERCENT && "tt-marker-end")}>
-    <span className={cls("tt-marker-label", room < MIN_ROOM_PERCENT && "screen-reader")} title={marker.label}>{marker.label}</span>
+  return <span ref={cssVars({ "--tt-at": at, "--tt-room": room })} className={cls("tt-marker", at > LATE_PERCENT && "tt-marker-end", lane === 1 && "tt-marker-low")}>
+    <button type="button" className="tt-marker-button" tabIndex={-1} data-roving="" aria-haspopup="dialog" onClick={(event) => onOpen(marker, event.currentTarget)}>
+      <span className={cls("tt-marker-label", room < MIN_ROOM_PERCENT && "screen-reader")} title={marker.title ?? marker.label}>{marker.label}</span>
+    </button>
   </span>;
 }
 
@@ -170,6 +194,8 @@ export function TimeTrack({ label, from, to, rows, now = null, night = [], axis 
   const showNow = now !== null && now >= from && now <= to;
   // A row's end column (`row.end`) needs its grid column on every row, so the track keeps one width.
   const withEnd = rows.some((row) => row.end !== undefined);
+  const [opened, setOpened] = useState<{ readonly marker: TrackMarker; readonly anchor: HTMLElement } | null>(null);
+  const open = (marker: TrackMarker, anchor: HTMLElement) => setOpened((current) => (current?.marker.key === marker.key ? null : { marker, anchor }));
   return <div className={cls("tt", withEnd && "tt-with-end", state === "stale" && "is-stale", apiDown && "is-neutral", state === "loading" && "viz-skeleton")} role="group" aria-label={label}
     tabIndex={drawn ? 0 : undefined} onKeyDown={drawn ? rovingKeys() : undefined}>
     {axis && (drawn ? <Ticks scale={scale} now={showNow ? now : null} /> : <div className="tt-axis" aria-hidden="true" />)}
@@ -177,7 +203,8 @@ export function TimeTrack({ label, from, to, rows, now = null, night = [], axis 
       ? <ul className="tt-rows">
         {rows.map((row) => {
           const marks = rowMarks(row, scale, showNow ? now : null);
-          return <li key={row.key} className={cls("tt-row", row.muted && "tt-row-muted")} {...row.data}>
+          const lanes = row.spans.length === 0 && (row.markers?.length ?? 0) > 0 ? markerLanes(row.markers ?? [], scale) : null;
+          return <li key={row.key} className={cls("tt-row", row.muted && "tt-row-muted", lanes && "tt-row-lanes")} {...row.data}>
           <span className="tt-label">{row.label}</span>
           <span className="tt-track">
             {night.map((span) => {
@@ -185,7 +212,10 @@ export function TimeTrack({ label, from, to, rows, now = null, night = [], axis 
               return place ? <span key={span.from} ref={cssVars({ "--tt-start": place.start, "--tt-width": place.width })} className="tt-night" aria-hidden="true" /> : null;
             })}
             {row.spans.map((span) => <Span key={span.key} span={span} scale={scale} marks={marks} />)}
-            {row.markers?.map((marker) => <Marker key={marker.key} marker={marker} scale={scale} marks={marks} />)}
+            {row.markers?.map((marker) => {
+              const lane = lanes?.lane.get(marker.key) ?? null;
+              return <Marker key={marker.key} marker={marker} scale={scale} marks={lanes && lane !== null ? lanes.marks[lane] : marks} lane={lane} onOpen={open} />;
+            })}
             {showNow && <span ref={cssVars({ "--tt-at": scale.pos(now) })} className="tt-now" aria-hidden="true" />}
             {row.note && <span className="tt-note">{row.note}</span>}
           </span>
@@ -194,5 +224,8 @@ export function TimeTrack({ label, from, to, rows, now = null, night = [], axis 
         })}
       </ul>
       : <p className="tt-empty meta">{STATE_WORDS[state]}</p>}
+    <Popover open={opened !== null} onClose={() => setOpened(null)} anchor={opened?.anchor ?? null} title={opened ? opened.marker.title ?? opened.marker.label : ""} className="tt-marker-popover">
+      {opened && <ul className="tt-marker-detail">{(opened.marker.detail ?? [opened.marker.label]).map((line, index) => <li key={index}>{line}</li>)}</ul>}
+    </Popover>
   </div>;
 }

@@ -25,8 +25,10 @@ from verdify_schemas.setting_help import setting_help, setting_label
 from verdify_schemas.tunable_registry import (
     ACTIVITY_MIRROR_PARAMS,
     LEGACY_WIDE_LIMIT_PARAMS,
+    READ_ONLY_REASONS,
     REGISTRY,
     SWITCH_READBACK_EQUIPMENT,
+    ZONE_VPD_TARGET_PARAMS,
     desired_write_rule,
 )
 from verdify_services import activity, reads, settings
@@ -421,7 +423,7 @@ def test_every_registry_row_gets_a_write_decision_with_a_reason_when_refused():
 
 @pytest.mark.parametrize(
     "param",
-    sorted(LEGACY_WIDE_LIMIT_PARAMS | ACTIVITY_MIRROR_PARAMS | {"sw_onchip_band_enabled"}),
+    sorted(LEGACY_WIDE_LIMIT_PARAMS | ZONE_VPD_TARGET_PARAMS | ACTIVITY_MIRROR_PARAMS | {"sw_onchip_band_enabled"}),
 )
 def test_the_read_only_list_is_refused_read_only_with_its_reason(param):
     db = FakeDB()
@@ -480,9 +482,14 @@ def test_unknown_settings_are_unknown_target_without_touching_the_database():
     assert db.sql == []
 
 
-@pytest.mark.parametrize("param", ["gl_lux_threshold", "gl_main_lux_threshold", "gl_sunrise_hour"])
+@pytest.mark.parametrize("param", ["gl_main_lux_threshold", "gl_grow_sunrise_hour", "sw_gl_main_auto_mode"])
 def test_the_lighting_rows_stay_writable(param):
     assert desired_write_rule(param) == (True, None)
+
+
+@pytest.mark.parametrize("param", ["gl_lux_threshold", "gl_sunrise_hour", "gl_main_dli_target", "sw_gl_auto_mode"])
+def test_the_lighting_rows_no_light_logic_reads_are_retired(param):
+    assert desired_write_rule(param) == (False, READ_ONLY_REASONS["retired"])
 
 
 def test_the_irrigation_site_rows_are_writable_before_the_engine():
@@ -492,7 +499,7 @@ def test_the_irrigation_site_rows_are_writable_before_the_engine():
 
 def test_a_crop_band_setting_is_writable_only_while_crop_band_anchors_holds_its_rows():
     db = FakeDB()
-    for param in ("zone_priority_center", "wet_taper_before_sunset_min", "manual_override_timeout_min"):
+    for param in ("zone_priority_center", "manual_override_timeout_min"):
         with pytest.raises(ServiceError) as excinfo:
             run(settings.validate(db, PERSON, param, 2))
         assert refusal(excinfo).code == "read_only" and settings.NO_ANCHOR_ROW in refusal(excinfo).detail
@@ -1209,7 +1216,7 @@ def test_every_catalog_row_carries_its_help_and_a_read_only_row_its_kind():
     assert rows["mister_on_s"].read_only_kind == "retired"
     assert rows["outdoor_temp_f"].read_only_kind == "readback_context"
     assert rows["sw_onchip_band_enabled"].read_only_kind == "band_owner"
-    assert rows["activity_start_hour"].read_only_kind == "activity_mirror"
+    assert rows["activity_start_hour"].read_only_kind == "retired"
     assert "gl_main_sunrise_hour" in rows["activity_start_hour"].source_params
     assert rows["safety_max"].help.guardrail and rows["safety_max"].writable
     assert rows[KPA].model_dump(mode="json")["help"]["raise"] == setting_help(KPA).raise_

@@ -19,7 +19,7 @@ _IRRIGATION_RETIRED = (
 _IRRIGATION_REFS = (f"{_CONTROLS}::Deliberate dawn/midday center watering is retired",)
 _MICROPULSE_RETIRED = (
     "The overnight micro-pulse path was removed from the controller, so nothing reads this value. "
-    "Night emergency wetting replaced it (see Night Stress Wet Enabled)."
+    "Night wetting now follows the night VPD band and the Night Stress Min Dew Margin."
 )
 _MICROPULSE_REFS = (
     "firmware/greenhouse/globals.yaml::CYC-4 overnight micro-pulse path DELETED",

@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { ChartStack, type StackPanel } from "../charts/chart-stack";
-import { EquipmentLanes } from "../charts/equipment-lanes";
+import { EquipmentLanes, MANUAL_LEAD_S } from "../charts/equipment-lanes";
 import { RangeToolbar } from "../charts/range-toolbar";
 import { clockTime, localDay } from "../charts/time-axis";
 import { buildTimeSeriesModel, chartNotes } from "../charts/time-series";
@@ -180,15 +180,18 @@ export default function GraphsLighting() {
   const daysId = `${key}|days`;
   const days = slotRead(useWindowReads("API-22", lanesWindow ? [{ id: daysId, params: { from: isoOf(lanesWindow.from), to: isoOf(lanesWindow.to) } }] : [], window?.live ? GRAPH_POLL_MS : null), daysId);
 
-  // The rail: light switches and grow-light setting changes (back to automatic included), one page of each.
+  // The rail: light switches and grow-light setting changes (back to automatic included), one page of each. The
+  // switches start a timer's length before the window, so the lanes read a switch still in force as manual.
   const lightId = `${key}|light-writes`, settingId = `${key}|setting-writes`;
-  const lightWrites = slotRead(useWindowReads("API-17", measured ? [{ id: lightId, params: { from: isoOf(measured.from), to: isoOf(measured.to), action: "light.", limit: EVENTS_PAGE } }] : [], null), lightId);
+  const lightWrites = slotRead(useWindowReads("API-17", measured ? [{ id: lightId, params: { from: isoOf(measured.from - MANUAL_LEAD_S), to: isoOf(measured.to), action: "light.", limit: EVENTS_PAGE } }] : [], null), lightId);
   const settingWrites = slotRead(useWindowReads("API-17", measured ? [{ id: settingId, params: { from: isoOf(measured.from), to: isoOf(measured.to), action: "setting.", limit: EVENTS_PAGE } }] : [], null), settingId);
+  const measuredFrom = measured?.from ?? null;
   const events = useMemo(() => {
     if (now === null) return [];
-    const activity = [...(lightWrites.data?.items ?? []), ...(settingWrites.data?.items ?? [])].filter(isLightingWrite);
+    const inWindow = (entry: ActivityEntry) => measuredFrom === null || Date.parse(entry.ts) / 1000 >= measuredFrom;
+    const activity = [...(lightWrites.data?.items ?? []), ...(settingWrites.data?.items ?? [])].filter((entry) => isLightingWrite(entry) && inWindow(entry));
     return chartEvents({ activity, settings: settingsCatalog, sources: ["people", "iris", "agents", "system"], now });
-  }, [lightWrites.data, settingWrites.data, settingsCatalog, now]);
+  }, [lightWrites.data, settingWrites.data, settingsCatalog, now, measuredFrom]);
   const eventsRead = lightWrites.data !== null || settingWrites.data !== null;
 
   const reads: WindowRead<unknown>[] = [registry, luxRead, solarRead, forecastRead, lanes, days, lightWrites, settingWrites];
@@ -247,7 +250,7 @@ export default function GraphsLighting() {
     </ul>}
     <ChartStack label={`Lighting, ${lead.charAt(0).toLowerCase()}${lead.slice(1)}`} panels={panels} settings={steps} forecast={forecast} now={now ?? 0} xRange={x}
       syncKey={`verdify:graphs-lighting:${key}`} events={eventsRead ? events : null} shades={shades} csvName="lighting" tableName="Lighting table" lanesName="Lights"
-      lanes={<EquipmentLanes states={lanes.data} xRange={x} syncKey={`verdify:graphs-lighting:${key}`} now={now ?? undefined} message={lanesMessage} zoomControl={false} systems={["lighting", "sensors"]} open={["sensors"]} />}
+      lanes={<EquipmentLanes states={lanes.data} xRange={x} syncKey={`verdify:graphs-lighting:${key}`} now={now ?? undefined} message={lanesMessage} zoomControl={false} systems={["lighting", "sensors"]} open={["sensors"]} lightWrites={lightWrites.data?.items ?? null} />}
       foot={<ResolutionLine window={window} bucketSeconds={bucket} daily={daily} now={now} />} />
     <section className="card gr-light-card" aria-label="Light minutes by day">
       <LightDays data={days.data} message={daysMessage} />

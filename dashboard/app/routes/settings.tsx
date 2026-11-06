@@ -15,6 +15,9 @@ import type { Setting } from "../lib/operator-api";
 import { useSettingsRead } from "../lib/queries";
 import { viewMeta } from "../lib/sections";
 import { useShellNow } from "../lib/shell";
+import { Panel } from "../components/panel";
+import { GlossaryList } from "../components/term";
+import { GLOSSARY } from "../lib/glossary";
 
 export const meta = () => viewMeta("control-settings");
 export const links = () => chartLinks();
@@ -168,6 +171,25 @@ export default function Settings() {
           : <SettingsCatalog rows={shown} failed={read.isError} onRetry={() => void read.refetch()} readbackStale={readbackStale} editTo={editTo} today={today} empty={empty} />}
       </div>
     </div>
+    <GlossaryPanel />
     <SettingDrawerHost />
   </>;
+}
+
+/** The glossary (#1339), from the one table every page's `Term` reads, so docs and MCP can cite `/settings#glossary`. */
+const GLOSSARY_ENTRIES = Object.entries(GLOSSARY).map(([id, entry]) => ({ id, ...entry }));
+
+/**
+ * The glossary folded under its count, so its definitions (which name verdicts such as "In band today") never read as
+ * the page's own state while data is missing; a link to `#glossary` or one term's `#term-<id>` opens it.
+ */
+function GlossaryPanel() {
+  const { hash } = useLocation();
+  const linked = hash === "#glossary" || hash.startsWith("#term-");
+  return <Panel id="glossary" title="Words on the pages" thing="the words on the pages" state="ready">
+    <details className="glossary" open={linked}>
+      <summary>{GLOSSARY_ENTRIES.length} terms the pages use</summary>
+      <GlossaryList entries={GLOSSARY_ENTRIES} />
+    </details>
+  </Panel>;
 }

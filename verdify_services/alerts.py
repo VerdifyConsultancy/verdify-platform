@@ -231,7 +231,7 @@ def runbook_markdown(runbook: Mapping[str, Any] | None) -> str | None:
 
 def pick_runbook(runbooks: Iterable[Mapping[str, Any]], alert_type: str, severity: str) -> Mapping[str, Any] | None:
     """The active runbook for a type: one for its severity, else one for any severity, else any; lowest id
-    first (the order ``slack_ops.runbooks.fetch_alert_runbook`` uses)."""
+    first."""
 
     def rank(runbook: Mapping[str, Any]) -> tuple[int, int]:
         level = runbook.get("severity")

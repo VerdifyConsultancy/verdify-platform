@@ -27,7 +27,7 @@ info:
 
     | Topic | Rule |
     |---|---|
-    | Ids | `operationId` is the design id: API-01 to API-22, API-IRR-01 to API-IRR-13, API-CROP-01 to API-CROP-11, BFF-01 to BFF-03, INT-01, INT-02, OPS-01, OPS-02 and OPS-04. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
+    | Ids | `operationId` is the design id: API-01 to API-24, API-IRR-01 to API-IRR-13, API-CROP-01 to API-CROP-11, BFF-01 to BFF-03, INT-01, INT-02, OPS-01, OPS-02 and OPS-04. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
     | Data | JSON. Times are ISO 8601 with an offset; days are America/Denver. Units are in field names or `unit` (°F, %, kPa, gal, min, s). `null` means unavailable, never 0; gaps stay gaps |
     | Roles | GET: `viewer` and `operator`. Every other method: `operator` (403 `forbidden`) |
     | Writes | Validated on submit (registry min/max, enums, step snap). The newest write wins. On a `manual: true` item the dispatcher ignores Iris's plan values (`set_plan` and `set_tunable` are unchanged) and Iris's `set_setting` and irrigation writes are refused with `manual`; people and other agents may overwrite it, attributed, and each write stores the `manual` it carries. Every write appends one `activity_log` row: source (`dashboard`, `iris`, `agent:<name>` or `system`), actor, time, reason, and the experiment id while one is armed. Nothing is refused because an experiment is armed |
@@ -376,6 +376,65 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/BandPreview'}}}}
         '422': {$ref: '#/components/responses/Invalid'}
         default: {$ref: '#/components/responses/Problem'}
+  /v1/band/profile:
+    get:
+      operationId: API-23
+      tags: [settings]
+      summary: The house band as stored and as drafted in the band editor, over one day, before Save
+      description: >-
+        Read-only (#1334). Reads the 24 house anchors as fn_crop_band_value resolves them and overlays the draft: any
+        simple temperature field recompiles the six temperature anchors from day (solar noon) and night (solar
+        midnight) values with sunrise and sunset at their midpoint, so the curve is a pure sinusoid that never leaves
+        its noon and midnight values; any VPD field does the same for the VPD anchors; then each anchor= item sets one
+        raw anchor (Advanced). Curves are the controller's four-anchor harmonic at 10-min steps of fn_solar_phase;
+        vpd.device adds night_vpd_bias_kpa's night bump as the controller does. findings with severity error are what
+        API-24 refuses. The expected night VPD ribbon is a 14-day indoor dewpoint fit on quiet deep-night hours and
+        the forecast; night_heat_kwh is 0.19 kW/°F over the forecast's night hours. Codes: unknown_target (anchor not
+        a house band anchor), out_of_range (outside planner_effective_bounds), read_only (no complete anchor set).
+      parameters:
+        - {name: temp_day, in: query, description: 'Temperature target at solar noon, °F', schema: {type: number}}
+        - {name: temp_night, in: query, description: 'Temperature target at solar midnight, °F', schema: {type: number}}
+        - {name: temp_width_day, in: query, description: '± °F around the day target', schema: {type: number, minimum: 0}}
+        - {name: temp_width_night, in: query, description: '± °F around the night target', schema: {type: number, minimum: 0}}
+        - {name: vpd_day, in: query, description: 'VPD target at solar noon, kPa', schema: {type: number}}
+        - {name: vpd_night, in: query, description: 'VPD target at solar midnight, kPa', schema: {type: number}}
+        - {name: vpd_below_day, in: query, description: kPa below the day target, schema: {type: number, minimum: 0}}
+        - {name: vpd_above_day, in: query, description: kPa above the day target, schema: {type: number, minimum: 0}}
+        - {name: vpd_below_night, in: query, description: kPa below the night target, schema: {type: number, minimum: 0}}
+        - {name: vpd_above_night, in: query, description: kPa above the night target, schema: {type: number, minimum: 0}}
+        - name: anchor
+          in: query
+          description: 'Advanced: one raw house anchor as param:value, repeatable'
+          schema: {type: array, items: {type: string, pattern: '^band_(temp|vpd)_(low|target|high)_(sr|sm|ss|mid):', examples: ['band_temp_low_sr:62.5']}}
+        - name: day
+          in: query
+          description: America/Denver day; default today
+          schema: {type: string, format: date}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/BandProfilePreview'}}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+    put:
+      operationId: API-24
+      tags: [settings]
+      summary: Save the band editor's draft, every changed house anchor in one write
+      description: >-
+        The same draft as API-23 (profile fields and Advanced anchors). In one transaction: each house anchor the
+        draft changes (by more than half the push quantum, 0.1 °F or 0.01 kPa) is an API-10 write, its desired_state
+        row with the manual flag and its crop_band_anchors rows, and one activity_log row, action band.write, target
+        "house band", detail {desired_ids, changes [{param, desired_id, before, value}], anchor_rows, manual,
+        profile, simple}. The dispatcher's anchor sync delivers the anchors; nothing talks to the controller. Codes:
+        out_of_range (an API-23 error finding: band order, the 40/100 °F guardrails 5 °F outside the band, the 0.3-3.0
+        kPa VPD guardrails or the 0.74 kPa night floor; or an anchor outside its bounds), invalid_request (the draft
+        changes nothing), read_only (Iris: the band is operator-owned), unknown_target, request_id_reused.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/BandSave'}}}
+      responses:
+        '200': {description: 'Stored; each changed anchor with state requested', content: {application/json: {schema: {$ref: '#/components/schemas/BandWrite'}}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
   /v1/equipment/lights/{light}/{state}:
     post:
       operationId: API-20
@@ -573,8 +632,9 @@ paths:
         line_id all accepts only paused_until (pause or resume every line). vpd_member and schedule_member are for
         L04, L07 and L09. Enabling a line with no check, or turning schedule_member on for the first time, needs
         checked true, which only the dashboard sends (check_required). Disabling stops everything on the line, VPD
-        misting included. Pause, resume and the check never change manual; any other edit that omits it stores true
-        (R3). Codes: out_of_range, check_required,
+        misting included. vpd_member true on a line that is and stays disabled is line_disabled: the controller acts on
+        VPD membership only while the line is enabled. Pause, resume and the check never change manual; any other edit
+        that omits it stores true (R3). Codes: out_of_range, check_required, line_disabled,
         unknown_target, request_id_reused; Iris only, on a manual line, manual.
       parameters:
         - name: line_id
@@ -1441,6 +1501,144 @@ components:
         low: {$ref: '#/components/schemas/NullableNumbers'}
         target: {$ref: '#/components/schemas/NullableNumbers'}
         high: {$ref: '#/components/schemas/NullableNumbers'}
+    BandProfile:
+      type: object
+      description: 'The house band in the editor''s terms: day (solar noon) and night (solar midnight) values'
+      required: [temp_day, temp_night, temp_width_day, temp_width_night, vpd_day, vpd_night, vpd_below_day, vpd_above_day, vpd_below_night, vpd_above_night]
+      properties:
+        temp_day: {type: number, description: °F}
+        temp_night: {type: number, description: °F}
+        temp_width_day: {type: number, minimum: 0, description: ± °F}
+        temp_width_night: {type: number, minimum: 0, description: ± °F}
+        vpd_day: {type: number, description: kPa}
+        vpd_night: {type: number, description: kPa}
+        vpd_below_day: {type: number, minimum: 0, description: kPa}
+        vpd_above_day: {type: number, minimum: 0, description: kPa}
+        vpd_below_night: {type: number, minimum: 0, description: kPa}
+        vpd_above_night: {type: number, minimum: 0, description: kPa}
+    BandProfilePatch:
+      type: object
+      description: The simple fields to change; a field left out keeps the band's own value
+      additionalProperties: false
+      properties:
+        temp_day: {type: [number, 'null']}
+        temp_night: {type: [number, 'null']}
+        temp_width_day: {type: [number, 'null'], minimum: 0}
+        temp_width_night: {type: [number, 'null'], minimum: 0}
+        vpd_day: {type: [number, 'null']}
+        vpd_night: {type: [number, 'null']}
+        vpd_below_day: {type: [number, 'null'], minimum: 0}
+        vpd_above_day: {type: [number, 'null'], minimum: 0}
+        vpd_below_night: {type: [number, 'null'], minimum: 0}
+        vpd_above_night: {type: [number, 'null'], minimum: 0}
+    BandProfileState:
+      type: object
+      required: [profile, anchors, simple]
+      properties:
+        profile: {$ref: '#/components/schemas/BandProfile'}
+        anchors: {type: object, additionalProperties: {type: number}, description: 'The 24 band_<series>_<anchor> values'}
+        simple: {type: boolean, description: True when sunrise and sunset are the midpoint of noon and midnight}
+    BandProfilePreview:
+      type: object
+      description: 'API-23: the house band as stored (current) and drafted, one point per step_s'
+      required: [day, step_s, t, sun, current, draft, changed, temp, vpd, night_vpd_bias_kpa, guardrails, overshoot, night_heat_kwh, envelope, findings, measured, forecast]
+      properties:
+        day: {type: string, format: date, description: America/Denver day}
+        step_s: {type: integer, const: 600}
+        t: {type: array, items: {type: integer}, description: Epoch seconds}
+        sun:
+          type: object
+          required: [sunrise, solar_noon, sunset, solar_midnight]
+          properties:
+            sunrise: {type: [integer, 'null'], description: Epoch seconds}
+            solar_noon: {type: [integer, 'null']}
+            sunset: {type: [integer, 'null']}
+            solar_midnight: {type: [integer, 'null']}
+        current: {$ref: '#/components/schemas/BandProfileState'}
+        draft: {$ref: '#/components/schemas/BandProfileState'}
+        changed: {type: array, items: {type: string}, description: The anchors a Save would write}
+        temp:
+          type: object
+          required: [current, draft]
+          properties:
+            current: {$ref: '#/components/schemas/BandCurve'}
+            draft: {$ref: '#/components/schemas/BandCurve'}
+        vpd:
+          type: object
+          required: [current, draft, device, expected_low, expected_high]
+          properties:
+            current: {$ref: '#/components/schemas/BandCurve'}
+            draft: {$ref: '#/components/schemas/BandCurve'}
+            device: {$ref: '#/components/schemas/BandCurve'}
+            expected_low: {$ref: '#/components/schemas/NullableNumbers'}
+            expected_high: {$ref: '#/components/schemas/NullableNumbers'}
+        night_vpd_bias_kpa: {type: [number, 'null'], description: The bias the controller reports running}
+        guardrails:
+          type: object
+          required: [temp_min_f, temp_max_f, margin_f, vpd_min_kpa, vpd_max_kpa, night_vpd_floor_kpa]
+          properties:
+            temp_min_f: {type: number}
+            temp_max_f: {type: number}
+            margin_f: {type: number}
+            vpd_min_kpa: {type: number}
+            vpd_max_kpa: {type: number}
+            night_vpd_floor_kpa: {type: number}
+        overshoot: {type: object, additionalProperties: {type: number}, description: 'By series, how far the draft curve leaves its anchor range'}
+        night_heat_kwh:
+          type: object
+          required: [current, draft]
+          properties:
+            current: {type: [number, 'null']}
+            draft: {type: [number, 'null']}
+        envelope:
+          type: [object, 'null']
+          required: [hours, days, rmse_f, dewpoint_p10_f]
+          properties:
+            hours: {type: integer}
+            days: {type: integer}
+            rmse_f: {type: number}
+            dewpoint_p10_f: {type: number}
+        findings:
+          type: array
+          items:
+            type: object
+            required: [code, severity, field, detail]
+            properties:
+              code: {type: string, examples: [band_order, guardrail, night_floor, overshoot, dewpoint_unreached]}
+              severity: {type: string, enum: [error, warning]}
+              field: {type: string}
+              detail: {type: string}
+        measured:
+          type: object
+          description: 'The last 24 h of the measured house average on t, by America/Denver clock time: a step before now holds today''s 10-min bucket, a later step yesterday''s'
+          required: [window_start, window_end, at, temp, vpd]
+          properties:
+            window_start: {type: integer, description: Epoch seconds of the oldest bucket read}
+            window_end: {type: integer, description: Epoch seconds at the end of the bucket holding now}
+            at: {type: array, items: {type: [integer, 'null']}, description: 'Per step, the bucket its values come from; null if none'}
+            temp: {$ref: '#/components/schemas/NullableNumbers', description: 'climate.temp_avg, °F'}
+            vpd: {$ref: '#/components/schemas/NullableNumbers', description: 'climate.vpd_avg, kPa'}
+        forecast:
+          type: object
+          description: The day's outdoor forecast on t; every step of an hour holds that hour's newest issue
+          required: [temp, vpd, issued_at]
+          properties:
+            temp: {$ref: '#/components/schemas/NullableNumbers', description: 'Outdoor forecast temperature, °F'}
+            vpd: {$ref: '#/components/schemas/NullableNumbers', description: 'Outdoor forecast VPD, kPa'}
+            issued_at: {type: [string, 'null'], format: date-time, description: The newest fetched_at behind the values}
+    BandSave:
+      type: object
+      additionalProperties: false
+      properties:
+        profile: {$ref: '#/components/schemas/BandProfilePatch'}
+        anchors: {type: object, additionalProperties: {type: number}, description: 'Advanced: raw house anchors'}
+        manual: {type: boolean, default: true}
+        reason: {type: string, maxLength: 500}
+    BandWrite:
+      type: object
+      required: [changed]
+      properties:
+        changed: {type: array, items: {$ref: '#/components/schemas/DesiredSetting'}}
 
     # ------------------------------------------------------------ plan and settings
     PlanRecord:
@@ -1530,7 +1728,7 @@ components:
         read_only_reason: {type: [string, 'null'], examples: ['legacy wide limit; not the band while the controller runs its on-chip curve']}
         read_only_kind:
           type: [string, 'null']
-          enum: [band_in_force, legacy_wide_limit, activity_mirror, band_owner, retired, readback_context, no_entity, no_anchor_row, unknown, null]
+          enum: [band_in_force, legacy_wide_limit, zone_vpd_target, activity_mirror, band_owner, retired, readback_context, no_entity, no_anchor_row, unknown, null]
           description: 'Why a read-only row cannot be written (#1333): the tunable_registry READ_ONLY_REASONS key, no_anchor_row (a crop-band row with no crop_band_anchors row) or band_in_force (derived band rows); null on a writable row'
         source_params:
           type: array

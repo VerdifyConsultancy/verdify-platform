@@ -147,7 +147,8 @@ export type GroupPanelProps = {
 
 /** One group of the board as its card, a skeleton until API-13 first answers. */
 export function GroupPanel({ group, items, state, onRetry, lights, settingTo }: GroupPanelProps) {
-  return <Panel title={group.title} thing={`${group.group} equipment`} state={state} reserve={group.reserve} onRetry={onRetry}
+  // The Lights card is `#lights`, where Now's light quick actions link (#1342).
+  return <Panel id={group.group === "light" ? "lights" : undefined} title={group.title} thing={`${group.group} equipment`} state={state} reserve={group.reserve} onRetry={onRetry}
     foot={group.group === "light" ? <span className="equipment-note">(controller) is the state the controller set; Lutron is the state the switch reports (sensed). Since, time on and cycles follow the Lutron readback.</span> : undefined}>
     <ul className={cls("equipment-rows", `equipment-rows-${group.group}`)}>
       {boardRows(group, items).map(({ key, item }) => {
