@@ -495,6 +495,7 @@ const ACTIVITY_ACTION = {
   "irrigation.line.update": "Changed line",
   "light.on": "Lights on",
   "light.off": "Lights off",
+  "band.write": "Changed",
 } as const;
 
 /**

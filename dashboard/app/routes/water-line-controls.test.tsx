@@ -56,7 +56,7 @@ test("enabling an unchecked line shows the Checked box once and sends checked wi
   expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Enable Wall drip (fertilized)");
   const save = dialog().getByRole<HTMLButtonElement>("button", { name: "Enable" });
   expect(save.disabled).toBe(true);
-  fireEvent.click(dialog().getByRole("checkbox", { name: "Checked: line, tank and injector checked, no leaks" }));
+  fireEvent.click(dialog().getByRole("checkbox", { name: "Checked: tank, injector and line checked, no leaks" }));
   fireEvent.change(dialog().getByLabelText("Note (optional)"), { target: { value: "No leaks at the injector" } });
   await press(dialog().getByRole("button", { name: "Enable" }));
   expect(writes(api)).toHaveLength(1);
@@ -94,7 +94,7 @@ test("a change the controller refuses reads \"Not confirmed: <reject in words>\"
   expect(sync("L04")).toBe("Not confirmed · Not confirmed: the controller refused a line's settings · retrying at 1, 5 and 15 min");
 });
 
-test("turning Schedule on for L04 with no check asks for the check; each switch has its own badge; both off reads \"This zone will not mist automatically\"", async () => {
+test("turning Schedule on for L04 with no check asks for the check; each switch has its own badge; both off reads \"This mister will not mist automatically\"", async () => {
   const api = open("/water", { fixture: "lines-unchecked" });
   await load();
   const mister = () => within(zone("L04"));
@@ -103,7 +103,7 @@ test("turning Schedule on for L04 with no check asks for the check; each switch 
   await press(mister().getByRole("switch", { name: "Schedule Center mister" }));
   expect(writes(api)).toEqual([]);
   expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Turn on Schedule for Center mister");
-  fireEvent.click(dialog().getByRole("checkbox", { name: "Checked: nozzles over the Vandas, coverage and walkway checked" }));
+  fireEvent.click(dialog().getByRole("checkbox", { name: "Checked: nozzles, coverage and spray area checked" }));
   await press(dialog().getByRole("button", { name: "Turn on Schedule" }));
   expect(writes(api).map((row) => [row.path, row.body])).toEqual([["/api/v1/irrigation/lines/L04", { schedule_member: true, checked: true, manual: true }]]);
   // The flag pressed reads REQUESTED, not its neighbour.
@@ -119,7 +119,7 @@ test("turning Schedule on for L04 with no check asks for the check; each switch 
   expect(lastWrite(api)?.body).toEqual({ vpd_member: false, manual: true });
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(text(zone("L04"))).toContain(WILL_NOT_MIST_TEXT);
-  expect(WILL_NOT_MIST_TEXT).toBe("This zone will not mist automatically");
+  expect(WILL_NOT_MIST_TEXT).toBe("This mister will not mist automatically");
 });
 
 test("a badge follows what changed: a cancelled Schedule press carries none, and a change confirmed earlier does not read REQUESTED again", async () => {
@@ -166,7 +166,7 @@ test("product J4: L07 disabled and unchecked is enabled with its check, then VPD
   await press(dialog().getByRole("button", { name: "Cancel" }));
   expect(writes(api)).toEqual([]);
   await press(within(card("L07")).getByRole("switch", { name: "Enabled South mister" }));
-  fireEvent.click(dialog().getByRole("checkbox", { name: "Checked: line drained, nozzles checked, no walkway spray" }));
+  fireEvent.click(dialog().getByRole("checkbox", { name: "Checked: nozzles, coverage and spray area checked" }));
   await press(dialog().getByRole("button", { name: "Enable" }));
   expect(lastWrite(api)?.body).toEqual({ enabled: true, checked: true, manual: true });
   await press(within(zone("L07")).getByRole("switch", { name: "VPD control South mister" }));
@@ -230,7 +230,7 @@ test("enabling L05 asks for the Checked box once, and its row no longer reads Re
   await load();
   expect(text(card("L05").querySelector(".line-state"))).toBe("Reserved · disabled");
   await press(within(card("L05")).getByRole("switch", { name: "Enabled Center drip" }));
-  fireEvent.click(dialog().getByRole("checkbox", { name: "Checked: line connected and checked" }));
+  fireEvent.click(dialog().getByRole("checkbox", { name: "Checked: line flushed and emitters checked" }));
   await press(dialog().getByRole("button", { name: "Enable" }));
   expect(lastWrite(api)).toMatchObject({ path: "/api/v1/irrigation/lines/L05", body: { enabled: true, checked: true, manual: true } });
   expect(text(card("L05").querySelector(".line-state"))).not.toContain("Reserved");
@@ -301,12 +301,16 @@ test("with the engine, the same options read REQUESTED, then CONFIRMED by the ha
   expect(text(document.querySelector('[data-limit="L04"]'))).toMatch(/^14 \/ 130 min.*60 min kept for VPD/);
 });
 
-test("Site today's SAF-4 meter links to its Settings drawer", async () => {
+test("Site today's daily mist & fog limit (SAF-4) links to its Settings drawer and explains itself in a tip (#1349)", async () => {
   open("/water");
   await load();
   const link = within(document.querySelector<HTMLElement>('[data-limit="saf4"]')!).getByRole("link");
   expect(link.getAttribute("href")).toBe("/settings?edit=mister_daily_volume_max_gal");
-  expect(link.textContent).toBe("SAF-4, the daily mist and fog ceiling, in Settings");
+  expect(link.textContent).toBe("Daily mist & fog limit, in Settings");
+  await press(screen.getByRole("button", { name: "About Daily mist & fog limit" }));
+  expect(text(screen.getByRole("dialog"))).toContain("The controller stops misting when it reaches this limit; survival fog is exempt.");
+  // No bare firmware term or upper-case budget label anywhere on the page.
+  expect(text(document.querySelector(".wat-site"))).not.toMatch(/SAF-4|SOFT BUDGET|Soft budget/);
 });
 
 test("a planned block's popover offers \"Pause <line> until after this run\": one minute past its planned end; it then reads skipped, and a past block's offers no pause, only Edit", async () => {

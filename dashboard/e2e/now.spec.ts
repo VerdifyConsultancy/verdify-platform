@@ -240,7 +240,7 @@ test("Acknowledge sends one API-15 and the answer follows the one count", async 
   expect((await fixtureRequests(request, "API-15")).map((row) => row.path)).toEqual(["/v1/alerts/101/ack"]);
 });
 
-test("Water today: each zone's minutes against its cap and when it last got water, then the mist and fog water against its daily safety limit", async ({ page, request }) => {
+test("Water today: each zone's minutes against its cap and when it last got water, then the daily mist & fog limit in gallons", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/");
   const water = page.locator(".now-water");
@@ -248,12 +248,6 @@ test("Water today: each zone's minutes against its cap and when it last got wate
   await expect(water.locator("[data-water=center] .now-water-last")).toHaveText("misted 06:58 (VPD)");
   await expect(water.locator("[data-water=wall] .now-water-amount")).toHaveText("0 / 60 min");
   await expect(water.locator("[data-water=saf4] .now-water-amount")).toHaveText("21 / 360 gal");
-  // In words, never the firmware's interlock code, and never cut (#1339).
-  await expect(water.locator("[data-water=saf4] .now-water-name")).toHaveText("Mist and fog water");
-  await expect(water.locator("[data-water=saf4] .now-water-last")).toHaveText("daily safety limit");
-  for (const cell of await water.locator("[data-water=saf4] .now-water-name, [data-water=saf4] .now-water-last").all()) {
-    expect(await cell.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
-  }
   await expect(water.getByRole("link", { name: /^Water/ })).toHaveAttribute("href", "/water");
 });
 

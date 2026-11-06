@@ -497,6 +497,10 @@ class HeapPressureDetails(_DetailsBase):
     heap_fragmentation_warning: bool = False
     heap_diag_ts: AwareDatetime | None = None
     healthy_heap_samples_after_event: int = Field(..., ge=0)
+    # The since-boot low-water-mark event that raised the warning: when the
+    # mark first fell to a new low under 10 KB and that low (kB).
+    heap_low_watermark_event_ts: AwareDatetime | None = None
+    heap_low_watermark_event_kb: float | None = None
 
 
 class HeapPressureCriticalDetails(HeapPressureDetails):

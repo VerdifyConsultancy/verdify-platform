@@ -2,8 +2,7 @@
 /**
  * Water today on Now (redesign §5.1; screens SCR-01, US-NOW-04, US-WAT-13, US-WAT-18) from API-IRR-01: each watering
  * zone's minutes today against its cap as a `Meter` (the drip zone in `--eq-water`, the mister zones in `--eq-mister`),
- * when it last got water (`last-water.ts`), the mist and fog water against its daily safety limit (the firmware's SAF-4,
- * never named by its code on Now, #1339), and the flow in words. Before the
+ * when it last got water (`last-water.ts`), the daily mist & fog limit's gallons (SAF-4, #1349), and the flow in words. Before the
  * irrigation firmware it says where the wall drip runs from. A failed or not yet served API-IRR-01 reads "Water status
  * unavailable." with Retry, never idle. Stop all water is not here: it is the first quick action, one per page.
  */
@@ -11,12 +10,12 @@ import { formatValue, shortTime } from "../../lib/format";
 import { WATER_ZONES, WATER_ZONE_WORDS, lastWater, type WaterZone, type ZoneLastWater } from "../../lib/last-water";
 import type { IrrigationLine, IrrigationStatus, Leak } from "../../lib/operator-api";
 import type { PanelRead } from "../../lib/queries";
-import { climateTodayWords } from "../../lib/water";
+import { SAF4_HELP, SAF4_TERM, climateTodayWords } from "../../lib/water";
 import { cls } from "../common";
 import { Meter, meterWords, type MeterDomain } from "../data/meter";
 import { useNow } from "../freshness";
+import { InfoTip } from "../info-tip";
 import { Panel, type PanelState } from "../panel";
-import { Term } from "../term";
 import { lineStatesUnknown } from "./status";
 
 export const WATER_UNAVAILABLE = "Water status unavailable.";
@@ -69,13 +68,10 @@ export function flowText(leak: Leak): { text: string; flowing: boolean } {
   return { text: "No flow with every valve closed", flowing: false };
 }
 
-/** The mist and fog water's row on Now (#1339): its name, a Term, and what its number is measured against. */
-export const MIST_FOG_NAME = "Mist and fog water";
-export const MIST_FOG_LIMIT_WORDS = "daily safety limit";
-/** "21 / 360 gal": the gallons today against the daily safety limit; an unknown use or limit reads "—". */
+/** "21 of 360 gal" against the daily mist & fog limit; an unknown use or limit reads "—". */
 export function saf4Text(saf4: IrrigationStatus["limits"]["saf4_gal"]): string {
   const number = (value: number | null) => (finite(value) ? formatValue(value, "gal").replace(/\s*gal$/, "") : "—");
-  return `${number(saf4.used)} / ${number(saf4.max)} gal`;
+  return `${number(saf4.used)} of ${number(saf4.max)} gal`;
 }
 
 /**
@@ -130,12 +126,12 @@ export function WaterCard({ irrigation }: WaterCardProps) {
         <ul className="now-water-zones">
           {zoneWater(status, clock).map((row) => <ZoneRow key={row.zone} row={row} stale={stale} />)}
           {saf4 && <li className="now-water-row now-water-saf4" data-water="saf4">
-            <span className="now-water-name"><Term id="mist_fog_limit">{MIST_FOG_NAME}</Term></span>
+            <span className="now-water-name">{SAF4_TERM}<InfoTip term={SAF4_TERM}><p>{SAF4_HELP}</p></InfoTip></span>
             <span className="now-water-meter">
-              <Meter label={`${MIST_FOG_NAME} today`} unit="gal" value={saf4.used} cap={saf4.max} domain="water" decorative state={stale ? "stale" : "ready"} />
-              <span className="now-water-amount">{saf4Text(saf4)}</span>
+              <Meter label={`${SAF4_TERM}, gallons today`} unit="gal" value={saf4.used} cap={saf4.max} domain="water" decorative state={stale ? "stale" : "ready"} />
+              <span className="now-water-amount">{saf4Text(saf4).replace(" of ", " / ")}</span>
             </span>
-            <span className="now-water-last meta">{MIST_FOG_LIMIT_WORDS}</span>
+            <span className="now-water-last meta">all misters and fog</span>
           </li>}
         </ul>
         {climate && <p className="meta" data-water="climate">{climate}</p>}

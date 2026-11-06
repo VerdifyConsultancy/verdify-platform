@@ -26,7 +26,7 @@ export const GLOSSARY = {
     definition: "The share of today's minutes, since local midnight, that the reading spent inside the band the controller was serving.",
   },
   mist_fog_limit: {
-    term: "Mist and fog water",
+    term: "Daily mist & fog limit",
     definition: "Gallons through every mister and the fog today, against the controller's daily safety limit (360 gal). At the limit all misting stops except emergency fog. Normal misting first meets the lower daily budget (120 gal), which a VPD emergency may pass.",
   },
   bursts: {

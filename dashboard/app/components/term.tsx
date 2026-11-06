@@ -33,7 +33,7 @@ export function Term({ id, children, className }: TermProps) {
   </>;
 }
 
-/** The whole table as a definition list, for Control → Settings' "Glossary" (`#glossary`). */
+/** The whole table as a definition list, for Control → Settings' "Words on the pages" (`#glossary`). */
 export function GlossaryList({ entries }: { entries: readonly { readonly id: string; readonly term: string; readonly definition: string }[] }) {
   return <dl className="glossary-list">
     {entries.map((entry) => <div key={entry.id} className="glossary-item" id={`term-${entry.id}`}>
