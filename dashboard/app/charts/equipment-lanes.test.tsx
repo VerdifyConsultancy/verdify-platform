@@ -25,8 +25,8 @@ const settle = () => act(async () => { await vi.dynamicImportSettled(); });
 const x = (clock: string) => ((at(clock) - RANGE.from) / (RANGE.to - RANGE.from)) * 1000;
 /** What shows at first: each system's header, then its rows that ran; idle rows fold under their header and Sensors folds whole. */
 const SHOWN = ["Climate", "Fan 1", "Vent", "Heat 1 (electric)", "Heat 2 (gas)", "Misting", "Center mister", "Irrigation", "Wall drip", "Lighting", "Main grow light (Lutron)", "Grow light (Lutron)", "Sensors"];
-/** Each shown row's top at the 20 px pitch: a header is 20 px too. */
-const TOP: Record<string, number> = { fan1: 20, vent: 40, heat1: 60, heat2: 80, mister_center: 120, drip_wall: 160, grow_light_main: 200, grow_light_grow: 220 };
+/** Each shown row's top at the 20 px pitch, under 24 px system headers. */
+const TOP: Record<string, number> = { fan1: 24, vent: 44, heat1: 64, heat2: 84, mister_center: 128, drip_wall: 172, grow_light_main: 216, grow_light_grow: 236 };
 function props(overrides: Partial<EquipmentLanesProps> = {}): EquipmentLanesProps {
   return { states: load<StateLanes>(statesFixture), xRange: RANGE, syncKey: KEY, now: RANGE.to, ...overrides };
 }
@@ -114,12 +114,12 @@ test("each system folds its idle rows under its header, which opens them; Sensor
   fireEvent.click(folds[0]);
   expect(folds[0].getAttribute("aria-expanded")).toBe("true");
   expect(shown(container).slice(0, 6)).toEqual(["Climate", "Fan 1", "Vent", "Heat 1 (electric)", "Heat 2 (gas)", "Fan 2"]);
-  // Sensors opens whole: water flowing is a solid bar in its colour on its row, under the Sensors header (now at 260).
+  // Sensors opens whole: water flowing is a solid bar in its colour on its row, under the Sensors header (now at 276).
   fireEvent.click(folds[3]);
   expect(shown(container).slice(-4)).toEqual(["Sensors", "Water flowing", "Unexplained flow", "Occupancy"]);
   expect(plot.dataUpdates.length).toBeGreaterThan(0);
   plot.draw();
-  const water = plot.ctx.rects.filter((rect) => rect.color === TOKENS["--eq-water"] && rect.y === band(280).top);
+  const water = plot.ctx.rects.filter((rect) => rect.color === TOKENS["--eq-water"] && rect.y === band(300).top);
   expect(water.map((rect) => [Math.round(rect.x), Math.round(rect.x + rect.width)])).toEqual([[Math.round(x("07:31")), Math.round(x("07:43"))]]);
 });
 
@@ -223,8 +223,8 @@ test("each row ends with its state, on time and starts; at 860 px and below the 
   MockPlot.reset();
   vi.stubGlobal("matchMedia", media({ narrow: true, fine: false }));
   const { plot } = await mount();
-  // Vent's top at 24 px rows: the Climate header (20), Fan 1 (24).
-  expect(plot.ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--muted"] && inBand(stroke, 44, 24))).toHaveLength(1);
+  // Vent's top at 24 px rows: the Climate header (24), Fan 1 (24).
+  expect(plot.ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--muted"] && inBand(stroke, 48, 24))).toHaveLength(1);
   expect(plot.ctx.rects.find((rect) => rect.color === TOKENS["--eq-water"])!.height).toBe(18);
 });
 
@@ -243,10 +243,10 @@ test("inside a chart stack: the panels' plot area with the time axis under the l
   expect(container.querySelector("figcaption")).toBeNull();
   expect(container.querySelector("[data-equipment=fan1]")!.textContent).toBe(`Fan 1 off · 80${NBSP}min on · 1 start`);
   expect(container.querySelector("[data-equipment=heat1]")!.textContent).toBe(`Heat 1 (electric) off · 70${NBSP}min on · 0 starts`);
-  // Rows are 36 px: a 16 px line for the name, then the band; a header is 20 px. Vent's unknown span is hatched in its band.
+  // Rows are 36 px: a 16 px line for the name, then the band; a header is 24 px. Vent's unknown span is hatched in its band.
   const stackedBand = (top: number) => ({ top: top + 16 + 3, bottom: top + 36 - 3 });
   const inStackedBand = (stroke: Stroke, top: number) => stroke.path.every(([, y]) => y >= stackedBand(top).top && y <= stackedBand(top).bottom);
-  expect(plot.ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--muted"] && inStackedBand(stroke, 20 + 36))).toHaveLength(1);
+  expect(plot.ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--muted"] && inStackedBand(stroke, 24 + 36))).toHaveLength(1);
   const fold = screen.getByRole("button", { name: "Climate: 1 idle" });
   expect(fold.closest(".lanes-group")?.getAttribute("data-system")).toBe("climate");
   fireEvent.click(fold);

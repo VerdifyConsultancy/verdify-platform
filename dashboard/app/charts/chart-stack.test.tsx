@@ -208,6 +208,11 @@ test("the event rail draws only when given events: an icon per kind, a key that 
   fireEvent.keyDown(marks[1], { key: "Escape" });
   expect(screen.queryByRole("list", { name: "Events at this mark" })).toBeNull();
   expect(document.activeElement).toBe(marks[1]);
+  // A pinned list closes on a pointer down elsewhere (a menu opened after it is never under it).
+  fireEvent.click(marks[1]);
+  expect(screen.getByRole("list", { name: "Events at this mark" })).toBeTruthy();
+  fireEvent.pointerDown(document.body);
+  expect(screen.queryByRole("list", { name: "Events at this mark" })).toBeNull();
   // Hovering a list row lights its mark; turning the alert kind off takes it off the rail and the list.
   fireEvent.mouseLeave(marks[1]);
   fireEvent.mouseEnter(document.getElementById("stack-event-a")!);

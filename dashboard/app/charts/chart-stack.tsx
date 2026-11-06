@@ -320,7 +320,19 @@ function EventRail({ events, view, hidden, lit, reverse, onLit, onPick }: {
     setHovered(null);
     return true;
   };
-  return <div className="stack-rail-wrap" onMouseLeave={() => { setHovered(null); onLit(null); }}>
+  // A pinned list closes on a pointer down anywhere else, so it never sits over a menu opened after it.
+  const wrap = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (pinned === null) return;
+    const away = (event: PointerEvent) => {
+      if (wrap.current && event.target instanceof Node && wrap.current.contains(event.target)) return;
+      setPinned(null);
+      setHovered(null);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [pinned]);
+  return <div ref={wrap} className="stack-rail-wrap" onMouseLeave={() => { setHovered(null); onLit(null); }}>
     <div ref={ref} className="stack-rail" role="group" aria-label={`Events on the charts, ${eventsIn(events, view.from, view.to, undefined, hidden).length}`} tabIndex={0} onKeyDown={(event) => { if (!close(event)) roving(event); }}>
       {clusters.map((cluster) => {
         const first = cluster.events[0];

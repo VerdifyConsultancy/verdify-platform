@@ -290,7 +290,7 @@ test("the lanes-unknown span is hatched where API-05 returns it, never drawn as 
   plot.draw();
   // Off all window but the unknown span, Fan 1 is no idle row: it is drawn first under the Climate header, at the 20 px pitch.
   expect([...view.container.querySelectorAll(".lanes-group-name, .lanes-row")].slice(0, 2).map((item) => item.getAttribute("data-equipment") ?? text(item))).toEqual(["Climate", "fan1"]);
-  const top = 20;
+  const top = 24;
   const band = { top: top + 3, bottom: top + 17 };
   const inFan1 = (path: [number, number][]) => path.every(([, y]) => y >= band.top && y <= band.bottom);
   const hatch = plot.ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--muted"] && inFan1(stroke.path));

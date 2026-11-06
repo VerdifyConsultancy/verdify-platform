@@ -242,8 +242,8 @@ export function laneEntries(model: LanesModel, open: ReadonlySet<LaneSystem>): L
   });
 }
 
-/** A group header's height in CSS px (charts.css mirrors it). */
-export const GROUP_HEAD = 20;
+/** A group header's height in CSS px (charts.css mirrors it): its fold is a 24 px touch target (WCAG 2.5.8). */
+export const GROUP_HEAD = 24;
 
 /** What the canvas paints: one entry per shown line (null for a group header), each line's top, the row pitch and now. */
 export type LanesView = {

@@ -47,10 +47,10 @@
 .lanes-label{grid-column:1;padding-right:.5rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .lanes-stat{grid-column:3;padding-left:.5rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--muted);font-variant-numeric:tabular-nums}
 /* A group's header (#1356): Climate, Misting, Irrigation, Lighting, Sensors, 20 px (GROUP_HEAD), with its fold. */
-.lanes-group{position:relative;z-index:2;display:flex;align-items:center;gap:var(--space-2);height:20px;border-top:1px solid var(--line);font:600 var(--fs-label)/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--forest);white-space:nowrap}
+.lanes-group{position:relative;z-index:2;display:flex;align-items:center;gap:var(--space-2);height:24px;border-top:1px solid var(--line);font:600 var(--fs-label)/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--forest);white-space:nowrap}
 .lanes-group:first-child{border-top:0}
 .lanes-group-name{background:#fff;padding-right:var(--space-1)}
-.lanes-group-fold{display:inline-flex;align-items:center;min-height:0;height:18px;padding:0 var(--space-1);border:0;background:#fff;font-size:var(--fs-xs);font-weight:700;line-height:1;text-transform:none;letter-spacing:0;color:var(--forest)}
+.lanes-group-fold{display:inline-flex;align-items:center;min-height:0;min-width:24px;height:24px;padding:0 var(--space-1);border:0;background:#fff;font-size:var(--fs-xs);font-weight:700;line-height:1;text-transform:none;letter-spacing:0;color:var(--forest)}
 .lanes-group-fold::after{content:" ›"}
 .lanes-group-fold[aria-expanded=true]::after{content:" ‹"}
 .lanes-axis{height:var(--lanes-axis)}

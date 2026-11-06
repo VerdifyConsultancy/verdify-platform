@@ -38,7 +38,7 @@ test("/graphs?range=72h&set=mister_engage_kpa: one stack of three panels on one 
   await expect(plots(page).locator("canvas")).toHaveCount(3);
   await expect(head(page, "temperature")).toHaveText(/^in band 100% · low \d\d\.\d \(.+\) · mean \d\d\.\d · high \d\d\.\d \(.+\)$/);
   await expect(page.locator(".lanes-canvas canvas")).toHaveCount(1);
-  await expect(page.locator("[data-equipment=fan1]")).toHaveCount(1);
+  await expect(page.locator(".lanes-group-name")).toHaveText(["Climate", "Misting", "Irrigation", "Lighting", "Sensors"]);
   await expect(page.getByRole("list", { name: "Settings drawn as steps" }).getByRole("listitem")).toContainText(["VPD Mister Engage · VPD"]);
   await expect(page.getByRole("list", { name: "Range" }).getByRole("link", { name: "72 h" })).toHaveAttribute("aria-current", "page");
   // The VPD panel's key names the setting and says it sits above the band-fitted axis; no word is painted in a plot (#1354).
@@ -183,7 +183,7 @@ test("soil moisture and flow from the URL: flow opens a panel, and from 7 d each
   await load(page, "/graphs?range=7d&m=climate.soil_moisture_south_1&m=climate.flow_gpm");
   await expect(names(page)).toHaveText(["Temperature °F", "VPD kPa", "RH %", "Site water flow gal/min"]);
   await expect(resolution(page)).toContainText("· one point per hour");
-  await expect(page.locator("[data-equipment=drip_wall]")).toContainText("Wall drip");
+  await expect(page.locator("[data-system=irrigation] .lanes-group-name")).toHaveText("Irrigation");
   await expect(page.getByRole("list", { name: "Metrics on the charts" }).getByRole("listitem")).toContainText(["South soil moisture 1 · %", "Site water flow · gal/min"]);
 });
 

@@ -112,7 +112,7 @@ export function LightDays({ data, message }: { data: LightingDays | null; messag
   if (!data) return <p className="meta">{message ?? "Loading light minutes…"}</p>;
   const dates = data.circuits[0]?.days.map((day) => day.date) ?? [];
   if (!dates.length) return <p className="meta">No light minutes in this window.</p>;
-  return <div className="table-wrap gr-light-days">
+  return <div className="table-wrap gr-light-days" role="region" tabIndex={0} aria-label="Light minutes by day, scrolls sideways">
     <table className="gr-light-table">
       <caption className="eyebrow">LIGHT MINUTES · QUALIFIED AGAINST TARGET</caption>
       <thead><tr><th scope="col">Light</th>{data.circuits[0].days.map((day) => <th key={day.date} scope="col">{dayName(day.date, day.partial)}</th>)}</tr></thead>
