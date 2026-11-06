@@ -231,7 +231,15 @@ test("the snapshot: one paragraph under the headline with its author, time and t
   const paragraph = snapshotOf();
   expect(paragraph?.getAttribute("data-snapshot")).toBe("fresh");
   expect(paragraph?.className).not.toContain("value-muted");
-  expect(plain(text(paragraph))).toMatch(/^The greenhouse is at 64\.8 °F .* no open alerts\. Written by Qwen \(Cortex\) at 10:36 · AI$/);
+  expect(plain(text(paragraph?.querySelector(".now-snapshot-text")))).toMatch(/^The greenhouse is at 64\.8 °F .* no open alerts\.$/);
+  expect(plain(text(paragraph?.querySelector(".now-snapshot-mark")))).toBe("Written by Qwen (Cortex) at 10:36 · AI");
+  // On a phone the text keeps to two lines until Read all (the clamp is CSS; the toggle is the same everywhere).
+  const more = screen.getByRole("button", { name: "Read all" });
+  expect(more.getAttribute("aria-controls")).toBe(paragraph?.querySelector(".now-snapshot-text")?.id);
+  expect(more.getAttribute("aria-expanded")).toBe("false");
+  fireEvent.click(more);
+  expect(screen.getByRole("button", { name: "Show less" }).getAttribute("aria-expanded")).toBe("true");
+  expect(paragraph?.hasAttribute("data-open")).toBe(true);
   // It follows the headline inside the hero's main block, and it is not a pill (D-UX-07).
   expect(paragraph?.closest(".now-hero-main")).not.toBeNull();
   expect(paragraph?.querySelector("[data-badge]")).toBeNull();

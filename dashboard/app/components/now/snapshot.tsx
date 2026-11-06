@@ -7,7 +7,11 @@
  * Fallback: stale (older than two cadences, or a later attempt failed) reads muted with "as of HH:MM"; outdated (a band
  * verdict or the alerts changed since it was written) and anything older than 2 h never show, so the deterministic
  * status line stands alone. The page's own muting (stale readings, the API down) mutes it too.
+ *
+ * On a phone the text is clamped to two lines with "Read all", so a long snapshot never pushes Stop all water below
+ * the fold; the full text stays in the page (the clamp is visual only), and the toggle is hidden on wider screens.
  */
+import { useId, useState } from "react";
 import type { Now } from "../../lib/operator-api";
 import { LocalTime, cls } from "../common";
 
@@ -26,16 +30,21 @@ export function snapshotState(snapshot: Snapshot | null | undefined, clockMs: nu
 }
 
 export function NowSnapshot({ snapshot, clock, muted }: { snapshot: Snapshot | null | undefined; clock: number; muted: boolean }) {
+  const [open, setOpen] = useState(false);
+  const textId = useId();
   const state = snapshotState(snapshot, clock);
   if (!state || !snapshot) return null;
   const quiet = muted || state === "stale";
-  return <p className={cls("now-snapshot", quiet && "value-muted")} data-snapshot={quiet ? "stale" : "fresh"}>
-    {snapshot.text}{" "}
+  return <p className={cls("now-snapshot", quiet && "value-muted")} data-snapshot={quiet ? "stale" : "fresh"} data-open={open || undefined}>
+    <span className="now-snapshot-text" id={textId}>{snapshot.text}</span>{" "}
     <span className="now-snapshot-mark">
       {quiet
         ? <>Written by {SNAPSHOT_AUTHOR} · as of <LocalTime at={snapshot.as_of} /></>
         : <>Written by {SNAPSHOT_AUTHOR} at <LocalTime at={snapshot.generated_at} /></>}
       {" · AI"}
-    </span>
+    </span>{" "}
+    <button type="button" className="now-snapshot-more" aria-controls={textId} aria-expanded={open} onClick={() => setOpen((was) => !was)}>
+      {open ? "Show less" : "Read all"}
+    </button>
   </p>;
 }
