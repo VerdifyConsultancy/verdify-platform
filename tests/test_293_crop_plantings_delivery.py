@@ -3,8 +3,8 @@
 #1327 and #1328: plantings on the location tree. 293 adds layout columns to shelves and positions, the
 shelf_water_lines and crop_occupancy tables, end_reason/source/actor on crops, the v_crop_planting_current view and
 the dashboard, MCP and ingestor grants the planting service and its readers need. Those grants and columns move all
-three seals. 290, 291 and 292 land first; until the rolled-back native qualification measures 293 on top of them, the
-file and its registrations carry 289's seals as stand-ins, which its own successor block refuses, so
+three seals. 293 chains from 291 (292 is a gap); until the rolled-back native qualification (290 and 291 applied
+first) measures 293, the file and its registrations carry 291's seals as stand-ins, which its own successor block refuses, so
 test_native_qualification_is_recorded (the merge gate) fails until then.
 """
 
@@ -20,7 +20,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 HEX = "([0-9a-f]{64})"
-PREDECESSOR = 289
+PREDECESSOR = 291
 SEALS = ("api", "ingestor", "mcp")
 API, INGESTOR = "verdify_api_runtime_login", "verdify_ingestor_runtime_login"
 
@@ -54,13 +54,13 @@ SUCCESSOR_BLOCK = SQL[SQL.index("DO $successor$") :]
 
 
 def later(last=293):
-    # 291 and 292 are not merged yet; 293 follows 290 in the reviewed order until they are.
-    numbers = [n for n in (*range(255, 291), 293) if n <= last]
+    # 292 is a gap: 293 follows 291 in the reviewed order.
+    numbers = [n for n in (*range(255, 292), 293) if n <= last]
     return [c0.SUCCESSOR_254] + [getattr(c0, f"SUCCESSOR_{n}") for n in numbers]
 
 
 def files(last=293):
-    numbers = [n for n in (*range(255, 291), 293) if n <= last]
+    numbers = [n for n in (*range(255, 292), 293) if n <= last]
     return {getattr(c0, f"SUCCESSOR_{n}"): getattr(c0, f"SUCCESSOR_{n}_SHA256") for n in numbers}
 
 
@@ -104,14 +104,14 @@ def test_file_is_wrap_safe_and_every_session_ends_in_rollback():
         assert sql.count("ROLLBACK;") == 1 and "COMMIT" not in sql.upper(), name
 
 
-def test_predecessor_binds_exact289_with_its_registered_seals():
+def test_predecessor_binds_exact291_with_its_registered_seals():
     row = re.search(r"seq=(\d+) AND filename='db/migrations/([^']+)'\s+AND sha256='" + HEX + "'", PREDECESSOR_BLOCK)
-    assert (int(row[1]), row[2], row[3]) == (PREDECESSOR, c0.SUCCESSOR_289, c0.SUCCESSOR_289_SHA256)
+    assert (int(row[1]), row[2], row[3]) == (PREDECESSOR, c0.SUCCESSOR_291, c0.SUCCESSOR_291_SHA256)
     assert "stamp_method='runner'" in PREDECESSOR_BLOCK and "current_user <> 'verdify'" in PREDECESSOR_BLOCK
     assert f"seq>{PREDECESSOR})" in PREDECESSOR_BLOCK
     assert "'293 refuses an unqualified predecessor'" in PREDECESSOR_BLOCK
     for seal, digest in registered(PREDECESSOR).items():
-        assert digest == six.SUCCESSOR_289[seal]
+        assert digest == six.SUCCESSOR_291[seal]
         assert PREDECESSOR_BLOCK.count(f"'hex') IS DISTINCT FROM '{digest}'") == 1, seal
         assert PREDECESSOR_BLOCK.count(f"boundary_sha256=decode('{digest}','hex')") == 1, seal
 
@@ -173,13 +173,13 @@ def test_api_stays_select_only_and_no_one_gets_delete():
 # ── The bootstrap and the C0 readback ───────────────────────────────────────
 
 
-def test_sealed_sql_293_chains_from_289_and_binds_the_exact_ledger_row():
-    old = six.seal_profile_sql(PREDECESSOR, six.SUCCESSOR_289)
-    expected = "(" + six.sealed_sql_289().replace(old, six.seal_profile_sql(293, six.SUCCESSOR_293), 1)
+def test_sealed_sql_293_chains_from_291_and_binds_the_exact_ledger_row():
+    old = six.seal_profile_sql(PREDECESSOR, six.SUCCESSOR_291)
+    expected = "(" + six.sealed_sql_291().replace(old, six.seal_profile_sql(293, six.SUCCESSOR_293), 1)
     expected += " AND " + six.ledger_row_sql(*six.CROP_PLANTINGS_MIGRATION) + ")"
     assert six.sealed_sql_293() == expected
     assert "(SELECT max(seq) FROM public.schema_migrations WHERE source='db/migrations')=293" in expected
-    assert six.sealed_sql().count(" OR " + six.sealed_sql_290() + " OR " + expected) == 1
+    assert six.sealed_sql().count(" OR " + six.sealed_sql_291() + " OR " + expected) == 1
     assert maintenance.contract_sql().count(" OR " + six.sealed_sql_293()) == 1
     assert '"293-crop-plantings.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
     assert "tests/test_293_crop_plantings_delivery.py" in (ROOT / "scripts/ci-local.sh").read_text()
@@ -243,16 +243,16 @@ def test_the_fixture_records_the_stand_ins_and_is_pending():
     assert evidence["exact_final_migration_sha256"] == c0.SUCCESSOR_293_SHA256
     assert evidence["projected_successor"] == six.SUCCESSOR_293 == qualifier.successor_literals(SQL)
     assert evidence["before"] == registered(PREDECESSOR)
-    assert "stand-ins" in evidence["projection"] and "290, 291 and 292 must land first" in evidence["projection"]
+    assert "stand-ins" in evidence["projection"] and "chains from 291" in evidence["projection"]
 
 
 def test_native_qualification_is_recorded():
     """Merge gate: the rolled-back production qualification of exact293 and its re-sealed seals."""
     evidence = json.loads(FIXTURE.read_text())
     assert evidence["final_migration_qualification_pending"] is False, (
-        "293 native qualification pending: land 290-292, re-chain 293 from the newest, then run "
+        "293 native qualification pending: run "
         "scripts/qualify-migration-successor.py db/migrations/293-crop-plantings.sql --fixture "
-        "tests/fixtures/293-crop-plantings-native-qualification.json on production (every session rolls back); set the "
+        "tests/fixtures/293-crop-plantings-native-qualification.json --apply-first 290 --apply-first 291 on production (every session rolls back); set the "
         "measured seals in the file's successor block and the c0-migration-delivery.py and "
         "bootstrap-six-runtime-roles.py registrations, update the file's sha at both and in the fixture, and run it "
         "again"

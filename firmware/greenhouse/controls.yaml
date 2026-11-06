@@ -645,7 +645,14 @@ interval:
               .vent_exchange_fraction = pol(verdify_policy::kPF_vent_exchange_fraction, id(vent_exchange_fraction)),
               // #410: vent+reheat held-temp dehum enable (ships OFF; armed by a
               // logged tunable push, readback cfg_dehum_vent_hold_enabled).
-              .dehum_vent_hold_enabled = id(dehum_vent_hold_enabled)
+              .dehum_vent_hold_enabled = id(dehum_vent_hold_enabled),
+              // #1365 night dry-out: vent + reheat pulses with confirmed-drier
+              // outdoor air, heat1 only (readbacks cfg_night_dryout_*).
+              .night_dryout_enabled = id(night_dryout_enabled),
+              .night_dryout_pulse_s = id(night_dryout_pulse_s),
+              .night_dryout_rest_s = id(night_dryout_rest_s),
+              .night_dryout_dp_margin_f = id(night_dryout_dp_margin_f),
+              .night_dryout_kwh_cap = id(night_dryout_kwh_cap)
           };
 
           validate_setpoints(setpts);
@@ -699,7 +706,9 @@ interval:
           // script flags and their Home Assistant buttons are gone (VD-47), so
           // the push buttons and manual_override are the only ways in.
           const bool manual_fans_eff   = manual_fans_latched;
-          const bool manual_fog_eff    = manual_fog_latched;
+          // #1343 follow-up: a fog run-once from the irrigation engine asks for fog
+          // the way the HUMID latch does, below the same safety rails.
+          const bool manual_fog_eff    = manual_fog_latched || irr_fog_run();
           const bool vent_bypass_eff   = vent_bypass_latched;
           const bool manual_fog_requested = manual_fog_eff;
           const char* manual_fog_safety_block = fog_safety_block_reason();
@@ -2215,7 +2224,10 @@ interval:
                 .solar_phasing = id(gl_main_solar_phasing),
                 .sunrise_offset_min = id(gl_main_sunrise_offset_min),
                 .sunset_offset_min = id(gl_main_sunset_offset_min),
-                .out_of_service = id(gl_main_out_of_service)
+                .out_of_service = id(gl_main_out_of_service),
+                // #1370: the main (people) light follows occupancy at any hour;
+                // grow_sp keeps the photoperiod for the Vandas' dark period.
+                .occupancy_any_hour = true
               };
               LightingSetpoints grow_sp = {
                 .target_light_minutes = (uint32_t)id(gl_grow_target_light_minutes),

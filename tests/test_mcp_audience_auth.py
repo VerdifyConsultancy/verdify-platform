@@ -1198,7 +1198,8 @@ class TestIrrigationWriteTools:
         from typing import Literal, get_args, get_origin
 
         lines = tuple(f"L{index:02d}" for index in range(1, 12))
-        for tool, optional in (("irrigation_run", False), ("irrigation_stop", True)):
+        # #1336: a run may name a physical line and variant instead, so line_id is optional on both.
+        for tool, optional in (("irrigation_run", True), ("irrigation_stop", True)):
             annotation = inspect.signature(getattr(mcp_server, tool)).parameters["line_id"].annotation
             base = get_args(annotation)[0]  # Annotated[...] -> the type
             literal = next(arg for arg in get_args(base) if get_origin(arg) is Literal) if optional else base
@@ -1208,6 +1209,8 @@ class TestIrrigationWriteTools:
         stop_params = list(inspect.signature(mcp_server.irrigation_stop).parameters)
         assert run_params == [
             "line_id",
+            "circuit_id",
+            "variant",
             "minutes",
             "prewet_s",
             "flush_s",
@@ -1286,6 +1289,8 @@ class TestIrrigationWriteTools:
             "on_s": None,
             "count": None,
             "gap_s": None,
+            "circuit_id": None,
+            "variant": None,
         }
 
     def test_stop_writes_as_admin_and_a_refusal_is_problem_json(self, mcp_server, mcp_types, monkeypatch):

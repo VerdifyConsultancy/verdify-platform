@@ -202,6 +202,7 @@ struct Sim {
   int vpd_grants = 0;
   int vpd_served = 0;
   bool fog_want = false;
+  bool fog_follows_engine = false;  // the climate fogs for a fog run-once (#1343 follow-up), held by occupancy and SF
   // Records.
   uint32_t open_s[kLineCount] = {};  // valve-open seconds per line, sampled per tick
   uint16_t seq[1024] = {};           // the relay masks in order (each change)
@@ -214,6 +215,7 @@ struct Sim {
   bool l03_alone = false;
   bool l03_with_fog = false;
   bool l03_with_clean_mist = false;
+  bool l03_with_clean = false;  // #1336: L03 open with any clean wet relay (L01, L04, L05, L07, L09, fog)
   bool ungranted = false;
   bool mist_in_sf = false;
   bool mist_occupied = false;  // an engine mister relay ON while occupancy is confirmed
@@ -259,7 +261,11 @@ struct Sim {
   // irrigation_water_conflict (drip_active) and SAF-5 (l03_hold) force it off.
   void record() {
     const uint16_t climate = uint16_t((vpd_on != kNoLine ? irr_bit(vpd_on) : 0u) |
-                                      (fog_want && !out.drip_active && !out.l03_hold ? kFogMask : 0u));
+                                      (fog_want && !out.drip_active && !out.l03_hold ? kFogMask : 0u) |
+                                      (fog_follows_engine && out.fog_run && !in.occupied && !in.sensor_fault &&
+                                               !out.l03_hold
+                                           ? kFogMask
+                                           : 0u));
     const uint16_t now = uint16_t(out.relay_mask | climate);
     if ((out.relay_mask & ~out.grant_mask) != 0) ungranted = true;
     if (seq_n == 0 || seq[seq_n - 1] != now) {
@@ -280,6 +286,7 @@ struct Sim {
     }
     if ((now & irr_bit(kL03)) && (now & kFogMask)) l03_with_fog = true;
     if ((now & irr_bit(kL03)) && (now & kDegradedOnlyMask)) l03_with_clean_mist = true;
+    if ((now & irr_bit(kL03)) && (now & kCleanWetMask)) l03_with_clean = true;
     if (in.sensor_fault && (out.relay_mask & kMistManifoldMask)) mist_in_sf = true;
     if (in.occupied && (out.relay_mask & kMistManifoldMask)) mist_occupied = true;
     disabled_opened |= uint16_t(out.relay_mask & ~eng.prog.enabled_mask & ~irr_bit(kL03));
@@ -1922,7 +1929,7 @@ static void run_now_refusals() {
             event_is(s.last_event(), IrrOutcome::kSkipped, IrrReason::kDis),
         "line_disabled");
   CHECK(s.run_now(kL01, 600, 2) == IrrRunResult::kBadArgs && s.run_now(kL03, 60) == IrrRunResult::kBadArgs &&
-            s.run_now(kL11, 60) == IrrRunResult::kBadArgs && s.run_now(kL04, 91, 1, 30) == IrrRunResult::kBadArgs,
+            s.run_now(kL11, 30) == IrrRunResult::kBadArgs && s.run_now(kL04, 91, 1, 30) == IrrRunResult::kBadArgs,
         "outside the bounds or not a schedulable line: bad_args");
   IrrProgram q = p;
   q.lines[kL01].paused_until = at(1200);
@@ -1990,6 +1997,115 @@ static void run_now_mister_without_schedule() {
   CHECK(event_is(s.find_event(0, kL07), IrrOutcome::kOk, IrrReason::kNone) && s.open_s[kL07] >= 85 &&
             s.open_s[kL07] <= 95,
         "the window delivers its two pulses and ends ok");
+}
+
+// #1336 (Jason, 2026-11-05): the master valve L03 opens only for a fertilized variant and never
+// with clean water. The pure rule, then a fertilized mister and a clean drip run end to end.
+static void master_valve_only_with_fertilized() {
+  CHECK(irr_master_rule(irr_bit(kL02)) == (irr_bit(kL02) | irr_bit(kL03)) &&
+            irr_master_rule(irr_bit(kL08) | irr_bit(kL03)) == (irr_bit(kL08) | irr_bit(kL03)),
+        "a fertilized relay brings L03");
+  CHECK(irr_master_rule(irr_bit(kL01) | irr_bit(kL03)) == irr_bit(kL01) &&
+            irr_master_rule(irr_bit(kL07) | irr_bit(kL03)) == irr_bit(kL07) &&
+            irr_master_rule(irr_bit(kL11) | irr_bit(kL03)) == irr_bit(kL11) && irr_master_rule(irr_bit(kL03)) == 0,
+        "a clean relay (or nothing) never has L03");
+  CHECK(irr_master_rule(irr_bit(kL02) | irr_bit(kL01) | irr_bit(kL03)) == (irr_bit(kL02) | irr_bit(kL01)),
+        "a mixed set keeps L03 shut");
+  for (uint8_t i = 0; i < kLineCount; ++i) {
+    const bool fert = (kFertRelayMask & irr_bit(i)) != 0;
+    CHECK(fert == (kLineKind[i] == IrrLineKind::kFertDrip || kLineKind[i] == IrrLineKind::kFertMister) &&
+              fert == (kCleanPartner[i] != kNoLine),
+          "the fertilized relays are exactly the fert kinds with a clean partner");
+  }
+  IrrProgram p = open_program();
+  Sim s;
+  s.epoch = at(600);
+  s.boot(true, &p);
+  s.tick();
+  CHECK(s.run_now(kL08, 30, 2, 30, 60, 60) == IrrRunResult::kStarted, "a fertilized South mister run starts");
+  s.run_for(400);
+  CHECK(event_is(s.find_event(0, kL08), IrrOutcome::kOk, IrrReason::kNone), "it feeds and ends ok");
+  CHECK(s.open_s[kL03] == s.open_s[kL08] && s.open_s[kL03] > 0, "L03 opens exactly with L08");
+  CHECK(s.open_s[kL07] >= 115, "prewet and flush on L07, without L03");
+  CHECK(s.run_now(kL01, 120) == IrrRunResult::kStarted, "a clean Wall drip run starts");
+  s.run_for(200);
+  CHECK(s.open_s[kL01] >= 115 && s.open_s[kL03] == s.open_s[kL08], "the clean run never opened L03");
+  CHECK(!s.l03_with_clean && !s.l03_alone && !s.ungranted, "L03 never with a clean relay, never alone");
+}
+
+// #1343 follow-up (Jason, 2026-11-05): fog (L11) runs once, under the mister rails that apply to
+// it. The climate path fogs while the engine asks (fog_run); the run counts the fog relay's ON time.
+static void fog_run_once() {
+  IrrProgram p = open_program();
+  Sim s;
+  s.fog_follows_engine = true;
+  s.epoch = at(600);
+  s.boot(true, &p);
+  s.tick();
+  CHECK(s.run_now(kL11, 120) == IrrRunResult::kLineDisabled &&
+            event_is(s.last_event(), IrrOutcome::kSkipped, IrrReason::kDis),
+        "fog disabled: line_disabled, skipped (dis) on L11");
+  enable(p, kL11);
+  s.push(p);
+  s.tick();
+  CHECK(s.run_now(kL11, 30) == IrrRunResult::kBadArgs && s.run_now(kL11, 1801) == IrrRunResult::kBadArgs &&
+            s.run_now(kL11, 120, 2, 30) == IrrRunResult::kBadArgs &&
+            s.run_now(kL11, 120, 1, 0, 60) == IrrRunResult::kBadArgs,
+        "fog bounds: 60-1800 s, one continuous run, no gap, prewet or flush");
+  s.in.sensor_fault = true;
+  s.tick();
+  CHECK(s.run_now(kL11, 120) == IrrRunResult::kSensorFault &&
+            event_is(s.last_event(), IrrOutcome::kSkipped, IrrReason::kSf),
+        "sensor fault refuses a fog run, as it refuses mist");
+  s.in.sensor_fault = false;
+  s.tick();
+  const uint32_t water = s.rtc.water_centigal;
+  s.rtc.water_centigal = uint32_t(s.eng.prog.saf4_gal) * 100u;
+  irr_rtc_seal(s.rtc);
+  CHECK(s.run_now(kL11, 120) == IrrRunResult::kCapReached &&
+            event_is(s.last_event(), IrrOutcome::kSkipped, IrrReason::kSaf),
+        "SAF-4 refuses a fog run (cap_reached, saf)");
+  s.rtc.water_centigal = water;
+  irr_rtc_seal(s.rtc);
+  CHECK(s.run_now(kL01, 600) == IrrRunResult::kStarted, "a drip holds the water");
+  CHECK(s.run_now(kL11, 120) == IrrRunResult::kManifoldBusy, "fog waits for nobody: manifold_busy");
+  s.stop(kL01);
+  s.tick();
+  CHECK(s.run_now(kL11, 120) == IrrRunResult::kStarted && s.out.fog_run, "fog runs once");
+  CHECK(s.out.state.mist.valid && s.out.state.mist.line == kL11 && s.out.state.mist.cause == IrrCause::kRunNow,
+        "published as m=10,run_now");
+  char buf[kTextBufLen];
+  IrrStateExtras x{};
+  irr_format_state(s.out.state, x, buf, sizeof(buf));
+  CHECK(std::strncmp(buf, "m=10,run_now,0,", 15) == 0, "irr_state names the fog run on m=");
+  CHECK(s.run_now(kL11, 120) == IrrRunResult::kLineBusy, "a second fog run: line_busy");
+  CHECK(s.run_now(kL07, 30, 1, 30) == IrrRunResult::kManifoldBusy, "one engine run at a time");
+  CHECK(!(s.out.relay_mask & kFogMask) && !(s.out.grant_mask & kFogMask), "the engine never switches fog itself");
+  s.run_for(130);
+  CHECK(event_is(s.find_event(0, kL11), IrrOutcome::kOk, IrrReason::kNone) && !s.out.fog_run &&
+            s.open_s[kL11] >= 115 && s.open_s[kL11] <= 130,
+        "120 s of fog, then ok");
+  // Occupancy holds the climate's fog: the run waits to its deadline and ends short (occ).
+  s.in.occupied = true;
+  s.tick();
+  CHECK(s.run_now(kL11, 60) == IrrRunResult::kStarted, "occupied: the run starts and waits");
+  s.run_for(60 + 3600 + 10);
+  CHECK(event_is(s.find_event(0, kL11), IrrOutcome::kShort, IrrReason::kOcc), "never fogged: short (occ)");
+  s.in.occupied = false;
+  s.tick();
+  uint16_t scope = 99;
+  CHECK(irr_stop_scope(kL11, scope) && scope == 0, "a stop on L11 closes no relay itself");
+  CHECK(s.run_now(kL11, 600) == IrrRunResult::kStarted, "a long fog run");
+  s.run_for(30);
+  s.stop(kL11);
+  CHECK(event_is(s.find_event(0, kL11), IrrOutcome::kStopped, IrrReason::kCmd) && !s.out.fog_run, "Stop ends it");
+  CHECK(s.run_now(kL11, 600) == IrrRunResult::kStarted, "again");
+  s.run_for(20);
+  s.in.sensor_fault = true;
+  s.tick();
+  CHECK(event_is(s.find_event(0, kL11), IrrOutcome::kShort, IrrReason::kSf), "sensor fault ends it short (sf)");
+  s.in.sensor_fault = false;
+  CHECK(!s.l03_with_clean && !s.ungranted, "no L03 with fog, nothing ungranted");
 }
 
 static void stop_disables_nothing() {
@@ -2264,7 +2380,8 @@ static void full_program_day_invariants() {
   CHECK(!s.two_misters, "never two misters");
   CHECK(!s.drip_with_mist, "never a drip with mist or fog");
   CHECK(!s.l03_alone, "L03 only with a fertilizer relay");
-  CHECK(!s.l03_with_fog && !s.l03_with_clean_mist, "SAF-5: no fog and no clean mist while L03 is open");
+  CHECK(!s.l03_with_fog && !s.l03_with_clean_mist && !s.l03_with_clean,
+        "SAF-5: no fog and no clean mist while L03 is open; #1336: no clean relay at all");
   CHECK(!s.ungranted, "every engine relay granted");
   CHECK(!s.mist_in_sf, "no engine mist in SENSOR_FAULT");
   CHECK(!s.mist_occupied, "no engine mist while occupancy is confirmed (D-IRP-10)");
@@ -2585,8 +2702,8 @@ static void wiring_commands_and_clock() {
   CHECK(irr_stop_scope(kAllLines, scope) && scope == kGrantableMask && !(scope & kFogMask),
         "stop 255: every wet relay, never fog");
   CHECK(irr_stop_scope(kL03, scope) && scope == irr_bit(kL03), "stop one line");
-  CHECK(!irr_stop_scope(kL11, scope) && scope == 0 && !irr_stop_scope(-1, scope) && !irr_stop_scope(254, scope),
-        "fog and any other value stop nothing");
+  CHECK(irr_stop_scope(kL11, scope) && scope == 0, "stop L11: ends a fog run-once, switches no relay (#1343 follow-up)");
+  CHECK(!irr_stop_scope(-1, scope) && scope == 0 && !irr_stop_scope(254, scope), "any other value stops nothing");
   // The device's local offset from one ESPTime reading, across both 2026 changeovers.
   const uint32_t jump = 1772960400u, back = 1793520000u;
   for (uint32_t ep : {kDay0, kDay0 + 25199u, kDay0 + 25200u, jump - 1u, jump, jump + 3599u, back - 1u, back,
@@ -4019,6 +4136,8 @@ int main() {
   vpd_zone_allowed_follows_membership_and_faults();
   center_window_needs_schedule_membership();
   run_now_mister_without_schedule();
+  master_valve_only_with_fertilized();
+  fog_run_once();
   wiring_arbiter_picks_the_zone();
   wiring_vpd_and_schedule_alternate_at_the_boundary();
   wiring_schedule_only_window_counts_duty_and_saf4();

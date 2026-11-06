@@ -6223,7 +6223,22 @@ async def irrigation_schedule_set(
     ] = None,
     delete: Annotated[bool, Field(description="Delete the schedule slot_id names; send no schedule field.")] = False,
     line_id: Annotated[
-        ScheduleLineId | None, Field(description="The line: L01, L02 or L04-L10. Needed to create.")
+        ScheduleLineId | None,
+        Field(description="The relay: L01, L02 or L04-L10. To create, give it or circuit_id and variant."),
+    ] = None,
+    circuit_id: Annotated[
+        Literal["wall_drip", "center_drip", "center_mister", "south_mister", "west_mister"] | None,
+        Field(
+            description="Instead of line_id (#1336): the physical line: wall_drip (every wall and shelf), center_drip, "
+            "center_mister, south_mister or west_mister. Send variant with it."
+        ),
+    ] = None,
+    variant: Annotated[
+        Literal["clean", "fertilized"] | None,
+        Field(
+            description="With circuit_id: clean water, or fertilized (opens the fertilizer master valve L03; clean "
+            "never does). A variant whose valve is not wired is unknown_target."
+        ),
     ] = None,
     days: Annotated[list[Weekday] | None, Field(min_length=1, description="The weekdays. Needed to create.")] = None,
     start: Annotated[ScheduleStart | None, Field(description="When it starts each day. Needed to create.")] = None,
@@ -6254,7 +6269,8 @@ async def irrigation_schedule_set(
     /v1/irrigation/schedules/{slot_id}) and API-IRR-05 (DELETE /v1/irrigation/schedules/{slot_id}). Returns the Schedule
     JSON with sync and manual_before; a delete returns {"slot_id": <id>, "deleted": true, "manual_before": <flag>}.
 
-    No slot_id creates, and needs line_id, days, start and on_s. A slot_id edits: omitted fields keep their value, except
+    No slot_id creates, and needs the line (line_id, or circuit_id and variant), days, start and on_s. An edit may send
+    variant alone to switch clean and fertilized on the same physical line. A slot_id edits: omitted fields keep their value, except
     manual. delete true with a slot_id and no schedule field deletes. irrigation_schedule has the bounds per line kind
     and the limit of 24 schedules.
 
@@ -6273,6 +6289,8 @@ async def irrigation_schedule_set(
         name: value
         for name, value in (
             ("line_id", line_id),
+            ("circuit_id", circuit_id),
+            ("variant", variant),
             ("days", days),
             ("start", None if start is None else start.model_dump(exclude_none=True)),
             ("on_s", on_s),
@@ -6407,16 +6425,33 @@ async def irrigation_line_set(
 @mcp.tool()
 async def irrigation_run(
     line_id: Annotated[
-        LineId,
-        Field(description="The line to run: L01, L02 or L04-L10; L03 and L11 take no runs. Before the firmware: L01."),
-    ],
+        LineId | None,
+        Field(
+            description="The relay to run: L01, L02, L04-L10, or fog L11; L03 takes no runs. Or give circuit_id and "
+            "variant instead. Before the firmware: L01."
+        ),
+    ] = None,
+    circuit_id: Annotated[
+        Literal["wall_drip", "center_drip", "center_mister", "south_mister", "west_mister"] | None,
+        Field(
+            description="Instead of line_id (#1336): the physical line: wall_drip (every wall and shelf), center_drip, "
+            "center_mister, south_mister or west_mister. Send variant with it."
+        ),
+    ] = None,
+    variant: Annotated[
+        Literal["clean", "fertilized"] | None,
+        Field(
+            description="With circuit_id: clean water, or fertilized (opens the fertilizer master valve L03; clean "
+            "never does). A variant whose valve is not wired is unknown_target."
+        ),
+    ] = None,
     minutes: Annotated[
         int | None,
         Field(
             ge=1,
             le=120,
-            description="Drips L01, L02, L05, L06. Before the irrigation firmware: L01, left out or exactly "
-            "irrig_wall_duration_min.",
+            description="Drips L01, L02, L05, L06, and fog L11 (1-30). Before the irrigation firmware: L01, left out "
+            "or exactly irrig_wall_duration_min.",
         ),
     ] = None,
     prewet_s: Annotated[
@@ -6441,7 +6476,11 @@ async def irrigation_run(
     Returns the Command JSON: status pending, then sent, or failed (not sent within 2 min, ended by a Stop, or the line
     already running). Whether water started shows on the line's relay in equipment_state within about 30 s, not here.
 
-    Send exactly the fields of the line's kind. Drips L01, L05: minutes. Fertilizer drips L02, L06: minutes, prewet_s,
+    Name the line by its relay (line_id) or as a physical line and variant (circuit_id and variant): a fertilized
+    variant runs its fertilizer relay with the master valve, a clean one never opens it.
+
+    Send exactly the fields of the line's kind. Fog L11: minutes, 1-30 (unavailable until the controller runs the
+    firmware that takes it). Drips L01, L05: minutes. Fertilizer drips L02, L06: minutes, prewet_s,
     flush_s. Misters L04, L07, L09, Schedule on or off: on_s, count, gap_s. Fertilizer misters L08, L10: on_s,
     count, gap_s, prewet_s, flush_s, never minutes; a rinse needs the clean partner enabled, or the controller ends the
     run skipped.
@@ -6457,7 +6496,7 @@ async def irrigation_run(
     cap_reached, line_disabled, line_paused, line_faulted, not_schedule_member (a mister with Schedule off, only until
     the controller runs the firmware that drops that rule), out_of_range (before the firmware, minutes
     is not irrig_wall_duration_min; min and max give it), invalid_request (a missing field or another kind's, such as
-    minutes on L08), unknown_target (L03, L11), request_id_reused, forbidden, and unavailable (a line other than L01
+    minutes on L08), unknown_target (L03, or a variant whose valve is not wired), request_id_reused, forbidden, and unavailable (a line other than L01
     before the irrigation firmware, not retryable; the database, retryable with the same request_id)."""
     from verdify_services.irrigation import writes
 
@@ -6476,6 +6515,8 @@ async def irrigation_run(
             on_s=on_s,
             count=count,
             gap_s=gap_s,
+            circuit_id=circuit_id,
+            variant=variant,
         )
 
     return await _irrigation_write("irrigation_run", write)

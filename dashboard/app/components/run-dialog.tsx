@@ -4,8 +4,9 @@
  * one confirmation. `lines[].kind` picks the fields. Any wet line runs once (#1343, superseding D-IRP-11): a mister offers
  * "Mist now…" whether or not Schedule is on, and a disabled line (not a reserved one) keeps its button, which opens the
  * check sheet to enable it (`?check=<line>&for=run`, asking the one-time check if none is recorded) and then this dialog.
- * Fog and the fertilizer master have no card controls. A refusal keeps the dialog open with the code in words; nothing
- * else is sent and nothing queues.
+ * Fog runs once too (#1343 follow-up): "Fog once…" for 1–30 min, which the API refuses `unavailable` until the
+ * controller runs the firmware that takes it. The fertilizer master has no card controls: it opens only with a fertilized
+ * run (#1336). A refusal keeps the dialog open with the code in words; nothing else is sent and nothing queues.
  *
  * Before the irrigation firmware only L01 runs, through the bridge, for the controller's own `irrig_wall_duration_min`:
  * no Duration field, the value read from API-09 when the dialog opens (without it the dialog names the setting only), and
@@ -21,7 +22,7 @@ import { lineDisplayName } from "../lib/lines";
 import type { IrrigationLine, IrrigationStatus } from "../lib/operator-api";
 import { fetchRead } from "../lib/queries";
 import { OperatorOnly, useRole } from "../lib/session";
-import { useWaterDrawer, wetLines } from "../lib/water";
+import { boardLines, useWaterDrawer } from "../lib/water";
 import { useCommand } from "../lib/writes";
 import { Button } from "./button";
 import { ConfirmDialog, type RunBody } from "./forms/confirm-dialog";
@@ -38,13 +39,20 @@ const BRIDGE_LINE = "L01";
  */
 export type RunOffer = "run" | "mist" | "enable" | "arrives" | null;
 export function runOffer(line: Pick<IrrigationLine, "line_id" | "kind" | "enabled" | "reserved">, engine: boolean): RunOffer {
-  if (line.kind === "fog" || line.kind === "master") return null;
+  if (line.kind === "master") return null;
+  // Fog runs once under the climate path's own rails once it is enabled, like any line; before the engine, nothing.
+  if (line.kind === "fog" && !engine) return null;
   if (!engine && line.line_id !== BRIDGE_LINE) return "arrives";
   if (!line.enabled) return engine && !line.reserved ? "enable" : null;
   return line.kind === "mister" ? "mist" : "run";
 }
 /** The button's words for an offer: a mister mists, every other wet line runs. */
-const runLabel = (line: Pick<IrrigationLine, "kind">): string => (line.kind === "mister" ? "Mist now…" : "Run…");
+const runLabel = (line: Pick<IrrigationLine, "kind">): string => (line.kind === "mister" ? "Mist now…" : line.kind === "fog" ? "Fog once…" : "Run…");
+/** A fog run-once's bounds and default (#1343 follow-up): 1–30 min of continuous fog. */
+export const FOG_RUN_BOUNDS = { minutes: { min: 1, max: 30 } } as const;
+const FOG_RUN_DEFAULTS = { minutes: 5 } as const;
+/** The lines a card can run once: every wet line and fog; never L03. */
+export const runLines = (lines: readonly IrrigationLine[]): IrrigationLine[] => boardLines(lines);
 /** What a disabled line's button says beside it (#1343). */
 export const LINE_OFF_TEXT = "This line is off: enable it to run it";
 
@@ -84,7 +92,9 @@ function LineRun({ line, engine, publish }: { line: IrrigationLine; engine: bool
   const note = command.phase === "waiting" && !running ? "Waiting for the valve to open" : command.phase === "late" && !running ? command.message : null;
   const refusal = !open ? command.error?.message ?? null : null;
   useEffect(() => publish(line.line_id, { note, refusal }), [publish, line.line_id, note, refusal]);
-  return open ? <ConfirmDialog open onClose={close} line={line} fixed={engine ? null : { minutes: fixed }} onRun={run} sending={command.sending} error={command.error} /> : null;
+  const fog = line.kind === "fog";
+  return open ? <ConfirmDialog open onClose={close} line={line} fixed={engine ? null : { minutes: fixed }} onRun={run} sending={command.sending} error={command.error}
+    bounds={fog ? FOG_RUN_BOUNDS : undefined} defaults={fog ? FOG_RUN_DEFAULTS : undefined} /> : null;
 }
 
 /**
@@ -97,7 +107,7 @@ export function WaterRuns({ status, children }: { status: Pick<IrrigationStatus,
   const publish = useCallback((lineId: string, note: RunNote) => setNotes((current) => ({ ...current, [lineId]: note })), []);
   return <RunNotes.Provider value={notes}>
     {children}
-    {operator && status && wetLines(status.lines).map((line) => <LineRun key={line.line_id} line={line} engine={status.engine} publish={publish} />)}
+    {operator && status && runLines(status.lines).map((line) => <LineRun key={line.line_id} line={line} engine={status.engine} publish={publish} />)}
   </RunNotes.Provider>;
 }
 

@@ -51,6 +51,8 @@ SIGNATURES = {
         "slot_id",
         "delete",
         "line_id",
+        "circuit_id",
+        "variant",
         "days",
         "start",
         "on_s",
@@ -83,6 +85,8 @@ SIGNATURES = {
     ),
     "irrigation_run": (
         "line_id",
+        "circuit_id",
+        "variant",
         "minutes",
         "prewet_s",
         "flush_s",

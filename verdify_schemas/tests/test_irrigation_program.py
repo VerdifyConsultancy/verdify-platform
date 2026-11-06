@@ -636,7 +636,7 @@ def test_state_tokens_in_any_order_format_canonically() -> None:
         "d=3,vpd,0,1,2",  # a mister on the drip manifold
         "m=0,schedule,4,1,2",  # a drip on the mist manifold
         "d=2,feed,0,1,2",  # L03 is never named
-        "m=10,vpd,0,1,2",  # nor L11
+        "m=10,vpd,0,1,2",  # L11 only as a fog run-once (run_now)
         "d=11,schedule,4,1,2",
         "d=0,schedule,04,1,2",
         "d=0,schedule,65536,1,2",
@@ -780,7 +780,6 @@ def test_eight_widest_events_fit_in_223_characters() -> None:
         "5,0,4,20759,ok 5,0,4,20759,ok",  # repeated sequence
         "0,0,4,20759,ok 40000,0,4,20759,ok",  # more than half the ring apart
         "1,2,0,20759,ok",  # L03 takes no runs
-        "1,10,0,20759,ok",  # nor L11
         "1,11,0,20759,ok",
         "65536,0,4,20759,ok",
         "1,0,65536,20759,ok",
@@ -804,7 +803,20 @@ def test_events_formatter_rejects_what_the_parser_rejects() -> None:
     with pytest.raises(ValueError):
         irr.format_irr_events([event.model_copy(update={"seq": 2}), event])
     with pytest.raises(ValidationError):
-        IrrEvent(seq=1, line_id="L11", local_day=date(2026, 11, 2), outcome="ok")
+        IrrEvent(seq=1, line_id="L03", local_day=date(2026, 11, 2), outcome="ok")
+
+
+def test_a_fog_run_once_rides_m_and_names_l11_in_events() -> None:
+    """#1343 follow-up: fog runs once. Its run token is m=10 with cause run_now only, and its outcome names L11."""
+    state = irr.parse_irr_state("m=10,run_now,0,100,220")
+    (run,) = state.runs
+    assert (run.line_id, run.cause, run.manifold) == ("L11", "run_now", "mist")
+    assert irr.format_irr_state(state) == "m=10,run_now,0,100,220"
+    for text in ("m=10,vpd,0,1,2", "m=10,schedule,4,1,2", "d=10,run_now,0,1,2", "w=10,man"):
+        with pytest.raises(ValueError):
+            irr.parse_irr_state(text)
+    (event,) = irr.parse_irr_events("1,10,0,20759,sh,occ")
+    assert (event.line_id, event.slot_id, event.outcome, event.reason) == ("L11", None, "short", "occ")
 
 
 @pytest.mark.parametrize(

@@ -705,21 +705,51 @@ def sealed_sql_290():
     )
 
 
+ENERGY_DAILY_MIGRATION = (
+    291,
+    "291-energy-daily-load-magnitude.sql",
+    "afd21ce741451d2530f78e94fb82bf1f7a3159476350cd6eb527a1543ae664ae",
+)
+# v_energy_daily's new text and two appended columns are in its relation entry, which both ordinary
+# digests take in, so the api and ingestor seals move; no MCP role or PUBLIC holds an entry on the view,
+# so the MCP seal stays 290's. The rolled-back native qualification measures them.
+SUCCESSOR_291 = {
+    "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
+    "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
+    "mcp": SUCCESSOR_290["mcp"],
+}
+
+
+def sealed_sql_291():
+    # Keep every 290 predicate and bind the exact 291 runner stamp with the two
+    # ordinary seals the view replacement moves.
+    predecessor = sealed_sql_290()
+    current = seal_profile_sql(290, SUCCESSOR_290)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(291, SUCCESSOR_291), 1)
+        + " AND "
+        + ledger_row_sql(*ENERGY_DAILY_MIGRATION)
+        + ")"
+    )
+
+
 CROP_PLANTINGS_MIGRATION = (
     293,
     "293-crop-plantings.sql",
-    "8359c00683afc8f14f7c1034e01925d189d752825f243f7a5cb67c0608eac5ab",
+    "7bdf03cddae08f1680a1e3586a49923bb1be211c0ba11e3347437f332a3ea164",
 )
-# 293's layout columns, crop_occupancy and grants move all three seals. 291 and 292 land first and this
-# re-chains from the newest of them. Until the rolled-back native qualification measures 293, these are 289's
-# seals as stand-ins (tests/fixtures/293-crop-plantings-native-qualification.json).
-SUCCESSOR_293 = dict(SUCCESSOR_289)
+# 293's layout columns, crop_occupancy and grants move all three seals. It chains from 291 (292 is a gap).
+# Until the rolled-back native qualification measures 293, these are 291's seals as stand-ins
+# (tests/fixtures/293-crop-plantings-native-qualification.json).
+SUCCESSOR_293 = dict(SUCCESSOR_291)
 
 
 def sealed_sql_293():
-    # Keep every 289 predicate and bind the exact 293 runner stamp with its seals.
-    predecessor = sealed_sql_289()
-    current = seal_profile_sql(289, SUCCESSOR_289)
+    # Keep every 291 predicate and bind the exact 293 runner stamp with its seals.
+    predecessor = sealed_sql_291()
+    current = seal_profile_sql(291, SUCCESSOR_291)
     assert predecessor.count(current) == 1
     return (
         "("
@@ -766,6 +796,8 @@ def sealed_sql():
         + sealed_sql_289()
         + " OR "
         + sealed_sql_290()
+        + " OR "
+        + sealed_sql_291()
         + " OR "
         + sealed_sql_293()
         + ")"
