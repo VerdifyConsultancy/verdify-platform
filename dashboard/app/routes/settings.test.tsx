@@ -810,4 +810,6 @@ test("the glossary at #glossary lists every term the pages define, from the one 
   expect(terms).toEqual(Object.values(GLOSSARY).map((entry) => entry.term));
   expect(terms).toEqual(expect.arrayContaining(["VPD", "Band", "In band today", "Mist and fog water", "Bursts", "Occupancy hold", "Iris plans"]));
   expect(glossary.querySelector("#term-mist_fog_limit dd")?.textContent).toBe(GLOSSARY.mist_fog_limit.definition);
+  // Folded unless linked, so "In band today" in a definition never reads as the page's state (states.spec).
+  expect(glossary.querySelector("details")?.open).toBe(false);
 });

@@ -119,12 +119,25 @@ export default function Settings() {
         <SettingsCatalog rows={shown} failed={read.isError} onRetry={() => void read.refetch()} readbackStale={readbackStale} editTo={editTo} today={today} empty={empty} />
       </div>
     </div>
-    <Panel id="glossary" title="Glossary" thing="the glossary" state="ready">
-      <GlossaryList entries={GLOSSARY_ENTRIES} />
-    </Panel>
+    <GlossaryPanel />
     <SettingDrawerHost />
   </>;
 }
 
 /** The glossary (#1339), from the one table every page's `Term` reads, so docs and MCP can cite `/settings#glossary`. */
 const GLOSSARY_ENTRIES = Object.entries(GLOSSARY).map(([id, entry]) => ({ id, ...entry }));
+
+/**
+ * The glossary folded under its count, so its definitions (which name verdicts such as "In band today") never read as
+ * the page's own state while data is missing; a link to `#glossary` or one term's `#term-<id>` opens it.
+ */
+function GlossaryPanel() {
+  const { hash } = useLocation();
+  const linked = hash === "#glossary" || hash.startsWith("#term-");
+  return <Panel id="glossary" title="Glossary" thing="the glossary" state="ready">
+    <details className="glossary" open={linked}>
+      <summary>{GLOSSARY_ENTRIES.length} terms the pages use</summary>
+      <GlossaryList entries={GLOSSARY_ENTRIES} />
+    </details>
+  </Panel>;
+}

@@ -272,12 +272,15 @@ test("Running and next from 861 px: the track over the last 6 h and the next 12 
   // Iris's triggers in words (#1339), in two lanes, each opening its time and outcome on a tap (#1340).
   await expect(track.locator("[data-row=iris] .tt-marker-label")).toHaveText(["Sunrise plan ✓", "Midday check", "Sunset plan"]);
   await expect(track.locator("[data-row=sun] .tt-marker-label")).toHaveText(["Sunrise 06:35", "Sunset 16:58"]);
-  await track.locator("[data-row=iris] .tt-marker-button").nth(1).click();
-  await expect(page.getByRole("dialog", { name: "Iris: Midday check" })).toContainText("Midday check 12:41 · due");
-  await page.keyboard.press("Escape");
+  await test.step("a tap on Midday check opens its time and outcome", async () => {
+    await track.locator("[data-row=iris] .tt-marker-button").nth(1).click({ timeout: 10_000 });
+    await expect(page.getByRole("dialog", { name: "Iris: Midday check" })).toContainText("Midday check 12:41 · due");
+    await page.keyboard.press("Escape");
+  });
   // The now rule is named at the top of the track, and the plan's labels stop at the next marker, so its row keeps the others' height.
   await expect(track.locator(".tt-now-label")).toHaveText("now 10:42");
-  const [iris, plan] = await Promise.all([track.locator("[data-row=iris]").boundingBox(), track.locator("[data-row=plan]").boundingBox()]);
+  const iris = await track.locator("[data-row=iris]").boundingBox({ timeout: 10_000 });
+  const plan = await track.locator("[data-row=plan]").boundingBox({ timeout: 10_000 });
   expect(Math.round(plan!.height)).toBe(Math.round(iris!.height));
   // The phone's lists are there for a narrow screen, hidden here.
   await expect(coming.locator(".now-next")).toBeHidden();

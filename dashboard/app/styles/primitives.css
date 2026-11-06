@@ -289,7 +289,8 @@ button.tt-span{cursor:pointer}
 button.term{display:inline;min-height:0;margin:0;padding:0;border:0;border-bottom:1px dotted currentColor;border-radius:0;background:none;color:inherit;font:inherit;text-align:inherit;cursor:help}
 button.term:hover{border-color:var(--ink)}
 .term-definition{margin:0 0 var(--space-2)}
-.glossary-list{display:grid;gap:var(--space-3);margin:0}
+.glossary>summary{cursor:pointer;padding:var(--space-2) 0}
+.glossary-list{display:grid;gap:var(--space-3);margin:var(--space-2) 0 0}
 .glossary-item dt{font-weight:700}
 .glossary-item dd{margin:0;color:var(--muted)}
 
