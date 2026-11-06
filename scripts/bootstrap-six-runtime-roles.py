@@ -865,6 +865,36 @@ def sealed_sql_302():
     )
 
 
+SOIL_TARGETS_MIGRATION = (
+    303,
+    "303-soil-targets-configurable.sql",
+    "fa983725905c01373290a490cd557fda86841a3c84cdee0f965513f924a3af97",
+)
+# Soil-moisture targets become configurable (#1345): new columns on a table 217 protects by name and the ingestor
+# login reads, and SELECT plus threshold UPDATE for the dashboard and MCP duties, so all three seals move. The
+# rolled-back native qualification measured them (tests/fixtures/303-soil-targets-native-qualification.json).
+SUCCESSOR_303 = {
+    **SUCCESSOR_302,
+    "api": "42091d8bc52adfff17ef589ca7d71ac3a97fe37af4460b551a938f313635bb8c",
+    "ingestor": "c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940",
+    "mcp": "2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245",
+}
+
+
+def sealed_sql_303():
+    # Keep every 302 predicate and bind the exact 303 runner stamp with the three seals it moves.
+    predecessor = sealed_sql_302()
+    current = seal_profile_sql(302, SUCCESSOR_302)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(303, SUCCESSOR_303), 1)
+        + " AND "
+        + ledger_row_sql(*SOIL_TARGETS_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -913,6 +943,8 @@ def sealed_sql():
         + sealed_sql_301()
         + " OR "
         + sealed_sql_302()
+        + " OR "
+        + sealed_sql_303()
         + ")"
     )
 

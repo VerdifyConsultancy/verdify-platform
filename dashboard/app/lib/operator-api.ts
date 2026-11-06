@@ -64,6 +64,8 @@ export type BandProfile = Lenient<Schemas["BandProfile"]>;
 export type BandProfilePreview = Lenient<Schemas["BandProfilePreview"]>;
 export type BandWrite = Lenient<Schemas["BandWrite"]>;
 export type LightCommand = Lenient<Schemas["LightCommand"]>;
+export type SoilTarget = Lenient<Schemas["SoilTarget"]>;
+export type SoilTargets = Lenient<Schemas["SoilTargets"]>;
 export type WaterUse = Lenient<Schemas["WaterUse"]>;
 export type LightingDays = Lenient<Schemas["LightingDays"]>;
 export type LightingCircuit = Lenient<Schemas["LightingDays"]["circuits"][number]>;
@@ -231,6 +233,12 @@ const bandProfile = z.object({
   vpd_below_day: num, vpd_above_day: num, vpd_below_night: num, vpd_above_night: num,
 });
 const bandWrite = z.object({ changed: z.array(desiredSetting) });
+const soilTarget = z.object({
+  zone: text, wilt_pct: num, min_pct: num, max_pct: num, saturation_pct: num, notes: maybe(text),
+  probe: maybe(text), sensor_id: maybe(text), occupancy_zone: maybe(text),
+  updated_at: maybe(text), updated_by: maybe(actor), reason: maybe(text),
+});
+const soilTargets = z.object({ targets: z.array(soilTarget) });
 const bandProfileState = z.object({ profile: bandProfile, anchors: z.record(z.string(), num), simple: flag });
 const bandProfilePreview = z.object({
   day: text, step_s: int, t: z.array(int),
@@ -288,6 +296,8 @@ const equipment = z.object({
   items: z.array(z.object({
     equipment: text, label: text, group: code, line_id: maybe(text), state: relay, since: maybe(text), runtime_today_s: maybe(int),
     cycles_today: maybe(int), intent: maybe(relay), observed_at: text.nullable(),
+    // Grow lights only: the timer's end (#1377) and the controller's reason (#1335); a strict parse would drop them.
+    manual_until: maybe(text), auto_reason: maybe(text),
   })),
   mode_reason: reasonState.optional(), fog_block_reason: reasonState.optional(), moisture_block_reason: reasonState.optional(),
 });
@@ -501,6 +511,8 @@ export const parseBandPreview: Parser<BandPreview> = parser(bandPreview);
 export const parseBandProfilePreview: Parser<BandProfilePreview> = parser(bandProfilePreview);
 export const parseBandWrite: Parser<BandWrite> = parser(bandWrite);
 export const parseLightCommand: Parser<LightCommand> = parser(lightCommand);
+export const parseSoilTargets: Parser<SoilTargets> = parser(soilTargets);
+export const parseSoilTarget: Parser<SoilTarget> = parser(soilTarget);
 export const parseWaterUse: Parser<WaterUse> = parser(waterUse);
 export const parseLightingDays: Parser<LightingDays> = parser(lightingDays);
 export const parsePlannerHistory: Parser<PlannerHistory> = parser(plannerHistory);
@@ -557,6 +569,8 @@ export const OPERATIONS = {
   "API-25": op("GET", "/v1/planner/history", parsePlannerHistory),
   "API-26": op("GET", "/v1/planner/experiments", parseExperimentList),
   "API-27": op("GET", "/v1/planner/experiments/{id}", parseExperimentDetail),
+  "API-SOIL-01": op("GET", "/v1/soil-targets", parseSoilTargets),
+  "API-SOIL-02": op("PUT", "/v1/soil-targets/{zone}", parseSoilTarget),
   "API-IRR-01": op("GET", "/v1/irrigation", parseIrrigationStatus),
   "API-IRR-02": op("GET", "/v1/irrigation/schedules", parseScheduleAgenda),
   "API-IRR-03": op("POST", "/v1/irrigation/schedules", parseSchedule),

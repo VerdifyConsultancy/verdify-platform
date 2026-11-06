@@ -889,3 +889,44 @@ test("the drawer explains the setting above New value, and a guardrail saves onl
     ["sr", "sm", "ss", "mid"].map((anchor) => `/settings?q=band_house_temp_high&edit=band_temp_high_${anchor}`),
   );
 });
+
+// Soil targets (#1345, API-SOIL-01/02): plant-agnostic rows per probe zone; operators edit one zone at a time.
+const soilRows = () => [...document.querySelectorAll(".ctl-soil tbody > tr:not(.ctl-soil-edit)")].map((row) => [...row.querySelectorAll("th, td")].slice(0, 5).map((cell) => text(cell)));
+
+test("Soil targets: every probe zone's four thresholds, no crop named; a viewer reads them with no Edit", async () => {
+  await open("/settings", { fixture: "viewer-session" });
+  expect(soilRows()).toEqual([["South 1", "20%", "40%", "60%", "80%"], ["South 2", "20%", "40%", "60%", "80%"], ["West", "18%", "35%", "55%", "75%"]]);
+  expect(text(document.querySelector("#soil-targets"))).not.toMatch(/lily|vanda|canna/i);
+  expect(screen.queryByRole("button", { name: /^Edit (South|West)/ })).toBeNull();
+});
+
+test("Soil targets: an operator raises West's wilt to 20 with a reason; one API-SOIL-02 sends only what changed and the row reads it", async () => {
+  const api = await open("/settings");
+  fireEvent.click(screen.getByRole("button", { name: "Edit West" }));
+  const form = screen.getByRole("form", { name: "Edit West soil target" });
+  fireEvent.change(within(form).getByLabelText("Wilt"), { target: { value: "20" } });
+  fireEvent.change(within(form).getByLabelText("Reason (optional)"), { target: { value: "New potting mix" } });
+  fireEvent.click(within(form).getByRole("button", { name: "Save" }));
+  await advance(0);
+  const sent = writes(api);
+  expect(sent).toEqual([expect.objectContaining({ method: "PUT", operationId: "API-SOIL-02", path: "/api/v1/soil-targets/west", body: { wilt_pct: 20, reason: "New potting mix" } })]);
+  expect(sent[0].idempotency_key).toMatch(UUID);
+  await settle();
+  expect(screen.queryByRole("form", { name: "Edit West soil target" })).toBeNull();
+  expect(soilRows()[2]).toEqual(["West", "20%", "35%", "55%", "75%"]);
+});
+
+test("Soil targets: wilt at or above min is the server's out_of_range, beside Wilt; the form stays open", async () => {
+  const api = await open("/settings");
+  fireEvent.click(screen.getByRole("button", { name: "Edit South 1" }));
+  const form = screen.getByRole("form", { name: "Edit South 1 soil target" });
+  fireEvent.change(within(form).getByLabelText("Wilt"), { target: { value: "45" } });
+  fireEvent.click(within(form).getByRole("button", { name: "Save" }));
+  await advance(0);
+  await settle();
+  expect(writes(api)).toHaveLength(1);
+  expect(screen.getByRole("form", { name: "Edit South 1 soil target" })).not.toBeNull();
+  expect(within(form).getByLabelText("Wilt").getAttribute("aria-invalid")).toBe("true");
+  expect(text(form)).toContain("Out of range");
+  expect(soilRows()[0]).toEqual(["South 1", "20%", "40%", "60%", "80%"]);
+});

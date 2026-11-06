@@ -240,8 +240,8 @@ function inBand(now) {
       water("L04", at("07:12"), { runtime_today_s: 840, cycles_today: 14 }), water("L05", at("06:40", -12)), water("L06", at("06:40", -12)),
       water("L07", at("13:20", -3)), water("L08", at("06:40", -12)), water("L09", at("14:05", -9)), water("L10", at("06:40", -12)),
       water("L11", at("05:10"), { runtime_today_s: 360, cycles_today: 9 }),
-      item("grow_light_main", "Main", "light", at("19:00", -1), { intent: "off", observed_at: iso(now - LUTRON_POLL_AGE) }),
-      item("grow_light_grow", "Grow", "light", at("19:00", -1), { intent: "off", observed_at: iso(now - LUTRON_POLL_AGE) }),
+      item("grow_light_main", "Main", "light", at("19:00", -1), { intent: "off", auto_reason: "lux_sufficient", observed_at: iso(now - LUTRON_POLL_AGE) }),
+      item("grow_light_grow", "Grow", "light", at("19:00", -1), { intent: "off", auto_reason: "lux_sufficient", observed_at: iso(now - LUTRON_POLL_AGE) }),
     ],
     reasons: {
       mode_reason: { code: "idle", since: iso(at("09:55")), observed_at: iso(at("09:55")) },
@@ -297,11 +297,19 @@ function inBand(now) {
       line("L11", { enabled: true, state: idle(at("05:16")), today: { minutes: 6, pulses: 9, gal: 2 }, last_water: { at: iso(at("05:10")), open_s: 360, pulses: 9, cause: "vpd" } }),
     ],
     limits: { saf4_gal: { used: 21, max: 360 }, soft_budget_gal: { used: 21, max: 300 } },
+    // Soil-moisture targets per probe zone (#1345, migration 303): plant-agnostic, prod's thresholds.
+    soilTargets: [
+      ["south_1", 20, 40, 60, 80, "soil_moisture_south_1", "south"], ["south_2", 20, 40, 60, 80, "soil_moisture_south_2", "south"],
+      ["west", 18, 35, 55, 75, "soil_moisture_west", "west"],
+    ].map(([zone, wilt_pct, min_pct, max_pct, saturation_pct, probe, occupancy_zone]) => ({
+      zone, wilt_pct, min_pct, max_pct, saturation_pct, notes: null, probe, sensor_id: `soil.${zone}`, occupancy_zone,
+      updated_at: null, updated_by: null, reason: null,
+    })),
     fallback_active: false,
     irrFreshness: { observed_at: iso(at("07:12")), age_s: Math.round((now - at("07:12")) / 1000), stale: false },
-    // The seeded vanda-degraded fallback (irrigation §4.3): L04 around solar noon, only while VPD sensing is degraded.
+    // The seeded sensor-fault backup slots (irrigation §4.3): L04 around solar noon, only while VPD sensing is degraded.
     schedules: [-120, 0, 120].map((offset, index) => ({
-      slot_id: index + 1, line_id: "L04", label: "vanda-degraded", enabled: true, days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      slot_id: index + 1, line_id: "L04", label: "sensor-fault backup", enabled: true, days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
       start: { kind: "solar_noon", offset_min: offset }, on_s: 45, count: 4, gap_s: 60, prewet_s: 0, flush_s: 0, degraded_only: true, manual: false,
       sync: "confirmed", updated_by: actor("system", "seed"), updated_at: iso(at("06:40", -12)),
     })),

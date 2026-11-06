@@ -174,10 +174,10 @@ test("a timed light switch still running marks its end on the light's row and in
 test("the phone's next 12 h: runs, plan changes with who planned them, the expected triggers and the sun, in time order", () => {
   const items = nextItems({ plan: planOf("plan-next"), agenda: agendaOf("in-band") }, WINDOW);
   expect(items.map((item) => [item.kind, plain(item.text), item.ai ?? false, plain(item.note)])).toEqual([
-    ["run", "Center mister · 4 × 45 s · vanda-degraded", false, "only if VPD sensing is degraded"],
+    ["run", "Center mister · 4 × 45 s · sensor-fault backup", false, "only if VPD sensing is degraded"],
     ["plan", "Misting starts at VPD 1.60 → 1.70 kPa", true, ""],
     ["plan", "Wait before misting 60.0 → 90.0 s", false, "Forecast rule · system"],
-    ["run", "Center mister · 4 × 45 s · vanda-degraded", false, "only if VPD sensing is degraded"],
+    ["run", "Center mister · 4 × 45 s · sensor-fault backup", false, "only if VPD sensing is degraded"],
     ["plan", "Mist pulse gap 45.0 → 55.0 s", true, ""],
     ["iris", "Iris: Sunset plan", false, ""],
     ["sun", "Sunset", false, ""],

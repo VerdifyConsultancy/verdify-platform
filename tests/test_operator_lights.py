@@ -1248,7 +1248,8 @@ def started(monkeypatch, fake, sessions, log):
     return types.SimpleNamespace(app=app, calls=calls, ran=ran, stored=writes_stored, state=state)
 
 
-BACK = {"value": 1, "manual": True, "reason": "Back to automatic"}
+# The Equipment button's write since #1335: not manual, so a light on Auto leaves Settings' manual count.
+BACK = {"value": 1, "manual": False, "reason": "Back to automatic"}
 
 
 def test_api10_starts_it_for_the_equipment_buttons_write_and_a_stop_drops_it(started, operator):
@@ -1278,11 +1279,10 @@ def test_api10_starts_it_for_the_equipment_buttons_write_and_a_stop_drops_it(sta
     [
         (AUTO, {"value": 1, "manual": True, "reason": "Lights back on schedule"}),  # a Settings drawer Save
         (AUTO, {"value": 1, "manual": True}),  # a Save with no reason
-        (AUTO, {"value": 1, "manual": False, "reason": "Back to automatic"}),  # not held manual
         (AUTO, {"value": 0, "manual": True, "reason": "Back to automatic"}),  # automation off
         ("mister_engage_kpa", {"value": 1, "manual": True, "reason": "Back to automatic"}),  # not a light's switch
     ],
-    ids=["another reason", "no reason", "manual false", "value 0", "another setting"],
+    ids=["another reason", "no reason", "value 0", "another setting"],
 )
 def test_any_other_write_starts_nothing(started, operator, param, body):
     with TestClient(started.app) as client:
@@ -1291,7 +1291,14 @@ def test_any_other_write_starts_nothing(started, operator, param, body):
         assert started.stored and started.calls == [] and started.app.state.resyncs.runs == {}
 
 
-def test_the_manual_default_is_the_buttons(started, operator):
+def test_a_page_from_before_1335_still_starts_it_with_manual_true(started, operator):
+    with TestClient(started.app) as client:
+        answer = client.put(f"/v1/settings/{AUTO}", headers=operator, json={**BACK, "manual": True})
+        assert answer.status_code == 200, answer.text
+        assert len(started.app.state.resyncs.runs) == 1
+
+
+def test_a_write_with_no_manual_defaults_to_manual_and_still_starts_it(started, operator):
     with TestClient(started.app) as client:
         answer = client.put(f"/v1/settings/{AUTO}", headers=operator, json={"value": 1, "reason": "Back to automatic"})
         assert answer.status_code == 200, answer.text

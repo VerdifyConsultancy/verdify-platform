@@ -354,7 +354,7 @@ test("with API-09 failing the automatic line reads —, never its last value, an
   expect(lightWrites(api)).toEqual([]);
 });
 
-test("Back to automatic: one API-10 write with manual on, REQUESTED then CONFIRMED, and only then one API-20 to the intent's state", async () => {
+test("Back to automatic: one API-10 write with manual off (#1335), REQUESTED then CONFIRMED, and only then one API-20 to the intent's state", async () => {
   const api = await load({ fixture: ["lights-confirmed", "requested-to-confirmed"] });
   // Turned on by hand first: intent OFF with Lutron ON.
   press("grow_light_main", /^Turn on/);
@@ -370,7 +370,7 @@ test("Back to automatic: one API-10 write with manual on, REQUESTED then CONFIRM
   await advance(0);
   const puts = requests(api, "API-10");
   expect(puts).toHaveLength(1);
-  expect(puts[0]).toMatchObject({ path: "/api/v1/settings/sw_gl_main_auto_mode", body: { value: 1, manual: true, reason: "Back to automatic" } });
+  expect(puts[0]).toMatchObject({ path: "/api/v1/settings/sw_gl_main_auto_mode", body: { value: 1, manual: false, reason: "Back to automatic" } });
   expect(puts[0].idempotency_key).toMatch(UUID);
   await tick(1);
   expect(auto("grow_light_main")).toBe("Requested");
@@ -529,4 +529,13 @@ test("the read after CONFIRMED failing sends nothing and says the light was not 
   press("grow_light_grow", /^Turn on/);
   await advance(0);
   expect(note("grow_light_grow")).toBe("Waiting for Lutron");
+});
+
+test("a light row says why the controller wants it so (API-13 auto_reason, #1335), in words, for every role", async () => {
+  await load({ fixture: "viewer-session" });
+  for (const key of ["grow_light_main", "grow_light_grow"]) {
+    const note = row(key).querySelector("[data-light-reason]");
+    expect(note?.getAttribute("data-light-reason")).toBe("lux_sufficient");
+    expect(text(note)).toBe("Controller: Off: enough daylight");
+  }
 });

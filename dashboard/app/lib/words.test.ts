@@ -232,6 +232,15 @@ test("the API-20 results in Problem.result and its targets have words", () => {
   expect(words("light_target", "grow_light_grow")).toBe("Grow lights");
 });
 
+test("every grow-light reason the controller sets has words (API-13 auto_reason, #1335)", () => {
+  const logic = /const char\* reason = "auto_disabled";([\s\S]*?)const uint32_t elapsed/.exec(repo("firmware/lib/greenhouse_logic.h"));
+  if (!logic) throw new Error("no evaluate_lighting reasons in the firmware");
+  const reasons = [...new Set([...logic[1].matchAll(/"([a-z0-9_]+)"/g)].map((match) => match[1]))];
+  expect(reasons.length).toBeGreaterThanOrEqual(9);
+  expectWorded("light_reason", [...reasons, "auto_disabled", "time_invalid"]);
+  expect(words("light_reason", "plant_hysteresis_hold")).toBe("On: plant light, holding until it is brighter");
+});
+
 test("every planner trigger outcome has its words, from the OpenAPI enum and the ledger's status check alike", () => {
   const outcomes = enumOf(SCHEMAS.PlannerTrigger?.properties?.outcome);
   expect([...TRIGGER_OUTCOMES].sort()).toEqual([...outcomes].sort());
@@ -289,6 +298,8 @@ test("every activity action the services write has words, each one an action the
     "band.write",
     // The planting writes (#1327, #1328).
     "planting.create", "planting.move", "planting.harvest", "planting.end", "planting.update", "planting.note",
+    // The soil targets' edit (#1345).
+    "soil_target.write",
   ];
   expectWorded("activity_action", actions);
   expect(Object.keys(WORDS.activity_action).sort()).toEqual([...actions].sort());

@@ -30,7 +30,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat
 from operator_routes import light_resync, setpoint_server
 from operator_routes.reads import Connection
 from verdify_schemas.activity import REASON_MAX_LENGTH
-from verdify_services import alerts, band_profile, lights, settings
+from verdify_services import alerts, band_profile, lights, settings, soil
 from verdify_services.activity import WriteResult
 from verdify_services.problems import ServiceError, problem
 
@@ -82,6 +82,20 @@ class BandSave(BaseModel):
     profile: band_profile.BandProfilePatch = Field(default_factory=band_profile.BandProfilePatch)
     anchors: dict[str, StrictFloat] = Field(default_factory=dict)
     manual: StrictBool = True
+    reason: str = Field(default=None, max_length=REASON_MAX_LENGTH)
+
+
+class SoilTargetWrite(BaseModel):
+    """API-SOIL-02's body: the thresholds or note to change (``verdify_schemas.soil.SoilTargetPatch``) and a reason.
+    The service checks the merged row's order."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    wilt_pct: StrictFloat | None = None
+    min_pct: StrictFloat | None = None
+    max_pct: StrictFloat | None = None
+    saturation_pct: StrictFloat | None = None
+    notes: str | None = None
     reason: str = Field(default=None, max_length=REASON_MAX_LENGTH)
 
 
@@ -152,6 +166,15 @@ async def save_band(key: IdempotencyKey, conn: Connection, request: Request, bod
         conn, request.state.actor, body.profile, body.anchors, body.manual, body.reason, key
     )
     return _answer(written)
+
+
+@router.put("/soil-targets/{zone}", operation_id="API-SOIL-02", tags=["settings"], response_model=soil.SoilTarget)
+async def write_soil_target(
+    key: IdempotencyKey, conn: Connection, request: Request, zone: str, body: SoilTargetWrite
+) -> JSONResponse:
+    """Change one zone's soil-moisture thresholds or note (#1345); ``soil_dryout`` pages on the new wilt next cycle."""
+    patch = body.model_dump(exclude={"reason"}, exclude_none=True)
+    return _answer(await soil.set_target(conn, request.state.actor, zone, patch, body.reason, key))
 
 
 @router.post("/alerts/{id}/ack", operation_id="API-15", tags=["alerts"], response_model=alerts.Alert)

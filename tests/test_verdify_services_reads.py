@@ -589,6 +589,7 @@ def test_the_routes_are_the_committed_operations():
         ("/planner/history", "GET", "API-25"),  # #1361
         ("/planner/experiments", "GET", "API-26"),
         ("/planner/experiments/{id}", "GET", "API-27"),
+        ("/soil-targets", "GET", "API-SOIL-01"),  # #1345
     }
     for path, method, operation_id in served:
         assert spec[f"/v1{path}"][method.lower()]["operationId"] == operation_id
@@ -659,6 +660,7 @@ def test_routes_call_the_services_and_validate_hours(monkeypatch):
         "intent": None,
         "observed_at": None,
         "manual_until": None,
+        "auto_reason": None,
     }
     empty = {"code": None, "since": None, "observed_at": None}
     assert (body["mode_reason"], body["fog_block_reason"], body["moisture_block_reason"]) == (empty, empty, empty)
@@ -713,9 +715,24 @@ def test_equipment_reads_the_three_reasons_in_its_snapshot():
                 {"key": "grow_light_main", "ends_at": AT + timedelta(minutes=9)},
                 {"key": "grow_light_grow", "ends_at": AT - timedelta(minutes=1)},
             ],
+            reads._LIGHT_REASONS_SQL: [
+                {"key": "grow_light_main", "reason": "plant_hysteresis_hold"},
+                {"key": "grow_light_grow", "reason": None},
+            ],
         }
     )
     result = asyncio.run(reads.equipment(conn))
+    # Each light's controller reason (#1335), while the controller reports.
+    reasons = {item.equipment: item.auto_reason for item in result.items if item.group == "light"}
+    assert reasons == {"grow_light_main": "plant_hysteresis_hold", "grow_light_grow": None}
+    assert next(args for sql, args in conn.sent if sql == reads._LIGHT_REASONS_SQL) == (
+        ["grow_light_main", "grow_light_grow"],
+        ["gl_main_reason", "gl_grow_reason"],
+    )
+    assert all(item.auto_reason is None for item in result.items if item.group != "light")
+    from verdify_services import lights
+
+    assert list(reads.LIGHT_REASON_ENTITIES.values()) == [lights.DECISION_ENTITIES[light] for light in ("main", "grow")]
     # A timed light switch reads its end while it is ahead; one already up reads none (#1377's timer sends automatic).
     lights = {item.equipment: item.manual_until for item in result.items if item.group == "light"}
     assert lights == {"grow_light_main": AT + timedelta(minutes=9), "grow_light_grow": None}

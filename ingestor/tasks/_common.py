@@ -255,6 +255,30 @@ SOIL_DRYOUT_PROBES = (
     ("soil_moisture_west", "soil.west", "west", "west"),
 )
 
+# Since migration 303 (#1345) the probe map is data: soil_moisture_targets carries probe_column, sensor_id and
+# occupancy_zone beside each zone's wilt_pct, backfilled from SOIL_DRYOUT_PROBES above (kept as that seed and as the
+# test vocabulary). soil_dryout reads the rows that name a probe.
+SOIL_DRYOUT_TARGETS_SQL = (
+    "SELECT probe_column, sensor_id, occupancy_zone, zone, wilt_pct::float8 AS wilt_pct "
+    "FROM soil_moisture_targets WHERE probe_column IS NOT NULL AND wilt_pct IS NOT NULL ORDER BY zone"
+)
+_SOIL_PROBE_COLUMN = re.compile(r"^soil_moisture_[a-z0-9_]{1,40}$")
+
+
+def soil_dryout_probes(rows) -> list[tuple[str, str, str, str, float]]:
+    """(column, sensor_id, crop_zone, target_zone, wilt_pct) per soil_moisture_targets row that names a probe. The
+    column is interpolated into the window SQL, so only a soil_moisture_* identifier passes (the table's CHECK keeps
+    the same shape, and no runtime role may change it)."""
+    probes = []
+    for row in rows:
+        column = str(row["probe_column"])
+        if not _SOIL_PROBE_COLUMN.fullmatch(column):
+            continue
+        probes.append(
+            (column, str(row["sensor_id"]), str(row["occupancy_zone"]), str(row["zone"]), float(row["wilt_pct"]))
+        )
+    return probes
+
 
 # A 5 s ESP32 loop yields ~720 soil samples/h. Require well over an hour of
 # coverage so a brief reporting gap or a single spurious read can't satisfy the
@@ -1384,6 +1408,8 @@ __all__ = [
     "VPD_STRESS_LEGACY_THRESHOLD_H",
     "SOIL_DRYOUT_MIN_DURATION_H",
     "SOIL_DRYOUT_PROBES",
+    "SOIL_DRYOUT_TARGETS_SQL",
+    "soil_dryout_probes",
     "SOIL_DRYOUT_MIN_SAMPLES",
     "VPD_HIGH_GUARD_MARGIN_KPA",
     "VPD_MOISTURE_DEW_MARGIN_F",

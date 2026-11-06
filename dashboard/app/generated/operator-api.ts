@@ -915,7 +915,7 @@ export interface paths {
         readonly get?: never;
         /**
          * Write a setting
-         * @description Validates (known and writable, type and range, snap), then appends one desired_state row and one activity_log row in one transaction and wakes the dispatcher. Codes: unknown_target, read_only, out_of_range, request_id_reused. A crop_band anchor write also updates its crop_band_anchors rows; an irrigation_site setting is delivered in the irrigation program, not by the dispatcher (R12). Before the engine firmware an irrigation_site write is stored and reads requested with state_reason no_engine until a program compiled after it is confirmed. The Equipment page's Back to automatic (a new write of sw_gl_main_auto_mode or sw_gl_grow_auto_mode with value 1, manual true and reason "Back to automatic") also starts a resync in the operator API, so the light matches the controller when the page has closed (#1300). Once the write reads confirmed it leaves the page 22 s for its own API-20 command, then, holding the light's lock that API-20 shares, sends one when the write is still the newest and confirmed, no light command was recorded since it, the controller decided the light within 120 s and not as auto_disabled or time_invalid, no Turn on or Turn off started meanwhile, and the intent and the Lutron state are known and differ. Its activity_log row is API-20's (light.on or light.off under the writer, reason Back to automatic) with detail.via server_resync and detail.write_id. A resync lives in one operator API process, so a restart drops one still waiting; the BFF's writes flag does not reach it.
+         * @description Validates (known and writable, type and range, snap), then appends one desired_state row and one activity_log row in one transaction and wakes the dispatcher. Codes: unknown_target, read_only, out_of_range, request_id_reused. A crop_band anchor write also updates its crop_band_anchors rows; an irrigation_site setting is delivered in the irrigation program, not by the dispatcher (R12). Before the engine firmware an irrigation_site write is stored and reads requested with state_reason no_engine until a program compiled after it is confirmed. The Equipment page's Back to automatic (a new write of sw_gl_main_auto_mode or sw_gl_grow_auto_mode with value 1 and reason "Back to automatic"; the page sends manual false since #1335, so a light on Auto is not counted manual) also starts a resync in the operator API, so the light matches the controller when the page has closed (#1300). Once the write reads confirmed it leaves the page 22 s for its own API-20 command, then, holding the light's lock that API-20 shares, sends one when the write is still the newest and confirmed, no light command was recorded since it, the controller decided the light within 120 s and not as auto_disabled or time_invalid, no Turn on or Turn off started meanwhile, and the intent and the Lutron state are known and differ. Its activity_log row is API-20's (light.on or light.off under the writer, reason Back to automatic) with detail.via server_resync and detail.write_id. A resync lives in one operator API process, so a restart drops one still waiting; the BFF's writes flag does not reach it.
          */
         readonly put: operations["API-10"];
         readonly post?: never;
@@ -939,6 +939,46 @@ export interface paths {
         /** Desired rows, plan values and readback steps over a window (also the Graphs setting steps) */
         readonly get: operations["API-12"];
         readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/soil-targets": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Every probe zone's soil-moisture target (#1345)
+         * @description One row per probe zone (south_1, south_2, west) from soil_moisture_targets (migration 303): wilt_pct, min_pct, max_pct and saturation_pct in percent, always 0 <= wilt < min < max < saturation <= 100; the note; the probe (climate column) and sensor it applies to and the crops.zone whose plantings let soil_dryout page; who last changed it, when and why. No crop name: targets are plant-agnostic.
+         */
+        readonly get: operations["API-SOIL-01"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/soil-targets/{zone}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        /**
+         * Change one zone's soil-moisture thresholds or note (#1345)
+         * @description A field left out keeps its stored value; the merged row must keep 0 <= wilt < min < max < saturation <= 100. One transaction: the soil_moisture_targets row (with updated_at, updated_by, updated_source and the reason) and one activity_log row, action soil_target.write, target the zone, detail {ref, zone, changed {field: {from, to}}}. The ingestor's soil_dryout rule pages on the new wilt_pct from its next cycle; nothing talks to the controller. Codes: out_of_range (a value outside 0-100 or the order broken), invalid_request (nothing to change), not_found (no such zone), request_id_reused.
+         */
+        readonly put: operations["API-SOIL-02"];
         readonly post?: never;
         readonly delete?: never;
         readonly options?: never;
@@ -1402,6 +1442,8 @@ export interface components {
             /** @description What holds fog (L11) off */
             readonly fog_block_reason?: components["schemas"]["ReasonState"];
             readonly items: readonly {
+                /** @description Grow lights only: the controller's newest reason for its intent (gl_main_reason, gl_grow_reason), for example plant_lux_low, plant_hysteresis_hold, outside_window or auto_disabled; null while the controller is not reporting or before any reason row (#1335) */
+                readonly auto_reason?: string | null;
                 /** @description From collapsed ON/OFF edges */
                 readonly cycles_today?: number | null;
                 /**
@@ -2820,6 +2862,43 @@ export interface components {
             /** @enum {string|null} */
             readonly stale_reason: "old" | "failed" | null;
             readonly text: string;
+        };
+        /** @description One probe zone's soil-moisture target (API-SOIL-01, */
+        readonly SoilTarget: {
+            readonly max_pct: number;
+            readonly min_pct: number;
+            readonly notes?: string | null;
+            /** @description The crops.zone whose open plantings let soil_dryout page */
+            readonly occupancy_zone?: string | null;
+            /** @description The climate column the probe writes */
+            readonly probe?: string | null;
+            readonly reason?: string | null;
+            readonly saturation_pct: number;
+            /** @example soil.west */
+            readonly sensor_id?: string | null;
+            /** Format: date-time */
+            readonly updated_at?: string | null;
+            readonly updated_by?: components["schemas"]["Actor"] | null;
+            /** @description soil_dryout pages when the live probe stays below this for over 2 h in the day */
+            readonly wilt_pct: number;
+            /**
+             * @example south_1
+             * @example south_2
+             * @example west
+             */
+            readonly zone: string;
+        };
+        readonly SoilTargets: {
+            readonly targets: readonly components["schemas"]["SoilTarget"][];
+        };
+        /** @description The thresholds or note to change; at least one. The merged row must stay ordered. */
+        readonly SoilTargetWrite: {
+            readonly max_pct?: number | null;
+            readonly min_pct?: number | null;
+            readonly notes?: string | null;
+            readonly reason?: string;
+            readonly saturation_pct?: number | null;
+            readonly wilt_pct?: number | null;
         };
         readonly StateLanes: {
             /** Format: date-time */
@@ -4550,6 +4629,58 @@ export interface operations {
                     readonly "application/json": components["schemas"]["SettingHistory"];
                 };
             };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-SOIL-01": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["SoilTargets"];
+                };
+            };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-SOIL-02": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: {
+                /** @description Optional on every write; stored as request_id on the write's activity_log row and logged as the request id. The same key and payload return the stored result with the header Idempotency-Replayed: true; the same key with a different payload is 422 request_id_reused. */
+                readonly "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            readonly path: {
+                readonly zone: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["SoilTargetWrite"];
+            };
+        };
+        readonly responses: {
+            /** @description Stored */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["SoilTarget"];
+                };
+            };
+            readonly 422: components["responses"]["Invalid"];
             readonly default: components["responses"]["Problem"];
         };
     };

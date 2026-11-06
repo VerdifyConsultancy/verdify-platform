@@ -9,8 +9,11 @@ later, and the light stayed ON until 21:04Z. So the page's Back to automatic wri
 and the page's own resync stays the fast path:
 
 1. ``start``: only a new API-10 write (not a replay) of ``sw_gl_main_auto_mode`` or ``sw_gl_grow_auto_mode`` with the
-   value 1, ``manual`` true and the reason ``BACK_TO_AUTOMATIC``, which only the Equipment button sends. A Settings
-   drawer Save or Revert of the switch carries its own reason and starts nothing.
+   value 1 and the reason ``BACK_TO_AUTOMATIC``, which only the Equipment button sends. The button writes it with
+   ``manual`` false (#1335): a light on Auto is not a manual setting, so it leaves Settings' manual count; a page from
+   before that change still sends ``manual`` true, which starts the resync too (the switch is not planner-pushable, so
+   the flag changes no writer). A Settings drawer Save or Revert of the switch carries its own reason and starts
+   nothing.
 2. Wait for the write to read CONFIRMED by API-09's rule (``settings.status``: it is still the switch's newest desired
    row, and its state is ``confirmed``), reading every 5 s as the page reads a REQUESTED row, for no longer than the
    page's window: the 5 min (``settings.REQUESTED_FOR``) the row reads REQUESTED before it reads NOT CONFIRMED. A newer
@@ -300,11 +303,11 @@ class Resyncs:
         self, pool: asyncpg.Pool, setpoint_url: str, actor: Actor, written: WriteResult[settings.DesiredSetting]
     ) -> asyncio.Task[Outcome] | None:
         """Step 1, API-10's hook after its write is stored: ``resync`` for the Equipment page's Back to automatic write
-        (a new write of an automatic switch with the value 1, ``manual`` and the reason ``BACK_TO_AUTOMATIC``). Any
-        other write starts nothing."""
+        (a new write of an automatic switch with the value 1 and the reason ``BACK_TO_AUTOMATIC``, ``manual`` either
+        way). Any other write starts nothing."""
         write = written.value
         light = SWITCHES.get(write.param)
-        if light is None or written.replayed or write.value != 1 or not write.manual:
+        if light is None or written.replayed or write.value != 1:
             return None
         if write.reason != BACK_TO_AUTOMATIC:
             return None

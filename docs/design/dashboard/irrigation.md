@@ -45,7 +45,7 @@ a decision as written, v2 keeps what the decision does and drops any procedure i
 | D-IRP-09 | A scheduled pulse is skipped on a measured RH ≥ 90 % or a measured dew-margin breach. No vent gate. Schedules never bypass the soft budget. Solar-night windows are allowed | Accepted (owner acknowledgement and #410 evidence dropped) |
 | D-IRP-10 | Mist and fog hold only while Frigate confirms occupancy, through the Home Assistant occupancy sensor, the only input (Round 2b A; §7). Unknown or stale occupancy means mist runs | Changed |
 | D-IRP-11 | "Mist now" is a one-off scheduled window on a mister with `schedule_member` on, under the same rails. There is no manual mister origin | Superseded 2026-11-05 (#1343): any wired, enabled line runs once, a mister with Schedule on or off, under the same rails |
-| D-IRP-12 | Seed a sensor-fault backup set (labelled `vanda-degraded` until #1345's rename): three center slots marked `degraded_only`. They run only while VPD sensing is degraded, in daylight, while the dew margin can still be computed, and never in SENSOR_FAULT | Accepted (observe mode dropped) |
+| D-IRP-12 | Seed a sensor-fault backup set (labelled `sensor-fault backup` since migration 303, #1345; `vanda-degraded` before): three center slots marked `degraded_only`. They run only while VPD sensing is degraded, in daylight, while the dew margin can still be computed, and never in SENSOR_FAULT | Accepted (observe mode dropped) |
 | D-IRP-13 | A zone whose own probe is out uses its peer probes, then the house average | Changed |
 | D-IRP-14 | Every physically connected line is schedulable, fertilizer included. Fertilizer schedules run even with sensors offline. The firmware hard-block on L06, L08 and L10 becomes a per-line enable | Changed |
 | D-IRP-15 | One clean flush follows a cancelled fertilizer run, except when disabling the line cancelled it | Accepted |
@@ -110,7 +110,7 @@ a decision as written, v2 keeps what the decision does and drops any procedure i
 | **L01** Drip • Wall | `wall_drips`, pcf_out_1.4 (`drip_wall`) | wall | Not run since 2026-05-29; only the unused HA RUN CLEAN button starts it | Schedules plus run-now. The first line live: run-now through the bridge before the engine (§6.5), the first schedule after it. Seeded enabled, with no check | Record the check (flush the stagnant line, look at the emitters); add the first schedule |
 | **L02** Drip • Wall (Fert.) | `wall_drips_fertilized`, pcf_out_2.0 (`drip_wall_fert`) | wall | Weekly feed, never commissioned | Fertilizer schedules with prewet and flush on L01. The feed comes from the tank through the injector that L03 opens | Check the line and record it; enable; add a feed schedule |
 | **L03** Valve • Fert. Master | `fertilizer_master_valve`, pcf_out_2.1 (`fert_master_valve`) | supply | Opens only in the FEED stage | Opens the injector line from the fertilizer tank with any fertilizer run; never scheduled on its own | Checked together with L02 |
-| **L04** Mister • Center | `center_mister`, pcf_out_1.5 (`mister_center`) | center | VPD only, implicitly; can never be scheduled | `vpd_member` on, as today; optional schedules; the `vanda-degraded` set | Check nozzles, coverage and the spray area; set `schedule_member`; add schedules |
+| **L04** Mister • Center | `center_mister`, pcf_out_1.5 (`mister_center`) | center | VPD only, implicitly; can never be scheduled | `vpd_member` on, as today; optional schedules; the `sensor-fault backup` set | Check nozzles, coverage and the spray area; set `schedule_member`; add schedules |
 | **L05** Drip • Center | `center_drips`, pcf_out_1.7 (`drip_center`) | center | Physically unconnected; forced off at boot | Reserved (Round 2b E): stays in the model and can hold schedules; the Water screen shows it reserved and disabled until a person enables it | None now |
 | **L06** Drip • Center (Fert.) | `center_drips_fertilized`, pcf_out_1.6 (`drip_center_fert`) | center | Off unconditionally | Reserved, as L05. Per-line enable; prewet and flush on L05 | None now |
 | **L07** Mister • South Wall | `south_wall_mister`, pcf_out_1.3 (`mister_south`) | south | Idle since 2026-07-10 | VPD member, schedule member, or both | Drain the stagnant line before the first mist; check the nozzles; set the flags. Probe repair #751 is not needed (peer fallback) |
@@ -207,7 +207,7 @@ Examples (illustrative):
 - L01 on Mon, Wed and Fri at clock 07:30: `on_s` 600, `count` 1.
 - L04 dawn drench: every day at sunrise +15, `on_s` 60, `count` 8, `gap_s` 60.
 - L02 feed: Sundays at sunrise +60, `prewet_s` 120, `on_s` 300, `flush_s` 240.
-- Seeded `vanda-degraded` (`degraded_only`, enabled): L04 at solar noon −120, 0 and +120 min, each
+- Seeded `sensor-fault backup` (`vanda-degraded` until migration 303) (`degraded_only`, enabled): L04 at solar noon −120, 0 and +120 min, each
   with `on_s` 45, `count` 4, `gap_s` 60.
 
 ### 4.4 Mister flags
@@ -930,7 +930,7 @@ As built (VD-40; `verdify_services/irrigation/reads.py`, with `runs.py` and `pro
 - **Program with no engine.** `applied_hash` and `applied_revision` are null too, whatever an old
   `irr_program_id` row says.
 - **`next_run`** looks 8 days ahead, so a weekly schedule past its time today still has one. A `degraded_only`
-  occurrence counts, as the agenda marks it planned; its `label` (`vanda-degraded`) says what it is.
+  occurrence counts, as the agenda marks it planned; its `label` (`sensor-fault backup`) says what it is.
 - **Agenda and pauses.** An occurrence `agenda()` skips for today's `paused_until` but with no pause row in
   force at its start was not skipped for that pause, so a past one reads as planned. A future one with no row
   at all reads "paused". Today's enable and membership flags say nothing about a past start either: with the

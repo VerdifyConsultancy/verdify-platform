@@ -39,7 +39,7 @@ from ._common import (
     REGISTRY,
     SAFETY_RAIL_PARAMS,
     SOIL_DRYOUT_MIN_DURATION_H,
-    SOIL_DRYOUT_PROBES,
+    SOIL_DRYOUT_TARGETS_SQL,
     UTC,
     AlertEnvelope,
     ValidationError,
@@ -54,6 +54,7 @@ from ._common import (
     log,
     registry_value_error,
     shared,
+    soil_dryout_probes,
 )
 from .daily import (
     SoilDryoutWindow,
@@ -2389,12 +2390,10 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             # Auto-resolves on recovery via the standard dedupe loop below: once
             # the probe climbs back to/above wilt the (alert_type, sensor_id)
             # key drops out of active_keys and the alert closes 'resolved'.
-            wilt_by_zone = {
-                str(r["zone"]): float(r["wilt_pct"])
-                for r in await conn.fetch("SELECT zone, wilt_pct FROM soil_moisture_targets WHERE wilt_pct IS NOT NULL")
-            }
+            # The probe map and each zone's wilt are soil_moisture_targets rows (303, #1345), editable by operators.
+            probes = soil_dryout_probes(await conn.fetch(SOIL_DRYOUT_TARGETS_SQL))
             lookback_interval = f"{SOIL_DRYOUT_MIN_DURATION_H + 0.5} hours"
-            for col, sensor_id, zone, target_zone in SOIL_DRYOUT_PROBES:
+            for col, sensor_id, zone, _target_zone, wilt_pct in probes:
                 stats = await conn.fetchrow(
                     f"""
                     SELECT COUNT({col}) AS samples,
@@ -2420,7 +2419,6 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                     if stats["oldest_sample_age_h"] is not None
                     else None,
                 )
-                wilt_pct = wilt_by_zone.get(target_zone, wilt_by_zone.get(zone))
                 zone_occupied = zone in soil_active_zones
                 if not evaluate_soil_dryout(window, wilt_pct, zone_occupied):
                     continue

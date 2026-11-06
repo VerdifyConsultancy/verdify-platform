@@ -333,7 +333,7 @@ test("fallback windows are conditional, never planned runs: dotted on the strips
   const strip = row("L04").querySelector<HTMLElement>(".wat-track")!;
   expect(strip.querySelectorAll(".sch-block.sch-conditional")).toHaveLength(3);
   expect(strip.querySelectorAll(".sch-planned, .sch-skipped")).toHaveLength(0);
-  expect(strip.getAttribute("aria-label")?.replaceAll("\u00a0", " ")).toContain("vanda-degraded, Mon 09:47, 4 × 45 s, fallback, not needed; vanda-degraded, Mon 11:47, 4 × 45 s, fallback, only if VPD sensing is degraded");
+  expect(strip.getAttribute("aria-label")?.replaceAll("\u00a0", " ")).toContain("sensor-fault backup, Mon 09:47, 4 × 45 s, fallback, not needed; sensor-fault backup, Mon 11:47, 4 × 45 s, fallback, only if VPD sensing is degraded");
   expect(text(row("L04").querySelector(".wat-next"))).toBe("nothing planned · 2 fallback windows");
   cleanup(); stopFixtureApi();
   open("/water/schedules", { fixture: "in-band" });
@@ -345,7 +345,7 @@ test("fallback windows are conditional, never planned runs: dotted on the strips
   expect(today.getAttribute("aria-label")).toBe("Monday, Nov 2 (today): nothing planned · 2 fallback windows");
   const blocks = [...timelineRow("L04").querySelectorAll(".sch-block")];
   expect(blocks.map((block) => block.className.includes("sch-conditional"))).toEqual([true, true, true]);
-  expect(blocks[0].getAttribute("aria-label")?.replaceAll("\u00a0", " ")).toBe("Center mister · vanda-degraded, Mon 09:47, 4 × 45 s, fallback, not needed");
+  expect(blocks[0].getAttribute("aria-label")?.replaceAll("\u00a0", " ")).toBe("Center mister · sensor-fault backup, Mon 09:47, 4 × 45 s, fallback, not needed");
   // The popover of the window that passed: not needed, never skipped.
   fireEvent.click(blocks[0]);
   await load();
@@ -468,9 +468,9 @@ test("a line's fallback schedules are one row, Backup misting when sensors fail 
   expect([...each.querySelectorAll("[data-slot]")].map((node) => node.getAttribute("data-slot"))).toEqual(["1", "2", "3"]);
   expect(text(each.querySelector('[data-slot="1"] .object-row-state'))).toBe("Daily · solar noon − 2 h (09:47 today) · 4 × 45 s, 60 s gap");
   const first = within(each.querySelector<HTMLElement>('[data-slot="1"]')!);
-  expect(first.getByRole("link", { name: "Edit vanda-degraded" })).toBeTruthy();
+  expect(first.getByRole("link", { name: "Edit sensor-fault backup" })).toBeTruthy();
   // "Enabled" is the switch's name alone; it says ON or OFF itself.
-  const toggle = first.getByRole("switch", { name: "vanda-degraded Enabled" });
+  const toggle = first.getByRole("switch", { name: "sensor-fault backup Enabled" });
   expect(text(toggle)).toBe("ON");
   expect(toggle.closest(".field-switch")!.querySelector(".field-label")!.firstElementChild?.className).toBe("screen-reader");
   // Lines with no fallback schedules have no fallback row.

@@ -375,6 +375,9 @@ class EquipmentItem(_Model):
     observed_at: datetime | None
     # Grow lights only (#1377's timer): when an API-20 manual switch goes back to automatic; null with no timer running.
     manual_until: datetime | None = None
+    # Grow lights only (#1335): the controller's newest reason for its intent (gl_main_reason, gl_grow_reason), such as
+    # plant_lux_low or outside_window; null while it is not reporting or before any reason row.
+    auto_reason: str | None = None
 
 
 class ReasonState(_Model):
@@ -874,6 +877,16 @@ SELECT t.target AS key, a.ts + make_interval(mins => (a.detail->>'minutes')::int
                       ORDER BY ts DESC, id DESC LIMIT 1) AS a ON true
 """
 LIGHT_TIMER_WINDOW = timedelta(days=1)
+# Each grow light's controller reason entity (lights.DECISION_ENTITIES), served as API-13 auto_reason (#1335). The
+# controller decides every 60 s, so a day bounds the read to the newest chunk.
+LIGHT_REASON_ENTITIES: Mapping[str, str] = {"grow_light_main": "gl_main_reason", "grow_light_grow": "gl_grow_reason"}
+_LIGHT_REASONS_SQL = """
+SELECT t.key, s.value AS reason
+  FROM unnest($1::text[], $2::text[]) AS t(key, entity)
+  LEFT JOIN LATERAL (SELECT value FROM system_state
+                      WHERE entity = t.entity AND ts > now() - interval '1 day'
+                      ORDER BY ts DESC LIMIT 1) AS s ON true
+"""
 
 _SYSTEM_TRACKS_SQL = """
 SELECT entity AS key, ts, value AS state, newest_at
@@ -1276,7 +1289,10 @@ def _plan_record(row: Mapping[str, Any]) -> PlanRecord:
 
 
 def _equipment_items(
-    tracks: Mapping[str, Track], rep: Reporting, timers: Mapping[str, datetime | None] | None = None
+    tracks: Mapping[str, Track],
+    rep: Reporting,
+    timers: Mapping[str, datetime | None] | None = None,
+    light_reasons: Mapping[str, str | None] | None = None,
 ) -> list[EquipmentItem]:
     """API-13's fixed list. A state is the newest row while the controller reports, else unknown.
 
@@ -1286,7 +1302,8 @@ def _equipment_items(
     reporting, and null before any intent row exists. An unknown state has no
     since, runtime or cycles: the open run's length is not known. A light's
     ``manual_until`` is its timed switch's end (``timers``) while it is still
-    ahead, else null.
+    ahead, else null; its ``auto_reason`` is the controller's newest reason
+    (``light_reasons``) while the controller reports.
     """
     items: list[EquipmentItem] = []
     for name, group in EQUIPMENT_LIST:
@@ -1322,6 +1339,7 @@ def _equipment_items(
                 intent=intent,
                 observed_at=track.newest_at,
                 manual_until=_manual_until((timers or {}).get(name), rep.at),
+                auto_reason=(light_reasons or {}).get(name) if rep.controller_reporting else None,
             )
         )
     return items
@@ -1330,6 +1348,12 @@ def _equipment_items(
 def _manual_until(ends_at: datetime | None, at: datetime) -> datetime | None:
     """A timed switch's end while it is still ahead; once it is up the light timer sends automatic back."""
     return ends_at if ends_at is not None and ends_at > at else None
+
+
+async def _light_reasons(conn: asyncpg.Connection) -> dict[str, str | None]:
+    """Each grow light's newest controller reason (``_LIGHT_REASONS_SQL``), keyed by its equipment name."""
+    rows = await conn.fetch(_LIGHT_REASONS_SQL, list(LIGHT_REASON_ENTITIES), list(LIGHT_REASON_ENTITIES.values()))
+    return {row["key"]: row["reason"] for row in rows}
 
 
 async def _light_timers(conn: asyncpg.Connection) -> dict[str, datetime | None]:
@@ -1726,8 +1750,9 @@ async def equipment(conn: asyncpg.Connection) -> Equipment:
         tracks = await _tracks(conn, _EQUIPMENT_TRACKS_SQL, _EQUIPMENT_KEYS)
         reasons = await _tracks(conn, _SYSTEM_TRACKS_SQL, REASON_ENTITIES)
         timers = await _light_timers(conn)
+        light_reasons = await _light_reasons(conn)
     return Equipment(
-        items=_equipment_items(tracks, rep, timers),
+        items=_equipment_items(tracks, rep, timers, light_reasons),
         mode_reason=reason_state(reasons.get("mode_reason"), rep),
         fog_block_reason=reason_state(reasons.get("fog_block_reason"), rep),
         moisture_block_reason=reason_state(reasons.get("moisture_block_reason"), rep),
