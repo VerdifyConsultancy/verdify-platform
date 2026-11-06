@@ -15,6 +15,7 @@ export default [
   ]),
   route("graphs", "routes/graphs.tsx"),
   route("graphs/zones", "routes/graphs.zones.tsx"),
+  route("graphs/lighting", "routes/graphs.lighting.tsx"),
   route("graphs/statistics", "routes/graphs-statistics.tsx"),
   route("graphs/scorecard", "routes/graphs-scorecard.tsx"),
   route("activity", "routes/activity.tsx"),

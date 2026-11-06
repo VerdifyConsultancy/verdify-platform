@@ -86,8 +86,9 @@ test("a preset picks its group's metrics from API-03, at most 5, and replaces th
   expect(graphSearch(withPreset(view("m=climate.flow_gpm"), "controller"))).toBe("range=72h&preset=controller");
   expect(graphSearch(withPreset(water, "climate"))).toBe("range=72h");
   expect(view("preset=climate").preset).toBeNull();
+  expect(presetKeys("light", METRICS)).toEqual(["climate.outdoor_lux", "climate.solar_irradiance_w_m2"]);
   // A group API-03 lists nothing in says so.
-  expect(resolveView(view("preset=light"), METRICS, SETTINGS).notices).toEqual(["Light has no metric yet"]);
+  expect(resolveView(view("preset=light"), METRICS.filter((metric) => metric.group !== "light"), SETTINGS).notices).toEqual(["Light has no metric yet"]);
 });
 
 test("/graphs/zones: no zone is the grid; zone, the window and the rows live in the URL; unknown values drop with a notice", () => {

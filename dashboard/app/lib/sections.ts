@@ -11,7 +11,7 @@ export type SectionId = "now" | "water" | "graphs" | "activity" | "control";
 export type ViewId =
   | "now"
   | "water-today" | "water-schedules" | "water-history"
-  | "graphs-climate" | "graphs-zones" | "graphs-statistics"
+  | "graphs-climate" | "graphs-zones" | "graphs-lighting" | "graphs-statistics"
   | "activity-alerts" | "activity-log"
   | "control-settings" | "control-band" | "control-plan" | "control-equipment";
 
@@ -48,6 +48,7 @@ export const SECTIONS: readonly Section[] = [
     id: "graphs", label: "Graphs", to: "/graphs", views: [
       view("graphs", "graphs-climate", "Climate", "Climate", "/graphs"),
       view("graphs", "graphs-zones", "Zones", "Zones", "/graphs/zones"),
+      view("graphs", "graphs-lighting", "Lighting", "Lighting", "/graphs/lighting"),
       view("graphs", "graphs-statistics", "Statistics", "Statistics", "/graphs/statistics"),
     ],
   },

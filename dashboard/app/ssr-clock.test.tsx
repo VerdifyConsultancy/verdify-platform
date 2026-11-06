@@ -21,6 +21,7 @@ import Equipment from "./routes/equipment";
 import Graphs from "./routes/graphs";
 import Statistics from "./routes/graphs-statistics";
 import GraphsZones from "./routes/graphs.zones";
+import GraphsLighting from "./routes/graphs.lighting";
 import Now from "./routes/now";
 import Plan from "./routes/plan";
 import Settings from "./routes/settings";
@@ -37,6 +38,7 @@ const CHILDREN = [
   { path: "water", Component: Water, children: [{ index: true, Component: WaterBoard }, { path: "schedules", Component: WaterSchedules }, { path: "history", Component: WaterHistory }] },
   { path: "graphs", Component: Graphs },
   { path: "graphs/zones", Component: GraphsZones },
+  { path: "graphs/lighting", Component: GraphsLighting },
   { path: "graphs/statistics", Component: Statistics },
   { path: "activity", Component: Activity },
   { path: "activity/log", Component: ActivityLog },
@@ -45,7 +47,7 @@ const CHILDREN = [
   { path: "equipment", Component: Equipment },
   { path: "band", Component: Band },
 ];
-const TESTED = ["/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/plan", "/equipment", "/band"];
+const TESTED = ["/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/lighting", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/plan", "/equipment", "/band"];
 
 /** The page's server render at `instant`, its text and tags without attributes. */
 function serverText(path: string, instant: string): string {

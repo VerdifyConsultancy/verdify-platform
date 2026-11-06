@@ -22,7 +22,7 @@ export const ROUTES = [
   ["API-10", "PUT", "/v1/settings/{param}"], ["API-11", "DELETE", "/v1/settings/{param}"], ["API-12", "GET", "/v1/settings/{param}/history"],
   ["API-13", "GET", "/v1/equipment"], ["API-14", "GET", "/v1/alerts"], ["API-15", "POST", "/v1/alerts/{id}/ack"],
   ["API-16", "POST", "/v1/alerts/{id}/resolve"], ["API-17", "GET", "/v1/activity"], ["API-19", "GET", "/v1/band/preview"],
-  ["API-22", "GET", "/v1/band/profile"], ["API-23", "PUT", "/v1/band/profile"], ["API-20", "POST", "/v1/equipment/lights/{light}/{state}"], ["API-21", "GET", "/v1/water/daily"], ["API-IRR-01", "GET", "/v1/irrigation"],
+  ["API-23", "GET", "/v1/band/profile"], ["API-24", "PUT", "/v1/band/profile"], ["API-20", "POST", "/v1/equipment/lights/{light}/{state}"], ["API-21", "GET", "/v1/water/daily"], ["API-22", "GET", "/v1/lighting"], ["API-IRR-01", "GET", "/v1/irrigation"],
   ["API-IRR-02", "GET", "/v1/irrigation/schedules"], ["API-IRR-03", "POST", "/v1/irrigation/schedules"],
   ["API-IRR-04", "PUT", "/v1/irrigation/schedules/{slot_id}"], ["API-IRR-05", "DELETE", "/v1/irrigation/schedules/{slot_id}"],
   ["API-IRR-06", "POST", "/v1/irrigation/lines/{line_id}/run"], ["API-IRR-07", "POST", "/v1/irrigation/stop"],
@@ -142,6 +142,7 @@ const WAVES = {
   "climate.vpd_west": [0.6, 0.12], "climate.house_vpd_target": [0.62, 0.05], "climate.vpd_target_center": [0.65, 0.05], "climate.vpd_target_south": [0.6, 0.05],
   "climate.vpd_target_west": [0.6, 0.05], "climate.vpd_target_east": [0.7, 0.05], "forecast.temp_f": [47, 11], "forecast.rh_pct": [52, -14], "forecast.vpd_kpa": [0.5, 0.25],
   "climate.soil_moisture_south_1": [38, -2], "climate.flow_gpm": [0, 0], "climate.outdoor_temp_f": [45, 10], "climate.outdoor_rh_pct": [55, -15],
+  "climate.outdoor_lux": [30000, 30000], "climate.solar_irradiance_w_m2": [300, 300], "forecast.solar_w_m2": [300, 300],
   "diagnostics.heap_free_kb": [38, 1.5], "daily.temp_in_band_pct": [92, 4], "daily.vpd_in_band_pct": [88, 6], "daily.time_in_band_day_pct": [90, 3],
   "daily.time_in_band_night_pct": [81, 5], "daily.water_gal": [24, 0], "daily.iris_required_written": [3, 0], "daily.iris_required_missed": [0, 0],
   "daily.alerts_critical": [0, 0], "daily.alerts_warning": [1, 0], "daily.alerts_info": [2, 0],
@@ -282,6 +283,10 @@ function statesBody(world, { query }) {
     leak_detected: world.leak.active ? [span(from, Date.parse(world.leak.since), "off"), span(Date.parse(world.leak.since), end, "on")] : [span(from, end, "off")],
     water_flowing: flowing.length ? [span(from, Math.min(...flowing), "off"), span(Math.min(...flowing), end, "on")] : [span(from, end, "off")],
   };
+  // The controller's grow-light intent (Q-09), which the lanes compare with the Lutron readback (#1356).
+  for (const item of world.equipment) if (item.group === "light" && item.intent) {
+    lanes.push({ equipment: `${item.equipment}_intent`, label: `${item.label}, controller intent`, group: "light", line_id: null, spans: [span(from, end, item.intent)] });
+  }
   for (const [equipment, label] of FLAGS) lanes.push({ equipment, label, group: "flag", line_id: null, spans: flags[equipment] });
   return {
     from: iso(from), to: iso(to),
@@ -490,7 +495,7 @@ const fieldsOf = (source) => Object.fromEntries([...TEMP_FIELDS, ...VPD_FIELDS].
   if (typeof value !== "number" || !Number.isFinite(value)) throw invalid(`${name} must be a number`, name);
   return [[name, value]];
 }));
-/** API-22: the house band as stored and drafted over one day, on the fixed solar day above. */
+/** API-23: the house band as stored and drafted over one day, on the fixed solar day above. */
 function profileBody(world, { query }) {
   const fields = fieldsOf((name) => (query.has(name) ? Number(query.get(name)) : undefined));
   const anchors = Object.fromEntries(query.getAll("anchor").map((item) => {
@@ -525,7 +530,7 @@ function profileBody(world, { query }) {
     findings: bandFindings(draft),
   };
 }
-/** API-23: every changed anchor as an API-10 write, under one band.write activity row. */
+/** API-24: every changed anchor as an API-10 write, under one band.write activity row. */
 function saveBand(world, { body, serial, key }) {
   const input = object(body);
   const profile = input.profile === undefined ? {} : object(input.profile);
@@ -588,6 +593,40 @@ function waterBody(world, { query }) {
       if (!water) return { date, coverage: "no_data", meter_gal: null, by_line: null, by_cause: null, no_valve_gal: null };
       const valve = Object.values(water.lines).reduce((sum, gal) => sum + gal, 0);
       return { date, coverage: date === last ? "partial" : "complete", meter_gal: valve + water.noValve, by_line: water.lines, by_cause: water.causes, no_valve_gal: water.noValve };
+    }),
+  };
+}
+
+/** The controller's grow-light policy the fixture runs: Tempest lux thresholds, the photoperiod window and its target. */
+const LIGHT_POLICY = {
+  main: { start_hour: 7, cutoff_hour: 20, lux_on: 40000, lux_off: 48000, target_min: 780 },
+  grow: { start_hour: 7, cutoff_hour: 22, lux_on: 40000, lux_off: 48000, target_min: 900 },
+};
+/** API-22: each light by America/Denver day up to now, from its Lutron runtime today and a steady day before. */
+function lightingBody(world, { query }) {
+  const { from, to } = window(query);
+  if (to - from > 31 * DAY) throw refuse(422, "window_too_large", "Window too large", "A window covers at most 31 days", { field: "to" });
+  const end = Math.min(to, world.now);
+  const days = [];
+  for (let date = local(from).date; end > from && localInstant(date) < end; date = addDays(date, 1)) days.push(date);
+  const last = today(world);
+  return {
+    from: iso(from), to: iso(to),
+    circuits: [["main", "grow_light_main", "Main"], ["grow", "grow_light_grow", "Grow"]].map(([light, equipment, label]) => {
+      const item = world.equipment.find((row) => row.equipment === equipment);
+      const policy = LIGHT_POLICY[light];
+      return {
+        light, equipment, label,
+        days: days.map((date) => {
+          const partial = date === last;
+          const on_s = partial ? item?.runtime_today_s ?? 0 : (policy.target_min - 240) * 60;
+          const window_min = partial ? Math.max(0, Math.min((world.now - localInstant(date)) / MINUTE - policy.start_hour * 60, (policy.cutoff_hour - policy.start_hour) * 60)) : (policy.cutoff_hour - policy.start_hour) * 60;
+          return {
+            date, partial, on_s, starts: partial ? item?.cycles_today ?? 0 : 2, ...policy,
+            window_min: Math.round(window_min), qualified_min: Math.round(Math.min(window_min, partial ? window_min / 2 : policy.target_min)),
+          };
+        }),
+      };
     }),
   };
 }
@@ -758,8 +797,9 @@ const READS = {
   "API-14": alertsBody,
   "API-17": activityBody,
   "API-19": previewBody,
-  "API-22": profileBody,
+  "API-23": profileBody,
   "API-21": waterBody,
+  "API-22": lightingBody,
   "API-IRR-01": irrigationBody,
   "API-IRR-02": agendaBody,
   "API-IRR-10": minutesBody,
@@ -1158,7 +1198,7 @@ const WRITES = {
   "API-15": (world, request) => alertWrite(world, request, false),
   "API-16": (world, request) => alertWrite(world, request, true),
   "API-20": lights,
-  "API-23": saveBand,
+  "API-24": saveBand,
   "API-IRR-03": createSchedule,
   "API-IRR-04": editSchedule,
   "API-IRR-05": deleteSchedule,
@@ -1270,10 +1310,11 @@ export const EXAMPLES = {
   "API-16": (world) => send("POST", `/v1/alerts/${firstAlert(world)}/resolve`, { resolution: "Fixed at the breaker" }),
   "API-17": () => get("/v1/activity"),
   "API-19": (world) => get("/v1/band/preview", world.preview),
-  "API-22": () => get("/v1/band/profile", { temp_night: "67.7" }),
-  "API-23": () => send("PUT", "/v1/band/profile", { profile: { temp_night: 67.7 }, manual: true, reason: "Warmer nights" }),
+  "API-23": () => get("/v1/band/profile", { temp_night: "67.7" }),
+  "API-24": () => send("PUT", "/v1/band/profile", { profile: { temp_night: 67.7 }, manual: true, reason: "Warmer nights" }),
   "API-20": () => send("POST", "/v1/equipment/lights/main/on", { reason: "Inspecting the Vandas" }),
   "API-21": (world) => get("/v1/water/daily", { days: String(world.waterUseDays) }),
+  "API-22": (world) => get("/v1/lighting", { from: iso(world.now - 3 * DAY), to: iso(world.now) }),
   "API-IRR-01": () => get("/v1/irrigation"),
   // The week view with "Last 7 days" on, so past blocks and their outcomes are in the set.
   "API-IRR-02": () => get("/v1/irrigation/schedules", { past_days: 7 }),

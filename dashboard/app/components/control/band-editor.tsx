@@ -18,8 +18,8 @@ import { PREVIEW_DEBOUNCE_MS, PREVIEW_UNAVAILABLE, PreviewChart, draftOf, ribbon
  * The band editor (Control → Band, #1334): the house band in the operator's terms, with a live 24 h preview. The
  * fields are the simple profile (day and night targets, the temperature ± width and the VPD range below and above); a
  * field changed recompiles its axis with sunrise and sunset at the midpoint of noon and midnight, so the curve never
- * leaves the values typed. Advanced shows the 24 raw anchors. Every edit, after 300 ms, reads API-22, which evaluates
- * the draft with the controller's own curve, so the browser computes no curve. Save is one API-23 write of every
+ * leaves the values typed. Advanced shows the 24 raw anchors. Every edit, after 300 ms, reads API-23, which evaluates
+ * the draft with the controller's own curve, so the browser computes no curve. Save is one API-24 write of every
  * changed anchor with one reason and one Activity row; the dispatcher delivers it, never the page.
  */
 
@@ -53,10 +53,10 @@ function anchorTexts(anchors: Readonly<Record<string, number>>): Texts {
 }
 
 /**
- * API-22's query from the fields the operator changed: a profile field that parses and differs from the band's own
+ * API-23's query from the fields the operator changed: a profile field that parses and differs from the band's own
  * value, and each raw anchor that does; null while a changed field does not read as a number.
  */
-export function draftParams(texts: Texts, base: Texts, anchors: Texts, anchorBase: Texts): ParamsOf<"API-22"> | null {
+export function draftParams(texts: Texts, base: Texts, anchors: Texts, anchorBase: Texts): ParamsOf<"API-23"> | null {
   const params: Record<string, number | string[]> = {};
   for (const name of PROFILE_FIELDS) {
     if (texts[name] === base[name]) continue;
@@ -72,7 +72,7 @@ export function draftParams(texts: Texts, base: Texts, anchors: Texts, anchorBas
     raw.push(`${name}:${value}`);
   }
   if (raw.length) params.anchor = raw;
-  return params as ParamsOf<"API-22">;
+  return params as ParamsOf<"API-23">;
 }
 
 /** The day's two charts as the band preview draws them, the VPD one with the controller's night bias and the expected night VPD. */
@@ -92,7 +92,7 @@ function views(preview: BandProfilePreview, now: number | null, edited: boolean)
 }
 
 export function BandEditor() {
-  const base = useFreshRead("API-22", {});
+  const base = useFreshRead("API-23", {});
   const current = base.data ?? null;
   const baseTexts = useMemo(() => (current ? profileTexts(current.current.profile) : {}), [current]);
   const baseAnchors = useMemo(() => (current ? anchorTexts(current.current.anchors) : {}), [current]);
@@ -122,7 +122,7 @@ export function BandEditor() {
     return () => clearTimeout(timer);
   }, [params]);
   const edited = settled !== null && Object.keys(settled).length > 0;
-  const read = useFreshRead("API-22", edited ? settled : null);
+  const read = useFreshRead("API-23", edited ? settled : null);
   const preview = edited ? read.data ?? current : current;
   const now = useGraphClock(true);
   const charts = useMemo(() => (preview ? views(preview, now, edited) : null), [preview, now, edited]);

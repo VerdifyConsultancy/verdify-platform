@@ -1,4 +1,4 @@
-"""The band editor (#1334): the profile compiler, the API-22 preview and the API-23 Save, with no database.
+"""The band editor (#1334): the profile compiler, the API-23 preview and the API-24 Save, with no database.
 
 The compiler's curves are the controller's harmonic (``ingestor/solar.band_value_at_phase``); a compiled profile never
 leaves its noon and midnight values; the checks refuse what the guardrails and the night dry-out floor forbid; the
@@ -221,7 +221,7 @@ def test_sun_times_are_where_the_phase_crosses_each_anchor():
     assert sun.solar_noon == 1500 and sun.sunset == 2700
 
 
-# ── API-22 ──────────────────────────────────────────────────────────────────
+# ── API-23 ──────────────────────────────────────────────────────────────────
 
 
 class Conn:
@@ -285,7 +285,7 @@ def test_the_preview_overlays_the_draft_adds_the_night_bias_and_matches_its_sche
     assert answer.temp.current.target[36] == pytest.approx(harmonic(*series_points(LIVE, "temp_target"), 1.0), abs=1e-4)
 
 
-# ── API-23 ──────────────────────────────────────────────────────────────────
+# ── API-24 ──────────────────────────────────────────────────────────────────
 
 
 def stored_row(desired_id: int, param: str, value: float) -> settings.DesiredSetting:
@@ -340,7 +340,7 @@ def test_a_save_writes_each_changed_anchor_under_one_band_write_row(monkeypatch)
     assert all(write[2] is True and write[3] == "Warmer nights" for write in harness.writes)
     assert [row.param for row in result.value.changed] == names
     logged = harness.logged
-    assert (logged["op"], logged["action"], logged["target"]) == ("API-23", "band.write", "house band")
+    assert (logged["op"], logged["action"], logged["target"]) == ("API-24", "band.write", "house band")
     assert logged["detail"]["desired_ids"] == [row.id for row in result.value.changed]
     assert logged["detail"]["changes"][2] == {
         "param": "band_temp_low_mid",

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
 // The band editor (#1334) against #1122's fixture API in process, with uPlot mocked: the fields start from the band as
-// stored, an edit previews through API-22 with only the changed field, Save is one API-23 write, the night floor is
+// stored, an edit previews through API-23 with only the changed field, Save is one API-24 write, the night floor is
 // refused beside its field, and a viewer sees the preview with no form.
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -27,7 +27,7 @@ async function mount(session = OPERATOR) {
   await settle();
   return api;
 }
-const queries = (api: ReturnType<typeof startFixtureApi>) => requests(api, "API-22").map((row) => new URL(row.path, "http://dashboard.invalid").searchParams.toString());
+const queries = (api: ReturnType<typeof startFixtureApi>) => requests(api, "API-23").map((row) => new URL(row.path, "http://dashboard.invalid").searchParams.toString());
 const field = (label: string, nth = 0) => screen.getAllByLabelText(label)[nth] as HTMLInputElement;
 async function type(input: HTMLInputElement, value: string) {
   fireEvent.change(input, { target: { value } });
@@ -46,7 +46,7 @@ test("draftParams sends only the fields that changed, and nothing while one does
   expect(draftParams(base, base, { band_vpd_low_mid: "0.76" }, { band_vpd_low_mid: "0.74" })).toEqual({ anchor: ["band_vpd_low_mid:0.76"] });
 });
 
-test("an edit previews through API-22 and Save writes the changed anchors in one API-23 request", async () => {
+test("an edit previews through API-23 and Save writes the changed anchors in one API-24 request", async () => {
   const api = await mount();
   const night = field("Night target (solar midnight)");
   expect(night.value).toBe("65.7");
@@ -59,7 +59,7 @@ test("an edit previews through API-22 and Save writes the changed anchors in one
   await settle();
   const sent = writes(api);
   expect(sent).toHaveLength(1);
-  expect(sent[0]).toMatchObject({ operationId: "API-23", body: { profile: { temp_night: 67.7 }, anchors: {}, manual: true, reason: "Warmer nights" } });
+  expect(sent[0]).toMatchObject({ operationId: "API-24", body: { profile: { temp_night: 67.7 }, anchors: {}, manual: true, reason: "Warmer nights" } });
   // The fields start again from the band as stored, now with the new night target.
   expect(field("Night target (solar midnight)").value).toBe("67.7");
 });

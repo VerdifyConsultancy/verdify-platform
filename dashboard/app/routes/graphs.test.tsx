@@ -138,7 +138,7 @@ test("/graphs?range=72h&set=mister_engage_kpa: one stack of three panels on one 
   expect(head("rh")).toMatch(/^low \d\d\.\d/);
   // The lanes sit in their disclosure, open from 861 px; a wet line's interval names its cause.
   expect(document.querySelector<HTMLDetailsElement>("details.stack-lanes")!.open).toBe(true);
-  expect(document.querySelector("[data-equipment=fan1]")).not.toBeNull();
+  expect([...document.querySelectorAll(".lanes-group-name")].map(text)).toEqual(["Climate", "Misting", "Irrigation", "Lighting", "Sensors"]);
   expect(texts(lanesPlot()!)).toContain("VPD");
   // The range chips keep the setting; the setting's chip opens its drawer.
   expect(links_("Range").map((chip) => [chip.textContent, chip.getAttribute("href"), chip.getAttribute("aria-current")])).toEqual([
@@ -317,17 +317,19 @@ test("the event rail marks writes, alerts and runs by source, each linking to Ac
   expect(requests(api, "API-14").map((row) => Object.fromEntries(query(row.path)))).toEqual([{ status: "recent", limit: "200" }]);
   expect(requests(api, "API-IRR-11").map((row) => Object.fromEntries(query(row.path)))).toEqual([{ from: iso(S - 24 * HOUR), to: iso(S), limit: "200" }]);
   const rail = screen.getByRole("group", { name: /^Events on the charts, \d+$/ });
-  const marks = within(rail).getAllByRole("button").map((mark) => [mark.getAttribute("data-mark"), mark.getAttribute("data-token"), mark.getAttribute("aria-label")]);
+  const marks = within(rail).getAllByRole("button").map((mark) => [mark.getAttribute("data-kind"), mark.querySelector(".rail-glyph")!.getAttribute("data-token"), text(mark), mark.getAttribute("aria-label")]);
   expect(marks).toEqual([
-    ["diamond-hollow", "muted", "06:30 · forecast-engine · Set Mister Pulse Gap"],
-    ["bar", "cause-vpd", "06:58 · Center mister · VPD · 14 min · ok"],
-    ["diamond", "ink", "07:02 · iris AI · Plan iris-20261102-0702 (SUNRISE)"],
-    ["triangle", "warn-text", "08:00 · warning · The greenhouse is outside its band"],
-    ["diamond", "forest", "08:42 · jason · Set VPD Mister Engage"],
-    ["diamond", "eq-fan2", "09:00 · steward AI · Set Fog RH Ceiling"],
-    ["triangle-hollow", "warn-text", "09:30 · resolved · The greenhouse is outside its band"],
+    ["setting", "muted", "✎", "06:30 · forecast-engine · Set Mister Pulse Gap"],
+    ["water", "cause-vpd", "▮", "06:58 · Center mister · VPD · 14 min · ok"],
+    ["plan", "ink", "◆↑", "07:02 · iris AI · Plan iris-20261102-0702 (SUNRISE)"],
+    ["alert", "warn-text", "▲", "08:00 · warning · The greenhouse is outside its band"],
+    ["setting", "forest", "✎", "08:42 · jason · Set VPD Mister Engage"],
+    ["setting", "eq-fan2", "✎", "09:00 · steward AI · Set Fog RH Ceiling"],
+    ["alert", "warn-text", "△", "09:30 · resolved · The greenhouse is outside its band"],
   ]);
-  const disclosure = screen.getByText("Events in this window (7)").closest("details")!;
+  // The key toggles each kind on the rail and names a plan's trigger.
+  expect(within(screen.getByRole("list", { name: "Event marks" })).getAllByRole("button").map(text)).toEqual(["✎setting", "◆plan", "▮water", "▲alert"]);
+  const disclosure = screen.getByRole("region", { name: "Events in this window (7)" });
   expect(within(disclosure).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
     "/activity/log?target=mister_pulse_gap_s#activity-13", "/water/history?line=L04", "/activity/log?target=iris-20261102-0702#activity-14", "/activity?alert=501",
     "/activity/log?target=mister_engage_kpa#activity-15", "/activity/log?target=fog_rh_ceiling_pct#activity-16", "/activity?alert=501",
@@ -359,13 +361,13 @@ test("Preset sets the picked metrics from an API-03 group; the Water and soil pa
   const presets = links_("Presets");
   expect(presets.map((link) => [text(link), link.getAttribute("aria-current"), link.getAttribute("href")])).toEqual([
     ["Climate", null, "/graphs?range=7d&outdoor=0"], ["Water and soil", "true", "/graphs?range=7d&preset=water-soil&outdoor=0"],
-    ["Light · none yet", null, "/graphs?range=7d&preset=light&outdoor=0"], ["Controller", null, "/graphs?range=7d&preset=controller&outdoor=0"],
+    ["Light", null, "/graphs?range=7d&preset=light&outdoor=0"], ["Controller", null, "/graphs?range=7d&preset=controller&outdoor=0"],
   ]);
   expect(text(document.querySelector(".gr-menu .gr-menu-value"))).toBe("Water and soil");
   // Taking a preset's metric off turns the preset into the metrics left.
   const chips = within(screen.getByRole("list", { name: "Metrics on the charts" }));
   expect(chips.getByRole("link", { name: "Take Site water flow off the charts" }).getAttribute("href")).toBe("/graphs?range=7d&m=climate.soil_moisture_south_1&outdoor=0");
-  expect(document.querySelector("[data-equipment=drip_wall]")?.textContent).toContain("Wall drip");
+  expect(text(document.querySelector("[data-system=irrigation] .lanes-group-name"))).toBe("Irrigation");
 });
 
 test("a daily key draws in a panel of its own, one point per day, read apart from the climate panels (D-UX-04)", async () => {

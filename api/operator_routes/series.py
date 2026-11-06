@@ -1,5 +1,5 @@
-"""Graph reads: API-03 to API-06, the band preview API-19 and the band editor's preview API-22 (architecture §7 and §8,
-#1334). No auth and no SQL here."""
+"""Graph reads: API-03 to API-06, the band preview API-19, the lighting days API-22 and the band editor's preview API-23
+(architecture §7 and §8, #1334). No auth and no SQL here."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import asyncpg
 from fastapi import APIRouter, Depends, Query
 from pydantic import AwareDatetime
 
-from verdify_services import band_profile
+from verdify_services import band_profile, lighting
 from verdify_services import series as service
 
 from .reads import connection
@@ -69,6 +69,16 @@ async def states(
 
 
 @router.get(
+    "/lighting",
+    operation_id="API-22",
+    summary="The grow lights by day: on time, starts, the policy in force and qualified light minutes against target",
+    response_model=lighting.LightingDays,
+)
+async def lighting_days(conn: Connection, from_: WindowStart, to: WindowEnd) -> lighting.LightingDays:
+    return await lighting.lighting_days(conn, from_, to)
+
+
+@router.get(
     "/band",
     operation_id="API-06",
     summary="Band in force and the reconstructed crop band, for the house or one zone",
@@ -105,7 +115,7 @@ def _field(description: str, minimum: float | None = None) -> object:
 
 @router.get(
     "/band/profile",
-    operation_id="API-22",
+    operation_id="API-23",
     tags=["settings"],
     summary="The house band as stored and as drafted in the band editor, over one day, before Save",
     response_model=band_profile.BandProfilePreview,

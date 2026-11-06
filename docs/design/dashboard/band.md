@@ -54,7 +54,7 @@ between the noon and midnight values, with no overshoot.
 ## Who may change what
 
 - **The band (the 24 anchors)** is set only by an operator: Control → Band, a single setting in Settings, or an operator
-  agent through the operator API. Iris (the planner) may not write it: `set_plan` drops anchors, and API-23 refuses Iris.
+  agent through the operator API. Iris (the planner) may not write it: `set_plan` drops anchors, and API-24 refuses Iris.
 - **Night dry-out bias** (`night_vpd_bias_kpa`, 0–0.25 kPa) is the planner's lever. The controller adds
   `bias·sin²(π(phase−2)/2)` to VPD low, target and high from sunset to sunrise, peaking at solar midnight. The editor
   shows it dotted ("As the controller runs it").
@@ -75,7 +75,7 @@ Changing any temperature field recompiles the six temperature anchors (noon and 
 sunset at their midpoint, each on the push quantum of 0.1 °F); any VPD field does the same for the VPD anchors (0.01
 kPa). Advanced shows the 24 raw anchors; uneven shoulders warn when the overshoot passes 0.5 °F or 0.03 kPa.
 
-**Preview (API-22, `GET /v1/band/profile`).** Read-only. The server overlays the draft on the anchors as
+**Preview (API-23, `GET /v1/band/profile`).** Read-only. The server overlays the draft on the anchors as
 `fn_crop_band_value` resolves them and evaluates both with the controller's curve at 10-min steps of the day's
 `fn_solar_phase`, so the preview is the device's curve. It also returns:
 
@@ -87,7 +87,7 @@ kPa). Advanced shows the 24 raw anchors; uneven shoulders warn when the overshoo
 - findings: errors (band order, guardrails, the night floor) and warnings (overshoot; a night floor that needs an
   indoor dewpoint below the driest tenth of the last 14 nights).
 
-**Save (API-23, `PUT /v1/band/profile`).** One transaction: every anchor that changes by more than half its push quantum
+**Save (API-24, `PUT /v1/band/profile`).** One transaction: every anchor that changes by more than half its push quantum
 is written as an API-10 setting write (its `desired_state` row with the manual flag and its `crop_band_anchors` rows),
 under one `activity_log` row, `band.write`. Last write wins; the manual flag works as everywhere else. The
 `desired_state` insert wakes the dispatcher, whose anchor sync (`ingestor/tasks/band_anchors.py`) pushes the changed

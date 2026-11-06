@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pytest
 
+from verdify_schemas.setting_help import setting_help, setting_label
 from verdify_schemas.tunable_registry import REGISTRY, planner_effective_bounds, tunable_control_class
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,9 +58,14 @@ def test_one_setting_per_registry_row_in_its_class_group_with_tunabledef_label_u
         spec = REGISTRY[name]
         control_class = tunable_control_class(name, spec)
         assert row["control_class"] == control_class, name
-        assert (row["label"], row["unit"], row["step"], row["kind"]) == (spec.label, spec.unit, spec.step, spec.kind), (
-            name
-        )
+        assert (row["label"], row["unit"], row["step"], row["kind"]) == (
+            setting_label(name),
+            spec.unit,
+            spec.step,
+            spec.kind,
+        ), name
+        assert row["help"] == setting_help(name).model_dump(mode="json"), name
+        assert (row["read_only_kind"] is None) is row["writable"], name
         assert (row["min"], row["max"]) == planner_effective_bounds(name), name
         if not row["writable"]:
             expected = "read_only"

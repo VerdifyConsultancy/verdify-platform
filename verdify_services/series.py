@@ -492,6 +492,8 @@ _REGISTRY: tuple[MetricBinding, ...] = (
     _forecast("temp_f", "Forecast temperature", "°F"),
     _forecast("rh_pct", "Forecast relative humidity", "%"),
     _forecast("vpd_kpa", "Forecast VPD", "kPa"),
+    # Graphs → Lighting draws it ahead of now beside the measured irradiance (#1357).
+    _forecast("solar_w_m2", "Forecast solar radiation", "W/m²"),
     # targets: the controller's on-chip targets, a cross-check for API-06, and how far the
     # measured value sits from each (the firmware publishes Tin - target and VPD - target)
     _climate(
@@ -1043,11 +1045,17 @@ LANES: tuple[tuple[str, LaneGroup], ...] = (
     *((equipment, "water") for equipment in EQUIPMENT_LINE_IDS),
     ("grow_light_main", "light"),
     ("grow_light_grow", "light"),
+    # The controller's switch intent (Q-09), which the lanes compare with the Lutron readback (#1356). Unlike the
+    # readback it is written on change, so its unknown spans are the controller's silences.
+    ("grow_light_main_intent", "light"),
+    ("grow_light_grow_intent", "light"),
     ("occupancy", "flag"),
     ("leak_detected", "flag"),
     ("water_flowing", "flag"),
 )
 _LANE_GROUPS = dict(LANES)
+# The Lutron readback lanes: polled every 300 s, so unknown 600 s after their newest row.
+LUTRON_LANES = frozenset({"grow_light_main", "grow_light_grow"})
 
 SEED_SQL = (
     "SELECT lane.equipment, public.fn_equip_at(lane.equipment, $2::timestamptz) AS state "
@@ -1204,8 +1212,9 @@ async def states(
     Each lane is seeded with fn_equip_at(equipment, from_) and its equal states collapse. A
     span is unknown before a lane's first row, while the controller was not reporting (no
     climate row for more than 300 s) and, on the Lutron light lanes, more than 600 s after a
-    readback row. Intervals end at the window's end or now. A wet line's cause stays null
-    until #1155's run_causes() fills it.
+    readback row. The controller's grow-light intent lanes follow the controller's silences.
+    Intervals end at the window's end or now. A wet line's cause stays null until #1155's
+    run_causes() fills it.
     """
     now = _now(now)
     from_, to = _validate_window(from_, to, MAX_STATES_WINDOW)
@@ -1217,7 +1226,7 @@ async def states(
     controller: list[tuple[datetime, datetime]] = []
     if from_ < end:
         names = [name for name, _ in lanes]
-        lights = [name for name, group in lanes if group == "light"]
+        lights = [name for name, _ in lanes if name in LUTRON_LANES]
         async with _read_transaction(conn):
             seeds = {row["equipment"]: row["state"] for row in await conn.fetch(SEED_SQL, names, from_)}
             if lights:
@@ -1240,7 +1249,7 @@ async def states(
         intervals: list[StateInterval] = []
         if from_ < end:
             lane_rows = rows.get(name, [])
-            if group == "light":
+            if name in LUTRON_LANES:
                 unknown = stale_spans((ts for ts, _ in lane_rows), light_seeds.get(name), from_, end)
             else:
                 unknown = controller

@@ -1,12 +1,12 @@
-"""The house band editor (#1334): API-22, the profile preview, and API-23, its one atomic Save.
+"""The house band editor (#1334): API-23, the profile preview, and API-24, its one atomic Save.
 
-API-22 reads the 24 house anchors as ``fn_crop_band_value`` resolves them, overlays a draft (simple profile fields,
+API-23 reads the 24 house anchors as ``fn_crop_band_value`` resolves them, overlays a draft (simple profile fields,
 which recompile their axis with midpoint shoulders, and Advanced raw anchors) and evaluates both with the harmonic
 the controller runs at 10-min steps of the day's ``fn_solar_phase``, so the preview is the device's curve. It adds
 what the controller adds on top (``night_vpd_bias_kpa``'s night bump), the guardrails, the checks of
 ``verdify_schemas.band_profile.findings``, an expected night VPD ribbon and the night heat estimate.
 
-API-23 stores the anchors a Save changes through the settings writer, one ``desired_state`` row and its
+API-24 stores the anchors a Save changes through the settings writer, one ``desired_state`` row and its
 ``crop_band_anchors`` rows per anchor, under one ``activity_log`` row (``band.write``) in one transaction. The
 ``desired_state`` insert trigger wakes the dispatcher, whose anchor sync (``ingestor/tasks/band_anchors.py``) pushes
 the changed anchors; nothing here talks to the controller. Iris may not write the band (``read_only``).
@@ -191,7 +191,7 @@ class BandProfilePreview(_Model):
 
 
 class BandWrite(_Model):
-    """API-23's answer: the stored row of every anchor the Save changed, in anchor order."""
+    """API-24's answer: the stored row of every anchor the Save changed, in anchor order."""
 
     changed: list[settings.DesiredSetting]
 
@@ -462,7 +462,7 @@ async def preview(
     *,
     now: datetime | None = None,
 ) -> BandProfilePreview:
-    """API-22: the house band as stored and as drafted over one America/Denver day. Read-only."""
+    """API-23: the house band as stored and as drafted over one America/Denver day. Read-only."""
     now = series._now(now)
     day = series._preview_day(day, now)
     start = series.denver_midnight(day)
@@ -525,7 +525,7 @@ async def write(
     reason: str | None,
     request_id: Any,
 ) -> WriteResult[BandWrite]:
-    """API-23: every anchor the draft changes, in one ``recorded_write`` transaction with one ``band.write`` row.
+    """API-24: every anchor the draft changes, in one ``recorded_write`` transaction with one ``band.write`` row.
 
     Refusals: Iris (``read_only``: the band is operator-owned), an ``error`` finding (``out_of_range`` with its field),
     a draft that changes nothing (``invalid_request``), and each anchor's own settings checks.
@@ -580,7 +580,7 @@ async def write(
     return await activity.recorded_write(
         conn,
         actor,
-        op="API-23",
+        op="API-24",
         action=ACTION,
         target=TARGET,
         request=request,
