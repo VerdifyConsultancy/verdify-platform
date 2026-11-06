@@ -34,6 +34,9 @@ EQUIPMENT_LABELS: Mapping[str, str] = MappingProxyType(
         # Light: the Lutron readback.
         "grow_light_main": "Main",
         "grow_light_grow": "Grow",
+        # Light: the controller's switch intent (Q-09), compared with the readback on the lanes (#1356).
+        "grow_light_main_intent": "Main, controller intent",
+        "grow_light_grow_intent": "Grow, controller intent",
         # The API-05 flags.
         "occupancy": "Occupancy",
         "leak_detected": "Water flowing, valves closed",

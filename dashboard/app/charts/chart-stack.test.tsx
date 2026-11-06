@@ -166,28 +166,37 @@ test("excursions, the envelope and compare paint only when asked", async () => {
   expect(paint().strokes.some((stroke) => stroke.stroke === envelope)).toBe(false);
 });
 
-test("the event rail draws only when given events: marks in words, a list per mark, and the same list as a disclosure", async () => {
+test("the event rail draws only when given events: an icon per kind, a key that turns kinds off, a list per mark, and the list under the stack", async () => {
   await mount(<ChartStack label="Climate" panels={panels()} now={NOW} xRange={RANGE} syncKey="k" />);
-  expect(document.querySelector(".stack-rail, .stack-events")).toBeNull();
+  expect(document.querySelector(".stack-rail, .stack-events, .rail-key")).toBeNull();
   cleanup(); MockPlot.reset();
   const events: ChartEvent[] = [
-    { id: "a", at: FROM + 2 * HOUR, source: "people", mark: "diamond", token: "forest", label: "09:00 · jason · Set VPD Mister Engage", href: "/activity/log?target=mister_engage_kpa#activity-1" },
-    { id: "b", at: FROM + 10 * HOUR, source: "alerts", mark: "triangle", token: "fault", label: "17:00 · critical · Relay stuck", href: "/activity?alert=7" },
-    { id: "c", at: FROM - HOUR, source: "runs", mark: "bar", token: "eq-water", label: "outside the window" },
+    { id: "a", at: FROM + 2 * HOUR, source: "people", kind: "setting", glyph: "✎", token: "forest", label: "09:00 · jason · Set VPD Mister Engage", href: "/activity/log?target=mister_engage_kpa#activity-1", touch: { kind: "setting", param: "mister_engage_kpa" } },
+    { id: "b", at: FROM + 10 * HOUR, source: "alerts", kind: "alert", glyph: "▲", token: "fault", label: "17:00 · critical · Relay stuck", href: "/activity?alert=7", touch: { kind: "span", from: FROM + 10 * HOUR, to: FROM + 12 * HOUR } },
+    { id: "p", at: FROM + 14 * HOUR, source: "iris", kind: "plan", glyph: "◆", badge: "↓", token: "ink", label: "21:00 · iris AI · Plan" },
+    { id: "c", at: FROM - HOUR, source: "runs", kind: "water", glyph: "▮", token: "eq-water", label: "outside the window" },
   ];
   await mount(<ChartStack label="Climate" panels={panels()} now={NOW} xRange={RANGE} syncKey="k" events={events} />);
-  const rail = screen.getByRole("group", { name: "Events on the charts, 2" });
+  const rail = screen.getByRole("group", { name: "Events on the charts, 3" });
   const marks = within(rail).getAllByRole("button");
-  expect(marks.map((mark) => [mark.getAttribute("aria-label"), mark.getAttribute("data-mark"), mark.getAttribute("data-token"), mark.getAttribute("tabindex")])).toEqual([
-    ["09:00 · jason · Set VPD Mister Engage", "diamond", "forest", "-1"], ["17:00 · critical · Relay stuck", "triangle", "fault", "-1"],
+  expect(marks.map((mark) => [mark.getAttribute("aria-label"), mark.getAttribute("data-kind"), mark.textContent, mark.getAttribute("tabindex")])).toEqual([
+    ["09:00 · jason · Set VPD Mister Engage", "setting", "✎", "-1"], ["17:00 · critical · Relay stuck", "alert", "▲", "-1"], ["21:00 · iris AI · Plan", "plan", "◆↓", "-1"],
   ]);
+  expect(marks[1].querySelector(".rail-glyph")?.getAttribute("data-token")).toBe("fault");
+  // The key names the kinds in the window, and a plan's triggers.
+  const key = screen.getByRole("list", { name: "Event marks" });
+  expect(within(key).getAllByRole("button").map((button) => [button.textContent, button.getAttribute("aria-pressed")])).toEqual([["✎setting", "true"], ["◆plan", "true"], ["▲alert", "true"]]);
+  expect(key.textContent).toContain("↑ sunrise · ↓ sunset · ☾ midnight");
+  // Hovering the alert draws the hairline and lights its span; the list under the stack lights its row.
   fireEvent.mouseEnter(marks[1]);
   expect(document.querySelector(".stack-hairline")).not.toBeNull();
+  expect(document.querySelectorAll(".stack-span")).toHaveLength(1);
+  const under = screen.getByRole("region", { name: "Events in this window (3)" });
+  expect(under.querySelector("[data-lit]")?.id).toBe("stack-event-b");
   fireEvent.click(marks[1]);
   const list = screen.getByRole("list", { name: "Events at this mark" });
   expect(within(list).getByRole("link", { name: "17:00 · critical · Relay stuck" }).getAttribute("href")).toBe("/activity?alert=7");
-  const disclosure = screen.getByText("Events in this window (2)").closest("details")!;
-  expect(within(disclosure).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/activity/log?target=mister_engage_kpa#activity-1", "/activity?alert=7"]);
+  expect(within(under).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/activity/log?target=mister_engage_kpa#activity-1", "/activity?alert=7"]);
   // Escape in the list closes it and puts focus back on the mark that opened it; Escape on the mark does the same.
   const link = within(list).getByRole("link");
   link.focus();
@@ -199,6 +208,24 @@ test("the event rail draws only when given events: marks in words, a list per ma
   fireEvent.keyDown(marks[1], { key: "Escape" });
   expect(screen.queryByRole("list", { name: "Events at this mark" })).toBeNull();
   expect(document.activeElement).toBe(marks[1]);
+  // Hovering a list row lights its mark; turning the alert kind off takes it off the rail and the list.
+  fireEvent.mouseLeave(marks[1]);
+  fireEvent.mouseEnter(document.getElementById("stack-event-a")!);
+  expect(marks[0].hasAttribute("data-lit")).toBe(true);
+  fireEvent.click(within(key).getByRole("button", { name: /alert/ }));
+  expect(screen.getByRole("group", { name: "Events on the charts, 2" })).toBeTruthy();
+  expect(screen.getByRole("region", { name: "Events in this window (2)" })).toBeTruthy();
+});
+
+test("marks closer than 8 px stack into one: the first one's icon and +N, every event in its list", async () => {
+  const events: ChartEvent[] = [0, 1, 2].map((n) => ({ id: `s${n}`, at: FROM + 2 * HOUR + n * 60, source: "people", kind: "setting", glyph: "✎", token: "forest", label: `set ${n}` }));
+  const width = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(800);
+  await mount(<ChartStack label="Climate" panels={panels()} now={NOW} xRange={RANGE} syncKey="k" events={events} />);
+  width.mockRestore();
+  const marks = within(screen.getByRole("group", { name: "Events on the charts, 3" })).getAllByRole("button");
+  expect(marks.map((mark) => mark.textContent)).toEqual(["✎+2"]);
+  fireEvent.click(marks[0]);
+  expect(within(screen.getByRole("list", { name: "Events at this mark" })).getAllByRole("listitem")).toHaveLength(3);
 });
 
 test("lanes sit in a disclosure open from 861 px; the foot offers CSV of this window and one data table", async () => {
