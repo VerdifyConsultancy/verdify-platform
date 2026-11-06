@@ -35,9 +35,13 @@ step() { printf '\n== %s ==\n' "$1"; }
 
 # CI_PYTEST_WORKERS (set by ci/gha/validate.sh from the job's CPU quota) runs the long
 # pure-logic step with pytest-xdist, work-stealing. Unset or 0 keeps it serial.
+# The k3s-smoke subprocess tests have tight wall-clock bounds, so under xdist they are
+# deselected from the parallel pass and run serially right after it (same tests).
 XDIST=()
+XDIST_SERIAL=(tests/test_k3s_smoke_device_monitor.py tests/test_k3s_smoke_g10.py)
 if [ "${CI_PYTEST_WORKERS:-0}" -gt 0 ]; then
   XDIST=(-n "$CI_PYTEST_WORKERS" --dist worksteal)
+  for serial_test in "${XDIST_SERIAL[@]}"; do XDIST+=(--deselect "$serial_test"); done
 fi
 
 step "ruff lint"
@@ -384,6 +388,9 @@ $PY -m pytest -q -rs ${XDIST[@]+"${XDIST[@]}"} \
   tests/test_writer_outbound_boundary.py \
   tests/test_verify_component_proof_packet.py \
   tests/test_writer_lease_fence.py
+if [ "${#XDIST[@]}" -gt 0 ]; then
+  $PY -m pytest -q -rs "${XDIST_SERIAL[@]}"
+fi
 
 step "offline suites that no step collected before"
 # Two invocations: these files import ingestor/ as a package, while several
