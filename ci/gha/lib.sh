@@ -55,51 +55,10 @@ ci_classify() {
     --base "$(ci_base)" --output "$out" "$@"
 }
 
-# TEMPORARY until estate-ci toolbox image adds kustomize + UID 1001 passwd entry (CI-PLATFORM):
-# ci_ensure_kustomize and ci_ensure_passwd_entry below; delete both then.
-#
-# kustomize v5.4.3, the release the native step downloads, checked against the
-# release's published SHA-256 (the value ci/validate.Dockerfile also pins).
-# Installed into the private HOME when the job image has none (python and
-# agents-ci-tools job images); tests call `kustomize build` directly.
-ci_ensure_kustomize() {
-  command -v kustomize >/dev/null && return 0
-  local bin="$HOME/.local/bin"
-  mkdir -p "$bin"
-  curl -fsSL --retry 3 -o "$bin/kustomize.tgz" \
-    "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz"
-  echo "3669470b454d865c8184d6bce78df05e977c9aea31c30df3c669317d43bcc7a7  $bin/kustomize.tgz" | sha256sum -c -
-  tar -xzf "$bin/kustomize.tgz" --no-same-owner -C "$bin" kustomize
-  rm "$bin/kustomize.tgz"
-  export PATH="$bin:$PATH"
-}
-
-# Give the job UID a passwd/group entry when the image has none: the job-image
-# sidecars run as UID 1001, which python:3.13-bookworm does not define, and
-# initdb (the private PostgreSQL fixtures) refuses a UID without one. Same
-# nss_wrapper mechanism as scripts/restore-backup-pair.sh; the library comes
-# from the image's own signed Debian sources, downloaded and extracted into
-# private state without installing anything.
-ci_ensure_passwd_entry() {
-  getent passwd "$(id -u)" >/dev/null && return 0
-  local root="$HOME/nss-wrapper" lib
-  mkdir -p "$root/lists/partial" "$root/cache/archives/partial" "$root/debs"
-  local apt=(apt-get -qq -o "Dir::State::lists=$root/lists" -o "Dir::Cache=$root/cache"
-    -o Debug::NoLocking=true -o Acquire::AllowInsecureRepositories=false -o Acquire::Retries=5)
-  "${apt[@]}" update
-  (cd "$root/debs" && "${apt[@]}" download libnss-wrapper)
-  dpkg-deb -x "$(ls "$root"/debs/libnss-wrapper_*.deb)" "$root/root"
-  lib="$(find "$root/root" -name libnss_wrapper.so -print -quit)"
-  [ -n "$lib" ] || { echo "libnss_wrapper.so not found in libnss-wrapper" >&2; return 1; }
-  { cat /etc/passwd; echo "ci:x:$(id -u):$(id -g):ci:$HOME:/bin/bash"; } > "$root/passwd"
-  { cat /etc/group; getent group "$(id -g)" >/dev/null || echo "ci:x:$(id -g):"; } > "$root/group"
-  export LD_PRELOAD="$lib${LD_PRELOAD:+:$LD_PRELOAD}"
-  export NSS_WRAPPER_PASSWD="$root/passwd" NSS_WRAPPER_GROUP="$root/group"
-  export USER=ci LOGNAME=ci
-  # The preload puts nss_wrapper ahead of the ASan runtime in the sanitizer
-  # tests' binaries (tests/test_api_overflow_patch.py); ASan then refuses to
-  # start. Skip only that link-order check: nss_wrapper wraps no allocator, so
-  # ASan/UBSan detection is unchanged.
-  export ASAN_OPTIONS="verify_asan_link_order=0${ASAN_OPTIONS:+:$ASAN_OPTIONS}"
-  getent passwd "$(id -u)" >/dev/null || { echo "nss_wrapper did not take effect" >&2; return 1; }
+# The estate-ci runner image (estate-ci#39) provides kustomize on PATH and a
+# passwd/group entry for the job UID; fail fast if either is missing rather
+# than skip the gates that need them (kustomize build, initdb).
+ci_require_runner_tools() {
+  command -v kustomize >/dev/null || { echo "runner image is missing kustomize (estate-ci#39)" >&2; return 1; }
+  getent passwd "$(id -u)" >/dev/null || { echo "runner image has no passwd entry for UID $(id -u) (estate-ci#39)" >&2; return 1; }
 }

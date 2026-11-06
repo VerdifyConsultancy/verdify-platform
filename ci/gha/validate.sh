@@ -12,8 +12,7 @@ for tool in g++ git curl tar make; do
   command -v "$tool" >/dev/null || { echo "CI image is missing $tool" >&2; exit 1; }
 done
 
-ci_ensure_kustomize
-ci_ensure_passwd_entry
+ci_require_runner_tools
 
 ci_fetch_history
 impact="$(mktemp -d)"
