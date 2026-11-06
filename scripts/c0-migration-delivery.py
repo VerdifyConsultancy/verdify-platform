@@ -311,6 +311,14 @@ SUCCESSOR_289_DIGESTS = {
     "verdify_ingestor_runtime_login": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
 }
 SUCCESSOR_289_MCP_DIGEST = SUCCESSOR_288_MCP_DIGEST
+# Exact290 (#1358): time in band graded against the band the controller served. The table, the
+# functions and the scorecard view are verdify's; the one EXECUTE goes to the matview-refresh duty in
+# its own schema, so no runtime seal moves and no receipt is re-sealed. The rolled-back native
+# qualification measures them.
+SUCCESSOR_290 = "290-band-compliance.sql"
+SUCCESSOR_290_SHA256 = "557d8d03a61a284e05e1b9bc26db7e3748898531ea7b80f0a6b4e458c922e6be"
+SUCCESSOR_290_DIGESTS = SUCCESSOR_289_DIGESTS
+SUCCESSOR_290_MCP_DIGEST = SUCCESSOR_289_MCP_DIGEST
 # Exact296 (#1351): knowledge_embeddings (halfvec 2560, Cortex embed.main) and its search function, SELECT and
 # EXECUTE for the MCP duty only. That moves the MCP seal and re-seals its receipt; neither object carries an
 # api or ingestor entry, so both ordinary seals stay 289's. 290-295 are ahead in open PRs; whichever merges
@@ -374,6 +382,7 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_287,
         SUCCESSOR_288,
         SUCCESSOR_289,
+        SUCCESSOR_290,
         SUCCESSOR_296,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
@@ -418,6 +427,7 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_287_SHA256,
                 SUCCESSOR_288_SHA256,
                 SUCCESSOR_289_SHA256,
+                SUCCESSOR_290_SHA256,
                 SUCCESSOR_296_SHA256,
             ),
             strict=True,
@@ -694,6 +704,7 @@ COMMIT;"""
         (SUCCESSOR_287, SUCCESSOR_287_DIGESTS),
         (SUCCESSOR_288, SUCCESSOR_288_DIGESTS),
         (SUCCESSOR_289, SUCCESSOR_289_DIGESTS),
+        (SUCCESSOR_290, SUCCESSOR_290_DIGESTS),
         (SUCCESSOR_296, SUCCESSOR_296_DIGESTS),
     ):
         if name in later:
@@ -786,6 +797,8 @@ COMMIT;"""
             expected_mcp = SUCCESSOR_288_MCP_DIGEST
         if SUCCESSOR_289 in later:
             expected_mcp = SUCCESSOR_289_MCP_DIGEST
+        if SUCCESSOR_290 in later:
+            expected_mcp = SUCCESSOR_290_MCP_DIGEST
         if SUCCESSOR_296 in later:
             expected_mcp = SUCCESSOR_296_MCP_DIGEST
         if hotfix_predecessor_263:

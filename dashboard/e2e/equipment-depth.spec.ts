@@ -79,16 +79,16 @@ for (const viewport of VIEWPORTS) {
     const held = new Promise<void>((resolve) => { release = resolve; });
     await page.route("**/api/v1/equipment/lights/main/on", async (route) => { await held; await route.continue(); });
     // Off in automatic, matching the controller: the one button turns it on (#1308 visual QA 26).
-    await expect(light(page, MAIN).locator(".light-actions button")).toHaveText(["Turn on Main"]);
-    await light(page, MAIN).getByRole("button", { name: "Turn on Main" }).dblclick();
+    await expect(light(page, MAIN).locator(".light-actions button")).toHaveText(["Turn on 15 min Main"]);
+    await light(page, MAIN).getByRole("button", { name: "Turn on 15 min Main" }).dblclick();
     await expect(light(page, MAIN).getByRole("button", { name: "Sending…" })).toBeDisabled();
     // While it is on its way both switches show, so the other could override it; nothing more is sent meanwhile.
-    await expect(light(page, MAIN).getByRole("button", { name: "Turn off Main" })).toBeDisabled();
+    await expect(light(page, MAIN).getByRole("button", { name: "Turn off 15 min Main" })).toBeDisabled();
     await expect(lutron(page, MAIN)).toHaveText("Off (controller) · Lutron Off");
     release();
     await untilPolled(page, () => expect(lutron(page, MAIN)).toHaveText("Off (controller) · Lutron On Differ", { timeout: 500 }));
     // On by hand against the controller: Back to automatic first, then Turn off.
-    await expect(light(page, MAIN).locator(".light-actions button")).toHaveText(["Back to automatic Main", "Turn off Main"]);
+    await expect(light(page, MAIN).locator(".light-actions button")).toHaveText(["Back to automatic Main", "Turn off 15 min Main"]);
     const sent = await fixtureWrites(request);
     expect(sent.map((write) => [write.method, write.path, write.operationId])).toEqual([["POST", "/v1/equipment/lights/main/on", "API-20"]]);
     expect(sent[0].idempotency_key).toMatch(UUID);
@@ -103,7 +103,7 @@ for (const viewport of VIEWPORTS) {
 test("Back to automatic: one API-10 write reads REQUESTED then CONFIRMED, and only then one API-20 back to the intent", async ({ page, request }) => {
   await useScreensClock(page, request, ["lights-confirmed", "requested-to-confirmed"]);
   await load(page, "/equipment");
-  await light(page, MAIN).getByRole("button", { name: "Turn on Main" }).click();
+  await light(page, MAIN).getByRole("button", { name: "Turn on 15 min Main" }).click();
   await untilPolled(page, () => expect(lutron(page, MAIN)).toHaveText("Off (controller) · Lutron On Differ", { timeout: 500 }));
   await expect(automatic(page, MAIN)).toHaveText("Automatic");
   await light(page, MAIN).getByRole("button", { name: "Back to automatic Main" }).click();
@@ -153,7 +153,7 @@ for (const [fixture, says] of [["lights-ha-fail", "Lutron did not switch: Home A
   test(`${fixture}: the result reads in words, the readback stays, and after 30 s it says still OFF`, async ({ page, request }) => {
     await useScreensClock(page, request, fixture);
     await load(page, "/equipment");
-    await light(page, MAIN).getByRole("button", { name: "Turn on Main" }).click();
+    await light(page, MAIN).getByRole("button", { name: "Turn on 15 min Main" }).click();
     await expect(light(page, MAIN).locator(".field-error")).toHaveText(says);
     await expect(lutron(page, MAIN)).toHaveText("Off (controller) · Lutron Off");
     await untilPolled(page, () => expect(light(page, MAIN).locator("[data-light-note=late]")).toHaveText("Lutron hasn't confirmed: still OFF", { timeout: 500 }));
@@ -180,7 +180,7 @@ test("writes-off: each light control is disabled beside the changes-off banner",
   // Main off in automatic, Grow overridden (its controller says on): each its own buttons by state, every one disabled.
   await useScreensClock(page, request, ["writes-off", "grow-lights-differ"]);
   await load(page, "/equipment");
-  for (const [key, names] of [[MAIN, ["Turn on Main"]], [GROW, ["Back to automatic Grow", "Turn on Grow"]]] as const) {
+  for (const [key, names] of [[MAIN, ["Turn on 15 min Main"]], [GROW, ["Back to automatic Grow", "Turn on 15 min Grow"]]] as const) {
     const buttons = light(page, key).getByRole("button");
     await expect(buttons).toHaveText([...names]);
     for (const button of await buttons.all()) await expect(button).toBeDisabled();
@@ -192,7 +192,7 @@ test("at 390 px a light's buttons are full width, each target is at least 44 px,
   await page.setViewportSize(PHONE);
   await useScreensClock(page, request, ["lights-confirmed", "grow-lights-differ"]);
   await load(page, "/equipment");
-  for (const [key, names] of [[MAIN, ["Turn on Main"]], [GROW, ["Back to automatic Grow", "Turn on Grow"]]] as const) {
+  for (const [key, names] of [[MAIN, ["Turn on 15 min Main"]], [GROW, ["Back to automatic Grow", "Turn on 15 min Grow"]]] as const) {
     const row = await light(page, key).locator(".light-actions").boundingBox();
     for (const name of names) {
       const box = await light(page, key).getByRole("button", { name }).boundingBox();

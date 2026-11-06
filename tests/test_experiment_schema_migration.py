@@ -355,6 +355,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "288-retire-irrigation-registry-rows.sql",
         # Alert silences, their seeds and the ingestor grant's receipt re-seals run forward only.
         "289-alert-silences.sql",
+        # daily_band_compliance and its refresh run forward only; the rollup is derived data.
+        "290-band-compliance.sql",
         # The knowledge-embeddings table, its search function and the MCP receipt re-seal run forward only.
         "296-knowledge-embeddings-cortex.sql",
     }

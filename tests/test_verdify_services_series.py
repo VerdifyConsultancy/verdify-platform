@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib
+import re
 import sys
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -365,6 +366,10 @@ def test_registry_bindings_follow_the_issue():
         "daily.vpd_in_band_pct": None,
         "daily.time_in_band_day_pct": "band_reason",
         "daily.time_in_band_night_pct": "band_reason",
+        "daily.temp_below_band_pct": None,
+        "daily.vpd_below_band_pct": None,
+        "daily.vpd_in_band_day_pct": None,
+        "daily.vpd_in_band_night_pct": None,
         "daily.water_gal": "water_reason",
         "daily.iris_required_written": None,
         "daily.iris_required_missed": None,
@@ -403,13 +408,14 @@ def test_target_deltas_read_as_the_distance_from_target():
 
 
 def test_the_scorecard_view_has_every_bound_column():
-    sql = (ROOT / "db/migrations/285-daily-scorecard-view.sql").read_text()
-    body = sql.split("CREATE VIEW public.v_daily_scorecard AS", 1)[1].split(";\n", 1)[0]
+    # The newest definition of the view: 290 replaced 285's (#1358).
+    sql = (ROOT / "db/migrations/290-band-compliance.sql").read_text()
+    body = sql.split("CREATE OR REPLACE VIEW public.v_daily_scorecard AS", 1)[1].split(";\n", 1)[0]
     for binding in s.METRICS.values():
         if binding.daily is not None and binding.daily.view == s.SCORECARD_VIEW:
             for column in (binding.daily.avg, binding.daily.reason, binding.daily.stamp):
                 if column:
-                    assert f" AS {column}" in body or f"d.{column}\n" in body, column
+                    assert re.search(rf"(?: AS {column}|[db]\.{column}),?\n", body), column
 
 
 # ─────────────────────────────────────────────────────────────── the forecast keys (API-04)

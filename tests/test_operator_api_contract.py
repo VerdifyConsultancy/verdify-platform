@@ -232,6 +232,7 @@ def test_it_serves_its_own_operations_and_every_included_route_module():
         ("DELETE", "/internal/sessions/current", "INT-02"),
         ("GET", "/healthz", "OPS-01"),
         ("GET", "/readyz", "OPS-02"),
+        ("GET", "/metrics", "OPS-04"),
         ("GET", "/v1/now", "API-02"),
         ("GET", "/v1/plan", "API-07"),
         ("GET", "/v1/equipment", "API-13"),
@@ -271,7 +272,7 @@ def test_every_served_route_is_an_api_route_and_no_bff_path_is_served():
     routes = served_routes(operator_api.app)
     assert all(isinstance(getattr(route, "original_route", route), APIRoute) for route in routes)
     paths = {route.path for route in routes}
-    assert not paths & {"/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect", "/metrics"}
+    assert not paths & {"/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"}
     bff_only = {path for path, item in SPEC["paths"].items() if item.get("x-served-by") == "bff"}
     assert bff_only == {"/auth/login", "/auth/callback", "/auth/logout"} and not paths & bff_only
 

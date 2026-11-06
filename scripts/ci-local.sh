@@ -97,6 +97,7 @@ $PY -m pytest -q -rs \
   tests/test_287_retire_high_wind_delivery.py \
   tests/test_288_retire_irrigation_registry_delivery.py \
   tests/test_289_alert_silences_delivery.py \
+  tests/test_290_band_compliance_delivery.py \
   tests/test_296_knowledge_embeddings_delivery.py \
   tests/test_metric_registry_completeness.py \
   tests/test_verdify_services_series.py \
@@ -338,6 +339,8 @@ $PY -m pytest -q -rs \
   tests/test_setpoint_server_ingress.py \
   tests/test_public_api_operator_paths.py \
   tests/test_operator_api_manifests.py \
+  tests/test_operator_api_alert_metrics.py \
+  tests/test_alert_delivery_local.py \
   tests/test_verdify_traefik_placement.py \
   tests/test_verdify_tier1_owner_exclusions.py \
   tests/test_dashboard_manifests.py \

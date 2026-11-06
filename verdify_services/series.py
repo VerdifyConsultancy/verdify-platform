@@ -310,6 +310,11 @@ def _diagnostic(key: str, column: str, label: str, unit: str, note: str | None =
     )
 
 
+# daily_band_compliance (migration 290, #1358): 5-minute house-average buckets graded against the band the controller
+# served (band_house_* audit rows; fn_band_setpoints where one is missing).
+_SERVED_BAND = "Share of graded 5-minute buckets against the band the controller served"
+
+
 def _scorecard(
     column: str,
     label: str,
@@ -554,28 +559,32 @@ _REGISTRY: tuple[MetricBinding, ...] = (
         "temp_in_band_pct",
         "Temperature time in band, whole day",
         "%",
-        note="Share of the day's readings inside the band (daily_summary)",
+        note=_SERVED_BAND,
     ),
     _scorecard(
         "vpd_in_band_pct",
         "VPD time in band, whole day",
         "%",
-        note="Share of the day's readings inside the band (daily_summary)",
+        note=_SERVED_BAND,
     ),
     _scorecard(
         "time_in_band_day_pct",
         "Time in band, day",
         "%",
         reason="band_reason",
-        note="Graded temperature and VPD score of the house average, sunrise to sunset; kept 3 days",
+        note="Share of graded 5-minute buckets with temperature and VPD both in the served band, sunrise to sunset",
     ),
     _scorecard(
         "time_in_band_night_pct",
         "Time in band, night",
         "%",
         reason="band_reason",
-        note="Graded temperature and VPD score of the house average, sunset to sunrise; kept 3 days",
+        note="Share of graded 5-minute buckets with temperature and VPD both in the served band, sunset to sunrise",
     ),
+    _scorecard("temp_below_band_pct", "Temperature below band, whole day", "%", note=_SERVED_BAND),
+    _scorecard("vpd_below_band_pct", "VPD below band, whole day", "%", note=_SERVED_BAND),
+    _scorecard("vpd_in_band_day_pct", "VPD time in band, day", "%", note=_SERVED_BAND + ", sunrise to sunset"),
+    _scorecard("vpd_in_band_night_pct", "VPD time in band, night", "%", note=_SERVED_BAND + ", sunset to sunrise"),
     _scorecard("water_gal", "Water used", "gal", reason="water_reason", provenance="MEASURED"),
     _scorecard("iris_required_written", "Iris required plans written", "count", note="MIDNIGHT, SUNRISE and SUNSET"),
     _scorecard(

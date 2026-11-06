@@ -99,6 +99,8 @@ AlertType = Literal[
     "irrigation_fence_breach",
     "irrigation_run_missed",
     "irrigation_line_faulted",
+    "mcp_unreachable",
+    "forecast_action_alert",
 ]
 
 ALERT_TYPES: tuple[str, ...] = (
@@ -152,6 +154,8 @@ ALERT_TYPES: tuple[str, ...] = (
     "irrigation_fence_breach",
     "irrigation_run_missed",
     "irrigation_line_faulted",
+    "mcp_unreachable",
+    "forecast_action_alert",
 )
 
 
@@ -946,6 +950,36 @@ class IrrigationLineFaultedAlert(_AlertBase):
     details: IrrigationLineFaultedDetails
 
 
+class McpUnreachableDetails(_DetailsBase):
+    """The planning heartbeat's MCP Service probe (#1352): replaces its Slack-only page."""
+
+    url: str = Field(..., min_length=1)
+    consecutive_failures: int = Field(..., ge=1)
+
+
+class McpUnreachableAlert(_AlertBase):
+    alert_type: Literal["mcp_unreachable"]
+    details: McpUnreachableDetails
+
+
+class ForecastActionAlertDetails(_DetailsBase):
+    """A fired forecast_action_rules row whose action is ``alert`` (#1352): replaces its Slack-only post."""
+
+    rule_id: int
+    rule_name: str = Field(..., min_length=1)
+    metric: str = Field(..., min_length=1)
+    operator: Literal["<", ">", "<=", ">="]
+    threshold: float
+    forecast_value: float
+    forecast_at: AwareDatetime
+    window: str
+
+
+class ForecastActionAlert(_AlertBase):
+    alert_type: Literal["forecast_action_alert"]
+    details: ForecastActionAlertDetails
+
+
 AlertEnvelopeUnion = Annotated[
     AlertValidationFailedAlert
     | BandAnchorDbReadFailedAlert
@@ -996,7 +1030,9 @@ AlertEnvelopeUnion = Annotated[
     | DeployOverrideAlert
     | IrrigationFenceBreachAlert
     | IrrigationRunMissedAlert
-    | IrrigationLineFaultedAlert,
+    | IrrigationLineFaultedAlert
+    | McpUnreachableAlert
+    | ForecastActionAlert,
     Field(discriminator="alert_type"),
 ]
 

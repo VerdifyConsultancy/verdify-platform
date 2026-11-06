@@ -108,7 +108,6 @@ from tasks import (
     ingestor_heartbeat,
     irrigation_sync,
     matview_refresh,
-    midnight_watch,
     planner_memory_ingest_sync,
     planning_heartbeat,
     policy_arbiter_admissions,
@@ -124,7 +123,6 @@ from tasks import (
     setpoint_dispatcher,
     shelly_sync,
     site_content_refresh,
-    slack_operator_briefs,
     water_flowing_sync,
     water_meter_materialize,
 )
@@ -4597,8 +4595,6 @@ async def task_loop(
         # 60s poll; guards on time-of-day (only fires in 00:05-00:10 MDT window,
         # dedup by date). Sprint 24.7 ops stopgap — retires when Sprint 25
         # alert_monitor rule 7 rewrite ships.
-        ("midnight_watch", 60, midnight_watch),
-        ("slack_operator_briefs", 60, slack_operator_briefs),
         # Public inference-infra proof data. Kept after greenhouse-critical
         # tasks and sampled at 5m cadence so exporter stalls cannot starve
         # dispatch, alerts, or planner heartbeat.

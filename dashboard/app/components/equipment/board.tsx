@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import type { ReactNode } from "react";
 import { isIntentKey } from "../../charts/equipment-lanes";
+import { lineKindToken } from "../../charts/palette";
 import { formatValue } from "../../lib/format";
 import { LINES, lineByEquipment } from "../../lib/lines";
 import type { Equipment } from "../../lib/operator-api";
@@ -42,14 +43,13 @@ export function boardRows(group: BoardGroup, items: readonly EquipmentItem[]): B
 
 export const known = (state: string | null | undefined): state is "on" | "off" => state === "on" || state === "off";
 
-const LINE_TOKENS: Readonly<Record<string, string>> = { drip: "eq-water", fert_drip: "eq-fert", master: "eq-master", mister: "eq-mister", fert_mister: "eq-fert", fog: "eq-fog" };
 /** The equipment's own colour token (design system §5.2), for its ON dot; null for one the build does not know. */
 export function equipmentToken(equipment: string): string | null {
   if (["fan1", "fan2", "vent", "heat1", "heat2"].includes(equipment)) return `eq-${equipment}`;
   if (equipment === "grow_light_main") return "eq-light-main";
   if (equipment === "grow_light_grow") return "eq-light-grow";
   const line = lineByEquipment(equipment);
-  return line ? LINE_TOKENS[line.kind] ?? null : null;
+  return line ? lineKindToken(line.kind)?.replace(/^--/, "") ?? null : null;
 }
 
 /**
