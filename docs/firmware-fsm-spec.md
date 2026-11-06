@@ -273,8 +273,8 @@ engine release's R3 OTA (#1164).
 | Rail | Condition / default | Effect | Pinned by |
 |---|---|---|---|
 | Sensor-fault | `!sensors_plausible` (temp∉(−20,140)°F, rh∉[0,100], vpd∉[0,10), hour∉[0,23]) | all relays off | inv #26, native tests |
-| Cold rail | `temp_f ≤ safety_min` (default 45 °F) | `SAFETY_HEAT` (both heaters) | inv #25 |
-| Hot rail | `temp_f ≥ safety_max` (default 95 °F) | `SAFETY_COOL` (vent+both fans) | inv #7 |
+| Cold rail | `temp_f ≤ safety_min` (default and fallback 40 °F) | `SAFETY_HEAT` (both heaters) | inv #25 |
+| Hot rail | `temp_f ≥ safety_max` (default and fallback 100 °F) | `SAFETY_COOL` (vent+both fans) | inv #7 |
 | VPD over-dry | `vpd_kpa > vpd_max_safe` (default 2.5 kPa) | forced `SEALED_MIST` | determine_mode |
 | VPD over-wet | `vpd_kpa < vpd_min_safe` (default 0.3 kPa) | forced `DEHUM_VENT` | determine_mode |
 | Dew-margin veto | every wetting path gated on `temp_f − dew_point_f` | no crown condensation | inv #2/#24 |
@@ -303,7 +303,11 @@ state machine. Five independent layers enforce this:
    (`greenhouse_types.h`), and `sw_fsm_controller_enabled` is force-locked on.
 
 The rails read fixed `safety_min/safety_max/vpd_*_safe` setpoints that are not in
-the planner-pushable set. Tested by `verdify_schemas/tests/test_tunable_registry.py`
+the planner-pushable set. 40 °F and 100 °F are the hard temperature guardrails (Jason
+2026-11-05, #1333): every firmware default and invalid-value fallback uses them
+(`kSafetyMinF`/`kSafetyMaxF`), and `validate_setpoints()` clamps the temperature band
+inside them (`temp_low ≥ safety_min + 5`, `temp_high ≤ safety_max − 5`); a band edge
+never moves a rail. Tested by `verdify_schemas/tests/test_tunable_registry.py`
 and the native suite.
 
 ### 5.3 Enforcement — the invariant suite
