@@ -6,7 +6,7 @@
 .brand-word{display:inline-flex;align-items:baseline}
 .brand .brand-glyph{width:auto;height:1.2em;margin-right:-.2em}
 
-/* The header row (redesign §2.2): the lockup, the five sections and the account button. Five links fit from 861 px, so the nav never scrolls sideways; the current section keeps weather's 2 px forest underline. */
+/* The header row (redesign §2.2): the lockup, the six sections and the account button. Six links fit from 861 px, so the nav never scrolls sideways; the current section keeps weather's 2 px forest underline. */
 .site-header .primary-nav{overflow:visible}
 .site-header .primary-nav a{gap:.4rem}
 /* The one open-alert count, filled by the worst open severity: critical white on --fault (6.54:1), warning --warn-text on --tint-warn (7.81:1), info ink on --field. */
@@ -54,11 +54,11 @@
 .session-ended::before{content:"";position:absolute;inset:0;background:var(--ink);opacity:.5}
 .session-ended .page-card{position:relative;width:min(28rem,100%);box-shadow:var(--shadow-sm)}
 
-/* Phones (860 px and below, redesign §2.3): a 52 px header with the lockup and the account button, and the fixed bar of the five sections, an icon over a one-word label, each a fifth of the width and at least 44 px. */
+/* Phones (860 px and below, redesign §2.3): a 52 px header with the lockup and the account button, and the fixed bar of the six sections, an icon over a one-word label, each a sixth of the width and at least 44 px. */
 @media(max-width:860px){
   .site-header>.shell{min-height:var(--header-h-phone);padding-block:var(--space-1)}
   .site-header .primary-nav{display:none}
-  .bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:var(--z-nav);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));min-height:calc(var(--bar-h) + env(safe-area-inset-bottom));padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);background:#fff;border-top:1px solid var(--line)}
+  .bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:var(--z-nav);display:grid;grid-template-columns:repeat(6,minmax(0,1fr));min-height:calc(var(--bar-h) + env(safe-area-inset-bottom));padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);background:#fff;border-top:1px solid var(--line)}
   .bottom-nav .tab{position:relative;display:grid;justify-items:center;align-content:center;gap:.2rem;min-width:0;min-height:var(--bar-h);padding:0 .125rem;color:var(--muted);font-size:var(--fs-xs);font-weight:600;line-height:1.15;text-align:center;text-decoration:none;overflow-wrap:normal}
   .bottom-nav .tab-icon{display:block;width:1.25rem;height:1.25rem}
   .bottom-nav .tab-label{display:block;max-width:100%}

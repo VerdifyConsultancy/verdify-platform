@@ -168,8 +168,8 @@ export async function expectNoHorizontalScroll(page: Page) {
 export const bottomBar = (page: Page) => page.getByRole("navigation", { name: "Sections, phone" });
 /** The desktop nav in the header (above 860 px). */
 export const sectionsNav = (page: Page) => page.getByRole("navigation", { name: "Sections", exact: true });
-/** The five sections in their one order, at every width (redesign §2.1, D-UX-01). */
-export const SECTION_LINKS = [/^Now/, /^Water/, /^Graphs/, /^Activity/, /^Control/];
+/** The six sections in their one order, at every width (redesign §2.1, D-UX-01). */
+export const SECTION_LINKS = [/^Now/, /^Water/, /^Crops/, /^Graphs/, /^Activity/, /^Control/];
 
 /**
  * The account button at the header's right edge (redesign §2.2): a disclosure whose summary holds the role pill (and,

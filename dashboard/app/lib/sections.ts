@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT
 /**
- * The information architecture of redesign §2.1 (D-UX-01): five sections in one order at every width, Now · Water ·
- * Graphs · Activity · Control, each with its views. The header's nav, the phone bar, a page's tabs, its breadcrumb and
+ * The information architecture of redesign §2.1 (D-UX-01): six sections in one order at every width, Now · Water ·
+ * Crops · Graphs · Activity · Control, each with its views (Crops is the sixth, #1330, Jason 2026-11-05). The header's nav, the phone bar, a page's tabs, its breadcrumb and
  * its document title all read this one model, so a label, a path or a title changes in one place. A section owns every
  * path under its views (weather's `SECTIONS` model): Control owns `/settings`, `/plan` and `/equipment`, which keep
  * their paths so drawer and banner links and bookmarks keep working.
  */
 
-export type SectionId = "now" | "water" | "graphs" | "activity" | "control";
+export type SectionId = "now" | "water" | "crops" | "graphs" | "activity" | "control";
 export type ViewId =
   | "now"
   | "water-today" | "water-schedules" | "water-history"
+  | "crops-map" | "crops-history"
   | "graphs-climate" | "graphs-zones" | "graphs-statistics"
   | "activity-alerts" | "activity-log"
   | "control-settings" | "control-plan" | "control-equipment";
@@ -42,6 +43,12 @@ export const SECTIONS: readonly Section[] = [
       view("water", "water-today", "Today", "Water today", "/water"),
       view("water", "water-schedules", "Schedules", "Schedules", "/water/schedules"),
       view("water", "water-history", "History", "Water history", "/water/history"),
+    ],
+  },
+  {
+    id: "crops", label: "Crops", to: "/crops", views: [
+      view("crops", "crops-map", "Map", "Crops", "/crops"),
+      view("crops", "crops-history", "History", "Crop history", "/crops/history"),
     ],
   },
   {

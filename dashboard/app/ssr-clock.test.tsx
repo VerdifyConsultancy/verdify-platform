@@ -15,6 +15,9 @@ import { ROUTES } from "../e2e/routes";
 import { AppShell } from "./components/app-shell";
 import { ToastProvider } from "./components/toast";
 import Activity from "./routes/activity";
+import Crops from "./routes/crops";
+import CropsHistory from "./routes/crops-history";
+import CropsMap from "./routes/crops-map";
 import ActivityLog from "./routes/activity-log";
 import Equipment from "./routes/equipment";
 import Graphs from "./routes/graphs";
@@ -34,6 +37,7 @@ const BUILD = "fedcba9876543210fedcba9876543210fedcba98";
 const CHILDREN = [
   { index: true, Component: Now },
   { path: "water", Component: Water, children: [{ index: true, Component: WaterBoard }, { path: "schedules", Component: WaterSchedules }, { path: "history", Component: WaterHistory }] },
+  { path: "crops", Component: Crops, children: [{ index: true, Component: CropsMap }, { path: "history", Component: CropsHistory }] },
   { path: "graphs", Component: Graphs },
   { path: "graphs/zones", Component: GraphsZones },
   { path: "graphs/statistics", Component: Statistics },
@@ -43,7 +47,7 @@ const CHILDREN = [
   { path: "plan", Component: Plan },
   { path: "equipment", Component: Equipment },
 ];
-const TESTED = ["/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/plan", "/equipment"];
+const TESTED = ["/", "/water", "/water/schedules", "/water/history", "/crops", "/crops/history", "/graphs", "/graphs/zones", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/plan", "/equipment"];
 
 /** The page's server render at `instant`, its text and tags without attributes. */
 function serverText(path: string, instant: string): string {

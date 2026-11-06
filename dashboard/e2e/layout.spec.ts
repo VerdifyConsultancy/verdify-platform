@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-// The caretaker's phone: no page scrolls sideways at 360 or 390 px and the bottom bar holds the five tabs; with reduced
-// motion emulated, nothing moves. And the shell of redesign §2 at 1440 px and on phones: the five sections, Control
+// The caretaker's phone: no page scrolls sideways at 360 or 390 px and the bottom bar holds the six tabs; with reduced
+// motion emulated, nothing moves. And the shell of redesign §2 at 1440 px and on phones: the six sections, Control
 // owning its views, the account menu, the fault row that never scrolls away, the warn notices in flow, the count pill's
 // severity, the redirects and the end of /more.
 import { CARD_PAGES, REDIRECTS, ROUTES, SETTING_DRAWERS } from "./routes";
@@ -12,7 +12,7 @@ import {
 for (const viewport of [SMALL_PHONE, PHONE]) {
   const size = `${viewport.width} × ${viewport.height}`;
   for (const path of ROUTES) {
-    test(`${path} · ${size}: no horizontal scroll, and the bottom bar holds the five tabs`, WEBKIT, async ({ page, request }) => {
+    test(`${path} · ${size}: no horizontal scroll, and the bottom bar holds the six tabs`, WEBKIT, async ({ page, request }) => {
       await useFixture(request, "in-band");
       await page.setViewportSize(viewport);
       await load(page, path);
@@ -70,7 +70,7 @@ for (const path of [...ROUTES, ...CARD_PAGES.map((card) => card.path)]) {
 }
 
 // ---------------------------------------------------------------------------------------------------- the shell
-test("1440 px: the header lists the five sections; Control opens Settings and is current on Settings, Plan and Equipment", async ({ page, request }) => {
+test("1440 px: the header lists the six sections; Control opens Settings and is current on Settings, Plan and Equipment", async ({ page, request }) => {
   await useFixture(request, "alerts-merged");
   await page.setViewportSize(DESKTOP);
   await load(page, "/");
@@ -103,13 +103,13 @@ test("1440 px: every page shares the header's one centred container, so switchin
 });
 
 for (const viewport of [SMALL_PHONE, PHONE]) {
-  test(`${viewport.width} px: each of the five phone tabs is an icon over its label, at least 44 px, and the header keeps the role pill`, WEBKIT, async ({ page, request }) => {
+  test(`${viewport.width} px: each of the six phone tabs is an icon over its label, at least 44 px, and the header keeps the role pill`, WEBKIT, async ({ page, request }) => {
     await useFixture(request, "in-band");
     await page.setViewportSize(viewport);
     await load(page, "/");
     const tabs = bottomBar(page).getByRole("link");
-    await expect(tabs).toHaveCount(5);
-    for (let index = 0; index < 5; index += 1) {
+    await expect(tabs).toHaveCount(6);
+    for (let index = 0; index < 6; index += 1) {
       const box = await tabs.nth(index).boundingBox();
       expect(box!.height).toBeGreaterThanOrEqual(44);
       await expect(tabs.nth(index).locator("svg.tab-icon")).toHaveCount(1);

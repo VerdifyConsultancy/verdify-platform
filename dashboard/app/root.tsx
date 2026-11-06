@@ -9,6 +9,7 @@ import { ApiError } from "./lib/operator-api";
 import { SIGN_IN_REFUSALS, displayableRequestId, pageContext, signInRefusal } from "./lib/page-context";
 import styles from "./styles.css?url";
 import controlStyles from "./styles/control.css?url";
+import cropsStyles from "./styles/crops.css?url";
 import graphsStyles from "./styles/graphs.css?url";
 import nowActivityStyles from "./styles/now-activity.css?url";
 import primitivesStyles from "./styles/primitives.css?url";
@@ -26,7 +27,7 @@ export const BUSY_RETRY_MS = 5000;
  * WP0's primitives and shell, then one section per screen package. Each section loads after styles.css, so none may
  * redefine what the §2.2 block overrides by order (`styles/sections.test.ts`). Chart routes add `chartLinks()` after these.
  */
-export const STYLESHEETS = [styles, tokensStyles, primitivesStyles, shellStyles, nowActivityStyles, graphsStyles, waterStyles, controlStyles] as const;
+export const STYLESHEETS = [styles, tokensStyles, primitivesStyles, shellStyles, nowActivityStyles, graphsStyles, waterStyles, controlStyles, cropsStyles] as const;
 export const links = () => [...STYLESHEETS.map((href) => ({ rel: "stylesheet", href })), { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }];
 export const headers: HeadersFunction = ({ errorHeaders }) => {
   const headers = new Headers();
