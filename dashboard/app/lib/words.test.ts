@@ -245,6 +245,26 @@ test("every planner trigger outcome has its words, from the OpenAPI enum and the
   expect(words("trigger_outcome", "rescheduled")).toBe("rescheduled");
 });
 
+test("every planner event in verdify_schemas/plan.py has words, so no trigger code reads on Now (#1339)", () => {
+  const literal = /^PlanDeliveryEventType = Literal\[([\s\S]*?)\]/m.exec(repo("verdify_schemas/plan.py"));
+  if (!literal) throw new Error("no PlanDeliveryEventType Literal in verdify_schemas/plan.py");
+  const triggers = [...literal[1].matchAll(/"([A-Z_]+)"/g)].map((match) => match[1]);
+  expect(triggers).toContain("FORECAST_DEVIATION");
+  expect(Object.keys(WORDS.trigger).sort()).toEqual([...triggers].sort());
+  for (const trigger of triggers) expect(words("trigger", trigger), trigger).not.toMatch(/_|^[A-Z]{3,}/);
+  expect(["SUNRISE", "SOLAR_MAX", "TRANSITION", "SUNSET", "FORECAST_DEVIATION"].map((trigger) => words("trigger", trigger))).toEqual([
+    "Sunrise plan", "Midday check", "Transition", "Sunset plan", "Forecast changed",
+  ]);
+});
+
+test("each setting Iris plans has a short plain name, never its key or a title-cased key", () => {
+  for (const [param, name] of Object.entries(WORDS.tunable_short)) {
+    expect(name, param).not.toMatch(/_/);
+    expect(name.toLowerCase(), param).not.toBe(param.replace(/_/g, " "));
+  }
+  expect(words("tunable_short", "mister_engage_kpa")).toBe("Misting starts at VPD");
+});
+
 test("every stress window kind and severity in verdify_schemas/plan.py has words", () => {
   const kinds = stressWindowLiteral("kind");
   const severities = stressWindowLiteral("severity");

@@ -258,15 +258,23 @@ test("Running and next from 861 px: the track over the last 6 h and the next 12 
   const coming = page.locator("#coming-up");
   await coming.scrollIntoViewIfNeeded();
   const track = coming.getByRole("group", { name: /^Running and next/ });
-  await expect(track.locator(".tt-label")).toHaveText(["Heat", "Vent, fans", "Fog, mist", "Drips", "Iris", "Plan", "Sun"]);
+  await expect(track.locator(".tt-label")).toHaveText(["Heat", "Vent, fans", "Fog, mist", "Drips", "Main light", "Grow light", "Iris plans", "Setting changes", "Sun"]);
+  // Row names read in full (#1340).
+  for (const label of await track.locator(".tt-label").all()) expect(await label.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
   await expect(track.locator(".tt-row").nth(0).locator(".tt-span").first()).toBeVisible();
   await expect(track.locator(".tt-now").first()).toBeVisible();
-  // Iris's triggers read as plan events with their times, so "SUNSET plan 16:50" never reads as a second sunset.
-  await expect(track.locator(".tt-row").nth(4).locator(".tt-marker-label")).toHaveText(["SUNRISE plan 07:00 ✓", "SOLAR_MAX plan 12:41", "SUNSET plan 16:50"]);
-  await expect(track.locator(".tt-row").nth(6).locator(".tt-marker-label")).toHaveText(["Sunrise 06:35", "Sunset 16:58"]);
+  // Iris's triggers in words (#1339), in two lanes, each opening its time and outcome on a tap (#1340).
+  await expect(track.locator("[data-row=iris] .tt-marker-label")).toHaveText(["Sunrise plan ✓", "Midday check", "Sunset plan"]);
+  await expect(track.locator("[data-row=sun] .tt-marker-label")).toHaveText(["Sunrise 06:35", "Sunset 16:58"]);
+  await test.step("a tap on Midday check opens its time and outcome", async () => {
+    await track.locator("[data-row=iris] .tt-marker-button").nth(1).click({ timeout: 10_000 });
+    await expect(page.getByRole("dialog", { name: "Iris: Midday check" })).toContainText("Midday check 12:41 · due");
+    await page.keyboard.press("Escape");
+  });
   // The now rule is named at the top of the track, and the plan's labels stop at the next marker, so its row keeps the others' height.
   await expect(track.locator(".tt-now-label")).toHaveText("now 10:42");
-  const [iris, plan] = await Promise.all([track.locator(".tt-row").nth(4).boundingBox(), track.locator(".tt-row").nth(5).boundingBox()]);
+  const iris = await track.locator("[data-row=iris]").boundingBox({ timeout: 10_000 });
+  const plan = await track.locator("[data-row=plan]").boundingBox({ timeout: 10_000 });
   expect(Math.round(plan!.height)).toBe(Math.round(iris!.height));
   // The phone's lists are there for a narrow screen, hidden here.
   await expect(coming.locator(".now-next")).toBeHidden();
@@ -280,8 +288,8 @@ test("Running and next on a phone: Running now and the Next 12 h list, with each
   await load(page, "/");
   const coming = page.locator("#coming-up");
   await expect(coming.locator(".now-track")).toBeHidden();
-  await expect(coming.locator("[data-coming=plan]")).toHaveText(["13:00VPD Mister Engage 1.60 → 1.70 kPa AI", "13:00Mister Engage Delay 60.0 → 90.0 s · Forecast rule · system", "16:30Mister Pulse Gap 45.0 → 55.0 s AI"]);
-  await expect(coming.locator("[data-coming=iris]")).toHaveText(["16:50Iris SUNSET trigger"]);
+  await expect(coming.locator("[data-coming=plan]")).toHaveText(["13:00Misting starts at VPD 1.60 → 1.70 kPa AI", "13:00Wait before misting 60.0 → 90.0 s · Forecast rule · system", "16:30Mist pulse gap 45.0 → 55.0 s AI"]);
+  await expect(coming.locator("[data-coming=iris]")).toHaveText(["16:50Iris: Sunset plan"]);
   await expect(coming.locator("[data-coming=sun]")).toHaveText(["16:58Sunset"]);
   await expect(coming.locator("[data-coming=later]")).toContainText("Wall drip paused until 14:00 by Jason: rain · next Wed 07:35");
   expect((await fixtureRequests(request, "API-07")).map((row) => row.path)).toEqual(["/v1/plan?hours=24"]);

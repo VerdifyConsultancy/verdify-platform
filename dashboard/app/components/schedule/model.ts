@@ -112,7 +112,7 @@ export function spanStatus(occurrence: OccurrenceFacts, schedule?: Pick<Schedule
 }
 export const STATUS_WORDS: Readonly<Record<SpanStatus, string>> = {
   done: "done", planned: "planned", running: "running", skipped: "skipped", blocked: "will not run", missed: "missed", unknown: "outcome unknown",
-  conditional: words("fallback_window", "conditional"),
+  conditional: words("fallback_window", "conditional"), intent: "the controller's intent",
 };
 
 const fertKind = (kind: string | undefined) => kind === "fert_drip" || kind === "fert_mister";

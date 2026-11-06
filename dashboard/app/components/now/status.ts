@@ -31,10 +31,14 @@ export function modeText(now: Pick<Now, "mode" | "server_time">, answer: Pick<No
   return `${last} (${validTime(now.server_time) ? clockOrDate(at, Date.parse(now.server_time)) : shortTime(at)})`;
 }
 
-/** The plan in force and its end ("SUNRISE plan to 17:30"), or "No plan: band and defaults". */
+/**
+ * The plan in force and its end in words (#1339): "Sunrise plan to 17:30", or for a trigger that is not itself a plan
+ * "Plan (forecast changed) to 07:30"; "No plan: band and defaults" with none.
+ */
 export function planLine(iris: Now["iris"]): string {
   if (iris.plan_id === null) return "No plan: band and defaults";
-  const head = iris.trigger ? `${iris.trigger} plan` : "Plan in force";
+  const named = iris.trigger ? words("trigger", iris.trigger) : null;
+  const head = named === null ? "Plan in force" : / plan$/.test(named) ? named : `Plan (${named.toLowerCase()})`;
   return validTime(iris.valid_until) ? `${head} to ${shortTime(iris.valid_until)}` : head;
 }
 /** "Iris OK", "Iris missed": the newest required trigger's state. */
