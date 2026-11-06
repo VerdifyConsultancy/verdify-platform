@@ -19,6 +19,8 @@ import {
 const SPEC = new URL("../../../docs/design/dashboard/openapi/dashboard-api.v1.yaml", import.meta.url);
 const NOW = Date.parse("2026-11-02T17:42:00Z"); // 10:42 America/Denver, the screens' clock
 const RESERVED = ["API-08", "API-18", "API-IRR-09", "OPS-03"];
+/** Operations that answer text, not JSON: OPS-04 is Prometheus's scrape (#1352), which the dashboard never calls. */
+const TEXT_OPERATIONS = new Set(["OPS-04"]);
 type Scanned = { operationId: string; method: string; path: string };
 
 /** Every `operationId:` line of the file, with the path and method above it. */
@@ -102,6 +104,7 @@ function contractFaults(operationId: string, status: number, body: unknown): str
 const PARSERS: Record<string, Parser<unknown> | null> = {
   ...Object.fromEntries(Object.entries(OPERATIONS).map(([id, entry]) => [id, entry.parse as Parser<unknown> | null])),
   "BFF-01": null, "BFF-02": null, "BFF-03": null, "INT-01": parseSessionToken, "INT-02": null, "OPS-01": parseHealth, "OPS-02": parseReadiness,
+  "OPS-04": null,
 };
 const wire = (value: unknown): unknown => (value === null || value === undefined ? null : JSON.parse(JSON.stringify(value)));
 type Request = { method: string; url: string; headers?: Record<string, string>; body?: unknown };
@@ -171,6 +174,7 @@ test("the fixture API answers every operationId of the file at its path, and the
     }
     expect(response.status, `${operationId} ${JSON.stringify(body).slice(0, 300)}`).toBeGreaterThanOrEqual(200);
     expect(response.status, operationId).toBeLessThan(300);
+    if (TEXT_OPERATIONS.has(operationId)) { expect(typeof body, operationId).toBe("string"); continue; }
     if (!parse) { expect(body, operationId).toBeNull(); continue; }
     expect(parsed, operationId).not.toBeNull();
     // Nothing the fixture sends is dropped or rewritten: every field is in the contract and its value is valid.
@@ -186,6 +190,7 @@ test("every named fixture answers every operation with a body that conforms to t
         const { response, body, parsed, parse, faults: found } = call(name, operationId, settled);
         const label = `${name}${settled ? " (settled)" : ""} ${operationId} ${response.status}`;
         expect(found, label).toEqual([]);
+        if (TEXT_OPERATIONS.has(operationId)) { expect(typeof body, label).toBe("string"); continue; }
         if (!parse) { expect(response.status >= 300 || body === null, label).toBe(true); continue; }
         expect(parsed, `${label} ${JSON.stringify(body).slice(0, 300)}`).not.toBeNull();
         expect(parsed, label).toMatchObject(body as object);

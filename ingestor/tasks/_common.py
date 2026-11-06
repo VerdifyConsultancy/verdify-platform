@@ -43,10 +43,6 @@ from esp32_push import push_to_esp32
 from occupancy import expire_occupancy_latch, sync_occupancy_state
 from pydantic import ValidationError
 
-from slack_config import build_slack_payload
-from slack_ops.briefs import build_operator_brief
-from slack_ops.policy import should_post_alert
-from slack_ops.runbooks import fetch_alert_runbook, format_runbook
 from verdify_schemas import (
     AlertEnvelope,
     ClimateRow,
@@ -80,9 +76,6 @@ from config import (
     GREENHOUSE_ID,
     HA_TOKEN_FILE,
     HA_URL,
-    SLACK_CHANNEL,
-    SLACK_SETTINGS,
-    SLACK_TOKEN_FILE,
     STATE_DIR,
 )
 from config import (
@@ -708,22 +701,6 @@ def _fetch_all_cpu_samples() -> list[dict]:
     return samples
 
 
-def _post_slack(token: str, channel: str, text: str, thread_ts: str | None = None) -> str | None:
-    payload = build_slack_payload(SLACK_SETTINGS, text, channel=channel, thread_ts=thread_ts)
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        f"{SLACK_SETTINGS.api_base_url.rstrip('/')}/chat.postMessage",
-        data=data,
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json; charset=utf-8"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            result = json.loads(resp.read())
-            return result.get("ts") if result.get("ok") else None
-    except Exception:
-        return None
-
-
 # ═════════════════════════════════════════════════════════════════
 # 1. WATER FLOWING + LEAK DETECTION (every 60s)
 # ═════════════════════════════════════════════════════════════════
@@ -1330,31 +1307,6 @@ PLANNER_TRIGGER_MATRIX: dict[str, PlannerTriggerSpec] = {
 _READBACKABLE_PARAMS: list[str] = sorted(set(CFG_READBACK_MAP.values()))
 
 
-# ═════════════════════════════════════════════════════════════════
-# 17. MIDNIGHT WATCH (Sprint 24.7 — ops stopgap until contract v1.4 SLA rule)
-#
-# At 00:05 MDT each day, check whether tonight's MIDNIGHT opus trigger
-# fired and produced a plan. Posts ONE Slack message per night with the
-# outcome so operators know without scraping journalctl. Retires once
-# Sprint 25's alert_monitor rule 7 rewrite (per-pair SLA over
-# plan_delivery_log) lands — that's the structural fix; this is the
-# visibility gap-closer until then.
-#
-# Matches both future-canonical (event_type='MIDNIGHT' after Sprint 25
-# splits it out) and today's form (event_type='TRANSITION' with
-# event_label containing "Midnight").
-# ═════════════════════════════════════════════════════════════════
-
-_midnight_watch_last_date: str = ""
-
-
-# ═════════════════════════════════════════════════════════════════
-# 18. SLACK OPERATOR BRIEFS
-# ═════════════════════════════════════════════════════════════════
-
-_slack_brief_last_fire: dict[str, str] = {}
-
-
 # Issue #46: this module is the shared base layer of the tasks package. Every
 # name below is imported or defined here for re-use by the domain submodules
 # (and re-exported by tasks/__init__.py). Declaring __all__ documents that
@@ -1388,11 +1340,6 @@ __all__ = [
     "expire_occupancy_latch",
     "sync_occupancy_state",
     "ValidationError",
-    "build_slack_payload",
-    "build_operator_brief",
-    "should_post_alert",
-    "fetch_alert_runbook",
-    "format_runbook",
     "AlertEnvelope",
     "build_validation_failed_envelope",
     "flow_stopped_at",
@@ -1416,9 +1363,6 @@ __all__ = [
     "GREENHOUSE_ID",
     "HA_TOKEN_FILE",
     "HA_URL",
-    "SLACK_CHANNEL",
-    "SLACK_SETTINGS",
-    "SLACK_TOKEN_FILE",
     "STATE_DIR",
     "_load_token",
     "LIGHTING_POLICY_PARAMS",
@@ -1475,7 +1419,6 @@ __all__ = [
     "_extract_node_snapshot",
     "_fetch_cpu_sample",
     "_fetch_all_cpu_samples",
-    "_post_slack",
     "LEAK_TRIGGER_GPM",
     "LEAK_CLEAR_GPM",
     "LEAK_DWELL_TICKS",
@@ -1556,6 +1499,4 @@ __all__ = [
     "PlannerTriggerSpec",
     "PLANNER_TRIGGER_MATRIX",
     "_READBACKABLE_PARAMS",
-    "_midnight_watch_last_date",
-    "_slack_brief_last_fire",
 ]

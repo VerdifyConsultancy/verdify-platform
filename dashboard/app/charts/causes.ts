@@ -5,10 +5,14 @@ import type { components } from "../generated/operator-api";
 type Cause = components["schemas"]["IrrigationCause"];
 
 /**
- * The cause words and colours (design system §5.1, cause table): what made a wet line run, for the equipment lanes,
- * the minutes by zone, Now's running chips (#1129) and Water (#1135). Design system §5.1 has no cause tokens, so the
- * causes reuse existing ones; the words are what every surface prints, so colour is never alone. A cause the table
- * does not know renders raw, in the "cause unknown" colour.
+ * The cause words and colours (design system §5.1, cause table): what made a wet line run, for the minutes by zone, the
+ * daily water use by cause, the run marks on the Graphs event rail and a line's state dot on Water (#1135). One chart
+ * vocabulary (#1354): a colour names what ran (the line's own, `lineToken`) and a cause never borrows a line's colour,
+ * so purple is never both "VPD" and a mister. The cause tokens: `--cause-vpd`, `--cause-schedule` and `--cause-prep`
+ * (prewet and flush) are their own; run now is a person's action in `--forest`, as a person's write is on the event
+ * rail; feed is fertilizer in `--eq-fert`; fallback keeps `--eq-heat1`, as the schedules' fallback-only runs do. The
+ * words are what every surface prints, so colour is never alone. A cause the table does not know renders raw, in the
+ * "cause unknown" colour.
  */
 export const IRRIGATION_CAUSES = ["vpd", "schedule", "run_now", "feed", "prewet", "flush", "fallback", "unknown"] as const satisfies readonly Cause[];
 
@@ -24,12 +28,12 @@ export const CAUSE_WORDS = {
 } as const satisfies Record<Cause, string>;
 
 export const CAUSE_TOKENS = {
-  vpd: "--eq-mister",
-  schedule: "--eq-water",
-  run_now: "--eq-master",
+  vpd: "--cause-vpd",
+  schedule: "--cause-schedule",
+  run_now: "--forest",
   feed: "--eq-fert",
-  prewet: "--eq-fog",
-  flush: "--eq-fog",
+  prewet: "--cause-prep",
+  flush: "--cause-prep",
   fallback: "--eq-heat1",
   unknown: "--c-bound",
 } as const satisfies Record<Cause, string>;

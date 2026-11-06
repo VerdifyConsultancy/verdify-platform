@@ -372,6 +372,8 @@ const ALERT_TYPE = {
   irrigation_fence_breach: "A watering valve opened outside its program",
   irrigation_run_missed: "A scheduled watering was missed",
   irrigation_line_faulted: "A mister zone faulted",
+  mcp_unreachable: "Iris's tool server is not answering",
+  forecast_action_alert: "The forecast crosses a watch limit",
 } as const;
 
 /**

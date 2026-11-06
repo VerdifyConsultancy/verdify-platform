@@ -27,7 +27,7 @@ info:
 
     | Topic | Rule |
     |---|---|
-    | Ids | `operationId` is the design id: API-01 to API-21, API-IRR-01 to API-IRR-13, API-CROP-01 to API-CROP-11, BFF-01 to BFF-03, INT-01, INT-02, OPS-01 and OPS-02. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
+    | Ids | `operationId` is the design id: API-01 to API-21, API-IRR-01 to API-IRR-13, API-CROP-01 to API-CROP-11, BFF-01 to BFF-03, INT-01, INT-02, OPS-01, OPS-02 and OPS-04. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
     | Data | JSON. Times are ISO 8601 with an offset; days are America/Denver. Units are in field names or `unit` (°F, %, kPa, gal, min, s). `null` means unavailable, never 0; gaps stay gaps |
     | Roles | GET: `viewer` and `operator`. Every other method: `operator` (403 `forbidden`) |
     | Writes | Validated on submit (registry min/max, enums, step snap). The newest write wins. On a `manual: true` item the dispatcher ignores Iris's plan values (`set_plan` and `set_tunable` are unchanged) and Iris's `set_setting` and irrigation writes are refused with `manual`; people and other agents may overwrite it, attributed, and each write stores the `manual` it carries. Every write appends one `activity_log` row: source (`dashboard`, `iris`, `agent:<name>` or `system`), actor, time, reason, and the experiment id while one is armed. Nothing is refused because an experiment is armed |
@@ -47,7 +47,7 @@ tags:
   - {name: plan, description: 'Iris plan in force, lanes and planner health'}
   - {name: settings, description: 'Every registry setting, writes and history'}
   - {name: equipment, description: Equipment board}
-  - {name: alerts, description: 'In-app alerts (alert_log); Slack is unchanged'}
+  - {name: alerts, description: 'In-app alerts (alert_log); critical ones page through Alertmanager (OPS-04), never Slack (#1352)'}
   - {name: activity, description: 'activity_log: every write by people, Iris, agents and the system'}
   - {name: irrigation, description: 'Lines L01-L11, schedules, runs, minutes by zone and commands'}
   - {name: crops, description: 'Plantings on the location tree: zones, shelves and cells, moves, harvests and history'}
@@ -381,7 +381,12 @@ paths:
       summary: Turn a grow light on or off through verdify-setpoint-server (Lutron)
       description: >-
         Calls verdify-setpoint-server POST /lights/{light}/{state} (12 s cap) and records one activity_log row:
-        light.on or light.off, target grow_light_main or grow_light_grow, detail {light, state, result}. 200 when
+        light.on or light.off, target grow_light_main or grow_light_grow, detail {light, state, result, minutes}. A
+        manual switch is timed like the Fans burst (#1335): minutes, 15 by default, from the row's ts; then the
+        operator API sends the controller's intent through verdify-setpoint-server, recording one more light.on or
+        light.off row (actor system light_timer, reason "Timer ended", detail.via timer), so the light is back on
+        automatic within about 15 s of the end. During the minutes the controller can still switch the light when its
+        own decision changes, which only brings automatic back early. 200 when
         setpoint-server saw Lutron reach the state. When Home Assistant or Lutron does not confirm: 503 unavailable,
         retryable, with result ha_failed, not_confirmed or timeout; the light may still switch late. The board's state
         comes only from API-13's Lutron readback. Back to automatic is API-10 on sw_gl_main_auto_mode or
@@ -398,7 +403,9 @@ paths:
           application/json:
             schema:
               type: object
-              properties: {reason: {type: string, maxLength: 500}}
+              properties:
+                reason: {type: string, maxLength: 500}
+                minutes: {type: integer, minimum: 1, maximum: 120, default: 15, description: 'How long the manual switch lasts before the light goes back to automatic'}
       responses:
         '200': {description: Lutron reached the state, content: {application/json: {schema: {$ref: '#/components/schemas/LightCommand'}}}}
         '422': {$ref: '#/components/responses/Invalid'}
@@ -906,6 +913,21 @@ paths:
       responses:
         '200': {description: Ready, content: {application/json: {schema: {$ref: '#/components/schemas/Readiness'}}}}
         '503': {description: Not ready, content: {application/json: {schema: {$ref: '#/components/schemas/Readiness'}}}}
+  /metrics:
+    x-served-by: operator-api
+    servers:
+      - {url: 'http://verdify-operator-api.verdify-prod.svc:8090', description: 'Operator API: Prometheus scrapes it (NetworkPolicy allow-operator-api-metrics-scrape)'}
+    get:
+      operationId: OPS-04
+      tags: [ops]
+      summary: Open-alert gauge for Alertmanager paging (#1352)
+      description: |
+        Prometheus text. `verdify_alert_open{severity, alert_type}` counts the merged alerts with status `open`, the
+        rows the Now count shows; Alertmanager pages the critical ones. `verdify_alert_metrics_up` is 0 when the read
+        failed. No alert text, session or token.
+      security: []
+      responses:
+        '200': {description: OK, content: {text/plain: {schema: {type: string}}}}
 
 components:
   securitySchemes:

@@ -1,7 +1,7 @@
 # verdify-operator-api: the verdify-api image (the same release digest as Deployment verdify-api; no new image and
 # no new pin site) running api/operator_api.py. Only the dashboard BFF reaches it (networkpolicy.yaml), with the
 # shared bearer token; the pool attests the dashboard login on every new connection, so /readyz stays 503 until
-# the login attests. No /metrics.
+# the login attests. Prometheus scrapes /metrics (OPS-04, the open-alert gauge; #1352).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -31,6 +31,12 @@ spec:
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: operator-api
+      annotations:
+        # The kubernetes-pods job scrapes OPS-04 (/metrics, no bearer): the verdify_alert_open gauge that pages
+        # critical alerts through Alertmanager (#1352). networkpolicy.yaml admits the observability namespace.
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8090"
+        prometheus.io/path: /metrics
     spec:
       automountServiceAccountToken: false
       enableServiceLinks: false

@@ -24,6 +24,7 @@ from verdify_schemas.alerts import (
     FirmwareReliefCeilingAlert,
     FirmwareVentLatchedAlert,
     FirmwareVersionMismatchAlert,
+    ForecastActionAlert,
     ForecastDeviationAlert,
     HeapPressureCriticalAlert,
     HeapPressureWarningAlert,
@@ -36,6 +37,7 @@ from verdify_schemas.alerts import (
     IrrigationRunMissedAlert,
     LeakDetectedAlert,
     LightingCfgThresholdDriftAlert,
+    McpUnreachableAlert,
     PlanContextFailedAlert,
     PlannerBandOwnershipDriftAlert,
     PlannerEvaluationMissedAlert,
@@ -314,6 +316,23 @@ CASES = {
             "offenders": [{"parameter": "temp_low", "plan_id": "p1", "source": "iris", "rows": 1}],
         },
     ),
+    "mcp_unreachable": (
+        McpUnreachableAlert,
+        {"url": "http://verdify-mcp:8000/mcp", "consecutive_failures": 3},
+    ),
+    "forecast_action_alert": (
+        ForecastActionAlert,
+        {
+            "rule_id": 7,
+            "rule_name": "frost_warning",
+            "metric": "temp_f",
+            "operator": "<",
+            "threshold": 35.0,
+            "forecast_value": 31.5,
+            "forecast_at": NOW,
+            "window": "24 hours",
+        },
+    ),
     "planner_gateway_delivery_failed": (
         PlannerGatewayDeliveryFailedAlert,
         {
@@ -577,6 +596,7 @@ def test_schema_covers_alert_types_in_write_paths():
         *tasks_sources,
         root / "ingestor" / "iris_planner.py",
         root / "api" / "main.py",
+        root / "scripts" / "forecast-action-engine.py",
     ]
     found: set[str] = set()
     patterns = [

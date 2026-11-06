@@ -28,12 +28,15 @@ export function zoomOutWindow(window: XRange, factor = 2, ceiling = 400 * 86_400
   const centre = (window.from + window.to) / 2;
   return { from: Math.round(centre - length / 2), to: Math.round(centre + length / 2) };
 }
+/** The most a window that reaches now looks ahead: the 72 h forecast (decisions 2026-11-05, replacing D-UX-13). */
+export const AHEAD_MAX_S = 72 * 3600;
 /**
- * The future pad of a window that reaches now (redesign §7.1, D-UX-13): 25% of its length, at most 12 h; "Today" ends at
- * the next local midnight instead, which its caller passes as the window's end.
+ * The future pad of a window that reaches now (decisions 2026-11-05, replacing D-UX-13's 25%, at most 12 h): as long as
+ * the window looks back, at most 72 h, so 24 h shows 24 h ahead and 72 h, 7 d and longer show 72 h of forecast; "Today"
+ * ends at the next local midnight instead, which its caller passes as the window's end.
  */
 export function futurePad(lengthSeconds: number): number {
-  return Math.min(Math.max(0, lengthSeconds) * 0.25, 12 * 3600);
+  return Math.min(Math.max(0, lengthSeconds), AHEAD_MAX_S);
 }
 
 export type RangeToolbarProps = {

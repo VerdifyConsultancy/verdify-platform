@@ -15,9 +15,10 @@ import { words } from "../../lib/words";
  * America/Denver day of the window, newest first, from API-04's `daily.*` keys (`v_daily_scorecard`) and API-IRR-10's
  * minutes by zone. Rows are keyed by the America/Denver date of each bucket's `t`, never by adding 86,400 s, so a 23- or
  * 25-hour day counts as it ran. A missing value reads "—" with its reason, never 0: the bucket's `SeriesColumns.reason`
- * in words, else "no data that day", and for minutes a `no_data` day reads "no data (outage)". Whole-day time in band
- * has a value every day; the day/night split only for the 3 days `mv_zone_band_grade` keeps (Q-12). Each day opens in
- * Climate. "CSV of this table" is exactly these rows.
+ * in words, else "no data that day", and for minutes a `no_data` day reads "no data (outage)". Time in band is graded
+ * against the band the controller served (`daily_band_compliance`, migration 290, #1358): temperature and VPD for the
+ * whole day, and both in band by day and by night, every graded day. Each day opens in Climate. "CSV of this table" is
+ * exactly these rows.
  */
 export const SCORECARD_DAYS = 30;
 export type ScorecardColumn = {
@@ -38,8 +39,8 @@ const minutes = (zone: MinutesZone): ScorecardColumn => ({ id: `minutes.${zone}`
 export const SCORECARD_COLUMNS: readonly ScorecardColumn[] = [
   daily("daily.temp_in_band_pct", "Time in band", "Temperature, whole day", "%"),
   daily("daily.vpd_in_band_pct", "Time in band", "VPD, whole day", "%"),
-  daily("daily.time_in_band_day_pct", "Time in band", "Day (last 3 days)", "%"),
-  daily("daily.time_in_band_night_pct", "Time in band", "Night (last 3 days)", "%"),
+  daily("daily.time_in_band_day_pct", "Time in band", "Both, day", "%"),
+  daily("daily.time_in_band_night_pct", "Time in band", "Both, night", "%"),
   daily("daily.water_gal", null, "Water", "gal"),
   minutes("wall"), minutes("center"), minutes("south"), minutes("west"),
   daily("daily.iris_required_written", "Iris required plans", "Written", "count"),
@@ -163,7 +164,7 @@ const DAY_LABEL = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "
 /** "Sun, Nov 1" for 2026-11-01. */
 export const dayLabel = (date: string): string => DAY_LABEL.format(new Date(`${date}T12:00:00Z`));
 
-/** A column's CSV header: "Time in band: Day (last 3 days) (%)". */
+/** A column's CSV header: "Time in band: Both, day (%)". */
 export const csvHeader = (column: ScorecardColumn): string => `${column.group ? `${column.group}: ` : ""}${column.header} (${column.unit})`;
 /**
  * "CSV of this table": the rows shown with the same columns, the date as YYYY-MM-DD with the day's note, each value as

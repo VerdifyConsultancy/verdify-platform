@@ -35,9 +35,9 @@ test("the line: window without offsets, elapsed, bucket and daily summaries, thr
   const now = epoch("2026-11-01T13:00:00Z");
   const window = graphWindow(parseGraphUrl("range=24h").view.window, now);
   const { container, rerender } = render(<ResolutionLine window={window} bucketSeconds={300} daily={false} now={now} />);
-  // The past 24 h and the 6 h ahead (a quarter of the window, D-UX-13).
-  expect(text(container)).toBe("Oct 31, 07:00 → Nov 1, 12:00 (30 h across the fall-back) · one point per 5 minutes");
-  expect([...container.querySelectorAll("time")].map((node) => node.getAttribute("dateTime"))).toEqual(["2026-10-31T13:00:00.000Z", "2026-11-01T19:00:00.000Z"]);
+  // The past 24 h and as much ahead (decisions 2026-11-05, replacing D-UX-13).
+  expect(text(container)).toBe("Oct 31, 07:00 → Nov 2, 06:00 (48 h across the fall-back) · one point per 5 minutes");
+  expect([...container.querySelectorAll("time")].map((node) => node.getAttribute("dateTime"))).toEqual(["2026-10-31T13:00:00.000Z", "2026-11-02T13:00:00.000Z"]);
   const long = graphWindow(parseGraphUrl("from=2025-09-29&to=2026-11-01").view.window, now);
   rerender(<ResolutionLine window={long} bucketSeconds={86_400} daily now={now} />);
   expect(text(container)).toBe("Sep 29, 2025, 00:00 → Nov 2, 2026, 00:00 (399 d 1 h across 3 clock changes) · one point per day · daily summaries");

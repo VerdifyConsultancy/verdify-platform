@@ -145,8 +145,6 @@ spec:
           app.kubernetes.io/component: outbound
     ports:
     - protocol: TCP
-      port: 8082
-    - protocol: TCP
       port: 8083
   - to:
     - ipBlock:

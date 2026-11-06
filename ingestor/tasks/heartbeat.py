@@ -17,19 +17,16 @@ from ._common import (
     CONTEXT_GATHER_FAILED_SENTINEL,
     GREENHOUSE_ID,
     PLANNER_TRIGGER_MATRIX,
-    SLACK_CHANNEL,
-    SLACK_TOKEN_FILE,
     STATE_DIR,
     UTC,
+    AlertEnvelope,
     PlanDeliveryLogRow,
     PlannerTriggerSpec,
     SeverityContext,
     ValidationError,
-    _load_token,
     _milestones_cache,
     _milestones_date,
     _milestones_fired,
-    _post_slack,
     _sun,
     _td,
     asyncio,
@@ -141,6 +138,66 @@ _trigger_attempts: dict[str, int] = {}
 
 # Consecutive failed MCP Service probes (see heartbeat section 6).
 _mcp_unreachable_streak = 0
+# Whether an mcp_unreachable alert_log row may be open: True at start, so the first
+# reachable probe after a restart closes a row the previous process left open.
+_mcp_alert_maybe_open = True
+MCP_UNREACHABLE_STREAK = 3  # ~3 min of hard-down before the row opens
+MCP_UNREACHABLE_SENSOR = "system.mcp"
+
+
+def mcp_unreachable_alert(url: str, streak: int) -> dict:
+    """The mcp_unreachable alert_log payload (#1352): critical, so it pages through Alertmanager."""
+    return {
+        "alert_type": "mcp_unreachable",
+        "severity": "critical",
+        "category": "system",
+        "sensor_id": MCP_UNREACHABLE_SENSOR,
+        "zone": None,
+        "message": f"MCP server unreachable at {url} for {streak} consecutive checks",
+        "details": {"url": url, "consecutive_failures": streak},
+        "metric_value": float(streak),
+        "threshold_value": float(MCP_UNREACHABLE_STREAK),
+    }
+
+
+async def _open_mcp_unreachable_alert(conn, url: str, streak: int) -> None:
+    """One open row per outage: insert unless one is already open."""
+    env = AlertEnvelope.model_validate(mcp_unreachable_alert(url, streak))
+    await conn.execute(
+        """
+        INSERT INTO alert_log
+          (alert_type, severity, category, sensor_id, zone, message, details,
+           source, metric_value, threshold_value, greenhouse_id)
+        SELECT $1, $2, $3, $4, $5, $6, $7::jsonb, 'ingestor', $8, $9, $10
+         WHERE NOT EXISTS (
+               SELECT 1 FROM alert_log
+                WHERE alert_type = $1 AND sensor_id = $4 AND resolved_at IS NULL
+                  AND disposition IN ('open', 'acknowledged'))
+        """,
+        env.alert_type,
+        env.severity,
+        env.category,
+        env.sensor_id,
+        env.zone,
+        env.message,
+        json.dumps(env.details),
+        env.metric_value,
+        env.threshold_value,
+        GREENHOUSE_ID,
+    )
+
+
+async def _resolve_mcp_unreachable_alert(conn) -> None:
+    await conn.execute(
+        """
+        UPDATE alert_log
+           SET disposition = 'resolved', resolved_at = now(), resolved_by = 'system',
+               resolution = 'auto-resolved: MCP reachable again'
+         WHERE alert_type = 'mcp_unreachable' AND sensor_id = $1 AND resolved_at IS NULL
+        """,
+        MCP_UNREACHABLE_SENSOR,
+    )
+
 
 # Hermes retains terminal /v1/runs status in process memory for one hour. Poll
 # only the bounded live window and keep the heartbeat's network fan-out below
@@ -1551,21 +1608,11 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
                     milestone_time,
                 )
             if plan_count == 0:
+                # Log only: the alert monitor's planner_required_plan_missed (critical) is the
+                # alert_log row for a required trigger without a plan (#1352).
                 log.warning(
                     "PLAN DELIVERY FAILED: No plan_journal entry after %s (fired %s ago)", key, f"{mins_since:.0f}m"
                 )
-                # Post alert to Slack
-                try:
-                    token = _load_token(SLACK_TOKEN_FILE)
-                    _post_slack(
-                        token,
-                        SLACK_CHANNEL,
-                        f":warning: *Planning alert:* No plan written after {key} event "
-                        f"({mins_since:.0f} min ago). Iris may have failed to process the event. "
-                        f"<@U0A9KJHFJSU> please check `tmux attach -t agent-iris-planner`.",
-                    )
-                except Exception:
-                    pass
             else:
                 log.info("Plan delivery verified: %d plan(s) written after %s", plan_count, key)
 
@@ -1576,9 +1623,9 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
     # EVERY MINUTE — pure noise that masked the real MCP health signal. Probe
     # the in-cluster Service instead (override via VERDIFY_MCP_HEALTH_URL);
     # k8s liveness/restart of the MCP Deployment owns recovery, so the local
-    # Popen respawn is gone. Slack is posted once per outage transition, not
-    # per heartbeat.
-    global _mcp_unreachable_streak
+    # Popen respawn is gone. One mcp_unreachable alert_log row opens per outage
+    # (#1352) and resolves when the probe answers again.
+    global _mcp_unreachable_streak, _mcp_alert_maybe_open
     mcp_url = os.environ.get("VERDIFY_MCP_HEALTH_URL", "http://verdify-mcp:8000/mcp")
     try:
         loop = asyncio.get_event_loop()
@@ -1586,21 +1633,24 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
             None,
             lambda: urllib.request.urlopen(mcp_url, timeout=5),
         )
-        _mcp_unreachable_streak = 0
+        mcp_reachable = True
         # Any response (even 405 Method Not Allowed) means the server is alive
     except urllib.error.HTTPError:
-        _mcp_unreachable_streak = 0  # alive, just doesn't accept GET on /mcp
+        mcp_reachable = True  # alive, just doesn't accept GET on /mcp
     except Exception as e:
+        mcp_reachable = False
         _mcp_unreachable_streak += 1
         log.error("MCP server unreachable (%s, streak=%d): %s", mcp_url, _mcp_unreachable_streak, e)
-        if _mcp_unreachable_streak == 3:  # ~3 min of hard-down before paging, once
-            try:
-                token = _load_token(SLACK_TOKEN_FILE)
-                _post_slack(
-                    token,
-                    SLACK_CHANNEL,
-                    f":warning: MCP server unreachable at {mcp_url} for 3 consecutive checks — "
-                    "kubectl -n verdify-prod get deploy verdify-mcp",
-                )
-            except Exception:
-                pass
+    try:
+        if mcp_reachable:
+            _mcp_unreachable_streak = 0
+            if _mcp_alert_maybe_open:
+                async with pool.acquire() as conn:
+                    await _resolve_mcp_unreachable_alert(conn)
+                _mcp_alert_maybe_open = False
+        elif _mcp_unreachable_streak >= MCP_UNREACHABLE_STREAK:  # idempotent: one open row per outage
+            async with pool.acquire() as conn:
+                await _open_mcp_unreachable_alert(conn, mcp_url, _mcp_unreachable_streak)
+            _mcp_alert_maybe_open = True
+    except Exception as e:
+        log.warning("mcp_unreachable alert_log write failed: %s", e)

@@ -10,8 +10,6 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from slack_config import load_slack_settings
-
 # Load .env files (ingestor-specific, then project-level)
 load_dotenv(Path(__file__).parent / ".env")
 load_dotenv(Path(__file__).parent.parent / ".env")
@@ -63,15 +61,9 @@ FANOUT_MQTT_PASS = os.environ.get("FANOUT_MQTT_PASS", "")
 #   {root}/{table}/{greenhouse_id}
 FANOUT_MQTT_TOPIC_ROOT = os.environ.get("FANOUT_MQTT_TOPIC_ROOT", "verdify/fanout")
 
-# ── Slack ─────────────────────────────────────────────────────────
-SLACK_SETTINGS = load_slack_settings()
-SLACK_TOKEN_FILE = os.environ.get("SLACK_TOKEN_FILE", SLACK_SETTINGS.bot_token_file)
-SLACK_CHANNEL = os.environ.get("SLACK_CHANNEL", SLACK_SETTINGS.channel_id)
-
 # ── External services ────────────────────────────────────────────
 FRIGATE_URL = os.environ.get("FRIGATE_URL", "http://192.168.30.142:5000")
 LOKI_URL = os.environ.get("LOKI_URL", "")  # Empty = disabled
-GEMINI_API_KEY_FILE = os.environ.get("GEMINI_API_KEY_FILE", "/mnt/agents/shared/credentials/gemini_api_key.txt")
 
 # ── Hermes Iris (sole planner gateway) ───────────────────────────
 HERMES_URL = os.environ.get("HERMES_URL", "http://127.0.0.1:8642")

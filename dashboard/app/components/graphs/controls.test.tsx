@@ -79,18 +79,19 @@ test("without script the form submits the same query: from, to and every other p
 });
 
 test("the chips: a setting chip opens its drawer on Settings and × takes it off; a metric chip's × takes it off", () => {
-  mount("/graphs?range=72h&m=climate.flow_gpm");
+  // No setting draws by default (#1354): these two are asked for by name.
+  mount("/graphs?range=72h&set=mister_engage_kpa&set=fog_rh_ceiling_pct&m=climate.flow_gpm");
   const settings = screen.getByRole("list", { name: "Settings drawn as steps" });
   // Each chip reads its setting by its label (the words layer), then the panel it draws on; its key is its title.
   expect(within(settings).getAllByRole("listitem").map(text)).toEqual(["VPD Mister Engage · VPD×", "Fog RH Ceiling · RH×"]);
   const chip = within(settings).getByRole("link", { name: "VPD Mister Engage · VPD" });
   expect([chip.getAttribute("href"), chip.getAttribute("title")]).toEqual(["/settings?edit=mister_engage_kpa", "mister_engage_kpa: edit it on Settings"]);
-  // Taking one default off names the other, so the URL keeps it.
+  // Taking one off keeps the other in the URL.
   expect(within(settings).getByRole("link", { name: "Take VPD Mister Engage off the charts" }).getAttribute("href")).toBe("/graphs?range=72h&set=fog_rh_ceiling_pct&m=climate.flow_gpm");
   const metrics = screen.getByRole("list", { name: "Metrics on the charts" });
   expect(within(metrics).getAllByRole("listitem").map(text)).toEqual(["Site water flow · gal/min×"]);
   fireEvent.click(within(metrics).getByRole("link", { name: "Take Site water flow off the charts" }));
-  expect(where()).toBe("/graphs?range=72h");
+  expect(where()).toBe("/graphs?range=72h&set=mister_engage_kpa&set=fog_rh_ceiling_pct");
   fireEvent.click(within(screen.getByRole("list", { name: "Settings drawn as steps" })).getByRole("link", { name: "Take Fog RH Ceiling off the charts" }));
   expect(where()).toBe("/graphs?range=72h&set=mister_engage_kpa");
   fireEvent.click(screen.getByRole("link", { name: "Take VPD Mister Engage off the charts" }));

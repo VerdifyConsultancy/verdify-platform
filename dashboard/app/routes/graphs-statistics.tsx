@@ -111,7 +111,7 @@ export default function Statistics() {
     { key: "vpd", name: "VPD", token: "--c-vpd", days: days.map((day) => ({ date: day.date, value: day.values.vpd, partial: day.partial })) },
   ];
   // The status line names time in band, so it shows only with the window's data and the API up (redesign §8).
-  const status = ready && !apiDown ? `${spanWords(span)} · whole-day time in band; the day and night split covers the last 3 days only` : null;
+  const status = ready && !apiDown ? `${spanWords(span)} · time in band graded against the band the controller served` : null;
   // A phone's wording (redesign §5.7): the period and what the figures are, the split's limit left to the table.
   const statusShort = status === null ? null : `${spanWords(span).replace(/^Last (\d+) days$/, "$1 days")} · whole-day time in band`;
 

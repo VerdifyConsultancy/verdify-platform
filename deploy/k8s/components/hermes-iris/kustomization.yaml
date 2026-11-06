@@ -6,7 +6,7 @@ kind: Component
 # opt in explicitly. The image is the UPSTREAM nousresearch/hermes-agent @sha256
 # digest from compose, deliberately PRESERVED (the overlay images: transformer
 # only matches the verdify-* app names, so it is left byte-identical). State PVC +
-# verdify-hermes / verdify-hermes-slack Secrets are provided out-of-band; this
+# the verdify-hermes Secret are provided out-of-band; this
 # component is INERT until the verdify-prod ArgoCD app + Longhorn storage
 # classes exist (laptop-root gate). See hermes-iris.yaml header.
 resources:

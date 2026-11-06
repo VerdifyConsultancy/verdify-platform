@@ -47,7 +47,7 @@ its row; [decisions](decisions.md) wins if it says otherwise.
 | D-UX-10 | Five navigation icons (inline SVG) on the phone bar, and no other icon set. | design system §1 "icon set: Later" |
 | D-UX-11 | No header "Water running · Stop" pill. VPD misting and fog cycle every few minutes, so it would flicker, and Stop all water is one tap away on Now and Water. | The research suggestion, rejected |
 | D-UX-12 | No drag editing on the schedule timeline. A click on an empty slot prefills the editor. | — |
-| D-UX-13 | The future pad on Graphs is 25% of the window, at most 12 h. Today runs to the next local midnight. | `lib/graph-url.ts:27,267` |
+| D-UX-13 | Superseded 2026-11-05 ([decisions](decisions.md)): the future pad matches the window's length, at most 72 h, and Graphs opens on 72 h back and 72 h ahead. Was: 25% of the window, at most 12 h. Today runs to the next local midnight. | `lib/graph-url.ts:27,267` |
 
 ## 1. Design principles
 
@@ -1237,8 +1237,9 @@ tooltips (`charts/tooltip.ts:22-33`). Lanes keep their own tooltip, for the hove
 - Zoom out (×2, centred);
 - Custom… (From and To days).
 
-Drag-to-zoom on fine pointers and "Reset zoom" stay. The future pad is 25% of the window, at most 12 h; Today ends at
-the next midnight (D-UX-13, in `lib/graph-url.ts`).
+Drag-to-zoom on fine pointers and "Reset zoom" stay. The future pad matches the window's length, at most 72 h, so the
+default 72 h opens with 72 h of forecast ahead; Today ends at the next midnight (decisions 2026-11-05, replacing D-UX-13;
+in `charts/range-toolbar.tsx` and `lib/graph-url.ts`).
 
 **Band.** The ribbon (`--c-band-wash` with `--c-band-edge` edges) stays. New: **excursion shading**. Wherever the
 measured series leaves the band, the area between the line and the nearest band edge fills with `--tint-warn`, and

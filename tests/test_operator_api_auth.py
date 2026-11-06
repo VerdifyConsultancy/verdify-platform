@@ -1,6 +1,6 @@
 """The operator API's checks with the database stubbed (#1148).
 
-The bearer on every route but /healthz and /readyz; INT-01's refusal of X-Dashboard-Session and its token storage;
+The bearer on every route but /healthz, /readyz and /metrics (OPS-04, tests/test_operator_api_alert_metrics.py); INT-01's refusal of X-Dashboard-Session and its token storage;
 INT-02; the session lookup and its 30 s cache; the role rule per method; problem+json errors; readiness against an
 attesting pool; the request log; and no FastAPI docs or schema routes. ``FakeDb`` answers the operator API's own SQL
 constants over an in-memory ``dashboard_session``, and ``FakePool`` runs the real ``attest_connection`` and
@@ -535,7 +535,7 @@ def test_the_route_modules_are_included_and_series_joins_when_its_file_lands():
 # ── errors ──────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize("path", ["/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect", "/metrics", "/v1/x"])
+@pytest.mark.parametrize("path", ["/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect", "/metrics/", "/v1/x"])
 def test_fastapi_docs_schema_and_unknown_paths_answer_404(client, path):
     assert_problem(client.get(path), 404, "not_found")
     assert_problem(client.get(path, headers=with_bearer()), 404, "not_found")
