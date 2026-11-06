@@ -357,14 +357,15 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
     digest: sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a
-  # Hand-pinned grow-light writer: source 3c9d6ad8ae3b (#1088, HA_TOKEN_FILE), build-setpoint-server
-  # in agent-fleet-ci/verdify-platform-ci-tlpsc. Rollback: 21336cd82de4 (source cb21fd3d3295). The #399 HA call allowlist confines
+  # Hand-pinned grow-light writer: source 36c7630c7858 (night dry-out params in the tunable registry, #1385),
+  # build-setpoint-server in agent-fleet-ci/verdify-platform-ci-jrgfp. Rollback: a009c2a3be62 (source 3c9d6ad8ae3b,
+  # build verdify-platform-ci-tlpsc). The #399 HA call allowlist confines
   # this prod-only writer to the declared main/grow light switches.
   # hermes-agent is deliberately ABSENT from this transformer — its upstream
   # @sha256 is preserved inline in the component (NOT transformer-pinned).
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
-    digest: sha256:a009c2a3be621fda4080276a376a1d19428aadfea2b0131234fa0a97ba04fe6a
+    digest: sha256:6d2772f8776b80cdb4b13932653b39731775a58c4f03bba493910dd8f8cc2c05
   # S6 native public shares (21 approved): source 3a7df6e3bb73 (#1106 lineage).
   # S1 rebuild (#1109, apt upgrade: libbrotli1 +deb12u1): main build verdify-platform-ci-49vcb,
   # source fad3197c4e26.
