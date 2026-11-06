@@ -15,6 +15,11 @@ Expected night VPD (docs/research/w5/vpd-band.md §3): indoor dewpoint is fitted
 on the trailing 14 days' deep-night hours (sun below -6°) with no vent, fan, fog or mister running; the ribbon is
 ``es(T_target) - es(Td_in)`` at ±0.674·RMSE of dewpoint (p25-p75), from the forecast's outdoor values, at night steps
 only. Night heat is 0.19 kW/°F × (target - outdoor) over the forecast's night hours.
+
+Overlays (#1334 follow-up): the last 24 h of measured house temperature and VPD (``climate.temp_avg`` and ``vpd_avg``
+as 10-min averages, API-04's read) placed on the preview's steps by America/Denver clock time, so a step before now
+shows today's value and a later step yesterday's; and the day's outdoor forecast (``weather_forecast`` temperature and
+VPD, the newest issue per hour, the read the expected-VPD ribbon already makes).
 """
 
 from __future__ import annotations
@@ -22,7 +27,7 @@ from __future__ import annotations
 import math
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal
 
 import asyncpg
@@ -97,7 +102,10 @@ WHERE alt < $4 AND t_in IS NOT NULL AND td_in IS NOT NULL AND t_out IS NOT NULL 
   AND NOT EXISTS (SELECT 1 FROM busy WHERE busy.b = h.b)
 ORDER BY b
 """
-FORECAST_SQL = series.forecast_rows_sql(["temp_f", "dew_point_f"])
+FORECAST_SQL = series.forecast_rows_sql(["temp_f", "dew_point_f", "vpd_kpa"])
+MEASURED_WINDOW = timedelta(hours=24)
+# API-04's gap-filled raw read of the house average: a0 is temp_avg, a1 vpd_avg.
+MEASURED_SQL = series.raw_series_sql("climate", ["temp_avg", "vpd_avg"], day_buckets=False)
 
 
 class _Model(BaseModel):
@@ -172,6 +180,24 @@ class ProfileFinding(_Model):
     detail: str
 
 
+class MeasuredOverlay(_Model):
+    """The last 24 h of the house average on the preview's steps, by America/Denver clock time."""
+
+    window_start: int = Field(description="Epoch seconds: the oldest 10-min bucket read (24 h before window_end)")
+    window_end: int = Field(description="Epoch seconds: the end of the bucket holding now")
+    at: list[int | None] = Field(description="Per step, the start of the bucket its values come from; null if none")
+    temp: list[float | None] = Field(description="Measured house temperature (climate.temp_avg), °F; null in a gap")
+    vpd: list[float | None] = Field(description="Measured house VPD (climate.vpd_avg), kPa; null in a gap")
+
+
+class ForecastOverlay(_Model):
+    """The day's outdoor forecast on the preview's steps: each hour's newest issue on every step of that hour."""
+
+    temp: list[float | None] = Field(description="Outdoor forecast temperature, °F; null without a forecast hour")
+    vpd: list[float | None] = Field(description="Outdoor forecast VPD, kPa; null without a forecast hour")
+    issued_at: datetime | None = Field(description="The newest fetched_at behind the values; null with none")
+
+
 class BandProfilePreview(_Model):
     day: date
     step_s: Literal[600]
@@ -188,6 +214,8 @@ class BandProfilePreview(_Model):
     night_heat_kwh: NightHeat
     envelope: EnvelopeFit | None
     findings: list[ProfileFinding]
+    measured: MeasuredOverlay
+    forecast: ForecastOverlay
 
 
 class BandWrite(_Model):
@@ -432,6 +460,60 @@ def _forecast_map(rows: Iterable[Mapping[str, Any]]) -> dict[int, tuple[float, f
     return out
 
 
+def measured_window(now: datetime) -> tuple[datetime, datetime]:
+    """24 h of 10-min buckets ending with the one that holds now."""
+    step = series.PREVIEW_STEP_S
+    end_epoch = int(now.timestamp()) // step * step + step
+    end = datetime.fromtimestamp(end_epoch, UTC)
+    return end - MEASURED_WINDOW, end
+
+
+def _clock(epoch: int) -> tuple[int, int]:
+    local = datetime.fromtimestamp(epoch, series.DENVER)
+    return local.hour, local.minute
+
+
+def measured_overlay(
+    t: Sequence[int], rows: Iterable[Mapping[str, Any]], start: datetime, end: datetime
+) -> MeasuredOverlay:
+    """Each step takes the bucket of the last 24 h with its Denver clock time: today's up to now, yesterday's after.
+
+    On the autumn DST night the repeated hour keeps its later bucket. A bucket with neither value is a gap (null)."""
+    by_clock: dict[tuple[int, int], tuple[int, float | None, float | None]] = {}
+    for row in sorted(rows, key=lambda row: row["bucket"]):
+        temp, vpd = series._number(row["a0"]), series._number(row["a1"])
+        if temp is None and vpd is None:
+            continue
+        at = series._epoch(row["bucket"])
+        by_clock[_clock(at)] = (at, None if temp is None else round(temp, 2), None if vpd is None else round(vpd, 3))
+    placed = [by_clock.get(_clock(step)) for step in t]
+    return MeasuredOverlay(
+        window_start=series._epoch(start),
+        window_end=series._epoch(end),
+        at=[None if item is None else item[0] for item in placed],
+        temp=[None if item is None else item[1] for item in placed],
+        vpd=[None if item is None else item[2] for item in placed],
+    )
+
+
+def forecast_overlay(t: Sequence[int], rows: Iterable[Mapping[str, Any]]) -> ForecastOverlay:
+    """Every step of a forecast hour takes that hour's outdoor temperature and VPD."""
+    hours: dict[int, tuple[float | None, float | None]] = {}
+    issued: datetime | None = None
+    for row in rows:
+        temp, vpd = series._number(row["temp_f"]), series._number(row["vpd_kpa"])
+        if temp is None and vpd is None:
+            continue
+        hours[_hour_key(int(row["ts"].timestamp()))] = (temp, vpd)
+        issued = row["fetched_at"] if issued is None else max(issued, row["fetched_at"])
+    placed = [hours.get(_hour_key(step)) for step in t]
+    return ForecastOverlay(
+        temp=[None if item is None or item[0] is None else round(item[0], 2) for item in placed],
+        vpd=[None if item is None or item[1] is None else round(item[1], 3) for item in placed],
+        issued_at=issued,
+    )
+
+
 # ── reads ───────────────────────────────────────────────────────────────────
 
 
@@ -476,6 +558,10 @@ async def preview(
             ENVELOPE_SQL, now, list(MOISTURE_EQUIPMENT), GREENHOUSE_ID, DEEP_NIGHT_ALTITUDE_DEG
         )
         forecast_rows = await conn.fetch(FORECAST_SQL, start, end)
+        measured_start, measured_end = measured_window(now)
+        measured_rows = await conn.fetch(
+            MEASURED_SQL, measured_start, measured_end, timedelta(seconds=series.PREVIEW_STEP_S)
+        )
     draft = draft_anchors(current, patch, overrides)
     t = [series._epoch(row["ts"]) for row in phase_rows]
     phases = [float(row["phase"]) for row in phase_rows]
@@ -510,6 +596,8 @@ async def preview(
         if fit is None
         else EnvelopeFit(hours=fit.hours, days=ENVELOPE_DAYS, rmse_f=fit.rmse_f, dewpoint_p10_f=fit.dewpoint_p10_f),
         findings=all_findings(draft, fit),
+        measured=measured_overlay(t, measured_rows, measured_start, measured_end),
+        forecast=forecast_overlay(t, forecast_rows),
     )
 
 

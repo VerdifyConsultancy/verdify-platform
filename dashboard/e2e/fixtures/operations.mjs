@@ -528,6 +528,19 @@ function profileBody(world, { query }) {
     night_heat_kwh: { current: heat(temp), draft: heat(tempDraft) },
     envelope: { hours: 140, days: 14, rmse_f: 4.5, dewpoint_p10_f: 44 },
     findings: bandFindings(draft),
+    measured: measuredOf(world, t, temp, vpd),
+    forecast: { temp: t.map((epoch) => round(38 + 12 * Math.sin((epoch * 1000 - start) / DAY * 2 * Math.PI - Math.PI / 2), 2)), vpd: t.map(() => 0.45), issued_at: iso(world.now - HOUR) },
+  };
+}
+/** The last 24 h on the day's steps by clock time: today's up to now, yesterday's after; one gap at 03:00. */
+function measuredOf(world, t, temp, vpd) {
+  const end = Math.floor(world.now / 600_000) * 600 + 600;
+  const at = t.map((epoch) => (epoch < end ? epoch : epoch - 86_400));
+  const gap = (index) => (t[index] - t[0]) / 600 === 18;
+  return {
+    window_start: end - 86_400, window_end: end, at: at.map((value, index) => (gap(index) ? null : value)),
+    temp: temp.target.map((value, index) => (gap(index) ? null : round(value + 1.5 * Math.sin(index / 9), 2))),
+    vpd: vpd.target.map((value, index) => (gap(index) ? null : round(value + 0.08 * Math.sin(index / 7), 3))),
   };
 }
 /** API-24: every changed anchor as an API-10 write, under one band.write activity row. */

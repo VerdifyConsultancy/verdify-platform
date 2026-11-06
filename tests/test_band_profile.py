@@ -247,9 +247,15 @@ class Conn:
             return [{"ts": args[0] + timedelta(minutes=10 * i), "phase": p} for i, p in enumerate(self.phases)]
         if sql == bp.ENVELOPE_SQL:
             return []
+        if sql == bp.MEASURED_SQL:
+            self.measured_args = args
+            return [
+                {"bucket": args[0] + timedelta(minutes=10 * i), "a0": 70.0 + i / 100, "a1": 0.9, "last_ts": None}
+                for i in range(144)
+            ]
         assert sql == bp.FORECAST_SQL, sql
         return [
-            {"ts": args[0] + timedelta(hours=h), "temp_f": 35.0, "dew_point_f": 25.0, "fetched_at": NOW}
+            {"ts": args[0] + timedelta(hours=h), "temp_f": 35.0, "dew_point_f": 25.0, "vpd_kpa": 0.4, "fetched_at": NOW}
             for h in range(24)
         ]
 
@@ -268,9 +274,8 @@ def test_the_preview_overlays_the_draft_adds_the_night_bias_and_matches_its_sche
 
     monkeypatch.setattr(bp, "_night_bias", bias)
     phases = [index * 4.0 / 144 for index in range(144)]
-    answer = asyncio.run(
-        bp.preview(Conn(phases), bp.BandProfilePatch(temp_night=67.7), None, date(2026, 11, 5), now=NOW)
-    )
+    conn = Conn(phases)
+    answer = asyncio.run(bp.preview(conn, bp.BandProfilePatch(temp_night=67.7), None, date(2026, 11, 5), now=NOW))
     assert openapi_errors("BandProfilePreview", answer.model_dump(mode="json")) == []
     assert answer.current.anchors == LIVE and not answer.current.simple
     assert answer.draft.anchors["band_temp_target_mid"] == 67.7
@@ -283,6 +288,46 @@ def test_the_preview_overlays_the_draft_adds_the_night_bias_and_matches_its_sche
     assert answer.envelope is None and answer.vpd.expected_low == [None] * 144
     assert answer.night_heat_kwh.draft > answer.night_heat_kwh.current > 0
     assert answer.temp.current.target[36] == pytest.approx(harmonic(*series_points(LIVE, "temp_target"), 1.0), abs=1e-4)
+    # The measured overlay reads the 24 h of 10-min buckets that end with now's (19:00Z is a bucket edge).
+    assert conn.measured_args == (
+        NOW - timedelta(hours=23, minutes=50),
+        NOW + timedelta(minutes=10),
+        timedelta(minutes=10),
+    )
+    assert all(value is not None for value in answer.measured.temp) and answer.measured.vpd[0] == 0.9
+    assert answer.forecast.temp == [35.0] * 144 and answer.forecast.vpd == [0.4] * 144
+    assert answer.forecast.issued_at == NOW
+
+
+def test_the_measured_overlay_folds_the_last_24_h_onto_the_day_by_clock_time():
+    # 2026-11-05 in Denver (UTC-7): midnight is 07:00Z. Now is 12:00 local (19:00Z).
+    day_start = datetime(2026, 11, 5, 7, 0, tzinfo=UTC)
+    t = [int((day_start + timedelta(minutes=10 * i)).timestamp()) for i in range(144)]
+    start, end = bp.measured_window(NOW)
+    rows = [
+        {"bucket": start + timedelta(minutes=10 * i), "a0": float(i), "a1": None if i == 5 else 1.0} for i in range(144)
+    ]
+    rows[7] |= {"a0": None, "a1": None}  # a gap
+    overlay = bp.measured_overlay(t, rows, start, end)
+    noon = 72  # 12:00 local, the bucket holding now
+    assert overlay.at[noon] == int(NOW.timestamp()) and overlay.temp[noon] == 143.0
+    # 12:10 local is after now: yesterday's 12:10, the oldest bucket read.
+    assert overlay.at[noon + 1] == int(start.timestamp()) and overlay.temp[noon + 1] == 0.0
+    assert overlay.vpd[noon + 6] is None and overlay.temp[noon + 6] == 5.0
+    assert overlay.at[noon + 8] is None and overlay.temp[noon + 8] is None
+    assert overlay.window_end - overlay.window_start == 86400
+
+
+def test_the_forecast_overlay_holds_each_hour_on_its_steps():
+    hour = datetime(2026, 11, 5, 7, 0, tzinfo=UTC)
+    t = [int((hour + timedelta(minutes=10 * i)).timestamp()) for i in range(12)]
+    rows = [
+        {"ts": hour, "temp_f": 30.0, "vpd_kpa": 0.31, "fetched_at": NOW},
+        {"ts": hour + timedelta(hours=1), "temp_f": None, "vpd_kpa": None, "fetched_at": NOW + timedelta(hours=1)},
+    ]
+    overlay = bp.forecast_overlay(t, rows)
+    assert overlay.temp == [30.0] * 6 + [None] * 6 and overlay.vpd[5] == 0.31
+    assert overlay.issued_at == NOW
 
 
 # ── API-24 ──────────────────────────────────────────────────────────────────
