@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Equipment, ParamsOf, Setting } from "../../lib/operator-api";
 import { fetchRead } from "../../lib/queries";
 import { OperatorOnly } from "../../lib/session";
+import { shortTime } from "../../lib/format";
 import { readback, useCommand, useSettingWrite, type SettingInfo, type WriteError } from "../../lib/writes";
 import { ReadbackBadge } from "../badge";
 import { Button } from "../button";
@@ -37,6 +38,19 @@ export function lightsDiffer(intent: string | null | undefined, state: string | 
 export function resyncState(item: Pick<LightItem, "intent" | "state"> | null | undefined): LightState | null {
   return item && known(item.intent) && lightsDiffer(item.intent, item.state) ? item.intent : null;
 }
+/**
+ * When a Turn on or Turn off still running goes back to automatic (#1377's timer, API-13 `manual_until`), or null. The
+ * API names it only while it is ahead; once the controller's intent and Lutron read the same the switch no longer holds
+ * anything (a decision change brought automatic back early, or Back to automatic matched them), so it is not shown.
+ */
+export function manualUntil(item: Pick<LightItem, "state" | "intent" | "manual_until"> | null | undefined): string | null {
+  const until = item?.manual_until ?? null;
+  if (until === null || (known(item?.intent) && known(item?.state) && item.intent === item.state)) return null;
+  return until;
+}
+/** "by hand until 10:57": a timed switch's end in words. */
+export const manualUntilWords = (until: string): string => `by hand until ${shortTime(until)}`;
+
 const itemIn = (answer: Pick<Equipment, "items"> | null | undefined, equipment: string) => answer?.items.find((item) => item.equipment === equipment);
 /** `unavailable`, API-20's own 503 with its `Problem.result` or no answer reaching the page: the light may still switch. */
 const mayStillSwitch = (error: WriteError) => error.code === "unavailable";
@@ -174,8 +188,10 @@ function AutomationLine({ control }: { control: LightControl }) {
  * tap and no dialog. The board's state only ever comes from the Lutron readback; here are what was said and what is
  * awaited: a 503's `Problem.result` in words, and after 30 s without a match "Lutron hasn't confirmed: still OFF".
  */
-export function LightControls({ control, item, settingTo }: { control: LightControl; item: Pick<LightItem, "label" | "state" | "intent">; settingTo?: string }) {
+export function LightControls({ control, item, settingTo }: { control: LightControl; item: Pick<LightItem, "label" | "state" | "intent" | "manual_until">; settingTo?: string }) {
+  const until = manualUntil(item);
   return <div className="light-controls">
+    {until !== null && <p className="state-note" data-light-until="">{item.state === "on" ? "On" : item.state === "off" ? "Off" : "Switched"} {manualUntilWords(until)}, then back to automatic</p>}
     <div className="light-auto-row">
       <AutomationLine control={control} />
       <span className="light-links">

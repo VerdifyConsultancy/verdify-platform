@@ -76,8 +76,8 @@ esphome:
           ESP_LOGI("boot","Validating restored globals...");
           int fixes = 0;
           // Safety rails — CRITICAL
-          if(id(safety_min_f) < 30 || id(safety_min_f) > 70 || isnan(id(safety_min_f))){ id(safety_min_f) = 45; fixes++; ESP_LOGE("boot","safety_min invalid → 45°F"); }
-          if(id(safety_max_f) < 70 || id(safety_max_f) > 120 || isnan(id(safety_max_f))){ id(safety_max_f) = 95; fixes++; ESP_LOGE("boot","safety_max invalid → 95°F"); }
+          if(id(safety_min_f) < 30 || id(safety_min_f) > 70 || isnan(id(safety_min_f))){ id(safety_min_f) = kSafetyMinF; fixes++; ESP_LOGE("boot","safety_min invalid → 40°F"); }
+          if(id(safety_max_f) < 70 || id(safety_max_f) > 120 || isnan(id(safety_max_f))){ id(safety_max_f) = kSafetyMaxF; fixes++; ESP_LOGE("boot","safety_max invalid → 100°F"); }
           if(id(safety_vpd_min_kpa) < 0 || isnan(id(safety_vpd_min_kpa))){ id(safety_vpd_min_kpa) = 0.3; fixes++; }
           if(id(safety_vpd_max_kpa) < 1 || isnan(id(safety_vpd_max_kpa))){ id(safety_vpd_max_kpa) = 3.0; fixes++; }
           // Timing — prevent 0 values

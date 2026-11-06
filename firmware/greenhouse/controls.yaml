@@ -339,23 +339,24 @@ interval:
           const float VPDlo = id(target_vpd_low_kpa);
           const float VPDhi = id(target_vpd_high_kpa);
           const float HV    = pol(verdify_policy::kPF_vpd_hysteresis, id(hyst_vpd_kpa));
-          // SAFETY SANITY: refuse invalid bounds — fall back to hardcoded defaults
+          // SAFETY SANITY: refuse invalid bounds — fall back to the hard
+          // guardrails, 40/100 °F (Jason 2026-11-05, #1333; kSafetyMinF/MaxF).
           float TminSafe = id(safety_min_f);
           float TmaxSafe = id(safety_max_f);
           float VPDminSafe = id(safety_vpd_min_kpa);
           float VPDmaxSafe = id(safety_vpd_max_kpa);
           if(TminSafe < 30.0f || TminSafe > 70.0f || isnan(TminSafe)){
-            id(safety_min_f) = 45.0f; TminSafe = 45.0f;
-            ESP_LOGE("safety","Invalid safety_min (%.1f) — reset to 45°F", TminSafe);
+            ESP_LOGE("safety","Invalid safety_min (%.1f) — reset to %.0f°F", TminSafe, kSafetyMinF);
+            id(safety_min_f) = kSafetyMinF; TminSafe = kSafetyMinF;
           }
           if(TmaxSafe < 70.0f || TmaxSafe > 120.0f || isnan(TmaxSafe)){
-            id(safety_max_f) = 95.0f; TmaxSafe = 95.0f;
-            ESP_LOGE("safety","Invalid safety_max (%.1f) — reset to 95°F", TmaxSafe);
+            ESP_LOGE("safety","Invalid safety_max (%.1f) — reset to %.0f°F", TmaxSafe, kSafetyMaxF);
+            id(safety_max_f) = kSafetyMaxF; TmaxSafe = kSafetyMaxF;
           }
           if(TminSafe >= TmaxSafe){
-            id(safety_min_f) = 45.0f; id(safety_max_f) = 95.0f;
-            TminSafe = 45.0f; TmaxSafe = 95.0f;
-            ESP_LOGE("safety","Inverted safety bounds — reset to 45/95°F");
+            id(safety_min_f) = kSafetyMinF; id(safety_max_f) = kSafetyMaxF;
+            TminSafe = kSafetyMinF; TmaxSafe = kSafetyMaxF;
+            ESP_LOGE("safety","Inverted safety bounds — reset to %.0f/%.0f°F", kSafetyMinF, kSafetyMaxF);
           }
           if(VPDminSafe < 0.0f || VPDmaxSafe < 1.0f || VPDminSafe >= VPDmaxSafe || isnan(VPDminSafe) || isnan(VPDmaxSafe)){
             id(safety_vpd_min_kpa) = 0.3f; id(safety_vpd_max_kpa) = 3.0f;

@@ -100,8 +100,8 @@ def _house_anchor(series: str, anchor: str) -> HelpEntry:
             ),
             raise_=f"Both heaters start warmer around {when}: the house is kept warmer then, and heating runs more.",
             lower=f"The house may run cooler around {when} before heat1, then gas heat2, start: less heating energy.",
-            caution="Keep it below the band target and high edge at the same anchor. Safety Min stays at least "
-            "5 °F below the band low edge.",
+            caution="Keep it below the band target and high edge at the same anchor. The controller keeps it at "
+            "least 5 °F above Safety Min.",
             refs=(*_BAND_REFS, f"{_LOGIC}::band_heat_target_f", f"{_LOGIC}::heat2_latched = stage2_escalation_latch"),
         )
     if series == "temp_target":
@@ -126,8 +126,8 @@ def _house_anchor(series: str, anchor: str) -> HelpEntry:
             ),
             raise_=f"Cooling starts later around {when}: the house runs warmer and the vent and fans run less.",
             lower=f"Cooling starts sooner around {when}: the house runs cooler, with more venting and fan time.",
-            caution="Keep it above the band target and low edge at the same anchor. Safety Max stays at least "
-            "5 °F above the band high edge.",
+            caution="Keep it above the band target and low edge at the same anchor. The controller keeps it at "
+            "least 5 °F below Safety Max.",
             refs=(*_BAND_REFS, f"{_LOGIC}::needs_cooling", f"{_LOGIC}::fan2_entry = temp_high"),
         )
     if series == "vpd_low":
