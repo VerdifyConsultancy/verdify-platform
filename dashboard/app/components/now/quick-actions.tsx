@@ -18,7 +18,7 @@ import { useEquipmentRead, useSettingsRead, type PanelRead } from "../../lib/que
 import { OperatorOnly } from "../../lib/session";
 import { BURSTS, BURSTS_ARRIVE_TEXT, BurstButton, burstsIgnoredText } from "../burst-panel";
 import { Button } from "../button";
-import { LIGHTS, LightButtons, automationWords, lightsDiffer, useLightControl, type LightControl } from "../equipment/light-controls";
+import { LIGHTS, LightButtons, automationWords, lightsDiffer, manualUntil, manualUntilWords, useLightControl, type LightControl } from "../equipment/light-controls";
 import { StopAllWater, type StopAllControl } from "../stop-all-water";
 import { Term } from "../term";
 
@@ -50,16 +50,18 @@ const LIGHT_NAMES: Readonly<Record<string, { readonly name: string; readonly ter
 };
 const settingOf = (rows: readonly Setting[] | undefined, param: string) => rows?.find((row) => row.param === param);
 
-/** "off · Automatic", "on · Automation off", "on · Automatic · the controller wants it off"; "—" until API-13 answers. */
-export function lightStateWords(item: { readonly state: string; readonly intent?: string | null } | undefined, setting: Pick<Setting, "readback"> | undefined): string {
+/** "off · Automatic", "on · Automation off", "on · by hand until 10:57 · the controller wants it off"; "—" until API-13 answers. */
+export function lightStateWords(item: { readonly state: string; readonly intent?: string | null; readonly manual_until?: string | null } | undefined, setting: Pick<Setting, "readback"> | undefined): string {
   if (!item) return "—";
   const state = item.state === "on" || item.state === "off" ? item.state : "state unknown";
   const differs = lightsDiffer(item.intent, item.state) ? ` · the controller wants it ${item.intent}` : "";
-  return `${state} · ${automationWords(setting)}${differs}`;
+  // A Turn on or Turn off still running (#1377's timer) reads its end, not the automation switch, which is still on.
+  const until = manualUntil({ state: item.state, intent: item.intent ?? null, manual_until: item.manual_until ?? null });
+  return `${state} · ${until !== null ? manualUntilWords(until) : automationWords(setting)}${differs}`;
 }
 
 /** One light: its name (a Term), its state in words, and the shared buttons. */
-function QuickLight({ control, item, light }: { control: LightControl; item: Pick<Equipment["items"][number], "state" | "intent"> | undefined; light: string }) {
+function QuickLight({ control, item, light }: { control: LightControl; item: Pick<Equipment["items"][number], "state" | "intent" | "manual_until"> | undefined; light: string }) {
   const { name, term } = LIGHT_NAMES[light];
   return <div className="now-light" data-light={light}>
     <p className="now-light-head"><Term id={term}>{name}</Term> <span className="meta" data-light-state="">{lightStateWords(item, control.setting)}</span></p>

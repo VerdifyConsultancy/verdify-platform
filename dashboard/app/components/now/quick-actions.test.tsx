@@ -9,7 +9,8 @@ import { afterEach, expect, test, vi } from "vitest";
 import { panelRead, useApiRead } from "../../lib/queries";
 import { UUID, advance, renderWithApi, startFixtureApi, stopFixtureApi, writes } from "../../lib/test-fixture-api";
 import { text } from "../test-render";
-import { QuickActions } from "./quick-actions";
+import { manualUntil } from "../equipment/light-controls";
+import { QuickActions, lightStateWords } from "./quick-actions";
 
 afterEach(() => { cleanup(); stopFixtureApi(); });
 
@@ -116,4 +117,17 @@ test("the lights do not wait for the irrigation firmware; with changes off they 
   renderWithApi(<Harness />, { role: "viewer", writesEnabled: false });
   await advance(0);
   expect(document.querySelector(".now-lights")).toBeNull();
+});
+
+test("a Turn on still running reads its end instead of Automatic; once Lutron and the intent agree, or with no timer, the switch reads as before (#1377)", () => {
+  const automatic = { readback: { value: 1 } } as never;
+  const until = "2026-11-02T17:55:00Z"; // 10:55 in Longmont
+  const on = { state: "on", intent: "off", manual_until: until };
+  expect(manualUntil(on)).toBe(until);
+  expect(lightStateWords(on, automatic).replaceAll("\u00a0", " ")).toBe("on · by hand until 10:55 · the controller wants it off");
+  expect(manualUntil({ ...on, intent: "on" })).toBeNull();
+  expect(lightStateWords({ ...on, intent: "on" }, automatic)).toBe("on · Automatic");
+  expect(lightStateWords({ state: "off", intent: "off", manual_until: null }, automatic)).toBe("off · Automatic");
+  // Lutron unknown: the timer still runs, so its end shows.
+  expect(manualUntil({ state: "unknown", intent: "off", manual_until: until })).toBe(until);
 });

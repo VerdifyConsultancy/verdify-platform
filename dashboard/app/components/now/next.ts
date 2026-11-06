@@ -22,6 +22,7 @@ import { isAiSource } from "../../lib/vocab";
 import { hasWords, words } from "../../lib/words";
 import { personName, type SignedIn } from "../../lib/activity";
 import type { SpanStatus, SpanToken, TrackMarker, TrackRow, TrackSpan } from "../data/time-track";
+import { manualUntil, manualUntilWords } from "../equipment/light-controls";
 import { lineName } from "./status";
 
 export const PAST_H = 6;
@@ -306,7 +307,7 @@ export function lightWindows(settings: readonly SettingRow[] | null | undefined,
   return out;
 }
 
-type LightItem = Pick<Equipment["items"][number], "equipment" | "state" | "intent" | "since">;
+type LightItem = Pick<Equipment["items"][number], "equipment" | "state" | "intent" | "since" | "manual_until">;
 const knownState = (state: string | null | undefined): state is "on" | "off" => state === "on" || state === "off";
 /**
  * Each light's future on the track: the part of its window ahead of now, dotted ("may switch on 07:00–20:00"); and
@@ -334,6 +335,26 @@ export function lightSpans(input: { settings: readonly SettingRow[] | null | und
   }
   return rows;
 }
+
+/**
+ * Each light's timed switch still running (#1377, API-13 `manual_until` through `manualUntil`): a mark on its row where
+ * the switch ends and the light goes back to automatic, "by hand until 10:57".
+ */
+export function lightTimers(equipment: readonly LightItem[] | null | undefined, window: NextWindow): { readonly row: RowKey; readonly name: string; readonly at: number; readonly state: string }[] {
+  const out: { row: RowKey; name: string; at: number; state: string }[] = [];
+  for (const item of equipment ?? []) {
+    const place = LIGHT_ROWS.find((row) => row.equipment === item.equipment);
+    const until = place ? manualUntil(item) : null;
+    const at = until === null ? NaN : epoch(until);
+    if (place && Number.isFinite(at) && at > window.now && at <= window.to) out.push({ row: place.row, name: place.name, at, state: item.state });
+  }
+  return out;
+}
+const timerMarker = ({ row, name, at, state }: ReturnType<typeof lightTimers>[number]): TrackMarker => ({
+  key: `timer-${row}-${at}`, at, label: manualUntilWords(new Date(at * 1000).toISOString()),
+  title: `${name}: back to automatic`,
+  detail: [`${knownState(state) ? `Turned ${state} by hand` : "Switched by hand"}; back to automatic at ${clockOf(at)}`],
+});
 
 export type TrackInput = {
   readonly lanes: StateLanes | null | undefined;
@@ -367,9 +388,11 @@ export function trackRows(input: TrackInput, window: NextWindow): TrackRow[] {
   const plan = clusterMarkers(planTransitions(input.plan, window).map(({ at, changes }) => planMarker(at, changes)), CLUSTER_S,
     (count, from, to) => `${count} setting changes ${clockOf(from)}–${clockOf(to)}`);
   const sun: TrackMarker[] = sunTimes(input.agenda?.solar, window).map(({ at, kind }) => ({ key: `${kind}-${at}`, at, label: `${kind === "sunrise" ? "Sunrise" : "Sunset"} ${clockOf(at)}` }));
+  const timers = lightTimers(input.equipment, window);
   const row = (key: RowKey, rest: Pick<TrackRow, "spans" | "markers">): TrackRow => ({ key, label: ROW_LABELS[key], data: { "data-row": key }, ...rest });
   return [
-    ...(["heat", "air", "mist", "drip", "light_main", "light_grow"] as const).map((key) => row(key, { spans: spans(key) })),
+    ...(["heat", "air", "mist", "drip"] as const).map((key) => row(key, { spans: spans(key) })),
+    ...(["light_main", "light_grow"] as const).map((key) => row(key, { spans: spans(key), markers: timers.filter((timer) => timer.row === key).map(timerMarker) })),
     row("iris", { spans: [], markers: iris }),
     row("plan", { spans: [], markers: plan }),
     row("sun", { spans: [], markers: sun }),
@@ -406,6 +429,9 @@ export function nextItems(input: Pick<TrackInput, "plan" | "agenda" | "settings"
       if (span.status === "conditional") items.push({ key: span.key, at: span.start, kind: "light", status: "conditional", text: `${name} ${span.label ?? ""}`, note: row === "light_main" ? "or for anyone inside" : "when daylight is low" });
       else items.push({ key: span.key, at: window.now, kind: "light", text: `${name}: ${span.label ?? ""}`, note: "Lutron differs" });
     }
+  }
+  for (const { row, name, at } of lightTimers(input.equipment, window)) {
+    items.push({ key: `timer-${row}-${at}`, at, kind: "light", text: `${name} back to automatic`, note: "the by-hand switch ends" });
   }
   for (const { at, changes } of planTransitions(input.plan, window)) {
     for (const change of changes) items.push({ key: `plan-${at}-${change.param}`, at, kind: "plan", text: change.text, ai: isAiSource(change.source), note: isAiSource(change.source) ? null : sourceWords(change.source) });
