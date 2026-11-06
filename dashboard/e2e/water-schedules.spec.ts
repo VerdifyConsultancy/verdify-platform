@@ -7,7 +7,7 @@ import type { Page } from "@playwright/test";
 import { DESKTOP, PHONE, axe, expect, expectNoHorizontalScroll, load, test, useScreensClock } from "./support";
 
 const timeline = (page: Page) => page.locator(".sch-day");
-const timelineRow = (page: Page, line: string) => timeline(page).locator(`.sch-row[data-line="${line}"]`);
+const timelineRow = (page: Page, line: string) => timeline(page).locator(`.sch-row[data-lines~="${line}"]`);
 const popover = (page: Page) => page.locator("dialog.popover[open]");
 const drawer = (page: Page) => page.locator("dialog.drawer[open]");
 
@@ -152,7 +152,7 @@ test("390 px: view=day fits one day across the width with 6-hour ticks and no si
   await expect(timeline(page)).toBeVisible();
   await expect(timeline(page).locator("h2")).toHaveCount(1);
   await expect(timeline(page).locator(".sch-axis-tick:visible")).toHaveText(["00", "06", "12", "18", "24"]);
-  await expect(timeline(page).locator(".sch-row")).toHaveCount(9);
+  await expect(timeline(page).locator(".sch-row")).toHaveCount(5);
   const [track, view] = await Promise.all([timelineRow(page, "L01").locator(".sch-track").boundingBox(), page.viewportSize()]);
   expect(track!.x + track!.width).toBeLessThanOrEqual(view!.width);
   await expectNoHorizontalScroll(page);

@@ -56,11 +56,11 @@ export default function WaterBoard() {
   return <div className="wat-today">
     <div className="wat-aside"><SiteToday status={status} today={today} /></div>
     <div className="wat-zones">
-      <ScheduleLegend className="wat-legend" />
       {TODAY_GROUPS.map((group) => <section key={group.kind} className="wat-group" data-group={group.kind} aria-labelledby={`wat-group-${group.kind}`}>
         <h2 id={`wat-group-${group.kind}`} className="wat-group-title">{group.title}</h2>
         {summaries.filter((summary) => zoneKind(summary.zone) === group.kind).map((summary) => <ZoneCard key={summary.zone} summary={summary} status={status} today={today} now={now} strips={strips} schedules={schedules} />)}
       </section>)}
+      <ScheduleLegend className="wat-legend" />
     </div>
   </div>;
 }

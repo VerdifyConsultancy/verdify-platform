@@ -48,7 +48,7 @@
 .wat-zone.is-off .wat-zone-name{color:var(--muted)}
 /* A disabled line is one quiet row: state, its faded strip, no meta. */
 .wat-line.is-off .object-row-title,.wat-line.is-off .object-row-state{color:var(--muted)}
-.wat-line.is-off .wat-day{opacity:.55}
+.wat-line.is-off .wat-track{opacity:.55}
 .wat-line.is-off .wat-track{--sch-row:14px}
 .wat-legend{margin:0}
 /* The info tip: a small round "i" button beside a term, its words in a popover. */
@@ -421,8 +421,10 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
   .wat-line .object-row-actions .state-note,.wat-line .object-row-actions .field-error{text-align:left}
 }
 @media(max-width:600px){
-  /* A meter keeps its term on its line; its words drop under the bar only when they do not fit beside it. */
-  .wat-site-meter{grid-template-columns:4.5rem minmax(0,1fr)}
+  /* A meter's term sits over its bar; its words drop under the bar only when they do not fit beside it. */
   .wat-site-meter .meter{flex-wrap:wrap}
+  /* Phones: the group headings stay for screen readers only (each card's name already says drip or mister), so Wall's first row stays above the fold. */
+  .wat-group-title{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .wat-group{position:relative}
   .sch-agenda-row{grid-template-columns:3rem minmax(0,1fr) auto;gap:var(--space-2);padding-inline:var(--space-2)}
 }
