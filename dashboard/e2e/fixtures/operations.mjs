@@ -23,7 +23,8 @@ export const ROUTES = [
   ["API-10", "PUT", "/v1/settings/{param}"], ["API-11", "DELETE", "/v1/settings/{param}"], ["API-12", "GET", "/v1/settings/{param}/history"],
   ["API-13", "GET", "/v1/equipment"], ["API-14", "GET", "/v1/alerts"], ["API-15", "POST", "/v1/alerts/{id}/ack"],
   ["API-16", "POST", "/v1/alerts/{id}/resolve"], ["API-17", "GET", "/v1/activity"], ["API-19", "GET", "/v1/band/preview"],
-  ["API-23", "GET", "/v1/band/profile"], ["API-24", "PUT", "/v1/band/profile"], ["API-20", "POST", "/v1/equipment/lights/{light}/{state}"], ["API-21", "GET", "/v1/water/daily"], ["API-22", "GET", "/v1/lighting"],
+  ["API-23", "GET", "/v1/band/profile"], ["API-24", "PUT", "/v1/band/profile"],
+  ["API-SOIL-01", "GET", "/v1/soil-targets"], ["API-SOIL-02", "PUT", "/v1/soil-targets/{zone}"], ["API-20", "POST", "/v1/equipment/lights/{light}/{state}"], ["API-21", "GET", "/v1/water/daily"], ["API-22", "GET", "/v1/lighting"],
   ["API-25", "GET", "/v1/planner/history"], ["API-26", "GET", "/v1/planner/experiments"], ["API-27", "GET", "/v1/planner/experiments/{id}"],
   ["API-IRR-01", "GET", "/v1/irrigation"],
   ["API-IRR-02", "GET", "/v1/irrigation/schedules"], ["API-IRR-03", "POST", "/v1/irrigation/schedules"],
@@ -586,6 +587,39 @@ function saveBand(world, { body, serial, key }) {
   return { status: 200, body: { changed: rows }, effect };
 }
 
+const SOIL_THRESHOLDS = ["wilt_pct", "min_pct", "max_pct", "saturation_pct"];
+/** API-SOIL-02: the thresholds or note given, kept in order (0 ≤ wilt < min < max < saturation ≤ 100). */
+function setSoilTarget(world, { params, body, key }) {
+  const index = world.soilTargets.findIndex((target) => target.zone === params.zone);
+  if (index < 0) throw refuse(404, "not_found", "Not found", `no soil target for zone '${params.zone}'`, { field: "zone" });
+  const input = object(body);
+  const known = new Set([...SOIL_THRESHOLDS, "notes", "reason"]);
+  const extra = Object.keys(input).find((name) => !known.has(name));
+  if (extra) throw invalid(`${extra} is not a soil target field`, extra);
+  const change = {};
+  for (const name of SOIL_THRESHOLDS) {
+    if (input[name] === undefined || input[name] === null) continue;
+    if (typeof input[name] !== "number" || !Number.isFinite(input[name])) throw invalid(`${name} must be a number`, name);
+    if (input[name] < 0 || input[name] > 100) throw refuse(422, "out_of_range", "Out of range", `${name} must be from 0 to 100`, { field: name, min: 0, max: 100 });
+    change[name] = input[name];
+  }
+  if (input.notes !== undefined && input.notes !== null) change.notes = text(input.notes, "notes");
+  if (!Object.keys(change).length) throw invalid("change at least one threshold or the note");
+  const reason = text(input.reason, "reason");
+  const before = world.soilTargets[index];
+  const after = { ...before, ...change };
+  if (!(0 <= after.wilt_pct && after.wilt_pct < after.min_pct && after.min_pct < after.max_pct && after.max_pct < after.saturation_pct && after.saturation_pct <= 100)) {
+    throw refuse(422, "out_of_range", "Out of range", "targets must keep 0 ≤ wilt < min < max < saturation ≤ 100 (percent)", { field: "wilt_pct" });
+  }
+  const stored = { ...after, updated_at: iso(world.now), updated_by: actorOf(world), reason };
+  const changed = Object.fromEntries(Object.keys(change).filter((name) => before[name] !== after[name]).map((name) => [name, { from: before[name], to: after[name] }]));
+  const effect = (next) => {
+    next.soilTargets = next.soilTargets.map((target) => (target.zone === stored.zone ? stored : target));
+    activity(next, { ts: iso(world.now), actor: actorOf(next), action: "soil_target.write", target: stored.zone, reason, request_id: key ?? null, detail: { ref: { table: "soil_moisture_targets", zone: stored.zone }, zone: stored.zone, changed } });
+  };
+  return { status: 200, body: stored, effect };
+}
+
 const weekday = (date) => local(localInstant(date, "12:00")).weekday;
 const NO_DATA_DAYS_AGO = 9;
 /** Whole gallons per day: today from the lines, earlier days synthetic, a no-data day nine days back. */
@@ -964,6 +998,7 @@ const READS = {
   "API-17": activityBody,
   "API-19": previewBody,
   "API-23": profileBody,
+  "API-SOIL-01": (world) => ({ targets: world.soilTargets }),
   "API-21": waterBody,
   "API-22": lightingBody,
   "API-25": plannerHistoryBody,
@@ -1371,6 +1406,7 @@ const WRITES = {
   "API-16": (world, request) => alertWrite(world, request, true),
   "API-20": lights,
   "API-24": saveBand,
+  "API-SOIL-02": setSoilTarget,
   "API-IRR-03": createSchedule,
   "API-IRR-04": editSchedule,
   "API-IRR-05": deleteSchedule,
@@ -1490,6 +1526,8 @@ export const EXAMPLES = {
   "API-19": (world) => get("/v1/band/preview", world.preview),
   "API-23": () => get("/v1/band/profile", { temp_night: "67.7" }),
   "API-24": () => send("PUT", "/v1/band/profile", { profile: { temp_night: 67.7 }, manual: true, reason: "Warmer nights" }),
+  "API-SOIL-01": () => get("/v1/soil-targets"),
+  "API-SOIL-02": () => send("PUT", "/v1/soil-targets/west", { wilt_pct: 20, reason: "New potting mix holds more water" }),
   "API-20": () => send("POST", "/v1/equipment/lights/main/on", { reason: "Inspecting the Vandas" }),
   "API-21": (world) => get("/v1/water/daily", { days: String(world.waterUseDays) }),
   "API-22": (world) => get("/v1/lighting", { from: iso(world.now - 3 * DAY), to: iso(world.now) }),

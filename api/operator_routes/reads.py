@@ -20,7 +20,7 @@ from typing import Annotated
 import asyncpg
 from fastapi import APIRouter, Depends, Query, Request
 
-from verdify_services import activity, alerts, planner, reads
+from verdify_services import activity, alerts, planner, reads, soil
 
 router = APIRouter()
 
@@ -87,6 +87,13 @@ async def get_planner_experiment(conn: Connection, id: str) -> planner.Experimen
 async def get_settings(conn: Connection) -> reads.SettingRows:
     """Every registry row with its device value, desired row, plan value and state, and the Band in force rows."""
     return await reads.settings_rows(conn)
+
+
+@router.get("/soil-targets", operation_id="API-SOIL-01", tags=["settings"], response_model=soil.SoilTargets)
+async def get_soil_targets(conn: Connection) -> soil.SoilTargets:
+    """Every probe zone's soil-moisture target (#1345): wilt, min, max and saturation in percent, the note, the probe
+    it applies to and who last changed it."""
+    return await soil.targets(conn)
 
 
 @router.get(

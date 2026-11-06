@@ -184,10 +184,22 @@ class TestProbeZoneVocabulary:
         crop_zones = {zone for _c, _s, zone, _t in SOIL_DRYOUT_PROBES}
         assert crop_zones <= self.CROPS_TABLE_ZONES
 
-    def test_south_probes_resolve_a_wilt_threshold(self):
-        from tasks import SOIL_DRYOUT_PROBES
+    def test_probe_map_rows_carry_each_zone_wilt(self):
+        """Since 303 (#1345) the probe map is soil_moisture_targets rows, each with its own (editable) wilt."""
+        from tasks import SOIL_DRYOUT_PROBES, soil_dryout_probes
 
-        wilt_by_zone = {"south_1": 20.0, "south_2": 20.0, "west": 18.0}  # prod rows
-        for _col, _sensor, zone, target_zone in SOIL_DRYOUT_PROBES:
-            wilt = wilt_by_zone.get(target_zone, wilt_by_zone.get(zone))
-            assert wilt is not None, f"probe {target_zone} has no wilt threshold"
+        rows = [
+            {"probe_column": col, "sensor_id": sensor, "occupancy_zone": zone, "zone": target, "wilt_pct": wilt}
+            for (col, sensor, zone, target), wilt in zip(SOIL_DRYOUT_PROBES, (20.0, 22.0, 18.0), strict=True)
+        ]
+        probes = soil_dryout_probes(rows)
+        assert [(c, s, z, t) for c, s, z, t, _w in probes] == list(SOIL_DRYOUT_PROBES)
+        assert [w for *_rest, w in probes] == [20.0, 22.0, 18.0]
+
+    def test_probe_map_refuses_a_column_that_is_not_a_soil_probe(self):
+        """The column is interpolated into the window SQL: anything but a soil_moisture_* identifier is dropped."""
+        from tasks import soil_dryout_probes
+
+        bad = {"sensor_id": "soil.x", "occupancy_zone": "west", "zone": "x", "wilt_pct": 10.0}
+        for column in ("temp_avg", "soil_moisture_west; DROP TABLE climate", "soil_moisture_"):
+            assert soil_dryout_probes([{**bad, "probe_column": column}]) == []

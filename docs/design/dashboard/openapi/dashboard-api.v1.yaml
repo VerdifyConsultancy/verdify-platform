@@ -437,6 +437,41 @@ paths:
         '200': {description: 'Stored; each changed anchor with state requested', content: {application/json: {schema: {$ref: '#/components/schemas/BandWrite'}}}}
         '422': {$ref: '#/components/responses/Invalid'}
         default: {$ref: '#/components/responses/Problem'}
+  /v1/soil-targets:
+    get:
+      operationId: API-SOIL-01
+      tags: [settings]
+      summary: Every probe zone's soil-moisture target (#1345)
+      description: >-
+        One row per probe zone (south_1, south_2, west) from soil_moisture_targets (migration 303): wilt_pct, min_pct,
+        max_pct and saturation_pct in percent, always 0 <= wilt < min < max < saturation <= 100; the note; the probe
+        (climate column) and sensor it applies to and the crops.zone whose plantings let soil_dryout page; who last
+        changed it, when and why. No crop name: targets are plant-agnostic.
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/SoilTargets'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/soil-targets/{zone}:
+    put:
+      operationId: API-SOIL-02
+      tags: [settings]
+      summary: Change one zone's soil-moisture thresholds or note (#1345)
+      description: >-
+        A field left out keeps its stored value; the merged row must keep 0 <= wilt < min < max < saturation <= 100.
+        One transaction: the soil_moisture_targets row (with updated_at, updated_by, updated_source and the reason) and
+        one activity_log row, action soil_target.write, target the zone, detail {ref, zone, changed {field: {from,
+        to}}}. The ingestor's soil_dryout rule pages on the new wilt_pct from its next cycle; nothing talks to the
+        controller. Codes: out_of_range (a value outside 0-100 or the order broken), invalid_request (nothing to
+        change), not_found (no such zone), request_id_reused.
+      parameters:
+        - {name: zone, in: path, required: true, schema: {type: string, examples: [west]}}
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/SoilTargetWrite'}}}
+      responses:
+        '200': {description: 'Stored', content: {application/json: {schema: {$ref: '#/components/schemas/SoilTarget'}}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
   /v1/equipment/lights/{light}/{state}:
     post:
       operationId: API-20
@@ -1708,6 +1743,42 @@ components:
       required: [changed]
       properties:
         changed: {type: array, items: {$ref: '#/components/schemas/DesiredSetting'}}
+    SoilTarget:
+      type: object
+      description: One probe zone's soil-moisture target (API-SOIL-01, #1345)
+      required: [zone, wilt_pct, min_pct, max_pct, saturation_pct]
+      properties:
+        zone: {type: string, examples: [south_1, south_2, west]}
+        wilt_pct: {type: number, minimum: 0, maximum: 100, description: soil_dryout pages when the live probe stays below this for over 2 h in the day}
+        min_pct: {type: number, minimum: 0, maximum: 100}
+        max_pct: {type: number, minimum: 0, maximum: 100}
+        saturation_pct: {type: number, minimum: 0, maximum: 100}
+        notes: {type: [string, 'null']}
+        probe: {type: [string, 'null'], description: The climate column the probe writes, for example soil_moisture_west}
+        sensor_id: {type: [string, 'null'], examples: [soil.west]}
+        occupancy_zone: {type: [string, 'null'], description: The crops.zone whose open plantings let soil_dryout page}
+        updated_at: {type: [string, 'null'], format: date-time}
+        updated_by:
+          anyOf:
+            - {$ref: '#/components/schemas/Actor'}
+            - {type: 'null'}
+        reason: {type: [string, 'null']}
+    SoilTargets:
+      type: object
+      required: [targets]
+      properties:
+        targets: {type: array, items: {$ref: '#/components/schemas/SoilTarget'}}
+    SoilTargetWrite:
+      type: object
+      additionalProperties: false
+      description: The thresholds or note to change; at least one. The merged row must stay ordered.
+      properties:
+        wilt_pct: {type: [number, 'null'], minimum: 0, maximum: 100}
+        min_pct: {type: [number, 'null'], minimum: 0, maximum: 100}
+        max_pct: {type: [number, 'null'], minimum: 0, maximum: 100}
+        saturation_pct: {type: [number, 'null'], minimum: 0, maximum: 100}
+        notes: {type: [string, 'null'], maxLength: 500}
+        reason: {type: string, maxLength: 500}
 
     # ------------------------------------------------------------ plan and settings
     PlanRecord:

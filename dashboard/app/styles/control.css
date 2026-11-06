@@ -387,3 +387,11 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .pln-ci-verdict.is-worse{color:var(--fault)}
 .pln-ci-verdict.is-inconclusive{color:var(--warn-text)}
 @media(max-width:760px){.pln-ci-row{grid-template-columns:minmax(0,1fr)}.pln-ci-words{padding-bottom:.25rem}}
+/* Soil targets (#1345): one row per probe zone; an operator's edit opens under its row. */
+.ctl-soil{width:100%;border-collapse:collapse;margin-top:var(--space-3)}
+.ctl-soil th,.ctl-soil td{padding:var(--space-2);text-align:left;border-bottom:1px solid var(--line)}
+.ctl-soil td.num{font-variant-numeric:tabular-nums}
+.ctl-soil-note{display:block;font-weight:400}
+.ctl-soil-fields{display:grid;gap:var(--space-3);grid-template-columns:repeat(auto-fit,minmax(9rem,1fr))}
+.ctl-soil-actions{display:flex;gap:var(--space-2);margin-top:var(--space-3)}
+@media(max-width:600px){.ctl-soil{display:block;overflow-x:auto}}

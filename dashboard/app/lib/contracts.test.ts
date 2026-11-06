@@ -131,7 +131,7 @@ function call(names: string | string[], operationId: string, settled = false) {
 test("the file names every operation by its design id, reserved ids unused, and the client's table is its /v1 rows", () => {
   const ids = SCANNED.map((row) => row.operationId);
   expect(new Set(ids).size).toBe(ids.length);
-  for (const id of ids) expect(id).toMatch(/^(API-(\d\d|IRR-\d\d|CROP-\d\d)|BFF-\d\d|INT-\d\d|OPS-\d\d)$/);
+  for (const id of ids) expect(id).toMatch(/^(API-(\d\d|IRR-\d\d|CROP-\d\d|SOIL-\d\d)|BFF-\d\d|INT-\d\d|OPS-\d\d)$/);
   for (const id of RESERVED) expect(ids).not.toContain(id);
   // The line scan and the parsed file agree on every operation's method and path.
   expect(Object.fromEntries(SCANNED.map(({ operationId, method, path }) => [operationId, { method, path }])))

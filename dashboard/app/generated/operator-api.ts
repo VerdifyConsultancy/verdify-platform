@@ -946,6 +946,46 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/v1/soil-targets": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Every probe zone's soil-moisture target (#1345)
+         * @description One row per probe zone (south_1, south_2, west) from soil_moisture_targets (migration 303): wilt_pct, min_pct, max_pct and saturation_pct in percent, always 0 <= wilt < min < max < saturation <= 100; the note; the probe (climate column) and sensor it applies to and the crops.zone whose plantings let soil_dryout page; who last changed it, when and why. No crop name: targets are plant-agnostic.
+         */
+        readonly get: operations["API-SOIL-01"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/soil-targets/{zone}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        /**
+         * Change one zone's soil-moisture thresholds or note (#1345)
+         * @description A field left out keeps its stored value; the merged row must keep 0 <= wilt < min < max < saturation <= 100. One transaction: the soil_moisture_targets row (with updated_at, updated_by, updated_source and the reason) and one activity_log row, action soil_target.write, target the zone, detail {ref, zone, changed {field: {from, to}}}. The ingestor's soil_dryout rule pages on the new wilt_pct from its next cycle; nothing talks to the controller. Codes: out_of_range (a value outside 0-100 or the order broken), invalid_request (nothing to change), not_found (no such zone), request_id_reused.
+         */
+        readonly put: operations["API-SOIL-02"];
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/v1/states": {
         readonly parameters: {
             readonly query?: never;
@@ -2821,6 +2861,43 @@ export interface components {
             readonly stale_reason: "old" | "failed" | null;
             readonly text: string;
         };
+        /** @description One probe zone's soil-moisture target (API-SOIL-01, */
+        readonly SoilTarget: {
+            readonly max_pct: number;
+            readonly min_pct: number;
+            readonly notes?: string | null;
+            /** @description The crops.zone whose open plantings let soil_dryout page */
+            readonly occupancy_zone?: string | null;
+            /** @description The climate column the probe writes */
+            readonly probe?: string | null;
+            readonly reason?: string | null;
+            readonly saturation_pct: number;
+            /** @example soil.west */
+            readonly sensor_id?: string | null;
+            /** Format: date-time */
+            readonly updated_at?: string | null;
+            readonly updated_by?: components["schemas"]["Actor"] | null;
+            /** @description soil_dryout pages when the live probe stays below this for over 2 h in the day */
+            readonly wilt_pct: number;
+            /**
+             * @example south_1
+             * @example south_2
+             * @example west
+             */
+            readonly zone: string;
+        };
+        readonly SoilTargets: {
+            readonly targets: readonly components["schemas"]["SoilTarget"][];
+        };
+        /** @description The thresholds or note to change; at least one. The merged row must stay ordered. */
+        readonly SoilTargetWrite: {
+            readonly max_pct?: number | null;
+            readonly min_pct?: number | null;
+            readonly notes?: string | null;
+            readonly reason?: string;
+            readonly saturation_pct?: number | null;
+            readonly wilt_pct?: number | null;
+        };
         readonly StateLanes: {
             /** Format: date-time */
             readonly from: string;
@@ -4550,6 +4627,58 @@ export interface operations {
                     readonly "application/json": components["schemas"]["SettingHistory"];
                 };
             };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-SOIL-01": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["SoilTargets"];
+                };
+            };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-SOIL-02": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: {
+                /** @description Optional on every write; stored as request_id on the write's activity_log row and logged as the request id. The same key and payload return the stored result with the header Idempotency-Replayed: true; the same key with a different payload is 422 request_id_reused. */
+                readonly "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            readonly path: {
+                readonly zone: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["SoilTargetWrite"];
+            };
+        };
+        readonly responses: {
+            /** @description Stored */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["SoilTarget"];
+                };
+            };
+            readonly 422: components["responses"]["Invalid"];
             readonly default: components["responses"]["Problem"];
         };
     };

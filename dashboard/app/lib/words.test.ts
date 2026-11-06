@@ -289,6 +289,8 @@ test("every activity action the services write has words, each one an action the
     "band.write",
     // The planting writes (#1327, #1328).
     "planting.create", "planting.move", "planting.harvest", "planting.end", "planting.update", "planting.note",
+    // The soil targets' edit (#1345).
+    "soil_target.write",
   ];
   expectWorded("activity_action", actions);
   expect(Object.keys(WORDS.activity_action).sort()).toEqual([...actions].sort());

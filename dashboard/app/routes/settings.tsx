@@ -8,6 +8,7 @@ import { SettingDrawerHost, useReadbackStale, useSettingEdit, withParams } from 
 import { STATE_WORDS, SettingsLegend } from "../components/control/setting-help";
 import { SettingsGlossary } from "../components/control/settings-glossary";
 import { SettingsRail, type RailFilter, type RailGroup } from "../components/control/settings-rail";
+import { SoilTargetsPanel } from "../components/control/soil-targets";
 import { AgeLabel, useClockValue } from "../components/freshness";
 import { PageHeader } from "../components/layout/page-header";
 import { RECENT_WINDOWS, SETTING_GROUPS, changedByAgent, groupLabel, recentlyChanged, useToday, type RecentWindow } from "../components/setting-row";
@@ -171,6 +172,7 @@ export default function Settings() {
           : <SettingsCatalog rows={shown} failed={read.isError} onRetry={() => void read.refetch()} readbackStale={readbackStale} editTo={editTo} today={today} empty={empty} />}
       </div>
     </div>
+    <SoilTargetsPanel />
     <GlossaryPanel />
     <SettingDrawerHost />
   </>;

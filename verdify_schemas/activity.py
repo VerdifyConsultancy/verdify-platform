@@ -23,7 +23,7 @@ ACTOR_SOURCE_PATTERN = r"^(dashboard|iris|system|agent:[a-z0-9][a-z0-9_-]*)$"
 # end, update, note). Extend it here when a new kind of write appears.
 ACTIVITY_ACTION_PATTERN = (
     r"^(setting\.(write|release)|band\.write|plan\.write|alert\.(ack|resolve)|light\.(on|off)"
-    r"|irrigation(\.[a-z][a-z0-9_]*)+|planting\.(create|move|harvest|end|update|note))$"
+    r"|irrigation(\.[a-z][a-z0-9_]*)+|planting\.(create|move|harvest|end|update|note)|soil_target\.write)$"
 )
 # A tunable_registry name (the OpenAPI Param pattern).
 SETTING_PARAM_PATTERN = r"^[a-z][a-z0-9_]*$"

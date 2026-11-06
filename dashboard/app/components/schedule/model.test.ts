@@ -59,7 +59,7 @@ test("a degraded_only fallback window is conditional, never a planned run: ahead
     spanStatus(occurrence({ status: "done", outcome: "unknown" }), fallback), spanStatus(occurrence({ status: "planned", reason: note })),
   ]).toEqual(["conditional", "conditional", "skipped", "done", "unknown", "planned"]);
   expect([STATUS_WORDS.conditional, fallbackCount(1), fallbackCount(3)]).toEqual(["fallback", "1 fallback window", "3 fallback windows"]);
-  // The seeded vanda-degraded windows today at 10:42: 09:47 passed without running, 11:47 and 13:47 ahead.
+  // The seeded sensor-fault backup windows today at 10:42: 09:47 passed without running, 11:47 and 13:47 ahead.
   const { agenda, status } = set("in-band");
   const info = lineInfo(status.lines);
   const today = entriesOf(agenda, null, NOW).filter((entry) => localDate(entry.occurrence.planned_start) === TODAY);
@@ -68,8 +68,8 @@ test("a degraded_only fallback window is conditional, never a planned run: ahead
     ["conditional", "eq-heat1", "09:47 not needed"], ["conditional", "eq-heat1", "11:47 fallback · only if VPD sensing is degraded"],
     ["conditional", "eq-heat1", "13:47 fallback · only if VPD sensing is degraded"],
   ]);
-  expect(plain(blocks[0].name)).toBe("Center mister · vanda-degraded, Mon 09:47, 4 × 45 s, fallback, not needed");
-  expect(plain(blocks[1].name)).toBe("Center mister · vanda-degraded, Mon 11:47, 4 × 45 s, fallback, only if VPD sensing is degraded");
+  expect(plain(blocks[0].name)).toBe("Center mister · sensor-fault backup, Mon 09:47, 4 × 45 s, fallback, not needed");
+  expect(plain(blocks[1].name)).toBe("Center mister · sensor-fault backup, Mon 11:47, 4 × 45 s, fallback, only if VPD sensing is degraded");
   // None counts as planned minutes, so the day's row plans nothing.
   const model = dayModel({ day: TODAY, today: TODAY, now: NOW, agenda, lines: status.lines, lanes: null, entries: entriesOf(agenda, null, NOW) });
   expect(model.groups[1].rows[0].planned).toBe(0);
@@ -83,8 +83,8 @@ test("a degraded_only fallback window is conditional, never a planned run: ahead
   // The agenda: the past window "not needed", the ones ahead with the note; none is NEXT.
   const [day] = agendaDays(entriesOf(agenda, null, NOW), { first: TODAY, days: 1, last, today: TODAY, now: NOW, lines: status.lines });
   expect(day.rows.map((row) => [shortTime(row.at), row.status, plain(row.detail), row.next])).toEqual([
-    ["09:47", "conditional", "vanda-degraded · not needed", false], ["11:47", "conditional", "vanda-degraded · only if VPD sensing is degraded · Iris may adjust", false],
-    ["13:47", "conditional", "vanda-degraded · only if VPD sensing is degraded · Iris may adjust", false],
+    ["09:47", "conditional", "sensor-fault backup · not needed", false], ["11:47", "conditional", "sensor-fault backup · only if VPD sensing is degraded · Iris may adjust", false],
+    ["13:47", "conditional", "sensor-fault backup · only if VPD sensing is degraded · Iris may adjust", false],
   ]);
 });
 

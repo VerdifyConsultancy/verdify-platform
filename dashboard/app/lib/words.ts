@@ -505,6 +505,7 @@ const ACTIVITY_ACTION = {
   "planting.update": "Changed planting",
   "planting.note": "Noted on planting",
   "band.write": "Changed",
+  "soil_target.write": "Changed soil target",
 } as const;
 
 /**

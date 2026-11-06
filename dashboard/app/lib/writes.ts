@@ -11,6 +11,7 @@
  * - **B** `useBandWrite`: API-24, the band editor's one Save of every changed house anchor.
  * - `useStop`: API-IRR-07 and its result toast.
  * - `useCropWrite`: API-CROP-07 to -11, the planting records (#1330).
+ * - `useSoilTargetWrite`: API-SOIL-02, one zone's soil-moisture thresholds (#1345).
  *
  * One action, one key: `crypto.randomUUID()` when Save, Run, Stop or Acknowledge is pressed, used for that request only.
  * While it is out the action is busy (the control reads "Sending…" and is disabled), and a second press sends nothing.
@@ -538,6 +539,25 @@ export function useCropWrite<K extends CropOperationId>(operation: K) {
     if (outcome.ok) refresh(client, ["API-CROP-01", "API-CROP-02", "API-CROP-03", "API-CROP-04", "API-17"]);
     return outcome;
   }, [run, client, operation]);
+  return { send, sending: action.sending, error: action.error, clearError: action.clearError };
+}
+
+/**
+ * API-SOIL-02: change one zone's soil-moisture thresholds or note (#1345). The server checks the merged order (0 ≤ wilt <
+ * min < max < saturation ≤ 100) and answers `out_of_range` otherwise; on a 200 API-SOIL-01 and Activity refetch.
+ */
+export function useSoilTargetWrite() {
+  const client = useQueryClient();
+  const action = useAction();
+  const { run } = action;
+  const send = useCallback(async (zone: string, body: BodyOf<"API-SOIL-02">) => {
+    const outcome = await run((key) => apiWrite("API-SOIL-02", { zone }, body, key), {
+      check: () => tooLong("reason", body.reason) ?? tooLong("notes", body.notes),
+      unitsOf: () => ({ unit: "%" }),
+    });
+    if (outcome.ok) refresh(client, ["API-SOIL-01", "API-17"]);
+    return outcome;
+  }, [run, client]);
   return { send, sending: action.sending, error: action.error, clearError: action.clearError };
 }
 

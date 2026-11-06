@@ -43,7 +43,7 @@ test("in band: Running now, the next 12 h in time order with who planned each ch
   await open("in-band");
   expect(within(card()).getByRole("heading", { level: 2 }).textContent).toBe("Running and next");
   expect(text(card().querySelector(".now-next-now"))).toBe("Running nowNothing running");
-  expect(coming("run")).toEqual(["11:47Center mister · 4 × 45 s · vanda-degraded · only if VPD sensing is degraded", "13:47Center mister · 4 × 45 s · vanda-degraded · only if VPD sensing is degraded"]);
+  expect(coming("run")).toEqual(["11:47Center mister · 4 × 45 s · sensor-fault backup · only if VPD sensing is degraded", "13:47Center mister · 4 × 45 s · sensor-fault backup · only if VPD sensing is degraded"]);
   expect(coming("plan")).toEqual(["13:00Misting starts at VPD 1.60 → 1.70 kPa AI", "16:30Mist pulse gap 45.0 → 55.0 s AI"]);
   expect(coming("iris")).toEqual(["12:41Iris: Midday check", "16:50Iris: Sunset plan"]);
   expect(coming("sun")).toEqual(["16:58Sunset"]);

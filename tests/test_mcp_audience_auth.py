@@ -89,6 +89,8 @@ AGENT_TOOLS = frozenset(
         "irrigation_clear_fault",
         "band_profile",
         "band_profile_preview",
+        "soil_targets",
+        "soil_target_set",
     }
     | PLANTING_TOOLS
 )
@@ -474,6 +476,9 @@ class TestAudienceMatrix:
                 "band_profile_preview",
                 # #1346: Iris never reads the greenhouse snapshot (it is never an input to a plan).
                 "get_greenhouse_snapshot",
+                # #1345: soil targets are an operator setting for named agents and admin, not a plan input.
+                "soil_targets",
+                "soil_target_set",
             }
             | PLANTING_TOOLS
         )
@@ -732,7 +737,7 @@ class TestListToolsAudienceFiltering:
     @pytest.mark.parametrize("mode", ["log", "enforce"])
     @pytest.mark.parametrize(
         ("audience", "token", "expected_count"),
-        [("iris", "tok-iris", 33), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 49)],
+        [("iris", "tok-iris", 33), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 51)],
     )
     def test_protocol_inventory_matches_exact_audience_allowlist(
         self, mcp_server, monkeypatch, mode, audience, token, expected_count

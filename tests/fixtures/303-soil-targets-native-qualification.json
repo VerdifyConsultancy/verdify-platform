@@ -1,0 +1,68 @@
+{
+  "migration": "303-soil-targets-configurable.sql",
+  "exact_final_migration_sha256": "fa983725905c01373290a490cd557fda86841a3c84cdee0f965513f924a3af97",
+  "final_migration_qualification_pending": false,
+  "projected_successor": {
+    "api": "42091d8bc52adfff17ef589ca7d71ac3a97fe37af4460b551a938f313635bb8c",
+    "ingestor": "c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940",
+    "mcp": "2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245"
+  },
+  "projection": "2026-11-06, production at exact302. A rolled-back --probe-only run of 303 measured all three successor seals: the api digest takes in soil_moisture_targets by name (217 protects it), the ingestor digest its new columns (the ingestor login reads the table) and the MCP digest the table, its columns and the MCP duty's SELECT and column UPDATE. The predecessor block pins 302's seals (291's api and ingestor, 301's MCP), which production held. The successor literals are the probe's; the full qualification (prelock on soil_moisture_targets, with the native fixture db/qualification/303-soil-targets-fixture.sql) must reproduce them. 2026-11-06T13:41Z: qualified on production at exact302 (no --apply-first; prelock on soil_moisture_targets) with the native fixture; the measured seals equal the probe's.",
+  "measured_at": "2026-11-06T13:41:06Z",
+  "before": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"
+  },
+  "qualified_successor": {
+    "api": "42091d8bc52adfff17ef589ca7d71ac3a97fe37af4460b551a938f313635bb8c",
+    "ingestor": "c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940",
+    "mcp": "2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245"
+  },
+  "after_rollback": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"
+  },
+  "inside_transaction_receipts_match": true,
+  "final_migration_rollback_verified": true,
+  "native_probe_source_sha256": "1f29e60f43339e6e5d3480a194d216faa1da1f0d1fe1ee3a484662fceb513087",
+  "qualification_source_sha256": "d82e336c7531dbc8723636f89491cf2cd41264583b8b92c3d0a27429fd344699",
+  "prelock": [
+    [
+      "public.mcp_runtime_boundary_receipt",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.runtime_ordinary_login_attestation_receipts",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.schema_migrations",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.soil_moisture_targets",
+      "ACCESS EXCLUSIVE"
+    ]
+  ],
+  "native_fixture": {
+    "checks": [
+      "probe_map_backfilled_to_live_columns",
+      "no_crop_slot_label",
+      "grants_select_and_threshold_update_only",
+      "api_and_public_denied",
+      "dashboard_login_attests_and_edits",
+      "order_check_refuses",
+      "dashboard_cannot_move_probe_or_delete",
+      "mcp_login_attests_and_edits",
+      "ingestor_reads_edited_wilt"
+    ],
+    "all_passed": true,
+    "attested": {
+      "dashboard": true,
+      "mcp": true
+    }
+  },
+  "native_fixture_sha256": "a6fb4f680f2ccdb8181d2b4fcc1c4a366e1a5f1fa9080ad2d0d5de388dc37507"
+}

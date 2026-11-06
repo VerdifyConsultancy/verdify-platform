@@ -369,6 +369,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "301-greenhouse-brief.sql",
         # The Planner section's read views and their dashboard grant run forward only.
         "302-planner-section-reads.sql",
+        # Configurable soil targets, the slot relabel and the three receipt re-seals run forward only.
+        "303-soil-targets-configurable.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

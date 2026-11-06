@@ -113,6 +113,7 @@ from verdify_services import alerts as alerts_service  # noqa: E402
 from verdify_services import crops as crop_service  # noqa: E402
 from verdify_services import reads as reads_service  # noqa: E402
 from verdify_services import settings as settings_service  # noqa: E402
+from verdify_services import soil as soil_service  # noqa: E402
 from verdify_services.actor import Actor as ServiceActor  # noqa: E402
 from verdify_services.problems import Problem, ServiceError, problem  # noqa: E402
 
@@ -1005,6 +1006,7 @@ _TOOL_READ_ONLY = frozenset(
         "activity",
         "band_profile",
         "band_profile_preview",
+        "soil_targets",
     }
 )
 
@@ -1287,6 +1289,10 @@ TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     # operator-owned; API-24 is the dashboard's), and Iris is left out so its profile stays the Hermes include list.
     "band_profile": frozenset({"agent", "admin"}),
     "band_profile_preview": frozenset({"agent", "admin"}),
+    # Soil-moisture targets (#1345): API-SOIL-01/02's twins for named agents and admin. Iris is left out: a target
+    # moves the soil_dryout page, which is an operator setting, not a plan.
+    "soil_targets": frozenset({"agent", "admin"}),
+    "soil_target_set": frozenset({"agent", "admin"}),
 }
 
 # Registry entries for tools that are DESIGNED but not yet registered. Each
@@ -6877,7 +6883,7 @@ def _when(value: str | None):
         return value
 
 
-async def _planting_read(tool: str, read):
+async def _planting_read(tool: str, read, *, records: str = "The planting records"):
     conn = None
     try:
         conn = await _db()
@@ -6888,18 +6894,19 @@ async def _planting_read(tool: str, read):
         return _tool_problem(problem("query_timeout", "The database stopped the query at its limit. Retry."))
     except Exception as exc:  # the database or its connection; never a refusal
         print(f"[mcp.{tool}] failed: {type(exc).__name__}", file=sys.stderr)
-        return _tool_problem(problem("unavailable", "The planting records could not be read. Retry."))
+        return _tool_problem(problem("unavailable", f"{records} could not be read. Retry."))
     finally:
         if conn is not None:
             await conn.close()
     return _tool_ok(model)
 
 
-async def _planting_write(tool: str, write):
-    """One planting write as the request's actor (current_actor(), never an argument) on its own connection."""
+async def _planting_write(tool: str, write, *, kind: str = "planting"):
+    """One planting (or other records) write as the request's actor (current_actor(), never an argument) on its own
+    connection."""
     caller = current_actor()
     if caller is None:
-        return _tool_problem(problem("forbidden", "A planting write needs a resolved caller: a named agent or admin"))
+        return _tool_problem(problem("forbidden", f"A {kind} write needs a resolved caller: a named agent or admin"))
     actor = ServiceActor(source=caller.source, name=caller.name)
     conn = None
     try:
@@ -6912,7 +6919,7 @@ async def _planting_write(tool: str, write):
         return _tool_problem(
             problem(
                 "unavailable",
-                "The planting service could not answer. Retry with the same request_id: it stores the write once",
+                f"The {kind} service could not answer. Retry with the same request_id: it stores the write once",
             )
         )
     finally:
@@ -7175,6 +7182,45 @@ async def planting_history(
         return await _planting_read("planting_history", lambda conn: crop_service.position_history(conn, position))
     return await _planting_read(
         "planting_history", lambda conn: crop_service.plantings(conn, active=active, zone=zone, limit=limit)
+    )
+
+
+# Soil-moisture targets (#1345, migration 303): API-SOIL-01/02's twins over verdify_services.soil. wilt_pct is what
+# the ingestor's soil_dryout rule pages on; the probe map is read-only here.
+_SoilPct = Annotated[float | None, Field(ge=0, le=100, description="Percent volumetric water content.")]
+
+
+@mcp.tool()
+async def soil_targets():
+    """Read every probe zone's soil-moisture target. REST twin: API-SOIL-01 (GET /v1/soil-targets).
+
+    Each target has zone, wilt_pct (soil_dryout pages when the probe stays below it for more than 2 h in the day),
+    min_pct, max_pct, saturation_pct, notes, the probe it reads (probe, sensor_id, occupancy_zone) and who last
+    changed it. Targets are plant-agnostic: no crop is named. Reads only."""
+    return await _planting_read("soil_targets", soil_service.targets, records="The soil targets")
+
+
+@mcp.tool()
+async def soil_target_set(
+    zone: Annotated[str, Field(min_length=1, max_length=40, description="The probe zone: south_1, south_2 or west.")],
+    wilt_pct: _SoilPct = None,
+    min_pct: _SoilPct = None,
+    max_pct: _SoilPct = None,
+    saturation_pct: _SoilPct = None,
+    notes: Annotated[str | None, Field(max_length=500)] = None,
+    reason: _PlantingReason = None,
+    request_id: _PlantingRequestId = None,
+):
+    """Change one zone's soil-moisture thresholds or note. REST twin: API-SOIL-02 (PUT /v1/soil-targets/{zone}).
+
+    Give only the fields that change; the result must keep 0 <= wilt < min < max < saturation <= 100. A wilt_pct
+    change moves the soil_dryout page on the ingestor's next cycle. Returns the stored target. Refusals: not_found
+    (unknown zone), out_of_range (order or bounds), invalid_request (no field given)."""
+    body = _body(wilt_pct=wilt_pct, min_pct=min_pct, max_pct=max_pct, saturation_pct=saturation_pct, notes=notes)
+    return await _planting_write(
+        "soil_target_set",
+        lambda conn, actor: soil_service.set_target(conn, actor, zone, body, reason=reason, request_id=request_id),
+        kind="soil target",
     )
 
 
