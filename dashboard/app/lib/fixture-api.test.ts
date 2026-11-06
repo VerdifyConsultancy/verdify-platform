@@ -800,8 +800,8 @@ test("plan-next: a manual lane with a waypoint, Iris's 13:00 and a forecast rule
 });
 
 test("each screen package registers its own fixtures once, after the base ones, and can never shadow a name", () => {
-  // The four package files of redesign §10.1, in package order.
-  expect(Object.keys(PACKAGE_FIXTURES)).toEqual(["now-activity.mjs", "graphs.mjs", "water.mjs", "control.mjs"]);
+  // The four package files of redesign §10.1, in package order, then Crops (#1330).
+  expect(Object.keys(PACKAGE_FIXTURES)).toEqual(["now-activity.mjs", "graphs.mjs", "water.mjs", "control.mjs", "crops.mjs"]);
   for (const fixtures of Object.values(PACKAGE_FIXTURES)) for (const name of Object.keys(fixtures)) expect(FIXTURE_NAMES).toContain(name);
   expect(FIXTURE_NAMES[0]).toBe("in-band");
   expect(() => registerFixtures("graphs.mjs", { "in-band": () => {} })).toThrow("Fixture in-band from graphs.mjs is already registered");

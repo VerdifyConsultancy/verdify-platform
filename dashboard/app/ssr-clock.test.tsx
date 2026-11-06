@@ -15,6 +15,9 @@ import { ROUTES } from "../e2e/routes";
 import { AppShell } from "./components/app-shell";
 import { ToastProvider } from "./components/toast";
 import Activity from "./routes/activity";
+import Crops from "./routes/crops";
+import CropsHistory from "./routes/crops-history";
+import CropsMap from "./routes/crops-map";
 import ActivityLog from "./routes/activity-log";
 import Band from "./routes/band";
 import Equipment from "./routes/equipment";
@@ -38,6 +41,7 @@ const BUILD = "fedcba9876543210fedcba9876543210fedcba98";
 const CHILDREN = [
   { index: true, Component: Now },
   { path: "water", Component: Water, children: [{ index: true, Component: WaterBoard }, { path: "schedules", Component: WaterSchedules }, { path: "history", Component: WaterHistory }] },
+  { path: "crops", Component: Crops, children: [{ index: true, Component: CropsMap }, { path: "history", Component: CropsHistory }] },
   { path: "graphs", Component: Graphs },
   { path: "graphs/zones", Component: GraphsZones },
   { path: "graphs/lighting", Component: GraphsLighting },
@@ -51,7 +55,7 @@ const CHILDREN = [
   { path: "planner/history", Component: PlannerHistory },
   { path: "planner/experiments", Component: PlannerExperiments },
 ];
-const TESTED = ["/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/lighting", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/band", "/plan", "/equipment", "/planner/history", "/planner/experiments"];
+const TESTED = ["/", "/water", "/water/schedules", "/water/history", "/crops", "/crops/history", "/graphs", "/graphs/zones", "/graphs/lighting", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/band", "/plan", "/equipment", "/planner/history", "/planner/experiments"];
 
 /** The page's server render at `instant`, its text and tags without attributes. */
 function serverText(path: string, instant: string): string {

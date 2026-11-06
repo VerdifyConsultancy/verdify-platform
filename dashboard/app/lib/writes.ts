@@ -10,6 +10,7 @@
  * - **R** `useRecordWrite`: API-15 and API-16.
  * - **B** `useBandWrite`: API-24, the band editor's one Save of every changed house anchor.
  * - `useStop`: API-IRR-07 and its result toast.
+ * - `useCropWrite`: API-CROP-07 to -11, the planting records (#1330).
  *
  * One action, one key: `crypto.randomUUID()` when Save, Run, Stop or Acknowledge is pressed, used for that request only.
  * While it is out the action is busy (the control reads "Sending…" and is disabled), and a second press sends nothing.
@@ -89,6 +90,8 @@ function problemWords(problem: Problem, units: FieldUnits): string {
   if (problem.code === "unavailable" && problem.result) return words("light_result", problem.result);
   if (problem.code === "unavailable") return problem.detail || problem.title;
   if (problem.code === "manifold_busy") return manifoldBusyText(problem);
+  // A planting refusal's own sentence names the cells and who holds them, or the places a text could mean (#1330).
+  if ((problem.code === "position_occupied" || problem.code === "ambiguous_position") && problem.detail) return problem.detail;
   if (hasWords("problem_code", problem.code)) return words("problem_code", problem.code);
   return problem.detail || problem.code;
 }
@@ -517,6 +520,25 @@ export function useBandWrite() {
     return outcome;
   }, [run, client, toast]);
   return { save, sending: action.sending, error: action.error, clearError: action.clearError };
+}
+
+// ---------------------------------------------------------------------------------------------------- crops
+export type CropOperationId = "API-CROP-07" | "API-CROP-08" | "API-CROP-09" | "API-CROP-10" | "API-CROP-11";
+/**
+ * A planting write (API-CROP-07 to -11): plant, move, harvest, remove and edit. Records only: no device write and no
+ * readback, so a 2xx is the end state. On success it refetches the map, the plantings, the open planting and cell
+ * reads and Activity; a refusal (`position_occupied`, `ambiguous_position`, a field) keeps the form open with `error`.
+ */
+export function useCropWrite<K extends CropOperationId>(operation: K) {
+  const client = useQueryClient();
+  const action = useAction();
+  const { run } = action;
+  const send = useCallback(async (params: ParamsOf<K>, body: BodyOf<K>) => {
+    const outcome = await run((key) => apiWrite(operation, params, body, key));
+    if (outcome.ok) refresh(client, ["API-CROP-01", "API-CROP-02", "API-CROP-03", "API-CROP-04", "API-17"]);
+    return outcome;
+  }, [run, client, operation]);
+  return { send, sending: action.sending, error: action.error, clearError: action.clearError };
 }
 
 // ---------------------------------------------------------------------------------------------------- Stop

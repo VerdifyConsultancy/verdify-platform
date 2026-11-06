@@ -12,7 +12,7 @@ import {
   DAY, JASON, LINES, MISTERS, REVISION, SCORECARD_REASON_COLUMNS, addDays, flowWithValvesClosed, iso, itemOf, laneOf, lineInfo, lineOf, local, localInstant,
   manifold, minutesZone, nextId, runLine, settingOf, stopLines,
 } from "./world.mjs";
-import { CROP_ROUTES, makeCrops } from "./crops.mjs";
+import { CROP_READS, CROP_WRITES, CropRefusal, cropWrite } from "./crops.mjs";
 
 const MINUTE = 60_000;
 const HOUR = 3_600_000;
@@ -30,7 +30,12 @@ export const ROUTES = [
   ["API-IRR-04", "PUT", "/v1/irrigation/schedules/{slot_id}"], ["API-IRR-05", "DELETE", "/v1/irrigation/schedules/{slot_id}"],
   ["API-IRR-06", "POST", "/v1/irrigation/lines/{line_id}/run"], ["API-IRR-07", "POST", "/v1/irrigation/stop"],
   ["API-IRR-08", "PUT", "/v1/irrigation/lines/{line_id}"], ["API-IRR-10", "GET", "/v1/irrigation/minutes"], ["API-IRR-11", "GET", "/v1/irrigation/runs"],
-  ["API-IRR-12", "POST", "/v1/equipment/override"], ["API-IRR-13", "POST", "/v1/irrigation/clear-fault"], ...CROP_ROUTES, ["BFF-01", "GET", "/auth/login"],
+  ["API-IRR-12", "POST", "/v1/equipment/override"], ["API-IRR-13", "POST", "/v1/irrigation/clear-fault"],
+  ["API-CROP-01", "GET", "/v1/crops/locations"], ["API-CROP-02", "GET", "/v1/crops/plantings"], ["API-CROP-07", "POST", "/v1/crops/plantings"],
+  ["API-CROP-03", "GET", "/v1/crops/plantings/{planting_id}"], ["API-CROP-11", "PATCH", "/v1/crops/plantings/{planting_id}"],
+  ["API-CROP-08", "POST", "/v1/crops/plantings/{planting_id}/move"], ["API-CROP-09", "POST", "/v1/crops/plantings/{planting_id}/harvest"],
+  ["API-CROP-10", "POST", "/v1/crops/plantings/{planting_id}/remove"], ["API-CROP-04", "GET", "/v1/crops/positions/{label}/history"],
+  ["API-CROP-05", "GET", "/v1/crops/catalog"], ["API-CROP-06", "GET", "/v1/crops/resolve"], ["BFF-01", "GET", "/auth/login"],
   ["BFF-02", "GET", "/auth/callback"], ["BFF-03", "POST", "/auth/logout"], ["INT-01", "POST", "/internal/sessions"],
   ["INT-02", "DELETE", "/internal/sessions/current"], ["OPS-01", "GET", "/healthz"], ["OPS-02", "GET", "/readyz"],
   ["OPS-04", "GET", "/metrics"],
@@ -944,7 +949,6 @@ function runsBody(world, { query }) {
   return paged(rows, query);
 }
 
-const CROPS = makeCrops({ refuse, invalid, object, activity });
 const READS = {
   "API-01": (world) => world.me,
   "API-02": nowBody,
@@ -969,9 +973,9 @@ const READS = {
   "API-IRR-02": agendaBody,
   "API-IRR-10": minutesBody,
   "API-IRR-11": runsBody,
+  ...CROP_READS,
   "OPS-01": () => ({ status: "ok" }),
   "OPS-02": () => ({ status: "ready", source_revision: REVISION }),
-  ...CROPS.READS,
 };
 
 // ---------------------------------------------------------------------------------------------------- writes
@@ -1375,7 +1379,7 @@ const WRITES = {
   "API-IRR-08": updateLines,
   "API-IRR-12": override,
   "API-IRR-13": clearFault,
-  ...CROPS.WRITES,
+  ...Object.fromEntries(CROP_WRITES.map((operationId) => [operationId, (world, request) => cropWrite(operationId, world, request)])),
 };
 
 // ---------------------------------------------------------------------------------------------------- BFF and BFF-only routes
@@ -1403,6 +1407,10 @@ const SPECIAL = {
   "OPS-04": () => ({ status: 200, headers: { "Content-Type": "text/plain; version=0.0.4; charset=utf-8" }, body: "verdify_alert_metrics_up 1\n" }),
 };
 
+const CROP_TITLES = {
+  invalid_request: "Invalid request", not_found: "Not found", unknown_target: "Unknown target", position_occupied: "Already planted",
+  ambiguous_position: "Ambiguous place", planting_ended: "Planting ended",
+};
 /**
  * One answer: `{operationId, status, headers, body, effect}`. `request` is `{method, url, headers, body}` (headers in
  * lower case, body parsed JSON) with the fixture API's `serial` and `key`; `history` counts earlier reads.
@@ -1444,6 +1452,7 @@ export function answer(world, request, history = { readsAfter: () => 0 }) {
     return done(response, result.effect ?? null);
   } catch (error) {
     if (error instanceof Refusal) return done(error.response);
+    if (error instanceof CropRefusal) return done(problem(error.status, error.code, CROP_TITLES[error.code] ?? "Refused", error.detail, error.fields));
     throw error;
   }
 }
@@ -1500,7 +1509,17 @@ export const EXAMPLES = {
   "API-IRR-11": (world) => get("/v1/irrigation/runs", { from: iso(world.now - 7 * DAY), to: iso(world.now) }),
   "API-IRR-12": () => send("POST", "/v1/equipment/override", { kind: "fans", minutes: 15 }),
   "API-IRR-13": () => send("POST", "/v1/irrigation/clear-fault", { line_id: "L04" }),
-  ...CROPS.EXAMPLES,
+  "API-CROP-01": () => get("/v1/crops/locations"),
+  "API-CROP-02": () => get("/v1/crops/plantings"),
+  "API-CROP-07": () => send("POST", "/v1/crops/plantings", { crop: "lettuce", variety: "Butterhead", positions: ["EAST-HYDRO-41..44"], count_per_cell: 1, count: 4 }),
+  "API-CROP-03": () => get("/v1/crops/plantings/5"),
+  "API-CROP-11": () => send("PATCH", "/v1/crops/plantings/5", { count: 6, reason: "Counted the Vandas" }),
+  "API-CROP-08": () => send("POST", "/v1/crops/plantings/5/move", { to_positions: ["CENTER-HANG-1", "CENTER-HANG-2"] }),
+  "API-CROP-09": () => send("POST", "/v1/crops/plantings/5/harvest", { count: 1, notes: "Cut a spike" }),
+  "API-CROP-10": () => send("POST", "/v1/crops/plantings/5/remove", { end_reason: "removed" }),
+  "API-CROP-04": () => get("/v1/crops/positions/EAST-HYDRO-41/history"),
+  "API-CROP-05": () => get("/v1/crops/catalog"),
+  "API-CROP-06": () => get("/v1/crops/resolve", { q: "hydro 1-10" }),
   "BFF-01": () => get("/auth/login", { returnTo: "/water" }),
   "BFF-02": () => get("/auth/callback", { code: "fixture", state: "/water" }),
   "BFF-03": () => send("POST", "/auth/logout"),

@@ -6,11 +6,11 @@ import { readFileSync, readdirSync } from "node:fs";
 import { expect, test } from "vitest";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
-/** The load order, after styles.css: tokens, WP0's primitives and shell, then WP1 to WP4. */
-const ORDER = ["tokens.css", "primitives.css", "shell.css", "now-activity.css", "graphs.css", "water.css", "control.css"];
+/** The load order, after styles.css: tokens, WP0's primitives and shell, then WP1 to WP4, then Crops (#1330). */
+const ORDER = ["tokens.css", "primitives.css", "shell.css", "now-activity.css", "graphs.css", "water.css", "control.css", "crops.css"];
 const TITLES: Readonly<Record<string, string>> = {
   "tokens.css": "Tokens", "primitives.css": "Primitives (WP0)", "shell.css": "Shell (WP0)", "now-activity.css": "Now and Activity (WP1)",
-  "graphs.css": "Graphs (WP2)", "water.css": "Water (WP3)", "control.css": "Control (WP4)",
+  "graphs.css": "Graphs (WP2)", "water.css": "Water (WP3)", "control.css": "Control (WP4)", "crops.css": "Crops (#1330)",
 };
 const sections = ORDER.map((name) => ({ name, text: read(`./${name}`) }));
 const uncommented = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, "");
@@ -27,7 +27,7 @@ const LAYOUT_TOKENS = [
   "--z-raised", "--z-sticky", "--z-nav", "--z-popover", "--z-toast",
 ];
 
-test("app/styles holds exactly the seven section files, and root.tsx loads them after styles.css in the fixed order", () => {
+test("app/styles holds exactly the eight section files, and root.tsx loads them after styles.css in the fixed order", () => {
   const files = readdirSync(new URL("./", import.meta.url)).filter((name) => name.endsWith(".css"));
   expect([...files].sort()).toEqual([...ORDER].sort());
   const root = read("../root.tsx");

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-// The information architecture of redesign §2.1 (changed 2026-11-05, #1361): six sections in one order, each view at its path with its h1, tab
+// The information architecture of redesign §2.1 (changed 2026-11-05, #1330, #1361): seven sections in one order, each view at its path with its h1, tab
 // and document title, and which section and view own a path.
 import { expect, test } from "vitest";
 import { SECTIONS, documentTitle, normalPath, sectionFor, viewFor, viewMeta, viewOf, type ViewId } from "./sections";
 
-test("six sections at every width, in this order, each defaulting to its first view; Control opens Settings, Planner opens Plan", () => {
-  expect(SECTIONS.map((section) => section.label)).toEqual(["Now", "Water", "Graphs", "Activity", "Control", "Planner"]);
-  expect(SECTIONS.map((section) => section.to)).toEqual(["/", "/water", "/graphs", "/activity", "/settings", "/plan"]);
+test("seven sections at every width, in this order, each defaulting to its first view; Control opens Settings, Planner opens Plan", () => {
+  expect(SECTIONS.map((section) => section.label)).toEqual(["Now", "Water", "Crops", "Graphs", "Activity", "Control", "Planner"]);
+  expect(SECTIONS.map((section) => section.to)).toEqual(["/", "/water", "/crops", "/graphs", "/activity", "/settings", "/plan"]);
   for (const section of SECTIONS) expect(section.views[0].path, section.id).toBe(section.to);
   expect(SECTIONS.map((section) => section.views.map((view) => view.tab))).toEqual([
-    ["Now"], ["Today", "Schedules", "History"], ["Climate", "Zones", "Lighting", "Statistics"], ["Alerts", "Log"], ["Settings", "Band", "Equipment"], ["Plan", "History", "Experiments"],
+    ["Now"], ["Today", "Schedules", "History"], ["Map", "History"], ["Climate", "Zones", "Lighting", "Statistics"], ["Alerts", "Log"], ["Settings", "Band", "Equipment"], ["Plan", "History", "Experiments"],
   ]);
 });
 
@@ -19,6 +19,8 @@ test("§2.1's h1 and document title for every view; a title that names its secti
     ["water-today", "Water today", "Water today · Verdify dashboard"],
     ["water-schedules", "Schedules", "Schedules · Water · Verdify dashboard"],
     ["water-history", "Water history", "Water history · Verdify dashboard"],
+    ["crops-map", "Crops", "Crops · Verdify dashboard"],
+    ["crops-history", "Crop history", "Crop history · Crops · Verdify dashboard"],
     ["graphs-climate", "Climate", "Climate · Graphs · Verdify dashboard"],
     ["graphs-zones", "Zones", "Zones · Graphs · Verdify dashboard"],
     ["graphs-lighting", "Lighting", "Lighting · Graphs · Verdify dashboard"],
@@ -44,7 +46,8 @@ test("§2.1's h1 and document title for every view; a title that names its secti
 test("a section owns every path under its views; the longest view path wins; nothing else is owned", () => {
   const owned: [string, string | null, ViewId | null][] = [
     ["/", "now", "now"], ["/water", "water", "water-today"], ["/water/", "water", "water-today"], ["/water/schedules", "water", "water-schedules"],
-    ["/water/history", "water", "water-history"], ["/graphs", "graphs", "graphs-climate"], ["/graphs/zones", "graphs", "graphs-zones"], ["/graphs/lighting", "graphs", "graphs-lighting"],
+    ["/water/history", "water", "water-history"], ["/crops", "crops", "crops-map"], ["/crops/history", "crops", "crops-history"], ["/graphs", "graphs", "graphs-climate"], ["/graphs/zones", "graphs", "graphs-zones"],
+    ["/graphs/lighting", "graphs", "graphs-lighting"],
     ["/graphs/statistics", "graphs", "graphs-statistics"], ["/graphs/scorecard", "graphs", "graphs-climate"], ["/activity", "activity", "activity-alerts"],
     ["/activity/log", "activity", "activity-log"], ["/settings", "control", "control-settings"], ["/band", "control", "control-band"], ["/plan", "planner", "planner-plan"],
     ["/equipment", "control", "control-equipment"], ["/planner", "planner", "planner-plan"], ["/planner/history", "planner", "planner-history"],

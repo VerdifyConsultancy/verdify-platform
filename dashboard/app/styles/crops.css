@@ -1,0 +1,94 @@
+/* SPDX-License-Identifier: MIT */
+/* Section: Crops (#1330) */
+/* Crops → Map and History: the selection bar, the legend, one card per wall or system, the shelf strips and their cell grids, the hydro rack that scrolls sideways on phones, and the planting and cell drawers. New classes use the prefix crop-. Grids take their column count from a class (crop-cols-N), never an inline style. A crop's tint is one of eight token pairs (crop-tone-N); white is the one literal. Loaded by root.tsx after control.css. */
+
+/* ---------------------------------------------------------------- The selection bar */
+.crop-toolbar{position:sticky;top:var(--shell-header-h,4.3rem);z-index:var(--z-raised);display:grid;gap:var(--space-2);margin:0 0 var(--space-4);padding:var(--space-3) var(--space-4);border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-xs)}
+.crop-toolbar-what{margin:0;font-size:var(--fs-sm);overflow-wrap:anywhere}
+.crop-toolbar-actions{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.crop-toolbar-actions:empty{display:none}
+.crop-place-form{display:grid;gap:var(--space-1);font-size:var(--fs-sm)}
+.crop-place-form label{font-weight:600}
+.crop-place-form input{flex:1 1 14rem;min-width:0}
+@media(max-width:860px){.crop-toolbar{top:var(--shell-header-h,calc(var(--header-h-phone) + 1px))}}
+
+/* ---------------------------------------------------------------- The legend */
+.crop-legend{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-4);margin:0 0 var(--space-4);padding:0;list-style:none;font-size:var(--fs-sm)}
+.crop-legend li{display:inline-flex;align-items:center;gap:var(--space-2)}
+.crop-swatch{display:inline-block;width:1rem;height:1rem;border-radius:var(--radius-sm);border:1px solid var(--line-strong)}
+.crop-legend-empty{margin:0 0 var(--space-4)}
+
+/* ---------------------------------------------------------------- Cards and shelf strips */
+.crop-cards{display:grid;gap:var(--space-4)}
+.crop-card{min-width:0}
+.crop-strip{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-2);padding:var(--space-3) 0;border-top:1px solid var(--line)}
+.crop-strip:first-of-type{border-top:0}
+.crop-strip-head{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-3)}
+.crop-strip-head h3{margin:0}
+.crop-strip-water{margin:0}
+.crop-strip-head .crop-place-toggle{margin-left:auto}
+.crop-place-toggle{min-height:var(--tap)}
+.crop-groups{margin:0}
+.crop-chips{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:0;padding:0;list-style:none}
+.crop-chip{display:inline-grid;gap:.1rem;min-height:var(--tap);padding:var(--space-1) var(--space-3);border-radius:var(--radius-sm);border:1px solid var(--line-strong);text-decoration:none;font-size:var(--fs-sm)}
+.crop-chip-name{font-weight:620}
+.crop-chip-meta{font-size:var(--fs-xs)}
+
+/* ---------------------------------------------------------------- Cell grids */
+.crop-grids{display:flex;flex-wrap:wrap;gap:var(--space-3)}
+.crop-grids>.crop-grid-group{flex:1 1 12rem;min-width:0}
+.crop-rack-scroll{width:100%;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:var(--space-1)}
+.crop-rack{display:flex;gap:var(--space-4);min-width:62rem}
+.crop-rack>.crop-grid-group{flex:1 1 0;min-width:0}
+.crop-grid-label{margin:0 0 var(--space-1);font:600 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--forest)}
+.crop-grid{display:grid;gap:2px}
+.crop-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}
+.crop-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.crop-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.crop-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.crop-cols-5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.crop-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}
+.crop-cols-7{grid-template-columns:repeat(7,minmax(0,1fr))}
+.crop-cols-8{grid-template-columns:repeat(8,minmax(0,1fr))}
+.crop-cols-9{grid-template-columns:repeat(9,minmax(0,1fr))}
+.crop-cols-10{grid-template-columns:repeat(10,minmax(0,1fr))}
+.crop-cell{display:grid;align-content:start;justify-items:start;gap:0;min-width:0;min-height:4.25rem;padding:var(--space-1) var(--space-2);border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:#fff;color:var(--ink);font-size:var(--fs-xs);font-weight:500;line-height:1.25;text-align:left;cursor:pointer;user-select:none;touch-action:manipulation}
+.crop-rack .crop-cell{min-height:3.25rem;padding:.15rem .25rem}
+.crop-cell>span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crop-cell-no{font:500 var(--fs-label)/1.2 var(--mono)}
+.crop-cell-crop{font-weight:700}
+.crop-cell-gap{min-height:3.25rem}
+.crop-cell-empty{background:#fff}
+.crop-cell[aria-pressed=true]{box-shadow:inset 0 0 0 3px var(--ink)}
+.crop-cell-empty[aria-pressed=true]{background:var(--field)}
+
+/* A crop's tint: eight pairs of tokens with readable text, in the order crops first appear on the map. */
+.crop-tone-0{background:var(--tint-ok);border-color:var(--leaf);color:var(--ink)}
+.crop-tone-1{background:var(--mint);border-color:var(--leaf);color:var(--ink)}
+.crop-tone-2{background:var(--leaf);border-color:var(--forest);color:#fff}
+.crop-tone-3{background:var(--tint-warn);border-color:var(--amber);color:var(--ink)}
+.crop-tone-4{background:var(--forest);border-color:var(--ink);color:#fff}
+.crop-tone-5{background:var(--line-strong);border-color:var(--muted);color:var(--ink)}
+.crop-tone-6{background:var(--ink-2);border-color:var(--ink);color:#fff}
+.crop-tone-7{background:var(--field);border-color:var(--forest);border-style:dashed;color:var(--ink)}
+a.crop-chip:hover{border-color:var(--ink)}
+
+/* ---------------------------------------------------------------- Drawers */
+.crop-preview{margin:0 0 var(--space-3);padding:var(--space-2) var(--space-3);border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--field);font-size:var(--fs-sm)}
+.crop-preview p{margin:0}
+.crop-conflicts{margin-top:var(--space-2);padding-left:var(--space-3);border-left:3px solid var(--amber)}
+.crop-conflict-head{font-weight:620}
+.crop-conflicts ul{margin:var(--space-1) 0 0;padding-left:var(--space-4)}
+.crop-drawer-h{margin:var(--space-4) 0 var(--space-2);font-size:var(--fs-md)}
+.crop-history{margin:0;padding-left:var(--space-4);font-size:var(--fs-sm)}
+.crop-history li{margin:0 0 var(--space-1)}
+.crop-kv{display:grid;grid-template-columns:max-content 1fr;gap:var(--space-1) var(--space-3);margin:0;font-size:var(--fs-sm)}
+.crop-kv dt{font-weight:600}
+.crop-kv dd{margin:0;overflow-wrap:anywhere}
+
+/* ---------------------------------------------------------------- History */
+.crop-filters{display:grid;gap:var(--space-3);margin:0 0 var(--space-4)}
+.crop-filter-form{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--space-3);font-size:var(--fs-sm)}
+.crop-filter-form label{display:grid;gap:var(--space-1);font-weight:600}
+.crop-filter-form a{display:inline-flex;align-items:center;min-height:var(--tap)}
+.crop-where{overflow-wrap:anywhere}

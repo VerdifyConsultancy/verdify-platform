@@ -12,6 +12,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { baseCrops } from "./crops.mjs";
 
 export const ZONE = "America/Denver";
 export const REVISION = "0123456789abcdef0123456789abcdef01234567";
@@ -202,6 +203,8 @@ function inBand(now) {
     now,
     flags: { apiDown: false, progress: false, confirm: true, flowAfterStop: false, stopUnconfirmed: false, lateOverride: false, lightResult: null, mistNeedsSchedule: false },
     me: { username: "jason", display_name: "Jason", role: "operator", writes_enabled: true, source_revision: REVISION },
+    // Crops (#1330): the location tree and the plantings, crops.mjs.
+    crops: baseCrops(now),
     indoor: { temp_f: reading(64.8, now - 20_000), rh_pct: reading(71.0, now - 20_000), vpd_kpa: reading(0.62, now - 20_000) },
     outdoor: { temp_f: reading(41.2, now - 2 * MINUTE), rh_pct: reading(58.0, now - 2 * MINUTE) },
     // The newest weather_forecast issue (#1138); null: no forecast row in any window (no-forecast).
