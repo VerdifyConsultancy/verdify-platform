@@ -21,9 +21,9 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-PREDECESSOR = 302
+PREDECESSOR = 303
 # Merged predecessors not yet applied in production when 304 is qualified (each one --apply-first).
-CHAIN = ()
+CHAIN = (303,)
 SEALS = ("api", "ingestor", "mcp")
 API, INGESTOR = "verdify_api_runtime_login", "verdify_ingestor_runtime_login"
 

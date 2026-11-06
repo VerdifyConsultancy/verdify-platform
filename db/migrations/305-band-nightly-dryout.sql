@@ -21,14 +21,14 @@ BEGIN
     IF current_user <> 'verdify'
         OR NOT EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations'
             AND seq=304 AND filename='db/migrations/304-water-day-local-end.sql'
-            AND sha256='2abfdb7625c5ee53a58255e94d47cdb4aa669ac07bafe171a709c103b63d1485'
+            AND sha256='1d89d1807dcbb19905ad147f8c0596d6066df48733dd5103739e28529003d901'
             AND stamp_method='runner')
         OR EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq>304)
         OR (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts)<>2
         OR (SELECT count(*) FROM public.mcp_runtime_boundary_receipt)<>1
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547'
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e'
-        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM 'af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '42091d8bc52adfff17ef589ca7d71ac3a97fe37af4460b551a938f313635bb8c'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM 'c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940'
+        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245'
         OR EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r
             WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))
         OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton
@@ -162,9 +162,9 @@ UPDATE public.daily_band_compliance b
 
 DO $successor$
 BEGIN
-    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547'
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e'
-        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM 'af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873'
+    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '42091d8bc52adfff17ef589ca7d71ac3a97fe37af4460b551a938f313635bb8c'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM 'c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940'
+        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245'
         OR EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r
             WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))
         OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton

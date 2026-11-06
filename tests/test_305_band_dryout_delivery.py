@@ -23,7 +23,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 PREDECESSOR = 304
 # Merged predecessors not yet applied in production when 305 is qualified (each one --apply-first).
-CHAIN = (304,)
+CHAIN = (303, 304)
 SEALS = ("api", "ingestor", "mcp")
 API, INGESTOR = "verdify_api_runtime_login", "verdify_ingestor_runtime_login"
 

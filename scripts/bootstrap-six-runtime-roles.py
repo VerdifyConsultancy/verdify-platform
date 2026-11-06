@@ -898,17 +898,17 @@ def sealed_sql_303():
 WATER_DAY_MIGRATION = (
     304,
     "304-water-day-local-end.sql",
-    "2abfdb7625c5ee53a58255e94d47cdb4aa669ac07bafe171a709c103b63d1485",
+    "1d89d1807dcbb19905ad147f8c0596d6066df48733dd5103739e28529003d901",
 )
 # v_water_meter_daily keeps its columns, owner and ACL (the dashboard duty's SELECT only), which neither ordinary
-# login nor an MCP role holds; v_water_daily, which the ingestor reads, keeps its text. All three seals stay 302's.
-SUCCESSOR_304 = SUCCESSOR_302
+# login nor an MCP role holds; v_water_daily, which the ingestor reads, keeps its text. All three seals stay 303's.
+SUCCESSOR_304 = SUCCESSOR_303
 
 
 def sealed_sql_304():
-    # Keep every 302 predicate and bind the exact 304 runner stamp.
-    predecessor = sealed_sql_302()
-    current = seal_profile_sql(302, SUCCESSOR_302)
+    # Keep every 303 predicate and bind the exact 304 runner stamp.
+    predecessor = sealed_sql_303()
+    current = seal_profile_sql(303, SUCCESSOR_303)
     assert predecessor.count(current) == 1
     return (
         "("
@@ -922,7 +922,7 @@ def sealed_sql_304():
 BAND_DRYOUT_MIGRATION = (
     305,
     "305-band-nightly-dryout.sql",
-    "352a37ae666996e2055cccad70ae4c16cb7de310196ef802f0d806c0d8829ef5",
+    "4e2db419f15541080310ca99782f38f298b17d8318b845a997b88672799b971e",
 )
 # daily_band_compliance keeps no ACL entry and fn_band_dryout_night is verdify's with PUBLIC's EXECUTE revoked,
 # reached only through the refresh duty's entry point. All three seals stay 304's.
@@ -939,6 +939,64 @@ def sealed_sql_305():
         + predecessor.replace(current, seal_profile_sql(305, SUCCESSOR_305), 1)
         + " AND "
         + ledger_row_sql(*BAND_DRYOUT_MIGRATION)
+        + ")"
+    )
+
+
+def sealed_sql():
+    return (
+        "("
+        + sealed_sql_270_274()
+        + " OR "
+        + sealed_sql_275()
+        + " OR "
+        + sealed_sql_276()
+        + " OR "
+        + sealed_sql_277()
+        + " OR "
+        + sealed_sql_278()
+        + " OR "
+        + sealed_sql_279()
+        + " OR "
+        + sealed_sql_280()
+        + " OR "
+        + sealed_sql_281()
+        + " OR "
+        + sealed_sql_282()
+        + " OR "
+        + sealed_sql_283()
+        + " OR "
+        + sealed_sql_284()
+        + " OR "
+        + sealed_sql_285()
+        + " OR "
+        + sealed_sql_286()
+        + " OR "
+        + sealed_sql_287()
+        + " OR "
+        + sealed_sql_288()
+        + " OR "
+        + sealed_sql_289()
+        + " OR "
+        + sealed_sql_290()
+        + " OR "
+        + sealed_sql_291()
+        + " OR "
+        + sealed_sql_293()
+        + " OR "
+        + sealed_sql_294()
+        + " OR "
+        + sealed_sql_296()
+        + " OR "
+        + sealed_sql_301()
+        + " OR "
+        + sealed_sql_302()
+        + " OR "
+        + sealed_sql_303()
+        + " OR "
+        + sealed_sql_304()
+        + " OR "
+        + sealed_sql_305()
         + ")"
     )
 

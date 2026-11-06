@@ -2,14 +2,14 @@
   "migration": "304-water-day-local-end.sql",
   "final_migration_qualification_pending": true,
   "before": {
-    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
-    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
-    "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"
+    "api": "42091d8bc52adfff17ef589ca7d71ac3a97fe37af4460b551a938f313635bb8c",
+    "ingestor": "c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940",
+    "mcp": "2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245"
   },
   "projected_successor": {
-    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
-    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
-    "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"
+    "api": "42091d8bc52adfff17ef589ca7d71ac3a97fe37af4460b551a938f313635bb8c",
+    "ingestor": "c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940",
+    "mcp": "2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245"
   },
-  "projection": "2026-11-06, read only, production at exact302. fn_runtime_ordinary_boundary_digest (217) takes in a relation only if the api or ingestor login can reach it, one of their roles owns it, 217 protects it by name, or PUBLIC or one of their roles holds an ACL entry on it; fn_mcp_runtime_boundary_digest (263) does the same for PUBLIC and the MCP roles. v_water_meter_daily is verdify's with one other ACL entry, verdify_dashboard_runtime SELECT, and is not in 217's protected list, so it is in neither digest. v_water_daily (the ingestor's SELECT) and v_water_attribution_daily read it by name, so their pg_get_viewdef text and columns are unchanged by a CREATE OR REPLACE that keeps the view's columns. All three seals are expected to stay 302's. Live before 304: pg_get_viewdef sha256 b6c1bafb...f338, session TimeZone UTC, 2026-11-01 (local) is 06:00Z..07:00Z+1 with last_raw_ts 2026-11-02 06:59:24Z (complete, discontinuous: one gap event). If the probe shows any digest moved, stop: that is a finding, not a literal to update. Otherwise run scripts/qualify-migration-successor.py db/migrations/304-water-day-local-end.sql --native-fixture db/qualification/304-water-day-local-end-fixture.sql --fixture tests/fixtures/304-water-day-local-end-native-qualification.json, with --apply-first for each merged predecessor production lacks (303) and --prelock as needed."
+  "projection": "2026-11-06, read only, production at exact302. fn_runtime_ordinary_boundary_digest (217) takes in a relation only if the api or ingestor login can reach it, one of their roles owns it, 217 protects it by name, or PUBLIC or one of their roles holds an ACL entry on it; fn_mcp_runtime_boundary_digest (263) does the same for PUBLIC and the MCP roles. v_water_meter_daily is verdify's with one other ACL entry, verdify_dashboard_runtime SELECT, and is not in 217's protected list, so it is in neither digest. v_water_daily (the ingestor's SELECT) and v_water_attribution_daily read it by name, so their pg_get_viewdef text and columns are unchanged by a CREATE OR REPLACE that keeps the view's columns. All three seals are expected to stay 303's (#1345; api 42091d8b, ingestor c7ad6a83, mcp 2c6a1cbe, measured by lane A's rolled-back qualification at exact302). Live before 304: pg_get_viewdef sha256 b6c1bafb...f338, session TimeZone UTC, 2026-11-01 (local) is 06:00Z..07:00Z+1 with last_raw_ts 2026-11-02 06:59:24Z (complete, discontinuous: one gap event). If the probe shows any digest moved, stop: that is a finding, not a literal to update. Otherwise run scripts/qualify-migration-successor.py db/migrations/304-water-day-local-end.sql --native-fixture db/qualification/304-water-day-local-end-fixture.sql --fixture tests/fixtures/304-water-day-local-end-native-qualification.json, with --apply-first for each merged predecessor production lacks (303) and --prelock as needed."
 }

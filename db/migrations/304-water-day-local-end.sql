@@ -9,7 +9,7 @@
 -- ledger watermark and quality order. The view keeps its oid, owner, ACL (verdify, and SELECT for the dashboard
 -- duty) and options. v_water_daily and v_water_attribution_daily read it by name, so their text is unchanged.
 -- No runtime seal moves: neither ordinary login, an MCP role nor PUBLIC holds an entry on the view, and the
--- relations they reach keep their text and columns. Both blocks pin 302's seals.
+-- relations they reach keep their text and columns. Both blocks pin 303's seals.
 SET LOCAL search_path=pg_catalog,public,pg_temp;
 LOCK TABLE public.schema_migrations,public.runtime_ordinary_login_attestation_receipts,
     public.mcp_runtime_boundary_receipt IN SHARE ROW EXCLUSIVE MODE;
@@ -17,15 +17,15 @@ DO $predecessor$
 BEGIN
     IF current_user <> 'verdify'
         OR NOT EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations'
-            AND seq=302 AND filename='db/migrations/302-planner-section-reads.sql'
-            AND sha256='a18aeb0588b5f4e56b7a78ce3dea7c592873b9fae54f0701c45f6d9bbbd8f3bf'
+            AND seq=303 AND filename='db/migrations/303-soil-targets-configurable.sql'
+            AND sha256='fa983725905c01373290a490cd557fda86841a3c84cdee0f965513f924a3af97'
             AND stamp_method='runner')
-        OR EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq>302)
+        OR EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq>303)
         OR (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts)<>2
         OR (SELECT count(*) FROM public.mcp_runtime_boundary_receipt)<>1
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547'
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e'
-        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM 'af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '42091d8bc52adfff17ef589ca7d71ac3a97fe37af4460b551a938f313635bb8c'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM 'c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940'
+        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245'
         OR EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r
             WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))
         OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton
@@ -156,9 +156,9 @@ COMMENT ON VIEW public.v_water_meter_daily IS
 
 DO $successor$
 BEGIN
-    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547'
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e'
-        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM 'af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873'
+    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM '42091d8bc52adfff17ef589ca7d71ac3a97fe37af4460b551a938f313635bb8c'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM 'c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940'
+        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245'
         OR EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r
             WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))
         OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton
