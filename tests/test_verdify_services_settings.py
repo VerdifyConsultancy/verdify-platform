@@ -21,6 +21,7 @@ import yaml
 from verdify_schemas import irrigation
 from verdify_schemas.band_rows import BAND_PARAM_ROWS
 from verdify_schemas.policy_vector import wire_fields
+from verdify_schemas.setting_help import setting_help, setting_label
 from verdify_schemas.tunable_registry import (
     ACTIVITY_MIRROR_PARAMS,
     LEGACY_WIDE_LIMIT_PARAMS,
@@ -714,6 +715,24 @@ def test_no_readback_only_for_a_setting_with_no_readback_route():
     assert (result.state, result.readback_via, result.readback) == ("no_readback", "none", None)
 
 
+def test_a_setting_nobody_requested_with_no_readback_is_no_readback_never_not_confirmed():
+    """#1333: not_confirmed means a request at least 5 min old that the readback does not match. A cfg-routed
+    setting with no desired row, plan or push and no readback is no_readback; with a readback it is confirmed."""
+    db = FakeDB()
+    result = status(db, "safety_vpd_min")
+    assert (result.readback_via, result.desired, result.state, result.state_reason) == (
+        "cfg",
+        None,
+        "no_readback",
+        None,
+    )
+    db.snapshots.append(("safety_vpd_min", ago(minutes=1), 0.3))
+    assert status(db, "safety_vpd_min").state == "confirmed"
+    db = FakeDB()
+    db.add_desired("safety_vpd_min", 0.3, at=ago(minutes=6))
+    assert status(db, "safety_vpd_min").state == "not_confirmed"
+
+
 def test_an_irrigation_site_write_stays_requested_before_the_engine():
     db = FakeDB()
     write = ago(hours=3)
@@ -1168,11 +1187,32 @@ def catalog(db=None):
 
 
 def test_the_catalog_lists_every_registry_row_with_the_registry_s_label_and_unit():
+    """The registry label, except where it is the raw name: then the setting_help label (#1332)."""
     rows = catalog()
     assert list(rows) == list(REGISTRY)
     for name, spec in REGISTRY.items():
-        assert (rows[name].label, rows[name].unit) == (spec.label, spec.unit), name
+        assert (rows[name].label, rows[name].unit) == (setting_label(name), spec.unit), name
+        assert rows[name].label != name, name
+        if spec.label != name:
+            assert rows[name].label == spec.label, name
     assert (rows[KPA].label, rows[KPA].unit) == ("VPD Mister Engage", "kPa")
+
+
+def test_every_catalog_row_carries_its_help_and_a_read_only_row_its_kind():
+    """#1332 and #1333: help on every row; read_only_kind on exactly the read-only rows, named by the rule."""
+    rows = catalog()
+    for name, row in rows.items():
+        assert row.help is not None and row.help.summary and row.help.effect, name
+        assert row.help == setting_help(name), name
+        assert (row.read_only_kind is None) is row.writable, name
+    assert rows["temp_high"].read_only_kind == "legacy_wide_limit"
+    assert rows["mister_on_s"].read_only_kind == "retired"
+    assert rows["outdoor_temp_f"].read_only_kind == "readback_context"
+    assert rows["sw_onchip_band_enabled"].read_only_kind == "band_owner"
+    assert rows["activity_start_hour"].read_only_kind == "activity_mirror"
+    assert "gl_main_sunrise_hour" in rows["activity_start_hour"].source_params
+    assert rows["safety_max"].help.guardrail and rows["safety_max"].writable
+    assert rows[KPA].model_dump(mode="json")["help"]["raise"] == setting_help(KPA).raise_
 
 
 def test_catalog_groups_and_read_only_reasons():

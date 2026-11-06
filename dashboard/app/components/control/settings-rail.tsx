@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { useId, type MouseEvent } from "react";
+import { useId, type MouseEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router";
 import { cls } from "../common";
 
@@ -10,7 +10,11 @@ import { cls } from "../common";
  * choices are two selects above it, Show and "Jump to group". Both render and the stylesheet shows one, so the server's
  * HTML is the same at every width.
  */
-export type RailFilter = { readonly key: string; readonly label: string; readonly count: number | null; readonly to: string; readonly current: boolean };
+export type RailFilter = {
+  readonly key: string; readonly label: string; readonly count: number | null; readonly to: string; readonly current: boolean;
+  /** What the filter keeps, in one line (#1333): the item's title, and the legend's entry. */
+  readonly definition?: string;
+};
 /** A group and the rows it holds under the current filter and search; null before API-09 first answers. */
 export type RailGroup = { readonly group: string; readonly label: string; readonly count: number | null };
 
@@ -29,7 +33,11 @@ function jumpTo(group: string): boolean {
 
 const countText = (count: number | null) => (count === null ? "—" : String(count));
 
-export function SettingsRail({ filters, groups }: { filters: readonly RailFilter[]; groups: readonly RailGroup[] }) {
+/**
+ * `foot` renders under both the lists and the selects, at every width: the window switch, the retired toggle and the
+ * legend of definitions (#1333).
+ */
+export function SettingsRail({ filters, groups, foot }: { filters: readonly RailFilter[]; groups: readonly RailGroup[]; foot?: ReactNode }) {
   const showId = useId(), groupsId = useId(), showSelect = useId(), groupSelect = useId();
   const navigate = useNavigate();
   const current = filters.find((item) => item.current) ?? filters[0];
@@ -39,7 +47,7 @@ export function SettingsRail({ filters, groups }: { filters: readonly RailFilter
       <p id={showId} className="eyebrow ctl-rail-label">Show</p>
       <ul className="ctl-rail-list ctl-rail-filters" aria-labelledby={showId}>
         {filters.map((item) => <li key={item.key}>
-          <Link className="ctl-rail-item" to={item.to} aria-current={item.current ? "true" : undefined}>
+          <Link className="ctl-rail-item" to={item.to} aria-current={item.current ? "true" : undefined} title={item.definition}>
             <span className="ctl-rail-name">{item.label}</span> <span className="ctl-rail-count">{countText(item.count)}</span>
           </Link>
         </li>)}
@@ -74,5 +82,6 @@ export function SettingsRail({ filters, groups }: { filters: readonly RailFilter
         </select>
       </div>
     </div>
+    {foot && <div className="ctl-rail-foot">{foot}</div>}
   </nav>;
 }

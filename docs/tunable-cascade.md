@@ -15,6 +15,10 @@ registry against firmware, schemas, entity_map, cfg readbacks, and MCP.
 
 **Current contract doc:** `docs/firmware-control-contract.md`.
 
+**Operator text:** `verdify_schemas/setting_help/` holds what each setting is, what it changes in the controller and
+what raising or lowering it does (#1332), with the code path behind each entry in its `refs`. The dashboard (API-09
+`help`), MCP `settings` and the generated reference page all read it; edit the text there, not here.
+
 ## Known open issues
 
 ### Resolved 2026-05-23 — band-first heating target and resource audit

@@ -209,9 +209,14 @@ const planLane = z.object({
 const plan = z.object({
   plan: planRecord.nullable(), no_plan_since: maybe(text), lanes: z.array(planLane), manual_count: int, health: z.array(plannerTrigger),
 });
+/** A setting's operator text (#1332); a server older than it sends none. */
+const settingHelp = z.object({
+  summary: text, effect: text, raise: maybe(text), lower: maybe(text), caution: maybe(text), guardrail: flag.optional(), reference_url: maybe(text),
+});
 const setting = z.object({
   param: text, label: text, control_class: code, group: code, kind: code, unit: maybe(text), min: maybe(num), max: maybe(num), step: maybe(num),
-  options: z.array(z.object({ value: num, label: text })).optional(), writable: flag, read_only_reason: maybe(text), readback_via: code,
+  options: z.array(z.object({ value: num, label: text })).optional(), writable: flag, read_only_reason: maybe(text),
+  read_only_kind: maybe(code), source_params: z.array(text).optional(), help: settingHelp.nullable().optional(), readback_via: code,
   readback: reading.nullable(), desired: desiredSetting.nullable(),
   plan: z.object({ value: num.nullable(), plan_id: text, source: code, written_at: text, next: planWaypoint.nullable() }).nullable(),
   applied_from: code, state: code,

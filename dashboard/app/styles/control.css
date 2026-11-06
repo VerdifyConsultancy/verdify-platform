@@ -297,3 +297,30 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .light-auto-link{font-size:var(--fs-sm)}
 .light-actions{margin:.5rem 0 0}
 .light-controls .state-note,.light-controls .field-error{margin:.35rem 0 0}
+
+/* What a setting is and does (#1332) and what Settings' words mean (#1333). */
+.setting-summary{display:block;margin-top:var(--space-1);font-size:var(--fs-xs);line-height:1.4;color:var(--muted);max-width:28rem}
+.ctl-filter-note{margin:0 0 var(--space-3)}
+.ctl-rail-foot{display:grid;gap:var(--space-2);margin-top:var(--space-4);font-size:var(--fs-sm)}
+.ctl-rail-foot p{margin:0}
+.ctl-rail-window{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)}
+.ctl-rail-window-label{color:var(--muted)}
+.ctl-rail-window .chip[aria-current=true]{border-color:var(--forest);color:var(--forest);font-weight:620}
+.ctl-rail-toggle a{display:inline-flex;align-items:center;min-height:var(--tap);font-weight:700}
+.ctl-legend summary{min-height:var(--tap);display:flex;align-items:center;font-weight:700;cursor:pointer}
+.ctl-legend dl,.ctl-help-list{margin:0 0 var(--space-3);display:grid;gap:var(--space-2)}
+.ctl-legend dt,.ctl-help-list dt{font-weight:620}
+.ctl-legend dd,.ctl-help-list dd{margin:0;color:var(--ink-2,var(--ink))}
+.ctl-legend dd{font-size:var(--fs-xs);color:var(--muted)}
+.ctl-help{display:grid;gap:var(--space-2);margin-top:var(--space-4);padding-top:var(--space-3);border-top:1px solid var(--line);font-size:var(--fs-sm)}
+.ctl-help p{margin:0}
+.ctl-help-summary{font-weight:600}
+.ctl-help-ref a,.ctl-help-sources a{font-weight:700}
+.ctl-guardrail-confirm{margin-top:var(--space-3)}
+.ctl-glossary{display:grid;gap:var(--space-5)}
+.ctl-glossary-head{margin:0 0 var(--space-2);font-size:var(--fs-md)}
+.ctl-glossary-entry{padding:var(--space-3) 0;border-bottom:1px solid var(--line);break-inside:avoid}
+.ctl-glossary-entry h3{margin:0;font-size:var(--fs-md)}
+.ctl-glossary-entry .setting-param{display:inline;margin-left:var(--space-2)}
+.ctl-glossary-summary{margin:var(--space-1) 0 var(--space-2)}
+@media print{.ctl-rail,.ctl-filter-note{display:none}.ctl-glossary-entry{border-color:var(--line-strong)}}

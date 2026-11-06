@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Setting } from "../../lib/operator-api";
 import { PanelError } from "../panel";
 import { SETTING_GROUPS, SettingRow, groupLabel } from "../setting-row";
+import { readOnlyWords } from "./setting-help";
 import { groupAnchor } from "./settings-rail";
 import { useSiteCapRevision } from "./setting-drawer";
 
@@ -22,11 +23,17 @@ export function groupRows(rows: readonly Setting[]): [string, Setting[]][] {
   return [...groups].filter(([, list]) => list.length > 0);
 }
 
-/** The note a group head carries: the Band in force rows say once, here, what each would otherwise repeat. */
+/**
+ * The note a group head carries: the Band in force rows say once, here, what each would otherwise repeat ("Computed
+ * (band in force): calculated from the crop band; edit the anchors under Crop band", #1333).
+ */
 function groupNote(group: string, rows: readonly Setting[]): string | null {
   if (group !== "band_in_force") return null;
-  const reasons = new Set(rows.map((row) => row.read_only_reason).filter(Boolean));
-  return reasons.size === 1 ? [...reasons][0] ?? null : null;
+  const words = new Set(rows.map((row) => {
+    const read = readOnlyWords(row);
+    return read ? `${read.label}: ${read.definition.charAt(0).toLowerCase()}${read.definition.slice(1)}` : null;
+  }).filter(Boolean));
+  return words.size === 1 ? [...words][0] ?? null : null;
 }
 
 type GroupProps = { rows: readonly Setting[]; readbackStale: boolean; editTo: (param: string) => string; today: string | null; programRevision?: number | null };
