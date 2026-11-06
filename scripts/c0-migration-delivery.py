@@ -333,13 +333,14 @@ SUCCESSOR_291_DIGESTS = {
 SUCCESSOR_291_MCP_DIGEST = SUCCESSOR_290_MCP_DIGEST
 # Exact293 (#1327, #1328): plantings on the location tree. Layout columns, shelf_water_lines, crop_occupancy,
 # the end_reason/source/actor columns and the dashboard, MCP and ingestor grants move all three seals. 293
-# chains from 291 (292 is a gap). Until the rolled-back native qualification (290 and 291 applied first)
-# measures 293, these are 291's seals as stand-ins, which 293's own successor block refuses; its fixture
-# records which they are.
+# chains from 291 (292 is a gap); the rolled-back native qualification on production at 291 measured them.
 SUCCESSOR_293 = "293-crop-plantings.sql"
-SUCCESSOR_293_SHA256 = "7bdf03cddae08f1680a1e3586a49923bb1be211c0ba11e3347437f332a3ea164"
-SUCCESSOR_293_DIGESTS = SUCCESSOR_291_DIGESTS
-SUCCESSOR_293_MCP_DIGEST = SUCCESSOR_291_MCP_DIGEST
+SUCCESSOR_293_SHA256 = "fe591976baeb81eb7676b6ff3198a9f370ba6bb7db8f69218c1d5f47ddbd48b7"
+SUCCESSOR_293_DIGESTS = {
+    "verdify_api_runtime_login": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "verdify_ingestor_runtime_login": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+}
+SUCCESSOR_293_MCP_DIGEST = "2f5f7ccadf8006a351353c4fce8aec9a59f634b605adf2bcda5e6e61dbe254b9"
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.

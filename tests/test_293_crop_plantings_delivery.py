@@ -3,9 +3,8 @@
 #1327 and #1328: plantings on the location tree. 293 adds layout columns to shelves and positions, the
 shelf_water_lines and crop_occupancy tables, end_reason/source/actor on crops, the v_crop_planting_current view and
 the dashboard, MCP and ingestor grants the planting service and its readers need. Those grants and columns move all
-three seals. 293 chains from 291 (292 is a gap); until the rolled-back native qualification (290 and 291 applied
-first) measures 293, the file and its registrations carry 291's seals as stand-ins, which its own successor block refuses, so
-test_native_qualification_is_recorded (the merge gate) fails until then.
+three seals. 293 chains from 291 (292 is a gap); the rolled-back native qualification on production at 291 measured
+them, and test_native_qualification_is_recorded (the merge gate) checks its fixture.
 """
 
 import hashlib
@@ -237,13 +236,12 @@ def test_post_249_readback_expects_293s_seals_once_293_is_stamped(monkeypatch):
 # ── The native qualification ────────────────────────────────────────────────
 
 
-def test_the_fixture_records_the_stand_ins_and_is_pending():
+def test_the_projection_is_the_files_literals():
     evidence = json.loads(FIXTURE.read_text())
     assert evidence["migration"] == c0.SUCCESSOR_293
     assert evidence["exact_final_migration_sha256"] == c0.SUCCESSOR_293_SHA256
     assert evidence["projected_successor"] == six.SUCCESSOR_293 == qualifier.successor_literals(SQL)
     assert evidence["before"] == registered(PREDECESSOR)
-    assert "stand-ins" in evidence["projection"] and "chains from 291" in evidence["projection"]
 
 
 def test_native_qualification_is_recorded():
@@ -252,7 +250,7 @@ def test_native_qualification_is_recorded():
     assert evidence["final_migration_qualification_pending"] is False, (
         "293 native qualification pending: run "
         "scripts/qualify-migration-successor.py db/migrations/293-crop-plantings.sql --fixture "
-        "tests/fixtures/293-crop-plantings-native-qualification.json --apply-first 290 --apply-first 291 on production (every session rolls back); set the "
+        "tests/fixtures/293-crop-plantings-native-qualification.json --prelock public.shelves on production at 291 (every session rolls back); set the "
         "measured seals in the file's successor block and the c0-migration-delivery.py and "
         "bootstrap-six-runtime-roles.py registrations, update the file's sha at both and in the fixture, and run it "
         "again"
@@ -260,3 +258,4 @@ def test_native_qualification_is_recorded():
     assert evidence["qualified_successor"] == six.SUCCESSOR_293 == registered(293)
     assert evidence["final_migration_rollback_verified"] is True
     assert evidence["inside_transaction_receipts_match"] is True
+    assert evidence["after_rollback"] == evidence["before"] == registered(PREDECESSOR)
