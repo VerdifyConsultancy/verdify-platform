@@ -16,6 +16,7 @@ import { AppShell } from "./components/app-shell";
 import { ToastProvider } from "./components/toast";
 import Activity from "./routes/activity";
 import ActivityLog from "./routes/activity-log";
+import Band from "./routes/band";
 import Equipment from "./routes/equipment";
 import Graphs from "./routes/graphs";
 import Statistics from "./routes/graphs-statistics";
@@ -42,8 +43,9 @@ const CHILDREN = [
   { path: "settings", Component: Settings },
   { path: "plan", Component: Plan },
   { path: "equipment", Component: Equipment },
+  { path: "band", Component: Band },
 ];
-const TESTED = ["/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/plan", "/equipment"];
+const TESTED = ["/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/plan", "/equipment", "/band"];
 
 /** The page's server render at `instant`, its text and tags without attributes. */
 function serverText(path: string, instant: string): string {
