@@ -105,7 +105,7 @@ test("the week strip shows past outcomes and future counts side by side, and mov
   await expect(page).toHaveURL(/\/water\/schedules\?day=2026-10-26$/);
   await expect(strip.getByRole("link", { name: /^Sunday, Nov 1: 1 ran ok/ })).toBeVisible();
   await strip.getByRole("link", { name: /^Sunday, Nov 1/ }).click();
-  await expect(timelineRow(page, "L02").locator(".sch-block.sch-skipped")).toHaveAttribute("aria-label", /skipped, line paused by jason$/);
+  await expect(timelineRow(page, "L02").locator("button.sch-block.sch-skipped")).toHaveAttribute("aria-label", /skipped, line paused by jason$/);
   await expect(page.getByRole("link", { name: "Previous week" })).toHaveCount(0);
 });
 
