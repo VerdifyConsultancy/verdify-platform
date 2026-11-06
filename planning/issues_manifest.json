@@ -10,7 +10,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "43001f1c12737d0afa77a005ff6a9f38772d9e9d539daa99d6524c64e0edb9b7"
+      "body_sha256": "22896684a29833ca1ca3f677031b7bd515147b1f38a50d82e9191c480f3e79d0"
     },
     {
       "key": "incident",
@@ -85,11 +85,11 @@
       "number": 581,
       "title": "[C2][P2] Complete the bounded AI-admission pilot and publish a decision",
       "stage": "C2",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "17426165fdf7a39ed846d655a1db27337dd88b49c111356d188cc50fe3ab7ab8"
+      "body_sha256": "75df97bf697b20ff531a631eb42219b9ec235be15f4d878191de14884ace46ba"
     },
     {
       "key": "750",
@@ -118,7 +118,7 @@
       "number": 749,
       "title": "[C1][P2] Qualify current three-probe readiness and explicit safety dependencies",
       "stage": "C1",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 581,
       "blocked_by": [
@@ -126,14 +126,14 @@
         778,
         949
       ],
-      "body_sha256": "263e64e6c2e8203445d7e45fe0e88841c85b8db90368b1d379ecdb8c75736dd6"
+      "body_sha256": "73916e0713f79fec32f286cacbb52c993315eda91b15ce50b3f23574b182c4ac"
     },
     {
       "key": "641",
       "number": 641,
       "title": "[C1][P2] Complete one fresh attended physical baseline\u2013target\u2013baseline proof",
       "stage": "C1",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 581,
       "blocked_by": [
@@ -142,36 +142,36 @@
         747,
         749
       ],
-      "body_sha256": "2d28a763bba67432e5929e5a1bcd7f397480f14b15907f2f203679b3f3466550"
+      "body_sha256": "4b5e337c02bd64c9bcd1062ff08c28578a337ea67d57009250c6c5298af2eed1"
     },
     {
       "key": "639",
       "number": 639,
       "title": "[C1][P2] Qualify the component executor, exclusivity and recovery behavior in containment",
       "stage": "C1",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 581,
       "blocked_by": [],
-      "body_sha256": "1e91111b6cb60672abe86b089076062a64009081570e8ae44266162b6f4ea082"
+      "body_sha256": "01caadfcdb811f14187a77fee6c8474dacce6e72dab3ebc074dfa044ac69f0ca"
     },
     {
       "key": "587",
       "number": 587,
       "title": "[C1][P2] Qualify lifecycle authority and blinded monitoring in containment",
       "stage": "C1",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 581,
       "blocked_by": [],
-      "body_sha256": "c2a0174b330148ef4012eee00e982c377098c1e6d021a1d1870fac8fa941135e"
+      "body_sha256": "7ccd0cd1574b6f3e509c43304b5c78b249194f70e5429a849cee11bb89ce477c"
     },
     {
       "key": "study_design",
       "number": 782,
       "title": "[C0][P2] Finish the empirical inputs and frozen exploratory scientific contract",
       "stage": "C0",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 581,
       "blocked_by": [
@@ -180,28 +180,28 @@
         780,
         781
       ],
-      "body_sha256": "0b0082782eb257c95757d0497eb6bd2d32283e4978de2b0fb5687260c3a7e77c"
+      "body_sha256": "16ed4ce9b74664f30a3e773fcaf5556b82388629588057027a694aaab0246e96"
     },
     {
       "key": "integration",
       "number": 783,
       "title": "[C1][P2] Qualify the complete current-login selector-to-frozen-analysis path",
       "stage": "C1",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 581,
       "blocked_by": [
         587,
         639
       ],
-      "body_sha256": "695466310185d414b1301aa7bece5b4b3d2bad3140a330ce9fafde5269e1da3a"
+      "body_sha256": "96ce9b9fa729cfc5f12b0e939c484ac4b021d2b11011665f6fbad4dc4c24e5cf"
     },
     {
       "key": "588",
       "number": 588,
       "title": "[C2][P2] Bind exact scientific/runtime identity and finalize one internal draw",
       "stage": "C2",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 581,
       "blocked_by": [
@@ -209,59 +209,59 @@
         782,
         783
       ],
-      "body_sha256": "f1ffdb166b7853f0c6e6bdc32767acecc668cd9b791a0c7fea094bfd64879812"
+      "body_sha256": "02916f08f72b5e4d4f9ddd8e3ed49b4711bf8b88388206b6acd75aa82c63589f"
     },
     {
       "key": "642",
       "number": 642,
       "title": "[C2][P2] Activate and verify one randomized day 1 from the locked pilot",
       "stage": "C2",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 581,
       "blocked_by": [
         588
       ],
-      "body_sha256": "ac05f8d0633562cda956408cbcafa1619f7ca67ffe73d21eefb7656ea90c8f79"
+      "body_sha256": "60a1fe6053ddbfe028e59e90f004864107d9267ba55768993fb19bc79587e616"
     },
     {
       "key": "640",
       "number": 640,
       "title": "[C3][P2] Freeze and reconcile the first real assigned-day outcome and blinded export",
       "stage": "C3",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 581,
       "blocked_by": [
         642
       ],
-      "body_sha256": "e28cfec100264e980062e9a4f56e2820cafa8f20dba37b6fedeb1059aa7bd214"
+      "body_sha256": "5d82829c4bde15bc8c4c988ef33aae965f54cec67dee7051a338260dd55145a8"
     },
     {
       "key": "pilot_run",
       "number": 784,
       "title": "[C3][P3] Operate the full blinded assigned-day pilot with immutable custody",
       "stage": "C3",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 581,
       "blocked_by": [
         640
       ],
-      "body_sha256": "a2efb87b2607a0e7d38afa19cd1b95b545bd540bdf55103d464c7acbefdb718b"
+      "body_sha256": "ae886699935b218720240d25aa9a021371d285e721896941a9c8e3ecb9fd205e"
     },
     {
       "key": "readout",
       "number": 785,
       "title": "[C3][P3] Reveal once, reproduce the frozen analysis and decide the program outcome",
       "stage": "C3",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 581,
       "blocked_by": [
         784
       ],
-      "body_sha256": "d3f431bb75213fd7b9a91e7b4488a455a2812a980aa22ae6e548ab89b17a58f8"
+      "body_sha256": "51177c8f9af88c8cf3c057e86745f36c1037e81c3fdde5e5a46106966f64144e"
     },
     {
       "key": "644",
@@ -320,11 +320,8 @@
       "status": "open",
       "accepted": false,
       "parent": 775,
-      "blocked_by": [
-        303,
-        419
-      ],
-      "body_sha256": "ea7cb8b9979039a8945506793e617b67a8207a26791fa0961c1ccbb8dc7e7ca0"
+      "blocked_by": [],
+      "body_sha256": "8412c0137c0a132e5b3cc1251d98ee6db29807bcb1e635a05e2f8c36f2460ba8"
     },
     {
       "key": "433",
@@ -359,7 +356,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "eb57cdaabb42c448dbfc5811ef3ac7d305a148a602df0f533f2d4dfa76f85928"
+      "body_sha256": "66f70820b13889adb6785b092a041d6c14f6862fc5e6d973ff3f45238841e259"
     },
     {
       "key": "563",
@@ -439,10 +436,8 @@
       "status": "open",
       "accepted": false,
       "parent": 359,
-      "blocked_by": [
-        303
-      ],
-      "body_sha256": "338173934dac5d50927fb635fa69801621711fe9c462cbdaf3be28ad5fccc2c2"
+      "blocked_by": [],
+      "body_sha256": "c0959cae5ba1feb0fc30ac43b3adf4135d248e871a3119934a4e40a0f2c284cf"
     },
     {
       "key": "218",
@@ -551,7 +546,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "eb66b41b3798f3d9f95e736415368b8386c0172ff96cd9feb6d73262552fe236"
+      "body_sha256": "8b851bb70574d5ab23a3c186f4846bea0c63dc9fb928374c4bb2a1962825032c"
     },
     {
       "key": "430",
@@ -562,7 +557,7 @@
       "accepted": false,
       "parent": 359,
       "blocked_by": [],
-      "body_sha256": "8518c004171998d3aa4107e5d582d7ca55ca6e0a84df7f3b2b4bfe03d0fa61e6"
+      "body_sha256": "930c78555680f38155b8a7caf350b734614a032ce2bfa4ade2ae5b6ea1c84537"
     },
     {
       "key": "428",
@@ -585,10 +580,8 @@
       "status": "open",
       "accepted": false,
       "parent": 359,
-      "blocked_by": [
-        424
-      ],
-      "body_sha256": "44dcd777168f659fbeb37cb06dd0dd8213c61ad1cb2d478d6097c3c679a2e07c"
+      "blocked_by": [],
+      "body_sha256": "cd22555f0acbcc0b245910c134d4d179319886366717c023a0f77c8ca8967f2b"
     },
     {
       "key": "367",
@@ -601,7 +594,7 @@
       "blocked_by": [
         390
       ],
-      "body_sha256": "804edeb78ce48de538a2dfd189ceb71606e5a317b7a94555a1ec9754a91b37ac"
+      "body_sha256": "8741f43612d23b3de0d732017ba74b514c6e12cc99349a8d567412370067ea42"
     },
     {
       "key": "370",
@@ -614,7 +607,7 @@
       "blocked_by": [
         367
       ],
-      "body_sha256": "d4a54e251937e1873b9c83949476392c8574a8f2d3d45de6b4dcbf1ec2902ca9"
+      "body_sha256": "9937993c68290dea5c66d6010b54bc5f4ce6a7c3aadf95cb0cc4a52b1c22c3e6"
     },
     {
       "key": "369",
@@ -625,10 +618,9 @@
       "accepted": false,
       "parent": 430,
       "blocked_by": [
-        390,
-        433
+        390
       ],
-      "body_sha256": "50b6b80c208b8f605e8ccc793865632a5098f65192c115b9da695b95ed59b595"
+      "body_sha256": "ec16abd24c66dbedd45079e4611d918da64d4e8a1012f0ceceeba1f35b00f772"
     },
     {
       "key": "324",
@@ -649,7 +641,7 @@
       "number": 410,
       "title": "[C6][P2] Measure realized solar-night dry-out before changing the controller",
       "stage": "C6",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 359,
       "blocked_by": [
@@ -657,21 +649,21 @@
         419,
         424
       ],
-      "body_sha256": "30a65651c240f47062eb366bc03071d6d177bfe9a727e6d6e97b882dd87d1906"
+      "body_sha256": "e4878e0d83573bf67b107148caf6d5fc779140ba8dd08f264c14fda843daa112"
     },
     {
       "key": "378",
       "number": 378,
       "title": "[C6][P3] Decide corridor widths from fixed-target crop and resource evidence",
       "stage": "C6",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 359,
       "blocked_by": [
         371,
         785
       ],
-      "body_sha256": "db36510c767c0a183f5fd7e0b85d32edf20cedb7d1af7b98bdb61f988ce81ed9"
+      "body_sha256": "a69cfe2213c7e11a053db86b09ef90c8055cd0ecffdf4d6db9338057d89063db"
     },
     {
       "key": "361",
@@ -685,7 +677,7 @@
         378,
         410
       ],
-      "body_sha256": "4f3e176dc2c6a72f226e12364ac6bc411bca7edf0e18a6aa77957df563e8ba07"
+      "body_sha256": "09958f23dec25d914b4997c802a2d863862a981e00ddd729ecf73df8d1978cba"
     },
     {
       "key": "214",
@@ -706,18 +698,18 @@
       "number": 350,
       "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
       "stage": "C6",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "b5ee0b936346038190d4b794b5ec9fcdf08b29faa407f2a50f19fe950fd609f1"
+      "body_sha256": "2a8d6109429fedc6969f5de95b6045581cbf135bd319000d6bec3b20f302a298"
     },
     {
       "key": "434",
       "number": 434,
       "title": "[C6][P2] Enforce center-only climate mist and commissioned wall-only fertigation",
       "stage": "C6",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 350,
       "blocked_by": [
@@ -736,7 +728,7 @@
       "blocked_by": [
         390
       ],
-      "body_sha256": "8e6cdbae13d233b9070dabfe9b9b0fafc6268d1b6ed949d0596deb4f35a6fad7"
+      "body_sha256": "324395083708776e372d8db5bebc05593a4400ad6ff3f6090ac70ca140ea80eb"
     },
     {
       "key": "297",
@@ -747,9 +739,10 @@
       "accepted": false,
       "parent": 350,
       "blocked_by": [
-        45
+        45,
+        398
       ],
-      "body_sha256": "e17bcf95e78cf73f0f3c9915f14d7ef54f780d64d0b389e793baccef369e4689"
+      "body_sha256": "47c5e3c27ded0c102e6c509aa621f34dba485a86fa8ecbb86412f61733d8d491"
     },
     {
       "key": "296",
@@ -764,7 +757,7 @@
         434,
         45
       ],
-      "body_sha256": "55e1ef7fee77b91caebf665c990f74708c026fb0b8dc2191d805467f955cee5c"
+      "body_sha256": "b72dc4460bf1deba718a39360fe02ba28ec6d5948c8dfa3ace1289eed80ba1a6"
     },
     {
       "key": "16",
@@ -775,7 +768,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "a060616de93974cee0742c64db3d8ec9be2afcfc6206232dbd5a948a3ea121c2"
+      "body_sha256": "116e5c4a74322bfa2ece2844d76752a95c4ca4f3cb90eafa519d8fe36d656bc8"
     },
     {
       "key": "751",
@@ -786,7 +779,7 @@
       "accepted": false,
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "1248f52f7ed380dc5a391006529bd4daa50291cf0856557f9bce06d9a5797c54"
+      "body_sha256": "98d6c57b5cccfb4f555fc2b8dcca67333b46a989b06b27a938fa79ac579cf44d"
     },
     {
       "key": "298",
@@ -797,7 +790,7 @@
       "accepted": false,
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "2d1190fea5fd2097525a75c4c42b8331f792fcf0f1fdcd0f49f6c4e43b1c4c7d"
+      "body_sha256": "fd891890065eb07587a5468564f45c0a227a8c54ae63e1e9f3c154c6fcec694e"
     },
     {
       "key": "398",
@@ -810,7 +803,7 @@
       "blocked_by": [
         298
       ],
-      "body_sha256": "55e785879466c5b49582238add2fc4d704825970d2a50c2ed21440f8e36a4118"
+      "body_sha256": "9f0704ae1f82f99018900f402ba85c5ecd4fca33813ee101e6549815d3f1bfe3"
     },
     {
       "key": "45",
@@ -821,9 +814,10 @@
       "accepted": false,
       "parent": 16,
       "blocked_by": [
-        398
+        398,
+        298
       ],
-      "body_sha256": "08030791081af75527a96ca78047f050fce2bb7ad9e762c039a000fd04517389"
+      "body_sha256": "70ae8f5487516c09bfe23c63e6888b639eb8f67450776d30dcf2fdc449f5c92e"
     },
     {
       "key": "51",
@@ -834,7 +828,7 @@
       "accepted": false,
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "c46d68c1bfd338ca8ae97216421454e160b6e72cc7f42ca69da90ade93827d07"
+      "body_sha256": "3dccfd2c4e124a4d420f5fb0f670d8aade90e07ca40da66f37efe9e4eeed0d57"
     },
     {
       "key": "52",
@@ -844,19 +838,21 @@
       "status": "open",
       "accepted": false,
       "parent": 16,
-      "blocked_by": [],
-      "body_sha256": "2b33bc27f0bc4f9ca77d447facdcc435588f423378e09df575ac640689270012"
+      "blocked_by": [
+        298
+      ],
+      "body_sha256": "3099557158ad5cde8575122fde28e93c1d00efc35213b54f1a19f86b13ff8cf6"
     },
     {
       "key": "412",
       "number": 412,
       "title": "[C7][P3] Close the seasonal door screen only when measured night conditions justify it",
       "stage": "C7",
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "ba6e0319158c7776ed9c54e410b20b0093b42430833aba534a2843676482d7e4"
+      "body_sha256": "9acb9648ce49662e76ee38c632fdd2957e90104e0328ff37edbaa4e3c2b2c5a1"
     },
     {
       "key": "174",
@@ -889,7 +885,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "2f8a29edd3d7a9021a471edd460d69e6d2fc55ad31fc15e0326d626cdd824292"
+      "body_sha256": "2db7795eaaf9ac0cef2cfb391f9ff65f4522fe92d61d4a5790caa967a179c82f"
     },
     {
       "key": "606",
@@ -926,7 +922,7 @@
         390,
         785
       ],
-      "body_sha256": "0c753ba8884108f541a8830e05f10eda6145bb8fefbc96e7c9d7b72b22c52d27"
+      "body_sha256": "f39255cd22f269ded1959ac283ac6d0f651caeccf1793ec6e238b97ad1a32099"
     },
     {
       "key": "comparator",
@@ -1072,13 +1068,13 @@
       "number": 963,
       "title": "[C4][P2] Bound moisture-exchange state and preserve structured consumer detail",
       "stage": "C4",
-      "status": "open",
-      "accepted": false,
+      "status": "closed",
+      "accepted": true,
       "parent": 75,
       "blocked_by": [
         390
       ],
-      "body_sha256": "0fbb6a61635fdcfcd322b395899d65c9ade86e8f882b499e4b044b67ed5063bf"
+      "body_sha256": "7317b815024225073131f7d49ac7746c0fc68090da678288d502c210e11808b9"
     },
     {
       "key": "976",
@@ -1278,7 +1274,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "373389bde32ca16ad2c55349b48a6f6e3a171e51850ceb757bc8a7413d78efb7"
+      "body_sha256": "2874552ee264cd89a82d013f1f3460b57d314a3620fecda2004386e90cdfab45"
     },
     {
       "key": "1002",
@@ -1366,7 +1362,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "1de75df191180d6b532f8244e54038df3bb0f77390fc88246acc63ecf0fa17ec"
+      "body_sha256": "006517fd187dca88ef19fc2c14e2bbba4eec081bab51c22223bc6ebda261bfcd"
     },
     {
       "key": "1010",
@@ -1377,7 +1373,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "78d4b685d9cb82913ead2b126e95c97056aefe5473159280688dd14c23f899f0"
+      "body_sha256": "67307f3447e21073a6ec160f6655537e3870002dc8d744e43a0bd41bb59b0f6f"
     },
     {
       "key": "1011",
@@ -1411,6 +1407,750 @@
       "parent": null,
       "blocked_by": [],
       "body_sha256": "332398229cf997ba1ea7c13ab9d47663580eabd176674c514e007e6c7ac74348"
+    },
+    {
+      "key": "1113",
+      "number": 1113,
+      "title": "[OPS][P2] security: grafana-image-renderer chromium CVE-2026-118333/118337 - bump when upstream ships chromium >= 156.0.8078.73",
+      "stage": "OPS",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "20a96d7fc1a2c5ff81451bd62b063619086670aaed7909de7d98e9e88f274175"
+    },
+    {
+      "key": "1118",
+      "number": 1118,
+      "title": "[OPS][P2] verdify-vision crop-health analysis step fails (exit 1) after B-POWER; its stderr is discarded",
+      "stage": "OPS",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "87e76c6389a0dd06dfeb628ab5189b889383eae4d4fccc8720248c54b19fbf5b"
+    },
+    {
+      "key": "1120",
+      "number": 1120,
+      "title": "[VD][P2] Program: dashboard.verdify.ai and the irrigation program",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "71acaa85f0f2c70c686ac49df373920925e0d7c346824361c2a17b72e914d553"
+    },
+    {
+      "key": "1125",
+      "number": 1125,
+      "title": "[VD][P2] Build the form controls, edit drawer, water confirm dialog and write hooks",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [
+        1143,
+        1135,
+        1164
+      ],
+      "body_sha256": "e40c7a13405e6756b805bb9aeda92255e334034187bf45586af765a0fb7d09cb"
+    },
+    {
+      "key": "1130",
+      "number": 1130,
+      "title": "[VD][P2] Build the Graphs screen (SCR-02) with the metric picker and the daily scorecard",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [],
+      "body_sha256": "c731d95a055017a6398e3216940b4d0e20e366521ea3ba1530579bb2950fa166"
+    },
+    {
+      "key": "1132",
+      "number": 1132,
+      "title": "[VD][P2] Build the Settings screen (SCR-05) with the edit drawer",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [],
+      "body_sha256": "c0bb8c90413f0e3a38b93fbde12980fc8475c1b7c570dfb722dc969e702876b9"
+    },
+    {
+      "key": "1135",
+      "number": 1135,
+      "title": "[VD][P2] Build the Water screen (SCR-04): read views and Stop all water",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [],
+      "body_sha256": "bb2d20088aba97508d90a5e96cb56bd7a26571841e3e628511e303ec3ea532a0"
+    },
+    {
+      "key": "1143",
+      "number": 1143,
+      "title": "[VD][P2] Ship R1: put the read-only dashboard live at dashboard.verdify.ai",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [],
+      "body_sha256": "c292232cfe9b1956ae5a78118488b3e7ba5f53812b6d89b4e5bde07a1f493183"
+    },
+    {
+      "key": "1161",
+      "number": 1161,
+      "title": "[VD][P2] Rework the mist path: membership, scheduled pulses, occupancy, survival fog and the D-IRP-19 watchdog",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [],
+      "body_sha256": "e5282fd91876883e35ea6a948526577d09e33d08d76b70b7da76aa7f4260f2e4"
+    },
+    {
+      "key": "1162",
+      "number": 1162,
+      "title": "[VD][P2] Remove the Home Assistant buttons, add manual_override and retire the old irrigation entities",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [],
+      "body_sha256": "b94c30e9b1c53d75acd5c651a5f8085c9948156aaf2e4b3945756f9ee50a399e"
+    },
+    {
+      "key": "1164",
+      "number": 1164,
+      "title": "[VD][P2] Ship R3: deploy the irrigation platform and flash the engine firmware",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [
+        1161,
+        1162
+      ],
+      "body_sha256": "b87e9f3431f17893258ecac99036f067953db8375e39c72bb9f82061ef307645"
+    },
+    {
+      "key": "1165",
+      "number": 1165,
+      "title": "[VD][P2] Bring the clean lines online: L01 first, then L04, L07 and L09",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [
+        1329
+      ],
+      "body_sha256": "1529f79c55032d5d58789b1913b9e304ff5361a232656e26e6270fe2cf71d74d"
+    },
+    {
+      "key": "1166",
+      "number": 1166,
+      "title": "[VD][P2] Bring the fertilizer lines online: L02 with L03, then L08 and L10",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [
+        1165,
+        1329
+      ],
+      "body_sha256": "e2f0845fccc5c2c0fdd2412a041fa19095c4d09639eb127aeefaa3260665d6b7"
+    },
+    {
+      "key": "1181",
+      "number": 1181,
+      "title": "[VD][P2] Ship R1.1: put every read screen, the water reads and the MCP irrigation reads live",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [],
+      "body_sha256": "478201fc9d671b4f455ccfd76ec7e3b8fd08467512798a3207809d31507ee9cd"
+    },
+    {
+      "key": "1183",
+      "number": 1183,
+      "title": "[VD][P2] Read the YINMIK hydroponic probe directly, without Home Assistant",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [],
+      "body_sha256": "3eb6b28bdaabc770ad9a34b7dbeba502247312d0f616d15752d887fa0655881f"
+    },
+    {
+      "key": "1184",
+      "number": 1184,
+      "title": "[VD][P2] Add a PAR light meter: hardware, firmware, ingest and DLI",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [],
+      "body_sha256": "a0a8d5d46539b3896981e35336505239479108ffa7abbab30934dcbb123ffbb0"
+    },
+    {
+      "key": "1186",
+      "number": 1186,
+      "title": "[VD][P2] Ship R4: put the Next screens live",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [
+        1300
+      ],
+      "body_sha256": "ba7f22e698bce7bf9d4b685b6c838f8f387bf94a5acf8dcaa473e94d1e7b39cf"
+    },
+    {
+      "key": "1271",
+      "number": 1271,
+      "title": "[OPS][P2] firmware: give sensor_degraded a boot grace before timed L04 fallback slots return",
+      "stage": "OPS",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "b254b3e073750d2c6ec81339ad4ae8ff660b766071370f5dca61f61ce1f3aaff"
+    },
+    {
+      "key": "1277",
+      "number": 1277,
+      "title": "[OPS][P2] c1 wire validation: move the firmware pin to the engine firmware",
+      "stage": "OPS",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "57b40bdb0bc3497a5aa8b0a44b354c9895d68c4dcc36171516207b5ecbd8ac13"
+    },
+    {
+      "key": "1283",
+      "number": 1283,
+      "title": "[OPS][P2] v_water_meter_daily may read a 25-hour day as complete with its last hour missing",
+      "stage": "OPS",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "9c56f9cd6ed85a535fd89c14af25af22878c09b2eab2773b9c11414b9b2d495c"
+    },
+    {
+      "key": "1300",
+      "number": 1300,
+      "title": "[VD][P2] Back to automatic leaves a grow light off its intent when the Equipment page closes before the write confirms",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [],
+      "body_sha256": "f4851ca40437da21a3d9ceb8de5f9bccaa684b4911a27b02a6b39e8b1deba35e"
+    },
+    {
+      "key": "1312",
+      "number": 1312,
+      "title": "[OPS][P2] firmware-replay-diff: rounding lets up to 14 divergent rows pass at THRESHOLD_PCT=0",
+      "stage": "OPS",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "f0a4f6f229e2e107dc9a9f2947e6f510b85a3cef3393d23c35cb02c1232a8f64"
+    },
+    {
+      "key": "1313",
+      "number": 1313,
+      "title": "[OPS][P2] firmware: runtime and drip accounting after an aborted OTA upload",
+      "stage": "OPS",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "482e702bcf345226791150447561b20ce5a949a97e78f784d98bfc566336a57a"
+    },
+    {
+      "key": "1322",
+      "number": 1322,
+      "title": "[VD][P2] dashboard: chart corner labels overlap the band edge; stray separator on the phone Now status line",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": 1120,
+      "blocked_by": [
+        1354
+      ],
+      "body_sha256": "252568b94d1d80b7b43c30925d4288a6e3f5f665a7c72ceeb419d07942cda367"
+    },
+    {
+      "key": "1325",
+      "number": 1325,
+      "title": "[W5][P2] [Epic] Dashboard wave 2: Jason's acceptance feedback on the redesign (2026-11-05)",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "f1d227fdbbe56342bc0201264e4fab6348094497d04a5ebb6f80a106ed1b01c5"
+    },
+    {
+      "key": "1327",
+      "number": 1327,
+      "title": "[W5][P2] Model plantings on the location tree and serve them from the operator API",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [
+        1330
+      ],
+      "body_sha256": "e8119bc731c92a3372cc775ce61da4c08c74fcc9997ca3520c80f0ef8265b37e"
+    },
+    {
+      "key": "1328",
+      "number": 1328,
+      "title": "[W5][P2] Let agents record, move and harvest plantings through MCP",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [
+        1330
+      ],
+      "body_sha256": "91936b4e64d4336c555677a845961ad4e44da6ee3bd2285d0d61430c69a8bb39"
+    },
+    {
+      "key": "1329",
+      "number": 1329,
+      "title": "[W5][P2] Reconcile greenhouse locations and current plantings with the physical greenhouse and lab.verdify.ai",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "c6e6a157f72807756798d875aee3f4b62a7b664d31a7d246ae53deb0db1def42"
+    },
+    {
+      "key": "1330",
+      "number": 1330,
+      "title": "[W5][P2] Add a Crops section: hydro slot grid, wall shelves and planting history",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "61d5f0452d600c9bf7b20825a1ff0b8ea67504d6890321297dac877682fd03dd"
+    },
+    {
+      "key": "1332",
+      "number": 1332,
+      "title": "[W5][P2] Explain every setting: what it does to the controller and what raising or lowering it does",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "4c1431ae0d708c0f36297989e8768af704b7e29b7a83a36522c38abf87266a95"
+    },
+    {
+      "key": "1333",
+      "number": 1333,
+      "title": "[W5][P2] Define the Settings filters and states in the UI, and explain or route around read-only rows",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "92344ac01688fb5f641a0bda18b8b1ddddfba3c5dbf6ae92c3ba2b25b3181ef7"
+    },
+    {
+      "key": "1334",
+      "number": 1334,
+      "title": "[W5][P2] Research the band math and design a plant-agnostic band editor with a live 24 h preview",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "945f4a4383457756e0a55257f7c7bed248a144d4baffc88f28c638f1c0f50d37"
+    },
+    {
+      "key": "1335",
+      "number": 1335,
+      "title": "[W5][P2] Give each light circuit a findable Auto / On / Off control that holds until released",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "40d79e72201cbde3f8a15bf50bf8f6a27d6b3bf974ddfce41c57c26aa9bf4b1c"
+    },
+    {
+      "key": "1336",
+      "number": 1336,
+      "title": "[W5][P2] Model one physical line with clean and fertilized schedules; give each mister its own line",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "409faa7a273fc498c1df954c3c62adeb1801b87a3bd8daa5ea4f1b98f46cfb81"
+    },
+    {
+      "key": "1337",
+      "number": 1337,
+      "title": "[W5][P2] Redraw Now's band gauges as one track with a green band box, and say in words when a zone uses its peers",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "dd378c430725c990696bc1af3b09e128ef4a369ab9a20356a4523e4bf652ebcf"
+    },
+    {
+      "key": "1338",
+      "number": 1338,
+      "title": "[W5][P2] Keep the Now headline steady and move the out-of-band detail into a plain line below it",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "87cb9b5c285182677197a172fa30ced33a85665339410c297ac39cd52989d11a"
+    },
+    {
+      "key": "1339",
+      "number": 1339,
+      "title": "[W5][P2] Replace codes on Now with plain labels and add a shared glossary (SAF-4, line IDs, trigger codes)",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "240b152d3c761281d6dbc4edb71b7162feb0f72fe032dd2a298b2701b4fef226"
+    },
+    {
+      "key": "1340",
+      "number": 1340,
+      "title": "[W5][P2] Give Running and next room for its labels and add Main and Grow light rows",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "b5b3700b07bb3099fe563b4665a8ddd64523f083d806ddcf18fb2aaa9280d66e"
+    },
+    {
+      "key": "1341",
+      "number": 1341,
+      "title": "[W5][P2] Show line names everywhere and remove the L01/L02 relay codes from the UI",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "8110e99db27ff091a17d3dc98872244669743fd236b25d767e91f62ad421ee74"
+    },
+    {
+      "key": "1342",
+      "number": 1342,
+      "title": "[W5][P2] Add Main and Grow light controls to Now's quick actions",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "eb2a7f0a3de9a1aaf5683c8371f0b0e279c05a84f93ca961aae72ecd055ec9ff"
+    },
+    {
+      "key": "1343",
+      "number": 1343,
+      "title": "[W5][P2] Allow a one-time run of any line, misters included",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "80204e3f683d313f1cb077025c6ad06f36c3a16ff9361dd9edd8df2a55b2ec5a"
+    },
+    {
+      "key": "1344",
+      "number": 1344,
+      "title": "[W5][P2] Explain VPD control, Manual and Fallback on Water; show VPD control only on misters",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "d6a9dbc1d7850d160fd88b66afa3e3f8f354903c56a77e6b747e7f063ad93fd0"
+    },
+    {
+      "key": "1345",
+      "number": 1345,
+      "title": "[W5][P2] Remove plant-specific copy and make soil-moisture targets configurable",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "fc8671e0ed0870fd20a39bb0335e8d136f1416c99b127b7e2bf336d5c8456e1f"
+    },
+    {
+      "key": "1346",
+      "number": 1346,
+      "title": "[W5][P2] Write a greenhouse snapshot with the local Cortex Qwen model and show it in the Now hero",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "e01ab1163a339d901f68ad65dc331c202ebcd25d3c969867e753bb67e41818b9"
+    },
+    {
+      "key": "1347",
+      "number": 1347,
+      "title": "[W5][P2] Make the schedule timeline readable: daylight band on every lane, visible legend, one lane per physical line",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "857b845ef67ab5d164294339ab53d2300d36b49890bba713592ae2bf5e42458b"
+    },
+    {
+      "key": "1348",
+      "number": 1348,
+      "title": "[W5][P2] Separate irrigation runs from VPD mist and fog everywhere",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "263e109bf79a5700e45501d82de8fbb8220029e276404ec3e452994a0878480e"
+    },
+    {
+      "key": "1349",
+      "number": 1349,
+      "title": "[W5][P2] Redesign Water cards for clear line and group delineation and replace the SAF-4 label",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "7fcc6e62426ef43322cb3be242a69b08c685cb8eecf0deb4cc474b00f60a666c"
+    },
+    {
+      "key": "1350",
+      "number": 1350,
+      "title": "[W5][P1] Replace the Hermes/OpenAI planner with one deterministic call to the local Cortex Qwen model",
+      "stage": "W5",
+      "status": "closed",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "c5a7cd42ef0a33e91c3314f3d5860c1c5214e6d300c13d3a595b783b49319fc8"
+    },
+    {
+      "key": "1351",
+      "number": 1351,
+      "title": "[W5][P1] Audit and remove Verdify's external dependencies (local-only goal)",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [
+        1352
+      ],
+      "body_sha256": "12eb4329938b24528ada9ad518a353378a985e5d0f2f0ae8d12202deff2a3155"
+    },
+    {
+      "key": "1352",
+      "number": 1352,
+      "title": "[W5][P2] Decommission Slack from Verdify: alerts on the dashboard, paging through Alertmanager",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "57eddd35e361b0629209f05d3a8765cd135b8531d75a3a39fe1068611c442f72"
+    },
+    {
+      "key": "1353",
+      "number": 1353,
+      "title": "[W5][P2] Show 72 h of history and 72 h of forecast on Graphs by default",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "d8cbda98d63f187c505d2d08c501aab1da5343ec83c944307783965bbd6cf7af"
+    },
+    {
+      "key": "1354",
+      "number": 1354,
+      "title": "[W5][P2] Move chart labels out of the plots and use one chart vocabulary across pages",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "355b15b2c2e6ee0deb2eba97dd801620df919d8c344490203b4b49416052118f"
+    },
+    {
+      "key": "1355",
+      "number": 1355,
+      "title": "[W5][P2] Make event markers on Graphs show what each event is and what it touched",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "1a014f6b1fe1f4bd791ac70099058691f6035d28415c95f77b9772ba1328ab2e"
+    },
+    {
+      "key": "1356",
+      "number": 1356,
+      "title": "[W5][P2] Redesign the equipment lanes: shared time axis, solid bars, grouped by system",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "77c7ee7961962500904bd494d44b2e2066f70a290ee4ec3a01673d5b4afe94e3"
+    },
+    {
+      "key": "1357",
+      "number": 1357,
+      "title": "[W5][P2] Add a Lighting tab to Graphs: light state, outdoor lux and thresholds, light minutes",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "8042dcdb566b9fc9aa5e4be085cdfe2d3cca3bd918cb545fc6965bd6cc7fc731"
+    },
+    {
+      "key": "1358",
+      "number": 1358,
+      "title": "[W5][P2] Research and fix band compliance: grade time in band against the band the controller served",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "17f9b9f199857a9d38e63464d1006e59b23012f9e894738d406cdbf472654751"
+    },
+    {
+      "key": "1360",
+      "number": 1360,
+      "title": "[W5][P2] Run an AI-planner-versus-baseline study end to end by extending the experiment orchestrator",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [
+        1365,
+        1389
+      ],
+      "body_sha256": "1bc3feaa5dc11344c3fc99afb956d31d9a1577c03b2949684fb8ce2b13963534"
+    },
+    {
+      "key": "1361",
+      "number": 1361,
+      "title": "[W5][P2] Add a Planner section: plan history, cost, experiments, arm calendar and results",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [
+        1360
+      ],
+      "body_sha256": "370ee49dae8f9112a2b02279aacd0918254b1b4fd8f4c7d0b5f4beb34572a8e9"
+    },
+    {
+      "key": "1363",
+      "number": 1363,
+      "title": "[W5][P2] Pull every Verdify image through the local registry (no direct Docker Hub/ghcr pulls)",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "3815226d27cf15dba53cf2d8a122b8453723b4d6e9984353d96782b93f0cb8d8"
+    },
+    {
+      "key": "1364",
+      "number": 1364,
+      "title": "[W5][P2] Use the estate's local NTP for the greenhouse controller instead of pool.ntp.org",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "7953e3192dfd6449ea6c1c3a7b6f7e307484730727cd41bae315ec3afa789fe1"
+    },
+    {
+      "key": "1365",
+      "number": 1365,
+      "title": "[W5][P1] Research sprint: a VPD band the greenhouse can actually hold, and how to improve VPD control",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "fab8c16f6d47203872e58cdd9391f186f226278eb5441456e25e9f8fb9a0b88e"
+    },
+    {
+      "key": "1366",
+      "number": 1366,
+      "title": "[W5][P2] Research the planner's 60K-token input pack: what the Cortex planner must see to plan well",
+      "stage": "W5",
+      "status": "closed",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [
+        1350
+      ],
+      "body_sha256": "e379abc14d594ee309cd8601442ecd32ef75a7946b7a8f7eb0de3170d712dca8"
+    },
+    {
+      "key": "1370",
+      "number": 1370,
+      "title": "[W5][P2] Turn the lights on when the cameras see someone in the greenhouse",
+      "stage": "W5",
+      "status": "open",
+      "accepted": false,
+      "parent": 1325,
+      "blocked_by": [],
+      "body_sha256": "994f182d24d31b8a44f5b3604559cc2b49b7d9b9adfb732b216be04a5365cf4a"
+    },
+    {
+      "key": "1389",
+      "number": 1389,
+      "title": "[OPS][P2] experiment-v2 lifecycle/freezer/selector CPU-throttled >50% (limits 250-500m, requests 10-25m)",
+      "stage": "OPS",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "7d2c3258a33460da396133fff763f985e3d976516d86c1bbc1b5b31b0d6c0e5d"
+    },
+    {
+      "key": "1397",
+      "number": 1397,
+      "title": "[OPS][P2] Move CI, image builds and pin automation to GitHub Actions on self-hosted runners",
+      "stage": "OPS",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "d1eb92f7dcc979a030b0df0a09622a5804277e3c03263b2f9bd2cc9c6a09ff33"
     }
   ]
 }
