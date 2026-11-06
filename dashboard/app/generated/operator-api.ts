@@ -1897,7 +1897,7 @@ export interface components {
              * @description Why a read-only row cannot be written (#1333): the tunable_registry READ_ONLY_REASONS key, no_anchor_row (a crop-band row with no crop_band_anchors row) or band_in_force (derived band rows); null on a writable row
              * @enum {string|null}
              */
-            readonly read_only_kind?: "band_in_force" | "legacy_wide_limit" | "activity_mirror" | "band_owner" | "retired" | "readback_context" | "no_entity" | "no_anchor_row" | "unknown" | null;
+            readonly read_only_kind?: "band_in_force" | "legacy_wide_limit" | "zone_vpd_target" | "activity_mirror" | "band_owner" | "retired" | "readback_context" | "no_entity" | "no_anchor_row" | "unknown" | null;
             /** @example legacy wide limit; not the band while the controller runs its on-chip curve */
             readonly read_only_reason?: string | null;
             /** @description Newest readback; for irrigation_site rows the value in the applied program */

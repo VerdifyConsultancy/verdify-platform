@@ -872,17 +872,17 @@ async def test_any_other_desired_state_read_error_fails_the_pass_before_any_push
 
 
 @pytest.mark.asyncio
-async def test_gl_main_dli_target_written_then_released_returns_to_the_lighting_policy_value(env):
-    param = "gl_main_dli_target"
+async def test_gl_main_min_on_s_written_then_released_returns_to_the_lighting_policy_value(env):
+    param = "gl_main_min_on_s"
     env.db.lighting = lighting_rows()
-    before = next(row["legacy_dli_target"] for row in env.db.lighting if row["light_key"] == "main")
+    before = float(next(row["min_on_s"] for row in env.db.lighting if row["light_key"] == "main"))
     env.controller.connect(lighting_device_values())
     await env.run_pass()
     assert env.controller.sent == []  # the device already holds the lighting policy
 
-    env.db.write(param, 14.0, at=T0)
+    env.db.write(param, 180.0, at=T0)
     await env.run_pass()
-    assert [(sent.param, sent.value) for sent in env.controller.sent] == [(param, 14.0)]
+    assert [(sent.param, sent.value) for sent in env.controller.sent] == [(param, 180.0)]
     assert env.db.rows_for(param)[-1]["source"] == "manual"
     await settle(env)
     assert len(env.controller.sent) == 1  # the policy value is not pushed back over it
@@ -896,15 +896,15 @@ async def test_gl_main_dli_target_written_then_released_returns_to_the_lighting_
 
 @pytest.mark.asyncio
 async def test_a_release_of_a_lighting_value_no_dispatcher_block_resolves_returns_its_registry_default(env):
-    """No block resolves the solar-phasing, offset or out-of-service values, nor on per-circuit
-    firmware the legacy shared ones: a release returns each to its registry default (the
-    controller's boot value) on the next pass instead of leaving the manual value in place."""
+    """No block resolves the solar-phasing, offset or out-of-service values: a release returns
+    each to its registry default (the controller's boot value) on the next pass instead of
+    leaving the manual value in place. (The legacy shared gl_* values are retired, so no
+    desired row reaches them.)"""
     env.db.lighting = lighting_rows()
     manual = {
         "sw_gl_main_out_of_service": 1.0,
         "sw_gl_grow_solar_phasing": 1.0,
         "gl_main_sunrise_offset_min": 30.0,
-        "gl_dli_target": 20.0,  # legacy shared: resolved only on firmware without per-circuit lighting
     }
     defaults = {param: float(REGISTRY[param].default) for param in manual}
     assert all(not dispatcher._dispatcher_resolves(param, lighting_circuit=True) for param in manual)

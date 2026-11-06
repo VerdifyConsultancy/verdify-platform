@@ -821,7 +821,13 @@ REGISTRY: dict[str, TunableDef] = {
         wire_kind="u8",
         wire_scale=2,
         wire_unit="ratio",
-        notes="Weight on VPD gap in zone-selection scoring formula. Capped at 3.0 until replay proves higher values help.",
+        notes=(
+            "Pulse-length multiplier, not a selection weight: in S2 all-zone rotation a pulse lasts "
+            "mister_pulse_on_s times this value when its zone is the driest (first S2 pulse: south or west within "
+            "5% of the highest VPD) or its VPD exceeds 1.2x its vpd_target_<zone> (later pulses); otherwise the "
+            "normal pulse (controls.yaml weighted_ms). Zone choice never reads it. Capped at 3.0 until replay "
+            "proves higher values help."
+        ),
     ),
     "night_vpd_bias_kpa": TunableDef(
         name="night_vpd_bias_kpa",
@@ -924,8 +930,8 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=False,
         tier=2,
-        notes="Wet taper master enable (default ON). Routine wetting stops wet_taper_before_sunset_min "
-        "before the on-chip sunset and stays off through the night half, so foliage dries before dark.",
+        notes="Retired: no controller effect. controls.yaml copies it into Setpoints, but past_wet_taper "
+        "(greenhouse_logic.h) is a no-op shim that returns false; wetting follows the VPD band curve.",
     ),
     "sw_night_stress_wet_enabled": TunableDef(
         name="sw_night_stress_wet_enabled",
@@ -936,8 +942,8 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=False,
         tier=2,
-        notes="Night stress wetting master enable (default ON). Lets the stress-wet rule fire at night "
-        "under the stricter night_stress_min_dew_margin_f; the mister machinery and SAF-4 caps bound the water.",
+        notes="Retired: no controller effect. controls.yaml copies it into Setpoints, but no control path "
+        "reads the field; night wetting follows the VPD band and night_stress_min_dew_margin_f.",
     ),
     # Read-only on purpose: no esp_object_id, so no route can push it and
     # Settings shows it read-only with the reason in notes. Its readback
@@ -974,7 +980,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="band",
         planner_pushable=False,
         tier=2,
-        notes="Per-zone VPD target — dispatcher pushes from crop band.",
+        notes=(
+            "Live: controls.yaml compares south VPD with it for the any-zone-stressed mister gate, the zone stress score, the fairness pick and the S2 pulse lengthening at 1.2x. "
+            "The dispatcher pushes fn_zone_vpd_targets(now()) every cycle in both band-source modes: the zone crop's vpd_target anchor curve at the solar phase, house curve fallback. Read-only (desired_write_kind zone_vpd_target)."
+        ),
     ),
     "vpd_target_west": TunableDef(
         name="vpd_target_west",
@@ -989,6 +998,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="band",
         planner_pushable=False,
         tier=2,
+        notes=(
+            "Live: controls.yaml compares west VPD with it for the any-zone-stressed mister gate, the zone stress score, the fairness pick and the S2 pulse lengthening at 1.2x. "
+            "The dispatcher pushes fn_zone_vpd_targets(now()) every cycle in both band-source modes: the zone crop's vpd_target anchor curve at the solar phase, house curve fallback. Read-only (desired_write_kind zone_vpd_target)."
+        ),
     ),
     "vpd_target_east": TunableDef(
         name="vpd_target_east",
@@ -1003,6 +1016,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="band",
         planner_pushable=False,
         tier=2,
+        notes=(
+            "Live: east has no mister, but controls.yaml compares east VPD with it for the any-zone-stressed mister gate and the east adjacency boost to the south and center stress scores. "
+            "The dispatcher pushes fn_zone_vpd_targets(now()) every cycle in both band-source modes: the zone crop's vpd_target anchor curve at the solar phase, house curve fallback. Read-only (desired_write_kind zone_vpd_target)."
+        ),
     ),
     "vpd_target_center": TunableDef(
         name="vpd_target_center",
@@ -1017,7 +1034,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="band",
         planner_pushable=False,
         tier=2,
-        notes="Center zone has wider floor (0.1) to tolerate seedling propagation.",
+        notes=(
+            "Live: controls.yaml compares house VPD with it for the any-zone-stressed mister gate, the center stress score, the fairness pick and the S2 pulse lengthening at 1.2x. Wider floor (0.1) for seedling propagation. "
+            "The dispatcher pushes fn_zone_vpd_targets(now()) every cycle in both band-source modes: the zone crop's vpd_target anchor curve at the solar phase, house curve fallback. Read-only (desired_write_kind zone_vpd_target)."
+        ),
     ),
     "mister_center_penalty": TunableDef(
         name="mister_center_penalty",
@@ -1605,7 +1625,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="schedule",
         planner_pushable=False,
         tier=2,
-        notes="South-zone direct-wet start offset from global activity start. Applies to clean/fert wetting paths in the zone.",
+        notes="Retired: no controller effect. The firmware stores and reports it, but greenhouse_logic.h direct_wet_window_open has no caller; misting follows the VPD band and the irrigation program. The dispatcher still sends its default until the entity leaves the firmware.",
     ),
     "direct_wet_wall_start_offset_min": TunableDef(
         name="direct_wet_wall_start_offset_min",
@@ -1620,7 +1640,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="schedule",
         planner_pushable=False,
         tier=2,
-        notes="Wall drip direct-wet start offset from global activity start. Applies to wall clean/fert drip and flush paths.",
+        notes="Retired: no controller effect. The firmware stores and reports it, but greenhouse_logic.h direct_wet_window_open has no caller; misting follows the VPD band and the irrigation program. The dispatcher still sends its default until the entity leaves the firmware.",
     ),
     "direct_wet_wall_drydown_before_off_min": TunableDef(
         name="direct_wet_wall_drydown_before_off_min",
@@ -1635,7 +1655,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="schedule",
         planner_pushable=False,
         tier=2,
-        notes="Wall drip drydown hold before global activity off. Applies to wall clean/fert drip and flush paths.",
+        notes="Retired: no controller effect. The firmware stores and reports it, but greenhouse_logic.h direct_wet_window_open has no caller; misting follows the VPD band and the irrigation program. The dispatcher still sends its default until the entity leaves the firmware.",
     ),
     "direct_wet_south_drydown_before_off_min": TunableDef(
         name="direct_wet_south_drydown_before_off_min",
@@ -1650,7 +1670,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="schedule",
         planner_pushable=False,
         tier=2,
-        notes="South-zone drydown hold before global activity off. Applies to clean/fert wetting paths in the zone.",
+        notes="Retired: no controller effect. The firmware stores and reports it, but greenhouse_logic.h direct_wet_window_open has no caller; misting follows the VPD band and the irrigation program. The dispatcher still sends its default until the entity leaves the firmware.",
     ),
     "direct_wet_west_start_offset_min": TunableDef(
         name="direct_wet_west_start_offset_min",
@@ -1665,7 +1685,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="schedule",
         planner_pushable=False,
         tier=2,
-        notes="West-zone direct-wet start offset from global activity start. Applies to clean/fert wetting paths in the zone.",
+        notes="Retired: no controller effect. The firmware stores and reports it, but greenhouse_logic.h direct_wet_window_open has no caller; misting follows the VPD band and the irrigation program. The dispatcher still sends its default until the entity leaves the firmware.",
     ),
     "direct_wet_west_drydown_before_off_min": TunableDef(
         name="direct_wet_west_drydown_before_off_min",
@@ -1680,7 +1700,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="schedule",
         planner_pushable=False,
         tier=2,
-        notes="West-zone drydown hold before global activity off. Applies to clean/fert wetting paths in the zone.",
+        notes="Retired: no controller effect. The firmware stores and reports it, but greenhouse_logic.h direct_wet_window_open has no caller; misting follows the VPD band and the irrigation program. The dispatcher still sends its default until the entity leaves the firmware.",
     ),
     "direct_wet_center_start_offset_min": TunableDef(
         name="direct_wet_center_start_offset_min",
@@ -1695,7 +1715,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="schedule",
         planner_pushable=False,
         tier=2,
-        notes="Center-zone direct-wet start offset from global activity start. Applies to clean/fert wetting paths in the zone.",
+        notes="Retired: no controller effect. The firmware stores and reports it, but greenhouse_logic.h direct_wet_window_open has no caller; misting follows the VPD band and the irrigation program. The dispatcher still sends its default until the entity leaves the firmware.",
     ),
     "direct_wet_center_drydown_before_off_min": TunableDef(
         name="direct_wet_center_drydown_before_off_min",
@@ -1710,7 +1730,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="schedule",
         planner_pushable=False,
         tier=2,
-        notes="Center-zone drydown hold before global activity off. Applies to clean/fert wetting paths in the zone.",
+        notes="Retired: no controller effect. The firmware stores and reports it, but greenhouse_logic.h direct_wet_window_open has no caller; misting follows the VPD band and the irrigation program. The dispatcher still sends its default until the entity leaves the firmware.",
     ),
     "sw_direct_wet_stress_override_enabled": TunableDef(
         name="sw_direct_wet_stress_override_enabled",
@@ -1812,7 +1832,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=False,
         tier=2,
-        notes="Daily light integral target for supplemental grow-light automation.",
+        notes="Retired: shared DLI target; the firmware stores it (tunables.yaml) but no light logic reads it; the per-circuit gl_main_* and gl_grow_* rows run the lights.",
     ),
     "gl_lux_threshold": TunableDef(
         name="gl_lux_threshold",
@@ -1827,7 +1847,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="dispatcher_default",
         planner_pushable=False,
         tier=2,
-        notes="Legacy shared grow-light threshold. Read-only fallback now that per-circuit gl_main_* and gl_grow_* thresholds are planner-writable.",
+        notes="Retired: shared lux threshold; the firmware stores it (tunables.yaml) but no light logic reads it; the per-circuit gl_main_* and gl_grow_* rows run the lights.",
     ),
     "gl_lux_hysteresis": TunableDef(
         name="gl_lux_hysteresis",
@@ -1842,7 +1862,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="dispatcher_default",
         planner_pushable=False,
         tier=2,
-        notes="Legacy shared grow-light hysteresis. Read-only fallback now that per-circuit hysteresis tunables are planner-writable.",
+        notes="Retired: shared lux hysteresis; the firmware stores it (tunables.yaml) but no light logic reads it; the per-circuit gl_main_* and gl_grow_* rows run the lights.",
     ),
     "gl_sunrise_hour": TunableDef(
         name="gl_sunrise_hour",
@@ -1857,7 +1877,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=False,
         tier=2,
-        notes="Earliest local hour grow lights may turn on.",
+        notes="Retired: shared earliest light hour; the firmware stores it (tunables.yaml) but no light logic reads it; the per-circuit gl_main_* and gl_grow_* rows run the lights.",
     ),
     "gl_sunset_hour": TunableDef(
         name="gl_sunset_hour",
@@ -1872,7 +1892,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=False,
         tier=2,
-        notes="Latest local hour grow lights may remain on.",
+        notes="Retired: shared latest light hour; the firmware stores it (tunables.yaml) but no light logic reads it; the per-circuit gl_main_* and gl_grow_* rows run the lights.",
     ),
     "gl_main_dli_target": TunableDef(
         name="gl_main_dli_target",
@@ -1887,7 +1907,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="dispatcher_default",
         planner_pushable=False,
         tier=2,
-        notes="Legacy main/overhead lighting DLI telemetry target. Runtime control now uses gl_main_target_light_minutes.",
+        notes="Retired: the firmware stores and reports it (cfg_gl_main_dli_target) but no light logic reads it; the main circuit runs to gl_main_target_light_minutes.",
     ),
     "gl_main_target_light_minutes": TunableDef(
         name="gl_main_target_light_minutes",
@@ -2059,7 +2079,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="dispatcher_default",
         planner_pushable=False,
         tier=2,
-        notes="Legacy grow/secondary lighting DLI telemetry target. Runtime control now uses gl_grow_target_light_minutes.",
+        notes="Retired: the firmware stores and reports it (cfg_gl_grow_dli_target) but no light logic reads it; the grow circuit runs to gl_grow_target_light_minutes.",
     ),
     "gl_grow_target_light_minutes": TunableDef(
         name="gl_grow_target_light_minutes",
@@ -2289,7 +2309,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=False,
         tier=2,
-        notes="Elevation-corrected barometric pressure for VPD calc. Site constant — not planner-pushable.",
+        notes="Site barometric pressure. The firmware uses it only for the inside/outside air enthalpy that feeds the economiser (sensors.yaml inside_enthalpy, outside_enthalpy); VPD does not use it. Site constant, not planner-pushable.",
     ),
     "sw_economiser_enabled": TunableDef(
         name="sw_economiser_enabled",
@@ -2311,7 +2331,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=False,
         tier=2,
-        notes="Grow-light automation master enable.",
+        notes="Retired: shared automation switch; the firmware stores it (tunables.yaml) but no light logic reads it; the per-circuit gl_main_* and gl_grow_* rows run the lights.",
     ),
     "sw_gl_main_auto_mode": TunableDef(
         name="sw_gl_main_auto_mode",
@@ -2644,10 +2664,11 @@ REGISTRY: dict[str, TunableDef] = {
         wire_scale=10,
         wire_unit="kPa",
         notes=(
-            "VPD delta above active vpd_high that escalates from mist to fog. "
-            "Lower values mean earlier fog inside VENTILATE mist assist; dispatcher "
-            "caps overly conservative deltas during live VPD-high or near-edge VENTILATE stress when dew "
-            "margin is healthy. Tightened to 0.5 kPa max so plans stay band-relative."
+            "VPD delta above vpd_high for the fog-first ladder: a sealed humidify run starts on fog, and "
+            "the misters join (S1, then S2) once VPD stays above vpd_high + this delta for mister_all_delay_s; "
+            " while VENTILATE cools, fog assists the vent above the same edge. The dispatcher caps "
+            "overly conservative deltas during live VPD-high or near-edge VENTILATE stress when dew margin "
+            "is healthy. Tightened to 0.5 kPa max so plans stay band-relative."
         ),
     ),
     # ─────────────────────────────────────────────────────────────────────
@@ -2918,7 +2939,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="firmware_internal",
         planner_pushable=False,
         tier=2,
-        notes="CYC-4 overnight micro-pulse master enable (ships ON; gate is dark+dew+RH+temp gated).",
+        notes="Retired: the CYC-4 overnight micro-pulse path was deleted from the firmware, so nothing reads it. Was: CYC-4 overnight micro-pulse master enable (ships ON; gate is dark+dew+RH+temp gated).",
     ),
     "sw_night_humidity_source_present": TunableDef(
         name="sw_night_humidity_source_present",
@@ -2929,7 +2950,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="firmware_internal",
         planner_pushable=False,
         tier=2,
-        notes="CYC-4 auto-disable flag: flip true once NB5/OPN-2 night humidity HW lands → CYC-4 micro-pulse self-disables.",
+        notes="Retired: the CYC-4 overnight micro-pulse path was deleted from the firmware, so nothing reads it. Was: CYC-4 auto-disable flag: flip true once NB5/OPN-2 night humidity HW lands → CYC-4 micro-pulse self-disables.",
     ),
     "micropulse_vpd_ceiling": TunableDef(
         name="micropulse_vpd_ceiling",
@@ -2944,7 +2965,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="firmware_internal",
         planner_pushable=False,
         tier=2,
-        notes="CYC-4 overnight VPD (kPa) above which a micro-pulse may fire.",
+        notes="Retired: the CYC-4 overnight micro-pulse path was deleted from the firmware, so nothing reads it. Was: CYC-4 overnight VPD (kPa) above which a micro-pulse may fire.",
     ),
     "micropulse_max_on_s": TunableDef(
         name="micropulse_max_on_s",
@@ -2959,7 +2980,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="firmware_internal",
         planner_pushable=False,
         tier=2,
-        notes="CYC-4 HARD cap on a single overnight pulse (s); validate_setpoints clamps ≤10.",
+        notes="Retired: the CYC-4 overnight micro-pulse path was deleted from the firmware, so nothing reads it. Was: CYC-4 HARD cap on a single overnight pulse (s); validate_setpoints clamps ≤10.",
     ),
     "micropulse_min_gap_s": TunableDef(
         name="micropulse_min_gap_s",
@@ -2974,7 +2995,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="firmware_internal",
         planner_pushable=False,
         tier=2,
-        notes="CYC-4 lockout between micro-pulses (s) — pulses can never chain into a run.",
+        notes="Retired: the CYC-4 overnight micro-pulse path was deleted from the firmware, so nothing reads it. Was: CYC-4 lockout between micro-pulses (s) — pulses can never chain into a run.",
     ),
     "micropulse_min_dew_margin_f": TunableDef(
         name="micropulse_min_dew_margin_f",
@@ -2989,7 +3010,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="firmware_internal",
         planner_pushable=False,
         tier=2,
-        notes="CYC-4 min temp-dewpoint spread (°F) to micro-pulse — no crown condensation.",
+        notes="Retired: the CYC-4 overnight micro-pulse path was deleted from the firmware, so nothing reads it. Was: CYC-4 min temp-dewpoint spread (°F) to micro-pulse — no crown condensation.",
     ),
     # ─────────────────────────────────────────────────────────────────────
     # Irrigation site values (VD-37, #1152; irrigation §4.1, architecture §5.3).
@@ -3129,7 +3150,7 @@ _FW2_WINDOW_PARAMS: dict[str, tuple[float, float, float, str]] = {
         120.0,
         0.0,
         480.0,
-        "routine wetting blocked when minutes-to-sunset < taper or phase >= 2 (§B4)",
+        "retired: no controller effect; past_wet_taper is a no-op shim, so wetting follows the VPD band (§B4)",
     ),
     "dawn_boost_offset_min": (60.0, 0.0, 360.0, "zone-boost window anchor, minutes after sunrise (§B4)"),
     "midday_boost_offset_min": (60.0, -240.0, 240.0, "zone-boost window anchor, minutes after solar noon (§B4)"),
@@ -3241,7 +3262,10 @@ def _firmware_v2_staged_defs() -> dict[str, TunableDef]:
         defs[name] = _fw2_def(name, above, 0.02, 1.0, f"{zone} VPD half-width above target, kPa (§B2)")
     for zone, rank in _FW2_ZONE_PRIORITY.items():
         name = f"zone_priority_{zone}"
-        defs[name] = _fw2_def(name, rank, 1.0, 4.0, f"{zone} wetting-arbiter rank, 1=highest (§B3)")
+        note = f"{zone} wetting-arbiter rank, 1=highest (§B3)"
+        if zone == "east":
+            note = "retired: east has no mister, so both arbiters pass it as never allowed and its rank decides nothing (§B3)"
+        defs[name] = _fw2_def(name, rank, 1.0, 4.0, note)
     for name, (default, lo, hi, note) in _FW2_WINDOW_PARAMS.items():
         defs[name] = _fw2_def(name, default, lo, hi, note)
     return defs
@@ -3613,6 +3637,49 @@ FIRMWARE_V2_CFG_WIRE_IDS: dict[str, str] = {
 # Derived views — ONE source of truth above, many consumers below.
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Settings the firmware still stores (and mostly reports) but no control path reads
+# (#1392 follow-up). Retired so the catalog hides them and nobody can write them;
+# nothing is deleted while the firmware keeps the entity. The dispatcher keeps
+# delivering the band, lighting and default values it already sends:
+# `_delivery_class` keeps them in CROP_BAND_REG, SCHEDULED_POLICY_REG and
+# LEGACY_SHARED_LIGHTING_REG, so no runtime set changes with this list.
+# Not here: mist_thermal_relief_s and sw_direct_wet_stress_override_enabled are
+# also inert on the live band-first controller, but they are policy-wire fields
+# (wire ids 24 and 39) the firmware decodes, so retiring them is a wire-schema change.
+NO_EFFECT_RETIRED_REG: frozenset[str] = frozenset(
+    {
+        # greenhouse_logic.h direct_wet_window_open has no caller.
+        *(
+            f"direct_wet_{where}_{part}_min"
+            for where in ("south", "wall", "west", "center")
+            for part in ("start_offset", "drydown_before_off")
+        ),
+        # past_wet_taper is a no-op shim; nothing reads sw_night_stress_wet_enabled.
+        "sw_wet_taper_enabled",
+        "wet_taper_before_sunset_min",
+        "sw_night_stress_wet_enabled",
+        # The east zone has no mister; the arbiters pass it as never allowed.
+        "zone_priority_east",
+        # Shared and per-circuit DLI lighting values no light logic reads.
+        "gl_dli_target",
+        "gl_lux_threshold",
+        "gl_lux_hysteresis",
+        "gl_sunrise_hour",
+        "gl_sunset_hour",
+        "sw_gl_auto_mode",
+        "gl_main_dli_target",
+        "gl_grow_dli_target",
+        # The CYC-4 overnight micro-pulse path was deleted from the firmware.
+        "sw_overnight_micropulse_enabled",
+        "sw_night_humidity_source_present",
+        "micropulse_vpd_ceiling",
+        "micropulse_max_on_s",
+        "micropulse_min_gap_s",
+        "micropulse_min_dew_margin_f",
+    }
+)
+assert NO_EFFECT_RETIRED_REG <= set(REGISTRY), sorted(NO_EFFECT_RETIRED_REG - set(REGISTRY))
+
 RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
     {
         "bias_cool",
@@ -3637,6 +3704,7 @@ RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
         "sw_fsm_controller_enabled",
         "summer_vent_min_runtime_s",
         *_INERT_IRRIGATION_COMPAT_TUNABLES,
+        *NO_EFFECT_RETIRED_REG,
     }
 )
 
@@ -3701,6 +3769,11 @@ def tunable_control_class(
     """
     if name in RETIRED_TUNABLES_REG:
         return "retired"
+    return _unretired_control_class(name, spec)
+
+
+def _unretired_control_class(name: str, spec: TunableDef) -> str:
+    """The class `tunable_control_class` gives a row that is not retired."""
     if name in IRRIGATION_SITE_PARAMS:
         return "irrigation_site"
     if spec.esp_object_id is None or spec.push_owner == "firmware_internal":
@@ -3712,6 +3785,17 @@ def tunable_control_class(
     if spec.push_owner == "band":
         return "crop_band"
     return "controller_safety"
+
+
+def _delivery_class(name: str, spec: TunableDef) -> str:
+    """The class the dispatcher delivers a row under.
+
+    A `NO_EFFECT_RETIRED_REG` row keeps its pre-retirement class here, so retiring it changes what the catalog,
+    MCP and the planner show, never what the dispatcher sends.
+    """
+    if name in NO_EFFECT_RETIRED_REG:
+        return _unretired_control_class(name, spec)
+    return spec.control_class
 
 
 def _contract_classes() -> dict[str, str]:
@@ -3759,7 +3843,7 @@ _LIGHTING_CIRCUIT_PREFIXES = ("gl_main_", "gl_grow_", "sw_gl_main_", "sw_gl_grow
 
 def _crop_band() -> frozenset[str]:
     """Tunables owned by crop/zone band policy rather than routine plans."""
-    return frozenset(n for n, d in REGISTRY.items() if d.control_class == "crop_band")
+    return frozenset(n for n, d in REGISTRY.items() if _delivery_class(n, d) == "crop_band")
 
 
 def _scheduled_policy() -> frozenset[str]:
@@ -3772,7 +3856,7 @@ def _scheduled_policy() -> frozenset[str]:
     `CROP_BAND_REG` so the schedule layer does not leak into the crop temp/VPD
     band surface the dispatcher and HTTP fallbacks resolve.
     """
-    return frozenset(n for n, d in REGISTRY.items() if d.control_class == "scheduled_policy")
+    return frozenset(n for n, d in REGISTRY.items() if _delivery_class(n, d) == "scheduled_policy")
 
 
 def _legacy_shared_lighting() -> frozenset[str]:
@@ -3785,7 +3869,7 @@ def _legacy_shared_lighting() -> frozenset[str]:
     return frozenset(
         n
         for n, d in REGISTRY.items()
-        if d.control_class == "controller_safety"
+        if _delivery_class(n, d) == "controller_safety"
         and not d.planner_pushable
         and (n == "sw_gl_auto_mode" or (n.startswith("gl_") and not n.startswith(("gl_main_", "gl_grow_"))))
     )
@@ -3965,9 +4049,10 @@ WRITABLE_CONTROL_CLASSES: frozenset[str] = frozenset(
 )
 # The legacy wide limits: the dispatcher derives them, and they are not the band
 # while the controller runs its on-chip curve.
-LEGACY_WIDE_LIMIT_PARAMS: frozenset[str] = frozenset(
-    {"temp_low", "temp_high", "vpd_low", "vpd_high"} | {name for name in REGISTRY if name.startswith("vpd_target_")}
-)
+LEGACY_WIDE_LIMIT_PARAMS: frozenset[str] = frozenset({"temp_low", "temp_high", "vpd_low", "vpd_high"})
+# The fixed per-zone VPD targets: the dispatcher sends fn_zone_vpd_targets(now()) every cycle, and the controller
+# still uses them to judge, rank and lengthen zone misting (controls.yaml), so they are not legacy limits.
+ZONE_VPD_TARGET_PARAMS: frozenset[str] = frozenset(name for name in REGISTRY if name.startswith("vpd_target_"))
 # The activity mirror the dispatcher derives from the main-light schedule
 # (ingestor/tasks/_common.py ACTIVITY_MIRROR_PARAMS).
 ACTIVITY_MIRROR_PARAMS: frozenset[str] = frozenset(
@@ -3980,15 +4065,19 @@ READ_ONLY_REASONS: dict[str, str] = {
     "unknown": "not a registered setting",
     "band_owner": "decides which side owns the band",
     "legacy_wide_limit": "legacy wide limit; not the band while the controller runs its on-chip curve",
+    "zone_vpd_target": "zone VPD target the dispatcher computes from the crop curves; the controller uses it for zone misting",
     "activity_mirror": "derived by the dispatcher from the main-light schedule",
     "retired": "retired; the controller no longer uses it",
     "readback_context": "readback context; the controller reports it and nothing sets it",
     "no_entity": "no controller entity to write",
 }
 
-assert len(LEGACY_WIDE_LIMIT_PARAMS) == 8 and all(
+assert len(LEGACY_WIDE_LIMIT_PARAMS) == 4 and all(
     REGISTRY[name].control_class == "crop_band" for name in LEGACY_WIDE_LIMIT_PARAMS
 ), "the legacy wide limits drifted"
+assert len(ZONE_VPD_TARGET_PARAMS) == 4 and all(
+    REGISTRY[name].control_class == "crop_band" for name in ZONE_VPD_TARGET_PARAMS
+), "the zone VPD targets drifted"
 assert ACTIVITY_MIRROR_PARAMS <= set(REGISTRY), "an activity-mirror row left the registry"
 
 
@@ -4000,8 +4089,8 @@ def desired_write_kind(name: str) -> str | None:
     * Writable: ``planner_policy``, ``scheduled_policy``, ``controller_safety`` and ``crop_band`` rows with an
       ``esp_object_id`` (the ``gl_*`` rows among them), and the ``irrigation_site`` rows, which reach the
       controller in the irrigation program.
-    * Read-only: ``readback_context`` and ``retired`` rows; the legacy wide limits; the activity mirror;
-      ``sw_onchip_band_enabled``, by name; a row with no controller entity; an unknown name.
+    * Read-only: ``readback_context`` and ``retired`` rows; the legacy wide limits; the zone VPD targets; the
+      activity mirror; ``sw_onchip_band_enabled``, by name; a row with no controller entity; an unknown name.
     """
     spec = REGISTRY.get(name)
     if spec is None:
@@ -4010,6 +4099,8 @@ def desired_write_kind(name: str) -> str | None:
         return "band_owner"
     if name in LEGACY_WIDE_LIMIT_PARAMS:
         return "legacy_wide_limit"
+    if name in ZONE_VPD_TARGET_PARAMS:
+        return "zone_vpd_target"
     if name in ACTIVITY_MIRROR_PARAMS:
         return "activity_mirror"
     control_class = spec.control_class

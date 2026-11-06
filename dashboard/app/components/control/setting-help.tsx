@@ -34,6 +34,7 @@ export const READ_ONLY_WORDS: Readonly<Record<string, StateWords>> = {
   retired: { label: "Retired", definition: "The controller no longer uses it. Kept for reference and history." },
   readback_context: { label: "Reported by the controller", definition: "The controller reports or measures it; nothing sets it." },
   legacy_wide_limit: { label: "Legacy limit, not used while the on-chip band runs", definition: "An older fixed limit. The band in force comes from the crop band anchors; the guardrails are Safety Min and Safety Max." },
+  zone_vpd_target: { label: "Computed zone target, still used", definition: "Worked out each cycle from the zone's VPD target curve. The controller uses it to decide which zone needs misting and how long a pulse lasts; edit the curve under Crop band." },
   activity_mirror: { label: "Mirrors the light schedule", definition: "Copied from the main grow-light schedule each cycle; change the schedule instead." },
   band_owner: { label: "Decides who owns the band", definition: "Switches between the band the controller computes and the legacy limits. Changed only through a reviewed rollout." },
   no_anchor_row: { label: "No crop band row", definition: "No crop band anchor row holds this value yet, so a change would reach nothing." },
@@ -116,7 +117,7 @@ export function SettingsLegend({ filters }: { filters: readonly { readonly key: 
     </dl>
     <p className="eyebrow">Read-only, because</p>
     <dl>
-      {["band_in_force", "retired", "readback_context", "legacy_wide_limit", "activity_mirror"].map((kind) => <div key={`r-${kind}`}>
+      {["band_in_force", "retired", "readback_context", "legacy_wide_limit", "zone_vpd_target", "activity_mirror"].map((kind) => <div key={`r-${kind}`}>
         <dt>{READ_ONLY_WORDS[kind].label}</dt><dd>{READ_ONLY_WORDS[kind].definition}</dd>
       </div>)}
     </dl>

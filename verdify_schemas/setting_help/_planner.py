@@ -269,13 +269,15 @@ ENTRIES: dict[str, HelpEntry] = {
     "mister_vpd_weight": HelpEntry(
         summary="Pulse-length multiplier for a very dry zone while the misters rotate through all zones.",
         effect=(
-            "In all-zone rotation, a zone well above its crop VPD target gets a pulse of Mister Pulse ON times this "
-            "value; other zones get the normal pulse. It does not change which zone is chosen."
+            "In all-zone rotation, a pulse lasts Mister Pulse ON times this value when its zone is the driest (the "
+            "first pulse) or more than 20% above its zone VPD target (later pulses); other pulses keep the normal "
+            "length. It never changes which zone is chosen."
         ),
         raise_="The driest zones get longer pulses: more water where it is driest.",
         lower="Pulses stay closer to the normal length (below 1 they are shorter than normal).",
         refs=(
             "firmware/greenhouse/controls.yaml::weighted_ms = uint32_t(PULSE_ON_MS * pol(verdify_policy::kPF_mister_vpd_weight, id(mister_vpd_weight)));",
+            "firmware/greenhouse/controls.yaml::zone_vpd > zone_target * 1.2f",
         ),
     ),
     # controls.yaml: nbias * sin^2 added to the VPD band between sunset and sunrise.

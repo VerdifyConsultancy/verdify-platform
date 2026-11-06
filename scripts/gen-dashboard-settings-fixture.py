@@ -57,7 +57,7 @@ WRITABLE_CLASSES = ("planner_policy", "scheduled_policy", "controller_safety", "
 GROUP_OF_CLASS = {**{name: name for name in WRITABLE_CLASSES}, "irrigation_site": "site_water_caps"}
 
 # Architecture §5.3 step 1: the rows a desired-state write may not target, each with its reason.
-LEGACY_WIDE_LIMITS = frozenset({"temp_low", "temp_high", "vpd_low", "vpd_high"})  # and vpd_target_<zone>
+LEGACY_WIDE_LIMITS = frozenset({"temp_low", "temp_high", "vpd_low", "vpd_high"})
 ACTIVITY_MIRROR = frozenset({"activity_start_hour", "activity_start_minute", "activity_duration_min"})
 WEEKLY_FEED = frozenset(
     {
@@ -81,6 +81,7 @@ REASONS = {
     "retired": "retired, read-only: the controller no longer uses it",
     "readback_context": "readback only, read-only: the controller reports it and nothing sends it",
     "legacy": "legacy limit, read-only: not the band while the on-chip band runs",
+    "zone_target": "zone VPD target, read-only: computed from the crop curves; the controller uses it for zone misting",
     "activity": "derived by the dispatcher, read-only: it mirrors the main-light activity window",
     "band_owner": "read-only: it decides whether the controller or the dispatcher owns the band",
     "weekly_feed": "legacy feed commissioning, read-only: retiring with the irrigation engine",
@@ -93,6 +94,7 @@ KINDS = {
     "retired": "retired",
     "readback_context": "readback_context",
     "legacy": "legacy_wide_limit",
+    "zone_target": "zone_vpd_target",
     "activity": "activity_mirror",
     "band_owner": "band_owner",
     "weekly_feed": "no_entity",
@@ -110,8 +112,10 @@ def read_only_key(name: str, spec: TunableDef) -> str | None:
         return "band_owner"
     if control_class in ("retired", "readback_context"):
         return control_class
-    if name in LEGACY_WIDE_LIMITS or name.startswith("vpd_target_"):
+    if name in LEGACY_WIDE_LIMITS:
         return "legacy"
+    if name.startswith("vpd_target_"):
+        return "zone_target"
     if name in ACTIVITY_MIRROR:
         return "activity"
     if name in WEEKLY_FEED:
