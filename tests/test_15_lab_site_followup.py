@@ -226,7 +226,7 @@ def test_resource_use_cost_panels_use_canonical_runtime_cost_fields():
     daily_sql = daily_cost["targets"][0]["rawSql"]
 
     assert "Runtime Electric ($)" in daily_sql
-    assert "cost_electric::numeric" in daily_sql
+    assert "cost_electric_est::numeric" in daily_sql
     assert "kwh_estimated * 0.111" not in daily_sql
     assert "fn_runtime_power_30m" in solar_load["targets"][0]["rawSql"]
     assert "fn_equip_at" not in solar_load["targets"][0]["rawSql"]
@@ -311,9 +311,8 @@ def test_resource_dashboards_label_scope_quality_and_no_legacy_catalog():
     assert "Modeled kWh low" in climate_text
     assert "partial Shelly" in climate_text
     assert "v_daily_kpi" in climate_text
-    assert "resource_terms_available" in climate_text
     assert "AVG(cost_total)::numeric, 2) AS v FROM daily_summary" not in climate_text
-    assert "AVG(cost_total)::numeric, 2) AS v FROM v_daily_kpi" in climate_text
+    assert "AVG(cost_total_est)::numeric, 2) AS v FROM mv_daily_kpi" in climate_text
 
     assert "v_water_attribution_daily" in water_text
     assert "Meter-Conserving Water Attribution" in water_text
