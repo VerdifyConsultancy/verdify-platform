@@ -323,4 +323,4 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .ctl-glossary-entry h3{margin:0;font-size:var(--fs-md)}
 .ctl-glossary-entry .setting-param{display:inline;margin-left:var(--space-2)}
 .ctl-glossary-summary{margin:var(--space-1) 0 var(--space-2)}
-@media print{.ctl-rail,.ctl-filter-note{display:none}.ctl-glossary-entry{border-color:#ccc}}
+@media print{.ctl-rail,.ctl-filter-note{display:none}.ctl-glossary-entry{border-color:var(--line-strong)}}
