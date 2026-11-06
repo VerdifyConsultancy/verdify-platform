@@ -88,7 +88,6 @@ AGENT_NEVER_TOOLS = frozenset(
         "observations",
         "crop_history",
         "crop_lifecycle",
-        "slack_ops",
         "plan_run",
         "query",
         "outcome_kpi",
@@ -480,7 +479,6 @@ class TestAudienceMatrix:
             "set_tunable",
             "plan_evaluate",
             "lessons_manage",
-            "slack_ops",
             "query",
             "plan_run",
         ):
@@ -629,7 +627,6 @@ class TestInventoryAndDriftGuards:
             "set_tunable",
             "plan_evaluate",
             "lessons_manage",
-            "slack_ops",
             "query",
             "plan_run",
         }
@@ -702,7 +699,7 @@ class TestListToolsAudienceFiltering:
     @pytest.mark.parametrize("mode", ["log", "enforce"])
     @pytest.mark.parametrize(
         ("audience", "token", "expected_count"),
-        [("iris", "tok-iris", 34), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 38)],
+        [("iris", "tok-iris", 33), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 37)],
     )
     def test_protocol_inventory_matches_exact_audience_allowlist(
         self, mcp_server, monkeypatch, mode, audience, token, expected_count
@@ -1049,32 +1046,6 @@ def test_ordinary_mcp_connection_attestation_fails_closed(mcp_server, monkeypatc
     monkeypatch.setattr(mcp_server.asyncpg, "connect", connect)
     with pytest.raises(RuntimeError, match="attestation failed"):
         _run(mcp_server._db())
-    assert conn.closed is True
-
-
-def test_slack_tool_uses_attested_connection(mcp_server, monkeypatch):
-    class Connection:
-        closed = False
-
-        async def close(self):
-            self.closed = True
-
-    conn = Connection()
-
-    async def attested_db():
-        return conn
-
-    async def command(_request, **kwargs):
-        assert kwargs["conn"] is conn
-        assert "dsn" not in kwargs
-        return SimpleNamespace(model_dump_json=lambda: '{"ok":true}')
-
-    monkeypatch.setattr(mcp_server, "_db", attested_db)
-    monkeypatch.setattr(mcp_server, "handle_slack_command", command)
-    monkeypatch.setattr(
-        mcp_server, "load_slack_settings", lambda: SimpleNamespace(channel_id="C1", channel_name="greenhouse")
-    )
-    assert _run(mcp_server.slack_ops("status")) == '{"ok":true}'
     assert conn.closed is True
 
 

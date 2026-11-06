@@ -54,7 +54,6 @@ mcp_servers:
         - plan_status
         - history
         - alerts
-        - slack_ops
         - irrigation_status
         - irrigation_schedule
         - irrigation_history
