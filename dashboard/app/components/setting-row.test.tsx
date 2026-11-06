@@ -305,6 +305,15 @@ test("read-only rows show their kind and Details, no Edit; temp_low reads \"Lega
   }
 });
 
+test("a zone VPD target reads as computed and still used, not as a legacy limit", () => {
+  const target = row("vpd_target_center");
+  expect([target.writable, target.read_only_kind]).toEqual([false, "zone_vpd_target"]);
+  draw(target);
+  expect(text(document.querySelector(".setting-note"))).toBe("Computed zone target, still used");
+  expect(document.querySelector(".setting-note")!.getAttribute("title")).toContain("how long a pulse lasts");
+  expect(edit()).toBeNull();
+});
+
 test("a site cap reads the program on the controller, without the revision while it is unknown; before the engine \"—\" with its reason", () => {
   draw(row("mister_daily_volume_max_gal", {}, "program-rev-42"), { programRevision: 42 });
   expect(lines(".setting-value")).toEqual(["On controller · rev 42: 360 gal"]);

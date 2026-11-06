@@ -120,6 +120,7 @@ SettingGroup = Literal[
 ReadOnlyKind = Literal[
     "band_in_force",
     "legacy_wide_limit",
+    "zone_vpd_target",
     "activity_mirror",
     "band_owner",
     "retired",

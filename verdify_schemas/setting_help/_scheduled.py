@@ -24,7 +24,6 @@ _NO_WET_WINDOW = (
     "The controller stores and reports this value, but no control path reads it today: misting follows the "
     "VPD band and the irrigation program, not a clock window."
 )
-_NO_EFFECT = "No effect on equipment today; only the reported value changes."
 
 
 def _wet_offset(where: str, start: bool) -> HelpEntry:
@@ -35,8 +34,6 @@ def _wet_offset(where: str, start: bool) -> HelpEntry:
     return HelpEntry(
         summary=summary,
         effect=_NO_WET_WINDOW,
-        raise_=_NO_EFFECT,
-        lower=_NO_EFFECT,
         refs=(
             f"{_LOGIC}::direct_wet_window_open",
             f"{_DISPATCHER}::_activity_defaults_from_lighting",
@@ -212,22 +209,31 @@ def _legacy_edge(axis: str, side: str, refs: tuple[str, ...]) -> HelpEntry:
 def _zone_target(zone: str, crop: str) -> HelpEntry:
     if zone == "east":
         use = (
-            "The east zone has no mister: the controller compares east VPD with this value only to boost the "
-            "south zone's misting score when the east side is dry."
+            "The east zone has no mister, but the controller still uses this value: east VPD above it counts as a "
+            "zone needing misting, and adds to the south and center misting scores."
+        )
+    elif zone == "center":
+        use = (
+            "The controller still uses this value: house VPD above it counts as the center zone needing misting, "
+            "and it sets the center misting score, the overdue-zone check and when a pulse is lengthened."
         )
     else:
         use = (
-            f"The controller still compares {zone} VPD with this value when it judges whether a zone needs misting, "
-            f"which zone a pulse goes to, and whether to lengthen a pulse when VPD is 20% above it."
+            f"The controller still uses this value: {zone} VPD above it counts as the zone needing misting, and it "
+            f"sets the misting score, the overdue-zone check and when a pulse is lengthened."
         )
     return HelpEntry(
-        summary=f"Fixed VPD target for the {zone} zone ({crop}), sent by the platform from the crop data.",
+        summary=f"VPD target for the {zone} zone, worked out by the platform each cycle from the zone's target curve.",
         effect=(
-            f"{use} The zone's band in force comes from its target curve under Crop band; this single value "
-            f"is not editable."
+            f"{use} The platform sends it each cycle from the zone's VPD target curve under Crop band, so "
+            f"this value itself is not editable."
         ),
         caution="Read-only. Edit the zone's VPD target curve under Crop band to change how the zone is misted.",
-        refs=(f"{_CONTROLS}::vpd_target_{zone}", f"{_DISPATCHER}::fn_zone_vpd_targets"),
+        refs=(
+            f"{_CONTROLS}::id(vpd_target_{zone}) > 0",
+            f"{_CONTROLS}::zone_vpd > zone_target * 1.2f",
+            f"{_DISPATCHER}::fn_zone_vpd_targets",
+        ),
     )
 
 
@@ -236,8 +242,6 @@ def _zone_priority(zone: str, crop: str) -> HelpEntry:
         return HelpEntry(
             summary=f"Misting rank of the east zone ({crop}); 1 is served first.",
             effect="The east zone has no mister, so the controller leaves it out when it ranks zones for a pulse.",
-            raise_="No effect today: the east zone has no mister.",
-            lower="No effect today: the east zone has no mister.",
             refs=(f"{_IRRIGATION}::irr_rank_vpd_zone", f"{_SOLAR}::arbitrate_wet_zone"),
         )
     return HelpEntry(
@@ -299,8 +303,6 @@ ENTRIES: dict[str, HelpEntry] = {
             "The controller stores and reports it, but the taper check is switched off in the control code: "
             "misting at dusk and at night now follows the VPD band curve, whose evening edge keeps nights dry."
         ),
-        raise_=_NO_EFFECT,
-        lower=_NO_EFFECT,
         caution="To keep evenings drier, raise the evening and night VPD band under Crop band instead.",
         refs=(f"{_LOGIC}::past_wet_taper", f"{_CONTROLS}::wet_taper_before_sunset_min"),
     ),

@@ -16,7 +16,6 @@ _LEGACY_LIGHT = (
     "The per-circuit grow-light settings (GL Main and GL Grow) run the lights now; this shared value is kept for "
     "reference and the controller's light logic does not read it."
 )
-_LEGACY_LIGHT_NO_EFFECT = "No effect on the grow lights; change the matching GL Main or GL Grow setting instead."
 
 ENTRIES: dict[str, HelpEntry] = {
     "safety_min": HelpEntry(
@@ -160,8 +159,6 @@ ENTRIES: dict[str, HelpEntry] = {
             "The controller now decides wetting from VPD against the band curve, so a properly shaped evening "
             "band keeps foliage dry. This switch is still stored and reported, but nothing reads it."
         ),
-        raise_="No effect on the greenhouse.",
-        lower="No effect on the greenhouse.",
         refs=(
             f"{_LOGIC}::inline bool past_wet_taper(const SensorInputs&, const Setpoints&) noexcept {{",
             f"{_CONTROLS}::.sw_wet_taper_enabled = id(sw_wet_taper_enabled),",
@@ -173,8 +170,6 @@ ENTRIES: dict[str, HelpEntry] = {
             "Night wetting now follows VPD against the night band and the night condensation guard (Night Stress "
             "Min Dew Margin). This switch is still stored and reported, but nothing reads it."
         ),
-        raise_="No effect on the greenhouse.",
-        lower="No effect on the greenhouse.",
         refs=(
             f"{_LOGIC}::inline bool stress_wet_override_permitted(const SensorInputs&, const Setpoints&) noexcept {{",
             f"{_CONTROLS}::.sw_night_stress_wet_enabled = id(sw_night_stress_wet_enabled),",
@@ -311,15 +306,11 @@ ENTRIES: dict[str, HelpEntry] = {
     "gl_dli_target": HelpEntry(
         summary="Former shared daily light target for the grow lights; no longer used by the controller.",
         effect=_LEGACY_LIGHT,
-        raise_=_LEGACY_LIGHT_NO_EFFECT,
-        lower=_LEGACY_LIGHT_NO_EFFECT,
         refs=(f"{_TUNABLES}::id(gl_dli_target) = x;",),
     ),
     "gl_lux_threshold": HelpEntry(
         summary="Former shared daylight level below which grow lights turned on; no longer used.",
         effect=_LEGACY_LIGHT,
-        raise_=_LEGACY_LIGHT_NO_EFFECT,
-        lower=_LEGACY_LIGHT_NO_EFFECT,
         refs=(
             f"{_TUNABLES}::id(gl_lux_threshold) = x;",
             f"{_CONTROLS}::.lux_on_threshold = id(gl_main_lux_threshold),",
@@ -328,8 +319,6 @@ ENTRIES: dict[str, HelpEntry] = {
     "gl_lux_hysteresis": HelpEntry(
         summary="Former shared daylight margin for turning grow lights off; no longer used.",
         effect=_LEGACY_LIGHT,
-        raise_=_LEGACY_LIGHT_NO_EFFECT,
-        lower=_LEGACY_LIGHT_NO_EFFECT,
         refs=(
             f"{_TUNABLES}::id(gl_lux_hysteresis) = x;",
             f"{_CONTROLS}::.lux_hysteresis = id(gl_main_lux_hysteresis),",
@@ -338,15 +327,11 @@ ENTRIES: dict[str, HelpEntry] = {
     "gl_sunrise_hour": HelpEntry(
         summary="Former shared earliest hour the grow lights could turn on; no longer used.",
         effect=_LEGACY_LIGHT,
-        raise_=_LEGACY_LIGHT_NO_EFFECT,
-        lower=_LEGACY_LIGHT_NO_EFFECT,
         refs=(f"{_TUNABLES}::id(gl_sunrise_hour) = (int)x;",),
     ),
     "gl_sunset_hour": HelpEntry(
         summary="Former shared latest hour the grow lights could stay on; no longer used.",
         effect=_LEGACY_LIGHT,
-        raise_=_LEGACY_LIGHT_NO_EFFECT,
-        lower=_LEGACY_LIGHT_NO_EFFECT,
         refs=(f"{_TUNABLES}::id(gl_sunset_hour) = (int)x;",),
     ),
     "gl_main_dli_target": HelpEntry(
@@ -355,8 +340,6 @@ ENTRIES: dict[str, HelpEntry] = {
             "The controller reports this value but does not use it. The main lights run to GL Main Target Light "
             "Minutes instead."
         ),
-        raise_="No effect on the lights; change GL Main Target Light Minutes instead.",
-        lower="No effect on the lights; change GL Main Target Light Minutes instead.",
         refs=(f"{_SENSORS}::return id(gl_main_dli_target);", f"{_TUNABLES}::id(gl_main_dli_target) = x;"),
     ),
     "sw_gl_main_out_of_service": HelpEntry(
@@ -378,8 +361,6 @@ ENTRIES: dict[str, HelpEntry] = {
             "The controller reports this value but does not use it. The grow circuit runs to GL Grow Target Light "
             "Minutes instead."
         ),
-        raise_="No effect on the lights; change GL Grow Target Light Minutes instead.",
-        lower="No effect on the lights; change GL Grow Target Light Minutes instead.",
         refs=(f"{_SENSORS}::return id(gl_grow_dli_target);", f"{_TUNABLES}::id(gl_grow_dli_target) = x;"),
     ),
     "sw_gl_grow_out_of_service": HelpEntry(
@@ -436,8 +417,6 @@ ENTRIES: dict[str, HelpEntry] = {
             "The main and grow circuits each have their own automatic switch (GL Main Auto Mode, GL Grow Auto "
             "Mode). This shared switch is stored and reported, but the light logic does not read it."
         ),
-        raise_="No effect on the lights; use GL Main Auto Mode or GL Grow Auto Mode.",
-        lower="No effect on the lights; use GL Main Auto Mode or GL Grow Auto Mode.",
         refs=(f"{_TUNABLES}::id(gl_auto_enabled) = true;", f"{_CONTROLS}::.auto_enabled = id(gl_main_auto_enabled),"),
     ),
     "sw_occupancy_inhibit": HelpEntry(
