@@ -573,7 +573,8 @@ def test_with_the_engine_each_line_kind_runs_its_own_fields(tools):
         ),
         ("L01", {}, "invalid_request", "minutes"),
         ("L03", {"minutes": 5}, "unknown_target", "line_id"),
-        ("L11", {"minutes": 5}, "unknown_target", "line_id"),
+        # #1343 follow-up: fog runs once only on a build whose irr_caps says so; none is published here.
+        ("L11", {"minutes": 5}, "unavailable", "line_id"),
     ],
 )
 def test_with_the_engine_the_wrong_fields_for_a_line_are_refused(tools, line_id, fields, code, field):

@@ -95,10 +95,13 @@ test("Today: zone cards in their fixed order, each line a row in its zone (L01�
   await load();
   expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Water today");
   expect(tab("Today").getAttribute("aria-current")).toBe("page");
-  expect([...document.querySelectorAll(".wat-zone")].map((node) => node.getAttribute("data-zone"))).toEqual(["wall", "center", "south", "west", "fog"]);
-  expect([...document.querySelectorAll("article[data-line]")].map((node) => node.getAttribute("data-line"))).toEqual(["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11"]);
+  expect([...document.querySelectorAll(".wat-zone")].map((node) => node.getAttribute("data-zone"))).toEqual(["wall", "center", "center_mister", "south", "west", "fog"]);
+  // #1336: one card per physical line, the center mister apart from the center drips, its fertilized side not wired.
+  expect([...document.querySelectorAll("article[data-line]")].map((node) => node.getAttribute("data-line"))).toEqual(["L01", "L02", "L05", "L06", "L04", "L07", "L08", "L09", "L10", "L11"]);
+  expect([...document.querySelectorAll(".wat-zone-name")].map((node) => text(node).split(" ").slice(0, 2).join(" "))).toEqual(["Wall drip", "Center drip", "Center mister", "South mister", "West mister", "Fog humidification"]);
+  expect(text(zone("center_mister").querySelector(".wat-unwired"))).toBe("Fertilized · not wired");
   expect([...document.querySelectorAll("article[data-line] h3")].map((node) => text(node))).toEqual([
-    "Wall drip", "Wall drip (fertilized)", "Center mister", "Center drip", "Center drip (fertilized)", "South mister", "South mister (fertilized)", "West mister", "West mister (fertilized)", "Fog",
+    "Wall drip", "Wall drip (fertilized)", "Center drip", "Center drip (fertilized)", "Center mister", "South mister", "South mister (fertilized)", "West mister", "West mister (fertilized)", "Fog",
   ]);
   // Each row is named by its h3, carries its state, and the old hook class stays for the visit specs.
   expect(screen.getByRole("article", { name: "Wall drip" }).getAttribute("data-state")).toBe("idle");
@@ -106,8 +109,8 @@ test("Today: zone cards in their fixed order, each line a row in its zone (L01�
   expect(row("L02").querySelector(".line-subrow")?.getAttribute("data-line")).toBe("L03");
   // Zone heads: minutes against the cap line's cap, the reserve and when it last watered; misters' switches and source.
   expect(text(zone("wall").querySelector('[data-limit="L01"]'))).toMatch(/^0 \/ 60 min.*last Fri \d\d:\d\d$/);
-  expect(text(zone("center").querySelector('[data-limit="L04"]'))).toMatch(/^14 \/ 120 min.*60 min kept for VPD · last 06:58$/);
-  expect(text(zone("center").querySelector(".mister-source"))).toBe("VPD from the house average");
+  expect(text(zone("center_mister").querySelector('[data-limit="L04"]'))).toMatch(/^14 \/ 120 min.*60 min kept for VPD · last 06:58$/);
+  expect(text(zone("center_mister").querySelector(".mister-source"))).toBe("VPD from the house average");
   expect(text(zone("fog").querySelector(".wat-zone-today"))).toMatch(/^6 min today/);
   // Site today, in words with its hooks.
   expect([...document.querySelectorAll(".wat-site [data-limit]")].map((node) => [node.getAttribute("data-limit"), text(node)])).toEqual([
@@ -170,7 +173,7 @@ test("a phone's status line names a running line too, linked to its row; the zon
   // The wall's head: today's 12 min against the cap, and "running now", never Friday's last water.
   expect(text(zone("wall").querySelector('[data-limit="L01"]'))).toMatch(/^12 \/ 60 min.*running now$/);
   expect(text(zone("wall").querySelector(".wat-zone-last"))).not.toContain("last");
-  expect(text(zone("center").querySelector(".wat-zone-last"))).toBe("60 min kept for VPD · last 06:58");
+  expect(text(zone("center_mister").querySelector(".wat-zone-last"))).toBe("60 min kept for VPD · last 06:58");
   cleanup(); stopFixtureApi();
   open("/water", { fixture: "in-band" });
   await load();
@@ -400,6 +403,7 @@ test("an operator's click on an empty part of a row opens the editor prefilled w
   expect(where()).toBe("/water/schedules?day=2026-11-04&line=L07&at=13%3A15&schedule=new");
   const drawer = within(document.querySelector<HTMLElement>("dialog.drawer")!);
   expect((drawer.getByLabelText("Line") as HTMLSelectElement).selectedOptions[0].textContent).toBe("South mister");
+  expect((drawer.getByLabelText("Variant") as HTMLSelectElement).selectedOptions[0].textContent).toBe("Clean");
   expect((drawer.getByLabelText("Clock time (HH:MM)") as HTMLInputElement).value).toBe("13:15");
   expect(drawer.getByRole("button", { name: "Wednesday" }).getAttribute("aria-pressed")).toBe("true");
   fireEvent.click(drawer.getByRole("button", { name: "Cancel" }));
@@ -615,12 +619,12 @@ const LINE_IDS = ["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10",
 const buttons = (id: string) => [...row(id).querySelectorAll(":scope > .object-row-actions > button")].map((node) => text(node));
 const everyRow = () => Object.fromEntries(LINE_IDS.map((id) => [id, buttons(id)]));
 
-test("each row's actions with the irrigation firmware (#1343): Run… or Mist now… on every wet line but a reserved one that is off, a quiet Stop on every row but fog", async () => {
+test("each row's actions with the irrigation firmware (#1343): Run… or Mist now… on every wet line but a reserved one that is off, a quiet Stop on every row, and Fog once… on L11", async () => {
   open("/water", { fixture: "run-dialogs" });
   await load();
   expect(everyRow()).toEqual({
     L01: ["Run… Wall drip", "Stop Wall drip"], L02: ["Run… Wall drip (fertilized)", "Stop Wall drip (fertilized)"], L04: ["Mist now… Center mister", "Stop Center mister"], L05: ["Stop Center drip"], L06: ["Stop Center drip (fertilized)"], L07: ["Mist now… South mister", "Stop South mister"],
-    L08: ["Run… South mister (fertilized)", "Stop South mister (fertilized)"], L09: ["Mist now… West mister", "Stop West mister"], L10: ["Run… West mister (fertilized)", "Stop West mister (fertilized)"], L11: [],
+    L08: ["Run… South mister (fertilized)", "Stop South mister (fertilized)"], L09: ["Mist now… West mister", "Stop West mister"], L10: ["Run… West mister (fertilized)", "Stop West mister (fertilized)"], L11: ["Fog once… Fog", "Stop Fog"],
   });
   expect(document.querySelectorAll("article[data-line] .btn-stop")).toHaveLength(0);
   expect(screen.getByRole("button", { name: "Run… Wall drip" }).className).toContain("btn-wide");

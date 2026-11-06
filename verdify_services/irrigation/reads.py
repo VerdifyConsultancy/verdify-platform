@@ -33,7 +33,15 @@ from decimal import Decimal
 from typing import Any, Literal
 
 import asyncpg
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, SerializerFunctionWrapHandler, model_serializer
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    model_serializer,
+    model_validator,
+)
 
 from verdify_schemas import irrigation as irr
 from verdify_schemas.irrigation import (
@@ -287,11 +295,66 @@ class StateFreshness(_Model):
     stale: bool
 
 
+class CircuitVariant(_Model):
+    """One variant of a physical line (#1336): its relay, or ``line_id`` null with ``wired`` false when that valve has
+    no relay (shown, never scheduled or run). ``master_valve``: L03 opens with it (fertilized only)."""
+
+    variant: Literal["clean", "fertilized"]
+    line_id: str | None
+    wired: bool
+    master_valve: bool
+    enabled: bool
+    running: bool
+
+
+class Circuit(_Model):
+    """One physical line (#1336): Wall drip, Center drip and the Center, South and West misters, each with a clean and
+    a fertilized variant mapped to its relay. The relays stay in ``lines``; this groups them as the greenhouse is
+    plumbed."""
+
+    circuit_id: str
+    name: str
+    zone: Literal["wall", "center", "south", "west"]
+    kind: Literal["drip", "mister"]
+    clean: CircuitVariant
+    fertilized: CircuitVariant
+
+
+def circuits_of(lines: Sequence[IrrigationLine]) -> list[Circuit]:
+    """The physical lines over ``lines`` (pure; ``irr.CIRCUITS`` order). A variant's ``enabled`` and ``running`` are
+    its relay's; an unwired variant is neither."""
+    by_id = {line.line_id: line for line in lines}
+
+    def variant(name: str, line_id: str | None) -> CircuitVariant:
+        line = by_id.get(line_id or "")
+        return CircuitVariant(
+            variant=name,
+            line_id=line_id,
+            wired=line_id is not None,
+            master_valve=line_id is not None and irr.master_valve_opens(line_id),
+            enabled=bool(line is not None and line.enabled),
+            running=bool(line is not None and line.state.code == "running"),
+        )
+
+    return [
+        Circuit(
+            circuit_id=c.circuit_id,
+            name=c.name,
+            zone=c.zone,
+            kind=c.kind,
+            clean=variant("clean", c.clean_line),
+            fertilized=variant("fertilized", c.fert_line),
+        )
+        for c in irr.CIRCUITS
+    ]
+
+
 class IrrigationStatus(_Model):
     server_time: AwareDatetime
     engine: bool
     program: ProgramSync
     lines: list[IrrigationLine]
+    circuits: list[Circuit]
     active_runs: list[ActiveRun]
     today: TodayMinutes
     limits: Limits
@@ -317,6 +380,8 @@ class Schedule(_Model):
 
     slot_id: int
     line_id: str
+    circuit_id: str | None = None
+    variant: Literal["clean", "fertilized"] | None = None
     label: str | None = None
     enabled: bool
     days: list[Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]]
@@ -334,10 +399,22 @@ class Schedule(_Model):
     updated_at: AwareDatetime
     reason: str | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _physical_line(cls, data: Any) -> Any:
+        """#1336: the physical line and variant the schedule's relay belongs to, from ``line_id``."""
+        if isinstance(data, Mapping) and data.get("circuit_id") is None:
+            found = irr.CIRCUIT_OF_LINE.get(str(data.get("line_id")))
+            if found is not None:
+                data = {**data, "circuit_id": found[0], "variant": found[1]}
+        return data
+
     @model_serializer(mode="wrap")
     def _no_null_strings(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
         return {
-            key: value for key, value in handler(self).items() if value is not None or key not in ("label", "reason")
+            key: value
+            for key, value in handler(self).items()
+            if value is not None or key not in ("label", "reason", "circuit_id", "variant")
         }
 
 
@@ -1096,6 +1173,7 @@ async def status(conn: asyncpg.Connection, actor: Actor | None) -> IrrigationSta
         engine=base.engine,
         program=_program_sync(base),
         lines=read.lines,
+        circuits=circuits_of(read.lines),
         active_runs=_active_runs(base, read, reading),
         today=TodayMinutes(
             date=read.today,

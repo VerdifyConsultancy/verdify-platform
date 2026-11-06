@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 import { useId } from "react";
-import { ZONE_WORDS, lineDisplayName } from "../../lib/lines";
+import { lineDisplayName } from "../../lib/lines";
 import type { IrrigationLine, IrrigationStatus, Schedule } from "../../lib/operator-api";
 import { useApiDown } from "../../lib/session";
-import { ZONE_KIND_WORDS, amountShort, dayClockWords, nextRunShort, vpdTodayWords, zoneLastAt, type ZoneSummary } from "../../lib/water";
+import { ZONE_CARD_WORDS, ZONE_KIND_WORDS, amountShort, dayClockWords, nextRunShort, vpdTodayWords, zoneLastAt, type ZoneSummary } from "../../lib/water";
 import { cls } from "../common";
 import { LineCard } from "../line-card";
 import { MisterControls } from "../mister-association";
@@ -33,16 +33,16 @@ export type ZoneCardProps = {
 };
 
 /**
- * A zone's card on Water → Today (redesign §5.2): the zone's name and kind, its minutes today against the cap line's
+ * A physical line's card on Water → Today (redesign §5.2, #1336): the line's name and variants, its minutes today against the cap line's
  * daily cap (planned minutes dashed) and when it last watered, "running now" while one of its lines runs; a mister zone
- * adds VPD control and Schedule with their VPD source; then a row per line in register order, L03 under L02. The order
- * never changes with state.
+ * adds VPD control and Schedule with their VPD source; then a row per wired variant in register order, L03 under L02, and
+ * "Fertilized · not wired" for a variant with no relay. The order never changes with state.
  */
 export function ZoneCard({ summary, status, today, now, strips, schedules }: ZoneCardProps) {
   const headingId = useId();
   const apiDown = useApiDown();
-  const { zone, lines, master, mister, minutes, planned, cap, capLine, reserve, running } = summary;
-  const name = ZONE_WORDS[zone];
+  const { zone, lines, master, mister, minutes, planned, cap, capLine, reserve, running, unwired } = summary;
+  const name = ZONE_CARD_WORDS[zone];
   // The zone's minutes count every purpose (the cap does); its mister's VPD misting is said apart (#1348).
   const vpd = vpdTodayWords(mister?.today);
   // Today's valve starts (API-05) stand in for a `last_water` the API has not filed yet once today's minutes are above 0.
@@ -76,6 +76,7 @@ export function ZoneCard({ summary, status, today, now, strips, schedules }: Zon
     <div className="wat-zone-lines">
       {lines.map((line, index) => <LineCard key={line.line_id} line={line} master={line.line_id === "L02" ? master : null} engine={status.engine} program={status.program}
         today={today} scheduleLabels={labels} strip={strip(line, index)} />)}
+      {unwired.map((variant) => <p key={variant} className="meta wat-unwired" data-variant={variant}>{variant === "clean" ? "Clean" : "Fertilized"} · not wired</p>)}
     </div>
   </section>;
 }

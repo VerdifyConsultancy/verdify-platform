@@ -1782,14 +1782,15 @@ def _irr_command_payload(
 
 
 def _run_payload(row: IrrigationCommandRow) -> dict:
-    """One run's irr_command arguments. A drip's minutes become one pulse; a mister's pulses pass through unchanged,
-    and both fertilizer kinds add their prewet and flush. Raises ValueError when the row's args do not fit its line."""
+    """One run's irr_command arguments. A drip's minutes become one pulse, and so do a fog run-once's (#1343 follow-up);
+    a mister's pulses pass through unchanged, and both fertilizer kinds add their prewet and flush. Raises ValueError
+    when the row's args do not fit its line."""
     if row.line_id is None:
         raise ValueError("a run names its line")
     kind = LINE_KIND[row.line_id]
     args = row.args
     fields: dict[str, int] = {}
-    if kind in _DRIP_KINDS:
+    if kind in _DRIP_KINDS or kind == "fog":
         fields |= {"on_s": _whole_arg(args, "minutes") * 60, "count": 1, "gap_s": 0}
     elif kind in _MISTER_KINDS:
         fields |= {name: _whole_arg(args, name) for name in ("on_s", "count", "gap_s")}

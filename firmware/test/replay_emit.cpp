@@ -393,6 +393,19 @@ static void process_row(const Header& h,
         if (dehum_hold_preview_on) {
             sp.dehum_vent_hold_enabled = true;
         }
+        // #1365 night dry-out: the firmware default is ON, but the feature did
+        // not exist when the corpus was recorded, so a row without an
+        // sp_sw_night_dryout_enabled column replays with it OFF (the setpoint
+        // the device actually had). REPLAY_EMIT_NIGHT_DRYOUT=1 forces it ON to
+        // characterise the change (OLD-vs-NEW: 19,739/296,698 rows, 6.65%, all
+        // night_dryout_pulse/reheat plus their knock-on). replay_invariants
+        // keeps the default ON, so invariant #28 still covers the ON path.
+        static const bool night_dryout_preview_on = []{
+            const char* e = std::getenv("REPLAY_EMIT_NIGHT_DRYOUT");
+            return e && *e && *e != '0';
+        }();
+        sp.night_dryout_enabled = night_dryout_preview_on
+            || parse_bool_float(get("sp_sw_night_dryout_enabled"), false);
         // #410 characterization companion: the checked-in corpus carries
         // outdoor_temp_f/outdoor_rh_pct on ~98k rows but NEVER populates
         // outdoor_data_age_s, so `fresh` is false on every corpus row and the
