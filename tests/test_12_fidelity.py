@@ -3187,6 +3187,11 @@ def test_manual_climate_buttons_are_flag_only_controller_path():
         "manual_fans_until_ms",
         "manual_fog_until_ms",
         "vent_bypass_until_ms",
+        # #1335: the per-circuit manual light holds (deadline and held state), never a relay.
+        "gl_main_hold_until_ms",
+        "gl_main_hold_on",
+        "gl_grow_hold_until_ms",
+        "gl_grow_hold_on",
     }
     dashboard = override
 
