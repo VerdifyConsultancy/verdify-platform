@@ -40,8 +40,8 @@ const BRIDGE_LINE = "L01";
 export type RunOffer = "run" | "mist" | "enable" | "arrives" | null;
 export function runOffer(line: Pick<IrrigationLine, "line_id" | "kind" | "enabled" | "reserved">, engine: boolean): RunOffer {
   if (line.kind === "master") return null;
-  // Fog runs once under the climate path's own rails, enabled or not; before the engine it has nothing to run.
-  if (line.kind === "fog") return engine ? "run" : null;
+  // Fog runs once under the climate path's own rails once it is enabled, like any line; before the engine, nothing.
+  if (line.kind === "fog" && !engine) return null;
   if (!engine && line.line_id !== BRIDGE_LINE) return "arrives";
   if (!line.enabled) return engine && !line.reserved ? "enable" : null;
   return line.kind === "mister" ? "mist" : "run";

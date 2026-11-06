@@ -27,8 +27,8 @@ FIRMWARE_SOURCES = {
     # lock). Solar/band expressions are unchanged. New captures bind this source;
     # historical receipts stay frozen. #1370 lets occupancy light the main
     # lights at any hour and #1343 fogs a fog run-once through the manual fog
-    # path; solar/band expressions are unchanged.
-    "firmware/greenhouse/controls.yaml": "af0169678b6131d95790cec91df2f195a5f66289b296ba161edc0fc48e4936e0",
+    # path; #1385's night dry-out joins them. Solar/band expressions are unchanged.
+    "firmware/greenhouse/controls.yaml": "3c51b1904eb2862efe817f074a0052f1c54c1ec279f140481061eddde2ee3e21",
 }
 SERIES = ("temp_low", "temp_high", "temp_target", "vpd_low", "vpd_high", "vpd_target")
 ANCHORS = ("sr", "sm", "ss", "mid")

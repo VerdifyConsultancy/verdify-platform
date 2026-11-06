@@ -944,8 +944,9 @@ FOG_BUILD = "2026.11.5.2200.abcdef12"
     ],
 )
 def test_fog_runs_once_only_while_irr_caps_names_fog_run_for_the_running_build(caps, accepted):
-    """#1343 follow-up, no date gate (2026-11-05): the controller's own irr_caps decides."""
+    """#1343 follow-up, no date gate (2026-11-05): the controller's own irr_caps decides (fog enabled, like any run)."""
     set_engine()
+    enable_line("L11", checked=True)
     sql("INSERT INTO public.diagnostics (ts, firmware_version) VALUES (now() - interval '1 minute', $1)", FOG_BUILD)
     if caps is not None:
         sql(

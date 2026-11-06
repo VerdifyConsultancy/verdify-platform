@@ -306,6 +306,91 @@ inline bool night_econ_heat_suppressed(const SensorInputs& in, const Setpoints& 
     return sp.sw_night_econ_heat_suppress_enabled && is_night_phase(in);
 }
 
+// ── #1365 night dry-out: vent + reheat pulses with confirmed-drier outdoor air ──
+// Jason 2026-11-05: the house must dry out overnight (roots, algae on the floor);
+// heating the colder outdoor air is accepted energy. Heat alone barely raises
+// night VPD (wet surfaces re-evaporate: indoor DP rises 0.5-0.85 °F per °F of
+// heat), so the lever is short exchanges with drier outdoor air while ELECTRIC
+// heat1 holds the temperature. The #410 hold candidate cannot arm at night
+// (it needs temp >= band_heat_target_f + heat_hysteresis, the line heat1 holds
+// the house at), so this is its own gate, not a re-enable of that path.
+//   PULSE: vent + lead fan for night_dryout_pulse_s; heat1 holds hold_temp.
+//   REST:  vent closed for night_dryout_rest_s; heat1 reheats to hold_temp.
+//   NONE:  next pulse when every gate below holds again.
+// heat2 (gas) never runs for humidity; ENV-2 (no heat-only humidity chasing)
+// is unchanged. Safety, cooling, sealing and the existing dehum path win.
+enum NightDryoutPhase : uint8_t { DRYOUT_NONE = 0, DRYOUT_PULSE = 1, DRYOUT_REST = 2 };
+// The dry-out floor never drops below today's served night floor, whatever the
+// band becomes (Jason overrode the research's 0.50 kPa plant floor).
+static constexpr float NIGHT_DRYOUT_MIN_FLOOR_KPA = 0.74f;
+// A pulse starts only this far above temp_low, and aborts at temp_low (where the
+// heat2 latch takes over for temperature).
+static constexpr float NIGHT_DRYOUT_START_MARGIN_F = 1.0f;
+// heat1 draw measured by the Shelly CT when on (#1365 research: 1.44 kW).
+static constexpr float NIGHT_DRYOUT_HEAT1_KW = 1.44f;
+
+inline float night_dryout_floor_kpa(const Setpoints& sp) noexcept {
+    return std::max(sp.vpd_low, NIGHT_DRYOUT_MIN_FLOOR_KPA);
+}
+
+inline bool night_dryout_budget_left(const Setpoints& sp, const ControlState& state) noexcept {
+    return state.dryout_reheat_wh < sp.night_dryout_kwh_cap * 1000.0f;
+}
+
+// The temperature heat1 holds through a pulse and its rest: the house's
+// temperature when the pulse started, at least the stage-1 heat line and at
+// most the served target. Never above temp_target, so it is not heat-chasing.
+inline float night_dryout_hold_temp_f(float start_temp_f, const Setpoints& sp) noexcept {
+    const float floor_f = band_heat_target_f(sp) + sp.heat_hysteresis;
+    return std::max(floor_f, std::min(sp.temp_target, start_temp_f));
+}
+
+// Outdoor air confirmed drier in absolute terms: fresh Tempest data and an
+// outdoor dewpoint at least night_dryout_dp_margin_f below indoor. Dewpoint
+// orders vapour pressure exactly, so this is the absolute-humidity test.
+inline bool night_dryout_outdoor_drier(const SensorInputs& in, const Setpoints& sp) noexcept {
+    return std::isfinite(in.outdoor_temp_f)
+        && std::isfinite(in.outdoor_dewpoint_f)
+        && std::isfinite(in.dew_point_f)
+        && in.outdoor_data_age_s < sp.outdoor_staleness_max_s
+        && in.outdoor_dewpoint_f <= (in.dew_point_f - sp.night_dryout_dp_margin_f);
+}
+
+// Why a NEW pulse may not start this cycle; "" when it may. base_mode is the
+// mode the controller chose before the dry-out layer (IDLE = nothing more
+// important is running, including plain stage-1 heating).
+inline const char* night_dryout_block_reason(const SensorInputs& in, const Setpoints& sp,
+                                             const ControlState& state, Mode base_mode) noexcept {
+    if (!sp.night_dryout_enabled) return "disabled";
+    if (!is_night_phase(in)) return "day";
+    if (!vpd_control_trusted(in)) return "vpd_untrusted";
+    if (base_mode != IDLE) return "busy";
+    if (in.vpd_kpa >= night_dryout_floor_kpa(sp)) return "dry_enough";
+    if (moisture_blocked_by_occupancy(in, sp)) return "occupied";
+    if (state.heat2_latched) return "heat2_latched";
+    if (in.temp_f < sp.temp_low + NIGHT_DRYOUT_START_MARGIN_F) return "too_cold";
+    if (!night_dryout_outdoor_drier(in, sp)) return "outdoor_not_drier";
+    if (!night_dryout_budget_left(sp, state)) return "kwh_cap";
+    return "";
+}
+
+// Why a RUNNING pulse must stop early; "" to keep going. Short by design: the
+// pulse is 1-10 min, so it finishes even if VPD crosses the floor mid-pulse.
+inline const char* night_dryout_abort_reason(const SensorInputs& in, const Setpoints& sp,
+                                             const ControlState& state, Mode base_mode) noexcept {
+    if (!sp.night_dryout_enabled) return "disabled";
+    if (!is_night_phase(in)) return "day";
+    if (!vpd_control_trusted(in)) return "vpd_untrusted";
+    if (base_mode != IDLE) return "busy";
+    if (moisture_blocked_by_occupancy(in, sp)) return "occupied";
+    if (state.heat2_latched) return "heat2_latched";
+    if (in.temp_f <= sp.temp_low) return "too_cold";
+    if (!std::isfinite(in.outdoor_dewpoint_f) || !std::isfinite(in.dew_point_f)
+        || in.outdoor_data_age_s >= sp.outdoor_staleness_max_s
+        || in.outdoor_dewpoint_f >= in.dew_point_f) return "outdoor_not_drier";
+    return "";
+}
+
 // ── Firmware-v2: wet taper (replaces the dusk_cutoff_hour clock rail) ────
 // Routine (non-stress) wetting ceases wet_taper_before_sunset_min before the
 // ON-CHIP sunset and stays off through the night half, so foliage dries
@@ -1509,6 +1594,10 @@ inline Mode determine_mode_band_first(
         state.mist_backoff_timer_ms = 0;
         state.vent_mist_assist_active = false;
         state.center_burst = CENTER_BURST_NONE;  // IRR-3/IRR-4: no burst under fault
+        state.dryout_phase = DRYOUT_NONE;        // #1365: no dry-out pulse under fault
+        state.dryout_timer_ms = 0;
+        state.dryout_reheat_active = false;
+        state.dryout_reason = "sensor_fault";
         state.last_mode_reason = "sensor_fault";
         return SENSOR_FAULT;
     }
@@ -1726,6 +1815,75 @@ inline Mode determine_mode_band_first(
         state.last_mode_reason = "dehum_vent_heat";
     }
 
+    // ── #1365 night dry-out pulse machine ────────────────────────────────────
+    // Runs only on top of an IDLE base decision (nothing more important wants
+    // the vent or the heaters' attention), so safety, cooling, sealing, the
+    // existing dehum path and the heat2 latch all win. See the helpers above.
+    bool dryout_owns_transition = false;
+    {
+        const Mode base_mode = mode;
+        const uint8_t phase_before = state.dryout_phase;
+        if (!is_night_phase(in)) {
+            // A new solar night starts a fresh pulse count and kWh budget.
+            state.dryout_reheat_wh = 0.0f;
+            state.dryout_pulse_count = 0;
+        }
+        if (state.dryout_phase == DRYOUT_PULSE) {
+            const char* abort_reason = night_dryout_abort_reason(in, sp, state, base_mode);
+            state.dryout_timer_ms = sat_add(state.dryout_timer_ms, dt_ms);
+            if (abort_reason[0] != '\0') {
+                state.dryout_phase = DRYOUT_REST;   // rest after an abort too: no instant retry
+                state.dryout_timer_ms = 0;
+                state.dryout_reason = abort_reason;
+            } else if (state.dryout_timer_ms >= sp.night_dryout_pulse_s * 1000UL) {
+                state.dryout_phase = DRYOUT_REST;
+                state.dryout_timer_ms = 0;
+                state.dryout_reason = "rest";
+            }
+        } else if (state.dryout_phase == DRYOUT_REST) {
+            state.dryout_timer_ms = sat_add(state.dryout_timer_ms, dt_ms);
+            if (state.dryout_timer_ms >= sp.night_dryout_rest_s * 1000UL || !is_night_phase(in)) {
+                state.dryout_phase = DRYOUT_NONE;
+                state.dryout_timer_ms = 0;
+            }
+        }
+        if (state.dryout_phase == DRYOUT_NONE) {
+            const char* block = night_dryout_block_reason(in, sp, state, base_mode);
+            state.dryout_reason = block[0] != '\0' ? block : "pulse";
+            if (block[0] == '\0') {
+                state.dryout_phase = DRYOUT_PULSE;
+                state.dryout_timer_ms = 0;
+                state.dryout_hold_temp_f = night_dryout_hold_temp_f(in.temp_f, sp);
+                state.dryout_pulse_count = sat_add(state.dryout_pulse_count, 1);
+            }
+        }
+        // heat1 holds the temperature through the pulse and its rest. Only
+        // ELECTRIC heat1 (resolve_equipment), never heat2; the budget caps it.
+        state.dryout_reheat_active =
+            state.dryout_phase != DRYOUT_NONE
+            && sp.night_dryout_enabled
+            && is_night_phase(in)
+            && base_mode == IDLE
+            && !state.heat2_latched
+            && in.temp_f < state.dryout_hold_temp_f
+            && in.temp_f < sp.temp_high;
+        if (state.dryout_phase == DRYOUT_PULSE) {
+            selected_action = CLIMATE_DEHUM_VENT;
+            mode = DEHUM_VENT;
+            state.dehum_heat_assist_active = false;   // the dry-out owns heat1 here
+            state.last_mode_reason = "night_dryout_pulse";
+        } else if (state.dryout_reheat_active && mode == IDLE
+                   && climate_reason_is(state.last_mode_reason, "idle")) {
+            state.last_mode_reason = "night_dryout_reheat";
+        }
+        if (state.dryout_reheat_active) {
+            // Estimate: heat1's measured draw x the time it is wanted for the dry-out.
+            state.dryout_reheat_wh += NIGHT_DRYOUT_HEAT1_KW * 1000.0f * (float(dt_ms) / 3600000.0f);
+        }
+        dryout_owns_transition =
+            (phase_before == DRYOUT_PULSE) != (state.dryout_phase == DRYOUT_PULSE);
+    }
+
     if (mode == SAFETY_COOL || mode == SAFETY_HEAT || mode == SENSOR_FAULT) {
         state.sealed_timer_ms = 0;
         state.relief_timer_ms = 0;
@@ -1783,10 +1941,13 @@ inline Mode determine_mode_band_first(
             || climate_decision.vpd_error_kpa > 0.0f;
         const bool mode_would_change = mode != state.mode_prev;
         const bool in_dwell = state.last_transition_tick_ms < sp.dwell_gate_ms;
+        // #1365: a dry-out pulse is bounded by its own timer (pulse + rest), so
+        // its start and end bypass the dwell gate.
         if (sp.sw_dwell_gate_enabled
             && mode_would_change
             && in_dwell
-            && !compliance_preempts_dwell) {
+            && !compliance_preempts_dwell
+            && !dryout_owns_transition) {
             mode = state.mode_prev;
             state.last_mode_reason = "dwell_hold";
         }
@@ -2584,6 +2745,14 @@ inline RelayOutputs resolve_equipment(
 
         case DEHUM_VENT: {
             out.vent = true;
+            if (state.dryout_phase == DRYOUT_PULSE) {
+                // #1365 night dry-out pulse: vent + lead fan exchange the wet
+                // house air for confirmed-drier outdoor air; ELECTRIC heat1 holds
+                // the pulse's hold temperature. heat2 (gas) never runs here.
+                if (lead_is_fan1) out.fan1 = true; else out.fan2 = true;
+                out.heat1 = needs_heating_s1 || state.dryout_reheat_active;
+                break;
+            }
             const MoistureExchangeEstimate mx = estimate_moisture_exchange(in, sp);
             if (mx.action == MX_VENT_HUMIDIFY) {
                 // BC-13 (ADR0003 §6.4) humid-import: too-dry indoor + wetter outdoor —
@@ -2624,6 +2793,11 @@ inline RelayOutputs resolve_equipment(
             else if (needs_heating_s1) { out.heat1 = true; }
             else if (state.dehum_heat_assist_active
                      && climate_reason_is(state.last_mode_reason, "heat_dehum")) {
+                out.heat1 = true;
+            }
+            // #1365: the dry-out's rest reheat — heat1 only, back to the
+            // temperature the pulse started at (never above temp_target).
+            else if (state.dryout_reheat_active) {
                 out.heat1 = true;
             }
             // Econ-block VPD rescue: electric heat if VPD is below the

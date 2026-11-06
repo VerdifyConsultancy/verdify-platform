@@ -114,6 +114,31 @@ A hold-flavor candidate may only **enter** `DEHUM_VENT` once temp has recovered
 continuation and the `vpd_min_safe` rescue are exempt — the rescue arms the
 hold-reheat on the same cycle it forces the vent).
 
+**Night dry-out (#1365).** Jason, 2026-11-05: the house must dry out overnight
+(roots, algae on the floor), and heating the colder outdoor air is accepted
+energy. The #410 held candidate cannot arm at night (it needs the house at or
+above the heat line, which is where heat1 holds it), so the dry-out is its own
+pulse machine in `determine_mode_band_first`, on top of an `IDLE` base decision
+only (safety, cooling, sealing, the estimator's dehum and the heat2 latch win):
+- **Start a pulse** when `night_dryout_enabled` (ships ON), solar night, VPD
+  trusted and below the dry-out floor `max(vpd_low, 0.74 kPa)` (never below
+  today's floor), no occupancy block, heat2 not latched, temp ≥ `temp_low + 1 °F`,
+  fresh Tempest data with outdoor DP ≤ indoor DP − `night_dryout_dp_margin_f`
+  (default 3 °F: confirmed drier in absolute terms), and tonight's heat1 reheat
+  estimate under `night_dryout_kwh_cap` (default 10 kWh; heat1 1.44 kW × the time
+  the dry-out wants it).
+- **PULSE** (`night_dryout_pulse`, `night_dryout_pulse_s`, default 120 s):
+  `DEHUM_VENT`, vent + lead fan, heat1 holds `hold = clamp(start temp,
+  band_heat_target_f + heat_hysteresis, temp_target)`. Aborts on day, occupancy,
+  heat2 latch, temp ≤ `temp_low`, stale or no-longer-drier outdoor air, or a
+  busier base mode.
+- **REST** (`night_dryout_reheat`, `night_dryout_rest_s`, default 780 s): vent
+  closed, heat1 reheats to `hold`. Pulse + rest ≥ 900 s (validate_setpoints), so
+  at most 4 pulses an hour. heat2 never runs for humidity; ENV-2 (no heat-only
+  humidity chasing) is unchanged. Pulse starts and ends bypass the dwell gate.
+- The pulse count and kWh budget reset each solar day and live in RAM (a reboot
+  starts a fresh budget). Invariant #28 bounds it in replay.
+
 ### 3.3 Per-mode relay map (`resolve_equipment`, `greenhouse_logic.h:2006-2122`)
 
 `resolve_equipment` is pure: `(mode, inputs, setpoints, state, lead_is_fan1) →
@@ -290,8 +315,10 @@ fault rails (#7/#25/#26: every climate and mister relay off in SENSOR_FAULT, L08
 included; drips outside it), mode↔relay consistency (#15; #2 and #15 exempt a mister whose
 irrigation-engine cause is schedule, run_now, fallback, feed, prewet or flush),
 heat2-requires-heat1 (#16),
-the ≥10 °F day/night drop (#17), the fertilizer/feed interlocks (#18–#22), and the
-curve-only fog gate (#24). `make test-firmware` adds 222 native unit tests of the
+the ≥10 °F day/night drop (#17), the fertilizer/feed interlocks (#18–#22), the
+curve-only fog gate (#24), and the night dry-out bounds (#28: at most 4 pulses an
+hour, never heat2 on a dry-out row, no pulse at or below `temp_low`; dry-out
+pulses are bounded there rather than counted by #14's cold-day vent cap). `make test-firmware` adds 222 native unit tests of the
 same code.
 
 ## 6. The diurnal band curve — the deterministic target (L3 #345 AC1)

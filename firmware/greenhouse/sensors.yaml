@@ -1275,6 +1275,66 @@ sensor:
       if (!id(cfg_first_pull_ok)) return NAN;
       return id(dehum_vent_hold_enabled) ? 1.0f : 0.0f;
 
+  # #1365 (rule 6): readbacks for the night dry-out tunables (tunables.yaml).
+  - platform: template
+    id: cfg_night_dryout_enabled
+    name: "Cfg • Night Dryout Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(night_dryout_enabled) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_night_dryout_pulse_s
+    name: "Cfg • Night Dryout Pulse (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(night_dryout_pulse_s);
+
+  - platform: template
+    id: cfg_night_dryout_rest_s
+    name: "Cfg • Night Dryout Rest (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(night_dryout_rest_s);
+
+  - platform: template
+    id: cfg_night_dryout_dp_margin_f
+    name: "Cfg • Night Dryout DP Margin (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(night_dryout_dp_margin_f);
+
+  - platform: template
+    id: cfg_night_dryout_kwh_cap
+    name: "Cfg • Night Dryout Cap (kWh)"
+    unit_of_measurement: "kWh"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(night_dryout_kwh_cap);
+
   - platform: template
     id: cfg_cold_vent_guard_delta_f
     name: "Cfg • Cold Vent Guard Delta (°F)"

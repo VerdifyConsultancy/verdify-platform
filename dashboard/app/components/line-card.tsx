@@ -112,7 +112,7 @@ export type LineCardProps = {
  * filled only while the relay is on or unknown, a quiet outline otherwise, never disabled by the writes flag), and ⋯ with
  * the enable switch and its check sheet, Options…, Pause until…, "Activity for Wall drip ›", "Runs of Wall drip ›" and Graphs. Fog
  * (L11) is a climate device: no sync pill and no Options, but it runs once ("Fog once…", #1343 follow-up), with its own
- * Stop; the climate path's own rails gate it, so it has no enable switch or pause. Viewers get the same row with the menu's links alone.
+ * Stop, and the enable switch it needs first (the controller runs no disabled line); no pause. Viewers get the same row with the menu's links alone.
  */
 export function LineCard({ line, master = null, engine, program, today, scheduleLabels, strip, className }: LineCardProps) {
   const apiDown = useApiDown();
@@ -148,6 +148,7 @@ export function LineCard({ line, master = null, engine, program, today, schedule
       {offer === "arrives" && <p className="state-note" data-arrives="run">{RUN_ARRIVES_TEXT}</p>}
       {!engine && line.kind === "mister" && <ClearFaultButton line={line} engine={engine} />}
     </OperatorOnly>}
+    {fog && engine && <OperatorOnly><div className="wat-menu-switch" data-menu-keep=""><LineEnable line={line} /></div></OperatorOnly>}
     <Link to={`/activity/log?target=${encodeURIComponent(id)}`}>Activity for {title}<span aria-hidden="true"> ›</span></Link>
     <Link to={`/water/history?line=${encodeURIComponent(id)}`}>Runs of {title}<span aria-hidden="true"> ›</span></Link>
     <Link to={graphs}>Graphs <span className="screen-reader">around {title}'s last run</span><span aria-hidden="true"> ›</span></Link>
