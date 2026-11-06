@@ -33,6 +33,7 @@
 .wat-site-meter{display:grid;grid-template-columns:minmax(0,1fr);align-items:center;gap:var(--space-1)}
 .wat-site-term{display:inline-flex;align-items:center;font-size:var(--fs-sm);font-weight:600;color:var(--ink)}
 .wat-site-term a{display:inline-flex;align-items:center;min-height:24px;color:inherit;text-underline-offset:.25em}
+.wat-site-primary{margin-left:var(--space-2);font-weight:400}
 .limit-fault{color:var(--fault);font-weight:600}
 .limit-warn{color:var(--warn-text);font-weight:600}
 
@@ -96,9 +97,6 @@
 .wat-dot[data-cause=fallback]{background:var(--eq-heat1)}
 .line-state.is-neutral .wat-dot{background:var(--muted)}
 .wat-line .object-row-actions .state-note,.wat-line .object-row-actions .field-error{flex-basis:100%;margin:0;text-align:right}
-/* The quiet Stop (D-UX-06): an outline while nothing runs; red only fills while the relay is on or unknown. */
-.btn-stop-quiet{background:#fff;border-color:var(--line-strong);color:var(--fault)}
-.btn-stop-quiet:hover{border-color:var(--fault);color:var(--fault)}
 .line-subrow{flex-basis:100%;margin:var(--space-1) 0 0;padding-left:var(--space-2);font-size:var(--fs-sm);color:var(--muted)}
 .line-subrow p{margin:0}
 .line-subrow strong{color:var(--ink);font-weight:600}
@@ -133,7 +131,7 @@
 /* Valve time not known (API-05 has not answered): the ticks' third is a muted hatch up to now, never empty. */
 .sch-tick-unknown{border-radius:0;background:repeating-linear-gradient(135deg,var(--muted) 0 1px,transparent 1px 4px)}
 .sch-block,.sch-mark,.sch-swatch{--sch-fill:var(--muted)}
-.sch-eq-water{--sch-fill:var(--eq-water)}.sch-eq-fert{--sch-fill:var(--eq-fert)}.sch-eq-fog{--sch-fill:var(--eq-fog)}.sch-eq-mister{--sch-fill:var(--eq-mister)}.sch-eq-heat1{--sch-fill:var(--eq-heat1)}
+.sch-eq-water{--sch-fill:var(--eq-water)}.sch-eq-fert{--sch-fill:var(--eq-fert)}.sch-eq-fog{--sch-fill:var(--eq-fog)}.sch-eq-mister{--sch-fill:var(--eq-mister)}.sch-eq-heat1{--sch-fill:var(--eq-heat1)}.sch-cause-prep{--sch-fill:var(--cause-prep)}
 .sch-block{position:absolute;top:5px;bottom:5px;left:calc(var(--sch-start) * 1%);width:calc(var(--sch-width) * 1%);min-width:6px;min-height:0;margin:0;padding:0;border:0;border-radius:3px;background:var(--sch-fill);color:var(--ink);font:500 var(--fs-xs)/1 "IBM Plex Sans",system-ui,sans-serif;text-align:left}
 button.sch-block{cursor:pointer}
 button.sch-block:hover,.sch-block.is-selected{box-shadow:0 0 0 2px var(--ink)}

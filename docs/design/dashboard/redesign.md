@@ -40,7 +40,7 @@ its row; [decisions](decisions.md) wins if it says otherwise.
 | D-UX-03 | Activity splits into Alerts (`/activity`) and Log (`/activity/log`). Old log links redirect. | screens SCR-06, `activity.spec.ts` |
 | D-UX-04 | The scorecard becomes Statistics (`/graphs/statistics`, 30, 90 or 365 days). `daily.*` keys may be charted. | The VD-10 detail "daily keys show on the scorecard" (`lib/graph-url.ts:211`), `graphs.spec.ts` |
 | D-UX-05 | For operators, the bursts (Fans, Humidify, Vent bypass) are quick actions on Now. They stay on Equipment too. | US-EQP-06 placement, J9 step 5 |
-| D-UX-06 | Stop stays on every line in every state, styled by state: filled red only while that line's relay is on or unknown, a quiet outline otherwise. It is still one tap and never blocked. | The Stop styling in screens SCR-04 (its presence is unchanged) |
+| D-UX-06 | Changed by Jason on 2026-11-06 ([decisions](decisions.md), #1349): a line's Stop shows only while that line runs (or its relay reads unknown), filled red, plus one Stop all water; an idle row has no Stop. It is still one tap and never blocked. (Was: Stop on every line in every state, a quiet outline while idle.) | The Stop in screens SCR-04: present only while the line runs (2026-11-06) |
 | D-UX-07 | A row or card head carries at most one state pill. CONFIRMED shows only while the newest write is under 10 minutes old. AI and provenance (MEASURED, PEER, HOUSE, DERIVED) are text marks, except in log rows. | design system §4.1 usage; settings, now and graphs specs |
 | D-UX-08 | The time zone is stated once: in the footer, on chart axes and in every `<time title>`. Eyebrows drop "America/Denver". | design system rule 2 |
 | D-UX-09 | Layout tokens (space, type, widths, z-index) live in `app/styles/tokens.css`. There are no new colour tokens. | design system §2 |
@@ -604,8 +604,7 @@ Program rev 42 on controller · confirmed 2 min ago · L04 Center mister running
 │ │ L01 Wall drip · CLEAN           ││
 │ │ Idle · last 07:31, 12 min · ok  ││
 │ │ ├───█│──────[ ]───┤ next 16:00  ││
-│ │ [Run…                    ] [⋯]  ││ Run full width, the quiet Stop below it
-│ │ [Stop]                          ││
+│ │ [Run…                    ] [⋯]  ││ Run full width (no Stop while idle, D-UX-06)
 │ │ L02 Wall feed · FERT · Off  [⋯] ││
 │ └─────────────────────────────────┘│
 ```
@@ -1698,7 +1697,7 @@ place of `.linked-panels figcaption` and `.plot-small`; the range list), plus `g
 
 - **The Water layout:** the header status line from the program state, the actions (Pause lines…, Stop all water) and
   the sticky phone row.
-- **Today** (§5.2): zone cards, line rows with state-driven actions, the quiet Stop, the menu, today strips and Site
+- **Today** (§5.2): zone cards, line rows with state-driven actions, a Stop only while running, the menu, today strips and Site
   today.
 - **Schedules** (§6): the day timeline, week strip, week matrix, agenda, rules list, popover, create from slot, and the
   editor's layout and preview words.
@@ -1888,7 +1887,7 @@ pin PR is live.
 **Water → Today**
 
 - [ ] Lines sit in their zones. The center zone's head holds VPD control and Schedule with the VPD source.
-- [ ] Only a running line has a filled red Stop. Idle lines have a quiet Stop, and Stop still works on them.
+- [ ] Only a running line (or one whose relay reads unknown) has a Stop, filled red; idle lines have none, and Stop all water stops everything (D-UX-06, 2026-11-06).
 - [ ] Each line shows one state sentence, a today strip and its next run. Everything else is under ⋯.
 - [ ] SAF-4, the soft budget, flow and occupancy are in Site today. On the phone, "■ Stop all" stays reachable while
   scrolling.

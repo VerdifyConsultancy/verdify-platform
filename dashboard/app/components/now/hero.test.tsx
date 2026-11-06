@@ -245,6 +245,23 @@ test("the snapshot: one paragraph under the headline with its author, time and t
   expect(paragraph?.querySelector("[data-badge]")).toBeNull();
 });
 
+test("every signed-in user sees the snapshot, viewers as well as operators (Jason, 2026-11-06, #1346)", () => {
+  const body = fixture(["in-band", "time-in-band"], { now: NOW })["API-02"] as Record<string, unknown>;
+  const now = parseNow(body);
+  const props = {
+    now, answer: nowAnswer({ now, failed: false }), irrigation: read(parseIrrigationStatus(fixture("in-band", { now: NOW })["API-IRR-01"])),
+    day: dayRead("in-band"), daily: dailyRead(["in-band", "time-in-band"]), onRetry: vi.fn(),
+  };
+  const seen = (["viewer", "operator"] as const).map((role) => {
+    render(<MemoryRouter><SessionProvider role={role} writesEnabled={role === "operator"}><NowHero {...props} /></SessionProvider></MemoryRouter>);
+    const words = plain(text(snapshotOf()?.querySelector(".now-snapshot-text")));
+    cleanup();
+    return words;
+  });
+  expect(seen[0]).toMatch(/^The greenhouse is at/);
+  expect(seen[1]).toBe(seen[0]);
+});
+
 test("the snapshot when stale (old or a failed later attempt) reads muted with its as-of time", () => {
   renderHero(["stale-data", "time-in-band"]);
   expect(snapshotOf()?.getAttribute("data-snapshot")).toBe("stale");

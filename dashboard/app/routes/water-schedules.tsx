@@ -53,7 +53,7 @@ function ScheduleKey() {
         <li><span className="sch-swatch sch-planned sch-capped" aria-hidden="true" />ends at the daily cap (amber outline)</li>
         <li><span className="sch-swatch sch-tick-swatch" aria-hidden="true" />valve open, VPD misting included (ticks)</li>
         <li><span className="sch-swatch sch-legend-day" aria-hidden="true" />day, sunrise to sunset (white) · <span className="sch-swatch sch-night-swatch" aria-hidden="true" />night (shaded), on every lane, a disabled one too</li>
-        <li><span className="sch-swatch sch-done sch-eq-water" aria-hidden="true" />clean water · <span className="sch-swatch sch-done sch-eq-fert" aria-hidden="true" />fertilized, in the same lane · <span className="sch-swatch sch-done sch-eq-fog" aria-hidden="true" />prewet and flush on the clean side · <span className="sch-swatch sch-done sch-eq-heat1" aria-hidden="true" />backup misting that ran</li>
+        <li><span className="sch-swatch sch-done sch-eq-water" aria-hidden="true" />clean water · <span className="sch-swatch sch-done sch-eq-fert" aria-hidden="true" />fertilized, in the same lane · <span className="sch-swatch sch-done sch-cause-prep" aria-hidden="true" />prewet and flush on the clean side · <span className="sch-swatch sch-done sch-eq-heat1" aria-hidden="true" />backup misting that ran</li>
       </ul>
       <p className="meta">MANUAL: Iris leaves it alone ("Let Iris change this" is off). Iris may adjust: Iris can change it. People and other agents can always change it.</p>
     </Popover>
