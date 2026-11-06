@@ -12,6 +12,7 @@ import { FakeResizeObserver, MockPlot, created, media, setTokens } from "../char
 import { AppShell } from "../components/app-shell";
 import { SETTING_GROUPS } from "../components/setting-row";
 import { text } from "../components/test-render";
+import { GLOSSARY } from "../lib/glossary";
 import { settingDisplay } from "../lib/setting-values";
 import { NOW, UUID, advance, requests, sentAt, startFixtureApi, stopFixtureApi, writes, type FixtureOptions } from "../lib/test-fixture-api";
 import Settings, { links } from "./settings";
@@ -799,4 +800,14 @@ test("the plot in the drawer is the setting's own: a settings-only chart in the 
   await open(`${ENGAGE}&hist=24h`, { fixture: "setting-history" });
   expect(lastPlot().opts.series).toHaveLength(1);
   expect(text(dialog().querySelector(".drawer-history figcaption"))).toBe("VPD Mister Engage · kPa");
+});
+
+test("the glossary at #glossary lists every term the pages define, from the one table their Terms read (#1339)", async () => {
+  await open("/settings");
+  const glossary = document.getElementById("glossary")!;
+  expect(within(glossary).getByRole("heading", { name: "Glossary" })).toBeTruthy();
+  const terms = [...glossary.querySelectorAll(".glossary-item dt")].map((term) => text(term));
+  expect(terms).toEqual(Object.values(GLOSSARY).map((entry) => entry.term));
+  expect(terms).toEqual(expect.arrayContaining(["VPD", "Band", "In band today", "Mist and fog water", "Bursts", "Occupancy hold", "Iris plans"]));
+  expect(glossary.querySelector("#term-mist_fog_limit dd")?.textContent).toBe(GLOSSARY.mist_fog_limit.definition);
 });

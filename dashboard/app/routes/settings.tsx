@@ -13,6 +13,9 @@ import type { Setting } from "../lib/operator-api";
 import { useSettingsRead } from "../lib/queries";
 import { viewMeta } from "../lib/sections";
 import { useShellNow } from "../lib/shell";
+import { Panel } from "../components/panel";
+import { GlossaryList } from "../components/term";
+import { GLOSSARY } from "../lib/glossary";
 
 export const meta = () => viewMeta("control-settings");
 export const links = () => chartLinks();
@@ -116,6 +119,12 @@ export default function Settings() {
         <SettingsCatalog rows={shown} failed={read.isError} onRetry={() => void read.refetch()} readbackStale={readbackStale} editTo={editTo} today={today} empty={empty} />
       </div>
     </div>
+    <Panel id="glossary" title="Glossary" thing="the glossary" state="ready">
+      <GlossaryList entries={GLOSSARY_ENTRIES} />
+    </Panel>
     <SettingDrawerHost />
   </>;
 }
+
+/** The glossary (#1339), from the one table every page's `Term` reads, so docs and MCP can cite `/settings#glossary`. */
+const GLOSSARY_ENTRIES = Object.entries(GLOSSARY).map(([id, entry]) => ({ id, ...entry }));

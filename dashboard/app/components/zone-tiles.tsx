@@ -26,6 +26,7 @@ import { BandBar, bandPosition, rangeWords, type Range } from "./data/band-bar";
 import { Sparkline } from "./data/sparkline";
 import { SPARK_S, ZONE_VPD_KEYS, rangeSince, valuesSince } from "./now/climate";
 import { Panel, type PanelState } from "./panel";
+import { Term } from "./term";
 
 /**
  * Where a tile's numbers come from, as a text mark in words (D-UX-07): muted, amber only when the provenance is the news.
@@ -61,10 +62,13 @@ function meanRange(values: readonly (number | null)[]): Range | null {
   return present.length ? { low: Math.min(...present), high: Math.max(...present) } : null;
 }
 
-/** The band words under a tile: "band 0.45–0.80 kPa", north's "house band …", with "above band" first when out of band. */
-function bandText(zone: Zone, band: { low: number; high: number } | null): string {
-  const name = zone === "north" ? "house band" : "band";
-  return band ? `${name} ${rangeWords(band.low, band.high, "kPa")}` : `${name} unavailable`;
+/**
+ * The band words under a tile: "band 0.45–0.80 kPa", north's "house band …", with "above band" first when out of band.
+ * The band's name is a `Term` (#1339): its definition is a tap away.
+ */
+function BandText({ zone, band }: { zone: Zone; band: { low: number; high: number } | null }) {
+  const name = zone === "north" ? <Term id="house_band">house band</Term> : <Term id="band">band</Term>;
+  return <>{name} {band ? rangeWords(band.low, band.high, "kPa") : "unavailable"}</>;
 }
 
 type DayInput = { readonly series: Series | null; readonly since: number; readonly sparkFrom: number; readonly failed: boolean };
@@ -103,7 +107,7 @@ function ZoneTile({ zone, data, day }: { zone: Zone; data: ZoneData; day: DayInp
     </div>
     <p className="now-zone-meta meta">
       {off && <><span className="now-off">{words("band_verdict", off)}</span> · </>}
-      {read.pending ? "band loading" : bandText(zone, band)}
+      {read.pending ? "band loading" : <BandText zone={zone} band={band} />}
       {vpd.value === null && vpd.reason && <> · {vpd.reason}</>}
       {vpd.stale && vpd.reason && <> · {vpd.reason}</>}
     </p>
