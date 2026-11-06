@@ -13,6 +13,7 @@ import { AppShell } from "../components/app-shell";
 import { readOnlyWords } from "../components/control/setting-help";
 import { SETTING_GROUPS } from "../components/setting-row";
 import { text } from "../components/test-render";
+import { GLOSSARY } from "../lib/glossary";
 import { settingDisplay } from "../lib/setting-values";
 import { NOW, UUID, advance, requests, sentAt, startFixtureApi, stopFixtureApi, writes, type FixtureOptions } from "../lib/test-fixture-api";
 import Settings, { links } from "./settings";
@@ -821,6 +822,18 @@ test("the plot in the drawer is the setting's own: a settings-only chart in the 
   await open(`${ENGAGE}&hist=24h`, { fixture: "setting-history" });
   expect(lastPlot().opts.series).toHaveLength(1);
   expect(text(dialog().querySelector(".drawer-history figcaption"))).toBe("VPD Mister Engage · kPa");
+});
+
+test("the glossary at #glossary lists every term the pages define, from the one table their Terms read (#1339)", async () => {
+  await open("/settings");
+  const glossary = document.getElementById("glossary")!;
+  expect(within(glossary).getByRole("heading", { name: "Words on the pages" })).toBeTruthy();
+  const terms = [...glossary.querySelectorAll(".glossary-item dt")].map((term) => text(term));
+  expect(terms).toEqual(Object.values(GLOSSARY).map((entry) => entry.term));
+  expect(terms).toEqual(expect.arrayContaining(["VPD", "Band", "In band today", "Daily mist & fog limit", "Bursts", "Occupancy hold", "Iris plans"]));
+  expect(glossary.querySelector("#term-mist_fog_limit dd")?.textContent).toBe(GLOSSARY.mist_fog_limit.definition);
+  // Folded unless linked, so "In band today" in a definition never reads as the page's state (states.spec).
+  expect(glossary.querySelector("details")?.open).toBe(false);
 });
 
 test("retired rows wait behind Show retired, a search still finds them, and the glossary explains every row with its sources (#1332, #1333)", async () => {

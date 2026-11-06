@@ -107,13 +107,15 @@ test("late in the window a marker's words and a narrow span's sit before them, s
   expect(container.querySelector(".tt-span")?.className).toBe("tt-span tt-planned tt-eq-water tt-narrow tt-narrow-end");
 });
 
-test("a label stops where its room on the row ends (the next span, marker or the now rule), and below a stub it is read, not drawn", () => {
+test("a label stops where its room on the row ends (the next span, the now rule, or on a row of markers the next mark in its lane), and below a stub it is not drawn but its marker still opens it", () => {
   const { container } = renderUi(<TimeTrack label="Running and next" from={DAY.from} to={DAY.to} now={at("10:42")} rows={[{
     key: "plan", label: "Plan", spans: [],
     markers: [
-      { key: "a", at: at("13:00"), label: "13:00 VPD Mister Engage 1.60 → 1.70 kPa · AI" },
-      { key: "b", at: at("16:30"), label: "16:30 Mister Pulse Gap 45.0 → 55.0 s · AI" },
-      { key: "c", at: at("10:30"), label: "SUNRISE" },
+      { key: "a", at: at("13:00"), label: "Misting starts at VPD 1.60 → 1.70 kPa · AI", title: "Setting changes at 13:00", detail: ["13:00 Misting starts at VPD 1.60 → 1.70 kPa · AI"] },
+      { key: "b", at: at("16:30"), label: "Mist pulse gap 45.0 → 55.0 s · AI" },
+      { key: "c", at: at("10:30"), label: "Sunrise plan" },
+      { key: "d", at: at("10:33"), label: "Forecast changed" },
+      { key: "e", at: at("10:36"), label: "Midday check" },
     ],
   }, {
     key: "L04", label: "Center mister",
@@ -123,16 +125,23 @@ test("a label stops where its room on the row ends (the next span, marker or the
     ],
   }]} />);
   const room = (element: Element) => Number((element as HTMLElement).style.getPropertyValue("--tt-room"));
-  const [first, second, sunrise] = [...container.querySelectorAll(".tt-marker")];
-  // 13:00's words run to 16:30's marker; 16:30's to the window's end; SUNRISE has 12 minutes before the now rule.
-  expect(room(first)).toBeCloseTo((3.5 / 24) * 100, 3);
+  const [first, second, sunrise, forecast, midday] = [...container.querySelectorAll(".tt-marker")];
+  // In time order the markers take turns in two lanes: 10:30, 10:36 and 16:30 above; 10:33 and 13:00 below.
+  expect([sunrise, forecast, midday, first, second].map((marker) => marker.classList.contains("tt-marker-low"))).toEqual([false, true, false, true, false]);
+  expect(container.querySelector(".tt-row")?.classList.contains("tt-row-lanes")).toBe(true);
+  // Each label runs to the next mark in its own lane, or the window's end; the now rule draws over it rather than cutting it.
+  expect(room(sunrise)).toBeCloseTo((0.1 / 24) * 100, 3);
+  expect(room(forecast)).toBeCloseTo(((13 * 60 - (10 * 60 + 33)) / 60 / 24) * 100, 3);
+  expect(room(first)).toBeCloseTo((11 / 24) * 100, 3);
   expect(room(second)).toBeCloseTo((7.5 / 24) * 100, 3);
-  expect(room(sunrise)).toBeCloseTo((0.2 / 24) * 100, 3);
-  expect(first.querySelector(".tt-marker-label")?.getAttribute("title")).toBe("13:00 VPD Mister Engage 1.60 → 1.70 kPa · AI");
+  expect(first.querySelector(".tt-marker-label")?.getAttribute("title")).toBe("Setting changes at 13:00");
   expect(first.querySelector(".tt-marker-label")?.classList.contains("screen-reader")).toBe(false);
-  // Too little room for a stub: the words stay in the row for a screen reader only.
+  // Too little room for a stub: the words are not drawn, and the marker still opens them in full.
   expect(sunrise.querySelector(".tt-marker-label")?.className).toBe("tt-marker-label screen-reader");
-  expect(text(sunrise)).toBe("SUNRISE");
+  fireEvent.click(sunrise.querySelector("button")!);
+  expect(text(screen.getByRole("dialog", { name: "Sunrise plan" }))).toContain("Sunrise plan");
+  fireEvent.click(first.querySelector("button")!);
+  expect(text(screen.getByRole("dialog", { name: "Setting changes at 13:00" }).querySelector(".tt-marker-detail"))).toBe("13:00 Misting starts at VPD 1.60 → 1.70 kPa · AI");
   // The skipped run's words would cross the now rule 54 minutes on: they are left out, its name keeps them.
   const skipped = container.querySelector(".tt-skipped")!;
   expect(room(skipped)).toBeCloseTo((54 / 60 / 24) * 100, 3);

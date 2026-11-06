@@ -85,7 +85,16 @@ kPa). Advanced shows the 24 raw anchors; uneven shoulders warn when the overshoo
   forecast;
 - the night heat estimate, 0.19 kW per °F of target above the forecast outdoor temperature;
 - findings: errors (band order, guardrails, the night floor) and warnings (overshoot; a night floor that needs an
-  indoor dewpoint below the driest tenth of the last 14 nights).
+  indoor dewpoint below the driest tenth of the last 14 nights);
+- `measured`: the last 24 h of the house average (`climate.temp_avg` and `vpd_avg`, 10-min averages, API-04's read),
+  placed on the day's steps by America/Denver clock time, so left of the now line is today and right of it yesterday;
+  the chart draws it solid in the metric's colour, as Graphs does, and the target as stored takes the band's edge colour;
+- `forecast`: the day's outdoor forecast temperature and VPD (the newest issue per hour), dashed in `--c-outdoor`, read
+  STALE when issued more than 3 h ago (#1354).
+
+**MCP.** `band_profile` returns API-23's JSON with no draft, and `band_profile_preview` takes the same fields and raw
+anchors and saves nothing. Named agents and admin may call them; Iris may not. There is no band write tool: the band is
+operator-owned, and API-24 stays the dashboard's.
 
 **Save (API-24, `PUT /v1/band/profile`).** One transaction: every anchor that changes by more than half its push quantum
 is written as an API-10 setting write (its `desired_state` row with the manual flag and its `crop_band_anchors` rows),

@@ -8,7 +8,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { FakeResizeObserver, MockPlot, media, setTokens } from "../../charts/fixtures/uplot-mock";
 import { OPERATOR, advance, renderWithApi, requests, startFixtureApi, stopFixtureApi, writes } from "../../lib/test-fixture-api";
 import { PREVIEW_DEBOUNCE_MS } from "../band-preview";
-import { BandEditor, draftParams } from "./band-editor";
+import { BandEditor, draftParams, overlays } from "./band-editor";
 
 vi.mock("uplot", async () => ({ default: (await import("../../charts/fixtures/uplot-mock")).MockPlot }));
 
@@ -76,4 +76,25 @@ test("a viewer sees the preview and the guardrails, with no form", async () => {
   expect(screen.queryByRole("button", { name: "Save band" })).toBeNull();
   expect(screen.queryByLabelText("Night target (solar midnight)")).toBeNull();
   expect(screen.getByText(/Guardrails 40/)).toBeTruthy();
+});
+
+test("the measured last 24 h is a solid line in the metric's colour and the forecast a dashed outdoor line, STALE after 3 h", () => {
+  const issued = Date.parse("2026-11-05T12:00:00Z") / 1000;
+  const preview = {
+    measured: { window_start: 0, window_end: 86_400, at: [1, null], temp: [70.1, null], vpd: [0.9, null] },
+    forecast: { temp: [40, 41], vpd: [null, null], issued_at: "2026-11-05T12:00:00Z" },
+  };
+  expect(overlays(preview, "temp", issued + 600)).toEqual([
+    { key: "measured", label: "Measured, last 24 h (after now: yesterday)", token: "--c-temp", values: [70.1, null], kind: "line" },
+    { key: "forecast", label: "Outdoor forecast", token: "--c-outdoor", values: [40, 41], kind: "dashed" },
+  ]);
+  expect(overlays(preview, "temp", issued + 4 * 3600)[1].label).toBe("Outdoor forecast (STALE)");
+  // A column with no value draws nothing.
+  expect(overlays(preview, "vpd", issued).map((line) => line.key)).toEqual(["measured"]);
+});
+
+test("the preview charts key the measured trace and the outdoor forecast", async () => {
+  await mount();
+  expect(screen.getAllByText("Measured, last 24 h (after now: yesterday)").length).toBe(2);
+  expect(screen.getAllByText(/Outdoor forecast/).length).toBe(2);
 });

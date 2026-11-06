@@ -89,7 +89,7 @@ async def test_real_mcp_127_stateless_protocol_filters_exact_audience_inventorie
                 assert unauthenticated_list.status_code == 200
                 assert _protocol_payload(unauthenticated_list)["result"]["tools"] == []
 
-            expected_counts = {"iris": 33, "experiment": 8, "admin": 37, "observer": 0}
+            expected_counts = {"iris": 33, "experiment": 8, "admin": 39, "observer": 0}
             for request_id, (audience, token) in enumerate(tokens.items(), start=10):
                 auth_headers = {**common_headers, "authorization": f"Bearer {token}"}
                 initialized = await client.post("/mcp", headers=auth_headers, json=initialize)
@@ -107,6 +107,8 @@ async def test_real_mcp_127_stateless_protocol_filters_exact_audience_inventorie
                 assert len(names) == expected_counts[audience]
                 reads = {"irrigation_status", "irrigation_schedule", "irrigation_history"}
                 assert reads <= names if audience in ("iris", "admin") else not reads & names
+                band = {"band_profile", "band_profile_preview"}
+                assert band <= names if audience == "admin" else not band & names
 
             if mode == "enforce":
                 iris_query = await client.post(

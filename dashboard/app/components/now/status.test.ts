@@ -48,7 +48,10 @@ test("stale data (row 7): the mode as the controller last said it, dated, with n
 
 test("Iris: the newest required trigger's state, amber unless OK; the plan in force and its end, or none", () => {
   const now = nowOf("in-band");
-  expect([irisText(now.iris), irisWarns(now.iris), planLine(now.iris)]).toEqual(["Iris OK", false, "SUNRISE plan to 17:30"]);
+  expect([irisText(now.iris), irisWarns(now.iris), planLine(now.iris)]).toEqual(["Iris OK", false, "Sunrise plan to 17:30"]);
+  // A trigger that is not itself a plan reads as the plan it wrote, in words (#1339).
+  expect(planLine({ ...now.iris, trigger: "FORECAST_DEVIATION" })).toBe("Plan (forecast changed) to 17:30");
+  expect(planLine({ ...now.iris, trigger: "SOLAR_MAX" })).toBe("Plan (midday check) to 17:30");
   const missed = nowOf("missed-sunset").iris;
   expect([irisText(missed), irisWarns(missed)]).toEqual(["Iris Missed", true]);
   expect(planLine(nowOf("no-plan").iris)).toBe("No plan: band and defaults");

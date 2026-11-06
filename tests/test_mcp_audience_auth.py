@@ -70,6 +70,8 @@ AGENT_TOOLS = frozenset(
         "irrigation_stop",
         "irrigation_line_set",
         "irrigation_clear_fault",
+        "band_profile",
+        "band_profile_preview",
     }
 )
 # Agents never get the planner, lessons, crop or Slack writers, nor the admin-only tools.
@@ -443,7 +445,14 @@ class TestAudienceMatrix:
         allowed = mcp_server.audience_allowlist("iris")
         assert allowed == mcp_server.HERMES_REQUIRED_TOOLS
         denied = set(mcp_server.TOOL_AUDIENCES) - allowed
-        assert denied == {"outcome_kpi", "plan_run", "query", "policy_template_propose"}
+        assert denied == {
+            "outcome_kpi",
+            "plan_run",
+            "query",
+            "policy_template_propose",
+            "band_profile",
+            "band_profile_preview",
+        }
         for tool in allowed:
             mcp_server.authorize_tool_call(tool, "tok-iris")
         for tool in denied:
@@ -699,7 +708,7 @@ class TestListToolsAudienceFiltering:
     @pytest.mark.parametrize("mode", ["log", "enforce"])
     @pytest.mark.parametrize(
         ("audience", "token", "expected_count"),
-        [("iris", "tok-iris", 33), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 37)],
+        [("iris", "tok-iris", 33), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 39)],
     )
     def test_protocol_inventory_matches_exact_audience_allowlist(
         self, mcp_server, monkeypatch, mode, audience, token, expected_count

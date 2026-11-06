@@ -6,7 +6,8 @@ import { expect, test } from "vitest";
 import { answer, buildWorld, fixture } from "../../../e2e/fixtures/index.mjs";
 import { parseIrrigationStatus, parseNow, parsePlan, parseScheduleAgenda, parseStateLanes, type ScheduleAgenda, type StateLanes } from "../../lib/operator-api";
 import {
-  equipmentRow, futureSpans, irisMarkerLabel, irisTriggers, laterText, lineRow, nextItems, nextWindow, nights, pastSpans, planTransitions, runLength, sunTimes, trackRows,
+  CLUSTER_S, clusterMarkers, equipmentRow, futureSpans, irisMarkerDetail, irisMarkerLabel, irisTriggers, laterText, lightSpans, lightWindows, lineRow, nextItems, nextWindow, nights, pastSpans,
+  planTransitions, runLength, sunTimes, trackRows,
 } from "./next";
 
 const NOW = Date.parse("2026-11-02T17:42:00Z");
@@ -24,11 +25,13 @@ test("the window: 6 h before now to 12 h after it, in epoch seconds", () => {
   expect(WINDOW).toEqual({ from: at("04:42"), now: at("10:42"), to: at("22:42") });
 });
 
-test("rows: heat, vent and fans, fog and mist, the drips; a wet line by its kind, feeds in --eq-fert; lights and flags draw nowhere", () => {
+test("rows: heat, vent and fans, fog and mist, the drips and the lights; a wet line by its kind, feeds in --eq-fert; flags draw nowhere", () => {
   expect([equipmentRow("heat1"), equipmentRow("fan2"), equipmentRow("fog"), equipmentRow("mister_center"), equipmentRow("drip_wall"), equipmentRow("drip_wall_fert")]).toEqual([
     ["heat", "eq-heat1"], ["air", "eq-fan2"], ["mist", "eq-fog"], ["mist", "eq-mister"], ["drip", "eq-water"], ["drip", "eq-fert"],
   ]);
-  expect([equipmentRow("grow_light_main"), equipmentRow("occupancy"), lineRow("L08"), lineRow("L99")]).toEqual([null, null, ["mist", "eq-fert"], null]);
+  expect([equipmentRow("grow_light_main"), equipmentRow("grow_light_grow"), equipmentRow("occupancy"), lineRow("L08"), lineRow("L99")]).toEqual([
+    ["light_main", "eq-light-main"], ["light_grow", "eq-light-grow"], null, ["mist", "eq-fert"], null,
+  ]);
 });
 
 test("the past from API-05: what was on is solid in its token, named in words; off draws nothing; unknown is hatched", () => {
@@ -61,7 +64,7 @@ test("the runs ahead: planned dashed, at their length, labelled and named; what 
 
 test("plan changes: every change ahead in the window grouped by time, from what the lane holds; manual lanes and restated values left out", () => {
   expect(planTransitions(planOf("in-band"), WINDOW).map(({ at: when, changes }) => [when, changes.map((change) => plain(change.text))])).toEqual([
-    [at("13:00"), ["VPD Mister Engage 1.60 → 1.70 kPa"]], [at("16:30"), ["Mister Pulse Gap 45.0 → 55.0 s"]],
+    [at("13:00"), ["Misting starts at VPD 1.60 → 1.70 kPa"]], [at("16:30"), ["Mist pulse gap 45.0 → 55.0 s"]],
   ]);
   // plan-next: the manual lane's 12:00 waypoint does not count; the forecast rule's 13:00 does.
   const next = planTransitions(planOf("plan-next"), WINDOW);
@@ -80,36 +83,80 @@ test("Iris's triggers, the sun and night in the window", () => {
   expect(nights([], WINDOW)).toEqual([]);
 });
 
-test("the track's seven rows in their fixed order, markers on Iris, the plan and the sun; an empty row still shows", () => {
+test("the track's nine rows in their fixed order, markers on Iris, the plan and the sun, in words; an empty row still shows", () => {
   const rows = trackRows({ lanes: lanesOf("in-band"), plan: planOf("in-band"), agenda: agendaOf("in-band"), irrigation: statusOf("in-band"), overrides: [] }, WINDOW);
-  expect(rows.map((row) => row.label)).toEqual(["Heat", "Vent, fans", "Fog, mist", "Drips", "Iris", "Plan", "Sun"]);
-  // Iris's triggers are plan events with their times, never the sun's words on the row below; a past one with its outcome.
-  expect(rows[4].markers?.map((marker) => marker.label)).toEqual(["SUNRISE plan 07:00 ✓", "SOLAR_MAX plan 12:41", "SUNSET plan 16:50"]);
-  expect(rows[5].markers?.map((marker) => plain(marker.label))).toEqual(["13:00 VPD Mister Engage 1.60 → 1.70 kPa · AI", "16:30 Mister Pulse Gap 45.0 → 55.0 s · AI"]);
-  expect(rows[6].markers?.map((marker) => marker.label)).toEqual(["Sunrise 06:35", "Sunset 16:58"]);
+  expect(rows.map((row) => row.label)).toEqual(["Heat", "Vent, fans", "Fog, mist", "Drips", "Main light", "Grow light", "Iris plans", "Setting changes", "Sun"]);
+  // Iris's triggers in words (#1339), short, with the time and the outcome in full one tap away (#1340).
+  expect(rows[6].markers?.map((marker) => marker.label)).toEqual(["Sunrise plan ✓", "Midday check", "Sunset plan"]);
+  expect(rows[6].markers?.map((marker) => marker.detail)).toEqual([["Sunrise plan 07:00 · plan written"], ["Midday check 12:41 · due"], ["Sunset plan 16:50 · due"]]);
+  expect(rows[7].markers?.map((marker) => plain(marker.label))).toEqual(["Misting starts at VPD 1.60 → 1.70 kPa · AI", "Mist pulse gap 45.0 → 55.0 s · AI"]);
+  expect(rows[7].markers?.map((marker) => marker.detail?.map(plain))).toEqual([["13:00 Misting starts at VPD 1.60 → 1.70 kPa · AI"], ["16:30 Mist pulse gap 45.0 → 55.0 s · AI"]]);
+  expect(rows[8].markers?.map((marker) => marker.label)).toEqual(["Sunrise 06:35", "Sunset 16:58"]);
   expect(rows[3].spans).toEqual([]);
+  // No code reads on the track: no trigger code, no line code.
+  const text = rows.flatMap((row) => [...(row.markers ?? []).flatMap((marker) => [marker.label, ...(marker.detail ?? [])]), ...row.spans.flatMap((span) => [span.label ?? "", span.name ?? ""])]).join(" | ");
+  expect(text).not.toMatch(/\b(?:SUNRISE|SUNSET|SOLAR_MAX|MIDNIGHT|TRANSITION|FORECAST_DEVIATION)\b|\bL(?:0[1-9]|1[01])\b|SAF-/);
 });
 
-test("an Iris trigger's label: ahead, the plan and its time; past, with a check when it did its job, else its outcome in words", () => {
-  expect(irisMarkerLabel("SOLAR_MAX", "expected", at("12:41"), WINDOW.now)).toBe("SOLAR_MAX plan 12:41");
-  expect(irisMarkerLabel("SUNRISE", "plan_written", at("07:02"), WINDOW.now)).toBe("SUNRISE plan 07:02 ✓");
-  expect(irisMarkerLabel("SUNRISE", "action_completed", at("07:02"), WINDOW.now)).toBe("SUNRISE plan 07:02 ✓");
-  expect(irisMarkerLabel("SUNRISE", "missed", at("07:02"), WINDOW.now)).toBe("SUNRISE plan 07:02 · missed");
-  expect(irisMarkerLabel("SUNRISE", "timed_out", at("07:02"), WINDOW.now)).toBe("SUNRISE plan 07:02 · timed out");
-  expect(irisMarkerLabel("SUNRISE", "expected", at("10:30"), WINDOW.now)).toBe("SUNRISE plan 10:30 · due");
-  // An outcome the words table lacks reads raw, never a check.
-  expect(irisMarkerLabel("SUNRISE", "new_outcome", at("07:02"), WINDOW.now)).toBe("SUNRISE plan 07:02 · new_outcome");
+test("an Iris trigger's label in words: ahead, its name; past, with a check when it did its job, else its outcome in words", () => {
+  expect(irisMarkerLabel("SOLAR_MAX", "expected", at("12:41"), WINDOW.now)).toBe("Midday check");
+  expect(irisMarkerLabel("SUNRISE", "plan_written", at("07:02"), WINDOW.now)).toBe("Sunrise plan ✓");
+  expect(irisMarkerLabel("SUNRISE", "action_completed", at("07:02"), WINDOW.now)).toBe("Sunrise plan ✓");
+  expect(irisMarkerLabel("SUNRISE", "missed", at("07:02"), WINDOW.now)).toBe("Sunrise plan · missed");
+  expect(irisMarkerLabel("FORECAST_DEVIATION", "timed_out", at("07:02"), WINDOW.now)).toBe("Forecast changed · timed out");
+  expect(irisMarkerLabel("TRANSITION", "expected", at("10:30"), WINDOW.now)).toBe("Transition · due");
+  expect(irisMarkerDetail("FORECAST_DEVIATION", "plan_written", at("07:31"))).toBe("Forecast changed 07:31 · plan written");
+  // An outcome or trigger the words table lacks reads raw, never a check.
+  expect(irisMarkerLabel("SUNRISE", "new_outcome", at("07:02"), WINDOW.now)).toBe("Sunrise plan · new_outcome");
+  expect(irisMarkerLabel("NEW_TRIGGER", "expected", at("12:00"), WINDOW.now)).toBe("NEW_TRIGGER");
+});
+
+test("2026-11-05's six triggers (two 29 and 60 min apart): every one is a marker or in a merged mark's detail, none dropped (#1340)", () => {
+  // As served at 18:51Z on 2026-11-05, in the window 12:51Z–06:51Z.
+  const day = (utc: string) => Date.parse(`2026-11-05T${utc}:00Z`) / 1000;
+  const health = [["SUNRISE", "13:34", "plan_written"], ["FORECAST_DEVIATION", "14:03", "plan_written"], ["SOLAR_MAX", "18:43", "acked"], ["TRANSITION", "20:43", "expected"], ["TRANSITION", "22:52", "expected"], ["SUNSET", "23:52", "expected"]]
+    .map(([trigger, utc, outcome]) => ({ trigger, outcome, expected_at: new Date(day(utc) * 1000).toISOString() }));
+  const window = nextWindow(Date.parse("2026-11-05T18:51:00Z"));
+  const rows = trackRows({ lanes: null, plan: { lanes: [], health } as never, agenda: null, irrigation: null, overrides: [] }, window);
+  const iris = rows.find((row) => row.key === "iris")!.markers!;
+  // 29 min apart is more than the 20 min merge: each keeps its own mark, and the track's two lanes give each room.
+  expect(iris.map((marker) => marker.label)).toEqual(["Sunrise plan ✓", "Forecast changed ✓", "Midday check · acknowledged", "Transition", "Transition", "Sunset plan"]);
+  expect(iris.every((marker) => (marker.detail?.length ?? 0) === 1)).toBe(true);
+  // Closer than 20 min, they merge into one mark whose detail lists both.
+  const merged = clusterMarkers([{ key: "a", at: 100, label: "A", detail: ["A 07:00"] }, { key: "b", at: 100 + CLUSTER_S - 60, label: "B", detail: ["B 07:19"] }, { key: "c", at: 100 + 3 * CLUSTER_S, label: "C" }], CLUSTER_S, (count) => `${count} plans`);
+  expect(merged.map((marker) => [marker.label, marker.detail])).toEqual([["2 plans", ["A 07:00", "B 07:19"]], ["C", undefined]]);
+});
+
+test("the lights: the window each may switch on from its device settings, dotted; nothing while automation is off; the intent where it differs", () => {
+  const setting = (param: string, value: number) => ({ param, readback: { value } }) as never;
+  const settings = [
+    setting("sw_gl_main_auto_mode", 1), setting("gl_main_sunrise_hour", 7), setting("gl_main_sunset_hour", 20), setting("sw_gl_main_solar_phasing", 0),
+    setting("sw_gl_grow_auto_mode", 0), setting("gl_grow_sunrise_hour", 7), setting("gl_grow_sunset_hour", 22),
+  ];
+  // At 10:42 the main light's window is open from 07:00 to 20:00 today; tomorrow's starts after the 12 h.
+  expect(lightWindows(settings, null, WINDOW).filter((item) => item.to > WINDOW.from && item.from < WINDOW.to)).toEqual([{ light: "main", from: at("07:00"), to: at("20:00") }]);
+  const spans = lightSpans({ settings, solar: null, equipment: [{ equipment: "grow_light_grow", state: "on", intent: "off", since: "2026-11-02T17:30:00Z" }] }, WINDOW);
+  expect(spans.get("light_main")).toEqual([expect.objectContaining({ status: "conditional", token: "eq-light-main", start: WINDOW.now, end: at("20:00"), label: "may switch on 07:00–20:00" })]);
+  expect(plain(spans.get("light_main")?.[0].name)).toBe("Main light may switch on 07:00–20:00 when daylight is low; anyone inside turns it on at any hour");
+  expect(spans.get("light_grow")).toEqual([expect.objectContaining({ status: "intent", start: at("10:30"), end: WINDOW.now, label: "controller wants it off" })]);
+  // Solar phasing reads sunrise and sunset, moved by the offsets.
+  const solar = agendaOf("in-band").solar;
+  const phased = [...settings, setting("sw_gl_main_solar_phasing", 1), setting("gl_main_sunrise_offset_min", -30), setting("gl_main_sunset_offset_min", 60)].reverse();
+  expect(lightWindows(phased, solar, WINDOW).find((item) => item.from <= WINDOW.now && item.to > WINDOW.now)).toEqual({ light: "main", from: at("06:05"), to: at("17:58") });
+  // The phone's list names the window and the difference.
+  const items = nextItems({ plan: null, agenda: null, settings, equipment: [{ equipment: "grow_light_grow", state: "on", intent: "off", since: null }] }, WINDOW).filter((item) => item.kind === "light");
+  expect(items.map((item) => [plain(item.text), item.note])).toEqual([["Main light may switch on 07:00–20:00", "or for anyone inside"], ["Grow light: controller wants it off", "Lutron differs"]]);
 });
 
 test("the phone's next 12 h: runs, plan changes with who planned them, the expected triggers and the sun, in time order", () => {
   const items = nextItems({ plan: planOf("plan-next"), agenda: agendaOf("in-band") }, WINDOW);
   expect(items.map((item) => [item.kind, plain(item.text), item.ai ?? false, plain(item.note)])).toEqual([
     ["run", "Center mister · 4 × 45 s · vanda-degraded", false, "only if VPD sensing is degraded"],
-    ["plan", "VPD Mister Engage 1.60 → 1.70 kPa", true, ""],
-    ["plan", "Mister Engage Delay 60.0 → 90.0 s", false, "Forecast rule · system"],
+    ["plan", "Misting starts at VPD 1.60 → 1.70 kPa", true, ""],
+    ["plan", "Wait before misting 60.0 → 90.0 s", false, "Forecast rule · system"],
     ["run", "Center mister · 4 × 45 s · vanda-degraded", false, "only if VPD sensing is degraded"],
-    ["plan", "Mister Pulse Gap 45.0 → 55.0 s", true, ""],
-    ["iris", "Iris SUNSET trigger", false, ""],
+    ["plan", "Mist pulse gap 45.0 → 55.0 s", true, ""],
+    ["iris", "Iris: Sunset plan", false, ""],
     ["sun", "Sunset", false, ""],
   ]);
   // A skipped run says why, without "Skipped:".
