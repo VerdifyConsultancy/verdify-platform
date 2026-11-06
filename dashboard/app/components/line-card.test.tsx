@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
 // A line's row on Water → Today (#1135, redesign §5.2, `ObjectRow`) over #1122's fixture lines, at 10:42 on Monday
-// 2026-11-02: the title, kind and one pill, the state sentence, the primary action by state, the state-aware Stop and ⋯.
+// 2026-11-02: the title, kind and one pill, the state sentence, the primary action by state, a Stop only while it runs or reads unknown (D-UX-06, 2026-11-06) and ⋯.
 import { act, cleanup, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { fixture } from "../../e2e/fixtures/index.mjs";
@@ -36,7 +36,7 @@ function row(line: IrrigationLine, props: Partial<LineCardProps> = {}, session: 
   };
 }
 
-test("an idle line: its title from zone and kind, CLEAN, its state with its last water, then Run…, the quiet Stop and ⋯", () => {
+test("an idle line: its title from zone and kind, CLEAN, its state with its last water, then Run… and ⋯, and no Stop (D-UX-06, 2026-11-06)", () => {
   const { article, title, head, state, buttons } = row(lineOf(status(), "L01"));
   expect(article.className).toContain("line-card");
   expect([article.getAttribute("data-state"), article.getAttribute("aria-labelledby") !== null]).toEqual(["idle", true]);
@@ -44,9 +44,8 @@ test("an idle line: its title from zone and kind, CLEAN, its state with its last
   expect(head).toBe("Wall dripClean");
   // The fixture's "07:31" three days back.
   expect(state).toMatch(/^Idle · last Fri \d\d:\d\d, 12 min · ok$/);
-  expect(buttons).toEqual(["Run… Wall drip", "Stop Wall drip"]);
+  expect(buttons).toEqual(["Run… Wall drip"]);
   expect(article.querySelector(".btn-stop")).toBeNull();
-  expect(article.querySelector(".btn-stop-quiet")).not.toBeNull();
 });
 
 test("a running line: the cause's dot, Running with its cause, schedule and time left counting down, and one filled Stop as its primary", () => {
@@ -67,24 +66,24 @@ test("a running line: the cause's dot, Running with its cause, schedule and time
   expect(row(misting).state).toBe("Running · VPD · since 10:30");
 });
 
-test("unknown fills the Stop too (the relay may be on); a disabled line keeps Run… (#1343) beside Stop and ⋯; L05 reads Reserved · disabled", () => {
+test("unknown keeps its Stop (the relay may be on); a disabled line keeps Run… (#1343) and ⋯ with no Stop; L05 reads Reserved · disabled", () => {
   const unknown = row(lineOf(status("controller-not-reporting"), "L01"));
   expect(unknown.state).toBe("Unknown · 3 days ago");
   expect(unknown.article.querySelector(".btn-stop")).not.toBeNull();
   cleanup();
   const disabled = row(lineOf(status(), "L02"));
   expect(disabled.state).toBe("Off · no check recorded");
-  expect(disabled.buttons).toEqual(["Run… Wall drip (fertilized)", "Stop Wall drip (fertilized)"]);
+  expect(disabled.buttons).toEqual(["Run… Wall drip (fertilized)"]);
   cleanup();
   const reserved = row(lineOf(status("reserved-lines"), "L05"));
   expect(reserved.state).toBe("Reserved · disabled");
   expect(reserved.head).toBe("Center dripClean");
 });
 
-test("L11 fog is climate only: Fog once…, its Stop and its enable switch with the engine (#1343 follow-up), no Options or pause, and its menu keeps its links", () => {
+test("L11 fog is climate only: Fog once… (a Stop only while it runs) and its enable switch with the engine (#1343 follow-up), no Options or pause, and its menu keeps its links", () => {
   const fog = row(lineOf(status(), "L11"));
   expect(fog.head).toBe("FogClimate only");
-  expect(fog.buttons).toEqual(["Fog once… Fog", "Stop Fog"]);
+  expect(fog.buttons).toEqual(["Fog once… Fog"]);
   expect(fog.menu!.querySelectorAll("[role=switch]")).toHaveLength(1);
   expect(within(fog.menu!).queryByRole("button", { name: /^Options…|^Pause until…/ })).toBeNull();
   expect([...fog.menu!.querySelectorAll("a")].map((link) => [text(link), link.getAttribute("href")])).toEqual([
@@ -123,7 +122,7 @@ test("a latched mister reads its fault as its state, in fault, with Clear fault 
   const latched = row(lineOf(status("mister-fault"), "L04"));
   const fault = latched.article.querySelector(".line-fault")!;
   expect([text(fault), fault.className]).toEqual(["Faulted: no misting until midnight (watchdog)", "line-fault fault"]);
-  expect(latched.buttons).toEqual(["Clear fault on Center mister", "Stop Center mister"]);
+  expect(latched.buttons).toEqual(["Clear fault on Center mister"]);
   expect(latched.article.className).toContain("tone-fault");
   cleanup();
   const backing = row({ ...lineOf(status(), "L07"), fault: "backing_off", fault_until: denver("13:20"), state: { ...lineOf(status(), "L07").state, code: "blocked", reason: "backing off" } });
@@ -136,7 +135,7 @@ test("paused, waiting and unknown read in words; a paused line's primary is Resu
   const base = lineOf(status(), "L04");
   const held = row({ ...base, ...paused, state: { ...base.state, code: "paused" } });
   expect(held.state).toBe("Paused until 14:00 · VPD misting continues · by jason: rain");
-  expect(held.buttons).toEqual(["Resume Center mister", "Stop Center mister"]);
+  expect(held.buttons).toEqual(["Resume Center mister"]);
   cleanup();
   const misting = row({ ...base, ...paused, state: { ...base.state, code: "running", cause: "vpd", ends_at: null } });
   expect(misting.state).toMatch(/^Running · VPD/);
@@ -166,10 +165,10 @@ test("before the irrigation firmware a row shows its relay; only L01 runs, throu
   const before = status("before-engine");
   const idle = row(lineOf(before, "L01"), { engine: false });
   expect(idle.state).toMatch(/^Relay Off since \d\d:\d\d$/);
-  expect(idle.buttons).toEqual(["Run… Wall drip", "Stop Wall drip"]);
+  expect(idle.buttons).toEqual(["Run… Wall drip"]);
   cleanup();
   const other = row(lineOf(before, "L04"), { engine: false });
-  expect(other.buttons).toEqual(["Stop Center mister"]);
+  expect(other.buttons).toEqual([]);
   expect(text(other.menu!.querySelector("[data-arrives=clear-fault]"))).toBe("Clear fault arrives with the irrigation firmware");
   cleanup();
   const feed = row(lineOf(before, "L02"), { engine: false });

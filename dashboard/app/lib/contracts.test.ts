@@ -212,7 +212,8 @@ test("fixture(name) is what the fixture API answers for the same request, after 
       expect(wire(set[operationId]), `${name} ${operationId}`).toEqual(call(name, operationId, !script.includes(operationId)).body);
     }
   }
-}, 60_000);
+  // About 11 s on a laptop, 77-168 s in in-cluster CI under parallel load (it timed out at 60 s on #1425 and #1437).
+}, 240_000);
 
 test("each named fixture is selectable by name or as a list, from /__control and from fixture()", () => {
   const api = createFixtureHandler({ clock: () => NOW });

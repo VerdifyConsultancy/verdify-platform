@@ -60,11 +60,14 @@ def test_one_hardened_image_has_three_separate_optional_duty_credentials() -> No
                 ]
             },
             "initialDelaySeconds": 5,
-            "periodSeconds": 5,
+            "periodSeconds": 10,
             "timeoutSeconds": 10 if deployment["metadata"]["name"] == "experiment-v2-lifecycle" else 2,
             "successThreshold": 1,
             "failureThreshold": 3,
         }
+        # #1389: requests sized to the idle probe cost; memory-only limit.
+        assert container["resources"]["requests"] == {"cpu": "20m", "memory": "64Mi"}
+        assert set(container["resources"]["limits"]) == {"memory"}
         for item in container["env"]:
             if item["name"].endswith("DB_USER"):
                 usernames.add(item["value"])

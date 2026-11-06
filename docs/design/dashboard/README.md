@@ -87,6 +87,7 @@ the OpenAPI file wins on operation ids and paths.
 | [band](band.md) | What the climate band is, how the four sun anchors make its curve, what each edge does, the guardrails and who may change what; the Control → Band editor, API-23 and API-24 (#1334) | Change the band |
 | [design system](design-system.md) | weather.vallery.net tokens, the Verdify lockup, the page and card grammar, badges, controls, edit drawer, micro-visualizations, the uPlot charts, responsive and accessibility rules; built by VD-01 and VD-03 to VD-08 and the redesign (§9) | Build components or charts |
 | [execution plan](execution-plan.md) | 7 lanes, 4 seams, 4 waves, 5 releases, critical paths, start-today list, dependency graph, the 71-issue table (VD-01 to VD-73) | Plan or pick up work |
+| [sprint W6](sprint-w6.md) | Sprint W6 (2026-11-06): Jason's decisions in force, the lanes A to H with their issues, migrations 303 to 305 in order, and what is out of scope | See what the sprint covers |
 | [OpenAPI](openapi/dashboard-api.v1.yaml) | The contract: 38 operationIds (API-08, API-18, API-IRR-09 and OPS-03 reserved), schemas and problem codes | Call or serve the API |
 | [decisions](decisions.md) | Direction, all 27 D-IRP answers, the Round 2 and 2b answers, Q-01 to Q-14 with their applied defaults | Get or record a ruling |
 | [audit](audit.md) | The adversarial audit: findings and resolutions, persona coverage, plan checks, readiness | See why a rule exists |

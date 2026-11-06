@@ -201,3 +201,24 @@ test("the old paths: /graphs/scorecard, /planner and a log-filtered /activity re
   expect(response.status()).toBe(404);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Page not found");
 });
+
+for (const viewport of [PHONE, DESKTOP]) {
+  test(`#1322 · ${viewport.width} px: Now's status items sit a gap apart with a "·" centred in it; a line's first item shows none`, async ({ page, request }) => {
+    await useFixture(request, "in-band");
+    await page.setViewportSize(viewport);
+    await load(page, "/");
+    const boxes = await page.locator(".now-status > li").evaluateAll((items) => items.map((item) => {
+      const box = item.getBoundingClientRect();
+      const list = item.parentElement!.getBoundingClientRect();
+      return { left: box.left, right: box.right, top: box.top, listLeft: list.left };
+    }));
+    expect(boxes.length).toBeGreaterThanOrEqual(3);
+    for (let index = 1; index < boxes.length; index += 1) {
+      const [before, item] = [boxes[index - 1], boxes[index]];
+      // Same line: a gap of at least 10 px between the two (no run-together "holdingIris"); a wrapped item starts at the edge.
+      if (Math.abs(item.top - before.top) < 4) expect(item.left - before.right).toBeGreaterThanOrEqual(10);
+      else expect(Math.abs(item.left - item.listLeft)).toBeLessThanOrEqual(1);
+    }
+    expect(Math.abs(boxes[0].left - boxes[0].listLeft)).toBeLessThanOrEqual(1);
+  });
+}

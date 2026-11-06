@@ -156,7 +156,8 @@ export type DayBlock = {
   readonly start: number;
   readonly end: number;
   readonly status: SpanStatus;
-  readonly token: SpanToken;
+  /** Prewet and flush take the shared prep cause colour (design system §5.1), never an equipment colour. */
+  readonly token: SpanToken | "cause-prep";
   /** On or beside it: "07:35 ok", "16:00 · 10 min", "15:00 skipped · RH 92%". */
   readonly label: string;
   /** Its name in words: "L01 Wall drip, Mon 07:35, 12 min, done, ok". */
@@ -200,10 +201,10 @@ export function blocksOf(entry: Entry, info: LineInfo, now: number): DayBlock[] 
   const partner = fertKind(kind) ? info.partnerOf(lineId) : null;
   if (partner && schedule) {
     const owner = `${info.nameOf(lineId)}'s ${time} feed`;
-    if (prewet > 0) blocks.push({ ...common, key: `${base}:prewet`, lineId: partner, part: "prewet", start, end: start + prewet, token: "eq-fog", label: "", name: `prewet ${Math.round(prewet / 60)}${NBSP}min before ${owner}, ${STATUS_WORDS[status]}`, openS: prewet });
+    if (prewet > 0) blocks.push({ ...common, key: `${base}:prewet`, lineId: partner, part: "prewet", start, end: start + prewet, token: "cause-prep", label: "", name: `prewet ${Math.round(prewet / 60)}${NBSP}min before ${owner}, ${STATUS_WORDS[status]}`, openS: prewet });
     if (flush > 0) {
       const after = feedStart + runLength;
-      blocks.push({ ...common, key: `${base}:flush`, lineId: partner, part: "flush", start: after, end: after + flush, token: "eq-fog", label: "", name: `flush ${Math.round(flush / 60)}${NBSP}min after ${owner}, ${STATUS_WORDS[status]}`, openS: flush });
+      blocks.push({ ...common, key: `${base}:flush`, lineId: partner, part: "flush", start: after, end: after + flush, token: "cause-prep", label: "", name: `flush ${Math.round(flush / 60)}${NBSP}min after ${owner}, ${STATUS_WORDS[status]}`, openS: flush });
     }
   }
   return blocks;
