@@ -413,6 +413,7 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
   .wat-zone-today{justify-items:stretch}
   .wat-zone-today .sch-minutes-meter{grid-template-columns:minmax(0,1fr) auto}
   .wat-zone-last{white-space:normal}
+  .wat-zone-kind{white-space:normal}
   .wat-runs-table{display:none}
   .sch-key-button,.wat-select select{min-height:var(--tap)}
   .wat-site-term a{min-height:var(--tap)}

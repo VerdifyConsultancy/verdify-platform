@@ -650,8 +650,8 @@ export const ZONE_CARD_WORDS: Readonly<Record<WaterZone, string>> = {
 };
 /** What each card holds, beside its name. */
 export const ZONE_KIND_WORDS: Readonly<Record<WaterZone, string>> = {
-  wall: "every wall and shelf · clean and fertilized", center: "clean and fertilized", center_mister: "clean", south: "clean and fertilized",
-  west: "clean and fertilized", fog: "humidification · climate only",
+  wall: "walls and shelves · clean · fert", center: "clean · fert", center_mister: "clean", south: "clean · fert", west: "clean · fert",
+  fog: "humidification · climate only",
 };
 /** The physical line (API-IRR-01 `circuits`) behind each card; fog has none. */
 export const ZONE_CIRCUIT: Readonly<Record<WaterZone, string | null>> = {

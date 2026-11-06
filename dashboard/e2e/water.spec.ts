@@ -71,7 +71,7 @@ test("1440 px: the zone heads' cap meters are one width, their minutes and right
     const box = node.getBoundingClientRect();
     return { width: Math.round(box.width), right: Math.round(box.right), top: Math.round(box.top), bottom: Math.round(box.bottom) };
   }));
-  // Wall drip, Center drip and the Center, South and West misters have a cap; Fog has minutes alone.
+  // Each physical line has a cap (#1336); Fog has minutes alone.
   const meters = await boxes(".wat-zone-head .meter");
   expect(meters).toHaveLength(5);
   expect(new Set(meters.map((box) => box.width)).size, JSON.stringify(meters)).toBe(1);
@@ -85,7 +85,7 @@ test("1440 px: the zone heads' cap meters are one width, their minutes and right
   expect(new Set(lasts.map((box) => box.bottom - box.top)).size, JSON.stringify(lasts)).toBe(1);
 });
 
-test("only a running line's Stop is filled red; every other non-fog line has a quiet one that still stops it", async ({ page, request }) => {
+test("only a running line's Stop is filled red; every other line, fog included (#1343 follow-up), has a quiet one that still stops it", async ({ page, request }) => {
   await useScreensClock(page, request, "l01-running");
   await load(page, "/water");
   await expect(page.locator("article[data-line] .btn-stop")).toHaveCount(1);
