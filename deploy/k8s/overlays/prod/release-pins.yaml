@@ -1,5 +1,6 @@
-# All five from main 14db37300293 (build verdify-platform-ci-6qwbv; #1408 full rebuild).
-# Includes migrations 290 and 291 and every merge through #1407.
+# Release 3 (main e136a4fb2bb3): api, mcp, ingestor and migrate from build
+# verdify-platform-ci-m4vp9; orchestrator from verdify-platform-ci-tnds6 (a7e0b49f0838).
+# Includes migrations 293, 294, 296, 301 and 302 and every merge through #1399.
 # Release pins: the digests production runs for the five images that the
 # verdify-platform-ci pin actuator manages (api, mcp, ingestor, migrate and
 # experiment-v2-orchestrator).
@@ -23,7 +24,7 @@ metadata:
   name: release-pin-verdify-api
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-api
-  digest: sha256:919137c78717a5d6dc05ab55acb5bcbf9cd36f9844e19459c7241fc41591bbc2
+  digest: sha256:d573087eaaa2d826b879203ff103ba0ecc6c4c710aea917a6ec080fdbb2a3c42
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -31,7 +32,7 @@ metadata:
   name: release-pin-verdify-mcp
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-mcp
-  digest: sha256:88f09bf43d17efd44dd1cd18cc2ef9d4fcc006f74689f2f0ab2ce3f619a502a7
+  digest: sha256:3c77fa18aea0d446672f3fcda2c2f08f8824c4d8c9fc8f64219ed5ba9bd303e0
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -39,7 +40,7 @@ metadata:
   name: release-pin-verdify-ingestor
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-  digest: sha256:eb686f94aab49f23cee051137b1946fadf335e3dfe918e86419494e354bef85f
+  digest: sha256:a935e30436e1420677a4a993ef9be696582d8bc5e524c76d44621de193fc3acc
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -47,7 +48,7 @@ metadata:
   name: release-pin-verdify-migrate
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-migrate
-  digest: sha256:33554ad0d0c914058268cb8bdf10d58b54e96d5d9a24fc1dbd90e6c8bf0982f2
+  digest: sha256:f2798947c2b8428c9644e71b74b897cfaf374555fbd20fd26e015974370df3bd
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -55,4 +56,4 @@ metadata:
   name: release-pin-verdify-experiment-v2-orchestrator
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
-  digest: sha256:7bf58f327bd2480997d6cace0e0fde9c3ccd22275e0888bcbe51ba5f6cb835d2
+  digest: sha256:339c9b4cad80ee10637447e6db5c33900b83bcf942c0f34b39b9964f462cc2e8
