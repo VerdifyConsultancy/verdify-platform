@@ -216,6 +216,12 @@ function inBand(now) {
       rssi_dbm: -61, observed_at: iso(now - 45_000),
     },
     occupancy: { occupied: false, seen_at: iso(at("05:10")), hold_enabled: true },
+    // #1346: the greenhouse snapshot, written 6 min ago and confirmed 1 min ago (the same conditions since).
+    snapshot: {
+      text: "The greenhouse is at 64.8 °F and 0.62 kPa, inside its band of 62.0-70.0 °F and 0.45-0.80 kPa. The climate system is idle "
+        + "because no heating, cooling or humidifying is needed. Nothing is watering now, and there are no open alerts.",
+      generated_at: iso(now - 6 * MINUTE), as_of: iso(now - MINUTE), model: "llm.primary.longctx", stale: false, stale_reason: null, outdated: false,
+    },
     // Relays report on change, so a relay's newest row is the start of its run; the Lutron rows are re-read every poll.
     equipment: [
       item("fan1", "Fan 1", "climate", FAN1_OFF_SINCE),
@@ -410,6 +416,8 @@ function notReporting(world, since) {
   world.irrFreshness = { ...world.irrFreshness, stale: true };
   // API-13's reasons (#1167): no code or since while the controller does not report, and the newest row's time stays.
   for (const reason of Object.values(world.reasons)) Object.assign(reason, { code: null, since: null });
+  // #1346: the band verdicts turn unavailable, so the snapshot written while it reported is outdated and never shows.
+  if (world.snapshot) world.snapshot.outdated = true;
 }
 function climateAge(world, ageS) {
   const { now } = world;
@@ -445,6 +453,8 @@ export const FIXTURES = {
   "api-down": (world) => { world.flags.apiDown = true; },
   "stale-data": (world) => {
     for (const reading of Object.values(world.indoor)) reading.observed_at = iso(world.now - 14 * MINUTE);
+    // #1346: the newest attempt failed after the snapshot was written, so it reads muted with its "as of" time.
+    Object.assign(world.snapshot, { as_of: iso(world.now - 40 * MINUTE), generated_at: iso(world.now - 40 * MINUTE), stale: true, stale_reason: "failed" });
   },
   "ingestor-not-running": (world) => {
     world.freshness.ingestor = freshness(world.now, 240, 60, 180);

@@ -705,6 +705,31 @@ def sealed_sql_290():
     )
 
 
+GREENHOUSE_BRIEF_MIGRATION = (
+    301,
+    "301-greenhouse-brief.sql",
+    "0a8b1a2d80f441338a0665de896bacc74cc1f0489f516928b8d2d20b725d4413",
+)
+# greenhouse_brief is written by the dashboard duty and read by the MCP duty; neither ordinary login reaches it,
+# so the api and ingestor seals stay 290's and the MCP seal moves. The MCP literal is a read-only projection on
+# production at exact289 until the rolled-back native qualification measures it.
+SUCCESSOR_301 = {**SUCCESSOR_290, "mcp": "717d3d0bea4032fe65fe977f78f511b6ed3bd97142d6665ebc3bfa83836414af"}
+
+
+def sealed_sql_301():
+    # Keep every 290 predicate and bind the exact 301 runner stamp with the MCP seal its grant moves.
+    predecessor = sealed_sql_290()
+    current = seal_profile_sql(290, SUCCESSOR_290)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(301, SUCCESSOR_301), 1)
+        + " AND "
+        + ledger_row_sql(*GREENHOUSE_BRIEF_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -741,6 +766,8 @@ def sealed_sql():
         + sealed_sql_289()
         + " OR "
         + sealed_sql_290()
+        + " OR "
+        + sealed_sql_301()
         + ")"
     )
 

@@ -1,0 +1,16 @@
+{
+  "migration": "301-greenhouse-brief.sql",
+  "exact_final_migration_sha256": "0a8b1a2d80f441338a0665de896bacc74cc1f0489f516928b8d2d20b725d4413",
+  "final_migration_qualification_pending": true,
+  "before": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projected_successor": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "717d3d0bea4032fe65fe977f78f511b6ed3bd97142d6665ebc3bfa83836414af"
+  },
+  "projection": "2026-11-05, read only, production at exact289 (290 merged, not applied; 290 moves no seal): max seq 289 with 289's sha, all three live digests and receipts equal to 289's registration, no greenhouse_brief. The VD-39 method: fn_mcp_runtime_boundary_digest's body from 263, run as a plain SELECT under SET LOCAL search_path = pg_catalog, pg_temp in a default_transaction_read_only session on production, reproduced the live MCP digest 6cab4f0f...893e exactly; with two injected entries for this file's table, 'relation|public|greenhouse_brief|r|10|f|f||' and 'relation-acl|public.greenhouse_brief|1527920|10|SELECT|f' (verdify OID 10 owns and grants; 1527920 is verdify_mcp_runtime on production), it gives 717d3d0b...14af. Both entry shapes were checked against production's own irrigation_line rows (the same CREATE TABLE owner and a lone MCP SELECT format identically). Nothing else enters it: the identity sequence and both indexes carry no ACL, the dashboard duty's table and column grants are not MCP or PUBLIC entries, and production has no table default ACL. The ordinary digests keep 289's values: neither ordinary login has any privilege on the table (has_table_privilege and has_any_column_privilege are false), it is not a protected relation, and the dashboard duty is not an ordinary login. 301 is chained after 290; 291-300 land first, then this file is re-chained onto 300 (predecessor block, seals and sha) and qualified natively: run scripts/qualify-migration-successor.py db/migrations/301-greenhouse-brief.sql --native-fixture db/qualification/301-greenhouse-brief-fixture.sql --fixture tests/fixtures/301-greenhouse-brief-native-qualification.json on production (every session rolls back; --apply-first each merged predecessor production lacks). If the probe differs from these literals, set the measured MCP digest in the file's successor block and both registrations, update the file's sha at both and here, and run it again."
+}

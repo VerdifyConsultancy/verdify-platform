@@ -74,8 +74,9 @@ paths:
       description: >-
         Indoor and outdoor climate with ages, the band in force (the dispatcher's DERIVED band rows) with a verdict
         per metric, mode, Iris status, equipment running, bursts from the controller's readback, the leak flag, the
-        open-alert count, source freshness with the ingestor heartbeat, and the device writer. Polled every 15 s; the
-        shell banners read `freshness`, `writer`, `leak` and `alerts`. Water and occupancy come from API-IRR-01.
+        open-alert count, source freshness with the ingestor heartbeat, the device writer and the greenhouse snapshot.
+        Polled every 15 s; the shell banners read `freshness`, `writer`, `leak` and `alerts`. Water and occupancy come
+        from API-IRR-01.
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Now'}}}}
         default: {$ref: '#/components/responses/Problem'}
@@ -1189,6 +1190,26 @@ components:
             differing: {type: integer}
             oldest_since: {type: [string, 'null'], format: date-time}
         controller: {$ref: '#/components/schemas/Controller'}
+        snapshot:
+          description: >-
+            The greenhouse snapshot (#1346): the newest 3-5 sentence summary the local Cortex model wrote from the
+            current conditions (CronJob verdify-greenhouse-brief); null when none was written in the last 2 h
+          anyOf: [{$ref: '#/components/schemas/Snapshot'}, {type: 'null'}]
+    Snapshot:
+      type: object
+      description: >-
+        Read-only text for people, never an input to a plan. stale: as_of is more than 30 min old (old) or a later
+        attempt failed or was rejected (failed); show it muted with "as of". outdated: a band verdict or the open-alert
+        count changed since it was written; never show it
+      required: [text, generated_at, as_of, model, stale, stale_reason, outdated]
+      properties:
+        text: {type: string}
+        generated_at: {type: string, format: date-time}
+        as_of: {type: string, format: date-time, description: 'The newer of generated_at and the last run that found the same conditions'}
+        model: {type: string, examples: [llm.primary.longctx]}
+        stale: {type: boolean}
+        stale_reason: {type: [string, 'null'], enum: [old, failed, null]}
+        outdated: {type: boolean}
     MetricDef:
       type: object
       required: [key, label, group, unit, cadence_s, retention_days, provenance, daily]

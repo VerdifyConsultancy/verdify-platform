@@ -19,6 +19,10 @@
 .now-condition{margin:var(--space-1) 0 0;font-size:var(--fs-sm);line-height:1.4;color:#fff;font-variant-numeric:tabular-nums}
 .now-condition-link{display:inline-flex;align-items:center;min-height:24px;color:var(--mint);text-decoration:none;white-space:nowrap}
 .now-condition-link:hover{color:#fff}
+/* The greenhouse snapshot (#1346): one paragraph under the condition line, written by the local Cortex model, with its author, time and the AI text mark (D-UX-07). Muted when stale, with its "as of" time. */
+.now-snapshot{margin:var(--space-2) 0 0;max-width:62ch;font-size:var(--fs-sm);line-height:1.5;color:#fff}
+.now-snapshot.value-muted{color:var(--ink-muted)}
+.now-snapshot-mark{font:500 var(--fs-xs)/1.2 var(--mono);color:var(--ink-muted);white-space:nowrap}
 .now-hero-value{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-1) var(--space-3);margin:var(--space-2) 0 var(--space-1)}
 .now-hero-value .hero-temp{margin:0}
 .now-hero-verdict{font:500 var(--fs-xs)/1.2 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--mint)}

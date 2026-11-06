@@ -357,6 +357,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "289-alert-silences.sql",
         # daily_band_compliance and its refresh run forward only; the rollup is derived data.
         "290-band-compliance.sql",
+        # The greenhouse snapshot table, its grants and the MCP receipt re-seal run forward only.
+        "301-greenhouse-brief.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

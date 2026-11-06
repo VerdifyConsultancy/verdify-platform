@@ -7,6 +7,9 @@
  * each bar's name; a verdict word only when out of band), time in band today against yesterday, the status line (mode, Iris and the plan in force, outdoor, occupancy),
  * and the "All readings" disclosure with every source's time and the raw mode code.
  *
+ * Under the headline and its condition line, the greenhouse snapshot (#1346, `snapshot.tsx`): the local model's paragraph
+ * with its time and the AI mark.
+ *
  * Honesty: rows 1 to 3 and 7 of the answer mute the values with STALE and show no verdict, and rows 1 to 3 read the mode
  * as unknown (row 7 as it was last said, with no verdict: "Last mode: holding (10:28)"). Muted, the band group says when
  * its numbers were read ("As of 10:28") and its bands read neutral, so a grey dot inside a green band never reads as live.
@@ -28,6 +31,7 @@ import { BandBar } from "../data/band-bar";
 import { AgeLabel, FreshnessDot, useNow } from "../freshness";
 import { Kv, type KvItem } from "../kv";
 import { bandRows, bandWords, hasTimeInBand, outOfBand, percentText, readingText, readingsAsOf, timeInBand, todayStartS, type BandRow, type TimeInBand } from "./climate";
+import { NowSnapshot } from "./snapshot";
 import { deviceUnknown, irisText, irisWarns, modeText, occupancyText, planLine } from "./status";
 
 /** The eyebrow: the time zone is stated once, in the footer and on axes (D-UX-08). */
@@ -239,6 +243,7 @@ export function NowHero({ now, answer, irrigation, day, daily, onRetry }: NowHer
       <span className="eyebrow">{NOW_EYEBROW}</span>
       <h1 id={headingId} className="hero-answer"><AnswerTitle answer={answer} /></h1>
       <AnswerDetail answer={answer} />
+      <NowSnapshot snapshot={now?.snapshot} clock={clock} muted={muted || apiDown} />
       <p className="now-hero-value">
         <span className={cls("hero-temp", muted && "value-muted")} data-hero-value="">{formatValue(missing ? null : temp.value, "°F")}</span>
         {inBand && <span className="now-hero-verdict">{words("band_verdict", "in")}</span>}

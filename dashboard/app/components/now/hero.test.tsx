@@ -211,3 +211,54 @@ test("a missed SUNSET turns the Iris phrase amber; the hero before API-02 answer
   expect(within(document.querySelector<HTMLElement>(".hero")!).getByRole("heading", { level: 1 }).textContent).toBe("Checking the greenhouse…");
   expect(document.querySelectorAll(".hero .skeleton")).toHaveLength(3);
 });
+
+// ── The greenhouse snapshot (#1346) ─────────────────────────────────────────
+
+const snapshotOf = () => document.querySelector<HTMLElement>(".now-snapshot");
+function renderWithSnapshot(names: string | string[], patch: Record<string, unknown> | null, apiDown = false) {
+  const body = fixture(names, { now: NOW })["API-02"] as Record<string, unknown>;
+  const snapshot = patch === null ? null : { ...(body.snapshot as Record<string, unknown>), ...patch };
+  const now = parseNow({ ...body, snapshot });
+  const props = {
+    now, answer: nowAnswer({ now, failed: false }), irrigation: read(parseIrrigationStatus(fixture(names, { now: NOW })["API-IRR-01"])),
+    day: dayRead(names), daily: dailyRead(names), onRetry: vi.fn(),
+  };
+  return render(<MemoryRouter><SessionProvider {...DEFAULT_SESSION} apiDown={apiDown}><NowHero {...props} /></SessionProvider></MemoryRouter>);
+}
+
+test("the snapshot: one paragraph under the headline with its author, time and the AI text mark", () => {
+  renderHero(["in-band", "time-in-band"]);
+  const paragraph = snapshotOf();
+  expect(paragraph?.getAttribute("data-snapshot")).toBe("fresh");
+  expect(paragraph?.className).not.toContain("value-muted");
+  expect(plain(text(paragraph))).toMatch(/^The greenhouse is at 64\.8 °F .* no open alerts\. Written by Qwen \(Cortex\) at 10:36 · AI$/);
+  // It follows the headline inside the hero's main block, and it is not a pill (D-UX-07).
+  expect(paragraph?.closest(".now-hero-main")).not.toBeNull();
+  expect(paragraph?.querySelector("[data-badge]")).toBeNull();
+});
+
+test("the snapshot when stale (old or a failed later attempt) reads muted with its as-of time", () => {
+  renderHero(["stale-data", "time-in-band"]);
+  expect(snapshotOf()?.getAttribute("data-snapshot")).toBe("stale");
+  expect(snapshotOf()?.className).toContain("value-muted");
+  expect(plain(text(snapshotOf()?.querySelector(".now-snapshot-mark")))).toBe("Written by Qwen (Cortex) · as of 10:02 · AI");
+  cleanup();
+  renderWithSnapshot("in-band", { stale: true, stale_reason: "old", as_of: new Date(NOW - 45 * 60_000).toISOString() });
+  expect(plain(text(snapshotOf()?.querySelector(".now-snapshot-mark")))).toBe("Written by Qwen (Cortex) · as of 09:57 · AI");
+  cleanup();
+  renderWithSnapshot("in-band", {}, true); // the API down mutes it with the rest of the hero
+  expect(snapshotOf()?.getAttribute("data-snapshot")).toBe("stale");
+});
+
+test("the snapshot never shows when outdated, missing, empty or older than 2 h, and the status line stands alone", () => {
+  for (const patch of [{ outdated: true }, null, { text: " " }, { as_of: new Date(NOW - 121 * 60_000).toISOString(), stale: true }]) {
+    renderWithSnapshot("in-band", patch);
+    expect(snapshotOf()).toBeNull();
+    expect(document.querySelector(".now-status")).not.toBeNull();
+    cleanup();
+  }
+  // A server before #1346 sends no snapshot at all.
+  const body = { ...(fixture("in-band", { now: NOW })["API-02"] as Record<string, unknown>) };
+  delete body.snapshot;
+  expect(parseNow(body)?.snapshot).toBeUndefined();
+});

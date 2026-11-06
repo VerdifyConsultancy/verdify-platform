@@ -131,7 +131,7 @@ function nowBody(world) {
   return {
     server_time: iso(world.now), indoor: world.indoor, outdoor: world.outdoor, band: world.band, mode: world.mode, iris: world.iris,
     alerts: { open: open.length, critical: count("critical"), warning: count("warning"), info: count("info") }, running, overrides: world.overrides,
-    leak: world.leak, freshness: world.freshness, writer: world.writer, controller: world.controller,
+    leak: world.leak, freshness: world.freshness, writer: world.writer, controller: world.controller, snapshot: world.snapshot ?? null,
   };
 }
 

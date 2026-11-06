@@ -93,6 +93,9 @@ RUN python -c "import verdify_services.activity"
 COPY verdify_public/ ./verdify_public/
 RUN python -c "import verdify_public.output_policy"
 RUN python -c "import operator_api"
+# CronJob verdify-greenhouse-brief (#1346) runs `python greenhouse_brief_job.py` on this image.
+COPY api/greenhouse_brief_job.py ./greenhouse_brief_job.py
+RUN python -c "import greenhouse_brief_job"
 COPY --from=source-metadata /out/source-revision /etc/verdify/source-revision
 
 # Non-root user (uid 1000, matches the homelab NFS/source ownership convention).
