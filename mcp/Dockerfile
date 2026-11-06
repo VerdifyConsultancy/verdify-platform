@@ -9,8 +9,8 @@
 # is a separate change with its own authentication tests).
 #
 # BUILD CONTEXT IS THE REPO ROOT. server.py imports the repo-root modules
-# `slack_config`, `slack_ops.service`, and `verdify_schemas` after inserting the
-# repo root on sys.path (mcp/server.py:25-27); all three must be COPYed in.
+# `verdify_schemas` and `verdify_services` after inserting the repo root on
+# sys.path; both must be COPYed in.
 #
 # Build (from repo root):
 #   docker build -f mcp/Dockerfile \
@@ -68,17 +68,9 @@ COPY --from=builder /install /usr/local
 # server.py uses `REPO_ROOT = parents[1]` and inserts it on sys.path, so the
 # layout must be /app/mcp/server.py with the repo-root modules at /app/*.
 COPY mcp/server.py ./mcp/server.py
-COPY slack_config.py ./slack_config.py
-COPY slack.yaml ./slack.yaml
-COPY slack_ops/ ./slack_ops/
 COPY verdify_schemas/ ./verdify_schemas/
 COPY verdify_services/ ./verdify_services/
 RUN python -c "import verdify_services.activity"
-
-# slack.yaml is the NON-SECRET Slack config (channel IDs + credential FILE
-# PATHS, never tokens). server.py's slack_command tool calls load_slack_settings()
-# which resolves slack.yaml next to slack_config.py, so it must be COPYed here.
-# Real tokens are mounted separately (k8s Secret -> /etc/verdify/slack/*).
 
 # Non-root (uid 1000). Handoff §3.2: MCP runs non-root.
 RUN useradd -m -u 1000 -s /usr/sbin/nologin appuser \

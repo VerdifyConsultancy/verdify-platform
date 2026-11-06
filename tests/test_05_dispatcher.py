@@ -196,10 +196,9 @@ def test_unknown_physical_outcome_is_terminal_and_never_retryable():
 
 
 def test_expected_lifecycle_consumers_cover_full_state_vocabulary():
-    brief = (ROOT / "slack_ops" / "briefs.py").read_text()
     irrigation = (ROOT / "scripts" / "validate-irrigation-stack.py").read_text()
 
-    for source in (brief, irrigation):
+    for source in (irrigation,):
         for status in (
             "requested",
             "queued",
@@ -211,9 +210,7 @@ def test_expected_lifecycle_consumers_cover_full_state_vocabulary():
             "superseded",
         ):
             assert f"'{status}'" in source
-    assert "setpoints_terminal_unconfirmed" in brief
     assert "lifecycle_terminal_unconfirmed" in irrigation
-    assert "terminal_unsent" not in brief
     assert "terminal_unsent" not in irrigation
 
 
