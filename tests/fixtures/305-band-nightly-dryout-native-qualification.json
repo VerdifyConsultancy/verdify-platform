@@ -1,0 +1,169 @@
+{
+  "migration": "305-band-nightly-dryout.sql",
+  "final_migration_qualification_pending": false,
+  "before": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"
+  },
+  "projected_successor": {
+    "api": "42091d8bc52adfff17ef589ca7d71ac3a97fe37af4460b551a938f313635bb8c",
+    "ingestor": "c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940",
+    "mcp": "2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245"
+  },
+  "projection": "2026-11-06, read only, production at exact302. daily_band_compliance is verdify's with relacl NULL, so neither digest takes it in, and adding columns or a CHECK to it moves neither. fn_band_dryout_night is created verdify's and its PUBLIC EXECUTE is revoked in the same transaction (pg_default_acl holds only verdify's own function EXECUTE); fn_band_compliance_store is replaced in place and keeps its ACL (PUBLIC revoked by 290). Neither is in 217's invoker-helper closure. All three seals are expected to stay 304's, which are 303's. Read only on production, 2026-11-06: fn_band_compliance_5m over 00:00-06:00 local for 2026-09-01..2026-11-06 runs in 6.7 s (67 days); 2026-11-01 grades 420 minutes, other days 360; minutes at or above max(vpd_low, 0.74) for 2026-10-26..11-06 are 0 except 11-03 55, 11-05 20 and 11-06 115, so no night dried out. If the probe shows any digest moved, stop. Otherwise run scripts/qualify-migration-successor.py db/migrations/305-band-nightly-dryout.sql --apply-first db/migrations/304-water-day-local-end.sql (and 303 first if production lacks it) --prelock as needed --native-fixture db/qualification/305-band-nightly-dryout-fixture.sql --fixture tests/fixtures/305-band-nightly-dryout-native-qualification.json.",
+  "measured_at": "2026-11-06T13:50:48Z",
+  "qualified_successor": {
+    "api": "42091d8bc52adfff17ef589ca7d71ac3a97fe37af4460b551a938f313635bb8c",
+    "ingestor": "c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940",
+    "mcp": "2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245"
+  },
+  "after_rollback": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"
+  },
+  "exact_final_migration_sha256": "4e2db419f15541080310ca99782f38f298b17d8318b845a997b88672799b971e",
+  "inside_transaction_receipts_match": true,
+  "final_migration_rollback_verified": true,
+  "native_probe_source_sha256": "3df519d0eb80f11bb5025187569bc1eedf39c36268b47baffc53b07754828ca4",
+  "qualification_source_sha256": "d82e336c7531dbc8723636f89491cf2cd41264583b8b92c3d0a27429fd344699",
+  "applied_first": [
+    {
+      "migration": "303-soil-targets-configurable.sql",
+      "seq": 303,
+      "sha256": "fa983725905c01373290a490cd557fda86841a3c84cdee0f965513f924a3af97"
+    },
+    {
+      "migration": "304-water-day-local-end.sql",
+      "seq": 304,
+      "sha256": "1d89d1807dcbb19905ad147f8c0596d6066df48733dd5103739e28529003d901"
+    }
+  ],
+  "applied_first_seals": {
+    "api": "42091d8bc52adfff17ef589ca7d71ac3a97fe37af4460b551a938f313635bb8c",
+    "ingestor": "c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940",
+    "mcp": "2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245"
+  },
+  "prelock": [
+    [
+      "public.daily_band_compliance",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.mcp_runtime_boundary_receipt",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.runtime_ordinary_login_attestation_receipts",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.schema_migrations",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.soil_moisture_targets",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.v_water_meter_daily",
+      "ACCESS EXCLUSIVE"
+    ]
+  ],
+  "native_fixture": {
+    "checks": [
+      "refresh_login_attests",
+      "refresh_runs",
+      "every_past_day_has_its_window",
+      "minutes_add_up",
+      "flag_is_four_hours",
+      "dst_day_420_min",
+      "ordinary_day_360_min",
+      "no_night_dried_out_before_the_dryout",
+      "today_null_until_06_local",
+      "function_matches_stored_last_7_days"
+    ],
+    "refreshed_days": 2,
+    "refresh_ms": 396,
+    "nights": [
+      [
+        "2026-10-26",
+        360,
+        0,
+        false
+      ],
+      [
+        "2026-10-27",
+        360,
+        0,
+        false
+      ],
+      [
+        "2026-10-28",
+        360,
+        0,
+        false
+      ],
+      [
+        "2026-10-29",
+        360,
+        0,
+        false
+      ],
+      [
+        "2026-10-30",
+        360,
+        0,
+        false
+      ],
+      [
+        "2026-10-31",
+        360,
+        0,
+        false
+      ],
+      [
+        "2026-11-01",
+        420,
+        0,
+        false
+      ],
+      [
+        "2026-11-02",
+        360,
+        0,
+        false
+      ],
+      [
+        "2026-11-03",
+        360,
+        55,
+        false
+      ],
+      [
+        "2026-11-04",
+        360,
+        0,
+        false
+      ],
+      [
+        "2026-11-05",
+        360,
+        20,
+        false
+      ],
+      [
+        "2026-11-06",
+        360,
+        115,
+        false
+      ]
+    ],
+    "all_passed": true,
+    "attested": {
+      "matview_refresh": true
+    }
+  },
+  "native_fixture_sha256": "9bb7b74bd74c99a54d15ad7962206daa736354deba32fc3793bb2d81732ecbcb"
+}

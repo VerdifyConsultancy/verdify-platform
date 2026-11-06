@@ -895,6 +895,54 @@ def sealed_sql_303():
     )
 
 
+WATER_DAY_MIGRATION = (
+    304,
+    "304-water-day-local-end.sql",
+    "1d89d1807dcbb19905ad147f8c0596d6066df48733dd5103739e28529003d901",
+)
+# v_water_meter_daily keeps its columns, owner and ACL (the dashboard duty's SELECT only), which neither ordinary
+# login nor an MCP role holds; v_water_daily, which the ingestor reads, keeps its text. All three seals stay 303's.
+SUCCESSOR_304 = SUCCESSOR_303
+
+
+def sealed_sql_304():
+    # Keep every 303 predicate and bind the exact 304 runner stamp.
+    predecessor = sealed_sql_303()
+    current = seal_profile_sql(303, SUCCESSOR_303)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(304, SUCCESSOR_304), 1)
+        + " AND "
+        + ledger_row_sql(*WATER_DAY_MIGRATION)
+        + ")"
+    )
+
+
+BAND_DRYOUT_MIGRATION = (
+    305,
+    "305-band-nightly-dryout.sql",
+    "4e2db419f15541080310ca99782f38f298b17d8318b845a997b88672799b971e",
+)
+# daily_band_compliance keeps no ACL entry and fn_band_dryout_night is verdify's with PUBLIC's EXECUTE revoked,
+# reached only through the refresh duty's entry point. All three seals stay 304's.
+SUCCESSOR_305 = SUCCESSOR_304
+
+
+def sealed_sql_305():
+    # Keep every 304 predicate and bind the exact 305 runner stamp.
+    predecessor = sealed_sql_304()
+    current = seal_profile_sql(304, SUCCESSOR_304)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(305, SUCCESSOR_305), 1)
+        + " AND "
+        + ledger_row_sql(*BAND_DRYOUT_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -945,6 +993,10 @@ def sealed_sql():
         + sealed_sql_302()
         + " OR "
         + sealed_sql_303()
+        + " OR "
+        + sealed_sql_304()
+        + " OR "
+        + sealed_sql_305()
         + ")"
     )
 

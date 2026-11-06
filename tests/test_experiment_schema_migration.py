@@ -371,6 +371,10 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "302-planner-section-reads.sql",
         # Configurable soil targets, the slot relabel and the three receipt re-seals run forward only.
         "303-soil-targets-configurable.sql",
+        # The water-day view's local day end runs forward only.
+        "304-water-day-local-end.sql",
+        # The nightly dry-out columns, their function and the rollup's refill run forward only.
+        "305-band-nightly-dryout.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

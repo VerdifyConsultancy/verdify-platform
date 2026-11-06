@@ -10,6 +10,11 @@
 > / band-grade-metric stance does not. See ADR-0004 §"what carries over" / §"what this reverses".
 
 - **Status:** SUPERSEDED by ADR-0004 (was Accepted 2026-06-17). Sets the control objective for the band-compliance reconcile sprint.
+- **Amended 2026-11-05 (#1365):** the night VPD floor is again an energy-accepted goal, as §2.4 here had it, but only
+  for the nightly dry-out (at least 4 h at or above `max(vpd_low, 0.74 kPa)` between 00:00 and 06:00 local, by
+  outdoor-air vent + electric heat1 reheat under a kWh cap; heat2 never for humidity). The rule and its limits are in
+  [ADR-0004, "Amendment: the night dry-out is an energy-accepted floor"](0004-floating-corridor-control.md). §6.4's
+  held-temp vent candidate is the closest earlier form of that lever.
 - **Owner lane:** verdify-platform (firmware + planner + data + web). **Epic:** band-compliance reconcile (see `docs/reviews/band-compliance-reconcile-sprint-2026-06-17.md`).
 - **Refs:** `firmware/lib/greenhouse_logic.h`, `firmware/lib/greenhouse_types.h`, `firmware/lib/greenhouse_solar.h`, `verdify_schemas/tunable_registry.py`, `db/migrations/{146,147,171,178}`, `docs/adr/0002-planner-hermes-vs-direct-gpt5.md`, the 2026-06-17 end-to-end control review.
 

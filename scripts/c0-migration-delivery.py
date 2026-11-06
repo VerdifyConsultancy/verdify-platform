@@ -383,6 +383,21 @@ SUCCESSOR_303_DIGESTS = {
     "verdify_ingestor_runtime_login": "c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940",
 }
 SUCCESSOR_303_MCP_DIGEST = "2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245"
+# Exact304 (#1283): v_water_meter_daily ends each day at the next America/Denver midnight, so the 25-hour day
+# cannot read complete with its last hour missing and the 23-hour day can read complete. The view keeps its columns,
+# owner and ACL (the dashboard duty's SELECT only), so no runtime seal moves and no receipt is re-sealed.
+# Chained from 303 (#1345).
+SUCCESSOR_304 = "304-water-day-local-end.sql"
+SUCCESSOR_304_SHA256 = "1d89d1807dcbb19905ad147f8c0596d6066df48733dd5103739e28529003d901"
+SUCCESSOR_304_DIGESTS = SUCCESSOR_303_DIGESTS
+SUCCESSOR_304_MCP_DIGEST = SUCCESSOR_303_MCP_DIGEST
+# Exact305 (#1365): the nightly dry-out flag in daily_band_compliance (minutes at or above the dry-out floor
+# between 00:00 and 06:00 local, and night_dried_out). The table keeps no ACL entry and the new function's
+# PUBLIC EXECUTE is revoked, so no runtime seal moves. It follows 304 in the same change.
+SUCCESSOR_305 = "305-band-nightly-dryout.sql"
+SUCCESSOR_305_SHA256 = "4e2db419f15541080310ca99782f38f298b17d8318b845a997b88672799b971e"
+SUCCESSOR_305_DIGESTS = SUCCESSOR_304_DIGESTS
+SUCCESSOR_305_MCP_DIGEST = SUCCESSOR_304_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.
@@ -445,6 +460,8 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_301,
         SUCCESSOR_302,
         SUCCESSOR_303,
+        SUCCESSOR_304,
+        SUCCESSOR_305,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
@@ -496,6 +513,8 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_301_SHA256,
                 SUCCESSOR_302_SHA256,
                 SUCCESSOR_303_SHA256,
+                SUCCESSOR_304_SHA256,
+                SUCCESSOR_305_SHA256,
             ),
             strict=True,
         ):
@@ -779,6 +798,8 @@ COMMIT;"""
         (SUCCESSOR_301, SUCCESSOR_301_DIGESTS),
         (SUCCESSOR_302, SUCCESSOR_302_DIGESTS),
         (SUCCESSOR_303, SUCCESSOR_303_DIGESTS),
+        (SUCCESSOR_304, SUCCESSOR_304_DIGESTS),
+        (SUCCESSOR_305, SUCCESSOR_305_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
@@ -886,6 +907,10 @@ COMMIT;"""
             expected_mcp = SUCCESSOR_302_MCP_DIGEST
         if SUCCESSOR_303 in later:
             expected_mcp = SUCCESSOR_303_MCP_DIGEST
+        if SUCCESSOR_304 in later:
+            expected_mcp = SUCCESSOR_304_MCP_DIGEST
+        if SUCCESSOR_305 in later:
+            expected_mcp = SUCCESSOR_305_MCP_DIGEST
         if hotfix_predecessor_263:
             require(
                 mcp_state.get("mcp")
