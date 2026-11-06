@@ -280,7 +280,9 @@ outcomes, the safety-rail no-op, the fog-safety block, the interlock carve-out,
 and (VD-47) the latch helpers' clamp, wrap and toggle. The source check
 `test_home_assistant_buttons_and_the_quiet_override_are_gone`
 (`verdify_schemas/tests/test_firmware_drift.py`) pins that the
-`manual_override` lambda writes only the three latches.
+`manual_override` lambda writes only the three latches and (#1335) the two
+per-circuit light holds (`gl_<c>_hold_until_ms`, `gl_<c>_hold_on`; see
+`docs/firmware-control-contract.md`, "Timed manual light hold").
 The replay corpus never presses a button, so a replay-diff is **0** (automatic
 control is unchanged) — these native tests are the required positive evidence.
 **Live status:** OTA-deployed 2026-06-17 (firmware `2026.6.17.0134.6a3b35a`);

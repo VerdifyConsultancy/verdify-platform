@@ -29,7 +29,7 @@ FIRMWARE_SOURCES = {
     # lights at any hour and #1343 fogs a fog run-once through the manual fog
     # path; #1385's night dry-out joins them. #1333's 40/100 °F SAFETY SANITY
     # fallbacks change only the safety-limit reset values. Solar/band expressions are unchanged.
-    "firmware/greenhouse/controls.yaml": "84001b6e50996d9f07d5a7ca98b025e1701da6a7fa2704644c366c99695575a5",
+    "firmware/greenhouse/controls.yaml": "b57929d5d464b7762461826b4f954f98f64924148d1ba0e3621efdfc31ac3e91",
 }
 SERIES = ("temp_low", "temp_high", "temp_target", "vpd_low", "vpd_high", "vpd_target")
 ANCHORS = ("sr", "sm", "ss", "mid")

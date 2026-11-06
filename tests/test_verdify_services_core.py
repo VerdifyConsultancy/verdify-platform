@@ -25,6 +25,7 @@ from verdify_schemas.activity import ACTOR_SOURCE_PATTERN, ActivityLogRow
 from verdify_schemas.irrigation import Refusal, RefusalCode
 from verdify_services import activity
 from verdify_services.actor import Actor, ActorRef
+from verdify_services.irrigation import writes as irrigation_writes
 from verdify_services.problems import (
     PROBLEM_CODES,
     RETRYABLE_CODES,
@@ -305,6 +306,13 @@ class FakeConnection:
         self.records: list[dict] = []  # what fetch returns (activity.list)
         self.fetched: list[tuple[str, tuple]] = []
         self.next_id = 100
+        self.engine: str | None = None  # the newest irr_engine row (#1335's light hold needs "true")
+        self.commands: list[dict] = []  # irrigation_command rows inserted (#1335's light hold)
+        self.executed: list[str] = []
+
+    async def execute(self, sql, *args):
+        self.executed.append(sql)
+        return "SELECT 1"
 
     def is_in_transaction(self):
         return self.pending is not None
@@ -317,6 +325,24 @@ class FakeConnection:
 
     async def fetchrow(self, sql, *args):
         self.sql.append(sql)
+        if sql == irrigation_writes._INSERT_SQL:
+            greenhouse_id, kind, line_id, args_json, source, actor, reason = args
+            row = {
+                "command_id": uuid.uuid4(),
+                "greenhouse_id": greenhouse_id,
+                "kind": kind,
+                "line_id": line_id,
+                "args": args_json,
+                "status": "pending",
+                "fail_reason": None,
+                "source": source,
+                "actor": actor,
+                "reason": reason,
+                "created_at": NOW,
+                "sent_at": None,
+            }
+            self.commands.append(row)
+            return row
         assert "FROM public.activity_log WHERE source = $1 AND request_id = $2" in sql and self.pending is not None
         source, key = args
         for row in self.visible():
@@ -328,6 +354,8 @@ class FakeConnection:
         self.sql.append(sql)
         if sql == activity.ARMED_EXPERIMENT_SQL:
             return self.armed
+        if sql == irrigation_writes._ENGINE_SQL:
+            return self.engine
         assert sql.startswith("INSERT INTO public.activity_log") and self.pending is not None
         greenhouse_id, source, actor, action, target, detail, reason, request_id, request_sha256, experiment_id = args
         if request_id is not None and self.race is not None:

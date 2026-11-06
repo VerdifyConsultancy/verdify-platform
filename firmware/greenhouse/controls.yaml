@@ -2265,10 +2265,22 @@ interval:
                 .out_of_service = id(gl_grow_out_of_service)
               };
 
-              LightingDecision main_dec = evaluate_lighting(
-                light_in, main_sp, gl_main_state, id(grow_light_main).state, now_ms, lighting_dt_s);
-              LightingDecision grow_dec = evaluate_lighting(
-                light_in, grow_sp, gl_grow_state, id(grow_light_grow).state, now_ms, lighting_dt_s);
+              // #1335: a timed manual switch (manual_override light_*) holds
+              // its circuit until the deadline, across a window edge too, then
+              // the schedule decides again. An expired deadline is zeroed so a
+              // millis() wrap can never make it look active again.
+              if(id(gl_main_hold_until_ms) != 0 && !manual_latch_active(id(gl_main_hold_until_ms), now_ms)){
+                id(gl_main_hold_until_ms) = 0;
+              }
+              if(id(gl_grow_hold_until_ms) != 0 && !manual_latch_active(id(gl_grow_hold_until_ms), now_ms)){
+                id(gl_grow_hold_until_ms) = 0;
+              }
+              LightingDecision main_dec = evaluate_lighting_held(
+                light_in, main_sp, gl_main_state, id(grow_light_main).state, now_ms, lighting_dt_s,
+                id(gl_main_hold_until_ms), id(gl_main_hold_on));
+              LightingDecision grow_dec = evaluate_lighting_held(
+                light_in, grow_sp, gl_grow_state, id(grow_light_grow).state, now_ms, lighting_dt_s,
+                id(gl_grow_hold_until_ms), id(gl_grow_hold_on));
 
               auto apply_light = [&](const char* label, esphome::switch_::Switch* sw, LightingDecision dec){
                 if(dec.want_on && !sw->state){

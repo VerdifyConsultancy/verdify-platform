@@ -233,3 +233,22 @@ after each edge. `boundary_ok` (the window closed during minimum-on and the ligh
 went OFF within one decision of its expiry) is the natural episode #386 waits for;
 `premature` or `overrun` exits 1. On 2026-11-06, ten days of history held 30
 ordinary intervals, 4 that a reboot cut short, and no boundary episode yet.
+
+### Timed manual light hold (#1335)
+
+A dashboard light switch (API-20) is timed: it lasts its minutes (15 by default,
+1-120), then the light is automatic again. The controller holds it too: the
+confirmed switch queues `manual_override light_<main|grow>_<on|off>` with the
+same minutes (an `irrigation_command` override row the ingestor sends under the
+writer fences), which sets the per-circuit deadline latch `gl_<c>_hold_until_ms`
+and the held state `gl_<c>_hold_on`. While the deadline is ahead,
+`evaluate_lighting_held()` reports the held state with the reason
+`manual_hold_on` or `manual_hold_off` whatever the schedule decides (a window
+opening or closing, occupancy, lux, `auto_disabled`), and stamps a dwell
+transition only when the relay really changes, so when the deadline passes the
+schedule's decision applies at once, measured from the manual switch. Back to
+automatic sends `light_<c>_auto`, which zeroes the deadline; the bursts' `clear`
+leaves light holds alone. A hold is not restored after a reboot, and invalid
+controller time still forces both relays OFF. On 2026-11-06 lane F saw the
+defect this closes: a 10-min manual Off was switched back ON when the 07:00
+window opened (`plant_hysteresis_hold`).

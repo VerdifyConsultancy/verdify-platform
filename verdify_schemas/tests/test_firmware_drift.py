@@ -533,6 +533,8 @@ HA_BUTTON_IDS = (
     "btn_vent_bypass",
 )
 MANUAL_LATCHES = ("manual_fans_until_ms", "manual_fog_until_ms", "vent_bypass_until_ms")
+# #1335: the per-circuit manual light holds manual_override also sets (API-20's timed switch).
+LIGHT_HOLDS = ("gl_main_hold_until_ms", "gl_main_hold_on", "gl_grow_hold_until_ms", "gl_grow_hold_on")
 _ID_WRITE_RE = re.compile(
     r"\bid\((\w+)\)\s*(?:[-+*/|&^]|<<|>>)?=(?!=)|(?:\+\+|--)\s*id\((\w+)\)|\bid\((\w+)\)\s*(?:\+\+|--)"
 )
@@ -593,11 +595,20 @@ def test_home_assistant_buttons_and_the_quiet_override_are_gone():
     assert override["variables"] == {"kind": "string", "minutes": "int"}
     (step,) = override["then"]
     code = _code_only(step["lambda"])
-    assert _id_writes(code) == set(MANUAL_LATCHES), _id_writes(code)
+    assert _id_writes(code) == set(MANUAL_LATCHES) | set(LIGHT_HOLDS), _id_writes(code)
     for latch, kind in zip(MANUAL_LATCHES, ("fans", "humidify", "vent_bypass"), strict=True):
         assert f'kind == "{kind}"' in code
         assert f"id({latch}) = manual_override_deadline_ms(now_ms, minutes);" in code
         assert f"id({latch}) = 0;" in code  # clear zeroes all three
+    # #1335: light_<circuit>_<on|off> sets that circuit's hold, light_<circuit>_auto releases it, and clear
+    # (the bursts' Clear) leaves the light holds alone.
+    for circuit in ("main", "grow"):
+        assert f'kind == "light_{circuit}_on" || kind == "light_{circuit}_off"' in code
+        assert f"id(gl_{circuit}_hold_until_ms) = manual_override_deadline_ms(now_ms, minutes);" in code
+        assert f'id(gl_{circuit}_hold_on) = kind == "light_{circuit}_on";' in code
+        assert f'kind == "light_{circuit}_auto"' in code
+    clear = code[code.index('kind == "clear"') :]
+    assert "hold" not in clear[: clear.index("return;")]
     restart = code[code.index('kind == "restart"') :]
     assert code.count("App.safe_reboot();") == 1 and "App.safe_reboot();" in restart[: restart.index("}")]
     for forbidden in ("occupan", "publish_state", "turn_on", "turn_off", "_rly", "irr_", "set_band_anchor"):

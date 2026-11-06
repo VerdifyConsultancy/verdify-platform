@@ -2891,6 +2891,43 @@ inline uint32_t manual_latch_toggle(uint32_t until_ms, uint32_t now_ms, int time
     return manual_latch_active(until_ms, now_ms) ? 0u : manual_override_deadline_ms(now_ms, timeout_min);
 }
 
+// #1335: a timed manual light switch. API-20 switches the light through Lutron
+// and sends manual_override light_<circuit>_<on|off> with the same minutes,
+// which sets gl_<circuit>_hold_until_ms and gl_<circuit>_hold_on. While that
+// deadline latch is active the circuit holds the manual state whatever the
+// schedule decides (a window opening or closing, occupancy, lux), with the
+// reason manual_hold_on or manual_hold_off. The schedule's state machine still
+// runs, so its light minutes keep counting, but its on/transition bookkeeping
+// follows the relay the hold drives: a transition is stamped only when the
+// relay really changes, so the min-off/min-on dwell measures from the manual
+// switch. When the deadline passes the schedule's decision applies again.
+inline LightingDecision evaluate_lighting_held(
+    const LightingInputs& in,
+    const LightingSetpoints& sp,
+    LightingState& state,
+    bool current_on,
+    uint32_t now_ms,
+    float dt_s,
+    uint32_t hold_until_ms,
+    bool hold_on
+) noexcept {
+    if (!manual_latch_active(hold_until_ms, now_ms)) {
+        return evaluate_lighting(in, sp, state, current_on, now_ms, dt_s);
+    }
+    const bool had_state = state.sentinel == LIGHT_STATE_SENTINEL;
+    const bool was_on = state.on;
+    const uint32_t was_transition = state.last_transition_tick_ms;
+    LightingDecision dec = evaluate_lighting(in, sp, state, current_on, now_ms, dt_s);
+    state.on = hold_on;
+    state.last_transition_tick_ms = (had_state && was_on == hold_on && current_on == hold_on)
+        ? was_transition
+        : now_ms;
+    dec.want_on = hold_on;
+    dec.reason = hold_on ? "manual_hold_on" : "manual_hold_off";
+    state.last_reason = dec.reason;
+    return dec;
+}
+
 // Whether the fan->vent interlock should force the vent OPEN this cycle. The
 // interlock holds the vent open while fans run so a closed-vent fan does not
 // leave the vent shut against the fan's airflow — EXCEPT (a) SAFETY_HEAT
