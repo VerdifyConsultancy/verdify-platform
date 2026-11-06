@@ -16,7 +16,8 @@
 # Identity: the owner DB login (verdify-app-secrets), because it writes a table no
 # runtime role may write and reads the five source tables; the embed.main-only Cortex
 # key (verdify-embedding-cortex, key api_key.txt; KSOPS adoption jvallery/agents#6079).
-# Egress: DNS, verdify-db:5432 and traefik-apps 192.168.7.10:443 (cortex.vallery.net)
+# Egress: DNS, verdify-db:5432 and traefik-apps (cortex.vallery.net: VIP 192.168.7.10:443, DNAT'd
+# to the traefik pods' websecure 8443)
 # only; it is excluded from egress-deny-management in overlays/prod.
 apiVersion: batch/v1
 kind: CronJob
@@ -147,6 +148,18 @@ spec:
       ports:
         - protocol: TCP
           port: 443
+    # kube-proxy DNATs the VIP to the traefik-apps pods before policy is evaluated, so the
+    # ipBlock never matches pod traffic; allow the traefik pods' websecure port 8443 itself.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik-apps
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 8443
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

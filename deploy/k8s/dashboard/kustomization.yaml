@@ -67,7 +67,7 @@ generatorOptions:
 images:
   - name: verdify-dashboard-web
     newName: registry.vallery.net/verdifyconsultancy/verdify-dashboard-web
-    digest: sha256:a0ad60b5dd30d4fa802158cb15d0dbc599e1dde15c186311a07fb886c816c7d5
+    digest: sha256:e8fe6258d7bd74610adde73cc14311a3c07728b1526f0c470f8c8870438171ea
 
 replicas:
   - name: verdify-dashboard-web
