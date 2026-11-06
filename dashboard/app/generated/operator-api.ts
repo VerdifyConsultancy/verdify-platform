@@ -268,6 +268,30 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/v1/band/profile": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * The house band as stored and as drafted in the band editor, over one day, before Save
+         * @description Read-only (#1334). Reads the 24 house anchors as fn_crop_band_value resolves them and overlays the draft: any simple temperature field recompiles the six temperature anchors from day (solar noon) and night (solar midnight) values with sunrise and sunset at their midpoint, so the curve is a pure sinusoid that never leaves its noon and midnight values; any VPD field does the same for the VPD anchors; then each anchor= item sets one raw anchor (Advanced). Curves are the controller's four-anchor harmonic at 10-min steps of fn_solar_phase; vpd.device adds night_vpd_bias_kpa's night bump as the controller does. findings with severity error are what API-24 refuses. The expected night VPD ribbon is a 14-day indoor dewpoint fit on quiet deep-night hours and the forecast; night_heat_kwh is 0.19 kW/°F over the forecast's night hours. Codes: unknown_target (anchor not a house band anchor), out_of_range (outside planner_effective_bounds), read_only (no complete anchor set).
+         */
+        readonly get: operations["API-23"];
+        /**
+         * Save the band editor's draft, every changed house anchor in one write
+         * @description The same draft as API-23 (profile fields and Advanced anchors). In one transaction: each house anchor the draft changes (by more than half the push quantum, 0.1 °F or 0.01 kPa) is an API-10 write, its desired_state row with the manual flag and its crop_band_anchors rows, and one activity_log row, action band.write, target "house band", detail {desired_ids, changes [{param, desired_id, before, value}], anchor_rows, manual, profile, simple}. The dispatcher's anchor sync delivers the anchors; nothing talks to the controller. Codes: out_of_range (an API-23 error finding: band order, the 40/100 °F guardrails 5 °F outside the band, the 0.3-3.0 kPa VPD guardrails or the 0.74 kPa night floor; or an anchor outside its bounds), invalid_request (the draft changes nothing), read_only (Iris: the band is operator-owned), unknown_target, request_id_reused.
+         */
+        readonly put: operations["API-24"];
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/v1/equipment": {
         readonly parameters: {
             readonly query?: never;
@@ -375,7 +399,7 @@ export interface paths {
         readonly get?: never;
         /**
          * Enable or disable a line with its check; VPD and Schedule flags on misters; caps; pause or resume; manual
-         * @description line_id all accepts only paused_until (pause or resume every line). vpd_member and schedule_member are for L04, L07 and L09. Enabling a line with no check, or turning schedule_member on for the first time, needs checked true, which only the dashboard sends (check_required). Disabling stops everything on the line, VPD misting included. Pause, resume and the check never change manual; any other edit that omits it stores true (R3). Codes: out_of_range, check_required, unknown_target, request_id_reused; Iris only, on a manual line, manual.
+         * @description line_id all accepts only paused_until (pause or resume every line). vpd_member and schedule_member are for L04, L07 and L09. Enabling a line with no check, or turning schedule_member on for the first time, needs checked true, which only the dashboard sends (check_required). Disabling stops everything on the line, VPD misting included. vpd_member true on a line that is and stays disabled is line_disabled: the controller acts on VPD membership only while the line is enabled. Pause, resume and the check never change manual; any other edit that omits it stores true (R3). Codes: out_of_range, check_required, line_disabled, unknown_target, request_id_reused; Iris only, on a manual line, manual.
          */
         readonly put: operations["API-IRR-08"];
         readonly post?: never;
@@ -497,6 +521,26 @@ export interface paths {
          * @description Never blocked, including by DASHBOARD_WRITES_ENABLED; never heap-deferred; sent ahead of any program push and re-sent until the relays read OFF (at most 2 min). Ends what is running now and disables nothing: VPD misting, survival fog and the next scheduled run can still start (disable the line to keep it off), and the dashboard's Stop result toast (VD-05) and the MCP tool description (VD-64, VD-61) say so. Before the engine firmware it works on one line or every line through the run-now bridge: it ends the legacy drip job (the sw_irrig_* enables) and turns the open wet relays off; their guards block only turn-on, so VPD misting may pulse again.
          */
         readonly post: operations["API-IRR-07"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/lighting": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * The grow lights by day: on time, starts, the policy in force and qualified light minutes against target
+         * @description Graphs → Lighting (#1357). One entry per America/Denver day the window touches, up to now, for main and grow: on time and starts from the Lutron readback over the whole day; the controller's readback of its ON threshold, hysteresis, start hour, cutoff hour and target light minutes in force at the day's end; and the qualified light minutes, v_lighting_minutes_status_now's rule for every day: each minute from the start hour to the cutoff (or now) counts once when its mean Tempest outdoor lux is at or above the ON threshold or the light was on. No DLI until the PAR meter (#1184). Windows up to 31 days.
+         */
+        readonly get: operations["API-22"];
+        readonly put?: never;
+        readonly post?: never;
         readonly delete?: never;
         readonly options?: never;
         readonly head?: never;
@@ -670,7 +714,7 @@ export interface paths {
         };
         /**
          * Equipment on/off intervals for the lanes
-         * @description From equipment_state, seeded with the state at `from` (fn_equip_at). Wet lines carry their cause from the run ledger. Unknown stays unknown. Windows up to 31 days.
+         * @description From equipment_state, seeded with the state at `from` (fn_equip_at). Wet lines carry their cause from the run ledger. Unknown stays unknown. Windows up to 31 days. The grow lights have two lanes each: the Lutron readback (grow_light_main, grow_light_grow; unknown 600 s after its newest row) and the controller's switch intent (grow_light_main_intent, grow_light_grow_intent; Q-09), which the lanes compare with the readback (#1356).
          */
         readonly get: operations["API-05"];
         readonly put?: never;
@@ -844,6 +888,133 @@ export interface components {
              */
             readonly unit: string;
         };
+        /** @description The house band in the editor's terms: day (solar noon) and night (solar midnight) values */
+        readonly BandProfile: {
+            /** @description °F */
+            readonly temp_day: number;
+            /** @description °F */
+            readonly temp_night: number;
+            /** @description ± °F */
+            readonly temp_width_day: number;
+            /** @description ± °F */
+            readonly temp_width_night: number;
+            /** @description kPa */
+            readonly vpd_above_day: number;
+            /** @description kPa */
+            readonly vpd_above_night: number;
+            /** @description kPa */
+            readonly vpd_below_day: number;
+            /** @description kPa */
+            readonly vpd_below_night: number;
+            /** @description kPa */
+            readonly vpd_day: number;
+            /** @description kPa */
+            readonly vpd_night: number;
+        };
+        /** @description The simple fields to change; a field left out keeps the band's own value */
+        readonly BandProfilePatch: {
+            readonly temp_day?: number | null;
+            readonly temp_night?: number | null;
+            readonly temp_width_day?: number | null;
+            readonly temp_width_night?: number | null;
+            readonly vpd_above_day?: number | null;
+            readonly vpd_above_night?: number | null;
+            readonly vpd_below_day?: number | null;
+            readonly vpd_below_night?: number | null;
+            readonly vpd_day?: number | null;
+            readonly vpd_night?: number | null;
+        };
+        /** @description API-23: the house band as stored (current) and drafted, one point per step_s */
+        readonly BandProfilePreview: {
+            /** @description The anchors a Save would write */
+            readonly changed: readonly string[];
+            readonly current: components["schemas"]["BandProfileState"];
+            /**
+             * Format: date
+             * @description America/Denver day
+             */
+            readonly day: string;
+            readonly draft: components["schemas"]["BandProfileState"];
+            readonly envelope: {
+                readonly days: number;
+                readonly dewpoint_p10_f: number;
+                readonly hours: number;
+                readonly rmse_f: number;
+            } | null;
+            readonly findings: readonly {
+                /**
+                 * @example band_order
+                 * @example guardrail
+                 * @example night_floor
+                 * @example overshoot
+                 * @example dewpoint_unreached
+                 */
+                readonly code: string;
+                readonly detail: string;
+                readonly field: string;
+                /** @enum {string} */
+                readonly severity: "error" | "warning";
+            }[];
+            readonly guardrails: {
+                readonly margin_f: number;
+                readonly night_vpd_floor_kpa: number;
+                readonly temp_max_f: number;
+                readonly temp_min_f: number;
+                readonly vpd_max_kpa: number;
+                readonly vpd_min_kpa: number;
+            };
+            readonly night_heat_kwh: {
+                readonly current: number | null;
+                readonly draft: number | null;
+            };
+            /** @description The bias the controller reports running */
+            readonly night_vpd_bias_kpa: number | null;
+            /** @description By series, how far the draft curve leaves its anchor range */
+            readonly overshoot: {
+                readonly [key: string]: number;
+            };
+            /** @constant */
+            readonly step_s: 600;
+            readonly sun: {
+                readonly solar_midnight: number | null;
+                readonly solar_noon: number | null;
+                /** @description Epoch seconds */
+                readonly sunrise: number | null;
+                readonly sunset: number | null;
+            };
+            /** @description Epoch seconds */
+            readonly t: readonly number[];
+            readonly temp: {
+                readonly current: components["schemas"]["BandCurve"];
+                readonly draft: components["schemas"]["BandCurve"];
+            };
+            readonly vpd: {
+                readonly current: components["schemas"]["BandCurve"];
+                readonly device: components["schemas"]["BandCurve"];
+                readonly draft: components["schemas"]["BandCurve"];
+                readonly expected_high: components["schemas"]["NullableNumbers"];
+                readonly expected_low: components["schemas"]["NullableNumbers"];
+            };
+        };
+        readonly BandProfileState: {
+            /** @description The 24 band_<series>_<anchor> values */
+            readonly anchors: {
+                readonly [key: string]: number;
+            };
+            readonly profile: components["schemas"]["BandProfile"];
+            /** @description True when sunrise and sunset are the midpoint of noon and midnight */
+            readonly simple: boolean;
+        };
+        readonly BandSave: {
+            /** @description Advanced: raw house anchors */
+            readonly anchors?: {
+                readonly [key: string]: number;
+            };
+            /** @default true */
+            readonly manual?: boolean;
+            readonly profile?: components["schemas"]["BandProfilePatch"];
+            readonly reason?: string;
+        };
         /** @description One point per step_s */
         readonly BandTimeline: {
             /** @description In force (DERIVED band rows of the requested zone); null beyond 90 days */
@@ -857,6 +1028,9 @@ export interface components {
             readonly t: readonly number[];
             /** Format: date-time */
             readonly to: string;
+        };
+        readonly BandWrite: {
+            readonly changed: readonly components["schemas"]["DesiredSetting"][];
         };
         /** @description A physical line (#1336): Wall drip (every wall and shelf), Center drip, and the Center, South and West misters, each with a clean and a fertilized variant mapped to its relay. Fog is a climate device, not a physical line */
         readonly Circuit: {
@@ -1151,6 +1325,44 @@ export interface components {
             readonly result: "confirmed";
             /** @enum {string} */
             readonly state: "on" | "off";
+        };
+        /** @description API-22: each grow-light circuit by America/Denver day, oldest first */
+        readonly LightingDays: {
+            readonly circuits: readonly {
+                readonly days: readonly {
+                    /** @description The window's cutoff, local hour */
+                    readonly cutoff_hour: number | null;
+                    /** Format: date */
+                    readonly date: string;
+                    /** @description OFF threshold: ON plus the hysteresis */
+                    readonly lux_off: number | null;
+                    /** @description ON threshold, outdoor lux */
+                    readonly lux_on: number | null;
+                    /** @description Seconds the Lutron readback was on in the day */
+                    readonly on_s: number;
+                    /** @description Today: counted up to now */
+                    readonly partial: boolean;
+                    /** @description Minutes in the window with enough outdoor light or the light on; null without a policy readback */
+                    readonly qualified_min: number | null;
+                    /** @description The photoperiod window's start, local hour; null without a readback */
+                    readonly start_hour: number | null;
+                    /** @description OFF to ON edges in the day */
+                    readonly starts: number;
+                    /** @description Target qualified light minutes */
+                    readonly target_min: number | null;
+                    /** @description Minutes of the window counted so far */
+                    readonly window_min: number | null;
+                }[];
+                /** @example grow_light_main */
+                readonly equipment: string;
+                readonly label: string;
+                /** @enum {string} */
+                readonly light: "main" | "grow";
+            }[];
+            /** Format: date-time */
+            readonly from: string;
+            /** Format: date-time */
+            readonly to: string;
         };
         /** @description Stop or clear-fault target; omit line_id for every line */
         readonly LineCommand: {
@@ -1579,7 +1791,7 @@ export interface components {
             readonly state: components["schemas"]["ReadbackState"];
         };
         /**
-         * @description Computed on every read (architecture §5.5); display only. held means the platform applies something else on purpose (a dispatcher clamp, or an armed experiment manifest serving the field). Irrigation items and the irrigation_site settings use requested, confirmed and not_confirmed against the controller's program hash; before the engine firmware they stay requested.
+         * @description Computed on every read (architecture §5.5); display only. held means the platform applies something else on purpose (a dispatcher clamp, or an armed experiment manifest serving the field). Irrigation items and the irrigation_site settings use requested, confirmed and not_confirmed against the controller's program hash; before the engine firmware they stay requested. not_confirmed is only a request at least 5 min old the readback does not match; a setting nobody requested with no readback reads no_readback (#1333).
          * @enum {string}
          */
         readonly ReadbackState: "requested" | "confirmed" | "not_confirmed" | "held" | "no_readback" | "overridden" | "released";
@@ -1863,6 +2075,8 @@ export interface components {
              * @enum {string}
              */
             readonly group: "planner_policy" | "scheduled_policy" | "controller_safety" | "crop_band" | "site_water_caps" | "read_only" | "band_in_force";
+            /** @description Operator text (verdify_schemas.setting_help, #1332); MCP settings serves the same */
+            readonly help?: components["schemas"]["SettingHelp"] | null;
             /** @enum {string} */
             readonly kind: "numeric" | "switch" | "enum";
             /** @description For a registry row, TunableDef.label (VD-29), filled from the setting's entity name in firmware/greenhouse/tunables.yaml and drift-tested */
@@ -1891,6 +2105,11 @@ export interface components {
                 /** Format: date-time */
                 readonly written_at: string;
             };
+            /**
+             * @description Why a read-only row cannot be written (#1333): the tunable_registry READ_ONLY_REASONS key, no_anchor_row (a crop-band row with no crop_band_anchors row) or band_in_force (derived band rows); null on a writable row
+             * @enum {string|null}
+             */
+            readonly read_only_kind?: "band_in_force" | "legacy_wide_limit" | "zone_vpd_target" | "activity_mirror" | "band_owner" | "retired" | "readback_context" | "no_entity" | "no_anchor_row" | "unknown" | null;
             /** @example legacy wide limit; not the band while the controller runs its on-chip curve */
             readonly read_only_reason?: string | null;
             /** @description Newest readback; for irrigation_site rows the value in the applied program */
@@ -1900,6 +2119,8 @@ export interface components {
              * @enum {string}
              */
             readonly readback_via: "cfg" | "entity" | "program" | "none";
+            /** @description The writable settings a derived row is computed from (the crop-band anchors behind a Band in force row, the main-light schedule behind the activity mirror); empty otherwise */
+            readonly source_params?: readonly string[];
             /** @description Of the newest write, else of the applied value against the readback */
             readonly state: components["schemas"]["ReadbackState"];
             /** @description The registry step (from tunables.yaml; equal to ENTITY_GRIDS for the 48 policy fields) */
@@ -1908,6 +2129,26 @@ export interface components {
             readonly unit?: string | null;
             /** @description false with read_only_reason; the irrigation_site rows are writable before the engine firmware too (their writes wait, state_reason no_engine) */
             readonly writable: boolean;
+        };
+        /** @description What a setting is and what changing it does to the controller (#1332). One source for the dashboard, MCP and the lab ai-tunables page. raise and lower are null on a read-only row; for a switch they say what turning it on and off does. */
+        readonly SettingHelp: {
+            /** @description An interaction or safety note */
+            readonly caution?: string | null;
+            /** @description What the controller does with it */
+            readonly effect: string;
+            /**
+             * @description A hard safety limit (Safety Min, Safety Max and the VPD pair): the dashboard shows caution and asks to confirm before saving
+             * @default false
+             */
+            readonly guardrail?: boolean;
+            /** @description What happens when the value goes down (a switch turned off) */
+            readonly lower?: string | null;
+            /** @description What happens to the greenhouse when the value goes up (a switch turned on) */
+            readonly raise?: string | null;
+            /** @description The setting's entry on the lab ai-tunables reference page */
+            readonly reference_url?: string | null;
+            /** @description One line */
+            readonly summary: string;
         };
         readonly SettingHistory: {
             /** @description Oldest first, from the row in force at from */
@@ -2494,6 +2735,82 @@ export interface operations {
             readonly default: components["responses"]["Problem"];
         };
     };
+    readonly "API-23": {
+        readonly parameters: {
+            readonly query?: {
+                /** @description Advanced: one raw house anchor as param:value, repeatable */
+                readonly anchor?: readonly string[];
+                /** @description America/Denver day; default today */
+                readonly day?: string;
+                /** @description Temperature target at solar noon, °F */
+                readonly temp_day?: number;
+                /** @description Temperature target at solar midnight, °F */
+                readonly temp_night?: number;
+                /** @description ± °F around the day target */
+                readonly temp_width_day?: number;
+                /** @description ± °F around the night target */
+                readonly temp_width_night?: number;
+                /** @description kPa above the day target */
+                readonly vpd_above_day?: number;
+                /** @description kPa above the night target */
+                readonly vpd_above_night?: number;
+                /** @description kPa below the day target */
+                readonly vpd_below_day?: number;
+                /** @description kPa below the night target */
+                readonly vpd_below_night?: number;
+                /** @description VPD target at solar noon, kPa */
+                readonly vpd_day?: number;
+                /** @description VPD target at solar midnight, kPa */
+                readonly vpd_night?: number;
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["BandProfilePreview"];
+                };
+            };
+            readonly 422: components["responses"]["Invalid"];
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-24": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: {
+                /** @description Optional on every write; stored as request_id on the write's activity_log row and logged as the request id. The same key and payload return the stored result with the header Idempotency-Replayed: true; the same key with a different payload is 422 request_id_reused. */
+                readonly "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["BandSave"];
+            };
+        };
+        readonly responses: {
+            /** @description Stored; each changed anchor with state requested */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["BandWrite"];
+                };
+            };
+            readonly 422: components["responses"]["Invalid"];
+            readonly default: components["responses"]["Problem"];
+        };
+    };
     readonly "API-13": {
         readonly parameters: {
             readonly query?: never;
@@ -2864,6 +3181,32 @@ export interface operations {
         };
         readonly responses: {
             readonly 202: components["responses"]["Accepted"];
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-22": {
+        readonly parameters: {
+            readonly query: {
+                /** @description Window start (inclusive) */
+                readonly from: components["parameters"]["From"];
+                /** @description Window end (exclusive) */
+                readonly to: components["parameters"]["To"];
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["LightingDays"];
+                };
+            };
             readonly default: components["responses"]["Problem"];
         };
     };

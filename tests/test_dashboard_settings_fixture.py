@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pytest
 
+from verdify_schemas.setting_help import setting_help, setting_label
 from verdify_schemas.tunable_registry import REGISTRY, planner_effective_bounds, tunable_control_class
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,9 +58,14 @@ def test_one_setting_per_registry_row_in_its_class_group_with_tunabledef_label_u
         spec = REGISTRY[name]
         control_class = tunable_control_class(name, spec)
         assert row["control_class"] == control_class, name
-        assert (row["label"], row["unit"], row["step"], row["kind"]) == (spec.label, spec.unit, spec.step, spec.kind), (
-            name
-        )
+        assert (row["label"], row["unit"], row["step"], row["kind"]) == (
+            setting_label(name),
+            spec.unit,
+            spec.step,
+            spec.kind,
+        ), name
+        assert row["help"] == setting_help(name).model_dump(mode="json"), name
+        assert (row["read_only_kind"] is None) is row["writable"], name
         assert (row["min"], row["max"]) == planner_effective_bounds(name), name
         if not row["writable"]:
             expected = "read_only"
@@ -102,14 +108,18 @@ def test_read_only_rows_follow_architecture_5_3_step_1(rows, generator):
         return row["read_only_reason"]
 
     # The legacy wide limits read "legacy limit, read-only" (screens SCR-05).
-    for name in ("temp_low", "temp_high", "vpd_low", "vpd_high", "vpd_target_center", "vpd_target_west"):
+    for name in ("temp_low", "temp_high", "vpd_low", "vpd_high"):
         assert reason(name) == "legacy limit, read-only: not the band while the on-chip band runs"
+    # The zone VPD targets are computed but still used by the controller, so they are not legacy limits.
+    for name in ("vpd_target_center", "vpd_target_west"):
+        assert reason(name).startswith("zone VPD target, read-only"), name
+        assert rows[name]["read_only_kind"] == "zone_vpd_target", name
     for name in ("activity_start_hour", "activity_start_minute", "activity_duration_min"):
         assert "derived by the dispatcher" in reason(name)
     assert "owns the band" in reason("sw_onchip_band_enabled")
     for name in present(*sorted(generator.WEEKLY_FEED)):
         assert "retiring with the irrigation engine" in reason(name)
-    for name in ("zone_priority_center", "wet_taper_before_sunset_min", "manual_override_timeout_min"):
+    for name in ("zone_priority_center", "manual_override_timeout_min"):
         assert "crop band anchor" in reason(name)
     retired = [name for name, spec in REGISTRY.items() if tunable_control_class(name, spec) == "retired"]
     context = [name for name, spec in REGISTRY.items() if tunable_control_class(name, spec) == "readback_context"]

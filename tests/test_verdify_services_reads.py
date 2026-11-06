@@ -503,7 +503,8 @@ def test_grow_light_intent_is_the_controllers_switch():
 
 def test_labels_name_every_actuator_and_flag_once():
     names = [name for name, _ in reads.EQUIPMENT_LIST]
-    assert set(EQUIPMENT_LABELS) == {*names, "occupancy", "leak_detected", "water_flowing"}
+    intents = {"grow_light_main_intent", "grow_light_grow_intent"}  # API-05's controller-intent lanes (#1356)
+    assert set(EQUIPMENT_LABELS) == {*names, "occupancy", "leak_detected", "water_flowing", *intents}
     assert list(EQUIPMENT_LINE_IDS.values()) == list(LINE_IDS)
     for name, line_id in EQUIPMENT_LINE_IDS.items():
         # The operator's name, never the relay code (#1341), and the line reads the same everywhere.

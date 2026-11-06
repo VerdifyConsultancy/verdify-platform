@@ -38,7 +38,7 @@ test("/graphs?range=72h&set=mister_engage_kpa: one stack of three panels on one 
   await expect(plots(page).locator("canvas")).toHaveCount(3);
   await expect(head(page, "temperature")).toHaveText(/^in band 100% · low \d\d\.\d \(.+\) · mean \d\d\.\d · high \d\d\.\d \(.+\)$/);
   await expect(page.locator(".lanes-canvas canvas")).toHaveCount(1);
-  await expect(page.locator("[data-equipment=fan1]")).toHaveCount(1);
+  await expect(page.locator(".lanes-group-name")).toHaveText(["Climate", "Misting", "Irrigation", "Lighting", "Sensors"]);
   await expect(page.getByRole("list", { name: "Settings drawn as steps" }).getByRole("listitem")).toContainText(["VPD Mister Engage · VPD"]);
   await expect(page.getByRole("list", { name: "Range" }).getByRole("link", { name: "72 h" })).toHaveAttribute("aria-current", "page");
   // The VPD panel's key names the setting and says it sits above the band-fitted axis; no word is painted in a plot (#1354).
@@ -167,15 +167,15 @@ test("the event rail marks writes, alerts and runs, each opening its Activity en
   await rail.getByRole("button", { name: "08:42 · jason · Set VPD Mister Engage" }).click();
   // 24 h now has 24 h ahead, so 08:42 and 09:00 sit within 8 px and share one mark.
   await expect(page.getByRole("list", { name: "Events at this mark" }).getByRole("link", { name: "08:42 · jason · Set VPD Mister Engage" })).toHaveAttribute("href", "/activity/log?target=mister_engage_kpa#activity-15");
-  const list = page.locator("details.stack-events");
-  await expect(list.locator("summary")).toHaveText("Events in this window (7)");
-  await list.locator("summary").click();
+  // On a wide screen the list is always shown, under the stack.
+  const list = page.getByRole("region", { name: "Events in this window (7)" });
+  await expect(list).toBeVisible();
   await expect(list.getByRole("link")).toHaveCount(7);
   await expect(list.getByRole("link", { name: "08:00 · warning · The greenhouse is outside its band" })).toHaveAttribute("href", "/activity?alert=501");
   await layers(page);
   await page.getByRole("list", { name: "Event sources" }).getByRole("link", { name: "Runs" }).click();
   await expect(page).toHaveURL(/\/graphs\?range=24h&events=people,iris,agents,system,alerts$/);
-  await expect(page.locator("details.stack-events summary")).toHaveText("Events in this window (6)");
+  await expect(page.getByRole("region", { name: "Events in this window (6)" })).toBeVisible();
 });
 
 test("soil moisture and flow from the URL: flow opens a panel, and from 7 d each panel reads hourly buckets, one point per hour, with the L01 lane", async ({ page, request }) => {
@@ -183,7 +183,7 @@ test("soil moisture and flow from the URL: flow opens a panel, and from 7 d each
   await load(page, "/graphs?range=7d&m=climate.soil_moisture_south_1&m=climate.flow_gpm");
   await expect(names(page)).toHaveText(["Temperature °F", "VPD kPa", "RH %", "Site water flow gal/min"]);
   await expect(resolution(page)).toContainText("· one point per hour");
-  await expect(page.locator("[data-equipment=drip_wall]")).toContainText("Wall drip");
+  await expect(page.locator("[data-system=irrigation] .lanes-group-name")).toHaveText("Irrigation");
   await expect(page.getByRole("list", { name: "Metrics on the charts" }).getByRole("listitem")).toContainText(["South soil moisture 1 · %", "Site water flow · gal/min"]);
 });
 

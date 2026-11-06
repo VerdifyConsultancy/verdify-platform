@@ -39,6 +39,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from verdify_schemas.activity import ActivityLogRow
 from verdify_schemas.band_rows import BandRows, band_rows, rows_in_force
 from verdify_schemas.policy_vector import wire_fields
+from verdify_schemas.setting_help import SettingHelp, setting_help, setting_label, source_params
 from verdify_schemas.setting_values import (
     binary32_ulp,
     readback_matches,
@@ -51,6 +52,7 @@ from verdify_schemas.tunable_registry import (
     REGISTRY,
     SWITCH_READBACK_EQUIPMENT,
     TunableDef,
+    desired_write_kind,
     desired_write_rule,
     planner_effective_bounds,
 )
@@ -112,6 +114,20 @@ SettingGroup = Literal[
     "site_water_caps",
     "read_only",
     "band_in_force",
+]
+# Why a row is read-only (#1333): a READ_ONLY_REASONS key, no_anchor_row for a crop-band row with no
+# crop_band_anchors row, or band_in_force for the dispatcher's derived band rows.
+ReadOnlyKind = Literal[
+    "band_in_force",
+    "legacy_wide_limit",
+    "zone_vpd_target",
+    "activity_mirror",
+    "band_owner",
+    "retired",
+    "readback_context",
+    "no_entity",
+    "no_anchor_row",
+    "unknown",
 ]
 
 
@@ -191,8 +207,11 @@ class SettingPlan(_Model):
 class Setting(_Model):
     """One registry row as the Settings screen shows it (OpenAPI ``Setting``).
 
-    ``label`` and ``unit`` are ``TunableDef.label`` and ``TunableDef.unit``, unchanged. ``plan`` stays None
-    here: ``reads.settings_rows`` (API-09) adds the plan block and the Band in force rows.
+    ``label`` and ``unit`` are ``TunableDef.label`` and ``TunableDef.unit``, unchanged (``setting_label`` names the
+    rows whose registry label is the raw name). ``plan`` stays None here: ``reads.settings_rows`` (API-09) adds the
+    plan block and the Band in force rows. ``help`` is the operator text (``verdify_schemas.setting_help``, #1332);
+    ``read_only_kind`` names why a row is read-only and ``source_params`` the writable settings a derived row is
+    computed from (#1333).
     """
 
     param: str
@@ -207,6 +226,9 @@ class Setting(_Model):
     options: list[SettingOption] = Field(default_factory=list)
     writable: bool
     read_only_reason: str | None = None
+    read_only_kind: ReadOnlyKind | None = None
+    source_params: list[str] = Field(default_factory=list)
+    help: SettingHelp | None = None
     readback_via: ReadbackVia
     readback: Reading | None
     desired: DesiredSetting | None
@@ -458,7 +480,8 @@ def _evaluate_site(param: str, request: _Request | None, facts: _Facts, shared: 
 
 def evaluate(spec: TunableDef, facts: _Facts, shared: _Shared) -> _Evaluation:
     """§5.5 readback state: the first that holds of released, overridden, held, confirmed, no_readback,
-    requested and not_confirmed, with ``state_reason`` for requested, not_confirmed and held.
+    requested and not_confirmed, with ``state_reason`` for requested, not_confirmed and held. A setting nobody
+    ever requested reads confirmed when it has a readback, else no_readback (never not_confirmed).
 
     Only readbacks at or after the request count. A desired value confirms by ``readback_matches()``; a plan
     value or a band or default push by ``readback_values_equivalent()``. A clamp holds the value only while the
@@ -473,9 +496,9 @@ def evaluate(spec: TunableDef, facts: _Facts, shared: _Shared) -> _Evaluation:
         return _evaluate_site(spec.name, request, facts, shared)
     route = readback_via(spec)
     if request is None:
-        if route == "none":
-            return _Evaluation("no_readback")
-        return _Evaluation("confirmed" if facts.readback is not None else "not_confirmed")
+        # Nothing was ever requested, so nothing can be not applied: with no readback either, it is no_readback
+        # (#1333). not_confirmed is only a request 5 min old the readback does not match.
+        return _Evaluation("confirmed" if route != "none" and facts.readback is not None else "no_readback")
     newest = facts.readback if facts.readback is not None and facts.readback.at >= request.since else None
     matches = newest is not None and request.matches(spec.name, newest.value, request.value)
     experiment = shared.experiment_armed and spec.name in POLICY_FIELDS
@@ -826,12 +849,16 @@ def _options(spec: TunableDef) -> list[SettingOption]:
     ]
 
 
-def _write_rule(spec: TunableDef, anchors: Mapping[str, tuple[int, ...]]) -> tuple[bool, str | None]:
-    """§5.3 step 1: the registry rule, and for a crop-band setting its ``crop_band_anchors`` rows."""
+def _write_rule(
+    spec: TunableDef, anchors: Mapping[str, tuple[int, ...]]
+) -> tuple[bool, str | None, ReadOnlyKind | None]:
+    """§5.3 step 1: the registry rule, and for a crop-band setting its ``crop_band_anchors`` rows, with the rule's
+    key (``desired_write_kind``)."""
     writable, reason = desired_write_rule(spec.name)
     if writable and spec.control_class == "crop_band" and not anchors.get(spec.name):
-        return False, NO_ANCHOR_ROW
-    return writable, reason
+        return False, NO_ANCHOR_ROW, "no_anchor_row"
+    kind = desired_write_kind(spec.name)
+    return writable, reason, kind  # type: ignore[return-value]
 
 
 def _anchors_in_force(rows: Sequence[Mapping[str, Any]], season: str | None) -> dict[str, tuple[int, ...]]:
@@ -844,7 +871,7 @@ def _anchors_in_force(rows: Sequence[Mapping[str, Any]], season: str | None) -> 
 
 
 def _setting(spec: TunableDef, facts: _Facts, shared: _Shared, anchors: Mapping[str, tuple[int, ...]]) -> Setting:
-    writable, reason = _write_rule(spec, anchors)
+    writable, reason, kind = _write_rule(spec, anchors)
     if not writable:
         group: SettingGroup = "read_only"
     elif spec.control_class == "irrigation_site":
@@ -855,7 +882,7 @@ def _setting(spec: TunableDef, facts: _Facts, shared: _Shared, anchors: Mapping[
     lo, hi = bounds(spec.name)
     return Setting(
         param=spec.name,
-        label=spec.label or spec.name,
+        label=setting_label(spec.name),
         control_class=spec.control_class,
         group=group,
         kind=spec.kind,
@@ -866,6 +893,9 @@ def _setting(spec: TunableDef, facts: _Facts, shared: _Shared, anchors: Mapping[
         options=_options(spec),
         writable=writable,
         read_only_reason=reason,
+        read_only_kind=None if writable else kind,
+        source_params=list(source_params(spec.name)),
+        help=setting_help(spec.name),
         readback_via=status.readback_via,
         readback=status.readback,
         desired=status.desired,
@@ -1325,6 +1355,21 @@ def _loader(param: str):
     return load
 
 
+async def write_in_transaction(
+    tx: asyncpg.Connection, actor: Actor, param: str, value: object, flag: bool, reason: str | None
+) -> tuple[_Checked, Mapping[str, Any], list[int], DesiredSetting]:
+    """Inside a ``recorded_write``: validate, insert the ``desired_state`` row and update its band rows."""
+    checked = await _validate(tx, actor, param, value)
+    row = await tx.fetchrow(
+        _INSERT_DESIRED_SQL, GREENHOUSE_ID, param, checked.value, flag, actor.source, actor.name, reason
+    )
+    anchor_rows = await _update_band_rows(tx, checked)
+    stored = await _stored(
+        tx, checked.spec, row, snapped_from=checked.snapped_from, manual_before=checked.manual_before
+    )
+    return checked, row, anchor_rows, stored
+
+
 async def write(
     conn: asyncpg.Connection,
     actor: Actor,
@@ -1351,14 +1396,7 @@ async def write(
     request = {"value": _hashable(value), "manual": flag, "reason": reason}
 
     async def perform(tx: asyncpg.Connection) -> tuple[DesiredSetting, dict[str, Any]]:
-        checked = await _validate(tx, actor, param, value)
-        row = await tx.fetchrow(
-            _INSERT_DESIRED_SQL, GREENHOUSE_ID, param, checked.value, flag, actor.source, actor.name, reason
-        )
-        anchor_rows = await _update_band_rows(tx, checked)
-        stored = await _stored(
-            tx, checked.spec, row, snapped_from=checked.snapped_from, manual_before=checked.manual_before
-        )
+        checked, row, anchor_rows, stored = await write_in_transaction(tx, actor, param, value, flag, reason)
         detail: dict[str, Any] = {
             **extra,
             "ref": {"table": "desired_state", "id": row["id"]},

@@ -240,7 +240,7 @@ test("Acknowledge sends one API-15 and the answer follows the one count", async 
   expect((await fixtureRequests(request, "API-15")).map((row) => row.path)).toEqual(["/v1/alerts/101/ack"]);
 });
 
-test("Water today: each zone's minutes against its cap and when it last got water, then SAF-4 in gallons", async ({ page, request }) => {
+test("Water today: each zone's minutes against its cap and when it last got water, then the daily mist & fog limit in gallons", async ({ page, request }) => {
   await useScreensClock(page, request, "in-band");
   await load(page, "/");
   const water = page.locator(".now-water");

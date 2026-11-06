@@ -19,10 +19,9 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validato
 # R4: who wrote. The OpenAPI Actor.source pattern, verbatim.
 ACTOR_SOURCE_PATTERN = r"^(dashboard|iris|system|agent:[a-z0-9][a-z0-9_-]*)$"
 # Architecture §9: setting.write, setting.release, plan.write, alert.ack, alert.resolve, irrigation.*,
-# light.on and light.off. Extend it here when a new kind of write appears.
-ACTIVITY_ACTION_PATTERN = (
-    r"^(setting\.(write|release)|plan\.write|alert\.(ack|resolve)|light\.(on|off)|irrigation(\.[a-z][a-z0-9_]*)+)$"
-)
+# light.on and light.off, and band.write (the band editor's one Save, #1334). Extend it here when a new kind of
+# write appears.
+ACTIVITY_ACTION_PATTERN = r"^(setting\.(write|release)|band\.write|plan\.write|alert\.(ack|resolve)|light\.(on|off)|irrigation(\.[a-z][a-z0-9_]*)+)$"
 # A tunable_registry name (the OpenAPI Param pattern).
 SETTING_PARAM_PATTERN = r"^[a-z][a-z0-9_]*$"
 ACTOR_NAME_MAX_LENGTH = 64

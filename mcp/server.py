@@ -5400,7 +5400,11 @@ async def settings(
 
     With no window: API-09's `{items, server_time}`, filtered by param, group, writable_only and manual_only. Each
     row carries applied_from (whose value is in force: manual, desired, plan, band or default), min, max, step,
-    its desired row, its plan value and its readback state. Narrow it: the whole catalog is large.
+    its desired row, its plan value and its readback state, and `help`: what the setting is (summary), what the
+    controller does with it (effect), what raising and lowering it does (raise, lower; for a switch, turning it on and
+    off) and any caution, the same words the dashboard shows; a guardrail row has guardrail true. A read-only row
+    carries read_only_kind, and a derived row source_params, the writable settings it is computed from. Explain a
+    change with that text. Narrow it: the whole catalog is large.
 
     With param, since and until all given: API-12's SettingHistory over [since, until), the desired rows, plan
     values and readback change points; since and until map to API-12's from and to, and the other filters do not
@@ -6253,7 +6257,15 @@ async def irrigation_line_set(
     enabled: Annotated[
         bool | None, Field(description="Off stops everything on the line, VPD misting included.")
     ] = None,
-    vpd_member: Annotated[bool | None, Field(description="L04, L07 and L09: VPD misting on this zone.")] = None,
+    vpd_member: Annotated[
+        bool | None,
+        Field(
+            description="L04, L07 and L09: VPD control. When the climate loop wants humidity and its safety gate "
+            "passes, the controller may send this mister short mist pulses, one mister at a time by rank (center "
+            "first unless another member's own VPD is further above its target), within the line's daily cap and the "
+            "daily mist and fog limit. Needs the line enabled (line_disabled otherwise)."
+        ),
+    ] = None,
     schedule_member: Annotated[bool | None, Field(description="L04, L07 and L09: schedules and runs here.")] = None,
     daily_cap_min: Annotated[int | None, Field(ge=0, le=480, description="Minutes a day; 0 is no cap.")] = None,
     vpd_reserve_min: Annotated[
@@ -6293,7 +6305,7 @@ async def irrigation_line_set(
 
     Refusals are the Problem JSON with isError: out_of_range (min and max are the bounds), check_required,
     invalid_request (all with any field but paused_until, manual included; a mister flag off L04, L07 or L09),
-    unknown_target, manual, request_id_reused, forbidden, and unavailable (the database; retry with the same
+    line_disabled (vpd_member true on a line that stays disabled), unknown_target, manual, request_id_reused, forbidden, and unavailable (the database; retry with the same
     request_id)."""
     from verdify_services.irrigation import writes
 

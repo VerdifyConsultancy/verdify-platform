@@ -41,6 +41,7 @@ sys.path.insert(0, str(REPO_ROOT / "ingestor"))
 
 from config import DB_DSN  # noqa: E402
 from verdify_schemas.climate_intent import CLIMATE_INTENT_FIELD_DOCS  # noqa: E402
+from verdify_schemas.setting_help import HELP  # noqa: E402
 from verdify_schemas.tunable_registry import (  # noqa: E402
     PLANNER_PUSHABLE_REG,
     REGISTRY,
@@ -846,8 +847,8 @@ def _render_parameter_index(
             [
                 f"### {category}",
                 "",
-                "| Parameter | Class | Owner | Default / bounds | Active | Readback | Route | Clamps 30d | Planner status |",
-                "|---|---|---|---|---:|---:|---|---:|---|",
+                "| Parameter | What it is | Class | Owner | Default / bounds | Active | Readback | Route | Clamps 30d | Planner status |",
+                "|---|---|---|---|---|---:|---:|---|---:|---|",
             ]
         )
         for name in sorted(grouped[category]):
@@ -862,7 +863,8 @@ def _render_parameter_index(
             clamps_cell = f"{ev.clamps_30d} ({_age(ev.latest_clamp_ts)})" if ev.clamps_30d else "-"
             rows.append(
                 "| "
-                f"`{name}` | `{spec.control_class}` | {owner} | default `{_fmt_value(spec.default)}`; {bounds} | "
+                f'<a id="{name}"></a>`{name}` | {_md(HELP[name].summary)} | `{spec.control_class}` | {owner} | '
+                f"default `{_fmt_value(spec.default)}`; {bounds} | "
                 f"{_fmt_value(ev.active_value)} | {_fmt_value(ev.last_readback_value)} ({_age(ev.last_readback_ts)}) | "
                 f"{route} | {clamps_cell} | {_planner_status(name, spec, plan_required)} |"
             )
@@ -924,6 +926,7 @@ def _render_tunable_detail(
     firmware_hits: dict[str, dict[str, int]],
 ) -> list[str]:
     category = _category(name, spec)
+    help_text = HELP[name]
     owner = spec.push_owner.replace("_", " ")
     control_class = spec.control_class
     bounds = "switch 0/1" if spec.kind == "switch" else f"{_fmt_value(spec.min)} to {_fmt_value(spec.max)}"
@@ -949,8 +952,14 @@ def _render_tunable_detail(
         f"<details{' open' if name in plan_required else ''}>",
         f"<summary><code>{name}</code> - {summary_status}</summary>",
         "",
-        f"- **Purpose:** {_md(spec.notes or _why_it_matters(name, category))}",
+        # The operator text the dashboard and MCP serve (verdify_schemas.setting_help, #1332), word for word.
+        f"- **What it is:** {_md(help_text.summary)}",
+        f"- **What it changes:** {_md(help_text.effect)}",
+        *([f"- **Raising it:** {_md(help_text.raise_)}"] if help_text.raise_ else []),
+        *([f"- **Lowering it:** {_md(help_text.lower)}"] if help_text.lower else []),
+        *([f"- **Caution:** {_md(help_text.caution)}"] if help_text.caution else []),
         f"- **Why it matters:** {_md(_why_it_matters(name, category))}",
+        *([f"- **Developer notes:** {_md(spec.notes)}"] if spec.notes else []),
         f"- **Implementation:** {_md(_implementation_summary(name, spec, plan_required))}",
         f"- **Registry:** class `{control_class}`, kind `{spec.kind}`, owner `{owner}`, tier `{spec.tier}`, default `{_fmt_value(spec.default)}`, bounds `{bounds}`.",
         f"- **Firmware evidence:** `{hit_text}`.",
