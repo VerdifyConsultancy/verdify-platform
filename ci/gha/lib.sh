@@ -96,5 +96,10 @@ ci_ensure_passwd_entry() {
   export LD_PRELOAD="$lib${LD_PRELOAD:+:$LD_PRELOAD}"
   export NSS_WRAPPER_PASSWD="$root/passwd" NSS_WRAPPER_GROUP="$root/group"
   export USER=ci LOGNAME=ci
+  # The preload puts nss_wrapper ahead of the ASan runtime in the sanitizer
+  # tests' binaries (tests/test_api_overflow_patch.py); ASan then refuses to
+  # start. Skip only that link-order check: nss_wrapper wraps no allocator, so
+  # ASan/UBSan detection is unchanged.
+  export ASAN_OPTIONS="verify_asan_link_order=0${ASAN_OPTIONS:+:$ASAN_OPTIONS}"
   getent passwd "$(id -u)" >/dev/null || { echo "nss_wrapper did not take effect" >&2; return 1; }
 }
