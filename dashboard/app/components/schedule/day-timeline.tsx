@@ -8,7 +8,7 @@ import { cls } from "../common";
 import { Meter, meterWords, type MeterDomain } from "../data/meter";
 import type { SpanStatus } from "../data/time-track";
 import { cssVars, rovingKeys } from "../data/viz";
-import { episodeWords, slotClock, type DayBlock, type DayModel, type DayRow, type Episode } from "./model";
+import { episodeWords, slotClock, type DayBlock, type DayModel, type DayRow, type LaneEpisode } from "./model";
 
 /** Past this point of the track a block whose words sit beside it has them on its left, so they stay inside the row. */
 const LATE_PERCENT = 82;
@@ -114,7 +114,7 @@ export function Block({ block, scale, onSelect, selected = false, now = null, ro
  * words. With `unknownUntil` (epoch s: API-05 has not answered) the lower third is a muted hatch up to then instead: a
  * gap in what is known, never an empty "the valve did not open".
  */
-export function Ticks({ episodes, scale, token, unknownUntil = null }: { episodes: readonly Episode[]; scale: TimeScale; token: string; unknownUntil?: number | null }) {
+export function Ticks({ episodes, scale, token, unknownUntil = null }: { episodes: readonly LaneEpisode[]; scale: TimeScale; token: string; unknownUntil?: number | null }) {
   if (unknownUntil !== null) {
     const place = scale.span(scale.from, Math.min(scale.to, unknownUntil));
     return place ? <span ref={cssVars({ "--sch-start": place.start, "--sch-width": place.width })} className="sch-tick sch-tick-unknown" title="Valve time unknown" aria-hidden="true" /> : null;
@@ -122,9 +122,28 @@ export function Ticks({ episodes, scale, token, unknownUntil = null }: { episode
   return <>
     {episodes.map((episode) => {
       const place = scale.span(episode.start, episode.end);
-      return place ? <span key={episode.start} ref={cssVars({ "--sch-start": place.start, "--sch-width": place.width })} className={cls("sch-tick", `sch-tick-${token}`)} title={episodeWords(episode)} aria-hidden="true" /> : null;
+      return place ? <span key={episode.start} ref={cssVars({ "--sch-start": place.start, "--sch-width": place.width })} className={cls("sch-tick", `sch-tick-${episode.fertilized ? "fert" : token}`)} title={episodeWords(episode)} aria-hidden="true" /> : null;
     })}
   </>;
+}
+
+/**
+ * The legend, always on show (#1347): what the white band, the shade, the now rule and each mark mean. It replaces the
+ * Key popover's short form; the popover stays for the long form. Shared by the day timeline and Water → Today's strips.
+ */
+export function ScheduleLegend({ className }: { className?: string }) {
+  return <ul className={cls("sch-legend", className)} aria-label="Legend">
+    <li><span className="sch-legend-swatch sch-legend-day" aria-hidden="true" />day</li>
+    <li><span className="sch-legend-swatch sch-legend-night" aria-hidden="true" />night</li>
+    <li><span className="sch-legend-swatch sch-legend-now" aria-hidden="true" />now</li>
+    <li><span className="sch-swatch sch-done sch-eq-water" aria-hidden="true" />clean</li>
+    <li><span className="sch-swatch sch-done sch-eq-fert" aria-hidden="true" />fertilized</li>
+    <li><span className="sch-swatch sch-done" aria-hidden="true" />ran (solid)</li>
+    <li><span className="sch-swatch sch-planned" aria-hidden="true" />planned (dashed)</li>
+    <li><span className="sch-swatch sch-skipped" aria-hidden="true" />skipped</li>
+    <li><span className="sch-swatch sch-conditional" aria-hidden="true" />backup window</li>
+    <li><span className="sch-swatch sch-tick-swatch" aria-hidden="true" />valve open</li>
+  </ul>;
 }
 
 /** Night before sunrise and after sunset, the now rule. */
@@ -198,8 +217,9 @@ export type DayTimelineProps = {
 const END_HEAD: Readonly<Record<DayModel["when"], string>> = { today: "today / cap", past: "that day / cap", future: "planned / cap" };
 
 /**
- * The day timeline (redesign §6.2): one local day across the width (25 h on the fall-back day), rows grouped by manifold
- * with night shaded, the now rule, each run as a block as long as its schedule (solid done, dashed planned, hatched when
+ * The day timeline (redesign §6.2, #1347): one local day across the width (25 h on the fall-back day), one lane per
+ * physical line grouped as Drips and Misters, its clean and fertilized runs in the same lane, daylight white and night
+ * shaded on every lane (a disabled lane dims its marks and name, never its day), an always-visible legend under the axis, the now rule, each run as a block as long as its schedule (solid done, dashed planned, hatched when
  * it will not run, a fault outline when missed, a muted hatch when its outcome is unknown), past valve episodes as ticks,
  * a pause band with who paused it, and at each row's end its minutes against the cap and [+]. Blocks are one tab stop
  * whose arrow keys move along them; each opens its popover. An operator's click on an empty part of a row opens the
@@ -222,10 +242,11 @@ export function DayTimeline({ model, now, head, label, selected, onBlock, newTo,
     <div className="sch-day-head">{head}</div>
     <div className="sch-day-body" role="group" aria-label={label} tabIndex={0} onKeyDown={rovingKeys()}>
       <div className="sch-axis-row"><span className="sch-axis-gap" /><DayAxis scale={scale} /><span className="sch-axis-end meta">{END_HEAD[model.when]}</span></div>
+      <ScheduleLegend className="sch-legend-timeline" />
       {model.groups.map((group, groupIndex) => <div key={group.key} className="sch-group">
         <p className="eyebrow sch-group-label" id={`${headingId}-${group.key}`}>{group.label}</p>
         <ul className="sch-rows" aria-labelledby={`${headingId}-${group.key}`}>
-          {group.rows.map((row, rowIndex) => <li key={row.lineId} className={cls("sch-row", row.muted && "is-muted")} data-line={row.lineId}>
+          {group.rows.map((row, rowIndex) => <li key={row.lineId} className={cls("sch-row", row.muted && "is-muted")} data-line={row.lineId} data-lines={row.lineIds.join(" ")}>
             <div className="sch-row-head">
               <span className="sch-row-name" title={row.name}>{row.name}</span>
               {row.note && <span className="sch-row-note">{row.note}</span>}
@@ -236,7 +257,7 @@ export function DayTimeline({ model, now, head, label, selected, onBlock, newTo,
                 const place = scale.span(row.pause.start, row.pause.end);
                 return place && <span ref={cssVars({ "--sch-start": place.start, "--sch-width": place.width })} className="sch-pause"><span className="sch-pause-words">{row.pause.words}</span></span>;
               })()}
-              <Ticks episodes={row.episodes} scale={scale} token={row.kind === "mister" || row.kind === "fert_mister" ? "mister" : row.kind === "fert_drip" ? "fert" : "water"} unknownUntil={row.valveKnown ? null : nowS} />
+              <Ticks episodes={row.episodes} scale={scale} token={row.kind === "mister" ? "mister" : "water"} unknownUntil={row.valveKnown ? null : nowS} />
               {(() => {
                 const rooms = blockRooms(row.blocks, scale, nowS);
                 return row.blocks.map((block) => <Block key={block.key} block={block} scale={scale} onSelect={onBlock} selected={selected === block.blockKey && block.blockKey !== ""} now={nowS}

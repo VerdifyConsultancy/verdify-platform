@@ -375,7 +375,7 @@ export interface paths {
         readonly get?: never;
         /**
          * Enable or disable a line with its check; VPD and Schedule flags on misters; caps; pause or resume; manual
-         * @description line_id all accepts only paused_until (pause or resume every line). vpd_member and schedule_member are for L04, L07 and L09. Enabling a line with no check, or turning schedule_member on for the first time, needs checked true, which only the dashboard sends (check_required). Disabling stops everything on the line, VPD misting included. Pause, resume and the check never change manual; any other edit that omits it stores true (R3). Codes: out_of_range, check_required, unknown_target, request_id_reused; Iris only, on a manual line, manual.
+         * @description line_id all accepts only paused_until (pause or resume every line). vpd_member and schedule_member are for L04, L07 and L09. Enabling a line with no check, or turning schedule_member on for the first time, needs checked true, which only the dashboard sends (check_required). Disabling stops everything on the line, VPD misting included. vpd_member true on a line that is and stays disabled is line_disabled: the controller acts on VPD membership only while the line is enabled. Pause, resume and the check never change manual; any other edit that omits it stores true (R3). Codes: out_of_range, check_required, line_disabled, unknown_target, request_id_reused; Iris only, on a manual line, manual.
          */
         readonly put: operations["API-IRR-08"];
         readonly post?: never;

@@ -968,6 +968,8 @@ function updateLines(world, { params, body, key, serial }) {
     const cap = input.daily_cap_min ?? line.daily_cap_min;
     if (!Number.isInteger(cap) || cap < 0 || cap > 480) throw refuse(422, "out_of_range", "Out of range", "daily_cap_min must be 0-480", { field: "daily_cap_min", min: 0, max: 480, current: line.daily_cap_min });
     if (input.vpd_reserve_min !== undefined && (!Number.isInteger(input.vpd_reserve_min) || input.vpd_reserve_min < 0 || input.vpd_reserve_min > cap)) throw refuse(422, "out_of_range", "Out of range", `vpd_reserve_min must be 0-${cap}`, { field: "vpd_reserve_min", min: 0, max: cap, current: line.vpd_reserve_min });
+    // #1344: a disabled mister ignores VPD control, so turning it on there is refused unless this body enables the line.
+    if (input.vpd_member === true && !(input.enabled ?? line.enabled)) throw refuse(422, "line_disabled", "Line disabled", `${lineId} is disabled, so VPD control would do nothing; enable the line first`, { field: "vpd_member" });
     const checkedNow = input.checked === true;
     if ((input.enabled === true && !line.enabled && !line.check && !checkedNow) || (input.schedule_member === true && !line.schedule_member && !line.check && !checkedNow)) {
       throw refuse(422, "check_required", "Check required", `Record the one-time check of ${lineId} first`, { field: "checked" });

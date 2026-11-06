@@ -7,7 +7,7 @@
 export { ConfirmDialog, lineLabel, RUN_BOUNDS, RUN_DEFAULTS, runFields, type ConfirmDialogProps, type RunBody, type RunField } from "./confirm-dialog";
 export { EditDrawer, GRAPH_UNITS, graphLink, type EditDrawerProps } from "./edit-drawer";
 export { describedBy, FieldError, FieldHint, useFieldIds } from "./field";
-export { MANUAL_DEFAULT, ManualToggle } from "./manual-toggle";
+export { LET_IRIS_HELP, LET_IRIS_TEXT, MANUAL_DEFAULT, ManualToggle } from "./manual-toggle";
 export { boundsHint, NumberField, savedText, stepValue, type NumberFieldProps } from "./number-field";
 export { Reason, type ReasonProps } from "./reason";
 export { Select, type SelectOption, type SelectProps } from "./select";

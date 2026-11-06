@@ -63,10 +63,10 @@ test("requested reads \"rev 43 sending\" beside what the controller holds; not c
 });
 
 // ---------------------------------------------------------------------------------------------------- limits
-test("the limits strip: SAF-4, the soft budget, mister zones with the VPD reserve, drip caps, flow, occupancy", () => {
+test("the limits strip: the daily mist & fog limit, the soft target, mister zones with the VPD reserve, drip caps, flow, occupancy", () => {
   expect(limitItems(status(), NOW, TODAY).map((item) => plain(item.text))).toEqual([
-    "SAF-4 21 of 360 gal", "Soft budget 21 of 300 gal", "Center 14 of 120 min (60 kept for VPD)", "South 0 of 45 min (15 kept for VPD)",
-    "West 0 of 45 min (15 kept for VPD)", "Wall drip 0 of 60 min", "Unexplained flow: none", "Nobody seen: misters may run (last person 05:10)",
+    "Daily mist & fog limit 21 of 360 gal", "Daily mist target (soft) 21 of 300 gal", "Center 14 of 120 min (60 kept for VPD)", "South 0 of 45 min (15 kept for VPD)",
+    "West 0 of 45 min (15 kept for VPD)", "Wall drip 0 of 60 min", "Water with no Verdify valve open: none", "Occupancy: nobody detected, misting allowed (last person 05:10)",
   ]);
   // A reserved line stays off the strip until a person enables it; a missing count is "—", never 0.
   const base = status();
@@ -75,24 +75,24 @@ test("the limits strip: SAF-4, the soft budget, mister zones with the VPD reserv
     lines: base.lines.map((item) => (item.line_id === "L05" ? { ...item, enabled: true, today: { minutes: null, pulses: null, gal: null } } : item)),
   };
   expect(limitItems(enabled, NOW, TODAY).map((item) => [plain(item.text), item.tone])).toEqual(expect.arrayContaining([
-    ["SAF-4 — of 360 gal", undefined], ["Center drip — of 30 min", undefined], ["VPD fallback active", "warn"],
+    ["Daily mist & fog limit — of 360 gal", undefined], ["Center drip — of 30 min", undefined], ["Backup misting (sensor fault): on", "warn"],
   ]));
 });
 
 test("flow reads none, flowing with every valve closed, or stopped, never an all clear while the alert is open", () => {
-  expect(flowWords(status().leak)).toEqual({ text: "Unexplained flow: none" });
+  expect(flowWords(status().leak)).toEqual({ text: "Water with no Verdify valve open: none" });
   expect(flowWords(status("flow-valves-closed").leak)).toEqual({ text: `Water flowing with every Verdify valve closed since 10:38 · 3${NBSP}gal in 10 min`, tone: "fault" });
   expect(flowWords(status("flow-stopped").leak)).toEqual({ text: "Flow stopped at 10:40", tone: "warn" });
-  expect(flowWords({ ...status().leak, active: null })).toEqual({ text: "Unexplained flow: unknown" });
+  expect(flowWords({ ...status().leak, active: null })).toEqual({ text: "Water with no Verdify valve open: unknown" });
 });
 
 test("occupancy in the Now chip's words; unknown never holds mist", () => {
   const seen = (occupancy: Partial<Occupancy>) => plain(occupancyWords({ occupied: false, seen_at: denver("05:10"), hold_enabled: true, ...occupancy }, NOW, TODAY));
-  expect(seen({ occupied: true, seen_at: denver("10:39") })).toBe("Someone inside: misters wait (Frigate, 3 min ago)");
-  expect(seen({})).toBe("Nobody seen: misters may run (last person 05:10)");
-  expect(seen({ seen_at: "2026-10-30T15:00:00Z" })).toBe("Nobody seen: misters may run (last person Oct 30, 09:00)");
-  expect(seen({ occupied: null })).toBe("Occupancy unknown: misters may run");
-  expect(seen({ occupied: true, hold_enabled: false })).toBe("Occupancy mist hold is off: misters may run");
+  expect(seen({ occupied: true, seen_at: denver("10:39") })).toBe("Occupancy: someone inside, misting waits (Frigate, 3 min ago)");
+  expect(seen({})).toBe("Occupancy: nobody detected, misting allowed (last person 05:10)");
+  expect(seen({ seen_at: "2026-10-30T15:00:00Z" })).toBe("Occupancy: nobody detected, misting allowed (last person Oct 30, 09:00)");
+  expect(seen({ occupied: null })).toBe("Occupancy unknown: misting allowed");
+  expect(seen({ occupied: true, hold_enabled: false })).toBe("Occupancy mist hold is off: misting allowed");
 });
 
 // ---------------------------------------------------------------------------------------------------- lines and words
