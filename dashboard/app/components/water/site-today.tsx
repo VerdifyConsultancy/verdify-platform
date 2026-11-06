@@ -1,22 +1,24 @@
 // SPDX-License-Identifier: MIT
 import { Link } from "react-router";
 import type { IrrigationStatus } from "../../lib/operator-api";
-import { SAF4_WORDS, flowWords, occupancyWords } from "../../lib/water";
+import { BACKUP_TERM, BUDGET_HELP, BUDGET_TERM, SAF4_HELP, SAF4_TERM, flowWords, occupancyWords } from "../../lib/water";
 import { Card } from "../card";
 import { cls } from "../common";
 import { Meter, meterWords } from "../data/meter";
 import { useNow } from "../freshness";
+import { InfoTip } from "../info-tip";
 
-/** Where the SAF-4 meter leads: the site caps save through API-10 in the Settings drawer, not on Water (#1182). */
+/** Where the daily mist & fog limit leads: the site caps save through API-10 in the Settings drawer, not on Water (#1182). */
 export const SAF4_LINK = "/settings?edit=mister_daily_volume_max_gal";
 
 /**
- * Site today (redesign §5.2), Water → Today's aside: SAF-4 (with what it caps in words, as Now says it) and the soft
- * budget as meters in whole gallons, both in `--eq-water` as §4.6 fills gallons, the flow with
- * every Verdify valve closed, occupancy and fallback misting, each in words and each with its `[data-limit]`. A count the
- * API does not have reads "—", never 0; a flow or fallback that is the news carries its colour on its words. On a phone
- * (§5.2's 360 px sketch) it holds SAF-4, the flow and occupancy, so Wall and L01 stay above the fold: the soft budget and
- * fallback misting (`.wat-site-quiet`) show there only once they are the news, the budget reached or fallback on.
+ * Site today (redesign §5.2, #1349), Water → Today's aside: the daily mist & fog limit (SAF-4) and the daily mist target
+ * (soft) as meters in whole gallons, each with an info tip that says what it is, both in `--eq-water` as §4.6 fills
+ * gallons; then water with no Verdify valve open, occupancy and backup misting, each in words with its `[data-limit]`.
+ * No bare "SAF-4" or "SOFT BUDGET". A count the API does not have reads "—", never 0; a flow or backup misting that is the
+ * news carries its colour on its words. On a phone (§5.2's 360 px sketch) it holds the limit, the flow and occupancy, so
+ * the first line card stays above the fold: the soft target and backup misting (`.wat-site-quiet`) show there only once
+ * they are the news.
  */
 export function SiteToday({ status, today }: { status: Pick<IrrigationStatus, "limits" | "leak" | "occupancy" | "fallback_active">; today: string }) {
   const now = useNow();
@@ -26,17 +28,16 @@ export function SiteToday({ status, today }: { status: Pick<IrrigationStatus, "l
   return <Card title="Site today" className="wat-site">
     <ul className="wat-site-list">
       <li className="wat-site-meter" data-limit="saf4">
-        <Link className="wat-site-term" to={SAF4_LINK}>SAF-4<span className="screen-reader">, the {SAF4_WORDS}, in Settings</span></Link>
-        <Meter label="SAF-4 gallons today" unit="gal" value={saf4.used} cap={saf4.max} domain="water" showWords />
-        <span className="meta wat-site-note" aria-hidden="true">{SAF4_WORDS}</span>
+        <span className="wat-site-term"><Link to={SAF4_LINK}>{SAF4_TERM}<span className="screen-reader">, in Settings</span></Link><InfoTip term={SAF4_TERM}><p>{SAF4_HELP}</p></InfoTip></span>
+        <Meter label={`${SAF4_TERM}, gallons today`} unit="gal" value={saf4.used} cap={saf4.max} domain="water" showWords />
       </li>
       <li className={cls("wat-site-meter", !budgetReached && "wat-site-quiet")} data-limit="budget">
-        <span className="wat-site-term">Soft budget</span>
-        <Meter label="Soft budget gallons today" unit="gal" value={budget.used} cap={budget.max} domain="water" showWords />
+        <span className="wat-site-term">{BUDGET_TERM}<InfoTip term={BUDGET_TERM}><p>{BUDGET_HELP}</p></InfoTip></span>
+        <Meter label={`${BUDGET_TERM}, gallons today`} unit="gal" value={budget.used} cap={budget.max} domain="water" showWords />
       </li>
       <li data-limit="flow" className={cls(flow.tone && `limit-${flow.tone}`)}>{flow.text}</li>
       <li data-limit="occupancy">{occupancyWords(status.occupancy, now, today)}</li>
-      <li data-limit="fallback" className={cls(status.fallback_active ? "limit-warn" : "wat-site-quiet")}>{status.fallback_active ? "Fallback misting on: VPD sensing is degraded" : "Fallback misting: off"}</li>
+      <li data-limit="fallback" className={cls(status.fallback_active ? "limit-warn" : "wat-site-quiet")}>{status.fallback_active ? `${BACKUP_TERM}: on, VPD sensing is degraded` : `${BACKUP_TERM}: off`}</li>
     </ul>
   </Card>;
 }

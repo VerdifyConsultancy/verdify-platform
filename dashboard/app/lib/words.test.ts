@@ -245,6 +245,26 @@ test("every planner trigger outcome has its words, from the OpenAPI enum and the
   expect(words("trigger_outcome", "rescheduled")).toBe("rescheduled");
 });
 
+test("every planner event in verdify_schemas/plan.py has words, so no trigger code reads on Now (#1339)", () => {
+  const literal = /^PlanDeliveryEventType = Literal\[([\s\S]*?)\]/m.exec(repo("verdify_schemas/plan.py"));
+  if (!literal) throw new Error("no PlanDeliveryEventType Literal in verdify_schemas/plan.py");
+  const triggers = [...literal[1].matchAll(/"([A-Z_]+)"/g)].map((match) => match[1]);
+  expect(triggers).toContain("FORECAST_DEVIATION");
+  expect(Object.keys(WORDS.trigger).sort()).toEqual([...triggers].sort());
+  for (const trigger of triggers) expect(words("trigger", trigger), trigger).not.toMatch(/_|^[A-Z]{3,}/);
+  expect(["SUNRISE", "SOLAR_MAX", "TRANSITION", "SUNSET", "FORECAST_DEVIATION"].map((trigger) => words("trigger", trigger))).toEqual([
+    "Sunrise plan", "Midday check", "Transition", "Sunset plan", "Forecast changed",
+  ]);
+});
+
+test("each setting Iris plans has a short plain name, never its key or a title-cased key", () => {
+  for (const [param, name] of Object.entries(WORDS.tunable_short)) {
+    expect(name, param).not.toMatch(/_/);
+    expect(name.toLowerCase(), param).not.toBe(param.replace(/_/g, " "));
+  }
+  expect(words("tunable_short", "mister_engage_kpa")).toBe("Misting starts at VPD");
+});
+
 test("every stress window kind and severity in verdify_schemas/plan.py has words", () => {
   const kinds = stressWindowLiteral("kind");
   const severities = stressWindowLiteral("severity");
@@ -262,10 +282,11 @@ test("every activity action the services write has words, each one an action the
   const source = /ACTIVITY_ACTION_PATTERN = \(((?:\s*r"[^"]+")+)\s*\)/.exec(repo("verdify_schemas/activity.py"));
   if (!source) throw new Error("no ACTIVITY_ACTION_PATTERN in verdify_schemas/activity.py");
   const server = new RegExp([...source[1].matchAll(/r"([^"]+)"/g)].map((part) => part[1]).join(""));
-  // The fixed actions (architecture §9), the irrigation ones #1156 writes, API-20's light.on and light.off and the plantings'.
+  // The fixed actions (architecture §9), the irrigation ones #1156 writes, API-20's light.on and light.off, API-24's band.write and the plantings'.
   const actions = [
     "setting.write", "setting.release", "plan.write", "alert.ack", "alert.resolve", "irrigation.run", "irrigation.stop", "irrigation.clear_fault",
     "irrigation.override", "irrigation.schedule.create", "irrigation.schedule.update", "irrigation.schedule.delete", "irrigation.line.update", "light.on", "light.off",
+    "band.write",
     // The planting writes (#1327, #1328).
     "planting.create", "planting.move", "planting.harvest", "planting.end", "planting.update", "planting.note",
   ];

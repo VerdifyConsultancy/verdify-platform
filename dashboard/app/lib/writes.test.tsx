@@ -87,7 +87,7 @@ test("Save always sends manual, ticked by default and false when unticked; a dou
   expect(sentWrites[0].idempotency_key).toMatch(UUID);
   expect(dialogOpen()).toBe(false);
   await openAndType("1.65");
-  fireEvent.click(screen.getByRole("checkbox", { name: "Manual: Iris skips this" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Let Iris change this" }));
   fireEvent.change(screen.getByLabelText("Reason (optional)"), { target: { value: "Vandas drying" } });
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
   await advance(0);

@@ -434,6 +434,7 @@ def test_the_forecast_keys_are_in_the_registry_and_say_what_they_are():
         "forecast.vpd_kpa": "kPa",
     }
     assert all(items[key].daily is False and items[key].group == "outdoor" for key in FORECAST)
+    assert (items["forecast.solar_w_m2"].unit, items["forecast.solar_w_m2"].group) == ("W/m²", "outdoor")
 
 
 def test_a_forecast_key_never_turns_a_window_daily_and_stays_a_forecast_when_it_is_daily():
@@ -655,7 +656,7 @@ def test_states_clamps_to_now_and_validates_window_and_equipment():
     )
     result = run(s.states(conn, start, NOW + timedelta(hours=12), ["fan1"], now=NOW))
     assert [(i.state, i.start, i.end) for i in result.lanes[0].intervals] == [("on", start, NOW)]
-    assert len(run(s.states(FakeConnection(), start, NOW, now=NOW)).lanes) == 21
+    assert len(run(s.states(FakeConnection(), start, NOW, now=NOW)).lanes) == 23
     assert code_of(s.states(conn, NOW - timedelta(days=32), NOW, now=NOW)) == ("window_too_large", 422)
     assert code_of(s.states(conn, start, NOW, ["fan9"], now=NOW)) == ("unknown_target", 422)
     future = run(s.states(FakeConnection(), NOW + MIN, NOW + timedelta(hours=1), now=NOW))
@@ -672,11 +673,14 @@ def test_lane_list_and_labels_match_the_equipment_map():
         *EQUIPMENT_LINE_IDS,
         "grow_light_main",
         "grow_light_grow",
+        "grow_light_main_intent",
+        "grow_light_grow_intent",
         "occupancy",
         "leak_detected",
         "water_flowing",
     ]
     assert set(EQUIPMENT_LABELS) == {name for name, _ in s.LANES}
+    assert s.LUTRON_LANES == {"grow_light_main", "grow_light_grow"}
     assert list(EQUIPMENT_LINE_IDS.values()) == [f"L{n:02d}" for n in range(1, 12)]
 
 
@@ -908,6 +912,8 @@ def test_routes_serve_the_committed_operations():
         ("/v1/states", "get"): "API-05",
         ("/v1/band", "get"): "API-06",
         ("/v1/band/preview", "get"): "API-19",
+        ("/v1/lighting", "get"): "API-22",
+        ("/v1/band/profile", "get"): "API-23",  # tests/test_band_profile.py
     }
     for (path, method), operation_id in served.items():
         assert OPENAPI["paths"][path][method]["operationId"] == operation_id

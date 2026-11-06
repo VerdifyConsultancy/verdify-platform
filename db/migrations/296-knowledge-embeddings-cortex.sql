@@ -15,10 +15,10 @@
 -- PUBLIC gets neither. The re-embed Job writes as the owner, so no runtime role can write the corpus.
 -- Only the MCP seal moves (263 takes in a relation or function an MCP role holds an entry on); neither
 -- object carries an api, ingestor or PUBLIC entry, so 217's two ordinary digests and receipts stay 294's.
--- Its predecessor is exact294 (same PR; 294 chains from 293 and moves no seal). Until the rolled-back
--- native qualification measures it, the successor block and registrations carry 294's stand-in seals,
--- MCP included, which this file's grants move, so that block refuses them;
--- tests/fixtures/296-knowledge-embeddings-native-qualification.json records which they are.
+-- Its predecessor is exact294 (same PR; 294 chains from 293 and moves no seal). The rolled-back
+-- native qualification measured it (production at 291, 293 and 294 applied first in each rolled-back
+-- session), and the successor block carries the measured MCP seal;
+-- tests/fixtures/296-knowledge-embeddings-native-qualification.json records it.
 SET LOCAL search_path=pg_catalog,public,pg_temp;
 LOCK TABLE public.schema_migrations,public.runtime_ordinary_login_attestation_receipts,
     public.mcp_runtime_boundary_receipt IN SHARE ROW EXCLUSIVE MODE;
@@ -27,17 +27,17 @@ BEGIN
     IF current_user <> 'verdify'
         OR NOT EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations'
             AND seq=294 AND filename='db/migrations/294-cortex-planner-shadow-storage.sql'
-            AND sha256='c0400e8b273ebe086f729a205c20be76430bd62b34ac528d4be152a01de2554a'
+            AND sha256='99e1feb22a465bafb7adf5852fec5def47357a5b9cd6bd15314c93c02697bb5d'
             AND stamp_method='runner')
         OR EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq>294)
         OR (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts)<>2
         OR (SELECT count(*) FROM public.mcp_runtime_boundary_receipt)<>1
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76'
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806'
-        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e'
-        OR NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts WHERE login_name='verdify_api_runtime_login' AND boundary_sha256=decode('b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76','hex'))
-        OR NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts WHERE login_name='verdify_ingestor_runtime_login' AND boundary_sha256=decode('2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806','hex'))
-        OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton AND boundary_sha256=decode('6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e','hex'))
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e'
+        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '2f5f7ccadf8006a351353c4fce8aec9a59f634b605adf2bcda5e6e61dbe254b9'
+        OR NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts WHERE login_name='verdify_api_runtime_login' AND boundary_sha256=decode('f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547','hex'))
+        OR NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts WHERE login_name='verdify_ingestor_runtime_login' AND boundary_sha256=decode('533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e','hex'))
+        OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton AND boundary_sha256=decode('2f5f7ccadf8006a351353c4fce8aec9a59f634b605adf2bcda5e6e61dbe254b9','hex'))
         OR NOT EXISTS(SELECT 1 FROM pg_extension WHERE extname='vector'
             AND string_to_array(extversion,'.')::int[] >= ARRAY[0,7])
         OR to_regclass('public.knowledge_embeddings') IS NOT NULL
@@ -95,12 +95,12 @@ GRANT EXECUTE ON FUNCTION public.fn_search_knowledge_embeddings(halfvec, integer
 -- digests and receipts must still equal 294's.
 DO $successor$
 BEGIN
-    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76'
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806'
-        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e'
+    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e'
+        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '984604e2c5e99ec801a752792373b53b1e817e5667b10ae35798da5c88eb0ef9'
         OR EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r
             WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))
     THEN RAISE EXCEPTION '296 refuses an unqualified successor'; END IF;
-    UPDATE public.mcp_runtime_boundary_receipt SET boundary_sha256=decode('6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e','hex') WHERE singleton;
+    UPDATE public.mcp_runtime_boundary_receipt SET boundary_sha256=decode('984604e2c5e99ec801a752792373b53b1e817e5667b10ae35798da5c88eb0ef9','hex') WHERE singleton;
     IF NOT FOUND THEN RAISE EXCEPTION '296 missing mcp receipt'; END IF;
 END $successor$;

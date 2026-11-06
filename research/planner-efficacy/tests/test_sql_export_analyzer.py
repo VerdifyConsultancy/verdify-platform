@@ -2,12 +2,16 @@
 
 import hashlib
 import json
+import sys
 from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
-from switchback.v2_analysis import (
+
+sys.path.insert(0, str(Path(__file__).parents[1]))
+
+from switchback.v2_analysis import (  # noqa: E402
     SQL_EVIDENCE_BUNDLE_DOMAIN,
     SQL_EXPORT_DOMAIN,
     analyze_revealed_sql_export,

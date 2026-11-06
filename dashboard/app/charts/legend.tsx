@@ -26,12 +26,12 @@ export function Legend({ items, onToggle }: { items: readonly LegendItem[]; onTo
  * planned outline and the cap): the same swatch-and-words items as the legend, without toggles, so colour, hatch and
  * line style always carry words.
  */
-export type KeyItem = { key: string; label: string; token: string; kind: "fill" | "line" | "outline" | "hatch" | "dashed" | "dotted" | "band"; title?: string };
+export type KeyItem = { key: string; label: string; token: string; kind: "fill" | "line" | "outline" | "hatch" | "dashed" | "dotted" | "band"; title?: string; /** What a hovered event touched (#1355). */ lit?: boolean };
 
 export function ChartKey({ items, className, label = "Key" }: { items: readonly KeyItem[]; className?: string; label?: string }) {
   if (!items.length) return null;
   return <ul className={className ? `chart-key ${className}` : "chart-key"} aria-label={label}>
-    {items.map((item) => <li key={item.key} title={item.title}>
+    {items.map((item) => <li key={item.key} title={item.title} data-lit={item.lit ? "" : undefined}>
       <span className="chart-key-swatch" data-token={item.token.replace(/^--/, "")} data-kind={item.kind} aria-hidden="true" />{item.label}
     </li>)}
   </ul>;

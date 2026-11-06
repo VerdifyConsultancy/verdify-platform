@@ -1356,9 +1356,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     continue
                 changes.append((param, val))
 
-        # Per-zone VPD targets (from crop data per zone). Still pushed in both
-        # band-source modes: firmware v2 recomputes its zone bands from the
-        # anchor curves, so these become informational under anchors mode.
+        # Per-zone VPD targets (from crop data per zone). Pushed in both
+        # band-source modes. Firmware v2 draws its zone bands from the anchor
+        # curves, but controls.yaml still reads these for the mister gate, zone
+        # stress scores, the fairness pick and S2 pulse lengthening.
         if zone_row:
             for param in ("vpd_target_south", "vpd_target_west", "vpd_target_east", "vpd_target_center"):
                 val = round(float(zone_row[param]), 2)

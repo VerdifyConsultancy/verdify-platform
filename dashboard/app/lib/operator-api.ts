@@ -59,8 +59,14 @@ export type Alert = Lenient<Schemas["Alert"]>;
 export type ActivityPage = Lenient<Schemas["ActivityPage"]>;
 export type ActivityEntry = Lenient<Schemas["ActivityEntry"]>;
 export type BandPreview = Lenient<Schemas["BandPreview"]>;
+export type BandProfile = Lenient<Schemas["BandProfile"]>;
+export type BandProfilePreview = Lenient<Schemas["BandProfilePreview"]>;
+export type BandWrite = Lenient<Schemas["BandWrite"]>;
 export type LightCommand = Lenient<Schemas["LightCommand"]>;
 export type WaterUse = Lenient<Schemas["WaterUse"]>;
+export type LightingDays = Lenient<Schemas["LightingDays"]>;
+export type LightingCircuit = Lenient<Schemas["LightingDays"]["circuits"][number]>;
+export type LightingDay = Lenient<Schemas["LightingDays"]["circuits"][number]["days"][number]>;
 export type IrrigationStatus = Lenient<Schemas["IrrigationStatus"]>;
 export type IrrigationLine = Lenient<Schemas["IrrigationLine"]>;
 export type LineState = Lenient<Schemas["LineState"]>;
@@ -201,6 +207,29 @@ const bandColumns = z.object({ temp_low: nullableNumbers, temp_high: nullableNum
 const bandTimeline = z.object({ from: text, to: text, step_s: int, t: z.array(int), band: bandColumns, crop: bandColumns });
 const bandCurve = z.object({ low: nullableNumbers, target: nullableNumbers, high: nullableNumbers });
 const bandPreview = z.object({ param: text, unit: text, day: text, step_s: int, t: z.array(int), current: bandCurve, draft: bandCurve });
+const bandProfile = z.object({
+  temp_day: num, temp_night: num, temp_width_day: num, temp_width_night: num, vpd_day: num, vpd_night: num,
+  vpd_below_day: num, vpd_above_day: num, vpd_below_night: num, vpd_above_night: num,
+});
+const bandWrite = z.object({ changed: z.array(desiredSetting) });
+const bandProfileState = z.object({ profile: bandProfile, anchors: z.record(z.string(), num), simple: flag });
+const bandProfilePreview = z.object({
+  day: text, step_s: int, t: z.array(int),
+  sun: z.object({ sunrise: maybe(int), solar_noon: maybe(int), sunset: maybe(int), solar_midnight: maybe(int) }),
+  current: bandProfileState, draft: bandProfileState, changed: z.array(text),
+  temp: z.object({ current: bandCurve, draft: bandCurve }),
+  vpd: z.object({ current: bandCurve, draft: bandCurve, device: bandCurve, expected_low: nullableNumbers, expected_high: nullableNumbers }),
+  night_vpd_bias_kpa: maybe(num),
+  guardrails: z.object({ temp_min_f: num, temp_max_f: num, margin_f: num, vpd_min_kpa: num, vpd_max_kpa: num, night_vpd_floor_kpa: num }),
+  overshoot: z.record(z.string(), num),
+  night_heat_kwh: z.object({ current: maybe(num), draft: maybe(num) }),
+  envelope: maybe(z.object({ hours: int, days: int, rmse_f: num, dewpoint_p10_f: num })),
+  findings: z.array(z.object({ code, severity: z.enum(["error", "warning"]).catch("warning"), field: text, detail: text })),
+  // The overlays: an API from before them draws none, rather than failing the page.
+  measured: z.object({ window_start: int, window_end: int, at: z.array(maybe(int)), temp: nullableNumbers, vpd: nullableNumbers })
+    .catch({ window_start: 0, window_end: 0, at: [], temp: [], vpd: [] }),
+  forecast: z.object({ temp: nullableNumbers, vpd: nullableNumbers, issued_at: maybe(text) }).catch({ temp: [], vpd: [], issued_at: null }),
+});
 
 const planRecord = z.object({
   plan_id: text, trigger: text, written_at: text, valid_from: maybe(text), valid_until: maybe(text), status: maybe(text), hypothesis: maybe(text),
@@ -217,9 +246,14 @@ const planLane = z.object({
 const plan = z.object({
   plan: planRecord.nullable(), no_plan_since: maybe(text), lanes: z.array(planLane), manual_count: int, health: z.array(plannerTrigger),
 });
+/** A setting's operator text (#1332); a server older than it sends none. */
+const settingHelp = z.object({
+  summary: text, effect: text, raise: maybe(text), lower: maybe(text), caution: maybe(text), guardrail: flag.optional(), reference_url: maybe(text),
+});
 const setting = z.object({
   param: text, label: text, control_class: code, group: code, kind: code, unit: maybe(text), min: maybe(num), max: maybe(num), step: maybe(num),
-  options: z.array(z.object({ value: num, label: text })).optional(), writable: flag, read_only_reason: maybe(text), readback_via: code,
+  options: z.array(z.object({ value: num, label: text })).optional(), writable: flag, read_only_reason: maybe(text),
+  read_only_kind: maybe(code), source_params: z.array(text).optional(), help: settingHelp.nullable().optional(), readback_via: code,
   readback: reading.nullable(), desired: desiredSetting.nullable(),
   plan: z.object({ value: num.nullable(), plan_id: text, source: code, written_at: text, next: planWaypoint.nullable() }).nullable(),
   applied_from: code, state: code,
@@ -254,6 +288,17 @@ const gallons = z.record(z.string(), int).nullable();
 const waterUse = z.object({
   from: text, to: text,
   days: z.array(z.object({ date: text, coverage: code, meter_gal: int.nullable(), by_line: gallons, by_cause: gallons, by_purpose: gallons.default(null), no_valve_gal: int.nullable() })),
+});
+
+const lightingDays = z.object({
+  from: text, to: text,
+  circuits: z.array(z.object({
+    light: code, equipment: text, label: text,
+    days: z.array(z.object({
+      date: text, partial: z.boolean(), on_s: int, starts: int, start_hour: int.nullable(), cutoff_hour: int.nullable(), lux_on: num.nullable(), lux_off: num.nullable(),
+      target_min: int.nullable(), window_min: int.nullable(), qualified_min: int.nullable(),
+    })),
+  })),
 });
 
 const lineState = z.object({
@@ -382,8 +427,11 @@ export const parseAlertPage: Parser<AlertPage> = parser(alertPage);
 export const parseAlert: Parser<Alert> = parser(alert);
 export const parseActivityPage: Parser<ActivityPage> = parser(activityPage);
 export const parseBandPreview: Parser<BandPreview> = parser(bandPreview);
+export const parseBandProfilePreview: Parser<BandProfilePreview> = parser(bandProfilePreview);
+export const parseBandWrite: Parser<BandWrite> = parser(bandWrite);
 export const parseLightCommand: Parser<LightCommand> = parser(lightCommand);
 export const parseWaterUse: Parser<WaterUse> = parser(waterUse);
+export const parseLightingDays: Parser<LightingDays> = parser(lightingDays);
 export const parseIrrigationStatus: Parser<IrrigationStatus> = parser(irrigationStatus);
 export const parseScheduleAgenda: Parser<ScheduleAgenda> = parser(scheduleAgenda);
 export const parseSchedule: Parser<Schedule> = parser(schedule);
@@ -429,6 +477,9 @@ export const OPERATIONS = {
   "API-19": op("GET", "/v1/band/preview", parseBandPreview),
   "API-20": op("POST", "/v1/equipment/lights/{light}/{state}", parseLightCommand),
   "API-21": op("GET", "/v1/water/daily", parseWaterUse),
+  "API-22": op("GET", "/v1/lighting", parseLightingDays),
+  "API-23": op("GET", "/v1/band/profile", parseBandProfilePreview),
+  "API-24": op("PUT", "/v1/band/profile", parseBandWrite),
   "API-IRR-01": op("GET", "/v1/irrigation", parseIrrigationStatus),
   "API-IRR-02": op("GET", "/v1/irrigation/schedules", parseScheduleAgenda),
   "API-IRR-03": op("POST", "/v1/irrigation/schedules", parseSchedule),

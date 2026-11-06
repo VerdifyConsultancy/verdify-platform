@@ -4,8 +4,8 @@
 text-embedding-3-large (vector 3072) to Cortex embed.main (halfvec 2560, HNSW). 296 adds knowledge_embeddings and
 fn_search_knowledge_embeddings beside the old table and grants the MCP duty SELECT and EXECUTE. Those entries move the
 MCP seal only; the api and ingestor seals stay 294's. 296 chains from 294 in the same PR (293 -> 294 -> 296).
-Until the rolled-back production qualification measures it, the successor literals are 294's stand-in seals (the
-fixture's projection says why); test_native_qualification_is_recorded is the merge gate for that run.
+The rolled-back production qualification (at 291, with 293 and 294 applied first in each session) measured the MCP
+seal; test_native_qualification_is_recorded is the merge gate for that run.
 """
 
 import hashlib
@@ -283,8 +283,8 @@ def assert_recorded(evidence):
     assert evidence["migration"] == c0.SUCCESSOR_296
     assert evidence["exact_final_migration_sha256"] == c0.SUCCESSOR_296_SHA256
     assert evidence["qualified_successor"] == six.SUCCESSOR_296 == registered(296)
-    assert not set(evidence) & set(qualifier.OPTION_EVIDENCE)
-    assert evidence["before"] == evidence["after_rollback"] == registered(PREDECESSOR)
+    assert measured_against(evidence) == registered(PREDECESSOR)
+    assert evidence["before"] == evidence["after_rollback"]
     assert evidence["final_migration_rollback_verified"] is True
     assert evidence["inside_transaction_receipts_match"] is True
 
@@ -336,7 +336,23 @@ def test_the_projection_is_the_files_literals():
     assert evidence["migration"] == c0.SUCCESSOR_296
     assert evidence["exact_final_migration_sha256"] == c0.SUCCESSOR_296_SHA256
     assert evidence["projected_successor"] == six.SUCCESSOR_296 == qualifier.successor_literals(SQL)
-    assert evidence["before"] == registered(PREDECESSOR)
+    assert measured_against(evidence) == registered(PREDECESSOR)
+
+
+def measured_against(evidence):
+    """The seals 296 ran on: 294's after 293 and 294 were applied in-session, or the live ones if they were live."""
+    assert {key for key in evidence if key in qualifier.OPTION_EVIDENCE} <= {
+        "applied_first",
+        "applied_first_seals",
+        "prelock",
+    }
+    if "applied_first" in evidence:
+        assert evidence["applied_first"] == [
+            {"migration": c0.SUCCESSOR_293, "seq": 293, "sha256": c0.SUCCESSOR_293_SHA256},
+            {"migration": c0.SUCCESSOR_294, "seq": 294, "sha256": c0.SUCCESSOR_294_SHA256},
+        ]
+        return evidence["applied_first_seals"]
+    return evidence["before"]
 
 
 def test_native_qualification_is_recorded():

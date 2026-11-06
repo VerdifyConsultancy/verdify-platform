@@ -3,10 +3,9 @@
 #1350/#1366 (Jason, 2026-11-05): the Cortex planner's packs and attempts, a retained weather_forecast
 archive with its daily job, the planner duty's views and owner-run functions, and the heater roles. Nothing
 294 adds carries an api, ingestor, MCP or PUBLIC privilege, so all three seals keep exact293's values and no
-receipt is re-sealed (the 288 pattern). 294 chains from 293 (292 is a gap) and ships with 296 in one PR; until
-the rolled-back native qualification measures them, the seals are 293's stand-ins. It is natively qualified
-before it merges. test_native_qualification_is_recorded is that merge gate: it is a
-strict xfail while the fixture says the qualification is pending, and a hard gate once it is recorded.
+receipt is re-sealed (the 288 pattern). 294 chains from 293 (292 is a gap) and ships with 296 in one PR; the
+seals are 293's measured values (#1387). It was natively qualified on production at 291 with 293 applied first in
+each rolled-back session; test_native_qualification_is_recorded is the merge gate.
 """
 
 import hashlib
@@ -239,19 +238,29 @@ def test_the_projection_is_the_files_literals():
     assert EVIDENCE["migration"] == c0.SUCCESSOR_294
     assert EVIDENCE["exact_final_migration_sha256"] == c0.SUCCESSOR_294_SHA256
     assert EVIDENCE["projected_successor"] == six.SUCCESSOR_294 == qualifier.successor_literals(SQL)
-    assert EVIDENCE["before"] == registered(PREDECESSOR) == EVIDENCE["projected_successor"]
+    assert measured_against(EVIDENCE) == registered(PREDECESSOR) == EVIDENCE["projected_successor"]
 
 
-@pytest.mark.xfail(
-    EVIDENCE.get("final_migration_qualification_pending", True),
-    reason="DO NOT MERGE: 294 must be natively qualified on production (after 293) first",
-    strict=True,
-)
+def measured_against(evidence):
+    """The seals 294 ran on: 293's after it was applied in-session, or the live ones if 293 was already live."""
+    assert {key for key in evidence if key in qualifier.OPTION_EVIDENCE} <= {
+        "applied_first",
+        "applied_first_seals",
+        "prelock",
+    }
+    if "applied_first" in evidence:
+        assert evidence["applied_first"] == [
+            {"migration": c0.SUCCESSOR_293, "seq": 293, "sha256": c0.SUCCESSOR_293_SHA256}
+        ]
+        return evidence["applied_first_seals"]
+    return evidence["before"]
+
+
 def test_native_qualification_is_recorded():
     """Merge gate: the rolled-back production qualification of exact294 with every seal unchanged."""
     assert EVIDENCE["final_migration_qualification_pending"] is False, "294 native qualification pending"
     assert EVIDENCE["qualified_successor"] == six.SUCCESSOR_294 == registered(294)
-    assert not set(EVIDENCE) & set(qualifier.OPTION_EVIDENCE)
-    assert EVIDENCE["before"] == EVIDENCE["after_rollback"] == registered(PREDECESSOR)
+    assert measured_against(EVIDENCE) == registered(PREDECESSOR)
+    assert EVIDENCE["before"] == EVIDENCE["after_rollback"]
     assert EVIDENCE["final_migration_rollback_verified"] is True
     assert EVIDENCE["inside_transaction_receipts_match"] is True

@@ -361,10 +361,10 @@ test("every equipment label the fixture serves is the API's: EQUIPMENT_LABELS in
   const source = readFileSync(new URL("../../../verdify_services/labels.py", import.meta.url), "utf8");
   const block = /EQUIPMENT_LABELS[^{]*\{([^}]*)\}/.exec(source)![1];
   const labels = Object.fromEntries([...block.matchAll(/"([a-z0-9_]+)":\s*"([^"]+)"/g)].map((match) => [match[1], match[2]]));
-  expect(Object.keys(labels)).toHaveLength(21);
+  expect(Object.keys(labels)).toHaveLength(23);
   const set = fixture("in-band", { now: NOW });
   const served = [...set["API-13"].items, ...set["API-05"].lanes].map((item: Body) => [item.equipment, item.label]);
-  expect(served.length).toBe(18 + 21);
+  expect(served.length).toBe(18 + 23);
   for (const [equipment, label] of served) expect(label, String(equipment)).toBe(labels[String(equipment)]);
 });
 

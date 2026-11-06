@@ -161,3 +161,18 @@ a.picker-item:hover{background:var(--field)}
   .gr-days-axis-row .gr-days-label{display:none}
   .gr-kpis .metric-tile{min-height:9rem}
 }
+
+/* Graphs → Lighting (#1357): light minutes by day, each cell a bar whose track is the day's target. */
+.gr-light-card{margin:.75rem 0;padding:var(--space-3) var(--space-4)}
+.gr-light-table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+.gr-light-table caption{text-align:left;margin-bottom:var(--space-2)}
+.gr-light-table th,.gr-light-table td{padding:var(--space-1) var(--space-2);text-align:left;vertical-align:top}
+.gr-light-table tbody th{font-weight:600;white-space:nowrap}
+.gr-light-table td{min-width:8.5rem}
+.gr-light-bar{display:block;height:8px;margin:2px 0 4px;border:1px dashed var(--line-strong);border-radius:2px;overflow:hidden}
+.gr-light-fill{display:block;height:100%;width:var(--share,0%);background:var(--eq-light-grow)}
+.gr-light-table tr[data-light=main] .gr-light-fill{background:var(--eq-light-main)}
+.gr-light-fill[data-met=true]{outline:1px solid var(--ink)}
+.gr-light-words{display:block;font-variant-numeric:tabular-nums}
+.gr-light-facts{display:block}
+.gr-light-table td[data-partial=true] .gr-light-words::after{content:" so far"}

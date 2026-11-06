@@ -11,7 +11,7 @@
  */
 import { useQueryClient, type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { useServerSkew } from "../components/freshness";
-import { apiGet, type BandTimeline, type IrrigationStatus, type ParamsOf, type Parsed, type ReadOperationId, type ScheduleAgenda, type Series, type Settings, type StateLanes } from "./operator-api";
+import { apiGet, type BandTimeline, type IrrigationStatus, type ParamsOf, type Parsed, type ReadOperationId, type ActivityPage, type ScheduleAgenda, type Series, type Settings, type StateLanes } from "./operator-api";
 import { POLL_TIMEOUT_MS, usePolledQuery, type PolledQueryResult } from "./use-current";
 
 /** The one key for a read: `["api", operationId]`, plus the params when there are any. */
@@ -132,6 +132,19 @@ export function useStatesWindowRead(seconds: number) {
   return usePolledQuery<StateLanes>(statesWindowKey(seconds), (signal) => {
     const to = Date.now() - skewMs;
     return apiGet("API-05", { from: new Date(to - seconds * 1000).toISOString(), to: new Date(to).toISOString() }, { signal });
+  }, READ_INTERVAL_MS.states);
+}
+
+/**
+ * API-17's light switches (`light.*`) for the API-05 window of the last `seconds`, from `leadSeconds` before it (60 s),
+ * the same way: the equipment lanes read a light's spans as manual or automatic from them (#1407). One page is plenty:
+ * a light switches a few times a day.
+ */
+export function useLightSwitchesWindowRead(seconds: number, leadSeconds: number) {
+  const skewMs = useServerSkew();
+  return usePolledQuery<ActivityPage>(["api", "API-17", { last_s: seconds, lead_s: leadSeconds, action: "light." }], (signal) => {
+    const to = Date.now() - skewMs;
+    return apiGet("API-17", { action: "light.", from: new Date(to - (seconds + leadSeconds) * 1000).toISOString(), to: new Date(to).toISOString(), limit: 200 }, { signal });
   }, READ_INTERVAL_MS.states);
 }
 

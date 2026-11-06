@@ -738,12 +738,16 @@ def sealed_sql_291():
 CROP_PLANTINGS_MIGRATION = (
     293,
     "293-crop-plantings.sql",
-    "7bdf03cddae08f1680a1e3586a49923bb1be211c0ba11e3347437f332a3ea164",
+    "fe591976baeb81eb7676b6ff3198a9f370ba6bb7db8f69218c1d5f47ddbd48b7",
 )
 # 293's layout columns, crop_occupancy and grants move all three seals. It chains from 291 (292 is a gap).
-# Until the rolled-back native qualification measures 293, these are 291's seals as stand-ins
+# The rolled-back native qualification on production at 291 measured them
 # (tests/fixtures/293-crop-plantings-native-qualification.json).
-SUCCESSOR_293 = dict(SUCCESSOR_291)
+SUCCESSOR_293 = {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "2f5f7ccadf8006a351353c4fce8aec9a59f634b605adf2bcda5e6e61dbe254b9",
+}
 
 
 def sealed_sql_293():
@@ -763,7 +767,7 @@ def sealed_sql_293():
 CORTEX_PLANNER_MIGRATION = (
     294,
     "294-cortex-planner-shadow-storage.sql",
-    "c0400e8b273ebe086f729a205c20be76430bd62b34ac528d4be152a01de2554a",
+    "99e1feb22a465bafb7adf5852fec5def47357a5b9cd6bd15314c93c02697bb5d",
 )
 # #1350: seal-preserving. No object 294 adds carries an api, ingestor, MCP or PUBLIC privilege, so every
 # seal keeps 293's value. Chained from 293; 294 and 296 ship in one PR, in that order.
@@ -787,14 +791,14 @@ def sealed_sql_294():
 KNOWLEDGE_EMBEDDINGS_MIGRATION = (
     296,
     "296-knowledge-embeddings-cortex.sql",
-    "543f7662c5a09b624e273e68ab11133f86e99249a2bc47f948a177402dd3f80c",
+    "aec163e31534e28d7ffd2e5b4bc0402819c8096c70d1d5ab28a804dec795d40d",
 )
 # #1351: knowledge_embeddings (halfvec 2560, Cortex embed.main) and its search function, SELECT and
 # EXECUTE for the MCP duty only. The MCP digest takes in both entries, so the MCP seal moves; neither
 # object carries an api, ingestor or PUBLIC entry, so both ordinary seals stay 294's. Chained from 294.
-# Until the rolled-back native qualification measures 296, these are 294's seals as stand-ins
+# The rolled-back native qualification measured the MCP seal
 # (tests/fixtures/296-knowledge-embeddings-native-qualification.json).
-SUCCESSOR_296 = dict(SUCCESSOR_294)
+SUCCESSOR_296 = {**SUCCESSOR_294, "mcp": "984604e2c5e99ec801a752792373b53b1e817e5667b10ae35798da5c88eb0ef9"}
 
 
 def sealed_sql_296():

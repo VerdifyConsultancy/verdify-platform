@@ -136,7 +136,7 @@ are no longer the only boundaries. Every tool call resolves its bearer token to
 an **audience** (constant-time comparison) and is checked against the
 server-side `TOOL_AUDIENCES` inventory in `mcp/server.py`:
 
-- `iris` — exactly the 34 tools in the hermes-config `tools.include` list
+- `iris` — exactly the 33 tools in the hermes-config `tools.include` list
   (drift-guarded by `tests/test_mcp_audience_auth.py`); current behavior.
 - `experiment` — the blinded experiment planner arm: qualified
   climate/forecast/crop/topology reads + `acknowledge_trigger` only;

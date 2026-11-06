@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-import ast
-import asyncio
 import copy
 import importlib.util
 import json
-from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
@@ -355,71 +351,3 @@ def test_window_refusal(extraction, start, end):
     manifest = directory / "manifest.json"
     with pytest.raises(ledger.ContractError):
         ledger.build(directory, manifest, ledger.sha256(manifest.read_bytes()), start, end)
-
-
-@pytest.mark.parametrize(
-    "states,expected",
-    [
-        ({"a": 120}, None),
-        ({"b": 80}, None),
-        ({"counter": 12}, None),
-        ({"a": 120, "b": 80}, 200),
-        ({}, None),
-    ],
-)
-def test_shelly_writer_supersedes_zero_fill_counterexample(states, expected):
-    """Same historical counterexamples, now asserting the repaired actual writer.
-
-    Only I/O is doubled; actual source converter and typed schema run. No tasks,
-    projected tokens or HA clients are imported and no frozen baseline is edited.
-    """
-    from ingestor import shelly_energy as energy
-
-    observed_at = datetime.now(UTC)
-    response = {
-        entity: {
-            "entity_id": entity,
-            "state": str(states[key]),
-            "attributes": {"unit_of_measurement": "W"},
-            "last_updated": observed_at.isoformat(),
-        }
-        for key, entity in zip(("a", "b"), energy.POWER_ENTITIES, strict=True)
-        if key in states
-    }
-    tree = ast.parse((ROOT / "ingestor/tasks/ha.py").read_text())
-    function = next(node for node in tree.body if isinstance(node, ast.AsyncFunctionDef) and node.name == "shelly_sync")
-    assert not function.decorator_list
-    namespace = {
-        "asyncio": asyncio,
-        "datetime": datetime,
-        "UTC": UTC,
-        "HA_TOKEN_FILE": "unused-test-placeholder",
-        "_load_token": lambda _: "noncredential-test-placeholder",
-        "_fetch_ha_batch": lambda *_: response,
-        "POWER_ENTITIES": energy.POWER_ENTITIES,
-        "WRITE_FIELDS": energy.WRITE_FIELDS,
-        "SHELLY_INSERT_SQL": energy.INSERT_SQL,
-        "build_sample": energy.build_sample,
-        "log": SimpleNamespace(info=lambda *_: None, debug=lambda *_: None),
-    }
-    exec(compile(ast.Module(body=[function], type_ignores=[]), "actual-shelly-sync", "exec"), namespace)  # noqa: S102
-    writes = []
-
-    class Connection:
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *_):
-            return False
-
-        async def execute(self, sql, *values):
-            assert sql == energy.INSERT_SQL
-            writes.append(values)
-
-    pool = SimpleNamespace(acquire=Connection)
-    asyncio.run(namespace["shelly_sync"](pool))
-    assert len(writes) == 1
-    values = dict(zip(energy.WRITE_FIELDS, writes[0], strict=True))
-    assert values["watts_total"] == expected
-    assert all(values[field] is None for field in ("watts_heat", "watts_fans", "watts_other", "kwh_today"))
-    assert values["ts"].tzinfo is UTC

@@ -2240,6 +2240,64 @@ TEST(s9_validate_enforces_safety_gt_thigh_plus_dc2) {
     PASS();
 }
 
+// Jason 2026-11-05 (#1333): 40/100 °F are the hard guardrails. Defaults and
+// invalid-value fallbacks use them, and the band is clamped inside them — a band
+// edge never moves a rail.
+TEST(guardrails_default_and_fallback_to_40_100) {
+    Setpoints sp = default_setpoints();
+    ASSERT_TRUE(std::fabs((sp.safety_min) - (40.0f)) < 1e-4f);
+    ASSERT_TRUE(std::fabs((sp.safety_max) - (100.0f)) < 1e-4f);
+    validate_setpoints(sp);
+    ASSERT_TRUE(std::fabs((sp.safety_min) - (40.0f)) < 1e-4f);   // default band (45..95) leaves rails alone
+    ASSERT_TRUE(std::fabs((sp.safety_max) - (100.0f)) < 1e-4f);
+    ASSERT_TRUE(std::fabs((sp.temp_low) - (45.0f)) < 1e-4f);
+    ASSERT_TRUE(std::fabs((sp.temp_high) - (95.0f)) < 1e-4f);
+
+    const float bad_min[] = {NAN, 10.0f, 75.0f};
+    for (float v : bad_min) {
+        Setpoints b = default_setpoints();
+        b.safety_min = v;
+        validate_setpoints(b);
+        ASSERT_TRUE(std::fabs((b.safety_min) - (40.0f)) < 1e-4f);
+        ASSERT_TRUE(std::fabs((b.safety_max) - (100.0f)) < 1e-4f);
+    }
+    const float bad_max[] = {NAN, 60.0f, 130.0f};
+    for (float v : bad_max) {
+        Setpoints b = default_setpoints();
+        b.safety_max = v;
+        validate_setpoints(b);
+        ASSERT_TRUE(std::fabs((b.safety_min) - (40.0f)) < 1e-4f);
+        ASSERT_TRUE(std::fabs((b.safety_max) - (100.0f)) < 1e-4f);
+    }
+    Setpoints inv = default_setpoints();   // inverted / too narrow for a band
+    inv.safety_min = 70.0f; inv.safety_max = 75.0f;
+    validate_setpoints(inv);
+    ASSERT_TRUE(std::fabs((inv.safety_min) - (40.0f)) < 1e-4f);
+    ASSERT_TRUE(std::fabs((inv.safety_max) - (100.0f)) < 1e-4f);
+    PASS();
+}
+
+TEST(guardrails_band_stays_inside_rails) {
+    Setpoints sp = default_setpoints();
+    sp.temp_low = 38.0f;     // below the 40 °F rail
+    sp.temp_high = 99.0f;    // within 5 °F of the 100 °F rail
+    validate_setpoints(sp);
+    ASSERT_TRUE(std::fabs((sp.safety_min) - (40.0f)) < 1e-4f);   // rails did not move
+    ASSERT_TRUE(std::fabs((sp.safety_max) - (100.0f)) < 1e-4f);
+    ASSERT_TRUE(std::fabs((sp.temp_low) - (45.0f)) < 1e-4f);
+    ASSERT_TRUE(std::fabs((sp.temp_high) - (95.0f)) < 1e-4f);
+    ASSERT_TRUE(sp.temp_high + sp.dC2 < sp.safety_max);
+    ASSERT_TRUE(sp.temp_target >= sp.temp_low && sp.temp_target <= sp.temp_high);
+
+    Setpoints narrow = default_setpoints();   // a narrow band at the cold rail keeps its order
+    narrow.temp_low = 41.0f; narrow.temp_high = 47.0f;
+    validate_setpoints(narrow);
+    ASSERT_TRUE(narrow.temp_low >= narrow.safety_min + 5.0f - 1e-6f);
+    ASSERT_TRUE(narrow.temp_low < narrow.temp_high);
+    ASSERT_TRUE(narrow.temp_high <= narrow.safety_max - 5.0f + 1e-6f);
+    PASS();
+}
+
 // (Firmware-v2: the fog clock window — and its zero-width validate clamp — is
 // DELETED. Fog gating is now solar-phase based; see
 // fog_gated_by_solar_phase_not_clock_window. The former

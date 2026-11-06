@@ -54,7 +54,7 @@ test("a line that is not a mister zone has no reserve, and sends none; Manual un
   const api = open("/water?options=L01");
   expect(drawer().queryByLabelText("VPD reserve")).toBeNull();
   type("Daily cap", "90");
-  fireEvent.click(drawer().getByRole("checkbox", { name: "Manual: Iris skips this" }));
+  fireEvent.click(drawer().getByRole("checkbox", { name: "Let Iris change this" }));
   type("Reason (optional)", "Hot week");
   save();
   await advance(0);

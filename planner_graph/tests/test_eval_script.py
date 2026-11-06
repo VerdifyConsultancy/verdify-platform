@@ -50,7 +50,7 @@ def test_expectation_failures_supports_richer_expectations() -> None:
 
 def test_eval_script_runs_all_fixtures_and_writes_summary(tmp_path: Path) -> None:
     output_path = tmp_path / "eval-summary.json"
-    fixture_paths = sorted(str(path) for path in Path("fixtures/evals").glob("*.json"))
+    fixture_paths = sorted(str(path) for path in (REPO_ROOT / "fixtures/evals").glob("*.json"))
     result = subprocess.run(
         [
             sys.executable,

@@ -1,31 +1,32 @@
 // SPDX-License-Identifier: MIT
 // SCR-04 Water → Schedules (redesign §6) at 1440 and 390 px against the fixture API, at the screens' 10:42 on Monday
-// 2026-11-02: the week strip, the day timeline by manifold with its blocks, valve ticks, pause band and caps, the block
+// 2026-11-02: the week strip, the day timeline by physical line with its blocks, valve ticks, pause band and caps, the block
 // popover, a new schedule from an empty slot with the editor's checks before Save, the week matrix (which keeps
 // `.week-table` with `tr[data-line] td[data-day]`), the agenda on phones and the 390 px day view with one day visible.
 import type { Page } from "@playwright/test";
 import { DESKTOP, PHONE, axe, expect, expectNoHorizontalScroll, load, test, useScreensClock } from "./support";
 
 const timeline = (page: Page) => page.locator(".sch-day");
-const timelineRow = (page: Page, line: string) => timeline(page).locator(`.sch-row[data-line="${line}"]`);
+const timelineRow = (page: Page, line: string) => timeline(page).locator(`.sch-row[data-lines~="${line}"]`);
 const popover = (page: Page) => page.locator("dialog.popover[open]");
 const drawer = (page: Page) => page.locator("dialog.drawer[open]");
 
-test("1440 px: today's timeline groups rows by manifold with night, the now rule, runs as blocks, the valve's ticks, a pause band and each row's cap", async ({ page, request }) => {
+test("1440 px: today's timeline has one lane per physical line by kind, with night, the now rule, runs as blocks, the valve's ticks, a pause band and each row's cap", async ({ page, request }) => {
   await page.setViewportSize(DESKTOP);
   await useScreensClock(page, request, "schedules-day");
   await load(page, "/water/schedules");
   await expect(timeline(page)).toBeVisible();
   await expect(page.locator(".sch-agenda")).toBeHidden();
   await expect(timeline(page).locator("h2")).toHaveText("Monday, Nov 2 · today");
-  await expect(timeline(page).locator(".sch-group-label")).toHaveText(["Drip manifold", "Mister manifold"], { useInnerText: false });
-  const lines = await timeline(page).locator(".sch-row").evaluateAll((rows) => rows.map((node) => node.getAttribute("data-line")));
-  expect(lines).toEqual(["L01", "L02", "L05", "L06", "L04", "L07", "L08", "L09", "L10"]);
+  await expect(timeline(page).locator(".sch-group-label")).toHaveText(["Drips", "Misters"], { useInnerText: false });
+  const lines = await timeline(page).locator(".sch-row").evaluateAll((rows) => rows.map((node) => node.getAttribute("data-lines")));
+  expect(lines).toEqual(["L01 L02", "L05 L06", "L04", "L07 L08", "L09 L10"]);
+  await expect(timeline(page).locator(".sch-legend")).toBeVisible();
   await expect(timelineRow(page, "L01").locator(".sch-pause")).toContainText("paused until 14:00 · jason");
   await expect(timelineRow(page, "L04").locator(".sch-tick")).not.toHaveCount(0);
   await expect(timelineRow(page, "L04").getByRole("button", { name: /^Center mister · Dawn drench, Mon 06:50/ })).toBeAttached();
   await expect(timelineRow(page, "L04").locator(".sch-cap")).toContainText("14 / 120 min");
-  await expect(timelineRow(page, "L07").locator(".sch-row-note")).toHaveText("Schedule off for this zone");
+  await expect(timelineRow(page, "L07").locator(".sch-row-note")).toHaveText("Schedule off for this mister");
   await expect(timelineRow(page, "L07").locator(".sch-block.sch-skipped")).toHaveCount(1);
   await expect(timelineRow(page, "L01").locator(".sch-now")).toBeVisible();
   // The status line names the next run, read the same way everywhere.
@@ -104,7 +105,7 @@ test("the week strip shows past outcomes and future counts side by side, and mov
   await expect(page).toHaveURL(/\/water\/schedules\?day=2026-10-26$/);
   await expect(strip.getByRole("link", { name: /^Sunday, Nov 1: 1 ran ok/ })).toBeVisible();
   await strip.getByRole("link", { name: /^Sunday, Nov 1/ }).click();
-  await expect(timelineRow(page, "L02").locator(".sch-block.sch-skipped")).toHaveAttribute("aria-label", /skipped, line paused by jason$/);
+  await expect(timelineRow(page, "L02").locator("button.sch-block.sch-skipped")).toHaveAttribute("aria-label", /skipped, line paused by jason$/);
   await expect(page.getByRole("link", { name: "Previous week" })).toHaveCount(0);
 });
 
@@ -151,7 +152,7 @@ test("390 px: view=day fits one day across the width with 6-hour ticks and no si
   await expect(timeline(page)).toBeVisible();
   await expect(timeline(page).locator("h2")).toHaveCount(1);
   await expect(timeline(page).locator(".sch-axis-tick:visible")).toHaveText(["00", "06", "12", "18", "24"]);
-  await expect(timeline(page).locator(".sch-row")).toHaveCount(9);
+  await expect(timeline(page).locator(".sch-row")).toHaveCount(5);
   const [track, view] = await Promise.all([timelineRow(page, "L01").locator(".sch-track").boundingBox(), page.viewportSize()]);
   expect(track!.x + track!.width).toBeLessThanOrEqual(view!.width);
   await expectNoHorizontalScroll(page);

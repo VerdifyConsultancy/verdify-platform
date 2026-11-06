@@ -6,13 +6,12 @@
 # fall back on, so every module imported at load time must be installable here.
 #
 # Import-closure reconstructed from the live process (ingestor.py -> tasks.py ->
-# iris_planner / planner_routing / slack_ops, verified against the live
+# iris_planner / planner_routing, verified against the live
 # /srv/greenhouse/.venv on python3.13):
 #
 #   ingestor.py            : aioesphomeapi, asyncpg, paho.mqtt, dotenv, pydantic, httpx (urllib stdlib)
 #   tasks.py  (top-level)  : astral, jinja2, pyyaml  + iris_planner/planner_routing
 #   iris_planner.py (lazy) : anthropic, openai, google-genai  (called by the planner path)
-#   slack_config.py        : pyyaml
 #
 # paho-mqtt is NOT in pyproject.toml nor ingestor/requirements.txt today — it
 # lives ambiently in the shared venv. Declaring it here is REQUIRED or the
