@@ -27,7 +27,7 @@ info:
 
     | Topic | Rule |
     |---|---|
-    | Ids | `operationId` is the design id: API-01 to API-21, API-IRR-01 to API-IRR-13, BFF-01 to BFF-03, INT-01, INT-02, OPS-01, OPS-02 and OPS-04. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
+    | Ids | `operationId` is the design id: API-01 to API-22, API-IRR-01 to API-IRR-13, BFF-01 to BFF-03, INT-01, INT-02, OPS-01, OPS-02 and OPS-04. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
     | Data | JSON. Times are ISO 8601 with an offset; days are America/Denver. Units are in field names or `unit` (°F, %, kPa, gal, min, s). `null` means unavailable, never 0; gaps stay gaps |
     | Roles | GET: `viewer` and `operator`. Every other method: `operator` (403 `forbidden`) |
     | Writes | Validated on submit (registry min/max, enums, step snap). The newest write wins. On a `manual: true` item the dispatcher ignores Iris's plan values (`set_plan` and `set_tunable` are unchanged) and Iris's `set_setting` and irrigation writes are refused with `manual`; people and other agents may overwrite it, attributed, and each write stores the `manual` it carries. Every write appends one `activity_log` row: source (`dashboard`, `iris`, `agent:<name>` or `system`), actor, time, reason, and the experiment id while one is armed. Nothing is refused because an experiment is armed |
@@ -128,7 +128,9 @@ paths:
       summary: Equipment on/off intervals for the lanes
       description: >-
         From equipment_state, seeded with the state at `from` (fn_equip_at). Wet lines carry their cause from the run
-        ledger. Unknown stays unknown. Windows up to 31 days.
+        ledger. Unknown stays unknown. Windows up to 31 days. The grow lights have two lanes each: the Lutron readback
+        (grow_light_main, grow_light_grow; unknown 600 s after its newest row) and the controller's switch intent
+        (grow_light_main_intent, grow_light_grow_intent; Q-09), which the lanes compare with the readback (#1356).
       parameters:
         - $ref: '#/components/parameters/From'
         - $ref: '#/components/parameters/To'
@@ -426,6 +428,24 @@ paths:
           schema: {type: integer, enum: [30, 90], default: 30}
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/WaterUse'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/lighting:
+    get:
+      operationId: API-22
+      tags: [graphs]
+      summary: 'The grow lights by day: on time, starts, the policy in force and qualified light minutes against target'
+      description: >-
+        Graphs → Lighting (#1357). One entry per America/Denver day the window touches, up to now, for main and grow:
+        on time and starts from the Lutron readback over the whole day; the controller's readback of its ON threshold,
+        hysteresis, start hour, cutoff hour and target light minutes in force at the day's end; and the qualified light
+        minutes, v_lighting_minutes_status_now's rule for every day: each minute from the start hour to the cutoff (or
+        now) counts once when its mean Tempest outdoor lux is at or above the ON threshold or the light was on. No DLI
+        until the PAR meter (#1184). Windows up to 31 days.
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/LightingDays'}}}}
         default: {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- irrigation (irrigation.md §8.1)
@@ -1947,6 +1967,39 @@ components:
               by_cause: {type: [object, 'null'], additionalProperties: {type: integer}, description: Verdify-valve gallons by IrrigationCause}
               by_purpose: {type: [object, 'null'], additionalProperties: {type: integer}, description: 'Verdify-valve gallons by RunPurpose (#1348): irrigation and climate'}
               no_valve_gal: {type: [integer, 'null'], description: 'Meter water while no Verdify valve was open: the hose, sink, hydro or a leak'}
+    LightingDays:
+      type: object
+      description: 'API-22: each grow-light circuit by America/Denver day, oldest first'
+      required: [from, to, circuits]
+      properties:
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        circuits:
+          type: array
+          items:
+            type: object
+            required: [light, equipment, label, days]
+            properties:
+              light: {type: string, enum: [main, grow]}
+              equipment: {type: string, examples: [grow_light_main]}
+              label: {type: string}
+              days:
+                type: array
+                items:
+                  type: object
+                  required: [date, partial, on_s, starts, start_hour, cutoff_hour, lux_on, lux_off, target_min, window_min, qualified_min]
+                  properties:
+                    date: {type: string, format: date}
+                    partial: {type: boolean, description: 'Today: counted up to now'}
+                    on_s: {type: integer, description: 'Seconds the Lutron readback was on in the day'}
+                    starts: {type: integer, description: 'OFF to ON edges in the day'}
+                    start_hour: {type: [integer, 'null'], description: 'The photoperiod window''s start, local hour; null without a readback'}
+                    cutoff_hour: {type: [integer, 'null'], description: 'The window''s cutoff, local hour'}
+                    lux_on: {type: [number, 'null'], description: 'ON threshold, outdoor lux'}
+                    lux_off: {type: [number, 'null'], description: 'OFF threshold: ON plus the hysteresis'}
+                    target_min: {type: [integer, 'null'], description: 'Target qualified light minutes'}
+                    window_min: {type: [integer, 'null'], description: 'Minutes of the window counted so far'}
+                    qualified_min: {type: [integer, 'null'], description: 'Minutes in the window with enough outdoor light or the light on; null without a policy readback'}
     Run:
       type: object
       description: >-

@@ -61,6 +61,9 @@ export type ActivityEntry = Lenient<Schemas["ActivityEntry"]>;
 export type BandPreview = Lenient<Schemas["BandPreview"]>;
 export type LightCommand = Lenient<Schemas["LightCommand"]>;
 export type WaterUse = Lenient<Schemas["WaterUse"]>;
+export type LightingDays = Lenient<Schemas["LightingDays"]>;
+export type LightingCircuit = Lenient<Schemas["LightingDays"]["circuits"][number]>;
+export type LightingDay = Lenient<Schemas["LightingDays"]["circuits"][number]["days"][number]>;
 export type IrrigationStatus = Lenient<Schemas["IrrigationStatus"]>;
 export type IrrigationLine = Lenient<Schemas["IrrigationLine"]>;
 export type LineState = Lenient<Schemas["LineState"]>;
@@ -253,6 +256,17 @@ const waterUse = z.object({
   days: z.array(z.object({ date: text, coverage: code, meter_gal: int.nullable(), by_line: gallons, by_cause: gallons, by_purpose: gallons.default(null), no_valve_gal: int.nullable() })),
 });
 
+const lightingDays = z.object({
+  from: text, to: text,
+  circuits: z.array(z.object({
+    light: code, equipment: text, label: text,
+    days: z.array(z.object({
+      date: text, partial: z.boolean(), on_s: int, starts: int, start_hour: int.nullable(), cutoff_hour: int.nullable(), lux_on: num.nullable(), lux_off: num.nullable(),
+      target_min: int.nullable(), window_min: int.nullable(), qualified_min: int.nullable(),
+    })),
+  })),
+});
+
 const lineState = z.object({
   code: choice(LINE_STATES, "unknown"), cause: maybe(cause), slot_id: maybe(int), reason: maybe(text), ends_at: maybe(text), observed_at: maybe(text),
 });
@@ -345,6 +359,7 @@ export const parseActivityPage: Parser<ActivityPage> = parser(activityPage);
 export const parseBandPreview: Parser<BandPreview> = parser(bandPreview);
 export const parseLightCommand: Parser<LightCommand> = parser(lightCommand);
 export const parseWaterUse: Parser<WaterUse> = parser(waterUse);
+export const parseLightingDays: Parser<LightingDays> = parser(lightingDays);
 export const parseIrrigationStatus: Parser<IrrigationStatus> = parser(irrigationStatus);
 export const parseScheduleAgenda: Parser<ScheduleAgenda> = parser(scheduleAgenda);
 export const parseSchedule: Parser<Schedule> = parser(schedule);
@@ -383,6 +398,7 @@ export const OPERATIONS = {
   "API-19": op("GET", "/v1/band/preview", parseBandPreview),
   "API-20": op("POST", "/v1/equipment/lights/{light}/{state}", parseLightCommand),
   "API-21": op("GET", "/v1/water/daily", parseWaterUse),
+  "API-22": op("GET", "/v1/lighting", parseLightingDays),
   "API-IRR-01": op("GET", "/v1/irrigation", parseIrrigationStatus),
   "API-IRR-02": op("GET", "/v1/irrigation/schedules", parseScheduleAgenda),
   "API-IRR-03": op("POST", "/v1/irrigation/schedules", parseSchedule),

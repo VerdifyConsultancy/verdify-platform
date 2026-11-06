@@ -1,4 +1,4 @@
-"""Graph reads: API-03 to API-06, and the band preview API-19 (architecture §7 and §8). No auth and no SQL here."""
+"""Graph reads: API-03 to API-06, the band preview API-19 and the lighting days API-22 (architecture §7 and §8). No auth and no SQL here."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import asyncpg
 from fastapi import APIRouter, Depends, Query
 from pydantic import AwareDatetime
 
+from verdify_services import lighting
 from verdify_services import series as service
 
 from .reads import connection
@@ -64,6 +65,16 @@ async def states(
     equipment: Annotated[list[str] | None, Query(description="Only these lanes; default all")] = None,
 ) -> service.StateLanes:
     return await service.states(conn, from_, to, equipment)
+
+
+@router.get(
+    "/lighting",
+    operation_id="API-22",
+    summary="The grow lights by day: on time, starts, the policy in force and qualified light minutes against target",
+    response_model=lighting.LightingDays,
+)
+async def lighting_days(conn: Connection, from_: WindowStart, to: WindowEnd) -> lighting.LightingDays:
+    return await lighting.lighting_days(conn, from_, to)
 
 
 @router.get(
