@@ -64,7 +64,7 @@ function useHeaderHeight(ref: RefObject<HTMLElement | null>) {
 }
 
 /**
- * Weather's sticky header with the Verdify lockup (redesign §2.2): the six sections with the 2 px forest underline
+ * Weather's sticky header with the Verdify lockup (redesign §2.2): the seven sections with the 2 px forest underline
  * on the current one and the count after Activity, then the account button. The one fault banner, worst first, is a
  * row inside the header while it is true, so it never scrolls away. At 860 px and below the stylesheet keeps the lockup
  * and the account button, and `BottomNav` takes over the sections. Nothing else goes here: no Stop, no freshness, no
@@ -90,8 +90,8 @@ export function SiteHeader() {
 }
 
 /**
- * The phone's fixed bottom bar (860 px and below, redesign §2.3): the same six sections in the same order, each a
- * sixth of the width and at least 44 px, an icon over a one-word label; the count rides the Activity icon's corner. The
+ * The phone's fixed bottom bar (860 px and below, redesign §2.3): the same seven sections in the same order, each a
+ * seventh of the width and at least 44 px, an icon over a one-word label; the count rides the Activity icon's corner. The
  * label comes first in the markup, so the link reads "Activity 2 open alerts".
  */
 export function BottomNav() {

@@ -6,9 +6,14 @@
 .brand-word{display:inline-flex;align-items:baseline}
 .brand .brand-glyph{width:auto;height:1.2em;margin-right:-.2em}
 
-/* The header row (redesign §2.2): the lockup, the six sections and the account button. Six links fit from 861 px, so the nav never scrolls sideways; the current section keeps weather's 2 px forest underline. */
+/* The header row (redesign §2.2): the lockup, the seven sections and the account button; the current section keeps weather's 2 px forest underline. Seven links fit on the one row from 861 px, so the nav never scrolls sideways or runs under the account button: below 1100 px, where the account name is hidden, the links and the row's gaps are tighter (layout.spec.ts checks 880 and 1100 px). */
 .site-header .primary-nav{overflow:visible}
 .site-header .primary-nav a{gap:.4rem}
+@media(min-width:861px) and (max-width:1099px){
+  .site-header>.shell{column-gap:1rem}
+  .site-header .primary-nav{gap:0}
+  .site-header .primary-nav a{padding:0 .45rem;font-size:.85rem}
+}
 /* The one open-alert count, filled by the worst open severity: critical white on --fault (6.54:1), warning --warn-text on --tint-warn (7.81:1), info ink on --field. */
 .nav-count{display:inline-flex;align-items:center;justify-content:center;min-width:1.35rem;height:1.35rem;padding:0 .35rem;border:1px solid var(--line-strong);border-radius:999px;background:var(--field);color:var(--ink);font:600 var(--fs-label)/1 var(--mono);letter-spacing:0;font-variant-numeric:tabular-nums}
 .nav-count[data-severity=critical]{background:var(--fault);border-color:var(--fault);color:#fff}
@@ -54,7 +59,7 @@
 .session-ended::before{content:"";position:absolute;inset:0;background:var(--ink);opacity:.5}
 .session-ended .page-card{position:relative;width:min(28rem,100%);box-shadow:var(--shadow-sm)}
 
-/* Phones (860 px and below, redesign §2.3): a 52 px header with the lockup and the account button, and the fixed bar of the six sections, an icon over a one-word label, each a sixth of the width and at least 44 px. */
+/* Phones (860 px and below, redesign §2.3): a 52 px header with the lockup and the account button, and the fixed bar of the seven sections, an icon over a one-word label, each a seventh of the width and at least 44 px. */
 @media(max-width:860px){
   .site-header>.shell{min-height:var(--header-h-phone);padding-block:var(--space-1)}
   .site-header .primary-nav{display:none}

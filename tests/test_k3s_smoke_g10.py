@@ -39,6 +39,37 @@ AUTHORIZE = (
 )
 
 
+def _preflight(tmp_path, **overrides):
+    fake = tmp_path / "kubectl"
+    fake.write_text("#!/bin/sh\nexit 1\n")
+    fake.chmod(0o755)
+    env = dict(os.environ)
+    env.update(PATH=f"{tmp_path}:{env['PATH']}", HOME=str(tmp_path), VERDIFY_SMOKE_PYTHON=sys.executable)
+    env.pop("KUBECONFIG", None)
+    env.update(overrides)
+    args = ["bash", str(SCRIPT), "smoke", "--expected-api-sha", SHA, "--expected-api-digest", DIGEST]
+    return subprocess.run(args, cwd=ROOT, env=env, capture_output=True, text=True, timeout=20)
+
+
+def test_smoke_preflight_fails_loudly_without_kubeconfig(tmp_path):
+    result = _preflight(tmp_path)
+    assert result.returncode == 2
+    assert "KUBECONFIG is unset" in result.stderr
+    assert "FAIL" not in result.stdout
+
+
+def test_smoke_preflight_fails_loudly_without_python_modules(tmp_path):
+    (tmp_path / "kubeconfig").write_text("")
+    bare = tmp_path / "bare-python"
+    bare.write_text("#!/bin/sh\necho \"ModuleNotFoundError: No module named 'yaml'\" >&2\nexit 1\n")
+    bare.chmod(0o755)
+    result = _preflight(tmp_path, KUBECONFIG=str(tmp_path / "kubeconfig"), VERDIFY_SMOKE_PYTHON=str(bare))
+    assert result.returncode == 2
+    assert "cannot import yaml, pydantic and verdify_schemas" in result.stderr
+    assert "No module named 'yaml'" in result.stderr
+    assert "FAIL" not in result.stdout
+
+
 @pytest.mark.parametrize(
     ("case", "expected_code", "expected_text"),
     [
@@ -132,6 +163,7 @@ def test_g10_smoke_fails_closed(tmp_path, case, expected_code, expected_text):
         env.update(
             PATH=f"{tmp_path}:{env['PATH']}",
             KUBECONFIG=str(tmp_path / "kubeconfig"),
+            VERDIFY_SMOKE_PYTHON=sys.executable,
             MOCK_IMAGE=IMAGE,
             MOCK_PODS=str(pod_file),
             MOCK_MCP_OK="0" if case == "missing_tools" else "1",
