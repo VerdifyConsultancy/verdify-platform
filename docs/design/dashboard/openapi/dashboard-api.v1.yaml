@@ -914,7 +914,8 @@ components:
         Computed on every read (architecture §5.5); display only. held means the platform applies something else on
         purpose (a dispatcher clamp, or an armed experiment manifest serving the field). Irrigation items and the
         irrigation_site settings use requested, confirmed and not_confirmed against the controller's program hash;
-        before the engine firmware they stay requested.
+        before the engine firmware they stay requested. not_confirmed is only a request at least 5 min old the
+        readback does not match; a setting nobody requested with no readback reads no_readback (#1333).
       enum: [requested, confirmed, not_confirmed, held, no_readback, overridden, released]
     StateReason:
       type: object
@@ -1354,6 +1355,15 @@ components:
           items: {type: object, required: [value, label], properties: {value: {type: number}, label: {type: string}}}
         writable: {type: boolean, description: 'false with read_only_reason; the irrigation_site rows are writable before the engine firmware too (their writes wait, state_reason no_engine)'}
         read_only_reason: {type: [string, 'null'], examples: ['legacy wide limit; not the band while the controller runs its on-chip curve']}
+        read_only_kind:
+          type: [string, 'null']
+          enum: [band_in_force, legacy_wide_limit, activity_mirror, band_owner, retired, readback_context, no_entity, no_anchor_row, unknown, null]
+          description: 'Why a read-only row cannot be written (#1333): the tunable_registry READ_ONLY_REASONS key, no_anchor_row (a crop-band row with no crop_band_anchors row) or band_in_force (derived band rows); null on a writable row'
+        source_params:
+          type: array
+          items: {type: string}
+          description: 'The writable settings a derived row is computed from (the crop-band anchors behind a Band in force row, the main-light schedule behind the activity mirror); empty otherwise'
+        help: {anyOf: [{$ref: '#/components/schemas/SettingHelp'}, {type: 'null'}], description: 'Operator text (verdify_schemas.setting_help, #1332); MCP settings serves the same'}
         readback_via:
           type: string
           enum: [cfg, entity, program, none]
@@ -1373,6 +1383,21 @@ components:
                 next: {anyOf: [{$ref: '#/components/schemas/PlanWaypoint'}, {type: 'null'}], description: 'Next planned change; effective false while a newer desired row holds it off'}
         applied_from: {type: string, enum: [manual, desired, plan, band, default], description: What the dispatcher applies now}
         state: {$ref: '#/components/schemas/ReadbackState', description: 'Of the newest write, else of the applied value against the readback'}
+    SettingHelp:
+      type: object
+      description: >-
+        What a setting is and what changing it does to the controller (#1332). One source for the dashboard, MCP and
+        the lab ai-tunables page. raise and lower are null on a read-only row; for a switch they say what turning it
+        on and off does.
+      required: [summary, effect]
+      properties:
+        summary: {type: string, description: One line, what the setting is}
+        effect: {type: string, description: What the controller does with it, naming the mode or equipment it drives}
+        raise: {type: [string, 'null'], description: What happens to the greenhouse when the value goes up (a switch turned on)}
+        lower: {type: [string, 'null'], description: What happens when the value goes down (a switch turned off)}
+        caution: {type: [string, 'null'], description: An interaction or safety note}
+        guardrail: {type: boolean, default: false, description: 'A hard safety limit (Safety Min, Safety Max and the VPD pair): the dashboard shows caution and asks to confirm before saving'}
+        reference_url: {type: [string, 'null'], description: The setting's entry on the lab ai-tunables reference page}
     SettingWrite:
       type: object
       required: [value]

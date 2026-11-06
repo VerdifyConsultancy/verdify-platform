@@ -1555,7 +1555,7 @@ export interface components {
             readonly state: components["schemas"]["ReadbackState"];
         };
         /**
-         * @description Computed on every read (architecture §5.5); display only. held means the platform applies something else on purpose (a dispatcher clamp, or an armed experiment manifest serving the field). Irrigation items and the irrigation_site settings use requested, confirmed and not_confirmed against the controller's program hash; before the engine firmware they stay requested.
+         * @description Computed on every read (architecture §5.5); display only. held means the platform applies something else on purpose (a dispatcher clamp, or an armed experiment manifest serving the field). Irrigation items and the irrigation_site settings use requested, confirmed and not_confirmed against the controller's program hash; before the engine firmware they stay requested. not_confirmed is only a request at least 5 min old the readback does not match; a setting nobody requested with no readback reads no_readback (#1333).
          * @enum {string}
          */
         readonly ReadbackState: "requested" | "confirmed" | "not_confirmed" | "held" | "no_readback" | "overridden" | "released";
@@ -1835,6 +1835,8 @@ export interface components {
              * @enum {string}
              */
             readonly group: "planner_policy" | "scheduled_policy" | "controller_safety" | "crop_band" | "site_water_caps" | "read_only" | "band_in_force";
+            /** @description Operator text (verdify_schemas.setting_help, #1332); MCP settings serves the same */
+            readonly help?: components["schemas"]["SettingHelp"] | null;
             /** @enum {string} */
             readonly kind: "numeric" | "switch" | "enum";
             /** @description For a registry row, TunableDef.label (VD-29), filled from the setting's entity name in firmware/greenhouse/tunables.yaml and drift-tested */
@@ -1863,6 +1865,11 @@ export interface components {
                 /** Format: date-time */
                 readonly written_at: string;
             };
+            /**
+             * @description Why a read-only row cannot be written (#1333): the tunable_registry READ_ONLY_REASONS key, no_anchor_row (a crop-band row with no crop_band_anchors row) or band_in_force (derived band rows); null on a writable row
+             * @enum {string|null}
+             */
+            readonly read_only_kind?: "band_in_force" | "legacy_wide_limit" | "activity_mirror" | "band_owner" | "retired" | "readback_context" | "no_entity" | "no_anchor_row" | "unknown" | null;
             /** @example legacy wide limit; not the band while the controller runs its on-chip curve */
             readonly read_only_reason?: string | null;
             /** @description Newest readback; for irrigation_site rows the value in the applied program */
@@ -1872,6 +1879,8 @@ export interface components {
              * @enum {string}
              */
             readonly readback_via: "cfg" | "entity" | "program" | "none";
+            /** @description The writable settings a derived row is computed from (the crop-band anchors behind a Band in force row, the main-light schedule behind the activity mirror); empty otherwise */
+            readonly source_params?: readonly string[];
             /** @description Of the newest write, else of the applied value against the readback */
             readonly state: components["schemas"]["ReadbackState"];
             /** @description The registry step (from tunables.yaml; equal to ENTITY_GRIDS for the 48 policy fields) */
@@ -1880,6 +1889,26 @@ export interface components {
             readonly unit?: string | null;
             /** @description false with read_only_reason; the irrigation_site rows are writable before the engine firmware too (their writes wait, state_reason no_engine) */
             readonly writable: boolean;
+        };
+        /** @description What a setting is and what changing it does to the controller (#1332). One source for the dashboard, MCP and the lab ai-tunables page. raise and lower are null on a read-only row; for a switch they say what turning it on and off does. */
+        readonly SettingHelp: {
+            /** @description An interaction or safety note */
+            readonly caution?: string | null;
+            /** @description What the controller does with it */
+            readonly effect: string;
+            /**
+             * @description A hard safety limit (Safety Min, Safety Max and the VPD pair): the dashboard shows caution and asks to confirm before saving
+             * @default false
+             */
+            readonly guardrail?: boolean;
+            /** @description What happens when the value goes down (a switch turned off) */
+            readonly lower?: string | null;
+            /** @description What happens to the greenhouse when the value goes up (a switch turned on) */
+            readonly raise?: string | null;
+            /** @description The setting's entry on the lab ai-tunables reference page */
+            readonly reference_url?: string | null;
+            /** @description One line */
+            readonly summary: string;
         };
         readonly SettingHistory: {
             /** @description Oldest first, from the row in force at from */

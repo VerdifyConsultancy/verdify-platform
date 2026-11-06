@@ -493,7 +493,7 @@ REGISTRY: dict[str, TunableDef] = {
         kind="numeric",
         min=30.0,
         max=60.0,
-        default=45.0,
+        default=40.0,
         fw_clamp_lo=30.0,
         fw_clamp_hi=60.0,
         esp_object_id="safety_min__f",
@@ -501,14 +501,14 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="safety",
         planner_pushable=False,
         tier=2,
-        notes="Hard cold rail — SAFETY_HEAT mode trigger. Operator-only.",
+        notes="Hard cold rail — SAFETY_HEAT mode trigger. Operator-only. Default 40 °F is the hard guardrail the dispatcher serves (Jason 2026-11-05, #1333).",
     ),
     "safety_max": TunableDef(
         name="safety_max",
         kind="numeric",
         min=80.0,
         max=110.0,
-        default=95.0,
+        default=100.0,
         fw_clamp_lo=80.0,
         fw_clamp_hi=110.0,
         esp_object_id="safety_max__f",
@@ -516,7 +516,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="safety",
         planner_pushable=False,
         tier=2,
-        notes="Hard hot rail — SAFETY_COOL mode trigger. Operator-only.",
+        notes="Hard hot rail — SAFETY_COOL mode trigger. Operator-only. Default 100 °F is the hard guardrail the dispatcher serves (Jason 2026-11-05, #1333).",
     ),
     "safety_vpd_min": TunableDef(
         name="safety_vpd_min",
@@ -3894,40 +3894,48 @@ assert len(LEGACY_WIDE_LIMIT_PARAMS) == 8 and all(
 assert ACTIVITY_MIRROR_PARAMS <= set(REGISTRY), "an activity-mirror row left the registry"
 
 
-def desired_write_rule(name: str) -> tuple[bool, str | None]:
-    """Architecture §5.3 step 1 without the anchor-row check: may a person or agent write ``name`` now?
+def desired_write_kind(name: str) -> str | None:
+    """The ``READ_ONLY_REASONS`` key that refuses a write to ``name``, or None when it is writable (#1333).
 
-    Returns ``(True, None)``, or ``(False, reason)`` with the read-only reason the catalog shows.
+    The rule ``desired_write_rule`` states, as a key the dashboard can name and explain:
 
     * Writable: ``planner_policy``, ``scheduled_policy``, ``controller_safety`` and ``crop_band`` rows with an
       ``esp_object_id`` (the ``gl_*`` rows among them), and the ``irrigation_site`` rows, which reach the
       controller in the irrigation program.
     * Read-only: ``readback_context`` and ``retired`` rows; the legacy wide limits; the activity mirror;
-      ``sw_onchip_band_enabled``, by name.
+      ``sw_onchip_band_enabled``, by name; a row with no controller entity; an unknown name.
+    """
+    spec = REGISTRY.get(name)
+    if spec is None:
+        return "unknown"
+    if name == BAND_OWNER_SWITCH:
+        return "band_owner"
+    if name in LEGACY_WIDE_LIMIT_PARAMS:
+        return "legacy_wide_limit"
+    if name in ACTIVITY_MIRROR_PARAMS:
+        return "activity_mirror"
+    control_class = spec.control_class
+    if control_class in ("retired", "readback_context"):
+        return control_class
+    if control_class == "irrigation_site":
+        return None
+    if control_class in WRITABLE_CONTROL_CLASSES and spec.esp_object_id is not None:
+        return None
+    return "no_entity"
+
+
+def desired_write_rule(name: str) -> tuple[bool, str | None]:
+    """Architecture §5.3 step 1 without the anchor-row check: may a person or agent write ``name`` now?
+
+    Returns ``(True, None)``, or ``(False, reason)`` with the read-only reason the catalog shows
+    (``desired_write_kind`` names the rule).
 
     A ``crop_band`` row is writable only while ``crop_band_anchors`` holds its rows (the zone priorities and
     the window values never do): ``verdify_services.settings`` adds that database check
     (``verdify_schemas.band_rows``). An unknown name is not writable.
     """
-    spec = REGISTRY.get(name)
-    if spec is None:
-        return False, READ_ONLY_REASONS["unknown"]
-    if name == BAND_OWNER_SWITCH:
-        return False, READ_ONLY_REASONS["band_owner"]
-    if name in LEGACY_WIDE_LIMIT_PARAMS:
-        return False, READ_ONLY_REASONS["legacy_wide_limit"]
-    if name in ACTIVITY_MIRROR_PARAMS:
-        return False, READ_ONLY_REASONS["activity_mirror"]
-    control_class = spec.control_class
-    if control_class == "retired":
-        return False, READ_ONLY_REASONS["retired"]
-    if control_class == "readback_context":
-        return False, READ_ONLY_REASONS["readback_context"]
-    if control_class == "irrigation_site":
-        return True, None
-    if control_class in WRITABLE_CONTROL_CLASSES and spec.esp_object_id is not None:
-        return True, None
-    return False, READ_ONLY_REASONS["no_entity"]
+    kind = desired_write_kind(name)
+    return (True, None) if kind is None else (False, READ_ONLY_REASONS[kind])
 
 
 # Switch params whose readback is an equipment_state mirror: param → equipment

@@ -38,6 +38,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from verdify_schemas.setting_help import (
+    band_in_force_help,
+    band_in_force_sources,
+    setting_help,
+    setting_label,
+    source_params,
+)
 from verdify_schemas.tunable_registry import REGISTRY, TunableDef, planner_effective_bounds, tunable_control_class
 
 OUT = ROOT / "dashboard" / "e2e" / "fixtures" / "settings.json"
@@ -81,28 +88,45 @@ REASONS = {
     "no_entity": "read-only: no controller entity takes it",
 }
 BAND_REASON = "derived by the dispatcher from the crop band anchors"
+# Each reason's Setting.read_only_kind (#1333).
+KINDS = {
+    "retired": "retired",
+    "readback_context": "readback_context",
+    "legacy": "legacy_wide_limit",
+    "activity": "activity_mirror",
+    "band_owner": "band_owner",
+    "weekly_feed": "no_entity",
+    "no_anchor": "no_anchor_row",
+    "no_entity": "no_entity",
+}
+
+
+def read_only_key(name: str, spec: TunableDef) -> str | None:
+    """The ``REASONS`` key that refuses a desired-state write to the row now, or None (architecture §5.3 step 1)."""
+    control_class = tunable_control_class(name, spec)
+    if control_class == "irrigation_site":
+        return None
+    if name == BAND_OWNER:
+        return "band_owner"
+    if control_class in ("retired", "readback_context"):
+        return control_class
+    if name in LEGACY_WIDE_LIMITS or name.startswith("vpd_target_"):
+        return "legacy"
+    if name in ACTIVITY_MIRROR:
+        return "activity"
+    if name in WEEKLY_FEED:
+        return "weekly_feed"
+    if control_class == "crop_band" and not ANCHOR_ROW.match(name):
+        return "no_anchor"
+    if control_class in WRITABLE_CLASSES and spec.esp_object_id:
+        return None
+    return "no_entity"
 
 
 def write_rule(name: str, spec: TunableDef) -> tuple[bool, str | None]:
     """Whether a desired-state write may target the row now, and why not (architecture §5.3 step 1)."""
-    control_class = tunable_control_class(name, spec)
-    if control_class == "irrigation_site":
-        return True, None
-    if name == BAND_OWNER:
-        return False, REASONS["band_owner"]
-    if control_class in ("retired", "readback_context"):
-        return False, REASONS[control_class]
-    if name in LEGACY_WIDE_LIMITS or name.startswith("vpd_target_"):
-        return False, REASONS["legacy"]
-    if name in ACTIVITY_MIRROR:
-        return False, REASONS["activity"]
-    if name in WEEKLY_FEED:
-        return False, REASONS["weekly_feed"]
-    if control_class == "crop_band" and not ANCHOR_ROW.match(name):
-        return False, REASONS["no_anchor"]
-    if control_class in WRITABLE_CLASSES and spec.esp_object_id:
-        return True, None
-    return False, REASONS["no_entity"]
+    key = read_only_key(name, spec)
+    return (True, None) if key is None else (False, REASONS[key])
 
 
 def group_of(control_class: str, writable: bool) -> str:
@@ -259,7 +283,7 @@ def registry_row(name: str, spec: TunableDef) -> dict[str, Any]:
     default = finite(spec.default)
     row: dict[str, Any] = {
         "param": name,
-        "label": spec.label,
+        "label": setting_label(name),
         "control_class": control_class,
         "group": group_of(control_class, writable),
         "kind": spec.kind,
@@ -283,6 +307,9 @@ def registry_row(name: str, spec: TunableDef) -> dict[str, Any]:
     row |= {
         "writable": writable,
         "read_only_reason": reason,
+        "read_only_kind": None if writable else KINDS[read_only_key(name, spec) or "no_entity"],
+        "source_params": list(source_params(name)),
+        "help": help_json(setting_help(name)),
         "readback_via": via,
         "readback": readback,
         "desired": None,
@@ -292,6 +319,11 @@ def registry_row(name: str, spec: TunableDef) -> dict[str, Any]:
     }
     row |= SCENARIO.get(name, {})
     return row
+
+
+def help_json(help_text: Any) -> dict[str, Any] | None:
+    """A ``SettingHelp`` as API-09 serves it (``raise``, not ``raise_``)."""
+    return None if help_text is None else help_text.model_dump(mode="json")
 
 
 def band_rows() -> Iterator[dict[str, Any]]:
@@ -312,6 +344,9 @@ def band_rows() -> Iterator[dict[str, Any]]:
                 "step": None,
                 "writable": False,
                 "read_only_reason": BAND_REASON,
+                "read_only_kind": "band_in_force",
+                "source_params": list(band_in_force_sources(zone, role)),
+                "help": help_json(band_in_force_help(zone, role)),
                 "readback_via": "none",
                 "readback": reading(HOUSE_TEMP[role] if series == "temp" else vpd[role], ago(BAND_AGE_S)),
                 "desired": None,

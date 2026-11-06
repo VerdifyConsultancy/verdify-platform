@@ -5437,7 +5437,11 @@ async def settings(
 
     With no window: API-09's `{items, server_time}`, filtered by param, group, writable_only and manual_only. Each
     row carries applied_from (whose value is in force: manual, desired, plan, band or default), min, max, step,
-    its desired row, its plan value and its readback state. Narrow it: the whole catalog is large.
+    its desired row, its plan value and its readback state, and `help`: what the setting is (summary), what the
+    controller does with it (effect), what raising and lowering it does (raise, lower; for a switch, turning it on and
+    off) and any caution, the same words the dashboard shows; a guardrail row has guardrail true. A read-only row
+    carries read_only_kind, and a derived row source_params, the writable settings it is computed from. Explain a
+    change with that text. Narrow it: the whole catalog is large.
 
     With param, since and until all given: API-12's SettingHistory over [since, until), the desired rows, plan
     values and readback change points; since and until map to API-12's from and to, and the other filters do not
