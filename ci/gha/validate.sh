@@ -45,5 +45,10 @@ for grp in ("dev", "planner", "api"):
 print("\n".join(reqs))
 PY
 python3 -m venv .venv
-.venv/bin/pip -q install -r "$impact/reqs.txt" paho-mqtt 'mcp[cli]' pydantic-settings pytest pytest-asyncio
+.venv/bin/pip -q install -r "$impact/reqs.txt" paho-mqtt 'mcp[cli]' pydantic-settings pytest pytest-asyncio \
+  'pytest-xdist>=3.6,<4'
+# One xdist worker per CPU of the job sidecar's cgroup quota (nproc sees the node).
+if read -r quota period < /sys/fs/cgroup/cpu.max 2>/dev/null && [ "$quota" != max ]; then
+  export CI_PYTEST_WORKERS=$(( quota / period > 0 ? quota / period : 1 ))
+fi
 bash scripts/ci-local.sh

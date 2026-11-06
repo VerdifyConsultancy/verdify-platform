@@ -33,6 +33,13 @@ export PATH="$("$PY" -c 'import pathlib, sys; print(pathlib.Path(sys.executable)
 
 step() { printf '\n== %s ==\n' "$1"; }
 
+# CI_PYTEST_WORKERS (set by ci/gha/validate.sh from the job's CPU quota) runs the long
+# pure-logic step with pytest-xdist, work-stealing. Unset or 0 keeps it serial.
+XDIST=()
+if [ "${CI_PYTEST_WORKERS:-0}" -gt 0 ]; then
+  XDIST=(-n "$CI_PYTEST_WORKERS" --dist worksteal)
+fi
+
 step "ruff lint"
 $RUFF check cortex_planner/ ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ verdify_services/ \
   research/planner-efficacy/generate_v2_artifacts.py \
@@ -87,7 +94,7 @@ step "device write gate"
 $PY -m pytest -q tests/test_device_write_gate.py tests/test_replay_outdoor_device_age.py tests/test_replay_setpoint_export.py tests/test_replay_accepted_threshold.py
 
 step "pure-logic / contract tests"
-$PY -m pytest -q -rs \
+$PY -m pytest -q -rs ${XDIST[@]+"${XDIST[@]}"} \
   tests/test_setpoint_listener_reconnect.py \
   tests/test_portable_stateful_placement.py \
   tests/test_component_runtime_probe.py \

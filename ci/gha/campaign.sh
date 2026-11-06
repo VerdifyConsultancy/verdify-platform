@@ -15,5 +15,5 @@ if [ "$(cat "$impact/dashboard-db")" != true ]; then
   echo "path impact: dashboard-db=false; campaign checks not required"
   exit 0
 fi
-ENV_NAMES="CI GITHUB_SHA GITHUB_REF GITHUB_REPOSITORY GITHUB_EVENT_NAME" TIMEOUT_MINUTES=45 \
+ENV_NAMES="CI GITHUB_SHA GITHUB_REF GITHUB_REPOSITORY GITHUB_EVENT_NAME CAMPAIGN_SHARD" TIMEOUT_MINUTES=45 \
   "$ESTATE_CI/sidecar-run.sh" job <<< "bash ci/gha/campaign-checks.sh"
