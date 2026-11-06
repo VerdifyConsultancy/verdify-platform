@@ -2,6 +2,7 @@
 import { useContext, useMemo, useRef, useState, type MutableRefObject } from "react";
 import type uPlot from "uplot";
 import { LINES, lineByEquipment, lineById, type Line } from "../lib/lines";
+import type { ActivityEntry } from "../lib/operator-api";
 import { causeWords } from "./causes";
 import { csvFilename, tableCsv } from "./csv";
 import { CsvLink, DataTable, TimeCell, type DataTableBlock } from "./data-table";
@@ -28,10 +29,18 @@ import { UPlotChart, useNarrow, useZoomReset, type ChartEnv, type ChartOptions }
  * in the fertilizer colour on its physical line's one row (a clean and a fertilized valve of one line share a row), a
  * light the Lutron readback. A light's controller intent (Q-09) is not a row: where it disagrees with the readback a
  * thin amber strip runs along the row's foot. Unknown spans are hatched exactly where the API returns them and off
- * draws nothing. A wet run's cause is said in words after the run (#1354). Labels are the API's.
+ * draws nothing. A wet run's cause is said in words after the run (#1354). Labels are the API's. A light switched by a
+ * person or an agent (API-20, from API-17's `light.*` rows) is manual until its timer ends, the next switch of that
+ * light, or the controller's next change of mind; a green strip runs along the row's head and "manual" follows it, on
+ * or off. The rest of a light's known readback is automatic (the controller's decision, occupancy included).
  */
 export type LaneState = "on" | "off" | "unknown";
-export type LaneSpan = { start: number; end: number; state: LaneState; cause: IrrigationCause | null; /** On through the fertilized valve. */ fert?: boolean };
+/** Who switched a light by hand and for how long (API-20's minutes; null for a switch from before the timer). */
+export type ManualSwitch = { by: string; minutes: number | null };
+export type LaneSpan = {
+  start: number; end: number; state: LaneState; cause: IrrigationCause | null; /** On through the fertilized valve. */ fert?: boolean;
+  /** A light's span inside a manual switch; a light's other known span is automatic. */ manual?: ManualSwitch;
+};
 export type LaneSystem = "climate" | "misting" | "irrigation" | "lighting" | "sensors";
 export const LANE_SYSTEMS: readonly LaneSystem[] = ["climate", "misting", "irrigation", "lighting", "sensors"];
 export const SYSTEM_WORDS: Readonly<Record<LaneSystem, string>> = { climate: "Climate", misting: "Misting", irrigation: "Irrigation", lighting: "Lighting", sensors: "Sensors" };
@@ -55,6 +64,8 @@ export type LaneRow = {
   spans: LaneSpan[];
   /** A grow light: where the controller's intent and the Lutron readback, both known, disagree. */
   mismatch: { start: number; end: number }[];
+  /** A light drawn with API-17's light switches: its known spans read manual or automatic. */
+  light: boolean;
   /** Off for the whole window: folds into its group's header. */
   idle: boolean;
   /** The state at the window's end. */
@@ -163,6 +174,57 @@ export function mismatchSpans(readback: readonly LaneSpan[], intent: readonly La
   return out;
 }
 
+/** A switch of a light: API-20's `light.on`/`light.off` row, the timer's, a Back to automatic resync's or occupancy's. */
+const isSwitch = (entry: ActivityEntry) => entry.action === "light.on" || entry.action === "light.off";
+/**
+ * A person's or an agent's switch through API-20: not the system's (the timer, occupancy) and not a Back to automatic
+ * resync (`detail.via`), and one Lutron reached; a failed switch changed nothing.
+ */
+function isManualSwitch(entry: ActivityEntry): boolean {
+  const detail = entry.detail ?? {};
+  return entry.actor.source !== "system" && detail.via == null && (detail.result == null || detail.result === "confirmed");
+}
+/** How far before the window a switch can still be in force: API-20's longest timer (MAX_MANUAL_MINUTES). */
+export const MANUAL_LEAD_S = 120 * 60;
+
+/**
+ * Where a light was manual: from each manual switch (API-17 rows, any order) until the first of its timer's end
+ * (`ts + minutes`), the light's next switch of any kind and the controller's next change of intent (its `apply_light`
+ * then writes the light again), clipped to [from, to]. A switch with no minutes ends only at the latter two.
+ */
+export function manualWindows(entries: readonly ActivityEntry[], equipment: string, intent: readonly LaneSpan[], from: number, to: number): (ManualSwitch & { start: number; end: number })[] {
+  const switches = entries.filter((entry) => entry.target === equipment && isSwitch(entry))
+    .map((entry) => ({ entry, at: epochOf(entry.ts) }))
+    .filter((item): item is { entry: ActivityEntry; at: number } => item.at !== null)
+    .sort((a, b) => a.at - b.at);
+  const edges = intent.flatMap((span, index) => (index > 0 && span.state !== "unknown" && intent[index - 1].state !== span.state ? [span.start] : []));
+  const out: (ManualSwitch & { start: number; end: number })[] = [];
+  switches.forEach(({ entry, at }, index) => {
+    if (!isManualSwitch(entry)) return;
+    const minutes = typeof entry.detail?.minutes === "number" ? entry.detail.minutes : null;
+    const ends = [to, switches[index + 1]?.at ?? Infinity, edges.find((edge) => edge > at) ?? Infinity, minutes === null ? Infinity : at + minutes * 60];
+    const start = Math.max(at, from), end = Math.min(...ends);
+    const ai = entry.actor.source === "dashboard" ? "" : " AI";
+    if (end > start) out.push({ start, end, by: `${entry.actor.name}${ai}`, minutes });
+  });
+  return out;
+}
+
+/** A light's readback spans cut at its manual windows: on or off inside one is manual; unknown stays unknown. */
+export function splitManual(spans: readonly LaneSpan[], windows: readonly (ManualSwitch & { start: number; end: number })[]): LaneSpan[] {
+  if (!windows.length) return [...spans];
+  const out: LaneSpan[] = [];
+  for (const span of spans) {
+    const points = [...new Set([span.start, span.end, ...windows.flatMap((part) => [part.start, part.end]).filter((point) => point > span.start && point < span.end)])].sort((a, b) => a - b);
+    for (let index = 0; index + 1 < points.length; index++) {
+      const start = points[index], end = points[index + 1];
+      const part = span.state === "unknown" ? undefined : windows.find((item) => item.start <= start && start < item.end);
+      out.push(part ? { ...span, start, end, manual: { by: part.by, minutes: part.minutes } } : { ...span, start, end });
+    }
+  }
+  return out;
+}
+
 function row(lane: StateLane, spans: LaneSpan[], members: readonly string[], line: Line | undefined, mismatch: LaneRow["mismatch"] = []): LaneRow {
   let runtime = 0, starts = 0;
   spans.forEach((span, index) => {
@@ -173,13 +235,13 @@ function row(lane: StateLane, spans: LaneSpan[], members: readonly string[], lin
   return {
     equipment: lane.equipment, members, label: lane.label || lane.equipment, group: lane.group, system: systemOf(lane.group, line), lineId: line?.id ?? lane.line_id ?? null,
     token: ROW_TOKENS[lane.equipment] ?? (line ? lineKindToken(line.kind) ?? "--muted" : "--muted"),
-    wet: line !== undefined, spans, mismatch, idle: spans.length > 0 && spans.every((span) => span.state === "off"),
+    wet: line !== undefined, light: false, spans, mismatch, idle: spans.length > 0 && spans.every((span) => span.state === "off"),
     current: spans.length ? spans[spans.length - 1].state : null, runtime, starts,
   };
 }
 
 /** The rows by system, in design order; a physical line's two valves share a row, and the intent lanes mark their light. */
-export function buildLanes(states: StateLanes): LanesModel {
+export function buildLanes(states: StateLanes, lightWrites?: readonly ActivityEntry[] | null): LanesModel {
   const from = epochOf(states.from) ?? -Infinity, to = epochOf(states.to) ?? Infinity;
   const lineOf = (lane: StateLane) => (lane.line_id ? lineById(lane.line_id) : undefined) ?? lineByEquipment(lane.equipment);
   const byKey = new Map(states.lanes.map((lane) => [lane.equipment, lane]));
@@ -206,8 +268,10 @@ export function buildLanes(states: StateLanes): LanesModel {
       rows.push(row(lane, mergeSpans(spans, spansOf(fertLane, from, to)), [lane.equipment, fertLane.equipment], line));
       continue;
     }
-    const intent = byKey.get(`${lane.equipment}_intent`);
-    rows.push(row(lane, spans, [lane.equipment], line, intent ? mismatchSpans(spans, spansOf(intent, from, to)) : []));
+    const intentLane = byKey.get(`${lane.equipment}_intent`);
+    const intent = intentLane ? spansOf(intentLane, from, to) : [];
+    const shownSpans = lane.group === "light" && lightWrites ? splitManual(spans, manualWindows(lightWrites, lane.equipment, intent, from, to)) : spans;
+    rows.push({ ...row(lane, shownSpans, [lane.equipment], line, intentLane ? mismatchSpans(spans, intent) : []), light: lane.group === "light" && Boolean(lightWrites) });
   }
   const groups = LANE_SYSTEMS.flatMap((system): LaneGroupModel[] => {
     const members = rows.filter((item) => item.system === system);
@@ -273,6 +337,12 @@ export function rowAtTop(view: LanesView, top: number): LaneRow | null {
   return item && top < view.tops[index] + view.pitch ? item : null;
 }
 
+/** A light's known span in words: "manual" (a person's or an agent's switch) or "automatic"; "" otherwise. */
+export function controlWords(row: LaneRow, span: LaneSpan): string {
+  if (!row.light || span.state === "unknown") return "";
+  return span.manual ? "manual" : "automatic";
+}
+
 /** The tooltip for the row under the pointer: name, state, start–end with offsets, duration and a wet line's cause. */
 export function laneTooltip(view: LanesView, plot: Pick<uPlot, "cursor" | "posToVal">): string[] | null {
   // A cursor moved by another chart on the sync key has no row; that chart shows its own tooltip.
@@ -285,6 +355,8 @@ export function laneTooltip(view: LanesView, plot: Pick<uPlot, "cursor" | "posTo
   if (!span) return null;
   const lines = [row.label, stateWords(row, span.state, span), intervalText(span.start, span.end), spanDuration(span.end - span.start)];
   if (row.wet && span.state === "on" && span.cause) lines.push(causeWords(span.cause));
+  const control = controlWords(row, span);
+  if (control) lines.push(span.manual ? `${control} · ${span.manual.by}${span.manual.minutes === null ? "" : ` · ${span.manual.minutes} min timer`}` : control);
   if (row.mismatch.some((part) => part.start <= x && x < part.end)) lines.push("controller intent differs");
   return lines;
 }
@@ -320,6 +392,14 @@ export function paintLanes(plot: PaintTarget, view: LanesView, colors: ChartColo
         ctx.fillStyle = colors["--amber"];
         ctx.fillRect(pixels.left, band.top + band.height - 3 * px, Math.max(pixels.right - pixels.left, px), 3 * px);
       }
+      // A manual switch: a green strip along the band's head, on or off.
+      const manual = row.spans.filter((span) => span.manual);
+      for (const span of manual) {
+        const pixels = spanPixels(plot, span.start, span.end);
+        if (!pixels) continue;
+        ctx.fillStyle = colors["--forest"];
+        ctx.fillRect(pixels.left, band.top, Math.max(pixels.right - pixels.left, px), 3 * px);
+      }
       for (const lit of view.lit ?? []) {
         if (!row.members.includes(lit.equipment)) continue;
         const pixels = spanPixels(plot, lit.from, Math.max(lit.to, lit.from + 1));
@@ -346,6 +426,14 @@ export function paintLanes(plot: PaintTarget, view: LanesView, colors: ChartColo
         if (next && next.span.state === "on" && next.span.cause === span.cause && next.pixels.left - pixels.right < gap) continue;
         labels.place(index, band, causeWords(span.cause), pixels.right + 4 * px, limit, labelColor(colors[row.token] ?? "", colors["--ink"]));
       }
+      // "manual" once after each manual stretch, on or off, up to the next painted span.
+      manual.forEach((span, position) => {
+        if (manual[position + 1]?.start === span.end) return;
+        const pixels = spanPixels(plot, span.start, span.end);
+        if (!pixels) return;
+        const next = painted.find((item) => item.pixels.left >= pixels.right);
+        labels.place(index, band, "manual", pixels.right + 4 * px, (next ? next.pixels.left : right) - 3 * px, colors["--ink"]);
+      });
     });
     if (view.now !== null) paintNow(plot, view.now, colors, px);
   });
@@ -386,21 +474,22 @@ export function lanesTable(model: LanesModel): DataTableBlock {
     caption: "Equipment intervals · America/Denver", headers: ["Equipment", "State", "From", "Until", "Duration", "Cause"], count,
     rows: () => model.rows.flatMap((item) => item.spans.map((span) => [
       item.label, stateWords(item, span.state, span), <TimeCell key="from" at={span.start} />, <TimeCell key="until" at={span.end} />,
-      spanDuration(span.end - span.start), item.wet && span.state === "on" && span.cause ? causeWords(span.cause) : "",
+      spanDuration(span.end - span.start), item.wet && span.state === "on" && span.cause ? causeWords(span.cause) : controlWords(item, span),
     ])),
   };
 }
 
 /**
  * "CSV of these lanes" (redesign §7.1): every interval of every row, in row order, with its local start and end, its
- * length and a wet line's cause; unknown is its own state, never off, and a fertilized run says so.
+ * length and a wet line's cause or a light's manual or automatic; unknown is its own state, never off, and a fertilized
+ * run says so.
  */
 export function lanesCsv(model: LanesModel): string {
   return tableCsv(
     ["equipment", "label", "state", "start (America/Denver)", "end (America/Denver)", "seconds", "cause"],
     model.rows.flatMap((item) => item.spans.map((span) => [
       item.equipment, item.label, span.fert && span.state === "on" ? "on fertilized" : span.state, isoLocal(span.start), isoLocal(span.end), Math.round(span.end - span.start),
-      item.wet && span.state === "on" ? span.cause ?? "" : "",
+      item.wet && span.state === "on" ? span.cause ?? "" : controlWords(item, span),
     ])),
   );
 }
@@ -411,10 +500,11 @@ export function lanesCsv(model: LanesModel): string {
  * written after it.
  */
 export function lanesKey(model: LanesModel): KeyItem[] {
-  let on = false, fert = false, unknown = false, mismatch = false;
+  let on = false, fert = false, unknown = false, mismatch = false, manual = false;
   for (const item of model.rows) {
     if (item.mismatch.length) mismatch = true;
     for (const span of item.spans) {
+      if (span.manual) manual = true;
       if (span.state === "unknown") unknown = true;
       if (span.state === "on") { on = true; if (span.fert) fert = true; }
     }
@@ -422,6 +512,7 @@ export function lanesKey(model: LanesModel): KeyItem[] {
   return [
     ...(on ? [{ key: "on", label: "on", token: "--ink", kind: "fill" } as const] : []),
     ...(fert ? [{ key: "fert", label: "fertilized", token: "--eq-fert", kind: "fill" } as const] : []),
+    ...(manual ? [{ key: "manual", label: "manual switch (otherwise automatic)", token: "--forest", kind: "line" } as const] : []),
     ...(mismatch ? [{ key: "intent", label: "controller intent differs", token: "--amber", kind: "line" } as const] : []),
     ...(unknown ? [{ key: "unknown-span", label: "unknown", token: "--muted", kind: "hatch" } as const] : []),
   ];
@@ -479,6 +570,11 @@ export type EquipmentLanesProps = {
   systems?: readonly LaneSystem[];
   /** Groups whose fold starts open (Graphs → Lighting opens Sensors, for occupancy). */
   open?: readonly LaneSystem[];
+  /**
+   * API-17's `light.*` rows from MANUAL_LEAD_S before the window: the light rows then read manual or automatic. Without
+   * them (Equipment) the lights read neither.
+   */
+  lightWrites?: readonly ActivityEntry[] | null;
 };
 
 export function EquipmentLanes(props: EquipmentLanesProps) {
@@ -489,14 +585,14 @@ export function EquipmentLanes(props: EquipmentLanesProps) {
   const link = useContext(StackLink);
   const [open, setOpen] = useState<ReadonlySet<LaneSystem>>(() => new Set(props.open ?? OPEN_AT_START));
   const zoom = useZoomReset(xRange, syncKey);
-  const systems = props.systems;
+  const systems = props.systems, lightWrites = props.lightWrites;
   const model = useMemo(() => {
     if (!states) return null;
-    const built = buildLanes(states);
+    const built = buildLanes(states, lightWrites);
     if (!systems) return built;
     const keep = (item: { system: LaneSystem }) => systems.includes(item.system);
     return { ...built, rows: built.rows.filter(keep), groups: built.groups.filter(keep), active: built.active.filter(keep), idle: built.idle.filter(keep) };
-  }, [states, systems?.join()]);
+  }, [states, systems?.join(), lightWrites]);
   const head = stacked ? LANE_HEAD : 0;
   const entries = model ? laneEntries(model, open) : [];
   const view: LanesView = { ...laneView(entries, (narrow ? LANE_PITCH.narrow : LANE_PITCH.wide) + head, head, props.now ?? null), lit: link?.lit ?? [], onLane: link?.onLane ?? null };

@@ -253,10 +253,11 @@ test("an exact ISO window draws exactly that window, with nothing ahead, and as 
   expect(text(document.querySelector(".resolution-line"))).toBe("Nov 1, 01:00 MST → Nov 1, 05:00 (4 h) · one point per minute");
   expect(screen.getByRole("list", { name: "Range" }).querySelector("[aria-current]")).toBeNull();
   // The settings catalog polls on its own; the window's reads never ask again: the panels, outdoor, the lanes, the band
-  // and the marks (writes, alerts, runs); no setting (none draws by default, #1354) and no forecast, as the window ended before now.
+  // and the marks (writes, alerts, runs), the light switches the lanes read; no setting (none draws by default, #1354) and no
+  // forecast, as the window ended before now.
   const windowReads = () => requests(api).filter((row) => ["API-04", "API-05", "API-06", "API-12", "API-17", "API-14", "API-IRR-11"].includes(row.operationId ?? "")).length;
   const count = windowReads();
-  expect(count).toBe(9);
+  expect(count).toBe(10);
   expect(overlayAsked(api).map((row) => row.metric)).toEqual([["climate.outdoor_temp_f", "climate.outdoor_rh_pct"]]);
   await advance(5 * 60_000);
   expect(windowReads()).toBe(count);
@@ -313,7 +314,10 @@ test("the event rail marks writes, alerts and runs by source, each linking to Ac
   chartStubs();
   const api = await open("/graphs?range=24h", { fixture: "graphs-events" });
   // One page of the log and of the runs over the window read so far, and the open and recently resolved alerts.
-  expect(requests(api, "API-17").map((row) => Object.fromEntries(query(row.path)))).toEqual([{ from: iso(S - 24 * HOUR), to: iso(S), limit: "200" }]);
+  // The lanes read the light switches on their own, from a timer's length (2 h) before the window, whatever the rail shows.
+  expect(requests(api, "API-17").map((row) => Object.fromEntries(query(row.path)))).toEqual([
+    { from: iso(S - 26 * HOUR), to: iso(S), action: "light.", limit: "200" }, { from: iso(S - 24 * HOUR), to: iso(S), limit: "200" },
+  ]);
   expect(requests(api, "API-14").map((row) => Object.fromEntries(query(row.path)))).toEqual([{ status: "recent", limit: "200" }]);
   expect(requests(api, "API-IRR-11").map((row) => Object.fromEntries(query(row.path)))).toEqual([{ from: iso(S - 24 * HOUR), to: iso(S), limit: "200" }]);
   const rail = screen.getByRole("group", { name: /^Events on the charts, \d+$/ });
@@ -350,7 +354,8 @@ test("the event rail marks writes, alerts and runs by source, each linking to Ac
   cleanup(); stopFixtureApi(); MockPlot.reset(); chartStubs();
   const none = await open("/graphs?range=24h&events=", { fixture: "graphs-events" });
   expect(document.querySelector(".stack-rail, .stack-events")).toBeNull();
-  expect([requests(none, "API-17"), requests(none, "API-14"), requests(none, "API-IRR-11")]).toEqual([[], [], []]);
+  const railWrites = requests(none, "API-17").filter((row) => !query(row.path).has("action"));
+  expect([railWrites, requests(none, "API-14"), requests(none, "API-IRR-11")]).toEqual([[], [], []]);
 });
 
 test("Preset sets the picked metrics from an API-03 group; the Water and soil panels open below, and the menu marks the current one", async () => {

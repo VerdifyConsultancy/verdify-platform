@@ -3,7 +3,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { EquipmentLanes, buildLanes, lanesCsv, lanesKey, mergeSpans, mismatchSpans, stateWords, type EquipmentLanesProps } from "./equipment-lanes";
+import { EquipmentLanes, buildLanes, lanesCsv, lanesKey, manualWindows, mergeSpans, mismatchSpans, stateWords, type EquipmentLanesProps } from "./equipment-lanes";
+import type { ActivityEntry } from "../lib/operator-api";
 import metricsFixture from "./fixtures/metrics.json";
 import holeFixture from "./fixtures/series-hole.json";
 import statesFixture from "./fixtures/states.json";
@@ -308,4 +309,45 @@ test("labels are the API's, never made up; a message stands in for the lanes; th
   await settle();
   expect(container.querySelector(".chart-message")!.textContent).toBe("Equipment lanes cover at most 31 days. Narrow the range to see them");
   expect(created).toHaveLength(0);
+});
+
+/** API-17 `light.*` rows: a person's timed switch, an agent's switch from before the timer and before the window, the system's rows and a failed switch. */
+const SWITCHES: ActivityEntry[] = [
+  { id: 1, ts: "2026-11-01T06:50:00Z", actor: { source: "dashboard", name: "jason" }, action: "light.off", target: "grow_light_main", detail: { light: "main", state: "off", result: "confirmed", minutes: 15 } },
+  { id: 2, ts: "2026-11-01T05:00:00Z", actor: { source: "agent:steward", name: "steward" }, action: "light.on", target: "grow_light_grow", detail: { light: "grow", state: "on", result: "confirmed" } },
+  { id: 3, ts: "2026-11-01T08:00:00Z", actor: { source: "system", name: "controller" }, action: "light.on", target: "grow_light_grow", detail: { cause: "occupancy" } },
+  { id: 4, ts: "2026-11-01T09:00:00Z", actor: { source: "dashboard", name: "jason" }, action: "light.on", target: "grow_light_main", detail: { light: "main", state: "on", result: "ha_failed", minutes: 15 } },
+  { id: 5, ts: "2026-11-01T09:20:00Z", actor: { source: "dashboard", name: "jason" }, action: "light.on", target: "grow_light_main", detail: { light: "main", state: "on", result: "confirmed", via: "server_resync" } },
+];
+
+test("a light reads manual from a person's or an agent's switch until its timer, the next switch or the controller's next change; the rest automatic", async () => {
+  const model = buildLanes(load<StateLanes>(statesFixture), SWITCHES);
+  const parts = (equipment: string) => model.rows.find((row) => row.equipment === equipment)!.spans.map((span) => [new Date(span.start * 1000).toISOString().slice(11, 16), span.state, span.manual?.by ?? null]);
+  // The timed switch ends at 15 min; the failed switch and the resync are never manual; unknown is neither.
+  expect(parts("grow_light_main")).toEqual([["06:00", "on", null], ["06:50", "on", "jason"], ["07:00", "off", "jason"], ["07:05", "off", null], ["09:10", "unknown", null]]);
+  // A switch before the window, with no timer, holds until the light's next switch (occupancy's, automatic).
+  expect(parts("grow_light_grow")).toEqual([["06:00", "off", "steward AI"], ["06:30", "on", "steward AI"], ["08:00", "off", null]]);
+  expect(lanesKey(model).map((item) => item.key)).toEqual(["on", "manual", "intent", "unknown-span"]);
+  const csv = lanesCsv(model).split(/\r?\n/).filter((line) => line.startsWith("grow_light_main,"));
+  expect(csv.map((line) => line.split(",").at(-1))).toEqual(["automatic", "manual", "manual", "automatic", ""]);
+  // Without the switches the lights read neither, as on Equipment.
+  expect(lanesKey(buildLanes(load<StateLanes>(statesFixture))).map((item) => item.key)).not.toContain("manual");
+
+  const { container, plot } = await mount({ lightWrites: SWITCHES });
+  // A green strip along the main light's head from 06:50 to 07:05, on then off, and "manual" after it.
+  const strips = plot.ctx.rects.filter((rect) => rect.color === TOKENS["--forest"] && rect.y === band(TOP.grow_light_main).top);
+  expect(strips.map((rect) => [rect.x, rect.x + rect.width, rect.height])).toEqual([[x("06:50"), x("07:00"), 3], [x("07:00"), x("07:05"), 3]]);
+  const label = plot.ctx.texts.find((text) => text.text === "manual" && text.x > x("07:05"))!;
+  expect(label.x).toBeCloseTo(x("07:05") + 4);
+  plot.hover(at("06:55"), null, TOP.grow_light_main + 10);
+  expect(tooltip(plot)).toContain("manual · jason · 15 min timer");
+  expect(container.querySelector(".chart-key")!.textContent).toContain("manual switch");
+});
+
+test("a manual switch with no timer ends at the controller's next change of intent", () => {
+  const span = (start: number, end: number, state: "on" | "off" | "unknown") => ({ start, end, state, cause: null });
+  const entry = { id: 9, ts: new Date(100 * 1000).toISOString(), actor: { source: "dashboard", name: "jason" }, action: "light.on", target: "grow_light_grow", detail: { result: "confirmed" } };
+  expect(manualWindows([entry], "grow_light_grow", [span(0, 150, "off"), span(150, 300, "on")], 0, 300)).toEqual([{ start: 100, end: 150, by: "jason", minutes: null }]);
+  // An unknown intent is no change of mind.
+  expect(manualWindows([entry], "grow_light_grow", [span(0, 150, "off"), span(150, 300, "unknown")], 0, 300)).toEqual([{ start: 100, end: 300, by: "jason", minutes: null }]);
 });
