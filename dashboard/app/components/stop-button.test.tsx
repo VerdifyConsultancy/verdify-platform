@@ -18,15 +18,15 @@ const STILL_START = "Stopped every running valve. VPD misting, fog and the next 
 const STILL_START_NO_ENGINE = "Stopped every running valve. VPD misting and fog can still start on their own.";
 
 /** The line's state over the shared API-IRR-01 read, and API-02 as the shell polls it, from which Stop notes what runs. */
-function Card({ lineId, quiet = false }: { lineId: string; quiet?: boolean }) {
+function Card({ lineId }: { lineId: string }) {
   useNowRead();
   const status = useIrrigationRead();
   const line = status.data?.lines.find((item) => item.line_id === lineId);
-  return <div><p data-testid="state">{line?.state.code ?? "—"}</p><StopButton lineId={lineId} filled={!quiet} /></div>;
+  return <div><p data-testid="state">{line?.state.code ?? "—"}</p><StopButton lineId={lineId} /></div>;
 }
-async function open(lineId: string, options: FixtureOptions, session = OPERATOR, quiet = false) {
+async function open(lineId: string, options: FixtureOptions, session = OPERATOR) {
   const api = startFixtureApi(options);
-  renderWithApi(<Card lineId={lineId} quiet={quiet} />, session);
+  renderWithApi(<Card lineId={lineId} />, session);
   await advance(0);
   return api;
 }
@@ -101,22 +101,4 @@ test("a viewer sees no Stop", async () => {
   await open("L01", { fixture: ["l01-running", "viewer-session"] }, { role: "viewer", writesEnabled: false });
   expect(stopButton()).toBeNull();
   expect(document.querySelectorAll("[data-write-control]")).toHaveLength(0);
-});
-
-test("the quiet Stop of a line that is not running (D-UX-06): an outline, no .btn-stop, still one tap and one request, never disabled by the writes flag", async () => {
-  const api = await open("L02", { fixture: "writes-off" }, { role: "operator", writesEnabled: false }, true);
-  const stop = stopButton()!;
-  expect(stop.className).toBe("btn btn-stop-quiet");
-  expect(stop.getAttribute("data-write-control")).toBe("true");
-  expect(stop.hasAttribute("disabled")).toBe(false);
-  expect(text(stop)).toBe("Stop Wall drip (fertilized)");
-  fireEvent.click(stop);
-  expect(text(stopButton())).toBe("Sending…");
-  await advance(0);
-  expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-07", body: { line_id: "L02" } })]);
-  expect(document.querySelector("dialog")).toBeNull();
-  cleanup(); stopFixtureApi();
-  // A viewer sees neither the outline nor the filled one.
-  await open("L02", { fixture: "viewer-session" }, { role: "viewer", writesEnabled: false }, true);
-  expect(stopButton()).toBeNull();
 });

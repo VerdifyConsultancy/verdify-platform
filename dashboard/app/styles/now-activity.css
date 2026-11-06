@@ -59,9 +59,12 @@
 .now-tib.value-muted strong{color:var(--ink-muted)}
 
 /* The status line: quiet phrases separated by middle dots; Iris turns amber when its newest required trigger was late, missed or failed. */
-.now-status{grid-area:status;display:flex;flex-wrap:wrap;align-items:center;min-height:calc(1.75rem + var(--space-3));margin:0;padding:var(--space-3) 0 0;list-style:none;border-top:1px solid color-mix(in srgb,var(--ink-muted) 22%,transparent);font-size:var(--fs-sm);color:var(--ink-muted)}
-.now-status>li{display:flex;align-items:center;min-width:0}
-.now-status>li+li::before{content:"·";margin:0 var(--space-2);color:var(--ink-muted)}
+.now-status{--now-sep:calc(var(--space-2) * 2 + .4em);grid-area:status;display:flex;flex-wrap:wrap;align-items:center;clip-path:inset(-1rem -1rem -1rem -5px);min-height:calc(1.75rem + var(--space-3));margin:0;padding:var(--space-3) 0 0;list-style:none;border-top:1px solid color-mix(in srgb,var(--ink-muted) 22%,transparent);font-size:var(--fs-sm);color:var(--ink-muted)}
+/* #1322: every item carries its "·" in a fixed-width lead it pulls back over the gap, so the item that starts a line
+   (the first, or one that wrapped) puts its "·" left of the list's edge, where the clip-path hides it; 5 px of the
+   left edge stay inside the clip for the 2 px focus ring and its 2 px offset. */
+.now-status>li{display:flex;align-items:center;min-width:0;margin-left:calc(-1 * var(--now-sep))}
+.now-status>li::before{content:"·" / "";flex:none;width:var(--now-sep);text-align:center;color:var(--ink-muted)}
 .now-status-item{display:inline-flex;align-items:center;min-height:24px;color:#fff;text-decoration:none}
 a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .now-status-static{color:var(--ink-muted)}
@@ -115,7 +118,7 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .now-unconfirmed{margin:var(--space-2) 0 0;padding-top:var(--space-3);border-top:1px solid var(--line)}
 .now-unconfirmed a{display:inline-flex;align-items:center;min-height:24px;font-weight:700;text-decoration:none}
 
-/* Water today: a row per zone, its minutes against the cap and when it last got water, then SAF-4 and the flow. */
+/* Water today: the daily mist & fog limit (SAF-4, the primary daily limit) first, then a row per zone, its minutes against the cap and when it last got water, and the flow. */
 .now-water-zones{display:grid;gap:var(--space-2);margin:0;padding:0;list-style:none;container-type:inline-size}
 .now-water-row{display:grid;grid-template-columns:3.75rem minmax(0,1fr) minmax(0,9.5rem);align-items:center;gap:var(--space-1) var(--space-3);min-height:1.75rem}
 .now-water-name{font-size:var(--fs-sm);font-weight:600}
@@ -125,7 +128,8 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .now-water-over{font-weight:600;color:var(--fault)}
 .now-water-last{min-width:0;font-size:var(--fs-sm);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .now-water-running{font-weight:600;color:var(--ink)}
-.now-water-saf4{margin-top:var(--space-1);padding-top:var(--space-2);border-top:1px solid var(--line)}
+.now-water-saf4{margin-bottom:var(--space-1);padding-bottom:var(--space-2);border-bottom:1px solid var(--line)}
+.now-water-primary{font-weight:400}
 /* Its name takes a line of its own (#1339), so "Daily mist & fog limit" and its tip never cut. */
 .now-water-saf4 .now-water-name{grid-column:1/-1}
 .now-water-saf4 .now-water-meter{grid-column:1/3}

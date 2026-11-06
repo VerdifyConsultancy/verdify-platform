@@ -85,16 +85,17 @@ test("1440 px: the zone heads' cap meters are one width, their minutes and right
   expect(new Set(lasts.map((box) => box.bottom - box.top)).size, JSON.stringify(lasts)).toBe(1);
 });
 
-test("only a running line's Stop is filled red; every other line, fog included (#1343 follow-up), has a quiet one that still stops it", async ({ page, request }) => {
+test("D-UX-06 (2026-11-06): only the running line has a Stop, filled red, and one Stop all water stops everything", async ({ page, request }) => {
   await useScreensClock(page, request, "l01-running");
   await load(page, "/water");
   await expect(page.locator("article[data-line] .btn-stop")).toHaveCount(1);
+  await expect(page.locator("article[data-line]").getByRole("button", { name: /^Stop/ })).toHaveCount(1);
   await expect(row(page, "L01").locator(".btn-stop")).toHaveText(/^Stop/);
-  await expect(page.locator("article[data-line] .btn-stop-quiet")).toHaveCount(9);
+  await expect(page.locator(".stop-all-water:visible")).toHaveCount(1);
   await expect(page.locator(".page-status")).toContainText("Wall drip running (run now)");
-  await row(page, "L04").getByRole("button", { name: /^Stop/ }).click();
+  await row(page, "L01").getByRole("button", { name: /^Stop/ }).click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
-  await untilPolled(page, async () => expect((await fixtureWrites(request)).map((write) => [write.operationId, write.body])).toEqual([["API-IRR-07", { line_id: "L04" }]]));
+  await untilPolled(page, async () => expect((await fixtureWrites(request)).map((write) => [write.operationId, write.body])).toEqual([["API-IRR-07", { line_id: "L01" }]]));
 });
 
 test("minutes by zone keys a no-data day, never 0, and marks today partial", async ({ page, request }) => {
@@ -195,9 +196,10 @@ test("at 390 px a row's Run… is full width and each of its targets is at least
   const actions = row(page, "L01").locator(":scope > .object-row-actions");
   const run = actions.getByRole("button", { name: /^Run…/ });
   const [box, wide] = await Promise.all([actions.boundingBox(), run.boundingBox()]);
-  // Run… takes the row's width beside its ⋯, the quiet Stop wrapping under it.
+  // Run… takes the row's width beside its ⋯; an idle row has no Stop (D-UX-06, 2026-11-06).
   expect(wide!.width).toBeGreaterThan(box!.width * 0.6);
-  for (const target of [run, actions.getByRole("button", { name: /^Stop/ }), actions.locator("summary")]) expect((await target.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  await expect(actions.getByRole("button", { name: /^Stop/ })).toHaveCount(0);
+  for (const target of [run, actions.locator("summary")]) expect((await target.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   await expectNoHorizontalScroll(page);
 });
 

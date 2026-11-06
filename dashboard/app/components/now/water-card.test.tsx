@@ -22,7 +22,7 @@ const renderCard = (irrigation: PanelRead<IrrigationStatus>, role: "operator" | 
 const row = (name: string) => document.querySelector(`[data-water="${name}"]`);
 const rowWords = (name: string) => ({ amount: plain(text(row(name)?.querySelector(".now-water-amount"))), last: plain(text(row(name)?.querySelector(".now-water-last"))) });
 
-test("in band: a meter per zone, its minutes against the cap and when it last got water, then the daily mist & fog limit and the flow", () => {
+test("in band: the daily mist & fog limit first, then a meter per zone, its minutes against the cap and when it last got water, and the flow", () => {
   renderCard(read(statusOf("in-band")));
   expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Water today");
   expect(["wall", "center", "south", "west"].map(rowWords)).toEqual([
@@ -30,10 +30,12 @@ test("in band: a meter per zone, its minutes against the cap and when it last go
     { amount: "0 / 45 min", last: "misted Fri 14:20 (VPD)" }, { amount: "0 / 45 min", last: "misted 9 days ago (VPD)" },
   ]);
   // The drip zone fills in --eq-water, the mister zones in --eq-mister.
-  expect([...document.querySelectorAll(".now-water-zones .meter")].map((meter) => meter.className.split(" ")[1])).toEqual(["meter-water", "meter-mister", "meter-mister", "meter-mister", "meter-water"]);
+  expect([...document.querySelectorAll(".now-water-zones .meter")].map((meter) => meter.className.split(" ")[1])).toEqual(["meter-water", "meter-water", "meter-mister", "meter-mister", "meter-mister"]);
   expect(rowWords("saf4")).toEqual({ amount: "21 / 360 gal", last: "all misters and fog" });
   // #1349: words and a tip, never a bare "SAF-4".
-  expect(text(row("saf4")?.querySelector(".now-water-name"))).toBe("Daily mist & fog limit");
+  expect(text(row("saf4")?.querySelector(".now-water-name"))).toBe("Daily mist & fog limit primary daily limit");
+  // #1339 (Jason, 2026-11-06): mist & fog is the primary daily water limit, so it leads the card, above the zones.
+  expect(document.querySelector(".now-water-zones > li")?.getAttribute("data-water")).toBe("saf4");
   expect(screen.getByRole("button", { name: "About Daily mist & fog limit" })).toBeTruthy();
   expect(document.body.textContent).not.toContain("SAF-4");
   expect(text(row("flow"))).toBe("No flow with every valve closed");
