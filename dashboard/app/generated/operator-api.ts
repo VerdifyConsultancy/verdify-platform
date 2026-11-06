@@ -549,7 +549,7 @@ export interface paths {
         };
         /**
          * Now hero
-         * @description Indoor and outdoor climate with ages, the band in force (the dispatcher's DERIVED band rows) with a verdict per metric, mode, Iris status, equipment running, bursts from the controller's readback, the leak flag, the open-alert count, source freshness with the ingestor heartbeat, and the device writer. Polled every 15 s; the shell banners read `freshness`, `writer`, `leak` and `alerts`. Water and occupancy come from API-IRR-01.
+         * @description Indoor and outdoor climate with ages, the band in force (the dispatcher's DERIVED band rows) with a verdict per metric, mode, Iris status, equipment running, bursts from the controller's readback, the leak flag, the open-alert count, source freshness with the ingestor heartbeat, the device writer and the greenhouse snapshot. Polled every 15 s; the shell banners read `freshness`, `writer`, `leak` and `alerts`. Water and occupancy come from API-IRR-01.
          */
         readonly get: operations["API-02"];
         readonly put?: never;
@@ -1510,6 +1510,8 @@ export interface components {
             }[];
             /** Format: date-time */
             readonly server_time: string;
+            /** @description The greenhouse snapshot (#1346): the newest 3-5 sentence summary the local Cortex model wrote from the current conditions (CronJob verdify-greenhouse-brief); null when none was written in the last 2 h */
+            readonly snapshot?: components["schemas"]["Snapshot"] | null;
             /** @description Device writer health (Round 2 #1): the writer-health tile and the stuck-delivery banner. age_s is the setpoints pipeline age (v_data_pipeline_health source setpoints: the newest setpoint push or device-reported change). stuck is true while the setpoint_delivery_stuck alert is open. differing counts settings whose effective value has differed from the newest readback for more than 10 min, leaving out held and clamped ones */
             readonly writer: {
                 readonly age_s: number | null;
@@ -2138,6 +2140,23 @@ export interface components {
             readonly reason?: string;
             /** @description Switches 0 or 1, enums the option value; snapped to step */
             readonly value: number;
+        };
+        /** @description Read-only text for people, never an input to a plan. stale: as_of is more than 30 min old (old) or a later attempt failed or was rejected (failed); show it muted with "as of". outdated: a band verdict or the open-alert count changed since it was written; never show it */
+        readonly Snapshot: {
+            /**
+             * Format: date-time
+             * @description The newer of generated_at and the last run that found the same conditions
+             */
+            readonly as_of: string;
+            /** Format: date-time */
+            readonly generated_at: string;
+            /** @example llm.primary.longctx */
+            readonly model: string;
+            readonly outdated: boolean;
+            readonly stale: boolean;
+            /** @enum {string|null} */
+            readonly stale_reason: "old" | "failed" | null;
+            readonly text: string;
         };
         readonly StateLanes: {
             /** Format: date-time */

@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# verdify-greenhouse-brief (#1346): the greenhouse snapshot on Now. A CronJob on the verdify-api image (the overlay's
+# `images:` entry and release-pins.yaml pin it to the verdify-api release digest, as for verdify-operator-api) runs
+# api/greenhouse_brief_job.py every 5 minutes as the dashboard login and writes public.greenhouse_brief (migration
+# 301). It calls only Cortex (cortex.vallery.net, 192.168.7.10 through cluster DNS): its component label is not in
+# egress-local-only's NotIn list, so it reaches private ranges only, never the public internet. Its Secrets,
+# verdify-dashboard-runtime-db and verdify-planner-cortex, already exist in verdify-prod (deploy/k8s/SECRETS.md).
+resources:
+  - cronjob.yaml

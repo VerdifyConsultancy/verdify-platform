@@ -316,6 +316,10 @@ migration and other bootstrap owner credentials are unchanged.
 
 `verdify-vision-cortex` must contain `api_key.txt`, a dedicated inference-only Cortex identity limited to `llm.primary.longctx.mm`, owned and sealed in agents KSOPS. The vision CronJob mounts it at `/vcortex/api_key.txt`. The old `verdify-vision-key` Gemini Secret is retained without workload references; deleting or revoking it is outside this change.
 
+## Greenhouse snapshot (#1346)
+
+CronJob `verdify-greenhouse-brief` (components/greenhouse-brief) reuses `verdify-planner-cortex`, key `api_key.txt`: the inference-only Cortex identity limited to the text routes `llm.primary.longctx` and `llm.qwen38u.longctx`, live in `verdify-prod` (its adoption into agents KSOPS is jvallery/agents#6079; no new key was minted). It is mounted `optional` at `/vcortex-brief/api_key.txt`: without it the job calls nothing, records one `error` row (`FAIL CLOSED`) per run and exits 2. Its database login is the dashboard login (`verdify-dashboard-runtime-db` / `password`). A separate `verdify-brief-cortex` identity, so the snapshot's Cortex use can be attributed and revoked on its own, is a follow-up in jvallery/cortex-ai-compute and the agents KSOPS lane.
+
 ## Firmware artifact signing (#1009)
 
 `verdify-firmware-signing` contains `cosign.key` and `password`. Agents owns the
@@ -358,7 +362,7 @@ start unless `OPERATOR_API_TOKEN` has at least 32 printable characters (the BFF'
 | Secret | Keys | Consumed by | Rotate |
 |---|---|---|---|
 | `verdify-operator-api` | `operator-api-token` | Deployment `verdify-operator-api` (`secretKeyRef`, required: `OPERATOR_API_TOKEN`), the bearer the BFF presents; the same value as `verdify-dashboard-web`'s `operator-api-token` | Jason reseals both copies in one jvallery/agents PR. Once both have synced, delete the web pod and the operator API pod so each restarts with the new value; until both have, the BFF's calls get 401. |
-| `verdify-dashboard-runtime-db` | `password` | Deployment `verdify-operator-api` (`secretKeyRef`, required: `DB_PASS`, user `verdify_dashboard_runtime_login`) and Job `verdify-maintenance-runtime-role-bootstrap` (`secretKeyRef`, optional: `DASHBOARD_DB_PASSWORD`). A missing or empty value skips that login's duty; any other value must be 64 characters of `[A-Za-z0-9_-]`, or the PreSync hook fails closed and stops the sync. | An owner-run `ALTER ROLE verdify_dashboard_runtime_login PASSWORD …` sets the new value, then Jason reseals it in the KSOPS lane; once synced, restart `verdify-operator-api` (`kubectl -n verdify-prod delete pod -l app.kubernetes.io/component=operator-api`). The role bootstrap never rotates a password. |
+| `verdify-dashboard-runtime-db` | `password` | Deployment `verdify-operator-api` (`secretKeyRef`, required: `DB_PASS`, user `verdify_dashboard_runtime_login`), CronJob `verdify-greenhouse-brief` (`secretKeyRef`, required: `DB_PASS`, the same login; #1346) and Job `verdify-maintenance-runtime-role-bootstrap` (`secretKeyRef`, optional: `DASHBOARD_DB_PASSWORD`). A missing or empty value skips that login's duty; any other value must be 64 characters of `[A-Za-z0-9_-]`, or the PreSync hook fails closed and stops the sync. | An owner-run `ALTER ROLE verdify_dashboard_runtime_login PASSWORD …` sets the new value, then Jason reseals it in the KSOPS lane; once synced, restart `verdify-operator-api` (`kubectl -n verdify-prod delete pod -l app.kubernetes.io/component=operator-api`). The role bootstrap never rotates a password. |
 
 A missing Secret or key leaves a new operator API pod in `CreateContainerConfigError`. Read both back by key name
 only: `kubectl -n verdify-prod describe secret verdify-operator-api verdify-dashboard-runtime-db`.

@@ -359,6 +359,10 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "290-band-compliance.sql",
         # The energy view replacement, its daily_summary backfill and the receipt re-seals run forward only.
         "291-energy-daily-load-magnitude.sql",
+        # The greenhouse snapshot table, its grants and the MCP receipt re-seal run forward only.
+        "301-greenhouse-brief.sql",
+        # The Planner section's read views and their dashboard grant run forward only.
+        "302-planner-section-reads.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

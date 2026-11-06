@@ -40,6 +40,7 @@ export type StateReason = Lenient<Schemas["StateReason"]>;
 export type DesiredSetting = Lenient<Schemas["DesiredSetting"]>;
 export type Me = Lenient<Schemas["Me"]>;
 export type Now = Lenient<Schemas["Now"]>;
+export type Snapshot = Lenient<Schemas["Snapshot"]>;
 export type MetricDef = Lenient<Schemas["MetricDef"]>;
 export type Metrics = Lenient<Json<"API-03", 200>>;
 export type Series = Lenient<Schemas["Series"]>;
@@ -161,6 +162,10 @@ const controller = z.object({
   firmware_version: maybe(text), uptime_s: maybe(int), reset_reason: maybe(text), heap_free_kb: maybe(num), heap_largest_block_kb: maybe(num),
   rssi_dbm: maybe(num), observed_at: maybe(text),
 });
+/** The greenhouse snapshot (#1346); a server before it sends none. */
+const snapshot = z.object({
+  text, generated_at: text, as_of: text, model: text, stale: flag, stale_reason: maybe(code), outdated: flag,
+});
 const now = z.object({
   server_time: text,
   indoor: z.object({ temp_f: reading, rh_pct: reading, vpd_kpa: reading }),
@@ -175,6 +180,7 @@ const now = z.object({
   freshness: z.object({ climate: freshness, diagnostics: freshness, readback: freshness, ingestor: freshness }),
   writer: z.object({ last_at: maybe(text), age_s: int.nullable(), stuck: flag, differing: int, oldest_since: maybe(text) }),
   controller: controller.optional(),
+  snapshot: snapshot.nullable().optional(),
 });
 
 const metricDef = z.object({

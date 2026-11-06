@@ -99,6 +99,8 @@ $PY -m pytest -q -rs \
   tests/test_289_alert_silences_delivery.py \
   tests/test_290_band_compliance_delivery.py \
   tests/test_291_energy_daily_delivery.py \
+  tests/test_301_greenhouse_brief_delivery.py \
+  tests/test_302_planner_section_delivery.py \
   tests/test_metric_registry_completeness.py \
   tests/test_verdify_services_series.py \
   tests/test_verdify_services_band_preview.py \
@@ -330,6 +332,7 @@ $PY -m pytest -q -rs \
   tests/test_twin_asof_migration.py \
   tests/test_twin_live_driver.py \
   tests/test_verdify_services_reads.py \
+  tests/test_greenhouse_brief.py \
   tests/test_verdify_services_irrigation_reads.py \
   tests/test_operator_api_contract.py \
   tests/test_operator_api_auth.py \

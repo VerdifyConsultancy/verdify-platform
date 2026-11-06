@@ -735,6 +735,57 @@ def sealed_sql_291():
     )
 
 
+GREENHOUSE_BRIEF_MIGRATION = (
+    301,
+    "301-greenhouse-brief.sql",
+    "0c7ad6846a52d840a9ec90366bdc87f8ee0d77a358c697f1e6bffe5f752d2062",
+)
+# greenhouse_brief is written by the dashboard duty and read by the MCP duty; neither ordinary login reaches it,
+# so the api and ingestor seals stay 291's and the MCP seal moves. The MCP literal is a read-only projection on
+# production at exact289 (291 leaves the MCP seal alone) until the rolled-back native qualification measures it.
+# Stand-in chain: 301 follows 291 here and moves behind 296 when #1388 publishes it.
+SUCCESSOR_301 = {**SUCCESSOR_291, "mcp": "717d3d0bea4032fe65fe977f78f511b6ed3bd97142d6665ebc3bfa83836414af"}
+
+
+def sealed_sql_301():
+    # Keep every 291 predicate and bind the exact 301 runner stamp with the MCP seal its grant moves.
+    predecessor = sealed_sql_291()
+    current = seal_profile_sql(291, SUCCESSOR_291)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(301, SUCCESSOR_301), 1)
+        + " AND "
+        + ledger_row_sql(*GREENHOUSE_BRIEF_MIGRATION)
+        + ")"
+    )
+
+
+PLANNER_SECTION_MIGRATION = (
+    302,
+    "302-planner-section-reads.sql",
+    "8d427bb1bc067a88e1e687fead3289841fd5d117247580a10608f0b9dd306ca5",
+)
+# The four Planner-section read views are verdify's, with SELECT for the dashboard duty only, which neither
+# ordinary login nor an MCP role holds. All three seals stay 301's. The rolled-back native qualification
+# measures them.
+SUCCESSOR_302 = SUCCESSOR_301
+
+
+def sealed_sql_302():
+    # Keep every 301 predicate and bind the exact 302 runner stamp.
+    predecessor = sealed_sql_301()
+    current = seal_profile_sql(301, SUCCESSOR_301)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(302, SUCCESSOR_302), 1)
+        + " AND "
+        + ledger_row_sql(*PLANNER_SECTION_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -773,6 +824,10 @@ def sealed_sql():
         + sealed_sql_290()
         + " OR "
         + sealed_sql_291()
+        + " OR "
+        + sealed_sql_301()
+        + " OR "
+        + sealed_sql_302()
         + ")"
     )
 

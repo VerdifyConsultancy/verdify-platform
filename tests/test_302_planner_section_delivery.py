@@ -3,10 +3,10 @@
 #1361: the dashboard's Planner section shows plan cost, the experiment list and a study's arm calendar. The dashboard
 duty reads plan_journal and planner_trigger_ledger already (284) but none of the experiment tables nor
 planner_inference_runs. 302 adds four security-barrier views, owned by verdify, with SELECT for the dashboard duty and
-nobody else, so every runtime seal keeps 290's value and no receipt is re-sealed. v_planner_inference_runs carries the
+nobody else, so every runtime seal keeps 301's value and no receipt is re-sealed (302 follows 301 in one change). v_planner_inference_runs carries the
 whole row as jsonb (`attempt`), so the Cortex attempt columns of #1350 show up there once migration 294 adds them.
 test_native_qualification_is_recorded is the merge gate for the rolled-back production run that measures that and runs
-db/qualification/302-planner-section-reads-fixture.sql.
+db/qualification/302-planner-section-reads-fixture.sql: a strict xfail while the fixture says it is pending, as 301's.
 """
 
 import hashlib
@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-PREDECESSOR = 290
+PREDECESSOR = 301
 SEALS = ("api", "ingestor", "mcp")
 API, INGESTOR = "verdify_api_runtime_login", "verdify_ingestor_runtime_login"
 VIEWS = (
@@ -48,7 +48,7 @@ MIGRATION = ROOT / "db/migrations" / c0.SUCCESSOR_302
 SOURCE = MIGRATION.read_text()
 NATIVE = ROOT / "db/qualification/302-planner-section-reads-fixture.sql"
 FIXTURE = ROOT / "tests/fixtures/302-planner-section-reads-native-qualification.json"
-NUMBERS = [*range(255, 291), 302]
+NUMBERS = [*range(255, 292), 301, 302]
 
 
 def uncommented(text):
@@ -99,8 +99,8 @@ def test_successor_keeps_every_seal_and_binds_its_exact_ledger_row():
     assert six.sealed_sql_302() == expected
     assert "(SELECT max(seq) FROM public.schema_migrations WHERE source='db/migrations')=302" in expected
     assert "stamp_method='runner'" in six.ledger_row_sql(*six.PLANNER_SECTION_MIGRATION)
-    # 302 follows 290 in both ORs.
-    assert six.sealed_sql().count(" OR " + six.sealed_sql_290() + " OR " + expected) == 1
+    # 302 follows 301 in both ORs.
+    assert six.sealed_sql().count(" OR " + six.sealed_sql_301() + " OR " + expected) == 1
     assert maintenance.contract_sql().count(" OR " + six.sealed_sql_302()) == 1
     assert '"302-planner-section-reads.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
     assert "tests/test_302_planner_section_delivery.py" in (ROOT / "scripts/ci-local.sh").read_text()
@@ -188,7 +188,7 @@ def test_native_fixture_reads_as_the_dashboard_login_and_finds_the_closed_draft(
 def assert_recorded(evidence):
     """What the recorded native qualification must show before 302 merges."""
     assert evidence["final_migration_qualification_pending"] is False, (
-        "302 native qualification pending: once production is at exact290, run "
+        "302 native qualification pending: with production at exact301 (or --apply-first each predecessor), run "
         "scripts/qualify-migration-successor.py db/migrations/302-planner-section-reads.sql --native-fixture "
         "db/qualification/302-planner-section-reads-fixture.sql --fixture "
         "tests/fixtures/302-planner-section-reads-native-qualification.json on production (every session rolls "
@@ -197,7 +197,6 @@ def assert_recorded(evidence):
     assert evidence["migration"] == c0.SUCCESSOR_302
     assert evidence["exact_final_migration_sha256"] == c0.SUCCESSOR_302_SHA256
     assert evidence["qualified_successor"] == six.SUCCESSOR_302 == registered(302) == registered(PREDECESSOR)
-    assert "applied_first" not in evidence
     assert evidence["before"] == evidence["after_rollback"] == registered(PREDECESSOR)
     assert evidence["final_migration_rollback_verified"] is True
     assert evidence["inside_transaction_receipts_match"] is True
@@ -208,7 +207,7 @@ def assert_recorded(evidence):
 
 
 def fake_qualification(monkeypatch, *, inside=None, native=None):
-    """Replay the qualifier's three sessions for 302, without a database, on production at 290."""
+    """Replay the qualifier's three sessions for 302, without a database, on production at 301."""
     seals = registered(302)
 
     def state(max_seq):
@@ -255,6 +254,11 @@ def test_the_projection_is_the_files_literals():
     assert evidence["before"] == registered(PREDECESSOR)
 
 
+@pytest.mark.xfail(
+    json.loads(FIXTURE.read_text()).get("final_migration_qualification_pending", True),
+    reason="DO NOT MERGE: 301 and 302 must be natively qualified on production first",
+    strict=True,
+)
 def test_native_qualification_is_recorded():
     """Merge gate: the rolled-back production qualification of exact302 and its unchanged seals."""
     assert_recorded(json.loads(FIXTURE.read_text()))
