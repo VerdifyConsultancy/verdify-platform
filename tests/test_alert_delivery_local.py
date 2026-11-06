@@ -217,3 +217,24 @@ def test_the_prod_render_carries_no_slack_env_secret_or_relay(prod_render):
             secret = (volume.get("secret") or {}).get("secretName", "")
             assert "slack" not in secret, (doc["metadata"]["name"], secret)
     assert "slack.com" not in prod_render and "/etc/verdify/slack" not in prod_render
+
+
+def test_hermes_cannot_send_a_message_and_iris_is_never_told_to():
+    """#1352: Hermes keeps planning but has no messaging tool, and no Iris prompt or skill reference asks for a
+    Slack or #greenhouse post (the brief is the run's final reply)."""
+    canonical = yaml.safe_load((ROOT / "hermes/iris/config.yaml").read_text())
+    manifest = yaml.safe_load((ROOT / "deploy/k8s/components/hermes-iris/hermes-config.yaml").read_text())
+    embedded = yaml.safe_load(manifest["data"]["config.yaml"])
+    for profile in (canonical, embedded):
+        assert "messaging" in profile["agent"]["disabled_toolsets"]
+        assert "slack" not in json.dumps(profile.get("platforms", {})).lower()
+    for name in (
+        "ingestor/iris_planner.py",
+        "docs/planner/greenhouse-playbook.md",
+        "hermes/iris/SOUL.md",
+        "hermes/iris/SKILL.md",
+        "deploy/k8s/components/hermes-iris/iris-inventory.yaml",
+    ):
+        text = (ROOT / name).read_text(encoding="utf-8")
+        assert "#greenhouse" not in text, name
+        assert not re.search(r"(post|posting)\b[^.\n]{0,40}\bslack|slack (post|brief)", text, re.IGNORECASE), name

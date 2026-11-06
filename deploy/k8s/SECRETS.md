@@ -270,8 +270,11 @@ renderer, OAuth, experiment and owner Secret keys remain unchanged.
 ### Slack (retired, #1352)
 
 No workload references a Slack Secret: alerts go to `alert_log` (the dashboard)
-and page through Alertmanager. The `verdify-slack` Secret is still delivered by
-the agents KSOPS lane until its removal there (#1352 follow-up); nothing mounts it.
+and page through Alertmanager, and Hermes has no messaging tool (its profile
+disables the `messaging` toolset). The `verdify-slack` Secret is still delivered
+by the agents KSOPS lane until its removal there (#1352 follow-up); nothing
+mounts it. The Iris bot token is revoked only after the 7-day zero-Slack window
+(about 2026-11-13), from the coordinator, on Jason's decision.
 
 ### Hydroponic probe (VD-70, #1183)
 

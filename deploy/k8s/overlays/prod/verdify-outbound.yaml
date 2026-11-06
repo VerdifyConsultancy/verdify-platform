@@ -8,25 +8,40 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: '0'
 data:
-  default.conf: "# Fixed destinations only: incoming Host/URI cannot select an upstream\
-    \ host.\naccess_log off;\nerror_log /dev/stderr crit;\nresolver 10.43.0.10 valid=30s\
-    \ ipv6=off;\nresolver_timeout 5s;\nproxy_ssl_verify on;\n# Open-Meteo cross-signs\
-    \ Root YR via ISRG Root X1: retain full verification.\nproxy_ssl_verify_depth\
-    \ 3;\nproxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;\nproxy_ssl_server_name\
-    \ on;\nproxy_connect_timeout 5s;\nproxy_send_timeout 10s;\nproxy_read_timeout\
-    \ 45s;\nproxy_redirect off;\nclient_max_body_size 2m;\nserver { listen 8080; location\
-    \ = /healthz { return 200 'ok'; } location / { return 404; } }\nserver {\n  listen\
-    \ 8081;\n  server_name _;\n  location = /v1/embeddings {\n    limit_except POST\
-    \ { deny all; }\n    proxy_set_header Host api.openai.com;\n    proxy_set_header\
-    \ X-Forwarded-Host \"\";\n    proxy_set_header X-Forwarded-For \"\";\n    proxy_set_header\
-    \ Forwarded \"\";\n    proxy_ssl_name api.openai.com;\n    set $fixed_host api.openai.com;\n\
-    \    proxy_pass https://$fixed_host$request_uri;\n  }\n  location / { return 404;\
-    \ }\n}\nserver {\n  listen 8083;\n  server_name _;\n  location = /v1/forecast\
-    \ {\n    limit_except GET { deny all; }\n    proxy_set_header Host api.open-meteo.com;\n\
-    \    proxy_set_header X-Forwarded-Host \"\";\n    proxy_set_header X-Forwarded-For\
-    \ \"\";\n    proxy_set_header Forwarded \"\";\n    proxy_ssl_name api.open-meteo.com;\n\
-    \    set $fixed_host api.open-meteo.com;\n    proxy_pass https://$fixed_host$request_uri;\n\
-    \  }\n  location / { return 404; }\n}\n"
+  # #1351: the only public destination is Open-Meteo. The OpenAI embeddings route (8081) left with
+  # migration 296 (Cortex embed.main); Slack (8082) left with #1352.
+  default.conf: |
+    # Fixed destinations only: incoming Host/URI cannot select an upstream host.
+    access_log off;
+    error_log /dev/stderr crit;
+    resolver 10.43.0.10 valid=30s ipv6=off;
+    resolver_timeout 5s;
+    proxy_ssl_verify on;
+    # Open-Meteo cross-signs Root YR via ISRG Root X1: retain full verification.
+    proxy_ssl_verify_depth 3;
+    proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+    proxy_ssl_server_name on;
+    proxy_connect_timeout 5s;
+    proxy_send_timeout 10s;
+    proxy_read_timeout 45s;
+    proxy_redirect off;
+    client_max_body_size 2m;
+    server { listen 8080; location = /healthz { return 200 'ok'; } location / { return 404; } }
+    server {
+      listen 8083;
+      server_name _;
+      location = /v1/forecast {
+        limit_except GET { deny all; }
+        proxy_set_header Host api.open-meteo.com;
+        proxy_set_header X-Forwarded-Host "";
+        proxy_set_header X-Forwarded-For "";
+        proxy_set_header Forwarded "";
+        proxy_ssl_name api.open-meteo.com;
+        set $fixed_host api.open-meteo.com;
+        proxy_pass https://$fixed_host$request_uri;
+      }
+      location / { return 404; }
+    }
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -61,7 +76,7 @@ spec:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: outbound
       annotations:
-        verdify.ai/outbound-config-sha256: 2c193fdd12841ae26095eaa6a96bb2c7c51b020de0e07798117268b7a3d90797
+        verdify.ai/outbound-config-sha256: 52228f9991a93d6709af6362debebeac822cf599fc630bfa4f61ed3143cf33b1
     spec:
       # #1363: the zot origin denies anonymous reads.
       imagePullSecrets:
@@ -100,8 +115,6 @@ spec:
         ports:
         - name: health
           containerPort: 8080
-        - name: openai
-          containerPort: 8081
         - name: forecast
           containerPort: 8083
         resources:
@@ -154,9 +167,6 @@ spec:
   selector:
     app.kubernetes.io/component: outbound
   ports:
-  - name: openai
-    port: 8081
-    targetPort: 8081
   - name: forecast
     port: 8083
     targetPort: 8083
@@ -186,8 +196,6 @@ spec:
         matchLabels:
           app.kubernetes.io/component: ingestor
     ports:
-    - protocol: TCP
-      port: 8081
     - protocol: TCP
       port: 8083
   egress:

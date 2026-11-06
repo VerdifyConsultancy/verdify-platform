@@ -37,6 +37,15 @@ CAMERAS = ["greenhouse_1", "greenhouse_2"]
 # k3s point this at an emptyDir/PVC shared with the analyze step.
 VAULT_DIR = Path(os.environ.get("VERDIFY_SNAPSHOT_DIR", "/mnt/iris/verdify-vault/snapshots"))
 DENVER = ZoneInfo("America/Denver")
+# The analyze step's budget. Two Cortex vision calls normally take well under a minute; 120 s timed out on
+# 2026-11-06 01:00Z with the reason thrown away (#1118). The CronJob's activeDeadlineSeconds (900) bounds the whole run.
+DEFAULT_ANALYZE_TIMEOUT_S = 600
+
+
+def analyze_timeout_s() -> int:
+    """VERDIFY_ANALYZE_TIMEOUT_S when it is a positive integer, else the default."""
+    raw = os.environ.get("VERDIFY_ANALYZE_TIMEOUT_S", "").strip()
+    return int(raw) if raw.isdigit() and int(raw) > 0 else DEFAULT_ANALYZE_TIMEOUT_S
 
 
 class SnapshotHTTPSConnection(http.client.HTTPSConnection):
@@ -113,9 +122,11 @@ def main():
 
     log.info("Done: %d/%d cameras captured", success, len(cameras))
 
-    # Trigger Gemini Vision analysis on captured snapshots
+    # Trigger the Cortex vision analysis on captured snapshots. The child inherits this process's stdout and
+    # stderr, so its own log lines (each Cortex call, error and timing) reach the pod log (#1118).
     if success > 0 and "--no-analyze" not in sys.argv:
-        log.info("Triggering crop health analysis...")
+        timeout_s = analyze_timeout_s()
+        log.info("Triggering crop health analysis (timeout %ds)...", timeout_s)
         try:
             result = subprocess.run(
                 [
@@ -124,15 +135,16 @@ def main():
                         "VERDIFY_ANALYZE_SNAPSHOT_SCRIPT", "/srv/verdify/scripts/analyze-greenhouse-snapshot.py"
                     ),
                 ],
-                capture_output=True,
-                text=True,
-                timeout=120,
+                timeout=timeout_s,
             )
             if result.returncode == 0:
                 log.info("Analysis complete")
             else:
-                log.error("Analysis failed (exit %d)", result.returncode)
+                log.error("Analysis failed (exit %d); its log lines are above", result.returncode)
                 return 1
+        except subprocess.TimeoutExpired:
+            log.error("Analysis timed out after %ds; its log lines are above", timeout_s)
+            return 1
         except Exception as error:
             log.error("Analysis trigger failed (%s)", type(error).__name__)
             return 1

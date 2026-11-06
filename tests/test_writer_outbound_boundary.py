@@ -111,15 +111,16 @@ def test_relay_has_fixed_tls_destinations_and_never_logs_credentials(rendered):
     assert "proxy_ssl_verify_depth 3;" in conf
     assert "access_log off;" in conf and "error_log /dev/stderr crit;" in conf
     for host, path in [
-        ("api.openai.com", "/v1/embeddings"),
         ("api.open-meteo.com", "/v1/forecast"),
     ]:
         assert f"proxy_ssl_name {host};" in conf
         assert f"set $fixed_host {host};" in conf
         assert f"location = {path}" in conf
     assert "$http_host" not in conf and "$arg_" not in conf
-    assert conf.count("location / { return 404; }") == 3
+    assert conf.count("location / { return 404; }") == 2
     assert "slack.com" not in conf and "listen 8082" not in conf  # #1352: no Slack destination
+    # #1351: no OpenAI route (embeddings are Cortex embed.main since migration 296); Open-Meteo is the only one.
+    assert "openai" not in conf and "listen 8081" not in conf
     relay = policy(rendered, "verdify-outbound-boundary")
     assert not allowed(relay, "192.168.30.126", 443)
     assert not allowed(relay, "169.254.169.254", 443)

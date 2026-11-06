@@ -5607,3 +5607,17 @@ def test_vision_snapshot_observations_carry_position_ids():
     assert "SELECT MAX(id) FROM image_observations" not in src
     assert "SELECT id, greenhouse_id, zone, position, zone_id, position_id" in src
     assert "ts, crop_id, greenhouse_id, zone, position, zone_id, position_id," in src
+
+
+def test_planning_failure_alert_names_provider_billing():
+    """#1351: a Hermes run that fails after its 202 (OpenAI out of credits) raises the planning alert, critical,
+    naming the cause; recovery means a terminal success, not a 2xx gateway status."""
+    from tasks import alerts as alert_tasks
+
+    src = _tasks_src()
+    assert "AND status IN ('plan_written', 'action_completed', 'acked')" in src
+    assert "gateway_status BETWEEN 200 AND 299\n            )" not in src
+    body = '{"run_id": "run_x", "status": "started"}\n{"error_class":"provider_billing","hermes_run_status":"failed"}'
+    assert alert_tasks._planner_run_error_class(body) == "provider_billing"
+    assert alert_tasks._planner_run_error_class('{"run_id": "run_x", "status": "started"}') is None
+    assert "provider_billing" in alert_tasks.PLANNER_PROVIDER_OUTAGE_CLASSES

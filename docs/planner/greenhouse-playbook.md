@@ -156,7 +156,7 @@ places. `hypothesis` is at most 2,200 characters, `experiment` at most 240, and
 `PlanHypothesisStructured` JSON with all required fields, at most 2 stress
 windows, and at most 3 decision-critical rationales. Do not repeat assembled
 context in tool arguments. Use exactly 5 SUNRISE, 3 SUNSET, 4 MIDNIGHT, or 5
-WEEKLY transitions. Confirm `set_plan` succeeds before posting the Slack brief.
+WEEKLY transitions. Confirm `set_plan` succeeds before writing the brief.
 
 ```json
 [
@@ -194,10 +194,11 @@ The prompt supplies dispatcher-owned read-only `temp_low`, `temp_target`,
 center fields inside `climate_intent`. The dispatcher executes the materialized
 tactical waypoints even if the planner is offline.
 
-### REPORT: Post to Slack
+### REPORT: the final reply
 
-Every event ends with a post to #greenhouse. For SUNRISE, SUNSET, MIDNIGHT, and
-WEEKLY, persist the plan successfully before posting its brief.
+Every event ends with a final reply; there is no Slack or chat channel (#1352),
+so never try to send a message. For SUNRISE, SUNSET, MIDNIGHT, and WEEKLY,
+persist the plan successfully before writing its brief.
 
 **SUNRISE brief format:**
 - Yesterday's scorecard: score, temp compliance, VPD compliance, dominant stress, cost breakdown
@@ -256,27 +257,11 @@ VPD, treat average compliance as incomplete evidence. Include the stressed zone
 in `conditions_summary`, preserve a wider house VPD deadband, and bias mister
 zone weighting before changing the crop band itself.
 
-## Crop Management Workflow
+## Crop Management
 
-When someone posts to #greenhouse about crops:
-
-1. **"Planted X in zone Y"** →
-   `crops(action="create", data='{"name":"X", "zone":"Y", "position":"...", "planted_date":"YYYY-MM-DD", "stage":"seedling"}')`
-   Then post confirmation to #greenhouse.
-
-2. **"The basil is flowering"** →
-   First: `crops(action="list")` to find the crop ID
-   Then: `observations(action="record_event", crop_id=ID, data='{"event_type":"stage_change", "old_stage":"vegetative", "new_stage":"flowering"}')`
-   Then: `crops(action="update", crop_id=ID, data='{"stage":"flowering"}')`
-
-3. **"Yellowing leaves on shelf 3"** →
-   `observations(action="record_observation", crop_id=ID, data='{"obs_type":"health_check", "notes":"Yellowing leaves on shelf 3", "severity":2, "health_score":0.6}')`
-
-4. **"Picked lettuce, about 2 lbs"** →
-   `observations(action="record_harvest", crop_id=ID, data='{"weight_kg":0.9, "quality_grade":"good", "notes":"From hydro rail A"}')`
-
-5. **"Sprayed neem oil on south wall"** →
-   `observations(action="record_treatment", crop_id=ID, data='{"product":"Neem oil", "method":"foliar spray", "zone":"south", "target_pest":"aphids", "phi_days":0, "rei_hours":4}')`
+Plantings are records a person keeps on the dashboard's Crops page, or a named
+agent keeps with the planting tools. Iris reads them and never records them, and
+no planting changes a setting or band.
 
 ## Lesson Management
 
@@ -307,7 +292,7 @@ At every planning event, check `alerts(action="list")`. For each unresolved aler
 
 1. **leak_detected** → Check `equipment_state()` for mister activity. If misters were pulsing, likely false positive. Acknowledge: `alerts(action="acknowledge", alert_id=ID)`
 2. **sensor_offline** → Check `climate()` age. If <5 min, sensor recovered. Resolve: `alerts(action="resolve", alert_id=ID, data='{"resolution":"Sensor recovered"}')`
-3. **relay_stuck** → Check equipment runtimes via `history(metric="climate", hours=6)`. If device truly stuck, post to #greenhouse tagging Jason.
+3. **relay_stuck** → Check equipment runtimes via `history(metric="climate", hours=6)`. If the device is truly stuck, say so in your final reply; the alert already shows on the dashboard.
 
 ## Closing the Learning Loop
 
@@ -365,4 +350,4 @@ The context is better for full-horizon scanning.
 7. **Never decouple moisture thresholds from the VPD band during active VPD-high stress.** The dispatcher will clamp conservative moisture values when live VPD is above band and dew margin is healthy; the planner should proactively choose band-coupled values instead of relying on that correction.
 8. **Never set `mister_engage_kpa` or `mister_all_kpa` to 2.5 during VPD-high venting as a resource-saving tactic.** That closes the moisture surface while the crop is already dry. Use high thresholds only when a safety rail or explicit water cap requires suppression.
 9. **Never enable stress wetting without disease-risk evidence.** Direct-wet/fog stress overrides require VPD-high stress, healthy dew margin, latest-hour caps, and post-change readback verification.
-10. **Never call docker exec, psql, or shell commands.** Use MCP tools only. Post a feature request if a tool is missing.
+10. **Never call docker exec, psql, or shell commands.** Use MCP tools only. Name a missing tool in your final reply as a feature request.

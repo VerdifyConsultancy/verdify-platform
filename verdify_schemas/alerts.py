@@ -305,10 +305,13 @@ class PlanDeliveryFailureDetails(_DetailsBase):
     gateway_status: int | None = None
     delivered_at: AwareDatetime | None = None
     gateway_body: str = ""
+    # #1351: the fixed class of a failed Hermes run's provider error (never its text), e.g. provider_billing.
+    error_class: str | None = Field(default=None, pattern=r"^[a-z_]{1,40}$")
 
 
 class PlannerGatewayDeliveryFailedDetails(_DetailsBase):
     failures: list[PlanDeliveryFailureDetails]
+    error_classes: list[str] = Field(default_factory=list)
 
 
 class PlanDeliveryTimeoutDetails(PlanDeliveryFailureDetails):

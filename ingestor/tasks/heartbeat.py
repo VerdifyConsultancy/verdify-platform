@@ -39,6 +39,7 @@ from ._common import (
     os,
     pick_instance,
     prepare_delivery_result,
+    re,
     send_to_iris,
     sla_for,
     urllib,
@@ -223,6 +224,46 @@ _HERMES_RUN_FAILURE_CLASSES = {
 }
 
 
+# #1351: a failed run's provider error is classified into this fixed vocabulary and only the class is kept, so
+# the planning-failure alert can say "OpenAI billing or credits" without retaining provider text. Order matters:
+# OpenAI's out-of-credits error is HTTP 429 `insufficient_quota`, so billing is checked before rate limiting.
+_HERMES_RUN_ERROR_CLASSES: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "provider_billing",
+        re.compile(
+            r"insufficient_quota|exceeded your current quota|billing|credit balance|out of credits|"
+            r"payment required|\b402\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "provider_auth",
+        re.compile(r"invalid_api_key|incorrect api key|\b401\b|unauthori[sz]ed|\b403\b|permission denied", re.I),
+    ),
+    ("provider_rate_limited", re.compile(r"rate.?limit|\b429\b", re.IGNORECASE)),
+    (
+        "provider_unavailable",
+        re.compile(
+            r"\b50[0234]\b|service unavailable|overloaded|timed? ?out|connection (?:error|refused|reset)",
+            re.IGNORECASE,
+        ),
+    ),
+)
+
+
+def _classify_hermes_run_error(error: object) -> str | None:
+    """A failed run's error text as one fixed class (never the text); None when there is no error text."""
+    if isinstance(error, dict):
+        error = " ".join(str(value) for value in error.values())
+    if not isinstance(error, str) or not error.strip():
+        return None
+    text = error[:4096]
+    for name, pattern in _HERMES_RUN_ERROR_CLASSES:
+        if pattern.search(text):
+            return name
+    return "other"
+
+
 def _valid_hermes_run_id(run_id: object) -> bool:
     """Accept only Hermes's fixed ``run_<uuid hex>`` path segment."""
     if not isinstance(run_id, str) or not run_id.startswith("run_") or len(run_id) != 36:
@@ -252,6 +293,11 @@ def _normalize_hermes_run_status(payload: object, expected_run_id: str) -> dict[
     last_event = payload.get("last_event")
     if last_event == _HERMES_RUN_LAST_EVENTS.get(status):
         normalized["last_event"] = last_event
+
+    if status == "failed":
+        error_class = _classify_hermes_run_error(payload.get("error"))
+        if error_class is not None:
+            normalized["error_class"] = error_class
 
     raw_usage = payload.get("usage")
     if isinstance(raw_usage, dict):
@@ -308,6 +354,8 @@ def _hermes_terminal_audit_body(status: dict[str, object]) -> str:
     summary: dict[str, object] = {"hermes_run_status": status["status"]}
     if "last_event" in status:
         summary["last_event"] = status["last_event"]
+    if "error_class" in status:
+        summary["error_class"] = status["error_class"]
     if "usage" in status:
         summary["usage"] = status["usage"]
     return json.dumps(summary, sort_keys=True, separators=(",", ":"))

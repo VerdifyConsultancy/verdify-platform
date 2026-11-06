@@ -176,7 +176,7 @@ def test_fetch_run_status_uses_auth_and_bounded_read_without_retaining_body(monk
 
     status = heartbeat._fetch_hermes_run_status(RUN_FAILED)
 
-    assert status == {"status": "failed", "last_event": "run.failed"}
+    assert status == {"status": "failed", "last_event": "run.failed", "error_class": "other"}
     assert test_credential not in json.dumps(status)
     assert captured["request"].full_url.endswith(f"/v1/runs/{RUN_FAILED}")
     assert captured["request"].get_header("Authorization") == f"Bearer {test_credential}"
@@ -246,7 +246,7 @@ async def test_reconcile_terminal_runs_fails_every_no_action_outcome_and_syncs_l
         assert "AND resulting_plan_id IS NULL" in sql
         assert args[2] == expected_class
         audit = json.loads(args[3])
-        assert set(audit) <= {"hermes_run_status", "last_event", "usage"}
+        assert set(audit) <= {"hermes_run_status", "last_event", "error_class", "usage"}
 
     assert len(conn.execute_calls) == 1
     assert "UPDATE planner_trigger_ledger" in conn.execute_calls[0][0]
@@ -283,3 +283,43 @@ async def test_reconcile_active_or_unavailable_runs_do_not_mutate(monkeypatch):
     assert reconciled == 0
     assert conn.fetchval_calls == []
     assert conn.execute_calls == []
+
+
+OPENAI_OUT_OF_CREDITS = (
+    "Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing "
+    "details.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+)
+
+
+@pytest.mark.parametrize(
+    "error, expected",
+    [
+        (OPENAI_OUT_OF_CREDITS, "provider_billing"),
+        ("Error code: 401 - invalid_api_key: Incorrect API key provided", "provider_auth"),
+        ("Error code: 429 - Rate limit reached for requests", "provider_rate_limited"),
+        ("Error code: 503 - The server is overloaded", "provider_unavailable"),
+        ("max_turns exceeded", "other"),
+        ({"message": "billing hard limit reached", "type": "server_error"}, "provider_billing"),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_failed_run_error_is_classified_never_retained(error, expected):
+    """#1351: a billing or credit failure becomes a fixed class; the provider text is never kept."""
+    payload = {"object": "hermes.run", "run_id": RUN_FAILED, "status": "failed", "last_event": "run.failed"}
+    if error is not None:
+        payload["error"] = error
+    normalized = heartbeat._normalize_hermes_run_status(payload, RUN_FAILED)
+    assert normalized.get("error_class") == expected
+    body = heartbeat._hermes_terminal_audit_body(normalized)
+    assert "quota" not in body and "API key" not in body
+    if expected:
+        assert f'"error_class":"{expected}"' in body
+
+
+def test_completed_run_never_carries_an_error_class():
+    normalized = heartbeat._normalize_hermes_run_status(
+        {"object": "hermes.run", "run_id": RUN_COMPLETED, "status": "completed", "error": OPENAI_OUT_OF_CREDITS},
+        RUN_COMPLETED,
+    )
+    assert "error_class" not in normalized

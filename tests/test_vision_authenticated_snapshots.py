@@ -124,6 +124,29 @@ def test_analysis_exception_fails_job(snapshot, monkeypatch, caplog):
     assert "secret body" not in caplog.text
 
 
+def test_analysis_output_reaches_the_job_log(snapshot, monkeypatch):
+    """#1118: the analyze child inherits stdout/stderr, so its reasons reach the pod log."""
+    analysis = Mock(return_value=SimpleNamespace(returncode=0))
+    monkeypatch.setattr(snapshot, "capture_snapshot", Mock(return_value=True))
+    monkeypatch.setattr(snapshot.subprocess, "run", analysis)
+    monkeypatch.setattr(snapshot.sys, "argv", ["snapshot"])
+    monkeypatch.delenv("VERDIFY_ANALYZE_TIMEOUT_S", raising=False)
+    assert snapshot.main() == 0
+    kwargs = analysis.call_args.kwargs
+    assert not {"capture_output", "stdout", "stderr"} & kwargs.keys()
+    assert kwargs["timeout"] == snapshot.DEFAULT_ANALYZE_TIMEOUT_S < 900
+
+
+def test_analysis_timeout_fails_job_and_says_so(snapshot, monkeypatch, caplog):
+    monkeypatch.setenv("VERDIFY_ANALYZE_TIMEOUT_S", "45")
+    monkeypatch.setattr(snapshot, "capture_snapshot", Mock(return_value=True))
+    expired = snapshot.subprocess.TimeoutExpired(cmd="analyze", timeout=45)
+    monkeypatch.setattr(snapshot.subprocess, "run", Mock(side_effect=expired))
+    monkeypatch.setattr(snapshot.sys, "argv", ["snapshot"])
+    assert snapshot.main() == 1
+    assert "timed out after 45s" in caplog.text
+
+
 def test_tls_sni_uses_provider_identity(monkeypatch):
     spec = importlib.util.spec_from_file_location("vision_tls", ROOT / "scripts/frigate-snapshot.py")
     module = importlib.util.module_from_spec(spec)
