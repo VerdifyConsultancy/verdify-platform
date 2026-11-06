@@ -1,0 +1,91 @@
+# verdify-greenhouse-brief (#1346): every 5 minutes, build the fact sheet from the operator reads and, on a change or
+# every 15 minutes, ask Cortex llm.primary.longctx for the 3-5 sentence greenhouse snapshot (api/greenhouse_brief_job.py).
+# One row per attempt in public.greenhouse_brief; API-02 serves the newest as Now.snapshot. The text is read-only and
+# never feeds the planner or the controller. The Cortex key is the planner's inference-only identity
+# (verdify-planner-cortex/api_key.txt, llm.primary.longctx and llm.qwen38u.longctx), mounted optional: without it the
+# job records an error row ("FAIL CLOSED") and calls nothing.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-greenhouse-brief
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: greenhouse-brief
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 240
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      # One Cortex call (90 s deadline) plus the reads; a wedged run must not hold the next one under Forbid.
+      activeDeadlineSeconds: 240
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/part-of: verdify
+            app.kubernetes.io/component: greenhouse-brief
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          enableServiceLinks: false
+          imagePullSecrets:
+            - name: zot-origin-cluster-pull
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000   # appuser in api/Dockerfile
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: brief
+              image: ghcr.io/verdifyconsultancy/verdify-api  # pinned to the verdify-api release digest by overlays/prod
+              imagePullPolicy: IfNotPresent
+              command: ["python", "greenhouse_brief_job.py"]
+              env:
+                - name: DB_HOST
+                  value: verdify-db
+                - name: DB_NAME
+                  value: verdify
+                - name: DB_USER
+                  value: verdify_dashboard_runtime_login
+                - name: DB_PASS
+                  valueFrom:
+                    secretKeyRef:
+                      name: verdify-dashboard-runtime-db
+                      key: password
+                - name: CORTEX_BASE_URL
+                  value: https://cortex.vallery.net/v1
+                - name: CORTEX_API_KEY_FILE
+                  value: /vcortex-brief/api_key.txt
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  memory: 384Mi
+              volumeMounts:
+                - name: cortex-key
+                  mountPath: /vcortex-brief
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: cortex-key
+              secret:
+                secretName: verdify-planner-cortex
+                optional: true
+                items:
+                  - key: api_key.txt
+                    path: api_key.txt
+            - name: tmp
+              emptyDir: {}

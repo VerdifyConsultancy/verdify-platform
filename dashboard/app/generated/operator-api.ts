@@ -774,7 +774,7 @@ export interface paths {
         };
         /**
          * Now hero
-         * @description Indoor and outdoor climate with ages, the band in force (the dispatcher's DERIVED band rows) with a verdict per metric, mode, Iris status, equipment running, bursts from the controller's readback, the leak flag, the open-alert count, source freshness with the ingestor heartbeat, and the device writer. Polled every 15 s; the shell banners read `freshness`, `writer`, `leak` and `alerts`. Water and occupancy come from API-IRR-01.
+         * @description Indoor and outdoor climate with ages, the band in force (the dispatcher's DERIVED band rows) with a verdict per metric, mode, Iris status, equipment running, bursts from the controller's readback, the leak flag, the open-alert count, source freshness with the ingestor heartbeat, the device writer and the greenhouse snapshot. Polled every 15 s; the shell banners read `freshness`, `writer`, `leak` and `alerts`. Water and occupancy come from API-IRR-01.
          */
         readonly get: operations["API-02"];
         readonly put?: never;
@@ -797,6 +797,66 @@ export interface paths {
          * @description Each lane says whose value applies now (applied_from) and marks waypoints that will not apply (effective false), for example while a newer non-manual desired row holds until Iris's next plan. Waypoints carry their source: iris, or preemptive for the forecast action engine (a forecast rule, never shown as AI). health is planner_trigger_ledger: the rows expected in the last 36 h and the expected rows ahead.
          */
         readonly get: operations["API-07"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/planner/experiments": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Committed study definitions not yet registered, then every experiment record with its status
+         * @description A definition in verdify_schemas (planner_study.py) that the orchestrator has not registered reads status defined. A record's status is control_experiments.status in words; a draft that an emergency action closed reads closed, with the reason its superseding definition gives or its closing event's code.
+         */
+        readonly get: operations["API-26"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/planner/experiments/{id}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * One study, by experiment id or study id, with its definition, arm calendar, results and daily outcomes
+         * @description The calendar is one cell per assigned study day. Results and daily outcomes come only from #1360's frozen analyzer output; until it has run, results.state is not_started with its reason and outcomes is empty. Results before the final look carry state interim.
+         */
+        readonly get: operations["API-27"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/planner/history": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Plans per day, required plans written, failed and late, dispatched changes, cost and the newest plans
+         * @description One entry per America/Denver day, oldest first, from plan_journal, planner_trigger_ledger (MIDNIGHT, SUNRISE and SUNSET are required) and setpoint_changes source plan. Cost comes from planner_inference_runs through migration 302's view: before the Cortex planner (#1350) records a call, cost is null and cost_recorded_from is null, which the page shows as "not recorded". dispatched and proposed_only are null until planner_inference_runs has the Cortex attempt columns (cortex_attempts false).
+         */
+        readonly get: operations["API-25"];
         readonly put?: never;
         readonly post?: never;
         readonly delete?: never;
@@ -1384,6 +1444,76 @@ export interface components {
             /** @description What holds the misters off */
             readonly moisture_block_reason?: components["schemas"]["ReasonState"];
         };
+        /** @description API-27: one study */
+        readonly ExperimentDetail: {
+            /** @description One cell per assigned study day, oldest first */
+            readonly calendar: readonly {
+                readonly arm: string | null;
+                /** Format: date */
+                readonly date: string;
+                readonly deviations: number;
+                /** Format: date-time */
+                readonly ends_at: string | null;
+                readonly events: readonly string[];
+                readonly pair_index: number | null;
+                /** Format: date-time */
+                readonly starts_at: string | null;
+                readonly status: string;
+            }[];
+            /** @description Null for a record with no committed definition */
+            readonly definition: components["schemas"]["StudyDefinition"] | null;
+            readonly experiment: components["schemas"]["ExperimentSummary"];
+            /**
+             * Format: date-time
+             * @description While scheduled or running
+             */
+            readonly next_boundary: string | null;
+            /** @description One row per study day from the frozen outcomes; a metric that could not be computed is null */
+            readonly outcomes: readonly {
+                readonly arm: string;
+                readonly covariates: {
+                    readonly [key: string]: number | null;
+                };
+                /** Format: date */
+                readonly date: string;
+                readonly deviation: boolean;
+                readonly values: {
+                    readonly [key: string]: number | null;
+                };
+            }[];
+            readonly results: components["schemas"]["StudyResults"];
+        };
+        /** @description API-26: committed definitions not yet registered first, then records newest first */
+        readonly ExperimentList: {
+            readonly items: readonly components["schemas"]["ExperimentSummary"][];
+        };
+        /** @enum {string} */
+        readonly ExperimentStatus: "defined" | "draft" | "scheduled" | "running" | "paused" | "finished" | "closed";
+        readonly ExperimentSummary: {
+            readonly arms: readonly string[];
+            /** Format: date-time */
+            readonly closed_at: string | null;
+            readonly closed_reason: string | null;
+            readonly days_done: number;
+            readonly days_planned: number | null;
+            /** @description Warning and critical experiment events */
+            readonly deviations: number;
+            /** Format: date-time */
+            readonly ended_at: string | null;
+            readonly experiment_id: string | null;
+            /** @description The experiment id, or the study id for a definition not yet registered */
+            readonly id: string;
+            readonly name: string;
+            readonly question: string | null;
+            /** @description control_experiments.status */
+            readonly raw_status: string | null;
+            /** Format: date-time */
+            readonly started_at: string | null;
+            readonly status: components["schemas"]["ExperimentStatus"];
+            readonly study_id: string | null;
+            /** Format: date-time */
+            readonly updated_at: string | null;
+        };
         /** @description How old a source is. A sensor source is stale when its age exceeds twice its cadence; the ingestor heartbeat (cadence 60 s) after 180 s; a change-only source (equipment_state, irr_state) only while the controller is offline; a source never seen is stale */
         readonly Freshness: {
             readonly age_s: number | null;
@@ -1847,6 +1977,8 @@ export interface components {
             }[];
             /** Format: date-time */
             readonly server_time: string;
+            /** @description The greenhouse snapshot (#1346): the newest 3-5 sentence summary the local Cortex model wrote from the current conditions (CronJob verdify-greenhouse-brief); null when none was written in the last 2 h */
+            readonly snapshot?: components["schemas"]["Snapshot"] | null;
             /** @description Device writer health (Round 2 #1): the writer-health tile and the stuck-delivery banner. age_s is the setpoints pipeline age (v_data_pipeline_health source setpoints: the newest setpoint push or device-reported change). stuck is true while the setpoint_delivery_stuck alert is open. differing counts settings whose effective value has differed from the newest readback for more than 10 min, leaving out held and clamped ones */
             readonly writer: {
                 readonly age_s: number | null;
@@ -1927,6 +2059,14 @@ export interface components {
             /** @description Null when no plan is in force */
             readonly plan: components["schemas"]["PlanRecord"] | null;
         };
+        readonly PlanCost: {
+            readonly energy_wh: number | null;
+            readonly input_tokens: number | null;
+            readonly latency_ms: number | null;
+            readonly model_id: string | null;
+            readonly output_tokens: number | null;
+            readonly status: string | null;
+        };
         readonly PlanLane: {
             /**
              * @description Computed by verdify_services with the dispatcher's rule
@@ -1942,6 +2082,72 @@ export interface components {
             readonly unit?: string | null;
             /** @description Plan values to the horizon */
             readonly waypoints: readonly components["schemas"]["PlanWaypoint"][];
+        };
+        readonly PlannerDayCost: {
+            readonly calls: number;
+            /** @description Calls whose plan was dispatched; null before the Cortex attempt columns */
+            readonly dispatched: number | null;
+            readonly energy_wh: number | null;
+            readonly input_tokens: number | null;
+            readonly latency_ms_median: number | null;
+            readonly models: readonly string[];
+            readonly output_tokens: number | null;
+            /** @description Calls stored but not sent (shadow or a baseline day) */
+            readonly proposed_only: number | null;
+        };
+        /** @description API-25: the planner over 30 or 90 local days. Null means not recorded, never 0 */
+        readonly PlannerHistory: {
+            /** @description planner_inference_runs has the Cortex attempt columns (migration 294) */
+            readonly cortex_attempts: boolean;
+            /**
+             * Format: date-time
+             * @description The first recorded planner call; null: cost not recorded yet (before #1350)
+             */
+            readonly cost_recorded_from: string | null;
+            /** @description One per America/Denver day, oldest first */
+            readonly days: readonly {
+                /** @description Dispatched changes the device confirmed by readback */
+                readonly changes_confirmed: number;
+                readonly changes_dispatched: number;
+                /** @description Null: no planner call recorded that day */
+                readonly cost: components["schemas"]["PlannerDayCost"] | null;
+                /** Format: date */
+                readonly date: string;
+                /** @description Distinct settings the plan path changed on the device (setpoint_changes source plan) */
+                readonly params_dispatched: number;
+                /** @description plan_journal rows written that day */
+                readonly plans_written: number;
+                /** @description Required triggers (MIDNIGHT, SUNRISE, SUNSET) expected by now */
+                readonly required_due: number;
+                /** @description Missed, timed out, failed delivery, wrong action or neutral fallback */
+                readonly required_failed: number;
+                /** @description Written after the trigger's due time */
+                readonly required_late: number;
+                readonly required_written: number;
+                /** @description Plans by trigger (UNKNOWN when unmatched) */
+                readonly triggers: {
+                    readonly [key: string]: number;
+                };
+            }[];
+            /** Format: date */
+            readonly from: string;
+            /** @description The newest plans in the window, newest first (at most 60) */
+            readonly plans: readonly {
+                readonly cost: components["schemas"]["PlanCost"] | null;
+                readonly hypothesis: string | null;
+                /** @description The planner's own score of the plan */
+                readonly outcome_score: number | null;
+                readonly params_dispatched: number;
+                readonly plan_id: string;
+                readonly trigger: string;
+                /** Format: date-time */
+                readonly written_at: string;
+            }[];
+            /**
+             * Format: date
+             * @description Inclusive local day: today, a partial day
+             */
+            readonly to: string;
         };
         /** @description One planner_trigger_ledger row */
         readonly PlannerTrigger: {
@@ -2598,6 +2804,23 @@ export interface components {
             readonly wall?: string | null;
             readonly water_lines?: readonly components["schemas"]["WaterLine"][];
         };
+        /** @description Read-only text for people, never an input to a plan. stale: as_of is more than 30 min old (old) or a later attempt failed or was rejected (failed); show it muted with "as of". outdated: a band verdict or the open-alert count changed since it was written; never show it */
+        readonly Snapshot: {
+            /**
+             * Format: date-time
+             * @description The newer of generated_at and the last run that found the same conditions
+             */
+            readonly as_of: string;
+            /** Format: date-time */
+            readonly generated_at: string;
+            /** @example llm.primary.longctx */
+            readonly model: string;
+            readonly outdated: boolean;
+            readonly stale: boolean;
+            /** @enum {string|null} */
+            readonly stale_reason: "old" | "failed" | null;
+            readonly text: string;
+        };
         readonly StateLanes: {
             /** Format: date-time */
             readonly from: string;
@@ -2641,6 +2864,78 @@ export interface components {
              * @description When the reason began, null when not known. writer_down: the newest ingestor heartbeat. controller_not_reporting: the newest climate row. no_match, push_failed and deferred: the push the request went out in (the "Sent HH:MM" time). clamped: the clamp row. no_engine: the stored write
              */
             readonly since?: string | null;
+        };
+        /** @description The committed, reviewed study design (verdify_schemas/planner_ab_winter_2026.yaml) */
+        readonly StudyDefinition: {
+            readonly arms: readonly {
+                readonly description: string;
+                readonly label: string;
+                readonly name: string;
+                readonly planner_mode: string;
+            }[];
+            readonly covariates: readonly string[];
+            readonly definition_sha256: string;
+            readonly looks: readonly {
+                readonly pairs: number;
+                readonly purpose: string;
+            }[];
+            /** @description In result order: the primary first, then the guardrail */
+            readonly metrics: readonly {
+                /** @description higher or lower is better; report is never scored (heat) */
+                readonly direction: string;
+                readonly id: string;
+                readonly label: string;
+                readonly noninferiority_margin: number | null;
+                /** @description primary, guardrail, secondary, cost or planner */
+                readonly role: string;
+                readonly unit: string;
+                readonly window: string;
+            }[];
+            /** @description The seed, schedule hash and baseline hash are committed */
+            readonly preregistered: boolean;
+            readonly prerequisites: readonly string[];
+            readonly schedule: {
+                readonly blinding: string;
+                readonly boundary_confirm_minutes: number;
+                /** @description HH:MM */
+                readonly boundary_local: string;
+                readonly boundary_max_retries: number;
+                readonly pairs: number;
+                readonly timezone: string;
+                readonly washout_hours: number;
+            };
+            readonly stopping_rules: readonly {
+                readonly action: string;
+                readonly id: string;
+                readonly rule: string;
+            }[];
+            readonly study_id: string;
+            readonly version: number;
+        };
+        /** @description Only from the frozen analyzer output, never computed in the browser */
+        readonly StudyResults: {
+            /** Format: date-time */
+            readonly analyzed_at: string | null;
+            /** @description AI minus baseline per metric, with its 95% CI */
+            readonly metrics: readonly {
+                readonly ci_high: number | null;
+                readonly ci_low: number | null;
+                readonly direction: string;
+                readonly estimate: number | null;
+                readonly id: string;
+                readonly label: string;
+                readonly n_pairs: number;
+                readonly role: string;
+                readonly unit: string;
+            }[];
+            readonly output_sha256: string | null;
+            readonly pairs_done: number;
+            readonly pairs_planned: number | null;
+            readonly reason: string | null;
+            /** @description The analyzer's plain-English summary */
+            readonly sentence: string | null;
+            /** @enum {string} */
+            readonly state: "not_started" | "interim" | "final";
         };
         /** @description One planting's time in a cell; until null while it is there. */
         readonly Tenure: {
@@ -4039,6 +4334,75 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["Plan"];
+                };
+            };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-26": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ExperimentList"];
+                };
+            };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-27": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                /** @description An experiment id (uuid) or a study id */
+                readonly id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ExperimentDetail"];
+                };
+            };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-25": {
+        readonly parameters: {
+            readonly query?: {
+                /** @description Days ending today, today included */
+                readonly days?: 30 | 90;
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["PlannerHistory"];
                 };
             };
             readonly default: components["responses"]["Problem"];

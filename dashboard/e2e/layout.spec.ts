@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// The caretaker's phone: no page scrolls sideways at 360 or 390 px and the bottom bar holds the five tabs; with reduced
+// The caretaker's phone: no page scrolls sideways at 360 or 390 px and the bottom bar holds every section tab; with reduced
 // motion emulated, nothing moves. And the shell of redesign §2 at 1440 px and on phones: the five sections, Control
 // owning its views, the account menu, the fault row that never scrolls away, the warn notices in flow, the count pill's
 // severity, the redirects and the end of /more.
@@ -12,7 +12,7 @@ import {
 for (const viewport of [SMALL_PHONE, PHONE]) {
   const size = `${viewport.width} × ${viewport.height}`;
   for (const path of ROUTES) {
-    test(`${path} · ${size}: no horizontal scroll, and the bottom bar holds the five tabs`, WEBKIT, async ({ page, request }) => {
+    test(`${path} · ${size}: no horizontal scroll, and the bottom bar holds every section tab`, WEBKIT, async ({ page, request }) => {
       await useFixture(request, "in-band");
       await page.setViewportSize(viewport);
       await load(page, path);
@@ -70,16 +70,16 @@ for (const path of [...ROUTES, ...CARD_PAGES.map((card) => card.path)]) {
 }
 
 // ---------------------------------------------------------------------------------------------------- the shell
-test("1440 px: the header lists the five sections; Control opens Settings and is current on Settings, Plan and Equipment", async ({ page, request }) => {
+test("1440 px: the header lists the six sections; Control opens Settings and is current on Settings and Equipment, Planner on Plan, History and Experiments", async ({ page, request }) => {
   await useFixture(request, "alerts-merged");
   await page.setViewportSize(DESKTOP);
   await load(page, "/");
   await expect(sectionsNav(page).getByRole("link")).toHaveText(SECTION_LINKS);
   await expect(sectionsNav(page).getByRole("link", { name: /^Control/ })).toHaveAttribute("href", "/settings");
-  for (const path of ["/settings", "/plan", "/equipment"]) {
+  for (const [path, section] of [["/settings", "Control"], ["/equipment", "Control"], ["/plan", "Planner"], ["/planner/history", "Planner"], ["/planner/experiments", "Planner"]]) {
     await load(page, path);
-    await expect(sectionsNav(page).locator("[aria-current=page]"), path).toHaveText("Control");
-    await expect(page.getByRole("navigation", { name: "Control views" }).locator("[aria-current=page]"), path).toHaveAttribute("href", path);
+    await expect(sectionsNav(page).locator("[aria-current=page]"), path).toHaveText(section);
+    await expect(page.getByRole("navigation", { name: `${section} views` }).locator("[aria-current=page]"), path).toHaveAttribute("href", path);
   }
   // The count pill: API-02 alerts.open, filled by the worst open severity.
   await expect(sectionsNav(page).locator(".nav-count")).toHaveText("2");
@@ -103,13 +103,13 @@ test("1440 px: every page shares the header's one centred container, so switchin
 });
 
 for (const viewport of [SMALL_PHONE, PHONE]) {
-  test(`${viewport.width} px: each of the five phone tabs is an icon over its label, at least 44 px, and the header keeps the role pill`, WEBKIT, async ({ page, request }) => {
+  test(`${viewport.width} px: each phone tab is an icon over its label, at least 44 px, and the header keeps the role pill`, WEBKIT, async ({ page, request }) => {
     await useFixture(request, "in-band");
     await page.setViewportSize(viewport);
     await load(page, "/");
     const tabs = bottomBar(page).getByRole("link");
-    await expect(tabs).toHaveCount(5);
-    for (let index = 0; index < 5; index += 1) {
+    await expect(tabs).toHaveCount(SECTION_LINKS.length);
+    for (let index = 0; index < SECTION_LINKS.length; index += 1) {
       const box = await tabs.nth(index).boundingBox();
       expect(box!.height).toBeGreaterThanOrEqual(44);
       await expect(tabs.nth(index).locator("svg.tab-icon")).toHaveCount(1);
@@ -156,13 +156,16 @@ test("the fault banner is a row of the sticky header and stays in view after scr
   await expect(page.locator("main [data-banner=warn]")).not.toBeInViewport();
 });
 
-test("the old paths: /graphs/scorecard and a log-filtered /activity redirect with their query, ?alert= stays on Alerts, and /more is not found", async ({ page, request }) => {
+/** The page each redirect lands on, by its h1. */
+const REDIRECT_TITLES: Readonly<Record<string, string>> = { "/graphs/statistics": "Statistics", "/plan": "Plan" };
+
+test("the old paths: /graphs/scorecard, /planner and a log-filtered /activity redirect with their query, ?alert= stays on Alerts, and /more is not found", async ({ page, request }) => {
   await useFixture(request, "in-band");
   for (const { path, to } of REDIRECTS) {
     await load(page, `${path}?x=1`);
     await expect(page).toHaveURL(new RegExp(`${to.replace(/\//g, "\\/")}\\?x=1$`));
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(REDIRECT_TITLES[to]);
   }
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Statistics");
   await load(page, "/activity?target=L01");
   await expect(page).toHaveURL(/\/activity\/log\?target=L01$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Activity log");

@@ -1,0 +1,145 @@
+{
+  "migration": "302-planner-section-reads.sql",
+  "exact_final_migration_sha256": "a18aeb0588b5f4e56b7a78ce3dea7c592873b9fae54f0701c45f6d9bbbd8f3bf",
+  "final_migration_qualification_pending": false,
+  "before": {
+    "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
+    "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projected_successor": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"
+  },
+  "projection": "2026-11-05, read only, production at exact289 (290 merged, not yet applied). 302 follows 301 in the same change, so its predecessor seals are 301's: 291's api and ingestor seals and 301's MCP projection (717d3d0b...14af). All three are expected to stay those values. fn_runtime_ordinary_boundary_digest (217) takes in a relation only if the api or ingestor login can reach it, one of their roles owns it, 217 protects it by name, or PUBLIC or one of their roles holds an ACL entry on it, and it skips each view's _RETURN rule; fn_mcp_runtime_boundary_digest (263) does the same for PUBLIC and the MCP roles. The four views v_planner_experiments, v_planner_assignments, v_planner_experiment_events and v_planner_inference_runs are verdify's, PUBLIC is revoked and the only grant is the dashboard duty's SELECT. control_experiments, control_assignments, experiment_events and planner_inference_runs keep their ACLs and shape (pg_default_acl holds only verdify's own function EXECUTE, read 2026-11-05). Each view body was run read only on production on 2026-11-05: 1 experiment (45039c86, closing event emergency_action facility_safe_closure 2026-09-30T17:50:12Z, 198 warning/critical events), 0 assignments, 213 events, 0 inference runs. If the probe shows any digest moved, stop: that is a finding, not a literal to update, because the file re-seals no receipt. Otherwise, with production at exact301 (or with --apply-first for each predecessor it lacks), run scripts/qualify-migration-successor.py db/migrations/302-planner-section-reads.sql --native-fixture db/qualification/302-planner-section-reads-fixture.sql --fixture tests/fixtures/302-planner-section-reads-native-qualification.json on production (every session rolls back); if 301's measured MCP seal differs from its projection, set the measured value in 302's predecessor and successor blocks too (and the sha here and in both registrations). When 301 is re-chained behind 296, 302's predecessor sha follows 301's. 2026-11-06: re-chained onto 301's final sha and measured MCP seal (af3f7ef2); every seal stays 301's. Qualified on production at 291 with --apply-first 293, 294, 296 and 301 in each rolled-back session (chain prelock on) and the native fixture.",
+  "qualified_successor": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"
+  },
+  "after_rollback": {
+    "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
+    "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "measured_at": "2026-11-06T10:13:12Z",
+  "inside_transaction_receipts_match": true,
+  "final_migration_rollback_verified": true,
+  "native_probe_source_sha256": "15b448b0088885e632d8f82fb9b0521895f064af5f3fddf0f1bb60b6d759b644",
+  "qualification_source_sha256": "d82e336c7531dbc8723636f89491cf2cd41264583b8b92c3d0a27429fd344699",
+  "applied_first": [
+    {
+      "migration": "293-crop-plantings.sql",
+      "seq": 293,
+      "sha256": "fe591976baeb81eb7676b6ff3198a9f370ba6bb7db8f69218c1d5f47ddbd48b7"
+    },
+    {
+      "migration": "294-cortex-planner-shadow-storage.sql",
+      "seq": 294,
+      "sha256": "99e1feb22a465bafb7adf5852fec5def47357a5b9cd6bd15314c93c02697bb5d"
+    },
+    {
+      "migration": "296-knowledge-embeddings-cortex.sql",
+      "seq": 296,
+      "sha256": "aec163e31534e28d7ffd2e5b4bc0402819c8096c70d1d5ab28a804dec795d40d"
+    },
+    {
+      "migration": "301-greenhouse-brief.sql",
+      "seq": 301,
+      "sha256": "24945842499e5d907d2c49ef4cbf4e57ada2f29b297c9744edd055421f7d0e1d"
+    }
+  ],
+  "applied_first_seals": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"
+  },
+  "prelock": [
+    [
+      "public.crop_events",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.crop_occupancy",
+      "SHARE"
+    ],
+    [
+      "public.crops",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.greenhouse_brief",
+      "SHARE"
+    ],
+    [
+      "public.greenhouses",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.irrigation_line",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.knowledge_embeddings",
+      "SHARE"
+    ],
+    [
+      "public.mcp_runtime_boundary_receipt",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.planner_inference_runs",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.planner_pack",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.positions",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.runtime_ordinary_login_attestation_receipts",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.schema_migrations",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.shelves",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.v_position_current",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.zones",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "verdify_vision_runtime.crops",
+      "ACCESS EXCLUSIVE"
+    ]
+  ],
+  "native_fixture": {
+    "checks": [
+      "grants_dashboard_select_only",
+      "api_and_ingestor_read_nothing_new",
+      "dashboard_login_attests",
+      "dashboard_login_reads_every_column",
+      "old_draft_closing_event",
+      "read_within_5_s"
+    ],
+    "closing_event_reason": "facility_safe_closure",
+    "read_ms": 17,
+    "all_passed": true,
+    "attested": {
+      "dashboard": true
+    }
+  },
+  "native_fixture_sha256": "e15004640cae82a8192b70e58f914dae988a18268a6420f4188cd353fa0e41fb"
+}

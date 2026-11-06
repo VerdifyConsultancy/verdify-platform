@@ -40,6 +40,7 @@ export type StateReason = Lenient<Schemas["StateReason"]>;
 export type DesiredSetting = Lenient<Schemas["DesiredSetting"]>;
 export type Me = Lenient<Schemas["Me"]>;
 export type Now = Lenient<Schemas["Now"]>;
+export type Snapshot = Lenient<Schemas["Snapshot"]>;
 export type MetricDef = Lenient<Schemas["MetricDef"]>;
 export type Metrics = Lenient<Json<"API-03", 200>>;
 export type Series = Lenient<Schemas["Series"]>;
@@ -67,6 +68,14 @@ export type WaterUse = Lenient<Schemas["WaterUse"]>;
 export type LightingDays = Lenient<Schemas["LightingDays"]>;
 export type LightingCircuit = Lenient<Schemas["LightingDays"]["circuits"][number]>;
 export type LightingDay = Lenient<Schemas["LightingDays"]["circuits"][number]["days"][number]>;
+export type PlannerHistory = Lenient<Schemas["PlannerHistory"]>;
+export type PlannerDay = PlannerHistory["days"][number];
+export type ExperimentSummary = Lenient<Schemas["ExperimentSummary"]>;
+export type ExperimentList = Lenient<Schemas["ExperimentList"]>;
+export type ExperimentDetail = Lenient<Schemas["ExperimentDetail"]>;
+export type StudyResults = Lenient<Schemas["StudyResults"]>;
+export type MetricResult = StudyResults["metrics"][number];
+export type CalendarDay = ExperimentDetail["calendar"][number];
 export type IrrigationStatus = Lenient<Schemas["IrrigationStatus"]>;
 export type IrrigationLine = Lenient<Schemas["IrrigationLine"]>;
 export type LineState = Lenient<Schemas["LineState"]>;
@@ -167,6 +176,10 @@ const controller = z.object({
   firmware_version: maybe(text), uptime_s: maybe(int), reset_reason: maybe(text), heap_free_kb: maybe(num), heap_largest_block_kb: maybe(num),
   rssi_dbm: maybe(num), observed_at: maybe(text),
 });
+/** The greenhouse snapshot (#1346); a server before it sends none. */
+const snapshot = z.object({
+  text, generated_at: text, as_of: text, model: text, stale: flag, stale_reason: maybe(code), outdated: flag,
+});
 const now = z.object({
   server_time: text,
   indoor: z.object({ temp_f: reading, rh_pct: reading, vpd_kpa: reading }),
@@ -181,6 +194,7 @@ const now = z.object({
   freshness: z.object({ climate: freshness, diagnostics: freshness, readback: freshness, ingestor: freshness }),
   writer: z.object({ last_at: maybe(text), age_s: int.nullable(), stuck: flag, differing: int, oldest_since: maybe(text) }),
   controller: controller.optional(),
+  snapshot: snapshot.nullable().optional(),
 });
 
 const metricDef = z.object({
@@ -299,6 +313,58 @@ const lightingDays = z.object({
       target_min: int.nullable(), window_min: int.nullable(), qualified_min: int.nullable(),
     })),
   })),
+});
+// The Planner section (#1361). Null is "not recorded", never 0.
+const counts = z.record(z.string(), int);
+const plannerDayCost = z.object({
+  calls: int, models: z.array(text), input_tokens: maybe(int), output_tokens: maybe(int), energy_wh: maybe(num), latency_ms_median: maybe(int),
+  dispatched: maybe(int), proposed_only: maybe(int),
+});
+const planCost = z.object({
+  model_id: maybe(text), input_tokens: maybe(int), output_tokens: maybe(int), energy_wh: maybe(num), latency_ms: maybe(int), status: maybe(code),
+});
+const plannerHistory = z.object({
+  from: text, to: text, cost_recorded_from: maybe(text), cortex_attempts: flag,
+  days: z.array(z.object({
+    date: text, plans_written: int, triggers: counts, params_dispatched: int, changes_dispatched: int, changes_confirmed: int, required_due: int,
+    required_written: int, required_failed: int, required_late: int, cost: plannerDayCost.nullable(),
+  })),
+  plans: z.array(z.object({
+    plan_id: text, trigger: text, written_at: text, hypothesis: maybe(text), outcome_score: maybe(num), params_dispatched: int, cost: planCost.nullable(),
+  })),
+});
+export const EXPERIMENT_STATUSES = members<Schemas["ExperimentStatus"]>()(["defined", "draft", "scheduled", "running", "paused", "finished", "closed"]);
+const experimentSummary = z.object({
+  id: text, experiment_id: maybe(text), study_id: maybe(text), name: text, question: maybe(text), status: choice(EXPERIMENT_STATUSES, "draft"),
+  raw_status: maybe(text), arms: z.array(text), started_at: maybe(text), ended_at: maybe(text), updated_at: maybe(text), days_planned: maybe(int),
+  days_done: int, deviations: int, closed_at: maybe(text), closed_reason: maybe(text),
+});
+const experimentList = z.object({ items: z.array(experimentSummary) });
+const studyDefinition = z.object({
+  study_id: text, version: int, definition_sha256: text, preregistered: flag,
+  arms: z.array(z.object({ label: text, name: text, planner_mode: code, description: text })),
+  metrics: z.array(z.object({ id: text, label: text, unit: text, role: code, direction: code, window: code, noninferiority_margin: maybe(num) })),
+  schedule: z.object({
+    timezone: text, boundary_local: text, pairs: int, washout_hours: num, blinding: code, boundary_confirm_minutes: int, boundary_max_retries: int,
+  }),
+  looks: z.array(z.object({ pairs: int, purpose: code })), covariates: z.array(text),
+  stopping_rules: z.array(z.object({ id: text, rule: text, action: text })), prerequisites: z.array(text),
+});
+const studyResults = z.object({
+  state: choice(["not_started", "interim", "final"] as const, "interim"), reason: maybe(text), pairs_done: int, pairs_planned: maybe(int), sentence: maybe(text),
+  metrics: z.array(z.object({
+    id: text, label: text, unit: text, role: code, direction: code, estimate: maybe(num), ci_low: maybe(num), ci_high: maybe(num), n_pairs: int,
+  })),
+  analyzed_at: maybe(text), output_sha256: maybe(text),
+});
+const nullableValues = z.record(z.string(), num.nullable());
+const experimentDetail = z.object({
+  experiment: experimentSummary, definition: studyDefinition.nullable(),
+  calendar: z.array(z.object({
+    date: text, pair_index: maybe(int), arm: maybe(text), status: text, starts_at: maybe(text), ends_at: maybe(text), deviations: int, events: z.array(code),
+  })),
+  next_boundary: maybe(text), results: studyResults,
+  outcomes: z.array(z.object({ date: text, arm: text, deviation: flag, values: nullableValues, covariates: nullableValues })),
 });
 
 const lineState = z.object({
@@ -432,6 +498,9 @@ export const parseBandWrite: Parser<BandWrite> = parser(bandWrite);
 export const parseLightCommand: Parser<LightCommand> = parser(lightCommand);
 export const parseWaterUse: Parser<WaterUse> = parser(waterUse);
 export const parseLightingDays: Parser<LightingDays> = parser(lightingDays);
+export const parsePlannerHistory: Parser<PlannerHistory> = parser(plannerHistory);
+export const parseExperimentList: Parser<ExperimentList> = parser(experimentList);
+export const parseExperimentDetail: Parser<ExperimentDetail> = parser(experimentDetail);
 export const parseIrrigationStatus: Parser<IrrigationStatus> = parser(irrigationStatus);
 export const parseScheduleAgenda: Parser<ScheduleAgenda> = parser(scheduleAgenda);
 export const parseSchedule: Parser<Schedule> = parser(schedule);
@@ -480,6 +549,9 @@ export const OPERATIONS = {
   "API-22": op("GET", "/v1/lighting", parseLightingDays),
   "API-23": op("GET", "/v1/band/profile", parseBandProfilePreview),
   "API-24": op("PUT", "/v1/band/profile", parseBandWrite),
+  "API-25": op("GET", "/v1/planner/history", parsePlannerHistory),
+  "API-26": op("GET", "/v1/planner/experiments", parseExperimentList),
+  "API-27": op("GET", "/v1/planner/experiments/{id}", parseExperimentDetail),
   "API-IRR-01": op("GET", "/v1/irrigation", parseIrrigationStatus),
   "API-IRR-02": op("GET", "/v1/irrigation/schedules", parseScheduleAgenda),
   "API-IRR-03": op("POST", "/v1/irrigation/schedules", parseSchedule),

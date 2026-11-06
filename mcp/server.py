@@ -1000,6 +1000,7 @@ _TOOL_READ_ONLY = frozenset(
         "irrigation_status",
         "irrigation_schedule",
         "irrigation_history",
+        "get_greenhouse_snapshot",
         "settings",
         "activity",
         "band_profile",
@@ -1236,6 +1237,9 @@ TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     "irrigation_status": frozenset({"iris", "agent", "admin"}),
     "irrigation_schedule": frozenset({"iris", "agent", "admin"}),
     "irrigation_history": frozenset({"iris", "agent", "admin"}),
+    # #1346: the greenhouse snapshot (Now's AI-written summary). Never Iris or the experiment arm: the snapshot is
+    # never an input to a plan.
+    "get_greenhouse_snapshot": frozenset({"agent", "admin"}),
     # Knowledge
     "lessons": frozenset({"iris", "admin"}),
     "lessons_search": frozenset({"iris", "admin"}),
@@ -6704,6 +6708,33 @@ async def irrigation_status():
     from verdify_services.irrigation import reads
 
     return await _irrigation_read("irrigation_status", reads.status)
+
+
+@mcp.tool()
+async def get_greenhouse_snapshot():
+    """Read the greenhouse snapshot: the 3-5 sentence summary at the top of the dashboard's Now page, written by the
+    local Cortex model (llm.primary.longctx) from the current conditions. The same text Now shows (API-02's
+    ``snapshot``).
+
+    It only reads and does not count as your plan for a trigger. Returns server_time and snapshot: text,
+    generated_at, as_of (the newest run that found the same conditions), model, stale with stale_reason (old: more
+    than 30 min; failed: a later attempt failed), and outdated (a band verdict or the open alerts changed since;
+    Now hides it). snapshot is null when none was written in the last 2 h. The text is a summary for people, never
+    an input to a plan. Refusals: unavailable (the database is out of reach; retryable)."""
+    from verdify_services import brief
+    from verdify_services.problems import problem
+
+    conn = None
+    try:
+        conn = await _db()
+        model = await brief.read(conn)
+    except Exception as exc:  # the database or its connection; never a refusal
+        print(f"[mcp.get_greenhouse_snapshot] failed: {type(exc).__name__}", file=sys.stderr)
+        return _tool_problem(problem("unavailable", "The greenhouse snapshot could not be read. Retry."))
+    finally:
+        if conn is not None:
+            await conn.close()
+    return _tool_ok(model)
 
 
 @mcp.tool()

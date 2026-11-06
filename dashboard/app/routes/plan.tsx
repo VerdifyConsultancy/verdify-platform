@@ -18,7 +18,7 @@ import { useApiRead } from "../lib/queries";
 import { viewMeta } from "../lib/sections";
 import { useShellNow } from "../lib/shell";
 
-export const meta = () => viewMeta("control-plan");
+export const meta = () => viewMeta("planner-plan");
 export const links = () => chartLinks();
 
 /** API-07 every 60 s (architecture §3), every 5 s while a lane's newest write still reads REQUESTED; paused while hidden. */
@@ -126,7 +126,7 @@ export default function Plan() {
     { key: "72", label: "72 h", to: hoursTo(72), current: hours === 72, keepScroll: true },
   ];
   return <>
-    <PageHeader view="control-plan" status={<PlanStatus data={data} now={now} />} statusShort={<PlanStatus data={data} now={now} short />} actions={<FindSetting />} />
+    <PageHeader view="planner-plan" status={<PlanStatus data={data} now={now} />} statusShort={<PlanStatus data={data} now={now} short />} actions={<FindSetting />} />
     <div className="page ctl-plan">
       <div className="l-cols-2 ctl-plan-top">
         <PlanCard data={data} state={state} now={now} onRetry={retry} />

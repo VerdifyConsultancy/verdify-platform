@@ -1,0 +1,247 @@
+# The AI-planner-versus-baseline study (#1360), as reviewed. Source: docs/research/w5/planner-ab.md; Jason accepted
+# its defaults (decisions 1-8) on 2026-11-05 ~21:45-21:50Z (docs/design/dashboard/decisions.md). The model and its
+# checks are verdify_schemas/planner_study.py; `python -m verdify_schemas.planner_study` prints the definition's
+# sha256. The orchestrator (#1360 PR A/B) reads this file to register the study, generate its schedule and freeze
+# its daily outcomes; the operator API (API-26/24) serves it to the dashboard's Planner section (#1361).
+#
+# Pre-registration: before day 1, `baseline_vector.sha256`, `schedule.seed` and `schedule.schedule_sha256` are set in
+# one reviewed commit and never edited after. A change to anything else after day 1 is a new study version.
+study_id: planner-ab-winter-2026
+version: 1
+title: AI planner versus a frozen baseline, winter 2026-27
+question: >-
+  Over a 24 h study day, does the Cortex planner adjusting the planner-owned tunables from forecast and history improve
+  served-band VPD at night, and what does it cost in heat, compared with the same firmware, band and safety rules with
+  those tunables frozen?
+status: defined
+issues: ["#1359", "#1360", "#1361"]
+research: docs/research/w5/planner-ab.md
+supersedes:
+  - experiment_id: 45039c86-c1d9-52f6-a0a9-d94a17bc4b14
+    name: Verdify confirmed-component AI-vs-frozen-FSM switchback v2
+    reason: >-
+      Never randomized a day. Its physical proof failed three times on 2026-08-28 and a facility safe closure ended it
+      on 2026-09-30. Its OpenAI selector and three hot/dry profiles are retired; its tables and evidence are kept.
+
+arms:
+  - label: ai
+    name: AI planner
+    planner_mode: dispatch
+    description: The Cortex planner (#1350) runs on its triggers and dispatches its plans as normal.
+  - label: baseline
+    name: Frozen baseline
+    planner_mode: propose_only
+    description: >-
+      At the boundary the planner-owned tunables are restored to the locked baseline vector. The planner still runs
+      and its plans are validated and stored (arm baseline, dispatched false) but never sent.
+same_in_both_arms: [band, safety, manual_writes, irrigation, firmware]
+
+baseline_vector:
+  fields: PLANNER_PUSHABLE_REG
+  field_count: 48
+  rule: >-
+    Per field, the median of the device-confirmed values over the 14 days before day 1, including the propose-only
+    output of a 7-day Cortex burn-in; the current readback where the planner never wrote the field.
+  sha256: null
+
+schedule:
+  unit: day
+  timezone: America/Denver
+  boundary_local: "11:00"
+  pairs: 30
+  order: seeded_coin_flip_within_adjacent_pair
+  blinding: none
+  washout_hours: 3
+  seed: null
+  schedule_sha256: null
+  boundary_confirm_minutes: 15
+  boundary_max_retries: 3
+  only_at_pair_boundaries: [firmware_ota, band_edit]
+
+# Metrics in the order the results show them. direction: higher (better), lower (better) or report (a cost or
+# context, never scored as better or worse). Heat is reported, never a defect: electric heat1 is the primary heater
+# (Jason, 2026-11-05) and he accepts more kWh for drier nights.
+metrics:
+  - id: night_vpd_in_band_pct
+    label: Night VPD in band
+    unit: pts
+    role: primary
+    direction: higher
+    window: night_post_washout
+    source: fn_band_compliance_5m
+  - id: temp_in_band_pct
+    label: Temperature in band
+    unit: pts
+    role: guardrail
+    direction: higher
+    window: study_day_post_washout
+    source: fn_band_compliance_5m
+    noninferiority_margin: 2.0
+  - id: heat_minutes
+    label: Heater minutes (heat1 + heat2)
+    unit: min
+    role: cost
+    direction: report
+    window: whole_day
+    source: equipment_state
+  - id: electric_kwh
+    label: Electric energy
+    unit: kWh
+    role: cost
+    direction: report
+    window: whole_day
+    source: energy.load_watts
+  - id: thermal_kwh
+    label: Heat delivered (heat1 1.5 kW + heat2 75k BTU/h x 0.8)
+    unit: kWh
+    role: cost
+    direction: report
+    window: whole_day
+    source: equipment_state
+  - id: therms_est
+    label: Gas (estimated)
+    unit: therm
+    role: cost
+    direction: report
+    window: whole_day
+    source: equipment_state
+  - id: vpd_in_band_pct
+    label: VPD in band, whole day
+    unit: pts
+    role: secondary
+    direction: higher
+    window: study_day_post_washout
+    source: fn_band_compliance_5m
+  - id: vpd_error_kpah
+    label: VPD error outside the band
+    unit: kPa·h
+    role: secondary
+    direction: lower
+    window: study_day_post_washout
+    source: fn_band_compliance_5m
+  - id: temp_error_fh
+    label: Temperature error outside the band
+    unit: °F·h
+    role: secondary
+    direction: lower
+    window: study_day_post_washout
+    source: fn_band_compliance_5m
+  - id: stress_hours
+    label: Stress and dew-risk hours
+    unit: h
+    role: secondary
+    direction: lower
+    window: study_day_post_washout
+    source: daily_band_compliance
+  - id: heat1_minutes
+    label: Electric heat minutes
+    unit: min
+    role: cost
+    direction: report
+    window: whole_day
+    source: equipment_state
+  - id: heat2_minutes
+    label: Gas heat minutes
+    unit: min
+    role: cost
+    direction: report
+    window: whole_day
+    source: equipment_state
+  - id: vent_minutes
+    label: Vent and fan minutes
+    unit: min
+    role: secondary
+    direction: report
+    window: whole_day
+    source: equipment_state
+  - id: wetting_minutes
+    label: Fog and mister minutes
+    unit: min
+    role: secondary
+    direction: report
+    window: whole_day
+    source: equipment_state
+  - id: water_gal
+    label: Water
+    unit: gal
+    role: secondary
+    direction: report
+    window: whole_day
+    source: daily_summary.water_used_gal
+  - id: plans_written_pct
+    label: Required plans written
+    unit: pts
+    role: planner
+    direction: higher
+    window: whole_day
+    source: planner_trigger_ledger
+  - id: planner_tokens
+    label: Planner tokens
+    unit: tokens
+    role: planner
+    direction: report
+    window: whole_day
+    source: planner_inference_runs
+  - id: planner_wh
+    label: Planner energy
+    unit: Wh
+    role: planner
+    direction: report
+    window: whole_day
+    source: planner_inference_runs
+
+# Observed weather only: the planner cannot change it. Never indoor variables or the previous day's outcome.
+covariates:
+  - outdoor_temp_min_f
+  - outdoor_temp_mean_f
+  - solar_kwh_m2
+  - outdoor_vpd_kpa
+  - wind_mph
+  - heating_degree_hours_60f
+recorded_not_adjusted: [outdoor_temp_max_f, forecast_error, door_window_state, esp32_reboots, firmware_version]
+
+analysis:
+  estimator: ols_arm_covariates_pair_fixed_effects
+  confidence: 0.95
+  ci_methods: [randomization_inference, hac_t]
+  randomization_draws: 4000
+  population: intention_to_treat
+  sensitivity: [per_protocol]
+  looks:
+    - pairs: 15
+      purpose: safety_futility
+    - pairs: 30
+      purpose: final
+  interim_label: true
+  frozen_output: byte_reproducible_json
+  expected_precision:
+    night_vpd_in_band_pct: 7.5
+    heat_minutes_pct: 10.0
+
+stopping_rules:
+  - id: hard_temperature
+    rule: Any house temperature below 40 °F or above 100 °F.
+    action: Firmware safety acts, the study pauses and the day is a deviation.
+  - id: baseline_temp_in_band
+    rule: A baseline day with temperature in band below 90%.
+    action: Pause and review.
+  - id: boundary_unconfirmed
+    rule: The boundary restore is not confirmed by readback within 15 minutes.
+    action: Record a deviation; retry at most 3 times; never loop.
+  - id: esp32_reboot
+    rule: The controller reboots during a study day.
+    action: Re-assert the arm's vector after it reconnects and flag the day.
+  - id: planner_failure
+    rule: The planner fails on an ai day.
+    action: The last plan stays in force; the day stays in the analysis, flagged.
+  - id: operator_pause
+    rule: Jason pauses the study.
+    action: Capability off until he resumes it; only an operator can.
+
+prerequisites:
+  - "#1350 cutover: the Cortex planner live, planner_inference_runs recording, a propose-only flag"
+  - "#1358 / PR #1372 merged: served-band time in band"
+  - "#1362 / PR #1369 merged: sign-corrected electric kWh"
+  - "#1365 band revision landed, then frozen for the study"
+  - "#1366 pack exposes the winter levers and night VPD history"
+  - "experiment 45039c86 closed with its recorded reason"

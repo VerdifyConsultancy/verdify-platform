@@ -51,7 +51,7 @@ from verdify_schemas.setting_help import band_in_force_help, band_in_force_sourc
 from verdify_schemas.setting_values import readback_matches, readback_tolerance, resolve_effective
 from verdify_schemas.tunable_registry import BAND_OWNED_REG, LIGHTING_CIRCUIT_DEFAULT_REG, desired_write_rule
 from verdify_schemas.tunable_registry import get as registry_get
-from verdify_services import activity, alerts, settings
+from verdify_services import activity, alerts, brief, settings
 from verdify_services.actor import ActorRef as ActorRef  # re-exported: the OpenAPI Actor of DesiredSetting
 from verdify_services.irrigation.runs import run_causes
 from verdify_services.labels import EQUIPMENT_LABELS, EQUIPMENT_LINE_IDS
@@ -299,6 +299,9 @@ class Now(_Model):
     freshness: NowFreshness
     writer: Writer
     controller: Controller
+    # #1346: the greenhouse snapshot, the newest written one with its freshness; None when there is none or it is
+    # older than 2 h (verdify_services.brief).
+    snapshot: brief.Snapshot | None = None
 
 
 TriggerOutcome = Literal[
@@ -1541,6 +1544,7 @@ async def now(conn: asyncpg.Connection) -> Now:
         due = [item for item in values if at - item.since > DIFFERING_AFTER]
         facts = await _readback_facts(conn, [(item.param, item.since, item.value) for item in due])
         causes = await _running_causes(conn, tracks, rep)
+        newest_brief = await brief.newest(conn)
 
     indoor_at = climate["ts"]
     no_row = "No climate row in the last 24 h"
@@ -1635,6 +1639,11 @@ async def now(conn: asyncpg.Connection) -> Now:
         ),
         writer=writer,
         controller=controller,
+        snapshot=brief.snapshot(
+            newest_brief,
+            at,
+            brief.event_key(band.temp_f.verdict, band.vpd_kpa.verdict, alert_counts.open, alert_counts.critical),
+        ),
     )
 
 

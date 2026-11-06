@@ -151,6 +151,9 @@ components:
   # in the agents KSOPS lane; its login's password comes from the PreSync hook in
   # runtime-role-boundary. It is not a device writer.
   - ../../components/operator-api
+  # #1346 verdify-greenhouse-brief: the greenhouse snapshot on Now, written by the local Cortex model every
+  # 5 minutes as the dashboard login (verdify-api image, egress-local-only). Not a device writer.
+  - ../../components/greenhouse-brief
   # Gate 2 experiment credential activation. This remains non-actuating and
   # uses a one-container wave-2 hook while capability and active ID stay off.
   - ../../components/experiment-v2-credential-bootstrap

@@ -365,6 +365,10 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "294-cortex-planner-shadow-storage.sql",
         # The knowledge-embeddings table, its search function and the MCP receipt re-seal run forward only.
         "296-knowledge-embeddings-cortex.sql",
+        # The greenhouse snapshot table, its grants and the MCP receipt re-seal run forward only.
+        "301-greenhouse-brief.sql",
+        # The Planner section's read views and their dashboard grant run forward only.
+        "302-planner-section-reads.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

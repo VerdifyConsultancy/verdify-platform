@@ -815,6 +815,56 @@ def sealed_sql_296():
     )
 
 
+GREENHOUSE_BRIEF_MIGRATION = (
+    301,
+    "301-greenhouse-brief.sql",
+    "24945842499e5d907d2c49ef4cbf4e57ada2f29b297c9744edd055421f7d0e1d",
+)
+# greenhouse_brief is written by the dashboard duty and read by the MCP duty; neither ordinary login reaches it,
+# so the api and ingestor seals stay 296's and the MCP seal moves. Chained from 296 (#1388); the rolled-back
+# native qualification measured the MCP seal (tests/fixtures/301-greenhouse-brief-native-qualification.json).
+SUCCESSOR_301 = {**SUCCESSOR_296, "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"}
+
+
+def sealed_sql_301():
+    # Keep every 296 predicate and bind the exact 301 runner stamp with the MCP seal its grant moves.
+    predecessor = sealed_sql_296()
+    current = seal_profile_sql(296, SUCCESSOR_296)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(301, SUCCESSOR_301), 1)
+        + " AND "
+        + ledger_row_sql(*GREENHOUSE_BRIEF_MIGRATION)
+        + ")"
+    )
+
+
+PLANNER_SECTION_MIGRATION = (
+    302,
+    "302-planner-section-reads.sql",
+    "a18aeb0588b5f4e56b7a78ce3dea7c592873b9fae54f0701c45f6d9bbbd8f3bf",
+)
+# The four Planner-section read views are verdify's, with SELECT for the dashboard duty only, which neither
+# ordinary login nor an MCP role holds. All three seals stay 301's; the rolled-back native qualification
+# confirmed it.
+SUCCESSOR_302 = SUCCESSOR_301
+
+
+def sealed_sql_302():
+    # Keep every 301 predicate and bind the exact 302 runner stamp.
+    predecessor = sealed_sql_301()
+    current = seal_profile_sql(301, SUCCESSOR_301)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(302, SUCCESSOR_302), 1)
+        + " AND "
+        + ledger_row_sql(*PLANNER_SECTION_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -859,6 +909,10 @@ def sealed_sql():
         + sealed_sql_294()
         + " OR "
         + sealed_sql_296()
+        + " OR "
+        + sealed_sql_301()
+        + " OR "
+        + sealed_sql_302()
         + ")"
     )
 
