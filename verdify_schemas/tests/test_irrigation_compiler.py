@@ -32,6 +32,7 @@ from verdify_schemas.irrigation import (
     DripRunArgs,
     FertDripRunArgs,
     FertMisterRunArgs,
+    FogRunArgs,
     LineSpec,
     MisterRunArgs,
     ProgramRecord,
@@ -95,6 +96,7 @@ RUN_BOUNDS = {
         "prewet_s": (0, 1800),
         "flush_s": (0, 1800),
     },
+    "fog": {"minutes": (1, 30)},  # #1343 follow-up: fog runs once
 }
 EVERY_DAY = list(irr.WEEKDAYS)
 
@@ -781,9 +783,11 @@ def test_run_args_take_exactly_their_kinds_fields() -> None:
     assert missing.value.errors()[0]["loc"] == ("flush_s",)
     with pytest.raises(ValidationError):
         run_args("drip", {"on_s": 30})
-    for kind in ("master", "fog"):
-        with pytest.raises(ValueError, match="takes no runs"):
-            run_args(kind, {"minutes": 5})
+    with pytest.raises(ValueError, match="takes no runs"):
+        run_args("master", {"minutes": 5})
+    assert run_args("fog", {"minutes": 5}).minutes == 5  # #1343 follow-up: fog runs once
+    with pytest.raises(ValidationError):
+        run_args("fog", {"on_s": 30, "count": 1, "gap_s": 30})
     assert run_args("drip", {"minutes": 4.5}).minutes == 4
 
 
@@ -797,9 +801,12 @@ def test_validate_run_bounds_per_kind() -> None:
     refusal = validate_run(by_id["L04"], MisterRunArgs(on_s=45, count=4, gap_s=20))
     assert (refusal.field, refusal.min, refusal.max) == ("gap_s", 30, 600)
     assert validate_run(by_id["L08"], FertMisterRunArgs(on_s=30, count=4, gap_s=60, prewet_s=120, flush_s=240)) is None
-    for line_id in ("L03", "L11"):
-        refusal = validate_run(by_id[line_id], DripRunArgs(minutes=5))
-        assert (refusal.code, refusal.field) == ("unknown_target", "line_id")
+    refusal = validate_run(by_id["L03"], DripRunArgs(minutes=5))
+    assert (refusal.code, refusal.field) == ("unknown_target", "line_id")
+    # #1343 follow-up: fog runs once, 1-30 min.
+    assert validate_run(by_id["L11"], FogRunArgs(minutes=30)) is None
+    refusal = validate_run(by_id["L11"], FogRunArgs(minutes=31))
+    assert (refusal.code, refusal.field, refusal.min, refusal.max) == ("out_of_range", "minutes", 1, 30)
     with pytest.raises(TypeError):
         validate_run(by_id["L08"], MisterRunArgs(on_s=30, count=4, gap_s=60))
 
