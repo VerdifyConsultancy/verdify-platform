@@ -28,14 +28,14 @@ ENTRIES: dict[str, HelpEntry] = {
         raise_="Emergency heating starts at a warmer temperature: more protection for the plants, more gas use.",
         lower="Emergency heating waits until the house is colder: the plants can get colder before the backstop acts.",
         caution=(
-            "Intended value 40 °F. The controller keeps it at least 5 °F below the band's low edge (and never below "
-            "30 °F); a higher value is pulled down to that limit."
+            "Intended value 40 °F. The band never moves it: the controller keeps the band's low edge at least 5 °F "
+            "above it. A value outside 30-70 °F, or too close to Safety Max, falls back to 40 °F."
         ),
         guardrail=True,
         refs=(
             f"{_LOGIC}::const bool safety_heat = in.temp_f <= sp.safety_min;",
             f"{_LOGIC}::out.heat1 = true; out.heat2 = true;",
-            f"{_TYPES}::sp.safety_min = std::max(30.0f, std::min(sp.temp_low - 5.0f, sp.safety_min));",
+            f"{_TYPES}::if (!(sp.safety_min >= 30.0f && sp.safety_min <= 70.0f)) sp.safety_min = kSafetyMinF;",
             f'{_DISPATCHER}::"safety_min": 40.0',
         ),
     ),
@@ -49,14 +49,14 @@ ENTRIES: dict[str, HelpEntry] = {
         raise_="Emergency cooling starts at a hotter temperature: the house may run hotter before the backstop acts.",
         lower="Emergency cooling starts sooner: more venting and fan time on hot days, less heat stress.",
         caution=(
-            "Intended value 100 °F. The controller keeps it at least 5 °F above the band's high edge (and at most "
-            "120 °F); a lower value is pushed up to that limit."
+            "Intended value 100 °F. The band never moves it: the controller keeps the band's high edge at least 5 °F "
+            "below it. A value outside 70-120 °F, or too close to Safety Min, falls back to 100 °F."
         ),
         guardrail=True,
         refs=(
             f"{_LOGIC}::const bool safety_cool = in.temp_f >= sp.safety_max;",
             f"{_LOGIC}::out.fan1 = true; out.fan2 = true;",
-            f"{_TYPES}::sp.safety_max = std::max(sp.temp_high + 5.0f, std::min(120.0f, sp.safety_max));",
+            f"{_TYPES}::if (!(sp.safety_max >= 70.0f && sp.safety_max <= 120.0f)) sp.safety_max = kSafetyMaxF;",
             f'{_DISPATCHER}::"safety_max": 100.0',
         ),
     ),
