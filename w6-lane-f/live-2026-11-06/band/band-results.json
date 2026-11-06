@@ -1,0 +1,120 @@
+{
+  "started": "2026-11-06T14:37:33.204Z",
+  "checks": {
+    "band-desktop": {
+      "url": "https://dashboard.verdify.ai/band",
+      "original_night": "65.7",
+      "edited_night": "68.7",
+      "before": {
+        "labels": [
+          "House temperature band over the day in °F, America/Denver: the band as stored. Gaps are left empty, never zero. The data table follows.",
+          "Key",
+          "House VPD band over the day in kPa, America/Denver: the band as stored. Gaps are left empty, never zero. The data table follows.",
+          "Key"
+        ],
+        "canvas_hashes": [
+          "824e925138f78168",
+          "6e90678dcae4b9c4"
+        ],
+        "preview_words": [],
+        "form_status": "No change yet"
+      },
+      "during": {
+        "labels": [
+          "House temperature band over the day in °F, America/Denver: the band as stored and dashed, the preview of this value. Gaps are left empty, never zero. The data table follows.",
+          "Key",
+          "House VPD band over the day in kPa, America/Denver: the band as stored. Gaps are left empty, never zero. The data table follows.",
+          "Key"
+        ],
+        "canvas_hashes": [
+          "f028a9beed8b0703",
+          "14e8790e48c66471"
+        ],
+        "preview_words": [
+          "PREVIEW Measured, last 24 h (after no"
+        ],
+        "form_status": "Save writes 9 anchors in one change"
+      },
+      "after": {
+        "labels": [
+          "House temperature band over the day in °F, America/Denver: the band as stored. Gaps are left empty, never zero. The data table follows.",
+          "Key",
+          "House VPD band over the day in kPa, America/Denver: the band as stored. Gaps are left empty, never zero. The data table follows.",
+          "Key"
+        ],
+        "canvas_hashes": [
+          "824e925138f78168",
+          "6e90678dcae4b9c4"
+        ],
+        "preview_words": [],
+        "form_status": "No change yet"
+      },
+      "preview_requests": [
+        "/api/v1/band/profile?temp_night=68.7"
+      ],
+      "curve_moved": true,
+      "restored_matches_before": true,
+      "draft_label_while_editing": true,
+      "draft_label_after_restore": false
+    },
+    "band-phone": {
+      "url": "https://dashboard.verdify.ai/band",
+      "original_night": "65.7",
+      "edited_night": "68.7",
+      "before": {
+        "labels": [
+          "House temperature band over the day in °F, America/Denver: the band as stored. Gaps are left empty, never zero. The data table follows.",
+          "Key",
+          "House VPD band over the day in kPa, America/Denver: the band as stored. Gaps are left empty, never zero. The data table follows.",
+          "Key"
+        ],
+        "canvas_hashes": [
+          "ec62718bb9dabaee",
+          "73afefb68bc710b4"
+        ],
+        "preview_words": [],
+        "form_status": "No change yet"
+      },
+      "during": {
+        "labels": [
+          "House temperature band over the day in °F, America/Denver: the band as stored and dashed, the preview of this value. Gaps are left empty, never zero. The data table follows.",
+          "Key",
+          "House VPD band over the day in kPa, America/Denver: the band as stored. Gaps are left empty, never zero. The data table follows.",
+          "Key"
+        ],
+        "canvas_hashes": [
+          "610e60b39bbd4baf",
+          "04363a51121814e7"
+        ],
+        "preview_words": [
+          "PREVIEW Measured, last 24 h (after no"
+        ],
+        "form_status": "Save writes 9 anchors in one change"
+      },
+      "after": {
+        "labels": [
+          "House temperature band over the day in °F, America/Denver: the band as stored. Gaps are left empty, never zero. The data table follows.",
+          "Key",
+          "House VPD band over the day in kPa, America/Denver: the band as stored. Gaps are left empty, never zero. The data table follows.",
+          "Key"
+        ],
+        "canvas_hashes": [
+          "127f030d3bd4097e",
+          "38cdf42aee8faf01"
+        ],
+        "preview_words": [],
+        "form_status": "No change yet"
+      },
+      "preview_requests": [
+        "/api/v1/band/profile?temp_night=68.7"
+      ],
+      "curve_moved": true,
+      "restored_matches_before": false,
+      "draft_label_while_editing": true,
+      "draft_label_after_restore": false
+    }
+  },
+  "errors": {},
+  "writes_seen": [],
+  "finished": "2026-11-06T14:38:06.293Z"
+}
