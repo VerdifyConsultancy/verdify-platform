@@ -66,7 +66,7 @@ test("an operator moves a planting from the selection, then harvests it from its
   await useScreensClock(page, request, "crops-planted");
   await load(page, "/crops");
   for (const label of ["EAST-HYDRO-31", "EAST-HYDRO-32", "EAST-HYDRO-33", "EAST-HYDRO-34", "EAST-HYDRO-45"]) await cell(page, label).click();
-  await toolbar(page).getByRole("button", { name: "Move…" }).click();
+  await toolbar(page).getByRole("button", { name: "Move…", exact: true }).click();
   await expect(dialog(page).getByRole("heading", { name: "Move planting" })).toBeVisible();
   const to = dialog(page).getByLabel("To", { exact: true });
   await to.fill("EAST-HYDRO-45..48");
