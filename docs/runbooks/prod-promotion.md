@@ -66,7 +66,7 @@ builds only (`Container Publish` runs every Dockerfile with `push: false`).
      workflowTemplateRef: {name: repo-build-verdifyconsultancy}
      arguments:
        parameters:
-         - {name: repo, value: https://github.com/VerdifyConsultancy/verdify-platform.git}
+         - {name: repo, value: https://github.com/jvallery/verdify-platform.git}
          - {name: revision, value: <sha>}
          - {name: dockerfile, value: <path/to/Dockerfile>}
          - {name: context, value: "."}

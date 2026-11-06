@@ -44,7 +44,7 @@ COPY --from=build /app/bff ./bff
 COPY --from=source-metadata /out/source-revision /etc/verdify/source-revision
 ARG GIT_SHA=unknown
 ENV NODE_ENV=production PORT=3000 SOURCE_REVISION=$GIT_SHA
-LABEL org.opencontainers.image.source="https://github.com/VerdifyConsultancy/verdify-platform" org.opencontainers.image.title="verdify-dashboard-web"
+LABEL org.opencontainers.image.source="https://github.com/jvallery/verdify-platform" org.opencontainers.image.title="verdify-dashboard-web"
 USER 10001:10001
 EXPOSE 3000
 CMD ["node", "server.mjs"]

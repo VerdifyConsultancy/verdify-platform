@@ -23,6 +23,10 @@ from pathlib import Path
 FILES = ("firmware.ota.bin", "firmware.bin", "firmware.elf", "firmware.map")
 SCHEMA = "verdify.firmware-release/v1"
 MAX_MANIFEST = 65536
+# D19 (2026-11-06): the repo moved from VerdifyConsultancy to jvallery. New manifests name the
+# new URL; manifests built and reviewed before the transfer still verify.
+SOURCE_REPOSITORY = "https://github.com/jvallery/verdify-platform"
+ACCEPTED_SOURCE_REPOSITORIES = frozenset({SOURCE_REPOSITORY, "https://github.com/VerdifyConsultancy/verdify-platform"})
 # secrets.yaml key -> the builder's environment variable.
 SECRET_KEYS = {
     "wifi_ssid": "WIFI_SSID",
@@ -196,7 +200,7 @@ def write_manifest(root: Path, revision: str, firmware_version: str, toolchain: 
         files[name] = {"sha256": sha256(path), "bytes": path.stat().st_size}
     result = {
         "schema": SCHEMA,
-        "source_repository": "https://github.com/VerdifyConsultancy/verdify-platform",
+        "source_repository": SOURCE_REPOSITORY,
         "source_revision": revision,
         "firmware_version": firmware_version,
         "device": "greenhouse",
@@ -221,7 +225,7 @@ def read_manifest(directory: Path, revision: str, expected: str) -> dict:
         raise ValueError("release identity mismatch")
     if result.get("device") != "greenhouse":
         raise ValueError("wrong device")
-    if result.get("source_repository") != "https://github.com/VerdifyConsultancy/verdify-platform":
+    if result.get("source_repository") not in ACCEPTED_SOURCE_REPOSITORIES:
         raise ValueError("wrong source repository")
     files = result.get("files")
     if not isinstance(files, dict) or set(files) != set(FILES):

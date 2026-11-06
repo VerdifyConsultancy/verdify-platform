@@ -24,7 +24,7 @@ the current sprint's survey and release status.
       offline checks. Use the existing private fixtures for isolated qualification.
 - [ ] Require the exact PR head's `Verdify Platform / Argo PR CI` commit status
       to pass, plus any other enforced branch checks. Read commit statuses with
-      `gh api repos/VerdifyConsultancy/verdify-platform/commits/<sha>/status`;
+      `gh api repos/jvallery/verdify-platform/commits/<sha>/status`;
       this repository has no hosted Actions workflows or check-runs. Retain the
       selected test results and their limits; a skipped case is not acceptance.
 - [ ] Land schema contracts and numbered migrations before or with their

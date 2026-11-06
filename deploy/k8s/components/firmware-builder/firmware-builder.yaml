@@ -180,7 +180,7 @@ spec:
               test ! -e "/artifacts/${FW_REVISION}" || { echo "[builder] immutable artifact already exists" >&2; exit 64; }
               [ "${FLASH:-0}" = "0" ] || { echo "[builder] compile template refuses FLASH" >&2; exit 64; }
               echo "[builder] cloning verdify-platform @ ${FW_REVISION}"
-              git clone --filter=blob:none "https://github.com/VerdifyConsultancy/verdify-platform.git" /work
+              git clone --filter=blob:none "https://github.com/jvallery/verdify-platform.git" /work
               cd /work
               test "$(git cat-file -t "${FW_REVISION}")" = commit
               git checkout --detach -q "${FW_REVISION}"
