@@ -258,13 +258,14 @@ test("every stress window kind and severity in verdify_schemas/plan.py has words
 });
 
 test("every activity action the services write has words, each one an action the server can log", () => {
-  const source = /ACTIVITY_ACTION_PATTERN = \(\s*r"([^"]+)"\s*\)/.exec(repo("verdify_schemas/activity.py"));
+  const source = /ACTIVITY_ACTION_PATTERN = \(?\s*r"([^"]+)"/.exec(repo("verdify_schemas/activity.py"));
   if (!source) throw new Error("no ACTIVITY_ACTION_PATTERN in verdify_schemas/activity.py");
   const server = new RegExp(source[1]);
-  // The fixed actions (architecture §9), the irrigation ones #1156 writes and API-20's light.on and light.off.
+  // The fixed actions (architecture §9), the irrigation ones #1156 writes, API-20's light.on and light.off and API-23's band.write.
   const actions = [
     "setting.write", "setting.release", "plan.write", "alert.ack", "alert.resolve", "irrigation.run", "irrigation.stop", "irrigation.clear_fault",
     "irrigation.override", "irrigation.schedule.create", "irrigation.schedule.update", "irrigation.schedule.delete", "irrigation.line.update", "light.on", "light.off",
+    "band.write",
   ];
   expectWorded("activity_action", actions);
   expect(Object.keys(WORDS.activity_action).sort()).toEqual([...actions].sort());

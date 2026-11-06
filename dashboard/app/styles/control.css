@@ -297,3 +297,14 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .light-auto-link{font-size:var(--fs-sm)}
 .light-actions{margin:.5rem 0 0}
 .light-controls .state-note,.light-controls .field-error{margin:.35rem 0 0}
+
+/* Band (#1334): the editor's two day charts side by side from 861 px, its findings, the facts under them, the form's two fieldsets and the Advanced anchor table. */
+.ctl-band-charts{display:grid;gap:var(--space-4)}
+@media(min-width:861px){.ctl-band-charts{grid-template-columns:1fr 1fr}}
+.ctl-band-findings{margin:var(--space-3) 0 0;padding-left:1.2rem}
+.ctl-band-warn{color:var(--warn-text)}
+.ctl-band-facts{margin:0;padding-left:1.2rem}
+.ctl-band-form{display:grid;gap:var(--space-4)}
+.ctl-band-form fieldset{display:grid;gap:var(--space-3);margin:0;padding:0;border:0}
+.ctl-band-form legend{font-weight:600;margin-bottom:var(--space-2)}
+.ctl-band-advanced table input{width:5.5rem;min-height:var(--tap)}

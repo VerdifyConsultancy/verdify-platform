@@ -1,4 +1,5 @@
-"""Graph reads: API-03 to API-06, and the band preview API-19 (architecture §7 and §8). No auth and no SQL here."""
+"""Graph reads: API-03 to API-06, the band preview API-19 and the band editor's preview API-22 (architecture §7 and §8,
+#1334). No auth and no SQL here."""
 
 from __future__ import annotations
 
@@ -9,6 +10,7 @@ import asyncpg
 from fastapi import APIRouter, Depends, Query
 from pydantic import AwareDatetime
 
+from verdify_services import band_profile
 from verdify_services import series as service
 
 from .reads import connection
@@ -95,3 +97,45 @@ async def band_preview(
     day: Annotated[date | None, Query(description="America/Denver day; default today")] = None,
 ) -> service.BandPreview:
     return await service.band_preview(conn, param, value, day)
+
+
+def _field(description: str, minimum: float | None = None) -> object:
+    return Query(description=description, ge=minimum)
+
+
+@router.get(
+    "/band/profile",
+    operation_id="API-22",
+    tags=["settings"],
+    summary="The house band as stored and as drafted in the band editor, over one day, before Save",
+    response_model=band_profile.BandProfilePreview,
+)
+async def band_profile_preview(
+    conn: Connection,
+    temp_day: Annotated[float | None, _field("Temperature target at solar noon, °F")] = None,
+    temp_night: Annotated[float | None, _field("Temperature target at solar midnight, °F")] = None,
+    temp_width_day: Annotated[float | None, _field("± °F around the day target", 0)] = None,
+    temp_width_night: Annotated[float | None, _field("± °F around the night target", 0)] = None,
+    vpd_day: Annotated[float | None, _field("VPD target at solar noon, kPa")] = None,
+    vpd_night: Annotated[float | None, _field("VPD target at solar midnight, kPa")] = None,
+    vpd_below_day: Annotated[float | None, _field("kPa below the day target", 0)] = None,
+    vpd_above_day: Annotated[float | None, _field("kPa above the day target", 0)] = None,
+    vpd_below_night: Annotated[float | None, _field("kPa below the night target", 0)] = None,
+    vpd_above_night: Annotated[float | None, _field("kPa above the night target", 0)] = None,
+    anchor: Annotated[list[str] | None, Query(description="Advanced: a raw house anchor as param:value")] = None,
+    day: Annotated[date | None, Query(description="America/Denver day; default today")] = None,
+) -> band_profile.BandProfilePreview:
+    patch = band_profile.BandProfilePatch(
+        temp_day=temp_day,
+        temp_night=temp_night,
+        temp_width_day=temp_width_day,
+        temp_width_night=temp_width_night,
+        vpd_day=vpd_day,
+        vpd_night=vpd_night,
+        vpd_below_day=vpd_below_day,
+        vpd_above_day=vpd_above_day,
+        vpd_below_night=vpd_below_night,
+        vpd_above_night=vpd_above_night,
+    )
+    overrides = band_profile.parse_anchor_overrides(anchor or [])
+    return await band_profile.preview(conn, patch, overrides, day)

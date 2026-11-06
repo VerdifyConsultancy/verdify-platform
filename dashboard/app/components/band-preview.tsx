@@ -72,8 +72,10 @@ function solarMarks(agenda: ScheduleAgenda | null, day: string): SolarMark[] {
 /** One column of the API's curve: a null stays a null, so a gap stays a gap. */
 type Column = readonly (number | null)[];
 type Curve = BandPreviewData["current"];
+/** A further line on the chart (the band editor's expected night VPD, the curve as the controller runs it), dotted. */
+export type ExtraLine = { readonly key: string; readonly label: string; readonly token: string; readonly values: Column };
 /** The ribbon's runs: a null in low or high leaves it open. */
-function ribbon(t: readonly number[], low: Column, high: Column): BandRun[] {
+export function ribbon(t: readonly number[], low: Column, high: Column): BandRun[] {
   const runs: BandRun[] = [];
   let run: BandRun | null = null;
   t.forEach((at, index) => {
@@ -85,7 +87,7 @@ function ribbon(t: readonly number[], low: Column, high: Column): BandRun[] {
   return runs;
 }
 
-type PreviewView = {
+export type PreviewView = {
   unit: string;
   token: string;
   t: readonly number[];
@@ -95,11 +97,13 @@ type PreviewView = {
   draft: Curve | null;
   now: number | null;
   marks: SolarMark[];
+  /** Further dotted lines, after the draft's. */
+  extras?: readonly ExtraLine[];
 };
 
 const sameColumn = (a: Column, b: Column) => a.length === b.length && a.every((value, index) => value === b[index]);
 /** The draft to draw, or null when `draftShown` is off or the draft changes nothing. */
-function draftOf(preview: BandPreviewData, draftShown: boolean): PreviewView["draft"] {
+export function draftOf(preview: Pick<BandPreviewData, "current" | "draft">, draftShown: boolean): PreviewView["draft"] {
   const { current, draft } = preview;
   if (!draftShown || (sameColumn(current.low, draft.low) && sameColumn(current.target, draft.target) && sameColumn(current.high, draft.high))) return null;
   return draft;
@@ -162,9 +166,10 @@ function previewOptions(env: ChartEnv, viewRef: MutableRefObject<PreviewView>): 
   const { colors, px } = env;
   const { unit, token } = viewRef.current;
   const draftLine = (label: string, width: number): uPlot.Series => ({ label, scale: "y", stroke: colors["--c-requested"], width, dash: [8, 4], spanGaps: false, points: { show: false } });
+  const extraLines = (viewRef.current.extras ?? []).map((extra): uPlot.Series => ({ label: extra.label, scale: "y", stroke: colors[extra.token], width: 1.5, dash: [2, 3], spanGaps: false, points: { show: false } }));
   return {
     padding: [18, 10, 0, 0],
-    series: [{}, { label: "Target", scale: "y", stroke: colors[token], width: 2, spanGaps: false, points: { show: false } }, draftLine(`${PREVIEW_WORD} target`, 2), draftLine(`${PREVIEW_WORD} low`, 1), draftLine(`${PREVIEW_WORD} high`, 1)],
+    series: [{}, { label: "Target", scale: "y", stroke: colors[token], width: 2, spanGaps: false, points: { show: false } }, draftLine(`${PREVIEW_WORD} target`, 2), draftLine(`${PREVIEW_WORD} low`, 1), draftLine(`${PREVIEW_WORD} high`, 1), ...extraLines],
     scales: { y: { range: (_plot, min, max) => paddedRange([min, max], marksExtent(viewRef.current.runs, [], ...env.xWindow())) } },
     axes: [timeAxis({ muted: colors["--muted"], grid: colors["--c-grid"] }), valueAxis(unit, colors)],
     hooks: {
@@ -174,10 +179,14 @@ function previewOptions(env: ChartEnv, viewRef: MutableRefObject<PreviewView>): 
     },
     plugins: [tooltipPlugin((plot) => {
       const index = plot.cursor.idx;
-      const { t, unit: shown, current, draft } = viewRef.current;
+      const { t, unit: shown, current, draft, extras } = viewRef.current;
       if (index === null || index === undefined || index < 0 || index >= t.length) return null;
       const lines = [fullTime(t[index]), `Band ${pointText(shown, current.low[index], current.target[index], current.high[index])}`];
       if (draft) lines.push(`${PREVIEW_WORD} ${pointText(shown, draft.low[index], draft.target[index], draft.high[index])}`);
+      for (const extra of extras ?? []) {
+        const value = extra.values[index];
+        if (value !== null && value !== undefined) lines.push(`${extra.label} ${formatValue(value, shown)}`);
+      }
       return lines;
     })],
   };
@@ -208,7 +217,7 @@ function previewCsv({ t, unit, current, draft }: PreviewView): string {
 }
 
 /** The day's curve, once the API has answered: 00:00 to 24:00 local, which a DST day makes 23 or 25 hours. */
-function PreviewChart({ day, view, name }: { day: string; view: PreviewView; name: string }) {
+export function PreviewChart({ day, view, name }: { day: string; view: PreviewView; name: string }) {
   const viewRef = useRef(view);
   viewRef.current = view;
   const xRange: XRange = useMemo(() => {
@@ -217,12 +226,13 @@ function PreviewChart({ day, view, name }: { day: string; view: PreviewView; nam
   }, [day, view.t]);
   const data = useMemo<uPlot.AlignedData>(() => {
     const blank = nulls(view.t.length);
-    return [[...view.t], [...view.current.target], [...(view.draft?.target ?? blank)], [...(view.draft?.low ?? blank)], [...(view.draft?.high ?? blank)]];
-  }, [view.t, view.current, view.draft]);
+    return [[...view.t], [...view.current.target], [...(view.draft?.target ?? blank)], [...(view.draft?.low ?? blank)], [...(view.draft?.high ?? blank)], ...(view.extras ?? []).map((extra) => [...extra.values])];
+  }, [view.t, view.current, view.draft, view.extras]);
+  const extraKeys = (view.extras ?? []).map((extra) => extra.key).join(",");
   // The marks repaint the same chart; a new unit rebuilds it, with its axis and colours.
   const marks = useMemo(() => ({ runs: view.runs, draft: view.draft, now: view.now, solar: view.marks }), [view.runs, view.draft, view.now, view.marks]);
   return <>
-    <UPlotChart options={(env) => previewOptions(env, viewRef)} data={data} xRange={xRange} structure={`band-preview|${view.unit}`} className="plot" zoom={false} marks={marks}
+    <UPlotChart options={(env) => previewOptions(env, viewRef)} data={data} xRange={xRange} structure={`band-preview|${view.unit}|${extraKeys}`} className="plot" zoom={false} marks={marks}
       label={`${name} band over the day in ${view.unit}, America/Denver: the band as stored${view.draft ? " and dashed, the preview of this value" : ""}. Gaps are left empty, never zero. The data table follows.`} />
     <ChartKey items={previewKey(view)} />
     {view.marks.length > 0 && <ul className="chart-notes">{view.marks.map((mark) => <li key={mark.word}>{mark.text}</li>)}</ul>}
@@ -236,6 +246,7 @@ function previewKey(view: PreviewView): KeyItem[] {
     { key: "band", label: "Band as stored", token: "--c-band-edge", kind: "fill" },
     { key: "target", label: "Target as stored", token: view.token, kind: "line" },
     ...(view.draft ? [{ key: "preview", label: PREVIEW_WORD, token: "--c-requested", kind: "dashed" } as const] : []),
+    ...(view.extras ?? []).map((extra) => ({ key: extra.key, label: extra.label, token: extra.token, kind: "dotted" } as const)),
   ];
 }
 

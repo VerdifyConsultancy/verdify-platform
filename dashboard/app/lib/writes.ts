@@ -8,6 +8,7 @@
  * - **P** `useProgramWrite`: API-IRR-03, -04, -05 and -08.
  * - **C** `useCommand`: API-IRR-06, -07, -12, -13 and API-20, then a readback.
  * - **R** `useRecordWrite`: API-15 and API-16.
+ * - **B** `useBandWrite`: API-23, the band editor's one Save of every changed house anchor.
  * - `useStop`: API-IRR-07 and its result toast.
  *
  * One action, one key: `crypto.randomUUID()` when Save, Run, Stop or Acknowledge is pressed, used for that request only.
@@ -492,6 +493,30 @@ export function useRecordWrite() {
     return done(await run((key) => apiWrite("API-16", { id }, resolution ? { resolution } : undefined, key), { check: () => tooLong("resolution", resolution) }));
   }, [run, done]);
   return { acknowledge, resolve, sending: action.sending, error: action.error, clearError: action.clearError };
+}
+
+// ---------------------------------------------------------------------------------------------------- B band
+export type BandSaveBody = NonNullable<BodyOf<"API-23">>;
+/**
+ * **B**: the band editor's Save (API-23 `PUT /v1/band/profile`), every house anchor the draft changes in one write with
+ * one reason and one Activity row. On a 200 it toasts "Requested N band anchors" and refetches the editor's preview,
+ * Settings and Activity; a refusal (a guardrail, the night floor, nothing to change) stays beside the form.
+ */
+export function useBandWrite() {
+  const client = useQueryClient();
+  const toast = useToast();
+  const action = useAction();
+  const { run } = action;
+  const save = useCallback(async (body: BandSaveBody) => {
+    const outcome = await run((key) => apiWrite("API-23", {}, body, key), { check: () => tooLong("reason", body.reason) });
+    if (outcome.ok) {
+      const count = outcome.data.changed.length;
+      toast.show({ message: `Requested ${count} band ${count === 1 ? "anchor" : "anchors"}` });
+      refresh(client, ["API-22", "API-09", "API-17"]);
+    }
+    return outcome;
+  }, [run, client, toast]);
+  return { save, sending: action.sending, error: action.error, clearError: action.clearError };
 }
 
 // ---------------------------------------------------------------------------------------------------- Stop

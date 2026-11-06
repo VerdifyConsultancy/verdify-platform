@@ -1,5 +1,5 @@
 """The operator API's write routes: settings and alerts, API-10, API-11, API-15 and API-16 (#1150); the grow lights,
-API-20 (#1170).
+API-20 (#1170); the band editor's Save, API-23 (#1334).
 
 Each settings and alert route runs one ``verdify_services`` call, which commits the domain row and its ``activity_log``
 row in one transaction: a ``desired_state`` row, plus the ``crop_band_anchors`` rows of a crop-band setting, or the
@@ -30,7 +30,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat
 from operator_routes import light_resync, setpoint_server
 from operator_routes.reads import Connection
 from verdify_schemas.activity import REASON_MAX_LENGTH
-from verdify_services import alerts, lights, settings
+from verdify_services import alerts, band_profile, lights, settings
 from verdify_services.activity import WriteResult
 from verdify_services.problems import ServiceError, problem
 
@@ -70,6 +70,17 @@ class SettingWrite(BaseModel):
 
     value: StrictFloat
     # The manual default lives here (Round 2 item 8): the service stores exactly the flag it receives.
+    manual: StrictBool = True
+    reason: str = Field(default=None, max_length=REASON_MAX_LENGTH)
+
+
+class BandSave(BaseModel):
+    """API-23's body: the simple profile fields to change and Advanced raw anchors, one manual flag and one reason."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    profile: band_profile.BandProfilePatch = Field(default_factory=band_profile.BandProfilePatch)
+    anchors: dict[str, StrictFloat] = Field(default_factory=dict)
     manual: StrictBool = True
     reason: str = Field(default=None, max_length=REASON_MAX_LENGTH)
 
@@ -132,6 +143,15 @@ async def release_setting(
 ) -> JSONResponse:
     """Release to auto: append ``value NULL, manual false``, so the plan, band or default applies again."""
     return _answer(await settings.release(conn, request.state.actor, param, reason, key))
+
+
+@router.put("/band/profile", operation_id="API-23", tags=["settings"], response_model=band_profile.BandWrite)
+async def save_band(key: IdempotencyKey, conn: Connection, request: Request, body: BandSave) -> JSONResponse:
+    """Store every house anchor the draft changes, in one transaction with one ``band.write`` activity row."""
+    written = await band_profile.write(
+        conn, request.state.actor, body.profile, body.anchors, body.manual, body.reason, key
+    )
+    return _answer(written)
 
 
 @router.post("/alerts/{id}/ack", operation_id="API-15", tags=["alerts"], response_model=alerts.Alert)

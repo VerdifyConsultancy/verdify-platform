@@ -22,6 +22,7 @@ import GraphZones from "../routes/graphs.zones";
 import Now from "../routes/now";
 import Plan from "../routes/plan";
 import Settings from "../routes/settings";
+import Band from "../routes/band";
 import WaterRoute from "../routes/water";
 import WaterBoard from "../routes/water-board";
 import WaterHistory from "../routes/water-history";
@@ -43,7 +44,7 @@ const BUILD = "fedcba9876543210fedcba9876543210fedcba98";
 /** Every screen route of app/routes.ts by path, with its component; Water's three views render inside its layout. */
 const SCREENS = [
   ["/", Now], ["/water", WaterBoard], ["/water/schedules", WaterSchedules], ["/water/history", WaterHistory], ["/graphs", Graphs], ["/graphs/zones", GraphZones],
-  ["/graphs/statistics", Statistics], ["/activity", Activity], ["/activity/log", ActivityLog], ["/settings", Settings], ["/plan", Plan], ["/equipment", Equipment],
+  ["/graphs/statistics", Statistics], ["/activity", Activity], ["/activity/log", ActivityLog], ["/settings", Settings], ["/band", Band], ["/plan", Plan], ["/equipment", Equipment],
 ] as const;
 const WATER_VIEWS: readonly string[] = ["/water", "/water/schedules", "/water/history"];
 /** The screens as the route stub nests them, as app/routes.ts does: the Water views under `routes/water.tsx`. */
@@ -114,7 +115,7 @@ test("the routes: the five sections' views, the scorecard's redirect, SCR-09 thr
   const paths = leaves(routes as Entry[]);
   expect(paths).toEqual([
     "/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/statistics", "/graphs/scorecard", "/activity", "/activity/log",
-    "/settings", "/plan", "/equipment", "/auth/*", "/*",
+    "/settings", "/band", "/plan", "/equipment", "/auth/*", "/*",
   ]);
   expect(paths).not.toContain("/plants");
   expect(paths).not.toContain("/more");
@@ -222,8 +223,9 @@ test("every page has a page header: the eyebrow names the section, the h1 the vi
     "/water/history": ["Water", "Water history", ["Today", "Schedules", "History"]], "/graphs": ["Graphs", "Climate", ["Climate", "Zones", "Statistics"]],
     "/graphs/zones": ["Graphs", "Zones", ["Climate", "Zones", "Statistics"]], "/graphs/statistics": ["Graphs", "Statistics", ["Climate", "Zones", "Statistics"]],
     "/activity": ["Activity", "Alerts", ["Alerts", "Log"]], "/activity/log": ["Activity", "Activity log", ["Alerts", "Log"]],
-    "/settings": ["Control", "Settings", ["Settings", "Plan", "Equipment"]], "/plan": ["Control", "Plan", ["Settings", "Plan", "Equipment"]],
-    "/equipment": ["Control", "Equipment", ["Settings", "Plan", "Equipment"]],
+    "/settings": ["Control", "Settings", ["Settings", "Band", "Plan", "Equipment"]], "/plan": ["Control", "Plan", ["Settings", "Band", "Plan", "Equipment"]],
+    "/equipment": ["Control", "Equipment", ["Settings", "Band", "Plan", "Equipment"]],
+    "/band": ["Control", "Band", ["Settings", "Band", "Plan", "Equipment"]],
   };
   for (const [path, [eyebrow, h1, tabs]] of Object.entries(expected)) {
     mount(path); await advance(0);
