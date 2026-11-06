@@ -5,7 +5,8 @@ Outputs `/mnt/iris/verdify-vault/website/greenhouse/crops/{slug}.md` for
 every catalog entry. For each crop:
   - Frontmatter with slug, category, season, cycle_days
   - Stage/season band aggregates from v_crop_catalog_with_profiles
-  - Active plantings of this crop type (from v_position_current)
+  - Active plantings of this crop type (from the active crops records, #1329)
+  - The crops hub (index.md): planted now and every profile's status
   - Historical plantings (from v_crop_history)
 
 Idempotent — writes only when content changes.
@@ -43,47 +44,35 @@ def _database_dsn() -> str:
     return f"postgresql://verdify:{password}@127.0.0.1:5432/verdify"
 
 
-ACTIVE_CONTROL_SLUGS = {"canna", "lettuce", "orchid", "peppers", "strawberries"}
-
 STALE_SEEDLING_AFTER_DAYS = 35
-CROP_TAXONOMY = {
-    "basil": (
-        "Planned/Retired",
-        "No active planting in <code>v_position_current</code>; kept as a crop profile and prior planting record.",
-    ),
-    "canna": (
-        "Active Control",
-        "Occupied south-zone record in <code>v_position_current</code>; its wide VPD tolerance informs south-zone control.",
-    ),
-    "cucumbers": (
-        "Planned/Retired",
-        "No active planting in <code>v_position_current</code>; retained as a future west-zone crop candidate.",
-    ),
-    "herbs": (
-        "Observed/Reference",
-        "Mixed-herb reference profile; individual herb species are not active control records right now.",
-    ),
-    "lettuce": (
-        "Active Control",
-        "Occupied east-zone record in <code>v_position_current</code>; heat-sensitive crop context participates in active policy. Target Bands below show current DB-backed profile coverage.",
-    ),
-    "orchid": (
-        "Active Control",
-        "Occupied center hanging record in <code>v_position_current</code>; Vanda VPD tolerance participates in active crop and zone policy.",
-    ),
-    "peppers": (
-        "Active Control",
-        "Occupied east-zone record in <code>v_position_current</code>; warm-crop context participates in active policy. Target Bands below show current DB-backed profile coverage.",
-    ),
-    "strawberries": (
-        "Active Control",
-        "Occupied east-zone record in <code>v_position_current</code>; strawberry crop context participates in active policy. Target Bands below show current DB-backed profile coverage.",
-    ),
-    "tomatoes": (
-        "Planned/Retired",
-        "No active planting in <code>v_position_current</code>; retained as a south-zone future crop profile.",
-    ),
-}
+# Plantings come from the operator read model's records: crops.is_active plus the anchor zone and position that
+# verdify_services.crops keeps in step with the open crop_occupancy row, so the lab lists what /v1/crops/locations
+# shows (#1329). There is no hand-kept list of "active" crops.
+ACTIVE_PLANTINGS_SQL = """
+SELECT c.id AS planting_id,
+       c.name AS crop_name,
+       c.variety AS crop_variety,
+       c.count AS crop_count,
+       c.position AS position_label,
+       COALESCE(z.slug, lower(btrim(c.zone))) AS zone_slug,
+       COALESCE(z.name, initcap(btrim(c.zone))) AS zone_name,
+       c.stage AS crop_stage,
+       c.planted_date AS crop_planted_date,
+       (now() AT TIME ZONE 'America/Denver')::date - c.planted_date AS crop_days_in_place,
+       cc.slug AS crop_catalog_slug
+FROM crops c
+LEFT JOIN crop_catalog cc ON cc.id = c.crop_catalog_id
+LEFT JOIN zones z ON z.id = c.zone_id
+WHERE c.is_active
+  AND c.greenhouse_id = 'vallery'
+ORDER BY zone_name NULLS LAST, c.position NULLS LAST, c.name, c.id
+"""
+HUB_FILENAME = "index.md"
+# The status block's heading on pages rendered before #1329.
+RENAMED_STATUS_HEADING = ("\n## Crop-Control Status\n", "\n## Planting Status\n")
+# Hand-written hub sections that the generated blocks replace the first time the hub is rendered.
+HUB_PLANTED_SECTION = "## Current Planting"
+HUB_PROFILE_SECTIONS = ("## Profile Status", "## Active Control", "## Observed/Reference", "## Planned/Retired")
 CROP_LABELS = {
     "basil": "Basil",
     "canna": "Canna lilies",
@@ -141,6 +130,24 @@ def _render_stage_band_table(profiles: list[dict], crop_label: str) -> str:
     return "\n".join(lines)
 
 
+def _place(planting: dict) -> str:
+    zone = planting.get("zone_name") or "Unassigned zone"
+    position = planting.get("position_label")
+    return f"{zone} · {position}" if position else zone
+
+
+def _planting_title(planting: dict) -> str:
+    variety = planting.get("crop_variety")
+    return f"{planting['crop_name']} ({variety})" if variety else str(planting["crop_name"])
+
+
+def _planting_detail(planting: dict) -> str:
+    stage_label = _planting_stage_label(planting.get("crop_stage"), planting.get("crop_days_in_place"))
+    count = planting.get("crop_count")
+    counted = f"{count} plants · " if count else ""
+    return f"{counted}{stage_label}"
+
+
 def _render_current_plantings(current: list[dict], crop_label: str) -> str:
     if not current:
         return (
@@ -150,16 +157,15 @@ def _render_current_plantings(current: list[dict], crop_label: str) -> str:
             "</div>"
         )
     lines = ['<div class="data-table">']
-    for c in sorted(current, key=lambda x: x["position_label"] or ""):
-        stage_label = _planting_stage_label(c.get("crop_stage"), c.get("crop_days_in_place"))
+    for c in current:
         age_note = _planting_age_note(
             c.get("crop_planted_date"),
             c.get("crop_days_in_place"),
             c.get("crop_stage"),
         )
         lines.append(
-            f'  <div class="data-row"><strong><code>{c["position_label"]}</code></strong>'
-            f"<span>{stage_label}</span>"
+            f'  <div class="data-row"><strong>{_place(c)}</strong>'
+            f"<span>{_planting_title(c)} · {_planting_detail(c)}</span>"
             f"<p>{age_note}</p></div>"
         )
     lines.append("</div>")
@@ -247,27 +253,22 @@ def _render_catalog_cards(d: dict) -> str:
 
 
 def _render_taxonomy_status(slug: str, current: list[dict]) -> str:
-    status, note = CROP_TAXONOMY.get(
-        slug,
-        ("Observed/Reference", "No explicit crop-control status assigned; treated as reference until validated."),
+    """The crop page's planting status: planted now (where) or not, from the active crop records."""
+    del slug
+    if current:
+        places = "; ".join(f"{_planting_title(c)} at {_place(c)}" for c in current)
+        noun = "planting" if len(current) == 1 else "plantings"
+        status = f'  <div class="metric-card"><strong>Planted now</strong><p>{len(current)} active {noun}: {places}.</p></div>'
+    else:
+        status = (
+            '  <div class="metric-card"><strong>Not planted now</strong>'
+            "<p>No active planting of this crop; the profile is kept for planning and history.</p></div>"
+        )
+    source = (
+        '  <div class="metric-card"><strong>Source</strong><p>The operator crop records (active plantings and their '
+        "zone and position), the same records the dashboard's crop locations show.</p></div>"
     )
-    occupied = [c for c in current if c.get("is_occupied", True)]
-    positions = ", ".join(c.get("position_label") or "—" for c in occupied) or "none"
-    control_source = (
-        "Counts as active control."
-        if slug in ACTIVE_CONTROL_SLUGS
-        else "Does not count toward the active-control crop total."
-    )
-    lines = [
-        '<div class="metric-grid">',
-        (f'  <div class="metric-card"><strong>{status}</strong><p>{control_source} {note}</p></div>'),
-        (
-            '  <div class="metric-card"><strong>Source Check</strong>'
-            f"<p>Current occupied positions from <code>v_position_current</code>: {positions}.</p></div>"
-        ),
-        "</div>",
-    ]
-    return "\n".join(lines)
+    return "\n".join(['<div class="metric-grid">', status, source, "</div>"])
 
 
 def _replace_auto_blocks(existing: str, blocks: dict[str, str]) -> tuple[str, list[str], list[str]]:
@@ -306,7 +307,7 @@ def _auto_block(name: str, body: str) -> str:
 def _insert_missing_blocks(existing: str, missing: list[str], blocks: dict[str, str]) -> str:
     updated = existing
     if "taxonomy-status" in missing:
-        block = "\n\n## Crop-Control Status\n\n" + _auto_block("taxonomy-status", blocks["taxonomy-status"])
+        block = "\n\n## Planting Status\n\n" + _auto_block("taxonomy-status", blocks["taxonomy-status"])
         anchors = [
             "[//]: # (auto-render:end catalog-entry)",
             "<!-- auto-render:end catalog-entry -->",
@@ -334,27 +335,126 @@ def _insert_missing_blocks(existing: str, missing: list[str], blocks: dict[str, 
     return updated.rstrip() + block + "\n"
 
 
+async def _active_plantings(conn: asyncpg.Connection) -> list[dict]:
+    rows = await conn.fetch(ACTIVE_PLANTINGS_SQL)
+    return [dict(r) for r in rows if is_public_crop_record(r["crop_catalog_slug"], r["crop_name"], occupied=True)]
+
+
 async def _check_crop_consistency(conn: asyncpg.Connection) -> int:
-    rows = await conn.fetch(
-        """
-        SELECT zone_slug, crop_catalog_slug
-        FROM v_position_current
-        WHERE greenhouse_id = 'vallery'
-          AND is_occupied
-          AND crop_catalog_slug IS NOT NULL
-        """
-    )
-    occupied_by_zone = {(r["zone_slug"], r["crop_catalog_slug"]) for r in rows}
-    active_from_db = {slug for _, slug in occupied_by_zone}
-    ok = True
-    if active_from_db != ACTIVE_CONTROL_SLUGS:
-        ok = False
-        print(
-            "ERROR active-control taxonomy mismatch: "
-            f"taxonomy={sorted(ACTIVE_CONTROL_SLUGS)} db={sorted(active_from_db)}"
+    """Every active public planting needs a catalog crop, so its profile page and the hub can list it."""
+    plantings = await _active_plantings(conn)
+    catalog = {r["slug"] for r in await conn.fetch("SELECT slug FROM crop_catalog")}
+    orphans = [p for p in plantings if p["crop_catalog_slug"] not in catalog]
+    for p in orphans:
+        print(f"ERROR active planting {p['planting_id']} has no crop_catalog entry")
+    print(f"Active plantings: {len(plantings)} ({', '.join(_planting_title(p) for p in plantings) or 'none'})")
+    return 1 if orphans else 0
+
+
+def _profile_href(slug: str) -> str:
+    return f"/greenhouse/crops/{slug.replace('_', '-')}/"
+
+
+def _render_hub_planted_now(plantings: list[dict], catalog: dict[str, dict]) -> str:
+    if not plantings:
+        return (
+            '<div class="metric-grid">\n'
+            '  <div class="metric-card"><strong>Nothing planted</strong>'
+            "<p>No active plantings are recorded right now.</p></div>\n"
+            "</div>"
         )
-    print(f"Active-control crop count: {len(ACTIVE_CONTROL_SLUGS)} ({', '.join(sorted(ACTIVE_CONTROL_SLUGS))})")
-    return 0 if ok else 1
+    noun = "planting" if len(plantings) == 1 else "plantings"
+    lines = [
+        f"<p><strong>{len(plantings)}</strong> active {noun}, from the operator crop records "
+        "(the same records the dashboard's crop locations show).</p>",
+        '<div class="data-table">',
+    ]
+    for p in plantings:
+        slug = p.get("crop_catalog_slug")
+        title = _planting_title(p)
+        name = f'<a href="{_profile_href(slug)}">{title}</a>' if slug in catalog else title
+        age_note = _planting_age_note(p.get("crop_planted_date"), p.get("crop_days_in_place"), p.get("crop_stage"))
+        lines.append(
+            f'  <div class="data-row"><strong>{name}</strong><span>{_place(p)}</span>'
+            f"<p>{_planting_detail(p)}. {age_note}</p></div>"
+        )
+    lines.append("</div>")
+    return "\n".join(lines)
+
+
+def _render_hub_profiles(plantings: list[dict], catalog: dict[str, dict]) -> str:
+    by_slug: dict[str, list[dict]] = {}
+    for p in plantings:
+        by_slug.setdefault(p.get("crop_catalog_slug"), []).append(p)
+    rows = sorted(catalog.values(), key=lambda c: (c["slug"] not in by_slug, str(c["common_name"]).lower()))
+    planted = sum(1 for c in rows if c["slug"] in by_slug)
+    lines = [
+        f"<p>{len(rows)} crop profiles; <strong>{planted}</strong> planted now. A profile with no active planting is "
+        "kept for planning and history.</p>",
+        '<div class="data-table">',
+    ]
+    for c in rows:
+        here = by_slug.get(c["slug"], [])
+        status = "Planted now: " + "; ".join(_place(p) for p in here) if here else "Not planted now"
+        kind = " · ".join(str(v) for v in (c.get("category"), c.get("season")) if v) or "—"
+        lines.append(
+            f'  <div class="data-row"><strong><a href="{_profile_href(c["slug"])}">{c["common_name"]}</a></strong>'
+            f"<span>{status}</span><p>{kind}</p></div>"
+        )
+    lines.append("</div>")
+    return "\n".join(lines)
+
+
+def _sections(text: str) -> list[tuple[str, str]]:
+    """Split markdown into (heading, text) pieces at each "## " heading; the first piece has heading ""."""
+    pieces: list[tuple[str, str]] = []
+    heading, buf = "", []
+    for line in text.splitlines(keepends=True):
+        if line.startswith("## "):
+            pieces.append((heading, "".join(buf)))
+            heading, buf = line.rstrip("\n"), [line]
+        else:
+            buf.append(line)
+    pieces.append((heading, "".join(buf)))
+    return pieces
+
+
+def _seed_hub(existing: str, blocks: dict[str, str]) -> str:
+    """Convert the hand-written hub once: the planting bullets and the status tables become generated blocks."""
+    out: list[str] = []
+    profiles_done = False
+    for heading, text in _sections(existing):
+        if heading == HUB_PLANTED_SECTION and "planted-now" in blocks:
+            out.append(f"{heading}\n\n{_auto_block('planted-now', blocks['planted-now'])}\n\n")
+        elif heading in HUB_PROFILE_SECTIONS:
+            if not profiles_done:
+                out.append(f"## Crop Profiles\n\n{_auto_block('crop-profiles', blocks['crop-profiles'])}\n\n")
+                profiles_done = True
+        else:
+            out.append(text)
+    seeded = "".join(out).replace(
+        "Target Bands and Crop-Control Status blocks", "Target Bands and Planting Status blocks"
+    )
+    for name, heading in (("planted-now", HUB_PLANTED_SECTION), ("crop-profiles", "## Crop Profiles")):
+        if f'data-auto-render="start {name}"' not in seeded:
+            seeded = seeded.rstrip() + f"\n\n{heading}\n\n{_auto_block(name, blocks[name])}\n"
+    return seeded
+
+
+def render_hub(existing: str, plantings: list[dict], catalog: dict[str, dict]) -> str:
+    blocks = {
+        "planted-now": _render_hub_planted_now(plantings, catalog),
+        "crop-profiles": _render_hub_profiles(plantings, catalog),
+    }
+    if not existing:
+        existing = (
+            '---\ntitle: "Crops and Growing System"\ntags: [crops, reference, greenhouse]\n---\n\n'
+            "# Crops and Growing\n\n"
+        )
+    content, _replaced, missing = _replace_auto_blocks(existing, blocks)
+    if missing:
+        content = _seed_hub(content, blocks)
+    return content
 
 
 def _render_latest_vision(rows: list[dict], public_refs: dict[int, str], crop_label: str) -> str:
@@ -421,13 +521,7 @@ async def render_crop(
     sp = d.get("stage_season_profiles")
     profiles = json.loads(sp) if isinstance(sp, str) else (sp or [])
 
-    current = await conn.fetch(
-        """
-        SELECT p.* FROM v_position_current p
-        WHERE p.crop_catalog_slug = $1 AND p.is_occupied
-        """,
-        slug,
-    )
+    current = [p for p in await _active_plantings(conn) if p["crop_catalog_slug"] == slug]
     history_rows = await conn.fetch(
         """
         SELECT h.* FROM v_crop_history h
@@ -473,11 +567,9 @@ async def render_crop(
 
     blocks = {
         "catalog-entry": _render_catalog_cards(d),
-        "taxonomy-status": _render_taxonomy_status(slug, [dict(r) for r in current]),
+        "taxonomy-status": _render_taxonomy_status(slug, current),
         "target-bands": _render_stage_band_table(profiles, CROP_LABELS.get(slug, d["common_name"])),
-        "current-plantings": _render_current_plantings(
-            [dict(r) for r in current], CROP_LABELS.get(slug, d["common_name"])
-        ),
+        "current-plantings": _render_current_plantings(current, CROP_LABELS.get(slug, d["common_name"])),
         "latest-vision": _render_latest_vision(
             vision_dicts,
             public_refs,
@@ -488,14 +580,14 @@ async def render_crop(
 
     body = f"""# {d["common_name"]}
 
-> Rendered from DB: `crop_catalog` + `crop_target_profiles` + `v_position_current` + `v_crop_history`.
+> Rendered from DB: `crop_catalog` + `crop_target_profiles` + the active `crops` records + `v_crop_history`.
 > Do not edit by hand — run `scripts/render-crop-profiles.py` to regenerate.
 
 ## Catalog Entry
 
 {_auto_block("catalog-entry", blocks["catalog-entry"])}
 
-## Crop-Control Status
+## Planting Status
 
 {_auto_block("taxonomy-status", blocks["taxonomy-status"])}
 
@@ -570,7 +662,7 @@ async def run(args: argparse.Namespace) -> int:
             existing = target.read_text() if target.exists() else ""
             mode = "full page"
             if existing and not args.replace_page and "auto-render" in existing:
-                content, replaced, missing = _replace_auto_blocks(existing, blocks)
+                content, replaced, missing = _replace_auto_blocks(existing.replace(*RENAMED_STATUS_HEADING), blocks)
                 content = _insert_missing_blocks(content, missing, blocks)
                 mode = f"{len(replaced)} block(s)"
                 if missing:
@@ -584,6 +676,24 @@ async def run(args: argparse.Namespace) -> int:
                 target.write_text(content)
                 print(f"  WROTE  {filename} ({mode})")
             changes += 1
+        if not args.slug:
+            catalog = {
+                r["slug"]: dict(r)
+                for r in await conn.fetch("SELECT slug, common_name, category, season FROM crop_catalog")
+                if is_public_crop(r["slug"])
+            }
+            hub = out_dir / HUB_FILENAME
+            existing = hub.read_text() if hub.exists() else ""
+            content = render_hub(existing, await _active_plantings(conn), catalog)
+            if content == existing:
+                print(f"  UNCHANGED  {HUB_FILENAME}")
+            elif args.dry_run:
+                print(f"  WOULD WRITE  {HUB_FILENAME}")
+                changes += 1
+            else:
+                hub.write_text(content)
+                print(f"  WROTE  {HUB_FILENAME}")
+                changes += 1
         if not args.slug and not args.dry_run:
             removed = 0
             for asset in DEFAULT_VISION_OUT.glob("*.jpg"):
@@ -603,9 +713,7 @@ def main() -> None:
     p.add_argument("--slug", help="Render only this crop slug")
     p.add_argument("--out", default=str(DEFAULT_OUT), help="Output directory")
     p.add_argument("--dry-run", action="store_true")
-    p.add_argument(
-        "--check-consistency", action="store_true", help="Validate active crop-control status against DB views"
-    )
+    p.add_argument("--check-consistency", action="store_true", help="Check every active planting has a catalog crop")
     p.add_argument(
         "--replace-page", action="store_true", help="Overwrite the whole page instead of updating auto-render blocks"
     )

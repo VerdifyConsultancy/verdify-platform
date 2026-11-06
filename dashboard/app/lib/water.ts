@@ -173,7 +173,9 @@ export function flowWords(leak: Leak): { readonly text: string; readonly tone?: 
  * relay's water plus climate fog; the soft target is `mister_water_budget_gal`, which holds routine misting once reached.
  */
 export const SAF4_TERM = "Daily mist & fog limit";
-export const SAF4_HELP = "Water through all the misters and fog today. The controller stops misting when it reaches this limit; survival fog is exempt. (Firmware documents call it SAF-4.)";
+export const SAF4_HELP = "The primary daily water limit: water through all the misters and fog today. The controller stops misting when it reaches this limit; survival fog is exempt. Total water, drip irrigation included, is secondary. (Firmware documents call it SAF-4.)";
+/** The tag beside its name on Now and Water (Jason, 2026-11-06, #1339): mist & fog is the primary daily water limit. */
+export const SAF4_PRIMARY = "primary daily limit";
 export const BUDGET_TERM = "Daily mist target (soft)";
 export const BUDGET_HELP = "A softer daily amount for mist and fog water. Once it is used the controller holds routine misting; in a VPD emergency it may go past it, up to the daily mist & fog limit.";
 /** What used to read "Unexplained flow": the meter's flow while every Verdify valve is closed. */

@@ -98,7 +98,7 @@ test("a block is as long as its schedule, named in words; a feed draws on its li
   expect(plain(run.name)).toBe("Wall drip · Wall MWF, Wed 07:35, 12 min, planned");
   const feed = entries.find((entry) => entry.occurrence.slot_id === 12 && localDate(entry.occurrence.planned_start) === "2026-11-08")!;
   const parts = blocksOf(feed, info, NOW);
-  expect(parts.map((block) => [block.lineId, block.part, block.token, block.end - block.start])).toEqual([["L02", "run", "eq-fert", 300], ["L01", "prewet", "eq-fog", 120], ["L01", "flush", "eq-fog", 240]]);
+  expect(parts.map((block) => [block.lineId, block.part, block.token, block.end - block.start])).toEqual([["L02", "run", "eq-fert", 300], ["L01", "prewet", "cause-prep", 120], ["L01", "flush", "cause-prep", 240]]);
   // The prewet comes first, the feed after it, then the flush.
   expect([parts[1].start, parts[0].start, parts[2].start]).toEqual([parts[1].start, parts[1].end, parts[0].end]);
   // A past skipped block says why; the seeded fallback is the fallback's colour.
