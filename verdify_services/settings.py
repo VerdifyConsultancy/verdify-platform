@@ -1355,6 +1355,21 @@ def _loader(param: str):
     return load
 
 
+async def write_in_transaction(
+    tx: asyncpg.Connection, actor: Actor, param: str, value: object, flag: bool, reason: str | None
+) -> tuple[_Checked, Mapping[str, Any], list[int], DesiredSetting]:
+    """Inside a ``recorded_write``: validate, insert the ``desired_state`` row and update its band rows."""
+    checked = await _validate(tx, actor, param, value)
+    row = await tx.fetchrow(
+        _INSERT_DESIRED_SQL, GREENHOUSE_ID, param, checked.value, flag, actor.source, actor.name, reason
+    )
+    anchor_rows = await _update_band_rows(tx, checked)
+    stored = await _stored(
+        tx, checked.spec, row, snapped_from=checked.snapped_from, manual_before=checked.manual_before
+    )
+    return checked, row, anchor_rows, stored
+
+
 async def write(
     conn: asyncpg.Connection,
     actor: Actor,
@@ -1381,14 +1396,7 @@ async def write(
     request = {"value": _hashable(value), "manual": flag, "reason": reason}
 
     async def perform(tx: asyncpg.Connection) -> tuple[DesiredSetting, dict[str, Any]]:
-        checked = await _validate(tx, actor, param, value)
-        row = await tx.fetchrow(
-            _INSERT_DESIRED_SQL, GREENHOUSE_ID, param, checked.value, flag, actor.source, actor.name, reason
-        )
-        anchor_rows = await _update_band_rows(tx, checked)
-        stored = await _stored(
-            tx, checked.spec, row, snapped_from=checked.snapped_from, manual_before=checked.manual_before
-        )
+        checked, row, anchor_rows, stored = await write_in_transaction(tx, actor, param, value, flag, reason)
         detail: dict[str, Any] = {
             **extra,
             "ref": {"table": "desired_state", "id": row["id"]},

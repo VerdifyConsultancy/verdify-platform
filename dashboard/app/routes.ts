@@ -21,6 +21,7 @@ export default [
   route("activity", "routes/activity.tsx"),
   route("activity/log", "routes/activity-log.tsx"),
   route("settings", "routes/settings.tsx"),
+  route("band", "routes/band.tsx"),
   route("plan", "routes/plan.tsx"),
   route("equipment", "routes/equipment.tsx"),
   route("auth/*", "routes/auth.tsx"),
