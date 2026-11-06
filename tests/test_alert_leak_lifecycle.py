@@ -18,7 +18,7 @@ KEY = ("leak_detected", "equipment.leak_detected")
 def leak_cycle(ns, log, when, *, before_sync=None):
     """One alert_monitor pass of the leak section and the shared sync."""
     log.now = when
-    leak, refresh_only = asyncio.run(ns["_leak_cycle_alert"](log))
+    leak, refresh_only = asyncio.run(ns["_leak_cycle_alert"](log, now=when))
     if before_sync is not None:
         before_sync()  # something that happens between the leak read and the sync
     return asyncio.run(

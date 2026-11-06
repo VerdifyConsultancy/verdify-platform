@@ -150,7 +150,7 @@ esp32:
     version: 5.5.4
     platform_version: 55.3.39
     sdkconfig_options:
-      # lwIP otherwise defaults to one slot and silently ignores pool.ntp.org.
+      # lwIP otherwise defaults to one slot and silently ignores the second server.
       CONFIG_LWIP_SNTP_MAX_SERVERS: "2"
 
 
@@ -313,9 +313,11 @@ ota:
 time:
   - platform: sntp
     id: sntp_time
+    # #1364 (Jason, 2026-11-05): local NTP only, no internet hostname. The estate chrony
+    # (VM305) first, the Starlink dish second; 192.168.10.1 (the VLAN 10 gateway) serves no NTP.
     servers:
-      - 192.168.10.1
-      - pool.ntp.org
+      - 192.168.7.54
+      - 192.168.100.1
     timezone: America/Denver
     on_time_sync:
       then:
@@ -570,10 +572,13 @@ binary_sensor:
       static uint32_t last_valve_on_ms = 0;
       static uint32_t flow_above_thresh_since_ms = 0;
       uint32_t now_ms = millis();
+      // #1381: center_drips_fertilized (L06) and the fertilizer master (L03)
+      // were missing, so a feed's own flow and bleed-down read as a leak.
       bool any_valve = id(wall_drips).state || id(center_drips).state
                     || id(south_wall_mister).state || id(west_wall_mister).state
                     || id(center_mister).state || id(wall_drips_fertilized).state
                     || id(south_wall_mister_fertilized).state || id(west_wall_mister_fertilized).state
+                    || id(center_drips_fertilized).state || id(fertilizer_master_valve).state
                     || id(fog_rly).state;
       if(any_valve) last_valve_on_ms = now_ms;
       float flow = id(water_flow_rate).state;

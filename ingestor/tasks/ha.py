@@ -82,6 +82,9 @@ async def water_flowing_sync(pool: asyncpg.Pool) -> None:
                 "drip_wall_fert",
                 "drip_center_fert",
                 "fert_master_valve",
+                # #1381: the fogger draws from the same meter (the controller's
+                # bs_leak_detected already counts fog_rly as a valve).
+                "fog",
             ]
             ph = ", ".join(f"${i + 1}" for i in range(len(valve_names)))
             any_open = await conn.fetchval(

@@ -6,7 +6,13 @@ from __future__ import annotations
 
 import pytest
 
-from verdify_services.irrigation.writes import RUN_ANY_MISTER_FIRMWARE_FROM, firmware_runs_any_mister
+from verdify_services.irrigation.writes import (
+    RUN_ANY_MISTER_FIRMWARE_FROM,
+    _resolve_target,
+    firmware_runs_any_mister,
+    firmware_runs_fog,
+)
+from verdify_services.problems import ServiceError
 
 
 @pytest.mark.parametrize(
@@ -29,3 +35,44 @@ def test_the_firmware_stamp_decides(version, expected):
 
 def test_the_cutoff_is_after_the_last_firmware_without_the_change():
     assert RUN_ANY_MISTER_FIRMWARE_FROM.isoformat() == "2026-11-06"
+
+
+# #1343 follow-up: fog runs once only while irr_caps names fog_run for the version the controller runs. No date gate.
+V = "2026.11.5.2200.abcdef1"
+
+
+@pytest.mark.parametrize(
+    ("version", "caps", "expected"),
+    [
+        (V, f"fw={V} caps=fog_run,run_any_mister", True),
+        (V, f"fw={V} caps=run_any_mister", False),  # a build without the capability
+        ("2026.11.5.2300.0123456", f"fw={V} caps=fog_run", False),  # a rollback or another build since
+        (V, None, False),  # never published: fails closed
+        (None, f"fw={V} caps=fog_run", False),
+        (V, "fog_run", False),  # outside the grammar
+    ],
+)
+def test_the_fog_run_once_capability_decides(version, caps, expected):
+    assert firmware_runs_fog(version, caps) is expected
+
+
+def test_a_same_day_build_with_the_capability_runs_any_mister():
+    assert firmware_runs_any_mister(V) is False  # its stamp is before the cutoff
+    assert firmware_runs_any_mister(V, f"fw={V} caps=fog_run,run_any_mister") is True
+    assert firmware_runs_any_mister(V, f"fw={V}.dirty caps=run_any_mister") is False
+
+
+def test_a_physical_line_and_variant_name_their_relay():
+    assert _resolve_target(None, "south_mister", "fertilized") == "L08"
+    assert _resolve_target("L08", "south_mister", "fertilized") == "L08"
+    assert _resolve_target(None, None, "clean", current_line="L08") == "L07"  # an edit switches variant in place
+    assert _resolve_target("L01", None, None) == "L01"
+    for args, code, field in (
+        ((None, "center_mister", "fertilized"), "unknown_target", "variant"),  # not wired
+        ((None, "south_mister", None), "invalid_request", "variant"),
+        (("L07", "south_mister", "fertilized"), "invalid_request", "line_id"),
+        ((None, None, "clean"), "invalid_request", "circuit_id"),
+    ):
+        with pytest.raises(ServiceError) as refused:
+            _resolve_target(*args)
+        assert (refused.value.problem.code, refused.value.problem.field) == (code, field)

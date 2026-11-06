@@ -632,11 +632,11 @@ def test_push_buttons_toggle_the_burst_latches_and_the_indicators_read_them():
     ):
         assert sensors[indicator]["name"] == name
         assert sensors[indicator]["lambda"] == f"return manual_latch_active(id({latch}), millis());"
-    # The override layer reads only the latches.
+    # The override layer reads only the latches, and fog also the engine's fog run-once (#1343 follow-up).
     controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
     for line in (
         "const bool manual_fans_eff   = manual_fans_latched;",
-        "const bool manual_fog_eff    = manual_fog_latched;",
+        "const bool manual_fog_eff    = manual_fog_latched || irr_fog_run();",
         "const bool vent_bypass_eff   = vent_bypass_latched;",
     ):
         assert line in controls, line
