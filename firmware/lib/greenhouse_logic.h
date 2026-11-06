@@ -475,24 +475,6 @@ inline bool minute_in_window(int now_minute, int start_minute, int duration_minu
         : (now_minute >= start_minute || now_minute < end_minute);
 }
 
-inline bool direct_wet_window_open(
-    int now_minute,
-    int activity_start_hour,
-    int activity_start_minute,
-    int activity_duration_min,
-    int wet_start_offset_min,
-    int drydown_before_off_min
-) noexcept {
-    const int activity_start = local_minute_of_day(activity_start_hour, activity_start_minute);
-    activity_duration_min = clamp_day_minutes(activity_duration_min);
-    wet_start_offset_min = std::max(0, wet_start_offset_min);
-    drydown_before_off_min = std::max(0, drydown_before_off_min);
-    const int wet_duration = activity_duration_min - wet_start_offset_min - drydown_before_off_min;
-    if (wet_duration <= 0) return false;
-    const int wet_start = (activity_start + wet_start_offset_min) % 1440;
-    return minute_in_window(now_minute, wet_start, wet_duration);
-}
-
 inline bool day_mask_allows(int day_mask, int day_of_week_zero_sunday) noexcept {
     if (day_mask <= 0) return false;
     day_of_week_zero_sunday = ((day_of_week_zero_sunday % 7) + 7) % 7;
@@ -2907,6 +2889,43 @@ inline bool manual_latch_active(uint32_t until_ms, uint32_t now_ms) noexcept {
 // it runs for timeout_min minutes (manual_override_timeout_min).
 inline uint32_t manual_latch_toggle(uint32_t until_ms, uint32_t now_ms, int timeout_min) noexcept {
     return manual_latch_active(until_ms, now_ms) ? 0u : manual_override_deadline_ms(now_ms, timeout_min);
+}
+
+// #1335: a timed manual light switch. API-20 switches the light through Lutron
+// and sends manual_override light_<circuit>_<on|off> with the same minutes,
+// which sets gl_<circuit>_hold_until_ms and gl_<circuit>_hold_on. While that
+// deadline latch is active the circuit holds the manual state whatever the
+// schedule decides (a window opening or closing, occupancy, lux), with the
+// reason manual_hold_on or manual_hold_off. The schedule's state machine still
+// runs, so its light minutes keep counting, but its on/transition bookkeeping
+// follows the relay the hold drives: a transition is stamped only when the
+// relay really changes, so the min-off/min-on dwell measures from the manual
+// switch. When the deadline passes the schedule's decision applies again.
+inline LightingDecision evaluate_lighting_held(
+    const LightingInputs& in,
+    const LightingSetpoints& sp,
+    LightingState& state,
+    bool current_on,
+    uint32_t now_ms,
+    float dt_s,
+    uint32_t hold_until_ms,
+    bool hold_on
+) noexcept {
+    if (!manual_latch_active(hold_until_ms, now_ms)) {
+        return evaluate_lighting(in, sp, state, current_on, now_ms, dt_s);
+    }
+    const bool had_state = state.sentinel == LIGHT_STATE_SENTINEL;
+    const bool was_on = state.on;
+    const uint32_t was_transition = state.last_transition_tick_ms;
+    LightingDecision dec = evaluate_lighting(in, sp, state, current_on, now_ms, dt_s);
+    state.on = hold_on;
+    state.last_transition_tick_ms = (had_state && was_on == hold_on && current_on == hold_on)
+        ? was_transition
+        : now_ms;
+    dec.want_on = hold_on;
+    dec.reason = hold_on ? "manual_hold_on" : "manual_hold_off";
+    state.last_reason = dec.reason;
+    return dec;
 }
 
 // Whether the fan->vent interlock should force the vent OPEN this cycle. The

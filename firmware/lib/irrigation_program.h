@@ -2305,6 +2305,14 @@ inline void irr_tick(IrrEngine& e, const IrrInputs& in, IrrOutputs& out) {
   for (uint8_t i = 0; i < kLineCount; ++i) {
     if (went_off & irr_bit(i)) detail::set_zone_off(e, i, in.now_ms);
   }
+  // #1313: a valve of the open continuous run read ON at the last tick and OFF now, and the
+  // engine did not close it: something else did (an OTA upload's on_begin close, #1276, then an
+  // aborted upload). The interval since the last accounting is not water delivered, so the run
+  // is not charged for it; build_outputs re-opens the valve. At most one tick is left uncounted.
+  // A valve that never read ON keeps the old accounting, so a refused relay still times out.
+  if (e.run.open && (prev_relays & ~in.relay_on_mask & detail::run_relays(e.run)) != 0) {
+    e.run.open_since_ms = in.now_ms;
+  }
   detail::accrue(e, in.relay_on_mask, dt);
   irr_rtc_validate(b, false, in.clock.valid ? in.clock.local_day : uint16_t(0));
   if (e.staged) detail::apply_program(e, in.now_ms);

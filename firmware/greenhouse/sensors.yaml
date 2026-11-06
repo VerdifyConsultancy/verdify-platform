@@ -2537,102 +2537,6 @@ sensor:
       return id(direct_wet_min_temp_f);
 
   - platform: template
-    id: cfg_direct_wet_wall_start_offset_min
-    name: "Cfg • Direct Wet Wall Start Offset (min)"
-    unit_of_measurement: "min"
-    state_class: measurement
-    accuracy_decimals: 0
-    entity_category: diagnostic
-    update_interval: 30s
-    lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(direct_wet_wall_start_offset_min);
-
-  - platform: template
-    id: cfg_direct_wet_wall_drydown_before_off_min
-    name: "Cfg • Direct Wet Wall Drydown Before Off (min)"
-    unit_of_measurement: "min"
-    state_class: measurement
-    accuracy_decimals: 0
-    entity_category: diagnostic
-    update_interval: 30s
-    lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(direct_wet_wall_drydown_before_off_min);
-
-  - platform: template
-    id: cfg_direct_wet_south_start_offset_min
-    name: "Cfg Direct Wet South Start Offset Min"
-    unit_of_measurement: "min"
-    state_class: measurement
-    accuracy_decimals: 0
-    entity_category: diagnostic
-    update_interval: 30s
-    lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(direct_wet_south_start_offset_min);
-
-  - platform: template
-    id: cfg_direct_wet_south_drydown_before_off_min
-    name: "Cfg Direct Wet South Drydown Before Off Min"
-    unit_of_measurement: "min"
-    state_class: measurement
-    accuracy_decimals: 0
-    entity_category: diagnostic
-    update_interval: 30s
-    lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(direct_wet_south_drydown_before_off_min);
-
-  - platform: template
-    id: cfg_direct_wet_west_start_offset_min
-    name: "Cfg Direct Wet West Start Offset Min"
-    unit_of_measurement: "min"
-    state_class: measurement
-    accuracy_decimals: 0
-    entity_category: diagnostic
-    update_interval: 30s
-    lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(direct_wet_west_start_offset_min);
-
-  - platform: template
-    id: cfg_direct_wet_west_drydown_before_off_min
-    name: "Cfg Direct Wet West Drydown Before Off Min"
-    unit_of_measurement: "min"
-    state_class: measurement
-    accuracy_decimals: 0
-    entity_category: diagnostic
-    update_interval: 30s
-    lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(direct_wet_west_drydown_before_off_min);
-
-  - platform: template
-    id: cfg_direct_wet_center_start_offset_min
-    name: "Cfg Direct Wet Center Start Offset Min"
-    unit_of_measurement: "min"
-    state_class: measurement
-    accuracy_decimals: 0
-    entity_category: diagnostic
-    update_interval: 30s
-    lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(direct_wet_center_start_offset_min);
-
-  - platform: template
-    id: cfg_direct_wet_center_drydown_before_off_min
-    name: "Cfg Direct Wet Center Drydown Before Off Min"
-    unit_of_measurement: "min"
-    state_class: measurement
-    accuracy_decimals: 0
-    entity_category: diagnostic
-    update_interval: 30s
-    lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(direct_wet_center_drydown_before_off_min);
-
-  - platform: template
     id: cfg_direct_wet_stress_override_enabled
     name: "Cfg Direct Wet Stress Override Enabled"
     state_class: measurement
@@ -3902,6 +3806,10 @@ text_sensor:
   # A2: Per-probe health monitoring. Preserve the earlier 120s warning
   # (aggregate eligibility is 300s); recent NaN/Inf values report INVALID.
   # Case has only temperature/RH; wall probes also require their VPD field.
+  # #368: a fresh, finite probe whose temperature stepped more than 6 F between
+  # samples reads JUMP for 10 minutes; one whose temperature and RH have not
+  # changed for 60 minutes reads FLAT (probe_validity.h). Diagnostic only: no
+  # aggregate, zone fallback or SENSOR_FAULT decision reads these words.
   - platform: template
     id: probe_health
     name: "Probe Health"
@@ -3913,13 +3821,14 @@ text_sensor:
       char result[96];
       size_t n = 0;
       result[0] = '\0';
-      struct { const char* name; uint32_t last; bool values_finite; } probes[] = {
-        {"Case", id(last_case_ms), probe_pair_finite(id(case_temperature).state, id(case_humidity).state)},
-        {"North", id(last_north_ms), probe_triple_finite(id(north_wall_temperature).state, id(north_wall_humidity).state, id(vpd_north).state)},
-        {"West", id(last_west_ms), probe_triple_finite(id(west_wall_temperature).state, id(west_wall_humidity).state, id(vpd_west).state)},
-        {"South", id(last_south_ms), probe_triple_finite(id(south_wall_temperature).state, id(south_wall_humidity).state, id(vpd_south).state)},
-        {"East", id(last_east_ms), probe_triple_finite(id(east_wall_temperature).state, id(east_wall_humidity).state, id(vpd_east).state)}
+      struct { const char* name; uint32_t last; bool values_finite; float temp; float rh; } probes[] = {
+        {"Case", id(last_case_ms), probe_pair_finite(id(case_temperature).state, id(case_humidity).state), id(case_temperature).state, id(case_humidity).state},
+        {"North", id(last_north_ms), probe_triple_finite(id(north_wall_temperature).state, id(north_wall_humidity).state, id(vpd_north).state), id(north_wall_temperature).state, id(north_wall_humidity).state},
+        {"West", id(last_west_ms), probe_triple_finite(id(west_wall_temperature).state, id(west_wall_humidity).state, id(vpd_west).state), id(west_wall_temperature).state, id(west_wall_humidity).state},
+        {"South", id(last_south_ms), probe_triple_finite(id(south_wall_temperature).state, id(south_wall_humidity).state, id(vpd_south).state), id(south_wall_temperature).state, id(south_wall_humidity).state},
+        {"East", id(last_east_ms), probe_triple_finite(id(east_wall_temperature).state, id(east_wall_humidity).state, id(vpd_east).state), id(east_wall_temperature).state, id(east_wall_humidity).state}
       };
+      static ProbeTrend trends[5];
       bool all_ok = true;
       auto append = [&](const char* s) {
         while (*s != '\0' && n + 1 < sizeof(result)) {
@@ -3927,12 +3836,22 @@ text_sensor:
         }
         result[n] = '\0';
       };
-      for(auto &p : probes){
+      for(size_t i = 0; i < 5; ++i){
+        auto &p = probes[i];
         const bool fresh = probe_sample_fresh(now, p.last, STALE_MS);
         if(!fresh || !p.values_finite){
+          trends[i] = ProbeTrend{};
           if(!all_ok) append(", ");
           append(p.name);
           append(fresh ? " INVALID" : " STALE");
+          all_ok = false;
+          continue;
+        }
+        const ProbeTrendState trend = probe_trend_update(trends[i], p.temp, p.rh, now);
+        if(trend != ProbeTrendState::kOk){
+          if(!all_ok) append(", ");
+          append(p.name);
+          append(trend == ProbeTrendState::kJump ? " JUMP" : " FLAT");
           all_ok = false;
         }
       }

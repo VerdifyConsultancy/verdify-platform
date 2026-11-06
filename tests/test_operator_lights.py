@@ -16,6 +16,7 @@ import asyncio
 import contextlib
 import dataclasses
 import inspect
+import json
 import logging
 import runpy
 import socket
@@ -480,6 +481,46 @@ def test_a_concurrent_request_with_the_same_key_that_recorded_first_wins():
     written = asyncio.run(lights.record(conn, JASON, "main", "on", "confirmed", None, key))
     assert written.replayed is True and written.value.result == "timeout" and written.value.activity_id == 7
     assert [row["id"] for row in conn.activity] == [7]
+
+
+# ── the controller's hold (#1335) ──────────────────────────────────────────
+
+
+@pytest.mark.parametrize(("light", "state"), [("main", "off"), ("grow", "on")])
+def test_a_confirmed_timed_switch_queues_the_controller_hold_with_its_row(light, state):
+    """Lane F, 2026-11-06: a 10-min manual Off was switched back on when the 07:00 window opened. The confirmed switch
+    now queues manual_override light_<light>_<state> for the same minutes, in the transaction of its row."""
+    conn = FakeConnection()
+    conn.engine = "true"
+    written = asyncio.run(lights.record(conn, JASON, light, state, "confirmed", "visit", KEY, minutes=10))
+    (command,) = conn.commands
+    assert command["kind"] == "override" and command["line_id"] is None and command["reason"] == "visit"
+    assert json.loads(command["args"]) == {"kind": f"light_{light}_{state}", "minutes": 10}
+    (row,) = conn.activity
+    assert row["detail"]["hold_command_id"] == str(command["command_id"]) and row["detail"]["minutes"] == 10
+    assert written.value.result == "confirmed"
+
+
+@pytest.mark.parametrize(
+    ("engine", "result", "minutes"),
+    [(None, "confirmed", 10), ("false", "confirmed", 10), ("true", "timeout", 10), ("true", "confirmed", None)],
+    ids=["no engine row", "engine off", "not confirmed", "untimed (resync or timer row)"],
+)
+def test_no_controller_hold_without_the_engine_a_confirmed_switch_or_minutes(engine, result, minutes):
+    conn = FakeConnection()
+    conn.engine = engine
+    asyncio.run(lights.record(conn, JASON, "main", "off", result, None, KEY, minutes=minutes))
+    assert conn.commands == [] and "hold_command_id" not in conn.activity[0]["detail"]
+
+
+def test_back_to_automatic_releases_the_controller_hold():
+    conn = FakeConnection()
+    conn.engine = "true"
+    assert asyncio.run(lights.release_hold(conn, JASON, "grow", light_resync.BACK_TO_AUTOMATIC)) is True
+    (command,) = conn.commands
+    assert json.loads(command["args"]) == {"kind": "light_grow_auto", "minutes": 0}
+    conn.engine = None
+    assert asyncio.run(lights.release_hold(conn, JASON, "main")) is False and len(conn.commands) == 1
 
 
 # ── who may, and what is refused before any call ────────────────────────────

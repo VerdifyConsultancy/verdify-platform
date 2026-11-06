@@ -270,6 +270,9 @@ $PY -m pytest -q -rs \
   tests/test_firmware_builder_image.py \
   tests/test_firmware_builder_admission.py \
   tests/test_firmware_release.py \
+  tests/test_firmware_ota_password_rotate.py \
+  tests/test_firmware_preflight_deny_checks.py \
+  tests/test_growlight_boundary_episodes.py \
   tests/test_firmware_provisional_rollback.py \
   tests/test_firmware_crop_agnostic_guard.py \
   tests/test_forecast_action_engine_path.py \

@@ -29,7 +29,7 @@ FIRMWARE_SOURCES = {
     # lights at any hour and #1343 fogs a fog run-once through the manual fog
     # path; #1385's night dry-out joins them. #1333's 40/100 °F SAFETY SANITY
     # fallbacks change only the safety-limit reset values. Solar/band expressions are unchanged.
-    "firmware/greenhouse/controls.yaml": "ab7999128bf0e8b936bea0626c4f8c4e036ee2368348a9ebd87db013b85b4fd7",
+    "firmware/greenhouse/controls.yaml": "b57929d5d464b7762461826b4f954f98f64924148d1ba0e3621efdfc31ac3e91",
 }
 SERIES = ("temp_low", "temp_high", "temp_target", "vpd_low", "vpd_high", "vpd_target")
 ANCHORS = ("sr", "sm", "ss", "mid")
@@ -237,6 +237,10 @@ def resolve_served_wire(desired: dict, sample: datetime, night_bias: float) -> d
 
 # The engine release. greenhouse_solar.h is byte-identical to the inspected firmware's and the solar and band
 # expressions in controls.yaml are unchanged (docs/runbooks/c1-native-capture.md).
+# #1277: validate_wire_contract also accepts the accepted firmware pin (the version
+# `firmware-release-job.py pin` wrote after a flash), so this constant no longer goes stale on
+# every release. That is sound only while FIRMWARE_SOURCES above still hash-match the source the
+# pin was built from: algorithm_revision() refuses any other solar/band source.
 SUPPORTED_FIRMWARE = "2026.11.3.0435.5e24d07c"
 # The ELF whose solar and band instructions were last inspected: 620a218a's, not yet the engine's.
 TARGET_ELF_SHA256 = "39a237cfb044e72633d52646c203d27b1217ba9f9de3d4a8308798b1b7a96b5b"
@@ -313,11 +317,13 @@ def wire_resolver_revision(contract: dict) -> str:
     return "served-band-wire-v1:sha256:" + content_digest(payload)
 
 
-def validate_wire_contract(contract: dict, document: dict) -> dict:
+def validate_wire_contract(contract: dict, document: dict, accepted_firmware: str | None = None) -> dict:
     """Recompute independent expected values and verify complete v3 lineage.
 
     This validates source evidence, not signatures or hardware authenticity.
     Original callback custody remains an independent qualification requirement.
+    ``accepted_firmware`` is the accepted firmware pin (#1277); the worksheet's firmware must equal
+    it or SUPPORTED_FIRMWARE.
     """
     from verdify_schemas.c1_grid_projection import project_c1_grid_state
     from verdify_schemas.tunable_registry import REGISTRY
@@ -358,7 +364,10 @@ def validate_wire_contract(contract: dict, document: dict) -> dict:
     for key in ("firmware_revision", "source_revision"):
         if identity[key] != document["revisions"][key]:
             raise ValueError("served wire worksheet source changed")
-    if identity["firmware_revision"] != SUPPORTED_FIRMWARE:
+    supported = {SUPPORTED_FIRMWARE} | (
+        {accepted_firmware.strip()} if accepted_firmware and accepted_firmware.strip() else set()
+    )
+    if identity["firmware_revision"] not in supported:
         raise ValueError("served wire target lowering is not qualified for this firmware")
     if content_digest(preview["base_inputs"]) != preview["base_inputs_sha256"]:
         raise ValueError("served wire source policy hash changed")

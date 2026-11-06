@@ -15,33 +15,6 @@ _SOLAR = "firmware/lib/greenhouse_solar.h"
 _IRRIGATION = "firmware/lib/irrigation_program.h"
 _DISPATCHER = "ingestor/tasks/dispatcher.py"
 
-# ── Direct-wet clock offsets ─────────────────────────────────────────────────
-# The controller stores and reports these, and the platform still sends their defaults
-# (dispatcher.py _activity_defaults_from_lighting), but nothing in the control loop reads
-# them: greenhouse_logic.h::direct_wet_window_open has no caller, and misting follows the
-# band curve (climate_wet_assist_permitted) and the irrigation program instead.
-_NO_WET_WINDOW = (
-    "The controller stores and reports this value, but no control path reads it today: misting follows the "
-    "VPD band and the irrigation program, not a clock window."
-)
-
-
-def _wet_offset(where: str, start: bool) -> HelpEntry:
-    if start:
-        summary = f"Minutes after the daily activity window opens before {where} wetting was meant to start."
-    else:
-        summary = f"Minutes before the daily activity window closes when {where} wetting was meant to stop."
-    return HelpEntry(
-        summary=summary,
-        effect=_NO_WET_WINDOW,
-        refs=(
-            f"{_LOGIC}::direct_wet_window_open",
-            f"{_DISPATCHER}::_activity_defaults_from_lighting",
-            f"{_CONTROLS}::climate_wet_assist_permitted",
-        ),
-    )
-
-
 # ── Grow-light circuits ──────────────────────────────────────────────────────
 # One evaluate_lighting() state machine per circuit (greenhouse_logic.h), fed from controls.yaml
 # block B6 (main_sp / grow_sp). Lux is the outdoor weather-station lux, the indoor sensor only
@@ -273,14 +246,6 @@ ENTRIES: dict[str, HelpEntry] = {
         lower="No effect on equipment today; the cold-house reason is reported less often.",
         refs=(f"{_CONTROLS}::direct_wet_min_temp_f", f"{_CONTROLS}::direct_wet_temp"),
     ),
-    "direct_wet_south_start_offset_min": _wet_offset("south zone", start=True),
-    "direct_wet_wall_start_offset_min": _wet_offset("wall drip", start=True),
-    "direct_wet_wall_drydown_before_off_min": _wet_offset("wall drip", start=False),
-    "direct_wet_south_drydown_before_off_min": _wet_offset("south zone", start=False),
-    "direct_wet_west_start_offset_min": _wet_offset("west zone", start=True),
-    "direct_wet_west_drydown_before_off_min": _wet_offset("west zone", start=False),
-    "direct_wet_center_start_offset_min": _wet_offset("center zone", start=True),
-    "direct_wet_center_drydown_before_off_min": _wet_offset("center zone", start=False),
     **_lighting("main"),
     **_lighting("grow"),
     "sw_gl_main_auto_mode": _auto_mode("main"),

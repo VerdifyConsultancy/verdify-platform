@@ -143,7 +143,11 @@ bash scripts/firmware-deploy-preflight.sh
 ```
 
 Required: exit 0, `Verified provisional rollback candidate (not accepted
-last-good)`, and one new `deploy_override` row in `alert_log`. The reason
+last-good)`, and one new `deploy_override` row in `alert_log`. Since #390 the
+preflight also denies a release while the device's irrigation program differs
+from the newest confirmed push, while a dwell-governed relay has cycled faster in
+the last hour than its live min-on plus min-off allows, or while the controller
+reports its Tempest outdoor inputs stale. The reason
 variable only records why this rollback release is used; there is no bake or
 weekly gate for it to clear. Do not set
 `ALLOW_FIRMWARE_DEPLOY_GUARD_OVERRIDE` or `FIRMWARE_DEPLOY_OVERRIDE_REASON`, which
@@ -259,6 +263,51 @@ this is the only supported path that writes that file. Until it moves, a healthy
 flash opens `firmware_version_mismatch`; the sweep reports that as `Pin lags`, a
 warning, only while live equals `--expected-fw`. After the pin, wait one alert cycle
 and confirm no new row opens.
+
+### OTA password rotation (#1009)
+
+A rotation rides an ordinary release: the candidate is built with a new OTA
+password while the flash authenticates with the one the controller runs. Secret
+`verdify-firmware-ota` carries the keys; only Jason's helper reads or writes them,
+through write-only patches, and it prints key names and booleans only.
+
+| Key | Holds | Used by |
+|---|---|---|
+| `ota_password` | the password of the image the controller runs | every flash by default |
+| `ota_password_next` | the staged new password, between stage and promote | the rotation build (`--ota-key ota_password_next`); a rollback flash while the rotated image runs |
+| `ota_password_previous` | the old password, after promote | a flash while a pre-rotation image runs (after a rollback) |
+
+1. Jason stages the new value before the build (hidden prompt twice, or
+   `--generate` for a random one):
+   `bash scripts/firmware-ota-password-rotate.sh stage`. It must print
+   `"ota_password_next_reads_back": true`.
+2. Build with it: `python3 scripts/firmware-release-job.py build --revision "$CAND_REV" --name JOB_NAME --ota-key ota_password_next --submit`.
+   The builder's `check-credentials` proves the image carries exactly that value.
+3. Credential parity (step 2 above) runs with `--rotate-ota`:
+   `... credential-parity --revision "$CAND_REV" --running "$RB_REV" --rotate-ota`.
+   It passes only when both Wi-Fi rows match and `set_auth_password` reads
+   `literals` 1, `candidate` at least 1 and `running` 0, so a Wi-Fi change is
+   still a stop.
+4. Preflight, wet gate and flash as above, with the default key: the controller
+   still runs the old password. A failed attempt that left the image unchanged
+   retries with the default key too.
+5. Once the device reports `$V`, it answers only to `ota_password_next`. A rollback
+   from here uses `flash --revision "$RB_REV" --expected "$RB_MANIFEST" --ota-key ota_password_next`,
+   and the pre-rotation image it installs answers to `ota_password` again.
+6. After the pin (step 8), Jason promotes:
+   `bash scripts/firmware-ota-password-rotate.sh promote`. `ota_password` now holds
+   the new value and `ota_password_previous` the old one, so every later build
+   and flash uses the default key. A later rollback to a pre-rotation image
+   flashes with the default key and leaves the controller on the old password:
+   flash it with `--ota-key ota_password_previous` from then on.
+7. When a rotated release is last-good and no pre-rotation image can run again,
+   Jason runs `bash scripts/firmware-ota-password-rotate.sh forget`.
+
+`Authentication invalid` on a rotation flash means the key does not match the
+running image: stop, re-read which version the controller reports, and pick the
+key from the table. The Secret is still applied out of band (its KSOPS custody is
+agents#4470); the rotation does not change that, and the unrendered
+`deploy/k8s/overlays/prod/firmware-ota-secret.sops.yaml` copy is stale after it.
 
 ### Rollback
 

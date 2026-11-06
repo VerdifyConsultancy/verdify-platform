@@ -17,7 +17,9 @@
 #                                       run | stop | clear_fault; line = device_idx, or 255 for all
 #   manual_override(kind, minutes)      fans | humidify | vent_bypass | clear | restart (F12, VD-47):
 #                                       the burst latches the panel push buttons toggle, for
-#                                       API-IRR-12's override command rows
+#                                       API-IRR-12's override command rows; light_<main|grow>_<on|off>
+#                                       holds a light circuit for minutes and light_<main|grow>_auto
+#                                       releases it (#1335, API-20's timed switch)
 #
 # Published state (#1151's grammars, verdify_schemas/irrigation.py):
 #   irr_program_id  h=<16 hex> src=nvs, or h=0000000000000000 src=rom for the ROM default
@@ -69,7 +71,9 @@ api:
     # HA-03; VD-47). fans, humidify and vent_bypass set manual_fans_until_ms, manual_fog_until_ms
     # or vent_bypass_until_ms to now + minutes (clamped to 1-120, as OverrideRequest bounds it;
     # a deadline that wraps to 0 is stored as 1, because 0 means no burst); clear zeroes all
-    # three; restart reboots. Nothing else is written: no relay (controls.yaml's override layer
+    # three; restart reboots. light_<main|grow>_<on|off> sets that circuit's hold deadline the
+    # same way and the state it holds; light_<main|grow>_auto zeroes the deadline (#1335); clear
+    # leaves the light holds alone. Nothing else is written: no relay (controls.yaml's override layer
     # reads the latches, below the safety rails) and never occupancy, so a burst leaves mist and
     # fog held while someone is inside. Any other kind logs and changes nothing.
     - service: manual_override
@@ -85,6 +89,20 @@ api:
               id(manual_fog_until_ms) = manual_override_deadline_ms(now_ms, minutes);
             } else if (kind == "vent_bypass") {
               id(vent_bypass_until_ms) = manual_override_deadline_ms(now_ms, minutes);
+            } else if (kind == "light_main_on" || kind == "light_main_off") {
+              id(gl_main_hold_until_ms) = manual_override_deadline_ms(now_ms, minutes);
+              id(gl_main_hold_on) = kind == "light_main_on";
+            } else if (kind == "light_grow_on" || kind == "light_grow_off") {
+              id(gl_grow_hold_until_ms) = manual_override_deadline_ms(now_ms, minutes);
+              id(gl_grow_hold_on) = kind == "light_grow_on";
+            } else if (kind == "light_main_auto" || kind == "light_grow_auto") {
+              if (kind == "light_main_auto") {
+                id(gl_main_hold_until_ms) = 0;
+              } else {
+                id(gl_grow_hold_until_ms) = 0;
+              }
+              ESP_LOGW("manual", "manual_override %s: light hold released", kind.c_str());
+              return;
             } else if (kind == "clear") {
               id(manual_fans_until_ms) = 0;
               id(manual_fog_until_ms) = 0;

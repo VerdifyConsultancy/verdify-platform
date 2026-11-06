@@ -165,6 +165,83 @@ if [[ -n "$action_proof_missing" ]]; then
 fi
 pass "Climate action log proof complete"
 
+# #390: release deny checks for topology, cycling and outdoor inputs.
+# Irrigation topology: the device must run the confirmed desired program (lines,
+# slots, zone membership), from NVS, with the engine up. A pending, rejected or
+# unmatched push means the flash would boot into an unknown wet topology.
+topology_missing="$("${DB[@]}" \
+    "/* preflight:topology */
+     WITH p AS (SELECT sha256, confirmed_at, NULLIF(reject_code, '') AS reject_code
+                  FROM irrigation_push ORDER BY revision DESC LIMIT 1),
+          d AS (SELECT value FROM system_state WHERE entity = 'irr_program_id'
+                   AND ts > now() - interval '30 days' ORDER BY ts DESC LIMIT 1),
+          g AS (SELECT value FROM system_state WHERE entity = 'irr_engine'
+                   AND ts > now() - interval '30 days' ORDER BY ts DESC LIMIT 1)
+     SELECT concat_ws(',',
+            CASE WHEN p.sha256 IS NULL THEN 'no_program_push' END,
+            CASE WHEN p.sha256 IS NOT NULL AND p.confirmed_at IS NULL THEN 'push_unconfirmed' END,
+            CASE WHEN p.reject_code IS NOT NULL THEN 'push_rejected:' || p.reject_code END,
+            CASE WHEN g.value IS DISTINCT FROM 'true' THEN 'irr_engine_not_true' END,
+            CASE WHEN d.value IS NULL OR p.sha256 IS NULL
+                      OR position(('h=' || left(p.sha256, 16)) IN d.value) <> 1
+                      OR position('src=nvs' IN d.value) = 0 THEN 'device_program_mismatch' END)
+       FROM (SELECT 1) AS one
+       LEFT JOIN p ON true LEFT JOIN d ON true LEFT JOIN g ON true" | tr -d '[:space:]')"
+if [[ -n "$topology_missing" ]]; then
+    guard_or_fail "Irrigation topology not confirmed (${topology_missing}); no firmware OTA while the device's wet topology differs from the desired program"
+fi
+pass "Irrigation topology confirmed (device runs the newest confirmed program from NVS)"
+
+# Impossible cycling: more ON edges in the last hour than the live minimum
+# on+off dwell allows, for any of the six dwell-governed climate relays. The
+# bound is ceil(3600 / (min_on + min_off)) + 1; a missing setpoint uses 60 s.
+cycling_bad="$("${DB[@]}" \
+    "/* preflight:cycling */
+     WITH sp AS (SELECT DISTINCT ON (parameter) parameter, value FROM setpoint_snapshot
+                  WHERE ts > now() - interval '6 hours'
+                    AND parameter ~ '^min_(heat|fan|fog|vent)_(on|off)_s\$'
+                  ORDER BY parameter, ts DESC),
+          relay(equipment, family) AS (VALUES ('heat1','heat'),('heat2','heat'),('fan1','fan'),
+                                              ('fan2','fan'),('fog','fog'),('vent','vent')),
+          bound AS (SELECT r.equipment,
+                           ceil(3600.0 / GREATEST(
+                               COALESCE((SELECT value FROM sp WHERE parameter = 'min_' || r.family || '_on_s'), 60)
+                             + COALESCE((SELECT value FROM sp WHERE parameter = 'min_' || r.family || '_off_s'), 60), 1))::int + 1 AS max_starts
+                      FROM relay r),
+          e AS (SELECT equipment, ts, state,
+                       lag(state) OVER (PARTITION BY equipment ORDER BY ts) AS prev
+                  FROM equipment_state
+                 WHERE ts > now() - interval '70 minutes'
+                   AND equipment IN (SELECT equipment FROM relay)),
+          starts AS (SELECT equipment, count(*) AS n FROM e
+                      WHERE state AND prev IS DISTINCT FROM true AND ts > now() - interval '60 minutes'
+                      GROUP BY equipment)
+     SELECT coalesce(string_agg(b.equipment || '=' || s.n || '>' || b.max_starts, ',' ORDER BY b.equipment), '')
+       FROM bound b JOIN starts s USING (equipment)
+      WHERE s.n > b.max_starts" | tr -d '[:space:]')"
+if [[ -n "$cycling_bad" ]]; then
+    guard_or_fail "Impossible relay cycling in the last hour (${cycling_bad} starts); no firmware OTA while a relay cycles faster than its dwell allows"
+fi
+pass "Relay cycling within the dwell bound"
+
+# Stale outdoor inputs: the controller's own outdoor freshness (Tempest UDP),
+# from the newest moisture-exchange row. An outdoor-blind controller cannot be
+# told apart from a regression after the flash.
+outdoor_state="$("${DB[@]}" \
+    "/* preflight:outdoor */
+     SELECT coalesce((SELECT CASE
+                WHEN ts < now() - interval '10 minutes' THEN 'no_recent_row'
+                WHEN outdoor_fresh IS DISTINCT FROM true THEN 'device_reports_stale'
+                WHEN outdoor_age_s IS NULL OR outdoor_age_s > 600 THEN 'age_' || coalesce(outdoor_age_s::text, 'null') || 's'
+                ELSE 'ok' END
+              FROM v_moisture_estimator_telemetry
+             WHERE ts > now() - interval '1 hour'
+             ORDER BY ts DESC LIMIT 1), 'no_recent_row')" | tr -d '[:space:]')"
+if [[ "$outdoor_state" != "ok" ]]; then
+    guard_or_fail "Outdoor (Tempest) inputs stale on the controller (${outdoor_state:-query_failed}); no firmware OTA while the controller is outdoor-blind"
+fi
+pass "Outdoor (Tempest) inputs fresh on the controller"
+
 max_temp="$("${DB[@]}" "SELECT COALESCE(max(temp_f), -999) FROM weather_forecast WHERE ts > now() AND ts <= now() + interval '24 hours'" | tr -d '[:space:]')"
 if awk -v t="$max_temp" 'BEGIN { exit !(t > 85.0) }'; then
     warn "Forecast max next 24h is ${max_temp}F (>85F); proceed with normal post-OTA health validation"

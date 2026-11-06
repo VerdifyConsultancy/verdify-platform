@@ -74,14 +74,6 @@ BAND_OWNED_PARAMS = CROP_BAND_REG
 PLAN_EXCLUDED_PARAMS_SQL = ",".join("'" + param.replace("'", "''") + "'" for param in sorted(BAND_OWNED_REG))
 DIRECT_WET_DEFAULTS = {
     "direct_wet_min_temp_f": "65",
-    "direct_wet_wall_start_offset_min": "60",
-    "direct_wet_wall_drydown_before_off_min": "120",
-    "direct_wet_south_start_offset_min": "60",
-    "direct_wet_south_drydown_before_off_min": "120",
-    "direct_wet_west_start_offset_min": "60",
-    "direct_wet_west_drydown_before_off_min": "120",
-    "direct_wet_center_start_offset_min": "120",
-    "direct_wet_center_drydown_before_off_min": "180",
     "irrig_wall_days_mask": "127",
     "irrig_wall_fert_days_mask": "127",
     "irrig_center_days_mask": "127",

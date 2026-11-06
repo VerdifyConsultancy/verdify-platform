@@ -349,6 +349,19 @@ class Resyncs:
         verdict, detail = await _until_confirmed(pool, run.write)
         if verdict != "confirmed":
             return verdict, detail
+        # #1335: the light is automatic again, so the controller's hold from a timed switch ends now, not at its
+        # deadline; the send below may find the light already matching and send nothing. Bounded like step 4's checks,
+        # so a busy pool cannot hold the resync here.
+        try:
+            async with asyncio.timeout(DECIDE_S), pool.acquire() as conn:
+                await lights.release_hold(conn, actor, run.light, BACK_TO_AUTOMATIC)
+        except Exception as failure:
+            log.warning(
+                "Back to automatic: write %d could not release the %s light's controller hold (%s)",
+                run.write.id,
+                run.light,
+                type(failure).__name__,
+            )
         await asyncio.sleep(PAGE_FIRST_S)
         return await self._final(run, pool, setpoint_url, actor)
 

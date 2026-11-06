@@ -1247,3 +1247,22 @@ int main() {
     binary = tmp_path / "batch"
     subprocess.run(["c++", "-std=c++17", str(source), "-o", str(binary)], check=True)
     subprocess.run([str(binary)], check=True)
+
+
+def test_v3_wire_contract_accepts_the_accepted_firmware_pin():
+    """#1277: the C1 pin follows the accepted firmware pin instead of going stale on every flash."""
+    from verdify_schemas.control_band_wire import validate_wire_contract, wire_resolver_revision
+
+    document = wire_artifact()
+    pinned = "2026.11.6.0938.36c7630c"
+    document["revisions"]["firmware_revision"] = pinned
+    contract = document["served_wire_contract"]
+    contract["worksheet"]["preview"]["identity"]["firmware_revision"] = pinned
+    document["revisions"]["crop_band_resolver_revision"] = wire_resolver_revision(contract)
+    with pytest.raises(ValueError, match="not qualified for this firmware"):
+        validate_wire_contract(contract, document)
+    with pytest.raises(ValueError, match="not qualified for this firmware"):
+        validate_wire_contract(contract, document, "2026.11.5.0131.57fe2a2e")
+    with pytest.raises(ValueError, match="not qualified for this firmware"):
+        validate_wire_contract(contract, document, "  ")
+    assert validate_wire_contract(contract, document, pinned + "\n")

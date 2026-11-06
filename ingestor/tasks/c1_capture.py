@@ -32,6 +32,8 @@ from verdify_schemas.control_band_wire import (
 from verdify_schemas.experiment_config import policy_device_id
 from verdify_schemas.tunable_registry import REGISTRY
 
+from ._common import _expected_firmware_version
+
 REQUEST_NAME = "c1-capture-request.json"
 RAW_SCHEMA = "verdify-c1-native-source-epoch-v1"
 BAND_SLUGS = {
@@ -554,7 +556,7 @@ async def capture_native_source(pool):
         if wire_contract is not None:
             document["served_wire_contract"] = wire_contract
             try:
-                validate_wire_contract(wire_contract, document)
+                validate_wire_contract(wire_contract, document, _expected_firmware_version())
             except (ValueError, KeyError, TypeError, OverflowError) as error:
                 unavailable = output / (epoch["source_epoch_id"] + ".unavailable.json")
                 if not unavailable.exists():

@@ -607,7 +607,7 @@ def test_setpoint_server_fallback_does_not_overlay_band_owned_plan_rows():
     assert params["activity_start_hour"] == "7"
     assert params["activity_start_minute"] == "0"
     assert params["activity_duration_min"] == "780"
-    assert params["direct_wet_wall_start_offset_min"] == "60"
+    assert "direct_wet_wall_start_offset_min" not in params  # #369: retired with its entity
     assert params["irrig_center_fert_days_mask"] == "127"
     assert params["sw_direct_wet_gate_enabled"] == "1"
     assert params["safety_min"] == "40"
@@ -3187,6 +3187,11 @@ def test_manual_climate_buttons_are_flag_only_controller_path():
         "manual_fans_until_ms",
         "manual_fog_until_ms",
         "vent_bypass_until_ms",
+        # #1335: the per-circuit manual light holds (deadline and held state), never a relay.
+        "gl_main_hold_until_ms",
+        "gl_main_hold_on",
+        "gl_grow_hold_until_ms",
+        "gl_grow_hold_on",
     }
     dashboard = override
 

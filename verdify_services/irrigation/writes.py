@@ -1124,6 +1124,28 @@ async def override(
     )
 
 
+async def light_hold(
+    conn: asyncpg.Connection,
+    actor: Actor,
+    light: Literal["main", "grow"],
+    state: Literal["on", "off"] | None,
+    minutes: int | None = None,
+    reason: str | None = None,
+) -> Command | None:
+    """#1335: the controller's own hold for a timed light switch, so its schedule cannot switch the light back during
+    the minutes. One ``pending`` ``override`` command with ``args`` ``{kind: light_<light>_<state>, minutes}``, or
+    ``{kind: light_<light>_auto, minutes: 0}`` to release the hold (``state`` None, Back to automatic); the ingestor
+    sends it as ``manual_override`` under the writer fences, like a burst. No activity row of its own: the caller's
+    API-20 row (or Back to automatic's write) is the record. Before the engine firmware there is no ``manual_override``,
+    so nothing is stored and None comes back."""
+    if state is not None and (minutes is None or not 1 <= minutes <= 120):
+        raise ValueError(f"a light hold needs minutes 1-120, not {minutes!r}")
+    if not await engine_on(conn):
+        return None
+    args = {"kind": f"light_{light}_{state or 'auto'}", "minutes": minutes if state is not None else 0}
+    return await _insert(conn, actor, kind="override", line_id=None, args=args, reason=reason)
+
+
 # ── Schedules (API-IRR-03 to -05) ───────────────────────────────────────────
 
 

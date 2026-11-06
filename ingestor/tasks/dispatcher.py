@@ -513,14 +513,6 @@ def _activity_defaults_from_lighting(lighting_row, lighting_circuit_rows) -> dic
         "activity_start_minute": 0.0,
         "activity_duration_min": float(activity_duration_min),
         "direct_wet_min_temp_f": 65.0,
-        "direct_wet_wall_start_offset_min": 60.0,
-        "direct_wet_wall_drydown_before_off_min": 120.0,
-        "direct_wet_south_start_offset_min": 60.0,
-        "direct_wet_south_drydown_before_off_min": 120.0,
-        "direct_wet_west_start_offset_min": 60.0,
-        "direct_wet_west_drydown_before_off_min": 120.0,
-        "direct_wet_center_start_offset_min": 120.0,
-        "direct_wet_center_drydown_before_off_min": 180.0,
         "sw_direct_wet_gate_enabled": 1.0,
     }
 

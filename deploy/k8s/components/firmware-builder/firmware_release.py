@@ -146,11 +146,14 @@ def check_credentials(main_cpp: Path, binary: Path, environ: Mapping[str, str]) 
     return report
 
 
-def credential_parity(root: Path, candidate: str, running: str) -> dict:
+def credential_parity(root: Path, candidate: str, running: str, rotate_ota: bool = False) -> dict:
     """Value-blind pre-flash check: the running image already carries the candidate's credentials.
 
     Holds no Secret: it compares the candidate's generated literals with both archived images
     and reports only setter names and counts. Never send a firmware image through a pod log.
+    ``rotate_ota`` (#1009) is the one planned exception: the candidate was built with the next OTA
+    password, so its set_auth_password literal must be absent from the running image, while both
+    Wi-Fi literals still must match.
     """
     candidate_dir, running_dir = release_directory(root, candidate), release_directory(root, running)
     source = (candidate_dir / GENERATED_MAIN_CPP).read_bytes()
@@ -165,8 +168,16 @@ def credential_parity(root: Path, candidate: str, running: str) -> dict:
         for label, image in images.items():
             entry[label] = image.count(literals[0] + b"\0") if len(literals) == 1 else 0
         report[setter] = entry
-    if not all(e["literals"] == 1 and e["candidate"] and e["running"] for e in report.values()):
+
+    def passes(setter: str, e: dict) -> bool:
+        if rotate_ota and setter == "set_auth_password":
+            return e["literals"] == 1 and e["candidate"] > 0 and e["running"] == 0
+        return e["literals"] == 1 and e["candidate"] > 0 and e["running"] > 0
+
+    if not all(passes(setter, e) for setter, e in report.items()):
         raise ValueError("credential parity failed: " + json.dumps(report, sort_keys=True))
+    if rotate_ota:
+        report["ota_rotation"] = True
     return report
 
 
@@ -325,6 +336,11 @@ def main() -> int:
     parser.add_argument("--main-cpp", type=Path, help="check-credentials: the generated main.cpp")
     parser.add_argument("--binary", type=Path, help="check-credentials: the compiled firmware.ota.bin")
     parser.add_argument("--running", default="", help="credential-parity: the running image's full source SHA")
+    parser.add_argument(
+        "--rotate-ota",
+        action="store_true",
+        help="credential-parity: the candidate carries the next OTA password (#1009); it must differ",
+    )
     args = parser.parse_args()
     try:
         if args.action == "secrets-yaml":
@@ -332,7 +348,9 @@ def main() -> int:
         elif args.action == "check-credentials":
             print(json.dumps(check_credentials(args.main_cpp, args.binary, os.environ), sort_keys=True))
         elif args.action == "credential-parity":
-            print(json.dumps(credential_parity(args.root, args.revision, args.running), sort_keys=True))
+            print(
+                json.dumps(credential_parity(args.root, args.revision, args.running, args.rotate_ota), sort_keys=True)
+            )
         elif args.action == "manifest":
             write_manifest(args.root, args.revision, args.firmware_version, args.toolchain)
             print(

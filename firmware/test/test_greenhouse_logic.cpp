@@ -68,6 +68,63 @@ TEST(probe_health_warns_before_aggregate_eligibility_expires) {
     PASS();
 }
 
+// #368: jump and flatline plausibility. Legitimate steps (the 3.2 F real
+// maximum between ~60 s samples) and legitimate plateaus (14 minutes of
+// identical readings) stay OK; the 2026-10-27 East spike reads JUMP.
+TEST(probe_trend_accepts_real_steps_and_plateaus) {
+    ProbeTrend p;
+    uint32_t t = 1000u;
+    ASSERT_TRUE(probe_trend_update(p, 60.0f, 70.0f, t) == ProbeTrendState::kOk);
+    t += 60000u;
+    ASSERT_TRUE(probe_trend_update(p, 63.2f, 55.0f, t) == ProbeTrendState::kOk);  // vent opening
+    t += 60000u;
+    ASSERT_TRUE(probe_trend_update(p, 60.4f, 85.0f, t) == ProbeTrendState::kOk);  // mist: RH is never a jump
+    for (int i = 0; i < 14; ++i) {
+        t += 60000u;
+        ASSERT_TRUE(probe_trend_update(p, 60.4f, 85.0f, t) == ProbeTrendState::kOk);
+    }
+    // A wide gap (a reboot, a stale probe) is not a jump.
+    t += 600000u;
+    ASSERT_TRUE(probe_trend_update(p, 75.0f, 60.0f, t) == ProbeTrendState::kOk);
+    PASS();
+}
+
+TEST(probe_trend_flags_the_east_spike_for_ten_minutes) {
+    ProbeTrend p;
+    uint32_t t = UINT32_MAX - 120000u;  // across the millis() wrap
+    probe_trend_update(p, 60.4f, 70.0f, t);
+    t += 60000u;
+    ASSERT_TRUE(probe_trend_update(p, 86.4f, 70.0f, t) == ProbeTrendState::kJump);
+    t += 62000u;
+    ASSERT_TRUE(probe_trend_update(p, 62.1f, 70.1f, t) == ProbeTrendState::kJump);
+    const uint32_t last_jump = t;
+    while (t - last_jump < kProbeJumpHoldMs - 60000u) {
+        t += 60000u;
+        ASSERT_TRUE(probe_trend_update(p, 62.0f + float(t % 7u) * 0.1f, 70.0f, t) == ProbeTrendState::kJump);
+    }
+    t = last_jump + kProbeJumpHoldMs;
+    ASSERT_TRUE(probe_trend_update(p, 62.3f, 70.2f, t) == ProbeTrendState::kOk);
+    PASS();
+}
+
+TEST(probe_trend_flags_a_stuck_probe_after_sixty_minutes) {
+    ProbeTrend p;
+    uint32_t t = 5000u;
+    probe_trend_update(p, 71.3f, 52.0f, t);
+    for (uint32_t i = 1; i < 60; ++i) {
+        ASSERT_TRUE(probe_trend_update(p, 71.3f, 52.0f, t + i * 60000u) == ProbeTrendState::kOk);
+    }
+    t += kProbeFlatMs;
+    ASSERT_TRUE(probe_trend_update(p, 71.3f, 52.0f, t) == ProbeTrendState::kFlat);
+    // RH alone moving is a live probe.
+    ASSERT_TRUE(probe_trend_update(p, 71.3f, 52.1f, t + 60000u) == ProbeTrendState::kOk);
+    // NaN restarts the trend instead of turning INVALID into FLAT.
+    ASSERT_TRUE(probe_trend_update(p, NAN, 52.1f, t + 120000u) == ProbeTrendState::kOk);
+    ASSERT_TRUE(probe_trend_update(p, 71.3f, 52.1f, t + 180000u) == ProbeTrendState::kOk);
+    ASSERT_TRUE(probe_trend_update(p, 71.3f, 52.1f, t + 180000u + kProbeFlatMs - 1u) == ProbeTrendState::kOk);
+    PASS();
+}
+
 static SensorInputs make_inputs(float temp, float vpd, float rh = 60.0f) {
     // Sprint-15: outdoor data defaults to STALE so the new summer-vent
     // gate is OFF by default in unit tests (outdoor_data_age_s above the
@@ -164,15 +221,6 @@ TEST(minute_window_wraps_midnight) {
     ASSERT_TRUE(minute_in_window(local_minute_of_day(23, 30), local_minute_of_day(22, 0), 480));
     ASSERT_TRUE(minute_in_window(local_minute_of_day(5, 59), local_minute_of_day(22, 0), 480));
     ASSERT_FALSE(minute_in_window(local_minute_of_day(6, 0), local_minute_of_day(22, 0), 480));
-    PASS();
-}
-
-TEST(direct_wet_window_uses_activity_offsets) {
-    // Activity 06:00-20:00, wettable after 2h ramp and before 3h drydown.
-    ASSERT_FALSE(direct_wet_window_open(local_minute_of_day(7, 59), 6, 0, 840, 120, 180));
-    ASSERT_TRUE(direct_wet_window_open(local_minute_of_day(8, 0), 6, 0, 840, 120, 180));
-    ASSERT_TRUE(direct_wet_window_open(local_minute_of_day(16, 59), 6, 0, 840, 120, 180));
-    ASSERT_FALSE(direct_wet_window_open(local_minute_of_day(17, 0), 6, 0, 840, 120, 180));
     PASS();
 }
 
@@ -4645,6 +4693,60 @@ TEST(lighting_occupancy_task_demand_respects_min_off_dwell) {
     ASSERT_FALSE(d.want_on);
     ASSERT_TRUE(d.occupancy_task_light_demand);
     ASSERT_TRUE(std::string(d.reason) == "min_off_hold");
+    PASS();
+}
+
+// #1335 (lane F, 2026-11-06): a 10-min manual Off was overridden when the 07:00
+// window opened. The hold keeps the circuit Off across the window-open edge
+// until its deadline, then the schedule turns it on with no dwell delay.
+TEST(lighting_manual_off_hold_spans_window_open_then_returns_to_schedule) {
+    auto sp = lighting_setpoints();  // window 06:00-22:00, min_off 60 s
+    auto s = initial_lighting_state();
+    bool relay = false;
+    uint32_t now = 1000000;
+    auto in = lighting_inputs(1000.0f, 5);  // dark, before the window
+    auto pre = evaluate_lighting_held(in, sp, s, relay, now, 5.0f, 0, false);
+    ASSERT_FALSE(pre.want_on);
+    ASSERT_TRUE(std::string(pre.reason) == "outside_window");
+
+    const uint32_t until = manual_override_deadline_ms(now, 10);
+    for (uint32_t t = now + 5000; manual_latch_active(until, t); t += 5000) {
+        in.local_hour = (t - now) >= 180000 ? 6 : 5;  // the window opens 3 min in
+        auto d = evaluate_lighting_held(in, sp, s, relay, t, 5.0f, until, false);
+        ASSERT_FALSE(d.want_on);
+        ASSERT_TRUE(std::string(d.reason) == "manual_hold_off");
+        if (in.local_hour == 6) ASSERT_TRUE(d.in_window);
+        relay = d.want_on;
+    }
+    auto after = evaluate_lighting_held(in, sp, s, relay, until, 5.0f, until, false);
+    ASSERT_TRUE(after.want_on);
+    ASSERT_TRUE(std::string(after.reason) == "plant_lux_low");
+    PASS();
+}
+
+// A manual On holds through a window close and min-on dwell plays no part
+// until the deadline; then the schedule turns it off.
+TEST(lighting_manual_on_hold_spans_window_close_then_returns_to_schedule) {
+    auto sp = lighting_setpoints();
+    auto s = initial_lighting_state();
+    bool relay = false;
+    uint32_t now = 2000000;
+    auto in = lighting_inputs(90000.0f, 21);  // bright: the schedule wants off
+    const uint32_t until = manual_override_deadline_ms(now, 5);
+    for (uint32_t t = now; manual_latch_active(until, t); t += 5000) {
+        in.local_hour = (t - now) >= 60000 ? 22 : 21;
+        auto d = evaluate_lighting_held(in, sp, s, relay, t, 5.0f, until, true);
+        ASSERT_TRUE(d.want_on);
+        ASSERT_TRUE(std::string(d.reason) == "manual_hold_on");
+        relay = d.want_on;
+    }
+    // The relay went on at the first tick, more than min_on (120 s) ago.
+    auto after = evaluate_lighting_held(in, sp, s, relay, until, 5.0f, until, true);
+    ASSERT_FALSE(after.want_on);
+    ASSERT_TRUE(std::string(after.reason) == "outside_window");
+    // A released hold (deadline 0) is the plain schedule.
+    auto plain = evaluate_lighting_held(in, sp, s, false, until + 5000, 5.0f, 0, true);
+    ASSERT_FALSE(plain.want_on);
     PASS();
 }
 

@@ -7,8 +7,9 @@ no HTTP client (README, Rules). So a switch is three steps, and the route runs t
    result, a failure included, so a retried request calls nothing.
 2. The route calls the setpoint server (``api/operator_routes/setpoint_server.py``), which gives a ``LightResult``.
 3. ``record`` writes the one ``activity_log`` row through ``activity.recorded_write``: ``light.on`` or ``light.off``,
-   target ``grow_light_main`` or ``grow_light_grow``, detail ``{light, state, result}``. That row is the only stored
-   thing: a light has no ``desired_state`` row and never reaches the ESP32, whose one writer stays the ingestor.
+   target ``grow_light_main`` or ``grow_light_grow``, detail ``{light, state, result}``. A light has no
+   ``desired_state`` row; the switch itself never reaches the ESP32, whose one writer stays the ingestor (a timed
+   switch's controller hold goes there as an ``irrigation_command`` row the ingestor sends, below).
 
 The answer is a ``LightRecord``: ``command()`` is the 200 body when Lutron reached the state, and ``refusal()`` the 503
 ``unavailable`` Problem otherwise. A light's state is never read from here: the board shows the Lutron readback (API-13).
@@ -23,7 +24,10 @@ A switch from API-20 is timed (#1335, Jason 2026-11-05): like a fan burst it las
 default, at most ``MAX_MANUAL_MINUTES``), stored in the row's detail, and then the light goes back to automatic.
 ``timer`` reads the light's newest switch row and when its time is up (``ts + minutes``, both by the database's clock);
 the operator API's ``light_timer`` sends the controller's intent once it is. A row without ``minutes`` (Back to
-automatic, the timer's own row, rows from before #1335) holds no timer.
+automatic, the timer's own row, rows from before #1335) holds no timer. A confirmed timed switch also queues the
+controller's own hold for the same minutes (``irrigation.writes.light_hold``, ``manual_override light_<light>_<state>``)
+in the same transaction as its row, so the controller's schedule cannot switch the light back during them; Back to
+automatic releases it (``release_hold``).
 """
 
 from __future__ import annotations
@@ -41,6 +45,7 @@ from verdify_schemas.activity import ActivityLogRow
 from verdify_services import activity
 from verdify_services.activity import GREENHOUSE_ID, WriteResult
 from verdify_services.actor import Actor
+from verdify_services.irrigation import writes as irrigation_writes
 from verdify_services.problems import Problem, problem
 
 OP = "API-20"
@@ -208,8 +213,15 @@ async def record(
     if clash:
         raise ValueError(f"extra_detail may not set {', '.join(clash)}")
 
-    async def perform(_conn: asyncpg.Connection) -> tuple[None, dict[str, Any]]:
-        return None, {**extra, **timed, "light": light, "state": state, "result": result}
+    async def perform(conn: asyncpg.Connection) -> tuple[None, dict[str, Any]]:
+        detail = {**extra, **timed, "light": light, "state": state, "result": result}
+        if minutes is not None and result == "confirmed":
+            # The controller holds the light for the same minutes (#1335), so a lighting decision change (a window
+            # opening, occupancy, lux) cannot switch it back before the timer ends.
+            command = await irrigation_writes.light_hold(conn, actor, light, state, minutes, reason)
+            if command is not None:
+                detail["hold_command_id"] = str(command.command_id)
+        return None, detail
 
     written = await activity.recorded_write(
         conn,
@@ -227,6 +239,11 @@ async def record(
         return written
     value = LightRecord(light=light, state=state, result=result, activity_id=written.activity_id)
     return written.model_copy(update={"value": value})
+
+
+async def release_hold(conn: asyncpg.Connection, actor: Actor, light: Light, reason: str | None = None) -> bool:
+    """Back to automatic: release the controller's hold on ``light`` (#1335). True when the release was queued."""
+    return await irrigation_writes.light_hold(conn, actor, light, None, reason=reason) is not None
 
 
 async def try_lock(conn: asyncpg.Connection, light: Light) -> bool:

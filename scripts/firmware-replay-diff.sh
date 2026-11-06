@@ -115,13 +115,17 @@ fi
 # reviews diff manually. CI uses a THRESHOLD_PCT env var to allow planned
 # divergence (e.g. Phase 2 dwell-gate expected to reduce transitions).
 THRESHOLD_PCT=${THRESHOLD_PCT:-0}
+# #1312: the gate compares the exact row count, never the rounded percentage.
+# At THRESHOLD_PCT=0 any divergent row fails; above 0 the unrounded fraction
+# is compared. DIVERGENT_PCT is for display only.
 DIVERGENT_PCT=$(awk -v d="$DIVERGENT_ROWS" -v t="$TOTAL_ROWS" \
-    'BEGIN { printf "%.2f", (t>0) ? (100.0*d/t) : 0 }')
+    'BEGIN { printf "%.4f", (t>0) ? (100.0*d/t) : 0 }')
 
-echo "  Divergent pct:  ${DIVERGENT_PCT}% (threshold: ${THRESHOLD_PCT}%)"
+echo "  Divergent rows: ${DIVERGENT_ROWS} of ${TOTAL_ROWS} (${DIVERGENT_PCT}%, threshold: ${THRESHOLD_PCT}%)"
 
-if awk -v d="$DIVERGENT_PCT" -v t="$THRESHOLD_PCT" 'BEGIN { exit !(d > t) }'; then
-    echo "  ✗ Divergence exceeds threshold. Review $DIFF_OUT before merging."
+if awk -v d="$DIVERGENT_ROWS" -v n="$TOTAL_ROWS" -v t="$THRESHOLD_PCT" \
+    'BEGIN { if (t + 0 <= 0 || n + 0 <= 0) exit !(d + 0 > 0); exit !(100.0 * d / n > t + 0) }'; then
+    echo "  ✗ ${DIVERGENT_ROWS} divergent rows exceed the threshold. Review $DIFF_OUT before merging."
     exit 1
 fi
 

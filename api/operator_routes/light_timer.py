@@ -21,9 +21,10 @@ firmware (#399). So the timer lives on this side and ends through that same serv
 
 The setpoint server is single-threaded and every caller holds the light's lock, so the timer, a press and a resync
 never switch one light at once. The controller's own switching does not go through the server: its ``apply_light``
-writes Home Assistant only when its decision changes, so during the minutes a decision change can still switch the
-light, which only brings automatic back early. Making the controller hold a manual light itself needs a firmware latch,
-as the bursts have; that is a separate firmware change.
+writes Home Assistant only when its decision changes. So a confirmed timed switch also queues the controller's own hold
+for the same minutes (``lights.record`` → ``manual_override light_<light>_<state>``, the per-circuit deadline latch the
+bursts have, #1335's firmware part), and during the minutes a decision change no longer switches the light. Before that
+firmware is flashed the controller ignores the hold, and a decision change can still bring automatic back early.
 """
 
 from __future__ import annotations
