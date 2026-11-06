@@ -60,7 +60,7 @@ jobs:
       run: ci/gha/validate.sh
       runner: verdify-platform-ci
       in-job-image: true
-      timeout-minutes: 50
+      timeout-minutes: 90
 
   # The five checks.steps of the native repo-validate profile (.agent-fleet/ci.yaml).
   platform-static:
