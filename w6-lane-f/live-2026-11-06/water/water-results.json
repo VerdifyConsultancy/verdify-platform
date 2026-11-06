@@ -1,0 +1,148 @@
+{
+  "started": "2026-11-06T16:39:52.738Z",
+  "flows": {
+    "1-row-stop": {
+      "start": {
+        "title": "Run Wall drip (clean) for 10 min?",
+        "dialog": "Run Wall drip (clean) for 1 min? Starts now · wall drip today 10 of 60 min Duration − min + Allowed 1–120 min · step 1 Reason (optional) Cancel Run 1 min",
+        "running": {
+          "at": "2026-11-06T16:40:16.376Z",
+          "code": "running",
+          "ends_at": "2026-11-06T16:41:09Z",
+          "observed_at": "2026-11-06T16:40:09.847663Z",
+          "today_min": 10,
+          "active_runs": 1,
+          "waited_s": 14
+        }
+      },
+      "stop_clicked_at": "2026-11-06T16:40:16.826Z",
+      "where": "Water, L01 row Stop",
+      "stopped": {
+        "at": "2026-11-06T16:40:23.137Z",
+        "code": "idle",
+        "ends_at": null,
+        "observed_at": "2026-11-06T16:40:19.309112Z",
+        "today_min": 10.2,
+        "active_runs": 0,
+        "waited_s": 6
+      },
+      "toast": []
+    },
+    "2-water-stop-all": {
+      "start": {
+        "title": "Run Wall drip (clean) for 10 min?",
+        "dialog": "Run Wall drip (clean) for 1 min? Starts now · wall drip today 10 of 60 min Duration − min + Allowed 1–120 min · step 1 Reason (optional) Cancel Run 1 min",
+        "running": {
+          "at": "2026-11-06T16:40:44.912Z",
+          "code": "running",
+          "ends_at": "2026-11-06T16:41:39Z",
+          "observed_at": "2026-11-06T16:40:39.958016Z",
+          "today_min": 10.2,
+          "active_runs": 1,
+          "waited_s": 9
+        }
+      },
+      "stop_clicked_at": "2026-11-06T16:40:45.560Z",
+      "where": "Water, Stop all water",
+      "stopped": {
+        "at": "2026-11-06T16:40:56.026Z",
+        "code": "idle",
+        "ends_at": null,
+        "observed_at": "2026-11-06T16:40:49.535088Z",
+        "today_min": 10.3,
+        "active_runs": 0,
+        "waited_s": 10
+      },
+      "toast": [
+        "Stopped every running valve. VPD misting, fog and the next scheduled run can still start on their own; to keep a line off, disable it. ×"
+      ]
+    },
+    "3-now-stop-all": {
+      "start": {
+        "title": "Run Wall drip (clean) for 10 min?",
+        "dialog": "Run Wall drip (clean) for 1 min? Starts now · wall drip today 10 of 60 min Duration − min + Allowed 1–120 min · step 1 Reason (optional) Cancel Run 1 min",
+        "running": {
+          "at": "2026-11-06T16:41:16.846Z",
+          "code": "running",
+          "ends_at": "2026-11-06T16:42:14Z",
+          "observed_at": "2026-11-06T16:41:14.726902Z",
+          "today_min": 10.3,
+          "active_runs": 1,
+          "waited_s": 8
+        }
+      },
+      "stop_clicked_at": "2026-11-06T16:41:17.369Z",
+      "where": "Now, Stop all water",
+      "stopped": {
+        "at": "2026-11-06T16:41:32.135Z",
+        "code": "idle",
+        "ends_at": null,
+        "observed_at": "2026-11-06T16:41:24.740322Z",
+        "today_min": 10.5,
+        "active_runs": 0,
+        "waited_s": 10
+      },
+      "toast": [
+        "Stopped every running valve. VPD misting, fog and the next scheduled run can still start on their own; to keep a line off, disable it. Disable Wall drip ×"
+      ]
+    }
+  },
+  "errors": {},
+  "requests": [
+    {
+      "at": "2026-11-06T16:40:02.126Z",
+      "method": "POST",
+      "path": "/api/v1/irrigation/lines/L01/run",
+      "body": "{\"minutes\":1}"
+    },
+    {
+      "at": "2026-11-06T16:40:16.906Z",
+      "method": "POST",
+      "path": "/api/v1/irrigation/stop",
+      "body": "{\"line_id\":\"L01\"}"
+    },
+    {
+      "at": "2026-11-06T16:40:36.372Z",
+      "method": "POST",
+      "path": "/api/v1/irrigation/lines/L01/run",
+      "body": "{\"minutes\":1}"
+    },
+    {
+      "at": "2026-11-06T16:40:45.674Z",
+      "method": "POST",
+      "path": "/api/v1/irrigation/stop",
+      "body": "{}"
+    },
+    {
+      "at": "2026-11-06T16:41:09.319Z",
+      "method": "POST",
+      "path": "/api/v1/irrigation/lines/L01/run",
+      "body": "{\"minutes\":1}"
+    },
+    {
+      "at": "2026-11-06T16:41:21.795Z",
+      "method": "POST",
+      "path": "/api/v1/irrigation/stop",
+      "body": "{}"
+    }
+  ],
+  "fallback_stops": [],
+  "before": {
+    "at": "2026-11-06T16:39:55.142Z",
+    "code": "idle",
+    "ends_at": null,
+    "observed_at": "2026-11-06T13:55:00.836652Z",
+    "today_min": 10,
+    "active_runs": 0
+  },
+  "after": {
+    "at": "2026-11-06T16:41:39.458Z",
+    "code": "idle",
+    "ends_at": null,
+    "observed_at": "2026-11-06T16:41:24.740322Z",
+    "today_min": 10.5,
+    "active_runs": 0,
+    "waited_s": 0
+  },
+  "finished": "2026-11-06T16:41:39.459Z"
+}
