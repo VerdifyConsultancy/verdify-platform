@@ -109,7 +109,7 @@ test("uPlot stacks the minutes bars through bands, in the causes' colours, over 
   expect([center.scales.y.min, center.scales.y.max]).toEqual([0, 138]);
   expect([plots[4].scales.y.min, plots[4].scales.y.max]).toEqual([0, 35]);
   const filled = new Set(contexts.flatMap((context) => context.fills.map((fill) => fill.color)));
-  for (const token of ["--eq-mister", "--eq-water", "--eq-fert", "--eq-fog", "--eq-master", "--c-bound"]) expect(filled, token).toContain(TOKENS[token]);
+  for (const token of ["--cause-vpd", "--cause-schedule", "--eq-fert", "--cause-prep", "--forest", "--c-bound"]) expect(filled, token).toContain(TOKENS[token]);
 });
 
 test("uPlot takes the plan lanes: an x-only window from now to the horizon, the rows painted in its draw hook", async () => {

@@ -134,6 +134,11 @@ spec:
               env:
                 - name: LAB_WORK_ROOT
                   value: /work/publisher
+                # #1351 (Jason 2026-11-05): the npm CLI's update notifier asks
+                # registry.npmjs.org for the latest npm on every run. Nothing
+                # needs it, and egress-local-only blocks it.
+                - name: NPM_CONFIG_UPDATE_NOTIFIER
+                  value: "false"
                 # Production CronJobs fail soft after one bounded attempt per
                 # generator. Host/manual publishers retain the script's retry
                 # default, but repeating a 45s analytical/API failure inside a

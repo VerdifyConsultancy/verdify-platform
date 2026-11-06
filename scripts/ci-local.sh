@@ -97,6 +97,7 @@ $PY -m pytest -q -rs \
   tests/test_287_retire_high_wind_delivery.py \
   tests/test_288_retire_irrigation_registry_delivery.py \
   tests/test_289_alert_silences_delivery.py \
+  tests/test_290_band_compliance_delivery.py \
   tests/test_293_crop_plantings_delivery.py \
   tests/test_crops_position_resolver.py \
   tests/test_crops_control_boundary.py \
@@ -339,10 +340,14 @@ $PY -m pytest -q -rs \
   tests/test_setpoint_server_ingress.py \
   tests/test_public_api_operator_paths.py \
   tests/test_operator_api_manifests.py \
+  tests/test_operator_api_alert_metrics.py \
+  tests/test_alert_delivery_local.py \
   tests/test_verdify_traefik_placement.py \
   tests/test_verdify_tier1_owner_exclusions.py \
   tests/test_dashboard_manifests.py \
   tests/test_egress_deny_management.py \
+  tests/test_egress_local_only.py \
+  tests/test_local_only_guards.py \
   tests/test_mcp_egress_boundary.py \
   tests/test_writer_outbound_boundary.py \
   tests/test_verify_component_proof_packet.py \
@@ -403,6 +408,15 @@ fi
 
 step "Prometheus rule-file delivery guard (#563)"
 $PY scripts/check-prometheus-rule-source.py
+
+step "images only from the estate registry (#1363)"
+$PY scripts/check-image-sources.py
+
+step "no new public hostnames in runtime source (#1351)"
+$PY scripts/check-external-hosts.py
+
+step "vision and AI calls only via Cortex llm.primary.longctx.mm (#1351)"
+$PY scripts/check-ai-routes.py
 
 # ── Diff-scoped gates (merge-base semantics from the retired PR workflows) ──
 if [ -n "${CI_BASE_REF:-}" ]; then

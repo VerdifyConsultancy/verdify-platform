@@ -54,13 +54,13 @@ SUCCESSOR_BLOCK = SQL[SQL.index("DO $successor$") :]
 
 
 def later(last=293):
-    # 290-292 are not merged yet; 293 follows 289 in the reviewed order until they are.
-    numbers = [n for n in (*range(255, 290), 293) if n <= last]
+    # 291 and 292 are not merged yet; 293 follows 290 in the reviewed order until they are.
+    numbers = [n for n in (*range(255, 291), 293) if n <= last]
     return [c0.SUCCESSOR_254] + [getattr(c0, f"SUCCESSOR_{n}") for n in numbers]
 
 
 def files(last=293):
-    numbers = [n for n in (*range(255, 290), 293) if n <= last]
+    numbers = [n for n in (*range(255, 291), 293) if n <= last]
     return {getattr(c0, f"SUCCESSOR_{n}"): getattr(c0, f"SUCCESSOR_{n}_SHA256") for n in numbers}
 
 
@@ -179,7 +179,7 @@ def test_sealed_sql_293_chains_from_289_and_binds_the_exact_ledger_row():
     expected += " AND " + six.ledger_row_sql(*six.CROP_PLANTINGS_MIGRATION) + ")"
     assert six.sealed_sql_293() == expected
     assert "(SELECT max(seq) FROM public.schema_migrations WHERE source='db/migrations')=293" in expected
-    assert six.sealed_sql().count(" OR " + six.sealed_sql_289() + " OR " + expected) == 1
+    assert six.sealed_sql().count(" OR " + six.sealed_sql_290() + " OR " + expected) == 1
     assert maintenance.contract_sql().count(" OR " + six.sealed_sql_293()) == 1
     assert '"293-crop-plantings.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
     assert "tests/test_293_crop_plantings_delivery.py" in (ROOT / "scripts/ci-local.sh").read_text()

@@ -76,7 +76,7 @@ class AIConfig:
     def max_tokens(self, task: str) -> int:
         return self.config["models"][task].get("max_output_tokens", 8192)
 
-    def api_key(self, provider: str = "gemini") -> str:
+    def api_key(self, provider: str = "cortex") -> str:
         """Load API key from the configured file."""
         key_file = self.config["keys"][provider]["file"]
         return Path(key_file).read_text().strip()
@@ -101,10 +101,6 @@ class AIConfig:
             import anthropic
 
             return anthropic.Anthropic(api_key=self.api_key(provider))
-        if provider in {"gemini", "google-ai-studio"}:
-            from google import genai
-
-            return genai.Client(api_key=self.api_key(provider))
         raise ValueError(f"Unsupported AI provider for {task}: {provider}")
 
     def template_path(self, task: str, template_key: str) -> Path:

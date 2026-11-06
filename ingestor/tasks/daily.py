@@ -16,8 +16,6 @@ from ._common import (
     COMPLIANCE_ZONE_WEIGHTS_DEFAULT,
     DEFAULT_ZONE_BAND,
     GREENHOUSE_ID,
-    HOUSE_BAND_PARAMS,
-    REGISTRY,
     RELAY_TRUTH_START,
     SOIL_DRYOUT_MIN_DURATION_H,
     SOIL_DRYOUT_MIN_SAMPLES,
@@ -32,6 +30,9 @@ from ._common import (
     dataclass,
     log,
 )
+
+# API-06's band carry: the band_house_* audit row in force at a moment is the newest at or before it, at most this old.
+SERVED_BAND_CARRY_S = 600
 
 
 def _auto_close_disposition(
@@ -925,39 +926,32 @@ async def _refresh_daily_summary_for_date(
         target_day,
     )
 
-    # Stress hours — computed with time-appropriate setpoints.
-    band_changes = await conn.fetch(
+    # Time in band, its whole-day shares and the below/above stress hours come from the database's one
+    # definition (migration 290, #1358): verdify_matview_refresh_runtime.fn_refresh_band_compliance grades
+    # each 5-minute bucket against the band the controller served and copies the day into daily_summary's
+    # compliance_pct, temp_/vpd_compliance_pct and stress_hours_* columns. This task no longer writes them.
+    #
+    # The graded credit below stays separate (crop_target_profiles grading, ADR-0004). Its feasibility
+    # classifier needs the served temperature high, read from the same band_house_* audit rows.
+    served_high_rows = await conn.fetch(
         """
-        SELECT parameter, value, ts
-        FROM setpoint_changes
-        WHERE parameter = ANY($2::text[])
-          AND ts <= ($1::date + 1)::timestamp AT TIME ZONE 'America/Denver'
-        ORDER BY parameter, ts
+        SELECT ts, value
+          FROM setpoint_snapshot
+         WHERE parameter = 'band_house_temp_high' AND zone = 'house'
+           AND ts >= ($1::date::timestamp AT TIME ZONE 'America/Denver') - make_interval(secs => $2)
+           AND ts < ($1::date + 1)::timestamp AT TIME ZONE 'America/Denver'
+         ORDER BY ts
         """,
         target_day,
-        sorted(HOUSE_BAND_PARAMS),
+        SERVED_BAND_CARRY_S,
     )
+    served_high_ts = [row["ts"] for row in served_high_rows]
 
-    timelines: dict[str, list[tuple]] = {}
-    timeline_ts: dict[str, list] = {}
-    for r in band_changes:
-        param = r["parameter"]
-        val = float(r["value"])
-        spec = REGISTRY[param]
-        if spec.fw_clamp_lo is not None and val < spec.fw_clamp_lo:
-            continue
-        if spec.fw_clamp_hi is not None and val > spec.fw_clamp_hi:
-            continue
-        timelines.setdefault(param, []).append((r["ts"], val))
-        timeline_ts.setdefault(param, []).append(r["ts"])
-
-    def _band_at(param: str, ts):
-        tl = timelines.get(param, [])
-        times = timeline_ts.get(param, [])
-        if not tl or not times:
+    def _served_temp_high_at(ts):
+        idx = bisect_right(served_high_ts, ts) - 1
+        if idx < 0 or (ts - served_high_ts[idx]).total_seconds() > SERVED_BAND_CARRY_S:
             return None
-        idx = bisect_right(times, ts) - 1
-        return tl[idx][1] if idx >= 0 else None
+        return float(served_high_rows[idx]["value"])
 
     readings = await conn.fetch(
         """
@@ -982,54 +976,15 @@ async def _refresh_daily_summary_for_date(
     relay_state_at = await _build_relay_forward_fill(conn, target_day, _GRADE_RELAYS)
     grade_acc = _GradedComplianceAccumulator(COMPLIANCE_ZONE_WEIGHTS_DEFAULT)
 
-    heat_s = cold_s = vpd_hi_s = vpd_lo_s = 0
-    temp_in_band = vpd_in_band = both_in_band = 0
-    temp_scored_readings = vpd_scored_readings = scored_readings = 0
-    interval_h = 1.0 / 60.0  # legacy nominal reading-hours, never elapsed exposure
     for r in readings:
-        th = _band_at("temp_high", r["ts"])
-        tl = _band_at("temp_low", r["ts"])
-        vh = _band_at("vpd_high", r["ts"])
-        vl = _band_at("vpd_low", r["ts"])
         temp, vpd = r["temp_avg"], r["vpd_avg"]
-        t_valid = all(x is not None and isfinite(float(x)) for x in (temp, tl, th)) and tl <= th
-        v_valid = all(x is not None and isfinite(float(x)) for x in (vpd, vl, vh)) and vl <= vh
-        t_ok = v_ok = False
-        if t_valid:
-            temp_scored_readings += 1
-            temp = float(temp)
-            t_ok = tl <= temp <= th
-            temp_in_band += int(t_ok)
-            if temp > th:
-                heat_s += interval_h
-            elif temp < tl:
-                cold_s += interval_h
-        if v_valid:
-            vpd_scored_readings += 1
-            vpd = float(vpd)
-            v_ok = vl <= vpd <= vh
-            vpd_in_band += int(v_ok)
-            if vpd > vh:
-                vpd_hi_s += interval_h
-            elif vpd < vl:
-                vpd_lo_s += interval_h
-        if not (t_valid and v_valid):
+        if temp is None or vpd is None or not (isfinite(float(temp)) and isfinite(float(vpd))):
             continue
-        scored_readings += 1
-        both_in_band += int(t_ok and v_ok)
         # Graded controller credit remains separately named and accumulated.
-        grade_acc.add_reading(r, served_temp_high=th, zone_bands=zone_bands, relay_state_at=relay_state_at)
+        grade_acc.add_reading(
+            r, served_temp_high=_served_temp_high_at(r["ts"]), zone_bands=zone_bands, relay_state_at=relay_state_at
+        )
 
-    n = scored_readings
-    compliance_pct = round((both_in_band / n) * 100, 1) if n else None
-    temp_compliance_pct = round((temp_in_band / temp_scored_readings) * 100, 1) if temp_scored_readings else None
-    vpd_compliance_pct = round((vpd_in_band / vpd_scored_readings) * 100, 1) if vpd_scored_readings else None
-    stress = {
-        "heat": round(heat_s, 2) if temp_scored_readings else None,
-        "vpd_high": round(vpd_hi_s, 2) if vpd_scored_readings else None,
-        "cold": round(cold_s, 2) if temp_scored_readings else None,
-        "vpd_low": round(vpd_lo_s, 2) if vpd_scored_readings else None,
-    }
     graded = grade_acc.finalize()
 
     # Dew point margin (condensation risk)
@@ -1132,26 +1087,21 @@ async def _refresh_daily_summary_for_date(
             rh_min=$8, rh_max=$9, rh_avg=$10,
             co2_avg=$11, dli_final=$12,
             outdoor_temp_min=$13, outdoor_temp_max=$14,
-            stress_hours_heat=$15, stress_hours_vpd_high=$16,
-            stress_hours_cold=$17, stress_hours_vpd_low=$18,
-            runtime_fan1_min=$19, runtime_fan2_min=$20,
-            runtime_heat1_min=$21, runtime_heat2_min=$22,
-            runtime_fog_min=$23, runtime_vent_min=$24,
-            runtime_grow_light_min=$25,
-            runtime_mister_south_h=$26, runtime_mister_west_h=$27, runtime_mister_center_h=$28,
-            runtime_drip_wall_h=$29, runtime_drip_center_h=$30,
-            kwh_estimated=$31, therms_estimated=$32,
-            cost_electric=$33, cost_gas=$34, cost_water=$35, cost_total=$36,
-            water_used_gal=$37, mister_water_gal=$38,
-            min_dp_margin_f=$39, dp_risk_hours=$40,
-            compliance_pct=$41,
-            temp_compliance_pct=$42,
-            vpd_compliance_pct=$43,
-            cycles_mister_south=$44,
-            cycles_mister_west=$45,
-            cycles_mister_center=$46,
-            cycles_drip_wall=$47,
-            cycles_drip_center=$48,
+            runtime_fan1_min=$15, runtime_fan2_min=$16,
+            runtime_heat1_min=$17, runtime_heat2_min=$18,
+            runtime_fog_min=$19, runtime_vent_min=$20,
+            runtime_grow_light_min=$21,
+            runtime_mister_south_h=$22, runtime_mister_west_h=$23, runtime_mister_center_h=$24,
+            runtime_drip_wall_h=$25, runtime_drip_center_h=$26,
+            kwh_estimated=$27, therms_estimated=$28,
+            cost_electric=$29, cost_gas=$30, cost_water=$31, cost_total=$32,
+            water_used_gal=$33, mister_water_gal=$34,
+            min_dp_margin_f=$35, dp_risk_hours=$36,
+            cycles_mister_south=$37,
+            cycles_mister_west=$38,
+            cycles_mister_center=$39,
+            cycles_drip_wall=$40,
+            cycles_drip_center=$41,
             captured_at=now()
         WHERE date = $1
     """,
@@ -1169,10 +1119,6 @@ async def _refresh_daily_summary_for_date(
         climate["dli_final"] if climate else None,
         climate["outdoor_temp_min"] if climate else None,
         climate["outdoor_temp_max"] if climate else None,
-        float(stress["heat"]) if stress else 0,
-        float(stress["vpd_high"]) if stress else 0,
-        float(stress["cold"]) if stress else 0,
-        float(stress["vpd_low"]) if stress else 0,
         rt.get("fan1"),
         rt.get("fan2"),
         rt.get("heat1"),
@@ -1195,9 +1141,6 @@ async def _refresh_daily_summary_for_date(
         mister_water_gal,
         float(dp["min_margin_f"]) if dp and dp["min_margin_f"] is not None else None,
         float(dp["risk_hours"]) if dp else 0,
-        compliance_pct,
-        temp_compliance_pct,
-        vpd_compliance_pct,
         cycles.get("mister_south", 0),
         cycles.get("mister_west", 0),
         cycles.get("mister_center", 0),
@@ -1279,7 +1222,9 @@ async def _refresh_daily_summary_for_date(
     minute_metrics = await refresh_observed_minute_metrics(conn, target_day)
     if minute_metrics is None:
         log.warning("Observed-minute metrics unavailable for %s: migration245 is absent", target_day)
-    return ct, temp_max, compliance_pct
+    # The band refresh (migration 290) owns compliance_pct; report its latest copy.
+    compliance_pct = await conn.fetchval("SELECT compliance_pct FROM daily_summary WHERE date = $1", target_day)
+    return ct, temp_max, (float(compliance_pct) if compliance_pct is not None else None)
 
 
 async def _write_graded_compliance(conn: asyncpg.Connection, target_day, graded: dict) -> None:

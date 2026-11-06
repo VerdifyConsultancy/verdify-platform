@@ -75,6 +75,14 @@ export type Run = Lenient<Schemas["Run"]>;
 export type SessionToken = Lenient<Schemas["SessionToken"]>;
 export type Readiness = Lenient<Schemas["Readiness"]>;
 export type Health = Lenient<Json<"OPS-01", 200>>;
+export type Place = Lenient<Schemas["Place"]>;
+export type Planting = Lenient<Schemas["Planting"]>;
+export type PlantingDetail = Lenient<Schemas["PlantingDetail"]>;
+export type PlantingList = Lenient<Schemas["PlantingList"]>;
+export type Locations = Lenient<Schemas["Locations"]>;
+export type PositionHistory = Lenient<Schemas["PositionHistory"]>;
+export type CropCatalog = Lenient<Schemas["Catalog"]>;
+export type Resolution = Lenient<Schemas["Resolution"]>;
 
 // ---------------------------------------------------------------------------------------------------- field parsers
 const text = z.string();
@@ -308,6 +316,42 @@ const run = z.object({
   actor: maybe(actor), started_at: text, ended_at: maybe(text), open_s: int, pulses: maybe(int), gal: maybe(int), outcome, reason: maybe(text),
 }).transform((value) => ({ ...value, purpose: value.purpose ?? purposeOf(value.line_id, value.cause) }));
 const runPage = z.object({ ...page, items: z.array(run) });
+// Plantings and the location tree (#1327).
+const list = <T extends z.ZodType>(schema: T) => z.array(schema).default([]);
+const place = z.object({ zone: text, shelf: maybe(text), cell: maybe(text), since: text, until: maybe(text), count: maybe(int) });
+const plantingFields = {
+  id: int, crop: text, variety: maybe(text), crop_catalog_slug: maybe(text), count: maybe(int), stage: maybe(code), planted_date: text, active: flag,
+  ended_at: maybe(text), end_reason: maybe(code), notes: maybe(text), recorded_by: maybe(actor), zones: list(text), shelves: list(text), cells: list(text),
+  where: maybe(text), places: list(place),
+};
+const planting = z.object(plantingFields);
+const plantingDetail = z.object({
+  ...plantingFields, history: list(place),
+  events: list(z.object({ id: int, ts: maybe(text), event_type: code, count: maybe(int), notes: maybe(text), source: maybe(text), operator: maybe(text), detail: maybe(record) })),
+  harvests: list(z.object({ id: int, ts: maybe(text), unit_count: maybe(int), weight_kg: maybe(num), notes: maybe(text), operator: maybe(text) })),
+});
+const plantingList = z.object({ items: z.array(planting) });
+const occupant = z.object({ planting_id: int, crop: text, variety: maybe(text), since: text, count: maybe(int) });
+const cellView = z.object({
+  label: text, number: maybe(int), mount_type: maybe(code), layout_group: maybe(text), layout_row: maybe(int), layout_col: maybe(int), occupant: maybe(occupant),
+});
+const shelfView = z.object({
+  slug: text, name: text, kind: code, tier: maybe(int), wall: maybe(text), display_order: maybe(int), label_short: maybe(text),
+  water_lines: list(z.object({ line_id: text, name: text, note: maybe(text) })), plantings: list(occupant), cells: list(cellView),
+});
+const locations = z.object({
+  zones: z.array(z.object({ slug: text, name: text, plantings: list(occupant), shelves: list(shelfView) })),
+  cell_count: int, occupied_cells: int, active_plantings: int, server_time: text,
+});
+const positionHistory = z.object({
+  label: text, zone: text, shelf: text,
+  items: z.array(z.object({ planting_id: int, crop: text, variety: maybe(text), since: text, until: maybe(text), count: maybe(int) })),
+});
+const cropCatalog = z.object({ items: z.array(z.object({ slug: text, name: text, category: maybe(text) })) });
+const resolution = z.object({
+  places: z.array(z.object({ zone: text, shelf: maybe(text), cell: maybe(text) })), cells: z.array(text), where: text, at: text,
+  conflicts: list(z.object({ cell: text, planting_id: int, crop: text, since: text, until: maybe(text) })),
+});
 
 // ---------------------------------------------------------------------------------------------------- parsers
 export type Parser<T> = (value: unknown) => T | null;
@@ -344,13 +388,20 @@ export const parseCommand: Parser<Command> = parser(command);
 export const parseLinesUpdated: Parser<LinesUpdated> = parser(linesUpdated);
 export const parseMinutesReport: Parser<MinutesReport> = parser(minutesReport);
 export const parseRunPage: Parser<RunPage> = parser(runPage);
+export const parseLocations: Parser<Locations> = parser(locations);
+export const parsePlantingList: Parser<PlantingList> = parser(plantingList);
+export const parsePlanting: Parser<Planting> = parser(planting);
+export const parsePlantingDetail: Parser<PlantingDetail> = parser(plantingDetail);
+export const parsePositionHistory: Parser<PositionHistory> = parser(positionHistory);
+export const parseCropCatalog: Parser<CropCatalog> = parser(cropCatalog);
+export const parseResolution: Parser<Resolution> = parser(resolution);
 // The BFF's own calls and the probes; the browser never makes these.
 export const parseSessionToken: Parser<SessionToken> = parser(sessionToken);
 export const parseReadiness: Parser<Readiness> = parser(readiness);
 export const parseHealth: Parser<Health> = parser(health);
 
 // ---------------------------------------------------------------------------------------------------- operations
-type Method = "GET" | "PUT" | "POST" | "DELETE";
+type Method = "GET" | "PUT" | "PATCH" | "POST" | "DELETE";
 type Entry<M extends Method, P extends keyof paths, F extends Parser<unknown> | null> = { readonly method: M; readonly path: P; readonly parse: F };
 const op = <M extends Method, P extends keyof paths, F extends Parser<unknown> | null>(method: M, path: P, parse: F): Entry<M, P, F> => ({ method, path, parse });
 
@@ -387,6 +438,17 @@ export const OPERATIONS = {
   "API-IRR-11": op("GET", "/v1/irrigation/runs", parseRunPage),
   "API-IRR-12": op("POST", "/v1/equipment/override", parseCommand),
   "API-IRR-13": op("POST", "/v1/irrigation/clear-fault", parseCommand),
+  "API-CROP-01": op("GET", "/v1/crops/locations", parseLocations),
+  "API-CROP-02": op("GET", "/v1/crops/plantings", parsePlantingList),
+  "API-CROP-03": op("GET", "/v1/crops/plantings/{planting_id}", parsePlantingDetail),
+  "API-CROP-04": op("GET", "/v1/crops/positions/{label}/history", parsePositionHistory),
+  "API-CROP-05": op("GET", "/v1/crops/catalog", parseCropCatalog),
+  "API-CROP-06": op("GET", "/v1/crops/resolve", parseResolution),
+  "API-CROP-07": op("POST", "/v1/crops/plantings", parsePlanting),
+  "API-CROP-08": op("POST", "/v1/crops/plantings/{planting_id}/move", parsePlanting),
+  "API-CROP-09": op("POST", "/v1/crops/plantings/{planting_id}/harvest", parsePlanting),
+  "API-CROP-10": op("POST", "/v1/crops/plantings/{planting_id}/remove", parsePlanting),
+  "API-CROP-11": op("PATCH", "/v1/crops/plantings/{planting_id}", parsePlanting),
 } as const;
 type Table = typeof OPERATIONS;
 export type ApiOperationId = keyof Table;
@@ -399,7 +461,7 @@ void tableMatchesContract;
 
 type IdsBy<M extends Method> = { [K in ApiOperationId]: Table[K]["method"] extends M ? K : never }[ApiOperationId];
 export type ReadOperationId = IdsBy<"GET">;
-export type WriteOperationId = IdsBy<"PUT" | "POST" | "DELETE">;
+export type WriteOperationId = IdsBy<"PUT" | "PATCH" | "POST" | "DELETE">;
 export type Parsed<K extends ApiOperationId> = Table[K]["parse"] extends Parser<infer T> ? T : null;
 type Part<T> = [NonNullable<T>] extends [never] ? Record<never, never> : NonNullable<T>;
 /** Path and query parameters in one object, typed from the generated operation. */

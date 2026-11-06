@@ -680,12 +680,37 @@ def sealed_sql_289():
     )
 
 
+BAND_COMPLIANCE_MIGRATION = (
+    290,
+    "290-band-compliance.sql",
+    "557d8d03a61a284e05e1b9bc26db7e3748898531ea7b80f0a6b4e458c922e6be",
+)
+# daily_band_compliance, its functions and the scorecard view are verdify's; the one EXECUTE goes to the
+# matview-refresh duty in its own schema, which neither ordinary login nor an MCP role can use. All three
+# seals stay 289's. The rolled-back native qualification measures them.
+SUCCESSOR_290 = SUCCESSOR_289
+
+
+def sealed_sql_290():
+    # Keep every 289 predicate and bind the exact 290 runner stamp.
+    predecessor = sealed_sql_289()
+    current = seal_profile_sql(289, SUCCESSOR_289)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(290, SUCCESSOR_290), 1)
+        + " AND "
+        + ledger_row_sql(*BAND_COMPLIANCE_MIGRATION)
+        + ")"
+    )
+
+
 CROP_PLANTINGS_MIGRATION = (
     293,
     "293-crop-plantings.sql",
     "8359c00683afc8f14f7c1034e01925d189d752825f243f7a5cb67c0608eac5ab",
 )
-# 293's layout columns, crop_occupancy and grants move all three seals. 290, 291 and 292 land first and this
+# 293's layout columns, crop_occupancy and grants move all three seals. 291 and 292 land first and this
 # re-chains from the newest of them. Until the rolled-back native qualification measures 293, these are 289's
 # seals as stand-ins (tests/fixtures/293-crop-plantings-native-qualification.json).
 SUCCESSOR_293 = dict(SUCCESSOR_289)
@@ -739,6 +764,8 @@ def sealed_sql():
         + sealed_sql_288()
         + " OR "
         + sealed_sql_289()
+        + " OR "
+        + sealed_sql_290()
         + " OR "
         + sealed_sql_293()
         + ")"

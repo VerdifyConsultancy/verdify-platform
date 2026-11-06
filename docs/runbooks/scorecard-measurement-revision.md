@@ -27,14 +27,13 @@ case does not establish that such a row reaches the current live loop.
 
 ## Reproduction and evidence preservation
 
-Run from the repository root:
+Migration 290 (#1358) retired the Python writer block this audit executed: `daily_summary`'s
+compliance and stress columns are now copies of `daily_band_compliance`, which grades 5-minute
+buckets against the band the controller served. `scripts/scorecard_measurement_audit.py` and its
+test went with the block; the receipts below stay as the record of the legacy writer. To re-run the
+audit, check out a revision before 290.
 
-```sh
-python scripts/scorecard_measurement_audit.py --check planning/evidence/scorecard-writer-counterexamples-observed-minute-20260905.json
-python -m pytest tests/test_scorecard_measurement_audit.py
-```
-
-The check verifies baseline reproduction, **not acceptance of these behaviors**.
+The check verified baseline reproduction, **not acceptance of these behaviors**.
 The original receipt is retained unchanged. The observed-minute extension adds
 an independent writer call outside that legacy block; its newer receipt has
 the updated whole-file hash but the same executed AST and nine legacy results.

@@ -91,11 +91,13 @@ class AlertResolve(BaseModel):
 
 
 class LightSwitch(BaseModel):
-    """API-20's optional body."""
+    """API-20's optional body: a reason, and how many minutes the manual switch lasts before the light goes back to
+    automatic (``lights.MANUAL_MINUTES`` when left out, #1335)."""
 
     model_config = ConfigDict(extra="forbid")
 
     reason: str = Field(default=None, max_length=REASON_MAX_LENGTH)
+    minutes: int = Field(default=lights.MANUAL_MINUTES, ge=1, le=lights.MAX_MANUAL_MINUTES, strict=True)
 
 
 NO_NOTE = AlertAck()
@@ -175,14 +177,16 @@ async def switch_light(
     state: lights.LightState,
     body: LightSwitch = NO_REASON,
 ) -> JSONResponse:
-    """Turn a grow light on or off through verdify-setpoint-server, with one ``activity_log`` row for the attempt. A
-    replayed key returns the stored result, a 503 included, and calls nothing, so a retry after a 503 sends a new key.
-    The call and its row hold the light's lock, so a Back to automatic resync never switches the light at the same
-    time; the press waits at most ``light_resync.LOCK_WAIT_S`` for it and then goes ahead."""
+    """Turn a grow light on or off through verdify-setpoint-server for ``minutes`` (15 by default), with one
+    ``activity_log`` row for the attempt; when the minutes are up the operator API's ``light_timer`` sends the
+    controller's intent, so the light is back on automatic. A replayed key returns the stored result, a 503 included,
+    and calls nothing, so a retry after a 503 sends a new key. The call and its row hold the light's lock, so a Back to
+    automatic resync or the timer never switches the light at the same time; the press waits at most
+    ``light_resync.LOCK_WAIT_S`` for it and then goes ahead."""
     actor = request.state.actor
-    written = await lights.stored(conn, actor, light, state, body.reason, key)
+    written = await lights.stored(conn, actor, light, state, body.reason, key, minutes=body.minutes)
     if written is None:
         async with light_resync.commanding(request.app, conn, light):
             result = await setpoint_server.switch(request.app.state.settings.setpoint_server_url, light, state)
-            written = await lights.record(conn, actor, light, state, result, body.reason, key)
+            written = await lights.record(conn, actor, light, state, result, body.reason, key, minutes=body.minutes)
     return _light_answer(request, written)

@@ -5,6 +5,9 @@ import { dayTitle, formatValue, localDayStart } from "../lib/format";
 import { LINES, lineById } from "../lib/lines";
 import type { WaterUse } from "../lib/operator-api";
 import { causeRank, causeToken, causeWords } from "./causes";
+import { lineToken } from "./palette";
+
+export { lineToken };
 import { dayCsvFilename, tableCsv } from "./csv";
 import { CsvLink, DataTable, type DataTableBlock } from "./data-table";
 import type { ChartColors, PaintTarget } from "./draw";
@@ -61,12 +64,6 @@ export type WaterModel = {
 };
 
 const DAY = 86_400;
-const LINE_TOKENS: Readonly<Record<string, string>> = { drip: "--eq-water", fert_drip: "--eq-fert", fert_mister: "--eq-fert", master: "--eq-master", mister: "--eq-mister", fog: "--eq-fog" };
-/** A line's own token by its kind (#1127); a line the register does not know takes the "cause unknown" colour. */
-export function lineToken(id: string): string {
-  const line = lineById(id);
-  return line ? LINE_TOKENS[line.kind] ?? "--c-bound" : "--c-bound";
-}
 const lineRank = (id: string) => {
   const rank = LINES.findIndex((line) => line.id === id);
   return rank < 0 ? LINES.length : rank;

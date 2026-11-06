@@ -155,7 +155,7 @@ test("a viewer gets the board's words and no light control; with changes switche
   chartStubs();
   // Main is off in automatic; Grow differs from its controller, so it is overridden: each its own buttons, all disabled.
   await load({ fixture: ["writes-off", "grow-lights-differ"] }, { writesEnabled: false });
-  for (const [key, names] of [["grow_light_main", ["Turn on Main"]], ["grow_light_grow", ["Back to automatic Grow", "Turn on Grow"]]] as const) {
+  for (const [key, names] of [["grow_light_main", ["Turn on 15 min Main"]], ["grow_light_grow", ["Back to automatic Grow", "Turn on 15 min Grow"]]] as const) {
     const buttons = within(row(key)).getAllByRole("button");
     expect(buttons.map((node) => text(node)), key).toEqual(names);
     for (const node of buttons) expect((node as HTMLButtonElement).disabled, key).toBe(true);
@@ -171,7 +171,7 @@ test("each light links to its Activity log beside its automatic switch's setting
   expect([...row("grow_light_main").querySelectorAll(".light-auto-row .light-links a")].map((node) => text(node))).toEqual(["Automation setting of Main›", "Activity of Main›"]);
   expect(document.querySelectorAll(".light-actions a")).toHaveLength(0);
   const buttons = [...document.querySelectorAll<HTMLElement>(".light-actions button")];
-  expect(buttons.map((node) => text(node))).toEqual(["Turn on Main", "Back to automatic Grow", "Turn on Grow"]);
+  expect(buttons.map((node) => text(node))).toEqual(["Turn on 15 min Main", "Back to automatic Grow", "Turn on 15 min Grow"]);
   for (const node of buttons) {
     expect(node.className).toContain("btn-wide");
     expect(node.getAttribute("data-write-control")).toBe("true");
@@ -195,15 +195,19 @@ test("a light offers the buttons its state calls for: the switch to its other st
 
   const api = await load({ fixture: "lights-confirmed" });
   const shown = () => within(row("grow_light_main")).queryAllByRole("button").map((node) => text(node));
-  expect(shown()).toEqual(["Turn on Main"]);
+  expect(shown()).toEqual(["Turn on 15 min Main"]);
+  const timed = () => row("grow_light_main").querySelector("[data-light-timed]")?.textContent ?? null;
+  expect(timed()).toBeNull();
   press("grow_light_main", /^Turn on/);
   await advance(0);
   // Reading back: both switches, the pressed one waiting.
-  expect(shown()).toEqual(["Turn on Main", "Turn off Main"]);
+  expect(shown()).toEqual(["Turn on 15 min Main", "Turn off 15 min Main"]);
   await tick(5000);
   // Lutron on, the controller off: overridden by hand.
   expect(state("grow_light_main")).toBe("Off (controller) · Lutron On Differ");
-  expect(shown()).toEqual(["Back to automatic Main", "Turn off Main"]);
+  expect(shown()).toEqual(["Back to automatic Main", "Turn off 15 min Main"]);
+  // A manual switch is timed like the Fans burst (#1335): API-20's default 15 min, so the page sends no minutes.
+  expect(timed()).toBe("A Turn on or Turn off lasts 15 min, then the light goes back to automatic");
   expect(lightWrites(api)).toEqual([["/api/v1/equipment/lights/main/on", null]]);
 });
 
