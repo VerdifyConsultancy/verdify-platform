@@ -27,6 +27,8 @@ import GraphsZones from "./routes/graphs.zones";
 import GraphsLighting from "./routes/graphs.lighting";
 import Now from "./routes/now";
 import Plan from "./routes/plan";
+import PlannerExperiments from "./routes/planner-experiments";
+import PlannerHistory from "./routes/planner-history";
 import Settings from "./routes/settings";
 import Water from "./routes/water";
 import WaterBoard from "./routes/water-board";
@@ -50,8 +52,10 @@ const CHILDREN = [
   { path: "plan", Component: Plan },
   { path: "equipment", Component: Equipment },
   { path: "band", Component: Band },
+  { path: "planner/history", Component: PlannerHistory },
+  { path: "planner/experiments", Component: PlannerExperiments },
 ];
-const TESTED = ["/", "/water", "/water/schedules", "/water/history", "/crops", "/crops/history", "/graphs", "/graphs/zones", "/graphs/lighting", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/plan", "/equipment", "/band"];
+const TESTED = ["/", "/water", "/water/schedules", "/water/history", "/crops", "/crops/history", "/graphs", "/graphs/zones", "/graphs/lighting", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/band", "/plan", "/equipment", "/planner/history", "/planner/experiments"];
 
 /** The page's server render at `instant`, its text and tags without attributes. */
 function serverText(path: string, instant: string): string {

@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: MIT
 /**
- * The information architecture of redesign §2.1 (D-UX-01): six sections in one order at every width, Now · Water ·
- * Crops · Graphs · Activity · Control, each with its views (Crops is the sixth, #1330, Jason 2026-11-05). The header's nav, the phone bar, a page's tabs, its breadcrumb and
- * its document title all read this one model, so a label, a path or a title changes in one place. A section owns every
- * path under its views (weather's `SECTIONS` model): Control owns `/settings`, `/band` (#1334), `/plan` and `/equipment`, which keep
- * their paths so drawer and banner links and bookmarks keep working.
+ * The information architecture of redesign §2.1 (D-UX-01, as Jason changed it on 2026-11-05): the sections in one order
+ * at every width, Now · Water · Crops · Graphs · Activity · Control · Planner, each with its views (Crops, #1330). The header's nav, the phone
+ * bar, a page's tabs, its breadcrumb and its document title all read this one model, so a label, a path or a title
+ * changes in one place. A section owns every path under its views (weather's `SECTIONS` model) and its `aliases`:
+ * Control owns `/settings`, `/band` (#1334) and `/equipment`; Planner (#1361) owns `/plan`, which keeps its path so drawer and banner
+ * links and bookmarks keep working, `/planner/*`, and `/planner` itself, which redirects to Plan.
  */
 
-export type SectionId = "now" | "water" | "crops" | "graphs" | "activity" | "control";
+export type SectionId = "now" | "water" | "crops" | "graphs" | "activity" | "control" | "planner";
 export type ViewId =
   | "now"
   | "water-today" | "water-schedules" | "water-history"
   | "crops-map" | "crops-history"
   | "graphs-climate" | "graphs-zones" | "graphs-lighting" | "graphs-statistics"
   | "activity-alerts" | "activity-log"
-  | "control-settings" | "control-band" | "control-plan" | "control-equipment";
+  | "control-settings" | "control-band" | "control-equipment"
+  | "planner-plan" | "planner-history" | "planner-experiments";
 
 export type View = {
   readonly id: ViewId;
@@ -32,6 +34,8 @@ export type Section = {
   readonly to: string;
   /** The views, the default first; a section with one view shows no tabs. */
   readonly views: readonly View[];
+  /** Other paths it owns, each a redirect to one of its views (`/planner`). */
+  readonly aliases?: readonly string[];
 };
 
 const view = (section: SectionId, id: ViewId, tab: string, title: string, path: string): View => ({ id, section, tab, title, path });
@@ -69,8 +73,14 @@ export const SECTIONS: readonly Section[] = [
     id: "control", label: "Control", to: "/settings", views: [
       view("control", "control-settings", "Settings", "Settings", "/settings"),
       view("control", "control-band", "Band", "Band", "/band"),
-      view("control", "control-plan", "Plan", "Plan", "/plan"),
       view("control", "control-equipment", "Equipment", "Equipment", "/equipment"),
+    ],
+  },
+  {
+    id: "planner", label: "Planner", to: "/plan", aliases: ["/planner"], views: [
+      view("planner", "planner-plan", "Plan", "Plan", "/plan"),
+      view("planner", "planner-history", "History", "Plan history", "/planner/history"),
+      view("planner", "planner-experiments", "Experiments", "Experiments", "/planner/experiments"),
     ],
   },
 ];
@@ -95,7 +105,7 @@ const under = (base: string, path: string) => path === base || path.startsWith(`
 export function sectionFor(path: string): Section | null {
   const at = normalPath(path);
   if (at === "/") return SECTIONS[0];
-  return SECTIONS.slice(1).find((section) => section.views.some((item) => under(item.path, at))) ?? null;
+  return SECTIONS.slice(1).find((section) => section.views.some((item) => under(item.path, at)) || section.aliases?.includes(at)) ?? null;
 }
 
 /** The view at `path`: the longest view path it is at or under ("/graphs/zones" is Zones, never Climate). */
@@ -105,7 +115,7 @@ export function viewFor(path: string): View | null {
   if (!section) return null;
   if (section.id === "now") return section.views[0];
   const matches = section.views.filter((item) => under(item.path, at)).sort((a, b) => b.path.length - a.path.length);
-  return matches[0] ?? null;
+  return matches[0] ?? (section.aliases?.includes(at) ? section.views[0] : null);
 }
 
 /**

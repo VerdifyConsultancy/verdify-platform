@@ -25,6 +25,8 @@ import GraphZones from "../routes/graphs.zones";
 import GraphsLighting from "../routes/graphs.lighting";
 import Now from "../routes/now";
 import Plan from "../routes/plan";
+import PlannerExperiments from "../routes/planner-experiments";
+import PlannerHistory from "../routes/planner-history";
 import Settings from "../routes/settings";
 import Band from "../routes/band";
 import WaterRoute from "../routes/water";
@@ -50,6 +52,7 @@ const SCREENS = [
   ["/", Now], ["/water", WaterBoard], ["/water/schedules", WaterSchedules], ["/water/history", WaterHistory], ["/crops", CropsMap], ["/crops/history", CropsHistory],
   ["/graphs", Graphs], ["/graphs/zones", GraphZones],
   ["/graphs/lighting", GraphsLighting], ["/graphs/statistics", Statistics], ["/activity", Activity], ["/activity/log", ActivityLog], ["/settings", Settings], ["/band", Band], ["/plan", Plan], ["/equipment", Equipment],
+  ["/planner/history", PlannerHistory], ["/planner/experiments", PlannerExperiments],
 ] as const;
 const WATER_VIEWS: readonly string[] = ["/water", "/water/schedules", "/water/history"];
 const CROPS_VIEWS: readonly string[] = ["/crops", "/crops/history"];
@@ -112,7 +115,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
-test("the routes: the six sections' views, the scorecard's redirect, SCR-09 through /auth/* and a catch-all; no /more or /plants", () => {
+test("the routes: the seven sections' views, the scorecard's and Planner's redirects, SCR-09 through /auth/* and a catch-all; no /more or /plants", () => {
   // A layout's own path is its index child's: Water's three views nest under routes/water.tsx.
   type Entry = { path?: string; index?: boolean; children?: Entry[] };
   const leaves = (entries: readonly Entry[], base = ""): string[] => entries.flatMap((entry) => {
@@ -122,7 +125,7 @@ test("the routes: the six sections' views, the scorecard's redirect, SCR-09 thro
   const paths = leaves(routes as Entry[]);
   expect(paths).toEqual([
     "/", "/water", "/water/schedules", "/water/history", "/crops", "/crops/history", "/graphs", "/graphs/zones", "/graphs/lighting", "/graphs/statistics", "/graphs/scorecard", "/activity", "/activity/log",
-    "/settings", "/band", "/plan", "/equipment", "/auth/*", "/*",
+    "/settings", "/band", "/equipment", "/plan", "/planner", "/planner/history", "/planner/experiments", "/auth/*", "/*",
   ]);
   expect(paths).not.toContain("/plants");
   expect(paths).not.toContain("/more");
@@ -175,8 +178,8 @@ test("the header: lockup, the six sections with the count, the account button; t
   expect(brand.querySelectorAll(".brand-leaf, .brand-mark, .brand-dot")).toHaveLength(3);
   expect(text(brand)).toBe("erdify · Dashboard");
   const sections = within(nav("Sections")).getAllByRole("link");
-  expect(sections.map(text)).toEqual(["Now", "Water", "Crops", "Graphs", "Activity 2 open alerts", "Control"]);
-  expect(sections.map((link) => link.getAttribute("href"))).toEqual(["/", "/water", "/crops", "/graphs", "/activity", "/settings"]);
+  expect(sections.map(text)).toEqual(["Now", "Water", "Crops", "Graphs", "Activity 2 open alerts", "Control", "Planner"]);
+  expect(sections.map((link) => link.getAttribute("href"))).toEqual(["/", "/water", "/crops", "/graphs", "/activity", "/settings", "/plan"]);
   expect(sections.filter((link) => link.getAttribute("aria-current") === "page").map(text)).toEqual(["Activity 2 open alerts"]);
   // The count is a pill filled by the worst open severity; the account button holds the role pill and the name.
   expect(nav("Sections").querySelector(".nav-count")?.getAttribute("data-severity")).toBe("warning");
@@ -195,17 +198,17 @@ test("the header: lockup, the six sections with the count, the account button; t
   expect(within(footer).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["https://graphs.verdify.ai/", "https://lab.verdify.ai/", "/fonts/OFL-sans.txt", "/fonts/OFL-mono.txt"]);
 });
 
-test("the phone bar holds the same six, each an icon over its label; Control owns Settings, Plan and Equipment", async () => {
+test("the phone bar holds the same seven, each an icon over its label; Control owns Settings and Equipment, Planner owns Plan", async () => {
   serve("alerts-merged");
-  for (const path of ["/settings", "/plan", "/equipment"]) {
+  for (const [path, section] of [["/settings", "Control"], ["/equipment", "Control"], ["/plan", "Planner"], ["/planner/history", "Planner"], ["/planner/experiments", "Planner"]] as const) {
     mount(path); await advance(0);
     const tabs = within(nav("Sections, phone")).getAllByRole("link");
-    expect(tabs.map(text), path).toEqual(["Now", "Water", "Crops", "Graphs", "Activity 2 open alerts", "Control"]);
-    expect(tabs.map((tab) => tab.getAttribute("href"))).toEqual(["/", "/water", "/crops", "/graphs", "/activity", "/settings"]);
-    expect(tabs.filter((tab) => tab.getAttribute("aria-current") === "page").map(text), path).toEqual(["Control"]);
-    expect(tabs.map((tab) => tab.querySelectorAll("svg.tab-icon[aria-hidden=true]").length)).toEqual([1, 1, 1, 1, 1, 1]);
+    expect(tabs.map(text), path).toEqual(["Now", "Water", "Crops", "Graphs", "Activity 2 open alerts", "Control", "Planner"]);
+    expect(tabs.map((tab) => tab.getAttribute("href"))).toEqual(["/", "/water", "/crops", "/graphs", "/activity", "/settings", "/plan"]);
+    expect(tabs.filter((tab) => tab.getAttribute("aria-current") === "page").map(text), path).toEqual([section]);
+    expect(tabs.map((tab) => tab.querySelectorAll("svg.tab-icon[aria-hidden=true]").length)).toEqual([1, 1, 1, 1, 1, 1, 1]);
     const current = within(nav("Sections")).getAllByRole("link").filter((link) => link.getAttribute("aria-current") === "page");
-    expect(current.map(text), path).toEqual(["Control"]);
+    expect(current.map(text), path).toEqual([section]);
     cleanup();
   }
   // Sub-views mark their own section: the log is Activity, Statistics is Graphs.
@@ -231,9 +234,10 @@ test("every page has a page header: the eyebrow names the section, the h1 the vi
     "/water/history": ["Water", "Water history", ["Today", "Schedules", "History"]], "/graphs": ["Graphs", "Climate", ["Climate", "Zones", "Lighting", "Statistics"]],
     "/graphs/zones": ["Graphs", "Zones", ["Climate", "Zones", "Lighting", "Statistics"]], "/graphs/lighting": ["Graphs", "Lighting", ["Climate", "Zones", "Lighting", "Statistics"]], "/graphs/statistics": ["Graphs", "Statistics", ["Climate", "Zones", "Lighting", "Statistics"]],
     "/activity": ["Activity", "Alerts", ["Alerts", "Log"]], "/activity/log": ["Activity", "Activity log", ["Alerts", "Log"]],
-    "/settings": ["Control", "Settings", ["Settings", "Band", "Plan", "Equipment"]], "/plan": ["Control", "Plan", ["Settings", "Band", "Plan", "Equipment"]],
-    "/equipment": ["Control", "Equipment", ["Settings", "Band", "Plan", "Equipment"]],
-    "/band": ["Control", "Band", ["Settings", "Band", "Plan", "Equipment"]],
+    "/settings": ["Control", "Settings", ["Settings", "Band", "Equipment"]], "/equipment": ["Control", "Equipment", ["Settings", "Band", "Equipment"]],
+    "/band": ["Control", "Band", ["Settings", "Band", "Equipment"]],
+    "/plan": ["Planner", "Plan", ["Plan", "History", "Experiments"]], "/planner/history": ["Planner", "Plan history", ["Plan", "History", "Experiments"]],
+    "/planner/experiments": ["Planner", "Experiments", ["Plan", "History", "Experiments"]],
   };
   for (const [path, [eyebrow, h1, tabs]] of Object.entries(expected)) {
     mount(path); await advance(0);

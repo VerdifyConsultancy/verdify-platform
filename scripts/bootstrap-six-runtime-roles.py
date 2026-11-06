@@ -764,6 +764,107 @@ def sealed_sql_293():
     )
 
 
+CORTEX_PLANNER_MIGRATION = (
+    294,
+    "294-cortex-planner-shadow-storage.sql",
+    "99e1feb22a465bafb7adf5852fec5def47357a5b9cd6bd15314c93c02697bb5d",
+)
+# #1350: seal-preserving. No object 294 adds carries an api, ingestor, MCP or PUBLIC privilege, so every
+# seal keeps 293's value. Chained from 293; 294 and 296 ship in one PR, in that order.
+SUCCESSOR_294 = dict(SUCCESSOR_293)
+
+
+def sealed_sql_294():
+    # Keep every 293 predicate and bind the exact 294 runner stamp.
+    predecessor = sealed_sql_293()
+    current = seal_profile_sql(293, SUCCESSOR_293)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(294, SUCCESSOR_294), 1)
+        + " AND "
+        + ledger_row_sql(*CORTEX_PLANNER_MIGRATION)
+        + ")"
+    )
+
+
+KNOWLEDGE_EMBEDDINGS_MIGRATION = (
+    296,
+    "296-knowledge-embeddings-cortex.sql",
+    "aec163e31534e28d7ffd2e5b4bc0402819c8096c70d1d5ab28a804dec795d40d",
+)
+# #1351: knowledge_embeddings (halfvec 2560, Cortex embed.main) and its search function, SELECT and
+# EXECUTE for the MCP duty only. The MCP digest takes in both entries, so the MCP seal moves; neither
+# object carries an api, ingestor or PUBLIC entry, so both ordinary seals stay 294's. Chained from 294.
+# The rolled-back native qualification measured the MCP seal
+# (tests/fixtures/296-knowledge-embeddings-native-qualification.json).
+SUCCESSOR_296 = {**SUCCESSOR_294, "mcp": "984604e2c5e99ec801a752792373b53b1e817e5667b10ae35798da5c88eb0ef9"}
+
+
+def sealed_sql_296():
+    # Keep every 294 predicate and bind the exact 296 runner stamp with the MCP seal its grants move.
+    predecessor = sealed_sql_294()
+    current = seal_profile_sql(294, SUCCESSOR_294)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(296, SUCCESSOR_296), 1)
+        + " AND "
+        + ledger_row_sql(*KNOWLEDGE_EMBEDDINGS_MIGRATION)
+        + ")"
+    )
+
+
+GREENHOUSE_BRIEF_MIGRATION = (
+    301,
+    "301-greenhouse-brief.sql",
+    "24945842499e5d907d2c49ef4cbf4e57ada2f29b297c9744edd055421f7d0e1d",
+)
+# greenhouse_brief is written by the dashboard duty and read by the MCP duty; neither ordinary login reaches it,
+# so the api and ingestor seals stay 296's and the MCP seal moves. Chained from 296 (#1388); the rolled-back
+# native qualification measured the MCP seal (tests/fixtures/301-greenhouse-brief-native-qualification.json).
+SUCCESSOR_301 = {**SUCCESSOR_296, "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"}
+
+
+def sealed_sql_301():
+    # Keep every 296 predicate and bind the exact 301 runner stamp with the MCP seal its grant moves.
+    predecessor = sealed_sql_296()
+    current = seal_profile_sql(296, SUCCESSOR_296)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(301, SUCCESSOR_301), 1)
+        + " AND "
+        + ledger_row_sql(*GREENHOUSE_BRIEF_MIGRATION)
+        + ")"
+    )
+
+
+PLANNER_SECTION_MIGRATION = (
+    302,
+    "302-planner-section-reads.sql",
+    "a18aeb0588b5f4e56b7a78ce3dea7c592873b9fae54f0701c45f6d9bbbd8f3bf",
+)
+# The four Planner-section read views are verdify's, with SELECT for the dashboard duty only, which neither
+# ordinary login nor an MCP role holds. All three seals stay 301's; the rolled-back native qualification
+# confirmed it.
+SUCCESSOR_302 = SUCCESSOR_301
+
+
+def sealed_sql_302():
+    # Keep every 301 predicate and bind the exact 302 runner stamp.
+    predecessor = sealed_sql_301()
+    current = seal_profile_sql(301, SUCCESSOR_301)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(302, SUCCESSOR_302), 1)
+        + " AND "
+        + ledger_row_sql(*PLANNER_SECTION_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -804,6 +905,14 @@ def sealed_sql():
         + sealed_sql_291()
         + " OR "
         + sealed_sql_293()
+        + " OR "
+        + sealed_sql_294()
+        + " OR "
+        + sealed_sql_296()
+        + " OR "
+        + sealed_sql_301()
+        + " OR "
+        + sealed_sql_302()
         + ")"
     )
 

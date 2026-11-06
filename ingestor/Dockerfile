@@ -69,6 +69,9 @@ COPY ingestor/ /app/ingestor/
 COPY firmware/lib/greenhouse_solar.h /app/firmware/lib/greenhouse_solar.h
 COPY firmware/greenhouse/controls.yaml /app/firmware/greenhouse/controls.yaml
 COPY verdify_schemas/ /app/verdify_schemas/
+# The Cortex planner (#1350) runs on this image as its own Deployment
+# (components/cortex-planner, `python -m cortex_planner.run`); the ingestor never imports it.
+COPY cortex_planner/ /app/cortex_planner/
 
 # B4: the forecast-action engine is launched as a subprocess by
 # ingestor/tasks/forecast.py:forecast_action_engine() every 900s. It must exist
@@ -78,6 +81,8 @@ COPY verdify_schemas/ /app/verdify_schemas/
 # verdify_schemas/ (its only repo import) already lives, so
 # its imports resolve at this in-container location.
 COPY scripts/ /app/scripts/
+# scripts/embed-corpora.py (the verdify-knowledge-embed Job) reads models.embedding (#1351).
+COPY config/ai.yaml /app/config/ai.yaml
 
 # k3s cleanup (#339/#210 + #43/#400): docs/ is runtime for TWO consumers now.
 # (1) iris_planner.PLANNER_PLAYBOOK_PATH reads /app/docs/planner/greenhouse-playbook.md

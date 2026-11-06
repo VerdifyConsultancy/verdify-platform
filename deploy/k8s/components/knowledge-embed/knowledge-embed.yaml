@@ -1,0 +1,171 @@
+# verdify-knowledge-embed (#1351 row 2): embeds the knowledge corpora (lesson, plan,
+# site_doc, playbook, observation) from each source row's text with local Cortex
+# embed.main (2560 dims) into public.knowledge_embeddings (migration 296), which MCP
+# lessons_search and knowledge_search read. scripts/embed-corpora.py is resumable
+# (rows whose content_hash and embedding_model already match are skipped, and each
+# batch is written as soon as it returns), runs at most 4 batches of 16 in flight,
+# stops launching batches after --deadline-seconds and logs a progress line per batch.
+#
+# SUSPENDED: Argo never starts a run. After migration 296 and the release that carries
+# this script are live, trigger the one-shot re-embed (the full corpus is ~5.3K rows):
+#   kubectl -n verdify-prod create job --from=cronjob/verdify-knowledge-embed verdify-knowledge-embed-initial
+#   kubectl -n verdify-prod logs -f job/verdify-knowledge-embed-initial
+# A run that hits its deadline exits 1 and a second Job resumes where it stopped.
+# Unsuspend later only to keep new lessons/plans/docs embedded incrementally.
+#
+# Identity: the owner DB login (verdify-app-secrets), because it writes a table no
+# runtime role may write and reads the five source tables; the embed.main-only Cortex
+# key (verdify-embedding-cortex, key api_key.txt; KSOPS adoption jvallery/agents#6079).
+# Egress: DNS, verdify-db:5432 and traefik-apps 192.168.7.10:443 (cortex.vallery.net)
+# only; it is excluded from egress-deny-management in overlays/prod.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-knowledge-embed
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: knowledge-embed
+spec:
+  schedule: "17 10 * * *"
+  suspend: true
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  startingDeadlineSeconds: 600
+  jobTemplate:
+    spec:
+      # Resumable: a retry continues from the rows already written.
+      backoffLimit: 2
+      activeDeadlineSeconds: 3600
+      ttlSecondsAfterFinished: 604800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/part-of: verdify
+            app.kubernetes.io/component: knowledge-embed
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000   # appuser in ingestor/Dockerfile
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          imagePullSecrets:
+            - name: zot-origin-cluster-pull
+          containers:
+            - name: embed
+              # Canonical image-name key only: the overlays/prod images and release-pins
+              # transformers rewrite it to the ingestor release digest on the zot origin.
+              image: ghcr.io/verdifyconsultancy/verdify-ingestor
+              imagePullPolicy: IfNotPresent
+              workingDir: /app/ingestor
+              command: ["python3", "/app/scripts/embed-corpora.py"]
+              args: ["--concurrency", "4", "--deadline-seconds", "3300"]
+              envFrom:
+                - configMapRef:
+                    name: verdify-config   # DB_HOST, DB_PORT, DB_NAME, DB_USER (verdify)
+              env:
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: verdify-app-secrets
+                      key: POSTGRES_PASSWORD
+                - name: VERDIFY_EMBEDDING_KEY_FILE
+                  value: /vembed/api_key.txt
+                - name: PYTHONUNBUFFERED
+                  value: "1"
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 768Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                runAsNonRoot: true
+                capabilities:
+                  drop: ["ALL"]
+                seccompProfile:
+                  type: RuntimeDefault
+              volumeMounts:
+                - name: embedding-key
+                  mountPath: /vembed
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: embedding-key
+              secret:
+                secretName: verdify-embedding-cortex
+                defaultMode: 0440
+            - name: tmp
+              emptyDir:
+                sizeLimit: 64Mi
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: verdify-knowledge-embed-egress
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: knowledge-embed
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: knowledge-embed
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: db
+      ports:
+        - protocol: TCP
+          port: 5432
+    # cortex.vallery.net resolves to traefik-apps in cluster DNS.
+    - to:
+        - ipBlock:
+            cidr: 192.168.7.10/32
+      ports:
+        - protocol: TCP
+          port: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-db-from-knowledge-embed
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: knowledge-embed
+      ports:
+        - protocol: TCP
+          port: 5432

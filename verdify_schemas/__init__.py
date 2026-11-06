@@ -100,6 +100,8 @@ from .crops import (
 )
 from .daily import ComplianceZoneWeightRow, DailySummaryRow, DailyZoneComplianceRow
 from .external import (
+    CortexEmbeddingDatum,
+    CortexEmbeddingResponse,
     HAEntityState,
     OpenMeteoForecastResponse,
     OpenMeteoHourly,
@@ -402,6 +404,8 @@ __all__ = [
     "CropStageTarget",
     "CropUpdate",
     "ComplianceZoneWeightRow",
+    "CortexEmbeddingDatum",
+    "CortexEmbeddingResponse",
     "CropVaultFrontmatter",
     "DailyOscillation",
     "DailyOscillationSummary",

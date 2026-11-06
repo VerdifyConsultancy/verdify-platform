@@ -35,6 +35,7 @@ from verdify_schemas.daily import (
 )
 from verdify_schemas.forecast import ForecastHour
 from verdify_schemas.forecast_ops import ForecastActionLog, ForecastActionRule
+from verdify_schemas.greenhouse_brief import GreenhouseBriefRow
 from verdify_schemas.irrigation import IrrigationCommandRow, IrrigationLedgerRow, IrrigationPushRow
 from verdify_schemas.lessons import PlannerLesson
 from verdify_schemas.mcp_responses import OUTCOME_COMPOSITE_METRICS, ScorecardResponse
@@ -220,6 +221,7 @@ DB_BACKED = [
     (ComplianceZoneWeightRow, "compliance_zone_weights"),
     (ForecastHour, "weather_forecast"),
     (AlertLogRow, "alert_log"),
+    (GreenhouseBriefRow, "greenhouse_brief"),
     (Crop, "crops"),
     (CropEvent, "crop_events"),
     (Observation, "observations"),

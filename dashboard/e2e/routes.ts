@@ -5,7 +5,7 @@
  */
 export const ROUTES = [
   "/", "/water", "/water/schedules", "/water/history", "/crops", "/crops/history", "/graphs", "/graphs/zones", "/graphs/lighting", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/band",
-  "/plan", "/equipment",
+  "/plan", "/equipment", "/planner/history", "/planner/experiments",
 ] as const;
 export type RoutePath = (typeof ROUTES)[number];
 
@@ -13,7 +13,7 @@ export type RoutePath = (typeof ROUTES)[number];
  * The paths app/routes.ts keeps only to redirect (redesign §2.1): each answers a redirect to `to` with its query, so the
  * suites walk `to` among ROUTES rather than the same page twice. layout.spec.ts checks each lands where it says.
  */
-export const REDIRECTS = [{ path: "/graphs/scorecard", to: "/graphs/statistics" }] as const;
+export const REDIRECTS = [{ path: "/graphs/scorecard", to: "/graphs/statistics" }, { path: "/planner", to: "/plan" }] as const;
 
 /**
  * The SCR-09 cards the root renders, with no nav, role pill or banner. Each has its status and its one heading. Sign-in

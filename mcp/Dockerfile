@@ -70,6 +70,8 @@ COPY --from=builder /install /usr/local
 COPY mcp/server.py ./mcp/server.py
 COPY verdify_schemas/ ./verdify_schemas/
 COPY verdify_services/ ./verdify_services/
+# models.embedding (Cortex embed.main) for lessons_search/knowledge_search (#1351).
+COPY config/ai.yaml ./config/ai.yaml
 RUN python -c "import verdify_services.activity"
 
 # Non-root (uid 1000). Handoff §3.2: MCP runs non-root.

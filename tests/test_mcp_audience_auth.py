@@ -81,6 +81,7 @@ AGENT_TOOLS = frozenset(
         "irrigation_status",
         "irrigation_schedule",
         "irrigation_history",
+        "get_greenhouse_snapshot",
         "irrigation_schedule_set",
         "irrigation_run",
         "irrigation_stop",
@@ -471,6 +472,8 @@ class TestAudienceMatrix:
                 "policy_template_propose",
                 "band_profile",
                 "band_profile_preview",
+                # #1346: Iris never reads the greenhouse snapshot (it is never an input to a plan).
+                "get_greenhouse_snapshot",
             }
             | PLANTING_TOOLS
         )
@@ -729,7 +732,7 @@ class TestListToolsAudienceFiltering:
     @pytest.mark.parametrize("mode", ["log", "enforce"])
     @pytest.mark.parametrize(
         ("audience", "token", "expected_count"),
-        [("iris", "tok-iris", 33), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 48)],
+        [("iris", "tok-iris", 33), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 49)],
     )
     def test_protocol_inventory_matches_exact_audience_allowlist(
         self, mcp_server, monkeypatch, mode, audience, token, expected_count

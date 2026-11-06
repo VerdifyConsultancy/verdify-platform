@@ -41,7 +41,7 @@
 # --sweep (#1181 step 4, #1186 step 1): reads only, as the viewer, so it runs at any time.
 #   - GET each served read through the BFF and expect 200: API-01 to API-07 (API-06 also with zone=south), API-09,
 #     API-12, API-13 (with its three reasons present), API-14, API-17, API-19 (zone_vpd_target_center_sm at the
-#     midpoint of its API-09 min and max), API-21, API-IRR-01, API-IRR-02, API-IRR-10 and API-IRR-11. A failure prints
+#     midpoint of its API-09 min and max), API-21, API-25 to API-27, API-IRR-01, API-IRR-02, API-IRR-10 and API-IRR-11. A failure prints
 #     the id and the status, so a read the dashboard login was never granted fails here as a 500, not on a screen.
 #   - API-IRR-10 reads 2025-08-05 to 2025-09-03, the first 30 days of wet-relay rows (irrigation §6.2), and each of
 #     those days must carry minutes, not no_data. The minutes begin there, so an earlier window reads no_data for good.
@@ -365,6 +365,9 @@ async function sweep(bff) {
     ["API-14", "/api/v1/alerts"],
     ["API-17", "/api/v1/activity?limit=50"],
     ["API-21", "/api/v1/water/daily?days=90"],
+    ["API-25", "/api/v1/planner/history?days=30"],
+    ["API-26", "/api/v1/planner/experiments"],
+    ["API-27", "/api/v1/planner/experiments/planner-ab-winter-2026"],
     ["API-IRR-01", "/api/v1/irrigation"],
     ["API-IRR-02", "/api/v1/irrigation/schedules?days=7&past_days=7"],
     [`API-IRR-10 with minutes on all ${MINUTES_DAYS} days, not no_data`, MINUTES_PATH, carriesMinutes],

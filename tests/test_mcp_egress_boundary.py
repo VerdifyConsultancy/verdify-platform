@@ -118,8 +118,11 @@ def test_only_declared_dns_database_and_fixed_relay_paths(rendered):
         x for x in rendered if x and x["kind"] == "NetworkPolicy" and x["metadata"]["name"] == "verdify-mcp-egress"
     )
     assert not allowed(p, "1.1.1.1", 443)
-    assert allowed(p, "10.42.1.4", 8081, pod_labels={"app.kubernetes.io/component": "outbound"})
-    assert not allowed(p, "10.42.1.4", 8082, pod_labels={"app.kubernetes.io/component": "outbound"})  # #1352
+    # #1351: embeddings go to local Cortex; #1352: no Slack. MCP reaches no verdify-outbound port.
+    for port in (8081, 8082):
+        assert not allowed(p, "10.42.1.4", port, pod_labels={"app.kubernetes.io/component": "outbound"})
+    assert allowed(p, "192.168.7.10", 443)
+    assert not allowed(p, "192.168.7.10", 80) and not allowed(p, "192.168.7.11", 443)
     assert not allowed(p, "10.42.1.4", 8083, pod_labels={"app.kubernetes.io/component": "outbound"})
     assert allowed(p, "10.42.1.2", 5432, pod_labels={"app.kubernetes.io/component": "db"})
     assert not allowed(p, "10.42.1.2", 5432, pod_labels={"app.kubernetes.io/component": "api"})

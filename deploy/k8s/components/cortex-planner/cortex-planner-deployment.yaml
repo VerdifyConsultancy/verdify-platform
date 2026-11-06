@@ -1,0 +1,115 @@
+# verdify-cortex-planner (#1350, #1366): one deterministic Cortex call per plan trigger.
+#
+# SHADOW: VERDIFY_PLANNER_MODE=shadow is the only mode this release accepts. The process reads the
+# planner duty's views (verdify_planner_runtime schema), builds the 16-section pack, calls Cortex
+# llm.primary.longctx once (retry once, repair once), and stores the pack, every attempt and the
+# validated proposal in planner_pack / planner_inference_runs with dispatched=false (a CHECK in
+# migration 294 refuses dispatched shadow rows). It never writes plan_journal, setpoint_plan or
+# setpoint_changes, and it is not a device writer. Hermes and verdify-planner keep running; the
+# cutover PR retires them.
+#
+# DB identity: the existing planner duty (verdify_planner_runtime_login, Secret
+# verdify-planner-runtime-db/password), which 294 grants only its own objects.
+# Cortex credential: Secret verdify-planner-cortex, key api_key.txt (Cortex identity limited to
+# llm.primary.longctx and llm.qwen38u.longctx; KSOPS adoption jvallery/agents#6079). The volume is
+# optional: without it the pod starts, logs FAIL CLOSED, raises one planner_failed alert and idles,
+# so a missing Secret never crash-loops the namespace.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-cortex-planner
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cortex-planner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: cortex-planner
+  strategy:
+    type: Recreate  # one runner: triggers are claimed by their attempt rows
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: cortex-planner
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: cortex-planner
+          image: ghcr.io/verdifyconsultancy/verdify-ingestor
+          workingDir: /app
+          command: ["python", "-m", "cortex_planner.run"]
+          envFrom:
+            - configMapRef:
+                name: verdify-config  # DB_HOST/DB_PORT/DB_NAME
+          env:
+            - name: PYTHONPATH
+              value: /app
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: DB_USER
+              value: "verdify_planner_runtime_login"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-planner-runtime-db
+                  key: password
+            - name: VERDIFY_PLANNER_MODE
+              value: "shadow"
+            - name: CORTEX_BASE_URL
+              value: "https://cortex.vallery.net/v1"
+            - name: CORTEX_API_KEY_FILE
+              value: /vcortex-planner/api_key.txt
+            - name: CORTEX_PLANNER_HEARTBEAT
+              value: /tmp/cortex-planner.alive
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "192Mi"
+            limits:
+              memory: "512Mi"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cortex-key
+              mountPath: /vcortex-planner
+              readOnly: true
+          livenessProbe:
+            # The loop touches the heartbeat every poll (30 s) and after every trigger; one Cortex
+            # call is bounded at 300 s, three attempts at most, so 20 minutes means a wedged loop.
+            exec:
+              command:
+                - python
+                - -c
+                - "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime('/tmp/cortex-planner.alive')<1200 else 1)"
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 3
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: cortex-key
+          secret:
+            secretName: verdify-planner-cortex
+            optional: true
+            defaultMode: 0400
+            items:
+              - key: api_key.txt
+                path: api_key.txt

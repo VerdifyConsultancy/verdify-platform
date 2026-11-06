@@ -25,12 +25,18 @@ resources:
   # the local-config ANNOTATION so it is EXCLUDED from build output (a
   # device-affecting HA token is never emitted). Real verdify-ha-token via SOPS.
   - ha-token.placeholder.yaml
+  # #1351: verdify-embedding-cortex (embed.main-only Cortex key) is live; this local-config
+  # placeholder only completes the render and never applies (KSOPS adoption jvallery/agents#6079).
+  - embedding-cortex.placeholder.yaml
   # PLACEHOLDER hermes gateway Secret for local build ONLY (#119 hermes-iris).
   # hermes-iris references verdify-hermes via envFrom.secretRef; this completes
   # the #30 contract surface so the prod build is lint-able. local-config
   # ANNOTATION -> EXCLUDED from build output (OpenAI key never emitted). Real
   # verdify-hermes via SOPS out-of-band. See hermes-secret.placeholder.yaml.
   - hermes-secret.placeholder.yaml
+  # PLACEHOLDER Cortex planner Secret (#1350), local-config ANNOTATION -> excluded from build
+  # output. Real verdify-planner-cortex/api_key.txt is live in verdify-prod (agents#6079 adopts it).
+  - planner-cortex-secret.placeholder.yaml
   # DEVICE WRITE PATH: the SINGLE egress allow letting the prod ingestor reach the
   # live device VLAN. See allow-ingestor-device-egress.yaml.
   - allow-ingestor-device-egress.yaml
@@ -114,6 +120,8 @@ components:
   # registration and exact source snapshot are staged on its archive PVC.
   - ../../components/winter-feasibility
   - ../../components/planner
+  # #1350 Cortex planner, SHADOW only: stores packs/attempts/proposals, dispatches nothing.
+  - ../../components/cortex-planner
   - ../../components/mqtt-broker
   # #118 verdify-setpoint-server — the grow-light writer + setpoint diagnostics.
   # PROD-ONLY: it is a DEVICE-AFFECTING writer (toggles the live grow lights via
@@ -143,6 +151,9 @@ components:
   # in the agents KSOPS lane; its login's password comes from the PreSync hook in
   # runtime-role-boundary. It is not a device writer.
   - ../../components/operator-api
+  # #1346 verdify-greenhouse-brief: the greenhouse snapshot on Now, written by the local Cortex model every
+  # 5 minutes as the dashboard login (verdify-api image, egress-local-only). Not a device writer.
+  - ../../components/greenhouse-brief
   # Gate 2 experiment credential activation. This remains non-actuating and
   # uses a one-container wave-2 hook while capability and active ID stay off.
   - ../../components/experiment-v2-credential-bootstrap
@@ -181,6 +192,9 @@ components:
   # ConfigMap does NOT touch the running ingestor; the mount + psql initContainer
   # ship in the gated ingestor patch (see PR / ingestor-gather-mount.patch.yaml).
   - ../../components/ingestor-gather-script
+  # #1351 row 2: suspended re-embed of the knowledge corpus into knowledge_embeddings
+  # (Cortex embed.main, migration 296). Argo never starts a run; see the component.
+  - ../../components/knowledge-embed
 
 patches:
   - path: source-owned-fields-ssa.patch.yaml
@@ -346,14 +360,15 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
     digest: sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a
-  # Hand-pinned grow-light writer: source 3c9d6ad8ae3b (#1088, HA_TOKEN_FILE), build-setpoint-server
-  # in agent-fleet-ci/verdify-platform-ci-tlpsc. Rollback: 21336cd82de4 (source cb21fd3d3295). The #399 HA call allowlist confines
+  # Hand-pinned grow-light writer: source 36c7630c7858 (night dry-out params in the tunable registry, #1385),
+  # build-setpoint-server in agent-fleet-ci/verdify-platform-ci-jrgfp. Rollback: a009c2a3be62 (source 3c9d6ad8ae3b,
+  # build verdify-platform-ci-tlpsc). The #399 HA call allowlist confines
   # this prod-only writer to the declared main/grow light switches.
   # hermes-agent is deliberately ABSENT from this transformer — its upstream
   # @sha256 is preserved inline in the component (NOT transformer-pinned).
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
-    digest: sha256:a009c2a3be621fda4080276a376a1d19428aadfea2b0131234fa0a97ba04fe6a
+    digest: sha256:6d2772f8776b80cdb4b13932653b39731775a58c4f03bba493910dd8f8cc2c05
   # S6 native public shares (21 approved): source 3a7df6e3bb73 (#1106 lineage).
   # S1 rebuild (#1109, apt upgrade: libbrotli1 +deb12u1): main build verdify-platform-ci-49vcb,
   # source fad3197c4e26.

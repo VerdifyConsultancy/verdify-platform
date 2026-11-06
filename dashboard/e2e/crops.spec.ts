@@ -75,9 +75,7 @@ test("an operator moves a planting from the selection, then harvests it from its
   const move = await fixtureRequests(request, "API-CROP-08");
   expect(move).toHaveLength(1);
   expect(move[0].body).toMatchObject({ to_positions: ["EAST-HYDRO-45..48"] });
-  await toolbar(page).getByRole("button", { name: "Clear" }).click();
-  await cell(page, "EAST-HYDRO-45").click();
-  await toolbar(page).getByRole("button", { name: "Planting details" }).click();
+  // A saved move returns to the planting's drawer, which offers Harvest… next.
   await dialog(page).getByRole("button", { name: "Harvest…" }).click();
   await dialog(page).getByLabel("Plants harvested (optional)").fill("4");
   await dialog(page).getByRole("button", { name: "Save harvest" }).click();

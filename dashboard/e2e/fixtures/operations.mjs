@@ -23,7 +23,9 @@ export const ROUTES = [
   ["API-10", "PUT", "/v1/settings/{param}"], ["API-11", "DELETE", "/v1/settings/{param}"], ["API-12", "GET", "/v1/settings/{param}/history"],
   ["API-13", "GET", "/v1/equipment"], ["API-14", "GET", "/v1/alerts"], ["API-15", "POST", "/v1/alerts/{id}/ack"],
   ["API-16", "POST", "/v1/alerts/{id}/resolve"], ["API-17", "GET", "/v1/activity"], ["API-19", "GET", "/v1/band/preview"],
-  ["API-23", "GET", "/v1/band/profile"], ["API-24", "PUT", "/v1/band/profile"], ["API-20", "POST", "/v1/equipment/lights/{light}/{state}"], ["API-21", "GET", "/v1/water/daily"], ["API-22", "GET", "/v1/lighting"], ["API-IRR-01", "GET", "/v1/irrigation"],
+  ["API-23", "GET", "/v1/band/profile"], ["API-24", "PUT", "/v1/band/profile"], ["API-20", "POST", "/v1/equipment/lights/{light}/{state}"], ["API-21", "GET", "/v1/water/daily"], ["API-22", "GET", "/v1/lighting"],
+  ["API-25", "GET", "/v1/planner/history"], ["API-26", "GET", "/v1/planner/experiments"], ["API-27", "GET", "/v1/planner/experiments/{id}"],
+  ["API-IRR-01", "GET", "/v1/irrigation"],
   ["API-IRR-02", "GET", "/v1/irrigation/schedules"], ["API-IRR-03", "POST", "/v1/irrigation/schedules"],
   ["API-IRR-04", "PUT", "/v1/irrigation/schedules/{slot_id}"], ["API-IRR-05", "DELETE", "/v1/irrigation/schedules/{slot_id}"],
   ["API-IRR-06", "POST", "/v1/irrigation/lines/{line_id}/run"], ["API-IRR-07", "POST", "/v1/irrigation/stop"],
@@ -137,7 +139,7 @@ function nowBody(world) {
   return {
     server_time: iso(world.now), indoor: world.indoor, outdoor: world.outdoor, band: world.band, mode: world.mode, iris: world.iris,
     alerts: { open: open.length, critical: count("critical"), warning: count("warning"), info: count("info") }, running, overrides: world.overrides,
-    leak: world.leak, freshness: world.freshness, writer: world.writer, controller: world.controller,
+    leak: world.leak, freshness: world.freshness, writer: world.writer, controller: world.controller, snapshot: world.snapshot ?? null,
   };
 }
 
@@ -650,6 +652,151 @@ function lightingBody(world, { query }) {
   };
 }
 
+// ---------------------------------------------------------------------------------------------------- planner reads (#1361)
+export const OLD_EXPERIMENT = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14";
+export const STUDY_ID = "planner-ab-winter-2026";
+const REQUIRED = ["MIDNIGHT", "SUNRISE", "SUNSET"];
+/**
+ * API-25 as production reads today: 3 required plans a day plus forecast replans, one SUNSET missed eight days back and
+ * one late SUNRISE twelve days back, dispatched changes only on the last five days, and cost recorded only for the
+ * last `world.plannerCostDays` days (0: "not recorded", as before #1350).
+ */
+function plannerHistoryBody(world, { query }) {
+  const days = integer(query, "days", 30, 30, 90);
+  if (days !== 30 && days !== 90) throw invalid("days must be 30 or 90", "days");
+  const last = today(world);
+  const from = addDays(last, -(days - 1));
+  const costDays = world.plannerCostDays ?? 0;
+  const firstCost = costDays > 0 ? addDays(last, -(costDays - 1)) : null;
+  const rows = Array.from({ length: days }, (_, index) => {
+    const date = addDays(from, index);
+    const ago = days - 1 - index;
+    const replans = ago % 3;
+    const missed = ago === 8 ? 1 : 0;
+    const late = ago === 12 ? 1 : 0;
+    const written = 3 - missed;
+    const dispatched = ago < 5 ? 150 + 10 * ago : 0;
+    const costed = firstCost !== null && date >= firstCost;
+    return {
+      date, plans_written: written + replans,
+      triggers: { ...Object.fromEntries(REQUIRED.filter((name) => !(missed && name === "SUNSET")).map((name) => [name, 1])), ...(replans ? { FORECAST_DEVIATION: replans } : {}) },
+      params_dispatched: dispatched ? 21 : 0, changes_dispatched: dispatched, changes_confirmed: dispatched ? dispatched - (ago === 1 ? 12 : 0) : 0,
+      required_due: 3, required_written: written, required_failed: missed, required_late: late,
+      cost: costed ? {
+        calls: written + replans, models: ["qwen3.6-35b-a3b"], input_tokens: 61_000 * (written + replans), output_tokens: 2_400 * (written + replans),
+        energy_wh: 4.2 * (written + replans), latency_ms_median: 48_000, dispatched: 0, proposed_only: written + replans,
+      } : null,
+    };
+  });
+  const plans = [];
+  for (let ago = 0; ago < Math.min(days, 6); ago += 1) {
+    const date = addDays(last, -ago);
+    for (const [trigger, hhmm] of [["SUNSET", "16:55"], ["SUNRISE", "06:30"], ["MIDNIGHT", "00:05"]]) {
+      const at = localInstant(date, hhmm);
+      if (at > world.now) continue;
+      const costed = firstCost !== null && date >= firstCost;
+      plans.push({
+        plan_id: `iris-${date.replaceAll("-", "")}-${hhmm.replace(":", "")}`, trigger, written_at: iso(at),
+        hypothesis: `${trigger === "SUNSET" ? "Cold night ahead" : trigger === "SUNRISE" ? "Bright cold day" : "Overnight hold"}: keep VPD above the night floor.`,
+        outcome_score: ago === 0 ? null : 7, params_dispatched: ago < 5 ? 7 : 0,
+        cost: costed ? { model_id: "qwen3.6-35b-a3b", input_tokens: 61_000, output_tokens: 2_400, energy_wh: 4.2, latency_ms: 48_000, status: "ok" } : null,
+      });
+    }
+  }
+  return { from, to: last, cost_recorded_from: firstCost ? iso(localInstant(firstCost, "00:05")) : null, cortex_attempts: costDays > 0, days: rows, plans };
+}
+
+const OLD_DRAFT = {
+  id: OLD_EXPERIMENT, experiment_id: OLD_EXPERIMENT, study_id: "verdify-confirmed-component-switchback-v2-2026-08",
+  name: "Verdify confirmed-component AI-vs-frozen-FSM switchback v2", question: null, status: "closed", raw_status: "draft", arms: [],
+  started_at: null, ended_at: null, updated_at: "2026-09-30T17:50:12Z", days_planned: null, days_done: 0, deviations: 198,
+  closed_at: "2026-09-30T17:50:12Z",
+  closed_reason: "Never randomized a day. Its physical proof failed three times on 2026-08-28 and a facility safe closure ended it on 2026-09-30. Its OpenAI selector and three hot/dry profiles are retired; its tables and evidence are kept.",
+};
+const QUESTION = "Over a 24 h study day, does the Cortex planner adjusting the planner-owned tunables from forecast and history improve served-band VPD at night, and what does it cost in heat, compared with the same firmware, band and safety rules with those tunables frozen?";
+const STUDY_METRICS = [
+  ["night_vpd_in_band_pct", "Night VPD in band", "pts", "primary", "higher", "night_post_washout", null],
+  ["temp_in_band_pct", "Temperature in band", "pts", "guardrail", "higher", "study_day_post_washout", 2],
+  ["heat_minutes", "Heater minutes (heat1 + heat2)", "min", "cost", "report", "whole_day", null],
+  ["electric_kwh", "Electric energy", "kWh", "cost", "report", "whole_day", null],
+  ["vpd_in_band_pct", "VPD in band, whole day", "pts", "secondary", "higher", "study_day_post_washout", null],
+  ["water_gal", "Water", "gal", "secondary", "report", "whole_day", null],
+].map(([id, label, unit, role, direction, window, margin]) => ({ id, label, unit, role, direction, window, noninferiority_margin: margin }));
+/** The study as the fixture world has it: `world.plannerStudy` is null (defined, today's state) or "interim". */
+function studySummary(world) {
+  const interim = world.plannerStudy === "interim";
+  return {
+    id: interim ? "6f1e2d3c-4b5a-4968-8776-655443322110" : STUDY_ID, experiment_id: interim ? "6f1e2d3c-4b5a-4968-8776-655443322110" : null, study_id: STUDY_ID,
+    name: "AI planner versus a frozen baseline, winter 2026-27", question: QUESTION, status: interim ? "running" : "defined", raw_status: interim ? "running" : null,
+    arms: ["ai", "baseline"], started_at: interim ? iso(localInstant(addDays(today(world), -36), "11:00")) : null, ended_at: null,
+    updated_at: interim ? iso(world.now - HOUR) : null, days_planned: 60, days_done: interim ? 36 : 0, deviations: interim ? 2 : 0, closed_at: null, closed_reason: null,
+  };
+}
+function plannerExperimentsBody(world) {
+  return { items: [studySummary(world), OLD_DRAFT] };
+}
+function studyCalendar(world) {
+  const start = addDays(today(world), -36);
+  const order = [1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0];
+  return Array.from({ length: 38 }, (_, index) => {
+    const date = addDays(start, index);
+    const starts = localInstant(date, "11:00");
+    return {
+      date, pair_index: Math.floor(index / 2), arm: order[index] ? "ai" : "baseline", status: starts > world.now ? "locked" : "exposed",
+      starts_at: iso(starts), ends_at: iso(starts + DAY), deviations: index === 9 || index === 22 ? 1 : 0,
+      events: index === 9 ? ["esp32_reboot"] : index === 22 ? ["manual_write"] : [],
+    };
+  });
+}
+function plannerExperimentBody(world, { params }) {
+  const key = params.id;
+  if (key === OLD_EXPERIMENT) {
+    return {
+      experiment: OLD_DRAFT, definition: null, calendar: [], next_boundary: null, outcomes: [],
+      results: { state: "not_started", reason: "No study day has run.", pairs_done: 0, pairs_planned: null, sentence: null, metrics: [], analyzed_at: null, output_sha256: null },
+    };
+  }
+  const summary = studySummary(world);
+  if (key !== summary.id && key !== STUDY_ID) throw refuse(404, "not_found", "Not found", `no experiment or study '${key}'`, { field: "id" });
+  const interim = world.plannerStudy === "interim";
+  const tomorrow = localInstant(addDays(today(world), 1), "11:00");
+  const nextBoundary = localInstant(today(world), "11:00") > world.now ? localInstant(today(world), "11:00") : tomorrow;
+  const ci = (id, estimate, low, high) => ({ ...STUDY_METRICS.find((metric) => metric.id === id), estimate, ci_low: low, ci_high: high, n_pairs: 18 });
+  const results = interim ? {
+    state: "interim", reason: null, pairs_done: 18, pairs_planned: 30,
+    sentence: "After 18 of 30 pairs, AI nights were 9 points more in band (95% CI 2 to 16); temperature in band no different; heat +4% (CI −3 to +11).",
+    metrics: [ci("night_vpd_in_band_pct", 9, 2, 16), ci("temp_in_band_pct", -0.4, -1.5, 0.7), ci("heat_minutes", 38, -29, 105), ci("electric_kwh", 0.9, -0.7, 2.5),
+      ci("vpd_in_band_pct", 4.1, -0.8, 9.0), ci("water_gal", null, null, null)].map(({ window: _w, noninferiority_margin: _m, ...row }) => row),
+    analyzed_at: iso(localInstant(today(world), "00:30")), output_sha256: "9b2c".padEnd(64, "0"),
+  } : { state: "not_started", reason: "No study day has run.", pairs_done: 0, pairs_planned: 30, sentence: null, metrics: [], analyzed_at: null, output_sha256: null };
+  const calendar = interim ? studyCalendar(world) : [];
+  return {
+    experiment: summary,
+    definition: {
+      study_id: STUDY_ID, version: 1, definition_sha256: "52a8c4649e500aa0c8ec618cf4723ad08f834d27541d8a9646310b8ccb7698de", preregistered: interim,
+      arms: [
+        { label: "ai", name: "AI planner", planner_mode: "dispatch", description: "The Cortex planner (#1350) runs on its triggers and dispatches its plans as normal." },
+        { label: "baseline", name: "Frozen baseline", planner_mode: "propose_only", description: "At the boundary the planner-owned tunables are restored to the locked baseline vector. The planner still runs and its plans are validated and stored (arm baseline, dispatched false) but never sent." },
+      ],
+      metrics: STUDY_METRICS,
+      schedule: { timezone: "America/Denver", boundary_local: "11:00", pairs: 30, washout_hours: 3, blinding: "none", boundary_confirm_minutes: 15, boundary_max_retries: 3 },
+      looks: [{ pairs: 15, purpose: "safety_futility" }, { pairs: 30, purpose: "final" }],
+      covariates: ["outdoor_temp_min_f", "outdoor_temp_mean_f", "solar_kwh_m2", "outdoor_vpd_kpa", "wind_mph", "heating_degree_hours_60f"],
+      stopping_rules: [
+        { id: "hard_temperature", rule: "Any house temperature below 40 °F or above 100 °F.", action: "Firmware safety acts, the study pauses and the day is a deviation." },
+        { id: "boundary_unconfirmed", rule: "The boundary restore is not confirmed by readback within 15 minutes.", action: "Record a deviation; retry at most 3 times; never loop." },
+      ],
+      prerequisites: ["#1350 cutover: the Cortex planner live, planner_inference_runs recording, a propose-only flag"],
+    },
+    calendar, next_boundary: interim ? iso(nextBoundary) : null, results,
+    outcomes: interim ? calendar.filter((day) => day.status === "exposed").slice(-4).map((day, index) => ({
+      date: day.date, arm: day.arm, deviation: day.deviations > 0,
+      values: { night_vpd_in_band_pct: 20 + 5 * index, temp_in_band_pct: 99.1, heat_minutes: 960 + 20 * index, electric_kwh: 23.5, vpd_in_band_pct: 48, water_gal: null },
+      covariates: { outdoor_temp_min_f: 28 + index, outdoor_temp_mean_f: 41, solar_kwh_m2: 3.1, outdoor_vpd_kpa: 0.6, wind_mph: 5, heating_degree_hours_60f: 310 },
+    })) : [],
+  };
+}
+
 // ---------------------------------------------------------------------------------------------------- irrigation reads
 const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const SOLAR = { sunrise: "06:35", solar_noon: "11:47", sunset: "16:58" };
@@ -819,6 +966,9 @@ const READS = {
   "API-23": profileBody,
   "API-21": waterBody,
   "API-22": lightingBody,
+  "API-25": plannerHistoryBody,
+  "API-26": plannerExperimentsBody,
+  "API-27": plannerExperimentBody,
   "API-IRR-01": irrigationBody,
   "API-IRR-02": agendaBody,
   "API-IRR-10": minutesBody,
@@ -1343,6 +1493,9 @@ export const EXAMPLES = {
   "API-20": () => send("POST", "/v1/equipment/lights/main/on", { reason: "Inspecting the Vandas" }),
   "API-21": (world) => get("/v1/water/daily", { days: String(world.waterUseDays) }),
   "API-22": (world) => get("/v1/lighting", { from: iso(world.now - 3 * DAY), to: iso(world.now) }),
+  "API-25": () => get("/v1/planner/history", { days: "30" }),
+  "API-26": () => get("/v1/planner/experiments"),
+  "API-27": (world) => get(`/v1/planner/experiments/${world.plannerStudy === "interim" ? "6f1e2d3c-4b5a-4968-8776-655443322110" : STUDY_ID}`),
   "API-IRR-01": () => get("/v1/irrigation"),
   // The week view with "Last 7 days" on, so past blocks and their outcomes are in the set.
   "API-IRR-02": () => get("/v1/irrigation/schedules", { past_days: 7 }),

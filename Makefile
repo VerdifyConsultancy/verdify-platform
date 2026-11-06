@@ -498,6 +498,9 @@ planner-publish: ## Publish today's plan to lab.verdify.ai
 planner-dry: ## Dry-run planner prompts — render every event type and assert G2/G4/G7 invariants
 	@$(PYTHON) scripts/planner-dry.py
 
+cortex-planner-dry: ## Offline render of the Cortex planner pack per event type: section tokens vs budgets (#1366)
+	@$(PYTHON) -m cortex_planner.dry
+
 # ── Hermes ─────────────────────────────────────────────────────────
 
 hermes-deploy-config: ## Sync versioned Hermes config/SOUL into the host runtime
