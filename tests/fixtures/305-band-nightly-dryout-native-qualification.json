@@ -1,0 +1,15 @@
+{
+  "migration": "305-band-nightly-dryout.sql",
+  "final_migration_qualification_pending": true,
+  "before": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"
+  },
+  "projected_successor": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"
+  },
+  "projection": "2026-11-06, read only, production at exact302. daily_band_compliance is verdify's with relacl NULL, so neither digest takes it in, and adding columns or a CHECK to it moves neither. fn_band_dryout_night is created verdify's and its PUBLIC EXECUTE is revoked in the same transaction (pg_default_acl holds only verdify's own function EXECUTE); fn_band_compliance_store is replaced in place and keeps its ACL (PUBLIC revoked by 290). Neither is in 217's invoker-helper closure. All three seals are expected to stay 304's, which are 302's. Read only on production, 2026-11-06: fn_band_compliance_5m over 00:00-06:00 local for 2026-09-01..2026-11-06 runs in 6.7 s (67 days); 2026-11-01 grades 420 minutes, other days 360; minutes at or above max(vpd_low, 0.74) for 2026-10-26..11-06 are 0 except 11-03 55, 11-05 20 and 11-06 115, so no night dried out. If the probe shows any digest moved, stop. Otherwise run scripts/qualify-migration-successor.py db/migrations/305-band-nightly-dryout.sql --apply-first db/migrations/304-water-day-local-end.sql (and 303 first if production lacks it) --prelock as needed --native-fixture db/qualification/305-band-nightly-dryout-fixture.sql --fixture tests/fixtures/305-band-nightly-dryout-native-qualification.json."
+}

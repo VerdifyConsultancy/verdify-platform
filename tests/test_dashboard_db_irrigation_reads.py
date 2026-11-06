@@ -1435,8 +1435,8 @@ def test_an_occurrence_skipped_for_a_pause_says_who_and_why(database):
         # A start before the pause was set was not skipped for it: today's paused_until says nothing about it.
         await f.conn.execute("UPDATE public.activity_log SET ts = $1", f.at + 4 * D)
         found = (await as_both(agenda_read(days=1, past_days=1)))[0]
-        earlier = [item for item in found.occurrences if item.slot_id == 1 and item.planned_start <= f.at]
-        assert all(item.reason != "line paused by jason" for item in earlier)
+        earlier = [item for item in found.occurrences if item.slot_id == slot and item.planned_start <= f.at]
+        assert earlier and all(item.reason != "line paused by jason" for item in earlier)
 
     scenario(database, body)
 

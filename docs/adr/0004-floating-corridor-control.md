@@ -79,3 +79,31 @@ to outcomes; the done band-single-source/dehum/fog/fan2 issues closed; new issue
 float flip, corridor-width, outcome grading, DLI-deficit lighting, forecast anticipation, and
 actuator-aware ID → MPC. Migration is sequenced lowest-risk-first; step 1 (`band_track_fraction
 → 0`) is a no-OTA, reversible planner push.
+
+## Amendment: the night dry-out is an energy-accepted floor (2026-11-05, Jason, #1365)
+
+Jason, 2026-11-05 (first-hand, recorded in `docs/design/dashboard/decisions.md`): "the overnight humidity needs to
+be dryer than perhaps the vanda guidance ... make sure we set a target that ensures the greenhouse drys out
+overnight", and "drier outdoor air is best, and then of course it's colder air so we have to heat that air, so it's
+still energy, but accepted." This amends Decision 3 (cost is a first-class driver) for night VPD only:
+
+1. **The night VPD floor is a hard goal, not a cost trade-off.** The floor is `max(served vpd_low, 0.74 kPa)`
+   (`night_dryout_floor_kpa` in `firmware/lib/greenhouse_logic.h`). The W5 report's 0.50 kPa floor was not adopted.
+   The goal is a nightly dry-out: at least 4 h at or above the floor between 00:00 and 06:00 America/Denver, so the
+   roots and the floor dry out every night.
+2. **Energy is spent for it, within a cap.** The lever is outdoor-air vent pulses with electric heat1 reheat, only
+   when the outdoor air is confirmed drier (outdoor dewpoint at least `night_dryout_dp_margin_f` below indoor from a
+   fresh Tempest reading) and never chilling the house below the temperature band floor. heat2 (gas) never runs for
+   humidity. The nightly energy is capped by the tunable `night_dryout_kwh_cap`, which defaults higher than the
+   report's 5 kWh because the target is drier (10 kWh at release). Shipped in firmware 2026.11.6.0938.36c7630c (#1385),
+   switched by `sw_night_dryout_enabled`.
+3. **Heat-only humidity chasing stays blocked** (ENV-2): heating a closed house to lift VPD underdelivers, because
+   the indoor dewpoint follows the temperature (W5 report, section E).
+4. **Graded nightly.** `daily_band_compliance` carries `night_dryout_graded_min`, `night_dryout_min` and
+   `night_dried_out` (migration 305), next to the served-band time in band of migration 290. Scoring against an
+   achievable envelope as well as the served band is a follow-up.
+5. **Not changed:** the corridor stays a float everywhere else, and minimum intervention still governs daytime and
+   temperature. Dry winter nights (VPD above the band) are accepted for now and rechecked in December.
+
+The door screen-window is closed for the winter (2026-11-05), so nights from then are closed-door; treat that as a
+confounder in any before/after comparison.
