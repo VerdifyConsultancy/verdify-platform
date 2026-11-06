@@ -6,6 +6,7 @@ import ast
 import asyncio
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 import types
@@ -155,8 +156,9 @@ def test_settled_emergency_hold_requires_a_proof_attempt(monkeypatch) -> None:
 
 
 def _rendered() -> list[dict]:
+    command = ["kustomize", "build"] if shutil.which("kustomize") else ["kubectl", "kustomize"]
     result = subprocess.run(
-        ["kubectl", "kustomize", str(ROOT / "deploy/k8s/overlays/prod")],
+        [*command, str(ROOT / "deploy/k8s/overlays/prod")],
         check=True,
         capture_output=True,
         text=True,

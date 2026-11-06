@@ -378,7 +378,6 @@ $PY -m pytest -q -rs \
 $PY -m pytest -q -rs \
   tests/test_01_infrastructure.py \
   tests/test_12_fidelity.py \
-  tests/test_15_lab_site_followup.py \
   tests/test_18_hermes_run_reconcile.py \
   tests/test_260_scorecard_repair.py \
   tests/test_261_outcome_kpi_acl.py \
@@ -500,6 +499,8 @@ $PY -m pytest -q -rs planner_graph/tests \
 #   planner_graph/tests/test_store_postgres.py.
 # - Own environment: research/planner-efficacy/tests/test_audit.py and
 #   test_epoch_analysis.py need scikit-learn (research/planner-efficacy/pyproject.toml).
+# - tests/test_15_lab_site_followup.py reads the Iris vault site content
+#   (VERDIFY_SITE_VAULT or /mnt/iris/verdify-vault/website), which is not in this repo.
 # - planning/tests/test_backlog.py runs under `make planning-validate`.
 
 step "migration rollback safety classification"
