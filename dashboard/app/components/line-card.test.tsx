@@ -26,7 +26,7 @@ function row(line: IrrigationLine, props: Partial<LineCardProps> = {}, session: 
   const actions = article.querySelector<HTMLElement>(":scope > .object-row-actions");
   return {
     article,
-    title: text(article.querySelector("h3")),
+    title: text(article.querySelector("h4")),
     head: text(article.querySelector(".object-row-head")),
     state: text(article.querySelector(".line-state")),
     meta: text(article.querySelector(".object-row-meta")),
@@ -177,7 +177,7 @@ test("before the irrigation firmware a row shows its relay; only L01 runs, throu
   expect(row(lineOf(status(["l01-running", "before-engine"]), "L01"), { engine: false }).state).toBe("Relay On since 10:30");
 });
 
-test("the row carries no style attribute and keeps its hooks: data-line, data-state, its h3 name and the strip slot", () => {
+test("the row carries no style attribute and keeps its hooks: data-line, data-state, its h4 name and the strip slot", () => {
   const { article } = row(lineOf(status(), "L01"), { strip: <div className="wat-day">strip</div> });
   expect(article.outerHTML).not.toMatch(/\sstyle=/);
   expect(article.id).toBe("line-L01");

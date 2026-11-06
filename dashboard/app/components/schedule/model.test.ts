@@ -9,7 +9,7 @@ import type { IrrigationStatus, Occurrence, ScheduleAgenda, StateLanes } from ".
 import { previewSchedule } from "../../lib/schedule-preview";
 import { localDayWindow } from "../../lib/time-scale";
 import {
-  MANIFOLDS, STATUS_WORDS, agendaDays, blocksOf, dayModel, entriesOf, fallbackCount, fallbackWindow, lineInfo, mondayOf, nextStarts, nightSpans, occurrenceKey, pauseNotes,
+  LANE_GROUPS, STATUS_WORDS, agendaDays, blocksOf, dayModel, entriesOf, fallbackCount, fallbackWindow, lineInfo, mondayOf, nextStarts, nightSpans, occurrenceKey, pauseNotes,
   ruleGroups, slotClock, spanStatus, valveEpisodes, valveMinutes, weekCellName, weekCells, weekdayCode,
 } from "./model";
 
@@ -123,14 +123,18 @@ test("API-05's relay intervals merge into episodes (pulses under 5 min apart) an
   expect(valveEpisodes(lanes, "L07", from, to)).toEqual([]);
 });
 
-test("the day: rows by manifold, notes for a disabled line, a reserved one and a mister with Schedule off, the cap meter's minutes", () => {
+test("the day: one lane per physical line by kind, notes for a disabled line, a reserved one and a mister with Schedule off, the cap meter's minutes", () => {
   const { agenda, status, lanes } = set("schedules-paused");
   const model = dayModel({ day: TODAY, today: TODAY, now: NOW, agenda, lines: status.lines, lanes, entries: entriesOf(agenda, null, NOW) });
-  expect(model.groups.map((group) => [group.label, group.rows.map((row) => row.lineId)])).toEqual(MANIFOLDS.map((manifold) => [manifold.label, manifold.lines]));
+  // #1347: Drips then Misters, one lane per physical line holding its clean and fertilized relays.
+  expect(model.groups.map((group) => [group.label, group.rows.map((row) => [row.name, row.lineIds])])).toEqual([
+    ["Drips", [["Wall drip", ["L01", "L02"]], ["Center drip", ["L05", "L06"]]]],
+    ["Misters", [["Center mister", ["L04"]], ["South mister", ["L07", "L08"]], ["West mister", ["L09", "L10"]]]],
+  ]);
+  expect(LANE_GROUPS.map((group) => group.label)).toEqual(["Drips", "Misters"]);
   const rows = new Map(model.groups.flatMap((group) => group.rows).map((row) => [row.lineId, row]));
   expect([rows.get("L05")?.note, rows.get("L05")?.muted]).toEqual(["Reserved · disabled", true]);
-  expect([rows.get("L07")?.note, rows.get("L07")?.muted]).toEqual(["Schedule off for this zone", false]);
-  expect(rows.get("L08")?.note).toBe("Disabled");
+  expect([rows.get("L07")?.note, rows.get("L07")?.muted]).toEqual(["Schedule off for this mister", false]);
   // Today: the API's minutes, and the valve's episodes from API-05 (L04 misted 06:58–07:12).
   expect([rows.get("L04")?.done, rows.get("L04")?.cap]).toEqual([14, 120]);
   expect(rows.get("L04")?.episodes.map((episode) => shortTime(new Date(episode.start * 1000).toISOString()))).toEqual(["06:58"]);
@@ -144,7 +148,7 @@ test("the day: rows by manifold, notes for a disabled line, a reserved one and a
   expect([sunday.when, sunday.groups[0].rows[0].done, sunday.groups[0].rows[0].valveKnown]).toEqual(["past", null, false]);
   // Today before API-05 answers: no ticks is unknown valve time, not none; with the read it is known.
   const unread = dayModel({ day: TODAY, today: TODAY, now: NOW, agenda, lines: status.lines, lanes: null, entries: entriesOf(agenda, null, NOW) });
-  expect(unread.groups.flatMap((group) => group.rows).map((row) => row.valveKnown)).toEqual(Array(9).fill(false));
+  expect(unread.groups.flatMap((group) => group.rows).map((row) => row.valveKnown)).toEqual(Array(5).fill(false));
   expect(rows.get("L04")?.valveKnown).toBe(true);
 });
 
@@ -155,7 +159,7 @@ test("a paused line draws its pause across the day with who paused it; a disable
   const disabled = set("schedules-paused");
   const lines = disabled.status.lines.map((line) => (line.line_id === "L01" ? { ...line, enabled: false } : line));
   const withSkips = { ...disabled.agenda, occurrences: disabled.agenda.occurrences.map((item) => (item.line_id === "L01" && item.planned_start > "2026-11-03" ? { ...item, status: "skipped" as const, reason: "line disabled" } : item)) };
-  expect(dayModel({ day: TODAY, today: TODAY, now: NOW, agenda: withSkips, lines, lanes: null, entries: [] }).groups[0].rows[0].note).toBe("Disabled: its 2 runs this week will not run");
+  expect(dayModel({ day: TODAY, today: TODAY, now: NOW, agenda: withSkips, lines, lanes: null, entries: [] }).groups[0].rows[0].note).toBe("Clean disabled: its 2 runs this week will not run");
 });
 
 test("the editor's draft draws on the timeline as dashed outlines that replace its saved blocks ahead; the meter counts it", () => {

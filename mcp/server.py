@@ -6288,7 +6288,15 @@ async def irrigation_line_set(
     enabled: Annotated[
         bool | None, Field(description="Off stops everything on the line, VPD misting included.")
     ] = None,
-    vpd_member: Annotated[bool | None, Field(description="L04, L07 and L09: VPD misting on this zone.")] = None,
+    vpd_member: Annotated[
+        bool | None,
+        Field(
+            description="L04, L07 and L09: VPD control. When the climate loop wants humidity and its safety gate "
+            "passes, the controller may send this mister short mist pulses, one mister at a time by rank (center "
+            "first unless another member's own VPD is further above its target), within the line's daily cap and the "
+            "daily mist and fog limit. Needs the line enabled (line_disabled otherwise)."
+        ),
+    ] = None,
     schedule_member: Annotated[bool | None, Field(description="L04, L07 and L09: schedules and runs here.")] = None,
     daily_cap_min: Annotated[int | None, Field(ge=0, le=480, description="Minutes a day; 0 is no cap.")] = None,
     vpd_reserve_min: Annotated[
@@ -6328,7 +6336,7 @@ async def irrigation_line_set(
 
     Refusals are the Problem JSON with isError: out_of_range (min and max are the bounds), check_required,
     invalid_request (all with any field but paused_until, manual included; a mister flag off L04, L07 or L09),
-    unknown_target, manual, request_id_reused, forbidden, and unavailable (the database; retry with the same
+    line_disabled (vpd_member true on a line that stays disabled), unknown_target, manual, request_id_reused, forbidden, and unavailable (the database; retry with the same
     request_id)."""
     from verdify_services.irrigation import writes
 

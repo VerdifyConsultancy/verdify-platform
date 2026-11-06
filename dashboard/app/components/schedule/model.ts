@@ -13,7 +13,7 @@ import { lineById, lineDisplayName } from "../../lib/lines";
 import type { IrrigationLine, Occurrence, Schedule, ScheduleAgenda, StateLanes } from "../../lib/operator-api";
 import { replacedByDraft, type ScheduleDraft, type SchedulePreview } from "../../lib/schedule-preview";
 import { localDayWindow } from "../../lib/time-scale";
-import { SCHEDULE_LINES, amountShort, occurrenceReasonWords, occurrenceWords, pauseUntilWords, runSeconds } from "../../lib/water";
+import { PHYSICAL_LINES, SCHEDULE_LINES, amountShort, occurrenceReasonWords, occurrenceWords, pauseUntilWords, runSeconds } from "../../lib/water";
 import { words } from "../../lib/words";
 
 type Solar = ScheduleAgenda["solar"][number];
@@ -212,6 +212,8 @@ export function blocksOf(entry: Entry, info: LineInfo, now: number): DayBlock[] 
 // ---------------------------------------------------------------------------------------------------- valve activity
 /** A stretch of valve-open time from API-05: pulses closer than 5 min merge into one episode. */
 export type Episode = { readonly start: number; readonly end: number; readonly pulses: number };
+/** An episode on a lane: which relay's, so a fertilized one draws in its own colour. */
+export type LaneEpisode = Episode & { readonly fertilized?: boolean };
 const EPISODE_GAP_S = 5 * 60;
 /** The line's relay `on` intervals inside [from, to), merged into episodes; empty without the read. */
 export function valveEpisodes(lanes: Pick<StateLanes, "lanes"> | null | undefined, lineId: string, from: number, to: number): Episode[] {
@@ -249,19 +251,27 @@ export function nightSpans(solar: Solar | null | undefined, from: number, to: nu
   return [{ from, to: Math.max(from, seconds(solar.sunrise)) }, { from: Math.min(to, seconds(solar.sunset)), to }].filter((span) => span.to > span.from);
 }
 
-/** The manifolds the timeline groups its rows by: one runs one line at a time, so its rows sit together (redesign §6.1). */
-export const MANIFOLDS: readonly { readonly key: "drip" | "mister"; readonly label: string; readonly lines: readonly string[] }[] = [
-  { key: "drip", label: "Drip manifold", lines: ["L01", "L02", "L05", "L06"] },
-  { key: "mister", label: "Mister manifold", lines: ["L04", "L07", "L08", "L09", "L10"] },
-];
+/** One lane of the timeline: a physical line (#1336) with its clean relay and, where wired, its fertilized one. */
+export type Lane = { readonly id: string; readonly name: string; readonly lines: readonly string[] };
+/**
+ * The timeline's lanes by kind (#1347): one lane per physical line, its clean and fertilized times together (told apart by
+ * colour, blue clean and purple fertilized), drips then misters. A manifold runs one line at a time, so each group is one.
+ */
+export const LANE_GROUPS: readonly { readonly key: "drip" | "mister"; readonly label: string; readonly lanes: readonly Lane[] }[] = (["drip", "mister"] as const).map((key) => ({
+  key, label: key === "drip" ? "Drips" : "Misters",
+  lanes: PHYSICAL_LINES.filter((line) => line.id.endsWith(`_${key}`)).map((line) => ({ id: line.id, name: line.name, lines: line.fertilized ? [line.clean, line.fertilized] : [line.clean] })),
+}));
 
 export type DayRow = {
+  /** The lane's clean relay: a new schedule from the lane starts there. */
   readonly lineId: string;
+  /** Every relay in the lane, clean first (#1347). */
+  readonly lineIds: readonly string[];
   readonly name: string;
   readonly kind: string;
   readonly blocks: readonly DayBlock[];
-  /** Valve-open episodes (past and today), drawn as thin ticks along the row's lower third. */
-  readonly episodes: readonly Episode[];
+  /** Valve-open episodes (past and today) of every relay in the lane, drawn as thin ticks along the row's lower third. */
+  readonly episodes: readonly LaneEpisode[];
   /** False while API-05 has not answered for a day that has had valve time: no tick is then a gap, never "none". */
   readonly valveKnown: boolean;
   /** A pause across the day: its span and "paused until Sat 09:00 · jason". */
@@ -321,28 +331,41 @@ export function dayModel({ day, today, now, agenda, lines, lanes, entries }: Day
     if (spanStatus(entry.occurrence) !== "planned" || entry.schedule?.degraded_only || seconds(entry.occurrence.planned_start) <= nowS) continue;
     for (const block of blocksOf(entry, info, now)) plannedSeconds.set(block.lineId, (plannedSeconds.get(block.lineId) ?? 0) + block.openS);
   }
-  const groups = MANIFOLDS.map((manifold): DayGroup => ({
-    key: manifold.key, label: manifold.label,
-    rows: manifold.lines.map((lineId): DayRow => {
-      const line = info.lineOf(lineId);
-      const kind = info.kindOf(lineId);
-      const enabled = line?.enabled ?? true;
-      const reserved = Boolean(line?.reserved) && !enabled;
-      const until = line?.paused_until;
-      const pause = until && validTime(until) && seconds(until) > Math.max(from, nowS) && nowS < to
-        ? { start: Math.max(from, nowS), end: Math.min(to, seconds(until)), words: `paused until ${pauseUntilWords(until, today)}${line?.paused_by ? ` · ${line.paused_by.name}` : ""}` }
-        : null;
-      const disabled = !enabled ? (reserved ? "Reserved · disabled" : (() => {
-        const count = disabledRuns(agenda, lineId, today);
-        return count > 0 ? `Disabled: its ${count} ${count === 1 ? "run" : "runs"} this week will not run` : "Disabled";
-      })()) : null;
-      const scheduleOff = enabled && kind === "mister" && line?.schedule_member === false ? "Schedule off for this zone" : null;
-      const done = when === "future" ? 0 : when === "today" ? (typeof line?.today?.minutes === "number" ? line.today.minutes : null) : valveMinutes(lanes, lineId, from, to);
+  const relay = (lineId: string) => {
+    const line = info.lineOf(lineId);
+    const kind = info.kindOf(lineId);
+    const enabled = line?.enabled ?? true;
+    const reserved = Boolean(line?.reserved) && !enabled;
+    const until = line?.paused_until;
+    const pause = until && validTime(until) && seconds(until) > Math.max(from, nowS) && nowS < to
+      ? { start: Math.max(from, nowS), end: Math.min(to, seconds(until)), words: `paused until ${pauseUntilWords(until, today)}${line?.paused_by ? ` · ${line.paused_by.name}` : ""}` }
+      : null;
+    const disabledRunCount = !enabled && !reserved ? disabledRuns(agenda, lineId, today) : 0;
+    const scheduleOff = enabled && kind === "mister" && line?.schedule_member === false ? "Schedule off for this mister" : null;
+    const done = when === "future" ? 0 : when === "today" ? (typeof line?.today?.minutes === "number" ? line.today.minutes : null) : valveMinutes(lanes, lineId, from, to);
+    const episodes: LaneEpisode[] = when === "future" ? [] : valveEpisodes(lanes, lineId, from, Math.min(to, nowS)).map((episode) => ({ ...episode, fertilized: fertKind(kind) }));
+    return { lineId, line, kind, enabled, reserved, pause, disabledRunCount, scheduleOff, done, episodes, cap: line && line.daily_cap_min > 0 ? line.daily_cap_min : null };
+  };
+  const groups = LANE_GROUPS.map((group): DayGroup => ({
+    key: group.key, label: group.label,
+    rows: group.lanes.map((lane): DayRow => {
+      const relays = lane.lines.map(relay);
+      const [clean] = relays;
+      const off = relays.filter((item) => !item.enabled);
+      const runs = off.reduce((sum, item) => sum + item.disabledRunCount, 0);
+      // The lane is off when every relay is; a fertilized relay alone off is said by its variant.
+      const missing = (label: string) => (runs > 0 ? `${label}: its ${runs} ${runs === 1 ? "run" : "runs"} this week will not run` : label);
+      const disabled = off.length === relays.length ? (relays.every((item) => item.reserved) ? "Reserved · disabled" : missing("Disabled"))
+        : off.includes(clean) ? missing("Clean disabled") : runs > 0 ? missing("Fertilized disabled") : null;
+      const dones = relays.map((item) => item.done);
+      const done = dones.some((value) => value === null) ? null : dones.reduce<number>((sum, value) => sum + (value ?? 0), 0);
+      const episodes = relays.flatMap((item) => item.episodes).sort((a, b) => a.start - b.start);
       return {
-        lineId, name: info.nameOf(lineId), kind, blocks: blocks.filter((block) => block.lineId === lineId),
-        episodes: when === "future" ? [] : valveEpisodes(lanes, lineId, from, Math.min(to, nowS)), valveKnown: when === "future" || lanes !== null,
-        pause, muted: !enabled, note: disabled ?? scheduleOff, done, planned: (plannedSeconds.get(lineId) ?? 0) / 60,
-        cap: line && line.daily_cap_min > 0 ? line.daily_cap_min : null,
+        lineId: clean.lineId, lineIds: lane.lines, name: lane.name, kind: clean.kind, blocks: blocks.filter((block) => lane.lines.includes(block.lineId)),
+        episodes, valveKnown: when === "future" || lanes !== null,
+        pause: clean.pause ?? relays.find((item) => item.pause)?.pause ?? null, muted: off.length === relays.length, note: disabled ?? clean.scheduleOff,
+        done, planned: lane.lines.reduce((sum, id) => sum + (plannedSeconds.get(id) ?? 0), 0) / 60,
+        cap: clean.cap ?? relays.find((item) => item.cap !== null)?.cap ?? null,
       };
     }),
   }));

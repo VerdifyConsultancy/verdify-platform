@@ -10,7 +10,7 @@ import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderUi, text } from "../test-render";
 import {
-  boundsHint, ManualToggle, MANUAL_DEFAULT, NumberField, Reason, resolvedStart, Select, startDraft, startFromDraft, stepValue, Switch, TimeField,
+  boundsHint, LET_IRIS_HELP, ManualToggle, MANUAL_DEFAULT, NumberField, Reason, resolvedStart, Select, startDraft, startFromDraft, stepValue, Switch, TimeField,
   WeekdayChips, type StartDraft, type Weekday,
 } from "./index";
 
@@ -119,7 +119,7 @@ test("Reason is one optional line of at most 500 characters", () => {
   expect(input.getAttribute("maxlength")).toBe("500");
 });
 
-test("ManualToggle: \"Manual: Iris skips this\", ticked by default on an edit form; unticking it reports false", () => {
+test("ManualToggle: \"Let Iris change this\", off by default on an edit form (manual); ticking it reports manual false (#1344)", () => {
   expect(MANUAL_DEFAULT).toBe(true);
   const seen: boolean[] = [];
   function Form() {
@@ -127,10 +127,11 @@ test("ManualToggle: \"Manual: Iris skips this\", ticked by default on an edit fo
     return <ManualToggle checked={manual} onChange={(value) => { seen.push(value); setManual(value); }} />;
   }
   renderUi(<Form />);
-  const box = screen.getByRole("checkbox", { name: "Manual: Iris skips this" }) as HTMLInputElement;
-  expect(box.checked).toBe(true);
-  fireEvent.click(box);
+  const box = screen.getByRole("checkbox", { name: "Let Iris change this" }) as HTMLInputElement;
   expect(box.checked).toBe(false);
+  expect(box.getAttribute("aria-describedby") && document.getElementById(box.getAttribute("aria-describedby")!)?.textContent).toBe(LET_IRIS_HELP);
+  fireEvent.click(box);
+  expect(box.checked).toBe(true);
   expect(seen).toEqual([false]);
 });
 

@@ -335,7 +335,7 @@ test("/settings?edit=mister_engage_kpa opens with Manual ticked; 1.53 saves as 1
   expect([...dialog().querySelectorAll(".drawer-status .ctl-status-lines li")].map((line) => text(line))).toEqual(["Iris changed this at 07:02 · AI", "next 1.70 kPa at 13:00 · AI"]);
   expect(within(dialog()).getByRole("link", { name: "Activity for this setting" }).getAttribute("href")).toBe("/activity/log?target=mister_engage_kpa");
   expect(within(dialog()).getByRole("link", { name: "Graph this setting" }).getAttribute("href")).toBe("/graphs?set=mister_engage_kpa");
-  expect((screen.getByRole("checkbox", { name: "Manual: Iris skips this" }) as HTMLInputElement).checked).toBe(true);
+  expect((screen.getByRole("checkbox", { name: "Let Iris change this" }) as HTMLInputElement).checked).toBe(false);
   const field = screen.getByLabelText("New value") as HTMLInputElement;
   expect(field.value).toBe("1.60");
   expect(text(dialog().querySelector(".field-hint"))).toBe("Allowed 0.50–2.50 kPa · step 0.05");
@@ -629,7 +629,7 @@ test("the drawer shows the history under the fields, the signed-in person by dis
 
 test("the drawer's Manual box goes with Revert, and the history window leaves the URL when the drawer closes", async () => {
   const api = await open(`${ENGAGE}&hist=30d`, { fixture: "setting-history" });
-  fireEvent.click(screen.getByRole("checkbox", { name: "Manual: Iris skips this" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Let Iris change this" }));
   fireEvent.click(revert()!);
   await settle();
   expect(writes(api).map((row) => (row.body as { manual: boolean }).manual)).toEqual([false]);

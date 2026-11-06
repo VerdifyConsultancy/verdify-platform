@@ -115,7 +115,7 @@ test("a strip without API-05's answer says its valve time is unknown and hatches
   const unread = dayModel({ day: TODAY, today: TODAY, now: NOW, agenda, lines: status.lines, lanes: null, entries });
   renderUi(<DayTimeline model={unread} now={NOW} head={<h2>Monday</h2>} label="Runs" />);
   expect(document.querySelector('.sch-row[data-line="L04"] .sch-track')?.textContent).toContain("valve time unknown");
-  expect(document.querySelectorAll(".sch-tick-unknown")).toHaveLength(9);
+  expect(document.querySelectorAll(".sch-tick-unknown")).toHaveLength(5);
 });
 
 test("a viewer's timeline offers no new schedule: no [+], and the track takes no click", () => {

@@ -101,6 +101,8 @@ export type LineCardProps = {
   scheduleLabels?: ReadonlyMap<number, string>;
   /** The today strip and "next 16:00 · 10 min" (redesign §5.2). */
   strip?: ReactNode;
+  /** A mister's own VPD control and Schedule (#1344), above its strip. */
+  controls?: ReactNode;
   /** Only the first row of a zone card carries the hour ticks. */
   className?: string;
 };
@@ -114,7 +116,7 @@ export type LineCardProps = {
  * (L11) is a climate device: no sync pill and no Options, but it runs once ("Fog once…", #1343 follow-up), with its own
  * Stop; the climate path's own rails gate it, so it has no enable switch or pause. Viewers get the same row with the menu's links alone.
  */
-export function LineCard({ line, master = null, engine, program, today, scheduleLabels, strip, className }: LineCardProps) {
+export function LineCard({ line, master = null, engine, program, today, scheduleLabels, strip, controls, className }: LineCardProps) {
   const apiDown = useApiDown();
   const now = useNow();
   const fog = line.kind === "fog";
@@ -155,13 +157,16 @@ export function LineCard({ line, master = null, engine, program, today, schedule
       ? <>Checked by {line.check.checked_by} <LocalTime at={line.check.checked_at} date />{line.check.note && <>: {line.check.note}</>}</>
       : "No check recorded"}</p>}
   </Menu>;
-  return <ObjectRow className={cls("line-card", "wat-line", className)} data={{ "data-line": id, "data-state": code }} id={`line-${id}`}
+  // A disabled line is one quiet row (#1349): its state, its faded strip, nothing else to read.
+  const off = !fog && !running && (code === "disabled" || line.enabled === false);
+  return <ObjectRow headingLevel={4} className={cls("line-card", "wat-line", off && "is-off", className)} data={{ "data-line": id, "data-state": code }} id={`line-${id}`}
     title={title} tag={fog ? <span className="tag">Climate only</span> : <ChemistryBadge chemistry={lineChemistry(line.kind)} />} pill={pill}
     state={<span className={cls("line-state", apiDown && "is-neutral")}>{pauseIsState ? pausedWords : <LineStateText line={line} engine={engine} today={today} scheduleLabels={scheduleLabels} />}</span>}
     meta={meta.length ? meta.join(" · ") : undefined}
     primary={primary}
     stop={fog && !engine ? undefined : <StopButton lineId={id} filled={filled} />}
     menu={menu} tone={tone} token={token}>
+    {controls}
     {strip}
     {master && <div className="line-subrow" data-line={master.line_id}>
       <p><span className="glyph glyph-branch" aria-hidden="true" /><strong>{lineDisplayName(master)}</strong>: {MASTER_TEXT} · <LineStateText line={master} engine={engine} today={today} /></p>

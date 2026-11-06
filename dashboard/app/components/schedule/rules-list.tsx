@@ -22,6 +22,8 @@ import type { RuleGroup } from "./model";
 /** CONFIRMED shows only while the newest write is under 10 minutes old (D-UX-07). */
 export const CONFIRMED_FRESH_MS = 10 * 60_000;
 const DEGRADED_WORDS = "only if VPD sensing is degraded";
+/** The backup row's help line (#1344). */
+const BACKUP_HELP = "Runs only while the VPD sensors are faulty; otherwise each window passes as not needed";
 
 /**
  * True while a pill of CONFIRMED is news (D-UX-07): the item's sync was seen requested or not confirmed on this page and
@@ -96,7 +98,7 @@ export type RulesListProps = {
  * muted under theirs. A rule reads its days, its start in words with today's time, its amount, MANUAL or "Iris may
  * adjust", FERT, the degraded-only note, its one sync pill and who changed it last. Operators get the enabled switch, Edit
  * and ⋯ (Duplicate, Delete), and "+ Schedule" per line; viewers read the same rows. A line's fallback schedules
- * (`degraded_only`, two or more) are one "Fallback (3)" row (redesign §6.2) that lists their starts and opens to each
+ * (`degraded_only`, two or more) are one "Backup misting when sensors fail (3 times a day)" row (redesign §6.2, #1344) that lists their starts and opens to each
  * schedule's own row. On phones each line folds into a disclosure under the agenda.
  */
 export function RulesList({ groups, agenda, program, today, now, editTo, newTo, copyTo }: RulesListProps) {
@@ -130,8 +132,8 @@ export function RulesList({ groups, agenda, program, today, now, editTo, newTo, 
 }
 
 /**
- * A line's fallback schedules as one row (redesign §6.2, #1308 visual QA 42): "Fallback (3)", their days and amount when
- * they share them, their starts as one list with units ("solar noon −2 h, 0, +2 h"), the degraded-only note, how many are
+ * A line's fallback schedules as one row (redesign §6.2, #1308 visual QA 42, #1344): "Backup misting when sensors fail (3
+ * times a day)" with its state first ("Off" when every window is disabled, "2 of 3 on"), their days and amount when they share them, their starts as one list with units ("solar noon −2 h, 0, +2 h"), the degraded-only note, how many are
  * on when not all, and who changed one last; the one pill a member's NOT CONFIRMED or REQUESTED, else MANUAL when every
  * one is. It opens to each schedule's own row, with its switch, Edit and ⋯.
  */
@@ -142,13 +144,16 @@ function FallbackRow({ schedules, group, solar, program, rows }: {
   const shared = (words: (schedule: Schedule) => string) => (new Set(schedules.map(words)).size === 1 ? words(first) : null);
   const facts = [shared((schedule) => daysWords(schedule.days)), startsWords(schedules.map((schedule) => schedule.start), solar), shared((schedule) => amountWords(schedule, group.kind, group.partner))];
   const on = schedules.filter((schedule) => schedule.enabled ?? true).length;
+  const daily = schedules.every((schedule) => daysWords(schedule.days) === "Daily");
+  const title = `Backup misting when sensors fail (${schedules.length} ${schedules.length === 1 ? "time" : "times"}${daily ? " a day" : ""})`;
+  const state = on === 0 ? "off" : on < schedules.length ? `${on} of ${schedules.length} on` : "on";
   const syncs = schedules.map((schedule) => schedule.sync);
   const sync = syncs.includes("not_confirmed") ? "not_confirmed" : syncs.includes("requested") ? "requested" : null;
   const pill = sync ? <ReadbackBadge state={sync} /> : schedules.every((schedule) => schedule.manual) ? <Badge kind="manual" /> : undefined;
   const newest = [...schedules].sort((a, b) => (Date.parse(b.updated_at ?? "") || 0) - (Date.parse(a.updated_at ?? "") || 0))[0];
-  const meta = [DEGRADED_WORDS, schedules.some((schedule) => schedule.manual) ? null : "Iris may adjust", on < schedules.length ? `${on} of ${schedules.length} on` : null].filter(Boolean);
+  const meta = [BACKUP_HELP, schedules.some((schedule) => schedule.manual) ? null : "Iris may adjust"].filter(Boolean);
   return <ObjectRow as="li" headingLevel={4} className={cls("sch-rule", "sch-rule-fallback", on === 0 && "is-muted")} data={{ "data-fallback": group.lineId }}
-    title={`Fallback (${schedules.length})`} pill={pill} state={facts.filter(Boolean).join(" · ")}
+    title={title} pill={pill} state={<><span className="sch-fallback-state" data-state={state}>{state === "off" ? "Off" : state === "on" ? "On" : state}</span> · {facts.filter(Boolean).join(" · ")}</>}
     meta={<>{meta.join(" · ")} · <ChangedBy schedule={newest} />{sync && <> · <span className={cls(sync === "not_confirmed" && "fault")}>{lineSyncWords(sync, program)}</span></>}</>}>
     <details className="sch-fallback-each">
       <summary>Each schedule <span className="meta">· {schedules.length}</span></summary>

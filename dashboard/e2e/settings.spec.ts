@@ -65,7 +65,7 @@ test("the rail's Show filters carry counts, filter the rows and survive a reload
 test("?edit= opens with Manual ticked; 1.53 saves as 1.55 and reads REQUESTED, then CONFIRMED on the fixture readback", async ({ page, request }) => {
   await useScreensClock(page, request, "requested-to-confirmed");
   await load(page, ENGAGE);
-  await expect(drawer(page).getByRole("checkbox", { name: "Manual: Iris skips this" })).toBeChecked();
+  await expect(drawer(page).getByRole("checkbox", { name: "Let Iris change this" })).not.toBeChecked();
   await drawer(page).getByLabel("New value").fill("1.53");
   await drawer(page).getByLabel("Reason (optional)").fill("Vandas drying");
   await drawer(page).getByRole("button", { name: "Save" }).click();
