@@ -90,6 +90,7 @@ jobs:
       in-job-image: true
       timeout-minutes: 30
 
+  # ~45 min on ARC (run 42260435002 reached 34 min with 4 of ~27 files left).
   campaign-qualification:
     name: ci
     needs: [trusted-precheck, path-impact]
@@ -99,7 +100,7 @@ jobs:
       run: ci/gha/registry-step.sh campaign-qualification
       runner: verdify-platform-ci-tools
       in-job-image: true
-      timeout-minutes: 45
+      timeout-minutes: 75
 
   firmware-logic:
     name: ci
