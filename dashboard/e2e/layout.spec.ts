@@ -156,13 +156,16 @@ test("the fault banner is a row of the sticky header and stays in view after scr
   await expect(page.locator("main [data-banner=warn]")).not.toBeInViewport();
 });
 
-test("the old paths: /graphs/scorecard and a log-filtered /activity redirect with their query, ?alert= stays on Alerts, and /more is not found", async ({ page, request }) => {
+/** The page each redirect lands on, by its h1. */
+const REDIRECT_TITLES: Readonly<Record<string, string>> = { "/graphs/statistics": "Statistics", "/plan": "Plan" };
+
+test("the old paths: /graphs/scorecard, /planner and a log-filtered /activity redirect with their query, ?alert= stays on Alerts, and /more is not found", async ({ page, request }) => {
   await useFixture(request, "in-band");
   for (const { path, to } of REDIRECTS) {
     await load(page, `${path}?x=1`);
     await expect(page).toHaveURL(new RegExp(`${to.replace(/\//g, "\\/")}\\?x=1$`));
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(REDIRECT_TITLES[to]);
   }
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Statistics");
   await load(page, "/activity?target=L01");
   await expect(page).toHaveURL(/\/activity\/log\?target=L01$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Activity log");
