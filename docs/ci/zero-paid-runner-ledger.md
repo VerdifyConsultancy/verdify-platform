@@ -9,6 +9,16 @@ Probed 2026-07-28. Every claim below is backed by a literal probe recorded in
 GitHub remains the source, issue, PR, and status-reporting surface. CI remains
 technical validation rather than a merge prerequisite.
 
+> **Update 2026-11-06 (#1397):** GitHub Actions returns on the estate's self-hosted
+> ARC runners only (jvallery/estate-ci rules R1-R3; ARC sets exist for jvallery
+> repositories, so this applies after the repository moves to jvallery).
+> `.github/workflows/ci.yml` runs the native pipeline's checks through `ci/gha/`
+> scripts, and `build.yml` is dormant until the build cutover. Disposition of both:
+> **MIGRATE_ARC**. `tests/test_no_hosted_runner_workflows.py` now asserts that every
+> job runs on a `verdify-platform-*` ARC set, uses only actions/checkout or
+> jvallery/estate-ci at a full SHA, and never a GitHub-hosted label. The sections
+> below record the 2026-07-28 state.
+
 ---
 
 ## 1. Headline finding
