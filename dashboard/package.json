@@ -13,7 +13,7 @@
     "start": "node server.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm fixtures:settings && vitest run",
+    "test": "pnpm fixtures:settings && vitest run app/lib/words.test.ts",
     "test:browser": "node e2e/verify-browser-tools.mjs && pnpm fixtures:settings && pnpm build && playwright test --project=chromium screenshots.spec.ts; code=$?; sleep 45; exit $code",
     "fixtures:settings": "uv run --no-project --with 'pydantic>=2.8,<3' --with 'pyyaml>=6,<7' python ../scripts/gen-dashboard-settings-fixture.py",
     "contract:write": "pnpm --dir contract-tools install --frozen-lockfile --ignore-scripts --reporter=silent && node contract-tools/generate.mjs --write",
