@@ -71,6 +71,12 @@ from .irrigation import LINE_RELAYS, _schedule_specs, read_program
 SETPOINT_DELIVERY_STUCK_AFTER = _td(minutes=15)
 SETPOINT_DELIVERY_STUCK_MAX_PARAMS = 20
 
+# The zones that hold a planting now (migration 293): open crop_occupancy rows, by zone slug. A planting with no
+# cell still counts for its zone or shelf. Alerting only; no control function reads plantings.
+ACTIVE_PLANTING_ZONES_SQL = (
+    "SELECT DISTINCT z.slug AS zone FROM crop_occupancy o JOIN zones z ON z.id = o.zone_id WHERE upper_inf(o.during)"
+)
+
 
 def _setpoint_delivery_stuck_alert(
     differing: Mapping[str, datetime],
@@ -2365,10 +2371,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # occupied zone's silent probe raises from 06:00 to 22:00 local as
         # before, and the check runs every cycle so the night keeps its row
         # open instead of resolving it at 22:00 and re-raising it at 06:00.
-        soil_active_zones = {
-            str(r["zone"])
-            for r in await conn.fetch("SELECT DISTINCT zone FROM crops WHERE is_active = true AND zone IS NOT NULL")
-        }
+        soil_active_zones = {str(r["zone"]) for r in await conn.fetch(ACTIVE_PLANTING_ZONES_SQL)}
         local_hour = datetime.now(ZoneInfo("America/Denver")).hour
         soil_alerts, soil_keep_open_keys, soil_unpotted_keys = await _soil_probe_offline_cycle(
             conn, soil_active_zones, local_hour
@@ -2985,10 +2988,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # this class of issue automatically (any dispatcher-owned tunable with
         # stddev=0 over 7 days) surfaces the condition without waiting for
         # an operator to notice.
-        active_crop_zones = {
-            str(r["zone"])
-            for r in await conn.fetch("SELECT DISTINCT zone FROM crops WHERE is_active = true AND zone IS NOT NULL")
-        }
+        active_crop_zones = {str(r["zone"]) for r in await conn.fetch(ACTIVE_PLANTING_ZONES_SQL)}
         zone_target_params = {
             "vpd_target_south": "south",
             "vpd_target_west": "west",

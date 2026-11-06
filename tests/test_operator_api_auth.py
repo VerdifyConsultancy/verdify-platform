@@ -519,7 +519,7 @@ def test_every_v1_route_runs_the_bearer_session_and_role_checks_first(app):
 def test_the_route_modules_are_included_and_series_joins_when_its_file_lands():
     names = [module.__name__ for module in operator_api.ROUTE_MODULES]
     expected = ["operator_routes.reads", "operator_routes.writes", "operator_routes.irrigation_reads"]
-    expected.append("operator_routes.irrigation_writes")
+    expected += ["operator_routes.irrigation_writes", "operator_routes.crops"]
     if (API / "operator_routes/series.py").exists():
         expected.insert(1, "operator_routes.series")
         assert operator_api.series is not None

@@ -106,6 +106,9 @@ $PY -m pytest -q -rs \
   tests/test_289_alert_silences_delivery.py \
   tests/test_290_band_compliance_delivery.py \
   tests/test_291_energy_daily_delivery.py \
+  tests/test_293_crop_plantings_delivery.py \
+  tests/test_crops_position_resolver.py \
+  tests/test_crops_control_boundary.py \
   tests/test_metric_registry_completeness.py \
   tests/test_verdify_services_series.py \
   tests/test_verdify_services_band_preview.py \

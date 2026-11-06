@@ -735,6 +735,35 @@ def sealed_sql_291():
     )
 
 
+CROP_PLANTINGS_MIGRATION = (
+    293,
+    "293-crop-plantings.sql",
+    "fe591976baeb81eb7676b6ff3198a9f370ba6bb7db8f69218c1d5f47ddbd48b7",
+)
+# 293's layout columns, crop_occupancy and grants move all three seals. It chains from 291 (292 is a gap).
+# The rolled-back native qualification on production at 291 measured them
+# (tests/fixtures/293-crop-plantings-native-qualification.json).
+SUCCESSOR_293 = {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "2f5f7ccadf8006a351353c4fce8aec9a59f634b605adf2bcda5e6e61dbe254b9",
+}
+
+
+def sealed_sql_293():
+    # Keep every 291 predicate and bind the exact 293 runner stamp with its seals.
+    predecessor = sealed_sql_291()
+    current = seal_profile_sql(291, SUCCESSOR_291)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(293, SUCCESSOR_293), 1)
+        + " AND "
+        + ledger_row_sql(*CROP_PLANTINGS_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -773,6 +802,8 @@ def sealed_sql():
         + sealed_sql_290()
         + " OR "
         + sealed_sql_291()
+        + " OR "
+        + sealed_sql_293()
         + ")"
     )
 

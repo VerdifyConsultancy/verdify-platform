@@ -66,6 +66,9 @@ const PROBLEM_CODE = {
   line_busy: "The line is already running",
   manifold_busy: "Another line on the same supply is running",
   cap_reached: "Over the line's daily limit",
+  position_occupied: "Something is already planted there",
+  ambiguous_position: "That place could mean more than one spot; be more specific",
+  planting_ended: "That planting has already ended",
 } as const satisfies Record<ProblemCode, string>;
 
 /** Every `LineState.code`: an irrigation line's state, with its reason beside it in words (`LineState.reason`). */
@@ -477,7 +480,7 @@ const STRESS_SEVERITY = { low: "low severity", medium: "medium severity", high: 
 /**
  * `activity_log.action` (`ACTIVITY_ACTION_PATTERN` in verdify_schemas/activity.py), as an Activity row's title begins:
  * the words, then the target's label ("Set VPD Mister Engage", "Changed line L01", "Lights on Main lights"). The
- * irrigation actions are the ones #1156's services write, and the light actions API-20's.
+ * irrigation actions are the ones #1156's services write, the light actions API-20's and the planting actions #1327's.
  */
 const ACTIVITY_ACTION = {
   "setting.write": "Set",
@@ -495,6 +498,12 @@ const ACTIVITY_ACTION = {
   "irrigation.line.update": "Changed line",
   "light.on": "Lights on",
   "light.off": "Lights off",
+  "planting.create": "Planted",
+  "planting.move": "Moved",
+  "planting.harvest": "Harvested",
+  "planting.end": "Ended",
+  "planting.update": "Changed planting",
+  "planting.note": "Noted on planting",
   "band.write": "Changed",
 } as const;
 
