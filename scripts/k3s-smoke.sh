@@ -46,7 +46,12 @@
 #     scripts/k3s-smoke.sh device-monitor [--namespace NS]
 #
 #   Environment / flags:
-#     KUBECONFIG            (required) path to the scoped kubeconfig.
+#     KUBECONFIG            path to the scoped kubeconfig (default: ~/.kube/config;
+#                           when unset and that file is unreadable, the script exits 2).
+#     VERDIFY_SMOKE_PYTHON  interpreter for the in-script checks (default: the
+#                           repo .venv/bin/python when present, else python3). For
+#                           smoke it must import yaml, pydantic and verdify_schemas;
+#                           the script exits 2 up front rather than report false FAILs.
 #     --namespace NS        target namespace (default: verdify-prod).
 #     --mode MODE           same as the positional MODE arg.
 #     --api-port PORT       localhost port for the api port-forward (default 18080).
@@ -89,7 +94,7 @@ while [ $# -gt 0 ]; do
     --expected-api-sha) EXPECTED_API_SHA="${2:-}"; shift 2 ;;
     --expected-api-digest) EXPECTED_API_DIGEST="${2:-}"; shift 2 ;;
     -h|--help)
-      sed -n '2,80p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,69p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     *) echo "ERROR: unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -100,11 +105,35 @@ if [ -z "${NAMESPACE}" ]; then
 fi
 
 if [ -z "${KUBECONFIG:-}" ]; then
-  echo "ERROR: KUBECONFIG must be set (the scoped verdify-agent kubeconfig)." >&2
+  KUBECONFIG="${HOME}/.kube/config"
+  if [ ! -r "${KUBECONFIG}" ]; then
+    echo "ERROR: KUBECONFIG is unset and ${KUBECONFIG} is not readable; set KUBECONFIG to the scoped verdify-agent kubeconfig." >&2
+    exit 2
+  fi
+  echo "NOTE: KUBECONFIG unset; using ${KUBECONFIG}." >&2
+fi
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -n "${VERDIFY_SMOKE_PYTHON:-}" ]; then
+  PY="${VERDIFY_SMOKE_PYTHON}"
+elif [ -x "${REPO_ROOT}/.venv/bin/python" ]; then
+  PY="${REPO_ROOT}/.venv/bin/python"
+else
+  PY="python3"
+fi
+if ! command -v kubectl >/dev/null 2>&1; then
+  echo "ERROR: kubectl is required on PATH." >&2
   exit 2
 fi
-if ! command -v kubectl >/dev/null 2>&1 || ! command -v python3 >/dev/null 2>&1; then
-  echo "ERROR: kubectl and python3 are required on PATH." >&2
+if ! command -v "${PY}" >/dev/null 2>&1; then
+  echo "ERROR: python interpreter ${PY} not found (set VERDIFY_SMOKE_PYTHON or run make setup)." >&2
+  exit 2
+fi
+# smoke parses YAML and imports verdify_schemas; device-monitor needs only the stdlib.
+if [ "${MODE}" = "smoke" ] &&
+   ! py_err="$(PYTHONPATH="${REPO_ROOT}" "${PY}" -c 'import yaml, pydantic, verdify_schemas.component_executor' 2>&1)"; then
+  echo "ERROR: ${PY} cannot import yaml, pydantic and verdify_schemas, so the checks would report false FAILs." >&2
+  echo "       Run make setup (repo .venv) or set VERDIFY_SMOKE_PYTHON to an interpreter that has them." >&2
+  echo "       ${py_err##*$'\n'}" >&2
   exit 2
 fi
 if ! [[ "${TIMEOUT}" =~ ^[1-9][0-9]*$ ]]; then
@@ -147,7 +176,7 @@ trap 'exit 143' TERM
 # timeout alone does not bound streaming exec. Kill only this invocation's local
 # process group so a child holding stdout cannot keep a socket scan alive.
 bounded_kubectl() {
-  python3 -c '
+  "${PY}" -c '
 import os, signal, subprocess, sys
 child = subprocess.Popen(sys.argv[2:], stdout=subprocess.PIPE, start_new_session=True)
 def stop_child():
@@ -213,7 +242,7 @@ run_smoke() {
     fi
     local pods_json image_verdict
     pods_json="$(bounded_kubectl get pods -l app.kubernetes.io/component=api -o json 2>/dev/null || true)"
-    image_verdict="$(printf '%s' "${pods_json}" | python3 -c '
+    image_verdict="$(printf '%s' "${pods_json}" | "${PY}" -c '
 import json, sys
 try:
     pods = json.load(sys.stdin)["items"]
@@ -239,8 +268,8 @@ except (ValueError, KeyError, AssertionError, TypeError) as exc:
       if [ -z "${body}" ]; then
         fail "api: /health/detailed unreachable / empty response"
       else
-        git_sha="$(printf '%s' "${body}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("git_sha", ""))' 2>/dev/null || true)"
-        db_ok="$(printf '%s' "${body}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("checks", {}).get("db_reachable", False))' 2>/dev/null || true)"
+        git_sha="$(printf '%s' "${body}" | "${PY}" -c 'import json,sys; print(json.load(sys.stdin).get("git_sha", ""))' 2>/dev/null || true)"
+        db_ok="$(printf '%s' "${body}" | "${PY}" -c 'import json,sys; print(json.load(sys.stdin).get("checks", {}).get("db_reachable", False))' 2>/dev/null || true)"
         info "/health/detailed git_sha=${git_sha:-<none>}"
         if [ "${git_sha}" = "${EXPECTED_API_SHA}" ]; then
           pass "api: baked git_sha matches reviewed source ${EXPECTED_API_SHA}"
@@ -253,7 +282,7 @@ except (ValueError, KeyError, AssertionError, TypeError) as exc:
           fail "db: NOT reachable (api /health/detailed checks.db_reachable!=true)"
         fi
         health_body="$(curl -fsS --max-time "${TIMEOUT}" "http://127.0.0.1:${API_PORT}/health" 2>/dev/null || true)"
-        health_verdict="$(printf '%s' "${health_body}" | python3 -c '
+        health_verdict="$(printf '%s' "${health_body}" | "${PY}" -c '
 import json, sys
 try:
     body = json.load(sys.stdin)
@@ -280,7 +309,7 @@ except (ValueError, KeyError, AssertionError, TypeError) as exc:
   #    an HTTP 401 or empty inventory never passes this smoke.
   echo "[2] mcp — streamable-http /mcp tool surface"
   local expected_tools mcp_pods pod mcp_verdict mcp_desired mcp_ready mcp_count
-  expected_tools="$(python3 -c 'import sys,yaml; p=yaml.safe_load(open(sys.argv[1])); c=yaml.safe_load(p["data"]["config.yaml"]); print(",".join(sorted(c["mcp_servers"]["verdify_greenhouse"]["tools"]["include"])))' \
+  expected_tools="$("${PY}" -c 'import sys,yaml; p=yaml.safe_load(open(sys.argv[1])); c=yaml.safe_load(p["data"]["config.yaml"]); print(",".join(sorted(c["mcp_servers"]["verdify_greenhouse"]["tools"]["include"])))' \
     "$(dirname "$0")/../deploy/k8s/components/hermes-iris/hermes-config.yaml" 2>/dev/null || true)"
   mcp_pods="$(bounded_kubectl get pods -l app.kubernetes.io/component=mcp --field-selector=status.phase=Running \
     -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)"
@@ -344,7 +373,7 @@ PY
   #    synthetic setpoint write or confirmation claim for a particular plan.
   echo "[3] setpoint observation — fresh snapshot"
   local snapshot fields snapshot_age snapshot_count
-  fields="$(PYTHONPATH="$(dirname "$0")/.." python3 -c '
+  fields="$(PYTHONPATH="${REPO_ROOT}" "${PY}" -c '
 from verdify_schemas.component_executor import CANONICAL_FIELD_ORDER
 assert len(CANONICAL_FIELD_ORDER) == 48
 assert all(name.replace("_", "").isalnum() for name in CANONICAL_FIELD_ORDER)
@@ -389,7 +418,7 @@ print("ARRAY[" + ",".join("\x27" + name + "\x27" for name in CANONICAL_FIELD_ORD
   if start_port_forward verdify-operator-api "${OPERATOR_API_PORT}" 8090; then
     # No -f: an unready pod answers 503 with the same body.
     operator_body="$(curl -sS --max-time "${TIMEOUT}" "http://127.0.0.1:${OPERATOR_API_PORT}/readyz" 2>/dev/null || true)"
-    operator_verdict="$(printf '%s' "${operator_body}" | python3 -c '
+    operator_verdict="$(printf '%s' "${operator_body}" | "${PY}" -c '
 import json, sys
 try:
     body = json.load(sys.stdin)

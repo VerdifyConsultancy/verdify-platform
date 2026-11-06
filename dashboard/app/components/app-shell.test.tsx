@@ -170,7 +170,7 @@ test("a server render carries no greenhouse data: no banner, count, role, name o
   expect(requests).toEqual([]);
 });
 
-test("the header: lockup, the six sections with the count, the account button; the footer names both builds", async () => {
+test("the header: lockup, the seven sections with the count, the account button; the footer names both builds", async () => {
   serve("alerts-merged");
   mount("/activity"); await advance(0);
   const brand = screen.getByRole("link", { name: "Verdify dashboard, home" });

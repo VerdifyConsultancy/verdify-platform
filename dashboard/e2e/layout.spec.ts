@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // The caretaker's phone: no page scrolls sideways at 360 or 390 px and the bottom bar holds every section tab; with reduced
-// motion emulated, nothing moves. And the shell of redesign §2 at 1440 px and on phones: the seven sections, Control
-// owning its views, the account menu, the fault row that never scrolls away, the warn notices in flow, the count pill's
-// severity, the redirects and the end of /more.
+// motion emulated, nothing moves. And the shell of redesign §2 at 1440 px and on phones: the seven sections (on one row
+// from 880 px), Control owning its views, the account menu, the fault row that never scrolls away, the warn notices in
+// flow, the count pill's severity, the redirects and the end of /more.
 import { CARD_PAGES, REDIRECTS, ROUTES, SETTING_DRAWERS } from "./routes";
 import {
   DESKTOP, PHONE, SECTION_LINKS, SMALL_PHONE, WEBKIT, accountMenu, bottomBar, expect, expectNoHorizontalScroll, expectRolePill, load, sectionsNav, test,
@@ -87,6 +87,31 @@ test("1440 px: the header lists the seven sections; Control opens Settings and i
   // Nothing links to /more any more.
   await expect(page.locator("a[href='/more']")).toHaveCount(0);
 });
+
+for (const width of [880, 1100]) {
+  test(`${width} px: the seven section links fit the header's one row, clear of the lockup and the account button`, async ({ page, request }) => {
+    await useFixture(request, "alerts-merged");
+    await page.setViewportSize({ width, height: 900 });
+    await load(page, "/activity");
+    await expect(sectionsNav(page).getByRole("link")).toHaveText(SECTION_LINKS);
+    await expect(sectionsNav(page).locator(".nav-count")).toHaveText("2");
+    const boxes = async (selector: string) => Promise.all((await page.locator(selector).all()).map(async (element) => (await element.boundingBox())!));
+    const [brand] = await boxes(".site-header > .shell > .brand");
+    const [account] = await boxes(".site-header > .shell > .account-menu");
+    const links = await boxes(".site-header .primary-nav a");
+    expect(links).toHaveLength(7);
+    for (const link of links) {
+      // One row: every link shares the lockup's row and sits between it and the account button.
+      expect(Math.abs(link.y + link.height / 2 - (brand.y + brand.height / 2))).toBeLessThanOrEqual(2);
+      expect(link.x).toBeGreaterThanOrEqual(brand.x + brand.width);
+      expect(link.x + link.width).toBeLessThanOrEqual(account.x);
+    }
+    expect(Math.abs(account.y + account.height / 2 - (brand.y + brand.height / 2))).toBeLessThanOrEqual(2);
+    const nav = await page.locator(".site-header .primary-nav").evaluate((element) => ({ scroll: element.scrollWidth, client: element.clientWidth }));
+    expect(nav.scroll).toBeLessThanOrEqual(nav.client);
+    await expectNoHorizontalScroll(page);
+  });
+}
 
 test("1440 px: every page shares the header's one centred container, so switching views never moves the page's edges; a short page's footer reaches the bottom", async ({ page, request }) => {
   await useFixture(request, "in-band");
