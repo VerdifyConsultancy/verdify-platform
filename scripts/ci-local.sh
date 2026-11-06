@@ -365,6 +365,7 @@ $PY -m pytest -q -rs \
   tests/test_dashboard_manifests.py \
   tests/test_egress_deny_management.py \
   tests/test_egress_local_only.py \
+  tests/test_descheduler_enforce_source.py \
   tests/test_local_only_guards.py \
   tests/test_mcp_egress_boundary.py \
   tests/test_writer_outbound_boundary.py \
@@ -444,6 +445,7 @@ $PY -m pytest -q -rs \
   tests/test_lessons_state_machine.py \
   tests/test_mcp_band_tools.py \
   tests/test_mcp_security_acceptance.py \
+  tests/test_mcp_client_attribution.py \
   tests/test_mcp_tool_audit.py \
   tests/test_migration_rollback_safety.py \
   tests/test_native_route_grafana.py \

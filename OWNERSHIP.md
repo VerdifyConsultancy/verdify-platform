@@ -51,6 +51,26 @@ Live Kubernetes objects attributed to this repo: 474 declared, 252 residue-delet
 
 Adjacent: Namespace `verdify-platform` (agent-sessions namesake, `ci-dbg-*` residue) is owned by [jvallery/agents](https://github.com/jvallery/agents/blob/main/docs/fleet-inventory/estate/jvallery__agents.md) in the final record; this repo only removes its own four dashboard ConfigMaps there (row `contribution:verdify-platform/configmap/verdifyconsultancy/verdify-platform` below, A9). In `verdify-edge` the Certificate `wildcard-verdify-ai`, its CertificateRequest/Order children and Secret `wildcard-verdify-ai-tls` are jvallery/agents' and retire under agents#4468; this repo owns only the Namespace object (retire).
 
+## MCP trusted-ingress source packet (#1010)
+
+Receiver side declared here (W6, rebased from the 2026-10-26 prepared source); it is
+inert until network-infra moves the exact `mcp.verdify.ai` tunnel row. No external-client
+acceptance is claimed. The namespace owner remains `VerdifyConsultancy/verdify-platform`.
+The central ownership companion must register these additions in the same delivery packet.
+The ordinary routes, authentication and single ingestor are preserved.
+
+| ID | Item | Source | State and dependencies |
+|---|---|---|---|
+| `route:verdify-prod/verdify-mcp-tunnel-forward` | MCP-only tier-1 twin on the existing cloudflared-only `tunnelclient` entrypoint, forwarding to tier-2 Service port81 | `deploy/k8s/overlays/prod/traefik/verdify-mcp-tunnel-forward.yaml` | declared-not-deployed; network-infra owns the matching exact MCP tunnel row, fleet control-plane owns its catalog pin |
+| `route:verdify-prod/verdify-t2-mcp-tunnel` | Exact MCP-only tokenless file router on isolated `verdify-tunnel:8001`; structured canonical-header access receipt | `deploy/k8s/overlays/prod/traefik/verdify-traefik-routes.yaml` and registered file renderer | declared-not-deployed; requires the tier-1 twin and strict receiver policy |
+| `cluster-object:verdify-prod/mcp-client-attribution-boundary` | Existing tier-2 Service gains ClusterIP port81, Deployment gains8001, and `allow-verdify-mcp-tunnel-from-apps-ingress` admits only the tier-1 namespace AND workload labels; ordinary MCP strips untrusted CF claims | `deploy/k8s/overlays/prod/traefik/verdify-traefik-deployment.yaml`, `verdify-traefik-netpol.yaml`, `verdify-traefik-routes.yaml` | declared-not-deployed; no credential, RBAC, Kubernetes provider or device access |
+
+Health and exact receipt criteria are in
+[`docs/runbooks/mcp-client-attribution.md`](docs/runbooks/mcp-client-attribution.md).
+Canonical client attribution requires the named edge router/entrypoint, a
+bounded correlation join and MCP's actual tier-2 transport peer; ordinary
+headers and an internal caller's copied CF-Ray never establish identity.
+
 ## Argo CD Applications
 
 The Application declarations and AppProjects are jvallery/agents' (R6); this repo owns the source paths they sync and what renders from them. The production declaration was adopted live on 2026-10-21 by agents#5263/#5272, preserving its UID and full spec. The rows below are adjacent-owner references; the October 19 summary remains a dated inventory snapshot.
@@ -518,8 +538,8 @@ Argo-declared containers (one row per workload container). Digest-pinned = image
 | verdify-prod | Deployment/verdify-grafana | inject-canvas-css | initContainer | `grafana/grafana:12.4.14@sha256:ae509d9ae8c1021ca32ec370a9ca975d40165eda9fccd1e1102d317ff8787cd7` | yes |
 | verdify-prod | Deployment/verdify-grafana | renderer | container | `grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986` | yes |
 | verdify-prod | Deployment/verdify-grafana-render-cache | render-cache | container | `nginxinc/nginx-unprivileged:stable-alpine-slim@sha256:5d8bb9437d74a600ec5dbf90c035451c724dc33eac8d3a71078f6f8612c345f6` | yes |
-| verdify-prod | Deployment/verdify-hermes-iris | hermes-iris | container | `nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e` | yes |
-| verdify-prod | Deployment/verdify-hermes-iris | seed-config | initContainer | `nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e` | yes |
+| verdify-prod | Deployment/verdify-hermes-iris | hermes-iris | container | `registry.vallery.net/jvallery/mirror-docker-io-nousresearch-hermes-agent:pinned-a7111ab1cc43@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e` | yes |
+| verdify-prod | Deployment/verdify-hermes-iris | seed-config | initContainer | `registry.vallery.net/jvallery/mirror-docker-io-nousresearch-hermes-agent:pinned-a7111ab1cc43@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e` | yes |
 | verdify-prod | Deployment/verdify-ingestor | ingestor | container | `registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:4b4994bc68c9e0966d2665d4d4da3e4e7e5d1c2dc8b2694f95db1fa629dc6000` | yes |
 | verdify-prod | Deployment/verdify-ingestor | install-psql | initContainer | `postgres:16` | **no** |
 | verdify-prod | Deployment/verdify-ingestor | wait-for-db | initContainer | `timescale/timescaledb:2.25.2-pg16` | **no** |

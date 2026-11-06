@@ -9,10 +9,12 @@
 #
 # IMAGE DIGEST PRESERVED (NOT transformer-rewritten): the image is the upstream
 # nousresearch/hermes-agent pinned to the EXACT @sha256 from compose
-# (a7111ab1...aec72e). It is NOT a ghcr.io/verdifyconsultancy/* app image, so the
-# overlay images: transformer (which only matches the verdify-* names) leaves it
-# untouched — the digest stays byte-identical to the live VM gateway. No mutable
-# tag is ever rendered.
+# (a7111ab1...aec72e), pulled from its zot-origin custody copy
+# jvallery/mirror-docker-io-nousresearch-hermes-agent (full index, storage-infra
+# deploy/registry-origin/custody/plan.json; #1363, Hermes stays per Jason
+# 2026-11-06). It is NOT a ghcr.io/verdifyconsultancy/* app image, so the overlay
+# images: transformer (which only matches the verdify-* names) leaves it
+# untouched. The digest is unchanged; the @sha256 decides what runs.
 #
 # LOOPBACK -> CLUSTERIP: on the VM hermes binds 127.0.0.1:8642 and reaches MCP via
 # the `host.docker.internal:host-gateway` hack (compose:381). In-cluster both
@@ -111,7 +113,7 @@ spec:
         # reconciled here. The learned skill/history and credentials are
         # retained. Uses the SAME upstream image (no extra pull).
         - name: seed-config
-          image: nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
+          image: registry.vallery.net/jvallery/mirror-docker-io-nousresearch-hermes-agent:pinned-a7111ab1cc43@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
           command: ["sh", "-c", "python3 /etc/verdify/iris-inventory/seed-inventory.py && cp -f /etc/verdify/hermes-config/config.yaml /opt/data/config.yaml && echo 'seeded /opt/data/config.yaml from verdify-hermes-iris-config'"]
           securityContext:
             runAsNonRoot: true
@@ -134,9 +136,9 @@ spec:
               readOnly: true
       containers:
         - name: hermes-iris
-          # UPSTREAM image, digest PRESERVED from compose:363 (NOT rewritten by
-          # the overlay images: transformer — name does not match verdify-*).
-          image: nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
+          # UPSTREAM image (zot custody copy), digest PRESERVED from compose:363
+          # (NOT rewritten by the overlay images: transformer).
+          image: registry.vallery.net/jvallery/mirror-docker-io-nousresearch-hermes-agent:pinned-a7111ab1cc43@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
           # MUST be `args:`, NOT `command:`. The image ENTRYPOINT is
           # `tini -g -- /opt/hermes/docker/entrypoint.sh` (verified on the live VM
           # container 2026-06-07), and that entrypoint script is what resolves the

@@ -10,6 +10,7 @@ resources:
   - verdify-traefik-netpol.yaml
   - verdify-traefik-routes.yaml
   - verdify-tier1-apps-forward.yaml
+  - verdify-mcp-tunnel-forward.yaml
 
 # A content-hashed ConfigMap makes every route change a zero-unavailable rollout.
 # IngressRoute/Middleware files remain the single authoring contract; the proxy
