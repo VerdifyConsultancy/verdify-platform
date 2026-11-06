@@ -217,6 +217,10 @@ const bandProfilePreview = z.object({
   night_heat_kwh: z.object({ current: maybe(num), draft: maybe(num) }),
   envelope: maybe(z.object({ hours: int, days: int, rmse_f: num, dewpoint_p10_f: num })),
   findings: z.array(z.object({ code, severity: z.enum(["error", "warning"]).catch("warning"), field: text, detail: text })),
+  // The overlays: an API from before them draws none, rather than failing the page.
+  measured: z.object({ window_start: int, window_end: int, at: z.array(maybe(int)), temp: nullableNumbers, vpd: nullableNumbers })
+    .catch({ window_start: 0, window_end: 0, at: [], temp: [], vpd: [] }),
+  forecast: z.object({ temp: nullableNumbers, vpd: nullableNumbers, issued_at: maybe(text) }).catch({ temp: [], vpd: [], issued_at: null }),
 });
 
 const planRecord = z.object({

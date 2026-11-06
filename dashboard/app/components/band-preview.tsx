@@ -72,8 +72,12 @@ function solarMarks(agenda: ScheduleAgenda | null, day: string): SolarMark[] {
 /** One column of the API's curve: a null stays a null, so a gap stays a gap. */
 type Column = readonly (number | null)[];
 type Curve = BandPreviewData["current"];
-/** A further line on the chart (the band editor's expected night VPD, the curve as the controller runs it), dotted. */
-export type ExtraLine = { readonly key: string; readonly label: string; readonly token: string; readonly values: Column };
+/**
+ * A further line on the chart: dotted by default (the band editor's expected night VPD, the curve as the controller
+ * runs it), solid for a measured trace, dashed for the forecast, as Graphs draws them.
+ */
+export type ExtraLine = { readonly key: string; readonly label: string; readonly token: string; readonly values: Column; readonly kind?: "line" | "dashed" | "dotted" };
+const EXTRA_DASH: Record<NonNullable<ExtraLine["kind"]>, number[] | undefined> = { line: undefined, dashed: [8, 4], dotted: [2, 3] };
 /** The ribbon's runs: a null in low or high leaves it open. */
 export function ribbon(t: readonly number[], low: Column, high: Column): BandRun[] {
   const runs: BandRun[] = [];
@@ -166,7 +170,7 @@ function previewOptions(env: ChartEnv, viewRef: MutableRefObject<PreviewView>): 
   const { colors, px } = env;
   const { unit, token } = viewRef.current;
   const draftLine = (label: string, width: number): uPlot.Series => ({ label, scale: "y", stroke: colors["--c-requested"], width, dash: [8, 4], spanGaps: false, points: { show: false } });
-  const extraLines = (viewRef.current.extras ?? []).map((extra): uPlot.Series => ({ label: extra.label, scale: "y", stroke: colors[extra.token], width: 1.5, dash: [2, 3], spanGaps: false, points: { show: false } }));
+  const extraLines = (viewRef.current.extras ?? []).map((extra): uPlot.Series => ({ label: extra.label, scale: "y", stroke: colors[extra.token], width: 1.5, dash: EXTRA_DASH[extra.kind ?? "dotted"], spanGaps: false, points: { show: false } }));
   return {
     padding: [18, 10, 0, 0],
     series: [{}, { label: "Target", scale: "y", stroke: colors[token], width: 2, spanGaps: false, points: { show: false } }, draftLine(`${PREVIEW_WORD} target`, 2), draftLine(`${PREVIEW_WORD} low`, 1), draftLine(`${PREVIEW_WORD} high`, 1), ...extraLines],
@@ -228,7 +232,7 @@ export function PreviewChart({ day, view, name }: { day: string; view: PreviewVi
     const blank = nulls(view.t.length);
     return [[...view.t], [...view.current.target], [...(view.draft?.target ?? blank)], [...(view.draft?.low ?? blank)], [...(view.draft?.high ?? blank)], ...(view.extras ?? []).map((extra) => [...extra.values])];
   }, [view.t, view.current, view.draft, view.extras]);
-  const extraKeys = (view.extras ?? []).map((extra) => extra.key).join(",");
+  const extraKeys = (view.extras ?? []).map((extra) => `${extra.key}:${extra.kind ?? "dotted"}`).join(",");
   // The marks repaint the same chart; a new unit rebuilds it, with its axis and colours.
   const marks = useMemo(() => ({ runs: view.runs, draft: view.draft, now: view.now, solar: view.marks }), [view.runs, view.draft, view.now, view.marks]);
   return <>
@@ -246,7 +250,7 @@ function previewKey(view: PreviewView): KeyItem[] {
     { key: "band", label: "Band as stored", token: "--c-band-edge", kind: "fill" },
     { key: "target", label: "Target as stored", token: view.token, kind: "line" },
     ...(view.draft ? [{ key: "preview", label: PREVIEW_WORD, token: "--c-requested", kind: "dashed" } as const] : []),
-    ...(view.extras ?? []).map((extra) => ({ key: extra.key, label: extra.label, token: extra.token, kind: "dotted" } as const)),
+    ...(view.extras ?? []).map((extra) => ({ key: extra.key, label: extra.label, token: extra.token, kind: extra.kind ?? "dotted" } as const)),
   ];
 }
 
