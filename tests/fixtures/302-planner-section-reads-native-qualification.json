@@ -1,0 +1,19 @@
+{
+  "migration": "302-planner-section-reads.sql",
+  "exact_final_migration_sha256": "40e5b4d64e1627da7496259da16c02773c186693f1bd7446ad086c45e6beedb3",
+  "final_migration_qualification_pending": true,
+  "before": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projected_successor": {
+    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
+    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projection": "2026-11-05, read only, production at exact289 (290 merged, not yet applied). All three seals are expected to stay 290's, which equal 289's. fn_runtime_ordinary_boundary_digest (217) takes in a relation only if the api or ingestor login can reach it, one of their roles owns it, 217 protects it by name, or PUBLIC or one of their roles holds an ACL entry on it, and it skips each view's _RETURN rule; fn_mcp_runtime_boundary_digest (263) does the same for PUBLIC and the MCP roles. The four views v_planner_experiments, v_planner_assignments, v_planner_experiment_events and v_planner_inference_runs are verdify's, PUBLIC is revoked and the only grant is the dashboard duty's SELECT. control_experiments, control_assignments, experiment_events and planner_inference_runs keep their ACLs and shape (pg_default_acl holds only verdify's own function EXECUTE, read 2026-11-05). Each view body was run read only on production on 2026-11-05: 1 experiment (45039c86, closing event emergency_action facility_safe_closure 2026-09-30T17:50:12Z, 198 warning/critical events), 0 assignments, 213 events, 0 inference runs. If the probe shows any digest moved, stop: that is a finding, not a literal to update, because the file re-seals no receipt. Otherwise, once production is at exact290, run scripts/qualify-migration-successor.py db/migrations/302-planner-section-reads.sql --native-fixture db/qualification/302-planner-section-reads-fixture.sql --fixture tests/fixtures/302-planner-section-reads-native-qualification.json on production (every session rolls back); no literal changes and the file's sha stays. If another migration lands before 302, re-chain the predecessor block to it first.",
+  "qualified_successor": null,
+  "after_rollback": null,
+  "native_fixture": null
+}

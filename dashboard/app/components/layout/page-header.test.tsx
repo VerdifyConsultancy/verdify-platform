@@ -22,9 +22,9 @@ test("on a section's default view the eyebrow is the section's name, not a link;
 });
 
 test("on another view the eyebrow links to the section's default view", () => {
-  renderUi(<PageHeader view="control-plan" />);
-  expect(screen.getByRole("link", { name: "Control" }).getAttribute("href")).toBe("/settings");
-  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Plan");
+  renderUi(<PageHeader view="planner-history" />);
+  expect(screen.getByRole("link", { name: "Planner" }).getAttribute("href")).toBe("/plan");
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Plan history");
 });
 
 test("a focused state names itself in the h1 and reads section › view, both links (GRAPHS › ZONES)", () => {

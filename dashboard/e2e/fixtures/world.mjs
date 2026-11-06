@@ -784,6 +784,8 @@ export const FIXTURES = {
   },
   // #1140: API-21 over 90 days: the base's no_data day nine days back and partial today, a complete day of 0 gal four days
   // back and 14 gal with no valve open six days back, inside the 30-day window too.
+  // #1361: the Planner section with Cortex cost recorded for the last 3 days and a study 18 pairs in, interim results.
+  "planner-study-interim": (world) => { world.plannerCostDays = 3; world.plannerStudy = "interim"; },
   "water-use-90d": (world) => {
     world.waterUseDays = 90;
     world.waterOverrides = {

@@ -297,3 +297,57 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .light-auto-link{font-size:var(--fs-sm)}
 .light-actions{margin:.5rem 0 0}
 .light-controls .state-note,.light-controls .field-error{margin:.35rem 0 0}
+
+/* Planner (#1361): History's day and plan tables, Experiments' list, design, arm calendar and CI rows. Arms: AI is forest, the frozen baseline neutral; a deviation is amber, every cell says it all in words. */
+.pln-bad{color:var(--fault)}
+.pln-warn{color:var(--warn-text)}
+.pln-cutover{margin-left:.35rem}
+.pln-triggers{font-size:var(--fs-xs)}
+.pln-hypothesis{display:block;max-width:40rem;font-size:var(--fs-sm)}
+.pln-experiments{list-style:none;margin:0;padding:0}
+.pln-experiment{padding:.5rem 0;border-top:1px solid var(--line)}
+.pln-experiment:first-child{border-top:0}
+.pln-experiment a{display:inline-flex;align-items:center;min-height:var(--tap)}
+.pln-experiment.is-current{box-shadow:inset 3px 0 0 var(--forest);padding-left:.6rem}
+.pln-closed{margin:.15rem 0 0}
+.pln-design{display:grid;grid-template-columns:12rem minmax(0,1fr);gap:.35rem var(--space-4);margin:0}
+.pln-design dt{font-weight:600}
+.pln-design dd{margin:0;min-width:0}
+.pln-design dd p{margin:0 0 .25rem}
+.pln-design ul{margin:0;padding-left:1.1rem}
+@media(max-width:600px){.pln-design{grid-template-columns:minmax(0,1fr)}.pln-design dd{margin-bottom:.5rem}}
+.pln-calendar-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(2.25rem,1fr));gap:4px;list-style:none;margin:0;padding:0}
+.pln-day{position:relative;display:flex;align-items:center;justify-content:center;min-height:2.25rem;border:1px solid var(--line-strong);border-radius:var(--radius-sm);font-variant-numeric:tabular-nums;font-size:var(--fs-sm)}
+.pln-day[data-arm=ai]{background:var(--forest);border-color:var(--forest);color:#fff}
+.pln-day[data-arm=baseline]{background:var(--line);color:var(--ink)}
+.pln-day[data-when=future]{background:transparent;color:var(--muted)}
+.pln-day[data-when=future][data-arm=ai]{border-color:var(--forest)}
+.pln-day[aria-current=date]{outline:2px solid var(--ink);outline-offset:1px}
+.pln-day[data-deviation]{border-color:var(--amber);border-width:2px}
+.pln-day-mark{position:absolute;top:0;right:2px;font-size:.6rem;color:var(--amber)}
+.pln-day[data-arm=ai] .pln-day-mark{color:#fff}
+.pln-calendar-legend{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem;margin:.5rem 0 0}
+.pln-key{display:inline-block;width:.9rem;height:.9rem;border:1px solid var(--line-strong);border-radius:2px}
+.pln-key[data-arm=ai]{background:var(--forest);border-color:var(--forest)}
+.pln-key[data-arm=baseline]{background:var(--line)}
+.pln-arm[data-arm=ai]{font-weight:600;color:var(--forest)}
+.pln-ci-rows{list-style:none;margin:0;padding:0}
+.pln-ci-row{display:grid;grid-template-columns:14rem 240px minmax(0,1fr);align-items:center;gap:0 .75rem;padding:.3rem 0;border-top:1px solid var(--line)}
+.pln-ci-row:first-child{border-top:0}
+.pln-ci-label{font-weight:600}
+.pln-ci-role{font-weight:400;color:var(--muted)}
+.pln-ci-plot{display:block;max-width:100%}
+.pln-ci-zero{stroke:var(--line-strong);stroke-width:1}
+.pln-ci-margin{stroke:var(--amber);stroke-width:1;stroke-dasharray:3 2}
+.pln-ci-whisker{stroke:var(--ink-muted);stroke-width:2}
+.pln-ci-dot{fill:var(--ink-muted)}
+.pln-ci-whisker.is-better,.pln-ci-whisker.is-not_worse{stroke:var(--forest)}
+.pln-ci-dot.is-better,.pln-ci-dot.is-not_worse{fill:var(--forest)}
+.pln-ci-whisker.is-worse{stroke:var(--fault)}
+.pln-ci-dot.is-worse{fill:var(--fault)}
+.pln-ci-words{font-size:var(--fs-sm);min-width:0}
+.pln-ci-verdict{font-weight:600}
+.pln-ci-verdict.is-better,.pln-ci-verdict.is-not_worse{color:var(--forest)}
+.pln-ci-verdict.is-worse{color:var(--fault)}
+.pln-ci-verdict.is-inconclusive{color:var(--warn-text)}
+@media(max-width:760px){.pln-ci-row{grid-template-columns:minmax(0,1fr)}.pln-ci-words{padding-bottom:.25rem}}

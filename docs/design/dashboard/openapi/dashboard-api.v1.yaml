@@ -50,6 +50,7 @@ tags:
   - {name: alerts, description: 'In-app alerts (alert_log); critical ones page through Alertmanager (OPS-04), never Slack (#1352)'}
   - {name: activity, description: 'activity_log: every write by people, Iris, agents and the system'}
   - {name: irrigation, description: 'Lines L01-L11, schedules, runs, minutes by zone and commands'}
+  - {name: planner, description: 'The Planner section (#1361): plan history and cost, experiments, the arm calendar and results'}
   - {name: ops, description: Health and readiness}
 security:
   - sessionCookie: []
@@ -426,6 +427,53 @@ paths:
           schema: {type: integer, enum: [30, 90], default: 30}
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/WaterUse'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+
+  # ---------------------------------------------------------------- planner section (#1361, #1360)
+  /v1/planner/history:
+    get:
+      operationId: API-22
+      tags: [planner]
+      summary: Plans per day, required plans written, failed and late, dispatched changes, cost and the newest plans
+      description: >-
+        One entry per America/Denver day, oldest first, from plan_journal, planner_trigger_ledger (MIDNIGHT, SUNRISE
+        and SUNSET are required) and setpoint_changes source plan. Cost comes from planner_inference_runs through
+        migration 302's view: before the Cortex planner (#1350) records a call, cost is null and cost_recorded_from is
+        null, which the page shows as "not recorded". dispatched and proposed_only are null until planner_inference_runs
+        has the Cortex attempt columns (cortex_attempts false).
+      parameters:
+        - name: days
+          in: query
+          description: Days ending today, today included
+          schema: {type: integer, enum: [30, 90], default: 30}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PlannerHistory'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/planner/experiments:
+    get:
+      operationId: API-23
+      tags: [planner]
+      summary: Committed study definitions not yet registered, then every experiment record with its status
+      description: >-
+        A definition in verdify_schemas (planner_study.py) that the orchestrator has not registered reads status
+        defined. A record's status is control_experiments.status in words; a draft that an emergency action closed
+        reads closed, with the reason its superseding definition gives or its closing event's code.
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ExperimentList'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/planner/experiments/{id}:
+    get:
+      operationId: API-24
+      tags: [planner]
+      summary: One study, by experiment id or study id, with its definition, arm calendar, results and daily outcomes
+      description: >-
+        The calendar is one cell per assigned study day. Results and daily outcomes come only from #1360's frozen
+        analyzer output; until it has run, results.state is not_started with its reason and outcomes is empty. Results
+        before the final look carry state interim.
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}, description: 'An experiment id (uuid) or a study id'}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ExperimentDetail'}}}}
         default: {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- irrigation (irrigation.md §8.1)
@@ -1883,6 +1931,225 @@ components:
               by_cause: {type: [object, 'null'], additionalProperties: {type: integer}, description: Verdify-valve gallons by IrrigationCause}
               by_purpose: {type: [object, 'null'], additionalProperties: {type: integer}, description: 'Verdify-valve gallons by RunPurpose (#1348): irrigation and climate'}
               no_valve_gal: {type: [integer, 'null'], description: 'Meter water while no Verdify valve was open: the hose, sink, hydro or a leak'}
+    PlannerHistory:
+      type: object
+      description: 'API-22: the planner over 30 or 90 local days. Null means not recorded, never 0'
+      required: [from, to, cost_recorded_from, cortex_attempts, days, plans]
+      properties:
+        from: {type: string, format: date}
+        to: {type: string, format: date, description: 'Inclusive local day: today, a partial day'}
+        cost_recorded_from: {type: [string, 'null'], format: date-time, description: 'The first recorded planner call; null: cost not recorded yet (before #1350)'}
+        cortex_attempts: {type: boolean, description: 'planner_inference_runs has the Cortex attempt columns (migration 294)'}
+        days:
+          type: array
+          description: One per America/Denver day, oldest first
+          items:
+            type: object
+            required: [date, plans_written, triggers, params_dispatched, changes_dispatched, changes_confirmed, required_due, required_written, required_failed, required_late, cost]
+            properties:
+              date: {type: string, format: date}
+              plans_written: {type: integer, description: plan_journal rows written that day}
+              triggers: {type: object, additionalProperties: {type: integer}, description: 'Plans by trigger (UNKNOWN when unmatched)'}
+              params_dispatched: {type: integer, description: 'Distinct settings the plan path changed on the device (setpoint_changes source plan)'}
+              changes_dispatched: {type: integer}
+              changes_confirmed: {type: integer, description: Dispatched changes the device confirmed by readback}
+              required_due: {type: integer, description: 'Required triggers (MIDNIGHT, SUNRISE, SUNSET) expected by now'}
+              required_written: {type: integer}
+              required_failed: {type: integer, description: 'Missed, timed out, failed delivery, wrong action or neutral fallback'}
+              required_late: {type: integer, description: Written after the trigger's due time}
+              cost: {anyOf: [{$ref: '#/components/schemas/PlannerDayCost'}, {type: 'null'}], description: 'Null: no planner call recorded that day'}
+        plans:
+          type: array
+          description: The newest plans in the window, newest first (at most 60)
+          items:
+            type: object
+            required: [plan_id, trigger, written_at, hypothesis, outcome_score, params_dispatched, cost]
+            properties:
+              plan_id: {type: string}
+              trigger: {type: string}
+              written_at: {type: string, format: date-time}
+              hypothesis: {type: [string, 'null']}
+              outcome_score: {type: [number, 'null'], description: The planner's own score of the plan}
+              params_dispatched: {type: integer}
+              cost: {anyOf: [{$ref: '#/components/schemas/PlanCost'}, {type: 'null'}]}
+    PlannerDayCost:
+      type: object
+      required: [calls, models, input_tokens, output_tokens, energy_wh, latency_ms_median, dispatched, proposed_only]
+      properties:
+        calls: {type: integer}
+        models: {type: array, items: {type: string}}
+        input_tokens: {type: [integer, 'null']}
+        output_tokens: {type: [integer, 'null']}
+        energy_wh: {type: [number, 'null']}
+        latency_ms_median: {type: [integer, 'null']}
+        dispatched: {type: [integer, 'null'], description: 'Calls whose plan was dispatched; null before the Cortex attempt columns'}
+        proposed_only: {type: [integer, 'null'], description: 'Calls stored but not sent (shadow or a baseline day)'}
+    PlanCost:
+      type: object
+      required: [model_id, input_tokens, output_tokens, energy_wh, latency_ms, status]
+      properties:
+        model_id: {type: [string, 'null']}
+        input_tokens: {type: [integer, 'null']}
+        output_tokens: {type: [integer, 'null']}
+        energy_wh: {type: [number, 'null']}
+        latency_ms: {type: [integer, 'null']}
+        status: {type: [string, 'null']}
+    ExperimentStatus:
+      type: string
+      enum: [defined, draft, scheduled, running, paused, finished, closed]
+    ExperimentSummary:
+      type: object
+      required: [id, experiment_id, study_id, name, question, status, raw_status, arms, started_at, ended_at, updated_at, days_planned, days_done, deviations, closed_at, closed_reason]
+      properties:
+        id: {type: string, description: 'The experiment id, or the study id for a definition not yet registered'}
+        experiment_id: {type: [string, 'null']}
+        study_id: {type: [string, 'null']}
+        name: {type: string}
+        question: {type: [string, 'null']}
+        status: {$ref: '#/components/schemas/ExperimentStatus'}
+        raw_status: {type: [string, 'null'], description: control_experiments.status}
+        arms: {type: array, items: {type: string}}
+        started_at: {type: [string, 'null'], format: date-time}
+        ended_at: {type: [string, 'null'], format: date-time}
+        updated_at: {type: [string, 'null'], format: date-time}
+        days_planned: {type: [integer, 'null']}
+        days_done: {type: integer}
+        deviations: {type: integer, description: Warning and critical experiment events}
+        closed_at: {type: [string, 'null'], format: date-time}
+        closed_reason: {type: [string, 'null']}
+    ExperimentList:
+      type: object
+      description: 'API-23: committed definitions not yet registered first, then records newest first'
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/ExperimentSummary'}}
+    ExperimentDetail:
+      type: object
+      description: 'API-24: one study'
+      required: [experiment, definition, calendar, next_boundary, results, outcomes]
+      properties:
+        experiment: {$ref: '#/components/schemas/ExperimentSummary'}
+        definition: {anyOf: [{$ref: '#/components/schemas/StudyDefinition'}, {type: 'null'}], description: 'Null for a record with no committed definition'}
+        calendar:
+          type: array
+          description: One cell per assigned study day, oldest first
+          items:
+            type: object
+            required: [date, pair_index, arm, status, starts_at, ends_at, deviations, events]
+            properties:
+              date: {type: string, format: date}
+              pair_index: {type: [integer, 'null']}
+              arm: {type: [string, 'null']}
+              status: {type: string}
+              starts_at: {type: [string, 'null'], format: date-time}
+              ends_at: {type: [string, 'null'], format: date-time}
+              deviations: {type: integer}
+              events: {type: array, items: {type: string}}
+        next_boundary: {type: [string, 'null'], format: date-time, description: 'While scheduled or running'}
+        results: {$ref: '#/components/schemas/StudyResults'}
+        outcomes:
+          type: array
+          description: 'One row per study day from the frozen outcomes; a metric that could not be computed is null'
+          items:
+            type: object
+            required: [date, arm, deviation, values, covariates]
+            properties:
+              date: {type: string, format: date}
+              arm: {type: string}
+              deviation: {type: boolean}
+              values: {type: object, additionalProperties: {type: [number, 'null']}}
+              covariates: {type: object, additionalProperties: {type: [number, 'null']}}
+    StudyDefinition:
+      type: object
+      description: The committed, reviewed study design (verdify_schemas/planner_ab_winter_2026.yaml)
+      required: [study_id, version, definition_sha256, preregistered, arms, metrics, schedule, looks, covariates, stopping_rules, prerequisites]
+      properties:
+        study_id: {type: string}
+        version: {type: integer}
+        definition_sha256: {type: string}
+        preregistered: {type: boolean, description: 'The seed, schedule hash and baseline hash are committed'}
+        arms:
+          type: array
+          items:
+            type: object
+            required: [label, name, planner_mode, description]
+            properties:
+              label: {type: string}
+              name: {type: string}
+              planner_mode: {type: string}
+              description: {type: string}
+        metrics:
+          type: array
+          description: 'In result order: the primary first, then the guardrail'
+          items:
+            type: object
+            required: [id, label, unit, role, direction, window, noninferiority_margin]
+            properties:
+              id: {type: string}
+              label: {type: string}
+              unit: {type: string}
+              role: {type: string, description: 'primary, guardrail, secondary, cost or planner'}
+              direction: {type: string, description: 'higher or lower is better; report is never scored (heat)'}
+              window: {type: string}
+              noninferiority_margin: {type: [number, 'null']}
+        schedule:
+          type: object
+          required: [timezone, boundary_local, pairs, washout_hours, blinding, boundary_confirm_minutes, boundary_max_retries]
+          properties:
+            timezone: {type: string}
+            boundary_local: {type: string, description: 'HH:MM'}
+            pairs: {type: integer}
+            washout_hours: {type: number}
+            blinding: {type: string}
+            boundary_confirm_minutes: {type: integer}
+            boundary_max_retries: {type: integer}
+        looks:
+          type: array
+          items:
+            type: object
+            required: [pairs, purpose]
+            properties:
+              pairs: {type: integer}
+              purpose: {type: string}
+        covariates: {type: array, items: {type: string}}
+        stopping_rules:
+          type: array
+          items:
+            type: object
+            required: [id, rule, action]
+            properties:
+              id: {type: string}
+              rule: {type: string}
+              action: {type: string}
+        prerequisites: {type: array, items: {type: string}}
+    StudyResults:
+      type: object
+      description: 'Only from the frozen analyzer output, never computed in the browser'
+      required: [state, reason, pairs_done, pairs_planned, sentence, metrics, analyzed_at, output_sha256]
+      properties:
+        state: {type: string, enum: [not_started, interim, final]}
+        reason: {type: [string, 'null']}
+        pairs_done: {type: integer}
+        pairs_planned: {type: [integer, 'null']}
+        sentence: {type: [string, 'null'], description: The analyzer's plain-English summary}
+        metrics:
+          type: array
+          description: 'AI minus baseline per metric, with its 95% CI'
+          items:
+            type: object
+            required: [id, label, unit, role, direction, estimate, ci_low, ci_high, n_pairs]
+            properties:
+              id: {type: string}
+              label: {type: string}
+              unit: {type: string}
+              role: {type: string}
+              direction: {type: string}
+              estimate: {type: [number, 'null']}
+              ci_low: {type: [number, 'null']}
+              ci_high: {type: [number, 'null']}
+              n_pairs: {type: integer}
+        analyzed_at: {type: [string, 'null'], format: date-time}
+        output_sha256: {type: [string, 'null']}
     Run:
       type: object
       description: >-

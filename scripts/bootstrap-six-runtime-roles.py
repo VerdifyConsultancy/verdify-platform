@@ -705,6 +705,31 @@ def sealed_sql_290():
     )
 
 
+PLANNER_SECTION_MIGRATION = (
+    302,
+    "302-planner-section-reads.sql",
+    "40e5b4d64e1627da7496259da16c02773c186693f1bd7446ad086c45e6beedb3",
+)
+# The four Planner-section read views are verdify's, with SELECT for the dashboard duty only, which neither
+# ordinary login nor an MCP role holds. All three seals stay 290's (289's). The rolled-back native
+# qualification measures them.
+SUCCESSOR_302 = SUCCESSOR_290
+
+
+def sealed_sql_302():
+    # Keep every 290 predicate and bind the exact 302 runner stamp.
+    predecessor = sealed_sql_290()
+    current = seal_profile_sql(290, SUCCESSOR_290)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(302, SUCCESSOR_302), 1)
+        + " AND "
+        + ledger_row_sql(*PLANNER_SECTION_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -741,6 +766,8 @@ def sealed_sql():
         + sealed_sql_289()
         + " OR "
         + sealed_sql_290()
+        + " OR "
+        + sealed_sql_302()
         + ")"
     )
 

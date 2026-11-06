@@ -1,8 +1,9 @@
-"""The operator reads: API-02, API-07 and API-13 (VD-54); API-09, API-12, API-14 and API-17 (VD-55); API-21 (VD-57).
+"""The operator reads: API-02, API-07 and API-13 (VD-54); API-09, API-12, API-14 and API-17 (VD-55); API-21 (VD-57);
+API-22, API-23 and API-24, the Planner section (#1361).
 
 No auth and no SQL: ``api/operator_api.py`` (#1148) includes ``router`` under
 ``/v1`` with its bearer, session and role dependencies, and each route calls
-one ``verdify_services.reads`` function, or ``alerts.list`` for API-14.
+one ``verdify_services.reads`` function, ``alerts.list`` for API-14, or ``planner`` for API-22 to API-24.
 ``connection`` lends one connection from the operator API's asyncpg pool,
 ``app.state.pool``; the operator API may override it with
 ``app.dependency_overrides``. Query values pass through unchanged: the services
@@ -19,7 +20,7 @@ from typing import Annotated
 import asyncpg
 from fastapi import APIRouter, Depends, Query, Request
 
-from verdify_services import activity, alerts, reads
+from verdify_services import activity, alerts, planner, reads
 
 router = APIRouter()
 
@@ -57,6 +58,29 @@ async def get_equipment(conn: Connection) -> reads.Equipment:
 async def get_water_daily(conn: Connection, days: reads.WaterDays = 30) -> reads.WaterUse:
     """Daily water use from the site meter by line and cause, with the water that ran while no valve was open apart."""
     return await reads.water_daily(conn, days=days)
+
+
+@router.get("/planner/history", operation_id="API-22", tags=["planner"], response_model=planner.PlannerHistory)
+async def get_planner_history(conn: Connection, days: planner.HistoryDays = 30) -> planner.PlannerHistory:
+    """Plans per day (written, required, failed, late), dispatched changes, cost per day and the newest plans."""
+    return await planner.history(conn, days=days)
+
+
+@router.get("/planner/experiments", operation_id="API-23", tags=["planner"], response_model=planner.ExperimentList)
+async def get_planner_experiments(conn: Connection) -> planner.ExperimentList:
+    """Committed studies not yet registered, then every experiment record with its status and closure."""
+    return await planner.experiments(conn)
+
+
+@router.get(
+    "/planner/experiments/{id}",
+    operation_id="API-24",
+    tags=["planner"],
+    response_model=planner.ExperimentDetail,
+)
+async def get_planner_experiment(conn: Connection, id: str) -> planner.ExperimentDetail:  # noqa: A002 - the path key
+    """One study by experiment id or study id: its definition, arm calendar, results and daily outcomes."""
+    return await planner.experiment(conn, id)
 
 
 @router.get("/settings", operation_id="API-09", tags=["settings"], response_model=reads.SettingRows)
