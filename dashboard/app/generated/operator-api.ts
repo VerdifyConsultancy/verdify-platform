@@ -955,6 +955,18 @@ export interface components {
                 /** @enum {string} */
                 readonly severity: "error" | "warning";
             }[];
+            /** @description The day's outdoor forecast on t; every step of an hour holds that hour's newest issue */
+            readonly forecast: {
+                /**
+                 * Format: date-time
+                 * @description The newest fetched_at behind the values
+                 */
+                readonly issued_at: string | null;
+                /** @description Outdoor forecast temperature, °F */
+                readonly temp: components["schemas"]["NullableNumbers"];
+                /** @description Outdoor forecast VPD, kPa */
+                readonly vpd: components["schemas"]["NullableNumbers"];
+            };
             readonly guardrails: {
                 readonly margin_f: number;
                 readonly night_vpd_floor_kpa: number;
@@ -962,6 +974,19 @@ export interface components {
                 readonly temp_min_f: number;
                 readonly vpd_max_kpa: number;
                 readonly vpd_min_kpa: number;
+            };
+            /** @description The last 24 h of the measured house average on t, by America/Denver clock time: a step before now holds today's 10-min bucket, a later step yesterday's */
+            readonly measured: {
+                /** @description Per step, the bucket its values come from; null if none */
+                readonly at: readonly (number | null)[];
+                /** @description climate.temp_avg, °F */
+                readonly temp: components["schemas"]["NullableNumbers"];
+                /** @description climate.vpd_avg, kPa */
+                readonly vpd: components["schemas"]["NullableNumbers"];
+                /** @description Epoch seconds at the end of the bucket holding now */
+                readonly window_end: number;
+                /** @description Epoch seconds of the oldest bucket read */
+                readonly window_start: number;
             };
             readonly night_heat_kwh: {
                 readonly current: number | null;

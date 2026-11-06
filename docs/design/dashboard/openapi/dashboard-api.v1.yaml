@@ -1391,7 +1391,7 @@ components:
     BandProfilePreview:
       type: object
       description: 'API-23: the house band as stored (current) and drafted, one point per step_s'
-      required: [day, step_s, t, sun, current, draft, changed, temp, vpd, night_vpd_bias_kpa, guardrails, overshoot, night_heat_kwh, envelope, findings]
+      required: [day, step_s, t, sun, current, draft, changed, temp, vpd, night_vpd_bias_kpa, guardrails, overshoot, night_heat_kwh, envelope, findings, measured, forecast]
       properties:
         day: {type: string, format: date, description: America/Denver day}
         step_s: {type: integer, const: 600}
@@ -1458,6 +1458,24 @@ components:
               severity: {type: string, enum: [error, warning]}
               field: {type: string}
               detail: {type: string}
+        measured:
+          type: object
+          description: 'The last 24 h of the measured house average on t, by America/Denver clock time: a step before now holds today''s 10-min bucket, a later step yesterday''s'
+          required: [window_start, window_end, at, temp, vpd]
+          properties:
+            window_start: {type: integer, description: Epoch seconds of the oldest bucket read}
+            window_end: {type: integer, description: Epoch seconds at the end of the bucket holding now}
+            at: {type: array, items: {type: [integer, 'null']}, description: 'Per step, the bucket its values come from; null if none'}
+            temp: {$ref: '#/components/schemas/NullableNumbers', description: 'climate.temp_avg, °F'}
+            vpd: {$ref: '#/components/schemas/NullableNumbers', description: 'climate.vpd_avg, kPa'}
+        forecast:
+          type: object
+          description: The day's outdoor forecast on t; every step of an hour holds that hour's newest issue
+          required: [temp, vpd, issued_at]
+          properties:
+            temp: {$ref: '#/components/schemas/NullableNumbers', description: 'Outdoor forecast temperature, °F'}
+            vpd: {$ref: '#/components/schemas/NullableNumbers', description: 'Outdoor forecast VPD, kPa'}
+            issued_at: {type: [string, 'null'], format: date-time, description: The newest fetched_at behind the values}
     BandSave:
       type: object
       additionalProperties: false

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { useMemo } from "react";
 import { useSearchParams } from "react-router";
-import { EquipmentLanes } from "../charts/equipment-lanes";
+import { EquipmentLanes, MANUAL_LEAD_S } from "../charts/equipment-lanes";
 import { RANGES, RangeChips, type RangeId } from "../charts/range-chips";
 import { epochOf } from "../charts/time-axis";
 import type { StateInterval, StateLane, StateLanes as LaneWindow } from "../charts/types";
@@ -19,7 +19,7 @@ import { useClockValue } from "../components/freshness";
 import { PageHeader } from "../components/layout/page-header";
 import { Panel, type PanelState } from "../components/panel";
 import type { Setting, StateLanes } from "../lib/operator-api";
-import { useEquipmentRead, useSettingsRead, useStatesWindowRead } from "../lib/queries";
+import { useEquipmentRead, useLightSwitchesWindowRead, useSettingsRead, useStatesWindowRead } from "../lib/queries";
 import { viewMeta } from "../lib/sections";
 
 export { BOARD_GROUPS, EquipmentGroups, SINCE_WINDOW_DAYS, boardRows, type EquipmentItem } from "../components/equipment/board";
@@ -31,7 +31,8 @@ export { lightsDiffer } from "../components/equipment/light-controls";
  * 861 px: Climate, Lights (Lutron beside the controller's intent, with the light controls) and Flags on the left; the
  * water relays and the Controller card on the right. Then, full width: the bursts (the quick actions Now shares, with
  * Restart controller under More actions), Why, the equipment lanes over the last 24 h or 72 h (`?range=`) and the daily
- * runtime of 14 days. The board and Why share one API-13 read every 15 s; the lanes read API-05 every 60 s. A light's
+ * runtime of 14 days. The board and Why share one API-13 read every 15 s; the lanes read API-05 and the light switches
+ * (API-17, for manual or automatic) every 60 s. A light's
  * automatic switch opens its setting drawer in place (`?edit=`). Only operators see the controls. No greenhouse data
  * renders here or in SSR: data loads in the browser.
  */
@@ -71,6 +72,8 @@ function LanesPanel() {
   const [params] = useSearchParams();
   const range = RANGES.find((item) => item.id === lanesRange(params.get("range")))!;
   const states = useStatesWindowRead(range.seconds);
+  // The light switches, so the light rows read manual or automatic; while this read fails they read neither.
+  const switches = useLightSwitchesWindowRead(range.seconds, MANUAL_LEAD_S);
   const href = (id: RangeId) => {
     const next = new URLSearchParams(params);
     next.set("range", id);
@@ -84,7 +87,7 @@ function LanesPanel() {
   const state = data && (from === null || to === null) ? "error" : readState(states);
   return <Panel title={`Last ${range.label}`} thing="equipment lanes" state={state} reserve="lg" observedAt={data?.to} onRetry={() => void states.refetch()}
     actions={<RangeChips only={LANE_RANGES} current={range.id} href={href} />}>
-    {lanes && from !== null && to !== null && <EquipmentLanes states={lanes} xRange={{ from, to }} syncKey={`verdify:equipment:${range.id}`} now={to} />}
+    {lanes && from !== null && to !== null && <EquipmentLanes states={lanes} xRange={{ from, to }} syncKey={`verdify:equipment:${range.id}`} now={to} lightWrites={switches.data?.items ?? null} />}
   </Panel>;
 }
 
