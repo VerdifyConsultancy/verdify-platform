@@ -637,6 +637,20 @@ function agendaBody(world, { query }) {
   }
   return { schedules: world.schedules, occurrences: occurrences(world, first, last), counts: { schedules: world.schedules.length, max_schedules: 24 }, bounds: BOUNDS, solar };
 }
+/** The physical lines (#1336, `verdify_schemas.irrigation.CIRCUITS`): id, name, zone, kind, clean relay, fertilized relay. */
+const CIRCUITS = [
+  ["wall_drip", "Wall drip", "wall", "drip", "L01", "L02"], ["center_drip", "Center drip", "center", "drip", "L05", "L06"],
+  ["center_mister", "Center mister", "center", "mister", "L04", null], ["south_mister", "South mister", "south", "mister", "L07", "L08"],
+  ["west_mister", "West mister", "west", "mister", "L09", "L10"],
+];
+function circuitsOf(lines) {
+  const variant = (name, lineId) => {
+    const line = lines.find((item) => item.line_id === lineId);
+    return { variant: name, line_id: lineId, wired: lineId !== null, master_valve: name === "fertilized" && lineId !== null, enabled: Boolean(line?.enabled), running: line?.state.code === "running" };
+  };
+  return CIRCUITS.map(([circuit_id, name, zone, kind, clean, fert]) => ({ circuit_id, name, zone, kind, clean: variant("clean", clean), fertilized: variant("fertilized", fert) }));
+}
+
 /** API-IRR-01, with each line's next run, the active runs and today's minutes by zone derived from the lines. */
 export function irrigationBody(world) {
   const upcoming = world.engine ? occurrences(world, today(world), addDays(today(world), 7)).filter((row) => row.status === "planned" && Date.parse(row.planned_start) > world.now) : [];
@@ -659,6 +673,7 @@ export function irrigationBody(world) {
       manifold: manifold(line.kind), line_id: line.line_id, cause: line.state.cause, slot_id: line.state.slot_id, started_at: line.state.observed_at,
       ends_at: line.state.ends_at, pulses_done: null, pulses_total: null,
     })),
+    circuits: circuitsOf(world.lines),
     today: { date: today(world), zones }, limits: world.limits, leak: world.leak, occupancy: world.occupancy, fallback_active: world.fallback_active,
     freshness: world.irrFreshness,
   };

@@ -267,6 +267,8 @@ const MODE_REASON = {
   dehum_continue: "Still venting to dry the air",
   dehum_vent_heat: "Venting with heat to dry the air",
   heat_dehum: "Heating with heat1 to dry the air, vent closed",
+  night_dryout_pulse: "Night dry-out: venting with drier outside air, heat1 holding the temperature",
+  night_dryout_reheat: "Night dry-out: heat1 warming back up after a vent pulse",
   dry_override: "Sealed: VPD above its safe limit",
   vpd_min_safe_rescue: "Venting: VPD below its safe limit",
   vpd_min_safe_heat_rescue: "Heating: VPD below its safe limit",
@@ -436,6 +438,8 @@ const ACTIVITY_ACTION = {
  */
 const IRRIGATION_FIELD = {
   enabled: "Enabled",
+  circuit_id: "Line",
+  variant: "Variant",
   vpd_member: "VPD control",
   schedule_member: "Schedule",
   daily_cap_min: "Daily cap",

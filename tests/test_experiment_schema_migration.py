@@ -357,8 +357,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "289-alert-silences.sql",
         # daily_band_compliance and its refresh run forward only; the rollup is derived data.
         "290-band-compliance.sql",
-        # The Planner section's read views run forward only; they hold no data.
-        "302-planner-section-reads.sql",
+        # The energy view replacement, its daily_summary backfill and the receipt re-seals run forward only.
+        "291-energy-daily-load-magnitude.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

@@ -705,27 +705,32 @@ def sealed_sql_290():
     )
 
 
-PLANNER_SECTION_MIGRATION = (
-    302,
-    "302-planner-section-reads.sql",
-    "40e5b4d64e1627da7496259da16c02773c186693f1bd7446ad086c45e6beedb3",
+ENERGY_DAILY_MIGRATION = (
+    291,
+    "291-energy-daily-load-magnitude.sql",
+    "afd21ce741451d2530f78e94fb82bf1f7a3159476350cd6eb527a1543ae664ae",
 )
-# The four Planner-section read views are verdify's, with SELECT for the dashboard duty only, which neither
-# ordinary login nor an MCP role holds. All three seals stay 290's (289's). The rolled-back native
-# qualification measures them.
-SUCCESSOR_302 = SUCCESSOR_290
+# v_energy_daily's new text and two appended columns are in its relation entry, which both ordinary
+# digests take in, so the api and ingestor seals move; no MCP role or PUBLIC holds an entry on the view,
+# so the MCP seal stays 290's. The rolled-back native qualification measures them.
+SUCCESSOR_291 = {
+    "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
+    "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
+    "mcp": SUCCESSOR_290["mcp"],
+}
 
 
-def sealed_sql_302():
-    # Keep every 290 predicate and bind the exact 302 runner stamp.
+def sealed_sql_291():
+    # Keep every 290 predicate and bind the exact 291 runner stamp with the two
+    # ordinary seals the view replacement moves.
     predecessor = sealed_sql_290()
     current = seal_profile_sql(290, SUCCESSOR_290)
     assert predecessor.count(current) == 1
     return (
         "("
-        + predecessor.replace(current, seal_profile_sql(302, SUCCESSOR_302), 1)
+        + predecessor.replace(current, seal_profile_sql(291, SUCCESSOR_291), 1)
         + " AND "
-        + ledger_row_sql(*PLANNER_SECTION_MIGRATION)
+        + ledger_row_sql(*ENERGY_DAILY_MIGRATION)
         + ")"
     )
 
@@ -767,7 +772,7 @@ def sealed_sql():
         + " OR "
         + sealed_sql_290()
         + " OR "
-        + sealed_sql_302()
+        + sealed_sql_291()
         + ")"
     )
 

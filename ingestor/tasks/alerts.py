@@ -270,8 +270,64 @@ async def _soil_probe_offline_cycle(conn, active_zones, local_hour):
 _LEAK_STOPPED_BELOW_GPM = 0.1
 _LEAK_STOPPED_READINGS = 2
 
+# #1381: the site meter also measures the hose, the sink and the workstation,
+# so "water flowing with every Verdify valve closed" is a leak only when nobody
+# is there to be using it. Every leak_detected episode of 2026-10-26, -27 and -29
+# (1-5 gal/min, 30-480 gal) began within an hour of Frigate seeing someone in
+# the greenhouse, with every valve closed: hose use, not a leak (Jason,
+# 2026-11-05). A flag episode is the run of on-rows whose off gaps are each
+# shorter than _LEAK_EPISODE_GAP (the meter reads whole gallons a minute, so the
+# flag flickers). It is attended when an occupancy detection lies within
+# _LEAK_ATTENDED_BEFORE before its start or at any time during it. An attended
+# episode raises nothing until it has run _LEAK_ATTENDED_MAX (a hose left
+# running); an unattended one raises at once, as before.
+_LEAK_EPISODE_GAP = _td(minutes=15)
+_LEAK_ATTENDED_BEFORE = _td(minutes=60)
+_LEAK_ATTENDED_MAX = _td(hours=3)
+_LEAK_HISTORY = _td(hours=6)
+# An occupancy=true row older than the attended window still counts while its
+# latch could hold (the firmware's 60 min occupancy fail-safe).
+_LEAK_OCCUPANCY_LATCH = _td(minutes=60)
 
-def _leak_alert(flag, open_row, readings):
+
+def _leak_episode_start(rows):
+    """Start of the leak_detected episode the newest row belongs to, or None when the flag is off.
+
+    ``rows`` are the (ts, state) equipment_state rows of the last _LEAK_HISTORY,
+    oldest first. Two writers (the controller and the ingestor) flip the flag,
+    so off rows repeat; a gap is measured from the first off row after an on row.
+    """
+    start = off_since = None
+    for row in rows:
+        ts, state = row["ts"], bool(row["state"])
+        if state:
+            if start is None or (off_since is not None and ts - off_since >= _LEAK_EPISODE_GAP):
+                start = ts
+            off_since = None
+        elif start is not None and off_since is None:
+            off_since = ts
+    return start if start is not None and off_since is None else None
+
+
+def _leak_attended(start, occupancy):
+    """Whether someone was seen in the greenhouse from an hour before ``start`` on.
+
+    ``occupancy`` are the (ts, state) occupancy rows from
+    start - _LEAK_ATTENDED_BEFORE - _LEAK_OCCUPANCY_LATCH, oldest first.
+    """
+    window = start - _LEAK_ATTENDED_BEFORE
+    before = None
+    for row in occupancy:
+        ts, state = row["ts"], bool(row["state"])
+        if ts >= window:
+            if state:
+                return True
+        else:
+            before = (ts, state)
+    return before is not None and before[1] and before[0] >= window - _LEAK_OCCUPANCY_LATCH
+
+
+def _leak_alert(flag, open_row, readings, episode=None):
     """This cycle's leak_detected envelope, or None (US-WAT-18, J6; an alert only, Q-05).
 
     ``flag`` is the newest equipment_state leak_detected row (ts, state) or
@@ -282,9 +338,18 @@ def _leak_alert(flag, open_row, readings):
     a person or agent resolve closes it: it reads "Flow stopped at HH:MM" after
     two readings under 0.1 gal/min, and goes back to the flowing text if flow
     starts again. Nothing latches.
+
+    ``episode`` is (start, attended, now) for an on flag (#1381): an attended
+    episode younger than _LEAK_ATTENDED_MAX raises nothing (hose or sink use),
+    and "since" is the episode's start rather than the newest flag row.
     """
     if flag is not None and flag["state"]:
         since, stopped_at = flag["ts"], None
+        if episode is not None:
+            start, attended, now = episode
+            since = start or since
+            if attended and now - since < _LEAK_ATTENDED_MAX:
+                return None
     elif open_row is not None:
         since = _parse_aware(_alert_details(open_row["details"]).get("since")) or open_row["ts"]
         stopped_at = flow_stopped_at(readings, below_gpm=_LEAK_STOPPED_BELOW_GPM, needed=_LEAK_STOPPED_READINGS)
@@ -310,7 +375,55 @@ def _leak_alert(flag, open_row, readings):
     }
 
 
-async def _leak_cycle_alert(conn):
+_HEAP_LOW_WATERMARK_KB = 10.0
+
+
+def _heap_low_watermark_episode(samples, *, healthy_free_kb, healthy_largest_kb, healthy_samples):
+    """The latest heap low-water-mark event and whether it is still active.
+
+    ``samples`` are diagnostics rows (ts, heap_bytes, heap_min_free_kb,
+    heap_largest_free_block_kb, uptime_s), oldest first. heap_min_free_kb is
+    the ESP32's lowest free heap since boot, so it stays low until a reboot
+    and cannot itself say when the controller recovered. An event is a NEW
+    low under _HEAP_LOW_WATERMARK_KB: the mark falls below its previous sample
+    or below the threshold for the first time in the window, or a reboot
+    (uptime going backwards) re-arms it. The event stays active until
+    ``healthy_samples`` consecutive later samples show current free heap and
+    largest block at or above the recovery thresholds; the mark staying low
+    afterwards does not hold it open, and rows without a current free-heap
+    value are skipped. Returns None when no event is in the
+    window, otherwise a dict with event_ts, event_low_kb, healthy_after and
+    active.
+    """
+    event = None
+    prev_min = prev_uptime = None
+    healthy_run = 0
+    for row in samples:
+        min_kb = row["heap_min_free_kb"]
+        uptime = row["uptime_s"]
+        rebooted = uptime is not None and prev_uptime is not None and uptime < prev_uptime
+        if (
+            min_kb is not None
+            and min_kb < _HEAP_LOW_WATERMARK_KB
+            and (prev_min is None or rebooted or min_kb < prev_min)
+        ):
+            event, healthy_run = {"event_ts": row["ts"], "event_low_kb": float(min_kb)}, 0
+        elif event is not None and row["heap_bytes"] is not None:
+            # A row without current free heap (a partial diagnostics write)
+            # neither proves recovery nor breaks the healthy run.
+            largest_kb = row["heap_largest_free_block_kb"]
+            healthy = row["heap_bytes"] >= healthy_free_kb and (largest_kb is None or largest_kb >= healthy_largest_kb)
+            healthy_run = healthy_run + 1 if healthy else 0
+        if min_kb is not None:
+            prev_min = min_kb
+        if uptime is not None:
+            prev_uptime = uptime
+    if event is None:
+        return None
+    return {**event, "healthy_after": healthy_run, "active": healthy_run < healthy_samples}
+
+
+async def _leak_cycle_alert(conn, now=None):
     """Read the leak flag, the open leak row and the meter's quiet run since that row; build the envelope.
 
     Returns ``(alert, refresh_only_keys)`` for _sync_monitor_alerts. With the
@@ -326,6 +439,19 @@ async def _leak_cycle_alert(conn):
         "AND disposition IN ('open', 'acknowledged') AND resolved_at IS NULL ORDER BY ts DESC LIMIT 1"
     )
     flag_on = flag is not None and bool(flag["state"])
+    episode = None
+    if flag_on:
+        now = now or datetime.now(UTC)
+        history = await conn.fetch(
+            "SELECT ts, state FROM equipment_state WHERE equipment = 'leak_detected' AND ts >= $1 ORDER BY ts",
+            now - _LEAK_HISTORY,
+        )
+        start = _leak_episode_start(history) or flag["ts"]
+        occupancy = await conn.fetch(
+            "SELECT ts, state FROM equipment_state WHERE equipment = 'occupancy' AND ts >= $1 ORDER BY ts",
+            start - _LEAK_ATTENDED_BEFORE - _LEAK_OCCUPANCY_LATCH,
+        )
+        episode = (start, _leak_attended(start, occupancy), now)
     readings = []
     if not flag_on and open_row is not None:
         # Bounded however long the row stays open: from the open row's ts, only
@@ -342,7 +468,7 @@ async def _leak_cycle_alert(conn):
                 _LEAK_STOPPED_READINGS,
             )
         ]
-    alert = _leak_alert(flag, open_row, readings)
+    alert = _leak_alert(flag, open_row, readings, episode)
     if alert is None or flag_on:
         return alert, frozenset()
     return alert, frozenset({(alert["alert_type"], alert["sensor_id"])})
@@ -2616,6 +2742,23 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
              LIMIT 1
             """
         )
+        # The since-boot low-water mark never recovers until a reboot, so it
+        # raises on a NEW low and resolves on consecutive healthy current
+        # samples instead of holding the warning open until the next reboot.
+        heap_low_watermark = _heap_low_watermark_episode(
+            await conn.fetch(
+                """
+                SELECT ts, heap_bytes, heap_min_free_kb, heap_largest_free_block_kb, uptime_s
+                  FROM diagnostics
+                 WHERE ts > now() - interval '6 hours'
+                   AND (heap_bytes IS NOT NULL OR heap_min_free_kb IS NOT NULL)
+                 ORDER BY ts
+                """
+            ),
+            healthy_free_kb=HEAP_CRITICAL_RECOVERY_FREE_KB,
+            healthy_largest_kb=HEAP_CRITICAL_RECOVERY_LARGEST_BLOCK_KB,
+            healthy_samples=HEAP_CRITICAL_RECOVERY_SAMPLES,
+        )
         heap_state = {r["equipment"]: r for r in heap_rows}
         heap_critical = heap_state.get("heap_pressure_critical")
         heap_warning = heap_state.get("heap_pressure_warning")
@@ -2697,7 +2840,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             startup_heap_grace = 0 <= age_after_boot_s <= 180
         critical_active = bool((heap_critical and heap_critical["recent_true"]) or critical_logs > 0)
         warning_active = bool((heap_warning and heap_warning["recent_true"]) or warning_logs > 0)
-        low_watermark_warning = bool(heap_min_free_kb is not None and heap_min_free_kb < 10.0)
+        low_watermark_warning = bool(heap_low_watermark and heap_low_watermark["active"])
         fragmentation_warning = bool(heap_largest_free_block_kb is not None and heap_largest_free_block_kb < 20.0)
         largest_block_recovered = bool(
             heap_largest_free_block_kb is None or heap_largest_free_block_kb >= HEAP_CRITICAL_RECOVERY_LARGEST_BLOCK_KB
@@ -2776,6 +2919,12 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                         "heap_fragmentation_warning": fragmentation_warning,
                         "heap_diag_ts": heap_diag["ts"].isoformat() if heap_diag else None,
                         "critical_logs_30m": critical_logs,
+                        "heap_low_watermark_event_ts": heap_low_watermark["event_ts"].isoformat()
+                        if heap_low_watermark
+                        else None,
+                        "heap_low_watermark_event_kb": round(heap_low_watermark["event_low_kb"], 1)
+                        if heap_low_watermark
+                        else None,
                         "healthy_heap_samples_after_event": healthy_after_critical,
                         "last_critical_log_ts": heap_log["last_critical_ts"].isoformat()
                         if heap_log and heap_log["last_critical_ts"]
@@ -2810,7 +2959,15 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                         "heap_fragmentation_warning": fragmentation_warning,
                         "heap_diag_ts": heap_diag["ts"].isoformat() if heap_diag else None,
                         "warning_logs_30m": warning_logs,
-                        "healthy_heap_samples_after_event": healthy_after_warning,
+                        "healthy_heap_samples_after_event": healthy_after_warning
+                        if last_warning_event_ts or not heap_low_watermark
+                        else heap_low_watermark["healthy_after"],
+                        "heap_low_watermark_event_ts": heap_low_watermark["event_ts"].isoformat()
+                        if heap_low_watermark
+                        else None,
+                        "heap_low_watermark_event_kb": round(heap_low_watermark["event_low_kb"], 1)
+                        if heap_low_watermark
+                        else None,
                         "last_warning_log_ts": heap_log["last_warning_ts"].isoformat()
                         if heap_log and heap_log["last_warning_ts"]
                         else None,
