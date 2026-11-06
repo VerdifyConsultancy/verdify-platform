@@ -202,3 +202,17 @@ def test_job_is_suspended_bounded_and_cortex_only():
     egress = next(d for d in docs if d["metadata"]["name"] == "verdify-knowledge-embed-egress")["spec"]["egress"]
     blocks = [t["ipBlock"]["cidr"] for rule in egress for t in rule["to"] if "ipBlock" in t]
     assert blocks == ["192.168.7.10/32"]
+    selectors = [
+        (t["namespaceSelector"]["matchLabels"], t["podSelector"]["matchLabels"], rule["ports"])
+        for rule in egress
+        for t in rule["to"]
+        if "namespaceSelector" in t
+        and t["namespaceSelector"]["matchLabels"].get("kubernetes.io/metadata.name") != "kube-system"
+    ]
+    assert selectors == [
+        (
+            {"kubernetes.io/metadata.name": "traefik-apps"},
+            {"app.kubernetes.io/name": "traefik"},
+            [{"protocol": "TCP", "port": 8443}],
+        )
+    ]

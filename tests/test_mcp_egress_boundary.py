@@ -123,6 +123,13 @@ def test_only_declared_dns_database_and_fixed_relay_paths(rendered):
         assert not allowed(p, "10.42.1.4", port, pod_labels={"app.kubernetes.io/component": "outbound"})
     assert allowed(p, "192.168.7.10", 443)
     assert not allowed(p, "192.168.7.10", 80) and not allowed(p, "192.168.7.11", 443)
+    # The VIP is DNAT'd to the traefik-apps pods before policy: only their websecure port 8443.
+    traefik = {"app.kubernetes.io/name": "traefik"}
+    assert allowed(p, "10.42.5.6", 8443, pod_labels=traefik, namespace="traefik-apps")
+    for port in (8080, 8000, 9443, 9444):
+        assert not allowed(p, "10.42.5.6", port, pod_labels=traefik, namespace="traefik-apps")
+    assert not allowed(p, "10.42.5.6", 8443, pod_labels=traefik, namespace="verdify-prod")
+    assert not allowed(p, "10.42.5.6", 8443, pod_labels={"app.kubernetes.io/name": "x"}, namespace="traefik-apps")
     assert not allowed(p, "10.42.1.4", 8083, pod_labels={"app.kubernetes.io/component": "outbound"})
     assert allowed(p, "10.42.1.2", 5432, pod_labels={"app.kubernetes.io/component": "db"})
     assert not allowed(p, "10.42.1.2", 5432, pod_labels={"app.kubernetes.io/component": "api"})

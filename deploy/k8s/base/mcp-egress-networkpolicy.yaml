@@ -45,3 +45,16 @@ spec:
     ports:
     - protocol: TCP
       port: 443
+  # kube-proxy DNATs the 192.168.7.10 LoadBalancer VIP to the traefik-apps pods before policy is
+  # evaluated, so the ipBlock above never matches pod traffic: the real destination is the traefik
+  # pod's websecure port 8443. Estate pattern (cortex-ai-compute open-webui); excludes 9443/9444/8080.
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: traefik-apps
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: traefik
+    ports:
+    - protocol: TCP
+      port: 8443
