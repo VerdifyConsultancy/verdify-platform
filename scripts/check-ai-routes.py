@@ -29,7 +29,6 @@ CORTEX_HOST = "cortex.vallery.net"
 # Model -> the issue that moves it to Cortex. Shrink only.
 PENDING = {
     "planner": "#1350 replaces Hermes/OpenAI with one Cortex call",
-    "embedding": "#1351 row 2: Cortex embed.main, vector migration and re-embed",
 }
 FORBIDDEN_KEY_PROVIDERS = {"openai", "gemini", "google-ai-studio"}
 SOURCE_PATHS = (
@@ -60,7 +59,7 @@ AI_PROVIDER_HOSTS = {
     "api.deepseek.com",
     "api.x.ai",
 }
-PENDING_HOSTS = {"api.openai.com": "#1350 and #1351 row 2"}
+PENDING_HOSTS = {"api.openai.com": "#1350"}
 
 
 def host(url: str) -> str:

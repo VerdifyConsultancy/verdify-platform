@@ -1,0 +1,7 @@
+# #1351 row 2: re-embed the knowledge corpus with local Cortex embed.main into
+# public.knowledge_embeddings (migration 296). Suspended CronJob only: Argo never
+# starts a run. See knowledge-embed.yaml for the one-shot trigger.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - knowledge-embed.yaml

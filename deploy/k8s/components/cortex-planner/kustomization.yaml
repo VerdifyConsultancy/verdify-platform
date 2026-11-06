@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Kustomize COMPONENT: verdify-cortex-planner (#1350, #1366), the Cortex planner in SHADOW mode.
+# Prod-only, opted into by overlays/prod. It runs on the ingestor image (the cortex_planner package
+# ships in it), so the overlay's release pin for ghcr.io/verdifyconsultancy/verdify-ingestor decides
+# its digest and no new CI image is needed.
+resources:
+  - cortex-planner-deployment.yaml

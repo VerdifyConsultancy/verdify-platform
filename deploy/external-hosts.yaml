@@ -9,7 +9,7 @@ hosts:
   api.open-meteo.com: {scope: runtime, decision: "#1351 row 6 accepted (verdify-outbound:8083)"}
   challenges.cloudflare.com: {scope: runtime, decision: "#1351 row 7 Cloudflare accepted for now (contact-form Turnstile)"}
   # Removal tracked.
-  api.openai.com: {scope: remove, decision: "#1350 (planner/Hermes/selector) and the MCP embeddings move (#1351 row 2)"}
+  api.openai.com: {scope: remove, decision: "#1350 (planner/Hermes/selector); embeddings moved to Cortex (#1351 row 2)"}
   # Build-time only (#1351 D3, accepted).
   github.com: {scope: build, decision: "#1351 D3 build-time; also repository links and OCI source labels"}
   raw.githubusercontent.com: {scope: reference, decision: "Quartz citations plugin locale URL; the plugin is not enabled"}

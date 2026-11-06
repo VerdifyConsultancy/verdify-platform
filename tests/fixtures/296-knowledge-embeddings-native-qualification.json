@@ -1,0 +1,114 @@
+{
+  "migration": "296-knowledge-embeddings-cortex.sql",
+  "exact_final_migration_sha256": "aec163e31534e28d7ffd2e5b4bc0402819c8096c70d1d5ab28a804dec795d40d",
+  "final_migration_qualification_pending": false,
+  "before": {
+    "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
+    "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projected_successor": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "984604e2c5e99ec801a752792373b53b1e817e5667b10ae35798da5c88eb0ef9"
+  },
+  "projection": "Chained from exact294 in the same PR (293 -> 294 -> 296); 294 moves no seal. before and projected_successor are STAND-INS: 294's seals, which are 293's stand-ins (291's values), because 293's grants move all three seals and 293 is not measured yet. 296 moves only the MCP seal, so the file's successor block refuses the stand-in MCP literal until it is measured. Earlier evidence (exact289, read only): fn_mcp_runtime_boundary_digest's live body, run as a plain query with four injected entries (relation|public|knowledge_embeddings|r|10|f|f|| shaped like public.verdify_embeddings; relation-acl SELECT and function-acl EXECUTE for verdify_mcp_runtime, production OID 1527920, grantor verdify OID 10; and the search function's pg_get_functiondef entry with argument type public.halfvec, SET search_path TO 'pg_catalog', 'public', 'pg_temp' and SET \"hnsw.iterative_scan\" TO 'strict_order'), projected MCP 9ede0ab24e66d55117768d87f7b09d8681471f53e6785638c4137792768e0b67 on top of exact289's 6cab4f0f...; the same four entries apply on top of 293's measured MCP digest. The ordinary seals stay 294's: this file grants no api, ingestor or PUBLIC entry. After 293 and 294 are measured (or with --apply-first), set the predecessor seals, run scripts/qualify-migration-successor.py db/migrations/296-knowledge-embeddings-cortex.sql --fixture tests/fixtures/296-knowledge-embeddings-native-qualification.json on production (every session rolls back), set the measured MCP digest in the file's successor block (both places) and in the c0-migration-delivery.py and bootstrap-six-runtime-roles.py registrations, update the file's sha at both and here, and run it again. 2026-11-06: re-chained onto 293's measured seals and 294's final sha. Production stayed at 291, so --probe-only and then the full run used --apply-first 293 and 294 in each rolled-back session (chain prelock on); the probe measured MCP 984604e2, which the successor block and both registrations now carry, and the ordinary seals stayed 293's.",
+  "qualified_successor": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "984604e2c5e99ec801a752792373b53b1e817e5667b10ae35798da5c88eb0ef9"
+  },
+  "after_rollback": {
+    "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
+    "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "inside_transaction_receipts_match": true,
+  "final_migration_rollback_verified": true,
+  "measured_at": "2026-11-06T09:29:43Z",
+  "native_probe_source_sha256": "afed5697bcb0283a83dec9d62e29dd314591925bca446ee6ef72cbc30d8d3a16",
+  "qualification_source_sha256": "d82e336c7531dbc8723636f89491cf2cd41264583b8b92c3d0a27429fd344699",
+  "applied_first": [
+    {
+      "migration": "293-crop-plantings.sql",
+      "seq": 293,
+      "sha256": "fe591976baeb81eb7676b6ff3198a9f370ba6bb7db8f69218c1d5f47ddbd48b7"
+    },
+    {
+      "migration": "294-cortex-planner-shadow-storage.sql",
+      "seq": 294,
+      "sha256": "99e1feb22a465bafb7adf5852fec5def47357a5b9cd6bd15314c93c02697bb5d"
+    }
+  ],
+  "applied_first_seals": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "2f5f7ccadf8006a351353c4fce8aec9a59f634b605adf2bcda5e6e61dbe254b9"
+  },
+  "prelock": [
+    [
+      "public.crop_events",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.crop_occupancy",
+      "SHARE"
+    ],
+    [
+      "public.crops",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.greenhouses",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.irrigation_line",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.knowledge_embeddings",
+      "SHARE"
+    ],
+    [
+      "public.mcp_runtime_boundary_receipt",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.planner_inference_runs",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.planner_pack",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.positions",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.runtime_ordinary_login_attestation_receipts",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.schema_migrations",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.shelves",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.v_position_current",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.zones",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "verdify_vision_runtime.crops",
+      "ACCESS EXCLUSIVE"
+    ]
+  ]
+}

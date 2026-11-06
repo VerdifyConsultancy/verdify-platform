@@ -693,9 +693,16 @@ class PlannerEvaluationMissedAlert(_AlertBase):
 
 class PlannerToolDependencyFailedDetails(_DetailsBase):
     tool: Literal["lessons_search", "knowledge_search"]
-    reason: Literal["embedding_credential_missing", "embedding_provider_failed", "semantic_query_failed"]
-    embedding_model: Literal["text-embedding-3-large"]
-    embedding_dimensions: Literal[3072]
+    reason: Literal[
+        "embedding_config_invalid",
+        "embedding_credential_missing",
+        "embedding_provider_failed",
+        "embedding_invalid_response",
+        "semantic_query_failed",
+    ]
+    # Cortex embed.main (2560) since #1351; the OpenAI pair stays readable for rows written before it.
+    embedding_model: Literal["embed.main", "text-embedding-3-large"]
+    embedding_dimensions: Literal[2560, 3072]
 
 
 class PlannerToolDependencyFailedAlert(_AlertBase):

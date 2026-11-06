@@ -341,6 +341,22 @@ SUCCESSOR_293_DIGESTS = {
     "verdify_ingestor_runtime_login": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
 }
 SUCCESSOR_293_MCP_DIGEST = "2f5f7ccadf8006a351353c4fce8aec9a59f634b605adf2bcda5e6e61dbe254b9"
+# Exact294 (#1350, #1366): planner_pack, the planner_inference_runs attempt columns, the retained
+# weather_forecast archive and its daily job, the planner duty's views and owner-run functions, and the
+# heater notes. Nothing carries an api, ingestor, MCP or PUBLIC privilege, so every seal keeps 293's value
+# and no receipt is re-sealed. Chained from 293; 294 and 296 ship in one PR, in that order.
+SUCCESSOR_294 = "294-cortex-planner-shadow-storage.sql"
+SUCCESSOR_294_SHA256 = "99e1feb22a465bafb7adf5852fec5def47357a5b9cd6bd15314c93c02697bb5d"
+SUCCESSOR_294_DIGESTS = SUCCESSOR_293_DIGESTS
+SUCCESSOR_294_MCP_DIGEST = SUCCESSOR_293_MCP_DIGEST
+# Exact296 (#1351): knowledge_embeddings (halfvec 2560, Cortex embed.main) and its search function, SELECT and
+# EXECUTE for the MCP duty only. That moves the MCP seal and re-seals its receipt; neither object carries an
+# api or ingestor entry, so both ordinary seals stay 294's. Chained from 294. The rolled-back native
+# qualification (production at 291, 293 and 294 applied first) measured the MCP seal; its fixture records it.
+SUCCESSOR_296 = "296-knowledge-embeddings-cortex.sql"
+SUCCESSOR_296_SHA256 = "aec163e31534e28d7ffd2e5b4bc0402819c8096c70d1d5ab28a804dec795d40d"
+SUCCESSOR_296_DIGESTS = SUCCESSOR_294_DIGESTS
+SUCCESSOR_296_MCP_DIGEST = "984604e2c5e99ec801a752792373b53b1e817e5667b10ae35798da5c88eb0ef9"
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.
@@ -398,6 +414,8 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_290,
         SUCCESSOR_291,
         SUCCESSOR_293,
+        SUCCESSOR_294,
+        SUCCESSOR_296,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
@@ -444,6 +462,8 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_290_SHA256,
                 SUCCESSOR_291_SHA256,
                 SUCCESSOR_293_SHA256,
+                SUCCESSOR_294_SHA256,
+                SUCCESSOR_296_SHA256,
             ),
             strict=True,
         ):
@@ -722,6 +742,8 @@ COMMIT;"""
         (SUCCESSOR_290, SUCCESSOR_290_DIGESTS),
         (SUCCESSOR_291, SUCCESSOR_291_DIGESTS),
         (SUCCESSOR_293, SUCCESSOR_293_DIGESTS),
+        (SUCCESSOR_294, SUCCESSOR_294_DIGESTS),
+        (SUCCESSOR_296, SUCCESSOR_296_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
@@ -819,6 +841,10 @@ COMMIT;"""
             expected_mcp = SUCCESSOR_291_MCP_DIGEST
         if SUCCESSOR_293 in later:
             expected_mcp = SUCCESSOR_293_MCP_DIGEST
+        if SUCCESSOR_294 in later:
+            expected_mcp = SUCCESSOR_294_MCP_DIGEST
+        if SUCCESSOR_296 in later:
+            expected_mcp = SUCCESSOR_296_MCP_DIGEST
         if hotfix_predecessor_263:
             require(
                 mcp_state.get("mcp")

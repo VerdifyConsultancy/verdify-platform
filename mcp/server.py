@@ -16,7 +16,6 @@ import hmac
 import ipaddress
 import json
 import logging
-import math
 import os
 import re
 import stat
@@ -40,6 +39,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationErro
 # verdify_schemas lives one level up from this server file in every worktree.
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
+import verdify_schemas.embeddings as _embeddings  # noqa: E402
 from verdify_schemas import (  # noqa: E402
     ALL_TUNABLES,
     AlertEnvelope,
@@ -190,10 +190,6 @@ BAND_OWNED_PARAMS = BAND_OWNED_REG
 # can grade planned-vs-served band against the new (migration-145) curve. We
 # capture them into hypothesis_structured.planned_band WITHOUT actuating them.
 CROP_BAND_PARAMS = CROP_BAND_REG
-_OPENAI_KEY_FILES = (
-    Path("/etc/verdify/hermes-iris.env"),
-    Path("/mnt/agents/shared/credentials/openai_api_key.txt"),
-)
 PLAN_REQUIRED_PARAMS = TIER1_REG
 TIER1_TUNABLES = TIER1_REG
 
@@ -5924,48 +5920,15 @@ async def crop_lifecycle(crop_id: int) -> str:
 
 
 # ═══════════════════════════════════════════════════════════════
-# VECTORIZED RETRIEVAL (Phase 3, migration 112)
+# VECTORIZED RETRIEVAL (Cortex embed.main, migration 296, #1351)
 # ═══════════════════════════════════════════════════════════════
 #
-# lessons_search and knowledge_search embed the query via OpenAI
-# text-embedding-3-large (3072-dim) and call fn_search_embeddings()
-# against the verdify_embeddings table. Both tools fail gracefully if
-# OPENAI_API_KEY is unset, returning a clear error instead of crashing.
-
-
-_OPENAI_EMBED_MODEL = "text-embedding-3-large"
-_OPENAI_EMBED_DIM = 3072
-
-
-def _openai_api_key() -> str | None:
-    key = os.environ.get("OPENAI_API_KEY")
-    if key:
-        return key
-
-    for path in _OPENAI_KEY_FILES:
-        try:
-            if not path.exists():
-                continue
-            text = path.read_text().strip()
-        except OSError:
-            continue
-
-        if path.name.endswith(".env"):
-            for raw_line in text.splitlines():
-                line = raw_line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if line.startswith("export "):
-                    line = line.removeprefix("export ").strip()
-                if not line.startswith("OPENAI_API_KEY="):
-                    continue
-                candidate = line.split("=", 1)[1].strip().strip('"').strip("'")
-                if candidate:
-                    return candidate
-        elif text:
-            return text
-
-    return None
+# lessons_search and knowledge_search embed the query with local Cortex
+# embed.main (2560-dim, #1351) and call fn_search_knowledge_embeddings()
+# against knowledge_embeddings (migration 296). The provider, endpoint, model
+# and key file come from config/ai.yaml models.embedding through
+# verdify_schemas.embeddings, which refuses any host but Cortex. A missing key
+# or config fails closed with a classified error instead of crashing.
 
 
 class SemanticDependencyFailure(Exception):
@@ -5992,8 +5955,8 @@ async def _semantic_dependency_lifecycle(tool: str, reason: str | None, started_
                 "details": {
                     "tool": tool,
                     "reason": reason,
-                    "embedding_model": _OPENAI_EMBED_MODEL,
-                    "embedding_dimensions": _OPENAI_EMBED_DIM,
+                    "embedding_model": _embeddings.EMBEDDING_MODEL,
+                    "embedding_dimensions": _embeddings.EMBEDDING_DIMENSIONS,
                 },
             }
         )
@@ -6045,36 +6008,25 @@ async def _semantic_failure_result(tool: str, reason: str, started_at: datetime)
 
 
 async def _embed_query(text: str) -> list[float]:
-    """Embed a query; raise a classified, credential-free dependency failure."""
-    api_key = _openai_api_key()
-    if not api_key:
-        raise SemanticDependencyFailure("embedding_credential_missing")
+    """Embed a query with Cortex embed.main; raise a classified, credential-free dependency failure."""
     try:
-        from openai import OpenAI
-
-        client = OpenAI(api_key=api_key, timeout=30.0, max_retries=0)
-        # Sync call wrapped in a worker thread; the OpenAI Python SDK has an
-        # async client too but we keep the import surface minimal here.
-        import asyncio as _asyncio
-
-        resp = await _asyncio.to_thread(
-            client.embeddings.create,
-            model=_OPENAI_EMBED_MODEL,
-            input=text,
-            dimensions=_OPENAI_EMBED_DIM,
-        )
-        vector = list(resp.data[0].embedding)
-        if len(vector) != _OPENAI_EMBED_DIM or any(not math.isfinite(float(v)) for v in vector):
-            raise ValueError("invalid embedding vector")
-        return vector
-    except Exception as exc:  # pragma: no cover — surface failure to caller
-        # Provider errors can contain credential-adjacent request metadata.
-        print(f"[mcp.embed_query] failed: {type(exc).__name__}", file=sys.stderr)
-        raise SemanticDependencyFailure("embedding_provider_failed") from None
+        settings = _embeddings.load_embedding_settings()
+        api_key = _embeddings.read_api_key(settings)
+        return await _embeddings.embed_query(settings, text, api_key=api_key)
+    except _embeddings.EmbeddingError as exc:
+        print(f"[mcp.embed_query] failed: {exc.reason}", file=sys.stderr)
+        reason = exc.reason if exc.reason in _EMBED_FAILURE_REASONS else "embedding_provider_failed"
+        raise SemanticDependencyFailure(reason) from None
 
 
-def _vector_literal(vec: list[float]) -> str:
-    return "[" + ",".join(f"{v:.6f}" for v in vec) + "]"
+_EMBED_FAILURE_REASONS = frozenset(
+    {
+        "embedding_config_invalid",
+        "embedding_credential_missing",
+        "embedding_provider_failed",
+        "embedding_invalid_response",
+    }
+)
 
 
 @mcp.tool()
@@ -6110,7 +6062,7 @@ async def lessons_search(query: str, top_k: int = 10, min_confidence: str = "low
             """
             WITH hits AS (
               SELECT source_id, content, metadata, distance
-                FROM fn_search_embeddings($1::vector, $2, ARRAY['lesson']::text[])
+                FROM fn_search_knowledge_embeddings($1::halfvec, $2, ARRAY['lesson']::text[])
             )
             SELECT pl.id, pl.category, pl.condition, pl.lesson, pl.confidence,
                    pl.times_validated, pl.is_active, h.distance
@@ -6121,7 +6073,7 @@ async def lessons_search(query: str, top_k: int = 10, min_confidence: str = "low
                AND CASE pl.confidence WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END >= $3
              ORDER BY h.distance
             """,
-            _vector_literal(embedding),
+            _embeddings.halfvec_literal(embedding),
             top_k,
             rank_floor,
         )
@@ -6191,7 +6143,7 @@ async def knowledge_search(
         rows = await conn.fetch(
             """
             SELECT source_type, source_id, chunk_idx, content, metadata, distance
-              FROM fn_search_embeddings($1::vector, $2, $3::text[]) h
+              FROM fn_search_knowledge_embeddings($1::halfvec, $2, $3::text[]) h
              WHERE h.source_type <> 'lesson'
                 OR EXISTS (
                      SELECT 1
@@ -6202,7 +6154,7 @@ async def knowledge_search(
                         AND NOT fn_dli_proxy_lesson_invalid(pl.condition, pl.lesson)
                    )
             """,
-            _vector_literal(embedding),
+            _embeddings.halfvec_literal(embedding),
             top_k,
             types,
         )

@@ -35,6 +35,7 @@ spec:
           - firmware-builder
           - firmware-flasher
           - ingestor
+          - knowledge-embed
           - lab-cache-origin
           - lab-site
           - mcp
