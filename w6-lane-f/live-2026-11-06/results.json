@@ -1,0 +1,260 @@
+{
+  "started": "2026-11-06T14:11:08.959Z",
+  "checks": {
+    "now-desktop": {
+      "url": "https://dashboard.verdify.ai/",
+      "title": "Now · Verdify dashboard",
+      "navs": {
+        "Sections": [
+          "Now",
+          "Water",
+          "Crops",
+          "Graphs",
+          "Activity 1 open alerts",
+          "Control",
+          "Planner"
+        ]
+      },
+      "running_next_labels": [
+        "Heat",
+        "Vent, fans",
+        "Fog, mist",
+        "Drips",
+        "Main light",
+        "Grow light",
+        "Iris plans",
+        "Setting changes",
+        "Sun"
+      ],
+      "track_rows": 9
+    },
+    "graphs-desktop": {
+      "url": "https://dashboard.verdify.ai/graphs",
+      "range_current": [
+        "72 h"
+      ],
+      "status": [
+        "72 h · in band 51% · 51 excursions, the worst too humid Nov 3, 21:24–Nov 4, 06:25 (low 0.40 kPa) ›"
+      ],
+      "forecast_labels": [
+        "Forecast · issued 06:37",
+        "Forecast",
+        "Forecast",
+        "Forecast"
+      ],
+      "stale": false,
+      "lane_labels": []
+    },
+    "graphs-lighting-desktop": {
+      "url": "https://dashboard.verdify.ai/graphs/lighting"
+    },
+    "water-desktop": {
+      "south_text": "VPD control off Schedule OFF VPD from peer probes This mister will not mist automatically",
+      "vpd_flag": "",
+      "south_dd": [
+        "off",
+        "OFF"
+      ],
+      "tip": "VPD control on South mister × When the greenhouse needs humidity and the climate safety checks pass, the controller may send short mist pulses to this mister. Only one mister runs at a time. Center goes first, unless this mister's own zone is drier than its target, or Center is capped or faulted. Pulses count toward its 45 min daily cap and the 360 gal daily mist & fog limit. Misting waits while someone is inside, a vent is open or a drip runs. It reads this zone's own humidity probe; while that probe is offline, the other probes, then the house average. The line has to be on: a mister that is off never mists, whatever this switch says.",
+      "vpd_controls_on_drip_cards": 0
+    },
+    "crops-desktop": {
+      "hydro_cells": 60,
+      "all_cells": 96,
+      "headings": [
+        "Hydro rack",
+        "Hydro",
+        "Center",
+        "Hanging",
+        "Center floor",
+        "East wall",
+        "East top",
+        "East bottom",
+        "South wall",
+        "South top",
+        "South bottom",
+        "South floor pots",
+        "West wall",
+        "West top",
+        "West bottom"
+      ],
+      "viewer_write_controls": 0
+    },
+    "planner-plan-desktop": {
+      "url": "https://dashboard.verdify.ai/plan",
+      "headings": [
+        "Plan",
+        "Plan in force",
+        "",
+        "",
+        "",
+        "Planner health",
+        "Planned settings"
+      ],
+      "viewer_write_controls": 0,
+      "viewer_write_buttons": 0,
+      "has_closed_draft": true,
+      "has_not_recorded": false,
+      "excerpt": "PLANNER Plan SUNRISE plan · written 06:42 · valid to Nov 7, 01:00 (17 h 47 min left) · AI Find a setting Find Plan History Experiments Plan in force SUNRISE · iris-20261106-0639 written 06:42 → valid to Nov 7, 01:00 · 17 h 47 min left “{\"conditions\":{\"outdoor_temp_peak_f\":59,\"outdoor_rh_min_pct\":30,\"solar_peak_w_m2\":216,\"cloud_cover_avg_pct\":100,\"notes\":\"Nov 6: 33F frost dawn, 59F high, overcast low-solar daylight; indoor 66.1F/VPD 0.90 with 14.8F dew margin. Prior completed plan self-grade 6 vs anchor 1 (gap 5): its narrow cold objective was largely met (94.9% temp compliance, 0.10h cold stress), but VPD compliance was 39.2%, VPD-low 1.24h, and 110/154 guardrail events were held. I graded t"
+    },
+    "planner-planner-history-desktop": {
+      "url": "https://dashboard.verdify.ai/planner/history",
+      "headings": [
+        "Plan history",
+        "Plans per day",
+        "Newest plans"
+      ],
+      "viewer_write_controls": 0,
+      "viewer_write_buttons": 0,
+      "has_closed_draft": false,
+      "has_not_recorded": true,
+      "excerpt": "PLANNER Plan history 87 of 88 required plans written · 1 failed · 128 plans in all · changes reached the controller on 11 of 30 days Plan History Experiments 30 days 90 days Plans per day Plans per day, Oct 8 to Nov 6, newest first DAY PLANS REQUIRED WRITTEN FAILED LATE TRIGGERS SETTINGS CHANGED CONFIRMED COST Nov 6CORTEX FROM HERE 2 2 of 2 0 0 MIDNIGHT, SUNRISE 22 (109 writes) 100% 2 calls Nov 5 4 3 of 3 0 0 MIDNIGHT, SUNRISE, SUNSET, FORECAST_DEVIATION 22 (305 writes) 96% not recorded Nov 4 3 3 of 3 0 0 MIDNIGHT, SUNRISE, SUNSET 20 (158 writes) 100% not recorded Nov 3 3 3 of 3 0 0 MIDNIGHT, SUNRISE, SUNSET 21 (183 writes) 92% not recorded Nov 2 7 3 of 3 0 0 MIDNIGHT, SUNRISE, SUNSET, FOREC"
+    },
+    "planner-planner-experiments-desktop": {
+      "url": "https://dashboard.verdify.ai/planner/experiments",
+      "headings": [
+        "Experiments",
+        "Experiments",
+        "Design",
+        "Arm calendar",
+        "Results",
+        "Daily outcomes"
+      ],
+      "viewer_write_controls": 0,
+      "viewer_write_buttons": 0,
+      "has_closed_draft": true,
+      "has_not_recorded": false,
+      "excerpt": "PLANNER Experiments AI planner versus a frozen baseline, winter 2026-27: Defined, not started, 0 of 60 days Plan History Experiments Experiments AI planner versus a frozen baseline, winter 2026-27 · Defined, not started · 0 of 60 days Verdify confirmed-component AI-vs-frozen-FSM switchback v2 · Closed · 0 days · 198 deviations Closed Sep 30, 11:50: Never randomized a day. Its physical proof failed three times on 2026-08-28 and a facility safe closure ended it on 2026-09-30. Its OpenAI selector and three hot/dry profiles are retired; its tables and evidence are kept. Design Arms AI planner (dispatch): The Cortex planner (#1350) runs on its triggers and dispatches its plans as normal. Frozen b"
+    },
+    "now-phone": {
+      "url": "https://dashboard.verdify.ai/",
+      "title": "Now · Verdify dashboard",
+      "navs": {
+        "Sections, phone": [
+          "Now",
+          "Water",
+          "Crops",
+          "Graphs",
+          "Activity 1 open alerts",
+          "Control",
+          "Planner"
+        ]
+      },
+      "running_next_labels": [],
+      "track_rows": 0
+    },
+    "graphs-phone": {
+      "url": "https://dashboard.verdify.ai/graphs",
+      "range_current": [
+        "72 h"
+      ],
+      "status": [
+        "72 h · in band 51% · 51 excursions\n, the worst too humid Nov 3, 21:24–Nov 4, 06:25 (low 0.40 kPa)\n ›"
+      ],
+      "forecast_labels": [
+        "Forecast · issued 06:37",
+        "Forecast",
+        "Forecast",
+        "Forecast"
+      ],
+      "stale": false,
+      "lane_labels": []
+    },
+    "graphs-lighting-phone": {
+      "url": "https://dashboard.verdify.ai/graphs/lighting"
+    },
+    "water-phone": {
+      "south_text": "VPD control off Schedule OFF VPD from peer probes This mister will not mist automatically",
+      "vpd_flag": "",
+      "south_dd": [
+        "off",
+        "OFF"
+      ],
+      "tip": "VPD control on South mister × When the greenhouse needs humidity and the climate safety checks pass, the controller may send short mist pulses to this mister. Only one mister runs at a time. Center goes first, unless this mister's own zone is drier than its target, or Center is capped or faulted. Pulses count toward its 45 min daily cap and the 360 gal daily mist & fog limit. Misting waits while someone is inside, a vent is open or a drip runs. It reads this zone's own humidity probe; while that probe is offline, the other probes, then the house average. The line has to be on: a mister that is off never mists, whatever this switch says.",
+      "vpd_controls_on_drip_cards": 0
+    },
+    "crops-phone": {
+      "hydro_cells": 60,
+      "all_cells": 96,
+      "headings": [
+        "Hydro rack",
+        "Hydro",
+        "Center",
+        "Hanging",
+        "Center floor",
+        "East wall",
+        "East top",
+        "East bottom",
+        "South wall",
+        "South top",
+        "South bottom",
+        "South floor pots",
+        "West wall",
+        "West top",
+        "West bottom"
+      ],
+      "viewer_write_controls": 0
+    },
+    "planner-plan-phone": {
+      "url": "https://dashboard.verdify.ai/plan",
+      "headings": [
+        "Plan",
+        "Plan in force",
+        "",
+        "",
+        "",
+        "Planner health",
+        "Planned settings"
+      ],
+      "viewer_write_controls": 0,
+      "viewer_write_buttons": 0,
+      "has_closed_draft": true,
+      "has_not_recorded": false,
+      "excerpt": "PLANNER Plan SUNRISE · to Nov 7, 01:00 · AI Find a setting Find Plan History Experiments Plan in force SUNRISE · iris-20261106-0639 written 06:42 → valid to Nov 7, 01:00 · 17 h 46 min left “{\"conditions\":{\"outdoor_temp_peak_f\":59,\"outdoor_rh_min_pct\":30,\"solar_peak_w_m2\":216,\"cloud_cover_avg_pct\":100,\"notes\":\"Nov 6: 33F frost dawn, 59F high, overcast low-solar daylight; indoor 66.1F/VPD 0.90 with 14.8F dew margin. Prior completed plan self-grade 6 vs anchor 1 (gap 5): its narrow cold objective was largely met (94.9% temp compliance, 0.10h cold stress), but VPD compliance was 39.2%, VPD-low 1.24h, and 110/154 guardrail events were held. I graded the cold objective more heavily; the anchor pen"
+    },
+    "planner-planner-history-phone": {
+      "url": "https://dashboard.verdify.ai/planner/history",
+      "headings": [
+        "Plan history",
+        "Plans per day",
+        "Newest plans"
+      ],
+      "viewer_write_controls": 0,
+      "viewer_write_buttons": 0,
+      "has_closed_draft": false,
+      "has_not_recorded": true,
+      "excerpt": "PLANNER Plan history 87 of 88 required plans written · 1 failed · 128 plans in all · changes reached the controller on 11 of 30 days Plan History Experiments 30 days 90 days Plans per day Plans per day, Oct 8 to Nov 6, newest first DAY PLANS REQUIRED WRITTEN FAILED LATE TRIGGERS SETTINGS CHANGED CONFIRMED COST Nov 6CORTEX FROM HERE 2 2 of 2 0 0 MIDNIGHT, SUNRISE 22 (109 writes) 100% 2 calls Nov 5 4 3 of 3 0 0 MIDNIGHT, SUNRISE, SUNSET, FORECAST_DEVIATION 22 (305 writes) 96% not recorded Nov 4 3 3 of 3 0 0 MIDNIGHT, SUNRISE, SUNSET 20 (158 writes) 100% not recorded Nov 3 3 3 of 3 0 0 MIDNIGHT, SUNRISE, SUNSET 21 (183 writes) 92% not recorded Nov 2 7 3 of 3 0 0 MIDNIGHT, SUNRISE, SUNSET, FOREC"
+    },
+    "planner-planner-experiments-phone": {
+      "url": "https://dashboard.verdify.ai/planner/experiments",
+      "headings": [
+        "Experiments",
+        "Experiments",
+        "Design",
+        "Arm calendar",
+        "Results",
+        "Daily outcomes"
+      ],
+      "viewer_write_controls": 0,
+      "viewer_write_buttons": 0,
+      "has_closed_draft": true,
+      "has_not_recorded": false,
+      "excerpt": "PLANNER Experiments AI planner versus a frozen baseline, winter 2026-27: Defined, not started, 0 of 60 days Plan History Experiments Experiments AI planner versus a frozen baseline, winter 2026-27 · Defined, not started · 0 of 60 days Verdify confirmed-component AI-vs-frozen-FSM switchback v2 · Closed · 0 days · 198 deviations Closed Sep 30, 11:50: Never randomized a day. Its physical proof failed three times on 2026-08-28 and a facility safe closure ended it on 2026-09-30. Its OpenAI selector and three hot/dry profiles are retired; its tables and evidence are kept. Design Arms AI planner (dispatch): The Cortex planner (#1350) runs on its triggers and dispatches its plans as normal. Frozen b"
+    },
+    "crops-plant-from-page": {
+      "selection": "3 selected: EAST-HYDRO-58..60 Plant… Clear Select by place Select",
+      "dialog_status": [
+        "Places: EAST-HYDRO-58..60 (3 cells)"
+      ],
+      "cell59_aria": "EAST-HYDRO-59, w6-page-test, 0 days",
+      "history_has_it": true,
+      "activity_has_it": false,
+      "activity_excerpt": "ACTIVITY Alerts 1 open · 5 acknowledged · 17 resolved in 24 h Alerts Log Needs action planner_failed WARNING since 06:48 (25 min) Cortex planner (shadow) wrote nothing for SUNRISE: 2 attempts, last transport_error. The plan in force is kept. Details of planner_failed › Acknowledge planner_failed Add a note Acknowledged, still open (5) Resolved in the last 24 h (17) Recent activity Open the log › TODAY 07:14 w6 lane F screenshots · dashboard Planted 18 06:56 w6-lane-f · dashboard Lights off Main lights“W6 lane F #1335 hold across the 07:00 decision change” 06:42 iris AI Plan · 195 changes 06:41"
+    },
+    "crops-remove-from-page": {
+      "cell59_aria_after": "EAST-HYDRO-59, empty"
+    }
+  },
+  "errors": {},
+  "finished": "2026-11-06T14:14:46.636Z"
+}
