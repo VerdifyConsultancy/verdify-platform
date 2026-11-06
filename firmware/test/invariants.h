@@ -686,6 +686,12 @@ inline bool check_10_equipment_toggle_auditable(Ctx10& c, const TraceRow& r, Rep
                                    || r.mode_reason == "vent_mist_assist"
                                    || r.mode_reason == "vpd_low"
                                    || r.mode_reason == "vpd_min_safe_rescue"
+                                   // BC-13 heat branch of the same rescue: heat1
+                                   // follows the normal heat path (it stops at the
+                                   // band's heat ceiling) while the rescue reason
+                                   // holds. Reached in the corpus once the default
+                                   // band low moved to 45 °F (#1333 guardrails).
+                                   || r.mode_reason == "vpd_min_safe_heat_rescue"
                                    || r.mode_reason == "vpd_too_low";
         if (!mode_changed && !reason_changed && !reason_auditable) {
             report(10, "equipment_toggle_without_reason", r,
