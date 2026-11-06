@@ -194,7 +194,9 @@ def test_stalled_exec_is_bounded_unknown_and_leaves_no_live_client_children(tmp_
         env=env,
         capture_output=True,
         text=True,
-        timeout=6,
+        # Well under the mock's 60 s stall, so an unbounded exec still fails;
+        # 6 s was too tight for python start-up on loaded CI nodes.
+        timeout=30,
     )
     assert result.returncode == 1, result.stdout + result.stderr
     assert "writer count UNKNOWN" in result.stdout
