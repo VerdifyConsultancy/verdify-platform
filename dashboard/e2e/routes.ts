@@ -4,8 +4,8 @@
  * a new screen cannot skip axe: an issue that adds a route adds its path here in the same PR.
  */
 export const ROUTES = [
-  "/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/lighting", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/plan",
-  "/equipment",
+  "/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/lighting", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/band",
+  "/plan", "/equipment",
 ] as const;
 export type RoutePath = (typeof ROUTES)[number];
 
@@ -37,4 +37,4 @@ export const SETTING_DRAWERS = [
  * `mister-fault`), so a viewer's "no write control" means something there. The other routes write nothing: the Graphs
  * views and the Activity log by design, and Plan because it writes only through a drawer opened from a lane.
  */
-export const WRITE_ROUTES: readonly RoutePath[] = ["/", "/water", "/water/schedules", "/water/history", "/settings", "/activity", "/equipment"];
+export const WRITE_ROUTES: readonly RoutePath[] = ["/", "/water", "/water/schedules", "/water/history", "/settings", "/band", "/activity", "/equipment"];

@@ -76,3 +76,33 @@ def test_a_physical_line_and_variant_name_their_relay():
         with pytest.raises(ServiceError) as refused:
             _resolve_target(*args)
         assert (refused.value.problem.code, refused.value.problem.field) == (code, field)
+
+
+# #1344: VPD control on a disabled mister would read ON and do nothing (the firmware's effective membership needs the
+# enable bit), so the write is refused unless the same change enables the line.
+def _line_row(enabled: bool) -> dict:
+    return {"enabled": enabled, "manual": False, "checked_at": None}
+
+
+@pytest.mark.parametrize(
+    ("enabled", "changes", "refused"),
+    [
+        (False, {"vpd_member": True}, True),
+        (True, {"vpd_member": True, "enabled": False}, True),
+        (False, {"vpd_member": True, "enabled": True}, False),  # needs the check, which the dashboard sends
+        (True, {"vpd_member": True}, False),
+        (False, {"vpd_member": False}, False),
+    ],
+)
+def test_vpd_control_needs_the_line_enabled(enabled, changes, refused):
+    from verdify_services.actor import Actor
+    from verdify_services.irrigation.writes import _check_line_fields
+
+    person = Actor.person("jason", "operator")
+    fields = {**changes, **({"checked": True} if changes.get("enabled") else {})}
+    if refused:
+        with pytest.raises(ServiceError) as caught:
+            _check_line_fields(person, "L07", _line_row(enabled), fields, records_check=bool(fields.get("checked")))
+        assert (caught.value.problem.code, caught.value.problem.field) == ("line_disabled", "vpd_member")
+    else:
+        _check_line_fields(person, "L07", _line_row(enabled), fields, records_check=bool(fields.get("checked")))

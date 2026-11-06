@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo
 import asyncpg
 from pydantic import BaseModel, ConfigDict, Field, model_serializer
 
+from verdify_schemas.band_profile import harmonic
 from verdify_schemas.band_rows import (
     ANCHOR_KEYS,
     BAND_PARAM_ROWS,
@@ -1457,16 +1458,6 @@ PREVIEW_PHASES_SQL = (
     "SELECT ts, public.fn_solar_phase(ts) AS phase "
     "FROM generate_series($1::timestamptz, $2::timestamptz, interval '10 minutes') AS ts ORDER BY ts"
 )
-
-
-def harmonic(sr: float, sm: float, ss: float, mid: float, phase: float) -> float:
-    """``fn_crop_band_value``'s four-anchor harmonic, which ``ingestor/solar.py`` ``band_value_at_phase`` mirrors."""
-    theta = math.pi * phase / 2.0
-    c0 = (sr + sm + ss + mid) / 4.0
-    c1 = (sr - ss) / 2.0
-    s1 = (sm - mid) / 2.0
-    c2 = (sr - sm + ss - mid) / 4.0
-    return c0 + c1 * math.cos(theta) + s1 * math.sin(theta) + c2 * math.cos(2.0 * theta)
 
 
 def resolve_anchors(rows: Iterable[Any]) -> dict[tuple[str, str], float]:

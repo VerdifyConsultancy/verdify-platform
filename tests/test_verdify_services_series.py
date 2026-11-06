@@ -913,6 +913,7 @@ def test_routes_serve_the_committed_operations():
         ("/v1/band", "get"): "API-06",
         ("/v1/band/preview", "get"): "API-19",
         ("/v1/lighting", "get"): "API-22",
+        ("/v1/band/profile", "get"): "API-23",  # tests/test_band_profile.py
     }
     for (path, method), operation_id in served.items():
         assert OPENAPI["paths"][path][method]["operationId"] == operation_id

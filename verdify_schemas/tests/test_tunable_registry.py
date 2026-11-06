@@ -623,12 +623,18 @@ class TestActivityDirectWetGuards:
         tactical `direct_wet_stress_*` override knobs and the
         `sw_direct_wet_gate_enabled` master gate switch remain planner-writable.
         """
+        from verdify_schemas.tunable_registry import NO_EFFECT_RETIRED_REG, SCHEDULED_POLICY_REG
+
         for name in self.DIRECT_WET_NUMERIC:
             row = REGISTRY[name]
             assert not row.planner_pushable
-            assert row.control_class == "scheduled_policy"
             assert row.push_owner == "schedule"
             assert row.cfg_readback_object_id  # readback visibility preserved
+            # The clock offsets have no controller effect (direct_wet_window_open has no caller):
+            # retired in the catalog, still delivered by the schedule layer.
+            expected = "retired" if name in NO_EFFECT_RETIRED_REG else "scheduled_policy"
+            assert row.control_class == expected, name
+            assert name in SCHEDULED_POLICY_REG, name
         # VD-47 retired the day-mask rows with their cfg_* readbacks.
         for name in self.RETIRED_IRRIGATION_MASKS:
             assert name not in REGISTRY
@@ -863,7 +869,7 @@ class TestPlannerWriteContractLockout:
         """Every band-CURVE anchor (band_*_{sr,sm,ss,mid}, zone_vpd_*, zone_priority_*)
         is deterministic crop-band geometry the firmware/curve owns — never a planner
         lever. Closes the 52-anchor hole the temp_low spot-check left open."""
-        from verdify_schemas.tunable_registry import BAND_OWNED_REG, CROP_BAND_REG
+        from verdify_schemas.tunable_registry import BAND_OWNED_REG, CROP_BAND_REG, NO_EFFECT_RETIRED_REG
 
         anchors = sorted(n for n in REGISTRY if _BAND_CURVE_ANCHOR_RE.match(n))
         assert len(anchors) >= 52, f"expected >=52 band-curve anchors, found {len(anchors)}"
@@ -871,7 +877,7 @@ class TestPlannerWriteContractLockout:
             n
             for n in anchors
             if REGISTRY[n].planner_pushable
-            or REGISTRY[n].control_class != "crop_band"
+            or REGISTRY[n].control_class != ("retired" if n in NO_EFFECT_RETIRED_REG else "crop_band")
             or n not in CROP_BAND_REG
             or n not in BAND_OWNED_REG
             or n in PLANNER_PUSHABLE_REG
@@ -1301,7 +1307,7 @@ _VD63_ROWS: dict[str, tuple] = {
         "wet_taper_enabled",
         "cfg_wet_taper_enabled",
         "operator",
-        "controller_safety",
+        "retired",
     ),
     "sw_night_stress_wet_enabled": (
         "switch",
@@ -1312,7 +1318,7 @@ _VD63_ROWS: dict[str, tuple] = {
         "night_stress_wet_enabled",
         "cfg_night_stress_wet_enabled",
         "operator",
-        "controller_safety",
+        "retired",
     ),
     "sw_onchip_band_enabled": (
         "switch",
@@ -1389,3 +1395,42 @@ class TestRegisteredFirmwareTunables:
             assert name not in entity_map.CFG_READBACK_MAP.values()
             # History rows still validate.
             SetpointSnapshot(ts=datetime(2026, 6, 10, tzinfo=UTC), parameter=name, value=spec.default)
+
+
+def test_no_effect_rows_are_retired_in_the_catalog_but_still_delivered() -> None:
+    """#1392 follow-up: rows no control path reads are retired (hidden, read-only, off the planner surface),
+    while the dispatcher keeps delivering the band, schedule and lighting values it already sends."""
+    from verdify_schemas.tunable_registry import (
+        CROP_BAND_REG,
+        LEGACY_SHARED_LIGHTING_REG,
+        NO_EFFECT_RETIRED_REG,
+        SCHEDULED_POLICY_REG,
+        desired_write_rule,
+    )
+
+    assert len(NO_EFFECT_RETIRED_REG) == 26
+    for name in NO_EFFECT_RETIRED_REG:
+        spec = REGISTRY[name]
+        assert spec.control_class == "retired", name
+        assert name in RETIRED_TUNABLES_REG and name not in ACTIVE_TUNABLES_REG, name
+        assert name not in PLANNER_PUSHABLE_REG and spec.wire_id is None, name
+        assert desired_write_rule(name)[0] is False, name
+        assert "retired" in spec.notes.lower(), name
+    offsets = {
+        f"direct_wet_{where}_{part}_min"
+        for where in ("south", "wall", "west", "center")
+        for part in ("start_offset", "drydown_before_off")
+    }
+    assert offsets <= SCHEDULED_POLICY_REG
+    assert {"wet_taper_before_sunset_min", "zone_priority_east"} <= CROP_BAND_REG
+    assert LEGACY_SHARED_LIGHTING_REG == {
+        "gl_dli_target",
+        "gl_lux_threshold",
+        "gl_lux_hysteresis",
+        "gl_sunrise_hour",
+        "gl_sunset_hour",
+        "sw_gl_auto_mode",
+    }
+    # Inert on the band-first controller but decoded from the policy wire: retiring them is a wire change.
+    for name in ("mist_thermal_relief_s", "sw_direct_wet_stress_override_enabled"):
+        assert REGISTRY[name].control_class == "planner_policy" and REGISTRY[name].wire_id is not None

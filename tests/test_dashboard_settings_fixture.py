@@ -108,14 +108,18 @@ def test_read_only_rows_follow_architecture_5_3_step_1(rows, generator):
         return row["read_only_reason"]
 
     # The legacy wide limits read "legacy limit, read-only" (screens SCR-05).
-    for name in ("temp_low", "temp_high", "vpd_low", "vpd_high", "vpd_target_center", "vpd_target_west"):
+    for name in ("temp_low", "temp_high", "vpd_low", "vpd_high"):
         assert reason(name) == "legacy limit, read-only: not the band while the on-chip band runs"
+    # The zone VPD targets are computed but still used by the controller, so they are not legacy limits.
+    for name in ("vpd_target_center", "vpd_target_west"):
+        assert reason(name).startswith("zone VPD target, read-only"), name
+        assert rows[name]["read_only_kind"] == "zone_vpd_target", name
     for name in ("activity_start_hour", "activity_start_minute", "activity_duration_min"):
         assert "derived by the dispatcher" in reason(name)
     assert "owns the band" in reason("sw_onchip_band_enabled")
     for name in present(*sorted(generator.WEEKLY_FEED)):
         assert "retiring with the irrigation engine" in reason(name)
-    for name in ("zone_priority_center", "wet_taper_before_sunset_min", "manual_override_timeout_min"):
+    for name in ("zone_priority_center", "manual_override_timeout_min"):
         assert "crop band anchor" in reason(name)
     retired = [name for name, spec in REGISTRY.items() if tunable_control_class(name, spec) == "retired"]
     context = [name for name, spec in REGISTRY.items() if tunable_control_class(name, spec) == "readback_context"]
