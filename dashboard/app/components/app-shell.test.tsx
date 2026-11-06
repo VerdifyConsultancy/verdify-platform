@@ -19,11 +19,13 @@ import Equipment from "../routes/equipment";
 import Graphs from "../routes/graphs";
 import Statistics from "../routes/graphs-statistics";
 import GraphZones from "../routes/graphs.zones";
+import GraphsLighting from "../routes/graphs.lighting";
 import Now from "../routes/now";
 import Plan from "../routes/plan";
 import PlannerExperiments from "../routes/planner-experiments";
 import PlannerHistory from "../routes/planner-history";
 import Settings from "../routes/settings";
+import Band from "../routes/band";
 import WaterRoute from "../routes/water";
 import WaterBoard from "../routes/water-board";
 import WaterHistory from "../routes/water-history";
@@ -45,7 +47,7 @@ const BUILD = "fedcba9876543210fedcba9876543210fedcba98";
 /** Every screen route of app/routes.ts by path, with its component; Water's three views render inside its layout. */
 const SCREENS = [
   ["/", Now], ["/water", WaterBoard], ["/water/schedules", WaterSchedules], ["/water/history", WaterHistory], ["/graphs", Graphs], ["/graphs/zones", GraphZones],
-  ["/graphs/statistics", Statistics], ["/activity", Activity], ["/activity/log", ActivityLog], ["/settings", Settings], ["/plan", Plan], ["/equipment", Equipment],
+  ["/graphs/lighting", GraphsLighting], ["/graphs/statistics", Statistics], ["/activity", Activity], ["/activity/log", ActivityLog], ["/settings", Settings], ["/band", Band], ["/plan", Plan], ["/equipment", Equipment],
   ["/planner/history", PlannerHistory], ["/planner/experiments", PlannerExperiments],
 ] as const;
 const WATER_VIEWS: readonly string[] = ["/water", "/water/schedules", "/water/history"];
@@ -116,8 +118,8 @@ test("the routes: the six sections' views, the scorecard's and Planner's redirec
   });
   const paths = leaves(routes as Entry[]);
   expect(paths).toEqual([
-    "/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/statistics", "/graphs/scorecard", "/activity", "/activity/log",
-    "/settings", "/equipment", "/plan", "/planner", "/planner/history", "/planner/experiments", "/auth/*", "/*",
+    "/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/lighting", "/graphs/statistics", "/graphs/scorecard", "/activity", "/activity/log",
+    "/settings", "/band", "/equipment", "/plan", "/planner", "/planner/history", "/planner/experiments", "/auth/*", "/*",
   ]);
   expect(paths).not.toContain("/plants");
   expect(paths).not.toContain("/more");
@@ -134,11 +136,12 @@ test("in band: the shell reads API-01 and API-02 once each, shows no banner, and
   requests = [];
   mount("/"); await advance(0);
   // Now (#1129) reads the shell's API-02 poll, so one request serves both; it adds its water and alert reads, and below
-  // them Coming up's plan and schedules and the zones' metric list and series (#1138), whose bands follow once they draw.
+  // them Coming up's plan and schedules, the lights' equipment and settings (#1340), and the zones' metric list and series
+  // (#1138), whose bands follow once they draw.
   const shellReads = (path: string) => path === "/api/v1/me" || path === "/api/v1/now";
   const zoneReads = (path: string) => path.startsWith("/api/v1/series?") || path.startsWith("/api/v1/band?");
   expect(requests.filter(shellReads).sort()).toEqual(["/api/v1/me", "/api/v1/now"]);
-  expect(requests.filter((path) => !shellReads(path) && !zoneReads(path)).sort()).toEqual(["/api/v1/alerts?status=recent&limit=200", "/api/v1/irrigation", "/api/v1/irrigation/schedules?days=7", "/api/v1/metrics", "/api/v1/plan?hours=24"]);
+  expect(requests.filter((path) => !shellReads(path) && !zoneReads(path)).sort()).toEqual(["/api/v1/alerts?status=recent&limit=200", "/api/v1/equipment", "/api/v1/irrigation", "/api/v1/irrigation/schedules?days=7", "/api/v1/metrics", "/api/v1/plan?hours=24", "/api/v1/settings"]);
   // API-02 every 15 s, API-01 every 60 s: one poll each, never a second.
   requests = [];
   await advance(NOW_POLL_MS);
@@ -222,10 +225,11 @@ test("every page has a page header: the eyebrow names the section, the h1 the vi
   serve("in-band");
   const expected: Record<string, [string, string, string[]]> = {
     "/water": ["Water", "Water today", ["Today", "Schedules", "History"]], "/water/schedules": ["Water", "Schedules", ["Today", "Schedules", "History"]],
-    "/water/history": ["Water", "Water history", ["Today", "Schedules", "History"]], "/graphs": ["Graphs", "Climate", ["Climate", "Zones", "Statistics"]],
-    "/graphs/zones": ["Graphs", "Zones", ["Climate", "Zones", "Statistics"]], "/graphs/statistics": ["Graphs", "Statistics", ["Climate", "Zones", "Statistics"]],
+    "/water/history": ["Water", "Water history", ["Today", "Schedules", "History"]], "/graphs": ["Graphs", "Climate", ["Climate", "Zones", "Lighting", "Statistics"]],
+    "/graphs/zones": ["Graphs", "Zones", ["Climate", "Zones", "Lighting", "Statistics"]], "/graphs/lighting": ["Graphs", "Lighting", ["Climate", "Zones", "Lighting", "Statistics"]], "/graphs/statistics": ["Graphs", "Statistics", ["Climate", "Zones", "Lighting", "Statistics"]],
     "/activity": ["Activity", "Alerts", ["Alerts", "Log"]], "/activity/log": ["Activity", "Activity log", ["Alerts", "Log"]],
-    "/settings": ["Control", "Settings", ["Settings", "Equipment"]], "/equipment": ["Control", "Equipment", ["Settings", "Equipment"]],
+    "/settings": ["Control", "Settings", ["Settings", "Band", "Equipment"]], "/equipment": ["Control", "Equipment", ["Settings", "Band", "Equipment"]],
+    "/band": ["Control", "Band", ["Settings", "Band", "Equipment"]],
     "/plan": ["Planner", "Plan", ["Plan", "History", "Experiments"]], "/planner/history": ["Planner", "Plan history", ["Plan", "History", "Experiments"]],
     "/planner/experiments": ["Planner", "Experiments", ["Plan", "History", "Experiments"]],
   };

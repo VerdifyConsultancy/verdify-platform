@@ -735,22 +735,101 @@ def sealed_sql_291():
     )
 
 
+CROP_PLANTINGS_MIGRATION = (
+    293,
+    "293-crop-plantings.sql",
+    "fe591976baeb81eb7676b6ff3198a9f370ba6bb7db8f69218c1d5f47ddbd48b7",
+)
+# 293's layout columns, crop_occupancy and grants move all three seals. It chains from 291 (292 is a gap).
+# The rolled-back native qualification on production at 291 measured them
+# (tests/fixtures/293-crop-plantings-native-qualification.json).
+SUCCESSOR_293 = {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "2f5f7ccadf8006a351353c4fce8aec9a59f634b605adf2bcda5e6e61dbe254b9",
+}
+
+
+def sealed_sql_293():
+    # Keep every 291 predicate and bind the exact 293 runner stamp with its seals.
+    predecessor = sealed_sql_291()
+    current = seal_profile_sql(291, SUCCESSOR_291)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(293, SUCCESSOR_293), 1)
+        + " AND "
+        + ledger_row_sql(*CROP_PLANTINGS_MIGRATION)
+        + ")"
+    )
+
+
+CORTEX_PLANNER_MIGRATION = (
+    294,
+    "294-cortex-planner-shadow-storage.sql",
+    "99e1feb22a465bafb7adf5852fec5def47357a5b9cd6bd15314c93c02697bb5d",
+)
+# #1350: seal-preserving. No object 294 adds carries an api, ingestor, MCP or PUBLIC privilege, so every
+# seal keeps 293's value. Chained from 293; 294 and 296 ship in one PR, in that order.
+SUCCESSOR_294 = dict(SUCCESSOR_293)
+
+
+def sealed_sql_294():
+    # Keep every 293 predicate and bind the exact 294 runner stamp.
+    predecessor = sealed_sql_293()
+    current = seal_profile_sql(293, SUCCESSOR_293)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(294, SUCCESSOR_294), 1)
+        + " AND "
+        + ledger_row_sql(*CORTEX_PLANNER_MIGRATION)
+        + ")"
+    )
+
+
+KNOWLEDGE_EMBEDDINGS_MIGRATION = (
+    296,
+    "296-knowledge-embeddings-cortex.sql",
+    "aec163e31534e28d7ffd2e5b4bc0402819c8096c70d1d5ab28a804dec795d40d",
+)
+# #1351: knowledge_embeddings (halfvec 2560, Cortex embed.main) and its search function, SELECT and
+# EXECUTE for the MCP duty only. The MCP digest takes in both entries, so the MCP seal moves; neither
+# object carries an api, ingestor or PUBLIC entry, so both ordinary seals stay 294's. Chained from 294.
+# The rolled-back native qualification measured the MCP seal
+# (tests/fixtures/296-knowledge-embeddings-native-qualification.json).
+SUCCESSOR_296 = {**SUCCESSOR_294, "mcp": "984604e2c5e99ec801a752792373b53b1e817e5667b10ae35798da5c88eb0ef9"}
+
+
+def sealed_sql_296():
+    # Keep every 294 predicate and bind the exact 296 runner stamp with the MCP seal its grants move.
+    predecessor = sealed_sql_294()
+    current = seal_profile_sql(294, SUCCESSOR_294)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(296, SUCCESSOR_296), 1)
+        + " AND "
+        + ledger_row_sql(*KNOWLEDGE_EMBEDDINGS_MIGRATION)
+        + ")"
+    )
+
+
 GREENHOUSE_BRIEF_MIGRATION = (
     301,
     "301-greenhouse-brief.sql",
-    "0c7ad6846a52d840a9ec90366bdc87f8ee0d77a358c697f1e6bffe5f752d2062",
+    "24945842499e5d907d2c49ef4cbf4e57ada2f29b297c9744edd055421f7d0e1d",
 )
 # greenhouse_brief is written by the dashboard duty and read by the MCP duty; neither ordinary login reaches it,
-# so the api and ingestor seals stay 291's and the MCP seal moves. The MCP literal is a read-only projection on
-# production at exact289 (291 leaves the MCP seal alone) until the rolled-back native qualification measures it.
-# Stand-in chain: 301 follows 291 here and moves behind 296 when #1388 publishes it.
-SUCCESSOR_301 = {**SUCCESSOR_291, "mcp": "717d3d0bea4032fe65fe977f78f511b6ed3bd97142d6665ebc3bfa83836414af"}
+# so the api and ingestor seals stay 296's and the MCP seal moves. Chained from 296 (#1388); the rolled-back
+# native qualification measured the MCP seal (tests/fixtures/301-greenhouse-brief-native-qualification.json).
+SUCCESSOR_301 = {**SUCCESSOR_296, "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"}
 
 
 def sealed_sql_301():
-    # Keep every 291 predicate and bind the exact 301 runner stamp with the MCP seal its grant moves.
-    predecessor = sealed_sql_291()
-    current = seal_profile_sql(291, SUCCESSOR_291)
+    # Keep every 296 predicate and bind the exact 301 runner stamp with the MCP seal its grant moves.
+    predecessor = sealed_sql_296()
+    current = seal_profile_sql(296, SUCCESSOR_296)
     assert predecessor.count(current) == 1
     return (
         "("
@@ -764,11 +843,11 @@ def sealed_sql_301():
 PLANNER_SECTION_MIGRATION = (
     302,
     "302-planner-section-reads.sql",
-    "8d427bb1bc067a88e1e687fead3289841fd5d117247580a10608f0b9dd306ca5",
+    "a18aeb0588b5f4e56b7a78ce3dea7c592873b9fae54f0701c45f6d9bbbd8f3bf",
 )
 # The four Planner-section read views are verdify's, with SELECT for the dashboard duty only, which neither
-# ordinary login nor an MCP role holds. All three seals stay 301's. The rolled-back native qualification
-# measures them.
+# ordinary login nor an MCP role holds. All three seals stay 301's; the rolled-back native qualification
+# confirmed it.
 SUCCESSOR_302 = SUCCESSOR_301
 
 
@@ -824,6 +903,12 @@ def sealed_sql():
         + sealed_sql_290()
         + " OR "
         + sealed_sql_291()
+        + " OR "
+        + sealed_sql_293()
+        + " OR "
+        + sealed_sql_294()
+        + " OR "
+        + sealed_sql_296()
         + " OR "
         + sealed_sql_301()
         + " OR "

@@ -84,12 +84,10 @@ spec:
                 secretKeyRef:
                   name: verdify-mcp-runtime-db
                   key: password
-            # Existing provider credential; no new secret or key rotation.
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: verdify-hermes
-                  key: OPENAI_API_KEY
+            # #1351: lessons_search/knowledge_search embed queries with local Cortex
+            # embed.main (config/ai.yaml models.embedding); no OpenAI key or host.
+            - name: VERDIFY_EMBEDDING_KEY_FILE
+              value: /vembed/api_key.txt
             - name: VERDIFY_MCP_RUNTIME_DB_ROLE_REQUIRED
               value: "1"
             # The DB_DSN and the psql helper both use this isolated login.
@@ -135,6 +133,10 @@ spec:
             - name: mcp-agents
               mountPath: /etc/verdify/mcp-agents
               readOnly: true
+            # #1351: the embed.main-only Cortex key (Secret verdify-embedding-cortex).
+            - name: embedding-key
+              mountPath: /vembed
+              readOnly: true
           # GRACEFUL DRAIN (HA #231, Lane C). preStop sleep so Traefik/kube-proxy
           # drop this pod's endpoint before the server stops accepting, avoiding a
           # mid-rollout 503 (same drain contract as www/lab/api).
@@ -175,6 +177,15 @@ spec:
         - name: mcp-agents
           secret:
             secretName: verdify-mcp-agents
+            optional: true
+            defaultMode: 0440
+        # verdify-embedding-cortex: a Cortex identity limited to embed.main (key
+        # api_key.txt), live in verdify-prod; KSOPS adoption is jvallery/agents#6079.
+        # Optional so a missing key fails the two semantic tools closed
+        # (embedding_credential_missing) instead of blocking every MCP tool.
+        - name: embedding-key
+          secret:
+            secretName: verdify-embedding-cortex
             optional: true
             defaultMode: 0440
 ---

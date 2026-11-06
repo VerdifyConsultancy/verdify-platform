@@ -27,7 +27,7 @@ info:
 
     | Topic | Rule |
     |---|---|
-    | Ids | `operationId` is the design id: API-01 to API-21, API-IRR-01 to API-IRR-13, BFF-01 to BFF-03, INT-01, INT-02, OPS-01, OPS-02 and OPS-04. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
+    | Ids | `operationId` is the design id: API-01 to API-27, API-IRR-01 to API-IRR-13, API-CROP-01 to API-CROP-11, BFF-01 to BFF-03, INT-01, INT-02, OPS-01, OPS-02 and OPS-04. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
     | Data | JSON. Times are ISO 8601 with an offset; days are America/Denver. Units are in field names or `unit` (°F, %, kPa, gal, min, s). `null` means unavailable, never 0; gaps stay gaps |
     | Roles | GET: `viewer` and `operator`. Every other method: `operator` (403 `forbidden`) |
     | Writes | Validated on submit (registry min/max, enums, step snap). The newest write wins. On a `manual: true` item the dispatcher ignores Iris's plan values (`set_plan` and `set_tunable` are unchanged) and Iris's `set_setting` and irrigation writes are refused with `manual`; people and other agents may overwrite it, attributed, and each write stores the `manual` it carries. Every write appends one `activity_log` row: source (`dashboard`, `iris`, `agent:<name>` or `system`), actor, time, reason, and the experiment id while one is armed. Nothing is refused because an experiment is armed |
@@ -50,6 +50,7 @@ tags:
   - {name: alerts, description: 'In-app alerts (alert_log); critical ones page through Alertmanager (OPS-04), never Slack (#1352)'}
   - {name: activity, description: 'activity_log: every write by people, Iris, agents and the system'}
   - {name: irrigation, description: 'Lines L01-L11, schedules, runs, minutes by zone and commands'}
+  - {name: crops, description: 'Plantings on the location tree: zones, shelves and cells, moves, harvests and history'}
   - {name: planner, description: 'The Planner section (#1361): plan history and cost, experiments, the arm calendar and results'}
   - {name: ops, description: Health and readiness}
 security:
@@ -130,7 +131,9 @@ paths:
       summary: Equipment on/off intervals for the lanes
       description: >-
         From equipment_state, seeded with the state at `from` (fn_equip_at). Wet lines carry their cause from the run
-        ledger. Unknown stays unknown. Windows up to 31 days.
+        ledger. Unknown stays unknown. Windows up to 31 days. The grow lights have two lanes each: the Lutron readback
+        (grow_light_main, grow_light_grow; unknown 600 s after its newest row) and the controller's switch intent
+        (grow_light_main_intent, grow_light_grow_intent; Q-09), which the lanes compare with the readback (#1356).
       parameters:
         - $ref: '#/components/parameters/From'
         - $ref: '#/components/parameters/To'
@@ -375,6 +378,65 @@ paths:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/BandPreview'}}}}
         '422': {$ref: '#/components/responses/Invalid'}
         default: {$ref: '#/components/responses/Problem'}
+  /v1/band/profile:
+    get:
+      operationId: API-23
+      tags: [settings]
+      summary: The house band as stored and as drafted in the band editor, over one day, before Save
+      description: >-
+        Read-only (#1334). Reads the 24 house anchors as fn_crop_band_value resolves them and overlays the draft: any
+        simple temperature field recompiles the six temperature anchors from day (solar noon) and night (solar
+        midnight) values with sunrise and sunset at their midpoint, so the curve is a pure sinusoid that never leaves
+        its noon and midnight values; any VPD field does the same for the VPD anchors; then each anchor= item sets one
+        raw anchor (Advanced). Curves are the controller's four-anchor harmonic at 10-min steps of fn_solar_phase;
+        vpd.device adds night_vpd_bias_kpa's night bump as the controller does. findings with severity error are what
+        API-24 refuses. The expected night VPD ribbon is a 14-day indoor dewpoint fit on quiet deep-night hours and
+        the forecast; night_heat_kwh is 0.19 kW/°F over the forecast's night hours. Codes: unknown_target (anchor not
+        a house band anchor), out_of_range (outside planner_effective_bounds), read_only (no complete anchor set).
+      parameters:
+        - {name: temp_day, in: query, description: 'Temperature target at solar noon, °F', schema: {type: number}}
+        - {name: temp_night, in: query, description: 'Temperature target at solar midnight, °F', schema: {type: number}}
+        - {name: temp_width_day, in: query, description: '± °F around the day target', schema: {type: number, minimum: 0}}
+        - {name: temp_width_night, in: query, description: '± °F around the night target', schema: {type: number, minimum: 0}}
+        - {name: vpd_day, in: query, description: 'VPD target at solar noon, kPa', schema: {type: number}}
+        - {name: vpd_night, in: query, description: 'VPD target at solar midnight, kPa', schema: {type: number}}
+        - {name: vpd_below_day, in: query, description: kPa below the day target, schema: {type: number, minimum: 0}}
+        - {name: vpd_above_day, in: query, description: kPa above the day target, schema: {type: number, minimum: 0}}
+        - {name: vpd_below_night, in: query, description: kPa below the night target, schema: {type: number, minimum: 0}}
+        - {name: vpd_above_night, in: query, description: kPa above the night target, schema: {type: number, minimum: 0}}
+        - name: anchor
+          in: query
+          description: 'Advanced: one raw house anchor as param:value, repeatable'
+          schema: {type: array, items: {type: string, pattern: '^band_(temp|vpd)_(low|target|high)_(sr|sm|ss|mid):', examples: ['band_temp_low_sr:62.5']}}
+        - name: day
+          in: query
+          description: America/Denver day; default today
+          schema: {type: string, format: date}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/BandProfilePreview'}}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+    put:
+      operationId: API-24
+      tags: [settings]
+      summary: Save the band editor's draft, every changed house anchor in one write
+      description: >-
+        The same draft as API-23 (profile fields and Advanced anchors). In one transaction: each house anchor the
+        draft changes (by more than half the push quantum, 0.1 °F or 0.01 kPa) is an API-10 write, its desired_state
+        row with the manual flag and its crop_band_anchors rows, and one activity_log row, action band.write, target
+        "house band", detail {desired_ids, changes [{param, desired_id, before, value}], anchor_rows, manual,
+        profile, simple}. The dispatcher's anchor sync delivers the anchors; nothing talks to the controller. Codes:
+        out_of_range (an API-23 error finding: band order, the 40/100 °F guardrails 5 °F outside the band, the 0.3-3.0
+        kPa VPD guardrails or the 0.74 kPa night floor; or an anchor outside its bounds), invalid_request (the draft
+        changes nothing), read_only (Iris: the band is operator-owned), unknown_target, request_id_reused.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/BandSave'}}}
+      responses:
+        '200': {description: 'Stored; each changed anchor with state requested', content: {application/json: {schema: {$ref: '#/components/schemas/BandWrite'}}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
   /v1/equipment/lights/{light}/{state}:
     post:
       operationId: API-20
@@ -429,11 +491,29 @@ paths:
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/WaterUse'}}}}
         default: {$ref: '#/components/responses/Problem'}
+  /v1/lighting:
+    get:
+      operationId: API-22
+      tags: [graphs]
+      summary: 'The grow lights by day: on time, starts, the policy in force and qualified light minutes against target'
+      description: >-
+        Graphs → Lighting (#1357). One entry per America/Denver day the window touches, up to now, for main and grow:
+        on time and starts from the Lutron readback over the whole day; the controller's readback of its ON threshold,
+        hysteresis, start hour, cutoff hour and target light minutes in force at the day's end; and the qualified light
+        minutes, v_lighting_minutes_status_now's rule for every day: each minute from the start hour to the cutoff (or
+        now) counts once when its mean Tempest outdoor lux is at or above the ON threshold or the light was on. No DLI
+        until the PAR meter (#1184). Windows up to 31 days.
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/LightingDays'}}}}
+        default: {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- planner section (#1361, #1360)
   /v1/planner/history:
     get:
-      operationId: API-22
+      operationId: API-25
       tags: [planner]
       summary: Plans per day, required plans written, failed and late, dispatched changes, cost and the newest plans
       description: >-
@@ -452,7 +532,7 @@ paths:
         default: {$ref: '#/components/responses/Problem'}
   /v1/planner/experiments:
     get:
-      operationId: API-23
+      operationId: API-26
       tags: [planner]
       summary: Committed study definitions not yet registered, then every experiment record with its status
       description: >-
@@ -464,7 +544,7 @@ paths:
         default: {$ref: '#/components/responses/Problem'}
   /v1/planner/experiments/{id}:
     get:
-      operationId: API-24
+      operationId: API-27
       tags: [planner]
       summary: One study, by experiment id or study id, with its definition, arm calendar, results and daily outcomes
       description: >-
@@ -601,8 +681,9 @@ paths:
         line_id all accepts only paused_until (pause or resume every line). vpd_member and schedule_member are for
         L04, L07 and L09. Enabling a line with no check, or turning schedule_member on for the first time, needs
         checked true, which only the dashboard sends (check_required). Disabling stops everything on the line, VPD
-        misting included. Pause, resume and the check never change manual; any other edit that omits it stores true
-        (R3). Codes: out_of_range, check_required,
+        misting included. vpd_member true on a line that is and stays disabled is line_disabled: the controller acts on
+        VPD membership only while the line is enabled. Pause, resume and the check never change manual; any other edit
+        that omits it stores true (R3). Codes: out_of_range, check_required, line_disabled,
         unknown_target, request_id_reused; Iris only, on a manual line, manual.
       parameters:
         - name: line_id
@@ -687,6 +768,152 @@ paths:
         default: {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- BFF sign-in (served by the Express BFF)
+  # ---------------------------------------------------------------- crops (#1327, #1330)
+  /v1/crops/locations:
+    get:
+      operationId: API-CROP-01
+      tags: [crops]
+      summary: Every zone, shelf and cell with its layout and water lines, and what each holds now
+      description: >-
+        A zone or a shelf holds any number of plantings; a cell holds at most one at a time. Water lines are the
+        irrigation lines that reach each shelf (shelf_water_lines).
+      parameters:
+        - {name: zone, in: query, description: Keep one zone (a zone slug), schema: {type: string, pattern: '^[a-z][a-z0-9_]{0,39}$'}}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Locations'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/crops/plantings:
+    get:
+      operationId: API-CROP-02
+      tags: [crops]
+      summary: Plantings, active first and newest first
+      parameters:
+        - {name: active, in: query, description: 'true keeps active plantings (default), false ended ones; omit with an empty value for both', schema: {type: [boolean, 'null'], default: true}}
+        - {name: zone, in: query, description: Plantings that were ever in this zone, schema: {type: string, pattern: '^[a-z][a-z0-9_]{0,39}$'}}
+        - {name: since, in: query, description: Planted or ended on or after this day, schema: {type: string, format: date}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 500, default: 200}}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PlantingList'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+    post:
+      operationId: API-CROP-07
+      tags: [crops]
+      summary: Record a planting across the places named
+      description: >-
+        positions are place texts (EAST-HYDRO-12, EAST-HYDRO-1..10, hydro 1-30, rail A top, west top 1-3, south
+        floor, hanging, center); API-CROP-06 previews them. Codes: invalid_request (a place it cannot read),
+        ambiguous_position (current lists the candidates), position_occupied (a requested cell is held at planted_at;
+        replace ends or trims the occupant instead), request_id_reused. Writes records only: no setting, band or
+        target changes (the grow-light window still follows the active crops' DLI targets, fn_lighting_policy).
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/PlantingCreate'}}}
+      responses:
+        '201': {description: Recorded, content: {application/json: {schema: {$ref: '#/components/schemas/Planting'}}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/crops/plantings/{planting_id}:
+    parameters: [{$ref: '#/components/parameters/PlantingId'}]
+    get:
+      operationId: API-CROP-03
+      tags: [crops]
+      summary: One planting with every place it has been, its events and its harvests
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PlantingDetail'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+    patch:
+      operationId: API-CROP-11
+      tags: [crops]
+      summary: Correct a planting's variety, count (null is unknown), stage, notes or expected harvest
+      description: Only the fields sent change. Places change through API-CROP-08. Codes as API-CROP-07, and unknown_target.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/PlantingPatch'}}}
+      responses:
+        '200': {description: Stored, content: {application/json: {schema: {$ref: '#/components/schemas/Planting'}}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/crops/plantings/{planting_id}/move:
+    parameters: [{$ref: '#/components/parameters/PlantingId'}]
+    post:
+      operationId: API-CROP-08
+      tags: [crops]
+      summary: Move a planting; the old and new places both stay in its history
+      description: >-
+        from_positions (default: every place it is now) close at moved_at and to_positions open then. Codes as
+        API-CROP-07, plus planting_ended and unknown_target.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/PlantingMove'}}}
+      responses:
+        '200': {description: Moved, content: {application/json: {schema: {$ref: '#/components/schemas/Planting'}}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/crops/plantings/{planting_id}/harvest:
+    parameters: [{$ref: '#/components/parameters/PlantingId'}]
+    post:
+      operationId: API-CROP-09
+      tags: [crops]
+      summary: Record a harvest; partial unless final, which ends the planting as harvested
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/PlantingHarvest'}}}
+      responses:
+        '200': {description: Recorded, content: {application/json: {schema: {$ref: '#/components/schemas/Planting'}}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/crops/plantings/{planting_id}/remove:
+    parameters: [{$ref: '#/components/parameters/PlantingId'}]
+    post:
+      operationId: API-CROP-10
+      tags: [crops]
+      summary: End a planting without a harvest (failed, removed or reconciled)
+      description: Every open place closes at `at`. Undo by recording the planting again.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/PlantingEnd'}}}
+      responses:
+        '200': {description: Ended, content: {application/json: {schema: {$ref: '#/components/schemas/Planting'}}}}
+        '422': {$ref: '#/components/responses/Invalid'}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/crops/positions/{label}/history:
+    get:
+      operationId: API-CROP-04
+      tags: [crops]
+      summary: Who has held one cell, current first
+      parameters:
+        - {name: label, in: path, required: true, schema: {type: string, pattern: '^[A-Za-z][A-Za-z0-9-]{0,39}$', examples: [EAST-HYDRO-12]}}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/PositionHistory'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/crops/catalog:
+    get:
+      operationId: API-CROP-05
+      tags: [crops]
+      summary: The crop catalog with plain names
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Catalog'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/crops/resolve:
+    get:
+      operationId: API-CROP-06
+      tags: [crops]
+      summary: Preview what a place text means and which plantings hold those cells; writes nothing
+      description: >-
+        A GET, so viewers can preview and DASHBOARD_WRITES_ENABLED never blocks it. Codes: invalid_request,
+        ambiguous_position (current lists the candidates).
+      parameters:
+        - {name: q, in: query, required: true, schema: {type: string, minLength: 1, maxLength: 500}, examples: {hydro: {value: 'hydro 1-10'}}}
+        - {name: at, in: query, description: When (default now), schema: {type: string, format: date-time}}
+        - {name: planting, in: query, description: 'Leave this planting out of the conflicts (a move''s own cells)', schema: {type: integer, minimum: 1}}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Resolution'}}}}
+        default: {$ref: '#/components/responses/Problem'}
   /auth/login:
     x-served-by: bff
     servers: [{url: 'https://dashboard.verdify.ai'}]
@@ -874,6 +1101,7 @@ components:
     AlertId: {name: id, in: path, required: true, schema: {type: integer}}
     SlotId: {name: slot_id, in: path, required: true, schema: {type: integer, minimum: 1, maximum: 65535}}
     LineId: {name: line_id, in: path, required: true, schema: {$ref: '#/components/schemas/LineId'}}
+    PlantingId: {name: planting_id, in: path, required: true, schema: {type: integer, minimum: 1, maximum: 2147483647}}
 
   responses:
     Problem:
@@ -922,11 +1150,13 @@ components:
         request_id: {type: string, description: 'The request id (the Idempotency-Key on a write), as logged'}
     ProblemCode:
       type: string
-      description: 'Stable codes shared with MCP (architecture §5.3, irrigation §4.3 and §4.7). manual is for Iris only'
+      description: >-
+        Stable codes shared with MCP (architecture §5.3, irrigation §4.3 and §4.7). manual is for Iris only.
+        position_occupied, ambiguous_position and planting_ended are the plantings' refusals (API-CROP-06 to -11)
       enum: [invalid_request, unauthenticated, forbidden, origin_mismatch, not_found, writes_disabled, query_timeout,
         unavailable, window_too_large, unknown_target, read_only, out_of_range, manual, request_id_reused,
         check_required, too_close, too_many_schedules, line_disabled, line_paused, line_faulted, not_schedule_member,
-        line_busy, manifold_busy, cap_reached]
+        line_busy, manifold_busy, cap_reached, position_occupied, ambiguous_position, planting_ended]
     Actor:
       type: object
       description: 'Who wrote (R4). system is the platform itself, for example the forecast action engine'
@@ -966,7 +1196,8 @@ components:
         Computed on every read (architecture §5.5); display only. held means the platform applies something else on
         purpose (a dispatcher clamp, or an armed experiment manifest serving the field). Irrigation items and the
         irrigation_site settings use requested, confirmed and not_confirmed against the controller's program hash;
-        before the engine firmware they stay requested.
+        before the engine firmware they stay requested. not_confirmed is only a request at least 5 min old the
+        readback does not match; a setting nobody requested with no readback reads no_readback (#1333).
       enum: [requested, confirmed, not_confirmed, held, no_readback, overridden, released]
     StateReason:
       type: object
@@ -1339,6 +1570,144 @@ components:
         low: {$ref: '#/components/schemas/NullableNumbers'}
         target: {$ref: '#/components/schemas/NullableNumbers'}
         high: {$ref: '#/components/schemas/NullableNumbers'}
+    BandProfile:
+      type: object
+      description: 'The house band in the editor''s terms: day (solar noon) and night (solar midnight) values'
+      required: [temp_day, temp_night, temp_width_day, temp_width_night, vpd_day, vpd_night, vpd_below_day, vpd_above_day, vpd_below_night, vpd_above_night]
+      properties:
+        temp_day: {type: number, description: °F}
+        temp_night: {type: number, description: °F}
+        temp_width_day: {type: number, minimum: 0, description: ± °F}
+        temp_width_night: {type: number, minimum: 0, description: ± °F}
+        vpd_day: {type: number, description: kPa}
+        vpd_night: {type: number, description: kPa}
+        vpd_below_day: {type: number, minimum: 0, description: kPa}
+        vpd_above_day: {type: number, minimum: 0, description: kPa}
+        vpd_below_night: {type: number, minimum: 0, description: kPa}
+        vpd_above_night: {type: number, minimum: 0, description: kPa}
+    BandProfilePatch:
+      type: object
+      description: The simple fields to change; a field left out keeps the band's own value
+      additionalProperties: false
+      properties:
+        temp_day: {type: [number, 'null']}
+        temp_night: {type: [number, 'null']}
+        temp_width_day: {type: [number, 'null'], minimum: 0}
+        temp_width_night: {type: [number, 'null'], minimum: 0}
+        vpd_day: {type: [number, 'null']}
+        vpd_night: {type: [number, 'null']}
+        vpd_below_day: {type: [number, 'null'], minimum: 0}
+        vpd_above_day: {type: [number, 'null'], minimum: 0}
+        vpd_below_night: {type: [number, 'null'], minimum: 0}
+        vpd_above_night: {type: [number, 'null'], minimum: 0}
+    BandProfileState:
+      type: object
+      required: [profile, anchors, simple]
+      properties:
+        profile: {$ref: '#/components/schemas/BandProfile'}
+        anchors: {type: object, additionalProperties: {type: number}, description: 'The 24 band_<series>_<anchor> values'}
+        simple: {type: boolean, description: True when sunrise and sunset are the midpoint of noon and midnight}
+    BandProfilePreview:
+      type: object
+      description: 'API-23: the house band as stored (current) and drafted, one point per step_s'
+      required: [day, step_s, t, sun, current, draft, changed, temp, vpd, night_vpd_bias_kpa, guardrails, overshoot, night_heat_kwh, envelope, findings, measured, forecast]
+      properties:
+        day: {type: string, format: date, description: America/Denver day}
+        step_s: {type: integer, const: 600}
+        t: {type: array, items: {type: integer}, description: Epoch seconds}
+        sun:
+          type: object
+          required: [sunrise, solar_noon, sunset, solar_midnight]
+          properties:
+            sunrise: {type: [integer, 'null'], description: Epoch seconds}
+            solar_noon: {type: [integer, 'null']}
+            sunset: {type: [integer, 'null']}
+            solar_midnight: {type: [integer, 'null']}
+        current: {$ref: '#/components/schemas/BandProfileState'}
+        draft: {$ref: '#/components/schemas/BandProfileState'}
+        changed: {type: array, items: {type: string}, description: The anchors a Save would write}
+        temp:
+          type: object
+          required: [current, draft]
+          properties:
+            current: {$ref: '#/components/schemas/BandCurve'}
+            draft: {$ref: '#/components/schemas/BandCurve'}
+        vpd:
+          type: object
+          required: [current, draft, device, expected_low, expected_high]
+          properties:
+            current: {$ref: '#/components/schemas/BandCurve'}
+            draft: {$ref: '#/components/schemas/BandCurve'}
+            device: {$ref: '#/components/schemas/BandCurve'}
+            expected_low: {$ref: '#/components/schemas/NullableNumbers'}
+            expected_high: {$ref: '#/components/schemas/NullableNumbers'}
+        night_vpd_bias_kpa: {type: [number, 'null'], description: The bias the controller reports running}
+        guardrails:
+          type: object
+          required: [temp_min_f, temp_max_f, margin_f, vpd_min_kpa, vpd_max_kpa, night_vpd_floor_kpa]
+          properties:
+            temp_min_f: {type: number}
+            temp_max_f: {type: number}
+            margin_f: {type: number}
+            vpd_min_kpa: {type: number}
+            vpd_max_kpa: {type: number}
+            night_vpd_floor_kpa: {type: number}
+        overshoot: {type: object, additionalProperties: {type: number}, description: 'By series, how far the draft curve leaves its anchor range'}
+        night_heat_kwh:
+          type: object
+          required: [current, draft]
+          properties:
+            current: {type: [number, 'null']}
+            draft: {type: [number, 'null']}
+        envelope:
+          type: [object, 'null']
+          required: [hours, days, rmse_f, dewpoint_p10_f]
+          properties:
+            hours: {type: integer}
+            days: {type: integer}
+            rmse_f: {type: number}
+            dewpoint_p10_f: {type: number}
+        findings:
+          type: array
+          items:
+            type: object
+            required: [code, severity, field, detail]
+            properties:
+              code: {type: string, examples: [band_order, guardrail, night_floor, overshoot, dewpoint_unreached]}
+              severity: {type: string, enum: [error, warning]}
+              field: {type: string}
+              detail: {type: string}
+        measured:
+          type: object
+          description: 'The last 24 h of the measured house average on t, by America/Denver clock time: a step before now holds today''s 10-min bucket, a later step yesterday''s'
+          required: [window_start, window_end, at, temp, vpd]
+          properties:
+            window_start: {type: integer, description: Epoch seconds of the oldest bucket read}
+            window_end: {type: integer, description: Epoch seconds at the end of the bucket holding now}
+            at: {type: array, items: {type: [integer, 'null']}, description: 'Per step, the bucket its values come from; null if none'}
+            temp: {$ref: '#/components/schemas/NullableNumbers', description: 'climate.temp_avg, °F'}
+            vpd: {$ref: '#/components/schemas/NullableNumbers', description: 'climate.vpd_avg, kPa'}
+        forecast:
+          type: object
+          description: The day's outdoor forecast on t; every step of an hour holds that hour's newest issue
+          required: [temp, vpd, issued_at]
+          properties:
+            temp: {$ref: '#/components/schemas/NullableNumbers', description: 'Outdoor forecast temperature, °F'}
+            vpd: {$ref: '#/components/schemas/NullableNumbers', description: 'Outdoor forecast VPD, kPa'}
+            issued_at: {type: [string, 'null'], format: date-time, description: The newest fetched_at behind the values}
+    BandSave:
+      type: object
+      additionalProperties: false
+      properties:
+        profile: {$ref: '#/components/schemas/BandProfilePatch'}
+        anchors: {type: object, additionalProperties: {type: number}, description: 'Advanced: raw house anchors'}
+        manual: {type: boolean, default: true}
+        reason: {type: string, maxLength: 500}
+    BandWrite:
+      type: object
+      required: [changed]
+      properties:
+        changed: {type: array, items: {$ref: '#/components/schemas/DesiredSetting'}}
 
     # ------------------------------------------------------------ plan and settings
     PlanRecord:
@@ -1426,6 +1795,15 @@ components:
           items: {type: object, required: [value, label], properties: {value: {type: number}, label: {type: string}}}
         writable: {type: boolean, description: 'false with read_only_reason; the irrigation_site rows are writable before the engine firmware too (their writes wait, state_reason no_engine)'}
         read_only_reason: {type: [string, 'null'], examples: ['legacy wide limit; not the band while the controller runs its on-chip curve']}
+        read_only_kind:
+          type: [string, 'null']
+          enum: [band_in_force, legacy_wide_limit, zone_vpd_target, activity_mirror, band_owner, retired, readback_context, no_entity, no_anchor_row, unknown, null]
+          description: 'Why a read-only row cannot be written (#1333): the tunable_registry READ_ONLY_REASONS key, no_anchor_row (a crop-band row with no crop_band_anchors row) or band_in_force (derived band rows); null on a writable row'
+        source_params:
+          type: array
+          items: {type: string}
+          description: 'The writable settings a derived row is computed from (the crop-band anchors behind a Band in force row, the main-light schedule behind the activity mirror); empty otherwise'
+        help: {anyOf: [{$ref: '#/components/schemas/SettingHelp'}, {type: 'null'}], description: 'Operator text (verdify_schemas.setting_help, #1332); MCP settings serves the same'}
         readback_via:
           type: string
           enum: [cfg, entity, program, none]
@@ -1445,6 +1823,21 @@ components:
                 next: {anyOf: [{$ref: '#/components/schemas/PlanWaypoint'}, {type: 'null'}], description: 'Next planned change; effective false while a newer desired row holds it off'}
         applied_from: {type: string, enum: [manual, desired, plan, band, default], description: What the dispatcher applies now}
         state: {$ref: '#/components/schemas/ReadbackState', description: 'Of the newest write, else of the applied value against the readback'}
+    SettingHelp:
+      type: object
+      description: >-
+        What a setting is and what changing it does to the controller (#1332). One source for the dashboard, MCP and
+        the lab ai-tunables page. raise and lower are null on a read-only row; for a switch they say what turning it
+        on and off does.
+      required: [summary, effect]
+      properties:
+        summary: {type: string, description: One line, what the setting is}
+        effect: {type: string, description: What the controller does with it, naming the mode or equipment it drives}
+        raise: {type: [string, 'null'], description: What happens to the greenhouse when the value goes up (a switch turned on)}
+        lower: {type: [string, 'null'], description: What happens when the value goes down (a switch turned off)}
+        caution: {type: [string, 'null'], description: An interaction or safety note}
+        guardrail: {type: boolean, default: false, description: 'A hard safety limit (Safety Min, Safety Max and the VPD pair): the dashboard shows caution and asks to confirm before saving'}
+        reference_url: {type: [string, 'null'], description: The setting's entry on the lab ai-tunables reference page}
     SettingWrite:
       type: object
       required: [value]
@@ -1495,6 +1888,12 @@ components:
               cycles_today: {type: [integer, 'null'], description: From collapsed ON/OFF edges}
               intent: {type: [string, 'null'], enum: ['on', 'off', unknown, null], description: "Grow lights only: the controller's intent (grow_light_main_intent, grow_light_grow_intent)"}
               observed_at: {type: [string, 'null'], format: date-time}
+              manual_until:
+                type: [string, 'null']
+                format: date-time
+                description: >-
+                  Grow lights only: when the API-20 manual switch goes back to automatic (its activity_log row's ts plus
+                  detail.minutes, the light timer's rule), while that is still ahead; null with no timer running
         mode_reason: {$ref: '#/components/schemas/ReasonState', description: Which branch chose the climate mode}
         fog_block_reason: {$ref: '#/components/schemas/ReasonState', description: 'What holds fog (L11) off'}
         moisture_block_reason: {$ref: '#/components/schemas/ReasonState', description: 'What holds the misters off'}
@@ -1991,9 +2390,42 @@ components:
               by_cause: {type: [object, 'null'], additionalProperties: {type: integer}, description: Verdify-valve gallons by IrrigationCause}
               by_purpose: {type: [object, 'null'], additionalProperties: {type: integer}, description: 'Verdify-valve gallons by RunPurpose (#1348): irrigation and climate'}
               no_valve_gal: {type: [integer, 'null'], description: 'Meter water while no Verdify valve was open: the hose, sink, hydro or a leak'}
+    LightingDays:
+      type: object
+      description: 'API-22: each grow-light circuit by America/Denver day, oldest first'
+      required: [from, to, circuits]
+      properties:
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        circuits:
+          type: array
+          items:
+            type: object
+            required: [light, equipment, label, days]
+            properties:
+              light: {type: string, enum: [main, grow]}
+              equipment: {type: string, examples: [grow_light_main]}
+              label: {type: string}
+              days:
+                type: array
+                items:
+                  type: object
+                  required: [date, partial, on_s, starts, start_hour, cutoff_hour, lux_on, lux_off, target_min, window_min, qualified_min]
+                  properties:
+                    date: {type: string, format: date}
+                    partial: {type: boolean, description: 'Today: counted up to now'}
+                    on_s: {type: integer, description: 'Seconds the Lutron readback was on in the day'}
+                    starts: {type: integer, description: 'OFF to ON edges in the day'}
+                    start_hour: {type: [integer, 'null'], description: 'The photoperiod window''s start, local hour; null without a readback'}
+                    cutoff_hour: {type: [integer, 'null'], description: 'The window''s cutoff, local hour'}
+                    lux_on: {type: [number, 'null'], description: 'ON threshold, outdoor lux'}
+                    lux_off: {type: [number, 'null'], description: 'OFF threshold: ON plus the hysteresis'}
+                    target_min: {type: [integer, 'null'], description: 'Target qualified light minutes'}
+                    window_min: {type: [integer, 'null'], description: 'Minutes of the window counted so far'}
+                    qualified_min: {type: [integer, 'null'], description: 'Minutes in the window with enough outdoor light or the light on; null without a policy readback'}
     PlannerHistory:
       type: object
-      description: 'API-22: the planner over 30 or 90 local days. Null means not recorded, never 0'
+      description: 'API-25: the planner over 30 or 90 local days. Null means not recorded, never 0'
       required: [from, to, cost_recorded_from, cortex_attempts, days, plans]
       properties:
         from: {type: string, format: date}
@@ -2079,13 +2511,13 @@ components:
         closed_reason: {type: [string, 'null']}
     ExperimentList:
       type: object
-      description: 'API-23: committed definitions not yet registered first, then records newest first'
+      description: 'API-26: committed definitions not yet registered first, then records newest first'
       required: [items]
       properties:
         items: {type: array, items: {$ref: '#/components/schemas/ExperimentSummary'}}
     ExperimentDetail:
       type: object
-      description: 'API-24: one study'
+      description: 'API-27: one study'
       required: [experiment, definition, calendar, next_boundary, results, outcomes]
       properties:
         experiment: {$ref: '#/components/schemas/ExperimentSummary'}
@@ -2240,3 +2672,266 @@ components:
         - type: object
           required: [items]
           properties: {items: {type: array, items: {$ref: '#/components/schemas/Run'}}}
+    # ------------------------------------------------------------ crops (#1327)
+    Place:
+      type: object
+      description: 'One occupancy range: the zone, the shelf and the cell (each null above the level given), and when.'
+      required: [zone, since]
+      properties:
+        zone: {type: string}
+        shelf: {type: [string, 'null']}
+        cell: {type: [string, 'null']}
+        since: {type: string, format: date-time}
+        until: {type: [string, 'null'], format: date-time}
+        count: {type: [integer, 'null']}
+    Planting:
+      type: object
+      description: A planting as the Crops page and the agents show it. cells are its open cells; places its open occupancy at every level; count null is unknown.
+      required: [id, crop, planted_date, active]
+      properties:
+        id: {type: integer}
+        crop: {type: string}
+        variety: {type: [string, 'null']}
+        crop_catalog_slug: {type: [string, 'null']}
+        count: {type: [integer, 'null']}
+        stage: {type: [string, 'null']}
+        planted_date: {type: string, format: date}
+        active: {type: boolean}
+        ended_at: {type: [string, 'null'], format: date-time}
+        end_reason: {type: [string, 'null']}
+        notes: {type: [string, 'null']}
+        recorded_by: {anyOf: [{$ref: '#/components/schemas/Actor'}, {type: 'null'}]}
+        zones: {type: array, items: {type: string}}
+        shelves: {type: array, items: {type: string}}
+        cells: {type: array, items: {type: string}}
+        where: {type: [string, 'null']}
+        places: {type: array, items: {$ref: '#/components/schemas/Place'}}
+    PlantingEvent:
+      type: object
+      required: [id, event_type]
+      properties:
+        id: {type: integer}
+        ts: {type: [string, 'null'], format: date-time}
+        event_type: {type: string}
+        count: {type: [integer, 'null']}
+        notes: {type: [string, 'null']}
+        source: {type: [string, 'null']}
+        operator: {type: [string, 'null']}
+        detail: {type: [object, 'null']}
+    HarvestRecord:
+      type: object
+      required: [id]
+      properties:
+        id: {type: integer}
+        ts: {type: [string, 'null'], format: date-time}
+        unit_count: {type: [integer, 'null']}
+        weight_kg: {type: [number, 'null']}
+        notes: {type: [string, 'null']}
+        operator: {type: [string, 'null']}
+    PlantingDetail:
+      type: object
+      description: 'A planting with every place it has been, its events (newest first) and its harvests.'
+      required: [id, crop, planted_date, active]
+      properties:
+        id: {type: integer}
+        crop: {type: string}
+        variety: {type: [string, 'null']}
+        crop_catalog_slug: {type: [string, 'null']}
+        count: {type: [integer, 'null']}
+        stage: {type: [string, 'null']}
+        planted_date: {type: string, format: date}
+        active: {type: boolean}
+        ended_at: {type: [string, 'null'], format: date-time}
+        end_reason: {type: [string, 'null']}
+        notes: {type: [string, 'null']}
+        recorded_by: {anyOf: [{$ref: '#/components/schemas/Actor'}, {type: 'null'}]}
+        zones: {type: array, items: {type: string}}
+        shelves: {type: array, items: {type: string}}
+        cells: {type: array, items: {type: string}}
+        where: {type: [string, 'null']}
+        places: {type: array, items: {$ref: '#/components/schemas/Place'}}
+        history: {type: array, items: {$ref: '#/components/schemas/Place'}}
+        events: {type: array, items: {$ref: '#/components/schemas/PlantingEvent'}}
+        harvests: {type: array, items: {$ref: '#/components/schemas/HarvestRecord'}}
+    PlantingList:
+      type: object
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/Planting'}}
+    Occupant:
+      type: object
+      required: [planting_id, crop, since]
+      properties:
+        planting_id: {type: integer}
+        crop: {type: string}
+        variety: {type: [string, 'null']}
+        since: {type: string, format: date-time}
+        count: {type: [integer, 'null']}
+    WaterLine:
+      type: object
+      required: [line_id, name]
+      properties:
+        line_id: {type: string}
+        name: {type: string}
+        note: {type: [string, 'null']}
+    CellView:
+      type: object
+      required: [label]
+      properties:
+        label: {type: string}
+        number: {type: [integer, 'null']}
+        mount_type: {type: [string, 'null']}
+        layout_group: {type: [string, 'null']}
+        layout_row: {type: [integer, 'null']}
+        layout_col: {type: [integer, 'null']}
+        occupant: {anyOf: [{$ref: '#/components/schemas/Occupant'}, {type: 'null'}]}
+    ShelfView:
+      type: object
+      required: [slug, name, kind]
+      properties:
+        slug: {type: string}
+        name: {type: string}
+        kind: {type: string}
+        tier: {type: [integer, 'null']}
+        wall: {type: [string, 'null']}
+        display_order: {type: [integer, 'null']}
+        label_short: {type: [string, 'null']}
+        water_lines: {type: array, items: {$ref: '#/components/schemas/WaterLine'}}
+        plantings: {type: array, items: {$ref: '#/components/schemas/Occupant'}}
+        cells: {type: array, items: {$ref: '#/components/schemas/CellView'}}
+    ZoneView:
+      type: object
+      required: [slug, name]
+      properties:
+        slug: {type: string}
+        name: {type: string}
+        plantings: {type: array, items: {$ref: '#/components/schemas/Occupant'}}
+        shelves: {type: array, items: {$ref: '#/components/schemas/ShelfView'}}
+    Locations:
+      type: object
+      description: 'The location tree with what each place holds now: zone- and shelf-level plantings and each cell''s occupant.'
+      required: [zones, cell_count, occupied_cells, active_plantings, server_time]
+      properties:
+        zones: {type: array, items: {$ref: '#/components/schemas/ZoneView'}}
+        cell_count: {type: integer}
+        occupied_cells: {type: integer}
+        active_plantings: {type: integer}
+        server_time: {type: string, format: date-time}
+    Tenure:
+      type: object
+      description: 'One planting''s time in a cell; until null while it is there.'
+      required: [planting_id, crop, since]
+      properties:
+        planting_id: {type: integer}
+        crop: {type: string}
+        variety: {type: [string, 'null']}
+        since: {type: string, format: date-time}
+        until: {type: [string, 'null'], format: date-time}
+        count: {type: [integer, 'null']}
+    PositionHistory:
+      type: object
+      description: 'Who has held one cell: the current occupant first, then the rest newest first.'
+      required: [label, zone, shelf, items]
+      properties:
+        label: {type: string}
+        zone: {type: string}
+        shelf: {type: string}
+        items: {type: array, items: {$ref: '#/components/schemas/Tenure'}}
+    CatalogEntry:
+      type: object
+      required: [slug, name]
+      properties:
+        slug: {type: string}
+        name: {type: string}
+        category: {type: [string, 'null']}
+    Catalog:
+      type: object
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/CatalogEntry'}}
+    ResolvedPlace:
+      type: object
+      required: [zone]
+      properties:
+        zone: {type: string}
+        shelf: {type: [string, 'null']}
+        cell: {type: [string, 'null']}
+    Conflict:
+      type: object
+      required: [cell, planting_id, crop, since]
+      properties:
+        cell: {type: string}
+        planting_id: {type: integer}
+        crop: {type: string}
+        since: {type: string, format: date-time}
+        until: {type: [string, 'null'], format: date-time}
+    Resolution:
+      type: object
+      description: What a place text means and what holds those cells at at. Nothing is written.
+      required: [places, cells, where, at]
+      properties:
+        places: {type: array, items: {$ref: '#/components/schemas/ResolvedPlace'}}
+        cells: {type: array, items: {type: string}}
+        where: {type: string}
+        at: {type: string, format: date-time}
+        conflicts: {type: array, items: {$ref: '#/components/schemas/Conflict'}}
+    PlantingCreate:
+      type: object
+      description: 'A new planting (API-CROP-07, MCP record_planting). crop is a catalog slug or name (lettuce, basil) or a free name; count is the number of plants, unknown when omitted; count_per_cell is stored on each cell''s occupancy. planted_at defaults to now; a date means local midnight. replace ends or trims whatever holds a requested cell instead of refusing with position_occupied.'
+      additionalProperties: false
+      required: [crop, positions]
+      properties:
+        reason: {type: [string, 'null'], maxLength: 500}
+        crop: {type: string, maxLength: 200, minLength: 1}
+        variety: {type: [string, 'null'], maxLength: 200}
+        positions: {type: array, items: {type: string}, maxItems: 40, minItems: 1}
+        count: {type: [integer, 'null'], maximum: 100000, minimum: 0}
+        count_per_cell: {type: [integer, 'null'], maximum: 1000, minimum: 0}
+        planted_at: {anyOf: [{type: string, format: date-time}, {type: string, format: date}, {type: 'null'}]}
+        stage: {type: [string, 'null'], enum: [seed, germination, seedling, vegetative, flowering, fruiting, harvest, cleared, null]}
+        notes: {type: [string, 'null'], maxLength: 2000}
+        replace: {type: boolean, default: false}
+    PlantingMove:
+      type: object
+      description: 'Move a planting (API-CROP-08, MCP move_planting): from_positions (default: everywhere it is now) close at moved_at and to_positions open then. Both ranges stay in history.'
+      additionalProperties: false
+      required: [to_positions]
+      properties:
+        reason: {type: [string, 'null'], maxLength: 500}
+        to_positions: {type: array, items: {type: string}, maxItems: 40, minItems: 1}
+        from_positions: {anyOf: [{type: array, items: {type: string}, maxItems: 40, minItems: 1}, {type: 'null'}]}
+        moved_at: {anyOf: [{type: string, format: date-time}, {type: string, format: date}, {type: 'null'}]}
+        replace: {type: boolean, default: false}
+    PlantingHarvest:
+      type: object
+      description: 'Record a harvest (API-CROP-09, MCP harvest_planting). Partial by default: the planting stays. Cells in positions are cleared; final ends the planting as harvested.'
+      additionalProperties: false
+      properties:
+        reason: {type: [string, 'null'], maxLength: 500}
+        count: {type: [integer, 'null'], maximum: 100000, minimum: 0}
+        weight_kg: {type: [number, 'null'], maximum: 10000, minimum: 0}
+        positions: {anyOf: [{type: array, items: {type: string}, maxItems: 40, minItems: 1}, {type: 'null'}]}
+        final: {type: boolean, default: false}
+        harvested_at: {anyOf: [{type: string, format: date-time}, {type: string, format: date}, {type: 'null'}]}
+        notes: {type: [string, 'null'], maxLength: 2000}
+    PlantingEnd:
+      type: object
+      description: 'End a planting without a harvest (API-CROP-10, MCP remove_planting): every open place closes at at.'
+      additionalProperties: false
+      required: [end_reason]
+      properties:
+        reason: {type: [string, 'null'], maxLength: 500}
+        end_reason: {type: string, enum: [failed, removed, reconciled]}
+        at: {anyOf: [{type: string, format: date-time}, {type: string, format: date}, {type: 'null'}]}
+        note: {type: [string, 'null'], maxLength: 2000}
+    PlantingPatch:
+      type: object
+      description: 'Edit a planting''s record (API-CROP-11): only the fields sent change. count null means unknown.'
+      additionalProperties: false
+      properties:
+        reason: {type: [string, 'null'], maxLength: 500}
+        variety: {type: [string, 'null'], maxLength: 200}
+        count: {type: [integer, 'null'], maximum: 100000, minimum: 0}
+        stage: {type: [string, 'null'], enum: [seed, germination, seedling, vegetative, flowering, fruiting, harvest, cleared, null]}
+        notes: {type: [string, 'null'], maxLength: 2000}
+        expected_harvest: {type: [string, 'null'], format: date}

@@ -12,6 +12,7 @@ import { Button } from "../button";
 import { EditDrawer, ManualToggle, MANUAL_DEFAULT, NumberField, Reason, Select, Switch } from "../forms";
 import { SettingHistoryPanel } from "../setting-history";
 import { SettingStatus, activityHref, classLabel, valueInForce } from "../setting-row";
+import { SettingHelpPanel } from "./setting-help";
 
 /**
  * The one setting drawer (#1125, redesign §5.10 and D-UX-02): Settings, Plan and Equipment open it in place from
@@ -119,7 +120,13 @@ export function SettingDrawer({ setting, onClose }: { setting: Setting; onClose:
   const [typed, setTyped] = useState<string | null>(null);
   // One write at a time from this drawer: Revert has its own hook, so Save and Release wait for it, as it waits for them.
   const [reverting, setReverting] = useState(false);
+  // A guardrail (Safety Min, Safety Max, the VPD pair) saves on a second press, after its rule is shown (#1333).
+  const guardrail = setting.help?.guardrail === true;
+  const [confirming, setConfirming] = useState(false);
   const readbackStale = useReadbackStale();
+  const { editTo } = useSettingEdit();
+  const catalog = useSettingsRead();
+  const labelOf = (param: string) => catalog.data?.items.find((item) => item.param === param)?.label ?? param;
   const save = () => {
     const value = setting.kind === "numeric" ? parseDecimal(text) : choice;
     if (value === null) {
@@ -127,6 +134,11 @@ export function SettingDrawer({ setting, onClose }: { setting: Setting; onClose:
       return;
     }
     setTyped(null);
+    if (guardrail && !confirming) {
+      setConfirming(true);
+      return;
+    }
+    setConfirming(false);
     void write.save({ value, manual, reason: reason.trim() || null });
   };
   const release = () => void write.release({ reason: reason.trim() || null });
@@ -151,8 +163,9 @@ export function SettingDrawer({ setting, onClose }: { setting: Setting; onClose:
       <span className="eyebrow">Device</span>
       <DrawerStatus setting={setting} readbackStale={readbackStale} />
       {notReporting && <p className="state-note">Save still works: the change applies when the controller reports again.</p>}
+      <SettingHelpPanel setting={setting} editTo={editTo} labelOf={labelOf} />
     </div>}
-    onSave={save} saving={write.sending} saveDisabled={reverting} error={switchError ?? formError(write.error, setting.kind === "switch" ? ["reason"] : ["value", "reason"])}
+    onSave={save} saving={write.sending} saveDisabled={reverting} saveLabel={confirming ? "Confirm guardrail change" : "Save"} error={switchError ?? formError(write.error, setting.kind === "switch" ? ["reason"] : ["value", "reason"])}
     actions={<Button write onClick={release} disabled={write.sending || reverting}>Release to auto</Button>}
     below={band ? undefined : <>
       <SettingHistoryPanel setting={setting} manual={manual} onReverted={onClose} band={curved} busy={write.sending} onSending={setReverting} />
@@ -162,5 +175,8 @@ export function SettingDrawer({ setting, onClose }: { setting: Setting; onClose:
     {curved && <BandPreviewPanel setting={setting} draft={parseDecimal(text)} />}
     {!readOnly && <ManualToggle checked={manual} onChange={setManual} />}
     {!readOnly && <Reason value={reason} onChange={setReason} error={errorFor(write.error, "reason")} />}
+    {confirming && <p className="notice notice-warn ctl-guardrail-confirm" role="alert">
+      <strong>This is a hard guardrail.</strong> {setting.help?.caution} Press Confirm guardrail change to save it.
+    </p>}
   </EditDrawer>;
 }

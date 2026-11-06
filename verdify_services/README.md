@@ -10,6 +10,7 @@ page is the conventions every service here follows; VD-31 (#1147) set them.
 | `actor.py` | `Actor` (who is calling) and `ActorRef` (who wrote, as responses show it) |
 | `problems.py` | `ProblemCode`, `Problem`, `ServiceError` and `problem()` |
 | `activity.py` | `append`, `list` and `recorded_write`, the one write convention, and `stored_write`, its refusals and replay alone, with `WriteResult`, `ActivityEntry` and `ActivityPage` |
+| `band_profile.py` | `preview` (API-23) and `write` (API-24, #1334): the band editor. The preview overlays a draft (simple profile fields, compiled by `verdify_schemas.band_profile`, and raw anchors) on the house anchors and evaluates it with the controller's curve, adding the night bias, the guardrail and night-floor findings, the expected night VPD ribbon and the night heat estimate; `write` stores every changed anchor through `settings.write_in_transaction` under one `band.write` activity row |
 | `lights.py` | `stored` and `record` (VD-57: API-20): a grow-light switch's `activity_log` row around the setpoint-server call the route makes, with `LightCommand` and `LightRecord`; `try_lock` and `unlock`, the per-light session advisory lock API-20 and the Back to automatic resync take around that call (#1300); `decision`, the controller's newest decision for a light (`LightDecision`); and `timer`, when a timed manual switch's minutes are up (`LightTimer`, #1335), which the operator API's `light_timer` sweep reads |
 | `irrigation/writes.py` | `schedule_create`, `schedule_update`, `schedule_delete`, `line_update`, `run`, `stop`, `override` and `clear_fault` (VD-41: API-IRR-03 to -08, -12 and -13, the functions the MCP write tools call), with their bodies; `run` and `stop` go through the L01 bridge before the engine firmware (VD-64) |
 | `settings.py` | `catalog`, `validate`, `write`, `release`, `status` and `history` (VD-67), and the batched `statuses` and `desired_states` (VD-55): the one validator and writer for desired state, with `Setting`, `DesiredSetting`, `StateReason`, `SettingHistory` and `SettingStatus`; `check_range` gives API-19's draft the refusal a Save would get |
@@ -17,6 +18,7 @@ page is the conventions every service here follows; VD-31 (#1147) set them.
 | `reads.py` | `now`, `plan` and `equipment` (VD-54: API-02, API-07 and API-13); `settings_rows`, `setting_history` and `activity_page` (VD-55: API-09, API-12 and API-17, which the MCP `settings` and `activity` tools call too), with `SettingRows`; `water_daily` (VD-57: API-21); and the shared `reporting()` (the one §7 test: heartbeat at most 180 s old, climate at most 300 s), which `settings.status` uses for its `writer_down` and `controller_not_reporting` reasons |
 | `irrigation/reads.py` | `status`, `lines`, `agenda`, `minutes` and `runs` (VD-40: API-IRR-01, -02, -10 and -11), the functions the MCP read tools wrap (#1173) |
 | `irrigation/runs.py` | The relay-edge runs, their cause (`run_causes`, for API-02 and API-05), a day's minutes by M4's rules and a run's gallons |
+| `crops.py` | Plantings on the location tree (#1327, #1328): `resolve_positions`, the one position parser, and `compress_labels`; the reads `locations`, `plantings`, `planting`, `position_history`, `catalog` and `resolve` (API-CROP-01 to -06; `resolve` is the preview); the writes `plant`, `move`, `harvest`, `end`, `update` and `annotate` (API-CROP-07 to -11 and the MCP planting tools). Records only: no setting, band or target |
 | `irrigation/program.py` | The controller's program: the `irr_engine` flag, `irr_program_id` and its pushes, for the reads and for the `irrigation_site` readback in `settings.status` |
 
 Later modules (`series`) follow the same rules. The irrigation reads take an `Actor` too, as #1173's tools pass it; it changes nothing.
@@ -48,7 +50,7 @@ Later modules (`series`) follow the same rules. The irrigation reads take an `Ac
 | 403 | `forbidden`, `origin_mismatch` |
 | 404 | `not_found` (an unknown id on a read) |
 | 503 | `writes_disabled`, `query_timeout`, `unavailable` |
-| 422 | every validation and refusal code: `window_too_large`, `unknown_target`, `read_only`, `out_of_range`, `manual`, `request_id_reused`, `check_required`, `too_close`, `too_many_schedules`, `line_disabled`, `line_paused`, `line_faulted`, `not_schedule_member`, `line_busy`, `manifold_busy`, `cap_reached` |
+| 422 | every validation and refusal code: `window_too_large`, `unknown_target`, `read_only`, `out_of_range`, `manual`, `request_id_reused`, `check_required`, `too_close`, `too_many_schedules`, `line_disabled`, `line_paused`, `line_faulted`, `not_schedule_member`, `line_busy`, `manifold_busy`, `cap_reached`, `position_occupied`, `ambiguous_position`, `planting_ended` |
 
   `retryable` is true only for `line_busy`, `manifold_busy` (with `retry_after_s` when known),
   `query_timeout` and `unavailable`; pass `retryable=False` where waiting cannot help (the pre-engine

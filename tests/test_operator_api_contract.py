@@ -255,11 +255,13 @@ def test_it_serves_its_own_operations_and_every_included_route_module():
         ("GET", "/v1/series", "API-04"),
         ("GET", "/v1/band", "API-06"),
         ("GET", "/v1/band/preview", "API-19"),
+        ("GET", "/v1/band/profile", "API-23"),
+        ("PUT", "/v1/band/profile", "API-24"),
         ("POST", "/v1/equipment/lights/{light}/{state}", "API-20"),
         ("GET", "/v1/water/daily", "API-21"),
-        ("GET", "/v1/planner/history", "API-22"),
-        ("GET", "/v1/planner/experiments", "API-23"),
-        ("GET", "/v1/planner/experiments/{id}", "API-24"),
+        ("GET", "/v1/planner/history", "API-25"),
+        ("GET", "/v1/planner/experiments", "API-26"),
+        ("GET", "/v1/planner/experiments/{id}", "API-27"),
     }
     # Committed operations not served yet are allowed: the other reads follow.
     committed = {

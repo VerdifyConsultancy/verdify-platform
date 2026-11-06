@@ -19,7 +19,7 @@ export const meta = () => viewMeta("planner-experiments");
 // The CSV link is chart code: its route links the chart stylesheet (charts/chunks.test.ts).
 export const links = () => chartLinks();
 
-/** API-23 and API-24 every 5 minutes: a study day is 24 h and the analyzer runs once a day. */
+/** API-26 and API-27 every 5 minutes: a study day is 24 h and the analyzer runs once a day. */
 const EXPERIMENTS_POLL_MS = 300_000;
 
 type Definition = NonNullable<ExperimentDetail["definition"]>;
@@ -77,13 +77,13 @@ function outcomesCsv(rows: readonly Outcome[], ids: readonly string[]): string {
 
 /**
  * Planner → Experiments (#1361, #1360): the experiments the planner is studied by, the selected one's design, its arm
- * calendar, its results and its daily outcomes. API-23 lists the committed study definitions and the experiment
- * records; API-24 reads one. Every estimate and interval is the frozen analyzer's: until it has run, Results say why
+ * calendar, its results and its daily outcomes. API-26 lists the committed study definitions and the experiment
+ * records; API-27 reads one. Every estimate and interval is the frozen analyzer's: until it has run, Results say why
  * there are none. Viewer and operator see the same; the study is started and stopped by the orchestrator, never here.
  */
 export default function PlannerExperimentsPage() {
   const [search] = useSearchParams();
-  const list = useApiRead("API-23", {}, { intervalMs: EXPERIMENTS_POLL_MS });
+  const list = useApiRead("API-26", {}, { intervalMs: EXPERIMENTS_POLL_MS });
   const items = list.isError ? null : list.data?.items ?? null;
   const chosen = items ? selectedExperiment(items, search.get("id")) : null;
   const listState: PanelState = items ? (items.length ? "ready" : "empty") : list.isError ? "error" : "loading";
@@ -101,9 +101,9 @@ export default function PlannerExperimentsPage() {
   </>;
 }
 
-/** The selected experiment's panels, from API-24: read only once one is chosen. */
+/** The selected experiment's panels, from API-27: read only once one is chosen. */
 function ExperimentPanels({ id }: { id: string }) {
-  const detailRead = useApiRead("API-24", { id }, { intervalMs: EXPERIMENTS_POLL_MS });
+  const detailRead = useApiRead("API-27", { id }, { intervalMs: EXPERIMENTS_POLL_MS });
   const detail = detailRead.isError ? null : detailRead.data ?? null;
   const detailState: PanelState = detail ? "ready" : detailRead.isError ? "error" : "loading";
   const retryDetail = () => { void detailRead.refetch(); };

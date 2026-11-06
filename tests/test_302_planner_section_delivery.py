@@ -6,7 +6,8 @@ planner_inference_runs. 302 adds four security-barrier views, owned by verdify, 
 nobody else, so every runtime seal keeps 301's value and no receipt is re-sealed (302 follows 301 in one change). v_planner_inference_runs carries the
 whole row as jsonb (`attempt`), so the Cortex attempt columns of #1350 show up there once migration 294 adds them.
 test_native_qualification_is_recorded is the merge gate for the rolled-back production run that measures that and runs
-db/qualification/302-planner-section-reads-fixture.sql: a strict xfail while the fixture says it is pending, as 301's.
+db/qualification/302-planner-section-reads-fixture.sql (production at 291, 293, 294, 296 and 301 applied first in each
+rolled-back session).
 """
 
 import hashlib
@@ -48,7 +49,8 @@ MIGRATION = ROOT / "db/migrations" / c0.SUCCESSOR_302
 SOURCE = MIGRATION.read_text()
 NATIVE = ROOT / "db/qualification/302-planner-section-reads-fixture.sql"
 FIXTURE = ROOT / "tests/fixtures/302-planner-section-reads-native-qualification.json"
-NUMBERS = [*range(255, 292), 301, 302]
+CHAIN = (293, 294, 296, 301)
+NUMBERS = [*range(255, 292), *CHAIN, 302]
 
 
 def uncommented(text):
@@ -197,7 +199,8 @@ def assert_recorded(evidence):
     assert evidence["migration"] == c0.SUCCESSOR_302
     assert evidence["exact_final_migration_sha256"] == c0.SUCCESSOR_302_SHA256
     assert evidence["qualified_successor"] == six.SUCCESSOR_302 == registered(302) == registered(PREDECESSOR)
-    assert evidence["before"] == evidence["after_rollback"] == registered(PREDECESSOR)
+    assert measured_against(evidence, CHAIN) == registered(PREDECESSOR)
+    assert evidence["before"] == evidence["after_rollback"]
     assert evidence["final_migration_rollback_verified"] is True
     assert evidence["inside_transaction_receipts_match"] is True
     assert evidence["native_fixture_sha256"] == hashlib.sha256(NATIVE.read_bytes()).hexdigest()
@@ -251,14 +254,20 @@ def test_the_projection_is_the_files_literals():
     evidence = json.loads(FIXTURE.read_text())
     assert evidence["migration"] == c0.SUCCESSOR_302
     assert evidence["projected_successor"] == six.SUCCESSOR_302 == qualifier.successor_literals(SOURCE)
-    assert evidence["before"] == registered(PREDECESSOR)
+    assert measured_against(evidence, CHAIN) == registered(PREDECESSOR)
 
 
-@pytest.mark.xfail(
-    json.loads(FIXTURE.read_text()).get("final_migration_qualification_pending", True),
-    reason="DO NOT MERGE: 301 and 302 must be natively qualified on production first",
-    strict=True,
-)
+def measured_against(evidence, chain):
+    """The seals the successor ran on: its predecessor's after `chain` was applied in-session, or the live ones."""
+    if "applied_first" in evidence:
+        assert evidence["applied_first"] == [
+            {"migration": getattr(c0, f"SUCCESSOR_{n}"), "seq": n, "sha256": getattr(c0, f"SUCCESSOR_{n}_SHA256")}
+            for n in chain
+        ]
+        return evidence["applied_first_seals"]
+    return evidence["before"]
+
+
 def test_native_qualification_is_recorded():
     """Merge gate: the rolled-back production qualification of exact302 and its unchanged seals."""
     assert_recorded(json.loads(FIXTURE.read_text()))

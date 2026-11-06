@@ -66,6 +66,9 @@ const PROBLEM_CODE = {
   line_busy: "The line is already running",
   manifold_busy: "Another line on the same supply is running",
   cap_reached: "Over the line's daily limit",
+  position_occupied: "Something is already planted there",
+  ambiguous_position: "That place could mean more than one spot; be more specific",
+  planting_ended: "That planting has already ended",
 } as const satisfies Record<ProblemCode, string>;
 
 /** Every `LineState.code`: an irrigation line's state, with its reason beside it in words (`LineState.reason`). */
@@ -180,10 +183,10 @@ const EQUIPMENT = {
   mister_west: "West mister",
   mister_west_fert: "West mister (fertilized)",
   fog: "Fog",
-  grow_light_main: "Grow light · main",
-  grow_light_grow: "Grow light · grow",
-  grow_light_main_intent: "Grow light · main (controller)",
-  grow_light_grow_intent: "Grow light · grow (controller)",
+  grow_light_main: "Main light",
+  grow_light_grow: "Grow light",
+  grow_light_main_intent: "Main light (controller)",
+  grow_light_grow_intent: "Grow light (controller)",
 } as const;
 
 /** API-02 `overrides[].kind`: a burst the controller reads back as running. */
@@ -405,6 +408,71 @@ const TRIGGER_OUTCOME = {
   missed: "missed",
 } as const satisfies Record<TriggerOutcome, string>;
 
+/**
+ * Every planner event (`PlanDeliveryEventType` in verdify_schemas/plan.py), as Now's track, its status line and its
+ * "Next 12 h" name an Iris trigger (#1339): the words a person uses, never the code. The glossary's "Iris plans" defines them.
+ */
+const TRIGGER = {
+  SUNRISE: "Sunrise plan",
+  SUNSET: "Sunset plan",
+  SOLAR_MAX: "Midday check",
+  MIDNIGHT: "Midnight plan",
+  TRANSITION: "Transition",
+  FORECAST: "Forecast update",
+  DEVIATION: "Drift check",
+  FORECAST_DEVIATION: "Forecast changed",
+  HEARTBEAT: "Routine check",
+  WEEKLY: "Weekly review",
+  MANUAL: "Asked by hand",
+} as const;
+
+/**
+ * Short plain names for the settings Iris plans (#1339), as Now's "Setting changes" row and its "Next 12 h" print a
+ * change ("Mist pulse gap 45 → 55 s"), in place of the API's title-cased key ("Mister Pulse Gap S"). A setting not listed
+ * reads as the API's label.
+ */
+const TUNABLE_SHORT = {
+  mister_engage_kpa: "Misting starts at VPD",
+  mister_all_kpa: "All misters at VPD",
+  fog_escalation_kpa: "Fog starts at VPD",
+  mister_pulse_on_s: "Mist pulse length",
+  mister_pulse_gap_s: "Mist pulse gap",
+  mister_engage_delay_s: "Wait before misting",
+  mister_all_delay_s: "Wait before all misters",
+  mister_vpd_weight: "Zone weight in misting",
+  mister_water_budget_gal: "Daily mist budget",
+  mist_max_closed_vent_s: "Longest sealed misting",
+  mist_backoff_s: "Rest after sealed misting",
+  mist_thermal_relief_s: "Heat relief vent time",
+  min_fog_on_s: "Shortest fog run",
+  min_fog_off_s: "Shortest fog rest",
+  vpd_hysteresis: "VPD margin",
+  vpd_watch_dwell_s: "Wait before humidifying",
+  night_vpd_bias_kpa: "Night VPD shift",
+  temp_hysteresis: "Temperature margin",
+  heat_hysteresis: "Heat margin",
+  cool_exit_hysteresis_f: "Cooling stop margin",
+  cool_stage2_exit_hysteresis_f: "Second fan stop margin",
+  cool_stage2_over_high_f: "Second fan above the high by",
+  sw_cool_all_fans_at_high_enabled: "Both fans at the high",
+  cold_vent_guard_delta_f: "Cold air vent guard",
+  vent_prefer_temp_delta_f: "Vent when outside cooler by",
+  vent_prefer_dp_delta_f: "Vent when outside drier by",
+  vent_exchange_fraction: "Air swapped per vent",
+  enthalpy_open: "Vent opens at outside air gain",
+  enthalpy_close: "Vent closes at outside air loss",
+  sw_summer_vent_enabled: "Summer venting",
+  sw_fog_closes_vent: "Fog closes the vent",
+  sw_mister_closes_vent: "Misting closes the vent",
+  sw_dwell_gate_enabled: "Hold each mode",
+  dwell_gate_ms: "Mode hold time",
+  direct_wet_stress_vpd_margin_kpa: "Dry-stress VPD margin",
+  direct_wet_stress_min_dew_margin_f: "Dry-stress dew margin",
+  sw_direct_wet_stress_override_enabled: "Dry-stress misting",
+  outdoor_staleness_max_s: "Oldest outdoor reading used",
+  band_track_fraction: "Band tracking",
+} as const;
+
 /** `StressWindow.kind` and `severity` (verdify_schemas/plan.py): a plan's stress windows in Plan's Details. */
 const STRESS_KIND = { heat: "Heat", cold: "Cold", vpd_high: "VPD high", vpd_low: "VPD low" } as const;
 const STRESS_SEVERITY = { low: "low severity", medium: "medium severity", high: "high severity" } as const;
@@ -412,7 +480,7 @@ const STRESS_SEVERITY = { low: "low severity", medium: "medium severity", high: 
 /**
  * `activity_log.action` (`ACTIVITY_ACTION_PATTERN` in verdify_schemas/activity.py), as an Activity row's title begins:
  * the words, then the target's label ("Set VPD Mister Engage", "Changed line L01", "Lights on Main lights"). The
- * irrigation actions are the ones #1156's services write, and the light actions API-20's.
+ * irrigation actions are the ones #1156's services write, the light actions API-20's and the planting actions #1327's.
  */
 const ACTIVITY_ACTION = {
   "setting.write": "Set",
@@ -430,6 +498,13 @@ const ACTIVITY_ACTION = {
   "irrigation.line.update": "Changed line",
   "light.on": "Lights on",
   "light.off": "Lights off",
+  "planting.create": "Planted",
+  "planting.move": "Moved",
+  "planting.harvest": "Harvested",
+  "planting.end": "Ended",
+  "planting.update": "Changed planting",
+  "planting.note": "Noted on planting",
+  "band.write": "Changed",
 } as const;
 
 /**
@@ -479,6 +554,8 @@ export const WORDS: { readonly [family: string]: { readonly [code: string]: stri
   band_verdict: BAND_VERDICT,
   scorecard_reason: SCORECARD_REASON,
   trigger_outcome: TRIGGER_OUTCOME,
+  trigger: TRIGGER,
+  tunable_short: TUNABLE_SHORT,
   stress_kind: STRESS_KIND,
   stress_severity: STRESS_SEVERITY,
   activity_action: ACTIVITY_ACTION,
@@ -491,7 +568,7 @@ export const WORDS: { readonly [family: string]: { readonly [code: string]: stri
   occurrence_reason: OCCURRENCE_REASON,
 };
 export type WordFamily = "state_reason" | "alert_severity" | "alert_status" | "problem_code" | "line_state" | "mode" | "mist_stage" | "fog_block_reason"
-  | "mode_reason" | "moisture_block_reason" | "light_result" | "light_target" | "alert_type" | "equipment" | "burst" | "required_trigger" | "band_verdict" | "scorecard_reason" | "trigger_outcome" | "stress_kind" | "stress_severity"
+  | "mode_reason" | "moisture_block_reason" | "light_result" | "light_target" | "alert_type" | "equipment" | "burst" | "required_trigger" | "band_verdict" | "scorecard_reason" | "trigger_outcome" | "trigger" | "tunable_short" | "stress_kind" | "stress_severity"
   | "activity_action" | "irrigation_field" | "run_outcome" | "vpd_source" | "line_fault" | "program_reject" | "occurrence_reason";
 
 /** True when the table has words for `code` in `family`. */

@@ -503,7 +503,8 @@ def test_grow_light_intent_is_the_controllers_switch():
 
 def test_labels_name_every_actuator_and_flag_once():
     names = [name for name, _ in reads.EQUIPMENT_LIST]
-    assert set(EQUIPMENT_LABELS) == {*names, "occupancy", "leak_detected", "water_flowing"}
+    intents = {"grow_light_main_intent", "grow_light_grow_intent"}  # API-05's controller-intent lanes (#1356)
+    assert set(EQUIPMENT_LABELS) == {*names, "occupancy", "leak_detected", "water_flowing", *intents}
     assert list(EQUIPMENT_LINE_IDS.values()) == list(LINE_IDS)
     for name, line_id in EQUIPMENT_LINE_IDS.items():
         # The operator's name, never the relay code (#1341), and the line reads the same everywhere.
@@ -585,9 +586,9 @@ def test_the_routes_are_the_committed_operations():
         ("/alerts", "GET", "API-14"),
         ("/activity", "GET", "API-17"),
         ("/water/daily", "GET", "API-21"),  # VD-57
-        ("/planner/history", "GET", "API-22"),  # #1361
-        ("/planner/experiments", "GET", "API-23"),
-        ("/planner/experiments/{id}", "GET", "API-24"),
+        ("/planner/history", "GET", "API-25"),  # #1361
+        ("/planner/experiments", "GET", "API-26"),
+        ("/planner/experiments/{id}", "GET", "API-27"),
     }
     for path, method, operation_id in served:
         assert spec[f"/v1{path}"][method.lower()]["operationId"] == operation_id
@@ -657,6 +658,7 @@ def test_routes_call_the_services_and_validate_hours(monkeypatch):
         "cycles_today": None,
         "intent": None,
         "observed_at": None,
+        "manual_until": None,
     }
     empty = {"code": None, "since": None, "observed_at": None}
     assert (body["mode_reason"], body["fog_block_reason"], body["moisture_block_reason"]) == (empty, empty, empty)
@@ -707,9 +709,18 @@ def test_equipment_reads_the_three_reasons_in_its_snapshot():
             reads._EQUIPMENT_NEWEST_SQL: [],
             reads._SYSTEM_TRACKS_SQL: reason_edges,
             reads._SYSTEM_NEWEST_SQL: [{"key": "fog_block_reason", "ts": den(1, 9), "state": "none"}],
+            reads._LIGHT_TIMERS_SQL: [
+                {"key": "grow_light_main", "ends_at": AT + timedelta(minutes=9)},
+                {"key": "grow_light_grow", "ends_at": AT - timedelta(minutes=1)},
+            ],
         }
     )
     result = asyncio.run(reads.equipment(conn))
+    # A timed light switch reads its end while it is ahead; one already up reads none (#1377's timer sends automatic).
+    lights = {item.equipment: item.manual_until for item in result.items if item.group == "light"}
+    assert lights == {"grow_light_main": AT + timedelta(minutes=9), "grow_light_grow": None}
+    timers = next(args for sql, args in conn.sent if sql == reads._LIGHT_TIMERS_SQL)
+    assert timers == (reads.GREENHOUSE_ID, ["grow_light_main", "grow_light_grow"], reads.LIGHT_TIMER_WINDOW)
     assert (result.mode_reason.code, result.mode_reason.since) == ("temp_high", den(2, 10))
     assert result.mode_reason.observed_at == den(2, 13)
     assert (result.fog_block_reason.code, result.fog_block_reason.since) == ("none", None)

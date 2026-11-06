@@ -1,16 +1,139 @@
 {
   "migration": "301-greenhouse-brief.sql",
-  "exact_final_migration_sha256": "0c7ad6846a52d840a9ec90366bdc87f8ee0d77a358c697f1e6bffe5f752d2062",
-  "final_migration_qualification_pending": true,
+  "exact_final_migration_sha256": "24945842499e5d907d2c49ef4cbf4e57ada2f29b297c9744edd055421f7d0e1d",
+  "final_migration_qualification_pending": false,
   "before": {
     "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
     "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
     "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
   },
   "projected_successor": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"
+  },
+  "projection": "2026-11-05, read only, production at exact289 (290 merged, not applied; 290 moves no seal): max seq 289 with 289's sha, all three live digests and receipts equal to 289's registration, no greenhouse_brief. The VD-39 method: fn_mcp_runtime_boundary_digest's body from 263, run as a plain SELECT under SET LOCAL search_path = pg_catalog, pg_temp in a default_transaction_read_only session on production, reproduced the live MCP digest 6cab4f0f...893e exactly; with two injected entries for this file's table, 'relation|public|greenhouse_brief|r|10|f|f||' and 'relation-acl|public.greenhouse_brief|1527920|10|SELECT|f' (verdify OID 10 owns and grants; 1527920 is verdify_mcp_runtime on production), it gives 717d3d0b...14af. Both entry shapes were checked against production's own irrigation_line rows (the same CREATE TABLE owner and a lone MCP SELECT format identically). Nothing else enters it: the identity sequence and both indexes carry no ACL, the dashboard duty's table and column grants are not MCP or PUBLIC entries, and production has no table default ACL. The ordinary digests keep 289's values: neither ordinary login has any privilege on the table (has_table_privilege and has_any_column_privilege are false), it is not a protected relation, and the dashboard duty is not an ordinary login. Stand-in chain (combined with 302 in one change): 301 follows 291, whose api and ingestor seals (b4b8499b...7b76, 2dcc7c99...2806) it keeps and whose MCP seal is 290's, so the MCP projection is unchanged; it is re-chained behind 296 (#1388; predecessor block, seals and sha) and qualified natively: run scripts/qualify-migration-successor.py db/migrations/301-greenhouse-brief.sql --native-fixture db/qualification/301-greenhouse-brief-fixture.sql --fixture tests/fixtures/301-greenhouse-brief-native-qualification.json on production (every session rolls back; --apply-first each merged predecessor production lacks). If the probe differs from these literals, set the measured MCP digest in the file's successor block and both registrations, update the file's sha at both and here, and run it again. 2026-11-06: re-chained onto exact296 (#1388, sha aec163e3). Production stayed at 291 (293, 294 and 296 merged, not applied), so a --probe-only run with --apply-first 293, 294 and 296 in one rolled-back session (chain prelock on) measured the MCP seal af3f7ef2 on top of 296's 984604e2; the ordinary seals stayed 296's. The full run followed with the same chain and the native fixture.",
+  "measured_at": "2026-11-06T10:12:28Z",
+  "qualified_successor": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"
+  },
+  "after_rollback": {
     "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
     "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
-    "mcp": "717d3d0bea4032fe65fe977f78f511b6ed3bd97142d6665ebc3bfa83836414af"
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
   },
-  "projection": "2026-11-05, read only, production at exact289 (290 merged, not applied; 290 moves no seal): max seq 289 with 289's sha, all three live digests and receipts equal to 289's registration, no greenhouse_brief. The VD-39 method: fn_mcp_runtime_boundary_digest's body from 263, run as a plain SELECT under SET LOCAL search_path = pg_catalog, pg_temp in a default_transaction_read_only session on production, reproduced the live MCP digest 6cab4f0f...893e exactly; with two injected entries for this file's table, 'relation|public|greenhouse_brief|r|10|f|f||' and 'relation-acl|public.greenhouse_brief|1527920|10|SELECT|f' (verdify OID 10 owns and grants; 1527920 is verdify_mcp_runtime on production), it gives 717d3d0b...14af. Both entry shapes were checked against production's own irrigation_line rows (the same CREATE TABLE owner and a lone MCP SELECT format identically). Nothing else enters it: the identity sequence and both indexes carry no ACL, the dashboard duty's table and column grants are not MCP or PUBLIC entries, and production has no table default ACL. The ordinary digests keep 289's values: neither ordinary login has any privilege on the table (has_table_privilege and has_any_column_privilege are false), it is not a protected relation, and the dashboard duty is not an ordinary login. Stand-in chain (combined with 302 in one change): 301 follows 291, whose api and ingestor seals (b4b8499b...7b76, 2dcc7c99...2806) it keeps and whose MCP seal is 290's, so the MCP projection is unchanged; it is re-chained behind 296 (#1388; predecessor block, seals and sha) and qualified natively: run scripts/qualify-migration-successor.py db/migrations/301-greenhouse-brief.sql --native-fixture db/qualification/301-greenhouse-brief-fixture.sql --fixture tests/fixtures/301-greenhouse-brief-native-qualification.json on production (every session rolls back; --apply-first each merged predecessor production lacks). If the probe differs from these literals, set the measured MCP digest in the file's successor block and both registrations, update the file's sha at both and here, and run it again."
+  "inside_transaction_receipts_match": true,
+  "final_migration_rollback_verified": true,
+  "native_probe_source_sha256": "5df5652f6401c9a5647e8d6827353903727f73320f55f4b562775d52265e8b84",
+  "qualification_source_sha256": "d82e336c7531dbc8723636f89491cf2cd41264583b8b92c3d0a27429fd344699",
+  "applied_first": [
+    {
+      "migration": "293-crop-plantings.sql",
+      "seq": 293,
+      "sha256": "fe591976baeb81eb7676b6ff3198a9f370ba6bb7db8f69218c1d5f47ddbd48b7"
+    },
+    {
+      "migration": "294-cortex-planner-shadow-storage.sql",
+      "seq": 294,
+      "sha256": "99e1feb22a465bafb7adf5852fec5def47357a5b9cd6bd15314c93c02697bb5d"
+    },
+    {
+      "migration": "296-knowledge-embeddings-cortex.sql",
+      "seq": 296,
+      "sha256": "aec163e31534e28d7ffd2e5b4bc0402819c8096c70d1d5ab28a804dec795d40d"
+    }
+  ],
+  "applied_first_seals": {
+    "api": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "ingestor": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+    "mcp": "984604e2c5e99ec801a752792373b53b1e817e5667b10ae35798da5c88eb0ef9"
+  },
+  "prelock": [
+    [
+      "public.crop_events",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.crop_occupancy",
+      "SHARE"
+    ],
+    [
+      "public.crops",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.greenhouse_brief",
+      "SHARE"
+    ],
+    [
+      "public.greenhouses",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.irrigation_line",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.knowledge_embeddings",
+      "SHARE"
+    ],
+    [
+      "public.mcp_runtime_boundary_receipt",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.planner_inference_runs",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.planner_pack",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.positions",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.runtime_ordinary_login_attestation_receipts",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.schema_migrations",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "public.shelves",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.v_position_current",
+      "ACCESS EXCLUSIVE"
+    ],
+    [
+      "public.zones",
+      "SHARE ROW EXCLUSIVE"
+    ],
+    [
+      "verdify_vision_runtime.crops",
+      "ACCESS EXCLUSIVE"
+    ]
+  ],
+  "native_fixture": {
+    "checks": [
+      "dashboard_login_attests",
+      "dashboard_inserts_ok_and_error",
+      "dashboard_confirms_and_outdates",
+      "dashboard_cannot_change_text",
+      "dashboard_deletes_past_retention",
+      "mcp_reads_only",
+      "ordinary_logins_and_public_denied"
+    ],
+    "all_passed": true,
+    "attested": {
+      "dashboard": true
+    }
+  },
+  "native_fixture_sha256": "3ab25bd3144373f9f41bae3a6b6d08128ab0441953056c8dbb4fba246d72328c"
 }

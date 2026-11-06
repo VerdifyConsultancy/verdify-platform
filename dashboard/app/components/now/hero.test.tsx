@@ -65,7 +65,7 @@ test("in band: All OK, 64.8 °F in band, Updated 20 s ago, the three band bars w
   expect(rows[2].bar).toMatch(/^RH 71\.0%, no band, today/);
   expect(document.querySelector(".now-off")).toBeNull();
   expect(plain(text(document.querySelector(".now-tib")))).toBe("In band today temperature 96% · VPD 88% (yesterday 94% · 91%)");
-  expect(status()).toEqual(["In band, holding", "Iris OK, SUNRISE plan to 17:30", "Outdoor 41.2 °F", "Nobody seen: misters may run (last person 05:10)"]);
+  expect(status()).toEqual(["In band, holding", "Iris OK, Sunrise plan to 17:30", "Outdoor 41.2 °F", "Nobody seen: misters may run (last person 05:10)"]);
 });
 
 test("each bar links to its Graphs panel; the status line links the mode to Equipment's why, Iris to Plan and outdoor to Graphs", () => {

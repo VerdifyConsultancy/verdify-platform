@@ -23,8 +23,12 @@ ALLOWLIST = ROOT / "deploy/external-hosts.yaml"
 SCAN_PATHS = (
     "Makefile",
     "api",
-    "dashboard/server",
-    "dashboard/src",
+    "config",
+    "dashboard/app",
+    "dashboard/bff",
+    "dashboard/Dockerfile",
+    "dashboard/security-headers.mjs",
+    "dashboard/server.mjs",
     "db",
     "deploy",
     "experiment_orchestrator",
@@ -36,8 +40,11 @@ SCAN_PATHS = (
     "scripts",
     "site/quartz",
     "site/quartz.config.ts",
+    "twin",
+    "verdify_public",
     "verdify_schemas",
     "verdify_services",
+    ":(top,glob)*.py",
 )
 SUFFIXES = {
     "",
@@ -77,6 +84,7 @@ LOCAL_SUFFIXES = (
     ".example.org",
     ".invalid",
     ".test",
+    ".example",
 )
 LOCAL_NAMES = {"vallery.net", "verdify.ai", "localhost", "example.com", "example.org"}
 COMMENT = ("#", "//", "/*", "*", "<!--", "--", ";")

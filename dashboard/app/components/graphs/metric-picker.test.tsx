@@ -26,7 +26,7 @@ function picker(search = "") {
 
 test("groups every metric but the forecast keys in the picker's order, the daily keys last, and the filter matches label, key, unit and note", () => {
   const groups = pickerGroups(METRICS);
-  expect(groups.map((group) => group.group)).toEqual(["house climate", "zones", "water and soil", "outdoor", "targets", "controller", "daily"]);
+  expect(groups.map((group) => group.group)).toEqual(["house climate", "zones", "water and soil", "light", "outdoor", "targets", "controller", "daily"]);
   expect(groups.at(-1)!.items.map((metric) => metric.key)).toEqual(METRICS.filter((metric) => metric.group === "daily").map((metric) => metric.key));
   expect(groups.flatMap((group) => group.items).some((metric) => metric.key.startsWith("forecast."))).toBe(false);
   expect(pickerGroups(METRICS, "gal/min").flatMap((group) => group.items.map((metric) => metric.key))).toEqual(["climate.flow_gpm"]);
@@ -50,8 +50,8 @@ test("a choice links to the view plus m=<key>; the climate traces and picked met
   expect(list.getByRole("link", { name: /Water used/ }).getAttribute("href")).toBe("/graphs?range=7d&set=mister_engage_kpa&m=climate.flow_gpm&m=daily.water_gal");
   fireEvent.change(list.getByLabelText("Filter metrics"), { target: { value: "heap" } });
   expect(list.getAllByRole("link").map((link) => link.textContent)).toEqual(["Controller free heapdiagnostics.heap_free_kb · kB · every 60 s · MEASURED"]);
-  fireEvent.change(list.getByLabelText("Filter metrics"), { target: { value: "lux" } });
-  expect(text(dialog())).toContain("Nothing matches “lux”.");
+  fireEvent.change(list.getByLabelText("Filter metrics"), { target: { value: "ppfd" } });
+  expect(text(dialog())).toContain("Nothing matches “ppfd”.");
 });
 
 test("at 8 metrics per window the picker says so and offers no more", () => {

@@ -331,20 +331,45 @@ SUCCESSOR_291_DIGESTS = {
     "verdify_ingestor_runtime_login": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
 }
 SUCCESSOR_291_MCP_DIGEST = SUCCESSOR_290_MCP_DIGEST
+# Exact293 (#1327, #1328): plantings on the location tree. Layout columns, shelf_water_lines, crop_occupancy,
+# the end_reason/source/actor columns and the dashboard, MCP and ingestor grants move all three seals. 293
+# chains from 291 (292 is a gap); the rolled-back native qualification on production at 291 measured them.
+SUCCESSOR_293 = "293-crop-plantings.sql"
+SUCCESSOR_293_SHA256 = "fe591976baeb81eb7676b6ff3198a9f370ba6bb7db8f69218c1d5f47ddbd48b7"
+SUCCESSOR_293_DIGESTS = {
+    "verdify_api_runtime_login": "f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547",
+    "verdify_ingestor_runtime_login": "533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e",
+}
+SUCCESSOR_293_MCP_DIGEST = "2f5f7ccadf8006a351353c4fce8aec9a59f634b605adf2bcda5e6e61dbe254b9"
+# Exact294 (#1350, #1366): planner_pack, the planner_inference_runs attempt columns, the retained
+# weather_forecast archive and its daily job, the planner duty's views and owner-run functions, and the
+# heater notes. Nothing carries an api, ingestor, MCP or PUBLIC privilege, so every seal keeps 293's value
+# and no receipt is re-sealed. Chained from 293; 294 and 296 ship in one PR, in that order.
+SUCCESSOR_294 = "294-cortex-planner-shadow-storage.sql"
+SUCCESSOR_294_SHA256 = "99e1feb22a465bafb7adf5852fec5def47357a5b9cd6bd15314c93c02697bb5d"
+SUCCESSOR_294_DIGESTS = SUCCESSOR_293_DIGESTS
+SUCCESSOR_294_MCP_DIGEST = SUCCESSOR_293_MCP_DIGEST
+# Exact296 (#1351): knowledge_embeddings (halfvec 2560, Cortex embed.main) and its search function, SELECT and
+# EXECUTE for the MCP duty only. That moves the MCP seal and re-seals its receipt; neither object carries an
+# api or ingestor entry, so both ordinary seals stay 294's. Chained from 294. The rolled-back native
+# qualification (production at 291, 293 and 294 applied first) measured the MCP seal; its fixture records it.
+SUCCESSOR_296 = "296-knowledge-embeddings-cortex.sql"
+SUCCESSOR_296_SHA256 = "aec163e31534e28d7ffd2e5b4bc0402819c8096c70d1d5ab28a804dec795d40d"
+SUCCESSOR_296_DIGESTS = SUCCESSOR_294_DIGESTS
+SUCCESSOR_296_MCP_DIGEST = "984604e2c5e99ec801a752792373b53b1e817e5667b10ae35798da5c88eb0ef9"
 # Exact301 (#1346): greenhouse_brief, the snapshot on Now. The dashboard duty writes it and the MCP duty reads
-# it; neither ordinary login reaches it, so the api and ingestor seals keep 291's values, and the MCP SELECT moves
-# the MCP seal, whose receipt is re-sealed. The MCP literal is a read-only projection on production at exact289
-# (291 leaves the MCP seal alone) until the rolled-back native qualification measures it. Stand-in chain: 301
-# follows 291 and moves behind 296 when #1388 publishes it.
+# it; neither ordinary login reaches it, so the api and ingestor seals keep 296's values, and the MCP SELECT moves
+# the MCP seal, whose receipt is re-sealed. Chained from 296 (#1388); the rolled-back native qualification
+# (production at 291, 293, 294 and 296 applied first) measured the MCP seal.
 SUCCESSOR_301 = "301-greenhouse-brief.sql"
-SUCCESSOR_301_SHA256 = "0c7ad6846a52d840a9ec90366bdc87f8ee0d77a358c697f1e6bffe5f752d2062"
-SUCCESSOR_301_DIGESTS = SUCCESSOR_291_DIGESTS
-SUCCESSOR_301_MCP_DIGEST = "717d3d0bea4032fe65fe977f78f511b6ed3bd97142d6665ebc3bfa83836414af"
+SUCCESSOR_301_SHA256 = "24945842499e5d907d2c49ef4cbf4e57ada2f29b297c9744edd055421f7d0e1d"
+SUCCESSOR_301_DIGESTS = SUCCESSOR_296_DIGESTS
+SUCCESSOR_301_MCP_DIGEST = "af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873"
 # Exact302 (#1361, #1360): four read views for the dashboard's Planner section, owned by verdify, with
 # SELECT for the dashboard duty only, so no runtime seal moves and no receipt is re-sealed. It follows 301 in
-# the same change. The rolled-back native qualification measures it.
+# the same change; the rolled-back native qualification confirmed it.
 SUCCESSOR_302 = "302-planner-section-reads.sql"
-SUCCESSOR_302_SHA256 = "8d427bb1bc067a88e1e687fead3289841fd5d117247580a10608f0b9dd306ca5"
+SUCCESSOR_302_SHA256 = "a18aeb0588b5f4e56b7a78ce3dea7c592873b9fae54f0701c45f6d9bbbd8f3bf"
 SUCCESSOR_302_DIGESTS = SUCCESSOR_301_DIGESTS
 SUCCESSOR_302_MCP_DIGEST = SUCCESSOR_301_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
@@ -403,6 +428,9 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_289,
         SUCCESSOR_290,
         SUCCESSOR_291,
+        SUCCESSOR_293,
+        SUCCESSOR_294,
+        SUCCESSOR_296,
         SUCCESSOR_301,
         SUCCESSOR_302,
     )
@@ -450,6 +478,9 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_289_SHA256,
                 SUCCESSOR_290_SHA256,
                 SUCCESSOR_291_SHA256,
+                SUCCESSOR_293_SHA256,
+                SUCCESSOR_294_SHA256,
+                SUCCESSOR_296_SHA256,
                 SUCCESSOR_301_SHA256,
                 SUCCESSOR_302_SHA256,
             ),
@@ -729,6 +760,9 @@ COMMIT;"""
         (SUCCESSOR_289, SUCCESSOR_289_DIGESTS),
         (SUCCESSOR_290, SUCCESSOR_290_DIGESTS),
         (SUCCESSOR_291, SUCCESSOR_291_DIGESTS),
+        (SUCCESSOR_293, SUCCESSOR_293_DIGESTS),
+        (SUCCESSOR_294, SUCCESSOR_294_DIGESTS),
+        (SUCCESSOR_296, SUCCESSOR_296_DIGESTS),
         (SUCCESSOR_301, SUCCESSOR_301_DIGESTS),
         (SUCCESSOR_302, SUCCESSOR_302_DIGESTS),
     ):
@@ -826,6 +860,12 @@ COMMIT;"""
             expected_mcp = SUCCESSOR_290_MCP_DIGEST
         if SUCCESSOR_291 in later:
             expected_mcp = SUCCESSOR_291_MCP_DIGEST
+        if SUCCESSOR_293 in later:
+            expected_mcp = SUCCESSOR_293_MCP_DIGEST
+        if SUCCESSOR_294 in later:
+            expected_mcp = SUCCESSOR_294_MCP_DIGEST
+        if SUCCESSOR_296 in later:
+            expected_mcp = SUCCESSOR_296_MCP_DIGEST
         if SUCCESSOR_301 in later:
             expected_mcp = SUCCESSOR_301_MCP_DIGEST
         if SUCCESSOR_302 in later:

@@ -2,7 +2,7 @@
 # its defaults (decisions 1-8) on 2026-11-05 ~21:45-21:50Z (docs/design/dashboard/decisions.md). The model and its
 # checks are verdify_schemas/planner_study.py; `python -m verdify_schemas.planner_study` prints the definition's
 # sha256. The orchestrator (#1360 PR A/B) reads this file to register the study, generate its schedule and freeze
-# its daily outcomes; the operator API (API-23/24) serves it to the dashboard's Planner section (#1361).
+# its daily outcomes; the operator API (API-26/24) serves it to the dashboard's Planner section (#1361).
 #
 # Pre-registration: before day 1, `baseline_vector.sha256`, `schedule.seed` and `schedule.schedule_sha256` are set in
 # one reviewed commit and never edited after. A change to anything else after day 1 is a new study version.

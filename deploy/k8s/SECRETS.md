@@ -206,6 +206,7 @@ reconciliation.
 | `overlays/prod/secrets.placeholder.yaml` | `verdify-app-secrets` | prod |
 | `overlays/prod/ha-token.placeholder.yaml` | `verdify-ha-token` | prod |
 | `overlays/prod/hermes-secret.placeholder.yaml` | `verdify-hermes` | prod |
+| `overlays/prod/planner-cortex-secret.placeholder.yaml` | `verdify-planner-cortex` | prod |
 
 `verdify-mcp-agents` (optional volume) and
 `ghcr-jvallery-readonly` (image-pull, delivered out-of-band by Root) have no
@@ -315,6 +316,14 @@ migration and other bootstrap owner credentials are unchanged.
 ## Verdify local vision (#1021)
 
 `verdify-vision-cortex` must contain `api_key.txt`, a dedicated inference-only Cortex identity limited to `llm.primary.longctx.mm`, owned and sealed in agents KSOPS. The vision CronJob mounts it at `/vcortex/api_key.txt`. The old `verdify-vision-key` Gemini Secret is retained without workload references; deleting or revoking it is outside this change.
+
+## Cortex planner (#1350)
+
+`verdify-planner-cortex` must contain `api_key.txt`, a dedicated inference-only Cortex identity limited to the text routes `llm.primary.longctx` and `llm.qwen38u.longctx` (any image request belongs to `llm.primary.longctx.mm` under its own identity). It is live in `verdify-prod`; its adoption into agents KSOPS is jvallery/agents#6079. `verdify-cortex-planner` (components/cortex-planner) mounts it, `optional`, at `/vcortex-planner/api_key.txt`: without it the pod logs `FAIL CLOSED`, raises one `planner_failed` alert and idles instead of crash-looping. Its database login is the existing planner duty (`verdify-planner-runtime-db` / `password`). Placeholder: `overlays/prod/planner-cortex-secret.placeholder.yaml`.
+
+## Verdify knowledge embeddings (#1351)
+
+`verdify-embedding-cortex` must contain `api_key.txt`, a dedicated Cortex identity (73) limited to `embed.main`, with no expiry. It is live in `verdify-prod`; its KSOPS adoption into the agents lane is jvallery/agents#6079. `verdify-mcp` mounts it at `/vembed/api_key.txt` (optional: if it is absent, `lessons_search` and `knowledge_search` fail closed with `embedding_credential_missing`), and so does the suspended `verdify-knowledge-embed` CronJob. `overlays/prod/embedding-cortex.placeholder.yaml` is local-config only, so the render emits no Secret. MCP no longer reads `OPENAI_API_KEY` from `verdify-hermes`.
 
 ## Greenhouse snapshot (#1346)
 

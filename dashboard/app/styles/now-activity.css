@@ -84,6 +84,14 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .now-burst .state-note,.now-burst .field-error{font-size:var(--fs-xs)}
 .now-bursts-skeleton{width:min(100%,24rem);min-height:var(--tap)}
 .now-actions-note{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);min-height:var(--tap);margin:0}
+.now-actions-term{align-self:center;margin:0}
+/* The lights (#1342): after the bursts, each light's name and state over its buttons; the link to Equipment's Lights under them. */
+.now-lights{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--space-2) var(--space-5)}
+.now-light{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-3);min-width:0}
+.now-light-head{margin:0;font-size:var(--fs-sm);font-weight:600}
+.now-light .light-actions{margin:0}
+.now-light .state-note,.now-light .field-error{flex-basis:100%;margin:0;font-size:var(--fs-xs)}
+.now-lights-more{align-self:center;margin:0}
 
 /* The alert row (redesign §5.8), on Now and Activity: an ObjectRow with its severity rule and word first, the place and when, the message, then Acknowledge with its note. */
 .alert-list{margin:0;padding:0;list-style:none}
@@ -118,6 +126,9 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .now-water-last{min-width:0;font-size:var(--fs-sm);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .now-water-running{font-weight:600;color:var(--ink)}
 .now-water-saf4{margin-top:var(--space-1);padding-top:var(--space-2);border-top:1px solid var(--line)}
+/* Its name takes a line of its own (#1339), so "Daily mist & fog limit" and its tip never cut. */
+.now-water-saf4 .now-water-name{grid-column:1/-1}
+.now-water-saf4 .now-water-meter{grid-column:1/3}
 .now-water p{margin:var(--space-3) 0 0}
 .now-water-flow{font-size:var(--fs-sm)}
 .now-water-flow.fault{font-weight:600}
@@ -125,6 +136,7 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 @container (max-width:28rem){
   .now-water-row{grid-template-columns:3.5rem minmax(0,1fr)}
   .now-water-last{grid-column:2;white-space:normal}
+  .now-water-saf4 .now-water-meter,.now-water-saf4 .now-water-last{grid-column:1/-1}
   /* "132 / 120 min" over "+12 min over", so a zone over its cap stays inside the card at 360 px. */
   .now-water-amount{flex:0 1 auto;min-width:0;white-space:normal}
   .now-water-over{display:block}
@@ -143,7 +155,9 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
 .now-dot[data-token=eq-fan1]{background:var(--eq-fan1)}.now-dot[data-token=eq-fan2]{background:var(--eq-fan2)}.now-dot[data-token=eq-fog]{background:var(--eq-fog)}
 .now-dot[data-token=eq-mister]{background:var(--eq-mister)}.now-dot[data-token=eq-water]{background:var(--eq-water)}.now-dot[data-token=eq-fert]{background:var(--eq-fert)}
 .now-dot.is-neutral{background:var(--muted)}
-.now-track{min-height:15.5rem}
+.now-track{min-height:21rem}
+/* The row names read in full (#1340): they wrap rather than cut. */
+.now-track .tt-label{overflow:visible;text-overflow:clip;white-space:normal;line-height:1.15}
 .now-track-caption{font-weight:400;color:var(--muted)}
 .now-track .tt-track{overflow:hidden}
 /* A marker's words stop where the next marker, span or the now rule starts (TimeTrack's --tt-room), so the plan's row keeps the height of the others. */
@@ -292,6 +306,9 @@ a.now-status-item:hover{color:var(--mint);text-decoration:underline}
   .now-burst{justify-items:stretch}
   .now-burst-button{flex-direction:column;gap:0;width:100%;min-height:3rem;padding:var(--space-1) var(--space-2);line-height:1.2}
   .now-burst-button .burst-length{font-size:var(--fs-xs)}
+  .now-lights{display:grid;grid-template-columns:minmax(0,1fr)}
+  .now-light{display:grid;gap:var(--space-1)}
+  .now-light .light-actions .btn{flex:1 1 0}
   .now-chip{min-height:var(--tap)}
   .now-running{display:grid;justify-items:start}
   .now-track{display:none}

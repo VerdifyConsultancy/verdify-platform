@@ -12,6 +12,7 @@ import {
   DAY, JASON, LINES, MISTERS, REVISION, SCORECARD_REASON_COLUMNS, addDays, flowWithValvesClosed, iso, itemOf, laneOf, lineInfo, lineOf, local, localInstant,
   manifold, minutesZone, nextId, runLine, settingOf, stopLines,
 } from "./world.mjs";
+import { CROP_ROUTES, makeCrops } from "./crops.mjs";
 
 const MINUTE = 60_000;
 const HOUR = 3_600_000;
@@ -22,13 +23,13 @@ export const ROUTES = [
   ["API-10", "PUT", "/v1/settings/{param}"], ["API-11", "DELETE", "/v1/settings/{param}"], ["API-12", "GET", "/v1/settings/{param}/history"],
   ["API-13", "GET", "/v1/equipment"], ["API-14", "GET", "/v1/alerts"], ["API-15", "POST", "/v1/alerts/{id}/ack"],
   ["API-16", "POST", "/v1/alerts/{id}/resolve"], ["API-17", "GET", "/v1/activity"], ["API-19", "GET", "/v1/band/preview"],
-  ["API-20", "POST", "/v1/equipment/lights/{light}/{state}"], ["API-21", "GET", "/v1/water/daily"], ["API-22", "GET", "/v1/planner/history"],
-  ["API-23", "GET", "/v1/planner/experiments"], ["API-24", "GET", "/v1/planner/experiments/{id}"], ["API-IRR-01", "GET", "/v1/irrigation"],
+  ["API-23", "GET", "/v1/band/profile"], ["API-24", "PUT", "/v1/band/profile"], ["API-20", "POST", "/v1/equipment/lights/{light}/{state}"], ["API-21", "GET", "/v1/water/daily"], ["API-22", "GET", "/v1/lighting"], ["API-IRR-01", "GET", "/v1/irrigation"],
+  ["API-25", "GET", "/v1/planner/history"], ["API-26", "GET", "/v1/planner/experiments"], ["API-27", "GET", "/v1/planner/experiments/{id}"],
   ["API-IRR-02", "GET", "/v1/irrigation/schedules"], ["API-IRR-03", "POST", "/v1/irrigation/schedules"],
   ["API-IRR-04", "PUT", "/v1/irrigation/schedules/{slot_id}"], ["API-IRR-05", "DELETE", "/v1/irrigation/schedules/{slot_id}"],
   ["API-IRR-06", "POST", "/v1/irrigation/lines/{line_id}/run"], ["API-IRR-07", "POST", "/v1/irrigation/stop"],
   ["API-IRR-08", "PUT", "/v1/irrigation/lines/{line_id}"], ["API-IRR-10", "GET", "/v1/irrigation/minutes"], ["API-IRR-11", "GET", "/v1/irrigation/runs"],
-  ["API-IRR-12", "POST", "/v1/equipment/override"], ["API-IRR-13", "POST", "/v1/irrigation/clear-fault"], ["BFF-01", "GET", "/auth/login"],
+  ["API-IRR-12", "POST", "/v1/equipment/override"], ["API-IRR-13", "POST", "/v1/irrigation/clear-fault"], ...CROP_ROUTES, ["BFF-01", "GET", "/auth/login"],
   ["BFF-02", "GET", "/auth/callback"], ["BFF-03", "POST", "/auth/logout"], ["INT-01", "POST", "/internal/sessions"],
   ["INT-02", "DELETE", "/internal/sessions/current"], ["OPS-01", "GET", "/healthz"], ["OPS-02", "GET", "/readyz"],
   ["OPS-04", "GET", "/metrics"],
@@ -143,6 +144,7 @@ const WAVES = {
   "climate.vpd_west": [0.6, 0.12], "climate.house_vpd_target": [0.62, 0.05], "climate.vpd_target_center": [0.65, 0.05], "climate.vpd_target_south": [0.6, 0.05],
   "climate.vpd_target_west": [0.6, 0.05], "climate.vpd_target_east": [0.7, 0.05], "forecast.temp_f": [47, 11], "forecast.rh_pct": [52, -14], "forecast.vpd_kpa": [0.5, 0.25],
   "climate.soil_moisture_south_1": [38, -2], "climate.flow_gpm": [0, 0], "climate.outdoor_temp_f": [45, 10], "climate.outdoor_rh_pct": [55, -15],
+  "climate.outdoor_lux": [30000, 30000], "climate.solar_irradiance_w_m2": [300, 300], "forecast.solar_w_m2": [300, 300],
   "diagnostics.heap_free_kb": [38, 1.5], "daily.temp_in_band_pct": [92, 4], "daily.vpd_in_band_pct": [88, 6], "daily.time_in_band_day_pct": [90, 3],
   "daily.time_in_band_night_pct": [81, 5], "daily.water_gal": [24, 0], "daily.iris_required_written": [3, 0], "daily.iris_required_missed": [0, 0],
   "daily.alerts_critical": [0, 0], "daily.alerts_warning": [1, 0], "daily.alerts_info": [2, 0],
@@ -283,6 +285,10 @@ function statesBody(world, { query }) {
     leak_detected: world.leak.active ? [span(from, Date.parse(world.leak.since), "off"), span(Date.parse(world.leak.since), end, "on")] : [span(from, end, "off")],
     water_flowing: flowing.length ? [span(from, Math.min(...flowing), "off"), span(Math.min(...flowing), end, "on")] : [span(from, end, "off")],
   };
+  // The controller's grow-light intent (Q-09), which the lanes compare with the Lutron readback (#1356).
+  for (const item of world.equipment) if (item.group === "light" && item.intent) {
+    lanes.push({ equipment: `${item.equipment}_intent`, label: `${item.label}, controller intent`, group: "light", line_id: null, spans: [span(from, end, item.intent)] });
+  }
   for (const [equipment, label] of FLAGS) lanes.push({ equipment, label, group: "flag", line_id: null, spans: flags[equipment] });
   return {
     from: iso(from), to: iso(to),
@@ -408,6 +414,172 @@ function previewBody(world, { query }) {
   };
 }
 
+// ---------------------------------------------------------------------------------------------------- the band editor
+const BAND_SERIES = ["temp_low", "temp_target", "temp_high", "vpd_low", "vpd_target", "vpd_high"];
+const BAND_ANCHORS = ["sr", "sm", "ss", "mid"];
+const HOUSE_BAND = BAND_SERIES.flatMap((series) => BAND_ANCHORS.map((anchor) => `band_${series}_${anchor}`));
+const TEMP_FIELDS = ["temp_day", "temp_night", "temp_width_day", "temp_width_night"];
+const VPD_FIELDS = ["vpd_day", "vpd_night", "vpd_below_day", "vpd_above_day", "vpd_below_night", "vpd_above_night"];
+const NIGHT_FLOOR_KPA = 0.74;
+const bandStep = (param) => (param.includes("temp_") ? 0.1 : 0.01);
+const onStep = (value, step) => Number((Math.round(value / step) * step).toFixed(step < 0.1 ? 2 : 1));
+const houseAnchors = (world) => Object.fromEntries(HOUSE_BAND.map((param) => [param, bandValue(world, param)]));
+const at = (anchors, series, anchor) => anchors[`band_${series}_${anchor}`];
+/** verdify_schemas.band_profile.decompose: noon and midnight values, the temperature half-width and the VPD gaps. */
+function profileOf(a) {
+  const half = (anchor) => round((at(a, "temp_high", anchor) - at(a, "temp_low", anchor)) / 2, 1);
+  const gap = (lower, upper, anchor) => round(at(a, upper, anchor) - at(a, lower, anchor), 3);
+  return {
+    temp_day: at(a, "temp_target", "sm"), temp_night: at(a, "temp_target", "mid"), temp_width_day: half("sm"), temp_width_night: half("mid"),
+    vpd_day: at(a, "vpd_target", "sm"), vpd_night: at(a, "vpd_target", "mid"), vpd_below_day: gap("vpd_low", "vpd_target", "sm"),
+    vpd_above_day: gap("vpd_target", "vpd_high", "sm"), vpd_below_night: gap("vpd_low", "vpd_target", "mid"), vpd_above_night: gap("vpd_target", "vpd_high", "mid"),
+  };
+}
+/** compile_profile: noon and midnight from the profile, sunrise and sunset their midpoint, on the push quantum. */
+function compileProfile(p) {
+  const ends = {
+    temp_low: [p.temp_day - p.temp_width_day, p.temp_night - p.temp_width_night], temp_target: [p.temp_day, p.temp_night],
+    temp_high: [p.temp_day + p.temp_width_day, p.temp_night + p.temp_width_night], vpd_low: [p.vpd_day - p.vpd_below_day, p.vpd_night - p.vpd_below_night],
+    vpd_target: [p.vpd_day, p.vpd_night], vpd_high: [p.vpd_day + p.vpd_above_day, p.vpd_night + p.vpd_above_night],
+  };
+  const out = {};
+  for (const [series, [noon, midnight]] of Object.entries(ends)) {
+    const step = bandStep(series);
+    const sm = onStep(noon, step), mid = onStep(midnight, step), shoulder = onStep((sm + mid) / 2, step);
+    Object.assign(out, { [`band_${series}_sr`]: shoulder, [`band_${series}_sm`]: sm, [`band_${series}_ss`]: shoulder, [`band_${series}_mid`]: mid });
+  }
+  return out;
+}
+/** The draft from a query or a body: patched axes recompiled, then raw anchors. */
+function draftOf(current, fields, anchors) {
+  const draft = { ...current };
+  const given = Object.keys(fields);
+  if (given.length) {
+    const compiled = compileProfile({ ...profileOf(current), ...fields });
+    for (const [names, axis] of [[TEMP_FIELDS, "temp_"], [VPD_FIELDS, "vpd_"]]) {
+      if (given.some((name) => names.includes(name))) for (const param of HOUSE_BAND) if (param.includes(axis)) draft[param] = compiled[param];
+    }
+  }
+  for (const [param, value] of Object.entries(anchors)) {
+    if (!HOUSE_BAND.includes(param)) throw refuse(422, "unknown_target", "Not a house band anchor", `${param} is not a house band anchor`, { field: "anchor" });
+    if (typeof value !== "number" || !Number.isFinite(value)) throw invalid(`${param} must be a number`, "anchor");
+    draft[param] = onStep(value, bandStep(param));
+  }
+  return draft;
+}
+const changedOf = (current, draft) => HOUSE_BAND.filter((param) => Math.abs(current[param] - draft[param]) > bandStep(param) / 2 + 1e-9);
+const isSimple = (anchors) => changedOf(anchors, compileProfile(profileOf(anchors))).length === 0;
+/** A fixed solar day: sunrise 07:00, solar noon 12:30, sunset 18:00, solar midnight 00:30, as fn_solar_phase's 0-4. */
+function phaseOf(hours) {
+  const h = hours < 7 ? hours + 24 : hours;
+  const knots = [[7, 0], [12.5, 1], [18, 2], [24.5, 3], [31, 4]];
+  for (let index = 1; index < knots.length; index += 1) {
+    const [h1, p1] = knots[index], [h0, p0] = knots[index - 1];
+    if (h <= h1) return p0 + ((h - h0) / (h1 - h0)) * (p1 - p0);
+  }
+  return 3.999;
+}
+function harmonicAt([sr, sm, ss, mid], phase) {
+  const theta = (Math.PI * phase) / 2;
+  return (sr + sm + ss + mid) / 4 + ((sr - ss) / 2) * Math.cos(theta) + ((sm - mid) / 2) * Math.sin(theta) + ((sr - sm + ss - mid) / 4) * Math.cos(2 * theta);
+}
+const curveOf = (anchors, axis, phases) => Object.fromEntries(["low", "target", "high"].map((role) => [role, phases.map((phase) => round(harmonicAt(BAND_ANCHORS.map((key) => at(anchors, `${axis}_${role}`, key)), phase), 4))]));
+function bandFindings(anchors) {
+  const out = [];
+  const floor = at(anchors, "vpd_low", "mid");
+  if (round(floor, 2) < NIGHT_FLOOR_KPA) out.push({ code: "night_floor", severity: "error", field: "vpd_below_night", detail: `The night VPD floor is ${floor.toFixed(2)} kPa; it stays at least 0.74 kPa so the house dries out overnight` });
+  if (!isSimple(anchors)) out.push({ code: "overshoot", severity: "warning", field: "band_temp_low_sr", detail: "temp_low leaves its anchor range by 1.5 °F: sunrise and sunset are not the midpoint of noon and midnight" });
+  return out;
+}
+const fieldsOf = (source) => Object.fromEntries([...TEMP_FIELDS, ...VPD_FIELDS].flatMap((name) => {
+  const value = source(name);
+  if (value === undefined || value === null) return [];
+  if (typeof value !== "number" || !Number.isFinite(value)) throw invalid(`${name} must be a number`, name);
+  return [[name, value]];
+}));
+/** API-23: the house band as stored and drafted over one day, on the fixed solar day above. */
+function profileBody(world, { query }) {
+  const fields = fieldsOf((name) => (query.has(name) ? Number(query.get(name)) : undefined));
+  const anchors = Object.fromEntries(query.getAll("anchor").map((item) => {
+    const [param, raw] = item.split(":");
+    if (raw === undefined) throw invalid("anchor is param:value", "anchor");
+    return [param, Number(raw)];
+  }));
+  const current = houseAnchors(world);
+  const draft = draftOf(current, fields, anchors);
+  const date = day(query, "day", today(world));
+  const start = localInstant(date);
+  const end = localInstant(addDays(date, 1));
+  const t = [];
+  for (let instant = start; instant < end; instant += 600_000) t.push(instant / 1000);
+  const phases = t.map((epoch) => phaseOf((epoch * 1000 - start) / HOUR));
+  const [temp, vpd] = [curveOf(current, "temp", phases), curveOf(current, "vpd", phases)];
+  const [tempDraft, vpdDraft] = [curveOf(draft, "temp", phases), curveOf(draft, "vpd", phases)];
+  const night = (values, shift) => values.map((value, index) => (phases[index] >= 2 ? round(value + shift, 3) : null));
+  const heat = (curve) => round(phases.reduce((sum, phase, index) => sum + (phase >= 2 ? 0.19 * Math.max(0, curve.target[index] - 35) / 6 : 0), 0), 1);
+  const mark = (hours) => Math.round((start + hours * HOUR) / 1000);
+  const state = (anchors) => ({ profile: profileOf(anchors), anchors, simple: isSimple(anchors) });
+  return {
+    day: date, step_s: 600, t, sun: { sunrise: mark(7), solar_noon: mark(12.5), sunset: mark(18), solar_midnight: mark(0.5) },
+    current: state(current), draft: state(draft), changed: changedOf(current, draft),
+    temp: { current: temp, draft: tempDraft },
+    vpd: { current: vpd, draft: vpdDraft, device: vpdDraft, expected_low: night(vpdDraft.target, -0.2), expected_high: night(vpdDraft.target, 0.05) },
+    night_vpd_bias_kpa: 0,
+    guardrails: { temp_min_f: 40, temp_max_f: 100, margin_f: 5, vpd_min_kpa: 0.3, vpd_max_kpa: 3, night_vpd_floor_kpa: NIGHT_FLOOR_KPA },
+    overshoot: Object.fromEntries(BAND_SERIES.map((series) => [series, isSimple(draft) ? 0 : series.startsWith("temp") ? 1.54 : 0.015])),
+    night_heat_kwh: { current: heat(temp), draft: heat(tempDraft) },
+    envelope: { hours: 140, days: 14, rmse_f: 4.5, dewpoint_p10_f: 44 },
+    findings: bandFindings(draft),
+    measured: measuredOf(world, t, temp, vpd),
+    forecast: { temp: t.map((epoch) => round(38 + 12 * Math.sin((epoch * 1000 - start) / DAY * 2 * Math.PI - Math.PI / 2), 2)), vpd: t.map(() => 0.45), issued_at: iso(world.now - HOUR) },
+  };
+}
+/** The last 24 h on the day's steps by clock time: today's up to now, yesterday's after; one gap at 03:00. */
+function measuredOf(world, t, temp, vpd) {
+  const end = Math.floor(world.now / 600_000) * 600 + 600;
+  const at = t.map((epoch) => (epoch < end ? epoch : epoch - 86_400));
+  const gap = (index) => (t[index] - t[0]) / 600 === 18;
+  return {
+    window_start: end - 86_400, window_end: end, at: at.map((value, index) => (gap(index) ? null : value)),
+    temp: temp.target.map((value, index) => (gap(index) ? null : round(value + 1.5 * Math.sin(index / 9), 2))),
+    vpd: vpd.target.map((value, index) => (gap(index) ? null : round(value + 0.08 * Math.sin(index / 7), 3))),
+  };
+}
+/** API-24: every changed anchor as an API-10 write, under one band.write activity row. */
+function saveBand(world, { body, serial, key }) {
+  const input = object(body);
+  const profile = input.profile === undefined ? {} : object(input.profile);
+  const fields = fieldsOf((name) => profile[name] ?? undefined);
+  const anchors = input.anchors === undefined ? {} : object(input.anchors);
+  if (input.manual !== undefined && typeof input.manual !== "boolean") throw invalid("manual must be true or false", "manual");
+  const reason = text(input.reason, "reason");
+  const current = houseAnchors(world);
+  const draft = draftOf(current, fields, anchors);
+  const error = bandFindings(draft).find((finding) => finding.severity === "error");
+  if (error) throw refuse(422, "out_of_range", "Out of range", error.detail, { field: error.field });
+  const changed = changedOf(current, draft);
+  if (!changed.length) throw invalid("The draft changes no anchor", "anchor");
+  const created = world.now;
+  const first = nextId(world.settings.map((item) => item.desired).filter(Boolean), 100);
+  const rows = changed.map((param, index) => {
+    const row = settingOf(world, param);
+    return {
+      id: first + index, param, value: draft[param], snapped_from: null, manual: input.manual ?? true, manual_before: row?.desired?.manual ?? false, state: "requested",
+      state_reason: row ? stateReason(world, row, created) : null, confirmed_at: null, actor: actorOf(world), reason, created_at: iso(created),
+    };
+  });
+  const effect = (next, history) => {
+    for (const row of rows) applyDesired(next, history, serial, row, null);
+    // One band.write row for the Save: the per-anchor rows applyDesired logs belong to API-10 and are dropped.
+    next.activity = next.activity.filter((entry) => !(entry.action === "setting.write" && rows.some((row) => row.param === entry.target && entry.ts === row.created_at)));
+    activity(next, {
+      ts: iso(created), actor: actorOf(next), action: "band.write", target: "house band", reason, request_id: key ?? null,
+      detail: { desired_ids: rows.map((row) => row.id), changes: rows.map((row) => ({ param: row.param, desired_id: row.id, before: current[row.param], value: row.value })), manual: { after: input.manual ?? true }, profile: profileOf(draft), simple: isSimple(draft) },
+    });
+  };
+  return { status: 200, body: { changed: rows }, effect };
+}
+
 const weekday = (date) => local(localInstant(date, "12:00")).weekday;
 const NO_DATA_DAYS_AGO = 9;
 /** Whole gallons per day: today from the lines, earlier days synthetic, a no-data day nine days back. */
@@ -440,12 +612,46 @@ function waterBody(world, { query }) {
   };
 }
 
+/** The controller's grow-light policy the fixture runs: Tempest lux thresholds, the photoperiod window and its target. */
+const LIGHT_POLICY = {
+  main: { start_hour: 7, cutoff_hour: 20, lux_on: 40000, lux_off: 48000, target_min: 780 },
+  grow: { start_hour: 7, cutoff_hour: 22, lux_on: 40000, lux_off: 48000, target_min: 900 },
+};
+/** API-22: each light by America/Denver day up to now, from its Lutron runtime today and a steady day before. */
+function lightingBody(world, { query }) {
+  const { from, to } = window(query);
+  if (to - from > 31 * DAY) throw refuse(422, "window_too_large", "Window too large", "A window covers at most 31 days", { field: "to" });
+  const end = Math.min(to, world.now);
+  const days = [];
+  for (let date = local(from).date; end > from && localInstant(date) < end; date = addDays(date, 1)) days.push(date);
+  const last = today(world);
+  return {
+    from: iso(from), to: iso(to),
+    circuits: [["main", "grow_light_main", "Main"], ["grow", "grow_light_grow", "Grow"]].map(([light, equipment, label]) => {
+      const item = world.equipment.find((row) => row.equipment === equipment);
+      const policy = LIGHT_POLICY[light];
+      return {
+        light, equipment, label,
+        days: days.map((date) => {
+          const partial = date === last;
+          const on_s = partial ? item?.runtime_today_s ?? 0 : (policy.target_min - 240) * 60;
+          const window_min = partial ? Math.max(0, Math.min((world.now - localInstant(date)) / MINUTE - policy.start_hour * 60, (policy.cutoff_hour - policy.start_hour) * 60)) : (policy.cutoff_hour - policy.start_hour) * 60;
+          return {
+            date, partial, on_s, starts: partial ? item?.cycles_today ?? 0 : 2, ...policy,
+            window_min: Math.round(window_min), qualified_min: Math.round(Math.min(window_min, partial ? window_min / 2 : policy.target_min)),
+          };
+        }),
+      };
+    }),
+  };
+}
+
 // ---------------------------------------------------------------------------------------------------- planner reads (#1361)
 export const OLD_EXPERIMENT = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14";
 export const STUDY_ID = "planner-ab-winter-2026";
 const REQUIRED = ["MIDNIGHT", "SUNRISE", "SUNSET"];
 /**
- * API-22 as production reads today: 3 required plans a day plus forecast replans, one SUNSET missed eight days back and
+ * API-25 as production reads today: 3 required plans a day plus forecast replans, one SUNSET missed eight days back and
  * one late SUNRISE twelve days back, dispatched changes only on the last five days, and cost recorded only for the
  * last `world.plannerCostDays` days (0: "not recorded", as before #1350).
  */
@@ -737,6 +943,7 @@ function runsBody(world, { query }) {
   return paged(rows, query);
 }
 
+const CROPS = makeCrops({ refuse, invalid, object, activity });
 const READS = {
   "API-01": (world) => world.me,
   "API-02": nowBody,
@@ -751,16 +958,19 @@ const READS = {
   "API-14": alertsBody,
   "API-17": activityBody,
   "API-19": previewBody,
+  "API-23": profileBody,
   "API-21": waterBody,
-  "API-22": plannerHistoryBody,
-  "API-23": plannerExperimentsBody,
-  "API-24": plannerExperimentBody,
+  "API-22": lightingBody,
+  "API-25": plannerHistoryBody,
+  "API-26": plannerExperimentsBody,
+  "API-27": plannerExperimentBody,
   "API-IRR-01": irrigationBody,
   "API-IRR-02": agendaBody,
   "API-IRR-10": minutesBody,
   "API-IRR-11": runsBody,
   "OPS-01": () => ({ status: "ok" }),
   "OPS-02": () => ({ status: "ready", source_revision: REVISION }),
+  ...CROPS.READS,
 };
 
 // ---------------------------------------------------------------------------------------------------- writes
@@ -1077,6 +1287,8 @@ function updateLines(world, { params, body, key, serial }) {
     const cap = input.daily_cap_min ?? line.daily_cap_min;
     if (!Number.isInteger(cap) || cap < 0 || cap > 480) throw refuse(422, "out_of_range", "Out of range", "daily_cap_min must be 0-480", { field: "daily_cap_min", min: 0, max: 480, current: line.daily_cap_min });
     if (input.vpd_reserve_min !== undefined && (!Number.isInteger(input.vpd_reserve_min) || input.vpd_reserve_min < 0 || input.vpd_reserve_min > cap)) throw refuse(422, "out_of_range", "Out of range", `vpd_reserve_min must be 0-${cap}`, { field: "vpd_reserve_min", min: 0, max: cap, current: line.vpd_reserve_min });
+    // #1344: a disabled mister ignores VPD control, so turning it on there is refused unless this body enables the line.
+    if (input.vpd_member === true && !(input.enabled ?? line.enabled)) throw refuse(422, "line_disabled", "Line disabled", `${lineId} is disabled, so VPD control would do nothing; enable the line first`, { field: "vpd_member" });
     const checkedNow = input.checked === true;
     if ((input.enabled === true && !line.enabled && !line.check && !checkedNow) || (input.schedule_member === true && !line.schedule_member && !line.check && !checkedNow)) {
       throw refuse(422, "check_required", "Check required", `Record the one-time check of ${lineId} first`, { field: "checked" });
@@ -1153,6 +1365,7 @@ const WRITES = {
   "API-15": (world, request) => alertWrite(world, request, false),
   "API-16": (world, request) => alertWrite(world, request, true),
   "API-20": lights,
+  "API-24": saveBand,
   "API-IRR-03": createSchedule,
   "API-IRR-04": editSchedule,
   "API-IRR-05": deleteSchedule,
@@ -1161,6 +1374,7 @@ const WRITES = {
   "API-IRR-08": updateLines,
   "API-IRR-12": override,
   "API-IRR-13": clearFault,
+  ...CROPS.WRITES,
 };
 
 // ---------------------------------------------------------------------------------------------------- BFF and BFF-only routes
@@ -1264,11 +1478,14 @@ export const EXAMPLES = {
   "API-16": (world) => send("POST", `/v1/alerts/${firstAlert(world)}/resolve`, { resolution: "Fixed at the breaker" }),
   "API-17": () => get("/v1/activity"),
   "API-19": (world) => get("/v1/band/preview", world.preview),
+  "API-23": () => get("/v1/band/profile", { temp_night: "67.7" }),
+  "API-24": () => send("PUT", "/v1/band/profile", { profile: { temp_night: 67.7 }, manual: true, reason: "Warmer nights" }),
   "API-20": () => send("POST", "/v1/equipment/lights/main/on", { reason: "Inspecting the Vandas" }),
   "API-21": (world) => get("/v1/water/daily", { days: String(world.waterUseDays) }),
-  "API-22": () => get("/v1/planner/history", { days: "30" }),
-  "API-23": () => get("/v1/planner/experiments"),
-  "API-24": (world) => get(`/v1/planner/experiments/${world.plannerStudy === "interim" ? "6f1e2d3c-4b5a-4968-8776-655443322110" : STUDY_ID}`),
+  "API-22": (world) => get("/v1/lighting", { from: iso(world.now - 3 * DAY), to: iso(world.now) }),
+  "API-25": () => get("/v1/planner/history", { days: "30" }),
+  "API-26": () => get("/v1/planner/experiments"),
+  "API-27": (world) => get(`/v1/planner/experiments/${world.plannerStudy === "interim" ? "6f1e2d3c-4b5a-4968-8776-655443322110" : STUDY_ID}`),
   "API-IRR-01": () => get("/v1/irrigation"),
   // The week view with "Last 7 days" on, so past blocks and their outcomes are in the set.
   "API-IRR-02": () => get("/v1/irrigation/schedules", { past_days: 7 }),
@@ -1282,6 +1499,7 @@ export const EXAMPLES = {
   "API-IRR-11": (world) => get("/v1/irrigation/runs", { from: iso(world.now - 7 * DAY), to: iso(world.now) }),
   "API-IRR-12": () => send("POST", "/v1/equipment/override", { kind: "fans", minutes: 15 }),
   "API-IRR-13": () => send("POST", "/v1/irrigation/clear-fault", { line_id: "L04" }),
+  ...CROPS.EXAMPLES,
   "BFF-01": () => get("/auth/login", { returnTo: "/water" }),
   "BFF-02": () => get("/auth/callback", { code: "fixture", state: "/water" }),
   "BFF-03": () => send("POST", "/auth/logout"),

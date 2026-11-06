@@ -2357,7 +2357,6 @@
         "No OTA, EC closed-loop dosing or guessed day-mask mitigation is required; alert-only implementation can proceed before physical enablement."
       ],
       "paths": [
-        "scripts/alert-monitor.py",
         "ingestor",
         "db/migrations",
         "tests"

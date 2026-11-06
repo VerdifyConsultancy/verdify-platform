@@ -233,13 +233,15 @@ class TestPromptBuilders:
         local_msg = builder("<context stub>", "<label stub>", "local")
         assert opus_msg == local_msg
 
-    def test_forecast_deviation_prompt_treats_forecast_gaps_as_no_tune(self, iris_planner):
+    def test_forecast_deviation_prompt_fails_explicitly_on_forecast_gaps(self, iris_planner):
+        """1fd3bf3e (#214 terminal contract): a data gap ends in a neutral fallback acknowledgement, never a plan."""
         message = iris_planner._PROMPT_BUILDERS["FORECAST_DEVIATION"](
             "<context stub>",
             '[{"parameter":"forecast_missing_min"}]',
             "local",
         )
-        assert "Do not tune for data gaps" in message
+        assert "Fail explicitly for data gaps" in message
+        assert "neutral_fallback=true" in message
         assert "forecast_missing_min" in message
         assert "acknowledge_trigger" in message
 

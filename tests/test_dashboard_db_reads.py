@@ -67,6 +67,7 @@ MIGRATION_DDL = (
         "CREATE FUNCTION public.fn_mcp_armed_assignment_context()",
         "$body$;\n",
     ),
+    ("db/migrations/280-desired-state-activity-log.sql", "CREATE TABLE public.activity_log (", ");\n"),
     ("db/migrations/283-irrigation-tables.sql", "CREATE TABLE public.irrigation_line (", ");\n"),
     ("db/migrations/283-irrigation-tables.sql", "CREATE TABLE public.irrigation_command (", ");\n"),
     ("db/migrations/283-irrigation-tables.sql", "CREATE TABLE public.irrigation_ledger (", ");\n"),
@@ -94,6 +95,7 @@ READ_TABLES = (
     "alert_log",  # VD-55: alerts.open_count and the leak rows read alert_log under v_open_alerts' predicate
     "irrigation_command",
     "irrigation_ledger",
+    "activity_log",  # API-13: a grow light's timed manual switch (manual_until) is its newest light.on/off row
 )
 READ_VIEWS = ("v_active_plan", "v_desired_state_current")
 ALL_TABLES = (*READ_TABLES, "desired_state", "control_experiments", "control_assignments", "irrigation_line")
@@ -424,8 +426,18 @@ def test_equipment_reads_the_newest_state_and_collapses_repeats(dsn):
         await system(conn, "greenhouse_state", [(t0 - 20 * MIN, "SEALED_MIST_FOG")])  # a reconnect repeat
         await system(conn, "mister_state", [(t0 - 10 * MIN, "WATCH")])
         await system(conn, "mode_reason", [(t0 - 40 * MIN, "seal_enter")])
+        # API-20's timed switches (#1377): main's 15 minutes are still running, grow's are up.
+        await conn.executemany(
+            "INSERT INTO activity_log (ts, source, actor, action, target, detail) VALUES ($1, 'operator', 'jason', $2, $3, $4)",
+            [
+                (t0 - 6 * MIN, "light.on", "grow_light_main", '{"light": "main", "state": "on", "minutes": 15}'),
+                (t0 - 20 * MIN, "light.off", "grow_light_grow", '{"light": "grow", "state": "off", "minutes": 15}'),
+            ],
+        )
 
         items = {item.equipment: item for item in (await as_reader(conn, reads.equipment)).items}
+        assert (items["grow_light_main"].manual_until, items["grow_light_grow"].manual_until) == (t0 + 9 * MIN, None)
+        assert items["fan1"].manual_until is None
         fan1 = items["fan1"]
         assert (fan1.state, fan1.since, fan1.observed_at) == ("off", t0 - 6 * D, t0 - 1 * D)
         assert (fan1.runtime_today_s, fan1.cycles_today) == (0, 0)

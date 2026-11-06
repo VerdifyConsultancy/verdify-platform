@@ -18,7 +18,7 @@ export const meta = () => viewMeta("planner-history");
 // The CSV link is chart code: its route links the chart stylesheet (charts/chunks.test.ts).
 export const links = () => chartLinks();
 
-/** API-22 every 10 minutes: plans arrive a few times a day. */
+/** API-25 every 10 minutes: plans arrive a few times a day. */
 const HISTORY_POLL_MS = 600_000;
 
 type Plan = PlannerHistory["plans"][number];
@@ -69,7 +69,7 @@ function historyCsv(days: readonly PlannerDay[]): string {
 }
 
 /**
- * Planner → History (#1361): the planner over 30 or 90 days from one API-22 read. A summary line, then one row per day,
+ * Planner → History (#1361): the planner over 30 or 90 days from one API-25 read. A summary line, then one row per day,
  * newest first: plans written, required plans written of due with failed and late, the trigger mix, the settings the
  * plans changed on the controller and the share it confirmed, and the cost. Before the Cortex planner (#1350) records
  * a call, cost reads "not recorded", and the first costed day is marked. Then the newest plans. Viewer and operator see
@@ -78,7 +78,7 @@ function historyCsv(days: readonly PlannerDay[]): string {
 export default function PlannerHistoryPage() {
   const [search] = useSearchParams();
   const days = historyDays(search);
-  const read = useApiRead("API-22", { days }, { intervalMs: HISTORY_POLL_MS });
+  const read = useApiRead("API-25", { days }, { intervalMs: HISTORY_POLL_MS });
   const data = read.isError ? null : read.data ?? null;
   const state: PanelState = data ? "ready" : read.isError ? "error" : "loading";
   const retry = () => { void read.refetch(); };

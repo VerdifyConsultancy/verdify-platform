@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 /**
- * The Planner section's words and sums (#1361). Every number is the server's: API-22 counts the days and API-24 carries
+ * The Planner section's words and sums (#1361). Every number is the server's: API-25 counts the days and API-27 carries
  * the frozen analyzer's estimates and confidence intervals. These helpers only add days up, choose the words and say
  * whether an interval leaves zero, never estimate anything.
  */
 import type { ExperimentSummary, MetricResult, PlannerDay } from "./operator-api";
 import { formatNumber } from "./format";
 
-/** API-22's windows. */
+/** API-25's windows. */
 export const HISTORY_DAYS = [30, 90] as const;
 export type HistoryDays = (typeof HISTORY_DAYS)[number];
 export function historyDays(search: URLSearchParams): HistoryDays {

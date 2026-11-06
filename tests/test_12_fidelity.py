@@ -661,11 +661,13 @@ def test_ha_light_sync_reads_real_lutron_switch_entities():
 
 def test_planner_context_surfaces_band_source_trace():
     """The planning prompt should show the read-only crop -> dispatcher/API
-    -> firmware -> cfg_readback chain for the four compliance-band edges.
+    -> firmware -> cfg_readback chain for the four compliance-band edges
+    (diagnostic lineage since #806, never delivery confirmation).
     """
     script = Path("scripts/gather-plan-context.sh").read_text()
 
-    assert "BAND SETPOINT PROVENANCE" in script
+    assert "BAND DATABASE LINEAGE (diagnostic only; consumed state unobservable)" in script
+    assert "never delivery confirmation" in script
     assert "fn_band_setpoint_provenance(now(), '${GREENHOUSE_ID}')" in script
     assert "Do not set band-driven, retired bias, or lighting-policy params in your plan" in script
     assert "LIGHTING POLICY (read-only; dispatcher pushes these to ESP32)" in script
@@ -1915,8 +1917,9 @@ def test_plan_context_surfaces_transition_audit_and_corrected_vpd_forecast():
     script = (REPO_ROOT / "scripts" / "gather-plan-context.sh").read_text()
     assert "GUARDRAIL-AWARE TRANSITION AUDIT" in script
     assert "fn_plan_transition_audit" in script
-    assert "corrected_vpd_kpa" in script
-    assert "'00-06h', '0-6h', '06-24h', '6-24h'" in script
+    # #806 replaced the bias-corrected priors with the contract-2 outdoor forecast verification.
+    assert "Contract 2: outdoor forecast versus outdoor observations, never indoor greenhouse VPD." in script
+    assert "corrected_vpd_kpa" not in script
     assert "HOT/DRY VENTILATE UTILIZATION" in script
 
 
@@ -2586,19 +2589,19 @@ def test_climate_action_log_persists_moisture_exchange_telemetry():
     ):
         assert token in logic
 
+    # Compact keys fit Home Assistant's 255-character state; the ingestor expands them. The action alone goes to
+    # gh_climate_moisture_exchange and the JSON to its _details entity.
     for token in (
-        '\\"action\\":\\"%s\\"',
-        '\\"reason\\":\\"%s\\"',
-        '\\"vent_vpd_gain_kpa\\":%.3f',
-        '\\"heat_vpd_gain_kpa\\":%.3f',
-        '\\"outdoor_fresh\\":%s',
-        '\\"vent_overcools\\":%s',
-        '\\"heat_assist_corun\\":%s',
-        '\\"heat_assist_active\\":%s',
-        '\\"heat_assist_timer_s\\":%.0f',
-        "id(gh_climate_moisture_exchange).publish_state(moisture_exchange)",
+        '\\"_mx\\":1,\\"a\\":\\"%s\\",\\"r\\":\\"%s\\",\\"vg\\":%.3f,',
+        '\\"hg\\":%.3f,\\"of\\":%s,',
+        '\\"vo\\":%s,\\"hc\\":%s,',
+        '\\"ha\\":%s,\\"ht\\":%.0f}',
+        "id(gh_climate_moisture_exchange).publish_state(climate_decision.moisture_exchange_action)",
+        "id(gh_climate_moisture_exchange_details).publish_state(moisture_exchange)",
     ):
         assert token in controls
+    assert "id: gh_climate_moisture_exchange_details" in hardware
+    assert '"climate_moisture_exchange_details": "climate_moisture_exchange"' in entity_map
 
 
 def test_climate_decision_surface_excludes_fert_and_drip_relays():
@@ -3130,7 +3133,8 @@ def test_manual_fog_cannot_bypass_final_fog_safety_rails():
     assert 'return "time_window";' in manual_block
     assert 'return "rh_ceiling";' in manual_block
     assert 'return "temp_low";' in manual_block
-    assert "const bool manual_fog_eff    = manual_fog_latched;" in manual_block
+    # A fog run-once from the irrigation engine is a manual fog request too, and meets the same rails.
+    assert "const bool manual_fog_eff    = manual_fog_latched || irr_fog_run();" in manual_block
     assert "const bool manual_fog_requested = manual_fog_eff;" in manual_block
     assert "const char* manual_fog_safety_block = fog_safety_block_reason();" in manual_block
     assert "const ManualOverrides manual_ov = {" in manual_block
@@ -3519,9 +3523,7 @@ def test_daily_summary_runtime_includes_fertigation_relays():
         assert relay in runtime_block
 
     summary_update = src[
-        src.index("runtime_drip_wall_fert_h") : src.index(
-            "UPDATE daily_summary ds", src.index("runtime_drip_wall_fert_h")
-        )
+        src.index("runtime_drip_wall_fert_h") : src.index("WHERE date = $1", src.index("runtime_drip_wall_fert_h"))
     ]
     for column in (
         "runtime_irrigation_clean_h",

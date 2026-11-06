@@ -268,6 +268,211 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/v1/band/profile": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * The house band as stored and as drafted in the band editor, over one day, before Save
+         * @description Read-only (#1334). Reads the 24 house anchors as fn_crop_band_value resolves them and overlays the draft: any simple temperature field recompiles the six temperature anchors from day (solar noon) and night (solar midnight) values with sunrise and sunset at their midpoint, so the curve is a pure sinusoid that never leaves its noon and midnight values; any VPD field does the same for the VPD anchors; then each anchor= item sets one raw anchor (Advanced). Curves are the controller's four-anchor harmonic at 10-min steps of fn_solar_phase; vpd.device adds night_vpd_bias_kpa's night bump as the controller does. findings with severity error are what API-24 refuses. The expected night VPD ribbon is a 14-day indoor dewpoint fit on quiet deep-night hours and the forecast; night_heat_kwh is 0.19 kW/°F over the forecast's night hours. Codes: unknown_target (anchor not a house band anchor), out_of_range (outside planner_effective_bounds), read_only (no complete anchor set).
+         */
+        readonly get: operations["API-23"];
+        /**
+         * Save the band editor's draft, every changed house anchor in one write
+         * @description The same draft as API-23 (profile fields and Advanced anchors). In one transaction: each house anchor the draft changes (by more than half the push quantum, 0.1 °F or 0.01 kPa) is an API-10 write, its desired_state row with the manual flag and its crop_band_anchors rows, and one activity_log row, action band.write, target "house band", detail {desired_ids, changes [{param, desired_id, before, value}], anchor_rows, manual, profile, simple}. The dispatcher's anchor sync delivers the anchors; nothing talks to the controller. Codes: out_of_range (an API-23 error finding: band order, the 40/100 °F guardrails 5 °F outside the band, the 0.3-3.0 kPa VPD guardrails or the 0.74 kPa night floor; or an anchor outside its bounds), invalid_request (the draft changes nothing), read_only (Iris: the band is operator-owned), unknown_target, request_id_reused.
+         */
+        readonly put: operations["API-24"];
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/crops/catalog": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** The crop catalog with plain names */
+        readonly get: operations["API-CROP-05"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/crops/locations": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Every zone, shelf and cell with its layout and water lines, and what each holds now
+         * @description A zone or a shelf holds any number of plantings; a cell holds at most one at a time. Water lines are the irrigation lines that reach each shelf (shelf_water_lines).
+         */
+        readonly get: operations["API-CROP-01"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/crops/plantings": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** Plantings, active first and newest first */
+        readonly get: operations["API-CROP-02"];
+        readonly put?: never;
+        /**
+         * Record a planting across the places named
+         * @description positions are place texts (EAST-HYDRO-12, EAST-HYDRO-1..10, hydro 1-30, rail A top, west top 1-3, south floor, hanging, center); API-CROP-06 previews them. Codes: invalid_request (a place it cannot read), ambiguous_position (current lists the candidates), position_occupied (a requested cell is held at planted_at; replace ends or trims the occupant instead), request_id_reused. Writes records only: no setting, band or target changes (the grow-light window still follows the active crops' DLI targets, fn_lighting_policy).
+         */
+        readonly post: operations["API-CROP-07"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/crops/plantings/{planting_id}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly planting_id: components["parameters"]["PlantingId"];
+            };
+            readonly cookie?: never;
+        };
+        /** One planting with every place it has been, its events and its harvests */
+        readonly get: operations["API-CROP-03"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        /**
+         * Correct a planting's variety, count (null is unknown), stage, notes or expected harvest
+         * @description Only the fields sent change. Places change through API-CROP-08. Codes as API-CROP-07, and unknown_target.
+         */
+        readonly patch: operations["API-CROP-11"];
+        readonly trace?: never;
+    };
+    readonly "/v1/crops/plantings/{planting_id}/harvest": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly planting_id: components["parameters"]["PlantingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /** Record a harvest; partial unless final, which ends the planting as harvested */
+        readonly post: operations["API-CROP-09"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/crops/plantings/{planting_id}/move": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly planting_id: components["parameters"]["PlantingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Move a planting; the old and new places both stay in its history
+         * @description from_positions (default: every place it is now) close at moved_at and to_positions open then. Codes as API-CROP-07, plus planting_ended and unknown_target.
+         */
+        readonly post: operations["API-CROP-08"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/crops/plantings/{planting_id}/remove": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly planting_id: components["parameters"]["PlantingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * End a planting without a harvest (failed, removed or reconciled)
+         * @description Every open place closes at `at`. Undo by recording the planting again.
+         */
+        readonly post: operations["API-CROP-10"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/crops/positions/{label}/history": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** Who has held one cell, current first */
+        readonly get: operations["API-CROP-04"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/v1/crops/resolve": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Preview what a place text means and which plantings hold those cells; writes nothing
+         * @description A GET, so viewers can preview and DASHBOARD_WRITES_ENABLED never blocks it. Codes: invalid_request, ambiguous_position (current lists the candidates).
+         */
+        readonly get: operations["API-CROP-06"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/v1/equipment": {
         readonly parameters: {
             readonly query?: never;
@@ -375,7 +580,7 @@ export interface paths {
         readonly get?: never;
         /**
          * Enable or disable a line with its check; VPD and Schedule flags on misters; caps; pause or resume; manual
-         * @description line_id all accepts only paused_until (pause or resume every line). vpd_member and schedule_member are for L04, L07 and L09. Enabling a line with no check, or turning schedule_member on for the first time, needs checked true, which only the dashboard sends (check_required). Disabling stops everything on the line, VPD misting included. Pause, resume and the check never change manual; any other edit that omits it stores true (R3). Codes: out_of_range, check_required, unknown_target, request_id_reused; Iris only, on a manual line, manual.
+         * @description line_id all accepts only paused_until (pause or resume every line). vpd_member and schedule_member are for L04, L07 and L09. Enabling a line with no check, or turning schedule_member on for the first time, needs checked true, which only the dashboard sends (check_required). Disabling stops everything on the line, VPD misting included. vpd_member true on a line that is and stays disabled is line_disabled: the controller acts on VPD membership only while the line is enabled. Pause, resume and the check never change manual; any other edit that omits it stores true (R3). Codes: out_of_range, check_required, line_disabled, unknown_target, request_id_reused; Iris only, on a manual line, manual.
          */
         readonly put: operations["API-IRR-08"];
         readonly post?: never;
@@ -503,6 +708,26 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/v1/lighting": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * The grow lights by day: on time, starts, the policy in force and qualified light minutes against target
+         * @description Graphs → Lighting (#1357). One entry per America/Denver day the window touches, up to now, for main and grow: on time and starts from the Lutron readback over the whole day; the controller's readback of its ON threshold, hysteresis, start hour, cutoff hour and target light minutes in force at the day's end; and the qualified light minutes, v_lighting_minutes_status_now's rule for every day: each minute from the start hour to the cutoff (or now) counts once when its mean Tempest outdoor lux is at or above the ON threshold or the light was on. No DLI until the PAR meter (#1184). Windows up to 31 days.
+         */
+        readonly get: operations["API-22"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/v1/me": {
         readonly parameters: {
             readonly query?: never;
@@ -591,7 +816,7 @@ export interface paths {
          * Committed study definitions not yet registered, then every experiment record with its status
          * @description A definition in verdify_schemas (planner_study.py) that the orchestrator has not registered reads status defined. A record's status is control_experiments.status in words; a draft that an emergency action closed reads closed, with the reason its superseding definition gives or its closing event's code.
          */
-        readonly get: operations["API-23"];
+        readonly get: operations["API-26"];
         readonly put?: never;
         readonly post?: never;
         readonly delete?: never;
@@ -611,7 +836,7 @@ export interface paths {
          * One study, by experiment id or study id, with its definition, arm calendar, results and daily outcomes
          * @description The calendar is one cell per assigned study day. Results and daily outcomes come only from #1360's frozen analyzer output; until it has run, results.state is not_started with its reason and outcomes is empty. Results before the final look carry state interim.
          */
-        readonly get: operations["API-24"];
+        readonly get: operations["API-27"];
         readonly put?: never;
         readonly post?: never;
         readonly delete?: never;
@@ -631,7 +856,7 @@ export interface paths {
          * Plans per day, required plans written, failed and late, dispatched changes, cost and the newest plans
          * @description One entry per America/Denver day, oldest first, from plan_journal, planner_trigger_ledger (MIDNIGHT, SUNRISE and SUNSET are required) and setpoint_changes source plan. Cost comes from planner_inference_runs through migration 302's view: before the Cortex planner (#1350) records a call, cost is null and cost_recorded_from is null, which the page shows as "not recorded". dispatched and proposed_only are null until planner_inference_runs has the Cortex attempt columns (cortex_attempts false).
          */
-        readonly get: operations["API-22"];
+        readonly get: operations["API-25"];
         readonly put?: never;
         readonly post?: never;
         readonly delete?: never;
@@ -730,7 +955,7 @@ export interface paths {
         };
         /**
          * Equipment on/off intervals for the lanes
-         * @description From equipment_state, seeded with the state at `from` (fn_equip_at). Wet lines carry their cause from the run ledger. Unknown stays unknown. Windows up to 31 days.
+         * @description From equipment_state, seeded with the state at `from` (fn_equip_at). Wet lines carry their cause from the run ledger. Unknown stays unknown. Windows up to 31 days. The grow lights have two lanes each: the Lutron readback (grow_light_main, grow_light_grow; unknown 600 s after its newest row) and the controller's switch intent (grow_light_main_intent, grow_light_grow_intent; Q-09), which the lanes compare with the readback (#1356).
          */
         readonly get: operations["API-05"];
         readonly put?: never;
@@ -904,6 +1129,158 @@ export interface components {
              */
             readonly unit: string;
         };
+        /** @description The house band in the editor's terms: day (solar noon) and night (solar midnight) values */
+        readonly BandProfile: {
+            /** @description °F */
+            readonly temp_day: number;
+            /** @description °F */
+            readonly temp_night: number;
+            /** @description ± °F */
+            readonly temp_width_day: number;
+            /** @description ± °F */
+            readonly temp_width_night: number;
+            /** @description kPa */
+            readonly vpd_above_day: number;
+            /** @description kPa */
+            readonly vpd_above_night: number;
+            /** @description kPa */
+            readonly vpd_below_day: number;
+            /** @description kPa */
+            readonly vpd_below_night: number;
+            /** @description kPa */
+            readonly vpd_day: number;
+            /** @description kPa */
+            readonly vpd_night: number;
+        };
+        /** @description The simple fields to change; a field left out keeps the band's own value */
+        readonly BandProfilePatch: {
+            readonly temp_day?: number | null;
+            readonly temp_night?: number | null;
+            readonly temp_width_day?: number | null;
+            readonly temp_width_night?: number | null;
+            readonly vpd_above_day?: number | null;
+            readonly vpd_above_night?: number | null;
+            readonly vpd_below_day?: number | null;
+            readonly vpd_below_night?: number | null;
+            readonly vpd_day?: number | null;
+            readonly vpd_night?: number | null;
+        };
+        /** @description API-23: the house band as stored (current) and drafted, one point per step_s */
+        readonly BandProfilePreview: {
+            /** @description The anchors a Save would write */
+            readonly changed: readonly string[];
+            readonly current: components["schemas"]["BandProfileState"];
+            /**
+             * Format: date
+             * @description America/Denver day
+             */
+            readonly day: string;
+            readonly draft: components["schemas"]["BandProfileState"];
+            readonly envelope: {
+                readonly days: number;
+                readonly dewpoint_p10_f: number;
+                readonly hours: number;
+                readonly rmse_f: number;
+            } | null;
+            readonly findings: readonly {
+                /**
+                 * @example band_order
+                 * @example guardrail
+                 * @example night_floor
+                 * @example overshoot
+                 * @example dewpoint_unreached
+                 */
+                readonly code: string;
+                readonly detail: string;
+                readonly field: string;
+                /** @enum {string} */
+                readonly severity: "error" | "warning";
+            }[];
+            /** @description The day's outdoor forecast on t; every step of an hour holds that hour's newest issue */
+            readonly forecast: {
+                /**
+                 * Format: date-time
+                 * @description The newest fetched_at behind the values
+                 */
+                readonly issued_at: string | null;
+                /** @description Outdoor forecast temperature, °F */
+                readonly temp: components["schemas"]["NullableNumbers"];
+                /** @description Outdoor forecast VPD, kPa */
+                readonly vpd: components["schemas"]["NullableNumbers"];
+            };
+            readonly guardrails: {
+                readonly margin_f: number;
+                readonly night_vpd_floor_kpa: number;
+                readonly temp_max_f: number;
+                readonly temp_min_f: number;
+                readonly vpd_max_kpa: number;
+                readonly vpd_min_kpa: number;
+            };
+            /** @description The last 24 h of the measured house average on t, by America/Denver clock time: a step before now holds today's 10-min bucket, a later step yesterday's */
+            readonly measured: {
+                /** @description Per step, the bucket its values come from; null if none */
+                readonly at: readonly (number | null)[];
+                /** @description climate.temp_avg, °F */
+                readonly temp: components["schemas"]["NullableNumbers"];
+                /** @description climate.vpd_avg, kPa */
+                readonly vpd: components["schemas"]["NullableNumbers"];
+                /** @description Epoch seconds at the end of the bucket holding now */
+                readonly window_end: number;
+                /** @description Epoch seconds of the oldest bucket read */
+                readonly window_start: number;
+            };
+            readonly night_heat_kwh: {
+                readonly current: number | null;
+                readonly draft: number | null;
+            };
+            /** @description The bias the controller reports running */
+            readonly night_vpd_bias_kpa: number | null;
+            /** @description By series, how far the draft curve leaves its anchor range */
+            readonly overshoot: {
+                readonly [key: string]: number;
+            };
+            /** @constant */
+            readonly step_s: 600;
+            readonly sun: {
+                readonly solar_midnight: number | null;
+                readonly solar_noon: number | null;
+                /** @description Epoch seconds */
+                readonly sunrise: number | null;
+                readonly sunset: number | null;
+            };
+            /** @description Epoch seconds */
+            readonly t: readonly number[];
+            readonly temp: {
+                readonly current: components["schemas"]["BandCurve"];
+                readonly draft: components["schemas"]["BandCurve"];
+            };
+            readonly vpd: {
+                readonly current: components["schemas"]["BandCurve"];
+                readonly device: components["schemas"]["BandCurve"];
+                readonly draft: components["schemas"]["BandCurve"];
+                readonly expected_high: components["schemas"]["NullableNumbers"];
+                readonly expected_low: components["schemas"]["NullableNumbers"];
+            };
+        };
+        readonly BandProfileState: {
+            /** @description The 24 band_<series>_<anchor> values */
+            readonly anchors: {
+                readonly [key: string]: number;
+            };
+            readonly profile: components["schemas"]["BandProfile"];
+            /** @description True when sunrise and sunset are the midpoint of noon and midnight */
+            readonly simple: boolean;
+        };
+        readonly BandSave: {
+            /** @description Advanced: raw house anchors */
+            readonly anchors?: {
+                readonly [key: string]: number;
+            };
+            /** @default true */
+            readonly manual?: boolean;
+            readonly profile?: components["schemas"]["BandProfilePatch"];
+            readonly reason?: string;
+        };
         /** @description One point per step_s */
         readonly BandTimeline: {
             /** @description In force (DERIVED band rows of the requested zone); null beyond 90 days */
@@ -917,6 +1294,26 @@ export interface components {
             readonly t: readonly number[];
             /** Format: date-time */
             readonly to: string;
+        };
+        readonly BandWrite: {
+            readonly changed: readonly components["schemas"]["DesiredSetting"][];
+        };
+        readonly Catalog: {
+            readonly items: readonly components["schemas"]["CatalogEntry"][];
+        };
+        readonly CatalogEntry: {
+            readonly category?: string | null;
+            readonly name: string;
+            readonly slug: string;
+        };
+        readonly CellView: {
+            readonly label: string;
+            readonly layout_col?: number | null;
+            readonly layout_group?: string | null;
+            readonly layout_row?: number | null;
+            readonly mount_type?: string | null;
+            readonly number?: number | null;
+            readonly occupant?: components["schemas"]["Occupant"] | null;
         };
         /** @description A physical line (#1336): Wall drip (every wall and shelf), Center drip, and the Center, South and West misters, each with a clean and a fertilized variant mapped to its relay. Fog is a climate device, not a physical line */
         readonly Circuit: {
@@ -958,6 +1355,15 @@ export interface components {
             readonly sent_at?: string | null;
             /** @enum {string} */
             readonly status: "pending" | "sent" | "failed";
+        };
+        readonly Conflict: {
+            readonly cell: string;
+            readonly crop: string;
+            readonly planting_id: number;
+            /** Format: date-time */
+            readonly since: string;
+            /** Format: date-time */
+            readonly until?: string | null;
         };
         /** @description ESP32 diagnostics; a reset of uptime_s confirms a restart */
         readonly Controller: {
@@ -1014,6 +1420,11 @@ export interface components {
                 readonly intent?: "on" | "off" | "unknown" | null;
                 readonly label: string;
                 readonly line_id?: string | null;
+                /**
+                 * Format: date-time
+                 * @description Grow lights only: when the API-20 manual switch goes back to automatic (its activity_log row's ts plus detail.minutes, the light timer's rule), while that is still ahead; null with no timer running
+                 */
+                readonly manual_until?: string | null;
                 /** Format: date-time */
                 readonly observed_at: string | null;
                 readonly runtime_today_s?: number | null;
@@ -1033,7 +1444,7 @@ export interface components {
             /** @description What holds the misters off */
             readonly moisture_block_reason?: components["schemas"]["ReasonState"];
         };
-        /** @description API-24: one study */
+        /** @description API-27: one study */
         readonly ExperimentDetail: {
             /** @description One cell per assigned study day, oldest first */
             readonly calendar: readonly {
@@ -1072,7 +1483,7 @@ export interface components {
             }[];
             readonly results: components["schemas"]["StudyResults"];
         };
-        /** @description API-23: committed definitions not yet registered first, then records newest first */
+        /** @description API-26: committed definitions not yet registered first, then records newest first */
         readonly ExperimentList: {
             readonly items: readonly components["schemas"]["ExperimentSummary"][];
         };
@@ -1110,6 +1521,15 @@ export interface components {
             /** Format: date-time */
             readonly observed_at: string | null;
             readonly stale: boolean;
+        };
+        readonly HarvestRecord: {
+            readonly id: number;
+            readonly notes?: string | null;
+            readonly operator?: string | null;
+            /** Format: date-time */
+            readonly ts?: string | null;
+            readonly unit_count?: number | null;
+            readonly weight_kg?: number | null;
         };
         /** @enum {string} */
         readonly IrrigationCause: "vpd" | "schedule" | "run_now" | "feed" | "prewet" | "flush" | "fallback" | "unknown";
@@ -1282,6 +1702,44 @@ export interface components {
             /** @enum {string} */
             readonly state: "on" | "off";
         };
+        /** @description API-22: each grow-light circuit by America/Denver day, oldest first */
+        readonly LightingDays: {
+            readonly circuits: readonly {
+                readonly days: readonly {
+                    /** @description The window's cutoff, local hour */
+                    readonly cutoff_hour: number | null;
+                    /** Format: date */
+                    readonly date: string;
+                    /** @description OFF threshold: ON plus the hysteresis */
+                    readonly lux_off: number | null;
+                    /** @description ON threshold, outdoor lux */
+                    readonly lux_on: number | null;
+                    /** @description Seconds the Lutron readback was on in the day */
+                    readonly on_s: number;
+                    /** @description Today: counted up to now */
+                    readonly partial: boolean;
+                    /** @description Minutes in the window with enough outdoor light or the light on; null without a policy readback */
+                    readonly qualified_min: number | null;
+                    /** @description The photoperiod window's start, local hour; null without a readback */
+                    readonly start_hour: number | null;
+                    /** @description OFF to ON edges in the day */
+                    readonly starts: number;
+                    /** @description Target qualified light minutes */
+                    readonly target_min: number | null;
+                    /** @description Minutes of the window counted so far */
+                    readonly window_min: number | null;
+                }[];
+                /** @example grow_light_main */
+                readonly equipment: string;
+                readonly label: string;
+                /** @enum {string} */
+                readonly light: "main" | "grow";
+            }[];
+            /** Format: date-time */
+            readonly from: string;
+            /** Format: date-time */
+            readonly to: string;
+        };
         /** @description Stop or clear-fault target; omit line_id for every line */
         readonly LineCommand: {
             readonly line_id?: components["schemas"]["LineId"];
@@ -1325,6 +1783,15 @@ export interface components {
             readonly vpd_member?: boolean;
             /** @description At most daily_cap_min */
             readonly vpd_reserve_min?: number;
+        };
+        /** @description The location tree with what each place holds now: zone- and shelf-level plantings and each cell's occupant. */
+        readonly Locations: {
+            readonly active_plantings: number;
+            readonly cell_count: number;
+            readonly occupied_cells: number;
+            /** Format: date-time */
+            readonly server_time: string;
+            readonly zones: readonly components["schemas"]["ZoneView"][];
         };
         readonly Me: {
             readonly display_name?: string | null;
@@ -1535,6 +2002,14 @@ export interface components {
              */
             readonly seen_at: string | null;
         };
+        readonly Occupant: {
+            readonly count?: number | null;
+            readonly crop: string;
+            readonly planting_id: number;
+            /** Format: date-time */
+            readonly since: string;
+            readonly variety?: string | null;
+        };
         readonly Occurrence: {
             readonly line_id: components["schemas"]["LineId"];
             /** @description Set when done; unknown when no outcome reached the platform */
@@ -1559,6 +2034,17 @@ export interface components {
         readonly Page: {
             /** @description Pass as cursor; null on the last page */
             readonly next_cursor: string | null;
+        };
+        /** @description One occupancy range: the zone, the shelf and the cell (each null above the level given), and when. */
+        readonly Place: {
+            readonly cell?: string | null;
+            readonly count?: number | null;
+            readonly shelf?: string | null;
+            /** Format: date-time */
+            readonly since: string;
+            /** Format: date-time */
+            readonly until?: string | null;
+            readonly zone: string;
         };
         readonly Plan: {
             /** @description planner_trigger_ledger: rows expected in the last 36 h and the expected rows ahead */
@@ -1609,7 +2095,7 @@ export interface components {
             /** @description Calls stored but not sent (shadow or a baseline day) */
             readonly proposed_only: number | null;
         };
-        /** @description API-22: the planner over 30 or 90 local days. Null means not recorded, never 0 */
+        /** @description API-25: the planner over 30 or 90 local days. Null means not recorded, never 0 */
         readonly PlannerHistory: {
             /** @description planner_inference_runs has the Cortex attempt columns (migration 294) */
             readonly cortex_attempts: boolean;
@@ -1710,6 +2196,121 @@ export interface components {
             /** Format: date-time */
             readonly written_at: string;
         };
+        /** @description A planting as the Crops page and the agents show it. cells are its open cells; places its open occupancy at every level; count null is unknown. */
+        readonly Planting: {
+            readonly active: boolean;
+            readonly cells?: readonly string[];
+            readonly count?: number | null;
+            readonly crop: string;
+            readonly crop_catalog_slug?: string | null;
+            readonly end_reason?: string | null;
+            /** Format: date-time */
+            readonly ended_at?: string | null;
+            readonly id: number;
+            readonly notes?: string | null;
+            readonly places?: readonly components["schemas"]["Place"][];
+            /** Format: date */
+            readonly planted_date: string;
+            readonly recorded_by?: components["schemas"]["Actor"] | null;
+            readonly shelves?: readonly string[];
+            readonly stage?: string | null;
+            readonly variety?: string | null;
+            readonly where?: string | null;
+            readonly zones?: readonly string[];
+        };
+        /** @description A new planting (API-CROP-07, MCP record_planting). crop is a catalog slug or name (lettuce, basil) or a free name; count is the number of plants, unknown when omitted; count_per_cell is stored on each cell's occupancy. planted_at defaults to now; a date means local midnight. replace ends or trims whatever holds a requested cell instead of refusing with position_occupied. */
+        readonly PlantingCreate: {
+            readonly count?: number | null;
+            readonly count_per_cell?: number | null;
+            readonly crop: string;
+            readonly notes?: string | null;
+            readonly planted_at?: string | null;
+            readonly positions: readonly string[];
+            readonly reason?: string | null;
+            /** @default false */
+            readonly replace?: boolean;
+            /** @enum {string|null} */
+            readonly stage?: "seed" | "germination" | "seedling" | "vegetative" | "flowering" | "fruiting" | "harvest" | "cleared" | null;
+            readonly variety?: string | null;
+        };
+        /** @description A planting with every place it has been, its events (newest first) and its harvests. */
+        readonly PlantingDetail: {
+            readonly active: boolean;
+            readonly cells?: readonly string[];
+            readonly count?: number | null;
+            readonly crop: string;
+            readonly crop_catalog_slug?: string | null;
+            readonly end_reason?: string | null;
+            /** Format: date-time */
+            readonly ended_at?: string | null;
+            readonly events?: readonly components["schemas"]["PlantingEvent"][];
+            readonly harvests?: readonly components["schemas"]["HarvestRecord"][];
+            readonly history?: readonly components["schemas"]["Place"][];
+            readonly id: number;
+            readonly notes?: string | null;
+            readonly places?: readonly components["schemas"]["Place"][];
+            /** Format: date */
+            readonly planted_date: string;
+            readonly recorded_by?: components["schemas"]["Actor"] | null;
+            readonly shelves?: readonly string[];
+            readonly stage?: string | null;
+            readonly variety?: string | null;
+            readonly where?: string | null;
+            readonly zones?: readonly string[];
+        };
+        /** @description End a planting without a harvest (API-CROP-10, MCP remove_planting): every open place closes at at. */
+        readonly PlantingEnd: {
+            readonly at?: string | null;
+            /** @enum {string} */
+            readonly end_reason: "failed" | "removed" | "reconciled";
+            readonly note?: string | null;
+            readonly reason?: string | null;
+        };
+        readonly PlantingEvent: {
+            readonly count?: number | null;
+            readonly detail?: Record<string, unknown> | null;
+            readonly event_type: string;
+            readonly id: number;
+            readonly notes?: string | null;
+            readonly operator?: string | null;
+            readonly source?: string | null;
+            /** Format: date-time */
+            readonly ts?: string | null;
+        };
+        /** @description Record a harvest (API-CROP-09, MCP harvest_planting). Partial by default: the planting stays. Cells in positions are cleared; final ends the planting as harvested. */
+        readonly PlantingHarvest: {
+            readonly count?: number | null;
+            /** @default false */
+            readonly final?: boolean;
+            readonly harvested_at?: string | null;
+            readonly notes?: string | null;
+            readonly positions?: readonly string[] | null;
+            readonly reason?: string | null;
+            readonly weight_kg?: number | null;
+        };
+        readonly PlantingList: {
+            readonly items: readonly components["schemas"]["Planting"][];
+        };
+        /** @description Move a planting (API-CROP-08, MCP move_planting): from_positions (default: everywhere it is now) close at moved_at and to_positions open then. Both ranges stay in history. */
+        readonly PlantingMove: {
+            readonly from_positions?: readonly string[] | null;
+            readonly moved_at?: string | null;
+            readonly reason?: string | null;
+            /** @default false */
+            readonly replace?: boolean;
+            readonly to_positions: readonly string[];
+        };
+        /** @description Edit a planting's record (API-CROP-11): only the fields sent change. count null means unknown. */
+        readonly PlantingPatch: {
+            readonly count?: number | null;
+            /** Format: date */
+            readonly expected_harvest?: string | null;
+            readonly notes?: string | null;
+            readonly reason?: string | null;
+            /** @enum {string|null} */
+            readonly stage?: "seed" | "germination" | "seedling" | "vegetative" | "flowering" | "fruiting" | "harvest" | "cleared" | null;
+            readonly variety?: string | null;
+        };
         readonly PlanWaypoint: {
             /** Format: date-time */
             readonly at: string;
@@ -1721,6 +2322,13 @@ export interface components {
              */
             readonly source: "iris" | "preemptive";
             readonly value: number | null;
+        };
+        /** @description Who has held one cell: the current occupant first, then the rest newest first. */
+        readonly PositionHistory: {
+            readonly items: readonly components["schemas"]["Tenure"][];
+            readonly label: string;
+            readonly shelf: string;
+            readonly zone: string;
         };
         /** @description RFC 9457 problem details. The UI maps code to words and shows an unknown code raw. */
         readonly Problem: {
@@ -1752,10 +2360,10 @@ export interface components {
             readonly type?: string;
         };
         /**
-         * @description Stable codes shared with MCP (architecture §5.3, irrigation §4.3 and §4.7). manual is for Iris only
+         * @description Stable codes shared with MCP (architecture §5.3, irrigation §4.3 and §4.7). manual is for Iris only. position_occupied, ambiguous_position and planting_ended are the plantings' refusals (API-CROP-06 to -11)
          * @enum {string}
          */
-        readonly ProblemCode: "invalid_request" | "unauthenticated" | "forbidden" | "origin_mismatch" | "not_found" | "writes_disabled" | "query_timeout" | "unavailable" | "window_too_large" | "unknown_target" | "read_only" | "out_of_range" | "manual" | "request_id_reused" | "check_required" | "too_close" | "too_many_schedules" | "line_disabled" | "line_paused" | "line_faulted" | "not_schedule_member" | "line_busy" | "manifold_busy" | "cap_reached";
+        readonly ProblemCode: "invalid_request" | "unauthenticated" | "forbidden" | "origin_mismatch" | "not_found" | "writes_disabled" | "query_timeout" | "unavailable" | "window_too_large" | "unknown_target" | "read_only" | "out_of_range" | "manual" | "request_id_reused" | "check_required" | "too_close" | "too_many_schedules" | "line_disabled" | "line_paused" | "line_faulted" | "not_schedule_member" | "line_busy" | "manifold_busy" | "cap_reached" | "position_occupied" | "ambiguous_position" | "planting_ended";
         /** @description The compiled program against the controller (irr_program_id); confirmed when the device hash matches */
         readonly ProgramSync: {
             /** @description First 16 hex of the applied sha256 */
@@ -1785,7 +2393,7 @@ export interface components {
             readonly state: components["schemas"]["ReadbackState"];
         };
         /**
-         * @description Computed on every read (architecture §5.5); display only. held means the platform applies something else on purpose (a dispatcher clamp, or an armed experiment manifest serving the field). Irrigation items and the irrigation_site settings use requested, confirmed and not_confirmed against the controller's program hash; before the engine firmware they stay requested.
+         * @description Computed on every read (architecture §5.5); display only. held means the platform applies something else on purpose (a dispatcher clamp, or an armed experiment manifest serving the field). Irrigation items and the irrigation_site settings use requested, confirmed and not_confirmed against the controller's program hash; before the engine firmware they stay requested. not_confirmed is only a request at least 5 min old the readback does not match; a setting nobody requested with no readback reads no_readback (#1333).
          * @enum {string}
          */
         readonly ReadbackState: "requested" | "confirmed" | "not_confirmed" | "held" | "no_readback" | "overridden" | "released";
@@ -1825,6 +2433,20 @@ export interface components {
              * @description When the current value began, from the collapsed values; null while code is null
              */
             readonly since: string | null;
+        };
+        /** @description What a place text means and what holds those cells at at. Nothing is written. */
+        readonly Resolution: {
+            /** Format: date-time */
+            readonly at: string;
+            readonly cells: readonly string[];
+            readonly conflicts?: readonly components["schemas"]["Conflict"][];
+            readonly places: readonly components["schemas"]["ResolvedPlace"][];
+            readonly where: string;
+        };
+        readonly ResolvedPlace: {
+            readonly cell?: string | null;
+            readonly shelf?: string | null;
+            readonly zone: string;
         };
         /** @description One run: a drip run, a fertilizer stage or a mist episode, from relay edges joined to its irrigation_ledger row. Listed once it has ended; the run in progress is in API-IRR-01 */
         readonly Run: {
@@ -2069,6 +2691,8 @@ export interface components {
              * @enum {string}
              */
             readonly group: "planner_policy" | "scheduled_policy" | "controller_safety" | "crop_band" | "site_water_caps" | "read_only" | "band_in_force";
+            /** @description Operator text (verdify_schemas.setting_help, #1332); MCP settings serves the same */
+            readonly help?: components["schemas"]["SettingHelp"] | null;
             /** @enum {string} */
             readonly kind: "numeric" | "switch" | "enum";
             /** @description For a registry row, TunableDef.label (VD-29), filled from the setting's entity name in firmware/greenhouse/tunables.yaml and drift-tested */
@@ -2097,6 +2721,11 @@ export interface components {
                 /** Format: date-time */
                 readonly written_at: string;
             };
+            /**
+             * @description Why a read-only row cannot be written (#1333): the tunable_registry READ_ONLY_REASONS key, no_anchor_row (a crop-band row with no crop_band_anchors row) or band_in_force (derived band rows); null on a writable row
+             * @enum {string|null}
+             */
+            readonly read_only_kind?: "band_in_force" | "legacy_wide_limit" | "zone_vpd_target" | "activity_mirror" | "band_owner" | "retired" | "readback_context" | "no_entity" | "no_anchor_row" | "unknown" | null;
             /** @example legacy wide limit; not the band while the controller runs its on-chip curve */
             readonly read_only_reason?: string | null;
             /** @description Newest readback; for irrigation_site rows the value in the applied program */
@@ -2106,6 +2735,8 @@ export interface components {
              * @enum {string}
              */
             readonly readback_via: "cfg" | "entity" | "program" | "none";
+            /** @description The writable settings a derived row is computed from (the crop-band anchors behind a Band in force row, the main-light schedule behind the activity mirror); empty otherwise */
+            readonly source_params?: readonly string[];
             /** @description Of the newest write, else of the applied value against the readback */
             readonly state: components["schemas"]["ReadbackState"];
             /** @description The registry step (from tunables.yaml; equal to ENTITY_GRIDS for the 48 policy fields) */
@@ -2114,6 +2745,26 @@ export interface components {
             readonly unit?: string | null;
             /** @description false with read_only_reason; the irrigation_site rows are writable before the engine firmware too (their writes wait, state_reason no_engine) */
             readonly writable: boolean;
+        };
+        /** @description What a setting is and what changing it does to the controller (#1332). One source for the dashboard, MCP and the lab ai-tunables page. raise and lower are null on a read-only row; for a switch they say what turning it on and off does. */
+        readonly SettingHelp: {
+            /** @description An interaction or safety note */
+            readonly caution?: string | null;
+            /** @description What the controller does with it */
+            readonly effect: string;
+            /**
+             * @description A hard safety limit (Safety Min, Safety Max and the VPD pair): the dashboard shows caution and asks to confirm before saving
+             * @default false
+             */
+            readonly guardrail?: boolean;
+            /** @description What happens when the value goes down (a switch turned off) */
+            readonly lower?: string | null;
+            /** @description What happens to the greenhouse when the value goes up (a switch turned on) */
+            readonly raise?: string | null;
+            /** @description The setting's entry on the lab ai-tunables reference page */
+            readonly reference_url?: string | null;
+            /** @description One line */
+            readonly summary: string;
         };
         readonly SettingHistory: {
             /** @description Oldest first, from the row in force at from */
@@ -2140,6 +2791,18 @@ export interface components {
             readonly reason?: string;
             /** @description Switches 0 or 1, enums the option value; snapped to step */
             readonly value: number;
+        };
+        readonly ShelfView: {
+            readonly cells?: readonly components["schemas"]["CellView"][];
+            readonly display_order?: number | null;
+            readonly kind: string;
+            readonly label_short?: string | null;
+            readonly name: string;
+            readonly plantings?: readonly components["schemas"]["Occupant"][];
+            readonly slug: string;
+            readonly tier?: number | null;
+            readonly wall?: string | null;
+            readonly water_lines?: readonly components["schemas"]["WaterLine"][];
         };
         /** @description Read-only text for people, never an input to a plan. stale: as_of is more than 30 min old (old) or a later attempt failed or was rejected (failed); show it muted with "as of". outdated: a band verdict or the open-alert count changed since it was written; never show it */
         readonly Snapshot: {
@@ -2274,6 +2937,17 @@ export interface components {
             /** @enum {string} */
             readonly state: "not_started" | "interim" | "final";
         };
+        /** @description One planting's time in a cell; until null while it is there. */
+        readonly Tenure: {
+            readonly count?: number | null;
+            readonly crop: string;
+            readonly planting_id: number;
+            /** Format: date-time */
+            readonly since: string;
+            /** Format: date-time */
+            readonly until?: string | null;
+            readonly variety?: string | null;
+        };
         readonly TimedValue: {
             /** Format: date-time */
             readonly at: string;
@@ -2285,6 +2959,11 @@ export interface components {
         };
         /** @enum {string} */
         readonly Variant: "clean" | "fertilized";
+        readonly WaterLine: {
+            readonly line_id: string;
+            readonly name: string;
+            readonly note?: string | null;
+        };
         /** @description API-21: daily water use in whole gallons. There is no rate and no flow flag */
         readonly WaterUse: {
             /** @description One per America/Denver day, oldest first. On a no_data day every value is null, never 0 */
@@ -2320,6 +2999,12 @@ export interface components {
              * @description Inclusive local day: today, a partial day
              */
             readonly to: string;
+        };
+        readonly ZoneView: {
+            readonly name: string;
+            readonly plantings?: readonly components["schemas"]["Occupant"][];
+            readonly shelves?: readonly components["schemas"]["ShelfView"][];
+            readonly slug: string;
         };
     };
     responses: {
@@ -2376,6 +3061,7 @@ export interface components {
         readonly LineId: components["schemas"]["LineId"];
         /** @description tunable_registry name */
         readonly Param: string;
+        readonly PlantingId: number;
         readonly Reason: string;
         readonly SlotId: number;
         /** @description Window end (exclusive) */
@@ -2789,6 +3475,382 @@ export interface operations {
             readonly default: components["responses"]["Problem"];
         };
     };
+    readonly "API-23": {
+        readonly parameters: {
+            readonly query?: {
+                /** @description Advanced: one raw house anchor as param:value, repeatable */
+                readonly anchor?: readonly string[];
+                /** @description America/Denver day; default today */
+                readonly day?: string;
+                /** @description Temperature target at solar noon, °F */
+                readonly temp_day?: number;
+                /** @description Temperature target at solar midnight, °F */
+                readonly temp_night?: number;
+                /** @description ± °F around the day target */
+                readonly temp_width_day?: number;
+                /** @description ± °F around the night target */
+                readonly temp_width_night?: number;
+                /** @description kPa above the day target */
+                readonly vpd_above_day?: number;
+                /** @description kPa above the night target */
+                readonly vpd_above_night?: number;
+                /** @description kPa below the day target */
+                readonly vpd_below_day?: number;
+                /** @description kPa below the night target */
+                readonly vpd_below_night?: number;
+                /** @description VPD target at solar noon, kPa */
+                readonly vpd_day?: number;
+                /** @description VPD target at solar midnight, kPa */
+                readonly vpd_night?: number;
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["BandProfilePreview"];
+                };
+            };
+            readonly 422: components["responses"]["Invalid"];
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-24": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: {
+                /** @description Optional on every write; stored as request_id on the write's activity_log row and logged as the request id. The same key and payload return the stored result with the header Idempotency-Replayed: true; the same key with a different payload is 422 request_id_reused. */
+                readonly "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["BandSave"];
+            };
+        };
+        readonly responses: {
+            /** @description Stored; each changed anchor with state requested */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["BandWrite"];
+                };
+            };
+            readonly 422: components["responses"]["Invalid"];
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-CROP-05": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Catalog"];
+                };
+            };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-CROP-01": {
+        readonly parameters: {
+            readonly query?: {
+                /** @description Keep one zone (a zone slug) */
+                readonly zone?: string;
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Locations"];
+                };
+            };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-CROP-02": {
+        readonly parameters: {
+            readonly query?: {
+                /** @description true keeps active plantings (default), false ended ones; omit with an empty value for both */
+                readonly active?: boolean | null;
+                readonly limit?: number;
+                /** @description Planted or ended on or after this day */
+                readonly since?: string;
+                /** @description Plantings that were ever in this zone */
+                readonly zone?: string;
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["PlantingList"];
+                };
+            };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-CROP-07": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: {
+                /** @description Optional on every write; stored as request_id on the write's activity_log row and logged as the request id. The same key and payload return the stored result with the header Idempotency-Replayed: true; the same key with a different payload is 422 request_id_reused. */
+                readonly "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["PlantingCreate"];
+            };
+        };
+        readonly responses: {
+            /** @description Recorded */
+            readonly 201: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Planting"];
+                };
+            };
+            readonly 422: components["responses"]["Invalid"];
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-CROP-03": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly planting_id: components["parameters"]["PlantingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["PlantingDetail"];
+                };
+            };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-CROP-11": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: {
+                /** @description Optional on every write; stored as request_id on the write's activity_log row and logged as the request id. The same key and payload return the stored result with the header Idempotency-Replayed: true; the same key with a different payload is 422 request_id_reused. */
+                readonly "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            readonly path: {
+                readonly planting_id: components["parameters"]["PlantingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["PlantingPatch"];
+            };
+        };
+        readonly responses: {
+            /** @description Stored */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Planting"];
+                };
+            };
+            readonly 422: components["responses"]["Invalid"];
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-CROP-09": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: {
+                /** @description Optional on every write; stored as request_id on the write's activity_log row and logged as the request id. The same key and payload return the stored result with the header Idempotency-Replayed: true; the same key with a different payload is 422 request_id_reused. */
+                readonly "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            readonly path: {
+                readonly planting_id: components["parameters"]["PlantingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["PlantingHarvest"];
+            };
+        };
+        readonly responses: {
+            /** @description Recorded */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Planting"];
+                };
+            };
+            readonly 422: components["responses"]["Invalid"];
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-CROP-08": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: {
+                /** @description Optional on every write; stored as request_id on the write's activity_log row and logged as the request id. The same key and payload return the stored result with the header Idempotency-Replayed: true; the same key with a different payload is 422 request_id_reused. */
+                readonly "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            readonly path: {
+                readonly planting_id: components["parameters"]["PlantingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["PlantingMove"];
+            };
+        };
+        readonly responses: {
+            /** @description Moved */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Planting"];
+                };
+            };
+            readonly 422: components["responses"]["Invalid"];
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-CROP-10": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: {
+                /** @description Optional on every write; stored as request_id on the write's activity_log row and logged as the request id. The same key and payload return the stored result with the header Idempotency-Replayed: true; the same key with a different payload is 422 request_id_reused. */
+                readonly "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            readonly path: {
+                readonly planting_id: components["parameters"]["PlantingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["PlantingEnd"];
+            };
+        };
+        readonly responses: {
+            /** @description Ended */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Planting"];
+                };
+            };
+            readonly 422: components["responses"]["Invalid"];
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-CROP-04": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly label: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["PositionHistory"];
+                };
+            };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-CROP-06": {
+        readonly parameters: {
+            readonly query: {
+                /** @description When (default now) */
+                readonly at?: string;
+                /** @description Leave this planting out of the conflicts (a move's own cells) */
+                readonly planting?: number;
+                readonly q: string;
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Resolution"];
+                };
+            };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
     readonly "API-13": {
         readonly parameters: {
             readonly query?: never;
@@ -3162,6 +4224,32 @@ export interface operations {
             readonly default: components["responses"]["Problem"];
         };
     };
+    readonly "API-22": {
+        readonly parameters: {
+            readonly query: {
+                /** @description Window start (inclusive) */
+                readonly from: components["parameters"]["From"];
+                /** @description Window end (exclusive) */
+                readonly to: components["parameters"]["To"];
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description OK */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["LightingDays"];
+                };
+            };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
     readonly "API-01": {
         readonly parameters: {
             readonly query?: never;
@@ -3251,7 +4339,7 @@ export interface operations {
             readonly default: components["responses"]["Problem"];
         };
     };
-    readonly "API-23": {
+    readonly "API-26": {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;
@@ -3272,7 +4360,7 @@ export interface operations {
             readonly default: components["responses"]["Problem"];
         };
     };
-    readonly "API-24": {
+    readonly "API-27": {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;
@@ -3296,7 +4384,7 @@ export interface operations {
             readonly default: components["responses"]["Problem"];
         };
     };
-    readonly "API-22": {
+    readonly "API-25": {
         readonly parameters: {
             readonly query?: {
                 /** @description Days ending today, today included */

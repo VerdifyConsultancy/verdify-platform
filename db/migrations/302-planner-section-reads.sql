@@ -2,7 +2,7 @@
 -- The dashboard duty already reads plan_journal and planner_trigger_ledger (284). It cannot read the experiment
 -- tables (control_experiments, control_assignments, experiment_events: api, ingestor and the experiment owner
 -- only) or planner_inference_runs (207: verdify only). 302 adds four read views, owned by verdify, with SELECT for
--- verdify_dashboard_runtime and nobody else, so API-22/23/24 can show plan cost, the experiment list (the closed
+-- verdify_dashboard_runtime and nobody else, so API-25/26/27 can show plan cost, the experiment list (the closed
 -- 2026-08-28 draft with the event that closed it) and a study's arm calendar:
 --   v_planner_experiments          one row per experiment, with its newest closing event and deviation count;
 --   v_planner_assignments          one row per assigned study day (arm, pair, valid range, status);
@@ -13,7 +13,7 @@
 --                                  (status, latency_ms, attempt, mode, dispatched; #1350, migration 294) appear in
 --                                  `attempt` once they exist, without another migration: the API checks for them.
 -- No runtime seal moves: the views carry no api, ingestor, MCP or PUBLIC privilege and no runtime role owns them;
--- the underlying tables keep their ACLs and shape. Both blocks pin the predecessor's seals: 301's (291's api and
+-- the underlying tables keep their ACLs and shape. Both blocks pin the predecessor's seals: 301's (296's api and
 -- ingestor, 301's MCP). 302 follows 301 in the same change; both are qualified together.
 SET LOCAL search_path=pg_catalog,public,pg_temp;
 LOCK TABLE public.schema_migrations,public.runtime_ordinary_login_attestation_receipts,
@@ -23,14 +23,14 @@ BEGIN
     IF current_user <> 'verdify'
         OR NOT EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations'
             AND seq=301 AND filename='db/migrations/301-greenhouse-brief.sql'
-            AND sha256='0c7ad6846a52d840a9ec90366bdc87f8ee0d77a358c697f1e6bffe5f752d2062'
+            AND sha256='24945842499e5d907d2c49ef4cbf4e57ada2f29b297c9744edd055421f7d0e1d'
             AND stamp_method='runner')
         OR EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq>301)
         OR (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts)<>2
         OR (SELECT count(*) FROM public.mcp_runtime_boundary_receipt)<>1
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76'
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806'
-        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '717d3d0bea4032fe65fe977f78f511b6ed3bd97142d6665ebc3bfa83836414af'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e'
+        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM 'af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873'
         OR EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r
             WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))
         OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton
@@ -146,9 +146,9 @@ GRANT SELECT ON public.v_planner_experiments, public.v_planner_assignments, publ
 
 DO $successor$
 BEGIN
-    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76'
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806'
-        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '717d3d0bea4032fe65fe977f78f511b6ed3bd97142d6665ebc3bfa83836414af'
+    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e'
+        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM 'af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873'
         OR EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r
             WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))
         OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton

@@ -46,7 +46,23 @@ BASE_CONFIG_PATH = REPO_ROOT / "deploy" / "k8s" / "base" / "configmap.yaml"
 PROD_OVERLAY_PATH = REPO_ROOT / "deploy" / "k8s" / "overlays" / "prod"
 
 # Architecture §5.6, the whole `agent` column (VD-59): the reads, alerts, settings,
-# activity and set_setting (#1171) and the eight irrigation tools (#1173, #1174, #1177).
+# activity and set_setting (#1171), the eight irrigation tools (#1173, #1174, #1177) and the nine
+# planting tools (#1328).
+# The planting tools (#1328): records only, for named agents and admin. Iris stays read-only on plantings and the
+# experiment arm gets none, so the Hermes include list (Iris's 34 tools) is unchanged.
+PLANTING_TOOLS = frozenset(
+    {
+        "crop_locations",
+        "resolve_positions",
+        "record_planting",
+        "record_plantings",
+        "move_planting",
+        "harvest_planting",
+        "remove_planting",
+        "annotate_planting",
+        "planting_history",
+    }
+)
 AGENT_TOOLS = frozenset(
     {
         "climate",
@@ -71,7 +87,10 @@ AGENT_TOOLS = frozenset(
         "irrigation_stop",
         "irrigation_line_set",
         "irrigation_clear_fault",
+        "band_profile",
+        "band_profile_preview",
     }
+    | PLANTING_TOOLS
 )
 # Agents never get the planner, lessons, crop or Slack writers, nor the admin-only tools.
 AGENT_NEVER_TOOLS = frozenset(
@@ -89,7 +108,6 @@ AGENT_NEVER_TOOLS = frozenset(
         "observations",
         "crop_history",
         "crop_lifecycle",
-        "slack_ops",
         "plan_run",
         "query",
         "outcome_kpi",
@@ -445,8 +463,20 @@ class TestAudienceMatrix:
         allowed = mcp_server.audience_allowlist("iris")
         assert allowed == mcp_server.HERMES_REQUIRED_TOOLS
         denied = set(mcp_server.TOOL_AUDIENCES) - allowed
-        # #1346: Iris never reads the greenhouse snapshot (it is never an input to a plan).
-        assert denied == {"outcome_kpi", "plan_run", "query", "policy_template_propose", "get_greenhouse_snapshot"}
+        assert (
+            denied
+            == {
+                "outcome_kpi",
+                "plan_run",
+                "query",
+                "policy_template_propose",
+                "band_profile",
+                "band_profile_preview",
+                # #1346: Iris never reads the greenhouse snapshot (it is never an input to a plan).
+                "get_greenhouse_snapshot",
+            }
+            | PLANTING_TOOLS
+        )
         for tool in allowed:
             mcp_server.authorize_tool_call(tool, "tok-iris")
         for tool in denied:
@@ -482,7 +512,6 @@ class TestAudienceMatrix:
             "set_tunable",
             "plan_evaluate",
             "lessons_manage",
-            "slack_ops",
             "query",
             "plan_run",
         ):
@@ -631,7 +660,6 @@ class TestInventoryAndDriftGuards:
             "set_tunable",
             "plan_evaluate",
             "lessons_manage",
-            "slack_ops",
             "query",
             "plan_run",
         }
@@ -704,7 +732,7 @@ class TestListToolsAudienceFiltering:
     @pytest.mark.parametrize("mode", ["log", "enforce"])
     @pytest.mark.parametrize(
         ("audience", "token", "expected_count"),
-        [("iris", "tok-iris", 34), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 39)],
+        [("iris", "tok-iris", 33), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 49)],
     )
     def test_protocol_inventory_matches_exact_audience_allowlist(
         self, mcp_server, monkeypatch, mode, audience, token, expected_count
@@ -1051,32 +1079,6 @@ def test_ordinary_mcp_connection_attestation_fails_closed(mcp_server, monkeypatc
     monkeypatch.setattr(mcp_server.asyncpg, "connect", connect)
     with pytest.raises(RuntimeError, match="attestation failed"):
         _run(mcp_server._db())
-    assert conn.closed is True
-
-
-def test_slack_tool_uses_attested_connection(mcp_server, monkeypatch):
-    class Connection:
-        closed = False
-
-        async def close(self):
-            self.closed = True
-
-    conn = Connection()
-
-    async def attested_db():
-        return conn
-
-    async def command(_request, **kwargs):
-        assert kwargs["conn"] is conn
-        assert "dsn" not in kwargs
-        return SimpleNamespace(model_dump_json=lambda: '{"ok":true}')
-
-    monkeypatch.setattr(mcp_server, "_db", attested_db)
-    monkeypatch.setattr(mcp_server, "handle_slack_command", command)
-    monkeypatch.setattr(
-        mcp_server, "load_slack_settings", lambda: SimpleNamespace(channel_id="C1", channel_name="greenhouse")
-    )
-    assert _run(mcp_server.slack_ops("status")) == '{"ok":true}'
     assert conn.closed is True
 
 

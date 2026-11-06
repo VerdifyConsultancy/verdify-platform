@@ -9,11 +9,10 @@
 -- checked_at (an unchanged fact sheet confirms the newest row without a model call) and outdated_at (a band
 -- verdict or alert change after the row was written). MCP's get_greenhouse_snapshot reads it, so the MCP duty
 -- gets SELECT and nothing else. The text is read-only: no planner, controller or Iris path reads this table.
--- Seals: neither ordinary login can reach the table, so the api and ingestor digests keep 291's values. The MCP
--- SELECT adds the table's relation and relation-acl entries to fn_mcp_runtime_boundary_digest (263), so the MCP
--- seal moves and its receipt is re-sealed. The successor literal is a read-only projection on production at
--- exact289 (tests/fixtures/301-greenhouse-brief-native-qualification.json; 291 leaves the MCP seal alone). Stand-in
--- chain: 301 follows 291, the newest merged migration, and moves behind 296 (#1388) before native qualification.
+-- Seals: neither ordinary login can reach the table, so the api and ingestor digests keep 296's values (293's).
+-- The MCP SELECT adds the table's relation and relation-acl entries to fn_mcp_runtime_boundary_digest (263), so the
+-- MCP seal moves and its receipt is re-sealed. 301 chains from exact296 (#1388); the rolled-back native
+-- qualification measured the MCP literal (tests/fixtures/301-greenhouse-brief-native-qualification.json).
 SET LOCAL search_path=pg_catalog,public,pg_temp;
 LOCK TABLE public.schema_migrations,public.runtime_ordinary_login_attestation_receipts,
     public.mcp_runtime_boundary_receipt IN SHARE ROW EXCLUSIVE MODE;
@@ -21,15 +20,15 @@ DO $predecessor$
 BEGIN
     IF current_user <> 'verdify'
         OR NOT EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations'
-            AND seq=291 AND filename='db/migrations/291-energy-daily-load-magnitude.sql'
-            AND sha256='afd21ce741451d2530f78e94fb82bf1f7a3159476350cd6eb527a1543ae664ae'
+            AND seq=296 AND filename='db/migrations/296-knowledge-embeddings-cortex.sql'
+            AND sha256='aec163e31534e28d7ffd2e5b4bc0402819c8096c70d1d5ab28a804dec795d40d'
             AND stamp_method='runner')
-        OR EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq>291)
+        OR EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq>296)
         OR (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts)<>2
         OR (SELECT count(*) FROM public.mcp_runtime_boundary_receipt)<>1
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76'
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806'
-        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e'
+        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '984604e2c5e99ec801a752792373b53b1e817e5667b10ae35798da5c88eb0ef9'
         OR EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r
             WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))
         OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt WHERE singleton
@@ -75,16 +74,16 @@ GRANT SELECT, INSERT, DELETE ON public.greenhouse_brief TO verdify_dashboard_run
 GRANT UPDATE (checked_at, outdated_at) ON public.greenhouse_brief TO verdify_dashboard_runtime;
 GRANT SELECT ON public.greenhouse_brief TO verdify_mcp_runtime;
 
--- Successor seals: the ordinary digests keep 291's values; the MCP digest takes in the table and the MCP duty's
+-- Successor seals: the ordinary digests keep 296's values; the MCP digest takes in the table and the MCP duty's
 -- SELECT, and its receipt is re-sealed.
 DO $successor$
 BEGIN
-    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76'
-        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806'
-        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '717d3d0bea4032fe65fe977f78f511b6ed3bd97142d6665ebc3bfa83836414af'
+    IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'f0a0d02a96692609b37d8429085163f4ce2668431a1840f7b1635856d846a547'
+        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '533b81f25b05bb544d4ecffe62d4c16c51644acff1190bbde2a85dc49130687e'
+        OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM 'af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873'
         OR EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r
             WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))
     THEN RAISE EXCEPTION '301 refuses an unqualified successor'; END IF;
-    UPDATE public.mcp_runtime_boundary_receipt SET boundary_sha256=decode('717d3d0bea4032fe65fe977f78f511b6ed3bd97142d6665ebc3bfa83836414af','hex') WHERE singleton;
+    UPDATE public.mcp_runtime_boundary_receipt SET boundary_sha256=decode('af3f7ef2493b94b11e9e7c3f5ead6bf61c8542e477d26da117f3930b0530d873','hex') WHERE singleton;
     IF NOT FOUND THEN RAISE EXCEPTION '301 missing mcp receipt'; END IF;
 END $successor$;

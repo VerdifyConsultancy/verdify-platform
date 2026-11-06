@@ -111,7 +111,7 @@ test("a viewer gets it read-only: the values, no Save; with changes switched off
   expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
   expect((screen.getByLabelText("New value") as HTMLInputElement).value).toBe("1.60");
   expect(screen.getByLabelText("New value").matches(":disabled")).toBe(true);
-  expect(screen.getByRole("checkbox", { name: "Manual: Iris skips this" }).matches(":disabled")).toBe(true);
+  expect(screen.getByRole("checkbox", { name: "Let Iris change this" }).matches(":disabled")).toBe(true);
   expect(document.activeElement).toBe(screen.getByRole("button", { name: "Done" }));
   fireEvent.submit(dialog().querySelector("form")!);
   expect(onSave).not.toHaveBeenCalled();

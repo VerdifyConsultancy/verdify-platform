@@ -535,6 +535,20 @@ export function zonesHref(zone: Zone | null, window: WindowSpec, metrics: readon
   return `/graphs/zones?${[...(zone ? [`zone=${zone}`] : []), ...windowQuery(window), ...(custom ? rows.map((metric) => `metric=${metric}`) : [])].join("&")}`;
 }
 
+// ---------------------------------------------------------------------------------------------------- /graphs/lighting
+/** `/graphs/lighting`'s view (#1357): the window as Climate reads it; what it cannot use is dropped with a notice. */
+export type LightingView = { readonly window: WindowSpec; readonly notices: readonly string[] };
+export function parseLightingUrl(search: string): LightingView {
+  const notices: string[] = [];
+  const window = windowOf(new URLSearchParams(search), notices);
+  return { window, notices };
+}
+/** The Lighting URL: the window, none for the 72 h default. */
+export function lightingHref(window: WindowSpec): string {
+  const query = window.kind === "range" && window.range === DEFAULT_RANGE ? [] : windowQuery(window);
+  return query.length ? `/graphs/lighting?${query.join("&")}` : "/graphs/lighting";
+}
+
 // ---------------------------------------------------------------------------------------------------- /graphs/statistics
 export const STATS_DAYS = [30, 90, 365] as const;
 export type StatsDays = (typeof STATS_DAYS)[number];

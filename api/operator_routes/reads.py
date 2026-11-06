@@ -1,9 +1,9 @@
 """The operator reads: API-02, API-07 and API-13 (VD-54); API-09, API-12, API-14 and API-17 (VD-55); API-21 (VD-57);
-API-22, API-23 and API-24, the Planner section (#1361).
+API-25, API-26 and API-27, the Planner section (#1361).
 
 No auth and no SQL: ``api/operator_api.py`` (#1148) includes ``router`` under
 ``/v1`` with its bearer, session and role dependencies, and each route calls
-one ``verdify_services.reads`` function, ``alerts.list`` for API-14, or ``planner`` for API-22 to API-24.
+one ``verdify_services.reads`` function, ``alerts.list`` for API-14, or ``planner`` for API-25 to API-27.
 ``connection`` lends one connection from the operator API's asyncpg pool,
 ``app.state.pool``; the operator API may override it with
 ``app.dependency_overrides``. Query values pass through unchanged: the services
@@ -60,13 +60,13 @@ async def get_water_daily(conn: Connection, days: reads.WaterDays = 30) -> reads
     return await reads.water_daily(conn, days=days)
 
 
-@router.get("/planner/history", operation_id="API-22", tags=["planner"], response_model=planner.PlannerHistory)
+@router.get("/planner/history", operation_id="API-25", tags=["planner"], response_model=planner.PlannerHistory)
 async def get_planner_history(conn: Connection, days: planner.HistoryDays = 30) -> planner.PlannerHistory:
     """Plans per day (written, required, failed, late), dispatched changes, cost per day and the newest plans."""
     return await planner.history(conn, days=days)
 
 
-@router.get("/planner/experiments", operation_id="API-23", tags=["planner"], response_model=planner.ExperimentList)
+@router.get("/planner/experiments", operation_id="API-26", tags=["planner"], response_model=planner.ExperimentList)
 async def get_planner_experiments(conn: Connection) -> planner.ExperimentList:
     """Committed studies not yet registered, then every experiment record with its status and closure."""
     return await planner.experiments(conn)
@@ -74,7 +74,7 @@ async def get_planner_experiments(conn: Connection) -> planner.ExperimentList:
 
 @router.get(
     "/planner/experiments/{id}",
-    operation_id="API-24",
+    operation_id="API-27",
     tags=["planner"],
     response_model=planner.ExperimentDetail,
 )

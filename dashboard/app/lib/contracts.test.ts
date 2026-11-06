@@ -131,7 +131,7 @@ function call(names: string | string[], operationId: string, settled = false) {
 test("the file names every operation by its design id, reserved ids unused, and the client's table is its /v1 rows", () => {
   const ids = SCANNED.map((row) => row.operationId);
   expect(new Set(ids).size).toBe(ids.length);
-  for (const id of ids) expect(id).toMatch(/^(API-(\d\d|IRR-\d\d)|BFF-\d\d|INT-\d\d|OPS-\d\d)$/);
+  for (const id of ids) expect(id).toMatch(/^(API-(\d\d|IRR-\d\d|CROP-\d\d)|BFF-\d\d|INT-\d\d|OPS-\d\d)$/);
   for (const id of RESERVED) expect(ids).not.toContain(id);
   // The line scan and the parsed file agree on every operation's method and path.
   expect(Object.fromEntries(SCANNED.map(({ operationId, method, path }) => [operationId, { method, path }])))
@@ -197,7 +197,8 @@ test("every named fixture answers every operation with a body that conforms to t
       }
     }
   }
-}, 60_000);
+  // About 15 s on a laptop, 44-66 s in in-cluster CI (66 s timed out at 60 s on #1410): headroom for CI load.
+}, 180_000);
 
 test("fixture(name) is what the fixture API answers for the same request, after the fixture's AFTER writes", () => {
   for (const name of FIXTURE_NAMES) {

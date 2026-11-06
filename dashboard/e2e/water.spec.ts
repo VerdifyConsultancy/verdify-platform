@@ -33,7 +33,7 @@ for (const viewport of [DESKTOP, PHONE]) {
   });
 }
 
-test("1440 px: Site today sits beside the zones from 1200 px, sticky, with SAF-4 linking to its Settings drawer", async ({ page, request }) => {
+test("1440 px: Site today sits beside the zones from 1200 px, sticky, with the daily mist & fog limit linking to its Settings drawer", async ({ page, request }) => {
   await page.setViewportSize(DESKTOP);
   await useScreensClock(page, request, "in-band");
   await load(page, "/water");
@@ -43,7 +43,7 @@ test("1440 px: Site today sits beside the zones from 1200 px, sticky, with SAF-4
   expect(siteBox!.x).toBeGreaterThan(zonesBox!.x + zonesBox!.width - 1);
   await expect(site.locator('[data-limit="saf4"] a')).toHaveAttribute("href", "/settings?edit=mister_daily_volume_max_gal");
   await expect(site.locator('[data-limit="saf4"]')).toContainText("21 / 360 gal");
-  await expect(site.locator('[data-limit="occupancy"]')).toHaveText("Nobody seen: misters may run (last person 05:10)");
+  await expect(site.locator('[data-limit="occupancy"]')).toHaveText("Occupancy: nobody detected, misting allowed (last person 05:10)");
   await page.evaluate(() => window.scrollTo(0, 900));
   await expect(site).toBeInViewport();
 });
@@ -55,7 +55,7 @@ test("at 390 × 844 with L01 running the status line names it, linked to its row
   const short = page.locator(".page-status-short");
   await expect(short.getByRole("link", { name: "Wall drip running" })).toHaveAttribute("href", "#line-L01");
   await expect(page.locator('.wat-zone[data-zone="wall"] .wat-zone-last')).toHaveText("running now");
-  // Site today holds SAF-4, the flow and occupancy on a phone; the soft budget and fallback misting are not the news.
+  // Site today holds the daily mist & fog limit, the flow and occupancy on a phone; the soft target and backup misting are not the news.
   await expect(page.locator('.wat-site [data-limit="budget"]')).toBeHidden();
   await expect(page.locator('.wat-site [data-limit="fallback"]')).toBeHidden();
   await expect(page.locator('.wat-site [data-limit="saf4"]')).toBeVisible();

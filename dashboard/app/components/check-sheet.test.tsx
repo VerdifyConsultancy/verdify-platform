@@ -81,9 +81,9 @@ test("enable: the line's check, a note up to 500, Manual ticked and Reason; Enab
   fireEvent.submit(screen.getByRole("dialog").querySelector("form")!);
   await advance(0);
   expect(writes(api)).toEqual([]);
-  const box = sheet().getByRole<HTMLInputElement>("checkbox", { name: "Checked: line, tank and injector checked, no leaks" });
+  const box = sheet().getByRole<HTMLInputElement>("checkbox", { name: "Checked: tank, injector and line checked, no leaks" });
   expect(box.checked).toBe(false);
-  expect(sheet().getByRole<HTMLInputElement>("checkbox", { name: "Manual: Iris skips this" }).checked).toBe(true);
+  expect(sheet().getByRole<HTMLInputElement>("checkbox", { name: "Let Iris change this" }).checked).toBe(false);
   expect(sheet().getByLabelText<HTMLInputElement>("Note (optional)").maxLength).toBe(500);
   fireEvent.click(box);
   expect(save.disabled).toBe(false);
@@ -103,7 +103,7 @@ test("enable: the line's check, a note up to 500, Manual ticked and Reason; Enab
 test("no note or reason sends neither; unticking Manual sends manual false", async () => {
   const api = open("/water?check=L02");
   fireEvent.click(sheet().getByRole("checkbox", { name: /^Checked:/ }));
-  fireEvent.click(sheet().getByRole("checkbox", { name: "Manual: Iris skips this" }));
+  fireEvent.click(sheet().getByRole("checkbox", { name: "Let Iris change this" }));
   fireEvent.click(sheet().getByRole("button", { name: "Enable" }));
   await advance(0);
   expect(writes(api).map((row) => row.body)).toEqual([{ enabled: true, checked: true, manual: false }]);
@@ -112,7 +112,7 @@ test("no note or reason sends neither; unticking Manual sends manual false", asy
 test("Schedule on: the sheet asks for the same check and sends schedule_member, not enabled", async () => {
   const api = open("/water?check=L04&for=schedule");
   expect(text(screen.getByRole("dialog").querySelector("h2"))).toBe("Turn on Schedule for Center mister");
-  sheet().getByRole("checkbox", { name: "Checked: nozzles over the Vandas, coverage and walkway checked" });
+  sheet().getByRole("checkbox", { name: "Checked: nozzles, coverage and spray area checked" });
   const save = sheet().getByRole<HTMLButtonElement>("button", { name: "Turn on Schedule" });
   expect(save.disabled).toBe(true);
   fireEvent.click(sheet().getByRole("checkbox", { name: /^Checked:/ }));

@@ -31,6 +31,7 @@ import { BandBar } from "../data/band-bar";
 import { AgeLabel, FreshnessDot, useNow } from "../freshness";
 import { Kv, type KvItem } from "../kv";
 import { bandRows, bandWords, hasTimeInBand, outOfBand, percentText, readingText, readingsAsOf, timeInBand, todayStartS, type BandRow, type TimeInBand } from "./climate";
+import { Term } from "../term";
 import { NowSnapshot } from "./snapshot";
 import { deviceUnknown, irisText, irisWarns, modeText, occupancyText, planLine } from "./status";
 
@@ -156,8 +157,8 @@ function InBandToday({ tib, muted }: { tib: TimeInBand | null; muted: boolean })
   if (!tib || !hasTimeInBand(tib)) return <p className="now-tib" aria-hidden="true" />;
   const yesterday = tib.temp.yesterday !== null || tib.vpd.yesterday !== null;
   return <p className={cls("now-tib", muted && "value-muted")} data-tib="">
-    <span className="now-tib-label">In band today</span>{" "}
-    <span className="now-tib-values">temperature <strong>{percentText(tib.temp.today)}</strong> · VPD <strong>{percentText(tib.vpd.today)}</strong></span>
+    <span className="now-tib-label"><Term id="in_band_today" /></span>{" "}
+    <span className="now-tib-values">temperature <strong>{percentText(tib.temp.today)}</strong> · <Term id="vpd" /> <strong>{percentText(tib.vpd.today)}</strong></span>
     {yesterday && <> <span className="now-tib-before">(yesterday {percentText(tib.temp.yesterday)} · {percentText(tib.vpd.yesterday)})</span></>}
   </p>;
 }
@@ -176,7 +177,7 @@ function StatusLine({ now, answer, irrigation, clock }: { now: Now | null; answe
         <span className="now-sr-phone">Outdoor{"\u00a0"}</span>{deviceUnknown(answer) ? "—" : readingText(now.outdoor.temp_f, "°F")}
       </Link></li>
     </>}
-    <li><span className="now-status-item now-status-static" data-chip="occupancy">{occupancyText(irrigation, clock)}</span></li>
+    <li><span className="now-status-item now-status-static" data-chip="occupancy"><Term id="occupancy_hold">{occupancyText(irrigation, clock)}</Term></span></li>
   </ul>;
 }
 
@@ -266,6 +267,7 @@ export function NowHero({ now, answer, irrigation, day, daily, onRetry }: NowHer
     <StatusLine now={now} answer={answer} irrigation={irrigation} clock={clock} />
     {now && <details ref={readings} className="now-readings" id={READINGS_ID}>
       <summary>All readings<span className="now-readings-hint"> · sources, times and the mode code{finite(now.writer.age_s) && `, settings pushed ${duration(Math.max(0, now.writer.age_s))} ago`}</span></summary>
+      <p className="meta now-readings-note">The raw codes, for checking: <Term id="derived">DERIVED</Term> marks a band computed from the crop band settings; the mode code is the controller's own name for its mode.</p>
       <AllReadings now={now} clock={clock} />
     </details>}
   </section>;

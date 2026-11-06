@@ -4,7 +4,7 @@
  * at every width, Now · Water · Graphs · Activity · Control · Planner, each with its views. The header's nav, the phone
  * bar, a page's tabs, its breadcrumb and its document title all read this one model, so a label, a path or a title
  * changes in one place. A section owns every path under its views (weather's `SECTIONS` model) and its `aliases`:
- * Control owns `/settings` and `/equipment`; Planner (#1361) owns `/plan`, which keeps its path so drawer and banner
+ * Control owns `/settings`, `/band` (#1334) and `/equipment`; Planner (#1361) owns `/plan`, which keeps its path so drawer and banner
  * links and bookmarks keep working, `/planner/*`, and `/planner` itself, which redirects to Plan.
  */
 
@@ -12,9 +12,9 @@ export type SectionId = "now" | "water" | "graphs" | "activity" | "control" | "p
 export type ViewId =
   | "now"
   | "water-today" | "water-schedules" | "water-history"
-  | "graphs-climate" | "graphs-zones" | "graphs-statistics"
+  | "graphs-climate" | "graphs-zones" | "graphs-lighting" | "graphs-statistics"
   | "activity-alerts" | "activity-log"
-  | "control-settings" | "control-equipment"
+  | "control-settings" | "control-band" | "control-equipment"
   | "planner-plan" | "planner-history" | "planner-experiments";
 
 export type View = {
@@ -52,6 +52,7 @@ export const SECTIONS: readonly Section[] = [
     id: "graphs", label: "Graphs", to: "/graphs", views: [
       view("graphs", "graphs-climate", "Climate", "Climate", "/graphs"),
       view("graphs", "graphs-zones", "Zones", "Zones", "/graphs/zones"),
+      view("graphs", "graphs-lighting", "Lighting", "Lighting", "/graphs/lighting"),
       view("graphs", "graphs-statistics", "Statistics", "Statistics", "/graphs/statistics"),
     ],
   },
@@ -64,6 +65,7 @@ export const SECTIONS: readonly Section[] = [
   {
     id: "control", label: "Control", to: "/settings", views: [
       view("control", "control-settings", "Settings", "Settings", "/settings"),
+      view("control", "control-band", "Band", "Band", "/band"),
       view("control", "control-equipment", "Equipment", "Equipment", "/equipment"),
     ],
   },

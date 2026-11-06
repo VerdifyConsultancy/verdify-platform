@@ -321,12 +321,12 @@ def test_the_actor_comes_from_the_caller(server, writes, opened, monkeypatch, au
     assert (actor.source, actor.name, actor.role) == (source, name, None)
 
 
-def test_the_planning_prompt_lists_exactly_irises_tools_but_slack(server):
+def test_the_planning_prompt_lists_exactly_irises_tools(server):
     source = (REPO_ROOT / "ingestor" / "iris_planner.py").read_text()
     listed = source[source.index("Hermes exposes 33 production tools:") : source.index("NEVER run psql")]
     names = re.findall(r"`([a-z_]+)`", listed)
     assert len(names) == 33
-    assert set(names) == server.HERMES_REQUIRED_TOOLS - {"slack_ops"}
+    assert set(names) == server.HERMES_REQUIRED_TOOLS
 
 
 def test_every_audience_of_the_three_tools(server):

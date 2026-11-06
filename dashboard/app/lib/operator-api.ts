@@ -60,8 +60,14 @@ export type Alert = Lenient<Schemas["Alert"]>;
 export type ActivityPage = Lenient<Schemas["ActivityPage"]>;
 export type ActivityEntry = Lenient<Schemas["ActivityEntry"]>;
 export type BandPreview = Lenient<Schemas["BandPreview"]>;
+export type BandProfile = Lenient<Schemas["BandProfile"]>;
+export type BandProfilePreview = Lenient<Schemas["BandProfilePreview"]>;
+export type BandWrite = Lenient<Schemas["BandWrite"]>;
 export type LightCommand = Lenient<Schemas["LightCommand"]>;
 export type WaterUse = Lenient<Schemas["WaterUse"]>;
+export type LightingDays = Lenient<Schemas["LightingDays"]>;
+export type LightingCircuit = Lenient<Schemas["LightingDays"]["circuits"][number]>;
+export type LightingDay = Lenient<Schemas["LightingDays"]["circuits"][number]["days"][number]>;
 export type PlannerHistory = Lenient<Schemas["PlannerHistory"]>;
 export type PlannerDay = PlannerHistory["days"][number];
 export type ExperimentSummary = Lenient<Schemas["ExperimentSummary"]>;
@@ -84,6 +90,14 @@ export type Run = Lenient<Schemas["Run"]>;
 export type SessionToken = Lenient<Schemas["SessionToken"]>;
 export type Readiness = Lenient<Schemas["Readiness"]>;
 export type Health = Lenient<Json<"OPS-01", 200>>;
+export type Place = Lenient<Schemas["Place"]>;
+export type Planting = Lenient<Schemas["Planting"]>;
+export type PlantingDetail = Lenient<Schemas["PlantingDetail"]>;
+export type PlantingList = Lenient<Schemas["PlantingList"]>;
+export type Locations = Lenient<Schemas["Locations"]>;
+export type PositionHistory = Lenient<Schemas["PositionHistory"]>;
+export type CropCatalog = Lenient<Schemas["Catalog"]>;
+export type Resolution = Lenient<Schemas["Resolution"]>;
 
 // ---------------------------------------------------------------------------------------------------- field parsers
 const text = z.string();
@@ -207,6 +221,29 @@ const bandColumns = z.object({ temp_low: nullableNumbers, temp_high: nullableNum
 const bandTimeline = z.object({ from: text, to: text, step_s: int, t: z.array(int), band: bandColumns, crop: bandColumns });
 const bandCurve = z.object({ low: nullableNumbers, target: nullableNumbers, high: nullableNumbers });
 const bandPreview = z.object({ param: text, unit: text, day: text, step_s: int, t: z.array(int), current: bandCurve, draft: bandCurve });
+const bandProfile = z.object({
+  temp_day: num, temp_night: num, temp_width_day: num, temp_width_night: num, vpd_day: num, vpd_night: num,
+  vpd_below_day: num, vpd_above_day: num, vpd_below_night: num, vpd_above_night: num,
+});
+const bandWrite = z.object({ changed: z.array(desiredSetting) });
+const bandProfileState = z.object({ profile: bandProfile, anchors: z.record(z.string(), num), simple: flag });
+const bandProfilePreview = z.object({
+  day: text, step_s: int, t: z.array(int),
+  sun: z.object({ sunrise: maybe(int), solar_noon: maybe(int), sunset: maybe(int), solar_midnight: maybe(int) }),
+  current: bandProfileState, draft: bandProfileState, changed: z.array(text),
+  temp: z.object({ current: bandCurve, draft: bandCurve }),
+  vpd: z.object({ current: bandCurve, draft: bandCurve, device: bandCurve, expected_low: nullableNumbers, expected_high: nullableNumbers }),
+  night_vpd_bias_kpa: maybe(num),
+  guardrails: z.object({ temp_min_f: num, temp_max_f: num, margin_f: num, vpd_min_kpa: num, vpd_max_kpa: num, night_vpd_floor_kpa: num }),
+  overshoot: z.record(z.string(), num),
+  night_heat_kwh: z.object({ current: maybe(num), draft: maybe(num) }),
+  envelope: maybe(z.object({ hours: int, days: int, rmse_f: num, dewpoint_p10_f: num })),
+  findings: z.array(z.object({ code, severity: z.enum(["error", "warning"]).catch("warning"), field: text, detail: text })),
+  // The overlays: an API from before them draws none, rather than failing the page.
+  measured: z.object({ window_start: int, window_end: int, at: z.array(maybe(int)), temp: nullableNumbers, vpd: nullableNumbers })
+    .catch({ window_start: 0, window_end: 0, at: [], temp: [], vpd: [] }),
+  forecast: z.object({ temp: nullableNumbers, vpd: nullableNumbers, issued_at: maybe(text) }).catch({ temp: [], vpd: [], issued_at: null }),
+});
 
 const planRecord = z.object({
   plan_id: text, trigger: text, written_at: text, valid_from: maybe(text), valid_until: maybe(text), status: maybe(text), hypothesis: maybe(text),
@@ -223,9 +260,14 @@ const planLane = z.object({
 const plan = z.object({
   plan: planRecord.nullable(), no_plan_since: maybe(text), lanes: z.array(planLane), manual_count: int, health: z.array(plannerTrigger),
 });
+/** A setting's operator text (#1332); a server older than it sends none. */
+const settingHelp = z.object({
+  summary: text, effect: text, raise: maybe(text), lower: maybe(text), caution: maybe(text), guardrail: flag.optional(), reference_url: maybe(text),
+});
 const setting = z.object({
   param: text, label: text, control_class: code, group: code, kind: code, unit: maybe(text), min: maybe(num), max: maybe(num), step: maybe(num),
-  options: z.array(z.object({ value: num, label: text })).optional(), writable: flag, read_only_reason: maybe(text), readback_via: code,
+  options: z.array(z.object({ value: num, label: text })).optional(), writable: flag, read_only_reason: maybe(text),
+  read_only_kind: maybe(code), source_params: z.array(text).optional(), help: settingHelp.nullable().optional(), readback_via: code,
   readback: reading.nullable(), desired: desiredSetting.nullable(),
   plan: z.object({ value: num.nullable(), plan_id: text, source: code, written_at: text, next: planWaypoint.nullable() }).nullable(),
   applied_from: code, state: code,
@@ -262,6 +304,16 @@ const waterUse = z.object({
   days: z.array(z.object({ date: text, coverage: code, meter_gal: int.nullable(), by_line: gallons, by_cause: gallons, by_purpose: gallons.default(null), no_valve_gal: int.nullable() })),
 });
 
+const lightingDays = z.object({
+  from: text, to: text,
+  circuits: z.array(z.object({
+    light: code, equipment: text, label: text,
+    days: z.array(z.object({
+      date: text, partial: z.boolean(), on_s: int, starts: int, start_hour: int.nullable(), cutoff_hour: int.nullable(), lux_on: num.nullable(), lux_off: num.nullable(),
+      target_min: int.nullable(), window_min: int.nullable(), qualified_min: int.nullable(),
+    })),
+  })),
+});
 // The Planner section (#1361). Null is "not recorded", never 0.
 const counts = z.record(z.string(), int);
 const plannerDayCost = z.object({
@@ -378,6 +430,42 @@ const run = z.object({
   actor: maybe(actor), started_at: text, ended_at: maybe(text), open_s: int, pulses: maybe(int), gal: maybe(int), outcome, reason: maybe(text),
 }).transform((value) => ({ ...value, purpose: value.purpose ?? purposeOf(value.line_id, value.cause) }));
 const runPage = z.object({ ...page, items: z.array(run) });
+// Plantings and the location tree (#1327).
+const list = <T extends z.ZodType>(schema: T) => z.array(schema).default([]);
+const place = z.object({ zone: text, shelf: maybe(text), cell: maybe(text), since: text, until: maybe(text), count: maybe(int) });
+const plantingFields = {
+  id: int, crop: text, variety: maybe(text), crop_catalog_slug: maybe(text), count: maybe(int), stage: maybe(code), planted_date: text, active: flag,
+  ended_at: maybe(text), end_reason: maybe(code), notes: maybe(text), recorded_by: maybe(actor), zones: list(text), shelves: list(text), cells: list(text),
+  where: maybe(text), places: list(place),
+};
+const planting = z.object(plantingFields);
+const plantingDetail = z.object({
+  ...plantingFields, history: list(place),
+  events: list(z.object({ id: int, ts: maybe(text), event_type: code, count: maybe(int), notes: maybe(text), source: maybe(text), operator: maybe(text), detail: maybe(record) })),
+  harvests: list(z.object({ id: int, ts: maybe(text), unit_count: maybe(int), weight_kg: maybe(num), notes: maybe(text), operator: maybe(text) })),
+});
+const plantingList = z.object({ items: z.array(planting) });
+const occupant = z.object({ planting_id: int, crop: text, variety: maybe(text), since: text, count: maybe(int) });
+const cellView = z.object({
+  label: text, number: maybe(int), mount_type: maybe(code), layout_group: maybe(text), layout_row: maybe(int), layout_col: maybe(int), occupant: maybe(occupant),
+});
+const shelfView = z.object({
+  slug: text, name: text, kind: code, tier: maybe(int), wall: maybe(text), display_order: maybe(int), label_short: maybe(text),
+  water_lines: list(z.object({ line_id: text, name: text, note: maybe(text) })), plantings: list(occupant), cells: list(cellView),
+});
+const locations = z.object({
+  zones: z.array(z.object({ slug: text, name: text, plantings: list(occupant), shelves: list(shelfView) })),
+  cell_count: int, occupied_cells: int, active_plantings: int, server_time: text,
+});
+const positionHistory = z.object({
+  label: text, zone: text, shelf: text,
+  items: z.array(z.object({ planting_id: int, crop: text, variety: maybe(text), since: text, until: maybe(text), count: maybe(int) })),
+});
+const cropCatalog = z.object({ items: z.array(z.object({ slug: text, name: text, category: maybe(text) })) });
+const resolution = z.object({
+  places: z.array(z.object({ zone: text, shelf: maybe(text), cell: maybe(text) })), cells: z.array(text), where: text, at: text,
+  conflicts: list(z.object({ cell: text, planting_id: int, crop: text, since: text, until: maybe(text) })),
+});
 
 // ---------------------------------------------------------------------------------------------------- parsers
 export type Parser<T> = (value: unknown) => T | null;
@@ -405,8 +493,11 @@ export const parseAlertPage: Parser<AlertPage> = parser(alertPage);
 export const parseAlert: Parser<Alert> = parser(alert);
 export const parseActivityPage: Parser<ActivityPage> = parser(activityPage);
 export const parseBandPreview: Parser<BandPreview> = parser(bandPreview);
+export const parseBandProfilePreview: Parser<BandProfilePreview> = parser(bandProfilePreview);
+export const parseBandWrite: Parser<BandWrite> = parser(bandWrite);
 export const parseLightCommand: Parser<LightCommand> = parser(lightCommand);
 export const parseWaterUse: Parser<WaterUse> = parser(waterUse);
+export const parseLightingDays: Parser<LightingDays> = parser(lightingDays);
 export const parsePlannerHistory: Parser<PlannerHistory> = parser(plannerHistory);
 export const parseExperimentList: Parser<ExperimentList> = parser(experimentList);
 export const parseExperimentDetail: Parser<ExperimentDetail> = parser(experimentDetail);
@@ -417,13 +508,20 @@ export const parseCommand: Parser<Command> = parser(command);
 export const parseLinesUpdated: Parser<LinesUpdated> = parser(linesUpdated);
 export const parseMinutesReport: Parser<MinutesReport> = parser(minutesReport);
 export const parseRunPage: Parser<RunPage> = parser(runPage);
+export const parseLocations: Parser<Locations> = parser(locations);
+export const parsePlantingList: Parser<PlantingList> = parser(plantingList);
+export const parsePlanting: Parser<Planting> = parser(planting);
+export const parsePlantingDetail: Parser<PlantingDetail> = parser(plantingDetail);
+export const parsePositionHistory: Parser<PositionHistory> = parser(positionHistory);
+export const parseCropCatalog: Parser<CropCatalog> = parser(cropCatalog);
+export const parseResolution: Parser<Resolution> = parser(resolution);
 // The BFF's own calls and the probes; the browser never makes these.
 export const parseSessionToken: Parser<SessionToken> = parser(sessionToken);
 export const parseReadiness: Parser<Readiness> = parser(readiness);
 export const parseHealth: Parser<Health> = parser(health);
 
 // ---------------------------------------------------------------------------------------------------- operations
-type Method = "GET" | "PUT" | "POST" | "DELETE";
+type Method = "GET" | "PUT" | "PATCH" | "POST" | "DELETE";
 type Entry<M extends Method, P extends keyof paths, F extends Parser<unknown> | null> = { readonly method: M; readonly path: P; readonly parse: F };
 const op = <M extends Method, P extends keyof paths, F extends Parser<unknown> | null>(method: M, path: P, parse: F): Entry<M, P, F> => ({ method, path, parse });
 
@@ -448,9 +546,12 @@ export const OPERATIONS = {
   "API-19": op("GET", "/v1/band/preview", parseBandPreview),
   "API-20": op("POST", "/v1/equipment/lights/{light}/{state}", parseLightCommand),
   "API-21": op("GET", "/v1/water/daily", parseWaterUse),
-  "API-22": op("GET", "/v1/planner/history", parsePlannerHistory),
-  "API-23": op("GET", "/v1/planner/experiments", parseExperimentList),
-  "API-24": op("GET", "/v1/planner/experiments/{id}", parseExperimentDetail),
+  "API-22": op("GET", "/v1/lighting", parseLightingDays),
+  "API-23": op("GET", "/v1/band/profile", parseBandProfilePreview),
+  "API-24": op("PUT", "/v1/band/profile", parseBandWrite),
+  "API-25": op("GET", "/v1/planner/history", parsePlannerHistory),
+  "API-26": op("GET", "/v1/planner/experiments", parseExperimentList),
+  "API-27": op("GET", "/v1/planner/experiments/{id}", parseExperimentDetail),
   "API-IRR-01": op("GET", "/v1/irrigation", parseIrrigationStatus),
   "API-IRR-02": op("GET", "/v1/irrigation/schedules", parseScheduleAgenda),
   "API-IRR-03": op("POST", "/v1/irrigation/schedules", parseSchedule),
@@ -463,6 +564,17 @@ export const OPERATIONS = {
   "API-IRR-11": op("GET", "/v1/irrigation/runs", parseRunPage),
   "API-IRR-12": op("POST", "/v1/equipment/override", parseCommand),
   "API-IRR-13": op("POST", "/v1/irrigation/clear-fault", parseCommand),
+  "API-CROP-01": op("GET", "/v1/crops/locations", parseLocations),
+  "API-CROP-02": op("GET", "/v1/crops/plantings", parsePlantingList),
+  "API-CROP-03": op("GET", "/v1/crops/plantings/{planting_id}", parsePlantingDetail),
+  "API-CROP-04": op("GET", "/v1/crops/positions/{label}/history", parsePositionHistory),
+  "API-CROP-05": op("GET", "/v1/crops/catalog", parseCropCatalog),
+  "API-CROP-06": op("GET", "/v1/crops/resolve", parseResolution),
+  "API-CROP-07": op("POST", "/v1/crops/plantings", parsePlanting),
+  "API-CROP-08": op("POST", "/v1/crops/plantings/{planting_id}/move", parsePlanting),
+  "API-CROP-09": op("POST", "/v1/crops/plantings/{planting_id}/harvest", parsePlanting),
+  "API-CROP-10": op("POST", "/v1/crops/plantings/{planting_id}/remove", parsePlanting),
+  "API-CROP-11": op("PATCH", "/v1/crops/plantings/{planting_id}", parsePlanting),
 } as const;
 type Table = typeof OPERATIONS;
 export type ApiOperationId = keyof Table;
@@ -475,7 +587,7 @@ void tableMatchesContract;
 
 type IdsBy<M extends Method> = { [K in ApiOperationId]: Table[K]["method"] extends M ? K : never }[ApiOperationId];
 export type ReadOperationId = IdsBy<"GET">;
-export type WriteOperationId = IdsBy<"PUT" | "POST" | "DELETE">;
+export type WriteOperationId = IdsBy<"PUT" | "PATCH" | "POST" | "DELETE">;
 export type Parsed<K extends ApiOperationId> = Table[K]["parse"] extends Parser<infer T> ? T : null;
 type Part<T> = [NonNullable<T>] extends [never] ? Record<never, never> : NonNullable<T>;
 /** Path and query parameters in one object, typed from the generated operation. */

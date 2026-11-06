@@ -144,7 +144,7 @@ async def _db_checks() -> dict[str, object]:
         embedding_counts = await conn.fetch(
             """
             SELECT source_type, count(*) AS rows
-              FROM verdify_embeddings
+              FROM knowledge_embeddings
              WHERE source_type = ANY($1::text[])
              GROUP BY source_type
             """,

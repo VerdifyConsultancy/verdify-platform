@@ -1,4 +1,4 @@
-"""The Planner section's reads (#1361): plan history and cost (API-22), experiments (API-23) and one study (API-24).
+"""The Planner section's reads (#1361): plan history and cost (API-25), experiments (API-26) and one study (API-27).
 
 Each read is ``async``, takes an asyncpg connection, runs in one read-only snapshot and returns a Pydantic model
 shaped like its committed OpenAPI schema (docs/design/dashboard/openapi/dashboard-api.v1.yaml).
@@ -44,7 +44,7 @@ class _Model(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-# ── API-22 ──────────────────────────────────────────────────────────────────
+# ── API-25 ──────────────────────────────────────────────────────────────────
 
 
 class DayCost(_Model):
@@ -102,7 +102,7 @@ class PlannerHistory(_Model):
     plans: list[PlanSummary]
 
 
-# ── API-23 / API-24 ─────────────────────────────────────────────────────────
+# ── API-26 / API-27 ─────────────────────────────────────────────────────────
 
 
 class ExperimentSummary(_Model):
@@ -528,7 +528,7 @@ SELECT assignment_id, event_kind, severity FROM v_planner_experiment_events
 
 
 async def history(conn: asyncpg.Connection, days: int = 30) -> PlannerHistory:
-    """API-22 ``GET /v1/planner/history``: the 30 or 90 local days ending today, and the newest plans."""
+    """API-25 ``GET /v1/planner/history``: the 30 or 90 local days ending today, and the newest plans."""
     if days not in (30, 90):
         raise ValueError("days must be 30 or 90")
     async with _snapshot(conn):
@@ -625,14 +625,14 @@ def _summaries(rows: Sequence[Mapping[str, Any]], defined: Sequence[PlannerStudy
 
 
 async def experiments(conn: asyncpg.Connection) -> ExperimentList:
-    """API-23 ``GET /v1/planner/experiments``: committed studies not yet registered, then every experiment record."""
+    """API-26 ``GET /v1/planner/experiments``: committed studies not yet registered, then every experiment record."""
     async with _snapshot(conn):
         rows, _ = await _records(conn)
     return ExperimentList(items=_summaries(rows, studies()))
 
 
 async def experiment(conn: asyncpg.Connection, key: str) -> ExperimentDetail:
-    """API-24 ``GET /v1/planner/experiments/{id}``: a study by experiment id or study id, with its calendar."""
+    """API-27 ``GET /v1/planner/experiments/{id}``: a study by experiment id or study id, with its calendar."""
     defined = studies()
     async with _snapshot(conn):
         rows, at = await _records(conn)

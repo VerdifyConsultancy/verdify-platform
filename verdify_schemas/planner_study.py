@@ -5,7 +5,7 @@ docs/research/w5/planner-ab.md. ``PlannerStudy`` checks it: exactly the two arms
 ``baseline`` (propose-only), one primary metric, a guardrail with its non-inferiority margin, looks that end at the
 planned pair count, and heat reported but never scored (electric heat1 is the primary heater, Jason 2026-11-05).
 ``definition_sha256`` is the canonical hash the orchestrator records when it registers the study, and ``load_study``
-the one loader the orchestrator and the operator API (API-23/24) share.
+the one loader the orchestrator and the operator API (API-26/24) share.
 """
 
 from __future__ import annotations

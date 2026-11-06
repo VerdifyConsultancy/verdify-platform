@@ -2,10 +2,9 @@
 
 #1346: CronJob verdify-greenhouse-brief writes the greenhouse snapshot to greenhouse_brief as the dashboard login,
 the operator API serves it in API-02 and MCP's get_greenhouse_snapshot reads it. Neither ordinary login reaches the
-table, so the api and ingestor seals keep 291's values; the MCP duty's SELECT moves the MCP seal and its receipt is
-re-sealed (the 283 pattern). Stand-in chain: 301 follows 291 and is re-chained behind 296 (#1388) and natively
-qualified before it merges. test_native_qualification_is_recorded is that merge gate: a strict xfail while the
-fixture says the qualification is pending, and a hard gate once it is recorded.
+table, so the api and ingestor seals keep 296's values; the MCP duty's SELECT moves the MCP seal and its receipt is
+re-sealed (the 283 pattern). 301 chains from 296 (#1388); it was natively qualified on production at 291 with 293,
+294 and 296 applied first in each rolled-back session. test_native_qualification_is_recorded is the merge gate.
 """
 
 import hashlib
@@ -20,7 +19,9 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 HEX = "([0-9a-f]{64})"
-PREDECESSOR = 291
+PREDECESSOR = 296
+CHAIN = (293, 294, 296)
+NUMBERS = [*range(255, 292), *CHAIN]
 SEALS = ("api", "ingestor", "mcp")
 API, INGESTOR = "verdify_api_runtime_login", "verdify_ingestor_runtime_login"
 DASHBOARD, MCP = "verdify_dashboard_runtime", "verdify_mcp_runtime"
@@ -56,12 +57,12 @@ SUCCESSOR_BLOCK = SQL[SQL.index("DO $successor$") :]
 
 
 def later(with_301=True):
-    rows = [c0.SUCCESSOR_254] + [getattr(c0, f"SUCCESSOR_{n}") for n in range(255, 292)]
+    rows = [c0.SUCCESSOR_254] + [getattr(c0, f"SUCCESSOR_{n}") for n in NUMBERS]
     return rows + [c0.SUCCESSOR_301] if with_301 else rows
 
 
 def files(with_301=True):
-    found = {getattr(c0, f"SUCCESSOR_{n}"): getattr(c0, f"SUCCESSOR_{n}_SHA256") for n in range(255, 292)}
+    found = {getattr(c0, f"SUCCESSOR_{n}"): getattr(c0, f"SUCCESSOR_{n}_SHA256") for n in NUMBERS}
     if with_301:
         found[c0.SUCCESSOR_301] = c0.SUCCESSOR_301_SHA256
     return found
@@ -100,15 +101,15 @@ def test_file_is_wrap_safe_and_every_session_ends_in_rollback():
         assert sql.count("ROLLBACK;") == 1 and "COMMIT" not in sql.upper(), name
 
 
-def test_predecessor_binds_exact291_with_its_registered_seals():
+def test_predecessor_binds_exact296_with_its_registered_seals():
     row = re.search(r"seq=(\d+) AND filename='db/migrations/([^']+)'\s+AND sha256='" + HEX + "'", PREDECESSOR_BLOCK)
-    assert (int(row[1]), row[2], row[3]) == (PREDECESSOR, c0.SUCCESSOR_291, c0.SUCCESSOR_291_SHA256)
+    assert (int(row[1]), row[2], row[3]) == (PREDECESSOR, c0.SUCCESSOR_296, c0.SUCCESSOR_296_SHA256)
     assert "stamp_method='runner'" in PREDECESSOR_BLOCK and "current_user <> 'verdify'" in PREDECESSOR_BLOCK
     assert f"seq>{PREDECESSOR})" in PREDECESSOR_BLOCK
     assert "to_regclass('public.greenhouse_brief') IS NOT NULL" in PREDECESSOR_BLOCK
     assert "'301 refuses an unqualified predecessor'" in PREDECESSOR_BLOCK
     for seal, digest in registered(PREDECESSOR).items():
-        assert digest == six.SUCCESSOR_291[seal]
+        assert digest == six.SUCCESSOR_296[seal]
         assert PREDECESSOR_BLOCK.count(f"'hex') IS DISTINCT FROM '{digest}'") == 1, seal
 
 
@@ -141,13 +142,13 @@ def test_body_grants_the_dashboard_writer_and_the_mcp_reader_only():
 # ── The bootstrap and the C0 readback ───────────────────────────────────────
 
 
-def test_sealed_sql_301_chains_from_291_and_binds_the_exact_ledger_row():
-    old = six.seal_profile_sql(PREDECESSOR, six.SUCCESSOR_291)
-    expected = "(" + six.sealed_sql_291().replace(old, six.seal_profile_sql(301, six.SUCCESSOR_301), 1)
+def test_sealed_sql_301_chains_from_296_and_binds_the_exact_ledger_row():
+    old = six.seal_profile_sql(PREDECESSOR, six.SUCCESSOR_296)
+    expected = "(" + six.sealed_sql_296().replace(old, six.seal_profile_sql(301, six.SUCCESSOR_301), 1)
     expected += " AND " + six.ledger_row_sql(*six.GREENHOUSE_BRIEF_MIGRATION) + ")"
     assert six.sealed_sql_301() == expected
     assert "(SELECT max(seq) FROM public.schema_migrations WHERE source='db/migrations')=301" in expected
-    assert six.sealed_sql().count(" OR " + six.sealed_sql_291() + " OR " + expected) == 1
+    assert six.sealed_sql().count(" OR " + six.sealed_sql_296() + " OR " + expected) == 1
     assert maintenance.contract_sql().count(" OR " + six.sealed_sql_301()) == 1
     assert '"301-greenhouse-brief.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
     assert "tests/test_301_greenhouse_brief_delivery.py" in (ROOT / "scripts/ci-local.sh").read_text()
@@ -203,7 +204,7 @@ def test_post_249_readback_expects_the_moved_mcp_seal_with_301_stamped(monkeypat
     verify(monkeypatch, registered(301))
     verify(monkeypatch, registered(PREDECESSOR), with_301=False)
     with pytest.raises(c0.DeliveryError, match="boundary is not exact"):
-        verify(monkeypatch, registered(PREDECESSOR))  # 301 stamped but the MCP seal still 291's
+        verify(monkeypatch, registered(PREDECESSOR))  # 301 stamped but the MCP seal still 296's
     for seal in SEALS:
         with pytest.raises(c0.DeliveryError, match="boundary is not exact"):
             verify(monkeypatch, {**registered(301), seal: "f" * 64})
@@ -259,19 +260,26 @@ def test_the_projection_is_the_files_literals():
     assert EVIDENCE["migration"] == c0.SUCCESSOR_301
     assert EVIDENCE["exact_final_migration_sha256"] == c0.SUCCESSOR_301_SHA256
     assert EVIDENCE["projected_successor"] == six.SUCCESSOR_301 == qualifier.successor_literals(SQL)
-    assert EVIDENCE["before"] == registered(PREDECESSOR)
+    assert measured_against(EVIDENCE, CHAIN) == registered(PREDECESSOR)
 
 
-@pytest.mark.xfail(
-    EVIDENCE.get("final_migration_qualification_pending", True),
-    reason="DO NOT MERGE: 301 must be re-chained onto 296 and natively qualified on production first",
-    strict=True,
-)
+def measured_against(evidence, chain):
+    """The seals the successor ran on: its predecessor's after `chain` was applied in-session, or the live ones."""
+    if "applied_first" in evidence:
+        assert evidence["applied_first"] == [
+            {"migration": getattr(c0, f"SUCCESSOR_{n}"), "seq": n, "sha256": getattr(c0, f"SUCCESSOR_{n}_SHA256")}
+            for n in chain
+        ]
+        return evidence["applied_first_seals"]
+    return evidence["before"]
+
+
 def test_native_qualification_is_recorded():
     """Merge gate: the rolled-back production qualification of exact301 and its moved MCP seal."""
     assert EVIDENCE["final_migration_qualification_pending"] is False, "301 native qualification pending"
     assert EVIDENCE["qualified_successor"] == six.SUCCESSOR_301 == registered(301)
-    assert EVIDENCE["before"] == EVIDENCE["after_rollback"] == registered(PREDECESSOR)
+    assert measured_against(EVIDENCE, CHAIN) == registered(PREDECESSOR)
+    assert EVIDENCE["before"] == EVIDENCE["after_rollback"]
     assert EVIDENCE["final_migration_rollback_verified"] is True
     assert EVIDENCE["inside_transaction_receipts_match"] is True
     assert EVIDENCE["native_fixture"]["all_passed"] is True

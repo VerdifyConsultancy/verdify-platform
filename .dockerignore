@@ -1,7 +1,7 @@
 # Verdify image build context (repo root) — exclusions.
 #
 # Build context spans the repo root because api/mcp/ingestor each COPY the
-# shared repo-root packages (verdify_schemas/, slack_config.py, slack_ops/).
+# shared repo-root packages (verdify_schemas/, verdify_services/).
 # This file trims the context to keep builds fast and the images clean. Keep in
 # sync with the COPY lines in api/Dockerfile, mcp/Dockerfile, ingestor/Dockerfile.
 
@@ -81,6 +81,13 @@ config
 db
 hermes
 
+# config/ is excluded above except config/ai.yaml: the mcp and ingestor images read its
+# models.embedding block (verdify_schemas/embeddings.py, #1351). Same kaniko-safe
+# re-include dance as db/ below.
+!config
+config/*
+!config/ai.yaml
+
 # db/ is excluded above (the api/mcp/ingestor images never touch it), but the
 # verdify-migrate image (db/Dockerfile.migrate) COPYs the schema, both runners,
 # every top-level numbered migration, and the two ledger SQL files. Re-include
@@ -150,10 +157,11 @@ db/ledger/*
 !docs
 !docs/**
 !verdify_schemas/README.md
+# The Cortex planner's static pack sections (#1350) are Markdown read at runtime.
+!cortex_planner/static/*.md
 README.md
 GOAL.md
 CONTEXT.md
-SLACK.md
 CLAUDE.md
 AGENTS.md
 
@@ -162,5 +170,5 @@ AGENTS.md
 venv
 
 # NOTE: deliberately NOT ignored (the images COPY these):
-#   api/  mcp/  ingestor/  verdify_schemas/  slack_config.py  slack_ops/  slack.yaml
-# (slack.yaml is non-secret config — channel IDs + credential file paths, not tokens.)
+#   api/  mcp/  ingestor/  cortex_planner/  verdify_schemas/  verdify_services/
+# Candidate rebuild marker: any .dockerignore change rebuilds every image profile (path-impact). 2026-11-06 recovery after unpublished main builds b880c41..c50bb2a7.

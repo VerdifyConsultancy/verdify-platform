@@ -15,7 +15,7 @@ globals:
   - id: target_temp_low_f
     type: float
     restore_value: no
-    initial_value: '40.0'
+    initial_value: '45.0'  # safety_min 40 + 5: the band stays inside the guardrails
   - id: target_temp_high_f
     type: float
     restore_value: no
@@ -156,14 +156,15 @@ globals:
     type: float
     restore_value: no
     initial_value: '0.0'
+  # Hard temperature guardrails: 40 °F / 100 °F (Jason 2026-11-05, #1333).
   - id: safety_min_f
     type: float
     restore_value: no
-    initial_value: '45.0'
+    initial_value: '40.0'
   - id: safety_max_f
     type: float
     restore_value: no
-    initial_value: '95.0'
+    initial_value: '100.0'
   - id: safety_vpd_min_kpa
     type: float
     restore_value: no

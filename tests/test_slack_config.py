@@ -1,22 +1,22 @@
-from slack_config import build_slack_payload, load_slack_settings
+"""#1352: Slack is not a Verdify channel. The Slack config and command modules stay retired.
+
+This file keeps its name because the in-cluster CI test list (.agent-fleet/ci.yaml, generated
+in jvallery/agents) still names it.
+"""
+
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+RETIRED = ("slack_config.py", "slack.yaml", "slack_ops", "SLACK.md")
+DOCKERFILES = ("api/Dockerfile", "ingestor/Dockerfile", "mcp/Dockerfile", "scripts/Dockerfile.lab-publisher")
 
 
-def test_root_slack_config_uses_iris_identity_and_local_secret_path():
-    settings = load_slack_settings("slack.yaml")
-
-    assert settings.username == "Iris"
-    assert settings.display_name == "Iris"
-    assert settings.channel_id == "C0ANVVAPLD6"
-    assert settings.bot_token_file == "/etc/verdify/slack/iris_slack_bot_token.txt"
-    assert "/mnt/agents/shared/credentials" not in settings.bot_token_file
+def test_slack_modules_are_gone():
+    assert [name for name in RETIRED if (ROOT / name).exists()] == []
 
 
-def test_build_slack_payload_includes_display_identity():
-    settings = load_slack_settings("slack.yaml")
-
-    payload = build_slack_payload(settings, "hello", thread_ts="123.456")
-
-    assert payload["channel"] == settings.channel_id
-    assert payload["username"] == "Iris"
-    assert payload["icon_emoji"] == ":seedling:"
-    assert payload["thread_ts"] == "123.456"
+def test_no_image_copies_a_slack_module():
+    for name in DOCKERFILES:
+        text = (ROOT / name).read_text()
+        assert not re.search(r"^\s*COPY\b.*slack", text, re.IGNORECASE | re.MULTILINE), name

@@ -9,7 +9,7 @@ hosts:
   api.open-meteo.com: {scope: runtime, decision: "#1351 row 6 accepted (verdify-outbound:8083)"}
   challenges.cloudflare.com: {scope: runtime, decision: "#1351 row 7 Cloudflare accepted for now (contact-form Turnstile)"}
   # Removal tracked.
-  api.openai.com: {scope: remove, decision: "#1350 (planner/Hermes/selector) and the MCP embeddings move (#1351 row 2)"}
+  api.openai.com: {scope: remove, decision: "#1350 (planner/Hermes/selector); embeddings moved to Cortex (#1351 row 2)"}
   # Build-time only (#1351 D3, accepted).
   github.com: {scope: build, decision: "#1351 D3 build-time; also repository links and OCI source labels"}
   raw.githubusercontent.com: {scope: reference, decision: "Quartz citations plugin locale URL; the plugin is not enabled"}
@@ -42,7 +42,6 @@ hosts:
   quartz.jzhao.xyz: {scope: reference, decision: "Quartz documentation link"}
   base.com: {scope: reference, decision: "Quartz URL-resolution placeholder"}
   verdify.com: {scope: reference, decision: "experiment-v2 identity URI, never fetched"}
-  evil.example: {scope: reference, decision: "negative test value in a script"}
   cloudflare-dns.com: {scope: reference, decision: "test-only DoH check in scripts/dashboard-smoke.sh (#1351 row 16)"}
   host.docker.internal: {scope: reference, decision: "decommissioned VM Hermes config, retired by #1350"}
   planner-graph-xxxxx-uc.a.run.app: {scope: reference, decision: "placeholder in planner_graph docs, retired by #1350"}

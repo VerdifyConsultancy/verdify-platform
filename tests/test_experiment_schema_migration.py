@@ -359,6 +359,12 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "290-band-compliance.sql",
         # The energy view replacement, its daily_summary backfill and the receipt re-seals run forward only.
         "291-energy-daily-load-magnitude.sql",
+        # Plantings: the layout seed, the occupancy backfill and the grants' receipt re-seals run forward only.
+        "293-crop-plantings.sql",
+        # The Cortex planner's shadow storage, the forecast archive and its job run forward only.
+        "294-cortex-planner-shadow-storage.sql",
+        # The knowledge-embeddings table, its search function and the MCP receipt re-seal run forward only.
+        "296-knowledge-embeddings-cortex.sql",
         # The greenhouse snapshot table, its grants and the MCP receipt re-seal run forward only.
         "301-greenhouse-brief.sql",
         # The Planner section's read views and their dashboard grant run forward only.

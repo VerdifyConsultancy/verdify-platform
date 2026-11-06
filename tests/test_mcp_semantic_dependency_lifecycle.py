@@ -4,7 +4,6 @@ import asyncio
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 from test_17_planner_health_surface import mcp_server as base_server_fixture
@@ -79,7 +78,7 @@ def test_successful_embedding_but_failed_query_does_not_recover(semantic_server,
         return next(pending)
 
     async def embed(q):
-        return [0.0] * 3072
+        return [0.0] * 2560
 
     monkeypatch.setattr(semantic_server, "_db", db)
     monkeypatch.setattr(semantic_server, "_embed_query", embed)
@@ -99,7 +98,7 @@ def test_genuine_empty_retrieval_resolves_only_same_tool_before_call_start(seman
         return next(pending)
 
     async def embed(q):
-        return [0.0] * 3072
+        return [0.0] * 2560
 
     monkeypatch.setattr(semantic_server, "_db", db)
     monkeypatch.setattr(semantic_server, "_embed_query", embed)
@@ -137,7 +136,7 @@ def test_alert_storage_failure_after_retrieval_does_not_claim_resolution(semanti
         return Connection()
 
     async def embed(q):
-        return [0.0] * 3072
+        return [0.0] * 2560
 
     monkeypatch.setattr(semantic_server, "_db", db)
     monkeypatch.setattr(semantic_server, "_embed_query", embed)
@@ -156,26 +155,94 @@ def test_manual_alert_resolution_cannot_credit_semantic_recovery(semantic_server
     assert "successful same-tool" in result["error"] and not conn.executed
 
 
-def test_provider_exception_is_classified_without_private_text(semantic_server, monkeypatch, capsys):
-    import sys
+def _settings(tmp_path, key="fixture-only"):
+    from verdify_schemas import embeddings
 
-    class Embeddings:
-        def create(self, **kwargs):
-            raise RuntimeError("credential-adjacent provider details")
-
-    monkeypatch.setattr(semantic_server, "_openai_api_key", lambda: "fixture-only")
-    monkeypatch.setitem(
-        sys.modules, "openai", SimpleNamespace(OpenAI=lambda **kw: SimpleNamespace(embeddings=Embeddings()))
+    key_file = tmp_path / "api_key.txt"
+    if key is not None:
+        key_file.write_text(key)
+    return embeddings.EmbeddingSettings(
+        provider="cortex",
+        base_url="https://cortex.vallery.net/v1",
+        model="embed.main",
+        dimensions=2560,
+        key_file=str(key_file),
+        query_instruction="fixture",
     )
+
+
+def test_provider_exception_is_classified_without_private_text(semantic_server, monkeypatch, capsys, tmp_path):
+    import httpx
+
+    from verdify_schemas import embeddings
+
+    settings = _settings(tmp_path)
+    monkeypatch.setattr(embeddings, "load_embedding_settings", lambda path=None: settings)
+
+    async def post(self, *args, **kwargs):
+        raise httpx.ConnectError("credential-adjacent provider details")
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", post)
     with pytest.raises(semantic_server.SemanticDependencyFailure, match="embedding_provider_failed"):
         asyncio.run(semantic_server._embed_query("prospective conditions"))
     assert "credential-adjacent" not in capsys.readouterr().err
 
 
-def test_missing_embedding_key_has_distinct_failure(semantic_server, monkeypatch):
-    monkeypatch.setattr(semantic_server, "_openai_api_key", lambda: None)
+def test_missing_embedding_key_has_distinct_failure(semantic_server, monkeypatch, tmp_path):
+    from verdify_schemas import embeddings
+
+    settings = _settings(tmp_path, key=None)
+    monkeypatch.setattr(embeddings, "load_embedding_settings", lambda path=None: settings)
     with pytest.raises(semantic_server.SemanticDependencyFailure, match="embedding_credential_missing"):
         asyncio.run(semantic_server._embed_query("prospective conditions"))
+
+
+def test_query_path_sends_the_instructed_query_and_searches_the_halfvec_function(
+    semantic_server, monkeypatch, tmp_path
+):
+    import httpx
+
+    from verdify_schemas import embeddings
+
+    settings = _settings(tmp_path)
+    monkeypatch.setattr(embeddings, "load_embedding_settings", lambda path=None: settings)
+    sent = {}
+
+    async def post(self, url, json=None, headers=None):
+        sent.update(url=url, body=json, auth=headers["Authorization"])
+        return httpx.Response(200, json={"data": [{"index": 0, "embedding": [0.25] * 2560}]})
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", post)
+
+    class Searching(Connection):
+        async def fetch(self, sql, *args):
+            self.searched = (sql, args)
+            return [
+                {
+                    "source_type": "playbook",
+                    "source_id": "p",
+                    "chunk_idx": 0,
+                    "content": "c",
+                    "metadata": None,
+                    "distance": 0.1,
+                }
+            ]
+
+    conn = Searching()
+
+    async def db():
+        return conn
+
+    monkeypatch.setattr(semantic_server, "_db", db)
+    result = json.loads(asyncio.run(semantic_server.knowledge_search("vent oscillation", top_k=3)))
+    assert result[0]["source_id"] == "p"
+    assert sent["url"] == "https://cortex.vallery.net/v1/embeddings" and sent["auth"] == "Bearer fixture-only"
+    assert sent["body"]["model"] == "embed.main" and "dimensions" not in sent["body"]
+    assert sent["body"]["input"] == ["Instruct: fixture\nQuery: vent oscillation"]
+    sql, args = conn.searched
+    assert "fn_search_knowledge_embeddings($1::halfvec, $2, $3::text[])" in sql
+    assert "fn_search_embeddings" not in sql
+    assert args[0].count(",") == 2559 and args[1] == 3
 
 
 def test_only_semantic_paths_recover_dependency_alerts():
@@ -197,7 +264,9 @@ def test_only_semantic_paths_recover_dependency_alerts():
     assert sorted(recovery) == ["knowledge_search", "lessons_search"]
 
 
-def test_embedding_sdk_is_in_owning_image_runtime_requirements():
+def test_embedding_client_and_config_are_in_the_owning_image():
     root = Path(__file__).resolve().parents[1]
-    assert "openai>=1.50,<3" in (root / "mcp/requirements.txt").read_text().splitlines()
-    assert "COPY mcp/requirements.txt" in (root / "mcp/Dockerfile").read_text()
+    requirements = (root / "mcp/requirements.txt").read_text().splitlines()
+    assert "httpx>=0.27,<1" in requirements and not any(r.startswith("openai") for r in requirements)
+    dockerfile = (root / "mcp/Dockerfile").read_text()
+    assert "COPY mcp/requirements.txt" in dockerfile and "COPY config/ai.yaml ./config/ai.yaml" in dockerfile

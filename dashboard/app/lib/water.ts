@@ -140,17 +140,17 @@ export function vpdSourceWords(source: string | null | undefined): string | null
  * how long ago Frigate saw them; nobody seen, with the last person's time; or unknown.
  */
 export function occupancyWords(occupancy: Occupancy, now: number, today: string): string {
-  if (occupancy.hold_enabled === false) return "Occupancy mist hold is off: misters may run";
+  if (occupancy.hold_enabled === false) return "Occupancy mist hold is off: misting allowed";
   if (occupancy.occupied === true) {
     const seen = validTime(occupancy.seen_at) ? `, ${agoWords((now - Date.parse(occupancy.seen_at)) / 1000)}` : "";
-    return `Someone inside: misters wait (Frigate${seen})`;
+    return `Occupancy: someone inside, misting waits (Frigate${seen})`;
   }
   if (occupancy.occupied === false) {
     const at = occupancy.seen_at;
     const last = validTime(at) ? ` (last person ${localDate(at) === today ? shortTime(at) : shortDateTime(at)})` : "";
-    return `Nobody seen: misters may run${last}`;
+    return `Occupancy: nobody detected, misting allowed${last}`;
   }
-  return "Occupancy unknown: misters may run";
+  return "Occupancy unknown: misting allowed";
 }
 
 /**
@@ -164,14 +164,22 @@ export function flowWords(leak: Leak): { readonly text: string; readonly tone?: 
     const volume = finite(leak.gal_last_10min) ? ` · ${leak.gal_last_10min}${NBSP}gal in 10 min` : "";
     return { text: `Water flowing with every Verdify valve closed${since}${volume}`, tone: "fault" };
   }
-  return { text: leak.active === false ? "Unexplained flow: none" : "Unexplained flow: unknown" };
+  return { text: leak.active === false ? `${FLOW_TERM}: none` : `${FLOW_TERM}: unknown` };
 }
 
 /**
- * What SAF-4 caps (irrigation §4.5: every mister relay's water plus climate fog), in the words Now's water card and Water's
- * Site today both show beside its meter, which fills `--eq-water` on both as redesign §4.6 fills gallons.
+ * The site limits in words (#1349), never the firmware's bare "SAF-4" or "SOFT BUDGET": what Now's water card, Water's Site
+ * today and the limits strip call them, and what each one's info tip says. SAF-4 (irrigation §4.5) caps every mister
+ * relay's water plus climate fog; the soft target is `mister_water_budget_gal`, which holds routine misting once reached.
  */
-export const SAF4_WORDS = "daily mist and fog ceiling";
+export const SAF4_TERM = "Daily mist & fog limit";
+export const SAF4_HELP = "Water through all the misters and fog today. The controller stops misting when it reaches this limit; survival fog is exempt. (Firmware documents call it SAF-4.)";
+export const BUDGET_TERM = "Daily mist target (soft)";
+export const BUDGET_HELP = "A softer daily amount for mist and fog water. Once it is used the controller holds routine misting; in a VPD emergency it may go past it, up to the daily mist & fog limit.";
+/** What used to read "Unexplained flow": the meter's flow while every Verdify valve is closed. */
+export const FLOW_TERM = "Water with no Verdify valve open";
+/** The `degraded_only` schedules, in words (#1344): they run only while VPD sensing fails. */
+export const BACKUP_TERM = "Backup misting (sensor fault)";
 
 /** "21 of 360 gal"; the count alone with no maximum; "—" for a count the API does not have. */
 export function ofWords(used: number | null | undefined, max: number | null | undefined, unit: string): string {
@@ -194,14 +202,14 @@ const byLineId = <T extends { readonly line_id: string }>(a: T, b: T) => lineRan
 
 export type LimitItem = { readonly key: string; readonly text: string; readonly tone?: "fault" | "warn" };
 /**
- * The limits strip (Board): SAF-4 and the soft budget in whole gallons; each mister zone's minutes against its duty cap
+ * The limits strip (Board): the daily mist & fog limit (SAF-4) and the soft target in whole gallons; each mister zone's minutes against its duty cap
  * with the VPD reserve marked; each capped drip line; the flow state; occupancy; "VPD fallback active" while the
  * `degraded_only` schedules run. A reserved line that is still disabled has no cap shown.
  */
 export function limitItems(status: IrrigationStatus, now: number, today: string): LimitItem[] {
   const items: LimitItem[] = [
-    { key: "saf4", text: `SAF-4 ${ofWords(status.limits.saf4_gal.used, status.limits.saf4_gal.max, "gal")}` },
-    { key: "budget", text: `Soft budget ${ofWords(status.limits.soft_budget_gal.used, status.limits.soft_budget_gal.max, "gal")}` },
+    { key: "saf4", text: `${SAF4_TERM} ${ofWords(status.limits.saf4_gal.used, status.limits.saf4_gal.max, "gal")}` },
+    { key: "budget", text: `${BUDGET_TERM} ${ofWords(status.limits.soft_budget_gal.used, status.limits.soft_budget_gal.max, "gal")}` },
   ];
   const lines = [...status.lines].sort(byLineId);
   for (const line of lines.filter((item) => item.kind === "mister")) {
@@ -216,7 +224,7 @@ export function limitItems(status: IrrigationStatus, now: number, today: string)
   const flow = flowWords(status.leak);
   items.push({ key: "flow", ...flow });
   items.push({ key: "occupancy", text: occupancyWords(status.occupancy, now, today) });
-  if (status.fallback_active) items.push({ key: "fallback", text: "VPD fallback active", tone: "warn" });
+  if (status.fallback_active) items.push({ key: "fallback", text: `${BACKUP_TERM}: on`, tone: "warn" });
   return items;
 }
 

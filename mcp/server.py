@@ -16,7 +16,6 @@ import hmac
 import ipaddress
 import json
 import logging
-import math
 import os
 import re
 import stat
@@ -40,8 +39,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationErro
 # verdify_schemas lives one level up from this server file in every worktree.
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
-from slack_config import load_slack_settings  # noqa: E402
-from slack_ops.service import handle_slack_command  # noqa: E402
+import verdify_schemas.embeddings as _embeddings  # noqa: E402
 from verdify_schemas import (  # noqa: E402
     ALL_TUNABLES,
     AlertEnvelope,
@@ -72,7 +70,6 @@ from verdify_schemas import (  # noqa: E402
     PlanStatusWaypoint,
     ScorecardResponse,
     SetpointSummary,
-    SlackCommandRequest,
     TreatmentCreate,
     derive_lesson_state,
     is_legal_lesson_transition,
@@ -113,6 +110,7 @@ from verdify_schemas.tunable_registry import (  # noqa: E402
 )
 from verdify_services import activity as activity_service  # noqa: E402
 from verdify_services import alerts as alerts_service  # noqa: E402
+from verdify_services import crops as crop_service  # noqa: E402
 from verdify_services import reads as reads_service  # noqa: E402
 from verdify_services import settings as settings_service  # noqa: E402
 from verdify_services.actor import Actor as ServiceActor  # noqa: E402
@@ -192,10 +190,6 @@ BAND_OWNED_PARAMS = BAND_OWNED_REG
 # can grade planned-vs-served band against the new (migration-145) curve. We
 # capture them into hypothesis_structured.planned_band WITHOUT actuating them.
 CROP_BAND_PARAMS = CROP_BAND_REG
-_OPENAI_KEY_FILES = (
-    Path("/etc/verdify/hermes-iris.env"),
-    Path("/mnt/agents/shared/credentials/openai_api_key.txt"),
-)
 PLAN_REQUIRED_PARAMS = TIER1_REG
 TIER1_TUNABLES = TIER1_REG
 
@@ -1009,6 +1003,8 @@ _TOOL_READ_ONLY = frozenset(
         "get_greenhouse_snapshot",
         "settings",
         "activity",
+        "band_profile",
+        "band_profile_preview",
     }
 )
 
@@ -1124,6 +1120,10 @@ SERVER_INSTRUCTIONS = """Verdify greenhouse control tools. Use these to monitor 
     `manual` flag it carries (default false); `settings` and `activity` read the catalog,
     history and every write; Iris's `set_setting` on a manual setting is refused with `manual`.
 
+    The house band is operator-owned and has no write tool: `band_profile` reads its profile,
+    anchors and day curve with the last 24 h measured, and `band_profile_preview` evaluates a
+    draft without saving it. The dashboard saves the band.
+
     Irrigation: `irrigation_status`, `irrigation_schedule` and `irrigation_history` only read
     the water program, in the operator API's JSON, with unknown as null, never 0. Iris, named
     agents and admin share the writes, with the dashboard's checks: `irrigation_schedule_set`,
@@ -1191,7 +1191,6 @@ HERMES_REQUIRED_TOOLS = frozenset(
         "set_setting",
         "set_tunable",
         "settings",
-        "slack_ops",
         "topology",
     }
 )
@@ -1202,7 +1201,7 @@ HERMES_REQUIRED_TOOLS = frozenset(
 # drift, so a new tool cannot silently skip authorization.
 #
 # Audiences:
-#   iris       — the current Hermes Iris profile. Exactly the 34 tools of
+#   iris       — the current Hermes Iris profile. Exactly the 33 tools of
 #                hermes-config.yaml tools.include (== HERMES_REQUIRED_TOOLS);
 #                tests/test_mcp_audience_auth.py holds the three surfaces in
 #                lockstep. Current behavior is preserved.
@@ -1214,8 +1213,9 @@ HERMES_REQUIRED_TOOLS = frozenset(
 #                unused until Lane C/D tranche 2 issues its credential.
 #   agent      — named in-cluster agents (VD-59, architecture §5.6), one key
 #                each in Secret verdify-mcp-agents (agent_key_registry). The
-#                live greenhouse reads plus alerts, settings, activity, set_setting
-#                and every irrigation tool. Never the planner, lessons, crop or
+#                live greenhouse reads plus alerts, settings, activity, set_setting,
+#                every irrigation tool and the planting tools (#1328). Never the
+#                planner, lessons, the legacy crops/observations tools or the
 #                Slack writers. Calls are attributed agent:<name>.
 #   admin      — operator/debug credential; every tool. Its writes are
 #                attributed agent:admin.
@@ -1233,7 +1233,6 @@ TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     "alerts": frozenset({"iris", "agent", "admin"}),
     "settings": frozenset({"iris", "agent", "admin"}),
     "activity": frozenset({"iris", "agent", "admin"}),
-    "slack_ops": frozenset({"iris", "admin"}),
     # Irrigation reads (VD-60, #1173): the REST JSON of API-IRR-01, -02, -10 and -11.
     "irrigation_status": frozenset({"iris", "agent", "admin"}),
     "irrigation_schedule": frozenset({"iris", "agent", "admin"}),
@@ -1273,6 +1272,21 @@ TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     "irrigation_run": frozenset({"iris", "agent", "admin"}),
     "irrigation_stop": frozenset({"iris", "agent", "admin"}),
     "irrigation_clear_fault": frozenset({"iris", "agent", "admin"}),
+    # Plantings (#1328): records only (no setting, band or target), over verdify_services.crops. Named agents and
+    # admin; Iris stays read-only on plantings and the experiment arm gets none.
+    "crop_locations": frozenset({"agent", "admin"}),
+    "resolve_positions": frozenset({"agent", "admin"}),
+    "record_planting": frozenset({"agent", "admin"}),
+    "record_plantings": frozenset({"agent", "admin"}),
+    "move_planting": frozenset({"agent", "admin"}),
+    "harvest_planting": frozenset({"agent", "admin"}),
+    "remove_planting": frozenset({"agent", "admin"}),
+    "annotate_planting": frozenset({"agent", "admin"}),
+    "planting_history": frozenset({"agent", "admin"}),
+    # The house band (#1334): API-23's read for named agents and admin. No band write tool exists (the band is
+    # operator-owned; API-24 is the dashboard's), and Iris is left out so its profile stays the Hermes include list.
+    "band_profile": frozenset({"agent", "admin"}),
+    "band_profile_preview": frozenset({"agent", "admin"}),
 }
 
 # Registry entries for tools that are DESIGNED but not yet registered. Each
@@ -1539,38 +1553,6 @@ async def mcp_ready(_request):
         },
         status_code=200 if ready else 503,
     )
-
-
-@mcp.tool()
-async def slack_ops(
-    text: str,
-    slack_user_id: str = "iris",
-    slack_user_name: str = "Iris",
-    role_override: str = "operator",
-) -> str:
-    """Execute deterministic Iris Slack operations against the #greenhouse command surface.
-
-    Use this for greenhouse status, briefs, alert runbooks/actions, forecast
-    triage, guardrail summaries, public-safe ops logs, crop observations/photo
-    intake, crop lifecycle/task writes, lesson extraction requests, and planner
-    triggers. Direct relay commands are denied by policy.
-    """
-
-    settings = load_slack_settings()
-    req = SlackCommandRequest(
-        text=text,
-        slack_user_id=slack_user_id,
-        slack_user_name=slack_user_name,
-        channel_id=settings.channel_id,
-        channel_name=settings.channel_name,
-        raw_event={"source": "mcp.slack_ops"},
-    )
-    conn = await _db()
-    try:
-        response = await handle_slack_command(req, conn=conn, settings=settings, role_override=role_override)
-        return response.model_dump_json()
-    finally:
-        await conn.close()
 
 
 async def _insert_plan_delivery_log(conn: asyncpg.Connection, result: dict) -> str | None:
@@ -4853,6 +4835,33 @@ async def history(metric: str = "climate", hours: int = 24, resolution_min: int 
 # ═══════════════════════════════════════════════════════════════
 
 
+def _crops_legacy_write_refusal() -> str | None:
+    """Iris stays read-only on plantings (#1328): its crops create and deactivate are refused."""
+    caller = current_actor()
+    if caller is None or caller.source == "iris":
+        return json.dumps(
+            {
+                "error": "Iris does not record plantings; a person (dashboard Crops) or a named agent does (record_planting)"
+            }
+        )
+    return None
+
+
+async def _crops_legacy_write(write) -> str:
+    """The crops tool's create and deactivate through verdify_services.crops, answered in the tool's old JSON
+    style: the planting, or {"error", "problem"}."""
+    caller = current_actor()
+    actor = ServiceActor(source=caller.source, name=caller.name)
+    conn = await _db()
+    try:
+        result = await write(conn, actor)
+    except ServiceError as refused:
+        return json.dumps({"error": refused.problem.detail, "problem": refused.problem.body()})
+    finally:
+        await conn.close()
+    return json.dumps(result.value.model_dump(mode="json"))
+
+
 @mcp.tool()
 async def crops(action: str, crop_id: int = 0, data: str = "") -> str:
     """Manage greenhouse crops. Actions: list, get, create, update, deactivate.
@@ -4914,34 +4923,40 @@ async def crops(action: str, crop_id: int = 0, data: str = "") -> str:
             )
 
         elif action == "create":
+            # #1328: create goes through the planting service (record_planting), so a planting always occupies its
+            # place and is attributed; the old INSERT dropped position_id and left the row nowhere.
             try:
                 payload = CropCreate.model_validate(d)
             except ValidationError as e:
                 return json.dumps({"error": "CropCreate validation failed", "details": json.loads(e.json())})
-            row = await conn.fetchrow(
-                """
-                INSERT INTO crops (name, variety, zone, position, planted_date, expected_harvest, stage,
-                                   count, notes, seed_lot_id, supplier, base_temp_f,
-                                   target_dli, target_vpd_low, target_vpd_high, greenhouse_id)
-                VALUES ($1, $2, $3, $4, $5::date, $6::date, $7, $8, $9, $10, $11, $12,
-                        $13, $14, $15, 'vallery') RETURNING *""",
-                payload.name,
-                payload.variety,
-                payload.zone,
-                payload.position,
-                payload.planted_date,
-                payload.expected_harvest,
-                payload.stage,
-                payload.count,
-                payload.notes,
-                payload.seed_lot_id,
-                payload.supplier,
-                payload.base_temp_f,
-                payload.target_dli,
-                payload.target_vpd_low,
-                payload.target_vpd_high,
+            refused = _crops_legacy_write_refusal()
+            if refused:
+                return refused
+            control = sorted(
+                name
+                for name in ("target_dli", "target_vpd_low", "target_vpd_high", "base_temp_f")
+                if name in payload.model_fields_set
             )
-            return _json(dict(row))
+            if control:
+                return json.dumps(
+                    {
+                        "error": "Plantings are records only; these fields set control targets and are not taken here",
+                        "fields": control,
+                    }
+                )
+            place = payload.position_label or payload.position
+            if payload.position_id is not None:
+                place = await conn.fetchval("SELECT label FROM positions WHERE id = $1", payload.position_id) or place
+            body = {
+                "crop": payload.crop_catalog_slug or payload.name,
+                "variety": payload.variety,
+                "positions": [place],
+                "count": payload.count,
+                "planted_at": payload.planted_date.isoformat(),
+                "stage": payload.stage,
+                "notes": payload.notes,
+            }
+            return await _crops_legacy_write(lambda c, actor: crop_service.plant(c, actor, body))
 
         elif action == "update" and crop_id:
             try:
@@ -4951,6 +4966,14 @@ async def crops(action: str, crop_id: int = 0, data: str = "") -> str:
             set_fields = patch.model_dump(exclude_unset=True)
             if not set_fields:
                 return json.dumps({"error": "No fields to update"})
+            moving = sorted(set(set_fields) & {"zone", "position", "position_id", "zone_id"})
+            if moving:
+                return json.dumps(
+                    {
+                        "error": "A planting's place changes with move_planting, which keeps its history",
+                        "fields": moving,
+                    }
+                )
             sets = [f"{k} = ${i}" for i, k in enumerate(set_fields, start=2)]
             sets.append("updated_at = now()")
             vals = [crop_id, *set_fields.values()]
@@ -4958,8 +4981,12 @@ async def crops(action: str, crop_id: int = 0, data: str = "") -> str:
             return _json(dict(row)) if row else json.dumps({"error": "Crop not found"})
 
         elif action == "deactivate" and crop_id:
-            await conn.execute("UPDATE crops SET is_active = false, updated_at = now() WHERE id = $1", crop_id)
-            return json.dumps({"ok": True, "crop_id": crop_id, "action": "deactivated"})
+            # #1328: ends the planting through the service, so its places close and it is attributed.
+            refused = _crops_legacy_write_refusal()
+            if refused:
+                return refused
+            body = {"end_reason": "removed", "reason": d.get("reason")}
+            return await _crops_legacy_write(lambda c, actor: crop_service.end(c, actor, crop_id, body))
 
         return json.dumps({"error": f"Unknown action '{action}'. Use: list, get, create, update, deactivate"})
     finally:
@@ -5441,7 +5468,11 @@ async def settings(
 
     With no window: API-09's `{items, server_time}`, filtered by param, group, writable_only and manual_only. Each
     row carries applied_from (whose value is in force: manual, desired, plan, band or default), min, max, step,
-    its desired row, its plan value and its readback state. Narrow it: the whole catalog is large.
+    its desired row, its plan value and its readback state, and `help`: what the setting is (summary), what the
+    controller does with it (effect), what raising and lowering it does (raise, lower; for a switch, turning it on and
+    off) and any caution, the same words the dashboard shows; a guardrail row has guardrail true. A read-only row
+    carries read_only_kind, and a derived row source_params, the writable settings it is computed from. Explain a
+    change with that text. Narrow it: the whole catalog is large.
 
     With param, since and until all given: API-12's SettingHistory over [since, until), the desired rows, plan
     values and readback change points; since and until map to API-12's from and to, and the other filters do not
@@ -5501,6 +5532,107 @@ async def activity(
                 cursor=cursor,
             )
         )
+
+
+# ── The house band (#1334): API-23's read, never its Save ──
+# The band is operator-owned (decisions 2026-11-05): there is no band write tool, and Iris is not in these reads'
+# audience. API-24 (PUT /v1/band/profile) stays the dashboard's.
+
+_BAND_DAY_DESCRIPTION = "America/Denver day, YYYY-MM-DD, at most 400 days from today; default today."
+
+
+def _band_day(value: str | None) -> date | None:
+    if value is None:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except (TypeError, ValueError) as exc:
+        raise ServiceError(problem("invalid_request", "day is a local date, YYYY-MM-DD", field="day")) from exc
+
+
+def _band_temp(description: str, minimum: float | None = None):
+    return Field(default=None, description=f"{description}, °F.", ge=minimum)
+
+
+def _band_vpd(description: str, minimum: float | None = None):
+    return Field(default=None, description=f"{description}, kPa.", ge=minimum)
+
+
+@mcp.tool()
+@_answers_problems
+async def band_profile(day: Annotated[str | None, Field(description=_BAND_DAY_DESCRIPTION)] = None):
+    """Read the house band: its profile, its 24 anchors and its curve over one day. REST twin: API-23
+    (GET /v1/band/profile) with no draft; the same JSON (BandProfilePreview).
+
+    It only reads. Returns current (profile: day and night targets, the temperature ± widths and the VPD range below
+    and above; the 24 raw anchors; simple), the day's curve at 10-min steps of t (temp and vpd low, target and high,
+    as the controller evaluates them), vpd.device (with the night_vpd_bias_kpa the controller reports running), the
+    sun times, the guardrails, overshoot, the night heat estimate, the expected night VPD ribbon and its fit, findings,
+    measured (the last 24 h of house temp_avg and vpd_avg on t by local clock time: today's before now, yesterday's
+    after) and forecast (the day's outdoor temperature and VPD). draft equals current and changed is empty. Unknown
+    values are null, never 0.
+
+    There is no band write tool: the band is operator-owned and is saved on the dashboard (Control → Band). Use
+    band_profile_preview to evaluate a change. Refusals return the Problem JSON with isError: invalid_request (day),
+    read_only (the house band has no complete anchor set), query_timeout and unavailable (both retryable)."""
+    from verdify_services import band_profile as band_service
+
+    parsed = _band_day(day)
+    async with _service_connection() as conn:
+        return _tool_ok(await band_service.preview(conn, None, None, parsed))
+
+
+@mcp.tool()
+@_answers_problems
+async def band_profile_preview(
+    temp_day: Annotated[float | None, _band_temp("Temperature target at solar noon")] = None,
+    temp_night: Annotated[float | None, _band_temp("Temperature target at solar midnight")] = None,
+    temp_width_day: Annotated[float | None, _band_temp("± around the day target", 0)] = None,
+    temp_width_night: Annotated[float | None, _band_temp("± around the night target", 0)] = None,
+    vpd_day: Annotated[float | None, _band_vpd("VPD target at solar noon")] = None,
+    vpd_night: Annotated[float | None, _band_vpd("VPD target at solar midnight")] = None,
+    vpd_below_day: Annotated[float | None, _band_vpd("Range below the day target", 0)] = None,
+    vpd_above_day: Annotated[float | None, _band_vpd("Range above the day target", 0)] = None,
+    vpd_below_night: Annotated[float | None, _band_vpd("Range below the night target", 0)] = None,
+    vpd_above_night: Annotated[float | None, _band_vpd("Range above the night target", 0)] = None,
+    anchors: Annotated[
+        dict[str, float] | None,
+        Field(description='Advanced: raw house anchors by param, such as {"band_temp_low_sr": 62.5}.'),
+    ] = None,
+    day: Annotated[str | None, Field(description=_BAND_DAY_DESCRIPTION)] = None,
+):
+    """Evaluate a draft of the house band without saving it. REST twin: API-23 (GET /v1/band/profile) with the same
+    fields; the same JSON (BandProfilePreview).
+
+    It only reads: nothing is stored and nothing reaches the controller. A field left out keeps the band's value; any
+    temperature field recompiles the temperature series with sunrise and sunset at the midpoint of noon and midnight,
+    any VPD field the VPD series; anchors then override single raw anchors. Returns current and draft (profile, anchors,
+    simple), changed (the anchors a Save would write), both curves over the day at 10-min steps of t, vpd.device (the
+    draft with the controller's night bias), findings (error: band_order, guardrail, night_floor, the 0.74 kPa night
+    dry-out floor; warning: overshoot, dewpoint_unreached), the night heat estimate for both, the expected night VPD,
+    measured (the last 24 h of the house average on t) and forecast (outdoor). Unknown values are null, never 0.
+
+    There is no band write tool: the band is operator-owned and is saved on the dashboard (Control → Band). Refusals
+    return the Problem JSON with isError: invalid_request (day), unknown_target (an anchor that is not a house band
+    anchor), out_of_range (an anchor outside its registry bounds), read_only (the house band has no complete anchor
+    set), query_timeout and unavailable (both retryable). A field outside its schema is refused before the tool runs."""
+    from verdify_services import band_profile as band_service
+
+    patch = band_service.BandProfilePatch(
+        temp_day=temp_day,
+        temp_night=temp_night,
+        temp_width_day=temp_width_day,
+        temp_width_night=temp_width_night,
+        vpd_day=vpd_day,
+        vpd_night=vpd_night,
+        vpd_below_day=vpd_below_day,
+        vpd_above_day=vpd_above_day,
+        vpd_below_night=vpd_below_night,
+        vpd_above_night=vpd_above_night,
+    )
+    parsed = _band_day(day)
+    async with _service_connection() as conn:
+        return _tool_ok(await band_service.preview(conn, patch, dict(anchors or {}), parsed))
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -5792,48 +5924,15 @@ async def crop_lifecycle(crop_id: int) -> str:
 
 
 # ═══════════════════════════════════════════════════════════════
-# VECTORIZED RETRIEVAL (Phase 3, migration 112)
+# VECTORIZED RETRIEVAL (Cortex embed.main, migration 296, #1351)
 # ═══════════════════════════════════════════════════════════════
 #
-# lessons_search and knowledge_search embed the query via OpenAI
-# text-embedding-3-large (3072-dim) and call fn_search_embeddings()
-# against the verdify_embeddings table. Both tools fail gracefully if
-# OPENAI_API_KEY is unset, returning a clear error instead of crashing.
-
-
-_OPENAI_EMBED_MODEL = "text-embedding-3-large"
-_OPENAI_EMBED_DIM = 3072
-
-
-def _openai_api_key() -> str | None:
-    key = os.environ.get("OPENAI_API_KEY")
-    if key:
-        return key
-
-    for path in _OPENAI_KEY_FILES:
-        try:
-            if not path.exists():
-                continue
-            text = path.read_text().strip()
-        except OSError:
-            continue
-
-        if path.name.endswith(".env"):
-            for raw_line in text.splitlines():
-                line = raw_line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if line.startswith("export "):
-                    line = line.removeprefix("export ").strip()
-                if not line.startswith("OPENAI_API_KEY="):
-                    continue
-                candidate = line.split("=", 1)[1].strip().strip('"').strip("'")
-                if candidate:
-                    return candidate
-        elif text:
-            return text
-
-    return None
+# lessons_search and knowledge_search embed the query with local Cortex
+# embed.main (2560-dim, #1351) and call fn_search_knowledge_embeddings()
+# against knowledge_embeddings (migration 296). The provider, endpoint, model
+# and key file come from config/ai.yaml models.embedding through
+# verdify_schemas.embeddings, which refuses any host but Cortex. A missing key
+# or config fails closed with a classified error instead of crashing.
 
 
 class SemanticDependencyFailure(Exception):
@@ -5860,8 +5959,8 @@ async def _semantic_dependency_lifecycle(tool: str, reason: str | None, started_
                 "details": {
                     "tool": tool,
                     "reason": reason,
-                    "embedding_model": _OPENAI_EMBED_MODEL,
-                    "embedding_dimensions": _OPENAI_EMBED_DIM,
+                    "embedding_model": _embeddings.EMBEDDING_MODEL,
+                    "embedding_dimensions": _embeddings.EMBEDDING_DIMENSIONS,
                 },
             }
         )
@@ -5913,36 +6012,25 @@ async def _semantic_failure_result(tool: str, reason: str, started_at: datetime)
 
 
 async def _embed_query(text: str) -> list[float]:
-    """Embed a query; raise a classified, credential-free dependency failure."""
-    api_key = _openai_api_key()
-    if not api_key:
-        raise SemanticDependencyFailure("embedding_credential_missing")
+    """Embed a query with Cortex embed.main; raise a classified, credential-free dependency failure."""
     try:
-        from openai import OpenAI
-
-        client = OpenAI(api_key=api_key, timeout=30.0, max_retries=0)
-        # Sync call wrapped in a worker thread; the OpenAI Python SDK has an
-        # async client too but we keep the import surface minimal here.
-        import asyncio as _asyncio
-
-        resp = await _asyncio.to_thread(
-            client.embeddings.create,
-            model=_OPENAI_EMBED_MODEL,
-            input=text,
-            dimensions=_OPENAI_EMBED_DIM,
-        )
-        vector = list(resp.data[0].embedding)
-        if len(vector) != _OPENAI_EMBED_DIM or any(not math.isfinite(float(v)) for v in vector):
-            raise ValueError("invalid embedding vector")
-        return vector
-    except Exception as exc:  # pragma: no cover — surface failure to caller
-        # Provider errors can contain credential-adjacent request metadata.
-        print(f"[mcp.embed_query] failed: {type(exc).__name__}", file=sys.stderr)
-        raise SemanticDependencyFailure("embedding_provider_failed") from None
+        settings = _embeddings.load_embedding_settings()
+        api_key = _embeddings.read_api_key(settings)
+        return await _embeddings.embed_query(settings, text, api_key=api_key)
+    except _embeddings.EmbeddingError as exc:
+        print(f"[mcp.embed_query] failed: {exc.reason}", file=sys.stderr)
+        reason = exc.reason if exc.reason in _EMBED_FAILURE_REASONS else "embedding_provider_failed"
+        raise SemanticDependencyFailure(reason) from None
 
 
-def _vector_literal(vec: list[float]) -> str:
-    return "[" + ",".join(f"{v:.6f}" for v in vec) + "]"
+_EMBED_FAILURE_REASONS = frozenset(
+    {
+        "embedding_config_invalid",
+        "embedding_credential_missing",
+        "embedding_provider_failed",
+        "embedding_invalid_response",
+    }
+)
 
 
 @mcp.tool()
@@ -5978,7 +6066,7 @@ async def lessons_search(query: str, top_k: int = 10, min_confidence: str = "low
             """
             WITH hits AS (
               SELECT source_id, content, metadata, distance
-                FROM fn_search_embeddings($1::vector, $2, ARRAY['lesson']::text[])
+                FROM fn_search_knowledge_embeddings($1::halfvec, $2, ARRAY['lesson']::text[])
             )
             SELECT pl.id, pl.category, pl.condition, pl.lesson, pl.confidence,
                    pl.times_validated, pl.is_active, h.distance
@@ -5989,7 +6077,7 @@ async def lessons_search(query: str, top_k: int = 10, min_confidence: str = "low
                AND CASE pl.confidence WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END >= $3
              ORDER BY h.distance
             """,
-            _vector_literal(embedding),
+            _embeddings.halfvec_literal(embedding),
             top_k,
             rank_floor,
         )
@@ -6059,7 +6147,7 @@ async def knowledge_search(
         rows = await conn.fetch(
             """
             SELECT source_type, source_id, chunk_idx, content, metadata, distance
-              FROM fn_search_embeddings($1::vector, $2, $3::text[]) h
+              FROM fn_search_knowledge_embeddings($1::halfvec, $2, $3::text[]) h
              WHERE h.source_type <> 'lesson'
                 OR EXISTS (
                      SELECT 1
@@ -6070,7 +6158,7 @@ async def knowledge_search(
                         AND NOT fn_dli_proxy_lesson_invalid(pl.condition, pl.lesson)
                    )
             """,
-            _vector_literal(embedding),
+            _embeddings.halfvec_literal(embedding),
             top_k,
             types,
         )
@@ -6294,7 +6382,15 @@ async def irrigation_line_set(
     enabled: Annotated[
         bool | None, Field(description="Off stops everything on the line, VPD misting included.")
     ] = None,
-    vpd_member: Annotated[bool | None, Field(description="L04, L07 and L09: VPD misting on this zone.")] = None,
+    vpd_member: Annotated[
+        bool | None,
+        Field(
+            description="L04, L07 and L09: VPD control. When the climate loop wants humidity and its safety gate "
+            "passes, the controller may send this mister short mist pulses, one mister at a time by rank (center "
+            "first unless another member's own VPD is further above its target), within the line's daily cap and the "
+            "daily mist and fog limit. Needs the line enabled (line_disabled otherwise)."
+        ),
+    ] = None,
     schedule_member: Annotated[bool | None, Field(description="L04, L07 and L09: schedules and runs here.")] = None,
     daily_cap_min: Annotated[int | None, Field(ge=0, le=480, description="Minutes a day; 0 is no cap.")] = None,
     vpd_reserve_min: Annotated[
@@ -6334,7 +6430,7 @@ async def irrigation_line_set(
 
     Refusals are the Problem JSON with isError: out_of_range (min and max are the bounds), check_required,
     invalid_request (all with any field but paused_until, manual included; a mister flag off L04, L07 or L09),
-    unknown_target, manual, request_id_reused, forbidden, and unavailable (the database; retry with the same
+    line_disabled (vpd_member true on a line that stays disabled), unknown_target, manual, request_id_reused, forbidden, and unavailable (the database; retry with the same
     request_id)."""
     from verdify_services.irrigation import writes
 
@@ -6740,6 +6836,346 @@ async def irrigation_history(
     except ServiceError as refused:
         return _tool_problem(refused.problem)
     return await _irrigation_read("irrigation_history", read)
+
+
+# ═══════════════════════════════════════════════════════════════
+# PLANTING TOOLS (#1328): verdify_services.crops, the Crops page's service
+# ═══════════════════════════════════════════════════════════════
+# Records only: no tool here changes a setting, band or target. Open to named agents and admin; Iris stays read-only
+# on plantings (its crops tool refuses create and deactivate). Each write returns the planting with its resolved cells
+# and id, so undo is remove_planting(end_reason="removed").
+
+_Positions = Annotated[
+    list[str],
+    Field(
+        min_length=1,
+        max_length=40,
+        description=(
+            "Places, each a label (EAST-HYDRO-12), a range (EAST-HYDRO-1..10, hydro 1-30), a rail (rail A top), "
+            "shelf cells (west top 1-3), every cell of a place (all south shelves), a shelf (south floor, hanging) "
+            "or a zone (center). Ambiguous text is refused with the candidates."
+        ),
+    ),
+]
+_PlantingId = Annotated[int, Field(ge=1, le=2**31 - 1, description="The planting id (crops.id).")]
+_PlantingWhen = Annotated[
+    str | None, Field(description="ISO 8601 time with offset, or a date (local midnight); default now.")
+]
+_PlantingReason = Annotated[str | None, Field(max_length=500, description="Why; shown in Activity.")]
+_PlantingRequestId = Annotated[
+    str | None, Field(description="A UUID; the same one and arguments replay the stored result.")
+]
+
+
+def _when(value: str | None):
+    """An ISO time or date as the service takes it; text it cannot read is left for its validation."""
+    if value is None:
+        return None
+    try:
+        return datetime.fromisoformat(value) if "T" in value or " " in value.strip() else date.fromisoformat(value)
+    except ValueError:
+        return value
+
+
+async def _planting_read(tool: str, read):
+    conn = None
+    try:
+        conn = await _db()
+        model = await read(conn)
+    except ServiceError as refused:
+        return _tool_problem(refused.problem)
+    except asyncpg.QueryCanceledError:
+        return _tool_problem(problem("query_timeout", "The database stopped the query at its limit. Retry."))
+    except Exception as exc:  # the database or its connection; never a refusal
+        print(f"[mcp.{tool}] failed: {type(exc).__name__}", file=sys.stderr)
+        return _tool_problem(problem("unavailable", "The planting records could not be read. Retry."))
+    finally:
+        if conn is not None:
+            await conn.close()
+    return _tool_ok(model)
+
+
+async def _planting_write(tool: str, write):
+    """One planting write as the request's actor (current_actor(), never an argument) on its own connection."""
+    caller = current_actor()
+    if caller is None:
+        return _tool_problem(problem("forbidden", "A planting write needs a resolved caller: a named agent or admin"))
+    actor = ServiceActor(source=caller.source, name=caller.name)
+    conn = None
+    try:
+        conn = await _db()
+        result = await write(conn, actor)
+    except ServiceError as refused:
+        return _tool_problem(refused.problem)
+    except Exception as exc:  # the database or its connection; never a refusal
+        print(f"[mcp.{tool}] failed: {type(exc).__name__}", file=sys.stderr)
+        return _tool_problem(
+            problem(
+                "unavailable",
+                "The planting service could not answer. Retry with the same request_id: it stores the write once",
+            )
+        )
+    finally:
+        if conn is not None:
+            await conn.close()
+    return _tool_ok(result.value, replayed=result.replayed)
+
+
+def _body(**fields) -> dict[str, Any]:
+    return {name: value for name, value in fields.items() if value is not None}
+
+
+@mcp.tool()
+async def crop_locations(
+    zone: Annotated[str | None, Field(description="Keep one zone: center, east, north, south or west.")] = None,
+):
+    """Read the location tree and what each place holds now. REST twin: API-CROP-01 (GET /v1/crops/locations).
+
+    Returns every zone, its shelves (wall, kind, tier, the irrigation lines that reach it) and their cells (layout
+    group, row and column), with the plantings at zone and shelf level and each cell's occupant. A zone or shelf holds
+    any number of plantings; a cell at most one. Reads only."""
+    return await _planting_read("crop_locations", lambda conn: crop_service.locations(conn, zone=zone))
+
+
+@mcp.tool()
+async def resolve_positions(
+    positions: _Positions,
+    at: _PlantingWhen = None,
+    planting_id: Annotated[
+        int | None, Field(ge=1, description="Leave this planting out of the conflicts (its own cells on a move).")
+    ] = None,
+):
+    """Preview what place text means, writing nothing. REST twin: API-CROP-06 (GET /v1/crops/resolve).
+
+    Returns places (zone, shelf, cell), cells, where (compressed, e.g. EAST-HYDRO-1..10) and conflicts: the plantings
+    holding those cells at `at`. Refusals: invalid_request (unreadable text), ambiguous_position (current lists the
+    candidates)."""
+    return await _planting_read(
+        "resolve_positions",
+        lambda conn: crop_service.resolve(conn, positions, at=_when(at), planting_id=planting_id),
+    )
+
+
+@mcp.tool()
+async def record_planting(
+    crop: Annotated[str, Field(min_length=1, max_length=200, description="Catalog slug or name (lettuce), or a name.")],
+    positions: _Positions,
+    variety: Annotated[str | None, Field(max_length=200)] = None,
+    count: Annotated[int | None, Field(ge=0, description="Plants in the planting; leave it out when unknown.")] = None,
+    count_per_cell: Annotated[int | None, Field(ge=0, description="Plants in each cell, when cells are named.")] = None,
+    planted_at: _PlantingWhen = None,
+    stage: Annotated[str | None, Field(description="seed (default), germination, seedling, vegetative, ...")] = None,
+    notes: Annotated[str | None, Field(max_length=2000)] = None,
+    replace: Annotated[
+        bool, Field(description="End or trim whatever holds a requested cell instead of refusing.")
+    ] = False,
+    dry_run: Annotated[bool, Field(description="Resolve and show conflicts only; nothing is written.")] = False,
+    reason: _PlantingReason = None,
+    request_id: _PlantingRequestId = None,
+):
+    """Record one planting across the places named. REST twin: API-CROP-07 (POST /v1/crops/plantings).
+
+    Records only: it changes no setting, band or target. Returns the planting with its id, cells and where; undo is
+    remove_planting(end_reason="removed"). A cell already held is refused with position_occupied (current names the
+    cells) unless replace. dry_run returns the API-CROP-06 preview instead. Refusals: invalid_request,
+    ambiguous_position, position_occupied, request_id_reused, forbidden."""
+    if dry_run:
+        return await _planting_read(
+            "record_planting", lambda conn: crop_service.resolve(conn, positions, at=_when(planted_at))
+        )
+    body = _body(
+        crop=crop,
+        positions=positions,
+        variety=variety,
+        count=count,
+        count_per_cell=count_per_cell,
+        planted_at=_when(planted_at),
+        stage=stage,
+        notes=notes,
+        replace=replace,
+        reason=reason,
+    )
+    return await _planting_write(
+        "record_planting", lambda conn, actor: crop_service.plant(conn, actor, body, request_id=request_id)
+    )
+
+
+class PlantingItem(BaseModel):
+    """One planting of a bulk re-plant: record_planting's arguments."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    crop: str = Field(min_length=1, max_length=200)
+    positions: list[str] = Field(min_length=1, max_length=40)
+    variety: str | None = Field(default=None, max_length=200)
+    count: int | None = Field(default=None, ge=0)
+    count_per_cell: int | None = Field(default=None, ge=0)
+    stage: str | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+@mcp.tool()
+async def record_plantings(
+    items: Annotated[list[PlantingItem], Field(min_length=1, max_length=40, description="The plantings, in order.")],
+    planted_at: _PlantingWhen = None,
+    replace: Annotated[bool, Field(description="Each item ends or trims what holds its cells.")] = False,
+    reason: _PlantingReason = None,
+    request_id: _PlantingRequestId = None,
+):
+    """Bulk re-plant: record several plantings at one time, each as record_planting would. No REST twin (the
+    dashboard sends API-CROP-07 per planting).
+
+    Each item is its own write: one refused does not stop the rest. Returns {"results": [...]}, one per item in
+    order, each the planting or {"problem": <Problem JSON>}. With request_id each item's key is derived from it and
+    the item's index, so a retry replays what was stored."""
+    from uuid import uuid5
+
+    base = None
+    if request_id is not None:
+        try:
+            base = UUID(request_id)
+        except ValueError:
+            return _tool_problem(problem("invalid_request", "request_id is a UUID", field="request_id"))
+    caller = current_actor()
+    if caller is None:
+        return _tool_problem(problem("forbidden", "A planting write needs a resolved caller: a named agent or admin"))
+    actor = ServiceActor(source=caller.source, name=caller.name)
+    results: list[dict[str, Any]] = []
+    conn = None
+    try:
+        conn = await _db()
+        for index, item in enumerate(items):
+            body = _body(**item.model_dump(), planted_at=_when(planted_at), replace=replace, reason=reason)
+            key = None if base is None else uuid5(base, f"record_plantings:{index}")
+            try:
+                result = await crop_service.plant(conn, actor, body, request_id=key)
+            except ServiceError as refused:
+                results.append({"problem": refused.problem.body()})
+                continue
+            entry = result.value.model_dump(mode="json")
+            results.append({**entry, "replayed": True} if result.replayed else entry)
+    except Exception as exc:  # the database or its connection; never a refusal
+        print(f"[mcp.record_plantings] failed: {type(exc).__name__}", file=sys.stderr)
+        return _tool_problem(
+            problem("unavailable", "The planting service could not answer. Retry with the same request_id")
+        )
+    finally:
+        if conn is not None:
+            await conn.close()
+    return _tool_result({"results": results})
+
+
+@mcp.tool()
+async def move_planting(
+    planting_id: _PlantingId,
+    to_positions: _Positions,
+    from_positions: Annotated[
+        list[str] | None, Field(description="The places it leaves; default every place it is now.")
+    ] = None,
+    moved_at: _PlantingWhen = None,
+    replace: Annotated[bool, Field(description="End or trim whatever holds a destination cell.")] = False,
+    reason: _PlantingReason = None,
+    request_id: _PlantingRequestId = None,
+):
+    """Move a planting; the old and new places both stay in its history. REST twin: API-CROP-08.
+
+    Refusals: invalid_request, ambiguous_position, position_occupied, planting_ended, unknown_target,
+    request_id_reused."""
+    body = _body(
+        to_positions=to_positions,
+        from_positions=from_positions,
+        moved_at=_when(moved_at),
+        replace=replace,
+        reason=reason,
+    )
+    return await _planting_write(
+        "move_planting", lambda conn, actor: crop_service.move(conn, actor, planting_id, body, request_id=request_id)
+    )
+
+
+@mcp.tool()
+async def harvest_planting(
+    planting_id: _PlantingId,
+    count: Annotated[int | None, Field(ge=0, description="Units harvested.")] = None,
+    weight_kg: Annotated[float | None, Field(ge=0, le=10000)] = None,
+    positions: Annotated[list[str] | None, Field(description="Cells cleared by this harvest; default none.")] = None,
+    final: Annotated[bool, Field(description="The last harvest: the planting ends as harvested.")] = False,
+    harvested_at: _PlantingWhen = None,
+    notes: Annotated[str | None, Field(max_length=2000)] = None,
+    reason: _PlantingReason = None,
+    request_id: _PlantingRequestId = None,
+):
+    """Record a harvest; partial unless final. REST twin: API-CROP-09.
+
+    Clearing every place it holds also ends the planting. Refusals: invalid_request, planting_ended, unknown_target,
+    request_id_reused."""
+    body = _body(
+        count=count,
+        weight_kg=weight_kg,
+        positions=positions,
+        final=final,
+        harvested_at=_when(harvested_at),
+        notes=notes,
+        reason=reason,
+    )
+    return await _planting_write(
+        "harvest_planting",
+        lambda conn, actor: crop_service.harvest(conn, actor, planting_id, body, request_id=request_id),
+    )
+
+
+@mcp.tool()
+async def remove_planting(
+    planting_id: _PlantingId,
+    end_reason: Annotated[Literal["failed", "removed", "reconciled"], Field(description="Why it ended.")],
+    at: _PlantingWhen = None,
+    note: Annotated[str | None, Field(max_length=2000)] = None,
+    reason: _PlantingReason = None,
+    request_id: _PlantingRequestId = None,
+):
+    """End a planting without a harvest; every open place closes. REST twin: API-CROP-10. Undo by recording it
+    again. Refusals: invalid_request, planting_ended, unknown_target, request_id_reused."""
+    body = _body(end_reason=end_reason, at=_when(at), note=note, reason=reason)
+    return await _planting_write(
+        "remove_planting",
+        lambda conn, actor: crop_service.end(conn, actor, planting_id, body, request_id=request_id),
+    )
+
+
+@mcp.tool()
+async def annotate_planting(
+    planting_id: _PlantingId,
+    note: Annotated[str, Field(min_length=1, max_length=2000)],
+    reason: _PlantingReason = None,
+    request_id: _PlantingRequestId = None,
+):
+    """Add a note to a planting's history (ended plantings too). Returns the event. Refusals: unknown_target,
+    request_id_reused."""
+    body = _body(note=note, reason=reason)
+    return await _planting_write(
+        "annotate_planting",
+        lambda conn, actor: crop_service.annotate(conn, actor, planting_id, body, request_id=request_id),
+    )
+
+
+@mcp.tool()
+async def planting_history(
+    planting_id: Annotated[int | None, Field(ge=1, description="One planting: its places, events, harvests.")] = None,
+    position: Annotated[str | None, Field(description="One cell label: who has held it, current first.")] = None,
+    active: Annotated[
+        bool | None, Field(description="With neither: true active (default), false ended, null both.")
+    ] = True,
+    zone: Annotated[str | None, Field(description="With neither: plantings ever in this zone.")] = None,
+    limit: Annotated[int, Field(ge=1, le=500)] = 100,
+):
+    """Read plantings. REST twins: API-CROP-03 (planting_id), API-CROP-04 (position) and API-CROP-02 (list)."""
+    if planting_id is not None:
+        return await _planting_read("planting_history", lambda conn: crop_service.planting(conn, planting_id))
+    if position is not None:
+        return await _planting_read("planting_history", lambda conn: crop_service.position_history(conn, position))
+    return await _planting_read(
+        "planting_history", lambda conn: crop_service.plantings(conn, active=active, zone=zone, limit=limit)
+    )
 
 
 # ═══════════════════════════════════════════════════════════════

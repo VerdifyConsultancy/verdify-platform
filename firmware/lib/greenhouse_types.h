@@ -713,6 +713,15 @@ inline uint32_t sat_add(uint32_t a, uint32_t b) noexcept {
     return (a > UINT32_MAX - b) ? UINT32_MAX : a + b;
 }
 
+// ── Hard temperature guardrails ──
+// Jason 2026-11-05 (#1333): 40 °F and 100 °F are the binding hard limits.
+// Every firmware default and invalid-value fallback for safety_min/safety_max
+// uses these, matching the tunable registry defaults and the dispatcher.
+inline constexpr float kSafetyMinF = 40.0f;
+inline constexpr float kSafetyMaxF = 100.0f;
+// The band keeps this margin inside the guardrails (validate_setpoints).
+inline constexpr float kSafetyBandMarginF = 5.0f;
+
 // ── Defaults ──
 // Sprint-11 widening: firmware defaults are PERMISSIVE, bounded only by
 // safety rails. The dispatcher pushes the real crop band every planner
@@ -721,12 +730,13 @@ inline uint32_t sat_add(uint32_t a, uint32_t b) noexcept {
 // safety rails + one dispatcher-pushed band.
 inline Setpoints default_setpoints() {
     return {
-        .temp_high = 95.0f, .temp_low = 40.0f,    // wide — dispatcher narrows
+        .temp_high = kSafetyMaxF - kSafetyBandMarginF,  // 95: wide — dispatcher narrows
+        .temp_low = kSafetyMinF + kSafetyBandMarginF,   // 45: inside the 40 °F guardrail
         .vpd_high = 2.80f,  .vpd_low = 0.35f,      // wide — dispatcher narrows
         .bias_cool = 0.0f, .bias_heat = 0.0f,
         .vpd_hysteresis = 0.3f, .temp_hysteresis = 1.5f, .heat_hysteresis = 1.0f,  // Phase-2: push temp_hysteresis=2.0 via dispatcher at sw_dwell_gate_enabled flip
         .dH2 = 5.0f, .dC2 = 3.0f,
-        .safety_max = 100.0f, .safety_min = 35.0f,
+        .safety_max = kSafetyMaxF, .safety_min = kSafetyMinF,
         .vpd_max_safe = 3.0f, .vpd_min_safe = 0.3f,
         .sealed_max_ms = 600000, .relief_duration_ms = 90000,
         .vpd_watch_dwell_ms = 60000, .mist_s2_delay_ms = 300000,
@@ -848,8 +858,22 @@ inline void validate_setpoints(Setpoints& sp) {
     // usage and matches the ±5°F margin the rest of validate uses.
     sp.bias_heat = std::max(-5.0f, std::min(5.0f, sp.bias_heat));
     sp.bias_cool = std::max(-5.0f, std::min(5.0f, sp.bias_cool));
-    sp.safety_max = std::max(sp.temp_high + 5.0f, std::min(120.0f, sp.safety_max));
-    sp.safety_min = std::max(30.0f, std::min(sp.temp_low - 5.0f, sp.safety_min));
+    // Guardrails are hard; the band stays inside them (Jason 2026-11-05,
+    // #1333). Before this the clamp ran the other way: a band edge within
+    // 5 °F of a rail pushed the rail outward (band high 98 → safety_max 103),
+    // so a pushed band could move the hard limits. Ranges match the
+    // controls.yaml SAFETY SANITY check; an invalid or inverted pair (or
+    // one too narrow to hold a band with its margins) falls back to 40/100.
+    if (!(sp.safety_min >= 30.0f && sp.safety_min <= 70.0f)) sp.safety_min = kSafetyMinF;
+    if (!(sp.safety_max >= 70.0f && sp.safety_max <= 120.0f)) sp.safety_max = kSafetyMaxF;
+    if (!(sp.safety_min + 3.0f * kSafetyBandMarginF <= sp.safety_max)) {
+        sp.safety_min = kSafetyMinF;
+        sp.safety_max = kSafetyMaxF;
+    }
+    sp.temp_high = std::max(sp.safety_min + 2.0f * kSafetyBandMarginF,
+                            std::min(sp.safety_max - kSafetyBandMarginF, sp.temp_high));
+    sp.temp_low = std::max(sp.safety_min + kSafetyBandMarginF, sp.temp_low);
+    if (sp.temp_low >= sp.temp_high) sp.temp_low = sp.temp_high - kSafetyBandMarginF;
     sp.sealed_max_ms = std::max(uint32_t(60000), std::min(uint32_t(1800000), sp.sealed_max_ms));
     sp.relief_duration_ms = std::max(uint32_t(15000), std::min(uint32_t(600000), sp.relief_duration_ms));
     sp.max_relief_cycles = std::max(uint32_t(1), std::min(uint32_t(10), sp.max_relief_cycles));

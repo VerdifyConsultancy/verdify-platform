@@ -16,10 +16,12 @@ import { AppShell } from "./components/app-shell";
 import { ToastProvider } from "./components/toast";
 import Activity from "./routes/activity";
 import ActivityLog from "./routes/activity-log";
+import Band from "./routes/band";
 import Equipment from "./routes/equipment";
 import Graphs from "./routes/graphs";
 import Statistics from "./routes/graphs-statistics";
 import GraphsZones from "./routes/graphs.zones";
+import GraphsLighting from "./routes/graphs.lighting";
 import Now from "./routes/now";
 import Plan from "./routes/plan";
 import PlannerExperiments from "./routes/planner-experiments";
@@ -38,16 +40,18 @@ const CHILDREN = [
   { path: "water", Component: Water, children: [{ index: true, Component: WaterBoard }, { path: "schedules", Component: WaterSchedules }, { path: "history", Component: WaterHistory }] },
   { path: "graphs", Component: Graphs },
   { path: "graphs/zones", Component: GraphsZones },
+  { path: "graphs/lighting", Component: GraphsLighting },
   { path: "graphs/statistics", Component: Statistics },
   { path: "activity", Component: Activity },
   { path: "activity/log", Component: ActivityLog },
   { path: "settings", Component: Settings },
   { path: "plan", Component: Plan },
   { path: "equipment", Component: Equipment },
+  { path: "band", Component: Band },
   { path: "planner/history", Component: PlannerHistory },
   { path: "planner/experiments", Component: PlannerExperiments },
 ];
-const TESTED = ["/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/plan", "/equipment", "/planner/history", "/planner/experiments"];
+const TESTED = ["/", "/water", "/water/schedules", "/water/history", "/graphs", "/graphs/zones", "/graphs/lighting", "/graphs/statistics", "/activity", "/activity/log", "/settings", "/band", "/plan", "/equipment", "/planner/history", "/planner/experiments"];
 
 /** The page's server render at `instant`, its text and tags without attributes. */
 function serverText(path: string, instant: string): string {
