@@ -2,8 +2,10 @@
 
 The controller is the one writer of the grow lights (#399): its lighting policy
 turns a circuit on with reason ``occupancy_lux_low`` when someone is in the
-greenhouse, it is dark enough outside and the circuit is inside its photoperiod
-window, and returns it to its automatic decision when the occupancy latch clears.
+greenhouse and it is dark enough outside: the main lights at any hour, night
+included, and the grow lights only inside their photoperiod window, so the
+Vandas keep their dark. It returns the circuit to its automatic decision when the
+occupancy latch clears.
 This module writes one ``activity_log`` row for each of those two changes, cause
 ``occupancy``, so Activity shows why a light came on and when it went back.
 

@@ -878,6 +878,7 @@ def test_a_status_validates_against_the_committed_schema():
         engine=False,
         program=water.ProgramSync(state="requested", desired_sha256=DESIRED, src=None, reason=water.NOT_ON_CONTROLLER),
         lines=[water.IrrigationLine(**line_dict())],
+        circuits=water.circuits_of([water.IrrigationLine(**line_dict())]),
         active_runs=[water.ActiveRun(manifold="drip", line_id="L01", cause="run_now", started_at=AT)],
         today=water.TodayMinutes(date=MONDAY, zones={"wall": 1.5, "south": None}),
         limits=water.Limits(
@@ -1135,6 +1136,7 @@ def test_the_status_and_schedules_routes_serve_the_committed_shape(client, monke
                 state="requested", desired_sha256=DESIRED, src=None, reason=water.NOT_ON_CONTROLLER
             ),
             lines=[water.IrrigationLine(**line_dict())],
+            circuits=water.circuits_of([water.IrrigationLine(**line_dict())]),
             active_runs=[],
             today=water.TodayMinutes(date=MONDAY, zones={"wall": 0.0, "south": None}),
             limits=water.Limits(
@@ -1243,3 +1245,18 @@ def test_engine_flag_and_program_id_readings():
     assert (
         water._saf4_max(program.ControllerProgram(engine=False)) == irr.REGISTRY["mister_daily_volume_max_gal"].default
     )
+
+
+def test_the_physical_lines_group_the_relays_and_mark_what_is_not_wired():
+    """#1336: five physical lines over the relays; a variant without a relay is not wired; L03 follows fertilized."""
+    lines = [
+        water.IrrigationLine(**line_dict(line_id=line_id, kind=kind, enabled=line_id != "L02"))
+        for line_id, kind in (("L01", "drip"), ("L02", "fert_drip"), ("L04", "mister"))
+    ]
+    circuits = {c.circuit_id: c for c in water.circuits_of(lines)}
+    assert list(circuits) == ["wall_drip", "center_drip", "center_mister", "south_mister", "west_mister"]
+    wall = circuits["wall_drip"]
+    assert (wall.clean.line_id, wall.clean.enabled, wall.clean.master_valve) == ("L01", True, False)
+    assert (wall.fertilized.line_id, wall.fertilized.enabled, wall.fertilized.master_valve) == ("L02", False, True)
+    center = circuits["center_mister"]
+    assert (center.fertilized.wired, center.fertilized.line_id, center.fertilized.enabled) == (False, None, False)

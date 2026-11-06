@@ -415,6 +415,12 @@ switch:
             ESP_LOGE("irrig","Blocked ungranted west_wall_mister ON");
             return;
           }
+          // #1336: a clean line never runs with the fertilizer master valve open.
+          if(id(fertilizer_master_valve).state) {
+            id(west_wall_mister).turn_off();
+            ESP_LOGE("irrig","Blocked west_wall_mister ON while L03 is open (clean water never opens with the master)");
+            return;
+          }
 
     # ESPHome switch callbacks deduplicate identical states: this runs only
     # on an OFF transition (also conservatively at startup), not repeated OFF.
@@ -491,6 +497,12 @@ switch:
             ESP_LOGE("irrig","Blocked ungranted south_wall_mister ON");
             return;
           }
+          // #1336: a clean line never runs with the fertilizer master valve open.
+          if(id(fertilizer_master_valve).state) {
+            id(south_wall_mister).turn_off();
+            ESP_LOGE("irrig","Blocked south_wall_mister ON while L03 is open (clean water never opens with the master)");
+            return;
+          }
 
     # ESPHome switch callbacks deduplicate identical states: this runs only
     # on an OFF transition (also conservatively at startup), not repeated OFF.
@@ -513,6 +525,12 @@ switch:
           if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::kL01))) {
             id(wall_drips).turn_off();
             ESP_LOGE("irrig","Blocked ungranted wall_drips ON");
+            return;
+          }
+          // #1336: a clean line never runs with the fertilizer master valve open.
+          if(id(fertilizer_master_valve).state) {
+            id(wall_drips).turn_off();
+            ESP_LOGE("irrig","Blocked wall_drips ON while L03 is open (clean water never opens with the master)");
             return;
           }
 
@@ -589,6 +607,12 @@ switch:
             ESP_LOGE("irrig","Blocked ungranted center_drips ON");
             return;
           }
+          // #1336: a clean line never runs with the fertilizer master valve open.
+          if(id(fertilizer_master_valve).state) {
+            id(center_drips).turn_off();
+            ESP_LOGE("irrig","Blocked center_drips ON while L03 is open (clean water never opens with the master)");
+            return;
+          }
 
   - platform: gpio
     id: wall_drips_fertilized
@@ -632,6 +656,15 @@ switch:
           if(!(id(irr_grant_mask) & verdify_irr::irr_bit(verdify_irr::kL03))) {
             id(fertilizer_master_valve).turn_off();
             ESP_LOGE("irrig","Blocked ungranted fertilizer_master_valve ON");
+            return;
+          }
+          // #1336 (Jason, 2026-11-05): the master valve connects the fertilizer tank and forces
+          // the flow through the feeder, so it opens only for a fertilized run, never while a
+          // clean line or fog is open.
+          if(id(wall_drips).state || id(center_drips).state || id(center_mister).state ||
+             id(south_wall_mister).state || id(west_wall_mister).state || id(fog_rly)->state) {
+            id(fertilizer_master_valve).turn_off();
+            ESP_LOGE("irrig","Blocked fertilizer_master_valve ON while a clean line or fog is open");
             return;
           }
 
