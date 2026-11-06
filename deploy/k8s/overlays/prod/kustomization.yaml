@@ -339,42 +339,40 @@ patches:
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
     newName: registry.vallery.net/verdifyconsultancy/verdify-api
-    digest: sha256:d573087eaaa2d826b879203ff103ba0ecc6c4c710aea917a6ec080fdbb2a3c42
+    digest: sha256:e5a2b293c38aa4e4a3dbe7daa2168f94d6f6e02e438f471367ff89f7dd15dc02
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
     newName: registry.vallery.net/verdifyconsultancy/verdify-mcp
-    digest: sha256:3c77fa18aea0d446672f3fcda2c2f08f8824c4d8c9fc8f64219ed5ba9bd303e0
+    digest: sha256:df9a590a0cb91c61c6a7668ba91141c2599e5d7309a8af15c1d673938c0a2b8a
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
     newName: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-    digest: sha256:a935e30436e1420677a4a993ef9be696582d8bc5e524c76d44621de193fc3acc
+    digest: sha256:ccd254de079aef0d2b2f21d71c94b7578da2f19e4e23365754230668bde6b536
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     newName: registry.vallery.net/verdifyconsultancy/verdify-migrate
-    digest: sha256:f2798947c2b8428c9644e71b74b897cfaf374555fbd20fd26e015974370df3bd
+    digest: sha256:12346df42077434e8169550619496ab89935b1976722ed6da38edee1b8948cce
   # Build candidate for the feature-off experiment-v2 orchestrator (its release
   # digest is in release-pins.yaml). The component remains inert until its
   # explicit GitOps feature gate.
   - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
     newName: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
-    digest: sha256:3675f9cd1e50b3e99a5815bb705181b40d526f2ddfca6049b41f0528eb7e9590
+    digest: sha256:4d3d80950315ffa17e18a7cbfa7f4c592c5fb086bfc7f5c793e1e10081d91fbe
   # Hand-pinned planner: merged source 96a1d6bd includes the #822 liveness fix;
   # built by agent-fleet-ci/verdify-platform-build-planner-96a1d6bd-vdbkv.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
     digest: sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a
-  # Hand-pinned grow-light writer: source 36c7630c7858 (night dry-out params in the tunable registry, #1385),
-  # build-setpoint-server in agent-fleet-ci/verdify-platform-ci-jrgfp. Rollback: a009c2a3be62 (source 3c9d6ad8ae3b,
-  # build verdify-platform-ci-tlpsc). The #399 HA call allowlist confines
+  # Hand-pinned grow-light writer: source 130a954e0ce7 (W6 lane C #1430 + lane E #1429), GHA build run
+  # 42294583580. Rollback: 6d2772f8776b (source 36c7630c7858, build verdify-platform-ci-jrgfp). The #399 HA call allowlist confines
   # this prod-only writer to the declared main/grow light switches.
   # hermes-agent is deliberately ABSENT from this transformer — its upstream
   # @sha256 (zot custody copy, #1363) is pinned inline in the component.
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
-    digest: sha256:6d2772f8776b80cdb4b13932653b39731775a58c4f03bba493910dd8f8cc2c05
-  # S6 native public shares (21 approved): source 3a7df6e3bb73 (#1106 lineage).
-  # S1 rebuild (#1109, apt upgrade: libbrotli1 +deb12u1): main build verdify-platform-ci-49vcb,
-  # source fad3197c4e26.
+    digest: sha256:0f40c6514b21fab0d7e040f79182bec57934a85a8afe36e46dcc1f1358dca0a6
+  # Lab publisher: source eaf572287c6a (plantings/crop status #1436, through 304/305), GHA build run
+  # 42302032655. Rollback: 6a9aed28aee3 (source fad3197c4e26, S1 rebuild #1109).
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:6a9aed28aee3f098a97cea615e381793b613df8103fe254ed929eb89b875fc80
+    digest: sha256:822d19776c28210af122dc532f9e4d62ed4f3cf3f4601e3fb46f41a9924af6e0
 
 # Release pins: the digests production runs for the five actuator-managed
 # images. kustomize applies `transformers:` after `images:`, so these replace
