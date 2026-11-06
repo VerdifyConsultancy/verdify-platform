@@ -27,7 +27,7 @@ export const GLOSSARY = {
   },
   mist_fog_limit: {
     term: "Daily mist & fog limit",
-    definition: "Gallons through every mister and the fog today, against the controller's daily safety limit (360 gal). At the limit all misting stops except emergency fog. Normal misting first meets the lower daily budget (120 gal), which a VPD emergency may pass.",
+    definition: "The primary daily water limit: gallons through every mister and the fog today, against the controller's daily safety limit (360 gal). At the limit all misting stops except emergency fog. Normal misting first meets the lower daily budget (120 gal), which a VPD emergency may pass. Total water, drip irrigation included, is secondary.",
   },
   bursts: {
     term: "Bursts",

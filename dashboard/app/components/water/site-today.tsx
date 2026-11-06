@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { Link } from "react-router";
 import type { IrrigationStatus } from "../../lib/operator-api";
-import { BACKUP_TERM, BUDGET_HELP, BUDGET_TERM, SAF4_HELP, SAF4_TERM, flowWords, occupancyWords } from "../../lib/water";
+import { BACKUP_TERM, BUDGET_HELP, BUDGET_TERM, SAF4_HELP, SAF4_PRIMARY, SAF4_TERM, flowWords, occupancyWords } from "../../lib/water";
 import { Card } from "../card";
 import { cls } from "../common";
 import { Meter, meterWords } from "../data/meter";
@@ -12,8 +12,8 @@ import { InfoTip } from "../info-tip";
 export const SAF4_LINK = "/settings?edit=mister_daily_volume_max_gal";
 
 /**
- * Site today (redesign §5.2, #1349), Water → Today's aside: the daily mist & fog limit (SAF-4) and the daily mist target
- * (soft) as meters in whole gallons, each with an info tip that says what it is, both in `--eq-water` as §4.6 fills
+ * Site today (redesign §5.2, #1349), Water → Today's aside: the daily mist & fog limit (SAF-4, the primary daily water
+ * limit, #1339) and the daily mist target (soft) as meters in whole gallons, each with an info tip that says what it is, both in `--eq-water` as §4.6 fills
  * gallons; then water with no Verdify valve open, occupancy and backup misting, each in words with its `[data-limit]`.
  * No bare "SAF-4" or "SOFT BUDGET". A count the API does not have reads "—", never 0; a flow or backup misting that is the
  * news carries its colour on its words. On a phone (§5.2's 360 px sketch) it holds the limit, the flow and occupancy, so
@@ -28,7 +28,7 @@ export function SiteToday({ status, today }: { status: Pick<IrrigationStatus, "l
   return <Card title="Site today" className="wat-site">
     <ul className="wat-site-list">
       <li className="wat-site-meter" data-limit="saf4">
-        <span className="wat-site-term"><Link to={SAF4_LINK}>{SAF4_TERM}<span className="screen-reader">, in Settings</span></Link><InfoTip term={SAF4_TERM}><p>{SAF4_HELP}</p></InfoTip></span>
+        <span className="wat-site-term"><Link to={SAF4_LINK}>{SAF4_TERM}<span className="screen-reader">, in Settings</span></Link><InfoTip term={SAF4_TERM}><p>{SAF4_HELP}</p></InfoTip><span className="wat-site-primary meta">{SAF4_PRIMARY}</span></span>
         <Meter label={`${SAF4_TERM}, gallons today`} unit="gal" value={saf4.used} cap={saf4.max} domain="water" showWords />
       </li>
       <li className={cls("wat-site-meter", !budgetReached && "wat-site-quiet")} data-limit="budget">

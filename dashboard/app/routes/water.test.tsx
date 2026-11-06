@@ -118,7 +118,7 @@ test("Today: zone cards in their fixed order, each line a row in its zone (L01�
   expect(text(zone("fog").querySelector(".wat-zone-today"))).toMatch(/^6 min today/);
   // Site today, in words with its hooks.
   expect([...document.querySelectorAll(".wat-site [data-limit]")].map((node) => [node.getAttribute("data-limit"), text(node)])).toEqual([
-    ["saf4", "Daily mist & fog limit, in Settings21 / 360 gal"], ["budget", "Daily mist target (soft)21 / 300 gal"], ["flow", "Water with no Verdify valve open: none"],
+    ["saf4", "Daily mist & fog limit, in Settingsprimary daily limit21 / 360 gal"], ["budget", "Daily mist target (soft)21 / 300 gal"], ["flow", "Water with no Verdify valve open: none"],
     ["occupancy", "Occupancy: nobody detected, misting allowed (last person 05:10)"], ["fallback", "Backup misting (sensor fault): off"],
   ]);
   expect(program()).toBe("Program rev 42 on controller · confirmed 2 min ago");
@@ -637,22 +637,22 @@ const LINE_IDS = ["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10",
 const buttons = (id: string) => [...row(id).querySelectorAll(":scope > .object-row-actions > button")].map((node) => text(node));
 const everyRow = () => Object.fromEntries(LINE_IDS.map((id) => [id, buttons(id)]));
 
-test("each row's actions with the irrigation firmware (#1343): Run… or Mist now… on every wet line but a reserved one that is off, a quiet Stop on every row, and Fog once… on L11", async () => {
+test("each row's actions with the irrigation firmware (#1343): Run… or Mist now… on every wet line but a reserved one that is off, no Stop on an idle row (D-UX-06, 2026-11-06), and Fog once… on L11", async () => {
   open("/water", { fixture: "run-dialogs" });
   await load();
   expect(everyRow()).toEqual({
-    L01: ["Run… Wall drip", "Stop Wall drip"], L02: ["Run… Wall drip (fertilized)", "Stop Wall drip (fertilized)"], L04: ["Mist now… Center mister", "Stop Center mister"], L05: ["Stop Center drip"], L06: ["Stop Center drip (fertilized)"], L07: ["Mist now… South mister", "Stop South mister"],
-    L08: ["Run… South mister (fertilized)", "Stop South mister (fertilized)"], L09: ["Mist now… West mister", "Stop West mister"], L10: ["Run… West mister (fertilized)", "Stop West mister (fertilized)"], L11: ["Fog once… Fog", "Stop Fog"],
+    L01: ["Run… Wall drip"], L02: ["Run… Wall drip (fertilized)"], L04: ["Mist now… Center mister"], L05: [], L06: [], L07: ["Mist now… South mister"],
+    L08: ["Run… South mister (fertilized)"], L09: ["Mist now… West mister"], L10: ["Run… West mister (fertilized)"], L11: ["Fog once… Fog"],
   });
   expect(document.querySelectorAll("article[data-line] .btn-stop")).toHaveLength(0);
   expect(screen.getByRole("button", { name: "Run… Wall drip" }).className).toContain("btn-wide");
 });
 
-test("before the irrigation firmware every row but fog has Stop, only L01 has Run…, and ⋯ says when the rest arrive", async () => {
-  const api = open("/water", { fixture: "before-engine" });
+test("before the irrigation firmware no idle row has Stop, only L01 has Run…, and ⋯ says when the rest arrive", async () => {
+  open("/water", { fixture: "before-engine" });
   await load();
   expect(everyRow()).toEqual({
-    L01: ["Run… Wall drip", "Stop Wall drip"], L02: ["Stop Wall drip (fertilized)"], L04: ["Stop Center mister"], L05: ["Stop Center drip"], L06: ["Stop Center drip (fertilized)"], L07: ["Stop South mister"], L08: ["Stop South mister (fertilized)"], L09: ["Stop West mister"], L10: ["Stop West mister (fertilized)"], L11: [],
+    L01: ["Run… Wall drip"], L02: [], L04: [], L05: [], L06: [], L07: [], L08: [], L09: [], L10: [], L11: [],
   });
   for (const id of ["L02", "L05", "L06", "L08", "L10"]) expect(text(row(id).querySelector(".menu [data-arrives=run]")), id).toBe("Run arrives with the irrigation firmware");
   for (const id of ["L04", "L07", "L09"]) expect(text(row(id).querySelector(".menu [data-arrives=clear-fault]")), id).toBe("Clear fault arrives with the irrigation firmware");
@@ -661,12 +661,6 @@ test("before the irrigation firmware every row but fog has Stop, only L01 has Ru
   await advance(1);
   expect(text(document.querySelector("dialog .dialog-note"))).toBe("Runs for the Wall drip duration (irrig_wall_duration_min)");
   fireEvent.click(within(document.querySelector("dialog")!).getByRole("button", { name: "Cancel" }));
-  fireEvent.click(screen.getByRole("button", { name: "Stop South mister" }));
-  await advance(0);
-  expect(writes(api).map((item) => [item.operationId, item.body])).toEqual([["API-IRR-07", { line_id: "L07" }]]);
-  await advance(5000);
-  await advance(1);
-  expect(toasts("status")).toEqual(["Stopped every running valve. VPD misting and fog can still start on their own."]);
 });
 
 test("Stop on a running row is filled and is its primary: one API-IRR-07 {line_id: L01} with no dialog, the relay edge turns the row off, and the toast offers Disable", async () => {
@@ -690,7 +684,7 @@ test("Stop on a running row is filled and is its primary: one API-IRR-07 {line_i
 test("a latched mister's row has Clear fault as its primary: one API-IRR-13, and the latch reads gone", async () => {
   const api = open("/water", { fixture: "mister-fault" });
   await load();
-  expect(buttons("L04")).toEqual(["Clear fault on Center mister", "Stop Center mister"]);
+  expect(buttons("L04")).toEqual(["Clear fault on Center mister"]);
   fireEvent.click(within(row("L04")).getByRole("button", { name: "Clear fault on Center mister" }));
   await advance(0);
   expect(writes(api)).toEqual([expect.objectContaining({ operationId: "API-IRR-13", body: { line_id: "L04" } })]);
@@ -724,7 +718,12 @@ test("with changes switched off Run… and Clear fault are disabled and Stop sta
   open("/water", { fixture: ["run-dialogs", "mister-fault", "writes-off"] });
   await load();
   for (const name of ["Run… Wall drip", "Run… Wall drip (fertilized)", "Clear fault on Center mister"]) expect(screen.getByRole("button", { name }).hasAttribute("disabled"), name).toBe(true);
-  for (const id of LINE_IDS.slice(0, -1)) expect(screen.getByRole("button", { name: `Stop ${lineDisplayName(id)}` }).hasAttribute("disabled"), id).toBe(false);
+  // D-UX-06 (2026-11-06): no Stop on an idle row; the running row's Stop stays live with changes switched off.
+  for (const id of LINE_IDS) expect(screen.queryByRole("button", { name: `Stop ${lineDisplayName(id)}` }), id).toBeNull();
+  cleanup(); stopFixtureApi();
+  open("/water", { fixture: ["l01-running", "writes-off"] });
+  await load();
+  expect(screen.getByRole("button", { name: "Stop Wall drip" }).hasAttribute("disabled")).toBe(false);
   cleanup(); stopFixtureApi();
   open("/water", { fixture: ["run-dialogs", "mister-fault", "l01-running", "viewer-session"] });
   await load();

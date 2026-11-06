@@ -110,8 +110,9 @@ export type LineCardProps = {
 /**
  * A line's row on Water → Today (redesign §5.2, `ObjectRow`): "Wall drip" with CLEAN or FERT and its one sync pill,
  * the state sentence, the today strip with the next run, one primary action by state (Run… while idle, Stop while
- * running, Clear fault on a latched mister, Resume while paused), the line's own Stop whenever it can matter (D-UX-06:
- * filled only while the relay is on or unknown, a quiet outline otherwise, never disabled by the writes flag), and ⋯ with
+ * running, Clear fault on a latched mister, Resume while paused), the line's own Stop only while it runs or its relay
+ * reads unknown (D-UX-06 as Jason set it on 2026-11-06, #1349: no Stop on an idle row; Stop all water in the header
+ * stops every line), never disabled by the writes flag, and ⋯ with
  * the enable switch and its check sheet, Options…, Pause until…, "Activity for Wall drip ›", "Runs of Wall drip ›" and Graphs. Fog
  * (L11) is a climate device: no sync pill and no Options, but it runs once ("Fog once…", #1343 follow-up), with its own
  * Stop, and the enable switch it needs first (the controller runs no disabled line); no pause. Viewers get the same row with the menu's links alone.
@@ -136,7 +137,8 @@ export function LineCard({ line, master = null, engine, program, today, schedule
   const pauseNote = pausedWords && !pauseIsState ? pausedWords : null;
   const meta = [syncWords, pauseNote, code === "idle" && engine ? last.meta : null].filter(Boolean);
   const offer = runOffer(line, engine);
-  const filled = running || code === "unknown";
+  // D-UX-06 (2026-11-06): a Stop only on a row that runs, or whose relay reads unknown and so may be on.
+  const stoppable = running || code === "unknown";
   const primary = running ? null : latched ? <ClearFaultButton line={line} engine={engine} /> : paused && !fog ? <ResumeLine line={line} /> : offer === "run" || offer === "mist" || offer === "enable" ? <RunControl line={line} engine={engine} /> : null;
   const tone: RowTone | undefined = running ? "running" : latched ? "fault" : engine && line.fault === "backing_off" ? "warn" : undefined;
   const token = running ? (line.state.cause === "vpd" ? "eq-mister" : line.state.cause === "feed" ? "eq-fert" : line.state.cause === "run_now" ? "eq-master" : "eq-water") : undefined;
@@ -165,7 +167,7 @@ export function LineCard({ line, master = null, engine, program, today, schedule
     state={<span className={cls("line-state", apiDown && "is-neutral")}>{pauseIsState ? pausedWords : <LineStateText line={line} engine={engine} today={today} scheduleLabels={scheduleLabels} />}</span>}
     meta={meta.length ? meta.join(" · ") : undefined}
     primary={primary}
-    stop={fog && !engine ? undefined : <StopButton lineId={id} filled={filled} />}
+    stop={(fog && !engine) || !stoppable ? undefined : <StopButton lineId={id} />}
     menu={menu} tone={tone} token={token}>
     {controls}
     {strip}

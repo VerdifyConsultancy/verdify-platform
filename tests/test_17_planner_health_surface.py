@@ -30,6 +30,13 @@ _MCP_STUB_MODULES = ("mcp", "mcp.server", "mcp.server.fastmcp")
 ACTIVE_PLANNER_MODEL_LABEL = "hermes-iris/custom:gpt-6-luna/xhigh"
 
 
+# #1363: the zot custody copy of the unchanged upstream digest.
+HERMES_IMAGE = (
+    "registry.vallery.net/jvallery/mirror-docker-io-nousresearch-hermes-agent:pinned-a7111ab1cc43"
+    "@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
+)
+
+
 def _install_fastmcp_test_stub() -> None:
     """Provide only the registration surface this isolated module test needs.
 
@@ -1081,9 +1088,7 @@ def test_actual_python3_liveness_probe_replaces_unacknowledged_disconnect_or_fat
     assert env_by_name["HERMES_MCP_UNACKNOWLEDGED_DISCONNECT_RESTART_SECONDS"] == "600"
     assert workload["spec"]["replicas"] == 1
     assert workload["spec"]["strategy"]["type"] == "Recreate"
-    expected_digest = (
-        "nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
-    )
+    expected_digest = HERMES_IMAGE
     assert probes["image"] == expected_digest
     init_by_name = {item["name"]: item for item in workload["spec"]["template"]["spec"]["initContainers"]}
     assert init_by_name["seed-config"]["image"] == expected_digest
@@ -1112,9 +1117,7 @@ def test_rendered_prod_hermes_supervision_preserves_singleton_exact_pin_and_both
     init_by_name = {item["name"]: item for item in workload["spec"]["template"]["spec"]["initContainers"]}
     volume_by_name = {item["name"]: item for item in workload["spec"]["template"]["spec"]["volumes"]}
     mount_by_name = {item["name"]: item for item in container["volumeMounts"]}
-    expected_digest = (
-        "nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
-    )
+    expected_digest = HERMES_IMAGE
     readiness = container["readinessProbe"]
     liveness = container["livenessProbe"]
 

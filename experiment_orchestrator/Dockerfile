@@ -34,6 +34,13 @@ COPY ingestor/tasks/component_experiment.py /app/readiness-source/ingestor/tasks
 COPY deploy/k8s/components/hermes-iris/hermes-config.yaml /app/readiness-source/deploy/k8s/components/hermes-iris/hermes-config.yaml
 COPY tests/fixtures/experiment-v2-readiness/base-proof.json /app/readiness-source/tests/fixtures/experiment-v2-readiness/base-proof.json
 COPY research/planner-efficacy/wetting-incident-778-readiness.json research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md /app/readiness-source/research/planner-efficacy/
+# The official python image strips every .pyc, and the pods run with
+# PYTHONDONTWRITEBYTECODE and a read-only root, so each readiness exec probe
+# recompiled the stdlib it imports: ~0.7 CPU-s per probe, ~110-160m steady
+# and >70% CFS throttling while idle (#1389). Ship hash-based bytecode;
+# unchecked-hash stays valid whatever mtimes the image builder records.
+RUN python -m compileall -q -j 0 --invalidation-mode unchecked-hash \
+        /usr/local/lib/python3.13 /app/experiment_orchestrator
 # The managed build clone uses umask 077. Docker/kaniko preserve those source
 # modes on bare COPY, so normalize every runtime module before dropping root;
 # otherwise uid 10001 cannot import a freshly built image.
