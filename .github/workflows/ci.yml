@@ -1,0 +1,155 @@
+# verdify-platform CI on the estate's self-hosted ARC runners (issue #1397).
+#
+# Every job is the estate-ci reusable checks workflow (checkout + one repository
+# script) on a jvallery/verdify-platform scale set; the scripts in ci/gha/ run
+# the same commands as the native in-cluster pipeline. Every caller job is named
+# "ci", so each check context is "ci / <check>" (for example "ci / validate").
+# No job is skipped by an `if:`: a check that its path impact does not select
+# passes as "not impacted", so every required context always reports.
+#
+# Scale sets (estate-ci runners.yaml, repository jvallery/verdify-platform):
+#   verdify-platform-ci            job image python:3.13-bookworm (native validate image)
+#   verdify-platform-ci-tools      job image agents-ci-tools (uv, verdify-campaign-ci)
+#   verdify-platform-ci-esphome    job image ESPHome 2026.6.5
+#   verdify-platform-ci-dashboard  job image weather-ci (node, pnpm, Playwright)
+#
+# Portability (Forgejo/Gitea Actions): each job is checkout plus one `run:` of a
+# ci/gha/ script and /opt/estate-ci helpers; vendor checks.yml if the forge
+# cannot call a cross-repository reusable workflow.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:   # estate-ci pin-bump dispatches this on its pin branch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Supersede stale PR runs; never cancel runs on main.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  trusted-precheck:
+    name: ci
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      name: trusted-precheck
+      run: ci/gha/trusted-precheck.sh
+      timeout-minutes: 5
+
+  path-impact:
+    name: ci
+    needs: [trusted-precheck]
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      name: path-impact
+      run: ci/gha/path-impact.sh
+      timeout-minutes: 10
+
+  # Native `validate`: scripts/ci-local.sh with the diff gates.
+  # TEMPORARY until estate-ci toolbox image adds kustomize + UID 1001 passwd entry (CI-PLATFORM):
+  # validate.sh installs a sha256-pinned kustomize and an nss_wrapper passwd entry
+  # for UID 1001 (initdb in the private PostgreSQL fixtures needs one).
+  validate:
+    name: ci
+    needs: [trusted-precheck, path-impact]
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      name: validate
+      run: ci/gha/validate.sh
+      runner: verdify-platform-ci
+      in-job-image: true
+      timeout-minutes: 50
+
+  # The five checks.steps of the native repo-validate profile (.agent-fleet/ci.yaml).
+  platform-static:
+    name: ci
+    needs: [trusted-precheck, path-impact]
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      name: platform-static
+      run: ci/gha/registry-step.sh platform-static
+      runner: verdify-platform-ci-tools
+      in-job-image: true
+      timeout-minutes: 20
+
+  # TEMPORARY until estate-ci toolbox image adds kustomize + UID 1001 passwd entry (CI-PLATFORM):
+  # registry-step.sh installs a sha256-pinned kustomize for platform-tests.
+  platform-tests:
+    name: ci
+    needs: [trusted-precheck, path-impact]
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      name: platform-tests
+      run: ci/gha/registry-step.sh platform-tests
+      runner: verdify-platform-ci-tools
+      in-job-image: true
+      timeout-minutes: 30
+
+  # ~45 min on ARC (run 42260435002 reached 34 min with 4 of ~27 files left).
+  campaign-qualification:
+    name: ci
+    needs: [trusted-precheck, path-impact]
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      name: campaign-qualification
+      run: ci/gha/registry-step.sh campaign-qualification
+      runner: verdify-platform-ci-tools
+      in-job-image: true
+      timeout-minutes: 75
+
+  firmware-logic:
+    name: ci
+    needs: [trusted-precheck, path-impact]
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      name: firmware-logic
+      run: ci/gha/registry-step.sh firmware-logic
+      runner: verdify-platform-ci-tools
+      in-job-image: true
+      timeout-minutes: 20
+
+  firmware-secretless-compile:
+    name: ci
+    needs: [trusted-precheck, path-impact]
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      name: firmware-secretless-compile
+      run: ci/gha/registry-step.sh firmware-secretless-compile
+      runner: verdify-platform-ci-esphome
+      in-job-image: true
+      timeout-minutes: 60
+
+  # Native `dashboard` and `campaign`: classification in the runner container,
+  # checks in the set's job image (ci/gha/dashboard.sh, ci/gha/campaign.sh).
+  dashboard:
+    name: ci
+    needs: [trusted-precheck, path-impact]
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      name: dashboard
+      run: ci/gha/dashboard.sh
+      runner: verdify-platform-ci-dashboard
+      timeout-minutes: 50
+
+  campaign:
+    name: ci
+    needs: [trusted-precheck, path-impact]
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      name: campaign
+      run: ci/gha/campaign.sh
+      runner: verdify-platform-ci-tools
+      timeout-minutes: 50
+
+  # Estate rules R1-R3 on this repository's workflows: context "ci / lint".
+  workflow-lint:
+    name: ci
+    uses: jvallery/estate-ci/.github/workflows/lint.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      strict: true
+      runner: verdify-platform-ci
