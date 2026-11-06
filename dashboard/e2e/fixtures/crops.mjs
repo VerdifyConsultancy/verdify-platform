@@ -13,14 +13,17 @@
 const DAY = 86_400_000;
 const iso = (ms) => new Date(ms).toISOString();
 const ZONE = "America/Denver";
+// One formatter each: building an Intl.DateTimeFormat per call made every world build slow.
+const DATE_PARTS = new Intl.DateTimeFormat("en-US", { timeZone: ZONE, year: "numeric", month: "2-digit", day: "2-digit" });
+const CLOCK = new Intl.DateTimeFormat("en-US", { timeZone: ZONE, hour: "2-digit", hourCycle: "h23", minute: "2-digit" });
 const localDate = (ms) => {
-  const part = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(ms)).map((item) => [item.type, item.value]));
+  const part = Object.fromEntries(DATE_PARTS.formatToParts(new Date(ms)).map((item) => [item.type, item.value]));
   return `${part.year}-${part.month}-${part.day}`;
 };
 /** Local midnight of a `YYYY-MM-DD` day in America/Denver, as epoch ms (the offset is read at noon of that day). */
 function localMidnight(date) {
   const noon = Date.parse(`${date}T12:00:00Z`);
-  const shown = new Intl.DateTimeFormat("en-US", { timeZone: ZONE, hour: "2-digit", hourCycle: "h23", minute: "2-digit" }).format(new Date(noon));
+  const shown = CLOCK.format(new Date(noon));
   const [hour, minute] = shown.split(":").map(Number);
   const offsetMs = noon - Date.parse(`${date}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00Z`);
   return Date.parse(`${date}T00:00:00Z`) + offsetMs;
