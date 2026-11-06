@@ -589,6 +589,7 @@ def test_the_routes_are_the_committed_operations():
         ("/planner/history", "GET", "API-25"),  # #1361
         ("/planner/experiments", "GET", "API-26"),
         ("/planner/experiments/{id}", "GET", "API-27"),
+        ("/soil-targets", "GET", "API-SOIL-01"),  # #1345
     }
     for path, method, operation_id in served:
         assert spec[f"/v1{path}"][method.lower()]["operationId"] == operation_id
