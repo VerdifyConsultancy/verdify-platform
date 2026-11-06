@@ -171,6 +171,58 @@ def _render_current_crops_table(crops: list[dict], zone_name: str) -> str:
     return "\n".join(lines)
 
 
+# Hand-written status cards the zone-status block replaces on first render (#1329): they named an "active control"
+# zone and its crops by hand, and went stale when plantings changed.
+STALE_STATUS_CARD_RE = re.compile(
+    r'[ \t]*<div class="metric-card"><strong>(?:Active Control Zone|Active Crop Zone|Observed/Reference Zone|'
+    r"Equipment Only(?: Zone)?|Current Control Crops?|Current Crops?)</strong><p>.*?</p></div>\n"
+)
+METRIC_GRID_RE = re.compile(
+    r'<div class="metric-grid">\n(?P<cards>(?:[ \t]*<div class="metric-card">.*?</div>\n)*)</div>\n?'
+)
+
+
+def _render_zone_status(plantings: list[dict], zone_name: str) -> str:
+    """Planted now in this zone, from the same active crop records as the current-plantings block."""
+    planted = [p for p in plantings if p.get("is_occupied", True)]
+    if planted:
+        names = "; ".join(
+            f"{p['crop_name']}{' (' + p['crop_variety'] + ')' if p.get('crop_variety') else ''}"
+            + (f" at <code>{p['position_label']}</code>" if p.get("position_label") else "")
+            for p in planted
+        )
+        noun = "planting" if len(planted) == 1 else "plantings"
+        status = _metric_card("Planted now", f"{len(planted)} active {noun}: {names}.")
+    else:
+        status = _metric_card("Nothing planted", f"No active plantings in {zone_name} right now.")
+    source = _metric_card(
+        "Source",
+        "The operator crop records (active plantings and their zone and position), "
+        "the same records the dashboard's crop locations show.",
+    )
+    return "\n".join(['<div class="metric-grid">', status, source, "</div>"])
+
+
+def _seed_zone_status(existing: str, block: str) -> str:
+    """Put the zone-status block where the first hand-written status cards were, dropping those cards."""
+    for grid in METRIC_GRID_RE.finditer(existing):
+        if not STALE_STATUS_CARD_RE.search(grid.group("cards")):
+            continue
+        rest = STALE_STATUS_CARD_RE.sub("", grid.group("cards"))
+        kept = f'<div class="metric-grid">\n{rest}</div>\n' if rest.strip() else ""
+        generated = _auto_block("zone-status", block) + "\n"
+        replacement = generated + ("\n" + kept if kept else "")
+        return existing[: grid.start()] + replacement + existing[grid.end() :]
+    anchors = [
+        '<div class="auto-render-marker" data-auto-render="start current-plantings"></div>',
+        "<!-- auto-render:start current-plantings -->",
+    ]
+    for anchor in anchors:
+        if anchor in existing:
+            return existing.replace(anchor, _auto_block("zone-status", block) + "\n\n" + anchor, 1)
+    return existing.rstrip() + "\n\n## Zone Status\n\n" + _auto_block("zone-status", block) + "\n"
+
+
 def _metric_card(title: str | None, body: str) -> str:
     return f'  <div class="metric-card"><strong>{title or "—"}</strong><p>{body}</p></div>'
 
@@ -335,6 +387,7 @@ async def render_zone(conn: asyncpg.Connection, zone_slug: str) -> tuple[str, st
     fm_yaml = _yaml_dumps(fm.model_dump(exclude_none=True))
 
     blocks = {
+        "zone-status": _render_zone_status(plantings_list, d["zone_name"]),
         "current-plantings": _render_current_crops_table(plantings_list, d["zone_name"]),
         "shelves": _render_shelves_table(d["shelves"]),
         "sensors": _render_sensors_table(d["sensors"]),
@@ -346,8 +399,10 @@ async def render_zone(conn: asyncpg.Connection, zone_slug: str) -> tuple[str, st
     body = f"""# {d["zone_name"]}
 
 > Rendered from DB: zones + shelves + positions + sensors + equipment + water_systems.
-> Source of truth: `v_zone_full` (migration 087) + `v_position_current` (migration 089).
+> Source of truth: `v_zone_full` (migration 087) + the active `crops` records (#1329).
 > Do not edit by hand — run `scripts/render-zone-pages.py` to regenerate.
+
+{_auto_block("zone-status", blocks["zone-status"])}
 
 ## Current Plantings
 
@@ -404,6 +459,9 @@ async def run(args: argparse.Namespace) -> int:
             mode = "full page"
             if existing and not args.replace_page and "auto-render" in existing:
                 content, replaced, missing = _replace_auto_blocks(existing, blocks)
+                if "zone-status" in missing:
+                    content = _seed_zone_status(content, blocks["zone-status"])
+                    missing.remove("zone-status")
                 mode = f"{len(replaced)} block(s)"
                 if missing:
                     print(f"  WARN {filename}: missing auto-render block(s): {', '.join(missing)}")
