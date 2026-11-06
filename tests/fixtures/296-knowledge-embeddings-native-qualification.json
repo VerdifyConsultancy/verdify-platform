@@ -1,20 +1,20 @@
 {
-  "migration": "296-knowledge-embeddings-cortex.sql",
-  "exact_final_migration_sha256": "28555e58ed20cc4d264dba288fdd3dd97d8e1b554fc6d561acfaa910d535e246",
-  "final_migration_qualification_pending": true,
-  "before": {
-    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
-    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
-    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
-  },
-  "projected_successor": {
-    "api": "a752a89a07b5b90ecbe6ccaf44358492aa8da6c562d608c8880d24d77088af7e",
-    "ingestor": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
-    "mcp": "9ede0ab24e66d55117768d87f7b09d8681471f53e6785638c4137792768e0b67"
-  },
-  "projection": "2026-11-05, read only, production at exact289: max seq 289 with 289's sha, and all three live digests and receipts equal to 289's registration. fn_mcp_runtime_boundary_digest's live body (pg_get_functiondef), run as a plain query under its own search_path (pg_catalog, pg_temp) in a default_transaction_read_only session on production, reproduced the live MCP digest 6cab4f0f... byte for byte. With four injected entries it gives the projected MCP seal: relation|public|knowledge_embeddings|r|10|f|f|| (shaped exactly like production's public.verdify_embeddings entry), relation-acl SELECT and function-acl EXECUTE for verdify_mcp_runtime (production OID 1527920, grantor verdify OID 10), and the function entry with pg_get_functiondef's layout for this file's CREATE FUNCTION (argument type public.halfvec, LANGUAGE sql, STABLE, SET search_path TO 'pg_catalog', 'public', 'pg_temp', SET \"hnsw.iterative_scan\" TO 'strict_order', and the body verbatim). The function entry's text is the part most likely to differ from the measured value, because no CREATE could run in a read-only session. The ordinary seals stay 289's: fn_runtime_ordinary_boundary_digest (217) takes in a relation or function only if an api or ingestor role can use it or holds an entry, or PUBLIC does; this file grants neither, revokes PUBLIC on both objects, production has no table default ACL and verdify's function default is {verdify=X/verdify}, and the two indexes carry no ACL. Run scripts/qualify-migration-successor.py db/migrations/296-knowledge-embeddings-cortex.sql --fixture tests/fixtures/296-knowledge-embeddings-native-qualification.json on production (every session rolls back; no --apply-first while production is at 289). If the probe differs from these literals, set the measured MCP digest in the file's successor block (both places) and in the c0-migration-delivery.py and bootstrap-six-runtime-roles.py registrations, update the file's sha at both and here, and run it again.",
-  "qualified_successor": null,
-  "after_rollback": null,
-  "inside_transaction_receipts_match": false,
-  "final_migration_rollback_verified": false
+ "migration": "296-knowledge-embeddings-cortex.sql",
+ "exact_final_migration_sha256": "543f7662c5a09b624e273e68ab11133f86e99249a2bc47f948a177402dd3f80c",
+ "final_migration_qualification_pending": true,
+ "before": {
+  "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
+  "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
+  "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+ },
+ "projected_successor": {
+  "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
+  "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
+  "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+ },
+ "projection": "Chained from exact294 in the same PR (293 -> 294 -> 296); 294 moves no seal. before and projected_successor are STAND-INS: 294's seals, which are 293's stand-ins (291's values), because 293's grants move all three seals and 293 is not measured yet. 296 moves only the MCP seal, so the file's successor block refuses the stand-in MCP literal until it is measured. Earlier evidence (exact289, read only): fn_mcp_runtime_boundary_digest's live body, run as a plain query with four injected entries (relation|public|knowledge_embeddings|r|10|f|f|| shaped like public.verdify_embeddings; relation-acl SELECT and function-acl EXECUTE for verdify_mcp_runtime, production OID 1527920, grantor verdify OID 10; and the search function's pg_get_functiondef entry with argument type public.halfvec, SET search_path TO 'pg_catalog', 'public', 'pg_temp' and SET \"hnsw.iterative_scan\" TO 'strict_order'), projected MCP 9ede0ab24e66d55117768d87f7b09d8681471f53e6785638c4137792768e0b67 on top of exact289's 6cab4f0f...; the same four entries apply on top of 293's measured MCP digest. The ordinary seals stay 294's: this file grants no api, ingestor or PUBLIC entry. After 293 and 294 are measured (or with --apply-first), set the predecessor seals, run scripts/qualify-migration-successor.py db/migrations/296-knowledge-embeddings-cortex.sql --fixture tests/fixtures/296-knowledge-embeddings-native-qualification.json on production (every session rolls back), set the measured MCP digest in the file's successor block (both places) and in the c0-migration-delivery.py and bootstrap-six-runtime-roles.py registrations, update the file's sha at both and here, and run it again.",
+ "qualified_successor": null,
+ "after_rollback": null,
+ "inside_transaction_receipts_match": false,
+ "final_migration_rollback_verified": false
 }

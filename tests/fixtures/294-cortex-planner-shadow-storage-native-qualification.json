@@ -1,0 +1,16 @@
+{
+  "migration": "294-cortex-planner-shadow-storage.sql",
+  "exact_final_migration_sha256": "c0400e8b273ebe086f729a205c20be76430bd62b34ac528d4be152a01de2554a",
+  "final_migration_qualification_pending": true,
+  "before": {
+    "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
+    "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projected_successor": {
+    "api": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
+    "ingestor": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
+    "mcp": "6cab4f0f09eef201254ba2ea858f514c9476f0a58954ed09762320cce919893e"
+  },
+  "projection": "2026-11-05, read only, production at exact289: max seq 289 with 289's sha, all three live digests and receipts equal to 289's registration, planner_inference_runs empty, no planner_pack or weather_forecast_archive. Seal-preserving like 288: every object 294 creates is owned by verdify and carries only verdify and verdify_planner_runtime entries (functions REVOKE PUBLIC; production's function default ACL is {verdify=X/verdify}, and it has no table default ACL), so neither fn_runtime_ordinary_boundary_digest nor fn_mcp_runtime_boundary_digest takes any of them in; planner_inference_runs (verdify-only ACL) gains columns but no runtime-role entry; equipment_assets changes only in rows. Applied on a loopback PostgreSQL 16 stub with the three seal functions stubbed out, the file runs clean and the planner duty reaches only its own objects. Re-chained onto exact293 (#1387) and combined with 296 in one PR: until 293 is measured, before and projected_successor are 293's stand-in seals (291's values), and 294 still moves none. After 293 is applied (or with --apply-first), set the measured 293 seals in both blocks and the registrations if they differ, then qualify natively: run scripts/qualify-migration-successor.py db/migrations/294-cortex-planner-shadow-storage.sql --fixture tests/fixtures/294-cortex-planner-shadow-storage-native-qualification.json on production (every session rolls back) and commit the fixture it writes."
+}

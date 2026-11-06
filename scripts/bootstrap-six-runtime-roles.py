@@ -760,6 +760,57 @@ def sealed_sql_293():
     )
 
 
+CORTEX_PLANNER_MIGRATION = (
+    294,
+    "294-cortex-planner-shadow-storage.sql",
+    "c0400e8b273ebe086f729a205c20be76430bd62b34ac528d4be152a01de2554a",
+)
+# #1350: seal-preserving. No object 294 adds carries an api, ingestor, MCP or PUBLIC privilege, so every
+# seal keeps 293's value. Chained from 293; 294 and 296 ship in one PR, in that order.
+SUCCESSOR_294 = dict(SUCCESSOR_293)
+
+
+def sealed_sql_294():
+    # Keep every 293 predicate and bind the exact 294 runner stamp.
+    predecessor = sealed_sql_293()
+    current = seal_profile_sql(293, SUCCESSOR_293)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(294, SUCCESSOR_294), 1)
+        + " AND "
+        + ledger_row_sql(*CORTEX_PLANNER_MIGRATION)
+        + ")"
+    )
+
+
+KNOWLEDGE_EMBEDDINGS_MIGRATION = (
+    296,
+    "296-knowledge-embeddings-cortex.sql",
+    "543f7662c5a09b624e273e68ab11133f86e99249a2bc47f948a177402dd3f80c",
+)
+# #1351: knowledge_embeddings (halfvec 2560, Cortex embed.main) and its search function, SELECT and
+# EXECUTE for the MCP duty only. The MCP digest takes in both entries, so the MCP seal moves; neither
+# object carries an api, ingestor or PUBLIC entry, so both ordinary seals stay 294's. Chained from 294.
+# Until the rolled-back native qualification measures 296, these are 294's seals as stand-ins
+# (tests/fixtures/296-knowledge-embeddings-native-qualification.json).
+SUCCESSOR_296 = dict(SUCCESSOR_294)
+
+
+def sealed_sql_296():
+    # Keep every 294 predicate and bind the exact 296 runner stamp with the MCP seal its grants move.
+    predecessor = sealed_sql_294()
+    current = seal_profile_sql(294, SUCCESSOR_294)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(296, SUCCESSOR_296), 1)
+        + " AND "
+        + ledger_row_sql(*KNOWLEDGE_EMBEDDINGS_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -800,6 +851,10 @@ def sealed_sql():
         + sealed_sql_291()
         + " OR "
         + sealed_sql_293()
+        + " OR "
+        + sealed_sql_294()
+        + " OR "
+        + sealed_sql_296()
         + ")"
     )
 

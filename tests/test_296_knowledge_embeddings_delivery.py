@@ -3,10 +3,9 @@
 #1351 row 2 (Jason 2026-11-05: Verdify runs local-only): the knowledge corpus moves from OpenAI
 text-embedding-3-large (vector 3072) to Cortex embed.main (halfvec 2560, HNSW). 296 adds knowledge_embeddings and
 fn_search_knowledge_embeddings beside the old table and grants the MCP duty SELECT and EXECUTE. Those entries move the
-MCP seal only; the api and ingestor seals stay 289's. The MCP successor literal is a read-only projection on
-production at exact289 (the fixture's projection says how); test_native_qualification_is_recorded is the merge gate
-for the rolled-back production run that measures it. 290-295 are in open PRs ahead of this one; whichever merges
-first re-chains the other.
+MCP seal only; the api and ingestor seals stay 294's. 296 chains from 294 in the same PR (293 -> 294 -> 296).
+Until the rolled-back production qualification measures it, the successor literals are 294's stand-in seals (the
+fixture's projection says why); test_native_qualification_is_recorded is the merge gate for that run.
 """
 
 import hashlib
@@ -21,10 +20,11 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 HEX = "([0-9a-f]{64})"
-PREDECESSOR = 289
+PREDECESSOR = 294
 SEALS = ("api", "ingestor", "mcp")
 API, INGESTOR = "verdify_api_runtime_login", "verdify_ingestor_runtime_login"
-MERGED = list(range(255, PREDECESSOR + 1))
+# 292 is a gap; 293 and 294 precede 296 (295 is a gap).
+MERGED = [*range(255, 292), 293, 294]
 
 
 def load(name, filename):
@@ -114,9 +114,9 @@ def test_file_is_wrap_safe_and_every_session_ends_in_rollback():
         assert sql.count("ROLLBACK;") == 1 and "COMMIT" not in sql.upper(), name
 
 
-def test_predecessor_binds_exact289_with_its_registered_seals_and_pgvector_with_halfvec_hnsw():
+def test_predecessor_binds_exact294_with_its_registered_seals_and_pgvector_with_halfvec_hnsw():
     row = re.search(r"seq=(\d+) AND filename='db/migrations/([^']+)'\s+AND sha256='" + HEX + "'", PREDECESSOR_BLOCK)
-    assert (int(row[1]), row[2], row[3]) == (PREDECESSOR, c0.SUCCESSOR_289, c0.SUCCESSOR_289_SHA256)
+    assert (int(row[1]), row[2], row[3]) == (PREDECESSOR, c0.SUCCESSOR_294, c0.SUCCESSOR_294_SHA256)
     assert "stamp_method='runner'" in PREDECESSOR_BLOCK and "current_user <> 'verdify'" in PREDECESSOR_BLOCK
     assert f"seq>{PREDECESSOR})" in PREDECESSOR_BLOCK
     assert "to_regclass('public.knowledge_embeddings') IS NOT NULL" in PREDECESSOR_BLOCK
@@ -124,7 +124,7 @@ def test_predecessor_binds_exact289_with_its_registered_seals_and_pgvector_with_
     assert "extname='vector'" in PREDECESSOR_BLOCK and ">= ARRAY[0,7]" in PREDECESSOR_BLOCK
     assert "'296 refuses an unqualified predecessor'" in PREDECESSOR_BLOCK
     for seal, digest in registered(PREDECESSOR).items():
-        assert digest == six.SUCCESSOR_289[seal]
+        assert digest == six.SUCCESSOR_294[seal]
         assert PREDECESSOR_BLOCK.count(f"'hex') IS DISTINCT FROM '{digest}'") == 1, seal
         assert PREDECESSOR_BLOCK.count(f"boundary_sha256=decode('{digest}','hex')") == 1, seal
 
@@ -134,7 +134,11 @@ def test_successor_reseals_only_the_mcp_receipt():
     assert literals == six.SUCCESSOR_296 == registered(296)
     assert literals["api"] == registered(PREDECESSOR)["api"]
     assert literals["ingestor"] == registered(PREDECESSOR)["ingestor"]
-    assert literals["mcp"] != registered(PREDECESSOR)["mcp"]
+    if json.loads(FIXTURE.read_text())["final_migration_qualification_pending"]:
+        # Stand-in: 294's MCP seal, which this file's grants move, so its successor block refuses it.
+        assert literals["mcp"] == registered(PREDECESSOR)["mcp"]
+    else:
+        assert literals["mcp"] != registered(PREDECESSOR)["mcp"]
     assert (
         f"UPDATE public.mcp_runtime_boundary_receipt SET boundary_sha256=decode('{literals['mcp']}','hex') WHERE singleton;"
     ) in SUCCESSOR_BLOCK
@@ -199,14 +203,14 @@ def test_the_projection_injects_exactly_the_mcp_entries_the_body_creates():
 # ── The bootstrap and the C0 readback ───────────────────────────────────────
 
 
-def test_sealed_sql_296_chains_from_289_and_binds_the_exact_ledger_row():
-    old = six.seal_profile_sql(PREDECESSOR, six.SUCCESSOR_289)
-    expected = "(" + six.sealed_sql_289().replace(old, six.seal_profile_sql(296, six.SUCCESSOR_296), 1)
+def test_sealed_sql_296_chains_from_294_and_binds_the_exact_ledger_row():
+    old = six.seal_profile_sql(PREDECESSOR, six.SUCCESSOR_294)
+    expected = "(" + six.sealed_sql_294().replace(old, six.seal_profile_sql(296, six.SUCCESSOR_296), 1)
     expected += " AND " + six.ledger_row_sql(*six.KNOWLEDGE_EMBEDDINGS_MIGRATION) + ")"
     assert six.sealed_sql_296() == expected
     assert "(SELECT max(seq) FROM public.schema_migrations WHERE source='db/migrations')=296" in expected
     assert "stamp_method='runner'" in six.ledger_row_sql(*six.KNOWLEDGE_EMBEDDINGS_MIGRATION)
-    assert six.sealed_sql().count(" OR " + six.sealed_sql_289() + " OR " + expected) == 1
+    assert six.sealed_sql().count(" OR " + six.sealed_sql_294() + " OR " + expected) == 1
     assert maintenance.contract_sql().count(" OR " + six.sealed_sql_296()) == 1
     assert '"296-knowledge-embeddings-cortex.sql",' in (ROOT / "tests/test_experiment_schema_migration.py").read_text()
     assert "tests/test_296_knowledge_embeddings_delivery.py" in (ROOT / "scripts/ci-local.sh").read_text()
@@ -286,7 +290,7 @@ def assert_recorded(evidence):
 
 
 def fake_qualification(monkeypatch, *, inside=None):
-    """Replay the qualifier's three sessions for 296, without a database, on production at 289."""
+    """Replay the qualifier's three sessions for 296, without a database, on production at 294."""
 
     def state(seals, max_seq):
         return {**seals, **{seal + "_receipt": seals[seal] for seal in SEALS}, "max_seq": max_seq}
