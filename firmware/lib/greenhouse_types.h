@@ -615,6 +615,13 @@ struct LightingSetpoints {
     // circuit no longer credits supplemental DLI or accrues qualified-light
     // minutes — the dark fixture can no longer "meet" the photoperiod on paper.
     bool out_of_service = false;
+    // #1370 (Jason, 2026-11-05: "Anytime the room is occupied regardless of time of
+    // day"): the occupancy task light may switch this circuit on outside the
+    // photoperiod window too. Only the MAIN (people) light sets it; the GROW
+    // circuit keeps false, so its occupancy light stays inside the window and the
+    // Vandas keep their dark period (invariant 23). The lux gate is unchanged: a
+    // bright room or no fresh exterior lux lights nothing.
+    bool occupancy_any_hour = false;
 };
 
 static constexpr uint32_t LIGHT_STATE_SENTINEL = 0xBEEF0043;

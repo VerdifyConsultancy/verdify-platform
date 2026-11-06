@@ -51,8 +51,10 @@ test("what a line offers (#1343): every enabled wet line runs once, Mist now… 
   for (const off of [line("L02", "fert_drip", false), line("L07", "mister", false), line("L10", "fert_mister", false)]) expect(runOffer(off, true)).toBe("enable");
   for (const reserved of [line("L05", "drip", false, true), line("L06", "fert_drip", false, true)]) expect(runOffer(reserved, true)).toBeNull();
   expect(runOffer(line("L05", "drip", true, true), true)).toBe("run");
-  // L11 and L03 have no card controls.
-  expect(runOffer(line("L11", "fog", true), true)).toBeNull();
+  // L11 fog runs once with the engine (#1343 follow-up), enabled first like any line; before it, nothing. L03 has no card controls.
+  expect(runOffer(line("L11", "fog", true), true)).toBe("run");
+  expect(runOffer(line("L11", "fog", false), true)).toBe("enable");
+  expect(runOffer(line("L11", "fog", true), false)).toBeNull();
   expect(runOffer(line("L03", "master", true), true)).toBeNull();
   expect(runOffer(line("L01", "drip", true), false)).toBe("run");
   expect(runOffer(line("L01", "drip", false), false)).toBeNull();

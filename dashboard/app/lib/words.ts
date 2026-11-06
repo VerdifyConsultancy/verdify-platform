@@ -438,6 +438,8 @@ const ACTIVITY_ACTION = {
  */
 const IRRIGATION_FIELD = {
   enabled: "Enabled",
+  circuit_id: "Line",
+  variant: "Variant",
   vpd_member: "VPD control",
   schedule_member: "Schedule",
   daily_cap_min: "Daily cap",

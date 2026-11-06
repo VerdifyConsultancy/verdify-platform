@@ -268,8 +268,11 @@ const programSync = z.object({
   reason: maybe(text), pushed_at: maybe(text), confirmed_at: maybe(text), reject_code: maybe(text), next_retry_at: maybe(text),
 });
 const usedOfMax = z.object({ used: num.nullable(), max: num.nullable() });
+/** #1336: one variant of a physical line; an API from before it sends no `circuits`, read as none. */
+const circuitVariant = z.object({ variant: code, line_id: maybe(text), wired: flag, master_valve: flag, enabled: flag, running: flag });
+const circuit = z.object({ circuit_id: code, name: text, zone: code, kind: code, clean: circuitVariant, fertilized: circuitVariant });
 const irrigationStatus = z.object({
-  server_time: text, engine: flag, program: programSync, lines: z.array(irrigationLine),
+  server_time: text, engine: flag, program: programSync, lines: z.array(irrigationLine), circuits: z.array(circuit).default([]),
   active_runs: z.array(z.object({
     manifold: code, line_id: text, cause, slot_id: maybe(int), started_at: text, ends_at: maybe(text), pulses_done: maybe(int), pulses_total: maybe(int),
   })),
