@@ -36,7 +36,9 @@ LOCAL = re.compile(
 )
 PLACEHOLDER = "invalid.local/"
 # Upstream repository prefix -> the issue that removes it. Shrink only.
-PENDING: dict[str, str] = {}
+PENDING = {
+    "nousresearch/hermes-agent@": "#1363 repins verdify-hermes-iris once its zot custody copy is verified (storage-infra#1409)",
+}
 # Files that no Argo source renders. Shrink only (delete the file or repin it).
 UNRENDERED = {
     "deploy/k8s/components/umami/umami.yaml": "umami is not wired into any overlay (docs/SERVICE_MAP.md)",

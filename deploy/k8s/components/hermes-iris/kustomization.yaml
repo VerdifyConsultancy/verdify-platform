@@ -4,7 +4,7 @@ kind: Component
 # Kustomize COMPONENT: the hermes-iris planner gateway (#119). Referenced by
 # overlays/prod via `components:` — NOT a base resource, so each overlay must
 # opt in explicitly. The image is the UPSTREAM nousresearch/hermes-agent @sha256
-# digest from compose (served from its zot custody copy, #1363), deliberately PRESERVED (the overlay images: transformer
+# digest from compose (zot custody copy pending, #1363), deliberately PRESERVED (the overlay images: transformer
 # only matches the verdify-* app names, so it is left byte-identical). State PVC +
 # the verdify-hermes Secret are provided out-of-band; this
 # component is INERT until the verdify-prod ArgoCD app + Longhorn storage

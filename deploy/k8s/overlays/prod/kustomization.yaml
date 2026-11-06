@@ -365,7 +365,7 @@ images:
   # build verdify-platform-ci-tlpsc). The #399 HA call allowlist confines
   # this prod-only writer to the declared main/grow light switches.
   # hermes-agent is deliberately ABSENT from this transformer — its upstream
-  # @sha256 (zot custody copy, #1363) is pinned inline in the component.
+  # @sha256 (upstream until its zot custody copy is verified, #1363) is pinned inline in the component.
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
     digest: sha256:6d2772f8776b80cdb4b13932653b39731775a58c4f03bba493910dd8f8cc2c05

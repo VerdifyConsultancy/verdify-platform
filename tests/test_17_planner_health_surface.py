@@ -30,11 +30,9 @@ _MCP_STUB_MODULES = ("mcp", "mcp.server", "mcp.server.fastmcp")
 ACTIVE_PLANNER_MODEL_LABEL = "hermes-iris/custom:gpt-6-luna/xhigh"
 
 
-# #1363: the zot custody copy of the unchanged upstream digest.
-HERMES_IMAGE = (
-    "registry.vallery.net/jvallery/mirror-docker-io-nousresearch-hermes-agent:pinned-a7111ab1cc43"
-    "@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
-)
+# #1363: the live upstream digest, kept until its zot custody copy is verified
+# (storage-infra#1409); then repin to registry.vallery.net/jvallery/mirror-*.
+HERMES_IMAGE = "nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
 
 
 def _install_fastmcp_test_stub() -> None:

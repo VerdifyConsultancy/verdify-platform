@@ -538,8 +538,8 @@ Argo-declared containers (one row per workload container). Digest-pinned = image
 | verdify-prod | Deployment/verdify-grafana | inject-canvas-css | initContainer | `grafana/grafana:12.4.14@sha256:ae509d9ae8c1021ca32ec370a9ca975d40165eda9fccd1e1102d317ff8787cd7` | yes |
 | verdify-prod | Deployment/verdify-grafana | renderer | container | `grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986` | yes |
 | verdify-prod | Deployment/verdify-grafana-render-cache | render-cache | container | `nginxinc/nginx-unprivileged:stable-alpine-slim@sha256:5d8bb9437d74a600ec5dbf90c035451c724dc33eac8d3a71078f6f8612c345f6` | yes |
-| verdify-prod | Deployment/verdify-hermes-iris | hermes-iris | container | `registry.vallery.net/jvallery/mirror-docker-io-nousresearch-hermes-agent:pinned-a7111ab1cc43@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e` | yes |
-| verdify-prod | Deployment/verdify-hermes-iris | seed-config | initContainer | `registry.vallery.net/jvallery/mirror-docker-io-nousresearch-hermes-agent:pinned-a7111ab1cc43@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e` | yes |
+| verdify-prod | Deployment/verdify-hermes-iris | hermes-iris | container | `nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e` | yes |
+| verdify-prod | Deployment/verdify-hermes-iris | seed-config | initContainer | `nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e` | yes |
 | verdify-prod | Deployment/verdify-ingestor | ingestor | container | `registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:4b4994bc68c9e0966d2665d4d4da3e4e7e5d1c2dc8b2694f95db1fa629dc6000` | yes |
 | verdify-prod | Deployment/verdify-ingestor | install-psql | initContainer | `postgres:16` | **no** |
 | verdify-prod | Deployment/verdify-ingestor | wait-for-db | initContainer | `timescale/timescaledb:2.25.2-pg16` | **no** |
