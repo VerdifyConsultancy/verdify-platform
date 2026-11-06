@@ -24,6 +24,13 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      base:
+        description: >-
+          Optional full SHA on main to diff against (for example the last pinned
+          build), so one dispatch builds every image changed since it.
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -54,6 +61,8 @@ jobs:
           persist-credentials: false
       - id: impact
         shell: bash
+        env:
+          VERDIFY_IMPACT_BASE: ${{ github.event_name == 'workflow_dispatch' && inputs.base || '' }}
         run: ci/gha/path-impact.sh --push
 
   api:
