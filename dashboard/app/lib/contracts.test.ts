@@ -182,38 +182,36 @@ test("the fixture API answers every operationId of the file at its path, and the
   }
 });
 
-test("every named fixture answers every operation with a body that conforms to the file and that the parsers read in full", () => {
-  for (const name of FIXTURE_NAMES) {
-    for (const settled of [false, true]) {
-      if (settled && !scripts[name]) continue;
-      for (const { operationId } of SCANNED) {
-        const { response, body, parsed, parse, faults: found } = call(name, operationId, settled);
-        const label = `${name}${settled ? " (settled)" : ""} ${operationId} ${response.status}`;
-        expect(found, label).toEqual([]);
-        if (TEXT_OPERATIONS.has(operationId)) { expect(typeof body, label).toBe("string"); continue; }
-        if (!parse) { expect(response.status >= 300 || body === null, label).toBe(true); continue; }
-        expect(parsed, `${label} ${JSON.stringify(body).slice(0, 300)}`).not.toBeNull();
-        expect(parsed, label).toMatchObject(body as object);
-      }
+// The two sweeps below run every operation under every fixture, each call rebuilding the fixture's world several times:
+// one test per fixture, so each stays well inside the default timeout however many fixtures the screens register.
+// As one test each they grew with the fixture list to 11-15 s on a laptop and 77-168 s in loaded in-cluster CI, and
+// kept outgrowing raised per-test limits (60 s timed out on #1410, #1425 and #1437; #1410 and #1425 raised them).
+test.each(FIXTURE_NAMES)("named fixture %s answers every operation with a body that conforms to the file and that the parsers read in full", (name) => {
+  for (const settled of [false, true]) {
+    if (settled && !scripts[name]) continue;
+    for (const { operationId } of SCANNED) {
+      const { response, body, parsed, parse, faults: found } = call(name, operationId, settled);
+      const label = `${name}${settled ? " (settled)" : ""} ${operationId} ${response.status}`;
+      expect(found, label).toEqual([]);
+      if (TEXT_OPERATIONS.has(operationId)) { expect(typeof body, label).toBe("string"); continue; }
+      if (!parse) { expect(response.status >= 300 || body === null, label).toBe(true); continue; }
+      expect(parsed, `${label} ${JSON.stringify(body).slice(0, 300)}`).not.toBeNull();
+      expect(parsed, label).toMatchObject(body as object);
     }
   }
-  // About 15 s on a laptop, 44-66 s in in-cluster CI (66 s timed out at 60 s on #1410): headroom for CI load.
-}, 180_000);
+});
 
-test("fixture(name) is what the fixture API answers for the same request, after the fixture's AFTER writes", () => {
-  for (const name of FIXTURE_NAMES) {
-    const set = fixture(name, { now: NOW });
-    const script = scripts[name] ?? [];
-    expect(Object.keys(set)).toEqual(SCANNED.map((row) => row.operationId));
-    for (const { operationId, method } of SCANNED) {
-      // A write's example may target what the AFTER writes changed, so with a script only its reads and the scripted
-      // writes themselves are compared.
-      if (script.length && method !== "GET" && !script.includes(operationId)) continue;
-      expect(wire(set[operationId]), `${name} ${operationId}`).toEqual(call(name, operationId, !script.includes(operationId)).body);
-    }
+test.each(FIXTURE_NAMES)("fixture(%s) is what the fixture API answers for the same request, after the fixture's AFTER writes", (name) => {
+  const set = fixture(name, { now: NOW });
+  const script = scripts[name] ?? [];
+  expect(Object.keys(set)).toEqual(SCANNED.map((row) => row.operationId));
+  for (const { operationId, method } of SCANNED) {
+    // A write's example may target what the AFTER writes changed, so with a script only its reads and the scripted
+    // writes themselves are compared.
+    if (script.length && method !== "GET" && !script.includes(operationId)) continue;
+    expect(wire(set[operationId]), `${name} ${operationId}`).toEqual(call(name, operationId, !script.includes(operationId)).body);
   }
-  // About 11 s on a laptop, 77-168 s in in-cluster CI under parallel load (it timed out at 60 s on #1425 and #1437).
-}, 240_000);
+});
 
 test("each named fixture is selectable by name or as a list, from /__control and from fixture()", () => {
   const api = createFixtureHandler({ clock: () => NOW });
