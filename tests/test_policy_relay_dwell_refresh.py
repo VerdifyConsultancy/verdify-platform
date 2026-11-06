@@ -263,6 +263,75 @@ int main(int argc, char** argv) {
     CHECK(r.runtime == 1000U && r.transitions == 3U);
     return 0;
   }
+  if (scenario == "external_off") {
+    // #1313: something else switches the relay off (an OTA on_begin close).
+    // The next tick books the interval and stamps that OFF edge, so the
+    // minimum-off time applies before the relay may come back on.
+    auto r = tick(selected, start, true);
+    CHECK(r.on && r.on_stamp == start);
+    switches[selected].turn_off();
+    const uint32_t seen = start + 300000U;
+    r = tick(selected, seen, true);
+    CHECK(!r.on && r.last_off == seen && r.on_stamp == 0U && r.runtime == 300000U);
+    r = tick(selected, seen + 119999U, true);
+    CHECK(!r.on && r.last_off == seen);
+    r = tick(selected, seen + 120000U, true);
+    CHECK(r.on && r.last_on == seen + 120000U && r.runtime == 300000U);
+    return 0;
+  }
+
+  if (scenario == "boot_min_off") {
+    // #299 restart: static RelayMeta starts at zero after a reboot and
+    // millis() restarts near zero, so an ordinary ON waits the full min-off
+    // from boot; only an explicit force bypasses it.
+    auto r = tick(selected, 5000U, true);
+    CHECK(!r.on && r.last_off == 0U && r.transitions == 0U);
+    r = tick(selected, 119999U, true);
+    CHECK(!r.on && r.transitions == 0U);
+    r = tick(selected, 120000U, true);
+    CHECK(r.on && r.last_on == 120000U && r.transitions == 1U);
+    return 0;
+  }
+
+  if (scenario == "boot_force_on") {
+    auto r = tick(selected, 5000U, true, true);
+    CHECK(r.on && r.last_on == 5000U && r.transitions == 1U);
+    return 0;
+  }
+
+  if (scenario == "manual_force_off_then_ordinary_on") {
+    // #299 manual origin: a forced OFF before min-on expires stamps the OFF
+    // edge, so an ordinary ON still waits the full min-off from that edge;
+    // a forced ON (manual FANS/HUMID/VENT-BYPASS) bypasses it.
+    tick(selected, start, true, true);
+    auto r = tick(selected, start + 1000U, false, false, true);
+    CHECK(!r.on && r.last_off == start + 1000U && r.runtime == 1000U);
+    r = tick(selected, start + 1000U + 119999U, true);
+    CHECK(!r.on && r.transitions == 2U);
+    r = tick(selected, start + 1000U + 120000U, true);
+    CHECK(r.on && r.last_on == start + 121000U && r.transitions == 3U);
+    r = tick(selected, start + 121000U + 120000U, false);
+    CHECK(!r.on && r.last_off == start + 241000U);
+    r = tick(selected, start + 241001U, true, true);
+    CHECK(r.on && r.last_on == start + 241001U && r.last_off == start + 241000U && r.transitions == 5U);
+    return 0;
+  }
+
+  if (scenario == "repeated_on_refused_by_min_off") {
+    // #367: ON intent repeated while min-off holds changes nothing; the relay
+    // makes exactly one accepted OFF-to-ON transition when min-off expires.
+    tick(selected, start, true, true);
+    auto r = tick(selected, start + 1000U, false, false, true);
+    for (uint32_t t = start + 2000U; t < start + 121000U; t += 1000U) {
+      r = tick(selected, t, true);
+      CHECK(!r.on && r.transitions == 2U);
+    }
+    r = tick(selected, start + 121000U, true);
+    CHECK(r.on && r.transitions == 3U);
+    r = tick(selected, start + 122000U, true);
+    CHECK(r.on && r.transitions == 3U && r.last_on == start + 121000U);
+    return 0;
+  }
   return 64;
 }
 """
@@ -282,7 +351,20 @@ int main(int argc, char** argv) {
 @pytest.mark.parametrize("mode", ("snapshot", "legacy"))
 @pytest.mark.parametrize(
     "scenario",
-    ("extend_on", "shorten_on", "extend_off", "shorten_off", "force", "rollover_on", "rollover_off"),
+    (
+        "extend_on",
+        "shorten_on",
+        "extend_off",
+        "shorten_off",
+        "force",
+        "rollover_on",
+        "rollover_off",
+        "boot_min_off",
+        "boot_force_on",
+        "manual_force_off_then_ordinary_on",
+        "repeated_on_refused_by_min_off",
+        "external_off",
+    ),
 )
 def test_policy_dwell_uses_original_relay_history(native_relay_consumer, relay, mode, scenario):
     binary, manifest = native_relay_consumer
@@ -296,3 +378,23 @@ def test_policy_dwell_uses_original_relay_history(native_relay_consumer, relay, 
         f"{relay}/{mode}/{scenario}: {result.stderr}\n"
         f"Actual firmware extraction: {json.dumps(manifest, sort_keys=True)}\n{result.stdout}"
     )
+
+
+def test_cycle_counters_count_accepted_edges_after_relay_application():
+    """#367: daily cycle counters read the switch state before and after set_relay, not the intent."""
+    controls = CONTROLS_PATH.read_text()
+    counters = controls.index("/**************** 10 — CYCLE COUNTERS")
+    apply_start = controls.index("/**************** 11 — APPLY RELAY OUTPUTS")
+    apply_end = controls.index("/**************** 12 — MISTER STATE MACHINE")
+    snapshot = controls[counters:apply_start]
+    application = controls[apply_start:apply_end]
+    assert "relay_was_on[]" in snapshot and "cnt_" not in snapshot
+    last_set_relay = application.rindex("set_relay(")
+    for index, (relay, counter) in enumerate(
+        (("heat1", "heat1"), ("heat2", "heat2"), ("fan1", "fan1"), ("fan2", "fan2"), ("fog", "fog"), ("vent", "vent"))
+    ):
+        line = f"if(!relay_was_on[{index}] && id({relay}_rly)->state)"
+        assert line in application, line
+        assert application.index(line) > last_set_relay
+        assert f"id(cnt_{counter}_today) += 1" in application[application.index(line) :].splitlines()[0]
+    assert "willHeat1 && !id(heat1_rly)->state" not in controls

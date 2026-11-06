@@ -162,3 +162,13 @@ def test_timeout_retains_partial_native_output_before_refusal(pilot, monkeypatch
     assert (tmp_path / "timeout.stderr").read_bytes() == b"partial stderr\n"
     assert records[0]["stdout_sha256"] == fog.sha256(b"partial stdout\n")
     assert (tmp_path / "process-results.json").is_file()
+
+
+def test_fog_call_excludes_unrelated_following_counters():
+    """#367: the accepted-edge cycle counters follow the fog call; the extractor stops at the call."""
+    text = (ROOT / fog.CONTROLS).read_text()
+    application = fog.extract_fragments()["fragments"]["fog_apply"]["text"]
+    assert application.rstrip().endswith("fog_forced_off(mode, fog_rails));")
+    assert "cnt_fog_today" not in application
+    changed = text.replace(application, application + "\n unrelated_counter += 1;", 1)
+    assert fog.extract_fragments(controls_text=changed)["fragments"]["fog_apply"]["text"] == application

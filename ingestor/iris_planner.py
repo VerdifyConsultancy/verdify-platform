@@ -533,9 +533,7 @@ Use tactical knobs below to shift behavior instead.
 
 **Greenhouse activity / direct wetting (all clean/fert misters and drips):**
 - Global biological activity is mirrored from the grow-light policy: `gl_sunrise_hour` + `gl_sunset_hour` define the on/off window, and dispatcher owns `activity_start_hour`, `activity_start_minute`, `activity_duration_min`. Do not push the activity mirror directly; tune the light window when the global on/off window should move.
-- `sw_direct_wet_gate_enabled` is the master direct-wet gate. When enabled, misters and scheduled clean/fert irrigation are blocked outside the activity window and during each zone drydown hold.
-- Zone offsets: `direct_wet_wall_start_offset_min`, `direct_wet_south_start_offset_min`, `direct_wet_west_start_offset_min`, `direct_wet_center_start_offset_min` delay wetting after global on. Use these per zone rather than crop-specific logic.
-- Per-zone drydown holds before global off, min [0-720], def 0 — `direct_wet_wall_drydown_before_off_min`, `direct_wet_south_drydown_before_off_min`, `direct_wet_west_drydown_before_off_min`, `direct_wet_center_drydown_before_off_min` block clean/fert wetting in the named zone for the final N minutes before the global activity window closes. Schedule-layer cadence; leave at 0 unless a zone needs a deliberate end-of-day dry-down for disease/root health, then raise only that zone.
+- `sw_direct_wet_gate_enabled` is the master direct-wet gate. When enabled, misters and scheduled clean/fert irrigation are blocked outside the activity window.
 - `direct_wet_min_temp_f` blocks automated wetting when the house is too cold.
 - `sw_direct_wet_stress_override_enabled` switch, def off — during VPD-high recovery, lets mister zones bypass drydown windows while preserving the master gate, direct-wet min temp, occupancy, irrigation, water budget, latest-hour, and dew-margin gates.
 - `direct_wet_stress_vpd_margin_kpa` kPa, [0-0.5], def 0.05 — VPD excess over `vpd_high` required before the stress override can open drydown-gated zones.

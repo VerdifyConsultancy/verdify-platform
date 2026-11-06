@@ -312,6 +312,55 @@ def test_credential_parity_stops_when_the_running_image_lacks_a_candidate_creden
     assert not any(value in str(refused.value) for value in CREDENTIALS.values())
 
 
+def test_ota_rotation_parity_requires_a_new_ota_literal_and_unchanged_wifi(tmp_path):
+    """#1009: a rotation candidate carries the next OTA password; Wi-Fi must still match."""
+    ssid, wifi = (CREDENTIALS[k].encode() for k in ("WIFI_SSID", "WIFI_PASSWORD"))
+    candidate, running = parity_tree(tmp_path, [ssid, wifi, b"the old ota password"])
+    with pytest.raises(ValueError, match="credential parity failed"):
+        release.credential_parity(tmp_path, candidate, running)
+    report = release.credential_parity(tmp_path, candidate, running, rotate_ota=True)
+    assert report["set_auth_password"] == {"literals": 1, "candidate": 1, "running": 0}
+    assert report["ota_rotation"] is True
+    assert not any(value in json.dumps(report) for value in CREDENTIALS.values())
+    # The same candidate as the running image is not a rotation.
+    tmp_same = tmp_path / "same"
+    tmp_same.mkdir()
+    candidate, running = parity_tree(tmp_same, [v.encode() for v in CREDENTIALS.values()])
+    with pytest.raises(ValueError, match="credential parity failed"):
+        release.credential_parity(tmp_same, candidate, running, rotate_ota=True)
+    # A Wi-Fi change is never covered by a rotation.
+    tmp_wifi = tmp_path / "wifi"
+    tmp_wifi.mkdir()
+    candidate, running = parity_tree(tmp_wifi, [ssid, b"another wifi", b"the old ota password"])
+    with pytest.raises(ValueError, match="credential parity failed"):
+        release.credential_parity(tmp_wifi, candidate, running, rotate_ota=True)
+
+
+@pytest.mark.parametrize("action,component", [("build", "firmware-builder.yaml"), ("flash", "firmware-flasher.yaml")])
+def test_ota_key_selects_the_rotation_key_and_refuses_others(action, component):
+    """#1009: build with ota_password_next, flash with the key the device runs; nothing else."""
+    docs = list(yaml.safe_load_all((COMPONENT / component).read_text()))
+    template = next(d for d in docs if d["kind"] == "CronJob")
+    expected = "" if action == "build" else "b" * 64
+
+    def ota_keys(job):
+        pod = job["spec"]["template"]["spec"]
+        return {
+            e["valueFrom"]["secretKeyRef"]["key"]
+            for c in pod.get("initContainers", []) + pod["containers"]
+            for e in c.get("env", [])
+            if e["name"] == "OTA_PASSWORD"
+        }
+
+    assert ota_keys(jobs.make_job(template, action, SHA, expected, "fixture")) == {"ota_password"}
+    job = jobs.make_job(template, action, SHA, expected, "fixture", "ota_password_next")
+    assert ota_keys(job) == {"ota_password_next"}
+    assert job["metadata"]["annotations"]["verdify.io/ota-secret-key"] == "ota_password_next"
+    assert ota_keys(jobs.make_job(template, action, SHA, expected, "fixture")) == {"ota_password"}
+    with pytest.raises(ValueError, match="invalid OTA key"):
+        jobs.make_job(template, action, SHA, expected, "fixture", "wifi_password")
+
+
 def test_verify_receipt_carries_the_elf_hash_the_c1_pin_needs(signed, tmp_path, capsys):
     directory, expected, public = signed
     staged = tmp_path / "staged"

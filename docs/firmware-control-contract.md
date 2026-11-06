@@ -224,3 +224,12 @@ disable takes precedence over ordinary cycling protection. Invalid controller
 time still forces both relays OFF in the existing wrapper before evaluation.
 These source rules do not establish actual per-circuit transitions, DLI or
 lighting efficiency; those require separate native runtime evidence.
+
+`scripts/growlight-boundary-episodes.py --since '3 days'` reads that runtime
+evidence passively: it classifies every intent ON interval per circuit from the
+exact `grow_light_<c>_intent` edges, the per-decision `gl_<c>_reason` rows, the
+live `gl_<c>_min_on_s` and controller boots, and reports the Lutron readback lag
+after each edge. `boundary_ok` (the window closed during minimum-on and the light
+went OFF within one decision of its expiry) is the natural episode #386 waits for;
+`premature` or `overrun` exits 1. On 2026-11-06, ten days of history held 30
+ordinary intervals, 4 that a reboot cut short, and no boundary episode yet.

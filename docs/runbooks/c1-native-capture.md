@@ -86,7 +86,17 @@ with the same GCC 14.2 (manifest
 rests on source identity: `firmware/lib/greenhouse_solar.h` is byte-identical to
 620a218a's, the solar and band expressions in `firmware/greenhouse/controls.yaml`
 are unchanged, and the differential above still passes. It is not a physical
-qualification claim. `TARGET_ELF_SHA256` still names 620a218a's ELF,
+qualification claim.
+
+Since #1277 the ingestor also accepts the accepted firmware pin, the version
+`scripts/firmware-release-job.py pin` writes to
+`/srv/verdify/state/expected-firmware-version` after a flash, so C1 no longer
+writes `.unavailable.json` for every epoch after each release. That rests on the
+same source identity: `algorithm_revision()` refuses any capture whose
+`FIRMWARE_SOURCES` hashes (greenhouse_solar.h and controls.yaml) differ from the
+ingestor's source, and a change to either file must restate in
+`verdify_schemas/control_band_wire.py` that the solar and band expressions are
+unchanged. `TARGET_ELF_SHA256` still names 620a218a's ELF,
 the last one whose instructions were inspected. To move it, read `elf_sha256`
 from a verify Job's log (`docs/runbooks/firmware-signed-artifacts.md`), repeat
 the instruction inspection on that ELF, then change the constant and this section.

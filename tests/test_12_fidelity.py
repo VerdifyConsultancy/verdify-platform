@@ -607,7 +607,7 @@ def test_setpoint_server_fallback_does_not_overlay_band_owned_plan_rows():
     assert params["activity_start_hour"] == "7"
     assert params["activity_start_minute"] == "0"
     assert params["activity_duration_min"] == "780"
-    assert params["direct_wet_wall_start_offset_min"] == "60"
+    assert "direct_wet_wall_start_offset_min" not in params  # #369: retired with its entity
     assert params["irrig_center_fert_days_mask"] == "127"
     assert params["sw_direct_wet_gate_enabled"] == "1"
     assert params["safety_min"] == "40"

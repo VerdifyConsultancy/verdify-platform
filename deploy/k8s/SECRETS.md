@@ -95,7 +95,7 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `ghcr-jvallery-readonly` | `.dockerconfigjson` | all workloads (`imagePullSecrets`) | ✓ | ✓ | ✓ |
 | `verdify-agent-secrets` | `AGENT_RO_DSN` | dev/coding agent (read-only `agent_ro`/`pg_read_all_data`, migration 184; **read-only, no device path**) | — | — | ✓ |
 | `verdify-frigate-vision-auth` | `token` | Vision CronJob and public API camera reader, mounted read-only at `/vfrigate/token`; existing GET-only two-camera snapshot credential, values owned by agents KSOPS | — | — | ✓ |
-| `verdify-firmware-ota` | `ota_password` | `make firmware-deploy` ESPHome OTA upload + `firmware-rollback.sh`; **device-affecting** (flash gate) | — | — | ✓ |
+| `verdify-firmware-ota` | `ota_password`; during a rotation also `ota_password_next` / `ota_password_previous` (#1009, `scripts/firmware-ota-password-rotate.sh`) | signed builder and flasher Jobs (`scripts/firmware-release-job.py --ota-key`), `make firmware-deploy` ESPHome OTA upload + `firmware-rollback.sh`; **device-affecting** (flash gate) | — | — | ✓ |
 | `verdify-hydro-probe` | `device-id`, `local-key` | ingestor, optional volume mount (`/etc/verdify/hydro-probe`; read-only YINMIK hydro reader, VD-70) | — | — | opt |
 
 ¹ dev/staging are device-dark: the ingestor runs `replicas: 0` and egress to the

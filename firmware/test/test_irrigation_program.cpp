@@ -4080,6 +4080,112 @@ static void wiring_ungranted_relay_forced_off() {
         "both are forced OFF at once, with no fault counted");
 }
 
+// #1313: an OTA upload holds the loop, its on_begin hook closes every relay (#1276), then the
+// upload aborts. The engine's drip is still open but its valve read OFF for the whole hold: the
+// run is not charged for that time, the valve re-opens, and the drip still delivers its length.
+static void aborted_ota_close_is_not_charged() {
+  IrrProgram p = irr_rom_default();
+  p.lines[kL01].daily_cap_min = 0;
+  Sim s;
+  s.epoch = at(600);
+  s.boot(true, &p);
+  s.tick();
+  CHECK(s.run_now(kL01, 600) == IrrRunResult::kStarted, "#1313: the drip starts");
+  s.run_for(120);
+  CHECK(s.relays & irr_bit(kL01), "#1313: the valve is open before the upload");
+  s.relays = 0;  // on_begin closed it; the upload then held the loop for 300 s and aborted
+  s.tick(300);
+  CHECK(s.out.relay_mask & irr_bit(kL01), "#1313: the engine re-opens the valve after the abort");
+  s.run_for(900);
+  CHECK(!(s.relays & irr_bit(kL01)), "#1313: the drip finished");
+  CHECK(s.open_s[kL01] >= 600 && s.open_s[kL01] <= 610,
+        "#1313: valve-open time equals the requested 600 s (one tick of slack), not 600 s less the hold");
+  // A valve the engine opened but that never read ON keeps the old accounting and times out.
+  Sim r;
+  r.epoch = at(600);
+  r.boot(true, &p);
+  r.tick();
+  CHECK(r.run_now(kL01, 60) == IrrRunResult::kStarted, "#1313: a second drip starts");
+  for (int i = 0; i < 40; ++i) {
+    r.relays = 0;  // refused: never reads ON
+    r.tick();
+  }
+  CHECK(!(r.out.relay_mask & irr_bit(kL01)), "#1313: a refused valve still times out");
+}
+
+// #299: the per-zone mister re-fire fence (mister_min_off_s) against every origin. A VPD
+// pulse on L09 closes; a manual run-now on the same zone, and a second VPD request, wait out
+// the fence and open at its expiry, never before. A reset clears the fence: the engine's
+// zone-off stamps are not kept across a boot (the RTC block holds runs and counters, not
+// zone stamps), so after a reboot the zone may re-fire at once. Current behaviour, encoded.
+static void mister_refire_fence_by_origin_and_reset() {
+  IrrProgram p = open_program();
+  const uint16_t fence_s = 45;
+  // Manual origin: run-now inside the fence waits; it opens once the fence expires.
+  {
+    Sim s;
+    s.in.mister_min_off_s = fence_s;
+    s.epoch = at(600);
+    s.boot(true, &p);
+    s.tick();
+    CHECK(irr_vpd_request(s.eng, kL09, 30, s.ms, s.out).answer == IrrVpdAnswer::kGrant, "#299: VPD pulse granted");
+    s.record();
+    s.run_for(30);
+    irr_vpd_release(s.eng, kL09, s.ms, s.out);
+    s.record();
+    const uint32_t closed = s.ms;
+    CHECK(!(s.relays & irr_bit(kL09)), "#299: the VPD pulse closed");
+    CHECK(s.run_now(kL09, 45, 2, 30) == IrrRunResult::kStarted, "#299: run-now accepted inside the fence");
+    CHECK(!(s.out.relay_mask & irr_bit(kL09)), "#299: run-now does not open inside the fence");
+    uint32_t opened = 0;
+    for (int i = 0; i < 40 && opened == 0; ++i) {
+      s.tick();
+      if (s.out.relay_mask & irr_bit(kL09)) opened = s.ms;
+    }
+    CHECK(opened != 0 && opened - closed >= uint32_t(fence_s) * 1000u,
+          "#299: the manual pulse opens only after mister_min_off_s from the close");
+    CHECK(opened - closed < uint32_t(fence_s) * 1000u + 10000u, "#299: and within two ticks of the fence expiry");
+  }
+  // VPD origin: a second request inside the fence is not granted; at the fence it is.
+  {
+    Sim s;
+    s.in.mister_min_off_s = fence_s;
+    s.epoch = at(600);
+    s.boot(true, &p);
+    s.tick();
+    CHECK(irr_vpd_request(s.eng, kL09, 30, s.ms, s.out).answer == IrrVpdAnswer::kGrant, "#299: first VPD pulse");
+    s.record();
+    s.run_for(30);
+    irr_vpd_release(s.eng, kL09, s.ms, s.out);
+    s.record();
+    const uint32_t closed = s.ms;
+    s.run_for(40);
+    CHECK(irr_vpd_request(s.eng, kL09, 30, s.ms, s.out).answer != IrrVpdAnswer::kGrant,
+          "#299: a VPD re-fire 40 s after the close is refused (45 s fence)");
+    while (s.ms - closed < uint32_t(fence_s) * 1000u) s.tick();
+    CHECK(irr_vpd_request(s.eng, kL09, 30, s.ms, s.out).answer == IrrVpdAnswer::kGrant,
+          "#299: at the fence expiry the VPD pulse is granted");
+  }
+  // Restart: the fence does not survive a reset (engine state re-initialised at boot).
+  {
+    Sim s;
+    s.in.mister_min_off_s = fence_s;
+    s.epoch = at(600);
+    s.boot(true, &p);
+    s.tick();
+    CHECK(irr_vpd_request(s.eng, kL09, 30, s.ms, s.out).answer == IrrVpdAnswer::kGrant, "#299: pulse before reset");
+    s.record();
+    s.run_for(30);
+    irr_vpd_release(s.eng, kL09, s.ms, s.out);
+    s.record();
+    s.run_for(10);
+    s.boot(false, &p);  // a software reset 10 s after the close: RTC block kept
+    s.tick();
+    CHECK(irr_vpd_request(s.eng, kL09, 30, s.ms, s.out).answer == IrrVpdAnswer::kGrant,
+          "#299 (current behaviour): after a reset the zone may re-fire before mister_min_off_s");
+  }
+}
+
 int main() {
   codes_match_python();
   decoder_accepts_the_golden_vectors();
@@ -4145,6 +4251,8 @@ int main() {
   wiring_survival_fog_runs_past_the_caps();
   wiring_watchdog_backs_off_then_resumes_and_latches();
   wiring_ungranted_relay_forced_off();
+  aborted_ota_close_is_not_charged();
+  mister_refire_fence_by_origin_and_reset();
   std::printf("test_irrigation_program: %d checks, %d failed\n", checks_run, checks_failed);
   return checks_failed == 0 ? 0 : 1;
 }

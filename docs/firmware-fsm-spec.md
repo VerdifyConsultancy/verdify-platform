@@ -139,6 +139,28 @@ only (safety, cooling, sealing, the estimator's dehum and the heat2 latch win):
 - The pulse count and kWh budget reset each solar day and live in RAM (a reboot
   starts a fresh budget). Invariant #28 bounds it in replay.
 
+### 3.2a Probe plausibility: degraded quorum versus SENSOR_FAULT (#368)
+
+Three separate things answer "is this probe good?", and only one of them changes
+what the relays do on its own:
+
+| Layer | Trigger | Effect |
+|---|---|---|
+| **Aggregate membership** | a probe field stale (300 s) or NaN/±Inf | that field leaves `average_*`; the others keep averaging. No mode change |
+| **Degraded quorum** | the indoor averages are not live (`avg_ok` false), so the controller's VPD is a fallback value | `sensor_degraded`: VPD-chasing wetting is suppressed (`vpd_control_trusted`), temperature control and the timed bursts continue. Zones fall back to a peer probe, then the house average, with the provenance shown on Now (D-IRP-13, #1394). The irrigation engine's `irr_degraded` waits out a grace before it can open a mister (#1271) |
+| **SENSOR_FAULT** | `sensors_plausible()` fails on the value the controller uses: NaN/±Inf or outside -20..140 °F, 0..100 % RH, 0..10 kPa | Mode 0: every climate and mister relay off, heat included (invariants #7/#25/#26) |
+| **Plausibility diagnostics** | a fresh, finite probe steps more than 6 °F between ~60 s samples (JUMP, reported for 10 minutes), or its temperature and RH stay identical for 60 minutes (FLAT); `probe_validity.h` `probe_trend_update` | `probe_health` text only (`North JUMP`, `East FLAT`). No aggregate, fallback or mode reads it |
+
+A plausible-but-wrong probe therefore never drives SENSOR_FAULT: one bad wall probe
+out of four must not turn the heat off (the three-probe quorum). JUMP and FLAT make
+that probe visible so an operator, the sensor-health sweep (#1274) or a later
+reviewed change can exclude it; excluding it automatically is a control change and
+would go through the replay gate. The thresholds come from 30 days of history
+(2026-11-06): the largest real step was 3.2 °F (99.99th percentile 1.8 °F), the
+East fault of 2026-10-27 stepped 24-26 °F for one sample, and the longest real
+identical run was 14 minutes. RH is not jump-checked: misting legitimately moves a
+wall probe's RH by about 30 % in one sample.
+
 ### 3.3 Per-mode relay map (`resolve_equipment`, `greenhouse_logic.h:2006-2122`)
 
 `resolve_equipment` is pure: `(mode, inputs, setpoints, state, lead_is_fan1) →
@@ -469,6 +491,54 @@ tests + `make firmware-replay-band` (11.6% behavioral diff vs the old misters-fi
 
 Mode-transition rate is additionally bounded by invariant #6 (≤30 transitions/hr in
 stable conditions).
+
+### 7.3a Final relay dwell authority and cycle evidence (#367, #299)
+
+The mode, engage and optional Phase-2 gates above decide intent; they do not
+switch a relay. In `controls.yaml`, `RelayMeta` and `set_relay` are the single
+final transition authority for heat1/2, fan1/2, fog and vent. A turn-on waits for
+`now_ms - last_off_ms >= min_off_ms`; a turn-off waits for
+`now_ms - last_on_ms >= min_on_ms`. The eight snapshot/legacy durations refresh
+every tick while the original edge timestamps and accumulated runtime stay intact,
+and unsigned elapsed arithmetic survives the `millis()` rollover. After a reboot the
+static metadata starts at zero and `millis()` restarts near zero, so an ordinary ON
+waits the full minimum-off time from boot; only a force bypasses that.
+
+Only the explicit caller flags bypass the dwell waits:
+
+| Relay | Force ON | Force OFF |
+|---|---|---|
+| Heat1 | none | sensor fault or the heat/air-exchange interlock |
+| Heat2 | none | heat1's force-OFF conditions, or retiring heat2 when heat1 will not run after this tick |
+| Fans | an accepted manual FANS / VENT-BYPASS latch (`manual_fan_force`) | sensor fault |
+| Vent | the fan/open-vent interlock (`fan_requires_vent`) | sensor fault |
+| Fog | an accepted manual HUMID latch (`manual_fog_force`) | the shared fog rule `fog_forced_off(mode, fog_rails)` (`greenhouse_logic.h`) |
+
+A force-OFF still stamps the OFF edge, so a later ordinary ON waits the full
+minimum-off from it. Daily relay cycles (`cnt_*_today`) count observed OFF-to-ON
+edges **after** `set_relay` has run, forced starts included: an ON request refused
+by minimum-off adds no cycle, and a sustained ON adds no further cycle. This is
+switch-state evidence, not proof that a contact or valve moved.
+
+The misters are not `RelayMeta` relays. Since the irrigation engine (#1160) they
+have their own final owner in `irrigation_program.h`: a per-zone re-fire fence
+(`mister_min_off_s`, `zone_fenced`) stamped at the relay's own close
+(`stamp_close`) or at the next tick's falling edge, so cancellation, a watchdog
+stop and a pulse train's gap all count from the real close. Every origin goes
+through it: a VPD request, a scheduled window pulse and a manual run-now wait
+until the fence expires (`mister_refire_fence_by_origin_and_reset` in
+`test_irrigation_program.cpp`). The fence lives in engine RAM, not in the RTC
+block, so **a reset clears it**: after a reboot a zone may re-fire before
+`mister_min_off_s` has passed since its last close. The reboot itself (boot,
+Wi-Fi, the first 5 s engine tick) is the only spacing then.
+
+A newly armed climate mister pulse keeps its complete requested duration: the
+tick's `dt_ms` elapsed before the pulse was armed and is not charged to it. The
+engine's continuous runs (drips, prewets, feeds, flushes) start accounting at
+`open_since_ms`, so they are never charged for time before their admission
+either. Hard safety cancellation still closes water at once. Physical re-fire,
+starts/runtime and rollback observations remain candidate-specific #390
+acceptance.
 
 ## 8. Mechanical transitions, energy-waste avoidance, outdoor air (L3 #345 AC3/AC4)
 

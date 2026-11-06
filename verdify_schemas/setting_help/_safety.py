@@ -17,10 +17,11 @@ _LEGACY_LIGHT = (
     "reference and the controller's light logic does not read it."
 )
 
-# The activity mirror (#1406 follow-up): only direct_wet_window_open reads it, and nothing calls that.
+# The activity mirror (#1406 follow-up): its only reader, direct_wet_window_open, was never
+# called and was deleted with the zone offsets (#369).
 _NO_ACTIVITY_WINDOW = (
     "The controller stores and reports this value, but no control path reads it: the only code that did "
-    "(the direct-wet window) is never called, so misting and watering do not depend on it."
+    "(the direct-wet window) was never called and has been removed, so misting and watering do not depend on it."
 )
 
 ENTRIES: dict[str, HelpEntry] = {
@@ -282,20 +283,20 @@ ENTRIES: dict[str, HelpEntry] = {
         effect=_NO_ACTIVITY_WINDOW + " It still follows the main lights' start hour.",
         refs=(
             f'{_DISPATCHER}::mirrored["activity_start_hour"]',
-            f"{_LOGIC}::inline bool direct_wet_window_open(",
+            f"{_TUNABLES}::id: num_activity_start_hour",
         ),
     ),
     "activity_start_minute": HelpEntry(
         summary="Start minute of the old daily activity window; always 0 and no longer used by the controller.",
         effect=_NO_ACTIVITY_WINDOW + " It stays 0, because the light schedule starts on the hour.",
-        refs=(f'{_DISPATCHER}::"activity_start_minute": 0.0', f"{_LOGIC}::inline bool direct_wet_window_open("),
+        refs=(f'{_DISPATCHER}::"activity_start_minute": 0.0', f"{_TUNABLES}::id: num_activity_start_min"),
     ),
     "activity_duration_min": HelpEntry(
         summary="Length of the old daily activity window; no longer used by the controller.",
         effect=_NO_ACTIVITY_WINDOW + " It still follows the main lights' daily light minutes.",
         refs=(
             f'{_DISPATCHER}::mirrored["activity_duration_min"]',
-            f"{_LOGIC}::const int wet_duration = activity_duration_min - wet_start_offset_min - drydown_before_off_min;",
+            f"{_TUNABLES}::id: num_activity_duration_min",
         ),
     ),
     "gl_dli_target": HelpEntry(

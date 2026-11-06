@@ -907,14 +907,6 @@ ACTIVITY_MIRROR_PARAMS = frozenset(
 
 DIRECT_WET_DEFAULTS = {
     "direct_wet_min_temp_f": 65,
-    "direct_wet_wall_start_offset_min": 60,
-    "direct_wet_wall_drydown_before_off_min": 120,
-    "direct_wet_south_start_offset_min": 60,
-    "direct_wet_south_drydown_before_off_min": 120,
-    "direct_wet_west_start_offset_min": 60,
-    "direct_wet_west_drydown_before_off_min": 120,
-    "direct_wet_center_start_offset_min": 120,
-    "direct_wet_center_drydown_before_off_min": 180,
     "sw_direct_wet_gate_enabled": 1,
 }
 
@@ -974,6 +966,16 @@ RETIRED_UNROUTABLE_PARAMS = frozenset(
         "sw_irrigation_weather_skip",
         "irrig_wall_duration_min",
         "irrig_center_duration_min",
+        # #369: the eight direct-wet zone offsets only the deleted
+        # direct_wet_window_open read; their entities left the firmware.
+        "direct_wet_wall_start_offset_min",
+        "direct_wet_wall_drydown_before_off_min",
+        "direct_wet_south_start_offset_min",
+        "direct_wet_south_drydown_before_off_min",
+        "direct_wet_west_start_offset_min",
+        "direct_wet_west_drydown_before_off_min",
+        "direct_wet_center_start_offset_min",
+        "direct_wet_center_drydown_before_off_min",
     }
 )
 
@@ -981,12 +983,13 @@ RETIRED_UNROUTABLE_PARAMS = frozenset(
 DIRECT_WET_POLICY_PARAMS = ACTIVITY_MIRROR_PARAMS | frozenset(DIRECT_WET_DEFAULTS)
 
 
+# #369: the zone-offset entities left the firmware, so the contract is keyed on
+# entities both the old and the new firmware carry.
 DIRECT_WET_REQUIRED_OBJECT_IDS = frozenset(
     {
         "activity_duration__min_",
         "direct_wet_gate_enabled",
-        "direct_wet_wall_drydown_before_off__min_",
-        "direct_wet_center_drydown_before_off__min_",
+        "direct_wet_min_temp__f_",
     }
 )
 

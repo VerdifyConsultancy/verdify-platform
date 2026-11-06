@@ -591,14 +591,6 @@ class TestActivityDirectWetGuards:
     }
     DIRECT_WET_NUMERIC = {
         "direct_wet_min_temp_f",
-        "direct_wet_wall_start_offset_min",
-        "direct_wet_wall_drydown_before_off_min",
-        "direct_wet_south_start_offset_min",
-        "direct_wet_south_drydown_before_off_min",
-        "direct_wet_west_start_offset_min",
-        "direct_wet_west_drydown_before_off_min",
-        "direct_wet_center_start_offset_min",
-        "direct_wet_center_drydown_before_off_min",
     }
 
     RETIRED_IRRIGATION_MASKS = {
@@ -630,8 +622,8 @@ class TestActivityDirectWetGuards:
             assert not row.planner_pushable
             assert row.push_owner == "schedule"
             assert row.cfg_readback_object_id  # readback visibility preserved
-            # The clock offsets have no controller effect (direct_wet_window_open has no caller):
-            # retired in the catalog, still delivered by the schedule layer.
+            # A NO_EFFECT_RETIRED_REG row reads retired in the catalog and is still delivered by the
+            # schedule layer. (#369 deleted the clock offsets with their firmware entities.)
             expected = "retired" if name in NO_EFFECT_RETIRED_REG else "scheduled_policy"
             assert row.control_class == expected, name
             assert name in SCHEDULED_POLICY_REG, name
@@ -1408,7 +1400,8 @@ def test_no_effect_rows_are_retired_in_the_catalog_but_still_delivered() -> None
         desired_write_rule,
     )
 
-    assert len(NO_EFFECT_RETIRED_REG) == 29
+    # 29 until #369 deleted the eight direct-wet zone offsets with their firmware entities.
+    assert len(NO_EFFECT_RETIRED_REG) == 21
     for name in NO_EFFECT_RETIRED_REG:
         spec = REGISTRY[name]
         assert spec.control_class == "retired", name
@@ -1421,7 +1414,7 @@ def test_no_effect_rows_are_retired_in_the_catalog_but_still_delivered() -> None
         for where in ("south", "wall", "west", "center")
         for part in ("start_offset", "drydown_before_off")
     }
-    assert offsets <= SCHEDULED_POLICY_REG
+    assert not offsets & set(REGISTRY) and not offsets & SCHEDULED_POLICY_REG
     # The activity mirror only direct_wet_window_open read: the dispatcher still pushes it on its own path.
     assert {"activity_start_hour", "activity_start_minute", "activity_duration_min"} <= NO_EFFECT_RETIRED_REG
     assert {"wet_taper_before_sunset_min", "zone_priority_east"} <= CROP_BAND_REG

@@ -149,10 +149,15 @@ interval:
           R[5].min_on_ms = MIN_VENT_ON_MS;
           R[5].min_off_ms = MIN_VENT_OFF_MS;
 
+          // A relay found OFF with its interval still open was switched off by
+          // something else (an OTA upload's on_begin close, #1276, then an
+          // aborted upload): book the interval and stamp the OFF edge here, so
+          // its minimum-off time still applies before the next ON (#1313).
           auto update_runtime = [&](RelayMeta &r){
             if(!r.sw->state && r.on_stamp_ms){
               r.runtime_ms += now_ms - r.on_stamp_ms;
               r.on_stamp_ms = 0;
+              r.last_off_ms = now_ms;
             }
           };
           auto can_on  = [&](RelayMeta &r){ return now_ms - r.last_off_ms >= r.min_off_ms; };
@@ -952,12 +957,12 @@ interval:
           }
 
           /**************** 10 — CYCLE COUNTERS ***********************************/
-          if(willHeat1 && !id(heat1_rly)->state) id(cnt_heat1_today) += 1;
-          if(willHeat2 && !id(heat2_rly)->state) id(cnt_heat2_today) += 1;
-          if(willFog && !id(fog_rly)->state)     id(cnt_fog_today) += 1;
-          if(willFan1 && !id(fan1_rly)->state)   id(cnt_fan1_today) += 1;
-          if(willFan2 && !id(fan2_rly)->state)   id(cnt_fan2_today) += 1;
-          if(willVent && !id(vent_rly)->state)    id(cnt_vent_today) += 1;
+          // #367: count accepted relay edges after dwell and overrides apply
+          // (below). Repeated ON intent refused by min-off is not a new cycle.
+          const bool relay_was_on[] = {
+              id(heat1_rly)->state, id(heat2_rly)->state,
+              id(fan1_rly)->state, id(fan2_rly)->state,
+              id(fog_rly)->state, id(vent_rly)->state};
 
           /**************** 11 — APPLY RELAY OUTPUTS ******************************/
           const bool force_heat_off = heat_air_exchange_interlock_active || sensor_fault_relay_lock;
@@ -986,6 +991,13 @@ interval:
               // the soft budget and SAF-4, and no leak signal forces it off.
               manual_fog_force,
               fog_forced_off(mode, fog_rails));
+
+          if(!relay_was_on[0] && id(heat1_rly)->state) id(cnt_heat1_today) += 1;
+          if(!relay_was_on[1] && id(heat2_rly)->state) id(cnt_heat2_today) += 1;
+          if(!relay_was_on[2] && id(fan1_rly)->state)  id(cnt_fan1_today) += 1;
+          if(!relay_was_on[3] && id(fan2_rly)->state)  id(cnt_fan2_today) += 1;
+          if(!relay_was_on[4] && id(fog_rly)->state)   id(cnt_fog_today) += 1;
+          if(!relay_was_on[5] && id(vent_rly)->state)  id(cnt_vent_today) += 1;
 
           /**************** 12 — MISTER STATE MACHINE *****************************/
           // Runs only for SEALED_MIST or explicit VENTILATE assist. Zone stress
@@ -1482,6 +1494,9 @@ interval:
 
               // --- S1 ENGAGE: misters start only under humidity demand; zone/global
               // stress decide whether a pulse is warranted and which zone gets it.
+              // #367: dt_ms elapsed before any pulse armed in this tick, so a
+              // newly armed pulse keeps its complete requested duration.
+              bool mister_timer_armed_this_tick = false;
               if(id(mister_state) == 0
                  && humidity_demand
                  && id(humid_s1_duration_ms) >= MISTER_ENGAGE_DELAY_MS
@@ -1497,6 +1512,7 @@ interval:
                   // (turn_on_zone may remap to first_allowed); center override
                   // only applies to zone 3.
                   id(mister_pulse_timer_ms) = pulse_on_ms_for(id(mister_pulse_zone));
+                  mister_timer_armed_this_tick = true;
                   ESP_LOGI("mister","S1 MISTERS: pulse %s %ums (VPD=%.2f, target=%.2f)",
                            zone_names[zone], (unsigned)pulse_on_ms_for(id(mister_pulse_zone)), avg_vpd,
                            zone == 1 ? id(vpd_target_south) : zone == 2 ? id(vpd_target_west) : id(vpd_target_center));
@@ -1525,6 +1541,7 @@ interval:
                   else if(zone == 2 && wvpd >= max_vpd * 0.95f) weighted_ms = uint32_t(PULSE_ON_MS * pol(verdify_policy::kPF_mister_vpd_weight, id(mister_vpd_weight)));
                     turn_on_zone(zone, weighted_ms);
                   id(mister_pulse_timer_ms) = weighted_ms;
+                  mister_timer_armed_this_tick = true;
                   ESP_LOGI("mister","S2 ALL-ROTATE: start %s %dms (VPD=%.2f)",
                            zone_names[zone], weighted_ms, avg_vpd);
                 }else{
@@ -1546,6 +1563,7 @@ interval:
                   if(zone == 0) zone = fallback_wet_zone();
                   turn_on_zone(zone, pulse_on_ms_for(zone));
                 id(mister_pulse_timer_ms) = pulse_on_ms_for(id(mister_pulse_zone));
+                mister_timer_armed_this_tick = true;
               }
 
               // --- DE-ESCALATE S1 → off ---
@@ -1562,10 +1580,12 @@ interval:
 
               // --- PULSE TIMER (both S2 and S3) ---
               if(id(mister_state) > 0){
-                if(id(mister_pulse_timer_ms) > dt_ms){
-                  id(mister_pulse_timer_ms) -= dt_ms;
-                }else{
-                  id(mister_pulse_timer_ms) = 0;
+                if(!mister_timer_armed_this_tick){
+                  if(id(mister_pulse_timer_ms) > dt_ms){
+                    id(mister_pulse_timer_ms) -= dt_ms;
+                  }else{
+                    id(mister_pulse_timer_ms) = 0;
+                  }
                 }
 
                 if(id(mister_pulse_timer_ms) == 0){
