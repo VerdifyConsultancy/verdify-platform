@@ -370,6 +370,8 @@ class EquipmentItem(_Model):
     cycles_today: int | None
     intent: Literal["on", "off", "unknown"] | None
     observed_at: datetime | None
+    # Grow lights only (#1377's timer): when an API-20 manual switch goes back to automatic; null with no timer running.
+    manual_until: datetime | None = None
 
 
 class ReasonState(_Model):
@@ -858,6 +860,18 @@ SELECT equipment AS key, ts, state, newest_at
  ORDER BY equipment, ts, state
 """
 
+# Each grow light's newest switch row in the last day and, when it is timed (detail.minutes, API-20), when its manual
+# time is up: the same rule as verdify_services.lights.timer, which the operator API's light timer sweeps by.
+_LIGHT_TIMERS_SQL = """
+SELECT t.target AS key, a.ts + make_interval(mins => (a.detail->>'minutes')::int) AS ends_at
+  FROM unnest($2::text[]) AS t(target)
+  LEFT JOIN LATERAL (SELECT ts, detail FROM activity_log
+                      WHERE greenhouse_id = $1 AND target = t.target AND action IN ('light.on', 'light.off')
+                        AND ts > now() - $3::interval
+                      ORDER BY ts DESC, id DESC LIMIT 1) AS a ON true
+"""
+LIGHT_TIMER_WINDOW = timedelta(days=1)
+
 _SYSTEM_TRACKS_SQL = """
 SELECT entity AS key, ts, value AS state, newest_at
   FROM (SELECT entity, ts, value,
@@ -1258,14 +1272,18 @@ def _plan_record(row: Mapping[str, Any]) -> PlanRecord:
     )
 
 
-def _equipment_items(tracks: Mapping[str, Track], rep: Reporting) -> list[EquipmentItem]:
+def _equipment_items(
+    tracks: Mapping[str, Track], rep: Reporting, timers: Mapping[str, datetime | None] | None = None
+) -> list[EquipmentItem]:
     """API-13's fixed list. A state is the newest row while the controller reports, else unknown.
 
     The grow lights are the Lutron readback instead, unknown once its newest
     row is older than two Home Assistant polls, whatever the controller does.
     Their ``intent`` is the controller's switch: unknown while it is not
     reporting, and null before any intent row exists. An unknown state has no
-    since, runtime or cycles: the open run's length is not known.
+    since, runtime or cycles: the open run's length is not known. A light's
+    ``manual_until`` is its timed switch's end (``timers``) while it is still
+    ahead, else null.
     """
     items: list[EquipmentItem] = []
     for name, group in EQUIPMENT_LIST:
@@ -1300,9 +1318,21 @@ def _equipment_items(tracks: Mapping[str, Track], rep: Reporting) -> list[Equipm
                 cycles_today=cycles,
                 intent=intent,
                 observed_at=track.newest_at,
+                manual_until=_manual_until((timers or {}).get(name), rep.at),
             )
         )
     return items
+
+
+def _manual_until(ends_at: datetime | None, at: datetime) -> datetime | None:
+    """A timed switch's end while it is still ahead; once it is up the light timer sends automatic back."""
+    return ends_at if ends_at is not None and ends_at > at else None
+
+
+async def _light_timers(conn: asyncpg.Connection) -> dict[str, datetime | None]:
+    """Each grow light's timed-switch end (``_LIGHT_TIMERS_SQL``), keyed by its equipment name."""
+    rows = await conn.fetch(_LIGHT_TIMERS_SQL, GREENHOUSE_ID, list(GROW_LIGHT_INTENTS), LIGHT_TIMER_WINDOW)
+    return {row["key"]: row["ends_at"] for row in rows}
 
 
 def _newest_text(track: Track | None) -> str | None:
@@ -1686,8 +1716,9 @@ async def equipment(conn: asyncpg.Connection) -> Equipment:
         rep = await reporting(conn)
         tracks = await _tracks(conn, _EQUIPMENT_TRACKS_SQL, _EQUIPMENT_KEYS)
         reasons = await _tracks(conn, _SYSTEM_TRACKS_SQL, REASON_ENTITIES)
+        timers = await _light_timers(conn)
     return Equipment(
-        items=_equipment_items(tracks, rep),
+        items=_equipment_items(tracks, rep, timers),
         mode_reason=reason_state(reasons.get("mode_reason"), rep),
         fog_block_reason=reason_state(reasons.get("fog_block_reason"), rep),
         moisture_block_reason=reason_state(reasons.get("moisture_block_reason"), rep),

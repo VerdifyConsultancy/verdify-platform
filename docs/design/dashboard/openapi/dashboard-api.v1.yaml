@@ -1669,6 +1669,12 @@ components:
               cycles_today: {type: [integer, 'null'], description: From collapsed ON/OFF edges}
               intent: {type: [string, 'null'], enum: ['on', 'off', unknown, null], description: "Grow lights only: the controller's intent (grow_light_main_intent, grow_light_grow_intent)"}
               observed_at: {type: [string, 'null'], format: date-time}
+              manual_until:
+                type: [string, 'null']
+                format: date-time
+                description: >-
+                  Grow lights only: when the API-20 manual switch goes back to automatic (its activity_log row's ts plus
+                  detail.minutes, the light timer's rule), while that is still ahead; null with no timer running
         mode_reason: {$ref: '#/components/schemas/ReasonState', description: Which branch chose the climate mode}
         fog_block_reason: {$ref: '#/components/schemas/ReasonState', description: 'What holds fog (L11) off'}
         moisture_block_reason: {$ref: '#/components/schemas/ReasonState', description: 'What holds the misters off'}

@@ -1153,6 +1153,11 @@ export interface components {
                 readonly intent?: "on" | "off" | "unknown" | null;
                 readonly label: string;
                 readonly line_id?: string | null;
+                /**
+                 * Format: date-time
+                 * @description Grow lights only: when the API-20 manual switch goes back to automatic (its activity_log row's ts plus detail.minutes, the light timer's rule), while that is still ahead; null with no timer running
+                 */
+                readonly manual_until?: string | null;
                 /** Format: date-time */
                 readonly observed_at: string | null;
                 readonly runtime_today_s?: number | null;

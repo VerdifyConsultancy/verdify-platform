@@ -6,7 +6,7 @@ import { expect, test } from "vitest";
 import { answer, buildWorld, fixture } from "../../../e2e/fixtures/index.mjs";
 import { parseIrrigationStatus, parseNow, parsePlan, parseScheduleAgenda, parseStateLanes, type ScheduleAgenda, type StateLanes } from "../../lib/operator-api";
 import {
-  CLUSTER_S, clusterMarkers, equipmentRow, futureSpans, irisMarkerDetail, irisMarkerLabel, irisTriggers, laterText, lightSpans, lightWindows, lineRow, nextItems, nextWindow, nights, pastSpans,
+  CLUSTER_S, clusterMarkers, equipmentRow, futureSpans, irisMarkerDetail, irisMarkerLabel, irisTriggers, laterText, lightSpans, lightTimers, lightWindows, lineRow, nextItems, nextWindow, nights, pastSpans,
   planTransitions, runLength, sunTimes, trackRows,
 } from "./next";
 
@@ -146,6 +146,29 @@ test("the lights: the window each may switch on from its device settings, dotted
   // The phone's list names the window and the difference.
   const items = nextItems({ plan: null, agenda: null, settings, equipment: [{ equipment: "grow_light_grow", state: "on", intent: "off", since: null }] }, WINDOW).filter((item) => item.kind === "light");
   expect(items.map((item) => [plain(item.text), item.note])).toEqual([["Main light may switch on 07:00–20:00", "or for anyone inside"], ["Grow light: controller wants it off", "Lutron differs"]]);
+});
+
+test("a timed light switch still running marks its end on the light's row and in the phone's list; one the controller already matches does not", () => {
+  const iso = (clock: string) => new Date(at(clock) * 1000).toISOString();
+  const equipment = [
+    { equipment: "grow_light_main", state: "on", intent: "off", since: iso("10:40"), manual_until: iso("10:55") },
+    // The controller's own decision brought automatic back early: Lutron and the intent agree, so nothing holds.
+    { equipment: "grow_light_grow", state: "on", intent: "on", since: iso("10:41"), manual_until: iso("10:56") },
+  ];
+  expect(lightTimers(equipment, WINDOW)).toEqual([{ row: "light_main", name: "Main light", at: at("10:55"), state: "on" }]);
+  const rows = trackRows({ lanes: null, plan: null, agenda: null, irrigation: null, overrides: [], equipment }, WINDOW);
+  const main = rows.find((row) => row.key === "light_main")!.markers!;
+  expect(main.map((marker) => [plain(marker.label), marker.title, marker.detail?.map(plain)])).toEqual([
+    ["by hand until 10:55", "Main light: back to automatic", ["Turned on by hand; back to automatic at 10:55"]],
+  ]);
+  expect(rows.find((row) => row.key === "light_grow")!.markers).toEqual([]);
+  // No timer, or one already up, draws nothing.
+  expect(lightTimers([{ ...equipment[0], manual_until: null }, { ...equipment[0], manual_until: iso("10:30") }], WINDOW)).toEqual([]);
+  const items = nextItems({ plan: null, agenda: null, equipment }, WINDOW).filter((item) => item.kind === "light");
+  expect(items.map((item) => [plain(item.text), item.note, item.at])).toEqual([
+    ["Main light: controller wants it off", "Lutron differs", WINDOW.now],
+    ["Main light back to automatic", "the by-hand switch ends", at("10:55")],
+  ]);
 });
 
 test("the phone's next 12 h: runs, plan changes with who planned them, the expected triggers and the sun, in time order", () => {
