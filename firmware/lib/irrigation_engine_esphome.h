@@ -383,6 +383,13 @@ inline bool irr_l03_hold() {
   return g.ready && g.out.l03_hold;
 }
 
+// A fog run-once wants fog now (#1343 follow-up): the climate path fogs as for the HUMID latch,
+// under the same rails (fog_safety_block_reason, fog_forced_off).
+inline bool irr_fog_run() {
+  const verdify_irr::IrrEsp& g = verdify_irr::irr_esp();
+  return g.ready && g.out.fog_run;
+}
+
 // SAF-4 (F11): the program's ceiling against the RTC block's centi-gallons.
 inline bool irr_saf4_tripped() {
   const verdify_irr::IrrEsp& g = verdify_irr::irr_esp();

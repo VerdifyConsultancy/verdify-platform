@@ -74,9 +74,27 @@ async def get_current_conditions(conn) -> dict:
 
 
 async def get_crop_inventory(conn) -> list[dict]:
-    """Get active crops for context."""
-    rows = await conn.fetch("SELECT name, zone, position, stage, notes FROM crops WHERE is_active ORDER BY zone")
-    return [dict(r) for r in rows]
+    """Active plantings for context, with every zone each occupies now (migration 293, crop_occupancy)."""
+    rows = await conn.fetch(
+        "SELECT name, zone, position, stage, notes, zone_slugs, cells FROM crops WHERE is_active ORDER BY zone, id"
+    )
+    inventory = []
+    for row in rows:
+        crop = dict(row)
+        crop["zones"] = list(crop.pop("zone_slugs") or [crop["zone"]])
+        crop["cells"] = list(crop["cells"] or [])
+        inventory.append(crop)
+    return inventory
+
+
+def visible_crops(crops: list[dict], zones: list[str]) -> list[dict]:
+    """The plantings in a zone the camera sees, each shown in the first such zone."""
+    visible = []
+    for crop in crops:
+        seen = [zone for zone in crop["zones"] if zone in zones]
+        if seen:
+            visible.append({**crop, "zone": seen[0]})
+    return visible
 
 
 async def get_zone_mapping(conn, camera: str) -> list[str]:
@@ -87,6 +105,7 @@ async def get_zone_mapping(conn, camera: str) -> list[str]:
 
 def build_prompt(camera: str, zones: list[str], conditions: dict, crops: list[dict]) -> str:
     """Build the structured vision analysis prompt from template."""
+    crops = visible_crops(crops, zones)
     return ai.render_template("vision", "prompt", camera=camera, zones=zones, conditions=conditions, crops=crops)
 
 
@@ -189,17 +208,21 @@ async def analyze_image(image_path: Path, conn, dry_run: bool = False) -> dict |
             health = obs.get("health_score")
             if not crop_name or health is None:
                 continue
+            # Only a planting in a zone this camera sees (crop_occupancy, through zone_slugs); a name seen
+            # elsewhere is not attributed.
             crop = await conn.fetchrow(
                 """
                 SELECT id, greenhouse_id, zone, position, zone_id, position_id
                 FROM crops
                 WHERE name ILIKE $1
                   AND is_active
+                  AND zone_slugs && $3::text[]
                 ORDER BY CASE WHEN lower(name) = lower($2) THEN 0 ELSE 1 END, id
                 LIMIT 1
             """,
                 f"%{crop_name}%",
                 crop_name,
+                zones,
             )
             if crop:
                 stress = obs.get("stress_indicators", [])

@@ -247,10 +247,12 @@ def _classify_vpd_low_feasibility(
 async def _build_zone_band_timeline(conn: asyncpg.Connection) -> dict[str, dict[int, dict[str, float]]]:
     """Per-zone agronomic GRADING band keyed by (zone, hour_of_day) (§4.1).
 
-    center → orchid; east → intersection(ideal)/union(stress) over its active
-    crops; north → _default. Reads the CURRENT season + is_active occupancy so
-    the band reflects live planting. Returns {} entries fall back to
-    DEFAULT_ZONE_BAND so the grader never NULLs (pre-migration-146 safe).
+    center → orchid; north → _default; east → DEFAULT_ZONE_BAND. Reads the
+    CURRENT season. Plant-agnostic (#1327): no band follows what is planted,
+    so recording a planting never moves a grade. East used to intersect the
+    profiles of its active crops, and with none active it already fell back
+    to DEFAULT_ZONE_BAND, as it now always does. Returns {} entries fall back
+    to DEFAULT_ZONE_BAND so the grader never NULLs (pre-migration-146 safe).
     """
     season = await conn.fetchval("SELECT fn_current_season()")
     bands: dict[str, dict[int, dict[str, float]]] = {z: {} for z in _GRADED_ZONES}
@@ -267,29 +269,7 @@ async def _build_zone_band_timeline(conn: asyncpg.Connection) -> dict[str, dict[
     ):
         bands["center"][int(row["hour_of_day"])] = {k: float(row[k]) for k in DEFAULT_ZONE_BAND}
 
-    # east: intersection of ideal, union of stress across active east crops.
-    for row in await conn.fetch(
-        """
-        SELECT p.hour_of_day,
-               MAX(p.temp_ideal_min)  AS temp_ideal_min,
-               MIN(p.temp_ideal_max)  AS temp_ideal_max,
-               MIN(p.temp_stress_low) AS temp_stress_low,
-               MAX(p.temp_stress_high) AS temp_stress_high,
-               MAX(p.vpd_ideal_min)   AS vpd_ideal_min,
-               MIN(p.vpd_ideal_max)   AS vpd_ideal_max,
-               MIN(p.vpd_stress_low)  AS vpd_stress_low,
-               MAX(p.vpd_stress_high) AS vpd_stress_high
-          FROM crop_target_profiles p
-          JOIN crops c ON c.crop_catalog_id = p.crop_catalog_id
-                      AND c.is_active AND c.zone = 'east'
-         WHERE p.season = $1
-         GROUP BY p.hour_of_day
-        """,
-        season,
-    ):
-        bands["east"][int(row["hour_of_day"])] = {k: float(row[k]) for k in DEFAULT_ZONE_BAND}
-
-    # north: _default house-comfort band (if a row exists; else DEFAULT_ZONE_BAND).
+    # north: _default house-comfort band (if a row exists; else DEFAULT_ZONE_BAND). east stays {}: DEFAULT_ZONE_BAND.
     for row in await conn.fetch(
         """
         SELECT hour_of_day, temp_ideal_min, temp_ideal_max, temp_stress_low, temp_stress_high,

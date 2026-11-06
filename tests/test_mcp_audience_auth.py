@@ -46,7 +46,23 @@ BASE_CONFIG_PATH = REPO_ROOT / "deploy" / "k8s" / "base" / "configmap.yaml"
 PROD_OVERLAY_PATH = REPO_ROOT / "deploy" / "k8s" / "overlays" / "prod"
 
 # Architecture §5.6, the whole `agent` column (VD-59): the reads, alerts, settings,
-# activity and set_setting (#1171) and the eight irrigation tools (#1173, #1174, #1177).
+# activity and set_setting (#1171), the eight irrigation tools (#1173, #1174, #1177) and the nine
+# planting tools (#1328).
+# The planting tools (#1328): records only, for named agents and admin. Iris stays read-only on plantings and the
+# experiment arm gets none, so the Hermes include list (Iris's 34 tools) is unchanged.
+PLANTING_TOOLS = frozenset(
+    {
+        "crop_locations",
+        "resolve_positions",
+        "record_planting",
+        "record_plantings",
+        "move_planting",
+        "harvest_planting",
+        "remove_planting",
+        "annotate_planting",
+        "planting_history",
+    }
+)
 AGENT_TOOLS = frozenset(
     {
         "climate",
@@ -71,6 +87,7 @@ AGENT_TOOLS = frozenset(
         "irrigation_line_set",
         "irrigation_clear_fault",
     }
+    | PLANTING_TOOLS
 )
 # Agents never get the planner, lessons, crop or Slack writers, nor the admin-only tools.
 AGENT_NEVER_TOOLS = frozenset(
@@ -444,7 +461,7 @@ class TestAudienceMatrix:
         allowed = mcp_server.audience_allowlist("iris")
         assert allowed == mcp_server.HERMES_REQUIRED_TOOLS
         denied = set(mcp_server.TOOL_AUDIENCES) - allowed
-        assert denied == {"outcome_kpi", "plan_run", "query", "policy_template_propose"}
+        assert denied == {"outcome_kpi", "plan_run", "query", "policy_template_propose"} | PLANTING_TOOLS
         for tool in allowed:
             mcp_server.authorize_tool_call(tool, "tok-iris")
         for tool in denied:
@@ -702,7 +719,7 @@ class TestListToolsAudienceFiltering:
     @pytest.mark.parametrize("mode", ["log", "enforce"])
     @pytest.mark.parametrize(
         ("audience", "token", "expected_count"),
-        [("iris", "tok-iris", 34), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 38)],
+        [("iris", "tok-iris", 34), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 47)],
     )
     def test_protocol_inventory_matches_exact_audience_allowlist(
         self, mcp_server, monkeypatch, mode, audience, token, expected_count
@@ -1181,7 +1198,8 @@ class TestIrrigationWriteTools:
         from typing import Literal, get_args, get_origin
 
         lines = tuple(f"L{index:02d}" for index in range(1, 12))
-        for tool, optional in (("irrigation_run", False), ("irrigation_stop", True)):
+        # #1336: a run may name a physical line and variant instead, so line_id is optional on both.
+        for tool, optional in (("irrigation_run", True), ("irrigation_stop", True)):
             annotation = inspect.signature(getattr(mcp_server, tool)).parameters["line_id"].annotation
             base = get_args(annotation)[0]  # Annotated[...] -> the type
             literal = next(arg for arg in get_args(base) if get_origin(arg) is Literal) if optional else base
@@ -1191,6 +1209,8 @@ class TestIrrigationWriteTools:
         stop_params = list(inspect.signature(mcp_server.irrigation_stop).parameters)
         assert run_params == [
             "line_id",
+            "circuit_id",
+            "variant",
             "minutes",
             "prewet_s",
             "flush_s",
@@ -1269,6 +1289,8 @@ class TestIrrigationWriteTools:
             "on_s": None,
             "count": None,
             "gap_s": None,
+            "circuit_id": None,
+            "variant": None,
         }
 
     def test_stop_writes_as_admin_and_a_refusal_is_problem_json(self, mcp_server, mcp_types, monkeypatch):

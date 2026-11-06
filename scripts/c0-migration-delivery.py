@@ -319,15 +319,27 @@ SUCCESSOR_290 = "290-band-compliance.sql"
 SUCCESSOR_290_SHA256 = "557d8d03a61a284e05e1b9bc26db7e3748898531ea7b80f0a6b4e458c922e6be"
 SUCCESSOR_290_DIGESTS = SUCCESSOR_289_DIGESTS
 SUCCESSOR_290_MCP_DIGEST = SUCCESSOR_289_MCP_DIGEST
-# Exact296 (#1351): knowledge_embeddings (halfvec 2560, Cortex embed.main) and its search function, SELECT and
-# EXECUTE for the MCP duty only. That moves the MCP seal and re-seals its receipt; neither object carries an
-# api or ingestor entry, so both ordinary seals stay 289's. 290-295 are ahead in open PRs; whichever merges
-# first re-chains the other. The MCP literal is a read-only projection on production at exact289 until the
-# rolled-back native qualification measures it; its fixture records which it is.
-SUCCESSOR_296 = "296-knowledge-embeddings-cortex.sql"
-SUCCESSOR_296_SHA256 = "28555e58ed20cc4d264dba288fdd3dd97d8e1b554fc6d561acfaa910d535e246"
-SUCCESSOR_296_DIGESTS = SUCCESSOR_289_DIGESTS
-SUCCESSOR_296_MCP_DIGEST = "9ede0ab24e66d55117768d87f7b09d8681471f53e6785638c4137792768e0b67"
+# Exact291 (#1362): v_energy_daily integrates |ch0| + |ch1| and gains signed_kwh and
+# sign_corrected_samples; daily_summary energy is refreshed from 2026-09-27. The view's relation entry
+# (text and columns) is in both ordinary digests, so the api and ingestor seals move and both receipts
+# are re-sealed; no MCP role or PUBLIC holds an entry on the view, so the MCP seal stays 290's. 291
+# chains from 290; the rolled-back native qualification (290 applied first) measures them.
+SUCCESSOR_291 = "291-energy-daily-load-magnitude.sql"
+SUCCESSOR_291_SHA256 = "afd21ce741451d2530f78e94fb82bf1f7a3159476350cd6eb527a1543ae664ae"
+SUCCESSOR_291_DIGESTS = {
+    "verdify_api_runtime_login": "b4b8499b426ef1c7abb2c6c996dee098d9aec968ddc3292d210cca70c2e77b76",
+    "verdify_ingestor_runtime_login": "2dcc7c99cd7cb2e80745ee1f2f05af9f5fa3dcdf0f6bbdd34e9cf1b870692806",
+}
+SUCCESSOR_291_MCP_DIGEST = SUCCESSOR_290_MCP_DIGEST
+# Exact293 (#1327, #1328): plantings on the location tree. Layout columns, shelf_water_lines, crop_occupancy,
+# the end_reason/source/actor columns and the dashboard, MCP and ingestor grants move all three seals. 293
+# chains from 291 (292 is a gap). Until the rolled-back native qualification (290 and 291 applied first)
+# measures 293, these are 291's seals as stand-ins, which 293's own successor block refuses; its fixture
+# records which they are.
+SUCCESSOR_293 = "293-crop-plantings.sql"
+SUCCESSOR_293_SHA256 = "7bdf03cddae08f1680a1e3586a49923bb1be211c0ba11e3347437f332a3ea164"
+SUCCESSOR_293_DIGESTS = SUCCESSOR_291_DIGESTS
+SUCCESSOR_293_MCP_DIGEST = SUCCESSOR_291_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.
@@ -383,7 +395,8 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_288,
         SUCCESSOR_289,
         SUCCESSOR_290,
-        SUCCESSOR_296,
+        SUCCESSOR_291,
+        SUCCESSOR_293,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
@@ -428,7 +441,8 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_288_SHA256,
                 SUCCESSOR_289_SHA256,
                 SUCCESSOR_290_SHA256,
-                SUCCESSOR_296_SHA256,
+                SUCCESSOR_291_SHA256,
+                SUCCESSOR_293_SHA256,
             ),
             strict=True,
         ):
@@ -705,7 +719,8 @@ COMMIT;"""
         (SUCCESSOR_288, SUCCESSOR_288_DIGESTS),
         (SUCCESSOR_289, SUCCESSOR_289_DIGESTS),
         (SUCCESSOR_290, SUCCESSOR_290_DIGESTS),
-        (SUCCESSOR_296, SUCCESSOR_296_DIGESTS),
+        (SUCCESSOR_291, SUCCESSOR_291_DIGESTS),
+        (SUCCESSOR_293, SUCCESSOR_293_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
@@ -799,8 +814,10 @@ COMMIT;"""
             expected_mcp = SUCCESSOR_289_MCP_DIGEST
         if SUCCESSOR_290 in later:
             expected_mcp = SUCCESSOR_290_MCP_DIGEST
-        if SUCCESSOR_296 in later:
-            expected_mcp = SUCCESSOR_296_MCP_DIGEST
+        if SUCCESSOR_291 in later:
+            expected_mcp = SUCCESSOR_291_MCP_DIGEST
+        if SUCCESSOR_293 in later:
+            expected_mcp = SUCCESSOR_293_MCP_DIGEST
         if hotfix_predecessor_263:
             require(
                 mcp_state.get("mcp")

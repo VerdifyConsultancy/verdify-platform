@@ -13,7 +13,7 @@ from __future__ import annotations
 from datetime import date as DateType
 from typing import Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
 from .catalog import CropCatalogId
 from .operations import HarvestCreate, TreatmentCreate
@@ -24,9 +24,11 @@ CropEventType = Literal[
     "planted",
     "stage_change",
     "transplanted",
+    "moved",
     "removed",
     "thinned",
     "harvested",
+    "reconciled",
     "disease",
     "pest",
     "treatment",
@@ -142,6 +144,105 @@ class EventCreate(BaseModel):
     count: int | None = Field(default=None, ge=0)
     operator: str | None = Field(default=None, max_length=100)
     notes: str | None = None
+
+
+# ── Plantings on the location tree (migration 293, #1327) ─────────────────
+#
+# A planting is one crops row (a batch); crop_occupancy says where it is over time: a zone, a shelf in that zone,
+# or a cell on that shelf. ``positions`` is what verdify_services.crops.resolve_positions reads: labels
+# (EAST-HYDRO-12), label ranges (EAST-HYDRO-1..10), hydro numbers (hydro 1-30), rails (rail A top), shelf cells
+# (west top 1-3), a whole shelf (south floor, hanging) or a zone (center). The operator API (API-CROP-07 to -11) and
+# the MCP planting tools send these bodies.
+
+PlantingEndReason = Literal["harvested", "failed", "removed", "moved_out", "reconciled"]
+# The reasons a person or agent ends a planting with; harvested comes from a final harvest, and moved_out from a
+# replace that takes the planting's last cell.
+PlantingRemoveReason = Literal["failed", "removed", "reconciled"]
+PLANTING_TEXT_MAX = 500
+PLANTING_REF_MAX = 40
+
+
+def _positions(value: object) -> object:
+    """One string or a list of strings; each is one resolver term (a list may also be split on commas)."""
+    if isinstance(value, str):
+        return [value]
+    return value
+
+
+class _PlantingBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    reason: str | None = Field(default=None, max_length=PLANTING_TEXT_MAX)
+
+
+class PlantingCreate(_PlantingBody):
+    """A new planting (API-CROP-07, MCP ``record_planting``). ``crop`` is a catalog slug or name (lettuce, basil)
+    or a free name; ``count`` is the number of plants, unknown when omitted; ``count_per_cell`` is stored on each
+    cell's occupancy. ``planted_at`` defaults to now; a date means local midnight. ``replace`` ends or trims whatever
+    holds a requested cell instead of refusing with ``position_occupied``."""
+
+    crop: str = Field(min_length=1, max_length=200)
+    variety: str | None = Field(default=None, max_length=200)
+    positions: list[str] = Field(min_length=1, max_length=PLANTING_REF_MAX)
+    count: int | None = Field(default=None, ge=0, le=100000)
+    count_per_cell: int | None = Field(default=None, ge=0, le=1000)
+    planted_at: AwareDatetime | DateType | None = None
+    stage: CropStage | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+    replace: bool = False
+
+    _split = field_validator("positions", mode="before")(_positions)
+
+
+class PlantingMove(_PlantingBody):
+    """Move a planting (API-CROP-08, MCP ``move_planting``): ``from_positions`` (default: everywhere it is now)
+    close at ``moved_at`` and ``to_positions`` open then. Both ranges stay in history."""
+
+    to_positions: list[str] = Field(min_length=1, max_length=PLANTING_REF_MAX)
+    from_positions: list[str] | None = Field(default=None, min_length=1, max_length=PLANTING_REF_MAX)
+    moved_at: AwareDatetime | DateType | None = None
+    replace: bool = False
+
+    _split_to = field_validator("to_positions", mode="before")(_positions)
+    _split_from = field_validator("from_positions", mode="before")(_positions)
+
+
+class PlantingHarvest(_PlantingBody):
+    """Record a harvest (API-CROP-09, MCP ``harvest_planting``). Partial by default: the planting stays. Cells in
+    ``positions`` are cleared; ``final`` ends the planting as harvested."""
+
+    count: int | None = Field(default=None, ge=0, le=100000)
+    weight_kg: float | None = Field(default=None, ge=0, le=10000, allow_inf_nan=False)
+    positions: list[str] | None = Field(default=None, min_length=1, max_length=PLANTING_REF_MAX)
+    final: bool = False
+    harvested_at: AwareDatetime | DateType | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+
+    _split = field_validator("positions", mode="before")(_positions)
+
+
+class PlantingEnd(_PlantingBody):
+    """End a planting without a harvest (API-CROP-10, MCP ``remove_planting``): every open place closes at ``at``."""
+
+    end_reason: PlantingRemoveReason
+    at: AwareDatetime | DateType | None = None
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class PlantingPatch(_PlantingBody):
+    """Edit a planting's record (API-CROP-11): only the fields sent change. ``count`` null means unknown."""
+
+    variety: str | None = Field(default=None, max_length=200)
+    count: int | None = Field(default=None, ge=0, le=100000)
+    stage: CropStage | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+    expected_harvest: DateType | None = None
+
+
+class PlantingNote(_PlantingBody):
+    """A note on a planting's history (MCP ``annotate_planting``)."""
+
+    note: str = Field(min_length=1, max_length=2000)
 
 
 # ── Full persisted row shapes (DB mirrors) ────────────────────────────────

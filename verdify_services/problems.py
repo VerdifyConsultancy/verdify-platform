@@ -39,6 +39,9 @@ ProblemCode = Literal[
     "line_busy",
     "manifold_busy",
     "cap_reached",
+    "position_occupied",
+    "ambiguous_position",
+    "planting_ended",
 ]
 PROBLEM_CODES: tuple[str, ...] = get_args(ProblemCode)
 
