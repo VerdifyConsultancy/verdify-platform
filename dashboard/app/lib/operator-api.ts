@@ -296,6 +296,8 @@ const equipment = z.object({
   items: z.array(z.object({
     equipment: text, label: text, group: code, line_id: maybe(text), state: relay, since: maybe(text), runtime_today_s: maybe(int),
     cycles_today: maybe(int), intent: maybe(relay), observed_at: text.nullable(),
+    // Grow lights only: the timer's end (#1377) and the controller's reason (#1335); a strict parse would drop them.
+    manual_until: maybe(text), auto_reason: maybe(text),
   })),
   mode_reason: reasonState.optional(), fog_block_reason: reasonState.optional(), moisture_block_reason: reasonState.optional(),
 });

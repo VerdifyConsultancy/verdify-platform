@@ -313,6 +313,23 @@ const LIGHT_RESULT = {
   timeout: "No answer yet: Lutron may still switch",
 } as const;
 
+/**
+ * Why the controller wants a grow light on or off (`gl_main_reason`, `gl_grow_reason`; API-13 `auto_reason`, #1335): every
+ * reason firmware `evaluate_lighting` and controls.yaml's no-clock branch set.
+ */
+const LIGHT_REASON = {
+  auto_disabled: "Automation off",
+  time_invalid: "Controller clock not set: lights held off",
+  occupancy_lux_low: "On: someone is in and it is dark outside",
+  occupancy_hysteresis_hold: "On: someone is in, holding until it is brighter",
+  plant_lux_low: "On: too dark for the plants",
+  plant_hysteresis_hold: "On: plant light, holding until it is brighter",
+  outside_window: "Off: outside the light window",
+  occupancy_lux_unavailable: "Off: someone is in, outdoor light level unknown",
+  lux_sufficient: "Off: enough daylight",
+  minutes_met: "Off: today's light minutes are met",
+} as const;
+
 /** The target API-20 records (`activity_log.target`), as an Activity row names it. */
 const LIGHT_TARGET = {
   grow_light_main: "Main lights",
@@ -547,6 +564,7 @@ export const WORDS: { readonly [family: string]: { readonly [code: string]: stri
   mode_reason: MODE_REASON,
   moisture_block_reason: MOISTURE_BLOCK_REASON,
   light_result: LIGHT_RESULT,
+  light_reason: LIGHT_REASON,
   light_target: LIGHT_TARGET,
   alert_type: ALERT_TYPE,
   equipment: EQUIPMENT,
@@ -569,7 +587,7 @@ export const WORDS: { readonly [family: string]: { readonly [code: string]: stri
   occurrence_reason: OCCURRENCE_REASON,
 };
 export type WordFamily = "state_reason" | "alert_severity" | "alert_status" | "problem_code" | "line_state" | "mode" | "mist_stage" | "fog_block_reason"
-  | "mode_reason" | "moisture_block_reason" | "light_result" | "light_target" | "alert_type" | "equipment" | "burst" | "required_trigger" | "band_verdict" | "scorecard_reason" | "trigger_outcome" | "trigger" | "tunable_short" | "stress_kind" | "stress_severity"
+  | "mode_reason" | "moisture_block_reason" | "light_result" | "light_reason" | "light_target" | "alert_type" | "equipment" | "burst" | "required_trigger" | "band_verdict" | "scorecard_reason" | "trigger_outcome" | "trigger" | "tunable_short" | "stress_kind" | "stress_severity"
   | "activity_action" | "irrigation_field" | "run_outcome" | "vpd_source" | "line_fault" | "program_reject" | "occurrence_reason";
 
 /** True when the table has words for `code` in `family`. */

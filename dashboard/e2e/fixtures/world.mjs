@@ -240,8 +240,8 @@ function inBand(now) {
       water("L04", at("07:12"), { runtime_today_s: 840, cycles_today: 14 }), water("L05", at("06:40", -12)), water("L06", at("06:40", -12)),
       water("L07", at("13:20", -3)), water("L08", at("06:40", -12)), water("L09", at("14:05", -9)), water("L10", at("06:40", -12)),
       water("L11", at("05:10"), { runtime_today_s: 360, cycles_today: 9 }),
-      item("grow_light_main", "Main", "light", at("19:00", -1), { intent: "off", observed_at: iso(now - LUTRON_POLL_AGE) }),
-      item("grow_light_grow", "Grow", "light", at("19:00", -1), { intent: "off", observed_at: iso(now - LUTRON_POLL_AGE) }),
+      item("grow_light_main", "Main", "light", at("19:00", -1), { intent: "off", auto_reason: "lux_sufficient", observed_at: iso(now - LUTRON_POLL_AGE) }),
+      item("grow_light_grow", "Grow", "light", at("19:00", -1), { intent: "off", auto_reason: "lux_sufficient", observed_at: iso(now - LUTRON_POLL_AGE) }),
     ],
     reasons: {
       mode_reason: { code: "idle", since: iso(at("09:55")), observed_at: iso(at("09:55")) },

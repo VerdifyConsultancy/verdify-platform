@@ -17,8 +17,8 @@ const GROW = "grow_light_grow";
 /** Every write the fixture API has had, as sent. */
 const sentWrites = async (request: Parameters<typeof fixtureWrites>[0]) => (await fixtureWrites(request)).map((write) => [write.method, write.path, write.body]);
 const TURN_ON = ["POST", "/v1/equipment/lights/main/on", null];
-const AUTO_MAIN = ["PUT", "/v1/settings/sw_gl_main_auto_mode", { value: 1, manual: true, reason: "Back to automatic" }];
-const AUTO_GROW = ["PUT", "/v1/settings/sw_gl_grow_auto_mode", { value: 1, manual: true, reason: "Back to automatic" }];
+const AUTO_MAIN = ["PUT", "/v1/settings/sw_gl_main_auto_mode", { value: 1, manual: false, reason: "Back to automatic" }];
+const AUTO_GROW = ["PUT", "/v1/settings/sw_gl_grow_auto_mode", { value: 1, manual: false, reason: "Back to automatic" }];
 
 for (const viewport of VIEWPORTS) {
   test(`${viewport.width} px: each reason reads in words with since and the Graphs window around it, under the board and above the lanes`, async ({ page, request }) => {

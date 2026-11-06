@@ -6,6 +6,7 @@ import type { Equipment, ParamsOf, Setting } from "../../lib/operator-api";
 import { fetchRead } from "../../lib/queries";
 import { OperatorOnly } from "../../lib/session";
 import { shortTime } from "../../lib/format";
+import { words } from "../../lib/words";
 import { readback, useCommand, useSettingWrite, type SettingInfo, type WriteError } from "../../lib/writes";
 import { ReadbackBadge } from "../badge";
 import { Button } from "../button";
@@ -105,7 +106,8 @@ export function useLightControl({ light, equipment, autoParam }: (typeof LIGHTS)
     // What the last command said and is still waiting for no longer stands: this press takes its place.
     command.reset();
     setAutomatic((current) => (current?.resync === "unread" ? { ...current, resync: "done" } : current));
-    const outcome = await write.save({ value: 1, manual: true, reason: BACK_TO_AUTOMATIC });
+    // Not manual (#1335): a light on Auto is the controller's, so it leaves Settings' manual count.
+    const outcome = await write.save({ value: 1, manual: false, reason: BACK_TO_AUTOMATIC });
     if (outcome.ok) setAutomatic({ writeId: outcome.data.id, resync: "waiting" });
   };
 
@@ -188,10 +190,12 @@ function AutomationLine({ control }: { control: LightControl }) {
  * tap and no dialog. The board's state only ever comes from the Lutron readback; here are what was said and what is
  * awaited: a 503's `Problem.result` in words, and after 30 s without a match "Lutron hasn't confirmed: still OFF".
  */
-export function LightControls({ control, item, settingTo }: { control: LightControl; item: Pick<LightItem, "label" | "state" | "intent" | "manual_until">; settingTo?: string }) {
+export function LightControls({ control, item, settingTo }: { control: LightControl; item: Pick<LightItem, "label" | "state" | "intent" | "manual_until" | "auto_reason">; settingTo?: string }) {
   const until = manualUntil(item);
+  const reason = item.auto_reason ?? null;
   return <div className="light-controls">
     {until !== null && <p className="state-note" data-light-until="">{item.state === "on" ? "On" : item.state === "off" ? "Off" : "Switched"} {manualUntilWords(until)}, then back to automatic</p>}
+    {reason !== null && <p className="state-note meta" data-light-reason={reason}>Controller: {words("light_reason", reason)}</p>}
     <div className="light-auto-row">
       <AutomationLine control={control} />
       <span className="light-links">
