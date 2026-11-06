@@ -8,7 +8,7 @@ An independent verifier triaged all **118 open issues** at about 13:00–14:00Z 
   - Superseded by #1360: #581, #587, #588, #639, #640, #641, #642, #749 and #782–#785.
   - Superseded by #1365: #410 and #378.
   - Superseded by #1358: #1314.
-- **Still open: 88.** 51 partial, 17 need Jason, 10 blocked, 6 not started and 4 time-gated.
+- **Still open: 86.** The triage left 88 open: 51 partial, 17 need Jason, 10 blocked, 6 not started and 4 time-gated. Afterwards the coordinator closed #1350 and #1366 as not planned, because Jason parked the Cortex planner and is keeping Hermes.
 
 ## Tracks, in order
 
@@ -16,6 +16,7 @@ Each track is the `execution_plan` sprint of the same id in `planning/backlog.ya
 
 - **T0, unblock.**
   1. Land the #1388 Cortex egress fix, then verify #1351 (re-embed), #1118 (vision) and #1346 (brief).
+  - #1351, #1352 and #1363 are re-scope pending Jason: local-only except the planner, which stays on OpenAI through Hermes. Slack goes by turning off Hermes's Slack output, and Hermes's image moves to the local registry instead of being retired.
   2. Land the Crops/Planner web pin, then verify #1330, #1361, #1327 and #1328.
 - **T1, live verification.** The code has shipped. What is left is one signed-in walk and one attended L01 run with the Stops. This covers 32 issues, including #1125–#1186, #1300 and #1332–#1358.
 - **T2, bounded fixes.**
@@ -23,7 +24,7 @@ Each track is the `execution_plan` sprint of the same id in `planning/backlog.ya
   - Firmware and DB: #1277 (C1 pin), #1283 (25 h day), #1312 (replay rounding) and #1313 (aborted-OTA accounting).
   - Platform: #1389 (experiment CPU), #1363 (images) and #1010 (client IP).
   - Firmware rebase: #299 and #367 (rebase PR #1095), then #368, #369, #370, #390 and #386.
-- **T3, the Cortex planner.** #1350 shadow, then cutover (14 days after the first shadow call). Then #1366 pack, then #1360 study (4-day dry run, then the study). #1360 also needs #1365 and #1389.
+- **T3, planner A/B study (Hermes arm).** #1360 with Hermes as the AI arm: PR B, a 4-day dry run, then the study (about 60 days). It needs #1365 (band freeze) and #1389 (CPU fix) first.
 - **T4, soaks.**
   - #1364 NTP: 2026-11-07.
   - #1346 brief cadence: 2026-11-07.
@@ -42,7 +43,7 @@ Each track is the `execution_plan` sprint of the same id in `planning/backlog.ya
   - #31 (Jason: defer or retire).
 - **Roll-ups:** #16, #75, #359, #430, #775, #1120 and #1325.
 
-**Critical path.** It runs: Cortex egress fix → #1350 shadow (≥14 days, earliest about 2026-11-20) → cutover → #1360 dry run (4 days) → the study (about 60 days). In parallel, #1365's 7 nights end 2026-11-13. The longest dependency chain is physical: replant → #298 → #398 → #45 → #297.
+**Critical path.** #1389 (CPU fix) and #1365 (7 nights of dry-out, ending 2026-11-13) feed #1360. Then #1360 PR B, a 4-day dry run and the study (about 60 days). The longest dependency chain is physical: replant → #298 → #398 → #45 → #297.
 
 ## Per-issue disposition
 | # | Title | Class | Closed now | Track | Blocked by (open) | Remaining / evidence |
@@ -143,9 +144,9 @@ Each track is the `execution_plan` sprint of the same id in `planning/backlog.ya
 | #1347 | [W5] Make the schedule timeline readable: daylight band on every lane, | NEEDS-JASON |  | T1 |  | Visual QA screenshots and Jason's walk. |
 | #1348 | [W5] Separate irrigation runs from VPD mist and fog everywhere | PARTIAL |  | T1 |  | BFF live check of /v1/irrigation/runs?purpose=irrigation\|climate |
 | #1349 | [W5] Redesign Water cards for clear line and group delineation and rep | NEEDS-JASON |  | T1 |  | Jason's D-UX-06 call recorded in decisions.md, plus the screenshots and his walk. |
-| #1350 | [W5] Replace the Hermes/OpenAI planner with one deterministic call to  | PARTIAL |  | T3 |  | egress fix -> shadow calls -> 14-day shadow report -> cutover -> induced-failure test -> remove Hermes/planner + OPENAI_API_KEY |
-| #1351 | [W5] Audit and remove Verdify's external dependencies (local-only goal | BLOCKED |  | T0 | #1350, #1352 | Cortex egress fix + re-embed; retire Hermes/OpenAI planner (#1350); drop outbound openai block; Slack (#1352); WAN-down drill |
-| #1352 | [W5] Decommission Slack from Verdify: alerts on the dashboard, paging  | TIME-GATED |  | T4 | #1350 | 7 days zero slack_ts (to ~2026-11-13); retire Hermes (#1350); remove KSOPS verdify-slack in agents; test critical page receipt; token revoke + archive channel |
+| #1350 | [W5] Replace the Hermes/OpenAI planner with one deterministic call to  | CLOSED (not planned, coordinator: Cortex parked) | yes |  |  | none; Jason parked the Cortex planner and keeps Hermes — cortex_planner + mig 294 via #1388 a7e0b49f, release 5196f955; verdify-cortex-planner shadow running; planner_inference_runs=0, planner_pack=0; hermes-iris + verdify-planner still Running; egress fix  |
+| #1351 | [W5] Audit and remove Verdify's external dependencies (local-only goal | BLOCKED |  | T0 | #1352 | re-scope pending Jason: local-only except planner (OpenAI via Hermes); Cortex egress fix + re-embed; retire Hermes/OpenAI planner (#1350); drop outbound openai  |
+| #1352 | [W5] Decommission Slack from Verdify: alerts on the dashboard, paging  | TIME-GATED |  | T4 |  | re-scope pending Jason: turn off Hermes Slack output; 7 days zero slack_ts (to ~2026-11-13); retire Hermes (#1350); remove KSOPS verdify-slack in agents; test c |
 | #1353 | [W5] Show 72 h of history and 72 h of forecast on Graphs by default | PARTIAL |  | T1 |  | The live side-by-side check against Grafana; an optional phone default and `ahead=`. |
 | #1354 | [W5] Move chart labels out of the plots and use one chart vocabulary a | PARTIAL |  | T2 |  | The `--cause-prep` fix on Water schedules and the screenshot set. |
 | #1355 | [W5] Make event markers on Graphs show what each event is and what it  | PARTIAL |  | T1 |  | The live 72 h screenshot QA. |
@@ -153,13 +154,13 @@ Each track is the `execution_plan` sprint of the same id in `planning/backlog.ya
 | #1357 | [W5] Add a Lighting tab to Graphs: light state, outdoor lux and thresh | PARTIAL |  | T1 |  | The two-day live spot check and the timing. |
 | #1358 | [W5] Research and fix band compliance: grade time in band against the  | NEEDS-JASON |  | T1 |  | Jason confirms definition; cross-surface live screenshots (Statistics/Now/Graphs/Grafana site-home); confirm CI grep guard |
 | #1359 | [W5] Research the experiment system's current state and how to measure | DONE | yes |  |  | none — docs/research/w5/planner-ab.md merged #1380 d4c8dae1; Jason accepted all decisions 11-05 21:45Z; #1360/#1361 updated via #1399 e136a4fb. |
-| #1360 | [W5] Run an AI-planner-versus-baseline study end to end by extending t | PARTIAL |  | T3 | #1350, #1365, #1389 | PR B: arm run path, deviation rows, study_day_outcomes, ANCOVA analyzer, remove OpenAI selector pin, schedule hash, 4-day dry run, 60-day study |
+| #1360 | [W5] Run an AI-planner-versus-baseline study end to end by extending t | PARTIAL |  | T3 | #1365, #1389 | Hermes is the AI arm; PR B then dry run and study after #1365 and #1389 |
 | #1361 | [W5] Add a Planner section: plan history, cost, experiments, arm calen | PARTIAL |  | T0 | #1360 | The web pin and the live viewer check; results after #1360. |
 | #1362 | [W5] Daily energy goes negative: daily_summary.kwh_total has read belo | DONE | yes |  |  | None (physical: reversed Shelly ch1 clamp noted by Jason, not acceptance) — PR #1369 5402e88d mig 291 (release 1 07:47Z); 0 negative kwh_total rows; 10-20 3.60=3.60 and 11-04 26.54=26.54 vs v_energy_daily |
-| #1363 | [W5] Pull every Verdify image through the local registry (no direct Do | PARTIAL |  | T2 | #1350 | Hermes retire (#1350); descheduler custody+repin (#802); imageIDs clean after reschedule; firmware-builder run receipt; storage-infra plan.json listing |
+| #1363 | [W5] Pull every Verdify image through the local registry (no direct Do | PARTIAL |  | T2 |  | re-scope pending Jason: Hermes image via local registry; Hermes retire (#1350); descheduler custody+repin (#802); imageIDs clean after reschedule; firmware-buil |
 | #1364 | [W5] Use the estate's local NTP for the greenhouse controller instead  | TIME-GATED |  | T4 |  | 24 h check after 2026-11-07 09:55Z; network-infra chronyc clients readback of 192.168.10.111 |
 | #1365 | [W5] Research sprint: a VPD band the greenhouse can actually hold, and | TIME-GATED |  | T4 |  | Build nightly dried-out flag in 290 rollup; amend ADR-0003/0004; file follow-ups; 7-night live check |
-| #1366 | [W5] Research the planner's 60K-token input pack: what the Cortex plan | PARTIAL |  | T3 | #1350 | write docs/planner/pack-v1.md; verify live pack stats over #1350 shadow window; re-export weather_forecast by ~11-26 |
+| #1366 | [W5] Research the planner's 60K-token input pack: what the Cortex plan | CLOSED (not planned, coordinator: Cortex parked) | yes |  |  | none; Jason parked the Cortex planner and keeps Hermes — Research posted; decision recorded in decisions.md; pack.py + test_cortex_planner_pack.py on main (#1388); docs/planner/pack-v1.md missing; planner_pack 0 rows live. |
 | #1370 | [W5] Turn the lights on when the cameras see someone in the greenhouse | PARTIAL |  | T1 |  | Observe one real walk-in: lights on <=5 s, back to Auto 15 min after last sighting, cause logged |
 | #1381 | [W5] leak_detected raises false positives: find the trigger and stop t | DONE | yes |  |  | none — #1385 (1863ccf7) attended-flow rule, replay test of 10-26/27/29 = no alert, unattended still raises; live since release 1; no leak alert since 10-29. |
 | #1389 | experiment-v2 lifecycle/freezer/selector CPU-throttled >50% (limits 25 | NOT STARTED |  | T2 |  | profile idle loop/backoff; right-size requests/limits |

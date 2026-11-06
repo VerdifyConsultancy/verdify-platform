@@ -5740,11 +5740,12 @@
       "paths": [
         "cortex_planner"
       ],
-      "baseline": "Triage 2026-11-06: PARTIAL. cortex_planner + mig 294 via #1388 a7e0b49f, release 5196f955; verdify-cortex-planner shadow running; planner_inference_runs=0, planner_pack=0; hermes-iris + verdify-planner still Running; egress fix PR #1422 open. Blocker: Cortex egress NetworkPolicy fix (PR #1422). Time gate: 2026-11-20. Next: egress fix -> shadow calls -> 14-day shadow report -> cutover -> induced-failure test -> remove Hermes/planner + OPENAI_API_KEY",
+      "baseline": "Closed as not planned 2026-11-06: Jason parked the Cortex planner and keeps Hermes. Shadow deployment and migration 294 storage remain as historical evidence.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
-      "status": "open"
+      "status": "closed",
+      "accepted": false
     },
     {
       "key": "1351",
@@ -5757,7 +5758,6 @@
       "owner_role": "Dashboard wave-2 lead",
       "parent": "1325",
       "depends_on": [
-        "1350",
         "1352"
       ],
       "what": "Audit and remove Verdify's external dependencies (local-only goal).",
@@ -5771,10 +5771,10 @@
       "paths": [
         "deploy/k8s/overlays/prod/kustomization.yaml"
       ],
-      "baseline": "Triage 2026-11-06: BLOCKED. #1384/#1404/#1388 (mig 296 release 3) shipped; re-embed 0 rows (Cortex egress NetPol); verdify-planner has OPENAI_API_KEY, hermes-iris has VERDIFY_SLACK_CONFIG; outbound conf still mentions openai Blocker: Cortex egress NetworkPolicy defect (#1388). Next: Cortex egress fix + re-embed; retire Hermes/OpenAI planner (#1350); drop outbound openai block; Slack (#1352); WAN-down drill",
+      "baseline": "Triage 2026-11-06: BLOCKED. #1384/#1404/#1388 (mig 296 release 3) shipped; re-embed 0 rows (Cortex egress NetPol); verdify-planner has OPENAI_API_KEY, hermes-iris has VERDIFY_SLACK_CONFIG; outbound conf still mentions openai Blocker: Cortex egress NetworkPolicy defect (#1388). Next: Cortex egress fix + re-embed; retire Hermes/OpenAI planner (#1350); drop outbound openai block; Slack (#1352); WAN-down drill Re-scope pending Jason: local-only applies to everything except the planner, which stays on OpenAI through Hermes. Embeddings on Cortex still wait on the egress fix.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
-      "decision": "Schedule 1 h WAN-down drill",
+      "decision": "Re-scope pending Jason: local-only applies to everything except the planner, which stays on OpenAI through Hermes. Embeddings on Cortex still wait on the egress fix.",
       "status": "open"
     },
     {
@@ -5787,9 +5787,7 @@
       "effort": "M",
       "owner_role": "Dashboard wave-2 lead",
       "parent": "1325",
-      "depends_on": [
-        "1350"
-      ],
+      "depends_on": [],
       "what": "Decommission Slack from Verdify: alerts on the dashboard, paging through Alertmanager.",
       "why": "Tracked on the GitHub issue; acceptance criteria and their amendments live in the issue body and comments. Added to the validated plan by the 2026-11-06 full triage so every open issue has one dependency-ordered record.",
       "how": [
@@ -5801,10 +5799,10 @@
       "paths": [
         "mcp"
       ],
-      "baseline": "Triage 2026-11-06: TIME-GATED. #1383 8729a826 + #1404 live from release 1 07:47Z; last slack_ts 06:32Z, 4 alerts since with 0 slack_ts; hermes-iris still has Slack config; Secret verdify-slack exists Time gate: 2026-11-13. Next: 7 days zero slack_ts (to ~2026-11-13); retire Hermes (#1350); remove KSOPS verdify-slack in agents; test critical page receipt; token revoke + archive channel",
+      "baseline": "Triage 2026-11-06: TIME-GATED. #1383 8729a826 + #1404 live from release 1 07:47Z; last slack_ts 06:32Z, 4 alerts since with 0 slack_ts; hermes-iris still has Slack config; Secret verdify-slack exists Time gate: 2026-11-13. Next: 7 days zero slack_ts (to ~2026-11-13); retire Hermes (#1350); remove KSOPS verdify-slack in agents; test critical page receipt; token revoke + archive channel Re-scope pending Jason: Slack is removed by turning off Hermes's Slack output (Hermes stays), not by retiring Hermes.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
-      "decision": "Decision line to revoke Iris Slack bot token/archive greenhouse",
+      "decision": "Re-scope pending Jason: Slack is removed by turning off Hermes's Slack output (Hermes stays), not by retiring Hermes.",
       "status": "open"
     },
     {
@@ -5986,7 +5984,6 @@
       "owner_role": "Dashboard wave-2 lead",
       "parent": "1325",
       "depends_on": [
-        "1350",
         "1365",
         "1389"
       ],
@@ -6001,10 +5998,10 @@
       "paths": [
         "mcp"
       ],
-      "baseline": "Triage 2026-11-06: PARTIAL. Slice 1 (study yaml + mig 302 views) via #1399 e136a4fb, release 5196f955; old experiment closed; 0 randomization/outcomes; no study_day_outcomes table. Blocker: Cortex planner cutover (#1350) and #1365 band change. Next: PR B: arm run path, deviation rows, study_day_outcomes, ANCOVA analyzer, remove OpenAI selector pin, schedule hash, 4-day dry run, 60-day study",
+      "baseline": "Triage 2026-11-06: PARTIAL. Slice 1 (study yaml + mig 302 views) via #1399 e136a4fb, release 5196f955; old experiment closed; 0 randomization/outcomes; no study_day_outcomes table. Blocker: Cortex planner cutover (#1350) and #1365 band change. Next: PR B: arm run path, deviation rows, study_day_outcomes, ANCOVA analyzer, remove OpenAI selector pin, schedule hash, 4-day dry run, 60-day study Re-scoped 2026-11-06: Cortex planner parked; Hermes is the AI arm. Depends on #1365 band freeze and #1389 CPU fix only.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
-      "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
+      "decision": "Jason 2026-11-06: Cortex planner parked; Hermes (OpenAI) stays as the AI arm of the study.",
       "status": "open"
     },
     {
@@ -6047,9 +6044,7 @@
       "effort": "M",
       "owner_role": "Dashboard wave-2 lead",
       "parent": "1325",
-      "depends_on": [
-        "1350"
-      ],
+      "depends_on": [],
       "what": "Pull every Verdify image through the local registry (no direct Docker Hub/ghcr pulls).",
       "why": "Tracked on the GitHub issue; acceptance criteria and their amendments live in the issue body and comments. Added to the validated plan by the 2026-11-06 full triage so every open issue has one dependency-ordered record.",
       "how": [
@@ -6061,10 +6056,10 @@
       "paths": [
         "deploy/k8s/overlays/prod/kustomization.yaml"
       ],
-      "baseline": "Triage 2026-11-06: PARTIAL. #1384/#1404 shipped; all verdify-prod pod specs on registry.vallery.net except hermes-iris (nousresearch/hermes-agent); descheduler on registry.k8s.io; some imageIDs alias docker.io Next: Hermes retire (#1350); descheduler custody+repin (#802); imageIDs clean after reschedule; firmware-builder run receipt; storage-infra plan.json listing",
+      "baseline": "Triage 2026-11-06: PARTIAL. #1384/#1404 shipped; all verdify-prod pod specs on registry.vallery.net except hermes-iris (nousresearch/hermes-agent); descheduler on registry.k8s.io; some imageIDs alias docker.io Next: Hermes retire (#1350); descheduler custody+repin (#802); imageIDs clean after reschedule; firmware-builder run receipt; storage-infra plan.json listing Re-scope pending Jason: Hermes's image goes through the local registry instead of being retired; descheduler still waits on #802.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
-      "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
+      "decision": "Re-scope pending Jason: Hermes's image goes through the local registry instead of being retired; descheduler still waits on #802.",
       "status": "open"
     },
     {
@@ -6147,11 +6142,12 @@
       "paths": [
         "cortex_planner"
       ],
-      "baseline": "Triage 2026-11-06: PARTIAL. Research posted; decision recorded in decisions.md; pack.py + test_cortex_planner_pack.py on main (#1388); docs/planner/pack-v1.md missing; planner_pack 0 rows live. Blocker: Cortex egress fix (PR #1422) for live pack rows. Time gate: 2026-11-20. Next: write docs/planner/pack-v1.md; verify live pack stats over #1350 shadow window; re-export weather_forecast by ~11-26",
+      "baseline": "Closed as not planned 2026-11-06: Jason parked the Cortex planner and keeps Hermes. Shadow deployment and migration 294 storage remain as historical evidence.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
-      "status": "open"
+      "status": "closed",
+      "accepted": false
     },
     {
       "key": "1370",
@@ -6314,7 +6310,6 @@
       1347,
       1348,
       1349,
-      1350,
       1351,
       1352,
       1353,
@@ -6328,7 +6323,6 @@
       1363,
       1364,
       1365,
-      1366,
       1370,
       1389,
       1397
@@ -6360,9 +6354,9 @@
       },
       {
         "id": "T3",
-        "title": "T3 \u2014 Cortex planner cutover and the A/B study",
-        "goal": "Shadow, cut over, retire Hermes and OpenAI, then run the two-arm study.",
-        "exit": "Cutover verified; study dry run and burn-in complete; study running.",
+        "title": "T3 \u2014 Planner A/B study (Hermes arm)",
+        "goal": "Run the two-arm study with Hermes as the AI arm after the band freeze and the CPU fix.",
+        "exit": "Study dry run and burn-in complete; study running.",
         "kind": "conditional",
         "capacity_hours": null
       },
@@ -6405,7 +6399,7 @@
         "sprint": "T0",
         "hours_min": 1,
         "hours_max": 3,
-        "next_action": "[BLOCKED] Cortex egress fix + re-embed; retire Hermes/OpenAI planner (#1350); drop outbound openai block; Slack (#1352); WAN-down drill",
+        "next_action": "[RE-SCOPE PENDING JASON] Re-scope pending Jason: local-only applies to everything except the planner, which stays on OpenAI through Hermes. Embeddings on Cortex still wait on the egress fix.",
         "owner_role": "Platform lead"
       },
       {
@@ -6789,7 +6783,7 @@
         "sprint": "T2",
         "hours_min": 2,
         "hours_max": 6,
-        "next_action": "[PARTIAL] Hermes retire (#1350); descheduler custody+repin (#802); imageIDs clean after reschedule; firmware-builder run receipt; storage-infra plan.json listing",
+        "next_action": "[RE-SCOPE PENDING JASON] Re-scope pending Jason: Hermes's image goes through the local registry instead of being retired; descheduler still waits on #802.",
         "owner_role": "Platform lead"
       },
       {
@@ -6857,27 +6851,11 @@
         "owner_role": "Platform lead"
       },
       {
-        "issue_number": 1350,
-        "sprint": "T3",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[PARTIAL] egress fix -> shadow calls -> 14-day shadow report -> cutover -> induced-failure test -> remove Hermes/planner + OPENAI_API_KEY",
-        "owner_role": "Planner lead"
-      },
-      {
-        "issue_number": 1366,
-        "sprint": "T3",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[PARTIAL] write docs/planner/pack-v1.md; verify live pack stats over #1350 shadow window; re-export weather_forecast by ~11-26",
-        "owner_role": "Planner lead"
-      },
-      {
         "issue_number": 1360,
         "sprint": "T3",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[PARTIAL] PR B: arm run path, deviation rows, study_day_outcomes, ANCOVA analyzer, remove OpenAI selector pin, schedule hash, 4-day dry run, 60-day study",
+        "next_action": "[PARTIAL] Hermes is the AI arm (Cortex parked). PR B: arm run path, study_day_outcomes, analyzer, schedule hash; then 4-day dry run and study after #1365 and #1389.",
         "owner_role": "Planner lead"
       },
       {
@@ -6901,7 +6879,7 @@
         "sprint": "T4",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[TIME-GATED] 7 days zero slack_ts (to ~2026-11-13); retire Hermes (#1350); remove KSOPS verdify-slack in agents; test critical page receipt; token revoke + archive channel",
+        "next_action": "[RE-SCOPE PENDING JASON] Re-scope pending Jason: Slack is removed by turning off Hermes's Slack output (Hermes stays), not by retiring Hermes.",
         "owner_role": "Verifier"
       },
       {

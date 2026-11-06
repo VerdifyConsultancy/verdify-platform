@@ -1,6 +1,6 @@
 # Open-work dependency graph (2026-11-06 triage)
 
-Open issues only (88), grouped by execution track. An arrow means the predecessor must finish before the dependent's acceptance. Closed records stay in the canonical graph in [planning/DEPENDENCIES.md](../../DEPENDENCIES.md).
+Open issues only (86), grouped by execution track. An arrow means the predecessor must finish before the dependent's acceptance. Closed records stay in the canonical graph in [planning/DEPENDENCIES.md](../../DEPENDENCIES.md).
 
 Longest open chain: #298 → #398 → #45 → #297.
 
@@ -69,9 +69,7 @@ flowchart LR
     i390["#390 [C4][P1] Gate firmware releases on topol"]
     i386["#386 [C4][P2] Prove grow-light minimum-on beh"]
   end
-  subgraph T3["T3: Cortex planner cutover and the A/B study"]
-    i1350["#1350 [W5] Replace the Hermes/OpenAI planner w"]
-    i1366["#1366 [W5] Research the planner's 60K-token in"]
+  subgraph T3["T3: Planner A/B study (Hermes arm)"]
     i1360["#1360 [W5] Run an AI-planner-versus-baseline s"]
   end
   subgraph T4["T4: Time-gated soaks"]
@@ -132,15 +130,10 @@ flowchart LR
   i1354 --> i1322
   i1330 --> i1327
   i1330 --> i1328
-  i1350 --> i1351
   i1352 --> i1351
-  i1350 --> i1352
-  i1350 --> i1360
   i1365 --> i1360
   i1389 --> i1360
   i1360 --> i1361
-  i1350 --> i1363
-  i1350 --> i1366
 ```
 
 ## Edge list
@@ -169,12 +162,7 @@ flowchart LR
 | #1354 | #1322 |
 | #1330 | #1327 |
 | #1330 | #1328 |
-| #1350 | #1351 |
 | #1352 | #1351 |
-| #1350 | #1352 |
-| #1350 | #1360 |
 | #1365 | #1360 |
 | #1389 | #1360 |
 | #1360 | #1361 |
-| #1350 | #1363 |
-| #1350 | #1366 |

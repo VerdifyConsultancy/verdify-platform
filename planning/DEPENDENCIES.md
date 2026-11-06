@@ -1,6 +1,6 @@
 # Complete blocking dependency graph
 
-The [current reviewed native graph](reviews/2026-11-06-triage/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 183-issue/89-edge campaign graph is retained below.
+The [current reviewed native graph](reviews/2026-11-06-triage/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 183-issue/85-edge campaign graph is retained below.
 
 Generated from [backlog.yaml](backlog.yaml). An arrow means **predecessor must finish before dependent acceptance/activation**, not parentage. Isolated nodes are included so coverage is auditable. Read [CAMPAIGN.md](CAMPAIGN.md) for the smaller critical path.
 
@@ -185,7 +185,7 @@ flowchart TD
     i1347["#1347 (open) Make the schedule timeline readable: daylight band on ever"]
     i1348["#1348 (open) Separate irrigation runs from VPD mist and fog everywhere"]
     i1349["#1349 (open) Redesign Water cards for clear line and group delineation "]
-    i1350["#1350 (open) Replace the Hermes/OpenAI planner with one deterministic c"]
+    i1350["#1350 (closed) Replace the Hermes/OpenAI planner with one deterministic c"]
     i1351["#1351 (open) Audit and remove Verdify's external dependencies (local-on"]
     i1352["#1352 (open) Decommission Slack from Verdify: alerts on the dashboard, "]
     i1353["#1353 (open) Show 72 h of history and 72 h of forecast on Graphs by def"]
@@ -199,7 +199,7 @@ flowchart TD
     i1363["#1363 (open) Pull every Verdify image through the local registry (no di"]
     i1364["#1364 (open) Use the estate's local NTP for the greenhouse controller i"]
     i1365["#1365 (open) Research sprint: a VPD band the greenhouse can actually ho"]
-    i1366["#1366 (open) Research the planner's 60K-token input pack: what the Cort"]
+    i1366["#1366 (closed) Research the planner's 60K-token input pack: what the Cort"]
     i1370["#1370 (open) Turn the lights on when the cameras see someone in the gre"]
   end
   subgraph OPS["OPS: Platform, firmware and estate follow-ups"]
@@ -293,14 +293,10 @@ flowchart TD
   i1354 --> i1322
   i1330 --> i1327
   i1330 --> i1328
-  i1350 --> i1351
   i1352 --> i1351
-  i1350 --> i1352
-  i1350 --> i1360
   i1365 --> i1360
   i1389 --> i1360
   i1360 --> i1361
-  i1350 --> i1363
   i1350 --> i1366
 ```
 
@@ -388,14 +384,10 @@ flowchart TD
 | [#1354](https://github.com/VerdifyConsultancy/verdify-platform/issues/1354) (open) | [#1322](https://github.com/VerdifyConsultancy/verdify-platform/issues/1322) (open) |
 | [#1330](https://github.com/VerdifyConsultancy/verdify-platform/issues/1330) (open) | [#1327](https://github.com/VerdifyConsultancy/verdify-platform/issues/1327) (open) |
 | [#1330](https://github.com/VerdifyConsultancy/verdify-platform/issues/1330) (open) | [#1328](https://github.com/VerdifyConsultancy/verdify-platform/issues/1328) (open) |
-| [#1350](https://github.com/VerdifyConsultancy/verdify-platform/issues/1350) (open) | [#1351](https://github.com/VerdifyConsultancy/verdify-platform/issues/1351) (open) |
 | [#1352](https://github.com/VerdifyConsultancy/verdify-platform/issues/1352) (open) | [#1351](https://github.com/VerdifyConsultancy/verdify-platform/issues/1351) (open) |
-| [#1350](https://github.com/VerdifyConsultancy/verdify-platform/issues/1350) (open) | [#1352](https://github.com/VerdifyConsultancy/verdify-platform/issues/1352) (open) |
-| [#1350](https://github.com/VerdifyConsultancy/verdify-platform/issues/1350) (open) | [#1360](https://github.com/VerdifyConsultancy/verdify-platform/issues/1360) (open) |
 | [#1365](https://github.com/VerdifyConsultancy/verdify-platform/issues/1365) (open) | [#1360](https://github.com/VerdifyConsultancy/verdify-platform/issues/1360) (open) |
 | [#1389](https://github.com/VerdifyConsultancy/verdify-platform/issues/1389) (open) | [#1360](https://github.com/VerdifyConsultancy/verdify-platform/issues/1360) (open) |
 | [#1360](https://github.com/VerdifyConsultancy/verdify-platform/issues/1360) (open) | [#1361](https://github.com/VerdifyConsultancy/verdify-platform/issues/1361) (open) |
-| [#1350](https://github.com/VerdifyConsultancy/verdify-platform/issues/1350) (open) | [#1363](https://github.com/VerdifyConsultancy/verdify-platform/issues/1363) (open) |
-| [#1350](https://github.com/VerdifyConsultancy/verdify-platform/issues/1350) (open) | [#1366](https://github.com/VerdifyConsultancy/verdify-platform/issues/1366) (open) |
+| [#1350](https://github.com/VerdifyConsultancy/verdify-platform/issues/1350) (closed) | [#1366](https://github.com/VerdifyConsultancy/verdify-platform/issues/1366) (closed) |
 
 Closed #676 remains historical qualification evidence, not an open blocker. Cross-repository fleet/monitoring delivery is a concrete implementation interface in the relevant issues, not a fabricated in-repository node. Physical windows and minimum live-state invariants remain explicit issue conditions.

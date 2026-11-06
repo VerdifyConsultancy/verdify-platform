@@ -1697,7 +1697,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "b1239c10b7086108339efe439ad8007cd12dbfae5fd0ee3529577afdfc0091af"
+      "body_sha256": "f1d227fdbbe56342bc0201264e4fab6348094497d04a5ebb6f80a106ed1b01c5"
     },
     {
       "key": "1327",
@@ -1950,11 +1950,11 @@
       "number": 1350,
       "title": "[W5][P1] Replace the Hermes/OpenAI planner with one deterministic call to the local Cortex Qwen model",
       "stage": "W5",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "2323c696061bd3ceec2d861e5a9f17f7417a7dd3e67f9fff97a1668bcea560d0"
+      "body_sha256": "c5a7cd42ef0a33e91c3314f3d5860c1c5214e6d300c13d3a595b783b49319fc8"
     },
     {
       "key": "1351",
@@ -1965,10 +1965,9 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [
-        1350,
         1352
       ],
-      "body_sha256": "ab5b25b81949a66a1d515027f2e3142a85c6daa9f6b98b89bbc3b8ee9c6c720c"
+      "body_sha256": "12eb4329938b24528ada9ad518a353378a985e5d0f2f0ae8d12202deff2a3155"
     },
     {
       "key": "1352",
@@ -1978,10 +1977,8 @@
       "status": "open",
       "accepted": false,
       "parent": 1325,
-      "blocked_by": [
-        1350
-      ],
-      "body_sha256": "248aa5c6daf7355b3d5ee6a5a364aced0bf2359e31530ad01d39d6b261a310eb"
+      "blocked_by": [],
+      "body_sha256": "57eddd35e361b0629209f05d3a8765cd135b8531d75a3a39fe1068611c442f72"
     },
     {
       "key": "1353",
@@ -2058,11 +2055,10 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [
-        1350,
         1365,
         1389
       ],
-      "body_sha256": "ed1702d17bebe316314d4ddd981b32a3e449ede4222cad9870ae3d02457c81b1"
+      "body_sha256": "1bc3feaa5dc11344c3fc99afb956d31d9a1577c03b2949684fb8ce2b13963534"
     },
     {
       "key": "1361",
@@ -2085,10 +2081,8 @@
       "status": "open",
       "accepted": false,
       "parent": 1325,
-      "blocked_by": [
-        1350
-      ],
-      "body_sha256": "d6623b5147b4998ce41ba4783b1b7183a4d3508ee1f8298c6f398216d66ca862"
+      "blocked_by": [],
+      "body_sha256": "3815226d27cf15dba53cf2d8a122b8453723b4d6e9984353d96782b93f0cb8d8"
     },
     {
       "key": "1364",
@@ -2117,13 +2111,13 @@
       "number": 1366,
       "title": "[W5][P2] Research the planner's 60K-token input pack: what the Cortex planner must see to plan well",
       "stage": "W5",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1325,
       "blocked_by": [
         1350
       ],
-      "body_sha256": "253f85b20ddea3fb12db823d9164b4d5c60cfb2ab71ab70d2428224d29233d95"
+      "body_sha256": "e379abc14d594ee309cd8601442ecd32ef75a7946b7a8f7eb0de3170d712dca8"
     },
     {
       "key": "1370",
