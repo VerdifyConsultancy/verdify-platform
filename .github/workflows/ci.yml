@@ -51,6 +51,9 @@ jobs:
       timeout-minutes: 10
 
   # Native `validate`: scripts/ci-local.sh with the diff gates.
+  # TEMPORARY until estate-ci toolbox image adds kustomize + UID 1001 passwd entry (CI-PLATFORM):
+  # validate.sh installs a sha256-pinned kustomize and an nss_wrapper passwd entry
+  # for UID 1001 (initdb in the private PostgreSQL fixtures needs one).
   validate:
     name: ci
     needs: [trusted-precheck, path-impact]
@@ -74,6 +77,8 @@ jobs:
       in-job-image: true
       timeout-minutes: 20
 
+  # TEMPORARY until estate-ci toolbox image adds kustomize + UID 1001 passwd entry (CI-PLATFORM):
+  # registry-step.sh installs a sha256-pinned kustomize for platform-tests.
   platform-tests:
     name: ci
     needs: [trusted-precheck, path-impact]

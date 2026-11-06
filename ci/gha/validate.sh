@@ -12,18 +12,8 @@ for tool in g++ git curl tar make; do
   command -v "$tool" >/dev/null || { echo "CI image is missing $tool" >&2; exit 1; }
 done
 
-# kustomize v5.4.3, the release the native step downloads, checked against the
-# release's published SHA-256 (the value ci/validate.Dockerfile also pins).
-if ! command -v kustomize >/dev/null; then
-  bin="$HOME/.local/bin"
-  mkdir -p "$bin"
-  curl -fsSL --retry 3 -o "$bin/kustomize.tgz" \
-    "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz"
-  echo "3669470b454d865c8184d6bce78df05e977c9aea31c30df3c669317d43bcc7a7  $bin/kustomize.tgz" | sha256sum -c -
-  tar -xzf "$bin/kustomize.tgz" --no-same-owner -C "$bin" kustomize
-  rm "$bin/kustomize.tgz"
-  export PATH="$bin:$PATH"
-fi
+ci_ensure_kustomize
+ci_ensure_passwd_entry
 
 ci_fetch_history
 impact="$(mktemp -d)"
