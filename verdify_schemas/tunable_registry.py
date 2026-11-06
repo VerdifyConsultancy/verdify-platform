@@ -1565,7 +1565,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="dispatcher_default",
         planner_pushable=False,
         tier=2,
-        notes="Dispatcher-owned mirror of the main-light activity start hour. Direct-wet gates consume it so lights and wetting share one activity policy.",
+        notes="Dispatcher-owned mirror of the main-light activity start hour. Retired: only direct_wet_window_open reads it, and nothing calls that.",
     ),
     "activity_start_minute": TunableDef(
         name="activity_start_minute",
@@ -1580,7 +1580,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="dispatcher_default",
         planner_pushable=False,
         tier=2,
-        notes="Dispatcher-owned mirror of the main-light activity start minute.",
+        notes="Dispatcher-owned mirror of the main-light activity start minute. Retired: only direct_wet_window_open reads it, and nothing calls that.",
     ),
     "activity_duration_min": TunableDef(
         name="activity_duration_min",
@@ -1595,7 +1595,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="dispatcher_default",
         planner_pushable=False,
         tier=2,
-        notes="Dispatcher-owned mirror of main-light target runtime. Direct wetting is blocked outside this global biological activity window.",
+        notes="Dispatcher-owned mirror of main-light target runtime. Retired: only direct_wet_window_open reads it, and nothing calls that, so it bounds no wetting.",
     ),
     "direct_wet_min_temp_f": TunableDef(
         name="direct_wet_min_temp_f",
@@ -3648,12 +3648,16 @@ FIRMWARE_V2_CFG_WIRE_IDS: dict[str, str] = {
 # (wire ids 24 and 39) the firmware decodes, so retiring them is a wire-schema change.
 NO_EFFECT_RETIRED_REG: frozenset[str] = frozenset(
     {
-        # greenhouse_logic.h direct_wet_window_open has no caller.
+        # greenhouse_logic.h direct_wet_window_open has no caller: its offsets and the
+        # activity mirror it reads (the dispatcher keeps sending the mirror).
         *(
             f"direct_wet_{where}_{part}_min"
             for where in ("south", "wall", "west", "center")
             for part in ("start_offset", "drydown_before_off")
         ),
+        "activity_start_hour",
+        "activity_start_minute",
+        "activity_duration_min",
         # past_wet_taper is a no-op shim; nothing reads sw_night_stress_wet_enabled.
         "sw_wet_taper_enabled",
         "wet_taper_before_sunset_min",
@@ -4090,7 +4094,8 @@ def desired_write_kind(name: str) -> str | None:
       ``esp_object_id`` (the ``gl_*`` rows among them), and the ``irrigation_site`` rows, which reach the
       controller in the irrigation program.
     * Read-only: ``readback_context`` and ``retired`` rows; the legacy wide limits; the zone VPD targets; the
-      activity mirror; ``sw_onchip_band_enabled``, by name; a row with no controller entity; an unknown name.
+      activity mirror (retired since no control path reads it, so it reads ``retired``); ``sw_onchip_band_enabled``,
+      by name; a row with no controller entity; an unknown name.
     """
     spec = REGISTRY.get(name)
     if spec is None:
@@ -4101,11 +4106,11 @@ def desired_write_kind(name: str) -> str | None:
         return "legacy_wide_limit"
     if name in ZONE_VPD_TARGET_PARAMS:
         return "zone_vpd_target"
-    if name in ACTIVITY_MIRROR_PARAMS:
-        return "activity_mirror"
     control_class = spec.control_class
     if control_class in ("retired", "readback_context"):
         return control_class
+    if name in ACTIVITY_MIRROR_PARAMS:
+        return "activity_mirror"
     if control_class == "irrigation_site":
         return None
     if control_class in WRITABLE_CONTROL_CLASSES and spec.esp_object_id is not None:

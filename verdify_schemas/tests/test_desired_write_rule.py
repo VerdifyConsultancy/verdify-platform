@@ -79,8 +79,11 @@ def test_the_zone_vpd_targets_are_read_only_and_not_legacy(name: str) -> None:
 
 
 @pytest.mark.parametrize("name", ["activity_start_hour", "activity_start_minute", "activity_duration_min"])
-def test_the_activity_mirror_is_read_only(name: str) -> None:
-    assert desired_write_rule(name) == (False, READ_ONLY_REASONS["activity_mirror"])
+def test_the_activity_mirror_is_read_only_as_retired(name: str) -> None:
+    """Only the uncalled direct_wet_window_open read the mirror, so it is retired; retired wins over the mirror."""
+    assert name in ACTIVITY_MIRROR_PARAMS
+    assert desired_write_kind(name) == "retired"
+    assert desired_write_rule(name) == (False, READ_ONLY_REASONS["retired"])
 
 
 @pytest.mark.parametrize("name", WEEKLY_FEED_ROWS)
@@ -112,9 +115,12 @@ def test_band_ownership_retired_readback_and_unknown_rows_are_not_writable() -> 
 def test_every_named_read_only_row_is_registered_and_of_a_writable_class() -> None:
     """A typo would leave a row writable; a row of a read-only class needs no entry."""
     assert BAND_OWNER_SWITCH in REGISTRY  # readback_context today; refused by name all the same
-    for name in LEGACY_WIDE_LIMIT_PARAMS | ZONE_VPD_TARGET_PARAMS | ACTIVITY_MIRROR_PARAMS:
+    for name in LEGACY_WIDE_LIMIT_PARAMS | ZONE_VPD_TARGET_PARAMS:
         assert name in REGISTRY, name
         assert REGISTRY[name].control_class in WRITABLE_CONTROL_CLASSES, name
+    # The activity mirror is retired (no control path reads it) and stays registered for the dispatcher's push.
+    for name in ACTIVITY_MIRROR_PARAMS:
+        assert name in REGISTRY and REGISTRY[name].control_class == "retired", name
 
 
 def test_the_rule_matches_the_class_split_for_every_row() -> None:
