@@ -47,6 +47,7 @@ from verdify_schemas.alerts import flow_stopped_at
 from verdify_schemas.band_rows import HOUSE_SERIES, ZONES
 from verdify_schemas.irrigation import purpose_of
 from verdify_schemas.policy_vector import wire_fields
+from verdify_schemas.setting_help import band_in_force_help, band_in_force_sources, setting_label
 from verdify_schemas.setting_values import readback_matches, readback_tolerance, resolve_effective
 from verdify_schemas.tunable_registry import BAND_OWNED_REG, LIGHTING_CIRCUIT_DEFAULT_REG, desired_write_rule
 from verdify_schemas.tunable_registry import get as registry_get
@@ -646,6 +647,8 @@ def band_in_force_row(zone: str, role: str, value: object, observed_at: datetime
     """One read-only Band in force row (API-09 ``group`` ``band_in_force``): DERIVED by the dispatcher, no edit.
 
     It has no registry row, so its label and unit are set here: °F for the ``temp_*`` roles, kPa for ``vpd_*``.
+    Its ``help`` is generated from its source (``band_in_force_help``) and ``source_params`` names the crop-band
+    settings it is computed from, so the dashboard links each row to the anchors to edit (#1332, #1333).
     """
     number = _finite(value)
     readback = settings.Reading(
@@ -662,6 +665,9 @@ def band_in_force_row(zone: str, role: str, value: object, observed_at: datetime
         unit="°F" if role.startswith("temp") else "kPa",
         writable=False,
         read_only_reason=BAND_IN_FORCE_REASON,
+        read_only_kind="band_in_force",
+        source_params=list(band_in_force_sources(zone, role)),
+        help=band_in_force_help(zone, role),
         readback_via="none",
         readback=readback,
         desired=None,
@@ -1639,7 +1645,7 @@ async def plan(conn: asyncpg.Connection, hours: int = 24) -> Plan:
         lanes.append(
             PlanLane(
                 param=param,
-                label=(spec.label if spec is not None and spec.label else param),
+                label=setting_label(param),
                 unit=spec.unit if spec is not None else None,
                 device=_reading(
                     readback["value"] if readback is not None else None,

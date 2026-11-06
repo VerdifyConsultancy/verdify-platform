@@ -9,6 +9,7 @@ import { isAiSource, type StateReason } from "../lib/vocab";
 import { LocalTime, cls } from "./common";
 import { BoundsBar } from "./control/bounds-bar";
 import { Mark, PillBadge, isManual, settingPill, useRecentWrite, writtenAt, type SettingPill } from "./control/marks";
+import { SettingSummary, readOnlyWords } from "./control/setting-help";
 import { AgeLabel, useClockValue, useNow } from "./freshness";
 import { StateReasonLine } from "./state-reason-line";
 
@@ -116,11 +117,23 @@ export function changedByAgent(setting: Pick<Setting, "applied_from" | "desired"
   return false;
 }
 
-/** Settings' "Recently changed": a desired write in the last 7 days (redesign §5.10). */
-export const RECENT_DAYS = 7;
-export function recentlyChanged(setting: Pick<Setting, "desired">, now: number): boolean {
-  const at = setting.desired ? Date.parse(setting.desired.created_at) : Number.NaN;
-  return Number.isFinite(at) && now - at <= RECENT_DAYS * 86_400_000;
+/** Settings' "Changed in the last …" windows (#1333): 24 h by default, or 7 d. */
+export const RECENT_WINDOWS = { "24h": { label: "24 h", ms: 86_400_000 }, "7d": { label: "7 d", ms: 7 * 86_400_000 } } as const;
+export type RecentWindow = keyof typeof RECENT_WINDOWS;
+/**
+ * When the newest write in force was made: the desired row's `created_at` (a person, an agent, or a release), or the
+ * plan's `written_at` while an Iris or forecast-rule plan value applies. Null when neither is known.
+ */
+export function lastWriteAt(setting: Pick<Setting, "desired" | "plan" | "applied_from">): number | null {
+  const times = [setting.desired ? Date.parse(setting.desired.created_at) : Number.NaN];
+  if (setting.applied_from === "plan" && setting.plan) times.push(Date.parse(setting.plan.written_at));
+  const known = times.filter(Number.isFinite);
+  return known.length ? Math.max(...known) : null;
+}
+/** Settings' "Changed in the last 24 h" (or 7 d): any write in force inside the window, Iris plans included (#1333). */
+export function recentlyChanged(setting: Pick<Setting, "desired" | "plan" | "applied_from">, now: number, windowMs: number = RECENT_WINDOWS["24h"].ms): boolean {
+  const at = lastWriteAt(setting);
+  return at !== null && now - at <= windowMs;
 }
 
 /** `/activity/log?target=<param>`: every write to the setting (redesign §2.6). */
@@ -316,7 +329,11 @@ function MetaParts({ setting, today, hideReadOnlyReason = false, confirmed = fal
   if (setting.writable) {
     const next = NextPlan({ setting, today });
     if (next) parts.push(<span key="next">{next}</span>);
-  } else if (setting.read_only_reason && !hideReadOnlyReason) parts.push(<span key="note" className="setting-note">{setting.read_only_reason}</span>);
+  } else if (!hideReadOnlyReason) {
+    // Why it is read-only, by kind (#1333): "Computed (band in force)", "Retired", ...; its definition on hover.
+    const words = readOnlyWords(setting);
+    if (words) parts.push(<span key="note" className="setting-note" data-read-only-kind={setting.read_only_kind ?? undefined} title={words.definition}>{words.label}</span>);
+  }
   return parts;
 }
 
@@ -385,7 +402,10 @@ export const SettingRow = memo(function SettingRow({ setting, readbackStale = fa
   const pending = isPending(setting.state) ? pendingRequest(setting) : null;
   const numeric = setting.kind === "numeric" && setting.group !== "band_in_force";
   return <tr className={cls("setting-row", !setting.writable && "setting-read-only")} data-param={setting.param} data-state={setting.state}>
-    <th scope="row" className="setting-name"><span className="setting-label">{setting.label}</span> <span className="setting-param mono">{breakableKey(setting.param)}</span></th>
+    <th scope="row" className="setting-name">
+      <span className="setting-label">{setting.label}</span> <span className="setting-param mono">{breakableKey(setting.param)}</span>
+      <SettingSummary setting={setting} />
+    </th>
     <td className="setting-device">
       <div className="ctl-row-line">
         <DeviceLine setting={setting} readbackStale={readbackStale} programRevision={programRevision} />

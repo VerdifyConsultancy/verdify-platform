@@ -27,6 +27,7 @@ import jsonschema
 import pytest
 import yaml
 
+from verdify_schemas.setting_help import band_in_force_sources, setting_label
 from verdify_schemas.tunable_registry import REGISTRY
 from verdify_services import alerts, reads, settings
 from verdify_services.actor import Actor
@@ -350,7 +351,9 @@ def test_api09_lists_every_registry_row_with_its_label_and_unit_and_the_band_in_
         ]
         for item in registry:
             spec = REGISTRY[item.param]
-            assert (item.label, item.unit) == (spec.label, spec.unit), item.param
+            # The served label is the help label where the registry label is the raw param name.
+            assert (item.label, item.unit) == (setting_label(item.param), spec.unit), item.param
+            assert item.help is not None, item.param
         rows = {item.param: item for item in result.items}
         assert (rows["mister_engage_kpa"].label, rows["mister_engage_kpa"].unit) == ("VPD Mister Engage", "kPa")
         legacy = rows["temp_low"]
@@ -367,6 +370,10 @@ def test_api09_lists_every_registry_row_with_its_label_and_unit_and_the_band_in_
                 "numeric",
                 False,
                 "derived by the dispatcher from the crop band anchors",
+            )
+            assert (item.read_only_kind, item.source_params) == (
+                "band_in_force",
+                list(band_in_force_sources(zone, role)),
             )
             assert item.unit == ("°F" if role.startswith("temp") else "kPa")
             assert (item.readback_via, item.desired, item.plan, item.applied_from, item.state) == (

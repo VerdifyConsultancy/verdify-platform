@@ -288,11 +288,10 @@ test("the lanes-unknown span is hatched where API-05 returns it, never drawn as 
   const plot = created[created.length - 1];
   plot.fire("ready");
   plot.draw();
-  const active = [...view.container.querySelectorAll("ul.lanes-rows")[0].querySelectorAll(".lanes-row:not(.lanes-fold)")].map((row) => row.getAttribute("data-equipment"));
-  const index = active.indexOf("fan1");
-  // Off all window but the unknown span, Fan 1 is no idle row: it is drawn, at the 20 px pitch.
-  expect(index).toBeGreaterThanOrEqual(0);
-  const band = { top: index * 20 + 3, bottom: index * 20 + 17 };
+  // Off all window but the unknown span, Fan 1 is no idle row: it is drawn first under the Climate header, at the 20 px pitch.
+  expect([...view.container.querySelectorAll(".lanes-group-name, .lanes-row")].slice(0, 2).map((item) => item.getAttribute("data-equipment") ?? text(item))).toEqual(["Climate", "fan1"]);
+  const top = 24;
+  const band = { top: top + 3, bottom: top + 17 };
   const inFan1 = (path: [number, number][]) => path.every(([, y]) => y >= band.top && y <= band.bottom);
   const hatch = plot.ctx.strokes.filter((stroke) => stroke.stroke === TOKENS["--muted"] && inFan1(stroke.path));
   expect(hatch).toHaveLength(1);
@@ -322,15 +321,17 @@ test("viewers see the board and the lanes with no controls; an operator gets the
   await load({ fixture: "viewer-session" }, { role: "viewer" });
   expect(document.querySelectorAll(".equipment-row")).toHaveLength(18);
   expect(document.querySelector(".lanes")).toBeTruthy();
-  // The buttons are Find and the lanes' fold of the idle rows: view controls, the same for every role.
-  const fold = expect.stringMatching(/^\d+ idle rows$/);
-  expect(controls()).toEqual({ buttons: ["Find", fold], writes: 0 });
+  // The buttons are Find and the lanes' folds, one per system with rows to fold: view controls, the same for every role.
+  const folds = [...document.querySelectorAll(".lanes-group-fold")].map((button) => text(button));
+  expect(folds.length).toBeGreaterThan(0);
+  expect(folds.every((words) => /^\d+ (idle|rows?)$/.test(words))).toBe(true);
+  expect(controls()).toEqual({ buttons: ["Find", ...folds], writes: 0 });
   cleanup(); stopFixtureApi(); chartStubs();
   await load({}, { role: "operator" });
   // Each light is off in automatic, matching its controller: its one button turns it on (#1308 visual QA 26). With no
   // shell here what runs is unknown, so Clear bursts stays (burst-panel.test.tsx has it go while nothing runs).
   const lights = ["Turn on 15 min Main", "Turn on 15 min Grow"];
-  expect(controls()).toEqual({ buttons: ["Find", ...lights, "Fans 15 min", "Humidify 5 min", "Vent bypass 10 min", "Clear bursts", "Restart controller", fold], writes: 7 });
+  expect(controls()).toEqual({ buttons: ["Find", ...lights, "Fans 15 min", "Humidify 5 min", "Vent bypass 10 min", "Clear bursts", "Restart controller", ...[...document.querySelectorAll(".lanes-group-fold")].map((button) => text(button))], writes: 7 });
 });
 
 test("a failed board read shows Couldn't load equipment with Retry on the board alone; the lanes keep working, and Retry reads again", async () => {

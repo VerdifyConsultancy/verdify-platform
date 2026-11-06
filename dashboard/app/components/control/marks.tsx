@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Setting } from "../../lib/operator-api";
 import { Badge, type BadgeKind } from "../badge";
 import { useClockValue } from "../freshness";
+import { PILL_WORDS, stateDefinition } from "./setting-help";
 
 /**
  * Control's marks and its one pill (redesign §4.4, D-UX-07). AI, DERIVED and NO READBACK are text marks: mono, muted
@@ -59,7 +60,10 @@ export function useRecentWrite(at: string | null | undefined): boolean {
   return useClockValue((now) => Number.isFinite(time) && now - time < CONFIRMED_FOR_MS);
 }
 
-/** The pill itself; nothing for a steady row. */
+/**
+ * The pill itself, in Settings' words (WAITING, NOT APPLIED, #1333) with its definition as its title; nothing for a
+ * steady row. `data-badge` keeps the state's key.
+ */
 export function PillBadge({ pill }: { pill: SettingPill | null }) {
-  return pill ? <Badge kind={pill} /> : null;
+  return pill ? <Badge kind={pill} title={stateDefinition(pill)}>{PILL_WORDS[pill]}</Badge> : null;
 }

@@ -15,10 +15,11 @@ test("one row per registry row; read-only rows show why and have no Edit; the ba
   await useScreensClock(page, request, "in-band");
   await load(page, "/settings");
   const served = await request.get(`${FIXTURE_API}/v1/settings`);
-  const { items } = await served.json() as { items: { param: string; writable: boolean; group: string }[] };
+  const { items } = await served.json() as { items: { param: string; writable: boolean; group: string; control_class: string }[] };
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Settings");
-  await expect(page.locator(".page-status")).toHaveText(`${items.length} settings · 0 requested · 0 not confirmed · 0 manual`);
-  await expect(page.locator("tr.setting-row")).toHaveCount(items.length);
+  await expect(page.locator(".page-status")).toHaveText(`${items.length} settings · 0 waiting · 0 not applied · 0 manual`);
+  // Retired rows wait behind "Show retired" (#1333).
+  await expect(page.locator("tr.setting-row")).toHaveCount(items.filter((item) => item.control_class !== "retired").length);
   await expect(page.locator(".setting-edit")).toHaveCount(items.filter((item) => item.writable).length);
   await expect(row(page, "mister_engage_kpa").locator(".setting-label")).toHaveText("VPD Mister Engage");
   // The device value large, its bounds bar with the next plan's ring, and one meta line; no pill in the steady state.
@@ -27,7 +28,7 @@ test("one row per registry row; read-only rows show why and have no Edit; the ba
   await expect(row(page, "mister_engage_kpa").locator(".ctl-bounds-planned")).toHaveCount(1);
   await expect(row(page, "mister_engage_kpa").locator(".setting-next")).toHaveText("next 1.70 kPa at 13:00 · AI");
   await expect(page.locator(".setting-row [data-badge=confirmed], .ctl-row-pill [data-badge]")).toHaveCount(0);
-  await expect(row(page, "temp_low").locator(".setting-device")).toContainText("legacy limit, read-only");
+  await expect(row(page, "temp_low").locator(".setting-device")).toContainText("Legacy limit, not used while the on-chip band runs");
   await expect(row(page, "temp_low").locator(".setting-edit")).toHaveCount(0);
   const band = page.locator('tbody[data-group="band_in_force"] tr.setting-row');
   await expect(band).toHaveCount(items.filter((item) => item.group === "band_in_force").length);
@@ -45,12 +46,12 @@ test("the rail's Show filters carry counts, filter the rows and survive a reload
   await load(page, "/settings");
   const rail = page.getByRole("navigation", { name: "Settings filters and groups" });
   await expect(rail.locator(".ctl-rail-list").first().getByRole("link")).toHaveText([
-    /^All \d+$/, "Recently changed 1", "Requested 0", "Not confirmed 0", "Manual 0", "Changed by an agent 4", /^Read-only \d+$/,
+    /^All \d+$/, "Changed in the last 24 h 5", "Waiting for controller 0", "Not applied 0", "Manual (Iris skips) 0", "Set by Iris or an agent 4", /^Read-only \d+$/,
   ]);
-  await rail.getByRole("link", { name: "Controller safety 32" }).click();
+  await rail.getByRole("link", { name: "Controller safety 37" }).click();
   await expect(page.locator("#group-controller_safety")).toBeInViewport();
   await expect(page).toHaveURL(/\/settings$/);
-  await page.getByRole("link", { name: "Changed by an agent 4" }).click();
+  await page.getByRole("link", { name: "Set by Iris or an agent 4" }).click();
   await expect(page).toHaveURL(/\/settings\?filter=agent$/);
   const params = async () => page.locator("tr.setting-row").evaluateAll((rows) => rows.map((node) => node.getAttribute("data-param")));
   await expect(page.locator("tr.setting-row")).toHaveCount(4);
@@ -59,7 +60,7 @@ test("the rail's Show filters carry counts, filter the rows and survive a reload
   await page.reload();
   await expect(page.locator("tr.setting-row")).toHaveCount(4);
   expect(await params()).toEqual(shown);
-  await expect(page.getByRole("link", { name: "Changed by an agent 4" })).toHaveAttribute("aria-current", "true");
+  await expect(page.getByRole("link", { name: "Set by Iris or an agent 4" })).toHaveAttribute("aria-current", "true");
 });
 
 test("?edit= opens with Manual ticked; 1.53 saves as 1.55 and reads REQUESTED, then CONFIRMED on the fixture readback", async ({ page, request }) => {

@@ -27,7 +27,7 @@ info:
 
     | Topic | Rule |
     |---|---|
-    | Ids | `operationId` is the design id: API-01 to API-21, API-IRR-01 to API-IRR-13, API-CROP-01 to API-CROP-11, BFF-01 to BFF-03, INT-01, INT-02, OPS-01, OPS-02 and OPS-04. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
+    | Ids | `operationId` is the design id: API-01 to API-22, API-IRR-01 to API-IRR-13, API-CROP-01 to API-CROP-11, BFF-01 to BFF-03, INT-01, INT-02, OPS-01, OPS-02 and OPS-04. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
     | Data | JSON. Times are ISO 8601 with an offset; days are America/Denver. Units are in field names or `unit` (°F, %, kPa, gal, min, s). `null` means unavailable, never 0; gaps stay gaps |
     | Roles | GET: `viewer` and `operator`. Every other method: `operator` (403 `forbidden`) |
     | Writes | Validated on submit (registry min/max, enums, step snap). The newest write wins. On a `manual: true` item the dispatcher ignores Iris's plan values (`set_plan` and `set_tunable` are unchanged) and Iris's `set_setting` and irrigation writes are refused with `manual`; people and other agents may overwrite it, attributed, and each write stores the `manual` it carries. Every write appends one `activity_log` row: source (`dashboard`, `iris`, `agent:<name>` or `system`), actor, time, reason, and the experiment id while one is armed. Nothing is refused because an experiment is armed |
@@ -129,7 +129,9 @@ paths:
       summary: Equipment on/off intervals for the lanes
       description: >-
         From equipment_state, seeded with the state at `from` (fn_equip_at). Wet lines carry their cause from the run
-        ledger. Unknown stays unknown. Windows up to 31 days.
+        ledger. Unknown stays unknown. Windows up to 31 days. The grow lights have two lanes each: the Lutron readback
+        (grow_light_main, grow_light_grow; unknown 600 s after its newest row) and the controller's switch intent
+        (grow_light_main_intent, grow_light_grow_intent; Q-09), which the lanes compare with the readback (#1356).
       parameters:
         - $ref: '#/components/parameters/From'
         - $ref: '#/components/parameters/To'
@@ -428,6 +430,24 @@ paths:
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/WaterUse'}}}}
         default: {$ref: '#/components/responses/Problem'}
+  /v1/lighting:
+    get:
+      operationId: API-22
+      tags: [graphs]
+      summary: 'The grow lights by day: on time, starts, the policy in force and qualified light minutes against target'
+      description: >-
+        Graphs → Lighting (#1357). One entry per America/Denver day the window touches, up to now, for main and grow:
+        on time and starts from the Lutron readback over the whole day; the controller's readback of its ON threshold,
+        hysteresis, start hour, cutoff hour and target light minutes in force at the day's end; and the qualified light
+        minutes, v_lighting_minutes_status_now's rule for every day: each minute from the start hour to the cutoff (or
+        now) counts once when its mean Tempest outdoor lux is at or above the ON threshold or the light was on. No DLI
+        until the PAR meter (#1184). Windows up to 31 days.
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/LightingDays'}}}}
+        default: {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- irrigation (irrigation.md §8.1)
   /v1/irrigation:
@@ -510,8 +530,11 @@ paths:
       summary: Run now
       description: >-
         Starts at once or is refused: line_busy, manifold_busy, cap_reached, line_disabled, line_paused, line_faulted,
-        not_schedule_member (mist). The API refuses what it can see in the newest irr_state (422); otherwise the
-        line's irr_state shows whether it started. Before the engine firmware only L01 runs, through the
+        not_schedule_member (mist, until the controller runs #1343's firmware). Any wired, enabled line runs once
+        (#1343), and fog (L11) runs once for minutes (#1343 follow-up), 503 unavailable until the controller runs the
+        firmware that takes it. The master valve L03 takes no run of its own: it opens only with a fertilized relay
+        (L02, L06, L08, L10), never with clean water (#1336). The API refuses what it can see in the newest irr_state
+        (422); otherwise the line's irr_state shows whether it started. Before the engine firmware only L01 runs, through the
         btn_wall_clean bridge, for its configured irrig_wall_duration_min (minutes, if sent, must equal it); any other
         line is 503 unavailable and nothing is stored.
       parameters: [{$ref: '#/components/parameters/LineId'}, {$ref: '#/components/parameters/IdempotencyKey'}]
@@ -1064,7 +1087,8 @@ components:
         Computed on every read (architecture §5.5); display only. held means the platform applies something else on
         purpose (a dispatcher clamp, or an armed experiment manifest serving the field). Irrigation items and the
         irrigation_site settings use requested, confirmed and not_confirmed against the controller's program hash;
-        before the engine firmware they stay requested.
+        before the engine firmware they stay requested. not_confirmed is only a request at least 5 min old the
+        readback does not match; a setting nobody requested with no readback reads no_readback (#1333).
       enum: [requested, confirmed, not_confirmed, held, no_readback, overridden, released]
     StateReason:
       type: object
@@ -1504,6 +1528,15 @@ components:
           items: {type: object, required: [value, label], properties: {value: {type: number}, label: {type: string}}}
         writable: {type: boolean, description: 'false with read_only_reason; the irrigation_site rows are writable before the engine firmware too (their writes wait, state_reason no_engine)'}
         read_only_reason: {type: [string, 'null'], examples: ['legacy wide limit; not the band while the controller runs its on-chip curve']}
+        read_only_kind:
+          type: [string, 'null']
+          enum: [band_in_force, legacy_wide_limit, activity_mirror, band_owner, retired, readback_context, no_entity, no_anchor_row, unknown, null]
+          description: 'Why a read-only row cannot be written (#1333): the tunable_registry READ_ONLY_REASONS key, no_anchor_row (a crop-band row with no crop_band_anchors row) or band_in_force (derived band rows); null on a writable row'
+        source_params:
+          type: array
+          items: {type: string}
+          description: 'The writable settings a derived row is computed from (the crop-band anchors behind a Band in force row, the main-light schedule behind the activity mirror); empty otherwise'
+        help: {anyOf: [{$ref: '#/components/schemas/SettingHelp'}, {type: 'null'}], description: 'Operator text (verdify_schemas.setting_help, #1332); MCP settings serves the same'}
         readback_via:
           type: string
           enum: [cfg, entity, program, none]
@@ -1523,6 +1556,21 @@ components:
                 next: {anyOf: [{$ref: '#/components/schemas/PlanWaypoint'}, {type: 'null'}], description: 'Next planned change; effective false while a newer desired row holds it off'}
         applied_from: {type: string, enum: [manual, desired, plan, band, default], description: What the dispatcher applies now}
         state: {$ref: '#/components/schemas/ReadbackState', description: 'Of the newest write, else of the applied value against the readback'}
+    SettingHelp:
+      type: object
+      description: >-
+        What a setting is and what changing it does to the controller (#1332). One source for the dashboard, MCP and
+        the lab ai-tunables page. raise and lower are null on a read-only row; for a switch they say what turning it
+        on and off does.
+      required: [summary, effect]
+      properties:
+        summary: {type: string, description: One line, what the setting is}
+        effect: {type: string, description: What the controller does with it, naming the mode or equipment it drives}
+        raise: {type: [string, 'null'], description: What happens to the greenhouse when the value goes up (a switch turned on)}
+        lower: {type: [string, 'null'], description: What happens when the value goes down (a switch turned off)}
+        caution: {type: [string, 'null'], description: An interaction or safety note}
+        guardrail: {type: boolean, default: false, description: 'A hard safety limit (Safety Min, Safety Max and the VPD pair): the dashboard shows caution and asks to confirm before saving'}
+        reference_url: {type: [string, 'null'], description: The setting's entry on the lab ai-tunables reference page}
     SettingWrite:
       type: object
       required: [value]
@@ -1794,14 +1842,43 @@ components:
         reason: {type: [string, 'null']}
         created_at: {type: string, format: date-time}
         sent_at: {type: [string, 'null'], format: date-time}
+    CircuitId: {type: string, enum: [wall_drip, center_drip, center_mister, south_mister, west_mister]}
+    Variant: {type: string, enum: [clean, fertilized]}
+    CircuitVariant:
+      type: object
+      description: >-
+        One variant of a physical line: its relay, or line_id null and wired false when that valve has no relay (shown,
+        never scheduled or run). master_valve: L03 opens with it, fertilized only (#1336)
+      required: [variant, line_id, wired, master_valve, enabled, running]
+      properties:
+        variant: {$ref: '#/components/schemas/Variant'}
+        line_id: {anyOf: [{$ref: '#/components/schemas/LineId'}, {type: 'null'}]}
+        wired: {type: boolean}
+        master_valve: {type: boolean}
+        enabled: {type: boolean}
+        running: {type: boolean}
+    Circuit:
+      type: object
+      description: >-
+        A physical line (#1336): Wall drip (every wall and shelf), Center drip, and the Center, South and West misters,
+        each with a clean and a fertilized variant mapped to its relay. Fog is a climate device, not a physical line
+      required: [circuit_id, name, zone, kind, clean, fertilized]
+      properties:
+        circuit_id: {$ref: '#/components/schemas/CircuitId'}
+        name: {type: string}
+        zone: {type: string, enum: [wall, center, south, west]}
+        kind: {type: string, enum: [drip, mister]}
+        clean: {$ref: '#/components/schemas/CircuitVariant'}
+        fertilized: {$ref: '#/components/schemas/CircuitVariant'}
     IrrigationStatus:
       type: object
-      required: [server_time, engine, program, lines, active_runs, today, limits, leak, occupancy, fallback_active, freshness]
+      required: [server_time, engine, program, lines, circuits, active_runs, today, limits, leak, occupancy, fallback_active, freshness]
       properties:
         server_time: {type: string, format: date-time}
         engine: {type: boolean, description: 'The live controller connection has the irrigation engine (irr_command); false before the engine firmware'}
         program: {$ref: '#/components/schemas/ProgramSync'}
         lines: {type: array, items: {$ref: '#/components/schemas/IrrigationLine'}, description: L01-L11}
+        circuits: {type: array, items: {$ref: '#/components/schemas/Circuit'}, description: 'The five physical lines over the relays (#1336)'}
         active_runs:
           type: array
           description: The run on each manifold
@@ -1863,6 +1940,12 @@ components:
       description: 'Bounds per irrigation §4.3, checked per line kind on submit; values snap to whole seconds and minutes'
       properties:
         line_id: {type: string, pattern: '^L(0[124-9]|10)$', description: 'L01, L02, L04-L10 (not L03 or L11)'}
+        circuit_id:
+          $ref: '#/components/schemas/CircuitId'
+          description: >-
+            The physical line (#1336), with variant, instead of line_id; the API stores the variant's relay. An edit may
+            give variant alone to switch clean and fertilized on the same physical line
+        variant: {$ref: '#/components/schemas/Variant'}
         label: {type: string, maxLength: 60}
         enabled: {type: boolean, default: true}
         days: {$ref: '#/components/schemas/ScheduleDays'}
@@ -1881,7 +1964,8 @@ components:
     ScheduleCreate:
       allOf:
         - $ref: '#/components/schemas/ScheduleInput'
-        - required: [line_id, days, start, on_s]
+        - required: [days, start, on_s]
+          description: 'The line: line_id, or circuit_id and variant (#1336); a variant whose valve is not wired is unknown_target'
           properties:
             manual: {type: boolean, default: true, description: 'Omitted on a REST create means true (the dashboard default); MCP creates default false'}
     Schedule:
@@ -1941,11 +2025,11 @@ components:
     RunRequest:
       type: object
       description: >-
-        Drips: minutes. Fertilizer drips (L02, L06): minutes, prewet_s, flush_s. Misters (schedule_member on): on_s,
-        count, gap_s. Fertilizer misters (L08, L10): on_s, count and gap_s within the mister bounds, plus prewet_s and
-        flush_s. Before the engine firmware only L01 runs, for its configured irrig_wall_duration_min
+        Drips: minutes. Fertilizer drips (L02, L06): minutes, prewet_s, flush_s. Misters: on_s, count, gap_s.
+        Fertilizer misters (L08, L10): on_s, count and gap_s within the mister bounds, plus prewet_s and flush_s. Fog
+        (L11): minutes, 1-30. Before the engine firmware only L01 runs, for its configured irrig_wall_duration_min
       properties:
-        minutes: {type: integer, minimum: 1, maximum: 120}
+        minutes: {type: integer, minimum: 1, maximum: 120, description: 'Drips 1-120; fog 1-30'}
         prewet_s: {type: integer, minimum: 0, maximum: 1800}
         flush_s: {type: integer, minimum: 0, maximum: 1800}
         on_s: {type: integer, minimum: 10, maximum: 90}
@@ -2033,6 +2117,39 @@ components:
               by_cause: {type: [object, 'null'], additionalProperties: {type: integer}, description: Verdify-valve gallons by IrrigationCause}
               by_purpose: {type: [object, 'null'], additionalProperties: {type: integer}, description: 'Verdify-valve gallons by RunPurpose (#1348): irrigation and climate'}
               no_valve_gal: {type: [integer, 'null'], description: 'Meter water while no Verdify valve was open: the hose, sink, hydro or a leak'}
+    LightingDays:
+      type: object
+      description: 'API-22: each grow-light circuit by America/Denver day, oldest first'
+      required: [from, to, circuits]
+      properties:
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        circuits:
+          type: array
+          items:
+            type: object
+            required: [light, equipment, label, days]
+            properties:
+              light: {type: string, enum: [main, grow]}
+              equipment: {type: string, examples: [grow_light_main]}
+              label: {type: string}
+              days:
+                type: array
+                items:
+                  type: object
+                  required: [date, partial, on_s, starts, start_hour, cutoff_hour, lux_on, lux_off, target_min, window_min, qualified_min]
+                  properties:
+                    date: {type: string, format: date}
+                    partial: {type: boolean, description: 'Today: counted up to now'}
+                    on_s: {type: integer, description: 'Seconds the Lutron readback was on in the day'}
+                    starts: {type: integer, description: 'OFF to ON edges in the day'}
+                    start_hour: {type: [integer, 'null'], description: 'The photoperiod window''s start, local hour; null without a readback'}
+                    cutoff_hour: {type: [integer, 'null'], description: 'The window''s cutoff, local hour'}
+                    lux_on: {type: [number, 'null'], description: 'ON threshold, outdoor lux'}
+                    lux_off: {type: [number, 'null'], description: 'OFF threshold: ON plus the hysteresis'}
+                    target_min: {type: [integer, 'null'], description: 'Target qualified light minutes'}
+                    window_min: {type: [integer, 'null'], description: 'Minutes of the window counted so far'}
+                    qualified_min: {type: [integer, 'null'], description: 'Minutes in the window with enough outdoor light or the light on; null without a policy readback'}
     Run:
       type: object
       description: >-

@@ -370,6 +370,24 @@ export function nextRunWords(next: IrrigationLine["next_run"], today: string): s
 export const SCHEDULE_LINES = ["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10"] as const;
 
 /**
+ * The physical lines a schedule picks (#1336), each with its clean and fertilized relay (`verdify_schemas.irrigation.
+ * CIRCUITS`); null where that valve has no relay. A fertilized variant opens L03; a clean one never does.
+ */
+export const PHYSICAL_LINES: readonly { readonly id: string; readonly name: string; readonly clean: string; readonly fertilized: string | null }[] = [
+  { id: "wall_drip", name: "Wall drip", clean: "L01", fertilized: "L02" },
+  { id: "center_drip", name: "Center drip", clean: "L05", fertilized: "L06" },
+  { id: "center_mister", name: "Center mister", clean: "L04", fertilized: null },
+  { id: "south_mister", name: "South mister", clean: "L07", fertilized: "L08" },
+  { id: "west_mister", name: "West mister", clean: "L09", fertilized: "L10" },
+];
+/** A relay's physical line and variant; null for L03, fog or an unknown id. */
+export function physicalOf(lineId: string): { readonly index: number; readonly variant: Variant } | null {
+  const index = PHYSICAL_LINES.findIndex((item) => item.clean === lineId || item.fertilized === lineId);
+  if (index < 0) return null;
+  return { index, variant: PHYSICAL_LINES[index].clean === lineId ? "clean" : "fertilized" };
+}
+
+/**
  * The seven local days the week shows, from `solar[].date`: today and the next six, or the seven before today ("Last 7
  * days", `past_days=7`). Without solar days it counts them from today.
  */
@@ -611,20 +629,37 @@ export function runGallons(gal: number | null | undefined): { readonly text: str
 // read it.
 
 // ---------------------------------------------------------------------------------------------------- zones (Today)
-export type WaterZone = "wall" | "center" | "south" | "west" | "fog";
-/** Water → Today's zone cards, in their fixed order: the order never changes with state, which keeps spatial memory. */
-export const WATER_ZONES: readonly WaterZone[] = ["wall", "center", "south", "west", "fog"];
-/** What each zone card holds, beside its name. */
-export const ZONE_KIND_WORDS: Readonly<Record<WaterZone, string>> = {
-  wall: "drip and feed", center: "mister and drips", south: "mister and feed", west: "mister and feed", fog: "humidification · climate only",
+/**
+ * Water → Today's cards (#1336): one per physical line, each with its clean and fertilized variants, then fog. The
+ * center mister is its own line, apart from the center drips. "center" is the center drip card.
+ */
+export type WaterZone = "wall" | "center" | "center_mister" | "south" | "west" | "fog";
+/** Water → Today's cards, in their fixed order: the order never changes with state, which keeps spatial memory. */
+export const WATER_ZONES: readonly WaterZone[] = ["wall", "center", "center_mister", "south", "west", "fog"];
+/** Each card's physical line. */
+export const ZONE_CARD_WORDS: Readonly<Record<WaterZone, string>> = {
+  wall: "Wall drip", center: "Center drip", center_mister: "Center mister", south: "South mister", west: "West mister", fog: "Fog",
 };
-/** The line whose daily cap a zone's minutes count against (the cap ticks of minutes by zone); fog has none. */
-export const ZONE_CAP_LINE: Readonly<Record<WaterZone, string | null>> = { wall: "L01", center: "L04", south: "L07", west: "L09", fog: null };
+/** What each card holds, beside its name. */
+export const ZONE_KIND_WORDS: Readonly<Record<WaterZone, string>> = {
+  wall: "walls and shelves · clean · fert", center: "clean · fert", center_mister: "clean", south: "clean · fert", west: "clean · fert",
+  fog: "humidification · climate only",
+};
+/** The physical line (API-IRR-01 `circuits`) behind each card; fog has none. */
+export const ZONE_CIRCUIT: Readonly<Record<WaterZone, string | null>> = {
+  wall: "wall_drip", center: "center_drip", center_mister: "center_mister", south: "south_mister", west: "west_mister", fog: null,
+};
+/** The line whose daily cap a card's minutes count against; fog has none. */
+export const ZONE_CAP_LINE: Readonly<Record<WaterZone, string | null>> = { wall: "L01", center: "L05", center_mister: "L04", south: "L07", west: "L09", fog: null };
+/** A variant with no relay when API-IRR-01 has no `circuits` yet: the center mister's fertilized side. */
+const UNWIRED_FALLBACK: Readonly<Partial<Record<WaterZone, readonly Variant[]>>> = { center_mister: ["fertilized"] };
+export type Variant = "clean" | "fertilized";
 const ZONE_OF_API: Readonly<Record<string, WaterZone>> = { wall: "wall", center: "center", south: "south", west: "west", house: "fog", supply: "wall" };
 
-/** A line's zone card: its API zone, with L03's supply on the wall card (it rides on L02) and L11's house as fog. */
-export function lineZone(line: Pick<IrrigationLine, "line_id" | "zone">): WaterZone {
-  return ZONE_OF_API[line.zone] ?? minutesZone(line.line_id) ?? "wall";
+/** A line's card: its API zone, with L03's supply on the wall card (it rides on L02), L11's house as fog and the center mister apart. */
+export function lineZone(line: Pick<IrrigationLine, "line_id" | "zone"> & Partial<Pick<IrrigationLine, "kind">>): WaterZone {
+  const zone = ZONE_OF_API[line.zone] ?? minutesZone(line.line_id) ?? "wall";
+  return zone === "center" && line.kind === "mister" ? "center_mister" : zone;
 }
 
 export type ZoneSummary = {
@@ -648,23 +683,31 @@ export type ZoneSummary = {
   readonly lastAt: string | null;
   /** A line of the zone, L03 included, reads `running` now: the head then says "running now" (redesign §5.2). */
   readonly running: boolean;
+  /** The physical line's variants with no relay (#1336): shown "not wired", never scheduled or run. */
+  readonly unwired: readonly Variant[];
 };
 
-/** The five zone cards' facts from API-IRR-01, with today's still-planned minutes from `plannedToday` when known. */
-export function zoneSummaries(status: Pick<IrrigationStatus, "lines" | "today">, planned: PlannedToday | null): ZoneSummary[] {
+/**
+ * The cards' facts from API-IRR-01, with today's still-planned minutes from `plannedToday` when known. The API's
+ * minutes by zone count the center drips and mister together, so the two center cards sum their own lines.
+ */
+export function zoneSummaries(status: Pick<IrrigationStatus, "lines" | "today"> & { circuits?: IrrigationStatus["circuits"] }, planned: PlannedToday | null): ZoneSummary[] {
   return WATER_ZONES.map((zone) => {
     const inZone = [...status.lines].filter((line) => lineZone(line) === zone).sort(byLineId);
     const running = inZone.some((line) => line.state.code === "running");
     const lines = inZone.filter((line) => !isMaster(line));
     const capLine = ZONE_CAP_LINE[zone];
     const capped = capLine ? lines.find((line) => line.line_id === capLine) ?? null : null;
-    const served = status.today?.zones?.[zone];
+    const served = zone === "center" || zone === "center_mister" ? undefined : status.today?.zones?.[zone];
     const summed = lines.map((line) => line.today?.minutes);
     const minutes = finite(served) ? served : summed.length && summed.every(finite) ? summed.reduce((sum, value) => sum + value, 0) : null;
+    const circuit = status.circuits?.find((item) => item.circuit_id === ZONE_CIRCUIT[zone]);
+    const unwired = circuit ? (["clean", "fertilized"] as const).filter((variant) => !circuit[variant].wired) : UNWIRED_FALLBACK[zone] ?? [];
+    const plannedHere = planned ? lines.reduce((sum, line) => sum + (planned.line[line.line_id] ?? 0), 0) : null;
     const newest = lines.map((line) => line.last_water?.at).filter(validTime).sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null;
     const mister = lines.find((line) => line.kind === "mister") ?? null;
     return {
-      zone, lines, master: inZone.find(isMaster) ?? null, mister, minutes, planned: planned ? planned.zone[zone] ?? 0 : null,
+      zone, lines, master: inZone.find(isMaster) ?? null, mister, minutes, planned: plannedHere, unwired,
       cap: capped && capped.daily_cap_min > 0 ? capped.daily_cap_min : null, capLine: capped?.line_id ?? null,
       reserve: mister && finite(mister.vpd_reserve_min) && mister.vpd_reserve_min > 0 ? mister.vpd_reserve_min : null, lastAt: newest, running,
     };

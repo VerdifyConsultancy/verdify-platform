@@ -388,7 +388,7 @@ def test_a_week_ending_380_days_ago_reads_daily_summary_and_marks_raw_retention(
 def test_states_cover_a_day_with_unknown_spans_only_where_the_controller_was_silent(db):
     from_, to = db.now - timedelta(hours=24), db.now
     lanes = run(_with_connection(lambda conn: s.states(conn, from_, to, now=db.now))).lanes
-    assert len(lanes) == 21
+    assert len(lanes) == 23
     by_name = {lane.equipment: lane for lane in lanes}
     fan = [(i.state, i.start, i.end) for i in by_name["fan1"].intervals]
     assert {"on", "off"} <= {state for state, _, _ in fan}

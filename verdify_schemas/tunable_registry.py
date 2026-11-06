@@ -493,7 +493,7 @@ REGISTRY: dict[str, TunableDef] = {
         kind="numeric",
         min=30.0,
         max=60.0,
-        default=45.0,
+        default=40.0,
         fw_clamp_lo=30.0,
         fw_clamp_hi=60.0,
         esp_object_id="safety_min__f",
@@ -501,14 +501,14 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="safety",
         planner_pushable=False,
         tier=2,
-        notes="Hard cold rail — SAFETY_HEAT mode trigger. Operator-only.",
+        notes="Hard cold rail — SAFETY_HEAT mode trigger. Operator-only. Default 40 °F is the hard guardrail the dispatcher serves (Jason 2026-11-05, #1333).",
     ),
     "safety_max": TunableDef(
         name="safety_max",
         kind="numeric",
         min=80.0,
         max=110.0,
-        default=95.0,
+        default=100.0,
         fw_clamp_lo=80.0,
         fw_clamp_hi=110.0,
         esp_object_id="safety_max__f",
@@ -516,7 +516,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="safety",
         planner_pushable=False,
         tier=2,
-        notes="Hard hot rail — SAFETY_COOL mode trigger. Operator-only.",
+        notes="Hard hot rail — SAFETY_COOL mode trigger. Operator-only. Default 100 °F is the hard guardrail the dispatcher serves (Jason 2026-11-05, #1333).",
     ),
     "safety_vpd_min": TunableDef(
         name="safety_vpd_min",
@@ -1331,6 +1331,95 @@ REGISTRY: dict[str, TunableDef] = {
         "the dispatcher/RT-listener push paths route switch_command by that "
         "prefix (entity_map SWITCH_TO_ENTITY); an unprefixed name would push a "
         "wire-dead number_command at the switch entity.",
+    ),
+    # ─────────────────────────────────────────────────────────────────────
+    # #1365 night dry-out (Jason 2026-11-05): vent + reheat pulses with
+    # confirmed-drier outdoor air at night, electric heat1 only, a nightly kWh
+    # cap. Shaped like the VD-63 rows: tier 2, operator-owned, never
+    # planner-pushable, no wire_id. Bounds and fw_clamp equal the tunables.yaml
+    # entities; defaults are the globals.yaml initial values and
+    # default_setpoints(). Live with the next signed flash; until then the
+    # device has no such entities and nothing pushes these rows.
+    # ─────────────────────────────────────────────────────────────────────
+    "sw_night_dryout_enabled": TunableDef(
+        name="sw_night_dryout_enabled",
+        kind="switch",
+        default=1,
+        esp_object_id="night_dryout_enabled",
+        cfg_readback_object_id="cfg___night_dryout_enabled",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="#1365 night dry-out master enable (default ON). At night, when VPD is below "
+        "max(vpd_low, 0.74 kPa) and the outdoor dewpoint is night_dryout_dp_margin_f below indoor "
+        "(fresh Tempest data), the controller runs vent + lead-fan pulses and electric heat1 holds "
+        "the temperature; heat2 never runs for humidity. sw_-prefixed so the push paths route a "
+        "switch_command.",
+    ),
+    "night_dryout_pulse_s": TunableDef(
+        name="night_dryout_pulse_s",
+        kind="numeric",
+        min=60,
+        max=600,
+        default=120,
+        fw_clamp_lo=60,
+        fw_clamp_hi=600,
+        esp_object_id="night_dryout_pulse__s_",
+        cfg_readback_object_id="cfg___night_dryout_pulse__s_",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="#1365 night dry-out vent + lead-fan pulse length, s (default 120 s, the fan min-on).",
+    ),
+    "night_dryout_rest_s": TunableDef(
+        name="night_dryout_rest_s",
+        kind="numeric",
+        min=300,
+        max=3600,
+        default=780,
+        fw_clamp_lo=300,
+        fw_clamp_hi=3600,
+        esp_object_id="night_dryout_rest__s_",
+        cfg_readback_object_id="cfg___night_dryout_rest__s_",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="#1365 closed rest after each dry-out pulse, s, while heat1 reheats (default 780 s). "
+        "The firmware raises it so pulse + rest is at least 900 s: at most 4 pulses an hour.",
+    ),
+    "night_dryout_dp_margin_f": TunableDef(
+        name="night_dryout_dp_margin_f",
+        kind="numeric",
+        min=1.0,
+        max=15.0,
+        default=3.0,
+        fw_clamp_lo=1.0,
+        fw_clamp_hi=15.0,
+        esp_object_id="night_dryout_dp_margin___f_",
+        cfg_readback_object_id="cfg___night_dryout_dp_margin___f_",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="#1365 how far the outdoor dewpoint must be below indoor before a dry-out pulse, °F "
+        "(default 3 °F, about 1.7 g/m3 at a 50 °F dewpoint). Confirms outdoor air is drier in "
+        "absolute terms.",
+    ),
+    "night_dryout_kwh_cap": TunableDef(
+        name="night_dryout_kwh_cap",
+        kind="numeric",
+        min=0.0,
+        max=30.0,
+        default=10.0,
+        fw_clamp_lo=0.0,
+        fw_clamp_hi=30.0,
+        esp_object_id="night_dryout_cap__kwh_",
+        cfg_readback_object_id="cfg___night_dryout_cap__kwh_",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="#1365 nightly cap on the dry-out's heat1 reheat estimate (heat1 1.44 kW x the time "
+        "the dry-out wants it), kWh. Default 10, above the research's 5 kWh, because the target "
+        "is a full dry-out at 0.74 kPa or more; Jason accepted the energy. 0 disables new pulses.",
     ),
     "vent_latch_timeout_ms": TunableDef(
         name="vent_latch_timeout_ms",
@@ -3252,6 +3341,10 @@ _ENTITY_STEPS: dict[str, float] = {
     "d_cool_stage_2": 0.5,
     "d_heat_stage_2": 0.5,
     "dehum_aggressive_kpa": 0.05,
+    "night_dryout_pulse_s": 30.0,
+    "night_dryout_rest_s": 30.0,
+    "night_dryout_dp_margin_f": 0.5,
+    "night_dryout_kwh_cap": 0.5,
     "direct_wet_center_drydown_before_off_min": 15.0,
     "direct_wet_center_start_offset_min": 15.0,
     "direct_wet_min_temp_f": 1.0,
@@ -3458,6 +3551,11 @@ _ENTITY_NAMES: dict[str, str] = {
     "sw_arbiter_zone_enabled": "Arbiter Zone Enabled",
     "sw_cool_all_fans_at_high_enabled": "Cool All Fans At High",
     "sw_dehum_vent_hold_enabled": "Dehum Vent Hold Enabled",
+    "sw_night_dryout_enabled": "Night Dryout Enabled",
+    "night_dryout_pulse_s": "Night Dryout Pulse (s)",
+    "night_dryout_rest_s": "Night Dryout Rest (s)",
+    "night_dryout_dp_margin_f": "Night Dryout DP Margin (°F)",
+    "night_dryout_kwh_cap": "Night Dryout Cap (kWh)",
     "sw_direct_wet_gate_enabled": "Direct Wet Gate Enabled",
     "sw_direct_wet_stress_override_enabled": "Direct Wet Stress Override Enabled",
     "sw_dwell_gate_enabled": "Dwell Gate Enabled",
@@ -3894,40 +3992,48 @@ assert len(LEGACY_WIDE_LIMIT_PARAMS) == 8 and all(
 assert ACTIVITY_MIRROR_PARAMS <= set(REGISTRY), "an activity-mirror row left the registry"
 
 
-def desired_write_rule(name: str) -> tuple[bool, str | None]:
-    """Architecture §5.3 step 1 without the anchor-row check: may a person or agent write ``name`` now?
+def desired_write_kind(name: str) -> str | None:
+    """The ``READ_ONLY_REASONS`` key that refuses a write to ``name``, or None when it is writable (#1333).
 
-    Returns ``(True, None)``, or ``(False, reason)`` with the read-only reason the catalog shows.
+    The rule ``desired_write_rule`` states, as a key the dashboard can name and explain:
 
     * Writable: ``planner_policy``, ``scheduled_policy``, ``controller_safety`` and ``crop_band`` rows with an
       ``esp_object_id`` (the ``gl_*`` rows among them), and the ``irrigation_site`` rows, which reach the
       controller in the irrigation program.
     * Read-only: ``readback_context`` and ``retired`` rows; the legacy wide limits; the activity mirror;
-      ``sw_onchip_band_enabled``, by name.
+      ``sw_onchip_band_enabled``, by name; a row with no controller entity; an unknown name.
+    """
+    spec = REGISTRY.get(name)
+    if spec is None:
+        return "unknown"
+    if name == BAND_OWNER_SWITCH:
+        return "band_owner"
+    if name in LEGACY_WIDE_LIMIT_PARAMS:
+        return "legacy_wide_limit"
+    if name in ACTIVITY_MIRROR_PARAMS:
+        return "activity_mirror"
+    control_class = spec.control_class
+    if control_class in ("retired", "readback_context"):
+        return control_class
+    if control_class == "irrigation_site":
+        return None
+    if control_class in WRITABLE_CONTROL_CLASSES and spec.esp_object_id is not None:
+        return None
+    return "no_entity"
+
+
+def desired_write_rule(name: str) -> tuple[bool, str | None]:
+    """Architecture §5.3 step 1 without the anchor-row check: may a person or agent write ``name`` now?
+
+    Returns ``(True, None)``, or ``(False, reason)`` with the read-only reason the catalog shows
+    (``desired_write_kind`` names the rule).
 
     A ``crop_band`` row is writable only while ``crop_band_anchors`` holds its rows (the zone priorities and
     the window values never do): ``verdify_services.settings`` adds that database check
     (``verdify_schemas.band_rows``). An unknown name is not writable.
     """
-    spec = REGISTRY.get(name)
-    if spec is None:
-        return False, READ_ONLY_REASONS["unknown"]
-    if name == BAND_OWNER_SWITCH:
-        return False, READ_ONLY_REASONS["band_owner"]
-    if name in LEGACY_WIDE_LIMIT_PARAMS:
-        return False, READ_ONLY_REASONS["legacy_wide_limit"]
-    if name in ACTIVITY_MIRROR_PARAMS:
-        return False, READ_ONLY_REASONS["activity_mirror"]
-    control_class = spec.control_class
-    if control_class == "retired":
-        return False, READ_ONLY_REASONS["retired"]
-    if control_class == "readback_context":
-        return False, READ_ONLY_REASONS["readback_context"]
-    if control_class == "irrigation_site":
-        return True, None
-    if control_class in WRITABLE_CONTROL_CLASSES and spec.esp_object_id is not None:
-        return True, None
-    return False, READ_ONLY_REASONS["no_entity"]
+    kind = desired_write_kind(name)
+    return (True, None) if kind is None else (False, READ_ONLY_REASONS[kind])
 
 
 # Switch params whose readback is an equipment_state mirror: param → equipment
