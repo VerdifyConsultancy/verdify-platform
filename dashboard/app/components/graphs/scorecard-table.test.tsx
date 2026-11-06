@@ -107,7 +107,7 @@ test("the table: grouped headers, 30 rows newest first, missing cells as — wit
   const heads = [...table.querySelectorAll("thead tr")].map((row) => [...row.querySelectorAll("th")].map(text));
   expect(heads).toEqual([
     ["Date", "Time in band", "Water", "Watering minutes", "Iris required plans", "Alerts raised"],
-    ["Temperature, whole day", "VPD, whole day", "Day (last 3 days)", "Night (last 3 days)", "Wall", "Center", "South", "West", "Written", "Missed", "Critical", "Warning", "Info"],
+    ["Temperature, whole day", "VPD, whole day", "Both, day", "Both, night", "Wall", "Center", "South", "West", "Written", "Missed", "Critical", "Warning", "Info"],
   ]);
   const rows = [...table.querySelectorAll("tbody tr")];
   expect(rows).toHaveLength(30);
@@ -127,7 +127,7 @@ test("the table: grouped headers, 30 rows newest first, missing cells as — wit
   expect(await blobs[0].text()).toBe(csv.slice(1));
   const lines = csv.slice(1).trimEnd().split("\r\n");
   expect(lines).toHaveLength(31);
-  expect(lines[0]).toBe('Date,"Time in band: Temperature, whole day (%)","Time in band: VPD, whole day (%)",Time in band: Day (last 3 days) (%),Time in band: Night (last 3 days) (%),Water (gal),Watering minutes: Wall (min),Watering minutes: Center (min),Watering minutes: South (min),Watering minutes: West (min),Iris required plans: Written (count),Iris required plans: Missed (count),Alerts raised: Critical (count),Alerts raised: Warning (count),Alerts raised: Info (count)');
+  expect(lines[0]).toBe('Date,"Time in band: Temperature, whole day (%)","Time in band: VPD, whole day (%)","Time in band: Both, day (%)","Time in band: Both, night (%)",Water (gal),Watering minutes: Wall (min),Watering minutes: Center (min),Watering minutes: South (min),Watering minutes: West (min),Iris required plans: Written (count),Iris required plans: Missed (count),Alerts raised: Critical (count),Alerts raised: Warning (count),Alerts raised: Info (count)');
   expect(lines[1]).toBe("2026-11-02 (partial),91.5,84,88.4,79.6,— day not finished,0,14,0,0,2,0,0,1,0");
   expect(lines[2]).toBe("2026-11-01 (25 h),90,86.5,87.2,81.7,19,0,14,0,0,3,0,0,2,1");
   expect(lines[4]).toBe("2026-10-30,87,91.5,— band grade kept 3 days,— band grade kept 3 days,21,12,18,0,0,3,0,0,1,0");

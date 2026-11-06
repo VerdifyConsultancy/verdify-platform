@@ -88,7 +88,6 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-ha-token` | `ha_token.txt` | setpoint-server (volume mount); **device-affecting** | — | — | ✓ |
 | `verdify-hermes` | `OPENAI_API_KEY` | MCP semantic retrieval (`secretKeyRef`, required) | — | — | ✓ |
 | `verdify-hermes` | `OPENAI_API_KEY`, `HERMES_MCP_URL`² | hermes-iris (`envFrom.secretRef`) | — | — | ✓ |
-| `verdify-hermes-slack` | slack channel config | hermes-iris (optional volume mount; **non-secret** channel cfg) | — | — | opt |
 | `verdify-lab-publisher-s3` | `LAB_S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, optional `LAB_S3_ENDPOINT_URL` | lab-publisher (`envFrom.secretRef`) | ✓ | — | ✓ |
 | `verdify-grafana-secrets` | `GRAFANA_RENDERER_TOKEN` | API saved-public-panel PNG adapter (`secretKeyRef`, optional; fails closed when absent) | — | — | ✓ |
 | `verdify-grafana-secrets` | `GRAFANA_ADMIN_PASSWORD` | grafana (`secretKeyRef`, required; pod fails closed when absent) | — | — | ✓ |
@@ -208,7 +207,6 @@ reconciliation.
 | `overlays/prod/ha-token.placeholder.yaml` | `verdify-ha-token` | prod |
 | `overlays/prod/hermes-secret.placeholder.yaml` | `verdify-hermes` | prod |
 
-`verdify-hermes-slack` (optional, non-secret channel config),
 `verdify-mcp-agents` (optional volume) and
 `ghcr-jvallery-readonly` (image-pull, delivered out-of-band by Root) have no
 placeholder — the workloads reference them as `optional` / `imagePullSecrets`, so
@@ -268,12 +266,11 @@ these credentials are delivered by their canonical owner. URL-composed DSNs
 require the owner's established URL-safe password generation. Existing admin,
 renderer, OAuth, experiment and owner Secret keys remain unchanged.
 
-### Ingestor Slack delivery (#950)
+### Slack (retired, #1352)
 
-`verdify-slack` is owned by the agents KSOPS lane. It carries only
-`iris_slack_bot_token.txt`, preserving the existing Iris bot identity. The
-single ingestor mounts it read-only at `/etc/verdify/slack`, matching
-`slack.yaml`; no app/signing token is required by this sender.
+No workload references a Slack Secret: alerts go to `alert_log` (the dashboard)
+and page through Alertmanager. The `verdify-slack` Secret is still delivered by
+the agents KSOPS lane until its removal there (#1352 follow-up); nothing mounts it.
 
 ### Hydroponic probe (VD-70, #1183)
 

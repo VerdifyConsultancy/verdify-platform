@@ -30,10 +30,8 @@
 # gated handoff step.
 #
 # STATE PVC: compose mounts host /var/lib/verdify/hermes/iris -> /opt/data. In
-# k3s this is a PVC on rebuildable Longhorn RWO storage. The slack.yaml
-# referenced by VERDIFY_SLACK_CONFIG=/opt/data/slack.yaml lives on that PVC;
-# the NON-SECRET slack channel config is also available from the
-# verdify-hermes-slack mount.
+# k3s this is a PVC on rebuildable Longhorn RWO storage. Slack is not a
+# Verdify channel (#1352): no Slack config or Secret is mounted.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -166,9 +164,6 @@ spec:
               value: "0.0.0.0"
             - name: API_SERVER_PORT
               value: "8642"
-            # compose:375 VERDIFY_SLACK_CONFIG=/opt/data/slack.yaml (on the PVC).
-            - name: VERDIFY_SLACK_CONFIG
-              value: /opt/data/slack.yaml
             - name: HERMES_MCP_READINESS_URL
               value: http://verdify-mcp.verdify-prod.svc:8000/readyz
             - name: HERMES_MCP_PROBE_STATE_PATH
@@ -203,10 +198,6 @@ spec:
             - name: hermes-config
               mountPath: /etc/verdify/hermes-config
               readOnly: true
-            # NON-SECRET slack channel config (compose:371 /etc/verdify/slack RO).
-            - name: slack-config
-              mountPath: /etc/verdify/slack
-              readOnly: true
             - name: tmp
               mountPath: /tmp
           livenessProbe:
@@ -230,10 +221,6 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: verdify-hermes-iris-data
-        - name: slack-config
-          secret:
-            secretName: verdify-hermes-slack
-            optional: true
         - name: tmp
           emptyDir: {}
         # #213 IaC Hermes profile, seeded onto the PVC by the seed-config init.

@@ -69,11 +69,11 @@ a.wat-site-term{display:inline-flex;align-items:center;min-height:24px;text-unde
 .line-fault{font-weight:600}
 .line-fault-warn{color:var(--warn-text)}
 .wat-dot{display:inline-block;flex:none;width:.55rem;height:.55rem;margin-right:var(--space-1);border-radius:50%;background:var(--c-bound)}
-.wat-dot[data-cause=vpd]{background:var(--eq-mister)}
-.wat-dot[data-cause=schedule]{background:var(--eq-water)}
-.wat-dot[data-cause=run_now]{background:var(--eq-master)}
+.wat-dot[data-cause=vpd]{background:var(--cause-vpd)}
+.wat-dot[data-cause=schedule]{background:var(--cause-schedule)}
+.wat-dot[data-cause=run_now]{background:var(--forest)}
 .wat-dot[data-cause=feed]{background:var(--eq-fert)}
-.wat-dot[data-cause=prewet],.wat-dot[data-cause=flush]{background:var(--eq-fog)}
+.wat-dot[data-cause=prewet],.wat-dot[data-cause=flush]{background:var(--cause-prep)}
 .wat-dot[data-cause=fallback]{background:var(--eq-heat1)}
 .line-state.is-neutral .wat-dot{background:var(--muted)}
 .wat-line .object-row-actions .state-note,.wat-line .object-row-actions .field-error{flex-basis:100%;margin:0;text-align:right}

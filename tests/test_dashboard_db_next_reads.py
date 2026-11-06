@@ -483,3 +483,19 @@ def test_a_switch_is_one_activity_row_the_activity_log_shows_and_its_key_replays
     assert oldest.detail == {"light": "main", "state": "on", "result": "confirmed"}
     assert (oldest.actor.source, oldest.actor.name, oldest.reason) == ("dashboard", "jason", "why")
     assert (newest.action, newest.detail["result"]) == ("light.off", "timeout")
+
+
+def test_a_timed_switch_ends_its_minutes_after_its_row_and_a_row_without_minutes_holds_no_timer(world):
+    jason = Actor.person("jason", "operator")
+
+    async def work(conn):
+        timed = await lights.record(conn, jason, "grow", "on", "confirmed", None, uuid.uuid4(), minutes=15)
+        first = await lights.timer(conn, "grow")
+        ts = await conn.fetchval("SELECT ts FROM public.activity_log WHERE id = $1", timed.value.activity_id)
+        await lights.record(conn, jason, "grow", "off", "confirmed", "Timer ended", None, {"via": "timer"})
+        after = await lights.timer(conn, "grow")
+        return timed, first, ts, after
+
+    timed, first, ts, after = as_login(work)
+    assert (first.activity_id, first.ends_at, first.due) == (timed.value.activity_id, ts + timedelta(minutes=15), False)
+    assert after.activity_id != timed.value.activity_id and after.ends_at is None and not after.due

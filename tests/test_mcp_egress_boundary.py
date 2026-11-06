@@ -119,7 +119,7 @@ def test_only_declared_dns_database_and_fixed_relay_paths(rendered):
     )
     assert not allowed(p, "1.1.1.1", 443)
     assert allowed(p, "10.42.1.4", 8081, pod_labels={"app.kubernetes.io/component": "outbound"})
-    assert allowed(p, "10.42.1.4", 8082, pod_labels={"app.kubernetes.io/component": "outbound"})
+    assert not allowed(p, "10.42.1.4", 8082, pod_labels={"app.kubernetes.io/component": "outbound"})  # #1352
     assert not allowed(p, "10.42.1.4", 8083, pod_labels={"app.kubernetes.io/component": "outbound"})
     assert allowed(p, "10.42.1.2", 5432, pod_labels={"app.kubernetes.io/component": "db"})
     assert not allowed(p, "10.42.1.2", 5432, pod_labels={"app.kubernetes.io/component": "api"})

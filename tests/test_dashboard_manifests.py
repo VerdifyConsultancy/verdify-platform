@@ -273,8 +273,11 @@ def test_tier1_forwarder_excludes_every_dashboard_host(rendered):
 def test_egress_deny_management_is_the_vendored_network_infra_policy(rendered):
     deny = copy.deepcopy(one(rendered, "NetworkPolicy", "egress-deny-management"))
     assert deny["metadata"].pop("namespace") == NAMESPACE
-    assert deny == yaml.safe_load(PROD_DENY.read_text())
-    assert deny["spec"]["podSelector"] == {}
+    # #1351/#1363: the only change to the vendored copy is the selector, pointed at a label no pod carries.
+    assert deny["spec"].pop("podSelector") == {"matchLabels": {"network.vallery.net/public-egress": "true"}}
+    vendored_policy = yaml.safe_load(PROD_DENY.read_text())
+    assert vendored_policy["spec"].pop("podSelector") == {}
+    assert deny == vendored_policy
     vendored, prod = (SOURCE / "egress-deny-management.yaml").read_text(), PROD_DENY.read_text()
     assert vendored[vendored.index(GENERATED) :] == prod[prod.index(GENERATED) :]
     header, prod_header = vendored[: vendored.index(GENERATED)], prod[: prod.index(GENERATED)]
@@ -288,11 +291,31 @@ def test_egress_deny_management_is_the_vendored_network_infra_policy(rendered):
     assert NAMESPACE in header
 
 
-def test_only_the_vendored_deny_governs_egress(rendered):
+def test_egress_is_local_only(rendered):
+    """#1351/#1363: egress-local-only governs every pod; the vendored deny (public egress) selects none."""
     policies = {x["metadata"]["name"]: x for x in rendered if x["kind"] == "NetworkPolicy"}
-    assert set(policies) == {"default-deny-ingress", "allow-web-from-traefik-apps", "egress-deny-management"}
-    egress = [name for name, p in policies.items() if "Egress" in p["spec"]["policyTypes"]]
-    assert egress == ["egress-deny-management"]
+    assert set(policies) == {
+        "default-deny-ingress",
+        "allow-web-from-traefik-apps",
+        "egress-deny-management",
+        "egress-local-only",
+    }
+    egress = sorted(name for name, p in policies.items() if "Egress" in p["spec"]["policyTypes"])
+    assert egress == ["egress-deny-management", "egress-local-only"]
+    local = policies["egress-local-only"]
+    assert local["spec"]["podSelector"] == {}
+    (rule,) = local["spec"]["egress"]
+    assert "ports" not in rule
+    cidrs = {peer["ipBlock"]["cidr"]: peer["ipBlock"].get("except", []) for peer in rule["to"]}
+    assert set(cidrs) == {"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}
+    vendored_except = yaml.safe_load(PROD_DENY.read_text())["spec"]["egress"][0]["to"][0]["ipBlock"]["except"]
+    assert cidrs["192.168.0.0/16"] == vendored_except
+    assert cidrs["10.0.0.0/8"] == cidrs["172.16.0.0/12"] == []
+    marker = policies["egress-deny-management"]["spec"]["podSelector"]["matchLabels"]
+    for x in rendered:
+        if x["kind"] == "Deployment":
+            labels = x["spec"]["template"]["metadata"].get("labels", {})
+            assert not marker.items() <= labels.items(), x["metadata"]["name"]
 
 
 def test_ingress_admits_only_the_traefik_apps_pods_on_3000(rendered):

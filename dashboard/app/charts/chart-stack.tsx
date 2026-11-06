@@ -8,13 +8,14 @@ import { csvFilename, windowCsv } from "./csv";
 import { CsvLink, DataTable } from "./data-table";
 import { clusterEvents, eventsIn, type ChartEvent, type EventCluster } from "./events";
 import { bandWord, compareLine, inBandShare, type CompareLine } from "./layers";
-import { bandAt, lastAtOrBefore, type ForecastInput } from "./marks";
+import { ChartKey, type KeyItem } from "./legend";
+import { FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandNotes, edgeOf, forecastAt, lastAtOrBefore, type ForecastInput, type StepSegment } from "./marks";
 import { InStack } from "./stack-context";
 import { gapCount } from "./summary";
 import { clockTime, localDay } from "./time-axis";
 import { cursorX } from "./tooltip";
 import {
-  buildTimeSeriesModel, chartLabel, csvBlock, dataTables, forecastCsvBlocks, timeSeriesOptions, type SeriesLayers, type TimeSeriesModel,
+  buildTimeSeriesModel, chartLabel, csvBlock, dataTables, forecastCsvBlocks, timeSeriesOptions, traceExtent, valueRange, type SeriesLayers, type TimeSeriesModel,
 } from "./time-series";
 import type { BandTimeline, MetricDef, Series, SettingSteps, XRange } from "./types";
 import { UPlotChart, resetZoom, useStableArray } from "./uplot-chart";
@@ -25,9 +26,11 @@ import { UPlotChart, resetZoom, useStableArray } from "./uplot-chart";
  * - Panel heights are reserved in charts.css (temperature 220, VPD 200, RH 160, any other 160; 160/150/120/120 at 860 px
  *   and below), and each panel has an id for anchors (`/graphs#vpd`).
  * - Each panel's header row carries its name and unit, the window's statistics (in band % of points where a band is
- *   drawn, low with its time, mean, high with its time, gaps) and the series swatches, which toggle (`aria-pressed`).
- *   While the cursor is on any panel, every header row reads the values at the cursor instead (the value, the band and
- *   above, below or in) and one time chip rides the cursor line at the top. There is no floating tooltip.
+ *   drawn, low with its time, mean, high with its time, gaps), the series swatches, which toggle (`aria-pressed`), and a
+ *   key for the band and each setting drawn as steps, which name what the plot no longer labels (#1354): a step outside
+ *   the panel's y range says so there rather than stretching the axis. While the cursor is on any panel, every header
+ *   row reads the values at the cursor instead (each trace, the forecast hour, the band and above, below or in, each
+ *   step) and one time chip rides the cursor line at the top. There is no floating tooltip.
  * - Layers, each only when asked: excursion shading, the min–max envelope (buckets of 30 min and coarser), the compare
  *   line with its delta in the header, and the event rail on top (its list is also a disclosure under the stack).
  * - Lanes sit in a `<details>`, open from 861 px and closed below; the foot holds the page's words, Reset zoom, CSV of
@@ -87,12 +90,13 @@ export const STACK_AXIS_PX = 56;
 /** The words a panel's name stands for, so a series named by them reads by what sets it apart ("RH" is relative humidity). */
 const PANEL_WORDS: Readonly<Record<string, readonly string[]>> = { rh: ["relative humidity", "rh"] };
 /**
- * A series named inside its panel: its label without the panel's own name, "Indoor" for "Indoor temperature" under
- * Temperature and "Outdoor · DERIVED" for "Outdoor VPD · DERIVED" under VPD; the label whole when nothing is left.
+ * A series named inside its panel: its label without the panel's own name or a provenance word ("· DERIVED", which the
+ * toggle's name keeps), "Indoor" for "Indoor temperature" under Temperature and "Outdoor" for "Outdoor VPD · DERIVED"
+ * under VPD; the label whole when nothing is left.
  */
 export function seriesWords(label: string, panel: string): string {
   const words = PANEL_WORDS[panel.toLowerCase()] ?? [panel.toLowerCase()];
-  let short = label;
+  let short = label.replace(/(\s·\s[A-Z][A-Z ]+)+$/, "");
   for (const word of words) short = short.replace(new RegExp(`(^|\\s)${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\s|$)`, "i"), "$1");
   short = short.replace(/\s+/g, " ").trim();
   if (!short || short === "·" || short.startsWith("· ")) return label;
@@ -140,11 +144,22 @@ export function panelStats(model: TimeSeriesModel, compare: CompareLine | null):
   return parts.join(" · ");
 }
 
-/** The header row at the cursor: each shown trace's value, the band and where the primary sits against it. */
+/** A step's kind in the words the key and the readout use: the device's line is the setting's own name. */
+const STEP_WORDS: Readonly<Record<StepSegment["kind"], string>> = { device: "", requested: "requested", planned: PLANNED_AI, superseded: SUPERSEDED };
+const stepWords = (step: StepSegment) => (step.kind === "planned" && step.source !== "iris" ? FORECAST_RULE : STEP_WORDS[step.kind]);
+
+/**
+ * The header row at the cursor: each shown trace's value, each shown forecast hour, the band and where the primary sits
+ * against it, then each setting step at the cursor, by name.
+ */
 export function panelReadout(model: TimeSeriesModel, hidden: ReadonlySet<string>, compare: CompareLine | null, x: number): string {
   const shown = model.traces.filter((trace) => !hidden.has(trace.key));
-  const several = shown.length > 1;
-  const parts = shown.map((trace) => `${several ? `${trace.label} ` : ""}${bare(valueAt(model, trace.values, x), model.unit)}`);
+  const forecast = model.forecast.filter((line) => !hidden.has(line.key)).flatMap((line) => {
+    const hour = forecastAt(line, x);
+    return hour ? [`${line.label} ${bare(hour.value, model.unit)}`] : [];
+  });
+  const several = shown.length > 1 || forecast.length > 0;
+  const parts = [...shown.map((trace) => `${several ? `${trace.label} ` : ""}${bare(valueAt(model, trace.values, x), model.unit)}`), ...forecast];
   const band = bandAt(model.runs, x);
   if (band) {
     parts.push(`band ${bare(band.low, model.unit)}–${bare(band.high, model.unit)}`);
@@ -157,7 +172,35 @@ export function panelReadout(model: TimeSeriesModel, hidden: ReadonlySet<string>
     const value = index >= 0 && Math.abs(x - compare.t[index]) <= model.bucketSeconds ? compare.values[index] : null;
     parts.push(`${compare.label} ${bare(value, model.unit)}`);
   }
+  for (const group of model.stepGroups) {
+    const index = lastAtOrBefore(group.map((step) => step.start), x);
+    const step = index >= 0 && x < group[index].end ? group[index] : null;
+    if (step) parts.push([step.setting, stepWords(step), bare(step.value, model.unit)].filter(Boolean).join(" "));
+  }
   return parts.join(" · ") || "—";
+}
+
+/** A key item with the words its hover gives: the band's source, or a step's value and where it sits. */
+export type PanelKeyItem = KeyItem & { readonly title: string };
+/**
+ * A panel's key beside its swatches (#1354): the band, with its source in the hover words, and each setting drawn as
+ * steps, by kind, at the value in force now (the plan's next value ahead of now). A value outside the panel's y range
+ * says "above the chart ↑" or "below the chart ↓" instead of stretching the axis.
+ */
+export function panelKey(model: TimeSeriesModel, yRange: readonly [number, number] | null): PanelKeyItem[] {
+  const items: PanelKeyItem[] = [];
+  if (model.runs.length) items.push({ key: "band", label: "Band", token: "--c-band-edge", kind: "band", title: bandNotes(model.runs, model.now).join("; ") });
+  for (const group of model.stepGroups) {
+    const ahead = group[0].kind === "planned" || group[0].kind === "superseded";
+    const step = ahead ? group.find((item) => item.end > model.now) ?? group[group.length - 1] : [...group].reverse().find((item) => item.start <= model.now) ?? group[0];
+    const value = formatValue(step.value, model.unit);
+    const edge = yRange ? edgeOf(step.value, yRange[0], yRange[1]) : null;
+    const where = edge === "above" ? " · above the chart ↑" : edge === "below" ? " · below the chart ↓" : "";
+    const kind = step.kind === "device" ? "line" : "dashed";
+    const token = step.kind === "device" ? "--c-setpoint" : step.kind === "requested" ? "--c-requested" : step.kind === "superseded" ? "--c-bound" : model.seriesToken;
+    items.push({ key: `${step.param}:${step.kind}`, label: `${[step.setting, stepWords(step)].filter(Boolean).join(" · ")} ${value}${where}`, token, kind, title: step.detail });
+  }
+  return items;
 }
 
 export type SeriesPlotProps = {
@@ -323,9 +366,10 @@ export function ChartStack(props: ChartStackProps) {
         const model = models[index];
         const last = index === panels.length - 1;
         const swatches = [
-          ...model.traces.map((trace) => ({ key: trace.key, label: trace.label, token: trace.token, shown: !hidden.has(trace.key) })),
-          ...model.forecast.map((line) => ({ key: line.key, label: line.label, token: "--c-outdoor", shown: !hidden.has(line.key) })),
+          ...model.traces.map((trace) => ({ key: trace.key, label: trace.label, token: trace.token, shown: !hidden.has(trace.key), title: trace.label })),
+          ...model.forecast.map((line) => ({ key: line.key, label: line.label, token: "--c-outdoor", shown: !hidden.has(line.key), title: `${line.label} · ${line.text}` })),
         ];
+        const key = panelKey(model, model.stepGroups.length ? valueRange(model, hidden, layers[index], view.from, view.to, traceExtent(model, hidden, view.from, view.to)) : null);
         const drawable = !(panel.series === null && panel.message) && (model.t.length > 0 || model.steps.length > 0 || model.runs.length > 0 || model.forecast.length > 0);
         // A panel whose read has not answered, or failed, states nothing about the window: its frame says why.
         const stats = panel.series === null ? "" : panelStats(model, compares[index]);
@@ -343,10 +387,11 @@ export function ChartStack(props: ChartStackProps) {
                 // Inside a named panel a toggle reads its series alone ("Indoor"), so three fit one row on a phone; the full name stays its accessible name.
                 const short = seriesWords(item.label, panel.name);
                 return <li key={item.key}>
-                  <button type="button" aria-pressed={item.shown} aria-label={short === item.label ? undefined : item.label} onClick={() => toggle(item.key)}><span className="chart-swatch" data-token={item.token.replace(/^--/, "")} aria-hidden="true" />{short}</button>
+                  <button type="button" aria-pressed={item.shown} aria-label={short === item.label ? undefined : item.label} title={item.title} onClick={() => toggle(item.key)}><span className="chart-swatch" data-token={item.token.replace(/^--/, "")} aria-hidden="true" />{short}</button>
                 </li>;
               })}
             </ul>}
+            {key.length > 0 && <ChartKey items={key} className="stack-key" label={`${panel.name} key`} />}
           </div>
           {drawable
             ? <SeriesPlot model={model} hidden={hidden} layers={layers[index]} axes={last ? "x" : "none"} syncKey={syncKey} xRange={xRange} onZoom={zoomHandlers.get(panel.id)} />

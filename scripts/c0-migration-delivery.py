@@ -311,6 +311,14 @@ SUCCESSOR_289_DIGESTS = {
     "verdify_ingestor_runtime_login": "b17c9da67fe6456c1fd470ac5dc82dfdd20320b3d808c482162b11952bd57011",
 }
 SUCCESSOR_289_MCP_DIGEST = SUCCESSOR_288_MCP_DIGEST
+# Exact290 (#1358): time in band graded against the band the controller served. The table, the
+# functions and the scorecard view are verdify's; the one EXECUTE goes to the matview-refresh duty in
+# its own schema, so no runtime seal moves and no receipt is re-sealed. The rolled-back native
+# qualification measures them.
+SUCCESSOR_290 = "290-band-compliance.sql"
+SUCCESSOR_290_SHA256 = "557d8d03a61a284e05e1b9bc26db7e3748898531ea7b80f0a6b4e458c922e6be"
+SUCCESSOR_290_DIGESTS = SUCCESSOR_289_DIGESTS
+SUCCESSOR_290_MCP_DIGEST = SUCCESSOR_289_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.
@@ -365,6 +373,7 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_287,
         SUCCESSOR_288,
         SUCCESSOR_289,
+        SUCCESSOR_290,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
@@ -408,6 +417,7 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_287_SHA256,
                 SUCCESSOR_288_SHA256,
                 SUCCESSOR_289_SHA256,
+                SUCCESSOR_290_SHA256,
             ),
             strict=True,
         ):
@@ -683,6 +693,7 @@ COMMIT;"""
         (SUCCESSOR_287, SUCCESSOR_287_DIGESTS),
         (SUCCESSOR_288, SUCCESSOR_288_DIGESTS),
         (SUCCESSOR_289, SUCCESSOR_289_DIGESTS),
+        (SUCCESSOR_290, SUCCESSOR_290_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
@@ -774,6 +785,8 @@ COMMIT;"""
             expected_mcp = SUCCESSOR_288_MCP_DIGEST
         if SUCCESSOR_289 in later:
             expected_mcp = SUCCESSOR_289_MCP_DIGEST
+        if SUCCESSOR_290 in later:
+            expected_mcp = SUCCESSOR_290_MCP_DIGEST
         if hotfix_predecessor_263:
             require(
                 mcp_state.get("mcp")

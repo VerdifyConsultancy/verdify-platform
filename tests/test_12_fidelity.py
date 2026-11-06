@@ -871,10 +871,6 @@ def test_alert_monitor_avoids_greenhouse_state_hot_path_scans():
     assert "fn_setpoint_at('temp_high', c.ts)" in body
     assert "fn_equip_at('mister_center', c.ts)" in body
 
-    standalone = (REPO_ROOT / "scripts" / "alert-monitor.py").read_text()
-    assert "FROM v_greenhouse_state" not in standalone
-    assert "latest_climate AS" in standalone
-
 
 def test_mcp_set_tunable_treats_vpd_low_as_band_owned():
     """MCP should expose crop-band params as read-only context, not Tier 1

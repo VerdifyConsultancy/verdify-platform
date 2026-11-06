@@ -57,7 +57,7 @@ test("events: a write's source, mark and colour by who wrote it; AI for Iris and
     ["triangle", "fault", "06:02 · critical · Relay stuck", "/activity?alert=7"], ["triangle-hollow", "fault", "07:00 · resolved · Relay stuck", "/activity?alert=7"],
   ]);
   const run = { run_id: "r1", line_id: "L01", cause: "schedule", started_at: "2026-11-02T14:31:00Z", open_s: 720, outcome: "ok" } as Run;
-  expect(runEvent(run, NOW)).toMatchObject({ mark: "bar", token: "eq-water", source: "runs", href: "/water/history?line=L01" });
+  expect(runEvent(run, NOW)).toMatchObject({ mark: "bar", token: "cause-schedule", source: "runs", href: "/water/history?line=L01" });
   expect(runEvent(run, NOW)?.label).toMatch(/^07:31 · Wall drip · .+ · 12 min · ok$/);
 });
 
@@ -108,8 +108,8 @@ test("the range toolbar: presets as nav chips in the Range list, steps by the wi
   expect(stepWindow({ from: 1000, to: 2000 }, 1)).toEqual({ from: 2000, to: 3000 });
   expect(zoomOutWindow({ from: 1000, to: 2000 })).toEqual({ from: 500, to: 2500 });
   expect(zoomOutWindow({ from: 0, to: 300 * 86_400 })).toEqual({ from: -50 * 86_400, to: 350 * 86_400 });
-  // The future pad: 25% of the window, at most 12 h (D-UX-13): 6 h for 24 h, 12 h from 48 h.
-  expect([futurePad(86_400), futurePad(7 * 86_400), futurePad(3600)]).toEqual([6 * 3600, 12 * 3600, 900]);
+  // The future pad matches the window, at most 72 h (decisions 2026-11-05, replacing D-UX-13): 24 h for 24 h, 72 h from 72 h.
+  expect([futurePad(86_400), futurePad(3 * 86_400), futurePad(7 * 86_400), futurePad(3600)]).toEqual([86_400, 3 * 86_400, 3 * 86_400, 3600]);
   render(<MemoryRouter><RangeToolbar span="24 h" presets={[{ id: "today", label: "Today", href: "?range=today", current: false }, { id: "24h", label: "24 h", href: "?range=24h", current: true }]}
     previous="?from=a&to=b" next={null} zoomOut="?range=48h" custom={<p>From and To</p>}><button type="button">Layers</button></RangeToolbar></MemoryRouter>);
   const presets = screen.getByRole("list", { name: "Range" });
