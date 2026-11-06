@@ -396,7 +396,7 @@ export interface paths {
         readonly put?: never;
         /**
          * Run now
-         * @description Starts at once or is refused: line_busy, manifold_busy, cap_reached, line_disabled, line_paused, line_faulted, not_schedule_member (mist). The API refuses what it can see in the newest irr_state (422); otherwise the line's irr_state shows whether it started. Before the engine firmware only L01 runs, through the btn_wall_clean bridge, for its configured irrig_wall_duration_min (minutes, if sent, must equal it); any other line is 503 unavailable and nothing is stored.
+         * @description Starts at once or is refused: line_busy, manifold_busy, cap_reached, line_disabled, line_paused, line_faulted, not_schedule_member (mist, until the controller runs #1343's firmware). Any wired, enabled line runs once (#1343), and fog (L11) runs once for minutes (#1343 follow-up), 503 unavailable until the controller runs the firmware that takes it. The master valve L03 takes no run of its own: it opens only with a fertilized relay (L02, L06, L08, L10), never with clean water (#1336). The API refuses what it can see in the newest irr_state (422); otherwise the line's irr_state shows whether it started. Before the engine firmware only L01 runs, through the btn_wall_clean bridge, for its configured irrig_wall_duration_min (minutes, if sent, must equal it); any other line is 503 unavailable and nothing is stored.
          */
         readonly post: operations["API-IRR-06"];
         readonly delete?: never;
@@ -858,6 +858,28 @@ export interface components {
             /** Format: date-time */
             readonly to: string;
         };
+        /** @description A physical line (#1336): Wall drip (every wall and shelf), Center drip, and the Center, South and West misters, each with a clean and a fertilized variant mapped to its relay. Fog is a climate device, not a physical line */
+        readonly Circuit: {
+            readonly circuit_id: components["schemas"]["CircuitId"];
+            readonly clean: components["schemas"]["CircuitVariant"];
+            readonly fertilized: components["schemas"]["CircuitVariant"];
+            /** @enum {string} */
+            readonly kind: "drip" | "mister";
+            readonly name: string;
+            /** @enum {string} */
+            readonly zone: "wall" | "center" | "south" | "west";
+        };
+        /** @enum {string} */
+        readonly CircuitId: "wall_drip" | "center_drip" | "center_mister" | "south_mister" | "west_mister";
+        /** @description One variant of a physical line: its relay, or line_id null and wired false when that valve has no relay (shown, never scheduled or run). master_valve: L03 opens with it, fertilized only (#1336) */
+        readonly CircuitVariant: {
+            readonly enabled: boolean;
+            readonly line_id: components["schemas"]["LineId"] | null;
+            readonly master_valve: boolean;
+            readonly running: boolean;
+            readonly variant: components["schemas"]["Variant"];
+            readonly wired: boolean;
+        };
         /** @description An irrigation_command row: pending until the ingestor marks it sent, just before it calls the device (sent at most once), or failed when not sent within 2 min. Relay edges and irr_state show the outcome */
         readonly Command: {
             readonly actor: components["schemas"]["Actor"];
@@ -1059,6 +1081,8 @@ export interface components {
                 /** Format: date-time */
                 readonly started_at: string;
             }[];
+            /** @description The five physical lines over the relays (#1336) */
+            readonly circuits: readonly components["schemas"]["Circuit"][];
             /** @description The live controller connection has the irrigation engine (irr_command); false before the engine firmware */
             readonly engine: boolean;
             /** @description degraded_only slots are running (D-IRP-12) */
@@ -1640,11 +1664,12 @@ export interface components {
          * @enum {string}
          */
         readonly RunPurpose: "irrigation" | "climate";
-        /** @description Drips: minutes. Fertilizer drips (L02, L06): minutes, prewet_s, flush_s. Misters (schedule_member on): on_s, count, gap_s. Fertilizer misters (L08, L10): on_s, count and gap_s within the mister bounds, plus prewet_s and flush_s. Before the engine firmware only L01 runs, for its configured irrig_wall_duration_min */
+        /** @description Drips: minutes. Fertilizer drips (L02, L06): minutes, prewet_s, flush_s. Misters: on_s, count, gap_s. Fertilizer misters (L08, L10): on_s, count and gap_s within the mister bounds, plus prewet_s and flush_s. Fog (L11): minutes, 1-30. Before the engine firmware only L01 runs, for its configured irrig_wall_duration_min */
         readonly RunRequest: {
             readonly count?: number;
             readonly flush_s?: number;
             readonly gap_s?: number;
+            /** @description Drips 1-120; fog 1-30 */
             readonly minutes?: number;
             readonly on_s?: number;
             readonly prewet_s?: number;
@@ -1700,6 +1725,8 @@ export interface components {
         readonly ScheduleDays: readonly ("mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun")[];
         /** @description Bounds per irrigation §4.3, checked per line kind on submit; values snap to whole seconds and minutes */
         readonly ScheduleInput: {
+            /** @description The physical line (#1336), with variant, instead of line_id; the API stores the variant's relay. An edit may give variant alone to switch clean and fertilized on the same physical line */
+            readonly circuit_id?: components["schemas"]["CircuitId"];
             /**
              * @description Pulses in a mist window; drips use 1
              * @default 1
@@ -1740,6 +1767,7 @@ export interface components {
             readonly prewet_s?: number;
             readonly reason?: string;
             readonly start?: components["schemas"]["ScheduleStart"];
+            readonly variant?: components["schemas"]["Variant"];
         };
         readonly ScheduleStart: {
             /** @description Local HH:MM when kind is clock */
@@ -1989,6 +2017,8 @@ export interface components {
             readonly max: number | null;
             readonly used: number | null;
         };
+        /** @enum {string} */
+        readonly Variant: "clean" | "fertilized";
         /** @description API-21: daily water use in whole gallons. There is no rate and no flow flag */
         readonly WaterUse: {
             /** @description One per America/Denver day, oldest first. On a no_data day every value is null, never 0 */

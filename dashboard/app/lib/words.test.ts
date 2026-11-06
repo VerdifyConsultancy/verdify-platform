@@ -64,7 +64,7 @@ const MODE_REASONS = [
   "init", "unknown", "idle", "idle_default", "sensor_fault", "safety_cool", "safety_heat", "heat_stage1", "heat_stage2", "temp_high", "temp_vent", "summer_vent",
   "summer_vent_preempt", "vent_mist_assist", "vent_fog_assist", "vent_humidify", "humidify_enter", "humidify_continue", "humidify_resolved", "fog_enter", "fog_continue",
   "seal_enter", "seal_continue", "seal_exit", "thermal_relief", "thermal_relief_forced", "relief_cycle_breaker", "vpd_low", "vpd_too_low", "dehum_continue",
-  "dehum_vent_heat", "heat_dehum", "dry_override", "vpd_min_safe_rescue", "vpd_min_safe_heat_rescue", "mist_backoff", "moisture_blocked", "dwell_hold",
+  "dehum_vent_heat", "heat_dehum", "night_dryout_pulse", "night_dryout_reheat", "dry_override", "vpd_min_safe_rescue", "vpd_min_safe_heat_rescue", "mist_backoff", "moisture_blocked", "dwell_hold",
 ];
 /** The codes `gh_moisture_block_reason` publishes (firmware/greenhouse/controls.yaml); `leak_detected` is today's firmware, which the engine release drops (Q-05). */
 const MOISTURE_BLOCK_REASONS = [
@@ -196,7 +196,7 @@ test("the table has words for every code gh_fog_block_reason publishes", () => {
 });
 
 test("the table has words for every mode_reason the firmware sets, in the issue's tone", () => {
-  expect(MODE_REASONS).toHaveLength(38);
+  expect(MODE_REASONS).toHaveLength(40);
   expectWorded("mode_reason", MODE_REASONS);
   expect(Object.keys(WORDS.mode_reason).sort()).toEqual([...MODE_REASONS].sort());
   const published = modeReasonsInFirmware();

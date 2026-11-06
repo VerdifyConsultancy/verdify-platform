@@ -509,8 +509,11 @@ paths:
       summary: Run now
       description: >-
         Starts at once or is refused: line_busy, manifold_busy, cap_reached, line_disabled, line_paused, line_faulted,
-        not_schedule_member (mist). The API refuses what it can see in the newest irr_state (422); otherwise the
-        line's irr_state shows whether it started. Before the engine firmware only L01 runs, through the
+        not_schedule_member (mist, until the controller runs #1343's firmware). Any wired, enabled line runs once
+        (#1343), and fog (L11) runs once for minutes (#1343 follow-up), 503 unavailable until the controller runs the
+        firmware that takes it. The master valve L03 takes no run of its own: it opens only with a fertilized relay
+        (L02, L06, L08, L10), never with clean water (#1336). The API refuses what it can see in the newest irr_state
+        (422); otherwise the line's irr_state shows whether it started. Before the engine firmware only L01 runs, through the
         btn_wall_clean bridge, for its configured irrig_wall_duration_min (minutes, if sent, must equal it); any other
         line is 503 unavailable and nothing is stored.
       parameters: [{$ref: '#/components/parameters/LineId'}, {$ref: '#/components/parameters/IdempotencyKey'}]
@@ -1669,14 +1672,43 @@ components:
         reason: {type: [string, 'null']}
         created_at: {type: string, format: date-time}
         sent_at: {type: [string, 'null'], format: date-time}
+    CircuitId: {type: string, enum: [wall_drip, center_drip, center_mister, south_mister, west_mister]}
+    Variant: {type: string, enum: [clean, fertilized]}
+    CircuitVariant:
+      type: object
+      description: >-
+        One variant of a physical line: its relay, or line_id null and wired false when that valve has no relay (shown,
+        never scheduled or run). master_valve: L03 opens with it, fertilized only (#1336)
+      required: [variant, line_id, wired, master_valve, enabled, running]
+      properties:
+        variant: {$ref: '#/components/schemas/Variant'}
+        line_id: {anyOf: [{$ref: '#/components/schemas/LineId'}, {type: 'null'}]}
+        wired: {type: boolean}
+        master_valve: {type: boolean}
+        enabled: {type: boolean}
+        running: {type: boolean}
+    Circuit:
+      type: object
+      description: >-
+        A physical line (#1336): Wall drip (every wall and shelf), Center drip, and the Center, South and West misters,
+        each with a clean and a fertilized variant mapped to its relay. Fog is a climate device, not a physical line
+      required: [circuit_id, name, zone, kind, clean, fertilized]
+      properties:
+        circuit_id: {$ref: '#/components/schemas/CircuitId'}
+        name: {type: string}
+        zone: {type: string, enum: [wall, center, south, west]}
+        kind: {type: string, enum: [drip, mister]}
+        clean: {$ref: '#/components/schemas/CircuitVariant'}
+        fertilized: {$ref: '#/components/schemas/CircuitVariant'}
     IrrigationStatus:
       type: object
-      required: [server_time, engine, program, lines, active_runs, today, limits, leak, occupancy, fallback_active, freshness]
+      required: [server_time, engine, program, lines, circuits, active_runs, today, limits, leak, occupancy, fallback_active, freshness]
       properties:
         server_time: {type: string, format: date-time}
         engine: {type: boolean, description: 'The live controller connection has the irrigation engine (irr_command); false before the engine firmware'}
         program: {$ref: '#/components/schemas/ProgramSync'}
         lines: {type: array, items: {$ref: '#/components/schemas/IrrigationLine'}, description: L01-L11}
+        circuits: {type: array, items: {$ref: '#/components/schemas/Circuit'}, description: 'The five physical lines over the relays (#1336)'}
         active_runs:
           type: array
           description: The run on each manifold
@@ -1738,6 +1770,12 @@ components:
       description: 'Bounds per irrigation §4.3, checked per line kind on submit; values snap to whole seconds and minutes'
       properties:
         line_id: {type: string, pattern: '^L(0[124-9]|10)$', description: 'L01, L02, L04-L10 (not L03 or L11)'}
+        circuit_id:
+          $ref: '#/components/schemas/CircuitId'
+          description: >-
+            The physical line (#1336), with variant, instead of line_id; the API stores the variant's relay. An edit may
+            give variant alone to switch clean and fertilized on the same physical line
+        variant: {$ref: '#/components/schemas/Variant'}
         label: {type: string, maxLength: 60}
         enabled: {type: boolean, default: true}
         days: {$ref: '#/components/schemas/ScheduleDays'}
@@ -1756,7 +1794,8 @@ components:
     ScheduleCreate:
       allOf:
         - $ref: '#/components/schemas/ScheduleInput'
-        - required: [line_id, days, start, on_s]
+        - required: [days, start, on_s]
+          description: 'The line: line_id, or circuit_id and variant (#1336); a variant whose valve is not wired is unknown_target'
           properties:
             manual: {type: boolean, default: true, description: 'Omitted on a REST create means true (the dashboard default); MCP creates default false'}
     Schedule:
@@ -1816,11 +1855,11 @@ components:
     RunRequest:
       type: object
       description: >-
-        Drips: minutes. Fertilizer drips (L02, L06): minutes, prewet_s, flush_s. Misters (schedule_member on): on_s,
-        count, gap_s. Fertilizer misters (L08, L10): on_s, count and gap_s within the mister bounds, plus prewet_s and
-        flush_s. Before the engine firmware only L01 runs, for its configured irrig_wall_duration_min
+        Drips: minutes. Fertilizer drips (L02, L06): minutes, prewet_s, flush_s. Misters: on_s, count, gap_s.
+        Fertilizer misters (L08, L10): on_s, count and gap_s within the mister bounds, plus prewet_s and flush_s. Fog
+        (L11): minutes, 1-30. Before the engine firmware only L01 runs, for its configured irrig_wall_duration_min
       properties:
-        minutes: {type: integer, minimum: 1, maximum: 120}
+        minutes: {type: integer, minimum: 1, maximum: 120, description: 'Drips 1-120; fog 1-30'}
         prewet_s: {type: integer, minimum: 0, maximum: 1800}
         flush_s: {type: integer, minimum: 0, maximum: 1800}
         on_s: {type: integer, minimum: 10, maximum: 90}

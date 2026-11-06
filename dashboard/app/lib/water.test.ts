@@ -289,20 +289,23 @@ test("daily water use's URL: 30 days split by line unless it says 90d or cause",
 });
 
 // ==================================================================================================== redesign §5.2–§5.4, §6
-test("Today's zones in their fixed order: their lines (L03 apart, on the wall), minutes against the cap line's cap, the reserve and the last water", () => {
+test("Today's cards, one per physical line (#1336), in their fixed order: their lines (L03 apart, on the wall), minutes against the cap line's cap, the reserve and the last water", () => {
   const from = status("schedules-paused");
   const zones = zoneSummaries(from, plannedToday(agenda("schedules-paused"), from.lines, TODAY, NOW));
   expect(zones.map((zone) => [zone.zone, zone.lines.map((item) => item.line_id), zone.master?.line_id ?? null, zone.mister?.line_id ?? null])).toEqual([
-    ["wall", ["L01", "L02"], "L03", null], ["center", ["L04", "L05", "L06"], null, "L04"], ["south", ["L07", "L08"], null, "L07"],
+    ["wall", ["L01", "L02"], "L03", null], ["center", ["L05", "L06"], null, null], ["center_mister", ["L04"], null, "L04"], ["south", ["L07", "L08"], null, "L07"],
     ["west", ["L09", "L10"], null, "L09"], ["fog", ["L11"], null, null],
   ]);
-  const [wall, center, , , fog] = zones;
+  expect(zones.map((zone) => zone.unwired)).toEqual([[], [], ["fertilized"], [], [], []]);
+  const [wall, drips, center, , , fog] = zones;
+  expect([drips.minutes, drips.capLine, drips.reserve]).toEqual([0, "L05", null]);
   expect([wall.minutes, wall.cap, wall.capLine, wall.reserve, wall.planned]).toEqual([0, 60, "L01", null, 0]);
   expect([center.minutes, center.cap, center.capLine, center.reserve]).toEqual([14, 120, "L04", 60]);
   expect(center.lastAt).toBe(line(from, "L04").last_water?.at);
   expect([fog.cap, fog.minutes]).toEqual([null, 6]);
-  expect(ZONE_KIND_WORDS.center).toBe("mister and drips");
-  expect([lineZone({ line_id: "L03", zone: "supply" }), lineZone({ line_id: "L11", zone: "house" }), lineZone({ line_id: "L07", zone: "south" })]).toEqual(["wall", "fog", "south"]);
+  expect(ZONE_KIND_WORDS.center_mister).toBe("clean");
+  expect([lineZone({ line_id: "L03", zone: "supply" }), lineZone({ line_id: "L11", zone: "house" }), lineZone({ line_id: "L07", zone: "south" }), lineZone({ line_id: "L04", zone: "center", kind: "mister" })])
+    .toEqual(["wall", "fog", "south", "center_mister"]);
   // A zone the API has no minutes for is unknown, never 0.
   expect(zoneSummaries({ ...from, today: { date: TODAY, zones: { wall: null } }, lines: from.lines.map((item) => ({ ...item, today: { minutes: null } })) }, null)[0].minutes).toBeNull();
 });
@@ -310,10 +313,10 @@ test("Today's zones in their fixed order: their lines (L03 apart, on the wall), 
 test("a zone with a running line says so, and today's minutes never sit beside an older last water (#1308 visual QA 5)", () => {
   // L01 has run for 12 min (run now) while its last filed water is Friday's.
   const running = status("l01-running");
-  const [wall, center] = zoneSummaries(running, null);
+  const [wall, , center] = zoneSummaries(running, null);
   expect([wall.running, wall.minutes, center.running]).toEqual([true, 12, false]);
   expect(wall.lastAt).toBe(line(running, "L01").last_water?.at);
-  expect(zoneSummaries(status(), null).map((zone) => zone.running)).toEqual([false, false, false, false, false]);
+  expect(zoneSummaries(status(), null).map((zone) => zone.running)).toEqual([false, false, false, false, false, false]);
   // A running master valve counts for the wall, since it opens only with a feed.
   const master = { ...running, lines: running.lines.map((item) => (item.line_id === "L01" ? { ...item, state: { ...item.state, code: "idle" } } : item.line_id === "L03" ? { ...item, state: { ...item.state, code: "running" } } : item)) };
   expect(zoneSummaries(master as IrrigationStatus, null)[0].running).toBe(true);

@@ -51,6 +51,7 @@ a.wat-site-term{display:inline-flex;align-items:center;min-height:24px;text-unde
 .wat-zone-minutes{font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
 .wat-zone-last{white-space:nowrap}
 .wat-zone-running{font-weight:600;color:var(--ink)}
+.wat-unwired{margin:0;padding:var(--space-2) 0;border-top:1px solid var(--line)}
 .wat-zone .mister-zone{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-5);padding:var(--space-2) 0;border-bottom:1px solid var(--line)}
 .mister-switches{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-4)}
 .mister-flag{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-2)}
@@ -381,6 +382,7 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
   .wat-zone-today{justify-items:stretch}
   .wat-zone-today .sch-minutes-meter{grid-template-columns:minmax(0,1fr) auto}
   .wat-zone-last{white-space:normal}
+  .wat-zone-kind{white-space:normal}
   .wat-runs-table{display:none}
   .sch-key-button,.wat-select select{min-height:var(--tap)}
   a.wat-site-term{min-height:var(--tap)}

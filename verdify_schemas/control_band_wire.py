@@ -25,8 +25,10 @@ FIRMWARE_SOURCES = {
     # latches); VD-46 (#1161) reworks the mist path (per-zone VPD membership, the
     # rank arbiter, the shared fog force-off, the D-IRP-19 watchdog, no leak
     # lock). Solar/band expressions are unchanged. New captures bind this source;
-    # historical receipts stay frozen.
-    "firmware/greenhouse/controls.yaml": "aff87c49391b410deb9ed242bdc722cec69d9b0cc240882db264b15728dc2a56",
+    # historical receipts stay frozen. #1370 lets occupancy light the main
+    # lights at any hour and #1343 fogs a fog run-once through the manual fog
+    # path; #1385's night dry-out joins them. Solar/band expressions are unchanged.
+    "firmware/greenhouse/controls.yaml": "3c51b1904eb2862efe817f074a0052f1c54c1ec279f140481061eddde2ee3e21",
 }
 SERIES = ("temp_low", "temp_high", "temp_target", "vpd_low", "vpd_high", "vpd_target")
 ANCHORS = ("sr", "sm", "ss", "mid")

@@ -487,4 +487,64 @@ ENTRIES: dict[str, HelpEntry] = {
         lower="Drip runs give way to misting or fog sooner; drip runs take longer to finish.",
         refs=(f"{_IRR}::if (r.yield_accum_ms >= uint32_t(e.prog.climate_yield_min) * 60000u) {{",),
     ),
+    "sw_night_dryout_enabled": HelpEntry(
+        summary="Master switch for night dry-out: short vent pulses with drier outdoor air while heat1 holds warmth.",
+        effect=(
+            "At night, when VPD is below the band low edge (never below 0.74 kPa) and the outdoor dewpoint is "
+            "Night Dryout DP Margin below indoor, the controller opens the vent with the lead fan for a pulse, then "
+            "rests closed while the electric heater (heat1) reheats. The gas heater (heat2) never runs for this."
+        ),
+        raise_="On: humid nights are dried out with vent pulses and electric reheat; more heat1 energy at night.",
+        lower="Off: no night dry-out pulses; the house can stay humid overnight.",
+        caution="It stops for occupancy, a gas-heat latch, cold within 1 °F of the band low edge, and the nightly "
+        "energy cap (Night Dryout Cap).",
+        refs=(
+            'firmware/lib/greenhouse_logic.h::if (!sp.night_dryout_enabled) return "disabled";',
+            "firmware/lib/greenhouse_logic.h::NIGHT_DRYOUT_MIN_FLOOR_KPA",
+        ),
+    ),
+    "night_dryout_pulse_s": HelpEntry(
+        summary="How long each night dry-out pulse runs the vent and lead fan, in seconds.",
+        effect=(
+            "During a dry-out pulse the vent is open and the lead fan runs for this many seconds while the electric "
+            "heater (heat1) holds the temperature; a closed rest follows."
+        ),
+        raise_="Longer pulses exchange more air each time: faster drying, more heat lost and reheated.",
+        lower="Shorter pulses: gentler drying with smaller temperature dips.",
+        caution="Pulse plus rest is kept at least 15 min, so there are at most 4 pulses an hour.",
+        refs=("firmware/lib/greenhouse_types.h::sp.night_dryout_pulse_s = std::max<uint32_t>(60u",),
+    ),
+    "night_dryout_rest_s": HelpEntry(
+        summary="Closed rest after each night dry-out pulse while heat1 reheats, in seconds.",
+        effect=(
+            "After a pulse the vent stays closed for this many seconds while the electric heater (heat1) brings the "
+            "house back to its hold temperature; then the next pulse may start if every condition still holds."
+        ),
+        raise_="Fewer pulses an hour: slower drying, less reheat energy.",
+        lower="More pulses an hour, down to the 15 min pulse-plus-rest minimum: faster drying, more energy.",
+        caution="The controller lengthens the rest so pulse plus rest is at least 15 min.",
+        refs=("firmware/lib/greenhouse_types.h::sp.night_dryout_rest_s = 900u - sp.night_dryout_pulse_s;",),
+    ),
+    "night_dryout_dp_margin_f": HelpEntry(
+        summary="How much drier (by dewpoint) outdoor air must be than indoor before a dry-out pulse, in °F.",
+        effect=(
+            "A night dry-out pulse starts only with fresh weather data and an outdoor dewpoint at least this far "
+            "below the indoor dewpoint, so the exchange really removes moisture."
+        ),
+        raise_="Pulses only when outdoor air is clearly drier: fewer pulses, each more effective.",
+        lower="Pulses on smaller dewpoint gaps: more pulses, some of which dry the house less.",
+        refs=(
+            "firmware/lib/greenhouse_logic.h::in.outdoor_dewpoint_f <= (in.dew_point_f - sp.night_dryout_dp_margin_f)",
+        ),
+    ),
+    "night_dryout_kwh_cap": HelpEntry(
+        summary="Nightly limit on the electric reheat the dry-out may use, in kWh.",
+        effect=(
+            "The controller estimates heat1's reheat energy for dry-out pulses each night; once it reaches this cap, "
+            "no new pulse starts until the next night. 0 turns new pulses off."
+        ),
+        raise_="More dry-out pulses allowed per night: drier nights, more electricity.",
+        lower="Dry-out stops earlier in the night: less electricity, the house may stay humid.",
+        refs=("firmware/lib/greenhouse_logic.h::state.dryout_reheat_wh < sp.night_dryout_kwh_cap * 1000.0f",),
+    ),
 }

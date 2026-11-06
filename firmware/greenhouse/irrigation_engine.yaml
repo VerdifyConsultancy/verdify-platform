@@ -24,6 +24,7 @@
 #   irr_state       the run on each manifold, due runs waiting, mister faults, VPD sources, the
 #                   last push reject; published when it changes and before a relay opens
 #   irr_events      the newest 8 outcomes from the RTC ring, when the newest sequence changes
+#   irr_caps        fw=<fw_version> caps=<capability,...>: what this build takes, every 60 s
 #
 # Every wet relay (L01-L10, hardware.yaml) opens only with its bit in irr_grant_mask, which
 # only the engine writes (F5). leak_detected is not an engine input (Q-05, F14).
@@ -118,6 +119,17 @@ text_sensor:
     name: "Irr Events"
     icon: "mdi:water-check"
     update_interval: never
+
+  # What this build takes (verdify_irr::kIrrCaps) beside the version it runs, so the API
+  # refuses a fog run-once until the controller says it takes one (#1343 follow-up).
+  - platform: template
+    id: irr_caps
+    name: "Irr Caps"
+    icon: "mdi:chip"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return {std::string("fw=${fw_version} caps=") + verdify_irr::kIrrCaps};
 
 interval:
   # The engine tick (F1): every 5 s. The first run binds the relays, the text sensors,

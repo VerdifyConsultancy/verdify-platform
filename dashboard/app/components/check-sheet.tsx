@@ -4,7 +4,7 @@ import { checkedLabel } from "../lib/line-checks";
 import { lineDisplayName } from "../lib/lines";
 import type { IrrigationLine } from "../lib/operator-api";
 import { useRole } from "../lib/session";
-import { useCheckThenRun, useWaterDrawer, wetLines } from "../lib/water";
+import { boardLines, useCheckThenRun, useWaterDrawer } from "../lib/water";
 import { MANUAL_DEFAULT, errorFor, formError, useProgramWrite } from "../lib/writes";
 import { EditDrawer, FieldError, ManualToggle, Reason } from "./forms";
 import { useToast } from "./toast";
@@ -87,7 +87,8 @@ function CheckForm({ line, action, forRun, onClose }: { line: IrrigationLine; ac
 export function CheckSheet({ lines }: { lines: readonly IrrigationLine[] }) {
   const operator = useRole() === "operator";
   const { value, wanted, close } = useWaterDrawer("check");
-  const line = wetLines(lines).find((item) => item.line_id === value);
+  // Fog too (#1343 follow-up): enabling it before its first run-once asks its check like a wet line.
+  const line = boardLines(lines).find((item) => item.line_id === value);
   const action = operator && line ? checkAction(line, wanted) : null;
   if (!line || !action) return null;
   return <CheckForm key={`${line.line_id}-${action}`} line={line} action={action} forRun={wanted === "run"} onClose={close} />;
