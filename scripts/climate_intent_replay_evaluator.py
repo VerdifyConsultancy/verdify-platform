@@ -152,7 +152,7 @@ class ReplayClimateRow:
             vpd_low=vpd_low,
             vpd_high=vpd_high,
             safety_min=_float(row.get("sp_safety_min"), 40.0) or 40.0,
-            safety_max=_float(row.get("sp_safety_max"), 95.0) or 95.0,
+            safety_max=_float(row.get("sp_safety_max"), 100.0) or 100.0,
             vpd_min_safe=_float(row.get("sp_vpd_min_safe"), 0.35) or 0.35,
             vpd_max_safe=_float(row.get("sp_vpd_max_safe"), 2.8) or 2.8,
             fog_escalation_kpa=_float(row.get("sp_fog_escalation_kpa"), 0.25) or 0.25,

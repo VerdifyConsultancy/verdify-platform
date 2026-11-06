@@ -12,27 +12,28 @@ const program = (page: Page) => page.locator("[data-program]");
 const stopAll = (page: Page) => page.getByRole("button", { name: "Stop all water" });
 
 for (const viewport of [DESKTOP, PHONE]) {
-  test(`${viewport.width} px: Today puts every line in its zone, in order; L05 and L06 are reserved and L11 is climate only with no controls`, async ({ page, request }) => {
+  test(`${viewport.width} px: Today puts every line on its physical line's card (#1336), in order; L05 and L06 are reserved and L11 is climate only, run once`, async ({ page, request }) => {
     await page.setViewportSize(viewport);
     await useScreensClock(page, request, "schedules-paused");
     await load(page, "/water");
-    await expect(page.locator(".wat-zone")).toHaveCount(5);
+    await expect(page.locator(".wat-zone")).toHaveCount(6);
     const zones = await page.locator(".wat-zone").evaluateAll((cards) => cards.map((node) => node.getAttribute("data-zone")));
-    expect(zones).toEqual(["wall", "center", "south", "west", "fog"]);
+    expect(zones).toEqual(["wall", "center", "center_mister", "south", "west", "fog"]);
     const ids = await page.locator("article[data-line]").evaluateAll((rows) => rows.map((node) => node.getAttribute("data-line")));
-    expect(ids).toEqual(["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11"]);
+    expect(ids).toEqual(["L01", "L02", "L05", "L06", "L04", "L07", "L08", "L09", "L10", "L11"]);
+    await expect(page.locator('.wat-zone[data-zone="center_mister"] .wat-unwired')).toHaveText("Fertilized · not wired");
     await expect(page.getByRole("article", { name: "Wall drip", exact: true })).toHaveAttribute("data-state", "idle");
     await expect(page.locator('[data-limit="L01"]')).toContainText("0 / 60 min");
     await expect(row(page, "L01").locator(".wat-next")).toHaveText(/^next Wed 07:35 · 12\smin$/);
     await expect(row(page, "L02").locator(".line-subrow")).toContainText("Fertilizer valve");
     for (const id of ["L05", "L06"]) await expect(row(page, id).locator(".line-state")).toHaveText("Reserved · disabled");
     await expect(row(page, "L11")).toContainText("Climate only");
-    await expect(row(page, "L11").locator(":scope > .object-row-actions > button")).toHaveCount(0);
+    await expect(row(page, "L11").getByRole("button", { name: "Fog once… Fog" })).toBeVisible();
     await expectNoHorizontalScroll(page);
   });
 }
 
-test("1440 px: Site today sits beside the zones from 1200 px, sticky, with SAF-4 linking to its Settings drawer", async ({ page, request }) => {
+test("1440 px: Site today sits beside the zones from 1200 px, sticky, with the daily mist & fog limit linking to its Settings drawer", async ({ page, request }) => {
   await page.setViewportSize(DESKTOP);
   await useScreensClock(page, request, "in-band");
   await load(page, "/water");
@@ -42,7 +43,7 @@ test("1440 px: Site today sits beside the zones from 1200 px, sticky, with SAF-4
   expect(siteBox!.x).toBeGreaterThan(zonesBox!.x + zonesBox!.width - 1);
   await expect(site.locator('[data-limit="saf4"] a')).toHaveAttribute("href", "/settings?edit=mister_daily_volume_max_gal");
   await expect(site.locator('[data-limit="saf4"]')).toContainText("21 / 360 gal");
-  await expect(site.locator('[data-limit="occupancy"]')).toHaveText("Nobody seen: misters may run (last person 05:10)");
+  await expect(site.locator('[data-limit="occupancy"]')).toHaveText("Occupancy: nobody detected, misting allowed (last person 05:10)");
   await page.evaluate(() => window.scrollTo(0, 900));
   await expect(site).toBeInViewport();
 });
@@ -54,7 +55,7 @@ test("at 390 × 844 with L01 running the status line names it, linked to its row
   const short = page.locator(".page-status-short");
   await expect(short.getByRole("link", { name: "Wall drip running" })).toHaveAttribute("href", "#line-L01");
   await expect(page.locator('.wat-zone[data-zone="wall"] .wat-zone-last')).toHaveText("running now");
-  // Site today holds SAF-4, the flow and occupancy on a phone; the soft budget and fallback misting are not the news.
+  // Site today holds the daily mist & fog limit, the flow and occupancy on a phone; the soft target and backup misting are not the news.
   await expect(page.locator('.wat-site [data-limit="budget"]')).toBeHidden();
   await expect(page.locator('.wat-site [data-limit="fallback"]')).toBeHidden();
   await expect(page.locator('.wat-site [data-limit="saf4"]')).toBeVisible();
@@ -70,26 +71,26 @@ test("1440 px: the zone heads' cap meters are one width, their minutes and right
     const box = node.getBoundingClientRect();
     return { width: Math.round(box.width), right: Math.round(box.right), top: Math.round(box.top), bottom: Math.round(box.bottom) };
   }));
-  // Wall, Center, South and West have a cap; Fog has minutes alone.
+  // Each physical line has a cap (#1336); Fog has minutes alone.
   const meters = await boxes(".wat-zone-head .meter");
-  expect(meters).toHaveLength(4);
+  expect(meters).toHaveLength(5);
   expect(new Set(meters.map((box) => box.width)).size, JSON.stringify(meters)).toBe(1);
   expect(new Set(meters.map((box) => box.right)).size, JSON.stringify(meters)).toBe(1);
   const minutes = await boxes(".wat-zone-head .meter-amount, .wat-zone-head .wat-zone-minutes");
   expect(new Set(minutes.map((box) => box.right)).size, JSON.stringify(minutes)).toBe(1);
   // The second line sits under the minutes on every zone, on one line.
   const [heads, lasts] = await Promise.all([boxes(".wat-zone-head .wat-zone-today > :first-child"), boxes(".wat-zone-head .wat-zone-last")]);
-  expect(lasts).toHaveLength(5);
+  expect(lasts).toHaveLength(6);
   lasts.forEach((last, index) => expect(last.top, `zone ${index}`).toBeGreaterThanOrEqual(heads[index].bottom));
   expect(new Set(lasts.map((box) => box.bottom - box.top)).size, JSON.stringify(lasts)).toBe(1);
 });
 
-test("only a running line's Stop is filled red; every other non-fog line has a quiet one that still stops it", async ({ page, request }) => {
+test("only a running line's Stop is filled red; every other line, fog included (#1343 follow-up), has a quiet one that still stops it", async ({ page, request }) => {
   await useScreensClock(page, request, "l01-running");
   await load(page, "/water");
   await expect(page.locator("article[data-line] .btn-stop")).toHaveCount(1);
   await expect(row(page, "L01").locator(".btn-stop")).toHaveText(/^Stop/);
-  await expect(page.locator("article[data-line] .btn-stop-quiet")).toHaveCount(8);
+  await expect(page.locator("article[data-line] .btn-stop-quiet")).toHaveCount(9);
   await expect(page.locator(".page-status")).toContainText("Wall drip running (run now)");
   await row(page, "L04").getByRole("button", { name: /^Stop/ }).click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);

@@ -9,7 +9,7 @@ test("six sections at every width, in this order, each defaulting to its first v
   expect(SECTIONS.map((section) => section.to)).toEqual(["/", "/water", "/crops", "/graphs", "/activity", "/settings"]);
   for (const section of SECTIONS) expect(section.views[0].path, section.id).toBe(section.to);
   expect(SECTIONS.map((section) => section.views.map((view) => view.tab))).toEqual([
-    ["Now"], ["Today", "Schedules", "History"], ["Map", "History"], ["Climate", "Zones", "Statistics"], ["Alerts", "Log"], ["Settings", "Plan", "Equipment"],
+    ["Now"], ["Today", "Schedules", "History"], ["Map", "History"], ["Climate", "Zones", "Lighting", "Statistics"], ["Alerts", "Log"], ["Settings", "Band", "Plan", "Equipment"],
   ]);
 });
 
@@ -23,10 +23,12 @@ test("§2.1's h1 and document title for every view; a title that names its secti
     ["crops-history", "Crop history", "Crop history · Crops · Verdify dashboard"],
     ["graphs-climate", "Climate", "Climate · Graphs · Verdify dashboard"],
     ["graphs-zones", "Zones", "Zones · Graphs · Verdify dashboard"],
+    ["graphs-lighting", "Lighting", "Lighting · Graphs · Verdify dashboard"],
     ["graphs-statistics", "Statistics", "Statistics · Graphs · Verdify dashboard"],
     ["activity-alerts", "Alerts", "Alerts · Activity · Verdify dashboard"],
     ["activity-log", "Activity log", "Activity log · Verdify dashboard"],
     ["control-settings", "Settings", "Settings · Control · Verdify dashboard"],
+    ["control-band", "Band", "Band · Control · Verdify dashboard"],
     ["control-plan", "Plan", "Plan · Control · Verdify dashboard"],
     ["control-equipment", "Equipment", "Equipment · Control · Verdify dashboard"],
   ];
@@ -43,8 +45,9 @@ test("a section owns every path under its views; the longest view path wins; not
   const owned: [string, string | null, ViewId | null][] = [
     ["/", "now", "now"], ["/water", "water", "water-today"], ["/water/", "water", "water-today"], ["/water/schedules", "water", "water-schedules"],
     ["/water/history", "water", "water-history"], ["/crops", "crops", "crops-map"], ["/crops/history", "crops", "crops-history"], ["/graphs", "graphs", "graphs-climate"], ["/graphs/zones", "graphs", "graphs-zones"],
+    ["/graphs/lighting", "graphs", "graphs-lighting"],
     ["/graphs/statistics", "graphs", "graphs-statistics"], ["/graphs/scorecard", "graphs", "graphs-climate"], ["/activity", "activity", "activity-alerts"],
-    ["/activity/log", "activity", "activity-log"], ["/settings", "control", "control-settings"], ["/plan", "control", "control-plan"],
+    ["/activity/log", "activity", "activity-log"], ["/settings", "control", "control-settings"], ["/plan", "control", "control-plan"], ["/band", "control", "control-band"],
     ["/equipment", "control", "control-equipment"], ["/more", null, null], ["/plants", null, null], ["/auth/login", null, null], ["/waterfall", null, null],
   ];
   for (const [path, section, view] of owned) {

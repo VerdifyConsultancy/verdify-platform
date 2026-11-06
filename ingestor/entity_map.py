@@ -323,6 +323,9 @@ STATE_MAP: dict[str, str] = {
     "irr_program_id": "irr_program_id",
     "irr_state": "irr_state",
     "irr_events": "irr_events",
+    # What the running build takes, beside its version (#1343 follow-up): the API offers a fog run-once only while
+    # this names fog_run for the firmware_version the controller reports.
+    "irr_caps": "irr_caps",
 }
 
 # ──────────────────────────────────────────────────────────────

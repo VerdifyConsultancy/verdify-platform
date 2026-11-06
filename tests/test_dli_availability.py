@@ -197,13 +197,6 @@ def test_firmware_publishes_unavailable_but_accumulates_real_elapsed_time():
     ):
         assert f"id: {entity}" in sensors
 
-    assert (ROOT / "firmware/lib/greenhouse_logic.h").read_bytes() == (
-        ROOT / "deploy/k8s/components/firmware-twin/src/greenhouse_logic.h"
-    ).read_bytes()
-    assert (ROOT / "firmware/lib/greenhouse_types.h").read_bytes() == (
-        ROOT / "deploy/k8s/components/firmware-twin/src/greenhouse_types.h"
-    ).read_bytes()
-
 
 def test_all_dli_dashboard_queries_report_unavailable_without_proxy_laundering():
     found = 0

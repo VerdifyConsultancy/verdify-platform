@@ -2240,6 +2240,64 @@ TEST(s9_validate_enforces_safety_gt_thigh_plus_dc2) {
     PASS();
 }
 
+// Jason 2026-11-05 (#1333): 40/100 °F are the hard guardrails. Defaults and
+// invalid-value fallbacks use them, and the band is clamped inside them — a band
+// edge never moves a rail.
+TEST(guardrails_default_and_fallback_to_40_100) {
+    Setpoints sp = default_setpoints();
+    ASSERT_TRUE(std::fabs((sp.safety_min) - (40.0f)) < 1e-4f);
+    ASSERT_TRUE(std::fabs((sp.safety_max) - (100.0f)) < 1e-4f);
+    validate_setpoints(sp);
+    ASSERT_TRUE(std::fabs((sp.safety_min) - (40.0f)) < 1e-4f);   // default band (45..95) leaves rails alone
+    ASSERT_TRUE(std::fabs((sp.safety_max) - (100.0f)) < 1e-4f);
+    ASSERT_TRUE(std::fabs((sp.temp_low) - (45.0f)) < 1e-4f);
+    ASSERT_TRUE(std::fabs((sp.temp_high) - (95.0f)) < 1e-4f);
+
+    const float bad_min[] = {NAN, 10.0f, 75.0f};
+    for (float v : bad_min) {
+        Setpoints b = default_setpoints();
+        b.safety_min = v;
+        validate_setpoints(b);
+        ASSERT_TRUE(std::fabs((b.safety_min) - (40.0f)) < 1e-4f);
+        ASSERT_TRUE(std::fabs((b.safety_max) - (100.0f)) < 1e-4f);
+    }
+    const float bad_max[] = {NAN, 60.0f, 130.0f};
+    for (float v : bad_max) {
+        Setpoints b = default_setpoints();
+        b.safety_max = v;
+        validate_setpoints(b);
+        ASSERT_TRUE(std::fabs((b.safety_min) - (40.0f)) < 1e-4f);
+        ASSERT_TRUE(std::fabs((b.safety_max) - (100.0f)) < 1e-4f);
+    }
+    Setpoints inv = default_setpoints();   // inverted / too narrow for a band
+    inv.safety_min = 70.0f; inv.safety_max = 75.0f;
+    validate_setpoints(inv);
+    ASSERT_TRUE(std::fabs((inv.safety_min) - (40.0f)) < 1e-4f);
+    ASSERT_TRUE(std::fabs((inv.safety_max) - (100.0f)) < 1e-4f);
+    PASS();
+}
+
+TEST(guardrails_band_stays_inside_rails) {
+    Setpoints sp = default_setpoints();
+    sp.temp_low = 38.0f;     // below the 40 °F rail
+    sp.temp_high = 99.0f;    // within 5 °F of the 100 °F rail
+    validate_setpoints(sp);
+    ASSERT_TRUE(std::fabs((sp.safety_min) - (40.0f)) < 1e-4f);   // rails did not move
+    ASSERT_TRUE(std::fabs((sp.safety_max) - (100.0f)) < 1e-4f);
+    ASSERT_TRUE(std::fabs((sp.temp_low) - (45.0f)) < 1e-4f);
+    ASSERT_TRUE(std::fabs((sp.temp_high) - (95.0f)) < 1e-4f);
+    ASSERT_TRUE(sp.temp_high + sp.dC2 < sp.safety_max);
+    ASSERT_TRUE(sp.temp_target >= sp.temp_low && sp.temp_target <= sp.temp_high);
+
+    Setpoints narrow = default_setpoints();   // a narrow band at the cold rail keeps its order
+    narrow.temp_low = 41.0f; narrow.temp_high = 47.0f;
+    validate_setpoints(narrow);
+    ASSERT_TRUE(narrow.temp_low >= narrow.safety_min + 5.0f - 1e-6f);
+    ASSERT_TRUE(narrow.temp_low < narrow.temp_high);
+    ASSERT_TRUE(narrow.temp_high <= narrow.safety_max - 5.0f + 1e-6f);
+    PASS();
+}
+
 // (Firmware-v2: the fog clock window — and its zero-width validate clamp — is
 // DELETED. Fog gating is now solar-phase based; see
 // fog_gated_by_solar_phase_not_clock_window. The former
@@ -4388,6 +4446,52 @@ TEST(lighting_solar_cutoff_holds_only_until_exact_min_on_boundary) {
     PASS();
 }
 
+// #1370: the MAIN light (occupancy_any_hour) turns on for occupancy at any hour,
+// outside the photoperiod window too; the lux gate still applies.
+TEST(lighting_main_occupancy_lights_outside_the_window) {
+    auto sp = lighting_setpoints();
+    sp.occupancy_any_hour = true;
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(lighting_inputs(0.0f, 23, true, 0.0f), sp, s, false, 120000);
+    ASSERT_FALSE(d.in_window);
+    ASSERT_TRUE(d.occupancy_task_light_demand);
+    ASSERT_FALSE(d.plant_supplement_demand);
+    ASSERT_TRUE(d.want_on);
+    ASSERT_TRUE(std::string(d.reason) == "occupancy_lux_low");
+    // 03:00 too: no hour is excluded.
+    auto s2 = initial_lighting_state();
+    auto early = evaluate_lighting(lighting_inputs(0.0f, 3, true, 0.0f), sp, s2, false, 120000);
+    ASSERT_TRUE(early.want_on);
+    PASS();
+}
+
+TEST(lighting_main_without_occupancy_stays_dark_outside_the_window) {
+    auto sp = lighting_setpoints();
+    sp.occupancy_any_hour = true;
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(lighting_inputs(0.0f, 23, false, 0.0f), sp, s, false, 120000);
+    ASSERT_FALSE(d.want_on);
+    ASSERT_TRUE(std::string(d.reason) == "outside_window");
+    // Occupied but no fresh exterior lux: nothing lights, as inside the window.
+    auto s2 = initial_lighting_state();
+    auto stale = evaluate_lighting(lighting_inputs(0.0f, 23, true, 0.0f, false), sp, s2, false, 120000);
+    ASSERT_FALSE(stale.want_on);
+    PASS();
+}
+
+// #1370: the GROW circuit (occupancy_any_hour false) keeps the photoperiod: an
+// occupied night leaves it dark, so the Vandas keep their dark period.
+TEST(lighting_grow_occupancy_stays_inside_the_window) {
+    auto sp = lighting_setpoints();
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(lighting_inputs(0.0f, 23, true, 0.0f), sp, s, false, 120000);
+    ASSERT_FALSE(d.occupancy_task_light_demand);
+    ASSERT_FALSE(d.want_on);
+    ASSERT_TRUE(std::string(d.reason) == "outside_window");
+    ASSERT_TRUE(invariants::check_23_min_dark(sp, silent_report));
+    PASS();
+}
+
 TEST(lighting_solar_cutoff_does_not_reverse_external_manual_off) {
     auto sp = lighting_setpoints();
     sp.solar_phasing = true;
@@ -5574,6 +5678,241 @@ TEST(sntp_completed_invalid_rtc_does_not_acquire_and_zero_millis_is_valid) {
     ASSERT_TRUE(record_sntp_acquisition(true, true, 0, acquired, last_sync_ms));
     ASSERT_TRUE(acquired);
     ASSERT_EQ(last_sync_ms, 0u);
+    PASS();
+}
+
+
+// ── #1365 night dry-out: vent + reheat pulses with confirmed-drier outdoor air ──
+// Corridor 60-75 °F: band_heat_target_f = 63.75, heat line 64.75 (+1 °F
+// hysteresis). Night VPD band 0.74-1.20 (today's served floor), target 66 °F.
+static Setpoints dryout_setpoints() {
+    auto sp = band_first_setpoints();
+    sp.temp_low = 60.0f;
+    sp.temp_high = 75.0f;
+    sp.temp_target = 66.0f;
+    sp.heat_hysteresis = 1.0f;
+    sp.vpd_low = 0.74f;
+    sp.vpd_high = 1.2f;
+    sp.vpd_target = 0.85f;
+    sp.vpd_hysteresis = 0.1f;
+    sp.vpd_min_safe = 0.3f;
+    sp.night_dryout_enabled = true;
+    sp.night_dryout_pulse_s = 120u;
+    sp.night_dryout_rest_s = 780u;
+    sp.night_dryout_dp_margin_f = 3.0f;
+    sp.night_dryout_kwh_cap = 10.0f;
+    return sp;
+}
+
+// A humid November night: 65 °F, 72% RH (DP ~56 °F, VPD ~0.60), outdoor 45 °F
+// with DP 38 °F and fresh Tempest data.
+static SensorInputs dryout_night_inputs(float temp_f = 65.0f) {
+    auto in = make_inputs(temp_f, 0.60f, 72.0f);
+    set_solar_day(in, 1);                 // solar night
+    in.dew_point_f = 56.0f;
+    in.outdoor_temp_f = 45.0f;
+    in.outdoor_rh_pct = 52.0f;
+    in.outdoor_dewpoint_f = 38.0f;
+    in.outdoor_data_age_s = 30;
+    return in;
+}
+
+TEST(night_dryout_pulses_vent_and_lead_fan_with_heat1_only) {
+    auto sp = dryout_setpoints();
+    auto in = dryout_night_inputs();
+    auto s = initial_state();
+    const Mode mode = determine_mode(in, sp, s, 1000);
+    ASSERT_EQ(mode, DEHUM_VENT);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "night_dryout_pulse");
+    ASSERT_EQ(s.dryout_phase, (uint8_t)DRYOUT_PULSE);
+    ASSERT_EQ(s.dryout_pulse_count, 1u);
+    // Hold = the start temperature (65), above the 64.75 heat line, below target.
+    ASSERT_TRUE(std::fabs(s.dryout_hold_temp_f - 65.0f) < 1e-4f);
+    const auto out = resolve_equipment(mode, in, sp, s, true);
+    ASSERT_TRUE(out.vent);
+    ASSERT_TRUE(out.fan1);
+    ASSERT_FALSE(out.fan2);
+    ASSERT_FALSE(out.heat2);
+    ASSERT_FALSE(out.fog);
+    // The pulse cools the house: heat1 holds the start temperature.
+    in.temp_f = 64.2f;
+    const Mode m2 = determine_mode(in, sp, s, 1000);
+    ASSERT_EQ(m2, DEHUM_VENT);
+    const auto out2 = resolve_equipment(m2, in, sp, s, false);
+    ASSERT_TRUE(out2.heat1);
+    ASSERT_FALSE(out2.heat2);
+    ASSERT_TRUE(out2.fan2);
+    ASSERT_FALSE(out2.fan1);
+    PASS();
+}
+
+TEST(night_dryout_floor_never_drops_below_074) {
+    auto sp = dryout_setpoints();
+    sp.vpd_low = 0.50f;                   // a lower served band does not lower the dry-out floor
+    ASSERT_TRUE(std::fabs(night_dryout_floor_kpa(sp) - 0.74f) < 1e-6f);
+    auto in = dryout_night_inputs();
+    in.vpd_kpa = 0.70f;                   // above the served 0.50, below the 0.74 dry-out floor
+    auto s = initial_state();
+    ASSERT_EQ(determine_mode(in, sp, s, 1000), DEHUM_VENT);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "night_dryout_pulse");
+    sp.vpd_low = 0.90f;                   // a higher served band raises it
+    ASSERT_TRUE(std::fabs(night_dryout_floor_kpa(sp) - 0.90f) < 1e-6f);
+    PASS();
+}
+
+TEST(night_dryout_gates_block_a_pulse) {
+    const auto sp0 = dryout_setpoints();
+    const auto in0 = dryout_night_inputs();
+    struct Case { const char* why; Setpoints sp; SensorInputs in; ControlState st; };
+    std::vector<Case> cases;
+    auto base = initial_state();
+    { auto sp = sp0; sp.night_dryout_enabled = false; cases.push_back({"disabled", sp, in0, base}); }
+    { auto in = in0; set_solar_day(in, 12); cases.push_back({"day", sp0, in, base}); }
+    { auto in = in0; in.vpd_kpa = 0.80f; cases.push_back({"dry_enough", sp0, in, base}); }
+    { auto in = in0; in.outdoor_dewpoint_f = 54.0f; cases.push_back({"outdoor_not_drier", sp0, in, base}); }
+    { auto in = in0; in.outdoor_data_age_s = 700; cases.push_back({"outdoor_not_drier", sp0, in, base}); }
+    { auto in = in0; in.outdoor_dewpoint_f = NAN; cases.push_back({"outdoor_not_drier", sp0, in, base}); }
+    { auto in = in0; in.temp_f = 60.8f; cases.push_back({"too_cold", sp0, in, base}); }
+    { auto sp = sp0; sp.occupancy_inhibit = true; auto in = in0; in.occupied = true;
+      cases.push_back({"occupied", sp, in, base}); }
+    { auto st = base; st.dryout_reheat_wh = 10000.0f; cases.push_back({"kwh_cap", sp0, in0, st}); }
+    { auto in = in0; in.sensor_degraded = true; cases.push_back({"vpd_untrusted", sp0, in, base}); }
+    for (auto& c : cases) {
+        const char* why = night_dryout_block_reason(c.in, c.sp, c.st, IDLE);
+        if (std::string(why) != c.why) {
+            printf("  FAIL: case %s got '%s'\n", c.why, why);
+            tests_failed++;
+            return;
+        }
+        auto st = c.st;
+        const Mode m = determine_mode(c.in, c.sp, st, 1000);
+        ASSERT_TRUE(st.dryout_phase != (uint8_t)DRYOUT_PULSE);
+        ASSERT_TRUE(std::string(st.last_mode_reason) != "night_dryout_pulse");
+        const auto out = resolve_equipment(m, c.in, c.sp, st, true);
+        ASSERT_FALSE(out.heat2);
+    }
+    // Something more important running: the dry-out yields.
+    ASSERT_TRUE(std::string(night_dryout_block_reason(in0, sp0, base, VENTILATE)) == "busy");
+    ASSERT_TRUE(std::string(night_dryout_block_reason(in0, sp0, base, IDLE)).empty());
+    PASS();
+}
+
+TEST(night_dryout_rest_reheats_with_vent_closed_then_pulses_again) {
+    auto sp = dryout_setpoints();
+    // Isolate the dry-out reheat from the ADR-0004 closed-vent heat_dehum nudge,
+    // which also runs heat1 above the heat line when econ_block is false.
+    sp.econ_block = true;
+    auto in = dryout_night_inputs();
+    auto s = initial_state();
+    ASSERT_EQ(determine_mode(in, sp, s, 1000), DEHUM_VENT);
+    // Pulse runs 120 s, cooling the house 1.5 °F.
+    in.temp_f = 63.5f;
+    Mode m = IDLE;
+    for (int i = 0; i < 119; ++i) m = determine_mode(in, sp, s, 1000);
+    ASSERT_EQ(m, DEHUM_VENT);
+    m = determine_mode(in, sp, s, 1000);   // 120 s elapsed -> REST
+    ASSERT_EQ(s.dryout_phase, (uint8_t)DRYOUT_REST);
+    ASSERT_TRUE(m != DEHUM_VENT);
+    auto out = resolve_equipment(m, in, sp, s, true);
+    ASSERT_FALSE(out.vent);
+    ASSERT_FALSE(out.fan1);
+    ASSERT_TRUE(out.heat1);                 // reheat back to the 65 °F hold
+    ASSERT_FALSE(out.heat2);
+    // Recovered above the heat line but below the hold: still the dry-out's reheat.
+    in.temp_f = 64.9f;
+    m = determine_mode(in, sp, s, 1000);
+    ASSERT_EQ(m, IDLE);
+    ASSERT_TRUE(s.dryout_reheat_active);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "night_dryout_reheat");
+    ASSERT_TRUE(resolve_equipment(m, in, sp, s, true).heat1);
+    // Back at the hold: heat1 stops.
+    in.temp_f = 65.1f;
+    m = determine_mode(in, sp, s, 1000);
+    ASSERT_FALSE(s.dryout_reheat_active);
+    ASSERT_FALSE(resolve_equipment(m, in, sp, s, true).heat1);
+    // Rest ends after 780 s; VPD still under the floor -> next pulse.
+    for (int i = 0; i < 780 && s.dryout_phase == (uint8_t)DRYOUT_REST; ++i) m = determine_mode(in, sp, s, 1000);
+    ASSERT_EQ(m, DEHUM_VENT);
+    ASSERT_EQ(s.dryout_pulse_count, 2u);
+    PASS();
+}
+
+TEST(night_dryout_runs_at_most_four_pulses_an_hour) {
+    auto sp = dryout_setpoints();
+    sp.night_dryout_pulse_s = 60u;
+    sp.night_dryout_rest_s = 300u;          // validate raises it to 840 s
+    validate_setpoints(sp);
+    ASSERT_EQ(sp.night_dryout_rest_s, 840u);
+    auto in = dryout_night_inputs();
+    auto s = initial_state();
+    int starts = 0;
+    Mode prev = IDLE;
+    for (int t = 0; t < 3600; ++t) {
+        const Mode m = determine_mode(in, sp, s, 1000);
+        if (m == DEHUM_VENT && prev != DEHUM_VENT) ++starts;
+        prev = m;
+    }
+    ASSERT_EQ(starts, 4);
+    PASS();
+}
+
+TEST(night_dryout_aborts_at_temp_low_and_never_runs_heat2) {
+    auto sp = dryout_setpoints();
+    auto in = dryout_night_inputs();
+    auto s = initial_state();
+    ASSERT_EQ(determine_mode(in, sp, s, 1000), DEHUM_VENT);
+    in.temp_f = 59.8f;                       // below temp_low: heat2 latches, pulse aborts
+    const Mode m = determine_mode(in, sp, s, 1000);
+    ASSERT_TRUE(m != DEHUM_VENT);
+    ASSERT_EQ(s.dryout_phase, (uint8_t)DRYOUT_REST);
+    ASSERT_FALSE(s.dryout_reheat_active);   // heat2 latched: temperature control owns the heaters
+    const auto out = resolve_equipment(m, in, sp, s, true);
+    ASSERT_FALSE(out.vent);
+    // Every dry-out pulse row: heat2 stays off whatever the temperature.
+    auto s2 = initial_state();
+    auto in2 = dryout_night_inputs();
+    for (float t = 65.0f; t > 60.2f; t -= 0.2f) {
+        in2.temp_f = t;
+        const Mode m2 = determine_mode(in2, sp, s2, 1000);
+        if (m2 == DEHUM_VENT) ASSERT_FALSE(resolve_equipment(m2, in2, sp, s2, true).heat2);
+    }
+    PASS();
+}
+
+TEST(night_dryout_kwh_cap_stops_new_pulses_and_resets_by_day) {
+    auto sp = dryout_setpoints();
+    sp.night_dryout_kwh_cap = 0.05f;        // 50 Wh: ~125 s of heat1
+    auto in = dryout_night_inputs(64.0f);   // below the 64.75 hold: heat1 runs through the pulse
+    auto s = initial_state();
+    int pulses_seen = 0;
+    Mode prev = IDLE;
+    for (int t = 0; t < 3 * 3600; ++t) {
+        const Mode m = determine_mode(in, sp, s, 1000);
+        if (m == DEHUM_VENT && prev != DEHUM_VENT) ++pulses_seen;
+        prev = m;
+    }
+    ASSERT_TRUE(s.dryout_reheat_wh >= 50.0f);
+    ASSERT_EQ(pulses_seen, 1);
+    ASSERT_TRUE(std::string(s.dryout_reason) == "kwh_cap");
+    set_solar_day(in, 12);
+    determine_mode(in, sp, s, 1000);
+    ASSERT_EQ(s.dryout_reheat_wh, 0.0f);
+    ASSERT_EQ(s.dryout_pulse_count, 0u);
+    PASS();
+}
+
+TEST(night_dryout_hold_never_above_temp_target) {
+    auto sp = dryout_setpoints();
+    ASSERT_TRUE(std::fabs(night_dryout_hold_temp_f(70.0f, sp) - 66.0f) < 1e-4f);   // capped at target
+    ASSERT_TRUE(std::fabs(night_dryout_hold_temp_f(62.0f, sp) - 64.75f) < 1e-4f);  // floored at heat line
+    // ENV-2 stays: with the dry-out off, a humid night still gets no heat-chasing.
+    sp.night_dryout_enabled = false;
+    sp.econ_block = true;
+    auto in = dryout_night_inputs(66.0f);
+    auto s = initial_state();
+    const Mode m = determine_mode(in, sp, s, 1000);
+    ASSERT_EQ(m, IDLE);
+    ASSERT_FALSE(resolve_equipment(m, in, sp, s, true).heat1);
     PASS();
 }
 

@@ -41,11 +41,11 @@ a decision as written, v2 keeps what the decision does and drops any procedure i
 | D-IRP-05 | When both are due, VPD and scheduled pulses alternate at pulse boundaries. A VPD emergency outranks schedules and pauses clean drips. Each mister zone keeps a VPD reserve that schedules cannot use | Accepted (the 60 % clause folds into the reserve) |
 | D-IRP-06 | Caps: SAF-4 360 gal/day; mister duty center 120, south 45, west 45 min/day; VPD reserves 60/15/15 min; drips wall 60, center 30 min/day; same-line spacing 30 min; scheduled-mist RH ceiling 90 %; climate yield 15 min | Accepted (settle and the 30-day revisit dropped) |
 | D-IRP-07 | A line is enabled once a person has checked it physically and ticked Checked on the dashboard, which records who and when (a note is optional). Agents cannot record the check | Accepted, simplified by the charter |
-| D-IRP-08 | Turning Schedule on for a mister with no check needs the same check (for L04: the nozzles over the Vandas and the walkway). Center VPD membership never expires | Accepted, simplified |
+| D-IRP-08 | Turning Schedule on for a mister with no check needs the same check (for a mister: the nozzles, coverage and spray area). Center VPD membership never expires | Accepted, simplified |
 | D-IRP-09 | A scheduled pulse is skipped on a measured RH ≥ 90 % or a measured dew-margin breach. No vent gate. Schedules never bypass the soft budget. Solar-night windows are allowed | Accepted (owner acknowledgement and #410 evidence dropped) |
 | D-IRP-10 | Mist and fog hold only while Frigate confirms occupancy, through the Home Assistant occupancy sensor, the only input (Round 2b A; §7). Unknown or stale occupancy means mist runs | Changed |
 | D-IRP-11 | "Mist now" is a one-off scheduled window on a mister with `schedule_member` on, under the same rails. There is no manual mister origin | Superseded 2026-11-05 (#1343): any wired, enabled line runs once, a mister with Schedule on or off, under the same rails |
-| D-IRP-12 | Seed a `vanda-degraded` set: three center slots marked `degraded_only`. They run only while VPD sensing is degraded, in daylight, while the dew margin can still be computed, and never in SENSOR_FAULT | Accepted (observe mode dropped) |
+| D-IRP-12 | Seed a sensor-fault backup set (labelled `vanda-degraded` until #1345's rename): three center slots marked `degraded_only`. They run only while VPD sensing is degraded, in daylight, while the dew margin can still be computed, and never in SENSOR_FAULT | Accepted (observe mode dropped) |
 | D-IRP-13 | A zone whose own probe is out uses its peer probes, then the house average | Changed |
 | D-IRP-14 | Every physically connected line is schedulable, fertilizer included. Fertilizer schedules run even with sensors offline. The firmware hard-block on L06, L08 and L10 becomes a per-line enable | Changed |
 | D-IRP-15 | One clean flush follows a cancelled fertilizer run, except when disabling the line cancelled it | Accepted |
@@ -110,7 +110,7 @@ a decision as written, v2 keeps what the decision does and drops any procedure i
 | **L01** Drip • Wall | `wall_drips`, pcf_out_1.4 (`drip_wall`) | wall | Not run since 2026-05-29; only the unused HA RUN CLEAN button starts it | Schedules plus run-now. The first line live: run-now through the bridge before the engine (§6.5), the first schedule after it. Seeded enabled, with no check | Record the check (flush the stagnant line, look at the emitters); add the first schedule |
 | **L02** Drip • Wall (Fert.) | `wall_drips_fertilized`, pcf_out_2.0 (`drip_wall_fert`) | wall | Weekly feed, never commissioned | Fertilizer schedules with prewet and flush on L01. The feed comes from the tank through the injector that L03 opens | Check the line and record it; enable; add a feed schedule |
 | **L03** Valve • Fert. Master | `fertilizer_master_valve`, pcf_out_2.1 (`fert_master_valve`) | supply | Opens only in the FEED stage | Opens the injector line from the fertilizer tank with any fertilizer run; never scheduled on its own | Checked together with L02 |
-| **L04** Mister • Center | `center_mister`, pcf_out_1.5 (`mister_center`) | center (hanging Vandas) | VPD only, implicitly; can never be scheduled | `vpd_member` on, as today; optional schedules; the `vanda-degraded` set | Check nozzles over the Vandas and the walkway; set `schedule_member`; add schedules |
+| **L04** Mister • Center | `center_mister`, pcf_out_1.5 (`mister_center`) | center | VPD only, implicitly; can never be scheduled | `vpd_member` on, as today; optional schedules; the `vanda-degraded` set | Check nozzles, coverage and the spray area; set `schedule_member`; add schedules |
 | **L05** Drip • Center | `center_drips`, pcf_out_1.7 (`drip_center`) | center | Physically unconnected; forced off at boot | Reserved (Round 2b E): stays in the model and can hold schedules; the Water screen shows it reserved and disabled until a person enables it | None now |
 | **L06** Drip • Center (Fert.) | `center_drips_fertilized`, pcf_out_1.6 (`drip_center_fert`) | center | Off unconditionally | Reserved, as L05. Per-line enable; prewet and flush on L05 | None now |
 | **L07** Mister • South Wall | `south_wall_mister`, pcf_out_1.3 (`mister_south`) | south | Idle since 2026-07-10 | VPD member, schedule member, or both | Drain the stagnant line before the first mist; check the nozzles; set the flags. Probe repair #751 is not needed (peer fallback) |
@@ -217,17 +217,29 @@ Examples (illustrative):
 | on | off | VPD control only. This is L04 today and the seed |
 | off | on | Mist schedules and run-now only |
 | on | on | Both. They share one set of caps |
-| off | off | No mist; the board says "This zone will not mist automatically". L07 and L09 seed here |
+| off | off | No mist; the mister's row says "This mister will not mist automatically". L07 and L09 seed here |
 
 - **More than one VPD member.** The existing rank arbiter picks the zone (`arbitrate_wet_zone`,
   `firmware/lib/greenhouse_solar.h:236-251`, center at rank 1). The legacy stress score halves center
-  (`mister_center_penalty` 0.5) and would move water away from the Vandas.
+  (`mister_center_penalty` 0.5) and would move water away from the center zone.
 - **Iris's VPD cadence tunables are unchanged.** Iris keeps `mister_engage_kpa`, `mister_pulse_on_s`,
   `mister_pulse_gap_s`, `mister_min_off_s` and `mister_vpd_weight`.
 - **VPD source per zone (D-IRP-13).** A zone uses its own probe when the reading is fresh and finite.
   Otherwise it uses the mean of the fresh peer probes (south, west, east), and failing that the house
   average. Center always uses the house average, because it has no probe. `irr_state` publishes the
   source each zone is using.
+- **Membership needs the line on.** The firmware's effective membership is `vpd_member` and the line
+  enabled (`irr_vpd_zone_allowed`), so the API refuses `vpd_member: true` on a line that is and stays
+  disabled (`line_disabled`, #1344), and Water shows VPD control on a disabled mister as words, never a
+  switch reading a false ON.
+- **What an operator reads (#1344).** VPD control sits on the mister's own row (Center, South or West
+  mister), never on a drip, a feed or a card head, with an info tip in these words: when the greenhouse
+  needs humidity and the climate safety checks pass, the controller may send short mist pulses to this
+  mister. Only one mister runs at a time: Center goes first, unless another member's own zone is drier
+  than its target, or Center is capped or faulted. Pulses count toward the mister's daily cap and the
+  daily mist & fog limit (SAF-4); misting waits while someone is inside, a vent is open or a drip runs.
+  South and West read their own probe, then the peer probes, then the house average. The tip fills in
+  the cap and the limit from API-IRR-01.
 
 ### 4.5 Shared caps (all existing or accepted in D-IRP-06)
 

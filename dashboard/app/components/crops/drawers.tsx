@@ -142,7 +142,7 @@ export function PlantDrawer({ positions, cellCount, template, onClose, onSaved }
   return <EditDrawer open onClose={onClose} title="Plant" heading={positions.join(", ")} onSave={() => void save()} saving={write.sending} saveLabel="Save planting"
     error={formError(write.error, ["crop", "variety", "count", "count_per_cell", "planted_at", "notes"])}
     status={<PlacesPreview q={positions.join(", ")} at={dayOrNow(day, now)} />}>
-    <TextField label="Crop" value={crop} onChange={setCrop} list={names} required error={error("crop")} hint="A catalog crop (Lettuce, Basil) or any name" />
+    <TextField label="Crop" value={crop} onChange={setCrop} list={names} required error={error("crop")} hint="A catalog crop or any name" />
     <TextField label="Variety (optional)" value={variety} onChange={setVariety} list={varieties} error={error("variety")} />
     {cellCount > 0 && <NumberField label="Plants per cell" value={perCell} onChange={setPerCell} min={0} max={1000} step={1} error={error("count_per_cell")} />}
     <NumberField label="Plants in all (optional)" value={shownTotal} onChange={setTotal} min={0} max={100000} step={1} error={error("count")}

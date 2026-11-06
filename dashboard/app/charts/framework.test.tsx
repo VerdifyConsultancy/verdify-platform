@@ -9,7 +9,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import minutesFixture from "./fixtures/minutes.json";
 import { DailyWaterUse, buildWaterUse, waterUseCsv } from "./daily-water-use";
 import { EquipmentLanes, buildLanes, lanesCsv } from "./equipment-lanes";
-import { activityEvent, alertEvents, clusterEvents, eventsIn, runEvent, type ChartEvent } from "./events";
+import { actionKind, activityEvent, alertEvents, clusterEvents, eventsIn, kindsOf, runEvent, touches, type ChartEvent } from "./events";
 import { FakeResizeObserver, MockPlot, created, load, media, setTokens } from "./fixtures/uplot-mock";
 import { bandWord, columnMean, compareLine, envelopeBars, excursions, inBandShare } from "./layers";
 import type { BandRun } from "./marks";
@@ -38,31 +38,39 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); document.documentElement.rem
 // ---------------------------------------------------------------------------------------------------- events
 const entry = (id: number, source: string, name: string, ts: string): ActivityEntry => ({ id, ts, actor: { source, name }, action: "setting.write", target: "mister_engage_kpa" } as ActivityEntry);
 
-test("events: a write's source, mark and colour by who wrote it; AI for Iris and agents only; each links to its Activity entry", () => {
+test("events: a write's source, icon and colour by who wrote it, and what it touched; AI for Iris and agents only; each links to its Activity entry", () => {
   const events = [
     activityEvent(entry(1, "dashboard", "jason", "2026-11-02T13:47:00Z"), NOW, "Set VPD Mister Engage"),
     activityEvent(entry(2, "iris", "iris", "2026-11-02T14:02:00Z"), NOW, "Plan iris-0702"),
     activityEvent(entry(3, "agent:steward", "steward", "2026-11-02T15:00:00Z"), NOW),
     activityEvent(entry(4, "system", "forecast-engine", "2026-11-01T13:30:00Z"), NOW),
-  ].map((event) => event && [event.source, event.mark, event.token, event.label, event.href]);
+  ].map((event) => event && [event.source, event.glyph, event.token, event.label, event.href]);
   expect(events).toEqual([
-    ["people", "diamond", "forest", "06:47 · jason · Set VPD Mister Engage", "/activity/log?target=mister_engage_kpa#activity-1"],
-    ["iris", "diamond", "ink", "07:02 · iris AI · Plan iris-0702", "/activity/log?target=mister_engage_kpa#activity-2"],
-    ["agents", "diamond", "eq-fan2", "08:00 · steward AI · setting.write mister_engage_kpa", "/activity/log?target=mister_engage_kpa#activity-3"],
-    ["system", "diamond-hollow", "muted", "Nov 1, 06:30 · forecast-engine · setting.write mister_engage_kpa", "/activity/log?target=mister_engage_kpa#activity-4"],
+    ["people", "✎", "forest", "06:47 · jason · Set VPD Mister Engage", "/activity/log?target=mister_engage_kpa#activity-1"],
+    ["iris", "✎", "ink", "07:02 · iris AI · Plan iris-0702", "/activity/log?target=mister_engage_kpa#activity-2"],
+    ["agents", "✎", "eq-fan2", "08:00 · steward AI · setting.write mister_engage_kpa", "/activity/log?target=mister_engage_kpa#activity-3"],
+    ["system", "✎", "muted", "Nov 1, 06:30 · forecast-engine · setting.write mister_engage_kpa", "/activity/log?target=mister_engage_kpa#activity-4"],
   ]);
+  expect(activityEvent(entry(1, "dashboard", "jason", "2026-11-02T13:47:00Z"), NOW)?.touch).toEqual({ kind: "setting", param: "mister_engage_kpa" });
   expect(activityEvent(entry(5, "dashboard", "jason", "not a time"), NOW)).toBeNull();
+  // A plan carries its trigger; a light write touches its lane for its minutes; an unknown family is "other".
+  const plan = activityEvent({ ...entry(6, "iris", "iris", "2026-11-02T13:00:00Z"), action: "plan.write", target: "iris-1", detail: { trigger: "SUNSET" } } as ActivityEntry, NOW);
+  expect([plan?.kind, plan?.glyph, plan?.badge, plan?.touch]).toEqual(["plan", "◆", "↓", undefined]);
+  const at = Date.parse("2026-11-02T13:00:00Z") / 1000;
+  const light = activityEvent({ ...entry(7, "dashboard", "jason", "2026-11-02T13:00:00Z"), action: "light.on", target: "grow_light_main", detail: { minutes: 30 } } as ActivityEntry, NOW);
+  expect([light?.kind, light?.touch]).toEqual(["light", { kind: "lane", equipment: ["grow_light_main"], from: at, to: at + 1800 }]);
+  expect(actionKind("controller.restart")).toBe("other");
   const alert = { id: 7, alert_type: "relay_stuck", severity: "critical", first_seen_at: "2026-11-02T13:02:00Z", resolved_at: "2026-11-02T14:00:00Z" } as Alert;
-  expect(alertEvents(alert, NOW, "Relay stuck").map((event) => [event.mark, event.token, event.label, event.href])).toEqual([
-    ["triangle", "fault", "06:02 · critical · Relay stuck", "/activity?alert=7"], ["triangle-hollow", "fault", "07:00 · resolved · Relay stuck", "/activity?alert=7"],
+  expect(alertEvents(alert, NOW, "Relay stuck").map((event) => [event.glyph, event.token, event.label, event.href])).toEqual([
+    ["▲", "fault", "06:02 · critical · Relay stuck", "/activity?alert=7"], ["△", "fault", "07:00 · resolved · Relay stuck", "/activity?alert=7"],
   ]);
   const run = { run_id: "r1", line_id: "L01", cause: "schedule", started_at: "2026-11-02T14:31:00Z", open_s: 720, outcome: "ok" } as Run;
-  expect(runEvent(run, NOW)).toMatchObject({ mark: "bar", token: "cause-schedule", source: "runs", href: "/water/history?line=L01" });
+  expect(runEvent(run, NOW)).toMatchObject({ kind: "water", glyph: "▮", token: "cause-schedule", source: "runs", href: "/water/history?line=L01", touch: { kind: "lane", from: Date.parse("2026-11-02T14:31:00Z") / 1000 } });
   expect(runEvent(run, NOW)?.label).toMatch(/^07:31 · Wall drip · .+ · 12 min · ok$/);
 });
 
 test("events: only the window's and the sources shown, in time order; marks closer than 8 px join into one with a count", () => {
-  const at = (minutes: number, source: ChartEvent["source"] = "people"): ChartEvent => ({ id: `e${minutes}`, at: 1000 + minutes * 60, source, mark: "diamond", token: "forest", label: `${minutes}` });
+  const at = (minutes: number, source: ChartEvent["source"] = "people"): ChartEvent => ({ id: `e${minutes}`, at: 1000 + minutes * 60, source, kind: source === "alerts" ? "alert" : "setting", glyph: "✎", token: "forest", label: `${minutes}` });
   const list = [at(30), at(0), at(31), at(600, "alerts"), at(2000)];
   expect(eventsIn(list, 1000, 1000 + 24 * 3600).map((event) => event.id)).toEqual(["e0", "e30", "e31", "e600"]);
   expect(eventsIn(list, 1000, 1000 + 24 * 3600, ["alerts"]).map((event) => event.id)).toEqual(["e600"]);
@@ -70,8 +78,14 @@ test("events: only the window's and the sources shown, in time order; marks clos
   const clusters = clusterEvents(list, 1000, 1000 + 24 * 3600, 1440);
   expect(clusters.map((cluster) => cluster.events.map((event) => event.id))).toEqual([["e0"], ["e30", "e31"], ["e600"]]);
   expect(clusters[1].pos).toBeCloseTo((30 / 1440) * 100, 6);
-  // Before layout (no width) every event keeps its own mark.
+  // Before layout (no width) every event keeps its own mark; a kind turned off in the key leaves the rail.
   expect(clusterEvents(list, 1000, 1000 + 24 * 3600, 0)).toHaveLength(4);
+  expect(clusterEvents(list, 1000, 1000 + 24 * 3600, 1440, 8, new Set(["alert"]))).toHaveLength(2);
+  expect(kindsOf(list)).toEqual(["setting", "alert"]);
+  // An alert touches its span on every panel; a lane touch only its lanes.
+  const alertSpan: ChartEvent = { ...list[3], touch: { kind: "span", from: 100, to: 200 } };
+  const laneSpan: ChartEvent = { ...list[0], touch: { kind: "lane", equipment: ["fog"], from: 100, to: 200 } };
+  expect([touches(alertSpan, 150), touches(alertSpan, 250), touches(laneSpan, 150), touches(laneSpan, 150, ["fog"]), touches(laneSpan, 150, ["fan1"])]).toEqual([true, false, false, true, false]);
 });
 
 // ---------------------------------------------------------------------------------------------------- layers

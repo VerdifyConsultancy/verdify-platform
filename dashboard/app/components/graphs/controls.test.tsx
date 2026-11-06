@@ -99,12 +99,12 @@ test("the chips: a setting chip opens its drawer on Settings and × takes it off
   expect(screen.queryByRole("list", { name: "Settings drawn as steps" })).toBeNull();
 });
 
-test("Preset: each a link that sets the preset and takes the picked metrics off; a group with nothing reads none yet", () => {
+test("Preset: each a link that sets the preset and takes the picked metrics off", () => {
   mount("/graphs?range=7d&m=climate.flow_gpm");
   expect(text(document.querySelector(".gr-menu > summary"))).toBe("Preset Climate");
   expect(chips("Presets").map((link) => [text(link), link.getAttribute("href"), link.getAttribute("aria-current")])).toEqual([
     ["Climate", "/graphs?range=7d", "true"], ["Water and soil", "/graphs?range=7d&preset=water-soil", null],
-    ["Light · none yet", "/graphs?range=7d&preset=light", null], ["Controller", "/graphs?range=7d&preset=controller", null],
+    ["Light", "/graphs?range=7d&preset=light", null], ["Controller", "/graphs?range=7d&preset=controller", null],
   ]);
   fireEvent.click(screen.getByRole("link", { name: "Water and soil" }));
   expect(where()).toBe("/graphs?range=7d&preset=water-soil");

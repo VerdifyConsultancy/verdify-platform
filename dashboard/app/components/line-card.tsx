@@ -101,6 +101,8 @@ export type LineCardProps = {
   scheduleLabels?: ReadonlyMap<number, string>;
   /** The today strip and "next 16:00 · 10 min" (redesign §5.2). */
   strip?: ReactNode;
+  /** A mister's own VPD control and Schedule (#1344), above its strip. */
+  controls?: ReactNode;
   /** Only the first row of a zone card carries the hour ticks. */
   className?: string;
 };
@@ -111,9 +113,10 @@ export type LineCardProps = {
  * running, Clear fault on a latched mister, Resume while paused), the line's own Stop whenever it can matter (D-UX-06:
  * filled only while the relay is on or unknown, a quiet outline otherwise, never disabled by the writes flag), and ⋯ with
  * the enable switch and its check sheet, Options…, Pause until…, "Activity for Wall drip ›", "Runs of Wall drip ›" and Graphs. Fog
- * (L11) is climate only: no Stop and no write control. Viewers get the same row with the menu's links alone.
+ * (L11) is a climate device: no sync pill and no Options, but it runs once ("Fog once…", #1343 follow-up), with its own
+ * Stop, and the enable switch it needs first (the controller runs no disabled line); no pause. Viewers get the same row with the menu's links alone.
  */
-export function LineCard({ line, master = null, engine, program, today, scheduleLabels, strip, className }: LineCardProps) {
+export function LineCard({ line, master = null, engine, program, today, scheduleLabels, strip, controls, className }: LineCardProps) {
   const apiDown = useApiDown();
   const now = useNow();
   const fog = line.kind === "fog";
@@ -134,7 +137,7 @@ export function LineCard({ line, master = null, engine, program, today, schedule
   const meta = [syncWords, pauseNote, code === "idle" && engine ? last.meta : null].filter(Boolean);
   const offer = runOffer(line, engine);
   const filled = running || code === "unknown";
-  const primary = fog ? null : running ? null : latched ? <ClearFaultButton line={line} engine={engine} /> : paused ? <ResumeLine line={line} /> : offer === "run" || offer === "mist" || offer === "enable" ? <RunControl line={line} engine={engine} /> : null;
+  const primary = running ? null : latched ? <ClearFaultButton line={line} engine={engine} /> : paused && !fog ? <ResumeLine line={line} /> : offer === "run" || offer === "mist" || offer === "enable" ? <RunControl line={line} engine={engine} /> : null;
   const tone: RowTone | undefined = running ? "running" : latched ? "fault" : engine && line.fault === "backing_off" ? "warn" : undefined;
   const token = running ? (line.state.cause === "vpd" ? "eq-mister" : line.state.cause === "feed" ? "eq-fert" : line.state.cause === "run_now" ? "eq-master" : "eq-water") : undefined;
   const graphs = line.last_water && validTime(line.last_water.at) ? runGraphUrl({ started_at: line.last_water.at, ended_at: null, open_s: line.last_water.open_s }) : "/graphs";
@@ -147,6 +150,7 @@ export function LineCard({ line, master = null, engine, program, today, schedule
       {offer === "arrives" && <p className="state-note" data-arrives="run">{RUN_ARRIVES_TEXT}</p>}
       {!engine && line.kind === "mister" && <ClearFaultButton line={line} engine={engine} />}
     </OperatorOnly>}
+    {fog && engine && <OperatorOnly><div className="wat-menu-switch" data-menu-keep=""><LineEnable line={line} /></div></OperatorOnly>}
     <Link to={`/activity/log?target=${encodeURIComponent(id)}`}>Activity for {title}<span aria-hidden="true"> ›</span></Link>
     <Link to={`/water/history?line=${encodeURIComponent(id)}`}>Runs of {title}<span aria-hidden="true"> ›</span></Link>
     <Link to={graphs}>Graphs <span className="screen-reader">around {title}'s last run</span><span aria-hidden="true"> ›</span></Link>
@@ -154,13 +158,16 @@ export function LineCard({ line, master = null, engine, program, today, schedule
       ? <>Checked by {line.check.checked_by} <LocalTime at={line.check.checked_at} date />{line.check.note && <>: {line.check.note}</>}</>
       : "No check recorded"}</p>}
   </Menu>;
-  return <ObjectRow className={cls("line-card", "wat-line", className)} data={{ "data-line": id, "data-state": code }} id={`line-${id}`}
+  // A disabled line is one quiet row (#1349): its state, its faded strip, nothing else to read.
+  const off = !fog && !running && (code === "disabled" || line.enabled === false);
+  return <ObjectRow headingLevel={4} className={cls("line-card", "wat-line", off && "is-off", className)} data={{ "data-line": id, "data-state": code }} id={`line-${id}`}
     title={title} tag={fog ? <span className="tag">Climate only</span> : <ChemistryBadge chemistry={lineChemistry(line.kind)} />} pill={pill}
     state={<span className={cls("line-state", apiDown && "is-neutral")}>{pauseIsState ? pausedWords : <LineStateText line={line} engine={engine} today={today} scheduleLabels={scheduleLabels} />}</span>}
     meta={meta.length ? meta.join(" · ") : undefined}
     primary={primary}
-    stop={fog ? undefined : <StopButton lineId={id} filled={filled} />}
+    stop={fog && !engine ? undefined : <StopButton lineId={id} filled={filled} />}
     menu={menu} tone={tone} token={token}>
+    {controls}
     {strip}
     {master && <div className="line-subrow" data-line={master.line_id}>
       <p><span className="glyph glyph-branch" aria-hidden="true" /><strong>{lineDisplayName(master)}</strong>: {MASTER_TEXT} · <LineStateText line={master} engine={engine} today={today} /></p>

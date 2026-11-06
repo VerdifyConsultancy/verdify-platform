@@ -6,11 +6,11 @@ import { formatValue } from "../lib/format";
 import { usePhone } from "../lib/narrow";
 import { csvFilename, windowCsv } from "./csv";
 import { CsvLink, DataTable } from "./data-table";
-import { clusterEvents, eventsIn, type ChartEvent, type EventCluster } from "./events";
+import { EVENT_GLYPHS, EVENT_KIND_WORDS, TRIGGER_BADGES, clusterEvents, eventsIn, kindsOf, touches, type ChartEvent, type EventCluster, type EventKind } from "./events";
 import { bandWord, compareLine, inBandShare, type CompareLine } from "./layers";
 import { ChartKey, type KeyItem } from "./legend";
 import { FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandNotes, edgeOf, forecastAt, lastAtOrBefore, type ForecastInput, type StepSegment } from "./marks";
-import { InStack } from "./stack-context";
+import { InStack, StackLink, type LitLane, type StackLinkValue } from "./stack-context";
 import { gapCount } from "./summary";
 import { clockTime, localDay } from "./time-axis";
 import { cursorX } from "./tooltip";
@@ -76,6 +76,10 @@ export type ChartStackProps = {
   events?: readonly ChartEvent[] | null;
   /** The equipment lanes (`EquipmentLanes` on this sync key), in their disclosure under the panels. */
   lanes?: ReactNode;
+  /** The lanes' disclosure's name: "Equipment" by default, "Lights" on Graphs → Lighting. */
+  lanesName?: string;
+  /** Spans shaded through every panel, with their words in the page's notes (Lighting's photoperiod windows). */
+  shades?: readonly XRange[];
   /** The foot's words: the resolution line, a note. */
   foot?: ReactNode;
   /** Names the CSV file. */
@@ -187,7 +191,7 @@ export type PanelKeyItem = KeyItem & { readonly title: string };
  * steps, by kind, at the value in force now (the plan's next value ahead of now). A value outside the panel's y range
  * says "above the chart ↑" or "below the chart ↓" instead of stretching the axis.
  */
-export function panelKey(model: TimeSeriesModel, yRange: readonly [number, number] | null): PanelKeyItem[] {
+export function panelKey(model: TimeSeriesModel, yRange: readonly [number, number] | null, lit: ReadonlySet<string> = new Set()): PanelKeyItem[] {
   const items: PanelKeyItem[] = [];
   if (model.runs.length) items.push({ key: "band", label: "Band", token: "--c-band-edge", kind: "band", title: bandNotes(model.runs, model.now).join("; ") });
   for (const group of model.stepGroups) {
@@ -198,7 +202,7 @@ export function panelKey(model: TimeSeriesModel, yRange: readonly [number, numbe
     const where = edge === "above" ? " · above the chart ↑" : edge === "below" ? " · below the chart ↓" : "";
     const kind = step.kind === "device" ? "line" : "dashed";
     const token = step.kind === "device" ? "--c-setpoint" : step.kind === "requested" ? "--c-requested" : step.kind === "superseded" ? "--c-bound" : model.seriesToken;
-    items.push({ key: `${step.param}:${step.kind}`, label: `${[step.setting, stepWords(step)].filter(Boolean).join(" · ")} ${value}${where}`, token, kind, title: step.detail });
+    items.push({ key: `${step.param}:${step.kind}`, label: `${[step.setting, stepWords(step)].filter(Boolean).join(" · ")} ${value}${where}`, token, kind, title: step.detail, ...(lit.has(step.param) ? { lit: true } : {}) });
   }
   return items;
 }
@@ -259,43 +263,116 @@ function useWidth(ref: MutableRefObject<HTMLElement | null>): number {
 /** "Fan 2 relay stuck, and 2 more": a cluster's name in words. */
 const clusterWords = (cluster: EventCluster) => (cluster.events.length === 1 ? cluster.events[0].label : `${cluster.events.length} events: ${cluster.events.map((event) => event.label).join("; ")}`);
 
+/** An event's icon with a plan's trigger, coloured by its token; the words beside it name it. */
+export function EventGlyph({ event }: { event: ChartEvent }) {
+  return <span className="rail-glyph" data-token={event.token} aria-hidden="true">{event.glyph}{event.badge && <span className="rail-badge">{event.badge}</span>}</span>;
+}
+
+/** What the pointer or focus is on: a mark or a list row, by its events and instant. */
+export type LitEvents = { readonly at: number; readonly events: readonly ChartEvent[] };
+
 /**
- * The event rail (redesign §7.1): a 20 px strip over the panels, one mark per event or cluster at its time. It is one tab
- * stop, and arrow keys move along its marks; a mark shows the hairline through every panel while it is hovered or
- * focused, and opens the list of its events, each linking to its Activity entry.
+ * The rail's key (#1355): one toggle per kind of mark in the window, its icon and its word ("✎ setting · ▲ alert ·
+ * ▮ water · ◆ plan"); a kind turned off leaves the rail and the list. A plan's trigger reads ↑ sunrise, ↓ sunset,
+ * ☾ midnight.
  */
-function EventRail({ events, view, onHover }: { events: readonly ChartEvent[]; view: XRange; onHover: (at: number | null) => void }) {
+function RailKey({ kinds, hidden, onToggle, plans }: { kinds: readonly EventKind[]; hidden: ReadonlySet<EventKind>; onToggle: (kind: EventKind) => void; plans: boolean }) {
+  if (!kinds.length) return null;
+  return <ul className="rail-key" aria-label="Event marks">
+    {kinds.map((kind) => <li key={kind}>
+      <button type="button" aria-pressed={!hidden.has(kind)} onClick={() => onToggle(kind)}>
+        <span className="rail-glyph" aria-hidden="true">{EVENT_GLYPHS[kind]}</span>{EVENT_KIND_WORDS[kind]}
+      </button>
+    </li>)}
+    {plans && <li className="rail-key-note">{Object.entries(TRIGGER_BADGES).map(([trigger, badge]) => `${badge} ${trigger.toLowerCase()}`).join(" · ")}</li>}
+  </ul>;
+}
+
+/**
+ * The event rail (redesign §7.1, #1355): a strip over the panels, one mark per event or stack at its time, each showing
+ * its kind's icon in its cause's colour, a stack also "+N". It is one tab stop, and arrow keys move along its marks. A
+ * mark hovered or focused lights what its events touched and shows their list, each linking to its Activity entry; a
+ * click pins the list and scrolls the events list under the stack to the event. A mark whose event touched what the
+ * pointer is on (an alert's span on a panel, a run's span on a lane) is lit too.
+ */
+function EventRail({ events, view, hidden, lit, reverse, onLit, onPick }: {
+  events: readonly ChartEvent[]; view: XRange; hidden: ReadonlySet<EventKind>; lit: LitEvents | null; reverse: ReadonlySet<string>;
+  onLit: (lit: LitEvents | null) => void; onPick: (event: ChartEvent) => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const width = useWidth(ref);
-  const clusters = clusterEvents(events, view.from, view.to, width);
-  const [open, setOpen] = useState<string | null>(null);
+  const clusters = clusterEvents(events, view.from, view.to, width, 8, hidden);
+  const [pinned, setPinned] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const open = pinned ?? hovered;
   const opened = clusters.find((cluster) => cluster.key === open) ?? null;
+  const litIds = new Set(lit?.events.map((event) => event.id) ?? []);
   const roving = rovingKeys();
+  const show = (cluster: EventCluster | null) => { setHovered(cluster?.key ?? null); onLit(cluster ? { at: cluster.at, events: cluster.events } : null); };
   // Escape closes the list, from the list or from its mark, and puts focus back on the mark that opened it.
   const close = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== "Escape" || open === null) return false;
     event.preventDefault();
     const mark = [...(ref.current?.querySelectorAll<HTMLElement>("[data-cluster]") ?? [])].find((element) => element.dataset.cluster === open);
-    setOpen(null);
+    // Focus first: the mark's focus shows its list, and the close below wins over it.
     mark?.focus();
+    setPinned(null);
+    setHovered(null);
     return true;
   };
-  return <div className="stack-rail-wrap">
-    <div ref={ref} className="stack-rail" role="group" aria-label={`Events on the charts, ${eventsIn(events, view.from, view.to).length}`} tabIndex={0} onKeyDown={(event) => { if (!close(event)) roving(event); }}>
+  // A pinned list closes on a pointer down anywhere else, so it never sits over a menu opened after it.
+  const wrap = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (pinned === null) return;
+    const away = (event: PointerEvent) => {
+      if (wrap.current && event.target instanceof Node && wrap.current.contains(event.target)) return;
+      setPinned(null);
+      setHovered(null);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [pinned]);
+  return <div ref={wrap} className="stack-rail-wrap" onMouseLeave={() => { setHovered(null); onLit(null); }}>
+    <div ref={ref} className="stack-rail" role="group" aria-label={`Events on the charts, ${eventsIn(events, view.from, view.to, undefined, hidden).length}`} tabIndex={0} onKeyDown={(event) => { if (!close(event)) roving(event); }}>
       {clusters.map((cluster) => {
         const first = cluster.events[0];
+        const isLit = cluster.events.some((event) => litIds.has(event.id) || reverse.has(event.id));
         return <button key={cluster.key} ref={cssVars({ "--at": cluster.pos })} type="button" tabIndex={-1} data-roving="" data-cluster={cluster.key} className="rail-mark"
-          data-mark={cluster.events.length > 1 ? "cluster" : first.mark} data-token={first.token} aria-label={clusterWords(cluster)} aria-expanded={open === cluster.key}
-          onClick={() => setOpen((current) => (current === cluster.key ? null : cluster.key))}
-          onMouseEnter={() => onHover(cluster.at)} onMouseLeave={() => onHover(null)} onFocus={() => onHover(cluster.at)} onBlur={() => onHover(null)}>
-          {cluster.events.length > 1 ? cluster.events.length : null}
+          data-kind={first.kind} data-lit={isLit ? "" : undefined} aria-label={clusterWords(cluster)} aria-expanded={open === cluster.key}
+          onClick={() => { setPinned((current) => (current === cluster.key ? null : cluster.key)); onPick(first); }}
+          onMouseEnter={() => show(cluster)} onFocus={() => show(cluster)} onBlur={() => { setHovered(null); onLit(null); }}>
+          <EventGlyph event={first} />{cluster.events.length > 1 && <span className="rail-more">+{cluster.events.length - 1}</span>}
         </button>;
       })}
     </div>
     {opened && <ul ref={cssVars({ "--at": opened.pos })} className="rail-list" aria-label="Events at this mark" onKeyDown={close}>
-      {opened.events.map((event) => <li key={event.id}>{event.href ? <a href={event.href}>{event.label}</a> : event.label}</li>)}
+      {opened.events.map((event) => <li key={event.id}><EventGlyph event={event} /> {event.href ? <a href={event.href}>{event.label}</a> : event.label}</li>)}
     </ul>}
   </div>;
+}
+
+/** The events list's row id, which a mark's click scrolls to. */
+const rowId = (event: ChartEvent) => `stack-event-${event.id}`;
+
+/**
+ * The events in the window under the stack (#1355), in time order with the rail's icons: always shown, compact, on a
+ * wide screen and a disclosure on a phone. Hovering or focusing a row lights its mark, its hairline and what it touched;
+ * a mark's click scrolls here. Activity stays the deep link.
+ */
+function EventList({ events, phone, lit, reverse, onLit }: { events: readonly ChartEvent[]; phone: boolean; lit: LitEvents | null; reverse: ReadonlySet<string>; onLit: (lit: LitEvents | null) => void }) {
+  const litIds = new Set(lit?.events.map((event) => event.id) ?? []);
+  const title = `Events in this window (${events.length})`;
+  const body = events.length
+    ? <ol className="stack-event-list">{events.map((event) => {
+      const enter = () => onLit({ at: event.at, events: [event] });
+      return <li key={event.id} id={rowId(event)} data-lit={litIds.has(event.id) || reverse.has(event.id) ? "" : undefined} onMouseEnter={enter} onMouseLeave={() => onLit(null)} onFocus={enter} onBlur={() => onLit(null)}>
+        <EventGlyph event={event} /> {event.href ? <a href={event.href}>{event.label}</a> : event.label}
+      </li>;
+    })}</ol>
+    : <p className="meta">None in this window.</p>;
+  return phone
+    ? <details className="stack-events"><summary>{title}</summary>{body}</details>
+    : <section className="stack-events stack-events-open" aria-label={title}><h3 className="stack-events-head">{title}</h3>{body}</section>;
 }
 
 export function ChartStack(props: ChartStackProps) {
@@ -321,7 +398,19 @@ export function ChartStack(props: ChartStackProps) {
   const [cursor, setCursor] = useState<number | null>(null);
   const [view, setView] = useState<XRange>({ from: xRange.from, to: xRange.to });
   useEffect(() => { setView({ from: xRange.from, to: xRange.to }); }, [xRange.from, xRange.to]);
-  const [hover, setHover] = useState<number | null>(null);
+  // The event rail (#1355): kinds turned off in its key, the mark or row under the pointer, and the lane span under it.
+  const [hiddenKinds, setHiddenKinds] = useState<ReadonlySet<EventKind>>(() => new Set());
+  const toggleKind = (kind: EventKind) => setHiddenKinds((previous) => {
+    const next = new Set(previous);
+    if (!next.delete(kind)) next.add(kind);
+    return next;
+  });
+  const [lit, setLit] = useState<LitEvents | null>(null);
+  const [laneHover, setLaneHover] = useState<{ equipment: readonly string[]; at: number } | null>(null);
+  const onLane = useCallback((equipment: readonly string[] | null, at: number | null) => setLaneHover((previous) => {
+    if (equipment === null || at === null) return previous === null ? previous : null;
+    return previous && previous.at === at && previous.equipment.join() === equipment.join() ? previous : { equipment, at };
+  }), []);
   const [zoomedPanels, setZoomedPanels] = useState<ReadonlySet<string>>(() => new Set());
   const zoomHandlers = useMemo(() => new Map(panels.map((panel) => [panel.id, (state: boolean) => setZoomedPanels((previous) => {
     if (previous.has(panel.id) === state) return previous;
@@ -349,18 +438,42 @@ export function ChartStack(props: ChartStackProps) {
   const phoneSeen = useRef(false);
   useEffect(() => { if (phone && !phoneSeen.current) { phoneSeen.current = true; setLanesOpen(false); } }, [phone]);
 
-  const shownEvents = props.events ? eventsIn(props.events, view.from, view.to) : [];
+  const shownEvents = props.events ? eventsIn(props.events, view.from, view.to, undefined, hiddenKinds) : [];
+  const kinds = props.events ? kindsOf(eventsIn(props.events, view.from, view.to)) : [];
+  // What the lit events touched: settings (their panel and key), spans and lane spans (shaded, the lanes outline them).
+  const touched = lit?.events.flatMap((event) => (event.touch ? [event.touch] : [])) ?? [];
+  const litParams = new Set(touched.flatMap((touch) => (touch.kind === "setting" ? [touch.param] : [])));
+  const litSpans = touched.flatMap((touch) => (touch.kind === "setting" ? [] : [{ from: touch.from, to: touch.to }]));
+  const litKey = touched.map((touch) => (touch.kind === "lane" ? `${touch.equipment.join("+")}@${touch.from}-${touch.to}` : "")).join(",");
+  const litLanes = useMemo((): LitLane[] => touched.flatMap((touch) => (touch.kind === "lane" ? touch.equipment.map((equipment) => ({ equipment, from: touch.from, to: touch.to })) : [])), [litKey]);
+  const link = useMemo((): StackLinkValue => ({ lit: litLanes, onLane }), [litLanes, onLane]);
+  // The reverse: marks whose event touched the lane span under the pointer, or the alert span under a panel's cursor.
+  const reverse = new Set(shownEvents.filter((event) => (laneHover ? touches(event, laneHover.at, laneHover.equipment) : cursor !== null && touches(event, cursor))).map((event) => event.id));
+  const pick = (event: ChartEvent) => {
+    const row = typeof document === "undefined" ? null : document.getElementById(rowId(event));
+    row?.scrollIntoView?.({ block: "nearest" });
+  };
+  const pct = (at: number) => ((at - view.from) / Math.max(1, view.to - view.from)) * 100;
   const multiDay = localDay(xRange.from) !== localDay(xRange.to - 1);
   const csvVersion = useMemo(() => ({ models, hidden }), [models, hidden]);
   const blocks = () => models.flatMap((model) => [csvBlock(model, hidden), ...forecastCsvBlocks(model.forecast, model.unit, hidden)]);
   const tables = models.flatMap((model, index) => (panels[index].series ? dataTables(model, hidden) : []));
   const zoomed = zoomedPanels.size > 0;
   return <section ref={stack} className="chart-stack" aria-label={props.label}>
-    {props.events && <EventRail events={props.events} view={view} onHover={setHover} />}
+    {props.events && <RailKey kinds={kinds} hidden={hiddenKinds} onToggle={toggleKind} plans={shownEvents.some((event) => event.badge)} />}
+    {props.events && <EventRail events={props.events} view={view} hidden={hiddenKinds} lit={lit} reverse={reverse} onLit={setLit} onPick={pick} />}
     <div ref={chip} className="stack-chip" hidden={cursor === null} aria-hidden="true">{cursor === null ? "" : clockTime(cursor, multiDay)}</div>
     <div className="stack-panels">
-      {hover !== null && hover >= view.from && hover <= view.to && <div className="stack-overlay" aria-hidden="true">
-        <span ref={cssVars({ "--at": ((hover - view.from) / Math.max(1, view.to - view.from)) * 100 })} className="stack-hairline" />
+      {props.shades && props.shades.length > 0 && <div className="stack-overlay stack-shades" aria-hidden="true">
+        {props.shades.map((shade) => (shade.to > view.from && shade.from < view.to
+          ? <span key={shade.from} ref={cssVars({ "--from": Math.max(0, pct(shade.from)), "--to": Math.min(100, pct(shade.to)) })} className="stack-shade" />
+          : null))}
+      </div>}
+      {lit !== null && lit.at >= view.from && lit.at <= view.to && <div className="stack-overlay" aria-hidden="true">
+        {litSpans.map((span, index) => (span.to > view.from && span.from < view.to
+          ? <span key={index} ref={cssVars({ "--from": Math.max(0, pct(span.from)), "--to": Math.min(100, pct(Math.max(span.to, span.from + 1))) })} className="stack-span" />
+          : null))}
+        <span ref={cssVars({ "--at": pct(lit.at) })} className="stack-hairline" />
       </div>}
       {panels.map((panel, index) => {
         const model = models[index];
@@ -369,12 +482,13 @@ export function ChartStack(props: ChartStackProps) {
           ...model.traces.map((trace) => ({ key: trace.key, label: trace.label, token: trace.token, shown: !hidden.has(trace.key), title: trace.label })),
           ...model.forecast.map((line) => ({ key: line.key, label: line.label, token: "--c-outdoor", shown: !hidden.has(line.key), title: `${line.label} · ${line.text}` })),
         ];
-        const key = panelKey(model, model.stepGroups.length ? valueRange(model, hidden, layers[index], view.from, view.to, traceExtent(model, hidden, view.from, view.to)) : null);
+        const key = panelKey(model, model.stepGroups.length ? valueRange(model, hidden, layers[index], view.from, view.to, traceExtent(model, hidden, view.from, view.to)) : null, litParams);
+        const panelLit = model.stepGroups.some((group) => litParams.has(group[0].param));
         const drawable = !(panel.series === null && panel.message) && (model.t.length > 0 || model.steps.length > 0 || model.runs.length > 0 || model.forecast.length > 0);
         // A panel whose read has not answered, or failed, states nothing about the window: its frame says why.
         const stats = panel.series === null ? "" : panelStats(model, compares[index]);
         const text = cursor === null || !drawable ? stats : panelReadout(model, hidden, compares[index], cursor);
-        return <div key={panel.id} id={panel.id} className={last ? "stack-panel stack-panel-last" : "stack-panel"} data-panel={panel.id}>
+        return <div key={panel.id} id={panel.id} className={last ? "stack-panel stack-panel-last" : "stack-panel"} data-panel={panel.id} data-lit={panelLit ? "" : undefined}>
           <div className="stack-head">
             <h3 className="stack-name">{panel.name} <span className="stack-unit">{panel.unit}</span></h3>
             {/* The statistics stay in the row's cell, unseen, while it reads the cursor, so the row keeps its height and the plots never move under a finger. */}
@@ -400,13 +514,10 @@ export function ChartStack(props: ChartStackProps) {
       })}
     </div>
     {props.lanes && <details className="stack-lanes" open={lanesOpen} onToggle={(event) => setLanesOpen(event.currentTarget.open)}>
-      <summary>Equipment</summary>
-      <InStack.Provider value={true}>{props.lanes}</InStack.Provider>
+      <summary>{props.lanesName ?? "Equipment"}</summary>
+      <InStack.Provider value={true}><StackLink.Provider value={link}>{props.lanes}</StackLink.Provider></InStack.Provider>
     </details>}
-    {props.events && <details className="stack-events">
-      <summary>Events in this window ({shownEvents.length})</summary>
-      {shownEvents.length ? <ul className="stack-event-list">{shownEvents.map((event) => <li key={event.id}>{event.href ? <a href={event.href}>{event.label}</a> : event.label}</li>)}</ul> : <p className="meta">None in this window.</p>}
-    </details>}
+    {props.events && <EventList events={shownEvents} phone={phone} lit={lit} reverse={reverse} onLit={setLit} />}
     <div className="stack-foot">
       {props.foot && <span className="stack-foot-words">{props.foot}</span>}
       {zoomed && <button type="button" onClick={() => resetZoom(syncKey, xRange)}>Reset zoom</button>}

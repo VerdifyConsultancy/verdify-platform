@@ -89,7 +89,7 @@ async def test_real_mcp_127_stateless_protocol_filters_exact_audience_inventorie
                 assert unauthenticated_list.status_code == 200
                 assert _protocol_payload(unauthenticated_list)["result"]["tools"] == []
 
-            expected_counts = {"iris": 34, "experiment": 8, "admin": 38, "observer": 0}
+            expected_counts = {"iris": 33, "experiment": 8, "admin": 48, "observer": 0}
             for request_id, (audience, token) in enumerate(tokens.items(), start=10):
                 auth_headers = {**common_headers, "authorization": f"Bearer {token}"}
                 initialized = await client.post("/mcp", headers=auth_headers, json=initialize)
@@ -107,6 +107,8 @@ async def test_real_mcp_127_stateless_protocol_filters_exact_audience_inventorie
                 assert len(names) == expected_counts[audience]
                 reads = {"irrigation_status", "irrigation_schedule", "irrigation_history"}
                 assert reads <= names if audience in ("iris", "admin") else not reads & names
+                band = {"band_profile", "band_profile_preview"}
+                assert band <= names if audience == "admin" else not band & names
 
             if mode == "enforce":
                 iris_query = await client.post(
@@ -430,8 +432,10 @@ async def test_real_mcp_irrigation_writes_are_typed_and_reach_the_services_as_th
                 properties = tools[name]["inputSchema"]["properties"]
                 assert not {"checked", "check_note", "actor", "source"} & set(properties)
             run_schema = tools["irrigation_run"]["inputSchema"]
-            assert run_schema["required"] == ["line_id"]
-            assert tuple(run_schema["properties"]["line_id"]["enum"]) == LINE_IDS
+            # #1336: line_id or circuit_id and variant name the run, so neither is required by the schema.
+            assert "required" not in run_schema
+            assert tuple(optional(run_schema["properties"]["line_id"], "type", "string")["enum"]) == LINE_IDS
+            assert optional(run_schema["properties"]["variant"], "type", "string")["enum"] == ["clean", "fertilized"]
             on_s = optional(run_schema["properties"]["on_s"])
             assert (on_s["minimum"], on_s["maximum"]) == (10, 90)
             schedule = tools["irrigation_schedule_set"]["inputSchema"]

@@ -259,6 +259,20 @@ struct Setpoints {
     // even though the cooled-mix candidate cannot. Enabled later by a logged
     // tunable push (decouples the OTA from the #411 night-temp decision).
     bool     dehum_vent_hold_enabled;
+    // #1365 night dry-out (Jason 2026-11-05: the house must dry out overnight,
+    // for the roots and the algae on the floor; energy for heating the colder
+    // outdoor air is accepted). At night, when VPD is below the dry-out floor
+    // (max(vpd_low, NIGHT_DRYOUT_MIN_FLOOR_KPA): never below today's 0.74 kPa)
+    // AND the outdoor dewpoint is at least night_dryout_dp_margin_f below the
+    // indoor dewpoint (outdoor air confirmed drier in absolute terms, fresh
+    // Tempest data), run a short vent + lead-fan pulse, then rest, with ELECTRIC
+    // heat1 holding the temperature. heat2 (gas) never runs for humidity. The
+    // nightly reheat estimate stops new pulses at night_dryout_kwh_cap.
+    bool     night_dryout_enabled;
+    uint32_t night_dryout_pulse_s;          // vent + lead-fan pulse length (s)
+    uint32_t night_dryout_rest_s;           // closed rest after each pulse (s); pulse+rest >= 900 s
+    float    night_dryout_dp_margin_f;      // outdoor DP must be this far below indoor DP (°F)
+    float    night_dryout_kwh_cap;          // nightly heat1 reheat estimate cap (kWh)
 };
 
 static constexpr uint32_t STATE_SENTINEL = 0xBEEF0042;
@@ -333,6 +347,15 @@ struct ControlState {
     // reads it to swap the center pulse ON/GAP for the denser dawn/midday
     // cadence. CENTER_BURST_NONE on safety/fault/blocked cycles.
     CenterBurst center_burst;
+    // #1365 night dry-out pulse machine. Managed by determine_mode; read by
+    // resolve_equipment (const). RAM only: a reboot starts a fresh night budget.
+    uint8_t  dryout_phase;            // NightDryoutPhase (greenhouse_logic.h)
+    uint32_t dryout_timer_ms;         // time in the current PULSE or REST phase
+    float    dryout_hold_temp_f;      // the temperature heat1 holds through PULSE + REST
+    bool     dryout_reheat_active;    // heat1 reheat wanted this cycle (the pulse's own reheat)
+    float    dryout_reheat_wh;        // tonight's heat1 reheat estimate (Wh)
+    uint32_t dryout_pulse_count;      // pulses started tonight
+    const char* dryout_reason;        // why the dry-out is (not) pulsing; telemetry/log only
 };
 
 struct RelayOutputs {
@@ -592,6 +615,13 @@ struct LightingSetpoints {
     // circuit no longer credits supplemental DLI or accrues qualified-light
     // minutes — the dark fixture can no longer "meet" the photoperiod on paper.
     bool out_of_service = false;
+    // #1370 (Jason, 2026-11-05: "Anytime the room is occupied regardless of time of
+    // day"): the occupancy task light may switch this circuit on outside the
+    // photoperiod window too. Only the MAIN (people) light sets it; the GROW
+    // circuit keeps false, so its occupancy light stays inside the window and the
+    // Vandas keep their dark period (invariant 23). The lux gate is unchanged: a
+    // bright room or no fresh exterior lux lights nothing.
+    bool occupancy_any_hour = false;
 };
 
 static constexpr uint32_t LIGHT_STATE_SENTINEL = 0xBEEF0043;
@@ -683,6 +713,15 @@ inline uint32_t sat_add(uint32_t a, uint32_t b) noexcept {
     return (a > UINT32_MAX - b) ? UINT32_MAX : a + b;
 }
 
+// ── Hard temperature guardrails ──
+// Jason 2026-11-05 (#1333): 40 °F and 100 °F are the binding hard limits.
+// Every firmware default and invalid-value fallback for safety_min/safety_max
+// uses these, matching the tunable registry defaults and the dispatcher.
+inline constexpr float kSafetyMinF = 40.0f;
+inline constexpr float kSafetyMaxF = 100.0f;
+// The band keeps this margin inside the guardrails (validate_setpoints).
+inline constexpr float kSafetyBandMarginF = 5.0f;
+
 // ── Defaults ──
 // Sprint-11 widening: firmware defaults are PERMISSIVE, bounded only by
 // safety rails. The dispatcher pushes the real crop band every planner
@@ -691,12 +730,13 @@ inline uint32_t sat_add(uint32_t a, uint32_t b) noexcept {
 // safety rails + one dispatcher-pushed band.
 inline Setpoints default_setpoints() {
     return {
-        .temp_high = 95.0f, .temp_low = 40.0f,    // wide — dispatcher narrows
+        .temp_high = kSafetyMaxF - kSafetyBandMarginF,  // 95: wide — dispatcher narrows
+        .temp_low = kSafetyMinF + kSafetyBandMarginF,   // 45: inside the 40 °F guardrail
         .vpd_high = 2.80f,  .vpd_low = 0.35f,      // wide — dispatcher narrows
         .bias_cool = 0.0f, .bias_heat = 0.0f,
         .vpd_hysteresis = 0.3f, .temp_hysteresis = 1.5f, .heat_hysteresis = 1.0f,  // Phase-2: push temp_hysteresis=2.0 via dispatcher at sw_dwell_gate_enabled flip
         .dH2 = 5.0f, .dC2 = 3.0f,
-        .safety_max = 100.0f, .safety_min = 35.0f,
+        .safety_max = kSafetyMaxF, .safety_min = kSafetyMinF,
         .vpd_max_safe = 3.0f, .vpd_min_safe = 0.3f,
         .sealed_max_ms = 600000, .relief_duration_ms = 90000,
         .vpd_watch_dwell_ms = 60000, .mist_s2_delay_ms = 300000,
@@ -781,7 +821,16 @@ inline Setpoints default_setpoints() {
         .vent_exchange_fraction = 0.30f,
         // #410: vent+reheat held-temp dehum ships OFF (matches globals.yaml
         // initial_value 'false'); flag-OFF behavior is bit-identical to pre-#410.
-        .dehum_vent_hold_enabled = false
+        .dehum_vent_hold_enabled = false,
+        // #1365 night dry-out: ships ON (Jason 2026-11-05). 120 s pulse (the fan
+        // min-on), 780 s rest (one pulse per 15 min, at most 4 an hour), outdoor
+        // DP 3 °F below indoor, 10 kWh a night (above the research's 5 kWh,
+        // because the target is a full dry-out, not the 0.50 kPa plant floor).
+        .night_dryout_enabled = true,
+        .night_dryout_pulse_s = 120u,
+        .night_dryout_rest_s = 780u,
+        .night_dryout_dp_margin_f = 3.0f,
+        .night_dryout_kwh_cap = 10.0f
     };
 }
 
@@ -809,8 +858,22 @@ inline void validate_setpoints(Setpoints& sp) {
     // usage and matches the ±5°F margin the rest of validate uses.
     sp.bias_heat = std::max(-5.0f, std::min(5.0f, sp.bias_heat));
     sp.bias_cool = std::max(-5.0f, std::min(5.0f, sp.bias_cool));
-    sp.safety_max = std::max(sp.temp_high + 5.0f, std::min(120.0f, sp.safety_max));
-    sp.safety_min = std::max(30.0f, std::min(sp.temp_low - 5.0f, sp.safety_min));
+    // Guardrails are hard; the band stays inside them (Jason 2026-11-05,
+    // #1333). Before this the clamp ran the other way: a band edge within
+    // 5 °F of a rail pushed the rail outward (band high 98 → safety_max 103),
+    // so a pushed band could move the hard limits. Ranges match the
+    // controls.yaml SAFETY SANITY check; an invalid or inverted pair (or
+    // one too narrow to hold a band with its margins) falls back to 40/100.
+    if (!(sp.safety_min >= 30.0f && sp.safety_min <= 70.0f)) sp.safety_min = kSafetyMinF;
+    if (!(sp.safety_max >= 70.0f && sp.safety_max <= 120.0f)) sp.safety_max = kSafetyMaxF;
+    if (!(sp.safety_min + 3.0f * kSafetyBandMarginF <= sp.safety_max)) {
+        sp.safety_min = kSafetyMinF;
+        sp.safety_max = kSafetyMaxF;
+    }
+    sp.temp_high = std::max(sp.safety_min + 2.0f * kSafetyBandMarginF,
+                            std::min(sp.safety_max - kSafetyBandMarginF, sp.temp_high));
+    sp.temp_low = std::max(sp.safety_min + kSafetyBandMarginF, sp.temp_low);
+    if (sp.temp_low >= sp.temp_high) sp.temp_low = sp.temp_high - kSafetyBandMarginF;
     sp.sealed_max_ms = std::max(uint32_t(60000), std::min(uint32_t(1800000), sp.sealed_max_ms));
     sp.relief_duration_ms = std::max(uint32_t(15000), std::min(uint32_t(600000), sp.relief_duration_ms));
     sp.max_relief_cycles = std::max(uint32_t(1), std::min(uint32_t(10), sp.max_relief_cycles));
@@ -906,6 +969,15 @@ inline void validate_setpoints(Setpoints& sp) {
     sp.dehum_heat_assist_min_dwell_ms = std::max<uint32_t>(
         60000u, std::min<uint32_t>(1800000u, sp.dehum_heat_assist_min_dwell_ms));
     sp.vent_exchange_fraction = std::max(0.1f, std::min(0.6f, sp.vent_exchange_fraction));
+    // #1365 night dry-out clamps (match the tunables.yaml entities). The rest is
+    // raised so one pulse + rest is at least 15 min: at most 4 pulses an hour.
+    sp.night_dryout_pulse_s = std::max<uint32_t>(60u, std::min<uint32_t>(600u, sp.night_dryout_pulse_s));
+    sp.night_dryout_rest_s  = std::max<uint32_t>(300u, std::min<uint32_t>(3600u, sp.night_dryout_rest_s));
+    if (sp.night_dryout_pulse_s + sp.night_dryout_rest_s < 900u) {
+        sp.night_dryout_rest_s = 900u - sp.night_dryout_pulse_s;
+    }
+    sp.night_dryout_dp_margin_f = std::max(1.0f, std::min(15.0f, sp.night_dryout_dp_margin_f));
+    sp.night_dryout_kwh_cap = std::max(0.0f, std::min(30.0f, sp.night_dryout_kwh_cap));
 }
 
 inline ControlState initial_state() {
@@ -926,6 +998,13 @@ inline ControlState initial_state() {
         .last_transition_tick_ms = 0,
         .mist_backoff_timer_ms = 0,
         .vent_mist_assist_active = false,
-        .center_burst = CENTER_BURST_NONE
+        .center_burst = CENTER_BURST_NONE,
+        .dryout_phase = 0,
+        .dryout_timer_ms = 0,
+        .dryout_hold_temp_f = 0.0f,
+        .dryout_reheat_active = false,
+        .dryout_reheat_wh = 0.0f,
+        .dryout_pulse_count = 0,
+        .dryout_reason = "init"
     };
 }

@@ -39,9 +39,9 @@ test("center: VPD control ON and Schedule OFF as words with no pill when nothing
   expect(text(section)).not.toMatch(/Last misted|Not misting/);
 });
 
-test("both flags off reads \"This zone will not mist automatically\"; a zone whose probe is out reads its peers", () => {
+test("both flags off reads \"This mister will not mist automatically\"; a zone whose probe is out reads its peers", () => {
   expect(zone(lineOf(status(), "L09")).lines).toEqual(["VPD from its own probe", WILL_NOT_MIST_TEXT]);
-  expect(WILL_NOT_MIST_TEXT).toBe("This zone will not mist automatically");
+  expect(WILL_NOT_MIST_TEXT).toBe("This mister will not mist automatically");
   cleanup();
   const south = zone(lineOf(status("south-peer"), "L07"), status("south-peer"));
   expect(south.lines[0]).toBe("VPD from peer probes");

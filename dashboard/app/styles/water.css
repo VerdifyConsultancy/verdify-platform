@@ -30,19 +30,38 @@
 .wat-site-list>li{padding:var(--space-3) 0;border-top:1px solid var(--line)}
 .wat-site-list>li:first-child{padding-top:0;border-top:0}
 .wat-site-list>li:last-child{padding-bottom:0}
-.wat-site-meter{display:grid;grid-template-columns:6.5rem minmax(0,1fr);align-items:center;gap:var(--space-2) var(--space-3)}
-.wat-site-term{font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--forest)}
-a.wat-site-term{display:inline-flex;align-items:center;min-height:24px;text-underline-offset:.25em}
-/* What SAF-4 caps, under its meter, in the words Now's water card shows. */
-.wat-site-note{grid-column:2;margin-top:calc(-1 * var(--space-1));font-size:var(--fs-xs)}
+.wat-site-meter{display:grid;grid-template-columns:minmax(0,1fr);align-items:center;gap:var(--space-1)}
+.wat-site-term{display:inline-flex;align-items:center;font-size:var(--fs-sm);font-weight:600;color:var(--ink)}
+.wat-site-term a{display:inline-flex;align-items:center;min-height:24px;color:inherit;text-underline-offset:.25em}
 .limit-fault{color:var(--fault);font-weight:600}
 .limit-warn{color:var(--warn-text);font-weight:600}
 
-/* A zone card: its name and kind, its minutes against the cap and when it last watered; a mister zone's switches; its line rows. */
-.wat-zone{padding-bottom:var(--space-2)}
+/* Today's groups (#1349): Drips, Misters and Climate under their own headings, more space between cards than between rows. */
+.wat-group{display:grid;gap:var(--space-4);min-width:0}
+.wat-group+.wat-group{margin-top:var(--space-3)}
+.wat-group-title{margin:0;font-size:var(--fs-lg);font-weight:700;color:var(--ink)}
+/* A physical line's card: a coloured left edge by kind in the equipment colours (drip water blue, mister teal, fog grey), its name and variants, its minutes against the cap and when it last watered; then a row per variant. */
+.wat-zone{--wat-kind:var(--eq-water);padding-bottom:var(--space-2);border-left:5px solid var(--wat-kind)}
+.wat-zone[data-kind=mister]{--wat-kind:var(--eq-mister)}
+.wat-zone[data-kind=fog]{--wat-kind:var(--eq-fog)}
+.wat-zone.is-off{--wat-kind:var(--line-strong)}
+.wat-zone.is-off .wat-zone-name{color:var(--muted)}
+/* A disabled line is one quiet row: state, its faded strip, no meta. */
+.wat-line.is-off .object-row-title,.wat-line.is-off .object-row-state{color:var(--muted)}
+.wat-line.is-off .wat-track{opacity:.55}
+.wat-line.is-off .wat-track{--sch-row:14px}
+.wat-legend{margin:0}
+/* The info tip: a small round "i" button beside a term, its words in a popover. */
+.info-tip{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1.35rem;height:1.35rem;min-height:0;margin-left:var(--space-1);padding:0;border:1px solid var(--line-strong);border-radius:50%;background:#fff;color:var(--forest);font:700 var(--fs-xs)/1 "IBM Plex Sans",system-ui,sans-serif;cursor:pointer;vertical-align:middle}
+.info-tip::before{content:"i"}
+.info-tip:hover{border-color:var(--forest)}
+.info-tip-pop p{margin:0 0 var(--space-2);font-size:var(--fs-sm)}
+.info-tip-pop p:last-child{margin-bottom:0}
+.mister-help{flex-basis:100%;margin:0;font-size:var(--fs-xs);color:var(--muted)}
 /* The head is a fixed grid, so the zones' meters stacked down the page are one width with their right edges in line: the name, then the meter (12rem) and its minutes (7rem, right-aligned in tabular figures), and under them, the same second line on every zone, the VPD reserve and when it last watered. */
 .wat-zone-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--space-2) var(--space-5);padding-bottom:var(--space-3);border-bottom:1px solid var(--line)}
-.wat-zone-kind{margin-left:var(--space-2);font:400 var(--fs-label)/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--forest);white-space:nowrap}
+.wat-zone-name{margin:0;font-size:var(--fs-md)}
+.wat-zone-kind{margin-left:var(--space-2);font-size:var(--fs-sm);font-weight:400;color:var(--muted);white-space:nowrap}
 .wat-zone-today{display:grid;justify-items:end;gap:var(--space-1);min-width:0}
 .wat-zone-today .sch-minutes-meter{display:grid;grid-template-columns:12rem 7rem;align-items:center;gap:var(--space-3)}
 .wat-zone-today .meter-words{text-align:right}
@@ -51,7 +70,8 @@ a.wat-site-term{display:inline-flex;align-items:center;min-height:24px;text-unde
 .wat-zone-minutes{font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
 .wat-zone-last{white-space:nowrap}
 .wat-zone-running{font-weight:600;color:var(--ink)}
-.wat-zone .mister-zone{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-5);padding:var(--space-2) 0;border-bottom:1px solid var(--line)}
+.wat-unwired{margin:0;padding:var(--space-2) 0;border-top:1px solid var(--line)}
+.wat-line .mister-zone{display:flex;flex-basis:100%;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-5);margin-top:var(--space-1);padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);background:var(--field)}
 .mister-switches{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-4)}
 .mister-flag{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-2)}
 .mister-flag .field-switch{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-2);margin:0}
@@ -204,7 +224,8 @@ span.sch-week-step.is-off{display:inline-flex;align-items:center;justify-content
 /* A row's note wraps rather than lose its end ("Disabled: its 3 runs this week will not run"). */
 .sch-row-note{font-size:var(--fs-xs);color:var(--muted)}
 .sch-row.is-muted .sch-row-name{color:var(--muted)}
-.sch-row.is-muted .sch-track{background:var(--field)}
+/* A disabled lane keeps its day (#1347): white daylight and shaded night like any lane, its marks and name dimmed. */
+.sch-row.is-muted .sch-block,.sch-row.is-muted .sch-tick,.sch-row.is-muted .sch-pause{opacity:.45}
 .sch-row-end{display:flex;align-items:center;gap:var(--space-2);min-width:0}
 .sch-cap{flex:1;min-width:0;font-size:var(--fs-xs)}
 .sch-minutes-meter{display:flex;align-items:center;gap:var(--space-2);min-width:0}
@@ -293,6 +314,17 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
 .sch-swatch.sch-planned{background:#fff}
 .sch-tick-swatch{height:.35rem;background:var(--eq-mister)}
 .sch-night-swatch{border:1px solid var(--line);background:var(--field)}
+/* The legend, always on show (#1347): one wrapping line under the axis, and under the Today strips. */
+.sch-legend{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-4);margin:var(--space-1) 0 var(--space-3);padding:0;font-size:var(--fs-xs);color:var(--muted);list-style:none}
+.sch-legend li{display:inline-flex;align-items:center;gap:var(--space-1)}
+.sch-legend .sch-swatch{width:1.25rem;height:.65rem}
+.sch-legend-swatch{display:inline-block;flex:none;width:1.25rem;height:.65rem;border-radius:2px;border:1px solid var(--line-strong)}
+.sch-legend-day{background:#fff}
+.sch-legend-night{background:var(--field)}
+.sch-legend-now{width:0;height:.85rem;border:0;border-left:1.5px solid var(--ink);border-radius:0}
+/* A week mark in its variant's colour: clean blue, fertilized purple. */
+.sch-mark-clean{--sch-fill:var(--eq-water)}
+.sch-mark-fert{--sch-fill:var(--eq-fert)}
 
 /* The schedule editor: the day shortcuts beside the weekday chips, and the words read out before Save. The page dims less and, on a wide screen, the timeline fits beside the drawer, so the draft can be read as it is typed. */
 .drawer-schedule::backdrop{background:color-mix(in srgb,var(--ink) 12%,transparent)}
@@ -381,16 +413,19 @@ button.sch-agenda-row:hover{border-color:var(--leaf);color:var(--ink)}
   .wat-zone-today{justify-items:stretch}
   .wat-zone-today .sch-minutes-meter{grid-template-columns:minmax(0,1fr) auto}
   .wat-zone-last{white-space:normal}
+  .wat-zone-kind{white-space:normal}
   .wat-runs-table{display:none}
   .sch-key-button,.wat-select select{min-height:var(--tap)}
-  a.wat-site-term{min-height:var(--tap)}
-  /* Site today on a phone (redesign §5.2's 360 px sketch): SAF-4, the flow and occupancy, so Wall and L01 stay above the fold; the soft budget and fallback misting only once they are the news. */
+  .wat-site-term a{min-height:var(--tap)}
+  /* Site today on a phone (redesign §5.2's 360 px sketch): the daily mist & fog limit, the flow and occupancy, so Wall and L01 stay above the fold; the soft budget and fallback misting only once they are the news. */
   .wat-site-quiet{display:none}
   .wat-line .object-row-actions .state-note,.wat-line .object-row-actions .field-error{text-align:left}
 }
 @media(max-width:600px){
-  /* A meter keeps its term on its line; its words drop under the bar only when they do not fit beside it. */
-  .wat-site-meter{grid-template-columns:4.5rem minmax(0,1fr)}
+  /* A meter's term sits over its bar; its words drop under the bar only when they do not fit beside it. */
   .wat-site-meter .meter{flex-wrap:wrap}
+  /* Phones: the group headings stay for screen readers only (each card's name already says drip or mister), so Wall's first row stays above the fold. */
+  .wat-group-title{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .wat-group{position:relative}
   .sch-agenda-row{grid-template-columns:3rem minmax(0,1fr) auto;gap:var(--space-2);padding-inline:var(--space-2)}
 }

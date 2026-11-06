@@ -665,6 +665,10 @@ inline bool check_10_equipment_toggle_auditable(Ctx10& c, const TraceRow& r, Rep
                                    || r.mode_reason == "idle_default"
                                    || r.mode_reason == "mist_backoff"
                                    || r.mode_reason == "moisture_blocked"
+                                   // #1365: heat1 holds the temperature through a
+                                   // dry-out pulse and its rest under one reason.
+                                   || r.mode_reason == "night_dryout_pulse"
+                                   || r.mode_reason == "night_dryout_reheat"
                                    || r.mode_reason == "relief_cycle_breaker"
                                    || r.mode_reason == "safety_cool"
                                    || r.mode_reason == "safety_heat"
@@ -682,6 +686,12 @@ inline bool check_10_equipment_toggle_auditable(Ctx10& c, const TraceRow& r, Rep
                                    || r.mode_reason == "vent_mist_assist"
                                    || r.mode_reason == "vpd_low"
                                    || r.mode_reason == "vpd_min_safe_rescue"
+                                   // BC-13 heat branch of the same rescue: heat1
+                                   // follows the normal heat path (it stops at the
+                                   // band's heat ceiling) while the rescue reason
+                                   // holds. Reached in the corpus once the default
+                                   // band low moved to 45 °F (#1333 guardrails).
+                                   || r.mode_reason == "vpd_min_safe_heat_rescue"
                                    || r.mode_reason == "vpd_too_low";
         if (!mode_changed && !reason_changed && !reason_auditable) {
             report(10, "equipment_toggle_without_reason", r,
@@ -754,8 +764,10 @@ inline bool check_14_vent_cold_day_cap(Ctx14& c, const TraceRow& r, ReportFn rep
         c.prev_vent = r.eq_vent;
         if (!ok) return false;
     }
-    // Per-row: accumulate toggles + check cold condition
-    if (r.eq_vent && !c.prev_vent) c.vent_open_cycles++;
+    // Per-row: accumulate toggles + check cold condition. #1365 night dry-out
+    // pulses are deliberate, timer-bounded exchanges (at most 4 an hour), so
+    // they are bounded by #28, not counted as thrash here.
+    if (r.eq_vent && !c.prev_vent && r.mode_reason != "night_dryout_pulse") c.vent_open_cycles++;
     c.prev_vent = r.eq_vent;
     if (std::isnan(r.outdoor_temp_f)) {
         c.day_was_cold = false;
@@ -843,13 +855,41 @@ inline bool check_20_feed_hold_window(Ctx20& c, const TraceRow& r, ReportFn repo
     return true;
 }
 
+// #28 (#1365): the night dry-out is bounded. At most NIGHT_DRYOUT_MAX_PULSES_PER_HOUR
+// pulse starts in any clock hour (pulse + rest >= 15 min), heat2 (gas) never runs on a
+// dry-out row (never gas for humidity), and no dry-out pulse runs with the house at or
+// below temp_low (the pulse aborts there and the heat2 latch owns the temperature).
+static constexpr int NIGHT_DRYOUT_MAX_PULSES_PER_HOUR = 4;
+struct Ctx28 { uint64_t hour_bucket = 0; int starts = 0; bool prev_pulse = false; };
+inline bool check_28_night_dryout_bounded(Ctx28& c, const TraceRow& r, ReportFn report = default_report) {
+    const bool pulse = r.mode_reason == "night_dryout_pulse";
+    const bool dryout = pulse || r.mode_reason == "night_dryout_reheat";
+    const uint64_t hour = r.ts_unix_s / 3600ULL;
+    if (hour != c.hour_bucket) { c.hour_bucket = hour; c.starts = 0; }
+    if (pulse && !c.prev_pulse) c.starts++;
+    c.prev_pulse = pulse;
+    if (c.starts > NIGHT_DRYOUT_MAX_PULSES_PER_HOUR) {
+        report(28, "night_dryout_pulse_rate", r, "more than 4 night dry-out pulses in one hour");
+        return false;
+    }
+    if (dryout && r.eq_heat2) {
+        report(28, "night_dryout_gas_heat", r, "heat2 ON on a night dry-out row");
+        return false;
+    }
+    if (pulse && r.temp_f <= r.temp_low) {
+        report(28, "night_dryout_below_temp_low", r, "night dry-out pulse with the house at or below temp_low");
+        return false;
+    }
+    return true;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Public entry point — iterate all 16 invariants over a trace.
 // Returns 0 on pass, non-zero = count of violated invariants.
 // ─────────────────────────────────────────────────────────────────────────
 struct Runner {
     Ctx4 c4; Ctx5 c5; Ctx6 c6; Ctx8 c8; Ctx10 c10; Ctx12 c12; Ctx13 c13; Ctx14 c14;
-    Ctx17 c17; Ctx20 c20;
+    Ctx17 c17; Ctx20 c20; Ctx28 c28;
     int failures = 0;
 
     bool run(const TraceRow& r, ReportFn report = default_report) {
@@ -884,6 +924,8 @@ struct Runner {
         if (!check_25_safety_heat_engaged(r, report))               { failures++; ok = false; }
         if (!check_26_sensor_fault_all_off(r, report))              { failures++; ok = false; }
         if (!check_27_heat_air_exchange_exclusive(r, report))       { failures++; ok = false; }
+        // ── #1365 night dry-out bounds ──
+        if (!check_28_night_dryout_bounded(c28, r, report))         { failures++; ok = false; }
         return ok;
     }
 };

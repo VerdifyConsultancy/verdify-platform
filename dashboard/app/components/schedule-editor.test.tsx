@@ -8,7 +8,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { createRoutesStub, useLocation } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
 import { UUID, advance, requests, startFixtureApi, stopFixtureApi, writes, type FixtureOptions } from "../lib/test-fixture-api";
-import { SCHEDULE_LINES } from "../lib/water";
+import { PHYSICAL_LINES, SCHEDULE_LINES, physicalOf } from "../lib/water";
 import type { WriteError } from "../lib/writes";
 import Activity from "../routes/activity";
 import ActivityLog from "../routes/activity-log";
@@ -45,7 +45,12 @@ const drawer = () => document.querySelector<HTMLDialogElement>("dialog.drawer");
 const inDrawer = () => within(drawer()!);
 const where = () => screen.getByTestId("where").textContent;
 const change = (label: string, value: string) => fireEvent.change(inDrawer().getByLabelText(label), { target: { value } });
-const setLine = (id: (typeof SCHEDULE_LINES)[number]) => change("Line", String(SCHEDULE_LINES.indexOf(id)));
+/** #1336: the physical line, then its variant when the line has two. */
+const setLine = (id: (typeof SCHEDULE_LINES)[number]) => {
+  const { index, variant } = physicalOf(id)!;
+  change("Line", String(index));
+  if (PHYSICAL_LINES[index].fertilized) change("Variant", variant === "fertilized" ? "1" : "0");
+};
 const NAMES = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" } as const;
 /** Moves the day chips to `days`; a new schedule starts on today's weekday, Monday. */
 function setDays(...days: (keyof typeof NAMES)[]) {
@@ -61,7 +66,7 @@ const save = async () => {
 /** The day timeline's blocks on `line`, the day it shows (the draft's next day while the editor is open). */
 const day = () => document.querySelector<HTMLElement>(".sch-day")!;
 const shownDay = () => text(day().querySelector("h2"));
-const blocks = (line: string) => [...day().querySelectorAll<HTMLElement>(`.sch-row[data-line="${line}"] .sch-block:not(.sch-part)`)].map((block) => ({
+const blocks = (line: string) => [...day().querySelectorAll<HTMLElement>(`.sch-row[data-lines~="${line}"] .sch-block:not(.sch-part)`)].map((block) => ({
   name: (block.getAttribute("aria-label") ?? block.getAttribute("title") ?? "").replaceAll("\u00a0", " "), draft: block.classList.contains("sch-draft"),
   hatched: block.classList.contains("sch-skipped") || block.classList.contains("sch-blocked"), capped: block.classList.contains("sch-capped"), conflict: block.classList.contains("sch-conflict"),
 }));
@@ -206,11 +211,11 @@ test("a degraded_only draft follows VPD control: on L04 \"only if VPD sensing is
   expect(preview()).toContain("Skipped: VPD control is off");
 });
 
-test("the Manual box starts ticked, unticking it saves manual: false, and it starts ticked again on an edit of a schedule Iris may adjust", async () => {
+test("Let Iris change this starts off (manual), ticking it saves manual: false, and it starts off again on an edit of a schedule Iris may adjust", async () => {
   const api = open(NEW);
   await fillWallMwf();
-  const manual = () => inDrawer().getByLabelText("Manual: Iris skips this") as HTMLInputElement;
-  expect(manual().checked).toBe(true);
+  const manual = () => inDrawer().getByLabelText("Let Iris change this") as HTMLInputElement;
+  expect(manual().checked).toBe(false);
   fireEvent.click(manual());
   await save();
   expect(writes(api)[0].body).toMatchObject({ manual: false });
@@ -219,7 +224,7 @@ test("the Manual box starts ticked, unticking it saves manual: false, and it sta
   cleanup(); stopFixtureApi();
   const again = open("/water/schedules?schedule=13", { fixture: "schedules-paused" });
   await advance(0);
-  expect(manual().checked).toBe(true);
+  expect(manual().checked).toBe(false);
   await save();
   expect(writes(again)[0].body).toMatchObject({ manual: true });
   expect(writes(again)[0].operationId).toBe("API-IRR-04");
@@ -252,7 +257,7 @@ test("an L02 feed shows FERT and the partner's note, sends prewet_s and flush_s,
 test("with L01 unchecked, ticking Checked sends one API-IRR-08 {checked, check_note} with no manual, then one API-IRR-03, each under its own key", async () => {
   const api = open(NEW);
   await fillWallMwf();
-  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed, emitters checked"));
+  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed and emitters checked"));
   expect((inDrawer().getByLabelText("Note (optional)") as HTMLInputElement).maxLength).toBe(500);
   change("Note (optional)", "flushed 10 min");
   await save();
@@ -271,7 +276,7 @@ test("with L01 unchecked, ticking Checked sends one API-IRR-08 {checked, check_n
 test("a double tap on Save sends each request once", async () => {
   const api = open(NEW);
   await fillWallMwf();
-  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed, emitters checked"));
+  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed and emitters checked"));
   const form = drawer()!.querySelector("form")!;
   await act(async () => { fireEvent.submit(form); fireEvent.submit(form); await vi.advanceTimersByTimeAsync(0); });
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-08", "API-IRR-03"]);
@@ -305,13 +310,13 @@ test("the box shows only for an enabled drip line with no check: never a mister,
   open(NEW, { fixture: "l02-enabled-unchecked" });
   await advance(0);
   setLine("L02");
-  expect(box()?.closest("label")?.textContent).toBe("Checked: line, tank and injector checked, no leaks");
+  expect(box()?.closest("label")?.textContent).toBe("Checked: tank, injector and line checked, no leaks");
 });
 
 test("a refusal of the check keeps the drawer open and sends nothing else", async () => {
   const api = open(NEW, { fail: { "API-IRR-08": 422 } });
   await fillWallMwf();
-  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed, emitters checked"));
+  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed and emitters checked"));
   await save();
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-08"]);
   expect(drawer()).not.toBeNull();
@@ -321,7 +326,7 @@ test("a refusal of the check keeps the drawer open and sends nothing else", asyn
 test("a check on record is not sent again when the schedule after it was refused", async () => {
   const api = open(NEW, { fixture: "l01-schedule" });
   await fillWallMwf();
-  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed, emitters checked"));
+  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed and emitters checked"));
   setSunrise(80);
   await save();
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-08", "API-IRR-03"]);
@@ -339,7 +344,7 @@ test("before the engine the schedule stays REQUESTED with \"Applies with the irr
   // The draft reads as a blocked occurrence does, and still counts against the cap.
   expect(blocks("L01")).toEqual([{ name: "Wall drip · Wall MWF, Mon 07:35, 12 min, draft, not saved, will not run, arrives with the irrigation firmware", draft: true, hatched: true, capped: false, conflict: false }]);
   expect(previewLine("L01")).toBe("Wall drip Mon 12 · Wed 12 · Fri 12 minWall drip cap 60 min a day");
-  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed, emitters checked"));
+  fireEvent.click(inDrawer().getByLabelText("Checked: line flushed and emitters checked"));
   await save();
   expect(writes(api).map((row) => row.operationId)).toEqual(["API-IRR-08", "API-IRR-03"]);
   expect([pill(4), ruleMeta(4)]).toEqual(["Requested", "manual · changed by jason 0 s ago · Applies with the irrigation firmware"]);
@@ -360,19 +365,24 @@ test("with no matching hash the schedule reads \"Not confirmed\" with the reject
   expect(banner()).toBe("Not confirmed: the controller refused a schedule · retrying at 1, 5 and 15 min");
 });
 
-test("the line's kind picks the fields, their min and max from API-IRR-02 bounds, and only L01, L02 and L04–L10 are offered", async () => {
+test("the line's kind picks the fields, their min and max from API-IRR-02 bounds, and only the five physical lines, each with its wired variants (#1336), are offered", async () => {
   open(NEW);
   await advance(0);
-  const options = [...(inDrawer().getByLabelText("Line") as HTMLSelectElement).options].map((option) => text(option));
-  expect(options).toEqual([
-    "Wall drip", "Wall drip (fertilized)", "Center mister", "Center drip (reserved)", "Center drip (fertilized) (reserved)", "South mister",
-    "South mister (fertilized)", "West mister", "West mister (fertilized)",
-  ]);
+  const options = (label: string) => [...(inDrawer().getByLabelText(label) as HTMLSelectElement).options].map((option) => text(option));
+  // #1336: the five physical lines, then the chosen line's variants; the center mister's fertilized side is not wired.
+  expect(options("Line")).toEqual(["Wall drip", "Center drip (reserved)", "Center mister", "South mister", "West mister"]);
+  expect(options("Variant")).toEqual(["Clean", "Fertilized"]);
   expect((inDrawer().getByLabelText("Label (optional)") as HTMLInputElement).maxLength).toBe(60);
   expect((inDrawer().getByLabelText("Reason (optional)") as HTMLInputElement).maxLength).toBe(500);
   const labels = () => [...drawer()!.querySelectorAll(".number-field label")].map((node) => text(node));
   const hint = (label: string) => text(document.getElementById(`${inDrawer().getByLabelText(label).id}-hint`));
   const fertTitle = () => inDrawer().getByRole("heading", { level: 2 }).querySelector("[data-badge='fert']") !== null;
+  setLine("L04");
+  expect(options("Variant")).toEqual(["Clean"]);
+  expect(hint("Variant")).toBe("Fertilized · not wired");
+  setLine("L05");
+  expect(options("Variant")).toEqual(["Clean (reserved)", "Fertilized (reserved)"]);
+  setLine("L01");
   // drip: whole minutes inside on_s 10–7200.
   expect(labels()).toEqual(["Run"]);
   expect(hint("Run")).toBe("Allowed 1–120 min · step 1");
@@ -457,6 +467,7 @@ test("the day shortcuts set every day or the weekdays, and an empty slot, a line
   open("/water/schedules?schedule=new&line=L04&at=13%3A15&day=2026-11-05", { fixture: "schedules-paused" });
   await advance(0);
   expect((inDrawer().getByLabelText("Line") as HTMLSelectElement).selectedOptions[0].textContent).toBe("Center mister");
+  expect((inDrawer().getByLabelText("Variant") as HTMLSelectElement).selectedOptions[0].textContent).toBe("Clean");
   expect((inDrawer().getByLabelText("Clock time (HH:MM)") as HTMLInputElement).value).toBe("13:15");
   expect(inDrawer().getByRole("button", { name: "Thursday" }).getAttribute("aria-pressed")).toBe("true");
   expect(shownDay()).toBe("Thursday, Nov 5");

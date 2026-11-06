@@ -30,7 +30,7 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 638,
+          "line": 639,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
@@ -71,14 +71,14 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 600,
+          "line": 601,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1289,
+          "line": 1349,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -112,7 +112,7 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 599,
+          "line": 600,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
@@ -153,7 +153,7 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 598,
+          "line": 599,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
@@ -194,7 +194,7 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 597,
+          "line": 598,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
@@ -208,7 +208,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1397,
+          "line": 1457,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -242,42 +242,42 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 607,
+          "line": 608,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1178,
+          "line": 1188,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1676,
+          "line": 1686,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2608,
+          "line": 2668,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1482,
+          "line": 1549,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1486,
+          "line": 1553,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -297,35 +297,35 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 606,
+          "line": 607,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1176,
+          "line": 1186,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2596,
+          "line": 2656,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1469,
+          "line": 1536,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1473,
+          "line": 1540,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -345,28 +345,28 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 592,
+          "line": 593,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2176,
+          "line": 2236,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 806,
+          "line": 873,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 810,
+          "line": 877,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -386,21 +386,21 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 380,
+          "line": 381,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 382,
+          "line": 383,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1563,
+          "line": 1623,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -458,21 +458,21 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 379,
+          "line": 380,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 384,
+          "line": 385,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1551,
+          "line": 1611,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -530,14 +530,14 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 575,
+          "line": 576,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1977,
+          "line": 2037,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -595,14 +595,14 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 565,
+          "line": 566,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1363,
+          "line": 1423,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -643,7 +643,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1656,
+          "line": 1716,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -700,7 +700,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1643,
+          "line": 1703,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -757,7 +757,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1965,
+          "line": 2025,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -814,7 +814,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1953,
+          "line": 2013,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -871,7 +871,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1630,
+          "line": 1690,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -928,7 +928,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1617,
+          "line": 1677,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -985,7 +985,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1683,
+          "line": 1743,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1042,7 +1042,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1670,
+          "line": 1730,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1092,28 +1092,28 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 608,
+          "line": 609,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2188,
+          "line": 2248,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 831,
+          "line": 898,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 835,
+          "line": 902,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -1133,14 +1133,14 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 569,
+          "line": 570,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2324,
+          "line": 2384,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1190,28 +1190,28 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 570,
+          "line": 571,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2348,
+          "line": 2408,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 844,
+          "line": 911,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 847,
+          "line": 914,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -1247,35 +1247,35 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 573,
+          "line": 574,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 989,
+          "line": 999,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1941,
+          "line": 2001,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 880,
+          "line": 947,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 886,
+          "line": 953,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -1295,21 +1295,21 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1500,
+          "line": 1510,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1531,
+          "line": 1541,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1796,
+          "line": 1856,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1367,14 +1367,14 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1319,
+          "line": 1329,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1862,
+          "line": 1922,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1432,14 +1432,14 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 987,
+          "line": 997,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1929,
+          "line": 1989,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1473,28 +1473,28 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1150,
+          "line": 1160,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1277,
+          "line": 1287,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1543,
+          "line": 1553,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1784,
+          "line": 1844,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1552,28 +1552,28 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1262,
+          "line": 1272,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1355,
+          "line": 1365,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1683,
+          "line": 1693,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2266,
+          "line": 2326,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1607,14 +1607,14 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1247,
+          "line": 1257,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2254,
+          "line": 2314,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1664,14 +1664,14 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1245,
+          "line": 1255,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2242,
+          "line": 2302,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1721,28 +1721,28 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1514,
+          "line": 1524,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1515,
+          "line": 1525,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1606,
+          "line": 1616,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2289,
+          "line": 2349,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1800,42 +1800,42 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 869,
+          "line": 879,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1207,
+          "line": 1217,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1680,
+          "line": 1690,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2278,
+          "line": 2338,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 956,
+          "line": 1023,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 959,
+          "line": 1026,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -1867,7 +1867,7 @@
         },
         {
           "file": "firmware/greenhouse.yaml",
-          "line": 530,
+          "line": 532,
           "category": "boot_or_diag",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1886,14 +1886,14 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 477,
+          "line": 478,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2300,
+          "line": 2360,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1927,35 +1927,35 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 588,
+          "line": 589,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 2186,
+          "line": 2196,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2081,
+          "line": 2141,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 779,
+          "line": 846,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 783,
+          "line": 850,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -1975,28 +1975,28 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 602,
+          "line": 603,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1300,
+          "line": 1360,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1635,
+          "line": 1702,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1639,
+          "line": 1706,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2004,7 +2004,7 @@
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1644,
+          "line": 1711,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2024,28 +2024,28 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1185,
+          "line": 1195,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2120,
+          "line": 2180,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1673,
+          "line": 1760,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1677,
+          "line": 1764,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2053,7 +2053,7 @@
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1682,
+          "line": 1769,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2073,28 +2073,28 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 605,
+          "line": 606,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2584,
+          "line": 2644,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1690,
+          "line": 1777,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1694,
+          "line": 1781,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2102,7 +2102,7 @@
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1699,
+          "line": 1786,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2122,28 +2122,28 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 591,
+          "line": 592,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2164,
+          "line": 2224,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1937,
+          "line": 2024,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1940,
+          "line": 2027,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2151,7 +2151,7 @@
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1944,
+          "line": 2031,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2171,35 +2171,35 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 940,
+          "line": 950,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 2004,
+          "line": 2014,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2131,
+          "line": 2191,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1853,
+          "line": 1940,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1856,
+          "line": 1943,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2207,7 +2207,7 @@
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1860,
+          "line": 1947,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2227,28 +2227,28 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 1008,
+          "line": 1018,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2142,
+          "line": 2202,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1868,
+          "line": 1955,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1871,
+          "line": 1958,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2256,7 +2256,7 @@
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1875,
+          "line": 1962,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2276,28 +2276,28 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 585,
+          "line": 586,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2108,
+          "line": 2168,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1919,
+          "line": 2006,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1922,
+          "line": 2009,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2305,7 +2305,7 @@
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 1926,
+          "line": 2013,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2332,14 +2332,14 @@
         },
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 564,
+          "line": 565,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1313,
+          "line": 1373,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -2373,7 +2373,7 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 645,
+          "line": 646,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
@@ -2414,28 +2414,28 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 587,
+          "line": 588,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2069,
+          "line": 2129,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 767,
+          "line": 834,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 770,
+          "line": 837,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2455,28 +2455,28 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 586,
+          "line": 587,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2056,
+          "line": 2116,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 755,
+          "line": 822,
           "category": "entity",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/tunables.yaml",
-          "line": 758,
+          "line": 825,
           "category": "entity",
           "access": "write",
           "migrated_to_snapshot": false,
@@ -2503,14 +2503,14 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1350,
+          "line": 1410,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1415,
+          "line": 1475,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -2568,14 +2568,14 @@
       "sites": [
         {
           "file": "firmware/greenhouse/controls.yaml",
-          "line": 571,
+          "line": 572,
           "category": "control",
           "access": "read",
           "migrated_to_snapshot": true
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 1917,
+          "line": 1977,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true

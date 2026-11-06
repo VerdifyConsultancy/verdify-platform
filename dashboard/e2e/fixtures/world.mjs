@@ -103,10 +103,14 @@ const METRICS = [
   ["climate.flow_gpm", "Site water flow", "water and soil", "gal/min", 60, 365, "MEASURED", null, false],
   ["climate.outdoor_temp_f", "Outdoor temperature", "outdoor", "°F", 60, 365, "MEASURED", null, false],
   ["climate.outdoor_rh_pct", "Outdoor relative humidity", "outdoor", "%", 60, 365, "MEASURED", null, false],
+  // The Tempest's light, which Graphs → Lighting draws (#1357).
+  ["climate.outdoor_lux", "Outdoor illuminance", "light", "lx", 60, 365, "MEASURED", null, false],
+  ["climate.solar_irradiance_w_m2", "Solar irradiance", "light", "W/m²", 60, 365, "MEASURED", null, false],
   // The forecast keys as #1170 registers them: the newest weather_forecast issue per hour.
   ["forecast.temp_f", "Forecast temperature", "outdoor", "°F", 3600, 400, "DERIVED", null, false],
   ["forecast.rh_pct", "Forecast relative humidity", "outdoor", "%", 3600, 400, "DERIVED", null, false],
   ["forecast.vpd_kpa", "Forecast VPD", "outdoor", "kPa", 3600, 400, "DERIVED", null, false],
+  ["forecast.solar_w_m2", "Forecast solar radiation", "outdoor", "W/m²", 3600, 400, "DERIVED", null, false],
   // The controller's on-chip targets, a cross-check for API-06 (house for north, which has no zone band).
   ["climate.house_vpd_target", "House VPD target", "targets", "kPa", 60, 365, "DERIVED", "house", false],
   ...["center", "south", "west", "east"].map((zone) => [`climate.vpd_target_${zone}`, `${zone[0].toUpperCase()}${zone.slice(1)} VPD target`, "targets", "kPa", 60, 365, "DERIVED", zone, false]),

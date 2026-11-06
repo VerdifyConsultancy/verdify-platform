@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: MIT
 // Water today on Now (redesign §5.1; US-NOW-04, US-WAT-13, US-WAT-18) over the fixtures at 10:42: each zone's minutes
-// against its cap as a meter with when it last got water, SAF-4's gallons against its ceiling, the flow in words, the
+// against its cap as a meter with when it last got water, the daily mist & fog limit's gallons, the flow in words, the
 // line before the irrigation firmware, "Water status unavailable." with Retry, and no Stop all water (it is a quick action).
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -22,7 +22,7 @@ const renderCard = (irrigation: PanelRead<IrrigationStatus>, role: "operator" | 
 const row = (name: string) => document.querySelector(`[data-water="${name}"]`);
 const rowWords = (name: string) => ({ amount: plain(text(row(name)?.querySelector(".now-water-amount"))), last: plain(text(row(name)?.querySelector(".now-water-last"))) });
 
-test("in band: a meter per zone, its minutes against the cap and when it last got water, then SAF-4 and the flow", () => {
+test("in band: a meter per zone, its minutes against the cap and when it last got water, then the daily mist & fog limit and the flow", () => {
   renderCard(read(statusOf("in-band")));
   expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Water today");
   expect(["wall", "center", "south", "west"].map(rowWords)).toEqual([
@@ -31,11 +31,15 @@ test("in band: a meter per zone, its minutes against the cap and when it last go
   ]);
   // The drip zone fills in --eq-water, the mister zones in --eq-mister.
   expect([...document.querySelectorAll(".now-water-zones .meter")].map((meter) => meter.className.split(" ")[1])).toEqual(["meter-water", "meter-mister", "meter-mister", "meter-mister", "meter-water"]);
-  expect(rowWords("saf4")).toEqual({ amount: "21 / 360 gal", last: "daily mist and fog ceiling" });
+  expect(rowWords("saf4")).toEqual({ amount: "21 / 360 gal", last: "all misters and fog" });
+  // #1349: words and a tip, never a bare "SAF-4".
+  expect(text(row("saf4")?.querySelector(".now-water-name"))).toBe("Daily mist & fog limit");
+  expect(screen.getByRole("button", { name: "About Daily mist & fog limit" })).toBeTruthy();
+  expect(document.body.textContent).not.toContain("SAF-4");
   expect(text(row("flow"))).toBe("No flow with every valve closed");
   expect(screen.getByRole("link", { name: /^Water today, by line/ }).getAttribute("href")).toBe("/water");
   // Stop all water is the first quick action, never here.
-  expect(screen.queryByRole("button")).toBeNull();
+  expect(screen.queryByRole("button", { name: /stop/i })).toBeNull();
 });
 
 test("a running zone says so with its cause; a cap reached or passed says so in words", () => {
@@ -80,8 +84,8 @@ test("the flow in words: flowing with every valve closed, stopped, unknown, and 
   const leak = statusOf("in-band").leak;
   expect(flowText({ ...leak, active: null }).text).toBe("Flow: unknown");
   expect(flowText({ ...leak, active: true }).flowing).toBe(true);
-  expect(saf4Text({ used: null, max: 360 })).toBe("SAF-4 — of 360 gal");
-  expect(saf4Text({ used: 21, max: 360 })).toBe("SAF-4 21 of 360 gal");
+  expect(saf4Text({ used: null, max: 360 })).toBe("— of 360 gal");
+  expect(saf4Text({ used: 21, max: 360 })).toBe("21 of 360 gal");
 });
 
 test("minutes against a cap read whole minutes as the caps are set, never 2 h; reached and over in words; unknown never 0", () => {

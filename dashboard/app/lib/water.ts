@@ -140,17 +140,17 @@ export function vpdSourceWords(source: string | null | undefined): string | null
  * how long ago Frigate saw them; nobody seen, with the last person's time; or unknown.
  */
 export function occupancyWords(occupancy: Occupancy, now: number, today: string): string {
-  if (occupancy.hold_enabled === false) return "Occupancy mist hold is off: misters may run";
+  if (occupancy.hold_enabled === false) return "Occupancy mist hold is off: misting allowed";
   if (occupancy.occupied === true) {
     const seen = validTime(occupancy.seen_at) ? `, ${agoWords((now - Date.parse(occupancy.seen_at)) / 1000)}` : "";
-    return `Someone inside: misters wait (Frigate${seen})`;
+    return `Occupancy: someone inside, misting waits (Frigate${seen})`;
   }
   if (occupancy.occupied === false) {
     const at = occupancy.seen_at;
     const last = validTime(at) ? ` (last person ${localDate(at) === today ? shortTime(at) : shortDateTime(at)})` : "";
-    return `Nobody seen: misters may run${last}`;
+    return `Occupancy: nobody detected, misting allowed${last}`;
   }
-  return "Occupancy unknown: misters may run";
+  return "Occupancy unknown: misting allowed";
 }
 
 /**
@@ -164,14 +164,22 @@ export function flowWords(leak: Leak): { readonly text: string; readonly tone?: 
     const volume = finite(leak.gal_last_10min) ? ` · ${leak.gal_last_10min}${NBSP}gal in 10 min` : "";
     return { text: `Water flowing with every Verdify valve closed${since}${volume}`, tone: "fault" };
   }
-  return { text: leak.active === false ? "Unexplained flow: none" : "Unexplained flow: unknown" };
+  return { text: leak.active === false ? `${FLOW_TERM}: none` : `${FLOW_TERM}: unknown` };
 }
 
 /**
- * What SAF-4 caps (irrigation §4.5: every mister relay's water plus climate fog), in the words Now's water card and Water's
- * Site today both show beside its meter, which fills `--eq-water` on both as redesign §4.6 fills gallons.
+ * The site limits in words (#1349), never the firmware's bare "SAF-4" or "SOFT BUDGET": what Now's water card, Water's Site
+ * today and the limits strip call them, and what each one's info tip says. SAF-4 (irrigation §4.5) caps every mister
+ * relay's water plus climate fog; the soft target is `mister_water_budget_gal`, which holds routine misting once reached.
  */
-export const SAF4_WORDS = "daily mist and fog ceiling";
+export const SAF4_TERM = "Daily mist & fog limit";
+export const SAF4_HELP = "Water through all the misters and fog today. The controller stops misting when it reaches this limit; survival fog is exempt. (Firmware documents call it SAF-4.)";
+export const BUDGET_TERM = "Daily mist target (soft)";
+export const BUDGET_HELP = "A softer daily amount for mist and fog water. Once it is used the controller holds routine misting; in a VPD emergency it may go past it, up to the daily mist & fog limit.";
+/** What used to read "Unexplained flow": the meter's flow while every Verdify valve is closed. */
+export const FLOW_TERM = "Water with no Verdify valve open";
+/** The `degraded_only` schedules, in words (#1344): they run only while VPD sensing fails. */
+export const BACKUP_TERM = "Backup misting (sensor fault)";
 
 /** "21 of 360 gal"; the count alone with no maximum; "—" for a count the API does not have. */
 export function ofWords(used: number | null | undefined, max: number | null | undefined, unit: string): string {
@@ -194,14 +202,14 @@ const byLineId = <T extends { readonly line_id: string }>(a: T, b: T) => lineRan
 
 export type LimitItem = { readonly key: string; readonly text: string; readonly tone?: "fault" | "warn" };
 /**
- * The limits strip (Board): SAF-4 and the soft budget in whole gallons; each mister zone's minutes against its duty cap
+ * The limits strip (Board): the daily mist & fog limit (SAF-4) and the soft target in whole gallons; each mister zone's minutes against its duty cap
  * with the VPD reserve marked; each capped drip line; the flow state; occupancy; "VPD fallback active" while the
  * `degraded_only` schedules run. A reserved line that is still disabled has no cap shown.
  */
 export function limitItems(status: IrrigationStatus, now: number, today: string): LimitItem[] {
   const items: LimitItem[] = [
-    { key: "saf4", text: `SAF-4 ${ofWords(status.limits.saf4_gal.used, status.limits.saf4_gal.max, "gal")}` },
-    { key: "budget", text: `Soft budget ${ofWords(status.limits.soft_budget_gal.used, status.limits.soft_budget_gal.max, "gal")}` },
+    { key: "saf4", text: `${SAF4_TERM} ${ofWords(status.limits.saf4_gal.used, status.limits.saf4_gal.max, "gal")}` },
+    { key: "budget", text: `${BUDGET_TERM} ${ofWords(status.limits.soft_budget_gal.used, status.limits.soft_budget_gal.max, "gal")}` },
   ];
   const lines = [...status.lines].sort(byLineId);
   for (const line of lines.filter((item) => item.kind === "mister")) {
@@ -216,7 +224,7 @@ export function limitItems(status: IrrigationStatus, now: number, today: string)
   const flow = flowWords(status.leak);
   items.push({ key: "flow", ...flow });
   items.push({ key: "occupancy", text: occupancyWords(status.occupancy, now, today) });
-  if (status.fallback_active) items.push({ key: "fallback", text: "VPD fallback active", tone: "warn" });
+  if (status.fallback_active) items.push({ key: "fallback", text: `${BACKUP_TERM}: on`, tone: "warn" });
   return items;
 }
 
@@ -368,6 +376,24 @@ export function nextRunWords(next: IrrigationLine["next_run"], today: string): s
 // ---------------------------------------------------------------------------------------------------- the week view
 /** The week view's rows: L01, L02 and L04–L10, the lines a schedule can name (not L03 or fog). */
 export const SCHEDULE_LINES = ["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10"] as const;
+
+/**
+ * The physical lines a schedule picks (#1336), each with its clean and fertilized relay (`verdify_schemas.irrigation.
+ * CIRCUITS`); null where that valve has no relay. A fertilized variant opens L03; a clean one never does.
+ */
+export const PHYSICAL_LINES: readonly { readonly id: string; readonly name: string; readonly clean: string; readonly fertilized: string | null }[] = [
+  { id: "wall_drip", name: "Wall drip", clean: "L01", fertilized: "L02" },
+  { id: "center_drip", name: "Center drip", clean: "L05", fertilized: "L06" },
+  { id: "center_mister", name: "Center mister", clean: "L04", fertilized: null },
+  { id: "south_mister", name: "South mister", clean: "L07", fertilized: "L08" },
+  { id: "west_mister", name: "West mister", clean: "L09", fertilized: "L10" },
+];
+/** A relay's physical line and variant; null for L03, fog or an unknown id. */
+export function physicalOf(lineId: string): { readonly index: number; readonly variant: Variant } | null {
+  const index = PHYSICAL_LINES.findIndex((item) => item.clean === lineId || item.fertilized === lineId);
+  if (index < 0) return null;
+  return { index, variant: PHYSICAL_LINES[index].clean === lineId ? "clean" : "fertilized" };
+}
 
 /**
  * The seven local days the week shows, from `solar[].date`: today and the next six, or the seven before today ("Last 7
@@ -611,20 +637,37 @@ export function runGallons(gal: number | null | undefined): { readonly text: str
 // read it.
 
 // ---------------------------------------------------------------------------------------------------- zones (Today)
-export type WaterZone = "wall" | "center" | "south" | "west" | "fog";
-/** Water → Today's zone cards, in their fixed order: the order never changes with state, which keeps spatial memory. */
-export const WATER_ZONES: readonly WaterZone[] = ["wall", "center", "south", "west", "fog"];
-/** What each zone card holds, beside its name. */
-export const ZONE_KIND_WORDS: Readonly<Record<WaterZone, string>> = {
-  wall: "drip and feed", center: "mister and drips", south: "mister and feed", west: "mister and feed", fog: "humidification · climate only",
+/**
+ * Water → Today's cards (#1336): one per physical line, each with its clean and fertilized variants, then fog. The
+ * center mister is its own line, apart from the center drips. "center" is the center drip card.
+ */
+export type WaterZone = "wall" | "center" | "center_mister" | "south" | "west" | "fog";
+/** Water → Today's cards, in their fixed order: the order never changes with state, which keeps spatial memory. */
+export const WATER_ZONES: readonly WaterZone[] = ["wall", "center", "center_mister", "south", "west", "fog"];
+/** Each card's physical line. */
+export const ZONE_CARD_WORDS: Readonly<Record<WaterZone, string>> = {
+  wall: "Wall drip", center: "Center drip", center_mister: "Center mister", south: "South mister", west: "West mister", fog: "Fog",
 };
-/** The line whose daily cap a zone's minutes count against (the cap ticks of minutes by zone); fog has none. */
-export const ZONE_CAP_LINE: Readonly<Record<WaterZone, string | null>> = { wall: "L01", center: "L04", south: "L07", west: "L09", fog: null };
+/** What each card holds, beside its name. */
+export const ZONE_KIND_WORDS: Readonly<Record<WaterZone, string>> = {
+  wall: "walls and shelves · clean · fert", center: "clean · fert", center_mister: "clean", south: "clean · fert", west: "clean · fert",
+  fog: "humidification · climate only",
+};
+/** The physical line (API-IRR-01 `circuits`) behind each card; fog has none. */
+export const ZONE_CIRCUIT: Readonly<Record<WaterZone, string | null>> = {
+  wall: "wall_drip", center: "center_drip", center_mister: "center_mister", south: "south_mister", west: "west_mister", fog: null,
+};
+/** The line whose daily cap a card's minutes count against; fog has none. */
+export const ZONE_CAP_LINE: Readonly<Record<WaterZone, string | null>> = { wall: "L01", center: "L05", center_mister: "L04", south: "L07", west: "L09", fog: null };
+/** A variant with no relay when API-IRR-01 has no `circuits` yet: the center mister's fertilized side. */
+const UNWIRED_FALLBACK: Readonly<Partial<Record<WaterZone, readonly Variant[]>>> = { center_mister: ["fertilized"] };
+export type Variant = "clean" | "fertilized";
 const ZONE_OF_API: Readonly<Record<string, WaterZone>> = { wall: "wall", center: "center", south: "south", west: "west", house: "fog", supply: "wall" };
 
-/** A line's zone card: its API zone, with L03's supply on the wall card (it rides on L02) and L11's house as fog. */
-export function lineZone(line: Pick<IrrigationLine, "line_id" | "zone">): WaterZone {
-  return ZONE_OF_API[line.zone] ?? minutesZone(line.line_id) ?? "wall";
+/** A line's card: its API zone, with L03's supply on the wall card (it rides on L02), L11's house as fog and the center mister apart. */
+export function lineZone(line: Pick<IrrigationLine, "line_id" | "zone"> & Partial<Pick<IrrigationLine, "kind">>): WaterZone {
+  const zone = ZONE_OF_API[line.zone] ?? minutesZone(line.line_id) ?? "wall";
+  return zone === "center" && line.kind === "mister" ? "center_mister" : zone;
 }
 
 export type ZoneSummary = {
@@ -648,23 +691,31 @@ export type ZoneSummary = {
   readonly lastAt: string | null;
   /** A line of the zone, L03 included, reads `running` now: the head then says "running now" (redesign §5.2). */
   readonly running: boolean;
+  /** The physical line's variants with no relay (#1336): shown "not wired", never scheduled or run. */
+  readonly unwired: readonly Variant[];
 };
 
-/** The five zone cards' facts from API-IRR-01, with today's still-planned minutes from `plannedToday` when known. */
-export function zoneSummaries(status: Pick<IrrigationStatus, "lines" | "today">, planned: PlannedToday | null): ZoneSummary[] {
+/**
+ * The cards' facts from API-IRR-01, with today's still-planned minutes from `plannedToday` when known. The API's
+ * minutes by zone count the center drips and mister together, so the two center cards sum their own lines.
+ */
+export function zoneSummaries(status: Pick<IrrigationStatus, "lines" | "today"> & { circuits?: IrrigationStatus["circuits"] }, planned: PlannedToday | null): ZoneSummary[] {
   return WATER_ZONES.map((zone) => {
     const inZone = [...status.lines].filter((line) => lineZone(line) === zone).sort(byLineId);
     const running = inZone.some((line) => line.state.code === "running");
     const lines = inZone.filter((line) => !isMaster(line));
     const capLine = ZONE_CAP_LINE[zone];
     const capped = capLine ? lines.find((line) => line.line_id === capLine) ?? null : null;
-    const served = status.today?.zones?.[zone];
+    const served = zone === "center" || zone === "center_mister" ? undefined : status.today?.zones?.[zone];
     const summed = lines.map((line) => line.today?.minutes);
     const minutes = finite(served) ? served : summed.length && summed.every(finite) ? summed.reduce((sum, value) => sum + value, 0) : null;
+    const circuit = status.circuits?.find((item) => item.circuit_id === ZONE_CIRCUIT[zone]);
+    const unwired = circuit ? (["clean", "fertilized"] as const).filter((variant) => !circuit[variant].wired) : UNWIRED_FALLBACK[zone] ?? [];
+    const plannedHere = planned ? lines.reduce((sum, line) => sum + (planned.line[line.line_id] ?? 0), 0) : null;
     const newest = lines.map((line) => line.last_water?.at).filter(validTime).sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null;
     const mister = lines.find((line) => line.kind === "mister") ?? null;
     return {
-      zone, lines, master: inZone.find(isMaster) ?? null, mister, minutes, planned: planned ? planned.zone[zone] ?? 0 : null,
+      zone, lines, master: inZone.find(isMaster) ?? null, mister, minutes, planned: plannedHere, unwired,
       cap: capped && capped.daily_cap_min > 0 ? capped.daily_cap_min : null, capLine: capped?.line_id ?? null,
       reserve: mister && finite(mister.vpd_reserve_min) && mister.vpd_reserve_min > 0 ? mister.vpd_reserve_min : null, lastAt: newest, running,
     };

@@ -40,8 +40,6 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationErro
 # verdify_schemas lives one level up from this server file in every worktree.
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
-from slack_config import load_slack_settings  # noqa: E402
-from slack_ops.service import handle_slack_command  # noqa: E402
 from verdify_schemas import (  # noqa: E402
     ALL_TUNABLES,
     AlertEnvelope,
@@ -72,7 +70,6 @@ from verdify_schemas import (  # noqa: E402
     PlanStatusWaypoint,
     ScorecardResponse,
     SetpointSummary,
-    SlackCommandRequest,
     TreatmentCreate,
     derive_lesson_state,
     is_legal_lesson_transition,
@@ -1009,6 +1006,8 @@ _TOOL_READ_ONLY = frozenset(
         "irrigation_history",
         "settings",
         "activity",
+        "band_profile",
+        "band_profile_preview",
     }
 )
 
@@ -1124,6 +1123,10 @@ SERVER_INSTRUCTIONS = """Verdify greenhouse control tools. Use these to monitor 
     `manual` flag it carries (default false); `settings` and `activity` read the catalog,
     history and every write; Iris's `set_setting` on a manual setting is refused with `manual`.
 
+    The house band is operator-owned and has no write tool: `band_profile` reads its profile,
+    anchors and day curve with the last 24 h measured, and `band_profile_preview` evaluates a
+    draft without saving it. The dashboard saves the band.
+
     Irrigation: `irrigation_status`, `irrigation_schedule` and `irrigation_history` only read
     the water program, in the operator API's JSON, with unknown as null, never 0. Iris, named
     agents and admin share the writes, with the dashboard's checks: `irrigation_schedule_set`,
@@ -1191,7 +1194,6 @@ HERMES_REQUIRED_TOOLS = frozenset(
         "set_setting",
         "set_tunable",
         "settings",
-        "slack_ops",
         "topology",
     }
 )
@@ -1202,7 +1204,7 @@ HERMES_REQUIRED_TOOLS = frozenset(
 # drift, so a new tool cannot silently skip authorization.
 #
 # Audiences:
-#   iris       — the current Hermes Iris profile. Exactly the 34 tools of
+#   iris       — the current Hermes Iris profile. Exactly the 33 tools of
 #                hermes-config.yaml tools.include (== HERMES_REQUIRED_TOOLS);
 #                tests/test_mcp_audience_auth.py holds the three surfaces in
 #                lockstep. Current behavior is preserved.
@@ -1234,7 +1236,6 @@ TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     "alerts": frozenset({"iris", "agent", "admin"}),
     "settings": frozenset({"iris", "agent", "admin"}),
     "activity": frozenset({"iris", "agent", "admin"}),
-    "slack_ops": frozenset({"iris", "admin"}),
     # Irrigation reads (VD-60, #1173): the REST JSON of API-IRR-01, -02, -10 and -11.
     "irrigation_status": frozenset({"iris", "agent", "admin"}),
     "irrigation_schedule": frozenset({"iris", "agent", "admin"}),
@@ -1282,6 +1283,10 @@ TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     "remove_planting": frozenset({"agent", "admin"}),
     "annotate_planting": frozenset({"agent", "admin"}),
     "planting_history": frozenset({"agent", "admin"}),
+    # The house band (#1334): API-23's read for named agents and admin. No band write tool exists (the band is
+    # operator-owned; API-24 is the dashboard's), and Iris is left out so its profile stays the Hermes include list.
+    "band_profile": frozenset({"agent", "admin"}),
+    "band_profile_preview": frozenset({"agent", "admin"}),
 }
 
 # Registry entries for tools that are DESIGNED but not yet registered. Each
@@ -1548,38 +1553,6 @@ async def mcp_ready(_request):
         },
         status_code=200 if ready else 503,
     )
-
-
-@mcp.tool()
-async def slack_ops(
-    text: str,
-    slack_user_id: str = "iris",
-    slack_user_name: str = "Iris",
-    role_override: str = "operator",
-) -> str:
-    """Execute deterministic Iris Slack operations against the #greenhouse command surface.
-
-    Use this for greenhouse status, briefs, alert runbooks/actions, forecast
-    triage, guardrail summaries, public-safe ops logs, crop observations/photo
-    intake, crop lifecycle/task writes, lesson extraction requests, and planner
-    triggers. Direct relay commands are denied by policy.
-    """
-
-    settings = load_slack_settings()
-    req = SlackCommandRequest(
-        text=text,
-        slack_user_id=slack_user_id,
-        slack_user_name=slack_user_name,
-        channel_id=settings.channel_id,
-        channel_name=settings.channel_name,
-        raw_event={"source": "mcp.slack_ops"},
-    )
-    conn = await _db()
-    try:
-        response = await handle_slack_command(req, conn=conn, settings=settings, role_override=role_override)
-        return response.model_dump_json()
-    finally:
-        await conn.close()
 
 
 async def _insert_plan_delivery_log(conn: asyncpg.Connection, result: dict) -> str | None:
@@ -5495,7 +5468,11 @@ async def settings(
 
     With no window: API-09's `{items, server_time}`, filtered by param, group, writable_only and manual_only. Each
     row carries applied_from (whose value is in force: manual, desired, plan, band or default), min, max, step,
-    its desired row, its plan value and its readback state. Narrow it: the whole catalog is large.
+    its desired row, its plan value and its readback state, and `help`: what the setting is (summary), what the
+    controller does with it (effect), what raising and lowering it does (raise, lower; for a switch, turning it on and
+    off) and any caution, the same words the dashboard shows; a guardrail row has guardrail true. A read-only row
+    carries read_only_kind, and a derived row source_params, the writable settings it is computed from. Explain a
+    change with that text. Narrow it: the whole catalog is large.
 
     With param, since and until all given: API-12's SettingHistory over [since, until), the desired rows, plan
     values and readback change points; since and until map to API-12's from and to, and the other filters do not
@@ -5555,6 +5532,107 @@ async def activity(
                 cursor=cursor,
             )
         )
+
+
+# ── The house band (#1334): API-23's read, never its Save ──
+# The band is operator-owned (decisions 2026-11-05): there is no band write tool, and Iris is not in these reads'
+# audience. API-24 (PUT /v1/band/profile) stays the dashboard's.
+
+_BAND_DAY_DESCRIPTION = "America/Denver day, YYYY-MM-DD, at most 400 days from today; default today."
+
+
+def _band_day(value: str | None) -> date | None:
+    if value is None:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except (TypeError, ValueError) as exc:
+        raise ServiceError(problem("invalid_request", "day is a local date, YYYY-MM-DD", field="day")) from exc
+
+
+def _band_temp(description: str, minimum: float | None = None):
+    return Field(default=None, description=f"{description}, °F.", ge=minimum)
+
+
+def _band_vpd(description: str, minimum: float | None = None):
+    return Field(default=None, description=f"{description}, kPa.", ge=minimum)
+
+
+@mcp.tool()
+@_answers_problems
+async def band_profile(day: Annotated[str | None, Field(description=_BAND_DAY_DESCRIPTION)] = None):
+    """Read the house band: its profile, its 24 anchors and its curve over one day. REST twin: API-23
+    (GET /v1/band/profile) with no draft; the same JSON (BandProfilePreview).
+
+    It only reads. Returns current (profile: day and night targets, the temperature ± widths and the VPD range below
+    and above; the 24 raw anchors; simple), the day's curve at 10-min steps of t (temp and vpd low, target and high,
+    as the controller evaluates them), vpd.device (with the night_vpd_bias_kpa the controller reports running), the
+    sun times, the guardrails, overshoot, the night heat estimate, the expected night VPD ribbon and its fit, findings,
+    measured (the last 24 h of house temp_avg and vpd_avg on t by local clock time: today's before now, yesterday's
+    after) and forecast (the day's outdoor temperature and VPD). draft equals current and changed is empty. Unknown
+    values are null, never 0.
+
+    There is no band write tool: the band is operator-owned and is saved on the dashboard (Control → Band). Use
+    band_profile_preview to evaluate a change. Refusals return the Problem JSON with isError: invalid_request (day),
+    read_only (the house band has no complete anchor set), query_timeout and unavailable (both retryable)."""
+    from verdify_services import band_profile as band_service
+
+    parsed = _band_day(day)
+    async with _service_connection() as conn:
+        return _tool_ok(await band_service.preview(conn, None, None, parsed))
+
+
+@mcp.tool()
+@_answers_problems
+async def band_profile_preview(
+    temp_day: Annotated[float | None, _band_temp("Temperature target at solar noon")] = None,
+    temp_night: Annotated[float | None, _band_temp("Temperature target at solar midnight")] = None,
+    temp_width_day: Annotated[float | None, _band_temp("± around the day target", 0)] = None,
+    temp_width_night: Annotated[float | None, _band_temp("± around the night target", 0)] = None,
+    vpd_day: Annotated[float | None, _band_vpd("VPD target at solar noon")] = None,
+    vpd_night: Annotated[float | None, _band_vpd("VPD target at solar midnight")] = None,
+    vpd_below_day: Annotated[float | None, _band_vpd("Range below the day target", 0)] = None,
+    vpd_above_day: Annotated[float | None, _band_vpd("Range above the day target", 0)] = None,
+    vpd_below_night: Annotated[float | None, _band_vpd("Range below the night target", 0)] = None,
+    vpd_above_night: Annotated[float | None, _band_vpd("Range above the night target", 0)] = None,
+    anchors: Annotated[
+        dict[str, float] | None,
+        Field(description='Advanced: raw house anchors by param, such as {"band_temp_low_sr": 62.5}.'),
+    ] = None,
+    day: Annotated[str | None, Field(description=_BAND_DAY_DESCRIPTION)] = None,
+):
+    """Evaluate a draft of the house band without saving it. REST twin: API-23 (GET /v1/band/profile) with the same
+    fields; the same JSON (BandProfilePreview).
+
+    It only reads: nothing is stored and nothing reaches the controller. A field left out keeps the band's value; any
+    temperature field recompiles the temperature series with sunrise and sunset at the midpoint of noon and midnight,
+    any VPD field the VPD series; anchors then override single raw anchors. Returns current and draft (profile, anchors,
+    simple), changed (the anchors a Save would write), both curves over the day at 10-min steps of t, vpd.device (the
+    draft with the controller's night bias), findings (error: band_order, guardrail, night_floor, the 0.74 kPa night
+    dry-out floor; warning: overshoot, dewpoint_unreached), the night heat estimate for both, the expected night VPD,
+    measured (the last 24 h of the house average on t) and forecast (outdoor). Unknown values are null, never 0.
+
+    There is no band write tool: the band is operator-owned and is saved on the dashboard (Control → Band). Refusals
+    return the Problem JSON with isError: invalid_request (day), unknown_target (an anchor that is not a house band
+    anchor), out_of_range (an anchor outside its registry bounds), read_only (the house band has no complete anchor
+    set), query_timeout and unavailable (both retryable). A field outside its schema is refused before the tool runs."""
+    from verdify_services import band_profile as band_service
+
+    patch = band_service.BandProfilePatch(
+        temp_day=temp_day,
+        temp_night=temp_night,
+        temp_width_day=temp_width_day,
+        temp_width_night=temp_width_night,
+        vpd_day=vpd_day,
+        vpd_night=vpd_night,
+        vpd_below_day=vpd_below_day,
+        vpd_above_day=vpd_above_day,
+        vpd_below_night=vpd_below_night,
+        vpd_above_night=vpd_above_night,
+    )
+    parsed = _band_day(day)
+    async with _service_connection() as conn:
+        return _tool_ok(await band_service.preview(conn, patch, dict(anchors or {}), parsed))
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -6223,7 +6301,22 @@ async def irrigation_schedule_set(
     ] = None,
     delete: Annotated[bool, Field(description="Delete the schedule slot_id names; send no schedule field.")] = False,
     line_id: Annotated[
-        ScheduleLineId | None, Field(description="The line: L01, L02 or L04-L10. Needed to create.")
+        ScheduleLineId | None,
+        Field(description="The relay: L01, L02 or L04-L10. To create, give it or circuit_id and variant."),
+    ] = None,
+    circuit_id: Annotated[
+        Literal["wall_drip", "center_drip", "center_mister", "south_mister", "west_mister"] | None,
+        Field(
+            description="Instead of line_id (#1336): the physical line: wall_drip (every wall and shelf), center_drip, "
+            "center_mister, south_mister or west_mister. Send variant with it."
+        ),
+    ] = None,
+    variant: Annotated[
+        Literal["clean", "fertilized"] | None,
+        Field(
+            description="With circuit_id: clean water, or fertilized (opens the fertilizer master valve L03; clean "
+            "never does). A variant whose valve is not wired is unknown_target."
+        ),
     ] = None,
     days: Annotated[list[Weekday] | None, Field(min_length=1, description="The weekdays. Needed to create.")] = None,
     start: Annotated[ScheduleStart | None, Field(description="When it starts each day. Needed to create.")] = None,
@@ -6254,7 +6347,8 @@ async def irrigation_schedule_set(
     /v1/irrigation/schedules/{slot_id}) and API-IRR-05 (DELETE /v1/irrigation/schedules/{slot_id}). Returns the Schedule
     JSON with sync and manual_before; a delete returns {"slot_id": <id>, "deleted": true, "manual_before": <flag>}.
 
-    No slot_id creates, and needs line_id, days, start and on_s. A slot_id edits: omitted fields keep their value, except
+    No slot_id creates, and needs the line (line_id, or circuit_id and variant), days, start and on_s. An edit may send
+    variant alone to switch clean and fertilized on the same physical line. A slot_id edits: omitted fields keep their value, except
     manual. delete true with a slot_id and no schedule field deletes. irrigation_schedule has the bounds per line kind
     and the limit of 24 schedules.
 
@@ -6273,6 +6367,8 @@ async def irrigation_schedule_set(
         name: value
         for name, value in (
             ("line_id", line_id),
+            ("circuit_id", circuit_id),
+            ("variant", variant),
             ("days", days),
             ("start", None if start is None else start.model_dump(exclude_none=True)),
             ("on_s", on_s),
@@ -6330,7 +6426,15 @@ async def irrigation_line_set(
     enabled: Annotated[
         bool | None, Field(description="Off stops everything on the line, VPD misting included.")
     ] = None,
-    vpd_member: Annotated[bool | None, Field(description="L04, L07 and L09: VPD misting on this zone.")] = None,
+    vpd_member: Annotated[
+        bool | None,
+        Field(
+            description="L04, L07 and L09: VPD control. When the climate loop wants humidity and its safety gate "
+            "passes, the controller may send this mister short mist pulses, one mister at a time by rank (center "
+            "first unless another member's own VPD is further above its target), within the line's daily cap and the "
+            "daily mist and fog limit. Needs the line enabled (line_disabled otherwise)."
+        ),
+    ] = None,
     schedule_member: Annotated[bool | None, Field(description="L04, L07 and L09: schedules and runs here.")] = None,
     daily_cap_min: Annotated[int | None, Field(ge=0, le=480, description="Minutes a day; 0 is no cap.")] = None,
     vpd_reserve_min: Annotated[
@@ -6370,7 +6474,7 @@ async def irrigation_line_set(
 
     Refusals are the Problem JSON with isError: out_of_range (min and max are the bounds), check_required,
     invalid_request (all with any field but paused_until, manual included; a mister flag off L04, L07 or L09),
-    unknown_target, manual, request_id_reused, forbidden, and unavailable (the database; retry with the same
+    line_disabled (vpd_member true on a line that stays disabled), unknown_target, manual, request_id_reused, forbidden, and unavailable (the database; retry with the same
     request_id)."""
     from verdify_services.irrigation import writes
 
@@ -6407,16 +6511,33 @@ async def irrigation_line_set(
 @mcp.tool()
 async def irrigation_run(
     line_id: Annotated[
-        LineId,
-        Field(description="The line to run: L01, L02 or L04-L10; L03 and L11 take no runs. Before the firmware: L01."),
-    ],
+        LineId | None,
+        Field(
+            description="The relay to run: L01, L02, L04-L10, or fog L11; L03 takes no runs. Or give circuit_id and "
+            "variant instead. Before the firmware: L01."
+        ),
+    ] = None,
+    circuit_id: Annotated[
+        Literal["wall_drip", "center_drip", "center_mister", "south_mister", "west_mister"] | None,
+        Field(
+            description="Instead of line_id (#1336): the physical line: wall_drip (every wall and shelf), center_drip, "
+            "center_mister, south_mister or west_mister. Send variant with it."
+        ),
+    ] = None,
+    variant: Annotated[
+        Literal["clean", "fertilized"] | None,
+        Field(
+            description="With circuit_id: clean water, or fertilized (opens the fertilizer master valve L03; clean "
+            "never does). A variant whose valve is not wired is unknown_target."
+        ),
+    ] = None,
     minutes: Annotated[
         int | None,
         Field(
             ge=1,
             le=120,
-            description="Drips L01, L02, L05, L06. Before the irrigation firmware: L01, left out or exactly "
-            "irrig_wall_duration_min.",
+            description="Drips L01, L02, L05, L06, and fog L11 (1-30). Before the irrigation firmware: L01, left out "
+            "or exactly irrig_wall_duration_min.",
         ),
     ] = None,
     prewet_s: Annotated[
@@ -6441,7 +6562,11 @@ async def irrigation_run(
     Returns the Command JSON: status pending, then sent, or failed (not sent within 2 min, ended by a Stop, or the line
     already running). Whether water started shows on the line's relay in equipment_state within about 30 s, not here.
 
-    Send exactly the fields of the line's kind. Drips L01, L05: minutes. Fertilizer drips L02, L06: minutes, prewet_s,
+    Name the line by its relay (line_id) or as a physical line and variant (circuit_id and variant): a fertilized
+    variant runs its fertilizer relay with the master valve, a clean one never opens it.
+
+    Send exactly the fields of the line's kind. Fog L11: minutes, 1-30 (unavailable until the controller runs the
+    firmware that takes it). Drips L01, L05: minutes. Fertilizer drips L02, L06: minutes, prewet_s,
     flush_s. Misters L04, L07, L09, Schedule on or off: on_s, count, gap_s. Fertilizer misters L08, L10: on_s,
     count, gap_s, prewet_s, flush_s, never minutes; a rinse needs the clean partner enabled, or the controller ends the
     run skipped.
@@ -6457,7 +6582,7 @@ async def irrigation_run(
     cap_reached, line_disabled, line_paused, line_faulted, not_schedule_member (a mister with Schedule off, only until
     the controller runs the firmware that drops that rule), out_of_range (before the firmware, minutes
     is not irrig_wall_duration_min; min and max give it), invalid_request (a missing field or another kind's, such as
-    minutes on L08), unknown_target (L03, L11), request_id_reused, forbidden, and unavailable (a line other than L01
+    minutes on L08), unknown_target (L03, or a variant whose valve is not wired), request_id_reused, forbidden, and unavailable (a line other than L01
     before the irrigation firmware, not retryable; the database, retryable with the same request_id)."""
     from verdify_services.irrigation import writes
 
@@ -6476,6 +6601,8 @@ async def irrigation_run(
             on_s=on_s,
             count=count,
             gap_s=gap_s,
+            circuit_id=circuit_id,
+            variant=variant,
         )
 
     return await _irrigation_write("irrigation_run", write)

@@ -44,8 +44,8 @@ test("in band: Running now, the next 12 h in time order with who planned each ch
   expect(within(card()).getByRole("heading", { level: 2 }).textContent).toBe("Running and next");
   expect(text(card().querySelector(".now-next-now"))).toBe("Running nowNothing running");
   expect(coming("run")).toEqual(["11:47Center mister · 4 × 45 s · vanda-degraded · only if VPD sensing is degraded", "13:47Center mister · 4 × 45 s · vanda-degraded · only if VPD sensing is degraded"]);
-  expect(coming("plan")).toEqual(["13:00VPD Mister Engage 1.60 → 1.70 kPa AI", "16:30Mister Pulse Gap 45.0 → 55.0 s AI"]);
-  expect(coming("iris")).toEqual(["12:41Iris SOLAR_MAX trigger", "16:50Iris SUNSET trigger"]);
+  expect(coming("plan")).toEqual(["13:00Misting starts at VPD 1.60 → 1.70 kPa AI", "16:30Mist pulse gap 45.0 → 55.0 s AI"]);
+  expect(coming("iris")).toEqual(["12:41Iris: Midday check", "16:50Iris: Sunset plan"]);
   expect(coming("sun")).toEqual(["16:58Sunset"]);
   expect(coming("later")).toEqual(["Later No schedule: Wall drip, South mister, West mister"]);
   // The next run shows here alone: nowhere else on Now (redesign §5.1).
@@ -54,9 +54,9 @@ test("in band: Running now, the next 12 h in time order with who planned each ch
 
 test("a forecast rule reads Forecast rule · system, never AI; a paused line under Later says who paused it and why", async () => {
   await open(["plan-next", "l01-paused"]);
-  expect(coming("plan")[1]).toBe("13:00Mister Engage Delay 60.0 → 90.0 s · Forecast rule · system");
+  expect(coming("plan")[1]).toBe("13:00Wait before misting 60.0 → 90.0 s · Forecast rule · system");
   expect(card().querySelectorAll("[data-coming=plan]")[1].querySelector("[data-badge=ai]")).toBeNull();
-  expect(coming("iris")).toEqual(["16:50Iris SUNSET trigger"]);
+  expect(coming("iris")).toEqual(["16:50Iris: Sunset plan"]);
   // Now is not in the shell here: the pause reads by username.
   expect(coming("later")[0]).toMatch(/^Later Wall drip paused until 14:00 by jason: rain · next Wed 07:35 · /);
 });
@@ -74,7 +74,14 @@ test("the track reads API-05's last 6 h only once it nears the screen; until the
   expect(observe).toHaveBeenCalledOnce();
   expect(sentAt("API-05")).toEqual([0]);
   const track = screen.getByRole("group", { name: TRACK_LABEL });
-  expect([...track.querySelectorAll(".tt-label")].map(text)).toEqual(["Heat", "Vent, fans", "Fog, mist", "Drips", "Iris", "Plan", "Sun"]);
+  expect([...track.querySelectorAll(".tt-label")].map(text)).toEqual(["Heat", "Vent, fans", "Fog, mist", "Drips", "Main light", "Grow light", "Iris plans", "Setting changes", "Sun"]);
+  // The planner's and the lights' row names are Terms: a tap opens the definition (#1339).
+  expect([...track.querySelectorAll(".tt-label button.term")].map(text)).toEqual(["Main light", "Grow light", "Iris plans", "Setting changes"]);
+  // A marker is a button: a tap opens its detail in full, whatever room its label had (#1340).
+  const marker = track.querySelector<HTMLElement>("[data-row=plan] .tt-marker-button")!;
+  fireEvent.click(marker);
+  const detail = screen.getByRole("dialog", { name: "Setting changes at 13:00" });
+  expect(plain(text(detail.querySelector(".tt-marker-detail")))).toBe("13:00 Misting starts at VPD 1.60 → 1.70 kPa · AI");
   expect(track.querySelector(".tt-now")).not.toBeNull();
   expect(track.querySelectorAll(".tt-night")).not.toHaveLength(0);
   expect(plain(text(track.querySelector(".tt-row:nth-child(1) .tt-span")))).toBe("Heat 1 (electric) 04:42–07:10");

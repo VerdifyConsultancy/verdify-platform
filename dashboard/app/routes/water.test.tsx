@@ -95,10 +95,17 @@ test("Today: zone cards in their fixed order, each line a row in its zone (L01�
   await load();
   expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Water today");
   expect(tab("Today").getAttribute("aria-current")).toBe("page");
-  expect([...document.querySelectorAll(".wat-zone")].map((node) => node.getAttribute("data-zone"))).toEqual(["wall", "center", "south", "west", "fog"]);
-  expect([...document.querySelectorAll("article[data-line]")].map((node) => node.getAttribute("data-line"))).toEqual(["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11"]);
-  expect([...document.querySelectorAll("article[data-line] h3")].map((node) => text(node))).toEqual([
-    "Wall drip", "Wall drip (fertilized)", "Center mister", "Center drip", "Center drip (fertilized)", "South mister", "South mister (fertilized)", "West mister", "West mister (fertilized)", "Fog",
+  expect([...document.querySelectorAll(".wat-zone")].map((node) => node.getAttribute("data-zone"))).toEqual(["wall", "center", "center_mister", "south", "west", "fog"]);
+  // #1336: one card per physical line, the center mister apart from the center drips, its fertilized side not wired.
+  expect([...document.querySelectorAll("article[data-line]")].map((node) => node.getAttribute("data-line"))).toEqual(["L01", "L02", "L05", "L06", "L04", "L07", "L08", "L09", "L10", "L11"]);
+  expect([...document.querySelectorAll(".wat-zone-name")].map((node) => text(node).split(" ").slice(0, 2).join(" "))).toEqual(["Wall drip", "Center drip", "Center mister", "South mister", "West mister", "Fog humidification"]);
+  expect(text(zone("center_mister").querySelector(".wat-unwired"))).toBe("Fertilized · not wired");
+  // #1349: the cards under Drips, Misters and Climate headings; each card's name an h3 and each row's an h4.
+  expect([...document.querySelectorAll(".wat-group")].map((node) => [text(node.querySelector(".wat-group-title")), [...node.querySelectorAll(".wat-zone")].map((card) => card.getAttribute("data-kind"))])).toEqual([
+    ["Drips", ["drip", "drip"]], ["Misters", ["mister", "mister", "mister"]], ["Climate", ["fog"]],
+  ]);
+  expect([...document.querySelectorAll("article[data-line] h4")].map((node) => text(node))).toEqual([
+    "Wall drip", "Wall drip (fertilized)", "Center drip", "Center drip (fertilized)", "Center mister", "South mister", "South mister (fertilized)", "West mister", "West mister (fertilized)", "Fog",
   ]);
   // Each row is named by its h3, carries its state, and the old hook class stays for the visit specs.
   expect(screen.getByRole("article", { name: "Wall drip" }).getAttribute("data-state")).toBe("idle");
@@ -106,13 +113,13 @@ test("Today: zone cards in their fixed order, each line a row in its zone (L01�
   expect(row("L02").querySelector(".line-subrow")?.getAttribute("data-line")).toBe("L03");
   // Zone heads: minutes against the cap line's cap, the reserve and when it last watered; misters' switches and source.
   expect(text(zone("wall").querySelector('[data-limit="L01"]'))).toMatch(/^0 \/ 60 min.*last Fri \d\d:\d\d$/);
-  expect(text(zone("center").querySelector('[data-limit="L04"]'))).toMatch(/^14 \/ 120 min.*60 min kept for VPD · last 06:58$/);
-  expect(text(zone("center").querySelector(".mister-source"))).toBe("VPD from the house average");
+  expect(text(zone("center_mister").querySelector('[data-limit="L04"]'))).toMatch(/^14 \/ 120 min.*60 min kept for VPD · last 06:58$/);
+  expect(text(zone("center_mister").querySelector(".mister-source"))).toBe("VPD from the house average");
   expect(text(zone("fog").querySelector(".wat-zone-today"))).toMatch(/^6 min today/);
   // Site today, in words with its hooks.
   expect([...document.querySelectorAll(".wat-site [data-limit]")].map((node) => [node.getAttribute("data-limit"), text(node)])).toEqual([
-    ["saf4", "SAF-4, the daily mist and fog ceiling, in Settings21 / 360 galdaily mist and fog ceiling"], ["budget", "Soft budget21 / 300 gal"], ["flow", "Unexplained flow: none"],
-    ["occupancy", "Nobody seen: misters may run (last person 05:10)"], ["fallback", "Fallback misting: off"],
+    ["saf4", "Daily mist & fog limit, in Settings21 / 360 gal"], ["budget", "Daily mist target (soft)21 / 300 gal"], ["flow", "Water with no Verdify valve open: none"],
+    ["occupancy", "Occupancy: nobody detected, misting allowed (last person 05:10)"], ["fallback", "Backup misting (sensor fault): off"],
   ]);
   expect(program()).toBe("Program rev 42 on controller · confirmed 2 min ago");
   expect(status()).toBe("Program rev 42 on controller · confirmed 2 min ago · nothing running");
@@ -139,9 +146,12 @@ test("Today's strips: each line's runs today with the now rule and its next run;
   expect(strip("L04").querySelectorAll(".sch-tick")).toHaveLength(1);
   expect(strip("L04").querySelectorAll(".sch-now")).toHaveLength(1);
   expect(text(row("L04").querySelector(".wat-next"))).toBe("next Tue 06:50 · 8 × 60 s");
-  // The hour ticks ride on the first row of each zone only; a reserved line that is off has no strip.
+  // The hour ticks ride on the first row of each zone only; a line that is off keeps its strip, faded, with its day and night (#1347).
   expect(zone("wall").querySelectorAll(".wat-day-axis")).toHaveLength(1);
-  expect(row("L05").querySelector(".wat-day")).toBeNull();
+  expect(row("L05").classList.contains("is-off")).toBe(true);
+  expect(row("L05").querySelector(".wat-day")).not.toBeNull();
+  // The legend is on show above the cards, no click needed.
+  expect([...document.querySelectorAll(".wat-legend li")].map((node) => text(node))).toEqual(["day", "night", "now", "clean", "fertilized", "ran (solid)", "planned (dashed)", "skipped", "backup window", "valve open"]);
   // Fog: its valve's time, no next run (it is not scheduled).
   expect(row("L11").querySelector(".wat-next")).toBeNull();
 });
@@ -170,7 +180,7 @@ test("a phone's status line names a running line too, linked to its row; the zon
   // The wall's head: today's 12 min against the cap, and "running now", never Friday's last water.
   expect(text(zone("wall").querySelector('[data-limit="L01"]'))).toMatch(/^12 \/ 60 min.*running now$/);
   expect(text(zone("wall").querySelector(".wat-zone-last"))).not.toContain("last");
-  expect(text(zone("center").querySelector(".wat-zone-last"))).toBe("60 min kept for VPD · last 06:58");
+  expect(text(zone("center_mister").querySelector(".wat-zone-last"))).toBe("60 min kept for VPD · last 06:58");
   cleanup(); stopFixtureApi();
   open("/water", { fixture: "in-band" });
   await load();
@@ -279,7 +289,7 @@ const timeline = () => document.querySelector<HTMLElement>(".sch-day")!;
 const timelineRow = (id: string) => timeline().querySelector<HTMLElement>(`.sch-row[data-line="${id}"]`)!;
 const agendaView = () => document.querySelector<HTMLElement>(".sch-agenda")!;
 
-test("Schedules reads API-IRR-02 once with past_days=7: the week strip with past and future, today's timeline by manifold and the agenda beside it for phones", async () => {
+test("Schedules reads API-IRR-02 once with past_days=7: the week strip with past and future, today's timeline one lane per physical line, with its legend, and the agenda beside it for phones", async () => {
   const api = open("/water/schedules", { fixture: "schedules-paused" });
   await load();
   expect(tab("Schedules").getAttribute("aria-current")).toBe("page");
@@ -298,12 +308,19 @@ test("Schedules reads API-IRR-02 once with past_days=7: the week strip with past
   // The day timeline: the manifolds, blocks named in words, the now rule, night, and each row's cap.
   expect(text(timeline().querySelector("h2"))).toBe("Monday, Nov 2 · today");
   expect(text(timeline().querySelector(".sch-day-title .meta"))).toBe("sunrise 06:35 · solar noon 11:47 · sunset 16:58");
-  expect([...timeline().querySelectorAll(".sch-group-label")].map((node) => text(node))).toEqual(["Drip manifold", "Mister manifold"]);
-  expect([...timeline().querySelectorAll(".sch-row")].map((node) => node.getAttribute("data-line"))).toEqual(["L01", "L02", "L05", "L06", "L04", "L07", "L08", "L09", "L10"]);
+  // #1347: Drips and Misters, one lane per physical line by its name, its clean and fertilized relays together; the legend under the axis.
+  expect([...timeline().querySelectorAll(".sch-group-label")].map((node) => text(node))).toEqual(["Drips", "Misters"]);
+  expect([...timeline().querySelectorAll(".sch-row")].map((node) => [text(node.querySelector(".sch-row-name")), node.getAttribute("data-lines")])).toEqual([
+    ["Wall drip", "L01 L02"], ["Center drip", "L05 L06"], ["Center mister", "L04"], ["South mister", "L07 L08"], ["West mister", "L09 L10"],
+  ]);
+  expect(timeline().querySelectorAll(".sch-legend li").length).toBeGreaterThan(5);
+  // A disabled lane keeps its night shade like any other.
+  expect(timelineRow("L05").classList.contains("is-muted")).toBe(true);
+  expect(timelineRow("L05").querySelectorAll(".sch-night").length).toBe(timelineRow("L01").querySelectorAll(".sch-night").length);
   expect(within(timelineRow("L01")).getByRole("button", { name: /^Wall drip · Wall MWF, Mon 07:35, 12\smin, done, ok$/ }).getAttribute("tabindex")).toBe("-1");
-  expect(timeline().querySelectorAll(".sch-now")).toHaveLength(9);
+  expect(timeline().querySelectorAll(".sch-now")).toHaveLength(5);
   expect(text(timelineRow("L04").querySelector(".sch-cap"))).toMatch(/^14 \/ 120 min/);
-  expect(text(timelineRow("L07").querySelector(".sch-row-note"))).toBe("Schedule off for this zone");
+  expect(text(timelineRow("L07").querySelector(".sch-row-note"))).toBe("Schedule off for this mister");
   expect(timelineRow("L04").querySelectorAll(".sch-tick")).toHaveLength(1);
   // The agenda renders too (the stylesheet shows it below 861 px): today, tomorrow with NEXT, Wednesday.
   expect([...agendaView().querySelectorAll("h3")].map((node) => text(node))).toEqual(["Today · Mon 2 Nov", "Tomorrow · Tue 3 Nov", "Wed 4 Nov"]);
@@ -358,9 +375,11 @@ test("‹ › step the day, the week strip selects one, and view=week shows the 
   expect(where()).toBe("/water/schedules?day=2026-11-08&view=week");
   const matrix = screen.getByRole("table");
   expect(matrix.className).toContain("week-table");
-  expect([...matrix.querySelectorAll("tbody tr[data-line]")].map((node) => node.getAttribute("data-line"))).toEqual(["L01", "L02", "L05", "L06", "L04", "L07", "L08", "L09", "L10"]);
+  expect([...matrix.querySelectorAll("tbody tr[data-line]")].map((node) => node.getAttribute("data-lane"))).toEqual(["wall_drip", "center_drip", "center_mister", "south_mister", "west_mister"]);
   const cell = matrix.querySelector<HTMLElement>('tr[data-line="L01"] td[data-day="2026-11-04"]')!;
-  expect(cell.querySelectorAll(".sch-mark.sch-planned")).toHaveLength(1);
+  expect(cell.querySelectorAll(".sch-mark.sch-planned.sch-mark-clean")).toHaveLength(1);
+  // Sunday's feed on L02 marks the Wall drip row in the fertilized colour (#1347).
+  expect(matrix.querySelectorAll('tr[data-lane="wall_drip"] td[data-day="2026-11-08"] .sch-mark-fert')).toHaveLength(1);
   expect(text(cell.querySelector(".sch-cell-total"))).toBe("12 / 60");
   fireEvent.click(within(cell).getByRole("link"));
   await load();
@@ -400,12 +419,14 @@ test("an operator's click on an empty part of a row opens the editor prefilled w
   expect(where()).toBe("/water/schedules?day=2026-11-04&line=L07&at=13%3A15&schedule=new");
   const drawer = within(document.querySelector<HTMLElement>("dialog.drawer")!);
   expect((drawer.getByLabelText("Line") as HTMLSelectElement).selectedOptions[0].textContent).toBe("South mister");
+  expect((drawer.getByLabelText("Variant") as HTMLSelectElement).selectedOptions[0].textContent).toBe("Clean");
   expect((drawer.getByLabelText("Clock time (HH:MM)") as HTMLInputElement).value).toBe("13:15");
   expect(drawer.getByRole("button", { name: "Wednesday" }).getAttribute("aria-pressed")).toBe("true");
   fireEvent.click(drawer.getByRole("button", { name: "Cancel" }));
   await load();
   expect(where()).toBe("/water/schedules?day=2026-11-04");
-  expect(within(timelineRow("L02")).getByRole("link", { name: "New schedule on Wall drip (fertilized)" }).getAttribute("href")).toBe("/water/schedules?day=2026-11-04&line=L02&schedule=new");
+  // A lane's [+] starts on its clean relay; the editor picks the variant (#1336, #1347).
+  expect(within(timelineRow("L01")).getByRole("link", { name: "New schedule on Wall drip" }).getAttribute("href")).toBe("/water/schedules?day=2026-11-04&line=L01&schedule=new");
 });
 
 test("the rules list: every schedule under its line with its words, who changed it, its one pill and its switch; Duplicate and Delete in ⋯", async () => {
@@ -431,14 +452,15 @@ test("the rules list: every schedule under its line with its words, who changed 
   expect(text(document.querySelector(".toast-stack[role=status]"))).toContain("Requested deleting Weekly feed on Wall drip (fertilized)");
 });
 
-test("a line's fallback schedules are one row, Fallback (3), with their starts in units, opening to each schedule's own row; the switches read ON with no visible Enabled (#1308 visual QA 42)", async () => {
+test("a line's fallback schedules are one row, Backup misting when sensors fail (3 times a day) with its state, with their starts in units, opening to each schedule's own row; the switches read ON with no visible Enabled (#1308 visual QA 42)", async () => {
   open("/water/schedules", { fixture: "in-band" });
   await load();
   const group = document.querySelector<HTMLElement>('.sch-rules .sch-rule-group[data-line="L04"]')!;
   const fallback = group.querySelector<HTMLElement>('.sch-rule-fallback[data-fallback="L04"]')!;
-  expect(text(fallback.querySelector(".object-row-title"))).toBe("Fallback (3)");
-  expect(text(fallback.querySelector(".object-row-state"))).toBe("Daily · solar noon −2 h, 0, +2 h (09:47, 11:47, 13:47 today) · 4 × 45 s, 60 s gap");
-  expect(text(fallback.querySelector(".object-row-meta"))).toBe("only if VPD sensing is degraded · Iris may adjust · changed by seed 12 days ago");
+  // #1344: plain words, its state first.
+  expect(text(fallback.querySelector(".object-row-title"))).toBe("Backup misting when sensors fail (3 times a day)");
+  expect(text(fallback.querySelector(".object-row-state"))).toBe("On · Daily · solar noon −2 h, 0, +2 h (09:47, 11:47, 13:47 today) · 4 × 45 s, 60 s gap");
+  expect(text(fallback.querySelector(".object-row-meta"))).toBe("Runs only while the VPD sensors are faulty; otherwise each window passes as not needed · Iris may adjust · changed by seed 12 days ago");
   // One row at the line's level; each schedule's own row, with its switch, Edit and ⋯, inside its disclosure.
   expect([...group.querySelectorAll(":scope > .sch-rule-rows > li")]).toEqual([fallback]);
   const each = fallback.querySelector<HTMLDetailsElement>("details.sch-fallback-each")!;
@@ -615,12 +637,12 @@ const LINE_IDS = ["L01", "L02", "L04", "L05", "L06", "L07", "L08", "L09", "L10",
 const buttons = (id: string) => [...row(id).querySelectorAll(":scope > .object-row-actions > button")].map((node) => text(node));
 const everyRow = () => Object.fromEntries(LINE_IDS.map((id) => [id, buttons(id)]));
 
-test("each row's actions with the irrigation firmware (#1343): Run… or Mist now… on every wet line but a reserved one that is off, a quiet Stop on every row but fog", async () => {
+test("each row's actions with the irrigation firmware (#1343): Run… or Mist now… on every wet line but a reserved one that is off, a quiet Stop on every row, and Fog once… on L11", async () => {
   open("/water", { fixture: "run-dialogs" });
   await load();
   expect(everyRow()).toEqual({
     L01: ["Run… Wall drip", "Stop Wall drip"], L02: ["Run… Wall drip (fertilized)", "Stop Wall drip (fertilized)"], L04: ["Mist now… Center mister", "Stop Center mister"], L05: ["Stop Center drip"], L06: ["Stop Center drip (fertilized)"], L07: ["Mist now… South mister", "Stop South mister"],
-    L08: ["Run… South mister (fertilized)", "Stop South mister (fertilized)"], L09: ["Mist now… West mister", "Stop West mister"], L10: ["Run… West mister (fertilized)", "Stop West mister (fertilized)"], L11: [],
+    L08: ["Run… South mister (fertilized)", "Stop South mister (fertilized)"], L09: ["Mist now… West mister", "Stop West mister"], L10: ["Run… West mister (fertilized)", "Stop West mister (fertilized)"], L11: ["Fog once… Fog", "Stop Fog"],
   });
   expect(document.querySelectorAll("article[data-line] .btn-stop")).toHaveLength(0);
   expect(screen.getByRole("button", { name: "Run… Wall drip" }).className).toContain("btn-wide");

@@ -63,10 +63,10 @@ test("requested reads \"rev 43 sending\" beside what the controller holds; not c
 });
 
 // ---------------------------------------------------------------------------------------------------- limits
-test("the limits strip: SAF-4, the soft budget, mister zones with the VPD reserve, drip caps, flow, occupancy", () => {
+test("the limits strip: the daily mist & fog limit, the soft target, mister zones with the VPD reserve, drip caps, flow, occupancy", () => {
   expect(limitItems(status(), NOW, TODAY).map((item) => plain(item.text))).toEqual([
-    "SAF-4 21 of 360 gal", "Soft budget 21 of 300 gal", "Center 14 of 120 min (60 kept for VPD)", "South 0 of 45 min (15 kept for VPD)",
-    "West 0 of 45 min (15 kept for VPD)", "Wall drip 0 of 60 min", "Unexplained flow: none", "Nobody seen: misters may run (last person 05:10)",
+    "Daily mist & fog limit 21 of 360 gal", "Daily mist target (soft) 21 of 300 gal", "Center 14 of 120 min (60 kept for VPD)", "South 0 of 45 min (15 kept for VPD)",
+    "West 0 of 45 min (15 kept for VPD)", "Wall drip 0 of 60 min", "Water with no Verdify valve open: none", "Occupancy: nobody detected, misting allowed (last person 05:10)",
   ]);
   // A reserved line stays off the strip until a person enables it; a missing count is "—", never 0.
   const base = status();
@@ -75,24 +75,24 @@ test("the limits strip: SAF-4, the soft budget, mister zones with the VPD reserv
     lines: base.lines.map((item) => (item.line_id === "L05" ? { ...item, enabled: true, today: { minutes: null, pulses: null, gal: null } } : item)),
   };
   expect(limitItems(enabled, NOW, TODAY).map((item) => [plain(item.text), item.tone])).toEqual(expect.arrayContaining([
-    ["SAF-4 — of 360 gal", undefined], ["Center drip — of 30 min", undefined], ["VPD fallback active", "warn"],
+    ["Daily mist & fog limit — of 360 gal", undefined], ["Center drip — of 30 min", undefined], ["Backup misting (sensor fault): on", "warn"],
   ]));
 });
 
 test("flow reads none, flowing with every valve closed, or stopped, never an all clear while the alert is open", () => {
-  expect(flowWords(status().leak)).toEqual({ text: "Unexplained flow: none" });
+  expect(flowWords(status().leak)).toEqual({ text: "Water with no Verdify valve open: none" });
   expect(flowWords(status("flow-valves-closed").leak)).toEqual({ text: `Water flowing with every Verdify valve closed since 10:38 · 3${NBSP}gal in 10 min`, tone: "fault" });
   expect(flowWords(status("flow-stopped").leak)).toEqual({ text: "Flow stopped at 10:40", tone: "warn" });
-  expect(flowWords({ ...status().leak, active: null })).toEqual({ text: "Unexplained flow: unknown" });
+  expect(flowWords({ ...status().leak, active: null })).toEqual({ text: "Water with no Verdify valve open: unknown" });
 });
 
 test("occupancy in the Now chip's words; unknown never holds mist", () => {
   const seen = (occupancy: Partial<Occupancy>) => plain(occupancyWords({ occupied: false, seen_at: denver("05:10"), hold_enabled: true, ...occupancy }, NOW, TODAY));
-  expect(seen({ occupied: true, seen_at: denver("10:39") })).toBe("Someone inside: misters wait (Frigate, 3 min ago)");
-  expect(seen({})).toBe("Nobody seen: misters may run (last person 05:10)");
-  expect(seen({ seen_at: "2026-10-30T15:00:00Z" })).toBe("Nobody seen: misters may run (last person Oct 30, 09:00)");
-  expect(seen({ occupied: null })).toBe("Occupancy unknown: misters may run");
-  expect(seen({ occupied: true, hold_enabled: false })).toBe("Occupancy mist hold is off: misters may run");
+  expect(seen({ occupied: true, seen_at: denver("10:39") })).toBe("Occupancy: someone inside, misting waits (Frigate, 3 min ago)");
+  expect(seen({})).toBe("Occupancy: nobody detected, misting allowed (last person 05:10)");
+  expect(seen({ seen_at: "2026-10-30T15:00:00Z" })).toBe("Occupancy: nobody detected, misting allowed (last person Oct 30, 09:00)");
+  expect(seen({ occupied: null })).toBe("Occupancy unknown: misting allowed");
+  expect(seen({ occupied: true, hold_enabled: false })).toBe("Occupancy mist hold is off: misting allowed");
 });
 
 // ---------------------------------------------------------------------------------------------------- lines and words
@@ -289,20 +289,23 @@ test("daily water use's URL: 30 days split by line unless it says 90d or cause",
 });
 
 // ==================================================================================================== redesign §5.2–§5.4, §6
-test("Today's zones in their fixed order: their lines (L03 apart, on the wall), minutes against the cap line's cap, the reserve and the last water", () => {
+test("Today's cards, one per physical line (#1336), in their fixed order: their lines (L03 apart, on the wall), minutes against the cap line's cap, the reserve and the last water", () => {
   const from = status("schedules-paused");
   const zones = zoneSummaries(from, plannedToday(agenda("schedules-paused"), from.lines, TODAY, NOW));
   expect(zones.map((zone) => [zone.zone, zone.lines.map((item) => item.line_id), zone.master?.line_id ?? null, zone.mister?.line_id ?? null])).toEqual([
-    ["wall", ["L01", "L02"], "L03", null], ["center", ["L04", "L05", "L06"], null, "L04"], ["south", ["L07", "L08"], null, "L07"],
+    ["wall", ["L01", "L02"], "L03", null], ["center", ["L05", "L06"], null, null], ["center_mister", ["L04"], null, "L04"], ["south", ["L07", "L08"], null, "L07"],
     ["west", ["L09", "L10"], null, "L09"], ["fog", ["L11"], null, null],
   ]);
-  const [wall, center, , , fog] = zones;
+  expect(zones.map((zone) => zone.unwired)).toEqual([[], [], ["fertilized"], [], [], []]);
+  const [wall, drips, center, , , fog] = zones;
+  expect([drips.minutes, drips.capLine, drips.reserve]).toEqual([0, "L05", null]);
   expect([wall.minutes, wall.cap, wall.capLine, wall.reserve, wall.planned]).toEqual([0, 60, "L01", null, 0]);
   expect([center.minutes, center.cap, center.capLine, center.reserve]).toEqual([14, 120, "L04", 60]);
   expect(center.lastAt).toBe(line(from, "L04").last_water?.at);
   expect([fog.cap, fog.minutes]).toEqual([null, 6]);
-  expect(ZONE_KIND_WORDS.center).toBe("mister and drips");
-  expect([lineZone({ line_id: "L03", zone: "supply" }), lineZone({ line_id: "L11", zone: "house" }), lineZone({ line_id: "L07", zone: "south" })]).toEqual(["wall", "fog", "south"]);
+  expect(ZONE_KIND_WORDS.center_mister).toBe("clean");
+  expect([lineZone({ line_id: "L03", zone: "supply" }), lineZone({ line_id: "L11", zone: "house" }), lineZone({ line_id: "L07", zone: "south" }), lineZone({ line_id: "L04", zone: "center", kind: "mister" })])
+    .toEqual(["wall", "fog", "south", "center_mister"]);
   // A zone the API has no minutes for is unknown, never 0.
   expect(zoneSummaries({ ...from, today: { date: TODAY, zones: { wall: null } }, lines: from.lines.map((item) => ({ ...item, today: { minutes: null } })) }, null)[0].minutes).toBeNull();
 });
@@ -310,10 +313,10 @@ test("Today's zones in their fixed order: their lines (L03 apart, on the wall), 
 test("a zone with a running line says so, and today's minutes never sit beside an older last water (#1308 visual QA 5)", () => {
   // L01 has run for 12 min (run now) while its last filed water is Friday's.
   const running = status("l01-running");
-  const [wall, center] = zoneSummaries(running, null);
+  const [wall, , center] = zoneSummaries(running, null);
   expect([wall.running, wall.minutes, center.running]).toEqual([true, 12, false]);
   expect(wall.lastAt).toBe(line(running, "L01").last_water?.at);
-  expect(zoneSummaries(status(), null).map((zone) => zone.running)).toEqual([false, false, false, false, false]);
+  expect(zoneSummaries(status(), null).map((zone) => zone.running)).toEqual([false, false, false, false, false, false]);
   // A running master valve counts for the wall, since it opens only with a feed.
   const master = { ...running, lines: running.lines.map((item) => (item.line_id === "L01" ? { ...item, state: { ...item.state, code: "idle" } } : item.line_id === "L03" ? { ...item, state: { ...item.state, code: "running" } } : item)) };
   expect(zoneSummaries(master as IrrigationStatus, null)[0].running).toBe(true);

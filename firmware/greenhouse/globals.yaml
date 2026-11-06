@@ -15,7 +15,7 @@ globals:
   - id: target_temp_low_f
     type: float
     restore_value: no
-    initial_value: '40.0'
+    initial_value: '45.0'  # safety_min 40 + 5: the band stays inside the guardrails
   - id: target_temp_high_f
     type: float
     restore_value: no
@@ -92,6 +92,32 @@ globals:
     type: bool
     restore_value: no
     initial_value: 'false'
+  # #1365 night dry-out: vent + reheat pulses with confirmed-drier outdoor air
+  # (Jason 2026-11-05). Ships ON with the next signed flash; the defaults match
+  # default_setpoints() in greenhouse_types.h. restore_value: no, so a reboot
+  # boots these defaults until the dispatcher pushes the desired values.
+  - id: night_dryout_enabled
+    type: bool
+    restore_value: no
+    initial_value: 'true'
+  - id: night_dryout_pulse_s
+    type: uint32_t
+    restore_value: no
+    initial_value: '120'
+  - id: night_dryout_rest_s
+    type: uint32_t
+    restore_value: no
+    initial_value: '780'
+  - id: night_dryout_dp_margin_f
+    type: float
+    restore_value: no
+    initial_value: '3.0'
+  # 10 kWh a night of heat1 reheat (estimate). Higher than the research's 5 kWh
+  # because the target is a full dry-out at >= 0.74 kPa, not the 0.50 plant floor.
+  - id: night_dryout_kwh_cap
+    type: float
+    restore_value: no
+    initial_value: '10.0'
 
   # ─── Humidity / VPD (kPa) ───
   # Wide defaults — see comment on target_temp_low_f.
@@ -130,14 +156,15 @@ globals:
     type: float
     restore_value: no
     initial_value: '0.0'
+  # Hard temperature guardrails: 40 °F / 100 °F (Jason 2026-11-05, #1333).
   - id: safety_min_f
     type: float
     restore_value: no
-    initial_value: '45.0'
+    initial_value: '40.0'
   - id: safety_max_f
     type: float
     restore_value: no
-    initial_value: '95.0'
+    initial_value: '100.0'
   - id: safety_vpd_min_kpa
     type: float
     restore_value: no

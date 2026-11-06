@@ -19,10 +19,10 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validato
 # R4: who wrote. The OpenAPI Actor.source pattern, verbatim.
 ACTOR_SOURCE_PATTERN = r"^(dashboard|iris|system|agent:[a-z0-9][a-z0-9_-]*)$"
 # Architecture §9: setting.write, setting.release, plan.write, alert.ack, alert.resolve, irrigation.*,
-# light.on and light.off, and planting.* (#1327: create, move, harvest, end, update, note). Extend it here when a
-# new kind of write appears.
+# light.on and light.off, band.write (the band editor's one Save, #1334) and planting.* (#1327: create, move, harvest,
+# end, update, note). Extend it here when a new kind of write appears.
 ACTIVITY_ACTION_PATTERN = (
-    r"^(setting\.(write|release)|plan\.write|alert\.(ack|resolve)|light\.(on|off)"
+    r"^(setting\.(write|release)|band\.write|plan\.write|alert\.(ack|resolve)|light\.(on|off)"
     r"|irrigation(\.[a-z][a-z0-9_]*)+|planting\.(create|move|harvest|end|update|note))$"
 )
 # A tunable_registry name (the OpenAPI Param pattern).

@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Equipment, ParamsOf, Setting } from "../../lib/operator-api";
 import { fetchRead } from "../../lib/queries";
 import { OperatorOnly } from "../../lib/session";
+import { shortTime } from "../../lib/format";
 import { readback, useCommand, useSettingWrite, type SettingInfo, type WriteError } from "../../lib/writes";
 import { ReadbackBadge } from "../badge";
 import { Button } from "../button";
@@ -37,6 +38,19 @@ export function lightsDiffer(intent: string | null | undefined, state: string | 
 export function resyncState(item: Pick<LightItem, "intent" | "state"> | null | undefined): LightState | null {
   return item && known(item.intent) && lightsDiffer(item.intent, item.state) ? item.intent : null;
 }
+/**
+ * When a Turn on or Turn off still running goes back to automatic (#1377's timer, API-13 `manual_until`), or null. The
+ * API names it only while it is ahead; once the controller's intent and Lutron read the same the switch no longer holds
+ * anything (a decision change brought automatic back early, or Back to automatic matched them), so it is not shown.
+ */
+export function manualUntil(item: Pick<LightItem, "state" | "intent" | "manual_until"> | null | undefined): string | null {
+  const until = item?.manual_until ?? null;
+  if (until === null || (known(item?.intent) && known(item?.state) && item.intent === item.state)) return null;
+  return until;
+}
+/** "by hand until 10:57": a timed switch's end in words. */
+export const manualUntilWords = (until: string): string => `by hand until ${shortTime(until)}`;
+
 const itemIn = (answer: Pick<Equipment, "items"> | null | undefined, equipment: string) => answer?.items.find((item) => item.equipment === equipment);
 /** `unavailable`, API-20's own 503 with its `Problem.result` or no answer reaching the page: the light may still switch. */
 const mayStillSwitch = (error: WriteError) => error.code === "unavailable";
@@ -174,16 +188,10 @@ function AutomationLine({ control }: { control: LightControl }) {
  * tap and no dialog. The board's state only ever comes from the Lutron readback; here are what was said and what is
  * awaited: a 503's `Problem.result` in words, and after 30 s without a match "Lutron hasn't confirmed: still OFF".
  */
-export function LightControls({ control, item, settingTo }: { control: LightControl; item: Pick<LightItem, "label" | "state" | "intent">; settingTo?: string }) {
-  const { command, write, pressed } = control;
-  const busy = command.sending || write.sending;
-  // Reading back: a second tap on the same button has nothing to add, though after a refusal it may retry.
-  const answering = (state: LightState) => command.phase === "waiting" && pressed === state && !command.error;
-  const shown = lightButtons(item, control.setting?.readback?.value, command.sending || (command.phase === "waiting" && !command.error));
-  const turn = (state: LightState) => <Button key={state} write wide busy={command.sending && pressed === state} disabled={busy || answering(state)} onClick={() => control.turn(state)}>
-    {state === "on" ? "Turn on" : "Turn off"} <span className="burst-length">{MANUAL_MINUTES} min</span> <span className="screen-reader">{item.label}</span>
-  </Button>;
+export function LightControls({ control, item, settingTo }: { control: LightControl; item: Pick<LightItem, "label" | "state" | "intent" | "manual_until">; settingTo?: string }) {
+  const until = manualUntil(item);
   return <div className="light-controls">
+    {until !== null && <p className="state-note" data-light-until="">{item.state === "on" ? "On" : item.state === "off" ? "Off" : "Switched"} {manualUntilWords(until)}, then back to automatic</p>}
     <div className="light-auto-row">
       <AutomationLine control={control} />
       <span className="light-links">
@@ -193,17 +201,36 @@ export function LightControls({ control, item, settingTo }: { control: LightCont
         </OperatorOnly>
       </span>
     </div>
-    <OperatorOnly>
-      <div className="actions light-actions">
-        {shown.automatic && <Button write wide busy={write.sending || (command.sending && pressed === "automatic")} disabled={busy || control.awaitingConfirm} onClick={() => void control.backToAutomatic()}>Back to automatic <span className="screen-reader">{item.label}</span></Button>}
-        {shown.turns.map(turn)}
-      </div>
-      {shown.automatic && <p className="state-note" data-light-timed="">A Turn on or Turn off lasts {MANUAL_MINUTES} min, then the light goes back to automatic</p>}
-      {command.phase === "waiting" && !command.error && <p className="state-note" data-light-note="waiting">Waiting for Lutron</p>}
-      {command.phase === "late" && <p className="state-note" data-light-note="late">{unconfirmedWords(item.state)}</p>}
-      {control.unread && <p className="state-note" data-light-note="unread">Couldn't read the light, so Lutron was not matched to the controller</p>}
-      {command.error && <p className="field-error" role="alert">{command.error.message}</p>}
-      {write.error && <p className="field-error" role="alert">{write.error.message}</p>}
-    </OperatorOnly>
+    <OperatorOnly><LightButtons control={control} item={item} /></OperatorOnly>
   </div>;
+}
+
+/**
+ * A light's buttons and what they await, shared by Equipment's Lights and Now's quick actions (#1342, as D-UX-05 shares
+ * the bursts), so the two pages cannot disagree: the buttons `lightButtons` picks, each Turn on or Turn off timed
+ * (`MANUAL_MINUTES`, #1335), then "Waiting for Lutron", 30 s later "Lutron hasn't confirmed: still OFF", a 503's words,
+ * or a refused write. `wide` makes them full width on phones (Equipment); `compact` keeps Now's row short. Operators only:
+ * the caller wraps it in `OperatorOnly`.
+ */
+export function LightButtons({ control, item, compact = false }: { control: LightControl; item: Pick<LightItem, "label" | "state" | "intent">; compact?: boolean }) {
+  const { command, write, pressed } = control;
+  const busy = command.sending || write.sending;
+  // Reading back: a second tap on the same button has nothing to add, though after a refusal it may retry.
+  const answering = (state: LightState) => command.phase === "waiting" && pressed === state && !command.error;
+  const shown = lightButtons(item, control.setting?.readback?.value, command.sending || (command.phase === "waiting" && !command.error));
+  const turn = (state: LightState) => <Button key={state} write wide={!compact} busy={command.sending && pressed === state} disabled={busy || answering(state)} onClick={() => control.turn(state)}>
+    {state === "on" ? "Turn on" : "Turn off"} <span className="burst-length">{MANUAL_MINUTES} min</span> <span className="screen-reader">{item.label}</span>
+  </Button>;
+  return <>
+    <div className="actions light-actions">
+      {shown.automatic && <Button write wide={!compact} busy={write.sending || (command.sending && pressed === "automatic")} disabled={busy || control.awaitingConfirm} onClick={() => void control.backToAutomatic()}>Back to automatic <span className="screen-reader">{item.label}</span></Button>}
+      {shown.turns.map(turn)}
+    </div>
+    {shown.automatic && !compact && <p className="state-note" data-light-timed="">A Turn on or Turn off lasts {MANUAL_MINUTES} min, then the light goes back to automatic</p>}
+    {command.phase === "waiting" && !command.error && <p className="state-note" data-light-note="waiting">Waiting for Lutron</p>}
+    {command.phase === "late" && <p className="state-note" data-light-note="late">{unconfirmedWords(item.state)}</p>}
+    {control.unread && <p className="state-note" data-light-note="unread">Couldn't read the light, so Lutron was not matched to the controller</p>}
+    {command.error && <p className="field-error" role="alert">{command.error.message}</p>}
+    {write.error && <p className="field-error" role="alert">{write.error.message}</p>}
+  </>;
 }

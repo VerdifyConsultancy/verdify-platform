@@ -9,7 +9,8 @@ import { fixture } from "../../e2e/fixtures/index.mjs";
 import { parseSettings, type DesiredSetting, type Setting } from "../lib/operator-api";
 import { displayNumber, keptNumber, keptValueText, keyUnit, readableDuration, settingDisplay, settingUnit } from "../lib/setting-values";
 import type { Session } from "../lib/session";
-import { SettingRow, boundsText, changedByAgent, pendingRequest, recentlyChanged, valueInForce, type SettingRowProps } from "./setting-row";
+import { readOnlyWords } from "./control/setting-help";
+import { RECENT_WINDOWS, SettingRow, boundsText, changedByAgent, pendingRequest, recentlyChanged, valueInForce, type SettingRowProps } from "./setting-row";
 import { NBSP, denver, renderUi, text } from "./test-render";
 
 const NOW = Date.parse(denver("10:42"));
@@ -46,7 +47,9 @@ const details = () => screen.queryByRole("link", { name: /^Details of / });
 
 test("label and key, the device value large, the bounds bar with the next plan's ring, no pill when steady, and one meta line", () => {
   draw(row("mister_engage_kpa"));
-  expect(cell("name")).toBe("VPD Mister Engage mister_engage_kpa");
+  // The label, the key, then the one-line summary API-09's help serves (#1332).
+  expect(text(document.querySelector(".setting-summary"))).toBe(row("mister_engage_kpa").help!.summary);
+  expect(cell("name")).toBe(`VPD Mister Engage mister_engage_kpa${row("mister_engage_kpa").help!.summary}`);
   expect(document.querySelector(".setting-param")!.classList.contains("mono")).toBe(true);
   // The key may wrap only after an underscore: a <wbr> after each, and no text added.
   expect(document.querySelector(".setting-param")!.querySelectorAll("wbr")).toHaveLength(2);
@@ -97,7 +100,9 @@ test("Band in force: the house and each zone read DERIVED as a text mark with th
     expect(pill(), setting.param).toEqual([]);
     expect(edit(), setting.param).toBeNull();
     expect(details(), setting.param).not.toBeNull();
-    expect(cell("device"), setting.param).toContain("derived by the dispatcher from the crop band anchors");
+    // Its read-only kind in words (#1333), with the definition as the note's title.
+    expect(cell("device"), setting.param).toContain("Computed (band in force)");
+    expect(document.querySelector(".setting-note")!.getAttribute("data-read-only-kind"), setting.param).toBe("band_in_force");
     cleanup();
   }
   draw(row("band_house_temp_low"));
@@ -281,12 +286,13 @@ test("one display for Settings' rows and Plan's lanes: the step's decimals or th
   ].map(plain)).toEqual(["5 min", "120 s", "7", "1.60 kPa", "ON"]);
 });
 
-test("read-only rows show their reason and Details, no Edit; temp_low reads \"legacy limit, read-only\"", () => {
+test("read-only rows show their kind and Details, no Edit; temp_low reads \"Legacy limit, not used while the on-chip band runs\"", () => {
   const legacy = row("temp_low");
   expect(legacy.writable).toBe(false);
   draw(legacy);
-  expect(cell("device")).toContain("legacy limit, read-only: not the band while the on-chip band runs");
-  expect(text(document.querySelector(".setting-note"))).toBe("legacy limit, read-only: not the band while the on-chip band runs");
+  expect(cell("device")).toContain("Legacy limit, not used while the on-chip band runs");
+  expect(text(document.querySelector(".setting-note"))).toBe("Legacy limit, not used while the on-chip band runs");
+  expect(document.querySelector(".setting-note")!.getAttribute("title")).toContain("the guardrails are Safety Min and Safety Max");
   expect(edit()).toBeNull();
   expect(details()!.getAttribute("href")).toBe("/settings?edit=temp_low");
   expect(document.querySelector(".setting-next")).toBeNull();
@@ -294,9 +300,18 @@ test("read-only rows show their reason and Details, no Edit; temp_low reads \"le
   for (const setting of rows().filter((item) => !item.writable && item.group === "read_only")) {
     draw(setting);
     expect(edit(), setting.param).toBeNull();
-    expect(text(document.querySelector(".setting-note")), setting.param).toBe(setting.read_only_reason);
+    expect(text(document.querySelector(".setting-note")), setting.param).toBe(readOnlyWords(setting)!.label);
     cleanup();
   }
+});
+
+test("a zone VPD target reads as computed and still used, not as a legacy limit", () => {
+  const target = row("vpd_target_center");
+  expect([target.writable, target.read_only_kind]).toEqual([false, "zone_vpd_target"]);
+  draw(target);
+  expect(text(document.querySelector(".setting-note"))).toBe("Computed zone target, still used");
+  expect(document.querySelector(".setting-note")!.getAttribute("title")).toContain("how long a pulse lasts");
+  expect(edit()).toBeNull();
 });
 
 test("a site cap reads the program on the controller, without the revision while it is unknown; before the engine \"—\" with its reason", () => {
@@ -371,7 +386,15 @@ test("bounds and step, the value in force, the pending request and a recent chan
   expect(valueInForce({ ...base, applied_from: "default", plan: null })).toBe(1.6);
   expect(pendingRequest({ ...base, applied_from: "default", plan: null, desired: null })).toBeNull();
   expect(pendingRequest({ ...base, applied_from: "manual", desired: desired({ value: 1.55, reason: "Vandas drying" }) })).toMatchObject({ value: 1.55, manual: true, reason: "Vandas drying" });
-  expect(recentlyChanged({ desired: desired({ created_at: new Date(NOW - 6 * 86_400_000).toISOString() }) }, NOW)).toBe(true);
-  expect(recentlyChanged({ desired: desired({ created_at: new Date(NOW - 8 * 86_400_000).toISOString() }) }, NOW)).toBe(false);
-  expect(recentlyChanged({ desired: null }, NOW)).toBe(false);
+  // "Changed in the last 24 h" by default, 7 d on request; an Iris plan in force counts by its written_at (#1333).
+  const hoursAgo = (hours: number) => new Date(NOW - hours * 3_600_000).toISOString();
+  const written = (hours: number) => ({ applied_from: "manual", plan: null, desired: desired({ created_at: hoursAgo(hours) }) });
+  expect(recentlyChanged(written(23), NOW)).toBe(true);
+  expect(recentlyChanged(written(25), NOW)).toBe(false);
+  expect(recentlyChanged(written(6 * 24), NOW, RECENT_WINDOWS["7d"].ms)).toBe(true);
+  expect(recentlyChanged(written(8 * 24), NOW, RECENT_WINDOWS["7d"].ms)).toBe(false);
+  expect(recentlyChanged({ applied_from: "default", plan: null, desired: null }, NOW)).toBe(false);
+  const planned = { ...base, applied_from: "plan", desired: null, plan: { ...base.plan!, written_at: hoursAgo(2) } };
+  expect(recentlyChanged(planned, NOW)).toBe(true);
+  expect(recentlyChanged({ ...planned, applied_from: "band" }, NOW)).toBe(false);
 });

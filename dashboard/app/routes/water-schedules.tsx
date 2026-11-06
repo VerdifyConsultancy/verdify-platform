@@ -37,7 +37,7 @@ const VIEWS: readonly View[] = ["day", "week", "agenda"];
 const VIEW_WORDS: Readonly<Record<View, string>> = { day: "Day", week: "Week", agenda: "Agenda" };
 const DATE = /^\d{4}-\d\d-\d\d$/;
 
-/** The key's words (redesign §6.3: the one-sentence key becomes a Key popover). */
+/** The key's long form (redesign §6.3); the short legend is always on show under the timeline's axis (#1347). */
 function ScheduleKey() {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   return <>
@@ -49,13 +49,13 @@ function ScheduleKey() {
         <li><span className="sch-swatch sch-skipped" aria-hidden="true" />will not run, or skipped (hatched)</li>
         <li><span className="sch-swatch sch-missed" aria-hidden="true" />missed (fault outline)</li>
         <li><span className="sch-swatch sch-unknown" aria-hidden="true" />outcome unknown</li>
-        <li><span className="sch-swatch sch-conditional" aria-hidden="true" />fallback window: runs only if VPD sensing fails (dotted); "not needed" once it passed without running</li>
+        <li><span className="sch-swatch sch-conditional" aria-hidden="true" />backup misting window: runs only if the VPD sensors fail (dotted); "not needed" once it passed without running</li>
         <li><span className="sch-swatch sch-planned sch-capped" aria-hidden="true" />ends at the daily cap (amber outline)</li>
         <li><span className="sch-swatch sch-tick-swatch" aria-hidden="true" />valve open, VPD misting included (ticks)</li>
-        <li><span className="sch-swatch sch-night-swatch" aria-hidden="true" />night</li>
-        <li><span className="sch-swatch sch-done sch-eq-fert" aria-hidden="true" />feed · <span className="sch-swatch sch-done sch-eq-fog" aria-hidden="true" />prewet and flush on the clean line · <span className="sch-swatch sch-done sch-eq-heat1" aria-hidden="true" />a fallback that ran</li>
+        <li><span className="sch-swatch sch-legend-day" aria-hidden="true" />day, sunrise to sunset (white) · <span className="sch-swatch sch-night-swatch" aria-hidden="true" />night (shaded), on every lane, a disabled one too</li>
+        <li><span className="sch-swatch sch-done sch-eq-water" aria-hidden="true" />clean water · <span className="sch-swatch sch-done sch-eq-fert" aria-hidden="true" />fertilized, in the same lane · <span className="sch-swatch sch-done sch-eq-fog" aria-hidden="true" />prewet and flush on the clean side · <span className="sch-swatch sch-done sch-eq-heat1" aria-hidden="true" />backup misting that ran</li>
       </ul>
-      <p className="meta">MANUAL: Iris skips it. Iris may adjust: Iris can change it.</p>
+      <p className="meta">MANUAL: Iris leaves it alone ("Let Iris change this" is off). Iris may adjust: Iris can change it. People and other agents can always change it.</p>
     </Popover>
   </>;
 }

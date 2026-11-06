@@ -3,7 +3,7 @@
  * The information architecture of redesign §2.1 (D-UX-01): six sections in one order at every width, Now · Water ·
  * Crops · Graphs · Activity · Control, each with its views (Crops is the sixth, #1330, Jason 2026-11-05). The header's nav, the phone bar, a page's tabs, its breadcrumb and
  * its document title all read this one model, so a label, a path or a title changes in one place. A section owns every
- * path under its views (weather's `SECTIONS` model): Control owns `/settings`, `/plan` and `/equipment`, which keep
+ * path under its views (weather's `SECTIONS` model): Control owns `/settings`, `/band` (#1334), `/plan` and `/equipment`, which keep
  * their paths so drawer and banner links and bookmarks keep working.
  */
 
@@ -12,9 +12,9 @@ export type ViewId =
   | "now"
   | "water-today" | "water-schedules" | "water-history"
   | "crops-map" | "crops-history"
-  | "graphs-climate" | "graphs-zones" | "graphs-statistics"
+  | "graphs-climate" | "graphs-zones" | "graphs-lighting" | "graphs-statistics"
   | "activity-alerts" | "activity-log"
-  | "control-settings" | "control-plan" | "control-equipment";
+  | "control-settings" | "control-band" | "control-plan" | "control-equipment";
 
 export type View = {
   readonly id: ViewId;
@@ -55,6 +55,7 @@ export const SECTIONS: readonly Section[] = [
     id: "graphs", label: "Graphs", to: "/graphs", views: [
       view("graphs", "graphs-climate", "Climate", "Climate", "/graphs"),
       view("graphs", "graphs-zones", "Zones", "Zones", "/graphs/zones"),
+      view("graphs", "graphs-lighting", "Lighting", "Lighting", "/graphs/lighting"),
       view("graphs", "graphs-statistics", "Statistics", "Statistics", "/graphs/statistics"),
     ],
   },
@@ -67,6 +68,7 @@ export const SECTIONS: readonly Section[] = [
   {
     id: "control", label: "Control", to: "/settings", views: [
       view("control", "control-settings", "Settings", "Settings", "/settings"),
+      view("control", "control-band", "Band", "Band", "/band"),
       view("control", "control-plan", "Plan", "Plan", "/plan"),
       view("control", "control-equipment", "Equipment", "Equipment", "/equipment"),
     ],
