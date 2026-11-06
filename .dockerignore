@@ -162,3 +162,4 @@ venv
 
 # NOTE: deliberately NOT ignored (the images COPY these):
 #   api/  mcp/  ingestor/  verdify_schemas/  verdify_services/
+# Candidate rebuild marker: any .dockerignore change rebuilds every image profile (path-impact). 2026-11-06 recovery after unpublished main builds b880c41..c50bb2a7.

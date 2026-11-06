@@ -1216,7 +1216,7 @@ def test_every_catalog_row_carries_its_help_and_a_read_only_row_its_kind():
     assert rows["mister_on_s"].read_only_kind == "retired"
     assert rows["outdoor_temp_f"].read_only_kind == "readback_context"
     assert rows["sw_onchip_band_enabled"].read_only_kind == "band_owner"
-    assert rows["activity_start_hour"].read_only_kind == "activity_mirror"
+    assert rows["activity_start_hour"].read_only_kind == "retired"
     assert "gl_main_sunrise_hour" in rows["activity_start_hour"].source_params
     assert rows["safety_max"].help.guardrail and rows["safety_max"].writable
     assert rows[KPA].model_dump(mode="json")["help"]["raise"] == setting_help(KPA).raise_

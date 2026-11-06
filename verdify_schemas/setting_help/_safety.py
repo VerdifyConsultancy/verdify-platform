@@ -17,6 +17,12 @@ _LEGACY_LIGHT = (
     "reference and the controller's light logic does not read it."
 )
 
+# The activity mirror (#1406 follow-up): only direct_wet_window_open reads it, and nothing calls that.
+_NO_ACTIVITY_WINDOW = (
+    "The controller stores and reports this value, but no control path reads it: the only code that did "
+    "(the direct-wet window) is never called, so misting and watering do not depend on it."
+)
+
 ENTRIES: dict[str, HelpEntry] = {
     "safety_min": HelpEntry(
         summary="Hard cold guardrail: the house temperature at which the controller goes into emergency heating.",
@@ -272,32 +278,21 @@ ENTRIES: dict[str, HelpEntry] = {
         refs=(f"{_LOGIC}::if (state.vent_latch_timer_ms >= sp.vent_latch_timeout_ms) {{",),
     ),
     "activity_start_hour": HelpEntry(
-        summary="Start hour of the daily activity window that bounds routine misting of each zone.",
-        effect=(
-            "Mirrors the main grow-light schedule: set from the main lights' start hour (or the grow lights' start "
-            "hour when Iris plans one). Each zone is wetted only inside this window, after its start offset and "
-            "before its drydown. To move it, change the grow-light schedule."
-        ),
+        summary="Start hour of the old daily activity window; no longer used by the controller.",
+        effect=_NO_ACTIVITY_WINDOW + " It still follows the main lights' start hour.",
         refs=(
             f'{_DISPATCHER}::mirrored["activity_start_hour"]',
             f"{_LOGIC}::inline bool direct_wet_window_open(",
         ),
     ),
     "activity_start_minute": HelpEntry(
-        summary="Start minute of the daily activity window; always 0.",
-        effect=(
-            "Mirrors the main grow-light schedule, which starts on the hour, so this stays 0. The window then runs "
-            "for Activity Duration. To move it, change the grow-light schedule."
-        ),
-        refs=(f'{_DISPATCHER}::"activity_start_minute": 0.0',),
+        summary="Start minute of the old daily activity window; always 0 and no longer used by the controller.",
+        effect=_NO_ACTIVITY_WINDOW + " It stays 0, because the light schedule starts on the hour.",
+        refs=(f'{_DISPATCHER}::"activity_start_minute": 0.0', f"{_LOGIC}::inline bool direct_wet_window_open("),
     ),
     "activity_duration_min": HelpEntry(
-        summary="Length of the daily activity window that bounds routine misting of each zone.",
-        effect=(
-            "Mirrors the main grow-light schedule: the main lights' daily light minutes (or the grow lights' when "
-            "Iris plans them). Zone wetting stops each zone's drydown time before the window ends. To change it, "
-            "change GL Main Target Light Minutes."
-        ),
+        summary="Length of the old daily activity window; no longer used by the controller.",
+        effect=_NO_ACTIVITY_WINDOW + " It still follows the main lights' daily light minutes.",
         refs=(
             f'{_DISPATCHER}::mirrored["activity_duration_min"]',
             f"{_LOGIC}::const int wet_duration = activity_duration_min - wet_start_offset_min - drydown_before_off_min;",
