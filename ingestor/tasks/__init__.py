@@ -35,7 +35,6 @@ from . import (  # noqa: F401
     liveness,
     policy_arbiter,
     policy_delivery,
-    watch,
 )
 from ._common import *  # noqa: F401,F403
 from ._common import (  # noqa: F401
@@ -78,13 +77,10 @@ from ._common import (  # noqa: F401
     _leak_counter,
     _leak_state,
     _load_token,
-    _midnight_watch_last_date,
     _milestones_cache,
     _milestones_date,
     _milestones_fired,
     _parse_prometheus_labels,
-    _post_slack,
-    _slack_brief_last_fire,
     _sp,
     _sun,
     _td,
@@ -205,4 +201,3 @@ from .policy_arbiter import (  # noqa: F401
     treatment_bytes_for_assignment,
 )
 from .policy_delivery import policy_delivery_worker  # noqa: F401
-from .watch import *  # noqa: F401,F403

@@ -25,6 +25,20 @@ resources:
   - networkpolicy.yaml
   # network-infra#839, vendored byte-identical from network-infra; the namespace comes from above.
   - egress-deny-management.yaml
+  # #1351/#1363: the namespace's egress is local-only. The vendored deny keeps public egress, so the
+  # patch below points it at a label no pod carries.
+  - egress-local-only.yaml
+
+patches:
+  - target:
+      kind: NetworkPolicy
+      name: egress-deny-management
+    patch: |-
+      - op: replace
+        path: /spec/podSelector
+        value:
+          matchLabels:
+            network.vallery.net/public-egress: "true"
 
 # The one switch (architecture §5.7). The name hash is kept, so any change here renames the
 # ConfigMap and rolls the pod. To turn dashboard writes off, merge a one-line change of

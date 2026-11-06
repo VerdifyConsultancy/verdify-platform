@@ -9,6 +9,11 @@
 # day becomes snapshot-complete as fast as it did under */10. Mid-day values
 # are up to ~30 min stale, which suits the daily views and Grafana panels and
 # cuts the CONCURRENTLY refresh scans on the single DB by two thirds.
+#
+# Then daily_band_compliance (migration 290, #1358): time in band for today and
+# yesterday, graded against the band the controller served, copied into
+# daily_summary's legacy compliance and stress-hour columns, plus up to 31
+# missing days back to 2026-09-01 per run (the backfill; ~0.1-0.2 s a day).
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -89,6 +94,8 @@ spec:
                   echo "mv_equipment_runtime_daily refreshed $(date -u +%FT%TZ)"
                   psql -X --no-password -v ON_ERROR_STOP=1 -c 'SELECT verdify_matview_refresh_runtime.fn_refresh_mv_daily_kpi()'
                   echo "mv_daily_kpi refreshed $(date -u +%FT%TZ)"
+                  days="$(psql -X --no-password -v ON_ERROR_STOP=1 -t -A -q -c 'SELECT verdify_matview_refresh_runtime.fn_refresh_band_compliance()')"
+                  echo "daily_band_compliance refreshed ${days} days $(date -u +%FT%TZ)"
               env:
                 - name: PGHOST
                   valueFrom:

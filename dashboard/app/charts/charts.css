@@ -121,12 +121,15 @@
 .chart-key-swatch[data-kind=dashed]{background:transparent;border:1px dashed currentColor}
 .chart-key-swatch[data-kind=dotted]{height:0;border-radius:0;background:none;border-top:2px dotted currentColor}
 .chart-key-swatch[data-kind=line]{height:0;border-radius:0;background:none;border-top:2px solid currentColor}
+.chart-key-swatch[data-kind=band]{height:.6rem;border-radius:0;background:var(--c-band-wash);border:1px solid currentColor;border-width:1px 0}
+.stack-key{margin:0}
 .chart-key-swatch[data-token=ink]{color:var(--ink)}.chart-key-swatch[data-token=c-bound]{color:var(--c-bound)}.chart-key-swatch[data-token=fault]{color:var(--fault)}
 .chart-key-swatch[data-token=c-setpoint]{color:var(--c-setpoint)}.chart-key-swatch[data-token=c-requested]{color:var(--c-requested)}.chart-key-swatch[data-token=c-band-edge]{color:var(--c-band-edge)}
 .chart-key-swatch[data-token=c-temp]{color:var(--c-temp)}.chart-key-swatch[data-token=c-vpd]{color:var(--c-vpd)}.chart-key-swatch[data-token=c-rh]{color:var(--c-rh)}
 .chart-key-swatch[data-token=eq-mister]{color:var(--eq-mister)}.chart-key-swatch[data-token=eq-water]{color:var(--eq-water)}
 .chart-key-swatch[data-token=eq-master]{color:var(--eq-master)}.chart-key-swatch[data-token=eq-fert]{color:var(--eq-fert)}
 .chart-key-swatch[data-token=eq-fog]{color:var(--eq-fog)}.chart-key-swatch[data-token=eq-heat1]{color:var(--eq-heat1)}
+.chart-key-swatch[data-token=cause-vpd]{color:var(--cause-vpd)}.chart-key-swatch[data-token=cause-schedule]{color:var(--cause-schedule)}.chart-key-swatch[data-token=cause-prep]{color:var(--cause-prep)}.chart-key-swatch[data-token=forest]{color:var(--forest)}
 
 /* ChartStack (redesign §7.1): one card of panels on one x scale. Every panel's y axis is 56 px (STACK_AXIS_PX) and its right padding 10 px, so the rail, the hairline and the plots line up; only the last panel adds the time axis to its reserved height. */
 .chart-stack{position:relative;margin:.75rem 0;padding:var(--space-3) var(--space-4) var(--space-4);border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-xs);min-width:0}
@@ -171,6 +174,7 @@
 .rail-mark[data-token=fault]{color:var(--fault)}.rail-mark[data-token=warn-text]{color:var(--warn-text)}.rail-mark[data-token=muted]{color:var(--muted)}
 .rail-mark[data-token=eq-water]{color:var(--eq-water)}.rail-mark[data-token=eq-fert]{color:var(--eq-fert)}.rail-mark[data-token=eq-fog]{color:var(--eq-fog)}
 .rail-mark[data-token=eq-mister]{color:var(--eq-mister)}.rail-mark[data-token=eq-heat1]{color:var(--eq-heat1)}.rail-mark[data-token=eq-master]{color:var(--eq-master)}
+.rail-mark[data-token=cause-vpd]{color:var(--cause-vpd)}.rail-mark[data-token=cause-schedule]{color:var(--cause-schedule)}.rail-mark[data-token=cause-prep]{color:var(--cause-prep)}.rail-mark[data-token=c-bound]{color:var(--c-bound)}
 /* A cluster keeps its first event's token: after the token rules, its count stays white on its ink disc, ringed white so it stands off the rail's line. */
 .rail-mark[data-mark=cluster][data-token]{color:#fff;box-shadow:0 0 0 1px #fff}
 .rail-list{position:absolute;top:22px;left:min(calc(var(--at) * 1%),calc(100% - 18rem));z-index:var(--z-popover);display:grid;gap:var(--space-1);width:18rem;max-width:100%;margin:0;padding:var(--space-2) var(--space-3);list-style:none;border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-sm);font-size:var(--fs-sm)}

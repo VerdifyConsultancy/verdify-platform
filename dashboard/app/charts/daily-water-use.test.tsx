@@ -78,7 +78,7 @@ test("the transform: a no_data day stays null, 0 stays 0, and the no-valve serie
 test("the transform by cause: the feed above the clean water, a cause it does not know raw, in the cause table's colours", () => {
   const model = buildWaterUse({ days: [day("2026-11-02", { by_cause: { feed: 5, schedule: 9, vpd: 4, hail: 1 } })] }, "cause");
   expect(model.segments.map((segment) => [segment.key, segment.token, segment.label])).toEqual([
-    ["vpd", "--eq-mister", "VPD"], ["schedule", "--eq-water", "Schedule"], ["hail", "--c-bound", "Hail"], ["feed", "--eq-fert", "Feed"],
+    ["vpd", "--cause-vpd", "VPD"], ["schedule", "--cause-schedule", "Schedule"], ["hail", "--c-bound", "Hail"], ["feed", "--eq-fert", "Feed"],
   ]);
   expect(model.stacks.map((column) => column[0])).toEqual([4, 13, 14, 19]);
 });

@@ -1,0 +1,48 @@
+# Public hostnames Verdify source may name (#1351; Jason 2026-11-05: Verdify runs local-only).
+# scripts/check-external-hosts.py fails CI on any other public host in a URL in the scanned
+# runtime paths. Add a host only with the decision that accepts it; remove rows as they retire.
+# Scope: runtime = a running Verdify pod or the controller reaches it; build = image or firmware
+# builds only; browser = lab.verdify.ai visitors' browsers; reference = an identifier or doc link
+# that is never fetched by Verdify code at runtime; remove = still in code, removal tracked.
+hosts:
+  # Accepted runtime egress.
+  api.open-meteo.com: {scope: runtime, decision: "#1351 row 6 accepted (verdify-outbound:8083)"}
+  challenges.cloudflare.com: {scope: runtime, decision: "#1351 row 7 Cloudflare accepted for now (contact-form Turnstile)"}
+  # Removal tracked.
+  api.openai.com: {scope: remove, decision: "#1350 (planner/Hermes/selector) and the MCP embeddings move (#1351 row 2)"}
+  # Build-time only (#1351 D3, accepted).
+  github.com: {scope: build, decision: "#1351 D3 build-time; also repository links and OCI source labels"}
+  raw.githubusercontent.com: {scope: reference, decision: "Quartz citations plugin locale URL; the plugin is not enabled"}
+  apt.postgresql.org: {scope: build, decision: "#1351 D3 build-time package index"}
+  packagecloud.io: {scope: build, decision: "#1351 D3 build-time package index"}
+  www.postgresql.org: {scope: build, decision: "#1351 D3 build-time (PGDG signing key, CI containment qualification)"}
+  nodejs.org: {scope: reference, decision: "Quartz CLI documentation link"}
+  # lab.verdify.ai visitors' browsers (#1351 row 8, accepted for now) and Quartz's optional plugins.
+  fonts.googleapis.com: {scope: browser, decision: "#1351 row 8 accepted for now"}
+  fonts.gstatic.com: {scope: browser, decision: "#1351 row 8 accepted for now"}
+  cdn.jsdelivr.net: {scope: browser, decision: "#1351 row 8 accepted for now"}
+  cdnjs.cloudflare.com: {scope: browser, decision: "#1351 row 8 accepted for now"}
+  www.googletagmanager.com: {scope: browser, decision: "#1351 row 8 accepted for now (GA)"}
+  analytics.umami.is: {scope: browser, decision: "Quartz analytics provider option, not configured"}
+  app.posthog.com: {scope: browser, decision: "Quartz analytics provider option, not configured"}
+  app.rybbit.io: {scope: browser, decision: "Quartz analytics provider option, not configured"}
+  gc.zgo.at: {scope: browser, decision: "Quartz analytics provider option, not configured"}
+  plausible.io: {scope: browser, decision: "Quartz analytics provider option, not configured"}
+  scripts.withcabin.com: {scope: browser, decision: "Quartz analytics provider option, not configured"}
+  tinylytics.app: {scope: browser, decision: "Quartz analytics provider option, not configured"}
+  www.clarity.ms: {scope: browser, decision: "Quartz analytics provider option, not configured"}
+  giscus.app: {scope: browser, decision: "Quartz comments provider option, not configured"}
+  github.githubassets.com: {scope: browser, decision: "Quartz giscus theme CSS (comments not configured)"}
+  www.youtube.com: {scope: browser, decision: "Quartz embed transformer"}
+  # Identifiers and documentation links, never fetched by Verdify at runtime.
+  schema.org: {scope: reference, decision: "structured-data vocabulary"}
+  www.w3.org: {scope: reference, decision: "XML/SVG namespaces"}
+  www.sitemaps.org: {scope: reference, decision: "sitemap namespace"}
+  developer.mozilla.org: {scope: reference, decision: "Quartz source link"}
+  quartz.jzhao.xyz: {scope: reference, decision: "Quartz documentation link"}
+  base.com: {scope: reference, decision: "Quartz URL-resolution placeholder"}
+  verdify.com: {scope: reference, decision: "experiment-v2 identity URI, never fetched"}
+  evil.example: {scope: reference, decision: "negative test value in a script"}
+  cloudflare-dns.com: {scope: reference, decision: "test-only DoH check in scripts/dashboard-smoke.sh (#1351 row 16)"}
+  host.docker.internal: {scope: reference, decision: "decommissioned VM Hermes config, retired by #1350"}
+  planner-graph-xxxxx-uc.a.run.app: {scope: reference, decision: "placeholder in planner_graph docs, retired by #1350"}

@@ -70,7 +70,6 @@ def test_thirty_days_of_flaps_leave_one_row_with_count_and_last_seen():
     assert first["details"]["long_offline"] is False
     assert [row for row in log.open_view() if row["alert_type"] == "soil_sensor_offline"] == [first]
     assert log.one_count() == 1  # the probe's flaps add one to the one count
-    assert ns["slack_posts"] == []  # inserts follow the delayed policy; re-opens post nothing
 
 
 def test_night_gate_keeps_the_row_open_and_raises_nothing_new():

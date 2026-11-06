@@ -30,6 +30,7 @@ export const ROUTES = [
   ["API-IRR-12", "POST", "/v1/equipment/override"], ["API-IRR-13", "POST", "/v1/irrigation/clear-fault"], ["BFF-01", "GET", "/auth/login"],
   ["BFF-02", "GET", "/auth/callback"], ["BFF-03", "POST", "/auth/logout"], ["INT-01", "POST", "/internal/sessions"],
   ["INT-02", "DELETE", "/internal/sessions/current"], ["OPS-01", "GET", "/healthz"], ["OPS-02", "GET", "/readyz"],
+  ["OPS-04", "GET", "/metrics"],
 ].map(([operationId, method, path]) => ({ operationId, method, path, pattern: new RegExp(`^${path.replace(/\{([a-z_]+)\}/g, "(?<$1>[^/]+)")}$`) }));
 export const OPERATION_IDS = ROUTES.map((route) => route.operationId);
 /** The browser reaches /v1 as /api/v1 through the BFF; the fixture accepts both, so a page can call it directly. */
@@ -1036,6 +1037,8 @@ const SPECIAL = {
     if (!headers["x-dashboard-session"]) throw refuse(401, "unauthenticated", "Sign in again", "X-Dashboard-Session is required");
     return { status: 204, body: null };
   },
+  // Prometheus's scrape of the operator API (#1352); the dashboard never calls it.
+  "OPS-04": () => ({ status: 200, headers: { "Content-Type": "text/plain; version=0.0.4; charset=utf-8" }, body: "verdify_alert_metrics_up 1\n" }),
 };
 
 /**
@@ -1136,4 +1139,5 @@ export const EXAMPLES = {
   "INT-02": () => ({ method: "DELETE", url: "/internal/sessions/current", headers: { "x-dashboard-session": "fixture-session" } }),
   "OPS-01": () => get("/healthz"),
   "OPS-02": () => get("/readyz"),
+  "OPS-04": () => get("/metrics"),
 };

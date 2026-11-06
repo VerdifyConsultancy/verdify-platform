@@ -49,7 +49,7 @@ def test_prod_lab_serves_only_the_validated_quartz_cache():
     )
     pod = deployment["spec"]["template"]["spec"]
     container = pod["containers"][0]
-    assert container["image"].startswith("nginxinc/nginx-unprivileged:")
+    assert container["image"].startswith("registry.vallery.net/jvallery/mirror-docker-io-nginxinc-nginx-unprivileged:")
     assert container["volumeMounts"][0] == {
         "name": "lab-cache",
         "mountPath": "/lab-cache",

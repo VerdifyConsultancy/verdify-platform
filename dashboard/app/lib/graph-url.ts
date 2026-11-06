@@ -5,15 +5,15 @@
  * use is dropped with a notice in words, never an error page.
  *
  * Climate (`/graphs`):
- * - `range=today|24h|72h|7d|30d|90d` (default 24h), or a longer last-N window that Zoom out writes (`48h`, `14d`), at
- *   most 400 days: the past window plus a future pad of a quarter of it, at most 12 h (D-UX-13). Today runs from local
- *   midnight to the next, so it ends there.
+ * - `range=today|24h|72h|7d|30d|90d` (default 72h), or a longer last-N window that Zoom out writes (`48h`, `14d`), at
+ *   most 400 days: the past window plus as much ahead, at most 72 h (decisions 2026-11-05, replacing D-UX-13), so the
+ *   default is 72 h back and 72 h of forecast ahead. Today runs from local midnight to the next, so it ends there.
  * - `from` and `to`, at most 400 days: local days (`from=2026-10-31&to=2026-11-01`, To included, America/Denver), which
  *   the custom-range form, the day links and the previous and next steps of a day window write, and which run from local
  *   midnight of From to local midnight after To, so a 25-hour day stays 25 hours; or ISO 8601 times with `Z` or an
  *   offset, exactly [from, to), as `graphWindowUrl()`, the story line and the steps of a window write them.
  * - `preset=climate|water-soil|light|controller`: the picked metrics of an API-03 group (Climate picks none).
- * - `set=<param>`, repeated: settings drawn as steps. No `set` is the defaults; `set=` alone is none.
+ * - `set=<param>`, repeated: settings drawn as steps. No `set` draws none (decisions 2026-11-05); `set=` alone is none.
  * - `m=<key>`, repeated: picked metrics (API-03 keys, `daily.*` included, D-UX-04), at most 5 beside the climate traces.
  * - `outdoor=0` hides the outdoor and forecast overlay; `events=people,iris,…` shows only those event sources on the
  *   rail (`events=` alone none, no `events` all); `env=0` hides the min–max envelope; `cmp=day|week` draws yesterday or
@@ -38,7 +38,7 @@ export const RANGES = [
   { id: "7d", label: "7 d" }, { id: "30d", label: "30 d" }, { id: "90d", label: "90 d" },
 ] as const;
 export type RangeId = (typeof RANGES)[number]["id"];
-export const DEFAULT_RANGE: RangeId = "24h";
+export const DEFAULT_RANGE: RangeId = "72h";
 const HOUR_S = 3600;
 const DAY_S = 86_400;
 export const MAX_DAYS = 400;
@@ -47,8 +47,11 @@ export const MAX_WINDOW_S = MAX_DAYS * DAY_S;
 export const LANES_MAX_S = 31 * DAY_S;
 /** The climate traces every Climate view draws, one per panel. */
 export const CLIMATE_KEYS = ["climate.temp_avg", "climate.vpd_avg", "climate.rh_avg"] as const;
-/** The settings drawn when the URL has no `set` (screens SCR-02). Temperature shows the band only. */
-export const DEFAULT_SETTINGS = ["mister_engage_kpa", "fog_rh_ceiling_pct"] as const;
+/**
+ * The settings drawn when the URL has no `set`: none (decisions 2026-11-05, #1354). Mister engage and the fog RH ceiling
+ * are opt-in through + Setting, so the default panels show the climate, the band and the forecast only.
+ */
+export const DEFAULT_SETTINGS: readonly string[] = [];
 /** At most 8 metrics per window, the three climate traces included, so no panel's API-04 request passes 8. */
 export const MAX_METRICS = 8;
 export const MAX_PICKED = MAX_METRICS - CLIMATE_KEYS.length;
@@ -212,7 +215,7 @@ function eventsOf(params: URLSearchParams, notices: string[]): readonly EventSou
 
 /**
  * The view a Climate URL asks for. `from` and `to` win over `range`; a window it cannot read falls back to the range or
- * the 24 h default, with a notice. Duplicate keys collapse; empty values are ignored (`set=` alone is none).
+ * the 72 h default, with a notice. Duplicate keys collapse; empty values are ignored (`set=` alone is none).
  */
 export function parseGraphUrl(search: URLSearchParams | string): ParsedView {
   const params = typeof search === "string" ? new URLSearchParams(search) : search;

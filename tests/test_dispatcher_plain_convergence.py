@@ -563,15 +563,9 @@ class AlertLog:
 
 
 @pytest.fixture
-def no_slack(monkeypatch):
-    def unavailable(_path):
-        raise FileNotFoundError("no Slack token in tests")
-
-    def forbidden(*_args, **_kwargs):
-        raise AssertionError("tests never post to Slack")
-
-    monkeypatch.setattr(alerts, "_load_token", unavailable)
-    monkeypatch.setattr(alerts, "_post_slack", forbidden)
+def alert_log_only():
+    """#1352: the monitor has no sender; alert_log is its only delivery."""
+    assert not hasattr(alerts, "_post_slack") and not hasattr(alerts, "_load_token")
 
 
 async def _sync(log: AlertLog, stuck: dict | None, **kwargs) -> None:
@@ -585,7 +579,7 @@ async def _sync(log: AlertLog, stuck: dict | None, **kwargs) -> None:
 
 
 @pytest.mark.asyncio
-async def test_settings_differing_sixteen_minutes_raise_stuck_once_and_resolve(plain, no_slack):
+async def test_settings_differing_sixteen_minutes_raise_stuck_once_and_resolve(plain, alert_log_only):
     plan = _load(plain, PARAMS[:2])
     plain.controller.refuses = set(plan)
     await plain.run_pass()
@@ -892,7 +886,7 @@ def test_paced_order_is_oldest_difference_first_then_name(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_unknown_dispatcher_state_keeps_an_open_stuck_alert(no_slack):
+async def test_unknown_dispatcher_state_keeps_an_open_stuck_alert(alert_log_only):
     log = AlertLog()
     alert = alerts._setpoint_delivery_stuck_alert({"temp_low": T0}, "paced 1/2", T0 + timedelta(minutes=20))
     assert alert["message"] == "1 setting not reaching the controller since 12:00 UTC"
@@ -905,7 +899,7 @@ async def test_unknown_dispatcher_state_keeps_an_open_stuck_alert(no_slack):
 
 
 @pytest.mark.asyncio
-async def test_stuck_alert_stays_open_across_a_restart_until_none_differ(plain, no_slack):
+async def test_stuck_alert_stays_open_across_a_restart_until_none_differ(plain, alert_log_only):
     plan = _load(plain, PARAMS[:2])
     plain.controller.refuses = set(plan)
     await plain.run_pass()

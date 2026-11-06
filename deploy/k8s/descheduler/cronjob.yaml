@@ -53,6 +53,10 @@ spec:
             descheduler.alpha.kubernetes.io/evict: "true"
         spec:
           serviceAccountName: descheduler
+          # #1363: custody copies on the zot origin, which denies anonymous reads. The Secret is
+          # reflected here by jvallery/agents (zot-origin-cluster-pull reflection list).
+          imagePullSecrets:
+            - name: zot-origin-cluster-pull
           priorityClassName: verdify-batch
           restartPolicy: Never
           # Do not schedule onto the cordoned etcd nodes.
@@ -71,7 +75,7 @@ spec:
           initContainers:
             - name: maintenance-gate
               # Same digest-pinned image as the estate descheduler's gate.
-              image: python:3.13.5-alpine3.22@sha256:37b14db89f587f9eaa890e4a442a3fe55db452b69cca1403cc730bd0fbdc8aaf
+              image: registry.vallery.net/jvallery/mirror-docker-io-library-python:3.13.5-alpine3.22-37b14db89f58@sha256:37b14db89f587f9eaa890e4a442a3fe55db452b69cca1403cc730bd0fbdc8aaf
               imagePullPolicy: IfNotPresent
               command: ["python3", "-I", "/policy-src/gate.py"]
               resources:
@@ -96,7 +100,7 @@ spec:
             - name: descheduler
               # registry.k8s.io/descheduler/descheduler:v0.36.0 (k8s 1.35 deps),
               # digest-pinned per the cluster's image policy.
-              image: registry.k8s.io/descheduler/descheduler:v0.36.0@sha256:7ca92c0a7b4f1c51d306409da6b832005fcadb224e384795646376726734c6e5
+              image: registry.vallery.net/jvallery/mirror-registry-k8s-io-descheduler-descheduler:v0.36.0-7ca92c0a7b4f@sha256:7ca92c0a7b4f1c51d306409da6b832005fcadb224e384795646376726734c6e5
               imagePullPolicy: IfNotPresent
               command:
                 - "/bin/descheduler"
