@@ -197,7 +197,8 @@ test("every named fixture answers every operation with a body that conforms to t
       }
     }
   }
-}, 60_000);
+  // About 15 s on a laptop, 44-66 s in in-cluster CI (66 s timed out at 60 s on #1410): headroom for CI load.
+}, 180_000);
 
 test("fixture(name) is what the fixture API answers for the same request, after the fixture's AFTER writes", () => {
   for (const name of FIXTURE_NAMES) {
