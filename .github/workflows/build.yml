@@ -1,0 +1,163 @@
+# verdify-platform image builds and the digest pin PR on the estate's ARC
+# runners (issue #1397). The native in-cluster pipeline builds these nine images
+# today and its pin step is the only pin writer. This workflow stays dormant on
+# push until the repository variable VERDIFY_GHA_BUILD is "true", which is set in
+# the same window that removes the native build sensor and registry build rows
+# (#1397 cutover step 3), so there is never a second pin writer. A manual
+# dispatch from main builds the impacted images and pushes them by digest
+# (tag gha-<sha12>) without opening a pin PR while the variable is unset.
+#
+# impact: the native classifier (ci/gha/path-impact.sh --push) selects the images
+# whose Dockerfile inputs changed; a digest-only pin push builds nothing.
+# Builds run on verdify-platform-build (Kaniko sidecar plus the repository's zot
+# writer; default-branch push/dispatch only), one at a time (set max 1).
+# pin: one estate-ci pin-bump job, the only writer. It opens one PR that moves the
+# five candidate entries in deploy/k8s/overlays/prod/kustomization.yaml (prod runs
+# release-pins.yaml, so merging it deploys nothing) and the dashboard-web digest in
+# deploy/k8s/dashboard/kustomization.yaml; an operator merges it.
+#
+# Portability (Forgejo/Gitea Actions): the impact job is checkout plus one script;
+# builds and the pin are /opt/estate-ci/image-build.sh and pin-bump.sh.
+name: build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  impact:
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.VERDIFY_GHA_BUILD == 'true' }}
+    runs-on: verdify-platform-ci
+    timeout-minutes: 10
+    outputs:
+      mode: ${{ steps.impact.outputs.mode }}
+      api: ${{ steps.impact.outputs.api }}
+      mcp: ${{ steps.impact.outputs.mcp }}
+      ingestor: ${{ steps.impact.outputs.ingestor }}
+      migrate: ${{ steps.impact.outputs.migrate }}
+      orchestrator: ${{ steps.impact.outputs.orchestrator }}
+      planner: ${{ steps.impact.outputs.planner }}
+      setpoint-server: ${{ steps.impact.outputs.setpoint-server }}
+      lab-publisher: ${{ steps.impact.outputs.lab-publisher }}
+      dashboard-web: ${{ steps.impact.outputs.dashboard-web }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - id: impact
+        shell: bash
+        run: ci/gha/path-impact.sh --push
+
+  api:
+    needs: [impact]
+    if: ${{ needs.impact.outputs.api == 'true' }}
+    uses: jvallery/estate-ci/.github/workflows/image-build.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      image: verdifyconsultancy/verdify-api
+      dockerfile: api/Dockerfile
+      push: true
+      build-args: GIT_SHA=${{ github.sha }}
+
+  mcp:
+    needs: [impact]
+    if: ${{ needs.impact.outputs.mcp == 'true' }}
+    uses: jvallery/estate-ci/.github/workflows/image-build.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      image: verdifyconsultancy/verdify-mcp
+      dockerfile: mcp/Dockerfile
+      push: true
+      build-args: GIT_SHA=${{ github.sha }}
+
+  ingestor:
+    needs: [impact]
+    if: ${{ needs.impact.outputs.ingestor == 'true' }}
+    uses: jvallery/estate-ci/.github/workflows/image-build.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      image: verdifyconsultancy/verdify-ingestor
+      dockerfile: ingestor/Dockerfile
+      push: true
+      build-args: GIT_SHA=${{ github.sha }}
+
+  migrate:
+    needs: [impact]
+    if: ${{ needs.impact.outputs.migrate == 'true' }}
+    uses: jvallery/estate-ci/.github/workflows/image-build.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      image: verdifyconsultancy/verdify-migrate
+      dockerfile: db/Dockerfile.migrate
+      push: true
+
+  orchestrator:
+    needs: [impact]
+    if: ${{ needs.impact.outputs.orchestrator == 'true' }}
+    uses: jvallery/estate-ci/.github/workflows/image-build.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      image: verdifyconsultancy/verdify-experiment-v2-orchestrator
+      dockerfile: experiment_orchestrator/Dockerfile
+      push: true
+      build-args: GIT_SHA=${{ github.sha }}
+
+  planner:
+    needs: [impact]
+    if: ${{ needs.impact.outputs.planner == 'true' }}
+    uses: jvallery/estate-ci/.github/workflows/image-build.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      image: verdifyconsultancy/verdify-planner
+      dockerfile: planner_graph/Dockerfile
+      push: true
+      build-args: GIT_SHA=${{ github.sha }}
+
+  setpoint-server:
+    needs: [impact]
+    if: ${{ needs.impact.outputs.setpoint-server == 'true' }}
+    uses: jvallery/estate-ci/.github/workflows/image-build.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      image: verdifyconsultancy/verdify-setpoint-server
+      dockerfile: scripts/Dockerfile.setpoint-server
+      push: true
+
+  lab-publisher:
+    needs: [impact]
+    if: ${{ needs.impact.outputs.lab-publisher == 'true' }}
+    uses: jvallery/estate-ci/.github/workflows/image-build.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      image: verdifyconsultancy/verdify-lab-publisher-k3s
+      dockerfile: scripts/Dockerfile.lab-publisher
+      push: true
+
+  dashboard-web:
+    needs: [impact]
+    if: ${{ needs.impact.outputs.dashboard-web == 'true' }}
+    uses: jvallery/estate-ci/.github/workflows/image-build.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      image: verdifyconsultancy/verdify-dashboard-web
+      dockerfile: dashboard/Dockerfile
+      push: true
+      build-args: GIT_SHA=${{ github.sha }}
+
+  pin:
+    needs: [impact, api, mcp, ingestor, migrate, orchestrator, planner, setpoint-server, lab-publisher, dashboard-web]
+    # Native pin-digests pins whatever built; a failed build leaves its line empty.
+    if: ${{ !cancelled() && vars.VERDIFY_GHA_BUILD == 'true' && needs.impact.outputs.mode == 'build' }}
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    uses: jvallery/estate-ci/.github/workflows/pin-bump.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      pins: |
+        deploy/k8s/overlays/prod/kustomization.yaml registry.vallery.net/verdifyconsultancy/verdify-api ${{ needs.api.outputs.digest }}
+        deploy/k8s/overlays/prod/kustomization.yaml registry.vallery.net/verdifyconsultancy/verdify-mcp ${{ needs.mcp.outputs.digest }}
+        deploy/k8s/overlays/prod/kustomization.yaml registry.vallery.net/verdifyconsultancy/verdify-ingestor ${{ needs.ingestor.outputs.digest }}
+        deploy/k8s/overlays/prod/kustomization.yaml registry.vallery.net/verdifyconsultancy/verdify-migrate ${{ needs.migrate.outputs.digest }}
+        deploy/k8s/overlays/prod/kustomization.yaml registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator ${{ needs.orchestrator.outputs.digest }}
+        deploy/k8s/dashboard/kustomization.yaml registry.vallery.net/verdifyconsultancy/verdify-dashboard-web ${{ needs.dashboard-web.outputs.digest }}
+      checks-workflow: ci.yml
