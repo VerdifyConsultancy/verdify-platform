@@ -440,6 +440,7 @@ $PY -m pytest -q -rs \
   tests/test_fixed_panel_native_ledger.py \
   tests/test_fixed_panel_native_route.py \
   tests/test_fixed_panel_native_source.py \
+  tests/test_event_alert_auto_resolve.py \
   tests/test_forecast_deviation_delivery_retry.py \
   tests/test_forecast_replay.py \
   tests/test_forecast_verification_contract.py \
