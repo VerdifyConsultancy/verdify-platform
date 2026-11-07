@@ -31,12 +31,15 @@ def test_quartz_is_the_only_lab_generator_source_and_deployment_path():
     assert not (REPO_ROOT / "deploy/k8s/overlays/lab-stage").exists()
 
 
-def test_generated_ci_has_no_retired_lab_image_profile():
-    ci = yaml.safe_load((REPO_ROOT / ".agent-fleet/ci.yaml").read_text())
-    images = {image["name"]: image for image in ci["images"]}
-    assert "verdify-lab-astro" not in images
-    assert "verdify-lab" not in images
-    assert images["verdify-lab-publisher-k3s"]["context"] == "."
+def test_image_builds_have_no_retired_lab_image():
+    # #1397 step 5: .github/workflows/build.yml is the only image list (the generated
+    # .agent-fleet/ci.yaml is gone). Every job builds with the repository root as context.
+    build = yaml.safe_load((REPO_ROOT / ".github/workflows/build.yml").read_text())
+    images = {job["with"]["image"]: job["with"] for job in build["jobs"].values() if "image" in job.get("with", {})}
+    assert "verdifyconsultancy/verdify-lab-astro" not in images
+    assert "verdifyconsultancy/verdify-lab" not in images
+    assert images["verdifyconsultancy/verdify-lab-publisher-k3s"]["dockerfile"] == "scripts/Dockerfile.lab-publisher"
+    assert all("context" not in image for image in images.values())
 
 
 def test_prod_lab_serves_only_the_validated_quartz_cache():

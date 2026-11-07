@@ -48,6 +48,7 @@ jobs:
       setpoint-server: ${{ steps.impact.outputs.setpoint-server }}
       lab-publisher: ${{ steps.impact.outputs.lab-publisher }}
       dashboard-web: ${{ steps.impact.outputs.dashboard-web }}
+      grafana-image-renderer: ${{ steps.impact.outputs.grafana-image-renderer }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -142,6 +143,16 @@ jobs:
       dockerfile: dashboard/Dockerfile
       push: true
       build-args: GIT_SHA=${{ github.sha }}
+
+  # #1113: not in the pin job; the renderer digest in grafana.yaml is hand-pinned.
+  grafana-image-renderer:
+    needs: [impact]
+    if: ${{ needs.impact.outputs.grafana-image-renderer == 'true' }}
+    uses: jvallery/estate-ci/.github/workflows/image-build.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      image: verdifyconsultancy/verdify-grafana-image-renderer
+      dockerfile: grafana/Dockerfile.image-renderer
+      push: true
 
   pin:
     needs: [impact, api, mcp, ingestor, migrate, orchestrator, planner, setpoint-server, lab-publisher, dashboard-web]

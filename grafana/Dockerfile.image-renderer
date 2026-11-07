@@ -1,0 +1,21 @@
+# Derived Grafana image renderer (#1113): the upstream v5.12.10 image with Debian's
+# chromium security update applied. Upstream still pins CHROMIUM_VERSION 156.0.8078.47,
+# which carries CVE-2026-118333 and CVE-2026-118337 (fixed in 156.0.8078.73-1~deb13u1,
+# DSA-6592-1). Drop this file and pin the upstream image again once an upstream release
+# ships chromium >= 156.0.8078.73.
+#
+# Built by .github/workflows/build.yml (job grafana-image-renderer) into
+# registry.vallery.net/verdifyconsultancy/verdify-grafana-image-renderer. The renderer
+# pin in deploy/k8s/components/grafana/grafana.yaml is a hand-edited digest, delivered
+# by an exact sync of Deployment/verdify-grafana.
+FROM grafana/grafana-image-renderer:v5.12.10@sha256:a7970b826f6e477461e02bf5463d92634e9ad27d525e4e50296978a2e592d2d7
+
+USER root
+# Upgrade only the four chromium packages the upstream image installs, then fail the
+# build unless the installed version carries the fix.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends --only-upgrade \
+        chromium chromium-driver chromium-shell chromium-sandbox \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' chromium)" ge 156.0.8078.73-1~deb13u1 \
+    && rm -rf /var/lib/apt/lists/*
+USER 65532
