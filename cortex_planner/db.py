@@ -278,6 +278,19 @@ class PlannerStore:
             "; ".join(attempt.errors)[:4000] or None,
         )
 
+    async def save_superseded(self, trigger: Trigger, by: Trigger, mode: str, model: str) -> None:
+        """Mark a catch-up trigger done without running it (#1486): no attempt, no status, no pack."""
+        await self.conn.execute(
+            """INSERT INTO public.planner_inference_runs
+                   (provider, model_id, started_at, ended_at, retries, trigger_id, event_type, mode, dispatched, error)
+               VALUES ('cortex', $1, now(), now(), 0, $2::uuid, $3, $4, false, $5)""",
+            model,
+            trigger.trigger_id,
+            trigger.event_type,
+            mode,
+            f"superseded by trigger {by.trigger_id} ({by.event_type} delivered {iso(by.delivered_at)}); not run",
+        )
+
     async def raise_failed(self, trigger_id: str | None, message: str, details: dict[str, Any]) -> None:
         await self.conn.execute(
             f"SELECT {VP}.raise_planner_failed($1::uuid, $2, $3::jsonb)", trigger_id, message[:500], json.dumps(details)
