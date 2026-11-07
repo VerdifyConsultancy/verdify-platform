@@ -58,3 +58,10 @@ The open-issue graph is [DEPENDENCIES.md](DEPENDENCIES.md), with 22 edges betwee
 - **One signed-in dashboard walk (U2)** and **one attended L04 run (#1343).**
 - **On-site work (U4).**
 - **Resuming #1360**, if and when he chooses.
+
+## Delta, 2026-11-07 04:50Z
+
+- Closed by the delta verifier: #1327 and #1328 (PR #1438 merged; prod read-only checks hold).
+- Added: #1458 (container CVE backlog; P1, U0, ships with release 5, Criticals due 2026-11-14) and #1459 (split `ci / validate`; P3, U6, deferred while validate stays under about 60 minutes).
+- Merged but not yet released (go out with release 5): #1433 (#1455), #1450 (#1454), #1346 (#1457), #1397 and #1113 (#1456).
+- External waits: jvallery/agents#6243 and the consolidated pin PR (COORD) for #1397, #1363 and #1001; network-infra#965 and the cloudflare-edge pin for #1010.
