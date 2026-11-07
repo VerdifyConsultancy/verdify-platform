@@ -11,6 +11,12 @@ There is no cloud fallback. A 4xx other than 429 (bad key, unknown model) fails 
 Shadow mode stores packs, attempts and the validated proposal with `dispatched = false`; it never
 writes plan_journal, setpoint_plan or setpoint_changes, and nothing it stores reaches the device.
 Idempotency: a trigger that already has an attempt row is never run again.
+
+Catch-up coalescing (#1486): while Hermes delivery fails, the same milestone is re-delivered every
+~2 minutes as a "(catch-up)" with a new trigger_id. Only the newest pending trigger of each event
+type runs; each older one is recorded once as superseded (a row with no attempt and no status,
+naming the trigger that replaced it) and never runs, so a delivery outage queues at most one shadow
+run per event type instead of one per re-delivery.
 """
 
 from __future__ import annotations
@@ -64,6 +70,7 @@ class Store(Protocol):
     async def load_inputs(self, trigger: Trigger) -> PackInputs: ...
     async def save_pack(self, pack: Pack, inputs: PackInputs) -> None: ...
     async def save_attempt(self, attempt: Attempt) -> None: ...
+    async def save_superseded(self, trigger: Trigger, by: Trigger, mode: str, model: str) -> None: ...
     async def raise_failed(self, trigger_id: str | None, message: str, details: dict[str, Any]) -> None: ...
     async def resolve_failed(self, resolution: str) -> None: ...
 
@@ -131,6 +138,67 @@ async def _call(client: CortexClient, attempt: Attempt) -> None:
         return
     attempt.status = "ok"
     attempt.proposal = proposal.model_dump()
+
+
+def coalesce(triggers: Sequence[Trigger]) -> tuple[list[Trigger], list[tuple[Trigger, Trigger]]]:
+    """Keep the newest pending trigger per event type (#1486).
+
+    Returns the kept triggers, oldest delivery first, and (superseded, superseded_by) pairs.
+    """
+    newest: dict[str, Trigger] = {}
+    for trigger in triggers:
+        current = newest.get(trigger.event_type)
+        if current is None or (trigger.delivered_at, trigger.trigger_id) > (current.delivered_at, current.trigger_id):
+            newest[trigger.event_type] = trigger
+    kept = sorted(newest.values(), key=lambda t: (t.delivered_at, t.trigger_id))
+    superseded = [(t, newest[t.event_type]) for t in triggers if t.trigger_id != newest[t.event_type].trigger_id]
+    return kept, superseded
+
+
+async def run_pending(
+    store: Store,
+    client: CortexClient,
+    event_types: Sequence[str],
+    *,
+    mode: str = "shadow",
+    stop: asyncio.Event | None = None,
+) -> list[RunOutcome]:
+    """Run pending triggers one at a time, coalescing catch-ups before each run.
+
+    The pending set is re-read before every run, so a catch-up that arrived while an earlier run was
+    in flight supersedes its queued predecessor instead of running after it.
+    """
+    outcomes: list[RunOutcome] = []
+    seen: set[str] = set()
+    model = CallConfig().model
+    while stop is None or not stop.is_set():
+        kept, superseded = coalesce(await store.pending_triggers(event_types))
+        for old, new in superseded:
+            await store.save_superseded(old, new, mode, model)
+            outcomes.append(RunOutcome(old.trigger_id, "skipped"))
+            log.info(
+                "trigger %s %s superseded by %s (delivered %s); not run",
+                old.trigger_id,
+                old.event_type,
+                new.trigger_id,
+                new.delivered_at.isoformat(),
+            )
+        kept = [t for t in kept if t.trigger_id not in seen]
+        if not kept:
+            break
+        trigger = kept[0]
+        seen.add(trigger.trigger_id)
+        outcome = await run_trigger(store, client, trigger, mode=mode)
+        outcomes.append(outcome)
+        log.info(
+            "trigger %s %s -> %s after %d attempts",
+            trigger.trigger_id,
+            trigger.event_type,
+            outcome.status,
+            len(outcome.attempts),
+        )
+        _heartbeat()
+    return outcomes
 
 
 async def run_trigger(
@@ -203,7 +271,9 @@ def _heartbeat() -> None:
 
 
 async def serve(store_factory, *, poll_s: float = 30.0, event_types: Sequence[str] = DEFAULT_EVENT_TYPES) -> None:
-    """Run every new plan trigger once, in shadow. Never exits on its own errors (fail closed, idle)."""
+    """Run the newest new plan trigger of each event type once, in shadow (older ones are superseded).
+
+    Never exits on its own errors (fail closed, idle)."""
     mode = os.environ.get("VERDIFY_PLANNER_MODE", "shadow")
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -241,16 +311,7 @@ async def serve(store_factory, *, poll_s: float = 30.0, event_types: Sequence[st
                             log.info("Cortex planner key present again")
                             key_alerted = False
                         client = CortexClient(key=key)
-                        for trigger in await store.pending_triggers(event_types):
-                            outcome = await run_trigger(store, client, trigger, mode=mode)
-                            log.info(
-                                "trigger %s %s -> %s after %d attempts",
-                                trigger.trigger_id,
-                                trigger.event_type,
-                                outcome.status,
-                                len(outcome.attempts),
-                            )
-                            _heartbeat()
+                        await run_pending(store, client, event_types, mode=mode, stop=stop)
             finally:
                 await store.close()
         except Exception:  # noqa: BLE001 — the loop must outlive one bad cycle
