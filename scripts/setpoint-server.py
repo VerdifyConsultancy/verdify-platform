@@ -68,7 +68,6 @@ EQUIPMENT_SWITCH_SETPOINTS = {
     "sw_irrigation_wall_enabled": "irrigation_wall_enabled",
     "sw_irrigation_center_enabled": "irrigation_center_enabled",
     "sw_irrigation_weather_skip": "irrigation_weather_skip",
-    "sw_gl_auto_mode": "gl_auto_mode",
 }
 BAND_OWNED_PARAMS = CROP_BAND_REG
 PLAN_EXCLUDED_PARAMS_SQL = ",".join("'" + param.replace("'", "''") + "'" for param in sorted(BAND_OWNED_REG))
@@ -98,23 +97,12 @@ _main_loop: asyncio.AbstractEventLoop | None = None
 _light_state = {"main": None, "grow": None}  # True=on, False=off, None=unknown
 
 
-def _int_param(params: dict[str, str], key: str, default: int) -> int:
-    try:
-        return int(float(params.get(key, default)))
-    except (TypeError, ValueError):
-        return default
-
-
 def _overlay_activity_direct_wet_defaults(params: dict[str, str], plan_params: set[str]) -> None:
-    """Keep the compatibility endpoint aligned with dispatcher-owned activity policy.
-    Keyed off the GROW (jalapeno, longest-day) circuit, NOT MAIN — a short orchid
-    photoperiod on MAIN must not shrink the irrigation activity window (#294)."""
-    activity_start_hour = max(0, min(23, _int_param(params, "gl_grow_sunrise_hour", 6)))
-    activity_duration_min = max(0, min(1440, _int_param(params, "gl_grow_target_light_minutes", 960)))
-    params["activity_start_hour"] = str(activity_start_hour)
-    params["activity_start_minute"] = "0"
-    params["activity_duration_min"] = str(activity_duration_min)
+    """Keep the compatibility endpoint aligned with the dispatcher's direct-wet defaults.
 
+    #1477 retired the activity mirror (activity_start_hour, activity_start_minute,
+    activity_duration_min); no controller logic read it.
+    """
     for param, value in DIRECT_WET_DEFAULTS.items():
         if param not in plan_params:
             params.setdefault(param, value)
@@ -125,13 +113,6 @@ def _overlay_dispatcher_owned_defaults(params: dict[str, str], plan_params: set[
     for param, value in SAFETY_DEFAULTS.items():
         if param not in plan_params:
             params[param] = value
-
-    has_per_circuit_lighting = "gl_main_lux_hysteresis" in params and "gl_grow_lux_hysteresis" in params
-    if has_per_circuit_lighting:
-        if "gl_lux_threshold" not in plan_params and "gl_main_lux_threshold" in params:
-            params["gl_lux_threshold"] = params["gl_main_lux_threshold"]
-        if "gl_lux_hysteresis" not in plan_params and "gl_main_lux_hysteresis" in params:
-            params["gl_lux_hysteresis"] = params["gl_main_lux_hysteresis"]
 
 
 def load_token() -> str:
@@ -351,7 +332,6 @@ def get_setpoint_text_sync() -> str:
     result_text = _db_text_safe(
         "SELECT parameter, value FROM fn_lighting_minutes_policy(now(), 'vallery') p "
         "CROSS JOIN LATERAL (VALUES "
-        "('gl_' || p.light_key || '_dli_target', round(p.legacy_dli_target::numeric, 1)::text), "
         "('gl_' || p.light_key || '_target_light_minutes', p.target_light_minutes::text), "
         "('gl_' || p.light_key || '_sunrise_hour', p.start_hour::text), "
         "('gl_' || p.light_key || '_sunset_hour', p.cutoff_hour::text), "

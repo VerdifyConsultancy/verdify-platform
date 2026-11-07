@@ -57,7 +57,6 @@ def _plain_planner_params() -> list[tuple[str, float, float]]:
         | _common.LIGHTING_TARGET_MINUTE_PARAMS
         | _common.LIGHTING_CIRCUIT_SUPPORT_SENTINELS
         | _common.LIGHTING_POLICY_PARAMS
-        | _common.ACTIVITY_MIRROR_PARAMS
         | _common.DIRECT_WET_POLICY_PARAMS
         | _common.AI_MOISTURE_STRESS_POLICY_PARAMS
         | _common.FORCED_ON_SWITCH_PARAMS

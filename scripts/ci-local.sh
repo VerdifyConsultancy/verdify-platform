@@ -117,6 +117,7 @@ $PY -m pytest -q -rs \
   tests/test_304_water_day_delivery.py \
   tests/test_305_band_dryout_delivery.py \
   tests/test_metric_registry_completeness.py \
+  tests/test_par_meter.py \
   tests/test_verdify_services_series.py \
   tests/test_verdify_services_band_preview.py \
   tests/test_band_profile.py \

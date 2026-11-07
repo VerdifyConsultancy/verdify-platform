@@ -367,6 +367,26 @@ struct RelayOutputs {
     bool vent;
 };
 
+// ── Relay conflict arbitration (#370) ─────────────────────────────────────
+// The one place the controller resolves equipment conflicts between the
+// requested relay table and the relays' PHYSICAL state (dwell timers keep a
+// relay in its old state after the request flips). arbitrate_relay_conflicts()
+// (greenhouse_logic.h) applies, in order: the SENSOR_FAULT all-off lock, the
+// fan->vent hold, the heat<->air-exchange suppression, the heat-stage rule and
+// the heater force-offs. controls.yaml applies its result unchanged.
+struct RelayArbitration {
+    RelayOutputs out;          // the arbitrated request handed to set_relay
+    bool sensor_fault_lock;    // SENSOR_FAULT: every relay forced off
+    bool fan_requires_vent;    // a fan runs or is wanted: vent held open (force_on)
+    bool fan_vent_hold;        // ...and the request had the vent closed
+    bool heat_vent_block;      // heat suppressed: vent open or opening
+    bool heat_fan_block;       // heat suppressed: a fan running or wanted
+    bool heat_stage_block;     // heat2 suppressed: heat1 not available
+    bool force_heat_off;       // heat1 + heat2 forced off past their min-on dwell
+    bool force_heat2_off;      // heat2 forced off past its min-on dwell
+    const char* block_reason;  // first rule that changed the request, "" if none
+};
+
 // ── Manual button-override layer (FANS / HUMID / VENT-BYPASS) ────────────
 // Three deadline latches, toggled by the momentary panel push buttons and set
 // or cleared by the manual_override service (VD-47); controls.yaml reads them.

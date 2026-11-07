@@ -1550,53 +1550,8 @@ REGISTRY: dict[str, TunableDef] = {
         notes="Mandatory vent-open relief duration if mist-closed-vent cap hit.",
     ),
     # ─────────────────────────────────────────────────────────────────────
-    # Greenhouse activity and direct-wet window gates.
+    # Direct-wet gates.
     # ─────────────────────────────────────────────────────────────────────
-    "activity_start_hour": TunableDef(
-        name="activity_start_hour",
-        kind="numeric",
-        min=0,
-        max=23,
-        default=6,
-        fw_clamp_lo=0,
-        fw_clamp_hi=23,
-        esp_object_id="activity_start_hour",
-        cfg_readback_object_id="cfg_activity_start_hour",
-        push_owner="dispatcher_default",
-        planner_pushable=False,
-        tier=2,
-        notes="Dispatcher-owned mirror of the main-light activity start hour. Retired: no firmware code reads it (direct_wet_window_open, its only reader, was deleted, #369).",
-    ),
-    "activity_start_minute": TunableDef(
-        name="activity_start_minute",
-        kind="numeric",
-        min=0,
-        max=59,
-        default=0,
-        fw_clamp_lo=0,
-        fw_clamp_hi=59,
-        esp_object_id="activity_start_min",
-        cfg_readback_object_id="cfg_activity_start_min",
-        push_owner="dispatcher_default",
-        planner_pushable=False,
-        tier=2,
-        notes="Dispatcher-owned mirror of the main-light activity start minute. Retired: no firmware code reads it (direct_wet_window_open, its only reader, was deleted, #369).",
-    ),
-    "activity_duration_min": TunableDef(
-        name="activity_duration_min",
-        kind="numeric",
-        min=0,
-        max=1440,
-        default=1440,
-        fw_clamp_lo=0,
-        fw_clamp_hi=1440,
-        esp_object_id="activity_duration__min_",
-        cfg_readback_object_id="cfg_activity_duration_min",
-        push_owner="dispatcher_default",
-        planner_pushable=False,
-        tier=2,
-        notes="Dispatcher-owned mirror of main-light target runtime. Retired: no firmware code reads it (direct_wet_window_open, its only reader, was deleted, #369), so it bounds no wetting.",
-    ),
     "direct_wet_min_temp_f": TunableDef(
         name="direct_wet_min_temp_f",
         kind="numeric",
@@ -1699,96 +1654,6 @@ REGISTRY: dict[str, TunableDef] = {
     # ─────────────────────────────────────────────────────────────────────
     # Grow lights.
     # ─────────────────────────────────────────────────────────────────────
-    "gl_dli_target": TunableDef(
-        name="gl_dli_target",
-        kind="numeric",
-        min=1,
-        max=50,
-        default=14.0,
-        fw_clamp_lo=1,
-        fw_clamp_hi=50,
-        esp_object_id="gl_dli_target__mol_",
-        cfg_readback_object_id=None,
-        push_owner="planner",
-        planner_pushable=False,
-        tier=2,
-        notes="Retired: shared DLI target; the firmware stores it (tunables.yaml) but no light logic reads it; the per-circuit gl_main_* and gl_grow_* rows run the lights.",
-    ),
-    "gl_lux_threshold": TunableDef(
-        name="gl_lux_threshold",
-        kind="numeric",
-        min=100,
-        max=50000,
-        default=3000.0,
-        fw_clamp_lo=100,
-        fw_clamp_hi=50000,
-        esp_object_id="gl_lux_threshold",
-        cfg_readback_object_id=None,
-        push_owner="dispatcher_default",
-        planner_pushable=False,
-        tier=2,
-        notes="Retired: shared lux threshold; the firmware stores it (tunables.yaml) but no light logic reads it; the per-circuit gl_main_* and gl_grow_* rows run the lights.",
-    ),
-    "gl_lux_hysteresis": TunableDef(
-        name="gl_lux_hysteresis",
-        kind="numeric",
-        min=0,
-        max=10000,
-        default=1500.0,
-        fw_clamp_lo=0,
-        fw_clamp_hi=10000,
-        esp_object_id="gl_lux_hysteresis",
-        cfg_readback_object_id="cfg___gl_lux_hysteresis",
-        push_owner="dispatcher_default",
-        planner_pushable=False,
-        tier=2,
-        notes="Retired: shared lux hysteresis; the firmware stores it (tunables.yaml) but no light logic reads it; the per-circuit gl_main_* and gl_grow_* rows run the lights.",
-    ),
-    "gl_sunrise_hour": TunableDef(
-        name="gl_sunrise_hour",
-        kind="numeric",
-        min=0,
-        max=23,
-        default=7,
-        fw_clamp_lo=0,
-        fw_clamp_hi=23,
-        esp_object_id="gl_start_hour",
-        cfg_readback_object_id=None,
-        push_owner="planner",
-        planner_pushable=False,
-        tier=2,
-        notes="Retired: shared earliest light hour; the firmware stores it (tunables.yaml) but no light logic reads it; the per-circuit gl_main_* and gl_grow_* rows run the lights.",
-    ),
-    "gl_sunset_hour": TunableDef(
-        name="gl_sunset_hour",
-        kind="numeric",
-        min=0,
-        max=23,
-        default=19,
-        fw_clamp_lo=0,
-        fw_clamp_hi=23,
-        esp_object_id="gl_cutoff_hour",
-        cfg_readback_object_id=None,
-        push_owner="planner",
-        planner_pushable=False,
-        tier=2,
-        notes="Retired: shared latest light hour; the firmware stores it (tunables.yaml) but no light logic reads it; the per-circuit gl_main_* and gl_grow_* rows run the lights.",
-    ),
-    "gl_main_dli_target": TunableDef(
-        name="gl_main_dli_target",
-        kind="numeric",
-        min=1,
-        max=50,
-        default=14.0,
-        fw_clamp_lo=1,
-        fw_clamp_hi=50,
-        esp_object_id="gl_main_dli_target",
-        cfg_readback_object_id="cfg_gl_main_dli_target",
-        push_owner="dispatcher_default",
-        planner_pushable=False,
-        tier=2,
-        notes="Retired: the firmware stores and reports it (cfg_gl_main_dli_target) but no light logic reads it; the main circuit runs to gl_main_target_light_minutes.",
-    ),
     "gl_main_target_light_minutes": TunableDef(
         name="gl_main_target_light_minutes",
         kind="numeric",
@@ -1945,21 +1810,6 @@ REGISTRY: dict[str, TunableDef] = {
         planner_pushable=False,
         tier=2,
         notes="Minimum OFF dwell for main/overhead lighting state machine.",
-    ),
-    "gl_grow_dli_target": TunableDef(
-        name="gl_grow_dli_target",
-        kind="numeric",
-        min=1,
-        max=50,
-        default=14.0,
-        fw_clamp_lo=1,
-        fw_clamp_hi=50,
-        esp_object_id="gl_grow_dli_target",
-        cfg_readback_object_id="cfg_gl_grow_dli_target",
-        push_owner="dispatcher_default",
-        planner_pushable=False,
-        tier=2,
-        notes="Retired: the firmware stores and reports it (cfg_gl_grow_dli_target) but no light logic reads it; the grow circuit runs to gl_grow_target_light_minutes.",
     ),
     "gl_grow_target_light_minutes": TunableDef(
         name="gl_grow_target_light_minutes",
@@ -2201,17 +2051,6 @@ REGISTRY: dict[str, TunableDef] = {
         planner_pushable=False,
         tier=2,
         notes="Economiser master enable. Default ON.",
-    ),
-    "sw_gl_auto_mode": TunableDef(
-        name="sw_gl_auto_mode",
-        kind="switch",
-        default=1,
-        esp_object_id="gl_auto_mode",
-        cfg_readback_object_id=None,
-        push_owner="operator",
-        planner_pushable=False,
-        tier=2,
-        notes="Retired: shared automation switch; the firmware stores it (tunables.yaml) but no light logic reads it; the per-circuit gl_main_* and gl_grow_* rows run the lights.",
     ),
     "sw_gl_main_auto_mode": TunableDef(
         name="sw_gl_main_auto_mode",
@@ -3232,9 +3071,6 @@ def split_entity_name(name: str) -> tuple[str, str | None]:
 
 # Number entity ``step:`` per registry row.
 _ENTITY_STEPS: dict[str, float] = {
-    "activity_duration_min": 15.0,
-    "activity_start_hour": 1.0,
-    "activity_start_minute": 1.0,
     "band_track_fraction": 0.05,
     "bias_cool": 0.5,
     "bias_heat": 0.5,
@@ -3260,8 +3096,6 @@ _ENTITY_STEPS: dict[str, float] = {
     "fog_escalation_kpa": 0.1,
     "fog_min_temp_f": 5.0,
     "fog_rh_ceiling_pct": 1.0,
-    "gl_dli_target": 1.0,
-    "gl_grow_dli_target": 1.0,
     "gl_grow_lux_hysteresis": 250.0,
     "gl_grow_lux_threshold": 500.0,
     "gl_grow_min_off_s": 30.0,
@@ -3271,9 +3105,6 @@ _ENTITY_STEPS: dict[str, float] = {
     "gl_grow_sunset_hour": 1.0,
     "gl_grow_sunset_offset_min": 15.0,
     "gl_grow_target_light_minutes": 15.0,
-    "gl_lux_hysteresis": 250.0,
-    "gl_lux_threshold": 500.0,
-    "gl_main_dli_target": 1.0,
     "gl_main_lux_hysteresis": 250.0,
     "gl_main_lux_threshold": 500.0,
     "gl_main_min_off_s": 30.0,
@@ -3283,8 +3114,6 @@ _ENTITY_STEPS: dict[str, float] = {
     "gl_main_sunset_hour": 1.0,
     "gl_main_sunset_offset_min": 15.0,
     "gl_main_target_light_minutes": 15.0,
-    "gl_sunrise_hour": 1.0,
-    "gl_sunset_hour": 1.0,
     "heat_hysteresis": 0.1,
     "lead_rotate_s": 30.0,
     "max_relief_cycles": 1.0,
@@ -3346,9 +3175,6 @@ _ENTITY_STEPS: dict[str, float] = {
 # Number and switch entity ``name:`` per registry row; split_entity_name() of it
 # gives the row's label and unit.
 _ENTITY_NAMES: dict[str, str] = {
-    "activity_duration_min": "Activity Duration (min)",
-    "activity_start_hour": "Activity Start Hour",
-    "activity_start_minute": "Activity Start Min",
     "band_track_fraction": "Band Track Fraction",
     "bias_cool": "Bias Cool °F",
     "bias_heat": "Bias Heat °F",
@@ -3370,8 +3196,6 @@ _ENTITY_NAMES: dict[str, str] = {
     "fog_escalation_kpa": "Fog Escalation (kPa)",
     "fog_min_temp_f": "Fog Min Temp (F)",
     "fog_rh_ceiling_pct": "Fog RH Ceiling (%)",
-    "gl_dli_target": "GL DLI Target (mol)",
-    "gl_grow_dli_target": "GL Grow DLI Target",
     "gl_grow_lux_hysteresis": "GL Grow Lux Hysteresis",
     "gl_grow_lux_threshold": "GL Grow Lux Threshold",
     "gl_grow_min_off_s": "GL Grow Min Off S",
@@ -3381,9 +3205,6 @@ _ENTITY_NAMES: dict[str, str] = {
     "gl_grow_sunset_hour": "GL Grow Sunset Hour",
     "gl_grow_sunset_offset_min": "GL Grow Sunset Offset Min",
     "gl_grow_target_light_minutes": "GL Grow Target Light Minutes",
-    "gl_lux_hysteresis": "GL Lux Hysteresis",
-    "gl_lux_threshold": "GL Lux Threshold",
-    "gl_main_dli_target": "GL Main DLI Target",
     "gl_main_lux_hysteresis": "GL Main Lux Hysteresis",
     "gl_main_lux_threshold": "GL Main Lux Threshold",
     "gl_main_min_off_s": "GL Main Min Off S",
@@ -3393,8 +3214,6 @@ _ENTITY_NAMES: dict[str, str] = {
     "gl_main_sunset_hour": "GL Main Sunset Hour",
     "gl_main_sunset_offset_min": "GL Main Sunset Offset Min",
     "gl_main_target_light_minutes": "GL Main Target Light Minutes",
-    "gl_sunrise_hour": "GL Start Hour",
-    "gl_sunset_hour": "GL Cutoff Hour",
     "heat_hysteresis": "Heat Hysteresis °F",
     "lead_rotate_s": "Lead Rotate (s)",
     "max_relief_cycles": "Max Relief Cycles",
@@ -3450,7 +3269,6 @@ _ENTITY_NAMES: dict[str, str] = {
     "sw_economiser_enabled": "Economiser Enabled",
     "sw_fog_closes_vent": "Fog Closes Vent",
     "sw_fsm_controller_enabled": "FSM Controller Enabled",
-    "sw_gl_auto_mode": "GL Auto Mode",
     "sw_gl_grow_auto_mode": "GL Grow Auto Mode",
     "sw_gl_grow_out_of_service": "GL Grow Out Of Service",
     "sw_gl_grow_solar_phasing": "GL Grow Solar Phasing",
@@ -3504,35 +3322,23 @@ FIRMWARE_V2_CFG_WIRE_IDS: dict[str, str] = {
 # Settings the firmware still stores (and mostly reports) but no control path reads
 # (#1392 follow-up). Retired so the catalog hides them and nobody can write them;
 # nothing is deleted while the firmware keeps the entity. The dispatcher keeps
-# delivering the band, lighting and default values it already sends:
-# `_delivery_class` keeps them in CROP_BAND_REG, SCHEDULED_POLICY_REG and
-# LEGACY_SHARED_LIGHTING_REG, so no runtime set changes with this list.
+# delivering the band and default values it already sends: `_delivery_class`
+# keeps them in CROP_BAND_REG and SCHEDULED_POLICY_REG, so no runtime set changes
+# with this list.
 # Not here: mist_thermal_relief_s and sw_direct_wet_stress_override_enabled are
 # also inert on the live band-first controller, but they are policy-wire fields
 # (wire ids 24 and 39) the firmware decodes, so retiring them is a wire-schema change.
 NO_EFFECT_RETIRED_REG: frozenset[str] = frozenset(
     {
-        # The activity mirror only the deleted direct_wet_window_open read (the
-        # dispatcher keeps sending the mirror). Its eight zone offsets left the
-        # firmware and the registry with it (#369).
-        "activity_start_hour",
-        "activity_start_minute",
-        "activity_duration_min",
+        # #1477: the activity mirror and the shared and per-circuit DLI lighting
+        # values left the firmware and the registry (their names are in the
+        # ingestor's RETIRED_UNROUTABLE_PARAMS), as the eight zone offsets did (#369).
         # past_wet_taper is a no-op shim; nothing reads sw_night_stress_wet_enabled.
         "sw_wet_taper_enabled",
         "wet_taper_before_sunset_min",
         "sw_night_stress_wet_enabled",
         # The east zone has no mister; the arbiters pass it as never allowed.
         "zone_priority_east",
-        # Shared and per-circuit DLI lighting values no light logic reads.
-        "gl_dli_target",
-        "gl_lux_threshold",
-        "gl_lux_hysteresis",
-        "gl_sunrise_hour",
-        "gl_sunset_hour",
-        "sw_gl_auto_mode",
-        "gl_main_dli_target",
-        "gl_grow_dli_target",
         # The CYC-4 overnight micro-pulse path was deleted from the firmware.
         "sw_overnight_micropulse_enabled",
         "sw_night_humidity_source_present",
@@ -3727,8 +3533,8 @@ def _legacy_shared_lighting() -> frozenset[str]:
     """Legacy shared lighting values computed by policy, not planner waypoints.
 
     Per-circuit `gl_main_*` and `gl_grow_*` tunables are planner-policy rows.
-    The remaining shared `gl_*` values and the shared auto-mode switch stay
-    dispatcher-owned compatibility values while older firmware/routes exist.
+    Empty since #1477 retired the shared `gl_*` values and the shared auto-mode
+    switch with their firmware entities.
     """
     return frozenset(
         n
@@ -3917,11 +3723,6 @@ LEGACY_WIDE_LIMIT_PARAMS: frozenset[str] = frozenset({"temp_low", "temp_high", "
 # The fixed per-zone VPD targets: the dispatcher sends fn_zone_vpd_targets(now()) every cycle, and the controller
 # still uses them to judge, rank and lengthen zone misting (controls.yaml), so they are not legacy limits.
 ZONE_VPD_TARGET_PARAMS: frozenset[str] = frozenset(name for name in REGISTRY if name.startswith("vpd_target_"))
-# The activity mirror the dispatcher derives from the main-light schedule
-# (ingestor/tasks/_common.py ACTIVITY_MIRROR_PARAMS).
-ACTIVITY_MIRROR_PARAMS: frozenset[str] = frozenset(
-    {"activity_start_hour", "activity_start_minute", "activity_duration_min"}
-)
 # Decides which side owns the band; refused by name whatever its class.
 BAND_OWNER_SWITCH = "sw_onchip_band_enabled"
 
@@ -3942,7 +3743,6 @@ assert len(LEGACY_WIDE_LIMIT_PARAMS) == 4 and all(
 assert len(ZONE_VPD_TARGET_PARAMS) == 4 and all(
     REGISTRY[name].control_class == "crop_band" for name in ZONE_VPD_TARGET_PARAMS
 ), "the zone VPD targets drifted"
-assert ACTIVITY_MIRROR_PARAMS <= set(REGISTRY), "an activity-mirror row left the registry"
 
 
 def desired_write_kind(name: str) -> str | None:
@@ -3953,9 +3753,9 @@ def desired_write_kind(name: str) -> str | None:
     * Writable: ``planner_policy``, ``scheduled_policy``, ``controller_safety`` and ``crop_band`` rows with an
       ``esp_object_id`` (the ``gl_*`` rows among them), and the ``irrigation_site`` rows, which reach the
       controller in the irrigation program.
-    * Read-only: ``readback_context`` and ``retired`` rows; the legacy wide limits; the zone VPD targets; the
-      activity mirror (retired since no control path reads it, so it reads ``retired``); ``sw_onchip_band_enabled``,
-      by name; a row with no controller entity; an unknown name.
+    * Read-only: ``readback_context`` and ``retired`` rows; the legacy wide limits; the zone VPD targets;
+      ``sw_onchip_band_enabled``, by name; a row with no controller entity; an unknown name (the retired activity
+      mirror among them since #1477; the ``activity_mirror`` reason stays only as an API enum value).
     """
     spec = REGISTRY.get(name)
     if spec is None:
@@ -3969,8 +3769,6 @@ def desired_write_kind(name: str) -> str | None:
     control_class = spec.control_class
     if control_class in ("retired", "readback_context"):
         return control_class
-    if name in ACTIVITY_MIRROR_PARAMS:
-        return "activity_mirror"
     if control_class == "irrigation_site":
         return None
     if control_class in WRITABLE_CONTROL_CLASSES and spec.esp_object_id is not None:
@@ -4001,7 +3799,6 @@ def desired_write_rule(name: str) -> tuple[bool, str | None]:
 SWITCH_READBACK_EQUIPMENT: dict[str, str] = {
     "sw_economiser_enabled": "economiser_enabled",
     "sw_fog_closes_vent": "fog_closes_vent",
-    "sw_gl_auto_mode": "gl_auto_mode",
     "sw_occupancy_inhibit": "occupancy_inhibit",
 }
 assert all(REGISTRY[name].kind == "switch" and REGISTRY[name].esp_object_id for name in SWITCH_READBACK_EQUIPMENT), (

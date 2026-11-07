@@ -82,7 +82,7 @@ def test_snap_without_a_step_returns_the_value_unchanged() -> None:
 
 
 def test_snap_returns_the_bound_when_the_snapped_value_falls_outside() -> None:
-    # gl_lux_threshold: min_value 100 sits off its 500-lux grid.
+    # gl_main_lux_threshold: min_value 100 sits off its 500-lux grid.
     assert snap(120, 500, lo=100, hi=50000) == 100.0
     assert snap(100, 500, lo=100, hi=50000) == 100.0
     assert snap(2.49, 0.05, lo=0.5, hi=2.45) == 2.45
@@ -104,7 +104,7 @@ def test_snap_rejects_non_finite_values_and_bad_steps(value: float, step: float 
         ("mister_engage_kpa", 1.53, 1.55),
         ("site_pressure_hpa", 845.4, 845.0),
         ("mister_engage_delay_s", 48.75, 60.0),
-        ("gl_lux_threshold", 120, 100.0),  # off-grid min stays reachable
+        ("gl_main_lux_threshold", 120, 100.0),  # off-grid min stays reachable
         ("gl_grow_lux_threshold", 250, 100.0),  # 0.5 steps → 0, clamped up to the min 100
         ("band_vpd_low_sr", 0.734, 0.73),  # anchors snap to the push quanta
         ("band_temp_low_sr", 61.26, 61.3),

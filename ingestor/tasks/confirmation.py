@@ -256,9 +256,6 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
                     SELECT * FROM fn_lighting_minutes_policy(now(), 'vallery')
                 ),
                 current_policy(parameter, value) AS (
-                    SELECT 'gl_' || light_key || '_dli_target', legacy_dli_target::double precision
-                      FROM policy
-                    UNION ALL
                     SELECT 'gl_' || light_key || '_target_light_minutes', target_light_minutes::double precision
                       FROM policy
                     UNION ALL

@@ -114,9 +114,9 @@ def test_read_only_rows_follow_architecture_5_3_step_1(rows, generator):
     for name in ("vpd_target_center", "vpd_target_west"):
         assert reason(name).startswith("zone VPD target, read-only"), name
         assert rows[name]["read_only_kind"] == "zone_vpd_target", name
-    # The activity mirror is retired: only the uncalled direct-wet window read it.
+    # #1477: the activity mirror left the registry with its firmware entities.
     for name in ("activity_start_hour", "activity_start_minute", "activity_duration_min"):
-        assert rows[name]["read_only_kind"] == "retired", name
+        assert name not in rows, name
     assert "owns the band" in reason("sw_onchip_band_enabled")
     for name in present(*sorted(generator.WEEKLY_FEED)):
         assert "retiring with the irrigation engine" in reason(name)

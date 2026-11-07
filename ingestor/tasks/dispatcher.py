@@ -45,11 +45,11 @@ from verdify_schemas.tunable_registry import desired_write_rule
 from . import band_anchors, bounded_reconcile, c1_overlay, drift_probe
 from ._common import (
     _PHYSICS_INVARIANTS,
-    ACTIVITY_MIRROR_PARAMS,
     AI_MOISTURE_STRESS_POLICY_PARAMS,
     AI_MOISTURE_STRESS_REQUIRED_OBJECT_IDS,
     BAND_DRIVEN_PARAMS,
     CROP_BAND_REG,
+    DIRECT_WET_DEFAULTS,
     DIRECT_WET_POLICY_PARAMS,
     DIRECT_WET_REQUIRED_OBJECT_IDS,
     FIRMWARE_HAS_LIGHTING_TARGET_MINUTES,
@@ -135,14 +135,14 @@ FORECAST_RULE_PLAN_PREFIX = "preemptive-"
 # irrigation_sync: the dispatcher sends nothing for their desired rows.
 DESIRED_OTHER_PATH_CLASSES = frozenset({"crop_band", "irrigation_site"})
 # The per-circuit values the lighting circuit block of setpoint_dispatcher
-# resolves from fn_lighting_minutes_policy, nine per circuit. The wider
+# resolves from fn_lighting_minutes_policy, eight per circuit (the DLI targets
+# stay in the DB policy since #1477 retired their entities). The wider
 # LIGHTING_CIRCUIT_DEFAULT_PARAMS also holds the solar-phasing, offset and
 # out-of-service values, which no dispatcher block resolves.
 LIGHTING_CIRCUIT_RESOLVED_PARAMS = frozenset(
     f"{prefix}{circuit}_{field}"
     for circuit in ("main", "grow")
     for prefix, field in (
-        ("gl_", "dli_target"),
         ("gl_", "target_light_minutes"),
         ("gl_", "sunrise_hour"),
         ("gl_", "sunset_hour"),
@@ -154,9 +154,8 @@ LIGHTING_CIRCUIT_RESOLVED_PARAMS = frozenset(
     )
 )
 # The values the dispatcher's own blocks resolve each pass: the band, the
-# lighting policy (per circuit, or the legacy shared values on firmware without
-# per-circuit lighting), the direct-wet activity window, the safety limits and
-# the mister defaults. _dispatch_source() labels each of them band. A released
+# per-circuit lighting policy, the direct-wet gate defaults, the safety limits
+# and the mister defaults. _dispatch_source() labels each of them band. A released
 # parameter none of them resolves, and with no plan, returns to its registry
 # default (architecture §5.2 Release, API-11).
 DISPATCHER_DEFAULT_PARAMS = frozenset(
@@ -408,21 +407,7 @@ async def _c1_source_guard(pool, selection):
             value = 1.0
         params[name] = min(value, caps[name]) if name in caps else value
     direct = _direct_wet_policy_supported()
-    activity = {}
-    if direct:
-        activity = _activity_defaults_from_lighting(lighting, circuits)
-        minutes = (
-            {row["light_key"]: float(int(row["target_light_minutes"])) for row in circuits or []}
-            if band_anchors.band_source() == band_anchors.BAND_SOURCE_ANCHORS
-            else {}
-        )
-        anchored = (
-            band_anchors.lighting_circuit_overrides(band_anchors.local_solar_context().times, minutes)
-            if band_anchors.band_source() == band_anchors.BAND_SOURCE_ANCHORS and circuits
-            else {}
-        )
-        activity = _mirror_activity_to_anchored_window(activity, anchored, minutes)
-        activity = _align_activity_defaults_with_planned_lighting(activity, params)
+    activity = _direct_wet_defaults(lighting, circuits) if direct else {}
     inputs = _c1_policy_inputs(
         planned,
         anchors,
@@ -487,78 +472,17 @@ def _ai_moisture_stress_policy_supported() -> bool:
     return AI_MOISTURE_STRESS_POLICY_PARAMS.issubset(set(shared.cfg_readback))
 
 
-def _activity_defaults_from_lighting(lighting_row, lighting_circuit_rows) -> dict[str, float]:
-    """Derive the biological-activity window (which gates ALL direct-wet irrigation)
-    from the LONGEST per-circuit lighting day, NOT the MAIN circuit. With per-circuit
-    crop policy (#294) MAIN is a short orchid photoperiod, so keying activity off MAIN
-    would silently shrink every irrigation window; the jalapeno/GROW day is the longer
-    one and is what plants are biologically active across."""
-    governing = max(
-        (lighting_circuit_rows or []),
-        key=lambda row: int(row["target_light_minutes"]),
-        default=None,
-    )
-    if governing:
-        activity_start_hour = int(governing["start_hour"])
-        activity_duration_min = int(governing["target_light_minutes"])
-    elif lighting_row:
-        activity_start_hour = int(lighting_row["sunrise_hour"])
-        activity_duration_min = int(lighting_row["target_light_hours"]) * 60
-    else:
-        return {}
+def _direct_wet_defaults(lighting_row, lighting_circuit_rows) -> dict[str, float]:
+    """The direct-wet gate defaults, sent while a lighting policy row exists.
 
-    activity_duration_min = max(0, min(1440, activity_duration_min))
-    return {
-        "activity_start_hour": float(max(0, min(23, activity_start_hour))),
-        "activity_start_minute": 0.0,
-        "activity_duration_min": float(activity_duration_min),
-        "direct_wet_min_temp_f": 65.0,
-        "sw_direct_wet_gate_enabled": 1.0,
-    }
-
-
-def _align_activity_defaults_with_planned_lighting(
-    defaults: dict[str, float],
-    planner_params: dict[str, float],
-) -> dict[str, float]:
-    """Keep activity defaults tied to the GROW (jalapeno, longest-day) circuit's plan
-    overrides — decoupled from MAIN so a short orchid photoperiod can't shrink the
-    irrigation activity window (#294)."""
-    if not defaults:
-        return defaults
-    aligned = dict(defaults)
-    if "gl_grow_sunrise_hour" in planner_params:
-        aligned["activity_start_hour"] = float(max(0, min(23, int(planner_params["gl_grow_sunrise_hour"]))))
-    if "gl_grow_target_light_minutes" in planner_params:
-        aligned["activity_duration_min"] = float(max(0, min(1440, int(planner_params["gl_grow_target_light_minutes"]))))
-    return aligned
-
-
-def _mirror_activity_to_anchored_window(
-    activity_defaults: dict[str, float],
-    anchor_lighting: dict[str, float],
-    circuit_minutes: dict[str, float],
-) -> dict[str, float]:
-    """Tie the biological-activity mirror to the sunrise-anchored main-light window.
-
-    The start HOUR comes from the anchored window (``anchor_lighting``), but the
-    duration MINUTES come from the DB photoperiod policy (``circuit_minutes``) —
-    NOT ``anchor_lighting``. After the 2026-06-16 lighting single-source change,
-    ``lighting_circuit_overrides()`` emits only the window HOURS
-    (``gl_<key>_sunrise_hour``/``gl_<key>_sunset_hour``) and deliberately no
-    longer carries a ``gl_main_target_light_minutes`` key. Reading that missing
-    key off ``anchor_lighting`` raised KeyError and took down the entire
-    ``setpoint_dispatch`` task (no pushes reached the device). Keeping the source
-    boundary in one pure, unit-tested helper prevents that regression class.
+    #1477 retired the activity mirror (activity_start_hour, activity_start_minute,
+    activity_duration_min) these defaults used to travel with; nothing on the
+    controller read it. The two gate values and their lighting-row condition are
+    unchanged.
     """
-    if not (activity_defaults and anchor_lighting):
-        return activity_defaults
-    mirrored = dict(activity_defaults)
-    mirrored["activity_start_hour"] = float(max(0, min(23, int(anchor_lighting["gl_main_sunrise_hour"]))))
-    main_minutes = circuit_minutes.get("main")
-    if main_minutes is not None:
-        mirrored["activity_duration_min"] = float(max(0, min(1440, int(main_minutes))))
-    return mirrored
+    if not (lighting_circuit_rows or lighting_row):
+        return {}
+    return {param: float(value) for param, value in DIRECT_WET_DEFAULTS.items()}
 
 
 def _dispatch_source(
@@ -581,8 +505,6 @@ def _dispatch_source(
     if param in BAND_DRIVEN_PARAMS:
         return "band"
     if param in LIGHTING_CIRCUIT_DEFAULT_PARAMS and param not in planner_params:
-        return "band"
-    if param in ACTIVITY_MIRROR_PARAMS:
         return "band"
     if param in DIRECT_WET_POLICY_PARAMS and param not in planner_params:
         return "band"
@@ -1399,29 +1321,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     continue
                 changes.append((param, val))
 
-        # Crop-driven lighting policy: highest active crop DLI determines the
-        # target photoperiod. Firmware owns enforcement once these values are
-        # pushed, so this remains reliable without the planner VM online.
-        if lighting_row:
-            lighting_defaults = {}
-            if not lighting_circuit_supported:
-                lighting_defaults.update(
-                    {
-                        "gl_dli_target": round(float(lighting_row["target_dli"]), 1),
-                        "gl_sunrise_hour": float(int(lighting_row["sunrise_hour"])),
-                        "gl_sunset_hour": float(int(lighting_row["cutoff_hour"])),
-                        "sw_gl_auto_mode": 1.0,
-                    }
-                )
-            if lighting_circuit_rows and not lighting_circuit_supported:
-                main_lighting = next((row for row in lighting_circuit_rows if row["light_key"] == "main"), None)
-                if main_lighting:
-                    lighting_defaults["gl_lux_threshold"] = round(float(main_lighting["lux_on_threshold"]), 0)
-                    lighting_defaults["gl_lux_hysteresis"] = round(float(main_lighting["lux_hysteresis"]), 0)
-            for param, val in lighting_defaults.items():
-                if _should_skip(_last_pushed.get(param), val) and not _readback_drift(param, val):
-                    continue
-                changes.append((param, val))
+        # #1477: the legacy shared lighting values (gl_dli_target, gl_sunrise_hour,
+        # gl_sunset_hour, gl_lux_threshold, gl_lux_hysteresis, sw_gl_auto_mode),
+        # sent only to firmware without per-circuit lighting, left the firmware
+        # and the registry; the per-circuit block below is the lighting delivery.
 
         # Per-circuit lighting state machines: crop policy + Tempest history
         # seed both circuits, but active planner rows are allowed to diverge
@@ -1444,7 +1347,6 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 continue
             key = row["light_key"]
             circuit_defaults = {
-                f"gl_{key}_dli_target": round(float(row["legacy_dli_target"]), 1),
                 f"gl_{key}_target_light_minutes": float(int(row["target_light_minutes"])),
                 f"gl_{key}_sunrise_hour": float(int(row["start_hour"])),
                 f"gl_{key}_sunset_hour": float(int(row["cutoff_hour"])),
@@ -1466,22 +1368,12 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     continue
                 changes.append((param, val))
 
-        # Global biological activity + per-zone direct-wet windows. The global
-        # activity duration intentionally follows the same main-light runtime
-        # policy that firmware uses for daily qualified light minutes; zones
-        # then narrow the wettable portion with start/drydown offsets.
+        # Direct-wet gate defaults (#1477 retired the activity mirror that rode with them).
+        direct_wet_defaults: dict[str, float] = {}
         if direct_wet_supported:
-            activity_defaults = _activity_defaults_from_lighting(lighting_row, lighting_circuit_rows)
-            # Keep the biological-activity mirror tied to the same sunrise-anchored
-            # main-light window pushed above (start HOUR from the anchored window,
-            # duration MINUTES from the DB photoperiod policy).
-            activity_defaults = _mirror_activity_to_anchored_window(activity_defaults, anchor_lighting, circuit_minutes)
-            activity_defaults = _align_activity_defaults_with_planned_lighting(
-                activity_defaults,
-                planner_params,
-            )
-            for param, val in activity_defaults.items():
-                if param in planner_params and param not in ACTIVITY_MIRROR_PARAMS:
+            direct_wet_defaults = _direct_wet_defaults(lighting_row, lighting_circuit_rows)
+            for param, val in direct_wet_defaults.items():
+                if param in planner_params:
                     continue
                 if _should_skip(_last_pushed.get(param), val) and not _readback_drift(param, val):
                     continue
@@ -1533,8 +1425,6 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             if param in LIGHTING_CIRCUIT_DEFAULT_PARAMS and not lighting_circuit_supported:
                 continue
             if param in LIGHTING_TARGET_MINUTE_PARAMS and not lighting_target_minutes_supported:
-                continue
-            if param in ACTIVITY_MIRROR_PARAMS:
                 continue
             if param in DIRECT_WET_POLICY_PARAMS and not direct_wet_supported:
                 continue
@@ -1717,7 +1607,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     anchor_origin,
                     lighting_row,
                     lighting_circuit_rows,
-                    activity_defaults if direct_wet_supported else {},
+                    direct_wet_defaults,
                     safety_defaults,
                     quiet_state,
                     direct_wet_supported,

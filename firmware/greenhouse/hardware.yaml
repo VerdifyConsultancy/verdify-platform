@@ -311,6 +311,15 @@ modbus_controller:
     modbus_id: modbus_main
     update_interval: 60s
     command_throttle: 200ms
+  # ── PAR quantum sensor (#1184): RS-485 Modbus RTU, 0-2500 µmol/m²/s, canopy height ──
+  # Set to address 10, 9600 8N1 before it joins the bus (these ship at address 1,
+  # which case_probe holds). Until it is fitted the controller skips 12 polls after
+  # each failed one (about every 2 min), so a silent meter never crowds the bus.
+  - id: par_probe
+    address: 10
+    modbus_id: modbus_main
+    update_interval: 10s
+    offline_skip_updates: 12
 
 # ───────────────────── SWITCHES (relays & templates) ─────────────────────
 switch:

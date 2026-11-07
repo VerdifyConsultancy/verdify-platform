@@ -744,92 +744,74 @@ interval:
           willFog  = ov_out.fog;  willVent = ov_out.vent;
           const bool manual_fan_force = manual_force.fans;
           const bool manual_fog_force = manual_force.fog;
-          if(sensor_fault_relay_lock) {
-            willHeat1 = false;
-            willHeat2 = false;
-            willFan1 = false;
-            willFan2 = false;
-            willFog = false;
-            willVent = false;
-          }
+          /**************** 11a — RELAY CONFLICT ARBITRATION (#370) **************/
+          // One pure resolver, arbitrate_relay_conflicts() (greenhouse_logic.h),
+          // decides every equipment conflict between the requested relay table
+          // and the relays' physical state, in order: the SENSOR_FAULT all-off
+          // lock (above the manual overrides), the fan/vent hold, the heat<->air
+          // suppression (SAFETY_HEAT and DEHUM_VENT exempt), the heat-stage rule
+          // and the heater force-offs. The pure state machine keeps fans and vent
+          // logically consistent, but relay dwell timers are physical state: on a
+          // VENTILATE->sealed transition fan min_on can keep a fan running after
+          // the vent may close, so the vent holds open until the fan dwell clears.
+          // VENT-BYPASS (#290) is the deliberate fans-on / vent-CLOSED carve-out
+          // and SAFETY_HEAT runs the lead fan with the vent shut to keep heat in
+          // (fan_requires_open_vent()). The native suite checks the resolver
+          // against the former inline rules over every input combination.
+          const RelayOutputs relay_physical = {
+              id(heat1_rly)->state, id(heat2_rly)->state,
+              id(fan1_rly)->state, id(fan2_rly)->state,
+              id(fog_rly)->state, id(vent_rly)->state};
+          const RelayArbitration arb = arbitrate_relay_conflicts(
+              mode,
+              RelayOutputs{willHeat1, willHeat2, willFan1, willFan2, willFog, willVent},
+              relay_physical,
+              can_on(R[0]),
+              can_off(R[0]),
+              vent_bypass_eff);
+          willHeat1 = arb.out.heat1; willHeat2 = arb.out.heat2;
+          willFan1  = arb.out.fan1;  willFan2  = arb.out.fan2;
+          willFog   = arb.out.fog;   willVent  = arb.out.vent;
+          const bool fan_requires_vent = arb.fan_requires_vent;
+          const bool vent_is_open = relay_physical.vent;
+          const bool force_heat_off = arb.force_heat_off;
+          const bool force_heat2_off = arb.force_heat2_off;
 
-          /**************** 11a — FAN/VENT + VENT-CLOSE INTERLOCKS ***************/
-          // The pure state machine keeps fans and vent logically consistent,
-          // but relay dwell timers are physical state. On a VENTILATE→sealed
-          // transition, fan min_on can otherwise keep a fan running after the
-          // vent is allowed to close. Hold/reopen the vent until non-safety fan
-          // dwell clears. SAFETY_HEAT is the intentional circulation exception:
-          // it runs the lead fan with vent closed to keep heat in.
-          const bool fan_physically_on = id(fan1_rly)->state || id(fan2_rly)->state;
-          const bool fan_wanted = willFan1 || willFan2;
-          // VENT-BYPASS carve-out (#290): normally fans force the vent open so a
-          // running fan never works against a shut vent, but bypass is the
-          // deliberate fans-on / vent-CLOSED winter house-air mode — so it must
-          // NOT re-open the vent. fan_requires_open_vent() encodes that carve-out
-          // (and the SAFETY_HEAT/SENSOR_FAULT exceptions) as a pure, tested rule.
-          const bool fan_requires_vent = fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff);
-          const bool fan_vent_interlock_active = fan_requires_vent && !willVent;
           static bool fan_vent_interlock_prev = false;
-          if (fan_requires_vent) {
-              willVent = true;
-          }
-          if (fan_vent_interlock_active != fan_vent_interlock_prev) {
-              if (fan_vent_interlock_active) {
+          if (arb.fan_vent_hold != fan_vent_interlock_prev) {
+              if (arb.fan_vent_hold) {
                   ESP_LOGI("interlock","Fan/vent: holding vent open until fan dwell clears");
               } else {
                   ESP_LOGI("interlock","Fan/vent: fan dwell clear, releasing vent hold");
               }
-              fan_vent_interlock_prev = fan_vent_interlock_active;
+              fan_vent_interlock_prev = arb.fan_vent_hold;
           }
-
-          const bool vent_is_open = id(vent_rly)->state;
-          // BC-5/BC-11: DEHUM_VENT is the ONE sanctioned heat+vent state — a bounded
-          // stage-1 heat-assist holds the temperature floor while dehumidifying — so
-          // it is exempt from the heat<->air suppression exactly like SAFETY_HEAT.
-          // (resolve_equipment only ever sets heat1, never heat2, in DEHUM_VENT.)
-          const bool heat_air_exchange_exempt = (mode == SAFETY_HEAT) || (mode == DEHUM_VENT);
-          const bool heat_vent_interlock_active =
-              !heat_air_exchange_exempt && (willHeat1 || willHeat2) && (vent_is_open || willVent);
-          const bool heat_fan_interlock_active =
-              !heat_air_exchange_exempt && (willHeat1 || willHeat2) && (fan_physically_on || fan_wanted);
-          const bool heat_air_exchange_interlock_active =
-              heat_vent_interlock_active || heat_fan_interlock_active;
           static bool heat_vent_interlock_prev = false;
           static bool heat_fan_interlock_prev = false;
-          if (heat_air_exchange_interlock_active) {
-              willHeat1 = false;
-              willHeat2 = false;
-          }
-          if (heat_vent_interlock_active != heat_vent_interlock_prev) {
-              if (heat_vent_interlock_active) {
+          if (arb.heat_vent_block != heat_vent_interlock_prev) {
+              if (arb.heat_vent_block) {
                   ESP_LOGI("interlock","Heat/vent: suppressing non-safety heat until vent closes");
               } else {
                   ESP_LOGI("interlock","Heat/vent: vent closed, releasing heat hold");
               }
-              heat_vent_interlock_prev = heat_vent_interlock_active;
+              heat_vent_interlock_prev = arb.heat_vent_block;
           }
-          if (heat_fan_interlock_active != heat_fan_interlock_prev) {
-              if (heat_fan_interlock_active) {
+          if (arb.heat_fan_block != heat_fan_interlock_prev) {
+              if (arb.heat_fan_block) {
                   ESP_LOGI("interlock","Heat/fan: suppressing non-safety heat until fan dwell clears");
               } else {
                   ESP_LOGI("interlock","Heat/fan: fan dwell clear, releasing heat hold");
               }
-              heat_fan_interlock_prev = heat_fan_interlock_active;
+              heat_fan_interlock_prev = arb.heat_fan_block;
           }
-
-          const bool heat1_available = willHeat1 && (id(heat1_rly)->state || can_on(R[0]));
-          const bool heat_stage_interlock_active = willHeat2 && !heat1_available;
           static bool heat_stage_interlock_prev = false;
-          if (heat_stage_interlock_active) {
-              willHeat2 = false;
-          }
-          if (heat_stage_interlock_active != heat_stage_interlock_prev) {
-              if (heat_stage_interlock_active) {
+          if (arb.heat_stage_block != heat_stage_interlock_prev) {
+              if (arb.heat_stage_block) {
                   ESP_LOGI("interlock","Heat stage: suppressing heat2 until heat1 is available");
               } else {
                   ESP_LOGI("interlock","Heat stage: heat1 available, releasing heat2 hold");
               }
-              heat_stage_interlock_prev = heat_stage_interlock_active;
+              heat_stage_interlock_prev = arb.heat_stage_block;
           }
 
           // Fog + misters follow their existing vent-policy tunables. Pre-sprint-15.1,
@@ -965,13 +947,6 @@ interval:
               id(fog_rly)->state, id(vent_rly)->state};
 
           /**************** 11 — APPLY RELAY OUTPUTS ******************************/
-          const bool force_heat_off = heat_air_exchange_interlock_active || sensor_fault_relay_lock;
-          const bool heat1_will_be_on_after_apply =
-              (willHeat1 && (id(heat1_rly)->state || can_on(R[0])))
-              || (id(heat1_rly)->state && !force_heat_off && !can_off(R[0]));
-          const bool force_heat2_off =
-              force_heat_off
-              || (id(heat2_rly)->state && !willHeat2 && !heat1_will_be_on_after_apply);
           set_relay(R[0], willHeat1, false, force_heat_off);
           set_relay(R[1], willHeat2, false, force_heat2_off);
           set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock);

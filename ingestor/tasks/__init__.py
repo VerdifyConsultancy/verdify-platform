@@ -121,12 +121,11 @@ from .daily import (  # noqa: F401
 )
 from .dispatcher import *  # noqa: F401,F403
 from .dispatcher import (  # noqa: F401
-    _activity_defaults_from_lighting,
     _ai_moisture_stress_policy_supported,
-    _align_activity_defaults_with_planned_lighting,
     _apply_manual_overlay,
     _coerce_registry_value,
     _control_band_from_house_row,
+    _direct_wet_defaults,
     _direct_wet_policy_supported,
     _dispatch_source,
     _fetch_moisture_guard_context,

@@ -143,8 +143,14 @@ if query MODBUS_ROWS "Modbus timeout query unavailable — bus health unknown" "
         while IFS='|' read -r addr count; do
             addr=$(echo "$addr" | tr -d ' ')
             count=$(echo "$count" | tr -d ' ')
-            # ESP32 probe addresses 1-9 per hardware.yaml:
+            # ESP32 probe addresses 1-10 per hardware.yaml:
             case "$addr" in
+                10)
+                    # #1184: the PAR meter is telemetry only and may not be fitted
+                    # yet; a silent meter warns and never rolls back an OTA.
+                    warn "par_probe (addr $addr) — $count timeouts in 2 min (PAR meter absent or silent; DLI stays unavailable)"
+                    continue
+                    ;;
                 1) name="case_probe" ;;
                 2) name="north_wall_probe" ;;
                 3) name="west_wall_probe" ;;

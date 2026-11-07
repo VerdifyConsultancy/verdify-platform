@@ -247,7 +247,7 @@ def mcp_set_tunable_dry_run() -> tuple[bool, str]:
         minutes.get("error") == "trigger_id not found in plan_delivery_log"
         and main.get("error") == "trigger_id not found in plan_delivery_log"
         and auto.get("error") == "trigger_id not found in plan_delivery_log"
-        and "not planner-pushable" in legacy.get("error", "")
+        and legacy.get("error")  # #1477: gl_lux_threshold is retired, so MCP refuses it
         and "gl_main_target_light_minutes" in allowed
         and "gl_main_lux_threshold" in allowed
         and "sw_gl_main_auto_mode" in allowed
@@ -398,35 +398,29 @@ def static_checks(audit: Audit) -> None:
         "per-circuit lighting params are schedule-owned scheduled_policy Tier 2 tunables with cfg readbacks (not planner-pushable)",
         f"registry missing={registry_missing} bad={registry_bad}",
     )
-    legacy_lighting_params = ("gl_lux_threshold", "gl_lux_hysteresis")
-    legacy_bad = sorted(
+    # #1477: the legacy shared lighting values and the per-circuit DLI targets
+    # left the firmware and the registry; the per-circuit values above are the
+    # whole lighting surface, and the DLI targets stay in the DB policy only.
+    retired_lighting = (
+        "gl_lux_threshold",
+        "gl_lux_hysteresis",
+        "gl_dli_target",
+        "gl_sunrise_hour",
+        "gl_sunset_hour",
+        "sw_gl_auto_mode",
+        "gl_main_dli_target",
+        "gl_grow_dli_target",
+    )
+    still_present = sorted(
         param
-        for param in legacy_lighting_params
-        if param not in REGISTRY
-        or REGISTRY[param].planner_pushable
-        or param in PLANNER_PUSHABLE_REG
-        or REGISTRY[param].push_owner != "dispatcher_default"
+        for param in retired_lighting
+        if param in REGISTRY or f"id: num_{param}" in tunables or f"id: cfg_{param}" in sensors
     )
     audit.check(
-        not legacy_bad,
-        "legacy shared lighting params are read-only",
-        "legacy shared gl_lux_* params are dispatcher/default context; planner writes use per-circuit gl_main_* and gl_grow_*",
-        f"legacy shared lighting params are still planner-writable or mis-owned: {legacy_bad}",
-    )
-    legacy_dli_params = ("gl_main_dli_target", "gl_grow_dli_target")
-    legacy_dli_bad = sorted(
-        param
-        for param in legacy_dli_params
-        if param not in REGISTRY
-        or REGISTRY[param].planner_pushable
-        or param in PLANNER_PUSHABLE_REG
-        or REGISTRY[param].push_owner != "dispatcher_default"
-    )
-    audit.check(
-        not legacy_dli_bad,
-        "legacy per-circuit DLI params are telemetry-only",
-        "legacy gl_main/gl_grow DLI targets are dispatcher compatibility values; target minutes are the planner control goal",
-        f"legacy per-circuit DLI params are still planner-writable or mis-owned: {legacy_dli_bad}",
+        not still_present,
+        "retired shared and DLI lighting params are gone",
+        "the legacy shared gl_* values and the per-circuit DLI targets have no registry row or firmware entity",
+        f"retired lighting params still present: {still_present}",
     )
     audit.check(
         all(
@@ -976,10 +970,9 @@ def live_checks(audit: Audit, require_ota: bool) -> None:
             and f"<strong>{len(PLANNER_PUSHABLE_REG)}</strong>" in tunables_html
             and "gl_main_lux_threshold" in tunables_html
             and "set_tunable allowed" in tunables_html
-            and "gl_lux_threshold" in tunables_html
             and "MCP rejects planner writes" in tunables_html,
             "live public tunables page",
-            "lab.verdify.ai/reference/ai-tunables reflects per-circuit lighting as planner-writable and legacy gl_lux_* as read-only",
+            "lab.verdify.ai/reference/ai-tunables reflects per-circuit lighting as planner-writable",
             "lab.verdify.ai/reference/ai-tunables is stale for lighting tunable writeability",
         )
     except (TimeoutError, UnicodeDecodeError, urllib.error.URLError) as exc:
@@ -1136,25 +1129,18 @@ def live_checks(audit: Audit, require_ota: bool) -> None:
         "local setpoint server exposes all per-circuit lighting values",
         "setpoint server is missing per-circuit values",
     )
-    legacy_expected = {
-        "gl_lux_threshold": float(keys["main"]["lux_on_threshold"]),
-        "gl_lux_hysteresis": float(keys["main"]["lux_off_threshold"]) - float(keys["main"]["lux_on_threshold"]),
-    }
+    # #1477: the legacy shared gl_* lighting values left the firmware and the
+    # registry, so neither compatibility endpoint serves them any more.
+    retired_shared = ("gl_lux_threshold", "gl_lux_hysteresis", "gl_dli_target", "gl_sunrise_hour", "gl_sunset_hour")
 
-    def legacy_values_match(values: dict[str, str]) -> bool:
-        try:
-            return all(
-                abs(float(values.get(param, "nan")) - expected) < 0.5 for param, expected in legacy_expected.items()
-            )
-        except ValueError:
-            return False
+    def retired_values_absent(values: dict[str, str]) -> bool:
+        return not any(param in values for param in retired_shared)
 
-    legacy_shared_params = set(legacy_expected)
     audit.check(
-        legacy_values_match(setpoint_text),
-        "setpoint server legacy shared lighting values",
-        "local setpoint server exposes compatibility gl_lux_* values derived from the main circuit policy",
-        f"setpoint server legacy gl_lux_* mismatch: expected={legacy_expected} got={setpoint_text}",
+        retired_values_absent(setpoint_text),
+        "setpoint server retired shared lighting values",
+        "local setpoint server no longer serves the retired shared gl_* values",
+        f"setpoint server still serves retired shared gl_* values: {setpoint_text}",
     )
     api_proc = run(
         [
@@ -1175,10 +1161,10 @@ def live_checks(audit: Audit, require_ota: bool) -> None:
         api_proc.stderr.strip() or "API /setpoints missing per-circuit values",
     )
     audit.check(
-        api_proc.returncode == 0 and legacy_values_match(api_values),
-        "api legacy shared lighting values",
-        "API /setpoints exposes legacy gl_lux_* values derived from the main circuit policy",
-        api_proc.stderr.strip() or f"API legacy gl_lux_* mismatch: expected={legacy_expected} got={api_values}",
+        api_proc.returncode == 0 and retired_values_absent(api_values),
+        "api retired shared lighting values",
+        "API /setpoints no longer serves the retired shared gl_* values",
+        api_proc.stderr.strip() or f"API still serves retired shared gl_* values: {api_values}",
     )
 
     deploy_preflight = run(["bash", "scripts/firmware-deploy-preflight.sh"], timeout=30)

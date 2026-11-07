@@ -920,15 +920,6 @@ HEAP_CRITICAL_RECOVERY_SAMPLES = 2
 FORCED_ON_SWITCH_PARAMS = frozenset({"sw_fsm_controller_enabled"})
 
 
-ACTIVITY_MIRROR_PARAMS = frozenset(
-    {
-        "activity_start_hour",
-        "activity_start_minute",
-        "activity_duration_min",
-    }
-)
-
-
 DIRECT_WET_DEFAULTS = {
     "direct_wet_min_temp_f": 65,
     "sw_direct_wet_gate_enabled": 1,
@@ -1000,18 +991,30 @@ RETIRED_UNROUTABLE_PARAMS = frozenset(
         "direct_wet_west_drydown_before_off_min",
         "direct_wet_center_start_offset_min",
         "direct_wet_center_drydown_before_off_min",
+        # #1477: the activity mirror and the legacy shared and per-circuit DLI
+        # lighting values no controller logic read; their entities left the firmware.
+        "activity_start_hour",
+        "activity_start_minute",
+        "activity_duration_min",
+        "gl_dli_target",
+        "gl_lux_threshold",
+        "gl_lux_hysteresis",
+        "gl_sunrise_hour",
+        "gl_sunset_hour",
+        "sw_gl_auto_mode",
+        "gl_main_dli_target",
+        "gl_grow_dli_target",
     }
 )
 
 
-DIRECT_WET_POLICY_PARAMS = ACTIVITY_MIRROR_PARAMS | frozenset(DIRECT_WET_DEFAULTS)
+DIRECT_WET_POLICY_PARAMS = frozenset(DIRECT_WET_DEFAULTS)
 
 
-# #369: the zone-offset entities left the firmware, so the contract is keyed on
-# entities both the old and the new firmware carry.
+# #369 and #1477: the zone-offset and activity entities left the firmware, so the
+# contract is keyed on entities both the old and the new firmware carry.
 DIRECT_WET_REQUIRED_OBJECT_IDS = frozenset(
     {
-        "activity_duration__min_",
         "direct_wet_gate_enabled",
         "direct_wet_min_temp__f_",
     }
@@ -1486,7 +1489,6 @@ __all__ = [
     "HEAP_CRITICAL_RECOVERY_LARGEST_BLOCK_KB",
     "HEAP_CRITICAL_RECOVERY_SAMPLES",
     "FORCED_ON_SWITCH_PARAMS",
-    "ACTIVITY_MIRROR_PARAMS",
     "DIRECT_WET_DEFAULTS",
     "RETIRED_UNROUTABLE_PARAMS",
     "DIRECT_WET_POLICY_PARAMS",

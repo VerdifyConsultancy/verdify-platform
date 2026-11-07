@@ -10,7 +10,6 @@ from __future__ import annotations
 import pytest
 
 from verdify_schemas.tunable_registry import (
-    ACTIVITY_MIRROR_PARAMS,
     BAND_OWNER_SWITCH,
     IRRIGATION_SITE_PARAMS,
     LEGACY_WIDE_LIMIT_PARAMS,
@@ -78,12 +77,26 @@ def test_the_zone_vpd_targets_are_read_only_and_not_legacy(name: str) -> None:
     assert desired_write_rule(name) == (False, READ_ONLY_REASONS["zone_vpd_target"])
 
 
-@pytest.mark.parametrize("name", ["activity_start_hour", "activity_start_minute", "activity_duration_min"])
-def test_the_activity_mirror_is_read_only_as_retired(name: str) -> None:
-    """Only the uncalled direct_wet_window_open read the mirror, so it is retired; retired wins over the mirror."""
-    assert name in ACTIVITY_MIRROR_PARAMS
-    assert desired_write_kind(name) == "retired"
-    assert desired_write_rule(name) == (False, READ_ONLY_REASONS["retired"])
+@pytest.mark.parametrize(
+    "name",
+    [
+        "activity_start_hour",
+        "activity_start_minute",
+        "activity_duration_min",
+        "gl_dli_target",
+        "gl_lux_threshold",
+        "gl_lux_hysteresis",
+        "gl_sunrise_hour",
+        "gl_sunset_hour",
+        "sw_gl_auto_mode",
+        "gl_main_dli_target",
+        "gl_grow_dli_target",
+    ],
+)
+def test_a_stale_row_naming_a_value_retired_by_1477_is_refused(name: str) -> None:
+    """#1477: the activity mirror and the DLI/legacy lighting values left the firmware and the registry."""
+    assert name not in REGISTRY
+    assert desired_write_rule(name) == (False, READ_ONLY_REASONS["unknown"])
 
 
 @pytest.mark.parametrize("name", WEEKLY_FEED_ROWS)
@@ -118,13 +131,10 @@ def test_every_named_read_only_row_is_registered_and_of_a_writable_class() -> No
     for name in LEGACY_WIDE_LIMIT_PARAMS | ZONE_VPD_TARGET_PARAMS:
         assert name in REGISTRY, name
         assert REGISTRY[name].control_class in WRITABLE_CONTROL_CLASSES, name
-    # The activity mirror is retired (no control path reads it) and stays registered for the dispatcher's push.
-    for name in ACTIVITY_MIRROR_PARAMS:
-        assert name in REGISTRY and REGISTRY[name].control_class == "retired", name
 
 
 def test_the_rule_matches_the_class_split_for_every_row() -> None:
-    named = LEGACY_WIDE_LIMIT_PARAMS | ZONE_VPD_TARGET_PARAMS | ACTIVITY_MIRROR_PARAMS | {BAND_OWNER_SWITCH}
+    named = LEGACY_WIDE_LIMIT_PARAMS | ZONE_VPD_TARGET_PARAMS | {BAND_OWNER_SWITCH}
     for name, spec in REGISTRY.items():
         writable, reason = desired_write_rule(name)
         expected = name not in named and (
