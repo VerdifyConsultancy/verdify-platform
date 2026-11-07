@@ -91,6 +91,30 @@ def test_tampering_and_wrong_identity_refuse_before_ota(signed, tmp_path, change
         release.finish(directory, revision, expected, public, True)
 
 
+@pytest.mark.parametrize(
+    ("repository", "accepted"),
+    [
+        ("https://github.com/jvallery/verdify-platform", True),
+        # Manifests built before the D19 transfer (running and rollback releases) carry the old name.
+        ("https://github.com/VerdifyConsultancy/verdify-platform", True),
+        ("https://github.com/someone-else/verdify-platform", False),
+    ],
+)
+def test_manifest_accepts_the_old_and_new_source_repository_only(signed, repository, accepted):
+    directory, _, _ = signed
+    manifest = directory / "release.json"
+    assert json.loads(manifest.read_text())["source_repository"] == release.SOURCE_REPOSITORY
+    data = json.loads(manifest.read_text())
+    data["source_repository"] = repository
+    manifest.write_text(json.dumps(data))
+    digest = hashlib.sha256(manifest.read_bytes()).hexdigest()
+    if accepted:
+        assert release.read_manifest(directory, SHA, digest)["source_repository"] == repository
+    else:
+        with pytest.raises(ValueError, match="wrong source repository"):
+            release.read_manifest(directory, SHA, digest)
+
+
 def test_release_is_immutable(signed):
     directory, _, _ = signed
     with pytest.raises(FileExistsError):
