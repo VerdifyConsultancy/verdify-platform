@@ -22,7 +22,7 @@ Research date: 2026-11-05. Code at origin/main `cf21fa421`. All data reads were 
 - **Remove Iris's self-score and the lessons from what the planner sees.** The self-graded `outcome_score` correlates *negatively* with the real served-band outcome (r = −0.22 with temperature in band and −0.17 with VPD in band, 113 days). Of 229 active lessons, 197 are low-confidence, 21 name band-owned or retired knobs, and none is newer than 2026-10-05. Feed a deterministic served-band scorecard and a plan-history table instead.
 - **No measurable climate benefit can be attributed to today's planner.** On the 14 days the plan was more than 24 hours stale (2026-07-04..09 and 2026-08-06..10), weather-adjusted VPD time in band was not significantly different: −6.4 points in summer (SE 4.3) and −2.4 points across all days (SE 3.6). Temperature in band was 8.7 points *better* without fresh plans (SE 3.9, summer). Planned days ran more fog (+101 min/day) and more vent (+127 min/day). This is observational and confounded, so it is no verdict. The A/B study (#1360) has to answer the question.
 - **The levers that move are not the levers that matter now.** 15 of the 41 pushable knobs never varied from 2026-07-04 to 2026-11-04, including `night_vpd_bias_kpa`. In the cold season the main miss is night VPD below band (78% of hours below band in November). Jason approved letting the planner write `night_vpd_bias_kpa` (decisions.md 2026-11-05 ~19:50Z). Add it to the output schema, and add a night-VPD section to the pack.
-- **One call:** `llm.primary.longctx` (Qwen3.8-27B NVFP4, vLLM 0.32, 98,304 context), no tools, thinking on at `medium`, `max_tokens` 12,000, sampling temperature 0.6 / top_p 0.95 / top_k 20 with a fixed seed. Use `response_format: json_schema` only after a gateway test passes. Pydantic plus the registry always re-validate. On failure, retry once with a minimum pack. If that also fails, write nothing, keep the plan in force and raise `planner_failed`. There is no OpenAI fallback.
+- **One call:** `llm.primary.longctx` (Qwen3.8-27B NVFP4, vLLM 0.32, 98,304 context), no tools, thinking on at `medium`, `max_tokens` 24,000 (#1480), sampling temperature 0.6 / top_p 0.95 / top_k 20 with a fixed seed. Use `response_format: json_schema` only after a gateway test passes. Pydantic plus the registry always re-validate. On failure, retry once with a minimum pack. If that also fails, write nothing, keep the plan in force and raise `planner_failed`. There is no OpenAI fallback.
 - **Store everything:** add a `planner_pack` table (compressed bytes, per-section sha and token counts) and extend `planner_inference_runs` (0 rows today) with trigger, pack/request/response hashes, status, finish reason, latency and arm. The forecast table keeps only about 30 days, so a pack cannot be rebuilt later. It must be stored when the plan is made.
 - **Embeddings: not in pack v1.** Cortex `embed.main` (Qwen3-Embedding-4B, 2,560-dim, served at 8,192 tokens) is live. But the existing corpus is 5,307 OpenAI 3,072-dim chunks frozen since 2026-05-24, and the lessons are poor. Analog-day retrieval on weather features did no better than "yesterday" over 94 days: MAE 0.101 vs 0.111 for VPD-below fraction, and 0.493 vs 0.461 for kPa-hours below. Re-embed with Cortex at 1,024 dims (MRL) into a new table, use it for the snapshot/agents' search, and test retrieval only as a shadow pack variant.
 - **A/B plug-in:** the pack version plus the request hash are the treatment identity. The same job runs in both arms. In the `baseline` arm it runs propose-only, so its plan is stored and never dispatched. `planner_inference_runs` already has `experiment_id`, `assignment_id` and `scheduled_in_arm` columns.
@@ -294,7 +294,7 @@ Cross-field rules, such as the moisture-ladder validator (`all_zone ≥ moisture
 ### Request
 
 `POST /v1/chat/completions` to `llm.primary.longctx`, no tools:
-- `max_tokens` 12,000;
+- `max_tokens` 24,000 (12,000 until #1480: one SUNRISE primary spent all of 12,000 in reasoning);
 - `temperature` 0.6, `top_p` 0.95, `top_k` 20, a fixed `seed`;
 - `chat_template_kwargs.reasoning_effort = "medium"`;
 - `response_format: json_schema` (strict) after the gateway test, otherwise `json_object` plus validation.
@@ -304,7 +304,7 @@ Guard: `pack_tokens + max_tokens ≤ 72,000`, checked before sending.
 ### Retries and fallback
 
 1. An HTTP or timeout error (deadline 5 min) gets 1 retry with the same request.
-2. On `finish_reason ≠ stop`, a parse error, or a Pydantic/registry rejection: one repair retry with `reasoning_effort=low`, the minimum pack (S0-S6, S15) and the validation error appended.
+2. On `finish_reason ≠ stop`, a parse error, or a Pydantic/registry rejection: one repair retry with thinking off (`enable_thinking=false`, sampling 0.7/0.8/20; #1480 measured `low` still reasoning 10,997 tokens), the minimum pack (S0-S6, S15) and the validation error appended.
 3. If that still fails: write nothing, keep the active plan (the device holds the last values), insert `alert_log` `planner_failed`, and set `plan_delivery_log.status=planner_failed`. There is no OpenAI fallback.
 
 Idempotency: there is one run per `trigger_id`. A re-delivery reuses the stored response.

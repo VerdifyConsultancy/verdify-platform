@@ -6,10 +6,21 @@ import json
 import pytest
 
 from cortex_planner import run as runner
-from cortex_planner.client import MODEL, CallConfig, CallResult, KeyMissing, TransportError, build_request, read_key
+from cortex_planner.client import (
+    DEADLINE_S,
+    MIN_TOKENS_PER_S,
+    MODEL,
+    CallConfig,
+    CallResult,
+    KeyMissing,
+    TransportError,
+    build_request,
+    read_key,
+)
 from cortex_planner.fixture import AS_OF, sample_inputs, sample_proposal
 from cortex_planner.inputs import Trigger
 from cortex_planner.pack import anchors
+from cortex_planner.sections import REQUEST_TOKEN_CAP
 
 TRIGGER = Trigger("00000000-0000-0000-0000-000000001350", "SUNRISE", "sunrise", AS_OF)
 
@@ -75,7 +86,7 @@ def go(store, client):
 def test_request_is_one_deterministic_text_call():
     body = build_request("sys", "user", CallConfig())
     assert body["model"] == MODEL == "llm.primary.longctx"
-    assert (body["temperature"], body["top_p"], body["top_k"], body["max_tokens"]) == (0.6, 0.95, 20, 12_000)
+    assert (body["temperature"], body["top_p"], body["top_k"], body["max_tokens"]) == (0.6, 0.95, 20, 24_000)
     assert body["chat_template_kwargs"] == {"reasoning_effort": "medium"} and isinstance(body["seed"], int)
     assert "tools" not in body and body["stream"] is False
     assert body["response_format"] == {"type": "json_object"}
@@ -105,8 +116,24 @@ def test_invalid_answer_gets_one_repair_with_the_minimum_pack():
     assert outcome.status == "ok" and [a.kind for a in store.attempts] == ["primary", "repair"]
     repair = store.attempts[1]
     assert repair.pack.variant == "minimum" and repair.config.reasoning_effort == "low"
+    assert repair.config.enable_thinking is False
     assert "## Repair" in client.bodies[1]["messages"][1]["content"]
     assert "confidence" in client.bodies[1]["messages"][1]["content"]
+
+
+def test_attempt_configs_cannot_end_inside_reasoning():
+    """#1480: the primary has room past the measured reasoning, the repair does not think at all."""
+    store, client = FakeStore(), FakeClient(answer("", finish="length"), answer(GOOD))
+    assert go(store, client).status == "ok"
+    primary, repair = client.bodies
+    assert primary["chat_template_kwargs"] == {"reasoning_effort": "medium"}
+    assert primary["max_tokens"] >= 2 * 12_000  # the 2026-11-07 SUNRISE cut
+    assert repair["chat_template_kwargs"] == {"enable_thinking": False}
+    assert (repair["temperature"], repair["top_p"], repair["top_k"]) == (0.7, 0.8, 20)
+    pack_cap = max(p.total_tokens for p in store.packs)
+    assert pack_cap + primary["max_tokens"] <= REQUEST_TOKEN_CAP
+    assert DEADLINE_S >= primary["max_tokens"] / MIN_TOKENS_PER_S * 1.15
+    assert CallConfig().identity_sha256() != store.attempts[1].config.identity_sha256()
 
 
 def test_length_stop_goes_to_repair():

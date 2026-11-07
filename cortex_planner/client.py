@@ -3,8 +3,10 @@
 Route `llm.primary.longctx` (Qwen3.8-27B NVFP4 on vLLM, 98,304 context, reasoning parser on),
 text only; any image request must use `llm.primary.longctx.mm` instead (Jason's rule). No tools.
 Sampling follows the Qwen3 thinking-mode guidance (temperature 0.6, top_p 0.95, top_k 20) with a
-fixed seed; the server default temperature of 1.0 is overridden. `max_tokens` is the only bound on
-reasoning, so a `length` stop inside the reasoning returns no JSON and goes to the repair path.
+fixed seed; the server default temperature of 1.0 is overridden. `reasoning_effort` is only a
+system-prompt sentence, so `max_tokens` is the only bound on reasoning, and a `length` stop inside
+the reasoning returns no JSON and goes to the repair path. The repair turns thinking off
+(`enable_thinking=false`, non-thinking sampling 0.7/0.8/20), so it cannot end inside reasoning (#1480).
 `response_format` is `json_object` until the gateway `json_schema` test passes (#1366 item 1);
 Pydantic and the registry re-validate every answer either way.
 """
@@ -29,10 +31,13 @@ DEFAULT_BASE_URL = "https://cortex.vallery.net/v1"
 DEFAULT_KEY_FILE = "/vcortex-planner/api_key.txt"
 SEED = 1350
 SAMPLING = {"temperature": 0.6, "top_p": 0.95, "top_k": 20}
-# A full answer is up to MAX_TOKENS (12,000) at the route's measured 37-47 tok/s
-# (successful shadow runs on 2026-11-06 took 221-287 s for ~10,000 tokens), so
-# 300 s timed out about half the runs; 600 s gives that answer twice its time.
-DEADLINE_S = 600.0
+# Qwen3 non-thinking guidance, used when a call turns thinking off (the repair attempt).
+SAMPLING_NO_THINKING = {"temperature": 0.7, "top_p": 0.8, "top_k": 20}
+# Slowest measured end-to-end rate on the route (2026-11-06/07 shadow runs: 32.8-44.4 tok/s
+# including prefill). The HTTP deadline must let a full MAX_TOKENS answer finish at that rate:
+# 24,000 / 32.8 = 732 s, so 900 s leaves about 20% headroom (#1480).
+MIN_TOKENS_PER_S = 32.8
+DEADLINE_S = 900.0
 RESPONSE_FORMATS = ("json_object", "json_schema", "none")
 
 
@@ -64,8 +69,19 @@ class CallConfig:
     model: str = MODEL
     max_tokens: int = MAX_TOKENS
     reasoning_effort: str = "medium"
+    enable_thinking: bool = True
     seed: int = SEED
     response_format: str = "json_object"
+
+    @property
+    def sampling(self) -> dict[str, Any]:
+        return SAMPLING if self.enable_thinking else SAMPLING_NO_THINKING
+
+    @property
+    def template_kwargs(self) -> dict[str, Any]:
+        if not self.enable_thinking:
+            return {"enable_thinking": False}
+        return {"reasoning_effort": self.reasoning_effort}
 
     def identity(self) -> dict[str, Any]:
         """Everything that defines the treatment except the pack itself (A/B identity, #1360)."""
@@ -73,8 +89,9 @@ class CallConfig:
             "model": self.model,
             "max_tokens": self.max_tokens,
             "reasoning_effort": self.reasoning_effort,
+            "enable_thinking": self.enable_thinking,
             "seed": self.seed,
-            "sampling": SAMPLING,
+            "sampling": self.sampling,
             "response_format": self.response_format,
             "schema_sha256": schema_sha256(),
             "pack_version": PACK_VERSION,
@@ -91,8 +108,8 @@ def build_request(system: str, user: str, config: CallConfig) -> dict[str, Any]:
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
         "max_tokens": config.max_tokens,
         "seed": config.seed,
-        **SAMPLING,
-        "chat_template_kwargs": {"reasoning_effort": config.reasoning_effort},
+        **config.sampling,
+        "chat_template_kwargs": config.template_kwargs,
         "stream": False,
     }
     if config.response_format == "json_object":
