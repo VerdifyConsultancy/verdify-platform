@@ -198,6 +198,8 @@ def test_277_retains_every276_authority_predicate_and_binds_exact_successor():
         + six.sealed_sql_304()
         + " OR "
         + six.sealed_sql_305()
+        + " OR "
+        + six.sealed_sql_306()
         + ")"
     )
 
@@ -260,6 +262,8 @@ def test_maintenance_or_is_scoped_inside_unchanged_authority_conjunction():
         + six.sealed_sql_304()
         + " OR "
         + six.sealed_sql_305()
+        + " OR "
+        + six.sealed_sql_306()
         + ")",
         1,
     )

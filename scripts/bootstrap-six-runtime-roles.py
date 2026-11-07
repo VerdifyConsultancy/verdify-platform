@@ -943,6 +943,30 @@ def sealed_sql_305():
     )
 
 
+VPD_ENVELOPE_MIGRATION = (
+    306,
+    "306-vpd-envelope-sql-mirror.sql",
+    "6d87f428b317cac9b4179f191d8342d897c29bd2b3046d6e61bb41e11bc41094",
+)
+# Nine pure fn_vpd_envelope_* functions, verdify's with PUBLIC's EXECUTE revoked: no runtime login can execute
+# them, so no digest takes them in. All three seals stay 305's.
+SUCCESSOR_306 = SUCCESSOR_305
+
+
+def sealed_sql_306():
+    # Keep every 305 predicate and bind the exact 306 runner stamp.
+    predecessor = sealed_sql_305()
+    current = seal_profile_sql(305, SUCCESSOR_305)
+    assert predecessor.count(current) == 1
+    return (
+        "("
+        + predecessor.replace(current, seal_profile_sql(306, SUCCESSOR_306), 1)
+        + " AND "
+        + ledger_row_sql(*VPD_ENVELOPE_MIGRATION)
+        + ")"
+    )
+
+
 def sealed_sql():
     return (
         "("
@@ -997,6 +1021,8 @@ def sealed_sql():
         + sealed_sql_304()
         + " OR "
         + sealed_sql_305()
+        + " OR "
+        + sealed_sql_306()
         + ")"
     )
 

@@ -102,7 +102,10 @@ temperature; outdoor values are measured up to now and forecast after. On 2026-1
 night VPD with an MAE of 0.07 kPa (bias +0.02). `achievable.nights` grades each night's house VPD, at the timeline's step, against the
 served band and the achievable band (in and below shares). Graphs → Climate draws the achievable edges dashed in
 `--c-outdoor` where they leave the band, and the VPD header reads "in band N% · achievable M%". The band itself is not
-changed: the night floor stays at least 0.74 kPa (#1365). There is no SQL mirror: no rollup consumes it yet.
+changed: the night floor stays at least 0.74 kPa (#1365). Migration 306 mirrors the model in SQL, bit for bit:
+`fn_vpd_envelope_fit` over the training rows as arrays, `fn_vpd_envelope_expected`, `fn_vpd_envelope_achievable_band`
+and `fn_vpd_envelope_grade` (with the Tetens pair and Python's rounding). No reader uses them yet; they are verdify's
+with PUBLIC's EXECUTE revoked, so a rollup or view that adopts them grants its own reader.
 
 **MCP.** `band_profile` returns API-23's JSON with no draft, and `band_profile_preview` takes the same fields and raw
 anchors and saves nothing. Named agents and admin may call them; Iris may not. There is no band write tool: the band is

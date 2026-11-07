@@ -16,6 +16,9 @@ control reaches the night VPD floor. The envelope says what the house can be exp
 The API's band read (API-06 with ``achievable``) and the band editor's preview (API-23) both use these functions;
 grading against the served band and against the achievable band is the same ``grade`` on the two edges.
 
+Migration 306 mirrors these functions in SQL bit for bit (``fn_vpd_envelope_*``;
+tests/test_dashboard_db_vpd_envelope_306.py): change one and the other together.
+
 Pure: no database, clock or file reads.
 """
 

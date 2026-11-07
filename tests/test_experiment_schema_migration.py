@@ -375,6 +375,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "304-water-day-local-end.sql",
         # The nightly dry-out columns, their function and the rollup's refill run forward only.
         "305-band-nightly-dryout.sql",
+        # The achievable-envelope SQL mirror (pure functions) runs forward only.
+        "306-vpd-envelope-sql-mirror.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

@@ -1,0 +1,15 @@
+{
+  "migration": "306-vpd-envelope-sql-mirror.sql",
+  "final_migration_qualification_pending": true,
+  "before": {
+    "api": "42091d8bc52adfff17ef589ca7d71ac3a97fe37af4460b551a938f313635bb8c",
+    "ingestor": "c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940",
+    "mcp": "2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245"
+  },
+  "projected_successor": {
+    "api": "42091d8bc52adfff17ef589ca7d71ac3a97fe37af4460b551a938f313635bb8c",
+    "ingestor": "c7ad6a83e598b8f6da9ebd0086c008b13cfa2812647516ecdf8a7d1b32331940",
+    "mcp": "2c6a1cbe628ea66fafe30784189f6c9ba7c33983792a46cd7383d7dae67dc245"
+  },
+  "projection": "2026-11-07, read only, production at exact305: the three live boundary digests equal 305's literals (api 42091d8b, ingestor c7ad6a83, mcp 2c6a1cbe) and pg_default_acl holds only verdify's own function EXECUTE. 306 creates nine fn_vpd_envelope_* functions, verdify's, SECURITY INVOKER and IMMUTABLE, and revokes PUBLIC's EXECUTE on each in the same transaction, so no runtime login can execute them and no digest takes them in; it touches no table, view, grant or existing function. All three seals are expected to stay 305's. Read only on production, 2026-11-07: the native fixture's training query (the 14 days before 2026-11-07 12:00 MST) returns 159 deep-night hours in 0.4 s; on those rows fn_vpd_envelope_fit on a private PostgreSQL equals verdify_schemas.vpd_envelope.fit_dewpoint bit for bit (RMSE 1.616 F, p10 50.37 F). If the probe shows any digest moved, stop. Otherwise run scripts/qualify-migration-successor.py db/migrations/306-vpd-envelope-sql-mirror.sql --native-fixture db/qualification/306-vpd-envelope-sql-mirror-fixture.sql --fixture tests/fixtures/306-vpd-envelope-sql-mirror-native-qualification.json (with --apply-first for any merged predecessor production lacks)."
+}
