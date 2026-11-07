@@ -190,13 +190,15 @@ def test_stalled_exec_is_bounded_unknown_and_leaves_no_live_client_children(tmp_
         MOCK_PIDS=str(tmp_path / "client-pids"),
     )
     result = subprocess.run(
-        ["bash", str(SCRIPT), "device-monitor", "--timeout", "1"],
+        # --timeout 5 leaves room for the mocked kubectl's python start-up on
+        # loaded CI nodes (at 1 s an earlier read timed out before the stalled
+        # exec ran); both bounds stay well under the mock's 60 s stall, so an
+        # unbounded exec still fails this test.
+        ["bash", str(SCRIPT), "device-monitor", "--timeout", "5"],
         env=env,
         capture_output=True,
         text=True,
-        # Well under the mock's 60 s stall, so an unbounded exec still fails;
-        # 6 s was too tight for python start-up on loaded CI nodes.
-        timeout=30,
+        timeout=45,
     )
     assert result.returncode == 1, result.stdout + result.stderr
     assert "writer count UNKNOWN" in result.stdout

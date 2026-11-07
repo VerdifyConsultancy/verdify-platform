@@ -38,6 +38,13 @@ ci_fetch_history() {
 ci_base() {
   local head base
   head="$(git rev-parse HEAD)"
+  # A manual build dispatch may name an older base on main (build.yml input).
+  if [ "${GITHUB_EVENT_NAME:-}" = workflow_dispatch ] && [ -n "${VERDIFY_IMPACT_BASE:-}" ]; then
+    [[ "$VERDIFY_IMPACT_BASE" =~ ^[0-9a-f]{40}$ ]] || { echo "VERDIFY_IMPACT_BASE must be a full SHA" >&2; return 1; }
+    git merge-base --is-ancestor "$VERDIFY_IMPACT_BASE" "$head" || { echo "VERDIFY_IMPACT_BASE is not an ancestor of HEAD" >&2; return 1; }
+    printf '%s' "$VERDIFY_IMPACT_BASE"
+    return 0
+  fi
   case "${GITHUB_EVENT_NAME:-}" in
     push) base="$(git rev-parse --verify --quiet "HEAD^1" || true)" ;;
     *) base="$(git merge-base origin/main HEAD 2>/dev/null || true)"
