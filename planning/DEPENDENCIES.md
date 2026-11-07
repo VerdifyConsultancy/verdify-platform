@@ -1,6 +1,6 @@
 # Complete blocking dependency graph
 
-The [current reviewed native graph](reviews/2026-11-07-triage/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 192-issue/85-edge campaign graph is retained below.
+The [current reviewed native graph](reviews/2026-11-07-pm-triage/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 194-issue/85-edge campaign graph is retained below.
 
 Generated from [backlog.yaml](backlog.yaml). An arrow means **predecessor must finish before dependent acceptance/activation**, not parentage. Isolated nodes are included so coverage is auditable. Read [CAMPAIGN.md](CAMPAIGN.md) for the smaller critical path.
 
@@ -123,6 +123,7 @@ flowchart TD
     i1431["#1431 (open) VPD: one-week night moisture-source experiment (E-1)"]
     i1432["#1432 (open) VPD: HAF circulation fans now; dehumidifier pilot decision"]
     i1434["#1434 (open) Planner study #1360: VPD scoring baseline (dry-out minutes"]
+    i1477["#1477 (open) firmware: retire or justify the activity-mirror entities a"]
   end
   subgraph C7["C7: Physical and seasonal commissioning"]
     i16["#16 (open) Hardware program: commission only the sensing and equipmen"]
@@ -209,18 +210,19 @@ flowchart TD
   end
   subgraph OPS["OPS: Platform, firmware and estate follow-ups"]
     i1113["#1113 (open) security: grafana-image-renderer chromium CVE-2026-118333/"]
-    i1118["#1118 (open) verdify-vision crop-health analysis step fails (exit 1) af"]
+    i1118["#1118 (closed) verdify-vision crop-health analysis step fails (exit 1) af"]
     i1271["#1271 (closed) firmware: give sensor_degraded a boot grace before timed L"]
     i1277["#1277 (open) c1 wire validation: move the firmware pin to the engine fi"]
     i1283["#1283 (closed) v_water_meter_daily may read a 25-hour day as complete wit"]
     i1312["#1312 (closed) firmware-replay-diff: rounding lets up to 14 divergent row"]
-    i1313["#1313 (open) firmware: runtime and drip accounting after an aborted OTA"]
+    i1313["#1313 (closed) firmware: runtime and drip accounting after an aborted OTA"]
     i1389["#1389 (closed) experiment-v2 lifecycle/freezer/selector CPU-throttled >50"]
     i1397["#1397 (open) Move CI, image builds and pin automation to GitHub Actions"]
     i1424["#1424 (open) heat1 Shelly ch1 power clamp is wired backwards (reads neg"]
     i1450["#1450 (open) Planner context gather runs ~98-120 s against its 120 s ca"]
     i1458["#1458 (open) estate-audit STD-OPS-01: container CVE triage backlog from"]
     i1459["#1459 (open) ci: split ci / validate into parallel step jobs (near its "]
+    i1480["#1480 (open) Cortex shadow planner runs out of tokens in reasoning: SUN"]
   end
   i371 --> i779
   i424 --> i749
@@ -256,7 +258,9 @@ flowchart TD
   i396 --> i245
   i670 --> i643
   i433 --> i428
+  i390 --> i367
   i367 --> i370
+  i390 --> i369
   i424 --> i324
   i371 --> i324
   i371 --> i410
@@ -269,13 +273,12 @@ flowchart TD
   i427 --> i214
   i780 --> i214
   i299 --> i434
-  i45 --> i297
+  i390 --> i299
   i398 --> i297
+  i45 --> i297
   i297 --> i296
   i434 --> i296
   i45 --> i296
-  i1183 --> i751
-  i1329 --> i298
   i298 --> i398
   i298 --> i45
   i398 --> i45
@@ -294,19 +297,18 @@ flowchart TD
   i1164 --> i1125
   i1161 --> i1164
   i1162 --> i1164
+  i1164 --> i1165
   i1165 --> i1166
   i1132 --> i1181
   i1354 --> i1322
   i1332 --> i1329
-  i1322 --> i1335
-  i1335 --> i1342
-  i1434 --> i1360
   i1360 --> i1361
   i1350 --> i1366
   i1365 --> i1431
-  i1365 --> i1432
   i1431 --> i1432
+  i1365 --> i1434
   i1433 --> i1434
+  i1360 --> i1434
 ```
 
 ## Exact edge list
@@ -347,7 +349,9 @@ flowchart TD
 | [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396) (closed) | [#245](https://github.com/VerdifyConsultancy/verdify-platform/issues/245) (closed) |
 | [#670](https://github.com/VerdifyConsultancy/verdify-platform/issues/670) (closed) | [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643) (closed) |
 | [#433](https://github.com/VerdifyConsultancy/verdify-platform/issues/433) (closed) | [#428](https://github.com/VerdifyConsultancy/verdify-platform/issues/428) (closed) |
+| [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) (open) | [#367](https://github.com/VerdifyConsultancy/verdify-platform/issues/367) (open) |
 | [#367](https://github.com/VerdifyConsultancy/verdify-platform/issues/367) (open) | [#370](https://github.com/VerdifyConsultancy/verdify-platform/issues/370) (open) |
+| [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) (open) | [#369](https://github.com/VerdifyConsultancy/verdify-platform/issues/369) (open) |
 | [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424) (closed) | [#324](https://github.com/VerdifyConsultancy/verdify-platform/issues/324) (closed) |
 | [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) (closed) | [#324](https://github.com/VerdifyConsultancy/verdify-platform/issues/324) (closed) |
 | [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) (closed) | [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410) (closed) |
@@ -360,13 +364,12 @@ flowchart TD
 | [#427](https://github.com/VerdifyConsultancy/verdify-platform/issues/427) (closed) | [#214](https://github.com/VerdifyConsultancy/verdify-platform/issues/214) (closed) |
 | [#780](https://github.com/VerdifyConsultancy/verdify-platform/issues/780) (closed) | [#214](https://github.com/VerdifyConsultancy/verdify-platform/issues/214) (closed) |
 | [#299](https://github.com/VerdifyConsultancy/verdify-platform/issues/299) (open) | [#434](https://github.com/VerdifyConsultancy/verdify-platform/issues/434) (closed) |
-| [#45](https://github.com/VerdifyConsultancy/verdify-platform/issues/45) (open) | [#297](https://github.com/VerdifyConsultancy/verdify-platform/issues/297) (open) |
+| [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) (open) | [#299](https://github.com/VerdifyConsultancy/verdify-platform/issues/299) (open) |
 | [#398](https://github.com/VerdifyConsultancy/verdify-platform/issues/398) (open) | [#297](https://github.com/VerdifyConsultancy/verdify-platform/issues/297) (open) |
+| [#45](https://github.com/VerdifyConsultancy/verdify-platform/issues/45) (open) | [#297](https://github.com/VerdifyConsultancy/verdify-platform/issues/297) (open) |
 | [#297](https://github.com/VerdifyConsultancy/verdify-platform/issues/297) (open) | [#296](https://github.com/VerdifyConsultancy/verdify-platform/issues/296) (closed) |
 | [#434](https://github.com/VerdifyConsultancy/verdify-platform/issues/434) (closed) | [#296](https://github.com/VerdifyConsultancy/verdify-platform/issues/296) (closed) |
 | [#45](https://github.com/VerdifyConsultancy/verdify-platform/issues/45) (open) | [#296](https://github.com/VerdifyConsultancy/verdify-platform/issues/296) (closed) |
-| [#1183](https://github.com/VerdifyConsultancy/verdify-platform/issues/1183) (open) | [#751](https://github.com/VerdifyConsultancy/verdify-platform/issues/751) (open) |
-| [#1329](https://github.com/VerdifyConsultancy/verdify-platform/issues/1329) (open) | [#298](https://github.com/VerdifyConsultancy/verdify-platform/issues/298) (open) |
 | [#298](https://github.com/VerdifyConsultancy/verdify-platform/issues/298) (open) | [#398](https://github.com/VerdifyConsultancy/verdify-platform/issues/398) (open) |
 | [#298](https://github.com/VerdifyConsultancy/verdify-platform/issues/298) (open) | [#45](https://github.com/VerdifyConsultancy/verdify-platform/issues/45) (open) |
 | [#398](https://github.com/VerdifyConsultancy/verdify-platform/issues/398) (open) | [#45](https://github.com/VerdifyConsultancy/verdify-platform/issues/45) (open) |
@@ -385,18 +388,17 @@ flowchart TD
 | [#1164](https://github.com/VerdifyConsultancy/verdify-platform/issues/1164) (open) | [#1125](https://github.com/VerdifyConsultancy/verdify-platform/issues/1125) (closed) |
 | [#1161](https://github.com/VerdifyConsultancy/verdify-platform/issues/1161) (open) | [#1164](https://github.com/VerdifyConsultancy/verdify-platform/issues/1164) (open) |
 | [#1162](https://github.com/VerdifyConsultancy/verdify-platform/issues/1162) (open) | [#1164](https://github.com/VerdifyConsultancy/verdify-platform/issues/1164) (open) |
+| [#1164](https://github.com/VerdifyConsultancy/verdify-platform/issues/1164) (open) | [#1165](https://github.com/VerdifyConsultancy/verdify-platform/issues/1165) (open) |
 | [#1165](https://github.com/VerdifyConsultancy/verdify-platform/issues/1165) (open) | [#1166](https://github.com/VerdifyConsultancy/verdify-platform/issues/1166) (open) |
 | [#1132](https://github.com/VerdifyConsultancy/verdify-platform/issues/1132) (open) | [#1181](https://github.com/VerdifyConsultancy/verdify-platform/issues/1181) (open) |
 | [#1354](https://github.com/VerdifyConsultancy/verdify-platform/issues/1354) (open) | [#1322](https://github.com/VerdifyConsultancy/verdify-platform/issues/1322) (open) |
 | [#1332](https://github.com/VerdifyConsultancy/verdify-platform/issues/1332) (open) | [#1329](https://github.com/VerdifyConsultancy/verdify-platform/issues/1329) (open) |
-| [#1322](https://github.com/VerdifyConsultancy/verdify-platform/issues/1322) (open) | [#1335](https://github.com/VerdifyConsultancy/verdify-platform/issues/1335) (open) |
-| [#1335](https://github.com/VerdifyConsultancy/verdify-platform/issues/1335) (open) | [#1342](https://github.com/VerdifyConsultancy/verdify-platform/issues/1342) (open) |
-| [#1434](https://github.com/VerdifyConsultancy/verdify-platform/issues/1434) (open) | [#1360](https://github.com/VerdifyConsultancy/verdify-platform/issues/1360) (open) |
 | [#1360](https://github.com/VerdifyConsultancy/verdify-platform/issues/1360) (open) | [#1361](https://github.com/VerdifyConsultancy/verdify-platform/issues/1361) (closed) |
 | [#1350](https://github.com/VerdifyConsultancy/verdify-platform/issues/1350) (closed) | [#1366](https://github.com/VerdifyConsultancy/verdify-platform/issues/1366) (closed) |
 | [#1365](https://github.com/VerdifyConsultancy/verdify-platform/issues/1365) (open) | [#1431](https://github.com/VerdifyConsultancy/verdify-platform/issues/1431) (open) |
-| [#1365](https://github.com/VerdifyConsultancy/verdify-platform/issues/1365) (open) | [#1432](https://github.com/VerdifyConsultancy/verdify-platform/issues/1432) (open) |
 | [#1431](https://github.com/VerdifyConsultancy/verdify-platform/issues/1431) (open) | [#1432](https://github.com/VerdifyConsultancy/verdify-platform/issues/1432) (open) |
+| [#1365](https://github.com/VerdifyConsultancy/verdify-platform/issues/1365) (open) | [#1434](https://github.com/VerdifyConsultancy/verdify-platform/issues/1434) (open) |
 | [#1433](https://github.com/VerdifyConsultancy/verdify-platform/issues/1433) (open) | [#1434](https://github.com/VerdifyConsultancy/verdify-platform/issues/1434) (open) |
+| [#1360](https://github.com/VerdifyConsultancy/verdify-platform/issues/1360) (open) | [#1434](https://github.com/VerdifyConsultancy/verdify-platform/issues/1434) (open) |
 
 Closed #676 remains historical qualification evidence, not an open blocker. Cross-repository fleet/monitoring delivery is a concrete implementation interface in the relevant issues, not a fabricated in-repository node. Physical windows and minimum live-state invariants remain explicit issue conditions.
