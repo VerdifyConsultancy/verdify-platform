@@ -26,6 +26,7 @@ export const ROUTES = [
   ["API-23", "GET", "/v1/band/profile"], ["API-24", "PUT", "/v1/band/profile"],
   ["API-SOIL-01", "GET", "/v1/soil-targets"], ["API-SOIL-02", "PUT", "/v1/soil-targets/{zone}"], ["API-20", "POST", "/v1/equipment/lights/{light}/{state}"], ["API-21", "GET", "/v1/water/daily"], ["API-22", "GET", "/v1/lighting"],
   ["API-25", "GET", "/v1/planner/history"], ["API-26", "GET", "/v1/planner/experiments"], ["API-27", "GET", "/v1/planner/experiments/{id}"],
+  ["API-28", "POST", "/v1/planner/experiments/{id}/{action}"],
   ["API-IRR-01", "GET", "/v1/irrigation"],
   ["API-IRR-02", "GET", "/v1/irrigation/schedules"], ["API-IRR-03", "POST", "/v1/irrigation/schedules"],
   ["API-IRR-04", "PUT", "/v1/irrigation/schedules/{slot_id}"], ["API-IRR-05", "DELETE", "/v1/irrigation/schedules/{slot_id}"],
@@ -747,7 +748,7 @@ const OLD_DRAFT = {
   closed_at: "2026-09-30T17:50:12Z",
   closed_reason: "Never randomized a day. Its physical proof failed three times on 2026-08-28 and a facility safe closure ended it on 2026-09-30. Its OpenAI selector and three hot/dry profiles are retired; its tables and evidence are kept.",
 };
-const QUESTION = "Over a 24 h study day, does the Cortex planner adjusting the planner-owned tunables from forecast and history improve served-band VPD at night, and what does it cost in heat, compared with the same firmware, band and safety rules with those tunables frozen?";
+const QUESTION = "Over a 24 h study day, does the AI planner (Hermes) adjusting the planner-owned tunables from forecast and history improve served-band VPD at night, and what does it cost in heat, compared with the same firmware, band and safety rules with those tunables frozen?";
 const STUDY_METRICS = [
   ["night_vpd_in_band_pct", "Night VPD in band", "pts", "primary", "higher", "night_post_washout", null],
   ["temp_in_band_pct", "Temperature in band", "pts", "guardrail", "higher", "study_day_post_washout", 2],
@@ -755,46 +756,104 @@ const STUDY_METRICS = [
   ["electric_kwh", "Electric energy", "kWh", "cost", "report", "whole_day", null],
   ["vpd_in_band_pct", "VPD in band, whole day", "pts", "secondary", "higher", "study_day_post_washout", null],
   ["water_gal", "Water", "gal", "secondary", "report", "whole_day", null],
+  ["heat1_minutes", "Electric heat minutes", "min", "cost", "report", "whole_day", null],
+  ["heat2_minutes", "Gas heat minutes", "min", "cost", "report", "whole_day", null],
+  ["vent_minutes", "Vent and fan minutes", "min", "secondary", "report", "whole_day", null],
+  ["wetting_minutes", "Fog and mister minutes", "min", "secondary", "report", "whole_day", null],
+  ["plans_written_pct", "Required plans written", "%", "planner", "higher", "whole_day", null],
 ].map(([id, label, unit, role, direction, window, margin]) => ({ id, label, unit, role, direction, window, noninferiority_margin: margin }));
+/** Arm order within each pair (1: AI first), the committed seed's draw as the fixture fixes it. */
+const STUDY_ORDER = [1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0];
+const STUDY_PAIRS = 30;
+const STUDY_SEED = 1360;
+const STUDY_SCHEDULE_SHA = "3f6a".padEnd(64, "0");
+const STUDY_BASELINE_SHA = "b4c1".padEnd(64, "0");
+const armAt = (index) => (STUDY_ORDER[index % STUDY_ORDER.length] ? "ai" : "baseline");
+/** The interim run (#1360): Hermes against the frozen baseline, 36 days in, one held setting and one unconfirmed boundary. */
+function interimRun(world) {
+  const first = addDays(today(world), -36);
+  const dayNow = localInstant(today(world), "11:00") > world.now ? addDays(today(world), -1) : today(world);
+  const armNow = armAt(dayNow === today(world) ? 36 : 35);
+  return {
+    study_id: STUDY_ID, run_id: uuidFrom("planner-study-interim"), status: "running", ai_planner: "hermes", started_at: iso(localInstant(addDays(first, -1), "15:20")),
+    started_by: JASON.name, first_day: first, pairs: STUDY_PAIRS, pairs_done: 18, pairs_left: 12, seed: STUDY_SEED, schedule_sha256: STUDY_SCHEDULE_SHA,
+    baseline_sha256: STUDY_BASELINE_SHA, paused_at: null, stopped_at: null, stop_reason: null, arm_now: armNow, day_now: dayNow,
+    next_boundary: iso(localInstant(addDays(dayNow, 1), "11:00")), holds_in_force: armNow === "baseline" ? 47 : 0,
+    held_by_others: armNow === "baseline" ? ["mister_engage_kpa"] : [],
+    last_boundary: { date: dayNow, arm: armNow, result: "confirmed", at: iso(localInstant(dayNow, "11:06")), unconfirmed: [] }, deviations: 2,
+  };
+}
+/** The study's newest run: one an API-28 write recorded, the interim fixture's, else none (defined, today's state). */
+function studyRunOf(world) {
+  return world.studyRun ?? (world.plannerStudy === "interim" ? interimRun(world) : null);
+}
+const RUN_STATUS = { scheduled: "scheduled", running: "running", paused: "paused", finished: "finished", stopped: "closed" };
 /** The study as the fixture world has it: `world.plannerStudy` is null (defined, today's state) or "interim". */
 function studySummary(world) {
   const interim = world.plannerStudy === "interim";
+  const run = studyRunOf(world);
+  const done = run ? studyCalendar(world, run).filter((day) => day.status === "done").length : 0;
   return {
     id: interim ? "6f1e2d3c-4b5a-4968-8776-655443322110" : STUDY_ID, experiment_id: interim ? "6f1e2d3c-4b5a-4968-8776-655443322110" : null, study_id: STUDY_ID,
-    name: "AI planner versus a frozen baseline, winter 2026-27", question: QUESTION, status: interim ? "running" : "defined", raw_status: interim ? "running" : null,
-    arms: ["ai", "baseline"], started_at: interim ? iso(localInstant(addDays(today(world), -36), "11:00")) : null, ended_at: null,
-    updated_at: interim ? iso(world.now - HOUR) : null, days_planned: 60, days_done: interim ? 36 : 0, deviations: interim ? 2 : 0, closed_at: null, closed_reason: null,
+    name: "AI planner versus a frozen baseline, winter 2026-27", question: QUESTION, status: run ? RUN_STATUS[run.status] : "defined", raw_status: interim ? "running" : null,
+    arms: ["ai", "baseline"], started_at: run?.started_at ?? null, ended_at: run?.stopped_at ?? null,
+    updated_at: run ? run.stopped_at ?? run.paused_at ?? (interim ? iso(world.now - HOUR) : run.started_at) : null, days_planned: 2 * STUDY_PAIRS, days_done: done,
+    deviations: run?.deviations ?? 0, closed_at: run?.stopped_at ?? null,
+    closed_reason: run?.status === "stopped" ? `Stopped by ${run.stopped_by ?? JASON.name}${run.stop_reason ? `: ${run.stop_reason}` : ""}` : null,
   };
 }
 function plannerExperimentsBody(world) {
   return { items: [studySummary(world), OLD_DRAFT] };
 }
-function studyCalendar(world) {
-  const start = addDays(today(world), -36);
-  const order = [1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0];
-  return Array.from({ length: 38 }, (_, index) => {
-    const date = addDays(start, index);
+/** A run's days: done before now, active while in force, then scheduled (cancelled once stopped). */
+function studyCalendar(world, run) {
+  const interim = world.plannerStudy === "interim" && !world.studyRun;
+  return Array.from({ length: interim ? 38 : 2 * STUDY_PAIRS }, (_, index) => {
+    const date = addDays(run.first_day, index);
     const starts = localInstant(date, "11:00");
-    return {
-      date, pair_index: Math.floor(index / 2), arm: order[index] ? "ai" : "baseline", status: starts > world.now ? "locked" : "exposed",
-      starts_at: iso(starts), ends_at: iso(starts + DAY), deviations: index === 9 || index === 22 ? 1 : 0,
-      events: index === 9 ? ["esp32_reboot"] : index === 22 ? ["manual_write"] : [],
-    };
+    const ends = starts + DAY;
+    const ran = interim && ends <= world.now;
+    const active = interim && starts <= world.now && world.now < ends;
+    const status = ran ? "done" : active ? "active" : run.status === "stopped" ? "cancelled" : "scheduled";
+    const deviations = interim && (index === 9 || index === 22) ? 1 : 0;
+    const events = !ran && !active ? [] : index === 9 ? ["boundary_unconfirmed"] : index === 22 ? ["boundary_confirmed", "held_by_other"] : ["boundary_confirmed"];
+    return { date, pair_index: Math.floor(index / 2), arm: armAt(index), status, starts_at: iso(starts), ends_at: iso(ends), deviations, events };
   });
+}
+/** Per arm, over its finished days: the live means (the climate ones null until the frozen analyzer). */
+function studyArms(days) {
+  const done = (arm) => days.filter((day) => day.arm === arm && day.status === "done");
+  const means = {
+    ai: { night_vpd_in_band_pct: null, temp_in_band_pct: null, heat_minutes: 980.4, heat1_minutes: 902.1, heat2_minutes: 78.3, vent_minutes: 214.5, wetting_minutes: 96.2, plans_written_pct: 94.4 },
+    baseline: { night_vpd_in_band_pct: null, temp_in_band_pct: null, heat_minutes: 1012.8, heat1_minutes: 921.6, heat2_minutes: 91.2, vent_minutes: 188.1, wetting_minutes: 81.7, plans_written_pct: 96.3 },
+  };
+  return ["ai", "baseline"].map((arm) => ({
+    arm, days_done: done(arm).length, deviation_days: done(arm).filter((day) => day.deviations > 0).length, means: done(arm).length ? means[arm] : {},
+  }));
+}
+/** Per arm, over its started days: Hermes's plans and changes sent, and the Cortex shadow runs by cohort, never pooled. */
+function studyCost(days) {
+  const started = (arm) => days.filter((day) => day.arm === arm && (day.status === "done" || day.status === "active")).length;
+  const shadow = (arm) => (started(arm) ? [
+    { cohort: "cortex-pre-1482", calls: 41, ok: 29, input_tokens: 2_501_000, output_tokens: 98_400, energy_wh: 172.2 },
+    { cohort: "cortex-1482", calls: 12, ok: 11, input_tokens: 732_000, output_tokens: 41_100, energy_wh: null },
+  ] : []);
+  return [
+    { arm: "ai", days: started("ai"), planner: "hermes", plans_written: started("ai") ? 96 : 0, plan_changes_sent: started("ai") ? 141 : 0, shadow: shadow("ai") },
+    { arm: "baseline", days: started("baseline"), planner: "hermes", plans_written: started("baseline") ? 94 : 0, plan_changes_sent: 0, shadow: shadow("baseline") },
+  ];
 }
 function plannerExperimentBody(world, { params }) {
   const key = params.id;
   if (key === OLD_EXPERIMENT) {
     return {
-      experiment: OLD_DRAFT, definition: null, calendar: [], next_boundary: null, outcomes: [],
+      experiment: OLD_DRAFT, definition: null, run: null, arms: [], cost: [], calendar: [], next_boundary: null, outcomes: [],
       results: { state: "not_started", reason: "No study day has run.", pairs_done: 0, pairs_planned: null, sentence: null, metrics: [], analyzed_at: null, output_sha256: null },
     };
   }
   const summary = studySummary(world);
   if (key !== summary.id && key !== STUDY_ID) throw refuse(404, "not_found", "Not found", `no experiment or study '${key}'`, { field: "id" });
   const interim = world.plannerStudy === "interim";
-  const tomorrow = localInstant(addDays(today(world), 1), "11:00");
-  const nextBoundary = localInstant(today(world), "11:00") > world.now ? localInstant(today(world), "11:00") : tomorrow;
   const ci = (id, estimate, low, high) => ({ ...STUDY_METRICS.find((metric) => metric.id === id), estimate, ci_low: low, ci_high: high, n_pairs: 18 });
   const results = interim ? {
     state: "interim", reason: null, pairs_done: 18, pairs_planned: 30,
@@ -803,13 +862,14 @@ function plannerExperimentBody(world, { params }) {
       ci("vpd_in_band_pct", 4.1, -0.8, 9.0), ci("water_gal", null, null, null)].map(({ window: _w, noninferiority_margin: _m, ...row }) => row),
     analyzed_at: iso(localInstant(today(world), "00:30")), output_sha256: "9b2c".padEnd(64, "0"),
   } : { state: "not_started", reason: "No study day has run.", pairs_done: 0, pairs_planned: 30, sentence: null, metrics: [], analyzed_at: null, output_sha256: null };
-  const calendar = interim ? studyCalendar(world) : [];
+  const run = studyRunOf(world);
+  const calendar = run ? studyCalendar(world, run) : [];
   return {
     experiment: summary,
     definition: {
-      study_id: STUDY_ID, version: 1, definition_sha256: "52a8c4649e500aa0c8ec618cf4723ad08f834d27541d8a9646310b8ccb7698de", preregistered: interim,
+      study_id: STUDY_ID, version: 1, definition_sha256: "52a8c4649e500aa0c8ec618cf4723ad08f834d27541d8a9646310b8ccb7698de", preregistered: world.studyPreregistered !== false,
       arms: [
-        { label: "ai", name: "AI planner", planner_mode: "dispatch", description: "The Cortex planner (#1350) runs on its triggers and dispatches its plans as normal." },
+        { label: "ai", name: "AI planner", planner_mode: "dispatch", description: "Hermes runs on its triggers and dispatches its plans as normal." },
         { label: "baseline", name: "Frozen baseline", planner_mode: "propose_only", description: "At the boundary the planner-owned tunables are restored to the locked baseline vector. The planner still runs and its plans are validated and stored (arm baseline, dispatched false) but never sent." },
       ],
       metrics: STUDY_METRICS,
@@ -822,13 +882,71 @@ function plannerExperimentBody(world, { params }) {
       ],
       prerequisites: ["#1350 cutover: the Cortex planner live, planner_inference_runs recording, a propose-only flag"],
     },
-    calendar, next_boundary: interim ? iso(nextBoundary) : null, results,
-    outcomes: interim ? calendar.filter((day) => day.status === "exposed").slice(-4).map((day, index) => ({
+    run, arms: run ? studyArms(calendar) : [], cost: run ? studyCost(calendar) : [],
+    calendar, next_boundary: run && (run.status === "scheduled" || run.status === "running") ? run.next_boundary : null, results,
+    outcomes: interim ? calendar.filter((day) => day.status === "done").slice(-4).map((day, index) => ({
       date: day.date, arm: day.arm, deviation: day.deviations > 0,
-      values: { night_vpd_in_band_pct: 20 + 5 * index, temp_in_band_pct: 99.1, heat_minutes: 960 + 20 * index, electric_kwh: 23.5, vpd_in_band_pct: 48, water_gal: null },
+      values: {
+        night_vpd_in_band_pct: null, temp_in_band_pct: null, heat_minutes: 960 + 20 * index, heat1_minutes: 880 + 20 * index, heat2_minutes: 80, vent_minutes: 200 + 5 * index,
+        wetting_minutes: 90, plans_written_pct: index === 2 ? 66.7 : 100, electric_kwh: null, vpd_in_band_pct: null, water_gal: null,
+      },
       covariates: { outdoor_temp_min_f: 28 + index, outdoor_temp_mean_f: 41, solar_kwh_m2: 3.1, outdoor_vpd_kpa: 0.6, wind_mph: 5, heating_degree_hours_60f: 310 },
     })) : [],
   };
+}
+
+// ---------------------------------------------------------------------------------------------------- planner study write (#1360)
+const STUDY_ACTIONS = ["start", "pause", "resume", "stop"];
+const IN_FORCE = ["scheduled", "running", "paused"];
+/** The next 11:00 boundary still ahead, as a local date. */
+const nextBoundaryDay = (world) => (localInstant(today(world), "11:00") > world.now ? today(world) : addDays(today(world), 1));
+/**
+ * API-28: start, pause, resume or stop the study's run, one study.<action> Activity row each. Refusals are study_state
+ * in the server's own sentence: not pre-registered, a run already in force, nothing to pause, resume or stop, or a
+ * first day whose boundary has passed.
+ */
+function controlStudy(world, { params, body, key }) {
+  if (params.id !== STUDY_ID) throw refuse(404, "not_found", "Not found", `no study '${params.id}'`, { field: "id" });
+  if (!STUDY_ACTIONS.includes(params.action)) throw refuse(422, "invalid_request", "Invalid request", "action is start, pause, resume or stop", { field: "action" });
+  const input = object(body);
+  const extra = Object.keys(input).find((name) => name !== "first_day" && name !== "reason");
+  if (extra) throw refuse(422, "invalid_request", "Invalid request", `${extra} is not a study control field`, { field: extra });
+  const reason = text(input.reason, "reason");
+  const state = (detail) => refuse(422, "study_state", "Refused", detail);
+  const current = studyRunOf(world);
+  const now = iso(world.now);
+  let run;
+  if (params.action === "start") {
+    if (world.studyPreregistered === false) throw state("The study is not pre-registered: run scripts/planner-study-preregister.py and commit the seed, schedule hash and baseline first.");
+    if (current && IN_FORCE.includes(current.status)) throw state(`A run is already ${current.status}; stop it before starting another.`);
+    if (input.first_day !== undefined && input.first_day !== null && (typeof input.first_day !== "string" || !DATE.test(input.first_day))) throw invalid("first_day must be a date", "first_day");
+    const first = input.first_day ?? nextBoundaryDay(world);
+    if (localInstant(first, "11:00") <= world.now) throw state(`The 11:00 boundary on ${first} has passed; pick a later first day.`);
+    run = {
+      study_id: STUDY_ID, run_id: uuidFrom(`study-run:${key ?? first}`), status: "scheduled", ai_planner: "hermes", started_at: now, started_by: world.me.username,
+      first_day: first, pairs: STUDY_PAIRS, pairs_done: 0, pairs_left: STUDY_PAIRS, seed: STUDY_SEED, schedule_sha256: STUDY_SCHEDULE_SHA, baseline_sha256: STUDY_BASELINE_SHA,
+      paused_at: null, stopped_at: null, stop_reason: null, arm_now: null, day_now: null, next_boundary: iso(localInstant(first, "11:00")), holds_in_force: 0,
+      held_by_others: [], last_boundary: null, deviations: 0,
+    };
+  } else {
+    if (input.first_day !== undefined && input.first_day !== null) throw refuse(422, "invalid_request", "Invalid request", "first_day goes with start only", { field: "first_day" });
+    if (!current || !IN_FORCE.includes(current.status)) throw state(`There is no run to ${params.action}: the study is ${current ? current.status : "not started"}.`);
+    const released = { arm_now: null, day_now: null, holds_in_force: 0 };
+    if (params.action === "pause") {
+      if (current.status === "paused") throw state("The run is already paused.");
+      run = { ...current, ...released, status: "paused", paused_at: now, next_boundary: null };
+    } else if (params.action === "resume") {
+      if (current.status !== "paused") throw state(`The run is ${current.status}, not paused.`);
+      run = { ...current, status: current.pairs_done > 0 ? "running" : "scheduled", paused_at: null, next_boundary: iso(localInstant(nextBoundaryDay(world), "11:00")) };
+    } else {
+      run = { ...current, ...released, status: "stopped", stopped_at: now, stop_reason: reason, next_boundary: null };
+    }
+  }
+  const effect = (next) => {
+    next.studyRun = run;
+    activity(next, { ts: now, actor: actorOf(next), action: `study.${params.action}`, target: STUDY_ID, reason, request_id: key ?? null, detail: { run_id: run.run_id, ...(params.action === "start" ? { first_day: run.first_day, pairs: run.pairs, seed: run.seed, ai_planner: run.ai_planner } : {}) } });
+  };
+  return { status: 200, body: run, effect };
 }
 
 // ---------------------------------------------------------------------------------------------------- irrigation reads
@@ -1407,6 +1525,7 @@ const WRITES = {
   "API-20": lights,
   "API-24": saveBand,
   "API-SOIL-02": setSoilTarget,
+  "API-28": controlStudy,
   "API-IRR-03": createSchedule,
   "API-IRR-04": editSchedule,
   "API-IRR-05": deleteSchedule,
@@ -1534,6 +1653,7 @@ export const EXAMPLES = {
   "API-25": () => get("/v1/planner/history", { days: "30" }),
   "API-26": () => get("/v1/planner/experiments"),
   "API-27": (world) => get(`/v1/planner/experiments/${world.plannerStudy === "interim" ? "6f1e2d3c-4b5a-4968-8776-655443322110" : STUDY_ID}`),
+  "API-28": (world) => send("POST", `/v1/planner/experiments/${STUDY_ID}/start`, { first_day: addDays(today(world), 1), reason: "Hermes against the frozen baseline" }),
   "API-IRR-01": () => get("/v1/irrigation"),
   // The week view with "Last 7 days" on, so past blocks and their outcomes are in the set.
   "API-IRR-02": () => get("/v1/irrigation/schedules", { past_days: 7 }),

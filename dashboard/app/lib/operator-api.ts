@@ -78,6 +78,10 @@ export type ExperimentDetail = Lenient<Schemas["ExperimentDetail"]>;
 export type StudyResults = Lenient<Schemas["StudyResults"]>;
 export type MetricResult = StudyResults["metrics"][number];
 export type CalendarDay = ExperimentDetail["calendar"][number];
+export type StudyRun = Lenient<Schemas["StudyRun"]>;
+export type ArmSummary = Lenient<Schemas["ArmSummary"]>;
+export type ArmCost = Lenient<Schemas["ArmCost"]>;
+export type StudyControl = Lenient<Schemas["StudyControl"]>;
 export type IrrigationStatus = Lenient<Schemas["IrrigationStatus"]>;
 export type IrrigationLine = Lenient<Schemas["IrrigationLine"]>;
 export type LineState = Lenient<Schemas["LineState"]>;
@@ -381,8 +385,23 @@ const studyResults = z.object({
   analyzed_at: maybe(text), output_sha256: maybe(text),
 });
 const nullableValues = z.record(z.string(), num.nullable());
+export const RUN_STATUSES = members<Schemas["StudyRun"]["status"]>()(["scheduled", "running", "paused", "finished", "stopped"]);
+/** A run status newer than this client reads `stopped`: no control is offered but Start, which the server checks. */
+const studyRun = z.object({
+  study_id: text, run_id: text, status: choice(RUN_STATUSES, "stopped"), ai_planner: text, started_at: text, started_by: text, first_day: text, pairs: int,
+  pairs_done: int, pairs_left: int, seed: int, schedule_sha256: text, baseline_sha256: text, paused_at: maybe(text), stopped_at: maybe(text),
+  stop_reason: maybe(text), arm_now: maybe(text), day_now: maybe(text), next_boundary: maybe(text), holds_in_force: int, held_by_others: z.array(text),
+  last_boundary: maybe(z.object({ date: text, arm: text, result: code, at: text, unconfirmed: z.array(text) })), deviations: int,
+});
+const armSummary = z.object({ arm: text, days_done: int, deviation_days: int, means: nullableValues });
+const armCost = z.object({
+  arm: text, days: int, planner: text, plans_written: int, plan_changes_sent: int,
+  shadow: z.array(z.object({ cohort: text, calls: int, ok: int, input_tokens: int, output_tokens: int, energy_wh: maybe(num) })),
+});
 const experimentDetail = z.object({
   experiment: experimentSummary, definition: studyDefinition.nullable(),
+  // A server before #1360's run sends none of these: no run, no per-arm summary and no cost.
+  run: maybe(studyRun), arms: z.array(armSummary).default([]), cost: z.array(armCost).default([]),
   calendar: z.array(z.object({
     date: text, pair_index: maybe(int), arm: maybe(text), status: text, starts_at: maybe(text), ends_at: maybe(text), deviations: int, events: z.array(code),
   })),
@@ -526,6 +545,7 @@ export const parseLightingDays: Parser<LightingDays> = parser(lightingDays);
 export const parsePlannerHistory: Parser<PlannerHistory> = parser(plannerHistory);
 export const parseExperimentList: Parser<ExperimentList> = parser(experimentList);
 export const parseExperimentDetail: Parser<ExperimentDetail> = parser(experimentDetail);
+export const parseStudyRun: Parser<StudyRun> = parser(studyRun);
 export const parseIrrigationStatus: Parser<IrrigationStatus> = parser(irrigationStatus);
 export const parseScheduleAgenda: Parser<ScheduleAgenda> = parser(scheduleAgenda);
 export const parseSchedule: Parser<Schedule> = parser(schedule);
@@ -577,6 +597,7 @@ export const OPERATIONS = {
   "API-25": op("GET", "/v1/planner/history", parsePlannerHistory),
   "API-26": op("GET", "/v1/planner/experiments", parseExperimentList),
   "API-27": op("GET", "/v1/planner/experiments/{id}", parseExperimentDetail),
+  "API-28": op("POST", "/v1/planner/experiments/{id}/{action}", parseStudyRun),
   "API-SOIL-01": op("GET", "/v1/soil-targets", parseSoilTargets),
   "API-SOIL-02": op("PUT", "/v1/soil-targets/{zone}", parseSoilTarget),
   "API-IRR-01": op("GET", "/v1/irrigation", parseIrrigationStatus),

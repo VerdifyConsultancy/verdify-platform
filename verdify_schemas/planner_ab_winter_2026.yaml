@@ -5,15 +5,21 @@
 # its daily outcomes; the operator API (API-26/24) serves it to the dashboard's Planner section (#1361).
 #
 # Pre-registration: before day 1, `baseline_vector.sha256`, `schedule.seed` and `schedule.schedule_sha256` are set in
-# one reviewed commit and never edited after. A change to anything else after day 1 is a new study version.
+# one reviewed commit with planner_study_baselines/<study_id>.json (scripts/planner-study-preregister.py), and never
+# edited after. A change to anything else after day 1 is a new study version.
+#
+# Jason, 2026-11-07: the study resumes with Hermes as the AI arm (it stays the authoritative planner, 2026-11-06; the
+# Cortex planner keeps running in shadow on both arms' days). The dashboard starts, pauses, resumes and stops it
+# (API-28); the operator API runs the boundaries (docs/design/dashboard/planner-study.md).
 study_id: planner-ab-winter-2026
 version: 1
 title: AI planner versus a frozen baseline, winter 2026-27
 question: >-
-  Over a 24 h study day, does the Cortex planner adjusting the planner-owned tunables from forecast and history improve
+  Over a 24 h study day, does the AI planner (Hermes) adjusting the planner-owned tunables from forecast and history improve
   served-band VPD at night, and what does it cost in heat, compared with the same firmware, band and safety rules with
   those tunables frozen?
 status: defined
+ai_planner: hermes
 issues: ["#1359", "#1360", "#1361"]
 research: docs/research/w5/planner-ab.md
 supersedes:
@@ -27,21 +33,23 @@ arms:
   - label: ai
     name: AI planner
     planner_mode: dispatch
-    description: The Cortex planner (#1350) runs on its triggers and dispatches its plans as normal.
+    description: >-
+      Hermes runs on its triggers and dispatches its plans as normal: at the boundary the study releases its holds on
+      the planner-owned tunables.
   - label: baseline
     name: Frozen baseline
     planner_mode: propose_only
     description: >-
-      At the boundary the planner-owned tunables are restored to the locked baseline vector. The planner still runs
-      and its plans are validated and stored (arm baseline, dispatched false) but never sent.
+      At the boundary the planner-owned tunables are held manual at the locked baseline vector. Hermes still runs
+      and its plans are stored, but a manual value wins over any plan, so none is sent.
 same_in_both_arms: [band, safety, manual_writes, irrigation, firmware]
 
 baseline_vector:
   fields: PLANNER_PUSHABLE_REG
   field_count: 48
   rule: >-
-    Per field, the median of the device-confirmed values over the 14 days before day 1, including the propose-only
-    output of a 7-day Cortex burn-in; the current readback where the planner never wrote the field.
+    Per field, the median of the device-confirmed plan values (Hermes) over the 14 days before pre-registration,
+    snapped to the registry grid; the newest readback where the planner never wrote the field.
   sha256: null
 
 schedule:
@@ -55,7 +63,9 @@ schedule:
   seed: null
   schedule_sha256: null
   boundary_confirm_minutes: 15
-  boundary_max_retries: 3
+  # The study writes each held value once per boundary; re-sending until the readback matches is the dispatcher's
+  # own loop (it also re-asserts every desired value after a controller reconnect), so the runner never retries.
+  boundary_max_retries: 0
   only_at_pair_boundaries: [firmware_ota, band_edit]
 
 # Metrics in the order the results show them. direction: higher (better), lower (better) or report (a cost or
@@ -227,21 +237,42 @@ stopping_rules:
     action: Pause and review.
   - id: boundary_unconfirmed
     rule: The boundary restore is not confirmed by readback within 15 minutes.
-    action: Record a deviation; retry at most 3 times; never loop.
+    action: >-
+      Record one deviation for the day, naming the fields; the dispatcher keeps re-sending on its own and the runner
+      never loops.
   - id: esp32_reboot
     rule: The controller reboots during a study day.
-    action: Re-assert the arm's vector after it reconnects and flag the day.
+    action: >-
+      The dispatcher re-asserts the held values after the controller reconnects; the reboot is recorded with the
+      day.
   - id: planner_failure
     rule: The planner fails on an ai day.
     action: The last plan stays in force; the day stays in the analysis, flagged.
   - id: operator_pause
     rule: Jason pauses the study.
-    action: Capability off until he resumes it; only an operator can.
+    action: >-
+      The holds are released at once and Hermes dispatches as normal until an operator resumes. A pair already under
+      way is void and runs again, in its own seeded order, from the next boundary after the resume.
 
 prerequisites:
-  - "#1350 cutover: the Cortex planner live, planner_inference_runs recording, a propose-only flag"
+  - "Pre-registration committed: baseline file, seed and schedule hash (scripts/planner-study-preregister.py)"
   - "#1358 / PR #1372 merged: served-band time in band"
   - "#1362 / PR #1369 merged: sign-corrected electric kWh"
   - "#1365 band revision landed, then frozen for the study"
-  - "#1366 pack exposes the winter levers and night VPD history"
+  - "#1434 VPD scoring baseline (dry-out minutes, night_dried_out, kWh) settled by its 2026-11-13 gate"
   - "experiment 45039c86 closed with its recorded reason"
+
+# Cortex shadow runs (planner_inference_runs, mode shadow) on both arms' days. Each cohort is a separate treatment and
+# is never pooled with another (Jason, 2026-11-07). cortex-1482's start is the first run of the #1482 image (repair
+# attempt with thinking off, max_tokens 24,000, deadline 900 s); until it is set here, runs after the #1482 merge
+# read unattributed.
+shadow_cohorts:
+  - id: cortex-pre-1482
+    label: Cortex shadow, before #1482
+    starts_at: null
+    note: max_tokens 12,000, repair attempt at reasoning_effort low, deadline 600 s.
+  - id: cortex-1482
+    label: Cortex shadow, #1482 settings
+    starts_at: null
+    not_before: "2026-11-07T14:46:00Z"
+    note: Repair attempt with thinking off, max_tokens 24,000, deadline 900 s (#1480, #1482).

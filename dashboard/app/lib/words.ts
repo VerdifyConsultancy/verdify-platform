@@ -69,6 +69,7 @@ const PROBLEM_CODE = {
   position_occupied: "Something is already planted there",
   ambiguous_position: "That place could mean more than one spot; be more specific",
   planting_ended: "That planting has already ended",
+  study_state: "The study cannot do that now",
 } as const satisfies Record<ProblemCode, string>;
 
 /** Every `LineState.code`: an irrigation line's state, with its reason beside it in words (`LineState.reason`). */
@@ -523,6 +524,12 @@ const ACTIVITY_ACTION = {
   "planting.note": "Noted on planting",
   "band.write": "Changed",
   "soil_target.write": "Changed soil target",
+  "study.start": "Started study",
+  "study.pause": "Paused study",
+  "study.resume": "Resumed study",
+  "study.stop": "Stopped study",
+  "study.boundary": "Study boundary",
+  "study.deviation": "Study deviation",
 } as const;
 
 /**

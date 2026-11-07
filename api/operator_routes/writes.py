@@ -1,5 +1,6 @@
 """The operator API's write routes: settings and alerts, API-10, API-11, API-15 and API-16 (#1150); the grow lights,
-API-20 (#1170); the band editor's Save, API-24 (#1334).
+API-20 (#1170); the band editor's Save, API-24 (#1334); the planner study's start, pause, resume and stop, API-28
+(#1360), whose boundaries ``planner_study_runner`` applies.
 
 Each settings and alert route runs one ``verdify_services`` call, which commits the domain row and its ``activity_log``
 row in one transaction: a ``desired_state`` row, plus the ``crop_band_anchors`` rows of a crop-band setting, or the
@@ -20,7 +21,8 @@ operator API never reads ``DASHBOARD_WRITES_ENABLED``, which gates only the BFF.
 from __future__ import annotations
 
 import re
-from typing import Annotated
+from datetime import date
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Query, Request
@@ -30,7 +32,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat
 from operator_routes import light_resync, setpoint_server
 from operator_routes.reads import Connection
 from verdify_schemas.activity import REASON_MAX_LENGTH
-from verdify_services import alerts, band_profile, lights, settings, soil
+from verdify_services import alerts, band_profile, lights, planner_study, settings, soil
 from verdify_services.activity import WriteResult
 from verdify_services.problems import ServiceError, problem
 
@@ -125,9 +127,19 @@ class LightSwitch(BaseModel):
     minutes: int = Field(default=lights.MANUAL_MINUTES, ge=1, le=lights.MAX_MANUAL_MINUTES, strict=True)
 
 
+class StudyControl(BaseModel):
+    """API-28's body: the reason, and the first study day for ``start`` (its 11:00 boundary must be ahead)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    first_day: date | None = None
+    reason: str = Field(default=None, max_length=REASON_MAX_LENGTH)
+
+
 NO_NOTE = AlertAck()
 NO_RESOLUTION = AlertResolve()
 NO_REASON = LightSwitch()
+NO_STUDY_REASON = StudyControl()
 
 
 def _answer(result: WriteResult) -> JSONResponse:
@@ -233,3 +245,25 @@ async def switch_light(
             result = await setpoint_server.switch(request.app.state.settings.setpoint_server_url, light, state)
             written = await lights.record(conn, actor, light, state, result, body.reason, key, minutes=body.minutes)
     return _light_answer(request, written)
+
+
+@router.post(
+    "/planner/experiments/{id}/{action}",
+    operation_id="API-28",
+    tags=["planner"],
+    response_model=planner_study.StudyRun,
+)
+async def control_study(
+    key: IdempotencyKey,
+    conn: Connection,
+    request: Request,
+    id: str,  # noqa: A002 - the path key, as API-27's
+    action: Literal["start", "pause", "resume", "stop"],
+    body: StudyControl = NO_STUDY_REASON,
+) -> JSONResponse:
+    """Start, pause, resume or stop a defined study's run (#1360): one ``study.<action>`` activity row after the
+    action's checks. The operator API's study runner holds or releases the planner settings within a minute."""
+    written = await planner_study.control(
+        conn, request.state.actor, id, action, first_day=body.first_day, reason=body.reason, request_id=key
+    )
+    return _answer(written)

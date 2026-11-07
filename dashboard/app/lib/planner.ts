@@ -127,3 +127,34 @@ export function ciDomain(metric: MetricResult, margin: number | null = null): nu
   const widest = Math.max(0, ...ends.map(Math.abs));
   return widest > 0 ? widest * 1.15 : 1;
 }
+
+// ---------------------------------------------------------------------------------------------------- the study's run (#1360)
+/** The planner settings a baseline day holds manual at the committed baseline vector. */
+export const STUDY_SETTINGS = 48;
+export const RUN_STATUS_WORDS: Readonly<Record<string, string>> = {
+  scheduled: "Scheduled", running: "Running", paused: "Paused", finished: "Finished", stopped: "Stopped",
+};
+export type StudyVerb = "start" | "pause" | "resume" | "stop";
+/** The controls a run's status admits: none or ended, Start; scheduled or running, Pause and Stop; paused, Resume and Stop. */
+export function runActions(status: string | null | undefined): StudyVerb[] {
+  if (status === "scheduled" || status === "running") return ["pause", "stop"];
+  if (status === "paused") return ["resume", "stop"];
+  return ["start"];
+}
+export const VERB_WORDS: Readonly<Record<StudyVerb, string>> = { start: "Start", pause: "Pause", resume: "Resume", stop: "Stop" };
+const PLANNER_NAMES: Readonly<Record<string, string>> = { hermes: "Hermes", cortex: "Cortex planner" };
+export const plannerName = (planner: string) => PLANNER_NAMES[planner] ?? planner;
+/** A calendar day's events in words; boundary_confirmed is the normal case and says nothing. */
+const DAY_EVENT_WORDS: Readonly<Record<string, string | null>> = {
+  boundary_confirmed: null, boundary_unconfirmed: "boundary not confirmed", held_by_other: "a setting held by someone else", paused: "paused", stopped: "stopped",
+};
+export function dayEventWords(events: readonly string[]): string[] {
+  return events.map((event) => (event in DAY_EVENT_WORDS ? DAY_EVENT_WORDS[event] : event.replaceAll("_", " "))).filter((word): word is string => Boolean(word));
+}
+/** A calendar status beyond scheduled, active and done, in words: a void pair runs again, a cancelled day never runs. */
+export const DAY_STATUS_WORDS: Readonly<Record<string, string>> = { void: "void, runs again", cancelled: "cancelled", excluded: "excluded" };
+/** The ids, `order` first, that carry a number in at least one row: the live values, not the climate ones still null. */
+export function filledIds(order: readonly string[], rows: readonly Readonly<Record<string, number | null>>[]): string[] {
+  const seen = new Set(rows.flatMap((row) => Object.keys(row).filter((id) => row[id] != null)));
+  return [...order.filter((id) => seen.has(id)), ...[...seen].filter((id) => !order.includes(id)).sort()];
+}

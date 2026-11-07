@@ -6,26 +6,35 @@ docs/research/w5/planner-ab.md. ``PlannerStudy`` checks it: exactly the two arms
 planned pair count, and heat reported but never scored (electric heat1 is the primary heater, Jason 2026-11-05).
 ``definition_sha256`` is the canonical hash the orchestrator records when it registers the study, and ``load_study``
 the one loader the orchestrator and the operator API (API-26/24) share.
+
+Jason, 2026-11-07: the study resumes with Hermes as the AI arm (``ai_planner``), and the dashboard starts, pauses,
+resumes and stops it (docs/design/dashboard/planner-study.md). The arm order is a pure function of the committed seed
+(``arm_order``, hashed by ``schedule_sha256``), and the baseline vector is one committed JSON file per study
+(``planner_study_baselines/<study_id>.json``, hashed by ``baseline_sha256``). ``shadow_cohorts`` keeps the Cortex
+shadow runs before and after #1482 apart: they are different treatments and are never pooled.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
-from datetime import time
+from datetime import datetime, time
 from functools import cache
 from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from verdify_schemas.tunable_registry import PLANNER_PUSHABLE_REG
 
 STUDY_DIR = Path(__file__).parent
 STUDY_FILES: dict[str, str] = {"planner-ab-winter-2026": "planner_ab_winter_2026.yaml"}
+BASELINE_DIR = STUDY_DIR / "planner_study_baselines"
+ARMS = ("ai", "baseline")
 SHA256 = r"^[0-9a-f]{64}$"
 # A heat metric is a cost: reported with its CI, never scored as better or worse.
 HEAT_METRICS = re.compile(r"^(heat|electric|thermal|therms)")
@@ -77,6 +86,19 @@ class Schedule(_Model):
     only_at_pair_boundaries: list[str]
 
 
+class ShadowCohort(_Model):
+    """A Cortex shadow treatment: the runs from ``starts_at`` until the next cohort starts. Each cohort is its own
+    treatment and is never pooled with another (Jason, 2026-11-07, #1482). The first cohort's ``starts_at`` may be
+    null (from the first run). A later cohort's ``starts_at`` is null until its rollout time is known; meanwhile
+    every run at or after its ``not_before`` reads ``unattributed`` rather than joining the cohort before it."""
+
+    id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{2,62}$")
+    label: str
+    starts_at: AwareDatetime | None
+    not_before: AwareDatetime | None = None
+    note: str
+
+
 class Metric(_Model):
     id: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
     label: str
@@ -126,6 +148,7 @@ class PlannerStudy(_Model):
     title: str
     question: str
     status: Literal["defined"]
+    ai_planner: Literal["hermes"]
     issues: list[str]
     research: str
     supersedes: list[Superseded]
@@ -139,6 +162,7 @@ class PlannerStudy(_Model):
     analysis: Analysis
     stopping_rules: list[StoppingRule] = Field(min_length=1)
     prerequisites: list[str]
+    shadow_cohorts: list[ShadowCohort] = Field(min_length=1)
 
     @model_validator(mode="after")
     def _design(self) -> PlannerStudy:
@@ -159,6 +183,14 @@ class PlannerStudy(_Model):
             raise ValueError("only the last look is final")
         if set(self.covariates) & set(ids):
             raise ValueError("a covariate is never an outcome")
+        if self.schedule.seed is not None and self.schedule.schedule_sha256 is not None:
+            if schedule_sha256(self.schedule.seed, self.schedule.pairs) != self.schedule.schedule_sha256:
+                raise ValueError("schedule_sha256 is not the hash of the seed's arm order")
+        starts = [cohort.starts_at for cohort in self.shadow_cohorts if cohort.starts_at is not None]
+        if starts != sorted(starts) or len({cohort.id for cohort in self.shadow_cohorts}) != len(self.shadow_cohorts):
+            raise ValueError("shadow cohorts have unique ids and start in order")
+        if any(cohort.starts_at is None and cohort.not_before is None for cohort in self.shadow_cohorts[1:]):
+            raise ValueError("a later shadow cohort without its start time needs not_before")
         return self
 
     @property
@@ -174,9 +206,81 @@ class PlannerStudy(_Model):
         """The seed, schedule hash and baseline hash are committed: day 1 may start."""
         return None not in (self.schedule.seed, self.schedule.schedule_sha256, self.baseline_vector.sha256)
 
+    def arm_order(self) -> list[tuple[str, str]]:
+        """The committed seed's arm order, one (first, second) per pair; ValueError before pre-registration."""
+        if self.schedule.seed is None:
+            raise ValueError(f"{self.study_id} has no committed seed")
+        return arm_order(self.schedule.seed, self.schedule.pairs)
+
     def definition_sha256(self) -> str:
         canonical = json.dumps(self.model_dump(mode="json"), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
         return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def arm_order(seed: int, pairs: int) -> list[tuple[str, str]]:
+    """``seeded_coin_flip_within_adjacent_pair``: pair i is (ai, baseline) when the low bit of
+    sha256("<seed>:<i>")'s first byte is 0, else (baseline, ai). Pure, so the order never depends on when a
+    pair runs: a pause or resume moves its dates, never its arms."""
+    order = []
+    for index in range(pairs):
+        flip = hashlib.sha256(f"{seed}:{index}".encode()).digest()[0] & 1
+        order.append(ARMS if flip == 0 else (ARMS[1], ARMS[0]))
+    return order
+
+
+def schedule_sha256(seed: int, pairs: int) -> str:
+    """The hash committed with the seed: canonical JSON of the seed, the pair count and the arm order."""
+    body = {"seed": seed, "pairs": pairs, "order": [list(pair) for pair in arm_order(seed, pairs)]}
+    return hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def baseline_sha256(values: dict[str, float]) -> str:
+    """The hash committed as ``baseline_vector.sha256``: canonical JSON of {field: value}, sorted by field."""
+    if set(values) != set(PLANNER_PUSHABLE_REG):
+        missing, extra = (
+            sorted(set(PLANNER_PUSHABLE_REG) - set(values)),
+            sorted(set(values) - set(PLANNER_PUSHABLE_REG)),
+        )
+        raise ValueError(f"the baseline names every planner-pushable field once (missing {missing}, extra {extra})")
+    for name, value in values.items():
+        if not isinstance(value, int | float) or isinstance(value, bool) or not math.isfinite(value):
+            raise ValueError(f"{name}: the baseline value must be a finite number")
+    canonical = json.dumps({name: float(values[name]) for name in sorted(values)}, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def load_baseline(study: PlannerStudy) -> dict[str, float]:
+    """The committed baseline vector of a pre-registered study; ValueError when it is missing or does not hash to
+    ``baseline_vector.sha256``."""
+    if study.baseline_vector.sha256 is None:
+        raise ValueError(f"{study.study_id} has no committed baseline hash")
+    path = BASELINE_DIR / f"{study.study_id}.json"
+    try:
+        document = json.loads(path.read_text())
+    except (OSError, ValueError) as failure:
+        raise ValueError(f"{study.study_id}: the baseline file is missing or unreadable") from failure
+    values = document.get("values") if isinstance(document, dict) else None
+    if not isinstance(values, dict):
+        raise ValueError(f"{study.study_id}: the baseline file has no values object")
+    if baseline_sha256(values) != study.baseline_vector.sha256:
+        raise ValueError(f"{study.study_id}: the baseline file does not hash to baseline_vector.sha256")
+    return {name: float(value) for name, value in values.items()}
+
+
+def cohort_of(study: PlannerStudy, started_at: datetime) -> str:
+    """The shadow cohort a Cortex run started at ``started_at`` belongs to; ``unattributed`` when a later cohort's
+    start is not set yet and the run is at or after its ``not_before``, or before the first cohort."""
+    first = study.shadow_cohorts[0]
+    if first.starts_at is not None and started_at < first.starts_at:
+        return "unattributed"
+    current = first.id
+    for cohort in study.shadow_cohorts[1:]:
+        if cohort.starts_at is not None:
+            if started_at >= cohort.starts_at:
+                current = cohort.id
+        elif cohort.not_before is not None and started_at >= cohort.not_before:
+            return "unattributed"
+    return current
 
 
 def parse_study(text: str) -> PlannerStudy:

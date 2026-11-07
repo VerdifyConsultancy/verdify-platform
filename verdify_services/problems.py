@@ -42,6 +42,7 @@ ProblemCode = Literal[
     "position_occupied",
     "ambiguous_position",
     "planting_ended",
+    "study_state",
 ]
 PROBLEM_CODES: tuple[str, ...] = get_args(ProblemCode)
 

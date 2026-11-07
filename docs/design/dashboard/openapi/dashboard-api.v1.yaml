@@ -27,7 +27,7 @@ info:
 
     | Topic | Rule |
     |---|---|
-    | Ids | `operationId` is the design id: API-01 to API-27, API-IRR-01 to API-IRR-13, API-CROP-01 to API-CROP-11, BFF-01 to BFF-03, INT-01, INT-02, OPS-01, OPS-02 and OPS-04. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
+    | Ids | `operationId` is the design id: API-01 to API-28, API-IRR-01 to API-IRR-13, API-CROP-01 to API-CROP-11, BFF-01 to BFF-03, INT-01, INT-02, OPS-01, OPS-02 and OPS-04. API-08, API-18, API-IRR-09 and OPS-03 are reserved (cut); ids are never reused |
     | Data | JSON. Times are ISO 8601 with an offset; days are America/Denver. Units are in field names or `unit` (°F, %, kPa, gal, min, s). `null` means unavailable, never 0; gaps stay gaps |
     | Roles | GET: `viewer` and `operator`. Every other method: `operator` (403 `forbidden`) |
     | Writes | Validated on submit (registry min/max, enums, step snap). The newest write wins. On a `manual: true` item the dispatcher ignores Iris's plan values (`set_plan` and `set_tunable` are unchanged) and Iris's `set_setting` and irrigation writes are refused with `manual`; people and other agents may overwrite it, attributed, and each write stores the `manual` it carries. Every write appends one `activity_log` row: source (`dashboard`, `iris`, `agent:<name>` or `system`), actor, time, reason, and the experiment id while one is armed. Nothing is refused because an experiment is armed |
@@ -597,6 +597,34 @@ paths:
         - {name: id, in: path, required: true, schema: {type: string}, description: 'An experiment id (uuid) or a study id'}
       responses:
         '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ExperimentDetail'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+  /v1/planner/experiments/{id}/{action}:
+    post:
+      operationId: API-28
+      tags: [planner]
+      summary: Start, pause, resume or stop a defined study's run (#1360)
+      description: >-
+        Operators only. One activity_log row, action study.<action>, target the study id, detail {ref, run_id} (start
+        adds first_day, pairs, seed, schedule_sha256, baseline_sha256, definition_sha256 and ai_planner). The operator
+        API's study runner applies it within a minute: on a baseline day it holds the 48 planner settings manual at
+        the committed baseline vector (desired state, as system:planner_study), so Hermes's plans are stored and not
+        sent; on an AI day, while paused or stopped, and after the last day it releases its own holds. start needs a
+        pre-registered definition whose baseline file matches its hash, no run scheduled, running or paused, a
+        first_day whose boundary is ahead, and none of the 48 settings held manual by anyone (study_state, naming them).
+        pause needs a scheduled or running run; a pair under way is void and runs again after resume, which starts
+        the remaining pairs at the next boundary. stop releases the holds and ends the run. Codes: study_state (the
+        action does not apply now, the study is not pre-registered, or a planner setting is held manual), invalid_request, not_found,
+        request_id_reused.
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, examples: [planner-ab-winter-2026]}, description: The study id}
+        - {name: action, in: path, required: true, schema: {type: string, enum: [start, pause, resume, stop]}}
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content: {application/json: {schema: {$ref: '#/components/schemas/StudyControl'}}}
+      responses:
+        '200': {description: 'Recorded', content: {application/json: {schema: {$ref: '#/components/schemas/StudyRun'}}}}
+        '422': {$ref: '#/components/responses/Invalid'}
         default: {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- irrigation (irrigation.md §8.1)
@@ -1194,11 +1222,12 @@ components:
       type: string
       description: >-
         Stable codes shared with MCP (architecture §5.3, irrigation §4.3 and §4.7). manual is for Iris only.
-        position_occupied, ambiguous_position and planting_ended are the plantings' refusals (API-CROP-06 to -11)
+        position_occupied, ambiguous_position and planting_ended are the plantings' refusals (API-CROP-06 to -11);
+        study_state is the planner study's (API-28)
       enum: [invalid_request, unauthenticated, forbidden, origin_mismatch, not_found, writes_disabled, query_timeout,
         unavailable, window_too_large, unknown_target, read_only, out_of_range, manual, request_id_reused,
         check_required, too_close, too_many_schedules, line_disabled, line_paused, line_faulted, not_schedule_member,
-        line_busy, manifold_busy, cap_reached, position_occupied, ambiguous_position, planting_ended]
+        line_busy, manifold_busy, cap_reached, position_occupied, ambiguous_position, planting_ended, study_state]
     Actor:
       type: object
       description: 'Who wrote (R4). system is the platform itself, for example the forecast action engine'
@@ -2646,13 +2675,25 @@ components:
     ExperimentDetail:
       type: object
       description: 'API-27: one study'
-      required: [experiment, definition, calendar, next_boundary, results, outcomes]
+      required: [experiment, definition, run, calendar, next_boundary, results, outcomes, arms, cost]
       properties:
         experiment: {$ref: '#/components/schemas/ExperimentSummary'}
         definition: {anyOf: [{$ref: '#/components/schemas/StudyDefinition'}, {type: 'null'}], description: 'Null for a record with no committed definition'}
+        run: {anyOf: [{$ref: '#/components/schemas/StudyRun'}, {type: 'null'}], description: 'The newest run of a defined study (API-28); null before the first start and for an experiment record'}
+        arms:
+          type: array
+          description: 'Per arm, over its finished days: the mean of each live value. Not the frozen analysis'
+          items: {$ref: '#/components/schemas/ArmSummary'}
+        cost:
+          type: array
+          description: "Per arm, over its started days: the AI planner's plans and plan changes sent, and the Cortex shadow runs by cohort (never pooled)"
+          items: {$ref: '#/components/schemas/ArmCost'}
         calendar:
           type: array
-          description: One cell per assigned study day, oldest first
+          description: >-
+            One cell per assigned study day, oldest first. For a run: status scheduled, active, done, void (a pair a
+            pause or stop interrupted) or cancelled; events boundary_confirmed or boundary_unconfirmed, the deviation
+            reasons (held_by_other, boundary_unconfirmed) and paused or stopped for a void day
           items:
             type: object
             required: [date, pair_index, arm, status, starts_at, ends_at, deviations, events]
@@ -2669,7 +2710,9 @@ components:
         results: {$ref: '#/components/schemas/StudyResults'}
         outcomes:
           type: array
-          description: 'One row per study day from the frozen outcomes; a metric that could not be computed is null'
+          description: >-
+            One row per finished study day. Until the frozen outcomes exist these are the run's live values (equipment
+            minutes, required plans written); a metric that is not computed yet (the climate ones) is null
           items:
             type: object
             required: [date, arm, deviation, values, covariates]
@@ -2679,6 +2722,80 @@ components:
               deviation: {type: boolean}
               values: {type: object, additionalProperties: {type: [number, 'null']}}
               covariates: {type: object, additionalProperties: {type: [number, 'null']}}
+    StudyControl:
+      type: object
+      additionalProperties: false
+      description: "API-28's body: first_day goes with start only"
+      properties:
+        first_day: {type: [string, 'null'], format: date, description: 'start: the first study day (America/Denver); its boundary must be ahead'}
+        reason: {type: string, maxLength: 500}
+    StudyRun:
+      type: object
+      description: "A defined study's newest run, from its study.* activity rows and the committed seed"
+      required: [study_id, run_id, status, ai_planner, started_at, started_by, first_day, pairs, pairs_done, pairs_left, seed, schedule_sha256, baseline_sha256, paused_at, stopped_at, stop_reason, arm_now, day_now, next_boundary, holds_in_force, held_by_others, last_boundary, deviations]
+      properties:
+        study_id: {type: string}
+        run_id: {type: string, format: uuid}
+        status: {type: string, enum: [scheduled, running, paused, finished, stopped]}
+        ai_planner: {type: string, examples: [hermes]}
+        started_at: {type: string, format: date-time}
+        started_by: {type: string}
+        first_day: {type: string, format: date}
+        pairs: {type: integer}
+        pairs_done: {type: integer}
+        pairs_left: {type: integer}
+        seed: {type: integer}
+        schedule_sha256: {type: string}
+        baseline_sha256: {type: string}
+        paused_at: {type: [string, 'null'], format: date-time}
+        stopped_at: {type: [string, 'null'], format: date-time}
+        stop_reason: {type: [string, 'null']}
+        arm_now: {type: [string, 'null'], description: 'ai or baseline while a study day is in force'}
+        day_now: {type: [string, 'null'], format: date}
+        next_boundary: {type: [string, 'null'], format: date-time}
+        holds_in_force: {type: integer, description: 'Planner settings the study holds manual now (48 on a settled baseline day)'}
+        held_by_others: {type: array, items: {type: string}, description: 'Planner settings someone else holds manual now'}
+        last_boundary:
+          anyOf:
+            - type: object
+              required: [date, arm, result, at, unconfirmed]
+              properties:
+                date: {type: string, format: date}
+                arm: {type: string}
+                result: {type: string, enum: [confirmed, unconfirmed]}
+                at: {type: string, format: date-time}
+                unconfirmed: {type: array, items: {type: string}}
+            - {type: 'null'}
+        deviations: {type: integer}
+    ArmSummary:
+      type: object
+      required: [arm, days_done, deviation_days, means]
+      properties:
+        arm: {type: string}
+        days_done: {type: integer}
+        deviation_days: {type: integer}
+        means: {type: object, additionalProperties: {type: [number, 'null']}}
+    ArmCost:
+      type: object
+      required: [arm, days, planner, plans_written, plan_changes_sent, shadow]
+      properties:
+        arm: {type: string}
+        days: {type: integer}
+        planner: {type: string, description: 'The AI arm planner (Hermes); it records no per-call tokens'}
+        plans_written: {type: integer}
+        plan_changes_sent: {type: integer, description: "setpoint_changes with source plan; near 0 on baseline days"}
+        shadow:
+          type: array
+          items:
+            type: object
+            required: [cohort, calls, ok, input_tokens, output_tokens, energy_wh]
+            properties:
+              cohort: {type: string, examples: [cortex-1482]}
+              calls: {type: integer}
+              ok: {type: integer}
+              input_tokens: {type: integer}
+              output_tokens: {type: integer}
+              energy_wh: {type: [number, 'null']}
     StudyDefinition:
       type: object
       description: The committed, reviewed study design (verdify_schemas/planner_ab_winter_2026.yaml)
