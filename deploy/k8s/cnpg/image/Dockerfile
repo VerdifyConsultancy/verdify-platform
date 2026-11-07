@@ -116,7 +116,7 @@ USER 26
 
 ARG GIT_SHA=unknown
 
-LABEL org.opencontainers.image.source="https://github.com/VerdifyConsultancy/verdify-platform" \
+LABEL org.opencontainers.image.source="https://github.com/jvallery/verdify-platform" \
       org.opencontainers.image.revision="${GIT_SHA}" \
       io.verdify.pgvector.version="${PGVECTOR_VERSION}" \
       org.opencontainers.image.title="verdify-timescaledb-cnpg" \

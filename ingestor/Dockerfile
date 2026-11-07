@@ -113,7 +113,7 @@ ENV VERDIFY_GIT_SHA=$GIT_SHA \
     VERDIFY_BUILD_TIME=$BUILD_TIME \
     VERDIFY_GIT_REF=$GIT_REF
 # Reserved revision/created OCI labels are supplied by the managed builder.
-LABEL org.opencontainers.image.source="https://github.com/VerdifyConsultancy/verdify-platform" \
+LABEL org.opencontainers.image.source="https://github.com/jvallery/verdify-platform" \
       org.opencontainers.image.title="verdify-ingestor"
 
 # Connect-out worker: NO EXPOSE, NO inbound port. Liveness in k3s is a process

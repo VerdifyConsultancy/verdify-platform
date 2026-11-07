@@ -120,7 +120,7 @@ ENV VERDIFY_GIT_SHA=$GIT_SHA \
 # The managed Kaniko invocation owns the reserved revision/created OCI labels.
 # Re-declaring them from defaulted ARGs here overwrote truthful values with
 # "unknown" when the shared template omitted build arguments.
-LABEL org.opencontainers.image.source="https://github.com/VerdifyConsultancy/verdify-platform" \
+LABEL org.opencontainers.image.source="https://github.com/jvallery/verdify-platform" \
       org.opencontainers.image.title="verdify-api"
 
 # Container port 8080 (the compose api port). The deployment makes this

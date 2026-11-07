@@ -87,5 +87,5 @@ COPY --from=source-metadata /out/source-revision /etc/verdify/source-revision
 # The managed Kaniko invocation sets the revision and created OCI labels. There
 # is no ENV, USER or WORKDIR: the validate step runs as root in the base's
 # environment.
-LABEL org.opencontainers.image.source="https://github.com/VerdifyConsultancy/verdify-platform" \
+LABEL org.opencontainers.image.source="https://github.com/jvallery/verdify-platform" \
       org.opencontainers.image.title="verdify-ci-validate"

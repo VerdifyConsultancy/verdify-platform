@@ -23,7 +23,7 @@
 #     workflowTemplateRef: {name: repo-build}
 #     arguments:
 #       parameters:
-#         - {name: repo, value: https://github.com/VerdifyConsultancy/verdify-platform.git}
+#         - {name: repo, value: https://github.com/jvallery/verdify-platform.git}
 #         - {name: revision, value: <exact main sha>}
 #         - {name: dockerfile, value: twin/Dockerfile}
 #         - {name: context, value: "."}
@@ -95,7 +95,7 @@ spec:
                 - -ceu
                 - |
                   git clone --filter=blob:none \
-                    https://github.com/VerdifyConsultancy/verdify-platform.git /workspace/src
+                    https://github.com/jvallery/verdify-platform.git /workspace/src
                   cd /workspace/src
                   git checkout -q "${TWIN_BUILD_REVISION}"
                   echo "checked out $(git rev-parse HEAD)"

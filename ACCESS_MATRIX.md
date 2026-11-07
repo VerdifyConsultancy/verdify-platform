@@ -14,7 +14,7 @@ does not include raw secret values.
 
 | Resource | Current access | Required access | Scope | Owner | Status |
 |---|---|---|---|---|---|
-| `VerdifyConsultancy/verdify-platform` checkout | Local read/write | Read/write repo files | Single repo | Verdify repo admins | Granted locally |
+| `jvallery/verdify-platform` checkout | Local read/write | Read/write repo files | Single repo | Verdify repo admins | Granted locally |
 | GitHub issues/PRs | Repo pods: GitHub App installation token; operator Mac: `gh` keyring login | Repo-scoped issue/PR read/write | Single repo | Verdify repo admins | Available |
 | In-cluster CI/publishing | Argo Events/Workflows + Kaniko; exact revisions publish to Zot | Submit/observe validated repo-build workflows; no GitHub Actions publishing | `agent-fleet-ci` / repo scope | Agent Fleet + repo owners | Available through the fixed pipeline |
 | Zot application images | `registry.vallery.net` digest pins; in-cluster origin push | Resolve/pin immutable digests through CI | Verdify image namespace | Agent Fleet / registry owners | CI-owned |

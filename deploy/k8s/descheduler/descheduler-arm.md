@@ -32,7 +32,7 @@ Do not relabel product workloads or force an eviction to prove adoption.
 
 ## Source and ownership boundary
 
-`VerdifyConsultancy/verdify-platform/deploy/k8s/descheduler` renders eight objects:
+`jvallery/verdify-platform/deploy/k8s/descheduler` renders eight objects:
 
 | Kind | Name | Namespace |
 | --- | --- | --- |

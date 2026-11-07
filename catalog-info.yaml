@@ -20,7 +20,7 @@ metadata:
     FastAPI api, MCP planner tool surface, ingestor + setpoint dispatcher,
     TimescaleDB, and supporting site/grafana/traefik/mqtt services.
   annotations:
-    github.com/project-slug: VerdifyConsultancy/verdify-platform
+    github.com/project-slug: jvallery/verdify-platform
     backstage.io/techdocs-ref: dir:.
     agent-fleet.vallery.net/golden-path-type: app
     agent-fleet.vallery.net/framework: python

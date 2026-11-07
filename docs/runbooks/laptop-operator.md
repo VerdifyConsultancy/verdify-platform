@@ -106,7 +106,7 @@ preflight.
   Stop if the precondition or resourceVersion test fails; inspect the current
   operation before submitting another one. The current Application CRD has no
   status subresource, so status clearing and submission share the atomic patch.
-  A prior selective operation can leak its resource scope ([#317](https://github.com/VerdifyConsultancy/verdify-platform/issues/317),
+  A prior selective operation can leak its resource scope ([#317](https://github.com/jvallery/verdify-platform/issues/317),
   [upstream #28701](https://github.com/argoproj/argo-cd/issues/28701)). A separate
   observed failure on 2026-10-02 also reused stale `syncResult` after a prior full
   operation: it reported Succeeded/126 resources at the intended new revision,

@@ -281,7 +281,7 @@ and #322/#339 (retired-VM doc/test cleanup).
   command reference; **commands are kubectl-host-portable** despite the title),
   `prod-promotion.md`, `verdify-firmware-safe-iteration-loop.md`,
   `verdify-secret-sealing-plan.md`.
-- Tracker: GitHub issues on `VerdifyConsultancy/verdify-platform`.
+- Tracker: GitHub issues on `jvallery/verdify-platform`.
 
 ---
 
