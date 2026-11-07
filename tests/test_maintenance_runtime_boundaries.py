@@ -373,9 +373,13 @@ def test_maintenance_hook_and_sibling_import_are_actual_migrate_copy_inputs():
     )
     container = hook["spec"]["template"]["spec"]["containers"][0]
     assert container["image"].endswith("/verdify-migrate")
-    images = yaml.safe_load((ROOT / ".agent-fleet/ci.yaml").read_text())["images"]
-    image = next(i for i in images if i["name"] == "verdify-migrate")
-    assert image["context"] == "."
+    # #1397 step 5: .github/workflows/build.yml is the only image list; its builds use the
+    # repository root as context.
+    jobs = yaml.safe_load((ROOT / ".github/workflows/build.yml").read_text())["jobs"]
+    image = next(
+        j["with"] for j in jobs.values() if j.get("with", {}).get("image") == "verdifyconsultancy/verdify-migrate"
+    )
+    assert "context" not in image
     copied = maintenance_image_scripts((ROOT / image["dockerfile"]).read_text())
     required = {
         container["command"][1]: "scripts/bootstrap-maintenance-runtime-roles.py",

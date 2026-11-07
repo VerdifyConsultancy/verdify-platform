@@ -15,7 +15,7 @@
 # tar). Change it only together with that template;
 # tests/test_ci_validate_dockerfile.py keeps the two in step.
 #
-# Build: this image is not in .agent-fleet/ci.yaml, so a merge does not build
+# Build: this image is not in .github/workflows/build.yml, so a merge does not build
 # it. Submit a repo-build-verdifyconsultancy Workflow (dockerfile
 # ci/validate.Dockerfile, image verdifyconsultancy/verdify-ci-validate); see
 # docs/runbooks/prod-promotion.md. Kaniko and BuildKit read

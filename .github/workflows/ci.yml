@@ -62,7 +62,7 @@ jobs:
       in-job-image: true
       timeout-minutes: 90
 
-  # The five checks.steps of the native repo-validate profile (.agent-fleet/ci.yaml).
+  # The five validation steps from the retired native repo-validate profile (ci/gha/registry-step.sh).
   platform-static:
     name: ci
     needs: [trusted-precheck, path-impact]

@@ -28,6 +28,9 @@ PROFILES = {
     # jvallery/agents#5994: the dashboard.verdify.ai web tier. Its Dockerfile copies only
     # dashboard/ paths, and no Python image copies dashboard/.
     "dashboard-web": "dashboard/Dockerfile",
+    # #1113: the derived renderer (upstream image plus Debian's chromium fix). It copies
+    # nothing from the repository, so only a change to its Dockerfile builds it.
+    "grafana-image-renderer": "grafana/Dockerfile.image-renderer",
 }
 # jvallery/agents#5994: check flags beside the profile flags. They select the PR
 # checks that run on the exact checkout, not image builds; every fallback sets both.

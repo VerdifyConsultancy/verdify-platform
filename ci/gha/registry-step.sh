@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# GHA registry steps: the five checks.steps of .agent-fleet/ci.yaml (the native
-# repo-validate profile from the jvallery/agents registry record), one per job.
-# Commands are copied unchanged from that file; keep them in step with it until
-# .agent-fleet/ci.yaml is removed (#1397 step 5), then this script is the source.
+# GHA registry steps: the five validation steps that came from the native
+# repo-validate profile in the jvallery/agents registry record, one per job.
+# Since #1397 step 5 removed .agent-fleet/ci.yaml and gated the native record,
+# this script is the only source of these commands.
 #
 #   ci/gha/registry-step.sh platform-static|platform-tests|campaign-qualification
 #                           |firmware-logic|firmware-secretless-compile
@@ -18,7 +18,7 @@ case "$step" in
     ;;
   platform-tests)
     ci_require_runner_tools  # two tests run `kustomize build`
-    export PYTHONPATH="$PWD" && uv sync --python 3.12 --extra dev --extra api --extra planner --extra planner-graph && uv pip install --python .venv/bin/python -r ingestor/requirements-image.txt && uv run pytest -q verdify_schemas/tests/ --ignore=verdify_schemas/tests/test_climate_intent.py --ignore=verdify_schemas/tests/test_drift_guards.py --ignore=verdify_schemas/tests/test_mcp_responses.py --ignore=verdify_schemas/tests/test_relationships.py --ignore=verdify_schemas/tests/test_tunables.py --ignore=verdify_schemas/tests/test_vault_writers.py --ignore=verdify_schemas/tests/test_views.py && uv run pytest -q tests/test_device_write_gate.py tests/test_migration_rollback_safety.py tests/test_14_site_doctor.py tests/test_climate_intent_replay_evaluator.py tests/test_g5_dualwrite_validation.py tests/test_generate_daily_plan.py tests/test_lab_generator_standardization.py tests/test_lab_publish_k3s_guard.py tests/test_mqtt_fanout.py tests/test_planner_memory_ingest.py tests/test_site_content_refresh.py tests/test_slack_config.py tests/test_slack_ops.py tests/test_soil_dryout_alert.py tests/test_tempest_sync.py tests/test_writer_lease_fence.py tests/test_component_grid_capture.py tests/test_component_prefix_replay.py
+    export PYTHONPATH="$PWD" && uv sync --python 3.12 --extra dev --extra api --extra planner --extra planner-graph && uv pip install --python .venv/bin/python -r ingestor/requirements-image.txt && uv run pytest -q verdify_schemas/tests/ --ignore=verdify_schemas/tests/test_climate_intent.py --ignore=verdify_schemas/tests/test_drift_guards.py --ignore=verdify_schemas/tests/test_mcp_responses.py --ignore=verdify_schemas/tests/test_relationships.py --ignore=verdify_schemas/tests/test_tunables.py --ignore=verdify_schemas/tests/test_vault_writers.py --ignore=verdify_schemas/tests/test_views.py && uv run pytest -q tests/test_device_write_gate.py tests/test_migration_rollback_safety.py tests/test_14_site_doctor.py tests/test_climate_intent_replay_evaluator.py tests/test_g5_dualwrite_validation.py tests/test_generate_daily_plan.py tests/test_lab_generator_standardization.py tests/test_lab_publish_k3s_guard.py tests/test_mqtt_fanout.py tests/test_planner_memory_ingest.py tests/test_site_content_refresh.py tests/test_slack_config.py tests/test_slack_ops.py tests/test_soil_dryout_alert.py tests/test_tempest_sync.py tests/test_writer_lease_fence.py tests/test_component_grid_capture.py tests/test_component_prefix_replay.py tests/test_gha_firmware_secretless_compile.py
     ;;
   campaign-qualification)
     # The native report path (/workspace) does not exist on ARC; keep it private.
