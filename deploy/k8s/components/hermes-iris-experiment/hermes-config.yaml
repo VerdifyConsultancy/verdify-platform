@@ -74,7 +74,7 @@ data:
       # generous live-profile turn budget still applies as a loop fence.
       max_turns: 30
       # Same hermes-side capability lockdown as the live profile: no memory,
-      # web, terminal, filesystem, browser or messaging (no chat, #1352) — every
+      # web, terminal, filesystem, browser or messaging (no Slack, #1352) — every
       # read/write goes through the MCP allowlist below.
       disabled_toolsets:
         - memory
