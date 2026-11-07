@@ -44,5 +44,7 @@ PACK_BUDGET = sum(spec.budget for spec in SECTIONS)  # 20,300
 PACK_HARD_CAP = 25_000
 # Whole-pack drop order when the sum ever exceeds PACK_HARD_CAP (budgets edited, estimate drift).
 DROP_ORDER = ("S14", "S10", "S9", "S12", "S6")
-MAX_TOKENS = 12_000
+# Completed medium-effort answers used 6,185-8,941 reasoning plus 1,499-2,067 answer tokens; one
+# SUNRISE primary spent all of 12,000 in reasoning (2026-11-07, #1480). 24,000 is 2x that cut.
+MAX_TOKENS = 24_000
 REQUEST_TOKEN_CAP = 72_000  # pack + max_tokens; the route's context is 98,304

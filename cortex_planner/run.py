@@ -3,7 +3,8 @@
 Failure policy (Jason, 2026-11-05, report defaults accepted):
 1. A transport failure (connection, timeout, 429/5xx) gets one retry of the same request.
 2. A `finish_reason` other than `stop`, an unparseable answer, or a schema/registry rejection gets
-   one repair attempt: reasoning `low`, the minimum pack (S0-S6, S15), the errors quoted.
+   one repair attempt: thinking off (#1480; `low` effort still reasoned past 10,000 tokens), the
+   minimum pack (S0-S6, S15), the errors quoted.
 3. If that fails too: write nothing, keep the plan in force, raise `planner_failed`.
 There is no cloud fallback. A 4xx other than 429 (bad key, unknown model) fails at once.
 
@@ -21,7 +22,7 @@ import os
 import signal
 import time
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
@@ -169,13 +170,7 @@ async def run_trigger(
         await _call(client, attempt)
         await store.save_attempt(attempt)
     if attempt.status == "invalid":
-        repair_config = CallConfig(
-            model=config.model,
-            max_tokens=config.max_tokens,
-            reasoning_effort="low",
-            seed=config.seed,
-            response_format=config.response_format,
-        )
+        repair_config = replace(config, reasoning_effort="low", enable_thinking=False)
         repair_pack = build_pack(inputs, "minimum", repair_errors=attempt.errors)
         _guard(repair_pack, repair_config)
         await store.save_pack(repair_pack, inputs)
