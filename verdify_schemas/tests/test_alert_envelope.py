@@ -605,7 +605,7 @@ def test_schema_covers_alert_types_in_write_paths():
         # Positional `INSERT INTO alert_log VALUES (alert_type, severity, ...)`.
         # The 2nd field MUST be a valid AlertSeverity — without that constraint
         # the pattern also matched unrelated inserts into other tables whose 2nd
-        # column happens to be a quoted string (e.g. slack_notification_events
+        # column happens to be a quoted string (e.g. a notification-audit insert
         # VALUES ('ingestor', 'operator_brief', ...)), a false alert_type.
         re.compile(r"VALUES\s*\('([^']+)',\s*'(?:info|warning|critical)',\s*'\w+'", re.MULTILINE),
     ]

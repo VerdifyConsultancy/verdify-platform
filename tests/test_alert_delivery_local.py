@@ -238,3 +238,23 @@ def test_hermes_cannot_send_a_message_and_iris_is_never_told_to():
         text = (ROOT / name).read_text(encoding="utf-8")
         assert "#greenhouse" not in text, name
         assert not re.search(r"(post|posting)\b[^.\n]{0,40}\bslack|slack (post|brief)", text, re.IGNORECASE), name
+
+
+# The retired Slack config, command modules and MCP `slack_ops` surface stay gone.
+RETIRED_MODULES = ("slack_config.py", "slack.yaml", "slack_ops", "SLACK.md")
+DOCKERFILES = ("api/Dockerfile", "ingestor/Dockerfile", "mcp/Dockerfile", "scripts/Dockerfile.lab-publisher")
+TOOL_PROFILES = ("mcp/server.py", "hermes/iris/config.yaml", "deploy/k8s/components/hermes-iris/hermes-config.yaml")
+
+
+def test_the_retired_slack_modules_stay_gone_and_no_image_copies_one():
+    assert [name for name in RETIRED_MODULES if (ROOT / name).exists()] == []
+    for name in DOCKERFILES:
+        text = (ROOT / name).read_text()
+        assert not re.search(r"^\s*COPY\b.*slack", text, re.IGNORECASE | re.MULTILINE), name
+
+
+def test_no_tool_surface_names_slack_ops_and_mcp_imports_no_slack():
+    for name in TOOL_PROFILES:
+        assert "slack_ops" not in (ROOT / name).read_text(), name
+    text = (ROOT / "mcp/server.py").read_text()
+    assert "slack_config" not in text and "handle_slack_command" not in text

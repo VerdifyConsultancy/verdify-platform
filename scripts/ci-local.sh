@@ -348,8 +348,6 @@ $PY -m pytest -q -rs \
   tests/test_service_restart_drift_guard.py \
   tests/test_setpoint_server_db_backend.py \
   tests/test_site_content_refresh.py \
-  tests/test_slack_config.py \
-  tests/test_slack_ops.py \
   tests/test_soil_dryout_alert.py tests/test_soil_saturation.py \
   tests/test_solar_band_anchors.py \
   tests/test_solar_constants_check.py \

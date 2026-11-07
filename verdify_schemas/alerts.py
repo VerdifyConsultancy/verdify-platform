@@ -1165,7 +1165,6 @@ class AlertLogRow(BaseModel):
     resolved_at: AwareDatetime | None = None
     resolved_by: str | None = None
     resolution: str | None = None
-    slack_ts: str | None = None
     notes: str | None = None
     greenhouse_id: str = "vallery"
 
