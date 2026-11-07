@@ -38,6 +38,9 @@ PlannerInstance = Literal["opus", "local"]
 DENVER = ZoneInfo("America/Denver")
 GATHER_SCRIPT = "/srv/verdify/scripts/gather-plan-context.sh"
 CONTEXT_GATHER_TIMEOUT = int(os.getenv("IRIS_CONTEXT_GATHER_TIMEOUT", "120"))
+# #1450: a gather that uses more than this share of its cap logs plan_context_slow,
+# so a slowing gather warns before it times out and stops planning.
+CONTEXT_GATHER_SLOW_FRACTION = 0.8
 
 # Iris reads this at runtime from her agent-host filesystem. The canonical
 # version-controlled source is `docs/planner/greenhouse-playbook.md` in the
@@ -1332,6 +1335,31 @@ def _resolve_plan_context_failures() -> None:
 CONTEXT_GATHER_FAILED_SENTINEL = "__CONTEXT_GATHER_FAILED__"
 
 
+def _log_gather_duration(elapsed_s: float, stderr: str | None) -> None:
+    """Log every gather's duration; above CONTEXT_GATHER_SLOW_FRACTION of the cap, warn plan_context_slow (#1450).
+
+    The gather prints one timing line ("gather-plan-context: parallel=... slowest: ...") on stderr; the warning
+    carries it so the slow sections are named in the log.
+    """
+    share = elapsed_s / CONTEXT_GATHER_TIMEOUT if CONTEXT_GATHER_TIMEOUT > 0 else 0.0
+    timing = next(
+        (line for line in reversed((stderr or "").splitlines()) if line.startswith("gather-plan-context: parallel=")),
+        "",
+    )
+    if share > CONTEXT_GATHER_SLOW_FRACTION:
+        log.warning(
+            "plan_context_slow: gather took %.1fs, %.0f%% of its %ss cap; %s",
+            elapsed_s,
+            share * 100,
+            CONTEXT_GATHER_TIMEOUT,
+            timing or "(no timing line)",
+        )
+    else:
+        log.info(
+            "context gather took %.1fs (%.0f%% of %ss cap); %s", elapsed_s, share * 100, CONTEXT_GATHER_TIMEOUT, timing
+        )
+
+
 def gather_context() -> str:
     """Run gather-plan-context.sh and return its output.
 
@@ -1367,6 +1395,7 @@ def gather_context() -> str:
             "VERDIFY_EXPERIMENT_PROMPT_SHA256": _EXPERIMENT_PROMPT_TEMPLATE_SHA256,
             "VERDIFY_EXPERIMENT_TOOL_MANIFEST_SHA256": _EXPERIMENT_TOOL_MANIFEST_SHA256,
         }
+    started = time.monotonic()
     try:
         result = subprocess.run(
             argv,
@@ -1375,6 +1404,7 @@ def gather_context() -> str:
             timeout=CONTEXT_GATHER_TIMEOUT,
             env=env,
         )
+        _log_gather_duration(time.monotonic() - started, result.stderr)
         if result.returncode != 0:
             log.error("gather-plan-context.sh failed: %s", result.stderr[:200])
             _record_plan_context_failure("nonzero_exit", result.stderr, result.returncode)
