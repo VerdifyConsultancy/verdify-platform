@@ -34,6 +34,7 @@ from verdify_schemas.band_rows import (
     ZONES,
 )
 from verdify_schemas.tunable_registry import REGISTRY
+from verdify_schemas.vpd_envelope import AchievableColumns
 from verdify_services import settings
 from verdify_services.labels import EQUIPMENT_LABELS, EQUIPMENT_LINE_IDS
 from verdify_services.problems import ServiceError, problem
@@ -174,6 +175,9 @@ class BandTimeline(BaseModel):
     t: list[int]
     band: BandColumns
     crop: BandColumns
+    achievable: AchievableColumns | None = Field(
+        default=None, description="Asked for with achievable (#1433): the house's achievable VPD band and grades"
+    )
 
 
 class BandCurve(BaseModel):
@@ -1310,6 +1314,12 @@ CROP_SQL = (
     "SELECT step.ts, crop.temp_low, crop.temp_high, crop.vpd_low, crop.vpd_high "
     "FROM unnest($1::timestamptz[]) AS step(ts) CROSS JOIN LATERAL public.fn_band_setpoints(step.ts) AS crop"
 )
+# The same with each step's temperature target and solar phase, for the achievable band (#1433).
+CROP_ACHIEVABLE_SQL = (
+    "SELECT step.ts, crop.temp_low, crop.temp_high, crop.vpd_low, crop.vpd_high, crop.temp_target, "
+    "public.fn_solar_phase(step.ts) AS phase "
+    "FROM unnest($1::timestamptz[]) AS step(ts) CROSS JOIN LATERAL public.fn_band_setpoints(step.ts) AS crop"
+)
 # A zone's crop band: the house temperature band (one air mass), and its VPD target ∓ the zone crop's widths ($2, $3),
 # the dispatcher's formula (band_anchors.zone_band_values). Never fn_band_timeline, on which the dashboard login holds
 # no EXECUTE, nor fn_zone_band, which reads the grading profiles in crop_target_profiles and not the band.
@@ -1412,10 +1422,12 @@ async def band(
     to: datetime,
     zone: BandZone = "house",
     *,
+    achievable: bool = False,
     now: datetime | None = None,
 ) -> BandTimeline:
     """API-06 for the house or one zone: the band in force (DERIVED, that zone's rows, kept 90 days) and the crop
-    band reconstructed from today's anchors, one point per step."""
+    band reconstructed from today's anchors, one point per step. With ``achievable``, the house's achievable VPD band
+    and both nightly grades (``vpd_envelope``; null for a zone or a window over 35 days)."""
     if zone not in BAND_ZONES:
         raise ServiceError(problem("invalid_request", f"zone is one of {', '.join(BAND_ZONES)}", field="zone"))
     now = _now(now)
@@ -1433,18 +1445,26 @@ async def band(
                 row["band_role"]: (row["value"], row["ts"])
                 for row in await conn.fetch(BAND_SEED_SQL[zone], low - BAND_CARRY, low)
             }
+        envelope = achievable and zone == "house"
         if zone == "house":
-            crop_rows = await conn.fetch(CROP_SQL, list(axis))
+            crop_rows = await conn.fetch(CROP_ACHIEVABLE_SQL if envelope else CROP_SQL, list(axis))
         else:
             below, above = zone_widths(await conn.fetch(ANCHOR_ROWS_SQL, GREENHOUSE_ID, ZONE_CROP[zone], [ZONE_SERIES]))
             crop_rows = await conn.fetch(ZONE_CROP_SQL[zone], list(axis), below, above)
+        in_force = band_columns(axis, band_rows, seeds, retained_from)
+        achievable_columns = None
+        if envelope:
+            from verdify_services import vpd_envelope  # imports this module
+
+            achievable_columns = await vpd_envelope.read(conn, axis, step_s, in_force, crop_rows, now)
     return BandTimeline(
         from_=from_,
         to=to,
         step_s=step_s,
         t=[_epoch(start) for start in axis],
-        band=band_columns(axis, band_rows, seeds, retained_from),
+        band=in_force,
         crop=crop_columns(axis, crop_rows),
+        achievable=achievable_columns,
     )
 
 

@@ -9,7 +9,7 @@ import { CsvLink, DataTable } from "./data-table";
 import { EVENT_GLYPHS, EVENT_KIND_WORDS, TRIGGER_BADGES, clusterEvents, eventsIn, kindsOf, touches, type ChartEvent, type EventCluster, type EventKind } from "./events";
 import { bandWord, compareLine, inBandShare, type CompareLine } from "./layers";
 import { ChartKey, type KeyItem } from "./legend";
-import { FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandNotes, edgeOf, forecastAt, lastAtOrBefore, type ForecastInput, type StepSegment } from "./marks";
+import { ACHIEVABLE, FORECAST_RULE, PLANNED_AI, SUPERSEDED, bandAt, bandNotes, edgeOf, forecastAt, lastAtOrBefore, type ForecastInput, type StepSegment } from "./marks";
 import { InStack, StackLink, type LitLane, type StackLinkValue } from "./stack-context";
 import { gapCount } from "./summary";
 import { clockTime, localDay } from "./time-axis";
@@ -133,8 +133,11 @@ export function panelStats(model: TimeSeriesModel, compare: CompareLine | null):
   const multiDay = localDay(model.windowFrom) !== localDay(model.windowTo - 1);
   const when = (at: number) => clockTime(at, multiDay);
   const share = model.runs.length ? inBandShare(model.t, trace.values, model.runs) : null;
+  // #1433: graded against the achievable band too, beside the band's own share.
+  const reachable = share !== null && model.achievable.length ? inBandShare(model.t, trace.values, model.achievable) : null;
   const parts = [
     ...(share !== null ? [`in band ${Math.round(share)}%`] : []),
+    ...(reachable !== null ? [`achievable ${Math.round(reachable)}%`] : []),
     `low ${bare(summary.low.value, model.unit)} (${when(summary.low.at)})`,
     `mean ${bare(summary.mean, model.unit)}`,
     `high ${bare(summary.high.value, model.unit)} (${when(summary.high.at)})`,
@@ -170,6 +173,8 @@ export function panelReadout(model: TimeSeriesModel, hidden: ReadonlySet<string>
     const primary = model.primary >= 0 && !hidden.has(model.traces[model.primary].key) ? valueAt(model, model.traces[model.primary].values, x) : null;
     const word = bandWord(primary, band);
     if (word) parts.push(word);
+    const achievable = bandAt(model.achievable, x);
+    if (achievable && (achievable.low !== band.low || achievable.high !== band.high)) parts.push(`achievable ${bare(achievable.low, model.unit)}–${bare(achievable.high, model.unit)}`);
   }
   if (compare) {
     const index = lastAtOrBefore([...compare.t], x);
@@ -194,6 +199,7 @@ export type PanelKeyItem = KeyItem & { readonly title: string };
 export function panelKey(model: TimeSeriesModel, yRange: readonly [number, number] | null, lit: ReadonlySet<string> = new Set()): PanelKeyItem[] {
   const items: PanelKeyItem[] = [];
   if (model.runs.length) items.push({ key: "band", label: "Band", token: "--c-band-edge", kind: "band", title: bandNotes(model.runs, model.now).join("; ") });
+  if (model.achievable.length) items.push({ key: "achievable", label: "Achievable", token: "--c-outdoor", kind: "dashed", title: ACHIEVABLE });
   for (const group of model.stepGroups) {
     const ahead = group[0].kind === "planned" || group[0].kind === "superseded";
     const step = ahead ? group.find((item) => item.end > model.now) ?? group[group.length - 1] : [...group].reverse().find((item) => item.start <= model.now) ?? group[0];

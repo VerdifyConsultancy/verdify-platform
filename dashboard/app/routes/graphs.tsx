@@ -116,7 +116,8 @@ export default function Graphs() {
     id: `${key}|${view.compare}|${plan.id}|${points ?? ""}`, params: { metric: [plan.metrics[0].key], from: isoOf(measured.from - compared.shift), to: isoOf(measured.to - compared.shift), ...pointed },
   })) : [];
   const compareReads = useWindowReads("API-04", compareSlots, null);
-  const band = slotRead(useWindowReads("API-06", resolved.ready && marks ? [{ id: key, params: { from: isoOf(marks.from), to: isoOf(marks.to) } }] : [], marksPoll), key);
+  // With the achievable VPD band beside the band, graded against both (#1433; the API answers it up to 35 days).
+  const band = slotRead(useWindowReads("API-06", resolved.ready && marks ? [{ id: key, params: { from: isoOf(marks.from), to: isoOf(marks.to), achievable: true } }] : [], marksPoll), key);
   const historySlots = marks ? resolved.settings.map((row) => ({ id: `${key}|${row.param}`, params: { param: row.param, from: isoOf(marks.from), to: isoOf(marks.to) } })) : [];
   const historyReads = useWindowReads("API-12", historySlots, marksPoll);
   const lanesOn = window !== null && lanesAllowed(window);

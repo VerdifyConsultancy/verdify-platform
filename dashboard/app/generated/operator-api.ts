@@ -237,7 +237,7 @@ export interface paths {
         };
         /**
          * Band in force and the reconstructed crop band, for the house or one zone
-         * @description band is the history of the dispatcher's band rows for `zone` (setpoint_snapshot band_role): DERIVED from crop_band_anchors with the controller's formula, kept 90 days, null before that. crop is reconstructed from today's anchors over the whole window: for house, fn_band_setpoints(ts) over the step series, which gives the same crop values as fn_band_timeline; for another zone, the house temperature crop band with fn_zone_vpd_targets(ts) ∓ the zone crop's crop_band_anchors widths. The step matches the window: at least 5 min and at most 2,000 points.
+         * @description band is the history of the dispatcher's band rows for `zone` (setpoint_snapshot band_role): DERIVED from crop_band_anchors with the controller's formula, kept 90 days, null before that. crop is reconstructed from today's anchors over the whole window: for house, fn_band_setpoints(ts) over the step series, which gives the same crop values as fn_band_timeline; for another zone, the house temperature crop band with fn_zone_vpd_targets(ts) ∓ the zone crop's crop_band_anchors widths. The step matches the window: at least 5 min and at most 2,000 points. With achievable (house, windows up to 35 days; #1433), achievable adds the band the house can be expected to hold: at night the band widened to the expected VPD ribbon of a rolling 14-day indoor-dewpoint fit (verdify_schemas.vpd_envelope), by day the band itself, and each night graded against both bands.
          */
         readonly get: operations["API-06"];
         readonly put?: never;
@@ -1030,6 +1030,44 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description The house VPD band the house can be expected to hold, one point per step (#1433). At night (sunset to sunrise) the expected ribbon is es(T) − es(Td_in ± 0.674·RMSE) at the house temperature the step measured (ahead of now, the band's temperature), with Td_in from a rolling least-squares fit of indoor dewpoint on indoor temperature, outdoor temperature and outdoor dewpoint over the 14 days of deep-night hours with no vent, fan, fog or mister before the night's local noon (before now for a night ahead); outdoor values are measured up to now and forecast after. The achievable band is the band in force (else the crop band) with its low edge dropped to the ribbon's p25 and its high edge raised to its p75 where they lie outside; by day, and with no fit, it is the band. */
+        readonly AchievableColumns: {
+            /** @description Days of deep-night hours each night's fit reads */
+            readonly days: number;
+            /** @description Expected night VPD, p75 */
+            readonly expected_high: components["schemas"]["NullableNumbers"];
+            /** @description Expected night VPD, p25; null by day or without a fit */
+            readonly expected_low: components["schemas"]["NullableNumbers"];
+            /** @description Each night in the window graded at the step against the served band and the achievable band */
+            readonly nights: readonly components["schemas"]["AchievableNight"][];
+            readonly vpd_high: components["schemas"]["NullableNumbers"];
+            readonly vpd_low: components["schemas"]["NullableNumbers"];
+        };
+        readonly AchievableFit: {
+            /** @description Deep-night hours the fit used */
+            readonly hours: number;
+            /** @description Root-mean-square dewpoint error, °F */
+            readonly rmse_f: number;
+        };
+        readonly AchievableNight: {
+            /** @description Share of graded steps inside the achievable band */
+            readonly achievable_in_pct: number | null;
+            /** @description Share below the achievable band's low edge */
+            readonly below_achievable_pct: number | null;
+            /** @description Share below the served band's low edge */
+            readonly below_served_pct: number | null;
+            /** @description The rolling dewpoint fit the night used; null with fewer than 24 hours */
+            readonly fit: components["schemas"]["AchievableFit"] | null;
+            /** @description Night steps with a measured house VPD and a band */
+            readonly graded: number;
+            /**
+             * Format: date
+             * @description America/Denver date of the night's evening
+             */
+            readonly night: string;
+            /** @description Share of graded steps inside the served band */
+            readonly served_in_pct: number | null;
+        };
         readonly ActivityEntry: {
             /**
              * @example setting.write
@@ -1229,6 +1267,7 @@ export interface components {
                  * @example night_floor
                  * @example overshoot
                  * @example dewpoint_unreached
+                 * @example night_floor_unachievable
                  */
                 readonly code: string;
                 readonly detail: string;
@@ -1323,6 +1362,8 @@ export interface components {
         };
         /** @description One point per step_s */
         readonly BandTimeline: {
+            /** @description Asked for with achievable: the house's achievable VPD band and grades; null otherwise, for a zone or past 35 days */
+            readonly achievable?: components["schemas"]["AchievableColumns"] | null;
             /** @description In force (DERIVED band rows of the requested zone); null beyond 90 days */
             readonly band: components["schemas"]["BandColumns"];
             /** @description Reconstructed from today's anchors (API-06 says how per zone) */
@@ -3500,6 +3541,8 @@ export interface operations {
     readonly "API-06": {
         readonly parameters: {
             readonly query: {
+                /** @description The house's achievable VPD band and its nightly grades (#1433); windows up to 35 days */
+                readonly achievable?: boolean;
                 /** @description Window start (inclusive) */
                 readonly from: components["parameters"]["From"];
                 /** @description Window end (exclusive) */

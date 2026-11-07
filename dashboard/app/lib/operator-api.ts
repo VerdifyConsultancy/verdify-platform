@@ -225,7 +225,15 @@ const stateLanes = z.object({
   })),
 });
 const bandColumns = z.object({ temp_low: nullableNumbers, temp_high: nullableNumbers, vpd_low: nullableNumbers, vpd_high: nullableNumbers });
-const bandTimeline = z.object({ from: text, to: text, step_s: int, t: z.array(int), band: bandColumns, crop: bandColumns });
+const achievableNight = z.object({
+  night: text, graded: int, served_in_pct: maybe(num), achievable_in_pct: maybe(num), below_served_pct: maybe(num), below_achievable_pct: maybe(num),
+  fit: maybe(z.object({ hours: int, rmse_f: num })),
+});
+// #1433: asked for with `achievable`; older answers have no field, which reads as null.
+const achievableColumns = z.object({
+  vpd_low: nullableNumbers, vpd_high: nullableNumbers, expected_low: nullableNumbers, expected_high: nullableNumbers, days: int, nights: z.array(achievableNight),
+});
+const bandTimeline = z.object({ from: text, to: text, step_s: int, t: z.array(int), band: bandColumns, crop: bandColumns, achievable: maybe(achievableColumns) });
 const bandCurve = z.object({ low: nullableNumbers, target: nullableNumbers, high: nullableNumbers });
 const bandPreview = z.object({ param: text, unit: text, day: text, step_s: int, t: z.array(int), current: bandCurve, draft: bandCurve });
 const bandProfile = z.object({
