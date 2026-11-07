@@ -977,7 +977,7 @@
         "Verdify integration and owning fleet dependency are linked; current branch policy is measured rather than copied from an August snapshot."
       ],
       "paths": [
-        ".agent-fleet/ci.yaml",
+        ".github/workflows/build.yml",
         "deploy/k8s",
         "docs",
         "Makefile"
@@ -1015,7 +1015,7 @@
         "tests",
         "scripts",
         "Makefile",
-        ".agent-fleet/ci.yaml"
+        ".github/workflows/build.yml"
       ],
       "baseline": "October 5, 2026: CLOSED — preserve the bounded historical receipt; no broader completion inferred. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
@@ -1047,7 +1047,7 @@
         "Owning fleet delivery and generated repo references agree; no redundant image is introduced solely for convenience."
       ],
       "paths": [
-        ".agent-fleet/ci.yaml",
+        ".github/workflows/build.yml",
         "firmware",
         "Makefile",
         "docs"
@@ -1088,7 +1088,7 @@
         "firmware",
         "Makefile",
         "tests",
-        ".agent-fleet/ci.yaml"
+        ".github/workflows/build.yml"
       ],
       "baseline": "October11 review: Current Argo is Failed/Degraded; a green API health snapshot is narrower than exact delivery, authenticated behavior and real fault/recovery proof. Missing compile, replay, release and runtime receipts stay explicit. Retained October6 assessment, not new execution: Declared fleet compile/negative-fixture steps exist, and firmware input tree is unchanged from the previously reviewed source. A declaration and green native C++ tests are not executed ESPHome evidence: retained CI output lacks the full secretless compile receipt. Keep portable positive/negative acceptance open. October12 missingregisteredLinux-amd64two-target/negativecompile remains pending304ownercommandadoption/distribution; reuseunchangedARM64proof. ActualgenericcallerdoesnotprovenoSA/no-device-network; fullmainlogcapturebefore60sGCneeded. SourceCI4808successnotfirmwareacceptance. October13 COMPLETED: owner4807/4808 merged and minimally adopted; exact generated mirror distributed on82195c1b. Registered Linux-amd64 Workflow327edaa05adf95dd7beaaee6/UID0d090d01 succeeded16:55:06Z/all5checks0, both maintained targets compiled and generated-C++ negative expectedexit1. All42firmwareblobs/10actualpackage manifests/16compilerhashes/full3500074Bstdout bound; sanitized owner receipt6150843427 provider-byteverified. Original six checkbox clauses assessed separately; generic caller token/ordinary networking/manual ownerArgo divergence remain explicit, no new grants or zero-ambient/device-denied/physical/cross-host-bit claim. Nonphysical artifact metadata supplied to390 comment6150900801. GitHubCOMPLETED closure verified17:05:28Z304/17:05:33Z303; no OTA/binarypromotion or390runtimeconsumption claimed.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
@@ -2838,7 +2838,7 @@
       ],
       "paths": [
         "twin/Dockerfile",
-        ".agent-fleet/ci.yaml",
+        ".github/workflows/build.yml",
         "deploy/k8s/components/firmware-twin",
         "docs"
       ],
@@ -5115,11 +5115,11 @@
       "paths": [
         "db/migrations"
       ],
-      "baseline": "Triage 2026-11-07: All criteria held live incl. live move 2026-11-06 14:32Z; #1438 CI pending at a9e34e64 Remaining: Merge PR #1438 (move test) with green CI. Blocker: software-ready. Next: Merge #1438 once Argo PR CI is green, then close",
+      "baseline": "Triage 2026-11-07: All criteria held live incl. live move 2026-11-06 14:32Z; #1438 CI pending at a9e34e64 Remaining: Merge PR #1438 (move test) with green CI. Blocker: software-ready. Next: Merge #1438 once Argo PR CI is green, then close | Closed 2026-11-07 by the delta verifier: PR #1438 merged f70ce081; prod layout, single open Vanda range and closed test ranges verified read-only.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
-      "status": "open"
+      "status": "closed"
     },
     {
       "key": "1328",
@@ -5143,11 +5143,11 @@
       "paths": [
         "mcp"
       ],
-      "baseline": "Triage 2026-11-07: Audience + live agent run held; tool tests only in open #1438 Remaining: Merge PR #1438 (MCP tool tests: conflict, replace, idempotent, move, partial harvest). Blocker: software-ready. Next: Merge #1438 once green, then close",
+      "baseline": "Triage 2026-11-07: Audience + live agent run held; tool tests only in open #1438 Remaining: Merge PR #1438 (MCP tool tests: conflict, replace, idempotent, move, partial harvest). Blocker: software-ready. Next: Merge #1438 once green, then close | Closed 2026-11-07 by the delta verifier: MCP tool tests from #1438 on main; live named-agent runs recorded under agent:orbit.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
-      "status": "open"
+      "status": "closed"
     },
     {
       "key": "1329",
@@ -6431,6 +6431,63 @@
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-07 triage.",
       "status": "open"
+    },
+    {
+      "key": "1458",
+      "issue_number": 1458,
+      "title": "estate-audit STD-OPS-01: container CVE triage backlog from the 2026-11-07 estate scan",
+      "stage": "OPS",
+      "kind": "task",
+      "priority": "P1",
+      "effort": "M",
+      "owner_role": "Platform lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "estate-audit STD-OPS-01: container CVE triage backlog from the 2026-11-07 estate scan.",
+      "why": "Tracked on the GitHub issue; acceptance criteria and their amendments live in the issue body and comments. Added to the validated plan by the 2026-11-07 delta triage.",
+      "how": [
+        "Rebuild or bump the 6 images with fixable Criticals and ship them with release 5; record no-fix findings as exceptions in jvallery/agents."
+      ],
+      "acceptance": [
+        "Every acceptance criterion on the GitHub issue, as amended in its comments, holds live, verified by an independent verifier (L9)."
+      ],
+      "paths": [
+        "deploy/k8s/overlays/prod/kustomization.yaml",
+        "deploy/k8s/overlays/prod/release-pins.yaml"
+      ],
+      "baseline": "Delta triage 2026-11-07: All 9 flagged images still run in verdify-prod with the pins on main; no PR yet. Criticals' 7-day window ends 2026-11-14.",
+      "delivery": "Merge through CI, release through the gated verdify-prod-dark sync, then verify the live end state.",
+      "rollback": "Revert the change or the release pin.",
+      "decision": "No open Jason decision recorded at the 2026-11-07 triage.",
+      "status": "open"
+    },
+    {
+      "key": "1459",
+      "issue_number": 1459,
+      "title": "ci: split ci / validate into parallel step jobs (near its 50-min timeout)",
+      "stage": "OPS",
+      "kind": "task",
+      "priority": "P3",
+      "effort": "M",
+      "owner_role": "Platform lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "ci: split ci / validate into parallel step jobs (near its 50-min timeout).",
+      "why": "Tracked on the GitHub issue; acceptance criteria and their amendments live in the issue body and comments. Added to the validated plan by the 2026-11-07 delta triage.",
+      "how": [
+        "Split ci / validate into parallel step jobs if validate runs past about 60 minutes."
+      ],
+      "acceptance": [
+        "Every acceptance criterion on the GitHub issue, as amended in its comments, holds live, verified by an independent verifier (L9)."
+      ],
+      "paths": [
+        ".github/workflows"
+      ],
+      "baseline": "Delta triage 2026-11-07: Release 4 (#1447) raised the validate timeout 50 to 90 min; #1438's run took about 39 min. Deferred.",
+      "delivery": "Merge through CI, release through the gated verdify-prod-dark sync, then verify the live end state.",
+      "rollback": "Revert the change or the release pin.",
+      "decision": "No open Jason decision recorded at the 2026-11-07 triage.",
+      "status": "open"
     }
   ],
   "execution_plan": {
@@ -6480,8 +6537,6 @@
       1313,
       1322,
       1325,
-      1327,
-      1328,
       1329,
       1332,
       1333,
@@ -6515,7 +6570,9 @@
       1433,
       1434,
       1435,
-      1450
+      1450,
+      1458,
+      1459
     ],
     "sprints": [
       {
@@ -6641,22 +6698,6 @@
         "owner_role": "Dashboard wave-2 lead"
       },
       {
-        "issue_number": 1327,
-        "sprint": "U0",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Merge #1438 once Argo PR CI is green, then close",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1328,
-        "sprint": "U0",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Merge #1438 once green, then close",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
         "issue_number": 1351,
         "sprint": "U0",
         "hours_min": 1,
@@ -6669,7 +6710,7 @@
         "sprint": "U0",
         "hours_min": 2,
         "hours_max": 6,
-        "next_action": "[dated-gate:2026-11-07] Diagnose Cortex 404s with cortex-ai-compute, fix the '12' rejection, restart the 24h window",
+        "next_action": "[merged, awaiting release 5] #1457 merged aa22faa6; ship in release 5, then verify live",
         "owner_role": "Dashboard wave-2 lead"
       },
       {
@@ -6677,7 +6718,7 @@
         "sprint": "U0",
         "hours_min": 2,
         "hours_max": 6,
-        "next_action": "[software-ready] Parallelise/trim gather, add warning, gated ingestor rollout",
+        "next_action": "[merged, awaiting release 5] #1454 merged f1b0a771; ship in release 5, then verify live",
         "owner_role": "Platform lead"
       },
       {
@@ -7141,7 +7182,7 @@
         "sprint": "U5",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[blocked-by-issue] Watch upstream releases (or build derived image); exact sync of Deployment/verdify-grafana",
+        "next_action": "[merged, awaiting release 5] #1456 merged 0a875b38; ship in release 5, then verify live",
         "owner_role": "Platform lead"
       },
       {
@@ -7157,7 +7198,7 @@
         "sprint": "U5",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[software-ready] Agents/estate PRs removing native wiring + ci.yaml + webhooks; attach receipts; L9 close",
+        "next_action": "[merged, awaiting release 5] #1456 merged 0a875b38; ship in release 5, then verify live",
         "owner_role": "Platform lead"
       },
       {
@@ -7165,7 +7206,7 @@
         "sprint": "U6",
         "hours_min": 6,
         "hours_max": 16,
-        "next_action": "[software-ready] Build read-model envelope function",
+        "next_action": "[merged, awaiting release 5] #1455 merged 67751a08; ship in release 5, then verify live",
         "owner_role": "Web lead"
       },
       {
@@ -7199,6 +7240,22 @@
         "hours_max": null,
         "next_action": "[blocked-by-issue] Web repin, lab publisher guard fix, signed-in walk",
         "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1458,
+        "sprint": "U0",
+        "hours_min": 3,
+        "hours_max": 6,
+        "next_action": "[software-ready] Rebuild/bump the 6 images with fixable Criticals in release 5; exception entries for no-fix findings",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 1459,
+        "sprint": "U6",
+        "hours_min": 2,
+        "hours_max": 4,
+        "next_action": "[deferred] Split validate only if it runs past ~60 min",
+        "owner_role": "Platform lead"
       }
     ]
   }

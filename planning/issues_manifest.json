@@ -274,7 +274,7 @@
       "blocked_by": [
         964
       ],
-      "body_sha256": "9e75ae76f0ddab11b7afd246ea16eb37383cde161d1d6ba020b73d809b5b85e2"
+      "body_sha256": "5fed10bc4947472f62ef3573b1160ea4217facb8e1f6c9945c863b025abf7ee7"
     },
     {
       "key": "322",
@@ -285,7 +285,7 @@
       "accepted": false,
       "parent": 644,
       "blocked_by": [],
-      "body_sha256": "42b023de8689524de912a25d9f80b17ab4581753d389f84b36d304959b088958"
+      "body_sha256": "105772a63c136238cd25e5d28ece416d8071c9f9aa0d82d4c60eeb6f4a5ba5ca"
     },
     {
       "key": "304",
@@ -296,7 +296,7 @@
       "accepted": false,
       "parent": 644,
       "blocked_by": [],
-      "body_sha256": "886721bb24f30edd8840163f00a26b710c3c754f3122c3f393221ac5e8b6f067"
+      "body_sha256": "9205741dea4a0c0e1b8a030aef26df75cc9a281572961d5b1c149ab76cb7715d"
     },
     {
       "key": "303",
@@ -310,7 +310,7 @@
         304,
         322
       ],
-      "body_sha256": "f420ddacd318648a1f1a9240d099e25e882c72759401016dc3e258e2398292d9"
+      "body_sha256": "e1675cc7079f95f9d5f8e4b2606db6270069e11151172f08dfd0b6613ae1c03f"
     },
     {
       "key": "390",
@@ -894,7 +894,7 @@
       "accepted": false,
       "parent": 14,
       "blocked_by": [],
-      "body_sha256": "5fbcc28a81fef1dc99d26a7a5f46bde2af302aaf01d9b6aef752ba17958f8920"
+      "body_sha256": "f9fd98aebb653f630fcf9cd9191dcb6b465cda5ba26a59f5cd27e68c383bf670"
     },
     {
       "key": "638",
@@ -1692,29 +1692,29 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "386cb22ddd6355a0e6a97f61f4a2bbd37fe66c91762f9c88cdb55fa0428d91f8"
+      "body_sha256": "9657e1d333b947ecf47bf65b4d01c35dd8689cfd2e5de7121a58b9d9f1602386"
     },
     {
       "key": "1327",
       "number": 1327,
       "title": "[W5][P2] Model plantings on the location tree and serve them from the operator API",
       "stage": "W5",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "ae94a5f617b378baca014bc07badf5772c767f258326fbe8f14a3505374c66ee"
+      "body_sha256": "71a5bcd9367a0ac557faa9a767ec8f7358597c6570058d297bdc146d9a105242"
     },
     {
       "key": "1328",
       "number": 1328,
       "title": "[W5][P2] Let agents record, move and harvest plantings through MCP",
       "stage": "W5",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "79093cfb3d7a885e69ac938fe724499f1aae876f82c003a6daff57a444d2782c"
+      "body_sha256": "64bb8590cdd9b60de4f1465b756782b7dfd8b9d6591d8649d00869771468410e"
     },
     {
       "key": "1329",
@@ -2229,6 +2229,28 @@
       "parent": null,
       "blocked_by": [],
       "body_sha256": "5184c737645244891746cf3201662cd4e2a5544578f32a0e89122f6908582e03"
+    },
+    {
+      "key": "1458",
+      "number": 1458,
+      "title": "[OPS][P1] estate-audit STD-OPS-01: container CVE triage backlog from the 2026-11-07 estate scan",
+      "stage": "OPS",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "19e31c47fd5006f1a50488bf04e81032b8801294813172df48d9b742b2c1f555"
+    },
+    {
+      "key": "1459",
+      "number": 1459,
+      "title": "[OPS][P3] ci: split ci / validate into parallel step jobs (near its 50-min timeout)",
+      "stage": "OPS",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "7bd6b0d04f81f79607345ff3edc9390e84e37a7af64b1bd2bd3d8d5128f694c4"
     }
   ]
 }

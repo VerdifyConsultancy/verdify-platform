@@ -1,6 +1,6 @@
 # Complete blocking dependency graph
 
-The [current reviewed native graph](reviews/2026-11-07-triage/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 190-issue/85-edge campaign graph is retained below.
+The [current reviewed native graph](reviews/2026-11-07-triage/DEPENDENCIES.md) includes independent local issues and transitive cross-repository predecessors. The canonical 192-issue/85-edge campaign graph is retained below.
 
 Generated from [backlog.yaml](backlog.yaml). An arrow means **predecessor must finish before dependent acceptance/activation**, not parentage. Isolated nodes are included so coverage is auditable. Read [CAMPAIGN.md](CAMPAIGN.md) for the smaller critical path.
 
@@ -168,8 +168,8 @@ flowchart TD
   end
   subgraph W5["W5: Dashboard wave 2: Jason acceptance feedback (epic #1325)"]
     i1325["#1325 (open) [Epic] Dashboard wave 2: Jason's acceptance feedback on th"]
-    i1327["#1327 (open) Model plantings on the location tree and serve them from t"]
-    i1328["#1328 (open) Let agents record, move and harvest plantings through MCP"]
+    i1327["#1327 (closed) Model plantings on the location tree and serve them from t"]
+    i1328["#1328 (closed) Let agents record, move and harvest plantings through MCP"]
     i1329["#1329 (open) Reconcile greenhouse locations and current plantings with "]
     i1330["#1330 (closed) Add a Crops section: hydro slot grid, wall shelves and pla"]
     i1332["#1332 (open) Explain every setting: what it does to the controller and "]
@@ -219,6 +219,8 @@ flowchart TD
     i1397["#1397 (open) Move CI, image builds and pin automation to GitHub Actions"]
     i1424["#1424 (open) heat1 Shelly ch1 power clamp is wired backwards (reads neg"]
     i1450["#1450 (open) Planner context gather runs ~98-120 s against its 120 s ca"]
+    i1458["#1458 (open) estate-audit STD-OPS-01: container CVE triage backlog from"]
+    i1459["#1459 (open) ci: split ci / validate into parallel step jobs (near its "]
   end
   i371 --> i779
   i424 --> i749
