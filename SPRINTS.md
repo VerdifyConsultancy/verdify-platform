@@ -2,178 +2,169 @@
 
 ## Current execution plan
 
-Reviewed **2026-11-06** against source `0ebab1860a6fd022e99702b7fb26400034461a5c`. [planning/reviews/2026-11-06-triage/README.md](planning/reviews/2026-11-06-triage/README.md) records current source, GitHub, runtime and evidence limits. All **86 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
+Reviewed **2026-11-07** against source `77a70404c09f733b73bf432ef81f0c7d4ab5bc96`. [planning/reviews/2026-11-07-triage/README.md](planning/reviews/2026-11-07-triage/README.md) records current source, GitHub, runtime and evidence limits. All **77 open issues** have one allocation and accountable role. Planning capacity: **40 engineering hours/week**; ranges are estimates, not calendar promises.
 
 | Pull set | Kind | Allocated hours | Capacity hours | Issues |
 |---|---|---|---|---|
-| T0 — Unblock: Cortex egress fix and the in-flight web pin | sprint | 7–21 | 20 | [#1351](https://github.com/VerdifyConsultancy/verdify-platform/issues/1351), [#1118](https://github.com/VerdifyConsultancy/verdify-platform/issues/1118), [#1346](https://github.com/VerdifyConsultancy/verdify-platform/issues/1346), [#1330](https://github.com/VerdifyConsultancy/verdify-platform/issues/1330), [#1361](https://github.com/VerdifyConsultancy/verdify-platform/issues/1361), [#1327](https://github.com/VerdifyConsultancy/verdify-platform/issues/1327), [#1328](https://github.com/VerdifyConsultancy/verdify-platform/issues/1328) |
-| T1 — Live verification walk (shipped code, no new build) | sprint | 0–32 | 16 | [#1125](https://github.com/VerdifyConsultancy/verdify-platform/issues/1125), [#1130](https://github.com/VerdifyConsultancy/verdify-platform/issues/1130), [#1132](https://github.com/VerdifyConsultancy/verdify-platform/issues/1132), [#1135](https://github.com/VerdifyConsultancy/verdify-platform/issues/1135), [#1143](https://github.com/VerdifyConsultancy/verdify-platform/issues/1143), [#1181](https://github.com/VerdifyConsultancy/verdify-platform/issues/1181), [#1186](https://github.com/VerdifyConsultancy/verdify-platform/issues/1186), [#1300](https://github.com/VerdifyConsultancy/verdify-platform/issues/1300), [#1162](https://github.com/VerdifyConsultancy/verdify-platform/issues/1162), [#1164](https://github.com/VerdifyConsultancy/verdify-platform/issues/1164), [#1337](https://github.com/VerdifyConsultancy/verdify-platform/issues/1337), [#1338](https://github.com/VerdifyConsultancy/verdify-platform/issues/1338), [#1339](https://github.com/VerdifyConsultancy/verdify-platform/issues/1339), [#1340](https://github.com/VerdifyConsultancy/verdify-platform/issues/1340), [#1341](https://github.com/VerdifyConsultancy/verdify-platform/issues/1341), [#1342](https://github.com/VerdifyConsultancy/verdify-platform/issues/1342), [#1344](https://github.com/VerdifyConsultancy/verdify-platform/issues/1344), [#1347](https://github.com/VerdifyConsultancy/verdify-platform/issues/1347), [#1349](https://github.com/VerdifyConsultancy/verdify-platform/issues/1349), [#1353](https://github.com/VerdifyConsultancy/verdify-platform/issues/1353), [#1355](https://github.com/VerdifyConsultancy/verdify-platform/issues/1355), [#1356](https://github.com/VerdifyConsultancy/verdify-platform/issues/1356), [#1357](https://github.com/VerdifyConsultancy/verdify-platform/issues/1357), [#1332](https://github.com/VerdifyConsultancy/verdify-platform/issues/1332), [#1333](https://github.com/VerdifyConsultancy/verdify-platform/issues/1333), [#1334](https://github.com/VerdifyConsultancy/verdify-platform/issues/1334), [#1335](https://github.com/VerdifyConsultancy/verdify-platform/issues/1335), [#1336](https://github.com/VerdifyConsultancy/verdify-platform/issues/1336), [#1348](https://github.com/VerdifyConsultancy/verdify-platform/issues/1348), [#1370](https://github.com/VerdifyConsultancy/verdify-platform/issues/1370), [#1343](https://github.com/VerdifyConsultancy/verdify-platform/issues/1343), [#1358](https://github.com/VerdifyConsultancy/verdify-platform/issues/1358) |
-| T2 — Bounded code fixes | sprint | 36–108 | 40 | [#1345](https://github.com/VerdifyConsultancy/verdify-platform/issues/1345), [#1354](https://github.com/VerdifyConsultancy/verdify-platform/issues/1354), [#1322](https://github.com/VerdifyConsultancy/verdify-platform/issues/1322), [#1329](https://github.com/VerdifyConsultancy/verdify-platform/issues/1329), [#1277](https://github.com/VerdifyConsultancy/verdify-platform/issues/1277), [#1283](https://github.com/VerdifyConsultancy/verdify-platform/issues/1283), [#1312](https://github.com/VerdifyConsultancy/verdify-platform/issues/1312), [#1313](https://github.com/VerdifyConsultancy/verdify-platform/issues/1313), [#1389](https://github.com/VerdifyConsultancy/verdify-platform/issues/1389), [#1363](https://github.com/VerdifyConsultancy/verdify-platform/issues/1363), [#1010](https://github.com/VerdifyConsultancy/verdify-platform/issues/1010), [#299](https://github.com/VerdifyConsultancy/verdify-platform/issues/299), [#367](https://github.com/VerdifyConsultancy/verdify-platform/issues/367), [#368](https://github.com/VerdifyConsultancy/verdify-platform/issues/368), [#369](https://github.com/VerdifyConsultancy/verdify-platform/issues/369), [#370](https://github.com/VerdifyConsultancy/verdify-platform/issues/370), [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390), [#386](https://github.com/VerdifyConsultancy/verdify-platform/issues/386) |
-| T3 — Planner A/B study (Hermes arm) | conditional | Unestimated | Not timeboxed | [#1360](https://github.com/VerdifyConsultancy/verdify-platform/issues/1360) |
-| T4 — Time-gated soaks | ongoing | Unestimated | Not timeboxed | [#1364](https://github.com/VerdifyConsultancy/verdify-platform/issues/1364), [#1365](https://github.com/VerdifyConsultancy/verdify-platform/issues/1365), [#1352](https://github.com/VerdifyConsultancy/verdify-platform/issues/1352), [#1165](https://github.com/VerdifyConsultancy/verdify-platform/issues/1165) |
-| T5 — Hardware, replant and irrigation bring-up (Jason physical) | conditional | Unestimated | Not timeboxed | [#51](https://github.com/VerdifyConsultancy/verdify-platform/issues/51), [#751](https://github.com/VerdifyConsultancy/verdify-platform/issues/751), [#1183](https://github.com/VerdifyConsultancy/verdify-platform/issues/1183), [#1184](https://github.com/VerdifyConsultancy/verdify-platform/issues/1184), [#298](https://github.com/VerdifyConsultancy/verdify-platform/issues/298), [#398](https://github.com/VerdifyConsultancy/verdify-platform/issues/398), [#45](https://github.com/VerdifyConsultancy/verdify-platform/issues/45), [#297](https://github.com/VerdifyConsultancy/verdify-platform/issues/297), [#52](https://github.com/VerdifyConsultancy/verdify-platform/issues/52), [#1166](https://github.com/VerdifyConsultancy/verdify-platform/issues/1166), [#1161](https://github.com/VerdifyConsultancy/verdify-platform/issues/1161), [#1271](https://github.com/VerdifyConsultancy/verdify-platform/issues/1271) |
-| T6 — External owners, upstream and the repo transfer | conditional | Unestimated | Not timeboxed | [#1001](https://github.com/VerdifyConsultancy/verdify-platform/issues/1001), [#1009](https://github.com/VerdifyConsultancy/verdify-platform/issues/1009), [#1113](https://github.com/VerdifyConsultancy/verdify-platform/issues/1113), [#1397](https://github.com/VerdifyConsultancy/verdify-platform/issues/1397), [#31](https://github.com/VerdifyConsultancy/verdify-platform/issues/31) |
-| ROLLUP — Program roll-ups | rollup | Unestimated | Not timeboxed | [#16](https://github.com/VerdifyConsultancy/verdify-platform/issues/16), [#75](https://github.com/VerdifyConsultancy/verdify-platform/issues/75), [#359](https://github.com/VerdifyConsultancy/verdify-platform/issues/359), [#430](https://github.com/VerdifyConsultancy/verdify-platform/issues/430), [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775), [#1120](https://github.com/VerdifyConsultancy/verdify-platform/issues/1120), [#1325](https://github.com/VerdifyConsultancy/verdify-platform/issues/1325) |
+| U0 — U0: Unblock releases (software, now) | sprint | 14–32 | 24 | [#1329](https://github.com/VerdifyConsultancy/verdify-platform/issues/1329), [#1332](https://github.com/VerdifyConsultancy/verdify-platform/issues/1332), [#1322](https://github.com/VerdifyConsultancy/verdify-platform/issues/1322), [#1339](https://github.com/VerdifyConsultancy/verdify-platform/issues/1339), [#1345](https://github.com/VerdifyConsultancy/verdify-platform/issues/1345), [#1349](https://github.com/VerdifyConsultancy/verdify-platform/issues/1349), [#1354](https://github.com/VerdifyConsultancy/verdify-platform/issues/1354), [#1327](https://github.com/VerdifyConsultancy/verdify-platform/issues/1327), [#1328](https://github.com/VerdifyConsultancy/verdify-platform/issues/1328), [#1351](https://github.com/VerdifyConsultancy/verdify-platform/issues/1351), [#1346](https://github.com/VerdifyConsultancy/verdify-platform/issues/1346), [#1450](https://github.com/VerdifyConsultancy/verdify-platform/issues/1450) |
+| U1 — U1: W6 single firmware flash + OTA rotation (2026-11-07 morning) | sprint | 16–38 + unestimated | 8 | [#299](https://github.com/VerdifyConsultancy/verdify-platform/issues/299), [#359](https://github.com/VerdifyConsultancy/verdify-platform/issues/359), [#367](https://github.com/VerdifyConsultancy/verdify-platform/issues/367), [#368](https://github.com/VerdifyConsultancy/verdify-platform/issues/368), [#369](https://github.com/VerdifyConsultancy/verdify-platform/issues/369), [#386](https://github.com/VerdifyConsultancy/verdify-platform/issues/386), [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390), [#430](https://github.com/VerdifyConsultancy/verdify-platform/issues/430), [#1009](https://github.com/VerdifyConsultancy/verdify-platform/issues/1009), [#1277](https://github.com/VerdifyConsultancy/verdify-platform/issues/1277), [#1313](https://github.com/VerdifyConsultancy/verdify-platform/issues/1313), [#1335](https://github.com/VerdifyConsultancy/verdify-platform/issues/1335), [#1342](https://github.com/VerdifyConsultancy/verdify-platform/issues/1342), [#370](https://github.com/VerdifyConsultancy/verdify-platform/issues/370) |
+| U2 — U2: Live verification walk (Jason signed-in + operator looks) | sprint | 14–28 | 6 | [#1130](https://github.com/VerdifyConsultancy/verdify-platform/issues/1130), [#1132](https://github.com/VerdifyConsultancy/verdify-platform/issues/1132), [#1135](https://github.com/VerdifyConsultancy/verdify-platform/issues/1135), [#1181](https://github.com/VerdifyConsultancy/verdify-platform/issues/1181), [#1186](https://github.com/VerdifyConsultancy/verdify-platform/issues/1186), [#1333](https://github.com/VerdifyConsultancy/verdify-platform/issues/1333), [#1337](https://github.com/VerdifyConsultancy/verdify-platform/issues/1337), [#1338](https://github.com/VerdifyConsultancy/verdify-platform/issues/1338), [#1341](https://github.com/VerdifyConsultancy/verdify-platform/issues/1341), [#1347](https://github.com/VerdifyConsultancy/verdify-platform/issues/1347), [#1355](https://github.com/VerdifyConsultancy/verdify-platform/issues/1355), [#1356](https://github.com/VerdifyConsultancy/verdify-platform/issues/1356), [#1358](https://github.com/VerdifyConsultancy/verdify-platform/issues/1358), [#1343](https://github.com/VerdifyConsultancy/verdify-platform/issues/1343) |
+| U3 — U3: Time-gated soaks | sprint | Unestimated | Not timeboxed | [#1364](https://github.com/VerdifyConsultancy/verdify-platform/issues/1364), [#1352](https://github.com/VerdifyConsultancy/verdify-platform/issues/1352), [#1365](https://github.com/VerdifyConsultancy/verdify-platform/issues/1365), [#1434](https://github.com/VerdifyConsultancy/verdify-platform/issues/1434), [#1435](https://github.com/VerdifyConsultancy/verdify-platform/issues/1435) |
+| U4 — U4: Hardware, replant and irrigation bring-up (Jason physical) | sprint | Unestimated | Not timeboxed | [#16](https://github.com/VerdifyConsultancy/verdify-platform/issues/16), [#45](https://github.com/VerdifyConsultancy/verdify-platform/issues/45), [#51](https://github.com/VerdifyConsultancy/verdify-platform/issues/51), [#52](https://github.com/VerdifyConsultancy/verdify-platform/issues/52), [#75](https://github.com/VerdifyConsultancy/verdify-platform/issues/75), [#298](https://github.com/VerdifyConsultancy/verdify-platform/issues/298), [#751](https://github.com/VerdifyConsultancy/verdify-platform/issues/751), [#1118](https://github.com/VerdifyConsultancy/verdify-platform/issues/1118), [#1161](https://github.com/VerdifyConsultancy/verdify-platform/issues/1161), [#1162](https://github.com/VerdifyConsultancy/verdify-platform/issues/1162), [#1164](https://github.com/VerdifyConsultancy/verdify-platform/issues/1164), [#1165](https://github.com/VerdifyConsultancy/verdify-platform/issues/1165), [#1183](https://github.com/VerdifyConsultancy/verdify-platform/issues/1183), [#1184](https://github.com/VerdifyConsultancy/verdify-platform/issues/1184), [#1336](https://github.com/VerdifyConsultancy/verdify-platform/issues/1336), [#1370](https://github.com/VerdifyConsultancy/verdify-platform/issues/1370), [#1424](https://github.com/VerdifyConsultancy/verdify-platform/issues/1424), [#1431](https://github.com/VerdifyConsultancy/verdify-platform/issues/1431), [#1432](https://github.com/VerdifyConsultancy/verdify-platform/issues/1432), [#297](https://github.com/VerdifyConsultancy/verdify-platform/issues/297), [#398](https://github.com/VerdifyConsultancy/verdify-platform/issues/398), [#1166](https://github.com/VerdifyConsultancy/verdify-platform/issues/1166) |
+| U5 — U5: External owners and upstream | sprint | Unestimated | Not timeboxed | [#1001](https://github.com/VerdifyConsultancy/verdify-platform/issues/1001), [#1010](https://github.com/VerdifyConsultancy/verdify-platform/issues/1010), [#1113](https://github.com/VerdifyConsultancy/verdify-platform/issues/1113), [#1363](https://github.com/VerdifyConsultancy/verdify-platform/issues/1363), [#1397](https://github.com/VerdifyConsultancy/verdify-platform/issues/1397) |
+| U6 — U6: Engineering backlog and parked study | sprint | 12–32 | 16 | [#1433](https://github.com/VerdifyConsultancy/verdify-platform/issues/1433), [#1360](https://github.com/VerdifyConsultancy/verdify-platform/issues/1360) |
+| ROLLUP — ROLLUP: Program roll-ups | sprint | Unestimated | Not timeboxed | [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775), [#1120](https://github.com/VerdifyConsultancy/verdify-platform/issues/1120), [#1325](https://github.com/VerdifyConsultancy/verdify-platform/issues/1325) |
 
 Sprint allocations may cover bounded preparation. Full issue acceptance still depends on its predecessors, current evidence and declared physical or seasonal conditions. C0–C8 remain stage contracts; closed historical issues remain visible in the stage views below.
 
-## T0 — Unblock: Cortex egress fix and the in-flight web pin
+## U0 — U0: Unblock releases (software, now)
 
-Kind: sprint. Capacity: 20 engineering hours. Goal: Land the #1388 egress fix and the Crops/Planner web pin, then verify what they unblock.
+Kind: sprint. Capacity: 24 engineering hours. Goal: Land #1451 (lab guard), #1443 + catch-up builds, #1438, the dashboard-web repin, #1449 NP sync, field-manager cleanup, the #1346 brief fix and #1450.
 
-Exit: Re-embed rows > 0, knowledge_search answers, shadow planner calls recorded, Crops and Planner live.
-
-| Issue | Accountable role | Engineering hours | Next action |
-|---|---|---|---|
-| [#1351](https://github.com/VerdifyConsultancy/verdify-platform/issues/1351) | Platform lead | 1–3 | [RE-SCOPE PENDING JASON] Re-scope pending Jason: local-only applies to everything except the planner, which stays on OpenAI through Hermes. Embeddings on Cortex still wait on the egress fix. |
-| [#1118](https://github.com/VerdifyConsultancy/verdify-platform/issues/1118) | Platform lead | 1–3 | [PARTIAL] Forward analyze stderr to logs; confirm runs after Cortex egress fix (next 15:00Z). |
-| [#1346](https://github.com/VerdifyConsultancy/verdify-platform/issues/1346) | Platform lead | 1–3 | [PARTIAL] 24h cadence (falls 2026-11-07 12:35Z); web pin live; number-match sample, stale/error fixtures, MCP parity; Jason spot check; fix plan-read ValueError |
-| [#1330](https://github.com/VerdifyConsultancy/verdify-platform/issues/1330) | Platform lead | 1–3 | [PARTIAL] Land the in-flight web pin, then run the live plant/remove check; Jason confirms the nav order. |
-| [#1361](https://github.com/VerdifyConsultancy/verdify-platform/issues/1361) | Platform lead | 1–3 | [PARTIAL] The web pin and the live viewer check; results after #1360. |
-| [#1327](https://github.com/VerdifyConsultancy/verdify-platform/issues/1327) | Platform lead | 1–3 | [PARTIAL] After Crops web pin: operator test planting create/remove via BFF shows in History |
-| [#1328](https://github.com/VerdifyConsultancy/verdify-platform/issues/1328) | Platform lead | 1–3 | [PARTIAL] Named-agent live test: plant test variety in hydro 1-10, verify API/Crops page/activity_log actor, then remove |
-
-## T1 — Live verification walk (shipped code, no new build)
-
-Kind: sprint. Capacity: 16 engineering hours. Goal: One signed-in operator walk plus one attended L01 run clear most merged-and-released UI work.
-
-Exit: Each issue closed by an independent verifier on live evidence.
+Exit: Lab publisher green, dashboard web past #1425, crops writes live, briefs ok for 24 h, gather under half its cap.
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#1125](https://github.com/VerdifyConsultancy/verdify-platform/issues/1125) | Operator (Jason) with verifier | 0–1 | [PARTIAL] Live Stop all (Now, Water) and Run/Stop from Water: owned by #1143 item 5, #1135 DoD, #1164 item 2 |
-| [#1130](https://github.com/VerdifyConsultancy/verdify-platform/issues/1130) | Operator (Jason) with verifier | 0–1 | [NEEDS-JASON] Jason opens /graphs/statistics once (30 rows) |
-| [#1132](https://github.com/VerdifyConsultancy/verdify-platform/issues/1132) | Operator (Jason) with verifier | 0–1 | [NEEDS-JASON] Jason opens /settings once (also closes #1181 item 1) |
-| [#1135](https://github.com/VerdifyConsultancy/verdify-platform/issues/1135) | Operator (Jason) with verifier | 0–1 | [NEEDS-JASON] Jason opens /water/history and presses Stop all water from Water |
-| [#1143](https://github.com/VerdifyConsultancy/verdify-platform/issues/1143) | Operator (Jason) with verifier | 0–1 | [NEEDS-JASON] Item 5: agent starts L01 via MCP, Jason taps Stop all water on Now (relay OFF <=30s) |
-| [#1181](https://github.com/VerdifyConsultancy/verdify-platform/issues/1181) | Operator (Jason) with verifier | 0–1 | [NEEDS-JASON] Jason opens /settings once |
-| [#1186](https://github.com/VerdifyConsultancy/verdify-platform/issues/1186) | Operator (Jason) with verifier | 0–1 | [PARTIAL] Jason: /band preview, /water/history 90d, Back to automatic with page closed (#1300) |
-| [#1300](https://github.com/VerdifyConsultancy/verdify-platform/issues/1300) | Operator (Jason) with verifier | 0–1 | [PARTIAL] Operator presses Back to automatic with light off intent, closes page; expect via=server_resync activity row |
-| [#1162](https://github.com/VerdifyConsultancy/verdify-platform/issues/1162) | Operator (Jason) with verifier | 0–1 | [PARTIAL] Daytime Clear during a fans burst (any operator/Claude allowed) + physical push buttons at panel |
-| [#1164](https://github.com/VerdifyConsultancy/verdify-platform/issues/1164) | Operator (Jason) with verifier | 0–1 | [PARTIAL] L01 Run/Stop from Water with Jason; daytime Restart + Clear; #1161 hose run; #1162 push buttons |
-| [#1337](https://github.com/VerdifyConsultancy/verdify-platform/issues/1337) | Operator (Jason) with verifier | 0–1 | [PARTIAL] Screenshot regeneration and the live check on the deployed page. |
-| [#1338](https://github.com/VerdifyConsultancy/verdify-platform/issues/1338) | Operator (Jason) with verifier | 0–1 | [PARTIAL] Screenshots plus the live midday-vent check. |
-| [#1339](https://github.com/VerdifyConsultancy/verdify-platform/issues/1339) | Operator (Jason) with verifier | 0–1 | [PARTIAL] Screenshots, the live check, and Jason's call on the primary water limit. |
-| [#1340](https://github.com/VerdifyConsultancy/verdify-platform/issues/1340) | Operator (Jason) with verifier | 0–1 | [PARTIAL] The live evening check and screenshots; optionally an API-05 intent lane for past intent differences. |
-| [#1341](https://github.com/VerdifyConsultancy/verdify-platform/issues/1341) | Operator (Jason) with verifier | 0–1 | [NEEDS-JASON] Operator or Jason walk on dashboard.verdify.ai, then close. |
-| [#1342](https://github.com/VerdifyConsultancy/verdify-platform/issues/1342) | Operator (Jason) with verifier | 0–1 | [PARTIAL] The daytime live on/auto check with the Lutron readback. |
-| [#1344](https://github.com/VerdifyConsultancy/verdify-platform/issues/1344) | Operator (Jason) with verifier | 0–1 | [PARTIAL] The live check on the South mister. |
-| [#1347](https://github.com/VerdifyConsultancy/verdify-platform/issues/1347) | Operator (Jason) with verifier | 0–1 | [NEEDS-JASON] Visual QA screenshots and Jason's walk. |
-| [#1349](https://github.com/VerdifyConsultancy/verdify-platform/issues/1349) | Operator (Jason) with verifier | 0–1 | [NEEDS-JASON] Jason's D-UX-06 call recorded in decisions.md, plus the screenshots and his walk. |
-| [#1353](https://github.com/VerdifyConsultancy/verdify-platform/issues/1353) | Operator (Jason) with verifier | 0–1 | [PARTIAL] The live side-by-side check against Grafana; an optional phone default and `ahead=`. |
-| [#1355](https://github.com/VerdifyConsultancy/verdify-platform/issues/1355) | Operator (Jason) with verifier | 0–1 | [PARTIAL] The live 72 h screenshot QA. |
-| [#1356](https://github.com/VerdifyConsultancy/verdify-platform/issues/1356) | Operator (Jason) with verifier | 0–1 | [PARTIAL] The live screenshot QA at 24 h and 72 h. |
-| [#1357](https://github.com/VerdifyConsultancy/verdify-platform/issues/1357) | Operator (Jason) with verifier | 0–1 | [PARTIAL] The two-day live spot check and the timing. |
-| [#1332](https://github.com/VerdifyConsultancy/verdify-platform/issues/1332) | Operator (Jason) with verifier | 0–1 | [PARTIAL] Repin+run lab-publisher so lab text matches; Jason live read of 3 settings |
-| [#1333](https://github.com/VerdifyConsultancy/verdify-platform/issues/1333) | Operator (Jason) with verifier | 0–1 | [PARTIAL] Live walk desktop+phone: definitions, not_confirmed semantics, House temp high links anchors |
-| [#1334](https://github.com/VerdifyConsultancy/verdify-platform/issues/1334) | Operator (Jason) with verifier | 0–1 | [PARTIAL] Live: change night target in preview, save, band_temp_target_mid confirmed within 2 dispatcher cycles |
-| [#1335](https://github.com/VerdifyConsultancy/verdify-platform/issues/1335) | Operator (Jason) with verifier | 0–1 | [PARTIAL] Live: Main On via Equipment holds across controller decision until timer/Auto; Auto returns within 30 s; equipment mode/auto_reason |
-| [#1336](https://github.com/VerdifyConsultancy/verdify-platform/issues/1336) | Operator (Jason) with verifier | 0–1 | [PARTIAL] BFF live check (six circuits); South-mister fertilized schedule once South enabled |
-| [#1348](https://github.com/VerdifyConsultancy/verdify-platform/issues/1348) | Operator (Jason) with verifier | 0–1 | [PARTIAL] BFF live check of /v1/irrigation/runs?purpose=irrigation\|climate |
-| [#1370](https://github.com/VerdifyConsultancy/verdify-platform/issues/1370) | Operator (Jason) with verifier | 0–1 | [PARTIAL] Observe one real walk-in: lights on <=5 s, back to Auto 15 min after last sighting, cause logged |
-| [#1343](https://github.com/VerdifyConsultancy/verdify-platform/issues/1343) | Operator (Jason) with verifier | 0–1 | [NEEDS-JASON] Attended: Center mister (L04) run once with Schedule off -> ledger cause=run_now on L04 |
-| [#1358](https://github.com/VerdifyConsultancy/verdify-platform/issues/1358) | Operator (Jason) with verifier | 0–1 | [NEEDS-JASON] Jason confirms definition; cross-surface live screenshots (Statistics/Now/Graphs/Grafana site-home); confirm CI grep guard |
+| [#1329](https://github.com/VerdifyConsultancy/verdify-platform/issues/1329) | Dashboard wave-2 lead | 1–2 | [software-ready] Fix publisher public-output guard failure on /reference/ai-tunables, run publisher, compare pages |
+| [#1332](https://github.com/VerdifyConsultancy/verdify-platform/issues/1332) | Dashboard wave-2 lead | 1–2 | [software-ready] Read guard finding, fix ai-tunables text or rule, run publisher; then Jason walk |
+| [#1322](https://github.com/VerdifyConsultancy/verdify-platform/issues/1322) | Dashboard/irrigation lead | 1–2 | [software-ready] Repin dashboard web past #1425 and sync, then phone check |
+| [#1339](https://github.com/VerdifyConsultancy/verdify-platform/issues/1339) | Dashboard wave-2 lead | 1–2 | [software-ready] Bump dashboard-web pin to a build containing 1a08e6d4, sync verdify-dashboard, walk Now |
+| [#1345](https://github.com/VerdifyConsultancy/verdify-platform/issues/1345) | Dashboard wave-2 lead | 1–2 | [software-ready] Bump dashboard-web pin, make one soil-target edit, read back API, activity and soil_dryout threshold |
+| [#1349](https://github.com/VerdifyConsultancy/verdify-platform/issues/1349) | Dashboard wave-2 lead | 1–2 | [software-ready] Bump dashboard-web pin, sync, Jason walk of Water Today |
+| [#1354](https://github.com/VerdifyConsultancy/verdify-platform/issues/1354) | Dashboard wave-2 lead | 1–2 | [software-ready] Bump dashboard-web pin, capture cross-page set; closes #1322 item 1 |
+| [#1327](https://github.com/VerdifyConsultancy/verdify-platform/issues/1327) | Dashboard wave-2 lead | 1–2 | [software-ready] Merge #1438 once Argo PR CI is green, then close |
+| [#1328](https://github.com/VerdifyConsultancy/verdify-platform/issues/1328) | Dashboard wave-2 lead | 1–2 | [software-ready] Merge #1438 once green, then close |
+| [#1351](https://github.com/VerdifyConsultancy/verdify-platform/issues/1351) | Dashboard wave-2 lead | 1–2 | [software-ready] Run supervisor field-manager release on the two Deployments and read back; get Jason's call on the selector |
+| [#1346](https://github.com/VerdifyConsultancy/verdify-platform/issues/1346) | Dashboard wave-2 lead | 2–6 | [dated-gate:2026-11-07] Diagnose Cortex 404s with cortex-ai-compute, fix the '12' rejection, restart the 24h window |
+| [#1450](https://github.com/VerdifyConsultancy/verdify-platform/issues/1450) | Platform lead | 2–6 | [software-ready] Parallelise/trim gather, add warning, gated ingestor rollout |
 
-## T2 — Bounded code fixes
+## U1 — U1: W6 single firmware flash + OTA rotation (2026-11-07 morning)
 
-Kind: sprint. Capacity: 40 engineering hours. Goal: Small fixes with no hardware or decision dependency.
+Kind: sprint. Capacity: 8 engineering hours. Goal: Flash 2026.11.7.0133.9517acb6 after #1364's window and a required plan clears the preflight; Jason promotes the OTA password.
 
-Exit: Merged, released and verified live.
+Exit: Device on the W6 build, post-flash checks green, last-good pinned, promote done.
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#1345](https://github.com/VerdifyConsultancy/verdify-platform/issues/1345) | Platform lead | 2–6 | [PARTIAL] A migration and a service change for the soil targets and the slot label rename, then live readback. |
-| [#1354](https://github.com/VerdifyConsultancy/verdify-platform/issues/1354) | Platform lead | 2–6 | [PARTIAL] The `--cause-prep` fix on Water schedules and the screenshot set. |
-| [#1322](https://github.com/VerdifyConsultancy/verdify-platform/issues/1322) | Platform lead | 2–6 | [PARTIAL] Fix phone status-line separator at wrap; item 1 closes with #1354 |
-| [#1329](https://github.com/VerdifyConsultancy/verdify-platform/issues/1329) | Platform lead | 2–6 | [PARTIAL] Make lab publisher read plantings/occupancy, repin lab publisher, verify lab == /v1/crops/locations |
-| [#1277](https://github.com/VerdifyConsultancy/verdify-platform/issues/1277) | Platform lead | 2–6 | [PARTIAL] Bump pin to 36c7630c or derive it from the accepted firmware pin |
-| [#1283](https://github.com/VerdifyConsultancy/verdify-platform/issues/1283) | Platform lead | 2–6 | [NOT STARTED] Migration: local-date day end; 25 h fixture test; fix slot-1 test assertion |
-| [#1312](https://github.com/VerdifyConsultancy/verdify-platform/issues/1312) | Platform lead | 2–6 | [NOT STARTED] Fail on any divergent row at threshold 0; unrounded compare; print count (both scripts) |
-| [#1313](https://github.com/VerdifyConsultancy/verdify-platform/issues/1313) | Platform lead | 2–6 | [NOT STARTED] Fix both + native test; ships with next flash |
-| [#1389](https://github.com/VerdifyConsultancy/verdify-platform/issues/1389) | Platform lead | 2–6 | [NOT STARTED] profile idle loop/backoff; right-size requests/limits |
-| [#1363](https://github.com/VerdifyConsultancy/verdify-platform/issues/1363) | Platform lead | 2–6 | [RE-SCOPE PENDING JASON] Re-scope pending Jason: Hermes's image goes through the local registry instead of being retired; descheduler still waits on #802. |
-| [#1010](https://github.com/VerdifyConsultancy/verdify-platform/issues/1010) | Platform lead | 2–6 | [PARTIAL] One public off-cluster (orbit) call showing the real client IP. |
-| [#299](https://github.com/VerdifyConsultancy/verdify-platform/issues/299) | Platform lead | 2–6 | [PARTIAL] Rebase/re-cut #1095 onto engine firmware; add restart/manual-origin min-off cases; one live re-fire observation. |
-| [#367](https://github.com/VerdifyConsultancy/verdify-platform/issues/367) | Platform lead | 2–6 | [PARTIAL] Rebase+merge #1095; show start/runtime parity on next release. |
-| [#368](https://github.com/VerdifyConsultancy/verdify-platform/issues/368) | Platform lead | 2–6 | [PARTIAL] Jump/flatline detection + tests; doc degraded quorum vs SENSOR_FAULT; pair with #1274. |
-| [#369](https://github.com/VerdifyConsultancy/verdify-platform/issues/369) | Platform lead | 2–6 | [PARTIAL] Firmware/dispatcher removal of retired tunables with net-negative entity count; #1278. |
-| [#370](https://github.com/VerdifyConsultancy/verdify-platform/issues/370) | Platform lead | 2–6 | [NOT STARTED] All criteria, after #367. |
-| [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) | Platform lead | 2–6 | [PARTIAL] Add topology/cycling/stale-outdoor deny checks; close #1273/#1274. |
-| [#386](https://github.com/VerdifyConsultancy/verdify-platform/issues/386) | Platform lead | 2–6 | [PARTIAL] Capture one natural ON-before-cutoff episode with min-on expiry via /v1/lighting. |
+| [#299](https://github.com/VerdifyConsultancy/verdify-platform/issues/299) | Control lead | 1–2 | [waits-on-W6-flash] read mister edges around flash reboot |
+| [#359](https://github.com/VerdifyConsultancy/verdify-platform/issues/359) | Control lead | Unestimated | [waits-on-W6-flash] re-check after flash and 11-13 |
+| [#367](https://github.com/VerdifyConsultancy/verdify-platform/issues/367) | Control lead | 1–2 | [waits-on-W6-flash] compare matched days post-flash from equipment_state edges |
+| [#368](https://github.com/VerdifyConsultancy/verdify-platform/issues/368) | Control lead | 1–2 | [waits-on-W6-flash] read diagnostics.probe_health 24h post-flash |
+| [#369](https://github.com/VerdifyConsultancy/verdify-platform/issues/369) | Control lead | 1–2 | [waits-on-W6-flash] post-flash entity and esp32_push_failed check |
+| [#386](https://github.com/VerdifyConsultancy/verdify-platform/issues/386) | Platform lead | 1–2 | [waits-on-W6-flash] run growlight-boundary-episodes.py daily post-flash |
+| [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390) | Platform lead | 1–2 | [waits-on-W6-flash] record W6 preflight output and sweep, then close |
+| [#430](https://github.com/VerdifyConsultancy/verdify-platform/issues/430) | Control lead | 2–6 | [waits-on-W6-flash] compare heap floor and pushes/day post-flash |
+| [#1009](https://github.com/VerdifyConsultancy/verdify-platform/issues/1009) | Platform/security lead | 1–2 | [waits-on-W6-flash] Record rotation receipt at the W6 flash; passive ACL readback when network-infra#839 lands |
+| [#1277](https://github.com/VerdifyConsultancy/verdify-platform/issues/1277) | Platform lead | 1–2 | [waits-on-W6-flash] After W6 flash, run one C1 capture or validate_wire_contract vs live preview |
+| [#1313](https://github.com/VerdifyConsultancy/verdify-platform/issues/1313) | Platform lead | 1–2 | [waits-on-W6-flash] After W6 flash, read back firmware version and close |
+| [#1335](https://github.com/VerdifyConsultancy/verdify-platform/issues/1335) | Dashboard wave-2 lead | 2–6 | [waits-on-W6-flash] After W6 flash + web repin, run lane C live check |
+| [#1342](https://github.com/VerdifyConsultancy/verdify-platform/issues/1342) | Dashboard wave-2 lead | 1–2 | [waits-on-W6-flash] After W6 flash + web pin bump, run #1335 live hold check and capture operator renders |
+| [#370](https://github.com/VerdifyConsultancy/verdify-platform/issues/370) | Control lead | 2–6 | [blocked-by-issue] start after #367 live parity; P3 |
 
-## T3 — Planner A/B study (Hermes arm)
+## U2 — U2: Live verification walk (Jason signed-in + operator looks)
 
-Kind: conditional. Goal: Run the two-arm study with Hermes as the AI arm after the band freeze and the CPU fix.
+Kind: sprint. Capacity: 6 engineering hours. Goal: One signed-in walk and in-cluster operator looks of shipped pages; one attended L04 run.
 
-Exit: Study dry run and burn-in complete; study running.
+Exit: Each walked criterion recorded on its issue.
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#1360](https://github.com/VerdifyConsultancy/verdify-platform/issues/1360) | Planner lead | Unestimated | [PARTIAL] Hermes is the AI arm (Cortex parked). PR B: arm run path, study_day_outcomes, analyzer, schedule hash; then 4-day dry run and study after #1365 and #1389. |
+| [#1130](https://github.com/VerdifyConsultancy/verdify-platform/issues/1130) | Dashboard/irrigation lead | 1–2 | [software-ready] Read-only in-cluster operator Playwright look (lane-F style) or Jason's look at /graphs/statistics |
+| [#1132](https://github.com/VerdifyConsultancy/verdify-platform/issues/1132) | Dashboard/irrigation lead | 1–2 | [software-ready] Read-only in-cluster operator Playwright look or Jason's look at /settings (also #1181 item 1) |
+| [#1135](https://github.com/VerdifyConsultancy/verdify-platform/issues/1135) | Dashboard/irrigation lead | 1–2 | [software-ready] Read-only in-cluster operator Playwright look or Jason's look at /water/history 30 d |
+| [#1181](https://github.com/VerdifyConsultancy/verdify-platform/issues/1181) | Dashboard/irrigation lead | 1–2 | [jason-decision] Include /settings in Jason's W6 signed-in walk |
+| [#1186](https://github.com/VerdifyConsultancy/verdify-platform/issues/1186) | Dashboard/irrigation lead | 1–2 | [jason-decision] One signed-in Jason walk |
+| [#1333](https://github.com/VerdifyConsultancy/verdify-platform/issues/1333) | Dashboard wave-2 lead | 1–2 | [jason-decision] Include in Jason's W6 walk |
+| [#1337](https://github.com/VerdifyConsultancy/verdify-platform/issues/1337) | Dashboard wave-2 lead | 1–2 | [software-ready] Jason/operator walk of Now, then close |
+| [#1338](https://github.com/VerdifyConsultancy/verdify-platform/issues/1338) | Dashboard wave-2 lead | 1–2 | [software-ready] Midday walk of Now |
+| [#1341](https://github.com/VerdifyConsultancy/verdify-platform/issues/1341) | Dashboard wave-2 lead | 1–2 | [software-ready] Jason/operator walk, then close |
+| [#1347](https://github.com/VerdifyConsultancy/verdify-platform/issues/1347) | Dashboard wave-2 lead | 1–2 | [software-ready] Jason walk, then close |
+| [#1355](https://github.com/VerdifyConsultancy/verdify-platform/issues/1355) | Dashboard wave-2 lead | 1–2 | [software-ready] Jason/operator walk at 72h |
+| [#1356](https://github.com/VerdifyConsultancy/verdify-platform/issues/1356) | Dashboard wave-2 lead | 1–2 | [software-ready] Jason/operator walk |
+| [#1358](https://github.com/VerdifyConsultancy/verdify-platform/issues/1358) | Dashboard wave-2 lead | 1–2 | [software-ready] Walk the four surfaces for one day |
+| [#1343](https://github.com/VerdifyConsultancy/verdify-platform/issues/1343) | Dashboard wave-2 lead | 1–2 | [software-ready] Jason attended L04 run-once |
 
-## T4 — Time-gated soaks
+## U3 — U3: Time-gated soaks
 
-Kind: ongoing. Goal: Let elapsed-time criteria fall and verify them on their dates.
+Kind: sprint. Goal: Close at the gate with live evidence.
 
-Exit: Gate dates passed with passing live evidence.
-
-| Issue | Accountable role | Engineering hours | Next action |
-|---|---|---|---|
-| [#1364](https://github.com/VerdifyConsultancy/verdify-platform/issues/1364) | Verifier | Unestimated | [TIME-GATED] 24 h check after 2026-11-07 09:55Z; network-infra chronyc clients readback of 192.168.10.111 |
-| [#1365](https://github.com/VerdifyConsultancy/verdify-platform/issues/1365) | Verifier | Unestimated | [TIME-GATED] Build nightly dried-out flag in 290 rollup; amend ADR-0003/0004; file follow-ups; 7-night live check |
-| [#1352](https://github.com/VerdifyConsultancy/verdify-platform/issues/1352) | Verifier | Unestimated | [RE-SCOPE PENDING JASON] Re-scope pending Jason: Slack is removed by turning off Hermes's Slack output (Hermes stays), not by retiring Hermes. |
-| [#1165](https://github.com/VerdifyConsultancy/verdify-platform/issues/1165) | Verifier | Unestimated | [TIME-GATED] First scheduled L01 run (~13:48Z today); L01 check note; L07/L09 bring-up after re-plant |
-
-## T5 — Hardware, replant and irrigation bring-up (Jason physical)
-
-Kind: conditional. Goal: Jason fits replacement sensors and replants; then topology, targets and feedback follow.
-
-Exit: New hardware verified live; post-replant lines and feedback commissioned.
-
-| Issue | Accountable role | Engineering hours | Next action |
-|---|---|---|---|
-| [#51](https://github.com/VerdifyConsultancy/verdify-platform/issues/51) | Jason (physical) with data lead | Unestimated | [NEEDS-JASON] Install new CO2 sensor and verify plausible live readings |
-| [#751](https://github.com/VerdifyConsultancy/verdify-platform/issues/751) | Jason (physical) with data lead | Unestimated | [NEEDS-JASON] Install new south probe, verify vs neighbours; hydro back on Wi-Fi (#1183) |
-| [#1183](https://github.com/VerdifyConsultancy/verdify-platform/issues/1183) | Jason (physical) with data lead | Unestimated | [BLOCKED] Meter back on Wi-Fi + seal keys; live freshness check; PR2 HA removal |
-| [#1184](https://github.com/VerdifyConsultancy/verdify-platform/issues/1184) | Jason (physical) with data lead | Unestimated | [NEEDS-JASON] Fit meter, then firmware+migration+ingest+DLI, in-cluster build/OTA, live checks |
-| [#298](https://github.com/VerdifyConsultancy/verdify-platform/issues/298) | Jason (physical) with data lead | Unestimated | [NEEDS-JASON] Record per-position pot/substrate/probe/plumbing truth at the replant |
-| [#398](https://github.com/VerdifyConsultancy/verdify-platform/issues/398) | Jason (physical) with data lead | Unestimated | [BLOCKED] Append ledgered target correction with inverse after replant |
-| [#45](https://github.com/VerdifyConsultancy/verdify-platform/issues/45) | Jason (physical) with data lead | Unestimated | [BLOCKED] After replant+targets, verify live probes and run feedback check |
-| [#297](https://github.com/VerdifyConsultancy/verdify-platform/issues/297) | Jason (physical) with data lead | Unestimated | [BLOCKED] Bind real targets/probes then enable alert + engine slot skip |
-| [#52](https://github.com/VerdifyConsultancy/verdify-platform/issues/52) | Jason (physical) with data lead | Unestimated | [NEEDS-JASON] Post-replant seasonal-care decision from observations (Dec recheck) |
-| [#1166](https://github.com/VerdifyConsultancy/verdify-platform/issues/1166) | Jason (physical) with data lead | Unestimated | [BLOCKED] Tank+injector setup, checks, enable fert lines, one scheduled feed each |
-| [#1161](https://github.com/VerdifyConsultancy/verdify-platform/issues/1161) | Jason (physical) with data lead | Unestimated | [PARTIAL] On-site hose run with all Verdify valves closed, then read block reasons |
-| [#1271](https://github.com/VerdifyConsultancy/verdify-platform/issues/1271) | Jason (physical) with data lead | Unestimated | [NEEDS-JASON] Jason says the word -> re-enable the 3 backup-misting slots, read back enabled=t |
-
-## T6 — External owners, upstream and the repo transfer
-
-Kind: conditional. Goal: Follow other lanes and upstream; no in-repo work until they land.
-
-Exit: Owner changes verified; CI moved after the transfer.
+Exit: #1364 11-07, #1346 24 h after its fix, #1352/#1365/#1434 11-13, #1435 mid-December.
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#1001](https://github.com/VerdifyConsultancy/verdify-platform/issues/1001) | Owner lanes | Unestimated | [BLOCKED] Delete verdify-edge after agents#4468; drop D-16 hosts after network-infra#602; update docs. |
-| [#1009](https://github.com/VerdifyConsultancy/verdify-platform/issues/1009) | Owner lanes | Unestimated | [BLOCKED] UniFi tcp/3232+6053 readback; ota_password rotation receipt. |
-| [#1113](https://github.com/VerdifyConsultancy/verdify-platform/issues/1113) | Owner lanes | Unestimated | [BLOCKED] Bump when upstream ships chromium >=156.0.8078.73 (v5.12.10 pin optional now). |
-| [#1397](https://github.com/VerdifyConsultancy/verdify-platform/issues/1397) | Owner lanes | Unestimated | [BLOCKED] Transfer -> rekey Argo -> runners + ci.yml -> ruleset swap -> 5 GHA PRs -> GHA digest deploys -> remove native wiring |
-| [#31](https://github.com/VerdifyConsultancy/verdify-platform/issues/31) | Owner lanes | Unestimated | [NOT STARTED] Select an oracle question or defer/retire with the replay-sandbox cut. |
+| [#1364](https://github.com/VerdifyConsultancy/verdify-platform/issues/1364) | Dashboard wave-2 lead | Unestimated | [dated-gate:2026-11-07] Rerun 24 h diagnostics query after gate on live build; request VM305 chronyc readback |
+| [#1352](https://github.com/VerdifyConsultancy/verdify-platform/issues/1352) | Dashboard wave-2 lead | Unestimated | [dated-gate:2026-11-13] Field-manager release on hermes-iris, sweep Slack code references, record test page, coordinator revoke after 11-13 |
+| [#1365](https://github.com/VerdifyConsultancy/verdify-platform/issues/1365) | Dashboard wave-2 lead | Unestimated | [dated-gate:2026-11-13] Rerun core query after 06:00 MST 11-13 |
+| [#1434](https://github.com/VerdifyConsultancy/verdify-platform/issues/1434) | Control lead | Unestimated | [dated-gate:2026-11-13] None until gate and #1360 resumes |
+| [#1435](https://github.com/VerdifyConsultancy/verdify-platform/issues/1435) | Control lead | Unestimated | [dated-gate:2026-12-15] Rerun mid-December (door window already closed per Jason 11-05) |
 
-## ROLLUP — Program roll-ups
+## U4 — U4: Hardware, replant and irrigation bring-up (Jason physical)
 
-Kind: rollup. Goal: Track child acceptance without double counting.
+Kind: sprint. Goal: On-site sensors, clamps, cameras, panel and hose checks, and the replant.
 
-Exit: Every child accepted or dispositioned.
+Exit: Each physical criterion recorded with live readback.
 
 | Issue | Accountable role | Engineering hours | Next action |
 |---|---|---|---|
-| [#16](https://github.com/VerdifyConsultancy/verdify-platform/issues/16) | Program lead | Unestimated | [NEEDS-JASON] Track children #45 #51 #52 #298 #398 #751 #1184 |
-| [#75](https://github.com/VerdifyConsultancy/verdify-platform/issues/75) | Program lead | Unestimated | [PARTIAL] Criterion 3 coverage doc after #749/#1118 and replacement probes (#751,#51). |
-| [#359](https://github.com/VerdifyConsultancy/verdify-platform/issues/359) | Program lead | Unestimated | [PARTIAL] Open children #367 #368 #369 #370 #386 #1365 |
-| [#430](https://github.com/VerdifyConsultancy/verdify-platform/issues/430) | Program lead | Unestimated | [PARTIAL] Per-tier measured heap/traffic after #367 then #369/#370. |
-| [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775) | Program lead | Unestimated | [PARTIAL] Close once #16, #31, #75, #359 and #390 are dispositioned. |
-| [#1120](https://github.com/VerdifyConsultancy/verdify-platform/issues/1120) | Program lead | Unestimated | [PARTIAL] One Jason walk, one attended L01 run, physical checks, hardware, post-replant line bring-up. |
-| [#1325](https://github.com/VerdifyConsultancy/verdify-platform/issues/1325) | Program lead | Unestimated | [PARTIAL] Live checks, web pin, Cortex egress fix, Cortex cutover, soaks. |
+| [#16](https://github.com/VerdifyConsultancy/verdify-platform/issues/16) | Operator with data/control lead | Unestimated | [physical] Jason installs replacement sensors; verify in children |
+| [#45](https://github.com/VerdifyConsultancy/verdify-platform/issues/45) | Operator with data/control lead | Unestimated | [physical] after replant, wire and verify installed probes |
+| [#51](https://github.com/VerdifyConsultancy/verdify-platform/issues/51) | Operator with data/control lead | Unestimated | [physical] verify after Jason installs new sensor |
+| [#52](https://github.com/VerdifyConsultancy/verdify-platform/issues/52) | Operator with data/control lead | Unestimated | [physical] December recheck with #1365 after replant |
+| [#75](https://github.com/VerdifyConsultancy/verdify-platform/issues/75) | Platform lead | Unestimated | [physical] confirm a successful vision run after camera fix; verify replacement probes |
+| [#298](https://github.com/VerdifyConsultancy/verdify-platform/issues/298) | Operator with data/control lead | Unestimated | [physical] record replant survey with #1329 |
+| [#751](https://github.com/VerdifyConsultancy/verdify-platform/issues/751) | Operator with data/control lead | Unestimated | [physical] After Jason installs the probe, read temp/rh/vpd_south freshness and peer comparison |
+| [#1118](https://github.com/VerdifyConsultancy/verdify-platform/issues/1118) | Platform lead | Unestimated | [physical] Read the 04:00Z run on image ccd254de; if greenhouse_2 still HTTP 500, fix the camera in jvallery/sentinel |
+| [#1161](https://github.com/VerdifyConsultancy/verdify-platform/issues/1161) | Dashboard/irrigation lead | Unestimated | [physical] On-site hose run; read fog/moisture_block_reason while leak_detected true |
+| [#1162](https://github.com/VerdifyConsultancy/verdify-platform/issues/1162) | Dashboard/irrigation lead | Unestimated | [physical] Someone at the panel presses FANS/HUMID/VENT-BYPASS; read fan_burst_active edges |
+| [#1164](https://github.com/VerdifyConsultancy/verdify-platform/issues/1164) | Dashboard/irrigation lead | Unestimated | [physical] Daytime operator Restart with confirmation read after W6 flash settles; then on-site checks |
+| [#1165](https://github.com/VerdifyConsultancy/verdify-platform/issues/1165) | Dashboard/irrigation lead | Unestimated | [physical] Jason records L01 check; enables L07/L09 after the re-plant |
+| [#1183](https://github.com/VerdifyConsultancy/verdify-platform/issues/1183) | Dashboard/irrigation lead | Unestimated | [physical] Jason reconnects YINMIK meter and seals verdify-hydro-probe |
+| [#1184](https://github.com/VerdifyConsultancy/verdify-platform/issues/1184) | Dashboard/irrigation lead | Unestimated | [physical] Jason fits replacement PAR sensor (parts on order) |
+| [#1336](https://github.com/VerdifyConsultancy/verdify-platform/issues/1336) | Dashboard wave-2 lead | Unestimated | [physical] Jason walk now; enable L07/L08 with the replant, then create/run the fertilized schedule and read back irrigation_ledger |
+| [#1370](https://github.com/VerdifyConsultancy/verdify-platform/issues/1370) | Dashboard wave-2 lead | Unestimated | [physical] After an on-site visit, measure MQTT time vs grow_light_main edge and 15-min return |
+| [#1424](https://github.com/VerdifyConsultancy/verdify-platform/issues/1424) | Firmware/HA lead | Unestimated | [physical] Jason flips clamp on site, then rerun sign query |
+| [#1431](https://github.com/VerdifyConsultancy/verdify-platform/issues/1431) | Control lead | Unestimated | [physical] Schedule the week after the 11-13 dry-out baseline |
+| [#1432](https://github.com/VerdifyConsultancy/verdify-platform/issues/1432) | Control lead | Unestimated | [physical] Fan spec proposal for Jason |
+| [#297](https://github.com/VerdifyConsultancy/verdify-platform/issues/297) | Control lead | Unestimated | [blocked-by-issue] wait for #398/#45 |
+| [#398](https://github.com/VerdifyConsultancy/verdify-platform/issues/398) | Operator with data/control lead | Unestimated | [blocked-by-issue] wait for replant |
+| [#1166](https://github.com/VerdifyConsultancy/verdify-platform/issues/1166) | Dashboard/irrigation lead | Unestimated | [blocked-by-issue] After #1165 and the tank/injector setup, Jason records checks and enables L02/L03 then L08/L10 |
+
+## U5 — U5: External owners and upstream
+
+Kind: sprint. Goal: agents, network-infra and upstream changes this repo waits on.
+
+Exit: Each external change merged and read back live.
+
+| Issue | Accountable role | Engineering hours | Next action |
+|---|---|---|---|
+| [#1001](https://github.com/VerdifyConsultancy/verdify-platform/issues/1001) | Platform/security lead | Unestimated | [blocked-by-issue] verdify-edge now holds only kube-root-ca.crt; get agents#4468 closed on that readback, then delete ns by exact name |
+| [#1010](https://github.com/VerdifyConsultancy/verdify-platform/issues/1010) | Platform/security lead | Unestimated | [blocked-by-issue] Land network-infra mcp.verdify.ai tunnel-row move + agents cloudflare-edge pin + ownership rows; then one orbit public call and Loki join |
+| [#1113](https://github.com/VerdifyConsultancy/verdify-platform/issues/1113) | Platform lead | Unestimated | [blocked-by-issue] Watch upstream releases (or build derived image); exact sync of Deployment/verdify-grafana |
+| [#1363](https://github.com/VerdifyConsultancy/verdify-platform/issues/1363) | Dashboard wave-2 lead | Unestimated | [blocked-by-issue] agents PRs for descheduler pull secret + Lease grant + pin bump; read back imageIDs and plan.json |
+| [#1397](https://github.com/VerdifyConsultancy/verdify-platform/issues/1397) | Platform lead | Unestimated | [software-ready] Agents/estate PRs removing native wiring + ci.yaml + webhooks; attach receipts; L9 close |
+
+## U6 — U6: Engineering backlog and parked study
+
+Kind: sprint. Capacity: 16 engineering hours. Goal: Bounded new engineering once U0-U1 land; #1360 stays parked by Jason's 2026-11-06 decision.
+
+Exit: #1433 shipped; #1360 resumes only on Jason's word.
+
+| Issue | Accountable role | Engineering hours | Next action |
+|---|---|---|---|
+| [#1433](https://github.com/VerdifyConsultancy/verdify-platform/issues/1433) | Web lead | 6–16 | [software-ready] Build read-model envelope function |
+| [#1360](https://github.com/VerdifyConsultancy/verdify-platform/issues/1360) | Dashboard wave-2 lead | 6–16 | [jason-decision] None until Jason resumes the study (left as is 2026-11-06; Hermes is AI arm if resumed) |
+
+## ROLLUP — ROLLUP: Program roll-ups
+
+Kind: sprint. Goal: Epics close when every child is closed or carried.
+
+Exit: All children closed or carried.
+
+| Issue | Accountable role | Engineering hours | Next action |
+|---|---|---|---|
+| [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775) | Evidence/data lead | Unestimated | [waits-on-W6-flash] Re-check after W6 flash and the 2026-11-13 band gate; close when every child is closed or carried |
+| [#1120](https://github.com/VerdifyConsultancy/verdify-platform/issues/1120) | Dashboard/irrigation lead | Unestimated | [blocked-by-issue] One read-only signed-in look (/graphs/statistics, /settings, /water/history 30 d); on-site checks; re-plant |
+| [#1325](https://github.com/VerdifyConsultancy/verdify-platform/issues/1325) | Dashboard wave-2 lead | Unestimated | [blocked-by-issue] Web repin, lab publisher guard fix, signed-in walk |
 
 ## Campaign stage contracts
 

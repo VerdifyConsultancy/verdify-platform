@@ -10,7 +10,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "22896684a29833ca1ca3f677031b7bd515147b1f38a50d82e9191c480f3e79d0"
+      "body_sha256": "1552a9623b5bcaee08bf31f08a749e94a1d02e539d1c1723fce47e1298cd7ae5"
     },
     {
       "key": "incident",
@@ -321,7 +321,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "8412c0137c0a132e5b3cc1251d98ee6db29807bcb1e635a05e2f8c36f2460ba8"
+      "body_sha256": "a027eaa01547089f5a3e2990bbc88a7a79dbabc505be8c5ca348105fa61f4ba7"
     },
     {
       "key": "433",
@@ -356,7 +356,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "66f70820b13889adb6785b092a041d6c14f6862fc5e6d973ff3f45238841e259"
+      "body_sha256": "198713a2d5b9b81fe3c214bfade6a0930ea9199b838cd6252f8e9728436e1fff"
     },
     {
       "key": "563",
@@ -437,7 +437,7 @@
       "accepted": false,
       "parent": 359,
       "blocked_by": [],
-      "body_sha256": "c0959cae5ba1feb0fc30ac43b3adf4135d248e871a3119934a4e40a0f2c284cf"
+      "body_sha256": "31c4691d408d391774beb93b2b6a92be4b0b32486dedcd7c1e128b7c432ec78b"
     },
     {
       "key": "218",
@@ -546,7 +546,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "8b851bb70574d5ab23a3c186f4846bea0c63dc9fb928374c4bb2a1962825032c"
+      "body_sha256": "44367e046ef2f64605e5c60b1ae5efa091766632e9c3157688546cc88cfcb640"
     },
     {
       "key": "430",
@@ -557,7 +557,7 @@
       "accepted": false,
       "parent": 359,
       "blocked_by": [],
-      "body_sha256": "930c78555680f38155b8a7caf350b734614a032ce2bfa4ade2ae5b6ea1c84537"
+      "body_sha256": "634eb262925cfe3ab621d1d0ee7847d742465379edd76c2c87e7cebd779274f5"
     },
     {
       "key": "428",
@@ -581,7 +581,7 @@
       "accepted": false,
       "parent": 359,
       "blocked_by": [],
-      "body_sha256": "cd22555f0acbcc0b245910c134d4d179319886366717c023a0f77c8ca8967f2b"
+      "body_sha256": "0f4cfb031feb4f6ac250b9b2ad512c4837c17de4868ea2d68efd4d1e6dbd8e69"
     },
     {
       "key": "367",
@@ -591,10 +591,8 @@
       "status": "open",
       "accepted": false,
       "parent": 430,
-      "blocked_by": [
-        390
-      ],
-      "body_sha256": "8741f43612d23b3de0d732017ba74b514c6e12cc99349a8d567412370067ea42"
+      "blocked_by": [],
+      "body_sha256": "35faa3732c141f55ab8304d008b4a17d81935fe3ae3f8b3412d93d9289156295"
     },
     {
       "key": "370",
@@ -607,7 +605,7 @@
       "blocked_by": [
         367
       ],
-      "body_sha256": "9937993c68290dea5c66d6010b54bc5f4ce6a7c3aadf95cb0cc4a52b1c22c3e6"
+      "body_sha256": "bcd983ff9c5c2d34eddeb50c8db45018f4b953c0df51a44fca07a91a520a7b03"
     },
     {
       "key": "369",
@@ -617,10 +615,8 @@
       "status": "open",
       "accepted": false,
       "parent": 430,
-      "blocked_by": [
-        390
-      ],
-      "body_sha256": "ec16abd24c66dbedd45079e4611d918da64d4e8a1012f0ceceeba1f35b00f772"
+      "blocked_by": [],
+      "body_sha256": "46ca3445cc41eeaa03198d647dd650c9fb45724ad3903871881f2ff23c19d4a6"
     },
     {
       "key": "324",
@@ -725,10 +721,8 @@
       "status": "open",
       "accepted": false,
       "parent": 350,
-      "blocked_by": [
-        390
-      ],
-      "body_sha256": "324395083708776e372d8db5bebc05593a4400ad6ff3f6090ac70ca140ea80eb"
+      "blocked_by": [],
+      "body_sha256": "2a161b5c5670134539ae66fbd3bd93c543732176f0a371758a955dd95a57d220"
     },
     {
       "key": "297",
@@ -742,7 +736,7 @@
         45,
         398
       ],
-      "body_sha256": "47c5e3c27ded0c102e6c509aa621f34dba485a86fa8ecbb86412f61733d8d491"
+      "body_sha256": "49e877349e7cd43ed0c7e51fb95071cb582ae0f9b3d4a3e1f59ef7f7792c2dca"
     },
     {
       "key": "296",
@@ -768,7 +762,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "116e5c4a74322bfa2ece2844d76752a95c4ca4f3cb90eafa519d8fe36d656bc8"
+      "body_sha256": "c687156b5fc7b73e4c09caedb751874bb684c434133dbd7fd958ec32bf002189"
     },
     {
       "key": "751",
@@ -778,8 +772,10 @@
       "status": "open",
       "accepted": false,
       "parent": 16,
-      "blocked_by": [],
-      "body_sha256": "98d6c57b5cccfb4f555fc2b8dcca67333b46a989b06b27a938fa79ac579cf44d"
+      "blocked_by": [
+        1183
+      ],
+      "body_sha256": "86913dfb379f44762c9b233e36bbfc7938a3ba1f7fa13e22fbe6024bd43f1e4a"
     },
     {
       "key": "298",
@@ -789,8 +785,10 @@
       "status": "open",
       "accepted": false,
       "parent": 16,
-      "blocked_by": [],
-      "body_sha256": "fd891890065eb07587a5468564f45c0a227a8c54ae63e1e9f3c154c6fcec694e"
+      "blocked_by": [
+        1329
+      ],
+      "body_sha256": "56a5d0d3025674e530f09ab61f8418d59d282729076589fc499ea112dce343aa"
     },
     {
       "key": "398",
@@ -803,7 +801,7 @@
       "blocked_by": [
         298
       ],
-      "body_sha256": "9f0704ae1f82f99018900f402ba85c5ecd4fca33813ee101e6549815d3f1bfe3"
+      "body_sha256": "d461cc7ff79a8a8e27fc4b766aaa4326ddc269f23be44385a874f5c54c68b6a6"
     },
     {
       "key": "45",
@@ -814,10 +812,10 @@
       "accepted": false,
       "parent": 16,
       "blocked_by": [
-        398,
-        298
+        298,
+        398
       ],
-      "body_sha256": "70ae8f5487516c09bfe23c63e6888b639eb8f67450776d30dcf2fdc449f5c92e"
+      "body_sha256": "d4e6e22617c61f076ed7796d1c595728f2492232716b753608f4f7750f241c7f"
     },
     {
       "key": "51",
@@ -828,7 +826,7 @@
       "accepted": false,
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "3dccfd2c4e124a4d420f5fb0f670d8aade90e07ca40da66f37efe9e4eeed0d57"
+      "body_sha256": "69bc4384097b9ed8935ced0e8bca052965b74757a3b6be83e61e7027b1ec0164"
     },
     {
       "key": "52",
@@ -841,7 +839,7 @@
       "blocked_by": [
         298
       ],
-      "body_sha256": "3099557158ad5cde8575122fde28e93c1d00efc35213b54f1a19f86b13ff8cf6"
+      "body_sha256": "4ee56d7fdd0a0174b9841940e4f65f625cdd24df3b561be432967da216ca3974"
     },
     {
       "key": "412",
@@ -881,11 +879,11 @@
       "number": 31,
       "title": "[C8][P3] Close twin setpoint and actuator coverage gaps with generated consumer truth",
       "stage": "C8",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "2db7795eaaf9ac0cef2cfb391f9ff65f4522fe92d61d4a5790caa967a179c82f"
+      "body_sha256": "d1eacf007a3bb39dd99327eea177e912c4ab85dcb89a106e82ccd3b60e4f8ad1"
     },
     {
       "key": "606",
@@ -1274,7 +1272,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "2874552ee264cd89a82d013f1f3460b57d314a3620fecda2004386e90cdfab45"
+      "body_sha256": "13648658596a2a39ab54f99fc278794f615a2711ce4dfe19312a818a9d947080"
     },
     {
       "key": "1002",
@@ -1362,7 +1360,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "006517fd187dca88ef19fc2c14e2bbba4eec081bab51c22223bc6ebda261bfcd"
+      "body_sha256": "878a6cd909542fc57b9cd1092dd2b1e9901df342c1d8afe3309723de278dd2d2"
     },
     {
       "key": "1010",
@@ -1373,7 +1371,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "67307f3447e21073a6ec160f6655537e3870002dc8d744e43a0bd41bb59b0f6f"
+      "body_sha256": "eb670f73511adfcedb39d050a3c40ada4892a067bdcc77c90832f75531229424"
     },
     {
       "key": "1011",
@@ -1417,7 +1415,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "20a96d7fc1a2c5ff81451bd62b063619086670aaed7909de7d98e9e88f274175"
+      "body_sha256": "d2b0db9dc76b8f3aecb9522466963446d745081ba065f4f037e9f6d4b0de785b"
     },
     {
       "key": "1118",
@@ -1428,7 +1426,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "87e76c6389a0dd06dfeb628ab5189b889383eae4d4fccc8720248c54b19fbf5b"
+      "body_sha256": "e1db8df26a52651d99c8021aab9f564bef63b23750573ebdd476a4b8b7847b43"
     },
     {
       "key": "1120",
@@ -1439,14 +1437,14 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "71acaa85f0f2c70c686ac49df373920925e0d7c346824361c2a17b72e914d553"
+      "body_sha256": "bb174c58c4f12f4f882677c57b74f39c464e0c24fc7c27e3a52ae679859cf338"
     },
     {
       "key": "1125",
       "number": 1125,
       "title": "[VD][P2] Build the form controls, edit drawer, water confirm dialog and write hooks",
       "stage": "VD",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1120,
       "blocked_by": [
@@ -1454,7 +1452,7 @@
         1135,
         1164
       ],
-      "body_sha256": "e40c7a13405e6756b805bb9aeda92255e334034187bf45586af765a0fb7d09cb"
+      "body_sha256": "0df3c642177161b25619a58e54cd52a87c02062028f333b168419fdd10bcd63e"
     },
     {
       "key": "1130",
@@ -1465,7 +1463,7 @@
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "c731d95a055017a6398e3216940b4d0e20e366521ea3ba1530579bb2950fa166"
+      "body_sha256": "6e59dde724d774f89401f3cee23386af025a28ae8a461cfb814bc3ff3be04097"
     },
     {
       "key": "1132",
@@ -1476,7 +1474,7 @@
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "c0bb8c90413f0e3a38b93fbde12980fc8475c1b7c570dfb722dc969e702876b9"
+      "body_sha256": "fd28d98df871c53e8eced89b75bbe2212c7b865c249d17120a4424d6594ca534"
     },
     {
       "key": "1135",
@@ -1487,18 +1485,18 @@
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "bb2d20088aba97508d90a5e96cb56bd7a26571841e3e628511e303ec3ea532a0"
+      "body_sha256": "4a2e39d50ba366305ac4d191368ab5c7884778bdb2de85a81e9b9c798585ddc7"
     },
     {
       "key": "1143",
       "number": 1143,
       "title": "[VD][P2] Ship R1: put the read-only dashboard live at dashboard.verdify.ai",
       "stage": "VD",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "c292232cfe9b1956ae5a78118488b3e7ba5f53812b6d89b4e5bde07a1f493183"
+      "body_sha256": "ec12c71771053d23f1486509376937ae6669bd54f84cc262c7d69645753c7edc"
     },
     {
       "key": "1161",
@@ -1509,7 +1507,7 @@
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "e5282fd91876883e35ea6a948526577d09e33d08d76b70b7da76aa7f4260f2e4"
+      "body_sha256": "39a90fcdcb5649eea32e2765233c9d61854e12b2d0b2284ccf9046a4b1f5144c"
     },
     {
       "key": "1162",
@@ -1520,7 +1518,7 @@
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "b94c30e9b1c53d75acd5c651a5f8085c9948156aaf2e4b3945756f9ee50a399e"
+      "body_sha256": "049936558a4c5ccfe30f9e3266c7ad410868b5190e71c710ea00b89793a16ccd"
     },
     {
       "key": "1164",
@@ -1534,7 +1532,7 @@
         1161,
         1162
       ],
-      "body_sha256": "b87e9f3431f17893258ecac99036f067953db8375e39c72bb9f82061ef307645"
+      "body_sha256": "57988dc4db9dcbbaff33ae5e7b23d92ab858e4653e67a29da49a40877877de98"
     },
     {
       "key": "1165",
@@ -1544,10 +1542,8 @@
       "status": "open",
       "accepted": false,
       "parent": 1120,
-      "blocked_by": [
-        1329
-      ],
-      "body_sha256": "1529f79c55032d5d58789b1913b9e304ff5361a232656e26e6270fe2cf71d74d"
+      "blocked_by": [],
+      "body_sha256": "e09c9cf3f9338987ee252006457d26520914b21c03a5f05ebb29a4d7d75eaffc"
     },
     {
       "key": "1166",
@@ -1558,10 +1554,9 @@
       "accepted": false,
       "parent": 1120,
       "blocked_by": [
-        1165,
-        1329
+        1165
       ],
-      "body_sha256": "e2f0845fccc5c2c0fdd2412a041fa19095c4d09639eb127aeefaa3260665d6b7"
+      "body_sha256": "bb0cbf935cf7f513aafc5f984708d3688ea6cc65b07e00b86c359a8bd9a3178e"
     },
     {
       "key": "1181",
@@ -1571,8 +1566,10 @@
       "status": "open",
       "accepted": false,
       "parent": 1120,
-      "blocked_by": [],
-      "body_sha256": "478201fc9d671b4f455ccfd76ec7e3b8fd08467512798a3207809d31507ee9cd"
+      "blocked_by": [
+        1132
+      ],
+      "body_sha256": "1c782ca16907c309ea67a27151eab718e567af9e995eeef088bd39a05c8f4b65"
     },
     {
       "key": "1183",
@@ -1583,7 +1580,7 @@
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "3eb6b28bdaabc770ad9a34b7dbeba502247312d0f616d15752d887fa0655881f"
+      "body_sha256": "ee8d02ec0210ee5c224e4852f78b808b655b24070c033a732d764dabc7d2200b"
     },
     {
       "key": "1184",
@@ -1594,7 +1591,7 @@
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "a0a8d5d46539b3896981e35336505239479108ffa7abbab30934dcbb123ffbb0"
+      "body_sha256": "bbbde657b430d2dcc2ad8fad0a923ee6bba7e690110eecc012c258a8a0fd8bd6"
     },
     {
       "key": "1186",
@@ -1604,21 +1601,19 @@
       "status": "open",
       "accepted": false,
       "parent": 1120,
-      "blocked_by": [
-        1300
-      ],
-      "body_sha256": "ba7f22e698bce7bf9d4b685b6c838f8f387bf94a5acf8dcaa473e94d1e7b39cf"
+      "blocked_by": [],
+      "body_sha256": "7c245d68ad1da16e96aed8805cceca2f6fc886ecca823a553f1216a4bedf51a3"
     },
     {
       "key": "1271",
       "number": 1271,
       "title": "[OPS][P2] firmware: give sensor_degraded a boot grace before timed L04 fallback slots return",
       "stage": "OPS",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "b254b3e073750d2c6ec81339ad4ae8ff660b766071370f5dca61f61ce1f3aaff"
+      "body_sha256": "1e9c3ca6eb205b517c3539e9f27a5acae7e2ba2587718b6211b1629e7b737bb8"
     },
     {
       "key": "1277",
@@ -1629,40 +1624,40 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "57b40bdb0bc3497a5aa8b0a44b354c9895d68c4dcc36171516207b5ecbd8ac13"
+      "body_sha256": "96b1f2dc1a06b444ec2f1cf35ea7a222bc821353628ee72fe81147d2667772d8"
     },
     {
       "key": "1283",
       "number": 1283,
       "title": "[OPS][P2] v_water_meter_daily may read a 25-hour day as complete with its last hour missing",
       "stage": "OPS",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "9c56f9cd6ed85a535fd89c14af25af22878c09b2eab2773b9c11414b9b2d495c"
+      "body_sha256": "b277eb884e191ac1c2ea6225843560bd28a230f1ce60ae6b2ceee1e1dd0fea2d"
     },
     {
       "key": "1300",
       "number": 1300,
       "title": "[VD][P2] Back to automatic leaves a grow light off its intent when the Equipment page closes before the write confirms",
       "stage": "VD",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "f4851ca40437da21a3d9ceb8de5f9bccaa684b4911a27b02a6b39e8b1deba35e"
+      "body_sha256": "1be84dbdad851547e1667edefba1f939aa4b9f993a29d824d48c80fdc2cc5f73"
     },
     {
       "key": "1312",
       "number": 1312,
       "title": "[OPS][P2] firmware-replay-diff: rounding lets up to 14 divergent rows pass at THRESHOLD_PCT=0",
       "stage": "OPS",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "f0a4f6f229e2e107dc9a9f2947e6f510b85a3cef3393d23c35cb02c1232a8f64"
+      "body_sha256": "6b44fd2d6f5581e41d7ea65c7d3cb96f07682e90051c2596a557693f0ef85013"
     },
     {
       "key": "1313",
@@ -1673,7 +1668,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "482e702bcf345226791150447561b20ce5a949a97e78f784d98bfc566336a57a"
+      "body_sha256": "2938b4fe6591a4893e2cfb5ff6146ac23e6b32909a5e9191ae2cac291097a88b"
     },
     {
       "key": "1322",
@@ -1686,7 +1681,7 @@
       "blocked_by": [
         1354
       ],
-      "body_sha256": "252568b94d1d80b7b43c30925d4288a6e3f5f665a7c72ceeb419d07942cda367"
+      "body_sha256": "fe67487f05183f948412de6664b181922d323ec7f3b1156c1d093d6330b6b99e"
     },
     {
       "key": "1325",
@@ -1697,7 +1692,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "f1d227fdbbe56342bc0201264e4fab6348094497d04a5ebb6f80a106ed1b01c5"
+      "body_sha256": "386cb22ddd6355a0e6a97f61f4a2bbd37fe66c91762f9c88cdb55fa0428d91f8"
     },
     {
       "key": "1327",
@@ -1707,10 +1702,8 @@
       "status": "open",
       "accepted": false,
       "parent": 1325,
-      "blocked_by": [
-        1330
-      ],
-      "body_sha256": "e8119bc731c92a3372cc775ce61da4c08c74fcc9997ca3520c80f0ef8265b37e"
+      "blocked_by": [],
+      "body_sha256": "ae94a5f617b378baca014bc07badf5772c767f258326fbe8f14a3505374c66ee"
     },
     {
       "key": "1328",
@@ -1720,10 +1713,8 @@
       "status": "open",
       "accepted": false,
       "parent": 1325,
-      "blocked_by": [
-        1330
-      ],
-      "body_sha256": "91936b4e64d4336c555677a845961ad4e44da6ee3bd2285d0d61430c69a8bb39"
+      "blocked_by": [],
+      "body_sha256": "79093cfb3d7a885e69ac938fe724499f1aae876f82c003a6daff57a444d2782c"
     },
     {
       "key": "1329",
@@ -1733,19 +1724,21 @@
       "status": "open",
       "accepted": false,
       "parent": 1325,
-      "blocked_by": [],
-      "body_sha256": "c6e6a157f72807756798d875aee3f4b62a7b664d31a7d246ae53deb0db1def42"
+      "blocked_by": [
+        1332
+      ],
+      "body_sha256": "3d93c84b601d82dc9f76cb8421bd1bb97dfef882357016a4a92050a3e01ff9e2"
     },
     {
       "key": "1330",
       "number": 1330,
       "title": "[W5][P2] Add a Crops section: hydro slot grid, wall shelves and planting history",
       "stage": "W5",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "61d5f0452d600c9bf7b20825a1ff0b8ea67504d6890321297dac877682fd03dd"
+      "body_sha256": "2af17cf34ba846d8a200d22a10879d40057be126eebd3286cca11dfcdca2ba62"
     },
     {
       "key": "1332",
@@ -1756,7 +1749,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "4c1431ae0d708c0f36297989e8768af704b7e29b7a83a36522c38abf87266a95"
+      "body_sha256": "c9dcabe8185c92b799d2f31f52340d337e27ed9dd55e4ccb548ff9d82c5429af"
     },
     {
       "key": "1333",
@@ -1767,18 +1760,18 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "92344ac01688fb5f641a0bda18b8b1ddddfba3c5dbf6ae92c3ba2b25b3181ef7"
+      "body_sha256": "a029b811d140cf9f08cae2321c33ead0e175ee8c781d1e93641b104e13ef3b82"
     },
     {
       "key": "1334",
       "number": 1334,
       "title": "[W5][P2] Research the band math and design a plant-agnostic band editor with a live 24 h preview",
       "stage": "W5",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "945f4a4383457756e0a55257f7c7bed248a144d4baffc88f28c638f1c0f50d37"
+      "body_sha256": "76177761b79b78f401a387c5e733dfd1672819cb0a7015c9fd2d0b19ef02a7c6"
     },
     {
       "key": "1335",
@@ -1788,8 +1781,10 @@
       "status": "open",
       "accepted": false,
       "parent": 1325,
-      "blocked_by": [],
-      "body_sha256": "40d79e72201cbde3f8a15bf50bf8f6a27d6b3bf974ddfce41c57c26aa9bf4b1c"
+      "blocked_by": [
+        1322
+      ],
+      "body_sha256": "a896d8a6ed2099551b2364ce219e9cc11e4702c8b7e93748769fefac22d0a0ae"
     },
     {
       "key": "1336",
@@ -1800,7 +1795,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "409faa7a273fc498c1df954c3c62adeb1801b87a3bd8daa5ea4f1b98f46cfb81"
+      "body_sha256": "2b0149f428697e5766cc2fda1ba5c4e881498951537483097893a5bf4c9bca5b"
     },
     {
       "key": "1337",
@@ -1811,7 +1806,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "dd378c430725c990696bc1af3b09e128ef4a369ab9a20356a4523e4bf652ebcf"
+      "body_sha256": "18dc1e89e50aeae3d1d221491d973feeeff494ce62dfe94b6ecc036991cca151"
     },
     {
       "key": "1338",
@@ -1822,7 +1817,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "87cb9b5c285182677197a172fa30ced33a85665339410c297ac39cd52989d11a"
+      "body_sha256": "cee7a2ce1a6ab010540b735d5a88d5145fd310ce1882ae29d2ba20f1ccf92623"
     },
     {
       "key": "1339",
@@ -1833,18 +1828,18 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "240b152d3c761281d6dbc4edb71b7162feb0f72fe032dd2a298b2701b4fef226"
+      "body_sha256": "605c69b1a88b95ef5a174552e86950688958b2b135eb757f8e91c4a936cce541"
     },
     {
       "key": "1340",
       "number": 1340,
       "title": "[W5][P2] Give Running and next room for its labels and add Main and Grow light rows",
       "stage": "W5",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "b5b3700b07bb3099fe563b4665a8ddd64523f083d806ddcf18fb2aaa9280d66e"
+      "body_sha256": "137547fd7a056153a30179d4dbd7e1559d9e77bbf384b0d415d36d380603aee7"
     },
     {
       "key": "1341",
@@ -1855,7 +1850,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "8110e99db27ff091a17d3dc98872244669743fd236b25d767e91f62ad421ee74"
+      "body_sha256": "6a1627b692c3fae991cbc52150cc8fee9a46106a98a2a09595a4b6ccdb5f9b6e"
     },
     {
       "key": "1342",
@@ -1865,8 +1860,10 @@
       "status": "open",
       "accepted": false,
       "parent": 1325,
-      "blocked_by": [],
-      "body_sha256": "eb2a7f0a3de9a1aaf5683c8371f0b0e279c05a84f93ca961aae72ecd055ec9ff"
+      "blocked_by": [
+        1335
+      ],
+      "body_sha256": "8dd7f96a5ba8d3a676eb50dd147fdfe9cc5a441abf3f1b3501a35db1d245e0ff"
     },
     {
       "key": "1343",
@@ -1877,18 +1874,18 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "80204e3f683d313f1cb077025c6ad06f36c3a16ff9361dd9edd8df2a55b2ec5a"
+      "body_sha256": "10cd76f5cd3a2392adf6e103c555a9052ee6492f17eb42779e715dfc1f56807f"
     },
     {
       "key": "1344",
       "number": 1344,
       "title": "[W5][P2] Explain VPD control, Manual and Fallback on Water; show VPD control only on misters",
       "stage": "W5",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "d6a9dbc1d7850d160fd88b66afa3e3f8f354903c56a77e6b747e7f063ad93fd0"
+      "body_sha256": "1948250794d0692e3a2844e5e1848d5c1b41cd7840d5f8ffed3bf0bc308ece2a"
     },
     {
       "key": "1345",
@@ -1899,7 +1896,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "fc8671e0ed0870fd20a39bb0335e8d136f1416c99b127b7e2bf336d5c8456e1f"
+      "body_sha256": "8e466e0c167700afcc7cd2c129060a3e6991cd9812cf2f3f8a849c3a828f74e7"
     },
     {
       "key": "1346",
@@ -1910,7 +1907,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "e01ab1163a339d901f68ad65dc331c202ebcd25d3c969867e753bb67e41818b9"
+      "body_sha256": "cbff1f67bf6339f4bac4824f51eb6ce584f56e4f7e2266ffb200226e8e023c76"
     },
     {
       "key": "1347",
@@ -1921,18 +1918,18 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "857b845ef67ab5d164294339ab53d2300d36b49890bba713592ae2bf5e42458b"
+      "body_sha256": "8752f70e59c82954e8fb3aa55087f471109fb06ea3c99fffea63e83851f525a8"
     },
     {
       "key": "1348",
       "number": 1348,
       "title": "[W5][P2] Separate irrigation runs from VPD mist and fog everywhere",
       "stage": "W5",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "263e109bf79a5700e45501d82de8fbb8220029e276404ec3e452994a0878480e"
+      "body_sha256": "021edd95ed876a9013324d40ef74d4884b407358697b173afce7f45eca01553b"
     },
     {
       "key": "1349",
@@ -1943,7 +1940,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "7fcc6e62426ef43322cb3be242a69b08c685cb8eecf0deb4cc474b00f60a666c"
+      "body_sha256": "04d88ead4affadef72f56290fc575628431f8721655ef8ad0a57877aaa29dad9"
     },
     {
       "key": "1350",
@@ -1964,10 +1961,8 @@
       "status": "open",
       "accepted": false,
       "parent": 1325,
-      "blocked_by": [
-        1352
-      ],
-      "body_sha256": "12eb4329938b24528ada9ad518a353378a985e5d0f2f0ae8d12202deff2a3155"
+      "blocked_by": [],
+      "body_sha256": "16380aa1521ffcd12934203962ce992c92b484af365fe5a9604261000ab7b3aa"
     },
     {
       "key": "1352",
@@ -1978,18 +1973,18 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "57eddd35e361b0629209f05d3a8765cd135b8531d75a3a39fe1068611c442f72"
+      "body_sha256": "642d16ecc5a17a1ed56d9f8df61323942af65ee9e133a915f14ce449a3551ef6"
     },
     {
       "key": "1353",
       "number": 1353,
       "title": "[W5][P2] Show 72 h of history and 72 h of forecast on Graphs by default",
       "stage": "W5",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "d8cbda98d63f187c505d2d08c501aab1da5343ec83c944307783965bbd6cf7af"
+      "body_sha256": "19f0f69abe59196eacb873cd32b793c8482161c43f6c15e76bbc7a2042c2ac82"
     },
     {
       "key": "1354",
@@ -2000,7 +1995,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "355b15b2c2e6ee0deb2eba97dd801620df919d8c344490203b4b49416052118f"
+      "body_sha256": "88115bea7165e3a29769128f79a66e3d9eea4b4971a900e6331ea400fc3c8b4b"
     },
     {
       "key": "1355",
@@ -2011,7 +2006,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "1a014f6b1fe1f4bd791ac70099058691f6035d28415c95f77b9772ba1328ab2e"
+      "body_sha256": "ae146d38705e65d5c1714d418284312951eb74f46b49d69d45d08d54d4199bb9"
     },
     {
       "key": "1356",
@@ -2022,18 +2017,18 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "77c7ee7961962500904bd494d44b2e2066f70a290ee4ec3a01673d5b4afe94e3"
+      "body_sha256": "2c2a0ada8b30dfbd56aae8a670b377c90ea70db510c071019978099255b4dc57"
     },
     {
       "key": "1357",
       "number": 1357,
       "title": "[W5][P2] Add a Lighting tab to Graphs: light state, outdoor lux and thresholds, light minutes",
       "stage": "W5",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "8042dcdb566b9fc9aa5e4be085cdfe2d3cca3bd918cb545fc6965bd6cc7fc731"
+      "body_sha256": "eaaf53390b9df0a8efbb695b361cb1f6553cc9825a7a50949d311cc6c2c0dacc"
     },
     {
       "key": "1358",
@@ -2044,7 +2039,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "17f9b9f199857a9d38e63464d1006e59b23012f9e894738d406cdbf472654751"
+      "body_sha256": "5f67afe159cacc2ce724163cf0deabf3f296db3af9003b80337980252214eaa7"
     },
     {
       "key": "1360",
@@ -2055,23 +2050,22 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [
-        1365,
-        1389
+        1434
       ],
-      "body_sha256": "1bc3feaa5dc11344c3fc99afb956d31d9a1577c03b2949684fb8ce2b13963534"
+      "body_sha256": "ce9ff29441e8f2035c08b4a27e8c9cf502b1898e4d787863e2553d76f2c748e7"
     },
     {
       "key": "1361",
       "number": 1361,
       "title": "[W5][P2] Add a Planner section: plan history, cost, experiments, arm calendar and results",
       "stage": "W5",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": 1325,
       "blocked_by": [
         1360
       ],
-      "body_sha256": "370ee49dae8f9112a2b02279aacd0918254b1b4fd8f4c7d0b5f4beb34572a8e9"
+      "body_sha256": "3e64707a9af426789351f425db134c345f9d97e342272a8fc0b9129675a3d077"
     },
     {
       "key": "1363",
@@ -2082,7 +2076,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "3815226d27cf15dba53cf2d8a122b8453723b4d6e9984353d96782b93f0cb8d8"
+      "body_sha256": "7adc0a3e15306a03652735d8dabafb35c3db112a1d689e5af9b37de83c78db07"
     },
     {
       "key": "1364",
@@ -2093,7 +2087,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "7953e3192dfd6449ea6c1c3a7b6f7e307484730727cd41bae315ec3afa789fe1"
+      "body_sha256": "cc8d7b60dc8c79ce6049b108aae3c68851a03ccf8763c32de968dfeac128ffe6"
     },
     {
       "key": "1365",
@@ -2104,7 +2098,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "fab8c16f6d47203872e58cdd9391f186f226278eb5441456e25e9f8fb9a0b88e"
+      "body_sha256": "1cf644dc94bcbd2dfefc040592ff0cecc703a5e3525c38fe52e689451f8bd04d"
     },
     {
       "key": "1366",
@@ -2128,18 +2122,18 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "994f182d24d31b8a44f5b3604559cc2b49b7d9b9adfb732b216be04a5365cf4a"
+      "body_sha256": "b19841d02d90303dfb2a311b0f2c13e3ee0f90b86be99a5ada277c6fc47c2c30"
     },
     {
       "key": "1389",
       "number": 1389,
       "title": "[OPS][P2] experiment-v2 lifecycle/freezer/selector CPU-throttled >50% (limits 250-500m, requests 10-25m)",
       "stage": "OPS",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "7d2c3258a33460da396133fff763f985e3d976516d86c1bbc1b5b31b0d6c0e5d"
+      "body_sha256": "33c15cf0b1fa15edf875b89a61b5740d7da2e38c6be3903f2f8f72820bc77ce7"
     },
     {
       "key": "1397",
@@ -2150,7 +2144,91 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "d1eb92f7dcc979a030b0df0a09622a5804277e3c03263b2f9bd2cc9c6a09ff33"
+      "body_sha256": "43001e5ede74fc1107d3195a12eeec0c692b19b1c17696f3aea6862d06581c06"
+    },
+    {
+      "key": "1424",
+      "number": 1424,
+      "title": "[OPS][P2] heat1 Shelly ch1 power clamp is wired backwards (reads negative)",
+      "stage": "OPS",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "a83874e6e801a492f81b350dc6226ccc8b48435a611f38efae2930b20dcf6d3f"
+    },
+    {
+      "key": "1431",
+      "number": 1431,
+      "title": "[C6][P2] VPD: one-week night moisture-source experiment (E-1)",
+      "stage": "C6",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [
+        1365
+      ],
+      "body_sha256": "347994c678fb280d70284ea1b866edc6308b67b0ae10cdac43aa4d6735b70d38"
+    },
+    {
+      "key": "1432",
+      "number": 1432,
+      "title": "[C6][P2] VPD: HAF circulation fans now; dehumidifier pilot decision after vent + reheat data",
+      "stage": "C6",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [
+        1365,
+        1431
+      ],
+      "body_sha256": "2f3f9e87a41dc7647c4f4ec1a8f59564d5022cc2977b8db36c6aacdb23f4065c"
+    },
+    {
+      "key": "1433",
+      "number": 1433,
+      "title": "[VD][P2] VPD: achievable vs aspirational band in the read model, dashboard and band-editor preview",
+      "stage": "VD",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "ec488d7f76b5b626d528150fb7c9af131ad7e5b4623157fe3999987f5ad2020f"
+    },
+    {
+      "key": "1434",
+      "number": 1434,
+      "title": "[C6][P2] Planner study #1360: VPD scoring baseline (dry-out minutes, dried-out flag, kWh; served + achievable band)",
+      "stage": "C6",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [
+        1433
+      ],
+      "body_sha256": "77b7d874aed32c1ffa017f325e342cf62d93996d10f73ced9979dc66a261fff6"
+    },
+    {
+      "key": "1435",
+      "number": 1435,
+      "title": "[C7][P3] VPD: recheck dry winter nights in December 2026",
+      "stage": "C7",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "df655c59edcf9a4de8e69f7fd5fddfb3c598bce91fce655f22f4ae184b3860c1"
+    },
+    {
+      "key": "1450",
+      "number": 1450,
+      "title": "[OPS][P1] Planner context gather runs ~98-120 s against its 120 s cap; cluster load stops planning",
+      "stage": "OPS",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "5184c737645244891746cf3201662cd4e2a5544578f32a0e89122f6908582e03"
     }
   ]
 }

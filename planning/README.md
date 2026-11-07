@@ -1,3 +1,5 @@
+[The November 7 full triage](reviews/2026-11-07-triage/README.md) is the current plan: **77 open issues** after W6 release 4, 16 closed since November 6, tracks U0–U6 plus roll-ups, and the [open-issue graph](reviews/2026-11-07-triage/DEPENDENCIES.md). Earlier reviews below are dated history.
+
 [Current October25 execution map](reviews/2026-10-25-unblocked/README.md): **41 open issues**, a canonical plan/queue reconciled with GitHub, the next private qualification packet, actual passive lighting evidence and exact remaining owner/physical/input gates. Earlier audits below are dated history.
 
 [The October20 full open-issue audit and next sprint](reviews/2026-10-20-sprint-audit/README.md) supersedes the earlier execution allocations: **62 open issues**, all individually assessed; **S6 October21–27** selects six bounded packets totaling **25–34h** in a 40h budget. It incorporates the current security/ownership intake, settled Jason decisions and #245 no-cutover closure. See the full register and native dependency snapshot; earlier reviews below remain dated evidence.
