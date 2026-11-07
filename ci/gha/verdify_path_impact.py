@@ -42,6 +42,8 @@ CHECKS = {
     # tests/test_dashboard_db_*.py and the code they exercise on a private TimescaleDB.
     "dashboard-db": (
         "tests/test_dashboard_db_*.py",
+        # The campaign check's own scripts (sharding, D-55) re-run the check.
+        "ci/gha/campaign*.sh",
         "db/**",
         "verdify_services/**",
         "verdify_schemas/**",

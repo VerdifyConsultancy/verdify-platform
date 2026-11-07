@@ -131,15 +131,33 @@ jobs:
       runner: verdify-platform-ci-dashboard
       timeout-minutes: 50
 
-  campaign:
+  # campaign runs its dashboard-db files (one private TimescaleDB each) as four
+  # parallel shards (CAMPAIGN_SHARD, D-55); the required context "ci / campaign"
+  # is the aggregate, which fails unless every shard finished success.
+  campaign-shard:
     name: ci
     needs: [trusted-precheck, path-impact]
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      name: campaign-${{ matrix.shard }}of4
+      run: CAMPAIGN_SHARD=${{ matrix.shard }}/4 ci/gha/campaign.sh
+      runner: verdify-platform-ci-tools
+      timeout-minutes: 50
+
+  campaign:
+    name: ci
+    needs: [trusted-precheck, path-impact, campaign-shard]
+    if: ${{ !cancelled() }}
     uses: jvallery/estate-ci/.github/workflows/checks.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
     with:
       name: campaign
-      run: ci/gha/campaign.sh
+      run: bash ci/gha/require-success.sh campaign-shards=${{ needs.campaign-shard.result }}
       runner: verdify-platform-ci-tools
-      timeout-minutes: 50
+      timeout-minutes: 5
 
   # Estate rules R1-R3 on this repository's workflows: context "ci / lint".
   workflow-lint:
