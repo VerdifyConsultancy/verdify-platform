@@ -24,7 +24,7 @@ metadata:
   name: release-pin-verdify-api
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-api
-  digest: sha256:e5a2b293c38aa4e4a3dbe7daa2168f94d6f6e02e438f471367ff89f7dd15dc02
+  digest: sha256:53d064881e31834619451b72229455c82eb9ff04cac63745c63f8393cb975146
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -32,7 +32,7 @@ metadata:
   name: release-pin-verdify-mcp
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-mcp
-  digest: sha256:df9a590a0cb91c61c6a7668ba91141c2599e5d7309a8af15c1d673938c0a2b8a
+  digest: sha256:268ff207f268f9d8e43b1d5b0a9fec37e6287038f0cf0e4d98888f7cf97a2249
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -40,7 +40,7 @@ metadata:
   name: release-pin-verdify-ingestor
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-  digest: sha256:ccd254de079aef0d2b2f21d71c94b7578da2f19e4e23365754230668bde6b536
+  digest: sha256:d8918f9390f97fb75f629947e1759a3b0629207d2b6ff10fa239b646d0c17ffc
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
