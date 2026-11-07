@@ -188,6 +188,118 @@ PY
 ACTIVE_CONTEXT_PARAMS_SQL="${REGISTRY_SQL[0]}"
 PLAN_COMPARE_EXCLUDED_SQL="${REGISTRY_SQL[1]}"
 
+# == Parallel section driver (#1450) ===========================================
+# The sections below are independent read-only reads. Run one after another
+# they took 98-120 s against the planner's 120 s cap (IRIS_CONTEXT_GATHER_TIMEOUT
+# in ingestor/iris_planner.py), so any cluster load stopped planning. This driver
+# splits the rest of this file at each section marker (a line starting with
+# "# ── "), runs at most VERDIFY_PLANNER_CONTEXT_PARALLELISM sections at a time
+# (default 6) and prints their output in document order: the packet is the text
+# the serial path prints. Sections that share shell variables stay joined
+# (_gpc_joins_previous). CONTEXT COMPLETENESS (section 31) runs last in this
+# shell, after GOVERNING_PLAN and TUNABLE_CONSTRAINTS come back from the
+# sections that set them. A section that fails under `set -e` fails the gather
+# after the output before it, as the serial path does.
+# VERDIFY_PLANNER_CONTEXT_PARALLELISM=1 selects the serial path. One timing
+# line goes to stderr; iris_planner logs it with plan_context_slow.
+_GPC_BEGIN="# == sections begin: the parallel driver splits the file below this line =="
+_GPC_SHARED_VARS=(GOVERNING_PLAN TUNABLE_CONSTRAINTS)
+_gpc_parallelism="${VERDIFY_PLANNER_CONTEXT_PARALLELISM:-6}"
+[[ "$_gpc_parallelism" =~ ^[0-9]+$ ]] || _gpc_parallelism=1
+
+_gpc_joins_previous() {
+  case "$1" in
+    "# ── 15. "* | "# ── 15c. "*) return 0 ;; # read GOVERNING_PLAN / EVAL_BACKLOG from Phase 1
+  esac
+  return 1
+}
+
+if [ "$_gpc_parallelism" -gt 1 ]; then
+  _gpc_segments=()
+  _gpc_titles=()
+  _gpc_cur=""
+  _gpc_title="header"
+  _gpc_found=0
+  while IFS= read -r _gpc_line || [ -n "$_gpc_line" ]; do
+    if [ "$_gpc_found" = 0 ]; then
+      if [ "$_gpc_line" = "$_GPC_BEGIN" ]; then _gpc_found=1; fi
+      continue
+    fi
+    if [[ "$_gpc_line" == "# ── "* ]] && ! _gpc_joins_previous "$_gpc_line"; then
+      _gpc_segments+=("$_gpc_cur")
+      _gpc_titles+=("$_gpc_title")
+      _gpc_cur=""
+      _gpc_title="${_gpc_line#"# ── "}"
+      _gpc_title="${_gpc_title%% ─*}"
+    fi
+    _gpc_cur+="${_gpc_line}"$'\n'
+  done <"${BASH_SOURCE[0]}"
+  _gpc_segments+=("$_gpc_cur")
+  _gpc_titles+=("$_gpc_title")
+  _gpc_last=$((${#_gpc_segments[@]} - 1))
+  if [ "$_gpc_found" != 1 ] || [ "$_gpc_last" -lt 2 ] || [[ "${_gpc_titles[_gpc_last]}" != "31. CONTEXT COMPLETENESS"* ]]; then
+    echo "gather-plan-context: section split failed; running serially" >&2
+    _gpc_parallelism=1
+  fi
+fi
+
+if [ "$_gpc_parallelism" -gt 1 ]; then
+  _gpc_tmp="$(mktemp -d "${TMPDIR:-/tmp}/gather-plan-context.XXXXXX")"
+  trap 'rm -rf "$_gpc_tmp"' EXIT
+  _gpc_t0="${EPOCHREALTIME:-0}"
+  for ((_gpc_i = 0; _gpc_i < _gpc_last; _gpc_i++)); do
+    while :; do
+      _gpc_active=0
+      for ((_gpc_j = 0; _gpc_j < _gpc_i; _gpc_j++)); do
+        [ -e "$_gpc_tmp/$_gpc_j.rc" ] || _gpc_active=$((_gpc_active + 1))
+      done
+      if [ "$_gpc_active" -lt "$_gpc_parallelism" ]; then break; fi
+      sleep 0.1
+    done
+    {
+      set +e
+      _gpc_s="${EPOCHREALTIME:-0}"
+      (
+        set -e
+        eval "${_gpc_segments[_gpc_i]}"
+        for _gpc_v in "${_GPC_SHARED_VARS[@]}"; do
+          if [ -n "${!_gpc_v+x}" ]; then declare -p "$_gpc_v"; fi
+        done >"$_gpc_tmp/$_gpc_i.vars"
+      ) >"$_gpc_tmp/$_gpc_i.out" 2>"$_gpc_tmp/$_gpc_i.err"
+      printf '%s %s %s\n' "$?" "$_gpc_s" "${EPOCHREALTIME:-0}" >"$_gpc_tmp/$_gpc_i.rc"
+    } &
+  done
+  wait
+  _gpc_timings=""
+  for ((_gpc_i = 0; _gpc_i < _gpc_last; _gpc_i++)); do
+    cat "$_gpc_tmp/$_gpc_i.out"
+    cat "$_gpc_tmp/$_gpc_i.err" >&2
+    read -r _gpc_rc _gpc_s _gpc_e <"$_gpc_tmp/$_gpc_i.rc"
+    if [ "$_gpc_rc" != 0 ]; then
+      echo "gather-plan-context: section '${_gpc_titles[_gpc_i]}' failed (rc=${_gpc_rc})" >&2
+      exit "$_gpc_rc"
+    fi
+    # shellcheck source=/dev/null
+    if [ -s "$_gpc_tmp/$_gpc_i.vars" ]; then . "$_gpc_tmp/$_gpc_i.vars"; fi
+    _gpc_timings+="${_gpc_s} ${_gpc_e} ${_gpc_titles[_gpc_i]}"$'\n'
+  done
+  eval "${_gpc_segments[_gpc_last]}"
+  printf '%s' "$_gpc_timings" | awk -v t0="$_gpc_t0" -v t1="${EPOCHREALTIME:-0}" -v p="$_gpc_parallelism" '
+    { d = $2 - $1; $1 = ""; $2 = ""; sub(/^  /, ""); dur[NR] = d; name[NR] = $0 }
+    END {
+      line = sprintf("gather-plan-context: parallel=%d sections=%d wall=%.1fs; slowest:", p, NR + 1, t1 - t0)
+      for (k = 1; k <= 5 && k <= NR; k++) {
+        best = 0
+        for (i = 1; i <= NR; i++) if (!(i in used) && (best == 0 || dur[i] > dur[best])) best = i
+        used[best] = 1
+        line = line sprintf("%s %s=%.1fs", (k > 1 ? "," : ""), name[best], dur[best])
+      }
+      print line
+    }' >&2
+  exit 0
+fi
+
+# == sections begin: the parallel driver splits the file below this line ==
 echo "=== GREENHOUSE PLANNING CONTEXT ==="
 echo "Greenhouse: $GREENHOUSE_ID"
 echo "Generated: $(date -u '+%Y-%m-%dT%H:%M:%SZ') ($(date '+%Y-%m-%d %H:%M %Z'))"
@@ -491,6 +603,8 @@ FROM fn_lighting_policy(now(), '${GREENHOUSE_ID}');
 echo "Do not set gl_dli_target, gl_sunrise_hour, gl_sunset_hour, or sw_gl_auto_mode in your plan."
 echo "Lighting automation is enforced by two ESP32 per-circuit state machines after dispatcher push."
 echo ""
+# ── 12b. PER-CIRCUIT LIGHTING POLICY ─────────────────────────────────
+# 12b-12d are separate sections so their slow reads run in parallel (#1450).
 echo "PER-CIRCUIT LIGHTING POLICY (planner-managed tunables; crop policy seeds defaults):"
 "${DB[@]}" -c "
 SELECT light_key,
@@ -510,6 +624,7 @@ ORDER BY light_key;
 echo "You may set gl_main_target_light_minutes/gl_grow_target_light_minutes plus threshold/hysteresis independently when observations support diverging the two circuits."
 echo "Policy rows use confirmed cfg/readback state; latest desired setpoint rows are shown separately below for traceability."
 echo ""
+# ── 12c. QUALIFIED LIGHT MINUTES TODAY ───────────────────────────────
 echo "QUALIFIED LIGHT MINUTES TODAY:"
 "${DB[@]}" -c "
 SELECT light_key,
@@ -530,6 +645,7 @@ ORDER BY light_key;
 " 2>/dev/null || echo "(qualified light minutes status unavailable)"
 echo "A qualified minute counts once when natural lux is above the circuit threshold OR the actual switch is ON; overlap is not double-counted."
 echo ""
+# ── 12d. TEMPEST LUX THRESHOLD RECOMMENDATION ──────────────────────
 echo "TEMPEST LUX THRESHOLD RECOMMENDATION (planner guidance for per-circuit tunables):"
 "${DB[@]}" -c "
 SELECT sample_count,
