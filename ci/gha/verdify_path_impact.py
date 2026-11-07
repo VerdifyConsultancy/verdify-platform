@@ -31,6 +31,9 @@ PROFILES = {
     # #1113: the derived renderer (upstream image plus Debian's chromium fix). It copies
     # nothing from the repository, so only a change to its Dockerfile builds it.
     "grafana-image-renderer": "grafana/Dockerfile.image-renderer",
+    # #1458: the derived Hermes agent (the pinned upstream digest plus Debian's security
+    # updates). It copies nothing from the repository either.
+    "hermes-agent": "hermes/Dockerfile.hermes-agent",
 }
 # jvallery/agents#5994: check flags beside the profile flags. They select the PR
 # checks that run on the exact checkout, not image builds; every fallback sets both.

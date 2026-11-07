@@ -68,7 +68,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: mosquitto
-          image: registry.vallery.net/jvallery/mirror-docker-io-library-eclipse-mosquitto:2-12436df85d6b@sha256:12436df85d6b2b91e63c71184da35ec89400a98abdc688a78b1403a11ecf44b4
+          image: registry.vallery.net/jvallery/mirror-docker-io-library-eclipse-mosquitto:2-22075095e879@sha256:22075095e8790eec5592ff3c213b1974cd51aa458275af2f8b0595af4c385df2
           args: ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
           ports:
             - name: mqtt

@@ -1,0 +1,19 @@
+# Derived Hermes agent image (#1458): the exact upstream nousresearch/hermes-agent digest
+# verdify-hermes-iris runs today, with Debian trixie's security updates applied. No newer
+# upstream build of this release exists (the digest is untagged upstream), and taking a
+# newer hermes-agent release would change planner behaviour. The application layers are
+# unchanged; only installed Debian packages move to their trixie/trixie-security
+# versions (perl 5.40.1-6+deb13u1 and the other fixable package advisories).
+#
+# Built by .github/workflows/build.yml (job hermes-agent) into
+# registry.vallery.net/verdifyconsultancy/verdify-hermes-agent. The image pin in
+# deploy/k8s/components/hermes-iris/hermes-iris.yaml is a hand-edited digest.
+FROM nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
+
+USER root
+# Upgrade installed packages only (no new installs, no removals), then fail the build
+# unless perl carries the fix.
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends upgrade \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' perl-base)" ge 5.40.1-6+deb13u1 \
+    && rm -rf /var/lib/apt/lists/*

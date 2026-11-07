@@ -56,6 +56,7 @@ jobs:
       lab-publisher: ${{ steps.impact.outputs.lab-publisher }}
       dashboard-web: ${{ steps.impact.outputs.dashboard-web }}
       grafana-image-renderer: ${{ steps.impact.outputs.grafana-image-renderer }}
+      hermes-agent: ${{ steps.impact.outputs.hermes-agent }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -161,6 +162,16 @@ jobs:
     with:
       image: verdifyconsultancy/verdify-grafana-image-renderer
       dockerfile: grafana/Dockerfile.image-renderer
+      push: true
+
+  # #1458: not in the pin job; the hermes-agent digest in hermes-iris.yaml is hand-pinned.
+  hermes-agent:
+    needs: [impact]
+    if: ${{ needs.impact.outputs.hermes-agent == 'true' }}
+    uses: jvallery/estate-ci/.github/workflows/image-build.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      image: verdifyconsultancy/verdify-hermes-agent
+      dockerfile: hermes/Dockerfile.hermes-agent
       push: true
 
   pin:
