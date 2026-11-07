@@ -3073,6 +3073,14 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         if stuck_alert is not None:
             alerts.append(stuck_alert)
 
+        # 15b. ESP32 push failures are one-shot event rows (dispatcher and
+        # setpoint listener); nothing else closes them. Close each once every
+        # parameter it names has been confirmed on the controller since.
+        try:
+            await _resolve_recovered_push_failures(conn)
+        except Exception as e:
+            log.warning("esp32_push_failed recovery resolve failed: %s", e)
+
         # 16. Time-bounded silences (migration 289), read each cycle: an operator's
         # insert, extension or early end applies on the next one.
         silences = await _active_alert_silences(conn)
@@ -3093,6 +3101,55 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             )
             | irrigation_preserved,
         )
+
+
+_RESOLVE_RECOVERED_PUSH_FAILURES_SQL = """
+UPDATE alert_log a
+   SET disposition = 'resolved',
+       resolved_at = now(),
+       resolved_by = 'system',
+       resolution = 'auto-resolved: every failed parameter confirmed on the controller since'
+  FROM (
+        SELECT f.id, f.created_at,
+               array_remove(
+                   ARRAY(
+                       SELECT jsonb_array_elements_text(
+                           CASE WHEN jsonb_typeof(f.details -> 'parameters') = 'array'
+                                THEN f.details -> 'parameters' ELSE '[]'::jsonb END
+                       )
+                   ) || (f.details ->> 'parameter'),
+                   NULL
+               ) AS params
+          FROM alert_log f
+         WHERE f.alert_type = 'esp32_push_failed'
+           AND f.disposition IN ('open', 'acknowledged')
+           AND f.resolved_at IS NULL
+       ) p
+ WHERE a.id = p.id
+   AND cardinality(p.params) > 0
+   AND NOT EXISTS (
+        SELECT 1
+          FROM unnest(p.params) AS q(param)
+         WHERE NOT EXISTS (
+                SELECT 1
+                  FROM setpoint_changes s
+                 WHERE s.parameter = q.param
+                   AND s.ts >= p.created_at - interval '1 day'
+                   AND s.confirmed_at > p.created_at
+         )
+   )
+"""
+
+
+async def _resolve_recovered_push_failures(conn) -> None:
+    """Close esp32_push_failed rows whose parameters all reached the controller.
+
+    The dispatcher and the setpoint listener write one row per terminal push
+    failure and never revisit it, so a row stayed open for months after the
+    next push delivered the same settings. A row naming no parameter (a
+    validation fallback) stays open for a person.
+    """
+    await conn.execute(_RESOLVE_RECOVERED_PUSH_FAILURES_SQL)
 
 
 def _probe_offline_key(key) -> bool:

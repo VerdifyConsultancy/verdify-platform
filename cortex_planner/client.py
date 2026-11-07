@@ -29,7 +29,10 @@ DEFAULT_BASE_URL = "https://cortex.vallery.net/v1"
 DEFAULT_KEY_FILE = "/vcortex-planner/api_key.txt"
 SEED = 1350
 SAMPLING = {"temperature": 0.6, "top_p": 0.95, "top_k": 20}
-DEADLINE_S = 300.0
+# A full answer is up to MAX_TOKENS (12,000) at the route's measured 37-47 tok/s
+# (successful shadow runs on 2026-11-06 took 221-287 s for ~10,000 tokens), so
+# 300 s timed out about half the runs; 600 s gives that answer twice its time.
+DEADLINE_S = 600.0
 RESPONSE_FORMATS = ("json_object", "json_schema", "none")
 
 

@@ -303,7 +303,31 @@ def _forecast_deviation_trigger_from_alert(row) -> tuple[int, dict[str, object]]
     return int(row["id"]), trigger
 
 
+async def _expire_stale_forecast_deviation_alerts(conn: asyncpg.Connection) -> None:
+    """Close deviation rows that aged out of the delivery window undelivered.
+
+    The heartbeat only delivers a row raised in the last five minutes; a row
+    whose delivery failed for longer was never picked up again and stayed open
+    for months. A stale deviation is no longer a replan trigger: the check
+    raises a fresh row if the miss persists.
+    """
+    await conn.execute(
+        """
+        UPDATE alert_log
+           SET disposition = 'resolved',
+               resolved_at = now(),
+               resolved_by = 'system',
+               resolution = 'auto-resolved: aged out of the delivery window undelivered'
+         WHERE alert_type = 'forecast_deviation'
+           AND disposition IN ('open', 'acknowledged')
+           AND resolved_at IS NULL
+           AND created_at <= now() - interval '5 minutes'
+        """
+    )
+
+
 async def _pending_forecast_deviation_alert(conn: asyncpg.Connection) -> tuple[int, dict[str, object]] | None:
+    await _expire_stale_forecast_deviation_alerts(conn)
     row = await conn.fetchrow(
         """
         SELECT id, details, message, created_at

@@ -91,12 +91,12 @@ spec:
               readOnly: true
           livenessProbe:
             # The loop touches the heartbeat every poll (30 s) and after every trigger; one Cortex
-            # call is bounded at 300 s, three attempts at most, so 20 minutes means a wedged loop.
+            # call is bounded at 600 s, three attempts at most, so 40 minutes means a wedged loop.
             exec:
               command:
                 - python
                 - -c
-                - "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime('/tmp/cortex-planner.alive')<1200 else 1)"
+                - "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime('/tmp/cortex-planner.alive')<2400 else 1)"
             initialDelaySeconds: 60
             periodSeconds: 60
             timeoutSeconds: 10
