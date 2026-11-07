@@ -1,0 +1,142 @@
+{
+  "started": "2026-11-07T03:25:31.038Z",
+  "checks": {
+    "settings-all": {
+      "status": "247 settings · 0 waiting · 1 not applied · 3 manual | 247 settings · 0 waiting · 1 not applied",
+      "stale_notice_shown": false,
+      "retired_toggle": "Show retired (52) | Glossary: every setting explained",
+      "default_rows": 195,
+      "all_rows": 247,
+      "distinct_params": 247,
+      "rows_with_value": 235,
+      "rows_without_value": [
+        "fog_time_window_start: — No readback512Allowed 5–12Retired",
+        "fog_time_window_end: — No readback1420Allowed 14–20Retired",
+        "direct_wet_stress_latest_hour: — no readback in the last 24 h1724Allowed 17–24Retired",
+        "dawn_rehydrate_start_minute: — no readback in the last 24 h059Allowed 0–59Retired",
+        "midday_drench_hour: — no readback in the last 24 h023Allowed 0–23Retired",
+        "midday_drench_start_minute: — no readback in the last 24 h059Allowed 0–59Retired",
+        "sw_overnight_micropulse_enabled: — no readback in the last 24 hRetired",
+        "sw_night_humidity_source_present: — no readback in the last 24 hRetired",
+        "micropulse_vpd_ceiling: — no readback in the last 24 h0.83Allowed 0.8–3Retired",
+        "micropulse_max_on_s: — no readback in the last 24 h110Allowed 1–10Retired",
+        "micropulse_min_gap_s: — no readback in the last 24 h603600Allowed 60–3600Retired",
+        "micropulse_min_dew_margin_f: — no readback in the last 24 h315Allowed 3–15Retired"
+      ],
+      "group_heads": [
+        "Every setting in fixed groups: the value the controller reports, its state, who changed it and what Iris plans next",
+        "PLANNER POLICY · 48",
+        "SCHEDULED POLICY · 23",
+        "CONTROLLER SAFETY · 27",
+        "CROP BAND · 48",
+        "SITE WATER CAPS · 3",
+        "BAND IN FORCE · 30 Computed (band in force): calculated from the crop band; edit the anchors under Crop band.",
+        "REFERENCE ONLY · 68",
+        "Words on the pages"
+      ]
+    },
+    "settings-details": {
+      "url": "https://dashboard.verdify.ai/settings?edit=mister_engage_kpa",
+      "drawer_text": "Setting × PLANNER POLICY · MISTER_ENGAGE_KPA VPD Mister Engage Graph this setting › DEVICE 1.05 kPa · reported 19 s ago 0.50 2.50 Allowed 0.50–2.50 kPa · step 0.05 Released: plan, band or default applies next 0.95 kPa at Nov 7, 08:00 · AI House VPD above which the misters may start pulsing once humidifying has escalated to them. What it changes When the controller is humidifying past the fog stage, the misters pulse if the house VPD is above this value or any zone is drier than its crop target. They stop once no zone is dry and VPD falls below this value minus the mister hysteresis. Raising it The misters wait for drier air and stop sooner: less mister water, a drier house. Lowering it The misters start in less dry air and run longer: more water and humidity. While the house is dry-stressed, a value far above the VPD band high edge is pulled back toward that edge. Full reference entry › ",
+      "reported_age": "reported 19 s ago",
+      "save_enabled": null,
+      "enabled_inputs": 1
+    },
+    "logout": {
+      "logout": "redirect"
+    }
+  },
+  "errors": {},
+  "writes_seen": [],
+  "api": {
+    "me": [
+      {
+        "url": "/api/v1/me",
+        "status": 200,
+        "role": "viewer",
+        "writes_enabled": true
+      },
+      {
+        "url": "/api/v1/me",
+        "status": 200,
+        "role": "viewer",
+        "writes_enabled": true
+      },
+      {
+        "url": "/api/v1/me",
+        "status": 200,
+        "role": "viewer",
+        "writes_enabled": true
+      }
+    ],
+    "settings": [
+      {
+        "url": "/api/v1/settings",
+        "status": 200,
+        "items": 247,
+        "server_time": "2026-11-07T03:25:32.305792Z",
+        "groups": [
+          "read_only",
+          "planner_policy",
+          "controller_safety",
+          "scheduled_policy",
+          "site_water_caps",
+          "crop_band",
+          "band_in_force"
+        ],
+        "with_readback_value": 235,
+        "states": {
+          "confirmed": 200,
+          "not_confirmed": 1,
+          "released": 4,
+          "no_readback": 42
+        }
+      },
+      {
+        "url": "/api/v1/settings",
+        "status": 200,
+        "items": 247,
+        "server_time": "2026-11-07T03:25:41.716596Z",
+        "groups": [
+          "read_only",
+          "planner_policy",
+          "controller_safety",
+          "scheduled_policy",
+          "site_water_caps",
+          "crop_band",
+          "band_in_force"
+        ],
+        "with_readback_value": 235,
+        "states": {
+          "confirmed": 200,
+          "not_confirmed": 1,
+          "released": 4,
+          "no_readback": 42
+        }
+      },
+      {
+        "url": "/api/v1/settings",
+        "status": 200,
+        "items": 247,
+        "server_time": "2026-11-07T03:25:53.514297Z",
+        "groups": [
+          "read_only",
+          "planner_policy",
+          "controller_safety",
+          "scheduled_policy",
+          "site_water_caps",
+          "crop_band",
+          "band_in_force"
+        ],
+        "with_readback_value": 235,
+        "states": {
+          "confirmed": 200,
+          "not_confirmed": 1,
+          "released": 4,
+          "no_readback": 42
+        }
+      }
+    ]
+  },
+  "finished": "2026-11-07T03:26:30.479Z"
+}

@@ -1,0 +1,247 @@
+{
+  "started": "2026-11-07T03:23:51.671Z",
+  "checks": {
+    "statistics": {
+      "url": "https://dashboard.verdify.ai/graphs/statistics",
+      "period_current": [
+        "30 d"
+      ],
+      "data_section": "Data 30 rows, newest first Show the daily table",
+      "table_rows": 30,
+      "first_date": "2026-11-06",
+      "last_date": "2026-10-08",
+      "distinct_dates": 30,
+      "header": "DATE TIME IN BAND WATER WATERING MINUTES IRIS REQUIRED PLANS ALERTS RAISED TEMPERATURE BELOW BAND, WHOLE DAY VPD BELOW BAND, WHOLE DAY VPD TIME IN BAND, DAY VPD TIME IN BAND, NIGHT TEMPERATURE, WHOLE DAY VPD, WHOLE DAY BOTH, DAY BOTH, NIGHT WALL CENTER SOUTH WEST WRITTEN MISSED CRITICAL WARNING INFO",
+      "first_row": "Fri, Nov 6 · partial 97.1% 56.8% 69.4% 42.7% — day not finished 11 min 0 min 0 min 0 min 2 1 3 22 1 2.9% 43.2% 69.4% 43.6%",
+      "last_row": "Thu, Oct 8 99.7% 58.7% 79.6% 39.7% 71 gal 0 min 14 min 0 min 0 min 3 0 0 78 0 0.0% 36.1% 79.6% 39.7%",
+      "csv_file": "verdify-scorecard-2026-10-08-2026-11-06.csv",
+      "csv_lines": 31,
+      "csv_data_rows": 30,
+      "csv_header": "﻿Date,\"Time in band: Temperature, whole day (%)\",\"Time in band: VPD, whole day (%)\",\"Time in band: Both, day (%)\",\"Time in band: Both, night (%)\",Water (gal),Watering minutes: Wall (min),Watering minutes: Center (min),Watering minutes: South (min),Watering minutes: West (min),Iris required plans: Written (count),Iris required plans: Missed (count),Alerts raised: Critical (count),Alerts raised: War"
+    },
+    "settings": {
+      "url": "https://dashboard.verdify.ai/settings",
+      "rows": 195,
+      "distinct_params": 195,
+      "rows_with_age_words": 57,
+      "rows_device_dash": 0,
+      "states": {
+        "confirmed": 160,
+        "released": 4,
+        "no_readback": 30,
+        "not_confirmed": 1
+      },
+      "headings": [
+        "Every setting in fixed groups: the value the controller reports, its state, who changed it and what Iris plans next",
+        "Words on the pages"
+      ],
+      "chips": "",
+      "viewer_write_controls": 0,
+      "samples": [
+        {
+          "param": "cool_stage2_over_high_f",
+          "state": "confirmed",
+          "device": "1.84 °F0.03.0Allowed 0.0–3.0 °F · step 0.1Iris changed this at 08:58 · AI · next 1.7425 °F at Nov 7, 08:00 · AI"
+        },
+        {
+          "param": "min_fan_off_s",
+          "state": "confirmed",
+          "device": "90 s30300Allowed 30–300 s · step 10"
+        },
+        {
+          "param": "gl_main_lux_threshold",
+          "state": "confirmed",
+          "device": "40000100100000Allowed 100–100000 · step 500"
+        },
+        {
+          "param": "safety_max_seal_margin_f",
+          "state": "confirmed",
+          "device": "5.0 °F1.015.0Allowed 1.0–15.0 °F · step 0.5"
+        },
+        {
+          "param": "band_temp_low_ss",
+          "state": "confirmed",
+          "device": "72.0 °F40.0100.0Allowed 40.0–100.0 °F · step 0.1"
+        },
+        {
+          "param": "zone_vpd_target_center_mid",
+          "state": "confirmed",
+          "device": "0.70 kPa0.103.00Allowed 0.10–3.00 kPa · step 0.01"
+        },
+        {
+          "param": "band_house_temp_target",
+          "state": "no_readback",
+          "device": "70.68 °F Derived · 4 min ago"
+        },
+        {
+          "param": "band_east_temp_high",
+          "state": "no_readback",
+          "device": "75.68 °F Derived · 4 min ago"
+        }
+      ]
+    },
+    "water-history-30d": {
+      "url": "https://dashboard.verdify.ai/water/history?range=30d",
+      "period_current": [
+        "30 d"
+      ],
+      "status": "Last 30 days: 13 min watering · 36 gal · 7 runs | Last 30 days: 13 min watering · 36 gal · 7 runs",
+      "sections": [
+        "Watering minutes by zone · last 30 days",
+        "Daily water use · gallons · last 30 days",
+        "Irrigation runs · newest first · Oct 8 – Nov 6"
+      ],
+      "kpis": [
+        "watering: Watering13 min— no comparison with previous 30 dDrips, feeds and scheduled misting; mist and fog apart",
+        "gallons: Gallons36 gal— no comparison with previous 30 dVerdify valves, from the site meter",
+        "runs: Runs7 up 7 vs previous 30 dIrrigation runs; VPD pulses and fog apart",
+        "shortfall: Missed, short or capnoneNo change vs previous 30 dEvery counted run ended as planned"
+      ],
+      "partial_words": [
+        "today 11 min (partial) · cap 60",
+        "today 0 min (partial) · cap 120",
+        "today 0 min (partial) · cap 45",
+        "today 0 min (partial) · cap 45",
+        "today 0 min (partial)",
+        "partial day"
+      ],
+      "chart_elements": 14,
+      "ledger_rows": 7,
+      "ledger_dates": [
+        "2026-10-08",
+        "2026-11-06"
+      ],
+      "ledger_outcomes": {
+        "stopped": 5,
+        "ok": 2
+      },
+      "ledger_first": "today 09:41–09:41 · Wall driprun now · 0 min · —stopped · stopped by a commandGraphs around this run ›",
+      "ledger_last": "Tue 21:59–22:01 · Wall driprun now · 2 min · 5 galokGraphs around this run ›"
+    },
+    "logout": {
+      "logout": "redirect"
+    }
+  },
+  "errors": {},
+  "writes_seen": [],
+  "api": {
+    "me": [
+      {
+        "url": "/api/v1/me",
+        "status": 200,
+        "role": "viewer",
+        "writes_enabled": true
+      },
+      {
+        "url": "/api/v1/me",
+        "status": 200,
+        "role": "viewer",
+        "writes_enabled": true
+      },
+      {
+        "url": "/api/v1/me",
+        "status": 200,
+        "role": "viewer",
+        "writes_enabled": true
+      }
+    ],
+    "minutes": [
+      {
+        "url": "/api/v1/irrigation/minutes?from=2026-10-08&to=2026-11-06&group_by=zone",
+        "status": 200,
+        "periods": 30,
+        "rows": 41,
+        "first": {
+          "start": "2026-10-08",
+          "coverage": "complete"
+        },
+        "last": {
+          "start": "2026-11-06",
+          "coverage": "partial"
+        }
+      },
+      {
+        "url": "/api/v1/irrigation/minutes?from=2026-10-08&to=2026-11-06&group_by=line&purpose=irrigation",
+        "status": 200,
+        "periods": 30,
+        "rows": 4,
+        "first": {
+          "start": "2026-10-08",
+          "coverage": "complete"
+        },
+        "last": {
+          "start": "2026-11-06",
+          "coverage": "partial"
+        }
+      },
+      {
+        "url": "/api/v1/irrigation/minutes?from=2026-09-08&to=2026-10-07&group_by=line&purpose=irrigation",
+        "status": 200,
+        "periods": 30,
+        "rows": 0,
+        "first": {
+          "start": "2026-09-08",
+          "coverage": "partial"
+        },
+        "last": {
+          "start": "2026-10-07",
+          "coverage": "complete"
+        }
+      }
+    ],
+    "settings": [
+      {
+        "url": "/api/v1/settings",
+        "status": 200,
+        "items": 247,
+        "server_time": "2026-11-07T03:24:09.074946Z",
+        "groups": [
+          "read_only",
+          "planner_policy",
+          "controller_safety",
+          "scheduled_policy",
+          "site_water_caps",
+          "crop_band",
+          "band_in_force"
+        ],
+        "with_readback_value": 235,
+        "states": {
+          "confirmed": 200,
+          "not_confirmed": 1,
+          "released": 4,
+          "no_readback": 42
+        }
+      }
+    ],
+    "runs": [
+      {
+        "url": "/api/v1/irrigation/runs?from=2026-10-08T06%3A00%3A00.000Z&to=2026-11-07T07%3A00%3A00.000Z&purpose=irrigation&limit=200",
+        "status": 200,
+        "runs": 7,
+        "keys": [
+          "items",
+          "next_cursor"
+        ]
+      },
+      {
+        "url": "/api/v1/irrigation/runs?from=2026-10-08T06%3A00%3A00.000Z&to=2026-11-07T07%3A00%3A00.000Z&purpose=irrigation",
+        "status": 200,
+        "runs": 7,
+        "keys": [
+          "items",
+          "next_cursor"
+        ]
+      },
+      {
+        "url": "/api/v1/irrigation/runs?from=2026-09-08T06%3A00%3A00.000Z&to=2026-10-08T06%3A00%3A00.000Z&purpose=irrigation&limit=200",
+        "status": 200,
+        "runs": 0,
+        "keys": [
+          "items",
+          "next_cursor"
+        ]
+      }
+    ]
+  },
+  "finished": "2026-11-07T03:24:34.607Z"
+}
