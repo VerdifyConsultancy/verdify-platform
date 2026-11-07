@@ -26,7 +26,7 @@ test("one row per registry row; read-only rows show why and have no Edit; the ba
   await expect(row(page, "mister_engage_kpa").locator(".setting-value")).toHaveText("1.60 kPa");
   // Every row shows its age (Jason, 2026-11-07), worded as the drawer words it.
   await expect(page.locator("tr.setting-row .setting-age")).toHaveCount(await page.locator("tr.setting-row").count());
-  await expect(row(page, "mister_engage_kpa").locator(".setting-age")).toHaveText(/^reported \d+ min ago$/);
+  await expect(row(page, "mister_engage_kpa").locator(".setting-age")).toHaveText(/^reported \d+\s+min ago$/);
   await expect(row(page, "mister_engage_kpa").locator(".setting-age")).toBeVisible();
   await expect(row(page, "mister_engage_kpa").locator(".ctl-bounds-end")).toHaveText(["0.50", "2.50"]);
   await expect(row(page, "mister_engage_kpa").locator(".ctl-bounds-planned")).toHaveCount(1);
