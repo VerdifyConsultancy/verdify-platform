@@ -62,7 +62,6 @@ ALERT_NAMES = (
     "_alert_silence",
     "_silence_resolution",
     "_active_alert_silences",
-    "_QUALIFICATION_OUTBOX",
     "_sync_monitor_alerts",
 )
 COMMON_NAMES = (
@@ -178,7 +177,7 @@ class AlertLog:
 
     COLUMNS = (
         "id ts alert_type severity category sensor_id zone message details source disposition acknowledged_at "
-        "acknowledged_by resolved_at resolved_by resolution slack_ts created_at updated_at metric_value "
+        "acknowledged_by resolved_at resolved_by resolution created_at updated_at metric_value "
         "threshold_value greenhouse_id"
     ).split()
 
@@ -191,7 +190,7 @@ class AlertLog:
         self.flow: list[tuple[datetime, float | None]] = []  # climate (ts, flow_gpm)
         self.grants = ingestor_alert_log_grants()
 
-    # ── seeding and person actions (API/MCP/Slack paths, not the monitor) ──
+    # ── seeding and person actions (API/MCP/dashboard paths, not the monitor) ──
     def seed(self, **values) -> dict:
         row = dict.fromkeys(self.COLUMNS)
         row.update(

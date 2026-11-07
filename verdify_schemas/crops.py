@@ -384,3 +384,26 @@ class ObservationAction(BaseModel):
     action: ObservationActionKind
     crop_id: int | None = None
     data: ObservationCreate | EventCreate | HarvestCreate | TreatmentCreate | None = None
+
+
+class CropTaskRow(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: int | None = None
+    created_at: AwareDatetime | None = None
+    updated_at: AwareDatetime | None = None
+    greenhouse_id: str = "vallery"
+    task_type: str
+    priority: str = "normal"
+    status: str = "open"
+    crop_id: int | None = None
+    position_id: int | None = None
+    zone_id: int | None = None
+    due_at: AwareDatetime | None = None
+    completed_at: AwareDatetime | None = None
+    completed_by: str | None = None
+    source: str = "system"
+    related_observation_id: int | None = None
+    related_treatment_id: int | None = None
+    related_harvest_id: int | None = None
+    notes: str | None = None

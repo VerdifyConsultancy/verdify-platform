@@ -1241,8 +1241,8 @@ HERMES_REQUIRED_TOOLS = frozenset(
 #                each in Secret verdify-mcp-agents (agent_key_registry). The
 #                live greenhouse reads plus alerts, settings, activity, set_setting,
 #                every irrigation tool and the planting tools (#1328). Never the
-#                planner, lessons, the legacy crops/observations tools or the
-#                Slack writers. Calls are attributed agent:<name>.
+#                planner, lessons or the legacy crops/observations tools.
+#                Calls are attributed agent:<name>.
 #   admin      — operator/debug credential; every tool. Its writes are
 #                attributed agent:admin.
 #   observer   — protocol-only availability probe; no tools.

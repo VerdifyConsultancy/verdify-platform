@@ -279,7 +279,7 @@ class TestPromptBuilders:
             ("_weekly_prompt", "Use exactly 5 transitions"),
         ],
     )
-    def test_full_plan_events_persist_compact_plan_before_slack(self, iris_planner, builder_name, count_contract):
+    def test_full_plan_events_persist_compact_plan_before_the_brief(self, iris_planner, builder_name, count_contract):
         prompt = " ".join(getattr(iris_planner, builder_name)("<context stub>").split())
 
         assert count_contract in prompt

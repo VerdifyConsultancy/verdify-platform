@@ -32,8 +32,8 @@
 # gated handoff step.
 #
 # STATE PVC: compose mounts host /var/lib/verdify/hermes/iris -> /opt/data. In
-# k3s this is a PVC on rebuildable Longhorn RWO storage. Slack is not a
-# Verdify channel (#1352): no Slack config or Secret is mounted.
+# k3s this is a PVC on rebuildable Longhorn RWO storage. Verdify has no chat
+# channel (#1352): no chat config or Secret is mounted.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

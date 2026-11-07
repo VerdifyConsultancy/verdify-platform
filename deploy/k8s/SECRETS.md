@@ -267,14 +267,14 @@ these credentials are delivered by their canonical owner. URL-composed DSNs
 require the owner's established URL-safe password generation. Existing admin,
 renderer, OAuth, experiment and owner Secret keys remain unchanged.
 
-### Slack (retired, #1352)
+### Chat delivery (retired, #1352)
 
-No workload references a Slack Secret: alerts go to `alert_log` (the dashboard)
-and page through Alertmanager, and Hermes has no messaging tool (its profile
-disables the `messaging` toolset). The `verdify-slack` Secret is still delivered
-by the agents KSOPS lane until its removal there (#1352 follow-up); nothing
-mounts it. The Iris bot token is revoked only after the 7-day zero-Slack window
-(about 2026-11-13), from the coordinator, on Jason's decision.
+Verdify has no chat channel and no workload references a chat Secret: alerts go
+to `alert_log` (the dashboard) and page through Alertmanager, and Hermes has no
+messaging tool (its profile disables the `messaging` toolset). The former bot
+Secret was deleted live on 2026-11-06 and removed from the agents KSOPS lane
+(jvallery/agents#6175); its token is revoked by the coordinator after the
+2026-11-13 soak.
 
 ### Hydroponic probe (VD-70, #1183)
 

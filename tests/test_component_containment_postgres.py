@@ -586,7 +586,7 @@ def _install_ops_facade(query):
     query("""CREATE TABLE alert_log (
         id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
         alert_type text, severity text, category text, sensor_id text, zone text,
-        message text, details jsonb, source text, slack_ts text, metric_value double precision,
+        message text, details jsonb, source text, metric_value double precision,
         threshold_value double precision, greenhouse_id text, disposition text DEFAULT 'open',
         resolved_at timestamptz, resolved_by text, resolution text)""")
     query("""CREATE TABLE slack_alert_runbooks (
@@ -598,38 +598,16 @@ def _exercise_ops_alert(containment, record_property, scenario=None):
     """Current ops projection; synthetic core-schema condition and safe closure.
 
     Alert storage is an explicit column facade. The synthetic authorization
-    artifact is never a physical proof or production approval. No message is
-    sent unless an attended external bridge was independently authorized.
+    artifact is never a physical proof or production approval. The alert_log
+    row is the only delivery (#1352); nothing is sent anywhere.
     """
     import asyncpg
-    from component_alert_delivery_bridge import FixtureDelivery
     from tasks.alerts import component_experiment_alert_cycle
 
     query = containment
     _install_ops_facade(query)
     before = snapshot(query)
     socket_dir = query("SHOW unix_socket_directories")
-    if scenario is None:
-        delivery = FixtureDelivery(ROOT)
-    else:
-        # This lane cannot read relay authorization or invoke the real sender.
-        class CaptureOnly:
-            prefix = "[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: "
-
-            def __init__(self):
-                self.messages = []
-                self.receipts = []
-
-            def __call__(self, channel, text, *, thread_ts=None):
-                assert len(self.messages) < 2
-                self.messages.append({"channel": channel, "text": text, "thread_ts": thread_ts})
-                self.receipts.append("0.587639")
-                return self.receipts[-1]
-
-            def report(self):
-                return {"live": False, "messages": self.messages, "receipts": self.receipts}
-
-        delivery = CaptureOnly()
 
     async def exercise():
         conn = await asyncpg.connect(
@@ -662,17 +640,12 @@ def _exercise_ops_alert(containment, record_property, scenario=None):
             record_property("synthetic_precondition_only", "true")
 
             async def cycle():
-                return await component_experiment_alert_cycle(
-                    conn,
-                    EXP,
-                    greenhouse_id="synthetic-containment",
-                    post_message=delivery,
-                    message_prefix=delivery.prefix,
-                )
+                return await component_experiment_alert_cycle(conn, EXP, greenhouse_id="synthetic-containment")
 
             assert await cycle() == {"new": 1, "escalated": 0, "resolved": 0, "suppressed": 0}
-            assert not any((await cycle()).values()) and len(delivery.messages) == 1
-            assert expected_reason.replace("_", " ") in delivery.messages[0]["text"]
+            assert not any((await cycle()).values())
+            assert await conn.fetchval("SELECT count(*) FROM alert_log") == 1
+            assert expected_reason.replace("_", " ") in await conn.fetchval("SELECT message FROM alert_log")
             if scenario is not None:
                 # Remove only the declared private precondition, then use the
                 # real yielded-authority closure. This is not physical recovery.
@@ -709,7 +682,6 @@ def _exercise_ops_alert(containment, record_property, scenario=None):
                 # mismatch until later confirmed recovery; do not invent a
                 # recovered event just to manufacture alert-clear coverage.
                 assert not any((await cycle()).values())
-                assert len(delivery.messages) == 1
                 assert await conn.fetchval("SELECT count(*) FROM alert_log WHERE disposition='open'") == 1
                 assert await conn.fetchval("SELECT resolution FROM alert_log") is None
                 after_closure = await conn.fetchrow(
@@ -721,8 +693,6 @@ def _exercise_ops_alert(containment, record_property, scenario=None):
                 record_property("alert_lifecycle_outcome", "retained_until_confirmed_recovery")
             else:
                 assert await cycle() == {"new": 0, "escalated": 0, "resolved": 1, "suppressed": 0}
-                assert len(delivery.messages) == 2
-                assert delivery.messages[1]["thread_ts"] == delivery.receipts[0]
                 assert await conn.fetchval("SELECT count(*) FROM alert_log WHERE disposition='open'") == 0
                 resolution = await conn.fetchval("SELECT resolution FROM alert_log")
                 assert resolution == (
@@ -757,7 +727,6 @@ def _exercise_ops_alert(containment, record_property, scenario=None):
     record_property("sequence_deltas", json.dumps(delta, sort_keys=True))
     record_property("public_rowsets", len(json.loads(before[0])))
     record_property("sequences", len(old_sequences))
-    record_property("delivery", json.dumps(delivery.report(), sort_keys=True))
 
 
 POSITIVE_REASONS = {
@@ -957,20 +926,6 @@ def _prepare_positive_shadow(query):
         "context_status": context["context_status"],
         "source": "synthetic_unavailable",
     }
-
-
-class _PositiveCaptureOnly:
-    """No bridge import, relay authorization read, client or real send path."""
-
-    prefix = "[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: "
-
-    def __init__(self):
-        self.messages = []
-
-    def __call__(self, channel, text, *, thread_ts=None):
-        assert len(self.messages) < 2
-        self.messages.append({"channel": channel, "text": text, "thread_ts": thread_ts})
-        return "0.587639"
 
 
 async def _positive_login(query, login, identities):
@@ -1247,7 +1202,6 @@ def test_native_positive_exposure_alert(committed_containment, record_property, 
     before, before_rows = snapshot(query), _public_rows(query)
     trigger_before = _trigger_custody(query)
     identities, refusals, works = {}, [], []
-    delivery = _PositiveCaptureOnly()
     device_count = 2 if scenario == "multiple" else 1
 
     async def exercise():
@@ -1428,18 +1382,12 @@ def test_native_positive_exposure_alert(committed_containment, record_property, 
             assert state["open_exposure_count"] == device_count and state["rollback_ready"] is True
 
             async def cycle():
-                return await component_experiment_alert_cycle(
-                    owner,
-                    EXP,
-                    greenhouse_id="synthetic-containment",
-                    post_message=delivery,
-                    message_prefix=delivery.prefix,
-                )
+                return await component_experiment_alert_cycle(owner, EXP, greenhouse_id="synthetic-containment")
 
             assert await cycle() == {"new": 1, "escalated": 0, "resolved": 0, "suppressed": 0}
-            assert not any((await cycle()).values()) and len(delivery.messages) == 1
+            assert not any((await cycle()).values())
             fired = json.loads(await owner.fetchval("SELECT to_jsonb(a)::text FROM alert_log a"))
-            assert POSITIVE_REASONS[scenario].replace("_", " ") in delivery.messages[0]["text"]
+            assert POSITIVE_REASONS[scenario].replace("_", " ") in fired["message"]
             for work in works:
                 await executor.fetchval(
                     "SELECT exposure_id FROM fn_experiment_v2_close_exposure($1::uuid,'manual',$2)",
@@ -1468,8 +1416,7 @@ def test_native_positive_exposure_alert(committed_containment, record_property, 
             assert final["work_id"] is None and final["open_exposure_count"] == 0
             assert final["admission_state"] == "closed" and final["rollback_ready"] is True
             assert await cycle() == {"new": 0, "escalated": 0, "resolved": 1, "suppressed": 0}
-            assert not any((await cycle()).values()) and len(delivery.messages) == 2
-            assert delivery.messages[1]["thread_ts"] == "0.587639"
+            assert not any((await cycle()).values())
             resolved = json.loads(await owner.fetchval("SELECT to_jsonb(a)::text FROM alert_log a"))
             mutable_alert = {"disposition", "resolved_at", "resolved_by", "resolution"}
             assert {k: v for k, v in fired.items() if k not in mutable_alert} == {
@@ -1483,7 +1430,6 @@ def test_native_positive_exposure_alert(committed_containment, record_property, 
             proof = {
                 "synthetic_only": True,
                 "physical_acceptance": False,
-                "live_delivery": False,
                 "native_logins": identities,
                 "shadow": shadow,
                 "guard_refusals": refusals,
@@ -1492,7 +1438,6 @@ def test_native_positive_exposure_alert(committed_containment, record_property, 
                 "device_count": device_count,
                 "receipt_bindings": bindings,
                 "effects": effects,
-                "delivery": {"live": False, "messages": delivery.messages},
                 "alert_lifecycle": "fire_dedupe_native_close_resolve_silent",
                 "final_open_exposures": 0,
                 "final_current_work": None,

@@ -1,7 +1,7 @@
 """Pure, bounded regressions for component-only alert persistence and routing.
 
 Execute the owning function bodies without importing or starting ingestor tasks.
-Database and qualification-outbox adapters are explicit fakes; these tests claim no live delivery.
+The database adapter is an explicit fake. alert_log is the only delivery (#1352).
 """
 
 from __future__ import annotations
@@ -20,7 +20,6 @@ ROOT = Path(__file__).resolve().parents[1]
 EXP = "cac56395-87b6-431d-b559-71e463987839"
 SENSOR = f"experiment.v2.{EXP}"
 GREENHOUSE = "synthetic-s3-639-587-20261018"
-LABEL = "[NONPRODUCTION SYNTHETIC QUALIFICATION] test #587: "
 
 
 def load_functions():
@@ -46,7 +45,6 @@ def load_functions():
         "AlertEnvelope": SimpleNamespace(model_validate=lambda row: SimpleNamespace(**row)),
         "ValidationError": TypeError,
         "_auto_close_disposition": lambda *a: ("resolved", "auto-resolved"),
-        "_QUALIFICATION_OUTBOX": "C0ANVVAPLD6",
         "_expire_planner_trigger_slas": forbidden,
     }
     exec(compile(module, "owning-alert-functions", "exec"), ns)  # noqa: S102 - owning source only
@@ -104,7 +102,6 @@ class Connection:
                     alert_type=args[0],
                     severity=args[1],
                     sensor_id=args[3],
-                    slack_ts=args[7],
                     disposition="open",
                 )
             ]
@@ -118,59 +115,43 @@ class Connection:
             raise AssertionError("unexpected write: " + sql)
 
 
-def test_scoped_cycle_fires_deduplicates_and_resolves_same_thread():
+def test_scoped_cycle_fires_deduplicates_and_resolves_one_row():
     ns = load_functions()
     conn = Connection()
-    sent = []
-
-    def sender(channel, text, *, thread_ts=None):
-        assert channel == "C0ANVVAPLD6" and text.startswith(LABEL)
-        sent.append((text, thread_ts))
-        return "1792290000.123456"
 
     async def exercise():
         cycle = ns["component_experiment_alert_cycle"]
-        first = await cycle(conn, EXP, greenhouse_id=GREENHOUSE, post_message=sender, message_prefix=LABEL)
-        again = await cycle(conn, EXP, greenhouse_id=GREENHOUSE, post_message=sender, message_prefix=LABEL)
+        first = await cycle(conn, EXP, greenhouse_id=GREENHOUSE)
+        again = await cycle(conn, EXP, greenhouse_id=GREENHOUSE)
         conn.row = ops(alert_severity=None, alert_reason=None)
-        clear = await cycle(conn, EXP, greenhouse_id=GREENHOUSE, post_message=sender, message_prefix=LABEL)
+        clear = await cycle(conn, EXP, greenhouse_id=GREENHOUSE)
         assert first["new"] == 1 and again["new"] == 0 and clear["resolved"] == 1
 
     asyncio.run(exercise())
-    assert len(sent) == 2
-    assert "[CRITICAL]" in sent[0][0] and sent[0][1] is None
-    assert "Resolved:" in sent[1][0] and sent[1][1] == "1792290000.123456"
+    inserts = [sql for sql, _ in conn.writes if sql.startswith("INSERT INTO alert_log")]
+    assert len(inserts) == 1
     assert not conn.open
 
 
 @pytest.mark.parametrize("wrong_surface", ["ops", "open"])
-def test_wrong_target_stops_before_mutation_or_send(wrong_surface):
+def test_wrong_target_stops_before_mutation(wrong_surface):
     ns = load_functions()
     conn = Connection()
-    sent = []
     if wrong_surface == "ops":
         conn.row["experiment_id"] = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
     else:
         conn.open = [dict(alert_type="sensor_offline", sensor_id="genuine", id=9)]
     with pytest.raises(ValueError, match="scope_mismatch"):
-        asyncio.run(
-            ns["component_experiment_alert_cycle"](
-                conn, EXP, greenhouse_id=GREENHOUSE, post_message=lambda *a, **k: sent.append(a), message_prefix=LABEL
-            )
-        )
-    assert not conn.writes and not sent
+        asyncio.run(ns["component_experiment_alert_cycle"](conn, EXP, greenhouse_id=GREENHOUSE))
+    assert not conn.writes
 
 
-def test_unconfirmed_delivery_never_records_fake_thread():
+def test_component_cycle_requires_a_synthetic_greenhouse():
     ns = load_functions()
     conn = Connection()
-    with pytest.raises(ValueError, match="delivery_unconfirmed"):
-        asyncio.run(
-            ns["component_experiment_alert_cycle"](
-                conn, EXP, greenhouse_id=GREENHOUSE, post_message=lambda *a, **k: None, message_prefix=LABEL
-            )
-        )
-    assert not conn.writes
+    with pytest.raises(ValueError, match="explicit_synthetic_greenhouse_required"):
+        asyncio.run(ns["component_experiment_alert_cycle"](conn, EXP, greenhouse_id="production"))
+    assert not conn.reads and not conn.writes
 
 
 def test_missing_status_cannot_clear_existing_component_alert():
@@ -182,7 +163,6 @@ def test_missing_status_cannot_clear_existing_component_alert():
             alert_type="component_experiment_integrity",
             severity="critical",
             sensor_id=SENSOR,
-            slack_ts="1792290000.123456",
             disposition="open",
         )
     ]
@@ -194,14 +174,12 @@ def test_missing_status_cannot_clear_existing_component_alert():
             component_closure_resolutions={},
             scope=("component_experiment_integrity", SENSOR),
             scope_greenhouse_id=GREENHOUSE,
-            post_message=lambda *a, **k: pytest.fail("unexpected send"),
-            message_prefix=LABEL,
         )
     )
     assert result["resolved"] == 0 and not conn.writes
 
 
-def test_unscoped_transport_override_is_refused():
+def test_unscoped_synthetic_greenhouse_is_refused():
     ns = load_functions()
     conn = Connection()
     with pytest.raises(ValueError, match="exact_alert_scope"):
@@ -211,7 +189,7 @@ def test_unscoped_transport_override_is_refused():
                 [],
                 component_status_available=True,
                 component_closure_resolutions={},
-                post_message=lambda *a, **k: None,
+                scope_greenhouse_id=GREENHOUSE,
             )
         )
     assert not conn.reads and not conn.writes
@@ -222,5 +200,5 @@ def test_normal_monitor_uses_same_sync_implementation():
     monitor = next(n for n in tree.body if isinstance(n, ast.AsyncFunctionDef) and n.name == "alert_monitor")
     calls = [n for n in ast.walk(monitor) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)]
     assert sum(n.func.id == "_sync_monitor_alerts" for n in calls) == 1
-    assert not any(n.func.id == "_post_slack" for n in calls)
-    assert "_post_slack" not in (ROOT / "ingestor/tasks/alerts.py").read_text()  # #1352: no production sender
+    source = (ROOT / "ingestor/tasks/alerts.py").read_text()
+    assert "post_message" not in source and "thread_ts" not in source  # #1352: alert_log is the only delivery

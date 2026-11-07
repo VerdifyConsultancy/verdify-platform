@@ -94,7 +94,7 @@ AGENT_TOOLS = frozenset(
     }
     | PLANTING_TOOLS
 )
-# Agents never get the planner, lessons, crop or Slack writers, nor the admin-only tools.
+# Agents never get the planner, lessons or crop writers, nor the admin-only tools.
 AGENT_NEVER_TOOLS = frozenset(
     {
         "set_plan",
@@ -546,7 +546,7 @@ class TestAudienceMatrix:
         registered = {tool.name for tool in mcp_server.mcp._registered_tools}
         assert mcp_server.AGENT_AUDIENCE == "agent" and "agent" in mcp_server.KNOWN_AUDIENCES
         assert mcp_server.audience_allowlist("agent") == AGENT_TOOLS & registered
-        assert AGENT_NEVER_TOOLS & registered, "expected the planner and Slack writers to be registered"
+        assert AGENT_NEVER_TOOLS & registered, "expected the planner writers to be registered"
         assert not mcp_server.audience_allowlist("agent") & AGENT_NEVER_TOOLS
 
     def test_agent_matrix_needs_a_named_key(self, mcp_server, monkeypatch, tmp_path):

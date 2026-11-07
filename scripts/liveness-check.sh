@@ -102,7 +102,6 @@ done
 # Alert on failure
 if [ "$FAIL" -gt 0 ]; then
     echo "$NOW ALERT: $FAIL liveness checks failed" >> "$LOG"
-    # Could post to Slack here if desired
 fi
 
 # Rotate log (keep last 2000 lines)

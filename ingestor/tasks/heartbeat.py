@@ -1667,7 +1667,7 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
     # ── 6. MCP server health check (every heartbeat = 60s) ──
     # 2026-07-11 audit: the legacy single-host watchdog probed 127.0.0.1:8000
     # (always dead in k3s — MCP is a separate Deployment), logged an ERROR,
-    # Popen'd a doomed in-container mcp/server.py, and attempted a Slack post
+    # Popen'd a doomed in-container mcp/server.py, and attempted a chat post
     # EVERY MINUTE — pure noise that masked the real MCP health signal. Probe
     # the in-cluster Service instead (override via VERDIFY_MCP_HEALTH_URL);
     # k8s liveness/restart of the MCP Deployment owns recovery, so the local

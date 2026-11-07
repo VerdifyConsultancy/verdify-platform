@@ -9,7 +9,7 @@ metadata:
     argocd.argoproj.io/sync-wave: '0'
 data:
   # #1351: the only public destination is Open-Meteo. The OpenAI embeddings route (8081) left with
-  # migration 296 (Cortex embed.main); Slack (8082) left with #1352.
+  # migration 296 (Cortex embed.main); the chat relay (8082) left with #1352.
   default.conf: |
     # Fixed destinations only: incoming Host/URI cannot select an upstream host.
     access_log off;

@@ -2,7 +2,7 @@
 
 Runs the owning soil scan and _sync_monitor_alerts from ingestor/tasks/alerts.py
 (see alert_lifecycle_harness) against an in-memory alert_log that holds every
-write to the ingestor login's migration-217 grants. No database, Slack or device.
+write to the ingestor login's migration-217 grants. No database, network or device.
 """
 
 from __future__ import annotations
@@ -322,8 +322,6 @@ def test_a_scoped_component_call_refuses_lifecycle_keys_before_any_read(lifecycl
                 component_closure_resolutions={},
                 scope=("component_experiment_integrity", "experiment.v2.test"),
                 scope_greenhouse_id="synthetic-test",
-                post_message=lambda *args, **kwargs: "1790000000.000001",
-                message_prefix="[NONPRODUCTION SYNTHETIC QUALIFICATION] ",
                 **{lifecycle: {PROBE}},
             )
         )

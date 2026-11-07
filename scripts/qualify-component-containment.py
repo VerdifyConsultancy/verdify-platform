@@ -135,7 +135,6 @@ def positive_case_qualified(case):
         return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
 
     bindings = proof.get("receipt_bindings", [])
-    messages = proof.get("delivery", {}).get("messages", [])
     path = disposal.get("generated_cluster")
     close = effects.get("admission_close_event", {})
     event = close.get("event", {})
@@ -152,7 +151,6 @@ def positive_case_qualified(case):
     return (
         proof.get("synthetic_only") is True
         and proof.get("physical_acceptance") is False
-        and proof.get("live_delivery") is False
         and proof.get("device_count") == count
         and proof.get("ops_reason") == POSITIVE_ALERT_REASON_BY_CASE[name]
         and proof.get("ops_severity") == "critical"
@@ -216,13 +214,6 @@ def positive_case_qualified(case):
         and proof.get("alert_lifecycle") == "fire_dedupe_native_close_resolve_silent"
         and proof.get("final_open_exposures") == 0
         and proof.get("final_current_work") is None
-        and proof.get("delivery", {}).get("live") is False
-        and len(messages) == 2
-        and messages[0].get("thread_ts") is None
-        and messages[1].get("thread_ts") == "0.587639"
-        and all(
-            m.get("text", "").startswith("[NONPRODUCTION SYNTHETIC QUALIFICATION] CAPTURE ONLY: ") for m in messages
-        )
         and disposal.get("mode") == "committed_private_cluster_disposed"
         and isinstance(path, str)
         and Path(path).is_absolute()
@@ -276,7 +267,6 @@ def case_qualified(c):
             or (
                 c["custody"].get("ops_reason") == ADDITIONAL_ALERT_REASON_BY_CASE[c["name"]]
                 and c["custody"].get("synthetic_precondition_only") == "true"
-                and json.loads(c["custody"]["delivery"])["live"] is False
                 and c["custody"].get("alert_lifecycle_outcome")
                 == (
                     "retained_until_confirmed_recovery"
@@ -451,7 +441,6 @@ def main():
             "db/migrations/214-confirmed-component-experiment-v2.sql",
             "db/migrations/270-facility-safe-ops-projection.sql",
             "db/migrations/256-experiment-v2-end-study-recovery-completion.sql",
-            "tests/component_alert_delivery_bridge.py",
             "tests/test_scorecard_semantics.py",
             "ingestor/tasks/alerts.py",
         )

@@ -1773,7 +1773,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 }
             )
 
-        # 7. Planner stale. Threshold 14h = SUNSET→SUNRISE gap (~12.7h) + 1.3h slack.
+        # 7. Planner stale. Threshold 14h = SUNSET→SUNRISE gap (~12.7h) + 1.3h margin.
         # Iris emits full plans at SUNRISE and SUNSET only; interim TRANSITION /
         # FORECAST / DEVIATION events adjust tunables or trigger replans. An 8h
         # threshold (pre-sprint-2) guaranteed a daily false-positive mid-afternoon;
@@ -2585,7 +2585,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # OBS-3 cooldown (Tier 2b): firmware_relief_ceiling and
         # firmware_vent_latched flap rapidly when the metric oscillates near
         # threshold during stress windows. After a recent auto-resolve, hold
-        # off re-firing for 10 min so the alert log + Slack don't accumulate
+        # off re-firing for 10 min so the alert log doesn't accumulate
         # the same incident as 17+ separate rows/day. The auto-resolve loop
         # below still clears genuinely-cleared alerts on the same monitor pass.
         relief_recent_resolve = await conn.fetchval(
@@ -2692,7 +2692,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
 
         # 13. ESP32 heap pressure watchdogs. Firmware publishes debounced
         # binary sensors; route them into alert_log so heap exhaustion has the
-        # same lifecycle and Slack path as the other system-owned alerts.
+        # same lifecycle and delivery path as the other system-owned alerts.
         heap_resolution_rows = await conn.fetch(
             """
             SELECT sensor_id, max(resolved_at) AS resolved_at
@@ -3201,11 +3201,6 @@ async def _active_alert_silences(conn):
         return []
 
 
-# The contained component qualification's outbox label (tests/component_alert_delivery_bridge.py).
-# No production path posts: the monitor's only delivery is alert_log (#1352).
-_QUALIFICATION_OUTBOX = "C0ANVVAPLD6"
-
-
 async def _sync_monitor_alerts(
     conn,
     alerts,
@@ -3214,8 +3209,6 @@ async def _sync_monitor_alerts(
     component_closure_resolutions,
     scope=None,
     scope_greenhouse_id=None,
-    post_message=None,
-    message_prefix="",
     keep_open_keys=frozenset(),
     unpotted_keys=frozenset(),
     refresh_only_keys=frozenset(),
@@ -3228,8 +3221,7 @@ async def _sync_monitor_alerts(
     ``alert_log`` is the only delivery: the dashboard lists every open row and the
     operator API's ``verdify_alert_open`` gauge pages the critical ones through
     Alertmanager (#1352). The monitor posts nowhere. A supplied scope restricts both
-    input envelopes and existing open rows, and only that exact scope may inject a
-    contained qualification outbox (``post_message``); the normal monitor has none.
+    input envelopes and existing open rows to one synthetic component key.
     Open alerts whose type is in ``preserve_open_types`` stay open when their
     producer's state is unknown this cycle; they are neither refreshed nor resolved.
 
@@ -3248,7 +3240,7 @@ async def _sync_monitor_alerts(
     resolution naming the silence and its expiry, and a long-offline mark stays.
     After the silence's ``until`` the rules apply again. leak_detected is never held.
     """
-    # Validate the complete scope before the first database or transport mutation.
+    # Validate the complete scope before the first database mutation.
     if scope is not None:
         if not isinstance(scope_greenhouse_id, str) or not scope_greenhouse_id.startswith("synthetic-"):
             raise ValueError("explicit_synthetic_greenhouse_required")
@@ -3256,8 +3248,8 @@ async def _sync_monitor_alerts(
             raise ValueError("component_alert_scope_mismatch")
         if keep_open_keys or unpotted_keys or refresh_only_keys or silences:
             raise ValueError("lifecycle_keys_require_unscoped_monitor")
-    elif message_prefix or post_message is not None or scope_greenhouse_id is not None:
-        raise ValueError("qualified_transport_requires_exact_alert_scope")
+    elif scope_greenhouse_id is not None:
+        raise ValueError("synthetic_greenhouse_requires_exact_alert_scope")
     if silences:
         # A silenced key is not raised this cycle (migration 289).
         now = now or datetime.now(UTC)
@@ -3277,9 +3269,9 @@ async def _sync_monitor_alerts(
     # column read: the containment qualification stores its alerts in an
     # exact-column facade that has no ts.
     open_columns = (
-        "id, ts, alert_type, severity, category, sensor_id, message, details, slack_ts, disposition"
+        "id, ts, alert_type, severity, category, sensor_id, message, details, disposition"
         if scope is None
-        else "id, alert_type, severity, sensor_id, slack_ts, disposition"
+        else "id, alert_type, severity, sensor_id, disposition"
     )
     open_query = (
         f"SELECT {open_columns} FROM alert_log "
@@ -3297,16 +3289,6 @@ async def _sync_monitor_alerts(
         # that a previously actionable experiment condition recovered.
         active_keys.update(key for key in open_keys if key[0] == "component_experiment_integrity")
     active_keys.update(key for key in open_keys if key[0] in preserve_open_types)
-
-    def transport_ready():
-        return post_message is not None
-
-    def send(text, *, thread_ts=None):
-        # Only a scoped qualification outbox reaches here (validated above).
-        receipt = post_message(_QUALIFICATION_OUTBOX, message_prefix + text, thread_ts=thread_ts)
-        if not isinstance(receipt, str) or not receipt:
-            raise ValueError("component_alert_delivery_unconfirmed")
-        return receipt
 
     new_count = 0
     escalated_count = 0
@@ -3332,13 +3314,6 @@ async def _sync_monitor_alerts(
                 disposition,
                 resolution,
                 details,
-            )
-        if row["slack_ts"] and transport_ready():
-            verb = "Suppressed" if disposition == "suppressed" else "Resolved"
-            emoji = "\U0001f507" if disposition == "suppressed" else "\u2705"
-            send(
-                f"{emoji} {verb}: `{row['alert_type']}` for `{row['sensor_id']}`",
-                thread_ts=row["slack_ts"],
             )
         if disposition == "suppressed":
             suppressed += 1
@@ -3447,11 +3422,6 @@ async def _sync_monitor_alerts(
             )
             # F14 (Sprint 24.6): escalate severity in place. The new severity
             # reaches the dashboard and the verdify_alert_open gauge directly.
-            if is_escalation and transport_ready():
-                send(
-                    f"\U0001f534 *[ESCALATED->CRITICAL]* `{env.alert_type}` - {env.message}",
-                    thread_ts=existing["slack_ts"],
-                )
             if is_escalation:
                 escalated_count += 1
             continue
@@ -3494,7 +3464,7 @@ async def _sync_monitor_alerts(
                 continue
         if reopen is not None:
             # Re-open in place: the acknowledgement sticks, the first ts stays,
-            # the trigger bumps updated_at and nothing new posts to Slack.
+            # the trigger bumps updated_at and no new row is written.
             await conn.execute(
                 "UPDATE alert_log SET disposition = $2, resolved_at = NULL, resolved_by = NULL, resolution = NULL, "
                 "severity = $3, message = $4, details = $5, metric_value = $6, threshold_value = $7 "
@@ -3509,15 +3479,10 @@ async def _sync_monitor_alerts(
             )
             reopened += 1
             continue
-        slack_ts = None
-        if transport_ready():
-            emoji = {"critical": "\U0001f534", "warning": "\U0001f7e1", "info": "\u2139\ufe0f"}.get(env.severity, "")
-            slack_ts = send(f"{emoji} *[{env.severity.upper()}]* `{env.alert_type}` - {env.message}")
-
-        insert_sql = "INSERT INTO alert_log (alert_type, severity, category, sensor_id, zone, message, details, source, slack_ts, metric_value, threshold_value) VALUES ($1,$2,$3,$4,$5,$6,$7,'system',$8,$9,$10)"
+        insert_sql = "INSERT INTO alert_log (alert_type, severity, category, sensor_id, zone, message, details, source, metric_value, threshold_value) VALUES ($1,$2,$3,$4,$5,$6,$7,'system',$8,$9)"
         extra_values = ()
         if scope is not None:
-            insert_sql = "INSERT INTO alert_log (alert_type, severity, category, sensor_id, zone, message, details, source, slack_ts, metric_value, threshold_value, greenhouse_id) VALUES ($1,$2,$3,$4,$5,$6,$7,'system',$8,$9,$10,$11)"
+            insert_sql = "INSERT INTO alert_log (alert_type, severity, category, sensor_id, zone, message, details, source, metric_value, threshold_value, greenhouse_id) VALUES ($1,$2,$3,$4,$5,$6,$7,'system',$8,$9,$10)"
             extra_values = (scope_greenhouse_id,)
         await conn.execute(
             insert_sql,
@@ -3528,7 +3493,6 @@ async def _sync_monitor_alerts(
             env.zone,
             env.message,
             json.dumps(env.details) if env.details else None,
-            slack_ts,
             env.metric_value,
             env.threshold_value,
             *extra_values,
@@ -3590,21 +3554,18 @@ async def _sync_monitor_alerts(
     return {"new": new_count, "escalated": escalated_count, "resolved": resolved, "suppressed": suppressed}
 
 
-async def component_experiment_alert_cycle(conn, experiment_id, *, greenhouse_id, post_message, message_prefix):
+async def component_experiment_alert_cycle(conn, experiment_id, *, greenhouse_id):
     """One component-only cycle using the production producer and sync path.
 
     The caller owns native target/role admission and transaction lifetime.
-    No ordinary greenhouse evaluator or planner SLA refresh runs here. A
-    qualification caller must supply its explicitly authorized transport;
-    this entrypoint never discovers or exports production credentials.
+    No ordinary greenhouse evaluator or planner SLA refresh runs here. The
+    only delivery is the scoped alert_log row; nothing is posted anywhere.
     """
     from uuid import UUID
 
     experiment_id = str(UUID(str(experiment_id)))
     if not isinstance(greenhouse_id, str) or not greenhouse_id.startswith("synthetic-"):
         raise ValueError("explicit_synthetic_greenhouse_required")
-    if post_message is None or not message_prefix.startswith("[NONPRODUCTION SYNTHETIC QUALIFICATION] "):
-        raise ValueError("explicit_qualified_transport_and_label_required")
     rows = await conn.fetch(
         "SELECT experiment_id, lifecycle_status, execution_phase, admission_state, "
         "operation_kind, observation_age_seconds, observation_truth, open_exposure_count, "
@@ -3626,6 +3587,4 @@ async def component_experiment_alert_cycle(conn, experiment_id, *, greenhouse_id
         component_closure_resolutions={sensor: closure} if closure else {},
         scope=("component_experiment_integrity", sensor),
         scope_greenhouse_id=greenhouse_id,
-        post_message=post_message,
-        message_prefix=message_prefix,
     )
