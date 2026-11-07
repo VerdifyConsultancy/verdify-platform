@@ -1484,7 +1484,7 @@ def test_publisher_image_and_ci_own_the_canonical_cache_scanner_and_shared_packa
     assert "prepare-lab-cache-lock" in initializer
     assert "prepare-lab-cache-lock" in (REPO_ROOT / "scripts" / "lab-publish-k3s.sh").read_text(encoding="utf-8")
 
-    ruff_lines = [line for line in ci_gate.splitlines() if line.startswith("$RUFF ")]
+    ruff_lines = [line for line in ci_gate.splitlines() if line.lstrip().startswith("$RUFF ")]
     assert len(ruff_lines) == 2
     assert all("verdify_public/" in line for line in ruff_lines)
     for test_file in (

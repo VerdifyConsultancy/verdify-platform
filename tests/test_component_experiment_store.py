@@ -17,7 +17,7 @@ if _INGESTOR_PATH not in sys.path:
 
 import shared  # noqa: E402
 import tasks.component_experiment as component_experiment  # noqa: E402
-from esp32_push import ComponentCommandOutcome  # noqa: E402
+from esp32_push import ComponentCommandOutcome, set_component_authority_hold  # noqa: E402
 from tasks.component_experiment import (  # noqa: E402
     MAX_EPOCH_SKEW,
     POST_DELIVERY_SETTLE_GRACE,
@@ -361,6 +361,7 @@ def isolated_component_source_epochs():
         connection_generation=None,
         revisions=None,
     )
+    set_component_authority_hold(False)
     yield
     configure_component_cfg_source(
         experiment_id=None,
@@ -369,6 +370,9 @@ def isolated_component_source_epochs():
         connection_generation=None,
         revisions=None,
     )
+    # prepare_runtime arms the process-wide ordinary-writer hold; release it
+    # so later files in the same pytest process start unheld (#1459).
+    set_component_authority_hold(False)
 
 
 @pytest.fixture
