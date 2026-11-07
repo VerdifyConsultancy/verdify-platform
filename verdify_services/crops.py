@@ -253,7 +253,9 @@ def _label_range(tree: Tree, upper: str, term: str, field: str) -> list[Target] 
     if match is None:
         return None
     prefix = match["left"]
-    if match["right"] and match["right"] != prefix:
+    # The right side may repeat the whole prefix (EAST-SHELF-T1..EAST-SHELF-T2) or just its
+    # tail (EAST-SHELF-T1..T2), as people write shelf slots.
+    if match["right"] and not prefix.endswith(match["right"]):
         raise _refuse(f"'{term}' runs between two different racks or shelves", field=field)
     by_label = {cell.label: cell for cell in tree.cells}
     found, missing = [], []

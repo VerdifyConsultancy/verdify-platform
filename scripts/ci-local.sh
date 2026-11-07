@@ -300,6 +300,7 @@ $PY -m pytest -q -rs \
   tests/test_mcp_irrigation_read_tools.py \
   tests/test_mcp_irrigation_write_tools.py \
   tests/test_dashboard_db_mcp_irrigation_writes.py \
+  tests/test_dashboard_db_crops_writes.py \
   tests/test_irrigation_context.py \
   tests/test_dashboard_db_irrigation_context.py \
   tests/test_gather_no_home_assistant.py \
