@@ -10,7 +10,7 @@ import { parseSettings, type DesiredSetting, type Setting } from "../lib/operato
 import { displayNumber, keptNumber, keptValueText, keyUnit, readableDuration, settingDisplay, settingUnit } from "../lib/setting-values";
 import type { Session } from "../lib/session";
 import { readOnlyWords } from "./control/setting-help";
-import { RECENT_WINDOWS, SettingRow, boundsText, changedByAgent, pendingRequest, recentlyChanged, valueInForce, type SettingRowProps } from "./setting-row";
+import { RECENT_WINDOWS, SettingRow, boundsText, changedByAgent, pendingRequest, recentlyChanged, settingAge, valueInForce, type SettingRowProps } from "./setting-row";
 import { NBSP, denver, renderUi, text } from "./test-render";
 
 const NOW = Date.parse(denver("10:42"));
@@ -397,4 +397,64 @@ test("bounds and step, the value in force, the pending request and a recent chan
   const planned = { ...base, applied_from: "plan", desired: null, plan: { ...base.plan!, written_at: hoursAgo(2) } };
   expect(recentlyChanged(planned, NOW)).toBe(true);
   expect(recentlyChanged({ ...planned, applied_from: "band" }, NOW)).toBe(false);
+});
+
+// Jason, 2026-11-07 (#1132): every row shows its age, worded as the drawer words it and under the same STALE rule.
+const ages = () => [...document.querySelectorAll(".setting-device .setting-age")].map((node) => [node.getAttribute("data-age"), text(node)]);
+
+test("every row shows exactly one age: reported as the drawer says it, Derived for Band in force, else changed, else age unknown", () => {
+  const all = rows();
+  expect(all.length).toBeGreaterThan(200);
+  for (const setting of all) {
+    draw(setting);
+    const found = ages();
+    expect(found, setting.param).toHaveLength(1);
+    expect(found[0][1], setting.param).toMatch(/^(reported .+ ago|Derived|\d.* ago|changed .+ ago|age unknown)$/);
+    cleanup();
+  }
+  // The steady row: reported 10:40, now 10:42, the drawer's "reported 2 min ago".
+  draw(row("mister_engage_kpa"));
+  expect(ages()).toEqual([["reported", "reported 2 min ago"]]);
+  expect(lines(".setting-value")).toEqual(["1.60 kPa"]);
+  cleanup();
+  // Band in force keeps its age in the value line, marked as the row's age.
+  draw(row("band_house_temp_low"));
+  expect(ages()).toEqual([["derived", "4 min ago"]]);
+});
+
+test("under the STALE rule the age reads as the drawer's stale age; a Band in force or no-readback row never does", () => {
+  draw(row("mister_engage_kpa"), { readbackStale: true });
+  expect(ages()).toEqual([["stale", "Last data 2 min ago (10:40)"]]);
+  cleanup();
+  draw(row("band_house_temp_low"), { readbackStale: true });
+  expect(ages()).toEqual([["derived", "4 min ago"]]);
+  cleanup();
+  draw(row("mister_pulse_on_s", { readback_via: "none", state: "no_readback" }), { readbackStale: true });
+  expect(ages()).toEqual([["reported", "reported 1 min ago"]]);
+});
+
+test("a row the device does not report dates from its newest write in force, and reads age unknown when nothing dates it", () => {
+  draw(row("mister_pulse_on_s", {
+    readback_via: "none", readback: null, state: "no_readback", applied_from: "manual",
+    desired: desired({ param: "mister_pulse_on_s", value: 70, state: "no_readback", created_at: denver("10:39") }),
+  }));
+  expect(ages()).toEqual([["changed", "changed 3 min ago"]]);
+  cleanup();
+  draw(row("mister_pulse_on_s", { readback: { value: null, observed_at: null, reason: "no readback in the last 24 h" }, desired: null, plan: null, applied_from: "default" }));
+  expect(ages()).toEqual([["unknown", "age unknown"]]);
+  expect(lines(".setting-value")).toEqual(["— no readback in the last 24 h"]);
+  // The age ticks with the clock.
+  cleanup();
+  draw(row("mister_engage_kpa"));
+  act(() => { vi.advanceTimersByTime(60_000); });
+  expect(ages()).toEqual([["reported", "reported 3 min ago"]]);
+});
+
+test("settingAge without rendering: the readback's time while it has a value, else the newest write, else unknown", () => {
+  const base = row("mister_engage_kpa");
+  expect(settingAge(base)).toEqual({ kind: "reported", at: base.readback!.observed_at });
+  expect(settingAge(row("band_house_temp_low")).kind).toBe("derived");
+  const at = denver("09:30");
+  expect(settingAge({ ...base, readback: null, applied_from: "plan", desired: null, plan: { ...base.plan!, written_at: at } })).toEqual({ kind: "changed", at: new Date(Date.parse(at)).toISOString() });
+  expect(settingAge({ ...base, readback: { value: 1.6, observed_at: "garbage", reason: null }, applied_from: "default", desired: null, plan: null })).toEqual({ kind: "unknown", at: null });
 });
