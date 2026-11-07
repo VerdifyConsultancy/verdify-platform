@@ -120,7 +120,7 @@ RETIRED_SOURCE_PATHS = (
     "reference/faq.md",
     "reference/inference.md",
     "reference/openclaw.md",
-    "start/slack-ops/index.md",
+    "start/slack-ops",
     "slack",
 )
 RETIRED_EMPTY_DIRS = ("press", "project", "updates")
@@ -910,6 +910,19 @@ def check_retired_source_paths(vault_root: Path) -> list[Finding]:
         path = vault_root / rel
         if path.exists() and path.is_dir() and not any(path.iterdir()):
             findings.append(Finding("error", "retired-empty-dir", f"{rel}/ is an empty retired website directory"))
+    # An alias on a live page re-creates a retired route as a redirect stub (#1352: /start/slack-ops and
+    # /data/slack-ops survived as aliases of data/operations.md).
+    retired_routes = {
+        normalize_route(Path(rel).parent.as_posix() if rel.endswith("/index.md") else rel)
+        for rel in RETIRED_SOURCE_PATHS
+    }
+    for page in sorted(vault_root.rglob("*.md")):
+        fm, _body = frontmatter(read_text(page))
+        aliases = fm.get("aliases") or []
+        for alias in [aliases] if isinstance(aliases, str) else aliases:
+            if normalize_route(str(alias)) in retired_routes:
+                rel = page.relative_to(vault_root).as_posix()
+                findings.append(Finding("error", "retired-site-alias", f"{rel} aliases the retired route {alias}"))
     return findings
 
 

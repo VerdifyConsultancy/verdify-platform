@@ -149,3 +149,26 @@ def test_navigation_coverage_flags_missing_and_stale_routes(tmp_path: Path):
 
     assert "nav-route-missing" in codes
     assert "nav-route-stale" in codes
+
+
+def test_retired_routes_flag_their_sources_and_aliases(tmp_path: Path):
+    """#1352: a retired route must not survive as a source directory or as a live page's alias redirect."""
+    sd = load_site_doctor()
+    vault_root = tmp_path / "vault"
+    (vault_root / "data").mkdir(parents=True)
+    (vault_root / "data/operations.md").write_text(
+        "---\ntitle: Ops\naliases:\n  - start/slack-ops\n  - /data/slack-ops/\n  - data/live\n---\n\nBody\n",
+        encoding="utf-8",
+    )
+    (vault_root / "start/slack-ops").mkdir(parents=True)
+    (vault_root / "start/slack-ops/brief.png").write_bytes(b"png")
+    findings = sd.check_retired_source_paths(vault_root)
+    assert sorted(f.message for f in findings) == [
+        "data/operations.md aliases the retired route /data/slack-ops/",
+        "data/operations.md aliases the retired route start/slack-ops",
+        "start/slack-ops still exists; collapse legacy content into the canonical nav/source path",
+    ]
+    (vault_root / "data/operations.md").write_text("---\ntitle: Ops\naliases: [data/live]\n---\n\nBody\n")
+    (vault_root / "start/slack-ops/brief.png").unlink()
+    (vault_root / "start/slack-ops").rmdir()
+    assert sd.check_retired_source_paths(vault_root) == []
