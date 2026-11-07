@@ -20,14 +20,15 @@ schedule or one server-clock boundary cycle. It cannot request both actions or
 enumerate future assignments. An absent plan digest performs no lifecycle
 mutation.
 
-The checked-in selector endpoint is the credential-free official OpenAI base
-URL. Kubernetes NetworkPolicy cannot select an FQDN, so its only Internet rule
-permits TCP/443 while the runtime independently accepts only
-`api.openai.com:443`, re-resolves it before every attempt, rejects non-global
-answers, ignores proxy environment variables, and rejects redirects. The
-shared capability and active-experiment gates still keep the component inert.
+Verdify runs local-only except the planner (#1351, Jason 2026-11-06), and the
+selector is not the planner. The checked-in selector endpoint and egress CIDR
+are therefore empty, the selector is given no provider API key, and its
+NetworkPolicy allows only DNS and the in-namespace DB. An empty endpoint is the
+settings contract for "no provider": if the capability is ever enabled, the
+selector records baseline-safe results and makes no network call. The shared
+capability and active-experiment gates still keep the component inert.
 
-The production selector adapter is deliberately narrower than a generic
+The selector adapter code (unused while the endpoint is empty) is deliberately narrower than a generic
 OpenAI client. It accepts only `https://api.openai.com/v1` (normalized to the
 exact `/v1/chat/completions` path) or that exact completions URL. The frozen
 identity names `gpt-5.6-luna` with `reasoning_effort=medium`. Requests are

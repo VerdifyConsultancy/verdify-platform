@@ -6,20 +6,5 @@ resources:
   - workloads.yaml
   - networkpolicies.yaml
 
-# Kubernetes NetworkPolicy cannot select an FQDN. The configured CIDR is
-# injected into the selector pod and its HTTPS egress rule; runtime performs
-# the independent api.openai.com/global-address lock.
-replacements:
-  - source:
-      kind: ConfigMap
-      name: experiment-v2-orchestrator-config
-      fieldPath: data.VERDIFY_EXPERIMENT_SELECTOR_EGRESS_CIDR
-    targets:
-      - select:
-          kind: NetworkPolicy
-          name: experiment-v2-selector
-        fieldPaths:
-          - spec.egress.2.to.0.ipBlock.cidr
-
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator

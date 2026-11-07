@@ -10,8 +10,9 @@
 #
 # Accepted public egress stays only in the components' own policies: verdify-outbound
 # (Open-Meteo, verdify-outbound-boundary) and the firmware builder (GitHub, PlatformIO, PyPI;
-# build-time only, allow-firmware-builder-egress). experiment-v2-selector keeps its own 443 rule
-# until #1350 removes it. Two components stay on the vendored deny: hermes-iris (api.openai.com,
+# build-time only, allow-firmware-builder-egress). experiment-v2-selector lost its 443 rule
+# (#1351, Jason 2026-11-06: local-only except the planner); its own policy allows DNS + DB only.
+# Two components stay on the vendored deny: hermes-iris (api.openai.com,
 # direct) until #1350 retires it, and api, whose contact form calls Cloudflare Turnstile siteverify
 # (challenges.cloudflare.com; Cloudflare is accepted for now on #1351 row 7).
 apiVersion: networking.k8s.io/v1
