@@ -35,10 +35,12 @@ step() { printf '\n== %s ==\n' "$1"; }
 
 # CI_PYTEST_WORKERS (set by ci/gha/validate.sh from the job's CPU quota) runs the long
 # pure-logic step with pytest-xdist, work-stealing. Unset or 0 keeps it serial.
-# The k3s-smoke subprocess tests have tight wall-clock bounds, so under xdist they are
-# deselected from the parallel pass and run serially right after it (same tests).
+# Files with tight wall-clock bounds (k3s-smoke subprocess timeouts, the writer
+# heartbeat cadence) are deselected from the parallel pass and run serially right
+# after it (same tests).
 XDIST=()
-XDIST_SERIAL=(tests/test_k3s_smoke_device_monitor.py tests/test_k3s_smoke_g10.py)
+XDIST_SERIAL=(tests/test_k3s_smoke_device_monitor.py tests/test_k3s_smoke_g10.py
+  tests/test_16_writer_lifecycle.py)
 if [ "${CI_PYTEST_WORKERS:-0}" -gt 0 ]; then
   XDIST=(-n "$CI_PYTEST_WORKERS" --dist worksteal)
   for serial_test in "${XDIST_SERIAL[@]}"; do XDIST+=(--deselect "$serial_test"); done
