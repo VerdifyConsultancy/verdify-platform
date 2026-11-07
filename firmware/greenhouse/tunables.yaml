@@ -1026,84 +1026,10 @@ number:
           id(mister_water_budget_gal) = x;
           id(num_mister_water_budget).publish_state(x);
 
-  # ─── Grow Light Shade-Aware Automation ───
-  - platform: template
-    id: num_gl_lux_threshold
-    name: "GL Lux Threshold"
-    min_value: 100
-    max_value: 50000
-    step: 500
-    lambda: "return id(gl_lux_threshold);"
-    set_action:
-      - lambda: |
-          id(gl_lux_threshold) = x;
-          id(num_gl_lux_threshold).publish_state(x);
-          ESP_LOGI("grow_light","Lux threshold set to %.0f", x);
-
-  - platform: template
-    id: num_gl_lux_hysteresis
-    name: "GL Lux Hysteresis"
-    min_value: 0
-    max_value: 10000
-    step: 250
-    lambda: "return id(gl_lux_hysteresis);"
-    set_action:
-      - lambda: |
-          id(gl_lux_hysteresis) = x;
-          id(num_gl_lux_hysteresis).publish_state(x);
-          ESP_LOGI("grow_light","Lux hysteresis set to %.0f", x);
-
-  - platform: template
-    id: num_gl_dli_target
-    name: "GL DLI Target (mol)"
-    min_value: 1
-    max_value: 50
-    step: 1
-    lambda: "return id(gl_dli_target);"
-    set_action:
-      - lambda: |
-          id(gl_dli_target) = x;
-          id(num_gl_dli_target).publish_state(x);
-          ESP_LOGI("grow_light","Legacy DLI telemetry target set to %.0f mol/m²/day", x);
-
-  - platform: template
-    id: num_gl_sunrise_hour
-    name: "GL Start Hour"
-    min_value: 0
-    max_value: 23
-    step: 1
-    lambda: "return id(gl_sunrise_hour);"
-    set_action:
-      - lambda: |
-          id(gl_sunrise_hour) = (int)x;
-          id(num_gl_sunrise_hour).publish_state(x);
-
-  - platform: template
-    id: num_gl_sunset_hour
-    name: "GL Cutoff Hour"
-    min_value: 0
-    max_value: 23
-    step: 1
-    lambda: "return id(gl_sunset_hour);"
-    set_action:
-      - lambda: |
-          id(gl_sunset_hour) = (int)x;
-          id(num_gl_sunset_hour).publish_state(x);
-
   # ─── Per-circuit lighting state-machine tunables ───
-  - platform: template
-    id: num_gl_main_dli_target
-    name: "GL Main DLI Target"
-    min_value: 1
-    max_value: 50
-    step: 1
-    lambda: "return id(gl_main_dli_target);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          id(gl_main_dli_target) = x;
-          id(num_gl_main_dli_target).publish_state(x);
-
+  # #1477: the shared gl_* set (DLI target, lux threshold/hysteresis, start and
+  # cutoff hours, GL Auto Mode) and both per-circuit DLI targets are retired: no
+  # light logic read them. The DLI targets stay in the DB lighting policy only.
   - platform: template
     id: num_gl_main_target_light_minutes
     name: "GL Main Target Light Minutes"
@@ -1194,19 +1120,6 @@ number:
           id(cfg_first_pull_ok) = true;
           id(gl_main_min_off_s) = (int)x;
           id(num_gl_main_min_off_s).publish_state(x);
-
-  - platform: template
-    id: num_gl_grow_dli_target
-    name: "GL Grow DLI Target"
-    min_value: 1
-    max_value: 50
-    step: 1
-    lambda: "return id(gl_grow_dli_target);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          id(gl_grow_dli_target) = x;
-          id(num_gl_grow_dli_target).publish_state(x);
 
   - platform: template
     id: num_gl_grow_target_light_minutes
@@ -1355,51 +1268,9 @@ number:
           id(gl_grow_sunset_offset_min) = (int)x;
           id(num_gl_grow_sunset_offset_min).publish_state(x);
 
-  # ─── Biological activity / direct-wet gate tunables ───
-  - platform: template
-    id: num_activity_start_hour
-    name: "Activity Start Hour"
-    min_value: 0
-    max_value: 23
-    step: 1
-    lambda: "return id(activity_start_hour);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          id(activity_start_hour) = val;
-          id(num_activity_start_hour).publish_state(val);
-
-  - platform: template
-    id: num_activity_start_min
-    name: "Activity Start Min"
-    min_value: 0
-    max_value: 59
-    step: 1
-    lambda: "return id(activity_start_minute);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          id(activity_start_minute) = val;
-          id(num_activity_start_min).publish_state(val);
-
-  - platform: template
-    id: num_activity_duration_min
-    name: "Activity Duration (min)"
-    min_value: 0
-    max_value: 1440
-    step: 15
-    lambda: "return id(activity_duration_min);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 1440) val = 1440;
-          id(activity_duration_min) = val;
-          id(num_activity_duration_min).publish_state(val);
-
+  # ─── Direct-wet gate tunables ───
+  # #1477: the activity mirror (activity_start_hour/_min, activity_duration_min)
+  # is retired; only the deleted direct_wet_window_open read it.
   - platform: template
     id: num_direct_wet_min_temp_f
     name: "Direct Wet Min Temp (F)"
@@ -1689,25 +1560,6 @@ switch:
           id(cfg_first_pull_ok) = true;
           id(sw_night_econ_heat_suppress_enabled) = false;
           id(sw_night_econ_heat_suppress_enabled_switch).publish_state(false);
-
-  # IRR-3: dawn rehydrate master enable (default ON — ships active in OTA).
-  - platform: template
-    id: sw_gl_auto
-    name: "GL Auto Mode"
-    icon: mdi:lightbulb-auto
-    optimistic: false
-    restore_mode: RESTORE_DEFAULT_ON
-    lambda: "return id(gl_auto_enabled);"
-    turn_on_action:
-      - lambda: |
-          id(gl_auto_enabled) = true;
-          id(sw_gl_auto).publish_state(true);
-          ESP_LOGI("grow_light","Auto mode ENABLED");
-    turn_off_action:
-      - lambda: |
-          id(gl_auto_enabled) = false;
-          id(sw_gl_auto).publish_state(false);
-          ESP_LOGI("grow_light","Auto mode DISABLED");
 
   - platform: template
     id: sw_gl_main_auto

@@ -5319,6 +5319,178 @@ TEST(fan_requires_open_vent_carves_out_bypass_and_safety) {
     PASS();
 }
 
+// ── #370: relay conflict arbitration ─────────────────────────────────────
+// The oracle is the controls.yaml section 11a code as it stood before #370
+// moved it into arbitrate_relay_conflicts(), copied verbatim apart from the
+// id(...)->state reads becoming `phys` fields. The exhaustive sweep covers
+// every mode x requested table x physical table x heat1 dwell x bypass
+// (8 x 64 x 64 x 4 x 2 = 262,144 cases), so the move changes no decision.
+struct ArbOracle {
+    RelayOutputs out;
+    bool fan_requires_vent, fan_vent_hold, heat_vent, heat_fan, heat_stage;
+    bool force_heat_off, force_heat2_off;
+};
+
+static ArbOracle arb_oracle(Mode mode, RelayOutputs req, RelayOutputs phys,
+                            bool can_on_h1, bool can_off_h1, bool vent_bypass_eff) {
+    bool willHeat1 = req.heat1, willHeat2 = req.heat2, willFan1 = req.fan1;
+    bool willFan2 = req.fan2, willFog = req.fog, willVent = req.vent;
+    const bool sensor_fault_relay_lock = mode == SENSOR_FAULT;
+    if (sensor_fault_relay_lock) {
+        willHeat1 = false; willHeat2 = false; willFan1 = false;
+        willFan2 = false; willFog = false; willVent = false;
+    }
+    const bool fan_physically_on = phys.fan1 || phys.fan2;
+    const bool fan_wanted = willFan1 || willFan2;
+    const bool fan_requires_vent = fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff);
+    const bool fan_vent_interlock_active = fan_requires_vent && !willVent;
+    if (fan_requires_vent) willVent = true;
+    const bool vent_is_open = phys.vent;
+    const bool heat_air_exchange_exempt = (mode == SAFETY_HEAT) || (mode == DEHUM_VENT);
+    const bool heat_vent_interlock_active =
+        !heat_air_exchange_exempt && (willHeat1 || willHeat2) && (vent_is_open || willVent);
+    const bool heat_fan_interlock_active =
+        !heat_air_exchange_exempt && (willHeat1 || willHeat2) && (fan_physically_on || fan_wanted);
+    const bool heat_air_exchange_interlock_active = heat_vent_interlock_active || heat_fan_interlock_active;
+    if (heat_air_exchange_interlock_active) { willHeat1 = false; willHeat2 = false; }
+    const bool heat1_available = willHeat1 && (phys.heat1 || can_on_h1);
+    const bool heat_stage_interlock_active = willHeat2 && !heat1_available;
+    if (heat_stage_interlock_active) willHeat2 = false;
+    const bool force_heat_off = heat_air_exchange_interlock_active || sensor_fault_relay_lock;
+    const bool heat1_will_be_on_after_apply =
+        (willHeat1 && (phys.heat1 || can_on_h1))
+        || (phys.heat1 && !force_heat_off && !can_off_h1);
+    const bool force_heat2_off =
+        force_heat_off || (phys.heat2 && !willHeat2 && !heat1_will_be_on_after_apply);
+    return {{willHeat1, willHeat2, willFan1, willFan2, willFog, willVent},
+            fan_requires_vent, fan_vent_interlock_active, heat_vent_interlock_active,
+            heat_fan_interlock_active, heat_stage_interlock_active, force_heat_off, force_heat2_off};
+}
+
+static RelayOutputs relays_from_bits(int bits) {
+    return {(bits & 1) != 0, (bits & 2) != 0, (bits & 4) != 0,
+            (bits & 8) != 0, (bits & 16) != 0, (bits & 32) != 0};
+}
+
+static bool relays_equal(const RelayOutputs& a, const RelayOutputs& b) {
+    return a.heat1 == b.heat1 && a.heat2 == b.heat2 && a.fan1 == b.fan1
+        && a.fan2 == b.fan2 && a.fog == b.fog && a.vent == b.vent;
+}
+
+// set_relay() in controls.yaml: a wanted relay turns on past min-off (or when
+// forced on); an unwanted one turns off past min-on (or when forced off).
+static bool relay_after_apply(bool want, bool phys, bool can_on, bool can_off, bool force_on, bool force_off) {
+    if (want) return phys || force_on || can_on;
+    return phys && !(force_off || can_off);
+}
+
+static const Mode ALL_MODES[] = {SENSOR_FAULT, SAFETY_COOL, SAFETY_HEAT, SEALED_MIST,
+                                 THERMAL_RELIEF, VENTILATE, DEHUM_VENT, IDLE};
+
+TEST(relay_arbitration_matches_the_former_inline_rules_exhaustively) {
+    long cases = 0;
+    for (Mode mode : ALL_MODES)
+    for (int req = 0; req < 64; ++req)
+    for (int phys = 0; phys < 64; ++phys)
+    for (int dwell = 0; dwell < 4; ++dwell)
+    for (int bypass = 0; bypass < 2; ++bypass) {
+        const RelayOutputs r = relays_from_bits(req), p = relays_from_bits(phys);
+        const bool can_on_h1 = dwell & 1, can_off_h1 = dwell & 2;
+        const RelayArbitration a = arbitrate_relay_conflicts(mode, r, p, can_on_h1, can_off_h1, bypass);
+        const ArbOracle o = arb_oracle(mode, r, p, can_on_h1, can_off_h1, bypass);
+        ASSERT_TRUE(relays_equal(a.out, o.out));
+        ASSERT_EQ(a.sensor_fault_lock, mode == SENSOR_FAULT);
+        ASSERT_EQ(a.fan_requires_vent, o.fan_requires_vent);
+        ASSERT_EQ(a.fan_vent_hold, o.fan_vent_hold);
+        ASSERT_EQ(a.heat_vent_block, o.heat_vent);
+        ASSERT_EQ(a.heat_fan_block, o.heat_fan);
+        ASSERT_EQ(a.heat_stage_block, o.heat_stage);
+        ASSERT_EQ(a.force_heat_off, o.force_heat_off);
+        ASSERT_EQ(a.force_heat2_off, o.force_heat2_off);
+        // One deterministic result: the same inputs give the same answer.
+        const RelayArbitration again = arbitrate_relay_conflicts(mode, r, p, can_on_h1, can_off_h1, bypass);
+        ASSERT_TRUE(relays_equal(a.out, again.out));
+        ASSERT_EQ(std::string(a.block_reason), std::string(again.block_reason));
+        ++cases;
+    }
+    ASSERT_EQ(cases, 262144L);
+    PASS();
+}
+
+TEST(relay_arbitration_never_energizes_incompatible_relays) {
+    // Every request, physical table (a restart leaves all relays off; a
+    // partial delivery leaves any subset on), dwell state of every relay and
+    // bypass, applied through set_relay's rules.
+    for (Mode mode : ALL_MODES)
+    for (int req = 0; req < 64; ++req)
+    for (int phys = 0; phys < 64; ++phys)
+    for (int dwell = 0; dwell < 16; ++dwell)
+    for (int bypass = 0; bypass < 2; ++bypass) {
+        const RelayOutputs r = relays_from_bits(req), p = relays_from_bits(phys);
+        const bool on1 = dwell & 1, off1 = dwell & 2, on_other = dwell & 4, off_other = dwell & 8;
+        const RelayArbitration a = arbitrate_relay_conflicts(mode, r, p, on1, off1, bypass);
+        const bool exempt = mode == SAFETY_HEAT || mode == DEHUM_VENT;
+        const bool sf = a.sensor_fault_lock;
+        const bool h1 = relay_after_apply(a.out.heat1, p.heat1, on1, off1, false, a.force_heat_off);
+        const bool h2 = relay_after_apply(a.out.heat2, p.heat2, on_other, off_other, false, a.force_heat2_off);
+        const bool f1 = relay_after_apply(a.out.fan1, p.fan1, on_other, off_other, false, sf);
+        const bool f2 = relay_after_apply(a.out.fan2, p.fan2, on_other, off_other, false, sf);
+        const bool v = relay_after_apply(a.out.vent, p.vent, on_other, off_other, a.fan_requires_vent, sf);
+
+        // SENSOR_FAULT: the request is all off and nothing turns on.
+        if (sf) {
+            ASSERT_TRUE(relays_equal(a.out, RelayOutputs{false, false, false, false, false, false}));
+            ASSERT_TRUE(a.force_heat_off && a.force_heat2_off);
+            ASSERT_FALSE((h1 && !p.heat1) || (h2 && !p.heat2) || (f1 && !p.fan1) || (f2 && !p.fan2) || (v && !p.vent));
+            ASSERT_EQ(std::string(a.block_reason), std::string("sensor_fault"));
+        }
+        // Outside the sanctioned heat+air states the arbitrated request never
+        // pairs a heater with an open or opening vent or a running or wanted fan.
+        if (!exempt && (a.out.heat1 || a.out.heat2)) {
+            ASSERT_FALSE(a.out.vent || p.vent || a.out.fan1 || a.out.fan2 || p.fan1 || p.fan2);
+        }
+        // A heater never switches ON into air exchange outside those states.
+        if (!exempt && ((h1 && !p.heat1) || (h2 && !p.heat2))) {
+            ASSERT_FALSE(v || f1 || f2);
+        }
+        // heat2 never runs without heat1 after the tick, whatever is on now.
+        if (h2) ASSERT_TRUE(h1);
+        // A fan running or wanted keeps the vent open, except SAFETY_HEAT,
+        // SENSOR_FAULT and VENT-BYPASS.
+        if (!sf && mode != SAFETY_HEAT && !bypass && (f1 || f2 || p.fan1 || p.fan2)) ASSERT_TRUE(v);
+        // Any change to the request names the rule that made it.
+        if (!relays_equal(a.out, r)) ASSERT_TRUE(a.block_reason[0] != '\0');
+    }
+    PASS();
+}
+
+TEST(relay_arbitration_names_each_block_reason) {
+    const RelayOutputs off = {false, false, false, false, false, false};
+    auto reason = [&](Mode m, RelayOutputs req, RelayOutputs phys, bool can_on, bool bypass) {
+        return std::string(arbitrate_relay_conflicts(m, req, phys, can_on, true, bypass).block_reason);
+    };
+    // Heat requested while the vent is still physically open after VENTILATE.
+    ASSERT_EQ(reason(IDLE, {true, false, false, false, false, false}, {false, false, false, false, false, true}, true, false),
+              std::string("heat_vent"));
+    // Heat requested while a fan is still in its min-on dwell (the fan/vent hold
+    // reopens the vent, so the vent rule is the first to fire).
+    ASSERT_EQ(reason(IDLE, {true, false, false, false, false, false}, {false, false, true, false, false, false}, true, false),
+              std::string("heat_vent"));
+    // VENT-BYPASS keeps the vent shut, so the fan rule is the one that fires.
+    ASSERT_EQ(reason(IDLE, {true, false, false, false, false, false}, {false, false, true, false, false, false}, true, true),
+              std::string("heat_fan"));
+    // heat2 asked while heat1 is still in its min-off dwell.
+    ASSERT_EQ(reason(IDLE, {true, true, false, false, false, false}, off, false, false), std::string("heat_stage"));
+    // A fan in min-on dwell after VENTILATE holds the vent open.
+    ASSERT_EQ(reason(SEALED_MIST, off, {false, false, true, false, false, false}, true, false), std::string("fan_vent_hold"));
+    // A running heat2 whose heat1 is off: heat2 is cut past its min-on dwell.
+    ASSERT_EQ(reason(IDLE, off, {false, true, false, false, false, false}, true, false), std::string("heat2_without_heat1"));
+    // SAFETY_HEAT circulation and DEHUM_VENT stage-1 assist are not blocked.
+    ASSERT_EQ(reason(SAFETY_HEAT, {true, true, true, false, false, false}, off, true, false), std::string(""));
+    ASSERT_EQ(reason(DEHUM_VENT, {true, false, false, false, false, true}, off, true, false), std::string(""));
+    PASS();
+}
+
 TEST(september_4_hot_dry_fog_keeps_open_vent_exception) {
     // The observed controller kept selecting VENT_COOL_FOG_ASSIST above 90 F,
     // but the sealed-mode 95-5 F margin cleared vent_mist_assist_active.

@@ -257,9 +257,9 @@ EQUIPMENT_SWITCH_MAP: dict[str, str] = {
     "economiser_enabled": "economiser_enabled",
     "fog_closes_vent": "fog_closes_vent",
     # The L01 bridge's irrigation_* switch routes retired with its rows once the
-    # irrigation engine was last-good (#1165); equipment_state history keeps the
-    # names (verdify_schemas/telemetry.py).
-    "gl_auto_mode": "gl_auto_mode",
+    # irrigation engine was last-good (#1165), and the shared GL Auto Mode switch
+    # with its entity (#1477); equipment_state history keeps the names
+    # (verdify_schemas/telemetry.py).
     "occupancy_mist_inhibit": "occupancy_inhibit",
 }
 

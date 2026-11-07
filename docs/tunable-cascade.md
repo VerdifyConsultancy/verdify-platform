@@ -217,7 +217,7 @@ data.
 - `enthalpy_open`, `enthalpy_close`, `site_pressure_hpa`
 
 ### Activity and direct wetting
-- Dispatcher-owned activity mirror: `activity_start_hour`, `activity_start_minute`, `activity_duration_min`
+- Retired in #1477 with their entities, readbacks and globals: the activity mirror `activity_start_hour`, `activity_start_minute`, `activity_duration_min` (only the deleted `direct_wet_window_open` read it). A stale plan or desired row naming one is skipped (`RETIRED_UNROUTABLE_PARAMS`).
 - Direct-wet gate: `sw_direct_wet_gate_enabled`, `direct_wet_min_temp_f`
 - Per-zone wet start/drydown: `direct_wet_wall_*`, `direct_wet_south_*`, `direct_wet_west_*`, `direct_wet_center_*`
 - Dry-stress override: `sw_direct_wet_stress_override_enabled`, `direct_wet_stress_vpd_margin_kpa`, `direct_wet_stress_min_dew_margin_f` (`direct_wet_stress_latest_hour` retired in wire schema v2, #588 — zero firmware presence)
@@ -231,12 +231,12 @@ data.
 - Retired in VD-47 with their entities, readbacks and globals: the legacy `irrig_wall_*` and `irrig_center_*` schedule, day-mask and fertilizer-cadence rows, the weekly wall-feed commissioning rows (`sw_wall_fertigation_commissioned`, `wall_*`) and the VPD boost (`irrig_vpd_boost_pct`, `irrig_vpd_boost_threshold_hrs`). A stale plan row naming one is skipped (`RETIRED_UNROUTABLE_PARAMS`).
 
 ### Grow lights
-- Legacy/readback context: `gl_dli_target`, `gl_lux_threshold`, `gl_lux_hysteresis`, `gl_sunrise_hour`, `gl_sunset_hour`
-- Per-circuit policy: `gl_main_*`, `gl_grow_*`, `sw_gl_main_auto_mode`, `sw_gl_grow_auto_mode`
-- The main circuit runtime policy feeds the global activity window consumed by direct-wet gates.
+- Per-circuit policy: `gl_main_*`, `gl_grow_*`, `sw_gl_main_auto_mode`, `sw_gl_grow_auto_mode`; every one is read by the controller's lighting state machine (`controls.yaml` lighting block), so all stay device-side.
+- Retired in #1477 with their entities, readbacks and globals, because no light logic read them: the shared `gl_dli_target`, `gl_lux_threshold`, `gl_lux_hysteresis`, `gl_sunrise_hour`, `gl_sunset_hour`, `sw_gl_auto_mode` and the per-circuit `gl_main_dli_target`, `gl_grow_dli_target`. The DLI targets stay planner/DB-side only, as `legacy_dli_target` in `fn_lighting_minutes_policy`; the controller runs each circuit to its target light minutes.
+- Kept: the interior `dli_sensor` and the `dli_availability` text sensors publish ADR-0008's unavailable evidence (`tests/test_dli_availability.py`); measured DLI comes from the PAR meter (#1184).
 
 ### Switches
-- `sw_economiser_enabled`, `sw_fog_closes_vent`, `sw_mister_closes_vent`, `sw_gl_auto_mode`, `sw_gl_main_auto_mode`, `sw_gl_grow_auto_mode`, `sw_direct_wet_gate_enabled`, `sw_direct_wet_stress_override_enabled`, `sw_fog_stress_window_extend_enabled`, `sw_cool_all_fans_at_high_enabled`, `sw_irrigation_enabled`, `sw_irrigation_wall_enabled`, `sw_irrigation_center_enabled`, `sw_irrigation_weather_skip`, `sw_occupancy_inhibit`, `sw_summer_vent_enabled`, `sw_dwell_gate_enabled`, `sw_fsm_controller_enabled`
+- `sw_economiser_enabled`, `sw_fog_closes_vent`, `sw_mister_closes_vent`, `sw_gl_main_auto_mode`, `sw_gl_grow_auto_mode`, `sw_direct_wet_gate_enabled`, `sw_direct_wet_stress_override_enabled`, `sw_fog_stress_window_extend_enabled`, `sw_cool_all_fans_at_high_enabled`, `sw_irrigation_enabled`, `sw_irrigation_wall_enabled`, `sw_irrigation_center_enabled`, `sw_irrigation_weather_skip`, `sw_occupancy_inhibit`, `sw_summer_vent_enabled`, `sw_dwell_gate_enabled`, `sw_fsm_controller_enabled`
 
 ### Reserved/no-op firmware globals
 - `mist_vent_close_lead_s` and `mist_vent_reopen_delay_s` have ESPHome numbers and cfg readbacks, but current firmware does not consume them. They are not planner-pushable until a firmware PR implements their semantics.

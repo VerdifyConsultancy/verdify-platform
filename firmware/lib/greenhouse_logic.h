@@ -2943,6 +2943,73 @@ inline bool fan_requires_open_vent(Mode mode,
         && fan_on_or_wanted;
 }
 
+// #370: the single equipment-conflict arbitration. `requested` is the relay
+// table after resolve_equipment() and the manual override layer; `physical`
+// is what the relays read now; heat1_can_on / heat1_can_off are heat1's dwell
+// gates (min-off elapsed / min-on elapsed). Pure, so every combination of mode,
+// request, physical state, dwell and bypass is unit-tested exhaustively
+// (test_greenhouse_logic.cpp). The rules, applied in this order:
+//   1. SENSOR_FAULT forces every relay off (above the manual overrides).
+//   2. A fan running or wanted holds the vent open, except in SAFETY_HEAT and
+//      under VENT-BYPASS (fan_requires_open_vent()).
+//   3. Outside SAFETY_HEAT and DEHUM_VENT (BC-5/BC-11, the sanctioned heat+air
+//      states) no heater runs while the vent is open or opening, or while a fan
+//      runs or is wanted.
+//   4. heat2 waits until heat1 is on or may turn on (stage order).
+//   5. force_heat_off cuts both heaters past min-on when rule 1 or 3 fired;
+//      force_heat2_off also cuts a running heat2 that is no longer wanted when
+//      heat1 will be off after this tick, so heat2 never runs alone.
+// Fog is not arbitrated here: fog_forced_off() owns its rails.
+inline RelayArbitration arbitrate_relay_conflicts(Mode mode,
+                                                  const RelayOutputs& requested,
+                                                  const RelayOutputs& physical,
+                                                  bool heat1_can_on,
+                                                  bool heat1_can_off,
+                                                  bool vent_bypass_active) noexcept {
+    RelayArbitration a{};
+    a.out = requested;
+    a.block_reason = "";
+    a.sensor_fault_lock = mode == SENSOR_FAULT;
+    if (a.sensor_fault_lock) {
+        a.out = {false, false, false, false, false, false};
+        a.block_reason = "sensor_fault";
+    }
+
+    const bool fan_physically_on = physical.fan1 || physical.fan2;
+    const bool fan_wanted = a.out.fan1 || a.out.fan2;
+    a.fan_requires_vent = fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_active);
+    a.fan_vent_hold = a.fan_requires_vent && !a.out.vent;
+    if (a.fan_requires_vent) a.out.vent = true;
+
+    const bool heat_air_exchange_exempt = mode == SAFETY_HEAT || mode == DEHUM_VENT;
+    const bool heat_wanted = a.out.heat1 || a.out.heat2;
+    a.heat_vent_block = !heat_air_exchange_exempt && heat_wanted && (physical.vent || a.out.vent);
+    a.heat_fan_block = !heat_air_exchange_exempt && heat_wanted && (fan_physically_on || fan_wanted);
+    if (a.heat_vent_block || a.heat_fan_block) {
+        a.out.heat1 = false;
+        a.out.heat2 = false;
+    }
+
+    const bool heat1_available = a.out.heat1 && (physical.heat1 || heat1_can_on);
+    a.heat_stage_block = a.out.heat2 && !heat1_available;
+    if (a.heat_stage_block) a.out.heat2 = false;
+
+    a.force_heat_off = a.heat_vent_block || a.heat_fan_block || a.sensor_fault_lock;
+    const bool heat1_on_after_apply =
+        (a.out.heat1 && (physical.heat1 || heat1_can_on))
+        || (physical.heat1 && !a.force_heat_off && !heat1_can_off);
+    a.force_heat2_off = a.force_heat_off || (physical.heat2 && !a.out.heat2 && !heat1_on_after_apply);
+
+    if (a.block_reason[0] == '\0') {
+        if (a.heat_vent_block) a.block_reason = "heat_vent";
+        else if (a.heat_fan_block) a.block_reason = "heat_fan";
+        else if (a.heat_stage_block) a.block_reason = "heat_stage";
+        else if (a.fan_vent_hold) a.block_reason = "fan_vent_hold";
+        else if (a.force_heat2_off) a.block_reason = "heat2_without_heat1";
+    }
+    return a;
+}
+
 // A hot-house fog request must not inherit the temperature margin used to
 // forbid *closing* the vent for sealed humidification. resolve_equipment()
 // can request vented fog even after vent_mist_assist_active drops at that

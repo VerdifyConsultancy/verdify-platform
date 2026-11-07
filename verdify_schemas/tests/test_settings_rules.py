@@ -12,7 +12,7 @@ import ast
 import sys
 from pathlib import Path
 
-from verdify_schemas.tunable_registry import ACTIVITY_MIRROR_PARAMS, REGISTRY, SWITCH_READBACK_EQUIPMENT
+from verdify_schemas.tunable_registry import REGISTRY, SWITCH_READBACK_EQUIPMENT
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -56,10 +56,3 @@ def test_switch_readback_equipment_equals_the_ingestor_switch_confirm_map():
     )
     assert SWITCH_READBACK_EQUIPMENT == rebuilt
     assert all(REGISTRY[param].kind == "switch" for param in SWITCH_READBACK_EQUIPMENT)
-
-
-def test_the_activity_mirror_the_settings_refuse_is_the_one_the_dispatcher_derives():
-    """desired_write_rule refuses the activity mirror: the values ingestor/tasks/_common.py derives."""
-    value = _common_assignment("ACTIVITY_MIRROR_PARAMS")
-    assert isinstance(value, ast.Call) and ast.unparse(value.func) == "frozenset" and len(value.args) == 1
-    assert ast.literal_eval(value.args[0]) == ACTIVITY_MIRROR_PARAMS

@@ -447,10 +447,6 @@ def test_alert_monitor_detects_band_owned_plan_rows():
         "temp_high",
         "vpd_low",
         "vpd_high",
-        "gl_dli_target",
-        "gl_sunrise_hour",
-        "gl_sunset_hour",
-        "sw_gl_auto_mode",
     } <= set(tasks.BAND_DRIVEN_PARAMS)
     assert "parameter = ANY($1::text[])" in src
 
@@ -464,10 +460,6 @@ def test_forecast_action_engine_does_not_write_dispatcher_owned_setpoints():
         "temp_high",
         "vpd_low",
         "vpd_high",
-        "gl_dli_target",
-        "gl_sunrise_hour",
-        "gl_sunset_hour",
-        "sw_gl_auto_mode",
     } <= band_owned
     assert "skipped_band_owned" in script
     assert "band_owned_dispatcher_contract" in script
@@ -550,7 +542,8 @@ def test_api_setpoint_fallback_uses_computed_band_not_planner_band_rows():
     assert set(module["FIRMWARE_SETPOINT_PARAMS"]) == set(SETPOINT_MAP_REG.values())
     assert set(module["HOUSE_BAND_COMPUTED_PARAMS"]) == {"temp_low", "temp_high", "vpd_low", "vpd_high"}
     assert "HOUSE_BAND_COMPUTED_PARAMS" in body
-    assert "LEGACY_LIGHTING_COMPUTED_PARAMS" in body
+    # #1477: the legacy shared lighting values left the firmware and the registry.
+    assert "LEGACY_LIGHTING_COMPUTED_PARAMS" not in api
     # The fallback reads its band/lighting authority through explicit column
     # lists (public-output allowlist discipline, PR #458); a reintroduced
     # SELECT * would silently widen the public payload surface.
@@ -563,7 +556,7 @@ def test_api_setpoint_fallback_uses_computed_band_not_planner_band_rows():
     assert "SELECT * FROM" not in body
     assert "planner_band" not in body
     assert "params[param] = _round_half_up(band_val, precision)" in body
-    assert "params[param] = lighting_values[param]" in body
+    assert "params[param] = value" in body
     assert "if param not in plan_params" in body
 
 
@@ -599,14 +592,12 @@ def test_setpoint_server_fallback_does_not_overlay_band_owned_plan_rows():
     assert "_overlay_activity_direct_wet_defaults(params, plan_params)" in script
     assert "_overlay_dispatcher_owned_defaults(params, plan_params)" in script
 
-    # #294: the activity window follows the GROW (jalapeno, longest-day) circuit, not
-    # MAIN — a short orchid MAIN photoperiod must not shrink direct-wet irrigation.
+    # #1477: the activity mirror is retired with its entities; only the direct-wet defaults remain.
     params = {"gl_grow_sunrise_hour": "7", "gl_grow_target_light_minutes": "780"}
     module["_overlay_activity_direct_wet_defaults"](params, set())
     module["_overlay_dispatcher_owned_defaults"](params, set())
-    assert params["activity_start_hour"] == "7"
-    assert params["activity_start_minute"] == "0"
-    assert params["activity_duration_min"] == "780"
+    for retired in ("activity_start_hour", "activity_start_minute", "activity_duration_min"):
+        assert retired not in params
     assert "direct_wet_wall_start_offset_min" not in params  # #369: retired with its entity
     assert params["irrig_center_fert_days_mask"] == "127"
     assert params["sw_direct_wet_gate_enabled"] == "1"
@@ -614,16 +605,14 @@ def test_setpoint_server_fallback_does_not_overlay_band_owned_plan_rows():
     assert params["safety_max"] == "100"
 
     legacy_params = {
-        "gl_lux_threshold": "40000",
-        "gl_lux_hysteresis": "8000",
         "gl_main_lux_threshold": "40000",
         "gl_main_lux_hysteresis": "8000",
         "gl_grow_lux_threshold": "40000",
         "gl_grow_lux_hysteresis": "8000",
     }
     module["_overlay_dispatcher_owned_defaults"](legacy_params, set())
-    assert legacy_params["gl_lux_threshold"] == "40000"
-    assert legacy_params["gl_lux_hysteresis"] == "8000"
+    # #1477: no shared gl_lux_* value is derived from the main circuit any more.
+    assert "gl_lux_threshold" not in legacy_params and "gl_lux_hysteresis" not in legacy_params
 
 
 def test_setpoint_server_controls_real_lutron_switch_entities_and_confirms_state():
@@ -924,17 +913,11 @@ def test_per_circuit_lighting_thresholds_are_schedule_owned_scheduled_policy():
     fn_lighting_minutes_policy. They were reclassified out of the
     planner-pushable surface into scheduled_policy (push_owner='schedule',
     planner_pushable=False) while keeping Tier 2 standing + cfg_* readbacks.
-    Legacy shared gl_lux_* values remain dispatcher/default context.
+    #1477 retired the legacy shared gl_* values and the per-circuit DLI targets
+    with their firmware entities.
     """
-    assert not REGISTRY["gl_lux_threshold"].planner_pushable
-    assert REGISTRY["gl_lux_threshold"].tier == 2
-    assert REGISTRY["gl_lux_threshold"].push_owner == "dispatcher_default"
-    assert not REGISTRY["gl_lux_hysteresis"].planner_pushable
-    assert REGISTRY["gl_lux_hysteresis"].tier == 2
-    assert REGISTRY["gl_lux_hysteresis"].push_owner == "dispatcher_default"
-    for param in ("gl_main_dli_target", "gl_grow_dli_target"):
-        assert not REGISTRY[param].planner_pushable
-        assert REGISTRY[param].push_owner == "dispatcher_default"
+    for param in ("gl_lux_threshold", "gl_lux_hysteresis", "gl_main_dli_target", "gl_grow_dli_target"):
+        assert param not in REGISTRY
     for param in (
         "gl_main_target_light_minutes",
         "gl_main_lux_threshold",
@@ -1184,8 +1167,8 @@ def test_lighting_automation_audit_checks_live_public_site():
     assert "live public home page" in src
     assert "live public lighting page" in src
     assert "live public tunables page" in src
-    assert "setpoint server legacy shared lighting values" in src
-    assert "api legacy shared lighting values" in src
+    assert "setpoint server retired shared lighting values" in src
+    assert "api retired shared lighting values" in src
     assert "Circuit Policy And Forecast Bands" in src
     assert "Firmware state and reason fields appear after the next ESP32 OTA" in src
     assert "gl_main_lux_threshold" in src
@@ -1243,8 +1226,7 @@ def test_lighting_automation_audit_checks_tunable_and_lutron_contracts():
     assert 'REGISTRY[param].control_class != "scheduled_policy"' in src
     assert "param in PLANNER_PUSHABLE_REG" in src
     assert "REGISTRY[param].tier != 2" in src
-    assert "legacy shared lighting params are read-only" in src
-    assert 'REGISTRY[param].push_owner != "dispatcher_default"' in src
+    assert "retired shared and DLI lighting params are gone" in src
     assert "Lutron switch enforcement path" in src
     assert '"switch.greenhouse_main": "grow_light_main"' in src
     assert '"switch.greenhouse_grow": "grow_light_grow"' in src
@@ -3161,12 +3143,17 @@ def test_manual_fan_cannot_open_vent_during_safety_heat():
     assert "const bool manual_fans_eff   = manual_fans_latched;" in manual_block
     assert "const ManualForce manual_force = apply_manual_overrides(ov_out, manual_ov, mode);" in manual_block
     assert "const bool manual_fan_force = manual_force.fans;" in manual_block
-    interlock_block = controls[
-        controls.index("const bool fan_requires_vent", manual_end) : controls.index(
-            "const bool fan_vent_interlock_active", manual_end
-        )
-    ]
-    assert "fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff)" in interlock_block
+    # #370: the fan/vent rule (and its SAFETY_HEAT and bypass carve-outs) is part of the one
+    # pure resolver; controls.yaml hands it the bypass latch and applies its result.
+    interlock_block = controls[manual_end : controls.index("/**************** 10", manual_end)]
+    assert "const RelayArbitration arb = arbitrate_relay_conflicts(" in interlock_block
+    assert "vent_bypass_eff);" in interlock_block
+    assert "const bool fan_requires_vent = arb.fan_requires_vent;" in interlock_block
+    logic = Path("firmware/lib/greenhouse_logic.h").read_text()
+    assert (
+        "a.fan_requires_vent = fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_active);"
+        in logic
+    )
 
 
 def test_manual_climate_buttons_are_flag_only_controller_path():
@@ -3279,18 +3266,18 @@ def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
     assert "const ManualForce manual_force = apply_manual_overrides(ov_out, manual_ov, mode);" in controls
     assert "const bool manual_fan_force = manual_force.fans;" in controls
     assert "const bool manual_fog_force = manual_force.fog;" in controls
-    assert (
-        "const bool fan_requires_vent = fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff);"
-        in controls
+    # #370: the SENSOR_FAULT all-off lock is rule 1 of the pure resolver, applied after the
+    # manual overrides; the native suite proves every relay is off under it.
+    assert "const bool fan_requires_vent = arb.fan_requires_vent;" in controls
+    assert "const bool force_heat_off = arb.force_heat_off;" in controls
+    assert controls.index("const ManualForce manual_force") < controls.index(
+        "const RelayArbitration arb = arbitrate_relay_conflicts("
     )
-    assert "const bool force_heat_off = heat_air_exchange_interlock_active || sensor_fault_relay_lock;" in controls
-
-    assert controls.index("const ManualForce manual_force") < controls.index("if(sensor_fault_relay_lock) {")
-    lock_start = controls.index("if(sensor_fault_relay_lock) {")
-    lock_end = controls.index("/**************** 11a", lock_start)
-    lock_block = controls[lock_start:lock_end]
-    for relay in ("willHeat1", "willHeat2", "willFan1", "willFan2", "willFog", "willVent"):
-        assert f"{relay} = false;" in lock_block
+    logic = Path("firmware/lib/greenhouse_logic.h").read_text()
+    resolver = logic[logic.index("inline RelayArbitration arbitrate_relay_conflicts(") :]
+    assert "a.sensor_fault_lock = mode == SENSOR_FAULT;" in resolver
+    assert "a.out = {false, false, false, false, false, false};" in resolver
+    assert "a.force_heat_off = a.heat_vent_block || a.heat_fan_block || a.sensor_fault_lock;" in resolver
 
     relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
     assert "set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock);" in relay_apply

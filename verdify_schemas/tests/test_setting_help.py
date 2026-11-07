@@ -117,7 +117,7 @@ def test_derived_registry_rows_name_writable_sources():
     for name in REGISTRY:
         for source in source_params(name):
             assert source in REGISTRY and desired_write_rule(source)[0], (name, source)
-    assert source_params("activity_start_hour")
+    assert source_params("activity_start_hour") == ()  # #1477 retired the only derived rows
 
 
 def test_no_setting_text_names_a_non_public_crop():

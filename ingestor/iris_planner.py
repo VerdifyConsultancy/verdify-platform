@@ -536,8 +536,7 @@ Use tactical knobs below to shift behavior instead.
 - `sw_mister_closes_vent` — when ON, suppresses normal physical mister pulses while the vent is open; explicit VENTILATE vent-mist assist bypasses it
 
 **Greenhouse activity / direct wetting (all clean/fert misters and drips):**
-- Global biological activity is mirrored from the grow-light policy: `gl_sunrise_hour` + `gl_sunset_hour` define the on/off window, and dispatcher owns `activity_start_hour`, `activity_start_minute`, `activity_duration_min`. Do not push the activity mirror directly; tune the light window when the global on/off window should move.
-- `sw_direct_wet_gate_enabled` is the master direct-wet gate. When enabled, misters and scheduled clean/fert irrigation are blocked outside the activity window.
+- `sw_direct_wet_gate_enabled` is the master direct-wet gate.
 - `direct_wet_min_temp_f` blocks automated wetting when the house is too cold.
 - `sw_direct_wet_stress_override_enabled` switch, def off — during VPD-high recovery, lets mister zones bypass drydown windows while preserving the master gate, direct-wet min temp, occupancy, irrigation, water budget, latest-hour, and dew-margin gates.
 - `direct_wet_stress_vpd_margin_kpa` kPa, [0-0.5], def 0.05 — VPD excess over `vpd_high` required before the stress override can open drydown-gated zones.

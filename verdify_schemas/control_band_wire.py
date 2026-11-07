@@ -28,8 +28,10 @@ FIRMWARE_SOURCES = {
     # historical receipts stay frozen. #1370 lets occupancy light the main
     # lights at any hour and #1343 fogs a fog run-once through the manual fog
     # path; #1385's night dry-out joins them. #1333's 40/100 °F SAFETY SANITY
-    # fallbacks change only the safety-limit reset values. Solar/band expressions are unchanged.
-    "firmware/greenhouse/controls.yaml": "b57929d5d464b7762461826b4f954f98f64924148d1ba0e3621efdfc31ac3e91",
+    # fallbacks change only the safety-limit reset values. #370 moves section 11a's
+    # relay interlocks into arbitrate_relay_conflicts() with no decision change.
+    # Solar/band expressions are unchanged.
+    "firmware/greenhouse/controls.yaml": "ad22fdcb099302124c9e66745da6b2105a973d6a211dc2f6bab0ad9bee5018c6",
 }
 SERIES = ("temp_low", "temp_high", "temp_target", "vpd_low", "vpd_high", "vpd_target")
 ANCHORS = ("sr", "sm", "ss", "mid")

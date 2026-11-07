@@ -344,47 +344,13 @@ globals:
     initial_value: '0.0'
 
   # ─── Grow light automation (B6) ───
-  - id: gl_dli_target
-    type: float
-    restore_value: no
-    initial_value: '14.0'    # mol/m²/day — set above natural max so safety cutoff rarely fires for crops
-
-  - id: gl_sunrise_hour
-    type: int
-    restore_value: no
-    initial_value: '7'       # earliest hour (local) to turn on grow lights
-
-  - id: gl_sunset_hour
-    type: int
-    restore_value: no
-    initial_value: '19'       # 7 PM cutoff — gives 2.5-3h afternoon supplement
-
-  - id: gl_lux_threshold
-    type: float
-    restore_value: no
-    initial_value: '3000.0'  # indoor lux below this = need supplementation
-
-  - id: gl_lux_hysteresis
-    type: float
-    restore_value: no
-    initial_value: '1500.0'  # prevent cycling during 9:30-10:30 AM transition (data-tuned) at threshold edge
-
-  - id: gl_auto_enabled
-    type: bool
-    restore_value: no
-    initial_value: 'true'    # master enable for auto grow light control
-
+  # #1477: the shared gl_* lighting globals and gl_auto_enabled are retired.
   - id: gl_last_check_ms
     type: uint32_t
     restore_value: no
     initial_value: '0'
 
   # ─── Per-circuit lighting automation (planner-managed) ───
-  - id: gl_main_dli_target
-    type: float
-    restore_value: no
-    initial_value: '14.0'
-
   - id: gl_main_target_light_minutes
     type: int
     restore_value: no
@@ -460,11 +426,6 @@ globals:
     restore_value: no
     initial_value: 'false'
 
-  - id: gl_grow_dli_target
-    type: float
-    restore_value: no
-    initial_value: '14.0'
-
   - id: gl_grow_target_light_minutes
     type: int
     restore_value: no
@@ -533,25 +494,8 @@ globals:
     restore_value: no
     initial_value: 'false'
 
-  # ─── Greenhouse biological activity / direct-wet policy ───
-  # Defaults preserve legacy behavior until the dispatcher/AI tunables push a
-  # finite activity day. Misters, fert paths, and drips all use this shared
-  # activity contract once direct_wet_gate_enabled is true.
-  - id: activity_start_hour
-    type: int
-    restore_value: no
-    initial_value: '6'
-
-  - id: activity_start_minute
-    type: int
-    restore_value: no
-    initial_value: '0'
-
-  - id: activity_duration_min
-    type: int
-    restore_value: no
-    initial_value: '1440'
-
+  # ─── Direct-wet policy ───
+  # #1477: the activity-day mirror globals are retired (nothing read them).
   - id: direct_wet_min_temp_f
     type: float
     restore_value: no

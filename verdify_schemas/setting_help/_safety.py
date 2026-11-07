@@ -12,18 +12,6 @@ _SENSORS = "firmware/greenhouse/sensors.yaml"
 _IRR = "firmware/lib/irrigation_program.h"
 _DISPATCHER = "ingestor/tasks/dispatcher.py"
 
-_LEGACY_LIGHT = (
-    "The per-circuit grow-light settings (GL Main and GL Grow) run the lights now; this shared value is kept for "
-    "reference and the controller's light logic does not read it."
-)
-
-# The activity mirror (#1406 follow-up): its only reader, direct_wet_window_open, was never
-# called and was deleted with the zone offsets (#369).
-_NO_ACTIVITY_WINDOW = (
-    "The controller stores and reports this value, but no control path reads it: the only code that did "
-    "(the direct-wet window) was never called and has been removed, so misting and watering do not depend on it."
-)
-
 ENTRIES: dict[str, HelpEntry] = {
     "safety_min": HelpEntry(
         summary="Hard cold guardrail: the house temperature at which the controller goes into emergency heating.",
@@ -278,66 +266,6 @@ ENTRIES: dict[str, HelpEntry] = {
         lower="Sealed misting is retried sooner after a forced vent.",
         refs=(f"{_LOGIC}::if (state.vent_latch_timer_ms >= sp.vent_latch_timeout_ms) {{",),
     ),
-    "activity_start_hour": HelpEntry(
-        summary="Start hour of the old daily activity window; no longer used by the controller.",
-        effect=_NO_ACTIVITY_WINDOW + " It still follows the main lights' start hour.",
-        refs=(
-            f'{_DISPATCHER}::mirrored["activity_start_hour"]',
-            f"{_TUNABLES}::id: num_activity_start_hour",
-        ),
-    ),
-    "activity_start_minute": HelpEntry(
-        summary="Start minute of the old daily activity window; always 0 and no longer used by the controller.",
-        effect=_NO_ACTIVITY_WINDOW + " It stays 0, because the light schedule starts on the hour.",
-        refs=(f'{_DISPATCHER}::"activity_start_minute": 0.0', f"{_TUNABLES}::id: num_activity_start_min"),
-    ),
-    "activity_duration_min": HelpEntry(
-        summary="Length of the old daily activity window; no longer used by the controller.",
-        effect=_NO_ACTIVITY_WINDOW + " It still follows the main lights' daily light minutes.",
-        refs=(
-            f'{_DISPATCHER}::mirrored["activity_duration_min"]',
-            f"{_TUNABLES}::id: num_activity_duration_min",
-        ),
-    ),
-    "gl_dli_target": HelpEntry(
-        summary="Former shared daily light target for the grow lights; no longer used by the controller.",
-        effect=_LEGACY_LIGHT,
-        refs=(f"{_TUNABLES}::id(gl_dli_target) = x;",),
-    ),
-    "gl_lux_threshold": HelpEntry(
-        summary="Former shared daylight level below which grow lights turned on; no longer used.",
-        effect=_LEGACY_LIGHT,
-        refs=(
-            f"{_TUNABLES}::id(gl_lux_threshold) = x;",
-            f"{_CONTROLS}::.lux_on_threshold = id(gl_main_lux_threshold),",
-        ),
-    ),
-    "gl_lux_hysteresis": HelpEntry(
-        summary="Former shared daylight margin for turning grow lights off; no longer used.",
-        effect=_LEGACY_LIGHT,
-        refs=(
-            f"{_TUNABLES}::id(gl_lux_hysteresis) = x;",
-            f"{_CONTROLS}::.lux_hysteresis = id(gl_main_lux_hysteresis),",
-        ),
-    ),
-    "gl_sunrise_hour": HelpEntry(
-        summary="Former shared earliest hour the grow lights could turn on; no longer used.",
-        effect=_LEGACY_LIGHT,
-        refs=(f"{_TUNABLES}::id(gl_sunrise_hour) = (int)x;",),
-    ),
-    "gl_sunset_hour": HelpEntry(
-        summary="Former shared latest hour the grow lights could stay on; no longer used.",
-        effect=_LEGACY_LIGHT,
-        refs=(f"{_TUNABLES}::id(gl_sunset_hour) = (int)x;",),
-    ),
-    "gl_main_dli_target": HelpEntry(
-        summary="Former daily light target for the main lights; reported only.",
-        effect=(
-            "The controller reports this value but does not use it. The main lights run to GL Main Target Light "
-            "Minutes instead."
-        ),
-        refs=(f"{_SENSORS}::return id(gl_main_dli_target);", f"{_TUNABLES}::id(gl_main_dli_target) = x;"),
-    ),
     "sw_gl_main_out_of_service": HelpEntry(
         summary="Marks the main grow-light fixture as dead so its on-time is not counted as light.",
         effect=(
@@ -350,14 +278,6 @@ ENTRIES: dict[str, HelpEntry] = {
             f"{_LOGIC}::const bool switch_on_qualifies = current_on && !sp.out_of_service;",
             f"{_CONTROLS}::.out_of_service = id(gl_main_out_of_service)",
         ),
-    ),
-    "gl_grow_dli_target": HelpEntry(
-        summary="Former daily light target for the grow lights; reported only.",
-        effect=(
-            "The controller reports this value but does not use it. The grow circuit runs to GL Grow Target Light "
-            "Minutes instead."
-        ),
-        refs=(f"{_SENSORS}::return id(gl_grow_dli_target);", f"{_TUNABLES}::id(gl_grow_dli_target) = x;"),
     ),
     "sw_gl_grow_out_of_service": HelpEntry(
         summary="Marks the grow-light fixture as dead so its on-time is not counted as light.",
@@ -406,14 +326,6 @@ ENTRIES: dict[str, HelpEntry] = {
             f"{_CONTROLS}::if(!id(economiser_enabled)){{",
             f"{_LOGIC}::bool vpd_too_low_enter = vpd_trusted && in.vpd_kpa < (vpd_low_eff - HV) && !sp.econ_block;",
         ),
-    ),
-    "sw_gl_auto_mode": HelpEntry(
-        summary="Former master switch for grow-light automation; no longer used.",
-        effect=(
-            "The main and grow circuits each have their own automatic switch (GL Main Auto Mode, GL Grow Auto "
-            "Mode). This shared switch is stored and reported, but the light logic does not read it."
-        ),
-        refs=(f"{_TUNABLES}::id(gl_auto_enabled) = true;", f"{_CONTROLS}::.auto_enabled = id(gl_main_auto_enabled),"),
     ),
     "sw_occupancy_inhibit": HelpEntry(
         summary="Stops misting, fog and the fans while someone is in the greenhouse.",

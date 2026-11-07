@@ -122,7 +122,9 @@ def extract_fragments(root: Path = ROOT, controls_text: str | None = None) -> di
         "dwell_constants": _span(controls, "const uint32_t MIN_HEAT_ON_MS", "const float    EXTRA_COOL_S3_DELTA_F"),
         "relay_helpers": _span(controls, "struct RelayMeta {", "/**************** 3"),
         "sensor_fault_lock": _statement(controls, "const bool sensor_fault_relay_lock = mode == SENSOR_FAULT"),
-        "vent_readback": _statement(controls, "const bool vent_is_open = id(vent_rly)->state"),
+        # Pre-arbitration relay readback; vent_is_open aliases its vent field (#370).
+        "relay_physical": _statement(controls, "const RelayOutputs relay_physical = {"),
+        "vent_readback": _statement(controls, "const bool vent_is_open = relay_physical.vent"),
         "fog_assist": _statement(controls, "const bool open_vent_fog_assist ="),
         "fog_rails": _statement(controls, "const FogForceOffInputs fog_rails{"),
         "safety_suppression": _block(controls, "if (fog_forced_off(mode, fog_rails))"),

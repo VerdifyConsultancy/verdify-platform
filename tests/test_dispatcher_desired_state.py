@@ -66,7 +66,6 @@ def _knobs() -> list[Knob]:
         | _common.LIGHTING_CIRCUIT_DEFAULT_PARAMS  # gated on per-circuit lighting firmware
         | _common.LIGHTING_POLICY_PARAMS
         | _common.LIGHTING_TARGET_MINUTE_PARAMS
-        | _common.ACTIVITY_MIRROR_PARAMS
         | _common.AI_MOISTURE_STRESS_POLICY_PARAMS
         | _common.FORCED_ON_SWITCH_PARAMS
         | _common.RETIRED_UNROUTABLE_PARAMS
@@ -135,7 +134,6 @@ def lighting_device_values() -> dict[str, float]:
         key = row["light_key"]
         values.update(
             {
-                f"gl_{key}_dli_target": row["legacy_dli_target"],
                 f"gl_{key}_target_light_minutes": float(row["target_light_minutes"]),
                 f"gl_{key}_sunrise_hour": float(row["start_hour"]),
                 f"gl_{key}_sunset_hour": float(row["cutoff_hour"]),

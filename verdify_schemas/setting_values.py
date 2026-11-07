@@ -60,9 +60,9 @@ def snap(value: float, step: float | None, lo: float | None = None, hi: float | 
     Decimal arithmetic on the shortest decimal form of each number, so 1.53 on
     a 0.05 grid is 1.55 and the tie 1.525 is 1.5. A ``None`` step returns the
     value unchanged. A snapped result outside [``lo``, ``hi``] returns that
-    bound: three entities have a ``min_value`` off their step grid
-    (``gl_lux_threshold``, ``gl_main_lux_threshold`` and
-    ``gl_grow_lux_threshold``), and their minimum must stay reachable.
+    bound: two entities have a ``min_value`` off their step grid
+    (``gl_main_lux_threshold`` and ``gl_grow_lux_threshold``), and their
+    minimum must stay reachable.
 
     Raises ``ValueError`` for a non-finite value or a step that is not a
     positive finite number.

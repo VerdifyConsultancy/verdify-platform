@@ -881,7 +881,6 @@ for param in (
     "mister_engage_kpa",
     "mister_all_kpa",
     "mister_water_budget_gal",
-    "gl_dli_target",
     "gl_main_lux_threshold",
     "gl_grow_lux_threshold",
 ):

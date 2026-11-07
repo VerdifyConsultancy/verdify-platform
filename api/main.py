@@ -127,7 +127,6 @@ from verdify_schemas.route_only_crop_band_reader import read_route_only_crop_ban
 from verdify_schemas.telemetry import DliEvidence  # noqa: E402
 from verdify_schemas.tunable_registry import (  # noqa: E402
     CROP_BAND_REG,
-    LEGACY_SHARED_LIGHTING_REG,
     SETPOINT_MAP_REG,
     registry_value_error,
 )
@@ -137,7 +136,6 @@ HOUSE_BAND_COMPUTED_PARAMS = frozenset(
     name for name in CROP_BAND_REG if name.startswith("temp_") or name in {"vpd_high", "vpd_low"}
 )
 ZONE_VPD_TARGET_PARAMS = frozenset(name for name in CROP_BAND_REG if name.startswith("vpd_target_"))
-LEGACY_LIGHTING_COMPUTED_PARAMS = LEGACY_SHARED_LIGHTING_REG & FIRMWARE_SETPOINT_PARAMS
 PUBLIC_CROP_EXCLUDE_SLUGS_DB = sorted(PUBLIC_CROP_EXCLUDE_SLUGS)
 PUBLIC_CROP_FIELDS = (
     "id",
@@ -756,7 +754,6 @@ def _public_crop_zone_sql_predicate(
     )
 
 
-ACTIVITY_MIRROR_PARAMS = frozenset({"activity_start_hour", "activity_start_minute", "activity_duration_min"})
 EQUIPMENT_SWITCH_SETPOINTS = {
     "sw_economiser_enabled": "economiser_enabled",
     "sw_fog_closes_vent": "fog_closes_vent",
@@ -764,7 +761,6 @@ EQUIPMENT_SWITCH_SETPOINTS = {
     "sw_irrigation_wall_enabled": "irrigation_wall_enabled",
     "sw_irrigation_center_enabled": "irrigation_center_enabled",
     "sw_irrigation_weather_skip": "irrigation_weather_skip",
-    "sw_gl_auto_mode": "gl_auto_mode",
 }
 DIRECT_WET_DEFAULTS = {
     "direct_wet_min_temp_f": 65,
@@ -855,45 +851,15 @@ async def _require_public_crop(conn, crop_id: int, greenhouse_id: str | None = N
         raise HTTPException(404, "Crop not found")
 
 
-def _activity_policy_values(lighting_row, lighting_circuit_rows) -> dict[str, float | int]:
-    """Derive greenhouse biological activity from the main-light runtime policy."""
-    main_lighting = next((row for row in lighting_circuit_rows or [] if row["light_key"] == "main"), None)
-    if main_lighting:
-        activity_start_hour = int(main_lighting["start_hour"])
-        activity_duration_min = int(main_lighting["target_light_minutes"])
-    elif lighting_row:
-        activity_start_hour = int(lighting_row["sunrise_hour"])
-        activity_duration_min = int(lighting_row["target_light_hours"]) * 60
-    else:
+def _direct_wet_policy_values(lighting_row, lighting_circuit_rows) -> dict[str, float | int]:
+    """The direct-wet defaults, while a lighting policy row exists.
+
+    #1477 retired the activity mirror (activity_start_hour, activity_start_minute,
+    activity_duration_min) that used to ride with them; no controller logic read it.
+    """
+    if not (lighting_circuit_rows or lighting_row):
         return {}
-
-    activity_duration_min = max(0, min(1440, activity_duration_min))
-    return {
-        "activity_start_hour": max(0, min(23, activity_start_hour)),
-        "activity_start_minute": 0,
-        "activity_duration_min": activity_duration_min,
-        "direct_wet_min_temp_f": 65,
-        "irrig_wall_days_mask": 127,
-        "irrig_wall_fert_days_mask": 127,
-        "irrig_center_days_mask": 127,
-        "irrig_center_fert_days_mask": 127,
-        "sw_direct_wet_gate_enabled": 1,
-    }
-
-
-def _align_activity_policy_with_plan(
-    activity_values: dict[str, float | int],
-    plan_values: dict[str, float],
-) -> dict[str, float | int]:
-    """Keep pull-fallback activity defaults tied to active main-light overrides."""
-    if not activity_values:
-        return activity_values
-    aligned = dict(activity_values)
-    if "gl_main_sunrise_hour" in plan_values:
-        aligned["activity_start_hour"] = max(0, min(23, int(plan_values["gl_main_sunrise_hour"])))
-    if "gl_main_target_light_minutes" in plan_values:
-        aligned["activity_duration_min"] = max(0, min(1440, int(plan_values["gl_main_target_light_minutes"])))
-    return aligned
+    return dict(DIRECT_WET_DEFAULTS)
 
 
 # ── DB Connection ──
@@ -1898,7 +1864,7 @@ async def get_setpoints(greenhouse_id: str = DEFAULT_GREENHOUSE):
         )
         lighting_circuit_rows = await conn.fetch(
             "SELECT light_key, equipment, target_light_minutes, start_hour, cutoff_hour, "
-            "lux_on_threshold, lux_hysteresis, min_on_s, min_off_s, auto_enabled, legacy_dli_target "
+            "lux_on_threshold, lux_hysteresis, min_on_s, min_off_s, auto_enabled "
             "FROM fn_lighting_minutes_policy(now(), $1) ORDER BY light_key",
             greenhouse_id,
         )
@@ -1962,24 +1928,11 @@ async def get_setpoints(greenhouse_id: str = DEFAULT_GREENHOUSE):
                 params[param] = _round_half_up(band_val, precision)
         # Lighting policy params: keep the compatibility endpoint identical to the live
         # dispatcher so stale active plans cannot shorten crop photoperiod.
-        if lighting_row:
-            lighting_values = {
-                "gl_dli_target": _round_half_up(float(lighting_row["target_dli"]), 1),
-                "gl_sunrise_hour": int(lighting_row["sunrise_hour"]),
-                "gl_sunset_hour": int(lighting_row["cutoff_hour"]),
-                "sw_gl_auto_mode": 1,
-            }
-            main_lighting = next((row for row in lighting_circuit_rows if row["light_key"] == "main"), None)
-            if main_lighting:
-                lighting_values["gl_lux_threshold"] = _round_half_up(float(main_lighting["lux_on_threshold"]), 0)
-                lighting_values["gl_lux_hysteresis"] = _round_half_up(float(main_lighting["lux_hysteresis"]), 0)
-            for param in LEGACY_LIGHTING_COMPUTED_PARAMS:
-                if param in lighting_values:
-                    params[param] = lighting_values[param]
+        # #1477: the legacy shared lighting values left the firmware and the
+        # registry; only the per-circuit values below are served.
         for row in lighting_circuit_rows:
             key = row["light_key"]
             lighting_values = {
-                f"gl_{key}_dli_target": _round_half_up(float(row["legacy_dli_target"]), 1),
                 f"gl_{key}_target_light_minutes": int(row["target_light_minutes"]),
                 f"gl_{key}_sunrise_hour": int(row["start_hour"]),
                 f"gl_{key}_sunset_hour": int(row["cutoff_hour"]),
@@ -1992,12 +1945,8 @@ async def get_setpoints(greenhouse_id: str = DEFAULT_GREENHOUSE):
             for param, value in lighting_values.items():
                 if param not in plan_params:
                     params[param] = value
-        activity_values = _align_activity_policy_with_plan(
-            _activity_policy_values(lighting_row, lighting_circuit_rows),
-            plan_values,
-        )
-        for param, value in activity_values.items():
-            if param not in plan_params or param in ACTIVITY_MIRROR_PARAMS:
+        for param, value in _direct_wet_policy_values(lighting_row, lighting_circuit_rows).items():
+            if param not in plan_params:
                 params[param] = value
         # Per-zone VPD targets (from crop data per zone)
         if zone_row:

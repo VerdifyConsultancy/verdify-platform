@@ -28,7 +28,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from verdify_schemas.band_rows import ANCHOR_KEYS, BAND_PARAM_ROWS, HOUSE_SERIES, ZONE_CROP, ZONES
 from verdify_schemas.setting_help import _planner, _reference, _safety, _scheduled
 from verdify_schemas.setting_help._entry import HelpEntry
-from verdify_schemas.tunable_registry import ACTIVITY_MIRROR_PARAMS, REGISTRY
+from verdify_schemas.tunable_registry import REGISTRY
 
 __all__ = [
     "HELP",
@@ -280,14 +280,9 @@ def setting_label(name: str) -> str:
 
 # ── Derived rows: what they are computed from ────────────────────────────────
 
-# The main grow-light schedule settings the activity mirror follows: its start hour is the main circuit's
-# anchored window start, its duration that circuit's daily light minutes (ingestor/tasks/dispatcher.py
-# _mirror_activity_to_anchored_window and _activity_defaults_from_lighting; an Iris plan for the grow circuit's
-# pair wins over them).
-_ACTIVITY_SOURCES = ("gl_main_sunrise_hour", "gl_main_target_light_minutes")
-_SOURCE_PARAMS: Mapping[str, tuple[str, ...]] = MappingProxyType(
-    {name: _ACTIVITY_SOURCES for name in sorted(ACTIVITY_MIRROR_PARAMS)}
-)
+# No registry row is derived from other settings since #1477 retired the activity mirror (it followed the main
+# grow-light schedule); the map stays so the catalog's source field keeps its shape.
+_SOURCE_PARAMS: Mapping[str, tuple[str, ...]] = MappingProxyType({})
 
 
 def source_params(name: str) -> tuple[str, ...]:

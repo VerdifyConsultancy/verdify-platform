@@ -58,7 +58,6 @@ GROUP_OF_CLASS = {**{name: name for name in WRITABLE_CLASSES}, "irrigation_site"
 
 # Architecture §5.3 step 1: the rows a desired-state write may not target, each with its reason.
 LEGACY_WIDE_LIMITS = frozenset({"temp_low", "temp_high", "vpd_low", "vpd_high"})
-ACTIVITY_MIRROR = frozenset({"activity_start_hour", "activity_start_minute", "activity_duration_min"})
 WEEKLY_FEED = frozenset(
     {
         "sw_wall_fertigation_commissioned",
@@ -82,7 +81,6 @@ REASONS = {
     "readback_context": "readback only, read-only: the controller reports it and nothing sends it",
     "legacy": "legacy limit, read-only: not the band while the on-chip band runs",
     "zone_target": "zone VPD target, read-only: computed from the crop curves; the controller uses it for zone misting",
-    "activity": "derived by the dispatcher, read-only: it mirrors the main-light activity window",
     "band_owner": "read-only: it decides whether the controller or the dispatcher owns the band",
     "weekly_feed": "legacy feed commissioning, read-only: retiring with the irrigation engine",
     "no_anchor": "read-only: no crop band anchor row holds it",
@@ -95,7 +93,6 @@ KINDS = {
     "readback_context": "readback_context",
     "legacy": "legacy_wide_limit",
     "zone_target": "zone_vpd_target",
-    "activity": "activity_mirror",
     "band_owner": "band_owner",
     "weekly_feed": "no_entity",
     "no_anchor": "no_anchor_row",
@@ -116,8 +113,6 @@ def read_only_key(name: str, spec: TunableDef) -> str | None:
         return "legacy"
     if name.startswith("vpd_target_"):
         return "zone_target"
-    if name in ACTIVITY_MIRROR:
-        return "activity"
     if name in WEEKLY_FEED:
         return "weekly_feed"
     if control_class == "crop_band" and not ANCHOR_ROW.match(name):

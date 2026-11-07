@@ -556,6 +556,23 @@ sensor:
       - lambda: ${modbus_temp_lambda}
       - timeout: 300s
 
+  # PAR quantum sensor at canopy height (#1184, par_probe at address 10):
+  # function 03, holding register 0x0000, 1 count = 1 µmol/m²/s. Telemetry only;
+  # no control logic reads it. While the meter is absent or silent the value is
+  # unavailable (timeout) and the interior DLI entities keep ADR-0008's reason.
+  - platform: modbus_controller
+    id: canopy_ppfd
+    name: "Canopy PPFD"
+    modbus_controller_id: par_probe
+    register_type: holding
+    address: 0x0000
+    value_type: U_WORD
+    unit_of_measurement: "µmol/m²/s"
+    state_class: measurement
+    accuracy_decimals: 0
+    filters:
+      - timeout: 300s
+
   # --------------------------------------------------------------------------
   # 2b. OUTDOOR CLIMATE — Tempest direct primary, legacy pulled globals fallback
   # --------------------------------------------------------------------------
@@ -2408,30 +2425,6 @@ sensor:
       return (float)verdify_policy::policy_read(verdify_policy::kPF_mist_thermal_relief_s, id(mist_thermal_relief_s));
 
   - platform: template
-    id: cfg_gl_lux_hysteresis
-    name: "Cfg • GL Lux Hysteresis"
-    unit_of_measurement: "lx"
-    state_class: measurement
-    accuracy_decimals: 0
-    entity_category: diagnostic
-    update_interval: 30s
-    lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(gl_lux_hysteresis);
-
-  - platform: template
-    id: cfg_gl_main_dli_target
-    name: "Cfg GL Main DLI Target"
-    unit_of_measurement: "mol/m²/day"
-    state_class: measurement
-    accuracy_decimals: 1
-    entity_category: diagnostic
-    update_interval: 30s
-    lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(gl_main_dli_target);
-
-  - platform: template
     id: cfg_gl_main_target_light_minutes
     name: "Cfg GL Main Target Light Minutes"
     unit_of_measurement: "min"
@@ -2488,41 +2481,6 @@ sensor:
     lambda: |-
       if (!id(cfg_first_pull_ok)) return NAN;
       return (float)id(gl_main_sunset_hour);
-
-  - platform: template
-    id: cfg_activity_start_hour
-    name: "Cfg Activity Start Hour"
-    state_class: measurement
-    accuracy_decimals: 0
-    entity_category: diagnostic
-    update_interval: 30s
-    lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(activity_start_hour);
-
-  - platform: template
-    id: cfg_activity_start_min
-    name: "Cfg Activity Start Min"
-    unit_of_measurement: "min"
-    state_class: measurement
-    accuracy_decimals: 0
-    entity_category: diagnostic
-    update_interval: 30s
-    lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(activity_start_minute);
-
-  - platform: template
-    id: cfg_activity_duration_min
-    name: "Cfg Activity Duration Min"
-    unit_of_measurement: "min"
-    state_class: measurement
-    accuracy_decimals: 0
-    entity_category: diagnostic
-    update_interval: 30s
-    lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(activity_duration_min);
 
   - platform: template
     id: cfg_direct_wet_min_temp_f
@@ -2605,18 +2563,6 @@ sensor:
     lambda: |-
       if (!id(cfg_first_pull_ok)) return NAN;
       return id(gl_main_auto_enabled) ? 1.0f : 0.0f;
-
-  - platform: template
-    id: cfg_gl_grow_dli_target
-    name: "Cfg GL Grow DLI Target"
-    unit_of_measurement: "mol/m²/day"
-    state_class: measurement
-    accuracy_decimals: 1
-    entity_category: diagnostic
-    update_interval: 30s
-    lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(gl_grow_dli_target);
 
   - platform: template
     id: cfg_gl_grow_target_light_minutes

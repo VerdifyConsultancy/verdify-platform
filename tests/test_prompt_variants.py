@@ -184,10 +184,6 @@ class TestSplitInvariants:
             "temp_high",
             "vpd_low",
             "vpd_high",
-            "gl_dli_target",
-            "gl_sunrise_hour",
-            "gl_sunset_hour",
-            "sw_gl_auto_mode",
         }
         assert expected <= set(module["BAND_OWNED_PARAMS"])
         assert "PLAN_REQUIRED_PARAMS" in server

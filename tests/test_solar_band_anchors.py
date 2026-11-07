@@ -318,31 +318,19 @@ class TestLightingDifferentiation:
                 spec = REGISTRY[param]
                 assert spec.min <= value <= spec.max, f"{param}={value} outside [{spec.min}, {spec.max}]"
 
-    def test_activity_mirror_sources_minutes_from_db_not_anchor_window(self):
-        """Consumer-side guard for the 2026-06-16 dispatch KeyError regression.
-
-        lighting_circuit_overrides() emits ONLY window HOURS (asserted above), so
-        the dispatcher's biological-activity mirror must take its duration MINUTES
-        from the DB photoperiod (circuit_minutes), never from the anchored-window
-        dict. Reading a minutes key off anchor_lighting KeyError'd and took down
-        the whole setpoint_dispatch task. This locks the source boundary.
-        """
-        # Import here: the dispatcher pulls in the heavy tasks package (asyncpg).
+    def test_dispatcher_sends_no_activity_mirror(self):
+        """#1477: the biological-activity mirror (and its anchored-window derivation,
+        the 2026-06-16 KeyError site) is retired with its firmware entities; only the
+        direct-wet gate defaults remain, while a lighting policy row exists."""
         dispatcher = pytest.importorskip("tasks.dispatcher")
-        anchor_lighting = band_anchors.lighting_circuit_overrides(_JUNE, self._CIRCUIT_MIN)
-        # Sanity: the anchored window genuinely has NO minutes key (the trap).
-        assert not any(k.endswith("target_light_minutes") for k in anchor_lighting)
-
-        activity_defaults = {"activity_start_hour": 5.0, "activity_duration_min": 600.0}
-        mirrored = dispatcher._mirror_activity_to_anchored_window(activity_defaults, anchor_lighting, self._CIRCUIT_MIN)
-        # start HOUR follows the anchored sunrise; duration MINUTES = DB main photoperiod.
-        assert mirrored["activity_start_hour"] == anchor_lighting["gl_main_sunrise_hour"]
-        assert mirrored["activity_duration_min"] == self._CIRCUIT_MIN["main"]
-
-        # The exact regression: hours-only anchor_lighting + no "main" minutes must
-        # NOT raise — duration falls back to the incoming default unchanged.
-        no_main = dispatcher._mirror_activity_to_anchored_window(activity_defaults, anchor_lighting, {})
-        assert no_main["activity_duration_min"] == 600.0
+        assert not hasattr(dispatcher, "_mirror_activity_to_anchored_window")
+        assert not hasattr(dispatcher, "_activity_defaults_from_lighting")
+        rows = [{"light_key": "main", "start_hour": 6, "target_light_minutes": 600}]
+        assert dispatcher._direct_wet_defaults(None, rows) == {
+            "direct_wet_min_temp_f": 65.0,
+            "sw_direct_wet_gate_enabled": 1.0,
+        }
+        assert dispatcher._direct_wet_defaults(None, []) == {}
 
 
 class TestAnchorConfirmation:

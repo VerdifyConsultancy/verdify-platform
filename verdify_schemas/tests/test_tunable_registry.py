@@ -600,12 +600,10 @@ class TestActivityDirectWetGuards:
         "irrig_center_fert_days_mask",
     }
 
-    def test_activity_mirror_is_dispatcher_owned(self) -> None:
+    def test_activity_mirror_left_the_registry(self) -> None:
+        """#1477: no controller logic read the activity mirror; its entities and rows are gone."""
         for name in self.ACTIVITY_MIRROR:
-            row = REGISTRY[name]
-            assert row.push_owner == "dispatcher_default"
-            assert not row.planner_pushable
-            assert row.cfg_readback_object_id
+            assert name not in REGISTRY, name
 
     def test_direct_wet_schedule_offsets_are_scheduled_policy_and_readbacked(self) -> None:
         """The per-zone watering offsets/masks are the schedule layer, not a
@@ -817,16 +815,17 @@ class TestActivityDirectWetGuards:
         ):
             assert f"id: {retired_button}" not in tunables_yaml
 
-    def test_dispatcher_and_api_derive_activity_from_light_window(self, tasks_py: str, api_main_py: str) -> None:
-        for text in (tasks_py, api_main_py):
-            assert "gl_sunrise_hour" in text
-            assert "gl_sunset_hour" in text
-            assert "activity_start_hour" in text
-            assert "activity_duration_min" in text
-        assert "_activity_defaults_from_lighting" in tasks_py
+    def test_dispatcher_and_api_send_direct_wet_defaults_without_the_activity_mirror(
+        self, tasks_py: str, api_main_py: str
+    ) -> None:
+        """#1477: the direct-wet gate defaults stay; the activity mirror is no longer derived or sent."""
+        assert "_direct_wet_defaults" in tasks_py
         assert "DIRECT_WET_REQUIRED_OBJECT_IDS" in tasks_py
         assert "direct_wet_supported" in tasks_py
-        assert "_activity_policy_values" in api_main_py
+        assert "_direct_wet_policy_values" in api_main_py
+        for text in (tasks_py, api_main_py):
+            for gone in ("_activity_defaults_from_lighting", "_mirror_activity_to_anchored_window", "mirrored["):
+                assert gone not in text, gone
 
 
 # L4 #346 AC4 — the AI planner CANNOT control deterministic target curves, hard
@@ -1400,8 +1399,9 @@ def test_no_effect_rows_are_retired_in_the_catalog_but_still_delivered() -> None
         desired_write_rule,
     )
 
-    # 29 until #369 deleted the eight direct-wet zone offsets with their firmware entities.
-    assert len(NO_EFFECT_RETIRED_REG) == 21
+    # 29 until #369 deleted the eight direct-wet zone offsets with their firmware entities, 21 until #1477
+    # deleted the activity mirror and the shared and per-circuit DLI lighting values with theirs.
+    assert len(NO_EFFECT_RETIRED_REG) == 10
     for name in NO_EFFECT_RETIRED_REG:
         spec = REGISTRY[name]
         assert spec.control_class == "retired", name
@@ -1415,17 +1415,22 @@ def test_no_effect_rows_are_retired_in_the_catalog_but_still_delivered() -> None
         for part in ("start_offset", "drydown_before_off")
     }
     assert not offsets & set(REGISTRY) and not offsets & SCHEDULED_POLICY_REG
-    # The activity mirror only direct_wet_window_open read: the dispatcher still pushes it on its own path.
-    assert {"activity_start_hour", "activity_start_minute", "activity_duration_min"} <= NO_EFFECT_RETIRED_REG
-    assert {"wet_taper_before_sunset_min", "zone_priority_east"} <= CROP_BAND_REG
-    assert LEGACY_SHARED_LIGHTING_REG == {
+    retired_1477 = {
+        "activity_start_hour",
+        "activity_start_minute",
+        "activity_duration_min",
         "gl_dli_target",
         "gl_lux_threshold",
         "gl_lux_hysteresis",
         "gl_sunrise_hour",
         "gl_sunset_hour",
         "sw_gl_auto_mode",
+        "gl_main_dli_target",
+        "gl_grow_dli_target",
     }
+    assert not retired_1477 & set(REGISTRY)
+    assert {"wet_taper_before_sunset_min", "zone_priority_east"} <= CROP_BAND_REG
+    assert LEGACY_SHARED_LIGHTING_REG == frozenset()
     # Inert on the band-first controller but decoded from the policy wire: retiring them is a wire change.
     for name in ("mist_thermal_relief_s", "sw_direct_wet_stress_override_enabled"):
         assert REGISTRY[name].control_class == "planner_policy" and REGISTRY[name].wire_id is not None
