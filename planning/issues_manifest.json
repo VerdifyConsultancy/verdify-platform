@@ -10,7 +10,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "1552a9623b5bcaee08bf31f08a749e94a1d02e539d1c1723fce47e1298cd7ae5"
+      "body_sha256": "bc91861b480d45549601c1e7b1d3eee8329f03799f0cbf9babdb8cd3f7f2eb2a"
     },
     {
       "key": "incident",
@@ -321,7 +321,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "a027eaa01547089f5a3e2990bbc88a7a79dbabc505be8c5ca348105fa61f4ba7"
+      "body_sha256": "17a9b726a4af2941d00180296c488a72c05522309ba67984da05520ae6772c12"
     },
     {
       "key": "433",
@@ -356,7 +356,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "198713a2d5b9b81fe3c214bfade6a0930ea9199b838cd6252f8e9728436e1fff"
+      "body_sha256": "cda253bfe6b4df96cbc07dd0bfd22d5f152fed962668f5cba4d464eae609abf0"
     },
     {
       "key": "563",
@@ -437,7 +437,7 @@
       "accepted": false,
       "parent": 359,
       "blocked_by": [],
-      "body_sha256": "31c4691d408d391774beb93b2b6a92be4b0b32486dedcd7c1e128b7c432ec78b"
+      "body_sha256": "8f37c467a7826a3e80c7bb73527b2d4432869dbeeb7fcd577e971e5ce2a5e575"
     },
     {
       "key": "218",
@@ -546,7 +546,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "44367e046ef2f64605e5c60b1ae5efa091766632e9c3157688546cc88cfcb640"
+      "body_sha256": "8fff5819b2c2dd27c02d3a44d32678fe92a4e8c2036ffea140f873aff5cc05f1"
     },
     {
       "key": "430",
@@ -557,7 +557,7 @@
       "accepted": false,
       "parent": 359,
       "blocked_by": [],
-      "body_sha256": "634eb262925cfe3ab621d1d0ee7847d742465379edd76c2c87e7cebd779274f5"
+      "body_sha256": "09ada730b3a2fb972e243577559b9548740f9d9d2a4fad1e24f592ceba9f0007"
     },
     {
       "key": "428",
@@ -581,7 +581,7 @@
       "accepted": false,
       "parent": 359,
       "blocked_by": [],
-      "body_sha256": "0f4cfb031feb4f6ac250b9b2ad512c4837c17de4868ea2d68efd4d1e6dbd8e69"
+      "body_sha256": "d80ee2262af47ed69d63ad18b4f9d3fc9843cffec254e0775d8dc4d307d0c443"
     },
     {
       "key": "367",
@@ -591,8 +591,10 @@
       "status": "open",
       "accepted": false,
       "parent": 430,
-      "blocked_by": [],
-      "body_sha256": "35faa3732c141f55ab8304d008b4a17d81935fe3ae3f8b3412d93d9289156295"
+      "blocked_by": [
+        390
+      ],
+      "body_sha256": "617ef388103308c50bb6ee3a4e926a89d3503106697f9acde2eada5c55e9dfaf"
     },
     {
       "key": "370",
@@ -605,7 +607,7 @@
       "blocked_by": [
         367
       ],
-      "body_sha256": "bcd983ff9c5c2d34eddeb50c8db45018f4b953c0df51a44fca07a91a520a7b03"
+      "body_sha256": "2380c244ae832570422ddcb6a349ad188ef1f5fdeefac2d3d662bfd92c35408f"
     },
     {
       "key": "369",
@@ -615,8 +617,10 @@
       "status": "open",
       "accepted": false,
       "parent": 430,
-      "blocked_by": [],
-      "body_sha256": "46ca3445cc41eeaa03198d647dd650c9fb45724ad3903871881f2ff23c19d4a6"
+      "blocked_by": [
+        390
+      ],
+      "body_sha256": "b6b7c3a1ab9dbac6d8cf694853b553fc8afd0ae29fa4cd7a733b9ca3a282c948"
     },
     {
       "key": "324",
@@ -721,8 +725,10 @@
       "status": "open",
       "accepted": false,
       "parent": 350,
-      "blocked_by": [],
-      "body_sha256": "2a161b5c5670134539ae66fbd3bd93c543732176f0a371758a955dd95a57d220"
+      "blocked_by": [
+        390
+      ],
+      "body_sha256": "6ffb6f8d22fd181207569ac4b50c15f15e6433e2808c204f6cdabadbe2185bc8"
     },
     {
       "key": "297",
@@ -733,10 +739,10 @@
       "accepted": false,
       "parent": 350,
       "blocked_by": [
-        45,
-        398
+        398,
+        45
       ],
-      "body_sha256": "49e877349e7cd43ed0c7e51fb95071cb582ae0f9b3d4a3e1f59ef7f7792c2dca"
+      "body_sha256": "186fc674a5d531d735719375d96cf9f23387e63f0b59cf8ed9862a2c4889a31c"
     },
     {
       "key": "296",
@@ -762,7 +768,7 @@
       "accepted": false,
       "parent": 775,
       "blocked_by": [],
-      "body_sha256": "c687156b5fc7b73e4c09caedb751874bb684c434133dbd7fd958ec32bf002189"
+      "body_sha256": "d1388feb53bdf548e3ff271b84862b8fdce92d6994d51c4ff51d9cf9bf8318b5"
     },
     {
       "key": "751",
@@ -772,10 +778,8 @@
       "status": "open",
       "accepted": false,
       "parent": 16,
-      "blocked_by": [
-        1183
-      ],
-      "body_sha256": "86913dfb379f44762c9b233e36bbfc7938a3ba1f7fa13e22fbe6024bd43f1e4a"
+      "blocked_by": [],
+      "body_sha256": "a91fce30fb1ba271d6ed38e108df39aec40c6abc2f5627df8df790aed91c333c"
     },
     {
       "key": "298",
@@ -785,10 +789,8 @@
       "status": "open",
       "accepted": false,
       "parent": 16,
-      "blocked_by": [
-        1329
-      ],
-      "body_sha256": "56a5d0d3025674e530f09ab61f8418d59d282729076589fc499ea112dce343aa"
+      "blocked_by": [],
+      "body_sha256": "b70b3d3cdebba83f8a201e0b9fc58101a41528297f3ccf04af0ce64f2ec43c55"
     },
     {
       "key": "398",
@@ -801,7 +803,7 @@
       "blocked_by": [
         298
       ],
-      "body_sha256": "d461cc7ff79a8a8e27fc4b766aaa4326ddc269f23be44385a874f5c54c68b6a6"
+      "body_sha256": "7d65897f6e9c5ec5f728af70af85dcd9e8a961fe660ef6c790b316ab711d025d"
     },
     {
       "key": "45",
@@ -815,7 +817,7 @@
         298,
         398
       ],
-      "body_sha256": "d4e6e22617c61f076ed7796d1c595728f2492232716b753608f4f7750f241c7f"
+      "body_sha256": "dcf2531f04d4a33c08804f6d913af8ff84d3d66f01c26a02cd57ef0c9daa0475"
     },
     {
       "key": "51",
@@ -826,7 +828,7 @@
       "accepted": false,
       "parent": 16,
       "blocked_by": [],
-      "body_sha256": "69bc4384097b9ed8935ced0e8bca052965b74757a3b6be83e61e7027b1ec0164"
+      "body_sha256": "9e68ba262ea4575dcc45bf773ec2d295604369402ecd9db61676386e39b9ed34"
     },
     {
       "key": "52",
@@ -839,7 +841,7 @@
       "blocked_by": [
         298
       ],
-      "body_sha256": "4ee56d7fdd0a0174b9841940e4f65f625cdd24df3b561be432967da216ca3974"
+      "body_sha256": "8358801a3e61d6f1757a883182465e6a82884fc81e7406b3fe0c1fa3418ba936"
     },
     {
       "key": "412",
@@ -1272,7 +1274,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "13648658596a2a39ab54f99fc278794f615a2711ce4dfe19312a818a9d947080"
+      "body_sha256": "d513b0408e22c85cb82c8a2cb82d4eec262e64f6b50f30f998cc330498fa8a1e"
     },
     {
       "key": "1002",
@@ -1360,7 +1362,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "878a6cd909542fc57b9cd1092dd2b1e9901df342c1d8afe3309723de278dd2d2"
+      "body_sha256": "f62c36d90e5f39c847db3c50df6adc4699c6abde0f0ae3ca1240772c8c53da7a"
     },
     {
       "key": "1010",
@@ -1371,7 +1373,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "eb670f73511adfcedb39d050a3c40ada4892a067bdcc77c90832f75531229424"
+      "body_sha256": "64d0075c41ac03bf1dc195bde8d59c0908f29313475df818c234d4f2ed546ff7"
     },
     {
       "key": "1011",
@@ -1422,11 +1424,11 @@
       "number": 1118,
       "title": "[OPS][P2] verdify-vision crop-health analysis step fails (exit 1) after B-POWER; its stderr is discarded",
       "stage": "OPS",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "e1db8df26a52651d99c8021aab9f564bef63b23750573ebdd476a4b8b7847b43"
+      "body_sha256": "5bc509519651d91472549868f4017d755f926ad039d4088a4ed6f580092ba4a9"
     },
     {
       "key": "1120",
@@ -1437,7 +1439,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "bb174c58c4f12f4f882677c57b74f39c464e0c24fc7c27e3a52ae679859cf338"
+      "body_sha256": "bc7f9142f69bbee22ebb30093a792a9dc9292e0ac15c43d270994a93a704f758"
     },
     {
       "key": "1125",
@@ -1474,7 +1476,7 @@
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "fd28d98df871c53e8eced89b75bbe2212c7b865c249d17120a4424d6594ca534"
+      "body_sha256": "7cf8160a1e065e0f81e78074c1cef878c8d8b72257475759a5cd9b7cccc386cc"
     },
     {
       "key": "1135",
@@ -1507,7 +1509,7 @@
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "39a90fcdcb5649eea32e2765233c9d61854e12b2d0b2284ccf9046a4b1f5144c"
+      "body_sha256": "a49d790c4e7bb7062c9f05aded20dd2d131c1bf30906ab04ebbbcc40a3ddc13d"
     },
     {
       "key": "1162",
@@ -1518,7 +1520,7 @@
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "049936558a4c5ccfe30f9e3266c7ad410868b5190e71c710ea00b89793a16ccd"
+      "body_sha256": "5d4967c86a6164aaf42933882af377c5a178895e4cac5d08f217750779b298ff"
     },
     {
       "key": "1164",
@@ -1532,7 +1534,7 @@
         1161,
         1162
       ],
-      "body_sha256": "57988dc4db9dcbbaff33ae5e7b23d92ab858e4653e67a29da49a40877877de98"
+      "body_sha256": "01fdc6eb5eee4d760b4bb9e790d3f7cb11f20e9823c4437ca9c7ff073d4a690f"
     },
     {
       "key": "1165",
@@ -1542,8 +1544,10 @@
       "status": "open",
       "accepted": false,
       "parent": 1120,
-      "blocked_by": [],
-      "body_sha256": "e09c9cf3f9338987ee252006457d26520914b21c03a5f05ebb29a4d7d75eaffc"
+      "blocked_by": [
+        1164
+      ],
+      "body_sha256": "7b9231b18e5bd00bcaf686439d6065649093ee44d0e0bc392dfc28daa8ede87a"
     },
     {
       "key": "1166",
@@ -1556,7 +1560,7 @@
       "blocked_by": [
         1165
       ],
-      "body_sha256": "bb0cbf935cf7f513aafc5f984708d3688ea6cc65b07e00b86c359a8bd9a3178e"
+      "body_sha256": "558dc2743dd3bf2886a2dc49e87ce8fe3e32152be95e3addad60b515befa03b6"
     },
     {
       "key": "1181",
@@ -1569,7 +1573,7 @@
       "blocked_by": [
         1132
       ],
-      "body_sha256": "1c782ca16907c309ea67a27151eab718e567af9e995eeef088bd39a05c8f4b65"
+      "body_sha256": "918484939d79c60c5d607846bc45376214090d86f319a887e1d643cf2b16b885"
     },
     {
       "key": "1183",
@@ -1580,7 +1584,7 @@
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "ee8d02ec0210ee5c224e4852f78b808b655b24070c033a732d764dabc7d2200b"
+      "body_sha256": "3b32c7c8a066cc9065afeb0a96aac53bf6bb4e11d4b4355970fa929ea30d23e0"
     },
     {
       "key": "1184",
@@ -1591,7 +1595,7 @@
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "bbbde657b430d2dcc2ad8fad0a923ee6bba7e690110eecc012c258a8a0fd8bd6"
+      "body_sha256": "6b1fa95e1e7335269415aa2cc767a4c36421495c2aa570e1e6a6ff507b63e55a"
     },
     {
       "key": "1186",
@@ -1602,7 +1606,7 @@
       "accepted": false,
       "parent": 1120,
       "blocked_by": [],
-      "body_sha256": "7c245d68ad1da16e96aed8805cceca2f6fc886ecca823a553f1216a4bedf51a3"
+      "body_sha256": "562e006f2343f16d26fbad4ae0f27c1a127f6841cd271d47d96dfdae374a24e2"
     },
     {
       "key": "1271",
@@ -1624,7 +1628,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "96b1f2dc1a06b444ec2f1cf35ea7a222bc821353628ee72fe81147d2667772d8"
+      "body_sha256": "246f4a23712989debec3a64a858c8d85c109c7b4d5dd17ae561d12d7d93104f2"
     },
     {
       "key": "1283",
@@ -1664,11 +1668,11 @@
       "number": 1313,
       "title": "[OPS][P2] firmware: runtime and drip accounting after an aborted OTA upload",
       "stage": "OPS",
-      "status": "open",
+      "status": "closed",
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "2938b4fe6591a4893e2cfb5ff6146ac23e6b32909a5e9191ae2cac291097a88b"
+      "body_sha256": "956b4f31050cbbe21a07a7084c9ce3ab8cff55d6d1db1d1b629cd4a3f5969880"
     },
     {
       "key": "1322",
@@ -1681,7 +1685,7 @@
       "blocked_by": [
         1354
       ],
-      "body_sha256": "fe67487f05183f948412de6664b181922d323ec7f3b1156c1d093d6330b6b99e"
+      "body_sha256": "dccce2adaf9ab51e6522c4363fa135568b8840e253ba2aedcfc1cbbb49ad1bfb"
     },
     {
       "key": "1325",
@@ -1692,7 +1696,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "9657e1d333b947ecf47bf65b4d01c35dd8689cfd2e5de7121a58b9d9f1602386"
+      "body_sha256": "075d532e9196228200873bdd42c91df41b7ba9793922128ef53789a38903f1f5"
     },
     {
       "key": "1327",
@@ -1749,7 +1753,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "c9dcabe8185c92b799d2f31f52340d337e27ed9dd55e4ccb548ff9d82c5429af"
+      "body_sha256": "87cfdf1745eb535c166ce151968841afdd427a035c0843e10e88e1cab63b3593"
     },
     {
       "key": "1333",
@@ -1760,7 +1764,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "a029b811d140cf9f08cae2321c33ead0e175ee8c781d1e93641b104e13ef3b82"
+      "body_sha256": "9a6c083b5cebdc4356e2f24ef990176b29a22b8d47b52dd00f49f6a132221c44"
     },
     {
       "key": "1334",
@@ -1781,10 +1785,8 @@
       "status": "open",
       "accepted": false,
       "parent": 1325,
-      "blocked_by": [
-        1322
-      ],
-      "body_sha256": "a896d8a6ed2099551b2364ce219e9cc11e4702c8b7e93748769fefac22d0a0ae"
+      "blocked_by": [],
+      "body_sha256": "bcd1967f3e52d93d9695309dc848842e2bc0d4bc3a6d9a264893e8daa1b13f9a"
     },
     {
       "key": "1336",
@@ -1795,7 +1797,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "2b0149f428697e5766cc2fda1ba5c4e881498951537483097893a5bf4c9bca5b"
+      "body_sha256": "f8ca90fcb60ad3c44571eec29ae8bff948a6a8fd695f8ac74a59f754a1113160"
     },
     {
       "key": "1337",
@@ -1806,7 +1808,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "18dc1e89e50aeae3d1d221491d973feeeff494ce62dfe94b6ecc036991cca151"
+      "body_sha256": "564dd5d458347611c7311d86530b573e8084055572696c1ef4fd559789c2856f"
     },
     {
       "key": "1338",
@@ -1817,7 +1819,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "cee7a2ce1a6ab010540b735d5a88d5145fd310ce1882ae29d2ba20f1ccf92623"
+      "body_sha256": "c88f4907205ff5af0636465190882f4540ab00b08696b270a30f761b2907bcd7"
     },
     {
       "key": "1339",
@@ -1828,7 +1830,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "605c69b1a88b95ef5a174552e86950688958b2b135eb757f8e91c4a936cce541"
+      "body_sha256": "d9ccbf3acf9ee3a686d6f71beaf433d4d4a15eb44fac1059060a86ed0bba0b24"
     },
     {
       "key": "1340",
@@ -1850,7 +1852,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "6a1627b692c3fae991cbc52150cc8fee9a46106a98a2a09595a4b6ccdb5f9b6e"
+      "body_sha256": "6cf6b6713379b826b19dde258e4889a353dd914867b08e9af3f27208f766f048"
     },
     {
       "key": "1342",
@@ -1860,10 +1862,8 @@
       "status": "open",
       "accepted": false,
       "parent": 1325,
-      "blocked_by": [
-        1335
-      ],
-      "body_sha256": "8dd7f96a5ba8d3a676eb50dd147fdfe9cc5a441abf3f1b3501a35db1d245e0ff"
+      "blocked_by": [],
+      "body_sha256": "a6c0c3b44d07806f29c186e69615b5f3410fdd96c942e842fa917a6bf90f2959"
     },
     {
       "key": "1343",
@@ -1874,7 +1874,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "10cd76f5cd3a2392adf6e103c555a9052ee6492f17eb42779e715dfc1f56807f"
+      "body_sha256": "0ee4d3808e607baf3c0585f9bbc1bb567dac60e34715a3e04cf4c7917adfacc1"
     },
     {
       "key": "1344",
@@ -1896,7 +1896,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "8e466e0c167700afcc7cd2c129060a3e6991cd9812cf2f3f8a849c3a828f74e7"
+      "body_sha256": "f8e19aa3ac6f3b39ddf21c7007736c56e69717b184f88c4a9f49eb14e8c2bcd0"
     },
     {
       "key": "1346",
@@ -1907,7 +1907,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "cbff1f67bf6339f4bac4824f51eb6ce584f56e4f7e2266ffb200226e8e023c76"
+      "body_sha256": "52b0334324f4c1ec4b7dad87a0df2b037faa9820438135f3b996103b232a9255"
     },
     {
       "key": "1347",
@@ -1918,7 +1918,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "8752f70e59c82954e8fb3aa55087f471109fb06ea3c99fffea63e83851f525a8"
+      "body_sha256": "b3c8fffed9c499dadd196ba64501f80f4e848970b7af4dae5b5ced2929d7d4a9"
     },
     {
       "key": "1348",
@@ -1940,7 +1940,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "04d88ead4affadef72f56290fc575628431f8721655ef8ad0a57877aaa29dad9"
+      "body_sha256": "e7ea4c07410cc41343fe9e8901963cfd5346465b9cd20193c7a3e5ed8331d619"
     },
     {
       "key": "1350",
@@ -1962,7 +1962,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "16380aa1521ffcd12934203962ce992c92b484af365fe5a9604261000ab7b3aa"
+      "body_sha256": "4a4efb23086c3f76db3ade37be53a98a62ea10e7754d5c0771ad9dca8678e572"
     },
     {
       "key": "1352",
@@ -1973,7 +1973,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "642d16ecc5a17a1ed56d9f8df61323942af65ee9e133a915f14ce449a3551ef6"
+      "body_sha256": "bcec311c71c216536e7888f618e31b7badfe42d7be8483a112eccfe47fad516b"
     },
     {
       "key": "1353",
@@ -1995,7 +1995,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "88115bea7165e3a29769128f79a66e3d9eea4b4971a900e6331ea400fc3c8b4b"
+      "body_sha256": "cac2e5d553daa44ae20e8d797e1cfd9afa14b21c726f5bac1ca5ece237283cc8"
     },
     {
       "key": "1355",
@@ -2006,7 +2006,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "ae146d38705e65d5c1714d418284312951eb74f46b49d69d45d08d54d4199bb9"
+      "body_sha256": "7627451b8c756fd5340ef714f470442ac4886c72bb9d821015e29a0421260f28"
     },
     {
       "key": "1356",
@@ -2017,7 +2017,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "2c2a0ada8b30dfbd56aae8a670b377c90ea70db510c071019978099255b4dc57"
+      "body_sha256": "0ebc6b099c44ee62ee620564f69430502c19b50c9dcbcdf8ea028d6478b9dcc6"
     },
     {
       "key": "1357",
@@ -2039,7 +2039,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "5f67afe159cacc2ce724163cf0deabf3f296db3af9003b80337980252214eaa7"
+      "body_sha256": "69b5b31335b077be531a06ef34a76340a451c4868dfdc91abc429d32e7d3408f"
     },
     {
       "key": "1360",
@@ -2049,10 +2049,8 @@
       "status": "open",
       "accepted": false,
       "parent": 1325,
-      "blocked_by": [
-        1434
-      ],
-      "body_sha256": "ce9ff29441e8f2035c08b4a27e8c9cf502b1898e4d787863e2553d76f2c748e7"
+      "blocked_by": [],
+      "body_sha256": "5e261535e438016a3baf69f8f2ca6ece1b2b5887fdd8886e5e2cad28c5ee7caf"
     },
     {
       "key": "1361",
@@ -2076,7 +2074,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "7adc0a3e15306a03652735d8dabafb35c3db112a1d689e5af9b37de83c78db07"
+      "body_sha256": "d0b7551700b572d45fa645de4c5bc79a7c13cb76b20a9b0415291e6dc30b72fb"
     },
     {
       "key": "1364",
@@ -2087,7 +2085,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "cc8d7b60dc8c79ce6049b108aae3c68851a03ccf8763c32de968dfeac128ffe6"
+      "body_sha256": "24da7e8e709201c464e349f59f7abeb225a67a4f5bd560f333096b1870d34192"
     },
     {
       "key": "1365",
@@ -2098,7 +2096,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "1cf644dc94bcbd2dfefc040592ff0cecc703a5e3525c38fe52e689451f8bd04d"
+      "body_sha256": "9abbb3cbd281035e9647be58bf88e24346b8cac3d85a77d737e2009ca60733b7"
     },
     {
       "key": "1366",
@@ -2122,7 +2120,7 @@
       "accepted": false,
       "parent": 1325,
       "blocked_by": [],
-      "body_sha256": "b19841d02d90303dfb2a311b0f2c13e3ee0f90b86be99a5ada277c6fc47c2c30"
+      "body_sha256": "d11532e6277d94d801e7abb07a448d890a0cfe8f1a7b9f95eb216e5c1673b937"
     },
     {
       "key": "1389",
@@ -2144,7 +2142,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "43001e5ede74fc1107d3195a12eeec0c692b19b1c17696f3aea6862d06581c06"
+      "body_sha256": "37ed603d68b9759a49a9c041981941afd652434674aea056514fdcb34c96b5e5"
     },
     {
       "key": "1424",
@@ -2155,7 +2153,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "a83874e6e801a492f81b350dc6226ccc8b48435a611f38efae2930b20dcf6d3f"
+      "body_sha256": "48b6963898365a76c0639eb73a912ec72edf4676ce853b9b407527d7932e7b71"
     },
     {
       "key": "1431",
@@ -2168,7 +2166,7 @@
       "blocked_by": [
         1365
       ],
-      "body_sha256": "347994c678fb280d70284ea1b866edc6308b67b0ae10cdac43aa4d6735b70d38"
+      "body_sha256": "863001913dbff10afc6a48f97970a7ce02d6d55cd3b49f81d7a1dacabd24211c"
     },
     {
       "key": "1432",
@@ -2179,10 +2177,9 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [
-        1365,
         1431
       ],
-      "body_sha256": "2f3f9e87a41dc7647c4f4ec1a8f59564d5022cc2977b8db36c6aacdb23f4065c"
+      "body_sha256": "3bf31b3a94f6859f68b040a36f2495bc63602cca2c1c86280765dd5c9cb4d41f"
     },
     {
       "key": "1433",
@@ -2193,7 +2190,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "ec488d7f76b5b626d528150fb7c9af131ad7e5b4623157fe3999987f5ad2020f"
+      "body_sha256": "a4f1d269d325291c4f8725d935d0fe587f264512108401696443ab36fb8cdd21"
     },
     {
       "key": "1434",
@@ -2204,9 +2201,11 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [
-        1433
+        1365,
+        1433,
+        1360
       ],
-      "body_sha256": "77b7d874aed32c1ffa017f325e342cf62d93996d10f73ced9979dc66a261fff6"
+      "body_sha256": "77ac47efc86ea385c6aa01c1d8938930089d5f8c085799876d0f81af82adb8a2"
     },
     {
       "key": "1435",
@@ -2217,7 +2216,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "df655c59edcf9a4de8e69f7fd5fddfb3c598bce91fce655f22f4ae184b3860c1"
+      "body_sha256": "9a3f2b5beb650239c7001f45fdf4267e22bf2750a98ef4f6c896391bd83ada0d"
     },
     {
       "key": "1450",
@@ -2239,7 +2238,7 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "19e31c47fd5006f1a50488bf04e81032b8801294813172df48d9b742b2c1f555"
+      "body_sha256": "90a87e6dbb82762cd4eef6f06fdc4141681b65dcb90f74e99a6d40ff1c44f5a4"
     },
     {
       "key": "1459",
@@ -2250,7 +2249,29 @@
       "accepted": false,
       "parent": null,
       "blocked_by": [],
-      "body_sha256": "7bd6b0d04f81f79607345ff3edc9390e84e37a7af64b1bd2bd3d8d5128f694c4"
+      "body_sha256": "8048cdeb521c9682f5beb2404aa39382a2aea4d8430fe48de267f35d18369a7b"
+    },
+    {
+      "key": "1477",
+      "number": 1477,
+      "title": "[C6][P3] firmware: retire or justify the activity-mirror entities and DLI/lighting tunables deferred from #369",
+      "stage": "C6",
+      "status": "open",
+      "accepted": false,
+      "parent": 430,
+      "blocked_by": [],
+      "body_sha256": "805c86c584fccf6f36a07de8d50c634b0a546619e79548c3260029deba5e0f7f"
+    },
+    {
+      "key": "1480",
+      "number": 1480,
+      "title": "[OPS][P2] Cortex shadow planner runs out of tokens in reasoning: SUNRISE 11-07 wrote no proposal",
+      "stage": "OPS",
+      "status": "open",
+      "accepted": false,
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "035834cd0c9fdbae2abf5d16137fa0bc4c7ed5af28b52a06e815c6b3aa5d4e6f"
     }
   ]
 }

@@ -191,7 +191,7 @@
         "LANES.md",
         "SPRINTS.md"
       ],
-      "baseline": "Triage 2026-11-07: #31 now closed; #16/#75/#359/#390 and #359's children open; device still on 36c7630c Remaining: open children #16, #75, #359 (with #367 #368 #369 #370 #386 #1365), #390. Blocker: waits-on-W6-flash. Next: Re-check after W6 flash and the 2026-11-13 band gate; close when every child is closed or carried",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): 19 children open (gh 14:3xZ): #16,45,51,52,75,297,298,398,751 physical; #299,359,367-370,386,390,430 control/firmware; #1360 parked. #581/#218/#350/#31 closed. Device fw 2026.11.7.0133.9517acb6 since 10:27:31Z. Remaining: Every open child closed or carried with its own receipt; Pilot ends in a reproducible published result (#581 closed 11-06; #1360 successor study parked). Gate: 2026-11-13T13:00Z. Next: Re-check the W6-gated children at their gates now that firmware 2026.11.7.0133.9517acb6 is on the device (#368 11-08 10:27Z, #386 11-08, #367/#390 11-09); close the roll-up only when every child is closed or carried.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "The requested bounded ordinary read/model packet and authorized live GPT-6 Luna upgrade are complete at their recorded scope. No additional user decision is identified here. Future physical/launch decisions require concrete scope; natural-cycle cost, complete historical coverage and full issue acceptance remain unproven.",
@@ -1128,7 +1128,7 @@
         "tests",
         "docs/runbooks"
       ],
-      "baseline": "Triage 2026-11-07: #1273/#1274 closed; deny checks in preflight on main 77a70404 Remaining: W6 flash passes extended preflight live; post-flash parity read. Blocker: waits-on-W6-flash. Next: record W6 preflight output and sweep, then close",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Preflight receipt for 9517acb6 recorded (topology, cycling, outdoor passed; no guard override). alert_log 14022 deploy_override 10:24:17Z (provisional rollback). Job completed 10:26:48Z; 9517acb6 live 10:27:31Z. Heap min free 44 kB vs 43 kB same hours pre. Remaining: post-flash matched-day parity (relay/cfg outcomes and runtime canaries) for a full local day. Gate: 2026-11-09T07:00Z. Next: After 2026-11-09T07:00Z run the matched-day parity read (starts, runtime, heap, resets) for local day 11-08 against pre-flash days and post it here, then close.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -1237,7 +1237,7 @@
         "grafana",
         "docs"
       ],
-      "baseline": "Triage 2026-11-07: #749 closed; Argo Degraded only from verdify-vision camera HTTP 500; #1118 open Remaining: #1118 successful vision runs; #751 and #51 hardware; criterion 3 coverage doc without false green. Blocker: physical. Next: confirm a successful vision run after camera fix; verify replacement probes",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): #980/#981/#963/#749 closed. #1118 meets acceptance (vision 04:00Z/07:00Z Complete, Argo Healthy). Open: #751 temp_south null since 08-02; #51 CO2 plateau 3,066 avg. Remaining: Crit 3: physical faults (south probe, CO2) still outstanding; documented, not fixed. Next: Epic: #1118 closes today; remaining physical-fault children are #751 (south probe) and #51 (CO2). Close the roll-up once those are verified, or carry them to #16.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -1487,7 +1487,7 @@
         "docs",
         "Makefile"
       ],
-      "baseline": "Triage 2026-11-07: script on main; 10d history no premature/overrun Remaining: one natural boundary episode classified boundary_ok on flashed build. Blocker: waits-on-W6-flash. Next: run growlight-boundary-episodes.py daily post-flash",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): growlight-boundary-episodes.py --since '2 days' (read-only, 14:2xZ): 14 ordinary, 2 reset, 0 premature, 0 overrun, 0 boundary_ok. Last cutoff 11-07 05:00:00Z was pre-flash; no post-flash cutoff yet. Remaining: one natural boundary_ok episode (ON within min-on of the window cutoff) on the flashed build, with exact transition and stop reason. Gate: 2026-11-08T05:00Z. Next: Run scripts/growlight-boundary-episodes.py daily after the first post-flash cutoffs (11-08 02:00-05:00Z) until a boundary_ok episode appears; it needs a natural ON shortly before a cutoff.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -1813,7 +1813,7 @@
         "research/planner-efficacy",
         "planning"
       ],
-      "baseline": "Triage 2026-11-07: children merged in #1430, not flashed Remaining: children #367 #368 #369 #370 #386; #1365 11-13 gate. Blocker: waits-on-W6-flash. Next: re-check after flash and 11-13",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Sub-issues open: #368, #386, #430 (#410/#378 closed as superseded by #1365, which is open to 11-13). 9517acb6 live 10:27Z. No PID/MPC/AI safety delegation added. Remaining: open children #368, #386, #430 and successor #1365. Gate: 2026-11-13T13:00Z. Next: Re-check after #368 (11-08T10:27Z), #367/#369/#390 (11-09T07:00Z) and #1365 (11-13T13:00Z); close when each child is closed or carried.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -1848,7 +1848,7 @@
         "ingestor",
         "verdify_schemas"
       ],
-      "baseline": "Triage 2026-11-07: #428 closed; #1430 merged; not flashed Remaining: before/after heap and traffic per tier on flashed build; #367/#369 live; #370. Blocker: waits-on-W6-flash. Next: compare heap floor and pushes/day post-flash",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Sub-issues open: #367, #369, #370. Post-flash: entities 556->540, heap_min_free_kb min 44 (vs 43 same hours 11-06; 9 over the prior 24 h). Pushes/day not yet measured over a full day. Remaining: per-tier before/after heap and traffic over full days; #367, #369 live acceptance (gated 11-09); #370 (deferred to the next flash). Gate: 2026-11-09T07:00Z. Next: Roll up after #367/#369 parity (2026-11-09T07:00Z) with measured heap/traffic before and after; #370 is deferred to the next flash, so this epic stays open until then.",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -1921,7 +1921,7 @@
         "verdify_schemas",
         "tests"
       ],
-      "baseline": "Triage 2026-11-07: probe_trend_update on main 77a70404; not flashed Remaining: probe_health OK on healthy probes after flash; no false green. Blocker: waits-on-W6-flash. Next: read diagnostics.probe_health 24h post-flash",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Post-flash 222+ diagnostics rows: probe_health 'South INVALID' (same as before the flash, 1322 rows 11-06), no JUMP/FLAT on N/W/E, active_probe_count 3. South missing is reported INVALID, not green. Remaining: 24 h post-flash probe_health soak (no false JUMP/FLAT on healthy probes). Gate: 2026-11-08T10:27Z. Next: After 2026-11-08T10:27Z read diagnostics.probe_health for the 24 h since the flash; close if no JUMP/FLAT appears on North/West/East.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -1937,7 +1937,9 @@
       "effort": "M",
       "owner_role": "Control lead",
       "parent": "430",
-      "depends_on": [],
+      "depends_on": [
+        "390"
+      ],
       "what": "Choose one authoritative anti-chatter mechanism with clear per-equipment timing and safety-override precedence.",
       "why": "Overlapping dwell gates can hide why an actuator is blocked or produce boundary oscillation, complicating resource and failure attribution.",
       "how": [
@@ -1955,7 +1957,7 @@
         "firmware/test",
         "docs"
       ],
-      "baseline": "Triage 2026-11-07: #1430 merged (a3699091); device still 36c7630c Remaining: start/runtime/short-cycle parity and climate response on flashed release. Blocker: waits-on-W6-flash. Next: compare matched days post-flash from equipment_state edges",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): #1430 in live 9517acb6. Early read 10:27-14:20Z vs same hours 11-06: heat1 7/8, heat2 5/5, vent 1/4, fan1 1/2, fan2 0/3, fog 0/0, mister_center 0/0 starts. No chatter seen; full-day parity gated. Remaining: measured starts/runtime parity on a full post-flash local day (11-08). Gate: 2026-11-09T07:00Z. Next: After 2026-11-09T07:00Z compare per-relay starts/day, short cycles and runtime for local day 11-08 against matched pre-flash days from raw equipment_state edges.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -1992,7 +1994,7 @@
         "firmware/greenhouse",
         "docs"
       ],
-      "baseline": "Triage 2026-11-07: no arbitration change merged Remaining: all three criteria. Blocker: blocked-by-issue. Next: start after #367 live parity; P3",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): No arbitration refactor in #1430 or 9517acb6 (lane C did only the #369 tunable cleanup). Deferred to the next firmware release; predecessor #367 is gated to 2026-11-09T07:00Z. Remaining: criterion 1: conflict/origin fixtures with one deterministic result and block reason; criterion 2: reverse conflict, manual rescue, restart and partial delivery cannot energize incompatible relays; criterion 3: native/replay/compile and #390 physical release checks on a flashed build. Next: Start after #367 parity holds (2026-11-09T07:00Z); capture reverse-conflict/origin/restart/partial-delivery behaviour, then one minimal consolidation for the next firmware release.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -2008,7 +2010,9 @@
       "effort": "L",
       "owner_role": "Control lead",
       "parent": "430",
-      "depends_on": [],
+      "depends_on": [
+        "390"
+      ],
       "what": "Consolidate the surviving cleanup from closed #300/#326 into one evidence-backed purge with net-negative unused surface.",
       "why": "Stale registry entries and static echoed entities cost memory and traffic, but deleting fields still used for current receipt or safety contracts would be a regression.",
       "how": [
@@ -2028,7 +2032,7 @@
         "scripts",
         "tests"
       ],
-      "baseline": "Triage 2026-11-07: #1278 closed; #1430 net -16 entities; release-4 images synced Remaining: live entity drop with no push errors for retired names; activity mirror and DLI set follow-up. Blocker: waits-on-W6-flash. Next: post-flash entity and esp32_push_failed check",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Ingestor log: 'Enumerated 556 entities' 09:52Z (36c7630c) -> 'Enumerated 540 entities' 10:27Z (9517acb6), net -16. alert_log since 10:00Z has no esp32_push_failed. Carry #1477 OPEN, labelled deferred. Remaining: criterion 3: #390 release checks, whose matched-day parity read is gated to 2026-11-09T07:00Z. Gate: 2026-11-09T07:00Z. Next: After #390's matched-day parity passes (from 2026-11-09T07:00Z), close with carry #1477.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -2314,7 +2318,9 @@
       "effort": "M",
       "owner_role": "Control lead",
       "parent": "350",
-      "depends_on": [],
+      "depends_on": [
+        "390"
+      ],
       "what": "Prove the center climate mister cannot bypass its bounded recovery/re-fire protection through any request origin, restart or topology transition.",
       "why": "Center-only routing increases dependence on one wetting path; protection must remain effective without being silently bypassed or creating an unexplained prolonged refusal.",
       "how": [
@@ -2332,10 +2338,10 @@
         "tests",
         "docs"
       ],
-      "baseline": "Triage 2026-11-07: #1430 merged; device still 36c7630c Remaining: live reset/topology re-fire observation on flashed build. Blocker: waits-on-W6-flash. Next: read mister edges around flash reboot",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): 9517acb6 live 10:27Z, contains #1430 native cases. mister_center: 0 ON since 11-05 19:10Z (6 ON in 7 d), none since flash; flash reboot was at night with misters off. Engine zone fence is RAM-only (Lane C finding). Remaining: criterion 1: engine zone fence (zone_off_ms) is lost on reset, so a zone can re-fire inside 45 s after a soft reset; no follow-up issue is filed; criterion 2/3: live re-fire observation on the flashed build (no center-mister run since the flash) and around a reset during misting hours. Next: File the RTC-retained zone-fence follow-up (or get Jason's scope call), then read center-mister edges on the first post-flash misting day and around the next reset in misting hours.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep the proven last-good binary and tunable snapshot independently available. On safety, heap, reset, cycling or parity regression stop release, restore the approved image/config and verify actual relay/readback behavior. Do not promote last-good on a compile or a short uptime alone.",
-      "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
+      "decision": "Criterion 1 vs. #1430's finding: accept boot time as the post-reset mister spacing (amend criterion 1), or require the RTC-retained zone fence in the next flash.",
       "status": "open"
     },
     {
@@ -2349,8 +2355,8 @@
       "owner_role": "Control lead",
       "parent": "350",
       "depends_on": [
-        "45",
-        "398"
+        "398",
+        "45"
       ],
       "what": "Provide the cheapest conservative soil-feedback loop: visible sustained saturation and bounded skip/shrink of an eligible scheduled drip.",
       "why": "Existing saturation_pct seeds were not evaluated and daily schedules can overwater pots already receiving incidental mist. This does not justify tuning thresholds from stale crop rows.",
@@ -2369,7 +2375,7 @@
         "db/migrations",
         "tests"
       ],
-      "baseline": "Triage 2026-11-07: no saturation alert type open; seed targets unchanged Remaining: bind real targets and live probes, enable alert and slot skip. Blocker: blocked-by-issue. Next: wait for #398/#45",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): 14:22Z: no saturation alert type open (open: planner_failed, sensor_offline hydro_tds). soil_moisture_targets = 2026-03-30 seeds (updated_at null). No credible soil channel. Evaluator+19 fixtures on main. Remaining: Sustained saturation alert with validity on real targets; One eligible drip truthfully skipped/shrunk and recorded. Next: After #398 targets and #45 live probes: bind the delivered evaluator, enable the saturation alert, then an irrigation-engine slot skip.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -2443,7 +2449,7 @@
         "docs",
         "planning"
       ],
-      "baseline": "Triage 2026-11-07: CO2 24h 2935-3129 ppm plateau; temp_south/moisture_center/soil_west 0 rows in 30d Remaining: CO2 sensor replacement (#51); south probe (#751); PAR meter (#1184); replant-driven children #298 #398 #45 #52. Blocker: physical. Next: Jason installs replacement sensors; verify in children",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): 14:22Z: CO2 24h 2,935-3,129 ppm (avg 3,066, 1,366 rows); temp_south last 2026-08-02; hydro_ph last 11-02 02:37Z; west/center soil 0 rows/24h; ppfd 0 rows. Children #45 #51 #52 #298 #398 #751 open. Remaining: Crit 1: per-item commissioning/enabled state, pending the replant survey and sensor installs; Crit 2: absent sensors stay unavailable (met in practice; not formally closed); Crit 3: operator windows tracked (children carry the gates). Next: Roll-up only: verify each child live after Jason's installs (CO2 #51, south probe #751, PAR #1184) and the replant (#298 -> #398 -> #45, #52).",
       "delivery": "Close the roll-up only when each in-scope child has its own acceptance receipt or an explicit, linked scope decision. A closed child is evidence of its stated boundary, not proof of a broader product claim.",
       "rollback": "Preserve child receipts and closed history. Replan explicitly when evidence fails; do not waive a safety invariant, reopen a locked draw, or call an incomplete campaign complete.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -2459,9 +2465,7 @@
       "effort": "M",
       "owner_role": "Operator with data/control lead",
       "parent": "16",
-      "depends_on": [
-        "1183"
-      ],
+      "depends_on": [],
       "what": "Restore credible south temperature/RH/VPD measurements after diagnosing the actual source fault, and separately diagnose hydro publication through its existing Home Assistant/network path.",
       "why": "The latest reviewed October17 baseline has three finite climate contributors with south missing and hydro unavailable; current fault cause is unestablished. Maintenance remains separate from the accepted degraded safety quorum and cannot silently change a locked study panel.",
       "how": [
@@ -2480,7 +2484,7 @@
         "ingestor",
         "docs"
       ],
-      "baseline": "Triage 2026-11-07: climate last 5 d: no non-null temp_south or hydro_ph (newest row 2026-11-07 02:51Z) Remaining: install replacement south probe and verify fresh finite T/RH/VPD vs neighbours; contributor diagnostics drop fallback; hydro alert resolves from telemetry (meter back on Wi-Fi, #1183); no silent locked-panel change. Blocker: physical. Next: After Jason installs the probe, read temp/rh/vpd_south freshness and peer comparison",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): 14:22Z: temp_south last non-null 2026-08-02 22:06Z; hydro_ph last 2026-11-02 02:37Z; v_data_pipeline_health hydro age 474,372 s; sensor_offline climate.hydro_tds_ppm open. Remaining: South probe installed and credible vs neighbours; Contributor diagnostics drop the fallback; Hydro alert resolves from telemetry. Next: Jason installs the replacement south climate probe and puts the YINMIK meter back on Wi-Fi; agents verify temp/rh/vpd_south vs peers, fallback drops, and the hydro alert resolves from telemetry.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep the affected path disabled until commissioning passes. On failure return to the previously documented safe topology, preserve the failed measurement, and never substitute a house-average proxy for an absent sensor.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -2496,9 +2500,7 @@
       "effort": "M",
       "owner_role": "Operator with data/control lead",
       "parent": "16",
-      "depends_on": [
-        "1329"
-      ],
+      "depends_on": [],
       "what": "Create an operator-verified per-position crop, pot, substrate, probe and plumbing map, explicitly confirming or replacing historical lime/cannabis/hydro/unassigned-sensor assumptions.",
       "why": "The old topology and soil thresholds were two generations stale; a historical stuck-zero diagnosis may not describe a probe now moved into different media.",
       "how": [
@@ -2517,7 +2519,7 @@
         "db/migrations",
         "docs"
       ],
-      "baseline": "Triage 2026-11-07: v_crop_planting_current=1 active; stale crops ended 11-05 Remaining: per-position pot/substrate/probe/plumbing truth from replant. Blocker: physical. Next: record replant survey with #1329",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): 14:22Z: v_crop_planting_current = 1 planting (Vandas). soil_moisture_targets still names Canna Lily (south_1/2) and Unknown pots (west). #1329 closed; replant not done. Remaining: Repo/DB map agrees with observed positions; no Canna Lily residue; Each sensor has source, location, validity and enabled state. Next: Jason replants and records per-position crop, pot, substrate, probe and plumbing; agents reconcile config/DB without enabling irrigation.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep the affected path disabled until commissioning passes. On failure return to the previously documented safe topology, preserve the failed measurement, and never substitute a house-average proxy for an absent sensor.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -2554,7 +2556,7 @@
         "scripts",
         "tests"
       ],
-      "baseline": "Triage 2026-11-07: soil_moisture_targets rows 1-3 still 2026-03-30 seeds Remaining: ledgered target correction with inverse after #298. Blocker: blocked-by-issue. Next: wait for replant",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): 14:22Z: soil_moisture_targets rows 1-3 = 2026-03-30 seeds (Canna Lily 40-60/80/20 x2; Unknown pots 35-55/75/18), updated_at null. Migration 303 (#1437) adds edit path + attribution. Remaining: Rows agree with the observed map; No consumer uses an uncommissioned target; Before/after receipt and rollback values. Next: After the replant, enter real per-zone targets through API-SOIL-02/MCP soil_target_set (migration 303 made the table editable), with before/after rows and inverse.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -2593,7 +2595,7 @@
         "config",
         "Makefile"
       ],
-      "baseline": "Triage 2026-11-07: no center/west soil rows in 30d; seed targets unchanged Remaining: commission installed soil/runoff probes and pass feedback check. Blocker: physical. Next: after replant, wire and verify installed probes",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): 14:22Z 24h: soil_moisture_south_1 1,149 rows flat 19.4-19.7%; soil_moisture_west, moisture_center, ec_runoff_center 0 rows. soil_moisture_targets still 2026-03-30 seeds. Probes not in soil (Jason 11-05). Remaining: Crit 1: credible calibrated soil/runoff channels; Crit 2: feedback check passes from real measurements; Crit 3 holds today (unknowns stay unavailable) but must keep holding through commissioning. Next: After Jason's replant, wire the soil/runoff probes that are actually installed, then run the feedback check from live readings.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep the affected path disabled until commissioning passes. On failure return to the previously documented safe topology, preserve the failed measurement, and never substitute a house-average proxy for an absent sensor.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -2627,7 +2629,7 @@
         "firmware/greenhouse/globals.yaml",
         "docs"
       ],
-      "baseline": "Triage 2026-11-07: CO2 24h 2935-3129 ppm avg 3066 (1370 rows), implausible Remaining: install replacement CO2 sensor; verify plausible live readings. Blocker: physical. Next: verify after Jason installs new sensor",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): 14:22Z: climate.co2_ppm over 24h = 2,935-3,129 ppm, avg 3,066, 1,366 rows: the same implausible plateau. Jason 2026-11-05: replacing the sensor. Remaining: Install the replacement CO2 sensor; Plausible live ppm verified against ambient or a reference, with stated uncertainty; Units and plausibility guards confirmed on the new sensor. Next: Jason installs the replacement CO2 sensor (parts on order); agents verify plausible live ppm against outdoor ambient or a reference and confirm units and guards.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep the affected path disabled until commissioning passes. On failure return to the previously documented safe topology, preserve the failed measurement, and never substitute a house-average proxy for an absent sensor.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
@@ -2664,10 +2666,10 @@
         "firmware",
         "docs"
       ],
-      "baseline": "Triage 2026-11-07: 1 active planting (Vandas); no decision recorded Remaining: species observation and seasonal-care decision after replant. Blocker: physical. Next: December recheck with #1365 after replant",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): 14:22Z: v_crop_planting_current = 1 active planting (Vandas). No species observation or seasonal-care decision recorded. Replant pending (#298). Remaining: Crop observations after the replant; Documented no-change or reversible seasonal decision. Next: After the replant, Jason records crop observations and a no-change or one reversible seasonal-care decision; December recheck alongside #1435.",
       "delivery": "Deliver the smallest complete owner change, use enforced checks and the existing supported delivery path, then verify the issue-specific end state. Heavy tests/builds run in admitted k3s workloads. Source or CI success does not establish runtime, physical or scientific acceptance.",
       "rollback": "Keep the affected path disabled until commissioning passes. On failure return to the previously documented safe topology, preserve the failed measurement, and never substitute a house-average proxy for an absent sensor.",
-      "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA.",
+      "decision": "After the replant: no seasonal change, or one reversible dormancy/light/dry-down setting for named species?",
       "status": "open"
     },
     {
@@ -3976,7 +3978,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Triage 2026-11-07: agents#4468 and network-infra#602 OPEN; verdify-edge Active but empty (no Certificate/Secret/workload); D-16 hosts still at lines 58-63 on main 77a70404 Remaining: delete ns verdify-edge after agents#4468; drop analytics/logs/botauth/traefik.verdify.ai from tier-1 HostRegexp after network-infra#602; update AGENTS.md/OWNERSHIP.md. Blocker: blocked-by-issue. Next: verdify-edge now holds only kube-root-ca.crt; get agents#4468 closed on that readback, then delete ns by exact name",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): ns verdify-edge Active 157d, only cm kube-root-ca.crt; agents#4468 OPEN, #6243 OPEN (unmerged), network-infra#602 OPEN; analytics/logs/botauth/traefik.verdify.ai still at tier1 lines 58-63 on main 5de074e9 and resolve via Cloudflare. Remaining: verdify-edge namespace deleted; readback NotFound; D-16 hosts removed from tier-1 HostRegexp; AGENTS.md / OWNERSHIP.md updated (OWNERSHIP.md still names verdify-edge 6 times). Next: COORD merges agents#6243 (removes the 3 AppProject destinations), closes agents#4468 on the empty-namespace readback, then a UID-preconditioned delete of ns verdify-edge; D-16 HostRegexp drop waits on network-infra#602.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Track agents#4461/#4470/#4468 and the network owner's D-16 retirement. Perform only the corresponding local Namespace/HostRegexp cleanup after owner receipts. Do not treat missing native D-16 edge as readiness or modify shared wildcard TLS/DNS here."
@@ -4243,7 +4245,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Triage 2026-11-07: criteria 1-4 met; rotation tooling merged #1430, Jason approved 2026-11-06; device still 36c7630c; network-infra#839/#42 OPEN Remaining: ota_password rotated at W6 flash with metadata-only receipt; UniFi readback tcp/3232+6053 limited to builder/ingestor (network-infra#839, #42). Blocker: waits-on-W6-flash. Next: Record rotation receipt at the W6 flash; passive ACL readback when network-infra#839 lands",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Criteria 1-4 met earlier. Secret verdify-firmware-ota keys: ota_password, ota_password_next (no ota_password_previous) -> staged 11-06T16:44Z, not promoted. 9517acb6 live. network-infra#839 and #42 OPEN. Remaining: criterion 5: passive UniFi readback that tcp/3232 and tcp/6053 to 192.168.10.111 are allowed only from builder and ingestor (jvallery/network-infra#839, #42); criterion 6: ota_password rotation promoted, with a metadata-only receipt. Next: Jason runs `firmware-ota-password-rotate.sh promote` (D-71) and posts the metadata-only receipt; the passive UniFi ACL readback follows jvallery/network-infra#839/#42.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Signing key/custody and final software sync were explicitly approved and completed. Remaining device/cutover work retains exact network and #390 recovery evidence plus the standing no-new-device-connection restriction; no new credential or physical action is authorized by this packet."
@@ -4275,7 +4277,7 @@
         "deploy/k8s",
         "OWNERSHIP.md"
       ],
-      "baseline": "Triage 2026-11-07: criterion 1 met; receiver PR #1427 merged and in release 4; cross-repo companions not landed Remaining: public off-cluster test call shows the real client IP, not a verdify-traefik pod IP. Blocker: blocked-by-issue. Next: Land network-infra mcp.verdify.ai tunnel-row move + agents cloudflare-edge pin + ownership rows; then one orbit public call and Loki join",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): cloudflared-config: mcp.verdify.ai -> traefik-tunnel-client.traefik-apps:443 (network-infra#965 merged 04:53Z, in cloudflare-edge pin beb61a87, Synced/Healthy). POST https://mcp.verdify.ai/mcp unauth = 401. 24h mcp_tool_call events: all edge_request_id_claim null, peer = in-cluster. Remaining: One public read-only call showing the real external client IP via the tier-2 tunnel record joined on CF-Ray, plus a forged-header negative; agents#6243 ownership rows merged. Next: The network row is now live, so lane X can make the one public read-only MCP call (orbit) and record the Loki join plus the forged-header negative; the agents ownership rows land with agents#6243.",
       "delivery": "Deliver through supported owner CI/GitOps, then verify the current issue-specific live end state. Planning alone does not deploy.",
       "rollback": "Retain previous exact source and metadata; restore only the scoped change. Preserve data and evidence; deletion is never a database rollback.",
       "decision": "Use recorded DR-20/45/47/48/49 decisions where applicable. Do not reopen settled decisions. Add secret-free structured allow/result events with audience/tool/write-class and trusted-proxy-only real-client attribution; verify read/write success and forged-header negative cases. Use for #1007 discovery if existing access logs cannot establish identity; do not infer a client from a shared token or pod IP."
@@ -4430,11 +4432,11 @@
       "paths": [
         "deploy/k8s/overlays/prod/kustomization.yaml"
       ],
-      "baseline": "Triage 2026-11-07: #1429 live (CronJob on ingestor ccd254de, 600 s budget) but not yet run; 22:00Z failed on greenhouse_2 HTTP 500 (1/2 cams); 01:00Z ran old image a935e304, 120 s TimeoutExpired; Argo Degraded Remaining: one natural verdify-vision run Complete on the release-4 image; KubeJobFailed{cronjob=verdify-vision} resolved; verdify-prod-dark Healthy. Blocker: physical. Next: Read the 04:00Z run on image ccd254de; if greenhouse_2 still HTTP 500, fix the camera in jvallery/sentinel",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Runs 29900400 (04:00Z) and 29900580 (07:00Z) Complete on new image; 07:00Z log: 2/2 cameras, two Cortex 200s, 'Analysis complete'. lastSuccessfulTime 07:01:02Z. Argo Healthy 14:25Z. KubeJobFailed resolves on latest natural success. Remaining: none. Next: Close. The intermittent greenhouse_2 snapshot HTTP 500 (Frigate, jvallery/sentinel) is a camera-side issue outside this acceptance; reopen or file in sentinel if it recurs.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
-      "status": "open"
+      "status": "closed"
     },
     {
       "key": "1120",
@@ -4458,7 +4460,7 @@
       "paths": [
         "docs/design/dashboard"
       ],
-      "baseline": "Triage 2026-11-07: #1125 and #1300 closed, #1143 closed today; 13 local + 5 cross-repo children open Remaining: open children #1130 #1132 #1135 #1161 #1162 #1164 #1165 #1166 #1181 #1183 #1184 #1186 #1322; cross-repo agents#5993 #5994, homeassistant#1096, monitoring-stack#1371, network-infra#933. Blocker: blocked-by-issue. Next: One read-only signed-in look (/graphs/statistics, /settings, /water/history 30 d); on-site checks; re-plant",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Open local children: 1132,1161,1162,1164,1165,1166,1181,1183,1184,1186,1313,1322,1336. Cross-repo: agents#5993/#5994 and monitoring-stack#1371 CLOSED; homeassistant#1096 and network-infra#933 OPEN. Remaining: children #1132, #1181, #1186, #1322 (signed-in walk); children #1161, #1162, #1164, #1183, #1184, #1336 (on site); #1165, #1166 (after re-plant); #1313 (W6 flash); jvallery/homeassistant#1096, jvallery/network-infra#933. Next: Keep open until every child closes or carries; the U2 walk clears #1132/#1181/#1186/#1322, the on-site work clears the physical children.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
@@ -4546,10 +4548,10 @@
       "paths": [
         "dashboard/app"
       ],
-      "baseline": "Triage 2026-11-07: criteria 1-6 + R2 half pass; no live Settings capture in lane F run Remaining: signed-in /settings lists every registry row with live device values and ages (R1.1). Blocker: software-ready. Next: Read-only in-cluster operator Playwright look or Jason's look at /settings (also #1181 item 1)",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Criteria 1-6 + R2 half of 7 held 2026-11-04. Lane W viewer look 03:24Z: 247/247 rows, 235 with device value. Live web built from 00b53fe3 contains #1392/#1406. Per-row age not in list; no decisions.md row. Remaining: R1.1: per-row age in the Settings list, or Jason's recorded acceptance of drawer/STALE ages. Next: In the U2 walk Jason opens /settings and either accepts drawer + STALE ages as meeting R1.1 (record in decisions.md) or asks for per-row ages.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
-      "decision": "Open /settings signed in",
+      "decision": "R1.1 'ages': accept the drawer and STALE ages as shipped (#1392), or require a per-row age in the Settings list (software follow-up).",
       "status": "open"
     },
     {
@@ -4630,7 +4632,7 @@
       "paths": [
         "firmware/greenhouse"
       ],
-      "baseline": "Triage 2026-11-07: leak_detected only false since 2026-11-03 (6 rows, newest 2026-11-07 00:04Z) Remaining: hose run with every Verdify valve closed: block reasons never read leak_detected. Blocker: physical. Next: On-site hose run; read fog/moisture_block_reason while leak_detected true",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Items 1-6 pass (11-04 record). Center misting live. Since 11-06 12:00Z equipment_state leak_detected has only 1 row, false (11-07 00:04Z); no true edge ever since the 11-03 flash. Fw 9517acb6. Remaining: Item 7 leak half: block reasons never read leak_detected during a hose run with all Verdify valves closed. Next: On site, run a hose with every Verdify valve closed; agents read fog_block_reason and moisture_block_reason while leak_detected is true.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "On-site deliberate hose run",
@@ -4658,7 +4660,7 @@
       "paths": [
         "firmware/greenhouse"
       ],
-      "baseline": "Triage 2026-11-07: items 1,4,5,6 pass, 3 retired; Clear 0.16 s off at 2026-11-06 13:41Z Remaining: panel push buttons start and clear a burst. Blocker: physical. Next: Someone at the panel presses FANS/HUMID/VENT-BYPASS; read fan_burst_active edges",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Items 1,4,5,6 met; item 3 retired by Jason 11-04. Software burst+clear passed 11-06 13:41Z (on 1.6 s, off 0.16 s). Since then fan_burst_active: no true edge (last true 11-06 13:41:31Z). Remaining: Item 2 physical half: panel push buttons start and clear a burst. Next: Someone at the panel presses the physical FANS/HUMID/VENT-BYPASS buttons to start and clear a burst; agents read fan_burst_active edges.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Press physical burst push buttons at the panel",
@@ -4689,7 +4691,7 @@
       "paths": [
         "firmware/greenhouse"
       ],
-      "baseline": "Triage 2026-11-07: item 2 now PASS (Water Run/Stop 2026-11-06 16:40Z, ledger 5-7) and item 6 PASS; no restart command, uptime not reset since 09:52Z OTA Remaining: item 3: daytime Restart re-confirms settings and program hash; item 5: #1161 and #1162 live records. Blocker: physical. Next: Daytime operator Restart with confirmation read after W6 flash settles; then on-site checks",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): fw 2026.11.7.0133.9517acb6, irr_program_id h=f6463e9a src=nvs, irr_caps run_any_mister. L01 Water run/stop 11-06 16:40Z. uptime_s 14,103 at 14:22Z: no restart since the 10:27Z flash; no restart command. Remaining: Item 3: Restart re-confirms settings and program hash; Item 5: live checks for #1161 (hose) and #1162 (push buttons). Next: Daytime operator Restart (an operator or Claude may, per the 2026-11-05 decision) with the settings and program-hash re-confirm read; then close once #1161 and #1162 record their on-site checks.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Present for L01 Run/Stop from Water screen",
@@ -4705,7 +4707,9 @@
       "effort": "S",
       "owner_role": "Dashboard/irrigation lead",
       "parent": "1120",
-      "depends_on": [],
+      "depends_on": [
+        "1164"
+      ],
       "what": "Bring the clean lines online: L01 first, then L04, L07 and L09.",
       "why": "Tracked on the GitHub issue; acceptance criteria and their amendments live in the issue body and comments. Added to the validated plan by the 2026-11-06 full triage so every open issue has one dependency-ordered record.",
       "how": [
@@ -4717,7 +4721,7 @@
       "paths": [
         "firmware/greenhouse"
       ],
-      "baseline": "Triage 2026-11-07: ledger id 4: L01 slot 4 cause schedule 2026-11-06 13:45Z 600 s ok; checked_by null on all lines; L07/L09 disabled Remaining: L01 check recorded; L07/L09 enabled with schedule/vpd runs; each enable/check CONFIRMED under Jason's name. Blocker: physical. Next: Jason records L01 check; enables L07/L09 after the re-plant",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): irrigation_line: checked_by null on all 11 lines; L07/L09 enabled=f. Ledger: L01 slot 4 cause=schedule ok 11-06 13:45Z and 11-07 13:46Z (600 s). Last-good 5e24d07c promoted 11-05; #1306 merged after. Remaining: Item 1: L01 check recorded from the dashboard; Item 2: L04/L07/L09 runs with cause schedule or vpd; south reads VPD from peer probes; Item 5: each enable/flag/schedule CONFIRMED under Jason's name. Next: Jason records L01's check from the dashboard (can happen now); after the replant, enables L07/L09 with VPD/schedule and their checks under his name.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Record L01 check note; enable L07/L09 after re-plant",
@@ -4747,7 +4751,7 @@
       "paths": [
         "firmware/greenhouse"
       ],
-      "baseline": "Triage 2026-11-07: L02/L03/L08/L10 enabled=false, no checks, no feed rows; L05/L06 reserved+disabled Remaining: L02 scheduled feed with prewet/feed/flush, L03 open only during feed; L08 and L10 one feed + flush each; no irrigation_fence_breach; L02 check note names tank/injector; Activity under Jason. Blocker: blocked-by-issue. Next: After #1165 and the tank/injector setup, Jason records checks and enables L02/L03 then L08/L10",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): irrigation_line: L02/L03/L08/L10 enabled=f, checked_by null; L05/L06 reserved=t enabled=f. irrigation_ledger has no prewet/feed/flush rows (11 rows, all L01/L04). Remaining: Item 1: L02 scheduled feed with prewet/feed/flush, L03 open only during feed; Item 2: L08 and L10 each one scheduled feed with flush; Item 3: no irrigation_fence_breach; Item 5: L02 check note names tank/injector; Activity under Jason. Next: After #1165 and the replant, Jason sets up the tank and injector behind L03, records L02/L08/L10 checks, enables them and creates one feed schedule per line.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Fill tank/injector behind L03, record checks, enable fert lines",
@@ -4777,7 +4781,7 @@
       "paths": [
         "deploy/k8s/overlays/prod/kustomization.yaml"
       ],
-      "baseline": "Triage 2026-11-07: Items 2-6 and item 1 for 5 screens held; Settings visit unprovable from logs Remaining: Item 1 Settings: Jason opens /settings signed in, record what rows showed. Blocker: jason-decision. Next: Include /settings in Jason's W6 signed-in walk",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Items 2-6 held (sweep 23/23, MCP parity equal, plan_delivery_log ok, children closed). Item 1 holds for Graphs/Water/Activity/Equipment/Plan; Settings visit by Jason not recorded (viewer look by lane W exists). Remaining: item 1: Jason's signed-in /settings look, recorded. Next: Jason opens /settings signed in during the U2 walk; record what the rows showed (same look as #1132).",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Open /settings signed in",
@@ -4805,7 +4809,7 @@
       "paths": [
         "firmware/greenhouse"
       ],
-      "baseline": "Triage 2026-11-07: hydro age_s 432,932 at 2026-11-07 02:55Z; meter offline since 11-02 Remaining: Items 2-7: meter on Wi-Fi, Secret sealed, 300 s freshness, PR 2 (_HYDRO_MAP + HA YINMIK removal), ipam row, live log check. Blocker: physical. Next: Jason reconnects YINMIK meter and seals verdify-hydro-probe",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): 14:25Z: Secret verdify-hydro-probe NotFound in verdify-prod; v_data_pipeline_health hydro age 474,372 s (last ~11-02 02:37Z). PR 1 (#1200) live and idle. Item 1 decided by Jason 11-04. Remaining: Item 2: fresh direct values every 300 s matching app; Item 3: PR 2 removes _HYDRO_MAP; Item 4: hydro age <600 s; Item 5: ipam/allocation.md row (network-infra); Item 6: Secret sealed, value-blind readback, live log check; Item 7: homeassistant YINMIK cleanup. Next: Jason puts the YINMIK meter back on Wi-Fi at 192.168.10.105 and seals Secret verdify-hydro-probe; agents verify 300 s freshness, then open PR 2 and request the network-infra ipam row.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Reconnect YINMIK to Wi-Fi (Tuya local) and seal device-id/local-key",
@@ -4833,7 +4837,7 @@
       "paths": [
         "firmware/greenhouse"
       ],
-      "baseline": "Triage 2026-11-07: No VD-71 code on main; hardware on order Remaining: All: fit PAR meter, firmware/migration/ingest/DLI views, OTA, live PPFD/DLI. Blocker: physical. Next: Jason fits replacement PAR sensor (parts on order)",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): 14:22Z: climate.ppfd 0 rows in 24h; no VD-71 code on main (no tests/test_par_meter.py, no ppfd_umol_m2_s migration). Jason 11-05: PAR sensor on order. Remaining: All 7 criteria: PPFD rows, Graphs PPFD/DLI, unavailable-without-sensor, DB DLI tests, grants/attestation, compile+OTA, Grafana DLI panels. Next: Software can start now (firmware sensor at Modbus addr 10 that only warns when absent, migration, ingest, DLI views); Jason fits the PAR meter when parts arrive; then OTA and live PPFD/DLI checks.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Install new PAR meter",
@@ -4861,7 +4865,7 @@
       "paths": [
         "deploy/k8s/overlays/prod/kustomization.yaml"
       ],
-      "baseline": "Triage 2026-11-07: Items 1-3,6 held; #1300 closed; walk items unseen Remaining: Item 4: Jason sees /band 24 h preview; Item 5: /water/history 90 d; Back to automatic with light off intent and page closed. Blocker: jason-decision. Next: One signed-in Jason walk",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Items 1-3, 6 held. #1300 closed; #1334 editor (#1396, #1409) in live web 00b53fe3. No Jason look at /band preview or /water/history 90 d recorded; Back-to-automatic page-closed path not shown by Jason. Remaining: item 4: Jason opens /band and sees the 24 h preview; item 5: /water/history at 90 d; item 5: Back to automatic with a light off its intent, page closed. Next: In the U2 walk: open /band and see the 24 h preview; open /water/history at 90 d; press Back to automatic with a light off its intent, then close the page.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Open /band preview and /water/history 90d",
@@ -4917,7 +4921,7 @@
       "paths": [
         "firmware/greenhouse"
       ],
-      "baseline": "Triage 2026-11-07: #1430 derivation live in ingestor (eaf57228); pin file = running fw 36c7630c; no capture to observe Remaining: Live proof that C1 validation accepts the accepted-firmware pin after a flash (no capture since 2026-10-06). Blocker: waits-on-W6-flash. Next: After W6 flash, run one C1 capture or validate_wire_contract vs live preview",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Auto-closed 13:57Z by PR #1478 merge without live evidence; reopened. Prod still release 6 (d925d764); no post-W6 C1 run recorded. Remaining: Release 7 sync; post-W6 C1 capture or validate_wire_contract run. Next: Release 7 gated sync carries the #1478 Tool A pin; then one C1 capture or validate_wire_contract run against 9517acb6 with no not-qualified result",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
@@ -5029,11 +5033,11 @@
       "paths": [
         "firmware/greenhouse"
       ],
-      "baseline": "Triage 2026-11-07: Fix+native test merged in #1430; device runs 36c7630c Remaining: Fix on device (firmware 9517acb6). Blocker: waits-on-W6-flash. Next: After W6 flash, read back firmware version and close",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): #1430 (a3699091) is an ancestor of 9517acb6; 9517acb6 controls.yaml update_runtime stamps last_off_ms on external OFF. Controller reports 2026.11.7.0133.9517acb6 since 10:27:31Z. Native test aborted_ota_close_is_not_charged on main. Remaining: none. Next: Close: the fix is on the device.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
-      "status": "open"
+      "status": "closed"
     },
     {
       "key": "1322",
@@ -5059,7 +5063,7 @@
       "paths": [
         "dashboard/app"
       ],
-      "baseline": "Triage 2026-11-07: Live web readyz source_revision c8b752c5 predates #1425 fix Remaining: Item 1 via #1354; Item 2: pin web build containing #1425, phone check of wrapping status line. Blocker: software-ready. Next: Repin dashboard web past #1425 and sync, then phone check",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Item 2 fix #1425 (1a08e6d4) is an ancestor of live web source 00b53fe3; e2e layout.spec.ts at 390/1440 px. Item 1 owned by #1354 (open). No phone look recorded. Remaining: item 1: closes with #1354; item 2: phone look at Now with a wrapping status line. Next: Item 2: Jason looks at Now on a phone (390 px) with a wrapping status line. Item 1 closes with #1354.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
@@ -5087,7 +5091,7 @@
       "paths": [
         "docs/design/dashboard"
       ],
-      "baseline": "Triage 2026-11-07: Epic; children open; web pin stale; lab publisher failing Remaining: Open W5 children. Blocker: blocked-by-issue. Next: Web repin, lab publisher guard fix, signed-in walk",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Closed since last triage: #1327-#1330, #1334, #1340, #1344, #1348, #1350, #1353, #1357, #1361, #1366. Open: walk-only 1332,1333,1337-1339,1341,1345,1347,1349,1354-1356,1358 and others. Remaining: open children (see blocked_by). Next: Keep the epic open; the U2 walk clears most walk-only children, time gates #1346 (11-08) and #1352/#1365 (11-13) follow.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
@@ -5229,7 +5233,7 @@
       "paths": [
         "verdify_services"
       ],
-      "baseline": "Triage 2026-11-07: Publisher guard blocks ai-tunables page with new summaries; live page old Remaining: Lab ai-tunables summaries for 3 params; Jason's signed-in read of 3 settings. Blocker: software-ready. Next: Read guard finding, fix ai-tunables text or rule, run publisher; then Jason walk",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): API/MCP/Settings help text live (#1392 in web 00b53fe3). Lab /reference/ai-tunables (200, last-modified 14:13:18Z) shows mister_engage_kpa, safety_max and band_temp_target_sm summaries equal to setting_help. Dashboard read by Jason not recorded. Remaining: Jason's signed-in read of VPD Mister Engage, Safety Max and House temp high on the dashboard. Next: In the U2 walk Jason opens VPD Mister Engage, Safety Max and House temp high and confirms the text matches the lab page.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Live read of 3 settings on dashboard",
@@ -5257,7 +5261,7 @@
       "paths": [
         "verdify_services"
       ],
-      "baseline": "Triage 2026-11-07: All code live (#1392,#1406,#1405, fw 36c7630c) Remaining: Signed-in desktop+phone walk: definitions, not_confirmed semantics, House temp high anchors. Blocker: jason-decision. Next: Include in Jason's W6 walk",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): #1392, #1406 in live web 00b53fe3; #1405 firmware 40/100 F guardrails (controller now 9517acb6, carries it). Lane W viewer look: '0 waiting · 1 not applied · 3 manual'. Desktop+phone definitions and anchor links not seen signed in. Remaining: live desktop+phone check: every filter and pill shows its definition; not_confirmed only on rows with a write >=5 min old and a mismatched readback; House temp high links its anchors. Next: In the U2 walk on desktop and phone: filter/pill definitions, not_confirmed only on stale mismatched writes, House temp high links its anchors.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Live walk (authenticated)",
@@ -5301,9 +5305,7 @@
       "effort": "M",
       "owner_role": "Dashboard wave-2 lead",
       "parent": "1325",
-      "depends_on": [
-        "1322"
-      ],
+      "depends_on": [],
       "what": "Give each light circuit a findable Auto / On / Off control that holds until released.",
       "why": "Tracked on the GitHub issue; acceptance criteria and their amendments live in the issue body and comments. Added to the validated plan by the 2026-11-06 full triage so every open issue has one dependency-ordered record.",
       "how": [
@@ -5315,7 +5317,7 @@
       "paths": [
         "verdify_services"
       ],
-      "baseline": "Triage 2026-11-07: #1437 API in release 4; firmware latch in #1430 not flashed; web c8b752c5 lacks #1437 Remaining: Firmware hold on device; #1437 web part live (web pin); Live hold/release checks, manual_count, auto_reason. Blocker: waits-on-W6-flash. Next: After W6 flash + web repin, run lane C live check",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Fw 9517acb6 (with #1430 hold latch) flashed 10:26Z; api 00b53fe3 carries #1437. Since flash gl_main_reason only outside_window/plant_lux_low/plant_hysteresis_hold; no manual_hold_* and no light.* activity rows today. Remaining: Main/Grow On/Off from Equipment with Lutron readback <30 s and Activity row (post-flash); Hold across a decision change; Auto returns within 30 s; Off holds; Auto clears manual mark; manual_count excludes lights; GET /api/v1/equipment serves mode+auto_reason (live read); Firmware gates/OTA record. Next: Signed-in operator walk in the lights-on window (now, ~14:03Z onward): set Main or Grow Off from Control -> Equipment, confirm gl_*_reason=manual_hold_off and Lutron stays off across the next decision change, then Auto releases within 30 s; agents read back.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Live exercise",
@@ -5343,7 +5345,7 @@
       "paths": [
         "ingestor"
       ],
-      "baseline": "Triage 2026-11-07: circuits[] five lines live via BFF (lane F 11-06 13:29Z); MCP circuit+variant live; Fog stays climate device by decision; L07/L08 disabled until replant by Jason decision Remaining: Signed-in walk: Today and Schedules show one entry per circuit; South-mister fertilized schedule (L07 prewet, L08+L03 feed, L07 flush) after South is enabled with the replant. Blocker: physical. Next: Jason walk now; enable L07/L08 with the replant, then create/run the fertilized schedule and read back irrigation_ledger",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): API-IRR-01 circuits[] = 5 physical lines (lane F 11-06 13:29Z); Fog stays a climate device (Jason 11-05). L07/L08 enabled=f (Jason 11-06: until replant). No fertilized ledger rows. Remaining: Today/Schedules render one entry per circuit (signed-in walk); South-mister fertilized schedule stored on L08 and run as prewet/feed/flush. Next: Now: signed-in walk of Water -> Today and Schedules (one entry per physical line). After the replant: enable L07/L08, create a South-mister fertilized schedule and read back prewet L07 -> L08+L03 -> flush L07.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Enable South lines (L07/L08)",
@@ -5371,7 +5373,7 @@
       "paths": [
         "dashboard/app"
       ],
-      "baseline": "Triage 2026-11-07: #1368/#1379 in live web c8b752c5; fixture screenshots regenerated in-cluster (#1426) Remaining: Signed-in live check on dashboard.verdify.ai. Blocker: software-ready. Next: Jason/operator walk of Now, then close",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): #1368 (98275054), #1379 (4e8160b0) ancestors of live web 00b53fe3; fixture screenshots 01/02/25/26 regenerated in-cluster (#1426). Live signed-in look not recorded. Remaining: live signed-in check: Now on desktop and phone: one track per gauge with the green band box and a dot; South/Center say in words when a value comes from peers or the house average; no PEER code.. Next: U2 walk: Now on desktop and phone: one track per gauge with the green band box and a dot; South/Center say in words when a value comes from peers or the house average; no PEER code.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
@@ -5399,7 +5401,7 @@
       "paths": [
         "dashboard/app"
       ],
-      "baseline": "Triage 2026-11-07: #1368 live in web c8b752c5; replay 1 headline change (limit 2); fixture screenshots regenerated Remaining: Signed-in live check during a midday vent cycle. Blocker: software-ready. Next: Midday walk of Now",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): #1368 (98275054) ancestor of live web 00b53fe3; replay 2026-11-05 18:15-18:45Z gave 1 headline change (limit 2); screenshots 25/26 regenerated. Midday live look not recorded. Remaining: live look at Now during a midday vent cycle: steady headline, condition line naming every out reading, h1 not a link, phone above-the-fold. Next: Jason looks at Now during a midday vent cycle (about 11:00-14:00 MST) signed in.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
@@ -5427,7 +5429,7 @@
       "paths": [
         "dashboard/app"
       ],
-      "baseline": "Triage 2026-11-07: #1394 live; #1425 merged but live web digest e8fe6258 = c8b752c5 predates it Remaining: Primary-limit ordering from #1425 is not in the live web image (still c8b752c5); Signed-in live check. Blocker: software-ready. Next: Bump dashboard-web pin to a build containing 1a08e6d4, sync verdify-dashboard, walk Now",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): #1394 (8029bd47) and #1425 (1a08e6d4, primary mist & fog limit per Jason 2026-11-06) ancestors of live web 00b53fe3; screenshots regenerated. Live check not recorded. Remaining: live check on Now after promotion (desktop and phone). Next: U2 walk of Now: mist & fog limit first, no codes outside All readings, glossary terms open, no truncation on desktop/phone.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Which daily water limit is primary",
@@ -5483,7 +5485,7 @@
       "paths": [
         "dashboard/app"
       ],
-      "baseline": "Triage 2026-11-07: #1371 test + name-only select + named refusals live in web c8b752c5 and API release 3+ Remaining: Operator walk of Water Today/Schedules/History/drawer/run dialog/Now with no L-codes. Blocker: software-ready. Next: Jason/operator walk, then close",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): #1371 (c16203ac) ancestor of live web 00b53fe3; API side live since release 3 (api 53d06488 = release-pins). Relay-code render test in CI. Live walk not recorded. Remaining: live signed-in check: Water → Today, Schedules, History, the schedule drawer, the run dialog and Now show no L-codes; the Line select lists names only.. Next: U2 walk: Water → Today, Schedules, History, the schedule drawer, the run dialog and Now show no L-codes; the Line select lists names only.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Walk Water + Now for L-codes",
@@ -5499,9 +5501,7 @@
       "effort": "M",
       "owner_role": "Dashboard wave-2 lead",
       "parent": "1325",
-      "depends_on": [
-        "1335"
-      ],
+      "depends_on": [],
       "what": "Add Main and Grow light controls to Now's quick actions.",
       "why": "Tracked on the GitHub issue; acceptance criteria and their amendments live in the issue body and comments. Added to the validated plan by the 2026-11-06 full triage so every open issue has one dependency-ordered record.",
       "how": [
@@ -5513,7 +5513,7 @@
       "paths": [
         "verdify_services"
       ],
-      "baseline": "Triage 2026-11-07: On/Auto from Now proven live 11-06 13:38Z (activity 68/70); hold not live (device 36c7630c) Remaining: Hold through next decision change (#1335 firmware latch in W6 flash); Equipment shows hand-override mode (#1437 web parser fix not in live web); Operator render of Now at 1440/390. Blocker: waits-on-W6-flash. Next: After W6 flash + web pin bump, run #1335 live hold check and capture operator renders",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): On from Now and Auto-with-page-closed passed 11-06 (activity 68, 70). Fw 9517acb6 (hold latch) live since 10:26Z; no manual_hold_* reason or light.* activity since. No operator render at 1440/390. Remaining: Operator render at 1440 and 390 px; Equipment shows the same mode (needs #1437 live: api 00b53fe3 done; web check); Hold through next decision change (#1335); Live daytime on/auto with Lutron readback on new firmware. Next: Signed-in walk: capture Now at 1440/390 px as operator, switch Grow Off from Now in the on-window and confirm the hold across the next decision change, then Auto; agents read back.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
@@ -5541,7 +5541,7 @@
       "paths": [
         "ingestor"
       ],
-      "baseline": "Triage 2026-11-07: irr_caps fog_run,run_any_mister live; ledger run_now since 11-05 = 3 rows L01 only, no L04 Remaining: Attended L04 run-once from dashboard with Schedule off -> ledger cause=run_now on L04; Refusals visible (paused/latched/cap/SAF-4/sensor fault); L07 run once South enabled (replant). Blocker: software-ready. Next: Jason attended L04 run-once",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): irr_caps fw=9517acb6 caps=fog_run,run_any_mister. L04 enabled=t schedule_member=f. Ledger run_now rows: 5, all L01 (last 11-06 16:41Z); none on L04 or L11. Remaining: L04 run-once with Schedule off: ledger cause=run_now on L04; Refusals visible (paused/latched/cap/SAF-4/sensor fault); L07 run-once once South is enabled (replant). Next: Attended L04 run-once from the dashboard with Schedule off (Jason or a named operator present); agents read ledger cause=run_now on L04 and the Activity row. L07 run-once follows the replant.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Attended L04 run-once",
@@ -5597,7 +5597,7 @@
       "paths": [
         "dashboard/app"
       ],
-      "baseline": "Triage 2026-11-07: Migration 303 live; slots 1-3 'sensor-fault backup'; soil_moisture_targets unedited (no updated_at), no soil activity rows Remaining: Soil targets panel in Control not live (web still c8b752c5); One API-SOIL-02 edit with activity row and soil_dryout readback of the edited value. Blocker: software-ready. Next: Bump dashboard-web pin, make one soil-target edit, read back API, activity and soil_dryout threshold",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Mig 303 live; irrigation_slot 1-3 = 'sensor-fault backup'; API-SOIL-01/02 + MCP soil_targets in api 53d06488 (00b53fe3). soil_moisture_targets: 3 rows, updated_at/updated_by NULL; activity_log has 0 soil rows: no edit yet. Remaining: Soil targets panel seen in Control (signed in); one live soil-target edit with its activity row; soil_dryout uses the edited value (live readback). Next: Make one soil-target edit (Control → Settings → Soil targets, or MCP soil_target_set by a named agent); then read back GET /v1/soil-targets, the activity row and the soil_dryout threshold.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
@@ -5625,10 +5625,10 @@
       "paths": [
         "mcp"
       ],
-      "baseline": "Triage 2026-11-07: LIVE REGRESSION: greenhouse_brief 103 rows: 69 ok/18 error/16 rejected; 25 ok-gaps >15 min; the 11-07 gate cannot pass Remaining: Clean 24h of ok briefs <=15 min apart (currently failing: 18 errors incl. 15 Cortex HTTP 404 since 11-07 00:02Z, 16 number-check rejections, max ok gap 45 min); Fix intermittent Cortex 404 and the recurring 'number 12 is not in the facts' rejection; Number-match sample, stale/forced-error fixtures, MCP parity, Jason spot check. Blocker: dated-gate:2026-11-07. Next: Diagnose Cortex 404s with cortex-ai-compute, fix the '12' rejection, restart the 24h window",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Since release 5 (07:06Z) to 14:22Z: 56 ok, 1 error (HTTP 503 no available server), 0 rejected. Latest ok id 188 at 14:10Z. Gaps between ok rows >15 min: 6, two real (07:30->07:50 20m15s, 08:45->09:05 19m55s), four at 15:00.0x. Remaining: ok row at least every 15 min for 24 h (gate 2026-11-08T07:06Z; two ~20-min gaps already); Number-match sample of a day of briefs; Stale and forced-error fixture check; MCP get_greenhouse_snapshot equals hero text; Jason's live spot check. Gate: 2026-11-08T07:06Z. Next: At the gate, re-run the gap query on ok rows since 07:06Z, explain the two ~20-min gaps (hash skip vs missed run), and run the number-match sample, stale/forced-error fixture, MCP parity and Jason's spot check.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
-      "decision": "Spot-check the paragraph; decide whether viewers see it",
+      "decision": "Cadence criterion vs hash skip: does an unchanged-facts skip count as meeting 'ok row every 15 min' (accept) or must a row be written anyway (change the job)?",
       "status": "open"
     },
     {
@@ -5653,7 +5653,7 @@
       "paths": [
         "dashboard/app"
       ],
-      "baseline": "Triage 2026-11-07: #1390 live in web c8b752c5; in-cluster screenshots regenerated (#1426) Remaining: Jason walk of Water -> Schedules. Blocker: software-ready. Next: Jason walk, then close",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): #1390 (f463193c) ancestor of live web 00b53fe3; in-cluster screenshots 03, 05-08, 27 regenerated (#1426). Jason's walk of Water → Schedules (an explicit criterion) not recorded. Remaining: live signed-in check: Water → Schedules: daylight band on every lane, always-on legend, one lane per physical line, fertilized colour.. Next: U2 walk: Water → Schedules: daylight band on every lane, always-on legend, one lane per physical line, fertilized colour.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Walk Water → Schedules",
@@ -5709,7 +5709,7 @@
       "paths": [
         "dashboard/app"
       ],
-      "baseline": "Triage 2026-11-07: #1390 live; D-UX-06 decided + implemented in #1425 but live web is c8b752c5 Remaining: Running-only Stop (D-UX-06, #1425) not in live web image; Jason walk accepting the page. Blocker: software-ready. Next: Bump dashboard-web pin, sync, Jason walk of Water Today",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): #1390 (f463193c) and #1425 (1a08e6d4; D-UX-06 Stop only on running rows + one Stop all, Jason 2026-11-06) ancestors of live web 00b53fe3; decision recorded; screenshots 03/27. Jason's accepting walk not recorded. Remaining: Jason's walk accepting Water → Today. Next: U2 walk accepting Water → Today.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "D-UX-06 Stop-on-every-row + walk",
@@ -5766,7 +5766,7 @@
       "paths": [
         "deploy/k8s/overlays/prod/kustomization.yaml"
       ],
-      "baseline": "Triage 2026-11-07: re-embed done (8731 rows embed.main); outbound config clean; guards in ci-local.sh; live env still has 2 stale names Remaining: Remove stale codex-ssa-owned VERDIFY_SLACK_CONFIG + verdify-hermes-slack volume on verdify-hermes-iris and OPENAI_API_KEY on verdify-planner; Decision on experiment-v2-selector 443 egress/OpenAI endpoint. Blocker: software-ready. Next: Run supervisor field-manager release on the two Deployments and read back; get Jason's call on the selector",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Env-name scan 14:3xZ: no OPENAI_*/SLACK_* env in any verdify-prod/verdify-dashboard workload; hermes-iris and planner no longer have codex-ssa. outbound default.conf: no openai/slack. Live selector NP still allows 0.0.0.0/0:443; #1479 merged 13:57Z, prod at d925d764. Remaining: Selector internet egress and OpenAI config removed live (#1479, release 7). Next: Release 7 sync (pin PR #1481 then gated full sync); read back NetworkPolicy experiment-v2-selector egress = DNS + DB only and no VERDIFY_EXPERIMENT_SELECTOR_API_KEY env; then close.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Re-scope pending Jason: local-only applies to everything except the planner, which stays on OpenAI through Hermes. Embeddings on Cortex still wait on the egress fix.",
@@ -5794,7 +5794,7 @@
       "paths": [
         "mcp"
       ],
-      "baseline": "Triage 2026-11-07: 0 slack_ts of 26 alerts since 11-06 07:47Z; Secret deleted; outbound clean; slack_alert_runbooks 13 rows Remaining: 7-day zero slack_ts window (to 11-13); hermes-iris stale VERDIFY_SLACK_CONFIG + slack volume; git grep -il slack still 217 files incl. live code (alerts.py, heartbeat.py, planner_graph/clients/slack.py); Recorded test critical page to Jason's phone; Plan-delivery/MCP-unreachable alert_log rows proven by test/replay; Token revoke + channel archive (coordinator, after 11-13). Blocker: dated-gate:2026-11-13. Next: Field-manager release on hermes-iris, sweep Slack code references, record test page, coordinator revoke after 11-13",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): alert_log since 11-06 07:47Z: 33 rows, 0 with slack_ts (last slack_ts 11-06 06:32Z). Secret verdify-slack NotFound. hermes-iris has no Slack env/volume. git grep -il slack (excl docs/planning/migrations) = 52 files; slack_alert_runbooks still the live table. lab /start/slack-ops 200. Remaining: 7-day zero slack_ts window (2026-11-13); git grep criterion: needs the runbook-table rename/archive migration; Test critical page via Alertmanager -> ha-local-push with receipt; Plan-delivery and MCP-unreachable alert_log rows by test or replay; Iris bot token revoked and greenhouse archived (COORD, after gate). Gate: 2026-11-13T07:47Z. Next: Before the gate: the slack_alert_runbooks rename/archive migration (grep criterion), the recorded test critical page to Jason's phone, a plan-delivery/MCP-unreachable replay test, and retire the lab /start/slack-ops and /data/slack-ops pages; after 11-13 COORD revokes the Iris token and archives greenhouse.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Re-scope pending Jason: Slack is removed by turning off Hermes's Slack output (Hermes stays), not by retiring Hermes.",
@@ -5850,7 +5850,7 @@
       "paths": [
         "dashboard/app"
       ],
-      "baseline": "Triage 2026-11-07: #1376/#1409 live in c8b752c5; #1425 merged but not deployed Remaining: --cause-prep on Water schedules (#1425) not in live web; Cross-page screenshot set. Blocker: software-ready. Next: Bump dashboard-web pin, capture cross-page set; closes #1322 item 1",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): #1376 (e3106fff), #1409 (6fa0c724), #1425 (--cause-prep) ancestors of live web 00b53fe3. Cross-page live screenshot set not captured. Remaining: live cross-page screenshot set (Graphs lanes, Water → History, Now). Next: U2 walk: Graphs → Climate default has no in-plot text except Now, VPD axis fitted; same line same colour/name on Graphs lanes, Water → History and Now; capture the cross-page set.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
@@ -5878,7 +5878,7 @@
       "paths": [
         "dashboard/app"
       ],
-      "baseline": "Triage 2026-11-07: #1401 live in web c8b752c5; fixture screenshots 11/13 regenerated Remaining: Live 72h check with screenshots on dashboard.verdify.ai. Blocker: software-ready. Next: Jason/operator walk at 72h",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): #1401 (9c255e6d) ancestor of live web 00b53fe3; fixture screenshots 11 and 13 regenerated (#1426). Live 72 h screenshot check not recorded. Remaining: live signed-in check: Graphs at 72 h: every mark type in the key, no bare-number clusters, two-way hover with the events list, arrow keys along the rail, with screenshots.. Next: U2 walk: Graphs at 72 h: every mark type in the key, no bare-number clusters, two-way hover with the events list, arrow keys along the rail, with screenshots.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
@@ -5906,7 +5906,7 @@
       "paths": [
         "dashboard/app"
       ],
-      "baseline": "Triage 2026-11-07: #1401/#1407/#1410 live in web c8b752c5; fixture screenshots regenerated Remaining: Live pixel-alignment check at 24h/72h; Equipment and Plan lanes match. Blocker: software-ready. Next: Jason/operator walk",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): #1401, #1407 (d65ef4cc), #1410 (00b93c80) ancestors of live web 00b53fe3; fixture screenshots 11, 15 regenerated. Live 24/72 h alignment check not recorded. Remaining: live signed-in check: Graphs and Equipment at 24 h and 72 h: lane axis aligned to the pixel with the charts, the now line crosses both, bars solid and grouped, Equipment and Plan lanes match.. Next: U2 walk: Graphs and Equipment at 24 h and 72 h: lane axis aligned to the pixel with the charts, the now line crosses both, bars solid and grouped, Equipment and Plan lanes match.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
@@ -5962,7 +5962,7 @@
       "paths": [
         "db/migrations"
       ],
-      "baseline": "Triage 2026-11-07: Definition confirmed by Jason; daily_band_compliance == v_daily_scorecard for 10-29..11-04; 30/30 days split populated; test_290 guards Remaining: Cross-surface live check (Statistics, Now, Graphs whole-day header, Grafana site-home) with screenshots. Blocker: software-ready. Next: Walk the four surfaces for one day",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Definition confirmed by Jason 2026-11-06; migration 290 live. daily_band_compliance: 68 days 2026-09-01..11-07, 0 missing night split, computed 14:02Z; 2026-11-06 temp 97.6% VPD 53.8%. Cross-surface live check not done. Remaining: cross-surface live check with screenshots: Statistics, Now, Graphs whole-day header, Grafana site-home equal for one day. Next: For one finished day (e.g. 2026-11-06), screenshot Statistics, Now 'time in band', the Graphs whole-day header and Grafana site-home showing the same number.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "Confirm band-compliance definition",
@@ -5978,9 +5978,7 @@
       "effort": "M",
       "owner_role": "Dashboard wave-2 lead",
       "parent": "1325",
-      "depends_on": [
-        "1434"
-      ],
+      "depends_on": [],
       "what": "Run an AI-planner-versus-baseline study end to end by extending the experiment orchestrator.",
       "why": "Tracked on the GitHub issue; acceptance criteria and their amendments live in the issue body and comments. Added to the validated plan by the 2026-11-06 full triage so every open issue has one dependency-ordered record.",
       "how": [
@@ -5992,10 +5990,10 @@
       "paths": [
         "mcp"
       ],
-      "baseline": "Triage 2026-11-07: Slice 1 (mig 302, PR #1399) live; old experiment closed; PR B not started; paused by Jason decision Remaining: PR B: orchestrator arms with readback-confirmed boundaries; deviation rows; study_day_outcomes; ANCOVA+RI analyzer; 4-day dry run + live endpoints. Blocker: jason-decision. Next: None until Jason resumes the study (left as is 2026-11-06; Hermes is AI arm if resumed)",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Parked by Jason 2026-11-06. Live: experiment_v2_randomization/exposures/outcomes = 0/0/0; study_day_outcomes table absent. Study definition + migration 302 read views shipped; old experiment 45039c86 closed (facility_safe_closure). Remaining: 4-day dry run with readback-confirmed boundaries; Deviation rows within deadline; study_day_outcomes rows with covariates; Analyzer estimate + 95% CI, byte-identical rerun; Live read endpoints + Argo Synced/Healthy. Next: None until Jason resumes it. If it resumes, note #1482 changes the Cortex shadow's A/B identity hash (max_tokens, enable_thinking), so runs before and after are different treatments.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
-      "decision": "Jason 2026-11-06: Cortex planner parked; Hermes (OpenAI) stays as the AI arm of the study.",
+      "decision": "AI-planner-vs-baseline study: resume (Hermes as AI arm), keep parked, or close as not planned?",
       "status": "open"
     },
     {
@@ -6050,10 +6048,10 @@
       "paths": [
         "deploy/k8s/overlays/prod/kustomization.yaml"
       ],
-      "baseline": "Triage 2026-11-07: All verdify-prod/dashboard pod specs on zot incl. Hermes custody repin (release 4); descheduler still registry.k8s.io Remaining: descheduler CronJob still on registry.k8s.io (agents pin/reflector/Lease grant, #802); imageIDs still docker.io aliases on nginx-unprivileged, hermes, grafana, renderer (node-lane); firmware-builder run on custody esphome/cosign with receipt; confirm storage-infra plan.json + container-images.md list every copy incl. Hermes. Blocker: blocked-by-issue. Next: agents PRs for descheduler pull secret + Lease grant + pin bump; read back imageIDs and plan.json",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): All verdify-prod/dashboard/descheduler pod specs are registry.vallery.net/...@sha256. descheduler at acb0969a Synced/Healthy, pull secret present, 14:15Z job Succeeded. imageIDs still alias docker.io (grafana, traefik, nginx-unprivileged, postgres) and registry.k8s.io (descheduler). Remaining: Live imageIDs only registry.vallery.net (node-side aliases remain); One firmware-builder run completes on custody esphome/cosign images with a receipt. Next: Get the criterion-3 reading settled (spec vs node imageID alias), then one firmware-builder run on the custody esphome/cosign images with a receipt (CronJob is suspended; last success 2026-09-29).",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
-      "decision": "Re-scope pending Jason: Hermes's image goes through the local registry instead of being retired; descheduler still waits on #802.",
+      "decision": "Criterion 3 imageIDs: accept pod-spec custody refs (imageID shows containerd's first-pulled alias, same digest), or require a node-side image purge/re-pull so imageIDs read registry.vallery.net?",
       "status": "open"
     },
     {
@@ -6078,7 +6076,7 @@
       "paths": [
         "firmware/greenhouse"
       ],
-      "baseline": "Triage 2026-11-07: 17 h clean: 959 rows, 0 invalid, miss 0, max age 885 s, best offset -0.53 s on 36c7630c Remaining: 24 h SNTP window closes 2026-11-07 ~09:55Z (restarts if W6 flash lands first); network-infra chronyc clients readback listing 192.168.10.111. Blocker: dated-gate:2026-11-07. Next: Rerun 24 h diagnostics query after gate on live build; request VM305 chronyc readback",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): 24 h on 36c7630c (11-06 09:55Z-11-07 09:55Z): 1343 rows, invalid 0, miss 0, max sync age 885 s, best offset 0.31 s. Post-flash 9517acb6: 222 rows, 0/0, 886 s, 0.92 s. network-infra#864 OPEN (deferred). Remaining: chronyc clients readback on VM305 listing 192.168.10.111; N-10 DNAT probe (conditional on jvallery/network-infra#864, deferred there). Next: network-infra reads `chronyc clients` on VM305 (value-free) for 192.168.10.111; then close with the N-10 criterion carried to jvallery/network-infra#864.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
@@ -6106,7 +6104,7 @@
       "paths": [
         "docs/research/w5"
       ],
-      "baseline": "Triage 2026-11-07: Mig 305 live; night_dried_out false 11-01..11-06 (max 115 min); doc, ADR amend, follow-ups #1431-1435 done Remaining: 7 full dry-out nights 11-07..11-13 graded by night_dried_out; rerun core query for last 7 days vs operator and achievable band, recorded. Blocker: dated-gate:2026-11-13. Next: Rerun core query after 06:00 MST 11-13",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): daily_band_compliance night_dried_out false every night 11-03..11-07; night_dryout_min 55/0/20/115/155 (needs 240). Dry-out live: sw_night_dryout_enabled 1, pulse 120 s, rest 780 s, cap 10 kWh; night_dryout_pulse mode 9x 11-06, 7x 11-07 (local). Remaining: 7 dry-out nights 11-07..11-13 graded by night_dried_out; core query rerun against operator and achievable bands (#1433 open). Gate: 2026-11-13T13:00Z. Next: After 2026-11-13T13:00Z rerun the core query for 11-07..11-13 against the operator and achievable bands and record it here.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
@@ -6165,7 +6163,7 @@
       "paths": [
         "firmware/greenhouse"
       ],
-      "baseline": "Triage 2026-11-07: Subscriber + firmware rule live; last occupancy=t 2026-11-05 20:51Z, no walk-in since Remaining: observed walk-in: main lights on within ~5 s of Frigate person message; return to Auto 15 min after last detection; change logged with cause occupancy. Blocker: physical. Next: After an on-site visit, measure MQTT time vs grow_light_main edge and 15-min return",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): occupancy last true 2026-11-05 20:51:30Z; system_state occupancy=empty at 14:18Z. MQTT subscriber (#1374) and main-light occupancy rule (#1382) live in fw 9517acb6. No walk-in observed since. Remaining: Lights on within ~5 s of first Frigate person message; Return to Auto 15 min after last detection; Every change logged with cause occupancy; no conflict with policy/manual. Next: Any on-site visit: walk into the greenhouse camera view; agents measure MQTT person message time vs grow_light_main edge (<=~5 s) and the 15-min return to Auto, with cause occupancy logged.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "A walk-in to the greenhouse (natural visit) to produce the live evidence",
@@ -6221,7 +6219,7 @@
       "paths": [
         "ci"
       ],
-      "baseline": "Triage 2026-11-07: Required checks now GHA-only (ci / *), no native status on main 77a70404, GHA build on main push, ARC sets registered Remaining: .agent-fleet/ci.yaml removal; remove 2 repo webhooks; before/after protection JSON receipt; GHA-built digest deployed Synced+Healthy with probe (receipt); remove native in-cluster pipeline + registry rows. Blocker: software-ready. Next: Agents/estate PRs removing native wiring + ci.yaml + webhooks; attach receipts; L9 close",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Protection requires only ci/* (app 15368); main 5de074e9 has 0 commit statuses; .agent-fleet/ci.yaml absent on main; Argo Workflow CRDs gone. Hooks 651752756/700993731 exist (inactive); 5 agent-fleet-verdify-* ConfigMaps in agent-fleet-ci; agents#6243 OPEN. Remaining: agents registry record for this repo gated / native rows removed (agents#6243); Two repo webhooks deleted; Native in-cluster leftovers (5 ConfigMaps) removed. Next: COORD merges agents#6243 (registry record gh-1247193937 -> gated); NATIVE-EXIT D10 deletes the two inactive repo webhooks and the 5 agent-fleet-ci ConfigMaps; then read back hooks=[] and no agent-fleet-verdify-* ConfigMaps.",
       "delivery": "Merge through in-cluster CI, release through the gated verdify-prod-dark sync (or the firmware release job), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-06 triage.",
@@ -6249,7 +6247,7 @@
       "paths": [
         "firmware"
       ],
-      "baseline": "Triage 2026-11-07: Last 24 h ch1_power_w avg -1200 W, min -1476 W: still reversed Remaining: flip clamp; raw ch1 positive while heat1 runs; follow-up to drop #1369 abs workaround. Blocker: physical. Next: Jason flips clamp on site, then rerun sign query",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): energy.ch1_power_w last 24 h: min -1464 W, max 15 W, avg -1167 W (288 rows); last 3 h min -1454 W. Clamp still reversed. Remaining: clamp flipped so raw ch1_power_w is positive while heat1 runs; follow-up to remove the #1369 abs workaround. Next: Jason flips the heat1 Shelly ch1 clamp on site; then rerun the sign query and file the follow-up that drops the #1369 abs workaround.",
       "delivery": "Merge through CI, release through the gated verdify-prod-dark sync (or the firmware release job, or on-site work), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-07 triage.",
@@ -6279,7 +6277,7 @@
       "paths": [
         "planning"
       ],
-      "baseline": "Triage 2026-11-07: Prereq night_dried_out (mig 305) live; experiment not started Remaining: one-week run varying one source per night; ranked moisture budget in vpd-band.md. Blocker: physical. Next: Schedule the week after the 11-13 dry-out baseline",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Prerequisite night_dried_out (migration 305) live and grading (11-03..11-07 all false). E-1 not started; no moisture budget in docs/research/w5/vpd-band.md yet. Remaining: one-week E-1 run with per-night single-source variation; ranked moisture budget recorded in docs/research/w5/vpd-band.md. Gate: 2026-11-13T13:00Z. Next: After the 11-13 dry-out baseline, Jason approves the start week and does the on-site one-source-at-a-time variations; agents log nightly dewpoint, pulses and prior-day irrigation/mist.",
       "delivery": "Merge through CI, release through the gated verdify-prod-dark sync (or the firmware release job, or on-site work), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-07 triage.",
@@ -6296,7 +6294,6 @@
       "owner_role": "Control lead",
       "parent": null,
       "depends_on": [
-        "1365",
         "1431"
       ],
       "what": "VPD: HAF circulation fans now; dehumidifier pilot decision after vent + reheat data.",
@@ -6310,10 +6307,10 @@
       "paths": [
         "planning"
       ],
-      "baseline": "Triage 2026-11-07: No work started; hardware + decision gated Remaining: HAF fan spec, switching, schedule; dehumidifier pilot decision after 7 graded nights + E-1 budget, in decisions.md. Blocker: physical. Next: Fan spec proposal for Jason",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): No fan spec proposal posted on the issue yet. Graded vent+reheat nights so far: 11-06, 11-07 (night_dried_out false both). #1431 not started. Remaining: HAF fan spec and switching path approved; firmware/entity issue if the controller owns the fans; dehumidifier pilot decision recorded in decisions.md. Next: Agents draft the HAF fan spec (count, CFM, mounting, power, switching, schedule) on this issue for Jason's approval; the dehumidifier pilot decision waits for ≥7 graded vent+reheat nights and #1431.",
       "delivery": "Merge through CI, release through the gated verdify-prod-dark sync (or the firmware release job, or on-site work), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
-      "decision": "No open Jason decision recorded at the 2026-11-07 triage.",
+      "decision": "Approve the HAF fan spec once posted (count/CFM/switching via Shelly or Home Assistant; continuous or scheduled); decide the dehumidifier pilot later (30-50 pint/day unit vs more vent+reheat).",
       "status": "open"
     },
     {
@@ -6339,10 +6336,10 @@
         "dashboard",
         "verdify_services"
       ],
-      "baseline": "Triage 2026-11-07: No envelope code on main 77a70404 Remaining: envelope function in verdify_schemas + SQL mirror; dual grading; dashboard display; #1334 editor overlay. Blocker: software-ready. Next: Build read-model envelope function",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): #1455 (67751a08) in api 53d06488 = release-pins (00b53fe3) and live web 00b53fe3. No SQL mirror (commit: no migration). API-06 ?achievable needs BFF session; no live readback or walk recorded. Remaining: scope 1: SQL mirror of the envelope (not built); API-06 ?achievable=true live readback; dashboard achievable band + dual grade seen live; band editor 24 h preview overlay seen live. Next: Jason decides whether the SQL mirror is required now; then the U2 walk looks at Graphs → Climate achievable edges + 'in band N% · achievable M%' and the band editor preview.",
       "delivery": "Merge through CI, release through the gated verdify-prod-dark sync (or the firmware release job, or on-site work), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
-      "decision": "No open Jason decision recorded at the 2026-11-07 triage.",
+      "decision": "Scope 1 'mirrored in SQL': accept the pure-function-only read model until a SQL rollup consumes it (defer the mirror), or require a serialized migration now.",
       "status": "open"
     },
     {
@@ -6356,7 +6353,9 @@
       "owner_role": "Control lead",
       "parent": null,
       "depends_on": [
-        "1433"
+        "1365",
+        "1433",
+        "1360"
       ],
       "what": "Planner study #1360: VPD scoring baseline (dry-out minutes, dried-out flag, kWh; served + achievable band).",
       "why": "Tracked on the GitHub issue; acceptance criteria and their amendments live in the issue body and comments. Added to the validated plan by the 2026-11-07 triage.",
@@ -6369,7 +6368,7 @@
       "paths": [
         "verdify_schemas"
       ],
-      "baseline": "Triage 2026-11-07: night_dried_out grading live; deferred; #1360 paused Remaining: 7 dry-out nights + core query rerun; shared lever set; achievable-envelope scoring. Blocker: dated-gate:2026-11-13. Next: None until gate and #1360 resumes",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): night_dried_out grading live (11-03..11-07 all false). #1433 (achievable envelope) OPEN; #1360 OPEN and parked by Jason 2026-11-06. Remaining: 7 dry-out nights with the #1365 core-query rerun; shared lever set for both arms; scoring against the achievable envelope (#1433). Gate: 2026-11-13T13:00Z. Next: None until 2026-11-13 and Jason resumes #1360; then record the scoring baseline (dry-out minutes, dried-out flag, kWh vs cap) against the served band and #1433's achievable envelope.",
       "delivery": "Merge through CI, release through the gated verdify-prod-dark sync (or the firmware release job, or on-site work), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-07 triage.",
@@ -6397,7 +6396,7 @@
       "paths": [
         "planning"
       ],
-      "baseline": "Triage 2026-11-07: Seasonal; nothing due yet Remaining: rerun #1365 core query 2026-12-01..12-15; winter ceiling-side decision in decisions.md. Blocker: dated-gate:2026-12-15. Next: Rerun mid-December (door window already closed per Jason 11-05)",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Seasonal gate not reached (2026-11-07). Door screen-window closed per Jason 2026-11-05 (confounder from 11-05). Grading columns needed for the rerun are live (migration 305). Remaining: December 1-15 core query rerun; winter ceiling-side decision recorded. Gate: 2026-12-15T13:00Z. Next: Mid-December: rerun the #1365 core query for 2026-12-01..12-15 and decide on a winter ceiling-side action in decisions.md.",
       "delivery": "Merge through CI, release through the gated verdify-prod-dark sync (or the firmware release job, or on-site work), then verify the live end state.",
       "rollback": "Revert the change or the release pin; firmware rolls back to the signed last-good image.",
       "decision": "No open Jason decision recorded at the 2026-11-07 triage.",
@@ -6455,7 +6454,7 @@
         "deploy/k8s/overlays/prod/kustomization.yaml",
         "deploy/k8s/overlays/prod/release-pins.yaml"
       ],
-      "baseline": "Delta triage 2026-11-07: All 9 flagged images still run in verdify-prod with the pins on main; no PR yet. Criticals' 7-day window ends 2026-11-14.",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Live specs: hermes-agent derived @1fa1f16e, renderer derived @c297463e, postgres mirror @43f9275d, mosquitto @22075095, python 3.12 @a61cbd76, traefik v3.7.17, planner @e7cc9183. timescaledb @05f59252 unchanged (planned exception). agents exceptions: only the old renderer v5.12.9 entry for Verdify. Remaining: R26 exceptions for remaining no-fix Critical/High (none filed for the new digests); timescaledb Go stdlib Critical: exception or rebuild; Next daily scan shows only exception-bound findings (2026-11-08 02:15Z). Gate: 2026-11-08T02:15Z. Next: File the R26 exception PR in jvallery/agents findings-exceptions.json for the no-fix findings on the new digests (timescaledb gosu, grafana 12.4.14, derived hermes-agent, postgres 43f9275d, derived renderer), then confirm at the 2026-11-08 02:15Z scan; STD-OPS-01 7-day window ends 2026-11-14.",
       "delivery": "Merge through CI, release through the gated verdify-prod-dark sync, then verify the live end state.",
       "rollback": "Revert the change or the release pin.",
       "decision": "No open Jason decision recorded at the 2026-11-07 triage.",
@@ -6483,10 +6482,66 @@
       "paths": [
         ".github/workflows"
       ],
-      "baseline": "Delta triage 2026-11-07: Release 4 (#1447) raised the validate timeout 50 to 90 min; #1438's run took about 39 min. Deferred.",
+      "baseline": "Triage 2026-11-07 PM (independent verifier): ci / validate on run 42376405936 (13:20:23Z-13:57:50Z) took 37.5 min, under the 90-min timeout and the ~60-min trigger; still one serial job. Remaining: Split validate into 2-3 serial jobs with an aggregate, or relax the 3 wall-clock asserts. Next: Keep deferred; pick up when ci / validate exceeds ~60 min or PR latency becomes the bottleneck.",
       "delivery": "Merge through CI, release through the gated verdify-prod-dark sync, then verify the live end state.",
       "rollback": "Revert the change or the release pin.",
       "decision": "No open Jason decision recorded at the 2026-11-07 triage.",
+      "status": "open"
+    },
+    {
+      "key": "1477",
+      "issue_number": 1477,
+      "title": "firmware: retire or justify the activity-mirror entities and DLI/lighting tunables deferred from #369",
+      "stage": "C6",
+      "kind": "task",
+      "priority": "P3",
+      "effort": "M",
+      "owner_role": "Platform lead",
+      "parent": "430",
+      "depends_on": [],
+      "what": "firmware: retire or justify the activity-mirror entities and DLI/lighting tunables deferred from #369.",
+      "why": "Added by the 2026-11-07 afternoon triage so every open issue has one dependency-ordered record; acceptance lives on the GitHub issue.",
+      "how": [
+        "Inventory the activity-mirror entities and DLI/lighting tunables left by #369 with their consumers; retire unused ones in the next signed flash or record why each stays"
+      ],
+      "acceptance": [
+        "Every acceptance criterion on the GitHub issue, as amended in its comments, holds live, verified by an independent verifier (L9)."
+      ],
+      "paths": [
+        "firmware"
+      ],
+      "baseline": "Triage 2026-11-07 PM (independent verifier): Carry from #369, labelled deferred; no PR references it yet. Live 9517acb6 enumerates 540 entities (baseline for the next drop). Remaining: firmware change or documented decision for each activity-mirror entity and DLI/lighting tunable; post-flash entity drop and 24 h clean push/unknown-entity log. Next: Prepare the activity-mirror / DLI-lighting retire-or-justify change so it rides the next firmware release; after that flash, check the entity count drops by the number removed and 24 h without push or unknown-entity errors.",
+      "delivery": "Merge through CI, release through the gated verdify-prod-dark sync, then verify the live end state.",
+      "rollback": "Revert the change or the release pin.",
+      "decision": "None needed.",
+      "status": "open"
+    },
+    {
+      "key": "1480",
+      "issue_number": 1480,
+      "title": "Cortex shadow planner runs out of tokens in reasoning: SUNRISE 11-07 wrote no proposal",
+      "stage": "OPS",
+      "kind": "task",
+      "priority": "P2",
+      "effort": "M",
+      "owner_role": "Platform lead",
+      "parent": null,
+      "depends_on": [],
+      "what": "Cortex shadow planner runs out of tokens in reasoning: SUNRISE 11-07 wrote no proposal.",
+      "why": "Added by the 2026-11-07 afternoon triage so every open issue has one dependency-ordered record; acceptance lives on the GitHub issue.",
+      "how": [
+        "Repair attempt runs with reasoning off and max_tokens raised within REQUEST_TOKEN_CAP (PR #1482); release 7; watch three shadow triggers"
+      ],
+      "acceptance": [
+        "Every acceptance criterion on the GitHub issue, as amended in its comments, holds live, verified by an independent verifier (L9)."
+      ],
+      "paths": [
+        "cortex_planner"
+      ],
+      "baseline": "Triage 2026-11-07 PM (independent verifier): PR #1482 OPEN, BLOCKED (head f7331c34; validate and campaign-qualification in progress, other checks SUCCESS). Last shadow rows: SUNRISE 13:38Z primary length (12000 reasoning) and 13:43Z repair length (10997). Burst attributed in PR body; carry cortex-ai-compute#487 OPEN. Remaining: Repair attempt cannot end in reasoning (PR #1482 merged and released); Burst carry recorded on this issue (cortex-ai-compute#487); Next 3 consecutive shadow triggers after release write ok or attributed non-length failures. Next: Land PR #1482 once ci / validate and campaign-qualification go green, ship it in release 7 (cortex-planner rolls on sync), then watch the next 3 shadow triggers in planner_inference_runs.",
+      "delivery": "Merge through CI, release through the gated verdify-prod-dark sync, then verify the live end state.",
+      "rollback": "Revert the change or the release pin.",
+      "decision": "None needed.",
       "status": "open"
     }
   ],
@@ -6494,7 +6549,7 @@
     "reviewed_at": "2026-11-07",
     "source_revision": "77a70404c09f733b73bf432ef81f0c7d4ab5bc96",
     "capacity_hours_per_week": 40,
-    "review_path": "planning/reviews/2026-11-07-triage/README.md",
+    "review_path": "planning/reviews/2026-11-07-pm-triage/README.md",
     "open_issues": [
       16,
       45,
@@ -6518,12 +6573,8 @@
       1001,
       1009,
       1010,
-      1113,
-      1118,
       1120,
-      1130,
       1132,
-      1135,
       1161,
       1162,
       1164,
@@ -6534,10 +6585,8 @@
       1184,
       1186,
       1277,
-      1313,
       1322,
       1325,
-      1329,
       1332,
       1333,
       1335,
@@ -6570,667 +6619,364 @@
       1433,
       1434,
       1435,
-      1450,
       1458,
-      1459
+      1459,
+      1477,
+      1480
     ],
     "sprints": [
       {
-        "id": "U0",
-        "title": "U0: Unblock releases (software, now)",
-        "goal": "Land #1451 (lab guard), #1443 + catch-up builds, #1438, the dashboard-web repin, #1449 NP sync, field-manager cleanup, the #1346 brief fix and #1450.",
-        "exit": "Lab publisher green, dashboard web past #1425, crops writes live, briefs ok for 24 h, gather under half its cap.",
-        "kind": "sprint",
-        "capacity_hours": 24
-      },
-      {
-        "id": "U1",
-        "title": "U1: W6 single firmware flash + OTA rotation (2026-11-07 morning)",
-        "goal": "Flash 2026.11.7.0133.9517acb6 after #1364's window and a required plan clears the preflight; Jason promotes the OTA password.",
-        "exit": "Device on the W6 build, post-flash checks green, last-good pinned, promote done.",
-        "kind": "sprint",
-        "capacity_hours": 8
-      },
-      {
-        "id": "U2",
-        "title": "U2: Live verification walk (Jason signed-in + operator looks)",
-        "goal": "One signed-in walk and in-cluster operator looks of shipped pages; one attended L04 run.",
-        "exit": "Each walked criterion recorded on its issue.",
+        "id": "R7",
+        "title": "R7: Release 7 (software, next attended session)",
+        "goal": "Merge pin PR #1481 and fix PR #1482, promote the five release pins, gated full sync of verdify-prod-dark with smoke, device-monitor, ingestor watch and 30-min soak.",
+        "exit": "Prod on release 7; #1277 C1 check recorded; #1351 selector egress cut live; #1480 shadow writes ok proposals for 3 triggers.",
         "kind": "sprint",
         "capacity_hours": 6
       },
       {
-        "id": "U3",
-        "title": "U3: Time-gated soaks",
-        "goal": "Close at the gate with live evidence.",
-        "exit": "#1364 11-07, #1346 24 h after its fix, #1352/#1365/#1434 11-13, #1435 mid-December.",
-        "kind": "sprint",
-        "capacity_hours": null
-      },
-      {
-        "id": "U4",
-        "title": "U4: Hardware, replant and irrigation bring-up (Jason physical)",
-        "goal": "On-site sensors, clamps, cameras, panel and hose checks, and the replant.",
-        "exit": "Each physical criterion recorded with live readback.",
-        "kind": "sprint",
-        "capacity_hours": null
-      },
-      {
-        "id": "U5",
-        "title": "U5: External owners and upstream",
-        "goal": "agents, network-infra and upstream changes this repo waits on.",
-        "exit": "Each external change merged and read back live.",
-        "kind": "sprint",
-        "capacity_hours": null
-      },
-      {
-        "id": "U6",
-        "title": "U6: Engineering backlog and parked study",
-        "goal": "Bounded new engineering once U0-U1 land; #1360 stays parked by Jason's 2026-11-06 decision.",
-        "exit": "#1433 shipped; #1360 resumes only on Jason's word.",
+        "id": "S1",
+        "title": "S1: Software backlog (agents, no Jason dependency)",
+        "goal": "Finish the remaining software slices: #1352 Slack remainder, #1458 CVE exceptions and rescan, #299 fence decision follow-through, #1432 fan spec.",
+        "exit": "Each item at its verifier gate.",
         "kind": "sprint",
         "capacity_hours": 16
       },
       {
-        "id": "ROLLUP",
-        "title": "ROLLUP: Program roll-ups",
-        "goal": "Epics close when every child is closed or carried.",
-        "exit": "All children closed or carried.",
+        "id": "V1",
+        "title": "V1: Jason signed-in walk and attended runs",
+        "goal": "One signed-in walk of dashboard.verdify.ai (desktop + 390 px), one light hold test, one attended L04 run-once, one daytime Restart, and Jason running promote (D-71).",
+        "exit": "Each walked criterion recorded on its issue; verifier closes.",
         "kind": "sprint",
+        "capacity_hours": 4
+      },
+      {
+        "id": "T1",
+        "title": "T1: Dated soaks",
+        "goal": "Close at the gate with live evidence.",
+        "exit": "#386 11-08 05:00Z, #368 11-08 10:27Z, #1346 11-08 07:06Z, #367/#369/#390 11-09 07:00Z, #1365/#359/#775 11-13, #1435 12-15.",
+        "kind": "ongoing",
+        "capacity_hours": null
+      },
+      {
+        "id": "H1",
+        "title": "H1: Jason on-site hardware, replant and irrigation bring-up",
+        "goal": "Sensors (CO2, south probe, PAR, hydro), clamp, panel buttons, hose test, replant and topology survey, line bring-up.",
+        "exit": "Each physical criterion recorded with live readback.",
+        "kind": "conditional",
+        "capacity_hours": null
+      },
+      {
+        "id": "D1",
+        "title": "D1: Blocked on a Jason decision",
+        "goal": "Decide the scope question on the issue.",
+        "exit": "Decision recorded in docs/design/dashboard/decisions.md and on the issue.",
+        "kind": "conditional",
+        "capacity_hours": null
+      },
+      {
+        "id": "X1",
+        "title": "X1: External owners",
+        "goal": "Track the named jvallery/agents, network-infra and cortex-ai-compute items.",
+        "exit": "Owner item closed and readback recorded here.",
+        "kind": "ongoing",
+        "capacity_hours": null
+      },
+      {
+        "id": "P1",
+        "title": "P1: Parked / deferred",
+        "goal": "Parked by decision or deferred with a carry.",
+        "exit": "Resumed by Jason or closed as not planned.",
+        "kind": "future",
+        "capacity_hours": null
+      },
+      {
+        "id": "ROLLUP",
+        "title": "ROLLUP: Epics",
+        "goal": "Close when every child closes or carries.",
+        "exit": "Children closed or carried.",
+        "kind": "rollup",
         "capacity_hours": null
       }
     ],
     "allocations": [
       {
-        "issue_number": 1329,
-        "sprint": "U0",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Fix publisher public-output guard failure on /reference/ai-tunables, run publisher, compare pages",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1332,
-        "sprint": "U0",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Read guard finding, fix ai-tunables text or rule, run publisher; then Jason walk",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1322,
-        "sprint": "U0",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Repin dashboard web past #1425 and sync, then phone check",
-        "owner_role": "Dashboard/irrigation lead"
-      },
-      {
-        "issue_number": 1339,
-        "sprint": "U0",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Bump dashboard-web pin to a build containing 1a08e6d4, sync verdify-dashboard, walk Now",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1345,
-        "sprint": "U0",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Bump dashboard-web pin, make one soil-target edit, read back API, activity and soil_dryout threshold",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1349,
-        "sprint": "U0",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Bump dashboard-web pin, sync, Jason walk of Water Today",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1354,
-        "sprint": "U0",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Bump dashboard-web pin, capture cross-page set; closes #1322 item 1",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1351,
-        "sprint": "U0",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Run supervisor field-manager release on the two Deployments and read back; get Jason's call on the selector",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1346,
-        "sprint": "U0",
-        "hours_min": 2,
-        "hours_max": 6,
-        "next_action": "[merged, awaiting release 5] #1457 merged aa22faa6; ship in release 5, then verify live",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1450,
-        "sprint": "U0",
-        "hours_min": 2,
-        "hours_max": 6,
-        "next_action": "[merged, awaiting release 5] #1454 merged f1b0a771; ship in release 5, then verify live",
-        "owner_role": "Platform lead"
-      },
-      {
-        "issue_number": 299,
-        "sprint": "U1",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[waits-on-W6-flash] read mister edges around flash reboot",
-        "owner_role": "Control lead"
-      },
-      {
-        "issue_number": 359,
-        "sprint": "U1",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[waits-on-W6-flash] re-check after flash and 11-13",
-        "owner_role": "Control lead"
-      },
-      {
-        "issue_number": 367,
-        "sprint": "U1",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[waits-on-W6-flash] compare matched days post-flash from equipment_state edges",
-        "owner_role": "Control lead"
-      },
-      {
-        "issue_number": 368,
-        "sprint": "U1",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[waits-on-W6-flash] read diagnostics.probe_health 24h post-flash",
-        "owner_role": "Control lead"
-      },
-      {
-        "issue_number": 369,
-        "sprint": "U1",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[waits-on-W6-flash] post-flash entity and esp32_push_failed check",
-        "owner_role": "Control lead"
-      },
-      {
-        "issue_number": 386,
-        "sprint": "U1",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[waits-on-W6-flash] run growlight-boundary-episodes.py daily post-flash",
-        "owner_role": "Platform lead"
-      },
-      {
-        "issue_number": 390,
-        "sprint": "U1",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[waits-on-W6-flash] record W6 preflight output and sweep, then close",
-        "owner_role": "Platform lead"
-      },
-      {
-        "issue_number": 430,
-        "sprint": "U1",
-        "hours_min": 2,
-        "hours_max": 6,
-        "next_action": "[waits-on-W6-flash] compare heap floor and pushes/day post-flash",
-        "owner_role": "Control lead"
-      },
-      {
-        "issue_number": 1009,
-        "sprint": "U1",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[waits-on-W6-flash] Record rotation receipt at the W6 flash; passive ACL readback when network-infra#839 lands",
-        "owner_role": "Platform/security lead"
-      },
-      {
-        "issue_number": 1277,
-        "sprint": "U1",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[waits-on-W6-flash] After W6 flash, run one C1 capture or validate_wire_contract vs live preview",
-        "owner_role": "Platform lead"
-      },
-      {
-        "issue_number": 1313,
-        "sprint": "U1",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[waits-on-W6-flash] After W6 flash, read back firmware version and close",
-        "owner_role": "Platform lead"
-      },
-      {
-        "issue_number": 1335,
-        "sprint": "U1",
-        "hours_min": 2,
-        "hours_max": 6,
-        "next_action": "[waits-on-W6-flash] After W6 flash + web repin, run lane C live check",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1342,
-        "sprint": "U1",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[waits-on-W6-flash] After W6 flash + web pin bump, run #1335 live hold check and capture operator renders",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 370,
-        "sprint": "U1",
-        "hours_min": 2,
-        "hours_max": 6,
-        "next_action": "[blocked-by-issue] start after #367 live parity; P3",
-        "owner_role": "Control lead"
-      },
-      {
-        "issue_number": 1130,
-        "sprint": "U2",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Read-only in-cluster operator Playwright look (lane-F style) or Jason's look at /graphs/statistics",
-        "owner_role": "Dashboard/irrigation lead"
-      },
-      {
-        "issue_number": 1132,
-        "sprint": "U2",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Read-only in-cluster operator Playwright look or Jason's look at /settings (also #1181 item 1)",
-        "owner_role": "Dashboard/irrigation lead"
-      },
-      {
-        "issue_number": 1135,
-        "sprint": "U2",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Read-only in-cluster operator Playwright look or Jason's look at /water/history 30 d",
-        "owner_role": "Dashboard/irrigation lead"
-      },
-      {
-        "issue_number": 1181,
-        "sprint": "U2",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[jason-decision] Include /settings in Jason's W6 signed-in walk",
-        "owner_role": "Dashboard/irrigation lead"
-      },
-      {
-        "issue_number": 1186,
-        "sprint": "U2",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[jason-decision] One signed-in Jason walk",
-        "owner_role": "Dashboard/irrigation lead"
-      },
-      {
-        "issue_number": 1333,
-        "sprint": "U2",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[jason-decision] Include in Jason's W6 walk",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1337,
-        "sprint": "U2",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Jason/operator walk of Now, then close",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1338,
-        "sprint": "U2",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Midday walk of Now",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1341,
-        "sprint": "U2",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Jason/operator walk, then close",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1347,
-        "sprint": "U2",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Jason walk, then close",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1355,
-        "sprint": "U2",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Jason/operator walk at 72h",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1356,
-        "sprint": "U2",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Jason/operator walk",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1358,
-        "sprint": "U2",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Walk the four surfaces for one day",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1343,
-        "sprint": "U2",
-        "hours_min": 1,
-        "hours_max": 2,
-        "next_action": "[software-ready] Jason attended L04 run-once",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1364,
-        "sprint": "U3",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[dated-gate:2026-11-07] Rerun 24 h diagnostics query after gate on live build; request VM305 chronyc readback",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1352,
-        "sprint": "U3",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[dated-gate:2026-11-13] Field-manager release on hermes-iris, sweep Slack code references, record test page, coordinator revoke after 11-13",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1365,
-        "sprint": "U3",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[dated-gate:2026-11-13] Rerun core query after 06:00 MST 11-13",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1434,
-        "sprint": "U3",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[dated-gate:2026-11-13] None until gate and #1360 resumes",
-        "owner_role": "Control lead"
-      },
-      {
-        "issue_number": 1435,
-        "sprint": "U3",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[dated-gate:2026-12-15] Rerun mid-December (door window already closed per Jason 11-05)",
-        "owner_role": "Control lead"
-      },
-      {
         "issue_number": 16,
-        "sprint": "U4",
+        "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[physical] Jason installs replacement sensors; verify in children",
+        "next_action": "Roll-up only: verify each child live after Jason's installs (CO2 #51, south probe #751, PAR #1184) and the replant (#298 -> #398 -> #45, #52).",
         "owner_role": "Operator with data/control lead"
       },
       {
         "issue_number": 45,
-        "sprint": "U4",
+        "sprint": "H1",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[physical] after replant, wire and verify installed probes",
+        "next_action": "After Jason's replant, wire the soil/runoff probes that are actually installed, then run the feedback check from live readings.",
         "owner_role": "Operator with data/control lead"
       },
       {
         "issue_number": 51,
-        "sprint": "U4",
+        "sprint": "H1",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[physical] verify after Jason installs new sensor",
+        "next_action": "Jason installs the replacement CO2 sensor (parts on order); agents verify plausible live ppm against outdoor ambient or a reference and confirm units and guards.",
         "owner_role": "Operator with data/control lead"
       },
       {
         "issue_number": 52,
-        "sprint": "U4",
+        "sprint": "H1",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[physical] December recheck with #1365 after replant",
+        "next_action": "After the replant, Jason records crop observations and a no-change or one reversible seasonal-care decision; December recheck alongside #1435.",
         "owner_role": "Operator with data/control lead"
       },
       {
         "issue_number": 75,
-        "sprint": "U4",
+        "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[physical] confirm a successful vision run after camera fix; verify replacement probes",
+        "next_action": "Epic: #1118 closes today; remaining physical-fault children are #751 (south probe) and #51 (CO2). Close the roll-up once those are verified, or carry them to #16.",
         "owner_role": "Platform lead"
-      },
-      {
-        "issue_number": 298,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[physical] record replant survey with #1329",
-        "owner_role": "Operator with data/control lead"
-      },
-      {
-        "issue_number": 751,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[physical] After Jason installs the probe, read temp/rh/vpd_south freshness and peer comparison",
-        "owner_role": "Operator with data/control lead"
-      },
-      {
-        "issue_number": 1118,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[physical] Read the 04:00Z run on image ccd254de; if greenhouse_2 still HTTP 500, fix the camera in jvallery/sentinel",
-        "owner_role": "Platform lead"
-      },
-      {
-        "issue_number": 1161,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[physical] On-site hose run; read fog/moisture_block_reason while leak_detected true",
-        "owner_role": "Dashboard/irrigation lead"
-      },
-      {
-        "issue_number": 1162,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[physical] Someone at the panel presses FANS/HUMID/VENT-BYPASS; read fan_burst_active edges",
-        "owner_role": "Dashboard/irrigation lead"
-      },
-      {
-        "issue_number": 1164,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[physical] Daytime operator Restart with confirmation read after W6 flash settles; then on-site checks",
-        "owner_role": "Dashboard/irrigation lead"
-      },
-      {
-        "issue_number": 1165,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[physical] Jason records L01 check; enables L07/L09 after the re-plant",
-        "owner_role": "Dashboard/irrigation lead"
-      },
-      {
-        "issue_number": 1183,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[physical] Jason reconnects YINMIK meter and seals verdify-hydro-probe",
-        "owner_role": "Dashboard/irrigation lead"
-      },
-      {
-        "issue_number": 1184,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[physical] Jason fits replacement PAR sensor (parts on order)",
-        "owner_role": "Dashboard/irrigation lead"
-      },
-      {
-        "issue_number": 1336,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[physical] Jason walk now; enable L07/L08 with the replant, then create/run the fertilized schedule and read back irrigation_ledger",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1370,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[physical] After an on-site visit, measure MQTT time vs grow_light_main edge and 15-min return",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1424,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[physical] Jason flips clamp on site, then rerun sign query",
-        "owner_role": "Firmware/HA lead"
-      },
-      {
-        "issue_number": 1431,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[physical] Schedule the week after the 11-13 dry-out baseline",
-        "owner_role": "Control lead"
-      },
-      {
-        "issue_number": 1432,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[physical] Fan spec proposal for Jason",
-        "owner_role": "Control lead"
       },
       {
         "issue_number": 297,
-        "sprint": "U4",
+        "sprint": "H1",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[blocked-by-issue] wait for #398/#45",
+        "next_action": "After #398 targets and #45 live probes: bind the delivered evaluator, enable the saturation alert, then an irrigation-engine slot skip.",
         "owner_role": "Control lead"
       },
       {
-        "issue_number": 398,
-        "sprint": "U4",
+        "issue_number": 298,
+        "sprint": "H1",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[blocked-by-issue] wait for replant",
+        "next_action": "Jason replants and records per-position crop, pot, substrate, probe and plumbing; agents reconcile config/DB without enabling irrigation.",
         "owner_role": "Operator with data/control lead"
       },
       {
-        "issue_number": 1166,
-        "sprint": "U4",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[blocked-by-issue] After #1165 and the tank/injector setup, Jason records checks and enables L02/L03 then L08/L10",
-        "owner_role": "Dashboard/irrigation lead"
+        "issue_number": 299,
+        "sprint": "S1",
+        "hours_min": 1,
+        "hours_max": 2,
+        "next_action": "File the RTC-retained zone-fence follow-up (or get Jason's scope call), then read center-mister edges on the first post-flash misting day and around the next reset in misting hours.",
+        "owner_role": "Control lead"
       },
       {
-        "issue_number": 1001,
-        "sprint": "U5",
+        "issue_number": 359,
+        "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[blocked-by-issue] verdify-edge now holds only kube-root-ca.crt; get agents#4468 closed on that readback, then delete ns by exact name",
-        "owner_role": "Platform/security lead"
+        "next_action": "Re-check after #368 (11-08T10:27Z), #367/#369/#390 (11-09T07:00Z) and #1365 (11-13T13:00Z); close when each child is closed or carried.",
+        "owner_role": "Control lead"
       },
       {
-        "issue_number": 1010,
-        "sprint": "U5",
+        "issue_number": 367,
+        "sprint": "T1",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[blocked-by-issue] Land network-infra mcp.verdify.ai tunnel-row move + agents cloudflare-edge pin + ownership rows; then one orbit public call and Loki join",
-        "owner_role": "Platform/security lead"
+        "next_action": "After 2026-11-09T07:00Z compare per-relay starts/day, short cycles and runtime for local day 11-08 against matched pre-flash days from raw equipment_state edges.",
+        "owner_role": "Control lead"
       },
       {
-        "issue_number": 1113,
-        "sprint": "U5",
+        "issue_number": 368,
+        "sprint": "T1",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[merged, awaiting release 5] #1456 merged 0a875b38; ship in release 5, then verify live",
+        "next_action": "After 2026-11-08T10:27Z read diagnostics.probe_health for the 24 h since the flash; close if no JUMP/FLAT appears on North/West/East.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 369,
+        "sprint": "T1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "After #390's matched-day parity passes (from 2026-11-09T07:00Z), close with carry #1477.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 370,
+        "sprint": "P1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Start after #367 parity holds (2026-11-09T07:00Z); capture reverse-conflict/origin/restart/partial-delivery behaviour, then one minimal consolidation for the next firmware release.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 386,
+        "sprint": "T1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Run scripts/growlight-boundary-episodes.py daily after the first post-flash cutoffs (11-08 02:00-05:00Z) until a boundary_ok episode appears; it needs a natural ON shortly before a cutoff.",
         "owner_role": "Platform lead"
       },
       {
-        "issue_number": 1363,
-        "sprint": "U5",
+        "issue_number": 390,
+        "sprint": "T1",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[blocked-by-issue] agents PRs for descheduler pull secret + Lease grant + pin bump; read back imageIDs and plan.json",
-        "owner_role": "Dashboard wave-2 lead"
-      },
-      {
-        "issue_number": 1397,
-        "sprint": "U5",
-        "hours_min": null,
-        "hours_max": null,
-        "next_action": "[merged, awaiting release 5] #1456 merged 0a875b38; ship in release 5, then verify live",
+        "next_action": "After 2026-11-09T07:00Z run the matched-day parity read (starts, runtime, heap, resets) for local day 11-08 against pre-flash days and post it here, then close.",
         "owner_role": "Platform lead"
       },
       {
-        "issue_number": 1433,
-        "sprint": "U6",
-        "hours_min": 6,
-        "hours_max": 16,
-        "next_action": "[merged, awaiting release 5] #1455 merged 67751a08; ship in release 5, then verify live",
-        "owner_role": "Web lead"
+        "issue_number": 398,
+        "sprint": "H1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "After the replant, enter real per-zone targets through API-SOIL-02/MCP soil_target_set (migration 303 made the table editable), with before/after rows and inverse.",
+        "owner_role": "Operator with data/control lead"
       },
       {
-        "issue_number": 1360,
-        "sprint": "U6",
-        "hours_min": 6,
-        "hours_max": 16,
-        "next_action": "[jason-decision] None until Jason resumes the study (left as is 2026-11-06; Hermes is AI arm if resumed)",
-        "owner_role": "Dashboard wave-2 lead"
+        "issue_number": 430,
+        "sprint": "ROLLUP",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Roll up after #367/#369 parity (2026-11-09T07:00Z) with measured heap/traffic before and after; #370 is deferred to the next flash, so this epic stays open until then.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 751,
+        "sprint": "H1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Jason installs the replacement south climate probe and puts the YINMIK meter back on Wi-Fi; agents verify temp/rh/vpd_south vs peers, fallback drops, and the hydro alert resolves from telemetry.",
+        "owner_role": "Operator with data/control lead"
       },
       {
         "issue_number": 775,
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[waits-on-W6-flash] Re-check after W6 flash and the 2026-11-13 band gate; close when every child is closed or carried",
+        "next_action": "Re-check the W6-gated children at their gates now that firmware 2026.11.7.0133.9517acb6 is on the device (#368 11-08 10:27Z, #386 11-08, #367/#390 11-09); close the roll-up only when every child is closed or carried.",
         "owner_role": "Evidence/data lead"
+      },
+      {
+        "issue_number": 1001,
+        "sprint": "X1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "COORD merges agents#6243 (removes the 3 AppProject destinations), closes agents#4468 on the empty-namespace readback, then a UID-preconditioned delete of ns verdify-edge; D-16 HostRegexp drop waits on network-infra#602.",
+        "owner_role": "Platform/security lead"
+      },
+      {
+        "issue_number": 1009,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Jason runs `firmware-ota-password-rotate.sh promote` (D-71) and posts the metadata-only receipt; the passive UniFi ACL readback follows jvallery/network-infra#839/#42.",
+        "owner_role": "Platform/security lead"
+      },
+      {
+        "issue_number": 1010,
+        "sprint": "X1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "The network row is now live, so lane X can make the one public read-only MCP call (orbit) and record the Loki join plus the forged-header negative; the agents ownership rows land with agents#6243.",
+        "owner_role": "Platform/security lead"
       },
       {
         "issue_number": 1120,
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[blocked-by-issue] One read-only signed-in look (/graphs/statistics, /settings, /water/history 30 d); on-site checks; re-plant",
+        "next_action": "Keep open until every child closes or carries; the U2 walk clears #1132/#1181/#1186/#1322, the on-site work clears the physical children.",
+        "owner_role": "Dashboard/irrigation lead"
+      },
+      {
+        "issue_number": 1132,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "In the U2 walk Jason opens /settings and either accepts drawer + STALE ages as meeting R1.1 (record in decisions.md) or asks for per-row ages.",
+        "owner_role": "Dashboard/irrigation lead"
+      },
+      {
+        "issue_number": 1161,
+        "sprint": "H1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "On site, run a hose with every Verdify valve closed; agents read fog_block_reason and moisture_block_reason while leak_detected is true.",
+        "owner_role": "Dashboard/irrigation lead"
+      },
+      {
+        "issue_number": 1162,
+        "sprint": "H1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Someone at the panel presses the physical FANS/HUMID/VENT-BYPASS buttons to start and clear a burst; agents read fan_burst_active edges.",
+        "owner_role": "Dashboard/irrigation lead"
+      },
+      {
+        "issue_number": 1164,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Daytime operator Restart (an operator or Claude may, per the 2026-11-05 decision) with the settings and program-hash re-confirm read; then close once #1161 and #1162 record their on-site checks.",
+        "owner_role": "Dashboard/irrigation lead"
+      },
+      {
+        "issue_number": 1165,
+        "sprint": "H1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Jason records L01's check from the dashboard (can happen now); after the replant, enables L07/L09 with VPD/schedule and their checks under his name.",
+        "owner_role": "Dashboard/irrigation lead"
+      },
+      {
+        "issue_number": 1166,
+        "sprint": "H1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "After #1165 and the replant, Jason sets up the tank and injector behind L03, records L02/L08/L10 checks, enables them and creates one feed schedule per line.",
+        "owner_role": "Dashboard/irrigation lead"
+      },
+      {
+        "issue_number": 1181,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Jason opens /settings signed in during the U2 walk; record what the rows showed (same look as #1132).",
+        "owner_role": "Dashboard/irrigation lead"
+      },
+      {
+        "issue_number": 1183,
+        "sprint": "H1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Jason puts the YINMIK meter back on Wi-Fi at 192.168.10.105 and seals Secret verdify-hydro-probe; agents verify 300 s freshness, then open PR 2 and request the network-infra ipam row.",
+        "owner_role": "Dashboard/irrigation lead"
+      },
+      {
+        "issue_number": 1184,
+        "sprint": "H1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Software can start now (firmware sensor at Modbus addr 10 that only warns when absent, migration, ingest, DLI views); Jason fits the PAR meter when parts arrive; then OTA and live PPFD/DLI checks.",
+        "owner_role": "Dashboard/irrigation lead"
+      },
+      {
+        "issue_number": 1186,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "In the U2 walk: open /band and see the 24 h preview; open /water/history at 90 d; press Back to automatic with a light off its intent, then close the page.",
+        "owner_role": "Dashboard/irrigation lead"
+      },
+      {
+        "issue_number": 1277,
+        "sprint": "R7",
+        "hours_min": 1,
+        "hours_max": 2,
+        "next_action": "Release 7 gated sync carries the #1478 Tool A pin; then one C1 capture or validate_wire_contract run against 9517acb6 with no not-qualified result",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 1322,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Item 2: Jason looks at Now on a phone (390 px) with a wrapping status line. Item 1 closes with #1354.",
         "owner_role": "Dashboard/irrigation lead"
       },
       {
@@ -7238,23 +6984,295 @@
         "sprint": "ROLLUP",
         "hours_min": null,
         "hours_max": null,
-        "next_action": "[blocked-by-issue] Web repin, lab publisher guard fix, signed-in walk",
+        "next_action": "Keep the epic open; the U2 walk clears most walk-only children, time gates #1346 (11-08) and #1352/#1365 (11-13) follow.",
         "owner_role": "Dashboard wave-2 lead"
       },
       {
+        "issue_number": 1332,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "In the U2 walk Jason opens VPD Mister Engage, Safety Max and House temp high and confirms the text matches the lab page.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1333,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "In the U2 walk on desktop and phone: filter/pill definitions, not_confirmed only on stale mismatched writes, House temp high links its anchors.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1335,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Signed-in operator walk in the lights-on window (now, ~14:03Z onward): set Main or Grow Off from Control -> Equipment, confirm gl_*_reason=manual_hold_off and Lutron stays off across the next decision change, then Auto releases within 30 s; agents read back.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1336,
+        "sprint": "H1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Now: signed-in walk of Water -> Today and Schedules (one entry per physical line). After the replant: enable L07/L08, create a South-mister fertilized schedule and read back prewet L07 -> L08+L03 -> flush L07.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1337,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "U2 walk: Now on desktop and phone: one track per gauge with the green band box and a dot; South/Center say in words when a value comes from peers or the house average; no PEER code.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1338,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Jason looks at Now during a midday vent cycle (about 11:00-14:00 MST) signed in.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1339,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "U2 walk of Now: mist & fog limit first, no codes outside All readings, glossary terms open, no truncation on desktop/phone.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1341,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "U2 walk: Water → Today, Schedules, History, the schedule drawer, the run dialog and Now show no L-codes; the Line select lists names only.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1342,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Signed-in walk: capture Now at 1440/390 px as operator, switch Grow Off from Now in the on-window and confirm the hold across the next decision change, then Auto; agents read back.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1343,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Attended L04 run-once from the dashboard with Schedule off (Jason or a named operator present); agents read ledger cause=run_now on L04 and the Activity row. L07 run-once follows the replant.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1345,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Make one soil-target edit (Control → Settings → Soil targets, or MCP soil_target_set by a named agent); then read back GET /v1/soil-targets, the activity row and the soil_dryout threshold.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1346,
+        "sprint": "T1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "At the gate, re-run the gap query on ok rows since 07:06Z, explain the two ~20-min gaps (hash skip vs missed run), and run the number-match sample, stale/forced-error fixture, MCP parity and Jason's spot check.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1347,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "U2 walk: Water → Schedules: daylight band on every lane, always-on legend, one lane per physical line, fertilized colour.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1349,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "U2 walk accepting Water → Today.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1351,
+        "sprint": "R7",
+        "hours_min": 1,
+        "hours_max": 2,
+        "next_action": "Release 7 sync (pin PR #1481 then gated full sync); read back NetworkPolicy experiment-v2-selector egress = DNS + DB only and no VERDIFY_EXPERIMENT_SELECTOR_API_KEY env; then close.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1352,
+        "sprint": "S1",
+        "hours_min": 1,
+        "hours_max": 2,
+        "next_action": "Before the gate: the slack_alert_runbooks rename/archive migration (grep criterion), the recorded test critical page to Jason's phone, a plan-delivery/MCP-unreachable replay test, and retire the lab /start/slack-ops and /data/slack-ops pages; after 11-13 COORD revokes the Iris token and archives greenhouse.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1354,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "U2 walk: Graphs → Climate default has no in-plot text except Now, VPD axis fitted; same line same colour/name on Graphs lanes, Water → History and Now; capture the cross-page set.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1355,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "U2 walk: Graphs at 72 h: every mark type in the key, no bare-number clusters, two-way hover with the events list, arrow keys along the rail, with screenshots.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1356,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "U2 walk: Graphs and Equipment at 24 h and 72 h: lane axis aligned to the pixel with the charts, the now line crosses both, bars solid and grouped, Equipment and Plan lanes match.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1358,
+        "sprint": "V1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "For one finished day (e.g. 2026-11-06), screenshot Statistics, Now 'time in band', the Graphs whole-day header and Grafana site-home showing the same number.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1360,
+        "sprint": "P1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "None until Jason resumes it. If it resumes, note #1482 changes the Cortex shadow's A/B identity hash (max_tokens, enable_thinking), so runs before and after are different treatments.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1363,
+        "sprint": "X1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Get the criterion-3 reading settled (spec vs node imageID alias), then one firmware-builder run on the custody esphome/cosign images with a receipt (CronJob is suspended; last success 2026-09-29).",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1364,
+        "sprint": "X1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "network-infra reads `chronyc clients` on VM305 (value-free) for 192.168.10.111; then close with the N-10 criterion carried to jvallery/network-infra#864.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1365,
+        "sprint": "T1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "After 2026-11-13T13:00Z rerun the core query for 11-07..11-13 against the operator and achievable bands and record it here.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1370,
+        "sprint": "H1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Any on-site visit: walk into the greenhouse camera view; agents measure MQTT person message time vs grow_light_main edge (<=~5 s) and the 15-min return to Auto, with cause occupancy logged.",
+        "owner_role": "Dashboard wave-2 lead"
+      },
+      {
+        "issue_number": 1397,
+        "sprint": "X1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "COORD merges agents#6243 (registry record gh-1247193937 -> gated); NATIVE-EXIT D10 deletes the two inactive repo webhooks and the 5 agent-fleet-ci ConfigMaps; then read back hooks=[] and no agent-fleet-verdify-* ConfigMaps.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 1424,
+        "sprint": "H1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Jason flips the heat1 Shelly ch1 clamp on site; then rerun the sign query and file the follow-up that drops the #1369 abs workaround.",
+        "owner_role": "Firmware/HA lead"
+      },
+      {
+        "issue_number": 1431,
+        "sprint": "H1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "After the 11-13 dry-out baseline, Jason approves the start week and does the on-site one-source-at-a-time variations; agents log nightly dewpoint, pulses and prior-day irrigation/mist.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 1432,
+        "sprint": "S1",
+        "hours_min": 1,
+        "hours_max": 2,
+        "next_action": "Agents draft the HAF fan spec (count, CFM, mounting, power, switching, schedule) on this issue for Jason's approval; the dehumidifier pilot decision waits for ≥7 graded vent+reheat nights and #1431.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 1433,
+        "sprint": "D1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Jason decides whether the SQL mirror is required now; then the U2 walk looks at Graphs → Climate achievable edges + 'in band N% · achievable M%' and the band editor preview.",
+        "owner_role": "Web lead"
+      },
+      {
+        "issue_number": 1434,
+        "sprint": "P1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "None until 2026-11-13 and Jason resumes #1360; then record the scoring baseline (dry-out minutes, dried-out flag, kWh vs cap) against the served band and #1433's achievable envelope.",
+        "owner_role": "Control lead"
+      },
+      {
+        "issue_number": 1435,
+        "sprint": "T1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Mid-December: rerun the #1365 core query for 2026-12-01..12-15 and decide on a winter ceiling-side action in decisions.md.",
+        "owner_role": "Control lead"
+      },
+      {
         "issue_number": 1458,
-        "sprint": "U0",
-        "hours_min": 3,
-        "hours_max": 6,
-        "next_action": "[software-ready] Rebuild/bump the 6 images with fixable Criticals in release 5; exception entries for no-fix findings",
+        "sprint": "S1",
+        "hours_min": 1,
+        "hours_max": 2,
+        "next_action": "File the R26 exception PR in jvallery/agents findings-exceptions.json for the no-fix findings on the new digests (timescaledb gosu, grafana 12.4.14, derived hermes-agent, postgres 43f9275d, derived renderer), then confirm at the 2026-11-08 02:15Z scan; STD-OPS-01 7-day window ends 2026-11-14.",
         "owner_role": "Platform lead"
       },
       {
         "issue_number": 1459,
-        "sprint": "U6",
-        "hours_min": 2,
-        "hours_max": 4,
-        "next_action": "[deferred] Split validate only if it runs past ~60 min",
+        "sprint": "P1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Keep deferred; pick up when ci / validate exceeds ~60 min or PR latency becomes the bottleneck.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 1477,
+        "sprint": "P1",
+        "hours_min": null,
+        "hours_max": null,
+        "next_action": "Prepare the activity-mirror / DLI-lighting retire-or-justify change so it rides the next firmware release; after that flash, check the entity count drops by the number removed and 24 h without push or unknown-entity errors.",
+        "owner_role": "Platform lead"
+      },
+      {
+        "issue_number": 1480,
+        "sprint": "R7",
+        "hours_min": 1,
+        "hours_max": 2,
+        "next_action": "Land PR #1482 once ci / validate and campaign-qualification go green, ship it in release 7 (cortex-planner rolls on sync), then watch the next 3 shadow triggers in planner_inference_runs.",
         "owner_role": "Platform lead"
       }
     ]
