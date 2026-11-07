@@ -116,6 +116,13 @@ def tree(seeds):  # noqa: F811
             finally:
                 await conn.execute("RESET ROLE")
             await conn.execute(lineage_sql())
+            # 255 hands the history to the database owner, which is verdify in prod but not on the
+            # campaign's private PostgreSQL; align it so 293 (run as verdify) can read it, as in prod.
+            await conn.execute(
+                "ALTER TABLE public.crop_assignment_revisions OWNER TO verdify; "
+                "ALTER FUNCTION public.fn_capture_crop_assignment_revision() OWNER TO verdify; "
+                "ALTER FUNCTION public.fn_reject_crop_assignment_history_mutation() OWNER TO verdify"
+            )
             await conn.execute("SET ROLE verdify")
             try:
                 await conn.execute(
