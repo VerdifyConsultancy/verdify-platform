@@ -50,17 +50,35 @@ jobs:
       run: ci/gha/path-impact.sh
       timeout-minutes: 10
 
-  # Native `validate`: scripts/ci-local.sh with the diff gates.
-  validate:
+  # Native `validate`: scripts/ci-local.sh with the diff gates, run as four
+  # parallel parts (VALIDATE_PART, #1459); each part stays serial inside so the
+  # wall-clock assertions keep their own CPU. The required context
+  # "ci / validate" is the aggregate, which fails unless every part succeeded.
+  validate-part:
     name: ci
     needs: [trusted-precheck, path-impact]
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [containment-firmware, pure-logic-1, pure-logic-2, rest]
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
+    with:
+      name: validate-${{ matrix.part }}
+      run: VALIDATE_PART=${{ matrix.part }} ci/gha/validate.sh
+      runner: verdify-platform-ci
+      in-job-image: true
+      timeout-minutes: 45
+
+  validate:
+    name: ci
+    needs: [trusted-precheck, path-impact, validate-part]
+    if: ${{ !cancelled() }}
     uses: jvallery/estate-ci/.github/workflows/checks.yml@6c3b7227e9e256391f8b88179c24caeb4e4b86a3
     with:
       name: validate
-      run: ci/gha/validate.sh
-      runner: verdify-platform-ci
-      in-job-image: true
-      timeout-minutes: 90
+      run: bash ci/gha/require-success.sh validate-parts=${{ needs.validate-part.result }}
+      runner: verdify-platform-ci-tools
+      timeout-minutes: 5
 
   # The five validation steps from the retired native repo-validate profile (ci/gha/registry-step.sh).
   platform-static:
