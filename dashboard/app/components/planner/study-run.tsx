@@ -24,7 +24,7 @@ function StatusLine({ run }: { run: StudyRun }) {
 }
 
 /**
- * The run's facts (#1360), from API-27 `run`: status, the AI planner, the arm and study day in force, the next boundary,
+ * The run's facts (issue 1360), from API-27 `run`: status, the AI planner, the arm and study day in force, the next boundary,
  * pairs done and left, the holds in force, the settings someone else holds, the last boundary's readback result, the
  * deviations and what was pre-registered. Every number is the server's.
  */
@@ -201,6 +201,6 @@ export function CostTables({ cost }: { cost: readonly ArmCost[] }) {
       ? <Table label="Cortex shadow runs by cohort" caption="Cortex shadow runs, per cohort and arm; cohorts are separate treatments and are never added together" captionHidden
         columns={shadow} rows={cohorts} rowKey={(row) => `${row.cohort}-${row.arm}`} group={(row) => row.cohort} groupLabel={(cohort) => <code>{cohort}</code>} />
       : <p className="muted">No Cortex shadow run on a study day yet.</p>}
-    {cohorts.length > 0 && <p className="meta">Each cohort is a different treatment (cortex-1482 is after the #1482 repair change); they are listed apart and never summed.</p>}
+    {cohorts.length > 0 && <p className="meta">Each cohort is a different treatment (cortex-1482 is after the PR 1482 repair change); they are listed apart and never summed.</p>}
   </>;
 }
