@@ -8,8 +8,13 @@ experiment records and the arm calendar come from migration 302's views; each re
 readable first, so before 302 a read answers with cost "not recorded" and only the committed study definitions
 instead of failing. The Cortex attempt columns (#1350, migration 294: status, latency_ms, mode, dispatched) are read
 from the view's ``attempt`` jsonb only when ``planner_inference_runs`` has them, which ``pg_attribute`` says without
-any table privilege. The study definitions are ``verdify_schemas.planner_study``. Results and daily outcomes come
-only from the frozen analyzer of #1360, which has not run: they read "not started" until it has.
+any table privilege. The study definitions are ``verdify_schemas.planner_study``.
+
+A defined study's run (#1360, 2026-11-07: started, paused, resumed and stopped from the dashboard) comes from
+``verdify_services.planner_study``: its status, placed days (the arm calendar), the run block, live per-day values
+(equipment minutes, required plans written), the per-arm means and the per-arm cost (Hermes's plans and the Cortex
+shadow runs by cohort). Results and the climate outcomes come only from the frozen analyzer of #1360, which has not
+run: they read "not started", and those metrics null, until it has.
 """
 
 from __future__ import annotations
@@ -25,6 +30,8 @@ import asyncpg
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 from verdify_schemas.planner_study import PlannerStudy, studies
+from verdify_services import planner_study
+from verdify_services.planner_study import ArmCost, ArmSummary, StudyRun
 from verdify_services.problems import ServiceError, problem
 from verdify_services.reads import _int_from_query, _snapshot
 
@@ -225,10 +232,13 @@ class DayOutcome(_Model):
 class ExperimentDetail(_Model):
     experiment: ExperimentSummary
     definition: StudyDefinition | None
+    run: StudyRun | None = None
     calendar: list[CalendarDay]
     next_boundary: datetime | None
     results: StudyResults
     outcomes: list[DayOutcome]
+    arms: list[ArmSummary] = Field(default_factory=list)
+    cost: list[ArmCost] = Field(default_factory=list)
 
 
 # ── Pure helpers ────────────────────────────────────────────────────────────
@@ -297,6 +307,87 @@ def defined_summary(study: PlannerStudy) -> ExperimentSummary:
         closed_at=None,
         closed_reason=None,
     )
+
+
+RUN_STATUS: Mapping[str, ExperimentStatus] = {
+    "scheduled": "scheduled",
+    "running": "running",
+    "paused": "paused",
+    "finished": "finished",
+    "stopped": "closed",
+}
+
+
+def run_summary(study: PlannerStudy, run: planner_study.Run, deviations: int) -> ExperimentSummary:
+    """A defined study with a run: its status, days and deviations from the run."""
+    base = defined_summary(study)
+    stopped = run.status == "stopped"
+    last_end = max((day.ends_at for day in run.days if day.status == "done"), default=None)
+    reason = None
+    if stopped:
+        reason = f"Stopped by {run.stopped_by}" + (f": {run.stop_reason}" if run.stop_reason else "")
+    return base.model_copy(
+        update={
+            "status": RUN_STATUS[run.status],
+            "raw_status": run.status,
+            "started_at": run.started_at,
+            "ended_at": run.stopped_at if stopped else (last_end if run.status == "finished" else None),
+            "updated_at": run.stopped_at or run.paused_at or run.started_at,
+            "days_done": sum(1 for day in run.days if day.status == "done"),
+            "deviations": deviations,
+            "closed_at": run.stopped_at if stopped else None,
+            "closed_reason": reason,
+        }
+    )
+
+
+def run_calendar(run: planner_study.Run, log: planner_study.StudyLog) -> list[CalendarDay]:
+    """One cell per placed day: its arm and status, and its boundary result and deviations as events."""
+    deviations: dict[date, list[Mapping[str, Any]]] = {}
+    for row in log.deviations:
+        deviations.setdefault(date.fromisoformat(str(row["date"])), []).append(row)
+    days = []
+    for day in run.days:
+        ran = day.status in ("active", "done")
+        boundary = log.boundaries.get(day.date) if ran else None
+        mine = deviations.get(day.date, []) if ran else []
+        events = [f"boundary_{boundary['result']}"] if boundary else []
+        events += sorted({str(row.get("reason")) for row in mine})
+        if day.reason:
+            events.append(day.reason)
+        days.append(
+            CalendarDay(
+                date=day.date,
+                pair_index=day.pair_index,
+                arm=day.arm,
+                status=day.status,
+                starts_at=day.starts_at,
+                ends_at=day.ends_at,
+                deviations=len(mine),
+                events=events,
+            )
+        )
+    return days
+
+
+def run_outcomes(
+    run: planner_study.Run,
+    facts: Mapping[date, planner_study.DayFacts],
+    deviation_days: set[date],
+    metric_ids: Sequence[str],
+) -> list[DayOutcome]:
+    """Each finished day's live values; a metric this slice does not compute (the climate ones) is null."""
+    return [
+        DayOutcome(
+            date=day.date,
+            arm=day.arm,
+            deviation=day.date in deviation_days,
+            values={metric: facts[day.date].values.get(metric) for metric in metric_ids},
+            covariates={},
+        )
+        for day in run.days
+        if day.status == "done" and day.date in facts
+    ]
 
 
 def record_summary(
@@ -377,7 +468,8 @@ def not_started(study: PlannerStudy | None, days_done: int) -> StudyResults:
     reason = (
         "No study day has run."
         if days_done == 0
-        else "The frozen analyzer (#1360) has not produced output for this study yet."
+        else "The frozen analyzer (#1360) has not produced output for this study yet. The daily outcomes are live "
+        "run-time values, not the frozen analysis; the climate metrics wait for it."
     )
     return StudyResults(
         state="not_started",
@@ -617,18 +709,35 @@ async def _records(conn: asyncpg.Connection) -> tuple[list[asyncpg.Record], date
     return rows, cap["at"]
 
 
-def _summaries(rows: Sequence[Mapping[str, Any]], defined: Sequence[PlannerStudy]) -> list[ExperimentSummary]:
+Runs = Mapping[str, tuple[planner_study.Run | None, planner_study.StudyLog]]
+
+
+async def _runs(conn: asyncpg.Connection, defined: Sequence[PlannerStudy], at: datetime) -> Runs:
+    return {study.study_id: await planner_study.current_run(conn, study, at) for study in defined}
+
+
+def _summaries(
+    rows: Sequence[Mapping[str, Any]], defined: Sequence[PlannerStudy], runs: Runs | None = None
+) -> list[ExperimentSummary]:
     registered = {row["study_id"] for row in rows}
-    items = [defined_summary(study) for study in defined if study.study_id not in registered]
+    items = []
+    for study in defined:
+        if study.study_id in registered:
+            continue
+        run, log = (runs or {}).get(study.study_id, (None, None))
+        items.append(defined_summary(study) if run is None else run_summary(study, run, len(log.deviations)))
     items += [record_summary(row, row["assigned_arms"] or [], row["days_done"], defined) for row in rows]
     return items
 
 
 async def experiments(conn: asyncpg.Connection) -> ExperimentList:
-    """API-26 ``GET /v1/planner/experiments``: committed studies not yet registered, then every experiment record."""
+    """API-26 ``GET /v1/planner/experiments``: committed studies not yet registered (with their run, once started),
+    then every experiment record."""
+    defined = studies()
     async with _snapshot(conn):
-        rows, _ = await _records(conn)
-    return ExperimentList(items=_summaries(rows, studies()))
+        rows, at = await _records(conn)
+        runs = await _runs(conn, defined, at)
+    return ExperimentList(items=_summaries(rows, defined, runs))
 
 
 async def experiment(conn: asyncpg.Connection, key: str) -> ExperimentDetail:
@@ -636,7 +745,8 @@ async def experiment(conn: asyncpg.Connection, key: str) -> ExperimentDetail:
     defined = studies()
     async with _snapshot(conn):
         rows, at = await _records(conn)
-        items = _summaries(rows, defined)
+        runs = await _runs(conn, defined, at)
+        items = _summaries(rows, defined, runs)
         summary = next((item for item in items if key in (item.id, item.study_id)), None)
         if summary is None:
             raise ServiceError(problem("not_found", f"no experiment or study {key!r}", field="id"))
@@ -645,14 +755,34 @@ async def experiment(conn: asyncpg.Connection, key: str) -> ExperimentDetail:
             uuid = UUID(summary.experiment_id)
             assignments = await conn.fetch(_ASSIGNMENTS_SQL, uuid)
             events = await conn.fetch(_EVENTS_SQL, uuid)
-    study = next((item for item in defined if item.study_id == summary.study_id), None)
+        study = next((item for item in defined if item.study_id == summary.study_id), None)
+        run, log = (None, None)
+        if study is not None and summary.experiment_id is None:
+            run, log = runs.get(study.study_id, (None, None))
+        if study is not None and run is not None:
+            facts = await planner_study.day_facts(conn, run.days)
+            current = await planner_study.desired_now(conn)
+            cost = await planner_study.arm_costs(conn, study, run.days, facts)
+    if study is None or run is None or log is None:
+        return ExperimentDetail(
+            experiment=summary,
+            definition=definition(study) if study is not None else None,
+            calendar=calendar_days(assignments, events),
+            next_boundary=next_boundary(study, summary.status, at),
+            results=not_started(study, summary.days_done),
+            outcomes=[],
+        )
+    deviation_days = {date.fromisoformat(str(row["date"])) for row in log.deviations}
     return ExperimentDetail(
         experiment=summary,
-        definition=definition(study) if study is not None else None,
-        calendar=calendar_days(assignments, events),
-        next_boundary=next_boundary(study, summary.status, at),
+        definition=definition(study),
+        run=planner_study.run_view(study, run, log, current, at),
+        calendar=run_calendar(run, log),
+        next_boundary=run.next_boundary(at),
         results=not_started(study, summary.days_done),
-        outcomes=[],
+        outcomes=run_outcomes(run, facts, deviation_days, [metric.id for metric in study.metrics]),
+        arms=planner_study.arm_summaries(run.days, facts, deviation_days),
+        cost=cost,
     )
 
 

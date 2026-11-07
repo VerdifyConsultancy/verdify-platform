@@ -845,6 +845,26 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/v1/planner/experiments/{id}/{action}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Start, pause, resume or stop a defined study's run (#1360)
+         * @description Operators only. One activity_log row, action study.<action>, target the study id, detail {ref, run_id} (start adds first_day, pairs, seed, schedule_sha256, baseline_sha256, definition_sha256 and ai_planner). The operator API's study runner applies it within a minute: on a baseline day it holds the 48 planner settings manual at the committed baseline vector (desired state, as system:planner_study), so Hermes's plans are stored and not sent; on an AI day, while paused or stopped, and after the last day it releases its own holds. start needs a pre-registered definition whose baseline file matches its hash, no run scheduled, running or paused, a first_day whose boundary is ahead, and none of the 48 settings held manual by anyone (study_state, naming them). pause needs a scheduled or running run; a pair under way is void and runs again after resume, which starts the remaining pairs at the next boundary. stop releases the holds and ends the run. Codes: study_state (the action does not apply now, the study is not pre-registered, or a planner setting is held manual), invalid_request, not_found, request_id_reused.
+         */
+        readonly post: operations["API-28"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/v1/planner/history": {
         readonly parameters: {
             readonly query?: never;
@@ -1169,6 +1189,32 @@ export interface components {
         };
         readonly AlertPage: components["schemas"]["Page"] & {
             readonly items: readonly components["schemas"]["Alert"][];
+        };
+        readonly ArmCost: {
+            readonly arm: string;
+            readonly days: number;
+            /** @description setpoint_changes with source plan; near 0 on baseline days */
+            readonly plan_changes_sent: number;
+            /** @description The AI arm planner (Hermes); it records no per-call tokens */
+            readonly planner: string;
+            readonly plans_written: number;
+            readonly shadow: readonly {
+                readonly calls: number;
+                /** @example cortex-1482 */
+                readonly cohort: string;
+                readonly energy_wh: number | null;
+                readonly input_tokens: number;
+                readonly ok: number;
+                readonly output_tokens: number;
+            }[];
+        };
+        readonly ArmSummary: {
+            readonly arm: string;
+            readonly days_done: number;
+            readonly deviation_days: number;
+            readonly means: {
+                readonly [key: string]: number | null;
+            };
         };
         readonly BandColumns: {
             readonly temp_high: components["schemas"]["NullableNumbers"];
@@ -1529,7 +1575,9 @@ export interface components {
         };
         /** @description API-27: one study */
         readonly ExperimentDetail: {
-            /** @description One cell per assigned study day, oldest first */
+            /** @description Per arm, over its finished days: the mean of each live value. Not the frozen analysis */
+            readonly arms: readonly components["schemas"]["ArmSummary"][];
+            /** @description One cell per assigned study day, oldest first. For a run: status scheduled, active, done, void (a pair a pause or stop interrupted) or cancelled; events boundary_confirmed or boundary_unconfirmed, the deviation reasons (held_by_other, boundary_unconfirmed) and paused or stopped for a void day */
             readonly calendar: readonly {
                 readonly arm: string | null;
                 /** Format: date */
@@ -1543,6 +1591,8 @@ export interface components {
                 readonly starts_at: string | null;
                 readonly status: string;
             }[];
+            /** @description Per arm, over its started days: the AI planner's plans and plan changes sent, and the Cortex shadow runs by cohort (never pooled) */
+            readonly cost: readonly components["schemas"]["ArmCost"][];
             /** @description Null for a record with no committed definition */
             readonly definition: components["schemas"]["StudyDefinition"] | null;
             readonly experiment: components["schemas"]["ExperimentSummary"];
@@ -1551,7 +1601,7 @@ export interface components {
              * @description While scheduled or running
              */
             readonly next_boundary: string | null;
-            /** @description One row per study day from the frozen outcomes; a metric that could not be computed is null */
+            /** @description One row per finished study day. Until the frozen outcomes exist these are the run's live values (equipment minutes, required plans written); a metric that is not computed yet (the climate ones) is null */
             readonly outcomes: readonly {
                 readonly arm: string;
                 readonly covariates: {
@@ -1565,6 +1615,8 @@ export interface components {
                 };
             }[];
             readonly results: components["schemas"]["StudyResults"];
+            /** @description The newest run of a defined study (API-28); null before the first start and for an experiment record */
+            readonly run: components["schemas"]["StudyRun"] | null;
         };
         /** @description API-26: committed definitions not yet registered first, then records newest first */
         readonly ExperimentList: {
@@ -2443,10 +2495,10 @@ export interface components {
             readonly type?: string;
         };
         /**
-         * @description Stable codes shared with MCP (architecture §5.3, irrigation §4.3 and §4.7). manual is for Iris only. position_occupied, ambiguous_position and planting_ended are the plantings' refusals (API-CROP-06 to -11)
+         * @description Stable codes shared with MCP (architecture §5.3, irrigation §4.3 and §4.7). manual is for Iris only. position_occupied, ambiguous_position and planting_ended are the plantings' refusals (API-CROP-06 to -11); study_state is the planner study's (API-28)
          * @enum {string}
          */
-        readonly ProblemCode: "invalid_request" | "unauthenticated" | "forbidden" | "origin_mismatch" | "not_found" | "writes_disabled" | "query_timeout" | "unavailable" | "window_too_large" | "unknown_target" | "read_only" | "out_of_range" | "manual" | "request_id_reused" | "check_required" | "too_close" | "too_many_schedules" | "line_disabled" | "line_paused" | "line_faulted" | "not_schedule_member" | "line_busy" | "manifold_busy" | "cap_reached" | "position_occupied" | "ambiguous_position" | "planting_ended";
+        readonly ProblemCode: "invalid_request" | "unauthenticated" | "forbidden" | "origin_mismatch" | "not_found" | "writes_disabled" | "query_timeout" | "unavailable" | "window_too_large" | "unknown_target" | "read_only" | "out_of_range" | "manual" | "request_id_reused" | "check_required" | "too_close" | "too_many_schedules" | "line_disabled" | "line_paused" | "line_faulted" | "not_schedule_member" | "line_busy" | "manifold_busy" | "cap_reached" | "position_occupied" | "ambiguous_position" | "planting_ended" | "study_state";
         /** @description The compiled program against the controller (irr_program_id); confirmed when the device hash matches */
         readonly ProgramSync: {
             /** @description First 16 hex of the applied sha256 */
@@ -2985,6 +3037,15 @@ export interface components {
              */
             readonly since?: string | null;
         };
+        /** @description API-28's body: first_day goes with start only */
+        readonly StudyControl: {
+            /**
+             * Format: date
+             * @description start: the first study day (America/Denver); its boundary must be ahead
+             */
+            readonly first_day?: string | null;
+            readonly reason?: string;
+        };
         /** @description The committed, reviewed study design (verdify_schemas/planner_ab_winter_2026.yaml) */
         readonly StudyDefinition: {
             readonly arms: readonly {
@@ -3056,6 +3117,53 @@ export interface components {
             readonly sentence: string | null;
             /** @enum {string} */
             readonly state: "not_started" | "interim" | "final";
+        };
+        /** @description A defined study's newest run, from its study.* activity rows and the committed seed */
+        readonly StudyRun: {
+            /** @example hermes */
+            readonly ai_planner: string;
+            /** @description ai or baseline while a study day is in force */
+            readonly arm_now: string | null;
+            readonly baseline_sha256: string;
+            /** Format: date */
+            readonly day_now: string | null;
+            readonly deviations: number;
+            /** Format: date */
+            readonly first_day: string;
+            /** @description Planner settings someone else holds manual now */
+            readonly held_by_others: readonly string[];
+            /** @description Planner settings the study holds manual now (48 on a settled baseline day) */
+            readonly holds_in_force: number;
+            readonly last_boundary: {
+                readonly arm: string;
+                /** Format: date-time */
+                readonly at: string;
+                /** Format: date */
+                readonly date: string;
+                /** @enum {string} */
+                readonly result: "confirmed" | "unconfirmed";
+                readonly unconfirmed: readonly string[];
+            } | null;
+            /** Format: date-time */
+            readonly next_boundary: string | null;
+            readonly pairs: number;
+            readonly pairs_done: number;
+            readonly pairs_left: number;
+            /** Format: date-time */
+            readonly paused_at: string | null;
+            /** Format: uuid */
+            readonly run_id: string;
+            readonly schedule_sha256: string;
+            readonly seed: number;
+            /** Format: date-time */
+            readonly started_at: string;
+            readonly started_by: string;
+            /** @enum {string} */
+            readonly status: "scheduled" | "running" | "paused" | "finished" | "stopped";
+            readonly stop_reason: string | null;
+            /** Format: date-time */
+            readonly stopped_at: string | null;
+            readonly study_id: string;
         };
         /** @description One planting's time in a cell; until null while it is there. */
         readonly Tenure: {
@@ -4503,6 +4611,39 @@ export interface operations {
                     readonly "application/json": components["schemas"]["ExperimentDetail"];
                 };
             };
+            readonly default: components["responses"]["Problem"];
+        };
+    };
+    readonly "API-28": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: {
+                /** @description Optional on every write; stored as request_id on the write's activity_log row and logged as the request id. The same key and payload return the stored result with the header Idempotency-Replayed: true; the same key with a different payload is 422 request_id_reused. */
+                readonly "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            readonly path: {
+                readonly action: "start" | "pause" | "resume" | "stop";
+                /** @description The study id */
+                readonly id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["StudyControl"];
+            };
+        };
+        readonly responses: {
+            /** @description Recorded */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["StudyRun"];
+                };
+            };
+            readonly 422: components["responses"]["Invalid"];
             readonly default: components["responses"]["Problem"];
         };
     };

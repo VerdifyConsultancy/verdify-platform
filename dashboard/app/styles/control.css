@@ -352,6 +352,9 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .pln-design dd p{margin:0 0 .25rem}
 .pln-design ul{margin:0;padding-left:1.1rem}
 @media(max-width:600px){.pln-design{grid-template-columns:minmax(0,1fr)}.pln-design dd{margin-bottom:.5rem}}
+.pln-run-controls{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-top:var(--space-4)}
+.pln-run-why{flex:1 1 100%;margin:0}
+.pln-subhead{margin:var(--space-4) 0 .35rem;font-size:var(--fs-sm)}
 .pln-calendar-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(2.25rem,1fr));gap:4px;list-style:none;margin:0;padding:0}
 .pln-day{position:relative;display:flex;align-items:center;justify-content:center;min-height:2.25rem;border:1px solid var(--line-strong);border-radius:var(--radius-sm);font-variant-numeric:tabular-nums;font-size:var(--fs-sm)}
 .pln-day[data-arm=ai]{background:var(--forest);border-color:var(--forest);color:#fff}
@@ -360,6 +363,7 @@ a.ctl-rail-item:hover{background:var(--field);color:var(--leaf)}
 .pln-day[data-when=future][data-arm=ai]{border-color:var(--forest)}
 .pln-day[aria-current=date]{outline:2px solid var(--ink);outline-offset:1px}
 .pln-day[data-deviation]{border-color:var(--amber);border-width:2px}
+.pln-day[data-status=void],.pln-day[data-status=cancelled]{background:transparent;color:var(--muted);text-decoration:line-through;border-style:dashed}
 .pln-day-mark{position:absolute;top:0;right:2px;font-size:.6rem;color:var(--amber)}
 .pln-day[data-arm=ai] .pln-day-mark{color:#fff}
 .pln-calendar-legend{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem;margin:.5rem 0 0}

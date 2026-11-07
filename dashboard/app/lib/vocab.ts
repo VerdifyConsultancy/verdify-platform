@@ -26,7 +26,7 @@ export const PROBLEM_CODES = everyMember<ProblemCode>()([
   "invalid_request", "unauthenticated", "forbidden", "origin_mismatch", "not_found", "writes_disabled", "query_timeout", "unavailable", "window_too_large",
   "unknown_target", "read_only", "out_of_range", "manual", "request_id_reused", "check_required", "too_close", "too_many_schedules", "line_disabled",
   "line_paused", "line_faulted", "not_schedule_member", "line_busy", "manifold_busy", "cap_reached", "position_occupied",
-  "ambiguous_position", "planting_ended",
+  "ambiguous_position", "planting_ended", "study_state",
 ]);
 
 /** `LineState.code`: an irrigation line's state. */

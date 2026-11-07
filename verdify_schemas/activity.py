@@ -20,10 +20,12 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validato
 ACTOR_SOURCE_PATTERN = r"^(dashboard|iris|system|agent:[a-z0-9][a-z0-9_-]*)$"
 # Architecture §9: setting.write, setting.release, plan.write, alert.ack, alert.resolve, irrigation.*,
 # light.on and light.off, band.write (the band editor's one Save, #1334) and planting.* (#1327: create, move, harvest,
-# end, update, note). Extend it here when a new kind of write appears.
+# end, update, note), soil_target.write (#1345) and the planner study's study.* rows (#1360: start, pause, resume and
+# stop by an operator, boundary and deviation by the study runner). Extend it here when a new kind of write appears.
 ACTIVITY_ACTION_PATTERN = (
     r"^(setting\.(write|release)|band\.write|plan\.write|alert\.(ack|resolve)|light\.(on|off)"
-    r"|irrigation(\.[a-z][a-z0-9_]*)+|planting\.(create|move|harvest|end|update|note)|soil_target\.write)$"
+    r"|irrigation(\.[a-z][a-z0-9_]*)+|planting\.(create|move|harvest|end|update|note)|soil_target\.write"
+    r"|study\.(start|pause|resume|stop|boundary|deviation))$"
 )
 # A tunable_registry name (the OpenAPI Param pattern).
 SETTING_PARAM_PATTERN = r"^[a-z][a-z0-9_]*$"

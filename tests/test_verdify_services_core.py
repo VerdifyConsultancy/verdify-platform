@@ -112,7 +112,7 @@ def test_actor_name_is_1_to_64_characters_and_the_actor_is_frozen():
 
 def test_problem_code_is_the_openapi_enum_verbatim():
     assert list(PROBLEM_CODES) == SCHEMAS["ProblemCode"]["enum"]
-    assert len(PROBLEM_CODES) == 27
+    assert len(PROBLEM_CODES) == 28
 
 
 def test_problem_has_the_openapi_problem_fields():

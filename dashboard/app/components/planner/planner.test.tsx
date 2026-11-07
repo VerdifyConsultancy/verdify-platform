@@ -3,9 +3,12 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
 import type { CalendarDay, MetricResult } from "../../lib/operator-api";
-import { ciDomain, confirmedShare, estimateWords, historyDays, historySentence, historyTotals, plannerHref, selectedExperiment, triggerMix, verdict } from "../../lib/planner";
+import { ciDomain, confirmedShare, estimateWords, filledIds, historyDays, historySentence, historyTotals, plannerHref, runActions, selectedExperiment, triggerMix, verdict } from "../../lib/planner";
+import { problemMessage } from "../../lib/writes";
+import { renderUi } from "../test-render";
 import { ArmCalendar, cellWords } from "./arm-calendar";
 import { CiRow } from "./ci-row";
+import { RunControls } from "./study-run";
 
 afterEach(cleanup);
 
@@ -64,6 +67,46 @@ test("each calendar cell says its arm, pair, deviations and when in words", () =
   expect(cells[1].getAttribute("data-when")).toBe("future");
   cleanup();
   expect(render(<ArmCalendar days={[]} today="2026-12-01" nextBoundary={null} />).container.textContent).toBe("No study day is assigned yet.");
+});
+
+test("a run's days say void, cancelled and the boundary result in words; a confirmed boundary says nothing", () => {
+  expect(cellWords(day("2026-12-01", { status: "done", events: ["boundary_confirmed"] }), "2026-12-05")).toBe("Dec 1: AI planner, pair 1");
+  expect(cellWords(day("2026-12-01", { status: "done", deviations: 1, events: ["boundary_unconfirmed"] }), "2026-12-05"))
+    .toBe("Dec 1: AI planner, pair 1, 1 deviation (boundary not confirmed)");
+  expect(cellWords(day("2026-12-02", { status: "void", events: ["paused"] }), "2026-12-05")).toBe("Dec 2: AI planner, pair 1, void, runs again (paused)");
+  expect(cellWords(day("2026-12-09", { status: "cancelled" }), "2026-12-05")).toBe("Dec 9: AI planner, pair 1, cancelled, to come");
+  const { container } = render(<ArmCalendar days={[day("2026-12-02", { status: "void", events: ["stopped"] })]} today="2026-12-05" nextBoundary={null} />);
+  expect(container.querySelector("li.pln-day")?.getAttribute("data-status")).toBe("void");
+  expect(container.textContent).toContain("struck through");
+});
+
+test("the controls follow the run's status", () => {
+  expect(runActions(null)).toEqual(["start"]);
+  expect(runActions("scheduled")).toEqual(["pause", "stop"]);
+  expect(runActions("running")).toEqual(["pause", "stop"]);
+  expect(runActions("paused")).toEqual(["resume", "stop"]);
+  expect(runActions("stopped")).toEqual(["start"]);
+  expect(runActions("finished")).toEqual(["start"]);
+  expect(filledIds(["a", "b", "c"], [{ a: null, b: 2 }, { c: null, d: 1 }])).toEqual(["b", "d"]);
+});
+
+test("Start is disabled with why until the definition is pre-registered; a viewer sees no control", () => {
+  const operator = renderUi(<RunControls status={null} preregistered={false} onChoose={() => {}} />, { role: "operator", writesEnabled: true });
+  const start = operator.getByRole("button", { name: "Start the study" }) as HTMLButtonElement;
+  expect(start.disabled).toBe(true);
+  expect(document.getElementById(start.getAttribute("aria-describedby") ?? "")?.textContent).toContain("pre-registered");
+  cleanup();
+  const viewer = renderUi(<RunControls status="paused" preregistered onChoose={() => {}} />, { role: "viewer", writesEnabled: true });
+  expect(viewer.queryAllByRole("button")).toHaveLength(0);
+  cleanup();
+  const paused = renderUi(<RunControls status="paused" preregistered onChoose={() => {}} />, { role: "operator", writesEnabled: true });
+  expect(paused.getAllByRole("button").map((button) => button.textContent)).toEqual(["Resume the study", "Stop the study"]);
+});
+
+test("a study_state refusal reads as the server's own sentence", () => {
+  const refusal = { type: "about:blank", title: "Refused", status: 422, code: "study_state", retryable: false, min: null, max: null, current: null, retry_after_s: null };
+  expect(problemMessage({ ...refusal, detail: "mister_engage_kpa is held manual by jason; release it first." })).toBe("mister_engage_kpa is held manual by jason; release it first.");
+  expect(problemMessage(refusal)).toBe("The study cannot do that now");
 });
 
 test("history: window, redirect, totals and words", () => {

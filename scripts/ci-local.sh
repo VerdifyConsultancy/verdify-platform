@@ -389,6 +389,9 @@ if in_part pure-logic-1 pure-logic-2; then
     tests/test_operator_api_auth.py
     tests/test_operator_writes.py
     tests/test_operator_lights.py
+    tests/test_verdify_services_planner.py
+    tests/test_verdify_services_planner_study.py
+    tests/test_planner_study_preregister.py
     tests/test_setpoint_server_ingress.py
     tests/test_public_api_operator_paths.py
     tests/test_operator_api_manifests.py

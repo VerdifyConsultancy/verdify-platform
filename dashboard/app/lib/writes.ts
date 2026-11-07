@@ -12,6 +12,7 @@
  * - `useStop`: API-IRR-07 and its result toast.
  * - `useCropWrite`: API-CROP-07 to -11, the planting records (#1330).
  * - `useSoilTargetWrite`: API-SOIL-02, one zone's soil-moisture thresholds (#1345).
+ * - `useStudyControl`: API-28, start, pause, resume or stop the planner study's run (#1360).
  *
  * One action, one key: `crypto.randomUUID()` when Save, Run, Stop or Acknowledge is pressed, used for that request only.
  * While it is out the action is busy (the control reads "Sending…" and is disabled), and a second press sends nothing.
@@ -93,6 +94,8 @@ function problemWords(problem: Problem, units: FieldUnits): string {
   if (problem.code === "manifold_busy") return manifoldBusyText(problem);
   // A planting refusal's own sentence names the cells and who holds them, or the places a text could mean (#1330).
   if ((problem.code === "position_occupied" || problem.code === "ambiguous_position") && problem.detail) return problem.detail;
+  // A planner study refusal's own sentence says why: not pre-registered, a run already in force, the settings held manual (#1360).
+  if (problem.code === "study_state" && problem.detail) return problem.detail;
   if (hasWords("problem_code", problem.code)) return words("problem_code", problem.code);
   return problem.detail || problem.code;
 }
@@ -558,6 +561,31 @@ export function useSoilTargetWrite() {
     if (outcome.ok) refresh(client, ["API-SOIL-01", "API-17"]);
     return outcome;
   }, [run, client]);
+  return { send, sending: action.sending, error: action.error, clearError: action.clearError };
+}
+
+// ---------------------------------------------------------------------------------------------------- planner study
+export type StudyAction = "start" | "pause" | "resume" | "stop";
+export type StudyControlBody = NonNullable<BodyOf<"API-28">>;
+const STUDY_TOAST: Readonly<Record<StudyAction, string>> = { start: "Started", pause: "Paused", resume: "Resumed", stop: "Stopped" };
+/**
+ * API-28: start, pause, resume or stop a defined study's run (#1360). One action, one key; the operator API's study
+ * runner applies it within a minute. On a 200 it toasts and refetches the experiment list, the study and Activity; a
+ * refusal (`study_state`, in the server's own sentence) stays in the dialog.
+ */
+export function useStudyControl(studyId: string) {
+  const client = useQueryClient();
+  const toast = useToast();
+  const action = useAction();
+  const { run } = action;
+  const send = useCallback(async (verb: StudyAction, body: StudyControlBody = {}) => {
+    const outcome = await run((key) => apiWrite("API-28", { id: studyId, action: verb }, body, key), { check: () => tooLong("reason", body.reason) });
+    if (outcome.ok) {
+      toast.show({ message: `${STUDY_TOAST[verb]} the study` });
+      refresh(client, ["API-26", "API-27", "API-17"]);
+    }
+    return outcome;
+  }, [run, client, toast, studyId]);
   return { send, sending: action.sending, error: action.error, clearError: action.clearError };
 }
 

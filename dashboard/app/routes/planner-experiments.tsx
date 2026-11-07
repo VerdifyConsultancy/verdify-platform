@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { dayCsvFilename, tableCsv } from "../charts/csv";
 import { CsvLink } from "../charts/data-table";
@@ -8,12 +9,14 @@ import { PageHeader } from "../components/layout/page-header";
 import { Panel, type PanelState } from "../components/panel";
 import { ArmCalendar } from "../components/planner/arm-calendar";
 import { CiRows } from "../components/planner/ci-row";
+import { ArmSummaryTable, CostTables, RunControls, RunFacts, StudyControlDialog } from "../components/planner/study-run";
 import { Table, type TableColumn } from "../components/table";
 import { dayTitle, formatNumber, localDate } from "../lib/format";
 import type { ExperimentDetail, ExperimentSummary } from "../lib/operator-api";
-import { STATUS_WORDS, armWords, daysWords, selectedExperiment } from "../lib/planner";
+import { RUN_STATUS_WORDS, STATUS_WORDS, armWords, daysWords, filledIds, selectedExperiment, type StudyVerb } from "../lib/planner";
 import { useApiRead } from "../lib/queries";
 import { viewMeta } from "../lib/sections";
+import { useStudyControl } from "../lib/writes";
 
 export const meta = () => viewMeta("planner-experiments");
 // The CSV link is chart code: its route links the chart stylesheet (charts/chunks.test.ts).
@@ -79,7 +82,9 @@ function outcomesCsv(rows: readonly Outcome[], ids: readonly string[]): string {
  * Planner → Experiments (#1361, #1360): the experiments the planner is studied by, the selected one's design, its arm
  * calendar, its results and its daily outcomes. API-26 lists the committed study definitions and the experiment
  * records; API-27 reads one. Every estimate and interval is the frozen analyzer's: until it has run, Results say why
- * there are none. Viewer and operator see the same; the study is started and stopped by the orchestrator, never here.
+ * there are none. A defined study also has its Run (#1360): status, the arm in force, holds and boundaries, and for an
+ * operator Start, Pause, Resume and Stop, each confirmed in a dialog and sent as API-28, which the operator API's study
+ * runner applies within a minute; then per-arm live means and cost. A viewer sees the same panels without the controls.
  */
 export default function PlannerExperimentsPage() {
   const [search] = useSearchParams();
@@ -111,9 +116,14 @@ function ExperimentPanels({ id }: { id: string }) {
   const metrics = detail?.definition?.metrics ?? [];
   const margins = Object.fromEntries(metrics.map((metric) => [metric.id, metric.noninferiority_margin ?? null]));
   const labels = Object.fromEntries(metrics.map((metric) => [metric.id, metric.label]));
-  const outcomeIds = metrics.filter((metric) => metric.direction !== "report").map((metric) => metric.id).slice(0, 4);
+  const metricIds = metrics.map((metric) => metric.id);
+  // The columns some day has a value for: the live ones (heat, vent, wetting, plans written) until the frozen analyzer.
+  const outcomeIds = filledIds(metricIds, detail?.outcomes.map((row) => row.values) ?? []);
   const results = detail?.results;
+  const definition = detail?.definition ?? null;
+  const run = detail?.run ?? null;
   return <>
+      {definition && <RunPanel studyId={definition.study_id} run={run} preregistered={definition.preregistered} today={today} />}
       <Panel title="Design" thing="the study design" state={detailState} onRetry={retryDetail}>
         {detail && (detail.definition ? <Design definition={detail.definition} />
           : <p className="muted">This record has no committed definition: it predates the study definitions in the repository.</p>)}
@@ -121,6 +131,16 @@ function ExperimentPanels({ id }: { id: string }) {
       <Panel title="Arm calendar" thing="the arm calendar" state={detailState} onRetry={retryDetail}>
         {detail && <ArmCalendar days={detail.calendar} today={today} nextBoundary={detail.next_boundary ?? null} />}
       </Panel>
+      {detail && run && <>
+        <Panel title="Per arm" thing="per-arm values" state={detail.arms.every((arm) => arm.days_done === 0) ? "empty" : "ready"}
+          empty={<p className="muted">No study day has finished yet.</p>}
+          foot="Live values, not the frozen analysis: the mean per finished day. The climate metrics wait for the frozen analyzer.">
+          <ArmSummaryTable arms={detail.arms} order={metricIds} labels={labels} />
+        </Panel>
+        <Panel title="Cost" thing="cost" state={detail.cost.every((arm) => arm.days === 0) ? "empty" : "ready"} empty={<p className="muted">No study day has started yet.</p>}>
+          <CostTables cost={detail.cost} />
+        </Panel>
+      </>}
       <Panel title="Results" thing="results" state={detailState} onRetry={retryDetail}
         pill={results && results.state !== "not_started" ? <span className={cls("tag", results.state === "final" && "tag-ok")}>{results.state === "interim" ? "Interim" : "Final"}</span> : undefined}
         foot={results?.analyzed_at ? <>Analyzed <LocalTime at={results.analyzed_at} date />{results.output_sha256 && <> · <span className="mono">{results.output_sha256.slice(0, 12)}</span></>} · AI minus baseline, pair fixed effects, 95% intervals.</> : undefined}>
@@ -134,8 +154,25 @@ function ExperimentPanels({ id }: { id: string }) {
       <Panel title="Daily outcomes" thing="daily outcomes" state={detail && detail.outcomes.length === 0 ? "empty" : detailState} onRetry={retryDetail}
         foot={detail && detail.outcomes.length > 0 && <CsvLink filename={dayCsvFilename("planner-study", detail.outcomes[0].date, detail.outcomes[detail.outcomes.length - 1].date)}
           build={() => outcomesCsv(detail.outcomes, outcomeIds)} version={detail} label="CSV of these days" />}>
-        {detail && <Table label="Daily outcomes" caption="Each scored study day, by arm" captionHidden columns={outcomeColumns(outcomeIds, labels)} rows={detail.outcomes}
-          rowKey={(row) => `${row.date}-${row.arm}`} />}
+        {detail && <Table label="Daily outcomes" caption="Each finished study day, by arm: live values until the frozen analyzer" captionHidden
+          columns={outcomeColumns(outcomeIds, labels)} rows={detail.outcomes} rowKey={(row) => `${row.date}-${row.arm}`} />}
       </Panel>
   </>;
+}
+
+/**
+ * The study's run (#1360): its facts, or "Not started", and the operator's controls for its status. Each control opens
+ * its confirmation; the 200 refetches API-26 and API-27, so the panel reads the new status at once.
+ */
+function RunPanel({ studyId, run, preregistered, today }: { studyId: string; run: ExperimentDetail["run"]; preregistered: boolean; today: string }) {
+  const control = useStudyControl(studyId);
+  const [verb, setVerb] = useState<StudyVerb | null>(null);
+  const choose = (next: StudyVerb) => { control.clearError(); setVerb(next); };
+  return <Panel title="Run" thing="the study run" state="ready"
+    pill={run ? <span className={cls("tag", run.status === "running" && "tag-ok")}>{RUN_STATUS_WORDS[run.status] ?? run.status}</span> : undefined}>
+    {run ? <RunFacts run={run} />
+      : <p className="muted">Not started. Start places the pairs from the first day you pick; nothing is held until that day's 11:00 boundary.</p>}
+    <RunControls status={run?.status ?? null} preregistered={preregistered} onChoose={choose} />
+    <StudyControlDialog verb={verb} onClose={() => setVerb(null)} onSend={control.send} sending={control.sending} error={control.error} today={today} />
+  </Panel>;
 }

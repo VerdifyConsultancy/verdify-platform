@@ -300,6 +300,8 @@ test("every activity action the services write has words, each one an action the
     "planting.create", "planting.move", "planting.harvest", "planting.end", "planting.update", "planting.note",
     // The soil targets' edit (#1345).
     "soil_target.write",
+    // The planner study's run (#1360): an operator's start, pause, resume and stop; the runner's boundary and deviation.
+    "study.start", "study.pause", "study.resume", "study.stop", "study.boundary", "study.deviation",
   ];
   expectWorded("activity_action", actions);
   expect(Object.keys(WORDS.activity_action).sort()).toEqual([...actions].sort());
