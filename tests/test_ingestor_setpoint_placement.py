@@ -4,11 +4,13 @@ import subprocess
 
 import yaml
 
-# The ingestor keeps the general class: its ESP32/Shelly egress source set is
-# the node4/node5 SNAT addresses (staged gateway rule GAP #11). The setpoint
+# The ingestor is pinned to node4/node5 by hostname, not by node class (D-127):
+# its ESP32/Shelly egress source set is the node4/node5 SNAT addresses (staged
+# gateway rule GAP #11). The setpoint
 # server's only off-cluster peer is Home Assistant on the services VLAN, so it
 # may run on any non-control-plane worker.
-INGESTOR_SELECTOR = {"agentfleet.vallery.net/node-class": "general"}
+INGESTOR_SELECTOR = {"kubernetes.io/os": "linux", "agentfleet.vallery.net/control-plane": "false"}
+INGESTOR_HOSTS = ["vm-k3s-node4", "vm-k3s-node5"]
 SETPOINT_SELECTOR = {"agentfleet.vallery.net/control-plane": "false"}
 
 
@@ -36,12 +38,17 @@ def test_prod_device_writers_require_exact_worker_selectors() -> None:
     assert setpoint["priorityClassName"] == "verdify-device-writer"
 
 
-def test_ingestor_retains_soft_node6_avoidance_and_single_writer_strategy() -> None:
+def test_ingestor_pins_egress_hosts_keeps_node6_avoidance_and_single_writer() -> None:
     ingestor = rendered_deployments()["verdify-ingestor"]
 
     assert ingestor["spec"]["strategy"] == {"type": "Recreate"}
     node_affinity = ingestor["spec"]["template"]["spec"]["affinity"]["nodeAffinity"]
     assert node_affinity == {
+        "requiredDuringSchedulingIgnoredDuringExecution": {
+            "nodeSelectorTerms": [
+                {"matchExpressions": [{"key": "kubernetes.io/hostname", "operator": "In", "values": INGESTOR_HOSTS}]}
+            ]
+        },
         "preferredDuringSchedulingIgnoredDuringExecution": [
             {
                 "weight": 100,
@@ -55,7 +62,7 @@ def test_ingestor_retains_soft_node6_avoidance_and_single_writer_strategy() -> N
                     ]
                 },
             }
-        ]
+        ],
     }
 
 

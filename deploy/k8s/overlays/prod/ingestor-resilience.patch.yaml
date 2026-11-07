@@ -33,6 +33,16 @@ spec:
     spec:
       affinity:
         nodeAffinity:
+          # 3. EGRESS SET (D-127): the writer's ESP32/Shelly egress source set is
+          #    the node4/node5 SNAT addresses (staged gateway rule GAP #11), so it
+          #    is pinned to those hosts by name, not by node class (node classes
+          #    now follow hardware, and node4/node5 become gpu).
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values: ["vm-k3s-node4", "vm-k3s-node5"]
           preferredDuringSchedulingIgnoredDuringExecution:
             - weight: 100
               preference:
