@@ -93,6 +93,7 @@ Observation tick(const Input &in) {
 @@dwell_constants@@
 @@relay_helpers@@
 @@sensor_fault_lock@@
+@@relay_physical@@
 @@vent_readback@@
 @@fog_assist@@
 @@fog_rails@@
